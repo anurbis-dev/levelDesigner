@@ -183,7 +183,31 @@ User Click → CanvasRenderer → LevelEditor → StateManager → UI Panels
 4. `StateManager` обновляет выделение
 5. UI панели реагируют на изменение
 
-### 3. Поток сохранения
+### 3. Поток дублирования объектов
+
+```
+User Action (Shift+D) → LevelEditor → StateManager → DuplicateRenderer → CanvasRenderer
+```
+
+1. Пользователь нажимает Shift+D
+2. `LevelEditor` клонирует выбранные объекты
+3. `StateManager` устанавливает состояние дублирования
+4. `DuplicateRenderer` управляет позиционированием копий
+5. `CanvasRenderer` отображает превью дублированных объектов
+
+### 4. Поток Alt+Drag в режиме групп
+
+```
+User Alt+Drag → LevelEditor → Group Bounds Check → StateManager → CanvasRenderer
+```
+
+1. Пользователь перетаскивает объект с зажатым Alt
+2. `LevelEditor` определяет границы группы и объекта
+3. Проверяется пересечение границ
+4. `StateManager` обновляет позицию объекта
+5. `CanvasRenderer` отображает результат
+
+### 5. Поток сохранения
 
 ```
 User Action → LevelEditor → FileManager → Browser Download
@@ -216,6 +240,21 @@ state = {
     
     // Состояние мыши
     mouse: { ... },
+    
+    // Режим редактирования групп
+    groupEditMode: {
+        isActive: boolean,
+        groupId: string,
+        group: Group,
+        openGroups: Array<Group>
+    },
+    
+    // Состояние дублирования
+    duplicate: {
+        isActive: boolean,
+        objects: Array<GameObject>,
+        basePosition: { x: number, y: number }
+    },
     
     // Состояние панелей
     outliner: { collapsedTypes: Set<string> }

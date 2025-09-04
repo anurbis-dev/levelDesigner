@@ -31,6 +31,13 @@ export class StateManager {
                 altKey: false
             },
             
+            // Duplicate state
+            duplicate: {
+                isActive: false,
+                objects: [],
+                basePosition: { x: 0, y: 0 }
+            },
+            
             // Outliner state
             outliner: {
                 collapsedTypes: new Set()
@@ -211,6 +218,11 @@ export class StateManager {
                 placingObjects: [], placingOffsets: [],
                 draggingGroupId: null,
                 altKey: false
+            },
+            duplicate: {
+                isActive: false,
+                objects: [],
+                basePosition: { x: 0, y: 0 }
             },
             outliner: {
                 collapsedTypes: new Set()

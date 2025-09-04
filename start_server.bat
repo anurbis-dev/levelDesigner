@@ -8,14 +8,14 @@ if %errorlevel% == 0 (
     echo Python found. Starting HTTP server on port 8000...
     echo.
     echo Server will be available at: http://localhost:8000
-    echo Level Editor will open at: http://localhost:8000/index-modular.html
+    echo Level Editor will open at: http://localhost:8000/index.html
     echo.
     echo Press Ctrl+C to stop the server
     echo.
     
     REM Start server in background and open browser
     timeout /t 2 /nobreak >nul
-    start http://localhost:8000/index-modular.html
+    start http://localhost:8000/index.html
     python -m http.server 8000
 ) else (
     echo Python not found. Checking for Node.js...
@@ -29,14 +29,14 @@ if %errorlevel% == 0 (
         echo Starting HTTP server on port 3000...
         echo.
         echo Server will be available at: http://localhost:3000
-        echo Level Editor will open at: http://localhost:3000/index-modular.html
+        echo Level Editor will open at: http://localhost:3000/index.html
         echo.
         echo Press Ctrl+C to stop the server
         echo.
         
         REM Start server in background and open browser
         timeout /t 2 /nobreak >nul
-        start http://localhost:3000/index-modular.html
+        start http://localhost:3000/index.html
         serve -p 3000
     ) else (
         echo Neither Python nor Node.js found!

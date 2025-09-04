@@ -9,13 +9,13 @@ try {
         Write-Host "Starting HTTP server on port 8000..." -ForegroundColor Yellow
         Write-Host ""
         Write-Host "Server will be available at: http://localhost:8000" -ForegroundColor Cyan
-        Write-Host "Level Editor will open at: http://localhost:8000/index-modular.html" -ForegroundColor Cyan
+        Write-Host "Level Editor will open at: http://localhost:8000/index.html" -ForegroundColor Cyan
         Write-Host ""
         Write-Host "Press Ctrl+C to stop the server" -ForegroundColor Red
         Write-Host ""
         
         # Start browser and server
-        Start-Process "http://localhost:8000/index-modular.html"
+        Start-Process "http://localhost:8000/index.html"
         python -m http.server 8000
     }
 } catch {
@@ -32,13 +32,13 @@ try {
             Write-Host "Starting HTTP server on port 3000..." -ForegroundColor Yellow
             Write-Host ""
             Write-Host "Server will be available at: http://localhost:3000" -ForegroundColor Cyan
-            Write-Host "Level Editor will open at: http://localhost:3000/index-modular.html" -ForegroundColor Cyan
+            Write-Host "Level Editor will open at: http://localhost:3000/index.html" -ForegroundColor Cyan
             Write-Host ""
             Write-Host "Press Ctrl+C to stop the server" -ForegroundColor Red
             Write-Host ""
             
             # Start browser and server
-            Start-Process "http://localhost:3000/index-modular.html"
+            Start-Process "http://localhost:3000/index.html"
             serve -p 3000
         }
     } catch {

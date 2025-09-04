@@ -94,23 +94,34 @@ export class CanvasRenderer {
      * Draw single object
      */
     drawSingleObject(obj, x, y) {
-        if (!obj.visible) return;
+        console.log('CanvasRenderer.drawSingleObject called:', obj.id, 'at', x, y, 'visible:', obj.visible);
+        
+        if (!obj.visible) {
+            console.log('CanvasRenderer: Object not visible, returning');
+            return;
+        }
         
         // Draw image if available
         if (obj.imgSrc) {
+            console.log('CanvasRenderer: Trying to draw image:', obj.imgSrc);
             const img = this.imageCache.get(obj.imgSrc);
             if (img && img.complete && img.naturalHeight !== 0) {
+                console.log('CanvasRenderer: Drawing image at', x, y, 'size:', obj.width, obj.height);
                 this.ctx.drawImage(img, x, y, obj.width, obj.height);
                 return;
+            } else {
+                console.log('CanvasRenderer: Image not available or not loaded');
             }
         }
         
         // Draw colored rectangle as fallback
+        console.log('CanvasRenderer: Drawing colored rectangle at', x, y, 'size:', obj.width, obj.height, 'color:', obj.color);
         this.ctx.fillStyle = obj.color || '#cccccc';
         this.ctx.fillRect(x, y, obj.width, obj.height);
         
         // Draw border for locked objects
         if (obj.locked) {
+            console.log('CanvasRenderer: Drawing locked object border');
             this.ctx.strokeStyle = '#ff6b6b';
             this.ctx.lineWidth = 2;
             this.ctx.strokeRect(x, y, obj.width, obj.height);
@@ -150,18 +161,32 @@ export class CanvasRenderer {
      * Draw placing objects (preview)
      */
     drawPlacingObjects(objects, camera) {
-        if (!objects || objects.length === 0) return;
+        console.log('CanvasRenderer.drawPlacingObjects called with:', objects);
+        if (!objects || objects.length === 0) {
+            console.log('CanvasRenderer: No objects to draw, returning');
+            return;
+        }
         
+        console.log('CanvasRenderer: Drawing', objects.length, 'objects');
         this.ctx.save();
         this.ctx.globalAlpha = 0.7;
         
         const draw = (obj, parentX = 0, parentY = 0) => {
             const absX = obj.x + parentX;
             const absY = obj.y + parentY;
+            console.log('CanvasRenderer: Drawing object', obj.id, 'at', absX, absY, 'type:', obj.type);
+            
             if (obj.type === 'group') {
+                console.log('CanvasRenderer: Drawing group children');
                 // Draw group children
-                obj.children?.forEach(child => draw(child, absX, absY));
+                if (obj.children && obj.children.length > 0) {
+                    obj.children.forEach(child => draw(child, absX, absY));
+                } else {
+                    console.log('CanvasRenderer: Group has no children, drawing as single object');
+                    this.drawSingleObject(obj, absX, absY);
+                }
             } else {
+                console.log('CanvasRenderer: Drawing single object');
                 this.drawSingleObject(obj, absX, absY);
             }
         };
@@ -169,6 +194,7 @@ export class CanvasRenderer {
         objects.forEach(obj => draw(obj, 0, 0));
         
         this.ctx.restore();
+        console.log('CanvasRenderer: Finished drawing placing objects');
     }
 
     /**

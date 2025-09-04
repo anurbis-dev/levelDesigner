@@ -242,6 +242,9 @@ setupKeyboardEvents() {
         } else if (e.key.toLowerCase() === 'v' && e.ctrlKey) {
             e.preventDefault();
             this.pasteObjects();
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            this.cancelAllActions(); // Отмена всех текущих действий
         }
     });
 }
@@ -272,6 +275,40 @@ pasteObjects() {
     
     this.stateManager.set('selectedObjects', newIds);
     this.updateAllPanels();
+    this.render();
+}
+
+// Новые методы для работы с дублированием
+cancelAllActions() {
+    const mouse = this.stateManager.get('mouse');
+    if (mouse.isPlacingObjects) {
+        this.stateManager.update({
+            'mouse.isPlacingObjects': false,
+            'mouse.placingObjects': []
+        });
+    }
+    if (mouse.isMarqueeSelecting) {
+        this.stateManager.update({
+            'mouse.isMarqueeSelecting': false,
+            'mouse.marqueeRect': null
+        });
+    }
+    if (mouse.isDragging) {
+        this.stateManager.update({
+            'mouse.isDragging': false
+        });
+    }
+    if (mouse.isRightDown) {
+        this.stateManager.update({
+            'mouse.isRightDown': false
+        });
+    }
+    // Отмена дублирования
+    this.stateManager.update({
+        'duplicate.isActive': false,
+        'duplicate.objects': [],
+        'duplicate.basePosition': { x: 0, y: 0 }
+    });
     this.render();
 }
 ```
@@ -600,6 +637,93 @@ if (!features.es6Modules) {
 }
 ```
 
+## Новые возможности
+
+### Режим редактирования групп
+
+Редактор поддерживает специальный режим для работы с объектами внутри групп:
+
+```javascript
+// Вход в режим редактирования группы
+enterGroupEditMode(group) {
+    this.stateManager.update({
+        'groupEditMode': {
+            isActive: true,
+            groupId: group.id,
+            group: group,
+            openGroups: [group]
+        }
+    });
+    this.updateAllPanels();
+    this.render();
+}
+
+// Выход из режима
+exitGroupEditMode() {
+    this.stateManager.update({
+        'groupEditMode': {
+            isActive: false,
+            groupId: null,
+            group: null,
+            openGroups: []
+        }
+    });
+    this.updateAllPanels();
+    this.render();
+}
+```
+
+### Alt+Drag функциональность
+
+Позволяет перемещать объекты между группами:
+
+```javascript
+// Проверка пересечения границ для Alt+Drag
+handleAltDragInGroup(object, group) {
+    const objectBounds = this.getObjectWorldBounds(object);
+    const groupBounds = this.getObjectWorldBounds(group, [object.id]);
+    
+    // Проверяем, полностью ли объект внутри группы
+    const isCompletelyInside = 
+        objectBounds.minX >= groupBounds.minX &&
+        objectBounds.minY >= groupBounds.minY &&
+        objectBounds.maxX <= groupBounds.maxX &&
+        objectBounds.maxY <= groupBounds.maxY;
+    
+    return !isCompletelyInside; // Перемещаем, если не полностью внутри
+}
+```
+
+### Дублирование с сохранением позиций
+
+```javascript
+// Использование DuplicateRenderer
+import { duplicateRenderUtils } from '../../tmp/duplicate_renderer_fixed.js';
+
+duplicateSelectedObjects() {
+    const selected = this.getSelectedObjects();
+    if (selected.length > 0) {
+        const clonedObjects = selected.map(obj => {
+            const cloned = this.deepClone(obj);
+            this.reassignIdsDeep(cloned);
+            return cloned;
+        });
+        
+        // Инициализация позиций
+        const currentWorldPos = this.getCurrentMouseWorldPosition();
+        const initialized = duplicateRenderUtils.initializePositions(clonedObjects, currentWorldPos);
+        
+        this.stateManager.update({
+            'duplicate.isActive': true,
+            'duplicate.objects': initialized,
+            'duplicate.basePosition': currentWorldPos
+        });
+        
+        this.render();
+    }
+}
+```
+
 ## Заключение
 
-Это руководство покрывает основные аспекты разработки и расширения 2D Level Editor. Для получения дополнительной информации обратитесь к API Reference и Architecture документации.
+Это руководство покрывает основные аспекты разработки и расширения 2D Level Editor, включая новые возможности дублирования, режима редактирования групп и Alt+Drag функциональности. Для получения дополнительной информации обратитесь к API Reference и Architecture документации.
