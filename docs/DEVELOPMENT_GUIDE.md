@@ -24,14 +24,13 @@ npx serve .
 php -S localhost:8000
 ```
 
-Откройте `http://localhost:8000/index-modular.html` в браузере.
+Откройте `http://localhost:8000/index.html` в браузере.
 
 ## Структура проекта
 
 ```
 levelDesigner/
-├── index.html              # Оригинальная версия (монолитная)
-├── index-modular.html      # Новая модульная версия
+├── index.html              # Основная версия с модульной архитектурой
 ├── src/                    # Исходный код
 │   ├── models/            # Модели данных
 │   ├── managers/          # Менеджеры системы
@@ -40,6 +39,78 @@ levelDesigner/
 ├── docs/                  # Документация
 └── README.md              # Основная документация
 ```
+
+## Система разделителей панелей
+
+Редактор использует гибкую систему разделителей для настройки размеров панелей:
+
+### Вертикальный разделитель (между canvas и правой панелью)
+
+```javascript
+// Обработка mousedown для вертикального разделителя
+resizerX.addEventListener('mousedown', (e) => {
+    isResizingX = true;
+    isAnyResizing = true;
+    initialMouseX = e.clientX;
+    initialRightPanelWidth = rightPanel.offsetWidth;
+    // ... настройка курсора и блокировка событий
+});
+
+// Обработка mousemove с ограничениями
+if (isResizingX) {
+    const mouseDelta = e.clientX - initialMouseX;
+    const containerWidth = mainContainer.clientWidth;
+    const resizerWidth = 6;
+    
+    // Ограничение диапазона: 0 до (containerWidth - resizerWidth)
+    let newWidth = initialRightPanelWidth - mouseDelta;
+    if (newWidth < 0) newWidth = 0;
+    const maxWidth = Math.max(0, containerWidth - resizerWidth);
+    if (newWidth > maxWidth) newWidth = maxWidth;
+    
+    // Остановка обновлений при упоре в границы
+    if (lastAppliedRightWidth !== null && newWidth === lastAppliedRightWidth) {
+        return;
+    }
+    
+    rightPanel.style.width = newWidth + 'px';
+    rightPanel.style.flex = '0 0 auto';
+    lastAppliedRightWidth = newWidth;
+    
+    // Обновление canvas в реальном времени
+    if (window.editor && window.editor.canvasRenderer) {
+        window.editor.canvasRenderer.resizeCanvas();
+        window.editor.render();
+    }
+}
+```
+
+### Горизонтальный разделитель (между canvas и панелью ассетов)
+
+```javascript
+// Обработка mousemove для горизонтального разделителя
+if (isResizingAssets) {
+    const mouseDelta = e.clientY - initialMouseY;
+    const newHeight = initialAssetsPanelHeight - mouseDelta;
+    
+    assetsPanel.style.height = newHeight + 'px';
+    assetsPanel.style.flexShrink = '0';
+    
+    // Обновление canvas в реальном времени
+    if (window.editor && window.editor.canvasRenderer) {
+        window.editor.canvasRenderer.resizeCanvas();
+        window.editor.render();
+    }
+}
+```
+
+### Ключевые особенности системы разделителей
+
+1. **Гибкие ограничения** - панели могут сжиматься до нуля или расширяться до максимума
+2. **Остановка при упоре** - разделитель перестает обновлять панель при достижении границ
+3. **Обновление в реальном времени** - canvas обновляется во время перетаскивания
+4. **Сохранение настроек** - размеры панелей сохраняются в localStorage
+5. **Адаптивность** - панели корректно реагируют на изменение размера окна браузера
 
 ## Добавление новых функций
 

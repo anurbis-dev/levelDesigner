@@ -12,7 +12,10 @@ export class DetailsPanel {
 
     setupEventListeners() {
         // Subscribe to selection changes
-        this.stateManager.subscribe('selectedObjects', () => this.render());
+        this.stateManager.subscribe('selectedObjects', () => {
+            this.render();
+            this.updateTabTitle();
+        });
     }
 
     render() {
@@ -203,5 +206,21 @@ export class DetailsPanel {
         };
         walk(group);
         return result;
+    }
+
+    updateTabTitle() {
+        const detailsTab = document.getElementById('details-tab');
+        if (!detailsTab) return;
+        
+        const selectedObjects = this.getSelectedObjects();
+        const count = selectedObjects.length;
+        
+        if (count === 0) {
+            detailsTab.textContent = 'Asset';
+        } else if (count === 1) {
+            detailsTab.textContent = 'Asset';
+        } else {
+            detailsTab.textContent = 'Asset(s)';
+        }
     }
 }

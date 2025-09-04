@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Level Editor - Modular</title>
+    <title>2D Level Editor v1.0.0 - Modular</title>
     <!-- Подключаем Tailwind CSS для быстрой стилизации -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -37,20 +37,78 @@
             height: 6px;
             flex-shrink: 0;
         }
+        
+        /* Prevent global scrollbars from affecting layout width */
+        html, body {
+            overflow: hidden;
+        }
+        
+        /* Context menu styles */
+        .context-menu {
+            position: absolute;
+            background: #1F2937;
+            border: 1px solid #374151;
+            border-radius: 4px;
+            padding: 4px 0;
+            z-index: 1000;
+            min-width: 120px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        
+        .context-menu-item {
+            padding: 8px 12px;
+            color: #D1D5DB;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .context-menu-item:hover {
+            background: #374151;
+        }
+        
+        .context-menu-item:active {
+            background: #4B5563;
+        }
+        
+        .log-entry {
+            position: relative;
+            user-select: text;
+        }
+        
+        .log-entry:hover {
+            background: rgba(55, 65, 81, 0.3);
+        }
         /* Стили для холста (основной рабочей зоны) */
         #main-canvas {
             display: block;
             width: 100%;
             height: 100%;
             background-color: #4B5563; /* gray-600 */
+            object-fit: none; /* Prevent scaling */
+            image-rendering: pixelated; /* Crisp pixel art rendering */
         }
         /* Стили для табов */
         .tab, .tab-right {
             transition: background-color 0.2s;
+            position: relative;
         }
         .tab.active, .tab-right.active {
             background-color: #374151; /* gray-700 */
             border-bottom-color: transparent;
+        }
+        /* Стили для перетаскивания табов */
+        .tab-right.dragging, .tab.dragging {
+            opacity: 0.5;
+            z-index: 1000;
+        }
+        .tab-right.drag-over, .tab.drag-over {
+            border-left: 2px solid #3B82F6;
+        }
+        .tab-right.drag-over:last-child, .tab.drag-over:last-child {
+            border-right: 2px solid #3B82F6;
         }
         /* Стили для превью ассетов */
         .asset-thumbnail {
@@ -104,22 +162,27 @@
 
     <!-- 1. Основное меню сверху -->
     <header class="bg-gray-900 shadow-md flex-shrink-0">
-        <nav class="flex items-center space-x-4 p-2">
-            <div class="relative group" id="menu-level">
-                <button class="px-3 py-1 rounded hover:bg-gray-700 transition">Level</button>
-                <div class="absolute left-0 mt-1 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-20 hidden">
-                    <a href="#" id="new-level" class="block px-4 py-2 text-sm hover:bg-gray-700">New Level</a>
-                    <a href="#" id="open-level" class="block px-4 py-2 text-sm hover:bg-gray-700">Open Level...</a>
-                    <a href="#" id="save-level" class="block px-4 py-2 text-sm hover:bg-gray-700">Save Level</a>
-                    <a href="#" id="save-level-as" class="block px-4 py-2 text-sm hover:bg-gray-700">Save Level As...</a>
+        <nav class="flex items-center justify-between p-2">
+            <div class="flex items-center space-x-4">
+                <div class="relative group" id="menu-level">
+                    <button class="px-3 py-1 rounded hover:bg-gray-700 transition">Level</button>
+                    <div class="absolute left-0 mt-1 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-20 hidden">
+                        <a href="#" id="new-level" class="block px-4 py-2 text-sm hover:bg-gray-700">New Level</a>
+                        <a href="#" id="open-level" class="block px-4 py-2 text-sm hover:bg-gray-700">Open Level...</a>
+                        <a href="#" id="save-level" class="block px-4 py-2 text-sm hover:bg-gray-700">Save Level</a>
+                        <a href="#" id="save-level-as" class="block px-4 py-2 text-sm hover:bg-gray-700">Save Level As...</a>
+                    </div>
+                </div>
+                <div class="relative group" id="menu-settings">
+                    <button class="px-3 py-1 rounded hover:bg-gray-700 transition">Settings</button>
+                    <div class="absolute left-0 mt-1 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-20 hidden">
+                        <a href="#" id="assets-path" class="block px-4 py-2 text-sm hover:bg-gray-700">Assets Path...</a>
+                        <a href="#" id="editor-settings" class="block px-4 py-2 text-sm hover:bg-gray-700">Editor Settings...</a>
+                    </div>
                 </div>
             </div>
-            <div class="relative group" id="menu-settings">
-                <button class="px-3 py-1 rounded hover:bg-gray-700 transition">Settings</button>
-                <div class="absolute left-0 mt-1 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-20 hidden">
-                    <a href="#" id="assets-path" class="block px-4 py-2 text-sm hover:bg-gray-700">Assets Path...</a>
-                    <a href="#" id="editor-settings" class="block px-4 py-2 text-sm hover:bg-gray-700">Editor Settings...</a>
-                </div>
+            <div class="text-sm text-gray-400">
+                2D Level Editor v1.0.0
             </div>
         </nav>
     </header>
@@ -127,7 +190,7 @@
     <!-- Основной контейнер с рабочими зонами -->
     <div class="flex flex-grow min-h-0">
         <!-- 2. Main Frame (основная рабочая зона) -->
-        <main id="main-panel" class="flex-grow flex flex-col bg-gray-700 p-1">
+        <main id="main-panel" class="flex-1 flex flex-col bg-gray-700 p-1 min-w-0">
             <canvas id="main-canvas"></canvas>
         </main>
 
@@ -135,9 +198,9 @@
         <div id="resizer-x" class="resizer"></div>
 
         <!-- 4. Панель Details (справа) -->
-        <aside id="right-panel" class="w-80 bg-gray-900 flex flex-col flex-shrink-0">
+        <aside id="right-panel" class="bg-gray-900 flex flex-col" style="width: 320px; flex-shrink: 0; flex-grow: 0;">
             <div class="flex border-b border-gray-700 flex-shrink-0">
-                <button data-tab="details" class="tab-right flex-1 p-2 text-sm font-medium active">Details</button>
+                <button data-tab="details" class="tab-right flex-1 p-2 text-sm font-medium active" id="details-tab">Asset</button>
                 <button data-tab="level" class="tab-right flex-1 p-2 text-sm font-medium">Level</button>
                 <button data-tab="outliner" class="tab-right flex-1 p-2 text-sm font-medium">Outliner</button>
             </div>
@@ -156,8 +219,8 @@
         </aside>
     </div>
 
-    <!-- Разделитель для изменения высоты нижней панели -->
-    <div id="resizer-y" class="resizer-y"></div>
+    <!-- Разделитель для изменения высоты панели ассетов -->
+    <div id="resizer-assets" class="resizer-y"></div>
 
     <!-- 3. Assets Drawer (панель с ассетами) -->
     <footer id="assets-panel" class="h-64 bg-gray-900 flex-shrink-0 flex flex-col relative">
@@ -168,6 +231,23 @@
             <!-- Контейнер для превью ассетов будет генерироваться динамически -->
         </div>
     </footer>
+
+    <!-- Разделитель для изменения высоты консоли -->
+    <div id="resizer-console" class="resizer-y hidden"></div>
+
+    <!-- Console Panel (скрыта по умолчанию) -->
+    <div id="console-panel" class="hidden bg-gray-800 border-t border-gray-700 flex flex-col" style="height: 300px;">
+        <div id="console-output" class="flex-grow p-2 overflow-y-auto text-sm font-mono text-gray-300 bg-gray-800">
+            <!-- Console output will be displayed here -->
+        </div>
+        <div class="flex items-center p-2 border-t border-gray-700 bg-gray-900">
+            <span class="text-gray-400 mr-2">&gt;</span>
+            <input id="console-input" type="text" placeholder="Enter command..." 
+                   class="flex-grow bg-transparent text-gray-300 outline-none text-sm font-mono"
+                   style="color: #d1d5db;">
+            <button id="console-close" class="text-gray-400 hover:text-white text-lg ml-2">&times;</button>
+        </div>
+    </div>
 
     <!-- Логика приложения -->
     <script type="module">
@@ -204,6 +284,872 @@
             console.error('Error details:', error);
             alert('Failed to initialize level editor: ' + (error.message || error));
         });
+
+        // User Preferences Manager
+        class UserPreferencesManager {
+            constructor() {
+                this.prefsKey = 'levelEditor_userPrefs';
+                this.defaultPrefs = {
+                    rightPanelWidth: 320,
+                    consoleHeight: 300,
+                    assetsPanelHeight: 256,
+                    rightPanelTabOrder: ['details', 'level', 'outliner'],
+                    assetTabOrder: [],
+                    consoleVisible: false,
+                    canvasBackgroundColor: '#4B5563',
+                    gridSize: 32,
+                    showGrid: true,
+                    autoSave: true,
+                    autoSaveInterval: 30000,
+                    theme: 'dark',
+                    fontSize: 'sm',
+                    compactMode: false
+                };
+                this.preferences = this.loadPreferences();
+            }
+
+            loadPreferences() {
+                try {
+                    const stored = localStorage.getItem(this.prefsKey);
+                    if (stored) {
+                        const parsed = JSON.parse(stored);
+                        return { ...this.defaultPrefs, ...parsed };
+                    }
+                } catch (error) {
+                    console.warn('Failed to load user preferences:', error);
+                }
+                return { ...this.defaultPrefs };
+            }
+
+            savePreferences() {
+                try {
+                    localStorage.setItem(this.prefsKey, JSON.stringify(this.preferences));
+                    return true;
+                } catch (error) {
+                    console.error('Failed to save user preferences:', error);
+                    return false;
+                }
+            }
+
+            get(key) {
+                return this.preferences[key];
+            }
+
+            set(key, value) {
+                this.preferences[key] = value;
+                this.savePreferences();
+            }
+
+            update(updates) {
+                Object.assign(this.preferences, updates);
+                this.savePreferences();
+            }
+        }
+
+                    // Initialize preferences manager
+            const userPrefs = new UserPreferencesManager();
+
+            // Function to apply saved panel sizes (called only on startup)
+            function applySavedPanelSizes() {
+                console.log('Applying saved panel sizes...');
+                const savedAssetsPanelHeight = userPrefs.get('assetsPanelHeight');
+                const savedConsoleHeight = userPrefs.get('consoleHeight');
+                const savedConsoleVisible = userPrefs.get('consoleVisible');
+                const savedRightPanelWidth = userPrefs.get('rightPanelWidth');
+                
+                console.log('Saved sizes:', {
+                    savedAssetsPanelHeight,
+                    savedConsoleHeight,
+                    savedConsoleVisible,
+                    savedRightPanelWidth
+                });
+                
+                // Get main elements
+                const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
+                const mainPanel = document.getElementById('main-panel');
+                const rightPanel = document.getElementById('right-panel');
+                const assetsPanel = document.getElementById('assets-panel');
+                const consolePanel = document.getElementById('console-panel');
+                
+                // Update right panel width (simple like assets panel)
+                if (savedRightPanelWidth) {
+                    rightPanel.style.width = savedRightPanelWidth + 'px';
+                    rightPanel.style.flexShrink = '0';
+                    rightPanel.style.flexGrow = '0';
+                    console.log('Right panel width set to:', savedRightPanelWidth);
+                }
+                
+                // Update assets panel height
+                if (savedAssetsPanelHeight) {
+                    const maxHeight = window.innerHeight * 0.6;
+                    const minHeight = 100;
+                    const assetsHeight = Math.max(minHeight, Math.min(maxHeight, savedAssetsPanelHeight));
+                    assetsPanel.style.height = assetsHeight + 'px';
+                    assetsPanel.style.flexShrink = '0';
+                    console.log('Assets panel height set to:', assetsHeight);
+                }
+                
+                // Update console height if visible
+                if (savedConsoleVisible && !consolePanel.classList.contains('hidden')) {
+                    const maxHeight = window.innerHeight * 0.6;
+                    const minHeight = 100;
+                    const consoleHeight = Math.max(minHeight, Math.min(maxHeight, savedConsoleHeight));
+                    consolePanel.style.height = consoleHeight + 'px';
+                    consolePanel.style.flexShrink = '0';
+                    console.log('Console height set to:', consoleHeight);
+                }
+                
+                // Update canvas only after applying saved sizes
+                if (window.editor && window.editor.canvasRenderer) {
+                    console.log('Updating canvas after applying saved panel sizes');
+                    window.editor.canvasRenderer.resizeCanvas();
+                    window.editor.render();
+                }
+                
+                // Additional render after applying saved sizes
+                setTimeout(() => {
+                    if (window.editor && window.editor.canvasRenderer) {
+                        console.log('Final render after applying saved panel sizes');
+                        window.editor.canvasRenderer.resizeCanvas();
+                        window.editor.render();
+                    }
+                }, 100);
+            }
+            
+            // Function to force complete layout update
+            function forceLayoutUpdate() {
+                console.log('Forcing complete layout update...');
+
+                // Get main elements
+                const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
+                const mainPanel = document.getElementById('main-panel');
+                const rightPanel = document.getElementById('right-panel');
+                const assetsPanel = document.getElementById('assets-panel');
+                const consolePanel = document.getElementById('console-panel');
+
+                // Only reset console styles when hidden - preserve other panel sizes
+                if (consolePanel.classList.contains('hidden')) {
+                    consolePanel.style.height = '';
+                    consolePanel.style.flexShrink = '';
+                    consolePanel.style.display = '';
+                    console.log('Console styles reset (hidden)');
+                }
+
+                // Minimal reflow trigger - only for main container to avoid affecting panel positions
+                if (mainContainer) {
+                    // Use getComputedStyle instead of offsetHeight to avoid layout changes
+                    const computedStyle = getComputedStyle(mainContainer);
+                    // This triggers a minimal reflow without changing layout
+                    const _ = computedStyle.height;
+                }
+
+                console.log('Layout forced, updating canvas...');
+
+                // Update canvas and render immediately
+                if (window.editor && window.editor.canvasRenderer) {
+                    console.log('Resizing canvas and rendering...');
+                    window.editor.canvasRenderer.resizeCanvas();
+                    window.editor.render();
+                }
+
+                console.log('Complete layout update finished');
+            }
+            
+            // Function to update canvas layout (called when panels show/hide)
+            function updateCanvasLayout() {
+                console.log('Updating canvas layout...');
+
+                // Only update canvas without forcing full layout to avoid panel drift
+                if (window.editor && window.editor.canvasRenderer) {
+                    console.log('Resizing canvas and rendering...');
+                    window.editor.canvasRenderer.resizeCanvas();
+                    window.editor.render();
+                }
+
+                console.log('Canvas layout update complete');
+            }
+
+        // Panel resizing functionality
+        function setupPanelResizing() {
+            const resizerX = document.getElementById('resizer-x');
+            const resizerAssets = document.getElementById('resizer-assets');
+            const resizerConsole = document.getElementById('resizer-console');
+            const mainPanel = document.getElementById('main-panel');
+            const rightPanel = document.getElementById('right-panel');
+            const assetsPanel = document.getElementById('assets-panel');
+            const consolePanel = document.getElementById('console-panel');
+            const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
+
+            let isResizingX = false;
+            let isResizingAssets = false;
+            let isResizingConsole = false;
+            let isAnyResizing = false;
+            
+            // Variables to track initial positions for resizing
+            let initialMouseY = 0;
+            let initialMouseX = 0;
+            let initialAssetsPanelHeight = 0;
+            let initialRightPanelWidth = 0;
+            let initialConsolePanelHeight = 0;
+            let lastAppliedRightWidth = null; // Track last width to detect boundary stall
+
+            // Note: Panel sizes are now applied in applySavedPanelSizes() function
+            // to avoid conflicts and ensure proper timing
+
+            // Horizontal resizer (between main panel and right panel)
+            resizerX.addEventListener('mousedown', (e) => {
+                isResizingX = true;
+                isAnyResizing = true;
+                initialMouseX = e.clientX;
+                initialRightPanelWidth = rightPanel.offsetWidth;
+                document.body.style.cursor = 'col-resize';
+                document.body.style.userSelect = 'none';
+                document.body.style.pointerEvents = 'none';
+                e.preventDefault();
+                e.stopPropagation();
+            });
+
+            // Assets panel resizer (between main area and assets panel)
+            resizerAssets.addEventListener('mousedown', (e) => {
+                isResizingAssets = true;
+                isAnyResizing = true;
+                initialMouseY = e.clientY;
+                initialAssetsPanelHeight = assetsPanel.offsetHeight;
+                document.body.style.cursor = 'row-resize';
+                document.body.style.userSelect = 'none';
+                document.body.style.pointerEvents = 'none';
+                
+                console.log('Assets resizer mousedown:', JSON.stringify({
+                    initialMouseY: initialMouseY,
+                    initialHeight: initialAssetsPanelHeight
+                }, null, 2));
+                
+                e.preventDefault();
+                e.stopPropagation();
+            });
+
+            // Console resizer (between assets panel and console)
+            resizerConsole.addEventListener('mousedown', (e) => {
+                isResizingConsole = true;
+                isAnyResizing = true;
+                initialMouseY = e.clientY; // Use Y for vertical resizer
+                initialConsolePanelHeight = consolePanel.offsetHeight;
+                document.body.style.cursor = 'row-resize';
+                document.body.style.userSelect = 'none';
+                document.body.style.pointerEvents = 'none';
+                e.preventDefault();
+                e.stopPropagation();
+            });
+
+            // Mouse move handler
+            document.addEventListener('mousemove', (e) => {
+                if (!isAnyResizing) return;
+                
+                e.preventDefault();
+                e.stopPropagation();
+                
+                if (isResizingX) {
+                    // Use same logic as assets resizer: mouse movement from initial position
+                    const mouseDelta = e.clientX - initialMouseX;
+                    const containerWidth = mainContainer.clientWidth;
+                    const resizerWidth = 6;
+                    // Right panel can range from 0 to (containerWidth - resizerWidth)
+                    let newWidth = initialRightPanelWidth - mouseDelta;
+                    if (newWidth < 0) newWidth = 0;
+                    const maxWidth = Math.max(0, containerWidth - resizerWidth);
+                    if (newWidth > maxWidth) newWidth = maxWidth;
+
+                    // If width didn't change compared to last applied (stuck at boundary), skip work
+                    if (lastAppliedRightWidth !== null && newWidth === lastAppliedRightWidth) {
+                        return;
+                    }
+                    
+                    console.log('Right resizer debug:', JSON.stringify({
+                        mouseX: e.clientX,
+                        initialMouseX: initialMouseX,
+                        mouseDelta: mouseDelta,
+                        initialWidth: initialRightPanelWidth,
+                        calculatedWidth: newWidth,
+                        appliedWidth: newWidth
+                    }));
+                    
+                    // Apply directly
+                    rightPanel.style.width = newWidth + 'px';
+                    rightPanel.style.flexShrink = '0';
+                    rightPanel.style.flexGrow = '0';
+
+                    lastAppliedRightWidth = newWidth;
+
+                    // Save preference
+                    userPrefs.set('rightPanelWidth', newWidth);
+
+                    // Update canvas
+                    if (window.editor && window.editor.canvasRenderer) {
+                        window.editor.canvasRenderer.resizeCanvas();
+                        window.editor.render();
+                    }
+                }
+                
+                if (isResizingAssets) {
+                    // Calculate height based on mouse movement from initial position
+                    const mouseDelta = e.clientY - initialMouseY;
+                    const newHeight = initialAssetsPanelHeight - mouseDelta; // Inverted direction
+                    
+                    console.log('Assets resizer debug:', JSON.stringify({
+                        mouseY: e.clientY,
+                        initialMouseY: initialMouseY,
+                        mouseDelta: mouseDelta,
+                        initialHeight: initialAssetsPanelHeight,
+                        calculatedHeight: newHeight,
+                        appliedHeight: newHeight,
+                        windowHeight: window.innerHeight
+                    }));
+                    
+                    // Apply directly without any limits
+                    assetsPanel.style.height = newHeight + 'px';
+                    assetsPanel.style.flexShrink = '0';
+
+                    // Save preference
+                    userPrefs.set('assetsPanelHeight', newHeight);
+
+                    // Update canvas and render
+                    if (window.editor && window.editor.canvasRenderer) {
+                        window.editor.canvasRenderer.resizeCanvas();
+                        window.editor.render();
+                    }
+                }
+                
+                if (isResizingConsole) {
+                    // Use same logic as assets resizer: mouse movement from initial position
+                    const mouseDelta = e.clientY - initialMouseY;
+                    const newHeight = initialConsolePanelHeight - mouseDelta; // Inverted direction (like assets)
+                    
+                    console.log('Console resizer debug:', JSON.stringify({
+                        mouseY: e.clientY,
+                        initialMouseY: initialMouseY,
+                        mouseDelta: mouseDelta,
+                        initialHeight: initialConsolePanelHeight,
+                        calculatedHeight: newHeight,
+                        appliedHeight: newHeight
+                    }));
+                    
+                    // Apply directly without any limits (like assets)
+                    consolePanel.style.height = newHeight + 'px';
+                    consolePanel.style.flexShrink = '0';
+
+                    // Save preference
+                    userPrefs.set('consoleHeight', newHeight);
+
+                    // Update canvas and render
+                    if (window.editor && window.editor.canvasRenderer) {
+                        window.editor.canvasRenderer.resizeCanvas();
+                        window.editor.render();
+                    }
+                }
+            });
+
+            // Mouse up handler
+            document.addEventListener('mouseup', (e) => {
+                if (isAnyResizing) {
+                    isResizingX = false;
+                    isResizingAssets = false;
+                    isResizingConsole = false;
+                    isAnyResizing = false;
+                    lastAppliedRightWidth = null;
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                    document.body.style.pointerEvents = '';
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            });
+
+            // Prevent text selection during resize
+            document.addEventListener('selectstart', (e) => {
+                if (isAnyResizing) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            });
+
+            // Prevent context menu during resize
+            document.addEventListener('contextmenu', (e) => {
+                if (isAnyResizing) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            });
+
+            // Prevent drag during resize
+            document.addEventListener('dragstart', (e) => {
+                if (isAnyResizing) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            });
+
+            // Prevent focus changes during resize
+            document.addEventListener('focusin', (e) => {
+                if (isAnyResizing) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            });
+
+            // Handle window resize to maintain panel proportions
+            window.addEventListener('resize', () => {
+                // Get saved panel sizes
+                const savedRightPanelWidth = userPrefs.get('rightPanelWidth');
+                const savedAssetsPanelHeight = userPrefs.get('assetsPanelHeight');
+                const savedConsoleHeight = userPrefs.get('consoleHeight');
+
+                // Restore right panel width (simple like assets panel)
+                if (savedRightPanelWidth) {
+                    rightPanel.style.width = savedRightPanelWidth + 'px';
+                    rightPanel.style.flexShrink = '0';
+                    rightPanel.style.flexGrow = '0';
+                    console.log('Window resize: Right panel restored to:', savedRightPanelWidth);
+                }
+
+                // Restore assets panel height if saved
+                if (savedAssetsPanelHeight) {
+                    assetsPanel.style.height = savedAssetsPanelHeight + 'px';
+                    assetsPanel.style.flexShrink = '0';
+                }
+
+                // Update canvas only (don't call full layout update to avoid drift)
+                if (window.editor && window.editor.canvasRenderer) {
+                    console.log('Resizing canvas after window resize...');
+                    window.editor.canvasRenderer.resizeCanvas();
+                    window.editor.render();
+                }
+            });
+        }
+
+        // Initialize panel resizing
+        setupPanelResizing();
+
+        // Tab dragging functionality
+        function setupTabDragging() {
+            const tabContainer = document.querySelector('#right-panel .flex.border-b.border-gray-700');
+            if (!tabContainer) return;
+
+            let draggedTab = null;
+            let draggedIndex = -1;
+
+            // Make tabs draggable
+            tabContainer.addEventListener('mousedown', (e) => {
+                const tab = e.target.closest('.tab-right');
+                if (!tab) return;
+
+                draggedTab = tab;
+                draggedIndex = Array.from(tabContainer.children).indexOf(tab);
+                
+                // Add dragging class
+                tab.classList.add('dragging');
+                
+                // Prevent default to avoid text selection
+                e.preventDefault();
+            });
+
+            // Handle mouse move for drag over effects
+            tabContainer.addEventListener('mousemove', (e) => {
+                if (!draggedTab) return;
+
+                const tab = e.target.closest('.tab-right');
+                if (!tab || tab === draggedTab) {
+                    // Remove drag-over from all tabs
+                    tabContainer.querySelectorAll('.tab-right').forEach(t => t.classList.remove('drag-over'));
+                    return;
+                }
+
+                const targetIndex = Array.from(tabContainer.children).indexOf(tab);
+                
+                // Remove drag-over from all tabs
+                tabContainer.querySelectorAll('.tab-right').forEach(t => t.classList.remove('drag-over'));
+                
+                // Add drag-over to target tab
+                tab.classList.add('drag-over');
+            });
+
+            // Handle mouse up to complete drag
+            document.addEventListener('mouseup', (e) => {
+                if (!draggedTab) return;
+
+                const tabContainer = draggedTab.parentElement;
+                const targetTab = e.target.closest('.tab-right');
+                
+                if (targetTab && targetTab !== draggedTab) {
+                    const targetIndex = Array.from(tabContainer.children).indexOf(targetTab);
+                    const draggedIndex = Array.from(tabContainer.children).indexOf(draggedTab);
+                    
+                    // Move the tab
+                    if (draggedIndex < targetIndex) {
+                        tabContainer.insertBefore(draggedTab, targetTab.nextSibling);
+                    } else {
+                        tabContainer.insertBefore(draggedTab, targetTab);
+                    }
+                }
+
+                // Clean up
+                tabContainer.querySelectorAll('.tab-right').forEach(t => {
+                    t.classList.remove('dragging', 'drag-over');
+                });
+                
+                draggedTab = null;
+                draggedIndex = -1;
+            });
+
+            // Prevent text selection during drag
+            tabContainer.addEventListener('selectstart', (e) => {
+                if (draggedTab) {
+                    e.preventDefault();
+                }
+            });
+        }
+
+        // Initialize tab dragging
+        setupTabDragging();
+
+        // Console functionality
+        function setupConsole() {
+            const consolePanel = document.getElementById('console-panel');
+            const consoleOutput = document.getElementById('console-output');
+            const consoleInput = document.getElementById('console-input');
+            const consoleClose = document.getElementById('console-close');
+            
+            let isConsoleVisible = false;
+
+            // Toggle console with backtick key
+            document.addEventListener('keydown', (e) => {
+                if (e.key === '`' && !e.ctrlKey && !e.altKey && !e.shiftKey) {
+                    e.preventDefault();
+                    toggleConsole();
+                }
+            });
+
+            // Close console button
+            consoleClose.addEventListener('click', () => {
+                hideConsole();
+            });
+
+            // Console input handling
+            consoleInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    const command = consoleInput.value.trim();
+                    if (command) {
+                        executeCommand(command);
+                        consoleInput.value = '';
+                    }
+                } else if (e.key === 'Escape') {
+                    hideConsole();
+                }
+            });
+
+            function toggleConsole() {
+                if (isConsoleVisible) {
+                    hideConsole();
+                } else {
+                    showConsole();
+                }
+            }
+
+            function showConsole() {
+                console.log('Showing console...');
+                consolePanel.classList.remove('hidden');
+                document.getElementById('resizer-console').classList.remove('hidden');
+                consoleInput.focus();
+                isConsoleVisible = true;
+                
+                // Save preference
+                userPrefs.set('consoleVisible', true);
+                
+                // Apply saved console height if available
+                const savedConsoleHeight = userPrefs.get('consoleHeight');
+                if (savedConsoleHeight) {
+                    const maxHeight = window.innerHeight * 0.6;
+                    const minHeight = 100;
+                    const consoleHeight = Math.max(minHeight, Math.min(maxHeight, savedConsoleHeight));
+                    consolePanel.style.height = consoleHeight + 'px';
+                    consolePanel.style.flexShrink = '0';
+                    console.log('Console height restored to:', consoleHeight);
+                }
+                
+                // Update canvas only (no layout changes to avoid panel drift)
+                if (window.editor && window.editor.canvasRenderer) {
+                    window.editor.canvasRenderer.resizeCanvas();
+                    window.editor.render();
+                }
+                
+                console.log('Console shown, layout updated');
+            }
+
+            function hideConsole() {
+                console.log('Hiding console...');
+                consolePanel.classList.add('hidden');
+                document.getElementById('resizer-console').classList.add('hidden');
+                isConsoleVisible = false;
+                
+                // Save preference
+                userPrefs.set('consoleVisible', false);
+                
+                // Update canvas only (no layout changes to avoid panel drift)
+                if (window.editor && window.editor.canvasRenderer) {
+                    window.editor.canvasRenderer.resizeCanvas();
+                    window.editor.render();
+                }
+                
+                console.log('Console hidden, layout updated');
+            }
+
+            function logToConsole(message, type = 'log') {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = document.createElement('div');
+                logEntry.className = `mb-1 log-entry ${getLogTypeClass(type)}`;
+                logEntry.innerHTML = `<span class="text-gray-500">[${timestamp}]</span> ${message}`;
+
+                // Add context menu functionality (use passive listener to avoid reflow)
+                logEntry.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    showContextMenu(e, message, timestamp);
+                }, { passive: true });
+
+                consoleOutput.appendChild(logEntry);
+
+                // Batch scroll update to minimize reflow
+                requestAnimationFrame(() => {
+                    consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                });
+            }
+
+            function getLogTypeClass(type) {
+                switch (type) {
+                    case 'error': return 'text-red-400';
+                    case 'warn': return 'text-yellow-400';
+                    case 'info': return 'text-blue-400';
+                    default: return 'text-gray-300';
+                }
+            }
+
+            // Context menu functionality
+            function showContextMenu(event, message, timestamp) {
+                // Remove existing context menu
+                const existingMenu = document.querySelector('.context-menu');
+                if (existingMenu) {
+                    existingMenu.remove();
+                }
+
+                // Create context menu
+                const contextMenu = document.createElement('div');
+                contextMenu.className = 'context-menu';
+                contextMenu.style.left = event.pageX + 'px';
+                contextMenu.style.top = event.pageY + 'px';
+
+                // Copy message option
+                const copyMessageItem = document.createElement('div');
+                copyMessageItem.className = 'context-menu-item';
+                copyMessageItem.innerHTML = '📋 Copy message';
+                copyMessageItem.addEventListener('click', () => {
+                    copyToClipboard(message);
+                    contextMenu.remove();
+                });
+
+                // Copy with timestamp option
+                const copyWithTimestampItem = document.createElement('div');
+                copyWithTimestampItem.className = 'context-menu-item';
+                copyWithTimestampItem.innerHTML = '🕒 Copy with timestamp';
+                copyWithTimestampItem.addEventListener('click', () => {
+                    copyToClipboard(`[${timestamp}] ${message}`);
+                    contextMenu.remove();
+                });
+
+                // Copy timestamp only option
+                const copyTimestampItem = document.createElement('div');
+                copyTimestampItem.className = 'context-menu-item';
+                copyTimestampItem.innerHTML = '⏰ Copy timestamp';
+                copyTimestampItem.addEventListener('click', () => {
+                    copyToClipboard(timestamp);
+                    contextMenu.remove();
+                });
+
+                // Add items to menu
+                contextMenu.appendChild(copyMessageItem);
+                contextMenu.appendChild(copyWithTimestampItem);
+                contextMenu.appendChild(copyTimestampItem);
+
+                // Add to document (use requestAnimationFrame to batch DOM operations)
+                requestAnimationFrame(() => {
+                    document.body.appendChild(contextMenu);
+                });
+
+                // Close menu when clicking outside
+                const closeMenu = (e) => {
+                    if (!contextMenu.contains(e.target)) {
+                        contextMenu.remove();
+                        document.removeEventListener('click', closeMenu);
+                    }
+                };
+
+                // Close menu after a short delay to allow click events to register
+                setTimeout(() => {
+                    document.addEventListener('click', closeMenu, { passive: true });
+                }, 100);
+            }
+
+            function copyToClipboard(text) {
+                if (navigator.clipboard && window.isSecureContext) {
+                    // Use modern clipboard API
+                    navigator.clipboard.writeText(text).then(() => {
+                        logToConsole(`Copied to clipboard: ${text}`, 'info');
+                    }).catch(err => {
+                        logToConsole(`Failed to copy: ${err.message}`, 'error');
+                    });
+                } else {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-999999px';
+                    textArea.style.top = '-999999px';
+                    document.body.appendChild(textArea);
+                    textArea.focus();
+                    textArea.select();
+                    
+                    try {
+                        document.execCommand('copy');
+                        logToConsole(`Copied to clipboard: ${text}`, 'info');
+                    } catch (err) {
+                        logToConsole(`Failed to copy: ${err.message}`, 'error');
+                    }
+                    
+                    document.body.removeChild(textArea);
+                }
+            }
+
+            function executeCommand(command) {
+                logToConsole(`> ${command}`, 'info');
+                
+                try {
+                    // Basic command parsing
+                    const parts = command.split(' ');
+                    const cmd = parts[0].toLowerCase();
+                    
+                    switch (cmd) {
+                        case 'help':
+                            logToConsole('Available commands:', 'info');
+                            logToConsole('  help - Show this help message', 'info');
+                            logToConsole('  clear - Clear console output', 'info');
+                            logToConsole('  version - Show editor version', 'info');
+                            logToConsole('  objects - Show object count', 'info');
+                            logToConsole('  level - Show level info', 'info');
+                            break;
+                            
+                        case 'clear':
+                            consoleOutput.innerHTML = '';
+                            break;
+                            
+                        case 'version':
+                            logToConsole('2D Level Editor v1.0.0', 'info');
+                            break;
+                            
+                        case 'objects':
+                            if (window.editor && window.editor.getLevel) {
+                                const level = window.editor.getLevel();
+                                const count = level.objects.length;
+                                logToConsole(`Total objects: ${count}`, 'info');
+                            } else {
+                                logToConsole('Editor not available', 'error');
+                            }
+                            break;
+                            
+                        case 'level':
+                            if (window.editor && window.editor.getLevel) {
+                                const level = window.editor.getLevel();
+                                logToConsole(`Level: ${level.meta.name || 'Unnamed'}`, 'info');
+                                logToConsole(`Objects: ${level.objects.length}`, 'info');
+                            } else {
+                                logToConsole('Editor not available', 'error');
+                            }
+                            break;
+                            
+                        default:
+                            logToConsole(`Unknown command: ${cmd}. Type 'help' for available commands.`, 'warn');
+                    }
+                } catch (error) {
+                    logToConsole(`Error: ${error.message}`, 'error');
+                }
+            }
+
+            // Override console methods to also log to our console
+            const originalLog = console.log;
+            const originalError = console.error;
+            const originalWarn = console.warn;
+
+            console.log = function(...args) {
+                originalLog.apply(console, args);
+                logToConsole(args.join(' '), 'log');
+            };
+
+            console.error = function(...args) {
+                originalError.apply(console, args);
+                logToConsole(args.join(' '), 'error');
+            };
+
+            console.warn = function(...args) {
+                originalWarn.apply(console, args);
+                logToConsole(args.join(' '), 'warn');
+            };
+
+            // Make editor available globally for console commands
+            window.editor = editor;
+
+            // Load saved console state
+            const savedConsoleVisible = userPrefs.get('consoleVisible');
+            
+            if (savedConsoleVisible) {
+                showConsole();
+            } else {
+                // Apply saved panel sizes even if console is hidden
+                applySavedPanelSizes();
+            }
+
+            // Initial console message
+            logToConsole('2D Level Editor v1.0.0 - Console ready', 'info');
+            logToConsole('Press ` to toggle console, type "help" for commands', 'info');
+        }
+
+        // Initialize console
+        setupConsole();
+        
+        // Update canvas after complete initialization
+        const updateCanvasOnStartup = () => {
+            console.log('Updating canvas on startup...');
+            
+            // Update canvas only (no layout changes to avoid panel drift)
+            if (window.editor && window.editor.canvasRenderer) {
+                window.editor.canvasRenderer.resizeCanvas();
+                window.editor.render();
+            }
+            
+            // Additional update after a longer delay to ensure everything is settled
+            setTimeout(() => {
+                console.log('Final canvas update on startup...');
+                if (window.editor && window.editor.canvasRenderer) {
+                    window.editor.canvasRenderer.resizeCanvas();
+                    window.editor.render();
+                }
+            }, 500);
+        };
+        
+        // Wait for DOM to be fully ready and styles applied
+        if (document.readyState === 'complete') {
+            setTimeout(updateCanvasOnStartup, 100);
+        } else {
+            window.addEventListener('load', () => {
+                setTimeout(updateCanvasOnStartup, 100);
+            });
+        }
     </script>
 </body>
 </html>
+

@@ -13,8 +13,17 @@ export class CanvasRenderer {
      */
     resizeCanvas() {
         const container = this.canvas.parentElement;
-        this.canvas.width = container.clientWidth;
-        this.canvas.height = container.clientHeight;
+        const rect = container.getBoundingClientRect();
+        
+        // Set canvas size to container size
+        this.canvas.width = rect.width;
+        this.canvas.height = rect.height;
+        
+        // Ensure canvas fills the container without scaling
+        this.canvas.style.width = rect.width + 'px';
+        this.canvas.style.height = rect.height + 'px';
+        this.canvas.style.display = 'block';
+        this.canvas.style.objectFit = 'none'; // Prevent scaling
     }
 
     /**

@@ -55,10 +55,14 @@ export class AssetPanel {
                 this.stateManager.get('activeAssetTabs').has(category) ? 'active' : ''
             }`;
             tabButton.textContent = category;
+            tabButton.dataset.category = category;
             
             tabButton.addEventListener('click', (e) => this.handleTabClick(e, category));
             this.tabsContainer.appendChild(tabButton);
         });
+        
+        // Setup tab dragging after rendering
+        this.setupTabDragging();
     }
 
     renderPreviews() {
@@ -295,5 +299,82 @@ export class AssetPanel {
      */
     removeDropTarget() {
         this.container.classList.remove('drop-target');
+    }
+
+    /**
+     * Setup tab dragging functionality
+     */
+    setupTabDragging() {
+        let draggedTab = null;
+        let draggedIndex = -1;
+
+        // Make tabs draggable
+        this.tabsContainer.addEventListener('mousedown', (e) => {
+            const tab = e.target.closest('.tab');
+            if (!tab) return;
+
+            draggedTab = tab;
+            draggedIndex = Array.from(this.tabsContainer.children).indexOf(tab);
+            
+            // Add dragging class
+            tab.classList.add('dragging');
+            
+            // Prevent default to avoid text selection
+            e.preventDefault();
+        });
+
+        // Handle mouse move for drag over effects
+        this.tabsContainer.addEventListener('mousemove', (e) => {
+            if (!draggedTab) return;
+
+            const tab = e.target.closest('.tab');
+            if (!tab || tab === draggedTab) {
+                // Remove drag-over from all tabs
+                this.tabsContainer.querySelectorAll('.tab').forEach(t => t.classList.remove('drag-over'));
+                return;
+            }
+
+            const targetIndex = Array.from(this.tabsContainer.children).indexOf(tab);
+            
+            // Remove drag-over from all tabs
+            this.tabsContainer.querySelectorAll('.tab').forEach(t => t.classList.remove('drag-over'));
+            
+            // Add drag-over to target tab
+            tab.classList.add('drag-over');
+        });
+
+        // Handle mouse up to complete drag
+        document.addEventListener('mouseup', (e) => {
+            if (!draggedTab) return;
+
+            const targetTab = e.target.closest('.tab');
+            
+            if (targetTab && targetTab !== draggedTab) {
+                const targetIndex = Array.from(this.tabsContainer.children).indexOf(targetTab);
+                const draggedIndex = Array.from(this.tabsContainer.children).indexOf(draggedTab);
+                
+                // Move the tab
+                if (draggedIndex < targetIndex) {
+                    this.tabsContainer.insertBefore(draggedTab, targetTab.nextSibling);
+                } else {
+                    this.tabsContainer.insertBefore(draggedTab, targetTab);
+                }
+            }
+
+            // Clean up
+            this.tabsContainer.querySelectorAll('.tab').forEach(t => {
+                t.classList.remove('dragging', 'drag-over');
+            });
+            
+            draggedTab = null;
+            draggedIndex = -1;
+        });
+
+        // Prevent text selection during drag
+        this.tabsContainer.addEventListener('selectstart', (e) => {
+            if (draggedTab) {
+                e.preventDefault();
+            }
+        });
     }
 }
