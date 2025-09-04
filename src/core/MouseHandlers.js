@@ -76,8 +76,8 @@ export class MouseHandlers {
             // Update marquee
             this.updateMarquee(worldPos);
         } else if (this.editor.stateManager.get('duplicate.isActive')) {
-            // Update duplicate objects position
-            this.updatePlacingObjectsPosition(worldPos);
+            // Update duplicate objects position via DuplicateOperations
+            this.editor.duplicateOperations.updatePreview(worldPos);
         }
 
         // Freeze group frame while Alt is pressed (for dragging objects out)
@@ -566,50 +566,6 @@ export class MouseHandlers {
      */
     finishPlacingObjects(worldPos) {
         const mouse = this.editor.stateManager.get('mouse');
-
-        const duplicate = this.editor.stateManager.get('duplicate');
-        if (!duplicate.isActive || !duplicate.objects || duplicate.objects.length === 0) return;
-
-        this.editor.historyManager.saveState(this.editor.level.objects);
-
-        const groupEditMode = this.editor.stateManager.get('groupEditMode');
-        const newIds = new Set();
-
-        duplicate.objects.forEach((obj, index) => {
-           // Use saved offset if available, otherwise use grid layout
-           const offsetX = obj._offsetX ?? (index % 5) * 20;
-           const offsetY = obj._offsetY ?? Math.floor(index / 5) * 20;
-           
-           const newObj = this.editor.deepClone(obj);
-           this.editor.reassignIdsDeep(newObj);
-           newObj.x = worldPos.x + offsetX;
-           newObj.y = worldPos.y + offsetY;
-
-            // Check if we're in group edit mode and the placement point is inside the group bounds
-            if (groupEditMode && groupEditMode.isActive && groupEditMode.group && this.editor.objectOperations.isPointInGroupBounds(newObj.x, newObj.y, groupEditMode)) {
-                // Convert to relative coordinates using group's WORLD position
-                const groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
-                newObj.x -= groupPos.x;
-                newObj.y -= groupPos.y;
-                groupEditMode.group.children.push(newObj);
-            } else {
-                // Add to main level with world coordinates
-                this.editor.level.addObject(newObj);
-            }
-
-            newIds.add(newObj.id);
-        });
-
-                this.editor.stateManager.set('selectedObjects', newIds);
-       this.editor.stateManager.update({
-           'mouse.isPlacingObjects': false,
-           'mouse.placingObjects': [],
-           'duplicate.isActive': false,
-           'duplicate.objects': [],
-           'duplicate.basePosition': { x: 0, y: 0 }
-       });
-
-                 this.editor.updateAllPanels();
-        this.editor.render();
+        this.editor.duplicateOperations.confirmPlacement(worldPos);
     }
 }

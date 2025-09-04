@@ -17,6 +17,7 @@ import { MouseHandlers } from './MouseHandlers.js';
 import { ObjectOperations } from './ObjectOperations.js';
 import { GroupOperations } from './GroupOperations.js';
 import { RenderOperations } from './RenderOperations.js';
+import { DuplicateOperations } from './DuplicateOperations.js';
 
 /**
  * Main Level Editor class - Refactored version
@@ -49,6 +50,7 @@ export class LevelEditor {
         this.objectOperations = new ObjectOperations(this);
         this.groupOperations = new GroupOperations(this);
         this.renderOperations = new RenderOperations(this);
+        this.duplicateOperations = new DuplicateOperations(this);
         
         // Store reference to duplicate render utils
         this.duplicateRenderUtils = duplicateRenderUtils;

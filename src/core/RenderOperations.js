@@ -54,18 +54,7 @@ export class RenderOperations {
         // Draw group edit mode frame
         this.drawGroupEditFrame();
         
-        // Draw placing objects (duplicates)
-        const duplicate = this.editor.stateManager.get('duplicate');
-        if (duplicate.isActive && duplicate.objects.length > 0) {
-            this.editor.duplicateRenderUtils.drawPlacingObjects(this.editor.canvasRenderer, duplicate.objects, camera);
-            // Draw outline for groups in placing preview
-            duplicate.objects.forEach(obj => {
-                if (obj.type === 'group') {
-                    const bounds = this.editor.objectOperations.getObjectWorldBounds(obj);
-                    this.drawSelectionRect(bounds, true, camera);
-                }
-            });
-        }
+        // (moved) duplicate preview drawing happens after restoreCamera()
         
         // Draw marquee
         if (mouse.marqueeRect) {
@@ -73,6 +62,30 @@ export class RenderOperations {
         }
         
         this.editor.canvasRenderer.restoreCamera();
+
+        // Draw placing objects (duplicates) after camera is restored (screen space)
+        const duplicate = this.editor.stateManager.get('duplicate');
+        if (duplicate && duplicate.isActive && Array.isArray(duplicate.objects) && duplicate.objects.length > 0) {
+            // Log only once per duplicate session
+            if (!this._lastRenderState || this._lastRenderState !== 'drawing') {
+                console.log('RENDER: Drawing duplicate objects:', duplicate.objects.length);
+                console.log('RENDER: Camera position:', { x: camera.x, y: camera.y, zoom: camera.zoom });
+                this._lastRenderState = 'drawing';
+            }
+            this.editor.duplicateRenderUtils.drawPlacingObjects(this.editor.canvasRenderer, duplicate.objects, camera);
+            // Note: selection outlines for groups are skipped here to avoid mixing spaces
+        } else if (duplicate) {
+            // Log state change only when it changes
+            const currentState = `${duplicate.isActive}_${duplicate.objects?.length || 0}`;
+            if (!this._lastRenderState || this._lastRenderState !== currentState) {
+                console.log('RENDER: Duplicate state changed:', {
+                    isActive: duplicate.isActive,
+                    objectsLength: duplicate.objects?.length || 0,
+                    objectsType: Array.isArray(duplicate.objects) ? 'array' : typeof duplicate.objects
+                });
+                this._lastRenderState = currentState;
+            }
+        }
     }
 
     /**

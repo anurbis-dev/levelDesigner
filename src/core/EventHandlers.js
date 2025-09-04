@@ -5,6 +5,7 @@
 export class EventHandlers {
     constructor(levelEditor) {
         this.editor = levelEditor;
+        this._rafId = null; // render loop id
     }
 
     /**
@@ -39,6 +40,34 @@ export class EventHandlers {
         
         // State change listeners
         this.setupStateListeners();
+
+        // Start render loop to ensure the main view renders every frame (decoupled from mouse actions)
+        let lastDuplicateState = null;
+        const renderLoop = () => {
+            try {
+                const duplicate = this.editor.stateManager.get('duplicate');
+                const currentState = duplicate ? `${duplicate.isActive}_${duplicate.objects?.length || 0}` : 'null';
+
+                // Log only when duplicate state changes
+                if (currentState !== lastDuplicateState) {
+                    if (duplicate && duplicate.isActive) {
+                        console.log(`RENDER LOOP: Duplicate active, objects: ${duplicate.objects?.length || 0}`);
+                    } else if (lastDuplicateState !== null) {
+                        console.log('RENDER LOOP: Duplicate deactivated');
+                    }
+                    lastDuplicateState = currentState;
+                }
+
+                this.editor.render();
+            } catch (e) {
+                console.error('RENDER LOOP ERROR:', e);
+            }
+            this._rafId = requestAnimationFrame(renderLoop);
+        };
+        if (!this._rafId) {
+            console.log('STARTING RENDER LOOP');
+            this._rafId = requestAnimationFrame(renderLoop);
+        }
     }
 
     setupCanvasEvents() {
@@ -140,6 +169,7 @@ export class EventHandlers {
 
         // Subscribe to camera changes - immediate render for responsive zoom
         this.editor.stateManager.subscribe('camera', () => {
+            console.log('CAMERA SUBSCRIPTION: Camera changed, calling render');
             this.editor.render();
         });
     }
