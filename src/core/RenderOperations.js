@@ -5,6 +5,11 @@
 export class RenderOperations {
     constructor(levelEditor) {
         this.editor = levelEditor;
+        
+        // Performance optimization caches
+        this.visibleObjectsCache = new Map();
+        this.lastCameraState = null;
+        this.cacheTimeout = 100; // Cache timeout in ms
     }
 
     /**
@@ -26,9 +31,10 @@ export class RenderOperations {
             this.editor.level.settings.backgroundColor
         );
         
-        // Draw objects
+        // Draw objects with frustum culling
         const groupEditMode = this.editor.stateManager.get('groupEditMode');
-        this.editor.level.objects.forEach(obj => {
+        const visibleObjects = this.getVisibleObjects(camera);
+        visibleObjects.forEach(obj => {
             this.editor.canvasRenderer.drawObject(obj);
         });
         
@@ -218,5 +224,74 @@ export class RenderOperations {
         const g = (bigint >> 8) & 255;
         const b = bigint & 255;
         return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    /**
+     * Get objects visible in the current viewport (frustum culling) with caching
+     */
+    getVisibleObjects(camera) {
+        const currentTime = performance.now();
+        const cameraKey = `${camera.x.toFixed(1)},${camera.y.toFixed(1)},${camera.zoom.toFixed(2)}`;
+        
+        // Check cache first
+        if (this.visibleObjectsCache.has(cameraKey)) {
+            const cached = this.visibleObjectsCache.get(cameraKey);
+            if (currentTime - cached.timestamp < this.cacheTimeout) {
+                return cached.objects;
+            }
+        }
+        
+        const canvas = this.editor.canvasRenderer.canvas;
+        const viewportLeft = camera.x;
+        const viewportTop = camera.y;
+        const viewportRight = camera.x + canvas.width / camera.zoom;
+        const viewportBottom = camera.y + canvas.height / camera.zoom;
+        
+        // Add some padding to avoid objects appearing/disappearing at edges
+        const padding = 100;
+        const extendedLeft = viewportLeft - padding;
+        const extendedTop = viewportTop - padding;
+        const extendedRight = viewportRight + padding;
+        const extendedBottom = viewportBottom + padding;
+        
+        const visibleObjects = this.editor.level.objects.filter(obj => {
+            return this.isObjectVisible(obj, extendedLeft, extendedTop, extendedRight, extendedBottom);
+        });
+        
+        // Cache the result
+        this.visibleObjectsCache.set(cameraKey, {
+            objects: visibleObjects,
+            timestamp: currentTime
+        });
+        
+        // Clean old cache entries
+        if (this.visibleObjectsCache.size > 10) {
+            const oldestKey = this.visibleObjectsCache.keys().next().value;
+            this.visibleObjectsCache.delete(oldestKey);
+        }
+        
+        return visibleObjects;
+    }
+
+    /**
+     * Check if object is visible in the given viewport bounds
+     */
+    isObjectVisible(obj, left, top, right, bottom) {
+        if (!obj.visible) return false;
+        
+        if (obj.type === 'group') {
+            // For groups, check if any child is visible
+            return obj.children && obj.children.some(child => 
+                this.isObjectVisible(child, left - obj.x, top - obj.y, right - obj.x, bottom - obj.y)
+            );
+        }
+        
+        // Check if object bounds intersect with viewport
+        const objLeft = obj.x;
+        const objTop = obj.y;
+        const objRight = obj.x + (obj.width || 0);
+        const objBottom = obj.y + (obj.height || 0);
+        
+        return !(objRight < left || objLeft > right || objBottom < top || objTop > bottom);
     }
 }

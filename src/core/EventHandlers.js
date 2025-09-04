@@ -137,8 +137,8 @@ export class EventHandlers {
             this.editor.updateAllPanels();
             this.editor.render();
         });
-        
-        // Subscribe to camera changes
+
+        // Subscribe to camera changes - immediate render for responsive zoom
         this.editor.stateManager.subscribe('camera', () => {
             this.editor.render();
         });

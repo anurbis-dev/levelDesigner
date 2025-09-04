@@ -5,6 +5,9 @@
 export class MouseHandlers {
     constructor(levelEditor) {
         this.editor = levelEditor;
+        
+        // Performance optimization for zoom
+        this.zoomAnimationFrame = null;
     }
 
     /**
@@ -241,25 +244,45 @@ export class MouseHandlers {
     handleWheel(e) {
         e.preventDefault();
         
+        // Cancel previous animation frame if still pending
+        if (this.zoomAnimationFrame) {
+            cancelAnimationFrame(this.zoomAnimationFrame);
+        }
+        
+        // Use requestAnimationFrame for smooth zoom but allow immediate updates
+        this.zoomAnimationFrame = requestAnimationFrame(() => {
+            this.performZoom(e);
+            this.zoomAnimationFrame = null;
+        });
+    }
+    
+    performZoom(e) {
         const zoomIntensity = 0.1;
         const direction = e.deltaY < 0 ? 1 : -1;
         const camera = this.editor.stateManager.get('camera');
-        
+
         const oldZoom = camera.zoom;
         const newZoom = Math.max(0.1, Math.min(10, oldZoom * (1 + direction * zoomIntensity)));
-        
+
+        // Calculate new camera position to keep mouse position fixed
         const mouseWorldPosBeforeZoom = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, camera);
-        
+
+        // Create a temporary camera object for calculations
+        const tempCamera = { ...camera, zoom: newZoom };
+        const mouseWorldPosAfterZoom = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, tempCamera);
+
+        const newCameraX = camera.x + mouseWorldPosBeforeZoom.x - mouseWorldPosAfterZoom.x;
+        const newCameraY = camera.y + mouseWorldPosBeforeZoom.y - mouseWorldPosAfterZoom.y;
+
+        // Update camera in one operation
         this.editor.stateManager.update({
-            'camera.zoom': newZoom
+            'camera.zoom': newZoom,
+            'camera.x': newCameraX,
+            'camera.y': newCameraY
         });
-        
-        const mouseWorldPosAfterZoom = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, this.editor.stateManager.get('camera'));
-        
-        this.editor.stateManager.update({
-            'camera.x': camera.x + mouseWorldPosBeforeZoom.x - mouseWorldPosAfterZoom.x,
-            'camera.y': camera.y + mouseWorldPosBeforeZoom.y - mouseWorldPosAfterZoom.y
-        });
+
+        // Immediate render for responsive zoom
+        this.editor.render();
     }
 
     handleDragOver(e) {

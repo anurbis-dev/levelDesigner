@@ -41,12 +41,19 @@ export class CanvasRenderer {
     }
 
     /**
-     * Draw grid
+     * Draw grid with performance optimizations
      */
     drawGrid(gridSize, camera, backgroundColor = '#4B5563') {
         this.ctx.save();
         this.ctx.fillStyle = backgroundColor;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        // Skip grid drawing if zoomed out too much (performance optimization)
+        const minGridSize = 5; // Minimum grid size in pixels
+        if (gridSize * camera.zoom < minGridSize) {
+            this.ctx.restore();
+            return;
+        }
         
         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
         this.ctx.lineWidth = 1 / camera.zoom;
@@ -57,20 +64,29 @@ export class CanvasRenderer {
         const endX = camera.x + this.canvas.width / camera.zoom;
         const endY = camera.y + this.canvas.height / camera.zoom;
         
+        // Limit number of grid lines for performance
+        const maxLines = 200;
+        const totalVerticalLines = Math.floor((endX - startX) / scaledGridSize);
+        const totalHorizontalLines = Math.floor((endY - startY) / scaledGridSize);
+        
         // Draw vertical lines
-        for (let x = startX; x < endX; x += scaledGridSize) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(x, startY);
-            this.ctx.lineTo(x, endY);
-            this.ctx.stroke();
+        if (totalVerticalLines <= maxLines) {
+            for (let x = startX; x < endX; x += scaledGridSize) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(x, startY);
+                this.ctx.lineTo(x, endY);
+                this.ctx.stroke();
+            }
         }
         
         // Draw horizontal lines
-        for (let y = startY; y < endY; y += scaledGridSize) {
-            this.ctx.beginPath();
-            this.ctx.moveTo(startX, y);
-            this.ctx.lineTo(endX, y);
-            this.ctx.stroke();
+        if (totalHorizontalLines <= maxLines) {
+            for (let y = startY; y < endY; y += scaledGridSize) {
+                this.ctx.beginPath();
+                this.ctx.moveTo(startX, y);
+                this.ctx.lineTo(endX, y);
+                this.ctx.stroke();
+            }
         }
         
         this.ctx.restore();
@@ -94,34 +110,25 @@ export class CanvasRenderer {
      * Draw single object
      */
     drawSingleObject(obj, x, y) {
-        console.log('CanvasRenderer.drawSingleObject called:', obj.id, 'at', x, y, 'visible:', obj.visible);
-        
         if (!obj.visible) {
-            console.log('CanvasRenderer: Object not visible, returning');
             return;
         }
         
         // Draw image if available
         if (obj.imgSrc) {
-            console.log('CanvasRenderer: Trying to draw image:', obj.imgSrc);
             const img = this.imageCache.get(obj.imgSrc);
             if (img && img.complete && img.naturalHeight !== 0) {
-                console.log('CanvasRenderer: Drawing image at', x, y, 'size:', obj.width, obj.height);
                 this.ctx.drawImage(img, x, y, obj.width, obj.height);
                 return;
-            } else {
-                console.log('CanvasRenderer: Image not available or not loaded');
             }
         }
         
         // Draw colored rectangle as fallback
-        console.log('CanvasRenderer: Drawing colored rectangle at', x, y, 'size:', obj.width, obj.height, 'color:', obj.color);
         this.ctx.fillStyle = obj.color || '#cccccc';
         this.ctx.fillRect(x, y, obj.width, obj.height);
         
         // Draw border for locked objects
         if (obj.locked) {
-            console.log('CanvasRenderer: Drawing locked object border');
             this.ctx.strokeStyle = '#ff6b6b';
             this.ctx.lineWidth = 2;
             this.ctx.strokeRect(x, y, obj.width, obj.height);
