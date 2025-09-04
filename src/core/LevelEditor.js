@@ -262,7 +262,6 @@ export class LevelEditor {
         // Draw placing objects (duplicates)
         const duplicate = this.stateManager.get('duplicate');
         if (duplicate.isActive && duplicate.objects.length > 0) {
-            console.log('RENDER: Drawing duplicate objects, count:', duplicate.objects.length);
             duplicateRenderUtils.drawPlacingObjects(this.canvasRenderer, duplicate.objects, camera);
             // Draw outline for groups in placing preview
             duplicate.objects.forEach(obj => {
@@ -271,8 +270,6 @@ export class LevelEditor {
                     this.drawSelectionRect(bounds, true, camera);
                 }
             });
-        } else {
-            console.log('RENDER: Not drawing duplicate objects, isActive:', duplicate.isActive, 'count:', duplicate.objects?.length || 0);
         }
         
         // Draw marquee
@@ -483,7 +480,6 @@ export class LevelEditor {
             this.updateMarquee(worldPos);
         } else if (this.stateManager.get('duplicate.isActive')) {
             // Update duplicate objects position
-            console.log('Mouse move with duplicate objects, worldPos:', worldPos);
             this.updatePlacingObjectsPosition(worldPos);
         }
 
@@ -549,21 +545,17 @@ export class LevelEditor {
             // If we are in group edit mode and released after dragging with Alt
             const groupEditMode = this.stateManager.get('groupEditMode');
             if (groupEditMode && groupEditMode.isActive && groupEditMode.group && currentAlt && wasDragging) {
-                console.log('Alt+drag detected in group edit mode');
                 const selectedIds = this.stateManager.get('selectedObjects');
-                
+
                 // ИЗМЕНЕНИЕ: Вычисляем границы группы, ИСКЛЮЧАЯ перетаскиваемые объекты.
                 const bounds = this.getObjectWorldBounds(groupEditMode.group, Array.from(selectedIds));
-                console.log('Group bounds (excluding dragged objects):', bounds);
-                
+
                 const selected = Array.from(selectedIds)
                     .map(id => this.level.findObjectById(id))
                     .filter(Boolean);
-                console.log('Selected objects:', selected.length);
                 selected.forEach(obj => {
                     // Only consider direct children of the edited group
                     const isChild = this.isObjectInGroup(obj, groupEditMode.group);
-                    console.log(`Object ${obj.id} is child:`, isChild);
                     if (isChild) {
                         // Get current world position and bounds of the object
                         const groupPos = this.getObjectWorldPosition(groupEditMode.group);
@@ -571,7 +563,7 @@ export class LevelEditor {
                         const worldY = groupPos.y + obj.y;
                         const objWidth = obj.width || 32;
                         const objHeight = obj.height || 32;
-                        
+
                         // Object bounds in world coordinates
                         const objBounds = {
                             minX: worldX,
@@ -579,21 +571,15 @@ export class LevelEditor {
                             maxX: worldX + objWidth,
                             maxY: worldY + objHeight
                         };
-                        
-                        console.log(`Object bounds:`, objBounds);
-                        console.log(`Group bounds:`, bounds);
-                        
+
                         // Check if object bounds intersect with group bounds
-                        const hasIntersection = objBounds.minX < bounds.maxX && 
-                                              objBounds.maxX > bounds.minX && 
-                                              objBounds.minY < bounds.maxY && 
+                        const hasIntersection = objBounds.minX < bounds.maxX &&
+                                              objBounds.maxX > bounds.minX &&
+                                              objBounds.minY < bounds.maxY &&
                                               objBounds.maxY > bounds.minY;
-                        
+
                         const outside = !hasIntersection;
-                        console.log(`Object intersects with group:`, hasIntersection);
-                        console.log(`Object should be moved out:`, outside);
                         if (outside) {
-                            console.log(`Moving object ${obj.id} out of group`);
                             // Remove from group's children
                             groupEditMode.group.children = groupEditMode.group.children.filter(c => c.id !== obj.id);
                             // Add to main level at world coordinates
@@ -1115,11 +1101,6 @@ export class LevelEditor {
         const duplicate = this.stateManager.get('duplicate');
         if (!duplicate.isActive || !duplicate.objects || duplicate.objects.length === 0) return;
 
-        // Always update positions to ensure smooth sticking to cursor
-
-        console.log('Updating duplicate objects position to:', worldPos);
-        console.log('Total objects to update:', duplicate.objects.length);
-
         // Update positions of duplicate objects to follow mouse
         // All objects should move together as a group
         const updatedObjects = duplicateRenderUtils.updatePositions(duplicate.objects, worldPos);
@@ -1212,12 +1193,9 @@ export class LevelEditor {
     }
 
     duplicateSelectedObjects() {
-        console.log('=== DUPLICATE DEBUG START ===');
         const selectedObjects = this.stateManager.get('selectedObjects');
-        console.log('Selected objects IDs:', Array.from(selectedObjects));
-        
+
         if (selectedObjects.size === 0) {
-            console.log('No objects selected, returning');
             return;
         }
 
@@ -1225,64 +1203,49 @@ export class LevelEditor {
         const selected = Array.from(selectedObjects)
             .map(id => this.level.findObjectById(id))
             .filter(Boolean);
-        
-        console.log('Found selected objects:', selected.length, selected);
 
         if (selected.length > 0) {
             // Ensure all objects have proper properties for display
             const clonedObjects = selected.map(obj => {
-                console.log('Cloning object:', obj);
                 const cloned = this.deepClone(obj);
-                console.log('Deep cloned object:', cloned);
-                
+
                 // Assign new unique IDs
-                console.log('Before reassignIdsDeep - nextObjectId:', this.level.nextObjectId);
                 this.reassignIdsDeep(cloned);
-                console.log('After reassignIdsDeep - nextObjectId:', this.level.nextObjectId, 'cloned:', cloned);
-                
+
                 // For groups, ensure all children have proper properties
                 if (cloned.type === 'group' && Array.isArray(cloned.children)) {
-                    console.log('Processing group children:', cloned.children.length);
-                    cloned.children.forEach((child, index) => {
-                        console.log(`Processing child ${index}:`, child);
+                    cloned.children.forEach((child) => {
                         child.visible = child.visible !== undefined ? child.visible : true;
                         child.locked = child.locked !== undefined ? child.locked : false;
                         child.width = child.width || 32;
                         child.height = child.height || 32;
                         child.color = child.color || '#cccccc';
-                        console.log(`Child ${index} after processing:`, child);
                     });
                 }
-                
+
                 // Ensure essential properties are set
                 cloned.visible = cloned.visible !== undefined ? cloned.visible : true;
                 cloned.locked = cloned.locked !== undefined ? cloned.locked : false;
                 cloned.width = cloned.width || 32;
                 cloned.height = cloned.height || 32;
                 cloned.color = cloned.color || '#cccccc';
-                
-                console.log('Final cloned object:', cloned);
+
                 return cloned;
             });
-            
-            console.log('All cloned objects:', clonedObjects);
-            
+
             // Initialize positions for placing objects using current mouse position
             const mouse = this.stateManager.get('mouse');
             const camera = this.stateManager.get('camera');
-            console.log('Mouse coordinates:', mouse.x, mouse.y);
-            console.log('Camera:', camera);
-            
+
             // Use current mouse position or fallback to center of canvas
             const mouseX = mouse.x || this.canvasRenderer.canvas.width / 2;
             const mouseY = mouse.y || this.canvasRenderer.canvas.height / 2;
             const currentWorldPos = this.canvasRenderer.screenToWorld(mouseX, mouseY, camera);
-            console.log('Current world position:', currentWorldPos);
-            
+
             // Initialize offsets from current mouse world position
             const initialized = duplicateRenderUtils.initializePositions(clonedObjects, currentWorldPos);
             initialized.forEach((o, i) => { clonedObjects[i] = o; });
-            
+
             this.stateManager.update({
                 'mouse.isPlacingObjects': true,
                 'mouse.placingObjects': clonedObjects,
@@ -1290,20 +1253,10 @@ export class LevelEditor {
                 'duplicate.objects': clonedObjects,
                 'duplicate.basePosition': { x: currentWorldPos.x, y: currentWorldPos.y }
             });
-            
-            console.log('Updated duplicate state:', {
-                isActive: this.stateManager.get('duplicate.isActive'),
-                objectsCount: this.stateManager.get('duplicate.objects').length,
-                basePosition: this.stateManager.get('duplicate.basePosition')
-            });
-            
-            console.log('State updated, isPlacingObjects:', this.stateManager.get('mouse.isPlacingObjects'));
-            console.log('Placing objects count:', this.stateManager.get('mouse.placingObjects').length);
-            
+
             // Force render to show the duplicated objects
             this.render();
         }
-        console.log('=== DUPLICATE DEBUG END ===');
     }
 
     groupSelectedObjects() {

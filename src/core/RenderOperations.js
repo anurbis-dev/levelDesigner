@@ -57,7 +57,6 @@ export class RenderOperations {
         // Draw placing objects (duplicates)
         const duplicate = this.editor.stateManager.get('duplicate');
         if (duplicate.isActive && duplicate.objects.length > 0) {
-            console.log('RENDER: Drawing duplicate objects, count:', duplicate.objects.length);
             this.editor.duplicateRenderUtils.drawPlacingObjects(this.editor.canvasRenderer, duplicate.objects, camera);
             // Draw outline for groups in placing preview
             duplicate.objects.forEach(obj => {
@@ -66,8 +65,6 @@ export class RenderOperations {
                     this.drawSelectionRect(bounds, true, camera);
                 }
             });
-        } else {
-            console.log('RENDER: Not drawing duplicate objects, isActive:', duplicate.isActive, 'count:', duplicate.objects?.length || 0);
         }
         
         // Draw marquee

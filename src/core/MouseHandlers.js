@@ -77,7 +77,6 @@ export class MouseHandlers {
             this.updateMarquee(worldPos);
         } else if (this.editor.stateManager.get('duplicate.isActive')) {
             // Update duplicate objects position
-            console.log('Mouse move with duplicate objects, worldPos:', worldPos);
             this.updatePlacingObjectsPosition(worldPos);
         }
 
@@ -501,11 +500,6 @@ export class MouseHandlers {
     updatePlacingObjectsPosition(worldPos) {
         const duplicate = this.editor.stateManager.get('duplicate');
         if (!duplicate.isActive || !duplicate.objects || duplicate.objects.length === 0) return;
-
-        // Always update positions to ensure smooth sticking to cursor
-
-        console.log('Updating duplicate objects position to:', worldPos);
-        console.log('Total objects to update:', duplicate.objects.length);
 
         // Update positions of duplicate objects to follow mouse
         // All objects should move together as a group
