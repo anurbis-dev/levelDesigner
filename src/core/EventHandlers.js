@@ -1,0 +1,146 @@
+/**
+ * Event Handlers module for LevelEditor
+ * Handles all event listener setup and management
+ */
+export class EventHandlers {
+    constructor(levelEditor) {
+        this.editor = levelEditor;
+    }
+
+    /**
+     * Setup all event listeners
+     */
+    setupEventListeners() {
+        // Window resize
+        window.addEventListener('resize', () => {
+            this.editor.canvasRenderer.resizeCanvas();
+            this.editor.render();
+        });
+        
+        // Canvas events
+        this.setupCanvasEvents();
+        
+        // Keyboard events
+        this.setupKeyboardEvents();
+        
+        // Initialize group edit mode state
+        this.editor.stateManager.set('groupEditMode', {
+            isActive: false,
+            groupId: null,
+            group: null,
+            openGroups: [] // Initialize openGroups
+        });
+        
+        // Menu events
+        this.setupMenuEvents();
+        
+        // Right panel tabs
+        this.setupRightPanelTabs();
+        
+        // State change listeners
+        this.setupStateListeners();
+    }
+
+    setupCanvasEvents() {
+        const canvas = this.editor.canvasRenderer.canvas;
+        
+        // Prevent context menu
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+        
+        // Mouse events on canvas
+        canvas.addEventListener('mousedown', (e) => this.editor.mouseHandlers.handleMouseDown(e));
+        canvas.addEventListener('mousemove', (e) => this.editor.mouseHandlers.handleMouseMove(e));
+        canvas.addEventListener('mouseup', (e) => this.editor.mouseHandlers.handleMouseUp(e));
+        canvas.addEventListener('wheel', (e) => this.editor.mouseHandlers.handleWheel(e), { passive: false });
+        canvas.addEventListener('dblclick', (e) => this.editor.mouseHandlers.handleDoubleClick(e));
+        
+        // Global mouse events for proper marquee handling
+        window.addEventListener('mousemove', (e) => this.editor.mouseHandlers.handleGlobalMouseMove(e));
+        window.addEventListener('mouseup', (e) => this.editor.mouseHandlers.handleGlobalMouseUp(e));
+        
+        // Drag and drop
+        canvas.addEventListener('dragover', (e) => this.editor.mouseHandlers.handleDragOver(e));
+        canvas.addEventListener('drop', (e) => this.editor.mouseHandlers.handleDrop(e));
+    }
+
+    setupKeyboardEvents() {
+        window.addEventListener('keydown', (e) => {
+            if (document.activeElement.tagName === 'INPUT') return;
+            
+            // Handle escape key to cancel all current actions
+            if (e.key === 'Escape') {
+                this.editor.cancelAllActions();
+                return;
+            }
+            
+            if (e.key === 'Delete' || e.key.toLowerCase() === 'x') {
+                this.editor.objectOperations.deleteSelectedObjects();
+            } else if (e.shiftKey && e.key.toLowerCase() === 'd') {
+                e.preventDefault();
+                this.editor.objectOperations.duplicateSelectedObjects();
+            } else if (e.key.toLowerCase() === 'f') {
+                this.editor.focusOnSelection();
+            } else if (e.key.toLowerCase() === 'a') {
+                this.editor.focusOnAll();
+            } else if (e.shiftKey && e.key.toLowerCase() === 'g') {
+                e.preventDefault();
+                this.editor.groupOperations.groupSelectedObjects();
+            } else if (e.altKey && e.key.toLowerCase() === 'g') {
+                e.preventDefault();
+                this.editor.groupOperations.ungroupSelectedObjects();
+            } else if (e.ctrlKey || e.metaKey) {
+                if (e.key.toLowerCase() === 'z') {
+                    e.preventDefault();
+                    e.shiftKey ? this.editor.redo() : this.editor.undo();
+                } else if (e.key.toLowerCase() === 'y') {
+                    e.preventDefault();
+                    this.editor.redo();
+                }
+            }
+        });
+    }
+
+    setupMenuEvents() {
+        // Level menu
+        document.getElementById('new-level')?.addEventListener('click', () => this.editor.newLevel());
+        document.getElementById('open-level')?.addEventListener('click', () => this.editor.openLevel());
+        document.getElementById('save-level')?.addEventListener('click', () => this.editor.saveLevel());
+        document.getElementById('save-level-as')?.addEventListener('click', () => this.editor.saveLevelAs());
+        
+        // Settings menu
+        document.getElementById('assets-path')?.addEventListener('click', () => this.editor.openAssetsPath());
+        document.getElementById('editor-settings')?.addEventListener('click', () => this.editor.openSettings());
+    }
+
+    setupRightPanelTabs() {
+        const tabs = document.querySelectorAll('.tab-right');
+        const contents = document.querySelectorAll('.tab-content-right');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                
+                const tabName = tab.dataset.tab;
+                this.editor.stateManager.set('rightPanelTab', tabName);
+                
+                contents.forEach(content => {
+                    content.classList.toggle('hidden', content.id !== `${tabName}-content-panel`);
+                });
+            });
+        });
+    }
+
+    setupStateListeners() {
+        // Subscribe to selection changes
+        this.editor.stateManager.subscribe('selectedObjects', () => {
+            this.editor.updateAllPanels();
+            this.editor.render();
+        });
+        
+        // Subscribe to camera changes
+        this.editor.stateManager.subscribe('camera', () => {
+            this.editor.render();
+        });
+    }
+}

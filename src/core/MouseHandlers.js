@@ -1,0 +1,598 @@
+/**
+ * Mouse Handlers module for LevelEditor
+ * Handles all mouse interactions and events
+ */
+export class MouseHandlers {
+    constructor(levelEditor) {
+        this.editor = levelEditor;
+    }
+
+    /**
+     * Mouse event handlers
+     */
+    handleMouseDown(e) {
+        const worldPos = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, this.editor.stateManager.get('camera'));
+        const mouse = this.editor.stateManager.get('mouse');
+        
+        if (e.button === 2) { // Right mouse button
+            this.editor.stateManager.update({
+                'mouse.isRightDown': true,
+                'mouse.lastX': e.clientX,
+                'mouse.lastY': e.clientY,
+                'mouse.altKey': e.altKey
+            });
+            this.editor.canvasRenderer.canvas.style.cursor = 'grabbing';
+            return;
+        }
+        
+        if (e.button === 0) { // Left mouse button
+            this.editor.stateManager.update({
+                'mouse.isLeftDown': true,
+                'mouse.altKey': e.altKey
+            });
+            
+            // Check if clicking on object
+            const clickedObject = this.editor.objectOperations.findObjectAtPoint(worldPos.x, worldPos.y);
+            
+            if (clickedObject) {
+                this.handleObjectClick(e, clickedObject, worldPos);
+            } else {
+                this.handleEmptyClick(e, worldPos);
+            }
+        }
+    }
+
+    handleMouseMove(e) {
+        const worldPos = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, this.editor.stateManager.get('camera'));
+        const mouse = this.editor.stateManager.get('mouse');
+        
+        this.editor.stateManager.update({
+            'mouse.x': e.clientX,
+            'mouse.y': e.clientY,
+            'mouse.worldX': worldPos.x,
+            'mouse.worldY': worldPos.y,
+            'mouse.altKey': e.altKey
+        });
+        
+        if (mouse.isRightDown) {
+            // Pan camera
+            const dx = e.clientX - mouse.lastX;
+            const dy = e.clientY - mouse.lastY;
+            const camera = this.editor.stateManager.get('camera');
+            
+            this.editor.stateManager.update({
+                'camera.x': camera.x - dx / camera.zoom,
+                'camera.y': camera.y - dy / camera.zoom,
+                'mouse.lastX': e.clientX,
+                'mouse.lastY': e.clientY
+            });
+        } else if (mouse.isLeftDown && mouse.isDragging) {
+            // Drag objects
+            this.dragSelectedObjects(worldPos);
+        } else if (mouse.isMarqueeSelecting) {
+            // Update marquee
+            this.updateMarquee(worldPos);
+        } else if (this.editor.stateManager.get('duplicate.isActive')) {
+            // Update duplicate objects position
+            console.log('Mouse move with duplicate objects, worldPos:', worldPos);
+            this.updatePlacingObjectsPosition(worldPos);
+        }
+
+        // Freeze group frame while Alt is pressed (for dragging objects out)
+        const groupEditMode = this.editor.stateManager.get('groupEditMode');
+        if (groupEditMode && groupEditMode && groupEditMode.isActive) {
+            if (e.altKey) {
+                if (!groupEditMode.frameFrozen) {
+                    this.editor.stateManager.set('groupEditMode', {
+                        ...groupEditMode,
+                        frameFrozen: true,
+                        frozenBounds: this.editor.objectOperations.getObjectWorldBounds(groupEditMode.group)
+                    });
+                }
+            } else if (groupEditMode.frameFrozen) {
+                this.editor.stateManager.set('groupEditMode', {
+                    ...groupEditMode,
+                    frameFrozen: false,
+                    frozenBounds: null
+                });
+            }
+        }
+
+        // Only render if something actually changed
+        if (mouse.isPlacingObjects || mouse.isRightDown || (mouse.isLeftDown && mouse.isDragging) || mouse.isMarqueeSelecting) {
+            this.editor.render();
+        }
+    }
+
+    handleMouseUp(e) {
+        const mouse = this.editor.stateManager.get('mouse');
+        
+        if (e.button === 2) {
+            this.editor.stateManager.update({
+                'mouse.isRightDown': false,
+                'mouse.altKey': e.altKey
+            });
+            this.editor.canvasRenderer.canvas.style.cursor = 'default';
+            
+            // Right click cancels all current actions
+            this.editor.cancelAllActions();
+        }
+        
+        if (e.button === 0) {
+            const currentAlt = e.altKey || mouse.altKey;
+            const wasDragging = mouse.isDragging; // Save dragging state before resetting
+            
+            if (mouse.isDragging) {
+                this.editor.historyManager.saveState(this.editor.level.objects);
+                this.editor.stateManager.markDirty();
+            }
+            
+            this.editor.stateManager.update({
+                'mouse.isLeftDown': false,
+                'mouse.isDragging': false,
+                'mouse.altKey': e.altKey
+            });
+            
+            if (mouse.isMarqueeSelecting) {
+                this.finishMarqueeSelection();
+            }
+
+            // If we are in group edit mode and released after dragging with Alt
+            const groupEditMode = this.editor.stateManager.get('groupEditMode');
+            if (groupEditMode && groupEditMode.isActive && groupEditMode.group && currentAlt && wasDragging) {
+                console.log('Alt+drag detected in group edit mode');
+                const selectedIds = this.editor.stateManager.get('selectedObjects');
+                
+                // ИЗМЕНЕНИЕ: Вычисляем границы группы, ИСКЛЮЧАЯ перетаскиваемые объекты.
+                const bounds = this.editor.objectOperations.getObjectWorldBounds(groupEditMode.group, Array.from(selectedIds));
+                console.log('Group bounds (excluding dragged objects):', bounds);
+                
+                const selected = Array.from(selectedIds)
+                    .map(id => this.editor.level.findObjectById(id))
+                    .filter(Boolean);
+                console.log('Selected objects:', selected.length);
+                selected.forEach(obj => {
+                    // Only consider direct children of the edited group
+                    const isChild = this.editor.objectOperations.isObjectInGroup(obj, groupEditMode.group);
+                    console.log(`Object ${obj.id} is child:`, isChild);
+                    if (isChild) {
+                        // Get current world position and bounds of the object
+                        const groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
+                        const worldX = groupPos.x + obj.x;
+                        const worldY = groupPos.y + obj.y;
+                        const objWidth = obj.width || 32;
+                        const objHeight = obj.height || 32;
+                        
+                        // Object bounds in world coordinates
+                        const objBounds = {
+                            minX: worldX,
+                            minY: worldY,
+                            maxX: worldX + objWidth,
+                            maxY: worldY + objHeight
+                        };
+                        
+                        console.log(`Object bounds:`, objBounds);
+                        console.log(`Group bounds:`, bounds);
+                        
+                        // Check if object bounds intersect with group bounds
+                        const hasIntersection = objBounds.minX < bounds.maxX && 
+                                              objBounds.maxX > bounds.minX && 
+                                              objBounds.minY < bounds.maxY && 
+                                              objBounds.maxY > bounds.minY;
+                        
+                        const outside = !hasIntersection;
+                        console.log(`Object intersects with group:`, hasIntersection);
+                        console.log(`Object should be moved out:`, outside);
+                        if (outside) {
+                            console.log(`Moving object ${obj.id} out of group`);
+                            // Remove from group's children
+                            groupEditMode.group.children = groupEditMode.group.children.filter(c => c.id !== obj.id);
+                            // Add to main level at world coordinates
+                            obj.x = worldX;
+                            obj.y = worldY;
+                            this.editor.level.objects.push(obj);
+                        }
+                    }
+                });
+            }
+            
+            if (mouse.isPlacingObjects) {
+                const worldPos = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, this.editor.stateManager.get('camera'));
+                this.finishPlacingObjects(worldPos);
+            }
+        }
+    }
+
+    handleGlobalMouseMove(e) {
+        const mouse = this.editor.stateManager.get('mouse');
+        const canvas = this.editor.canvasRenderer.canvas;
+        const rect = canvas.getBoundingClientRect();
+        
+        // Check if mouse is inside canvas bounds
+        const isInsideCanvas = e.clientX >= rect.left && e.clientX <= rect.right && 
+                              e.clientY >= rect.top && e.clientY <= rect.bottom;
+        
+        if (mouse.isMarqueeSelecting && !isInsideCanvas) {
+            // Constrain marquee to canvas bounds
+            const constrainedX = Math.max(rect.left, Math.min(rect.right, e.clientX));
+            const constrainedY = Math.max(rect.top, Math.min(rect.bottom, e.clientY));
+            
+            const worldPos = this.editor.canvasRenderer.screenToWorld(constrainedX, constrainedY, this.editor.stateManager.get('camera'));
+            this.updateMarquee(worldPos);
+            this.editor.render();
+        }
+    }
+
+    handleGlobalMouseUp(e) {
+        const mouse = this.editor.stateManager.get('mouse');
+        
+        if (e.button === 0 && mouse.isMarqueeSelecting) {
+            this.finishMarqueeSelection();
+        }
+        
+        if (e.button === 2) {
+            this.editor.stateManager.update({
+                'mouse.isRightDown': false
+            });
+            this.editor.canvasRenderer.canvas.style.cursor = 'default';
+        }
+    }
+
+    handleWheel(e) {
+        e.preventDefault();
+        
+        const zoomIntensity = 0.1;
+        const direction = e.deltaY < 0 ? 1 : -1;
+        const camera = this.editor.stateManager.get('camera');
+        
+        const oldZoom = camera.zoom;
+        const newZoom = Math.max(0.1, Math.min(10, oldZoom * (1 + direction * zoomIntensity)));
+        
+        const mouseWorldPosBeforeZoom = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, camera);
+        
+        this.editor.stateManager.update({
+            'camera.zoom': newZoom
+        });
+        
+        const mouseWorldPosAfterZoom = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, this.editor.stateManager.get('camera'));
+        
+        this.editor.stateManager.update({
+            'camera.x': camera.x + mouseWorldPosBeforeZoom.x - mouseWorldPosAfterZoom.x,
+            'camera.y': camera.y + mouseWorldPosBeforeZoom.y - mouseWorldPosAfterZoom.y
+        });
+    }
+
+    handleDragOver(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+    }
+
+    handleDrop(e) {
+        e.preventDefault();
+        
+        const mouse = this.editor.stateManager.get('mouse');
+        if (!mouse.isDraggingAsset) return;
+        
+        this.editor.historyManager.saveState(this.editor.level.objects);
+        
+        const droppedAssetIds = JSON.parse(e.dataTransfer.getData('application/json'));
+        const worldPos = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, this.editor.stateManager.get('camera'));
+        
+        const groupEditMode = this.editor.stateManager.get('groupEditMode');
+        const newIds = new Set();
+
+        droppedAssetIds.forEach((assetId, index) => {
+            const asset = this.editor.assetManager.getAsset(assetId);
+            if (asset) {
+                const newObject = asset.createInstance(worldPos.x + index * 10, worldPos.y + index * 10);
+
+                // Check if we're in group edit mode and the drop point is inside the group bounds
+                if (groupEditMode && groupEditMode.isActive && groupEditMode.group && this.editor.objectOperations.isPointInGroupBounds(worldPos.x, worldPos.y, groupEditMode)) {
+                    // Convert to relative coordinates using group's WORLD position
+                    const groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
+                    newObject.x -= groupPos.x;
+                    newObject.y -= groupPos.y;
+                    groupEditMode.group.children.push(newObject);
+                } else {
+                    // Add to main level
+                    this.editor.level.addObject(newObject);
+                }
+
+                newIds.add(newObject.id);
+            }
+        });
+        
+        this.editor.stateManager.set('selectedObjects', newIds);
+        this.editor.stateManager.update({
+            'mouse.isDraggingAsset': false
+        });
+        
+        this.editor.updateAllPanels();
+        this.editor.render();
+    }
+
+    handleDoubleClick(e) {
+        const worldPos = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, this.editor.stateManager.get('camera'));
+        const clickedObject = this.editor.objectOperations.findObjectAtPoint(worldPos.x, worldPos.y);
+        
+        if (clickedObject && clickedObject.type === 'group') {
+            this.editor.groupOperations.openGroupEditMode(clickedObject);
+        }
+    }
+
+    // Helper methods for mouse interactions
+    handleObjectClick(e, obj, worldPos) {
+        const selectedObjects = new Set(this.editor.stateManager.get('selectedObjects'));
+        const isSelected = selectedObjects.has(obj.id);
+        let selectionChanged = false;
+        
+        if (!e.shiftKey) {
+            if (!isSelected) {
+                selectedObjects.clear();
+                selectedObjects.add(obj.id);
+                selectionChanged = true;
+            }
+        } else {
+            if (isSelected) {
+                selectedObjects.delete(obj.id);
+                selectionChanged = true;
+            } else {
+                selectedObjects.add(obj.id);
+                selectionChanged = true;
+            }
+        }
+        
+        if (selectionChanged) {
+            this.editor.stateManager.set('selectedObjects', selectedObjects);
+            this.editor.updateAllPanels();
+        }
+        
+        // Only start dragging if the clicked object is selected
+        if (selectedObjects.has(obj.id)) {
+            this.editor.stateManager.update({
+                'mouse.isDragging': true,
+                'mouse.dragStartX': worldPos.x,
+                'mouse.dragStartY': worldPos.y
+            });
+        }
+    }
+
+    handleEmptyClick(e, worldPos) {
+        const selectedObjects = this.editor.stateManager.get('selectedObjects');
+        const groupEditMode = this.editor.stateManager.get('groupEditMode');
+
+        // If editing groups, only close when clicking OUTSIDE the active group's frame
+        if (groupEditMode && groupEditMode.isActive && groupEditMode.group) {
+            const bounds = this.editor.objectOperations.getObjectWorldBounds(groupEditMode.group);
+            const inside = worldPos.x >= bounds.minX && worldPos.x <= bounds.maxX && worldPos.y >= bounds.minY && worldPos.y <= bounds.maxY;
+            if (inside) {
+                // Start marquee selection instead of closing
+                if (!e.shiftKey) {
+                    this.editor.stateManager.set('selectedObjects', new Set());
+                }
+                this.editor.stateManager.update({
+                    'mouse.isMarqueeSelecting': true,
+                    'mouse.marqueeRect': { x: worldPos.x, y: worldPos.y, width: 0, height: 0 },
+                    'mouse.marqueeStartX': worldPos.x,
+                    'mouse.marqueeStartY': worldPos.y
+                });
+                return;
+            }
+            // Outside: close group edit mode
+            this.editor.groupOperations.closeGroupEditMode();
+            return;
+        }
+
+        // Normal behavior
+        if (!e.shiftKey) {
+            this.editor.stateManager.set('selectedObjects', new Set());
+        }
+        this.editor.stateManager.update({
+            'mouse.isMarqueeSelecting': true,
+            'mouse.marqueeRect': { x: worldPos.x, y: worldPos.y, width: 0, height: 0 },
+            'mouse.marqueeStartX': worldPos.x,
+            'mouse.marqueeStartY': worldPos.y
+        });
+    }
+
+    dragSelectedObjects(worldPos) {
+        const selectedObjects = this.editor.stateManager.get('selectedObjects');
+        const mouse = this.editor.stateManager.get('mouse');
+        const groupEditMode = this.editor.stateManager.get('groupEditMode');
+
+        const dx = worldPos.x - mouse.dragStartX;
+        const dy = worldPos.y - mouse.dragStartY;
+
+        selectedObjects.forEach(id => {
+            const obj = this.editor.level.findObjectById(id);
+            if (obj) {
+                // Check if object is on main level or inside the currently edited group
+                const isOnMainLevel = this.editor.level.objects.some(topObj => topObj.id === obj.id);
+                const isInEditedGroup = groupEditMode && groupEditMode.isActive && groupEditMode.group &&
+                    this.editor.objectOperations.isObjectInGroup(obj, groupEditMode.group);
+
+                if (isOnMainLevel) {
+                    // Object is on main level - move it normally
+                    obj.x += dx;
+                    obj.y += dy;
+
+                    // If dragged into edited group bounds, move under the group with relative coordinates
+                    if (!this.editor.stateManager.get('mouse').altKey && groupEditMode && groupEditMode.isActive && groupEditMode.group && this.editor.objectOperations.isPointInGroupBounds(obj.x, obj.y, groupEditMode)) {
+                        // Convert world -> relative to group's world position
+                        const groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
+                        obj.x -= groupPos.x;
+                        obj.y -= groupPos.y;
+
+                        // Remove from main level and append into group
+                        this.editor.level.objects = this.editor.level.objects.filter(top => top.id !== obj.id);
+                        groupEditMode.group.children.push(obj);
+                    }
+                } else if (isInEditedGroup) {
+                    // Object is inside the currently edited group
+                    if (this.editor.stateManager.get('mouse').altKey) {
+                        // Alt+drag: move in world coordinates by converting to world position first
+                        const groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
+                        const worldX = groupPos.x + obj.x;
+                        const worldY = groupPos.y + obj.y;
+                        
+                        // Move in world coordinates
+                        const newWorldX = worldX + dx;
+                        const newWorldY = worldY + dy;
+                        
+                        // Convert back to relative coordinates
+                        obj.x = newWorldX - groupPos.x;
+                        obj.y = newWorldY - groupPos.y;
+                    } else {
+                        // Normal drag: move relative to group
+                        obj.x += dx;
+                        obj.y += dy;
+                    }
+                }
+
+                // If it's a group, all children move with it automatically
+                // because they are positioned relative to the group
+            }
+        });
+
+        this.editor.stateManager.update({
+            'mouse.dragStartX': worldPos.x,
+            'mouse.dragStartY': worldPos.y
+        });
+
+        this.editor.updateAllPanels();
+    }
+
+    updateMarquee(worldPos) {
+        const mouse = this.editor.stateManager.get('mouse');
+        if (mouse.marqueeRect) {
+            const startX = mouse.marqueeStartX || mouse.marqueeRect.x;
+            const startY = mouse.marqueeStartY || mouse.marqueeRect.y;
+            
+            mouse.marqueeRect.x = Math.min(startX, worldPos.x);
+            mouse.marqueeRect.y = Math.min(startY, worldPos.y);
+            mouse.marqueeRect.width = Math.abs(worldPos.x - startX);
+            mouse.marqueeRect.height = Math.abs(worldPos.y - startY);
+        }
+    }
+
+    updatePlacingObjectsPosition(worldPos) {
+        const duplicate = this.editor.stateManager.get('duplicate');
+        if (!duplicate.isActive || !duplicate.objects || duplicate.objects.length === 0) return;
+
+        // Always update positions to ensure smooth sticking to cursor
+
+        console.log('Updating duplicate objects position to:', worldPos);
+        console.log('Total objects to update:', duplicate.objects.length);
+
+        // Update positions of duplicate objects to follow mouse
+        // All objects should move together as a group
+        const updatedObjects = this.editor.duplicateRenderUtils.updatePositions(duplicate.objects, worldPos);
+
+        // Update state with new positions
+        this.editor.stateManager.update({
+            'duplicate.objects': updatedObjects,
+            'duplicate.basePosition': { x: worldPos.x, y: worldPos.y },
+            'mouse.placingObjects': updatedObjects
+        });
+
+        // Force render to show updated positions
+        this.editor.render();
+    }
+
+    finishMarqueeSelection() {
+        const mouse = this.editor.stateManager.get('mouse');
+        if (!mouse.marqueeRect) return;
+
+        const marquee = mouse.marqueeRect;
+        const selectedObjects = new Set(this.editor.stateManager.get('selectedObjects'));
+        const groupEditMode = this.editor.stateManager.get('groupEditMode');
+
+        if (groupEditMode && groupEditMode.isActive) {
+            // In group edit mode, limit selection to descendants of the edited group
+            const collect = (g) => {
+                const res = [];
+                g.children.forEach(ch => {
+                    res.push(ch);
+                    if (ch.type === 'group') res.push(...collect(ch));
+                });
+                return res;
+            };
+            const candidates = collect(groupEditMode.group);
+            candidates.forEach(obj => {
+                const bounds = this.editor.objectOperations.getObjectWorldBounds(obj);
+                if (marquee.x < bounds.maxX && marquee.x + marquee.width > bounds.minX &&
+                    marquee.y < bounds.maxY && marquee.y + marquee.height > bounds.minY) {
+                    selectedObjects.add(obj.id);
+                }
+            });
+        } else {
+            // Normal mode - select objects on main level only
+            this.editor.level.objects.forEach(obj => {
+                const bounds = this.editor.objectOperations.getObjectWorldBounds(obj);
+                if (marquee.x < bounds.maxX && marquee.x + marquee.width > bounds.minX &&
+                    marquee.y < bounds.maxY && marquee.y + marquee.height > bounds.minY) {
+                    selectedObjects.add(obj.id);
+                }
+            });
+        }
+
+        this.editor.stateManager.set('selectedObjects', selectedObjects);
+        this.editor.stateManager.update({
+            'mouse.marqueeRect': null,
+            'mouse.marqueeStartX': null,
+            'mouse.marqueeStartY': null
+        });
+    }
+
+    /**
+     * Finish placing objects (duplication)
+     */
+    finishPlacingObjects(worldPos) {
+        const mouse = this.editor.stateManager.get('mouse');
+
+        const duplicate = this.editor.stateManager.get('duplicate');
+        if (!duplicate.isActive || !duplicate.objects || duplicate.objects.length === 0) return;
+
+        this.editor.historyManager.saveState(this.editor.level.objects);
+
+        const groupEditMode = this.editor.stateManager.get('groupEditMode');
+        const newIds = new Set();
+
+        duplicate.objects.forEach((obj, index) => {
+           // Use saved offset if available, otherwise use grid layout
+           const offsetX = obj._offsetX ?? (index % 5) * 20;
+           const offsetY = obj._offsetY ?? Math.floor(index / 5) * 20;
+           
+           const newObj = this.editor.deepClone(obj);
+           this.editor.reassignIdsDeep(newObj);
+           newObj.x = worldPos.x + offsetX;
+           newObj.y = worldPos.y + offsetY;
+
+            // Check if we're in group edit mode and the placement point is inside the group bounds
+            if (groupEditMode && groupEditMode.isActive && groupEditMode.group && this.editor.objectOperations.isPointInGroupBounds(newObj.x, newObj.y, groupEditMode)) {
+                // Convert to relative coordinates using group's WORLD position
+                const groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
+                newObj.x -= groupPos.x;
+                newObj.y -= groupPos.y;
+                groupEditMode.group.children.push(newObj);
+            } else {
+                // Add to main level with world coordinates
+                this.editor.level.addObject(newObj);
+            }
+
+            newIds.add(newObj.id);
+        });
+
+                this.editor.stateManager.set('selectedObjects', newIds);
+       this.editor.stateManager.update({
+           'mouse.isPlacingObjects': false,
+           'mouse.placingObjects': [],
+           'duplicate.isActive': false,
+           'duplicate.objects': [],
+           'duplicate.basePosition': { x: 0, y: 0 }
+       });
+
+                 this.editor.updateAllPanels();
+        this.editor.render();
+    }
+}
