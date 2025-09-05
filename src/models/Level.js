@@ -9,7 +9,7 @@ export class Level {
     constructor(data = {}) {
         this.meta = {
             name: data.meta?.name || 'Untitled Level',
-            version: data.meta?.version || '1.0.0',
+            version: data.meta?.version || '2.0.0',
             created: data.meta?.created || new Date().toISOString(),
             modified: data.meta?.modified || new Date().toISOString(),
             author: data.meta?.author || '',

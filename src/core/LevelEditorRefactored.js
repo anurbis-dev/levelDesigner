@@ -18,11 +18,20 @@ import { ObjectOperations } from './ObjectOperations.js';
 import { GroupOperations } from './GroupOperations.js';
 import { RenderOperations } from './RenderOperations.js';
 import { DuplicateOperations } from './DuplicateOperations.js';
+import { Logger } from '../utils/Logger.js';
 
 /**
  * Main Level Editor class - Refactored version
+ * @version 2.0.0 - Utility Architecture
  */
 export class LevelEditor {
+    /**
+     * Current version of the Level Editor
+     * @static
+     * @type {string}
+     */
+    static VERSION = '2.0.0';
+
     constructor() {
         // Initialize managers
         this.stateManager = new StateManager();
@@ -60,6 +69,10 @@ export class LevelEditor {
      * Initialize the editor
      */
     async init() {
+        // Log version info
+        Logger.event.info(`🚀 Level Editor v${LevelEditor.VERSION} - Utility Architecture`);
+        Logger.event.info('Initializing editor components...');
+        
         // Get DOM elements
         const canvas = document.getElementById('main-canvas');
         const assetsPanel = document.getElementById('assets-panel');
@@ -94,6 +107,9 @@ export class LevelEditor {
         
         // Initial render
         this.render();
+        // Update version info in UI
+        this.updateVersionInfo();
+        
         this.updateAllPanels();
         
         // Save initial state
@@ -319,5 +335,15 @@ export class LevelEditor {
 
     getActiveEditedGroup() {
         return this.groupOperations.getActiveEditedGroup();
+    }
+
+    /**
+     * Update version info in UI
+     */
+    updateVersionInfo() {
+        const versionElement = document.getElementById('version-info');
+        if (versionElement) {
+            versionElement.textContent = `Level Editor v${LevelEditor.VERSION}`;
+        }
     }
 }
