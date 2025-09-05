@@ -89,13 +89,17 @@ export class GroupOperations extends BaseModule {
 
             // Simply remove editing flag - children stay where they are
             delete group._isEditing;
+            
+            console.log(`[GROUP EDIT DEBUG] 🚪 Closing group edit mode for: ${group.name} (ID: ${group.id})`);
         }
 
         // Pop the last opened group
         const openGroups = Array.isArray(groupEditMode.openGroups) ? [...groupEditMode.openGroups] : [];
+        const currentGroup = openGroups.length > 0 ? openGroups[openGroups.length - 1] : null;
         openGroups.pop();
         const nextGroup = openGroups.length > 0 ? openGroups[openGroups.length - 1] : null;
 
+        // Update group edit mode state FIRST
         this.editor.stateManager.set('groupEditMode', {
             isActive: openGroups.length > 0,
             groupId: nextGroup ? nextGroup.id : null,
@@ -103,6 +107,19 @@ export class GroupOperations extends BaseModule {
             originalChildren: nextGroup ? [...nextGroup.children] : [],
             openGroups
         });
+
+        // NOW check if the group that was just closed became empty and remove it
+        // (after it's no longer in the protected openGroups list)
+        if (currentGroup) {
+            console.log(`[GROUP EDIT DEBUG] 🔍 Checking if closed group is empty: ${currentGroup.name} (ID: ${currentGroup.id})`);
+            const groupWasRemoved = this.removeEmptyGroup(currentGroup);
+            if (groupWasRemoved) {
+                console.log(`[GROUP EDIT DEBUG] ✅ Group was removed after closing edit mode`);
+                this.editor.updateAllPanels();
+            } else {
+                console.log(`[GROUP EDIT DEBUG] ❌ Group was NOT removed after closing edit mode`);
+            }
+        }
 
         this.editor.stateManager.set('selectedObjects', new Set());
         this.editor.updateAllPanels();
@@ -156,5 +173,165 @@ export class GroupOperations extends BaseModule {
     getActiveEditedGroup() {
         const open = this.getOpenGroups();
         return open.length > 0 ? open[open.length - 1] : null;
+    }
+
+    /**
+     * Remove a specific group if it's empty
+     * @param {Object} targetGroup - The specific group to check and potentially remove
+     * @returns {boolean} - True if the group was removed
+     */
+    removeEmptyGroup(targetGroup) {
+        console.log(`[EMPTY GROUPS DEBUG] 🔍 Checking group for removal:`, {
+            group: targetGroup?.name || 'Unknown',
+            id: targetGroup?.id,
+            type: targetGroup?.type,
+            hasChildren: targetGroup?.children ? targetGroup.children.length : 'undefined',
+            children: targetGroup?.children
+        });
+
+        if (!targetGroup || targetGroup.type !== 'group') {
+            console.log(`[EMPTY GROUPS DEBUG] ❌ Not a valid group - skipping removal`);
+            return false;
+        }
+
+        // Fix: Handle case where children is undefined or null
+        const childrenArray = targetGroup.children || [];
+        console.log(`[EMPTY GROUPS DEBUG] 📊 Children array:`, childrenArray, `Length: ${childrenArray.length}`);
+
+        // Don't remove if it's not empty
+        if (childrenArray.length > 0) {
+            console.log(`[EMPTY GROUPS DEBUG] ❌ Group has ${childrenArray.length} children - NOT removing`);
+            return false;
+        }
+
+        // Don't remove if it's currently being edited
+        const groupEditMode = this.editor.stateManager.get('groupEditMode');
+        console.log(`[EMPTY GROUPS DEBUG] 🛡️ Group edit mode:`, {
+            isActive: groupEditMode?.isActive,
+            openGroupsCount: groupEditMode?.openGroups?.length || 0,
+            openGroupIds: groupEditMode?.openGroups?.map(g => g?.id) || []
+        });
+
+        if (groupEditMode && groupEditMode.openGroups) {
+            const isProtected = groupEditMode.openGroups.some(g => g && g.id === targetGroup.id);
+            if (isProtected) {
+                console.log(`[EMPTY GROUPS DEBUG] ❌ Group is protected (currently being edited) - NOT removing`);
+                return false;
+            }
+        }
+
+        console.log(`[EMPTY GROUPS DEBUG] ✅ Group is empty and not protected - attempting removal...`);
+
+        // Check if group actually exists in the level first
+        const existsInMainLevel = this.editor.level.objects.some(obj => obj.id === targetGroup.id);
+        console.log(`[EMPTY GROUPS DEBUG] 🔍 Group exists in main level: ${existsInMainLevel}`);
+
+        // Remove from main level
+        const initialCount = this.editor.level.objects.length;
+        console.log(`[EMPTY GROUPS DEBUG] 📋 Main level objects before removal: ${initialCount}`);
+        console.log(`[EMPTY GROUPS DEBUG] 📋 Main level object IDs:`, this.editor.level.objects.map(obj => `${obj.name}(${obj.id})`));
+        
+        this.editor.level.objects = this.editor.level.objects.filter(obj => obj.id !== targetGroup.id);
+        const finalCount = this.editor.level.objects.length;
+        console.log(`[EMPTY GROUPS DEBUG] 📋 Main level objects after removal: ${finalCount}`);
+        
+        if (finalCount < initialCount) {
+            console.log(`[EMPTY GROUPS DEBUG] ✅ Successfully removed group from main level!`);
+            return true; // Group was removed from main level
+        }
+
+        // If not found on main level, search in nested groups
+        console.log(`[EMPTY GROUPS DEBUG] 🔍 Group not found on main level, searching nested groups...`);
+        const removeFromNestedGroups = (objects) => {
+            for (const obj of objects) {
+                if (obj.type === 'group' && obj.children) {
+                    const beforeCount = obj.children.length;
+                    obj.children = obj.children.filter(child => child.id !== targetGroup.id);
+                    
+                    if (obj.children.length < beforeCount) {
+                        console.log(`[EMPTY GROUPS DEBUG] ✅ Successfully removed group from nested group: ${obj.name} (ID: ${obj.id})`);
+                        return true; // Found and removed
+                    }
+                    
+                    // Recursively search in nested children
+                    if (removeFromNestedGroups(obj.children)) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        };
+
+        const removedFromNested = removeFromNestedGroups(this.editor.level.objects);
+        if (!removedFromNested) {
+            console.log(`[EMPTY GROUPS DEBUG] ❌ Group not found anywhere for removal - this might be an error!`);
+        }
+        return removedFromNested;
+    }
+
+    /**
+     * Remove empty groups from the level automatically
+     * Groups that are currently being edited are protected from deletion
+     */
+    removeEmptyGroups() {
+        const groupEditMode = this.editor.stateManager.get('groupEditMode');
+        const protectedGroupIds = new Set();
+        
+        // Protect groups that are currently open for editing
+        if (groupEditMode && groupEditMode.openGroups) {
+            groupEditMode.openGroups.forEach(group => {
+                if (group && group.id) {
+                    protectedGroupIds.add(group.id);
+                }
+            });
+        }
+
+        // Track if any groups were removed
+        let groupsRemoved = false;
+
+        // Remove empty groups from main level
+        const beforeCount = this.editor.level.objects.length;
+        this.editor.level.objects = this.editor.level.objects.filter(obj => {
+            if (obj.type === 'group' && 
+                obj.children && 
+                obj.children.length === 0 && 
+                !protectedGroupIds.has(obj.id)) {
+                return false; // Remove empty group
+            }
+            return true; // Keep non-empty groups and other objects
+        });
+        
+        if (this.editor.level.objects.length < beforeCount) {
+            groupsRemoved = true;
+        }
+
+        // Recursively remove empty groups from nested groups
+        const removeEmptyNestedGroups = (objects) => {
+            for (const obj of objects) {
+                if (obj.type === 'group' && obj.children) {
+                    const beforeNestedCount = obj.children.length;
+                    obj.children = obj.children.filter(child => {
+                        if (child.type === 'group' && 
+                            child.children && 
+                            child.children.length === 0 && 
+                            !protectedGroupIds.has(child.id)) {
+                            return false; // Remove empty nested group
+                        }
+                        return true; // Keep non-empty groups and other objects
+                    });
+                    
+                    if (obj.children.length < beforeNestedCount) {
+                        groupsRemoved = true;
+                    }
+                    
+                    // Recursively check nested groups
+                    removeEmptyNestedGroups(obj.children);
+                }
+            }
+        };
+        
+        removeEmptyNestedGroups(this.editor.level.objects);
+
+        return groupsRemoved;
     }
 }

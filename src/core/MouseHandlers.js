@@ -190,6 +190,16 @@ export class MouseHandlers extends BaseModule {
                             obj.x = worldX;
                             obj.y = worldY;
                             this.editor.level.objects.push(obj);
+                            
+                            // Check if the specific group became empty and remove it
+                            console.log(`[MOUSE HANDLERS DEBUG] 🖱️ Object dragged out of group: ${groupEditMode.group.name} (ID: ${groupEditMode.group.id})`);
+                            const groupWasRemoved = this.editor.groupOperations.removeEmptyGroup(groupEditMode.group);
+                            if (groupWasRemoved) {
+                                console.log(`[MOUSE HANDLERS DEBUG] ✅ Group was removed after drag & drop`);
+                                this.editor.updateAllPanels();
+                            } else {
+                                console.log(`[MOUSE HANDLERS DEBUG] ❌ Group was NOT removed after drag & drop`);
+                            }
                         }
                     }
                 });

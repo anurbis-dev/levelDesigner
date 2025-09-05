@@ -123,16 +123,52 @@ export class ObjectOperations extends BaseModule {
         // Remove from main level
         this.editor.level.objects = this.editor.level.objects.filter(obj => !idsToDelete.has(obj.id));
 
-        // Remove from all groups recursively
+        // Remove from all groups recursively and collect affected groups
+        const affectedGroups = new Set();
         const removeFromGroups = (objects) => {
             for (const obj of objects) {
                 if (obj.type === 'group') {
-                    obj.children = obj.children.filter(child => !idsToDelete.has(child.id));
+                    const hadChildren = obj.children.some(child => idsToDelete.has(child.id));
+                    
+                    // IMPORTANT: Process children BEFORE removing them
                     removeFromGroups(obj.children);
+                    
+                    // Now remove the children 
+                    obj.children = obj.children.filter(child => !idsToDelete.has(child.id));
+                    
+                    // If this group had children that were deleted, mark it as affected
+                    if (hadChildren) {
+                        console.log(`[OBJECT OPERATIONS DEBUG] 📝 Marking group as affected: ${obj.name} (ID: ${obj.id})`);
+                        affectedGroups.add(obj);
+                    }
                 }
             }
         };
         removeFromGroups(this.editor.level.objects);
+
+        // Check only affected groups for emptiness and remove them
+        console.log(`[OBJECT OPERATIONS DEBUG] 🔍 Checking ${affectedGroups.size} affected groups for emptiness...`);
+        let anyGroupsRemoved = false;
+        affectedGroups.forEach((group, index) => {
+            console.log(`[OBJECT OPERATIONS DEBUG] Checking group ${index + 1}/${affectedGroups.size}: ${group.name} (ID: ${group.id})`);
+            const wasRemoved = this.editor.groupOperations.removeEmptyGroup(group);
+            if (wasRemoved) {
+                console.log(`[OBJECT OPERATIONS DEBUG] ✅ Group ${group.name} was removed!`);
+                anyGroupsRemoved = true;
+            } else {
+                console.log(`[OBJECT OPERATIONS DEBUG] ❌ Group ${group.name} was NOT removed`);
+            }
+        });
+
+        if (anyGroupsRemoved) {
+            console.log(`[OBJECT OPERATIONS DEBUG] 🎯 Some groups were removed - updating UI`);
+        } else {
+            console.log(`[OBJECT OPERATIONS DEBUG] ℹ️ No groups were removed`);
+        }
+
+        if (anyGroupsRemoved) {
+            // Groups were removed, panels will be updated below
+        }
 
         this.editor.stateManager.set('selectedObjects', new Set());
         this.editor.updateAllPanels();
