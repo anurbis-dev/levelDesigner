@@ -10,7 +10,7 @@
 
 ### Управление версиями
 
-**Централизованная система версий**: Версия проекта управляется из **одного места** - статической переменной `LevelEditor.VERSION` в файле `src/core/LevelEditorRefactored.js`.
+**Централизованная система версий**: Версия проекта управляется из **одного места** - статической переменной `LevelEditor.VERSION` в файле `src/core/LevelEditor.js`.
 
 ```javascript
 export class LevelEditor {
@@ -29,11 +29,79 @@ export class LevelEditor {
 3. **Console команда `version`** - по запросу пользователя
 
 **Для обновления версии:**
-1. Измените `LevelEditor.VERSION` в `src/core/LevelEditorRefactored.js`
+1. Измените `LevelEditor.VERSION` в `src/core/LevelEditor.js`
 2. Обновите версию в `package.json` для синхронизации
 3. Все места отображения обновятся автоматически
 
 **Избегайте дублирования версии** в других местах - используйте динамическое получение из `LevelEditor.VERSION`.
+
+## Система логирования
+
+### Использование Logger
+
+Проект использует централизованную систему логирования через `Logger`. **Никогда не используйте** `console.log/error/warn` напрямую!
+
+```javascript
+import { Logger } from '../utils/Logger.js';
+
+// ✅ ПРАВИЛЬНО
+Logger.mouse.debug('Alt+drag detected');
+Logger.preferences.error('Failed to save:', error);
+Logger.layout.info('Panel resized');
+
+// ❌ НЕПРАВИЛЬНО  
+console.log('Debug message');
+console.error('Error message');
+```
+
+### Категории логирования (17 доступных)
+
+**Основные системы**:
+- `Logger.duplicate` - операции дублирования
+- `Logger.render` - процессы рендеринга
+- `Logger.ui` - UI операции
+- `Logger.event` - обработка событий
+- `Logger.asset` - работа с ресурсами
+- `Logger.camera` - операции камеры
+
+**Специализированные**:
+- `Logger.mouse` - события мыши
+- `Logger.state` - изменения состояния
+- `Logger.git` - Git операции
+- `Logger.console` - работа с консолью
+- `Logger.layout` - управление панелями
+
+**Конфигурации**:
+- `Logger.settings` - настройки редактора  
+- `Logger.preferences` - пользовательские предпочтения
+- `Logger.file` - файловые операции
+- `Logger.history` - история изменений
+
+### Уровни логирования
+
+В `src/utils/Logger.js` настроен уровень `INFO`:
+
+```javascript
+static currentLevel = Logger.LEVELS.INFO; // Production оптимизация
+```
+
+**Доступные уровни**:
+- `DEBUG` (0) - детальная отладка (отключено в production)
+- `INFO` (1) - важные события (включено)
+- `WARN` (2) - предупреждения (включено)
+- `ERROR` (3) - критические ошибки (включено)
+
+### Отладка приложения
+
+Для детальной отладки временно измените уровень:
+
+```javascript
+// В src/utils/Logger.js для отладки:
+static currentLevel = Logger.LEVELS.DEBUG;
+
+// Верните обратно для production:
+static currentLevel = Logger.LEVELS.INFO;
+```
 
 ### Запуск локального сервера
 
@@ -52,6 +120,29 @@ php -S localhost:8000
 ```
 
 Откройте `http://localhost:8000/index.html` в браузере.
+
+## Правила создания отчётов
+
+**ПРАВИЛО**: Все отчёты создаются и ведутся в папке `./tmp/reports`. Ключевые изменения из отчётов должны отражаться в основной документации проекта.
+
+### Текущие отчёты
+- `LOGGER_MIGRATION_REPORT.md` - миграция системы логирования (73 лога)
+- `TMP_MIGRATION_REPORT.md` - миграция временных файлов (DuplicateUtils)
+- `REFACTORING_REPORT.md` - общий рефакторинг (280+ строк устранено)
+
+### Создание новых отчётов
+```bash
+# Создавайте отчёты в правильной папке
+echo "# Новый отчёт" > ./tmp/reports/FEATURE_REPORT.md
+
+# НЕ создавайте в docs/ - это для основной документации
+```
+
+### Интеграция отчётов
+После завершения работы **обязательно** перенесите ключевую информацию из отчёта в основные документы:
+- `docs/ARCHITECTURE.md` - архитектурные изменения
+- `docs/DEVELOPMENT_GUIDE.md` - новые правила разработки  
+- `docs/README.md` - обновление описания возможностей
 
 ## Структура проекта
 
@@ -796,7 +887,7 @@ handleAltDragInGroup(object, group) {
 
 ```javascript
 // Использование DuplicateRenderer
-import { duplicateRenderUtils } from '../../tmp/duplicate_renderer_fixed.js';
+import { duplicateRenderUtils } from '../utils/DuplicateUtils.js';
 
 duplicateSelectedObjects() {
     const selected = this.getSelectedObjects();

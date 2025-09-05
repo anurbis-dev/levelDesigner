@@ -11,7 +11,7 @@ Level Editor использует **централизованную систе�
 Версия определяется **только в одном месте**:
 
 ```javascript
-// src/core/LevelEditorRefactored.js
+// src/core/LevelEditor.js
 export class LevelEditor {
     static VERSION = '2.1.0'; // ← ЕДИНСТВЕННЫЙ ИСТОЧНИК
 }
@@ -45,7 +45,7 @@ export class LevelEditor {
 
 1. **Обновить основную версию**
    ```javascript
-   // src/core/LevelEditorRefactored.js
+   // src/core/LevelEditor.js
    static VERSION = '2.2.0'; // новая версия
    ```
 
@@ -121,7 +121,7 @@ updateVersionInfo() {
 grep '"version"' package.json
 
 # Найти VERSION в коде
-grep -r "VERSION.*=" src/core/LevelEditorRefactored.js
+grep -r "VERSION.*=" src/core/LevelEditor.js
 ```
 
 ### Тестирование версионирования:

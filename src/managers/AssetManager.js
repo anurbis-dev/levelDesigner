@@ -1,4 +1,5 @@
 import { Asset } from '../models/Asset.js';
+import { Logger } from '../utils/Logger.js';
 
 /**
  * Asset library management
@@ -242,7 +243,7 @@ export class AssetManager {
             
             return true;
         } catch (error) {
-            console.error('Failed to import asset library:', error);
+            Logger.asset.error('Failed to import asset library:', error);
             return false;
         }
     }

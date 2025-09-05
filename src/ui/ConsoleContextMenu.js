@@ -14,14 +14,16 @@
  * Usage:
  * ```javascript
  * const contextMenu = new ConsoleContextMenu(consolePanel, consoleOutput, {
- *     onLoggingToggle: (enabled) => console.log(`Logging ${enabled ? 'enabled' : 'disabled'}`),
- *     onConsoleClear: () => console.log('Console cleared')
+ *     onLoggingToggle: (enabled) => Logger.console.info(`Logging ${enabled ? 'enabled' : 'disabled'}`),
+ *     onConsoleClear: () => Logger.console.info('Console cleared')
  * });
  * ```
  * 
  * @author Level Designer
  * @version dynamic
  */
+
+import { Logger } from '../utils/Logger.js';
 
 export class ConsoleContextMenu {
     constructor(consolePanel, consoleOutput, callbacks = {}) {
@@ -38,16 +40,16 @@ export class ConsoleContextMenu {
         
         // Debug: Check if elements exist
         if (!this.consolePanel) {
-            console.error('ConsoleContextMenu: consolePanel not found');
+            Logger.console.error('ConsoleContextMenu: consolePanel not found');
         }
         if (!this.consoleOutput) {
-            console.error('ConsoleContextMenu: consoleOutput not found');
+            Logger.console.error('ConsoleContextMenu: consoleOutput not found');
         }
         
         this.setupContextMenu();
         this.setupWindowResizeHandler();
         
-        console.log('ConsoleContextMenu initialized successfully');
+        Logger.console.info('ConsoleContextMenu initialized successfully');
     }
 
     /**
@@ -422,7 +424,7 @@ export class ConsoleContextMenu {
                 this.fallbackCopyToClipboard(text);
             }
         } catch (err) {
-            console.error('Failed to copy text: ', err);
+            Logger.console.error('Failed to copy text: ', err);
             this.fallbackCopyToClipboard(text);
         }
     }
@@ -445,7 +447,7 @@ export class ConsoleContextMenu {
             document.execCommand('copy');
             this.callbacks.onCopyToClipboard(text);
         } catch (err) {
-            console.error('Fallback copy failed: ', err);
+            Logger.console.error('Fallback copy failed: ', err);
         }
         
         document.body.removeChild(textArea);

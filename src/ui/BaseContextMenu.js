@@ -31,6 +31,8 @@
  * @version dynamic
  */
 
+import { Logger } from '../utils/Logger.js';
+
 export class BaseContextMenu {
     constructor(panel, callbacks = {}) {
         this.panel = panel;
@@ -48,7 +50,7 @@ export class BaseContextMenu {
         this.setupContextMenu();
         this.setupWindowResizeHandler();
         
-        console.log(`${this.constructor.name} initialized successfully`);
+        Logger.ui.info(`${this.constructor.name} initialized successfully`);
     }
 
     /**

@@ -16,8 +16,11 @@ export class Logger {
 
     /**
      * Current logging level (can be changed for production)
+     * INFO level allows error/warn/info messages but blocks debug
+     * DEBUG level allows all messages
+     * NONE disables all logging (not recommended as breaks console integration)
      */
-    static currentLevel = Logger.LEVELS.DEBUG;
+    static currentLevel = Logger.LEVELS.INFO;
 
     /**
      * Logging categories with colors
@@ -34,7 +37,12 @@ export class Logger {
         ASSET: { color: '#FF5722', prefix: 'ASSET' },
         UI: { color: '#3F51B5', prefix: 'UI' },
         PERFORMANCE: { color: '#CDDC39', prefix: 'PERF' },
-        DEBUG: { color: '#9E9E9E', prefix: 'DEBUG' }
+        DEBUG: { color: '#9E9E9E', prefix: 'DEBUG' },
+        GIT: { color: '#FF6B35', prefix: 'GIT' },
+        CONSOLE: { color: '#00BCD4', prefix: 'CONSOLE' },
+        LAYOUT: { color: '#8BC34A', prefix: 'LAYOUT' },
+        SETTINGS: { color: '#FFC107', prefix: 'SETTINGS' },
+        PREFERENCES: { color: '#673AB7', prefix: 'PREFS' }
     };
 
     /**
@@ -264,5 +272,52 @@ export class Logger {
                 console.trace();
             }
         }
+    };
+
+    /**
+     * Git operations logging
+     */
+    static git = {
+        info: (message, ...args) => Logger.log('GIT', 'info', message, ...args),
+        debug: (message, ...args) => Logger.log('GIT', 'debug', message, ...args),
+        error: (message, ...args) => Logger.log('GIT', 'error', message, ...args)
+    };
+
+    /**
+     * Console operations logging
+     */
+    static console = {
+        info: (message, ...args) => Logger.log('CONSOLE', 'info', message, ...args),
+        debug: (message, ...args) => Logger.log('CONSOLE', 'debug', message, ...args),
+        error: (message, ...args) => Logger.log('CONSOLE', 'error', message, ...args)
+    };
+
+    /**
+     * Layout and panels logging
+     */
+    static layout = {
+        info: (message, ...args) => Logger.log('LAYOUT', 'info', message, ...args),
+        debug: (message, ...args) => Logger.log('LAYOUT', 'debug', message, ...args),
+        error: (message, ...args) => Logger.log('LAYOUT', 'error', message, ...args)
+    };
+
+    /**
+     * Settings management logging
+     */
+    static settings = {
+        info: (message, ...args) => Logger.log('SETTINGS', 'info', message, ...args),
+        debug: (message, ...args) => Logger.log('SETTINGS', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('SETTINGS', 'warn', message, ...args),
+        error: (message, ...args) => Logger.log('SETTINGS', 'error', message, ...args)
+    };
+
+    /**
+     * User preferences logging
+     */
+    static preferences = {
+        info: (message, ...args) => Logger.log('PREFERENCES', 'info', message, ...args),
+        debug: (message, ...args) => Logger.log('PREFERENCES', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('PREFERENCES', 'warn', message, ...args),
+        error: (message, ...args) => Logger.log('PREFERENCES', 'error', message, ...args)
     };
 }

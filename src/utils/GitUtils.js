@@ -1,6 +1,9 @@
 /**
  * Git utilities for safe log retrieval without pager issues
  */
+
+import { Logger } from './Logger.js';
+
 class GitUtils {
     /**
      * Get git logs safely without pager hanging
@@ -118,9 +121,9 @@ class GitUtils {
             const logs = await this.getLogs(commits);
             const fs = require('fs');
             fs.writeFileSync(filename, logs, 'utf8');
-            console.log(`Git logs saved to: ${filename}`);
+            Logger.git.info(`Git logs saved to: ${filename}`);
         } catch (error) {
-            console.error('Error saving git logs:', error.message);
+            Logger.git.error('Error saving git logs:', error.message);
             throw error;
         }
     }

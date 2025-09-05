@@ -2,6 +2,8 @@
  * User Preferences Manager
  * Handles saving and loading user preferences to/from localStorage
  */
+
+import { Logger } from '../utils/Logger.js';
 export class UserPreferencesManager {
     constructor() {
         this.prefsKey = 'levelEditor_userPrefs';
@@ -49,7 +51,7 @@ export class UserPreferencesManager {
                 return { ...this.defaultPrefs, ...parsed };
             }
         } catch (error) {
-            console.warn('Failed to load user preferences:', error);
+            Logger.preferences.warn('Failed to load user preferences:', error);
         }
         return { ...this.defaultPrefs };
     }
@@ -62,7 +64,7 @@ export class UserPreferencesManager {
             localStorage.setItem(this.prefsKey, JSON.stringify(this.preferences));
             return true;
         } catch (error) {
-            console.error('Failed to save user preferences:', error);
+            Logger.preferences.error('Failed to save user preferences:', error);
             return false;
         }
     }
@@ -115,7 +117,7 @@ export class UserPreferencesManager {
             this.savePreferences();
             return true;
         } catch (error) {
-            console.error('Failed to import preferences:', error);
+            Logger.preferences.error('Failed to import preferences:', error);
             return false;
         }
     }

@@ -1,6 +1,9 @@
 /**
  * Settings Manager for Level Editor
  */
+
+import { Logger } from '../utils/Logger.js';
+
 export class SettingsManager {
     constructor() {
         this.settings = {
@@ -224,7 +227,7 @@ export class SettingsManager {
                 this.settings = this.mergeSettings(this.settings, parsed);
             }
         } catch (error) {
-            console.warn('Failed to load settings:', error);
+            Logger.settings.warn('Failed to load settings:', error);
         }
     }
 
@@ -235,7 +238,7 @@ export class SettingsManager {
         try {
             localStorage.setItem('levelEditor_settings', JSON.stringify(this.settings));
         } catch (error) {
-            console.warn('Failed to save settings:', error);
+            Logger.settings.warn('Failed to save settings:', error);
         }
     }
 
@@ -289,7 +292,7 @@ export class SettingsManager {
             this.updateSettings(imported);
             return true;
         } catch (error) {
-            console.error('Failed to import settings:', error);
+            Logger.settings.error('Failed to import settings:', error);
             return false;
         }
     }

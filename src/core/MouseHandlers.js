@@ -1,4 +1,5 @@
 import { BaseModule } from './BaseModule.js';
+import { Logger } from '../utils/Logger.js';
 
 /**
  * Mouse Handlers module for LevelEditor
@@ -138,21 +139,21 @@ export class MouseHandlers extends BaseModule {
             // If we are in group edit mode and released after dragging with Alt
             if (this.isInGroupEditMode() && currentAlt && wasDragging) {
                 const groupEditMode = this.getGroupEditMode();
-                console.log('Alt+drag detected in group edit mode');
+                Logger.mouse.debug('Alt+drag detected in group edit mode');
                 const selectedIds = this.editor.stateManager.get('selectedObjects');
                 
                 // ИЗМЕНЕНИЕ: Вычисляем границы группы, ИСКЛЮЧАЯ перетаскиваемые объекты.
                 const bounds = this.editor.objectOperations.getObjectWorldBounds(groupEditMode.group, Array.from(selectedIds));
-                console.log('Group bounds (excluding dragged objects):', bounds);
+                Logger.mouse.debug('Group bounds (excluding dragged objects):', bounds);
                 
                 const selected = Array.from(selectedIds)
                     .map(id => this.editor.level.findObjectById(id))
                     .filter(Boolean);
-                console.log('Selected objects:', selected.length);
+                Logger.mouse.debug('Selected objects:', selected.length);
                 selected.forEach(obj => {
                     // Only consider direct children of the edited group
                     const isChild = this.editor.objectOperations.isObjectInGroup(obj, groupEditMode.group);
-                    console.log(`Object ${obj.id} is child:`, isChild);
+                    Logger.mouse.debug(`Object ${obj.id} is child:`, isChild);
                     if (isChild) {
                         // Get current world position and bounds of the object
                         const groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
@@ -169,8 +170,8 @@ export class MouseHandlers extends BaseModule {
                             maxY: worldY + objHeight
                         };
                         
-                        console.log(`Object bounds:`, objBounds);
-                        console.log(`Group bounds:`, bounds);
+                        Logger.mouse.debug(`Object bounds:`, objBounds);
+                        Logger.mouse.debug(`Group bounds:`, bounds);
                         
                         // Check if object bounds intersect with group bounds
                         const hasIntersection = objBounds.minX < bounds.maxX && 
@@ -179,10 +180,10 @@ export class MouseHandlers extends BaseModule {
                                               objBounds.maxY > bounds.minY;
                         
                         const outside = !hasIntersection;
-                        console.log(`Object intersects with group:`, hasIntersection);
-                        console.log(`Object should be moved out:`, outside);
+                        Logger.mouse.debug(`Object intersects with group:`, hasIntersection);
+                        Logger.mouse.debug(`Object should be moved out:`, outside);
                         if (outside) {
-                            console.log(`Moving object ${obj.id} out of group`);
+                            Logger.mouse.debug(`Moving object ${obj.id} out of group`);
                             // Remove from group's children
                             groupEditMode.group.children = groupEditMode.group.children.filter(c => c.id !== obj.id);
                             // Add to main level at world coordinates

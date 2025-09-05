@@ -1,6 +1,9 @@
 /**
  * Central state management for the level editor
  */
+
+import { Logger } from '../utils/Logger.js';
+
 export class StateManager {
     constructor() {
         this.state = {
@@ -131,7 +134,7 @@ export class StateManager {
                 try {
                     callback(newValue, oldValue);
                 } catch (error) {
-                    console.error('State listener error:', error);
+                    Logger.state.error('State listener error:', error);
                 }
             });
         }
@@ -235,7 +238,7 @@ export class StateManager {
                 try {
                     callback(this.state[key], undefined);
                 } catch (error) {
-                    console.error('State reset listener error:', error);
+                    Logger.state.error('State reset listener error:', error);
                 }
             });
         });
