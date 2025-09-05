@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Level Editor v2.0.0 - Utility Architecture</title>
+    <title>2D Level Editor - Utility Architecture</title>
     <!-- Подключаем Tailwind CSS для быстрой стилизации -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="src/ui/ConsoleContextMenu.css">
@@ -155,7 +155,7 @@
                 </div>
             </div>
             <div class="text-sm text-gray-400">
-                2D Level Editor v1.0.0
+                <span id="header-version-info">2D Level Editor</span>
             </div>
         </nav>
     </header>
@@ -205,7 +205,7 @@
         </div>
         <!-- Version info -->
         <div class="text-xs text-gray-500 px-2 py-1 text-right">
-            <span id="version-info">Level Editor v2.0.0</span>
+            <span id="version-info">Level Editor</span>
         </div>
     </footer>
 
@@ -979,7 +979,8 @@
                             break;
                             
                         case 'version':
-                            logToConsole('2D Level Editor v1.0.0', 'info');
+                            const version = window.editor ? window.editor.constructor.VERSION : '2.0.0';
+                            logToConsole(`2D Level Editor v${version}`, 'info');
                             break;
                             
                         case 'objects':
@@ -1050,7 +1051,8 @@
             }
 
             // Initial console message
-            logToConsole('2D Level Editor v1.0.0 - Console ready', 'info');
+            const version = window.editor ? window.editor.constructor.VERSION : '2.0.0';
+            logToConsole(`2D Level Editor v${version} - Console ready`, 'info');
             logToConsole('Press ` to toggle console, type "help" for commands', 'info');
         }
 

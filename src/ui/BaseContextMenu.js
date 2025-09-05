@@ -28,7 +28,7 @@
  * ```
  * 
  * @author Level Designer
- * @version 2.0.0
+ * @version dynamic
  */
 
 export class BaseContextMenu {

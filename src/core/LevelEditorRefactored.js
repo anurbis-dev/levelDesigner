@@ -22,7 +22,7 @@ import { Logger } from '../utils/Logger.js';
 
 /**
  * Main Level Editor class - Refactored version
- * @version 2.0.0 - Utility Architecture
+ * @version dynamic - Utility Architecture
  */
 export class LevelEditor {
     /**
@@ -107,8 +107,9 @@ export class LevelEditor {
         
         // Initial render
         this.render();
-        // Update version info in UI
+        // Update version info in UI and page title
         this.updateVersionInfo();
+        this.updatePageTitle();
         
         this.updateAllPanels();
         
@@ -341,9 +342,23 @@ export class LevelEditor {
      * Update version info in UI
      */
     updateVersionInfo() {
+        // Update version in assets panel
         const versionElement = document.getElementById('version-info');
         if (versionElement) {
             versionElement.textContent = `Level Editor v${LevelEditor.VERSION}`;
         }
+        
+        // Update version in header
+        const headerVersionElement = document.getElementById('header-version-info');
+        if (headerVersionElement) {
+            headerVersionElement.textContent = `2D Level Editor v${LevelEditor.VERSION}`;
+        }
+    }
+
+    /**
+     * Update page title with current version
+     */
+    updatePageTitle() {
+        document.title = `2D Level Editor v${LevelEditor.VERSION} - Utility Architecture`;
     }
 }
