@@ -1,6 +1,9 @@
 # PowerShell script to safely get git logs without pager issues
 # Usage: .\get_git_logs.ps1 [number_of_commits] [output_file]
 
+# Change to script directory
+Set-Location $PSScriptRoot
+
 param(
     [int]$Commits = 10,
     [string]$OutputFile = "git_logs.txt"

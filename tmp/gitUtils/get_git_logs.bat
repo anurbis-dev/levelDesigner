@@ -2,6 +2,9 @@
 REM Batch script to safely get git logs without pager issues
 REM Usage: get_git_logs.bat [number_of_commits] [output_file]
 
+REM Change to script directory
+cd /d "%~dp0"
+
 set COMMITS=%1
 if "%COMMITS%"=="" set COMMITS=10
 

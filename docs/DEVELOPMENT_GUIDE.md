@@ -47,13 +47,13 @@ export class LevelEditor {
 6. **`tmp/gitUtils/git_status.bat`** - Быстрая проверка статуса
 7. **`tmp/gitUtils/git_commit.bat`** - Быстрый коммит с версионированием
 
-**Рекомендуемый workflow (используйте обёртки):**
+**Рекомендуемый workflow:**
 ```bash
 # 1. Проверка статуса
-.\git_status.bat
+tmp\gitUtils\git_status.bat
 
 # 2. Получение логов
-.\get_git_logs.bat 10
+tmp\gitUtils\get_git_logs.bat 10
 
 # 3. Добавление изменений
 git add .
@@ -67,14 +67,6 @@ git push origin master
 
 **Или используйте автоматизированный workflow:**
 ```bash
-.\git_workflow.bat
-```
-
-**Альтернативно (прямые пути):**
-```bash
-# Прямые пути к файлам в tmp/gitUtils/
-tmp\gitUtils\git_status.bat
-tmp\gitUtils\get_git_logs.bat 10
 tmp\gitUtils\git_workflow.bat
 ```
 
