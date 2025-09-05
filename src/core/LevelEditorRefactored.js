@@ -342,13 +342,7 @@ export class LevelEditor {
      * Update version info in UI
      */
     updateVersionInfo() {
-        // Update version in assets panel
-        const versionElement = document.getElementById('version-info');
-        if (versionElement) {
-            versionElement.textContent = `Level Editor v${LevelEditor.VERSION}`;
-        }
-        
-        // Update version in header
+        // Update version in header (main window for users)
         const headerVersionElement = document.getElementById('header-version-info');
         if (headerVersionElement) {
             headerVersionElement.textContent = `2D Level Editor v${LevelEditor.VERSION}`;
@@ -356,9 +350,9 @@ export class LevelEditor {
     }
 
     /**
-     * Update page title with current version
+     * Update page title (simplified without version)
      */
     updatePageTitle() {
-        document.title = `2D Level Editor v${LevelEditor.VERSION} - Utility Architecture`;
+        document.title = '2D Level Editor';
     }
 }

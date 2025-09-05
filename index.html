@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2D Level Editor - Utility Architecture</title>
+    <title>2D Level Editor</title>
     <!-- Подключаем Tailwind CSS для быстрой стилизации -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="src/ui/ConsoleContextMenu.css">
@@ -202,10 +202,6 @@
         </div>
         <div id="asset-previews-container" class="flex-grow p-4 overflow-auto">
             <!-- Контейнер для превью ассетов будет генерироваться динамически -->
-        </div>
-        <!-- Version info -->
-        <div class="text-xs text-gray-500 px-2 py-1 text-right">
-            <span id="version-info">Level Editor</span>
         </div>
     </footer>
 
@@ -979,7 +975,7 @@
                             break;
                             
                         case 'version':
-                            const version = window.editor ? window.editor.constructor.VERSION : '2.1.0';
+                            const version = window.editor ? window.editor.constructor.VERSION : 'unknown';
                             logToConsole(`2D Level Editor v${version}`, 'info');
                             break;
                             
@@ -1051,7 +1047,7 @@
             }
 
             // Initial console message
-            const version = window.editor ? window.editor.constructor.VERSION : '2.1.0';
+            const version = window.editor ? window.editor.constructor.VERSION : 'unknown';
             logToConsole(`2D Level Editor v${version} - Console ready`, 'info');
             logToConsole('Press ` to toggle console, type "help" for commands', 'info');
         }
