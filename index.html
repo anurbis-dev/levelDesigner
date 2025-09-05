@@ -6,6 +6,7 @@
     <title>2D Level Editor v1.0.0 - Modular</title>
     <!-- Подключаем Tailwind CSS для быстрой стилизации -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="src/ui/ConsoleContextMenu.css">
     <style>
         /* Дополнительные стили для улучшения внешнего вида и функциональности */
         body, html {
@@ -43,35 +44,7 @@
             overflow: hidden;
         }
         
-        /* Context menu styles */
-        .context-menu {
-            position: absolute;
-            background: #1F2937;
-            border: 1px solid #374151;
-            border-radius: 4px;
-            padding: 4px 0;
-            z-index: 1000;
-            min-width: 120px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-        
-        .context-menu-item {
-            padding: 8px 12px;
-            color: #D1D5DB;
-            cursor: pointer;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .context-menu-item:hover {
-            background: #374151;
-        }
-        
-        .context-menu-item:active {
-            background: #4B5563;
-        }
+        /* Console context menu styles - moved to ConsoleContextMenu.css */
         
         .log-entry {
             position: relative;
@@ -252,6 +225,7 @@
     <!-- Логика приложения -->
     <script type="module">
         import { LevelEditor } from './src/core/LevelEditorRefactored.js';
+        import { ConsoleContextMenu } from './src/ui/ConsoleContextMenu.js';
 
         // Initialize the level editor
         const editor = new LevelEditor();
@@ -819,6 +793,21 @@
             const consoleClose = document.getElementById('console-close');
             
             let isConsoleVisible = false;
+            let isLoggingEnabled = true;
+
+            // Initialize console context menu
+            const consoleContextMenu = new ConsoleContextMenu(consolePanel, consoleOutput, {
+                onLoggingToggle: (enabled) => {
+                    isLoggingEnabled = enabled;
+                    logToConsole(`Logging ${enabled ? 'enabled' : 'disabled'}`, 'info');
+                },
+                onConsoleClear: () => {
+                    logToConsole('Console cleared', 'info');
+                },
+                onCopyToClipboard: (text) => {
+                    logToConsole(`Copied to clipboard: ${text}`, 'info');
+                }
+            });
 
             // Toggle console with backtick key
             document.addEventListener('keydown', (e) => {
@@ -832,6 +821,8 @@
             consoleClose.addEventListener('click', () => {
                 hideConsole();
             });
+
+            // Context menu is now handled by ConsoleContextMenu class
 
             // Console input handling
             consoleInput.addEventListener('keydown', (e) => {
@@ -903,16 +894,14 @@
             }
 
             function logToConsole(message, type = 'log') {
+                if (!consoleContextMenu.getLoggingState()) return;
+                
                 const timestamp = new Date().toLocaleTimeString();
                 const logEntry = document.createElement('div');
                 logEntry.className = `mb-1 log-entry ${getLogTypeClass(type)}`;
                 logEntry.innerHTML = `<span class="text-gray-500">[${timestamp}]</span> ${message}`;
 
-                // Add context menu functionality (use passive listener to avoid reflow)
-                logEntry.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    showContextMenu(e, message, timestamp);
-                }, { passive: true });
+                // Context menu is now handled by the console panel itself
 
                 consoleOutput.appendChild(logEntry);
 
@@ -931,70 +920,7 @@
                 }
             }
 
-            // Context menu functionality
-            function showContextMenu(event, message, timestamp) {
-                // Remove existing context menu
-                const existingMenu = document.querySelector('.context-menu');
-                if (existingMenu) {
-                    existingMenu.remove();
-                }
-
-                // Create context menu
-                const contextMenu = document.createElement('div');
-                contextMenu.className = 'context-menu';
-                contextMenu.style.left = event.pageX + 'px';
-                contextMenu.style.top = event.pageY + 'px';
-
-                // Copy message option
-                const copyMessageItem = document.createElement('div');
-                copyMessageItem.className = 'context-menu-item';
-                copyMessageItem.innerHTML = '📋 Copy message';
-                copyMessageItem.addEventListener('click', () => {
-                    copyToClipboard(message);
-                    contextMenu.remove();
-                });
-
-                // Copy with timestamp option
-                const copyWithTimestampItem = document.createElement('div');
-                copyWithTimestampItem.className = 'context-menu-item';
-                copyWithTimestampItem.innerHTML = '🕒 Copy with timestamp';
-                copyWithTimestampItem.addEventListener('click', () => {
-                    copyToClipboard(`[${timestamp}] ${message}`);
-                    contextMenu.remove();
-                });
-
-                // Copy timestamp only option
-                const copyTimestampItem = document.createElement('div');
-                copyTimestampItem.className = 'context-menu-item';
-                copyTimestampItem.innerHTML = '⏰ Copy timestamp';
-                copyTimestampItem.addEventListener('click', () => {
-                    copyToClipboard(timestamp);
-                    contextMenu.remove();
-                });
-
-                // Add items to menu
-                contextMenu.appendChild(copyMessageItem);
-                contextMenu.appendChild(copyWithTimestampItem);
-                contextMenu.appendChild(copyTimestampItem);
-
-                // Add to document (use requestAnimationFrame to batch DOM operations)
-                requestAnimationFrame(() => {
-                    document.body.appendChild(contextMenu);
-                });
-
-                // Close menu when clicking outside
-                const closeMenu = (e) => {
-                    if (!contextMenu.contains(e.target)) {
-                        contextMenu.remove();
-                        document.removeEventListener('click', closeMenu);
-                    }
-                };
-
-                // Close menu after a short delay to allow click events to register
-                setTimeout(() => {
-                    document.addEventListener('click', closeMenu, { passive: true });
-                }, 100);
-            }
+            // Context menu functionality moved to ConsoleContextMenu class
 
             function copyToClipboard(text) {
                 if (navigator.clipboard && window.isSecureContext) {
@@ -1087,17 +1013,23 @@
 
             console.log = function(...args) {
                 originalLog.apply(console, args);
-                logToConsole(args.join(' '), 'log');
+                if (consoleContextMenu.getLoggingState()) {
+                    logToConsole(args.join(' '), 'log');
+                }
             };
 
             console.error = function(...args) {
                 originalError.apply(console, args);
-                logToConsole(args.join(' '), 'error');
+                if (consoleContextMenu.getLoggingState()) {
+                    logToConsole(args.join(' '), 'error');
+                }
             };
 
             console.warn = function(...args) {
                 originalWarn.apply(console, args);
-                logToConsole(args.join(' '), 'warn');
+                if (consoleContextMenu.getLoggingState()) {
+                    logToConsole(args.join(' '), 'warn');
+                }
             };
 
             // Make editor available globally for console commands
@@ -1120,6 +1052,16 @@
 
         // Initialize console
         setupConsole();
+        
+        // Test context menu functionality
+        window.testContextMenu = () => {
+            const consolePanel = document.getElementById('console-panel');
+            if (consolePanel) {
+                consolePanel.classList.remove('hidden');
+                document.getElementById('resizer-console').classList.remove('hidden');
+                console.log('Console shown for testing context menu');
+            }
+        };
         
         // Update canvas after complete initialization
         const updateCanvasOnStartup = () => {
