@@ -30,7 +30,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '2.2.1';
+    static VERSION = '2.3.0';
 
     constructor() {
         // Initialize managers
@@ -194,7 +194,8 @@ export class LevelEditor {
         this.stateManager.update({
             'duplicate.isActive': false,
             'duplicate.objects': [],
-            'duplicate.basePosition': { x: 0, y: 0 }
+            'duplicate.basePosition': { x: 0, y: 0 },
+            'duplicate.isAltDragMode': false
         });
         
         this.render();

@@ -79,9 +79,17 @@ export class DuplicateOperations extends BaseModule {
         // Determine current world position under mouse (fallback to canvas center)
         const mouse = this.editor.stateManager.get('mouse');
         const camera = this.editor.stateManager.get('camera');
-        const mouseX = mouse?.x || this.editor.canvasRenderer.canvas.width / 2;
-        const mouseY = mouse?.y || this.editor.canvasRenderer.canvas.height / 2;
-        const worldPos = this.editor.canvasRenderer.screenToWorld(mouseX, mouseY, camera);
+
+        // Use mouse world coordinates if available, otherwise fallback to canvas center
+        let worldPos;
+        if (mouse?.worldX !== undefined && mouse?.worldY !== undefined) {
+            worldPos = { x: mouse.worldX, y: mouse.worldY };
+        } else {
+            // Fallback: convert canvas center to world coordinates
+            const centerX = this.editor.canvasRenderer.canvas.width / 2;
+            const centerY = this.editor.canvasRenderer.canvas.height / 2;
+            worldPos = this.editor.canvasRenderer.screenToWorld(centerX, centerY, camera);
+        }
 
         // Initialize offsets relative to the cursor
         const initialized = this.editor.duplicateRenderUtils.initializePositions(clones, worldPos);
@@ -89,14 +97,18 @@ export class DuplicateOperations extends BaseModule {
         // Apply initial positions so preview is visible immediately (even without mouse move)
         const positioned = this.editor.duplicateRenderUtils.updatePositions(initialized, worldPos);
 
+        // Check if this is Alt+drag mode
+        const isAltDragMode = mouse?.altKey || false;
+
         // Set duplicate state and start placing mode
-        Logger.duplicate.debug('Setting duplicate state, objects count:', positioned.length);
+        Logger.duplicate.debug('Setting duplicate state, objects count:', positioned.length, 'isAltDragMode:', isAltDragMode);
         this.editor.stateManager.update({
             'mouse.isPlacingObjects': true,
             'mouse.placingObjects': positioned,
             'duplicate.isActive': true,
             'duplicate.objects': positioned,
-            'duplicate.basePosition': { x: worldPos.x, y: worldPos.y }
+            'duplicate.basePosition': { x: worldPos.x, y: worldPos.y },
+            'duplicate.isAltDragMode': isAltDragMode
         });
 
         Logger.duplicate.debug('State after update:', this.editor.stateManager.get('duplicate'));
@@ -185,7 +197,8 @@ export class DuplicateOperations extends BaseModule {
             'mouse.placingObjects': [],
             'duplicate.isActive': false,
             'duplicate.objects': [],
-            'duplicate.basePosition': { x: 0, y: 0 }
+            'duplicate.basePosition': { x: 0, y: 0 },
+            'duplicate.isAltDragMode': false
         });
 
         // Force clear references

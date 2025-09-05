@@ -38,7 +38,8 @@ export class StateManager {
             duplicate: {
                 isActive: false,
                 objects: [],
-                basePosition: { x: 0, y: 0 }
+                basePosition: { x: 0, y: 0 },
+                isAltDragMode: false
             },
             
             // Outliner state
@@ -225,7 +226,8 @@ export class StateManager {
             duplicate: {
                 isActive: false,
                 objects: [],
-                basePosition: { x: 0, y: 0 }
+                basePosition: { x: 0, y: 0 },
+                isAltDragMode: false
             },
             outliner: {
                 collapsedTypes: new Set()

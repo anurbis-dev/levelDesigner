@@ -69,12 +69,28 @@ export class MouseHandlers extends BaseModule {
         } else if (mouse.isLeftDown && mouse.isDragging) {
             // Drag objects
             this.dragSelectedObjects(worldPos);
-        } else if (mouse.isMarqueeSelecting) {
-            // Update marquee
-            this.updateMarquee(worldPos);
+        } else if (mouse.isLeftDown && e.altKey && !this.editor.stateManager.get('duplicate.isActive')) {
+            // Check if we should start Alt+drag duplication
+            const selectedObjects = this.editor.stateManager.get('selectedObjects');
+            if (selectedObjects && selectedObjects.size > 0) {
+                Logger.mouse.debug('Starting Alt+drag duplication from selected objects');
+                this.editor.duplicateOperations.startFromSelection();
+            } else if (this.editor.level.objects.length > 0) {
+                // If no objects selected but Alt is pressed, select all objects and start duplication
+                Logger.mouse.debug('Starting Alt+drag duplication - selecting all objects');
+                const allObjectIds = this.editor.level.objects.map(obj => obj.id);
+                this.editor.stateManager.set('selectedObjects', new Set(allObjectIds));
+                this.editor.duplicateOperations.startFromSelection();
+            }
         } else if (this.editor.stateManager.get('duplicate.isActive')) {
             // Update duplicate objects position via DuplicateOperations
             this.editor.duplicateOperations.updatePreview(worldPos);
+        } else if (mouse.isLeftDown && e.altKey && this.editor.stateManager.get('duplicate.isAltDragMode')) {
+            // Alt+drag duplication mode - update preview
+            this.editor.duplicateOperations.updatePreview(worldPos);
+        } else if (mouse.isMarqueeSelecting) {
+            // Update marquee (only if not Alt+drag)
+            this.updateMarquee(worldPos);
         }
 
         // Freeze group frame while Alt is pressed (for dragging objects out)
@@ -98,7 +114,7 @@ export class MouseHandlers extends BaseModule {
         }
 
         // Only render if something actually changed
-        if (mouse.isPlacingObjects || mouse.isRightDown || (mouse.isLeftDown && mouse.isDragging) || mouse.isMarqueeSelecting) {
+        if (mouse.isPlacingObjects || mouse.isRightDown || (mouse.isLeftDown && mouse.isDragging) || mouse.isMarqueeSelecting || this.editor.stateManager.get('duplicate.isActive')) {
             this.editor.render();
         }
     }
@@ -134,6 +150,7 @@ export class MouseHandlers extends BaseModule {
             
             if (mouse.isMarqueeSelecting) {
                 this.finishMarqueeSelection();
+                // Note: finishMarqueeSelection now handles Alt+drag duplication internally
             }
 
             // If we are in group edit mode and released after dragging with Alt
@@ -208,6 +225,13 @@ export class MouseHandlers extends BaseModule {
             if (mouse.isPlacingObjects) {
                 const worldPos = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, this.editor.stateManager.get('camera'));
                 this.finishPlacingObjects(worldPos);
+            }
+            
+            // Handle Alt+drag duplication completion
+            if (this.editor.stateManager.get('duplicate.isAltDragMode')) {
+                const worldPos = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, this.editor.stateManager.get('camera'));
+                Logger.mouse.debug('Alt+drag duplication completed');
+                this.editor.duplicateOperations.confirmPlacement(worldPos);
             }
         }
     }
@@ -355,6 +379,13 @@ export class MouseHandlers extends BaseModule {
         const isSelected = selectedObjects.has(obj.id);
         let selectionChanged = false;
         
+        // Check for Alt+drag duplication on selected objects
+        if (e.altKey && isSelected) {
+            Logger.mouse.debug('Alt+click on selected object, starting duplication');
+            this.editor.duplicateOperations.startFromSelection();
+            return; // Don't process normal selection logic
+        }
+        
         if (!e.shiftKey) {
             if (!isSelected) {
                 selectedObjects.clear();
@@ -388,6 +419,15 @@ export class MouseHandlers extends BaseModule {
 
     handleEmptyClick(e, worldPos) {
         const selectedObjects = this.editor.stateManager.get('selectedObjects');
+
+        // If Alt is pressed, don't start marquee selection - let Alt+drag handle it
+        if (e.altKey) {
+            // Just clear selection if not Shift+click
+            if (!e.shiftKey) {
+                this.editor.stateManager.set('selectedObjects', new Set());
+            }
+            return;
+        }
 
         // If editing groups, only close when clicking OUTSIDE the active group's frame
         if (this.isInGroupEditMode()) {
@@ -567,6 +607,13 @@ export class MouseHandlers extends BaseModule {
             'mouse.marqueeStartX': null,
             'mouse.marqueeStartY': null
         });
+        
+        // Check if Alt is still pressed after marquee selection to start duplication
+        const currentMouse = this.editor.stateManager.get('mouse');
+        if (currentMouse.altKey && selectedObjects.size > 0) {
+            Logger.mouse.debug('Alt+drag duplication after marquee selection');
+            this.editor.duplicateOperations.startFromSelection();
+        }
     }
 
     /**

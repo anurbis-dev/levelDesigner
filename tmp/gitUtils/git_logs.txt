@@ -1,3 +1,0 @@
-f40a46c refactor: Move git utilities to tmp/gitUtils and create wrapper scripts
-c73173f docs: Update git workflow documentation and add automation scripts
-06e6d72 v2.2.0: Major architecture unification and code consolidation
