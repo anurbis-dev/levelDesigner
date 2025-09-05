@@ -1,0 +1,43 @@
+{
+  "name": "level-editor-2d",
+  "version": "2.0.0",
+  "description": "Профессиональный 2D редактор уровней с утилитарной архитектурой мирового класса",
+  "main": "index.html",
+  "type": "module",
+  "scripts": {
+    "start": "python -m http.server 8000",
+    "start:node": "npx serve .",
+    "dev": "python -m http.server 8000"
+  },
+  "keywords": [
+    "level-editor",
+    "2d",
+    "game-development",
+    "javascript", 
+    "es6-modules",
+    "utility-architecture",
+    "clean-code",
+    "dry-principles"
+  ],
+  "author": "Level Editor Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "."
+  },
+  "homepage": "./index.html",
+  "directories": {
+    "doc": "./docs",
+    "lib": "./src"
+  },
+  "files": [
+    "src/",
+    "docs/", 
+    "index.html",
+    "start_server.bat",
+    "start_server.ps1"
+  ]
+}

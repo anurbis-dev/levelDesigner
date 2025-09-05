@@ -1,11 +1,10 @@
+import { BaseModule } from './BaseModule.js';
+
 /**
  * Group Operations module for LevelEditor
  * Handles all group-related operations
  */
-export class GroupOperations {
-    constructor(levelEditor) {
-        this.editor = levelEditor;
-    }
+export class GroupOperations extends BaseModule {
 
     groupSelectedObjects() {
         const selectedObjects = this.editor.stateManager.get('selectedObjects');

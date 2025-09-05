@@ -1,10 +1,13 @@
+import { BaseModule } from './BaseModule.js';
+import { Logger } from '../utils/Logger.js';
+
 /**
  * Render Operations module for LevelEditor
  * Handles all rendering operations
  */
-export class RenderOperations {
+export class RenderOperations extends BaseModule {
     constructor(levelEditor) {
-        this.editor = levelEditor;
+        super(levelEditor);
         
         // Performance optimization caches
         this.visibleObjectsCache = new Map();
@@ -68,8 +71,8 @@ export class RenderOperations {
         if (duplicate && duplicate.isActive && Array.isArray(duplicate.objects) && duplicate.objects.length > 0) {
             // Log only once per duplicate session
             if (!this._lastRenderState || this._lastRenderState !== 'drawing') {
-                console.log('RENDER: Drawing duplicate objects:', duplicate.objects.length);
-                console.log('RENDER: Camera position:', { x: camera.x, y: camera.y, zoom: camera.zoom });
+                Logger.render.debug('Drawing duplicate objects:', duplicate.objects.length);
+                Logger.render.debug('Camera position:', { x: camera.x, y: camera.y, zoom: camera.zoom });
                 this._lastRenderState = 'drawing';
             }
             this.editor.duplicateRenderUtils.drawPlacingObjects(this.editor.canvasRenderer, duplicate.objects, camera);
@@ -78,7 +81,7 @@ export class RenderOperations {
             // Log state change only when it changes
             const currentState = `${duplicate.isActive}_${duplicate.objects?.length || 0}`;
             if (!this._lastRenderState || this._lastRenderState !== currentState) {
-                console.log('RENDER: Duplicate state changed:', {
+                Logger.render.debug('Duplicate state changed:', {
                     isActive: duplicate.isActive,
                     objectsLength: duplicate.objects?.length || 0,
                     objectsType: Array.isArray(duplicate.objects) ? 'array' : typeof duplicate.objects
@@ -94,9 +97,9 @@ export class RenderOperations {
     drawSelection() {
         const selectedObjects = this.editor.stateManager.get('selectedObjects');
         const camera = this.editor.stateManager.get('camera');
-        const groupEditMode = this.editor.stateManager.get('groupEditMode');
 
-        if (groupEditMode && groupEditMode.isActive) {
+        if (this.isInGroupEditMode()) {
+            const groupEditMode = this.getGroupEditMode();
             // In group edit mode, draw selection for all objects including nested ones
             this.editor.level.getAllObjects().forEach(obj => {
                 if (selectedObjects.has(obj.id)) {
@@ -164,11 +167,11 @@ export class RenderOperations {
      * Draw group edit mode frame
      */
     drawGroupEditFrame() {
-        const groupEditMode = this.editor.stateManager.get('groupEditMode');
-        if (!groupEditMode || !groupEditMode.isActive || !groupEditMode.group) return;
+        if (!this.isInGroupEditMode()) return;
 
         const camera = this.editor.stateManager.get('camera');
-        const group = groupEditMode.group;
+        const group = this.getActiveGroup();
+        const groupEditMode = this.getGroupEditMode();
 
         // Draw frame around the group being edited; allow freezing during Alt-drag
         const bounds = (groupEditMode.frameFrozen && groupEditMode.frozenBounds)

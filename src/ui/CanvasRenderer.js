@@ -1,3 +1,6 @@
+import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
+import { Logger } from '../utils/Logger.js';
+
 /**
  * Canvas rendering system
  */
@@ -177,32 +180,32 @@ export class CanvasRenderer {
      * Draw placing objects (preview)
      */
     drawPlacingObjects(objects, camera) {
-        console.log('CanvasRenderer.drawPlacingObjects called with:', objects);
+        Logger.canvas.debug('drawPlacingObjects called with:', objects);
         if (!objects || objects.length === 0) {
-            console.log('CanvasRenderer: No objects to draw, returning');
+            Logger.canvas.debug('No objects to draw, returning');
             return;
         }
         
-        console.log('CanvasRenderer: Drawing', objects.length, 'objects');
+        Logger.canvas.debug('Drawing', objects.length, 'objects');
         this.ctx.save();
         this.ctx.globalAlpha = 0.7;
         
         const draw = (obj, parentX = 0, parentY = 0) => {
             const absX = obj.x + parentX;
             const absY = obj.y + parentY;
-            console.log('CanvasRenderer: Drawing object', obj.id, 'at', absX, absY, 'type:', obj.type);
+            Logger.canvas.debug('Drawing object', obj.id, 'at', absX, absY, 'type:', obj.type);
             
             if (obj.type === 'group') {
-                console.log('CanvasRenderer: Drawing group children');
+                Logger.canvas.debug('Drawing group children');
                 // Draw group children
                 if (obj.children && obj.children.length > 0) {
                     obj.children.forEach(child => draw(child, absX, absY));
                 } else {
-                    console.log('CanvasRenderer: Group has no children, drawing as single object');
+                    Logger.canvas.debug('Group has no children, drawing as single object');
                     this.drawSingleObject(obj, absX, absY);
                 }
             } else {
-                console.log('CanvasRenderer: Drawing single object');
+                Logger.canvas.debug('Drawing single object');
                 this.drawSingleObject(obj, absX, absY);
             }
         };
@@ -210,7 +213,7 @@ export class CanvasRenderer {
         objects.forEach(obj => draw(obj, 0, 0));
         
         this.ctx.restore();
-        console.log('CanvasRenderer: Finished drawing placing objects');
+        Logger.canvas.debug('Finished drawing placing objects');
     }
 
     /**

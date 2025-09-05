@@ -1,10 +1,13 @@
+import { BaseModule } from './BaseModule.js';
+import { Logger } from '../utils/Logger.js';
+
 /**
  * Event Handlers module for LevelEditor
  * Handles all event listener setup and management
  */
-export class EventHandlers {
+export class EventHandlers extends BaseModule {
     constructor(levelEditor) {
-        this.editor = levelEditor;
+        super(levelEditor);
         this._rafId = null; // render loop id
     }
 
@@ -51,21 +54,21 @@ export class EventHandlers {
                 // Log only when duplicate state changes
                 if (currentState !== lastDuplicateState) {
                     if (duplicate && duplicate.isActive) {
-                        console.log(`RENDER LOOP: Duplicate active, objects: ${duplicate.objects?.length || 0}`);
+                        Logger.event.debug(`Render loop: Duplicate active, objects: ${duplicate.objects?.length || 0}`);
                     } else if (lastDuplicateState !== null) {
-                        console.log('RENDER LOOP: Duplicate deactivated');
+                        Logger.event.debug('Render loop: Duplicate deactivated');
                     }
                     lastDuplicateState = currentState;
                 }
 
                 this.editor.render();
             } catch (e) {
-                console.error('RENDER LOOP ERROR:', e);
+                Logger.event.error('Render loop error:', e);
             }
             this._rafId = requestAnimationFrame(renderLoop);
         };
         if (!this._rafId) {
-            console.log('STARTING RENDER LOOP');
+            Logger.event.info('Starting render loop');
             this._rafId = requestAnimationFrame(renderLoop);
         }
     }
@@ -169,7 +172,7 @@ export class EventHandlers {
 
         // Subscribe to camera changes - immediate render for responsive zoom
         this.editor.stateManager.subscribe('camera', () => {
-            console.log('CAMERA SUBSCRIPTION: Camera changed, calling render');
+            Logger.event.debug('Camera changed, calling render');
             this.editor.render();
         });
     }

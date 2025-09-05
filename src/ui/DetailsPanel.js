@@ -1,3 +1,6 @@
+import { GroupTraversalUtils } from '../utils/GroupTraversalUtils.js';
+import { UIFactory } from '../utils/UIFactory.js';
+
 /**
  * Details panel UI component
  */
@@ -52,62 +55,42 @@ export class DetailsPanel {
         const childAssets = this.getAllChildren(group).filter(o => o.type !== 'group').length;
         const childGroups = this.getAllChildren(group).filter(o => o.type === 'group').length;
         
-        this.container.innerHTML = `
-            <div class="mb-3">
-                <label class="block text-sm font-medium text-gray-300">Group Name</label>
-                <input id="group-name-input" type="text" value="${group.name}" 
-                       class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-            </div>
-            <div class="text-sm text-gray-400">
-                <p>Assets: ${childAssets}</p>
-                <p>Groups: ${childGroups}</p>
-            </div>
+        const nameInput = UIFactory.createLabeledInput({
+            label: 'Group Name',
+            value: group.name,
+            id: 'group-name-input',
+            onChange: (e) => {
+                group.name = e.target.value;
+                this.stateManager.markDirty();
+                // Trigger outliner update
+                this.stateManager.notifyListeners('selectedObjects', this.stateManager.get('selectedObjects'), this.stateManager.get('selectedObjects'));
+            }
+        });
+        
+        const statsDiv = document.createElement('div');
+        statsDiv.className = 'text-sm text-gray-400';
+        statsDiv.innerHTML = `
+            <p>Assets: ${childAssets}</p>
+            <p>Groups: ${childGroups}</p>
         `;
         
-        // Add event listener for name change
-        const nameInput = this.container.querySelector('#group-name-input');
-        nameInput.addEventListener('change', (e) => {
-            group.name = e.target.value;
-            this.stateManager.markDirty();
-            // Trigger outliner update
-            this.stateManager.notifyListeners('selectedObjects', this.stateManager.get('selectedObjects'), this.stateManager.get('selectedObjects'));
-        });
+        this.container.innerHTML = '';
+        this.container.appendChild(nameInput);
+        this.container.appendChild(statsDiv);
     }
 
     renderObjectDetails(obj) {
         const properties = ['name', 'type', 'x', 'y', 'width', 'height', 'color'];
         
-        properties.forEach(prop => {
-            const propContainer = document.createElement('div');
-            propContainer.className = 'mb-3';
-            
-            const value = obj[prop];
-            const displayValue = typeof value === 'number' ? value.toFixed(1) : value;
-            
-            propContainer.innerHTML = `
-                <label class="block text-sm font-medium text-gray-300 capitalize">${prop}</label>
-                <input type="text" value="${displayValue}" 
-                       class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-            `;
-            
-            const input = propContainer.querySelector('input');
-            input.addEventListener('change', (e) => {
-                let newValue = e.target.value;
-                
-                // Convert to number if original was number
-                if (typeof value === 'number') {
-                    newValue = parseFloat(newValue) || 0;
-                }
-                
-                obj[prop] = newValue;
-                this.stateManager.markDirty();
-                
-                // Trigger redraw
-                this.stateManager.notifyListeners('selectedObjects', this.stateManager.get('selectedObjects'), this.stateManager.get('selectedObjects'));
-            });
-            
-            this.container.appendChild(propContainer);
+        // Use UIFactory to create property editor
+        const propertyEditor = UIFactory.createPropertyEditor(obj, properties, (prop, newValue, object) => {
+            this.stateManager.markDirty();
+            // Trigger redraw
+            this.stateManager.notifyListeners('selectedObjects', this.stateManager.get('selectedObjects'), this.stateManager.get('selectedObjects'));
         });
+        
+        this.container.innerHTML = '';
+        this.container.appendChild(propertyEditor);
         
         // Add custom properties section
         this.renderCustomProperties(obj);
@@ -195,17 +178,7 @@ export class DetailsPanel {
     }
 
     getAllChildren(group) {
-        const result = [];
-        const walk = (obj) => {
-            for (const child of obj.children) {
-                result.push(child);
-                if (child.type === 'group') {
-                    walk(child);
-                }
-            }
-        };
-        walk(group);
-        return result;
+        return GroupTraversalUtils.getAllChildren(group);
     }
 
     updateTabTitle() {

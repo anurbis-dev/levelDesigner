@@ -1,20 +1,19 @@
+import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
+import { BaseModule } from './BaseModule.js';
+
 /**
  * Object Operations module for LevelEditor
  * Handles all object manipulation operations
  */
-export class ObjectOperations {
-    constructor(levelEditor) {
-        this.editor = levelEditor;
-    }
+export class ObjectOperations extends BaseModule {
 
     /**
      * Object manipulation methods
      */
     findObjectAtPoint(x, y) {
-        const groupEditMode = this.editor.stateManager.get('groupEditMode');
-
         // In group edit mode, search through all objects including nested ones
-        if (groupEditMode && groupEditMode.isActive) {
+        if (this.isInGroupEditMode()) {
+            const groupEditMode = this.getGroupEditMode();
            const openGroups = Array.isArray(groupEditMode.openGroups) ? groupEditMode.openGroups : (groupEditMode.group ? [groupEditMode.group] : []);
            const openIds = new Set(openGroups.map(g => g.id));
            const selectable = this.computeSelectableSet();
@@ -69,15 +68,16 @@ export class ObjectOperations {
     }
 
     isPointInObject(x, y, obj) {
-        const bounds = this.getObjectWorldBounds(obj);
-        return x >= bounds.minX && x <= bounds.maxX && y >= bounds.minY && y <= bounds.maxY;
+        return WorldPositionUtils.isPointInWorldBounds(x, y, obj, this.editor.level.objects);
     }
 
-    isPointInGroupBounds(x, y, groupEditMode) {
-        if (!groupEditMode || !groupEditMode.isActive || !groupEditMode.group) return false;
+    isPointInGroupBounds(x, y, groupEditMode = null) {
+        // Use provided groupEditMode or get current one
+        const gem = groupEditMode || this.getGroupEditMode();
+        if (!gem) return false;
 
-        const group = groupEditMode.group;
-        const bounds = this.getObjectWorldBounds(group);
+        const group = gem.group;
+        const bounds = WorldPositionUtils.getWorldBounds(group, this.editor.level.objects);
 
         // Add some padding to make it easier to drop inside (same as visual frame)
         const padding = 10;
@@ -86,42 +86,18 @@ export class ObjectOperations {
     }
 
     getObjectCenterWorld(obj, parentGroup = null) {
-        // If parentGroup provided, obj.x/obj.y are relative to that group
         if (parentGroup) {
-            const parentPos = this.getObjectWorldPosition(parentGroup);
+            const parentPos = WorldPositionUtils.getWorldPosition(parentGroup, this.editor.level.objects);
             return {
                 x: parentPos.x + obj.x + (obj.width || 0) / 2,
                 y: parentPos.y + obj.y + (obj.height || 0) / 2
             };
         }
-        // Otherwise, walk from top-level
-        const pos = this.getObjectWorldPosition(obj);
-        return {
-            x: pos.x + (obj.width || 0) / 2,
-            y: pos.y + (obj.height || 0) / 2
-        };
+        return WorldPositionUtils.getWorldCenter(obj, this.editor.level.objects);
     }
 
     getObjectWorldPosition(target) {
-        let result = null;
-        const dfs = (current, accX, accY) => {
-            if (current.id === target.id) {
-                result = { x: accX + current.x, y: accY + current.y };
-                return true;
-            }
-            if (current.type === 'group') {
-                const nextX = accX + current.x;
-                const nextY = accY + current.y;
-                for (const child of current.children) {
-                    if (dfs(child, nextX, nextY)) return true;
-                }
-            }
-            return false;
-        };
-        for (const top of this.editor.level.objects) {
-            if (dfs(top, 0, 0)) break;
-        }
-        return result || { x: target.x, y: target.y };
+        return WorldPositionUtils.getWorldPosition(target, this.editor.level.objects);
     }
 
     isObjectInGroup(obj, group) {
@@ -129,92 +105,7 @@ export class ObjectOperations {
     }
 
     getObjectWorldBounds(obj, excludeIds = []) {
-        const getWorldPosition = (target) => {
-            let result = null;
-            const dfs = (current, accX, accY) => {
-                if (current.id === target.id) {
-                    result = { x: accX + current.x, y: accY + current.y };
-                    return true;
-                }
-                if (current.type === 'group') {
-                    const nextX = accX + current.x;
-                    const nextY = accY + current.y;
-                    for (const child of current.children) {
-                        if (dfs(child, nextX, nextY)) return true;
-                    }
-                }
-                return false;
-            };
-            for (const top of this.editor.level.objects) {
-                if (dfs(top, 0, 0)) break;
-            }
-            return result || { x: target.x, y: target.y };
-        };
-
-        if (obj.type !== 'group') {
-            const pos = getWorldPosition(obj);
-            return {
-                minX: pos.x,
-                minY: pos.y,
-                maxX: pos.x + (obj.width || 0),
-                maxY: pos.y + (obj.height || 0)
-            };
-        }
-
-        const groupPos = getWorldPosition(obj);
-        const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
-
-        const walk = (current, baseX, baseY) => {
-            // ИЗМЕНЕНИЕ: Не обрабатываем сам объект, если он в списке исключений
-            if (excludeIds.includes(current.id)) {
-                return;
-            }
-
-            if (current.type === 'group') {
-                const nextX = baseX + current.x;
-                const nextY = baseY + current.y;
-
-                // Если у группы нет дочерних элементов (или все они исключены), 
-                // ее собственные координаты должны учитываться в границах.
-                let hasVisibleChildren = false;
-                if (current.children && current.children.length > 0) {
-                    for (const child of current.children) {
-                        if (!excludeIds.includes(child.id)) {
-                            hasVisibleChildren = true;
-                            walk(child, nextX, nextY);
-                        }
-                    }
-                }
-
-                if (!hasVisibleChildren) {
-                    bounds.minX = Math.min(bounds.minX, nextX);
-                    bounds.minY = Math.min(bounds.minY, nextY);
-                    bounds.maxX = Math.max(bounds.maxX, nextX);
-                    bounds.maxY = Math.max(bounds.maxY, nextY);
-                }
-                return;
-            }
-
-            const absX = baseX + current.x;
-            const absY = baseY + current.y;
-            bounds.minX = Math.min(bounds.minX, absX);
-            bounds.minY = Math.min(bounds.minY, absY);
-            bounds.maxX = Math.max(bounds.maxX, absX + (current.width || 0));
-            bounds.maxY = Math.max(bounds.maxY, absY + (current.height || 0));
-        };
-
-        walk(obj, groupPos.x - obj.x, groupPos.y - obj.y);
-        
-        // Если после всех исключений границы остались бесконечными (т.е. группа пуста),
-        // ее границами будет ее собственная точка привязки.
-        if (bounds.minX === Infinity) {
-            bounds.minX = groupPos.x;
-            bounds.minY = groupPos.y;
-            bounds.maxX = groupPos.x;
-            bounds.maxY = groupPos.y;
-        }
-
-        return bounds;
+        return WorldPositionUtils.getWorldBounds(obj, this.editor.level.objects, excludeIds);
     }
 
     /**
@@ -253,8 +144,7 @@ export class ObjectOperations {
     }
 
     focusOnSelection() {
-        const selectedObjects = this.editor.stateManager.get('selectedObjects');
-        const selection = Array.from(selectedObjects).map(id => this.editor.level.findObjectById(id)).filter(Boolean);
+        const selection = this.getSelectedObjects();
         this.focusOnBounds(this.getSelectionBounds(selection));
     }
 
@@ -262,48 +152,18 @@ export class ObjectOperations {
         this.focusOnBounds(this.getSelectionBounds(this.editor.level.objects));
     }
 
+    // These methods are now inherited from BaseModule and automatically trigger render
     focusOnBounds(bounds) {
-        if (!bounds || bounds.minX === Infinity) return;
-        
-        const canvas = this.editor.canvasRenderer.canvas;
-        const boundsWidth = bounds.maxX - bounds.minX;
-        const boundsHeight = bounds.maxY - bounds.minY;
-        const padding = 50;
-        const zoomX = canvas.width / (boundsWidth + padding * 2);
-        const zoomY = canvas.height / (boundsHeight + padding * 2);
-        
-        const newZoom = Math.max(0.1, Math.min(10, Math.min(zoomX, zoomY)));
-        const centerX = bounds.minX + boundsWidth / 2;
-        const centerY = bounds.minY + boundsHeight / 2;
-        
-        this.editor.stateManager.update({
-            'camera.zoom': newZoom,
-            'camera.x': centerX - (canvas.width / 2) / newZoom,
-            'camera.y': centerY - (canvas.height / 2) / newZoom
-        });
-        
+        super.focusOnBounds(bounds);
         this.editor.render();
-    }
-
-    getSelectionBounds(collection) {
-        if (collection.length === 0) return null;
-        const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
-        collection.forEach(obj => {
-            const objBounds = this.getObjectWorldBounds(obj);
-            bounds.minX = Math.min(bounds.minX, objBounds.minX);
-            bounds.minY = Math.min(bounds.minY, objBounds.minY);
-            bounds.maxX = Math.max(bounds.maxX, objBounds.maxX);
-            bounds.maxY = Math.max(bounds.maxY, objBounds.maxY);
-        });
-        return bounds;
     }
 
     // Compute a set of selectable IDs depending on current edit state
     computeSelectableSet() {
         const selectable = new Set();
-        const groupEditMode = this.editor.stateManager.get('groupEditMode');
 
-        if (groupEditMode && groupEditMode.isActive) {
+        if (this.isInGroupEditMode()) {
+            const groupEditMode = this.getGroupEditMode();
             // Only descendants of the deepest open group are selectable; all other open groups are transparent
             const openGroups = Array.isArray(groupEditMode.openGroups) ? groupEditMode.openGroups : (groupEditMode.group ? [groupEditMode.group] : []);
             const active = openGroups[openGroups.length - 1];

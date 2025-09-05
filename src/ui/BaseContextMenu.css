@@ -1,0 +1,233 @@
+/**
+ * BaseContextMenu CSS Styles
+ * 
+ * Базовые стили для универсальной системы контекстных меню.
+ * Предоставляет единообразный внешний вид для всех контекстных меню
+ * в различных панелях редактора.
+ * 
+ * Key features:
+ * - Высокий z-index (10000) для отображения поверх всех элементов
+ * - Темная тема, соответствующая дизайну приложения
+ * - Плавные анимации появления/исчезновения
+ * - Адаптивный дизайн с правильными отступами
+ * - Поддержка различных состояний элементов меню
+ * 
+ * @author Level Designer
+ * @version 1.0.0
+ */
+
+/* Базовый контейнер контекстного меню */
+.base-context-menu {
+    position: absolute;
+    background: #1F2937; /* gray-800 */
+    border: 1px solid #374151; /* gray-700 */
+    border-radius: 6px;
+    padding: 6px 0;
+    z-index: 10000; /* Высокий z-index для отображения поверх всех элементов */
+    min-width: 140px;
+    max-width: 300px;
+    box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 
+                0 4px 6px -2px rgba(0, 0, 0, 0.05),
+                0 0 0 1px rgba(255, 255, 255, 0.05);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    
+    /* Свойства анимации */
+    opacity: 0;
+    transform: scale(0.95);
+    transition: opacity 0.15s ease-out, transform 0.15s ease-out;
+    pointer-events: none;
+}
+
+/* Анимация показа */
+.base-context-menu.show {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+}
+
+/* Элементы контекстного меню */
+.base-context-menu-item {
+    padding: 10px 16px;
+    color: #D1D5DB; /* gray-300 */
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background-color 0.15s ease;
+    user-select: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Состояние наведения для элементов меню */
+.base-context-menu-item:hover:not(.disabled) {
+    background: #374151; /* gray-700 */
+}
+
+/* Активное состояние для элементов меню */
+.base-context-menu-item:active:not(.disabled) {
+    background: #4B5563; /* gray-600 */
+}
+
+/* Отключенное состояние */
+.base-context-menu-item.disabled {
+    color: #6B7280; /* gray-500 */
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* Первый элемент меню */
+.base-context-menu-item:first-child {
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+}
+
+/* Последний элемент меню */
+.base-context-menu-item:last-child {
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+}
+
+/* Разделитель */
+.base-context-menu-item.separator {
+    height: 1px;
+    background: #374151; /* gray-700 */
+    margin: 4px 0;
+    padding: 0;
+    cursor: default;
+}
+
+.base-context-menu-item.separator:hover {
+    background: #374151;
+}
+
+/* Иконки элементов меню */
+.base-context-menu-item::before {
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
+}
+
+/* Индикаторы позиционирования */
+.base-context-menu.positioned-left {
+    transform-origin: right top;
+}
+
+.base-context-menu.positioned-right {
+    transform-origin: left top;
+}
+
+.base-context-menu.positioned-above {
+    transform-origin: center bottom;
+}
+
+.base-context-menu.positioned-below {
+    transform-origin: center top;
+}
+
+/* Адаптивные настройки для маленьких экранов */
+@media (max-width: 768px) {
+    .base-context-menu {
+        min-width: 120px;
+        font-size: 13px;
+    }
+    
+    .base-context-menu-item {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+}
+
+/* Мобильная оптимизация */
+@media (max-width: 480px) {
+    .base-context-menu {
+        min-width: 160px;
+        font-size: 16px; /* Увеличенные touch-цели */
+    }
+    
+    .base-context-menu-item {
+        padding: 12px 16px;
+        font-size: 16px;
+    }
+}
+
+/* Поддержка высокого контраста */
+@media (prefers-contrast: high) {
+    .base-context-menu {
+        border: 2px solid #FFFFFF;
+        background: #000000;
+    }
+    
+    .base-context-menu-item {
+        color: #FFFFFF;
+    }
+    
+    .base-context-menu-item:hover:not(.disabled) {
+        background: #333333;
+    }
+    
+    .base-context-menu-item.disabled {
+        color: #888888;
+    }
+}
+
+/* Поддержка уменьшенной анимации */
+@media (prefers-reduced-motion: reduce) {
+    .base-context-menu {
+        transition: none;
+    }
+    
+    .base-context-menu-item {
+        transition: none;
+    }
+}
+
+/* Специальные стили для различных типов панелей */
+.base-context-menu.assets-panel {
+    min-width: 180px;
+}
+
+.base-context-menu.details-panel {
+    min-width: 160px;
+}
+
+.base-context-menu.outliner-panel {
+    min-width: 200px;
+}
+
+.base-context-menu.canvas-panel {
+    min-width: 150px;
+}
+
+/* Стили для группировки элементов */
+.base-context-menu-group {
+    border-bottom: 1px solid #374151;
+    margin-bottom: 4px;
+    padding-bottom: 4px;
+}
+
+.base-context-menu-group:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+/* Стили для подменю (если понадобятся в будущем) */
+.base-context-menu-item.has-submenu::after {
+    content: '▶';
+    margin-left: auto;
+    font-size: 12px;
+    color: #9CA3AF;
+}
+
+/* Стили для горячих клавиш */
+.base-context-menu-item .hotkey {
+    margin-left: auto;
+    font-size: 12px;
+    color: #9CA3AF;
+    font-family: monospace;
+}
+

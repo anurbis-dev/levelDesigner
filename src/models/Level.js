@@ -1,5 +1,6 @@
 import { GameObject } from './GameObject.js';
 import { Group } from './Group.js';
+import { GroupTraversalUtils } from '../utils/GroupTraversalUtils.js';
 
 /**
  * Level data model
@@ -53,56 +54,28 @@ export class Level {
      * Find object by ID
      */
     findObjectById(id) {
-        for (const obj of this.objects) {
-            if (obj.id === id) return obj;
-            if (obj.type === 'group') {
-                const found = this.findInGroup(obj, id);
-                if (found) return found;
-            }
-        }
-        return null;
+        return GroupTraversalUtils.findInObjects(this.objects, (obj) => obj.id === id);
     }
 
     /**
      * Find object in group recursively
      */
     findInGroup(group, id) {
-        for (const child of group.children) {
-            if (child.id === id) return child;
-            if (child.type === 'group') {
-                const found = this.findInGroup(child, id);
-                if (found) return found;
-            }
-        }
-        return null;
+        return GroupTraversalUtils.findInGroup(group, (obj) => obj.id === id);
     }
 
     /**
      * Get all objects flattened (including group children)
      */
     getAllObjects() {
-        const result = [];
-        for (const obj of this.objects) {
-            result.push(obj);
-            if (obj.type === 'group') {
-                result.push(...this.getGroupChildren(obj));
-            }
-        }
-        return result;
+        return GroupTraversalUtils.getAllObjects(this.objects);
     }
 
     /**
      * Get all children from group recursively
      */
     getGroupChildren(group) {
-        const result = [];
-        for (const child of group.children) {
-            result.push(child);
-            if (child.type === 'group') {
-                result.push(...this.getGroupChildren(child));
-            }
-        }
-        return result;
+        return GroupTraversalUtils.getAllChildren(group);
     }
 
     /**

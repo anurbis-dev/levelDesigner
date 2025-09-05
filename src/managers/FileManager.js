@@ -1,4 +1,5 @@
 import { Level } from '../models/Level.js';
+import { FileUtils } from '../utils/FileUtils.js';
 
 /**
  * File operations for level editor
@@ -58,17 +59,7 @@ export class FileManager {
         const filename = fileName || this.currentFileName || 'level.json';
         const data = level.toJSON();
         
-        const blob = new Blob([JSON.stringify(data, null, 2)], { 
-            type: 'application/json' 
-        });
-        
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.click();
-        
-        URL.revokeObjectURL(url);
+        FileUtils.downloadData(data, filename, FileUtils.TYPES.JSON);
         
         this.currentFileName = filename;
         return filename;
@@ -78,61 +69,34 @@ export class FileManager {
      * Load level from file
      */
     async loadLevel(file) {
-        return new Promise((resolve, reject) => {
-            if (!file) {
-                reject(new Error('No file provided'));
-                return;
-            }
+        if (!file) {
+            throw new Error('No file provided');
+        }
 
-            if (!this.isValidFile(file)) {
-                reject(new Error('Invalid file format'));
-                return;
-            }
+        if (!this.isValidFile(file)) {
+            throw new Error('Invalid file format');
+        }
 
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                try {
-                    const data = JSON.parse(event.target.result);
-                    const level = Level.fromJSON(data);
-                    this.currentFileName = file.name;
-                    resolve(level);
-                } catch (error) {
-                    reject(new Error('Failed to parse level file: ' + error.message));
-                }
-            };
-            reader.onerror = () => {
-                reject(new Error('Failed to read file'));
-            };
-            reader.readAsText(file);
-        });
+        try {
+            const data = await FileUtils.readFileAsJSON(file);
+            const level = Level.fromJSON(data);
+            this.currentFileName = file.name;
+            return level;
+        } catch (error) {
+            throw new Error('Failed to parse level file: ' + error.message);
+        }
     }
 
     /**
      * Load level from file input
      */
     async loadLevelFromFileInput() {
-        return new Promise((resolve, reject) => {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = this.supportedFormats.join(',');
-            
-            input.onchange = async (e) => {
-                const file = e.target.files[0];
-                if (!file) {
-                    reject(new Error('No file selected'));
-                    return;
-                }
-                
-                try {
-                    const level = await this.loadLevel(file);
-                    resolve(level);
-                } catch (error) {
-                    reject(error);
-                }
-            };
-            
-            input.click();
-        });
+        try {
+            const file = await FileUtils.pickFile(this.supportedFormats, false);
+            return await this.loadLevel(file);
+        } catch (error) {
+            throw new Error('Failed to load level: ' + error.message);
+        }
     }
 
     /**
@@ -181,53 +145,24 @@ export class FileManager {
      */
     saveAssetLibrary(assetManager, fileName = 'assets.json') {
         const data = assetManager.exportToJSON();
-        
-        const blob = new Blob([data], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        
-        URL.revokeObjectURL(url);
+        FileUtils.downloadData(data, fileName, FileUtils.TYPES.JSON, false);
     }
 
     /**
      * Load asset library from file
      */
     async loadAssetLibrary(assetManager) {
-        return new Promise((resolve, reject) => {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = '.json';
+        try {
+            const { file, content } = await FileUtils.pickAndReadText('.json');
+            const success = assetManager.importFromJSON(content);
             
-            input.onchange = (e) => {
-                const file = e.target.files[0];
-                if (!file) {
-                    reject(new Error('No file selected'));
-                    return;
-                }
-                
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    try {
-                        const success = assetManager.importFromJSON(event.target.result);
-                        if (success) {
-                            resolve(true);
-                        } else {
-                            reject(new Error('Failed to import asset library'));
-                        }
-                    } catch (error) {
-                        reject(new Error('Failed to parse asset library file: ' + error.message));
-                    }
-                };
-                reader.onerror = () => {
-                    reject(new Error('Failed to read file'));
-                };
-                reader.readAsText(file);
-            };
+            if (!success) {
+                throw new Error('Failed to import asset library');
+            }
             
-            input.click();
-        });
+            return true;
+        } catch (error) {
+            throw new Error('Failed to load asset library: ' + error.message);
+        }
     }
 }

@@ -1,10 +1,12 @@
+import { BaseModule } from './BaseModule.js';
+
 /**
  * Mouse Handlers module for LevelEditor
  * Handles all mouse interactions and events
  */
-export class MouseHandlers {
+export class MouseHandlers extends BaseModule {
     constructor(levelEditor) {
-        this.editor = levelEditor;
+        super(levelEditor);
         
         // Performance optimization for zoom
         this.zoomAnimationFrame = null;
@@ -14,8 +16,8 @@ export class MouseHandlers {
      * Mouse event handlers
      */
     handleMouseDown(e) {
-        const worldPos = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, this.editor.stateManager.get('camera'));
-        const mouse = this.editor.stateManager.get('mouse');
+        const worldPos = this.screenToWorld(e);
+        const mouse = this.getMouseState();
         
         if (e.button === 2) { // Right mouse button
             this.editor.stateManager.update({
@@ -46,16 +48,10 @@ export class MouseHandlers {
     }
 
     handleMouseMove(e) {
-        const worldPos = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, this.editor.stateManager.get('camera'));
-        const mouse = this.editor.stateManager.get('mouse');
+        const worldPos = this.screenToWorld(e);
+        const mouse = this.getMouseState();
         
-        this.editor.stateManager.update({
-            'mouse.x': e.clientX,
-            'mouse.y': e.clientY,
-            'mouse.worldX': worldPos.x,
-            'mouse.worldY': worldPos.y,
-            'mouse.altKey': e.altKey
-        });
+        this.updateMouseState(e, worldPos);
         
         if (mouse.isRightDown) {
             // Pan camera
@@ -81,8 +77,8 @@ export class MouseHandlers {
         }
 
         // Freeze group frame while Alt is pressed (for dragging objects out)
-        const groupEditMode = this.editor.stateManager.get('groupEditMode');
-        if (groupEditMode && groupEditMode && groupEditMode.isActive) {
+        if (this.isInGroupEditMode()) {
+            const groupEditMode = this.getGroupEditMode();
             if (e.altKey) {
                 if (!groupEditMode.frameFrozen) {
                     this.editor.stateManager.set('groupEditMode', {
@@ -140,8 +136,8 @@ export class MouseHandlers {
             }
 
             // If we are in group edit mode and released after dragging with Alt
-            const groupEditMode = this.editor.stateManager.get('groupEditMode');
-            if (groupEditMode && groupEditMode.isActive && groupEditMode.group && currentAlt && wasDragging) {
+            if (this.isInGroupEditMode() && currentAlt && wasDragging) {
+                const groupEditMode = this.getGroupEditMode();
                 console.log('Alt+drag detected in group edit mode');
                 const selectedIds = this.editor.stateManager.get('selectedObjects');
                 
@@ -298,9 +294,8 @@ export class MouseHandlers {
         this.editor.historyManager.saveState(this.editor.level.objects);
         
         const droppedAssetIds = JSON.parse(e.dataTransfer.getData('application/json'));
-        const worldPos = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, this.editor.stateManager.get('camera'));
+        const worldPos = this.screenToWorld(e);
         
-        const groupEditMode = this.editor.stateManager.get('groupEditMode');
         const newIds = new Set();
 
         droppedAssetIds.forEach((assetId, index) => {
@@ -309,7 +304,8 @@ export class MouseHandlers {
                 const newObject = asset.createInstance(worldPos.x + index * 10, worldPos.y + index * 10);
 
                 // Check if we're in group edit mode and the drop point is inside the group bounds
-                if (groupEditMode && groupEditMode.isActive && groupEditMode.group && this.editor.objectOperations.isPointInGroupBounds(worldPos.x, worldPos.y, groupEditMode)) {
+                if (this.isInGroupEditMode() && this.editor.objectOperations.isPointInGroupBounds(worldPos.x, worldPos.y)) {
+                    const groupEditMode = this.getGroupEditMode();
                     // Convert to relative coordinates using group's WORLD position
                     const groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
                     newObject.x -= groupPos.x;
@@ -381,10 +377,10 @@ export class MouseHandlers {
 
     handleEmptyClick(e, worldPos) {
         const selectedObjects = this.editor.stateManager.get('selectedObjects');
-        const groupEditMode = this.editor.stateManager.get('groupEditMode');
 
         // If editing groups, only close when clicking OUTSIDE the active group's frame
-        if (groupEditMode && groupEditMode.isActive && groupEditMode.group) {
+        if (this.isInGroupEditMode()) {
+            const groupEditMode = this.getGroupEditMode();
             const bounds = this.editor.objectOperations.getObjectWorldBounds(groupEditMode.group);
             const inside = worldPos.x >= bounds.minX && worldPos.x <= bounds.maxX && worldPos.y >= bounds.minY && worldPos.y <= bounds.maxY;
             if (inside) {
@@ -420,7 +416,6 @@ export class MouseHandlers {
     dragSelectedObjects(worldPos) {
         const selectedObjects = this.editor.stateManager.get('selectedObjects');
         const mouse = this.editor.stateManager.get('mouse');
-        const groupEditMode = this.editor.stateManager.get('groupEditMode');
 
         const dx = worldPos.x - mouse.dragStartX;
         const dy = worldPos.y - mouse.dragStartY;
@@ -430,8 +425,8 @@ export class MouseHandlers {
             if (obj) {
                 // Check if object is on main level or inside the currently edited group
                 const isOnMainLevel = this.editor.level.objects.some(topObj => topObj.id === obj.id);
-                const isInEditedGroup = groupEditMode && groupEditMode.isActive && groupEditMode.group &&
-                    this.editor.objectOperations.isObjectInGroup(obj, groupEditMode.group);
+                const isInEditedGroup = this.isInGroupEditMode() && 
+                    this.editor.objectOperations.isObjectInGroup(obj, this.getActiveGroup());
 
                 if (isOnMainLevel) {
                     // Object is on main level - move it normally
@@ -439,7 +434,8 @@ export class MouseHandlers {
                     obj.y += dy;
 
                     // If dragged into edited group bounds, move under the group with relative coordinates
-                    if (!this.editor.stateManager.get('mouse').altKey && groupEditMode && groupEditMode.isActive && groupEditMode.group && this.editor.objectOperations.isPointInGroupBounds(obj.x, obj.y, groupEditMode)) {
+                    if (!this.isAltKeyPressed() && this.isInGroupEditMode() && this.editor.objectOperations.isPointInGroupBounds(obj.x, obj.y)) {
+                        const groupEditMode = this.getGroupEditMode();
                         // Convert world -> relative to group's world position
                         const groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
                         obj.x -= groupPos.x;
@@ -451,9 +447,9 @@ export class MouseHandlers {
                     }
                 } else if (isInEditedGroup) {
                     // Object is inside the currently edited group
-                    if (this.editor.stateManager.get('mouse').altKey) {
+                    if (this.isAltKeyPressed()) {
                         // Alt+drag: move in world coordinates by converting to world position first
-                        const groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
+                        const groupPos = this.editor.objectOperations.getObjectWorldPosition(this.getActiveGroup());
                         const worldX = groupPos.x + obj.x;
                         const worldY = groupPos.y + obj.y;
                         
@@ -462,8 +458,9 @@ export class MouseHandlers {
                         const newWorldY = worldY + dy;
                         
                         // Convert back to relative coordinates
-                        obj.x = newWorldX - groupPos.x;
-                        obj.y = newWorldY - groupPos.y;
+                        const activeGroupPos = this.editor.objectOperations.getObjectWorldPosition(this.getActiveGroup());
+                        obj.x = newWorldX - activeGroupPos.x;
+                        obj.y = newWorldY - activeGroupPos.y;
                     } else {
                         // Normal drag: move relative to group
                         obj.x += dx;
@@ -522,9 +519,9 @@ export class MouseHandlers {
 
         const marquee = mouse.marqueeRect;
         const selectedObjects = new Set(this.editor.stateManager.get('selectedObjects'));
-        const groupEditMode = this.editor.stateManager.get('groupEditMode');
 
-        if (groupEditMode && groupEditMode.isActive) {
+        if (this.isInGroupEditMode()) {
+            const groupEditMode = this.getGroupEditMode();
             // In group edit mode, limit selection to descendants of the edited group
             const collect = (g) => {
                 const res = [];

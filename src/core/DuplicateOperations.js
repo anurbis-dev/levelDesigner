@@ -1,11 +1,11 @@
+import { BaseModule } from './BaseModule.js';
+import { Logger } from '../utils/Logger.js';
+
 /**
  * Duplicate Operations module
  * Encapsulates start/update/confirm/cancel flow for duplicating objects
  */
-export class DuplicateOperations {
-    constructor(levelEditor) {
-        this.editor = levelEditor;
-    }
+export class DuplicateOperations extends BaseModule {
 
     // Remove helper fields recursively and ensure visibility defaults
     _sanitizeForPlacement(obj) {
@@ -28,13 +28,13 @@ export class DuplicateOperations {
      * Start duplication from current selection
      */
     startFromSelection() {
-        console.log('DUPLICATE: startFromSelection called');
+        Logger.duplicate.start('startFromSelection called');
 
         const selectedIds = this.editor.stateManager.get('selectedObjects');
-        console.log('DUPLICATE: Selected IDs:', selectedIds);
+        Logger.duplicate.debug('Selected IDs:', selectedIds);
 
         if (!selectedIds || selectedIds.size === 0) {
-            console.log('DUPLICATE: No selected objects, returning');
+            Logger.duplicate.debug('No selected objects, returning');
             return;
         }
 
@@ -43,10 +43,10 @@ export class DuplicateOperations {
             .map(id => this.editor.level.findObjectById(id))
             .filter(Boolean);
 
-        console.log('DUPLICATE: Found objects:', selected.length, selected);
+        Logger.duplicate.debug('Found objects:', selected.length, selected);
 
         if (selected.length === 0) {
-            console.log('DUPLICATE: No valid objects found, returning');
+            Logger.duplicate.debug('No valid objects found, returning');
             return;
         }
 
@@ -90,7 +90,7 @@ export class DuplicateOperations {
         const positioned = this.editor.duplicateRenderUtils.updatePositions(initialized, worldPos);
 
         // Set duplicate state and start placing mode
-        console.log('DUPLICATE: Setting duplicate state, objects count:', positioned.length);
+        Logger.duplicate.debug('Setting duplicate state, objects count:', positioned.length);
         this.editor.stateManager.update({
             'mouse.isPlacingObjects': true,
             'mouse.placingObjects': positioned,
@@ -99,13 +99,13 @@ export class DuplicateOperations {
             'duplicate.basePosition': { x: worldPos.x, y: worldPos.y }
         });
 
-        console.log('DUPLICATE: State after update:', this.editor.stateManager.get('duplicate'));
+        Logger.duplicate.debug('State after update:', this.editor.stateManager.get('duplicate'));
 
         // Immediate render to show preview
-        console.log('DUPLICATE: Calling initial render');
+        Logger.duplicate.debug('Calling initial render');
         this.editor.render();
 
-        console.log('DUPLICATE: startFromSelection completed');
+        Logger.duplicate.start('startFromSelection completed');
     }
 
     /**
@@ -159,7 +159,7 @@ export class DuplicateOperations {
             newIds.add(base.id);
         });
 
-        console.log('DUPLICATE: Placing', duplicate.objects.length, 'objects');
+        Logger.duplicate.start('Placing', duplicate.objects.length, 'objects');
 
         // Use the same reset method as cancel for consistency
         this.cancel();
@@ -170,14 +170,14 @@ export class DuplicateOperations {
         this.editor.updateAllPanels();
         this.editor.render();
 
-        console.log('DUPLICATE: Placement completed, selected objects:', newIds.size);
+        Logger.duplicate.start('Placement completed, selected objects:', newIds.size);
     }
 
     /**
      * Cancel duplication
      */
     cancel() {
-        console.log('DUPLICATE: Cancelling duplication');
+        Logger.duplicate.start('Cancelling duplication');
 
         // Full reset to avoid stale references
         this.editor.stateManager.update({
@@ -195,7 +195,7 @@ export class DuplicateOperations {
         }
 
         this.editor.render();
-        console.log('DUPLICATE: Cancellation completed');
+        Logger.duplicate.start('Cancellation completed');
     }
 }
 
