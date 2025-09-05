@@ -14,7 +14,7 @@
 
 ```javascript
 export class LevelEditor {
-    static VERSION = '2.1.0'; // ← ЕДИНЫЙ ИСТОЧНИК ИСТИНЫ
+    static VERSION = '2.2.0'; // ← ЕДИНЫЙ ИСТОЧНИК ИСТИНЫ
 }
 ```
 
@@ -34,6 +34,43 @@ export class LevelEditor {
 3. Все места отображения обновятся автоматически
 
 **Избегайте дублирования версии** в других местах - используйте динамическое получение из `LevelEditor.VERSION`.
+
+### Git Workflow и получение логов
+
+**Специальные батники для работы с git:**
+
+1. **`start_server.bat`** - Запуск сервера разработки
+2. **`start_server.ps1`** - PowerShell версия запуска
+3. **`get_git_logs.bat`** - Безопасное получение git логов
+4. **`get_git_logs.ps1`** - PowerShell версия получения логов
+5. **`git_workflow.bat`** - Полная автоматизация git операций
+6. **`git_status.bat`** - Быстрая проверка статуса
+7. **`git_commit.bat`** - Быстрый коммит с версионированием
+
+**Рекомендуемый workflow:**
+```bash
+# 1. Проверка статуса
+git_status.bat
+
+# 2. Получение логов
+get_git_logs.bat 10
+
+# 3. Добавление изменений
+git add .
+
+# 4. Коммит с версионированием
+git commit -m "v2.2.0: Описание изменений"
+
+# 5. Пуш в репозиторий
+git push origin master
+```
+
+**Или используйте автоматизированный workflow:**
+```bash
+git_workflow.bat
+```
+
+Подробная документация в [GIT_LOGS_SOLUTION.md](GIT_LOGS_SOLUTION.md).
 
 ## Система логирования
 
