@@ -41,19 +41,19 @@ export class LevelEditor {
 
 1. **`start_server.bat`** - Запуск сервера разработки
 2. **`start_server.ps1`** - PowerShell версия запуска
-3. **`get_git_logs.bat`** - Безопасное получение git логов
-4. **`get_git_logs.ps1`** - PowerShell версия получения логов
-5. **`git_workflow.bat`** - Полная автоматизация git операций
-6. **`git_status.bat`** - Быстрая проверка статуса
-7. **`git_commit.bat`** - Быстрый коммит с версионированием
+3. **`tmp/gitUtils/get_git_logs.bat`** - Безопасное получение git логов
+4. **`tmp/gitUtils/get_git_logs.ps1`** - PowerShell версия получения логов
+5. **`tmp/gitUtils/git_workflow.bat`** - Полная автоматизация git операций
+6. **`tmp/gitUtils/git_status.bat`** - Быстрая проверка статуса
+7. **`tmp/gitUtils/git_commit.bat`** - Быстрый коммит с версионированием
 
-**Рекомендуемый workflow:**
+**Рекомендуемый workflow (используйте обёртки):**
 ```bash
 # 1. Проверка статуса
-git_status.bat
+.\git_status.bat
 
 # 2. Получение логов
-get_git_logs.bat 10
+.\get_git_logs.bat 10
 
 # 3. Добавление изменений
 git add .
@@ -67,7 +67,15 @@ git push origin master
 
 **Или используйте автоматизированный workflow:**
 ```bash
-git_workflow.bat
+.\git_workflow.bat
+```
+
+**Альтернативно (прямые пути):**
+```bash
+# Прямые пути к файлам в tmp/gitUtils/
+tmp\gitUtils\git_status.bat
+tmp\gitUtils\get_git_logs.bat 10
+tmp\gitUtils\git_workflow.bat
 ```
 
 Подробная документация в [GIT_LOGS_SOLUTION.md](GIT_LOGS_SOLUTION.md).
