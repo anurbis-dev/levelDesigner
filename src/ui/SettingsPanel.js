@@ -35,40 +35,53 @@ export class SettingsPanel {
         
         overlay.innerHTML = `
             <div style="
+                position: relative;
                 background-color: #1f2937;
                 border-radius: 0.5rem;
                 box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
                 max-width: 64rem;
                 width: 100%;
-                max-height: 90vh;
-                overflow: hidden;
+                margin: 1rem auto;
+                height: calc(100vh - 2rem);
                 color: white;
+                display: flex;
+                flex-direction: column;
             ">
                 <div style="
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
-                    padding: 1.5rem;
+                    padding: 0.5rem 1rem;
                     border-bottom: 1px solid #374151;
+                    flex: 0 0 auto;
+                    min-height: 3rem;
                 ">
-                    <h2 style="font-size: 1.25rem; font-weight: 600; margin: 0;">Settings</h2>
+                    <h2 style="font-size: 1.125rem; font-weight: 600; margin: 0;">Settings</h2>
                     <button id="close-settings" style="
                         color: #9ca3af;
                         background: none;
                         border: none;
                         cursor: pointer;
-                        padding: 0.5rem;
-                        font-size: 1.5rem;
+                        padding: 0.25rem;
+                        font-size: 1.25rem;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        width: 2rem;
+                        height: 2rem;
                     ">✕</button>
                 </div>
                 
-                <div style="display: flex; height: 70vh;">
+                <div style="display: flex; flex: 1 1 auto; overflow: hidden; position: relative;">
                     <!-- Settings Categories -->
                     <div style="
                         width: 25%;
+                        min-width: 200px;
                         background-color: #111827;
                         padding: 1rem;
                         overflow-y: auto;
+                        flex: 0 0 auto;
+                        height: 100%;
                     ">
                         <nav style="display: flex; flex-direction: column; gap: 0.5rem;">
                             <button class="settings-tab active" data-tab="general" style="width: 100%; text-align: left; padding: 0.75rem; border-radius: 0.25rem; color: #d1d5db; background: #374151; border: none; cursor: pointer;">General</button>
@@ -83,9 +96,11 @@ export class SettingsPanel {
                     
                     <!-- Settings Content -->
                     <div style="
-                        flex: 1;
-                        padding: 1.5rem;
+                        flex: 1 1 auto;
+                        padding: 1rem;
                         overflow-y: auto;
+                        height: 100%;
+                        padding-bottom: 4rem;
                     ">
                         <div id="settings-content">
                             <!-- Content will be dynamically generated -->
@@ -97,18 +112,28 @@ export class SettingsPanel {
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
-                    padding: 1.5rem;
+                    padding: 0.75rem 1rem;
                     border-top: 1px solid #374151;
+                    position: fixed;
+                    bottom: 1rem;
+                    left: 1rem;
+                    right: 1rem;
+                    max-width: calc(64rem - 2rem);
+                    margin: 0 auto;
+                    background-color: #1f2937;
+                    z-index: 10;
+                    border-radius: 0 0 0.5rem 0.5rem;
+                    box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
                 ">
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button id="reset-settings" style="padding: 0.5rem 1rem; background-color: #dc2626; color: white; border: none; border-radius: 0.25rem; cursor: pointer;">Reset to Defaults</button>
-                        <button id="export-settings" style="padding: 0.5rem 1rem; background-color: #2563eb; color: white; border: none; border-radius: 0.25rem; cursor: pointer;">Export Settings</button>
-                        <button id="import-settings" style="padding: 0.5rem 1rem; background-color: #059669; color: white; border: none; border-radius: 0.25rem; cursor: pointer;">Import Settings</button>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <button id="reset-settings" style="padding: 0.4rem 0.75rem; background-color: #dc2626; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;">Reset to Defaults</button>
+                        <button id="export-settings" style="padding: 0.4rem 0.75rem; background-color: #2563eb; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;">Export Settings</button>
+                        <button id="import-settings" style="padding: 0.4rem 0.75rem; background-color: #059669; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;">Import Settings</button>
                         <input type="file" id="import-file" accept=".json" style="display: none;">
                     </div>
                     <div style="display: flex; gap: 0.5rem;">
-                        <button id="cancel-settings" style="padding: 0.5rem 1rem; background-color: #4b5563; color: white; border: none; border-radius: 0.25rem; cursor: pointer;">Cancel</button>
-                        <button id="save-settings" style="padding: 0.5rem 1rem; background-color: #2563eb; color: white; border: none; border-radius: 0.25rem; cursor: pointer;">Save Changes</button>
+                        <button id="cancel-settings" style="padding: 0.4rem 0.75rem; background-color: #4b5563; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;">Cancel</button>
+                        <button id="save-settings" style="padding: 0.4rem 0.75rem; background-color: #2563eb; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;">Save Changes</button>
                     </div>
                 </div>
             </div>
@@ -201,6 +226,14 @@ export class SettingsPanel {
                             <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Nested Groups Highlight Color</label>
                             <input type="color" class="setting-input" data-setting="selection.hierarchyHighlightColor" value="${this.settingsManager.get('selection.hierarchyHighlightColor') || '#3B82F6'}"/>
                         </div>
+                        <div>
+                            <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Marquee Color</label>
+                            <input type="color" class="setting-input" data-setting="selection.marqueeColor" value="${this.settingsManager.get('selection.marqueeColor')}"/>
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Marquee Opacity</label>
+                            <input type="range" min="0" max="1" step="0.05" class="setting-input" data-setting="selection.marqueeOpacity" value="${this.settingsManager.get('selection.marqueeOpacity')}" style="width:100%;"/>
+                        </div>
                     </div>`;
                 break;
             case 'assets':
@@ -238,6 +271,27 @@ export class SettingsPanel {
                            value="${settings.ui.fontScale || 1.0}"
                            style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white;">
                 </div>
+
+                <div>
+                    <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Panel Width (px)</label>
+                    <input type="number" step="10" min="200" max="600" class="setting-input" data-setting="ui.panelWidth" 
+                           value="${settings.ui.panelWidth || 300}"
+                           style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white;">
+                </div>
+
+                <div>
+                    <label style="display: flex; align-items: center;">
+                        <input type="checkbox" class="setting-input" data-setting="ui.showTooltips" ${settings.ui.showTooltips ? 'checked' : ''} style="margin-right: 0.5rem;">
+                        <span style="color: #d1d5db;">Show Tooltips</span>
+                    </label>
+                </div>
+
+                <div>
+                    <label style="display: flex; align-items: center;">
+                        <input type="checkbox" class="setting-input" data-setting="ui.compactMode" ${settings.ui.compactMode ? 'checked' : ''} style="margin-right: 0.5rem;">
+                        <span style="color: #d1d5db;">Compact Mode</span>
+                    </label>
+                </div>
                 
                 <div>
                     <label style="display: flex; align-items: center;">
@@ -271,7 +325,36 @@ export class SettingsPanel {
     }
 
     renderGridSettings() {
-        return `<h3>Grid Settings</h3><p>Grid settings will be implemented here.</p>`;
+        const settings = this.settingsManager.getAllSettings();
+        return `
+            <h3 style="font-size: 1.125rem; font-weight: 500; margin-bottom: 1rem;">Grid & Snapping Settings</h3>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div>
+                    <label style="display: flex; align-items: center;">
+                        <input type="checkbox" class="setting-input" data-setting="grid.showGrid" ${settings.grid.showGrid ? 'checked' : ''} style="margin-right: 0.5rem;">
+                        <span style="color: #d1d5db;">Show Grid</span>
+                    </label>
+                </div>
+                <div>
+                    <label style="display: flex; align-items: center;">
+                        <input type="checkbox" class="setting-input" data-setting="grid.snapToGrid" ${settings.grid.snapToGrid ? 'checked' : ''} style="margin-right: 0.5rem;">
+                        <span style="color: #d1d5db;">Snap to Grid</span>
+                    </label>
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Size (px)</label>
+                    <input type="number" min="1" max="256" class="setting-input" data-setting="grid.size" value="${settings.grid.size}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Color</label>
+                    <input type="color" class="setting-input" data-setting="grid.color" value="${settings.grid.color}"/>
+                </div>
+                <div>
+                    <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Opacity</label>
+                    <input type="range" min="0" max="1" step="0.05" class="setting-input" data-setting="grid.opacity" value="${settings.grid.opacity}" style="width:100%;"/>
+                </div>
+            </div>
+        `;
     }
 
     renderCameraSettings() {
