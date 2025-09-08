@@ -1,0 +1,8 @@
+{
+  "backgroundColor": "#4B5563",
+  "gridSize": 32,
+  "showGrid": true,
+  "gridColor": "#333333",
+  "gridOpacity": 0.5,
+  "snapToGrid": false
+}

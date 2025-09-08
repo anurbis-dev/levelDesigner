@@ -42,7 +42,8 @@ export class Logger {
         CONSOLE: { color: '#00BCD4', prefix: 'CONSOLE' },
         LAYOUT: { color: '#8BC34A', prefix: 'LAYOUT' },
         SETTINGS: { color: '#FFC107', prefix: 'SETTINGS' },
-        PREFERENCES: { color: '#673AB7', prefix: 'PREFS' }
+        PREFERENCES: { color: '#673AB7', prefix: 'PREFS' },
+        CONFIG: { color: '#00E676', prefix: 'CONFIG' }
     };
 
     /**

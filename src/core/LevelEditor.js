@@ -3,6 +3,7 @@ import { HistoryManager } from '../managers/HistoryManager.js';
 import { AssetManager } from '../managers/AssetManager.js';
 import { FileManager } from '../managers/FileManager.js';
 import { SettingsManager } from '../managers/SettingsManager.js';
+import { ConfigManager } from '../managers/ConfigManager.js';
 import { CanvasRenderer } from '../ui/CanvasRenderer.js';
 import { AssetPanel } from '../ui/AssetPanel.js';
 import { DetailsPanel } from '../ui/DetailsPanel.js';
@@ -32,13 +33,19 @@ export class LevelEditor {
      */
     static VERSION = '2.3.0';
 
-    constructor() {
+    constructor(userPreferencesManager = null) {
         // Initialize managers
         this.stateManager = new StateManager();
         this.historyManager = new HistoryManager();
         this.assetManager = new AssetManager();
         this.fileManager = new FileManager();
         this.settingsManager = new SettingsManager();
+        
+        // Store user preferences manager (for backward compatibility)
+        this.userPrefs = userPreferencesManager;
+        
+        // ConfigManager will be initialized in init() method
+        this.configManager = null;
         
         // Initialize UI components
         this.canvasRenderer = null;
@@ -66,12 +73,41 @@ export class LevelEditor {
     }
 
     /**
+     * Safe logging method that works even if Logger is not available
+     */
+    log(level, message, ...args) {
+        try {
+            if (typeof Logger !== 'undefined' && Logger.event && Logger.event[level]) {
+                Logger.event[level](message, ...args);
+            } else {
+                console[level === 'error' ? 'error' : 'log'](`[EVENT] ${message}`, ...args);
+            }
+        } catch (error) {
+            console.log(`[EVENT] ${message}`, ...args);
+        }
+    }
+
+    /**
      * Initialize the editor
      */
     async init() {
         // Log version info
-        Logger.event.info(`🚀 Level Editor v${LevelEditor.VERSION} - Utility Architecture`);
-        Logger.event.info('Initializing editor components...');
+        this.log('info', `🚀 Level Editor v${LevelEditor.VERSION} - Utility Architecture`);
+        this.log('info', 'Initializing editor components...');
+        
+        // Initialize configuration manager after Logger is available
+        this.configManager = new ConfigManager();
+        
+        // Wait for configuration to load
+        await this.configManager.loadAllConfigs();
+        
+        // Apply configuration settings
+        this.applyConfiguration();
+        
+        // Apply user preferences if available (legacy support)
+        if (this.userPrefs) {
+            this.applyUserPreferences();
+        }
         
         // Get DOM elements
         const canvas = document.getElementById('main-canvas');
@@ -99,6 +135,14 @@ export class LevelEditor {
         // Create new level
         this.level = this.fileManager.createNewLevel();
         
+        // Apply configuration to level settings
+        this.applyConfigurationToLevel();
+        
+        // Apply user preferences to level settings if available (legacy support)
+        if (this.userPrefs) {
+            this.applyUserPreferencesToLevel();
+        }
+        
         // Setup event listeners
         this.eventHandlers.setupEventListeners();
         
@@ -116,6 +160,162 @@ export class LevelEditor {
         
         // Save initial state
         this.historyManager.saveState(this.level.objects, true);
+    }
+
+    /**
+     * Apply configuration settings to editor
+     */
+    applyConfiguration() {
+        if (!this.configManager) {
+            this.log('warn', 'ConfigManager not initialized, skipping configuration');
+            return;
+        }
+        
+        this.log('info', 'Applying configuration settings...');
+        
+        // Apply editor settings
+        const editorConfig = this.configManager.getEditor();
+        Object.keys(editorConfig).forEach(key => {
+            this.settingsManager.set(`editor.${key}`, editorConfig[key]);
+        });
+        
+        // Apply UI settings
+        const uiConfig = this.configManager.getUI();
+        Object.keys(uiConfig).forEach(key => {
+            this.settingsManager.set(`ui.${key}`, uiConfig[key]);
+        });
+        
+        // Apply canvas settings
+        const canvasConfig = this.configManager.getCanvas();
+        Object.keys(canvasConfig).forEach(key => {
+            this.settingsManager.set(`canvas.${key}`, canvasConfig[key]);
+        });
+        
+        // Apply panels settings
+        const panelsConfig = this.configManager.getPanels();
+        Object.keys(panelsConfig).forEach(key => {
+            this.settingsManager.set(`panels.${key}`, panelsConfig[key]);
+        });
+        
+        // Apply font scale to document
+        const fontScale = this.configManager.get('ui.fontScale');
+        if (fontScale) {
+            document.documentElement.style.fontSize = `${fontScale * 16}px`;
+            this.log('info', `Applied font scale: ${fontScale}`);
+        }
+        
+        this.log('info', 'Configuration applied successfully');
+    }
+
+    /**
+     * Apply user preferences to editor settings (legacy method)
+     */
+    applyUserPreferences() {
+        if (!this.userPrefs) return;
+        
+        this.log('info', 'Applying user preferences...');
+        
+        // Apply canvas settings
+        const canvasBackgroundColor = this.userPrefs.get('canvasBackgroundColor');
+        const gridSize = this.userPrefs.get('gridSize');
+        const showGrid = this.userPrefs.get('showGrid');
+        
+        if (canvasBackgroundColor) {
+            this.settingsManager.set('canvas.backgroundColor', canvasBackgroundColor);
+        }
+        
+        if (gridSize) {
+            this.settingsManager.set('canvas.gridSize', gridSize);
+        }
+        
+        if (showGrid !== undefined) {
+            this.settingsManager.set('canvas.showGrid', showGrid);
+        }
+        
+        // Apply editor settings
+        const autoSave = this.userPrefs.get('autoSave');
+        const autoSaveInterval = this.userPrefs.get('autoSaveInterval');
+        
+        if (autoSave !== undefined) {
+            this.settingsManager.set('editor.autoSave', autoSave);
+        }
+        
+        if (autoSaveInterval) {
+            this.settingsManager.set('editor.autoSaveInterval', autoSaveInterval);
+        }
+        
+        // Apply UI settings
+        const theme = this.userPrefs.get('theme');
+        const fontSize = this.userPrefs.get('fontSize');
+        const compactMode = this.userPrefs.get('compactMode');
+        
+        if (theme) {
+            this.settingsManager.set('ui.theme', theme);
+        }
+        
+        if (fontSize) {
+            this.settingsManager.set('ui.fontSize', fontSize);
+        }
+        
+        if (compactMode !== undefined) {
+            this.settingsManager.set('ui.compactMode', compactMode);
+        }
+        
+        this.log('info', 'User preferences applied successfully');
+    }
+
+    /**
+     * Apply configuration to level settings
+     */
+    applyConfigurationToLevel() {
+        if (!this.level || !this.configManager) return;
+        
+        this.log('info', 'Applying configuration to level...');
+        
+        // Apply canvas settings to level
+        const canvasConfig = this.configManager.getCanvas();
+        
+        if (canvasConfig.backgroundColor) {
+            this.level.settings.backgroundColor = canvasConfig.backgroundColor;
+        }
+        
+        if (canvasConfig.gridSize) {
+            this.level.settings.gridSize = canvasConfig.gridSize;
+        }
+        
+        if (canvasConfig.showGrid !== undefined) {
+            this.level.settings.showGrid = canvasConfig.showGrid;
+        }
+        
+        this.log('info', 'Configuration applied to level successfully');
+    }
+
+    /**
+     * Apply user preferences to level settings (legacy method)
+     */
+    applyUserPreferencesToLevel() {
+        if (!this.userPrefs || !this.level) return;
+        
+        this.log('info', 'Applying user preferences to level...');
+        
+        // Apply canvas settings to level
+        const canvasBackgroundColor = this.userPrefs.get('canvasBackgroundColor');
+        const gridSize = this.userPrefs.get('gridSize');
+        const showGrid = this.userPrefs.get('showGrid');
+        
+        if (canvasBackgroundColor) {
+            this.level.settings.backgroundColor = canvasBackgroundColor;
+        }
+        
+        if (gridSize) {
+            this.level.settings.gridSize = gridSize;
+        }
+        
+        if (showGrid !== undefined) {
+            this.level.settings.showGrid = showGrid;
+        }
+        
+        this.log('info', 'User preferences applied to level successfully');
     }
 
     /**

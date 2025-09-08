@@ -228,39 +228,20 @@
         import { ConsoleContextMenu } from './src/ui/ConsoleContextMenu.js';
         import { Logger } from './src/utils/Logger.js';
 
-        // Initialize the level editor
-        const editor = new LevelEditor();
-        
-        // Setup menu dropdowns
-        const menuLevel = document.getElementById('menu-level');
-        const menuSettings = document.getElementById('menu-settings');
-        
-        [menuLevel, menuSettings].forEach(menu => {
-            const button = menu.querySelector('button');
-            const dropdown = menu.querySelector('div');
-            button.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const isHidden = dropdown.classList.contains('hidden');
-                // Close all menus first
-                document.querySelectorAll('#menu-level > div, #menu-settings > div').forEach(d => d.classList.add('hidden'));
-                if (isHidden) {
-                    dropdown.classList.remove('hidden');
+        // Safe logging function that works even if Logger is not available
+        function safeLog(level, message, ...args) {
+            try {
+                if (typeof Logger !== 'undefined' && Logger.layout && Logger.layout[level]) {
+                    Logger.layout[level](message, ...args);
+                } else {
+                    console[level === 'error' ? 'error' : 'log'](`[LAYOUT] ${message}`, ...args);
                 }
-            });
-        });
-        
-        window.addEventListener('click', () => {
-            document.querySelectorAll('#menu-level > div, #menu-settings > div').forEach(d => d.classList.add('hidden'));
-        });
+            } catch (error) {
+                console.log(`[LAYOUT] ${message}`, ...args);
+            }
+        }
 
-        // Initialize the editor
-        editor.init().catch(error => {
-            Logger.event.error('Failed to initialize level editor:', error);
-            Logger.event.error('Error details:', error);
-            alert('Failed to initialize level editor: ' + (error.message || error));
-        });
-
-        // User Preferences Manager
+        // User Preferences Manager - Initialize BEFORE LevelEditor
         class UserPreferencesManager {
             constructor() {
                 this.prefsKey = 'levelEditor_userPrefs';
@@ -291,7 +272,7 @@
                         return { ...this.defaultPrefs, ...parsed };
                     }
                 } catch (error) {
-                    Logger.preferences.warn('Failed to load user preferences:', error);
+                    console.warn('Failed to load user preferences:', error);
                 }
                 return { ...this.defaultPrefs };
             }
@@ -301,7 +282,7 @@
                     localStorage.setItem(this.prefsKey, JSON.stringify(this.preferences));
                     return true;
                 } catch (error) {
-                    Logger.preferences.error('Failed to save user preferences:', error);
+                    console.error('Failed to save user preferences:', error);
                     return false;
                 }
             }
@@ -321,18 +302,55 @@
             }
         }
 
-                    // Initialize preferences manager
-            const userPrefs = new UserPreferencesManager();
+        // Initialize preferences manager FIRST
+        const userPrefs = new UserPreferencesManager();
 
-            // Function to apply saved panel sizes (called only on startup)
-            function applySavedPanelSizes() {
-                Logger.layout.debug('Applying saved panel sizes...');
-                const savedAssetsPanelHeight = userPrefs.get('assetsPanelHeight');
-                const savedConsoleHeight = userPrefs.get('consoleHeight');
-                const savedConsoleVisible = userPrefs.get('consoleVisible');
-                const savedRightPanelWidth = userPrefs.get('rightPanelWidth');
+        // Initialize the level editor with user preferences
+        const editor = new LevelEditor(userPrefs);
+        
+        // Setup menu dropdowns
+        const menuLevel = document.getElementById('menu-level');
+        const menuSettings = document.getElementById('menu-settings');
+        
+        [menuLevel, menuSettings].forEach(menu => {
+            const button = menu.querySelector('button');
+            const dropdown = menu.querySelector('div');
+            button.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const isHidden = dropdown.classList.contains('hidden');
+                // Close all menus first
+                document.querySelectorAll('#menu-level > div, #menu-settings > div').forEach(d => d.classList.add('hidden'));
+                if (isHidden) {
+                    dropdown.classList.remove('hidden');
+                }
+            });
+        });
+        
+        window.addEventListener('click', () => {
+            document.querySelectorAll('#menu-level > div, #menu-settings > div').forEach(d => d.classList.add('hidden'));
+        });
+
+        // Initialize the editor
+        editor.init().then(() => {
+            // Apply saved panel sizes after editor initialization
+            applySavedPanelSizes();
+        }).catch(error => {
+            console.error('Failed to initialize level editor:', error);
+            console.error('Error details:', error);
+            alert('Failed to initialize level editor: ' + (error.message || error));
+        });
+
+        // User preferences manager is already initialized above
+
+        // Function to apply saved panel sizes (called only on startup)
+        function applySavedPanelSizes() {
+            safeLog('debug', 'Applying saved panel sizes...');
+            const savedAssetsPanelHeight = userPrefs.get('assetsPanelHeight');
+            const savedConsoleHeight = userPrefs.get('consoleHeight');
+            const savedConsoleVisible = userPrefs.get('consoleVisible');
+            const savedRightPanelWidth = userPrefs.get('rightPanelWidth');
                 
-                Logger.layout.debug('Saved sizes:', {
+                safeLog('debug', 'Saved sizes:', {
                     savedAssetsPanelHeight,
                     savedConsoleHeight,
                     savedConsoleVisible,
@@ -351,7 +369,7 @@
                     rightPanel.style.width = savedRightPanelWidth + 'px';
                     rightPanel.style.flexShrink = '0';
                     rightPanel.style.flexGrow = '0';
-                    Logger.layout.debug('Right panel width set to:', savedRightPanelWidth);
+                    safeLog('debug', 'Right panel width set to:', savedRightPanelWidth);
                 }
                 
                 // Update assets panel height
@@ -361,7 +379,7 @@
                     const assetsHeight = Math.max(minHeight, Math.min(maxHeight, savedAssetsPanelHeight));
                     assetsPanel.style.height = assetsHeight + 'px';
                     assetsPanel.style.flexShrink = '0';
-                    Logger.layout.debug('Assets panel height set to:', assetsHeight);
+                    safeLog('debug','Assets panel height set to:', assetsHeight);
                 }
                 
                 // Update console height if visible
@@ -371,12 +389,12 @@
                     const consoleHeight = Math.max(minHeight, Math.min(maxHeight, savedConsoleHeight));
                     consolePanel.style.height = consoleHeight + 'px';
                     consolePanel.style.flexShrink = '0';
-                    Logger.layout.debug('Console height set to:', consoleHeight);
+                    safeLog('debug','Console height set to:', consoleHeight);
                 }
                 
                 // Update canvas only after applying saved sizes
                 if (window.editor && window.editor.canvasRenderer) {
-                    Logger.layout.debug('Updating canvas after applying saved panel sizes');
+                    safeLog('debug','Updating canvas after applying saved panel sizes');
                     window.editor.canvasRenderer.resizeCanvas();
                     window.editor.render();
                 }
@@ -384,7 +402,7 @@
                 // Additional render after applying saved sizes
                 setTimeout(() => {
                     if (window.editor && window.editor.canvasRenderer) {
-                        Logger.layout.debug('Final render after applying saved panel sizes');
+                        safeLog('debug','Final render after applying saved panel sizes');
                         window.editor.canvasRenderer.resizeCanvas();
                         window.editor.render();
                     }
@@ -393,7 +411,7 @@
             
             // Function to force complete layout update
             function forceLayoutUpdate() {
-                Logger.layout.debug('Forcing complete layout update...');
+                safeLog('debug','Forcing complete layout update...');
 
                 // Get main elements
                 const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
@@ -407,7 +425,7 @@
                     consolePanel.style.height = '';
                     consolePanel.style.flexShrink = '';
                     consolePanel.style.display = '';
-                    Logger.layout.debug('Console styles reset (hidden)');
+                    safeLog('debug','Console styles reset (hidden)');
                 }
 
                 // Minimal reflow trigger - only for main container to avoid affecting panel positions
@@ -418,30 +436,30 @@
                     const _ = computedStyle.height;
                 }
 
-                Logger.layout.debug('Layout forced, updating canvas...');
+                safeLog('debug','Layout forced, updating canvas...');
 
                 // Update canvas and render immediately
                 if (window.editor && window.editor.canvasRenderer) {
-                    Logger.layout.debug('Resizing canvas and rendering...');
+                    safeLog('debug','Resizing canvas and rendering...');
                     window.editor.canvasRenderer.resizeCanvas();
                     window.editor.render();
                 }
 
-                Logger.layout.debug('Complete layout update finished');
+                safeLog('debug','Complete layout update finished');
             }
             
             // Function to update canvas layout (called when panels show/hide)
             function updateCanvasLayout() {
-                Logger.layout.debug('Updating canvas layout...');
+                safeLog('debug','Updating canvas layout...');
 
                 // Only update canvas without forcing full layout to avoid panel drift
                 if (window.editor && window.editor.canvasRenderer) {
-                    Logger.layout.debug('Resizing canvas and rendering...');
+                    safeLog('debug','Resizing canvas and rendering...');
                     window.editor.canvasRenderer.resizeCanvas();
                     window.editor.render();
                 }
 
-                Logger.layout.debug('Canvas layout update complete');
+                safeLog('debug','Canvas layout update complete');
             }
 
         // Panel resizing functionality
@@ -494,7 +512,7 @@
                 document.body.style.userSelect = 'none';
                 document.body.style.pointerEvents = 'none';
                 
-                Logger.layout.debug('Assets resizer mousedown:', JSON.stringify({
+                safeLog('debug','Assets resizer mousedown:', JSON.stringify({
                     initialMouseY: initialMouseY,
                     initialHeight: initialAssetsPanelHeight
                 }, null, 2));
@@ -539,7 +557,7 @@
                         return;
                     }
                     
-                    Logger.layout.debug('Right resizer debug:', JSON.stringify({
+                    safeLog('debug','Right resizer debug:', JSON.stringify({
                         mouseX: e.clientX,
                         initialMouseX: initialMouseX,
                         mouseDelta: mouseDelta,
@@ -570,7 +588,7 @@
                     const mouseDelta = e.clientY - initialMouseY;
                     const newHeight = initialAssetsPanelHeight - mouseDelta; // Inverted direction
                     
-                    Logger.layout.debug('Assets resizer debug:', JSON.stringify({
+                    safeLog('debug','Assets resizer debug:', JSON.stringify({
                         mouseY: e.clientY,
                         initialMouseY: initialMouseY,
                         mouseDelta: mouseDelta,
@@ -599,7 +617,7 @@
                     const mouseDelta = e.clientY - initialMouseY;
                     const newHeight = initialConsolePanelHeight - mouseDelta; // Inverted direction (like assets)
                     
-                    Logger.layout.debug('Console resizer debug:', JSON.stringify({
+                    safeLog('debug','Console resizer debug:', JSON.stringify({
                         mouseY: e.clientY,
                         initialMouseY: initialMouseY,
                         mouseDelta: mouseDelta,
@@ -683,7 +701,7 @@
                     rightPanel.style.width = savedRightPanelWidth + 'px';
                     rightPanel.style.flexShrink = '0';
                     rightPanel.style.flexGrow = '0';
-                    Logger.layout.debug('Window resize: Right panel restored to:', savedRightPanelWidth);
+                    safeLog('debug','Window resize: Right panel restored to:', savedRightPanelWidth);
                 }
 
                 // Restore assets panel height if saved
@@ -694,7 +712,7 @@
 
                 // Update canvas only (don't call full layout update to avoid drift)
                 if (window.editor && window.editor.canvasRenderer) {
-                    Logger.layout.debug('Resizing canvas after window resize...');
+                    safeLog('debug','Resizing canvas after window resize...');
                     window.editor.canvasRenderer.resizeCanvas();
                     window.editor.render();
                 }
@@ -847,7 +865,7 @@
             }
 
             function showConsole() {
-                Logger.console.debug('Showing console...');
+                safeLog('debug','Showing console...');
                 consolePanel.classList.remove('hidden');
                 document.getElementById('resizer-console').classList.remove('hidden');
                 consoleInput.focus();
@@ -864,7 +882,7 @@
                     const consoleHeight = Math.max(minHeight, Math.min(maxHeight, savedConsoleHeight));
                     consolePanel.style.height = consoleHeight + 'px';
                     consolePanel.style.flexShrink = '0';
-                    Logger.console.debug('Console height restored to:', consoleHeight);
+                    safeLog('debug','Console height restored to:', consoleHeight);
                 }
                 
                 // Update canvas only (no layout changes to avoid panel drift)
@@ -873,11 +891,11 @@
                     window.editor.render();
                 }
                 
-                Logger.console.debug('Console shown, layout updated');
+                safeLog('debug','Console shown, layout updated');
             }
 
             function hideConsole() {
-                Logger.console.debug('Hiding console...');
+                safeLog('debug','Hiding console...');
                 consolePanel.classList.add('hidden');
                 document.getElementById('resizer-console').classList.add('hidden');
                 isConsoleVisible = false;
@@ -891,7 +909,7 @@
                     window.editor.render();
                 }
                 
-                Logger.console.debug('Console hidden, layout updated');
+                safeLog('debug','Console hidden, layout updated');
             }
 
             function logToConsole(message, type = 'log') {
@@ -1062,13 +1080,13 @@
             if (consolePanel) {
                 consolePanel.classList.remove('hidden');
                 document.getElementById('resizer-console').classList.remove('hidden');
-                Logger.console.debug('Console shown for testing context menu');
+                safeLog('debug','Console shown for testing context menu');
             }
         };
         
         // Update canvas after complete initialization
         const updateCanvasOnStartup = () => {
-            Logger.layout.debug('Updating canvas on startup...');
+            safeLog('debug','Updating canvas on startup...');
             
             // Update canvas only (no layout changes to avoid panel drift)
             if (window.editor && window.editor.canvasRenderer) {
@@ -1078,7 +1096,7 @@
             
             // Additional update after a longer delay to ensure everything is settled
             setTimeout(() => {
-                Logger.layout.debug('Final canvas update on startup...');
+                safeLog('debug','Final canvas update on startup...');
                 if (window.editor && window.editor.canvasRenderer) {
                     window.editor.canvasRenderer.resizeCanvas();
                     window.editor.render();
