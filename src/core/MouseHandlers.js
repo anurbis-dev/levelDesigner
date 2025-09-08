@@ -75,12 +75,6 @@ export class MouseHandlers extends BaseModule {
             if (selectedObjects && selectedObjects.size > 0) {
                 Logger.mouse.debug('Starting Alt+drag duplication from selected objects');
                 this.editor.duplicateOperations.startFromSelection();
-            } else if (this.editor.level.objects.length > 0) {
-                // If no objects selected but Alt is pressed, select all objects and start duplication
-                Logger.mouse.debug('Starting Alt+drag duplication - selecting all objects');
-                const allObjectIds = this.editor.level.objects.map(obj => obj.id);
-                this.editor.stateManager.set('selectedObjects', new Set(allObjectIds));
-                this.editor.duplicateOperations.startFromSelection();
             }
         } else if (this.editor.stateManager.get('duplicate.isActive')) {
             // Update duplicate objects position via DuplicateOperations
