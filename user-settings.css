@@ -1,0 +1,12 @@
+/* User settings CSS - applied immediately */
+:root {
+    --font-scale: 1.0;
+    font-size: calc(16px * var(--font-scale, 1.0));
+}
+
+/* Apply font scale from localStorage if available */
+@media screen {
+    :root {
+        font-size: 16px; /* Default fallback */
+    }
+}

@@ -278,22 +278,27 @@
 - `saveAssetLibrary(assetManager, fileName)` - сохранение библиотеки ассетов
 - `async loadAssetLibrary(assetManager)` - загрузка библиотеки ассетов
 
-### SettingsManager (src/managers/SettingsManager.js)
-Управление настройками.
+### ConfigManager (src/managers/ConfigManager.js)
+Централизованное управление всеми настройками редактора.
 
 #### Основные методы
 - `get(path)` - получение настройки по пути
 - `set(path, value)` - установка настройки
 - `reset()` - сброс к значениям по умолчанию
-- `loadSettings()` - загрузка настроек
-- `saveSettings()` - сохранение настроек
 - `getAllSettings()` - получение всех настроек
-- `updateSettings(newSettings)` - обновление настроек
-
-#### Импорт/экспорт
 - `exportSettings()` - экспорт настроек
 - `importSettings(jsonString)` - импорт настроек
 - `validateSetting(path, value)` - валидация настройки
+
+#### Специфичные конфигурации
+- `getEditor()` - настройки редактора
+- `getUI()` - настройки интерфейса
+- `getCanvas()` - настройки холста
+- `getCamera()` - настройки камеры
+- `getSelection()` - настройки выделения
+- `getAssets()` - настройки ассетов
+- `getPerformance()` - настройки производительности
+- `getShortcuts()` - горячие клавиши
 
 ### UserPreferencesManager (src/managers/UserPreferencesManager.js)
 Управление пользовательскими предпочтениями.

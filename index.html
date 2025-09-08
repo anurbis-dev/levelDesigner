@@ -6,8 +6,44 @@
     <title>2D Level Editor</title>
     <!-- Подключаем Tailwind CSS для быстрой стилизации -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="user-settings.css">
     <link rel="stylesheet" href="src/ui/ConsoleContextMenu.css">
+    
+    <!-- Apply user settings immediately to prevent visual jumps -->
+    <script>
+        // Apply user settings immediately, before any rendering
+        (function() {
+            try {
+                const stored = localStorage.getItem('levelEditor_userPrefs');
+                if (stored) {
+                    const prefs = JSON.parse(stored);
+                    const fontScale = prefs.fontScale || 1.0;
+                    if (fontScale !== 1.0) {
+                        // Set CSS custom property immediately
+                        document.documentElement.style.setProperty('--font-scale', fontScale);
+                        document.documentElement.style.fontSize = fontScale * 16 + 'px';
+                    }
+                }
+            } catch (error) {
+                // Ignore errors during early initialization
+            }
+        })();
+    </script>
+    
     <style>
+        /* Apply user settings immediately via CSS to prevent visual jumps */
+        :root {
+            --font-scale: 1.0;
+            font-size: calc(16px * var(--font-scale, 1.0)); /* Use CSS variable for font scale */
+        }
+        
+        /* Apply font scale immediately if localStorage has settings */
+        @media screen {
+            :root {
+                font-size: 16px; /* Default fallback */
+            }
+        }
+        
         /* Дополнительные стили для улучшения внешнего вида и функциональности */
         body, html {
             overflow: hidden; /* Запрещаем прокрутку всей страницы */
@@ -241,6 +277,38 @@
             }
         }
 
+        // Apply user settings IMMEDIATELY to prevent visual jumps
+        // This must happen before any DOM manipulation
+        function applyUserSettingsImmediately() {
+            try {
+                // Load user preferences directly from localStorage
+                const stored = localStorage.getItem('levelEditor_userPrefs');
+                if (stored) {
+                    const prefs = JSON.parse(stored);
+                    
+                    // Apply font scale immediately
+                    const fontScale = prefs.fontScale || 1.0;
+                    if (fontScale !== 1.0) {
+                        document.documentElement.style.fontSize = `${fontScale * 16}px`;
+                        console.log(`[LAYOUT] Applied font scale: ${fontScale}`);
+                    }
+                    
+                    // Apply theme immediately if available
+                    const theme = prefs.theme;
+                    if (theme && theme !== 'dark') {
+                        console.log(`[LAYOUT] Applied theme: ${theme}`);
+                    }
+                    
+                    console.log('[LAYOUT] User settings applied immediately');
+                }
+            } catch (error) {
+                console.log('[LAYOUT] Failed to apply user settings immediately:', error);
+            }
+        }
+
+        // Apply settings immediately
+        applyUserSettingsImmediately();
+
         // User Preferences Manager - Initialize BEFORE LevelEditor
         class UserPreferencesManager {
             constructor() {
@@ -344,18 +412,10 @@
 
         // Function to apply saved panel sizes (called only on startup)
         function applySavedPanelSizes() {
-            safeLog('debug', 'Applying saved panel sizes...');
             const savedAssetsPanelHeight = userPrefs.get('assetsPanelHeight');
             const savedConsoleHeight = userPrefs.get('consoleHeight');
             const savedConsoleVisible = userPrefs.get('consoleVisible');
             const savedRightPanelWidth = userPrefs.get('rightPanelWidth');
-                
-                safeLog('debug', 'Saved sizes:', {
-                    savedAssetsPanelHeight,
-                    savedConsoleHeight,
-                    savedConsoleVisible,
-                    savedRightPanelWidth
-                });
                 
                 // Get main elements
                 const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
@@ -369,7 +429,6 @@
                     rightPanel.style.width = savedRightPanelWidth + 'px';
                     rightPanel.style.flexShrink = '0';
                     rightPanel.style.flexGrow = '0';
-                    safeLog('debug', 'Right panel width set to:', savedRightPanelWidth);
                 }
                 
                 // Update assets panel height
@@ -379,7 +438,6 @@
                     const assetsHeight = Math.max(minHeight, Math.min(maxHeight, savedAssetsPanelHeight));
                     assetsPanel.style.height = assetsHeight + 'px';
                     assetsPanel.style.flexShrink = '0';
-                    safeLog('debug','Assets panel height set to:', assetsHeight);
                 }
                 
                 // Update console height if visible
@@ -389,12 +447,10 @@
                     const consoleHeight = Math.max(minHeight, Math.min(maxHeight, savedConsoleHeight));
                     consolePanel.style.height = consoleHeight + 'px';
                     consolePanel.style.flexShrink = '0';
-                    safeLog('debug','Console height set to:', consoleHeight);
                 }
                 
                 // Update canvas only after applying saved sizes
                 if (window.editor && window.editor.canvasRenderer) {
-                    safeLog('debug','Updating canvas after applying saved panel sizes');
                     window.editor.canvasRenderer.resizeCanvas();
                     window.editor.render();
                 }
@@ -402,7 +458,6 @@
                 // Additional render after applying saved sizes
                 setTimeout(() => {
                     if (window.editor && window.editor.canvasRenderer) {
-                        safeLog('debug','Final render after applying saved panel sizes');
                         window.editor.canvasRenderer.resizeCanvas();
                         window.editor.render();
                     }
@@ -411,7 +466,6 @@
             
             // Function to force complete layout update
             function forceLayoutUpdate() {
-                safeLog('debug','Forcing complete layout update...');
 
                 // Get main elements
                 const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
@@ -425,7 +479,6 @@
                     consolePanel.style.height = '';
                     consolePanel.style.flexShrink = '';
                     consolePanel.style.display = '';
-                    safeLog('debug','Console styles reset (hidden)');
                 }
 
                 // Minimal reflow trigger - only for main container to avoid affecting panel positions
@@ -436,30 +489,20 @@
                     const _ = computedStyle.height;
                 }
 
-                safeLog('debug','Layout forced, updating canvas...');
-
                 // Update canvas and render immediately
                 if (window.editor && window.editor.canvasRenderer) {
-                    safeLog('debug','Resizing canvas and rendering...');
                     window.editor.canvasRenderer.resizeCanvas();
                     window.editor.render();
                 }
-
-                safeLog('debug','Complete layout update finished');
             }
             
             // Function to update canvas layout (called when panels show/hide)
             function updateCanvasLayout() {
-                safeLog('debug','Updating canvas layout...');
-
                 // Only update canvas without forcing full layout to avoid panel drift
                 if (window.editor && window.editor.canvasRenderer) {
-                    safeLog('debug','Resizing canvas and rendering...');
                     window.editor.canvasRenderer.resizeCanvas();
                     window.editor.render();
                 }
-
-                safeLog('debug','Canvas layout update complete');
             }
 
         // Panel resizing functionality
@@ -512,11 +555,6 @@
                 document.body.style.userSelect = 'none';
                 document.body.style.pointerEvents = 'none';
                 
-                safeLog('debug','Assets resizer mousedown:', JSON.stringify({
-                    initialMouseY: initialMouseY,
-                    initialHeight: initialAssetsPanelHeight
-                }, null, 2));
-                
                 e.preventDefault();
                 e.stopPropagation();
             });
@@ -557,15 +595,6 @@
                         return;
                     }
                     
-                    safeLog('debug','Right resizer debug:', JSON.stringify({
-                        mouseX: e.clientX,
-                        initialMouseX: initialMouseX,
-                        mouseDelta: mouseDelta,
-                        initialWidth: initialRightPanelWidth,
-                        calculatedWidth: newWidth,
-                        appliedWidth: newWidth
-                    }));
-                    
                     // Apply directly
                     rightPanel.style.width = newWidth + 'px';
                     rightPanel.style.flexShrink = '0';
@@ -588,15 +617,6 @@
                     const mouseDelta = e.clientY - initialMouseY;
                     const newHeight = initialAssetsPanelHeight - mouseDelta; // Inverted direction
                     
-                    safeLog('debug','Assets resizer debug:', JSON.stringify({
-                        mouseY: e.clientY,
-                        initialMouseY: initialMouseY,
-                        mouseDelta: mouseDelta,
-                        initialHeight: initialAssetsPanelHeight,
-                        calculatedHeight: newHeight,
-                        appliedHeight: newHeight,
-                        windowHeight: window.innerHeight
-                    }));
                     
                     // Apply directly without any limits
                     assetsPanel.style.height = newHeight + 'px';
@@ -616,15 +636,6 @@
                     // Use same logic as assets resizer: mouse movement from initial position
                     const mouseDelta = e.clientY - initialMouseY;
                     const newHeight = initialConsolePanelHeight - mouseDelta; // Inverted direction (like assets)
-                    
-                    safeLog('debug','Console resizer debug:', JSON.stringify({
-                        mouseY: e.clientY,
-                        initialMouseY: initialMouseY,
-                        mouseDelta: mouseDelta,
-                        initialHeight: initialConsolePanelHeight,
-                        calculatedHeight: newHeight,
-                        appliedHeight: newHeight
-                    }));
                     
                     // Apply directly without any limits (like assets)
                     consolePanel.style.height = newHeight + 'px';
@@ -701,7 +712,6 @@
                     rightPanel.style.width = savedRightPanelWidth + 'px';
                     rightPanel.style.flexShrink = '0';
                     rightPanel.style.flexGrow = '0';
-                    safeLog('debug','Window resize: Right panel restored to:', savedRightPanelWidth);
                 }
 
                 // Restore assets panel height if saved
@@ -712,7 +722,6 @@
 
                 // Update canvas only (don't call full layout update to avoid drift)
                 if (window.editor && window.editor.canvasRenderer) {
-                    safeLog('debug','Resizing canvas after window resize...');
                     window.editor.canvasRenderer.resizeCanvas();
                     window.editor.render();
                 }
@@ -865,7 +874,6 @@
             }
 
             function showConsole() {
-                safeLog('debug','Showing console...');
                 consolePanel.classList.remove('hidden');
                 document.getElementById('resizer-console').classList.remove('hidden');
                 consoleInput.focus();
@@ -882,7 +890,6 @@
                     const consoleHeight = Math.max(minHeight, Math.min(maxHeight, savedConsoleHeight));
                     consolePanel.style.height = consoleHeight + 'px';
                     consolePanel.style.flexShrink = '0';
-                    safeLog('debug','Console height restored to:', consoleHeight);
                 }
                 
                 // Update canvas only (no layout changes to avoid panel drift)
@@ -890,12 +897,9 @@
                     window.editor.canvasRenderer.resizeCanvas();
                     window.editor.render();
                 }
-                
-                safeLog('debug','Console shown, layout updated');
             }
 
             function hideConsole() {
-                safeLog('debug','Hiding console...');
                 consolePanel.classList.add('hidden');
                 document.getElementById('resizer-console').classList.add('hidden');
                 isConsoleVisible = false;
@@ -908,8 +912,6 @@
                     window.editor.canvasRenderer.resizeCanvas();
                     window.editor.render();
                 }
-                
-                safeLog('debug','Console hidden, layout updated');
             }
 
             function logToConsole(message, type = 'log') {
@@ -1080,13 +1082,11 @@
             if (consolePanel) {
                 consolePanel.classList.remove('hidden');
                 document.getElementById('resizer-console').classList.remove('hidden');
-                safeLog('debug','Console shown for testing context menu');
             }
         };
         
         // Update canvas after complete initialization
         const updateCanvasOnStartup = () => {
-            safeLog('debug','Updating canvas on startup...');
             
             // Update canvas only (no layout changes to avoid panel drift)
             if (window.editor && window.editor.canvasRenderer) {
@@ -1096,7 +1096,6 @@
             
             // Additional update after a longer delay to ensure everything is settled
             setTimeout(() => {
-                safeLog('debug','Final canvas update on startup...');
                 if (window.editor && window.editor.canvasRenderer) {
                     window.editor.canvasRenderer.resizeCanvas();
                     window.editor.render();

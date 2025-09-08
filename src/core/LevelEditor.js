@@ -2,7 +2,6 @@ import { StateManager } from '../managers/StateManager.js';
 import { HistoryManager } from '../managers/HistoryManager.js';
 import { AssetManager } from '../managers/AssetManager.js';
 import { FileManager } from '../managers/FileManager.js';
-import { SettingsManager } from '../managers/SettingsManager.js';
 import { ConfigManager } from '../managers/ConfigManager.js';
 import { CanvasRenderer } from '../ui/CanvasRenderer.js';
 import { AssetPanel } from '../ui/AssetPanel.js';
@@ -31,7 +30,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '2.3.0';
+    static VERSION = '2.3.1';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -39,7 +38,6 @@ export class LevelEditor {
         this.historyManager = new HistoryManager();
         this.assetManager = new AssetManager();
         this.fileManager = new FileManager();
-        this.settingsManager = new SettingsManager();
         
         // Store user preferences manager (for backward compatibility)
         this.userPrefs = userPreferencesManager;
@@ -98,16 +96,9 @@ export class LevelEditor {
         // Initialize configuration manager after Logger is available
         this.configManager = new ConfigManager();
         
-        // Wait for configuration to load
-        await this.configManager.loadAllConfigs();
-        
+        // Configuration is already loaded synchronously in constructor
         // Apply configuration settings
         this.applyConfiguration();
-        
-        // Apply user preferences if available (legacy support)
-        if (this.userPrefs) {
-            this.applyUserPreferences();
-        }
         
         // Get DOM elements
         const canvas = document.getElementById('main-canvas');
@@ -127,7 +118,7 @@ export class LevelEditor {
         this.assetPanel = new AssetPanel(assetsPanel, this.assetManager, this.stateManager);
         this.detailsPanel = new DetailsPanel(detailsPanel, this.stateManager, this);
         this.outlinerPanel = new OutlinerPanel(outlinerPanel, this.stateManager, this);
-        this.settingsPanel = new SettingsPanel(document.body, this.settingsManager);
+        this.settingsPanel = new SettingsPanel(document.body, this.configManager);
         
         // Initial render of asset panel
         this.assetPanel.render();
@@ -173,35 +164,10 @@ export class LevelEditor {
         
         this.log('info', 'Applying configuration settings...');
         
-        // Apply editor settings
-        const editorConfig = this.configManager.getEditor();
-        Object.keys(editorConfig).forEach(key => {
-            this.settingsManager.set(`editor.${key}`, editorConfig[key]);
-        });
-        
-        // Apply UI settings
-        const uiConfig = this.configManager.getUI();
-        Object.keys(uiConfig).forEach(key => {
-            this.settingsManager.set(`ui.${key}`, uiConfig[key]);
-        });
-        
-        // Apply canvas settings
-        const canvasConfig = this.configManager.getCanvas();
-        Object.keys(canvasConfig).forEach(key => {
-            this.settingsManager.set(`canvas.${key}`, canvasConfig[key]);
-        });
-        
-        // Apply panels settings
-        const panelsConfig = this.configManager.getPanels();
-        Object.keys(panelsConfig).forEach(key => {
-            this.settingsManager.set(`panels.${key}`, panelsConfig[key]);
-        });
-        
         // Apply font scale to document
         const fontScale = this.configManager.get('ui.fontScale');
         if (fontScale) {
             document.documentElement.style.fontSize = `${fontScale * 16}px`;
-            this.log('info', `Applied font scale: ${fontScale}`);
         }
         
         this.log('info', 'Configuration applied successfully');

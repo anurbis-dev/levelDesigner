@@ -1,0 +1,11 @@
+{
+  "fontScale": 1.2,
+  "theme": "dark",
+  "rightPanelWidth": 320,
+  "consoleHeight": 300,
+  "assetsPanelHeight": 256,
+  "consoleVisible": false,
+  "consoleMaxLines": 1000,
+  "panelWidth": 300,
+  "showTooltips": true
+}

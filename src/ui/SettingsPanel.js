@@ -2,9 +2,9 @@
  * Settings Panel UI Component
  */
 export class SettingsPanel {
-    constructor(container, settingsManager) {
+    constructor(container, configManager) {
         this.container = container;
-        this.settingsManager = settingsManager;
+        this.configManager = configManager;
         this.isVisible = false;
         
         this.init();
@@ -212,27 +212,27 @@ export class SettingsPanel {
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
                         <div>
                             <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Outline Color</label>
-                            <input type="color" class="setting-input" data-setting="selection.outlineColor" value="${this.settingsManager.get('selection.outlineColor')}"/>
+                            <input type="color" class="setting-input" data-setting="selection.outlineColor" value="${this.configManager.get('selection.outlineColor')}"/>
                         </div>
                         <div>
                             <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Outline Width (px)</label>
-                            <input type="number" min="1" max="12" class="setting-input" data-setting="selection.outlineWidth" value="${this.settingsManager.get('selection.outlineWidth')}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
+                            <input type="number" min="1" max="12" class="setting-input" data-setting="selection.outlineWidth" value="${this.configManager.get('selection.outlineWidth')}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
                         </div>
                         <div>
                             <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Group Outline Width (px)</label>
-                            <input type="number" min="1" max="16" class="setting-input" data-setting="selection.groupOutlineWidth" value="${this.settingsManager.get('selection.groupOutlineWidth')}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
+                            <input type="number" min="1" max="16" class="setting-input" data-setting="selection.groupOutlineWidth" value="${this.configManager.get('selection.groupOutlineWidth')}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
                         </div>
                         <div>
                             <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Nested Groups Highlight Color</label>
-                            <input type="color" class="setting-input" data-setting="selection.hierarchyHighlightColor" value="${this.settingsManager.get('selection.hierarchyHighlightColor') || '#3B82F6'}"/>
+                            <input type="color" class="setting-input" data-setting="selection.hierarchyHighlightColor" value="${this.configManager.get('selection.hierarchyHighlightColor') || '#3B82F6'}"/>
                         </div>
                         <div>
                             <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Marquee Color</label>
-                            <input type="color" class="setting-input" data-setting="selection.marqueeColor" value="${this.settingsManager.get('selection.marqueeColor')}"/>
+                            <input type="color" class="setting-input" data-setting="selection.marqueeColor" value="${this.configManager.get('selection.marqueeColor')}"/>
                         </div>
                         <div>
                             <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Marquee Opacity</label>
-                            <input type="range" min="0" max="1" step="0.05" class="setting-input" data-setting="selection.marqueeOpacity" value="${this.settingsManager.get('selection.marqueeOpacity')}" style="width:100%;"/>
+                            <input type="range" min="0" max="1" step="0.05" class="setting-input" data-setting="selection.marqueeOpacity" value="${this.configManager.get('selection.marqueeOpacity')}" style="width:100%;"/>
                         </div>
                     </div>`;
                 break;
@@ -251,7 +251,7 @@ export class SettingsPanel {
     }
 
     renderGeneralSettings() {
-        const settings = this.settingsManager.getAllSettings();
+        const settings = this.configManager.getAllSettings();
         
         return `
             <h3 style="font-size: 1.125rem; font-weight: 500; margin-bottom: 1rem;">General Settings</h3>
@@ -325,7 +325,7 @@ export class SettingsPanel {
     }
 
     renderGridSettings() {
-        const settings = this.settingsManager.getAllSettings();
+        const settings = this.configManager.getAllSettings();
         return `
             <h3 style="font-size: 1.125rem; font-weight: 500; margin-bottom: 1rem;">Grid & Snapping Settings</h3>
             <div style="display: flex; flex-direction: column; gap: 1rem;">
@@ -394,20 +394,20 @@ export class SettingsPanel {
                     }
                 }
                 
-                this.settingsManager.set(path, value);
+                this.configManager.set(path, value);
             });
         });
     }
 
     resetSettings() {
         if (confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.')) {
-            this.settingsManager.reset();
+            this.configManager.reset();
             this.renderSettingsContent(document.querySelector('.settings-tab.active').dataset.tab);
         }
     }
 
     exportSettings() {
-        const settings = this.settingsManager.exportSettings();
+        const settings = this.configManager.exportSettings();
         const blob = new Blob([settings], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         
@@ -425,7 +425,7 @@ export class SettingsPanel {
         
         const reader = new FileReader();
         reader.onload = (e) => {
-            if (this.settingsManager.importSettings(e.target.result)) {
+            if (this.configManager.importSettings(e.target.result)) {
                 alert('Settings imported successfully!');
                 this.renderSettingsContent(document.querySelector('.settings-tab.active').dataset.tab);
             } else {
@@ -436,9 +436,9 @@ export class SettingsPanel {
     }
 
     saveSettings() {
-        this.settingsManager.saveSettings();
+        this.configManager.saveSettings();
         // Apply UI font scale globally
-        const scale = this.settingsManager.get('ui.fontScale') || 1.0;
+        const scale = this.configManager.get('ui.fontScale') || 1.0;
         document.documentElement.style.fontSize = `${scale * 16}px`;
         this.hide();
     }

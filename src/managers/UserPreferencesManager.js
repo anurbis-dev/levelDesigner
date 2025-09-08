@@ -33,6 +33,7 @@ export class UserPreferencesManager {
             // UI settings
             theme: 'dark',
             fontSize: 'sm',
+            fontScale: 1.0,
             compactMode: false
         };
         
