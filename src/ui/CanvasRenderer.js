@@ -176,45 +176,6 @@ export class CanvasRenderer {
         this.ctx.restore();
     }
 
-    /**
-     * Draw placing objects (preview)
-     */
-    drawPlacingObjects(objects, camera) {
-        Logger.canvas.debug('drawPlacingObjects called with:', objects);
-        if (!objects || objects.length === 0) {
-            Logger.canvas.debug('No objects to draw, returning');
-            return;
-        }
-        
-        Logger.canvas.debug('Drawing', objects.length, 'objects');
-        this.ctx.save();
-        this.ctx.globalAlpha = 0.7;
-        
-        const draw = (obj, parentX = 0, parentY = 0) => {
-            const absX = obj.x + parentX;
-            const absY = obj.y + parentY;
-            Logger.canvas.debug('Drawing object', obj.id, 'at', absX, absY, 'type:', obj.type);
-            
-            if (obj.type === 'group') {
-                Logger.canvas.debug('Drawing group children');
-                // Draw group children
-                if (obj.children && obj.children.length > 0) {
-                    obj.children.forEach(child => draw(child, absX, absY));
-                } else {
-                    Logger.canvas.debug('Group has no children, drawing as single object');
-                    this.drawSingleObject(obj, absX, absY);
-                }
-            } else {
-                Logger.canvas.debug('Drawing single object');
-                this.drawSingleObject(obj, absX, absY);
-            }
-        };
-        
-        objects.forEach(obj => draw(obj, 0, 0));
-        
-        this.ctx.restore();
-        Logger.canvas.debug('Finished drawing placing objects');
-    }
 
     /**
      * Get object world bounds

@@ -57,16 +57,7 @@ export class RenderOperations extends BaseModule {
         // Draw group edit mode frame
         this.drawGroupEditFrame();
         
-        // (moved) duplicate preview drawing happens after restoreCamera()
-        
-        // Draw marquee
-        if (mouse.marqueeRect) {
-            this.editor.canvasRenderer.drawMarquee(mouse.marqueeRect, camera);
-        }
-        
-        this.editor.canvasRenderer.restoreCamera();
-
-        // Draw placing objects (duplicates) after camera is restored (screen space)
+        // Draw placing objects (duplicates) BEFORE restoreCamera() (world space)
         const duplicate = this.editor.stateManager.get('duplicate');
         if (duplicate && duplicate.isActive && Array.isArray(duplicate.objects) && duplicate.objects.length > 0) {
             // Log only once per duplicate session
@@ -75,8 +66,7 @@ export class RenderOperations extends BaseModule {
                 Logger.render.debug('Camera position:', { x: camera.x, y: camera.y, zoom: camera.zoom });
                 this._lastRenderState = 'drawing';
             }
-            this.editor.duplicateRenderUtils.drawPlacingObjects(this.editor.canvasRenderer, duplicate.objects, camera);
-            // Note: selection outlines for groups are skipped here to avoid mixing spaces
+            this.drawDuplicateObjects(duplicate.objects, camera);
         } else if (duplicate) {
             // Log state change only when it changes
             const currentState = `${duplicate.isActive}_${duplicate.objects?.length || 0}`;
@@ -89,6 +79,13 @@ export class RenderOperations extends BaseModule {
                 this._lastRenderState = currentState;
             }
         }
+        
+        // Draw marquee
+        if (mouse.marqueeRect) {
+            this.editor.canvasRenderer.drawMarquee(mouse.marqueeRect, camera);
+        }
+        
+        this.editor.canvasRenderer.restoreCamera();
     }
 
     /**
@@ -284,6 +281,153 @@ export class RenderOperations extends BaseModule {
         }
         
         return visibleObjects;
+    }
+
+    /**
+     * Draw duplicate objects using standard rendering logic
+     */
+    drawDuplicateObjects(objects, camera) {
+        if (!objects || objects.length === 0) return;
+
+        // Draw objects with transparency
+        this.editor.canvasRenderer.ctx.save();
+        this.editor.canvasRenderer.ctx.globalAlpha = 0.7;
+
+        // Draw each duplicate object using standard object rendering
+        objects.forEach(obj => {
+            this.drawDuplicateObject(obj);
+        });
+
+        this.editor.canvasRenderer.ctx.restore();
+
+        // Draw selection outlines using direct bounds calculation (duplicates aren't in level tree)
+        objects.forEach(obj => {
+            const bounds = this.getDuplicateObjectBounds(obj);
+            if (bounds) {
+                this.drawSelectionRect(bounds, obj.type === 'group', camera);
+            }
+
+            // Draw hierarchy highlight for groups
+            if (obj.type === 'group') {
+                this.drawDuplicateHierarchyHighlight(obj, 0, 0, 0);
+            }
+        });
+    }
+
+    /**
+     * Draw hierarchy highlight for duplicate groups (uses direct bounds calculation)
+     */
+    drawDuplicateHierarchyHighlight(group, depth = 0, parentX = 0, parentY = 0) {
+        const camera = this.editor.stateManager.get('camera');
+        const baseColor = this.editor.settingsManager?.get('selection.hierarchyHighlightColor') || '#3B82F6';
+        const maxAlpha = 0.25; // base alpha
+        const decay = 0.6; // alpha decay per depth
+        const alpha = Math.max(0, maxAlpha * Math.pow(decay, depth));
+
+        if (!group || !group.children) return;
+
+        const groupAbsX = parentX + group.x;
+        const groupAbsY = parentY + group.y;
+
+        // Highlight each nested group
+        group.children.forEach(child => {
+            if (child.type === 'group') {
+                const bounds = this.getDuplicateObjectBounds(child, groupAbsX, groupAbsY);
+                const rgba = this.hexToRgba(baseColor, alpha);
+                this.editor.canvasRenderer.ctx.save();
+                this.editor.canvasRenderer.ctx.fillStyle = rgba;
+                this.editor.canvasRenderer.ctx.fillRect(
+                    bounds.minX,
+                    bounds.minY,
+                    bounds.maxX - bounds.minX,
+                    bounds.maxY - bounds.minY
+                );
+                this.editor.canvasRenderer.ctx.restore();
+
+                // Recurse deeper with updated parent coordinates
+                this.drawDuplicateHierarchyHighlight(child, depth + 1, groupAbsX, groupAbsY);
+            }
+        });
+    }
+
+    /**
+     * Get bounds for duplicate object (direct calculation without level tree search)
+     */
+    getDuplicateObjectBounds(obj, parentX = 0, parentY = 0) {
+        const absX = obj.x + parentX;
+        const absY = obj.y + parentY;
+
+        if (obj.type !== 'group') {
+            // Simple object - return its direct bounds
+            return {
+                minX: absX,
+                minY: absY,
+                maxX: absX + (obj.width || 0),
+                maxY: absY + (obj.height || 0)
+            };
+        }
+
+        // Group object - calculate bounds from all children
+        const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+
+        const walkChildren = (current, baseX, baseY) => {
+            const currentAbsX = baseX + current.x;
+            const currentAbsY = baseY + current.y;
+
+            if (current.type === 'group' && current.children) {
+                // Recursively walk group children
+                for (const child of current.children) {
+                    walkChildren(child, currentAbsX, currentAbsY);
+                }
+            } else {
+                // Regular object - add to bounds
+                bounds.minX = Math.min(bounds.minX, currentAbsX);
+                bounds.minY = Math.min(bounds.minY, currentAbsY);
+                bounds.maxX = Math.max(bounds.maxX, currentAbsX + (current.width || 0));
+                bounds.maxY = Math.max(bounds.maxY, currentAbsY + (current.height || 0));
+            }
+        };
+
+        // Walk all children
+        if (obj.children && obj.children.length > 0) {
+            for (const child of obj.children) {
+                walkChildren(child, absX, absY);
+            }
+        }
+
+        // If no valid bounds found (empty group), use group's position
+        if (bounds.minX === Infinity) {
+            bounds.minX = absX;
+            bounds.minY = absY;
+            bounds.maxX = absX;
+            bounds.maxY = absY;
+        }
+
+        return bounds;
+    }
+
+    /**
+     * Draw single duplicate object recursively
+     */
+    drawDuplicateObject(obj, parentX = 0, parentY = 0) {
+        const absX = obj.x + parentX;
+        const absY = obj.y + parentY;
+
+        if (obj.type === 'group') {
+            // Draw group children
+            if (obj.children && obj.children.length > 0) {
+                obj.children.forEach(child => {
+                    this.drawDuplicateObject(child, absX, absY);
+                });
+            }
+        } else {
+            // Use standard object drawing method
+            this.editor.canvasRenderer.drawObject({
+                ...obj,
+                x: absX,
+                y: absY
+            });
+        }
     }
 
     /**
