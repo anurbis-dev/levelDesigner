@@ -120,21 +120,32 @@ export class ObjectOperations extends BaseModule {
         // Delete selected objects - they can be on main level or inside groups
         const idsToDelete = new Set(selectedObjects);
 
-        // Remove from main level
-        this.editor.level.objects = this.editor.level.objects.filter(obj => !idsToDelete.has(obj.id));
-
-        // Remove from all groups recursively and collect affected groups
+        // First, process groups to move their children to main level BEFORE removing groups
         const affectedGroups = new Set();
-        const removeFromGroups = (objects) => {
+        const processGroups = (objects) => {
             for (const obj of objects) {
                 if (obj.type === 'group') {
                     const hadChildren = obj.children.some(child => idsToDelete.has(child.id));
                     
                     // IMPORTANT: Process children BEFORE removing them
-                    removeFromGroups(obj.children);
+                    processGroups(obj.children);
                     
-                    // Now remove the children 
-                    obj.children = obj.children.filter(child => !idsToDelete.has(child.id));
+                    // If this group is being deleted, move its children to main level first
+                    if (idsToDelete.has(obj.id)) {
+                        console.log(`[OBJECT OPERATIONS DEBUG] 📦 Group ${obj.name} is being deleted, moving children to main level`);
+                        obj.children.forEach(child => {
+                            // Convert child coordinates to world coordinates
+                            child.x += obj.x;
+                            child.y += obj.y;
+                            // Add to main level
+                            this.editor.level.objects.push(child);
+                        });
+                        // Clear children array since they're now on main level
+                        obj.children = [];
+                    } else {
+                        // Now remove the children that were deleted
+                        obj.children = obj.children.filter(child => !idsToDelete.has(child.id));
+                    }
                     
                     // If this group had children that were deleted, mark it as affected
                     if (hadChildren) {
@@ -144,7 +155,10 @@ export class ObjectOperations extends BaseModule {
                 }
             }
         };
-        removeFromGroups(this.editor.level.objects);
+        processGroups(this.editor.level.objects);
+
+        // NOW remove from main level (after children have been moved)
+        this.editor.level.objects = this.editor.level.objects.filter(obj => !idsToDelete.has(obj.id));
 
         // Check only affected groups for emptiness and remove them
         console.log(`[OBJECT OPERATIONS DEBUG] 🔍 Checking ${affectedGroups.size} affected groups for emptiness...`);
@@ -166,13 +180,10 @@ export class ObjectOperations extends BaseModule {
             console.log(`[OBJECT OPERATIONS DEBUG] ℹ️ No groups were removed`);
         }
 
-        if (anyGroupsRemoved) {
-            // Groups were removed, panels will be updated below
-        }
-
+        // Clear selection and update UI AFTER all operations are complete
         this.editor.stateManager.set('selectedObjects', new Set());
-        this.editor.updateAllPanels();
         this.editor.render();
+        this.editor.updateAllPanels();
     }
 
     duplicateSelectedObjects() {

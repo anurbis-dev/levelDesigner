@@ -74,8 +74,8 @@ export class BaseModule {
      */
     markDirtyAndUpdate() {
         this.editor.stateManager.markDirty();
-        this.editor.updateAllPanels();
         this.editor.render();
+        this.editor.updateAllPanels();
     }
 
     /**
@@ -196,8 +196,8 @@ export class BaseModule {
      * Trigger full UI update and render
      */
     triggerFullUpdate() {
-        this.editor.updateAllPanels();
         this.editor.render();
+        this.editor.updateAllPanels();
     }
 
     /**

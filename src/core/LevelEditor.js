@@ -30,7 +30,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '2.3.1';
+    static VERSION = '2.3.3';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -375,8 +375,8 @@ export class LevelEditor {
         if (previousState) {
             this.level.objects = previousState;
             this.stateManager.set('selectedObjects', new Set());
-            this.updateAllPanels();
             this.render();
+            this.updateAllPanels();
             this.stateManager.markDirty();
         }
     }
@@ -386,8 +386,8 @@ export class LevelEditor {
         if (nextState) {
             this.level.objects = nextState;
             this.stateManager.set('selectedObjects', new Set());
-            this.updateAllPanels();
             this.render();
+            this.updateAllPanels();
             this.stateManager.markDirty();
         }
     }
@@ -413,8 +413,8 @@ export class LevelEditor {
         
         this.historyManager.clear();
         this.historyManager.saveState(this.level.objects, true);
-        this.updateAllPanels();
         this.render();
+        this.updateAllPanels();
     }
 
     async openLevel() {
@@ -436,8 +436,8 @@ export class LevelEditor {
             
             this.historyManager.clear();
             this.historyManager.saveState(this.level.objects, true);
-            this.updateAllPanels();
             this.render();
+            this.updateAllPanels();
         } catch (error) {
             alert("Error loading level: " + error.message);
         }

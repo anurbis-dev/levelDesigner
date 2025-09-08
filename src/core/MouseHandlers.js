@@ -354,8 +354,8 @@ export class MouseHandlers extends BaseModule {
             'mouse.isDraggingAsset': false
         });
         
-        this.editor.updateAllPanels();
         this.editor.render();
+        this.editor.updateAllPanels();
     }
 
     handleDoubleClick(e) {

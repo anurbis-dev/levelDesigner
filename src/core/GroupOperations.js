@@ -50,8 +50,8 @@ export class GroupOperations extends BaseModule {
             this.editor.stateManager.set('selectedObjects', new Set([newGroup.id]));
             
             // Refresh all UI panels and redraw the canvas
-            this.editor.updateAllPanels();
             this.editor.render();
+            this.editor.updateAllPanels();
         }
     }
 
@@ -75,8 +75,8 @@ export class GroupOperations extends BaseModule {
 
         // Clear selection
         this.editor.stateManager.set('selectedObjects', new Set());
-        this.editor.updateAllPanels();
         this.editor.render();
+        this.editor.updateAllPanels();
     }
 
     /**
@@ -122,8 +122,8 @@ export class GroupOperations extends BaseModule {
         }
 
         this.editor.stateManager.set('selectedObjects', new Set());
-        this.editor.updateAllPanels();
         this.editor.render();
+        this.editor.updateAllPanels();
     }
 
     /**
@@ -145,23 +145,33 @@ export class GroupOperations extends BaseModule {
 
         this.editor.historyManager.saveState(this.editor.level.objects);
 
+        const newTopLevelObjects = [];
+
         groupsToUngroup.forEach(group => {
-            // Convert children back to world coordinates
+            // Convert children back to world coordinates and prepare them for "move"
             group.children.forEach(child => {
                 child.x += group.x;
                 child.y += group.y;
+                newTopLevelObjects.push(child); // Collect children in separate array
             });
 
-            // Add children back to main level
-            this.editor.level.objects.push(...group.children);
-
-            // Remove the group
-            this.editor.level.objects = this.editor.level.objects.filter(obj => obj.id !== group.id);
+            // ✨ KEY STEP: Empty the group. 
+            // Now render, even if triggered, won't draw these children as child objects.
+            group.children = []; 
         });
 
+        // Remove old (now empty) groups from main list
+        this.editor.level.objects = this.editor.level.objects.filter(obj => {
+            // Check if object is not one of our groups
+            return !groupsToUngroup.some(group => group.id === obj.id);
+        });
+
+        // Add "freed" child objects to top level
+        this.editor.level.objects.push(...newTopLevelObjects);
+
         this.editor.stateManager.set('selectedObjects', new Set());
-        this.editor.updateAllPanels();
         this.editor.render();
+        this.editor.updateAllPanels();
     }
 
     // Group edit helpers

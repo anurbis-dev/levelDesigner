@@ -166,8 +166,8 @@ export class EventHandlers extends BaseModule {
     setupStateListeners() {
         // Subscribe to selection changes
         this.editor.stateManager.subscribe('selectedObjects', () => {
-            this.editor.updateAllPanels();
             this.editor.render();
+            this.editor.updateAllPanels();
         });
 
         // Subscribe to camera changes - immediate render for responsive zoom

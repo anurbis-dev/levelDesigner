@@ -179,8 +179,8 @@ export class DuplicateOperations extends BaseModule {
         // Set selection after cleanup
         this.editor.stateManager.set('selectedObjects', newIds);
 
-        this.editor.updateAllPanels();
         this.editor.render();
+        this.editor.updateAllPanels();
 
         Logger.duplicate.start('Placement completed, selected objects:', newIds.size);
     }

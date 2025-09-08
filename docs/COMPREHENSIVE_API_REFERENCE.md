@@ -197,6 +197,12 @@
 - `drawSelectionRect(bounds, isGroup, camera)` - отрисовка прямоугольника выделения
 - `drawAltDragSelectionRect(bounds, camera)` - отрисовка прямоугольника Alt+перетаскивания
 - `drawHierarchyHighlightForGroup(group, depth)` - отрисовка подсветки иерархии групп
+
+#### Методы отрисовки дубликатов (v2.3.2)
+- `drawDuplicateObjects(objects, camera)` - отрисовка дублируемых объектов с подсветкой
+- `getDuplicateObjectBounds(obj, parentX, parentY)` - вычисление границ дублируемого объекта
+- `drawDuplicateHierarchyHighlight(group, depth, parentX, parentY)` - подсветка иерархии дублируемых групп
+- `drawDuplicateObject(obj, parentX, parentY)` - рекурсивная отрисовка дублируемого объекта
 - `hexToRgba(hex, alpha)` - конвертация hex в rgba
 
 ## Менеджеры
@@ -641,16 +647,20 @@
 ## Дополнительные утилиты
 
 ### DuplicateUtils (src/utils/DuplicateUtils.js)
-Утилиты для дублирования объектов.
+Утилиты позиционирования дублируемых объектов (упрощено в v2.3.2).
 
 #### Основные методы
-- `initializePositions(objects, worldPos)` - инициализация позиций
-- `updatePositions(objects, worldPos)` - обновление позиций
+- `static updatePositions(objects, worldPos)` - обновление позиций объектов
+- `static initializePositions(objects, worldPos)` - инициализация относительных позиций
+- `static hasPositionChanged(firstObj, worldPos, threshold)` - проверка изменения позиции
+
+#### Legacy совместимость
+- `duplicateRenderUtils` - экспорт для обратной совместимости
 - `drawPlacingObjects(canvasRenderer, objects, camera)` - отрисовка размещаемых объектов
 
 ## Заключение
 
-Этот справочник содержит все доступные методы и функции Level Editor v2.3.0. Используйте его для:
+Этот справочник содержит все доступные методы и функции Level Editor v2.3.2. Используйте его для:
 
 1. **Понимания существующего API** - перед добавлением новой функциональности
 2. **Избежания дублирования** - проверки, не существует ли уже нужный метод

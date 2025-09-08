@@ -1140,30 +1140,58 @@ new LevelEditor()
 - Изменение режима редактирования групп
 - Изменение состояния дублирования
 
-## DuplicateRenderer
+## RenderOperations (v2.3.2)
 
-Специальный рендерер для дублированных объектов.
+Модуль отрисовки с поддержкой специализированной отрисовки дубликатов.
 
-### Конструктор
+### Методы отрисовки дубликатов
 
-```javascript
-new DuplicateRenderer(canvasRenderer)
-```
+##### `drawDuplicateObjects(objects, camera)`
+
+Отрисовывает дублируемые объекты с прозрачностью и подсветкой.
 
 **Параметры:**
-- `canvasRenderer` (CanvasRenderer) - основной рендерер
+- `objects` (Array) - массив дублируемых объектов
+- `camera` (Object) - объект камеры
+
+**Особенности:**
+- Отрисовка с прозрачностью 0.7
+- Использует стандартную подсветку выделения
+- Поддерживает иерархию групп
+
+##### `getDuplicateObjectBounds(obj, parentX, parentY)`
+
+Вычисляет границы дублируемого объекта без поиска в дереве уровня.
+
+**Параметры:**
+- `obj` (Object) - дублируемый объект
+- `parentX` (number) - X координата родителя (по умолчанию 0)
+- `parentY` (number) - Y координата родителя (по умолчанию 0)
+
+**Возвращает:** `Object` - границы {minX, minY, maxX, maxY}
+
+##### `drawDuplicateHierarchyHighlight(group, depth, parentX, parentY)`
+
+Отрисовывает подсветку иерархии для дублируемых групп.
+
+**Параметры:**
+- `group` (Object) - дублируемая группа
+- `depth` (number) - глубина вложенности (по умолчанию 0)
+- `parentX` (number) - X координата родителя (по умолчанию 0)
+- `parentY` (number) - Y координата родителя (по умолчанию 0)
+
+**Особенности:**
+- Прозрачность затухает по глубине (decay = 0.6)
+- Рекурсивный обход вложенных групп
+- Использует прямое вычисление координат
+
+## DuplicateUtils (упрощено в v2.3.2)
+
+Утилиты позиционирования дублируемых объектов.
 
 ### Методы
 
-##### `drawPlacingObjects(objects, camera)`
-
-Отрисовывает превью дублированных объектов.
-
-**Параметры:**
-- `objects` (Array) - массив объектов для отрисовки
-- `camera` (Object) - объект камеры
-
-##### `updateObjectPositions(objects, worldPos)`
+##### `updatePositions(objects, worldPos)`
 
 Обновляет позиции объектов относительно курсора.
 
@@ -1173,7 +1201,7 @@ new DuplicateRenderer(canvasRenderer)
 
 **Возвращает:** `Array` - обновленные объекты
 
-##### `initializeObjectPositions(objects, worldPos)`
+##### `initializePositions(objects, worldPos)`
 
 Инициализирует относительные позиции объектов.
 
@@ -1182,6 +1210,17 @@ new DuplicateRenderer(canvasRenderer)
 - `worldPos` (Object) - базовые мировые координаты
 
 **Возвращает:** `Array` - объекты с инициализированными смещениями
+
+##### `hasPositionChanged(firstObj, worldPos, threshold)`
+
+Проверяет изменение позиции объекта.
+
+**Параметры:**
+- `firstObj` (Object) - первый объект для проверки
+- `worldPos` (Object) - текущая позиция курсора
+- `threshold` (number) - порог изменения (по умолчанию 1)
+
+**Возвращает:** `boolean` - true если позиция изменилась
 
 ## Обработка ошибок
 
