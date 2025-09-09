@@ -32,7 +32,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '2.6.2';
+    static VERSION = '2.6.3';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -421,10 +421,13 @@ export class LevelEditor {
         if (this.stateManager.get('isDirty') && !confirm("You have unsaved changes. Are you sure you want to create a new level?")) {
             return;
         }
-        
+
+        // Save current View states before resetting
+        const savedViewStates = this.eventHandlers.saveViewStates();
+
         this.level = this.fileManager.createNewLevel();
         this.stateManager.reset();
-        
+
         // Re-initialize group edit mode state after reset
         this.stateManager.set('groupEditMode', {
             isActive: false,
@@ -432,7 +435,10 @@ export class LevelEditor {
             group: null,
             openGroups: []
         });
-        
+
+        // Apply saved View states after reset
+        this.eventHandlers.applySavedViewStates(savedViewStates);
+
         this.historyManager.clear();
         this.historyManager.saveState(this.level.objects, true);
         this.render();
@@ -443,11 +449,14 @@ export class LevelEditor {
         if (this.stateManager.get('isDirty') && !confirm("You have unsaved changes. Are you sure you want to open a new level?")) {
             return;
         }
-        
+
         try {
+            // Save current View states before resetting
+            const savedViewStates = this.eventHandlers.saveViewStates();
+
             this.level = await this.fileManager.loadLevelFromFileInput();
             this.stateManager.reset();
-            
+
             // Re-initialize group edit mode state after reset
             this.stateManager.set('groupEditMode', {
                 isActive: false,
@@ -455,7 +464,10 @@ export class LevelEditor {
                 group: null,
                 openGroups: []
             });
-            
+
+            // Apply saved View states after reset
+            this.eventHandlers.applySavedViewStates(savedViewStates);
+
             this.historyManager.clear();
             this.historyManager.saveState(this.level.objects, true);
             this.render();

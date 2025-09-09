@@ -382,6 +382,47 @@ export class EventHandlers extends BaseModule {
         }
     }
 
+    /**
+     * Save current View menu states before level operations
+     * @returns {Object} Saved view states
+     */
+    saveViewStates() {
+        console.log('[VIEW MENU] Saving current View states...');
+
+        const savedStates = {};
+        const viewOptions = ['grid', 'gameMode', 'snapToGrid', 'objectBoundaries', 'objectCollisions'];
+
+        viewOptions.forEach(option => {
+            const stateKey = `view.${option}`;
+            const currentValue = this.editor.stateManager.get(stateKey);
+            savedStates[option] = currentValue !== undefined ? currentValue : false;
+            console.log(`[VIEW MENU] Saved ${option}: ${savedStates[option]}`);
+        });
+
+        return savedStates;
+    }
+
+    /**
+     * Apply saved View states after level operations
+     * @param {Object} savedStates - Previously saved view states
+     */
+    applySavedViewStates(savedStates) {
+        console.log('[VIEW MENU] Applying saved View states...');
+
+        Object.keys(savedStates).forEach(option => {
+            const enabled = savedStates[option];
+            console.log(`[VIEW MENU] Applying ${option}: ${enabled}`);
+
+            // Apply the view option
+            this.applyViewOption(option, enabled);
+
+            // Update menu checkbox state
+            this.updateViewCheckbox(option, enabled);
+        });
+
+        console.log('[VIEW MENU] All saved View states applied');
+    }
+
     toggleGameMode(enabled) {
         const rightPanel = document.getElementById('right-panel');
         const assetsPanel = document.getElementById('assets-panel');
