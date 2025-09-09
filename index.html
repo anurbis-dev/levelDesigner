@@ -172,62 +172,9 @@
     <!-- 1. Основное меню сверху -->
     <header class="bg-gray-900 shadow-md flex-shrink-0">
         <nav class="flex items-center justify-between p-2">
-            <div class="flex items-center space-x-4">
-                <div class="relative group" id="menu-level">
-                    <button class="px-3 py-1 rounded hover:bg-gray-700 transition">Level</button>
-                    <div class="absolute left-0 mt-1 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-20 hidden">
-                        <a href="#" id="new-level" class="block px-4 py-2 text-sm hover:bg-gray-700">New Level</a>
-                        <a href="#" id="open-level" class="block px-4 py-2 text-sm hover:bg-gray-700">Open Level...</a>
-                        <a href="#" id="save-level" class="block px-4 py-2 text-sm hover:bg-gray-700">Save Level</a>
-                        <a href="#" id="save-level-as" class="block px-4 py-2 text-sm hover:bg-gray-700">Save Level As...</a>
-                    </div>
-                </div>
-                <div class="relative group" id="menu-view">
-                    <button class="px-3 py-1 rounded hover:bg-gray-700 transition">View</button>
-                    <div class="absolute left-0 mt-1 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-20 hidden">
-                        <!-- Canvas Section -->
-                        <div class="px-4 py-2 text-xs text-gray-400 text-center border-b border-gray-600">Canvas</div>
-                        <a href="#" id="toggle-grid" class="block px-4 py-2 text-sm hover:bg-gray-700 flex items-center">
-                            <span class="w-4 h-4 border border-gray-500 mr-2 flex items-center justify-center">
-                                <span class="w-2 h-2 bg-gray-500 hidden" id="grid-check"></span>
-                            </span>
-                            Grid
-                        </a>
-                        <a href="#" id="toggle-game-mode" class="block px-4 py-2 text-sm hover:bg-gray-700 flex items-center">
-                            <span class="w-4 h-4 border border-gray-500 mr-2 flex items-center justify-center">
-                                <span class="w-2 h-2 bg-gray-500 hidden" id="game-mode-check"></span>
-                            </span>
-                            Game Mode
-                        </a>
-                        <a href="#" id="toggle-snap-to-grid" class="block px-4 py-2 text-sm hover:bg-gray-700 flex items-center">
-                            <span class="w-4 h-4 border border-gray-500 mr-2 flex items-center justify-center">
-                                <span class="w-2 h-2 bg-gray-500 hidden" id="snap-to-grid-check"></span>
-                            </span>
-                            Snap To Grid
-                        </a>
-                        <!-- Object Section -->
-                        <div class="px-4 py-2 text-xs text-gray-400 text-center border-b border-gray-600 mt-2">Object</div>
-                        <a href="#" id="toggle-object-boundaries" class="block px-4 py-2 text-sm hover:bg-gray-700 flex items-center">
-                            <span class="w-4 h-4 border border-gray-500 mr-2 flex items-center justify-center">
-                                <span class="w-2 h-2 bg-gray-500 hidden" id="object-boundaries-check"></span>
-                            </span>
-                            Object Boundaries
-                        </a>
-                        <a href="#" id="toggle-object-collisions" class="block px-4 py-2 text-sm hover:bg-gray-700 flex items-center">
-                            <span class="w-4 h-4 border border-gray-500 mr-2 flex items-center justify-center">
-                                <span class="w-2 h-2 bg-gray-500 hidden" id="object-collisions-check"></span>
-                            </span>
-                            Object Collisions
-                        </a>
-                    </div>
-                </div>
-                <div class="relative group" id="menu-settings">
-                    <button class="px-3 py-1 rounded hover:bg-gray-700 transition">Settings</button>
-                    <div class="absolute left-0 mt-1 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-20 hidden">
-                        <a href="#" id="assets-path" class="block px-4 py-2 text-sm hover:bg-gray-700">Assets Path...</a>
-                        <a href="#" id="editor-settings" class="block px-4 py-2 text-sm hover:bg-gray-700">Editor Settings...</a>
-                    </div>
-                </div>
+            <!-- Menu container - will be populated by MenuManager -->
+            <div id="menu-container" class="flex items-center space-x-4">
+                <!-- Menus will be dynamically generated here -->
             </div>
             <div class="text-sm text-gray-400">
                 <span id="header-version-info">2D Level Editor</span>
@@ -306,6 +253,7 @@
         import { LevelEditor } from './src/core/LevelEditor.js';
         import { ConsoleContextMenu } from './src/ui/ConsoleContextMenu.js';
         import { Logger } from './src/utils/Logger.js';
+        import { MenuManager } from './src/managers/MenuManager.js';
 
         // Safe logging function that works even if Logger is not available
         function safeLog(level, message, ...args) {
@@ -418,29 +366,6 @@
 
         // Initialize the level editor with user preferences
         const editor = new LevelEditor(userPrefs);
-        
-        // Setup menu dropdowns
-        const menuLevel = document.getElementById('menu-level');
-        const menuView = document.getElementById('menu-view');
-        const menuSettings = document.getElementById('menu-settings');
-        
-        [menuLevel, menuView, menuSettings].forEach(menu => {
-            const button = menu.querySelector('button');
-            const dropdown = menu.querySelector('div');
-            button.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const isHidden = dropdown.classList.contains('hidden');
-                // Close all menus first
-                document.querySelectorAll('#menu-level > div, #menu-view > div, #menu-settings > div').forEach(d => d.classList.add('hidden'));
-                if (isHidden) {
-                    dropdown.classList.remove('hidden');
-                }
-            });
-        });
-        
-        window.addEventListener('click', () => {
-            document.querySelectorAll('#menu-level > div, #menu-view > div, #menu-settings > div').forEach(d => d.classList.add('hidden'));
-        });
 
         // Initialize the editor
         editor.init().then(() => {

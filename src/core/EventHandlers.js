@@ -6,9 +6,10 @@ import { Logger } from '../utils/Logger.js';
  * Handles all event listener setup and management
  */
 export class EventHandlers extends BaseModule {
-    constructor(levelEditor) {
+    constructor(levelEditor, menuManager = null) {
         super(levelEditor);
         this._rafId = null; // render loop id
+        this.menuManager = menuManager;
     }
 
     /**
@@ -133,65 +134,9 @@ export class EventHandlers extends BaseModule {
     }
 
     setupMenuEvents() {
-        console.log('[VIEW MENU] Setting up menu events...');
-        
-        // Check if DOM is ready
-        if (document.readyState === 'loading') {
-            console.log('[VIEW MENU] DOM not ready, waiting...');
-            document.addEventListener('DOMContentLoaded', () => this.setupMenuEvents());
-            return;
-        }
-        
-        // Level menu
-        document.getElementById('new-level')?.addEventListener('click', () => this.editor.newLevel());
-        document.getElementById('open-level')?.addEventListener('click', () => this.editor.openLevel());
-        document.getElementById('save-level')?.addEventListener('click', () => this.editor.saveLevel());
-        document.getElementById('save-level-as')?.addEventListener('click', () => this.editor.saveLevelAs());
-        
-        // View menu
-        const gridToggle = document.getElementById('toggle-grid');
-        const gameModeToggle = document.getElementById('toggle-game-mode');
-        const snapToGridToggle = document.getElementById('toggle-snap-to-grid');
-        const objectBoundariesToggle = document.getElementById('toggle-object-boundaries');
-        const objectCollisionsToggle = document.getElementById('toggle-object-collisions');
-        
-        console.log('[VIEW MENU] View menu elements found:', {
-            gridToggle: !!gridToggle,
-            gameModeToggle: !!gameModeToggle,
-            snapToGridToggle: !!snapToGridToggle,
-            objectBoundariesToggle: !!objectBoundariesToggle,
-            objectCollisionsToggle: !!objectCollisionsToggle
-        });
-        
-        gridToggle?.addEventListener('click', (e) => {
-            e.preventDefault();
-            console.log('[VIEW MENU] Grid toggle clicked');
-            this.toggleViewOption('grid');
-        });
-        gameModeToggle?.addEventListener('click', (e) => {
-            e.preventDefault();
-            console.log('[VIEW MENU] Game mode toggle clicked');
-            this.toggleViewOption('gameMode');
-        });
-        snapToGridToggle?.addEventListener('click', (e) => {
-            e.preventDefault();
-            console.log('[VIEW MENU] Snap to grid toggle clicked');
-            this.toggleViewOption('snapToGrid');
-        });
-        objectBoundariesToggle?.addEventListener('click', (e) => {
-            e.preventDefault();
-            console.log('[VIEW MENU] Object boundaries toggle clicked');
-            this.toggleViewOption('objectBoundaries');
-        });
-        objectCollisionsToggle?.addEventListener('click', (e) => {
-            e.preventDefault();
-            console.log('[VIEW MENU] Object collisions toggle clicked');
-            this.toggleViewOption('objectCollisions');
-        });
-        
-        // Settings menu
-        document.getElementById('assets-path')?.addEventListener('click', () => this.editor.openAssetsPath());
-        document.getElementById('editor-settings')?.addEventListener('click', () => this.editor.openSettings());
+        // Menu events are now handled by MenuManager
+        // This method is kept for backward compatibility
+        console.log('[VIEW MENU] Menu events handled by MenuManager');
     }
 
     initializeViewStates() {
@@ -225,11 +170,18 @@ export class EventHandlers extends BaseModule {
     }
 
     updateViewCheckbox(option, enabled) {
-        const checkId = option.replace(/([A-Z])/g, '-$1').toLowerCase() + '-check';
-        const checkElement = document.getElementById(checkId);
-        console.log(`[VIEW MENU] Updating checkbox ${checkId}, enabled: ${enabled}, element found: ${!!checkElement}`);
-        if (checkElement) {
-            checkElement.classList.toggle('hidden', !enabled);
+        if (this.menuManager) {
+            // Use MenuManager if available
+            const itemId = `toggle-${option.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+            this.menuManager.updateToggleState(itemId, enabled);
+        } else {
+            // Fallback to direct DOM manipulation
+            const checkId = option.replace(/([A-Z])/g, '-$1').toLowerCase() + '-check';
+            const checkElement = document.getElementById(checkId);
+            console.log(`[VIEW MENU] Updating checkbox ${checkId}, enabled: ${enabled}, element found: ${!!checkElement}`);
+            if (checkElement) {
+                checkElement.classList.toggle('hidden', !enabled);
+            }
         }
     }
 

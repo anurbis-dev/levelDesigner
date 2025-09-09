@@ -19,6 +19,7 @@ import { ObjectOperations } from './ObjectOperations.js';
 import { GroupOperations } from './GroupOperations.js';
 import { RenderOperations } from './RenderOperations.js';
 import { DuplicateOperations } from './DuplicateOperations.js';
+import { MenuManager } from '../managers/MenuManager.js';
 import { Logger } from '../utils/Logger.js';
 
 /**
@@ -31,7 +32,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '2.5.1';
+    static VERSION = '2.5.2';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -59,7 +60,10 @@ export class LevelEditor {
         
         // Event handlers
         this.eventHandlers = new Map();
-        
+
+        // Initialize MenuManager (will be set up in init() after DOM is ready)
+        this.menuManager = null;
+
         // Initialize operation modules
         this.eventHandlers = new EventHandlers(this);
         this.mouseHandlers = new MouseHandlers(this);
@@ -138,6 +142,18 @@ export class LevelEditor {
             this.applyUserPreferencesToLevel();
         }
         
+        // Initialize MenuManager
+        const menuContainer = document.getElementById('menu-container');
+        if (menuContainer) {
+            this.menuManager = new MenuManager(menuContainer, this.eventHandlers);
+            this.menuManager.initialize();
+
+            // Update EventHandlers with MenuManager reference
+            this.eventHandlers.menuManager = this.menuManager;
+        } else {
+            Logger.warn('Menu container not found, menu functionality will be limited');
+        }
+
         // Setup event listeners
         this.eventHandlers.setupEventListeners();
         
