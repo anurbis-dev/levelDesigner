@@ -513,9 +513,18 @@ export class RenderOperations extends BaseModule {
      * Draw boundaries for a group and its children
      */
     drawGroupBoundaries(group) {
-        // Draw group boundary
-        this.drawSingleObjectBoundary(group);
-        
+        // Get correct bounds for the entire group (same as selection bounds)
+        const bounds = this.editor.objectOperations.getObjectWorldBounds(group);
+        const camera = this.editor.stateManager.get('camera');
+
+        // Draw group boundary using the same logic as selection
+        this.editor.canvasRenderer.ctx.strokeRect(
+            bounds.minX - camera.x,
+            bounds.minY - camera.y,
+            bounds.maxX - bounds.minX,
+            bounds.maxY - bounds.minY
+        );
+
         // Draw children boundaries
         if (group.children) {
             group.children.forEach(child => {
