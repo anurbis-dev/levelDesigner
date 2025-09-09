@@ -32,7 +32,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '2.6.5';
+    static VERSION = '2.6.6';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -57,6 +57,9 @@ export class LevelEditor {
         
         // Current level
         this.level = null;
+
+        // Cached level statistics for quick access
+        this.cachedLevelStats = null;
         
         // Initialize MenuManager (will be set up in init() after DOM is ready)
         this.menuManager = null;
@@ -157,6 +160,9 @@ export class LevelEditor {
         
         // Preload assets
         await this.assetManager.preloadImages();
+
+        // Initialize cached level statistics
+        this.updateCachedLevelStats();
         
         // Initial render
         this.render();
@@ -316,6 +322,9 @@ export class LevelEditor {
      * Update all panels
      */
     updateAllPanels() {
+        // Update cached level statistics for quick access
+        this.updateCachedLevelStats();
+
         this.detailsPanel.render();
         this.outlinerPanel.render();
         this.layersPanel.render();
@@ -327,8 +336,11 @@ export class LevelEditor {
         const levelStatsContent = document.getElementById('level-stats-content');
         if (!levelStatsContent) return;
 
-        // Check Player Start objects
-        const playerStartCount = this.countPlayerStartObjects();
+        // Use cached statistics (already updated in updateAllPanels)
+        const stats = this.cachedLevelStats;
+
+        // Check Player Start objects from cached stats
+        const playerStartCount = stats?.byType?.player_start || 0;
 
         // Auto-create Player Start if missing (but don't call updateAllPanels recursively)
         if (playerStartCount === 0) {
@@ -352,22 +364,20 @@ export class LevelEditor {
             // Update history
             this.historyManager.saveState(this.level.objects, false);
 
-            // Re-count after creation
-            const newPlayerStartCount = 1;
-
-            // Get updated stats
-            const stats = this.level.getStats();
+            // Update cached stats after creation
+            this.updateCachedLevelStats();
+            const updatedStats = this.cachedLevelStats;
+            const newPlayerStartCount = updatedStats?.byType?.player_start || 1;
 
             // Generate display with the new count
-            this.renderLevelStats(levelStatsContent, stats, newPlayerStartCount);
+            this.renderLevelStats(levelStatsContent, updatedStats, newPlayerStartCount);
 
             // Render the new object (but don't call updateAllPanels)
             this.render();
             return;
         }
 
-        // Get stats for normal case
-        const stats = this.level.getStats();
+        // Use cached stats for normal case
         this.renderLevelStats(levelStatsContent, stats, playerStartCount);
     }
 
@@ -495,6 +505,9 @@ export class LevelEditor {
         // Apply saved View states after reset
         this.eventHandlers.applySavedViewStates(savedViewStates);
 
+        // Update cached level statistics
+        this.updateCachedLevelStats();
+
         this.historyManager.clear();
         this.historyManager.saveState(this.level.objects, true);
         this.render();
@@ -524,6 +537,9 @@ export class LevelEditor {
             // Apply saved View states after reset
             this.eventHandlers.applySavedViewStates(savedViewStates);
 
+            // Update cached level statistics
+            this.updateCachedLevelStats();
+
             this.historyManager.clear();
             this.historyManager.saveState(this.level.objects, true);
             this.render();
@@ -537,6 +553,26 @@ export class LevelEditor {
      * Count Player Start objects on the current level
      * @returns {number} Number of Player Start objects
      */
+    /**
+     * Get Player Start count from cached level statistics
+     * @returns {number} Number of Player Start objects
+     */
+    getPlayerStartCount() {
+        if (!this.cachedLevelStats) {
+            this.updateCachedLevelStats();
+        }
+        return this.cachedLevelStats?.byType?.player_start || 0;
+    }
+
+    /**
+     * Update cached level statistics
+     */
+    updateCachedLevelStats() {
+        if (this.level) {
+            this.cachedLevelStats = this.level.getStats();
+        }
+    }
+
     countPlayerStartObjects() {
         let count = 0;
 
@@ -560,8 +596,8 @@ export class LevelEditor {
     }
 
     saveLevel() {
-        // Check for Player Start objects
-        const playerStartCount = this.countPlayerStartObjects();
+        // Check for Player Start objects using cached stats
+        const playerStartCount = this.getPlayerStartCount();
 
         // Check if Player Start is missing
         if (playerStartCount === 0) {
@@ -580,8 +616,8 @@ export class LevelEditor {
     }
 
     saveLevelAs() {
-        // Check for Player Start objects BEFORE prompting for filename
-        const playerStartCount = this.countPlayerStartObjects();
+        // Check for Player Start objects BEFORE prompting for filename using cached stats
+        const playerStartCount = this.getPlayerStartCount();
 
         // Check if Player Start is missing
         if (playerStartCount === 0) {
