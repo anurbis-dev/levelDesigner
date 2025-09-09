@@ -36,6 +36,7 @@ export class Logger {
         FILE: { color: '#009688', prefix: 'FILE' },
         ASSET: { color: '#FF5722', prefix: 'ASSET' },
         UI: { color: '#3F51B5', prefix: 'UI' },
+        MENU: { color: '#FF9800', prefix: 'MENU' },
         PERFORMANCE: { color: '#CDDC39', prefix: 'PERF' },
         DEBUG: { color: '#9E9E9E', prefix: 'DEBUG' },
         GIT: { color: '#FF6B35', prefix: 'GIT' },

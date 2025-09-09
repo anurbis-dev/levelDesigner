@@ -14,6 +14,7 @@ export class MenuManager {
         this.logger = Logger.menu || {
             info: console.log,
             error: console.error,
+            warn: console.warn,
             debug: console.debug
         };
 
