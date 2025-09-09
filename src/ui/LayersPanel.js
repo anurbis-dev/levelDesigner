@@ -119,7 +119,7 @@ export class LayersPanel {
                         }
                     </svg>
                 </button>
-                <button class="layer-delete-btn p-1 rounded hover:bg-red-600 ${layer.name === 'Main' ? 'hidden' : ''}" 
+                <button class="layer-delete-btn p-1 rounded hover:bg-red-600 ${layer.id === level.getMainLayerId() ? 'hidden' : ''}" 
                         data-layer-id="${layer.id}" 
                         title="Delete layer">
                     <svg class="w-4 h-4 text-gray-300" fill="currentColor" viewBox="0 0 20 20">
@@ -322,7 +322,7 @@ export class LayersPanel {
             btn.addEventListener('click', (e) => {
                 const layerId = e.target.closest('button').dataset.layerId;
                 const layer = level.getLayerById(layerId);
-                if (layer && layer.name !== 'Main') {
+                if (layer && layerId !== level.getMainLayerId()) {
                     if (confirm(`Delete layer "${layer.name}"?`)) {
                         level.removeLayer(layerId);
                         this.render();

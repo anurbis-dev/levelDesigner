@@ -148,7 +148,7 @@ export class Level {
      */
     removeLayer(layerId) {
         const layer = this.getLayerById(layerId);
-        if (!layer || layer.name === 'Main') {
+        if (!layer || layerId === this.getMainLayerId()) {
             return false;
         }
         
@@ -162,6 +162,13 @@ export class Level {
      */
     getLayerById(layerId) {
         return this.layers.find(layer => layer.id === layerId);
+    }
+
+    /**
+     * Get Main layer ID (first layer is always Main)
+     */
+    getMainLayerId() {
+        return this.layers.length > 0 ? this.layers[0].id : null;
     }
 
     /**
