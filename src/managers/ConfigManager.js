@@ -107,7 +107,24 @@ export class ConfigManager {
                 showGrid: true,
                 gridColor: '#333333',
                 gridOpacity: 0.5,
+                gridThickness: 1,
+                gridSubdivisions: 4,
+                gridSubdivColor: '#666666',
+                gridSubdivThickness: 0.5,
                 snapToGrid: false
+            },
+
+            // Grid-specific settings (for SettingsPanel compatibility)
+            grid: {
+                showGrid: true,
+                snapToGrid: false,
+                size: 32,
+                color: '#333333',
+                opacity: 0.5,
+                thickness: 1,
+                subdivisions: 4,
+                subdivColor: '#666666',
+                subdivThickness: 0.5
             },
 
             // Camera settings
@@ -280,6 +297,31 @@ export class ConfigManager {
                 merged[key] = userConfigs[key];
             }
         });
+
+        // Synchronize grid and canvas settings for compatibility
+        if (merged.grid && merged.canvas) {
+            // Sync from grid to canvas (SettingsPanel uses grid.* paths)
+            merged.canvas.showGrid = merged.grid.showGrid;
+            merged.canvas.snapToGrid = merged.grid.snapToGrid;
+            merged.canvas.gridSize = merged.grid.size;
+            merged.canvas.gridColor = merged.grid.color;
+            merged.canvas.gridOpacity = merged.grid.opacity;
+            merged.canvas.gridThickness = merged.grid.thickness;
+            merged.canvas.gridSubdivisions = merged.grid.subdivisions;
+            merged.canvas.gridSubdivColor = merged.grid.subdivColor;
+            merged.canvas.gridSubdivThickness = merged.grid.subdivThickness;
+
+            // Sync from canvas to grid (for backward compatibility)
+            merged.grid.showGrid = merged.canvas.showGrid;
+            merged.grid.snapToGrid = merged.canvas.snapToGrid;
+            merged.grid.size = merged.canvas.gridSize;
+            merged.grid.color = merged.canvas.gridColor;
+            merged.grid.opacity = merged.canvas.gridOpacity;
+            merged.grid.thickness = merged.canvas.gridThickness;
+            merged.grid.subdivisions = merged.canvas.gridSubdivisions;
+            merged.grid.subdivColor = merged.canvas.gridSubdivColor;
+            merged.grid.subdivThickness = merged.canvas.gridSubdivThickness;
+        }
         
         return merged;
     }
@@ -356,6 +398,13 @@ export class ConfigManager {
     }
 
     /**
+     * Get grid configuration
+     */
+    getGrid() {
+        return this.configs.grid || {};
+    }
+
+    /**
      * Get panels configuration
      */
     getPanels() {
@@ -403,7 +452,7 @@ export class ConfigManager {
     set(path, value) {
         const keys = path.split('.');
         let current = this.configs;
-        
+
         for (let i = 0; i < keys.length - 1; i++) {
             const key = keys[i];
             if (current[key] === undefined) {
@@ -411,9 +460,86 @@ export class ConfigManager {
             }
             current = current[key];
         }
-        
+
         current[keys[keys.length - 1]] = value;
+
+        // Synchronize grid and canvas settings
+        this.syncGridCanvasSettings(path, value);
+
         this.saveUserConfigsToStorage();
+    }
+
+    /**
+     * Synchronize grid and canvas settings
+     */
+    syncGridCanvasSettings(path, value) {
+        if (!this.configs.grid || !this.configs.canvas) return;
+
+        if (path.startsWith('grid.')) {
+            // Sync from grid to canvas
+            const gridKey = path.substring(5); // Remove 'grid.' prefix
+            switch (gridKey) {
+                case 'showGrid':
+                    this.configs.canvas.showGrid = value;
+                    break;
+                case 'snapToGrid':
+                    this.configs.canvas.snapToGrid = value;
+                    break;
+                case 'size':
+                    this.configs.canvas.gridSize = value;
+                    break;
+                case 'color':
+                    this.configs.canvas.gridColor = value;
+                    break;
+                case 'opacity':
+                    this.configs.canvas.gridOpacity = value;
+                    break;
+                case 'thickness':
+                    this.configs.canvas.gridThickness = value;
+                    break;
+                case 'subdivisions':
+                    this.configs.canvas.gridSubdivisions = value;
+                    break;
+                case 'subdivColor':
+                    this.configs.canvas.gridSubdivColor = value;
+                    break;
+                case 'subdivThickness':
+                    this.configs.canvas.gridSubdivThickness = value;
+                    break;
+            }
+        } else if (path.startsWith('canvas.')) {
+            // Sync from canvas to grid
+            const canvasKey = path.substring(7); // Remove 'canvas.' prefix
+            switch (canvasKey) {
+                case 'showGrid':
+                    this.configs.grid.showGrid = value;
+                    break;
+                case 'snapToGrid':
+                    this.configs.grid.snapToGrid = value;
+                    break;
+                case 'gridSize':
+                    this.configs.grid.size = value;
+                    break;
+                case 'gridColor':
+                    this.configs.grid.color = value;
+                    break;
+                case 'gridOpacity':
+                    this.configs.grid.opacity = value;
+                    break;
+                case 'gridThickness':
+                    this.configs.grid.thickness = value;
+                    break;
+                case 'gridSubdivisions':
+                    this.configs.grid.subdivisions = value;
+                    break;
+                case 'gridSubdivColor':
+                    this.configs.grid.subdivColor = value;
+                    break;
+                case 'gridSubdivThickness':
+                    this.configs.grid.subdivThickness = value;
+                    break;
+            }
+        }
     }
 
     /**
@@ -428,6 +554,18 @@ export class ConfigManager {
      */
     reset() {
         this.configs = this.getDefaultConfigs();
+        // Synchronize grid and canvas settings after reset
+        if (this.configs.grid && this.configs.canvas) {
+            this.configs.canvas.showGrid = this.configs.grid.showGrid;
+            this.configs.canvas.snapToGrid = this.configs.grid.snapToGrid;
+            this.configs.canvas.gridSize = this.configs.grid.size;
+            this.configs.canvas.gridColor = this.configs.grid.color;
+            this.configs.canvas.gridOpacity = this.configs.grid.opacity;
+            this.configs.canvas.gridThickness = this.configs.grid.thickness;
+            this.configs.canvas.gridSubdivisions = this.configs.grid.subdivisions;
+            this.configs.canvas.gridSubdivColor = this.configs.grid.subdivColor;
+            this.configs.canvas.gridSubdivThickness = this.configs.grid.subdivThickness;
+        }
         this.saveUserConfigsToStorage();
     }
 
@@ -469,6 +607,15 @@ export class ConfigManager {
                 break;
             case 'canvas':
                 if (keys[1] === 'gridSize' && (typeof value !== 'number' || value < 8 || value > 128)) {
+                    return false;
+                }
+                if (keys[1] === 'gridThickness' && (typeof value !== 'number' || value < 0.1 || value > 5)) {
+                    return false;
+                }
+                if (keys[1] === 'gridSubdivisions' && (typeof value !== 'number' || value < 1 || value > 10)) {
+                    return false;
+                }
+                if (keys[1] === 'gridSubdivThickness' && (typeof value !== 'number' || value < 0.1 || value > 3)) {
                     return false;
                 }
                 break;
@@ -563,6 +710,10 @@ export class ConfigManager {
                 canvasBackgroundColor: this.configs.canvas?.backgroundColor || '#4B5563',
                 gridSize: this.configs.canvas?.gridSize || 32,
                 showGrid: this.configs.canvas?.showGrid || true,
+                gridThickness: this.configs.canvas?.gridThickness || 1,
+                gridSubdivisions: this.configs.canvas?.gridSubdivisions || 4,
+                gridSubdivColor: this.configs.canvas?.gridSubdivColor || '#666666',
+                gridSubdivThickness: this.configs.canvas?.gridSubdivThickness || 0.5,
                 
                 // Editor settings
                 autoSave: this.configs.editor?.autoSave || true,

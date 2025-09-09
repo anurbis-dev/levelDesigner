@@ -8,6 +8,7 @@ export class SettingsPanel {
         this.container = container;
         this.configManager = configManager;
         this.isVisible = false;
+        this.lastActiveTab = 'general'; // Default tab
         
         this.init();
     }
@@ -145,36 +146,57 @@ export class SettingsPanel {
     }
 
     setupEventListeners() {
-        // Close settings
-        document.getElementById('close-settings').addEventListener('click', () => this.hide());
-        document.getElementById('cancel-settings').addEventListener('click', () => this.hide());
-        document.getElementById('settings-overlay').addEventListener('click', (e) => {
-            if (e.target.id === 'settings-overlay') {
-                this.hide();
-            }
-        });
+        // Settings tabs - delegate to overlay since elements are created dynamically
+        const overlay = document.getElementById('settings-overlay');
+        if (overlay) {
+            overlay.addEventListener('click', (e) => {
+                // Handle close button and overlay click
+                if (e.target.id === 'close-settings' || e.target.id === 'cancel-settings') {
+                    this.hide();
+                    return;
+                }
+                if (e.target.id === 'settings-overlay') {
+                    this.hide();
+                    return;
+                }
 
-        // Settings tabs
-        document.querySelectorAll('.settings-tab').forEach(tab => {
-            tab.addEventListener('click', () => {
-                document.querySelectorAll('.settings-tab').forEach(t => {
-                    t.classList.remove('active');
-                    t.style.backgroundColor = 'transparent';
-                });
-                tab.classList.add('active');
-                tab.style.backgroundColor = '#374151';
-                this.renderSettingsContent(tab.dataset.tab);
+                // Handle settings tabs (fallback for delegated events)
+                const tabButton = e.target.closest('.settings-tab');
+                if (tabButton) {
+                    const tabName = tabButton.dataset.tab;
+                    
+                    // Update last active tab
+                    this.lastActiveTab = tabName;
+                    localStorage.setItem('levelEditor_lastActiveSettingsTab', tabName);
+                    
+                    // Activate tab visually
+                    this.activateTab(tabName);
+                    
+                    // Render content
+                    this.renderSettingsContent(tabName);
+                }
+
+                // Handle other settings actions
+                if (e.target.id === 'reset-settings') {
+                    this.resetSettings();
+                }
+                if (e.target.id === 'export-settings') {
+                    this.exportSettings();
+                }
+                if (e.target.id === 'import-settings') {
+                    document.getElementById('import-file').click();
+                }
+                if (e.target.id === 'save-settings') {
+                    this.saveSettings();
+                }
             });
-        });
+        }
 
-        // Settings actions
-        document.getElementById('reset-settings').addEventListener('click', () => this.resetSettings());
-        document.getElementById('export-settings').addEventListener('click', () => this.exportSettings());
-        document.getElementById('import-settings').addEventListener('click', () => {
-            document.getElementById('import-file').click();
-        });
-        document.getElementById('import-file').addEventListener('change', (e) => this.importSettings(e));
-        document.getElementById('save-settings').addEventListener('click', () => this.saveSettings());
+        // File import handler
+        const importFile = document.getElementById('import-file');
+        if (importFile) {
+            importFile.addEventListener('change', (e) => this.importSettings(e));
+        }
     }
 
     show() {
@@ -182,7 +204,20 @@ export class SettingsPanel {
         const overlay = document.getElementById('settings-overlay');
         if (overlay) {
             overlay.style.display = 'flex';
-            this.renderSettingsContent('general');
+            
+            // Load last active tab from localStorage
+            const savedTab = localStorage.getItem('levelEditor_lastActiveSettingsTab');
+            const activeTab = savedTab || 'general';
+            this.lastActiveTab = activeTab;
+            
+            // Activate the correct tab visually
+            this.activateTab(activeTab);
+            
+            // Render content for the active tab
+            this.renderSettingsContent(activeTab);
+            
+            // Add direct event listeners to tabs after they are visible
+            this.setupTabEventListeners();
         }
     }
 
@@ -194,6 +229,49 @@ export class SettingsPanel {
         }
     }
 
+    activateTab(tabName) {
+        // Remove active class from all tabs
+        document.querySelectorAll('.settings-tab').forEach(tab => {
+            tab.classList.remove('active');
+            tab.style.backgroundColor = 'transparent';
+        });
+        
+        // Activate the specified tab
+        const targetTab = document.querySelector(`[data-tab="${tabName}"]`);
+        if (targetTab) {
+            targetTab.classList.add('active');
+            targetTab.style.backgroundColor = '#374151';
+        }
+    }
+
+    setupTabEventListeners() {
+        const tabs = document.querySelectorAll('.settings-tab');
+        tabs.forEach(tab => {
+            // Remove existing listeners to avoid duplicates
+            tab.removeEventListener('click', this.handleTabClick);
+            // Add new listener
+            tab.addEventListener('click', this.handleTabClick.bind(this));
+        });
+    }
+
+    handleTabClick(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const tabButton = e.currentTarget;
+        const tabName = tabButton.dataset.tab;
+        
+        // Update last active tab
+        this.lastActiveTab = tabName;
+        localStorage.setItem('levelEditor_lastActiveSettingsTab', tabName);
+        
+        // Activate tab visually
+        this.activateTab(tabName);
+        
+        // Render content
+        this.renderSettingsContent(tabName);
+    }
+
     renderSettingsContent(category) {
         const content = document.getElementById('settings-content');
         if (!content) return;
@@ -203,7 +281,49 @@ export class SettingsPanel {
                 content.innerHTML = this.renderGeneralSettings();
                 break;
             case 'grid':
-                content.innerHTML = this.renderGridSettings();
+                content.innerHTML = `
+                    <h3 style="font-size: 1.125rem; font-weight: 500; margin-bottom: 1rem;">Grid & Snapping Settings</h3>
+
+                    <!-- Grid Layout для компактного размещения -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+
+                        <!-- Левая колонка -->
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div>
+                                <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Size (px)</label>
+                                <input type="number" min="8" max="128" step="8" class="setting-input" name="setting-input" data-setting="grid.size" value="${this.configManager.get('grid.size') || 32}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
+                            </div>
+                            <div>
+                                <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Color</label>
+                                <input type="color" class="setting-input" name="setting-input" data-setting="grid.color" value="${this.configManager.get('grid.color') || '#333333'}" style="width:100%; height: 2.5rem; border:1px solid #4b5563; border-radius:0.25rem; cursor:pointer;"/>
+                            </div>
+                            <div>
+                                <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Thickness</label>
+                                <input type="number" min="0.1" max="5" step="0.1" class="setting-input" name="setting-input" data-setting="grid.thickness" value="${this.configManager.get('grid.thickness') || 1}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
+                            </div>
+                        </div>
+
+                        <!-- Правая колонка -->
+                        <div style="display: flex; flex-direction: column; gap: 1rem;">
+                            <div>
+                                <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Opacity</label>
+                                <input type="range" min="0" max="1" step="0.05" class="setting-input" name="setting-input" data-setting="grid.opacity" value="${this.configManager.get('grid.opacity') || 0.5}" style="width:100%;"/>
+                            </div>
+                            <div>
+                                <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Subdivisions</label>
+                                <input type="number" min="1" max="10" step="1" class="setting-input" name="setting-input" data-setting="grid.subdivisions" value="${this.configManager.get('grid.subdivisions') || 4}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
+                            </div>
+                            <div>
+                                <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Subdiv. Color</label>
+                                <input type="color" class="setting-input" name="setting-input" data-setting="grid.subdivColor" value="${this.configManager.get('grid.subdivColor') || '#666666'}" style="width:100%; height: 2.5rem; border:1px solid #4b5563; border-radius:0.25rem; cursor:pointer;"/>
+                            </div>
+                            <div>
+                                <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Subdiv. Thickness</label>
+                                <input type="number" min="0.1" max="3" step="0.1" class="setting-input" name="setting-input" data-setting="grid.subdivThickness" value="${this.configManager.get('grid.subdivThickness') || 0.5}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
+                            </div>
+                        </div>
+                    </div>
+                `;
                 break;
             case 'camera':
                 content.innerHTML = this.renderCameraSettings();
@@ -283,7 +403,7 @@ export class SettingsPanel {
     }
 
     renderGeneralSettings() {
-        const settings = this.configManager.getAllSettings();
+        const settings = this.configManager.getAll();
         
         return `
             <h3 style="font-size: 1.125rem; font-weight: 500; margin-bottom: 1rem;">General Settings</h3>
@@ -356,38 +476,6 @@ export class SettingsPanel {
         `;
     }
 
-    renderGridSettings() {
-        const settings = this.configManager.getAllSettings();
-        return `
-            <h3 style="font-size: 1.125rem; font-weight: 500; margin-bottom: 1rem;">Grid & Snapping Settings</h3>
-            <div style="display: flex; flex-direction: column; gap: 1rem;">
-                <div>
-                    <label style="display: flex; align-items: center;">
-                        <input type="checkbox" class="setting-input" name="setting-input" data-setting="grid.showGrid" ${settings.grid.showGrid ? 'checked' : ''} style="margin-right: 0.5rem;">
-                        <span style="color: #d1d5db;">Show Grid</span>
-                    </label>
-                </div>
-                <div>
-                    <label style="display: flex; align-items: center;">
-                        <input type="checkbox" class="setting-input" name="setting-input" data-setting="grid.snapToGrid" ${settings.grid.snapToGrid ? 'checked' : ''} style="margin-right: 0.5rem;">
-                        <span style="color: #d1d5db;">Snap to Grid</span>
-                    </label>
-                </div>
-                <div>
-                    <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Size (px)</label>
-                    <input type="number" min="1" max="256" class="setting-input" name="setting-input" data-setting="grid.size" value="${settings.grid.size}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
-                </div>
-                <div>
-                    <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Color</label>
-                    <input type="color" class="setting-input" name="setting-input" data-setting="grid.color" value="${settings.grid.color}"/>
-                </div>
-                <div>
-                    <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Opacity</label>
-                    <input type="range" min="0" max="1" step="0.05" class="setting-input" name="setting-input" data-setting="grid.opacity" value="${settings.grid.opacity}" style="width:100%;"/>
-                </div>
-            </div>
-        `;
-    }
 
     renderCameraSettings() {
         return `<h3>Camera Settings</h3><p>Camera settings will be implemented here.</p>`;
