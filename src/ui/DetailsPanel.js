@@ -196,4 +196,5 @@ export class DetailsPanel {
             detailsTab.textContent = 'Asset(s)';
         }
     }
+
 }

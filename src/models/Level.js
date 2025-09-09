@@ -1,5 +1,6 @@
 import { GameObject } from './GameObject.js';
 import { Group } from './Group.js';
+import { Layer } from './Layer.js';
 import { GroupTraversalUtils } from '../utils/GroupTraversalUtils.js';
 
 /**
@@ -31,6 +32,9 @@ export class Level {
         
         this.objects = data.objects || [];
         this.nextObjectId = data.nextObjectId || 1;
+        
+        // Initialize layers system
+        this.layers = this.initializeLayers(data.layers);
     }
 
     /**
@@ -38,6 +42,10 @@ export class Level {
      */
     addObject(obj) {
         obj.id = this.nextObjectId++;
+        // Assign to main layer by default
+        if (this.layers.length > 0) {
+            obj.layerId = this.layers[0].id;
+        }
         this.objects.push(obj);
         this.updateModified();
     }
@@ -100,6 +108,116 @@ export class Level {
     }
 
     /**
+     * Initialize layers system
+     */
+    initializeLayers(layersData) {
+        if (layersData && layersData.length > 0) {
+            return layersData.map(layerData => Layer.fromJSON(layerData));
+        }
+        
+        // Create default Main layer
+        const mainLayer = new Layer({
+            name: 'Main',
+            order: 0,
+            visible: true,
+            locked: false
+        });
+        
+        return [mainLayer];
+    }
+
+    /**
+     * Add new layer
+     */
+    addLayer(name = 'New Layer') {
+        const maxOrder = Math.max(...this.layers.map(layer => layer.order), -1);
+        const newLayer = new Layer({
+            name: name,
+            order: maxOrder + 1,
+            visible: true,
+            locked: false
+        });
+        
+        this.layers.push(newLayer);
+        this.updateModified();
+        return newLayer;
+    }
+
+    /**
+     * Remove layer by ID (cannot remove Main layer)
+     */
+    removeLayer(layerId) {
+        const layer = this.getLayerById(layerId);
+        if (!layer || layer.name === 'Main') {
+            return false;
+        }
+        
+        this.layers = this.layers.filter(l => l.id !== layerId);
+        this.updateModified();
+        return true;
+    }
+
+    /**
+     * Get layer by ID
+     */
+    getLayerById(layerId) {
+        return this.layers.find(layer => layer.id === layerId);
+    }
+
+    /**
+     * Reorder layers
+     */
+    reorderLayers(layerIds) {
+        const reorderedLayers = [];
+        
+        layerIds.forEach((layerId, index) => {
+            const layer = this.getLayerById(layerId);
+            if (layer) {
+                layer.setOrder(index);
+                reorderedLayers.push(layer);
+            }
+        });
+        
+        this.layers = reorderedLayers;
+        this.updateModified();
+    }
+
+    /**
+     * Get layers sorted by order
+     */
+    getLayersSorted() {
+        return [...this.layers].sort((a, b) => a.order - b.order);
+    }
+
+    /**
+     * Get objects count for a specific layer
+     */
+    getLayerObjectsCount(layerId) {
+        // Count objects that belong to this layer
+        return this.objects.filter(obj => obj.layerId === layerId).length;
+    }
+
+    /**
+     * Assign object to layer
+     */
+    assignObjectToLayer(objId, layerId) {
+        const obj = this.findObjectById(objId);
+        if (obj) {
+            obj.layerId = layerId;
+            this.updateModified();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Get objects for specific layer
+     */
+    getLayerObjects(layerId) {
+        return this.objects.filter(obj => obj.layerId === layerId);
+    }
+
+    /**
      * Update modified timestamp
      */
     updateModified() {
@@ -122,6 +240,7 @@ export class Level {
                     return GameObject.fromJSON(obj).toJSON();
                 }
             }),
+            layers: this.layers.map(layer => layer.toJSON()),
             nextObjectId: this.nextObjectId
         };
     }

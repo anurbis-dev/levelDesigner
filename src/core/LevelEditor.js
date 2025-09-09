@@ -7,6 +7,7 @@ import { CanvasRenderer } from '../ui/CanvasRenderer.js';
 import { AssetPanel } from '../ui/AssetPanel.js';
 import { DetailsPanel } from '../ui/DetailsPanel.js';
 import { OutlinerPanel } from '../ui/OutlinerPanel.js';
+import { LayersPanel } from '../ui/LayersPanel.js';
 import { SettingsPanel } from '../ui/SettingsPanel.js';
 import { Level } from '../models/Level.js';
 import { duplicateRenderUtils } from '../utils/DuplicateUtils.js';
@@ -30,7 +31,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '2.3.3';
+    static VERSION = '2.3.4';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -50,6 +51,7 @@ export class LevelEditor {
         this.assetPanel = null;
         this.detailsPanel = null;
         this.outlinerPanel = null;
+        this.layersPanel = null;
         this.settingsPanel = null;
         
         // Current level
@@ -105,8 +107,9 @@ export class LevelEditor {
         const assetsPanel = document.getElementById('assets-panel');
         const detailsPanel = document.getElementById('details-content-panel');
         const outlinerPanel = document.getElementById('outliner-content-panel');
+        const layersPanel = document.getElementById('layers-content-panel');
         
-        if (!canvas || !assetsPanel || !detailsPanel || !outlinerPanel) {
+        if (!canvas || !assetsPanel || !detailsPanel || !outlinerPanel || !layersPanel) {
             throw new Error('Required DOM elements not found');
         }
         
@@ -118,6 +121,7 @@ export class LevelEditor {
         this.assetPanel = new AssetPanel(assetsPanel, this.assetManager, this.stateManager);
         this.detailsPanel = new DetailsPanel(detailsPanel, this.stateManager, this);
         this.outlinerPanel = new OutlinerPanel(outlinerPanel, this.stateManager, this);
+        this.layersPanel = new LayersPanel(layersPanel, this.stateManager, this);
         this.settingsPanel = new SettingsPanel(document.body, this.configManager);
         
         // Initial render of asset panel
@@ -297,6 +301,7 @@ export class LevelEditor {
     updateAllPanels() {
         this.detailsPanel.render();
         this.outlinerPanel.render();
+        this.layersPanel.render();
         this.updateLevelStatsPanel();
     }
 

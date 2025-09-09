@@ -1,3 +1,5 @@
+import { ColorChooser } from '../widgets/ColorChooser.js';
+
 /**
  * Settings Panel UI Component
  */
@@ -212,7 +214,7 @@ export class SettingsPanel {
                     <div style="display: flex; flex-direction: column; gap: 1rem;">
                         <div>
                             <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Outline Color</label>
-                            <input type="color" class="setting-input" data-setting="selection.outlineColor" value="${this.configManager.get('selection.outlineColor')}"/>
+                            <div id="outline-color-chooser"></div>
                         </div>
                         <div>
                             <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Outline Width (px)</label>
@@ -224,7 +226,7 @@ export class SettingsPanel {
                         </div>
                         <div>
                             <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Nested Groups Highlight Color</label>
-                            <input type="color" class="setting-input" data-setting="selection.hierarchyHighlightColor" value="${this.configManager.get('selection.hierarchyHighlightColor') || '#3B82F6'}"/>
+                            <div id="hierarchy-color-chooser"></div>
                         </div>
                         <div>
                             <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Marquee Color</label>
@@ -234,7 +236,8 @@ export class SettingsPanel {
                             <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Marquee Opacity</label>
                             <input type="range" min="0" max="1" step="0.05" class="setting-input" data-setting="selection.marqueeOpacity" value="${this.configManager.get('selection.marqueeOpacity')}" style="width:100%;"/>
                         </div>
-                    </div>`;
+                    </div>                `;
+                this.initializeColorChoosers();
                 break;
             case 'assets':
                 content.innerHTML = this.renderAssetSettings();
@@ -248,6 +251,35 @@ export class SettingsPanel {
         }
         
         this.setupSettingsInputs();
+    }
+
+    /**
+     * Initialize color choosers for selection settings
+     */
+    initializeColorChoosers() {
+        // Outline Color Chooser
+        const outlineColorContainer = document.getElementById('outline-color-chooser');
+        if (outlineColorContainer) {
+            const outlineColorChooser = ColorChooser.forSettings(
+                this.configManager.get('selection.outlineColor'),
+                (newColor) => {
+                    this.configManager.set('selection.outlineColor', newColor);
+                }
+            );
+            outlineColorContainer.appendChild(outlineColorChooser.createInlineElement());
+        }
+
+        // Hierarchy Highlight Color Chooser
+        const hierarchyColorContainer = document.getElementById('hierarchy-color-chooser');
+        if (hierarchyColorContainer) {
+            const hierarchyColorChooser = ColorChooser.forSettings(
+                this.configManager.get('selection.hierarchyHighlightColor') || '#3B82F6',
+                (newColor) => {
+                    this.configManager.set('selection.hierarchyHighlightColor', newColor);
+                }
+            );
+            hierarchyColorContainer.appendChild(hierarchyColorChooser.createInlineElement());
+        }
     }
 
     renderGeneralSettings() {
