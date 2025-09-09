@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>2D Level Editor</title>
-    <!-- Подключаем Tailwind CSS для быстрой стилизации -->
+    <!-- Load Tailwind CSS for quick styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="user-settings.css">
     <link rel="stylesheet" href="src/ui/ConsoleContextMenu.css">
@@ -44,24 +44,24 @@
             }
         }
         
-        /* Дополнительные стили для улучшения внешнего вида и функциональности */
+        /* Additional styles for improved appearance and functionality */
         body, html {
-            overflow: hidden; /* Запрещаем прокрутку всей страницы */
+            overflow: hidden; /* Prevent global page scrolling */
             height: 100%;
-            user-select: none; /* Отключаем выделение текста */
+            user-select: none; /* Disable text selection */
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
         }
-        
-        /* Разрешаем выделение текста только в input полях */
+
+        /* Allow text selection only in input fields */
         input, textarea {
             user-select: text;
             -webkit-user-select: text;
             -moz-user-select: text;
             -ms-user-select: text;
         }
-        /* Стили для разделителей, которые позволят менять размеры панелей */
+        /* Styles for resizers that allow changing panel sizes */
         .resizer {
             background-color: #374151; /* gray-700 */
             cursor: col-resize;
@@ -90,7 +90,7 @@
         .log-entry:hover {
             background: rgba(55, 65, 81, 0.3);
         }
-        /* Стили для холста (основной рабочей зоны) */
+        /* Styles for canvas (main workspace) */
         #main-canvas {
             display: block;
             width: 100%;
@@ -99,7 +99,7 @@
             object-fit: none; /* Prevent scaling */
             image-rendering: pixelated; /* Crisp pixel art rendering */
         }
-        /* Стили для табов */
+        /* Styles for tabs */
         .tab, .tab-right {
             transition: background-color 0.2s;
             position: relative;
@@ -108,7 +108,7 @@
             background-color: #374151; /* gray-700 */
             border-bottom-color: transparent;
         }
-        /* Стили для перетаскивания табов */
+        /* Styles for tab dragging */
         .tab-right.dragging, .tab.dragging {
             opacity: 0.5;
             z-index: 1000;
@@ -119,7 +119,7 @@
         .tab-right.drag-over:last-child, .tab.drag-over:last-child {
             border-right: 2px solid #3B82F6;
         }
-        /* Стили для превью ассетов */
+        /* Styles for asset previews */
         .asset-thumbnail {
             border: 2px solid transparent;
             transition: border-color 0.2s;
@@ -127,15 +127,15 @@
         .asset-thumbnail.selected {
             border-color: #3B82F6; /* blue-500 */
         }
-        /* Стили для рамки выделения в панели ассетов */
+        /* Styles for selection rectangle in asset panel */
         #asset-marquee {
             position: absolute;
             border: 1px solid rgba(59, 130, 246, 0.8);
             background-color: rgba(59, 130, 246, 0.2);
-            pointer-events: none; /* чтобы не мешала кликам */
+            pointer-events: none; /* so it doesn't interfere with clicks */
             z-index: 100;
         }
-        /* Стили для аутлайнера */
+        /* Styles for outliner */
         .outliner-item {
             padding: 2px 5px;
             border-radius: 3px;
@@ -161,7 +161,7 @@
         .outliner-group-header.collapsed::before {
             transform: rotate(-90deg);
         }
-        /* Стили для перетаскивания группы для создания префаба */
+        /* Styles for group dragging to create prefab */
         #assets-panel.drop-target {
             box-shadow: 0 0 0 3px #3B82F6 inset;
         }
@@ -169,7 +169,7 @@
 </head>
 <body class="bg-gray-800 text-white font-sans flex flex-col h-screen">
 
-    <!-- 1. Основное меню сверху -->
+    <!-- 1. Main menu on top -->
     <header class="bg-gray-900 shadow-md flex-shrink-0">
         <nav class="flex items-center justify-between p-2">
             <!-- Menu container - will be populated by MenuManager -->
@@ -182,17 +182,17 @@
         </nav>
     </header>
 
-    <!-- Основной контейнер с рабочими зонами -->
+    <!-- Main container with working areas -->
     <div class="flex flex-grow min-h-0">
-        <!-- 2. Main Frame (основная рабочая зона) -->
+        <!-- 2. Main Frame (main workspace) -->
         <main id="main-panel" class="flex-1 flex flex-col bg-gray-700 p-1 min-w-0">
             <canvas id="main-canvas"></canvas>
         </main>
 
-        <!-- Разделитель для изменения ширины правой панели -->
+        <!-- Separator for changing right panel width -->
         <div id="resizer-x" class="resizer"></div>
 
-        <!-- 4. Панель Details (справа) -->
+        <!-- 4. Details Panel (right) -->
         <aside id="right-panel" class="bg-gray-900 flex flex-col" style="width: 320px; flex-shrink: 0; flex-grow: 0;">
             <div class="flex border-b border-gray-700 flex-shrink-0">
                 <button data-tab="details" class="tab-right flex-1 p-2 text-sm font-medium active" id="details-tab">Asset</button>
@@ -218,23 +218,23 @@
         </aside>
     </div>
 
-    <!-- Разделитель для изменения высоты панели ассетов -->
+        <!-- Separator for changing asset panel height -->
     <div id="resizer-assets" class="resizer-y"></div>
 
-    <!-- 3. Assets Drawer (панель с ассетами) -->
+        <!-- 3. Assets Drawer (assets panel) -->
     <footer id="assets-panel" class="h-64 bg-gray-900 flex-shrink-0 flex flex-col relative">
         <div id="asset-tabs-container" class="flex border-b border-gray-700">
-            <!-- Табы будут генерироваться динамически -->
+            <!-- Tabs will be generated dynamically -->
         </div>
         <div id="asset-previews-container" class="flex-grow p-4 overflow-auto">
-            <!-- Контейнер для превью ассетов будет генерироваться динамически -->
+            <!-- Asset previews container will be generated dynamically -->
         </div>
     </footer>
 
-    <!-- Разделитель для изменения высоты консоли -->
+    <!-- Separator for changing console height -->
     <div id="resizer-console" class="resizer-y hidden"></div>
 
-    <!-- Console Panel (скрыта по умолчанию) -->
+    <!-- Console Panel (hidden by default) -->
     <div id="console-panel" class="hidden bg-gray-800 border-t border-gray-700 flex flex-col" style="height: 300px;">
         <div id="console-output" class="flex-grow p-2 overflow-y-auto text-sm font-mono text-gray-300 bg-gray-800">
             <!-- Console output will be displayed here -->
@@ -248,7 +248,7 @@
         </div>
     </div>
 
-    <!-- Логика приложения -->
+    <!-- Application logic -->
     <script type="module">
         import { LevelEditor } from './src/core/LevelEditor.js';
         import { ConsoleContextMenu } from './src/ui/ConsoleContextMenu.js';

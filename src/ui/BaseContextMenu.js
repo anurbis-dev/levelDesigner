@@ -1,16 +1,16 @@
 /**
- * BaseContextMenu - Базовый класс для контекстных меню
+ * BaseContextMenu - Base class for context menus
  * 
- * Предоставляет универсальную функциональность для создания контекстных меню
- * в различных панелях редактора. Наследуется специализированными классами
- * для конкретных панелей.
+ * Provides universal functionality for creating context menus
+ * in various editor panels. Inherited by specialized classes
+ * for specific panels.
  * 
  * Features:
- * - Умное позиционирование меню
- * - Плавные анимации появления/исчезновения
- * - Блокировка браузерного контекстного меню
- * - Поддержка различных типов элементов меню
- * - Адаптивность и мобильная оптимизация
+ * - Smart menu positioning
+ * - Smooth show/hide animations
+ * - Browser context menu blocking
+ * - Support for different menu item types
+ * - Responsiveness and mobile optimization
  * 
  * Usage:
  * ```javascript

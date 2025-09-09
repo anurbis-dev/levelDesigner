@@ -32,7 +32,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '2.5.9';
+    static VERSION = '2.6.0';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -498,7 +498,7 @@ export class LevelEditor {
         // Check for multiple Player Start objects
         const playerStartCount = this.countPlayerStartObjects();
         if (playerStartCount > 1) {
-            alert(`Невозможно сохранить уровень!\n\nНа уровне найдено ${playerStartCount} объектов типа "Player Start".\nДолжен быть только один объект Player Start.\n\nУдалите лишние объекты Player Start перед сохранением уровня.`);
+            alert(`Cannot save level!\n\nFound ${playerStartCount} Player Start objects on the level.\nThere should be only one Player Start object.\n\nPlease remove extra Player Start objects before saving the level.`);
             return;
         }
 
@@ -507,15 +507,15 @@ export class LevelEditor {
     }
 
     saveLevelAs() {
+        // Check for multiple Player Start objects BEFORE prompting for filename
+        const playerStartCount = this.countPlayerStartObjects();
+        if (playerStartCount > 1) {
+            alert(`Cannot save level!\n\nFound ${playerStartCount} Player Start objects on the level.\nThere should be only one Player Start object.\n\nPlease remove extra Player Start objects before saving the level.`);
+            return;
+        }
+
         const fileName = prompt("Enter file name:", this.fileManager.getCurrentFileName() || "level.json");
         if (fileName) {
-            // Check for multiple Player Start objects
-            const playerStartCount = this.countPlayerStartObjects();
-            if (playerStartCount > 1) {
-                alert(`Невозможно сохранить уровень!\n\nНа уровне найдено ${playerStartCount} объектов типа "Player Start".\nДолжен быть только один объект Player Start.\n\nУдалите лишние объекты Player Start перед сохранением уровня.`);
-                return;
-            }
-
             this.fileManager.saveLevel(this.level, fileName);
             this.stateManager.markClean();
         }
