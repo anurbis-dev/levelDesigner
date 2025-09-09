@@ -39,25 +39,14 @@ export class DuplicateOperations extends BaseModule {
         }
 
         // Collect selected objects
-        const allSelected = Array.from(selectedIds)
+        const selected = Array.from(selectedIds)
             .map(id => this.editor.level.findObjectById(id))
             .filter(Boolean);
 
-        Logger.duplicate.debug('All selected objects before filtering:', allSelected.map(obj => `${obj.name} (${obj.type})`));
-
-        const selected = allSelected.filter(obj => obj.type !== 'player_start'); // Filter out Player Start objects
-        const filteredPlayerStarts = allSelected.filter(obj => obj.type === 'player_start');
-
-        Logger.duplicate.debug('Objects after filtering Player Start:', selected.map(obj => `${obj.name} (${obj.type})`));
-
-        // Log filtered out Player Start objects
-        if (filteredPlayerStarts.length > 0) {
-            Logger.duplicate.warn(`🚫 Player Start objects cannot be duplicated: ${filteredPlayerStarts.map(obj => obj.name).join(', ')}`);
-            Logger.duplicate.info(`📊 Duplication: ${selected.length} objects will be duplicated, ${filteredPlayerStarts.length} Player Start objects skipped`);
-        }
+        Logger.duplicate.debug('Found objects:', selected.length, selected);
 
         if (selected.length === 0) {
-            Logger.duplicate.debug('No valid objects found (Player Start objects filtered out), returning');
+            Logger.duplicate.debug('No valid objects found, returning');
             return;
         }
 
@@ -161,12 +150,6 @@ export class DuplicateOperations extends BaseModule {
         const newIds = new Set();
 
         duplicate.objects.forEach((obj) => {
-            // Double-check: ensure Player Start objects are not in the final placement list
-            if (obj.type === 'player_start') {
-                Logger.duplicate.error(`🚫 CRITICAL: Player Start object ${obj.name} found in final placement list! This should not happen.`);
-                return; // Skip this object
-            }
-
             const offsetX = obj._offsetX ?? 0;
             const offsetY = obj._offsetY ?? 0;
 
