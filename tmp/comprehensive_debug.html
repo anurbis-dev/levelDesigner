@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Comprehensive Debug</title>
+</head>
+<body>
+    <h1>Comprehensive Debug</h1>
+    <div id="output"></div>
+
+    <script type="module">
+        import { Level } from '../src/models/Level.js';
+        import { Asset } from '../src/models/Asset.js';
+
+        const output = document.getElementById('output');
+
+        function log(message) {
+            console.log(message);
+            output.innerHTML += `<div>${message}</div>`;
+        }
+
+        log('🔍 Comprehensive debugging of group counting...');
+
+        // Test 1: Create level and check initial state
+        const level = new Level();
+        log('📋 Test 1: Initial level state');
+        log(`  Layers count: ${level.layers.length}`);
+        log(`  Objects count: ${level.objects.length}`);
+        level.layers.forEach((layer, i) => {
+            log(`  Layer ${i}: ${layer.name} (id: ${layer.id})`);
+        });
+
+        const mainLayerId = level.getMainLayerId();
+        log(`  Main layer ID: ${mainLayerId}`);
+        log(`  Type of mainLayerId: ${typeof mainLayerId}`);
+
+        // Test 2: Add regular object
+        log('\n📋 Test 2: Adding regular object');
+        const asset = new Asset({
+            name: 'Regular Object',
+            type: 'object',
+            width: 32,
+            height: 32,
+            color: '#ff0000'
+        });
+        const regularObj = asset.createInstance(0, 0);
+        log(`  Before addObject: id=${regularObj.id}, layerId=${regularObj.layerId}`);
+
+        level.addObject(regularObj);
+        log(`  After addObject: id=${regularObj.id}, layerId=${regularObj.layerId}`);
+        log(`  Objects in level: ${level.objects.length}`);
+        log(`  Objects in Main layer: ${level.getLayerObjectsCount(mainLayerId)}`);
+
+        // Test 3: Clear level and add only group
+        log('\n📋 Test 3: Clear level and add only group');
+        level.objects = [];
+        level.nextObjectId = 1;
+
+        log(`  Cleared level. Objects: ${level.objects.length}`);
+
+        const group = {
+            name: 'Single Group',
+            type: 'group',
+            x: 100,
+            y: 100,
+            visible: true,
+            locked: false,
+            layerId: mainLayerId,
+            children: []
+        };
+
+        log(`  Group before addObject: name=${group.name}, type=${group.type}, layerId=${group.layerId}, id=${group.id}`);
+
+        level.addObject(group);
+
+        log(`  Group after addObject: name=${group.name}, type=${group.type}, layerId=${group.layerId}, id=${group.id}`);
+        log(`  Objects in level: ${level.objects.length}`);
+
+        // Check all objects in level
+        log('  All objects in level:');
+        level.objects.forEach((obj, i) => {
+            log(`    ${i}: ${obj.name} (${obj.type}, layerId: ${obj.layerId}, id: ${obj.id})`);
+            log(`        layerId type: ${typeof obj.layerId}`);
+        });
+
+        // Test layer counting
+        log(`\n  Main layer ID: ${mainLayerId} (type: ${typeof mainLayerId})`);
+        const count = level.getLayerObjectsCount(mainLayerId);
+        log(`  getLayerObjectsCount result: ${count}`);
+
+        // Manual verification
+        const manualCount = level.objects.filter(obj => {
+            const match = obj.layerId === mainLayerId;
+            log(`    Checking ${obj.name}: layerId=${obj.layerId} === ${mainLayerId} -> ${match}`);
+            return match;
+        }).length;
+        log(`  Manual count: ${manualCount}`);
+
+        // Test 4: Check if group is in the right layer
+        log('\n📋 Test 4: Check layer objects');
+        const layerObjects = level.getLayerObjects(mainLayerId);
+        log(`  getLayerObjects returned ${layerObjects.length} objects:`);
+        layerObjects.forEach((obj, i) => {
+            log(`    ${i}: ${obj.name} (${obj.type}, layerId: ${obj.layerId})`);
+        });
+
+        // Test 5: Test with different layerId types
+        log('\n📋 Test 5: Testing layerId type conversion');
+        const group2 = {
+            name: 'Group 2',
+            type: 'group',
+            x: 200,
+            y: 200,
+            visible: true,
+            locked: false,
+            layerId: String(mainLayerId), // Convert to string
+            children: []
+        };
+
+        level.addObject(group2);
+        log(`  Added group with string layerId: ${group2.layerId} (type: ${typeof group2.layerId})`);
+
+        const count2 = level.getLayerObjectsCount(mainLayerId);
+        log(`  Count after adding string layerId group: ${count2}`);
+
+        log('\n🎉 Debug completed!');
+    </script>
+</body>
+</html>

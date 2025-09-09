@@ -18,14 +18,16 @@ export class GroupOperations extends BaseModule {
 
             // Calculate the bounding box of all selected objects to determine the new group's position
             const bounds = this.editor.objectOperations.getSelectionBounds(selectedTopLevelObjects);
+            const mainLayerId = this.editor.level.getMainLayerId();
+
             const newGroup = {
-                id: this.editor.level.nextObjectId++,
                 name: "New Group",
                 type: 'group',
                 x: bounds.minX,
                 y: bounds.minY,
                 visible: true,
                 locked: false,
+                layerId: mainLayerId, // Assign to Main layer
                 children: []
             };
             
@@ -41,11 +43,13 @@ export class GroupOperations extends BaseModule {
             });
 
             // Remove the original objects from the main level scene
-            this.editor.level.objects = this.editor.level.objects.filter(obj => !idsToRemove.has(obj.id));
+            idsToRemove.forEach(id => {
+                this.editor.level.removeObject(id);
+            });
             
-            // Add the newly created group to the scene
-            this.editor.level.objects.push(newGroup);
-            
+            // Add the newly created group to the scene using addObject method
+            this.editor.level.addObject(newGroup);
+
             // Clear the old selection and select only the new group
             this.editor.stateManager.set('selectedObjects', new Set([newGroup.id]));
             
@@ -166,8 +170,10 @@ export class GroupOperations extends BaseModule {
             return !groupsToUngroup.some(group => group.id === obj.id);
         });
 
-        // Add "freed" child objects to top level
-        this.editor.level.objects.push(...newTopLevelObjects);
+        // Add "freed" child objects to top level using addObject method
+        newTopLevelObjects.forEach(obj => {
+            this.editor.level.addObject(obj);
+        });
 
         this.editor.stateManager.set('selectedObjects', new Set());
         this.editor.render();

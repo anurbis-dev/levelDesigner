@@ -32,25 +32,37 @@ export class Level {
         
         this.objects = data.objects || [];
         this.nextObjectId = data.nextObjectId || 1;
-        
+
         // Initialize layers system
         this.layers = this.initializeLayers(data.layers);
+
+        // Store Main layer ID for consistent reference
+        this.mainLayerId = this.layers.length > 0 ? this.layers[0].id : null;
     }
 
     /**
      * Add object to level
      */
     addObject(obj) {
-        obj.id = this.nextObjectId++;
-        // Assign to Main layer by default (search by name, not position)
-        const mainLayerId = this.getMainLayerId();
-        if (mainLayerId) {
-            obj.layerId = mainLayerId;
-        } else if (this.layers.length > 0) {
-            // Fallback to first layer if Main layer not found
-            obj.layerId = this.layers[0].id;
+        // Only assign ID if not already set (for groups created elsewhere)
+        if (!obj.id) {
+            obj.id = this.nextObjectId++;
         }
+
+        // Assign to Main layer by default (first layer, protected from deletion)
+        // Only if layerId is not already set
+        if (!obj.layerId) {
+            const mainLayerId = this.getMainLayerId();
+            if (mainLayerId) {
+                obj.layerId = mainLayerId;
+            }
+        }
+
         this.objects.push(obj);
+
+        // Ensure all objects have valid layer references
+        this.fixLayerReferences();
+
         this.updateModified();
     }
 
@@ -176,11 +188,38 @@ export class Level {
     }
 
     /**
-     * Get Main layer ID (searches by name, not position)
+     * Get Main layer ID (the layer that serves as default for new objects)
+     * Returns the stored Main layer ID, which was set when the level was created
      */
     getMainLayerId() {
-        const mainLayer = this.getMainLayer();
-        return mainLayer ? mainLayer.id : null;
+        // Return stored Main layer ID, or fallback to first layer if not set
+        return this.mainLayerId || (this.layers.length > 0 ? this.layers[0].id : null);
+    }
+
+    /**
+     * Fix layer references for objects
+     * Ensures all objects have valid layerId references to existing layers
+     */
+    fixLayerReferences() {
+        const mainLayerId = this.getMainLayerId();
+        let fixedCount = 0;
+
+        this.objects.forEach(obj => {
+            // If object has invalid layerId or no layerId, assign to Main layer (first layer)
+            if (!obj.layerId || !this.getLayerById(obj.layerId)) {
+                if (mainLayerId) {
+                    obj.layerId = mainLayerId;
+                    fixedCount++;
+                }
+            }
+        });
+
+        if (fixedCount > 0) {
+            console.log(`Fixed ${fixedCount} object layer references to Main layer`);
+            this.updateModified();
+        }
+
+        return fixedCount;
     }
 
     /**
@@ -188,7 +227,7 @@ export class Level {
      */
     reorderLayers(layerIds) {
         const reorderedLayers = [];
-        
+
         layerIds.forEach((layerId, index) => {
             const layer = this.getLayerById(layerId);
             if (layer) {
@@ -196,7 +235,7 @@ export class Level {
                 reorderedLayers.push(layer);
             }
         });
-        
+
         this.layers = reorderedLayers;
         this.updateModified();
     }
@@ -260,7 +299,8 @@ export class Level {
                 }
             }),
             layers: this.layers.map(layer => layer.toJSON()),
-            nextObjectId: this.nextObjectId
+            nextObjectId: this.nextObjectId,
+            mainLayerId: this.mainLayerId
         };
     }
 
@@ -276,6 +316,12 @@ export class Level {
                 return GameObject.fromJSON(objData);
             }
         }) : [];
+
+        // Restore Main layer ID from saved data or use first layer
+        if (data.mainLayerId) {
+            level.mainLayerId = data.mainLayerId;
+        }
+
         return level;
     }
 }

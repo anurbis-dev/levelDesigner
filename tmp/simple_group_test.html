@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Group Test</title>
+</head>
+<body>
+    <h1>Simple Group Test</h1>
+    <div id="output"></div>
+
+    <script type="module">
+        import { Level } from '../src/models/Level.js';
+
+        const output = document.getElementById('output');
+
+        function log(message) {
+            console.log(message);
+            output.innerHTML += `<div>${message}</div>`;
+        }
+
+        log('🧪 Simple group test with debug output...');
+
+        // Create level
+        const level = new Level();
+
+        // Get main layer ID
+        const mainLayerId = level.getMainLayerId();
+        log(`Main layer ID: ${mainLayerId}`);
+
+        // Create group
+        const group = {
+            name: 'Test Group',
+            type: 'group',
+            x: 100,
+            y: 100,
+            visible: true,
+            locked: false,
+            layerId: mainLayerId,
+            children: []
+        };
+
+        log('Adding group...');
+        level.addObject(group);
+
+        log('Checking count...');
+        const count = level.getLayerObjectsCount(mainLayerId);
+        log(`Count result: ${count}`);
+
+        log('All objects:');
+        level.objects.forEach(obj => {
+            log(`  ${obj.name}: layerId=${obj.layerId}`);
+        });
+
+        log('Test completed!');
+    </script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Test</title>
+</head>
+<body>
+    <h1>Quick Test</h1>
+    <div id="output"></div>
+
+    <script type="module">
+        // Simple test without imports
+        const output = document.getElementById('output');
+
+        function log(message) {
+            console.log(message);
+            output.innerHTML += `<div>${message}</div>`;
+        }
+
+        log('🧪 Quick test - checking layerId behavior...');
+
+        // Simulate layer creation
+        const mockLayer = {
+            id: 'layer_123',
+            name: 'Main'
+        };
+
+        const mockGroup = {
+            name: 'Test Group',
+            type: 'group',
+            layerId: mockLayer.id
+        };
+
+        log(`Mock layer ID: ${mockLayer.id}`);
+        log(`Mock group layerId: ${mockGroup.layerId}`);
+        log(`Comparison: ${mockGroup.layerId === mockLayer.id}`);
+
+        // Test with string conversion
+        const strLayerId = String(mockLayer.id);
+        const strGroupLayerId = String(mockGroup.layerId);
+        log(`String comparison: "${strGroupLayerId}" === "${strLayerId}" -> ${strGroupLayerId === strLayerId}`);
+
+        // Test array filtering
+        const objects = [mockGroup];
+        const count = objects.filter(obj => obj.layerId === mockLayer.id).length;
+        log(`Filter count: ${count}`);
+
+        log('Test completed!');
+    </script>
+</body>
+</html>

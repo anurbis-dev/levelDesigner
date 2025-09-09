@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Check layerId Types</title>
+</head>
+<body>
+    <h1>Check layerId Types</h1>
+    <div id="output"></div>
+
+    <script type="module">
+        import { Level } from '../src/models/Level.js';
+
+        const output = document.getElementById('output');
+
+        function log(message) {
+            console.log(message);
+            output.innerHTML += `<div>${message}</div>`;
+        }
+
+        log('🔍 Checking layerId types and values...');
+
+        // Create level
+        const level = new Level();
+
+        // Check layers
+        log('Layers:');
+        level.layers.forEach(layer => {
+            log(`  ${layer.name}: id=${layer.id}, type=${typeof layer.id}`);
+        });
+
+        const mainLayerId = level.getMainLayerId();
+        log(`Main layer ID: ${mainLayerId}, type: ${typeof mainLayerId}`);
+
+        // Create group with explicit layerId
+        const group = {
+            name: 'Test Group',
+            type: 'group',
+            x: 100,
+            y: 100,
+            visible: true,
+            locked: false,
+            layerId: mainLayerId,  // Explicit assignment
+            children: []
+        };
+
+        log(`Group layerId before add: ${group.layerId}, type: ${typeof group.layerId}`);
+
+        // Add group
+        level.addObject(group);
+
+        log(`Group layerId after add: ${group.layerId}, type: ${typeof group.layerId}`);
+
+        // Check all objects
+        log('All objects after add:');
+        level.objects.forEach(obj => {
+            log(`  ${obj.name}: layerId=${obj.layerId}, type=${typeof obj.layerId}`);
+        });
+
+        // Test comparison
+        const comparison = group.layerId === mainLayerId;
+        log(`Comparison: ${group.layerId} === ${mainLayerId} -> ${comparison}`);
+
+        // Test with string conversion
+        const strComparison = String(group.layerId) === String(mainLayerId);
+        log(`String comparison: "${String(group.layerId)}" === "${String(mainLayerId)}" -> ${strComparison}`);
+
+        // Test count
+        const count = level.getLayerObjectsCount(mainLayerId);
+        log(`Count result: ${count}`);
+
+        log('Test completed!');
+    </script>
+</body>
+</html>

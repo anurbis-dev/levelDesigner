@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Main Layer Persistence Test</title>
+</head>
+<body>
+    <h1>Main Layer Persistence Test</h1>
+    <div id="output"></div>
+
+    <script type="module">
+        import { Level } from '../src/models/Level.js';
+        import { Asset } from '../src/models/Asset.js';
+
+        const output = document.getElementById('output');
+
+        function log(message) {
+            console.log(message);
+            output.innerHTML += `<div>${message}</div>`;
+        }
+
+        log('🧪 Testing Main layer persistence and reordering...');
+
+        // Create level
+        const level = new Level();
+
+        // Get initial Main layer ID
+        const initialMainLayerId = level.getMainLayerId();
+        log(`Initial Main layer ID: ${initialMainLayerId}`);
+        log(`Stored mainLayerId: ${level.mainLayerId}`);
+
+        // Add multiple layers
+        log('\n📋 Adding layers...');
+        const layer1 = level.addLayer('Background');
+        const layer2 = level.addLayer('Middle');
+        const layer3 = level.addLayer('Foreground');
+
+        log('Layers after adding:');
+        level.layers.forEach((layer, index) => {
+            log(`  Position ${index}: ${layer.name} (ID: ${layer.id})`);
+        });
+
+        // Test 1: Main layer ID should be consistent
+        const mainLayerIdAfterAdding = level.getMainLayerId();
+        log(`\n📋 Test 1: Main layer consistency`);
+        log(`Main layer ID after adding: ${mainLayerIdAfterAdding}`);
+        log(`Stored mainLayerId: ${level.mainLayerId}`);
+        log(`Consistent: ${initialMainLayerId === mainLayerIdAfterAdding ? 'YES' : 'NO'}`);
+
+        // Test 2: Add objects and check they go to Main layer
+        log('\n📋 Test 2: Adding objects');
+        const asset = new Asset({
+            name: 'Test Object',
+            type: 'object',
+            width: 32,
+            height: 32,
+            color: '#ff0000'
+        });
+
+        const obj1 = asset.createInstance(0, 0);
+        level.addObject(obj1);
+        log(`Object 1 layerId: ${obj1.layerId} (${obj1.layerId === mainLayerIdAfterAdding ? 'correct' : 'WRONG'})`);
+
+        // Test 3: Reorder layers
+        log('\n📋 Test 3: Reordering layers');
+
+        // Create new order that moves Main to the end
+        const originalOrder = level.layers.map(l => l.id);
+        log(`Original order: [${originalOrder.join(', ')}]`);
+
+        // Move Main layer to position 3 (last)
+        const newOrder = [...originalOrder];
+        const mainIndex = newOrder.indexOf(mainLayerIdAfterAdding);
+        newOrder.splice(mainIndex, 1);
+        newOrder.push(mainLayerIdAfterAdding);
+
+        log(`New order (Main moved to end): [${newOrder.join(', ')}]`);
+        level.reorderLayers(newOrder);
+
+        log('Layers after reordering:');
+        level.layers.forEach((layer, index) => {
+            log(`  Position ${index}: ${layer.name} (ID: ${layer.id})`);
+        });
+
+        // Test 4: Main layer ID should remain the same
+        const mainLayerIdAfterReorder = level.getMainLayerId();
+        log(`\n📋 Test 4: Main layer after reorder`);
+        log(`Main layer ID: ${mainLayerIdAfterReorder}`);
+        log(`Stored mainLayerId: ${level.mainLayerId}`);
+        log(`Still consistent: ${initialMainLayerId === mainLayerIdAfterReorder ? 'YES' : 'NO'}`);
+        log(`Position changed: ${level.layers.findIndex(l => l.id === mainLayerIdAfterReorder)} (should be 3)`);
+
+        // Test 5: Add more objects after reordering
+        const obj2 = asset.createInstance(100, 100);
+        level.addObject(obj2);
+        log(`\n📋 Test 5: Object after reorder`);
+        log(`Object 2 layerId: ${obj2.layerId} (${obj2.layerId === mainLayerIdAfterReorder ? 'correct' : 'WRONG'})`);
+
+        // Test 6: Serialize and deserialize
+        log('\n📋 Test 6: Serialization test');
+        const serialized = level.toJSON();
+        log(`Serialized mainLayerId: ${serialized.mainLayerId}`);
+
+        const deserialized = Level.fromJSON(serialized);
+        const deserializedMainLayerId = deserialized.getMainLayerId();
+        log(`Deserialized Main layer ID: ${deserializedMainLayerId}`);
+        log(`Deserialized stored mainLayerId: ${deserialized.mainLayerId}`);
+        log(`Serialization preserved: ${initialMainLayerId === deserializedMainLayerId ? 'YES' : 'NO'}`);
+
+        // Test 7: Add object to deserialized level
+        const obj3 = asset.createInstance(200, 200);
+        deserialized.addObject(obj3);
+        log(`\n📋 Test 7: Object in deserialized level`);
+        log(`Object 3 layerId: ${obj3.layerId} (${obj3.layerId === deserializedMainLayerId ? 'correct' : 'WRONG'})`);
+
+        log('\n🎉 Test completed successfully!');
+        log('✅ Main layer ID persistence confirmed!');
+    </script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-# Полный справочник API Level Editor v2.3.0
+# Полный справочник API Level Editor v2.4.4
 
 ## Обзор
 
@@ -129,10 +129,10 @@
 Операции с группами.
 
 #### Основные методы
-- `groupSelectedObjects()` - группировка выделенных объектов
+- `groupSelectedObjects()` - группировка выделенных объектов (группа добавляется в Main слой)
 - `openGroupEditMode(group)` - открытие режима редактирования группы
 - `closeGroupEditMode()` - закрытие режима редактирования группы
-- `ungroupSelectedObjects()` - разгруппировка выделенных объектов
+- `ungroupSelectedObjects()` - разгруппировка выделенных объектов (дети добавляются в Main слой)
 - `removeEmptyGroup(targetGroup)` - удаление пустой группы
 - `removeEmptyGroups()` - удаление всех пустых групп
 
@@ -362,12 +362,42 @@
 - `toJSON()` - сериализация в JSON
 - `static fromJSON(data)` - создание из JSON
 
+### Layer (src/models/Layer.js)
+Модель слоя уровня с поддержкой визуального управления.
+
+#### Свойства
+- `id` - уникальный идентификатор слоя
+- `name` - имя слоя
+- `visible` - видимость слоя
+- `locked` - блокировка слоя
+- `order` - порядок отображения в интерфейсе
+- `color` - цвет индикатора слоя
+
+#### Основные методы
+- `constructor(data)` - создание слоя
+- `toggleVisibility()` - переключение видимости
+- `toggleLock()` - переключение блокировки
+- `setName(name)` - установка имени
+- `setOrder(order)` - установка порядка
+- `toJSON()` - сериализация в JSON
+- `static fromJSON(data)` - создание из JSON
+- `clone()` - создание копии слоя
+
 ### Level (src/models/Level.js)
-Модель уровня.
+Модель уровня с поддержкой системы слоев.
+
+#### Свойства
+- `meta` - метаданные уровня (имя, версия, дата создания/модификации)
+- `settings` - настройки уровня (размер сетки, привязка, цвет фона)
+- `camera` - состояние камеры (позиция, зум)
+- `objects` - массив объектов уровня
+- `layers` - массив слоев уровня
+- `nextObjectId` - счетчик ID для новых объектов
+- `mainLayerId` - ID основного слоя (сохраняется между сессиями)
 
 #### Основные методы
 - `constructor(data)` - создание уровня
-- `addObject(obj)` - добавление объекта
+- `addObject(obj)` - добавление объекта с автоматическим назначением в Main слой
 - `removeObject(objId)` - удаление объекта
 - `findObjectById(id)` - поиск объекта по ID
 - `findInGroup(group, id)` - поиск в группе
@@ -375,8 +405,24 @@
 - `getGroupChildren(group)` - получение дочерних объектов группы
 - `getStats()` - получение статистики уровня
 - `updateModified()` - обновление времени модификации
-- `toJSON()` - сериализация в JSON
-- `static fromJSON(data)` - создание из JSON
+
+#### Методы работы со слоями
+- `initializeLayers(layersData)` - инициализация системы слоев
+- `addLayer(name)` - добавление нового слоя
+- `removeLayer(layerId)` - удаление слоя (нельзя удалить Main слой)
+- `getLayerById(layerId)` - поиск слоя по ID
+- `getMainLayer()` - получение объекта Main слоя
+- `getMainLayerId()` - получение ID Main слоя (постоянный)
+- `getLayerObjects(layerId)` - получение объектов слоя
+- `getLayerObjectsCount(layerId)` - подсчет объектов в слое
+- `assignObjectToLayer(objId, layerId)` - назначение объекта слою
+- `reorderLayers(layerIds)` - изменение порядка слоев
+- `getLayersSorted()` - получение отсортированных слоев
+- `fixLayerReferences()` - исправление ссылок на слои
+
+#### Сериализация
+- `toJSON()` - сериализация уровня в JSON (включая mainLayerId)
+- `static fromJSON(data)` - создание уровня из JSON (восстанавливает mainLayerId)
 
 ## UI компоненты
 
@@ -407,6 +453,27 @@
 - `addDropTarget()` - добавление стиля drop target
 - `removeDropTarget()` - удаление стиля drop target
 - `setupTabDragging()` - настройка перетаскивания вкладок
+
+### LayersPanel (src/ui/LayersPanel.js)
+Панель управления слоями с визуальным интерфейсом и подсчетом объектов.
+
+#### Основные методы
+- `constructor(container, stateManager, levelEditor)` - создание панели
+- `render()` - отрисовка панели слоев
+- `renderLayersSection()` - отрисовка секции слоев
+- `createLayerElement(layer)` - создание элемента слоя
+- `updateAllLayersObjectsCount()` - обновление счетчиков объектов
+- `setupLayersEventListeners()` - настройка обработчиков событий
+
+#### Управление слоями
+- `showColorPicker(layer, event)` - показ цветового пикера для слоя
+- `hideColorPicker()` - скрытие цветового пикера
+- `updateLayerElement(layerId, layer)` - обновление визуального состояния слоя
+
+#### Drag & Drop
+- `setupLayersDragAndDrop()` - настройка перетаскивания слоев
+- `handleDragStart(e, layerId)` - обработка начала перетаскивания
+- `handleDrop(e, targetLayerId)` - обработка сброса слоя
 
 ### CanvasRenderer (src/ui/CanvasRenderer.js)
 Рендерер canvas.
@@ -660,7 +727,7 @@
 
 ## Заключение
 
-Этот справочник содержит все доступные методы и функции Level Editor v2.3.2. Используйте его для:
+Этот справочник содержит все доступные методы и функции Level Editor v2.4.3. Используйте его для:
 
 1. **Понимания существующего API** - перед добавлением новой функциональности
 2. **Избежания дублирования** - проверки, не существует ли уже нужный метод
