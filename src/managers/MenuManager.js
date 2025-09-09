@@ -35,7 +35,7 @@ export class MenuManager {
      * Render all menus from configuration
      */
     renderMenus() {
-        const nav = this.container.querySelector('nav');
+        const nav = this.container; // container is now the nav element itself
         if (!nav) {
             this.logger.error('Navigation container not found');
             return;
@@ -43,24 +43,27 @@ export class MenuManager {
 
         // Clear existing menu structure but keep version info
         const versionInfo = nav.querySelector('.text-sm.text-gray-400');
-        nav.innerHTML = '';
+        const menuContainer = nav.querySelector('#menu-container');
 
-        // Create menu container
-        const menuContainer = document.createElement('div');
-        menuContainer.className = 'flex items-center space-x-4';
+        // Clear only the menu container content
+        if (menuContainer) {
+            menuContainer.innerHTML = '';
+        } else {
+            // If menu-container doesn't exist, create it
+            const newMenuContainer = document.createElement('div');
+            newMenuContainer.id = 'menu-container';
+            newMenuContainer.className = 'flex items-center space-x-4';
+            nav.insertBefore(newMenuContainer, versionInfo);
+        }
+
+        // Get the menu container (either existing or newly created)
+        const targetContainer = nav.querySelector('#menu-container');
 
         // Render each menu
         MENU_CONFIG.menus.forEach(menuConfig => {
             const menuElement = this.createMenu(menuConfig);
-            menuContainer.appendChild(menuElement);
+            targetContainer.appendChild(menuElement);
         });
-
-        nav.appendChild(menuContainer);
-
-        // Restore version info
-        if (versionInfo) {
-            nav.appendChild(versionInfo);
-        }
 
         this.logger.info('Menus rendered successfully');
     }

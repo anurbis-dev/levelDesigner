@@ -32,7 +32,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '2.5.3';
+    static VERSION = '2.5.4';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -144,14 +144,15 @@ export class LevelEditor {
         
         // Initialize MenuManager
         const menuContainer = document.getElementById('menu-container');
-        if (menuContainer) {
-            this.menuManager = new MenuManager(menuContainer, this.eventHandlers);
+        const navElement = menuContainer?.closest('nav');
+        if (navElement) {
+            this.menuManager = new MenuManager(navElement, this.eventHandlers);
             this.menuManager.initialize();
 
             // Update EventHandlers with MenuManager reference
             this.eventHandlers.menuManager = this.menuManager;
         } else {
-            Logger.warn('Menu container not found, menu functionality will be limited');
+            Logger.warn('Navigation element not found, menu functionality will be limited');
         }
 
         // Setup event listeners
