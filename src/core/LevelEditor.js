@@ -32,7 +32,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '2.5.4';
+    static VERSION = '2.5.5';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -92,6 +92,34 @@ export class LevelEditor {
     }
 
     /**
+     * Ensure Player Start object exists on the level
+     */
+    ensurePlayerStartExists() {
+        const hasPlayerStart = this.level.objects.some(obj => obj.type === 'player_start');
+
+        if (!hasPlayerStart) {
+            Logger.event.info('🚀 Player Start object not found, creating default one');
+
+            const playerStart = {
+                id: this.generateId(),
+                name: 'Player Start',
+                type: 'player_start',
+                x: 50,
+                y: 50,
+                width: 32,
+                height: 32,
+                color: 'lightblue',
+                visible: true,
+                locked: false,
+                properties: {}
+            };
+
+            this.level.addObject(playerStart);
+            Logger.event.info('✅ Player Start object created and added to level');
+        }
+    }
+
+    /**
      * Initialize the editor
      */
     async init() {
@@ -133,6 +161,7 @@ export class LevelEditor {
         
         // Create new level
         this.level = this.fileManager.createNewLevel();
+        this.ensurePlayerStartExists();
         
         // Apply configuration to level settings
         this.applyConfigurationToLevel();
@@ -426,6 +455,7 @@ export class LevelEditor {
         }
         
         this.level = this.fileManager.createNewLevel();
+        this.ensurePlayerStartExists();
         this.stateManager.reset();
         
         // Re-initialize group edit mode state after reset
@@ -449,6 +479,7 @@ export class LevelEditor {
         
         try {
             this.level = await this.fileManager.loadLevelFromFileInput();
+            this.ensurePlayerStartExists();
             this.stateManager.reset();
             
             // Re-initialize group edit mode state after reset

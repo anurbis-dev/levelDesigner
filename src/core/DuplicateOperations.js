@@ -41,12 +41,23 @@ export class DuplicateOperations extends BaseModule {
         // Collect selected objects
         const selected = Array.from(selectedIds)
             .map(id => this.editor.level.findObjectById(id))
-            .filter(Boolean);
+            .filter(Boolean)
+            .filter(obj => obj.type !== 'player_start'); // Filter out Player Start objects
 
         Logger.duplicate.debug('Found objects:', selected.length, selected);
 
+        // Log filtered out Player Start objects
+        const playerStartCount = Array.from(selectedIds)
+            .map(id => this.editor.level.findObjectById(id))
+            .filter(Boolean)
+            .filter(obj => obj.type === 'player_start').length;
+
+        if (playerStartCount > 0) {
+            Logger.duplicate.info(`🚫 Skipped ${playerStartCount} Player Start object(s) - they cannot be duplicated`);
+        }
+
         if (selected.length === 0) {
-            Logger.duplicate.debug('No valid objects found, returning');
+            Logger.duplicate.debug('No valid objects found (Player Start objects filtered out), returning');
             return;
         }
 

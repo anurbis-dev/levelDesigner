@@ -120,7 +120,15 @@ export class ObjectOperations extends BaseModule {
         // Delete selected objects - they can be on main level or inside groups
         const idsToDelete = new Set(selectedObjects);
 
-        console.log(`[OBJECT OPERATIONS DEBUG] 🗑️ Starting deletion of ${idsToDelete.size} selected objects`);
+        // Filter out Player Start objects - they cannot be deleted
+        for (const obj of this.editor.level.objects) {
+            if (obj.type === 'player_start' && idsToDelete.has(obj.id)) {
+                console.log(`[OBJECT OPERATIONS DEBUG] 🚫 Player Start object cannot be deleted: ${obj.name} (ID: ${obj.id})`);
+                idsToDelete.delete(obj.id);
+            }
+        }
+
+        console.log(`[OBJECT OPERATIONS DEBUG] 🗑️ Starting deletion of ${idsToDelete.size} selected objects (Player Start objects filtered out)`);
 
         // First, collect all objects that need to be deleted (including children of deleted groups)
         const collectObjectsToDelete = (objects) => {
@@ -130,8 +138,13 @@ export class ObjectOperations extends BaseModule {
                     if (idsToDelete.has(obj.id)) {
                         console.log(`[OBJECT OPERATIONS DEBUG] 📦 Group ${obj.name} is being deleted, marking all children for deletion`);
                         obj.children.forEach(child => {
-                            console.log(`[OBJECT OPERATIONS DEBUG] ➕ Adding child ${child.name} (ID: ${child.id}) to deletion set`);
-                            idsToDelete.add(child.id);
+                            // Skip Player Start objects
+                            if (child.type !== 'player_start') {
+                                console.log(`[OBJECT OPERATIONS DEBUG] ➕ Adding child ${child.name} (ID: ${child.id}) to deletion set`);
+                                idsToDelete.add(child.id);
+                            } else {
+                                console.log(`[OBJECT OPERATIONS DEBUG] 🚫 Skipping Player Start child: ${child.name} (ID: ${child.id})`);
+                            }
                         });
                     } else {
                         // Process children recursively for groups that are not being deleted
