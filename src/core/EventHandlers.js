@@ -1,5 +1,6 @@
 import { BaseModule } from './BaseModule.js';
 import { Logger } from '../utils/Logger.js';
+import { MENU_CONFIG, getShortcutTarget } from '../../config/menu.js';
 
 /**
  * Event Handlers module for LevelEditor
@@ -99,50 +100,28 @@ export class EventHandlers extends BaseModule {
     setupKeyboardEvents() {
         window.addEventListener('keydown', (e) => {
             if (document.activeElement.tagName === 'INPUT') return;
-            
+
             // Handle escape key to cancel all current actions
             if (e.key === 'Escape') {
+                e.preventDefault();
                 this.editor.cancelAllActions();
                 return;
             }
             
             if (e.key === 'Delete' || e.key.toLowerCase() === 'x') {
+                e.preventDefault();
                 this.editor.objectOperations.deleteSelectedObjects();
             } else if (e.shiftKey && e.key.toLowerCase() === 'd') {
                 e.preventDefault();
-
-                // Check if any selected objects are Player Start
-                const selectedObjects = this.editor.stateManager.get('selectedObjects');
-                const hasPlayerStart = selectedObjects && Array.from(selectedObjects).some(id => {
-                    const obj = this.editor.level.findObjectById(id);
-                    return obj && obj.type === 'player_start';
-                });
-
-                if (hasPlayerStart) {
-                    Logger.event.warn('🚫 Shift+D duplication blocked: Player Start objects cannot be duplicated');
-                    return;
-                }
-
                 this.editor.objectOperations.duplicateSelectedObjects();
             } else if (e.key.toLowerCase() === 'f') {
+                e.preventDefault();
                 this.editor.focusOnSelection();
             } else if (e.key.toLowerCase() === 'a') {
+                e.preventDefault();
                 this.editor.focusOnAll();
             } else if (e.shiftKey && e.key.toLowerCase() === 'g') {
                 e.preventDefault();
-
-                // Check if any selected objects are Player Start
-                const selectedObjects = this.editor.stateManager.get('selectedObjects');
-                const hasPlayerStart = selectedObjects && Array.from(selectedObjects).some(id => {
-                    const obj = this.editor.level.findObjectById(id);
-                    return obj && obj.type === 'player_start';
-                });
-
-                if (hasPlayerStart) {
-                    Logger.event.warn('🚫 Ctrl+G grouping blocked: Player Start objects cannot be grouped');
-                    return;
-                }
-
                 this.editor.groupOperations.groupSelectedObjects();
             } else if (e.altKey && e.key.toLowerCase() === 'g') {
                 e.preventDefault();
@@ -154,6 +133,19 @@ export class EventHandlers extends BaseModule {
                 } else if (e.key.toLowerCase() === 'y') {
                     e.preventDefault();
                     this.editor.redo();
+                } else if (e.key.toLowerCase() === 'n') {
+                    e.preventDefault();
+                    this.editor.newLevel();
+                } else if (e.key.toLowerCase() === 'o') {
+                    e.preventDefault();
+                    this.editor.openLevel();
+                } else if (e.key.toLowerCase() === 's') {
+                    e.preventDefault();
+                    if (e.shiftKey) {
+                        this.editor.saveLevelAs();
+                    } else {
+                        this.editor.saveLevel();
+                    }
                 }
             }
         });

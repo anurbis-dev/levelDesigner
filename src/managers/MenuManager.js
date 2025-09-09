@@ -127,20 +127,31 @@ export class MenuManager {
         element.className = template.classes;
         element.href = template.href || '#';
 
-        // Add checkbox for toggle items
+        // Set up content based on item type
+        let contentHtml = '';
         if (itemConfig.type === 'toggle' && template.checkboxHtml) {
-            const checkboxHtml = template.checkboxHtml.replace('{id}', itemConfig.id);
-            element.innerHTML = checkboxHtml + itemConfig.label;
+            contentHtml = template.checkboxHtml.replace('{id}', itemConfig.id) + itemConfig.label;
         } else {
-            element.textContent = itemConfig.label;
+            contentHtml = itemConfig.label;
         }
 
         // Add keyboard shortcut if available
         if (itemConfig.shortcut) {
+            // Make the element a flex container for proper alignment
+            element.className += ' flex items-center justify-between';
+            element.innerHTML = contentHtml;
+
             const shortcutSpan = document.createElement('span');
-            shortcutSpan.className = 'ml-auto text-xs text-gray-400';
+            shortcutSpan.className = 'text-xs text-gray-400 ml-4';
             shortcutSpan.textContent = itemConfig.shortcut;
             element.appendChild(shortcutSpan);
+        } else {
+            // No shortcut, just set content normally
+            if (itemConfig.type === 'toggle' && template.checkboxHtml) {
+                element.innerHTML = contentHtml;
+            } else {
+                element.textContent = itemConfig.label;
+            }
         }
 
         return element;
