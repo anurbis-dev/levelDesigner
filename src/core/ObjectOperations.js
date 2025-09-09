@@ -157,6 +157,9 @@ export class ObjectOperations extends BaseModule {
         // Collect all objects to delete
         collectObjectsToDelete(this.editor.level.objects);
 
+        // Extract Player Start objects from groups that are being deleted
+        this.extractPlayerStartFromGroups(idsToDelete);
+
         // Now remove all collected objects from everywhere they might be
         const removeFromArrays = (objects) => {
             for (const obj of objects) {
@@ -254,5 +257,55 @@ export class ObjectOperations extends BaseModule {
             this.editor.level.objects.forEach(o => selectable.add(o.id));
         }
         return selectable;
+    }
+
+    /**
+     * Extract Player Start objects from groups that are being deleted
+     * @param {Set} idsToDelete - Set of object IDs to be deleted
+     */
+    extractPlayerStartFromGroups(idsToDelete) {
+        const extractFromGroup = (group, parentObjects, parentIndex = -1) => {
+            if (!group.children || group.children.length === 0) return;
+
+            for (let i = group.children.length - 1; i >= 0; i--) {
+                const child = group.children[i];
+
+                if (child.type === 'player_start') {
+                    console.log(`[OBJECT OPERATIONS DEBUG] 🚀 Extracting Player Start ${child.name} from group ${group.name}`);
+
+                    // Calculate world position before extraction
+                    const groupPos = this.editor.objectOperations.getObjectWorldPosition(group);
+                    child.x += groupPos.x;
+                    child.y += groupPos.y;
+
+                    // Remove from group
+                    group.children.splice(i, 1);
+
+                    // Add to parent level
+                    if (parentIndex >= 0 && parentObjects) {
+                        // Insert at the position where the group was
+                        parentObjects.splice(parentIndex + 1, 0, child);
+                    } else {
+                        // Add to main level
+                        this.editor.level.objects.push(child);
+                    }
+
+                    console.log(`[OBJECT OPERATIONS DEBUG] ✅ Player Start extracted to ${parentObjects ? 'parent level' : 'main level'}`);
+                } else if (child.type === 'group') {
+                    // Recursively process nested groups
+                    extractFromGroup(child, group.children, i);
+                }
+            }
+        };
+
+        // Process all top-level objects
+        for (let i = this.editor.level.objects.length - 1; i >= 0; i--) {
+            const obj = this.editor.level.objects[i];
+
+            if (obj.type === 'group' && idsToDelete.has(obj.id)) {
+                // This group is being deleted, extract Player Start objects
+                extractFromGroup(obj, this.editor.level.objects, i);
+            }
+        }
     }
 }

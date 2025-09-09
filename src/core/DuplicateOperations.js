@@ -39,21 +39,21 @@ export class DuplicateOperations extends BaseModule {
         }
 
         // Collect selected objects
-        const selected = Array.from(selectedIds)
+        const allSelected = Array.from(selectedIds)
             .map(id => this.editor.level.findObjectById(id))
-            .filter(Boolean)
-            .filter(obj => obj.type !== 'player_start'); // Filter out Player Start objects
+            .filter(Boolean);
 
-        Logger.duplicate.debug('Found objects:', selected.length, selected);
+        Logger.duplicate.debug('All selected objects before filtering:', allSelected.map(obj => `${obj.name} (${obj.type})`));
+
+        const selected = allSelected.filter(obj => obj.type !== 'player_start'); // Filter out Player Start objects
+        const filteredPlayerStarts = allSelected.filter(obj => obj.type === 'player_start');
+
+        Logger.duplicate.debug('Objects after filtering Player Start:', selected.map(obj => `${obj.name} (${obj.type})`));
 
         // Log filtered out Player Start objects
-        const playerStartCount = Array.from(selectedIds)
-            .map(id => this.editor.level.findObjectById(id))
-            .filter(Boolean)
-            .filter(obj => obj.type === 'player_start').length;
-
-        if (playerStartCount > 0) {
-            Logger.duplicate.info(`🚫 Skipped ${playerStartCount} Player Start object(s) - they cannot be duplicated`);
+        if (filteredPlayerStarts.length > 0) {
+            Logger.duplicate.warn(`🚫 Player Start objects cannot be duplicated: ${filteredPlayerStarts.map(obj => obj.name).join(', ')}`);
+            Logger.duplicate.info(`📊 Duplication: ${selected.length} objects will be duplicated, ${filteredPlayerStarts.length} Player Start objects skipped`);
         }
 
         if (selected.length === 0) {
@@ -161,6 +161,12 @@ export class DuplicateOperations extends BaseModule {
         const newIds = new Set();
 
         duplicate.objects.forEach((obj) => {
+            // Double-check: ensure Player Start objects are not in the final placement list
+            if (obj.type === 'player_start') {
+                Logger.duplicate.error(`🚫 CRITICAL: Player Start object ${obj.name} found in final placement list! This should not happen.`);
+                return; // Skip this object
+            }
+
             const offsetX = obj._offsetX ?? 0;
             const offsetY = obj._offsetY ?? 0;
 
