@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Main Layer Assignment Test</title>
+</head>
+<body>
+    <h1>Main Layer Assignment Test</h1>
+    <div id="output"></div>
+
+    <script type="module">
+        import { Level } from '../src/models/Level.js';
+        import { Asset } from '../src/models/Asset.js';
+
+        const output = document.getElementById('output');
+        
+        function log(message) {
+            console.log(message);
+            output.innerHTML += `<div>${message}</div>`;
+        }
+
+        log('🧪 Testing Main layer assignment logic...');
+
+        // Create a new level
+        const level = new Level();
+
+        log('📋 Initial layers:');
+        level.layers.forEach((layer, index) => {
+            log(`  ${index}: ${layer.name} (ID: ${layer.id})`);
+        });
+
+        // Test 1: Add layer before Main
+        log('\n🔄 Test 1: Adding layer before Main...');
+        const newLayer1 = level.addLayer('Background');
+        log(`Added: ${newLayer1.name} (ID: ${newLayer1.id})`);
+
+        log('📋 Layers after adding Background:');
+        level.layers.forEach((layer, index) => {
+            log(`  ${index}: ${layer.name} (ID: ${layer.id})`);
+        });
+
+        // Test 2: Add another layer
+        log('\n🔄 Test 2: Adding another layer...');
+        const newLayer2 = level.addLayer('Foreground');
+        log(`Added: ${newLayer2.name} (ID: ${newLayer2.id})`);
+
+        log('📋 Final layer order:');
+        level.layers.forEach((layer, index) => {
+            log(`  ${index}: ${layer.name} (ID: ${layer.id})`);
+        });
+
+        // Test 3: Check Main layer detection
+        const mainLayer = level.getMainLayer();
+        const mainLayerId = level.getMainLayerId();
+        log(`\n🎯 Main layer found: ${mainLayer ? mainLayer.name : 'NOT FOUND'}`);
+        log(`🎯 Main layer ID: ${mainLayerId}`);
+
+        // Test 4: Add object and check assignment
+        log('\n🔄 Test 4: Adding object to level...');
+        const asset = new Asset({
+            name: 'Test Object',
+            type: 'object',
+            width: 32,
+            height: 32,
+            color: '#ff0000'
+        });
+
+        const instance = asset.createInstance(100, 100);
+        level.addObject(instance);
+
+        log(`✅ Object added: ${instance.name}`);
+        log(`🔗 Object layerId: ${instance.layerId}`);
+        log(`🎯 Main layer ID: ${mainLayerId}`);
+        log(`✅ Correctly assigned to Main: ${instance.layerId === mainLayerId ? 'YES' : 'NO'}`);
+
+        // Test 5: Reorder layers and test again
+        log('\n🔄 Test 5: Reordering layers...');
+        const layerIds = level.layers.map(l => l.id);
+        // Move Main to the end
+        const mainIndex = layerIds.indexOf(mainLayerId);
+        layerIds.splice(mainIndex, 1);
+        layerIds.push(mainLayerId);
+        
+        level.reorderLayers(layerIds);
+        
+        log('📋 Layers after reordering (Main moved to end):');
+        level.layers.forEach((layer, index) => {
+            log(`  ${index}: ${layer.name} (ID: ${layer.id})`);
+        });
+
+        // Test 6: Add another object after reordering
+        log('\n🔄 Test 6: Adding object after reordering...');
+        const asset2 = new Asset({
+            name: 'Test Object 2',
+            type: 'object',
+            width: 32,
+            height: 32,
+            color: '#00ff00'
+        });
+
+        const instance2 = asset2.createInstance(200, 200);
+        level.addObject(instance2);
+
+        log(`✅ Object added: ${instance2.name}`);
+        log(`🔗 Object layerId: ${instance2.layerId}`);
+        log(`🎯 Main layer ID: ${mainLayerId}`);
+        log(`✅ Correctly assigned to Main: ${instance2.layerId === mainLayerId ? 'YES' : 'NO'}`);
+
+        log('\n🎉 Test completed!');
+    </script>
+</body>
+</html>

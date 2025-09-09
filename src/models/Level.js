@@ -42,8 +42,12 @@ export class Level {
      */
     addObject(obj) {
         obj.id = this.nextObjectId++;
-        // Assign to main layer by default
-        if (this.layers.length > 0) {
+        // Assign to Main layer by default (search by name, not position)
+        const mainLayerId = this.getMainLayerId();
+        if (mainLayerId) {
+            obj.layerId = mainLayerId;
+        } else if (this.layers.length > 0) {
+            // Fallback to first layer if Main layer not found
             obj.layerId = this.layers[0].id;
         }
         this.objects.push(obj);
@@ -165,10 +169,18 @@ export class Level {
     }
 
     /**
-     * Get Main layer ID (first layer is always Main)
+     * Get Main layer (searches by name, not position)
+     */
+    getMainLayer() {
+        return this.layers.find(layer => layer.name === 'Main');
+    }
+
+    /**
+     * Get Main layer ID (searches by name, not position)
      */
     getMainLayerId() {
-        return this.layers.length > 0 ? this.layers[0].id : null;
+        const mainLayer = this.getMainLayer();
+        return mainLayer ? mainLayer.id : null;
     }
 
     /**
