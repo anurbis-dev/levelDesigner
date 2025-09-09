@@ -120,13 +120,12 @@ export class ObjectOperations extends BaseModule {
         // Delete selected objects - they can be on main level or inside groups
         const idsToDelete = new Set(selectedObjects);
 
+        console.log(`[OBJECT OPERATIONS DEBUG] 🗑️ Starting deletion of ${idsToDelete.size} selected objects`);
+
         // First, collect all objects that need to be deleted (including children of deleted groups)
         const collectObjectsToDelete = (objects) => {
             for (const obj of objects) {
                 if (obj.type === 'group') {
-                    // Process children recursively
-                    collectObjectsToDelete(obj.children);
-
                     // If this group is being deleted, add all its children to deletion set
                     if (idsToDelete.has(obj.id)) {
                         console.log(`[OBJECT OPERATIONS DEBUG] 📦 Group ${obj.name} is being deleted, marking all children for deletion`);
@@ -135,8 +134,8 @@ export class ObjectOperations extends BaseModule {
                             idsToDelete.add(child.id);
                         });
                     } else {
-                        // Remove individual children that were selected for deletion
-                        obj.children = obj.children.filter(child => !idsToDelete.has(child.id));
+                        // Process children recursively for groups that are not being deleted
+                        collectObjectsToDelete(obj.children);
                     }
                 }
             }
@@ -145,9 +144,34 @@ export class ObjectOperations extends BaseModule {
         // Collect all objects to delete
         collectObjectsToDelete(this.editor.level.objects);
 
-        // Remove all selected objects from main level
-        console.log(`[OBJECT OPERATIONS DEBUG] 🗑️ Removing ${idsToDelete.size} objects from level:`, Array.from(idsToDelete));
+        // Now remove all collected objects from everywhere they might be
+        const removeFromArrays = (objects) => {
+            for (const obj of objects) {
+                if (obj.type === 'group') {
+                    // Remove deleted children from this group's children array
+                    const originalCount = obj.children.length;
+                    obj.children = obj.children.filter(child => !idsToDelete.has(child.id));
+                    const removedCount = originalCount - obj.children.length;
+                    if (removedCount > 0) {
+                        console.log(`[OBJECT OPERATIONS DEBUG] 🧹 Removed ${removedCount} children from group ${obj.name}`);
+                    }
+
+                    // Process nested groups
+                    removeFromArrays(obj.children);
+                }
+            }
+        };
+
+        // Remove objects from all nested arrays
+        removeFromArrays(this.editor.level.objects);
+
+        // Remove all collected objects from main level
+        console.log(`[OBJECT OPERATIONS DEBUG] 🗑️ Final deletion set has ${idsToDelete.size} objects:`, Array.from(idsToDelete));
+        const originalCount = this.editor.level.objects.length;
         this.editor.level.objects = this.editor.level.objects.filter(obj => !idsToDelete.has(obj.id));
+        const removedCount = originalCount - this.editor.level.objects.length;
+
+        console.log(`[OBJECT OPERATIONS DEBUG] ✅ Removed ${removedCount} objects from main level`);
 
         // Clean up any empty groups that might remain after deletion
         console.log(`[OBJECT OPERATIONS DEBUG] 🧹 Cleaning up empty groups...`);
