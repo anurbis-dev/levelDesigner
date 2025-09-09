@@ -8,27 +8,41 @@ import { MENU_CONFIG, getShortcutTarget } from '../../config/menu.js';
  */
 export class EventHandlers extends BaseModule {
     constructor(levelEditor, menuManager = null) {
+        console.log('[EVENTS] EventHandlers constructor called');
+        console.log('[EVENTS] LevelEditor instance:', levelEditor ? 'provided' : 'null');
+        console.log('[EVENTS] MenuManager instance:', menuManager ? 'provided' : 'null');
+
         super(levelEditor);
         this._rafId = null; // render loop id
         this.menuManager = menuManager;
+
+        console.log('[EVENTS] EventHandlers initialized successfully');
     }
 
     /**
      * Setup all event listeners
      */
     setupEventListeners() {
+        console.log('[EVENTS] Setting up event listeners...');
+        console.log('[EVENTS] Editor instance:', this.editor ? 'exists' : 'null');
+
         // Window resize
         window.addEventListener('resize', () => {
+            console.log('[EVENTS] Window resize event');
             this.editor.canvasRenderer.resizeCanvas();
             this.editor.render();
         });
-        
+
         // Canvas events
+        console.log('[EVENTS] Setting up canvas events...');
         this.setupCanvasEvents();
-        
+
         // Keyboard events
+        console.log('[EVENTS] Setting up keyboard events...');
         this.setupKeyboardEvents();
-        
+
+        console.log('[EVENTS] Event listeners setup completed');
+
         // Initialize group edit mode state
         this.editor.stateManager.set('groupEditMode', {
             isActive: false,
@@ -98,55 +112,160 @@ export class EventHandlers extends BaseModule {
     }
 
     setupKeyboardEvents() {
+        console.log('[HOTKEYS] Setting up keyboard events...');
         window.addEventListener('keydown', (e) => {
-            if (document.activeElement.tagName === 'INPUT') return;
+            // Allow input fields to work normally
+            if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.contentEditable === 'true')) {
+                console.log('[HOTKEYS] Ignoring - focus on input field:', document.activeElement.tagName);
+                return;
+            }
+
+            console.log(`[HOTKEYS] Key event: "${e.key}" (code: ${e.code}), Ctrl: ${e.ctrlKey}, Shift: ${e.shiftKey}, Alt: ${e.altKey}, Meta: ${e.metaKey}`);
 
             // Handle escape key to cancel all current actions
             if (e.key === 'Escape') {
+                console.log('[HOTKEYS] Escape pressed - preventing default and canceling actions');
                 e.preventDefault();
+                console.log('[HOTKEYS] Default prevented:', !e.defaultPrevented);
                 this.editor.cancelAllActions();
                 return;
             }
             
             if (e.key === 'Delete' || e.key.toLowerCase() === 'x') {
+                console.log('[HOTKEYS] Delete pressed - deleting selected objects');
                 e.preventDefault();
-                this.editor.objectOperations.deleteSelectedObjects();
-            } else if (e.shiftKey && e.key.toLowerCase() === 'd') {
-                e.preventDefault();
-                this.editor.objectOperations.duplicateSelectedObjects();
-            } else if (e.key.toLowerCase() === 'f') {
-                e.preventDefault();
-                this.editor.focusOnSelection();
-            } else if (e.key.toLowerCase() === 'a') {
-                e.preventDefault();
-                this.editor.focusOnAll();
-            } else if (e.shiftKey && e.key.toLowerCase() === 'g') {
-                e.preventDefault();
-                this.editor.groupOperations.groupSelectedObjects();
-            } else if (e.altKey && e.key.toLowerCase() === 'g') {
-                e.preventDefault();
-                this.editor.groupOperations.ungroupSelectedObjects();
-            } else if (e.ctrlKey || e.metaKey) {
-                if (e.key.toLowerCase() === 'z') {
-                    e.preventDefault();
-                    e.shiftKey ? this.editor.redo() : this.editor.undo();
-                } else if (e.key.toLowerCase() === 'y') {
-                    e.preventDefault();
-                    this.editor.redo();
-                } else if (e.key.toLowerCase() === 'n') {
-                    e.preventDefault();
-                    this.editor.newLevel();
-                } else if (e.key.toLowerCase() === 'o') {
-                    e.preventDefault();
-                    this.editor.openLevel();
-                } else if (e.key.toLowerCase() === 's') {
-                    e.preventDefault();
-                    if (e.shiftKey) {
-                        this.editor.saveLevelAs();
-                    } else {
-                        this.editor.saveLevel();
-                    }
+                console.log('[HOTKEYS] Delete - default prevented:', e.defaultPrevented);
+                if (this.editor.objectOperations && typeof this.editor.objectOperations.deleteSelectedObjects === 'function') {
+                    console.log('[HOTKEYS] Calling deleteSelectedObjects()');
+                    this.editor.objectOperations.deleteSelectedObjects();
+                } else {
+                    console.error('[HOTKEYS] deleteSelectedObjects method not found!');
                 }
+            } else if (e.shiftKey && e.key.toLowerCase() === 'd') {
+                console.log('[HOTKEYS] Shift+D pressed - duplicating objects');
+                e.preventDefault();
+                console.log('[HOTKEYS] Shift+D - default prevented:', e.defaultPrevented);
+                if (this.editor.objectOperations && typeof this.editor.objectOperations.duplicateSelectedObjects === 'function') {
+                    console.log('[HOTKEYS] Calling duplicateSelectedObjects()');
+                    this.editor.objectOperations.duplicateSelectedObjects();
+                } else {
+                    console.error('[HOTKEYS] duplicateSelectedObjects method not found!');
+                }
+            } else if (e.key.toLowerCase() === 'f') {
+                console.log('[HOTKEYS] F pressed - focus on selection');
+                e.preventDefault();
+                console.log('[HOTKEYS] F - default prevented:', e.defaultPrevented);
+                if (typeof this.editor.focusOnSelection === 'function') {
+                    console.log('[HOTKEYS] Calling focusOnSelection()');
+                    this.editor.focusOnSelection();
+                } else {
+                    console.error('[HOTKEYS] focusOnSelection method not found!');
+                }
+            } else if (e.key.toLowerCase() === 'a') {
+                console.log('[HOTKEYS] A pressed - focus on all');
+                e.preventDefault();
+                console.log('[HOTKEYS] A - default prevented:', e.defaultPrevented);
+                if (typeof this.editor.focusOnAll === 'function') {
+                    console.log('[HOTKEYS] Calling focusOnAll()');
+                    this.editor.focusOnAll();
+                } else {
+                    console.error('[HOTKEYS] focusOnAll method not found!');
+                }
+            } else if (e.shiftKey && e.key.toLowerCase() === 'g') {
+                console.log('[HOTKEYS] Shift+G pressed - grouping objects');
+                e.preventDefault();
+                console.log('[HOTKEYS] Shift+G - default prevented:', e.defaultPrevented);
+                if (this.editor.groupOperations && typeof this.editor.groupOperations.groupSelectedObjects === 'function') {
+                    console.log('[HOTKEYS] Calling groupSelectedObjects()');
+                    this.editor.groupOperations.groupSelectedObjects();
+                } else {
+                    console.error('[HOTKEYS] groupSelectedObjects method not found!');
+                }
+            } else if (e.altKey && e.key.toLowerCase() === 'g') {
+                console.log('[HOTKEYS] Alt+G pressed - ungrouping objects');
+                e.preventDefault();
+                console.log('[HOTKEYS] Alt+G - default prevented:', e.defaultPrevented);
+                if (this.editor.groupOperations && typeof this.editor.groupOperations.ungroupSelectedObjects === 'function') {
+                    console.log('[HOTKEYS] Calling ungroupSelectedObjects()');
+                    this.editor.groupOperations.ungroupSelectedObjects();
+                } else {
+                    console.error('[HOTKEYS] ungroupSelectedObjects method not found!');
+                }
+            } else if (e.ctrlKey || e.metaKey) {
+                console.log('[HOTKEYS] Ctrl combination detected');
+                if (e.key.toLowerCase() === 'z') {
+                    console.log('[HOTKEYS] Ctrl+Z pressed - undo');
+                    e.preventDefault();
+                    console.log('[HOTKEYS] Ctrl+Z - default prevented:', e.defaultPrevented);
+                    if (e.shiftKey) {
+                        if (typeof this.editor.redo === 'function') {
+                            console.log('[HOTKEYS] Calling redo()');
+                            this.editor.redo();
+                        } else {
+                            console.error('[HOTKEYS] redo method not found!');
+                        }
+                    } else {
+                        if (typeof this.editor.undo === 'function') {
+                            console.log('[HOTKEYS] Calling undo()');
+                            this.editor.undo();
+                        } else {
+                            console.error('[HOTKEYS] undo method not found!');
+                        }
+                    }
+                } else if (e.key.toLowerCase() === 'y') {
+                    console.log('[HOTKEYS] Ctrl+Y pressed - redo');
+                    e.preventDefault();
+                    console.log('[HOTKEYS] Ctrl+Y - default prevented:', e.defaultPrevented);
+                    if (typeof this.editor.redo === 'function') {
+                        console.log('[HOTKEYS] Calling redo()');
+                        this.editor.redo();
+                    } else {
+                        console.error('[HOTKEYS] redo method not found!');
+                    }
+                } else if (e.key.toLowerCase() === 'n') {
+                    console.log('[HOTKEYS] Ctrl+N pressed - new level');
+                    e.preventDefault();
+                    console.log('[HOTKEYS] Ctrl+N - default prevented:', e.defaultPrevented);
+                    if (typeof this.editor.newLevel === 'function') {
+                        console.log('[HOTKEYS] Calling newLevel()');
+                        this.editor.newLevel();
+                    } else {
+                        console.error('[HOTKEYS] newLevel method not found!');
+                    }
+                } else if (e.key.toLowerCase() === 'o') {
+                    console.log('[HOTKEYS] Ctrl+O pressed - open level');
+                    e.preventDefault();
+                    console.log('[HOTKEYS] Ctrl+O - default prevented:', e.defaultPrevented);
+                    if (typeof this.editor.openLevel === 'function') {
+                        console.log('[HOTKEYS] Calling openLevel()');
+                        this.editor.openLevel();
+                    } else {
+                        console.error('[HOTKEYS] openLevel method not found!');
+                    }
+                } else if (e.key.toLowerCase() === 's') {
+                    console.log('[HOTKEYS] Ctrl+S pressed - save level');
+                    e.preventDefault();
+                    console.log('[HOTKEYS] Ctrl+S - default prevented:', e.defaultPrevented);
+                    if (e.shiftKey) {
+                        if (typeof this.editor.saveLevelAs === 'function') {
+                            console.log('[HOTKEYS] Calling saveLevelAs()');
+                            this.editor.saveLevelAs();
+                        } else {
+                            console.error('[HOTKEYS] saveLevelAs method not found!');
+                        }
+                    } else {
+                        if (typeof this.editor.saveLevel === 'function') {
+                            console.log('[HOTKEYS] Calling saveLevel()');
+                            this.editor.saveLevel();
+                        } else {
+                            console.error('[HOTKEYS] saveLevel method not found!');
+                        }
+                    }
+                } else {
+                    console.log('[HOTKEYS] Unhandled Ctrl combination:', e.key.toLowerCase());
+                }
+            } else {
+                console.log('[HOTKEYS] Unhandled key:', e.key.toLowerCase());
             }
         });
     }

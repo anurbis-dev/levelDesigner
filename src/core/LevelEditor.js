@@ -32,7 +32,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '2.6.1';
+    static VERSION = '2.6.2';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -58,9 +58,6 @@ export class LevelEditor {
         // Current level
         this.level = null;
         
-        // Event handlers
-        this.eventHandlers = new Map();
-
         // Initialize MenuManager (will be set up in init() after DOM is ready)
         this.menuManager = null;
 
