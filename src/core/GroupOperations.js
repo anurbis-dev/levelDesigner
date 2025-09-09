@@ -8,9 +8,16 @@ export class GroupOperations extends BaseModule {
 
     groupSelectedObjects() {
         const selectedObjects = this.editor.stateManager.get('selectedObjects');
-        
+
         // Find all selected objects that are at the top level of the scene hierarchy
         const selectedTopLevelObjects = this.editor.level.objects.filter(obj => selectedObjects.has(obj.id));
+
+        // Check if any selected objects are Player Start
+        const hasPlayerStart = selectedTopLevelObjects.some(obj => obj.type === 'player_start');
+        if (hasPlayerStart) {
+            Logger.group.warn('🚫 Grouping blocked: Player Start objects cannot be grouped');
+            return;
+        }
 
         // Grouping makes sense only if there are 2 or more objects selected at the same level
         if (selectedTopLevelObjects.length > 1) {

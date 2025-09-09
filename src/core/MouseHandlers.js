@@ -74,6 +74,17 @@ export class MouseHandlers extends BaseModule {
             // Check if we should start Alt+drag duplication
             const selectedObjects = this.editor.stateManager.get('selectedObjects');
             if (selectedObjects && selectedObjects.size > 0) {
+                // Check if any selected objects are Player Start
+                const hasPlayerStart = Array.from(selectedObjects).some(id => {
+                    const obj = this.editor.level.findObjectById(id);
+                    return obj && obj.type === 'player_start';
+                });
+
+                if (hasPlayerStart) {
+                    Logger.mouse.warn('🚫 Alt+drag duplication blocked: Player Start objects cannot be duplicated');
+                    return;
+                }
+
                 Logger.mouse.debug('Starting Alt+drag duplication from selected objects');
                 this.editor.duplicateOperations.startFromSelection();
             }
@@ -618,6 +629,17 @@ export class MouseHandlers extends BaseModule {
         // Check if Alt is still pressed after marquee selection to start duplication
         const currentMouse = this.editor.stateManager.get('mouse');
         if (currentMouse.altKey && selectedObjects.size > 0) {
+            // Check if any selected objects are Player Start
+            const hasPlayerStart = Array.from(selectedObjects).some(id => {
+                const obj = this.editor.level.findObjectById(id);
+                return obj && obj.type === 'player_start';
+            });
+
+            if (hasPlayerStart) {
+                Logger.mouse.warn('🚫 Alt+drag duplication blocked after marquee: Player Start objects cannot be duplicated');
+                return;
+            }
+
             Logger.mouse.debug('Alt+drag duplication after marquee selection');
             this.editor.duplicateOperations.startFromSelection();
         }

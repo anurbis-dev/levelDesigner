@@ -110,6 +110,19 @@ export class EventHandlers extends BaseModule {
                 this.editor.objectOperations.deleteSelectedObjects();
             } else if (e.shiftKey && e.key.toLowerCase() === 'd') {
                 e.preventDefault();
+
+                // Check if any selected objects are Player Start
+                const selectedObjects = this.editor.stateManager.get('selectedObjects');
+                const hasPlayerStart = selectedObjects && Array.from(selectedObjects).some(id => {
+                    const obj = this.editor.level.findObjectById(id);
+                    return obj && obj.type === 'player_start';
+                });
+
+                if (hasPlayerStart) {
+                    Logger.event.warn('🚫 Shift+D duplication blocked: Player Start objects cannot be duplicated');
+                    return;
+                }
+
                 this.editor.objectOperations.duplicateSelectedObjects();
             } else if (e.key.toLowerCase() === 'f') {
                 this.editor.focusOnSelection();
@@ -117,6 +130,19 @@ export class EventHandlers extends BaseModule {
                 this.editor.focusOnAll();
             } else if (e.shiftKey && e.key.toLowerCase() === 'g') {
                 e.preventDefault();
+
+                // Check if any selected objects are Player Start
+                const selectedObjects = this.editor.stateManager.get('selectedObjects');
+                const hasPlayerStart = selectedObjects && Array.from(selectedObjects).some(id => {
+                    const obj = this.editor.level.findObjectById(id);
+                    return obj && obj.type === 'player_start';
+                });
+
+                if (hasPlayerStart) {
+                    Logger.event.warn('🚫 Ctrl+G grouping blocked: Player Start objects cannot be grouped');
+                    return;
+                }
+
                 this.editor.groupOperations.groupSelectedObjects();
             } else if (e.altKey && e.key.toLowerCase() === 'g') {
                 e.preventDefault();
