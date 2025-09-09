@@ -131,7 +131,7 @@ export class SettingsPanel {
                         <button id="reset-settings" style="padding: 0.4rem 0.75rem; background-color: #dc2626; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;">Reset to Defaults</button>
                         <button id="export-settings" style="padding: 0.4rem 0.75rem; background-color: #2563eb; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;">Export Settings</button>
                         <button id="import-settings" style="padding: 0.4rem 0.75rem; background-color: #059669; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;">Import Settings</button>
-                        <input type="file" id="import-file" accept=".json" style="display: none;">
+                        <input type="file" id="import-file" name="import-file" accept=".json" style="display: none;">
                     </div>
                     <div style="display: flex; gap: 0.5rem;">
                         <button id="cancel-settings" style="padding: 0.4rem 0.75rem; background-color: #4b5563; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;">Cancel</button>
@@ -218,11 +218,11 @@ export class SettingsPanel {
                         </div>
                         <div>
                             <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Outline Width (px)</label>
-                            <input type="number" min="1" max="12" class="setting-input" data-setting="selection.outlineWidth" value="${this.configManager.get('selection.outlineWidth')}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
+                            <input type="number" min="1" max="12" class="setting-input" name="setting-input" data-setting="selection.outlineWidth" value="${this.configManager.get('selection.outlineWidth')}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
                         </div>
                         <div>
                             <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Group Outline Width (px)</label>
-                            <input type="number" min="1" max="16" class="setting-input" data-setting="selection.groupOutlineWidth" value="${this.configManager.get('selection.groupOutlineWidth')}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
+                            <input type="number" min="1" max="16" class="setting-input" name="setting-input" data-setting="selection.groupOutlineWidth" value="${this.configManager.get('selection.groupOutlineWidth')}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
                         </div>
                         <div>
                             <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Nested Groups Highlight Color</label>
@@ -230,11 +230,11 @@ export class SettingsPanel {
                         </div>
                         <div>
                             <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Marquee Color</label>
-                            <input type="color" class="setting-input" data-setting="selection.marqueeColor" value="${this.configManager.get('selection.marqueeColor')}"/>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="selection.marqueeColor" value="${this.configManager.get('selection.marqueeColor')}"/>
                         </div>
                         <div>
                             <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Marquee Opacity</label>
-                            <input type="range" min="0" max="1" step="0.05" class="setting-input" data-setting="selection.marqueeOpacity" value="${this.configManager.get('selection.marqueeOpacity')}" style="width:100%;"/>
+                            <input type="range" min="0" max="1" step="0.05" class="setting-input" name="setting-input" data-setting="selection.marqueeOpacity" value="${this.configManager.get('selection.marqueeOpacity')}" style="width:100%;"/>
                         </div>
                     </div>                `;
                 this.initializeColorChoosers();
@@ -291,7 +291,7 @@ export class SettingsPanel {
             <div style="display: flex; flex-direction: column; gap: 1rem;">
                 <div>
                     <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Theme</label>
-                    <select class="setting-input" data-setting="ui.theme" style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white;">
+                    <select class="setting-input" name="setting-input" data-setting="ui.theme" style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white;">
                         <option value="dark" ${settings.ui.theme === 'dark' ? 'selected' : ''}>Dark</option>
                         <option value="light" ${settings.ui.theme === 'light' ? 'selected' : ''}>Light</option>
                     </select>
@@ -299,56 +299,56 @@ export class SettingsPanel {
                 
                 <div>
                     <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">UI Font Scale</label>
-                    <input type="number" step="0.05" min="0.5" max="2.0" class="setting-input" data-setting="ui.fontScale" 
+                    <input type="number" step="0.05" min="0.5" max="2.0" class="setting-input" name="setting-input" data-setting="ui.fontScale" 
                            value="${settings.ui.fontScale || 1.0}"
                            style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white;">
                 </div>
 
                 <div>
                     <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Panel Width (px)</label>
-                    <input type="number" step="10" min="200" max="600" class="setting-input" data-setting="ui.panelWidth" 
+                    <input type="number" step="10" min="200" max="600" class="setting-input" name="setting-input" data-setting="ui.panelWidth" 
                            value="${settings.ui.panelWidth || 300}"
                            style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white;">
                 </div>
 
                 <div>
                     <label style="display: flex; align-items: center;">
-                        <input type="checkbox" class="setting-input" data-setting="ui.showTooltips" ${settings.ui.showTooltips ? 'checked' : ''} style="margin-right: 0.5rem;">
+                        <input type="checkbox" class="setting-input" name="setting-input" data-setting="ui.showTooltips" ${settings.ui.showTooltips ? 'checked' : ''} style="margin-right: 0.5rem;">
                         <span style="color: #d1d5db;">Show Tooltips</span>
                     </label>
                 </div>
 
                 <div>
                     <label style="display: flex; align-items: center;">
-                        <input type="checkbox" class="setting-input" data-setting="ui.compactMode" ${settings.ui.compactMode ? 'checked' : ''} style="margin-right: 0.5rem;">
+                        <input type="checkbox" class="setting-input" name="setting-input" data-setting="ui.compactMode" ${settings.ui.compactMode ? 'checked' : ''} style="margin-right: 0.5rem;">
                         <span style="color: #d1d5db;">Compact Mode</span>
                     </label>
                 </div>
                 
                 <div>
                     <label style="display: flex; align-items: center;">
-                        <input type="checkbox" class="setting-input" data-setting="editor.autoSave" ${settings.editor.autoSave ? 'checked' : ''} style="margin-right: 0.5rem;">
+                        <input type="checkbox" class="setting-input" name="setting-input" data-setting="editor.autoSave" ${settings.editor.autoSave ? 'checked' : ''} style="margin-right: 0.5rem;">
                         <span style="color: #d1d5db;">Auto Save</span>
                     </label>
                 </div>
                 
                 <div>
                     <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Auto Save Interval (minutes)</label>
-                    <input type="number" class="setting-input" data-setting="editor.autoSaveInterval" 
+                    <input type="number" class="setting-input" name="setting-input" data-setting="editor.autoSaveInterval" 
                            value="${settings.editor.autoSaveInterval / 60000}" min="1" max="60"
                            style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white;">
                 </div>
                 
                 <div>
                     <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Undo History Limit</label>
-                    <input type="number" class="setting-input" data-setting="editor.undoHistoryLimit" 
+                    <input type="number" class="setting-input" name="setting-input" data-setting="editor.undoHistoryLimit" 
                            value="${settings.editor.undoHistoryLimit}" min="1" max="1000"
                            style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white;">
                 </div>
                 
                 <div>
                     <label style="display: flex; align-items: center;">
-                        <input type="checkbox" class="setting-input" data-setting="editor.showFPS" ${settings.editor.showFPS ? 'checked' : ''} style="margin-right: 0.5rem;">
+                        <input type="checkbox" class="setting-input" name="setting-input" data-setting="editor.showFPS" ${settings.editor.showFPS ? 'checked' : ''} style="margin-right: 0.5rem;">
                         <span style="color: #d1d5db;">Show FPS Counter</span>
                     </label>
                 </div>
@@ -363,27 +363,27 @@ export class SettingsPanel {
             <div style="display: flex; flex-direction: column; gap: 1rem;">
                 <div>
                     <label style="display: flex; align-items: center;">
-                        <input type="checkbox" class="setting-input" data-setting="grid.showGrid" ${settings.grid.showGrid ? 'checked' : ''} style="margin-right: 0.5rem;">
+                        <input type="checkbox" class="setting-input" name="setting-input" data-setting="grid.showGrid" ${settings.grid.showGrid ? 'checked' : ''} style="margin-right: 0.5rem;">
                         <span style="color: #d1d5db;">Show Grid</span>
                     </label>
                 </div>
                 <div>
                     <label style="display: flex; align-items: center;">
-                        <input type="checkbox" class="setting-input" data-setting="grid.snapToGrid" ${settings.grid.snapToGrid ? 'checked' : ''} style="margin-right: 0.5rem;">
+                        <input type="checkbox" class="setting-input" name="setting-input" data-setting="grid.snapToGrid" ${settings.grid.snapToGrid ? 'checked' : ''} style="margin-right: 0.5rem;">
                         <span style="color: #d1d5db;">Snap to Grid</span>
                     </label>
                 </div>
                 <div>
                     <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Size (px)</label>
-                    <input type="number" min="1" max="256" class="setting-input" data-setting="grid.size" value="${settings.grid.size}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
+                    <input type="number" min="1" max="256" class="setting-input" name="setting-input" data-setting="grid.size" value="${settings.grid.size}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
                 </div>
                 <div>
                     <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Color</label>
-                    <input type="color" class="setting-input" data-setting="grid.color" value="${settings.grid.color}"/>
+                    <input type="color" class="setting-input" name="setting-input" data-setting="grid.color" value="${settings.grid.color}"/>
                 </div>
                 <div>
                     <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Opacity</label>
-                    <input type="range" min="0" max="1" step="0.05" class="setting-input" data-setting="grid.opacity" value="${settings.grid.opacity}" style="width:100%;"/>
+                    <input type="range" min="0" max="1" step="0.05" class="setting-input" name="setting-input" data-setting="grid.opacity" value="${settings.grid.opacity}" style="width:100%;"/>
                 </div>
             </div>
         `;

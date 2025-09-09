@@ -141,6 +141,12 @@ Level Editor построен на **утилитарной архитектур
 ### EventHandlers → BaseModule + Logger
 - Управление событиями и рендер-циклом
 - Интеграция с `Logger.event`
+- **View меню v2.5.0**: Переключение режимов отображения
+  - Grid - отображение сетки
+  - Game Mode - скрытие UI панелей
+  - Snap To Grid - привязка к сетке
+  - Object Boundaries - границы объектов
+  - Object Collisions - коллизии объектов
 
 ### MouseHandlers → BaseModule + WorldPositionUtils  
 - Обработка мыши и drag&drop

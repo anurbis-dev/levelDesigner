@@ -1,4 +1,4 @@
-# Полный справочник API Level Editor v2.4.4
+# Полный справочник API Level Editor v2.5.0
 
 ## Обзор
 
@@ -125,6 +125,12 @@
 - `setupRightPanelTabs()` - настройка вкладок правой панели
 - `setupStateListeners()` - настройка слушателей состояния
 
+#### View меню методы (v2.5.0)
+- `toggleViewOption(option)` - переключение режимов отображения
+- `initializeViewStates()` - инициализация состояний View меню
+- `toggleGameMode(enabled)` - переключение игрового режима
+- `updateViewCheckbox(option, enabled)` - обновление состояния чекбокса
+
 ### GroupOperations (src/core/GroupOperations.js)
 Операции с группами.
 
@@ -218,11 +224,20 @@
 
 #### Основные методы
 - `getState()` - получение всего состояния
-- `get(key)` - получение свойства по ключу
-- `set(key, value)` - установка свойства
+- `get(key)` - получение свойства по ключу (поддержка вложенных ключей)
+- `set(key, value)` - установка свойства (поддержка вложенных ключей v2.5.0)
 - `update(updates)` - обновление нескольких свойств
 - `subscribe(key, callback)` - подписка на изменения
 - `notifyListeners(key, newValue, oldValue)` - уведомление слушателей
+
+#### Новые состояния (v2.5.0)
+- `view.grid` - отображение сетки
+- `view.gameMode` - игровой режим
+- `view.snapToGrid` - привязка к сетке
+- `view.objectBoundaries` - границы объектов
+- `view.objectCollisions` - коллизии объектов
+- `canvas.showGrid` - отображение сетки на canvas
+- `canvas.snapToGrid` - привязка к сетке на canvas
 
 #### Методы состояния
 - `markDirty()` - пометка как измененный

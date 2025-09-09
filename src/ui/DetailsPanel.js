@@ -111,7 +111,10 @@ export class DetailsPanel {
             
             propContainer.innerHTML = `
                 <label class="block text-sm font-medium text-gray-300 capitalize">${prop}</label>
-                <input type="text" value="${displayValue}" 
+                <input type="text" 
+                       id="property-${prop}-${Date.now()}"
+                       name="property-${prop}-${Date.now()}"
+                       value="${displayValue}" 
                        placeholder="${allSame ? '' : 'multiple values'}"
                        class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
             `;
@@ -153,7 +156,10 @@ export class DetailsPanel {
             
             propContainer.innerHTML = `
                 <label class="block text-sm font-medium text-gray-300">${key}</label>
-                <input type="text" value="${value}" 
+                <input type="text" 
+                       id="custom-property-${key}-${Date.now()}"
+                       name="custom-property-${key}-${Date.now()}"
+                       value="${value}" 
                        class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
             `;
             

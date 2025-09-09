@@ -31,7 +31,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '2.4.6';
+    static VERSION = '2.5.0';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -152,6 +152,9 @@ export class LevelEditor {
         this.updatePageTitle();
         
         this.updateAllPanels();
+        
+        // Initialize view states after level is created
+        this.eventHandlers.initializeViewStates();
         
         // Save initial state
         this.historyManager.saveState(this.level.objects, true);

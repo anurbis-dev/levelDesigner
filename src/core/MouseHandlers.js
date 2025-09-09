@@ -1,5 +1,6 @@
 import { BaseModule } from './BaseModule.js';
 import { Logger } from '../utils/Logger.js';
+import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
 
 /**
  * Mouse Handlers module for LevelEditor
@@ -330,7 +331,19 @@ export class MouseHandlers extends BaseModule {
         droppedAssetIds.forEach((assetId, index) => {
             const asset = this.editor.assetManager.getAsset(assetId);
             if (asset) {
-                const newObject = asset.createInstance(worldPos.x + index * 10, worldPos.y + index * 10);
+                let x = worldPos.x + index * 10;
+                let y = worldPos.y + index * 10;
+                
+                // Apply snap to grid if enabled
+                const snapToGrid = this.editor.stateManager.get('canvas.snapToGrid') ?? this.editor.level.settings.snapToGrid;
+                if (snapToGrid) {
+                    const gridSize = this.editor.level.settings.gridSize;
+                    const snapped = WorldPositionUtils.snapToGrid(x, y, gridSize);
+                    x = snapped.x;
+                    y = snapped.y;
+                }
+                
+                const newObject = asset.createInstance(x, y);
 
                 // Check if we're in group edit mode and the drop point is inside the group bounds
                 if (this.isInGroupEditMode() && this.editor.objectOperations.isPointInGroupBounds(worldPos.x, worldPos.y)) {

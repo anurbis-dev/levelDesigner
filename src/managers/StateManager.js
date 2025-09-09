@@ -45,6 +45,21 @@ export class StateManager {
             // Outliner state
             outliner: {
                 collapsedTypes: new Set()
+            },
+            
+            // View state
+            view: {
+                grid: true,
+                gameMode: false,
+                snapToGrid: false,
+                objectBoundaries: false,
+                objectCollisions: false
+            },
+            
+            // Canvas state
+            canvas: {
+                showGrid: true,
+                snapToGrid: false
             }
         };
         
@@ -79,9 +94,28 @@ export class StateManager {
      * Set state property and notify listeners
      */
     set(key, value) {
-        const oldValue = this.state[key];
-        this.state[key] = value;
-        this.notifyListeners(key, value, oldValue);
+        if (key.includes('.')) {
+            // Handle nested properties like 'view.grid'
+            const parts = key.split('.');
+            const lastPart = parts.pop();
+            let current = this.state;
+            
+            // Navigate to the parent object
+            for (const part of parts) {
+                if (!current[part] || typeof current[part] !== 'object') {
+                    current[part] = {};
+                }
+                current = current[part];
+            }
+            
+            const oldValue = current[lastPart];
+            current[lastPart] = value;
+            this.notifyListeners(key, value, oldValue);
+        } else {
+            const oldValue = this.state[key];
+            this.state[key] = value;
+            this.notifyListeners(key, value, oldValue);
+        }
     }
 
     /**

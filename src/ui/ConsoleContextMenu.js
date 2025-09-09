@@ -435,6 +435,8 @@ export class ConsoleContextMenu {
      */
     fallbackCopyToClipboard(text) {
         const textArea = document.createElement('textarea');
+        textArea.id = 'console-copy-textarea';
+        textArea.name = 'console-copy-textarea';
         textArea.value = text;
         textArea.style.position = 'fixed';
         textArea.style.left = '-999999px';

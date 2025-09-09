@@ -28,11 +28,19 @@ export class RenderOperations extends BaseModule {
         this.editor.canvasRenderer.setCamera(camera);
         
         // Draw background and grid
-        this.editor.canvasRenderer.drawGrid(
-            this.editor.level.settings.gridSize, 
-            camera, 
-            this.editor.level.settings.backgroundColor
-        );
+        const showGrid = this.editor.stateManager.get('canvas.showGrid') ?? this.editor.level.settings.showGrid;
+        if (showGrid) {
+            this.editor.canvasRenderer.drawGrid(
+                this.editor.level.settings.gridSize, 
+                camera, 
+                this.editor.level.settings.backgroundColor
+            );
+        } else {
+            // Just draw background without grid
+            this.editor.canvasRenderer.clear();
+            this.editor.canvasRenderer.ctx.fillStyle = this.editor.level.settings.backgroundColor;
+            this.editor.canvasRenderer.ctx.fillRect(0, 0, this.editor.canvasRenderer.canvas.width, this.editor.canvasRenderer.canvas.height);
+        }
         
         // Draw objects with frustum culling
         const groupEditMode = this.editor.stateManager.get('groupEditMode');
@@ -40,6 +48,18 @@ export class RenderOperations extends BaseModule {
         visibleObjects.forEach(obj => {
             this.editor.canvasRenderer.drawObject(obj);
         });
+        
+        // Draw object boundaries if enabled
+        const showObjectBoundaries = this.editor.stateManager.get('view.objectBoundaries');
+        if (showObjectBoundaries) {
+            this.drawObjectBoundaries();
+        }
+        
+        // Draw object collisions if enabled
+        const showObjectCollisions = this.editor.stateManager.get('view.objectCollisions');
+        if (showObjectCollisions) {
+            this.drawObjectCollisions();
+        }
         
         // Draw selection
         this.drawSelection();
@@ -450,5 +470,127 @@ export class RenderOperations extends BaseModule {
         const objBottom = obj.y + (obj.height || 0);
         
         return !(objRight < left || objLeft > right || objBottom < top || objTop > bottom);
+    }
+
+    /**
+     * Draw object boundaries for debugging
+     */
+    drawObjectBoundaries() {
+        this.editor.canvasRenderer.ctx.save();
+        this.editor.canvasRenderer.ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
+        this.editor.canvasRenderer.ctx.lineWidth = 1;
+        this.editor.canvasRenderer.ctx.setLineDash([2, 2]);
+        
+        // Only draw boundaries for top-level objects
+        this.editor.level.objects.forEach(obj => {
+            if (obj.type === 'group') {
+                this.drawGroupBoundaries(obj);
+            } else {
+                this.drawSingleObjectBoundary(obj);
+            }
+        });
+        
+        this.editor.canvasRenderer.ctx.restore();
+    }
+
+    /**
+     * Draw boundaries for a single object
+     */
+    drawSingleObjectBoundary(obj) {
+        const worldPos = this.editor.objectOperations.getObjectWorldPosition(obj);
+        const width = obj.width || 32;
+        const height = obj.height || 32;
+        
+        this.editor.canvasRenderer.ctx.strokeRect(
+            worldPos.x, 
+            worldPos.y, 
+            width, 
+            height
+        );
+    }
+
+    /**
+     * Draw boundaries for a group and its children
+     */
+    drawGroupBoundaries(group) {
+        // Draw group boundary
+        this.drawSingleObjectBoundary(group);
+        
+        // Draw children boundaries
+        if (group.children) {
+            group.children.forEach(child => {
+                if (child.type === 'group') {
+                    this.drawGroupBoundaries(child);
+                } else {
+                    this.drawSingleObjectBoundary(child);
+                }
+            });
+        }
+    }
+
+    /**
+     * Draw object collision boxes for debugging
+     */
+    drawObjectCollisions() {
+        this.editor.canvasRenderer.ctx.save();
+        this.editor.canvasRenderer.ctx.strokeStyle = 'rgba(255, 0, 0, 0.7)';
+        this.editor.canvasRenderer.ctx.lineWidth = 2;
+        this.editor.canvasRenderer.ctx.setLineDash([]);
+        
+        // Only draw collisions for top-level objects
+        this.editor.level.objects.forEach(obj => {
+            if (obj.type === 'group') {
+                this.drawGroupCollisions(obj);
+            } else {
+                this.drawSingleObjectCollision(obj);
+            }
+        });
+        
+        this.editor.canvasRenderer.ctx.restore();
+    }
+
+    /**
+     * Draw collision box for a single object
+     */
+    drawSingleObjectCollision(obj) {
+        const worldPos = this.editor.objectOperations.getObjectWorldPosition(obj);
+        const width = obj.width || 32;
+        const height = obj.height || 32;
+        
+        // Draw collision box (same as boundary for now, but could be different)
+        this.editor.canvasRenderer.ctx.strokeRect(
+            worldPos.x, 
+            worldPos.y, 
+            width, 
+            height
+        );
+        
+        // Draw collision center point
+        this.editor.canvasRenderer.ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
+        this.editor.canvasRenderer.ctx.fillRect(
+            worldPos.x + width/2 - 2, 
+            worldPos.y + height/2 - 2, 
+            4, 
+            4
+        );
+    }
+
+    /**
+     * Draw collision boxes for a group and its children
+     */
+    drawGroupCollisions(group) {
+        // Draw group collision
+        this.drawSingleObjectCollision(group);
+        
+        // Draw children collisions
+        if (group.children) {
+            group.children.forEach(child => {
+                if (child.type === 'group') {
+                    this.drawGroupCollisions(child);
+                } else {
+                    this.drawSingleObjectCollision(child);
+                }
+            });
+        }
     }
 }

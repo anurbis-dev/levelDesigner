@@ -93,6 +93,8 @@ export class FileUtils {
         return new Promise((resolve, reject) => {
             const input = document.createElement('input');
             input.type = 'file';
+            input.id = 'file-picker-input';
+            input.name = 'file-picker-input';
             input.multiple = multiple;
             
             if (accept) {

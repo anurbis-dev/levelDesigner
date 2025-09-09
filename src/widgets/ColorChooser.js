@@ -28,6 +28,8 @@ export class ColorChooser {
             <div class="mb-4">
                 <label class="block text-sm text-gray-300 mb-2">${this.options.label}</label>
                 <input type="color" 
+                       id="color-picker-full-${Date.now()}"
+                       name="color-picker-full-${Date.now()}"
                        class="color-picker-input w-full h-10 rounded border border-gray-600 bg-gray-700 cursor-pointer"
                        value="${this.options.initialColor}"
                        style="border: 1px solid #4b5563; background: #374151;">
@@ -61,6 +63,8 @@ export class ColorChooser {
         
         container.innerHTML = `
             <input type="color" 
+                   id="color-picker-inline-${Date.now()}"
+                   name="color-picker-inline-${Date.now()}"
                    class="color-picker-input w-full h-8 rounded border border-gray-600 bg-gray-700 cursor-pointer"
                    value="${this.options.initialColor}"
                    style="border: 1px solid #4b5563; background: #374151;">

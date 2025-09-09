@@ -182,6 +182,45 @@
                         <a href="#" id="save-level-as" class="block px-4 py-2 text-sm hover:bg-gray-700">Save Level As...</a>
                     </div>
                 </div>
+                <div class="relative group" id="menu-view">
+                    <button class="px-3 py-1 rounded hover:bg-gray-700 transition">View</button>
+                    <div class="absolute left-0 mt-1 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-20 hidden">
+                        <!-- Canvas Section -->
+                        <div class="px-4 py-2 text-xs text-gray-400 text-center border-b border-gray-600">Canvas</div>
+                        <a href="#" id="toggle-grid" class="block px-4 py-2 text-sm hover:bg-gray-700 flex items-center">
+                            <span class="w-4 h-4 border border-gray-500 mr-2 flex items-center justify-center">
+                                <span class="w-2 h-2 bg-gray-500 hidden" id="grid-check"></span>
+                            </span>
+                            Grid
+                        </a>
+                        <a href="#" id="toggle-game-mode" class="block px-4 py-2 text-sm hover:bg-gray-700 flex items-center">
+                            <span class="w-4 h-4 border border-gray-500 mr-2 flex items-center justify-center">
+                                <span class="w-2 h-2 bg-gray-500 hidden" id="game-mode-check"></span>
+                            </span>
+                            Game Mode
+                        </a>
+                        <a href="#" id="toggle-snap-to-grid" class="block px-4 py-2 text-sm hover:bg-gray-700 flex items-center">
+                            <span class="w-4 h-4 border border-gray-500 mr-2 flex items-center justify-center">
+                                <span class="w-2 h-2 bg-gray-500 hidden" id="snap-to-grid-check"></span>
+                            </span>
+                            Snap To Grid
+                        </a>
+                        <!-- Object Section -->
+                        <div class="px-4 py-2 text-xs text-gray-400 text-center border-b border-gray-600 mt-2">Object</div>
+                        <a href="#" id="toggle-object-boundaries" class="block px-4 py-2 text-sm hover:bg-gray-700 flex items-center">
+                            <span class="w-4 h-4 border border-gray-500 mr-2 flex items-center justify-center">
+                                <span class="w-2 h-2 bg-gray-500 hidden" id="object-boundaries-check"></span>
+                            </span>
+                            Object Boundaries
+                        </a>
+                        <a href="#" id="toggle-object-collisions" class="block px-4 py-2 text-sm hover:bg-gray-700 flex items-center">
+                            <span class="w-4 h-4 border border-gray-500 mr-2 flex items-center justify-center">
+                                <span class="w-2 h-2 bg-gray-500 hidden" id="object-collisions-check"></span>
+                            </span>
+                            Object Collisions
+                        </a>
+                    </div>
+                </div>
                 <div class="relative group" id="menu-settings">
                     <button class="px-3 py-1 rounded hover:bg-gray-700 transition">Settings</button>
                     <div class="absolute left-0 mt-1 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-20 hidden">
@@ -255,7 +294,7 @@
         </div>
         <div class="flex items-center p-2 border-t border-gray-700 bg-gray-900">
             <span class="text-gray-400 mr-2">&gt;</span>
-            <input id="console-input" type="text" placeholder="Enter command..." 
+            <input id="console-input" name="console-input" type="text" placeholder="Enter command..." 
                    class="flex-grow bg-transparent text-gray-300 outline-none text-sm font-mono"
                    style="color: #d1d5db;">
             <button id="console-close" class="text-gray-400 hover:text-white text-lg ml-2">&times;</button>
@@ -382,16 +421,17 @@
         
         // Setup menu dropdowns
         const menuLevel = document.getElementById('menu-level');
+        const menuView = document.getElementById('menu-view');
         const menuSettings = document.getElementById('menu-settings');
         
-        [menuLevel, menuSettings].forEach(menu => {
+        [menuLevel, menuView, menuSettings].forEach(menu => {
             const button = menu.querySelector('button');
             const dropdown = menu.querySelector('div');
             button.addEventListener('click', (e) => {
                 e.stopPropagation();
                 const isHidden = dropdown.classList.contains('hidden');
                 // Close all menus first
-                document.querySelectorAll('#menu-level > div, #menu-settings > div').forEach(d => d.classList.add('hidden'));
+                document.querySelectorAll('#menu-level > div, #menu-view > div, #menu-settings > div').forEach(d => d.classList.add('hidden'));
                 if (isHidden) {
                     dropdown.classList.remove('hidden');
                 }
@@ -399,7 +439,7 @@
         });
         
         window.addEventListener('click', () => {
-            document.querySelectorAll('#menu-level > div, #menu-settings > div').forEach(d => d.classList.add('hidden'));
+            document.querySelectorAll('#menu-level > div, #menu-view > div, #menu-settings > div').forEach(d => d.classList.add('hidden'));
         });
 
         // Initialize the editor

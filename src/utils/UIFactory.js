@@ -59,7 +59,10 @@ export class UIFactory {
         input.className = this.CSS.input;
         input.disabled = disabled;
         
-        if (id) input.id = id;
+        if (id) {
+            input.id = id;
+            input.name = id; // Use same value for name as id
+        }
         
         if (onChange) {
             input.addEventListener('change', onChange);
@@ -91,7 +94,10 @@ export class UIFactory {
         input.className = this.CSS.input;
         input.disabled = disabled;
         
-        if (id) input.id = id;
+        if (id) {
+            input.id = id;
+            input.name = id; // Use same value for name as id
+        }
         if (onChange) input.addEventListener('change', onChange);
 
         return input;

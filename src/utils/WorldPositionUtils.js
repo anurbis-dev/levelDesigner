@@ -141,4 +141,18 @@ export class WorldPositionUtils {
         return x >= bounds.minX && x <= bounds.maxX && 
                y >= bounds.minY && y <= bounds.maxY;
     }
+
+    /**
+     * Snap coordinates to grid
+     * @param {number} x - X coordinate
+     * @param {number} y - Y coordinate
+     * @param {number} gridSize - Grid size in pixels
+     * @returns {Object} Snapped coordinates {x, y}
+     */
+    static snapToGrid(x, y, gridSize) {
+        return {
+            x: Math.round(x / gridSize) * gridSize,
+            y: Math.round(y / gridSize) * gridSize
+        };
+    }
 }

@@ -92,6 +92,8 @@ export class LayersPanel {
                      title="Click to change color"></div>
                 <div class="flex items-center space-x-1 flex-1 min-w-0">
                     <input type="text"
+                           id="layer-name-${layer.id}"
+                           name="layer-name-${layer.id}"
                            value="${layer.name}"
                            class="layer-name-input bg-transparent border-none text-white flex-1 focus:outline-none focus:bg-gray-600 px-1 rounded min-w-0"
                            data-layer-id="${layer.id}">
@@ -140,6 +142,8 @@ export class LayersPanel {
         // Create a hidden color input and trigger it
         const colorInput = document.createElement('input');
         colorInput.type = 'color';
+        colorInput.id = `color-picker-${layer.id}`;
+        colorInput.name = `color-picker-${layer.id}`;
         colorInput.value = layer.color;
         colorInput.style.position = 'absolute';
         colorInput.style.left = '-9999px';
