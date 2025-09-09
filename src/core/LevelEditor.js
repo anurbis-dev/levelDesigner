@@ -32,7 +32,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '2.5.8';
+    static VERSION = '2.5.9';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -92,34 +92,6 @@ export class LevelEditor {
     }
 
     /**
-     * Ensure Player Start object exists on the level
-     */
-    ensurePlayerStartExists() {
-        const hasPlayerStart = this.level.objects.some(obj => obj.type === 'player_start');
-
-        if (!hasPlayerStart) {
-            Logger.event.info('🚀 Player Start object not found, creating default one');
-
-            const playerStart = {
-                id: this.generateId(),
-                name: 'Player Start',
-                type: 'player_start',
-                x: 50,
-                y: 50,
-                width: 32,
-                height: 32,
-                color: 'lightblue',
-                visible: true,
-                locked: false,
-                properties: {}
-            };
-
-            this.level.addObject(playerStart);
-            Logger.event.info('✅ Player Start object created and added to level');
-        }
-    }
-
-    /**
      * Initialize the editor
      */
     async init() {
@@ -161,7 +133,6 @@ export class LevelEditor {
         
         // Create new level
         this.level = this.fileManager.createNewLevel();
-        this.ensurePlayerStartExists();
         
         // Apply configuration to level settings
         this.applyConfigurationToLevel();
@@ -455,7 +426,6 @@ export class LevelEditor {
         }
         
         this.level = this.fileManager.createNewLevel();
-        this.ensurePlayerStartExists();
         this.stateManager.reset();
         
         // Re-initialize group edit mode state after reset
@@ -479,7 +449,6 @@ export class LevelEditor {
         
         try {
             this.level = await this.fileManager.loadLevelFromFileInput();
-            this.ensurePlayerStartExists();
             this.stateManager.reset();
             
             // Re-initialize group edit mode state after reset
@@ -499,7 +468,40 @@ export class LevelEditor {
         }
     }
 
+    /**
+     * Count Player Start objects on the current level
+     * @returns {number} Number of Player Start objects
+     */
+    countPlayerStartObjects() {
+        let count = 0;
+
+        // Count in top-level objects
+        count += this.level.objects.filter(obj => obj.type === 'player_start').length;
+
+        // Count in nested groups recursively
+        const countInGroups = (objects) => {
+            let groupCount = 0;
+            for (const obj of objects) {
+                if (obj.type === 'group' && obj.children) {
+                    groupCount += obj.children.filter(child => child.type === 'player_start').length;
+                    groupCount += countInGroups(obj.children);
+                }
+            }
+            return groupCount;
+        };
+
+        count += countInGroups(this.level.objects);
+        return count;
+    }
+
     saveLevel() {
+        // Check for multiple Player Start objects
+        const playerStartCount = this.countPlayerStartObjects();
+        if (playerStartCount > 1) {
+            alert(`Невозможно сохранить уровень!\n\nНа уровне найдено ${playerStartCount} объектов типа "Player Start".\nДолжен быть только один объект Player Start.\n\nУдалите лишние объекты Player Start перед сохранением уровня.`);
+            return;
+        }
+
         this.fileManager.saveLevel(this.level);
         this.stateManager.markClean();
     }
@@ -507,6 +509,13 @@ export class LevelEditor {
     saveLevelAs() {
         const fileName = prompt("Enter file name:", this.fileManager.getCurrentFileName() || "level.json");
         if (fileName) {
+            // Check for multiple Player Start objects
+            const playerStartCount = this.countPlayerStartObjects();
+            if (playerStartCount > 1) {
+                alert(`Невозможно сохранить уровень!\n\nНа уровне найдено ${playerStartCount} объектов типа "Player Start".\nДолжен быть только один объект Player Start.\n\nУдалите лишние объекты Player Start перед сохранением уровня.`);
+                return;
+            }
+
             this.fileManager.saveLevel(this.level, fileName);
             this.stateManager.markClean();
         }
