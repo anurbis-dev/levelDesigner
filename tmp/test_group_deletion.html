@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Group Deletion</title>
+</head>
+<body>
+    <h1>Test Group Deletion</h1>
+    <div id="output"></div>
+
+    <script type="module">
+        import { Level } from '../src/models/Level.js';
+        import { Asset } from '../src/models/Asset.js';
+
+        const output = document.getElementById('output');
+
+        function log(message) {
+            console.log(message);
+            output.innerHTML += `<div>${message}</div>`;
+        }
+
+        log('🧪 Testing group deletion with children...');
+
+        // Create level
+        const level = new Level();
+
+        // Create assets
+        const asset = new Asset({
+            name: 'Test Object',
+            type: 'object',
+            width: 32,
+            height: 32,
+            color: '#ff0000'
+        });
+
+        // Create a group with children
+        log('\n📋 Creating group with children...');
+        const child1 = asset.createInstance(0, 0);
+        const child2 = asset.createInstance(50, 50);
+        const child3 = asset.createInstance(100, 100);
+
+        const group = {
+            name: 'Test Group',
+            type: 'group',
+            x: 0,
+            y: 0,
+            visible: true,
+            locked: false,
+            children: [child1, child2, child3]
+        };
+
+        // Add group to level
+        level.addObject(group);
+        log(`Added group: ${group.name} (ID: ${group.id})`);
+        log(`Group has ${group.children.length} children`);
+        log(`Total objects in level: ${level.objects.length}`);
+
+        // Simulate deletion of the group
+        log('\n📋 Simulating group deletion...');
+        const idsToDelete = new Set([group.id]);
+
+        // Collect all objects to delete (including children of deleted groups)
+        const collectObjectsToDelete = (objects) => {
+            for (const obj of objects) {
+                if (obj.type === 'group') {
+                    // Process children recursively
+                    collectObjectsToDelete(obj.children);
+
+                    // If this group is being deleted, add all its children to deletion set
+                    if (idsToDelete.has(obj.id)) {
+                        console.log(`📦 Group ${obj.name} is being deleted, marking all children for deletion`);
+                        obj.children.forEach(child => {
+                            console.log(`➕ Adding child ${child.name} (ID: ${child.id}) to deletion set`);
+                            idsToDelete.add(child.id);
+                        });
+                    } else {
+                        // Remove individual children that were selected for deletion
+                        obj.children = obj.children.filter(child => !idsToDelete.has(child.id));
+                    }
+                }
+            }
+        };
+
+        // Collect all objects to delete
+        collectObjectsToDelete(level.objects);
+
+        log(`Objects to delete: ${idsToDelete.size}`);
+        idsToDelete.forEach(id => {
+            const obj = level.objects.find(o => o.id === id) || group.children.find(c => c.id === id);
+            if (obj) {
+                log(`  - ${obj.name} (${obj.type}, ID: ${obj.id})`);
+            }
+        });
+
+        // Remove all selected objects from main level
+        log(`\n🗑️ Removing objects from level...`);
+        const objectsBefore = level.objects.length;
+        level.objects = level.objects.filter(obj => !idsToDelete.has(obj.id));
+        const objectsAfter = level.objects.length;
+
+        log(`Objects before: ${objectsBefore}`);
+        log(`Objects after: ${objectsAfter}`);
+        log(`Removed: ${objectsBefore - objectsAfter} objects`);
+
+        // Check final state
+        log('\n📋 Final state:');
+        log(`Objects in level: ${level.objects.length}`);
+        level.objects.forEach(obj => {
+            log(`  - ${obj.name} (${obj.type})`);
+        });
+
+        // Verify that group and its children are completely gone
+        const groupExists = level.objects.some(obj => obj.name === 'Test Group');
+        const childrenExist = level.objects.some(obj =>
+            obj.name === 'Test Object' &&
+            (obj.x === 0 || obj.x === 50 || obj.x === 100)
+        );
+
+        log(`\n✅ Verification:`);
+        log(`Group removed: ${!groupExists ? 'YES' : 'NO'}`);
+        log(`Children removed: ${!childrenExist ? 'YES' : 'NO'}`);
+        log(`Total objects remaining: ${level.objects.length}`);
+
+        if (!groupExists && !childrenExist && level.objects.length === 0) {
+            log('🎉 SUCCESS: Group deletion with children works correctly!');
+        } else {
+            log('❌ FAILURE: Group deletion did not work as expected!');
+        }
+
+        log('\nTest completed!');
+    </script>
+</body>
+</html>
