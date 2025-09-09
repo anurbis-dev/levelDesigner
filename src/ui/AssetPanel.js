@@ -47,20 +47,26 @@ export class AssetPanel {
 
     renderTabs() {
         this.tabsContainer.innerHTML = '';
-        const categories = this.assetManager.getCategories();
-        
-        categories.forEach(category => {
+        const tabOrder = this.stateManager.get('assetTabOrder') || [];
+        const availableCategories = this.assetManager.getCategories();
+
+        // Filter tabOrder to only include available categories, and add any missing categories at the end
+        const orderedCategories = tabOrder.filter(cat => availableCategories.includes(cat));
+        const missingCategories = availableCategories.filter(cat => !orderedCategories.includes(cat));
+        const finalOrder = [...orderedCategories, ...missingCategories];
+
+        finalOrder.forEach(category => {
             const tabButton = document.createElement('button');
             tabButton.className = `tab px-4 py-2 text-sm font-medium border-b-2 border-transparent hover:bg-gray-700 ${
                 this.stateManager.get('activeAssetTabs').has(category) ? 'active' : ''
             }`;
             tabButton.textContent = category;
             tabButton.dataset.category = category;
-            
+
             tabButton.addEventListener('click', (e) => this.handleTabClick(e, category));
             this.tabsContainer.appendChild(tabButton);
         });
-        
+
         // Setup tab dragging after rendering
         this.setupTabDragging();
     }
@@ -348,24 +354,29 @@ export class AssetPanel {
             if (!draggedTab) return;
 
             const targetTab = e.target.closest('.tab');
-            
+
             if (targetTab && targetTab !== draggedTab) {
                 const targetIndex = Array.from(this.tabsContainer.children).indexOf(targetTab);
                 const draggedIndex = Array.from(this.tabsContainer.children).indexOf(draggedTab);
-                
+
                 // Move the tab
                 if (draggedIndex < targetIndex) {
                     this.tabsContainer.insertBefore(draggedTab, targetTab.nextSibling);
                 } else {
                     this.tabsContainer.insertBefore(draggedTab, targetTab);
                 }
+
+                // Save new tab order to state
+                const newOrder = Array.from(this.tabsContainer.children)
+                    .map(tab => tab.dataset.category);
+                this.stateManager.set('assetTabOrder', newOrder);
             }
 
             // Clean up
             this.tabsContainer.querySelectorAll('.tab').forEach(t => {
                 t.classList.remove('dragging', 'drag-over');
             });
-            
+
             draggedTab = null;
             draggedIndex = -1;
         });
