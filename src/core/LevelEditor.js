@@ -32,7 +32,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '2.6.4';
+    static VERSION = '2.6.5';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -322,19 +322,75 @@ export class LevelEditor {
         this.updateLevelStatsPanel();
     }
 
+
     updateLevelStatsPanel() {
         const levelStatsContent = document.getElementById('level-stats-content');
         if (!levelStatsContent) return;
-        
+
+        // Check Player Start objects
+        const playerStartCount = this.countPlayerStartObjects();
+
+        // Auto-create Player Start if missing (but don't call updateAllPanels recursively)
+        if (playerStartCount === 0) {
+            console.log('[LEVEL STATS] No Player Start found, auto-creating...');
+            const playerStartObject = {
+                name: 'Player Start',
+                type: 'player_start',
+                x: 0,
+                y: 0,
+                width: 32,
+                height: 32,
+                color: 'lightblue',
+                visible: true,
+                locked: false,
+                properties: {}
+            };
+
+            this.level.addObject(playerStartObject);
+            console.log('[LEVEL STATS] Player Start auto-created at (0,0)');
+
+            // Update history
+            this.historyManager.saveState(this.level.objects, false);
+
+            // Re-count after creation
+            const newPlayerStartCount = 1;
+
+            // Get updated stats
+            const stats = this.level.getStats();
+
+            // Generate display with the new count
+            this.renderLevelStats(levelStatsContent, stats, newPlayerStartCount);
+
+            // Render the new object (but don't call updateAllPanels)
+            this.render();
+            return;
+        }
+
+        // Get stats for normal case
         const stats = this.level.getStats();
-        levelStatsContent.innerHTML = `
+        this.renderLevelStats(levelStatsContent, stats, playerStartCount);
+    }
+
+    renderLevelStats(container, stats, playerStartCount) {
+        // Generate Player Start display with color coding
+        const playerStartText = playerStartCount === 1 ? 'Player Start: 1' :
+                               playerStartCount === 0 ? 'Player Start: 0' :
+                               `Player Start: ${playerStartCount}`;
+        const playerStartClass = playerStartCount === 1 ? 'text-green-400' :
+                                playerStartCount === 0 ? 'text-yellow-400' :
+                                'text-red-400 font-bold';
+
+        container.innerHTML = `
             <p class="text-sm">Total Objects: ${stats.totalObjects}</p>
             <p class="text-sm">Groups: ${stats.groups}</p>
             <div class="mt-2">
                 <p class="text-sm font-medium">By Type:</p>
-                ${Object.entries(stats.byType).map(([type, count]) => 
-                    `<p class="text-sm ml-2">${type}: ${count}</p>`
-                ).join('')}
+                ${Object.entries(stats.byType).map(([type, count]) => {
+                    if (type === 'player_start') {
+                        return `<p class="text-sm ml-2 ${playerStartClass}">${playerStartText}</p>`;
+                    }
+                    return `<p class="text-sm ml-2">${type}: ${count}</p>`;
+                }).join('')}
             </div>
         `;
     }
