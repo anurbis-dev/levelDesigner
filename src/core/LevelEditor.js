@@ -32,7 +32,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '2.6.3';
+    static VERSION = '2.6.4';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -504,8 +504,16 @@ export class LevelEditor {
     }
 
     saveLevel() {
-        // Check for multiple Player Start objects
+        // Check for Player Start objects
         const playerStartCount = this.countPlayerStartObjects();
+
+        // Check if Player Start is missing
+        if (playerStartCount === 0) {
+            alert(`Cannot save level!\n\nNo Player Start object found on the level.\nEvery level must have exactly one Player Start object.\n\nPlease add a Player Start object to your level before saving.\n\nYou can find Player Start objects in the Assets panel under the "Collectibles" category.`);
+            return;
+        }
+
+        // Check for multiple Player Start objects
         if (playerStartCount > 1) {
             alert(`Cannot save level!\n\nFound ${playerStartCount} Player Start objects on the level.\nThere should be only one Player Start object.\n\nPlease remove extra Player Start objects before saving the level.`);
             return;
@@ -516,8 +524,16 @@ export class LevelEditor {
     }
 
     saveLevelAs() {
-        // Check for multiple Player Start objects BEFORE prompting for filename
+        // Check for Player Start objects BEFORE prompting for filename
         const playerStartCount = this.countPlayerStartObjects();
+
+        // Check if Player Start is missing
+        if (playerStartCount === 0) {
+            alert(`Cannot save level!\n\nNo Player Start object found on the level.\nEvery level must have exactly one Player Start object.\n\nPlease add a Player Start object to your level before saving.\n\nYou can find Player Start objects in the Assets panel under the "Collectibles" category.`);
+            return;
+        }
+
+        // Check for multiple Player Start objects
         if (playerStartCount > 1) {
             alert(`Cannot save level!\n\nFound ${playerStartCount} Player Start objects on the level.\nThere should be only one Player Start object.\n\nPlease remove extra Player Start objects before saving the level.`);
             return;
