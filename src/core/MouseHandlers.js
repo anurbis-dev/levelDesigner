@@ -32,6 +32,20 @@ export class MouseHandlers extends BaseModule {
             return;
         }
         
+        if (e.button === 1) { // Middle mouse button - zoom
+            const camera = this.editor.stateManager.get('camera');
+            this.editor.stateManager.update({
+                'mouse.isMiddleDown': true,
+                'mouse.lastX': e.clientX,
+                'mouse.lastY': e.clientY,
+                'mouse.zoomStartX': e.clientX,
+                'mouse.zoomStartY': e.clientY,
+                'mouse.initialZoom': camera.zoom
+            });
+            this.editor.canvasRenderer.canvas.style.cursor = 'zoom-in';
+            return;
+        }
+        
         if (e.button === 0) { // Left mouse button
             this.editor.stateManager.update({
                 'mouse.isLeftDown': true,
@@ -67,6 +81,9 @@ export class MouseHandlers extends BaseModule {
                 'mouse.lastX': e.clientX,
                 'mouse.lastY': e.clientY
             });
+        } else if (mouse.isMiddleDown) {
+            // Interactive zoom with middle mouse button
+            this.handleMiddleMouseZoom(e);
         } else if (mouse.isLeftDown && mouse.isDragging) {
             // Drag objects
             this.dragSelectedObjects(worldPos);
@@ -109,7 +126,7 @@ export class MouseHandlers extends BaseModule {
         }
 
         // Only render if something actually changed
-        if (mouse.isPlacingObjects || mouse.isRightDown || (mouse.isLeftDown && mouse.isDragging) || mouse.isMarqueeSelecting || this.editor.stateManager.get('duplicate.isActive')) {
+        if (mouse.isPlacingObjects || mouse.isRightDown || mouse.isMiddleDown || (mouse.isLeftDown && mouse.isDragging) || mouse.isMarqueeSelecting || this.editor.stateManager.get('duplicate.isActive')) {
             this.editor.render();
         }
     }
@@ -126,6 +143,14 @@ export class MouseHandlers extends BaseModule {
             
             // Right click cancels all current actions
             this.editor.cancelAllActions();
+        }
+        
+        if (e.button === 1) { // Middle mouse button
+            this.editor.stateManager.update({
+                'mouse.isMiddleDown': false,
+                'mouse.initialZoom': null
+            });
+            this.editor.canvasRenderer.canvas.style.cursor = 'default';
         }
         
         if (e.button === 0) {
@@ -629,5 +654,50 @@ export class MouseHandlers extends BaseModule {
     finishPlacingObjects(worldPos) {
         const mouse = this.editor.stateManager.get('mouse');
         this.editor.duplicateOperations.confirmPlacement(worldPos);
+    }
+
+    /**
+     * Handle interactive zoom with middle mouse button drag
+     */
+    handleMiddleMouseZoom(e) {
+        const mouse = this.editor.stateManager.get('mouse');
+        const camera = this.editor.stateManager.get('camera');
+        
+        // Get the initial zoom level when middle mouse was first pressed
+        const initialZoom = mouse.initialZoom || camera.zoom;
+        
+        // Calculate zoom factor based on drag distance from start point
+        // Positive Y movement (down) = zoom in, negative Y movement (up) = zoom out
+        const deltaY = e.clientY - mouse.zoomStartY;
+        const zoomIntensity = 0.01; // Increased sensitivity for better responsiveness
+        const zoomFactor = 1 + (deltaY * zoomIntensity);
+        
+        // Calculate new zoom based on initial zoom, not current zoom
+        const newZoom = Math.max(0.1, Math.min(10, initialZoom * zoomFactor));
+        
+        // Only update if zoom actually changed
+        if (Math.abs(newZoom - camera.zoom) > 0.001) {
+            // Use the original mouse position (zoomStartX, zoomStartY) for zoom center
+            const mouseWorldPosBeforeZoom = this.editor.canvasRenderer.screenToWorld(mouse.zoomStartX, mouse.zoomStartY, camera);
+            
+            // Create temporary camera for calculations
+            const tempCamera = { ...camera, zoom: newZoom };
+            const mouseWorldPosAfterZoom = this.editor.canvasRenderer.screenToWorld(mouse.zoomStartX, mouse.zoomStartY, tempCamera);
+            
+            // Adjust camera position to keep original mouse point fixed
+            const newCameraX = camera.x + mouseWorldPosBeforeZoom.x - mouseWorldPosAfterZoom.x;
+            const newCameraY = camera.y + mouseWorldPosBeforeZoom.y - mouseWorldPosAfterZoom.y;
+            
+            // Update camera
+            this.editor.stateManager.update({
+                'camera.zoom': newZoom,
+                'camera.x': newCameraX,
+                'camera.y': newCameraY,
+                'mouse.lastX': e.clientX,
+                'mouse.lastY': e.clientY
+            });
+            
+            // Don't update cursor during zoom - it stays as set in handleMouseDown
+        }
     }
 }

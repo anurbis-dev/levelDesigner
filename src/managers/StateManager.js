@@ -25,8 +25,9 @@ export class StateManager {
             // Mouse state
             mouse: {
                 x: 0, y: 0, worldX: 0, worldY: 0,
-                isLeftDown: false, isRightDown: false, isDragging: false,
+                isLeftDown: false, isRightDown: false, isMiddleDown: false, isDragging: false,
                 dragStartX: 0, dragStartY: 0, lastX: 0, lastY: 0,
+                zoomStartX: 0, zoomStartY: 0,
                 isDraggingAsset: false, isMarqueeSelecting: false, marqueeRect: null,
                 marqueeStartX: null, marqueeStartY: null,
                 isAssetMarqueeSelecting: false, isPlacingObjects: false,
@@ -250,8 +251,9 @@ export class StateManager {
             camera: { x: 0, y: 0, zoom: 1 },
             mouse: {
                 x: 0, y: 0, worldX: 0, worldY: 0,
-                isLeftDown: false, isRightDown: false, isDragging: false,
+                isLeftDown: false, isRightDown: false, isMiddleDown: false, isDragging: false,
                 dragStartX: 0, dragStartY: 0, lastX: 0, lastY: 0,
+                zoomStartX: 0, zoomStartY: 0,
                 isDraggingAsset: false, isMarqueeSelecting: false, marqueeRect: null,
                 marqueeStartX: null, marqueeStartY: null,
                 isAssetMarqueeSelecting: false, isPlacingObjects: false,

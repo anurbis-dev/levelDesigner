@@ -131,6 +131,15 @@ export class BaseModule {
     }
 
     /**
+     * Check if middle mouse button is down
+     * @returns {boolean} True if middle mouse button is pressed
+     */
+    isMiddleMouseDown() {
+        const mouse = this.getMouseState();
+        return mouse && mouse.isMiddleDown;
+    }
+
+    /**
      * Check if currently dragging objects
      * @returns {boolean} True if dragging
      */
