@@ -91,10 +91,7 @@ export class EventHandlers extends BaseModule {
 
     setupCanvasEvents() {
         const canvas = this.editor.canvasRenderer.canvas;
-        
-        // Prevent context menu
-        canvas.addEventListener('contextmenu', e => e.preventDefault());
-        
+
         // Mouse events on canvas
         canvas.addEventListener('mousedown', (e) => this.editor.mouseHandlers.handleMouseDown(e));
         canvas.addEventListener('mousemove', (e) => this.editor.mouseHandlers.handleMouseMove(e));

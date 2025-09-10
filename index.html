@@ -7,6 +7,8 @@
     <!-- Load Tailwind CSS for quick styling -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="user-settings.css">
+    <link rel="stylesheet" href="src/ui/BaseContextMenu.css">
+    <link rel="stylesheet" href="src/ui/CanvasContextMenu.css">
     <link rel="stylesheet" href="src/ui/ConsoleContextMenu.css">
     
     <!-- Apply user settings immediately to prevent visual jumps -->
@@ -806,6 +808,9 @@
                 }
             });
 
+            // Register console context menu with the manager after editor is initialized
+            // This will be done after the editor initialization completes
+
             // Toggle console with backtick key
             document.addEventListener('keydown', (e) => {
                 if (e.key === '`' && !e.ctrlKey && !e.altKey && !e.shiftKey) {
@@ -1025,6 +1030,12 @@
 
             // Make editor available globally for console commands
             window.editor = editor;
+
+            // Register console context menu with the manager
+            if (window.editor && window.editor.contextMenuManager) {
+                window.editor.contextMenuManager.registerMenu('console', consoleContextMenu);
+                console.log('[INIT] ConsoleContextMenu registered with ContextMenuManager');
+            }
 
             // Load saved console state
             const savedConsoleVisible = userPrefs.get('consoleVisible');

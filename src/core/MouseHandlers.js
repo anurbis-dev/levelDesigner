@@ -22,10 +22,14 @@ export class MouseHandlers extends BaseModule {
         const mouse = this.getMouseState();
         
         if (e.button === 2) { // Right mouse button
+            console.log('[MouseHandlers] Right mouse down at:', e.clientX, e.clientY);
             this.editor.stateManager.update({
                 'mouse.isRightDown': true,
                 'mouse.lastX': e.clientX,
                 'mouse.lastY': e.clientY,
+                'mouse.rightClickStartX': e.clientX,
+                'mouse.rightClickStartY': e.clientY,
+                'mouse.wasPanning': false, // Reset panning flag
                 'mouse.altKey': e.altKey
             });
             this.editor.canvasRenderer.canvas.style.cursor = 'grabbing';
@@ -74,13 +78,40 @@ export class MouseHandlers extends BaseModule {
             const dx = e.clientX - mouse.lastX;
             const dy = e.clientY - mouse.lastY;
             const camera = this.editor.stateManager.get('camera');
-            
-            this.editor.stateManager.update({
+
+            // Check if this is significant movement (panning vs clicking)
+            let shouldUpdatePanningFlag = false;
+            if (mouse.rightClickStartX !== undefined && mouse.rightClickStartY !== undefined) {
+                const distanceFromStart = Math.sqrt(
+                    Math.pow(e.clientX - mouse.rightClickStartX, 2) +
+                    Math.pow(e.clientY - mouse.rightClickStartY, 2)
+                );
+
+                // If moved more than 3 pixels, consider this panning (reduced threshold)
+                if (distanceFromStart > 3 && !mouse.wasPanning) {
+                    console.log('[MouseHandlers] Panning detected!');
+                    console.log('[MouseHandlers] Start pos:', mouse.rightClickStartX, mouse.rightClickStartY);
+                    console.log('[MouseHandlers] Current pos:', e.clientX, e.clientY);
+                    console.log('[MouseHandlers] Distance:', distanceFromStart);
+                    shouldUpdatePanningFlag = true;
+                }
+            }
+
+            // Update state
+            const stateUpdate = {
                 'camera.x': camera.x - dx / camera.zoom,
                 'camera.y': camera.y - dy / camera.zoom,
                 'mouse.lastX': e.clientX,
                 'mouse.lastY': e.clientY
-            });
+            };
+
+            if (shouldUpdatePanningFlag) {
+                stateUpdate['mouse.wasPanning'] = true;
+                console.log('[MouseHandlers] Set wasPanning = true');
+            }
+
+            this.editor.stateManager.update(stateUpdate);
+
         } else if (mouse.isMiddleDown) {
             // Interactive zoom with middle mouse button
             this.handleMiddleMouseZoom(e);
@@ -135,12 +166,27 @@ export class MouseHandlers extends BaseModule {
         const mouse = this.editor.stateManager.get('mouse');
         
         if (e.button === 2) {
+            console.log('[MouseHandlers] Right mouse up at:', e.clientX, e.clientY);
+            console.log('[MouseHandlers] Was panning:', mouse.wasPanning);
+
+            // Don't reset wasPanning immediately - let contextmenu handler do it
+            // This prevents race condition between mouseup and contextmenu events
             this.editor.stateManager.update({
                 'mouse.isRightDown': false,
                 'mouse.altKey': e.altKey
             });
+
+            // Schedule cleanup after contextmenu event
+            setTimeout(() => {
+                this.editor.stateManager.update({
+                    'mouse.rightClickStartX': undefined,
+                    'mouse.rightClickStartY': undefined,
+                    'mouse.wasPanning': false
+                });
+            }, 100);
+
             this.editor.canvasRenderer.canvas.style.cursor = 'default';
-            
+
             // Right click cancels all current actions
             this.editor.cancelAllActions();
         }

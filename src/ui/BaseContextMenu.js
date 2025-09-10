@@ -103,8 +103,14 @@ export class BaseContextMenu {
      * @param {Object} contextData - Context data from clicked element
      */
     showContextMenu(event, contextData) {
-        // Hide existing menu
-        this.hideMenu();
+        // Hide existing menu immediately (without animation for responsiveness)
+        if (this.currentMenu) {
+            if (this.currentMenu.parentNode) {
+                this.currentMenu.parentNode.removeChild(this.currentMenu);
+            }
+            this.currentMenu = null;
+            this.isVisible = false;
+        }
 
         // Create new context menu
         const contextMenu = this.createContextMenu(event, contextData);
@@ -353,7 +359,8 @@ export class BaseContextMenu {
      */
     setupMenuClosing(menu) {
         const closeMenu = (e) => {
-            if (!menu.contains(e.target)) {
+            // Check if menu still exists and is in DOM
+            if (menu && menu.parentNode && !menu.contains(e.target)) {
                 this.hideMenu();
                 document.removeEventListener('click', closeMenu);
             }
@@ -370,16 +377,24 @@ export class BaseContextMenu {
      */
     hideMenu() {
         if (this.currentMenu) {
-            this.currentMenu.classList.remove('show');
-            // Wait for animation to complete before removing
-            setTimeout(() => {
-                if (this.currentMenu && this.currentMenu.parentNode) {
-                    this.currentMenu.parentNode.removeChild(this.currentMenu);
-                }
+            // Check if menu is still in DOM
+            if (this.currentMenu.parentNode) {
+                this.currentMenu.classList.remove('show');
+                // Wait for animation to complete before removing
+                setTimeout(() => {
+                    if (this.currentMenu && this.currentMenu.parentNode) {
+                        this.currentMenu.parentNode.removeChild(this.currentMenu);
+                    }
+                    this.currentMenu = null;
+                    this.isVisible = false;
+                    this.callbacks.onMenuHide();
+                }, 150);
+            } else {
+                // Menu already removed, just clean up state
                 this.currentMenu = null;
                 this.isVisible = false;
                 this.callbacks.onMenuHide();
-            }, 150);
+            }
         }
     }
 

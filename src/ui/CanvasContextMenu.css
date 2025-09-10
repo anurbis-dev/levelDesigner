@@ -1,0 +1,64 @@
+/**
+ * CanvasContextMenu CSS Styles
+ * 
+ * Additional styles for the canvas context menu system.
+ * Extends the base context menu styles with canvas-specific customizations.
+ * 
+ * Key features:
+ * - Slightly larger menu items for better touch targets
+ * - Custom icons for canvas operations
+ * - Group-specific styling
+ * - View operation highlights
+ * 
+ * @author Level Designer
+ * @version dynamic
+ */
+
+/* Extend base menu for canvas context */
+.base-context-menu.canvas-context {
+    min-width: 160px; /* Slightly wider than base for canvas operations */
+    position: fixed; /* Изменено с absolute на fixed для отображения поверх всего */
+    z-index: 100000; /* Увеличен z-index для гарантированного отображения поверх */
+    pointer-events: auto; /* Обеспечивает работу событий мыши */
+}
+
+/* Custom icons and spacing for canvas operations */
+.base-context-menu-item[data-action="zoom-in"]::before,
+.base-context-menu-item[data-action="zoom-out"]::before,
+.base-context-menu-item[data-action="zoom-fit"]::before,
+.base-context-menu-item[data-action="reset-view"]::before {
+    margin-right: 8px;
+    font-size: 14px;
+}
+
+/* Group operation highlights */
+.base-context-menu-item[data-action="group"],
+.base-context-menu-item[data-action="ungroup"] {
+    font-weight: 500;
+}
+
+/* Enhanced separator between object commands and view commands */
+.base-context-menu.canvas-context .base-context-menu-item.separator.object-view-separator {
+    height: 2px;
+    background: linear-gradient(to right, transparent, #6B7280, transparent);
+    margin: 6px 0;
+    border: none;
+}
+
+/* View operation section */
+.base-context-menu-group.view-operations {
+    border-top: 1px solid #374151;
+    margin-top: 4px;
+    padding-top: 4px;
+}
+
+/* Mobile optimization for canvas menu */
+@media (max-width: 480px) {
+    .base-context-menu.canvas-context {
+        min-width: 180px;
+    }
+    
+    .base-context-menu.canvas-context .base-context-menu-item {
+        padding: 14px 16px; /* Larger touch targets for canvas operations */
+    }
+}

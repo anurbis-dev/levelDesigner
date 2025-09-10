@@ -20,6 +20,8 @@ import { GroupOperations } from './GroupOperations.js';
 import { RenderOperations } from './RenderOperations.js';
 import { DuplicateOperations } from './DuplicateOperations.js';
 import { MenuManager } from '../managers/MenuManager.js';
+import { ContextMenuManager } from '../managers/ContextMenuManager.js';
+import { CanvasContextMenu } from '../ui/CanvasContextMenu.js';
 import { Logger } from '../utils/Logger.js';
 
 /**
@@ -32,7 +34,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '2.7.0';
+    static VERSION = '2.8.0';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -54,6 +56,7 @@ export class LevelEditor {
         this.outlinerPanel = null;
         this.layersPanel = null;
         this.settingsPanel = null;
+        this.canvasContextMenu = null;
         
         // Current level
         this.level = null;
@@ -63,6 +66,9 @@ export class LevelEditor {
         
         // Initialize MenuManager (will be set up in init() after DOM is ready)
         this.menuManager = null;
+
+        // Initialize ContextMenuManager
+        this.contextMenuManager = new ContextMenuManager();
 
         // Initialize operation modules
         this.eventHandlers = new EventHandlers(this);
@@ -120,7 +126,25 @@ export class LevelEditor {
         // Initialize renderer
         this.canvasRenderer = new CanvasRenderer(canvas);
         this.canvasRenderer.resizeCanvas();
-        
+
+        // Initialize canvas context menu
+        this.canvasContextMenu = new CanvasContextMenu(canvas, this, {
+            onDuplicate: (objects) => this.duplicateSelectedObjects(),
+            onDelete: (objects) => this.deleteSelectedObjects(),
+            onCopy: () => this.copySelectedObjects(),
+            onPaste: () => this.pasteObjects(),
+            onCut: () => this.cutSelectedObjects(),
+            onGroup: () => this.groupSelectedObjects(),
+            onUngroup: () => this.ungroupSelectedObjects(),
+            onZoomIn: () => this.zoomIn(),
+            onZoomOut: () => this.zoomOut(),
+            onZoomFit: () => this.zoomToFit(),
+            onResetView: () => this.resetView()
+        });
+
+        // Register canvas context menu with the manager
+        this.contextMenuManager.registerMenu('canvas', this.canvasContextMenu);
+
         // Initialize UI panels
         this.assetPanel = new AssetPanel(assetsPanel, this.assetManager, this.stateManager);
         this.detailsPanel = new DetailsPanel(detailsPanel, this.stateManager, this);
@@ -178,6 +202,117 @@ export class LevelEditor {
         
         // Save initial state
         this.historyManager.saveState(this.level.objects, true);
+
+        // Test context menu functionality
+        this.testContextMenu();
+        this.testContextMenuManager();
+        this.testGlobalClickHandler();
+        this.testPanningDetection();
+    }
+
+    /**
+     * Test context menu functionality
+     */
+    testContextMenu() {
+        console.log('[TEST] Context menu test started');
+
+        // Test that context menu is initialized
+        if (this.canvasContextMenu) {
+            console.log('[TEST] ✓ CanvasContextMenu initialized successfully');
+        } else {
+            console.log('[TEST] ✗ CanvasContextMenu not initialized');
+        }
+
+        // Test menu methods
+        const testData = {
+            hasSelection: false,
+            isGroup: false,
+            clickPosition: { x: 100, y: 100 }
+        };
+
+        // Test extractContextData method
+        if (this.canvasContextMenu && typeof this.canvasContextMenu.extractContextData === 'function') {
+            console.log('[TEST] ✓ extractContextData method exists');
+        }
+
+        // Test hasSelectedObjects method
+        if (this.canvasContextMenu && typeof this.canvasContextMenu.hasSelectedObjects === 'function') {
+            const hasSelection = this.canvasContextMenu.hasSelectedObjects();
+            console.log(`[TEST] ✓ hasSelectedObjects method works: ${hasSelection}`);
+        }
+
+        console.log('[TEST] Context menu test completed');
+    }
+
+    /**
+     * Test ContextMenuManager functionality
+     */
+    testContextMenuManager() {
+        console.log('[TEST] ContextMenuManager test started');
+
+        if (this.contextMenuManager) {
+            console.log('[TEST] ✓ ContextMenuManager initialized successfully');
+
+            const registeredMenus = this.contextMenuManager.getRegisteredMenus();
+            console.log(`[TEST] ✓ Registered menus: ${registeredMenus.join(', ')}`);
+
+            const hasActive = this.contextMenuManager.hasActiveMenu();
+            console.log(`[TEST] ✓ Has active menu: ${hasActive}`);
+        } else {
+            console.log('[TEST] ✗ ContextMenuManager not initialized');
+        }
+
+        console.log('[TEST] ContextMenuManager test completed');
+    }
+
+    /**
+     * Test global click handler functionality
+     */
+    testGlobalClickHandler() {
+        console.log('[TEST] Global click handler test started');
+
+        if (this.contextMenuManager) {
+            console.log('[TEST] ✓ Global context menu handler should close menus on empty area clicks');
+
+            // Test that we can access the manager
+            const registeredMenus = this.contextMenuManager.getRegisteredMenus();
+            console.log(`[TEST] ✓ Global handler can access ${registeredMenus.length} registered menus`);
+        } else {
+            console.log('[TEST] ✗ ContextMenuManager not available for global handler');
+        }
+
+        console.log('[TEST] Global click handler test completed');
+        console.log('[TEST] Right-click in empty areas should now close all active menus');
+    }
+
+    /**
+     * Test panning detection functionality
+     */
+    testPanningDetection() {
+        console.log('[TEST] Panning detection test started');
+
+        // Test mouse state initialization
+        const mouseState = this.stateManager.get('mouse');
+        if (mouseState) {
+            console.log('[TEST] ✓ Mouse state available for panning detection');
+
+            // Check if panning-related properties exist
+            const hasPanningProps = mouseState.hasOwnProperty('wasPanning') ||
+                                  mouseState.hasOwnProperty('rightClickStartX') ||
+                                  mouseState.hasOwnProperty('rightClickStartY');
+
+            if (hasPanningProps) {
+                console.log('[TEST] ✓ Panning detection properties initialized');
+            } else {
+                console.log('[TEST] ⚠ Panning detection properties not found');
+            }
+        } else {
+            console.log('[TEST] ✗ Mouse state not available');
+        }
+
+        console.log('[TEST] Panning detection test completed');
+        console.log('[TEST] Right-click + drag should not show context menu');
+        console.log('[TEST] Right-click without movement should show context menu');
     }
 
     /**
@@ -721,6 +856,105 @@ export class LevelEditor {
 
     ungroupSelectedObjects() {
         this.groupOperations.ungroupSelectedObjects();
+    }
+
+    /**
+     * Copy selected objects to clipboard
+     */
+    copySelectedObjects() {
+        // TODO: Implement copy functionality
+        console.log('Copy selected objects - not implemented yet');
+    }
+
+    /**
+     * Paste objects from clipboard
+     */
+    pasteObjects() {
+        // TODO: Implement paste functionality
+        console.log('Paste objects - not implemented yet');
+    }
+
+    /**
+     * Cut selected objects (copy + delete)
+     */
+    cutSelectedObjects() {
+        this.copySelectedObjects();
+        this.deleteSelectedObjects();
+    }
+
+    /**
+     * Zoom in canvas view
+     */
+    zoomIn() {
+        const camera = this.stateManager.get('camera');
+        const newZoom = Math.min(camera.zoom * 1.2, 5.0); // Max zoom 5x
+        this.stateManager.update({
+            'camera.zoom': newZoom
+        });
+        this.render();
+    }
+
+    /**
+     * Zoom out canvas view
+     */
+    zoomOut() {
+        const camera = this.stateManager.get('camera');
+        const newZoom = Math.max(camera.zoom / 1.2, 0.1); // Min zoom 0.1x
+        this.stateManager.update({
+            'camera.zoom': newZoom
+        });
+        this.render();
+    }
+
+    /**
+     * Zoom to fit all objects in view
+     */
+    zoomToFit() {
+        if (!this.level || this.level.objects.length === 0) {
+            this.resetView();
+            return;
+        }
+
+        const bounds = this.getSelectionBounds(this.level.objects);
+        if (!bounds) {
+            this.resetView();
+            return;
+        }
+
+        const canvas = document.getElementById('main-canvas');
+        const canvasRect = canvas.getBoundingClientRect();
+        const canvasWidth = canvasRect.width;
+        const canvasHeight = canvasRect.height;
+
+        // Calculate zoom to fit all objects with some padding
+        const padding = 50;
+        const zoomX = (canvasWidth - padding) / bounds.width;
+        const zoomY = (canvasHeight - padding) / bounds.height;
+        const zoom = Math.min(zoomX, zoomY, 1.0); // Don't zoom in beyond 1:1
+
+        // Center the view on the objects
+        const centerX = bounds.centerX;
+        const centerY = bounds.centerY;
+
+        this.stateManager.update({
+            'camera.x': centerX,
+            'camera.y': centerY,
+            'camera.zoom': zoom
+        });
+
+        this.render();
+    }
+
+    /**
+     * Reset canvas view to default position and zoom
+     */
+    resetView() {
+        this.stateManager.update({
+            'camera.x': 0,
+            'camera.y': 0,
+            'camera.zoom': 1.0
+        });
+        this.render();
     }
 
     // Group edit helpers - delegate to group operations

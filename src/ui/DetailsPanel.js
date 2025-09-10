@@ -77,6 +77,9 @@ export class DetailsPanel {
         this.container.innerHTML = '';
         this.container.appendChild(nameInput);
         this.container.appendChild(statsDiv);
+        
+        // Add layer information section for groups
+        this.renderLayerInfo(group);
     }
 
     renderObjectDetails(obj) {
@@ -91,6 +94,9 @@ export class DetailsPanel {
         
         this.container.innerHTML = '';
         this.container.appendChild(propertyEditor);
+        
+        // Add layer information section
+        this.renderLayerInfo(obj);
         
         // Add custom properties section
         this.renderCustomProperties(obj);
@@ -139,6 +145,147 @@ export class DetailsPanel {
             
             this.container.appendChild(propContainer);
         });
+        
+        // Add layer information for multiple selection
+        this.renderMultipleLayerInfo(objects);
+    }
+
+    renderLayerInfo(obj) {
+        const level = this.levelEditor.getLevel();
+        const layerInfo = this.getObjectLayerInfo(obj, level);
+        
+        const section = document.createElement('div');
+        section.className = 'mt-4';
+        section.innerHTML = '<h4 class="text-md font-bold mb-2">Layer Information</h4>';
+        
+        const layerContainer = document.createElement('div');
+        layerContainer.className = 'mb-2';
+        
+        layerContainer.innerHTML = `
+            <label class="block text-sm font-medium text-gray-300">Current Layer</label>
+            <div class="mt-1 flex items-center space-x-2">
+                <div class="w-4 h-4 rounded border" style="background-color: ${layerInfo.color}"></div>
+                <span class="text-sm text-gray-200">${layerInfo.name}</span>
+                <span class="text-xs text-gray-400">(${layerInfo.objectCount} objects)</span>
+            </div>
+        `;
+        
+        section.appendChild(layerContainer);
+        this.container.appendChild(section);
+    }
+
+    getObjectLayerInfo(obj, level) {
+        // Get layer ID from object, fallback to Main layer if not set
+        const layerId = obj.layerId || level.getMainLayerId();
+        const layer = level.getLayerById(layerId);
+        
+        if (layer) {
+            const objectCount = level.getLayerObjectsCount(layerId);
+            return {
+                id: layer.id,
+                name: layer.name,
+                color: layer.color,
+                visible: layer.visible,
+                locked: layer.locked,
+                objectCount: objectCount
+            };
+        }
+        
+        // Fallback if layer not found
+        return {
+            id: 'unknown',
+            name: 'Unknown Layer',
+            color: '#6B7280',
+            visible: true,
+            locked: false,
+            objectCount: 0
+        };
+    }
+
+    renderMultipleLayerInfo(objects) {
+        const level = this.levelEditor.getLevel();
+        const layerAnalysis = this.analyzeMultipleLayers(objects, level);
+        
+        const section = document.createElement('div');
+        section.className = 'mt-4';
+        section.innerHTML = '<h4 class="text-md font-bold mb-2">Layer Information</h4>';
+        
+        if (layerAnalysis.allSameLayer) {
+            // All objects are on the same layer
+            const layerInfo = layerAnalysis.layers[0];
+            const layerContainer = document.createElement('div');
+            layerContainer.className = 'mb-2';
+            
+            layerContainer.innerHTML = `
+                <label class="block text-sm font-medium text-gray-300">Current Layer</label>
+                <div class="mt-1 flex items-center space-x-2">
+                    <div class="w-4 h-4 rounded border" style="background-color: ${layerInfo.color}"></div>
+                    <span class="text-sm text-gray-200">${layerInfo.name}</span>
+                    <span class="text-xs text-gray-400">(${layerInfo.objectCount} objects, ${objects.length} selected)</span>
+                </div>
+            `;
+            
+            section.appendChild(layerContainer);
+        } else {
+            // Objects are on different layers
+            const layerContainer = document.createElement('div');
+            layerContainer.className = 'mb-2';
+            
+            layerContainer.innerHTML = `
+                <label class="block text-sm font-medium text-gray-300">Layers (${layerAnalysis.layers.length} different)</label>
+                <div class="mt-1 space-y-1">
+            `;
+            
+            layerAnalysis.layers.forEach(layerInfo => {
+                const layerItem = document.createElement('div');
+                layerItem.className = 'flex items-center space-x-2 text-sm';
+                layerItem.innerHTML = `
+                    <div class="w-3 h-3 rounded border" style="background-color: ${layerInfo.color}"></div>
+                    <span class="text-gray-200">${layerInfo.name}</span>
+                    <span class="text-xs text-gray-400">(${layerInfo.selectedCount} selected, ${layerInfo.objectCount} total)</span>
+                `;
+                layerContainer.appendChild(layerItem);
+            });
+            
+            layerContainer.innerHTML += '</div>';
+            section.appendChild(layerContainer);
+        }
+        
+        this.container.appendChild(section);
+    }
+
+    analyzeMultipleLayers(objects, level) {
+        const layerMap = new Map();
+        
+        objects.forEach(obj => {
+            const layerId = obj.layerId || level.getMainLayerId();
+            const layer = level.getLayerById(layerId);
+            
+            if (layer) {
+                if (!layerMap.has(layerId)) {
+                    const objectCount = level.getLayerObjectsCount(layerId);
+                    layerMap.set(layerId, {
+                        id: layer.id,
+                        name: layer.name,
+                        color: layer.color,
+                        visible: layer.visible,
+                        locked: layer.locked,
+                        objectCount: objectCount,
+                        selectedCount: 0
+                    });
+                }
+                layerMap.get(layerId).selectedCount++;
+            }
+        });
+        
+        const layers = Array.from(layerMap.values());
+        const allSameLayer = layers.length === 1;
+        
+        return {
+            layers: layers,
+            allSameLayer: allSameLayer,
+            totalLayers: layers.length
+        };
     }
 
     renderCustomProperties(obj) {

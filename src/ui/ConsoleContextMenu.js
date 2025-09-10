@@ -61,10 +61,18 @@ export class ConsoleContextMenu {
         this.consolePanel.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            
+
             // Extract message and timestamp from log entry if available
             const { message, timestamp } = this.extractLogData(e.target);
-            this.showContextMenu(e, message, timestamp);
+
+            // Try to use ContextMenuManager if available
+            if (window.editor && window.editor.contextMenuManager) {
+                window.editor.contextMenuManager.showMenu('console', e, { message, timestamp });
+            } else {
+                // Fallback to direct show if manager not available
+                console.warn('[ConsoleContextMenu] ContextMenuManager not available, using fallback');
+                this.showContextMenu(e, message, timestamp);
+            }
         });
     }
 
