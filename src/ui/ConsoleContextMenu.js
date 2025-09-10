@@ -37,7 +37,14 @@ export class ConsoleContextMenu {
         
         this.isLoggingEnabled = true;
         this.currentMenu = null;
-        
+
+        // Animation monitoring properties
+        this.monitoringAnimationFrame = null;
+        this.isMonitoringCursor = false;
+        this.animationStartTime = 0;
+        this.lastCursorX = 0;
+        this.lastCursorY = 0;
+
         // Debug: Check if elements exist
         if (!this.consolePanel) {
             Logger.console.error('ConsoleContextMenu: consolePanel not found');
@@ -45,9 +52,10 @@ export class ConsoleContextMenu {
         if (!this.consoleOutput) {
             Logger.console.error('ConsoleContextMenu: consoleOutput not found');
         }
-        
+
         this.setupContextMenu();
         this.setupWindowResizeHandler();
+        this.setupCursorTracking();
         
         Logger.console.info('ConsoleContextMenu initialized successfully');
     }
@@ -87,8 +95,106 @@ export class ConsoleContextMenu {
                 this.currentMenu = null;
             }
         };
-        
+
         window.addEventListener('resize', this.resizeHandler, { passive: true });
+    }
+
+    /**
+     * Setup global mousemove handler to track cursor position in real-time
+     */
+    setupCursorTracking() {
+        if (this.cursorTrackingHandler) {
+            document.removeEventListener('mousemove', this.cursorTrackingHandler);
+        }
+
+        this.cursorTrackingHandler = (e) => {
+            this.lastCursorX = e.clientX;
+            this.lastCursorY = e.clientY;
+        };
+
+        document.addEventListener('mousemove', this.cursorTrackingHandler, { passive: true });
+    }
+
+    /**
+     * Remove cursor tracking handler
+     */
+    removeCursorTracking() {
+        if (this.cursorTrackingHandler) {
+            document.removeEventListener('mousemove', this.cursorTrackingHandler);
+            this.cursorTrackingHandler = null;
+        }
+    }
+
+    /**
+     * Start continuous cursor position monitoring during animation
+     * @param {HTMLElement} menu - The context menu element
+     */
+    startCursorMonitoring(menu) {
+        if (this.isMonitoringCursor) {
+            this.stopCursorMonitoring();
+        }
+
+        console.log('[ConsoleContextMenu] Starting cursor monitoring during animation');
+        this.isMonitoringCursor = true;
+        this.animationStartTime = Date.now();
+
+        // Start monitoring loop
+        this.monitorCursorPosition(menu);
+    }
+
+    /**
+     * Stop cursor position monitoring
+     */
+    stopCursorMonitoring() {
+        if (this.monitoringAnimationFrame) {
+            cancelAnimationFrame(this.monitoringAnimationFrame);
+            this.monitoringAnimationFrame = null;
+        }
+        this.isMonitoringCursor = false;
+        console.log('[ConsoleContextMenu] Stopped cursor monitoring');
+    }
+
+    /**
+     * Monitor cursor position during animation and close menu if cursor leaves bounds
+     * @param {HTMLElement} menu - The context menu element
+     */
+    monitorCursorPosition(menu) {
+        if (!this.isMonitoringCursor || !menu || !menu.parentNode) {
+            return;
+        }
+
+        // Check if animation duration exceeded (fallback timeout)
+        const elapsed = Date.now() - this.animationStartTime;
+        if (elapsed > 200) { // 200ms timeout (slightly longer than animation)
+            console.log('[ConsoleContextMenu] Animation monitoring timeout - stopping');
+            this.stopCursorMonitoring();
+            return;
+        }
+
+        // Get current cursor position
+        const cursorX = this.lastCursorX;
+        const cursorY = this.lastCursorY;
+
+        // Check if cursor is inside menu bounds
+        const rect = menu.getBoundingClientRect();
+        const isInside = cursorX >= rect.left - 2 &&
+                        cursorX <= rect.right + 2 &&
+                        cursorY >= rect.top - 2 &&
+                        cursorY <= rect.bottom + 2;
+
+        if (!isInside) {
+            console.log('[ConsoleContextMenu] Cursor moved outside menu bounds during animation - closing menu');
+            console.log('[ConsoleContextMenu] Cursor:', cursorX, cursorY);
+            console.log('[ConsoleContextMenu] Menu bounds:', rect);
+            this.stopCursorMonitoring();
+            this.removeMenu(menu);
+            return;
+        }
+
+        // Continue monitoring
+        this.monitoringAnimationFrame = requestAnimationFrame(() => {
+            this.monitorCursorPosition(menu);
+        });
     }
 
     /**
@@ -123,9 +229,13 @@ export class ConsoleContextMenu {
         // Remove existing context menu
         this.removeExistingMenu();
 
+        // Store cursor position for animation monitoring
+        this.lastCursorX = event.clientX;
+        this.lastCursorY = event.clientY;
+
         // Create new context menu
         const contextMenu = this.createContextMenu(event, message, timestamp);
-        
+
         // Add to document first (hidden)
         document.body.appendChild(contextMenu);
         this.currentMenu = contextMenu;
@@ -148,9 +258,11 @@ export class ConsoleContextMenu {
         // Add positioning classes for better animation
         this.addPositioningClasses(contextMenu, event, optimalPosition);
         
-        // Trigger animation
+        // Trigger animation and start cursor monitoring
         requestAnimationFrame(() => {
             contextMenu.classList.add('show');
+            // Start continuous cursor monitoring during animation
+            this.startCursorMonitoring(contextMenu);
         });
 
         // Setup menu closing
@@ -404,6 +516,9 @@ export class ConsoleContextMenu {
      * @param {HTMLElement} menu - The context menu element
      */
     removeMenu(menu) {
+        // Stop cursor monitoring if active
+        this.stopCursorMonitoring();
+
         if (menu && menu.parentNode) {
             menu.classList.remove('show');
 
@@ -513,33 +628,59 @@ export class ConsoleContextMenu {
      */
     ensureCursorInsideMenu(event, menuPosition, menu) {
         const rect = menu.getBoundingClientRect();
-        const cursorX = event.clientX;
-        const cursorY = event.clientY;
+
+        // Use stored cursor position for consistency, fallback to event
+        const cursorX = this.lastCursorX || event.clientX;
+        const cursorY = this.lastCursorY || event.clientY;
 
         let offsetX = 0;
         let offsetY = 0;
 
-        // Check if cursor is to the left of menu
+        // Check if cursor is to the left of menu (cursor left of menu's left edge)
         if (cursorX < rect.left) {
-            // Move menu left so cursor is 2px inside from the left edge
+            // Move menu left so cursor ends up 2px inside from the left edge
+            // New menu left = current menu left + offsetX
+            // We want: cursorX = newMenuLeft + 2
+            // So: newMenuLeft = cursorX - 2
+            // Therefore: offsetX = (cursorX - 2) - rect.left = cursorX - rect.left - 2
             offsetX = cursorX - rect.left - 2;
         }
-        // Check if cursor is to the right of menu
+        // Check if cursor is to the right of menu (cursor right of menu's right edge)
         else if (cursorX > rect.right) {
-            // Move menu right so cursor is 2px inside from the right edge
+            // Move menu right so cursor ends up 2px inside from the right edge
+            // New menu right = current menu right + offsetX
+            // We want: cursorX = newMenuRight - 2
+            // So: newMenuRight = cursorX + 2
+            // Since newMenuRight = rect.right + offsetX, then:
+            // offsetX = (cursorX + 2) - rect.right = cursorX - rect.right + 2
             offsetX = cursorX - rect.right + 2;
         }
 
-        // Check if cursor is above menu
+        // Check if cursor is above menu (cursor above menu's top edge)
         if (cursorY < rect.top) {
-            // Move menu up so cursor is 2px inside from the top edge
+            // Move menu up so cursor ends up 2px inside from the top edge
+            // New menu top = current menu top + offsetY
+            // We want: cursorY = newMenuTop + 2
+            // So: newMenuTop = cursorY - 2
+            // Therefore: offsetY = (cursorY - 2) - rect.top = cursorY - rect.top - 2
             offsetY = cursorY - rect.top - 2;
         }
-        // Check if cursor is below menu
+        // Check if cursor is below menu (cursor below menu's bottom edge)
         else if (cursorY > rect.bottom) {
-            // Move menu down so cursor is 2px inside from the bottom edge
+            // Move menu down so cursor ends up 2px inside from the bottom edge
+            // New menu bottom = current menu bottom + offsetY
+            // We want: cursorY = newMenuBottom - 2
+            // So: newMenuBottom = cursorY + 2
+            // Since newMenuBottom = rect.bottom + offsetY, then:
+            // offsetY = (cursorY + 2) - rect.bottom = cursorY - rect.bottom + 2
             offsetY = cursorY - rect.bottom + 2;
         }
+
+        console.log('[ConsoleContextMenu] Cursor position check:', {
+            cursor: { x: cursorX, y: cursorY },
+            menuRect: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom },
+            offset: { x: offsetX, y: offsetY }
+        });
 
         return { x: offsetX, y: offsetY };
     }

@@ -582,33 +582,59 @@ export class BaseContextMenu {
      */
     ensureCursorInsideMenu(event, menuPosition, menu) {
         const rect = menu.getBoundingClientRect();
-        const cursorX = event.clientX;
-        const cursorY = event.clientY;
+
+        // Use stored cursor position for consistency, fallback to event
+        const cursorX = this.lastCursorX || event.clientX;
+        const cursorY = this.lastCursorY || event.clientY;
 
         let offsetX = 0;
         let offsetY = 0;
 
-        // Check if cursor is to the left of menu
+        // Check if cursor is to the left of menu (cursor left of menu's left edge)
         if (cursorX < rect.left) {
-            // Move menu left so cursor is 2px inside from the left edge
+            // Move menu left so cursor ends up 2px inside from the left edge
+            // New menu left = current menu left + offsetX
+            // We want: cursorX = newMenuLeft + 2
+            // So: newMenuLeft = cursorX - 2
+            // Therefore: offsetX = (cursorX - 2) - rect.left = cursorX - rect.left - 2
             offsetX = cursorX - rect.left - 2;
         }
-        // Check if cursor is to the right of menu
+        // Check if cursor is to the right of menu (cursor right of menu's right edge)
         else if (cursorX > rect.right) {
-            // Move menu right so cursor is 2px inside from the right edge
+            // Move menu right so cursor ends up 2px inside from the right edge
+            // New menu right = current menu right + offsetX
+            // We want: cursorX = newMenuRight - 2
+            // So: newMenuRight = cursorX + 2
+            // Since newMenuRight = rect.right + offsetX, then:
+            // offsetX = (cursorX + 2) - rect.right = cursorX - rect.right + 2
             offsetX = cursorX - rect.right + 2;
         }
 
-        // Check if cursor is above menu
+        // Check if cursor is above menu (cursor above menu's top edge)
         if (cursorY < rect.top) {
-            // Move menu up so cursor is 2px inside from the top edge
+            // Move menu up so cursor ends up 2px inside from the top edge
+            // New menu top = current menu top + offsetY
+            // We want: cursorY = newMenuTop + 2
+            // So: newMenuTop = cursorY - 2
+            // Therefore: offsetY = (cursorY - 2) - rect.top = cursorY - rect.top - 2
             offsetY = cursorY - rect.top - 2;
         }
-        // Check if cursor is below menu
+        // Check if cursor is below menu (cursor below menu's bottom edge)
         else if (cursorY > rect.bottom) {
-            // Move menu down so cursor is 2px inside from the bottom edge
+            // Move menu down so cursor ends up 2px inside from the bottom edge
+            // New menu bottom = current menu bottom + offsetY
+            // We want: cursorY = newMenuBottom - 2
+            // So: newMenuBottom = cursorY + 2
+            // Since newMenuBottom = rect.bottom + offsetY, then:
+            // offsetY = (cursorY + 2) - rect.bottom = cursorY - rect.bottom + 2
             offsetY = cursorY - rect.bottom + 2;
         }
+
+        console.log('[ContextMenu] Cursor position check:', {
+            cursor: { x: cursorX, y: cursorY },
+            menuRect: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom },
+            offset: { x: offsetX, y: offsetY }
+        });
 
         return { x: offsetX, y: offsetY };
     }
