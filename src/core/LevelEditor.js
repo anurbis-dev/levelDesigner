@@ -34,7 +34,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.0.0';
+    static VERSION = '3.1.0';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -350,23 +350,45 @@ export class LevelEditor {
     testCursorPositioning() {
         console.log('[TEST] Cursor positioning test started');
 
+        let canvasMenuOk = false;
+        let consoleMenuOk = false;
+
         if (this.canvasContextMenu) {
             console.log('[TEST] ✓ CanvasContextMenu supports cursor positioning');
 
             // Test that the menu has the necessary methods
             if (typeof this.canvasContextMenu.ensureCursorInsideMenu === 'function') {
-                console.log('[TEST] ✓ ensureCursorInsideMenu method available');
+                console.log('[TEST] ✓ CanvasContextMenu.ensureCursorInsideMenu method available');
+                canvasMenuOk = true;
             }
 
             if (typeof this.canvasContextMenu.adjustCursorPosition === 'function') {
-                console.log('[TEST] ✓ adjustCursorPosition method available');
+                console.log('[TEST] ✓ CanvasContextMenu.adjustCursorPosition method available');
             }
         } else {
             console.log('[TEST] ✗ CanvasContextMenu not available');
         }
 
+        // Test ConsoleContextMenu if available
+        if (window.consoleContextMenu) {
+            console.log('[TEST] ✓ ConsoleContextMenu supports cursor positioning');
+
+            if (typeof window.consoleContextMenu.ensureCursorInsideMenu === 'function') {
+                console.log('[TEST] ✓ ConsoleContextMenu.ensureCursorInsideMenu method available');
+                consoleMenuOk = true;
+            }
+        } else {
+            console.log('[TEST] ⚠ ConsoleContextMenu not available for testing');
+        }
+
+        if (canvasMenuOk && consoleMenuOk) {
+            console.log('[TEST] ✓ Both context menus support cursor positioning');
+        } else if (canvasMenuOk) {
+            console.log('[TEST] ✓ Canvas context menu supports cursor positioning');
+        }
+
         console.log('[TEST] Cursor positioning test completed');
-        console.log('[TEST] Menus should now position themselves to keep cursor inside bounds');
+        console.log('[TEST] Menus should now position themselves to keep cursor inside bounds (2px offset)');
     }
 
     /**

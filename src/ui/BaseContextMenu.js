@@ -407,24 +407,24 @@ export class BaseContextMenu {
 
         // Check if cursor is to the left of menu
         if (cursorX < rect.left) {
-            // Move menu left so cursor is 3px inside from the left edge
-            offsetX = cursorX - rect.left - 3;
+            // Move menu left so cursor is 2px inside from the left edge
+            offsetX = cursorX - rect.left - 2;
         }
         // Check if cursor is to the right of menu
         else if (cursorX > rect.right) {
-            // Move menu right so cursor is 3px inside from the right edge
-            offsetX = cursorX - rect.right + 3;
+            // Move menu right so cursor is 2px inside from the right edge
+            offsetX = cursorX - rect.right + 2;
         }
 
         // Check if cursor is above menu
         if (cursorY < rect.top) {
-            // Move menu up so cursor is 3px inside from the top edge
-            offsetY = cursorY - rect.top - 3;
+            // Move menu up so cursor is 2px inside from the top edge
+            offsetY = cursorY - rect.top - 2;
         }
         // Check if cursor is below menu
         else if (cursorY > rect.bottom) {
-            // Move menu down so cursor is 3px inside from the bottom edge
-            offsetY = cursorY - rect.bottom + 3;
+            // Move menu down so cursor is 2px inside from the bottom edge
+            offsetY = cursorY - rect.bottom + 2;
         }
 
         return { x: offsetX, y: offsetY };
