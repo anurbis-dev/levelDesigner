@@ -186,22 +186,26 @@ export class CanvasContextMenu extends BaseContextMenu {
     }
 
     /**
-     * Check if the selected object is a group
-     * @returns {boolean} - Whether selected object is a group
+     * Check if any of the selected objects is a group
+     * @returns {boolean} - Whether any selected object is a group
      */
     isSelectedObjectGroup() {
         if (!this.levelEditor) return false;
 
         const selectedObjects = this.levelEditor.stateManager.get('selectedObjects');
-        if (!selectedObjects || selectedObjects.size !== 1) {
+        if (!selectedObjects || selectedObjects.size === 0) {
             return false;
         }
 
-        // Get the single selected object
-        const selectedId = Array.from(selectedObjects)[0];
-        const object = this.levelEditor.level.findObjectById(selectedId);
+        // Check if any selected object is a group
+        for (const selectedId of selectedObjects) {
+            const object = this.levelEditor.level.findObjectById(selectedId);
+            if (object && object.type === 'group') {
+                return true;
+            }
+        }
 
-        return object && object.type === 'group';
+        return false;
     }
 
     /**
@@ -258,10 +262,60 @@ export class CanvasContextMenu extends BaseContextMenu {
         this.addSeparatorWithClass('object-view-separator');
 
         // View operations
-        this.addMenuItem('Zoom In', '🔍', () => this.callbacks.onZoomIn());
-        this.addMenuItem('Zoom Out', '🔎', () => this.callbacks.onZoomOut());
+        this.addMenuItem('Zoom In', '🔍', (contextData) => {
+            // Perform zoom in around cursor position without closing menu
+            this.performZoomAroundCursor(1);
+            // Don't close menu - return false to prevent default behavior
+            return false;
+        });
+        this.addMenuItem('Zoom Out', '🔎', (contextData) => {
+            // Perform zoom out around cursor position without closing menu
+            this.performZoomAroundCursor(-1);
+            // Don't close menu - return false to prevent default behavior
+            return false;
+        });
         this.addMenuItem('Zoom to Fit', '🎯', () => this.callbacks.onZoomFit());
         this.addMenuItem('Reset View', '🔄', () => this.callbacks.onResetView());
+    }
+
+    /**
+     * Perform zoom around cursor position (like mouse wheel zoom)
+     * @param {number} direction - 1 for zoom in, -1 for zoom out
+     */
+    performZoomAroundCursor(direction) {
+        if (!this.levelEditor) return;
+
+        const camera = this.levelEditor.stateManager.get('camera');
+        const zoomIntensity = 0.1;
+
+        const oldZoom = camera.zoom;
+        const newZoom = Math.max(0.1, Math.min(10, oldZoom * (1 + direction * zoomIntensity)));
+
+        // Use the cursor position from the last stored position
+        const cursorX = this.lastCursorX || window.innerWidth / 2;
+        const cursorY = this.lastCursorY || window.innerHeight / 2;
+
+        // Calculate new camera position to keep cursor position fixed
+        const mouseWorldPosBeforeZoom = this.levelEditor.canvasRenderer.screenToWorld(cursorX, cursorY, camera);
+
+        // Create a temporary camera object for calculations
+        const tempCamera = { ...camera, zoom: newZoom };
+        const mouseWorldPosAfterZoom = this.levelEditor.canvasRenderer.screenToWorld(cursorX, cursorY, tempCamera);
+
+        const newCameraX = camera.x + mouseWorldPosBeforeZoom.x - mouseWorldPosAfterZoom.x;
+        const newCameraY = camera.y + mouseWorldPosBeforeZoom.y - mouseWorldPosAfterZoom.y;
+
+        // Update camera in one operation
+        this.levelEditor.stateManager.update({
+            'camera.zoom': newZoom,
+            'camera.x': newCameraX,
+            'camera.y': newCameraY
+        });
+
+        // Render immediately for responsive zoom
+        this.levelEditor.render();
+
+        console.log(`[CanvasContextMenu] Zoom ${direction > 0 ? 'in' : 'out'} around cursor (${cursorX}, ${cursorY}): ${oldZoom} -> ${newZoom}`);
     }
 
     /**

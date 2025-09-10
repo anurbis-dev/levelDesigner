@@ -251,8 +251,11 @@ export class BaseContextMenu {
         menuItem.addEventListener('click', (e) => {
             e.stopPropagation();
             if (!item.disabled) {
-                this.handleMenuItemClick(item, contextData);
-                this.hideMenu();
+                const result = this.handleMenuItemClick(item, contextData);
+                // Only hide menu if action doesn't return false
+                if (result !== false) {
+                    this.hideMenu();
+                }
             }
         });
         
@@ -263,12 +266,15 @@ export class BaseContextMenu {
      * Handle menu item click
      * @param {Object} item - Menu item
      * @param {Object} contextData - Context data
+     * @returns {*} - Result of the action (if any)
      */
     handleMenuItemClick(item, contextData) {
+        let result;
         if (item.action) {
-            item.action(contextData);
+            result = item.action(contextData);
         }
         this.callbacks.onItemClick(item, contextData);
+        return result;
     }
 
     /**
