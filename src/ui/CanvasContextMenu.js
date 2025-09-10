@@ -168,6 +168,7 @@ export class CanvasContextMenu extends BaseContextMenu {
 
         // Add canvas-specific context data
         contextData.hasSelection = this.hasSelectedObjects();
+        contextData.hasMultipleSelection = this.hasMultipleSelectedObjects();
         contextData.isGroup = this.isSelectedObjectGroup();
         contextData.clickPosition = this.getCanvasPosition(event);
 
@@ -183,6 +184,17 @@ export class CanvasContextMenu extends BaseContextMenu {
 
         const selectedObjects = this.levelEditor.stateManager.get('selectedObjects');
         return selectedObjects && selectedObjects.size > 0;
+    }
+
+    /**
+     * Check if there are at least 2 selected objects (for Group operation)
+     * @returns {boolean} - Whether there are 2 or more selected objects
+     */
+    hasMultipleSelectedObjects() {
+        if (!this.levelEditor) return false;
+
+        const selectedObjects = this.levelEditor.stateManager.get('selectedObjects');
+        return selectedObjects && selectedObjects.size >= 2;
     }
 
     /**
@@ -252,11 +264,26 @@ export class CanvasContextMenu extends BaseContextMenu {
         
         // Group operations
         this.addMenuItem('Group', '📦', () => this.callbacks.onGroup(), {
-            visible: (context) => context.hasSelection && !context.isGroup
+            visible: (context) => {
+                const visible = context.hasMultipleSelection;
+                console.log('[CanvasContextMenu] Group menu item visibility:', visible, {
+                    hasMultipleSelection: context.hasMultipleSelection,
+                    totalSelected: this.levelEditor?.stateManager.get('selectedObjects')?.size || 0
+                });
+                return visible;
+            }
         });
 
         this.addMenuItem('Ungroup', '📭', () => this.callbacks.onUngroup(), {
-            visible: (context) => context.hasSelection && context.isGroup
+            visible: (context) => {
+                const visible = context.hasSelection && context.isGroup;
+                console.log('[CanvasContextMenu] Ungroup menu item visibility:', visible, {
+                    hasSelection: context.hasSelection,
+                    isGroup: context.isGroup,
+                    totalSelected: this.levelEditor?.stateManager.get('selectedObjects')?.size || 0
+                });
+                return visible;
+            }
         });
 
         this.addSeparatorWithClass('object-view-separator');
