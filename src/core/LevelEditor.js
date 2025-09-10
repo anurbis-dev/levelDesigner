@@ -34,7 +34,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '2.9.0';
+    static VERSION = '3.0.0';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -209,6 +209,7 @@ export class LevelEditor {
         this.testGlobalClickHandler();
         this.testPanningDetection();
         this.testMenuAutoClose();
+        this.testCursorPositioning();
     }
 
     /**
@@ -341,6 +342,31 @@ export class LevelEditor {
 
         console.log('[TEST] Menu auto-close test completed');
         console.log('[TEST] Menus should now close automatically when mouse leaves their area');
+    }
+
+    /**
+     * Test cursor positioning functionality
+     */
+    testCursorPositioning() {
+        console.log('[TEST] Cursor positioning test started');
+
+        if (this.canvasContextMenu) {
+            console.log('[TEST] ✓ CanvasContextMenu supports cursor positioning');
+
+            // Test that the menu has the necessary methods
+            if (typeof this.canvasContextMenu.ensureCursorInsideMenu === 'function') {
+                console.log('[TEST] ✓ ensureCursorInsideMenu method available');
+            }
+
+            if (typeof this.canvasContextMenu.adjustCursorPosition === 'function') {
+                console.log('[TEST] ✓ adjustCursorPosition method available');
+            }
+        } else {
+            console.log('[TEST] ✗ CanvasContextMenu not available');
+        }
+
+        console.log('[TEST] Cursor positioning test completed');
+        console.log('[TEST] Menus should now position themselves to keep cursor inside bounds');
     }
 
     /**

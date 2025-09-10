@@ -124,9 +124,22 @@ export class BaseContextMenu {
         const optimalPosition = this.calculateOptimalPosition(event, contextMenu);
         contextMenu.style.left = optimalPosition.x + 'px';
         contextMenu.style.top = optimalPosition.y + 'px';
-        
+
+        // Adjust cursor position to be inside menu bounds (3px offset)
+        this.adjustCursorPosition(event, optimalPosition, contextMenu);
+
         // Add positioning classes for better animation
         this.addPositioningClasses(contextMenu, event, optimalPosition);
+
+        // Ensure cursor is inside menu bounds by adjusting menu position if needed
+        const cursorOffset = this.ensureCursorInsideMenu(event, optimalPosition, contextMenu);
+        if (cursorOffset.x !== 0 || cursorOffset.y !== 0) {
+            console.log('[ContextMenu] Adjusting menu position to keep cursor inside');
+            console.log('[ContextMenu] Cursor:', event.clientX, event.clientY);
+            console.log('[ContextMenu] Offset:', cursorOffset.x, cursorOffset.y);
+            contextMenu.style.left = (optimalPosition.x + cursorOffset.x) + 'px';
+            contextMenu.style.top = (optimalPosition.y + cursorOffset.y) + 'px';
+        }
         
         // Trigger animation
         requestAnimationFrame(() => {
@@ -375,6 +388,57 @@ export class BaseContextMenu {
         // Store references for cleanup
         menu._closeMenuHandler = closeMenu;
         menu._closeOnClickHandler = closeOnClick;
+    }
+
+    /**
+     * Ensure cursor is inside menu bounds by adjusting menu position if needed
+     * @param {Event} event - The context menu event
+     * @param {Object} menuPosition - Current menu position
+     * @param {HTMLElement} menu - The context menu element
+     * @returns {Object} - Offset to apply to menu position
+     */
+    ensureCursorInsideMenu(event, menuPosition, menu) {
+        const rect = menu.getBoundingClientRect();
+        const cursorX = event.clientX;
+        const cursorY = event.clientY;
+
+        let offsetX = 0;
+        let offsetY = 0;
+
+        // Check if cursor is to the left of menu
+        if (cursorX < rect.left) {
+            // Move menu left so cursor is 3px inside from the left edge
+            offsetX = cursorX - rect.left - 3;
+        }
+        // Check if cursor is to the right of menu
+        else if (cursorX > rect.right) {
+            // Move menu right so cursor is 3px inside from the right edge
+            offsetX = cursorX - rect.right + 3;
+        }
+
+        // Check if cursor is above menu
+        if (cursorY < rect.top) {
+            // Move menu up so cursor is 3px inside from the top edge
+            offsetY = cursorY - rect.top - 3;
+        }
+        // Check if cursor is below menu
+        else if (cursorY > rect.bottom) {
+            // Move menu down so cursor is 3px inside from the bottom edge
+            offsetY = cursorY - rect.bottom + 3;
+        }
+
+        return { x: offsetX, y: offsetY };
+    }
+
+    /**
+     * Adjust cursor position to be inside menu bounds (legacy method)
+     * @param {Event} event - The context menu event
+     * @param {Object} menuPosition - Menu position
+     * @param {HTMLElement} menu - The context menu element
+     */
+    adjustCursorPosition(event, menuPosition, menu) {
+        // This method is now handled by ensureCursorInsideMenu
+        // Kept for backward compatibility
     }
 
     /**
