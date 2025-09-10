@@ -274,7 +274,17 @@ export class CanvasContextMenu extends BaseContextMenu {
             // Don't close menu - return false to prevent default behavior
             return false;
         });
-        this.addMenuItem('Zoom to Fit', '🎯', () => this.callbacks.onZoomFit());
+        this.addMenuItem('Zoom to Fit', '🎯', () => {
+            // Use the same function as 'a' key - focusOnAll
+            console.log('[CanvasContextMenu] Zoom to Fit clicked - calling focusOnAll (same as "a" key)');
+            if (this.levelEditor && typeof this.levelEditor.focusOnAll === 'function') {
+                this.levelEditor.focusOnAll();
+            } else {
+                // Fallback to zoomToFit if focusOnAll not available
+                console.warn('[CanvasContextMenu] focusOnAll not available, using fallback');
+                this.callbacks.onZoomFit();
+            }
+        });
         this.addMenuItem('Reset View', '🔄', () => this.callbacks.onResetView());
     }
 
