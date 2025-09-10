@@ -51,9 +51,15 @@ export class BaseContextMenu {
         this.lastCursorX = 0;
         this.lastCursorY = 0;
 
+        // Animation monitoring
+        this.monitoringAnimationFrame = null;
+        this.isMonitoringCursor = false;
+        this.animationStartTime = 0;
+
         this.setupContextMenu();
         this.setupWindowResizeHandler();
-        
+        this.setupCursorTracking();
+
         Logger.ui.info(`${this.constructor.name} initialized successfully`);
     }
 
@@ -82,8 +88,34 @@ export class BaseContextMenu {
                 this.hideMenu();
             }
         };
-        
+
         window.addEventListener('resize', this.resizeHandler, { passive: true });
+    }
+
+    /**
+     * Setup global mousemove handler to track cursor position in real-time
+     */
+    setupCursorTracking() {
+        if (this.cursorTrackingHandler) {
+            document.removeEventListener('mousemove', this.cursorTrackingHandler);
+        }
+
+        this.cursorTrackingHandler = (e) => {
+            this.lastCursorX = e.clientX;
+            this.lastCursorY = e.clientY;
+        };
+
+        document.addEventListener('mousemove', this.cursorTrackingHandler, { passive: true });
+    }
+
+    /**
+     * Remove cursor tracking handler
+     */
+    removeCursorTracking() {
+        if (this.cursorTrackingHandler) {
+            document.removeEventListener('mousemove', this.cursorTrackingHandler);
+            this.cursorTrackingHandler = null;
+        }
     }
 
     /**
@@ -149,9 +181,11 @@ export class BaseContextMenu {
             contextMenu.style.top = (optimalPosition.y + cursorOffset.y) + 'px';
         }
 
-        // Trigger animation
+        // Trigger animation and start cursor monitoring
         requestAnimationFrame(() => {
             contextMenu.classList.add('show');
+            // Start continuous cursor monitoring during animation
+            this.startCursorMonitoring(contextMenu);
         });
 
         // Setup menu closing on mouse leave
@@ -263,6 +297,9 @@ export class BaseContextMenu {
         // Only handle transitionend for our menu element
         if (event.target !== this.currentMenu) return;
 
+        // Stop cursor monitoring since animation is complete
+        this.stopCursorMonitoring();
+
         console.log('[ContextMenu] Animation completed, checking cursor position');
 
         // Update cursor position from event if available, otherwise use stored position
@@ -281,6 +318,78 @@ export class BaseContextMenu {
         }
 
         console.log('[ContextMenu] Cursor is inside menu bounds - keeping menu open');
+    }
+
+    /**
+     * Start continuous cursor position monitoring during animation
+     * @param {HTMLElement} menu - The context menu element
+     */
+    startCursorMonitoring(menu) {
+        if (this.isMonitoringCursor) {
+            this.stopCursorMonitoring();
+        }
+
+        console.log('[ContextMenu] Starting cursor monitoring during animation');
+        this.isMonitoringCursor = true;
+        this.animationStartTime = Date.now();
+
+        // Start monitoring loop
+        this.monitorCursorPosition(menu);
+    }
+
+    /**
+     * Stop cursor position monitoring
+     */
+    stopCursorMonitoring() {
+        if (this.monitoringAnimationFrame) {
+            cancelAnimationFrame(this.monitoringAnimationFrame);
+            this.monitoringAnimationFrame = null;
+        }
+        this.isMonitoringCursor = false;
+        console.log('[ContextMenu] Stopped cursor monitoring');
+    }
+
+    /**
+     * Monitor cursor position during animation and close menu if cursor leaves bounds
+     * @param {HTMLElement} menu - The context menu element
+     */
+    monitorCursorPosition(menu) {
+        if (!this.isMonitoringCursor || !menu || !menu.parentNode) {
+            return;
+        }
+
+        // Check if animation duration exceeded (fallback timeout)
+        const elapsed = Date.now() - this.animationStartTime;
+        if (elapsed > 200) { // 200ms timeout (slightly longer than animation)
+            console.log('[ContextMenu] Animation monitoring timeout - stopping');
+            this.stopCursorMonitoring();
+            return;
+        }
+
+        // Get current cursor position
+        const cursorX = this.lastCursorX;
+        const cursorY = this.lastCursorY;
+
+        // Check if cursor is inside menu bounds
+        const rect = menu.getBoundingClientRect();
+        const isInside = cursorX >= rect.left - 2 &&
+                        cursorX <= rect.right + 2 &&
+                        cursorY >= rect.top - 2 &&
+                        cursorY <= rect.bottom + 2;
+
+        if (!isInside) {
+            console.log('[ContextMenu] Cursor moved outside menu bounds during animation - closing menu');
+            console.log('[ContextMenu] Cursor:', cursorX, cursorY);
+            console.log('[ContextMenu] Menu bounds:', rect);
+            this.stopCursorMonitoring();
+            this.hideMenu();
+            return;
+        }
+
+        // Continue monitoring
+        this.monitoringAnimationFrame = requestAnimationFrame(() => {
+            this.monitorCursorPosition(menu);
+        });
     }
 
     /**
@@ -519,7 +628,12 @@ export class BaseContextMenu {
      * Hide context menu
      */
     hideMenu() {
+        // Stop cursor monitoring if active
+        this.stopCursorMonitoring();
+
         if (this.currentMenu) {
+            // Remove cursor tracking if this is the last menu
+            // Note: We keep cursor tracking active as it might be needed by other components
             // Check if menu is still in DOM
             if (this.currentMenu.parentNode) {
                 this.currentMenu.classList.remove('show');
