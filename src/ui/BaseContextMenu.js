@@ -133,7 +133,7 @@ export class BaseContextMenu {
             contextMenu.classList.add('show');
         });
 
-        // Setup menu closing
+        // Setup menu closing on mouse leave
         this.setupMenuClosing(contextMenu);
         
         // Notify callback
@@ -354,22 +354,27 @@ export class BaseContextMenu {
     }
 
     /**
-     * Setup menu closing behavior
+     * Setup menu closing behavior on mouse leave
      * @param {HTMLElement} menu - The context menu element
      */
     setupMenuClosing(menu) {
-        const closeMenu = (e) => {
-            // Check if menu still exists and is in DOM
-            if (menu && menu.parentNode && !menu.contains(e.target)) {
-                this.hideMenu();
-                document.removeEventListener('click', closeMenu);
-            }
+        const closeMenu = () => {
+            // Close menu when mouse leaves its area
+            this.hideMenu();
         };
 
-        // Close menu after a short delay to allow click events to register
-        setTimeout(() => {
-            document.addEventListener('click', closeMenu, { passive: true });
-        }, 100);
+        // Close menu when mouse leaves the menu area
+        menu.addEventListener('mouseleave', closeMenu);
+
+        // Also close on click for better UX
+        const closeOnClick = () => {
+            this.hideMenu();
+        };
+        menu.addEventListener('click', closeOnClick);
+
+        // Store references for cleanup
+        menu._closeMenuHandler = closeMenu;
+        menu._closeOnClickHandler = closeOnClick;
     }
 
     /**
@@ -380,6 +385,15 @@ export class BaseContextMenu {
             // Check if menu is still in DOM
             if (this.currentMenu.parentNode) {
                 this.currentMenu.classList.remove('show');
+
+                // Clean up event listeners
+                if (this.currentMenu._closeMenuHandler) {
+                    this.currentMenu.removeEventListener('mouseleave', this.currentMenu._closeMenuHandler);
+                }
+                if (this.currentMenu._closeOnClickHandler) {
+                    this.currentMenu.removeEventListener('click', this.currentMenu._closeOnClickHandler);
+                }
+
                 // Wait for animation to complete before removing
                 setTimeout(() => {
                     if (this.currentMenu && this.currentMenu.parentNode) {

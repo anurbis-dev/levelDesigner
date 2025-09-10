@@ -366,21 +366,27 @@ export class ConsoleContextMenu {
     }
 
     /**
-     * Setup menu closing behavior
+     * Setup menu closing behavior on mouse leave
      * @param {HTMLElement} menu - The context menu element
      */
     setupMenuClosing(menu) {
-        const closeMenu = (e) => {
-            if (!menu.contains(e.target)) {
-                this.removeMenu(menu);
-                document.removeEventListener('click', closeMenu);
-            }
+        const closeMenu = () => {
+            // Close menu when mouse leaves its area
+            this.removeMenu(menu);
         };
 
-        // Close menu after a short delay to allow click events to register
-        setTimeout(() => {
-            document.addEventListener('click', closeMenu, { passive: true });
-        }, 100);
+        // Close menu when mouse leaves the menu area
+        menu.addEventListener('mouseleave', closeMenu);
+
+        // Also close on click for better UX
+        const closeOnClick = () => {
+            this.removeMenu(menu);
+        };
+        menu.addEventListener('click', closeOnClick);
+
+        // Store references for cleanup
+        menu._closeMenuHandler = closeMenu;
+        menu._closeOnClickHandler = closeOnClick;
     }
 
     /**
@@ -390,6 +396,15 @@ export class ConsoleContextMenu {
     removeMenu(menu) {
         if (menu && menu.parentNode) {
             menu.classList.remove('show');
+
+            // Clean up event listeners
+            if (menu._closeMenuHandler) {
+                menu.removeEventListener('mouseleave', menu._closeMenuHandler);
+            }
+            if (menu._closeOnClickHandler) {
+                menu.removeEventListener('click', menu._closeOnClickHandler);
+            }
+
             // Wait for animation to complete before removing
             setTimeout(() => {
                 if (menu.parentNode) {
