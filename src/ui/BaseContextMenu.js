@@ -46,7 +46,11 @@ export class BaseContextMenu {
         this.currentMenu = null;
         this.menuItems = [];
         this.isVisible = false;
-        
+
+        // Store cursor position for animation end checks
+        this.lastCursorX = 0;
+        this.lastCursorY = 0;
+
         this.setupContextMenu();
         this.setupWindowResizeHandler();
         
@@ -112,14 +116,18 @@ export class BaseContextMenu {
             this.isVisible = false;
         }
 
+        // Store cursor position for animation end checks
+        this.lastCursorX = event.clientX;
+        this.lastCursorY = event.clientY;
+
         // Create new context menu
         const contextMenu = this.createContextMenu(event, contextData);
-        
+
         // Add to document first (hidden)
         document.body.appendChild(contextMenu);
         this.currentMenu = contextMenu;
         this.isVisible = true;
-        
+
         // Calculate optimal position after menu is in DOM
         const optimalPosition = this.calculateOptimalPosition(event, contextMenu);
         contextMenu.style.left = optimalPosition.x + 'px';
@@ -140,7 +148,7 @@ export class BaseContextMenu {
             contextMenu.style.left = (optimalPosition.x + cursorOffset.x) + 'px';
             contextMenu.style.top = (optimalPosition.y + cursorOffset.y) + 'px';
         }
-        
+
         // Trigger animation
         requestAnimationFrame(() => {
             contextMenu.classList.add('show');
@@ -148,7 +156,10 @@ export class BaseContextMenu {
 
         // Setup menu closing on mouse leave
         this.setupMenuClosing(contextMenu);
-        
+
+        // Setup animation end handler to check cursor position
+        this.setupAnimationEndHandler(contextMenu);
+
         // Notify callback
         this.callbacks.onMenuShow(contextData);
     }
@@ -224,6 +235,69 @@ export class BaseContextMenu {
             item.action(contextData);
         }
         this.callbacks.onItemClick(item, contextData);
+    }
+
+    /**
+     * Check if cursor is inside menu bounds
+     * @param {HTMLElement} menu - The context menu element
+     * @returns {boolean} - True if cursor is inside menu bounds
+     */
+    isCursorInsideMenu(menu) {
+        if (!menu) return false;
+
+        const rect = menu.getBoundingClientRect();
+        const cursorX = this.lastCursorX || 0;
+        const cursorY = this.lastCursorY || 0;
+
+        return cursorX >= rect.left - 2 &&
+               cursorX <= rect.right + 2 &&
+               cursorY >= rect.top - 2 &&
+               cursorY <= rect.bottom + 2;
+    }
+
+    /**
+     * Handle animation end event - check cursor position and close menu if needed
+     * @param {Event} event - The transitionend event
+     */
+    handleAnimationEnd(event) {
+        // Only handle transitionend for our menu element
+        if (event.target !== this.currentMenu) return;
+
+        console.log('[ContextMenu] Animation completed, checking cursor position');
+
+        // Update cursor position from event if available, otherwise use stored position
+        if (event.clientX !== undefined && event.clientY !== undefined) {
+            this.lastCursorX = event.clientX;
+            this.lastCursorY = event.clientY;
+        }
+
+        // Check if cursor is still inside menu after animation
+        if (!this.isCursorInsideMenu(this.currentMenu)) {
+            console.log('[ContextMenu] Cursor is outside menu bounds after animation - closing menu');
+            console.log('[ContextMenu] Cursor position:', this.lastCursorX, this.lastCursorY);
+            console.log('[ContextMenu] Menu bounds:', this.currentMenu.getBoundingClientRect());
+            this.hideMenu();
+            return;
+        }
+
+        console.log('[ContextMenu] Cursor is inside menu bounds - keeping menu open');
+    }
+
+    /**
+     * Setup animation end handler to check cursor position after animation completes
+     * @param {HTMLElement} menu - The context menu element
+     */
+    setupAnimationEndHandler(menu) {
+        // Remove existing handler if any
+        if (this.animationEndHandler) {
+            menu.removeEventListener('transitionend', this.animationEndHandler);
+        }
+
+        // Create new handler
+        this.animationEndHandler = this.handleAnimationEnd.bind(this);
+
+        // Add handler for animation completion
+        menu.addEventListener('transitionend', this.animationEndHandler, { once: true });
     }
 
     /**
@@ -456,6 +530,10 @@ export class BaseContextMenu {
                 }
                 if (this.currentMenu._closeOnClickHandler) {
                     this.currentMenu.removeEventListener('click', this.currentMenu._closeOnClickHandler);
+                }
+                if (this.animationEndHandler) {
+                    this.currentMenu.removeEventListener('transitionend', this.animationEndHandler);
+                    this.animationEndHandler = null;
                 }
 
                 // Wait for animation to complete before removing
