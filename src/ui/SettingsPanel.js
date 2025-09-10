@@ -1,4 +1,5 @@
 import { ColorChooser } from '../widgets/ColorChooser.js';
+import { GridSettings } from './GridSettings.js';
 
 /**
  * Settings Panel UI Component
@@ -9,6 +10,9 @@ export class SettingsPanel {
         this.configManager = configManager;
         this.isVisible = false;
         this.lastActiveTab = 'general'; // Default tab
+        
+        // Initialize grid settings module
+        this.gridSettings = new GridSettings(configManager);
         
         this.init();
     }
@@ -152,11 +156,11 @@ export class SettingsPanel {
             overlay.addEventListener('click', (e) => {
                 // Handle close button and overlay click
                 if (e.target.id === 'close-settings' || e.target.id === 'cancel-settings') {
-                    this.hide();
+                    this.cancelSettings();
                     return;
                 }
                 if (e.target.id === 'settings-overlay') {
-                    this.hide();
+                    this.cancelSettings();
                     return;
                 }
 
@@ -197,6 +201,13 @@ export class SettingsPanel {
         if (importFile) {
             importFile.addEventListener('change', (e) => this.importSettings(e));
         }
+        
+        // ESC key handler
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && this.isVisible) {
+                this.cancelSettings();
+            }
+        });
     }
 
     show() {
@@ -218,6 +229,9 @@ export class SettingsPanel {
             
             // Add direct event listeners to tabs after they are visible
             this.setupTabEventListeners();
+            
+            // Setup input event listeners after content is rendered
+            this.setupSettingsInputs();
         }
     }
 
@@ -281,49 +295,7 @@ export class SettingsPanel {
                 content.innerHTML = this.renderGeneralSettings();
                 break;
             case 'grid':
-                content.innerHTML = `
-                    <h3 style="font-size: 1.125rem; font-weight: 500; margin-bottom: 1rem;">Grid & Snapping Settings</h3>
-
-                    <!-- Grid Layout для компактного размещения -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-
-                        <!-- Левая колонка -->
-                        <div style="display: flex; flex-direction: column; gap: 1rem;">
-                            <div>
-                                <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Size (px)</label>
-                                <input type="number" min="8" max="128" step="8" class="setting-input" name="setting-input" data-setting="grid.size" value="${this.configManager.get('grid.size') || 32}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
-                            </div>
-                            <div>
-                                <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Color</label>
-                                <input type="color" class="setting-input" name="setting-input" data-setting="grid.color" value="${this.configManager.get('grid.color') || '#333333'}" style="width:100%; height: 2.5rem; border:1px solid #4b5563; border-radius:0.25rem; cursor:pointer;"/>
-                            </div>
-                            <div>
-                                <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Thickness</label>
-                                <input type="number" min="0.1" max="5" step="0.1" class="setting-input" name="setting-input" data-setting="grid.thickness" value="${this.configManager.get('grid.thickness') || 1}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
-                            </div>
-                        </div>
-
-                        <!-- Правая колонка -->
-                        <div style="display: flex; flex-direction: column; gap: 1rem;">
-                            <div>
-                                <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Opacity</label>
-                                <input type="range" min="0" max="1" step="0.05" class="setting-input" name="setting-input" data-setting="grid.opacity" value="${this.configManager.get('grid.opacity') || 0.5}" style="width:100%;"/>
-                            </div>
-                            <div>
-                                <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Subdivisions</label>
-                                <input type="number" min="1" max="10" step="1" class="setting-input" name="setting-input" data-setting="grid.subdivisions" value="${this.configManager.get('grid.subdivisions') || 4}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
-                            </div>
-                            <div>
-                                <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Subdiv. Color</label>
-                                <input type="color" class="setting-input" name="setting-input" data-setting="grid.subdivColor" value="${this.configManager.get('grid.subdivColor') || '#666666'}" style="width:100%; height: 2.5rem; border:1px solid #4b5563; border-radius:0.25rem; cursor:pointer;"/>
-                            </div>
-                            <div>
-                                <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Subdiv. Thickness</label>
-                                <input type="number" min="0.1" max="3" step="0.1" class="setting-input" name="setting-input" data-setting="grid.subdivThickness" value="${this.configManager.get('grid.subdivThickness') || 0.5}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                content.innerHTML = this.gridSettings.renderGridSettings();
                 break;
             case 'camera':
                 content.innerHTML = this.renderCameraSettings();
@@ -477,6 +449,7 @@ export class SettingsPanel {
     }
 
 
+
     renderCameraSettings() {
         return `<h3>Camera Settings</h3><p>Camera settings will be implemented here.</p>`;
     }
@@ -515,9 +488,13 @@ export class SettingsPanel {
                 }
                 
                 this.configManager.set(path, value);
+                
+                // Note: Grid settings are only applied to StateManager when Save is clicked
+                // Real-time changes are not applied to avoid confusion
             });
         });
     }
+    
 
     resetSettings() {
         if (confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.')) {
@@ -557,9 +534,23 @@ export class SettingsPanel {
 
     saveSettings() {
         this.configManager.saveSettings();
+        
+        // Sync all grid settings to StateManager before closing
+        this.gridSettings.syncAllGridSettingsToState();
+        
         // Apply UI font scale globally
         const scale = this.configManager.get('ui.fontScale') || 1.0;
         document.documentElement.style.fontSize = `${scale * 16}px`;
+        this.hide();
+    }
+    
+    cancelSettings() {
+        // Reload settings from ConfigManager to discard unsaved changes
+        this.configManager.loadAllConfigsSync();
+        
+        // Sync current saved settings to StateManager (not the unsaved changes)
+        this.gridSettings.syncAllGridSettingsToState();
+        
         this.hide();
     }
 }

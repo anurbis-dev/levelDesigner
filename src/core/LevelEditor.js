@@ -32,7 +32,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '2.6.8';
+    static VERSION = '2.7.0';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -195,6 +195,34 @@ export class LevelEditor {
         const fontScale = this.configManager.get('ui.fontScale');
         if (fontScale) {
             document.documentElement.style.fontSize = `${fontScale * 16}px`;
+        }
+        
+        // Apply grid settings to StateManager
+        const gridSize = this.configManager.get('grid.size');
+        const gridColor = this.configManager.get('grid.color');
+        const gridThickness = this.configManager.get('grid.thickness');
+        const gridOpacity = this.configManager.get('grid.opacity');
+        
+        if (gridSize !== undefined) {
+            this.stateManager.set('canvas.gridSize', gridSize);
+        }
+        if (gridColor !== undefined) {
+            // Convert hex color to rgba if needed
+            let colorValue = gridColor;
+            if (gridColor.startsWith('#')) {
+                const opacity = gridOpacity !== undefined ? gridOpacity : 0.1;
+                const r = parseInt(gridColor.slice(1, 3), 16);
+                const g = parseInt(gridColor.slice(3, 5), 16);
+                const b = parseInt(gridColor.slice(5, 7), 16);
+                colorValue = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+            }
+            this.stateManager.set('canvas.gridColor', colorValue);
+        }
+        if (gridThickness !== undefined) {
+            this.stateManager.set('canvas.gridThickness', gridThickness);
+        }
+        if (gridOpacity !== undefined) {
+            this.stateManager.set('canvas.gridOpacity', gridOpacity);
         }
         
         this.log('info', 'Configuration applied successfully');

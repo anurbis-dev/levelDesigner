@@ -362,7 +362,7 @@ export class MouseHandlers extends BaseModule {
                 // Apply snap to grid if enabled
                 const snapToGrid = this.editor.stateManager.get('canvas.snapToGrid') ?? this.editor.level.settings.snapToGrid;
                 if (snapToGrid) {
-                    const gridSize = this.editor.level.settings.gridSize;
+                    const gridSize = this.editor.stateManager.get('canvas.gridSize') ?? this.editor.level.settings.gridSize;
                     const snapped = WorldPositionUtils.snapToGrid(x, y, gridSize);
                     x = snapped.x;
                     y = snapped.y;

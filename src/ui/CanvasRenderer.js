@@ -55,7 +55,7 @@ export class CanvasRenderer {
     /**
      * Draw grid with performance optimizations
      */
-    drawGrid(gridSize, camera, backgroundColor = '#4B5563') {
+    drawGrid(gridSize, camera, backgroundColor = '#4B5563', options = {}) {
         this.ctx.save();
         this.ctx.fillStyle = backgroundColor;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
@@ -67,8 +67,25 @@ export class CanvasRenderer {
             return;
         }
         
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        this.ctx.lineWidth = 1 / camera.zoom;
+        // Apply grid styling options
+        const gridColor = options.color || 'rgba(255, 255, 255, 0.1)';
+        const gridThickness = options.thickness || 1;
+        const gridOpacity = options.opacity || 0.1;
+        
+        // Handle both hex and rgba colors
+        if (gridColor.startsWith('rgba')) {
+            this.ctx.strokeStyle = gridColor;
+        } else {
+            // Convert hex color to rgba with opacity
+            const hexToRgba = (hex, alpha) => {
+                const r = parseInt(hex.slice(1, 3), 16);
+                const g = parseInt(hex.slice(3, 5), 16);
+                const b = parseInt(hex.slice(5, 7), 16);
+                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+            };
+            this.ctx.strokeStyle = hexToRgba(gridColor, gridOpacity);
+        }
+        this.ctx.lineWidth = (gridThickness / camera.zoom);
         
         const scaledGridSize = gridSize;
         const startX = camera.x - (camera.x % gridSize);

@@ -786,6 +786,86 @@ new FileManager()
 
 ## UI компоненты
 
+### GridSettings
+
+Модуль для управления настройками грида в редакторе уровней.
+
+**Файл**: `src/ui/GridSettings.js`
+
+#### Конструктор
+
+```javascript
+new GridSettings(configManager)
+```
+
+**Параметры:**
+- `configManager` (ConfigManager) - менеджер конфигурации
+
+#### Методы
+
+##### `renderGridSettings()`
+
+Рендерит HTML интерфейс настроек грида.
+
+**Возвращает:** `string` - HTML разметка
+
+**Особенности:**
+- Создает двухколоночный макет настроек
+- Включает настройки размера, цвета, толщины и прозрачности грида
+- Поддерживает подразделения грида с отдельными настройками
+
+##### `syncAllGridSettingsToState()`
+
+Синхронизирует настройки грида из ConfigManager в StateManager.
+
+**Особенности:**
+- Конвертирует цвет из HEX в RGBA с учетом прозрачности
+- Обновляет все параметры грида в StateManager
+- Запускает перерисовку canvas после обновления
+
+**Синхронизируемые параметры:**
+- `canvas.gridSize` - размер сетки
+- `canvas.gridColor` - цвет сетки (RGBA)
+- `canvas.gridThickness` - толщина линий
+- `canvas.gridOpacity` - прозрачность
+
+### SettingsPanel
+
+Панель настроек с модульной архитектурой.
+
+**Файл**: `src/ui/SettingsPanel.js`
+
+#### Конструктор
+
+```javascript
+new SettingsPanel(container, configManager)
+```
+
+**Параметры:**
+- `container` (HTMLElement) - контейнер для панели
+- `configManager` (ConfigManager) - менеджер конфигурации
+
+#### Методы
+
+##### `show()`
+
+Показывает панель настроек.
+
+##### `hide()`
+
+Скрывает панель настроек.
+
+##### `renderSettingsContent(category)`
+
+Рендерит содержимое для указанной категории настроек.
+
+**Параметры:**
+- `category` (string) - категория настроек ('general', 'grid', 'camera', etc.)
+
+**Интеграция с GridSettings:**
+- Использует `this.gridSettings.renderGridSettings()` для настроек грида
+- Синхронизирует настройки через `this.gridSettings.syncAllGridSettingsToState()`
+
 ### CanvasRenderer
 
 Рендеринг на canvas.

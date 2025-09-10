@@ -205,6 +205,20 @@ Level Editor построен на **утилитарной архитектур
 ### DetailsPanel → GroupTraversalUtils + UIFactory  
 Редактирование свойств с использованием `UIFactory`
 
+### SettingsPanel → GridSettings (модульная архитектура)
+**Файл**: `src/ui/SettingsPanel.js`  
+**Модуль настроек грида**: `src/ui/GridSettings.js`
+
+**Архитектурные решения**:
+- **Модульное разделение** - настройки грида вынесены в отдельный класс `GridSettings`
+- **Единая точка ответственности** - все настройки грида в одном модуле
+- **Чистая интеграция** - `SettingsPanel` использует `GridSettings` через композицию
+- **Переиспользование** - модуль `GridSettings` можно использовать независимо
+
+**Методы GridSettings**:
+- `renderGridSettings()` - рендеринг HTML интерфейса настроек грида
+- `syncAllGridSettingsToState()` - синхронизация с StateManager
+
 ### AssetPanel, OutlinerPanel
 Готовы к интеграции с `UIFactory`
 
