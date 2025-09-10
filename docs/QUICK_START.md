@@ -1,4 +1,4 @@
-# Быстрый запуск Level Editor v2.5.0
+# Быстрый запуск Level Editor v2.6.9
 
 ## Автоматический запуск
 
@@ -48,6 +48,7 @@ npx serve -p 3000
 - **Дублирование**: выберите объекты и нажмите `Ctrl+D`
 - **Сохранить**: `Ctrl+S` или меню File → Save
 - **View меню**: Grid, Game Mode, Snap To Grid, Object Boundaries, Object Collisions
+- **Интерактивный зум**: средняя кнопка мыши + перетаскивание
 
 ## Горячие клавиши
 
