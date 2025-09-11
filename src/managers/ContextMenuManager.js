@@ -34,7 +34,6 @@ export class ContextMenuManager {
         // Global context menu blocker and closer
         this.setupGlobalContextMenuBlocker();
 
-        // Debug logging removed - use Logger.js instead
     }
 
     /**
@@ -46,13 +45,11 @@ export class ContextMenuManager {
             if (!e.defaultPrevented) {
                 // No custom menu handled this event - close all active menus
                 if (this.hasActiveMenu()) {
-                    // Debug logging removed - use Logger.js instead
                     this.closeAllMenus();
                 }
 
                 // Block the default browser context menu
                 e.preventDefault();
-                // Debug logging removed - use Logger.js instead
             }
         }, { passive: false });
     }
@@ -64,11 +61,9 @@ export class ContextMenuManager {
      */
     registerMenu(name, menuInstance) {
         if (this.activeMenus.has(name)) {
-            // Debug logging removed - use Logger.js instead
         }
 
         this.activeMenus.set(name, menuInstance);
-        // Debug logging removed - use Logger.js instead
     }
 
     /**
@@ -83,7 +78,6 @@ export class ContextMenuManager {
             }
 
             this.activeMenus.delete(name);
-            // Debug logging removed - use Logger.js instead
         }
     }
 
@@ -94,7 +88,6 @@ export class ContextMenuManager {
      * @param {Object} contextData - Additional context data
      */
     showMenu(menuName, event, contextData = {}) {
-        // Debug logging removed - use Logger.js instead
 
         // Check if the requested menu is already active
         const isSameMenuType = this.currentActiveMenu === menuName;
@@ -107,7 +100,6 @@ export class ContextMenuManager {
             // 1. Do nothing (leave menu as is)
             // 2. Move menu to new cursor position
             // For now, let's move it to new position for better UX
-            // Debug logging removed - use Logger.js instead
         }
 
         // Find and show the requested menu
@@ -125,9 +117,7 @@ export class ContextMenuManager {
             }
 
             this.currentActiveMenu = menuName;
-            // Debug logging removed - use Logger.js instead
         } else {
-            // Debug logging removed - use Logger.js instead
         }
     }
 
@@ -156,7 +146,6 @@ export class ContextMenuManager {
                 this.currentActiveMenu = null;
             }
 
-            // Debug logging removed - use Logger.js instead
         }
     }
 
@@ -174,7 +163,6 @@ export class ContextMenuManager {
      * @param {string} exceptMenuName - Name of menu type to keep open (optional)
      */
     closeAllMenus(exceptMenuName = null) {
-        // Debug logging removed - use Logger.js instead
 
         // Close the current active menu first (unless it's the excepted one)
         if (this.currentActiveMenu && this.currentActiveMenu !== exceptMenuName) {
@@ -227,6 +215,5 @@ export class ContextMenuManager {
         this.closeAllMenus();
         this.activeMenus.clear();
         this.currentActiveMenu = null;
-        // Debug logging removed - use Logger.js instead
     }
 }

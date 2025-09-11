@@ -96,7 +96,6 @@ export class GroupOperations extends BaseModule {
             // Simply remove editing flag - children stay where they are
             delete group._isEditing;
             
-            // Debug logging removed - use Logger.js instead
         }
 
         // Pop the last opened group
@@ -117,13 +116,10 @@ export class GroupOperations extends BaseModule {
         // NOW check if the group that was just closed became empty and remove it
         // (after it's no longer in the protected openGroups list)
         if (currentGroup) {
-            // Debug logging removed - use Logger.js instead
             const groupWasRemoved = this.removeEmptyGroup(currentGroup);
             if (groupWasRemoved) {
-                // Debug logging removed - use Logger.js instead
                 this.editor.updateAllPanels();
             } else {
-                // Debug logging removed - use Logger.js instead
             }
         }
 
@@ -199,56 +195,44 @@ export class GroupOperations extends BaseModule {
      * @returns {boolean} - True if the group was removed
      */
     removeEmptyGroup(targetGroup) {
-        // Debug logging removed - use Logger.js instead
 
         if (!targetGroup || targetGroup.type !== 'group') {
-            // Debug logging removed - use Logger.js instead
             return false;
         }
 
         // Fix: Handle case where children is undefined or null
         const childrenArray = targetGroup.children || [];
-        // Debug logging removed - use Logger.js instead
 
         // Don't remove if it's not empty
         if (childrenArray.length > 0) {
-            // Debug logging removed - use Logger.js instead
             return false;
         }
 
         // Don't remove if it's currently being edited
         const groupEditMode = this.editor.stateManager.get('groupEditMode');
-        // Debug logging removed - use Logger.js instead
 
         if (groupEditMode && groupEditMode.openGroups) {
             const isProtected = groupEditMode.openGroups.some(g => g && g.id === targetGroup.id);
             if (isProtected) {
-                // Debug logging removed - use Logger.js instead
                 return false;
             }
         }
 
-        // Debug logging removed - use Logger.js instead
 
         // Check if group actually exists in the level first
         const existsInMainLevel = this.editor.level.objects.some(obj => obj.id === targetGroup.id);
-        // Debug logging removed - use Logger.js instead
 
         // Remove from main level
         const initialCount = this.editor.level.objects.length;
-        // Debug logging removed - use Logger.js instead
         
         this.editor.level.objects = this.editor.level.objects.filter(obj => obj.id !== targetGroup.id);
         const finalCount = this.editor.level.objects.length;
-        // Debug logging removed - use Logger.js instead
         
         if (finalCount < initialCount) {
-            // Debug logging removed - use Logger.js instead
             return true; // Group was removed from main level
         }
 
         // If not found on main level, search in nested groups
-        // Debug logging removed - use Logger.js instead
         const removeFromNestedGroups = (objects) => {
             for (const obj of objects) {
                 if (obj.type === 'group' && obj.children) {
@@ -256,7 +240,6 @@ export class GroupOperations extends BaseModule {
                     obj.children = obj.children.filter(child => child.id !== targetGroup.id);
                     
                     if (obj.children.length < beforeCount) {
-                        // Debug logging removed - use Logger.js instead
                         return true; // Found and removed
                     }
                     
@@ -271,7 +254,6 @@ export class GroupOperations extends BaseModule {
 
         const removedFromNested = removeFromNestedGroups(this.editor.level.objects);
         if (!removedFromNested) {
-            // Debug logging removed - use Logger.js instead
         }
         return removedFromNested;
     }

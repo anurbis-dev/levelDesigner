@@ -1,5 +1,4 @@
 import { BaseModule } from './BaseModule.js';
-import { Logger } from '../utils/Logger.js';
 import { GameObject } from '../models/GameObject.js';
 import { Group } from '../models/Group.js';
 
@@ -43,13 +42,10 @@ export class DuplicateOperations extends BaseModule {
      * Start duplication from current selection
      */
     startFromSelection() {
-        Logger.duplicate.start('startFromSelection called');
 
         const selectedIds = this.editor.stateManager.get('selectedObjects');
-        Logger.duplicate.debug('Selected IDs:', selectedIds);
 
         if (!selectedIds || selectedIds.size === 0) {
-            Logger.duplicate.debug('No selected objects, returning');
             return;
         }
 
@@ -58,10 +54,7 @@ export class DuplicateOperations extends BaseModule {
             .map(id => this.editor.level.findObjectById(id))
             .filter(Boolean);
 
-        Logger.duplicate.debug('Found objects:', selected.length, selected);
-
         if (selected.length === 0) {
-            Logger.duplicate.debug('No valid objects found, returning');
             return;
         }
 
@@ -116,7 +109,6 @@ export class DuplicateOperations extends BaseModule {
         const isAltDragMode = mouse?.altKey || false;
 
         // Set duplicate state and start placing mode
-        Logger.duplicate.debug('Setting duplicate state, objects count:', positioned.length, 'isAltDragMode:', isAltDragMode);
         this.editor.stateManager.update({
             'mouse.isPlacingObjects': true,
             'mouse.placingObjects': positioned,
@@ -126,13 +118,9 @@ export class DuplicateOperations extends BaseModule {
             'duplicate.isAltDragMode': isAltDragMode
         });
 
-        Logger.duplicate.debug('State after update:', this.editor.stateManager.get('duplicate'));
-
         // Immediate render to show preview
-        Logger.duplicate.debug('Calling initial render');
         this.editor.render();
 
-        Logger.duplicate.start('startFromSelection completed');
     }
 
     /**
@@ -168,9 +156,7 @@ export class DuplicateOperations extends BaseModule {
 
             // Sanitize and place
             const base = this._sanitizeForPlacement(this.editor.deepClone(obj));
-            // Debug logging removed - use Logger.js instead
             this.editor.reassignIdsDeep(base);
-            // Debug logging removed - use Logger.js instead
             base.x = worldPos.x + offsetX;
             base.y = worldPos.y + offsetY;
 
@@ -179,20 +165,15 @@ export class DuplicateOperations extends BaseModule {
                 base.x -= groupPos.x;
                 base.y -= groupPos.y;
                 groupEditMode.group.children.push(base);
-                // Debug logging removed - use Logger.js instead
             } else {
                 this.editor.level.addObject(base);
-                // Debug logging removed - use Logger.js instead
             }
 
             newIds.add(base.id);
-            // Debug logging removed - use Logger.js instead
 
             // Invalidate caches for the new object
             this.editor.invalidateObjectCaches(base.id);
         });
-
-        Logger.duplicate.start('Placing', duplicate.objects.length, 'objects');
 
         // Schedule full cache invalidation since multiple objects were added
         this.editor.scheduleCacheInvalidation();
@@ -209,15 +190,12 @@ export class DuplicateOperations extends BaseModule {
         this.editor.render();
         this.editor.updateAllPanels();
 
-        Logger.duplicate.start('Placement completed, selected objects:', newIds.size);
     }
 
     /**
      * Cancel duplication
      */
     cancel() {
-        Logger.duplicate.start('Cancelling duplication');
-
         // Full reset to avoid stale references
         this.editor.stateManager.update({
             'mouse.isPlacingObjects': false,
@@ -235,7 +213,6 @@ export class DuplicateOperations extends BaseModule {
         }
 
         this.editor.render();
-        Logger.duplicate.start('Cancellation completed');
     }
 }
 

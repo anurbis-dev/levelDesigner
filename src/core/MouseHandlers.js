@@ -491,7 +491,6 @@ export class MouseHandlers extends BaseModule {
     handleEmptyClick(e, worldPos) {
         // Don't clear selection if we just did an undo/redo operation
         if (this.editor.historyManager && (this.editor.historyManager.isUndoing || this.editor.historyManager.isRedoing)) {
-            // Debug logging removed - use Logger.js instead
             return;
         }
 

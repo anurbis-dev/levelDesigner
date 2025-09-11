@@ -101,7 +101,6 @@ export class StateManager {
      */
     set(key, value) {
         if (key === 'selectedObjects') {
-            // Debug logging removed - use Logger.js instead
         }
 
         if (key.includes('.')) {

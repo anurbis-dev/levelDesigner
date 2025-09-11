@@ -174,7 +174,6 @@ export class BaseContextMenu {
         // Ensure cursor is inside menu bounds by adjusting menu position if needed
         const cursorOffset = this.ensureCursorInsideMenu(event, optimalPosition, contextMenu);
         if (cursorOffset.x !== 0 || cursorOffset.y !== 0) {
-            // Debug logging removed - use Logger.js instead
             contextMenu.style.left = (optimalPosition.x + cursorOffset.x) + 'px';
             contextMenu.style.top = (optimalPosition.y + cursorOffset.y) + 'px';
         }
@@ -304,7 +303,6 @@ export class BaseContextMenu {
         // Stop cursor monitoring since animation is complete
         this.stopCursorMonitoring();
 
-        // Debug logging removed - use Logger.js instead
 
         // Update cursor position from event if available, otherwise use stored position
         if (event.clientX !== undefined && event.clientY !== undefined) {
@@ -314,12 +312,10 @@ export class BaseContextMenu {
 
         // Check if cursor is still inside menu after animation
         if (!this.isCursorInsideMenu(this.currentMenu)) {
-            // Debug logging removed - use Logger.js instead
             this.hideMenu();
             return;
         }
 
-        // Debug logging removed - use Logger.js instead
     }
 
     /**
@@ -331,7 +327,6 @@ export class BaseContextMenu {
             this.stopCursorMonitoring();
         }
 
-        // Debug logging removed - use Logger.js instead
         this.isMonitoringCursor = true;
         this.animationStartTime = Date.now();
 
@@ -348,7 +343,6 @@ export class BaseContextMenu {
             this.monitoringAnimationFrame = null;
         }
         this.isMonitoringCursor = false;
-        // Debug logging removed - use Logger.js instead
     }
 
     /**
@@ -363,7 +357,6 @@ export class BaseContextMenu {
         // Check if animation duration exceeded (fallback timeout)
         const elapsed = Date.now() - this.animationStartTime;
         if (elapsed > 200) { // 200ms timeout (slightly longer than animation)
-            // Debug logging removed - use Logger.js instead
             this.stopCursorMonitoring();
             return;
         }
@@ -380,7 +373,6 @@ export class BaseContextMenu {
                         cursorY <= rect.bottom + 2;
 
         if (!isInside) {
-            // Debug logging removed - use Logger.js instead
             this.stopCursorMonitoring();
             this.hideMenu();
             return;
@@ -630,7 +622,6 @@ export class BaseContextMenu {
             offsetY = cursorY - rect.bottom + 2;
         }
 
-        // Debug logging removed - use Logger.js instead
 
         return { x: offsetX, y: offsetY };
     }

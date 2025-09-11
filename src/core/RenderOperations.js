@@ -534,7 +534,6 @@ export class RenderOperations extends BaseModule {
 
             // Debug group visibility issues
             if (!result) {
-                // Debug logging removed - use Logger.js instead
             }
 
             return result;
@@ -551,7 +550,6 @@ export class RenderOperations extends BaseModule {
 
         // Debug only during undo/redo operations or when object is not visible in viewport
         if (this.editor.historyManager && (this.editor.historyManager.isUndoing || this.editor.historyManager.isRedoing) || !intersects) {
-            // Debug logging removed - use Logger.js instead
         }
 
         return intersects;

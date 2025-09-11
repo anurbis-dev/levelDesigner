@@ -122,7 +122,6 @@ export class ObjectOperations extends BaseModule {
         // Delete selected objects - they can be on main level or inside groups
         const idsToDelete = new Set(selectedObjects);
 
-        // Debug logging removed - use Logger.js instead
 
         // First, collect all objects that need to be deleted (including children of deleted groups)
         const collectObjectsToDelete = (objects) => {
@@ -130,9 +129,7 @@ export class ObjectOperations extends BaseModule {
                 if (obj.type === 'group') {
                     // If this group is being deleted, add all its children to deletion set
                     if (idsToDelete.has(obj.id)) {
-                        // Debug logging removed - use Logger.js instead
                         obj.children.forEach(child => {
-                            // Debug logging removed - use Logger.js instead
                             idsToDelete.add(child.id);
                         });
                     } else {
@@ -155,7 +152,6 @@ export class ObjectOperations extends BaseModule {
                     obj.children = obj.children.filter(child => !idsToDelete.has(child.id));
                     const removedCount = originalCount - obj.children.length;
                     if (removedCount > 0) {
-                        // Debug logging removed - use Logger.js instead
                     }
 
                     // Process nested groups
@@ -168,20 +164,15 @@ export class ObjectOperations extends BaseModule {
         removeFromArrays(this.editor.level.objects);
 
         // Remove all collected objects from main level
-        // Debug logging removed - use Logger.js instead
         const originalCount = this.editor.level.objects.length;
         this.editor.level.objects = this.editor.level.objects.filter(obj => !idsToDelete.has(obj.id));
         const removedCount = originalCount - this.editor.level.objects.length;
 
-        // Debug logging removed - use Logger.js instead
 
         // Clean up any empty groups that might remain after deletion
-        // Debug logging removed - use Logger.js instead
         const emptyGroupsRemoved = this.editor.groupOperations.removeEmptyGroups();
         if (emptyGroupsRemoved > 0) {
-            // Debug logging removed - use Logger.js instead
         } else {
-            // Debug logging removed - use Logger.js instead
         }
 
         // Save state AFTER all deletions and cleanup are complete
@@ -220,7 +211,6 @@ export class ObjectOperations extends BaseModule {
         const isObjectSelectable = (obj) => {
             // Check object visibility
             if (!obj.visible) {
-                // Debug logging removed - use Logger.js instead
                 return false;
             }
 
@@ -233,11 +223,9 @@ export class ObjectOperations extends BaseModule {
                 new Set(this.editor.level.layers.map(l => l.id));
 
             if (!visibleLayerIds.has(effectiveLayerId)) {
-                // Debug logging removed - use Logger.js instead
                 return false;
             }
 
-            // Debug logging removed - use Logger.js instead
             return true;
         };
 
@@ -274,16 +262,12 @@ export class ObjectOperations extends BaseModule {
             });
         } else {
             // Normal mode: only top-level objects selectable
-            // Debug logging removed - use Logger.js instead
             this.editor.level.objects.forEach(o => {
                 if (isObjectSelectable(o)) {
                     selectable.add(o.id);
-                    // Debug logging removed - use Logger.js instead
                 } else {
-                    // Debug logging removed - use Logger.js instead
                 }
             });
-            // Debug logging removed - use Logger.js instead
         }
         return selectable;
     }

@@ -260,7 +260,6 @@ export class Level {
         });
 
         if (fixedCount > 0) {
-            // Debug logging removed - use Logger.js instead
             this.updateModified();
         }
 

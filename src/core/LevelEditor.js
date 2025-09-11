@@ -192,7 +192,6 @@ export class LevelEditor {
 
         // Debug viewport bounds only during undo operations
         if (this.historyManager && (this.historyManager.isUndoing || this.historyManager.isRedoing)) {
-            // Debug logging removed - use Logger.js instead
         }
 
         // Add padding for better UX (objects near edge should still be selectable)
@@ -214,7 +213,6 @@ export class LevelEditor {
         // Debug only during undo operations
         const isDebugMode = this.historyManager && (this.historyManager.isUndoing || this.historyManager.isRedoing);
         if (isDebugMode) {
-            // Debug logging removed - use Logger.js instead
         }
 
         selectableSet.forEach(objId => {
@@ -236,7 +234,6 @@ export class LevelEditor {
             }
         });
 
-        // Debug logging removed - use Logger.js instead
 
         // Cache the result
         this.selectableObjectsCache.set(cameraKey, selectableInViewport);
@@ -864,11 +861,9 @@ export class LevelEditor {
      * History operations
      */
     undo() {
-            // Debug logging removed - use Logger.js instead
 
             const previousState = this.historyManager.undo();
             if (previousState) {
-                // Debug logging removed - use Logger.js instead
 
                 this.level.objects = previousState.objects;
 
@@ -941,15 +936,12 @@ export class LevelEditor {
                 missingFromSelectable.forEach(id => {
                     const obj = this.level.findObjectById(id);
                     if (obj) {
-                        // Debug logging removed - use Logger.js instead
                     }
                 });
             }
 
         } else {
-            // Debug logging removed - use Logger.js instead
         }
-        // Debug logging removed - use Logger.js instead
     }
 
     redo() {

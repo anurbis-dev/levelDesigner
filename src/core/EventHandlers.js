@@ -8,35 +8,28 @@ import { MENU_CONFIG, getShortcutTarget } from '../../config/menu.js';
  */
 export class EventHandlers extends BaseModule {
     constructor(levelEditor, menuManager = null) {
-        // Debug logging removed - use Logger.js instead
         super(levelEditor);
         this._rafId = null; // render loop id
         this.menuManager = menuManager;
-        // Debug logging removed - use Logger.js instead
     }
 
     /**
      * Setup all event listeners
      */
     setupEventListeners() {
-        // Debug logging removed - use Logger.js instead
 
         // Window resize
         window.addEventListener('resize', () => {
-            // Debug logging removed - use Logger.js instead
             this.editor.canvasRenderer.resizeCanvas();
             this.editor.render();
         });
 
         // Canvas events
-        // Debug logging removed - use Logger.js instead
         this.setupCanvasEvents();
 
         // Keyboard events
-        // Debug logging removed - use Logger.js instead
         this.setupKeyboardEvents();
 
-        // Debug logging removed - use Logger.js instead
 
         // Initialize group edit mode state
         this.editor.stateManager.set('groupEditMode', {
@@ -104,182 +97,118 @@ export class EventHandlers extends BaseModule {
     }
 
     setupKeyboardEvents() {
-        // Debug logging removed - use Logger.js instead
         window.addEventListener('keydown', (e) => {
             // Allow input fields to work normally
             if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.contentEditable === 'true')) {
-                // Debug logging removed - use Logger.js instead
                 return;
             }
 
-            // Debug logging removed - use Logger.js instead
 
             // Handle escape key to cancel all current actions
             if (e.key === 'Escape') {
-                // Debug logging removed - use Logger.js instead
                 e.preventDefault();
-                // Debug logging removed - use Logger.js instead
                 this.editor.cancelAllActions();
                 return;
             }
             
             if (e.key === 'Delete' || e.key.toLowerCase() === 'x') {
-                // Debug logging removed - use Logger.js instead
                 e.preventDefault();
-                // Debug logging removed - use Logger.js instead
                 if (this.editor.objectOperations && typeof this.editor.objectOperations.deleteSelectedObjects === 'function') {
-                    // Debug logging removed - use Logger.js instead
                     this.editor.objectOperations.deleteSelectedObjects();
                 } else {
-                    // Debug logging removed - use Logger.js instead
                 }
             } else if (e.shiftKey && e.key.toLowerCase() === 'd') {
-                // Debug logging removed - use Logger.js instead
                 e.preventDefault();
-                // Debug logging removed - use Logger.js instead
                 if (this.editor.objectOperations && typeof this.editor.objectOperations.duplicateSelectedObjects === 'function') {
-                    // Debug logging removed - use Logger.js instead
                     this.editor.objectOperations.duplicateSelectedObjects();
                 } else {
-                    // Debug logging removed - use Logger.js instead
                 }
             } else if (e.key.toLowerCase() === 'f') {
-                // Debug logging removed - use Logger.js instead
                 e.preventDefault();
-                // Debug logging removed - use Logger.js instead
                 if (typeof this.editor.focusOnSelection === 'function') {
-                    // Debug logging removed - use Logger.js instead
                     this.editor.focusOnSelection();
                 } else {
-                    // Debug logging removed - use Logger.js instead
                 }
             } else if (e.key.toLowerCase() === 'a') {
-                // Debug logging removed - use Logger.js instead
                 e.preventDefault();
-                // Debug logging removed - use Logger.js instead
                 if (typeof this.editor.focusOnAll === 'function') {
-                    // Debug logging removed - use Logger.js instead
                     this.editor.focusOnAll();
                 } else {
-                    // Debug logging removed - use Logger.js instead
                 }
             } else if (e.shiftKey && e.key.toLowerCase() === 'g') {
-                // Debug logging removed - use Logger.js instead
                 e.preventDefault();
-                // Debug logging removed - use Logger.js instead
                 if (this.editor.groupOperations && typeof this.editor.groupOperations.groupSelectedObjects === 'function') {
-                    // Debug logging removed - use Logger.js instead
                     this.editor.groupOperations.groupSelectedObjects();
                 } else {
-                    // Debug logging removed - use Logger.js instead
                 }
             } else if (e.altKey && e.key.toLowerCase() === 'g') {
-                // Debug logging removed - use Logger.js instead
                 e.preventDefault();
-                // Debug logging removed - use Logger.js instead
                 if (this.editor.groupOperations && typeof this.editor.groupOperations.ungroupSelectedObjects === 'function') {
-                    // Debug logging removed - use Logger.js instead
                     this.editor.groupOperations.ungroupSelectedObjects();
                 } else {
-                    // Debug logging removed - use Logger.js instead
                 }
             } else if (e.ctrlKey || e.metaKey) {
-                // Debug logging removed - use Logger.js instead
                 if (e.key.toLowerCase() === 'z') {
-                    // Debug logging removed - use Logger.js instead
                     e.preventDefault();
-                    // Debug logging removed - use Logger.js instead
                     if (e.shiftKey) {
                         if (typeof this.editor.redo === 'function') {
-                            // Debug logging removed - use Logger.js instead
                             this.editor.redo();
                         } else {
-                            // Debug logging removed - use Logger.js instead
                         }
                     } else {
                         if (typeof this.editor.undo === 'function') {
-                            // Debug logging removed - use Logger.js instead
                             this.editor.undo();
                         } else {
-                            // Debug logging removed - use Logger.js instead
                         }
                     }
                 } else if (e.key.toLowerCase() === 'y') {
-                    // Debug logging removed - use Logger.js instead
                     e.preventDefault();
-                    // Debug logging removed - use Logger.js instead
                     if (typeof this.editor.redo === 'function') {
-                        // Debug logging removed - use Logger.js instead
                         this.editor.redo();
                     } else {
-                        // Debug logging removed - use Logger.js instead
                     }
                 } else if (e.key.toLowerCase() === 'n') {
-                    // Debug logging removed - use Logger.js instead
                     e.preventDefault();
-                    // Debug logging removed - use Logger.js instead
                     if (typeof this.editor.newLevel === 'function') {
-                        // Debug logging removed - use Logger.js instead
                         this.editor.newLevel();
                     } else {
-                        // Debug logging removed - use Logger.js instead
                     }
                 } else if (e.key.toLowerCase() === 'o') {
-                    // Debug logging removed - use Logger.js instead
                     e.preventDefault();
-                    // Debug logging removed - use Logger.js instead
                     if (typeof this.editor.openLevel === 'function') {
-                        // Debug logging removed - use Logger.js instead
                         this.editor.openLevel();
                     } else {
-                        // Debug logging removed - use Logger.js instead
                     }
                 } else if (e.key.toLowerCase() === 's') {
-                    // Debug logging removed - use Logger.js instead
                     e.preventDefault();
-                    // Debug logging removed - use Logger.js instead
                     if (e.shiftKey) {
                         if (typeof this.editor.saveLevelAs === 'function') {
-                            // Debug logging removed - use Logger.js instead
                             this.editor.saveLevelAs();
                         } else {
-                            // Debug logging removed - use Logger.js instead
                         }
                     } else {
                         if (typeof this.editor.saveLevel === 'function') {
-                            // Debug logging removed - use Logger.js instead
                             this.editor.saveLevel();
                         } else {
-                            // Debug logging removed - use Logger.js instead
                         }
                     }
                 } else {
-                    // Debug logging removed - use Logger.js instead
                 }
             } else if (e.key === 'PageUp') {
-                // Debug logging removed - use Logger.js instead
                 e.preventDefault();
-                // Debug logging removed - use Logger.js instead
                 if (typeof this.editor.moveSelectedObjectsToLayer === 'function') {
                     const moveToExtreme = e.shiftKey;
-                    // Debug logging removed - use Logger.js instead
                     this.editor.moveSelectedObjectsToLayer(true, moveToExtreme);
                 } else {
-                    // Debug logging removed - use Logger.js instead
                 }
             } else if (e.key === 'PageDown') {
-                // Debug logging removed - use Logger.js instead
                 e.preventDefault();
-                // Debug logging removed - use Logger.js instead
                 if (typeof this.editor.moveSelectedObjectsToLayer === 'function') {
                     const moveToExtreme = e.shiftKey;
-                    // Debug logging removed - use Logger.js instead
                     this.editor.moveSelectedObjectsToLayer(false, moveToExtreme);
                 } else {
-                    // Debug logging removed - use Logger.js instead
                 }
             } else {
-                // Debug logging removed - use Logger.js instead
             }
         });
     }
@@ -287,20 +216,16 @@ export class EventHandlers extends BaseModule {
     setupMenuEvents() {
         // Menu events are now handled by MenuManager
         // This method is kept for backward compatibility
-        // Debug logging removed - use Logger.js instead
     }
 
     initializeViewStates() {
-        // Debug logging removed - use Logger.js instead
         
         // Initialize grid state from level settings
         const gridEnabled = this.editor.level?.settings?.showGrid ?? true;
-        // Debug logging removed - use Logger.js instead
         
         this.editor.stateManager.set('view.grid', gridEnabled);
         this.editor.stateManager.set('canvas.showGrid', gridEnabled);
         
-        // Debug logging removed - use Logger.js instead
         
         this.updateViewCheckbox('grid', gridEnabled);
         
@@ -328,7 +253,6 @@ export class EventHandlers extends BaseModule {
             // Fallback to direct DOM manipulation
             const checkId = option.replace(/([A-Z])/g, '-$1').toLowerCase() + '-check';
             const checkElement = document.getElementById(checkId);
-            // Debug logging removed - use Logger.js instead
             if (checkElement) {
                 checkElement.classList.toggle('hidden', !enabled);
             }
@@ -336,16 +260,13 @@ export class EventHandlers extends BaseModule {
     }
 
     toggleViewOption(option) {
-        // Debug logging removed - use Logger.js instead
         
         // Debug: Check all related states
-        // Debug logging removed - use Logger.js instead
         
         // Get current state from editor's state manager
         const currentState = this.editor.stateManager.get(`view.${option}`) || false;
         const newState = !currentState;
         
-        // Debug logging removed - use Logger.js instead
         
         // Update state
         this.editor.stateManager.set(`view.${option}`, newState);
@@ -394,7 +315,6 @@ export class EventHandlers extends BaseModule {
      * @returns {Object} Saved view states
      */
     saveViewStates() {
-        // Debug logging removed - use Logger.js instead
 
         const savedStates = {};
         const viewOptions = ['grid', 'gameMode', 'snapToGrid', 'objectBoundaries', 'objectCollisions'];
@@ -403,7 +323,6 @@ export class EventHandlers extends BaseModule {
             const stateKey = `view.${option}`;
             const currentValue = this.editor.stateManager.get(stateKey);
             savedStates[option] = currentValue !== undefined ? currentValue : false;
-            // Debug logging removed - use Logger.js instead
         });
 
         return savedStates;
@@ -414,11 +333,9 @@ export class EventHandlers extends BaseModule {
      * @param {Object} savedStates - Previously saved view states
      */
     applySavedViewStates(savedStates) {
-        // Debug logging removed - use Logger.js instead
 
         Object.keys(savedStates).forEach(option => {
             const enabled = savedStates[option];
-            // Debug logging removed - use Logger.js instead
 
             // Apply the view option
             this.applyViewOption(option, enabled);
@@ -427,7 +344,6 @@ export class EventHandlers extends BaseModule {
             this.updateViewCheckbox(option, enabled);
         });
 
-        // Debug logging removed - use Logger.js instead
     }
 
     toggleGameMode(enabled) {

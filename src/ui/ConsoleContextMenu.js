@@ -78,7 +78,6 @@ export class ConsoleContextMenu {
                 window.editor.contextMenuManager.showMenu('console', e, { message, timestamp });
             } else {
                 // Fallback to direct show if manager not available
-                // Debug logging removed - use Logger.js instead
                 this.showContextMenu(e, message, timestamp);
             }
         });
@@ -134,7 +133,6 @@ export class ConsoleContextMenu {
             this.stopCursorMonitoring();
         }
 
-        // Debug logging removed - use Logger.js instead
         this.isMonitoringCursor = true;
         this.animationStartTime = Date.now();
 
@@ -151,7 +149,6 @@ export class ConsoleContextMenu {
             this.monitoringAnimationFrame = null;
         }
         this.isMonitoringCursor = false;
-        // Debug logging removed - use Logger.js instead
     }
 
     /**
@@ -166,7 +163,6 @@ export class ConsoleContextMenu {
         // Check if animation duration exceeded (fallback timeout)
         const elapsed = Date.now() - this.animationStartTime;
         if (elapsed > 200) { // 200ms timeout (slightly longer than animation)
-            // Debug logging removed - use Logger.js instead
             this.stopCursorMonitoring();
             return;
         }
@@ -183,7 +179,6 @@ export class ConsoleContextMenu {
                         cursorY <= rect.bottom + 2;
 
         if (!isInside) {
-            // Debug logging removed - use Logger.js instead
             this.stopCursorMonitoring();
             this.removeMenu(menu);
             return;
@@ -246,7 +241,6 @@ export class ConsoleContextMenu {
         // Ensure cursor is inside menu bounds by adjusting menu position if needed
         const cursorOffset = this.ensureCursorInsideMenu(event, optimalPosition, contextMenu);
         if (cursorOffset.x !== 0 || cursorOffset.y !== 0) {
-            // Debug logging removed - use Logger.js instead
             contextMenu.style.left = (optimalPosition.x + cursorOffset.x) + 'px';
             contextMenu.style.top = (optimalPosition.y + cursorOffset.y) + 'px';
         }
@@ -672,7 +666,6 @@ export class ConsoleContextMenu {
             offsetY = cursorY - rect.bottom + 2;
         }
 
-        // Debug logging removed - use Logger.js instead
 
         return { x: offsetX, y: offsetY };
     }

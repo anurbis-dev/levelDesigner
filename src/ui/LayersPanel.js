@@ -27,7 +27,6 @@ export class LayersPanel {
 
         // Subscribe to layer objects count changes for efficient updates
         this.stateManager.subscribe('layerObjectsCountChanged', (layerId, changeData) => {
-            // Debug logging removed - use Logger.js instead
             
             // Update only the specific layer's object count
             this.updateLayerObjectsCount(layerId);
@@ -293,7 +292,6 @@ export class LayersPanel {
             const countSpan = layerElement.querySelector('.text-gray-400.text-sm');
             if (countSpan) {
                 countSpan.textContent = objectsCount > 0 ? ` (${objectsCount})` : '';
-                // Debug logging removed - use Logger.js instead
             }
         }
     }
@@ -303,13 +301,10 @@ export class LayersPanel {
      * @returns {Set<string>} Set of layer IDs
      */
     getActiveLayerIds() {
-        // Debug logging removed - use Logger.js instead
 
         const selectedObjects = this.stateManager.get('selectedObjects');
-        // Debug logging removed - use Logger.js instead
 
         if (!selectedObjects || selectedObjects.size === 0) {
-            // Debug logging removed - use Logger.js instead
             return new Set();
         }
 
@@ -318,21 +313,16 @@ export class LayersPanel {
 
         // Collect all effective layer IDs from selected objects
         selectedObjects.forEach(objId => {
-            // Debug logging removed - use Logger.js instead
             const obj = level.findObjectById(objId);
-            // Debug logging removed - use Logger.js instead
             
             if (obj) {
                 // Use effective layer ID considering inheritance from parent groups
                 const effectiveLayerId = this.getEffectiveLayerId(obj, level);
-                // Debug logging removed - use Logger.js instead
                 layerIds.add(effectiveLayerId);
             } else {
-                // Debug logging removed - use Logger.js instead
             }
         });
 
-        // Debug logging removed - use Logger.js instead
         return layerIds;
     }
 
@@ -409,29 +399,22 @@ export class LayersPanel {
      * Update layer styles based on active state
      */
     updateLayerStyles() {
-        // Debug logging removed - use Logger.js instead
 
         const activeLayerIds = this.getActiveLayerIds();
-        // Debug logging removed - use Logger.js instead
 
         const layerElements = this.container.querySelectorAll('.layer-item');
-        // Debug logging removed - use Logger.js instead
 
         // Get active layer border color from settings
         const activeLayerBorderColor = this.levelEditor.configManager?.get('selection.activeLayerBorderColor') || '#3B82F6';
-        // Debug logging removed - use Logger.js instead
 
         layerElements.forEach(element => {
             const layerId = element.dataset.layerId;
             const isActive = activeLayerIds.has(layerId);
-            // Debug logging removed - use Logger.js instead
 
             // Update border color for the main layer item container only
             if (isActive) {
-                // Debug logging removed - use Logger.js instead
                 element.style.borderColor = activeLayerBorderColor;
             } else {
-                // Debug logging removed - use Logger.js instead
                 element.style.borderColor = '';
             }
         });

@@ -15,14 +15,12 @@ export class DetailsPanel {
     setupEventListeners() {
         // Subscribe to selection changes
         this.stateManager.subscribe('selectedObjects', () => {
-            // Debug logging removed - use Logger.js instead
             this.render();
             this.updateTabTitle();
         });
 
         // Subscribe to level changes (for object property updates like layer changes)
         this.stateManager.subscribe('level', (newLevel, oldLevel) => {
-            // Debug logging removed - use Logger.js instead
 
             // Check if selected objects properties changed (excluding position changes)
             const selectedIds = this.stateManager.get('selectedObjects');
@@ -31,13 +29,11 @@ export class DetailsPanel {
                 const newObj = newLevel.objects?.find(obj => obj.id === firstId);
                 const oldObj = oldLevel?.objects?.find(obj => obj.id === firstId);
                 
-                // Debug logging removed - use Logger.js instead
                 
                 // Only re-render if non-position properties changed
                 if (oldObj && newObj) {
                     const positionChanged = (oldObj.x !== newObj.x || oldObj.y !== newObj.y);
                     if (positionChanged) {
-                        // Debug logging removed - use Logger.js instead
                         return;
                     }
                 }
@@ -49,19 +45,16 @@ export class DetailsPanel {
 
         // Subscribe to object property changes (for immediate updates like layer changes)
         this.stateManager.subscribe('objectPropertyChanged', (changedObject, changeData) => {
-            // Debug logging removed - use Logger.js instead
 
             // Skip real-time updates for position properties to avoid performance issues
             // Position updates will happen on: selection change, drag end, duplicate end
             if (changeData?.property === 'x' || changeData?.property === 'y') {
-                // Debug logging removed - use Logger.js instead
                 return;
             }
 
             // Check if the changed object is currently selected
             const selectedIds = this.stateManager.get('selectedObjects');
             if (selectedIds && selectedIds.has(changedObject?.id)) {
-                // Debug logging removed - use Logger.js instead
                 this.render();
                 this.updateTabTitle();
             }
@@ -69,23 +62,18 @@ export class DetailsPanel {
     }
 
     render() {
-        // Debug logging removed - use Logger.js instead
         this.container.innerHTML = '';
 
         const selectedObjects = this.getSelectedObjects();
-        // Debug logging removed - use Logger.js instead
 
         if (selectedObjects.length === 0) {
-            // Debug logging removed - use Logger.js instead
             this.renderNoSelection();
             return;
         }
 
         if (selectedObjects.length === 1) {
-            // Debug logging removed - use Logger.js instead
             this.renderSingleObject(selectedObjects[0]);
         } else {
-            // Debug logging removed - use Logger.js instead
             this.renderMultipleObjects(selectedObjects);
         }
 
@@ -100,13 +88,10 @@ export class DetailsPanel {
     }
 
     renderSingleObject(obj) {
-        // Debug logging removed - use Logger.js instead
 
         if (obj.type === 'group') {
-            // Debug logging removed - use Logger.js instead
             this.renderGroupDetails(obj);
         } else {
-            // Debug logging removed - use Logger.js instead
             this.renderObjectDetails(obj);
         }
     }
@@ -157,7 +142,6 @@ export class DetailsPanel {
     }
 
     renderObjectDetails(obj) {
-        // Debug logging removed - use Logger.js instead
 
         const properties = ['name', 'type', 'x', 'y', 'width', 'height', 'color'];
 
@@ -184,7 +168,6 @@ export class DetailsPanel {
         this.container.appendChild(propertyEditor);
 
         // Add layer information section
-        // Debug logging removed - use Logger.js instead
         this.renderLayerInfo(obj);
 
         // Add custom properties section
@@ -251,11 +234,9 @@ export class DetailsPanel {
     }
 
     renderLayerInfo(obj) {
-        // Debug logging removed - use Logger.js instead
 
         const level = this.levelEditor.getLevel();
         const layerInfo = this.getObjectLayerInfo(obj, level);
-        // Debug logging removed - use Logger.js instead
 
         const section = document.createElement('div');
         section.className = 'mt-4';
@@ -276,18 +257,14 @@ export class DetailsPanel {
         section.appendChild(layerContainer);
         this.container.appendChild(section);
 
-        // Debug logging removed - use Logger.js instead
     }
 
     getObjectLayerInfo(obj, level) {
-        // Debug logging removed - use Logger.js instead
 
         // Get effective layer ID (considering inheritance from parent groups)
         const effectiveLayerId = this.getEffectiveLayerId(obj, level);
-        // Debug logging removed - use Logger.js instead
 
         const layer = level.getLayerById(effectiveLayerId);
-        // Debug logging removed - use Logger.js instead
 
         if (layer) {
             const objectCount = level.getLayerObjectsCount(effectiveLayerId);
@@ -299,7 +276,6 @@ export class DetailsPanel {
                 locked: layer.locked,
                 objectCount: objectCount
             };
-            // Debug logging removed - use Logger.js instead
             return result;
         }
         
@@ -450,13 +426,11 @@ export class DetailsPanel {
         const selectedIds = this.stateManager.get('selectedObjects');
         const level = this.levelEditor.getLevel();
 
-        // Debug logging removed - use Logger.js instead
 
         const objects = Array.from(selectedIds)
             .map(id => level.findObjectById(id))
             .filter(Boolean);
 
-        // Debug logging removed - use Logger.js instead
 
         return objects;
     }
