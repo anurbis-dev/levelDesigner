@@ -8,40 +8,35 @@ import { MENU_CONFIG, getShortcutTarget } from '../../config/menu.js';
  */
 export class EventHandlers extends BaseModule {
     constructor(levelEditor, menuManager = null) {
-        console.log('[EVENTS] EventHandlers constructor called');
-        console.log('[EVENTS] LevelEditor instance:', levelEditor ? 'provided' : 'null');
-        console.log('[EVENTS] MenuManager instance:', menuManager ? 'provided' : 'null');
-
+        // Debug logging removed - use Logger.js instead
         super(levelEditor);
         this._rafId = null; // render loop id
         this.menuManager = menuManager;
-
-        console.log('[EVENTS] EventHandlers initialized successfully');
+        // Debug logging removed - use Logger.js instead
     }
 
     /**
      * Setup all event listeners
      */
     setupEventListeners() {
-        console.log('[EVENTS] Setting up event listeners...');
-        console.log('[EVENTS] Editor instance:', this.editor ? 'exists' : 'null');
+        // Debug logging removed - use Logger.js instead
 
         // Window resize
         window.addEventListener('resize', () => {
-            console.log('[EVENTS] Window resize event');
+            // Debug logging removed - use Logger.js instead
             this.editor.canvasRenderer.resizeCanvas();
             this.editor.render();
         });
 
         // Canvas events
-        console.log('[EVENTS] Setting up canvas events...');
+        // Debug logging removed - use Logger.js instead
         this.setupCanvasEvents();
 
         // Keyboard events
-        console.log('[EVENTS] Setting up keyboard events...');
+        // Debug logging removed - use Logger.js instead
         this.setupKeyboardEvents();
 
-        console.log('[EVENTS] Event listeners setup completed');
+        // Debug logging removed - use Logger.js instead
 
         // Initialize group edit mode state
         this.editor.stateManager.set('groupEditMode', {
@@ -109,186 +104,182 @@ export class EventHandlers extends BaseModule {
     }
 
     setupKeyboardEvents() {
-        console.log('[HOTKEYS] Setting up keyboard events...');
+        // Debug logging removed - use Logger.js instead
         window.addEventListener('keydown', (e) => {
             // Allow input fields to work normally
             if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.contentEditable === 'true')) {
-                console.log('[HOTKEYS] Ignoring - focus on input field:', document.activeElement.tagName);
+                // Debug logging removed - use Logger.js instead
                 return;
             }
 
-            console.log(`[HOTKEYS] Key event: "${e.key}" (code: ${e.code}), Ctrl: ${e.ctrlKey}, Shift: ${e.shiftKey}, Alt: ${e.altKey}, Meta: ${e.metaKey}`);
+            // Debug logging removed - use Logger.js instead
 
             // Handle escape key to cancel all current actions
             if (e.key === 'Escape') {
-                console.log('[HOTKEYS] Escape pressed - preventing default and canceling actions');
+                // Debug logging removed - use Logger.js instead
                 e.preventDefault();
-                console.log('[HOTKEYS] Default prevented:', !e.defaultPrevented);
+                // Debug logging removed - use Logger.js instead
                 this.editor.cancelAllActions();
                 return;
             }
             
             if (e.key === 'Delete' || e.key.toLowerCase() === 'x') {
-                console.log('[HOTKEYS] Delete pressed - deleting selected objects');
+                // Debug logging removed - use Logger.js instead
                 e.preventDefault();
-                console.log('[HOTKEYS] Delete - default prevented:', e.defaultPrevented);
+                // Debug logging removed - use Logger.js instead
                 if (this.editor.objectOperations && typeof this.editor.objectOperations.deleteSelectedObjects === 'function') {
-                    console.log('[HOTKEYS] Calling deleteSelectedObjects()');
+                    // Debug logging removed - use Logger.js instead
                     this.editor.objectOperations.deleteSelectedObjects();
                 } else {
-                    console.error('[HOTKEYS] deleteSelectedObjects method not found!');
+                    // Debug logging removed - use Logger.js instead
                 }
             } else if (e.shiftKey && e.key.toLowerCase() === 'd') {
-                console.log('[HOTKEYS] Shift+D pressed - duplicating objects');
+                // Debug logging removed - use Logger.js instead
                 e.preventDefault();
-                console.log('[HOTKEYS] Shift+D - default prevented:', e.defaultPrevented);
+                // Debug logging removed - use Logger.js instead
                 if (this.editor.objectOperations && typeof this.editor.objectOperations.duplicateSelectedObjects === 'function') {
-                    console.log('[HOTKEYS] Calling duplicateSelectedObjects()');
+                    // Debug logging removed - use Logger.js instead
                     this.editor.objectOperations.duplicateSelectedObjects();
                 } else {
-                    console.error('[HOTKEYS] duplicateSelectedObjects method not found!');
+                    // Debug logging removed - use Logger.js instead
                 }
             } else if (e.key.toLowerCase() === 'f') {
-                console.log('[HOTKEYS] F pressed - focus on selection');
+                // Debug logging removed - use Logger.js instead
                 e.preventDefault();
-                console.log('[HOTKEYS] F - default prevented:', e.defaultPrevented);
+                // Debug logging removed - use Logger.js instead
                 if (typeof this.editor.focusOnSelection === 'function') {
-                    console.log('[HOTKEYS] Calling focusOnSelection()');
+                    // Debug logging removed - use Logger.js instead
                     this.editor.focusOnSelection();
                 } else {
-                    console.error('[HOTKEYS] focusOnSelection method not found!');
+                    // Debug logging removed - use Logger.js instead
                 }
             } else if (e.key.toLowerCase() === 'a') {
-                console.log('[HOTKEYS] A pressed - focus on all');
+                // Debug logging removed - use Logger.js instead
                 e.preventDefault();
-                console.log('[HOTKEYS] A - default prevented:', e.defaultPrevented);
+                // Debug logging removed - use Logger.js instead
                 if (typeof this.editor.focusOnAll === 'function') {
-                    console.log('[HOTKEYS] Calling focusOnAll()');
+                    // Debug logging removed - use Logger.js instead
                     this.editor.focusOnAll();
                 } else {
-                    console.error('[HOTKEYS] focusOnAll method not found!');
+                    // Debug logging removed - use Logger.js instead
                 }
             } else if (e.shiftKey && e.key.toLowerCase() === 'g') {
-                console.log('[HOTKEYS] Shift+G pressed - grouping objects');
+                // Debug logging removed - use Logger.js instead
                 e.preventDefault();
-                console.log('[HOTKEYS] Shift+G - default prevented:', e.defaultPrevented);
+                // Debug logging removed - use Logger.js instead
                 if (this.editor.groupOperations && typeof this.editor.groupOperations.groupSelectedObjects === 'function') {
-                    console.log('[HOTKEYS] Calling groupSelectedObjects()');
+                    // Debug logging removed - use Logger.js instead
                     this.editor.groupOperations.groupSelectedObjects();
                 } else {
-                    console.error('[HOTKEYS] groupSelectedObjects method not found!');
+                    // Debug logging removed - use Logger.js instead
                 }
             } else if (e.altKey && e.key.toLowerCase() === 'g') {
-                console.log('[HOTKEYS] Alt+G pressed - ungrouping objects');
+                // Debug logging removed - use Logger.js instead
                 e.preventDefault();
-                console.log('[HOTKEYS] Alt+G - default prevented:', e.defaultPrevented);
+                // Debug logging removed - use Logger.js instead
                 if (this.editor.groupOperations && typeof this.editor.groupOperations.ungroupSelectedObjects === 'function') {
-                    console.log('[HOTKEYS] Calling ungroupSelectedObjects()');
+                    // Debug logging removed - use Logger.js instead
                     this.editor.groupOperations.ungroupSelectedObjects();
                 } else {
-                    console.error('[HOTKEYS] ungroupSelectedObjects method not found!');
+                    // Debug logging removed - use Logger.js instead
                 }
             } else if (e.ctrlKey || e.metaKey) {
-                console.log('[HOTKEYS] Ctrl combination detected');
+                // Debug logging removed - use Logger.js instead
                 if (e.key.toLowerCase() === 'z') {
-                    console.log('[HOTKEYS] Ctrl+Z pressed - undo');
+                    // Debug logging removed - use Logger.js instead
                     e.preventDefault();
-                    console.log('[HOTKEYS] Ctrl+Z - default prevented:', e.defaultPrevented);
+                    // Debug logging removed - use Logger.js instead
                     if (e.shiftKey) {
                         if (typeof this.editor.redo === 'function') {
-                            console.log('[HOTKEYS] Calling redo()');
+                            // Debug logging removed - use Logger.js instead
                             this.editor.redo();
                         } else {
-                            console.error('[HOTKEYS] redo method not found!');
+                            // Debug logging removed - use Logger.js instead
                         }
                     } else {
                         if (typeof this.editor.undo === 'function') {
-                            console.log('[HOTKEYS] Calling undo()');
+                            // Debug logging removed - use Logger.js instead
                             this.editor.undo();
                         } else {
-                            console.error('[HOTKEYS] undo method not found!');
+                            // Debug logging removed - use Logger.js instead
                         }
                     }
                 } else if (e.key.toLowerCase() === 'y') {
-                    console.log('[HOTKEYS] Ctrl+Y pressed - redo');
+                    // Debug logging removed - use Logger.js instead
                     e.preventDefault();
-                    console.log('[HOTKEYS] Ctrl+Y - default prevented:', e.defaultPrevented);
+                    // Debug logging removed - use Logger.js instead
                     if (typeof this.editor.redo === 'function') {
-                        console.log('[HOTKEYS] Calling redo()');
+                        // Debug logging removed - use Logger.js instead
                         this.editor.redo();
                     } else {
-                        console.error('[HOTKEYS] redo method not found!');
+                        // Debug logging removed - use Logger.js instead
                     }
                 } else if (e.key.toLowerCase() === 'n') {
-                    console.log('[HOTKEYS] Ctrl+N pressed - new level');
+                    // Debug logging removed - use Logger.js instead
                     e.preventDefault();
-                    console.log('[HOTKEYS] Ctrl+N - default prevented:', e.defaultPrevented);
+                    // Debug logging removed - use Logger.js instead
                     if (typeof this.editor.newLevel === 'function') {
-                        console.log('[HOTKEYS] Calling newLevel()');
+                        // Debug logging removed - use Logger.js instead
                         this.editor.newLevel();
                     } else {
-                        console.error('[HOTKEYS] newLevel method not found!');
+                        // Debug logging removed - use Logger.js instead
                     }
                 } else if (e.key.toLowerCase() === 'o') {
-                    console.log('[HOTKEYS] Ctrl+O pressed - open level');
+                    // Debug logging removed - use Logger.js instead
                     e.preventDefault();
-                    console.log('[HOTKEYS] Ctrl+O - default prevented:', e.defaultPrevented);
+                    // Debug logging removed - use Logger.js instead
                     if (typeof this.editor.openLevel === 'function') {
-                        console.log('[HOTKEYS] Calling openLevel()');
+                        // Debug logging removed - use Logger.js instead
                         this.editor.openLevel();
                     } else {
-                        console.error('[HOTKEYS] openLevel method not found!');
+                        // Debug logging removed - use Logger.js instead
                     }
                 } else if (e.key.toLowerCase() === 's') {
-                    console.log('[HOTKEYS] Ctrl+S pressed - save level');
+                    // Debug logging removed - use Logger.js instead
                     e.preventDefault();
-                    console.log('[HOTKEYS] Ctrl+S - default prevented:', e.defaultPrevented);
+                    // Debug logging removed - use Logger.js instead
                     if (e.shiftKey) {
                         if (typeof this.editor.saveLevelAs === 'function') {
-                            console.log('[HOTKEYS] Calling saveLevelAs()');
+                            // Debug logging removed - use Logger.js instead
                             this.editor.saveLevelAs();
                         } else {
-                            console.error('[HOTKEYS] saveLevelAs method not found!');
+                            // Debug logging removed - use Logger.js instead
                         }
                     } else {
                         if (typeof this.editor.saveLevel === 'function') {
-                            console.log('[HOTKEYS] Calling saveLevel()');
+                            // Debug logging removed - use Logger.js instead
                             this.editor.saveLevel();
                         } else {
-                            console.error('[HOTKEYS] saveLevel method not found!');
+                            // Debug logging removed - use Logger.js instead
                         }
                     }
                 } else {
-                    console.log('[HOTKEYS] Unhandled Ctrl combination:', e.key.toLowerCase());
+                    // Debug logging removed - use Logger.js instead
                 }
             } else if (e.key === 'PageUp') {
-                console.log('[HOTKEYS] PageUp pressed - move objects to upper layer');
-                console.log('[HOTKEYS] Shift key:', e.shiftKey);
+                // Debug logging removed - use Logger.js instead
                 e.preventDefault();
-                console.log('[HOTKEYS] PageUp - default prevented:', e.defaultPrevented);
+                // Debug logging removed - use Logger.js instead
                 if (typeof this.editor.moveSelectedObjectsToLayer === 'function') {
                     const moveToExtreme = e.shiftKey;
-                    console.log('[HOTKEYS] Calling moveSelectedObjectsToLayer(true, moveToExtreme)');
-                    console.log('[HOTKEYS] Parameters: moveUp=true, moveToExtreme=', moveToExtreme);
+                    // Debug logging removed - use Logger.js instead
                     this.editor.moveSelectedObjectsToLayer(true, moveToExtreme);
                 } else {
-                    console.error('[HOTKEYS] moveSelectedObjectsToLayer method not found!');
+                    // Debug logging removed - use Logger.js instead
                 }
             } else if (e.key === 'PageDown') {
-                console.log('[HOTKEYS] PageDown pressed - move objects to lower layer');
-                console.log('[HOTKEYS] Shift key:', e.shiftKey);
+                // Debug logging removed - use Logger.js instead
                 e.preventDefault();
-                console.log('[HOTKEYS] PageDown - default prevented:', e.defaultPrevented);
+                // Debug logging removed - use Logger.js instead
                 if (typeof this.editor.moveSelectedObjectsToLayer === 'function') {
                     const moveToExtreme = e.shiftKey;
-                    console.log('[HOTKEYS] Calling moveSelectedObjectsToLayer(false, moveToExtreme)');
-                    console.log('[HOTKEYS] Parameters: moveUp=false, moveToExtreme=', moveToExtreme);
+                    // Debug logging removed - use Logger.js instead
                     this.editor.moveSelectedObjectsToLayer(false, moveToExtreme);
                 } else {
-                    console.error('[HOTKEYS] moveSelectedObjectsToLayer method not found!');
+                    // Debug logging removed - use Logger.js instead
                 }
             } else {
-                console.log('[HOTKEYS] Unhandled key:', e.key.toLowerCase());
+                // Debug logging removed - use Logger.js instead
             }
         });
     }
@@ -296,21 +287,20 @@ export class EventHandlers extends BaseModule {
     setupMenuEvents() {
         // Menu events are now handled by MenuManager
         // This method is kept for backward compatibility
-        console.log('[VIEW MENU] Menu events handled by MenuManager');
+        // Debug logging removed - use Logger.js instead
     }
 
     initializeViewStates() {
-        console.log('[VIEW MENU] Initializing view states...');
+        // Debug logging removed - use Logger.js instead
         
         // Initialize grid state from level settings
         const gridEnabled = this.editor.level?.settings?.showGrid ?? true;
-        console.log('[VIEW MENU] Grid enabled from level settings:', gridEnabled);
+        // Debug logging removed - use Logger.js instead
         
         this.editor.stateManager.set('view.grid', gridEnabled);
         this.editor.stateManager.set('canvas.showGrid', gridEnabled);
         
-        console.log('[VIEW MENU] After setting - view.grid:', this.editor.stateManager.get('view.grid'));
-        console.log('[VIEW MENU] After setting - canvas.showGrid:', this.editor.stateManager.get('canvas.showGrid'));
+        // Debug logging removed - use Logger.js instead
         
         this.updateViewCheckbox('grid', gridEnabled);
         
@@ -338,7 +328,7 @@ export class EventHandlers extends BaseModule {
             // Fallback to direct DOM manipulation
             const checkId = option.replace(/([A-Z])/g, '-$1').toLowerCase() + '-check';
             const checkElement = document.getElementById(checkId);
-            console.log(`[VIEW MENU] Updating checkbox ${checkId}, enabled: ${enabled}, element found: ${!!checkElement}`);
+            // Debug logging removed - use Logger.js instead
             if (checkElement) {
                 checkElement.classList.toggle('hidden', !enabled);
             }
@@ -346,22 +336,16 @@ export class EventHandlers extends BaseModule {
     }
 
     toggleViewOption(option) {
-        console.log(`[VIEW MENU] Toggling ${option}`);
+        // Debug logging removed - use Logger.js instead
         
         // Debug: Check all related states
-        console.log(`[VIEW MENU] All view states:`, {
-            'view.grid': this.editor.stateManager.get('view.grid'),
-            'canvas.showGrid': this.editor.stateManager.get('canvas.showGrid'),
-            'view.snapToGrid': this.editor.stateManager.get('view.snapToGrid'),
-            'canvas.snapToGrid': this.editor.stateManager.get('canvas.snapToGrid')
-        });
+        // Debug logging removed - use Logger.js instead
         
         // Get current state from editor's state manager
         const currentState = this.editor.stateManager.get(`view.${option}`) || false;
         const newState = !currentState;
         
-        console.log(`[VIEW MENU] Current state: ${currentState}, New state: ${newState}`);
-        console.log(`[VIEW MENU] State manager state for view.${option}:`, this.editor.stateManager.get(`view.${option}`));
+        // Debug logging removed - use Logger.js instead
         
         // Update state
         this.editor.stateManager.set(`view.${option}`, newState);
@@ -410,7 +394,7 @@ export class EventHandlers extends BaseModule {
      * @returns {Object} Saved view states
      */
     saveViewStates() {
-        console.log('[VIEW MENU] Saving current View states...');
+        // Debug logging removed - use Logger.js instead
 
         const savedStates = {};
         const viewOptions = ['grid', 'gameMode', 'snapToGrid', 'objectBoundaries', 'objectCollisions'];
@@ -419,7 +403,7 @@ export class EventHandlers extends BaseModule {
             const stateKey = `view.${option}`;
             const currentValue = this.editor.stateManager.get(stateKey);
             savedStates[option] = currentValue !== undefined ? currentValue : false;
-            console.log(`[VIEW MENU] Saved ${option}: ${savedStates[option]}`);
+            // Debug logging removed - use Logger.js instead
         });
 
         return savedStates;
@@ -430,11 +414,11 @@ export class EventHandlers extends BaseModule {
      * @param {Object} savedStates - Previously saved view states
      */
     applySavedViewStates(savedStates) {
-        console.log('[VIEW MENU] Applying saved View states...');
+        // Debug logging removed - use Logger.js instead
 
         Object.keys(savedStates).forEach(option => {
             const enabled = savedStates[option];
-            console.log(`[VIEW MENU] Applying ${option}: ${enabled}`);
+            // Debug logging removed - use Logger.js instead
 
             // Apply the view option
             this.applyViewOption(option, enabled);
@@ -443,7 +427,7 @@ export class EventHandlers extends BaseModule {
             this.updateViewCheckbox(option, enabled);
         });
 
-        console.log('[VIEW MENU] All saved View states applied');
+        // Debug logging removed - use Logger.js instead
     }
 
     toggleGameMode(enabled) {

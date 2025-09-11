@@ -71,11 +71,11 @@ export class CanvasContextMenu extends BaseContextMenu {
      * @param {Event} e - The context menu event
      */
     handleContextMenuEvent(e) {
-        console.log('[CanvasContextMenu] Context menu event at:', e.clientX, e.clientY);
+        // Debug logging removed - use Logger.js instead
 
         // Check if user was panning (don't show menu after panning)
         const mouseState = this.levelEditor?.stateManager.get('mouse');
-        console.log('[CanvasContextMenu] Mouse state at contextmenu:', mouseState);
+        // Debug logging removed - use Logger.js instead
 
         // Check distance from start position as additional verification
         let wasActuallyPanning = mouseState?.wasPanning;
@@ -84,34 +84,20 @@ export class CanvasContextMenu extends BaseContextMenu {
                 Math.pow(e.clientX - mouseState.rightClickStartX, 2) +
                 Math.pow(e.clientY - mouseState.rightClickStartY, 2)
             );
-            console.log('[CanvasContextMenu] Distance from start:', distanceFromStart);
+            // Debug logging removed - use Logger.js instead
             if (distanceFromStart > 3) {
-                console.log('[CanvasContextMenu] Detected panning by distance check:', distanceFromStart);
-                console.log('[CanvasContextMenu] Start:', mouseState.rightClickStartX, mouseState.rightClickStartY);
-                console.log('[CanvasContextMenu] Current:', e.clientX, e.clientY);
+                // Debug logging removed - use Logger.js instead
                 wasActuallyPanning = true;
             }
         }
 
         if (wasActuallyPanning) {
-            console.log('[CanvasContextMenu] Skipping menu - user was panning');
-            console.log('[CanvasContextMenu] Mouse state:', {
-                wasPanning: mouseState?.wasPanning,
-                rightClickStartX: mouseState?.rightClickStartX,
-                rightClickStartY: mouseState?.rightClickStartY,
-                currentPos: { x: e.clientX, y: e.clientY }
-            });
+            // Debug logging removed - use Logger.js instead
             // Don't reset here - let the scheduled cleanup in handleMouseUp do it
             return;
         }
 
-        console.log('[CanvasContextMenu] Showing menu - no panning detected');
-        console.log('[CanvasContextMenu] Mouse state:', {
-            wasPanning: mouseState?.wasPanning,
-            rightClickStartX: mouseState?.rightClickStartX,
-            rightClickStartY: mouseState?.rightClickStartY,
-            currentPos: { x: e.clientX, y: e.clientY }
-        });
+        // Debug logging removed - use Logger.js instead
 
         // Extract context data from clicked element and event
         const contextData = this.extractContextData(e.target, e);
@@ -121,7 +107,7 @@ export class CanvasContextMenu extends BaseContextMenu {
             this.levelEditor.contextMenuManager.showMenu('canvas', e, contextData);
         } else {
             // Fallback to direct show if manager not available
-            console.warn('[CanvasContextMenu] ContextMenuManager not available, using fallback');
+            // Debug logging removed - use Logger.js instead
             this.showContextMenu(e, contextData);
         }
     }
@@ -266,10 +252,7 @@ export class CanvasContextMenu extends BaseContextMenu {
         this.addMenuItem('Group', '📦', () => this.callbacks.onGroup(), {
             visible: (context) => {
                 const visible = context.hasMultipleSelection;
-                console.log('[CanvasContextMenu] Group menu item visibility:', visible, {
-                    hasMultipleSelection: context.hasMultipleSelection,
-                    totalSelected: this.levelEditor?.stateManager.get('selectedObjects')?.size || 0
-                });
+                // Debug logging removed - use Logger.js instead
                 return visible;
             }
         });
@@ -277,11 +260,7 @@ export class CanvasContextMenu extends BaseContextMenu {
         this.addMenuItem('Ungroup', '📭', () => this.callbacks.onUngroup(), {
             visible: (context) => {
                 const visible = context.hasSelection && context.isGroup;
-                console.log('[CanvasContextMenu] Ungroup menu item visibility:', visible, {
-                    hasSelection: context.hasSelection,
-                    isGroup: context.isGroup,
-                    totalSelected: this.levelEditor?.stateManager.get('selectedObjects')?.size || 0
-                });
+                // Debug logging removed - use Logger.js instead
                 return visible;
             }
         });
@@ -303,12 +282,12 @@ export class CanvasContextMenu extends BaseContextMenu {
         });
         this.addMenuItem('Zoom to Fit', '🎯', () => {
             // Use the same function as 'a' key - focusOnAll
-            console.log('[CanvasContextMenu] Zoom to Fit clicked - calling focusOnAll (same as "a" key)');
+            // Debug logging removed - use Logger.js instead
             if (this.levelEditor && typeof this.levelEditor.focusOnAll === 'function') {
                 this.levelEditor.focusOnAll();
             } else {
                 // Fallback to zoomToFit if focusOnAll not available
-                console.warn('[CanvasContextMenu] focusOnAll not available, using fallback');
+                // Debug logging removed - use Logger.js instead
                 this.callbacks.onZoomFit();
             }
         });
@@ -352,7 +331,7 @@ export class CanvasContextMenu extends BaseContextMenu {
         // Render immediately for responsive zoom
         this.levelEditor.render();
 
-        console.log(`[CanvasContextMenu] Zoom ${direction > 0 ? 'in' : 'out'} around cursor (${cursorX}, ${cursorY}): ${oldZoom} -> ${newZoom}`);
+        // Debug logging removed - use Logger.js instead
     }
 
     /**

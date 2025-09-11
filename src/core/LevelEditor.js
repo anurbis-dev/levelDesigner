@@ -190,6 +190,11 @@ export class LevelEditor {
         const viewportRight = camera.x + canvas.width / camera.zoom;
         const viewportBottom = camera.y + canvas.height / camera.zoom;
 
+        // Debug viewport bounds only during undo operations
+        if (this.historyManager && (this.historyManager.isUndoing || this.historyManager.isRedoing)) {
+            // Debug logging removed - use Logger.js instead
+        }
+
         // Add padding for better UX (objects near edge should still be selectable)
         const padding = 50;
         const extendedLeft = viewportLeft - padding;
@@ -205,9 +210,18 @@ export class LevelEditor {
 
         // Filter by viewport and visibility
         const selectableInViewport = new Set();
+
+        // Debug only during undo operations
+        const isDebugMode = this.historyManager && (this.historyManager.isUndoing || this.historyManager.isRedoing);
+        if (isDebugMode) {
+            // Debug logging removed - use Logger.js instead
+        }
+
         selectableSet.forEach(objId => {
             const obj = this.getCachedObject(objId);
-            if (!obj) return;
+            if (!obj) {
+                return;
+            }
 
             // In group edit mode, include ALL selectable objects (no viewport filtering)
             // This ensures nested objects in groups can be selected even if outside viewport
@@ -215,11 +229,14 @@ export class LevelEditor {
                 selectableInViewport.add(objId);
             } else {
                 // Normal mode - check if object is in viewport
-                if (this.renderOperations.isObjectVisible(obj, extendedLeft, extendedTop, extendedRight, extendedBottom)) {
+                const isVisible = this.renderOperations.isObjectVisible(obj, extendedLeft, extendedTop, extendedRight, extendedBottom);
+                if (isVisible) {
                     selectableInViewport.add(objId);
                 }
             }
         });
+
+        // Debug logging removed - use Logger.js instead
 
         // Cache the result
         this.selectableObjectsCache.set(cameraKey, selectableInViewport);
@@ -253,6 +270,8 @@ export class LevelEditor {
         this.cacheInvalidationTimeout = setTimeout(() => {
             this.clearCaches();
             this.clearSelectableObjectsCache();
+            // Также очищаем кеш счетчиков слоев при массовых изменениях
+            this.level.clearLayerCountsCache();
             this.cacheInvalidationTimeout = null;
         }, 100); // Debounce cache invalidation by 100ms
     }
@@ -268,7 +287,6 @@ export class LevelEditor {
                 console[level === 'error' ? 'error' : 'log'](`[EVENT] ${message}`, ...args);
             }
         } catch (error) {
-            console.log(`[EVENT] ${message}`, ...args);
         }
     }
 
@@ -379,8 +397,11 @@ export class LevelEditor {
         // Initialize view states after level is created
         this.eventHandlers.initializeViewStates();
         
+        // Ensure selection is clear before saving initial state
+        this.stateManager.set('selectedObjects', new Set());
+
         // Save initial state
-        this.historyManager.saveState(this.level.objects, true);
+        this.historyManager.saveState(this.level.objects, this.stateManager.get('selectedObjects'), true);
 
         // Test context menu functionality
         this.testContextMenu();
@@ -395,13 +416,9 @@ export class LevelEditor {
      * Test context menu functionality
      */
     testContextMenu() {
-        console.log('[TEST] Context menu test started');
-
         // Test that context menu is initialized
-        if (this.canvasContextMenu) {
-            console.log('[TEST] ✓ CanvasContextMenu initialized successfully');
-        } else {
-            console.log('[TEST] ✗ CanvasContextMenu not initialized');
+        if (!this.canvasContextMenu) {
+            return;
         }
 
         // Test menu methods
@@ -412,162 +429,104 @@ export class LevelEditor {
         };
 
         // Test extractContextData method
-        if (this.canvasContextMenu && typeof this.canvasContextMenu.extractContextData === 'function') {
-            console.log('[TEST] ✓ extractContextData method exists');
+        if (typeof this.canvasContextMenu.extractContextData !== 'function') {
+            return;
         }
 
         // Test hasSelectedObjects method
-        if (this.canvasContextMenu && typeof this.canvasContextMenu.hasSelectedObjects === 'function') {
-            const hasSelection = this.canvasContextMenu.hasSelectedObjects();
-            console.log(`[TEST] ✓ hasSelectedObjects method works: ${hasSelection}`);
+        if (typeof this.canvasContextMenu.hasSelectedObjects !== 'function') {
+            return;
         }
 
-        console.log('[TEST] Context menu test completed');
+        const hasSelection = this.canvasContextMenu.hasSelectedObjects();
     }
 
     /**
      * Test ContextMenuManager functionality
      */
     testContextMenuManager() {
-        console.log('[TEST] ContextMenuManager test started');
-
-        if (this.contextMenuManager) {
-            console.log('[TEST] ✓ ContextMenuManager initialized successfully');
-
-            const registeredMenus = this.contextMenuManager.getRegisteredMenus();
-            console.log(`[TEST] ✓ Registered menus: ${registeredMenus.join(', ')}`);
-
-            const hasActive = this.contextMenuManager.hasActiveMenu();
-            console.log(`[TEST] ✓ Has active menu: ${hasActive}`);
-        } else {
-            console.log('[TEST] ✗ ContextMenuManager not initialized');
+        if (!this.contextMenuManager) {
+            return;
         }
 
-        console.log('[TEST] ContextMenuManager test completed');
+        const registeredMenus = this.contextMenuManager.getRegisteredMenus();
+        const hasActive = this.contextMenuManager.hasActiveMenu();
     }
 
     /**
      * Test global click handler functionality
      */
     testGlobalClickHandler() {
-        console.log('[TEST] Global click handler test started');
-
-        if (this.contextMenuManager) {
-            console.log('[TEST] ✓ Global context menu handler should close menus on empty area clicks');
-
-            // Test that we can access the manager
-            const registeredMenus = this.contextMenuManager.getRegisteredMenus();
-            console.log(`[TEST] ✓ Global handler can access ${registeredMenus.length} registered menus`);
-        } else {
-            console.log('[TEST] ✗ ContextMenuManager not available for global handler');
+        if (!this.contextMenuManager) {
+            return;
         }
 
-        console.log('[TEST] Global click handler test completed');
-        console.log('[TEST] Right-click in empty areas should now close all active menus');
+        // Test that we can access the manager
+        const registeredMenus = this.contextMenuManager.getRegisteredMenus();
     }
 
     /**
      * Test panning detection functionality
      */
     testPanningDetection() {
-        console.log('[TEST] Panning detection test started');
-
         // Test mouse state initialization
         const mouseState = this.stateManager.get('mouse');
-        if (mouseState) {
-            console.log('[TEST] ✓ Mouse state available for panning detection');
-
-            // Check if panning-related properties exist
-            const hasPanningProps = mouseState.hasOwnProperty('wasPanning') ||
-                                  mouseState.hasOwnProperty('rightClickStartX') ||
-                                  mouseState.hasOwnProperty('rightClickStartY');
-
-            if (hasPanningProps) {
-                console.log('[TEST] ✓ Panning detection properties initialized');
-            } else {
-                console.log('[TEST] ⚠ Panning detection properties not found');
-            }
-        } else {
-            console.log('[TEST] ✗ Mouse state not available');
+        if (!mouseState) {
+            return;
         }
 
-        console.log('[TEST] Panning detection test completed');
-        console.log('[TEST] Right-click + drag should not show context menu');
-        console.log('[TEST] Right-click without movement should show context menu');
+        // Check if panning-related properties exist
+        const hasPanningProps = mouseState.hasOwnProperty('wasPanning') ||
+                              mouseState.hasOwnProperty('rightClickStartX') ||
+                              mouseState.hasOwnProperty('rightClickStartY');
     }
 
     /**
      * Test menu auto-close functionality
      */
     testMenuAutoClose() {
-        console.log('[TEST] Menu auto-close test started');
-
-        if (this.canvasContextMenu) {
-            console.log('[TEST] ✓ CanvasContextMenu supports auto-close on mouse leave');
-
-            // Test that the menu has the necessary methods
-            if (typeof this.canvasContextMenu.setupMenuClosing === 'function') {
-                console.log('[TEST] ✓ setupMenuClosing method available');
-            }
-
-            // Check if we can access the base functionality
-            const hasBaseMenu = this.canvasContextMenu.constructor.name === 'CanvasContextMenu';
-            if (hasBaseMenu) {
-                console.log('[TEST] ✓ CanvasContextMenu inherits from BaseContextMenu');
-            }
-        } else {
-            console.log('[TEST] ✗ CanvasContextMenu not available');
+        if (!this.canvasContextMenu) {
+            return;
         }
 
-        console.log('[TEST] Menu auto-close test completed');
-        console.log('[TEST] Menus should now close automatically when mouse leaves their area');
+        // Test that the menu has the necessary methods
+        if (typeof this.canvasContextMenu.setupMenuClosing !== 'function') {
+            return;
+        }
+
+        // Check if we can access the base functionality
+        const hasBaseMenu = this.canvasContextMenu.constructor.name === 'CanvasContextMenu';
     }
 
     /**
      * Test cursor positioning functionality
      */
     testCursorPositioning() {
-        console.log('[TEST] Cursor positioning test started');
-
         let canvasMenuOk = false;
         let consoleMenuOk = false;
 
-        if (this.canvasContextMenu) {
-            console.log('[TEST] ✓ CanvasContextMenu supports cursor positioning');
+        if (!this.canvasContextMenu) {
+            return;
+        }
 
-            // Test that the menu has the necessary methods
-            if (typeof this.canvasContextMenu.ensureCursorInsideMenu === 'function') {
-                console.log('[TEST] ✓ CanvasContextMenu.ensureCursorInsideMenu method available');
-                canvasMenuOk = true;
-            }
+        // Test that the menu has the necessary methods
+        if (typeof this.canvasContextMenu.ensureCursorInsideMenu === 'function') {
+            canvasMenuOk = true;
+        }
 
-            if (typeof this.canvasContextMenu.adjustCursorPosition === 'function') {
-                console.log('[TEST] ✓ CanvasContextMenu.adjustCursorPosition method available');
-            }
-        } else {
-            console.log('[TEST] ✗ CanvasContextMenu not available');
+        if (typeof this.canvasContextMenu.adjustCursorPosition !== 'function') {
+            return;
         }
 
         // Test ConsoleContextMenu if available
         if (window.consoleContextMenu) {
-            console.log('[TEST] ✓ ConsoleContextMenu supports cursor positioning');
-
             if (typeof window.consoleContextMenu.ensureCursorInsideMenu === 'function') {
-                console.log('[TEST] ✓ ConsoleContextMenu.ensureCursorInsideMenu method available');
                 consoleMenuOk = true;
             }
-        } else {
-            console.log('[TEST] ⚠ ConsoleContextMenu not available for testing');
         }
 
-        if (canvasMenuOk && consoleMenuOk) {
-            console.log('[TEST] ✓ Both context menus support cursor positioning');
-        } else if (canvasMenuOk) {
-            console.log('[TEST] ✓ Canvas context menu supports cursor positioning');
-        }
-
-        console.log('[TEST] Cursor positioning test completed');
-        console.log('[TEST] Menus should now position themselves to keep cursor inside bounds (2px offset)');
+        const bothOk = canvasMenuOk && consoleMenuOk;
+        const canvasOnlyOk = canvasMenuOk && !consoleMenuOk;
     }
 
     /**
@@ -761,8 +720,9 @@ export class LevelEditor {
         const playerStartCount = stats?.byType?.player_start || 0;
 
         // Auto-create Player Start if missing (but don't call updateAllPanels recursively)
-        if (playerStartCount === 0) {
-            console.log('[LEVEL STATS] No Player Start found, auto-creating...');
+        // Skip auto-creation during undo/redo operations to avoid history corruption
+        const isDuringUndoRedo = this.historyManager.isUndoing || this.historyManager.isRedoing;
+        if (playerStartCount === 0 && !isDuringUndoRedo) {
             const playerStartObject = new GameObject({
                 name: 'Player Start',
                 type: 'player_start',
@@ -777,13 +737,12 @@ export class LevelEditor {
             });
 
             this.level.addObject(playerStartObject);
-            console.log('[LEVEL STATS] Player Start auto-created at (0,0)');
 
             // Invalidate caches since new object was added
             this.invalidateObjectCaches(playerStartObject.id);
 
             // Update history
-            this.historyManager.saveState(this.level.objects, false);
+            this.historyManager.saveState(this.level.objects, this.stateManager.get('selectedObjects'), false);
 
             // Update cached stats after creation
             this.updateCachedLevelStats();
@@ -877,24 +836,139 @@ export class LevelEditor {
     }
 
     /**
+     * Check if object is a descendant of group (recursive)
+     * @param {string} objectId - ID of object to check
+     * @param {Object} group - Group to check in
+     * @returns {boolean} True if object is descendant of group
+     */
+    isObjectDescendantOfGroup(objectId, group) {
+        if (!group.children || !Array.isArray(group.children)) {
+            return false;
+        }
+
+        for (const child of group.children) {
+            if (child.id === objectId) {
+                return true;
+            }
+
+            // Check recursively in child groups
+            if (child.type === 'group' && this.isObjectDescendantOfGroup(objectId, child)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * History operations
      */
     undo() {
-        const previousState = this.historyManager.undo();
-        if (previousState) {
-            this.level.objects = previousState;
-            this.stateManager.set('selectedObjects', new Set());
+            // Debug logging removed - use Logger.js instead
+
+            const previousState = this.historyManager.undo();
+            if (previousState) {
+                // Debug logging removed - use Logger.js instead
+
+                this.level.objects = previousState.objects;
+
+                // Ensure all restored objects have correct visibility
+                // Ensure all restored objects have correct visibility
+                this.level.objects.forEach(obj => {
+                    // Ensure object visibility is set correctly
+                    // By default, all objects should be visible unless there's a specific reason to hide them
+                    if (!obj.visible) {
+                        obj.visible = true;
+                    }
+
+                    // Special handling for groups - they should always be visible
+                    if (obj.type === 'group') {
+                        if (!obj.visible) {
+                            obj.visible = true;
+                        }
+                    }
+                });
+
+                // Force update of selectable set after visibility corrections
+                const selectableSetAfterCorrection = this.objectOperations.computeSelectableSet();
+
+                // Clear viewport selectable objects cache to ensure it gets recalculated
+                this.clearSelectableObjectsCache();
+
+                // Force recalculation of viewport selectable set
+                const viewportSelectableAfter = this.getSelectableObjectsInViewport();
+
+            // Filter selection to only include objects that actually exist
+            const validSelection = new Set();
+            const objectIds = new Set(this.level.objects.map(obj => obj.id));
+
+            // Debug groups specifically
+            const groups = this.level.objects.filter(obj => obj.type === 'group');
+
+            // Check if selection contains group IDs
+            const selectionContainsGroups = Array.from(previousState.selection).some(id => {
+                const obj = this.level.findObjectById(id);
+                return obj && obj.type === 'group';
+            });
+
+            // Add all existing objects from previous selection
+            previousState.selection.forEach(id => {
+                if (objectIds.has(id)) {
+                    validSelection.add(id);
+                }
+            });
+
+            this.stateManager.set('selectedObjects', validSelection);
+
+            // Verify selection was set correctly
+            const currentSelection = this.stateManager.get('selectedObjects');
+
             this.render();
             this.updateAllPanels();
             this.stateManager.markDirty();
+
+            // Check Player Start count after updateAllPanels
+            const playerStartCountAfter = this.level.objects.filter(obj => obj.type === 'player_start').length;
+
+            // Check selectable set after updateAllPanels
+            const selectableSet = this.objectOperations.computeSelectableSet();
+
+            // Check if our selected objects are in selectable set
+            const finalSelection = this.stateManager.get('selectedObjects');
+            const missingFromSelectable = Array.from(finalSelection).filter(id => !selectableSet.has(id));
+            if (missingFromSelectable.length > 0) {
+                // Debug why they're not selectable
+                missingFromSelectable.forEach(id => {
+                    const obj = this.level.findObjectById(id);
+                    if (obj) {
+                        // Debug logging removed - use Logger.js instead
+                    }
+                });
+            }
+
+        } else {
+            // Debug logging removed - use Logger.js instead
         }
+        // Debug logging removed - use Logger.js instead
     }
 
     redo() {
         const nextState = this.historyManager.redo();
         if (nextState) {
-            this.level.objects = nextState;
-            this.stateManager.set('selectedObjects', new Set());
+            this.level.objects = nextState.objects;
+
+            // Filter selection to only include objects that actually exist
+            const validSelection = new Set();
+            const objectIds = new Set(this.level.objects.map(obj => obj.id));
+
+            // Add all existing objects from next selection
+            nextState.selection.forEach(id => {
+                if (objectIds.has(id)) {
+                    validSelection.add(id);
+                }
+            });
+
+            this.stateManager.set('selectedObjects', validSelection);
             this.render();
             this.updateAllPanels();
             this.stateManager.markDirty();
@@ -930,7 +1004,7 @@ export class LevelEditor {
         this.updateCachedLevelStats();
 
         this.historyManager.clear();
-        this.historyManager.saveState(this.level.objects, true);
+        this.historyManager.saveState(this.level.objects, this.stateManager.get('selectedObjects'), true);
         this.render();
         this.updateAllPanels();
     }
@@ -962,7 +1036,11 @@ export class LevelEditor {
             this.updateCachedLevelStats();
 
             this.historyManager.clear();
-            this.historyManager.saveState(this.level.objects, true);
+
+            // Ensure selection is clear before saving initial state
+            this.stateManager.set('selectedObjects', new Set());
+
+            this.historyManager.saveState(this.level.objects, this.stateManager.get('selectedObjects'), true);
             this.render();
             this.updateAllPanels();
         } catch (error) {
@@ -1000,7 +1078,6 @@ export class LevelEditor {
     setupLayerObjectsCountTracking() {
         if (this.level) {
             this.level.setLayerObjectsCountChangeCallback((layerId, newCount, oldCount) => {
-                console.log('[DEBUG] Layer objects count changed:', { layerId, newCount, oldCount });
                 
                 // Notify StateManager about layer objects count change
                 this.stateManager.notifyLayerObjectsCountChanged(layerId, newCount, oldCount);
@@ -1196,7 +1273,6 @@ export class LevelEditor {
      */
     copySelectedObjects() {
         // TODO: Implement copy functionality
-        console.log('Copy selected objects - not implemented yet');
     }
 
     /**
@@ -1204,7 +1280,6 @@ export class LevelEditor {
      */
     pasteObjects() {
         // TODO: Implement paste functionality
-        console.log('Paste objects - not implemented yet');
     }
 
     /**
@@ -1398,28 +1473,23 @@ export class LevelEditor {
      * @param {boolean} moveToExtreme - true to move to first/last layer, false to move to adjacent layer
      */
     moveSelectedObjectsToLayer(moveUp, moveToExtreme = false) {
-        console.log('[DEBUG] moveSelectedObjectsToLayer called:', { moveUp, moveToExtreme });
 
         // Quick check for selected objects
         const selectedObjects = this.stateManager.get('selectedObjects');
         if (!selectedObjects || selectedObjects.size === 0) {
-            console.log('[DEBUG] No selected objects');
             return;
         }
 
         // Check for active duplication only
         const duplicate = this.stateManager.get('duplicate');
         if (duplicate && duplicate.isActive) {
-            console.log('[DEBUG] Duplication is active, cannot move objects');
             Logger.layer.warn('Cannot move objects while duplication is active');
             return;
         }
 
-        console.log('[DEBUG] All conditions passed, proceeding with move');
 
         // Save state for undo
-        this.historyManager.saveState(this.level.toJSON(), false);
-        console.log('[DEBUG] Saved state for undo');
+        this.historyManager.saveState(this.level.objects, this.stateManager.get('selectedObjects'), false);
 
         let movedCount = 0;
 
@@ -1519,30 +1589,23 @@ export class LevelEditor {
      * @returns {GameObject|null} - The found object or null
      */
     findObjectById(objId) {
-        console.log('[DEBUG] findObjectById called for:', objId);
 
         // First try to find as top-level object
         const topLevelObj = this.level.objects.find(obj => obj.id === objId);
         if (topLevelObj) {
-            console.log('[DEBUG] Found as top-level object:', { id: topLevelObj.id, layerId: topLevelObj.layerId });
             return topLevelObj;
         }
-
-        console.log('[DEBUG] Not found as top-level, searching in groups...');
 
         // If not found as top-level, search in groups recursively
         for (const obj of this.level.objects) {
             if (obj.type === 'group') {
-                console.log('[DEBUG] Checking group:', obj.id);
                 const found = this.findObjectInGroupRecursive(obj, objId);
                 if (found) {
-                    console.log('[DEBUG] Found object in group:', { id: found.id, layerId: found.layerId });
                     return found;
                 }
             }
         }
 
-        console.log('[DEBUG] Object not found anywhere');
         return null;
     }
 
@@ -1752,10 +1815,10 @@ export class LevelEditor {
         // Notify about layer objects count changes (optimized - batch these updates)
         if (oldEffectiveLayerId && oldEffectiveLayerId !== targetLayerId) {
             const oldCount = this.level.getLayerObjectsCount(oldEffectiveLayerId);
-            this.level.notifyLayerObjectsCountChange(oldEffectiveLayerId, oldCount, oldCount - 1);
+            this.level.notifyLayerObjectsCountChange(oldEffectiveLayerId, oldCount, oldCount + 1);
 
             const newCount = this.level.getLayerObjectsCount(targetLayerId);
-            this.level.notifyLayerObjectsCountChange(targetLayerId, newCount, newCount + 1);
+            this.level.notifyLayerObjectsCountChange(targetLayerId, newCount, newCount - 1);
         }
 
         return { moved: true, targetObj: topLevelObj };

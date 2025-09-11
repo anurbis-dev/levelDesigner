@@ -120,7 +120,8 @@ export class Logger {
      */
     static event = {
         info: (message, ...args) => Logger.log('EVENT', 'info', message, ...args),
-        debug: (message, ...args) => Logger.log('EVENT', 'debug', message, ...args)
+        debug: (message, ...args) => Logger.log('EVENT', 'debug', message, ...args),
+        error: (message, ...args) => Logger.log('EVENT', 'error', message, ...args)
     };
 
     /**
@@ -136,7 +137,8 @@ export class Logger {
      */
     static state = {
         info: (message, ...args) => Logger.log('STATE', 'info', message, ...args),
-        debug: (message, ...args) => Logger.log('STATE', 'debug', message, ...args)
+        debug: (message, ...args) => Logger.log('STATE', 'debug', message, ...args),
+        error: (message, ...args) => Logger.log('STATE', 'error', message, ...args)
     };
 
     /**
@@ -149,11 +151,12 @@ export class Logger {
     };
 
     /**
-     * Asset management logging  
+     * Asset management logging
      */
     static asset = {
         info: (message, ...args) => Logger.log('ASSET', 'info', message, ...args),
-        debug: (message, ...args) => Logger.log('ASSET', 'debug', message, ...args)
+        debug: (message, ...args) => Logger.log('ASSET', 'debug', message, ...args),
+        error: (message, ...args) => Logger.log('ASSET', 'error', message, ...args)
     };
 
     /**

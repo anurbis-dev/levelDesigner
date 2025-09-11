@@ -159,8 +159,6 @@ export class DuplicateOperations extends BaseModule {
         const duplicate = this.editor.stateManager.get('duplicate');
         if (!duplicate || !duplicate.isActive || !Array.isArray(duplicate.objects) || duplicate.objects.length === 0) return;
 
-        this.editor.historyManager.saveState(this.editor.level.objects);
-
         const groupEditMode = this.editor.stateManager.get('groupEditMode');
         const newIds = new Set();
 
@@ -170,7 +168,9 @@ export class DuplicateOperations extends BaseModule {
 
             // Sanitize and place
             const base = this._sanitizeForPlacement(this.editor.deepClone(obj));
+            // Debug logging removed - use Logger.js instead
             this.editor.reassignIdsDeep(base);
+            // Debug logging removed - use Logger.js instead
             base.x = worldPos.x + offsetX;
             base.y = worldPos.y + offsetY;
 
@@ -179,11 +179,14 @@ export class DuplicateOperations extends BaseModule {
                 base.x -= groupPos.x;
                 base.y -= groupPos.y;
                 groupEditMode.group.children.push(base);
+                // Debug logging removed - use Logger.js instead
             } else {
                 this.editor.level.addObject(base);
+                // Debug logging removed - use Logger.js instead
             }
 
             newIds.add(base.id);
+            // Debug logging removed - use Logger.js instead
 
             // Invalidate caches for the new object
             this.editor.invalidateObjectCaches(base.id);
@@ -194,10 +197,13 @@ export class DuplicateOperations extends BaseModule {
         // Schedule full cache invalidation since multiple objects were added
         this.editor.scheduleCacheInvalidation();
 
+        // Save state AFTER placing objects but BEFORE changing selection
+        this.editor.historyManager.saveState(this.editor.level.objects, newIds);
+
         // Use the same reset method as cancel for consistency
         this.cancel();
 
-        // Set selection after cleanup
+        // Set selection after state is saved
         this.editor.stateManager.set('selectedObjects', newIds);
 
         this.editor.render();

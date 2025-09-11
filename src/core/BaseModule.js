@@ -82,7 +82,7 @@ export class BaseModule {
      * Save state to history if not already saved recently
      */
     saveStateIfNeeded() {
-        this.editor.historyManager.saveState(this.editor.level.objects);
+        this.editor.historyManager.saveState(this.editor.level.objects, this.editor.stateManager.get('selectedObjects'));
         this.editor.stateManager.markDirty();
     }
 

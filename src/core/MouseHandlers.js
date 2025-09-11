@@ -200,7 +200,7 @@ export class MouseHandlers extends BaseModule {
             const wasDragging = mouse.isDragging; // Save dragging state before resetting
             
             if (mouse.isDragging) {
-                this.editor.historyManager.saveState(this.editor.level.objects);
+                this.editor.historyManager.saveState(this.editor.level.objects, this.editor.stateManager.get('selectedObjects'));
                 this.editor.stateManager.markDirty();
                 
                 // Update panels after drag ends to show final position
@@ -380,15 +380,13 @@ export class MouseHandlers extends BaseModule {
 
     handleDrop(e) {
         e.preventDefault();
-        
+
         const mouse = this.editor.stateManager.get('mouse');
         if (!mouse.isDraggingAsset) return;
-        
-        this.editor.historyManager.saveState(this.editor.level.objects);
-        
+
         const droppedAssetIds = JSON.parse(e.dataTransfer.getData('application/json'));
         const worldPos = this.screenToWorld(e);
-        
+
         const newIds = new Set();
 
         droppedAssetIds.forEach((assetId, index) => {
@@ -396,7 +394,7 @@ export class MouseHandlers extends BaseModule {
             if (asset) {
                 let x = worldPos.x + index * 10;
                 let y = worldPos.y + index * 10;
-                
+
                 // Apply snap to grid if enabled
                 const snapToGrid = this.editor.stateManager.get('canvas.snapToGrid') ?? this.editor.level.settings.snapToGrid;
                 if (snapToGrid) {
@@ -405,7 +403,7 @@ export class MouseHandlers extends BaseModule {
                     x = snapped.x;
                     y = snapped.y;
                 }
-                
+
                 const newObject = asset.createInstance(x, y);
 
                 // Check if we're in group edit mode and the drop point is inside the group bounds
@@ -424,12 +422,15 @@ export class MouseHandlers extends BaseModule {
                 newIds.add(newObject.id);
             }
         });
-        
+
+        // Save state AFTER all objects are added
+        this.editor.historyManager.saveState(this.editor.level.objects, newIds);
+
         this.editor.stateManager.set('selectedObjects', newIds);
         this.editor.stateManager.update({
             'mouse.isDraggingAsset': false
         });
-        
+
         this.editor.render();
         this.editor.updateAllPanels();
     }
@@ -488,6 +489,12 @@ export class MouseHandlers extends BaseModule {
     }
 
     handleEmptyClick(e, worldPos) {
+        // Don't clear selection if we just did an undo/redo operation
+        if (this.editor.historyManager && (this.editor.historyManager.isUndoing || this.editor.historyManager.isRedoing)) {
+            // Debug logging removed - use Logger.js instead
+            return;
+        }
+
         const selectedObjects = this.editor.stateManager.get('selectedObjects');
 
         // If Alt is pressed, don't start marquee selection - let Alt+drag handle it

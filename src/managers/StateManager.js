@@ -100,12 +100,16 @@ export class StateManager {
      * Set state property and notify listeners
      */
     set(key, value) {
+        if (key === 'selectedObjects') {
+            // Debug logging removed - use Logger.js instead
+        }
+
         if (key.includes('.')) {
             // Handle nested properties like 'view.grid'
             const parts = key.split('.');
             const lastPart = parts.pop();
             let current = this.state;
-            
+
             // Navigate to the parent object
             for (const part of parts) {
                 if (!current[part] || typeof current[part] !== 'object') {
@@ -113,7 +117,7 @@ export class StateManager {
                 }
                 current = current[part];
             }
-            
+
             const oldValue = current[lastPart];
             current[lastPart] = value;
             this.notifyListeners(key, value, oldValue);

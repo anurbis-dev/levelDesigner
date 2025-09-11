@@ -174,9 +174,7 @@ export class BaseContextMenu {
         // Ensure cursor is inside menu bounds by adjusting menu position if needed
         const cursorOffset = this.ensureCursorInsideMenu(event, optimalPosition, contextMenu);
         if (cursorOffset.x !== 0 || cursorOffset.y !== 0) {
-            console.log('[ContextMenu] Adjusting menu position to keep cursor inside');
-            console.log('[ContextMenu] Cursor:', event.clientX, event.clientY);
-            console.log('[ContextMenu] Offset:', cursorOffset.x, cursorOffset.y);
+            // Debug logging removed - use Logger.js instead
             contextMenu.style.left = (optimalPosition.x + cursorOffset.x) + 'px';
             contextMenu.style.top = (optimalPosition.y + cursorOffset.y) + 'px';
         }
@@ -306,7 +304,7 @@ export class BaseContextMenu {
         // Stop cursor monitoring since animation is complete
         this.stopCursorMonitoring();
 
-        console.log('[ContextMenu] Animation completed, checking cursor position');
+        // Debug logging removed - use Logger.js instead
 
         // Update cursor position from event if available, otherwise use stored position
         if (event.clientX !== undefined && event.clientY !== undefined) {
@@ -316,14 +314,12 @@ export class BaseContextMenu {
 
         // Check if cursor is still inside menu after animation
         if (!this.isCursorInsideMenu(this.currentMenu)) {
-            console.log('[ContextMenu] Cursor is outside menu bounds after animation - closing menu');
-            console.log('[ContextMenu] Cursor position:', this.lastCursorX, this.lastCursorY);
-            console.log('[ContextMenu] Menu bounds:', this.currentMenu.getBoundingClientRect());
+            // Debug logging removed - use Logger.js instead
             this.hideMenu();
             return;
         }
 
-        console.log('[ContextMenu] Cursor is inside menu bounds - keeping menu open');
+        // Debug logging removed - use Logger.js instead
     }
 
     /**
@@ -335,7 +331,7 @@ export class BaseContextMenu {
             this.stopCursorMonitoring();
         }
 
-        console.log('[ContextMenu] Starting cursor monitoring during animation');
+        // Debug logging removed - use Logger.js instead
         this.isMonitoringCursor = true;
         this.animationStartTime = Date.now();
 
@@ -352,7 +348,7 @@ export class BaseContextMenu {
             this.monitoringAnimationFrame = null;
         }
         this.isMonitoringCursor = false;
-        console.log('[ContextMenu] Stopped cursor monitoring');
+        // Debug logging removed - use Logger.js instead
     }
 
     /**
@@ -367,7 +363,7 @@ export class BaseContextMenu {
         // Check if animation duration exceeded (fallback timeout)
         const elapsed = Date.now() - this.animationStartTime;
         if (elapsed > 200) { // 200ms timeout (slightly longer than animation)
-            console.log('[ContextMenu] Animation monitoring timeout - stopping');
+            // Debug logging removed - use Logger.js instead
             this.stopCursorMonitoring();
             return;
         }
@@ -384,9 +380,7 @@ export class BaseContextMenu {
                         cursorY <= rect.bottom + 2;
 
         if (!isInside) {
-            console.log('[ContextMenu] Cursor moved outside menu bounds during animation - closing menu');
-            console.log('[ContextMenu] Cursor:', cursorX, cursorY);
-            console.log('[ContextMenu] Menu bounds:', rect);
+            // Debug logging removed - use Logger.js instead
             this.stopCursorMonitoring();
             this.hideMenu();
             return;
@@ -636,11 +630,7 @@ export class BaseContextMenu {
             offsetY = cursorY - rect.bottom + 2;
         }
 
-        console.log('[ContextMenu] Cursor position check:', {
-            cursor: { x: cursorX, y: cursorY },
-            menuRect: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom },
-            offset: { x: offsetX, y: offsetY }
-        });
+        // Debug logging removed - use Logger.js instead
 
         return { x: offsetX, y: offsetY };
     }

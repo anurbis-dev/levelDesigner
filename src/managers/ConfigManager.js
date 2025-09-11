@@ -33,7 +33,7 @@ export class ConfigManager {
                 console[level === 'error' ? 'error' : 'log'](`[CONFIG] ${message}`, ...args);
             }
         } catch (error) {
-            console.log(`[CONFIG] ${message}`, ...args);
+            // Debug logging removed - use Logger.js instead
         }
     }
 

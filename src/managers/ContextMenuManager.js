@@ -34,7 +34,7 @@ export class ContextMenuManager {
         // Global context menu blocker and closer
         this.setupGlobalContextMenuBlocker();
 
-        console.log('[ContextMenuManager] Initialized');
+        // Debug logging removed - use Logger.js instead
     }
 
     /**
@@ -46,13 +46,13 @@ export class ContextMenuManager {
             if (!e.defaultPrevented) {
                 // No custom menu handled this event - close all active menus
                 if (this.hasActiveMenu()) {
-                    console.log('[ContextMenuManager] Closing all menus - right click in empty area');
+                    // Debug logging removed - use Logger.js instead
                     this.closeAllMenus();
                 }
 
                 // Block the default browser context menu
                 e.preventDefault();
-                console.log('[ContextMenuManager] Blocked default context menu');
+                // Debug logging removed - use Logger.js instead
             }
         }, { passive: false });
     }
@@ -64,11 +64,11 @@ export class ContextMenuManager {
      */
     registerMenu(name, menuInstance) {
         if (this.activeMenus.has(name)) {
-            console.warn(`[ContextMenuManager] Menu '${name}' already registered, replacing`);
+            // Debug logging removed - use Logger.js instead
         }
 
         this.activeMenus.set(name, menuInstance);
-        console.log(`[ContextMenuManager] Registered menu: ${name}`);
+        // Debug logging removed - use Logger.js instead
     }
 
     /**
@@ -83,7 +83,7 @@ export class ContextMenuManager {
             }
 
             this.activeMenus.delete(name);
-            console.log(`[ContextMenuManager] Unregistered menu: ${name}`);
+            // Debug logging removed - use Logger.js instead
         }
     }
 
@@ -94,7 +94,7 @@ export class ContextMenuManager {
      * @param {Object} contextData - Additional context data
      */
     showMenu(menuName, event, contextData = {}) {
-        console.log(`[ContextMenuManager] Showing menu: ${menuName}`);
+        // Debug logging removed - use Logger.js instead
 
         // Check if the requested menu is already active
         const isSameMenuType = this.currentActiveMenu === menuName;
@@ -107,7 +107,7 @@ export class ContextMenuManager {
             // 1. Do nothing (leave menu as is)
             // 2. Move menu to new cursor position
             // For now, let's move it to new position for better UX
-            console.log(`[ContextMenuManager] Menu '${menuName}' already active, repositioning`);
+            // Debug logging removed - use Logger.js instead
         }
 
         // Find and show the requested menu
@@ -125,9 +125,9 @@ export class ContextMenuManager {
             }
 
             this.currentActiveMenu = menuName;
-            console.log(`[ContextMenuManager] Menu '${menuName}' is now active`);
+            // Debug logging removed - use Logger.js instead
         } else {
-            console.warn(`[ContextMenuManager] Menu '${menuName}' not found`);
+            // Debug logging removed - use Logger.js instead
         }
     }
 
@@ -156,7 +156,7 @@ export class ContextMenuManager {
                 this.currentActiveMenu = null;
             }
 
-            console.log(`[ContextMenuManager] Closed menu: ${menuName}`);
+            // Debug logging removed - use Logger.js instead
         }
     }
 
@@ -174,7 +174,7 @@ export class ContextMenuManager {
      * @param {string} exceptMenuName - Name of menu type to keep open (optional)
      */
     closeAllMenus(exceptMenuName = null) {
-        console.log(`[ContextMenuManager] Closing all menus${exceptMenuName ? ` except '${exceptMenuName}'` : ''}`);
+        // Debug logging removed - use Logger.js instead
 
         // Close the current active menu first (unless it's the excepted one)
         if (this.currentActiveMenu && this.currentActiveMenu !== exceptMenuName) {
@@ -227,6 +227,6 @@ export class ContextMenuManager {
         this.closeAllMenus();
         this.activeMenus.clear();
         this.currentActiveMenu = null;
-        console.log('[ContextMenuManager] Destroyed');
+        // Debug logging removed - use Logger.js instead
     }
 }

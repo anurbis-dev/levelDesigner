@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Layer Performance Test</title>
+</head>
+<body>
+    <h1>Тест производительности системы слоев</h1>
+
+    <div>
+        <button id="createTestLevel">Создать тестовый уровень (1000 объектов)</button>
+        <button id="testLayerCounts">Тест подсчета объектов в слоях</button>
+        <button id="testLayerAssignment">Тест изменения слоя (100 объектов)</button>
+        <button id="clearResults">Очистить результаты</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script type="module">
+        import { Level } from '../src/models/Level.js';
+        import { GameObject } from '../src/models/GameObject.js';
+
+        const resultsDiv = document.getElementById('results');
+
+        function log(message) {
+            resultsDiv.innerHTML += `<p>${new Date().toLocaleTimeString()}: ${message}</p>`;
+            console.log(message);
+        }
+
+        function measureTime(operation, description) {
+            const start = performance.now();
+            const result = operation();
+            const end = performance.now();
+            log(`${description}: ${(end - start).toFixed(2)}ms`);
+            return result;
+        }
+
+        // Создание тестового уровня
+        window.createTestLevel = () => {
+            measureTime(() => {
+                const level = new Level();
+
+                // Создаем 1000 объектов разных типов
+                for (let i = 0; i < 1000; i++) {
+                    const obj = new GameObject({
+                        name: `Object_${i}`,
+                        x: Math.random() * 1000,
+                        y: Math.random() * 1000,
+                        width: 32,
+                        height: 32
+                    });
+                    level.addObject(obj);
+                }
+
+                window.testLevel = level;
+                log(`Создан уровень с ${level.objects.length} объектами`);
+                return level;
+            }, 'Создание уровня');
+        };
+
+        // Тест подсчета объектов в слоях
+        window.testLayerCounts = () => {
+            if (!window.testLevel) {
+                log('Сначала создайте тестовый уровень!');
+                return;
+            }
+
+            measureTime(() => {
+                const mainLayerId = window.testLevel.getMainLayerId();
+                const count = window.testLevel.getLayerObjectsCount(mainLayerId);
+                log(`Объектов в основном слое: ${count}`);
+                return count;
+            }, 'Подсчет объектов в слое');
+
+            // Повторный подсчет (должен быть из кеша)
+            measureTime(() => {
+                const mainLayerId = window.testLevel.getMainLayerId();
+                const count = window.testLevel.getLayerObjectsCount(mainLayerId);
+                log(`Повторный подсчет: ${count}`);
+                return count;
+            }, 'Повторный подсчет (кеш)');
+        };
+
+        // Тест изменения слоя для множества объектов
+        window.testLayerAssignment = () => {
+            if (!window.testLevel) {
+                log('Сначала создайте тестовый уровень!');
+                return;
+            }
+
+            const level = window.testLevel;
+            const layers = level.getLayersSorted();
+            if (layers.length < 2) {
+                log('Нужно минимум 2 слоя для теста!');
+                return;
+            }
+
+            // Выбираем первые 100 объектов для изменения слоя
+            const objectsToChange = level.objects.slice(0, 100);
+            const targetLayerId = layers[1].id;
+
+            measureTime(() => {
+                objectsToChange.forEach(obj => {
+                    level.assignObjectToLayer(obj.id, targetLayerId);
+                });
+                log(`Изменен слой для ${objectsToChange.length} объектов`);
+            }, `Изменение слоя для ${objectsToChange.length} объектов`);
+
+            // Проверяем счетчики
+            const oldLayerCount = level.getLayerObjectsCount(layers[0].id);
+            const newLayerCount = level.getLayerObjectsCount(targetLayerId);
+            log(`Старый слой: ${oldLayerCount}, Новый слой: ${newLayerCount}`);
+        };
+
+        window.clearResults = () => {
+            resultsDiv.innerHTML = '';
+        };
+
+        // Привязываем обработчики
+        document.getElementById('createTestLevel').addEventListener('click', createTestLevel);
+        document.getElementById('testLayerCounts').addEventListener('click', testLayerCounts);
+        document.getElementById('testLayerAssignment').addEventListener('click', testLayerAssignment);
+        document.getElementById('clearResults').addEventListener('click', clearResults);
+
+        log('Тест производительности готов к работе');
+    </script>
+</body>
+</html>

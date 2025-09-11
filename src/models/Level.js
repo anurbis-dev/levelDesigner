@@ -33,11 +33,17 @@ export class Level {
         this.objects = data.objects || [];
         this.nextObjectId = data.nextObjectId || 1;
 
+        // Кеш счетчиков объектов по слоям для оптимизации производительности
+        this.layerCountsCache = new Map();
+
         // Initialize layers system
         this.layers = this.initializeLayers(data.layers);
 
         // Store Main layer ID for consistent reference
         this.mainLayerId = this.layers.length > 0 ? this.layers[0].id : null;
+
+        // Инициализируем кеш счетчиков слоев
+        this.rebuildLayerCountsCache();
     }
 
     /**
@@ -70,8 +76,9 @@ export class Level {
 
         this.objects.push(properObj);
 
-        // Notify about layer objects count change
+        // Обновляем кеш счетчиков слоев при добавлении объекта
         if (properObj.layerId) {
+            this.updateLayerCountCache(properObj.layerId, +1);
             const newCount = this.getLayerObjectsCount(properObj.layerId);
             this.notifyLayerObjectsCountChange(properObj.layerId, newCount, newCount - 1);
         }
@@ -89,15 +96,16 @@ export class Level {
         // Find object before removing to get its layerId
         const obj = this.findObjectById(objId);
         const layerId = obj?.layerId;
-        
+
         this.objects = this.objects.filter(obj => obj.id !== objId);
-        
-        // Notify about layer objects count change
+
+        // Обновляем кеш счетчиков слоев при удалении объекта
         if (layerId) {
+            this.updateLayerCountCache(layerId, -1);
             const newCount = this.getLayerObjectsCount(layerId);
             this.notifyLayerObjectsCountChange(layerId, newCount, newCount + 1);
         }
-        
+
         this.updateModified();
     }
 
@@ -252,7 +260,7 @@ export class Level {
         });
 
         if (fixedCount > 0) {
-            console.log(`Fixed ${fixedCount} object layer references to Main layer`);
+            // Debug logging removed - use Logger.js instead
             this.updateModified();
         }
 
@@ -288,8 +296,53 @@ export class Level {
      * Get objects count for a specific layer
      */
     getLayerObjectsCount(layerId) {
-        // Count objects that belong to this layer
-        return this.objects.filter(obj => obj.layerId === layerId).length;
+        // Используем кеш для оптимизации производительности
+        if (this.layerCountsCache.has(layerId)) {
+            return this.layerCountsCache.get(layerId);
+        }
+
+        // Вычисляем и кешируем результат
+        const count = this.objects.filter(obj => obj.layerId === layerId).length;
+        this.layerCountsCache.set(layerId, count);
+        return count;
+    }
+
+    /**
+     * Обновить счетчик объектов для слоя в кеше
+     * @param {string} layerId - ID слоя
+     * @param {number} delta - изменение счетчика (+1 или -1)
+     */
+    updateLayerCountCache(layerId, delta) {
+        const currentCount = this.layerCountsCache.get(layerId) || 0;
+        const newCount = Math.max(0, currentCount + delta);
+        this.layerCountsCache.set(layerId, newCount);
+    }
+
+    /**
+     * Перестроить кеш счетчиков слоев (при загрузке уровня или массовых изменениях)
+     */
+    rebuildLayerCountsCache() {
+        this.layerCountsCache.clear();
+
+        // Подсчитываем объекты по слоям
+        const counts = new Map();
+        this.objects.forEach(obj => {
+            if (obj.layerId) {
+                counts.set(obj.layerId, (counts.get(obj.layerId) || 0) + 1);
+            }
+        });
+
+        // Заполняем кеш
+        for (const [layerId, count] of counts) {
+            this.layerCountsCache.set(layerId, count);
+        }
+    }
+
+    /**
+     * Очистить кеш счетчиков слоев (при массовых изменениях)
+     */
+    clearLayerCountsCache() {
+        this.layerCountsCache.clear();
     }
 
     /**
@@ -301,7 +354,15 @@ export class Level {
             const oldLayerId = obj.layerId;
             obj.layerId = layerId;
             this.updateModified();
-            
+
+            // Обновляем кеш счетчиков слоев
+            if (oldLayerId && oldLayerId !== layerId) {
+                this.updateLayerCountCache(oldLayerId, -1);
+                this.updateLayerCountCache(layerId, +1);
+            } else if (!oldLayerId && layerId) {
+                this.updateLayerCountCache(layerId, +1);
+            }
+
             // Notify about layer objects count change
             if (this.onLayerObjectsCountChanged) {
                 if (oldLayerId) {
@@ -311,7 +372,7 @@ export class Level {
                 const newCount = this.getLayerObjectsCount(layerId);
                 this.onLayerObjectsCountChanged(layerId, newCount, newCount - 1);
             }
-            
+
             return true;
         }
         return false;
@@ -398,6 +459,9 @@ export class Level {
         if (data.mainLayerId) {
             level.mainLayerId = data.mainLayerId;
         }
+
+        // Перестраиваем кеш счетчиков слоев после загрузки объектов
+        level.rebuildLayerCountsCache();
 
         return level;
     }

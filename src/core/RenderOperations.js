@@ -522,22 +522,39 @@ export class RenderOperations extends BaseModule {
      * Check if object is visible in the given viewport bounds
      */
     isObjectVisible(obj, left, top, right, bottom) {
-        if (!obj.visible) return false;
-        
+        if (!obj.visible) {
+            return false;
+        }
+
         if (obj.type === 'group') {
             // For groups, check if any child is visible
-            return obj.children && obj.children.some(child => 
+            const result = obj.children && obj.children.some(child =>
                 this.isObjectVisible(child, left - obj.x, top - obj.y, right - obj.x, bottom - obj.y)
             );
+
+            // Debug group visibility issues
+            if (!result) {
+                // Debug logging removed - use Logger.js instead
+            }
+
+            return result;
         }
-        
+
         // Check if object bounds intersect with viewport
         const objLeft = obj.x;
         const objTop = obj.y;
-        const objRight = obj.x + (obj.width || 0);
-        const objBottom = obj.y + (obj.height || 0);
-        
-        return !(objRight < left || objLeft > right || objBottom < top || objTop > bottom);
+        const objRight = obj.x + (obj.width || 32); // Default width for objects without explicit width
+        const objBottom = obj.y + (obj.height || 32); // Default height for objects without explicit height
+
+        // Debug bounds calculation for all operations
+        const intersects = !(objRight < left || objLeft > right || objBottom < top || objTop > bottom);
+
+        // Debug only during undo/redo operations or when object is not visible in viewport
+        if (this.editor.historyManager && (this.editor.historyManager.isUndoing || this.editor.historyManager.isRedoing) || !intersects) {
+            // Debug logging removed - use Logger.js instead
+        }
+
+        return intersects;
     }
 
     /**

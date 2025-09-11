@@ -119,12 +119,10 @@ export class ObjectOperations extends BaseModule {
         const selectedObjects = this.editor.stateManager.get('selectedObjects');
         if (selectedObjects.size === 0) return;
 
-        this.editor.historyManager.saveState(this.editor.level.objects);
-
         // Delete selected objects - they can be on main level or inside groups
         const idsToDelete = new Set(selectedObjects);
 
-        console.log(`[OBJECT OPERATIONS DEBUG] 🗑️ Starting deletion of ${idsToDelete.size} selected objects`);
+        // Debug logging removed - use Logger.js instead
 
         // First, collect all objects that need to be deleted (including children of deleted groups)
         const collectObjectsToDelete = (objects) => {
@@ -132,9 +130,9 @@ export class ObjectOperations extends BaseModule {
                 if (obj.type === 'group') {
                     // If this group is being deleted, add all its children to deletion set
                     if (idsToDelete.has(obj.id)) {
-                        console.log(`[OBJECT OPERATIONS DEBUG] 📦 Group ${obj.name} is being deleted, marking all children for deletion`);
+                        // Debug logging removed - use Logger.js instead
                         obj.children.forEach(child => {
-                            console.log(`[OBJECT OPERATIONS DEBUG] ➕ Adding child ${child.name} (ID: ${child.id}) to deletion set`);
+                            // Debug logging removed - use Logger.js instead
                             idsToDelete.add(child.id);
                         });
                     } else {
@@ -157,7 +155,7 @@ export class ObjectOperations extends BaseModule {
                     obj.children = obj.children.filter(child => !idsToDelete.has(child.id));
                     const removedCount = originalCount - obj.children.length;
                     if (removedCount > 0) {
-                        console.log(`[OBJECT OPERATIONS DEBUG] 🧹 Removed ${removedCount} children from group ${obj.name}`);
+                        // Debug logging removed - use Logger.js instead
                     }
 
                     // Process nested groups
@@ -170,21 +168,24 @@ export class ObjectOperations extends BaseModule {
         removeFromArrays(this.editor.level.objects);
 
         // Remove all collected objects from main level
-        console.log(`[OBJECT OPERATIONS DEBUG] 🗑️ Final deletion set has ${idsToDelete.size} objects:`, Array.from(idsToDelete));
+        // Debug logging removed - use Logger.js instead
         const originalCount = this.editor.level.objects.length;
         this.editor.level.objects = this.editor.level.objects.filter(obj => !idsToDelete.has(obj.id));
         const removedCount = originalCount - this.editor.level.objects.length;
 
-        console.log(`[OBJECT OPERATIONS DEBUG] ✅ Removed ${removedCount} objects from main level`);
+        // Debug logging removed - use Logger.js instead
 
         // Clean up any empty groups that might remain after deletion
-        console.log(`[OBJECT OPERATIONS DEBUG] 🧹 Cleaning up empty groups...`);
+        // Debug logging removed - use Logger.js instead
         const emptyGroupsRemoved = this.editor.groupOperations.removeEmptyGroups();
         if (emptyGroupsRemoved > 0) {
-            console.log(`[OBJECT OPERATIONS DEBUG] ✅ Removed ${emptyGroupsRemoved} empty groups`);
+            // Debug logging removed - use Logger.js instead
         } else {
-            console.log(`[OBJECT OPERATIONS DEBUG] ℹ️ No empty groups to remove`);
+            // Debug logging removed - use Logger.js instead
         }
+
+        // Save state AFTER all deletions and cleanup are complete
+        this.editor.historyManager.saveState(this.editor.level.objects, selectedObjects);
 
         // Clear selection and update UI AFTER all operations are complete
         this.editor.stateManager.set('selectedObjects', new Set());
@@ -218,7 +219,10 @@ export class ObjectOperations extends BaseModule {
         // Helper function to check if object is selectable (visible and in visible layer)
         const isObjectSelectable = (obj) => {
             // Check object visibility
-            if (!obj.visible) return false;
+            if (!obj.visible) {
+                // Debug logging removed - use Logger.js instead
+                return false;
+            }
 
             // Check layer visibility (considering inheritance from parent groups)
             const effectiveLayerId = this.editor.renderOperations ?
@@ -227,8 +231,13 @@ export class ObjectOperations extends BaseModule {
             const visibleLayerIds = this.editor.renderOperations ?
                 this.editor.renderOperations.getVisibleLayerIds() :
                 new Set(this.editor.level.layers.map(l => l.id));
-            if (!visibleLayerIds.has(effectiveLayerId)) return false;
 
+            if (!visibleLayerIds.has(effectiveLayerId)) {
+                // Debug logging removed - use Logger.js instead
+                return false;
+            }
+
+            // Debug logging removed - use Logger.js instead
             return true;
         };
 
@@ -265,11 +274,16 @@ export class ObjectOperations extends BaseModule {
             });
         } else {
             // Normal mode: only top-level objects selectable
+            // Debug logging removed - use Logger.js instead
             this.editor.level.objects.forEach(o => {
                 if (isObjectSelectable(o)) {
                     selectable.add(o.id);
+                    // Debug logging removed - use Logger.js instead
+                } else {
+                    // Debug logging removed - use Logger.js instead
                 }
             });
+            // Debug logging removed - use Logger.js instead
         }
         return selectable;
     }

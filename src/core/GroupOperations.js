@@ -15,8 +15,6 @@ export class GroupOperations extends BaseModule {
 
         // Grouping makes sense only if there are 2 or more objects selected at the same level
         if (selectedTopLevelObjects.length > 1) {
-            this.editor.historyManager.saveState(this.editor.level.objects); // Save the state before making changes
-
             // Calculate the bounding box of all selected objects to determine the new group's position
             const bounds = this.editor.objectOperations.getSelectionBounds(selectedTopLevelObjects);
             const mainLayerId = this.editor.level.getMainLayerId();
@@ -31,7 +29,7 @@ export class GroupOperations extends BaseModule {
                 layerId: selectedTopLevelObjects[0]?.layerId || mainLayerId, // Use first selected object's layer or Main
                 children: []
             });
-            
+
             const idsToRemove = new Set();
             selectedTopLevelObjects.forEach(obj => {
                 idsToRemove.add(obj.id);
@@ -47,13 +45,16 @@ export class GroupOperations extends BaseModule {
             idsToRemove.forEach(id => {
                 this.editor.level.removeObject(id);
             });
-            
+
             // Add the newly created group to the scene using addObject method
             this.editor.level.addObject(newGroup);
 
+            // Save state AFTER all changes are complete
+            this.editor.historyManager.saveState(this.editor.level.objects, new Set([newGroup.id]));
+
             // Clear the old selection and select only the new group
             this.editor.stateManager.set('selectedObjects', new Set([newGroup.id]));
-            
+
             // Refresh all UI panels and redraw the canvas
             this.editor.render();
             this.editor.updateAllPanels();
@@ -95,7 +96,7 @@ export class GroupOperations extends BaseModule {
             // Simply remove editing flag - children stay where they are
             delete group._isEditing;
             
-            console.log(`[GROUP EDIT DEBUG] 🚪 Closing group edit mode for: ${group.name} (ID: ${group.id})`);
+            // Debug logging removed - use Logger.js instead
         }
 
         // Pop the last opened group
@@ -116,13 +117,13 @@ export class GroupOperations extends BaseModule {
         // NOW check if the group that was just closed became empty and remove it
         // (after it's no longer in the protected openGroups list)
         if (currentGroup) {
-            console.log(`[GROUP EDIT DEBUG] 🔍 Checking if closed group is empty: ${currentGroup.name} (ID: ${currentGroup.id})`);
+            // Debug logging removed - use Logger.js instead
             const groupWasRemoved = this.removeEmptyGroup(currentGroup);
             if (groupWasRemoved) {
-                console.log(`[GROUP EDIT DEBUG] ✅ Group was removed after closing edit mode`);
+                // Debug logging removed - use Logger.js instead
                 this.editor.updateAllPanels();
             } else {
-                console.log(`[GROUP EDIT DEBUG] ❌ Group was NOT removed after closing edit mode`);
+                // Debug logging removed - use Logger.js instead
             }
         }
 
@@ -148,7 +149,7 @@ export class GroupOperations extends BaseModule {
 
         if (groupsToUngroup.length === 0) return;
 
-        this.editor.historyManager.saveState(this.editor.level.objects);
+        this.editor.historyManager.saveState(this.editor.level.objects, selectedObjects);
 
         const newTopLevelObjects = [];
 
@@ -198,67 +199,56 @@ export class GroupOperations extends BaseModule {
      * @returns {boolean} - True if the group was removed
      */
     removeEmptyGroup(targetGroup) {
-        console.log(`[EMPTY GROUPS DEBUG] 🔍 Checking group for removal:`, {
-            group: targetGroup?.name || 'Unknown',
-            id: targetGroup?.id,
-            type: targetGroup?.type,
-            hasChildren: targetGroup?.children ? targetGroup.children.length : 'undefined',
-            children: targetGroup?.children
-        });
+        // Debug logging removed - use Logger.js instead
 
         if (!targetGroup || targetGroup.type !== 'group') {
-            console.log(`[EMPTY GROUPS DEBUG] ❌ Not a valid group - skipping removal`);
+            // Debug logging removed - use Logger.js instead
             return false;
         }
 
         // Fix: Handle case where children is undefined or null
         const childrenArray = targetGroup.children || [];
-        console.log(`[EMPTY GROUPS DEBUG] 📊 Children array:`, childrenArray, `Length: ${childrenArray.length}`);
+        // Debug logging removed - use Logger.js instead
 
         // Don't remove if it's not empty
         if (childrenArray.length > 0) {
-            console.log(`[EMPTY GROUPS DEBUG] ❌ Group has ${childrenArray.length} children - NOT removing`);
+            // Debug logging removed - use Logger.js instead
             return false;
         }
 
         // Don't remove if it's currently being edited
         const groupEditMode = this.editor.stateManager.get('groupEditMode');
-        console.log(`[EMPTY GROUPS DEBUG] 🛡️ Group edit mode:`, {
-            isActive: groupEditMode?.isActive,
-            openGroupsCount: groupEditMode?.openGroups?.length || 0,
-            openGroupIds: groupEditMode?.openGroups?.map(g => g?.id) || []
-        });
+        // Debug logging removed - use Logger.js instead
 
         if (groupEditMode && groupEditMode.openGroups) {
             const isProtected = groupEditMode.openGroups.some(g => g && g.id === targetGroup.id);
             if (isProtected) {
-                console.log(`[EMPTY GROUPS DEBUG] ❌ Group is protected (currently being edited) - NOT removing`);
+                // Debug logging removed - use Logger.js instead
                 return false;
             }
         }
 
-        console.log(`[EMPTY GROUPS DEBUG] ✅ Group is empty and not protected - attempting removal...`);
+        // Debug logging removed - use Logger.js instead
 
         // Check if group actually exists in the level first
         const existsInMainLevel = this.editor.level.objects.some(obj => obj.id === targetGroup.id);
-        console.log(`[EMPTY GROUPS DEBUG] 🔍 Group exists in main level: ${existsInMainLevel}`);
+        // Debug logging removed - use Logger.js instead
 
         // Remove from main level
         const initialCount = this.editor.level.objects.length;
-        console.log(`[EMPTY GROUPS DEBUG] 📋 Main level objects before removal: ${initialCount}`);
-        console.log(`[EMPTY GROUPS DEBUG] 📋 Main level object IDs:`, this.editor.level.objects.map(obj => `${obj.name}(${obj.id})`));
+        // Debug logging removed - use Logger.js instead
         
         this.editor.level.objects = this.editor.level.objects.filter(obj => obj.id !== targetGroup.id);
         const finalCount = this.editor.level.objects.length;
-        console.log(`[EMPTY GROUPS DEBUG] 📋 Main level objects after removal: ${finalCount}`);
+        // Debug logging removed - use Logger.js instead
         
         if (finalCount < initialCount) {
-            console.log(`[EMPTY GROUPS DEBUG] ✅ Successfully removed group from main level!`);
+            // Debug logging removed - use Logger.js instead
             return true; // Group was removed from main level
         }
 
         // If not found on main level, search in nested groups
-        console.log(`[EMPTY GROUPS DEBUG] 🔍 Group not found on main level, searching nested groups...`);
+        // Debug logging removed - use Logger.js instead
         const removeFromNestedGroups = (objects) => {
             for (const obj of objects) {
                 if (obj.type === 'group' && obj.children) {
@@ -266,7 +256,7 @@ export class GroupOperations extends BaseModule {
                     obj.children = obj.children.filter(child => child.id !== targetGroup.id);
                     
                     if (obj.children.length < beforeCount) {
-                        console.log(`[EMPTY GROUPS DEBUG] ✅ Successfully removed group from nested group: ${obj.name} (ID: ${obj.id})`);
+                        // Debug logging removed - use Logger.js instead
                         return true; // Found and removed
                     }
                     
@@ -281,7 +271,7 @@ export class GroupOperations extends BaseModule {
 
         const removedFromNested = removeFromNestedGroups(this.editor.level.objects);
         if (!removedFromNested) {
-            console.log(`[EMPTY GROUPS DEBUG] ❌ Group not found anywhere for removal - this might be an error!`);
+            // Debug logging removed - use Logger.js instead
         }
         return removedFromNested;
     }

@@ -78,7 +78,7 @@ export class ConsoleContextMenu {
                 window.editor.contextMenuManager.showMenu('console', e, { message, timestamp });
             } else {
                 // Fallback to direct show if manager not available
-                console.warn('[ConsoleContextMenu] ContextMenuManager not available, using fallback');
+                // Debug logging removed - use Logger.js instead
                 this.showContextMenu(e, message, timestamp);
             }
         });
@@ -134,7 +134,7 @@ export class ConsoleContextMenu {
             this.stopCursorMonitoring();
         }
 
-        console.log('[ConsoleContextMenu] Starting cursor monitoring during animation');
+        // Debug logging removed - use Logger.js instead
         this.isMonitoringCursor = true;
         this.animationStartTime = Date.now();
 
@@ -151,7 +151,7 @@ export class ConsoleContextMenu {
             this.monitoringAnimationFrame = null;
         }
         this.isMonitoringCursor = false;
-        console.log('[ConsoleContextMenu] Stopped cursor monitoring');
+        // Debug logging removed - use Logger.js instead
     }
 
     /**
@@ -166,7 +166,7 @@ export class ConsoleContextMenu {
         // Check if animation duration exceeded (fallback timeout)
         const elapsed = Date.now() - this.animationStartTime;
         if (elapsed > 200) { // 200ms timeout (slightly longer than animation)
-            console.log('[ConsoleContextMenu] Animation monitoring timeout - stopping');
+            // Debug logging removed - use Logger.js instead
             this.stopCursorMonitoring();
             return;
         }
@@ -183,9 +183,7 @@ export class ConsoleContextMenu {
                         cursorY <= rect.bottom + 2;
 
         if (!isInside) {
-            console.log('[ConsoleContextMenu] Cursor moved outside menu bounds during animation - closing menu');
-            console.log('[ConsoleContextMenu] Cursor:', cursorX, cursorY);
-            console.log('[ConsoleContextMenu] Menu bounds:', rect);
+            // Debug logging removed - use Logger.js instead
             this.stopCursorMonitoring();
             this.removeMenu(menu);
             return;
@@ -248,9 +246,7 @@ export class ConsoleContextMenu {
         // Ensure cursor is inside menu bounds by adjusting menu position if needed
         const cursorOffset = this.ensureCursorInsideMenu(event, optimalPosition, contextMenu);
         if (cursorOffset.x !== 0 || cursorOffset.y !== 0) {
-            console.log('[ConsoleContextMenu] Adjusting menu position to keep cursor inside');
-            console.log('[ConsoleContextMenu] Cursor:', event.clientX, event.clientY);
-            console.log('[ConsoleContextMenu] Offset:', cursorOffset.x, cursorOffset.y);
+            // Debug logging removed - use Logger.js instead
             contextMenu.style.left = (optimalPosition.x + cursorOffset.x) + 'px';
             contextMenu.style.top = (optimalPosition.y + cursorOffset.y) + 'px';
         }
@@ -676,11 +672,7 @@ export class ConsoleContextMenu {
             offsetY = cursorY - rect.bottom + 2;
         }
 
-        console.log('[ConsoleContextMenu] Cursor position check:', {
-            cursor: { x: cursorX, y: cursorY },
-            menuRect: { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom },
-            offset: { x: offsetX, y: offsetY }
-        });
+        // Debug logging removed - use Logger.js instead
 
         return { x: offsetX, y: offsetY };
     }
