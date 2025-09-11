@@ -661,20 +661,29 @@ export class MouseHandlers extends BaseModule {
                 return res;
             };
             const candidates = collect(groupEditMode.group);
+            const selectableObjects = this.editor.objectOperations.computeSelectableSet();
+
             candidates.forEach(obj => {
-                const bounds = this.editor.objectOperations.getObjectWorldBounds(obj);
-                if (marquee.x < bounds.maxX && marquee.x + marquee.width > bounds.minX &&
-                    marquee.y < bounds.maxY && marquee.y + marquee.height > bounds.minY) {
-                    selectedObjects.add(obj.id);
+                // Only select if object is in selectable set and intersects with marquee
+                if (selectableObjects.has(obj.id)) {
+                    const bounds = this.editor.objectOperations.getObjectWorldBounds(obj);
+                    if (marquee.x < bounds.maxX && marquee.x + marquee.width > bounds.minX &&
+                        marquee.y < bounds.maxY && marquee.y + marquee.height > bounds.minY) {
+                        selectedObjects.add(obj.id);
+                    }
                 }
             });
         } else {
-            // Normal mode - select objects on main level only
+            // Normal mode - select visible objects on main level only
+            const selectableObjects = this.editor.objectOperations.computeSelectableSet();
             this.editor.level.objects.forEach(obj => {
-                const bounds = this.editor.objectOperations.getObjectWorldBounds(obj);
-                if (marquee.x < bounds.maxX && marquee.x + marquee.width > bounds.minX &&
-                    marquee.y < bounds.maxY && marquee.y + marquee.height > bounds.minY) {
-                    selectedObjects.add(obj.id);
+                // Only select if object is in selectable set and intersects with marquee
+                if (selectableObjects.has(obj.id)) {
+                    const bounds = this.editor.objectOperations.getObjectWorldBounds(obj);
+                    if (marquee.x < bounds.maxX && marquee.x + marquee.width > bounds.minX &&
+                        marquee.y < bounds.maxY && marquee.y + marquee.height > bounds.minY) {
+                        selectedObjects.add(obj.id);
+                    }
                 }
             });
         }

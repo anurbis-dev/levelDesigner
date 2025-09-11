@@ -211,16 +211,34 @@ export class ObjectOperations extends BaseModule {
     computeSelectableSet() {
         const selectable = new Set();
 
+        // Helper function to check if object is selectable (visible and in visible layer)
+        const isObjectSelectable = (obj) => {
+            // Check object visibility
+            if (!obj.visible) return false;
+
+            // Check layer visibility
+            if (obj.layerId) {
+                const visibleLayerIds = this.editor.renderOperations ?
+                    this.editor.renderOperations.getVisibleLayerIds() :
+                    new Set(this.editor.level.layers.map(l => l.id));
+                if (!visibleLayerIds.has(obj.layerId)) return false;
+            }
+
+            return true;
+        };
+
         if (this.isInGroupEditMode()) {
             const groupEditMode = this.getGroupEditMode();
             // Only descendants of the deepest open group are selectable; all other open groups are transparent
             const openGroups = Array.isArray(groupEditMode.openGroups) ? groupEditMode.openGroups : (groupEditMode.group ? [groupEditMode.group] : []);
             const active = openGroups[openGroups.length - 1];
-            if (active) {
+            if (active && isObjectSelectable(active)) {
                 const collect = (g) => {
                     const res = [];
                     g.children.forEach(ch => {
-                        res.push(ch);
+                        if (isObjectSelectable(ch)) {
+                            res.push(ch);
+                        }
                         if (ch.type === 'group') res.push(...collect(ch));
                     });
                     return res;
@@ -230,15 +248,23 @@ export class ObjectOperations extends BaseModule {
             // All non-open groups on any level are still selectable (priority for groups), exclude open ones
             const openIds = new Set(openGroups.map(g => g.id));
             this.editor.level.getAllObjects().forEach(o => {
-                if (o.type === 'group' && !openIds.has(o.id)) selectable.add(o.id);
+                if (o.type === 'group' && !openIds.has(o.id) && isObjectSelectable(o)) {
+                    selectable.add(o.id);
+                }
             });
             // Also allow selection of external objects (not in any open group)
             this.editor.level.objects.forEach(o => {
-                if (o.type !== 'group') selectable.add(o.id);
+                if (o.type !== 'group' && isObjectSelectable(o)) {
+                    selectable.add(o.id);
+                }
             });
         } else {
             // Normal mode: only top-level objects selectable
-            this.editor.level.objects.forEach(o => selectable.add(o.id));
+            this.editor.level.objects.forEach(o => {
+                if (isObjectSelectable(o)) {
+                    selectable.add(o.id);
+                }
+            });
         }
         return selectable;
     }

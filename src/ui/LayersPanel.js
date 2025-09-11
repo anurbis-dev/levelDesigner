@@ -270,6 +270,11 @@ export class LayersPanel {
                 const newLayer = level.addLayer();
                 this.render();
                 this.stateManager.markDirty();
+
+                // Invalidate cache when new layer is added
+                if (this.levelEditor.renderOperations) {
+                    this.levelEditor.renderOperations.invalidateLayerVisibilityCache();
+                }
             });
         }
         
@@ -299,9 +304,25 @@ export class LayersPanel {
                 const layerId = e.target.closest('button').dataset.layerId;
                 const layer = level.getLayerById(layerId);
                 if (layer) {
+                    const wasVisible = layer.visible;
                     layer.toggleVisibility();
                     this.updateLayerElement(layerId, layer);
                     this.stateManager.markDirty();
+
+                    // Handle visibility changes
+                    if (wasVisible && !layer.visible) {
+                        // Layer became invisible
+                        this.handleLayerVisibilityChanged(layerId, false);
+                    } else if (!wasVisible && layer.visible) {
+                        // Layer became visible - update selection to include objects from this layer
+                        this.handleLayerVisibilityChanged(layerId, true);
+                    }
+
+                    // Invalidate layer visibility cache for performance
+                    if (this.levelEditor.renderOperations) {
+                        this.levelEditor.renderOperations.invalidateLayerVisibilityCache();
+                        this.levelEditor.render();
+                    }
                 }
             });
         });
@@ -328,9 +349,17 @@ export class LayersPanel {
                 const layer = level.getLayerById(layerId);
                 if (layer && layerId !== level.getMainLayerId()) {
                     if (confirm(`Delete layer "${layer.name}"?`)) {
+                        // Handle layer deletion - remove selection and close groups before deleting
+                        this.handleLayerVisibilityChanged(layerId, false);
+
                         level.removeLayer(layerId);
                         this.render();
                         this.stateManager.markDirty();
+
+                        // Invalidate cache when layer is deleted
+                        if (this.levelEditor.renderOperations) {
+                            this.levelEditor.renderOperations.invalidateLayerVisibilityCache();
+                        }
                     }
                 }
             });
@@ -410,5 +439,81 @@ export class LayersPanel {
             this.render();
             this.stateManager.markDirty();
         });
+    }
+
+    /**
+     * Handle layer visibility change - remove selection and close groups when hidden
+     */
+    handleLayerVisibilityChanged(layerId, isVisible) {
+        const level = this.levelEditor.getLevel();
+        const selectedObjects = this.stateManager.get('selectedObjects') || new Set();
+
+        // Update visible property for all objects in the layer
+        this.updateObjectsVisibilityForLayer(layerId, isVisible);
+
+        if (!isVisible) {
+            // Layer became invisible
+
+            // Find objects in the hidden layer
+            const objectsToDeselect = new Set();
+
+            selectedObjects.forEach(objId => {
+                const obj = level.findObjectById(objId);
+                if (obj && obj.layerId === layerId) {
+                    objectsToDeselect.add(objId);
+                }
+            });
+
+            // Remove selection from objects in hidden layer
+            if (objectsToDeselect.size > 0) {
+                const newSelection = new Set();
+                selectedObjects.forEach(objId => {
+                    if (!objectsToDeselect.has(objId)) {
+                        newSelection.add(objId);
+                    }
+                });
+                this.stateManager.set('selectedObjects', newSelection);
+            }
+
+            // Close any open groups from the hidden layer
+            const groupEditMode = this.stateManager.get('groupEditMode');
+            if (groupEditMode && groupEditMode.isActive) {
+                const openGroups = groupEditMode.openGroups || [];
+                const groupsToClose = openGroups.filter(group => group.layerId === layerId);
+
+                if (groupsToClose.length > 0) {
+                    // Exit group edit mode if active group is from hidden layer
+                    if (groupEditMode.group && groupEditMode.group.layerId === layerId) {
+                        this.levelEditor.groupOperations.closeGroupEditMode();
+                    } else {
+                        // Filter out groups from hidden layer
+                        const remainingGroups = openGroups.filter(group => group.layerId !== layerId);
+                        if (remainingGroups.length !== openGroups.length) {
+                            // Update group edit mode with filtered groups
+                            this.stateManager.update({
+                                'groupEditMode.openGroups': remainingGroups
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Update visible property for all objects in a layer
+     */
+    updateObjectsVisibilityForLayer(layerId, layerVisible) {
+        const level = this.levelEditor.getLevel();
+        const allObjects = level.getAllObjects();
+
+        allObjects.forEach(obj => {
+            if (obj.layerId === layerId) {
+                obj.visible = layerVisible;
+            }
+        });
+
+        // Mark level as modified
+        level.updateModified();
     }
 }

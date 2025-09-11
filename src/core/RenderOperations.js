@@ -13,6 +13,10 @@ export class RenderOperations extends BaseModule {
         this.visibleObjectsCache = new Map();
         this.lastCameraState = null;
         this.cacheTimeout = 100; // Cache timeout in ms
+
+        // Layer visibility cache for performance
+        this.visibleLayersCache = null;
+        this.layerVisibilityCacheTimestamp = 0;
     }
 
     /**
@@ -269,6 +273,43 @@ export class RenderOperations extends BaseModule {
     }
 
     /**
+     * Get visible layer IDs for performance optimization
+     * @returns {Set<string>} Set of visible layer IDs
+     */
+    getVisibleLayerIds() {
+        if (this.visibleLayersCache &&
+            performance.now() - this.layerVisibilityCacheTimestamp < this.cacheTimeout) {
+            return this.visibleLayersCache;
+        }
+
+        // Get all layers and filter visible ones
+        const visibleLayers = new Set();
+        const layers = this.editor.level.getLayersSorted();
+
+        layers.forEach(layer => {
+            if (layer.visible) {
+                visibleLayers.add(layer.id);
+            }
+        });
+
+        // Cache the result
+        this.visibleLayersCache = visibleLayers;
+        this.layerVisibilityCacheTimestamp = performance.now();
+
+        return visibleLayers;
+    }
+
+    /**
+     * Invalidate layer visibility cache (call when layer visibility changes)
+     */
+    invalidateLayerVisibilityCache() {
+        this.visibleLayersCache = null;
+        this.layerVisibilityCacheTimestamp = 0;
+        // Also invalidate visible objects cache since layer visibility affects it
+        this.visibleObjectsCache.clear();
+    }
+
+    /**
      * Get objects visible in the current viewport (frustum culling) with caching
      */
     getVisibleObjects(camera) {
@@ -296,7 +337,21 @@ export class RenderOperations extends BaseModule {
         const extendedRight = viewportRight + padding;
         const extendedBottom = viewportBottom + padding;
         
+        // Get visible layer IDs for performance
+        const visibleLayerIds = this.getVisibleLayerIds();
+
         const visibleObjects = this.editor.level.objects.filter(obj => {
+            // Check if object's layer is visible
+            if (!visibleLayerIds.has(obj.layerId)) {
+                return false;
+            }
+
+            // Check if object itself is visible
+            if (!obj.visible) {
+                return false;
+            }
+
+            // Check if object is in viewport
             return this.isObjectVisible(obj, extendedLeft, extendedTop, extendedRight, extendedBottom);
         });
         
@@ -488,20 +543,26 @@ export class RenderOperations extends BaseModule {
      * Draw object boundaries for debugging
      */
     drawObjectBoundaries() {
+        // Get visible layer IDs for filtering
+        const visibleLayerIds = this.getVisibleLayerIds();
+
         this.editor.canvasRenderer.ctx.save();
         this.editor.canvasRenderer.ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
         this.editor.canvasRenderer.ctx.lineWidth = 1;
         this.editor.canvasRenderer.ctx.setLineDash([2, 2]);
-        
-        // Only draw boundaries for top-level objects
+
+        // Only draw boundaries for visible top-level objects
         this.editor.level.objects.forEach(obj => {
-            if (obj.type === 'group') {
-                this.drawGroupBoundaries(obj);
-            } else {
-                this.drawSingleObjectBoundary(obj);
+            // Check if object is visible and in visible layer
+            if (obj.visible && (!obj.layerId || visibleLayerIds.has(obj.layerId))) {
+                if (obj.type === 'group') {
+                    this.drawGroupBoundaries(obj);
+                } else {
+                    this.drawSingleObjectBoundary(obj);
+                }
             }
         });
-        
+
         this.editor.canvasRenderer.ctx.restore();
     }
 
@@ -563,20 +624,26 @@ export class RenderOperations extends BaseModule {
      * Draw object collision boxes for debugging
      */
     drawObjectCollisions() {
+        // Get visible layer IDs for filtering
+        const visibleLayerIds = this.getVisibleLayerIds();
+
         this.editor.canvasRenderer.ctx.save();
         this.editor.canvasRenderer.ctx.strokeStyle = 'rgba(255, 0, 0, 0.7)';
         this.editor.canvasRenderer.ctx.lineWidth = 2;
         this.editor.canvasRenderer.ctx.setLineDash([]);
-        
-        // Only draw collisions for top-level objects
+
+        // Only draw collisions for visible top-level objects
         this.editor.level.objects.forEach(obj => {
-            if (obj.type === 'group') {
-                this.drawGroupCollisions(obj);
-            } else {
-                this.drawSingleObjectCollision(obj);
+            // Check if object is visible and in visible layer
+            if (obj.visible && (!obj.layerId || visibleLayerIds.has(obj.layerId))) {
+                if (obj.type === 'group') {
+                    this.drawGroupCollisions(obj);
+                } else {
+                    this.drawSingleObjectCollision(obj);
+                }
             }
         });
-        
+
         this.editor.canvasRenderer.ctx.restore();
     }
 
