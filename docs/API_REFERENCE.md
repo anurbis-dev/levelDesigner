@@ -19,6 +19,9 @@
 - `Level.findTopLevelObjectFast(objId)` - поиск top-level объекта за O(1)
 - `Level.isObjectDescendantOfGroupFast(objId, groupId)` - проверка иерархии за O(1)
 - `Level.getLayerObjectsCount(layerId)` - кешированный подсчет объектов в слое
+- `LevelEditor.batchNotifyObjectPropertyChanged()` - группировка уведомлений об изменении свойств
+- `LevelEditor.batchNotifyLayerCountChanged()` - группировка уведомлений о счетчиках слоев
+- `LevelEditor.flushBatchedNotifications()` - отправка сгруппированных уведомлений
 
 **Исправленные методы:**
 - `Asset.createInstance(x, y)` - возвращает `GameObject` вместо `Object`

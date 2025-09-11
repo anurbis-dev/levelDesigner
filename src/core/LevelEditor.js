@@ -1669,6 +1669,12 @@ export class LevelEditor {
         const processedGroups = new Set(); // Track groups that have already been processed
         const layersSorted = this.level.getLayersSorted();
 
+        // Система группировки уведомлений для оптимизации производительности
+        const batchedNotifications = {
+            objectPropertyChanges: new Map(), // property -> [{obj, oldValue, newValue}, ...]
+            layerCountChanges: new Map() // layerId -> {oldCount, newCount}
+        };
+
         if (moveToExtreme) {
             // Move all selected objects to first/last layer
             const targetLayerId = moveUp ?
@@ -1681,7 +1687,7 @@ export class LevelEditor {
             }
 
             // Batch process objects for better performance
-            const batchResults = this.batchProcessLayerAssignment(selectedObjects, targetLayerId, processedGroups);
+            const batchResults = this.batchProcessLayerAssignment(selectedObjects, targetLayerId, processedGroups, batchedNotifications);
             movedCount = batchResults.movedCount;
 
             if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
@@ -1689,13 +1695,16 @@ export class LevelEditor {
             }
         } else {
             // Move each object/group to adjacent layer based on its current effective layer
-            const batchResults = this.batchProcessAdjacentLayerAssignment(selectedObjects, layersSorted, moveUp, processedGroups);
+            const batchResults = this.batchProcessAdjacentLayerAssignment(selectedObjects, layersSorted, moveUp, processedGroups, batchedNotifications);
             movedCount = batchResults.movedCount;
 
             if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
                 Logger.layer.debug(`Batch moved ${movedCount} objects to adjacent layers`);
             }
         }
+
+        // Отправляем сгруппированные уведомления для оптимизации производительности
+        this.flushBatchedNotifications(batchedNotifications);
 
         // Invalidate caches after bulk operations
         this.scheduleCacheInvalidation();
@@ -1710,7 +1719,7 @@ export class LevelEditor {
      * @param {Set} processedGroups - Set of processed groups
      * @returns {Object} Results with movedCount
      */
-    batchProcessLayerAssignment(selectedObjects, targetLayerId, processedGroups) {
+    batchProcessLayerAssignment(selectedObjects, targetLayerId, processedGroups, batchedNotifications) {
         let movedCount = 0;
         const objectsToProcess = [];
 
@@ -1728,7 +1737,7 @@ export class LevelEditor {
 
         // Process objects in batch
         objectsToProcess.forEach(objId => {
-            const result = this.processObjectForLayerAssignmentOptimized(objId, targetLayerId, processedGroups);
+            const result = this.processObjectForLayerAssignmentOptimized(objId, targetLayerId, processedGroups, batchedNotifications);
             if (result.moved) {
                 movedCount++;
             }
@@ -1745,7 +1754,7 @@ export class LevelEditor {
      * @param {Set} processedGroups - Set of processed groups
      * @returns {Object} Results with movedCount
      */
-    batchProcessAdjacentLayerAssignment(selectedObjects, layersSorted, moveUp, processedGroups) {
+    batchProcessAdjacentLayerAssignment(selectedObjects, layersSorted, moveUp, processedGroups, batchedNotifications) {
         let movedCount = 0;
         const objectsByTargetLayer = new Map();
 
@@ -1772,7 +1781,7 @@ export class LevelEditor {
         // Process each group of objects going to the same layer
         objectsByTargetLayer.forEach((objIds, targetLayerId) => {
             objIds.forEach(objId => {
-                const result = this.processObjectForLayerAssignmentOptimized(objId, targetLayerId, processedGroups);
+                const result = this.processObjectForLayerAssignmentOptimized(objId, targetLayerId, processedGroups, batchedNotifications);
                 if (result.moved) {
                     movedCount++;
                 }
@@ -1789,7 +1798,7 @@ export class LevelEditor {
      * @param {Set} processedGroups - Set of already processed groups
      * @returns {Object} Result with moved flag and target object info
      */
-    processObjectForLayerAssignmentOptimized(objId, targetLayerId, processedGroups) {
+    processObjectForLayerAssignmentOptimized(objId, targetLayerId, processedGroups, batchedNotifications = null) {
         // Use cached object lookup
         const targetObj = this.getCachedObject(objId);
         if (!targetObj) {
@@ -1825,23 +1834,107 @@ export class LevelEditor {
         // Invalidate cache for this object since layerId changed
         this.invalidateObjectCaches(topLevelObj.id);
 
-        // Notify StateManager about object property change
-        this.stateManager.notifyListeners('objectPropertyChanged', topLevelObj, {
-            property: 'layerId',
-            oldValue: oldLayerId,
-            newValue: targetLayerId
-        });
+        // Группируем уведомления или отправляем сразу для обратной совместимости
+        if (batchedNotifications) {
+            // Группируем уведомления для оптимизации производительности
+            this.batchNotifyObjectPropertyChanged(batchedNotifications, topLevelObj, 'layerId', oldLayerId, targetLayerId);
 
-        // Notify about layer objects count changes (optimized - batch these updates)
-        if (oldEffectiveLayerId && oldEffectiveLayerId !== targetLayerId) {
-            const oldCount = this.level.getLayerObjectsCount(oldEffectiveLayerId);
-            this.level.notifyLayerObjectsCountChange(oldEffectiveLayerId, oldCount, oldCount + 1);
+            if (oldEffectiveLayerId && oldEffectiveLayerId !== targetLayerId) {
+                this.batchNotifyLayerCountChanged(batchedNotifications, oldEffectiveLayerId, targetLayerId);
+            }
+        } else {
+            // Отправляем уведомления сразу (обратная совместимость)
+            this.stateManager.notifyListeners('objectPropertyChanged', topLevelObj, {
+                property: 'layerId',
+                oldValue: oldLayerId,
+                newValue: targetLayerId
+            });
 
-            const newCount = this.level.getLayerObjectsCount(targetLayerId);
-            this.level.notifyLayerObjectsCountChange(targetLayerId, newCount, newCount - 1);
+            // Notify about layer objects count changes
+            if (oldEffectiveLayerId && oldEffectiveLayerId !== targetLayerId) {
+                const oldCount = this.level.getLayerObjectsCount(oldEffectiveLayerId);
+                this.level.notifyLayerObjectsCountChange(oldEffectiveLayerId, oldCount, oldCount + 1);
+
+                const newCount = this.level.getLayerObjectsCount(targetLayerId);
+                this.level.notifyLayerObjectsCountChange(targetLayerId, newCount, newCount - 1);
+            }
         }
 
         return { moved: true, targetObj: topLevelObj };
+    }
+
+    /**
+     * Группирует уведомления об изменении свойств объектов для оптимизации производительности
+     * @param {Object} batchedNotifications - Структура для группировки уведомлений
+     * @param {Object} obj - Объект, свойство которого изменилось
+     * @param {string} property - Название свойства
+     * @param {*} oldValue - Старое значение
+     * @param {*} newValue - Новое значение
+     */
+    batchNotifyObjectPropertyChanged(batchedNotifications, obj, property, oldValue, newValue) {
+        if (!batchedNotifications.objectPropertyChanges.has(property)) {
+            batchedNotifications.objectPropertyChanges.set(property, []);
+        }
+
+        batchedNotifications.objectPropertyChanges.get(property).push({
+            obj,
+            oldValue,
+            newValue
+        });
+    }
+
+    /**
+     * Группирует уведомления об изменении счетчиков слоев
+     * @param {Object} batchedNotifications - Структура для группировки уведомлений
+     * @param {string} oldLayerId - ID старого слоя
+     * @param {string} newLayerId - ID нового слоя
+     */
+    batchNotifyLayerCountChanged(batchedNotifications, oldLayerId, newLayerId) {
+        // Группируем изменения счетчиков слоев
+        if (!batchedNotifications.layerCountChanges.has(oldLayerId)) {
+            const oldCount = this.level.getLayerObjectsCount(oldLayerId);
+            batchedNotifications.layerCountChanges.set(oldLayerId, {
+                oldCount,
+                newCount: oldCount - 1 // Уменьшаем счетчик для старого слоя
+            });
+        }
+
+        if (!batchedNotifications.layerCountChanges.has(newLayerId)) {
+            const newCount = this.level.getLayerObjectsCount(newLayerId);
+            batchedNotifications.layerCountChanges.set(newLayerId, {
+                oldCount: newCount + 1, // Старый счетчик был на 1 больше
+                newCount
+            });
+        }
+    }
+
+    /**
+     * Отправляет все сгруппированные уведомления
+     * @param {Object} batchedNotifications - Структура сгруппированных уведомлений
+     */
+    flushBatchedNotifications(batchedNotifications) {
+        // Отправляем уведомления об изменении свойств объектов
+        for (const [property, changes] of batchedNotifications.objectPropertyChanges) {
+            // Отправляем сводное уведомление для каждого свойства
+            this.stateManager.notifyListeners('objectsPropertyChanged', changes, {
+                property,
+                count: changes.length
+            });
+
+            // Для обратной совместимости отправляем отдельные уведомления
+            changes.forEach(change => {
+                this.stateManager.notifyListeners('objectPropertyChanged', change.obj, {
+                    property,
+                    oldValue: change.oldValue,
+                    newValue: change.newValue
+                });
+            });
+        }
+
+        // Отправляем уведомления об изменении счетчиков слоев
+        for (const [layerId, countInfo] of batchedNotifications.layerCountChanges) {
+            this.level.notifyLayerObjectsCountChange(layerId, countInfo.newCount, countInfo.oldCount);
+        }
     }
 
     /**
