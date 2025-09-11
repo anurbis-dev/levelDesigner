@@ -106,11 +106,19 @@ export class LevelEditor {
             return this.objectCache.get(objId);
         }
 
-        const obj = this.findObjectById(objId);
+        // Сначала пытаемся найти через индекс уровня - O(1)
+        const obj = this.level.findObjectByIdFast(objId);
         if (obj) {
             this.objectCache.set(objId, obj);
+            return obj;
         }
-        return obj;
+
+        // Fallback на старый метод поиска - O(N×D)
+        const fallbackObj = this.findObjectById(objId);
+        if (fallbackObj) {
+            this.objectCache.set(objId, fallbackObj);
+        }
+        return fallbackObj;
     }
 
     /**
@@ -267,8 +275,14 @@ export class LevelEditor {
         this.cacheInvalidationTimeout = setTimeout(() => {
             this.clearCaches();
             this.clearSelectableObjectsCache();
-            // Также очищаем кеш счетчиков слоев при массовых изменениях
+                // Также очищаем кеши при массовых изменениях
             this.level.clearLayerCountsCache();
+            this.level.clearObjectsIndex();
+
+            // Перестраиваем индекс после очистки
+            setTimeout(() => {
+                this.level.buildObjectsIndex();
+            }, 0);
             this.cacheInvalidationTimeout = null;
         }, 100); // Debounce cache invalidation by 100ms
     }
@@ -1514,6 +1528,20 @@ export class LevelEditor {
     findTopLevelObject(objId) {
         if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
             Logger.layer.debug(`findTopLevelObject called for: ${objId}`);
+        }
+
+        // Сначала пытаемся найти через индекс - O(1)
+        const fastResult = this.level.findTopLevelObjectFast(objId);
+        if (fastResult) {
+            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+                Logger.layer.debug(`Found via index: ${fastResult.id}`);
+            }
+            return fastResult;
+        }
+
+        // Fallback на старый метод - O(N×D)
+        if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+            Logger.layer.debug('Index miss, falling back to recursive search');
         }
 
         // First try to find as top-level object

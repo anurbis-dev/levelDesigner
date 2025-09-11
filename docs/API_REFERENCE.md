@@ -8,20 +8,24 @@
 
 ## Новые функции v3.6.0
 
-### Исправление типизации объектов (v3.6.0)
-- **Полное исправление типизации объектов** - устранение ошибки `child.toJSON is not a function`
-- **Asset.createInstance()** - теперь возвращает GameObject вместо plain object
-- **LevelEditor.deepClone()** - сохраняет типы объектов при клонировании
-- **Level.addObject()** - проверяет типы перед добавлением в уровень
-- **Group.addChild()** - проверяет типы перед добавлением в группу
-- **GroupOperations.groupSelectedObjects()** - создает Group экземпляры
-- **Безопасная сериализация** - все объекты имеют методы toJSON(), clone() и др.
+### Полная оптимизация производительности (v3.6.0)
+- **Кеширование счетчиков слоев** - O(M×N) → O(1) при подсчете объектов в слоях
+- **Индекс объектов** - O(N×D) → O(1) при поиске объектов и определении иерархии
+- **Исправление типизации объектов** - устранение ошибки `child.toJSON is not a function`
+
+**Новые методы оптимизации:**
+- `Level.buildObjectsIndex()` - построение индекса для быстрого поиска
+- `Level.findObjectByIdFast(objId)` - поиск объекта за O(1)
+- `Level.findTopLevelObjectFast(objId)` - поиск top-level объекта за O(1)
+- `Level.isObjectDescendantOfGroupFast(objId, groupId)` - проверка иерархии за O(1)
+- `Level.getLayerObjectsCount(layerId)` - кешированный подсчет объектов в слое
 
 **Исправленные методы:**
 - `Asset.createInstance(x, y)` - возвращает `GameObject` вместо `Object`
 - `LevelEditor.deepClone(obj)` - сохраняет типы GameObject/Group
 - `Level.addObject(obj)` - проверяет и создает правильные экземпляры
 - `Group.addChild(child)` - проверяет и создает правильные экземпляры
+- `LevelEditor.getCachedObject(objId)` - использует индекс для быстрого поиска
 
 ### Наследование layerId для групп (v3.5.0)
 

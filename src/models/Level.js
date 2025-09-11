@@ -36,6 +36,9 @@ export class Level {
         // Кеш счетчиков объектов по слоям для оптимизации производительности
         this.layerCountsCache = new Map();
 
+        // Индекс объектов для быстрого поиска (id -> {object, topLevelParent})
+        this.objectsIndex = new Map();
+
         // Initialize layers system
         this.layers = this.initializeLayers(data.layers);
 
@@ -44,6 +47,9 @@ export class Level {
 
         // Инициализируем кеш счетчиков слоев
         this.rebuildLayerCountsCache();
+
+        // Инициализируем индекс объектов для быстрого поиска
+        this.buildObjectsIndex();
     }
 
     /**
@@ -76,6 +82,9 @@ export class Level {
 
         this.objects.push(properObj);
 
+        // Добавляем объект в индекс (top-level объект)
+        this.addObjectToIndex(properObj, null);
+
         // Обновляем кеш счетчиков слоев при добавлении объекта
         if (properObj.layerId) {
             this.updateLayerCountCache(properObj.layerId, +1);
@@ -99,6 +108,9 @@ export class Level {
 
         this.objects = this.objects.filter(obj => obj.id !== objId);
 
+        // Удаляем объект из индекса
+        this.removeObjectFromIndex(objId);
+
         // Обновляем кеш счетчиков слоев при удалении объекта
         if (layerId) {
             this.updateLayerCountCache(layerId, -1);
@@ -113,6 +125,13 @@ export class Level {
      * Find object by ID
      */
     findObjectById(id) {
+        // Сначала пытаемся найти через индекс - O(1)
+        const fastResult = this.findObjectByIdFast(id);
+        if (fastResult) {
+            return fastResult;
+        }
+
+        // Fallback на старый метод - O(N×D)
         return GroupTraversalUtils.findInObjects(this.objects, (obj) => obj.id === id);
     }
 
@@ -345,6 +364,106 @@ export class Level {
     }
 
     /**
+     * Построить индекс объектов для быстрого поиска
+     * O(N×D) - вызывается при создании/загрузке уровня
+     */
+    buildObjectsIndex() {
+        this.objectsIndex.clear();
+
+        // Индексируем все объекты уровня
+        const walkObjects = (objects, topLevelParent = null) => {
+            for (const obj of objects) {
+                // Сохраняем объект и его top-level родителя
+                this.objectsIndex.set(obj.id, {
+                    object: obj,
+                    topLevelParent: topLevelParent
+                });
+
+                // Рекурсивно обрабатываем дочерние объекты групп
+                if (obj.type === 'group' && obj.children) {
+                    walkObjects(obj.children, topLevelParent || obj);
+                }
+            }
+        };
+
+        walkObjects(this.objects);
+    }
+
+    /**
+     * Найти объект по ID с помощью индекса - O(1)
+     * @param {string} objId - ID объекта
+     * @returns {Object|null} Объект или null
+     */
+    findObjectByIdFast(objId) {
+        const entry = this.objectsIndex.get(objId);
+        return entry ? entry.object : null;
+    }
+
+    /**
+     * Найти top-level объект для любого объекта - O(1)
+     * @param {string} objId - ID объекта
+     * @returns {Object|null} Top-level объект или null
+     */
+    findTopLevelObjectFast(objId) {
+        const entry = this.objectsIndex.get(objId);
+        return entry ? entry.topLevelParent : null;
+    }
+
+    /**
+     * Проверить, является ли объект потомком группы - O(1)
+     * @param {string} objId - ID объекта
+     * @param {string} groupId - ID группы
+     * @returns {boolean} true если объект является потомком группы
+     */
+    isObjectDescendantOfGroupFast(objId, groupId) {
+        const entry = this.objectsIndex.get(objId);
+        if (!entry || !entry.topLevelParent) {
+            return false;
+        }
+
+        // Проверяем цепочку родителей
+        let current = entry.topLevelParent;
+        while (current) {
+            if (current.id === groupId) {
+                return true;
+            }
+
+            // Если текущий объект тоже индексирован, получаем его родителя
+            const currentEntry = this.objectsIndex.get(current.id);
+            current = currentEntry ? currentEntry.topLevelParent : null;
+        }
+
+        return false;
+    }
+
+    /**
+     * Добавить объект в индекс
+     * @param {Object} obj - Объект для добавления
+     * @param {Object|null} topLevelParent - Top-level родитель
+     */
+    addObjectToIndex(obj, topLevelParent = null) {
+        this.objectsIndex.set(obj.id, {
+            object: obj,
+            topLevelParent: topLevelParent
+        });
+    }
+
+    /**
+     * Удалить объект из индекса
+     * @param {string} objId - ID объекта для удаления
+     */
+    removeObjectFromIndex(objId) {
+        this.objectsIndex.delete(objId);
+    }
+
+    /**
+     * Очистить индекс объектов
+     */
+    clearObjectsIndex() {
+        this.objectsIndex.clear();
+    }
+
+    /**
      * Assign object to layer
      */
     assignObjectToLayer(objId, layerId) {
@@ -459,8 +578,9 @@ export class Level {
             level.mainLayerId = data.mainLayerId;
         }
 
-        // Перестраиваем кеш счетчиков слоев после загрузки объектов
+        // Перестраиваем кеши после загрузки объектов
         level.rebuildLayerCountsCache();
+        level.buildObjectsIndex();
 
         return level;
     }
