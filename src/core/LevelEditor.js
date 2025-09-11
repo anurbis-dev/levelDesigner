@@ -36,7 +36,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.7.0';
+    static VERSION = '3.8.0';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -532,7 +532,7 @@ export class LevelEditor {
             // Update EventHandlers with MenuManager reference
             this.eventHandlers.menuManager = this.menuManager;
         } else {
-            Logger.warn('Navigation element not found, menu functionality will be limited');
+            Logger.ui.warn('Navigation element not found, menu functionality will be limited');
         }
 
         // Setup event listeners
@@ -557,7 +557,9 @@ export class LevelEditor {
         }
 
         // Initial render (теперь индекс уже построен)
+        Logger.render.info('🎨 Initial render started');
         this.render();
+        Logger.render.info('✅ Level Editor initialized successfully');
 
         // Update version info in UI and page title
         this.updateVersionInfo();
@@ -1181,6 +1183,8 @@ export class LevelEditor {
         }
 
         try {
+            Logger.render.info('📂 Opening level...');
+
             // Save current View states before resetting
             const savedViewStates = this.eventHandlers.saveViewStates();
 
@@ -1209,7 +1213,10 @@ export class LevelEditor {
             this.historyManager.saveState(this.level.objects, this.stateManager.get('selectedObjects'), true);
             this.render();
             this.updateAllPanels();
+
+            Logger.render.info(`✅ Level loaded: ${this.level.objects.length} objects`);
         } catch (error) {
+            Logger.render.error(`❌ Failed to load level: ${error.message}`);
             alert("Error loading level: " + error.message);
         }
     }
@@ -1294,6 +1301,7 @@ export class LevelEditor {
 
         this.fileManager.saveLevel(this.level);
         this.stateManager.markClean();
+        Logger.render.info('💾 Level saved successfully');
     }
 
     saveLevelAs() {
@@ -1316,6 +1324,7 @@ export class LevelEditor {
         if (fileName) {
             this.fileManager.saveLevel(this.level, fileName);
             this.stateManager.markClean();
+            Logger.render.info(`💾 Level saved as: ${fileName}`);
         }
     }
 
@@ -2004,6 +2013,15 @@ export class LevelEditor {
         const oldLayerId = topLevelObj.layerId;
         topLevelObj.layerId = targetLayerId;
 
+        // FORCED INHERITANCE: Propagate layerId to all children if this is a group
+        if (topLevelObj.type === 'group' && topLevelObj.children) {
+            topLevelObj.propagateLayerIdToChildren();
+            
+            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+                Logger.layer.debug(`Propagated layerId ${targetLayerId} to all children of group ${topLevelObj.id}`);
+            }
+        }
+
         // Отслеживаем измененные объекты и слои для умной инвалидации кешей
         if (changedObjectIds) {
             changedObjectIds.add(topLevelObj.id);
@@ -2173,6 +2191,15 @@ export class LevelEditor {
         const oldLayerId = topLevelObj.layerId;
         topLevelObj.layerId = targetLayerId;
 
+        // FORCED INHERITANCE: Propagate layerId to all children if this is a group
+        if (topLevelObj.type === 'group' && topLevelObj.children) {
+            topLevelObj.propagateLayerIdToChildren();
+            
+            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+                Logger.layer.debug(`Propagated layerId ${targetLayerId} to all children of group ${topLevelObj.id}`);
+            }
+        }
+
         if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
             Logger.layer.debug(`Changed layerId for top-level object ${topLevelObj.id} from ${oldLayerId} to ${targetLayerId}`);
         }
@@ -2184,13 +2211,14 @@ export class LevelEditor {
             newValue: targetLayerId
         });
 
-        // Notify about layer objects count changes
+        // Notify about layer objects count changes (including nested objects)
         if (oldEffectiveLayerId && oldEffectiveLayerId !== targetLayerId) {
+            // Recalculate counts including nested objects
             const oldCount = this.level.getLayerObjectsCount(oldEffectiveLayerId);
-            this.level.notifyLayerObjectsCountChange(oldEffectiveLayerId, oldCount, oldCount - 1);
-
             const newCount = this.level.getLayerObjectsCount(targetLayerId);
-            this.level.notifyLayerObjectsCountChange(targetLayerId, newCount, newCount + 1);
+            
+            this.level.notifyLayerObjectsCountChange(oldEffectiveLayerId, oldCount, oldCount);
+            this.level.notifyLayerObjectsCountChange(targetLayerId, newCount, newCount);
         }
 
         return { moved: true, targetObj: topLevelObj };

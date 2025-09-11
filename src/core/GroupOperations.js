@@ -38,6 +38,24 @@ export class GroupOperations extends BaseModule {
                 // Recalculate the child's coordinates to be relative to the new group's origin
                 newChild.x -= newGroup.x;
                 newChild.y -= newGroup.y;
+
+                // FORCED INHERITANCE: Always inherit layerId from parent group
+                if (newGroup.layerId) {
+                    const oldLayerId = newChild.layerId;
+                    newChild.layerId = newGroup.layerId;
+
+                    // Log forced inheritance
+                    this.editor.logger?.layer?.info(`Grouping inheritance: ${newChild.name || newChild.id} layerId ${oldLayerId || 'none'} → ${newGroup.layerId}`);
+
+                    // Clear effective layer cache for this child
+                    this.editor.renderOperations.clearEffectiveLayerCacheForObject(newChild.id);
+
+                    // If child is a group, propagate layerId to all its children recursively
+                    if (newChild.type === 'group' && newChild.children) {
+                        newGroup.propagateLayerIdToChildren(newChild);
+                    }
+                }
+
                 newGroup.children.push(newChild);
             });
 

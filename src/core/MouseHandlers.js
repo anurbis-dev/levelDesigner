@@ -568,6 +568,23 @@ export class MouseHandlers extends BaseModule {
                         obj.x -= groupPos.x;
                         obj.y -= groupPos.y;
 
+                        // FORCED INHERITANCE: Always inherit layerId from parent group
+                        if (groupEditMode.group.layerId) {
+                            const oldLayerId = obj.layerId;
+                            obj.layerId = groupEditMode.group.layerId;
+
+                            // Log forced inheritance
+                            this.editor.logger?.layer?.info(`Drag inheritance: ${obj.name || obj.id} layerId ${oldLayerId || 'none'} → ${groupEditMode.group.layerId}`);
+
+                            // Clear effective layer cache for this object
+                            this.editor.renderOperations.clearEffectiveLayerCacheForObject(obj.id);
+
+                            // If object is a group, propagate layerId to all its children recursively
+                            if (obj.type === 'group' && obj.children) {
+                                groupEditMode.group.propagateLayerIdToChildren(obj);
+                            }
+                        }
+
                         // Remove from main level and append into group
                         this.editor.level.objects = this.editor.level.objects.filter(top => top.id !== obj.id);
                         groupEditMode.group.children.push(obj);

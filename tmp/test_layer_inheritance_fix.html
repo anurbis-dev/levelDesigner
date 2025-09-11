@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Layer Inheritance Fix Test</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            background: #1e1e1e;
+            color: #ffffff;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #555;
+            border-radius: 5px;
+        }
+        .test-pass {
+            color: #4ade80;
+        }
+        .test-fail {
+            color: #ef4444;
+        }
+        .test-info {
+            color: #fbbf24;
+        }
+    </style>
+</head>
+<body>
+    <h1>Тест исправлений наследования Layer ID</h1>
+    <div id="output"></div>
+
+    <script type="module">
+        import { Level } from '../src/models/Level.js';
+        import { GameObject } from '../src/models/GameObject.js';
+        import { Group } from '../src/models/Group.js';
+
+        const output = document.getElementById('output');
+        function log(message, className = '') {
+            const div = document.createElement('div');
+            div.className = className;
+            div.textContent = message;
+            output.appendChild(div);
+        }
+
+        function testSection(title) {
+            const section = document.createElement('div');
+            section.className = 'test-section';
+            section.innerHTML = `<h3>${title}</h3>`;
+            output.appendChild(section);
+            return section;
+        }
+
+        async function runTests() {
+            log('=== ТЕСТ ИСПРАВЛЕНИЙ НАСЛЕДОВАНИЯ LAYERID ===', 'test-info');
+
+            try {
+                // Создаем тестовый уровень
+                const level = new Level();
+                log('Создан уровень', 'test-info');
+
+                // Создаем дополнительные слои для тестирования
+                const layer1 = level.addLayer('Test Layer 1');
+                log(`Создан слой: ${layer1.id}`, 'test-info');
+
+                // Получаем ID основного слоя
+                const mainLayerId = level.getMainLayerId();
+                log(`Основной слой: ${mainLayerId}`, 'test-info');
+
+                // Тест 1: Добавление объекта в группу через addChild
+                const section1 = testSection('ТЕСТ 1: Group.addChild()');
+                const group1 = new Group({
+                    name: 'TestGroup1',
+                    x: 0,
+                    y: 0,
+                    layerId: layer1.id
+                });
+
+                const obj1 = new GameObject({
+                    name: 'TestObject1',
+                    x: 10,
+                    y: 10,
+                    layerId: null // Объект без layerId
+                });
+
+                log(`Группа layerId: ${group1.layerId}`, 'test-info');
+                log(`Объект layerId до addChild: ${obj1.layerId}`, 'test-info');
+
+                group1.addChild(obj1);
+                level.addObject(group1);
+
+                log(`Объект layerId после addChild: ${obj1.layerId}`, 'test-info');
+                const test1Passed = obj1.layerId === layer1.id;
+                log(`Тест 1: ${test1Passed ? 'ПРОЙДЕН' : 'ПРОВАЛЕН'}`, test1Passed ? 'test-pass' : 'test-fail');
+
+                // Тест 2: Вложенные группы
+                const section2 = testSection('ТЕСТ 2: Вложенные группы');
+                const parentGroup = new Group({
+                    name: 'ParentGroup',
+                    x: 100,
+                    y: 100,
+                    layerId: layer1.id
+                });
+
+                const childGroup = new Group({
+                    name: 'ChildGroup',
+                    x: 110,
+                    y: 110,
+                    layerId: null
+                });
+
+                const nestedObj = new GameObject({
+                    name: 'NestedObject',
+                    x: 120,
+                    y: 120,
+                    layerId: null
+                });
+
+                log(`Родительская группа layerId: ${parentGroup.layerId}`, 'test-info');
+                log(`Дочерняя группа layerId до: ${childGroup.layerId}`, 'test-info');
+                log(`Вложенный объект layerId до: ${nestedObj.layerId}`, 'test-info');
+
+                childGroup.addChild(nestedObj);
+                parentGroup.addChild(childGroup);
+                level.addObject(parentGroup);
+
+                log(`Дочерняя группа layerId после: ${childGroup.layerId}`, 'test-info');
+                log(`Вложенный объект layerId после: ${nestedObj.layerId}`, 'test-info');
+                const test2Passed = childGroup.layerId === layer1.id && nestedObj.layerId === layer1.id;
+                log(`Тест 2: ${test2Passed ? 'ПРОЙДЕН' : 'ПРОВАЛЕН'}`, test2Passed ? 'test-pass' : 'test-fail');
+
+                // Тест 3: Проверка индекса объектов
+                const section3 = testSection('ТЕСТ 3: Проверка индекса объектов');
+                const allObjects = level.getAllObjects();
+                log(`Всего объектов в уровне: ${allObjects.length}`, 'test-info');
+
+                let foundObjects = 0;
+                allObjects.forEach(obj => {
+                    const indexEntry = level.objectsIndex.get(obj.id);
+                    if (indexEntry) {
+                        foundObjects++;
+                        log(`Объект ${obj.name} найден в индексе`, 'test-info');
+                    }
+                });
+
+                const test3Passed = foundObjects === allObjects.length;
+                log(`Объектов в индексе: ${foundObjects}/${allObjects.length}`, 'test-info');
+                log(`Тест 3: ${test3Passed ? 'ПРОЙДЕН' : 'ПРОВАЛЕН'}`, test3Passed ? 'test-pass' : 'test-fail');
+
+                log('=== ТЕСТ ЗАВЕРШЕН ===', 'test-info');
+
+            } catch (error) {
+                log(`Ошибка выполнения теста: ${error.message}`, 'test-fail');
+                console.error(error);
+            }
+        }
+
+        // Запускаем тесты
+        runTests();
+    </script>
+</body>
+</html>

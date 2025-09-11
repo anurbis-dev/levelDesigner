@@ -129,7 +129,7 @@ export class RenderOperations extends BaseModule {
 
         const totalGridCells = grid.size;
 
-        Logger.render.info(`Spatial index built: ${objects.length} objects, ${totalGridCells} grid cells`);
+        Logger.render.info(`Spatial index built: ${objects.length} objects → ${totalGridCells} grid cells`);
 
         // Логируем только если есть проблемы
         if (objects.length > 0 && totalGridCells === 0) {
@@ -246,6 +246,10 @@ export class RenderOperations extends BaseModule {
      * Render the canvas
      */
     render() {
+        // Счетчик рендеров для периодических логов
+        if (!this.renderCount) this.renderCount = 0;
+        this.renderCount++;
+
         // Проверки на существование необходимых объектов
         if (!this.editor || !this.editor.level || !this.editor.level.objects) {
             return;
@@ -368,6 +372,12 @@ export class RenderOperations extends BaseModule {
         }
         
         this.editor.canvasRenderer.restoreCamera();
+
+        // Периодический лог состояния (каждые 500 рендеров)
+        if (this.renderCount % 500 === 0) {
+            const visibleCount = visibleObjects.length;
+            Logger.render.info(`🎨 Render #${this.renderCount}: ${visibleCount} visible objects`);
+        }
     }
 
     /**
@@ -1058,23 +1068,49 @@ export class RenderOperations extends BaseModule {
     }
 
     /**
+     * Clear the effective layer ID cache
+     */
+    clearEffectiveLayerCache() {
+        if (this.editor && this.editor.effectiveLayerCache) {
+            this.editor.effectiveLayerCache.clear();
+        }
+    }
+
+    /**
+     * Clear cache for specific object
+     * @param {string} objId - Object ID to clear from cache
+     */
+    clearEffectiveLayerCacheForObject(objId) {
+        if (this.editor && this.editor.effectiveLayerCache) {
+            this.editor.effectiveLayerCache.delete(objId);
+        }
+    }
+
+    /**
      * Find parent layer ID for object without caching (internal method)
      * @param {Object} obj - Object to find parent layer for
      * @returns {string} Parent layer ID or main layer ID
      */
     findParentLayerId(obj) {
-            // Search recursively in all groups
-            for (const topLevelObj of this.editor.level.objects) {
-                if (topLevelObj.type === 'group') {
+        // First check if object is at top level
+        const topLevelObject = this.editor.level.objects.find(topObj => topObj.id === obj.id);
+        if (topLevelObject) {
+            // Object is at top level, use its own layerId or main layer
+            return topLevelObject.layerId || this.editor.level.getMainLayerId();
+        }
+
+        // Search recursively in all groups
+        for (const topLevelObj of this.editor.level.objects) {
+            if (topLevelObj.type === 'group') {
                 const result = this.searchInGroupForLayerId(topLevelObj, obj);
-                    if (result) {
-                        return result;
-                    }
+                if (result) {
+                    return result;
                 }
             }
+        }
 
-            // If not found in any group, use main layer
-            return this.editor.level.getMainLayerId();
+        // If not found in any group, use main layer
+        return this.editor.level.getMainLayerId();
     }
 
     /**
@@ -1083,18 +1119,30 @@ export class RenderOperations extends BaseModule {
      * @param {GameObject} targetObj - Object to find
      * @returns {string|null} Parent's layerId or null if not found
      */
-    searchInGroupForLayerId(group, targetObj) {
+    searchInGroupForLayerId(group, targetObj, visitedGroups = new Set()) {
         if (!group.children) return null;
+
+        // Prevent infinite recursion
+        if (visitedGroups.has(group.id)) {
+            return null;
+        }
+        visitedGroups.add(group.id);
 
         for (const child of group.children) {
             if (child.id === targetObj.id) {
-                // Found the object - return group's layerId or main layer if group has no layerId
-                return group.layerId || this.editor.level.getMainLayerId();
+                // Found the object - return group's effective layerId
+                // Group should inherit layerId from its parent if it doesn't have its own
+                if (group.layerId) {
+                    return group.layerId;
+                } else {
+                    // If group doesn't have layerId, find its parent's layerId
+                    return this.findParentLayerId(group);
+                }
             }
 
             // Search recursively in child groups
             if (child.type === 'group') {
-                const result = this.searchInGroupForLayerId(child, targetObj);
+                const result = this.searchInGroupForLayerId(child, targetObj, visitedGroups);
                 if (result) return result;
             }
         }

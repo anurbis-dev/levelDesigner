@@ -314,7 +314,7 @@ export class Level {
     }
 
     /**
-     * Get objects count for a specific layer
+     * Get objects count for a specific layer (including nested objects in groups)
      */
     getLayerObjectsCount(layerId) {
         // Используем кеш для оптимизации производительности
@@ -322,8 +322,33 @@ export class Level {
             return this.layerCountsCache.get(layerId);
         }
 
-        // Вычисляем и кешируем результат
-        const count = this.objects.filter(obj => obj.layerId === layerId).length;
+        // Вычисляем и кешируем результат - включая вложенные объекты
+        let count = 0;
+        
+        // Count top-level objects
+        count += this.objects.filter(obj => obj.layerId === layerId).length;
+        
+        // Count nested objects in groups recursively
+        const countInGroups = (objects) => {
+            let groupCount = 0;
+            for (const obj of objects) {
+                if (obj.type === 'group' && obj.children) {
+                    // Count children that inherit this layerId
+                    groupCount += obj.children.filter(child => {
+                        // Use effective layerId (inherited from parent group)
+                        const effectiveLayerId = child.layerId || obj.layerId;
+                        return effectiveLayerId === layerId;
+                    }).length;
+                    
+                    // Recursively count in nested groups
+                    groupCount += countInGroups(obj.children);
+                }
+            }
+            return groupCount;
+        };
+        
+        count += countInGroups(this.objects);
+        
         this.layerCountsCache.set(layerId, count);
         return count;
     }
@@ -345,13 +370,34 @@ export class Level {
     rebuildLayerCountsCache() {
         this.layerCountsCache.clear();
 
-        // Подсчитываем объекты по слоям
+        // Подсчитываем объекты по слоям (включая вложенные)
         const counts = new Map();
+        
+        // Count top-level objects
         this.objects.forEach(obj => {
             if (obj.layerId) {
                 counts.set(obj.layerId, (counts.get(obj.layerId) || 0) + 1);
             }
         });
+        
+        // Count nested objects in groups recursively
+        const countInGroups = (objects) => {
+            for (const obj of objects) {
+                if (obj.type === 'group' && obj.children) {
+                    obj.children.forEach(child => {
+                        const effectiveLayerId = child.layerId || obj.layerId;
+                        if (effectiveLayerId) {
+                            counts.set(effectiveLayerId, (counts.get(effectiveLayerId) || 0) + 1);
+                        }
+                    });
+                    
+                    // Recursively count in nested groups
+                    countInGroups(obj.children);
+                }
+            }
+        };
+        
+        countInGroups(this.objects);
 
         // Заполняем кеш
         for (const [layerId, count] of counts) {
@@ -474,14 +520,27 @@ export class Level {
         if (obj) {
             const oldLayerId = obj.layerId;
             obj.layerId = layerId;
+            
+            // FORCED INHERITANCE: Propagate layerId to all children if this is a group
+            if (obj.type === 'group' && obj.children) {
+                obj.propagateLayerIdToChildren();
+            }
+            
             this.updateModified();
 
-            // Обновляем кеш счетчиков слоев
+            // Обновляем кеш счетчиков слоев с учетом вложенных объектов
             if (oldLayerId && oldLayerId !== layerId) {
-                this.updateLayerCountCache(oldLayerId, -1);
-                this.updateLayerCountCache(layerId, +1);
+                // Decrease count for old layer (including nested objects)
+                const oldCount = this.getLayerObjectsCount(oldLayerId);
+                this.layerCountsCache.set(oldLayerId, oldCount - 1);
+                
+                // Increase count for new layer (including nested objects)
+                const newCount = this.getLayerObjectsCount(layerId);
+                this.layerCountsCache.set(layerId, newCount + 1);
             } else if (!oldLayerId && layerId) {
-                this.updateLayerCountCache(layerId, +1);
+                // Increase count for new layer (including nested objects)
+                const newCount = this.getLayerObjectsCount(layerId);
+                this.layerCountsCache.set(layerId, newCount + 1);
             }
 
             // Notify about layer objects count change
@@ -500,10 +559,34 @@ export class Level {
     }
 
     /**
-     * Get objects for specific layer
+     * Get objects for specific layer (including nested objects in groups)
      */
     getLayerObjects(layerId) {
-        return this.objects.filter(obj => obj.layerId === layerId);
+        const result = [];
+        
+        // Get top-level objects
+        result.push(...this.objects.filter(obj => obj.layerId === layerId));
+        
+        // Get nested objects in groups recursively
+        const getObjectsInGroups = (objects) => {
+            for (const obj of objects) {
+                if (obj.type === 'group' && obj.children) {
+                    // Add children that inherit this layerId
+                    obj.children.forEach(child => {
+                        const effectiveLayerId = child.layerId || obj.layerId;
+                        if (effectiveLayerId === layerId) {
+                            result.push(child);
+                        }
+                    });
+                    
+                    // Recursively get objects in nested groups
+                    getObjectsInGroups(obj.children);
+                }
+            }
+        };
+        
+        getObjectsInGroups(this.objects);
+        return result;
     }
 
     /**

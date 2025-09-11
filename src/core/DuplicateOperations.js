@@ -164,6 +164,24 @@ export class DuplicateOperations extends BaseModule {
                 const groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
                 base.x -= groupPos.x;
                 base.y -= groupPos.y;
+
+                // FORCED INHERITANCE: Always inherit layerId from parent group
+                if (groupEditMode.group.layerId) {
+                    const oldLayerId = base.layerId;
+                    base.layerId = groupEditMode.group.layerId;
+
+                    // Log forced inheritance
+                    this.editor.logger?.layer?.info(`Duplicate inheritance: ${base.name || base.id} layerId ${oldLayerId || 'none'} → ${groupEditMode.group.layerId}`);
+
+                    // Clear effective layer cache for this object
+                    this.editor.renderOperations.clearEffectiveLayerCacheForObject(base.id);
+
+                    // If object is a group, propagate layerId to all its children recursively
+                    if (base.type === 'group' && base.children) {
+                        groupEditMode.group.propagateLayerIdToChildren(base);
+                    }
+                }
+
                 groupEditMode.group.children.push(base);
             } else {
                 this.editor.level.addObject(base);

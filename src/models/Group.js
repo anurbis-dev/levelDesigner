@@ -25,6 +25,31 @@ export class Group extends GameObject {
                 properChild = new GameObject(child);
             }
         }
+
+        // FORCED INHERITANCE: Always inherit layerId from parent group
+        if (this.layerId) {
+            const oldLayerId = properChild.layerId;
+            properChild.layerId = this.layerId;
+
+            // Log forced inheritance
+            if (typeof window !== 'undefined' && window.Logger) {
+                window.Logger.layer.info(`Forced inheritance: ${properChild.name || properChild.id} layerId ${oldLayerId || 'none'} → ${this.layerId}`);
+            }
+
+            // If child is a group, propagate layerId to all its children recursively
+            if (properChild.type === 'group' && properChild.children) {
+                this.propagateLayerIdToChildren(properChild);
+            }
+
+            // Clear effective layer cache for this object since its layerId changed
+            if (typeof window !== 'undefined' && window.LevelEditor) {
+                const editor = window.LevelEditor.getInstance();
+                if (editor && editor.renderOperations) {
+                    editor.renderOperations.clearEffectiveLayerCacheForObject(properChild.id);
+                }
+            }
+        }
+
         this.children.push(properChild);
     }
 
@@ -33,6 +58,37 @@ export class Group extends GameObject {
      */
     removeChild(childId) {
         this.children = this.children.filter(child => child.id !== childId);
+    }
+
+    /**
+     * Propagate layerId to all children recursively
+     */
+    propagateLayerIdToChildren(group = this) {
+        if (!group.layerId || !group.children) return;
+
+        group.children.forEach(child => {
+            // FORCED INHERITANCE: Always inherit layerId from parent group
+            const oldLayerId = child.layerId;
+            child.layerId = group.layerId;
+
+            // Log forced inheritance
+            if (typeof window !== 'undefined' && window.Logger) {
+                window.Logger.layer.info(`Propagated inheritance: ${child.name || child.id} layerId ${oldLayerId || 'none'} → ${group.layerId}`);
+            }
+
+            // Clear effective layer cache for this child
+            if (typeof window !== 'undefined' && window.LevelEditor) {
+                const editor = window.LevelEditor.getInstance();
+                if (editor && editor.renderOperations) {
+                    editor.renderOperations.clearEffectiveLayerCacheForObject(child.id);
+                }
+            }
+
+            // If child is a group, propagate recursively
+            if (child.type === 'group' && child.children) {
+                this.propagateLayerIdToChildren(child);
+            }
+        });
     }
 
     /**

@@ -65,6 +65,21 @@ export class Logger {
         const levelValue = this.LEVELS[level.toUpperCase()];
         if (levelValue < this.currentLevel) return;
 
+        // Validate message parameter
+        if (message === null || message === undefined) {
+            message = '[no message]';
+        } else if (typeof message !== 'string') {
+            message = String(message);
+        }
+
+        // Ensure message is not empty after trimming
+        const trimmedMessage = message.trim();
+        if (!trimmedMessage) {
+            message = '[empty message]';
+        } else {
+            message = trimmedMessage;
+        }
+
         const categoryConfig = this.CATEGORIES[category] || this.CATEGORIES.DEBUG;
         const prefix = `%c${categoryConfig.prefix}:`;
         const style = `color: ${categoryConfig.color}; font-weight: bold;`;
