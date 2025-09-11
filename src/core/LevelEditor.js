@@ -267,6 +267,154 @@ export class LevelEditor {
     /**
      * Schedule cache invalidation (debounced for performance)
      */
+    /**
+     * Умная инвалидация кешей - инвалидирует только необходимые кеши
+     * @param {Object} invalidationSpec - спецификация того, что нужно инвалидировать
+     */
+    smartCacheInvalidation(invalidationSpec = {}) {
+        const {
+            objectIds = new Set(), // ID объектов, которые изменились
+            layerIds = new Set(), // ID слоев, которые изменились
+            invalidateAll = false, // Полная инвалидация
+            reason = 'unknown' // Причина инвалидации для отладки
+        } = invalidationSpec;
+
+        if (invalidateAll) {
+            // Полная инвалидация (fallback для сложных случаев)
+            this.scheduleCacheInvalidation();
+            return;
+        }
+
+        // Умная инвалидация только измененных объектов
+        objectIds.forEach(objId => {
+            this.invalidateObjectCaches(objId);
+        });
+
+        // Инвалидация кешей слоев
+        layerIds.forEach(layerId => {
+            // Вместо полной очистки счетчиков слоев, помечаем их как грязные
+            this.markLayerCountCacheDirty(layerId);
+        });
+
+        // Инвалидация кеша выбираемых объектов (только если изменились объекты)
+        if (objectIds.size > 0) {
+            this.invalidateSelectableObjectsCacheForObjects(objectIds);
+        }
+
+        // Отладка умной инвалидации
+        if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+            Logger.cache.debug(`Smart cache invalidation (${reason}):`, {
+                objects: objectIds.size,
+                layers: layerIds.size,
+                invalidateAll
+            });
+        }
+    }
+
+    /**
+     * Помечает кеш счетчика слоя как грязный (нуждается в пересчете)
+     * @param {string} layerId - ID слоя
+     */
+    markLayerCountCacheDirty(layerId) {
+        // Добавляем слой в список грязных для отложенного пересчета
+        if (!this.dirtyLayerCounts) {
+            this.dirtyLayerCounts = new Set();
+        }
+        this.dirtyLayerCounts.add(layerId);
+    }
+
+    /**
+     * Инвалидирует кеш выбираемых объектов только для указанных объектов
+     * @param {Set} objectIds - ID объектов, которые изменились
+     */
+    invalidateSelectableObjectsCacheForObjects(objectIds) {
+        // Вместо полной очистки, удаляем только записи для измененных объектов
+        if (this.selectableObjectsCache) {
+            // Находим и удаляем кешированные записи, содержащие измененные объекты
+            for (const [cacheKey, cachedSet] of this.selectableObjectsCache) {
+                let hasChangedObjects = false;
+                for (const objId of objectIds) {
+                    if (cachedSet.has(objId)) {
+                        hasChangedObjects = true;
+                        break;
+                    }
+                }
+                if (hasChangedObjects) {
+                    this.selectableObjectsCache.delete(cacheKey);
+                }
+            }
+        }
+    }
+
+    /**
+     * Пересчитывает грязные счетчики слоев (отложенная операция)
+     */
+    recalculateDirtyLayerCounts() {
+        if (!this.dirtyLayerCounts || this.dirtyLayerCounts.size === 0) {
+            return;
+        }
+
+        // Пересчитываем только грязные счетчики
+        for (const layerId of this.dirtyLayerCounts) {
+            // Удаляем старый кеш для этого слоя
+            this.level.layerCountsCache.delete(layerId);
+
+            // При следующем обращении будет пересчитан автоматически
+            // this.level.getLayerObjectsCount(layerId) - пересчитает и закэширует
+        }
+
+        this.dirtyLayerCounts.clear();
+    }
+
+    /**
+     * Умная инвалидация после изменения слоев объектов
+     * @param {Set} changedObjectIds - ID объектов, слои которых изменились
+     * @param {Set} affectedLayers - ID слоев, которые были затронуты
+     */
+    invalidateAfterLayerChanges(changedObjectIds, affectedLayers) {
+        this.smartCacheInvalidation({
+            objectIds: changedObjectIds,
+            layerIds: affectedLayers,
+            reason: 'layer_changes'
+        });
+
+        // Отложенный пересчет счетчиков слоев
+        setTimeout(() => {
+            this.recalculateDirtyLayerCounts();
+        }, 0);
+    }
+
+    /**
+     * Умная инвалидация после групповых операций
+     * @param {Set} affectedObjectIds - ID объектов, которые были затронуты
+     */
+    invalidateAfterGroupOperations(affectedObjectIds) {
+        this.smartCacheInvalidation({
+            objectIds: affectedObjectIds,
+            invalidateAll: false, // Не нужна полная инвалидация для групповых операций
+            reason: 'group_operations'
+        });
+    }
+
+    /**
+     * Умная инвалидация после операций дублирования
+     * @param {Set} newObjectIds - ID новых объектов
+     */
+    invalidateAfterDuplicateOperations(newObjectIds) {
+        this.smartCacheInvalidation({
+            objectIds: newObjectIds,
+            reason: 'duplicate_operations'
+        });
+
+        // Для новых объектов нужно обновить индекс
+        setTimeout(() => {
+            this.level.buildObjectsIndex();
+        }, 0);
+    }
+
+    /**
+     * Устаревший метод полной инвалидации (сохраняется для совместимости)
+     */
     scheduleCacheInvalidation() {
         if (this.cacheInvalidationTimeout) {
             clearTimeout(this.cacheInvalidationTimeout);
@@ -275,7 +423,6 @@ export class LevelEditor {
         this.cacheInvalidationTimeout = setTimeout(() => {
             this.clearCaches();
             this.clearSelectableObjectsCache();
-                // Также очищаем кеши при массовых изменениях
             this.level.clearLayerCountsCache();
             this.level.clearObjectsIndex();
 
@@ -1675,6 +1822,10 @@ export class LevelEditor {
             layerCountChanges: new Map() // layerId -> {oldCount, newCount}
         };
 
+        // Отслеживание измененных объектов и слоев для умной инвалидации кешей
+        const changedObjectIds = new Set();
+        const affectedLayers = new Set();
+
         if (moveToExtreme) {
             // Move all selected objects to first/last layer
             const targetLayerId = moveUp ?
@@ -1687,7 +1838,7 @@ export class LevelEditor {
             }
 
             // Batch process objects for better performance
-            const batchResults = this.batchProcessLayerAssignment(selectedObjects, targetLayerId, processedGroups, batchedNotifications);
+            const batchResults = this.batchProcessLayerAssignment(selectedObjects, targetLayerId, processedGroups, batchedNotifications, changedObjectIds, affectedLayers);
             movedCount = batchResults.movedCount;
 
             if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
@@ -1695,7 +1846,7 @@ export class LevelEditor {
             }
         } else {
             // Move each object/group to adjacent layer based on its current effective layer
-            const batchResults = this.batchProcessAdjacentLayerAssignment(selectedObjects, layersSorted, moveUp, processedGroups, batchedNotifications);
+            const batchResults = this.batchProcessAdjacentLayerAssignment(selectedObjects, layersSorted, moveUp, processedGroups, batchedNotifications, changedObjectIds, affectedLayers);
             movedCount = batchResults.movedCount;
 
             if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
@@ -1706,8 +1857,8 @@ export class LevelEditor {
         // Отправляем сгруппированные уведомления для оптимизации производительности
         this.flushBatchedNotifications(batchedNotifications);
 
-        // Invalidate caches after bulk operations
-        this.scheduleCacheInvalidation();
+        // Умная инвалидация кешей только для измененных объектов и слоев
+        this.invalidateAfterLayerChanges(changedObjectIds, affectedLayers);
 
         return movedCount;
     }
@@ -1719,7 +1870,7 @@ export class LevelEditor {
      * @param {Set} processedGroups - Set of processed groups
      * @returns {Object} Results with movedCount
      */
-    batchProcessLayerAssignment(selectedObjects, targetLayerId, processedGroups, batchedNotifications) {
+    batchProcessLayerAssignment(selectedObjects, targetLayerId, processedGroups, batchedNotifications, changedObjectIds, affectedLayers) {
         let movedCount = 0;
         const objectsToProcess = [];
 
@@ -1737,7 +1888,7 @@ export class LevelEditor {
 
         // Process objects in batch
         objectsToProcess.forEach(objId => {
-            const result = this.processObjectForLayerAssignmentOptimized(objId, targetLayerId, processedGroups, batchedNotifications);
+            const result = this.processObjectForLayerAssignmentOptimized(objId, targetLayerId, processedGroups, batchedNotifications, changedObjectIds, affectedLayers);
             if (result.moved) {
                 movedCount++;
             }
@@ -1754,7 +1905,7 @@ export class LevelEditor {
      * @param {Set} processedGroups - Set of processed groups
      * @returns {Object} Results with movedCount
      */
-    batchProcessAdjacentLayerAssignment(selectedObjects, layersSorted, moveUp, processedGroups, batchedNotifications) {
+    batchProcessAdjacentLayerAssignment(selectedObjects, layersSorted, moveUp, processedGroups, batchedNotifications, changedObjectIds, affectedLayers) {
         let movedCount = 0;
         const objectsByTargetLayer = new Map();
 
@@ -1781,7 +1932,7 @@ export class LevelEditor {
         // Process each group of objects going to the same layer
         objectsByTargetLayer.forEach((objIds, targetLayerId) => {
             objIds.forEach(objId => {
-                const result = this.processObjectForLayerAssignmentOptimized(objId, targetLayerId, processedGroups, batchedNotifications);
+                const result = this.processObjectForLayerAssignmentOptimized(objId, targetLayerId, processedGroups, batchedNotifications, changedObjectIds, affectedLayers);
                 if (result.moved) {
                     movedCount++;
                 }
@@ -1798,7 +1949,7 @@ export class LevelEditor {
      * @param {Set} processedGroups - Set of already processed groups
      * @returns {Object} Result with moved flag and target object info
      */
-    processObjectForLayerAssignmentOptimized(objId, targetLayerId, processedGroups, batchedNotifications = null) {
+    processObjectForLayerAssignmentOptimized(objId, targetLayerId, processedGroups, batchedNotifications = null, changedObjectIds = null, affectedLayers = null) {
         // Use cached object lookup
         const targetObj = this.getCachedObject(objId);
         if (!targetObj) {
@@ -1830,6 +1981,17 @@ export class LevelEditor {
         // Change layerId of the top-level object
         const oldLayerId = topLevelObj.layerId;
         topLevelObj.layerId = targetLayerId;
+
+        // Отслеживаем измененные объекты и слои для умной инвалидации кешей
+        if (changedObjectIds) {
+            changedObjectIds.add(topLevelObj.id);
+        }
+        if (affectedLayers && oldLayerId) {
+            affectedLayers.add(oldLayerId);
+        }
+        if (affectedLayers && targetLayerId) {
+            affectedLayers.add(targetLayerId);
+        }
 
         // Invalidate cache for this object since layerId changed
         this.invalidateObjectCaches(topLevelObj.id);

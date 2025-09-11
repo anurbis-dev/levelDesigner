@@ -22,6 +22,10 @@
 - `LevelEditor.batchNotifyObjectPropertyChanged()` - группировка уведомлений об изменении свойств
 - `LevelEditor.batchNotifyLayerCountChanged()` - группировка уведомлений о счетчиках слоев
 - `LevelEditor.flushBatchedNotifications()` - отправка сгруппированных уведомлений
+- `LevelEditor.smartCacheInvalidation()` - умная инвалидация кешей
+- `LevelEditor.invalidateAfterLayerChanges()` - инвалидация после изменения слоев
+- `LevelEditor.invalidateAfterGroupOperations()` - инвалидация после групповых операций
+- `LevelEditor.invalidateAfterDuplicateOperations()` - инвалидация после дублирования
 
 **Исправленные методы:**
 - `Asset.createInstance(x, y)` - возвращает `GameObject` вместо `Object`

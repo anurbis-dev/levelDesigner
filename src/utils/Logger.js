@@ -45,7 +45,8 @@ export class Logger {
         SETTINGS: { color: '#FFC107', prefix: 'SETTINGS' },
         PREFERENCES: { color: '#673AB7', prefix: 'PREFS' },
         CONFIG: { color: '#00E676', prefix: 'CONFIG' },
-        LAYER: { color: '#03A9F4', prefix: 'LAYER' }
+        LAYER: { color: '#03A9F4', prefix: 'LAYER' },
+        CACHE: { color: '#4CAF50', prefix: 'CACHE' }
     };
 
     /**
@@ -330,6 +331,16 @@ export class Logger {
     /**
      * Layer management logging
      */
+    /**
+     * Cache operations logging
+     */
+    static cache = {
+        info: (message, ...args) => Logger.log('CACHE', 'info', message, ...args),
+        debug: (message, ...args) => Logger.log('CACHE', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('CACHE', 'warn', message, ...args),
+        error: (message, ...args) => Logger.log('CACHE', 'error', message, ...args)
+    };
+
     static layer = {
         info: (message, ...args) => Logger.log('LAYER', 'info', message, ...args),
         debug: (message, ...args) => Logger.log('LAYER', 'debug', message, ...args),
