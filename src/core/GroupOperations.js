@@ -27,7 +27,8 @@ export class GroupOperations extends BaseModule {
                 y: bounds.minY,
                 visible: true,
                 locked: false,
-                layerId: mainLayerId, // Assign to Main layer
+                // TEMPORARILY COMMENTED OUT: layerId: mainLayerId, // Assign to Main layer
+                layerId: selectedTopLevelObjects[0]?.layerId || mainLayerId, // Use first selected object's layer or Main
                 children: []
             };
             

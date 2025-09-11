@@ -216,13 +216,14 @@ export class ObjectOperations extends BaseModule {
             // Check object visibility
             if (!obj.visible) return false;
 
-            // Check layer visibility
-            if (obj.layerId) {
-                const visibleLayerIds = this.editor.renderOperations ?
-                    this.editor.renderOperations.getVisibleLayerIds() :
-                    new Set(this.editor.level.layers.map(l => l.id));
-                if (!visibleLayerIds.has(obj.layerId)) return false;
-            }
+            // Check layer visibility (considering inheritance from parent groups)
+            const effectiveLayerId = this.editor.renderOperations ?
+                this.editor.renderOperations.getEffectiveLayerId(obj) :
+                (obj.layerId || this.editor.level.getMainLayerId());
+            const visibleLayerIds = this.editor.renderOperations ?
+                this.editor.renderOperations.getVisibleLayerIds() :
+                new Set(this.editor.level.layers.map(l => l.id));
+            if (!visibleLayerIds.has(effectiveLayerId)) return false;
 
             return true;
         };

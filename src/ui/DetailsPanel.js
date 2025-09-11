@@ -9,43 +9,112 @@ export class DetailsPanel {
         this.container = container;
         this.stateManager = stateManager;
         this.levelEditor = levelEditor;
-        
         this.setupEventListeners();
     }
 
     setupEventListeners() {
         // Subscribe to selection changes
         this.stateManager.subscribe('selectedObjects', () => {
+            console.log('[DEBUG] DetailsPanel: selectedObjects subscription triggered');
             this.render();
             this.updateTabTitle();
+        });
+
+        // Subscribe to level changes (for object property updates like layer changes)
+        this.stateManager.subscribe('level', (newLevel, oldLevel) => {
+            console.log('[DEBUG] DetailsPanel: LEVEL CHANGE SUBSCRIPTION TRIGGERED!');
+            console.log('[DEBUG] DetailsPanel: Level changed, checking if re-rendering is needed');
+            console.log('[DEBUG] DetailsPanel: Level change stack trace:', new Error().stack);
+
+            // Check if selected objects properties changed (excluding position changes)
+            const selectedIds = this.stateManager.get('selectedObjects');
+            if (selectedIds && selectedIds.size > 0) {
+                const firstId = Array.from(selectedIds)[0];
+                const newObj = newLevel.objects?.find(obj => obj.id === firstId);
+                const oldObj = oldLevel?.objects?.find(obj => obj.id === firstId);
+                
+                console.log('[DEBUG] DetailsPanel: First selected object layerId:', newObj?.layerId);
+                
+                // Only re-render if non-position properties changed
+                if (oldObj && newObj) {
+                    const positionChanged = (oldObj.x !== newObj.x || oldObj.y !== newObj.y);
+                    if (positionChanged) {
+                        console.log('[DEBUG] DetailsPanel: Position changed, skipping re-render to avoid performance issues');
+                        console.log('[DEBUG] DetailsPanel: Position change source:', new Error().stack);
+                        return;
+                    }
+                }
+            }
+
+            this.render();
+            this.updateTabTitle();
+        });
+
+        // Subscribe to object property changes (for immediate updates like layer changes)
+        this.stateManager.subscribe('objectPropertyChanged', (changedObject, changeData) => {
+            console.log('[DEBUG] DetailsPanel: OBJECT PROPERTY CHANGE SUBSCRIPTION TRIGGERED!');
+            console.log('[DEBUG] DetailsPanel: Object changed:', changedObject?.id, 'Property:', changeData?.property, 'New value:', changeData?.newValue);
+            console.log('[DEBUG] DetailsPanel: Stack trace:', new Error().stack);
+
+            // Skip real-time updates for position properties to avoid performance issues
+            // Position updates will happen on: selection change, drag end, duplicate end
+            if (changeData?.property === 'x' || changeData?.property === 'y') {
+                console.log('[DEBUG] DetailsPanel: Skipping real-time update for position property:', changeData?.property);
+                console.log('[DEBUG] DetailsPanel: Position update source:', new Error().stack);
+                return;
+            }
+
+            // Check if the changed object is currently selected
+            const selectedIds = this.stateManager.get('selectedObjects');
+            if (selectedIds && selectedIds.has(changedObject?.id)) {
+                console.log('[DEBUG] DetailsPanel: Changed object is selected, re-rendering');
+                this.render();
+                this.updateTabTitle();
+            }
         });
     }
 
     render() {
+        console.log('[DEBUG] DetailsPanel.render() called');
+        console.log('[DEBUG] DetailsPanel.render() stack trace:', new Error().stack);
         this.container.innerHTML = '';
-        
+
         const selectedObjects = this.getSelectedObjects();
-        
+        console.log('[DEBUG] DetailsPanel: Selected objects count:', selectedObjects.length);
+
         if (selectedObjects.length === 0) {
+            console.log('[DEBUG] DetailsPanel: No objects selected, rendering no selection');
             this.renderNoSelection();
             return;
         }
-        
+
         if (selectedObjects.length === 1) {
+            console.log('[DEBUG] DetailsPanel: Single object selected, rendering single object');
             this.renderSingleObject(selectedObjects[0]);
         } else {
+            console.log('[DEBUG] DetailsPanel: Multiple objects selected, rendering multiple objects');
             this.renderMultipleObjects(selectedObjects);
         }
+
+        // Update tab title after rendering content
+        this.updateTabTitle();
     }
 
     renderNoSelection() {
         this.container.innerHTML = '<p class="text-gray-400">Select an object to see its properties.</p>';
+        // Update tab title for no selection case
+        this.updateTabTitle();
     }
 
     renderSingleObject(obj) {
+        console.log('[DEBUG] DetailsPanel.renderSingleObject() called for object:', obj.id, 'type:', obj.type);
+        console.log('[DEBUG] DetailsPanel: Object layerId:', obj.layerId, 'name:', obj.name);
+
         if (obj.type === 'group') {
+            console.log('[DEBUG] DetailsPanel: Rendering as group');
             this.renderGroupDetails(obj);
         } else {
+            console.log('[DEBUG] DetailsPanel: Rendering as single object');
             this.renderObjectDetails(obj);
         }
     }
@@ -60,10 +129,23 @@ export class DetailsPanel {
             value: group.name,
             id: 'group-name-input',
             onChange: (e) => {
-                group.name = e.target.value;
+                const oldValue = group.name;
+                const newValue = e.target.value;
+                group.name = newValue;
                 this.stateManager.markDirty();
+
+                // Notify about group name change
+                this.stateManager.notifyListeners('objectPropertyChanged', group, {
+                    property: 'name',
+                    oldValue: oldValue,
+                    newValue: newValue
+                });
+
                 // Trigger outliner update
                 this.stateManager.notifyListeners('selectedObjects', this.stateManager.get('selectedObjects'), this.stateManager.get('selectedObjects'));
+
+                // Update tab title immediately
+                this.updateTabTitle();
             }
         });
         
@@ -83,21 +165,36 @@ export class DetailsPanel {
     }
 
     renderObjectDetails(obj) {
+        console.log('[DEBUG] DetailsPanel.renderObjectDetails() called for object:', obj.id, 'type:', obj.type, 'layerId:', obj.layerId);
+
         const properties = ['name', 'type', 'x', 'y', 'width', 'height', 'color'];
-        
+
         // Use UIFactory to create property editor
         const propertyEditor = UIFactory.createPropertyEditor(obj, properties, (prop, newValue, object) => {
+            const oldValue = object[prop];
             this.stateManager.markDirty();
-            // Trigger redraw
+
+            // Notify about object property change
+            this.stateManager.notifyListeners('objectPropertyChanged', object, {
+                property: prop,
+                oldValue: oldValue,
+                newValue: newValue
+            });
+
+            // Trigger redraw of selected objects
             this.stateManager.notifyListeners('selectedObjects', this.stateManager.get('selectedObjects'), this.stateManager.get('selectedObjects'));
+
+            // Update tab title immediately
+            this.updateTabTitle();
         });
-        
+
         this.container.innerHTML = '';
         this.container.appendChild(propertyEditor);
-        
+
         // Add layer information section
+        console.log('[DEBUG] DetailsPanel: About to call renderLayerInfo');
         this.renderLayerInfo(obj);
-        
+
         // Add custom properties section
         this.renderCustomProperties(obj);
     }
@@ -128,19 +225,30 @@ export class DetailsPanel {
             const input = propContainer.querySelector('input');
             input.addEventListener('change', (e) => {
                 let newValue = e.target.value;
-                
+
                 if (typeof firstValue === 'number') {
                     newValue = parseFloat(newValue) || 0;
                 }
-                
+
                 objects.forEach(obj => {
+                    const oldValue = obj[prop];
                     obj[prop] = newValue;
+
+                    // Notify about each object property change
+                    this.stateManager.notifyListeners('objectPropertyChanged', obj, {
+                        property: prop,
+                        oldValue: oldValue,
+                        newValue: newValue
+                    });
                 });
-                
+
                 this.stateManager.markDirty();
-                
+
                 // Trigger redraw
                 this.stateManager.notifyListeners('selectedObjects', this.stateManager.get('selectedObjects'), this.stateManager.get('selectedObjects'));
+
+                // Update tab title immediately
+                this.updateTabTitle();
             });
             
             this.container.appendChild(propContainer);
@@ -151,16 +259,19 @@ export class DetailsPanel {
     }
 
     renderLayerInfo(obj) {
+        console.log('[DEBUG] DetailsPanel.renderLayerInfo() called for object:', obj.id, 'layerId:', obj.layerId);
+
         const level = this.levelEditor.getLevel();
         const layerInfo = this.getObjectLayerInfo(obj, level);
-        
+        console.log('[DEBUG] DetailsPanel: Layer info:', layerInfo);
+
         const section = document.createElement('div');
         section.className = 'mt-4';
         section.innerHTML = '<h4 class="text-md font-bold mb-2">Layer Information</h4>';
-        
+
         const layerContainer = document.createElement('div');
         layerContainer.className = 'mb-2';
-        
+
         layerContainer.innerHTML = `
             <label class="block text-sm font-medium text-gray-300">Current Layer</label>
             <div class="mt-1 flex items-center space-x-2">
@@ -169,19 +280,26 @@ export class DetailsPanel {
                 <span class="text-xs text-gray-400">(${layerInfo.objectCount} objects)</span>
             </div>
         `;
-        
+
         section.appendChild(layerContainer);
         this.container.appendChild(section);
+
+        console.log('[DEBUG] DetailsPanel: Layer info rendered with name:', layerInfo.name);
     }
 
     getObjectLayerInfo(obj, level) {
-        // Get layer ID from object, fallback to Main layer if not set
-        const layerId = obj.layerId || level.getMainLayerId();
-        const layer = level.getLayerById(layerId);
-        
+        console.log('[DEBUG] DetailsPanel.getObjectLayerInfo called for object:', obj.id, 'obj.layerId:', obj.layerId);
+
+        // Get effective layer ID (considering inheritance from parent groups)
+        const effectiveLayerId = this.getEffectiveLayerId(obj, level);
+        console.log('[DEBUG] DetailsPanel.getObjectLayerInfo: effectiveLayerId:', effectiveLayerId);
+
+        const layer = level.getLayerById(effectiveLayerId);
+        console.log('[DEBUG] DetailsPanel.getObjectLayerInfo: found layer:', layer ? layer.name : 'null');
+
         if (layer) {
-            const objectCount = level.getLayerObjectsCount(layerId);
-            return {
+            const objectCount = level.getLayerObjectsCount(effectiveLayerId);
+            const result = {
                 id: layer.id,
                 name: layer.name,
                 color: layer.color,
@@ -189,6 +307,8 @@ export class DetailsPanel {
                 locked: layer.locked,
                 objectCount: objectCount
             };
+            console.log('[DEBUG] DetailsPanel.getObjectLayerInfo: returning:', result);
+            return result;
         }
         
         // Fallback if layer not found
@@ -312,8 +432,20 @@ export class DetailsPanel {
             
             const input = propContainer.querySelector('input');
             input.addEventListener('change', (e) => {
-                obj.properties[key] = e.target.value;
+                const oldValue = obj.properties[key];
+                const newValue = e.target.value;
+                obj.properties[key] = newValue;
                 this.stateManager.markDirty();
+
+                // Notify about custom property change
+                this.stateManager.notifyListeners('objectPropertyChanged', obj, {
+                    property: `properties.${key}`,
+                    oldValue: oldValue,
+                    newValue: newValue
+                });
+
+                // Update tab title immediately
+                this.updateTabTitle();
             });
             
             section.appendChild(propContainer);
@@ -325,13 +457,90 @@ export class DetailsPanel {
     getSelectedObjects() {
         const selectedIds = this.stateManager.get('selectedObjects');
         const level = this.levelEditor.getLevel();
-        return Array.from(selectedIds)
+
+        console.log('[DEBUG] DetailsPanel.getSelectedObjects: selectedIds count:', selectedIds.size);
+        console.log('[DEBUG] DetailsPanel.getSelectedObjects: level objects count:', level.objects.length);
+
+        const objects = Array.from(selectedIds)
             .map(id => level.findObjectById(id))
             .filter(Boolean);
+
+        console.log('[DEBUG] DetailsPanel.getSelectedObjects: found objects count:', objects.length);
+        if (objects.length > 0) {
+            console.log('[DEBUG] DetailsPanel.getSelectedObjects: first object layerId:', objects[0].layerId, 'name:', objects[0].name);
+        }
+
+        return objects;
     }
 
     getAllChildren(group) {
         return GroupTraversalUtils.getAllChildren(group);
+    }
+
+    /**
+     * Get effective layer ID for an object, considering inheritance from parent groups
+     * @param {GameObject} obj - Object to get layer ID for
+     * @param {Level} level - Level containing the object
+     * @returns {string} Effective layer ID
+     */
+    getEffectiveLayerId(obj, level) {
+        // If object has its own layerId, use it
+        if (obj.layerId) {
+            return obj.layerId;
+        }
+
+        // Try to find the object in the hierarchy and get parent's layerId
+        const findParentLayerId = (currentObj, parentGroup = null) => {
+            // If we have a parent group, check if currentObj is its child
+            if (parentGroup && parentGroup.children) {
+                const childIndex = parentGroup.children.findIndex(child => child.id === currentObj.id);
+                if (childIndex !== -1) {
+                    // Found the object as child of parentGroup
+                    return parentGroup.layerId || level.getMainLayerId();
+                }
+            }
+
+            // Search recursively in all groups
+            for (const topLevelObj of level.objects) {
+                if (topLevelObj.type === 'group') {
+                    const result = this.searchInGroupForLayerId(topLevelObj, currentObj, level);
+                    if (result) {
+                        return result;
+                    }
+                }
+            }
+
+            // If not found in any group, use main layer
+            return level.getMainLayerId();
+        };
+
+        return findParentLayerId(obj);
+    }
+
+    /**
+     * Recursively search for object in group hierarchy and return parent's layerId
+     * @param {Group} group - Group to search in
+     * @param {GameObject} targetObj - Object to find
+     * @param {Level} level - Level for fallback
+     * @returns {string|null} Parent's layerId or null if not found
+     */
+    searchInGroupForLayerId(group, targetObj, level) {
+        if (!group.children) return null;
+
+        for (const child of group.children) {
+            if (child.id === targetObj.id) {
+                // Found the object - return group's layerId or main layer if group has no layerId
+                return group.layerId || level.getMainLayerId();
+            }
+
+            // Search recursively in child groups
+            if (child.type === 'group') {
+                const result = this.searchInGroupForLayerId(child, targetObj, level);
+                if (result) return result;
+            }
+        }
+
+        return null;
     }
 
     updateTabTitle() {
@@ -342,11 +551,11 @@ export class DetailsPanel {
         const count = selectedObjects.length;
         
         if (count === 0) {
-            detailsTab.textContent = 'Asset';
+            detailsTab.textContent = 'Details';
         } else if (count === 1) {
             detailsTab.textContent = 'Asset';
         } else {
-            detailsTab.textContent = 'Asset(s)';
+            detailsTab.textContent = 'Assets';
         }
     }
 

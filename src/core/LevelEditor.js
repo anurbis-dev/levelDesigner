@@ -34,7 +34,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.4.0';
+    static VERSION = '3.4.1';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -118,7 +118,8 @@ export class LevelEditor {
         const detailsPanel = document.getElementById('details-content-panel');
         const outlinerPanel = document.getElementById('outliner-content-panel');
         const layersPanel = document.getElementById('layers-content-panel');
-        
+
+
         if (!canvas || !assetsPanel || !detailsPanel || !outlinerPanel || !layersPanel) {
             throw new Error('Required DOM elements not found');
         }
@@ -187,6 +188,9 @@ export class LevelEditor {
 
         // Initialize cached level statistics
         this.updateCachedLevelStats();
+        
+        // Set up layer objects count change callback
+        this.setupLayerObjectsCountTracking();
         
         // Initial render
         this.render();
@@ -812,6 +816,23 @@ export class LevelEditor {
         }
     }
 
+    /**
+     * Set up layer objects count change tracking
+     */
+    setupLayerObjectsCountTracking() {
+        if (this.level) {
+            this.level.setLayerObjectsCountChangeCallback((layerId, newCount, oldCount) => {
+                console.log('[DEBUG] Layer objects count changed:', { layerId, newCount, oldCount });
+                
+                // Notify StateManager about layer objects count change
+                this.stateManager.notifyLayerObjectsCountChanged(layerId, newCount, oldCount);
+                
+                // Update cached stats
+                this.updateCachedLevelStats();
+            });
+        }
+    }
+
     countPlayerStartObjects() {
         let count = 0;
 
@@ -1133,6 +1154,351 @@ export class LevelEditor {
         if (headerVersionElement) {
             headerVersionElement.textContent = `2D Level Editor v${LevelEditor.VERSION}`;
         }
+    }
+
+    /**
+     * Move selected objects to next layer (up/down) with improved nested object handling
+     * @param {boolean} moveUp - true to move to upper layer, false to move to lower layer
+     * @param {boolean} moveToExtreme - true to move to first/last layer, false to move to adjacent layer
+     */
+    moveSelectedObjectsToLayer(moveUp, moveToExtreme = false) {
+        console.log('[DEBUG] moveSelectedObjectsToLayer called:', { moveUp, moveToExtreme });
+
+        // Quick check for selected objects
+        const selectedObjects = this.stateManager.get('selectedObjects');
+        if (!selectedObjects || selectedObjects.size === 0) {
+            console.log('[DEBUG] No selected objects');
+            return;
+        }
+
+        // Check for active duplication only
+        const duplicate = this.stateManager.get('duplicate');
+        if (duplicate && duplicate.isActive) {
+            console.log('[DEBUG] Duplication is active, cannot move objects');
+            Logger.layer.warn('Cannot move objects while duplication is active');
+            return;
+        }
+
+        console.log('[DEBUG] All conditions passed, proceeding with move');
+
+        // Save state for undo
+        this.historyManager.saveState(this.level.toJSON(), false);
+        console.log('[DEBUG] Saved state for undo');
+
+        let movedCount = 0;
+
+        // Use improved layer assignment logic
+        movedCount = this.assignSelectedObjectsToLayer(selectedObjects, moveUp, moveToExtreme);
+
+        if (movedCount > 0) {
+            // Mark level as modified and update UI
+            this.stateManager.markDirty();
+            this.level.updateModified();
+
+            // Update all panels to reflect changes
+            this.updateAllPanels();
+
+            // Notify subscribers about level changes
+            // Force level update by creating a deep copy to trigger state manager listeners
+            this.stateManager.set('level', JSON.parse(JSON.stringify(this.level)));
+
+            Logger.layer.info(`Moved ${movedCount} objects to ${moveToExtreme ? (moveUp ? 'first' : 'last') : (moveUp ? 'upper' : 'lower')} layer`);
+        } else {
+            Logger.layer.info('No objects were moved (already in target layer or no valid objects found)');
+        }
+    }
+
+    /**
+     * Find top-level object (group or single object) that contains the given object ID
+     * @param {string} objId - Object ID to find
+     * @returns {Object|null} Top-level object or null if not found
+     */
+    findTopLevelObject(objId) {
+        console.log('[DEBUG] findTopLevelObject called for:', objId);
+
+        // First try to find as top-level object
+        const topLevelObj = this.level.objects.find(obj => obj.id === objId);
+        if (topLevelObj) {
+            console.log('[DEBUG] Found as top-level object:', { id: topLevelObj.id, layerId: topLevelObj.layerId });
+            return topLevelObj;
+        }
+
+        console.log('[DEBUG] Not found as top-level, searching in groups...');
+
+        // If not found as top-level, search in groups recursively
+        for (const obj of this.level.objects) {
+            if (obj.type === 'group') {
+                console.log('[DEBUG] Checking group:', obj.id);
+                const found = this.findObjectInGroup(obj, objId);
+                if (found) {
+                    console.log('[DEBUG] Found in group:', { groupId: obj.id, groupLayerId: obj.layerId });
+                    return obj; // Return the top-level group that contains this object
+                }
+            }
+        }
+
+        console.log('[DEBUG] Object not found anywhere');
+        return null;
+    }
+
+    /**
+     * Recursively search for object in group
+     * @param {Object} group - Group to search in
+     * @param {string} objId - Object ID to find
+     * @returns {boolean} true if found
+     */
+    findObjectInGroup(group, objId) {
+        if (group.id === objId) {
+            return true;
+        }
+
+        if (group.children) {
+            for (const child of group.children) {
+                if (child.id === objId) {
+                    return true;
+                }
+                if (child.type === 'group') {
+                    if (this.findObjectInGroup(child, objId)) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Find object by ID in the level, including objects inside groups
+     * @param {string} objId - Object ID to find
+     * @returns {GameObject|null} - The found object or null
+     */
+    findObjectById(objId) {
+        console.log('[DEBUG] findObjectById called for:', objId);
+
+        // First try to find as top-level object
+        const topLevelObj = this.level.objects.find(obj => obj.id === objId);
+        if (topLevelObj) {
+            console.log('[DEBUG] Found as top-level object:', { id: topLevelObj.id, layerId: topLevelObj.layerId });
+            return topLevelObj;
+        }
+
+        console.log('[DEBUG] Not found as top-level, searching in groups...');
+
+        // If not found as top-level, search in groups recursively
+        for (const obj of this.level.objects) {
+            if (obj.type === 'group') {
+                console.log('[DEBUG] Checking group:', obj.id);
+                const found = this.findObjectInGroupRecursive(obj, objId);
+                if (found) {
+                    console.log('[DEBUG] Found object in group:', { id: found.id, layerId: found.layerId });
+                    return found;
+                }
+            }
+        }
+
+        console.log('[DEBUG] Object not found anywhere');
+        return null;
+    }
+
+    /**
+     * Recursively find object in group and return the object itself
+     * @param {Group} group - Group to search in
+     * @param {string} objId - Object ID to find
+     * @returns {GameObject|null} - The found object or null
+     */
+    findObjectInGroupRecursive(group, objId) {
+        if (group.id === objId) {
+            return group;
+        }
+
+        if (group.children) {
+            for (const child of group.children) {
+                if (child.id === objId) {
+                    return child; // Return the actual object
+                }
+                if (child.type === 'group') {
+                    const found = this.findObjectInGroupRecursive(child, objId);
+                    if (found) {
+                        return found;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Assign selected objects to a layer with improved nested object handling
+     * @param {Set} selectedObjects - Set of selected object IDs
+     * @param {boolean} moveUp - true to move to upper layer, false to move to lower layer
+     * @param {boolean} moveToExtreme - true to move to first/last layer, false to move to adjacent layer
+     * @returns {number} Number of objects moved
+     */
+    assignSelectedObjectsToLayer(selectedObjects, moveUp, moveToExtreme) {
+        let movedCount = 0;
+        const processedGroups = new Set(); // Track groups that have already been processed
+
+        if (moveToExtreme) {
+            // Move all selected objects to first/last layer
+            const targetLayerId = moveUp ?
+                this.level.getLayersSorted()[0]?.id :
+                this.level.getLayersSorted()[this.level.layers.length - 1]?.id;
+
+            if (!targetLayerId) {
+                Logger.layer.warn('No target layer found for extreme move');
+                return 0;
+            }
+
+            console.log('[DEBUG] Moving to extreme layer:', targetLayerId);
+
+            selectedObjects.forEach(objId => {
+                const result = this.processObjectForLayerAssignment(objId, targetLayerId, processedGroups);
+                if (result.moved) {
+                    movedCount++;
+                    Logger.layer.debug(`Moved object/group ${objId} to layer ${targetLayerId}`);
+                }
+            });
+        } else {
+            // Move each object/group to adjacent layer based on its current effective layer
+            const layersSorted = this.level.getLayersSorted();
+            console.log('[DEBUG] Moving to adjacent layer, available layers:', layersSorted.map(l => ({ id: l.id, name: l.name })));
+
+            selectedObjects.forEach(objId => {
+                const targetObj = this.findObjectById(objId);
+                if (!targetObj) {
+                    console.log('[DEBUG] Object not found:', objId);
+                    return;
+                }
+
+                // Get effective layer ID (considering inheritance from parent groups)
+                const currentEffectiveLayerId = this.renderOperations ?
+                    this.renderOperations.getEffectiveLayerId(targetObj) :
+                    (targetObj.layerId || this.level.getMainLayerId());
+                console.log('[DEBUG] Current effective layerId for', objId, ':', currentEffectiveLayerId);
+
+                const currentLayerIndex = layersSorted.findIndex(layer => layer.id === currentEffectiveLayerId);
+                if (currentLayerIndex === -1) {
+                    console.log('[DEBUG] Current effective layer not found in layers list');
+                    return;
+                }
+
+                const targetIndex = moveUp ? currentLayerIndex - 1 : currentLayerIndex + 1;
+                if (targetIndex < 0 || targetIndex >= layersSorted.length) {
+                    console.log('[DEBUG] Target index out of bounds');
+                    return;
+                }
+
+                const targetLayerId = layersSorted[targetIndex].id;
+                console.log('[DEBUG] Target layerId:', targetLayerId);
+
+                const result = this.processObjectForLayerAssignment(objId, targetLayerId, processedGroups);
+                if (result.moved) {
+                    movedCount++;
+                    Logger.layer.debug(`Moved object/group ${objId} to layer ${targetLayerId}`);
+                }
+            });
+        }
+
+        return movedCount;
+    }
+
+    /**
+     * Process individual object for layer assignment
+     * @param {string} objId - Object ID to process
+     * @param {string} targetLayerId - Target layer ID
+     * @param {Set} processedGroups - Set of already processed groups
+     * @returns {Object} Result with moved flag and target object info
+     */
+    processObjectForLayerAssignment(objId, targetLayerId, processedGroups) {
+        const targetObj = this.findObjectById(objId);
+        if (!targetObj) {
+            return { moved: false };
+        }
+
+        // Check if this object is already in the target layer
+        const currentEffectiveLayerId = this.renderOperations ?
+            this.renderOperations.getEffectiveLayerId(targetObj) :
+            (targetObj.layerId || this.level.getMainLayerId());
+        if (currentEffectiveLayerId === targetLayerId) {
+            console.log('[DEBUG] Object already in target layer:', objId);
+            return { moved: false };
+        }
+
+        // Find the top-level object (could be a group containing this object)
+        const topLevelObj = this.findTopLevelObject(objId);
+        if (!topLevelObj) {
+            console.log('[DEBUG] Could not find top-level object for:', objId);
+            return { moved: false };
+        }
+
+        // If we've already processed this top-level object, skip it
+        if (processedGroups.has(topLevelObj.id)) {
+            console.log('[DEBUG] Top-level object already processed:', topLevelObj.id);
+            return { moved: false };
+        }
+
+        processedGroups.add(topLevelObj.id);
+
+        // Get the old effective layer ID for notifications
+        const oldEffectiveLayerId = this.renderOperations ?
+            this.renderOperations.getEffectiveLayerId(topLevelObj) :
+            (topLevelObj.layerId || this.level.getMainLayerId());
+
+        // Change layerId of the top-level object
+        const oldLayerId = topLevelObj.layerId;
+        topLevelObj.layerId = targetLayerId;
+
+        console.log('[DEBUG] CHANGED layerId for top-level object', topLevelObj.id, 'from', oldLayerId, 'to', targetLayerId);
+
+        // Notify StateManager about object property change
+        this.stateManager.notifyListeners('objectPropertyChanged', topLevelObj, {
+            property: 'layerId',
+            oldValue: oldLayerId,
+            newValue: targetLayerId
+        });
+
+        // Notify about layer objects count changes
+        if (oldEffectiveLayerId && oldEffectiveLayerId !== targetLayerId) {
+            const oldCount = this.level.getLayerObjectsCount(oldEffectiveLayerId);
+            this.level.notifyLayerObjectsCountChange(oldEffectiveLayerId, oldCount, oldCount - 1);
+
+            const newCount = this.level.getLayerObjectsCount(targetLayerId);
+            this.level.notifyLayerObjectsCountChange(targetLayerId, newCount, newCount + 1);
+        }
+
+        return { moved: true, targetObj: topLevelObj };
+    }
+
+    /**
+     * Check if objects can be moved to another layer
+     * @returns {boolean} true if all conditions are met
+     */
+    canMoveObjectsToLayer() {
+        console.log('[DEBUG] canMoveObjectsToLayer called');
+
+        // Condition 1: Selected objects list is not empty
+        const selectedObjects = this.stateManager.get('selectedObjects');
+        console.log('[DEBUG] Selected objects:', selectedObjects);
+
+        if (!selectedObjects || selectedObjects.size === 0) {
+            console.log('[DEBUG] Condition 1 failed: No selected objects');
+            return false;
+        }
+
+        // Condition 2: No active duplication (the only action we check for)
+        const duplicate = this.stateManager.get('duplicate');
+        console.log('[DEBUG] Duplicate state:', duplicate);
+
+        if (duplicate && duplicate.isActive) {
+            console.log('[DEBUG] Condition 2 failed: Duplication active');
+            Logger.layer.warn('Cannot move objects while duplication is active');
+            return false;
+        }
+
+        console.log('[DEBUG] All conditions passed');
+        return true;
     }
 
     /**

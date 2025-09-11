@@ -44,7 +44,8 @@ export class Logger {
         LAYOUT: { color: '#8BC34A', prefix: 'LAYOUT' },
         SETTINGS: { color: '#FFC107', prefix: 'SETTINGS' },
         PREFERENCES: { color: '#673AB7', prefix: 'PREFS' },
-        CONFIG: { color: '#00E676', prefix: 'CONFIG' }
+        CONFIG: { color: '#00E676', prefix: 'CONFIG' },
+        LAYER: { color: '#03A9F4', prefix: 'LAYER' }
     };
 
     /**
@@ -321,5 +322,15 @@ export class Logger {
         debug: (message, ...args) => Logger.log('PREFERENCES', 'debug', message, ...args),
         warn: (message, ...args) => Logger.log('PREFERENCES', 'warn', message, ...args),
         error: (message, ...args) => Logger.log('PREFERENCES', 'error', message, ...args)
+    };
+
+    /**
+     * Layer management logging
+     */
+    static layer = {
+        info: (message, ...args) => Logger.log('LAYER', 'info', message, ...args),
+        debug: (message, ...args) => Logger.log('LAYER', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('LAYER', 'warn', message, ...args),
+        error: (message, ...args) => Logger.log('LAYER', 'error', message, ...args)
     };
 }

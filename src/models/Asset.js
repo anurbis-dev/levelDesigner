@@ -35,6 +35,7 @@ export class Asset {
             imgSrc: this.imgSrc,
             visible: true,
             locked: false,
+            layerId: null, // Will be set by level.addObject()
             properties: { ...this.properties }
         };
 

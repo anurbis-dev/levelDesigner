@@ -206,6 +206,9 @@ export class MouseHandlers extends BaseModule {
             if (mouse.isDragging) {
                 this.editor.historyManager.saveState(this.editor.level.objects);
                 this.editor.stateManager.markDirty();
+                
+                // Update panels after drag ends to show final position
+                this.editor.updateAllPanels();
             }
             
             this.editor.stateManager.update({
@@ -607,7 +610,8 @@ export class MouseHandlers extends BaseModule {
             'mouse.dragStartY': worldPos.y
         });
 
-        this.editor.updateAllPanels();
+        // Don't update panels during drag to avoid real-time position updates
+        // Panels will be updated when drag ends in handleMouseUp
     }
 
     updateMarquee(worldPos) {

@@ -240,6 +240,27 @@ export class StateManager {
     }
 
     /**
+     * Notify about object property change
+     */
+    notifyObjectPropertyChanged(obj, property, newValue, oldValue) {
+        this.notifyListeners('objectPropertyChanged', obj, {
+            property,
+            newValue,
+            oldValue
+        });
+    }
+
+    /**
+     * Notify about layer objects count change
+     */
+    notifyLayerObjectsCountChanged(layerId, newCount, oldCount) {
+        this.notifyListeners('layerObjectsCountChanged', layerId, {
+            newCount,
+            oldCount
+        });
+    }
+
+    /**
      * Reset state to initial values
      */
     reset() {

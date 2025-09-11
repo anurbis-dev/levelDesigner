@@ -59,6 +59,12 @@ export class Level {
         }
 
         this.objects.push(obj);
+        
+        // Notify about layer objects count change
+        if (obj.layerId) {
+            const newCount = this.getLayerObjectsCount(obj.layerId);
+            this.notifyLayerObjectsCountChange(obj.layerId, newCount, newCount - 1);
+        }
 
         // Ensure all objects have valid layer references
         this.fixLayerReferences();
@@ -70,7 +76,18 @@ export class Level {
      * Remove object from level
      */
     removeObject(objId) {
+        // Find object before removing to get its layerId
+        const obj = this.findObjectById(objId);
+        const layerId = obj?.layerId;
+        
         this.objects = this.objects.filter(obj => obj.id !== objId);
+        
+        // Notify about layer objects count change
+        if (layerId) {
+            const newCount = this.getLayerObjectsCount(layerId);
+            this.notifyLayerObjectsCountChange(layerId, newCount, newCount + 1);
+        }
+        
         this.updateModified();
     }
 
@@ -110,14 +127,23 @@ export class Level {
         const stats = {
             totalObjects: allObjects.length,
             groups: allObjects.filter(obj => obj.type === 'group').length,
-            byType: {}
+            byType: {},
+            byLayer: {}
         };
 
         allObjects.forEach(obj => {
+            // Count by type
             if (!stats.byType[obj.type]) {
                 stats.byType[obj.type] = 0;
             }
             stats.byType[obj.type]++;
+            
+            // Count by layer
+            const layerId = obj.layerId || this.getMainLayerId();
+            if (!stats.byLayer[layerId]) {
+                stats.byLayer[layerId] = 0;
+            }
+            stats.byLayer[layerId]++;
         });
 
         return stats;
@@ -205,8 +231,9 @@ export class Level {
         let fixedCount = 0;
 
         this.objects.forEach(obj => {
-            // If object has invalid layerId or no layerId, assign to Main layer (first layer)
-            if (!obj.layerId || !this.getLayerById(obj.layerId)) {
+            // Only fix objects that have invalid layerId (layer doesn't exist)
+            // Don't touch objects that have no layerId - they will be handled by addObject()
+            if (obj.layerId && !this.getLayerById(obj.layerId)) {
                 if (mainLayerId) {
                     obj.layerId = mainLayerId;
                     fixedCount++;
@@ -261,8 +288,20 @@ export class Level {
     assignObjectToLayer(objId, layerId) {
         const obj = this.findObjectById(objId);
         if (obj) {
+            const oldLayerId = obj.layerId;
             obj.layerId = layerId;
             this.updateModified();
+            
+            // Notify about layer objects count change
+            if (this.onLayerObjectsCountChanged) {
+                if (oldLayerId) {
+                    const oldCount = this.getLayerObjectsCount(oldLayerId);
+                    this.onLayerObjectsCountChanged(oldLayerId, oldCount, oldCount + 1);
+                }
+                const newCount = this.getLayerObjectsCount(layerId);
+                this.onLayerObjectsCountChanged(layerId, newCount, newCount - 1);
+            }
+            
             return true;
         }
         return false;
@@ -273,6 +312,34 @@ export class Level {
      */
     getLayerObjects(layerId) {
         return this.objects.filter(obj => obj.layerId === layerId);
+    }
+
+    /**
+     * Get cached layer objects count from level editor
+     * This is more efficient than getLayerObjectsCount for frequent calls
+     */
+    getCachedLayerObjectsCount(layerId, cachedStats) {
+        if (cachedStats && cachedStats.byLayer) {
+            return cachedStats.byLayer[layerId] || 0;
+        }
+        // Fallback to regular method if no cached stats
+        return this.getLayerObjectsCount(layerId);
+    }
+
+    /**
+     * Set callback for layer objects count changes
+     */
+    setLayerObjectsCountChangeCallback(callback) {
+        this.onLayerObjectsCountChanged = callback;
+    }
+
+    /**
+     * Notify about layer objects count change
+     */
+    notifyLayerObjectsCountChange(layerId, newCount, oldCount) {
+        if (this.onLayerObjectsCountChanged) {
+            this.onLayerObjectsCountChanged(layerId, newCount, oldCount);
+        }
     }
 
     /**

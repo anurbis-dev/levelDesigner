@@ -303,30 +303,45 @@ export class SettingsPanel {
             case 'selection':
                 content.innerHTML = `
                     <h3 style="font-size: 1.125rem; font-weight: 500; margin-bottom: 1rem;">Selection Settings</h3>
-                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                    <div style="display: flex; flex-direction: column; gap: 1.5rem;">
                         <div>
-                            <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Outline Color</label>
-                            <div id="outline-color-chooser"></div>
+                            <h4 style="font-size: 1rem; font-weight: 500; margin-bottom: 0.75rem; color: #d1d5db;">Object Selection</h4>
+                            <div style="display: flex; flex-direction: column; gap: 1rem; padding-left: 0.5rem; border-left: 2px solid #374151;">
+                                <div>
+                                    <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Outline Color</label>
+                                    <div id="outline-color-chooser"></div>
+                                </div>
+                                <div>
+                                    <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Outline Width (px)</label>
+                                    <input type="number" min="1" max="12" class="setting-input" name="setting-input" data-setting="selection.outlineWidth" value="${this.configManager.get('selection.outlineWidth')}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
+                                </div>
+                                <div>
+                                    <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Group Outline Width (px)</label>
+                                    <input type="number" min="1" max="16" class="setting-input" name="setting-input" data-setting="selection.groupOutlineWidth" value="${this.configManager.get('selection.groupOutlineWidth')}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
+                                </div>
+                                <div>
+                                    <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Nested Groups Highlight Color</label>
+                                    <div id="hierarchy-color-chooser"></div>
+                                </div>
+                                <div>
+                                    <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Marquee Color</label>
+                                    <input type="color" class="setting-input" name="setting-input" data-setting="selection.marqueeColor" value="${this.configManager.get('selection.marqueeColor')}"/>
+                                </div>
+                                <div>
+                                    <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Marquee Opacity</label>
+                                    <input type="range" min="0" max="1" step="0.05" class="setting-input" name="setting-input" data-setting="selection.marqueeOpacity" value="${this.configManager.get('selection.marqueeOpacity')}" style="width:100%;"/>
+                                </div>
+                            </div>
                         </div>
+
                         <div>
-                            <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Outline Width (px)</label>
-                            <input type="number" min="1" max="12" class="setting-input" name="setting-input" data-setting="selection.outlineWidth" value="${this.configManager.get('selection.outlineWidth')}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
-                        </div>
-                        <div>
-                            <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Group Outline Width (px)</label>
-                            <input type="number" min="1" max="16" class="setting-input" name="setting-input" data-setting="selection.groupOutlineWidth" value="${this.configManager.get('selection.groupOutlineWidth')}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
-                        </div>
-                        <div>
-                            <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Nested Groups Highlight Color</label>
-                            <div id="hierarchy-color-chooser"></div>
-                        </div>
-                        <div>
-                            <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Marquee Color</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="selection.marqueeColor" value="${this.configManager.get('selection.marqueeColor')}"/>
-                        </div>
-                        <div>
-                            <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Marquee Opacity</label>
-                            <input type="range" min="0" max="1" step="0.05" class="setting-input" name="setting-input" data-setting="selection.marqueeOpacity" value="${this.configManager.get('selection.marqueeOpacity')}" style="width:100%;"/>
+                            <h4 style="font-size: 1rem; font-weight: 500; margin-bottom: 0.75rem; color: #d1d5db;">Layers</h4>
+                            <div style="display: flex; flex-direction: column; gap: 1rem; padding-left: 0.5rem; border-left: 2px solid #374151;">
+                                <div>
+                                    <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Active Layer Border Color</label>
+                                    <div id="active-layer-border-color-chooser"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>                `;
                 this.initializeColorChoosers();
@@ -371,6 +386,18 @@ export class SettingsPanel {
                 }
             );
             hierarchyColorContainer.appendChild(hierarchyColorChooser.createInlineElement());
+        }
+
+        // Active Layer Border Color Chooser
+        const activeLayerBorderColorContainer = document.getElementById('active-layer-border-color-chooser');
+        if (activeLayerBorderColorContainer) {
+            const activeLayerBorderColorChooser = ColorChooser.forSettings(
+                this.configManager.get('selection.activeLayerBorderColor') || '#3B82F6',
+                (newColor) => {
+                    this.configManager.set('selection.activeLayerBorderColor', newColor);
+                }
+            );
+            activeLayerBorderColorContainer.appendChild(activeLayerBorderColorChooser.createInlineElement());
         }
     }
 

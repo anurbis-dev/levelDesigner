@@ -341,8 +341,9 @@ export class RenderOperations extends BaseModule {
         const visibleLayerIds = this.getVisibleLayerIds();
 
         const visibleObjects = this.editor.level.objects.filter(obj => {
-            // Check if object's layer is visible
-            if (!visibleLayerIds.has(obj.layerId)) {
+            // Check if object's effective layer is visible (considering inheritance from parent groups)
+            const effectiveLayerId = this.getEffectiveLayerId(obj);
+            if (!visibleLayerIds.has(effectiveLayerId)) {
                 return false;
             }
 
@@ -554,7 +555,7 @@ export class RenderOperations extends BaseModule {
         // Only draw boundaries for visible top-level objects
         this.editor.level.objects.forEach(obj => {
             // Check if object is visible and in visible layer
-            if (obj.visible && (!obj.layerId || visibleLayerIds.has(obj.layerId))) {
+            if (obj.visible && visibleLayerIds.has(this.getEffectiveLayerId(obj))) {
                 if (obj.type === 'group') {
                     this.drawGroupBoundaries(obj);
                 } else {
@@ -635,7 +636,7 @@ export class RenderOperations extends BaseModule {
         // Only draw collisions for visible top-level objects
         this.editor.level.objects.forEach(obj => {
             // Check if object is visible and in visible layer
-            if (obj.visible && (!obj.layerId || visibleLayerIds.has(obj.layerId))) {
+            if (obj.visible && visibleLayerIds.has(this.getEffectiveLayerId(obj))) {
                 if (obj.type === 'group') {
                     this.drawGroupCollisions(obj);
                 } else {
@@ -679,7 +680,7 @@ export class RenderOperations extends BaseModule {
     drawGroupCollisions(group) {
         // Draw group collision
         this.drawSingleObjectCollision(group);
-        
+
         // Draw children collisions
         if (group.children) {
             group.children.forEach(child => {
@@ -690,5 +691,60 @@ export class RenderOperations extends BaseModule {
                 }
             });
         }
+    }
+
+    /**
+     * Get effective layer ID for an object, considering inheritance from parent groups
+     * @param {GameObject} obj - Object to get layer ID for
+     * @returns {string} Effective layer ID
+     */
+    getEffectiveLayerId(obj) {
+        // If object has its own layerId, use it
+        if (obj.layerId) {
+            return obj.layerId;
+        }
+
+        // Try to find the object in the hierarchy and get parent's layerId
+        const findParentLayerId = (currentObj) => {
+            // Search recursively in all groups
+            for (const topLevelObj of this.editor.level.objects) {
+                if (topLevelObj.type === 'group') {
+                    const result = this.searchInGroupForLayerId(topLevelObj, currentObj);
+                    if (result) {
+                        return result;
+                    }
+                }
+            }
+
+            // If not found in any group, use main layer
+            return this.editor.level.getMainLayerId();
+        };
+
+        return findParentLayerId(obj);
+    }
+
+    /**
+     * Recursively search for object in group hierarchy and return parent's layerId
+     * @param {Group} group - Group to search in
+     * @param {GameObject} targetObj - Object to find
+     * @returns {string|null} Parent's layerId or null if not found
+     */
+    searchInGroupForLayerId(group, targetObj) {
+        if (!group.children) return null;
+
+        for (const child of group.children) {
+            if (child.id === targetObj.id) {
+                // Found the object - return group's layerId or main layer if group has no layerId
+                return group.layerId || this.editor.level.getMainLayerId();
+            }
+
+            // Search recursively in child groups
+            if (child.type === 'group') {
+                const result = this.searchInGroupForLayerId(child, targetObj);
+                if (result) return result;
+            }
+        }
+
+        return null;
     }
 }

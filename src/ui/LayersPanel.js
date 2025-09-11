@@ -19,6 +19,26 @@ export class LayersPanel {
         this.stateManager.subscribe('level', () => {
             this.render();
         });
+
+        // Subscribe to selection changes
+        this.stateManager.subscribe('selectedObjects', () => {
+            this.updateLayerStyles();
+        });
+
+        // Subscribe to layer objects count changes for efficient updates
+        this.stateManager.subscribe('layerObjectsCountChanged', (layerId, changeData) => {
+            console.log('[DEBUG] LayersPanel: LAYER OBJECTS COUNT CHANGED SUBSCRIPTION TRIGGERED!');
+            console.log('[DEBUG] LayersPanel: LayerId:', layerId, 'New count:', changeData?.newCount, 'Old count:', changeData?.oldCount);
+            
+            // Update only the specific layer's object count
+            this.updateLayerObjectsCount(layerId);
+        });
+
+        // Subscribe to config changes (for active layer border color)
+        if (this.levelEditor.configManager) {
+            // Since ConfigManager doesn't have built-in events, we'll update on render
+            // This could be enhanced by adding event system to ConfigManager if needed
+        }
     }
 
     render() {
@@ -29,6 +49,9 @@ export class LayersPanel {
 
         // Update objects count for all layers
         this.updateAllLayersObjectsCount();
+
+        // Update layer styles based on active state
+        this.updateLayerStyles();
     }
 
     /**
@@ -76,7 +99,8 @@ export class LayersPanel {
      */
     createLayerElement(layer) {
         const level = this.levelEditor.getLevel();
-        const objectsCount = level.getLayerObjectsCount(layer.id);
+        const cachedStats = this.levelEditor.cachedLevelStats;
+        const objectsCount = level.getCachedLayerObjectsCount(layer.id, cachedStats);
         const countText = objectsCount > 0 ? ` (${objectsCount})` : '';
         
         const layerDiv = document.createElement('div');
@@ -202,7 +226,8 @@ export class LayersPanel {
 
         // Update objects count
         const level = this.levelEditor.getLevel();
-        const objectsCount = level.getLayerObjectsCount(layerId);
+        const cachedStats = this.levelEditor.cachedLevelStats;
+        const objectsCount = level.getCachedLayerObjectsCount(layerId, cachedStats);
         const countSpan = layerElement.querySelector('.text-gray-400.text-sm');
         if (countSpan) {
             countSpan.textContent = objectsCount > 0 ? ` (${objectsCount})` : '';
@@ -241,14 +266,174 @@ export class LayersPanel {
         const level = this.levelEditor.getLevel();
         const layers = level.getLayersSorted();
         
+        // Use cached statistics for better performance
+        const cachedStats = this.levelEditor.cachedLevelStats;
+
         layers.forEach(layer => {
-            const objectsCount = level.getLayerObjectsCount(layer.id);
+            const objectsCount = level.getCachedLayerObjectsCount(layer.id, cachedStats);
             const layerElement = this.container.querySelector(`[data-layer-id="${layer.id}"]`);
             if (layerElement) {
                 const countSpan = layerElement.querySelector('.text-gray-400.text-sm');
                 if (countSpan) {
                     countSpan.textContent = objectsCount > 0 ? ` (${objectsCount})` : '';
                 }
+            }
+        });
+    }
+
+    /**
+     * Update objects count for specific layer
+     */
+    updateLayerObjectsCount(layerId) {
+        const level = this.levelEditor.getLevel();
+        const cachedStats = this.levelEditor.cachedLevelStats;
+        const objectsCount = level.getCachedLayerObjectsCount(layerId, cachedStats);
+        
+        const layerElement = this.container.querySelector(`[data-layer-id="${layerId}"]`);
+        if (layerElement) {
+            const countSpan = layerElement.querySelector('.text-gray-400.text-sm');
+            if (countSpan) {
+                countSpan.textContent = objectsCount > 0 ? ` (${objectsCount})` : '';
+                console.log('[DEBUG] LayersPanel: Updated layer objects count:', { layerId, objectsCount });
+            }
+        }
+    }
+
+    /**
+     * Get all layer IDs that contain selected objects (considering layerId inheritance)
+     * @returns {Set<string>} Set of layer IDs
+     */
+    getActiveLayerIds() {
+        console.log('[DEBUG] getActiveLayerIds called');
+
+        const selectedObjects = this.stateManager.get('selectedObjects');
+        console.log('[DEBUG] Selected objects in getActiveLayerIds:', selectedObjects);
+
+        if (!selectedObjects || selectedObjects.size === 0) {
+            console.log('[DEBUG] No selected objects, returning empty set');
+            return new Set();
+        }
+
+        const level = this.levelEditor.getLevel();
+        const layerIds = new Set();
+
+        // Collect all effective layer IDs from selected objects
+        selectedObjects.forEach(objId => {
+            console.log('[DEBUG] Processing selected object:', objId);
+            const obj = level.findObjectById(objId);
+            console.log('[DEBUG] Found object:', obj ? { id: obj.id, layerId: obj.layerId } : null);
+            
+            if (obj) {
+                // Use effective layer ID considering inheritance from parent groups
+                const effectiveLayerId = this.getEffectiveLayerId(obj, level);
+                console.log('[DEBUG] Effective layerId for object:', effectiveLayerId);
+                layerIds.add(effectiveLayerId);
+            } else {
+                console.log('[DEBUG] Object not found');
+            }
+        });
+
+        console.log('[DEBUG] Collected effective layerIds:', Array.from(layerIds));
+        return layerIds;
+    }
+
+    /**
+     * Get effective layer ID for an object, considering inheritance from parent groups
+     * @param {GameObject} obj - Object to get layer ID for
+     * @param {Level} level - Level containing the object
+     * @returns {string} Effective layer ID
+     */
+    getEffectiveLayerId(obj, level) {
+        // If object has its own layerId, use it
+        if (obj.layerId) {
+            return obj.layerId;
+        }
+
+        // Try to find the object in the hierarchy and get parent's layerId
+        const findParentLayerId = (currentObj, parentGroup = null) => {
+            // If we have a parent group, check if currentObj is its child
+            if (parentGroup && parentGroup.children) {
+                const childIndex = parentGroup.children.findIndex(child => child.id === currentObj.id);
+                if (childIndex !== -1) {
+                    // Found the object as child of parentGroup
+                    return parentGroup.layerId || level.getMainLayerId();
+                }
+            }
+
+            // Search recursively in all groups
+            for (const topLevelObj of level.objects) {
+                if (topLevelObj.type === 'group') {
+                    const result = this.searchInGroupForLayerId(topLevelObj, currentObj, level);
+                    if (result) {
+                        return result;
+                    }
+                }
+            }
+
+            // If not found in any group, use main layer
+            return level.getMainLayerId();
+        };
+
+        return findParentLayerId(obj);
+    }
+
+    /**
+     * Recursively search for object in group hierarchy and return parent's layerId
+     * @param {Group} group - Group to search in
+     * @param {GameObject} targetObj - Object to find
+     * @param {Level} level - Level for fallback
+     * @returns {string|null} Parent's layerId or null if not found
+     */
+    searchInGroupForLayerId(group, targetObj, level) {
+        if (!group.children) return null;
+
+        // Check if targetObj is direct child of this group
+        const directChild = group.children.find(child => child.id === targetObj.id);
+        if (directChild) {
+            return group.layerId || level.getMainLayerId();
+        }
+
+        // Search recursively in child groups
+        for (const child of group.children) {
+            if (child.type === 'group') {
+                const result = this.searchInGroupForLayerId(child, targetObj, level);
+                if (result) {
+                    return result;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Update layer styles based on active state
+     */
+    updateLayerStyles() {
+        console.log('[DEBUG] updateLayerStyles called');
+
+        const activeLayerIds = this.getActiveLayerIds();
+        console.log('[DEBUG] Active layer IDs:', Array.from(activeLayerIds));
+
+        const layerElements = this.container.querySelectorAll('.layer-item');
+        console.log('[DEBUG] Found layer elements:', layerElements.length);
+
+        // Get active layer border color from settings
+        const activeLayerBorderColor = this.levelEditor.configManager?.get('selection.activeLayerBorderColor') || '#3B82F6';
+        console.log('[DEBUG] Active layer border color:', activeLayerBorderColor);
+
+        layerElements.forEach(element => {
+            const layerId = element.dataset.layerId;
+            const isActive = activeLayerIds.has(layerId);
+            console.log('[DEBUG] Layer element:', layerId, 'isActive:', isActive);
+
+            // Update border color for the main layer item container only
+            if (isActive) {
+                console.log('[DEBUG] Setting active border color for layer:', layerId);
+                element.style.borderColor = activeLayerBorderColor;
+            } else {
+                console.log('[DEBUG] Clearing border color for layer:', layerId);
+                element.style.borderColor = '';
             }
         });
     }
@@ -324,6 +509,9 @@ export class LayersPanel {
                         this.levelEditor.render();
                     }
                 }
+
+                // Update layer styles after visibility change
+                this.updateLayerStyles();
             });
         });
         

@@ -14,6 +14,7 @@ export class GameObject {
         this.imgSrc = data.imgSrc || null;
         this.visible = data.visible !== undefined ? data.visible : true;
         this.locked = data.locked || false;
+        this.layerId = data.layerId || null;
         this.properties = data.properties || {};
     }
 
@@ -67,6 +68,7 @@ export class GameObject {
             imgSrc: this.imgSrc,
             visible: this.visible,
             locked: this.locked,
+            layerId: this.layerId,
             properties: this.properties
         };
     }

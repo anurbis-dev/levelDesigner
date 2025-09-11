@@ -13,11 +13,18 @@ export class DuplicateOperations extends BaseModule {
         const cleaned = { ...obj };
         delete cleaned._offsetX;
         delete cleaned._offsetY;
+
+        // Ensure essential properties have defaults
         cleaned.visible = cleaned.visible !== undefined ? cleaned.visible : true;
         cleaned.locked = cleaned.locked !== undefined ? cleaned.locked : false;
         cleaned.width = cleaned.width || 32;
         cleaned.height = cleaned.height || 32;
         cleaned.color = cleaned.color || '#cccccc';
+
+        // CRITICAL: Preserve layerId to maintain layer assignment
+        // If layerId is missing, it will be assigned to Main layer by Level.addObject()
+        // We preserve it here to maintain original layer assignment during duplication
+
         if (cleaned.type === 'group' && Array.isArray(cleaned.children)) {
             cleaned.children = cleaned.children.map(ch => this._sanitizeForPlacement(ch));
         }

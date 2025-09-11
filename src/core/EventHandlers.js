@@ -261,6 +261,32 @@ export class EventHandlers extends BaseModule {
                 } else {
                     console.log('[HOTKEYS] Unhandled Ctrl combination:', e.key.toLowerCase());
                 }
+            } else if (e.key === 'PageUp') {
+                console.log('[HOTKEYS] PageUp pressed - move objects to upper layer');
+                console.log('[HOTKEYS] Shift key:', e.shiftKey);
+                e.preventDefault();
+                console.log('[HOTKEYS] PageUp - default prevented:', e.defaultPrevented);
+                if (typeof this.editor.moveSelectedObjectsToLayer === 'function') {
+                    const moveToExtreme = e.shiftKey;
+                    console.log('[HOTKEYS] Calling moveSelectedObjectsToLayer(true, moveToExtreme)');
+                    console.log('[HOTKEYS] Parameters: moveUp=true, moveToExtreme=', moveToExtreme);
+                    this.editor.moveSelectedObjectsToLayer(true, moveToExtreme);
+                } else {
+                    console.error('[HOTKEYS] moveSelectedObjectsToLayer method not found!');
+                }
+            } else if (e.key === 'PageDown') {
+                console.log('[HOTKEYS] PageDown pressed - move objects to lower layer');
+                console.log('[HOTKEYS] Shift key:', e.shiftKey);
+                e.preventDefault();
+                console.log('[HOTKEYS] PageDown - default prevented:', e.defaultPrevented);
+                if (typeof this.editor.moveSelectedObjectsToLayer === 'function') {
+                    const moveToExtreme = e.shiftKey;
+                    console.log('[HOTKEYS] Calling moveSelectedObjectsToLayer(false, moveToExtreme)');
+                    console.log('[HOTKEYS] Parameters: moveUp=false, moveToExtreme=', moveToExtreme);
+                    this.editor.moveSelectedObjectsToLayer(false, moveToExtreme);
+                } else {
+                    console.error('[HOTKEYS] moveSelectedObjectsToLayer method not found!');
+                }
             } else {
                 console.log('[HOTKEYS] Unhandled key:', e.key.toLowerCase());
             }

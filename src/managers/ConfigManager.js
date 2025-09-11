@@ -144,7 +144,8 @@ export class ConfigManager {
                 groupOutlineWidth: 4,
                 marqueeColor: '#3B82F6',
                 marqueeOpacity: 0.2,
-                hierarchyHighlightColor: '#3B82F6'
+                hierarchyHighlightColor: '#3B82F6',
+                activeLayerBorderColor: '#3B82F6'
             },
 
             // Asset settings

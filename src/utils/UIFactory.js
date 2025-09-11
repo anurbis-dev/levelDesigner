@@ -37,6 +37,7 @@ export class UIFactory {
             value = '',
             placeholder = '',
             onChange = null,
+            onBlur = null,
             id = null,
             disabled = false
         } = options;
@@ -66,6 +67,10 @@ export class UIFactory {
         
         if (onChange) {
             input.addEventListener('change', onChange);
+        }
+        
+        if (onBlur) {
+            input.addEventListener('blur', onBlur);
         }
 
         container.appendChild(input);
@@ -162,6 +167,19 @@ export class UIFactory {
                 label: prop.charAt(0).toUpperCase() + prop.slice(1),
                 value: displayValue,
                 onChange: (e) => {
+                    // Update object property immediately for visual feedback
+                    let newValue = e.target.value;
+                    
+                    // Convert to number if original was number
+                    if (typeof value === 'number') {
+                        newValue = parseFloat(newValue) || 0;
+                    }
+                    
+                    obj[prop] = newValue;
+                    // Don't notify here to avoid real-time updates during typing
+                },
+                onBlur: (e) => {
+                    // Notify only on blur to avoid real-time updates during typing
                     let newValue = e.target.value;
                     
                     // Convert to number if original was number
