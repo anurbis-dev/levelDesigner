@@ -10,6 +10,8 @@ import { OutlinerPanel } from '../ui/OutlinerPanel.js';
 import { LayersPanel } from '../ui/LayersPanel.js';
 import { SettingsPanel } from '../ui/SettingsPanel.js';
 import { Level } from '../models/Level.js';
+import { GameObject } from '../models/GameObject.js';
+import { Group } from '../models/Group.js';
 import { duplicateRenderUtils } from '../utils/DuplicateUtils.js';
 
 // Import new modules
@@ -34,7 +36,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.4.1';
+    static VERSION = '3.6.0';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -77,9 +79,182 @@ export class LevelEditor {
         this.groupOperations = new GroupOperations(this);
         this.renderOperations = new RenderOperations(this);
         this.duplicateOperations = new DuplicateOperations(this);
+
+        // Performance optimization caches
+        this.objectCache = new Map(); // Cache for object lookups: objId -> object
+        this.topLevelObjectCache = new Map(); // Cache for top-level object lookups: objId -> topLevelObject
+        this.effectiveLayerCache = new Map(); // Cache for effective layer IDs: objId -> effectiveLayerId
+        this.selectableObjectsCache = new Map(); // Cache for selectable objects in viewport: cameraKey -> Set<objectIds>
+        this.selectableObjectsCacheTimestamp = 0;
+        this.cacheInvalidationTimeout = null;
         
         // Store reference to duplicate render utils
         this.duplicateRenderUtils = duplicateRenderUtils;
+    }
+
+    /**
+     * Cache management methods for performance optimization
+     */
+
+    /**
+     * Get object from cache or find it in level
+     * @param {string} objId - Object ID to find
+     * @returns {Object|null} Found object or null
+     */
+    getCachedObject(objId) {
+        if (this.objectCache.has(objId)) {
+            return this.objectCache.get(objId);
+        }
+
+        const obj = this.findObjectById(objId);
+        if (obj) {
+            this.objectCache.set(objId, obj);
+        }
+        return obj;
+    }
+
+    /**
+     * Get top-level object from cache or find it
+     * @param {string} objId - Object ID to find
+     * @returns {Object|null} Top-level object or null
+     */
+    getCachedTopLevelObject(objId) {
+        if (this.topLevelObjectCache.has(objId)) {
+            return this.topLevelObjectCache.get(objId);
+        }
+
+        const topLevelObj = this.findTopLevelObject(objId);
+        if (topLevelObj) {
+            this.topLevelObjectCache.set(objId, topLevelObj);
+        }
+        return topLevelObj;
+    }
+
+    /**
+     * Get effective layer ID from cache or calculate it
+     * @param {Object} obj - Object to get effective layer for
+     * @returns {string} Effective layer ID
+     */
+    getCachedEffectiveLayerId(obj) {
+        if (this.effectiveLayerCache.has(obj.id)) {
+            return this.effectiveLayerCache.get(obj.id);
+        }
+
+        const effectiveLayerId = this.renderOperations ?
+            this.renderOperations.getEffectiveLayerId(obj) :
+            (obj.layerId || this.level.getMainLayerId());
+
+        this.effectiveLayerCache.set(obj.id, effectiveLayerId);
+        return effectiveLayerId;
+    }
+
+    /**
+     * Clear all caches (call when level changes or objects are modified)
+     */
+    clearCaches() {
+        this.objectCache.clear();
+        this.topLevelObjectCache.clear();
+        this.effectiveLayerCache.clear();
+        this.clearSelectableObjectsCache();
+    }
+
+    /**
+     * Invalidate specific object caches (call when object is modified)
+     * @param {string} objId - Object ID to invalidate
+     */
+    invalidateObjectCaches(objId) {
+        this.objectCache.delete(objId);
+        this.topLevelObjectCache.delete(objId);
+        this.effectiveLayerCache.delete(objId);
+    }
+
+    /**
+     * Get selectable objects within viewport (with frustum culling)
+     * @returns {Set<string>} Set of selectable object IDs in viewport
+     */
+    getSelectableObjectsInViewport() {
+        const camera = this.stateManager.get('camera');
+        const cameraKey = `${camera.x.toFixed(1)},${camera.y.toFixed(1)},${camera.zoom.toFixed(2)}`;
+
+        // Check cache first
+        const currentTime = performance.now();
+        if (this.selectableObjectsCache.has(cameraKey) &&
+            currentTime - this.selectableObjectsCacheTimestamp < 200) { // 200ms cache timeout
+            return this.selectableObjectsCache.get(cameraKey);
+        }
+
+        // Calculate viewport bounds
+        const canvas = this.canvasRenderer.canvas;
+        const viewportLeft = camera.x;
+        const viewportTop = camera.y;
+        const viewportRight = camera.x + canvas.width / camera.zoom;
+        const viewportBottom = camera.y + canvas.height / camera.zoom;
+
+        // Add padding for better UX (objects near edge should still be selectable)
+        const padding = 50;
+        const extendedLeft = viewportLeft - padding;
+        const extendedTop = viewportTop - padding;
+        const extendedRight = viewportRight + padding;
+        const extendedBottom = viewportBottom + padding;
+
+        // Get visible layer IDs
+        const visibleLayerIds = this.renderOperations.getVisibleLayerIds();
+
+        // Get all selectable objects from computeSelectableSet
+        const selectableSet = this.objectOperations.computeSelectableSet();
+
+        // Filter by viewport and visibility
+        const selectableInViewport = new Set();
+        selectableSet.forEach(objId => {
+            const obj = this.getCachedObject(objId);
+            if (!obj) return;
+
+            // In group edit mode, include ALL selectable objects (no viewport filtering)
+            // This ensures nested objects in groups can be selected even if outside viewport
+            if (this.objectOperations.isInGroupEditMode()) {
+                selectableInViewport.add(objId);
+            } else {
+                // Normal mode - check if object is in viewport
+                if (this.renderOperations.isObjectVisible(obj, extendedLeft, extendedTop, extendedRight, extendedBottom)) {
+                    selectableInViewport.add(objId);
+                }
+            }
+        });
+
+        // Cache the result
+        this.selectableObjectsCache.set(cameraKey, selectableInViewport);
+        this.selectableObjectsCacheTimestamp = currentTime;
+
+        // Clean old cache entries
+        if (this.selectableObjectsCache.size > 5) {
+            const oldestKey = this.selectableObjectsCache.keys().next().value;
+            this.selectableObjectsCache.delete(oldestKey);
+        }
+
+        return selectableInViewport;
+    }
+
+    /**
+     * Clear selectable objects cache
+     */
+    clearSelectableObjectsCache() {
+        this.selectableObjectsCache.clear();
+        this.selectableObjectsCacheTimestamp = 0;
+    }
+
+    /**
+     * Schedule cache invalidation (debounced for performance)
+     */
+    scheduleCacheInvalidation() {
+        if (this.cacheInvalidationTimeout) {
+            clearTimeout(this.cacheInvalidationTimeout);
+        }
+
+        this.cacheInvalidationTimeout = setTimeout(() => {
+            this.clearCaches();
+            this.clearSelectableObjectsCache();
+            this.cacheInvalidationTimeout = null;
+        }, 100); // Debounce cache invalidation by 100ms
     }
 
     /**
@@ -588,7 +763,7 @@ export class LevelEditor {
         // Auto-create Player Start if missing (but don't call updateAllPanels recursively)
         if (playerStartCount === 0) {
             console.log('[LEVEL STATS] No Player Start found, auto-creating...');
-            const playerStartObject = {
+            const playerStartObject = new GameObject({
                 name: 'Player Start',
                 type: 'player_start',
                 x: 0,
@@ -599,10 +774,13 @@ export class LevelEditor {
                 visible: true,
                 locked: false,
                 properties: {}
-            };
+            });
 
             this.level.addObject(playerStartObject);
             console.log('[LEVEL STATS] Player Start auto-created at (0,0)');
+
+            // Invalidate caches since new object was added
+            this.invalidateObjectCaches(playerStartObject.id);
 
             // Update history
             this.historyManager.saveState(this.level.objects, false);
@@ -911,7 +1089,20 @@ export class LevelEditor {
      * Utility methods
      */
     deepClone(obj) {
-        return JSON.parse(JSON.stringify(obj));
+        if (!obj) return null;
+
+        // For GameObject and Group instances, preserve the class structure
+        if (obj.type === 'group') {
+            const cloned = new Group({
+                ...obj,
+                children: obj.children ? obj.children.map(child => this.deepClone(child)) : []
+            });
+            return cloned;
+        } else {
+            // For regular GameObjects
+            const cloned = new GameObject(obj);
+            return cloned;
+        }
     }
 
     // Assign new unique ids recursively to object and its subtree
@@ -940,19 +1131,64 @@ export class LevelEditor {
     }
 
     deleteSelectedObjects() {
+        // Get selected objects before deletion for cache invalidation
+        const selectedObjects = this.stateManager.get('selectedObjects');
+        const objectsToDelete = Array.from(selectedObjects).map(id => this.findObjectById(id)).filter(Boolean);
+
         this.objectOperations.deleteSelectedObjects();
+
+        // Invalidate caches for deleted objects
+        objectsToDelete.forEach(obj => {
+            this.invalidateObjectCaches(obj.id);
+        });
+
+        // Schedule full cache invalidation since multiple objects were affected
+        this.scheduleCacheInvalidation();
     }
 
     duplicateSelectedObjects() {
         this.duplicateOperations.duplicateSelectedObjects();
+
+        // Note: Cache invalidation for duplicated objects is handled in DuplicateOperations.confirmPlacement()
+        // which calls invalidateObjectCaches for each new object
     }
 
     groupSelectedObjects() {
+        // Get selected objects before grouping for cache invalidation
+        const selectedObjects = this.stateManager.get('selectedObjects');
+        const objectsToGroup = Array.from(selectedObjects).map(id => this.findObjectById(id)).filter(Boolean);
+
         this.groupOperations.groupSelectedObjects();
+
+        // Invalidate caches for grouped objects
+        objectsToGroup.forEach(obj => {
+            this.invalidateObjectCaches(obj.id);
+        });
+
+        // Schedule full cache invalidation since hierarchy changed
+        this.scheduleCacheInvalidation();
     }
 
     ungroupSelectedObjects() {
+        // Get selected objects before ungrouping for cache invalidation
+        const selectedObjects = this.stateManager.get('selectedObjects');
+        const objectsToUngroup = Array.from(selectedObjects).map(id => this.findObjectById(id)).filter(Boolean);
+
         this.groupOperations.ungroupSelectedObjects();
+
+        // Invalidate caches for ungrouped objects and their children
+        objectsToUngroup.forEach(obj => {
+            this.invalidateObjectCaches(obj.id);
+            // Also invalidate caches for children if it's a group
+            if (obj.type === 'group' && obj.children) {
+                obj.children.forEach(child => {
+                    this.invalidateObjectCaches(child.id);
+                });
+            }
+        });
+
+        // Schedule full cache invalidation since hierarchy changed
+        this.scheduleCacheInvalidation();
     }
 
     /**
@@ -1214,30 +1450,39 @@ export class LevelEditor {
      * @returns {Object|null} Top-level object or null if not found
      */
     findTopLevelObject(objId) {
-        console.log('[DEBUG] findTopLevelObject called for:', objId);
+        if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+            Logger.layer.debug(`findTopLevelObject called for: ${objId}`);
+        }
 
         // First try to find as top-level object
         const topLevelObj = this.level.objects.find(obj => obj.id === objId);
         if (topLevelObj) {
-            console.log('[DEBUG] Found as top-level object:', { id: topLevelObj.id, layerId: topLevelObj.layerId });
+            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+                Logger.layer.debug(`Found as top-level object: ${topLevelObj.id}`);
+            }
             return topLevelObj;
         }
 
-        console.log('[DEBUG] Not found as top-level, searching in groups...');
+        if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+            Logger.layer.debug('Not found as top-level, searching in groups...');
+        }
 
         // If not found as top-level, search in groups recursively
         for (const obj of this.level.objects) {
             if (obj.type === 'group') {
-                console.log('[DEBUG] Checking group:', obj.id);
                 const found = this.findObjectInGroup(obj, objId);
                 if (found) {
-                    console.log('[DEBUG] Found in group:', { groupId: obj.id, groupLayerId: obj.layerId });
+                    if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+                        Logger.layer.debug(`Found in group: ${obj.id}`);
+                    }
                     return obj; // Return the top-level group that contains this object
                 }
             }
         }
 
-        console.log('[DEBUG] Object not found anywhere');
+        if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+            Logger.layer.debug(`Object not found anywhere: ${objId}`);
+        }
         return null;
     }
 
@@ -1339,73 +1584,185 @@ export class LevelEditor {
     assignSelectedObjectsToLayer(selectedObjects, moveUp, moveToExtreme) {
         let movedCount = 0;
         const processedGroups = new Set(); // Track groups that have already been processed
+        const layersSorted = this.level.getLayersSorted();
 
         if (moveToExtreme) {
             // Move all selected objects to first/last layer
             const targetLayerId = moveUp ?
-                this.level.getLayersSorted()[0]?.id :
-                this.level.getLayersSorted()[this.level.layers.length - 1]?.id;
+                layersSorted[0]?.id :
+                layersSorted[layersSorted.length - 1]?.id;
 
             if (!targetLayerId) {
                 Logger.layer.warn('No target layer found for extreme move');
                 return 0;
             }
 
-            console.log('[DEBUG] Moving to extreme layer:', targetLayerId);
+            // Batch process objects for better performance
+            const batchResults = this.batchProcessLayerAssignment(selectedObjects, targetLayerId, processedGroups);
+            movedCount = batchResults.movedCount;
 
-            selectedObjects.forEach(objId => {
-                const result = this.processObjectForLayerAssignment(objId, targetLayerId, processedGroups);
-                if (result.moved) {
-                    movedCount++;
-                    Logger.layer.debug(`Moved object/group ${objId} to layer ${targetLayerId}`);
-                }
-            });
+            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+                Logger.layer.debug(`Batch moved ${movedCount} objects to extreme layer ${targetLayerId}`);
+            }
         } else {
             // Move each object/group to adjacent layer based on its current effective layer
-            const layersSorted = this.level.getLayersSorted();
-            console.log('[DEBUG] Moving to adjacent layer, available layers:', layersSorted.map(l => ({ id: l.id, name: l.name })));
+            const batchResults = this.batchProcessAdjacentLayerAssignment(selectedObjects, layersSorted, moveUp, processedGroups);
+            movedCount = batchResults.movedCount;
 
-            selectedObjects.forEach(objId => {
-                const targetObj = this.findObjectById(objId);
-                if (!targetObj) {
-                    console.log('[DEBUG] Object not found:', objId);
-                    return;
-                }
-
-                // Get effective layer ID (considering inheritance from parent groups)
-                const currentEffectiveLayerId = this.renderOperations ?
-                    this.renderOperations.getEffectiveLayerId(targetObj) :
-                    (targetObj.layerId || this.level.getMainLayerId());
-                console.log('[DEBUG] Current effective layerId for', objId, ':', currentEffectiveLayerId);
-
-                const currentLayerIndex = layersSorted.findIndex(layer => layer.id === currentEffectiveLayerId);
-                if (currentLayerIndex === -1) {
-                    console.log('[DEBUG] Current effective layer not found in layers list');
-                    return;
-                }
-
-                const targetIndex = moveUp ? currentLayerIndex - 1 : currentLayerIndex + 1;
-                if (targetIndex < 0 || targetIndex >= layersSorted.length) {
-                    console.log('[DEBUG] Target index out of bounds');
-                    return;
-                }
-
-                const targetLayerId = layersSorted[targetIndex].id;
-                console.log('[DEBUG] Target layerId:', targetLayerId);
-
-                const result = this.processObjectForLayerAssignment(objId, targetLayerId, processedGroups);
-                if (result.moved) {
-                    movedCount++;
-                    Logger.layer.debug(`Moved object/group ${objId} to layer ${targetLayerId}`);
-                }
-            });
+            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+                Logger.layer.debug(`Batch moved ${movedCount} objects to adjacent layers`);
+            }
         }
+
+        // Invalidate caches after bulk operations
+        this.scheduleCacheInvalidation();
 
         return movedCount;
     }
 
     /**
-     * Process individual object for layer assignment
+     * Batch process layer assignment for multiple objects
+     * @param {Set} selectedObjects - Set of object IDs
+     * @param {string} targetLayerId - Target layer ID
+     * @param {Set} processedGroups - Set of processed groups
+     * @returns {Object} Results with movedCount
+     */
+    batchProcessLayerAssignment(selectedObjects, targetLayerId, processedGroups) {
+        let movedCount = 0;
+        const objectsToProcess = [];
+
+        // Pre-filter objects that need processing
+        selectedObjects.forEach(objId => {
+            const targetObj = this.getCachedObject(objId);
+            if (!targetObj) return;
+
+            // Check if object is already in target layer
+            const currentEffectiveLayerId = this.getCachedEffectiveLayerId(targetObj);
+            if (currentEffectiveLayerId !== targetLayerId) {
+                objectsToProcess.push(objId);
+            }
+        });
+
+        // Process objects in batch
+        objectsToProcess.forEach(objId => {
+            const result = this.processObjectForLayerAssignmentOptimized(objId, targetLayerId, processedGroups);
+            if (result.moved) {
+                movedCount++;
+            }
+        });
+
+        return { movedCount };
+    }
+
+    /**
+     * Batch process adjacent layer assignment
+     * @param {Set} selectedObjects - Set of object IDs
+     * @param {Array} layersSorted - Sorted layers array
+     * @param {boolean} moveUp - Direction to move
+     * @param {Set} processedGroups - Set of processed groups
+     * @returns {Object} Results with movedCount
+     */
+    batchProcessAdjacentLayerAssignment(selectedObjects, layersSorted, moveUp, processedGroups) {
+        let movedCount = 0;
+        const objectsByTargetLayer = new Map();
+
+        // Group objects by their target layer for batch processing
+        selectedObjects.forEach(objId => {
+            const targetObj = this.getCachedObject(objId);
+            if (!targetObj) return;
+
+            const currentEffectiveLayerId = this.getCachedEffectiveLayerId(targetObj);
+            const currentLayerIndex = layersSorted.findIndex(layer => layer.id === currentEffectiveLayerId);
+            if (currentLayerIndex === -1) return;
+
+            const targetIndex = moveUp ? currentLayerIndex - 1 : currentLayerIndex + 1;
+            if (targetIndex < 0 || targetIndex >= layersSorted.length) return;
+
+            const targetLayerId = layersSorted[targetIndex].id;
+
+            if (!objectsByTargetLayer.has(targetLayerId)) {
+                objectsByTargetLayer.set(targetLayerId, []);
+            }
+            objectsByTargetLayer.get(targetLayerId).push(objId);
+        });
+
+        // Process each group of objects going to the same layer
+        objectsByTargetLayer.forEach((objIds, targetLayerId) => {
+            objIds.forEach(objId => {
+                const result = this.processObjectForLayerAssignmentOptimized(objId, targetLayerId, processedGroups);
+                if (result.moved) {
+                    movedCount++;
+                }
+            });
+        });
+
+        return { movedCount };
+    }
+
+    /**
+     * Optimized version of processObjectForLayerAssignment for batch operations
+     * @param {string} objId - Object ID to process
+     * @param {string} targetLayerId - Target layer ID
+     * @param {Set} processedGroups - Set of already processed groups
+     * @returns {Object} Result with moved flag and target object info
+     */
+    processObjectForLayerAssignmentOptimized(objId, targetLayerId, processedGroups) {
+        // Use cached object lookup
+        const targetObj = this.getCachedObject(objId);
+        if (!targetObj) {
+            return { moved: false };
+        }
+
+        // Use cached effective layer ID
+        const currentEffectiveLayerId = this.getCachedEffectiveLayerId(targetObj);
+        if (currentEffectiveLayerId === targetLayerId) {
+            return { moved: false };
+        }
+
+        // Use cached top-level object lookup
+        const topLevelObj = this.getCachedTopLevelObject(objId);
+        if (!topLevelObj) {
+            return { moved: false };
+        }
+
+        // If we've already processed this top-level object, skip it
+        if (processedGroups.has(topLevelObj.id)) {
+            return { moved: false };
+        }
+
+        processedGroups.add(topLevelObj.id);
+
+        // Get the old effective layer ID for notifications (use cache)
+        const oldEffectiveLayerId = this.getCachedEffectiveLayerId(topLevelObj);
+
+        // Change layerId of the top-level object
+        const oldLayerId = topLevelObj.layerId;
+        topLevelObj.layerId = targetLayerId;
+
+        // Invalidate cache for this object since layerId changed
+        this.invalidateObjectCaches(topLevelObj.id);
+
+        // Notify StateManager about object property change
+        this.stateManager.notifyListeners('objectPropertyChanged', topLevelObj, {
+            property: 'layerId',
+            oldValue: oldLayerId,
+            newValue: targetLayerId
+        });
+
+        // Notify about layer objects count changes (optimized - batch these updates)
+        if (oldEffectiveLayerId && oldEffectiveLayerId !== targetLayerId) {
+            const oldCount = this.level.getLayerObjectsCount(oldEffectiveLayerId);
+            this.level.notifyLayerObjectsCountChange(oldEffectiveLayerId, oldCount, oldCount - 1);
+
+            const newCount = this.level.getLayerObjectsCount(targetLayerId);
+            this.level.notifyLayerObjectsCountChange(targetLayerId, newCount, newCount + 1);
+        }
+
+        return { moved: true, targetObj: topLevelObj };
+    }
+
+    /**
+     * Process individual object for layer assignment (legacy version)
      * @param {string} objId - Object ID to process
      * @param {string} targetLayerId - Target layer ID
      * @param {Set} processedGroups - Set of already processed groups
@@ -1422,20 +1779,26 @@ export class LevelEditor {
             this.renderOperations.getEffectiveLayerId(targetObj) :
             (targetObj.layerId || this.level.getMainLayerId());
         if (currentEffectiveLayerId === targetLayerId) {
-            console.log('[DEBUG] Object already in target layer:', objId);
+            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+                Logger.layer.debug(`Object already in target layer: ${objId}`);
+            }
             return { moved: false };
         }
 
         // Find the top-level object (could be a group containing this object)
         const topLevelObj = this.findTopLevelObject(objId);
         if (!topLevelObj) {
-            console.log('[DEBUG] Could not find top-level object for:', objId);
+            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+                Logger.layer.debug(`Could not find top-level object for: ${objId}`);
+            }
             return { moved: false };
         }
 
         // If we've already processed this top-level object, skip it
         if (processedGroups.has(topLevelObj.id)) {
-            console.log('[DEBUG] Top-level object already processed:', topLevelObj.id);
+            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+                Logger.layer.debug(`Top-level object already processed: ${topLevelObj.id}`);
+            }
             return { moved: false };
         }
 
@@ -1450,7 +1813,9 @@ export class LevelEditor {
         const oldLayerId = topLevelObj.layerId;
         topLevelObj.layerId = targetLayerId;
 
-        console.log('[DEBUG] CHANGED layerId for top-level object', topLevelObj.id, 'from', oldLayerId, 'to', targetLayerId);
+        if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+            Logger.layer.debug(`Changed layerId for top-level object ${topLevelObj.id} from ${oldLayerId} to ${targetLayerId}`);
+        }
 
         // Notify StateManager about object property change
         this.stateManager.notifyListeners('objectPropertyChanged', topLevelObj, {
@@ -1476,28 +1841,34 @@ export class LevelEditor {
      * @returns {boolean} true if all conditions are met
      */
     canMoveObjectsToLayer() {
-        console.log('[DEBUG] canMoveObjectsToLayer called');
+        if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+            Logger.layer.debug('canMoveObjectsToLayer called');
+        }
 
         // Condition 1: Selected objects list is not empty
         const selectedObjects = this.stateManager.get('selectedObjects');
-        console.log('[DEBUG] Selected objects:', selectedObjects);
 
         if (!selectedObjects || selectedObjects.size === 0) {
-            console.log('[DEBUG] Condition 1 failed: No selected objects');
+            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+                Logger.layer.debug('Condition 1 failed: No selected objects');
+            }
             return false;
         }
 
         // Condition 2: No active duplication (the only action we check for)
         const duplicate = this.stateManager.get('duplicate');
-        console.log('[DEBUG] Duplicate state:', duplicate);
 
         if (duplicate && duplicate.isActive) {
-            console.log('[DEBUG] Condition 2 failed: Duplication active');
+            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+                Logger.layer.debug('Condition 2 failed: Duplication active');
+            }
             Logger.layer.warn('Cannot move objects while duplication is active');
             return false;
         }
 
-        console.log('[DEBUG] All conditions passed');
+        if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+            Logger.layer.debug('All conditions passed');
+        }
         return true;
     }
 

@@ -1,4 +1,5 @@
 import { BaseModule } from './BaseModule.js';
+import { Group } from '../models/Group.js';
 
 /**
  * Group Operations module for LevelEditor
@@ -20,9 +21,8 @@ export class GroupOperations extends BaseModule {
             const bounds = this.editor.objectOperations.getSelectionBounds(selectedTopLevelObjects);
             const mainLayerId = this.editor.level.getMainLayerId();
 
-            const newGroup = {
+            const newGroup = new Group({
                 name: "New Group",
-                type: 'group',
                 x: bounds.minX,
                 y: bounds.minY,
                 visible: true,
@@ -30,7 +30,7 @@ export class GroupOperations extends BaseModule {
                 // TEMPORARILY COMMENTED OUT: layerId: mainLayerId, // Assign to Main layer
                 layerId: selectedTopLevelObjects[0]?.layerId || mainLayerId, // Use first selected object's layer or Main
                 children: []
-            };
+            });
             
             const idsToRemove = new Set();
             selectedTopLevelObjects.forEach(obj => {

@@ -1,3 +1,5 @@
+import { GameObject } from './GameObject.js';
+
 /**
  * Asset definition for the asset library
  */
@@ -23,7 +25,7 @@ export class Asset {
      * Create a game object instance from this asset
      */
     createInstance(x = 0, y = 0) {
-        const instance = {
+        const instanceData = {
             id: `obj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             name: this.name,
             type: this.type,
@@ -39,7 +41,8 @@ export class Asset {
             properties: { ...this.properties }
         };
 
-        return instance;
+        // Create proper GameObject instance instead of plain object
+        return new GameObject(instanceData);
     }
 
     /**

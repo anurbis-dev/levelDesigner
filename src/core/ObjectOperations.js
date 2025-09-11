@@ -11,7 +11,7 @@ export class ObjectOperations extends BaseModule {
      * Object manipulation methods
      */
     findObjectAtPoint(x, y) {
-        // In group edit mode, search through all objects including nested ones
+        // In group edit mode, search through all objects including nested ones (no viewport filtering)
         if (this.isInGroupEditMode()) {
             const groupEditMode = this.getGroupEditMode();
            const openGroups = Array.isArray(groupEditMode.openGroups) ? groupEditMode.openGroups : (groupEditMode.group ? [groupEditMode.group] : []);
@@ -23,25 +23,27 @@ export class ObjectOperations extends BaseModule {
            for (const grp of [...allGroups].reverse()) {
                if (this.isPointInObject(x, y, grp)) return grp;
            }
-           
+
            // 2) External objects (not in any open group)
            const externalObjects = this.editor.level.objects.filter(o => o.type !== 'group' && selectable.has(o.id));
            for (const obj of [...externalObjects].reverse()) {
                if (this.isPointInObject(x, y, obj)) return obj;
            }
-           
-           // 3) Then descendants of the deepest open group
+
+           // 3) Then descendants of the deepest open group (check ALL descendants, not just those in viewport)
            const activeGroup = openGroups.length > 0 ? openGroups[openGroups.length - 1] : null;
            if (activeGroup) {
                const collect = (g) => {
                    const res = [];
                    g.children.forEach(ch => {
-                       res.push(ch);
+                       if (selectable.has(ch.id)) {
+                           res.push(ch);
+                       }
                        if (ch.type === 'group') res.push(...collect(ch));
                    });
                    return res;
                };
-               const descendants = collect(activeGroup).filter(o => selectable.has(o.id));
+               const descendants = collect(activeGroup);
                for (const obj of [...descendants].reverse()) {
                    if (this.isPointInObject(x, y, obj)) return obj;
                }
@@ -49,15 +51,17 @@ export class ObjectOperations extends BaseModule {
            return null;
        }
 
-       // Normal mode - hit-test groups first (highest priority) among top-level
-       const selectable = this.computeSelectableSet();
-       const topLevelGroups = this.editor.level.objects.filter(o => o.type === 'group' && selectable.has(o.id));
+       // Normal mode - use viewport optimization
+       const selectableInViewport = this.editor.getSelectableObjectsInViewport();
+
+       // Hit-test groups first (highest priority) among top-level - only those in viewport
+       const topLevelGroups = this.editor.level.objects.filter(o => o.type === 'group' && selectableInViewport.has(o.id));
        for (const grp of [...topLevelGroups].reverse()) {
            if (this.isPointInObject(x, y, grp)) return grp;
        }
 
-       // Then hit-test top-level non-group objects
-       const topLevelObjects = this.editor.level.objects.filter(o => o.type !== 'group' && selectable.has(o.id));
+       // Then hit-test top-level non-group objects - only those in viewport
+       const topLevelObjects = this.editor.level.objects.filter(o => o.type !== 'group' && selectableInViewport.has(o.id));
        for (const obj of [...topLevelObjects].reverse()) {
            if (this.isPointInObject(x, y, obj)) {
                return obj;

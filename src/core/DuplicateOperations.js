@@ -1,5 +1,7 @@
 import { BaseModule } from './BaseModule.js';
 import { Logger } from '../utils/Logger.js';
+import { GameObject } from '../models/GameObject.js';
+import { Group } from '../models/Group.js';
 
 /**
  * Duplicate Operations module
@@ -10,7 +12,13 @@ export class DuplicateOperations extends BaseModule {
     // Remove helper fields recursively and ensure visibility defaults
     _sanitizeForPlacement(obj) {
         if (!obj) return obj;
-        const cleaned = { ...obj };
+
+        // Create new instance to avoid modifying original
+        const cleaned = obj.type === 'group' ?
+            new Group(obj) :
+            new GameObject(obj);
+
+        // Clean up temporary properties
         delete cleaned._offsetX;
         delete cleaned._offsetY;
 
@@ -176,9 +184,15 @@ export class DuplicateOperations extends BaseModule {
             }
 
             newIds.add(base.id);
+
+            // Invalidate caches for the new object
+            this.editor.invalidateObjectCaches(base.id);
         });
 
         Logger.duplicate.start('Placing', duplicate.objects.length, 'objects');
+
+        // Schedule full cache invalidation since multiple objects were added
+        this.editor.scheduleCacheInvalidation();
 
         // Use the same reset method as cancel for consistency
         this.cancel();

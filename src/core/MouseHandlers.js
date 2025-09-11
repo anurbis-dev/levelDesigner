@@ -22,7 +22,7 @@ export class MouseHandlers extends BaseModule {
         const mouse = this.getMouseState();
         
         if (e.button === 2) { // Right mouse button
-            console.log('[MouseHandlers] Right mouse down at:', e.clientX, e.clientY);
+            Logger.mouse.debug('Right mouse down at:', e.clientX, e.clientY);
             this.editor.stateManager.update({
                 'mouse.isRightDown': true,
                 'mouse.lastX': e.clientX,
@@ -89,10 +89,7 @@ export class MouseHandlers extends BaseModule {
 
                 // If moved more than 3 pixels, consider this panning (reduced threshold)
                 if (distanceFromStart > 3 && !mouse.wasPanning) {
-                    console.log('[MouseHandlers] Panning detected!');
-                    console.log('[MouseHandlers] Start pos:', mouse.rightClickStartX, mouse.rightClickStartY);
-                    console.log('[MouseHandlers] Current pos:', e.clientX, e.clientY);
-                    console.log('[MouseHandlers] Distance:', distanceFromStart);
+                    Logger.mouse.debug('Panning detected! Distance:', distanceFromStart);
                     shouldUpdatePanningFlag = true;
                 }
             }
@@ -107,7 +104,7 @@ export class MouseHandlers extends BaseModule {
 
             if (shouldUpdatePanningFlag) {
                 stateUpdate['mouse.wasPanning'] = true;
-                console.log('[MouseHandlers] Set wasPanning = true');
+                Logger.mouse.debug('Set wasPanning = true');
             }
 
             this.editor.stateManager.update(stateUpdate);
@@ -166,8 +163,7 @@ export class MouseHandlers extends BaseModule {
         const mouse = this.editor.stateManager.get('mouse');
         
         if (e.button === 2) {
-            console.log('[MouseHandlers] Right mouse up at:', e.clientX, e.clientY);
-            console.log('[MouseHandlers] Was panning:', mouse.wasPanning);
+            Logger.mouse.debug('Right mouse up, was panning:', mouse.wasPanning);
 
             // Don't reset wasPanning immediately - let contextmenu handler do it
             // This prevents race condition between mouseup and contextmenu events
@@ -230,16 +226,16 @@ export class MouseHandlers extends BaseModule {
                 
                 // MODIFICATION: Calculate group bounds EXCLUDING dragged objects.
                 const bounds = this.editor.objectOperations.getObjectWorldBounds(groupEditMode.group, Array.from(selectedIds));
-                Logger.mouse.debug('Group bounds (excluding dragged objects):', bounds);
-                
+
                 const selected = Array.from(selectedIds)
                     .map(id => this.editor.level.findObjectById(id))
                     .filter(Boolean);
-                Logger.mouse.debug('Selected objects:', selected.length);
+
+                // Process each selected object for potential move out of group
+                let movedObjectsCount = 0;
                 selected.forEach(obj => {
                     // Only consider direct children of the edited group
                     const isChild = this.editor.objectOperations.isObjectInGroup(obj, groupEditMode.group);
-                    Logger.mouse.debug(`Object ${obj.id} is child:`, isChild);
                     if (isChild) {
                         // Get current world position and bounds of the object
                         const groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
@@ -247,7 +243,7 @@ export class MouseHandlers extends BaseModule {
                         const worldY = groupPos.y + obj.y;
                         const objWidth = obj.width || 32;
                         const objHeight = obj.height || 32;
-                        
+
                         // Object bounds in world coordinates
                         const objBounds = {
                             minX: worldX,
@@ -255,40 +251,33 @@ export class MouseHandlers extends BaseModule {
                             maxX: worldX + objWidth,
                             maxY: worldY + objHeight
                         };
-                        
-                        Logger.mouse.debug(`Object bounds:`, objBounds);
-                        Logger.mouse.debug(`Group bounds:`, bounds);
-                        
+
                         // Check if object bounds intersect with group bounds
-                        const hasIntersection = objBounds.minX < bounds.maxX && 
-                                              objBounds.maxX > bounds.minX && 
-                                              objBounds.minY < bounds.maxY && 
+                        const hasIntersection = objBounds.minX < bounds.maxX &&
+                                              objBounds.maxX > bounds.minX &&
+                                              objBounds.minY < bounds.maxY &&
                                               objBounds.maxY > bounds.minY;
-                        
-                        const outside = !hasIntersection;
-                        Logger.mouse.debug(`Object intersects with group:`, hasIntersection);
-                        Logger.mouse.debug(`Object should be moved out:`, outside);
-                        if (outside) {
-                            Logger.mouse.debug(`Moving object ${obj.id} out of group`);
-                            // Remove from group's children
+
+                        if (!hasIntersection) {
+                            // Move object out of group
                             groupEditMode.group.children = groupEditMode.group.children.filter(c => c.id !== obj.id);
-                            // Add to main level at world coordinates
                             obj.x = worldX;
                             obj.y = worldY;
                             this.editor.level.objects.push(obj);
-                            
-                            // Check if the specific group became empty and remove it
-                            console.log(`[MOUSE HANDLERS DEBUG] 🖱️ Object dragged out of group: ${groupEditMode.group.name} (ID: ${groupEditMode.group.id})`);
-                            const groupWasRemoved = this.editor.groupOperations.removeEmptyGroup(groupEditMode.group);
-                            if (groupWasRemoved) {
-                                console.log(`[MOUSE HANDLERS DEBUG] ✅ Group was removed after drag & drop`);
-                                this.editor.updateAllPanels();
-                            } else {
-                                console.log(`[MOUSE HANDLERS DEBUG] ❌ Group was NOT removed after drag & drop`);
-                            }
+                            movedObjectsCount++;
                         }
                     }
                 });
+
+                // Log summary and check if group became empty
+                if (movedObjectsCount > 0) {
+                    Logger.mouse.debug(`Moved ${movedObjectsCount} objects out of group: ${groupEditMode.group.name}`);
+                    const groupWasRemoved = this.editor.groupOperations.removeEmptyGroup(groupEditMode.group);
+                    if (groupWasRemoved) {
+                        Logger.mouse.debug('Group was removed after drag & drop');
+                        this.editor.updateAllPanels();
+                    }
+                }
             }
             
             if (mouse.isPlacingObjects) {
@@ -654,35 +643,36 @@ export class MouseHandlers extends BaseModule {
         const selectedObjects = new Set(this.editor.stateManager.get('selectedObjects'));
 
         if (this.isInGroupEditMode()) {
+            // In group edit mode, check ALL descendants without viewport filtering
             const groupEditMode = this.getGroupEditMode();
-            // In group edit mode, limit selection to descendants of the edited group
+            const selectable = this.editor.objectOperations.computeSelectableSet();
+
+            // Collect all descendants of the edited group
             const collect = (g) => {
                 const res = [];
                 g.children.forEach(ch => {
-                    res.push(ch);
+                    if (selectable.has(ch.id)) {
+                        res.push(ch);
+                    }
                     if (ch.type === 'group') res.push(...collect(ch));
                 });
                 return res;
             };
             const candidates = collect(groupEditMode.group);
-            const selectableObjects = this.editor.objectOperations.computeSelectableSet();
 
             candidates.forEach(obj => {
-                // Only select if object is in selectable set and intersects with marquee
-                if (selectableObjects.has(obj.id)) {
-                    const bounds = this.editor.objectOperations.getObjectWorldBounds(obj);
-                    if (marquee.x < bounds.maxX && marquee.x + marquee.width > bounds.minX &&
-                        marquee.y < bounds.maxY && marquee.y + marquee.height > bounds.minY) {
-                        selectedObjects.add(obj.id);
-                    }
+                const bounds = this.editor.objectOperations.getObjectWorldBounds(obj);
+                if (marquee.x < bounds.maxX && marquee.x + marquee.width > bounds.minX &&
+                    marquee.y < bounds.maxY && marquee.y + marquee.height > bounds.minY) {
+                    selectedObjects.add(obj.id);
                 }
             });
         } else {
-            // Normal mode - select visible objects on main level only
-            const selectableObjects = this.editor.objectOperations.computeSelectableSet();
-            this.editor.level.objects.forEach(obj => {
-                // Only select if object is in selectable set and intersects with marquee
-                if (selectableObjects.has(obj.id)) {
+            // Normal mode - use viewport optimization for better performance
+            const selectableInViewport = this.editor.getSelectableObjectsInViewport();
+            selectableInViewport.forEach(objId => {
+                const obj = this.editor.getCachedObject(objId);
+                if (obj) {
                     const bounds = this.editor.objectOperations.getObjectWorldBounds(obj);
                     if (marquee.x < bounds.maxX && marquee.x + marquee.width > bounds.minX &&
                         marquee.y < bounds.maxY && marquee.y + marquee.height > bounds.minY) {

@@ -44,26 +44,36 @@ export class Level {
      * Add object to level
      */
     addObject(obj) {
+        // Ensure obj is a proper GameObject or Group instance
+        let properObj = obj;
+        if (!(obj instanceof GameObject) && !(obj instanceof Group)) {
+            if (obj.type === 'group') {
+                properObj = new Group(obj);
+            } else {
+                properObj = new GameObject(obj);
+            }
+        }
+
         // Only assign ID if not already set (for groups created elsewhere)
-        if (!obj.id) {
-            obj.id = this.nextObjectId++;
+        if (!properObj.id) {
+            properObj.id = this.nextObjectId++;
         }
 
         // Assign to Main layer by default (first layer, protected from deletion)
         // Only if layerId is not already set
-        if (!obj.layerId) {
+        if (!properObj.layerId) {
             const mainLayerId = this.getMainLayerId();
             if (mainLayerId) {
-                obj.layerId = mainLayerId;
+                properObj.layerId = mainLayerId;
             }
         }
 
-        this.objects.push(obj);
-        
+        this.objects.push(properObj);
+
         // Notify about layer objects count change
-        if (obj.layerId) {
-            const newCount = this.getLayerObjectsCount(obj.layerId);
-            this.notifyLayerObjectsCountChange(obj.layerId, newCount, newCount - 1);
+        if (properObj.layerId) {
+            const newCount = this.getLayerObjectsCount(properObj.layerId);
+            this.notifyLayerObjectsCountChange(properObj.layerId, newCount, newCount - 1);
         }
 
         // Ensure all objects have valid layer references

@@ -14,7 +14,18 @@ export class Group extends GameObject {
      * Add child object to group
      */
     addChild(child) {
-        this.children.push(child);
+        // Ensure child is a proper GameObject or Group instance
+        let properChild = child;
+        if (!(child instanceof GameObject)) {
+            if (child.type === 'group') {
+                // Create Group instance without circular dependency
+                properChild = Object.assign(Object.create(Group.prototype), child);
+                properChild.children = child.children || [];
+            } else {
+                properChild = new GameObject(child);
+            }
+        }
+        this.children.push(properChild);
     }
 
     /**

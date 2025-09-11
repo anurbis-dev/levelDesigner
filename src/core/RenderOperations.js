@@ -96,21 +96,19 @@ export class RenderOperations extends BaseModule {
         // Draw placing objects (duplicates) BEFORE restoreCamera() (world space)
         const duplicate = this.editor.stateManager.get('duplicate');
         if (duplicate && duplicate.isActive && Array.isArray(duplicate.objects) && duplicate.objects.length > 0) {
-            // Log only once per duplicate session
+            // Log only once per duplicate session (optimized to reduce console spam)
             if (!this._lastRenderState || this._lastRenderState !== 'drawing') {
                 Logger.render.debug('Drawing duplicate objects:', duplicate.objects.length);
-                Logger.render.debug('Camera position:', { x: camera.x, y: camera.y, zoom: camera.zoom });
                 this._lastRenderState = 'drawing';
             }
             this.drawDuplicateObjects(duplicate.objects, camera);
         } else if (duplicate) {
-            // Log state change only when it changes
+            // Log state change only when it changes (optimized to reduce console spam)
             const currentState = `${duplicate.isActive}_${duplicate.objects?.length || 0}`;
             if (!this._lastRenderState || this._lastRenderState !== currentState) {
                 Logger.render.debug('Duplicate state changed:', {
                     isActive: duplicate.isActive,
-                    objectsLength: duplicate.objects?.length || 0,
-                    objectsType: Array.isArray(duplicate.objects) ? 'array' : typeof duplicate.objects
+                    objectsLength: duplicate.objects?.length || 0
                 });
                 this._lastRenderState = currentState;
             }
@@ -307,6 +305,8 @@ export class RenderOperations extends BaseModule {
         this.layerVisibilityCacheTimestamp = 0;
         // Also invalidate visible objects cache since layer visibility affects it
         this.visibleObjectsCache.clear();
+        // Invalidate selectable objects cache as well
+        this.editor.clearSelectableObjectsCache();
     }
 
     /**
@@ -699,28 +699,47 @@ export class RenderOperations extends BaseModule {
      * @returns {string} Effective layer ID
      */
     getEffectiveLayerId(obj) {
-        // If object has its own layerId, use it
-        if (obj.layerId) {
-            return obj.layerId;
+        // Use cached result if available
+        if (this.editor.effectiveLayerCache && this.editor.effectiveLayerCache.has(obj.id)) {
+            return this.editor.effectiveLayerCache.get(obj.id);
         }
 
-        // Try to find the object in the hierarchy and get parent's layerId
-        const findParentLayerId = (currentObj) => {
-            // Search recursively in all groups
-            for (const topLevelObj of this.editor.level.objects) {
-                if (topLevelObj.type === 'group') {
-                    const result = this.searchInGroupForLayerId(topLevelObj, currentObj);
-                    if (result) {
-                        return result;
-                    }
+        let effectiveLayerId;
+
+        // If object has its own layerId, use it
+        if (obj.layerId) {
+            effectiveLayerId = obj.layerId;
+        } else {
+            // Try to find the object in the hierarchy and get parent's layerId
+            effectiveLayerId = this.findParentLayerId(obj);
+        }
+
+        // Cache the result
+        if (this.editor.effectiveLayerCache) {
+            this.editor.effectiveLayerCache.set(obj.id, effectiveLayerId);
+        }
+
+        return effectiveLayerId;
+    }
+
+    /**
+     * Find parent layer ID for object without caching (internal method)
+     * @param {Object} obj - Object to find parent layer for
+     * @returns {string} Parent layer ID or main layer ID
+     */
+    findParentLayerId(obj) {
+        // Search recursively in all groups
+        for (const topLevelObj of this.editor.level.objects) {
+            if (topLevelObj.type === 'group') {
+                const result = this.searchInGroupForLayerId(topLevelObj, obj);
+                if (result) {
+                    return result;
                 }
             }
+        }
 
-            // If not found in any group, use main layer
-            return this.editor.level.getMainLayerId();
-        };
-
-        return findParentLayerId(obj);
+        // If not found in any group, use main layer
+        return this.editor.level.getMainLayerId();
     }
 
     /**

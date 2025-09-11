@@ -67,7 +67,7 @@ export class EventHandlers extends BaseModule {
                 const duplicate = this.editor.stateManager.get('duplicate');
                 const currentState = duplicate ? `${duplicate.isActive}_${duplicate.objects?.length || 0}` : 'null';
 
-                // Log only when duplicate state changes
+                // Log only when duplicate state changes (optimized to reduce console spam)
                 if (currentState !== lastDuplicateState) {
                     if (duplicate && duplicate.isActive) {
                         Logger.event.debug(`Render loop: Duplicate active, objects: ${duplicate.objects?.length || 0}`);
@@ -502,7 +502,12 @@ export class EventHandlers extends BaseModule {
 
         // Subscribe to camera changes - immediate render for responsive zoom
         this.editor.stateManager.subscribe('camera', () => {
-            Logger.event.debug('Camera changed, calling render');
+            // Only log camera changes in debug mode to avoid console spam
+            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+                Logger.event.debug('Camera changed, calling render');
+            }
+            // Invalidate selectable objects cache since camera changed
+            this.editor.clearSelectableObjectsCache();
             this.editor.render();
         });
     }
