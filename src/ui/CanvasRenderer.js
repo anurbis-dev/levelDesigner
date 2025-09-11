@@ -16,23 +16,50 @@ export class CanvasRenderer {
      */
     resizeCanvas() {
         const container = this.canvas.parentElement;
+        if (!container) {
+            console.warn('CanvasRenderer.resizeCanvas: No parent container found');
+            return;
+        }
+
         const rect = container.getBoundingClientRect();
-        
-        // Set canvas size to container size
-        this.canvas.width = rect.width;
-        this.canvas.height = rect.height;
-        
+
+        // Проверки на валидность размеров контейнера
+        if (!rect.width || !rect.height || rect.width <= 0 || rect.height <= 0) {
+            console.warn(`CanvasRenderer.resizeCanvas: Invalid container dimensions ${rect.width}x${rect.height}`);
+            return;
+        }
+
+        // Set canvas size to container size (минимум 1 пиксель для избежания ошибок)
+        const width = Math.max(1, Math.floor(rect.width));
+        const height = Math.max(1, Math.floor(rect.height));
+
+        this.canvas.width = width;
+        this.canvas.height = height;
+
         // Ensure canvas fills the container without scaling
-        this.canvas.style.width = rect.width + 'px';
-        this.canvas.style.height = rect.height + 'px';
+        this.canvas.style.width = width + 'px';
+        this.canvas.style.height = height + 'px';
         this.canvas.style.display = 'block';
         this.canvas.style.objectFit = 'none'; // Prevent scaling
+
+        Logger.canvas.debug(`Canvas resized to ${width}x${height}`);
     }
 
     /**
      * Clear canvas
      */
     clear() {
+        // Проверки на валидность canvas
+        if (!this.canvas || !this.ctx) {
+            console.warn('CanvasRenderer.clear: Canvas or context not available');
+            return;
+        }
+
+        if (!this.canvas.width || !this.canvas.height || this.canvas.width <= 0 || this.canvas.height <= 0) {
+            console.warn(`CanvasRenderer.clear: Invalid canvas dimensions ${this.canvas.width}x${this.canvas.height}`);
+            return;
+        }
+
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
 
@@ -40,6 +67,22 @@ export class CanvasRenderer {
      * Set camera transform
      */
     setCamera(camera) {
+        // Проверки на валидность camera
+        if (!camera) {
+            console.warn('CanvasRenderer.setCamera: Camera not provided');
+            return;
+        }
+
+        if (!camera.zoom || camera.zoom <= 0 || !isFinite(camera.zoom)) {
+            console.warn(`CanvasRenderer.setCamera: Invalid camera zoom ${camera.zoom}`);
+            return;
+        }
+
+        if (!this.ctx) {
+            console.warn('CanvasRenderer.setCamera: Context not available');
+            return;
+        }
+
         this.ctx.save();
         this.ctx.scale(camera.zoom, camera.zoom);
         this.ctx.translate(-camera.x, -camera.y);
@@ -49,6 +92,11 @@ export class CanvasRenderer {
      * Restore camera transform
      */
     restoreCamera() {
+        if (!this.ctx) {
+            console.warn('CanvasRenderer.restoreCamera: Context not available');
+            return;
+        }
+
         this.ctx.restore();
     }
 

@@ -17,16 +17,264 @@ export class RenderOperations extends BaseModule {
         // Layer visibility cache for performance
         this.visibleLayersCache = null;
         this.layerVisibilityCacheTimestamp = 0;
+
+        // Пространственный индекс для быстрого поиска объектов в области видимости
+        this.spatialIndex = new Map(); // levelId -> {grid, bounds, lastUpdate}
+        this.spatialGridSize = 256; // Размер ячейки пространственного индекса
+        this.isBuildingSpatialIndex = false; // Флаг для предотвращения повторного построения
+
+        // Кеш для разных уровней масштаба камеры
+        this.zoomLevelCache = new Map(); // zoom -> cachedObjects
+        this.lastZoomLevel = null;
     }
+
+    /**
+     * Построение пространственного индекса для быстрого поиска объектов
+     * O(N) - вызывается при изменении уровня или добавлении/удалении объектов
+     */
+    buildSpatialIndex() {
+        // Проверки на существование необходимых объектов
+        if (!this.editor || !this.editor.level || !this.editor.level.objects) {
+            Logger.render.warn('Cannot build spatial index: missing required objects');
+            return;
+        }
+
+        // Предотвращаем повторное построение индекса
+        if (this.isBuildingSpatialIndex) {
+            return;
+        }
+
+        this.isBuildingSpatialIndex = true;
+
+        const objects = this.editor.level?.objects || [];
+
+        // Создаем сетку для индексации
+        const grid = new Map(); // 'x,y' -> Set of objects
+
+        // Вычисляем границы всех объектов
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+        objects.forEach(obj => {
+            if (!obj.visible) {
+                return; // Тихо пропускаем невидимые объекты
+            }
+
+            // Получаем мировые границы объекта
+            const bounds = this.editor.objectOperations.getObjectWorldBounds(obj);
+
+            if (!bounds) {
+                return;
+            }
+
+            // Проверяем валидность границ
+            if (bounds.minX === bounds.maxX || bounds.minY === bounds.maxY) {
+                return;
+            }
+
+            // Проверяем на NaN или бесконечность
+            if (!isFinite(bounds.minX) || !isFinite(bounds.minY) || !isFinite(bounds.maxX) || !isFinite(bounds.maxY)) {
+                return;
+            }
+
+            // Проверяем на нулевые размеры
+            if (bounds.maxX <= bounds.minX || bounds.maxY <= bounds.minY) {
+                return;
+            }
+
+            minX = Math.min(minX, bounds.minX);
+            minY = Math.min(minY, bounds.minY);
+            maxX = Math.max(maxX, bounds.maxX);
+            maxY = Math.max(maxY, bounds.maxY);
+
+            // Добавляем объект во все ячейки сетки, которые он пересекает
+            const startGridX = Math.floor(bounds.minX / this.spatialGridSize);
+            const endGridX = Math.floor(bounds.maxX / this.spatialGridSize);
+            const startGridY = Math.floor(bounds.minY / this.spatialGridSize);
+            const endGridY = Math.floor(bounds.maxY / this.spatialGridSize);
+
+            // Убеждаемся, что объект попадает хотя бы в одну ячейку
+            let cellsAdded = 0;
+            for (let gridX = startGridX; gridX <= endGridX; gridX++) {
+                for (let gridY = startGridY; gridY <= endGridY; gridY++) {
+                    const key = `${gridX},${gridY}`;
+                    if (!grid.has(key)) {
+                        grid.set(key, new Set());
+                    }
+                    grid.get(key).add(obj);
+                    cellsAdded++;
+                }
+            }
+
+            // Если объект не попал ни в одну ячейку, добавляем в ближайшую
+            if (cellsAdded === 0) {
+                const centerX = (bounds.minX + bounds.maxX) / 2;
+                const centerY = (bounds.minY + bounds.maxY) / 2;
+                const gridX = Math.floor(centerX / this.spatialGridSize);
+                const gridY = Math.floor(centerY / this.spatialGridSize);
+                const key = `${gridX},${gridY}`;
+                if (!grid.has(key)) {
+                    grid.set(key, new Set());
+                }
+                grid.get(key).add(obj);
+                cellsAdded++;
+            }
+        });
+
+        // Сохраняем индекс
+        this.spatialIndex.set(levelId, {
+            grid,
+            bounds: { minX, minY, maxX, maxY },
+            lastUpdate: performance.now()
+        });
+
+        const totalGridCells = grid.size;
+
+        Logger.render.info(`Spatial index built: ${objects.length} objects, ${totalGridCells} grid cells`);
+
+        // Логируем только если есть проблемы
+        if (objects.length > 0 && totalGridCells === 0) {
+            Logger.render.warn(`Spatial index built but no grid cells created for ${objects.length} objects`);
+        }
+
+        this.isBuildingSpatialIndex = false;
+
+    }
+
+    /**
+     * Invalidate spatial index for a specific level or all levels
+     * @param {string} levelId - Level ID to invalidate, or null to invalidate all
+     */
+    invalidateSpatialIndex(levelId = null) {
+        if (levelId) {
+            this.spatialIndex.delete(levelId);
+        } else {
+            this.spatialIndex.clear();
+        }
+        this.isBuildingSpatialIndex = false; // Reset flag in case build was interrupted
+    }
+
+    /**
+     * Быстрый поиск объектов в области видимости с помощью пространственного индекса
+     * O(k) - где k - количество ячеек сетки в области видимости
+     */
+    getVisibleObjectsSpatial(camera) {
+        // Проверки на существование необходимых объектов
+        if (!this.editor || !this.editor.level || !this.editor.level.objects) {
+            return [];
+        }
+
+        if (!this.editor.canvasRenderer || !this.editor.canvasRenderer.canvas) {
+            return [];
+        }
+
+        const canvas = this.editor.canvasRenderer.canvas;
+
+        // Проверки на валидность canvas размеров
+        if (!canvas.width || !canvas.height || canvas.width <= 0 || canvas.height <= 0) {
+            return [];
+        }
+
+        if (!camera.zoom || camera.zoom <= 0) {
+            return [];
+        }
+
+        const levelId = this.editor.level?.id || 'default';
+        let spatialData = this.spatialIndex.get(levelId);
+
+        if (!spatialData) {
+            // Попытка автоматически построить индекс, если он не найден
+            try {
+                this.buildSpatialIndex();
+                spatialData = this.spatialIndex.get(levelId);
+                if (!spatialData) {
+                    return this.getVisibleObjectsRegular(camera);
+                }
+            } catch (error) {
+                return this.getVisibleObjectsRegular(camera);
+            }
+        }
+
+        const viewportLeft = camera.x;
+        const viewportTop = camera.y;
+        const viewportRight = camera.x + canvas.width / camera.zoom;
+        const viewportBottom = camera.y + canvas.height / camera.zoom;
+
+        // Добавляем padding
+        const padding = 100;
+        const extendedLeft = viewportLeft - padding;
+        const extendedTop = viewportTop - padding;
+        const extendedRight = viewportRight + padding;
+        const extendedBottom = viewportBottom + padding;
+
+        // Находим ячейки сетки, которые пересекают область видимости
+        const startGridX = Math.floor(extendedLeft / this.spatialGridSize);
+        const endGridX = Math.floor(extendedRight / this.spatialGridSize);
+        const startGridY = Math.floor(extendedTop / this.spatialGridSize);
+        const endGridY = Math.floor(extendedBottom / this.spatialGridSize);
+
+        // Собираем объекты из найденных ячеек
+        const candidates = new Set();
+
+        for (let gridX = startGridX; gridX <= endGridX; gridX++) {
+            for (let gridY = startGridY; gridY <= endGridY; gridY++) {
+                const key = `${gridX},${gridY}`;
+                const cellObjects = spatialData.grid.get(key);
+                if (cellObjects) {
+                    cellObjects.forEach(obj => candidates.add(obj));
+                }
+            }
+        }
+
+        // Фильтруем кандидаты по точным критериям видимости
+        const visibleLayerIds = this.getVisibleLayerIds();
+        const visibleObjects = Array.from(candidates).filter(obj => {
+            // Проверяем видимость слоя
+            const effectiveLayerId = this.getEffectiveLayerId(obj);
+            if (!visibleLayerIds.has(effectiveLayerId)) {
+                return false;
+            }
+
+            // Проверяем точную видимость в viewport
+            return this.isObjectVisible(obj, extendedLeft, extendedTop, extendedRight, extendedBottom);
+        });
+
+        return visibleObjects;
+    }
+
 
     /**
      * Render the canvas
      */
     render() {
-        if (!this.editor.level) return;
+        // Проверки на существование необходимых объектов
+        if (!this.editor || !this.editor.level || !this.editor.level.objects) {
+            return;
+        }
+
+        if (!this.editor.canvasRenderer || !this.editor.canvasRenderer.canvas) {
+            return;
+        }
+
+        if (!this.editor.stateManager) {
+            return;
+        }
         
         const camera = this.editor.stateManager.get('camera');
         const mouse = this.editor.stateManager.get('mouse');
+
+        if (!camera) {
+            return;
+        }
+
+        // Проверки на валидность canvas размеров и camera zoom
+        const canvas = this.editor.canvasRenderer.canvas;
+        if (!canvas.width || !canvas.height || canvas.width <= 0 || canvas.height <= 0) {
+            return;
+        }
+
+        if (!camera.zoom || camera.zoom <= 0) {
+            return;
+        }
         
         this.editor.canvasRenderer.clear();
         this.editor.canvasRenderer.setCamera(camera);
@@ -275,6 +523,12 @@ export class RenderOperations extends BaseModule {
      * @returns {Set<string>} Set of visible layer IDs
      */
     getVisibleLayerIds() {
+        // Проверки на существование необходимых объектов
+        if (!this.editor || !this.editor.level) {
+            Logger.render.warn('Cannot get visible layer IDs: level not available');
+            return new Set();
+        }
+
         if (this.visibleLayersCache &&
             performance.now() - this.layerVisibilityCacheTimestamp < this.cacheTimeout) {
             return this.visibleLayersCache;
@@ -312,19 +566,30 @@ export class RenderOperations extends BaseModule {
     /**
      * Get objects visible in the current viewport (frustum culling) with caching
      */
-    getVisibleObjects(camera) {
-        const currentTime = performance.now();
-        const cameraKey = `${camera.x.toFixed(1)},${camera.y.toFixed(1)},${camera.zoom.toFixed(2)}`;
-        
-        // Check cache first
-        if (this.visibleObjectsCache.has(cameraKey)) {
-            const cached = this.visibleObjectsCache.get(cameraKey);
-            if (currentTime - cached.timestamp < this.cacheTimeout) {
-                return cached.objects;
-            }
+    /**
+     * Обычный метод поиска видимых объектов (fallback)
+     */
+    getVisibleObjectsRegular(camera) {
+        // Проверки на существование необходимых объектов
+        if (!this.editor || !this.editor.level || !this.editor.level.objects) {
+            return [];
         }
-        
+
+        if (!this.editor.canvasRenderer || !this.editor.canvasRenderer.canvas) {
+            return [];
+        }
+
         const canvas = this.editor.canvasRenderer.canvas;
+
+        // Проверки на валидность canvas размеров
+        if (!canvas.width || !canvas.height || canvas.width <= 0 || canvas.height <= 0) {
+            return [];
+        }
+
+        if (!camera.zoom || camera.zoom <= 0) {
+            return [];
+        }
+
         const viewportLeft = camera.x;
         const viewportTop = camera.y;
         const viewportRight = camera.x + canvas.width / camera.zoom;
@@ -355,6 +620,50 @@ export class RenderOperations extends BaseModule {
             // Check if object is in viewport
             return this.isObjectVisible(obj, extendedLeft, extendedTop, extendedRight, extendedBottom);
         });
+
+        return visibleObjects;
+    }
+
+    getVisibleObjects(camera) {
+        // Проверки на существование необходимых объектов
+        if (!this.editor || !this.editor.level || !this.editor.level.objects) {
+            return [];
+        }
+
+        if (!this.editor.canvasRenderer || !this.editor.canvasRenderer.canvas) {
+            return [];
+        }
+
+        const canvas = this.editor.canvasRenderer.canvas;
+
+        // Проверки на валидность canvas размеров
+        if (!canvas.width || !canvas.height || canvas.width <= 0 || canvas.height <= 0) {
+            return [];
+        }
+
+        if (!camera.zoom || camera.zoom <= 0) {
+            return [];
+        }
+
+        const currentTime = performance.now();
+        const cameraKey = `${camera.x.toFixed(1)},${camera.y.toFixed(1)},${camera.zoom.toFixed(2)}`;
+
+        // Check cache first
+        if (this.visibleObjectsCache.has(cameraKey)) {
+            const cached = this.visibleObjectsCache.get(cameraKey);
+            if (currentTime - cached.timestamp < this.cacheTimeout) {
+                return cached.objects;
+            }
+        }
+
+        // Пытаемся использовать пространственный индекс для быстрого поиска
+        let visibleObjects;
+        try {
+            visibleObjects = this.getVisibleObjectsSpatial(camera);
+        } catch (error) {
+            Logger.render.warn('Spatial index search failed, falling back to regular method', error);
+            visibleObjects = this.getVisibleObjectsRegular(camera);
+        }
         
         // Cache the result
         this.visibleObjectsCache.set(cameraKey, {
@@ -525,7 +834,7 @@ export class RenderOperations extends BaseModule {
         if (!obj.visible) {
             return false;
         }
-
+        
         if (obj.type === 'group') {
             // For groups, check if any child is visible
             const result = obj.children && obj.children.some(child =>
@@ -538,7 +847,7 @@ export class RenderOperations extends BaseModule {
 
             return result;
         }
-
+        
         // Check if object bounds intersect with viewport
         const objLeft = obj.x;
         const objTop = obj.y;
@@ -714,6 +1023,17 @@ export class RenderOperations extends BaseModule {
      * @returns {string} Effective layer ID
      */
     getEffectiveLayerId(obj) {
+        // Проверки на существование необходимых объектов
+        if (!obj || !obj.id) {
+            Logger.render.warn('Cannot get effective layer ID: object or object.id not available');
+            return null;
+        }
+
+        if (!this.editor) {
+            Logger.render.warn('Cannot get effective layer ID: editor not available');
+            return null;
+        }
+
         // Use cached result if available
         if (this.editor.effectiveLayerCache && this.editor.effectiveLayerCache.has(obj.id)) {
             return this.editor.effectiveLayerCache.get(obj.id);
@@ -743,18 +1063,18 @@ export class RenderOperations extends BaseModule {
      * @returns {string} Parent layer ID or main layer ID
      */
     findParentLayerId(obj) {
-        // Search recursively in all groups
-        for (const topLevelObj of this.editor.level.objects) {
-            if (topLevelObj.type === 'group') {
+            // Search recursively in all groups
+            for (const topLevelObj of this.editor.level.objects) {
+                if (topLevelObj.type === 'group') {
                 const result = this.searchInGroupForLayerId(topLevelObj, obj);
-                if (result) {
-                    return result;
+                    if (result) {
+                        return result;
+                    }
                 }
             }
-        }
 
-        // If not found in any group, use main layer
-        return this.editor.level.getMainLayerId();
+            // If not found in any group, use main layer
+            return this.editor.level.getMainLayerId();
     }
 
     /**

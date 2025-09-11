@@ -8,6 +8,9 @@ import { GroupTraversalUtils } from '../utils/GroupTraversalUtils.js';
  */
 export class Level {
     constructor(data = {}) {
+        // Устанавливаем ID уровня для пространственного индекса
+        this.id = data.id || `level_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
         this.meta = {
             name: data.meta?.name || 'Untitled Level',
             version: data.meta?.version || 'dynamic',

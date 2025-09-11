@@ -36,7 +36,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.6.0';
+    static VERSION = '3.7.0';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -429,6 +429,10 @@ export class LevelEditor {
             // Перестраиваем индекс после очистки
             setTimeout(() => {
                 this.level.buildObjectsIndex();
+                // Также перестраиваем пространственный индекс для рендеринга
+                if (this.renderOperations) {
+                    this.renderOperations.buildSpatialIndex();
+                }
             }, 0);
             this.cacheInvalidationTimeout = null;
         }, 100); // Debounce cache invalidation by 100ms
@@ -543,9 +547,18 @@ export class LevelEditor {
         // Set up layer objects count change callback
         this.setupLayerObjectsCountTracking();
         
-        // Initial render
+        // Построение пространственного индекса ДО первого рендеринга
+        if (this.renderOperations) {
+            try {
+                this.renderOperations.buildSpatialIndex();
+            } catch (error) {
+                Logger.render.error('Failed to build spatial index:', error);
+            }
+        }
+
+        // Initial render (теперь индекс уже построен)
         this.render();
-        
+
         // Update version info in UI and page title
         this.updateVersionInfo();
         this.updatePageTitle();
@@ -1859,6 +1872,15 @@ export class LevelEditor {
 
         // Умная инвалидация кешей только для измененных объектов и слоев
         this.invalidateAfterLayerChanges(changedObjectIds, affectedLayers);
+
+        // При массовых изменениях слоев перестраиваем пространственный индекс
+        if (changedObjectIds.size > 10) {
+            setTimeout(() => {
+                if (this.renderOperations) {
+                    this.renderOperations.buildSpatialIndex();
+                }
+            }, 0);
+        }
 
         return movedCount;
     }

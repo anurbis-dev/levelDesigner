@@ -1,4 +1,4 @@
-# API Reference - 2D Level Editor v3.6.0
+# API Reference - 2D Level Editor v3.7.0
 
 ## Обзор
 
@@ -26,6 +26,9 @@
 - `LevelEditor.invalidateAfterLayerChanges()` - инвалидация после изменения слоев
 - `LevelEditor.invalidateAfterGroupOperations()` - инвалидация после групповых операций
 - `LevelEditor.invalidateAfterDuplicateOperations()` - инвалидация после дублирования
+- `RenderOperations.buildSpatialIndex()` - построение пространственного индекса для рендеринга
+- `RenderOperations.getVisibleObjectsSpatial()` - быстрый поиск видимых объектов через индекс
+- `RenderOperations.getObjectWorldBounds()` - расчет мировых границ объекта
 
 **Исправленные методы:**
 - `Asset.createInstance(x, y)` - возвращает `GameObject` вместо `Object`

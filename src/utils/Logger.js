@@ -87,6 +87,7 @@ export class Logger {
     static duplicate = {
         start: (message, ...args) => Logger.log('DUPLICATE', 'info', message, ...args),
         debug: (message, ...args) => Logger.log('DUPLICATE', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('DUPLICATE', 'warn', message, ...args),
         error: (message, ...args) => Logger.log('DUPLICATE', 'error', message, ...args)
     };
 
@@ -96,6 +97,8 @@ export class Logger {
     static render = {
         info: (message, ...args) => Logger.log('RENDER', 'info', message, ...args),
         debug: (message, ...args) => Logger.log('RENDER', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('RENDER', 'warn', message, ...args),
+        error: (message, ...args) => Logger.log('RENDER', 'error', message, ...args),
         performance: (message, ...args) => Logger.log('PERFORMANCE', 'info', message, ...args)
     };
 
@@ -105,6 +108,7 @@ export class Logger {
     static canvas = {
         info: (message, ...args) => Logger.log('CANVAS', 'info', message, ...args),
         debug: (message, ...args) => Logger.log('CANVAS', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('CANVAS', 'warn', message, ...args),
         error: (message, ...args) => Logger.log('CANVAS', 'error', message, ...args)
     };
 
@@ -113,7 +117,9 @@ export class Logger {
      */
     static mouse = {
         info: (message, ...args) => Logger.log('MOUSE', 'info', message, ...args),
-        debug: (message, ...args) => Logger.log('MOUSE', 'debug', message, ...args)
+        debug: (message, ...args) => Logger.log('MOUSE', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('MOUSE', 'warn', message, ...args),
+        error: (message, ...args) => Logger.log('MOUSE', 'error', message, ...args)
     };
 
     /**
@@ -122,6 +128,7 @@ export class Logger {
     static event = {
         info: (message, ...args) => Logger.log('EVENT', 'info', message, ...args),
         debug: (message, ...args) => Logger.log('EVENT', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('EVENT', 'warn', message, ...args),
         error: (message, ...args) => Logger.log('EVENT', 'error', message, ...args)
     };
 
@@ -130,7 +137,9 @@ export class Logger {
      */
     static group = {
         info: (message, ...args) => Logger.log('GROUP', 'info', message, ...args),
-        debug: (message, ...args) => Logger.log('GROUP', 'debug', message, ...args)
+        debug: (message, ...args) => Logger.log('GROUP', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('GROUP', 'warn', message, ...args),
+        error: (message, ...args) => Logger.log('GROUP', 'error', message, ...args)
     };
 
     /**
@@ -139,6 +148,7 @@ export class Logger {
     static state = {
         info: (message, ...args) => Logger.log('STATE', 'info', message, ...args),
         debug: (message, ...args) => Logger.log('STATE', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('STATE', 'warn', message, ...args),
         error: (message, ...args) => Logger.log('STATE', 'error', message, ...args)
     };
 
@@ -148,6 +158,7 @@ export class Logger {
     static file = {
         info: (message, ...args) => Logger.log('FILE', 'info', message, ...args),
         debug: (message, ...args) => Logger.log('FILE', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('FILE', 'warn', message, ...args),
         error: (message, ...args) => Logger.log('FILE', 'error', message, ...args)
     };
 
@@ -157,6 +168,7 @@ export class Logger {
     static asset = {
         info: (message, ...args) => Logger.log('ASSET', 'info', message, ...args),
         debug: (message, ...args) => Logger.log('ASSET', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('ASSET', 'warn', message, ...args),
         error: (message, ...args) => Logger.log('ASSET', 'error', message, ...args)
     };
 
@@ -165,7 +177,9 @@ export class Logger {
      */
     static ui = {
         info: (message, ...args) => Logger.log('UI', 'info', message, ...args),
-        debug: (message, ...args) => Logger.log('UI', 'debug', message, ...args)
+        debug: (message, ...args) => Logger.log('UI', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('UI', 'warn', message, ...args),
+        error: (message, ...args) => Logger.log('UI', 'error', message, ...args)
     };
 
     /**
@@ -287,6 +301,7 @@ export class Logger {
     static git = {
         info: (message, ...args) => Logger.log('GIT', 'info', message, ...args),
         debug: (message, ...args) => Logger.log('GIT', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('GIT', 'warn', message, ...args),
         error: (message, ...args) => Logger.log('GIT', 'error', message, ...args)
     };
 
@@ -296,6 +311,7 @@ export class Logger {
     static console = {
         info: (message, ...args) => Logger.log('CONSOLE', 'info', message, ...args),
         debug: (message, ...args) => Logger.log('CONSOLE', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('CONSOLE', 'warn', message, ...args),
         error: (message, ...args) => Logger.log('CONSOLE', 'error', message, ...args)
     };
 
@@ -305,6 +321,7 @@ export class Logger {
     static layout = {
         info: (message, ...args) => Logger.log('LAYOUT', 'info', message, ...args),
         debug: (message, ...args) => Logger.log('LAYOUT', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('LAYOUT', 'warn', message, ...args),
         error: (message, ...args) => Logger.log('LAYOUT', 'error', message, ...args)
     };
 
