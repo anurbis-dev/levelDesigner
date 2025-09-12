@@ -1041,7 +1041,18 @@ export class LevelEditor {
             const previousState = this.historyManager.undo();
             if (previousState) {
 
-                this.level.objects = previousState.objects;
+                // Properly restore objects from JSON using fromJSON methods to maintain class instances
+                this.level.objects = previousState.objects.map(objData => {
+                    if (objData.type === 'group') {
+                        return Group.fromJSON(objData);
+                    } else {
+                        return GameObject.fromJSON(objData);
+                    }
+                });
+
+                // Rebuild object index and caches after restoring objects
+                this.level.buildObjectsIndex();
+                this.level.rebuildLayerCountsCache();
 
                 // Ensure all restored objects have correct visibility
                 // Ensure all restored objects have correct visibility
@@ -1123,7 +1134,43 @@ export class LevelEditor {
     redo() {
         const nextState = this.historyManager.redo();
         if (nextState) {
-            this.level.objects = nextState.objects;
+            // Properly restore objects from JSON using fromJSON methods to maintain class instances
+            this.level.objects = nextState.objects.map(objData => {
+                if (objData.type === 'group') {
+                    return Group.fromJSON(objData);
+                } else {
+                    return GameObject.fromJSON(objData);
+                }
+            });
+
+            // Rebuild object index and caches after restoring objects
+            this.level.buildObjectsIndex();
+            this.level.rebuildLayerCountsCache();
+
+            // Ensure all restored objects have correct visibility
+            this.level.objects.forEach(obj => {
+                // Ensure object visibility is set correctly
+                // By default, all objects should be visible unless there's a specific reason to hide them
+                if (!obj.visible) {
+                    obj.visible = true;
+                }
+
+                // Special handling for groups - they should always be visible
+                if (obj.type === 'group') {
+                    if (!obj.visible) {
+                        obj.visible = true;
+                    }
+                }
+            });
+
+            // Force update of selectable set after visibility corrections
+            const selectableSetAfterCorrection = this.objectOperations.computeSelectableSet();
+
+            // Clear viewport selectable objects cache to ensure it gets recalculated
+            this.clearSelectableObjectsCache();
+
+            // Force recalculation of viewport selectable set
+            const viewportSelectableAfter = this.getSelectableObjectsInViewport();
 
             // Filter selection to only include objects that actually exist
             const validSelection = new Set();
