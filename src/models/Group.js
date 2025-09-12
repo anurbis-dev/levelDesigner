@@ -175,6 +175,10 @@ export class Group extends GameObject {
                 return GameObject.fromJSON(childData);
             }
         }) : [];
+
+        // Ensure layerId inheritance is applied after restoring from JSON
+        group.propagateLayerIdToChildren();
+
         return group;
     }
 }

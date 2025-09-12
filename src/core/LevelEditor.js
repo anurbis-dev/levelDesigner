@@ -265,6 +265,61 @@ export class LevelEditor {
     }
 
     /**
+     * Update group edit mode references after undo/redo restore
+     * @param {Array} previousSelection - Selection from the restored state
+     */
+    updateGroupEditModeAfterRestore(previousSelection) {
+        const groupEditMode = this.stateManager.get('groupEditMode');
+        if (!groupEditMode || !groupEditMode.isActive) {
+            return; // Not in group edit mode, nothing to update
+        }
+
+        // Check if the active group still exists in the restored level
+        const activeGroup = this.getCachedObject(groupEditMode.group.id);
+        if (!activeGroup || activeGroup.type !== 'group') {
+            // Active group no longer exists or is not a group, exit group edit mode
+            this.stateManager.set('groupEditMode', {
+                isActive: false,
+                group: null,
+                openGroups: []
+            });
+            return;
+        }
+
+        // Update references to point to restored objects
+        const updatedOpenGroups = groupEditMode.openGroups.map(oldGroup => {
+            const restoredGroup = this.getCachedObject(oldGroup.id);
+            return restoredGroup && restoredGroup.type === 'group' ? restoredGroup : null;
+        }).filter(group => group !== null);
+
+        // Update group edit mode state with restored object references
+        // Clear frozen frame state since object hierarchy may have changed
+        const updatedGroupEditMode = {
+            isActive: true,
+            group: activeGroup,
+            openGroups: updatedOpenGroups,
+            frameFrozen: false, // Clear frozen state after restore
+            frozenBounds: null   // Clear frozen bounds after restore
+        };
+
+        // Set _isEditing flag and originalChildren for all open groups (like in openGroupEditMode)
+        updatedOpenGroups.forEach(openGroup => {
+            openGroup._isEditing = true;
+            // Restore originalChildren if not set, or keep existing
+            if (!openGroup.originalChildren) {
+                openGroup.originalChildren = [...openGroup.children];
+            }
+        });
+
+        this.stateManager.set('groupEditMode', updatedGroupEditMode);
+
+        // Force update of group state (similar to opening/closing group)
+        // This ensures all internal group state is properly updated
+        this.render();
+        this.updateAllPanels();
+    }
+
+    /**
      * Schedule cache invalidation (debounced for performance)
      */
     /**
@@ -1054,6 +1109,39 @@ export class LevelEditor {
                 this.level.buildObjectsIndex();
                 this.level.rebuildLayerCountsCache();
 
+                // Rebuild spatial index for correct group bounds calculation
+                if (this.renderOperations) {
+                    this.renderOperations.buildSpatialIndex();
+                }
+
+            // Update group edit mode references to restored objects
+            this.updateGroupEditModeAfterRestore(previousState.selection);
+
+            // Force recalculation of group bounds for active group if in group edit mode
+        // This ensures the group frame displays correct boundaries immediately
+        const updatedGroupEditMode = this.stateManager.get('groupEditMode');
+        if (updatedGroupEditMode && updatedGroupEditMode.isActive && updatedGroupEditMode.group) {
+            // Force bounds recalculation by calling getObjectWorldBounds
+            const freshBounds = this.objectOperations.getObjectWorldBounds(updatedGroupEditMode.group);
+
+            // Update frozenBounds with fresh bounds to ensure immediate correct display
+            // (since drawGroupEditFrame uses frozenBounds when available)
+            const updatedState = this.stateManager.get('groupEditMode');
+            if (updatedState.frameFrozen === false) {
+                // If not frozen, we can update with fresh bounds for immediate display
+                updatedState.frozenBounds = freshBounds;
+                this.stateManager.set('groupEditMode', updatedState);
+            }
+        }
+
+                // Smart cache invalidation for all restored objects
+                const allRestoredObjectIds = new Set(this.level.objects.map(obj => obj.id));
+                this.smartCacheInvalidation({
+                    objectIds: allRestoredObjectIds,
+                    invalidateAll: true, // Since all objects were restored, invalidate everything
+                    reason: 'undo_restore'
+                });
+
                 // Ensure all restored objects have correct visibility
                 // Ensure all restored objects have correct visibility
                 this.level.objects.forEach(obj => {
@@ -1093,12 +1181,24 @@ export class LevelEditor {
                 return obj && obj.type === 'group';
             });
 
-            // Add all existing objects from previous selection
-            previousState.selection.forEach(id => {
-                if (objectIds.has(id)) {
-                    validSelection.add(id);
-                }
-            });
+            // In group edit mode, restore selection as-is from history
+            const currentGroupEditMode = this.stateManager.get('groupEditMode');
+            if (currentGroupEditMode && currentGroupEditMode.isActive && currentGroupEditMode.group) {
+                // In group edit mode, restore selection as-is from history
+                // The history should contain the correct selection for the group edit context
+                previousState.selection.forEach(id => {
+                    if (objectIds.has(id)) {
+                        validSelection.add(id);
+                    }
+                });
+            } else {
+                // Normal mode: include all existing objects from previous selection
+                previousState.selection.forEach(id => {
+                    if (objectIds.has(id)) {
+                        validSelection.add(id);
+                    }
+                });
+            }
 
             this.stateManager.set('selectedObjects', validSelection);
 
@@ -1147,6 +1247,39 @@ export class LevelEditor {
             this.level.buildObjectsIndex();
             this.level.rebuildLayerCountsCache();
 
+            // Rebuild spatial index for correct group bounds calculation
+            if (this.renderOperations) {
+                this.renderOperations.buildSpatialIndex();
+            }
+
+            // Update group edit mode references to restored objects
+            this.updateGroupEditModeAfterRestore(nextState.selection);
+
+            // Force recalculation of group bounds for active group if in group edit mode
+            // This ensures the group frame displays correct boundaries immediately
+            const updatedGroupEditMode = this.stateManager.get('groupEditMode');
+            if (updatedGroupEditMode && updatedGroupEditMode.isActive && updatedGroupEditMode.group) {
+                // Force bounds recalculation by calling getObjectWorldBounds
+                const freshBounds = this.objectOperations.getObjectWorldBounds(updatedGroupEditMode.group);
+
+                // Update frozenBounds with fresh bounds to ensure immediate correct display
+                // (since drawGroupEditFrame uses frozenBounds when available)
+                const updatedState = this.stateManager.get('groupEditMode');
+                if (updatedState.frameFrozen === false) {
+                    // If not frozen, we can update with fresh bounds for immediate display
+                    updatedState.frozenBounds = freshBounds;
+                    this.stateManager.set('groupEditMode', updatedState);
+                }
+            }
+
+            // Smart cache invalidation for all restored objects
+            const allRestoredObjectIds = new Set(this.level.objects.map(obj => obj.id));
+            this.smartCacheInvalidation({
+                objectIds: allRestoredObjectIds,
+                invalidateAll: true, // Since all objects were restored, invalidate everything
+                reason: 'redo_restore'
+            });
+
             // Ensure all restored objects have correct visibility
             this.level.objects.forEach(obj => {
                 // Ensure object visibility is set correctly
@@ -1176,12 +1309,24 @@ export class LevelEditor {
             const validSelection = new Set();
             const objectIds = new Set(this.level.objects.map(obj => obj.id));
 
-            // Add all existing objects from next selection
-            nextState.selection.forEach(id => {
-                if (objectIds.has(id)) {
-                    validSelection.add(id);
-                }
-            });
+            // In group edit mode, restore selection as-is from history
+            const currentGroupEditMode = this.stateManager.get('groupEditMode');
+            if (currentGroupEditMode && currentGroupEditMode.isActive && currentGroupEditMode.group) {
+                // In group edit mode, restore selection as-is from history
+                // The history should contain the correct selection for the group edit context
+                nextState.selection.forEach(id => {
+                    if (objectIds.has(id)) {
+                        validSelection.add(id);
+                    }
+                });
+            } else {
+                // Normal mode: include all existing objects from next selection
+                nextState.selection.forEach(id => {
+                    if (objectIds.has(id)) {
+                        validSelection.add(id);
+                    }
+                });
+            }
 
             this.stateManager.set('selectedObjects', validSelection);
             this.render();
