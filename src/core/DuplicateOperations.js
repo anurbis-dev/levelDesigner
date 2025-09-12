@@ -118,6 +118,9 @@ export class DuplicateOperations extends BaseModule {
             'duplicate.isAltDragMode': isAltDragMode
         });
 
+        // Selective cache invalidation for duplicate preview
+        this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
+
         // Immediate render to show preview
         this.editor.render();
 
@@ -136,6 +139,9 @@ export class DuplicateOperations extends BaseModule {
             'duplicate.basePosition': { x: worldPos.x, y: worldPos.y },
             'mouse.placingObjects': updatedObjects
         });
+
+        // Selective cache invalidation for duplicate preview update
+        this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
 
         this.editor.render();
     }

@@ -574,6 +574,42 @@ export class RenderOperations extends BaseModule {
     }
 
     /**
+     * Clear visible objects cache for current camera position
+     * More selective than clearing entire cache
+     */
+    clearVisibleObjectsCacheForCurrentCamera() {
+        if (!this.lastCameraState) return;
+
+        const camera = this.editor.stateManager.get('camera');
+        if (!camera) return;
+
+        const cameraKey = `${camera.x.toFixed(1)},${camera.y.toFixed(1)},${camera.zoom.toFixed(2)}`;
+        this.visibleObjectsCache.delete(cameraKey);
+    }
+
+    /**
+     * Clear visible objects cache for specific camera position
+     * @param {Object} camera - Camera state to clear cache for
+     */
+    clearVisibleObjectsCacheForCamera(camera) {
+        if (!camera) return;
+
+        const cameraKey = `${camera.x.toFixed(1)},${camera.y.toFixed(1)},${camera.zoom.toFixed(2)}`;
+        this.visibleObjectsCache.delete(cameraKey);
+    }
+
+    /**
+     * Invalidate spatial index for current level
+     * Call when object positions or structure changes
+     */
+    invalidateSpatialIndex() {
+        const levelId = this.editor?.level?.id || 'default';
+        this.spatialIndex.delete(levelId);
+        // Force rebuild on next access
+        this.isBuildingSpatialIndex = false;
+    }
+
+    /**
      * Get objects visible in the current viewport (frustum culling) with caching
      */
     /**

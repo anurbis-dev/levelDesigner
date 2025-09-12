@@ -73,6 +73,20 @@ export class GroupOperations extends BaseModule {
             // Clear the old selection and select only the new group
             this.editor.stateManager.set('selectedObjects', new Set([newGroup.id]));
 
+            // Selective cache invalidation to prevent coordinate glitches
+            // Clear effective layer cache for all affected objects
+            selectedTopLevelObjects.forEach(obj => {
+                this.editor.renderOperations.clearEffectiveLayerCacheForObject(obj.id);
+            });
+            // Clear cache for new group as well
+            this.editor.renderOperations.clearEffectiveLayerCacheForObject(newGroup.id);
+
+            // Clear visible objects cache only for current camera position
+            this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
+
+            // Invalidate spatial index since structure changed
+            this.editor.renderOperations.invalidateSpatialIndex();
+
             // Refresh all UI panels and redraw the canvas
             this.editor.render();
             this.editor.updateAllPanels();
@@ -98,6 +112,10 @@ export class GroupOperations extends BaseModule {
         });
 
         // Clear selection
+        // Selective cache invalidation for group edit mode
+        this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
+        this.editor.renderOperations.invalidateSpatialIndex();
+
         this.editor.stateManager.set('selectedObjects', new Set());
         this.editor.render();
         this.editor.updateAllPanels();
@@ -140,6 +158,10 @@ export class GroupOperations extends BaseModule {
             } else {
             }
         }
+
+        // Selective cache invalidation for closing group edit mode
+        this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
+        this.editor.renderOperations.invalidateSpatialIndex();
 
         this.editor.stateManager.set('selectedObjects', new Set());
         this.editor.render();
@@ -190,6 +212,18 @@ export class GroupOperations extends BaseModule {
         newTopLevelObjects.forEach(obj => {
             this.editor.level.addObject(obj);
         });
+
+        // Selective cache invalidation for ungrouping
+        // Clear effective layer cache for freed objects
+        newTopLevelObjects.forEach(obj => {
+            this.editor.renderOperations.clearEffectiveLayerCacheForObject(obj.id);
+        });
+
+        // Clear visible objects cache only for current camera position
+        this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
+
+        // Invalidate spatial index since structure changed
+        this.editor.renderOperations.invalidateSpatialIndex();
 
         this.editor.stateManager.set('selectedObjects', new Set());
         this.editor.render();
