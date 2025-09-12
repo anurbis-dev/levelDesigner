@@ -268,7 +268,12 @@
                     console[level === 'error' ? 'error' : 'log'](`[LAYOUT] ${message}`, ...args);
                 }
             } catch (error) {
-                console.log(`[LAYOUT] ${message}`, ...args);
+                try {
+                    console.log(`[LAYOUT] ${message}`, ...args);
+                } catch (fallbackError) {
+                    // Last resort - just log to console
+                    console.log(`[LAYOUT] ${message}`);
+                }
             }
         }
 
@@ -284,14 +289,22 @@
                     // Apply font scale immediately
                     const fontScale = prefs.fontScale || 1.0;
                     if (fontScale !== 1.0) {
-                        document.documentElement.style.fontSize = `${fontScale * 16}px`;
-                        console.log(`[LAYOUT] Applied font scale: ${fontScale}`);
+                        try {
+                            document.documentElement.style.fontSize = `${fontScale * 16}px`;
+                            console.log(`[LAYOUT] Applied font scale: ${fontScale}`);
+                        } catch (fontError) {
+                            console.warn('[LAYOUT] Failed to apply font scale:', fontError);
+                        }
                     }
                     
                     // Apply theme immediately if available
                     const theme = prefs.theme;
                     if (theme && theme !== 'dark') {
-                        console.log(`[LAYOUT] Applied theme: ${theme}`);
+                        try {
+                            console.log(`[LAYOUT] Applied theme: ${theme}`);
+                        } catch (themeError) {
+                            console.warn('[LAYOUT] Failed to apply theme:', themeError);
+                        }
                     }
                     
                     console.log('[LAYOUT] User settings applied immediately');
@@ -302,37 +315,51 @@
         }
 
         // Apply settings immediately
-        applyUserSettingsImmediately();
+        try {
+            applyUserSettingsImmediately();
+        } catch (error) {
+            console.error('Error applying user settings immediately:', error);
+        }
 
         // User Preferences Manager - Initialize BEFORE LevelEditor
         class UserPreferencesManager {
             constructor() {
-                this.prefsKey = 'levelEditor_userPrefs';
-                this.defaultPrefs = {
-                    rightPanelWidth: 320,
-                    consoleHeight: 300,
-                    assetsPanelHeight: 256,
-                    rightPanelTabOrder: ['details', 'level', 'outliner'],
-                    assetTabOrder: [],
-                    consoleVisible: false,
-                    canvasBackgroundColor: '#4B5563',
-                    gridSize: 32,
-                    showGrid: true,
-                    autoSave: true,
-                    autoSaveInterval: 30000,
-                    theme: 'dark',
-                    fontSize: 'sm',
-                    compactMode: false
-                };
-                this.preferences = this.loadPreferences();
+                try {
+                    this.prefsKey = 'levelEditor_userPrefs';
+                    this.defaultPrefs = {
+                        rightPanelWidth: 320,
+                        consoleHeight: 300,
+                        assetsPanelHeight: 256,
+                        rightPanelTabOrder: ['details', 'level', 'outliner'],
+                        assetTabOrder: [],
+                        consoleVisible: false,
+                        canvasBackgroundColor: '#4B5563',
+                        gridSize: 32,
+                        showGrid: true,
+                        autoSave: true,
+                        autoSaveInterval: 30000,
+                        theme: 'dark',
+                        fontSize: 'sm',
+                        compactMode: false
+                    };
+                    this.preferences = this.loadPreferences();
+                } catch (error) {
+                    console.error('Error initializing UserPreferencesManager:', error);
+                    this.preferences = this.defaultPrefs;
+                }
             }
 
             loadPreferences() {
                 try {
                     const stored = localStorage.getItem(this.prefsKey);
                     if (stored) {
-                        const parsed = JSON.parse(stored);
-                        return { ...this.defaultPrefs, ...parsed };
+                        try {
+                            const parsed = JSON.parse(stored);
+                            return { ...this.defaultPrefs, ...parsed };
+                        } catch (parseError) {
+                            console.warn('Failed to parse user preferences:', parseError);
+                            return { ...this.defaultPrefs };
+                        }
                     }
                 } catch (error) {
                     console.warn('Failed to load user preferences:', error);
@@ -342,7 +369,8 @@
 
             savePreferences() {
                 try {
-                    localStorage.setItem(this.prefsKey, JSON.stringify(this.preferences));
+                    const jsonString = JSON.stringify(this.preferences);
+                    localStorage.setItem(this.prefsKey, jsonString);
                     return true;
                 } catch (error) {
                     console.error('Failed to save user preferences:', error);
@@ -351,44 +379,95 @@
             }
 
             get(key) {
-                return this.preferences[key];
+                try {
+                    return this.preferences[key];
+                } catch (error) {
+                    console.warn('Failed to get preference:', key, error);
+                    return undefined;
+                }
             }
 
             set(key, value) {
-                this.preferences[key] = value;
-                this.savePreferences();
+                try {
+                    this.preferences[key] = value;
+                    this.savePreferences();
+                } catch (error) {
+                    console.warn('Failed to set preference:', key, value, error);
+                }
             }
 
             update(updates) {
-                Object.assign(this.preferences, updates);
-                this.savePreferences();
+                try {
+                    Object.assign(this.preferences, updates);
+                    this.savePreferences();
+                } catch (error) {
+                    console.warn('Failed to update preferences:', updates, error);
+                }
             }
         }
 
         // Initialize preferences manager FIRST
-        const userPrefs = new UserPreferencesManager();
+        let userPrefs;
+        try {
+            userPrefs = new UserPreferencesManager();
+        } catch (error) {
+            console.error('Error creating UserPreferencesManager:', error);
+            // Create a fallback preferences manager
+            userPrefs = {
+                get: () => undefined,
+                set: () => {},
+                update: () => {}
+            };
+        }
 
         // Initialize the level editor with user preferences
-        const editor = new LevelEditor(userPrefs);
+        let editor;
+        try {
+            editor = new LevelEditor(userPrefs);
+        } catch (error) {
+            console.error('Error creating LevelEditor:', error);
+            // Create a fallback editor
+            editor = {
+                init: () => Promise.resolve(),
+                render: () => {},
+                canvasRenderer: { resizeCanvas: () => {} }
+            };
+        }
 
         // Initialize the editor
-        editor.init().then(() => {
+        try {
+            editor.init().then(() => {
             // Apply saved panel sizes after editor initialization
-            applySavedPanelSizes();
-        }).catch(error => {
-            console.error('Failed to initialize level editor:', error);
-            console.error('Error details:', error);
-            alert('Failed to initialize level editor: ' + (error.message || error));
-        });
+            try {
+                applySavedPanelSizes();
+            } catch (error) {
+                console.error('Error applying saved panel sizes:', error);
+            }
+            }).catch(error => {
+                console.error('Failed to initialize level editor:', error);
+                console.error('Error details:', error);
+                // Don't show alert for async response errors from extensions
+                if (!error.message || !error.message.includes('message channel closed')) {
+                    try {
+                        alert('Failed to initialize level editor: ' + (error.message || error));
+                    } catch (alertError) {
+                        console.error('Failed to show alert:', alertError);
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error calling editor.init():', error);
+        }
 
         // User preferences manager is already initialized above
 
         // Function to apply saved panel sizes (called only on startup)
         function applySavedPanelSizes() {
-            const savedAssetsPanelHeight = userPrefs.get('assetsPanelHeight');
-            const savedConsoleHeight = userPrefs.get('consoleHeight');
-            const savedConsoleVisible = userPrefs.get('consoleVisible');
-            const savedRightPanelWidth = userPrefs.get('rightPanelWidth');
+            try {
+                const savedAssetsPanelHeight = userPrefs.get('assetsPanelHeight');
+                const savedConsoleHeight = userPrefs.get('consoleHeight');
+                const savedConsoleVisible = userPrefs.get('consoleVisible');
+                const savedRightPanelWidth = userPrefs.get('rightPanelWidth');
                 
                 // Get main elements
                 const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
@@ -430,22 +509,29 @@
                 
                 // Additional render after applying saved sizes
                 setTimeout(() => {
-                    if (window.editor && window.editor.canvasRenderer) {
-                        window.editor.canvasRenderer.resizeCanvas();
-                        window.editor.render();
+                    try {
+                        if (window.editor && window.editor.canvasRenderer) {
+                            window.editor.canvasRenderer.resizeCanvas();
+                            window.editor.render();
+                        }
+                    } catch (error) {
+                        console.error('Error in delayed panel size update:', error);
                     }
                 }, 100);
+            } catch (error) {
+                console.warn('Error applying saved panel sizes:', error);
             }
+        }
             
             // Function to force complete layout update
             function forceLayoutUpdate() {
-
-                // Get main elements
-                const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
-                const mainPanel = document.getElementById('main-panel');
-                const rightPanel = document.getElementById('right-panel');
-                const assetsPanel = document.getElementById('assets-panel');
-                const consolePanel = document.getElementById('console-panel');
+                try {
+                    // Get main elements
+                    const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
+                    const mainPanel = document.getElementById('main-panel');
+                    const rightPanel = document.getElementById('right-panel');
+                    const assetsPanel = document.getElementById('assets-panel');
+                    const consolePanel = document.getElementById('console-panel');
 
                 // Only reset console styles when hidden - preserve other panel sizes
                 if (consolePanel.classList.contains('hidden')) {
@@ -467,27 +553,35 @@
                     window.editor.canvasRenderer.resizeCanvas();
                     window.editor.render();
                 }
+                } catch (error) {
+                    console.error('Error in forceLayoutUpdate:', error);
+                }
             }
             
             // Function to update canvas layout (called when panels show/hide)
             function updateCanvasLayout() {
-                // Only update canvas without forcing full layout to avoid panel drift
-                if (window.editor && window.editor.canvasRenderer) {
-                    window.editor.canvasRenderer.resizeCanvas();
-                    window.editor.render();
+                try {
+                    // Only update canvas without forcing full layout to avoid panel drift
+                    if (window.editor && window.editor.canvasRenderer) {
+                        window.editor.canvasRenderer.resizeCanvas();
+                        window.editor.render();
+                    }
+                } catch (error) {
+                    console.error('Error in updateCanvasLayout:', error);
                 }
             }
 
         // Panel resizing functionality
         function setupPanelResizing() {
-            const resizerX = document.getElementById('resizer-x');
-            const resizerAssets = document.getElementById('resizer-assets');
-            const resizerConsole = document.getElementById('resizer-console');
-            const mainPanel = document.getElementById('main-panel');
-            const rightPanel = document.getElementById('right-panel');
-            const assetsPanel = document.getElementById('assets-panel');
-            const consolePanel = document.getElementById('console-panel');
-            const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
+            try {
+                const resizerX = document.getElementById('resizer-x');
+                const resizerAssets = document.getElementById('resizer-assets');
+                const resizerConsole = document.getElementById('resizer-console');
+                const mainPanel = document.getElementById('main-panel');
+                const rightPanel = document.getElementById('right-panel');
+                const assetsPanel = document.getElementById('assets-panel');
+                const consolePanel = document.getElementById('console-panel');
+                const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
 
             let isResizingX = false;
             let isResizingAssets = false;
@@ -699,18 +793,26 @@
                     window.editor.render();
                 }
             });
+            } catch (error) {
+                console.error('Error setting up panel resizing:', error);
+            }
         }
 
         // Initialize panel resizing
-        setupPanelResizing();
+        try {
+            setupPanelResizing();
+        } catch (error) {
+            console.error('Error initializing panel resizing:', error);
+        }
 
         // Tab dragging functionality
         function setupTabDragging() {
-            const tabContainer = document.querySelector('#right-panel .flex.border-b.border-gray-700');
-            if (!tabContainer) return;
+            try {
+                const tabContainer = document.querySelector('#right-panel .flex.border-b.border-gray-700');
+                if (!tabContainer) return;
 
-            let draggedTab = null;
-            let draggedIndex = -1;
+                let draggedTab = null;
+                let draggedIndex = -1;
 
             // Make tabs draggable
             tabContainer.addEventListener('mousedown', (e) => {
@@ -781,20 +883,28 @@
                     e.preventDefault();
                 }
             });
+            } catch (error) {
+                console.error('Error setting up tab dragging:', error);
+            }
         }
 
         // Initialize tab dragging
-        setupTabDragging();
+        try {
+            setupTabDragging();
+        } catch (error) {
+            console.error('Error initializing tab dragging:', error);
+        }
 
         // Console functionality
         function setupConsole() {
-            const consolePanel = document.getElementById('console-panel');
-            const consoleOutput = document.getElementById('console-output');
-            const consoleInput = document.getElementById('console-input');
-            const consoleClose = document.getElementById('console-close');
-            
-            let isConsoleVisible = false;
-            let isLoggingEnabled = true;
+            try {
+                const consolePanel = document.getElementById('console-panel');
+                const consoleOutput = document.getElementById('console-output');
+                const consoleInput = document.getElementById('console-input');
+                const consoleClose = document.getElementById('console-close');
+                
+                let isConsoleVisible = false;
+                let isLoggingEnabled = true;
 
             // Initialize console context menu
             const consoleContextMenu = new ConsoleContextMenu(consolePanel, consoleOutput, {
@@ -904,7 +1014,11 @@
 
                 // Batch scroll update to minimize reflow
                 requestAnimationFrame(() => {
-                    consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                    try {
+                        consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                    } catch (error) {
+                        console.error('Error scrolling console output:', error);
+                    }
                 });
             }
 
@@ -921,32 +1035,37 @@
 
             function copyToClipboard(text) {
                 if (navigator.clipboard && window.isSecureContext) {
-                    // Use modern clipboard API
+                    // Use modern clipboard API with proper error handling
                     navigator.clipboard.writeText(text).then(() => {
                         logToConsole(`Copied to clipboard: ${text}`, 'info');
                     }).catch(err => {
-                        logToConsole(`Failed to copy: ${err.message}`, 'error');
+                        console.warn('Clipboard API failed, using fallback:', err);
+                        fallbackCopyToClipboard(text);
                     });
                 } else {
-                    // Fallback for older browsers
-                    const textArea = document.createElement('textarea');
-                    textArea.value = text;
-                    textArea.style.position = 'fixed';
-                    textArea.style.left = '-999999px';
-                    textArea.style.top = '-999999px';
-                    document.body.appendChild(textArea);
-                    textArea.focus();
-                    textArea.select();
-                    
-                    try {
-                        document.execCommand('copy');
-                        logToConsole(`Copied to clipboard: ${text}`, 'info');
-                    } catch (err) {
-                        logToConsole(`Failed to copy: ${err.message}`, 'error');
-                    }
-                    
-                    document.body.removeChild(textArea);
+                    fallbackCopyToClipboard(text);
                 }
+            }
+            
+            function fallbackCopyToClipboard(text) {
+                // Fallback for older browsers
+                const textArea = document.createElement('textarea');
+                textArea.value = text;
+                textArea.style.position = 'fixed';
+                textArea.style.left = '-999999px';
+                textArea.style.top = '-999999px';
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                
+                try {
+                    document.execCommand('copy');
+                    logToConsole(`Copied to clipboard: ${text}`, 'info');
+                } catch (err) {
+                    logToConsole(`Failed to copy: ${err.message}`, 'error');
+                }
+                
+                document.body.removeChild(textArea);
             }
 
             function executeCommand(command) {
@@ -1031,66 +1150,112 @@
             };
 
             // Make editor available globally for console commands
-            window.editor = editor;
+            try {
+                window.editor = editor;
+            } catch (error) {
+                console.error('Error setting global editor:', error);
+            }
 
             // Register console context menu with the manager
             if (window.editor && window.editor.contextMenuManager) {
-                window.editor.contextMenuManager.registerMenu('console', consoleContextMenu);
-                console.log('[INIT] ConsoleContextMenu registered with ContextMenuManager');
+                try {
+                    window.editor.contextMenuManager.registerMenu('console', consoleContextMenu);
+                    console.log('[INIT] ConsoleContextMenu registered with ContextMenuManager');
+                } catch (error) {
+                    console.error('Error registering console context menu:', error);
+                }
             }
 
             // Load saved console state
             const savedConsoleVisible = userPrefs.get('consoleVisible');
             
             if (savedConsoleVisible) {
-                showConsole();
+                try {
+                    showConsole();
+                } catch (error) {
+                    console.error('Error showing console:', error);
+                }
             } else {
                 // Apply saved panel sizes even if console is hidden
-                applySavedPanelSizes();
+                try {
+                    applySavedPanelSizes();
+                } catch (error) {
+                    console.error('Error applying saved panel sizes:', error);
+                }
             }
 
             // Initial console message
-            const version = window.editor ? window.editor.constructor.VERSION : 'unknown';
-            logToConsole(`2D Level Editor v${version} - Console ready`, 'info');
-            logToConsole('Press ` to toggle console, type "help" for commands', 'info');
+            try {
+                const version = window.editor ? window.editor.constructor.VERSION : 'unknown';
+                logToConsole(`2D Level Editor v${version} - Console ready`, 'info');
+                logToConsole('Press ` to toggle console, type "help" for commands', 'info');
+            } catch (error) {
+                console.error('Error logging initial console message:', error);
+            }
+            } catch (error) {
+                console.error('Error setting up console:', error);
+            }
         }
 
         // Initialize console
-        setupConsole();
+        try {
+            setupConsole();
+        } catch (error) {
+            console.error('Error initializing console:', error);
+        }
         
         // Test context menu functionality
         window.testContextMenu = () => {
-            const consolePanel = document.getElementById('console-panel');
-            if (consolePanel) {
-                consolePanel.classList.remove('hidden');
-                document.getElementById('resizer-console').classList.remove('hidden');
+            try {
+                const consolePanel = document.getElementById('console-panel');
+                if (consolePanel) {
+                    consolePanel.classList.remove('hidden');
+                    document.getElementById('resizer-console').classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error in testContextMenu:', error);
             }
         };
         
         // Update canvas after complete initialization
         const updateCanvasOnStartup = () => {
-            
-            // Update canvas only (no layout changes to avoid panel drift)
-            if (window.editor && window.editor.canvasRenderer) {
-                window.editor.canvasRenderer.resizeCanvas();
-                window.editor.render();
-            }
-            
-            // Additional update after a longer delay to ensure everything is settled
-            setTimeout(() => {
+            try {
+                // Update canvas only (no layout changes to avoid panel drift)
                 if (window.editor && window.editor.canvasRenderer) {
                     window.editor.canvasRenderer.resizeCanvas();
                     window.editor.render();
                 }
-            }, 500);
+                
+                // Additional update after a longer delay to ensure everything is settled
+                setTimeout(() => {
+                    try {
+                        if (window.editor && window.editor.canvasRenderer) {
+                            window.editor.canvasRenderer.resizeCanvas();
+                            window.editor.render();
+                        }
+                    } catch (error) {
+                        console.error('Error in delayed canvas update:', error);
+                    }
+                }, 500);
+            } catch (error) {
+                console.error('Error updating canvas on startup:', error);
+            }
         };
         
         // Wait for DOM to be fully ready and styles applied
         if (document.readyState === 'complete') {
-            setTimeout(updateCanvasOnStartup, 100);
+            try {
+                setTimeout(updateCanvasOnStartup, 100);
+            } catch (error) {
+                console.error('Error in setTimeout:', error);
+            }
         } else {
             window.addEventListener('load', () => {
-                setTimeout(updateCanvasOnStartup, 100);
+                try {
+                    setTimeout(updateCanvasOnStartup, 100);
+                } catch (error) {
+                    console.error('Error in load event handler:', error);
+                }
             });
         }
     </script>

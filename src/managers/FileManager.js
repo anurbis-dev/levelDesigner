@@ -95,6 +95,10 @@ export class FileManager {
             const file = await FileUtils.pickFile(this.supportedFormats, false);
             return await this.loadLevel(file);
         } catch (error) {
+            // Don't throw for user cancellation
+            if (error.message && error.message.includes('cancelled')) {
+                throw error;
+            }
             throw new Error('Failed to load level: ' + error.message);
         }
     }
@@ -162,6 +166,10 @@ export class FileManager {
             
             return true;
         } catch (error) {
+            // Don't throw for user cancellation
+            if (error.message && error.message.includes('cancelled')) {
+                throw error;
+            }
             throw new Error('Failed to load asset library: ' + error.message);
         }
     }

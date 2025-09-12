@@ -63,7 +63,10 @@ export class FileUtils {
 
             const reader = new FileReader();
             reader.onload = (event) => resolve(event.target.result);
-            reader.onerror = () => reject(new Error('Failed to read file'));
+            reader.onerror = (error) => {
+                console.warn('FileReader error:', error);
+                reject(new Error('Failed to read file'));
+            };
             reader.readAsText(file);
         });
     }
@@ -106,13 +109,22 @@ export class FileUtils {
             }
 
             input.onchange = (e) => {
-                const files = e.target.files;
-                if (!files || files.length === 0) {
-                    reject(new Error('No file selected'));
-                    return;
+                try {
+                    const files = e.target.files;
+                    if (!files || files.length === 0) {
+                        reject(new Error('No file selected'));
+                        return;
+                    }
+                    
+                    resolve(multiple ? files : files[0]);
+                } catch (error) {
+                    reject(error);
+                } finally {
+                    // Ensure cleanup even if error occurs
+                    if (document.body.contains(input)) {
+                        document.body.removeChild(input);
+                    }
                 }
-                
-                resolve(multiple ? files : files[0]);
             };
 
             input.oncancel = () => {
@@ -129,9 +141,14 @@ export class FileUtils {
      * @returns {Promise<{file: File, content: string}>} File and its content
      */
     static async pickAndReadText(accept = null) {
-        const file = await this.pickFile(accept, false);
-        const content = await this.readFileAsText(file);
-        return { file, content };
+        try {
+            const file = await this.pickFile(accept, false);
+            const content = await this.readFileAsText(file);
+            return { file, content };
+        } catch (error) {
+            console.warn('Error in pickAndReadText:', error);
+            throw error;
+        }
     }
 
     /**
@@ -140,9 +157,14 @@ export class FileUtils {
      * @returns {Promise<{file: File, data: Object}>} File and parsed JSON data
      */
     static async pickAndReadJSON(accept = '.json') {
-        const file = await this.pickFile(accept, false);
-        const data = await this.readFileAsJSON(file);
-        return { file, data };
+        try {
+            const file = await this.pickFile(accept, false);
+            const data = await this.readFileAsJSON(file);
+            return { file, data };
+        } catch (error) {
+            console.warn('Error in pickAndReadJSON:', error);
+            throw error;
+        }
     }
 
     /**
@@ -204,7 +226,10 @@ export class FileUtils {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = (e) => resolve(e.target.result);
-            reader.onerror = () => reject(new Error('Failed to create data URL'));
+            reader.onerror = (error) => {
+                console.warn('FileReader error creating data URL:', error);
+                reject(new Error('Failed to create data URL'));
+            };
             reader.readAsDataURL(file);
         });
     }
@@ -223,13 +248,18 @@ export class FileUtils {
      * @param {number} delay - Delay between downloads in ms (default: 100)
      */
     static async downloadBatch(files, delay = 100) {
-        for (let i = 0; i < files.length; i++) {
-            const { data, filename, mimeType } = files[i];
-            this.downloadData(data, filename, mimeType);
-            
-            if (i < files.length - 1) {
-                await new Promise(resolve => setTimeout(resolve, delay));
+        try {
+            for (let i = 0; i < files.length; i++) {
+                const { data, filename, mimeType } = files[i];
+                this.downloadData(data, filename, mimeType);
+                
+                if (i < files.length - 1) {
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                }
             }
+        } catch (error) {
+            console.warn('Error in downloadBatch:', error);
+            throw error;
         }
     }
 
@@ -240,11 +270,16 @@ export class FileUtils {
      * @returns {Promise<Array>} Array of file contents
      */
     static async readMultipleFiles(files, format = 'text') {
-        const promises = Array.from(files).map(file => {
-            return format === 'json' ? this.readFileAsJSON(file) : this.readFileAsText(file);
-        });
+        try {
+            const promises = Array.from(files).map(file => {
+                return format === 'json' ? this.readFileAsJSON(file) : this.readFileAsText(file);
+            });
 
-        return Promise.all(promises);
+            return Promise.all(promises);
+        } catch (error) {
+            console.warn('Error reading multiple files:', error);
+            throw error;
+        }
     }
 
     /**

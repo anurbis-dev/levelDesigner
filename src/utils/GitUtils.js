@@ -13,6 +13,12 @@ class GitUtils {
      */
     static async getLogs(commits = 10, format = 'oneline') {
         return new Promise((resolve, reject) => {
+            // Check if we're in a browser environment
+            if (typeof require === 'undefined') {
+                reject(new Error('GitUtils requires Node.js environment'));
+                return;
+            }
+            
             const { spawn } = require('child_process');
             
             // Set environment to disable pager
@@ -50,6 +56,12 @@ class GitUtils {
      */
     static async getCurrentBranch() {
         return new Promise((resolve, reject) => {
+            // Check if we're in a browser environment
+            if (typeof require === 'undefined') {
+                reject(new Error('GitUtils requires Node.js environment'));
+                return;
+            }
+            
             const { spawn } = require('child_process');
             
             const gitProcess = spawn('git', ['branch', '--show-current'], {
@@ -83,6 +95,12 @@ class GitUtils {
      */
     static async getStatus() {
         return new Promise((resolve, reject) => {
+            // Check if we're in a browser environment
+            if (typeof require === 'undefined') {
+                reject(new Error('GitUtils requires Node.js environment'));
+                return;
+            }
+            
             const { spawn } = require('child_process');
             
             const gitProcess = spawn('git', ['status', '--porcelain'], {
@@ -118,6 +136,11 @@ class GitUtils {
      */
     static async saveLogsToFile(commits = 10, filename = 'git_logs.txt') {
         try {
+            // Check if we're in a browser environment
+            if (typeof require === 'undefined') {
+                throw new Error('GitUtils requires Node.js environment');
+            }
+            
             const logs = await this.getLogs(commits);
             const fs = require('fs');
             fs.writeFileSync(filename, logs, 'utf8');

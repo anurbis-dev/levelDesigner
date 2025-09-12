@@ -172,11 +172,16 @@ export class AssetManager {
      * Preload asset images
      */
     async preloadImages() {
-        const promises = this.getAllAssets()
-            .filter(asset => asset.imgSrc)
-            .map(asset => this.loadImage(asset.imgSrc));
-        
-        await Promise.all(promises);
+        try {
+            const promises = this.getAllAssets()
+                .filter(asset => asset.imgSrc)
+                .map(asset => this.loadImage(asset.imgSrc));
+            
+            await Promise.all(promises);
+        } catch (error) {
+            console.warn('Failed to preload some images:', error);
+            // Don't throw - let the editor continue with partial asset loading
+        }
     }
 
     /**
@@ -194,7 +199,10 @@ export class AssetManager {
                 this.imageCache.set(src, img);
                 resolve(img);
             };
-            img.onerror = reject;
+            img.onerror = (error) => {
+                console.warn(`Failed to load image: ${src}`, error);
+                reject(error);
+            };
             img.src = src;
         });
     }

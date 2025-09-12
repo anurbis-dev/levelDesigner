@@ -36,7 +36,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.8.4';
+    static VERSION = '3.8.5';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -511,9 +511,10 @@ export class LevelEditor {
      * Initialize the editor
      */
     async init() {
-        // Log version info
-        this.log('info', `🚀 Level Editor v${LevelEditor.VERSION} - Utility Architecture`);
-        this.log('info', 'Initializing editor components...');
+        try {
+            // Log version info
+            this.log('info', `🚀 Level Editor v${LevelEditor.VERSION} - Utility Architecture`);
+            this.log('info', 'Initializing editor components...');
         
         // Initialize configuration manager after Logger is available
         this.configManager = new ConfigManager();
@@ -594,7 +595,11 @@ export class LevelEditor {
         this.eventHandlers.setupEventListeners();
         
         // Preload assets
-        await this.assetManager.preloadImages();
+        try {
+            await this.assetManager.preloadImages();
+        } catch (error) {
+            this.log('warn', 'Failed to preload some assets:', error.message);
+        }
 
         // Initialize cached level statistics
         this.updateCachedLevelStats();
@@ -621,6 +626,11 @@ export class LevelEditor {
         this.updatePageTitle();
         
         this.updateAllPanels();
+        
+        } catch (error) {
+            this.log('error', 'Failed to initialize editor:', error.message);
+            throw error;
+        }
         
         // Initialize view states after level is created
         this.eventHandlers.initializeViewStates();
