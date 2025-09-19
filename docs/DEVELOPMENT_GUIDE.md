@@ -458,7 +458,225 @@ export class LevelEditor {
 }
 ```
 
-### 3. Добавление новых горячих клавиш
+### 3. Разработка продвинутой панели слоёв
+
+#### Архитектурные принципы
+
+**Двойная система состояний:**
+- **Активные слои** - слои с выбранными объектами (border highlight)
+- **Текущий слой** - слой для создания новых объектов (blue background)
+
+**Централизованное управление:**
+```javascript
+// LevelEditor - единая точка управления
+getCurrentLayer() // Получение текущего слоя
+setCurrentLayer(layerId) // Установка текущего слоя
+
+// LayersPanel - локальное кеширование
+this.currentLayerId = null; // Кеш для производительности
+```
+
+#### Ключевые методы
+
+**Инициализация:**
+```javascript
+initializeCurrentLayer() {
+    const level = this.levelEditor.getLevel();
+    if (level) {
+        this.currentLayerId = level.getMainLayerId();
+        this.levelEditor.setCurrentLayer(this.currentLayerId);
+    }
+}
+```
+
+**Управление состоянием:**
+```javascript
+setCurrentLayer(layerId) {
+    const level = this.levelEditor.getLevel();
+    const layer = level.getLayerById(layerId);
+    if (!layer) return;
+    
+    this.currentLayerId = layerId;
+    this.updateLayerStyles();
+}
+
+setCurrentLayerAndNotify(layerId) {
+    this.setCurrentLayer(layerId);
+    this.levelEditor.setCurrentLayer(layerId);
+    this.levelEditor.updateAllPanels();
+}
+```
+
+**Контекстные меню:**
+```javascript
+showLayerContextMenu(layer, event) {
+    // Умное позиционирование с проверкой границ
+    const menuWidth = 192;
+    const menuHeight = 200;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    let left = event.clientX;
+    let top = event.clientY;
+    
+    // Корректировка позиции при выходе за экран
+    if (left + menuWidth > viewportWidth) {
+        left = viewportWidth - menuWidth - 10;
+    }
+    if (top + menuHeight > viewportHeight) {
+        top = viewportHeight - menuHeight - 10;
+    }
+    
+    left = Math.max(10, left);
+    top = Math.max(10, top);
+}
+```
+
+**Поиск и фильтрация:**
+```javascript
+getFilteredLayers(layers) {
+    if (!this.searchFilter) return layers;
+    
+    const filter = this.searchFilter.toLowerCase();
+    return layers.filter(layer => 
+        layer.name.toLowerCase().includes(filter)
+    );
+}
+
+setupSearch() {
+    const searchInput = this.container.querySelector('#layers-search');
+    if (!searchInput) return;
+    
+    searchInput.addEventListener('input', (e) => {
+        this.searchFilter = e.target.value;
+        this.render();
+    });
+}
+```
+
+**Массовые операции:**
+```javascript
+selectAllLayers() {
+    const level = this.levelEditor.getLevel();
+    const allLayerIds = level.layers.map(layer => layer.id);
+    this.selectedLayers = new Set(allLayerIds);
+    this.updateLayerStyles();
+}
+
+showAllLayers() {
+    const level = this.levelEditor.getLevel();
+    level.layers.forEach(layer => {
+        layer.visible = true;
+    });
+    this.stateManager.markDirty();
+    this.render();
+}
+```
+
+#### Оптимизация производительности
+
+**Кеширование статистики:**
+```javascript
+updateLayersStats() {
+    const level = this.levelEditor.getLevel();
+    const stats = level.getLayersStats(); // Кешированный метод
+    
+    // Обновление только при изменении
+    if (this.lastStatsHash !== stats.hash) {
+        this.renderLayersStats(stats);
+        this.lastStatsHash = stats.hash;
+    }
+}
+```
+
+**Избирательное обновление стилей:**
+```javascript
+updateLayerStyles() {
+    const layerElements = this.container.querySelectorAll('.layer-item');
+    layerElements.forEach(element => {
+        const layerId = element.dataset.layerId;
+        const isActive = this.isLayerActive(layerId);
+        const isCurrent = layerId === this.currentLayerId;
+        const isSelected = this.selectedLayers.has(layerId);
+        
+        // Обновление только изменённых стилей
+        this.applyLayerStyles(element, { isActive, isCurrent, isSelected });
+    });
+}
+```
+
+#### Обработка событий
+
+**Подписка на изменения:**
+```javascript
+setupEventListeners() {
+    // Изменения уровня - только инициализация, не сброс
+    this.stateManager.subscribe('level', () => {
+        if (!this.currentLayerId) {
+            this.initializeCurrentLayer();
+        }
+        this.render();
+    });
+    
+    // Изменения выделения - обновление активных слоёв
+    this.stateManager.subscribe('selectedObjects', () => {
+        this.updateLayerStyles();
+    });
+    
+    // Изменения счётчиков слоёв - обновление статистики
+    this.stateManager.subscribe('layerObjectsCountChanged', (layerId, changeData) => {
+        this.updateLayerObjectsCount(layerId);
+    });
+}
+```
+
+**Горячие клавиши:**
+```javascript
+setupKeyboardShortcuts() {
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'l') {
+            e.preventDefault();
+            this.selectAllLayers();
+        }
+        
+        if (e.key === 'Delete' && this.selectedLayers.size > 0) {
+            this.deleteSelectedLayers();
+        }
+    });
+}
+```
+
+#### Тестирование панели слоёв
+
+**Unit тесты:**
+```javascript
+// tests/LayersPanel.test.js
+describe('LayersPanel', () => {
+    test('should initialize current layer on startup', () => {
+        const panel = new LayersPanel(container, stateManager, levelEditor);
+        expect(panel.currentLayerId).toBe(level.getMainLayerId());
+    });
+    
+    test('should not reset current layer when moving objects', () => {
+        panel.setCurrentLayer('custom-layer');
+        // Симуляция перемещения объектов
+        stateManager.set('level', JSON.parse(JSON.stringify(level)));
+        expect(panel.currentLayerId).toBe('custom-layer');
+    });
+});
+```
+
+**Integration тесты:**
+```javascript
+test('should create new objects in current layer', () => {
+    panel.setCurrentLayer('background-layer');
+    const newObject = asset.createInstance(100, 100);
+    level.addObject(newObject);
+    expect(newObject.layerId).toBe('background-layer');
+});
+```
+
+### 4. Добавление новых горячих клавиш
 
 ```javascript
 // src/core/LevelEditor.js

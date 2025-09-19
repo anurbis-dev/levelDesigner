@@ -56,6 +56,9 @@ export class LayersPanel {
             
             // Update only the specific layer's object count
             this.updateLayerObjectsCount(layerId);
+            
+            // Update global stats
+            this.updateLayersStats();
         });
 
         // Subscribe to config changes (for active layer border color)
@@ -69,6 +72,11 @@ export class LayersPanel {
     }
 
     render() {
+        // Save search input state before clearing
+        const searchInput = document.getElementById('layers-search');
+        const wasSearchFocused = searchInput && document.activeElement === searchInput;
+        const searchValue = this.searchFilter;
+
         this.container.innerHTML = '';
 
         // Initialize current layer if not set
@@ -84,6 +92,18 @@ export class LayersPanel {
 
         // Update layer styles based on active state
         this.updateLayerStyles();
+
+        // Update global statistics
+        this.updateLayersStats();
+
+        // Restore search input state after render
+        if (wasSearchFocused) {
+            const newSearchInput = document.getElementById('layers-search');
+            if (newSearchInput) {
+                newSearchInput.focus();
+                newSearchInput.setSelectionRange(newSearchInput.value.length, newSearchInput.value.length);
+            }
+        }
     }
 
     /**
@@ -164,9 +184,14 @@ export class LayersPanel {
      */
     createLayerElement(layer) {
         const level = this.levelEditor.getLevel();
+        
+        // Force update cached stats if not available
+        if (!this.levelEditor.cachedLevelStats) {
+            this.levelEditor.updateCachedLevelStats();
+        }
+        
         const cachedStats = this.levelEditor.cachedLevelStats;
         const objectsCount = level.getCachedLayerObjectsCount(layer.id, cachedStats);
-        const countText = objectsCount > 0 ? ` (${objectsCount})` : '';
         const isMainLayer = layer.id === level.getMainLayerId();
         const isActive = this.activeLayerId === layer.id;
         const isCurrent = this.currentLayerId === layer.id;
@@ -189,7 +214,7 @@ export class LayersPanel {
                      title="Click to change color"></div>
                 <div class="flex items-center space-x-1 flex-1 min-w-0">
                     <span class="layer-name-display text-white flex-1 px-1 py-1 rounded min-w-0"
-                          data-layer-id="${layer.id}">${layer.name}${countText}</span>
+                          data-layer-id="${layer.id}">${layer.name}</span>
                     <input type="text"
                            id="layer-name-${layer.id}"
                            name="layer-name-${layer.id}"
@@ -199,6 +224,8 @@ export class LayersPanel {
                 </div>
             </div>
             <div class="flex items-center space-x-1 flex-shrink-0">
+                <span class="layer-objects-count text-gray-400 text-sm px-2 py-1 rounded bg-gray-600 min-w-0"
+                      data-layer-id="${layer.id}">${objectsCount > 0 ? objectsCount : ''}</span>
                 <button class="layer-visibility-btn p-1 rounded hover:bg-gray-600 w-8 h-8 flex items-center justify-center" 
                         data-layer-id="${layer.id}" 
                         title="${layer.visible ? 'Hide layer' : 'Show layer'}">
@@ -309,12 +336,25 @@ export class LayersPanel {
 
         // Update objects count in display text
         const level = this.levelEditor.getLevel();
+        
+        // Force update cached stats if not available
+        if (!this.levelEditor.cachedLevelStats) {
+            this.levelEditor.updateCachedLevelStats();
+        }
+        
         const cachedStats = this.levelEditor.cachedLevelStats;
         const objectsCount = level.getCachedLayerObjectsCount(layerId, cachedStats);
-        const countText = objectsCount > 0 ? ` (${objectsCount})` : '';
+        
+        // Update layer name display (without count)
         const display = layerElement.querySelector('.layer-name-display');
         if (display) {
-            display.textContent = layer.name + countText;
+            display.textContent = layer.name;
+        }
+        
+        // Update objects count in separate element
+        const countElement = layerElement.querySelector('.layer-objects-count');
+        if (countElement) {
+            countElement.textContent = objectsCount > 0 ? objectsCount : '';
         }
 
         // Update background color based on current state
@@ -338,7 +378,7 @@ export class LayersPanel {
             visibilityBtn.title = layer.visible ? 'Hide layer' : 'Show layer';
             const svg = visibilityBtn.querySelector('svg');
             if (svg) {
-                svg.className = `w-4 h-4 ${layer.visible ? 'text-gray-300' : 'text-gray-500'}`;
+                svg.setAttribute('class', `w-4 h-4 ${layer.visible ? 'text-gray-300' : 'text-gray-500'}`);
                 svg.innerHTML = layer.visible ? 
                     '<path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>' :
                     '<path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd"/><path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z"/>';
@@ -351,7 +391,7 @@ export class LayersPanel {
             lockBtn.title = layer.locked ? 'Unlock layer' : 'Lock layer';
             const svg = lockBtn.querySelector('svg');
             if (svg) {
-                svg.className = `w-4 h-4 ${layer.locked ? 'text-gray-300' : 'text-gray-500'}`;
+                svg.setAttribute('class', `w-4 h-4 ${layer.locked ? 'text-gray-300' : 'text-gray-500'}`);
                 svg.innerHTML = layer.locked ? 
                     '<path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>' :
                     '<path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 015.905-.75 1 1 0 001.937-.5A5.002 5.002 0 0010 2z"/>';
@@ -367,6 +407,11 @@ export class LayersPanel {
         const level = this.levelEditor.getLevel();
         const layers = level.getLayersSorted();
         
+        // Force update cached stats if not available
+        if (!this.levelEditor.cachedLevelStats) {
+            this.levelEditor.updateCachedLevelStats();
+        }
+        
         // Use cached statistics for better performance
         const cachedStats = this.levelEditor.cachedLevelStats;
 
@@ -374,9 +419,9 @@ export class LayersPanel {
             const objectsCount = level.getCachedLayerObjectsCount(layer.id, cachedStats);
             const layerElement = this.container.querySelector(`[data-layer-id="${layer.id}"]`);
             if (layerElement) {
-                const countSpan = layerElement.querySelector('.text-gray-400.text-sm');
-                if (countSpan) {
-                    countSpan.textContent = objectsCount > 0 ? ` (${objectsCount})` : '';
+                const countElement = layerElement.querySelector('.layer-objects-count');
+                if (countElement) {
+                    countElement.textContent = objectsCount > 0 ? objectsCount : '';
                 }
             }
         });
@@ -387,14 +432,20 @@ export class LayersPanel {
      */
     updateLayerObjectsCount(layerId) {
         const level = this.levelEditor.getLevel();
+        
+        // Force update cached stats if not available
+        if (!this.levelEditor.cachedLevelStats) {
+            this.levelEditor.updateCachedLevelStats();
+        }
+        
         const cachedStats = this.levelEditor.cachedLevelStats;
         const objectsCount = level.getCachedLayerObjectsCount(layerId, cachedStats);
         
         const layerElement = this.container.querySelector(`[data-layer-id="${layerId}"]`);
         if (layerElement) {
-            const countSpan = layerElement.querySelector('.text-gray-400.text-sm');
-            if (countSpan) {
-                countSpan.textContent = objectsCount > 0 ? ` (${objectsCount})` : '';
+            const countElement = layerElement.querySelector('.layer-objects-count');
+            if (countElement) {
+                countElement.textContent = objectsCount > 0 ? objectsCount : '';
             }
         }
     }
@@ -570,8 +621,12 @@ export class LayersPanel {
                 if (layer) {
                     const input = this.container.querySelector(`#layer-name-${layerId}`);
                     const display = this.container.querySelector(`[data-layer-id="${layerId}"].layer-name-display`);
+                    const layerElement = this.container.querySelector(`[data-layer-id="${layerId}"]`);
                     
-                    if (input && display) {
+                    if (input && display && layerElement) {
+                        // Disable dragging for this layer during rename
+                        layerElement.draggable = false;
+                        
                         display.classList.add('hidden');
                         input.classList.remove('hidden');
                         input.focus();
@@ -590,24 +645,53 @@ export class LayersPanel {
                     layer.setName(e.target.value);
                     this.stateManager.markDirty();
                     
-                    // Update display text
+                    // Update display text (name only)
                     const display = this.container.querySelector(`[data-layer-id="${layerId}"].layer-name-display`);
                     if (display) {
+                        display.textContent = layer.name;
+                    }
+                    
+                    // Update objects count in separate element
+                    const countElement = this.container.querySelector(`[data-layer-id="${layerId}"].layer-objects-count`);
+                    if (countElement) {
+                        // Force update cached stats if not available
+                        if (!this.levelEditor.cachedLevelStats) {
+                            this.levelEditor.updateCachedLevelStats();
+                        }
+                        
                         const cachedStats = this.levelEditor.cachedLevelStats;
                         const objectsCount = level.getCachedLayerObjectsCount(layerId, cachedStats);
-                        const countText = objectsCount > 0 ? ` (${objectsCount})` : '';
-                        display.textContent = layer.name + countText;
+                        countElement.textContent = objectsCount > 0 ? objectsCount : '';
                     }
                     
                     // Hide input, show display
                     e.target.classList.add('hidden');
                     display.classList.remove('hidden');
+                    
+                    // Re-enable dragging for this layer
+                    const layerElement = this.container.querySelector(`[data-layer-id="${layerId}"]`);
+                    if (layerElement) {
+                        layerElement.draggable = true;
+                    }
                 }
             });
             
             input.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
                     e.target.blur();
+                }
+            });
+            
+            // Also handle Escape key to cancel rename
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    const layerId = e.target.dataset.layerId;
+                    const layer = level.getLayerById(layerId);
+                    if (layer) {
+                        // Restore original name
+                        e.target.value = layer.name;
+                        e.target.blur();
+                    }
                 }
             });
         });
@@ -621,6 +705,8 @@ export class LayersPanel {
                 if (layer) {
                     const wasVisible = layer.visible;
                     layer.toggleVisibility();
+                    
+                    // Force update the layer element immediately
                     this.updateLayerElement(layerId, layer);
                     this.stateManager.markDirty();
 
@@ -654,6 +740,8 @@ export class LayersPanel {
                 if (layer) {
                     const wasLocked = layer.locked;
                     layer.toggleLock();
+                    
+                    // Force update the layer element immediately
                     this.updateLayerElement(layerId, layer);
                     this.stateManager.markDirty();
 
@@ -755,6 +843,13 @@ export class LayersPanel {
         
         layersList.addEventListener('dragstart', (e) => {
             if (e.target.classList.contains('layer-item')) {
+                // Check if any layer name input is currently visible (renaming in progress)
+                const visibleInput = layersList.querySelector('.layer-name-input:not(.hidden)');
+                if (visibleInput) {
+                    e.preventDefault();
+                    return;
+                }
+                
                 draggedElement = e.target;
                 e.target.style.opacity = '0.5';
             }
@@ -944,7 +1039,22 @@ export class LayersPanel {
      */
     updateLayersStats() {
         const level = this.levelEditor.getLevel();
+        if (!level) {
+            return;
+        }
+        
         const layers = level.getLayersSorted();
+        
+        // Force update cached stats if not available
+        if (!this.levelEditor.cachedLevelStats) {
+            this.levelEditor.updateCachedLevelStats();
+        }
+        
+        // Ensure we have valid cached stats
+        if (!this.levelEditor.cachedLevelStats || !this.levelEditor.cachedLevelStats.byLayer) {
+            this.levelEditor.updateCachedLevelStats();
+        }
+        
         const totalObjects = layers.reduce((sum, layer) => {
             const cachedStats = this.levelEditor.cachedLevelStats;
             return sum + level.getCachedLayerObjectsCount(layer.id, cachedStats);
@@ -1131,8 +1241,12 @@ export class LayersPanel {
 
         const input = this.container.querySelector(`#layer-name-${layerId}`);
         const display = this.container.querySelector(`[data-layer-id="${layerId}"].layer-name-display`);
+        const layerElement = this.container.querySelector(`[data-layer-id="${layerId}"]`);
         
-        if (input && display) {
+        if (input && display && layerElement) {
+            // Disable dragging for this layer during rename
+            layerElement.draggable = false;
+            
             display.classList.add('hidden');
             input.classList.remove('hidden');
             input.focus();
@@ -1155,6 +1269,9 @@ export class LayersPanel {
         level.layers.push(duplicatedLayer);
         this.render();
         this.stateManager.markDirty();
+        
+        // Update global stats
+        this.updateLayersStats();
         
         Logger.layer.info(`Duplicated layer: ${layer.name} → ${duplicatedLayer.name}`);
     }
@@ -1250,6 +1367,9 @@ export class LayersPanel {
         this.stateManager.markDirty();
         this.render();
         
+        // Update global stats
+        this.updateLayersStats();
+        
         Logger.layer.info(`Moved ${objectsToMove.length} objects to main layer`);
     }
 
@@ -1276,6 +1396,9 @@ export class LayersPanel {
             if (this.levelEditor.renderOperations) {
                 this.levelEditor.renderOperations.invalidateLayerVisibilityCache();
             }
+            
+            // Update global stats
+            this.updateLayersStats();
             
             Logger.layer.info(`Deleted layer: ${layer.name}`);
         }
@@ -1625,6 +1748,9 @@ export class LayersPanel {
             this.render();
             this.stateManager.markDirty();
             
+            // Update global stats
+            this.updateLayersStats();
+            
             Logger.layer.info(`Deleted ${layersToDelete.length} layers: ${layerNames}`);
         }
     }
@@ -1650,6 +1776,9 @@ export class LayersPanel {
 
         this.render();
         this.stateManager.markDirty();
+        
+        // Update global stats
+        this.updateLayersStats();
         
         Logger.layer.info(`Duplicated ${duplicatedLayers.length} layers`);
     }
