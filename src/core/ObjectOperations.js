@@ -207,7 +207,7 @@ export class ObjectOperations extends BaseModule {
     computeSelectableSet() {
         const selectable = new Set();
 
-        // Helper function to check if object is selectable (visible and in visible layer)
+        // Helper function to check if object is selectable (visible and in visible unlocked layer)
         const isObjectSelectable = (obj) => {
             // Check object visibility
             if (!obj.visible) {
@@ -223,6 +223,12 @@ export class ObjectOperations extends BaseModule {
                 new Set(this.editor.level.layers.map(l => l.id));
 
             if (!visibleLayerIds.has(effectiveLayerId)) {
+                return false;
+            }
+
+            // Check if layer is locked
+            const layer = this.editor.level.getLayerById(effectiveLayerId);
+            if (layer && layer.locked) {
                 return false;
             }
 

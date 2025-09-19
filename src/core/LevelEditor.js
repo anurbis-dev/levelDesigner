@@ -1373,6 +1373,9 @@ export class LevelEditor {
         // Update cached level statistics
         this.updateCachedLevelStats();
 
+        // Initialize current layer to Main layer
+        this.setCurrentLayer(this.level.getMainLayerId());
+
         this.historyManager.clear();
         this.historyManager.saveState(this.level.objects, this.stateManager.get('selectedObjects'), true);
         this.render();
@@ -1406,6 +1409,9 @@ export class LevelEditor {
 
             // Update cached level statistics
             this.updateCachedLevelStats();
+
+            // Initialize current layer to Main layer
+            this.setCurrentLayer(this.level.getMainLayerId());
 
             this.historyManager.clear();
 
@@ -2051,13 +2057,29 @@ export class LevelEditor {
         const affectedLayers = new Set();
 
         if (moveToExtreme) {
-            // Move all selected objects to first/last layer
-            const targetLayerId = moveUp ?
-                layersSorted[0]?.id :
-                layersSorted[layersSorted.length - 1]?.id;
+            // Move all selected objects to first/last unlocked layer
+            let targetLayerId = null;
+            
+            if (moveUp) {
+                // Find first unlocked layer from the top
+                for (let i = 0; i < layersSorted.length; i++) {
+                    if (!layersSorted[i].locked) {
+                        targetLayerId = layersSorted[i].id;
+                        break;
+                    }
+                }
+            } else {
+                // Find last unlocked layer from the bottom
+                for (let i = layersSorted.length - 1; i >= 0; i--) {
+                    if (!layersSorted[i].locked) {
+                        targetLayerId = layersSorted[i].id;
+                        break;
+                    }
+                }
+            }
 
             if (!targetLayerId) {
-                Logger.layer.warn('No target layer found for extreme move');
+                Logger.layer.warn('No unlocked layer found for extreme move');
                 return 0;
             }
 
@@ -2131,6 +2153,32 @@ export class LevelEditor {
     }
 
     /**
+     * Find next unlocked layer in the specified direction
+     * @param {Array} layersSorted - Sorted layers array
+     * @param {string} currentLayerId - Current layer ID
+     * @param {boolean} moveUp - Direction to move
+     * @returns {string|null} Next unlocked layer ID or null if not found
+     */
+    findNextUnlockedLayer(layersSorted, currentLayerId, moveUp) {
+        const currentLayerIndex = layersSorted.findIndex(layer => layer.id === currentLayerId);
+        if (currentLayerIndex === -1) return null;
+
+        const direction = moveUp ? -1 : 1;
+        let targetIndex = currentLayerIndex + direction;
+
+        // Search for next unlocked layer
+        while (targetIndex >= 0 && targetIndex < layersSorted.length) {
+            const targetLayer = layersSorted[targetIndex];
+            if (!targetLayer.locked) {
+                return targetLayer.id;
+            }
+            targetIndex += direction;
+        }
+
+        return null;
+    }
+
+    /**
      * Batch process adjacent layer assignment
      * @param {Set} selectedObjects - Set of object IDs
      * @param {Array} layersSorted - Sorted layers array
@@ -2151,10 +2199,9 @@ export class LevelEditor {
             const currentLayerIndex = layersSorted.findIndex(layer => layer.id === currentEffectiveLayerId);
             if (currentLayerIndex === -1) return;
 
-            const targetIndex = moveUp ? currentLayerIndex - 1 : currentLayerIndex + 1;
-            if (targetIndex < 0 || targetIndex >= layersSorted.length) return;
-
-            const targetLayerId = layersSorted[targetIndex].id;
+            // Find next unlocked layer instead of just adjacent layer
+            const targetLayerId = this.findNextUnlockedLayer(layersSorted, currentEffectiveLayerId, moveUp);
+            if (!targetLayerId) return; // No unlocked layer found in this direction
 
             if (!objectsByTargetLayer.has(targetLayerId)) {
                 objectsByTargetLayer.set(targetLayerId, []);
@@ -2467,5 +2514,33 @@ export class LevelEditor {
      */
     updatePageTitle() {
         document.title = '2D Level Editor';
+    }
+
+    /**
+     * Get current layer for new objects
+     * @returns {Layer} Current layer or Main layer as fallback
+     */
+    getCurrentLayer() {
+        const currentLayerId = this.stateManager.get('currentLayerId');
+        if (currentLayerId) {
+            const layer = this.level.getLayerById(currentLayerId);
+            if (layer) return layer;
+        }
+        
+        // Fallback to Main layer
+        return this.level.getLayerById(this.level.getMainLayerId());
+    }
+
+    /**
+     * Set current layer for new objects
+     * @param {string} layerId - Layer ID to set as current
+     */
+    setCurrentLayer(layerId) {
+        this.stateManager.set('currentLayerId', layerId);
+        
+        // Notify layers panel if it exists
+        if (this.layersPanel) {
+            this.layersPanel.setCurrentLayer(layerId);
+        }
     }
 }

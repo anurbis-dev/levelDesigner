@@ -91,6 +91,19 @@ export class OutlinerPanel {
         item.textContent = group.name || `[${group.type}]`;
         item.dataset.id = group.id;
         
+        // Check if object is in a locked layer
+        const effectiveLayerId = this.levelEditor.renderOperations ?
+            this.levelEditor.renderOperations.getEffectiveLayerId(group) :
+            (group.layerId || this.levelEditor.level.getMainLayerId());
+        const layer = this.levelEditor.level.getLayerById(effectiveLayerId);
+        
+        if (layer && layer.locked) {
+            item.classList.add('locked');
+            item.style.opacity = '0.5';
+            item.style.cursor = 'not-allowed';
+            item.title = 'Object is in locked layer';
+        }
+        
         if (this.stateManager.get('selectedObjects').has(group.id)) {
             item.classList.add('selected');
         }
@@ -116,6 +129,19 @@ export class OutlinerPanel {
         item.textContent = obj.name || `[${obj.type}]`;
         item.dataset.id = obj.id;
         
+        // Check if object is in a locked layer
+        const effectiveLayerId = this.levelEditor.renderOperations ?
+            this.levelEditor.renderOperations.getEffectiveLayerId(obj) :
+            (obj.layerId || this.levelEditor.level.getMainLayerId());
+        const layer = this.levelEditor.level.getLayerById(effectiveLayerId);
+        
+        if (layer && layer.locked) {
+            item.classList.add('locked');
+            item.style.opacity = '0.5';
+            item.style.cursor = 'not-allowed';
+            item.title = 'Object is in locked layer';
+        }
+        
         if (this.stateManager.get('selectedObjects').has(obj.id)) {
             item.classList.add('selected');
         }
@@ -126,6 +152,17 @@ export class OutlinerPanel {
     }
 
     handleObjectClick(e, obj) {
+        // Check if object is in a locked layer
+        const effectiveLayerId = this.levelEditor.renderOperations ?
+            this.levelEditor.renderOperations.getEffectiveLayerId(obj) :
+            (obj.layerId || this.levelEditor.level.getMainLayerId());
+        const layer = this.levelEditor.level.getLayerById(effectiveLayerId);
+        
+        if (layer && layer.locked) {
+            // Don't allow selection of objects in locked layers
+            return;
+        }
+        
         const selectedObjects = new Set(this.stateManager.get('selectedObjects'));
         
         if (e.shiftKey) {

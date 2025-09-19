@@ -58,7 +58,7 @@ export class Level {
     /**
      * Add object to level
      */
-    addObject(obj) {
+    addObject(obj, currentLayerId = null) {
         // Ensure obj is a proper GameObject or Group instance
         let properObj = obj;
         if (!(obj instanceof GameObject) && !(obj instanceof Group)) {
@@ -74,12 +74,12 @@ export class Level {
             properObj.id = this.nextObjectId++;
         }
 
-        // Assign to Main layer by default (first layer, protected from deletion)
+        // Assign to current layer if provided, otherwise Main layer by default
         // Only if layerId is not already set
         if (!properObj.layerId) {
-            const mainLayerId = this.getMainLayerId();
-            if (mainLayerId) {
-                properObj.layerId = mainLayerId;
+            const targetLayerId = currentLayerId || this.getMainLayerId();
+            if (targetLayerId) {
+                properObj.layerId = targetLayerId;
             }
         }
 

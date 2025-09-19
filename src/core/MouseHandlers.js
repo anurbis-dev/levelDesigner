@@ -404,7 +404,9 @@ export class MouseHandlers extends BaseModule {
                     y = snapped.y;
                 }
 
-                const newObject = asset.createInstance(x, y);
+                // Get current layer for new objects
+                const currentLayer = this.editor.getCurrentLayer();
+                const newObject = asset.createInstance(x, y, currentLayer.id);
 
                 // Check if we're in group edit mode and the drop point is inside the group bounds
                 if (this.isInGroupEditMode() && this.editor.objectOperations.isPointInGroupBounds(worldPos.x, worldPos.y)) {
@@ -415,8 +417,8 @@ export class MouseHandlers extends BaseModule {
                     newObject.y -= groupPos.y;
                     groupEditMode.group.children.push(newObject);
                 } else {
-                    // Add to main level
-                    this.editor.level.addObject(newObject);
+                    // Add to main level with current layer
+                    this.editor.level.addObject(newObject, currentLayer.id);
                 }
 
                 newIds.add(newObject.id);
@@ -563,6 +565,16 @@ export class MouseHandlers extends BaseModule {
                     // If dragged into edited group bounds, move under the group with relative coordinates
                     if (!this.isAltKeyPressed() && this.isInGroupEditMode() && this.editor.objectOperations.isPointInGroupBounds(obj.x, obj.y)) {
                         const groupEditMode = this.getGroupEditMode();
+                        
+                        // Check if target group's layer is locked
+                        if (groupEditMode.group.layerId) {
+                            const targetLayer = this.editor.level.getLayerById(groupEditMode.group.layerId);
+                            if (targetLayer && targetLayer.locked) {
+                                // Skip moving to locked layer
+                                return;
+                            }
+                        }
+                        
                         // Convert world -> relative to group's world position
                         const groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
                         obj.x -= groupPos.x;

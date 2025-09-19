@@ -23,8 +23,11 @@ export class Asset {
 
     /**
      * Create a game object instance from this asset
+     * @param {number} x - X coordinate
+     * @param {number} y - Y coordinate
+     * @param {string} layerId - Layer ID for the new object (optional)
      */
-    createInstance(x = 0, y = 0) {
+    createInstance(x = 0, y = 0, layerId = null) {
         const instanceData = {
             id: `obj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             name: this.name,
@@ -37,7 +40,7 @@ export class Asset {
             imgSrc: this.imgSrc,
             visible: true,
             locked: false,
-            layerId: null, // Will be set by level.addObject()
+            layerId: layerId, // Will be set by level.addObject() if not provided
             properties: { ...this.properties }
         };
 

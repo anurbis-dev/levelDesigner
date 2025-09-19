@@ -167,6 +167,18 @@ export class DuplicateOperations extends BaseModule {
             base.y = worldPos.y + offsetY;
 
             if (groupEditMode && groupEditMode.isActive && groupEditMode.group && this.editor.objectOperations.isPointInGroupBounds(base.x, base.y, groupEditMode)) {
+                // Check if target group's layer is locked
+                if (groupEditMode.group.layerId) {
+                    const targetLayer = this.editor.level.getLayerById(groupEditMode.group.layerId);
+                    if (targetLayer && targetLayer.locked) {
+                        // Skip placing in locked layer - place on main level instead
+                        this.editor.level.addObject(base);
+                        newIds.add(base.id);
+                        this.editor.invalidateObjectCaches(base.id);
+                        return;
+                    }
+                }
+                
                 const groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
                 base.x -= groupPos.x;
                 base.y -= groupPos.y;

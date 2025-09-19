@@ -19,14 +19,33 @@ export class GroupOperations extends BaseModule {
             const bounds = this.editor.objectOperations.getSelectionBounds(selectedTopLevelObjects);
             const mainLayerId = this.editor.level.getMainLayerId();
 
+            // Determine target layer for the new group - use current layer if available
+            const currentLayer = this.editor.getCurrentLayer();
+            let targetLayerId = currentLayer ? currentLayer.id : (selectedTopLevelObjects[0]?.layerId || mainLayerId);
+            
+            // Check if target layer is locked, if so find next unlocked layer
+            const targetLayer = this.editor.level.getLayerById(targetLayerId);
+            if (targetLayer && targetLayer.locked) {
+                const layersSorted = this.editor.level.getLayersSorted();
+                const currentLayerIndex = layersSorted.findIndex(layer => layer.id === targetLayerId);
+                if (currentLayerIndex !== -1) {
+                    // Find next unlocked layer
+                    for (let i = 0; i < layersSorted.length; i++) {
+                        if (!layersSorted[i].locked) {
+                            targetLayerId = layersSorted[i].id;
+                            break;
+                        }
+                    }
+                }
+            }
+
             const newGroup = new Group({
                 name: "New Group",
                 x: bounds.minX,
                 y: bounds.minY,
                 visible: true,
                 locked: false,
-                // TEMPORARILY COMMENTED OUT: layerId: mainLayerId, // Assign to Main layer
-                layerId: selectedTopLevelObjects[0]?.layerId || mainLayerId, // Use first selected object's layer or Main
+                layerId: targetLayerId,
                 children: []
             });
 
