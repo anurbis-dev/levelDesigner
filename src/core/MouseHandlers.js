@@ -384,6 +384,13 @@ export class MouseHandlers extends BaseModule {
         const mouse = this.editor.stateManager.get('mouse');
         if (!mouse.isDraggingAsset) return;
 
+        // Check if current layer is locked
+        const currentLayer = this.editor.getCurrentLayer();
+        if (currentLayer && currentLayer.locked) {
+            Logger.mouse.warn(`Cannot add objects: current layer '${currentLayer.name}' is locked`);
+            return;
+        }
+
         const droppedAssetIds = JSON.parse(e.dataTransfer.getData('application/json'));
         const worldPos = this.screenToWorld(e);
 
@@ -404,8 +411,7 @@ export class MouseHandlers extends BaseModule {
                     y = snapped.y;
                 }
 
-                // Get current layer for new objects
-                const currentLayer = this.editor.getCurrentLayer();
+                // Get current layer for new objects (already checked above)
                 const newObject = asset.createInstance(x, y, currentLayer.id);
 
                 // Check if we're in group edit mode and the drop point is inside the group bounds
@@ -452,9 +458,18 @@ export class MouseHandlers extends BaseModule {
         const isSelected = selectedObjects.has(obj.id);
         let selectionChanged = false;
         
-        // Check for Alt+drag duplication on selected objects
-        if (e.altKey && isSelected) {
-            Logger.mouse.debug('Alt+click on selected object, starting duplication');
+        // Check for Alt+drag duplication - works on any object, selected or not
+        if (e.altKey) {
+            Logger.mouse.debug('Alt+click on object, starting duplication');
+            
+            // If object is not selected, select it first
+            if (!isSelected) {
+                selectedObjects.clear();
+                selectedObjects.add(obj.id);
+                this.editor.stateManager.set('selectedObjects', selectedObjects);
+                this.editor.updateAllPanels();
+            }
+            
             this.editor.duplicateOperations.startFromSelection();
             return; // Don't process normal selection logic
         }

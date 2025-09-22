@@ -12,7 +12,6 @@ export class LayersPanel {
         this.levelEditor = levelEditor;
         this.activeLayerId = null; // Track active layer (for border highlight)
         this.currentLayerId = null; // Track current layer (for new objects, blue highlight)
-        this.selectedLayers = new Set(); // Track selected layers for multi-selection
         this.searchFilter = ''; // Search filter for layers
         this.contextMenu = null; // Context menu instance
 
@@ -195,11 +194,9 @@ export class LayersPanel {
         const isMainLayer = layer.id === level.getMainLayerId();
         const isActive = this.activeLayerId === layer.id;
         const isCurrent = this.currentLayerId === layer.id;
-        const isSelected = this.selectedLayers.has(layer.id);
         
         const layerDiv = document.createElement('div');
         layerDiv.className = `layer-item flex items-center justify-between p-2 rounded border border-gray-600 cursor-pointer transition-colors ${
-            isSelected ? 'bg-blue-500' : 
             isCurrent ? 'bg-blue-600' : 
             'bg-gray-700 hover:bg-gray-600'
         }`;
@@ -359,16 +356,12 @@ export class LayersPanel {
 
         // Update background color based on current state
         const isCurrent = this.currentLayerId === layerId;
-        const isSelected = this.selectedLayers.has(layerId);
         
-        if (isSelected) {
-            layerElement.classList.remove('bg-gray-700', 'hover:bg-gray-600', 'bg-blue-600');
-            layerElement.classList.add('bg-blue-500');
-        } else if (isCurrent) {
-            layerElement.classList.remove('bg-gray-700', 'hover:bg-gray-600', 'bg-blue-500');
+        if (isCurrent) {
+            layerElement.classList.remove('bg-gray-700', 'hover:bg-gray-600');
             layerElement.classList.add('bg-blue-600');
         } else {
-            layerElement.classList.remove('bg-blue-500', 'bg-blue-600');
+            layerElement.classList.remove('bg-blue-600');
             layerElement.classList.add('bg-gray-700', 'hover:bg-gray-600');
         }
 
@@ -563,17 +556,13 @@ export class LayersPanel {
             const layerId = element.dataset.layerId;
             const isActive = activeLayerIds.has(layerId);
             const isCurrent = this.currentLayerId === layerId;
-            const isSelected = this.selectedLayers.has(layerId);
 
-            // Update background color based on state priority: selected > current > default
-            if (isSelected) {
-                element.classList.remove('bg-gray-700', 'hover:bg-gray-600', 'bg-blue-600');
-                element.classList.add('bg-blue-500');
-            } else if (isCurrent) {
-                element.classList.remove('bg-gray-700', 'hover:bg-gray-600', 'bg-blue-500');
+            // Update background color based on state: current > default
+            if (isCurrent) {
+                element.classList.remove('bg-gray-700', 'hover:bg-gray-600');
                 element.classList.add('bg-blue-600');
             } else {
-                element.classList.remove('bg-blue-500', 'bg-blue-600');
+                element.classList.remove('bg-blue-600');
                 element.classList.add('bg-gray-700', 'hover:bg-gray-600');
             }
 
@@ -796,8 +785,8 @@ export class LayersPanel {
                 const layerId = e.currentTarget.dataset.layerId;
                 
                 if (e.ctrlKey || e.metaKey) {
-                    // Multi-select mode
-                    this.handleLayerSelection(layerId, e);
+                    // Select all objects in the layer
+                    this.selectAllObjectsInLayer(layerId);
                 } else {
                     // Set as current layer
                     this.setCurrentLayerAndNotify(layerId);
@@ -1080,7 +1069,6 @@ export class LayersPanel {
 
         const level = this.levelEditor.getLevel();
         const isMainLayer = layer.id === level.getMainLayerId();
-        const isSelected = this.selectedLayers.has(layer.id);
         const isCurrent = layer.id === this.currentLayerId;
 
         const contextMenu = document.createElement('div');
@@ -1152,12 +1140,6 @@ export class LayersPanel {
                 icon: '🎯',
                 action: () => this.selectAllObjectsInLayer(layer.id),
                 enabled: true
-            },
-            {
-                text: 'Move Objects to Main Layer',
-                icon: '📦',
-                action: () => this.moveObjectsToMainLayer(layer.id),
-                enabled: !isMainLayer
             },
             { text: '---', enabled: false },
             {
@@ -1343,35 +1325,6 @@ export class LayersPanel {
         Logger.layer.info(`Selected ${objectIds.length} objects in layer: ${level.getLayerById(layerId)?.name}`);
     }
 
-    /**
-     * Move all objects from layer to main layer
-     * Note: This does NOT change the current layer - it only moves objects
-     */
-    moveObjectsToMainLayer(layerId) {
-        const level = this.levelEditor.getLevel();
-        const mainLayerId = level.getMainLayerId();
-        
-        if (layerId === mainLayerId) return;
-
-        const objectsToMove = level.objects.filter(obj => obj.layerId === layerId);
-        
-        if (objectsToMove.length === 0) {
-            Logger.layer.info(`No objects to move from layer: ${level.getLayerById(layerId)?.name}`);
-            return;
-        }
-
-        objectsToMove.forEach(obj => {
-            obj.layerId = mainLayerId;
-        });
-
-        this.stateManager.markDirty();
-        this.render();
-        
-        // Update global stats
-        this.updateLayersStats();
-        
-        Logger.layer.info(`Moved ${objectsToMove.length} objects to main layer`);
-    }
 
     /**
      * Delete layer
@@ -1404,25 +1357,6 @@ export class LayersPanel {
         }
     }
 
-    /**
-     * Handle layer selection (single or multi-select)
-     */
-    handleLayerSelection(layerId, event) {
-        if (event.ctrlKey || event.metaKey) {
-            // Multi-select
-            if (this.selectedLayers.has(layerId)) {
-                this.selectedLayers.delete(layerId);
-            } else {
-                this.selectedLayers.add(layerId);
-            }
-        } else {
-            // Single select
-            this.selectedLayers.clear();
-            this.selectedLayers.add(layerId);
-        }
-        
-        this.updateLayerStyles();
-    }
 
     /**
      * Setup search functionality
@@ -1497,16 +1431,6 @@ export class LayersPanel {
         contextMenu.style.top = `${top}px`;
 
         const menuItems = [
-            {
-                text: 'Select All Layers',
-                icon: '🎯',
-                action: () => this.selectAllLayers()
-            },
-            {
-                text: 'Deselect All',
-                icon: '❌',
-                action: () => this.deselectAllLayers()
-            },
             { text: '---', enabled: false },
             {
                 text: 'Show All Layers',
@@ -1566,24 +1490,6 @@ export class LayersPanel {
         }, 0);
     }
 
-    /**
-     * Select all layers
-     */
-    selectAllLayers() {
-        const level = this.levelEditor.getLevel();
-        const layers = level.getLayersSorted();
-        this.selectedLayers.clear();
-        layers.forEach(layer => this.selectedLayers.add(layer.id));
-        this.updateLayerStyles();
-    }
-
-    /**
-     * Deselect all layers
-     */
-    deselectAllLayers() {
-        this.selectedLayers.clear();
-        this.updateLayerStyles();
-    }
 
     /**
      * Show all layers
@@ -1594,10 +1500,19 @@ export class LayersPanel {
             if (!layer.visible) {
                 layer.toggleVisibility();
                 this.updateLayerElement(layer.id, layer);
+                // Call handler to update object visibility
+                this.handleLayerVisibilityChanged(layer.id, true);
             }
         });
+        
+        // Invalidate layer visibility cache to ensure objects are re-rendered
+        this.levelEditor.renderOperations.invalidateLayerVisibilityCache();
+        
         this.stateManager.markDirty();
         this.render();
+        
+        // Force re-render to show objects from newly visible layers
+        this.levelEditor.render();
     }
 
     /**
@@ -1609,11 +1524,19 @@ export class LayersPanel {
             if (layer.visible) {
                 layer.toggleVisibility();
                 this.updateLayerElement(layer.id, layer);
+                // Call handler to update object visibility
                 this.handleLayerVisibilityChanged(layer.id, false);
             }
         });
+        
+        // Invalidate layer visibility cache to ensure objects are re-rendered
+        this.levelEditor.renderOperations.invalidateLayerVisibilityCache();
+        
         this.stateManager.markDirty();
         this.render();
+        
+        // Force re-render to hide objects from newly hidden layers
+        this.levelEditor.render();
     }
 
     /**
@@ -1683,159 +1606,9 @@ export class LayersPanel {
                 Logger.layer.info(`Added new layer: ${newLayer.name}`);
             }
 
-            // Delete: Delete selected layers
-            if (e.key === 'Delete' && this.selectedLayers.size > 0) {
-                e.preventDefault();
-                this.deleteSelectedLayers();
-            }
-
-            // Ctrl/Cmd + D: Duplicate selected layers
-            if ((e.ctrlKey || e.metaKey) && e.key === 'd' && this.selectedLayers.size > 0) {
-                e.preventDefault();
-                this.duplicateSelectedLayers();
-            }
-
-            // Ctrl/Cmd + A: Select all layers
-            if ((e.ctrlKey || e.metaKey) && e.key === 'a' && this.container.contains(activeElement)) {
-                e.preventDefault();
-                this.selectAllLayers();
-            }
-
-            // Escape: Deselect all layers
-            if (e.key === 'Escape' && this.selectedLayers.size > 0) {
-                e.preventDefault();
-                this.deselectAllLayers();
-            }
-
-            // Ctrl/Cmd + H: Toggle visibility of selected layers
-            if ((e.ctrlKey || e.metaKey) && e.key === 'h' && this.selectedLayers.size > 0) {
-                e.preventDefault();
-                this.toggleSelectedLayersVisibility();
-            }
-
-            // Ctrl/Cmd + Shift + H: Toggle lock of selected layers
-            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'H' && this.selectedLayers.size > 0) {
-                e.preventDefault();
-                this.toggleSelectedLayersLock();
-            }
         });
     }
 
-    /**
-     * Delete selected layers
-     */
-    deleteSelectedLayers() {
-        const level = this.levelEditor.getLevel();
-        const layersToDelete = Array.from(this.selectedLayers).filter(layerId => 
-            layerId !== level.getMainLayerId()
-        );
-
-        if (layersToDelete.length === 0) {
-            Logger.layer.warn('Cannot delete main layer');
-            return;
-        }
-
-        const layerNames = layersToDelete.map(id => level.getLayerById(id)?.name).join(', ');
-        
-        if (confirm(`Delete ${layersToDelete.length} layer(s): ${layerNames}?`)) {
-            layersToDelete.forEach(layerId => {
-                this.moveObjectsToMainLayer(layerId);
-                this.handleLayerVisibilityChanged(layerId, false);
-                level.removeLayer(layerId);
-            });
-            
-            this.selectedLayers.clear();
-            this.render();
-            this.stateManager.markDirty();
-            
-            // Update global stats
-            this.updateLayersStats();
-            
-            Logger.layer.info(`Deleted ${layersToDelete.length} layers: ${layerNames}`);
-        }
-    }
-
-    /**
-     * Duplicate selected layers
-     */
-    duplicateSelectedLayers() {
-        const level = this.levelEditor.getLevel();
-        const duplicatedLayers = [];
-
-        this.selectedLayers.forEach(layerId => {
-            const layer = level.getLayerById(layerId);
-            if (layer) {
-                const duplicatedLayer = layer.clone();
-                duplicatedLayer.name = `${layer.name} Copy`;
-                duplicatedLayer.order = Math.max(...level.layers.map(l => l.order), -1) + 1;
-                
-                level.layers.push(duplicatedLayer);
-                duplicatedLayers.push(duplicatedLayer);
-            }
-        });
-
-        this.render();
-        this.stateManager.markDirty();
-        
-        // Update global stats
-        this.updateLayersStats();
-        
-        Logger.layer.info(`Duplicated ${duplicatedLayers.length} layers`);
-    }
-
-    /**
-     * Toggle visibility of selected layers
-     */
-    toggleSelectedLayersVisibility() {
-        const level = this.levelEditor.getLevel();
-        
-        this.selectedLayers.forEach(layerId => {
-            const layer = level.getLayerById(layerId);
-            if (layer) {
-                const wasVisible = layer.visible;
-                layer.toggleVisibility();
-                this.updateLayerElement(layerId, layer);
-
-                if (wasVisible && !layer.visible) {
-                    this.handleLayerVisibilityChanged(layerId, false);
-                } else if (!wasVisible && layer.visible) {
-                    this.handleLayerVisibilityChanged(layerId, true);
-                }
-            }
-        });
-
-        this.stateManager.markDirty();
-        this.render();
-        
-        Logger.layer.info(`Toggled visibility of ${this.selectedLayers.size} layers`);
-    }
-
-    /**
-     * Toggle lock of selected layers
-     */
-    toggleSelectedLayersLock() {
-        const level = this.levelEditor.getLevel();
-        
-        this.selectedLayers.forEach(layerId => {
-            const layer = level.getLayerById(layerId);
-            if (layer) {
-                const wasLocked = layer.locked;
-                layer.toggleLock();
-                this.updateLayerElement(layerId, layer);
-
-                if (!wasLocked && layer.locked) {
-                    this.handleLayerLockChanged(layerId, true);
-                } else if (wasLocked && !layer.locked) {
-                    this.handleLayerLockChanged(layerId, false);
-                }
-            }
-        });
-
-        this.stateManager.markDirty();
-        this.render();
-        
-        Logger.layer.info(`Toggled lock of ${this.selectedLayers.size} layers`);
-    }
 
 
     /**
