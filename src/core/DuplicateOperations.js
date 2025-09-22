@@ -206,6 +206,9 @@ export class DuplicateOperations extends BaseModule {
                 }
 
                 groupEditMode.group.children.push(base);
+                
+                // Add object to index even when adding to group
+                this.editor.level.addObjectToIndex(base, groupEditMode.group);
             } else {
                 // Place on main level with world coordinates
                 base.x = worldX;

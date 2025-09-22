@@ -1567,7 +1567,7 @@ export class LevelEditor {
 
     // Assign new unique ids recursively to object and its subtree
     reassignIdsDeep(obj) {
-        obj.id = this.level.nextObjectId++;
+        obj.id = `obj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         if (obj.type === 'group' && Array.isArray(obj.children)) {
             obj.children.forEach(child => this.reassignIdsDeep(child));
         }

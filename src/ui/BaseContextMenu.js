@@ -46,6 +46,7 @@ export class BaseContextMenu {
         this.currentMenu = null;
         this.menuItems = [];
         this.isVisible = false;
+        this.contextMenuHandler = null;
 
         // Store cursor position for animation end checks
         this.lastCursorX = 0;
@@ -68,15 +69,22 @@ export class BaseContextMenu {
      * Sets up event listeners and menu creation
      */
     setupContextMenu() {
+        // Remove existing context menu handler if it exists
+        if (this.contextMenuHandler) {
+            this.panel.removeEventListener('contextmenu', this.contextMenuHandler);
+        }
+        
         // Add context menu to panel
-        this.panel.addEventListener('contextmenu', (e) => {
+        this.contextMenuHandler = (e) => {
             e.preventDefault();
             e.stopPropagation();
             
             // Extract context data from clicked element
             const contextData = this.extractContextData(e.target);
             this.showContextMenu(e, contextData);
-        });
+        };
+        
+        this.panel.addEventListener('contextmenu', this.contextMenuHandler);
     }
 
     /**
@@ -712,6 +720,10 @@ export class BaseContextMenu {
         if (this.resizeHandler) {
             window.removeEventListener('resize', this.resizeHandler);
         }
+        if (this.contextMenuHandler) {
+            this.panel.removeEventListener('contextmenu', this.contextMenuHandler);
+        }
+        this.removeCursorTracking();
     }
 }
 

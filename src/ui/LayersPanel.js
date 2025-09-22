@@ -1,5 +1,6 @@
 import { UIFactory } from '../utils/UIFactory.js';
 import { Logger } from '../utils/Logger.js';
+import { SearchUtils } from '../utils/SearchUtils.js';
 
 /**
  * Layers panel UI component
@@ -129,12 +130,16 @@ export class LayersPanel {
         // Search and controls row
         const controlsRow = document.createElement('div');
         controlsRow.className = 'flex items-center space-x-2';
+        
+        // Create search input using SearchUtils
+        const searchInput = SearchUtils.createSearchInput(
+            'Search layers...',
+            'layers-search',
+            'flex-1 bg-gray-700 text-white px-2 py-1 rounded text-sm border border-gray-600 focus:border-blue-500 focus:outline-none'
+        );
+        searchInput.value = this.searchFilter;
+        
         controlsRow.innerHTML = `
-            <input type="text" 
-                   id="layers-search" 
-                   placeholder="Search layers..." 
-                   class="flex-1 bg-gray-700 text-white px-2 py-1 rounded text-sm border border-gray-600 focus:border-blue-500 focus:outline-none"
-                   value="${this.searchFilter}">
             <button id="add-layer-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
                 + Add
             </button>
@@ -142,6 +147,8 @@ export class LayersPanel {
                 ⋮
             </button>
         `;
+        
+        controlsRow.insertBefore(searchInput, controlsRow.firstChild);
         
         header.appendChild(titleRow);
         header.appendChild(controlsRow);
@@ -1017,14 +1024,7 @@ export class LayersPanel {
      * Filter layers based on search query
      */
     filterLayers(layers) {
-        if (!this.searchFilter.trim()) {
-            return layers;
-        }
-        
-        const query = this.searchFilter.toLowerCase();
-        return layers.filter(layer => 
-            layer.name.toLowerCase().includes(query)
-        );
+        return SearchUtils.filterObjects(layers, this.searchFilter, 'name');
     }
 
     /**
@@ -1369,18 +1369,9 @@ export class LayersPanel {
         const searchInput = document.getElementById('layers-search');
         if (!searchInput) return;
 
-        searchInput.addEventListener('input', (e) => {
-            this.searchFilter = e.target.value;
+        SearchUtils.setupSearchListeners(searchInput, (searchTerm) => {
+            this.searchFilter = searchTerm;
             this.render();
-        });
-
-        // Clear search on Escape
-        searchInput.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                this.searchFilter = '';
-                e.target.value = '';
-                this.render();
-            }
         });
     }
 
@@ -1593,11 +1584,7 @@ export class LayersPanel {
             // Ctrl/Cmd + L: Focus layers search
             if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
                 e.preventDefault();
-                const searchInput = document.getElementById('layers-search');
-                if (searchInput) {
-                    searchInput.focus();
-                    searchInput.select();
-                }
+                SearchUtils.focusSearch('layers-search');
             }
 
             // Ctrl/Cmd + Shift + L: Add new layer

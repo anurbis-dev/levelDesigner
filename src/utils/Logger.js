@@ -46,7 +46,8 @@ export class Logger {
         PREFERENCES: { color: '#673AB7', prefix: 'PREFS' },
         CONFIG: { color: '#00E676', prefix: 'CONFIG' },
         LAYER: { color: '#03A9F4', prefix: 'LAYER' },
-        CACHE: { color: '#4CAF50', prefix: 'CACHE' }
+        CACHE: { color: '#4CAF50', prefix: 'CACHE' },
+        OUTLINER: { color: '#9C27B0', prefix: 'OUTLINER' }
     };
 
     /**
@@ -378,5 +379,15 @@ export class Logger {
         debug: (message, ...args) => Logger.log('LAYER', 'debug', message, ...args),
         warn: (message, ...args) => Logger.log('LAYER', 'warn', message, ...args),
         error: (message, ...args) => Logger.log('LAYER', 'error', message, ...args)
+    };
+
+    /**
+     * Outliner panel logging
+     */
+    static outliner = {
+        info: (message, ...args) => Logger.log('OUTLINER', 'info', message, ...args),
+        debug: (message, ...args) => Logger.log('OUTLINER', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('OUTLINER', 'warn', message, ...args),
+        error: (message, ...args) => Logger.log('OUTLINER', 'error', message, ...args)
     };
 }
