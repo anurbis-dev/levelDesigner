@@ -29,13 +29,38 @@ export class DuplicateUtils {
     /**
      * Initialize object positions for duplication
      */
-    static initializePositions(objects, worldPos) {
+    static initializePositions(objects, worldPos, editor = null) {
         if (!objects || objects.length === 0) return objects;
 
         return objects.map((obj, index) => {
-            // Save relative offset from cursor position
-            const offsetX = obj.x - worldPos.x;
-            const offsetY = obj.y - worldPos.y;
+            // Get world position of the object to calculate correct offset
+            let objWorldX, objWorldY;
+            
+            if (editor && editor.objectOperations) {
+                // Special handling for group edit mode
+                if (editor.objectOperations.isInGroupEditMode()) {
+                    const groupEditMode = editor.objectOperations.getGroupEditMode();
+                    const activeGroup = groupEditMode.group;
+                    
+                    // Calculate world position relative to the active group
+                    const groupWorldPos = editor.objectOperations.getObjectWorldPosition(activeGroup);
+                    objWorldX = groupWorldPos.x + obj.x;
+                    objWorldY = groupWorldPos.y + obj.y;
+                } else {
+                    // Use standard method for normal mode
+                    const worldPos = editor.objectOperations.getObjectWorldPosition(obj);
+                    objWorldX = worldPos.x;
+                    objWorldY = worldPos.y;
+                }
+            } else {
+                // Fallback to local coordinates if editor not available
+                objWorldX = obj.x;
+                objWorldY = obj.y;
+            }
+            
+            // Save relative offset from cursor position using world coordinates
+            const offsetX = objWorldX - worldPos.x;
+            const offsetY = objWorldY - worldPos.y;
 
             return { ...obj, _offsetX: offsetX, _offsetY: offsetY };
         });
@@ -68,8 +93,8 @@ export const duplicateRenderUtils = {
     /**
      * Initialize positions
      */
-    initializePositions: (objects, worldPos) => {
-        return DuplicateUtils.initializePositions(objects, worldPos);
+    initializePositions: (objects, worldPos, editor = null) => {
+        return DuplicateUtils.initializePositions(objects, worldPos, editor);
     },
 
     /**

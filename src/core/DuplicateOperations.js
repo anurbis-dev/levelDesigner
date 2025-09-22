@@ -100,7 +100,7 @@ export class DuplicateOperations extends BaseModule {
         }
 
         // Initialize offsets relative to the cursor
-        const initialized = this.editor.duplicateRenderUtils.initializePositions(clones, worldPos);
+        const initialized = this.editor.duplicateRenderUtils.initializePositions(clones, worldPos, this.editor);
 
         // Apply initial positions so preview is visible immediately (even without mouse move)
         const positioned = this.editor.duplicateRenderUtils.updatePositions(initialized, worldPos);
@@ -163,15 +163,19 @@ export class DuplicateOperations extends BaseModule {
             // Sanitize and place
             const base = this._sanitizeForPlacement(this.editor.deepClone(obj));
             this.editor.reassignIdsDeep(base);
-            base.x = worldPos.x + offsetX;
-            base.y = worldPos.y + offsetY;
+            
+            // Calculate world position for the duplicate
+            const worldX = worldPos.x + offsetX;
+            const worldY = worldPos.y + offsetY;
 
-            if (groupEditMode && groupEditMode.isActive && groupEditMode.group && this.editor.objectOperations.isPointInGroupBounds(base.x, base.y, groupEditMode)) {
+            if (groupEditMode && groupEditMode.isActive && groupEditMode.group) {
                 // Check if target group's layer is locked
                 if (groupEditMode.group.layerId) {
                     const targetLayer = this.editor.level.getLayerById(groupEditMode.group.layerId);
                     if (targetLayer && targetLayer.locked) {
                         // Skip placing in locked layer - place on main level instead
+                        base.x = worldX;
+                        base.y = worldY;
                         this.editor.level.addObject(base);
                         newIds.add(base.id);
                         this.editor.invalidateObjectCaches(base.id);
@@ -179,9 +183,10 @@ export class DuplicateOperations extends BaseModule {
                     }
                 }
                 
+                // Convert world coordinates to relative coordinates within the group
                 const groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
-                base.x -= groupPos.x;
-                base.y -= groupPos.y;
+                base.x = worldX - groupPos.x;
+                base.y = worldY - groupPos.y;
 
                 // FORCED INHERITANCE: Always inherit layerId from parent group
                 if (groupEditMode.group.layerId) {
@@ -202,6 +207,9 @@ export class DuplicateOperations extends BaseModule {
 
                 groupEditMode.group.children.push(base);
             } else {
+                // Place on main level with world coordinates
+                base.x = worldX;
+                base.y = worldY;
                 this.editor.level.addObject(base);
             }
 
