@@ -1,5 +1,4 @@
 import { UIFactory } from '../utils/UIFactory.js';
-import { ColorChooser } from '../widgets/ColorChooser.js';
 import { Logger } from '../utils/Logger.js';
 
 /**
@@ -262,52 +261,57 @@ export class LayersPanel {
      * Show color picker for layer
      */
     showColorPicker(layer, event) {
-        // Create a hidden color input and trigger it
+        // Create a visible color input element positioned near the button
+        const button = event.target.closest('.layer-color');
+        const buttonRect = button.getBoundingClientRect();
+        
         const colorInput = document.createElement('input');
         colorInput.type = 'color';
-        colorInput.id = `color-picker-${layer.id}`;
-        colorInput.name = `color-picker-${layer.id}`;
         colorInput.value = layer.color;
-        colorInput.style.position = 'absolute';
-        colorInput.style.left = '-9999px';
-        colorInput.style.opacity = '0';
-        colorInput.style.pointerEvents = 'none';
+        colorInput.style.position = 'fixed';
+        colorInput.style.left = `${buttonRect.left}px`;
+        colorInput.style.top = `${buttonRect.bottom + 5}px`;
+        colorInput.style.width = '40px';
+        colorInput.style.height = '40px';
+        colorInput.style.border = '2px solid #3B82F6';
+        colorInput.style.borderRadius = '4px';
+        colorInput.style.zIndex = '10000';
+        colorInput.style.cursor = 'pointer';
+        colorInput.style.opacity = '1';
         
-        // Add to body temporarily
+        // Add to body
         document.body.appendChild(colorInput);
+        
+        // Focus and click to open native color picker
+        colorInput.focus();
+        colorInput.click();
         
         // Handle color change
         colorInput.addEventListener('change', (e) => {
-            layer.color = e.target.value;
+            const newColor = e.target.value;
+            layer.color = newColor;
             this.updateLayerElement(layer.id, layer);
             this.stateManager.markDirty();
             
             // Clean up
-            document.body.removeChild(colorInput);
+            if (document.body.contains(colorInput)) {
+                document.body.removeChild(colorInput);
+            }
         });
         
-        // Handle cancel (click outside or escape)
+        // Handle escape key or focus loss
         const cleanup = () => {
             if (document.body.contains(colorInput)) {
                 document.body.removeChild(colorInput);
             }
         };
         
-        // Clean up on escape key
-        const escapeHandler = (e) => {
+        colorInput.addEventListener('blur', cleanup);
+        document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 cleanup();
-                document.removeEventListener('keydown', escapeHandler);
             }
-        };
-        
-        document.addEventListener('keydown', escapeHandler);
-        
-        // Clean up after a delay (in case user doesn't interact)
-        setTimeout(cleanup, 10000);
-        
-        // Trigger the color picker
-        colorInput.click();
+        }, { once: true });
     }
 
     /**
