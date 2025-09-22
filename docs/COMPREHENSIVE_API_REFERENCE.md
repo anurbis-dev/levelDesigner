@@ -1,4 +1,4 @@
-# Полный справочник API Level Editor v3.4.1
+# Полный справочник API Level Editor v3.9.0
 
 ## Обзор
 
@@ -543,8 +543,8 @@
 - `getAllChildren(group)` - получение всех дочерних объектов
 - `updateTabTitle()` - обновление заголовка вкладки
 
-### OutlinerPanel (src/ui/OutlinerPanel.js)
-Панель структуры.
+### OutlinerPanel (src/ui/OutlinerPanel.js) - ОБНОВЛЕН в v3.9.0
+Панель структуры с улучшенным поиском и выделением.
 
 #### Основные методы
 - `constructor(container, stateManager, levelEditor)` - создание панели
@@ -557,6 +557,53 @@
 - `renderGroupNode(group, depth, container)` - отрисовка узла группы
 - `renderObjectNode(obj, depth, container)` - отрисовка узла объекта
 - `handleObjectClick(e, obj)` - обработка клика по объекту
+
+#### Новые методы v3.9.0
+- `handleShiftClick(obj, selectedObjects)` - выделение диапазона объектов (Shift+клик)
+- `handleCtrlClick(obj, selectedObjects)` - переключение единичного объекта (Ctrl+клик)
+- `getFlatObjectList()` - получение плоского списка объектов в порядке отображения
+- `addObjectsToFlatList(objects, flatList)` - рекурсивное добавление объектов в плоский список
+- `hasMatchingChildrenRecursive(objects, searchTerm)` - проверка наличия подходящих детей
+- `setupContextMenu()` - настройка контекстного меню
+- `startInlineRename(object)` - начало переименования объекта
+- `toggleGroupCollapse(groupId)` - переключение сворачивания группы
+
+#### Поиск и фильтрация
+- `createSearchBar()` - создание панели поиска
+- `filterObjects(objects)` - фильтрация объектов
+- `getAllFilteredObjects(objects)` - получение всех отфильтрованных объектов
+
+### OutlinerContextMenu (src/ui/OutlinerContextMenu.js) - НОВЫЙ в v3.9.0
+Контекстное меню для объектов в OutlinerPanel.
+
+#### Основные методы
+- `constructor(panel, levelEditor, callbacks)` - создание контекстного меню
+- `setupMenuItems()` - настройка пунктов меню
+- `extractContextData(target)` - извлечение данных контекста из элемента
+- `showContextMenu(e, contextData)` - показ контекстного меню
+- `calculateMenuPosition(e, menu)` - расчет позиции меню
+
+#### Обработчики
+- `handleRenameObject(object)` - переименование объекта
+- `handleDeleteObject(object)` - удаление объекта
+- `handleToggleVisibility(object)` - переключение видимости
+- `handleSelectObject(object)` - выбор объекта
+- `handleDuplicateObject(object)` - дублирование объекта
+- `handleExpandAllGroups()` - развертывание всех групп
+- `handleCollapseAllGroups()` - сворачивание всех групп
+
+### BaseContextMenu (src/ui/BaseContextMenu.js) - ОБНОВЛЕН в v3.9.0
+Базовый класс для контекстных меню с улучшенной очисткой обработчиков.
+
+#### Основные методы
+- `constructor(panel, callbacks)` - создание базового контекстного меню
+- `setupContextMenu()` - настройка контекстного меню
+- `showContextMenu(event, contextData)` - показ контекстного меню
+- `hideMenu()` - скрытие меню
+- `destroy()` - уничтожение меню и очистка обработчиков
+
+#### Новые поля v3.9.0
+- `contextMenuHandler` - ссылка на обработчик контекстного меню
 
 ### SettingsPanel (src/ui/SettingsPanel.js)
 Панель настроек.
@@ -673,6 +720,7 @@
 - `static layout` - логирование макета
 - `static settings` - логирование настроек
 - `static preferences` - логирование предпочтений
+- `static outliner` - логирование OutlinerPanel (новый в v3.9.0)
 
 #### Утилиты
 - `static utils.trace(className, methodName, args)` - трассировка функций
@@ -703,6 +751,18 @@
 - `static registerStyle(name, config)` - регистрация стиля
 - `static applyCameraTransform(ctx, camera)` - применение трансформации камеры
 - `static restoreCameraTransform(ctx)` - восстановление трансформации камеры
+
+### SearchUtils (src/utils/SearchUtils.js) - НОВЫЙ в v3.9.0
+Унифицированная система поиска для всех панелей.
+
+#### Основные методы
+- `static createSearchInput(placeholder, id, className)` - создание поля поиска
+- `static createSearchContainer(placeholder, id, className)` - создание контейнера поиска
+- `static setupSearchListeners(searchInput, onSearch, onClear)` - настройка обработчиков поиска
+- `static filterObjects(objects, searchTerm, nameProperty)` - фильтрация плоского массива объектов
+- `static filterObjectsRecursive(objects, searchTerm, nameProperty, childrenProperty)` - рекурсивная фильтрация иерархических объектов
+- `static createSearchResultsInfo(totalFiltered, searchTerm, itemType)` - создание информации о результатах поиска
+- `static focusSearch(id)` - фокус на поле поиска по ID
 
 ### UIFactory (src/utils/UIFactory.js)
 Фабрика UI элементов.
