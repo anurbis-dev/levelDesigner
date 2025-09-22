@@ -33,7 +33,15 @@ export class StateManager {
                 isAssetMarqueeSelecting: false, isPlacingObjects: false,
                 placingObjects: [], placingOffsets: [],
                 draggingGroupId: null,
-                altKey: false
+                altKey: false,
+                constrainedAxis: null, // 'x' or 'y' when Shift is pressed
+                axisCenter: null // {x, y} center of selected objects for axis constraint
+            },
+            
+            // Keyboard state
+            keyboard: {
+                ctrlSnapToGrid: false,
+                shiftKey: false
             },
             
             // Duplicate state

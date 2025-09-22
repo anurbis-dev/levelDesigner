@@ -4,5 +4,17 @@
   "undoHistoryLimit": 50,
   "showFPS": false,
   "showObjectCount": true,
-  "multiSelectMode": "additive"
+  "multiSelectMode": "additive",
+  "axisConstraint": {
+    "showAxis": true,
+    "axisColor": "#cccccc",
+    "axisWidth": 1
+  },
+  "view": {
+    "grid": true,
+    "gameMode": false,
+    "snapToGrid": false,
+    "objectBoundaries": true,
+    "objectCollisions": false
+  }
 }

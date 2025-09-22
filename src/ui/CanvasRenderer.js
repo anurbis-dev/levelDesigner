@@ -241,6 +241,47 @@ export class CanvasRenderer {
         this.ctx.restore();
     }
 
+    /**
+     * Draw axis constraint line
+     */
+    drawAxisConstraint(axis, startX, startY, camera, config) {
+        if (!config.showAxis || !axis) return;
+        
+        this.ctx.save();
+        
+        this.ctx.strokeStyle = config.axisColor || '#cccccc';
+        this.ctx.lineWidth = (config.axisWidth || 1) / camera.zoom;
+        this.ctx.setLineDash([]);
+        
+        // Get canvas dimensions in world coordinates (after camera transform)
+        const canvasWidth = this.canvas.width / camera.zoom;
+        const canvasHeight = this.canvas.height / camera.zoom;
+        
+        if (axis === 'x') {
+            // Draw horizontal line through start point, extending to visible area edges
+            const y = startY;
+            // After camera transform, we need to draw from camera position to camera position + canvas size
+            const leftX = camera.x;
+            const rightX = camera.x + canvasWidth;
+            this.ctx.beginPath();
+            this.ctx.moveTo(leftX, y);
+            this.ctx.lineTo(rightX, y);
+            this.ctx.stroke();
+        } else if (axis === 'y') {
+            // Draw vertical line through start point, extending to visible area edges
+            const x = startX;
+            // After camera transform, we need to draw from camera position to camera position + canvas size
+            const topY = camera.y;
+            const bottomY = camera.y + canvasHeight;
+            this.ctx.beginPath();
+            this.ctx.moveTo(x, topY);
+            this.ctx.lineTo(x, bottomY);
+            this.ctx.stroke();
+        }
+        
+        this.ctx.restore();
+    }
+
 
     /**
      * Get object world bounds

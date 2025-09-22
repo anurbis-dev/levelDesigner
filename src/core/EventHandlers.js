@@ -97,6 +97,31 @@ export class EventHandlers extends BaseModule {
     }
 
     setupKeyboardEvents() {
+        // Handle Ctrl key for snap to grid
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Control' || e.key === 'Meta') {
+                this.editor.stateManager.update({
+                    'keyboard.ctrlSnapToGrid': true
+                });
+            } else if (e.key === 'Shift') {
+                this.editor.stateManager.update({
+                    'keyboard.shiftKey': true
+                });
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'Control' || e.key === 'Meta') {
+                this.editor.stateManager.update({
+                    'keyboard.ctrlSnapToGrid': false
+                });
+            } else if (e.key === 'Shift') {
+                this.editor.stateManager.update({
+                    'keyboard.shiftKey': false
+                });
+            }
+        });
+
         window.addEventListener('keydown', (e) => {
             // Allow input fields to work normally
             if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.contentEditable === 'true')) {
@@ -220,27 +245,30 @@ export class EventHandlers extends BaseModule {
 
     initializeViewStates() {
         
-        // Initialize grid state from level settings
-        const gridEnabled = this.editor.level?.settings?.showGrid ?? true;
+        // Initialize grid state from user config or level settings
+        const gridEnabled = this.editor.configManager.get('editor.view.grid') ?? this.editor.level?.settings?.showGrid ?? true;
         
         this.editor.stateManager.set('view.grid', gridEnabled);
         this.editor.stateManager.set('canvas.showGrid', gridEnabled);
-        
-        
         this.updateViewCheckbox('grid', gridEnabled);
         
-        // Initialize snap to grid state from level settings
-        const snapToGridEnabled = this.editor.level?.settings?.snapToGrid ?? false;
+        // Initialize snap to grid state from user config or level settings
+        const snapToGridEnabled = this.editor.configManager.get('editor.view.snapToGrid') ?? this.editor.level?.settings?.snapToGrid ?? false;
         this.editor.stateManager.set('view.snapToGrid', snapToGridEnabled);
         this.editor.stateManager.set('canvas.snapToGrid', snapToGridEnabled);
         this.updateViewCheckbox('snapToGrid', snapToGridEnabled);
         
-        // Initialize other view states (default to false)
+        // Initialize other view states from user config
         const viewStates = ['gameMode', 'objectBoundaries', 'objectCollisions'];
         viewStates.forEach(state => {
-            const enabled = this.editor.stateManager.get(`view.${state}`) || false;
+            const enabled = this.editor.configManager.get(`editor.view.${state}`) ?? false;
             this.editor.stateManager.set(`view.${state}`, enabled);
             this.updateViewCheckbox(state, enabled);
+            
+            // Apply the view option for states that need UI changes
+            if (state === 'gameMode') {
+                this.toggleGameMode(enabled);
+            }
         });
     }
 
@@ -270,6 +298,9 @@ export class EventHandlers extends BaseModule {
         
         // Update state
         this.editor.stateManager.set(`view.${option}`, newState);
+        
+        // Save to user configuration
+        this.editor.configManager.set(`editor.view.${option}`, newState);
         
         // Update UI checkbox
         this.updateViewCheckbox(option, newState);

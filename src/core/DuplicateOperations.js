@@ -1,6 +1,7 @@
 import { BaseModule } from './BaseModule.js';
 import { GameObject } from '../models/GameObject.js';
 import { Group } from '../models/Group.js';
+import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
 
 /**
  * Duplicate Operations module
@@ -153,6 +154,16 @@ export class DuplicateOperations extends BaseModule {
         const duplicate = this.editor.stateManager.get('duplicate');
         if (!duplicate || !duplicate.isActive || !Array.isArray(duplicate.objects) || duplicate.objects.length === 0) return;
 
+        // Apply snap to grid if enabled (either setting or Ctrl key)
+        let snappedWorldPos = worldPos;
+        const snapToGrid = this.editor.stateManager.get('canvas.snapToGrid') ?? this.editor.level.settings.snapToGrid;
+        const ctrlSnapToGrid = this.editor.stateManager.get('keyboard.ctrlSnapToGrid');
+        
+        if (snapToGrid || ctrlSnapToGrid) {
+            const gridSize = this.editor.stateManager.get('canvas.gridSize') ?? this.editor.level.settings.gridSize;
+            snappedWorldPos = WorldPositionUtils.snapToGrid(worldPos.x, worldPos.y, gridSize);
+        }
+
         const groupEditMode = this.editor.stateManager.get('groupEditMode');
         const newIds = new Set();
 
@@ -164,9 +175,9 @@ export class DuplicateOperations extends BaseModule {
             const base = this._sanitizeForPlacement(this.editor.deepClone(obj));
             this.editor.reassignIdsDeep(base);
             
-            // Calculate world position for the duplicate
-            const worldX = worldPos.x + offsetX;
-            const worldY = worldPos.y + offsetY;
+            // Calculate world position for the duplicate using snapped position
+            const worldX = snappedWorldPos.x + offsetX;
+            const worldY = snappedWorldPos.y + offsetY;
 
             if (groupEditMode && groupEditMode.isActive && groupEditMode.group) {
                 // Check if target group's layer is locked

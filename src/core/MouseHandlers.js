@@ -210,7 +210,9 @@ export class MouseHandlers extends BaseModule {
             this.editor.stateManager.update({
                 'mouse.isLeftDown': false,
                 'mouse.isDragging': false,
-                'mouse.altKey': e.altKey
+                'mouse.altKey': e.altKey,
+                'mouse.constrainedAxis': null,
+                'mouse.axisCenter': null
             });
             
             if (mouse.isMarqueeSelecting) {
@@ -560,9 +562,65 @@ export class MouseHandlers extends BaseModule {
     dragSelectedObjects(worldPos) {
         const selectedObjects = this.editor.stateManager.get('selectedObjects');
         const mouse = this.editor.stateManager.get('mouse');
+        const shiftKey = this.editor.stateManager.get('keyboard.shiftKey');
 
-        const dx = worldPos.x - mouse.dragStartX;
-        const dy = worldPos.y - mouse.dragStartY;
+        // Apply snap to grid if enabled (either setting or Ctrl key)
+        let snappedWorldPos = worldPos;
+        const snapToGrid = this.editor.stateManager.get('canvas.snapToGrid') ?? this.editor.level.settings.snapToGrid;
+        const ctrlSnapToGrid = this.editor.stateManager.get('keyboard.ctrlSnapToGrid');
+        
+        if (snapToGrid || ctrlSnapToGrid) {
+            const gridSize = this.editor.stateManager.get('canvas.gridSize') ?? this.editor.level.settings.gridSize;
+            snappedWorldPos = WorldPositionUtils.snapToGrid(worldPos.x, worldPos.y, gridSize);
+        }
+
+        let dx = snappedWorldPos.x - mouse.dragStartX;
+        let dy = snappedWorldPos.y - mouse.dragStartY;
+
+        // Apply Shift constraint for axis locking
+        if (shiftKey && mouse.isDragging) {
+            // Determine constrained axis based on initial movement direction
+            if (mouse.constrainedAxis === null) {
+                // Set axis based on which direction has more movement
+                const absDx = Math.abs(dx);
+                const absDy = Math.abs(dy);
+                
+                if (absDx > absDy) {
+                    mouse.constrainedAxis = 'x';
+                } else if (absDy > absDx) {
+                    mouse.constrainedAxis = 'y';
+                } else {
+                    // Equal movement - default to X axis
+                    mouse.constrainedAxis = 'x';
+                }
+                
+                // Update state with constrained axis
+                this.editor.stateManager.update({
+                    'mouse.constrainedAxis': mouse.constrainedAxis
+                });
+            }
+            
+            // Calculate center of selected objects in their current positions
+            const axisCenter = this.editor.objectOperations.getSelectedObjectsCenter(selectedObjects);
+            
+            // Update axis center to current position
+            this.editor.stateManager.update({
+                'mouse.axisCenter': axisCenter
+            });
+            
+            // Apply constraint
+            if (mouse.constrainedAxis === 'x') {
+                dy = 0; // Lock Y movement
+            } else if (mouse.constrainedAxis === 'y') {
+                dx = 0; // Lock X movement
+            }
+        } else if (!shiftKey && mouse.constrainedAxis !== null) {
+            // Reset constraint when Shift is released
+            this.editor.stateManager.update({
+                'mouse.constrainedAxis': null,
+                'mouse.axisCenter': null
+            });
+        }
 
         selectedObjects.forEach(id => {
             const obj = this.editor.level.findObjectById(id);
@@ -645,8 +703,8 @@ export class MouseHandlers extends BaseModule {
         });
 
         this.editor.stateManager.update({
-            'mouse.dragStartX': worldPos.x,
-            'mouse.dragStartY': worldPos.y
+            'mouse.dragStartX': snappedWorldPos.x,
+            'mouse.dragStartY': snappedWorldPos.y
         });
 
         // Don't update panels during drag to avoid real-time position updates

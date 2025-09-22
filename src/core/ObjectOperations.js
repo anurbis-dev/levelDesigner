@@ -277,4 +277,90 @@ export class ObjectOperations extends BaseModule {
         }
         return selectable;
     }
+
+    /**
+     * Get center point of selected objects
+     * @param {Set} selectedObjects - Set of selected object IDs
+     * @returns {Object|null} Center position {x, y} or null if no objects
+     */
+    getSelectedObjectsCenter(selectedObjects) {
+        if (!selectedObjects || selectedObjects.size === 0) {
+            return null;
+        }
+
+        const objects = Array.from(selectedObjects)
+            .map(id => this.editor.level.findObjectById(id))
+            .filter(Boolean);
+
+        if (objects.length === 0) {
+            return null;
+        }
+
+        if (objects.length === 1) {
+            // Single object - get its center
+            const obj = objects[0];
+            if (obj.type === 'group') {
+                // For groups, calculate center based on children positions
+                return this.getGroupCenter(obj);
+            } else {
+                return this.getObjectCenterWorld(obj);
+            }
+        }
+
+        // Multiple objects - calculate bounding box center
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+        objects.forEach(obj => {
+            const bounds = this.getObjectWorldBounds(obj);
+            minX = Math.min(minX, bounds.minX);
+            minY = Math.min(minY, bounds.minY);
+            maxX = Math.max(maxX, bounds.maxX);
+            maxY = Math.max(maxY, bounds.maxY);
+        });
+
+        return {
+            x: (minX + maxX) / 2,
+            y: (minY + maxY) / 2
+        };
+    }
+
+    /**
+     * Get geometric center of a group based on its children
+     * @param {Object} group - Group object
+     * @returns {Object} Center position {x, y}
+     */
+    getGroupCenter(group) {
+        if (!group.children || group.children.length === 0) {
+            // Empty group - return its own center
+            return this.getObjectCenterWorld(group);
+        }
+
+        // Calculate center based on children positions
+        let totalX = 0, totalY = 0, count = 0;
+
+        const addObjectCenter = (obj) => {
+            if (obj.type === 'group') {
+                // Recursively process child groups
+                addObjectCenter(this.getGroupCenter(obj));
+            } else {
+                // Regular object - add its center
+                const center = this.getObjectCenterWorld(obj);
+                totalX += center.x;
+                totalY += center.y;
+                count++;
+            }
+        };
+
+        group.children.forEach(child => addObjectCenter(child));
+
+        if (count === 0) {
+            // No valid children - return group's own center
+            return this.getObjectCenterWorld(group);
+        }
+
+        return {
+            x: totalX / count,
+            y: totalY / count
+        };
+    }
 }

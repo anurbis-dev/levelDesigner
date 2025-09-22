@@ -471,6 +471,79 @@ export class SettingsPanel {
                         <span style="color: #d1d5db;">Show FPS Counter</span>
                     </label>
                 </div>
+                
+                <div style="border-top: 1px solid #374151; padding-top: 1rem; margin-top: 1rem;">
+                    <h4 style="font-size: 1rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.75rem;">Axis Constraint</h4>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <div>
+                            <label style="display: flex; align-items: center;">
+                                <input type="checkbox" class="setting-input" name="setting-input" data-setting="editor.axisConstraint.showAxis" ${settings.editor.axisConstraint?.showAxis ? 'checked' : ''} style="margin-right: 0.5rem;">
+                                <span style="color: #d1d5db;">Show Axis Line</span>
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Axis Color</label>
+                            <div class="axis-color-container" style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="color" class="setting-input" name="setting-input" data-setting="editor.axisConstraint.axisColor" 
+                                       value="${settings.editor.axisConstraint?.axisColor || '#cccccc'}"
+                                       style="width: 3rem; height: 2rem; padding: 0; border: 1px solid #4b5563; border-radius: 0.25rem; background: none;">
+                                <input type="text" class="setting-input" name="setting-input" data-setting="editor.axisConstraint.axisColor" 
+                                       value="${settings.editor.axisConstraint?.axisColor || '#cccccc'}"
+                                       style="flex: 1; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white;">
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Axis Width (px)</label>
+                            <input type="number" step="1" min="1" max="10" class="setting-input" name="setting-input" data-setting="editor.axisConstraint.axisWidth" 
+                                   value="${settings.editor.axisConstraint?.axisWidth || 1}"
+                                   style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white;">
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="border-top: 1px solid #374151; padding-top: 1rem; margin-top: 1rem;">
+                    <h4 style="font-size: 1rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.75rem;">View Settings</h4>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <div>
+                            <label style="display: flex; align-items: center;">
+                                <input type="checkbox" class="setting-input" name="setting-input" data-setting="editor.view.grid" ${settings.editor.view?.grid ? 'checked' : ''} style="margin-right: 0.5rem;">
+                                <span style="color: #d1d5db;">Show Grid</span>
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <label style="display: flex; align-items: center;">
+                                <input type="checkbox" class="setting-input" name="setting-input" data-setting="editor.view.gameMode" ${settings.editor.view?.gameMode ? 'checked' : ''} style="margin-right: 0.5rem;">
+                                <span style="color: #d1d5db;">Game Mode</span>
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <label style="display: flex; align-items: center;">
+                                <input type="checkbox" class="setting-input" name="setting-input" data-setting="editor.view.snapToGrid" ${settings.editor.view?.snapToGrid ? 'checked' : ''} style="margin-right: 0.5rem;">
+                                <span style="color: #d1d5db;">Snap To Grid</span>
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <label style="display: flex; align-items: center;">
+                                <input type="checkbox" class="setting-input" name="setting-input" data-setting="editor.view.objectBoundaries" ${settings.editor.view?.objectBoundaries ? 'checked' : ''} style="margin-right: 0.5rem;">
+                                <span style="color: #d1d5db;">Object Boundaries</span>
+                            </label>
+                        </div>
+                        
+                        <div>
+                            <label style="display: flex; align-items: center;">
+                                <input type="checkbox" class="setting-input" name="setting-input" data-setting="editor.view.objectCollisions" ${settings.editor.view?.objectCollisions ? 'checked' : ''} style="margin-right: 0.5rem;">
+                                <span style="color: #d1d5db;">Object Collisions</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
             </div>
         `;
     }
@@ -515,6 +588,19 @@ export class SettingsPanel {
                 }
                 
                 this.configManager.set(path, value);
+                
+                // Synchronize color inputs for axis constraint
+                if (path === 'editor.axisConstraint.axisColor') {
+                    const container = e.target.closest('.axis-color-container');
+                    if (container) {
+                        const colorInputs = container.querySelectorAll('input[data-setting="editor.axisConstraint.axisColor"]');
+                        colorInputs.forEach(input => {
+                            if (input !== e.target) {
+                                input.value = value;
+                            }
+                        });
+                    }
+                }
                 
                 // Note: Grid settings are only applied to StateManager when Save is clicked
                 // Real-time changes are not applied to avoid confusion

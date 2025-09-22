@@ -371,6 +371,18 @@ export class RenderOperations extends BaseModule {
             this.editor.canvasRenderer.drawMarquee(mouse.marqueeRect, camera);
         }
         
+        // Draw axis constraint line
+        if (mouse.constrainedAxis && mouse.isDragging && mouse.axisCenter) {
+            const axisConfig = this.editor.configManager.get('editor.axisConstraint') || {};
+            this.editor.canvasRenderer.drawAxisConstraint(
+                mouse.constrainedAxis, 
+                mouse.axisCenter.x, 
+                mouse.axisCenter.y, 
+                camera, 
+                axisConfig
+            );
+        }
+        
         this.editor.canvasRenderer.restoreCamera();
 
         // Периодический лог состояния (каждые 500 рендеров)
