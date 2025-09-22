@@ -47,13 +47,13 @@
 
 /* Элементы контекстного меню */
 .base-context-menu-item {
-    padding: 10px 16px;
+    padding: 0.625rem 1rem; /* 10px 16px в rem */
     color: #D1D5DB; /* gray-300 */
     cursor: pointer;
-    font-size: 14px;
+    font-size: 0.875rem; /* 14px в rem */
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 0.625rem; /* 10px в rem */
     transition: background-color 0.15s ease;
     user-select: none;
     white-space: nowrap;
@@ -103,12 +103,14 @@
     background: #374151;
 }
 
-/* Иконки элементов меню */
-.base-context-menu-item::before {
-    font-size: 16px;
-    width: 20px;
-    text-align: center;
-    flex-shrink: 0;
+/* Иконки элементов меню - добавляются через innerHTML */
+.base-context-menu-item {
+    /* Иконки уже включены в innerHTML, дополнительные стили не нужны */
+}
+
+/* Стили для эмодзи иконок */
+.base-context-menu-item {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol';
 }
 
 /* Индикаторы позиционирования */
@@ -131,26 +133,26 @@
 /* Адаптивные настройки для маленьких экранов */
 @media (max-width: 768px) {
     .base-context-menu {
-        min-width: 120px;
-        font-size: 13px;
+        min-width: 7.5rem; /* 120px в rem */
+        font-size: 0.8125rem; /* 13px в rem */
     }
     
     .base-context-menu-item {
-        padding: 8px 12px;
-        font-size: 13px;
+        padding: 0.5rem 0.75rem; /* 8px 12px в rem */
+        font-size: 0.8125rem; /* 13px в rem */
     }
 }
 
 /* Мобильная оптимизация */
 @media (max-width: 480px) {
     .base-context-menu {
-        min-width: 160px;
-        font-size: 16px; /* Увеличенные touch-цели */
+        min-width: 10rem; /* 160px в rem */
+        font-size: 1rem; /* 16px в rem - увеличенные touch-цели */
     }
     
     .base-context-menu-item {
-        padding: 12px 16px;
-        font-size: 16px;
+        padding: 0.75rem 1rem; /* 12px 16px в rem */
+        font-size: 1rem; /* 16px в rem */
     }
 }
 
@@ -219,14 +221,14 @@
 .base-context-menu-item.has-submenu::after {
     content: '▶';
     margin-left: auto;
-    font-size: 12px;
+    font-size: 0.75rem; /* 12px в rem */
     color: #9CA3AF;
 }
 
 /* Стили для горячих клавиш */
 .base-context-menu-item .hotkey {
     margin-left: auto;
-    font-size: 12px;
+    font-size: 0.75rem; /* 12px в rem */
     color: #9CA3AF;
     font-family: monospace;
 }

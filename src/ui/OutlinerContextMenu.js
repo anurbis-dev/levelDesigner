@@ -49,47 +49,47 @@ export class OutlinerContextMenu extends BaseContextMenu {
      */
     setupMenuItems() {
         // Object operations
-        this.addMenuItem('select', 'Select', '🎯', (contextData) => {
+        this.addMenuItem('Select', '🎯', (contextData) => {
             Logger.outliner.debug('Context menu: Select object', contextData.object?.name);
             this.callbacks.onSelect(contextData.object);
-        });
+        }, { id: 'select' });
 
-        this.addMenuItem('rename', 'Rename', '✏️', (contextData) => {
+        this.addMenuItem('Rename', '✏️', (contextData) => {
             Logger.outliner.debug('Context menu: Rename object', contextData.object?.name);
             this.callbacks.onRename(contextData.object);
-        });
+        }, { id: 'rename' });
 
-        this.addMenuItem('duplicate', 'Duplicate', '📋', (contextData) => {
+        this.addMenuItem('Duplicate', '📋', (contextData) => {
             Logger.outliner.debug('Context menu: Duplicate object', contextData.object?.name);
             this.callbacks.onDuplicate(contextData.object);
-        });
+        }, { id: 'duplicate' });
 
         this.addSeparator();
 
-        this.addMenuItem('visibility', 'Toggle Visibility', '👁️', (contextData) => {
+        this.addMenuItem('Toggle Visibility', '👁️', (contextData) => {
             Logger.outliner.debug('Context menu: Toggle visibility', contextData.object?.name);
             this.callbacks.onToggleVisibility(contextData.object);
-        });
+        }, { id: 'visibility' });
 
         this.addSeparator();
 
-        this.addMenuItem('delete', 'Delete', '🗑️', (contextData) => {
+        this.addMenuItem('Delete', '🗑️', (contextData) => {
             Logger.outliner.debug('Context menu: Delete object', contextData.object?.name);
             this.callbacks.onDelete(contextData.object);
-        });
+        }, { id: 'delete' });
 
         // Global operations (always shown)
         this.addSeparator('global-separator');
 
-        this.addMenuItem('expand-all', 'Expand All Groups', '📂', (contextData) => {
+        this.addMenuItem('Expand All Groups', '📂', (contextData) => {
             Logger.outliner.debug('Context menu: Expand all groups');
             this.callbacks.onExpandAllGroups();
-        });
+        }, { id: 'expand-all' });
 
-        this.addMenuItem('collapse-all', 'Collapse All Groups', '📁', (contextData) => {
+        this.addMenuItem('Collapse All Groups', '📁', (contextData) => {
             Logger.outliner.debug('Context menu: Collapse all groups');
             this.callbacks.onCollapseAllGroups();
-        });
+        }, { id: 'collapse-all' });
     }
 
     /**
