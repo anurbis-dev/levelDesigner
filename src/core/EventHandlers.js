@@ -465,11 +465,19 @@ export class EventHandlers extends BaseModule {
 
         const savedStates = {};
         const viewOptions = ['grid', 'gameMode', 'snapToGrid', 'objectBoundaries', 'objectCollisions'];
+        const panelOptions = ['toolbar', 'assetsPanel', 'rightPanel'];
 
         viewOptions.forEach(option => {
             const stateKey = `view.${option}`;
             const currentValue = this.editor.stateManager.get(stateKey);
             savedStates[option] = currentValue !== undefined ? currentValue : false;
+        });
+
+        // Save panel states
+        panelOptions.forEach(panel => {
+            const stateKey = `view.${panel}`;
+            const currentValue = this.editor.stateManager.get(stateKey);
+            savedStates[panel] = currentValue !== undefined ? currentValue : true; // Default to true for panels
         });
 
         return savedStates;
@@ -484,11 +492,19 @@ export class EventHandlers extends BaseModule {
         Object.keys(savedStates).forEach(option => {
             const enabled = savedStates[option];
 
-            // Apply the view option
-            this.applyViewOption(option, enabled);
-
-            // Update menu checkbox state
-            this.updateViewCheckbox(option, enabled);
+            // Check if it's a panel option
+            const panelOptions = ['toolbar', 'assetsPanel', 'rightPanel'];
+            if (panelOptions.includes(option)) {
+                // Apply panel visibility
+                this.applyPanelVisibility(option, enabled);
+                // Update menu checkbox state
+                this.updateViewCheckbox(option, enabled);
+            } else {
+                // Apply the view option
+                this.applyViewOption(option, enabled);
+                // Update menu checkbox state
+                this.updateViewCheckbox(option, enabled);
+            }
         });
 
     }

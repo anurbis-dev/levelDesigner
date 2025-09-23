@@ -1,11 +1,12 @@
+import { BasePanel } from './BasePanel.js';
+
 /**
  * Asset panel UI component
  */
-export class AssetPanel {
+export class AssetPanel extends BasePanel {
     constructor(container, assetManager, stateManager) {
-        this.container = container;
+        super(container, stateManager);
         this.assetManager = assetManager;
-        this.stateManager = stateManager;
         this.tabsContainer = null;
         this.previewsContainer = null;
         this.marqueeDiv = null;
@@ -23,6 +24,14 @@ export class AssetPanel {
         
         this.tabsContainer = this.container.querySelector('#asset-tabs-container');
         this.previewsContainer = this.container.querySelector('#asset-previews-container');
+        
+        // Setup scrolling using BasePanel
+        this.setupScrolling({
+            horizontal: true,
+            vertical: true,
+            sensitivity: 1.0,
+            target: this.previewsContainer
+        });
     }
 
     setupEventListeners() {

@@ -1,15 +1,14 @@
 import { UIFactory } from '../utils/UIFactory.js';
 import { Logger } from '../utils/Logger.js';
 import { SearchUtils } from '../utils/SearchUtils.js';
+import { BasePanel } from './BasePanel.js';
 
 /**
  * Layers panel UI component
  */
-export class LayersPanel {
+export class LayersPanel extends BasePanel {
     constructor(container, stateManager, levelEditor) {
-        this.container = container;
-        this.stateManager = stateManager;
-        this.levelEditor = levelEditor;
+        super(container, stateManager, levelEditor);
         this.activeLayerId = null; // Track active layer (for border highlight)
         this.currentLayerId = null; // Track current layer (for new objects, blue highlight)
         this.searchFilter = ''; // Search filter for layers
@@ -179,6 +178,17 @@ export class LayersPanel {
         this.setupLayersEventListeners();
         this.setupSearch();
         this.setupLayersMenu();
+        
+        // Setup scrolling using BasePanel - target the actual scrollable container
+        const rightPanel = this.container.closest('#right-panel');
+        const scrollableContainer = rightPanel?.querySelector('.flex-grow.overflow-y-auto');
+        
+        this.setupScrolling({
+            horizontal: false,
+            vertical: true,
+            sensitivity: 1.0,
+            target: scrollableContainer || rightPanel
+        });
         
         // Update layer styles to show current layer highlight
         this.updateLayerStyles();

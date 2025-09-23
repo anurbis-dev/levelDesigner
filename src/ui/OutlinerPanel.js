@@ -1,15 +1,14 @@
 import { Logger } from '../utils/Logger.js';
 import { SearchUtils } from '../utils/SearchUtils.js';
 import { OutlinerContextMenu } from './OutlinerContextMenu.js';
+import { BasePanel } from './BasePanel.js';
 
 /**
  * Outliner panel UI component
  */
-export class OutlinerPanel {
+export class OutlinerPanel extends BasePanel {
     constructor(container, stateManager, levelEditor) {
-        this.container = container;
-        this.stateManager = stateManager;
-        this.levelEditor = levelEditor;
+        super(container, stateManager, levelEditor);
         this.searchTerm = '';
 
         // Initialize collapsed groups state if not exists
@@ -197,6 +196,17 @@ export class OutlinerPanel {
 
         // Always recreate context menu after DOM is updated to ensure it works with new objects
         this.setupContextMenu();
+        
+        // Setup scrolling using BasePanel - target the actual scrollable container
+        const rightPanel = this.container.closest('#right-panel');
+        const scrollableContainer = rightPanel?.querySelector('.flex-grow.overflow-y-auto');
+        
+        this.setupScrolling({
+            horizontal: false,
+            vertical: true,
+            sensitivity: 1.0,
+            target: scrollableContainer || rightPanel
+        });
     }
 
     groupObjectsByType(objects) {
