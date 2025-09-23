@@ -45,7 +45,6 @@ export class ConsoleContextMenu {
         this.lastCursorX = 0;
         this.lastCursorY = 0;
 
-        // Debug: Check if elements exist
         if (!this.consolePanel) {
             Logger.console.error('ConsoleContextMenu: consolePanel not found');
         }

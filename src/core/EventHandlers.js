@@ -261,10 +261,21 @@ export class EventHandlers extends BaseModule {
         this.editor.stateManager.set('canvas.snapToGrid', snapToGridEnabled);
         this.updateViewCheckbox('snapToGrid', snapToGridEnabled);
         
+        // Initialize panel states first (always initialize panels)
+        const panelStates = ['toolbar', 'assetsPanel', 'rightPanel'];
+        panelStates.forEach(panel => {
+            const visible = this.editor.configManager.get(`editor.view.${panel}`) ?? true;
+            this.editor.stateManager.set(`view.${panel}`, visible);
+            this.updateViewCheckbox(panel, visible);
+            this.applyPanelVisibility(panel, visible);
+        });
+
         // Initialize other view states from user config
         const viewStates = ['gameMode', 'objectBoundaries', 'objectCollisions', 'parallax'];
         viewStates.forEach(state => {
-            const enabled = this.editor.configManager.get(`editor.view.${state}`) ?? false;
+            // Game Mode should be false by default
+            const defaultValue = state === 'gameMode' ? false : false;
+            const enabled = this.editor.configManager.get(`editor.view.${state}`) ?? defaultValue;
             this.editor.stateManager.set(`view.${state}`, enabled);
             this.updateViewCheckbox(state, enabled);
             
@@ -278,11 +289,38 @@ export class EventHandlers extends BaseModule {
     updateViewCheckbox(option, enabled) {
         if (this.menuManager) {
             // Use MenuManager if available
-            const itemId = `toggle-${option.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+            let itemId;
+            // Map panel names to menu item IDs
+            switch(option) {
+                case 'toolbar':
+                    itemId = 'toggle-toolbar';
+                    break;
+                case 'assetsPanel':
+                    itemId = 'toggle-assets-panel';
+                    break;
+                case 'rightPanel':
+                    itemId = 'toggle-right-panel';
+                    break;
+                default:
+                    itemId = `toggle-${option.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+            }
             this.menuManager.updateToggleState(itemId, enabled);
         } else {
-            // Fallback to direct DOM manipulation
-            const checkId = option.replace(/([A-Z])/g, '-$1').toLowerCase() + '-check';
+            // Fallback to direct DOM manipulation - use the same ID mapping as when menuManager is available
+            let checkId;
+            switch(option) {
+                case 'toolbar':
+                    checkId = 'toggle-toolbar-check';
+                    break;
+                case 'assetsPanel':
+                    checkId = 'toggle-assets-panel-check';
+                    break;
+                case 'rightPanel':
+                    checkId = 'toggle-right-panel-check';
+                    break;
+                default:
+                    checkId = `toggle-${option.replace(/([A-Z])/g, '-$1').toLowerCase()}-check`;
+            }
             const checkElement = document.getElementById(checkId);
             if (checkElement) {
                 checkElement.classList.toggle('hidden', !enabled);
@@ -291,9 +329,6 @@ export class EventHandlers extends BaseModule {
     }
 
     toggleViewOption(option) {
-        
-        // Debug: Check all related states
-        
         // Get current state from editor's state manager
         const currentState = this.editor.stateManager.get(`view.${option}`) || false;
         const newState = !currentState;
@@ -310,6 +345,30 @@ export class EventHandlers extends BaseModule {
         
         // Apply the view option
         this.applyViewOption(option, newState);
+        
+        // Close the menu
+        document.querySelectorAll('#menu-level > div, #menu-view > div, #menu-settings > div').forEach(d => d.classList.add('hidden'));
+    }
+
+    /**
+     * Toggle panel visibility
+     * @param {string} panel - Panel name (toolbar, assetsPanel, rightPanel)
+     */
+    togglePanel(panel) {
+        const currentState = this.editor.stateManager.get(`view.${panel}`) || false;
+        const newState = !currentState;
+        
+        // Update state
+        this.editor.stateManager.set(`view.${panel}`, newState);
+        
+        // Save to user configuration
+        this.editor.configManager.set(`editor.view.${panel}`, newState);
+        
+        // Update UI checkbox
+        this.updateViewCheckbox(panel, newState);
+        
+        // Apply the panel visibility
+        this.applyPanelVisibility(panel, newState);
         
         // Close the menu
         document.querySelectorAll('#menu-level > div, #menu-view > div, #menu-settings > div').forEach(d => d.classList.add('hidden'));
@@ -345,6 +404,56 @@ export class EventHandlers extends BaseModule {
                 this.editor.stateManager.set('view.parallax', enabled);
                 this.editor.render();
                 break;
+        }
+    }
+
+    /**
+     * Apply panel visibility changes
+     * @param {string} panel - Panel name
+     * @param {boolean} visible - Whether panel should be visible
+     */
+    applyPanelVisibility(panel, visible) {
+        switch (panel) {
+            case 'toolbar':
+                const toolbarContainer = document.getElementById('toolbar-container');
+                if (toolbarContainer) {
+                    toolbarContainer.classList.toggle('hidden', !visible);
+                    toolbarContainer.style.display = visible ? 'flex' : 'none';
+                }
+                if (this.editor.toolbar) {
+                    this.editor.toolbar.setVisible(visible);
+                }
+                break;
+            case 'assetsPanel':
+                const assetsPanel = document.getElementById('assets-panel');
+                const resizerAssets = document.getElementById('resizer-assets');
+                if (assetsPanel) {
+                    assetsPanel.classList.toggle('hidden', !visible);
+                    assetsPanel.style.display = visible ? 'flex' : 'none';
+                    if (resizerAssets) {
+                        resizerAssets.classList.toggle('hidden', !visible);
+                        resizerAssets.style.display = visible ? 'block' : 'none';
+                    }
+                }
+                break;
+            case 'rightPanel':
+                const rightPanel = document.getElementById('right-panel');
+                const resizerX = document.getElementById('resizer-x');
+                if (rightPanel) {
+                    rightPanel.classList.toggle('hidden', !visible);
+                    rightPanel.style.display = visible ? 'flex' : 'none';
+                    if (resizerX) {
+                        resizerX.classList.toggle('hidden', !visible);
+                        resizerX.style.display = visible ? 'block' : 'none';
+                    }
+                }
+                break;
+        }
+        
+        // Resize canvas after panel changes
+        if (this.editor.canvasRenderer) {
+            this.editor.canvasRenderer.resizeCanvas();
+            this.editor.render();
         }
     }
 
@@ -385,24 +494,47 @@ export class EventHandlers extends BaseModule {
     }
 
     toggleGameMode(enabled) {
+        // Get all panel elements
         const rightPanel = document.getElementById('right-panel');
         const assetsPanel = document.getElementById('assets-panel');
         const consolePanel = document.getElementById('console-panel');
+        const toolbarContainer = document.getElementById('toolbar-container');
+        const resizerX = document.getElementById('resizer-x');
+        const resizerAssets = document.getElementById('resizer-assets');
+        const resizerConsole = document.getElementById('resizer-console');
         
         if (enabled) {
-            // Hide editor panels
+            // Store current panel states for restoration
+            this.savedPanelStates = {
+                toolbar: this.editor.stateManager.get('view.toolbar') ?? true,
+                assetsPanel: this.editor.stateManager.get('view.assetsPanel') ?? true,
+                rightPanel: this.editor.stateManager.get('view.rightPanel') ?? true,
+                console: this.editor.stateManager.get('console.visible') ?? false
+            };
+            
+            // Reset panel toggle states in menu to show they're disabled in Game Mode
+            this.resetPanelToggleStates();
+            
+            // Game Mode: Hide ALL panels except header and main canvas
             rightPanel?.classList.add('hidden');
             assetsPanel?.classList.add('hidden');
             consolePanel?.classList.add('hidden');
-        } else {
-            // Show editor panels
-            rightPanel?.classList.remove('hidden');
-            assetsPanel?.classList.remove('hidden');
-            // Console visibility depends on user preference
-            const consoleVisible = this.editor.stateManager.get('console.visible');
-            if (consoleVisible) {
-                consolePanel?.classList.remove('hidden');
+            toolbarContainer?.classList.add('hidden');
+            resizerX?.classList.add('hidden');
+            resizerAssets?.classList.add('hidden');
+            resizerConsole?.classList.add('hidden');
+            
+            // Also hide toolbar content
+            if (this.editor.toolbar) {
+                this.editor.toolbar.setVisible(false);
             }
+            
+        } else {
+            // Exit Game Mode: Restore panels based on saved states
+            this.restorePanelStates();
+            
+            // Restore panel toggle states in menu
+            this.restorePanelToggleStates();
         }
         
         // Resize canvas after panel changes
@@ -410,6 +542,112 @@ export class EventHandlers extends BaseModule {
             this.editor.canvasRenderer.resizeCanvas();
             this.editor.render();
         }
+    }
+
+
+    /**
+     * Restore panel states when exiting Game Mode
+     */
+    restorePanelStates() {
+        if (!this.savedPanelStates) return;
+
+        const rightPanel = document.getElementById('right-panel');
+        const assetsPanel = document.getElementById('assets-panel');
+        const consolePanel = document.getElementById('console-panel');
+        const toolbarContainer = document.getElementById('toolbar-container');
+        const resizerX = document.getElementById('resizer-x');
+        const resizerAssets = document.getElementById('resizer-assets');
+        const resizerConsole = document.getElementById('resizer-console');
+
+        // Restore toolbar
+        if (this.savedPanelStates.toolbar) {
+            toolbarContainer?.classList.remove('hidden');
+            toolbarContainer.style.display = 'flex'; // Reset display style
+            if (this.editor.toolbar) {
+                this.editor.toolbar.setVisible(true);
+            }
+        } else {
+            // Keep toolbar hidden if it was hidden before Game Mode
+            toolbarContainer?.classList.add('hidden');
+            toolbarContainer.style.display = 'none';
+        }
+
+        // Restore right panel
+        if (this.savedPanelStates.rightPanel) {
+            rightPanel?.classList.remove('hidden');
+            rightPanel.style.display = 'flex'; // Reset display style
+            resizerX?.classList.remove('hidden');
+            resizerX.style.display = 'block';
+        } else {
+            rightPanel?.classList.add('hidden');
+            rightPanel.style.display = 'none';
+            resizerX?.classList.add('hidden');
+            resizerX.style.display = 'none';
+        }
+
+        // Restore assets panel
+        if (this.savedPanelStates.assetsPanel) {
+            assetsPanel?.classList.remove('hidden');
+            assetsPanel.style.display = 'flex'; // Reset display style
+            resizerAssets?.classList.remove('hidden');
+            resizerAssets.style.display = 'block';
+        } else {
+            assetsPanel?.classList.add('hidden');
+            assetsPanel.style.display = 'none';
+            resizerAssets?.classList.add('hidden');
+            resizerAssets.style.display = 'none';
+        }
+
+        // Restore console panel
+        if (this.savedPanelStates.console) {
+            consolePanel?.classList.remove('hidden');
+            consolePanel.style.display = 'flex'; // Reset display style
+            resizerConsole?.classList.remove('hidden');
+            resizerConsole.style.display = 'block';
+        } else {
+            consolePanel?.classList.add('hidden');
+            consolePanel.style.display = 'none';
+            resizerConsole?.classList.add('hidden');
+            resizerConsole.style.display = 'none';
+        }
+
+        // Clear saved states
+        this.savedPanelStates = null;
+    }
+
+    /**
+     * Reset panel toggle states in menu when entering Game Mode
+     */
+    resetPanelToggleStates() {
+        const panelToggles = ['toolbar', 'assetsPanel', 'rightPanel'];
+        
+        panelToggles.forEach(panel => {
+            // Update checkbox in menu
+            this.updateViewCheckbox(panel, false);
+            // Apply panel visibility (force hide)
+            this.applyPanelVisibility(panel, false);
+        });
+        
+    }
+
+    /**
+     * Restore panel toggle states in menu when exiting Game Mode
+     */
+    restorePanelToggleStates() {
+        if (!this.savedPanelStates) return;
+
+        // Restore toolbar toggle
+        this.editor.stateManager.set('view.toolbar', this.savedPanelStates.toolbar);
+        this.updateViewCheckbox('toolbar', this.savedPanelStates.toolbar);
+
+        // Restore assets panel toggle
+        this.editor.stateManager.set('view.assetsPanel', this.savedPanelStates.assetsPanel);
+        this.updateViewCheckbox('assetsPanel', this.savedPanelStates.assetsPanel);
+
+        // Restore right panel toggle
+        this.editor.stateManager.set('view.rightPanel', this.savedPanelStates.rightPanel);
+        this.updateViewCheckbox('rightPanel', this.savedPanelStates.rightPanel);
+
     }
 
     setupRightPanelTabs() {

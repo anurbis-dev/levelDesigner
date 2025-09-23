@@ -47,6 +47,36 @@ export const MENU_CONFIG = {
             label: 'View',
             items: [
                 {
+                    id: 'panels-section',
+                    label: 'Panels',
+                    type: 'section'
+                },
+                {
+                    id: 'toggle-toolbar',
+                    label: 'Toolbar',
+                    type: 'toggle',
+                    stateKey: 'view.toolbar',
+                    action: 'togglePanel',
+                    actionParam: 'toolbar'
+                },
+                {
+                    id: 'toggle-assets-panel',
+                    label: 'Assets Panel',
+                    type: 'toggle',
+                    stateKey: 'view.assetsPanel',
+                    action: 'togglePanel',
+                    actionParam: 'assetsPanel'
+                },
+                {
+                    id: 'toggle-right-panel',
+                    label: 'Right Panel',
+                    type: 'toggle',
+                    stateKey: 'view.rightPanel',
+                    action: 'togglePanel',
+                    actionParam: 'rightPanel'
+                },
+                { type: 'separator' },
+                {
                     id: 'canvas-section',
                     label: 'Canvas',
                     type: 'section'

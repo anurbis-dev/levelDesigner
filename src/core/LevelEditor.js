@@ -9,6 +9,7 @@ import { DetailsPanel } from '../ui/DetailsPanel.js';
 import { OutlinerPanel } from '../ui/OutlinerPanel.js';
 import { LayersPanel } from '../ui/LayersPanel.js';
 import { SettingsPanel } from '../ui/SettingsPanel.js';
+import { Toolbar } from '../ui/Toolbar.js';
 import { Level } from '../models/Level.js';
 import { GameObject } from '../models/GameObject.js';
 import { Group } from '../models/Group.js';
@@ -36,7 +37,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.12.0';
+    static VERSION = '3.13.0';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -58,6 +59,7 @@ export class LevelEditor {
         this.outlinerPanel = null;
         this.layersPanel = null;
         this.settingsPanel = null;
+        this.toolbar = null;
         this.canvasContextMenu = null;
         
         // Current level
@@ -529,9 +531,10 @@ export class LevelEditor {
         const detailsPanel = document.getElementById('details-content-panel');
         const outlinerPanel = document.getElementById('outliner-content-panel');
         const layersPanel = document.getElementById('layers-content-panel');
+        const toolbarContainer = document.getElementById('toolbar-container');
 
 
-        if (!canvas || !assetsPanel || !detailsPanel || !outlinerPanel || !layersPanel) {
+        if (!canvas || !assetsPanel || !detailsPanel || !outlinerPanel || !layersPanel || !toolbarContainer) {
             throw new Error('Required DOM elements not found');
         }
         
@@ -563,6 +566,7 @@ export class LevelEditor {
         this.outlinerPanel = new OutlinerPanel(outlinerPanel, this.stateManager, this);
         this.layersPanel = new LayersPanel(layersPanel, this.stateManager, this);
         this.settingsPanel = new SettingsPanel(document.body, this.configManager);
+        this.toolbar = new Toolbar(toolbarContainer, this.stateManager, this);
         
         // Initial render of asset panel
         this.assetPanel.render();
