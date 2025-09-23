@@ -272,6 +272,17 @@ export class StateManager {
     }
 
     /**
+     * Notify about layer property change
+     */
+    notifyLayerChanged(layerId, property, newValue, oldValue) {
+        this.notifyListeners('layerChanged', layerId, {
+            property,
+            newValue,
+            oldValue
+        });
+    }
+
+    /**
      * Reset state to initial values
      */
     reset() {

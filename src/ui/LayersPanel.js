@@ -51,12 +51,22 @@ export class LayersPanel extends BasePanel {
 
         // Subscribe to layer objects count changes for efficient updates
         this.stateManager.subscribe('layerObjectsCountChanged', (layerId, changeData) => {
-            
+
             // Update only the specific layer's object count
             this.updateLayerObjectsCount(layerId);
-            
+
             // Update global stats
             this.updateLayersStats();
+        });
+
+        // Subscribe to layer property changes for real-time updates
+        this.stateManager.subscribe('layerChanged', (layerId, changeData) => {
+            // Update the specific layer element
+            const level = this.levelEditor.getLevel();
+            const layer = level.getLayerById(layerId);
+            if (layer) {
+                this.updateLayerElement(layerId, layer);
+            }
         });
 
         // Subscribe to config changes (for active layer border color)
@@ -304,10 +314,14 @@ export class LayersPanel extends BasePanel {
         
         // Handle color change
         colorInput.addEventListener('change', (e) => {
+            const oldColor = layer.color;
             const newColor = e.target.value;
             layer.color = newColor;
             this.updateLayerElement(layer.id, layer);
             this.stateManager.markDirty();
+
+            // Notify about layer color change
+            this.stateManager.notifyLayerChanged(layer.id, 'color', newColor, oldColor);
             
             // Clean up
             if (document.body.contains(colorInput)) {
@@ -658,8 +672,12 @@ export class LayersPanel extends BasePanel {
                 const layerId = e.target.dataset.layerId;
                 const layer = level.getLayerById(layerId);
                 if (layer) {
+                    const oldName = layer.name;
                     layer.setName(e.target.value);
                     this.stateManager.markDirty();
+
+                    // Notify about layer name change
+                    this.stateManager.notifyLayerChanged(layerId, 'name', layer.name, oldName);
                     
                     // Update display text (name only)
                     const display = this.container.querySelector(`[data-layer-id="${layerId}"].layer-name-display`);
@@ -721,10 +739,13 @@ export class LayersPanel extends BasePanel {
                 if (layer) {
                     const wasVisible = layer.visible;
                     layer.toggleVisibility();
-                    
+
                     // Force update the layer element immediately
                     this.updateLayerElement(layerId, layer);
                     this.stateManager.markDirty();
+
+                    // Notify about layer visibility change
+                    this.stateManager.notifyLayerChanged(layerId, 'visible', layer.visible, wasVisible);
 
                     // Handle visibility changes
                     if (wasVisible && !layer.visible) {
@@ -756,10 +777,13 @@ export class LayersPanel extends BasePanel {
                 if (layer) {
                     const wasLocked = layer.locked;
                     layer.toggleLock();
-                    
+
                     // Force update the layer element immediately
                     this.updateLayerElement(layerId, layer);
                     this.stateManager.markDirty();
+
+                    // Notify about layer lock change
+                    this.stateManager.notifyLayerChanged(layerId, 'locked', layer.locked, wasLocked);
 
                     // Handle lock state changes
                     if (!wasLocked && layer.locked) {
@@ -783,9 +807,13 @@ export class LayersPanel extends BasePanel {
                 const layerId = e.target.dataset.layerId;
                 const layer = level.getLayerById(layerId);
                 if (layer) {
+                    const oldOffset = layer.parallaxOffset;
                     const newOffset = parseFloat(e.target.value) || 0;
                     layer.parallaxOffset = newOffset;
                     this.stateManager.markDirty();
+
+                    // Notify about layer parallax change
+                    this.stateManager.notifyLayerChanged(layerId, 'parallaxOffset', newOffset, oldOffset);
 
                     Logger.layer.debug(`Updated parallax offset for layer ${layer.name}: ${newOffset}`);
                 }
@@ -1296,6 +1324,9 @@ export class LayersPanel extends BasePanel {
         this.updateLayerElement(layerId, layer);
         this.stateManager.markDirty();
 
+        // Notify about layer visibility change
+        this.stateManager.notifyLayerChanged(layerId, 'visible', layer.visible, wasVisible);
+
         if (wasVisible && !layer.visible) {
             this.handleLayerVisibilityChanged(layerId, false);
         } else if (!wasVisible && layer.visible) {
@@ -1322,6 +1353,9 @@ export class LayersPanel extends BasePanel {
         layer.toggleLock();
         this.updateLayerElement(layerId, layer);
         this.stateManager.markDirty();
+
+        // Notify about layer lock change
+        this.stateManager.notifyLayerChanged(layerId, 'locked', layer.locked, wasLocked);
 
         if (!wasLocked && layer.locked) {
             this.handleLayerLockChanged(layerId, true);
