@@ -11,6 +11,49 @@
 import { Logger } from './Logger.js';
 
 export class ScrollUtils {
+    // Static variables to track global state
+    static globalMouseMoveHandler = null;
+    static globalMouseUpHandler = null;
+    static activeContainers = new Map(); // container -> config
+    static isGlobalHandlersSetup = false;
+
+    /**
+     * Setup global mouse handlers if not already setup
+     */
+    static setupGlobalHandlers() {
+        if (this.isGlobalHandlersSetup) return;
+
+        // Global mouse move handler
+        this.globalMouseMoveHandler = (e) => {
+            // Find active scrolling container
+            for (const [container, config] of this.activeContainers) {
+                if (config.isScrolling) {
+                    e.preventDefault();
+                    this.updateScrolling(container, config, e);
+                    break; // Only one container can scroll at a time
+                }
+            }
+        };
+
+        // Global mouse up handler
+        this.globalMouseUpHandler = (e) => {
+            // Find and stop any active scrolling
+            for (const [container, config] of this.activeContainers) {
+                if (config.isScrolling && e.button === 1) {
+                    e.preventDefault();
+                    this.stopScrolling(container, config);
+                    break;
+                }
+            }
+        };
+
+        document.addEventListener('mousemove', this.globalMouseMoveHandler);
+        document.addEventListener('mouseup', this.globalMouseUpHandler);
+
+        this.isGlobalHandlersSetup = true;
+        Logger.log('DEBUG', 'debug', 'ScrollUtils: Global handlers setup');
+    }
+
     /**
      * Setup middle mouse button scrolling for a container
      * @param {HTMLElement} container - The container to add scrolling to
@@ -25,40 +68,29 @@ export class ScrollUtils {
             return;
         }
 
+        // Setup global handlers if needed
+        this.setupGlobalHandlers();
+
         const config = {
             horizontal: options.horizontal !== false,
             vertical: options.vertical !== false,
-            sensitivity: options.sensitivity || 1.0
+            sensitivity: options.sensitivity || 1.0,
+            isScrolling: false,
+            scrollStartX: 0,
+            scrollStartY: 0,
+            scrollStartScrollLeft: 0,
+            scrollStartScrollTop: 0
         };
 
-        let isScrolling = false;
-        let scrollStartX = 0;
-        let scrollStartY = 0;
-        let scrollStartScrollLeft = 0;
-        let scrollStartScrollTop = 0;
+        // Store container config
+        this.activeContainers.set(container, config);
 
         // Middle mouse button down - start scrolling
         container.addEventListener('mousedown', (e) => {
             if (e.button === 1) { // Middle mouse button
                 e.preventDefault();
                 e.stopPropagation();
-                startScrolling(e);
-            }
-        });
-
-        // Mouse move - continue scrolling
-        document.addEventListener('mousemove', (e) => {
-            if (isScrolling) {
-                e.preventDefault();
-                updateScrolling(e);
-            }
-        });
-
-        // Mouse up - stop scrolling
-        document.addEventListener('mouseup', (e) => {
-            if (isScrolling && e.button === 1) {
-                e.preventDefault();
-                stopScrolling();
+                this.startScrolling(container, config, e);
             }
         });
 
@@ -67,7 +99,7 @@ export class ScrollUtils {
             e.preventDefault();
             e.stopPropagation();
             const scrollAmount = e.deltaY * config.sensitivity * 0.5;
-            
+
             if (config.horizontal) {
                 container.scrollLeft += scrollAmount;
             }
@@ -83,68 +115,63 @@ export class ScrollUtils {
             }
         });
 
-        // Prevent text selection during scrolling
-        container.addEventListener('selectstart', (e) => {
-            if (isScrolling) {
-                e.preventDefault();
-            }
-        });
+        Logger.log('DEBUG', 'debug', `ScrollUtils: Scrolling setup for ${container.tagName}#${container.id || container.className}`);
+    }
 
-        function startScrolling(e) {
-            isScrolling = true;
-            scrollStartX = e.clientX;
-            scrollStartY = e.clientY;
-            scrollStartScrollLeft = container.scrollLeft;
-            scrollStartScrollTop = container.scrollTop;
-            
-            // Change cursor to panning cursor
-            container.style.cursor = 'grabbing';
-            document.body.style.cursor = 'grabbing';
-            document.body.style.userSelect = 'none';
-            
-            // Add panning class to body for global panning state
-            document.body.classList.add('panning-mode');
-            
-            Logger.log('DEBUG', 'debug', `ScrollUtils: Scrolling started on ${container.tagName}#${container.id || container.className}`);
+    static startScrolling(container, config, e) {
+        config.isScrolling = true;
+        config.scrollStartX = e.clientX;
+        config.scrollStartY = e.clientY;
+        config.scrollStartScrollLeft = container.scrollLeft;
+        config.scrollStartScrollTop = container.scrollTop;
+
+        // Change cursor to panning cursor
+        container.style.cursor = 'grabbing';
+        document.body.style.cursor = 'grabbing';
+        document.body.style.userSelect = 'none';
+
+        // Add panning class to body for global panning state
+        document.body.classList.add('panning-mode');
+
+        Logger.log('DEBUG', 'debug', `ScrollUtils: Scrolling started on ${container.tagName}#${container.id || container.className}`);
+    }
+
+    static updateScrolling(container, config, e) {
+        if (!config.isScrolling) return;
+
+        const deltaX = e.clientX - config.scrollStartX;
+        const deltaY = e.clientY - config.scrollStartY;
+
+        // Apply scrolling with bounds
+        if (config.horizontal) {
+            const newScrollLeft = config.scrollStartScrollLeft - deltaX;
+            container.scrollLeft = Math.max(0, Math.min(
+                newScrollLeft,
+                container.scrollWidth - container.clientWidth
+            ));
         }
 
-        function updateScrolling(e) {
-            if (!isScrolling) return;
-
-            const deltaX = e.clientX - scrollStartX;
-            const deltaY = e.clientY - scrollStartY;
-            
-            // Apply scrolling with bounds
-            if (config.horizontal) {
-                const newScrollLeft = scrollStartScrollLeft - deltaX;
-                container.scrollLeft = Math.max(0, Math.min(
-                    newScrollLeft, 
-                    container.scrollWidth - container.clientWidth
-                ));
-            }
-            
-            if (config.vertical) {
-                const newScrollTop = scrollStartScrollTop - deltaY;
-                container.scrollTop = Math.max(0, Math.min(
-                    newScrollTop, 
-                    container.scrollHeight - container.clientHeight
-                ));
-            }
+        if (config.vertical) {
+            const newScrollTop = config.scrollStartScrollTop - deltaY;
+            container.scrollTop = Math.max(0, Math.min(
+                newScrollTop,
+                container.scrollHeight - container.clientHeight
+            ));
         }
+    }
 
-        function stopScrolling() {
-            isScrolling = false;
-            
-            // Restore cursor
-            container.style.cursor = '';
-            document.body.style.cursor = '';
-            document.body.style.userSelect = '';
-            
-            // Remove panning class from body
-            document.body.classList.remove('panning-mode');
-            
-            Logger.log('DEBUG', 'debug', 'ScrollUtils: Scrolling stopped');
-        }
+    static stopScrolling(container, config) {
+        config.isScrolling = false;
+
+        // Restore cursor
+        container.style.cursor = '';
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+
+        // Remove panning class from body
+        document.body.classList.remove('panning-mode');
+
+        Logger.log('DEBUG', 'debug', 'ScrollUtils: Scrolling stopped');
     }
 
     /**

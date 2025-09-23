@@ -86,6 +86,9 @@ export class GroupOperations extends BaseModule {
             // Add the newly created group to the scene using addObject method
             this.editor.level.addObject(newGroup);
 
+            // Add all child objects to the index with correct topLevelParent
+            this.editor.level.addGroupObjectsToIndex(newGroup);
+
             // Save state AFTER all changes are complete
             this.editor.historyManager.saveState(this.editor.level.objects, new Set([newGroup.id]));
 

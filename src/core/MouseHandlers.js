@@ -625,10 +625,10 @@ export class MouseHandlers extends BaseModule {
         selectedObjects.forEach(id => {
             const obj = this.editor.level.findObjectById(id);
             if (obj) {
-                // Check if object is on main level or inside the currently edited group
+                // Check if object is on main level or inside the currently edited group (including nested subgroups)
                 const isOnMainLevel = this.editor.level.objects.some(topObj => topObj.id === obj.id);
-                const isInEditedGroup = this.isInGroupEditMode() && 
-                    this.editor.objectOperations.isObjectInGroup(obj, this.getActiveGroup());
+                const isInEditedGroup = this.isInGroupEditMode() &&
+                    this.editor.objectOperations.isObjectInGroupRecursive(obj, this.getActiveGroup());
 
                 if (isOnMainLevel) {
                     // Object is on main level - move it normally

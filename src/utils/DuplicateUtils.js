@@ -32,10 +32,8 @@ export class DuplicateUtils {
     static initializePositions(objects, worldPos, editor = null) {
         if (!objects || objects.length === 0) return objects;
 
-        // Calculate center of all objects to maintain relative positions during duplication
-        let totalX = 0, totalY = 0;
-
-        objects.forEach(obj => {
+        return objects.map((obj, index) => {
+            // Get world position of the object
             let objWorldX, objWorldY;
 
             if (editor && editor.objectOperations) {
@@ -64,42 +62,9 @@ export class DuplicateUtils {
                 objWorldY = obj.y;
             }
 
-            totalX += objWorldX;
-            totalY += objWorldY;
-        });
-
-        const centerX = totalX / objects.length;
-        const centerY = totalY / objects.length;
-
-        return objects.map((obj, index) => {
-            // Get world position of the object
-            let objWorldX, objWorldY;
-
-            if (editor && editor.objectOperations) {
-                // Special handling for group edit mode
-                if (editor.objectOperations.isInGroupEditMode()) {
-                    const groupEditMode = editor.objectOperations.getGroupEditMode();
-                    const activeGroup = groupEditMode.group;
-
-                    // Calculate world position relative to the active group
-                    const groupWorldPos = editor.objectOperations.getObjectWorldPosition(activeGroup);
-                    objWorldX = groupWorldPos.x + obj.x;
-                    objWorldY = groupWorldPos.y + obj.y;
-                } else {
-                    // Use standard method for normal mode
-                    const objPos = editor.objectOperations.getObjectWorldPosition(obj);
-                    objWorldX = objPos.x;
-                    objWorldY = objPos.y;
-                }
-            } else {
-                // Fallback to local coordinates if editor not available
-                objWorldX = obj.x;
-                objWorldY = obj.y;
-            }
-
-            // Save relative offset from center of group (maintains relative positions)
-            const offsetX = objWorldX - centerX;
-            const offsetY = objWorldY - centerY;
+            // Save relative offset from cursor position (maintains relative positions)
+            const offsetX = objWorldX - worldPos.x;
+            const offsetY = objWorldY - worldPos.y;
 
             return { ...obj, _offsetX: offsetX, _offsetY: offsetY };
         });

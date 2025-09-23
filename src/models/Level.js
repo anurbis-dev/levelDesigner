@@ -506,6 +506,22 @@ export class Level {
     }
 
     /**
+     * Рекурсивно добавить все объекты группы в индекс
+     * @param {Object} group - Группа, объекты которой нужно добавить в индекс
+     */
+    addGroupObjectsToIndex(group) {
+        if (group.children && group.children.length > 0) {
+            group.children.forEach(child => {
+                this.addObjectToIndex(child, group);
+                // Рекурсивно добавляем дочерние объекты вложенных групп
+                if (child.type === 'group') {
+                    this.addGroupObjectsToIndex(child);
+                }
+            });
+        }
+    }
+
+    /**
      * Очистить индекс объектов
      */
     clearObjectsIndex() {

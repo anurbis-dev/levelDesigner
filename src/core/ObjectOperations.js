@@ -171,6 +171,30 @@ export class ObjectOperations extends BaseModule {
         return group.children.some(child => child.id === obj.id);
     }
 
+    /**
+     * Check if object is in group recursively (including nested groups)
+     * @param {Object} obj - Object to check
+     * @param {Object} group - Group to check in
+     * @returns {boolean} True if object is in group or any of its subgroups
+     */
+    isObjectInGroupRecursive(obj, group) {
+        // Check if object is direct child of this group
+        if (group.children.some(child => child.id === obj.id)) {
+            return true;
+        }
+
+        // Check recursively in child groups
+        for (const child of group.children) {
+            if (child.type === 'group' && child.children) {
+                if (this.isObjectInGroupRecursive(obj, child)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
     getObjectWorldBounds(obj, excludeIds = []) {
         return WorldPositionUtils.getWorldBounds(obj, this.editor.level.objects, excludeIds);
     }
