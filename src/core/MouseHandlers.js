@@ -20,7 +20,16 @@ export class MouseHandlers extends BaseModule {
     handleMouseDown(e) {
         const worldPos = this.screenToWorld(e);
         const mouse = this.getMouseState();
-        
+
+        // Ignore middle mouse button if clicked on panels (handled by ScrollUtils)
+        if (e.button === 1) { // Middle mouse button
+            const target = e.target;
+            // Check if click is on right panel or its contents
+            if (target.closest('#right-panel')) {
+                return; // Let ScrollUtils handle this
+            }
+        }
+
         if (e.button === 2) { // Right mouse button
             Logger.mouse.debug('Right mouse down at:', e.clientX, e.clientY);
             this.editor.stateManager.update({
@@ -70,9 +79,17 @@ export class MouseHandlers extends BaseModule {
     handleMouseMove(e) {
         const worldPos = this.screenToWorld(e);
         const mouse = this.getMouseState();
-        
+
         this.updateMouseState(e, worldPos);
-        
+
+        // Skip processing if middle mouse button and event is from panels
+        if (mouse.isMiddleDown) {
+            const target = e.target;
+            if (target.closest('#right-panel')) {
+                return; // Let ScrollUtils handle this
+            }
+        }
+
         if (mouse.isRightDown) {
             // Pan camera
             const dx = e.clientX - mouse.lastX;
@@ -161,7 +178,15 @@ export class MouseHandlers extends BaseModule {
 
     handleMouseUp(e) {
         const mouse = this.editor.stateManager.get('mouse');
-        
+
+        // Skip processing middle mouse button if event is from panels
+        if (e.button === 1) { // Middle mouse button
+            const target = e.target;
+            if (target.closest('#right-panel')) {
+                return; // Let ScrollUtils handle this
+            }
+        }
+
         if (e.button === 2) {
             Logger.mouse.debug('Right mouse up, was panning:', mouse.wasPanning);
 
