@@ -105,31 +105,21 @@ export class LayersPanel extends BasePanel {
     }
 
     /**
-     * Render layers management section
+     * Render layers search controls in the shared search section
      */
-    renderLayersSection() {
-        const level = this.levelEditor.getLevel();
-        const layers = level.getLayersSorted();
-        
-        const section = document.createElement('div');
-        section.className = 'layers-section';
-        
-        // Header with search, stats and add button
-        const header = document.createElement('div');
-        header.className = 'layers-header mb-3';
-        
-        // Title and stats row
-        const titleRow = document.createElement('div');
-        titleRow.className = 'flex justify-between items-center mb-2';
-        titleRow.innerHTML = `
-            <h3 class="text-lg font-bold text-gray-200">Layers</h3>
-            <div class="text-sm text-gray-400" id="layers-stats">0 layers</div>
-        `;
-        
-        // Search and controls row
-        const controlsRow = document.createElement('div');
-        controlsRow.className = 'flex items-center space-x-2';
-        
+    renderLayersSearchControls() {
+        const searchSection = document.getElementById('right-panel-search');
+        if (!searchSection) return;
+
+        // Check if layers panel is currently active
+        const layersPanel = document.getElementById('layers-content-panel');
+        if (!layersPanel || layersPanel.classList.contains('hidden')) {
+            return; // Don't render if layers is not active
+        }
+
+        // Clear existing content
+        searchSection.innerHTML = '';
+
         // Create search input using SearchUtils
         const searchInput = SearchUtils.createSearchInput(
             'Search layers...',
@@ -137,7 +127,11 @@ export class LayersPanel extends BasePanel {
             'flex-1 bg-gray-700 text-white px-2 py-1 rounded text-sm border border-gray-600 focus:border-blue-500 focus:outline-none'
         );
         searchInput.value = this.searchFilter;
-        
+
+        // Create controls row
+        const controlsRow = document.createElement('div');
+        controlsRow.className = 'flex items-center space-x-2';
+
         controlsRow.innerHTML = `
             <button id="add-layer-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
                 + Add
@@ -146,52 +140,58 @@ export class LayersPanel extends BasePanel {
                 ⋮
             </button>
         `;
-        
+
         controlsRow.insertBefore(searchInput, controlsRow.firstChild);
-        
-        header.appendChild(titleRow);
-        header.appendChild(controlsRow);
-        
+        searchSection.appendChild(controlsRow);
+
+        // Setup event listeners for search controls
+        this.setupSearch();
+        this.setupLayersMenu();
+        this.setupSearchButtons();
+    }
+
+    /**
+     * Render layers management section
+     */
+    renderLayersSection() {
+        const level = this.levelEditor.getLevel();
+        const layers = level.getLayersSorted();
+
+        // Clear existing content
+        this.container.innerHTML = '';
+
         // Layers list container
         const layersList = document.createElement('div');
-        layersList.className = 'layers-list space-y-1';
+        layersList.className = 'layers-list space-y-1 p-4';
         layersList.id = 'layers-list';
-        
+
         // Filter layers based on search
         const filteredLayers = this.filterLayers(layers);
-        
+
         // Render each layer
         filteredLayers.forEach(layer => {
             const layerElement = this.createLayerElement(layer);
             layersList.appendChild(layerElement);
         });
-        
-        // Update statistics
-        this.updateLayersStats();
-        
-        section.appendChild(header);
-        section.appendChild(layersList);
-        
-        this.container.appendChild(section);
-        
-        // Add event listeners
-        this.setupLayersEventListeners();
-        this.setupSearch();
-        this.setupLayersMenu();
-        
+
+        this.container.appendChild(layersList);
+
         // Setup scrolling using BasePanel - target the actual scrollable container
         const rightPanel = this.container.closest('#right-panel');
         const scrollableContainer = rightPanel?.querySelector('.flex-grow.overflow-y-auto');
-        
+
         this.setupScrolling({
             horizontal: false,
             vertical: true,
             sensitivity: 1.0,
             target: scrollableContainer || rightPanel
         });
-        
+
         // Update layer styles to show current layer highlight
         this.updateLayerStyles();
+
+        // Setup event listeners for layer elements
+        this.setupLayersEventListeners();
     }
 
     /**
@@ -596,18 +596,18 @@ export class LayersPanel extends BasePanel {
     }
 
     /**
-     * Setup layers event listeners
+     * Setup search buttons event listeners
      */
-    setupLayersEventListeners() {
+    setupSearchButtons() {
         const level = this.levelEditor.getLevel();
-        
+
         // Add layer button - remove existing listeners first
         const addLayerBtn = document.getElementById('add-layer-btn');
         if (addLayerBtn) {
             // Clone the button to remove all event listeners
             const newAddLayerBtn = addLayerBtn.cloneNode(true);
             addLayerBtn.parentNode.replaceChild(newAddLayerBtn, addLayerBtn);
-            
+
             newAddLayerBtn.addEventListener('click', () => {
                 const newLayer = level.addLayer();
                 this.render();
@@ -619,6 +619,13 @@ export class LayersPanel extends BasePanel {
                 }
             });
         }
+    }
+
+    /**
+     * Setup layers event listeners
+     */
+    setupLayersEventListeners() {
+        const level = this.levelEditor.getLevel();
         
         // Layer name editing - double click to edit
         const nameDisplays = this.container.querySelectorAll('.layer-name-display');

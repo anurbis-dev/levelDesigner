@@ -597,7 +597,10 @@ export class LevelEditor {
 
         // Setup event listeners
         this.eventHandlers.setupEventListeners();
-        
+
+        // Initialize search controls for current tab
+        this.initializeSearchControls();
+
         // Preload assets
         try {
             await this.assetManager.preloadImages();
@@ -1893,6 +1896,33 @@ export class LevelEditor {
 
     computeSelectableSet() {
         return this.objectOperations.computeSelectableSet();
+    }
+
+    /**
+     * Initialize search controls for the current active tab
+     */
+    initializeSearchControls() {
+        const searchSection = document.getElementById('right-panel-search');
+        if (!searchSection) return;
+
+        // Get current active tab
+        const activeTab = document.querySelector('.tab-right.active');
+        if (!activeTab) return;
+
+        const tabName = activeTab.dataset.tab;
+
+        // Show search section for layers and outliner tabs
+        const showSearch = tabName === 'layers' || tabName === 'outliner';
+        searchSection.style.display = showSearch ? 'block' : 'none';
+
+        // Render appropriate search controls
+        if (showSearch) {
+            if (tabName === 'layers' && this.layersPanel) {
+                this.layersPanel.renderLayersSearchControls();
+            } else if (tabName === 'outliner' && this.outlinerPanel) {
+                this.outlinerPanel.renderOutlinerSearchControls();
+            }
+        }
     }
 
     /**

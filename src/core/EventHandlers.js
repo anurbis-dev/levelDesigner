@@ -669,18 +669,34 @@ export class EventHandlers extends BaseModule {
     setupRightPanelTabs() {
         const tabs = document.querySelectorAll('.tab-right');
         const contents = document.querySelectorAll('.tab-content-right');
-        
+        const searchSection = document.getElementById('right-panel-search');
+
         tabs.forEach(tab => {
             tab.addEventListener('click', () => {
                 tabs.forEach(t => t.classList.remove('active'));
                 tab.classList.add('active');
-                
+
                 const tabName = tab.dataset.tab;
                 this.editor.stateManager.set('rightPanelTab', tabName);
-                
+
                 contents.forEach(content => {
                     content.classList.toggle('hidden', content.id !== `${tabName}-content-panel`);
                 });
+
+                // Show search section for layers and outliner tabs
+                if (searchSection) {
+                    const showSearch = tabName === 'layers' || tabName === 'outliner';
+                    searchSection.style.display = showSearch ? 'block' : 'none';
+
+                    // Render appropriate search controls
+                    if (showSearch) {
+                        if (tabName === 'layers' && this.editor.layersPanel) {
+                            this.editor.layersPanel.renderLayersSearchControls();
+                        } else if (tabName === 'outliner' && this.editor.outlinerPanel) {
+                            this.editor.outlinerPanel.renderOutlinerSearchControls();
+                        }
+                    }
+                }
             });
         });
     }

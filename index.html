@@ -212,6 +212,10 @@
                 <button data-tab="layers" class="tab-right flex-1 p-2 text-sm font-medium">Layers</button>
                 <button data-tab="outliner" class="tab-right flex-1 p-2 text-sm font-medium">Outliner</button>
             </div>
+            <!-- Search section - non-scrollable -->
+            <div id="right-panel-search" class="border-b border-gray-700 flex-shrink-0 p-4" style="display: none;">
+                <!-- Search controls will be added here dynamically -->
+            </div>
             <div class="flex-grow overflow-y-auto">
                 <div id="details-content-panel" class="p-4 tab-content-right">
                      <p class="text-gray-400">Select an object to see its properties.</p>
@@ -220,10 +224,10 @@
                     <h3 class="text-md font-bold mb-2">Level Stats</h3>
                     <div id="level-stats-content"></div>
                 </div>
-                <div id="layers-content-panel" class="p-4 tab-content-right hidden">
+                <div id="layers-content-panel" class="tab-content-right hidden">
                      <!-- Layers content here -->
                 </div>
-                <div id="outliner-content-panel" class="p-4 tab-content-right hidden">
+                <div id="outliner-content-panel" class="tab-content-right hidden">
                      <!-- Outliner content here -->
                 </div>
             </div>

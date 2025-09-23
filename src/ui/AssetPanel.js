@@ -196,6 +196,9 @@ export class AssetPanel extends BasePanel {
     }
 
     handleAssetMouseDown(e) {
+        // Only allow marquee selection with left mouse button (button 0)
+        if (e.button !== 0) return;
+
         // Check if click was on background, not a thumbnail
         if (e.target.closest('.asset-thumbnail')) return;
         

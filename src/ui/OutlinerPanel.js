@@ -15,13 +15,26 @@ export class OutlinerPanel extends BasePanel {
         if (!this.stateManager.get('outliner')) {
             this.stateManager.set('outliner', {
                 collapsedTypes: new Set(),
-                collapsedGroups: new Set()
+                collapsedGroups: new Set(),
+                activeTypeFilters: new Set(), // All types active by default
+                shiftAnchor: null // Anchor point for shift+click selection
             });
-        } else if (!this.stateManager.get('outliner').collapsedGroups) {
+        } else {
             const outlinerState = this.stateManager.get('outliner');
-            outlinerState.collapsedGroups = new Set();
+            if (!outlinerState.collapsedGroups) {
+                outlinerState.collapsedGroups = new Set();
+            }
+            if (!outlinerState.activeTypeFilters) {
+                outlinerState.activeTypeFilters = new Set();
+            }
+            if (!outlinerState.shiftAnchor) {
+                outlinerState.shiftAnchor = null;
+            }
             this.stateManager.set('outliner', outlinerState);
         }
+
+        // Get active type filters from state
+        this.activeTypeFilters = this.stateManager.get('outliner').activeTypeFilters || new Set();
 
         this.setupEventListeners();
         this.setupContextMenu();
@@ -42,17 +55,6 @@ export class OutlinerPanel extends BasePanel {
         return icons[type] || icons.default;
     }
 
-    getTypeGroupCount(type, objects) {
-        if (type === 'Groups') {
-            // For groups, count all objects in the hierarchy
-            return objects.reduce((total, group) => {
-                return total + this.countObjectsInGroup(group);
-            }, 0);
-        } else {
-            // For regular objects, just count them
-            return objects.length;
-        }
-    }
 
     countObjectsInGroup(group) {
         let count = 1; // Count the group itself
@@ -91,6 +93,249 @@ export class OutlinerPanel extends BasePanel {
         this.stateManager.subscribe('selectedObjects', () => this.render());
         // Subscribe to level changes
         this.stateManager.subscribe('level', () => this.render());
+        // Subscribe to outliner state changes (including filters)
+        this.stateManager.subscribe('outliner', () => {
+            // Update activeTypeFilters from state
+            this.activeTypeFilters = this.stateManager.get('outliner').activeTypeFilters || new Set();
+            this.render();
+        });
+    }
+
+    /**
+     * Render outliner search controls in the shared search section
+     */
+    renderOutlinerSearchControls() {
+        const searchSection = document.getElementById('right-panel-search');
+        if (!searchSection) return;
+
+        // Check if outliner panel is currently active
+        const outlinerPanel = document.getElementById('outliner-content-panel');
+        if (!outlinerPanel || outlinerPanel.classList.contains('hidden')) {
+            return; // Don't render if outliner is not active
+        }
+
+        // Clear existing content
+        searchSection.innerHTML = '';
+
+        // Create controls row with search and filter
+        const controlsRow = document.createElement('div');
+        controlsRow.className = 'flex items-center space-x-2';
+
+        // Create search input using SearchUtils with same style as LayersPanel
+        const searchInput = SearchUtils.createSearchInput(
+            'Search objects...',
+            'outliner-search',
+            'flex-1 bg-gray-700 text-white px-2 py-1 rounded text-sm border border-gray-600 focus:border-blue-500 focus:outline-none'
+        );
+        searchInput.value = this.searchTerm;
+
+        SearchUtils.setupSearchListeners(searchInput, (searchTerm) => {
+            this.searchTerm = searchTerm;
+            Logger.outliner.debug('Search term changed:', searchTerm);
+            this.render();
+        });
+
+        // Create filter button
+        const filterButton = document.createElement('button');
+        filterButton.id = 'outliner-filter-btn';
+        const hasActiveFilters = this.activeTypeFilters.size > 0 && !this.activeTypeFilters.has('DISABLE_ALL');
+        filterButton.className = `text-white px-3 py-1 rounded text-sm flex items-center justify-center h-8 ${
+            hasActiveFilters ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 hover:bg-gray-700'
+        }`;
+        filterButton.title = hasActiveFilters ? 'Filter active - click to change' : 'Filter by object types';
+        filterButton.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 12 12" fill="currentColor">
+                <path d="M2 3h8l-3 3v3l-2 1V6L2 3z"/>
+            </svg>
+        `;
+
+        filterButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.showFilterMenu(filterButton);
+        });
+
+        controlsRow.appendChild(searchInput);
+        controlsRow.appendChild(filterButton);
+        searchSection.appendChild(controlsRow);
+    }
+
+    /**
+     * Show filter menu with object types
+     */
+    showFilterMenu(button) {
+        // Get all available object types from current level
+        const level = this.levelEditor.getLevel();
+        const allObjects = level.getAllObjects();
+        const availableTypes = new Set();
+
+        allObjects.forEach(obj => {
+            const type = obj.type === 'group' ? 'Groups' : obj.type || 'Untyped';
+            availableTypes.add(type);
+        });
+
+        // Create menu
+        const menu = document.createElement('div');
+        menu.className = 'absolute z-50 bg-gray-800 border border-gray-600 rounded shadow-lg p-2 min-w-48';
+        menu.style.top = `${button.offsetTop + button.offsetHeight + 4}px`;
+        menu.style.right = `${document.body.offsetWidth - button.offsetLeft - button.offsetWidth}px`;
+
+        // Add "Toggle All" option
+        const allTypesActive = this.activeTypeFilters.size === 0;
+        const allOption = document.createElement('div');
+        allOption.className = 'flex items-center p-2 hover:bg-gray-700 cursor-pointer text-sm text-white';
+        allOption.innerHTML = `
+            <input type="checkbox" id="filter-all" class="mr-2" ${allTypesActive ? 'checked' : ''}>
+            <label for="filter-all">Toggle All</label>
+        `;
+
+        allOption.addEventListener('click', () => {
+            // Check current state at the time of click
+            const currentlyAllActive = this.activeTypeFilters.size === 0;
+            
+            if (currentlyAllActive) {
+                // Currently all types are active, deactivate all
+                this.activeTypeFilters = new Set(['DISABLE_ALL']);
+            } else {
+                // Currently some types are filtered or disabled, activate all
+                this.activeTypeFilters.clear();
+            }
+            // Save state
+            this.stateManager.update({
+                'outliner.activeTypeFilters': this.activeTypeFilters
+            });
+            this.render();
+            // Update menu instead of closing it
+            this.updateFilterMenu(menu, button);
+        });
+
+        menu.appendChild(allOption);
+
+        // Add separator
+        const separator = document.createElement('div');
+        separator.className = 'border-t border-gray-600 my-1';
+        menu.appendChild(separator);
+
+        // Add individual type options
+        Array.from(availableTypes).sort().forEach(type => {
+            const option = document.createElement('div');
+            option.className = 'flex items-center p-2 hover:bg-gray-700 cursor-pointer text-sm text-white';
+
+            // Type is active if: no filters (show all) OR specifically selected OR not in DISABLE_ALL mode
+            const isActive = this.activeTypeFilters.size === 0 ||
+                           (this.activeTypeFilters.has(type) && !this.activeTypeFilters.has('DISABLE_ALL'));
+
+            option.innerHTML = `
+                <input type="checkbox" id="filter-${type}" class="mr-2" ${isActive ? 'checked' : ''}>
+                <label for="filter-${type}">${type}</label>
+            `;
+
+            option.addEventListener('click', () => {
+                if (this.activeTypeFilters.has('DISABLE_ALL')) {
+                    // If in DISABLE_ALL mode, start with this type only
+                    this.activeTypeFilters = new Set([type]);
+                } else if (this.activeTypeFilters.size === 0) {
+                    // If all were active, exclude this type (show all except this one)
+                    const level = this.levelEditor.getLevel();
+                    const allObjects = level.getAllObjects();
+                    const allTypes = new Set();
+                    allObjects.forEach(obj => {
+                        const objType = obj.type === 'group' ? 'Groups' : obj.type || 'Untyped';
+                        allTypes.add(objType);
+                    });
+                    // Create set with all types except the clicked one
+                    this.activeTypeFilters = new Set([...allTypes].filter(t => t !== type));
+                } else if (this.activeTypeFilters.has(type)) {
+                    // Remove this type
+                    this.activeTypeFilters.delete(type);
+                    // If no types left, disable all (show nothing)
+                    if (this.activeTypeFilters.size === 0) {
+                        this.activeTypeFilters = new Set(['DISABLE_ALL']);
+                    }
+                } else {
+                    // Add this type
+                    this.activeTypeFilters.add(type);
+                }
+                // Save state
+                this.stateManager.update({
+                    'outliner.activeTypeFilters': this.activeTypeFilters
+                });
+                this.render();
+                // Update menu instead of closing it
+                this.updateFilterMenu(menu, button);
+            });
+
+            menu.appendChild(option);
+        });
+
+        // Close menu when clicking outside
+        const closeMenu = (e) => {
+            if (!menu.contains(e.target) && e.target !== button) {
+                document.body.removeChild(menu);
+                document.removeEventListener('click', closeMenu);
+            }
+        };
+
+        document.addEventListener('click', closeMenu);
+        document.body.appendChild(menu);
+    }
+
+    /**
+     * Update filter menu to reflect current filter state
+     */
+    updateFilterMenu(menu, button) {
+        // Get all available object types from current level
+        const level = this.levelEditor.getLevel();
+        const allObjects = level.getAllObjects();
+        const availableTypes = new Set();
+
+        allObjects.forEach(obj => {
+            const type = obj.type === 'group' ? 'Groups' : obj.type || 'Untyped';
+            availableTypes.add(type);
+        });
+
+        // Update "Toggle All" option
+        const allOption = menu.querySelector('#filter-all');
+        if (allOption) {
+            const allTypesActive = this.activeTypeFilters.size === 0;
+            
+            allOption.checked = allTypesActive;
+            const label = allOption.nextElementSibling;
+            if (label) {
+                // Label is static "Toggle All"
+                label.textContent = 'Toggle All';
+            }
+        }
+
+        // Update individual type options
+        Array.from(availableTypes).sort().forEach(type => {
+            const option = menu.querySelector(`#filter-${type}`);
+            if (option) {
+                const isActive = this.activeTypeFilters.size === 0 ||
+                               (this.activeTypeFilters.has(type) && !this.activeTypeFilters.has('DISABLE_ALL'));
+                option.checked = isActive;
+            }
+        });
+
+        // Update filter button appearance
+        const hasActiveFilters = this.activeTypeFilters.size > 0 && !this.activeTypeFilters.has('DISABLE_ALL');
+        button.className = `text-white px-3 py-1 rounded text-sm flex items-center justify-center h-8 ${
+            hasActiveFilters ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 hover:bg-gray-700'
+        }`;
+        button.title = hasActiveFilters ? 'Filter active - click to change' : 'Filter by object types';
+    }
+
+    /**
+     * Check if object type should be shown based on filters
+     */
+    shouldShowObjectType(type) {
+        // If no filters active, show all
+        if (this.activeTypeFilters.size === 0) return true;
+
+        // If DISABLE_ALL is active, show nothing
+        if (this.activeTypeFilters.has('DISABLE_ALL')) return false;
+
+        // Check if this type is in active filters
+        return this.activeTypeFilters.has(type);
     }
 
     createSearchBar() {
@@ -102,7 +347,7 @@ export class OutlinerPanel extends BasePanel {
 
         const searchInput = searchContainer.querySelector('#outliner-search');
         searchInput.value = this.searchTerm;
-        
+
         SearchUtils.setupSearchListeners(searchInput, (searchTerm) => {
             this.searchTerm = searchTerm;
             Logger.outliner.debug('Search term changed:', searchTerm);
@@ -154,6 +399,59 @@ export class OutlinerPanel extends BasePanel {
         }
     }
 
+    /**
+     * Filter objects by type recursively, preserving hierarchy
+     */
+    filterObjectsByTypeRecursive(objects) {
+        const filtered = [];
+        
+        objects.forEach(obj => {
+            const type = obj.type === 'group' ? 'Groups' : obj.type || 'Untyped';
+            
+            if (this.activeTypeFilters.has(type)) {
+                // Object type is allowed, add it
+                const filteredObj = { ...obj };
+                
+                // If it's a group, recursively filter its children
+                if (obj.type === 'group' && obj.children) {
+                    const filteredChildren = this.filterObjectsByTypeRecursive(obj.children);
+                    // Always include group if its type is allowed, even if no children
+                    filteredObj.children = filteredChildren;
+                    filtered.push(filteredObj);
+                } else {
+                    // Regular object, add it
+                    filtered.push(filteredObj);
+                }
+            } else if (obj.type === 'group' && obj.children) {
+                // Group type is not allowed, but check if any children are allowed
+                const filteredChildren = this.filterObjectsByTypeRecursive(obj.children);
+                if (filteredChildren.length > 0) {
+                    // Don't create a group, just add the children directly (flatten the hierarchy)
+                    filtered.push(...filteredChildren);
+                }
+            }
+            // If object type is not allowed and it's not a group, skip it
+        });
+        
+        return filtered;
+    }
+
+    /**
+     * Count all objects recursively in the filtered hierarchy
+     */
+    countAllObjectsRecursive(objects) {
+        let count = 0;
+        
+        objects.forEach(obj => {
+            count++; // Count the object itself
+            if (obj.type === 'group' && obj.children) {
+                count += this.countAllObjectsRecursive(obj.children);
+            }
+        });
+        
+        return count;
+    }
+
 
     render() {
         // Save search input state before clearing
@@ -161,28 +459,43 @@ export class OutlinerPanel extends BasePanel {
         const wasSearchFocused = searchInput && document.activeElement === searchInput;
         const searchValue = this.searchTerm;
 
+        // Clear container
         this.container.innerHTML = '';
 
-        // Create search bar
-        this.createSearchBar();
+        // Render outliner search controls in shared section
+        this.renderOutlinerSearchControls();
 
         const level = this.levelEditor.getLevel();
         // Show only top-level objects in outliner
         const topLevelObjects = level.objects;
-        const filteredObjects = this.searchTerm ? this.getAllFilteredObjects(topLevelObjects) : topLevelObjects;
-        const groupedByType = this.groupObjectsByType(filteredObjects);
+        
+        // First apply search filter if active
+        let filteredObjects = this.searchTerm ? this.getAllFilteredObjects(topLevelObjects) : topLevelObjects;
+        
+        // Then apply type filter - filter objects by their types recursively
+        if (this.activeTypeFilters.size > 0 && !this.activeTypeFilters.has('DISABLE_ALL')) {
+            filteredObjects = this.filterObjectsByTypeRecursive(filteredObjects);
+        } else if (this.activeTypeFilters.has('DISABLE_ALL')) {
+            // If DISABLE_ALL is active, show nothing
+            filteredObjects = [];
+        }
 
         // Show search results info
         if (this.searchTerm) {
-            const totalFiltered = filteredObjects.length;
+            const totalFiltered = this.countAllObjectsRecursive(filteredObjects);
             Logger.outliner.info(`Search "${this.searchTerm}" found ${totalFiltered} objects`);
 
             const resultsInfo = SearchUtils.createSearchResultsInfo(totalFiltered, this.searchTerm, 'objects');
             this.container.appendChild(resultsInfo);
         }
 
-        Object.keys(groupedByType).sort().forEach(type => {
-            this.renderTypeGroup(type, groupedByType[type]);
+        // Render objects directly without grouping by type
+        filteredObjects.forEach(obj => {
+            if (obj.type === 'group') {
+                this.renderGroupNode(obj, 0, this.container);
+            } else {
+                this.renderObjectNode(obj, 0, this.container);
+            }
         });
 
         // Restore search input state after render
@@ -209,61 +522,6 @@ export class OutlinerPanel extends BasePanel {
         });
     }
 
-    groupObjectsByType(objects) {
-        return objects.reduce((acc, obj) => {
-            const type = obj.type === 'group' ? 'Groups' : obj.type || 'Untyped';
-            if (!acc[type]) acc[type] = [];
-            acc[type].push(obj);
-            return acc;
-        }, {});
-    }
-
-    renderTypeGroup(type, objects) {
-        const header = document.createElement('h4');
-        header.className = 'outliner-group-header mt-2';
-
-        const isCollapsed = this.stateManager.get('outliner').collapsedTypes.has(type);
-        if (isCollapsed) header.classList.add('collapsed');
-
-        // Count objects in this type group
-        const count = this.getTypeGroupCount(type, objects);
-        header.textContent = `${type} (${count})`;
-        
-        const itemsContainer = document.createElement('div');
-        if (isCollapsed) itemsContainer.classList.add('hidden');
-        
-        // Toggle collapse on double click
-        header.addEventListener('dblclick', () => {
-            const collapsedTypes = new Set(this.stateManager.get('outliner').collapsedTypes);
-            
-            if (collapsedTypes.has(type)) {
-                collapsedTypes.delete(type);
-            } else {
-                collapsedTypes.add(type);
-            }
-            
-            this.stateManager.update({
-                'outliner.collapsedTypes': collapsedTypes
-            });
-            
-            this.render();
-        });
-        
-        this.container.appendChild(header);
-        this.container.appendChild(itemsContainer);
-        
-        if (type === 'Groups') {
-            // Render groups hierarchically
-            objects.forEach(group => {
-                this.renderGroupNode(group, 0, itemsContainer);
-            });
-        } else {
-            // Render regular objects
-            objects.forEach(obj => {
-                this.renderObjectNode(obj, 0, itemsContainer);
-            });
-        }
-    }
 
     renderGroupNode(group, depth, container) {
         const item = document.createElement('div');
@@ -514,54 +772,67 @@ export class OutlinerPanel extends BasePanel {
         }
         
         const selectedObjects = new Set(this.stateManager.get('selectedObjects'));
-        
+
         if (e.shiftKey) {
-            // Shift+click: select range from last selected to current object
+            // Shift+click: select range from anchor point to current object
             this.handleShiftClick(obj, selectedObjects);
         } else if (e.ctrlKey || e.metaKey) {
             // Ctrl/Cmd+click: toggle single object
             this.handleCtrlClick(obj, selectedObjects);
         } else {
-            // Normal click: replace selection
+            // Normal click: replace selection and set anchor point
             selectedObjects.clear();
             selectedObjects.add(obj.id);
+            // Set anchor point for future shift+click operations
+            this.stateManager.update({
+                'outliner.shiftAnchor': obj.id
+            });
         }
         
         this.stateManager.set('selectedObjects', selectedObjects);
     }
 
     /**
-     * Handle Shift+click: select range from last selected to current object
+     * Handle Shift+click: select range from anchor point to current object
      */
     handleShiftClick(obj, selectedObjects) {
         const flatObjectList = this.getFlatObjectList();
         const currentIndex = flatObjectList.findIndex(item => item.id === obj.id);
-        
+
         if (currentIndex === -1) {
             // Object not found in flat list, just add it
             selectedObjects.add(obj.id);
             return;
         }
-        
-        // Find the last selected object in the flat list
-        let lastSelectedIndex = -1;
-        for (let i = flatObjectList.length - 1; i >= 0; i--) {
-            if (selectedObjects.has(flatObjectList[i].id)) {
-                lastSelectedIndex = i;
-                break;
-            }
-        }
-        
-        if (lastSelectedIndex === -1) {
-            // No previous selection, just add current object
+
+        // Get anchor point from state
+        const anchorId = this.stateManager.get('outliner').shiftAnchor;
+
+        if (!anchorId) {
+            // No anchor point set, set current object as anchor and select it
             selectedObjects.add(obj.id);
+            this.stateManager.update({
+                'outliner.shiftAnchor': obj.id
+            });
             return;
         }
-        
-        // Select range from last selected to current
-        const startIndex = Math.min(lastSelectedIndex, currentIndex);
-        const endIndex = Math.max(lastSelectedIndex, currentIndex);
-        
+
+        // Find anchor point in flat list
+        const anchorIndex = flatObjectList.findIndex(item => item.id === anchorId);
+
+        if (anchorIndex === -1) {
+            // Anchor point not found, reset anchor and select current object
+            selectedObjects.add(obj.id);
+            this.stateManager.update({
+                'outliner.shiftAnchor': obj.id
+            });
+            return;
+        }
+
+        // Select range from anchor point to current object
+        const startIndex = Math.min(anchorIndex, currentIndex);
+        const endIndex = Math.max(anchorIndex, currentIndex);
+
         for (let i = startIndex; i <= endIndex; i++) {
             selectedObjects.add(flatObjectList[i].id);
         }
@@ -575,6 +846,10 @@ export class OutlinerPanel extends BasePanel {
             selectedObjects.delete(obj.id);
         } else {
             selectedObjects.add(obj.id);
+            // Update anchor point to last toggled object
+            this.stateManager.update({
+                'outliner.shiftAnchor': obj.id
+            });
         }
     }
 
@@ -586,10 +861,17 @@ export class OutlinerPanel extends BasePanel {
         const level = this.levelEditor.getLevel();
         const topLevelObjects = level.objects;
         
-        // If search is active, use filtered objects
-        const objectsToProcess = this.searchTerm ? 
+        // First apply search filter if active
+        let objectsToProcess = this.searchTerm ? 
             this.getAllFilteredObjects(topLevelObjects) : 
             topLevelObjects;
+        
+        // Then apply type filter if active
+        if (this.activeTypeFilters.size > 0 && !this.activeTypeFilters.has('DISABLE_ALL')) {
+            objectsToProcess = this.filterObjectsByTypeRecursive(objectsToProcess);
+        } else if (this.activeTypeFilters.has('DISABLE_ALL')) {
+            objectsToProcess = [];
+        }
         
         const flatList = [];
         
@@ -747,27 +1029,32 @@ export class OutlinerPanel extends BasePanel {
         // Handle save/cancel
         const finishRename = (save = true) => {
             const newName = nameInput.value.trim();
+            const oldName = object.name || '';
 
-            if (save && newName !== (object.name || '')) {
+            if (save && newName !== oldName) {
                 // Update object name
                 object.name = newName;
-                Logger.outliner.info(`Renamed object ${object.id} from "${object.name || ''}" to "${newName}"`);
+                Logger.outliner.info(`Renamed object ${object.id} from "${oldName}" to "${newName}"`);
 
                 // Update display text
-                nameDisplay.textContent = object.name || `[${object.type}]`;
+                nameDisplay.textContent = newName || `[${object.type}]`;
                 
                 // Update input value
-                nameInput.value = object.name || '';
+                nameInput.value = newName;
 
                 // Notify about object property change
                 this.levelEditor.stateManager.notifyListeners('objectPropertyChanged', object, {
                     property: 'name',
-                    oldValue: object.name || '',
+                    oldValue: oldName,
                     newValue: newName
                 });
+
+                // Notify about level change to trigger save
+                const level = this.levelEditor.getLevel();
+                this.levelEditor.stateManager.notifyListeners('level', level);
             } else {
                 // Restore original value
-                nameInput.value = object.name || '';
+                nameInput.value = oldName;
             }
 
             // Hide input, show display
