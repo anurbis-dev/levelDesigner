@@ -51,12 +51,25 @@ export class DuplicateOperations extends BaseModule {
         }
 
         // Collect selected objects
-        const selected = Array.from(selectedIds)
-            .map(id => this.editor.level.findObjectById(id))
-            .filter(Boolean);
+        const selected = this.getSelectedObjects();
 
         if (selected.length === 0) {
             return;
+        }
+
+        // Determine current world position under mouse (fallback to canvas center)
+        const mouse = this.editor.stateManager.get('mouse');
+        const camera = this.editor.stateManager.get('camera');
+
+        // Use mouse world coordinates if available, otherwise fallback to canvas center
+        let worldPos;
+        if (mouse?.worldX !== undefined && mouse?.worldY !== undefined) {
+            worldPos = { x: mouse.worldX, y: mouse.worldY };
+        } else {
+            // Fallback: convert canvas center to world coordinates
+            const centerX = this.editor.canvasRenderer.canvas.width / 2;
+            const centerY = this.editor.canvasRenderer.canvas.height / 2;
+            worldPos = this.editor.canvasRenderer.screenToWorld(centerX, centerY, camera);
         }
 
         // Clone and normalize properties
@@ -85,26 +98,29 @@ export class DuplicateOperations extends BaseModule {
             return cloned;
         });
 
-        // Determine current world position under mouse (fallback to canvas center)
-        const mouse = this.editor.stateManager.get('mouse');
-        const camera = this.editor.stateManager.get('camera');
-
-        // Use mouse world coordinates if available, otherwise fallback to canvas center
-        let worldPos;
-        if (mouse?.worldX !== undefined && mouse?.worldY !== undefined) {
-            worldPos = { x: mouse.worldX, y: mouse.worldY };
-        } else {
-            // Fallback: convert canvas center to world coordinates
-            const centerX = this.editor.canvasRenderer.canvas.width / 2;
-            const centerY = this.editor.canvasRenderer.canvas.height / 2;
-            worldPos = this.editor.canvasRenderer.screenToWorld(centerX, centerY, camera);
+        // If parallax is enabled, adjust worldPos to account for parallax offset of the first object
+        // This ensures we work with visual coordinates for cursor position
+        if (this.editor.renderOperations?.parallaxRenderer?.isParallaxEnabled() && clones.length > 0) {
+            const firstObj = clones[0];
+            const effectiveLayerId = this.editor.renderOperations.getEffectiveLayerId(firstObj);
+            if (this.editor.renderOperations.parallaxRenderer.isLayerParallaxEnabled(
+                this.editor.level.getLayerById(effectiveLayerId)
+            )) {
+                const parallaxOffset = this.editor.renderOperations.parallaxRenderer.getParallaxOffset(
+                    this.editor.level.getLayerById(effectiveLayerId)
+                );
+                // Adjust cursor position to visual coordinates
+                worldPos.x += parallaxOffset.x;
+                worldPos.y += parallaxOffset.y;
+            }
         }
 
-        // Initialize offsets relative to the cursor
+        // Initialize offsets relative to the cursor BEFORE setting positions
+        // This ensures we calculate offsets based on original object positions
         const initialized = this.editor.duplicateRenderUtils.initializePositions(clones, worldPos, this.editor);
 
         // Apply initial positions so preview is visible immediately (even without mouse move)
-        const positioned = this.editor.duplicateRenderUtils.updatePositions(initialized, worldPos);
+        const positioned = this.editor.duplicateRenderUtils.updatePositions(initialized, worldPos, this.editor);
 
         // Check if this is Alt+drag mode
         const isAltDragMode = mouse?.altKey || false;
@@ -134,7 +150,7 @@ export class DuplicateOperations extends BaseModule {
         const duplicate = this.editor.stateManager.get('duplicate');
         if (!duplicate || !duplicate.isActive || !Array.isArray(duplicate.objects) || duplicate.objects.length === 0) return;
 
-        const updatedObjects = this.editor.duplicateRenderUtils.updatePositions(duplicate.objects, worldPos);
+        const updatedObjects = this.editor.duplicateRenderUtils.updatePositions(duplicate.objects, worldPos, this.editor);
         this.editor.stateManager.update({
             'duplicate.objects': updatedObjects,
             'duplicate.basePosition': { x: worldPos.x, y: worldPos.y },
@@ -162,6 +178,22 @@ export class DuplicateOperations extends BaseModule {
         if (snapToGrid || ctrlSnapToGrid) {
             const gridSize = this.editor.stateManager.get('canvas.gridSize') ?? this.editor.level.settings.gridSize;
             snappedWorldPos = WorldPositionUtils.snapToGrid(worldPos.x, worldPos.y, gridSize);
+        }
+
+        // If parallax is enabled, adjust snappedWorldPos to account for parallax offset of the first object
+        if (this.editor.renderOperations?.parallaxRenderer?.isParallaxEnabled() && duplicate.objects.length > 0) {
+            const firstObj = duplicate.objects[0];
+            const effectiveLayerId = this.editor.renderOperations.getEffectiveLayerId(firstObj);
+            if (this.editor.renderOperations.parallaxRenderer.isLayerParallaxEnabled(
+                this.editor.level.getLayerById(effectiveLayerId)
+            )) {
+                const parallaxOffset = this.editor.renderOperations.parallaxRenderer.getParallaxOffset(
+                    this.editor.level.getLayerById(effectiveLayerId)
+                );
+                // Adjust snapped position to visual coordinates
+                snappedWorldPos.x += parallaxOffset.x;
+                snappedWorldPos.y += parallaxOffset.y;
+            }
         }
 
         const groupEditMode = this.editor.stateManager.get('groupEditMode');

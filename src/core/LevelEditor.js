@@ -36,7 +36,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.11.0';
+    static VERSION = '3.11.1';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -634,7 +634,14 @@ export class LevelEditor {
         
         // Initialize view states after level is created
         this.eventHandlers.initializeViewStates();
-        
+
+        // Auto-set parallax start position to current camera position on startup
+        const currentCamera = this.stateManager.get('camera');
+        this.stateManager.set('parallax.startPosition', {
+            x: currentCamera.x,
+            y: currentCamera.y
+        });
+
         // Ensure selection is clear before saving initial state
         this.stateManager.set('selectedObjects', new Set());
 
@@ -997,6 +1004,9 @@ export class LevelEditor {
 
         // Use cached stats for normal case
         this.renderLevelStats(levelStatsContent, stats, playerStartCount);
+
+        // Setup camera start position button handler
+        this.setupCameraStartPositionButton();
     }
 
     renderLevelStats(container, stats, playerStartCount) {
@@ -1020,7 +1030,35 @@ export class LevelEditor {
                     return `<p class="text-sm ml-2">${type}: ${count}</p>`;
                 }).join('')}
             </div>
+            <div class="mt-4">
+                <button id="set-camera-start-position-btn"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors">
+                    Set Camera Start Position
+                </button>
+                <p class="text-xs text-gray-400 mt-1">
+                    Sets current camera position as parallax reference point
+                </p>
+            </div>
         `;
+    }
+
+    setupCameraStartPositionButton() {
+        const btn = document.getElementById('set-camera-start-position-btn');
+        if (!btn) return;
+
+        // Remove existing listener to avoid duplicates
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+
+        newBtn.addEventListener('click', () => {
+            const currentCamera = this.stateManager.get('camera');
+            this.stateManager.set('parallax.startPosition', {
+                x: currentCamera.x,
+                y: currentCamera.y
+            });
+
+            Logger.parallax.info(`Set camera start position: (${currentCamera.x}, ${currentCamera.y})`);
+        });
     }
 
     /**
@@ -1370,6 +1408,13 @@ export class LevelEditor {
         // Apply saved View states after reset
         this.eventHandlers.applySavedViewStates(savedViewStates);
 
+        // Auto-set parallax start position to current camera position after reset
+        const currentCamera = this.stateManager.get('camera');
+        this.stateManager.set('parallax.startPosition', {
+            x: currentCamera.x,
+            y: currentCamera.y
+        });
+
         // Update cached level statistics
         this.updateCachedLevelStats();
 
@@ -1406,6 +1451,13 @@ export class LevelEditor {
 
             // Apply saved View states after reset
             this.eventHandlers.applySavedViewStates(savedViewStates);
+
+            // Auto-set parallax start position to current camera position after loading
+            const currentCamera = this.stateManager.get('camera');
+            this.stateManager.set('parallax.startPosition', {
+                x: currentCamera.x,
+                y: currentCamera.y
+            });
 
             // Update cached level statistics
             this.updateCachedLevelStats();
