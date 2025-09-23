@@ -172,6 +172,9 @@ export class EventHandlers extends BaseModule {
                     this.editor.groupOperations.ungroupSelectedObjects();
                 } else {
                 }
+            } else if (e.key.toLowerCase() === 'p') {
+                e.preventDefault();
+                this.toggleViewOption('parallax');
             } else if (e.ctrlKey || e.metaKey) {
                 if (e.key.toLowerCase() === 'z') {
                     e.preventDefault();
@@ -259,7 +262,7 @@ export class EventHandlers extends BaseModule {
         this.updateViewCheckbox('snapToGrid', snapToGridEnabled);
         
         // Initialize other view states from user config
-        const viewStates = ['gameMode', 'objectBoundaries', 'objectCollisions'];
+        const viewStates = ['gameMode', 'objectBoundaries', 'objectCollisions', 'parallax'];
         viewStates.forEach(state => {
             const enabled = this.editor.configManager.get(`editor.view.${state}`) ?? false;
             this.editor.stateManager.set(`view.${state}`, enabled);
@@ -336,6 +339,10 @@ export class EventHandlers extends BaseModule {
                 break;
             case 'objectCollisions':
                 this.editor.stateManager.set('view.objectCollisions', enabled);
+                this.editor.render();
+                break;
+            case 'parallax':
+                this.editor.stateManager.set('view.parallax', enabled);
                 this.editor.render();
                 break;
         }

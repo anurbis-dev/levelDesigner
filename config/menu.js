@@ -96,6 +96,15 @@ export const MENU_CONFIG = {
                     stateKey: 'view.objectCollisions',
                     action: 'toggleViewOption',
                     actionParam: 'objectCollisions'
+                },
+                { type: 'separator' },
+                {
+                    id: 'toggle-parallax',
+                    label: 'Parallax',
+                    type: 'toggle',
+                    stateKey: 'view.parallax',
+                    action: 'toggleViewOption',
+                    actionParam: 'parallax'
                 }
             ]
         },
@@ -134,6 +143,7 @@ export const MENU_CONFIG = {
         'Ctrl+Shift+G': 'ungroup-selected',
         'F': 'focus-selection',
         'A': 'focus-all',
+        'P': 'toggle-parallax',
         'Escape': 'cancel-action'
     },
 

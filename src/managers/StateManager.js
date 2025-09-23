@@ -313,6 +313,10 @@ export class StateManager {
                 gridColor: 'rgba(255, 255, 255, 0.1)',
                 gridThickness: 1,
                 gridOpacity: 0.1
+            },
+            parallax: {
+                startPosition: { x: 0, y: 0 },
+                enabled: false
             }
         };
         

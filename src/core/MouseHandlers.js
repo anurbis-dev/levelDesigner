@@ -769,7 +769,7 @@ export class MouseHandlers extends BaseModule {
             const candidates = collect(groupEditMode.group);
 
             candidates.forEach(obj => {
-                const bounds = this.editor.objectOperations.getObjectWorldBounds(obj);
+                const bounds = this.editor.renderOperations.parallaxRenderer.getObjectWorldBoundsWithParallax(obj, this.editor.renderOperations.getEffectiveLayerId(obj));
                 if (marquee.x < bounds.maxX && marquee.x + marquee.width > bounds.minX &&
                     marquee.y < bounds.maxY && marquee.y + marquee.height > bounds.minY) {
                     selectedObjects.add(obj.id);
@@ -781,7 +781,7 @@ export class MouseHandlers extends BaseModule {
             selectableInViewport.forEach(objId => {
                 const obj = this.editor.getCachedObject(objId);
                 if (obj) {
-                    const bounds = this.editor.objectOperations.getObjectWorldBounds(obj);
+                    const bounds = this.editor.renderOperations.parallaxRenderer.getObjectWorldBoundsWithParallax(obj, this.editor.renderOperations.getEffectiveLayerId(obj));
                     if (marquee.x < bounds.maxX && marquee.x + marquee.width > bounds.minX &&
                         marquee.y < bounds.maxY && marquee.y + marquee.height > bounds.minY) {
                         selectedObjects.add(obj.id);

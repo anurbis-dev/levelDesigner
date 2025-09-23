@@ -47,7 +47,9 @@ export class Logger {
         CONFIG: { color: '#00E676', prefix: 'CONFIG' },
         LAYER: { color: '#03A9F4', prefix: 'LAYER' },
         CACHE: { color: '#4CAF50', prefix: 'CACHE' },
-        OUTLINER: { color: '#9C27B0', prefix: 'OUTLINER' }
+        OUTLINER: { color: '#9C27B0', prefix: 'OUTLINER' },
+        PARALLAX: { color: '#FF1493', prefix: 'PARALLAX' },
+        OBJECT_OPERATIONS: { color: '#9C27B0', prefix: 'OBJECT_OPS' }
     };
 
     /**
@@ -389,5 +391,25 @@ export class Logger {
         debug: (message, ...args) => Logger.log('OUTLINER', 'debug', message, ...args),
         warn: (message, ...args) => Logger.log('OUTLINER', 'warn', message, ...args),
         error: (message, ...args) => Logger.log('OUTLINER', 'error', message, ...args)
+    };
+
+    /**
+     * Parallax effects logging
+     */
+    static parallax = {
+        info: (message, ...args) => Logger.log('PARALLAX', 'info', message, ...args),
+        debug: (message, ...args) => Logger.log('PARALLAX', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('PARALLAX', 'warn', message, ...args),
+        error: (message, ...args) => Logger.log('PARALLAX', 'error', message, ...args)
+    };
+
+    /**
+     * Object operations logging
+     */
+    static objectOperations = {
+        info: (message, ...args) => Logger.log('OBJECT_OPERATIONS', 'info', message, ...args),
+        debug: (message, ...args) => Logger.log('OBJECT_OPERATIONS', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('OBJECT_OPERATIONS', 'warn', message, ...args),
+        error: (message, ...args) => Logger.log('OBJECT_OPERATIONS', 'error', message, ...args)
     };
 }

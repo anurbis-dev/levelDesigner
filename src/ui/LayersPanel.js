@@ -249,15 +249,14 @@ export class LayersPanel {
                         }
                     </svg>
                 </button>
-                <button class="layer-delete-btn p-1 rounded hover:bg-red-600 w-8 h-8 flex items-center justify-center ${isMainLayer ? 'opacity-50 cursor-not-allowed' : ''}" 
-                        data-layer-id="${layer.id}" 
-                        title="${isMainLayer ? 'Cannot delete main layer' : 'Delete layer'}"
-                        ${isMainLayer ? 'disabled' : ''}>
-                    <svg class="w-4 h-4 ${isMainLayer ? 'text-gray-500' : 'text-gray-300'}" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" clip-rule="evenodd"/>
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                    </svg>
-                </button>
+                <input type="number"
+                       class="layer-parallax-input bg-gray-600 border border-gray-500 text-white text-xs rounded px-1 py-1 w-12 h-8 text-center focus:outline-none focus:border-blue-500"
+                       data-layer-id="${layer.id}"
+                       value="${layer.parallaxOffset}"
+                       step="0.1"
+                       min="-10"
+                       max="10"
+                       title="Parallax offset (0 = no parallax, negative = slower, positive = faster)">
             </div>
         `;
         
@@ -760,25 +759,30 @@ export class LayersPanel {
             });
         });
         
-        // Delete layer
-        const deleteBtns = this.container.querySelectorAll('.layer-delete-btn');
-        deleteBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const layerId = e.target.closest('button').dataset.layerId;
+        // Parallax offset input
+        const parallaxInputs = this.container.querySelectorAll('.layer-parallax-input');
+        parallaxInputs.forEach(input => {
+            input.addEventListener('input', (e) => {
+                const layerId = e.target.dataset.layerId;
                 const layer = level.getLayerById(layerId);
-                if (layer && layerId !== level.getMainLayerId()) {
-                    if (confirm(`Delete layer "${layer.name}"?`)) {
-                        // Handle layer deletion - remove selection and close groups before deleting
-                        this.handleLayerVisibilityChanged(layerId, false);
+                if (layer) {
+                    const newOffset = parseFloat(e.target.value) || 0;
+                    layer.parallaxOffset = newOffset;
+                    this.stateManager.markDirty();
 
-                        level.removeLayer(layerId);
-                        this.render();
-                        this.stateManager.markDirty();
+                    Logger.layer.debug(`Updated parallax offset for layer ${layer.name}: ${newOffset}`);
+                }
+            });
 
-                        // Invalidate cache when layer is deleted
-                        if (this.levelEditor.renderOperations) {
-                            this.levelEditor.renderOperations.invalidateLayerVisibilityCache();
-                        }
+            input.addEventListener('blur', (e) => {
+                // Ensure value is valid
+                const value = parseFloat(e.target.value);
+                if (isNaN(value)) {
+                    e.target.value = 0;
+                    const layerId = e.target.dataset.layerId;
+                    const layer = level.getLayerById(layerId);
+                    if (layer) {
+                        layer.parallaxOffset = 0;
                     }
                 }
             });

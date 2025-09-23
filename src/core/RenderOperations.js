@@ -1,5 +1,6 @@
 import { BaseModule } from './BaseModule.js';
 import { Logger } from '../utils/Logger.js';
+import { ParallaxRenderer } from '../utils/ParallaxRenderer.js';
 
 /**
  * Render Operations module for LevelEditor
@@ -26,6 +27,9 @@ export class RenderOperations extends BaseModule {
         // Кеш для разных уровней масштаба камеры
         this.zoomLevelCache = new Map(); // zoom -> cachedObjects
         this.lastZoomLevel = null;
+
+        // Parallax renderer
+        this.parallaxRenderer = new ParallaxRenderer(levelEditor);
     }
 
     /**
@@ -200,7 +204,16 @@ export class RenderOperations extends BaseModule {
         const viewportBottom = camera.y + canvas.height / camera.zoom;
 
         // Добавляем padding
-        const padding = 100;
+        let padding = 100;
+
+        // При включенном параллаксе расширяем область поиска, чтобы учесть возможные смещения объектов
+        if (this.parallaxRenderer.isParallaxEnabled()) {
+            // Расширяем область на максимальное возможное параллакс смещение
+            // Предполагаем максимальный коэффициент параллакса ±10
+            const parallaxRange = Math.abs(camera.x - (this.parallaxRenderer.getParallaxState()?.startPosition?.x || 0)) * 10;
+            padding = Math.max(padding, parallaxRange + 200); // +200 для безопасности
+        }
+
         const extendedLeft = viewportLeft - padding;
         const extendedTop = viewportTop - padding;
         const extendedRight = viewportRight + padding;
@@ -313,9 +326,15 @@ export class RenderOperations extends BaseModule {
         // Draw objects with frustum culling
         const groupEditMode = this.editor.stateManager.get('groupEditMode');
         const visibleObjects = this.getVisibleObjects(camera);
-        visibleObjects.forEach(obj => {
-            this.editor.canvasRenderer.drawObject(obj);
-        });
+
+        // Check if parallax mode is enabled
+        if (this.parallaxRenderer.isParallaxEnabled()) {
+            this.parallaxRenderer.renderParallaxObjects(visibleObjects, camera);
+        } else {
+            visibleObjects.forEach(obj => {
+                this.editor.canvasRenderer.drawObject(obj);
+            });
+        }
         
         // Draw object boundaries if enabled
         const showObjectBoundaries = this.editor.stateManager.get('view.objectBoundaries');
@@ -392,6 +411,7 @@ export class RenderOperations extends BaseModule {
         }
     }
 
+
     /**
      * Draw selection outlines
      */
@@ -404,9 +424,10 @@ export class RenderOperations extends BaseModule {
             // In group edit mode, draw selection for all objects including nested ones
             this.editor.level.getAllObjects().forEach(obj => {
                 if (selectedObjects.has(obj.id)) {
-                    const bounds = this.editor.objectOperations.getObjectWorldBounds(obj);
+                    const effectiveLayerId = this.getEffectiveLayerId(obj);
+                    const bounds = this.parallaxRenderer.getObjectWorldBoundsWithParallax(obj, effectiveLayerId);
                     const mouse = this.editor.stateManager.get('mouse');
-                    
+
                     // Special visual feedback for Alt+drag in group edit mode
                     if (mouse.altKey && mouse.isDragging && this.editor.objectOperations.isObjectInGroup(obj, groupEditMode.group)) {
                         this.drawAltDragSelectionRect(bounds, camera);
@@ -419,7 +440,8 @@ export class RenderOperations extends BaseModule {
             // Normal mode - draw selection for top-level objects only
             this.editor.level.objects.forEach(obj => {
                 if (selectedObjects.has(obj.id)) {
-                    const bounds = this.editor.objectOperations.getObjectWorldBounds(obj);
+                    const effectiveLayerId = this.getEffectiveLayerId(obj);
+                    const bounds = this.parallaxRenderer.getObjectWorldBoundsWithParallax(obj, effectiveLayerId);
                     this.drawSelectionRect(bounds, obj.type === 'group', camera);
                 }
             });
@@ -652,9 +674,16 @@ export class RenderOperations extends BaseModule {
         const viewportTop = camera.y;
         const viewportRight = camera.x + canvas.width / camera.zoom;
         const viewportBottom = camera.y + canvas.height / camera.zoom;
-        
+
         // Add some padding to avoid objects appearing/disappearing at edges
-        const padding = 100;
+        let padding = 100;
+
+        // При включенном параллаксе расширяем область поиска, чтобы учесть возможные смещения объектов
+        if (this.parallaxRenderer.isParallaxEnabled()) {
+            // Расширяем область на максимальное возможное параллакс смещение
+            const parallaxRange = Math.abs(camera.x - (this.parallaxRenderer.getParallaxState()?.startPosition?.x || 0)) * 10;
+            padding = Math.max(padding, parallaxRange + 200); // +200 для безопасности
+        }
         const extendedLeft = viewportLeft - padding;
         const extendedTop = viewportTop - padding;
         const extendedRight = viewportRight + padding;
@@ -704,7 +733,10 @@ export class RenderOperations extends BaseModule {
         }
 
         const currentTime = performance.now();
-        const cameraKey = `${camera.x.toFixed(1)},${camera.y.toFixed(1)},${camera.zoom.toFixed(2)}`;
+        const parallaxEnabled = this.parallaxRenderer.isParallaxEnabled();
+        const parallaxState = parallaxEnabled ? this.parallaxRenderer.getParallaxState() : null;
+        const parallaxKey = parallaxState?.startPosition ? `_${parallaxState.startPosition.x.toFixed(1)},${parallaxState.startPosition.y.toFixed(1)}` : '_off';
+        const cameraKey = `${camera.x.toFixed(1)},${camera.y.toFixed(1)},${camera.zoom.toFixed(2)}${parallaxKey}`;
 
         // Check cache first
         if (this.visibleObjectsCache.has(cameraKey)) {

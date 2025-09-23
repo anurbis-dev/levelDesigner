@@ -1,5 +1,6 @@
 import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
 import { BaseModule } from './BaseModule.js';
+import { Logger } from '../utils/Logger.js';
 
 /**
  * Object Operations module for LevelEditor
@@ -51,42 +52,104 @@ export class ObjectOperations extends BaseModule {
            return null;
        }
 
-       // Normal mode - use viewport optimization
-       const selectableInViewport = this.editor.getSelectableObjectsInViewport();
+        // Normal mode - use viewport optimization
+        const selectableInViewport = this.editor.getSelectableObjectsInViewport();
 
-       // Hit-test groups first (highest priority) among top-level - only those in viewport
-       const topLevelGroups = this.editor.level.objects.filter(o => o.type === 'group' && selectableInViewport.has(o.id));
-       for (const grp of [...topLevelGroups].reverse()) {
-           if (this.isPointInObject(x, y, grp)) return grp;
-       }
+        // Hit-test groups first (highest priority) among top-level - only those in viewport
+        const topLevelGroups = this.editor.level.objects.filter(o => o.type === 'group' && selectableInViewport.has(o.id));
+        for (const grp of [...topLevelGroups].reverse()) {
+            if (this.isPointInObject(x, y, grp)) return grp;
+        }
 
-       // Then hit-test top-level non-group objects - only those in viewport
-       const topLevelObjects = this.editor.level.objects.filter(o => o.type !== 'group' && selectableInViewport.has(o.id));
-       for (const obj of [...topLevelObjects].reverse()) {
-           if (this.isPointInObject(x, y, obj)) {
-               return obj;
-           }
-       }
+        // Then hit-test top-level non-group objects - only those in viewport
+        const topLevelObjects = this.editor.level.objects.filter(o => o.type !== 'group' && selectableInViewport.has(o.id));
+        for (const obj of [...topLevelObjects].reverse()) {
+            if (this.isPointInObject(x, y, obj)) {
+                return obj;
+            }
+        }
 
-       return null;
+        return null;
     }
 
-    isPointInObject(x, y, obj) {
-        return WorldPositionUtils.isPointInWorldBounds(x, y, obj, this.editor.level.objects);
+    isPointInObject(worldX, worldY, obj) {
+        // Check if parallax is enabled and object participates in it
+        if (this.editor.renderOperations.parallaxRenderer.isParallaxEnabled()) {
+            const effectiveLayerId = this.editor.renderOperations.getEffectiveLayerId(obj);
+            if (this.editor.renderOperations.parallaxRenderer.isLayerParallaxEnabled(
+                this.editor.level.getLayerById(effectiveLayerId)
+            )) {
+                // Object is rendered with parallax offset, so we need to check against
+                // the transformed world bounds
+                const parallaxOffset = this.editor.renderOperations.parallaxRenderer.getParallaxOffset(
+                    this.editor.level.getLayerById(effectiveLayerId)
+                );
+
+                // Get the original world bounds
+                const originalBounds = WorldPositionUtils.getWorldBounds(obj, this.editor.level.objects);
+
+                // Apply parallax transformation to bounds
+                const transformedBounds = {
+                    minX: originalBounds.minX - parallaxOffset.x,
+                    minY: originalBounds.minY - parallaxOffset.y,
+                    maxX: originalBounds.maxX - parallaxOffset.x,
+                    maxY: originalBounds.maxY - parallaxOffset.y
+                };
+
+                // Check if point is within transformed bounds
+                return worldX >= transformedBounds.minX && worldX <= transformedBounds.maxX &&
+                       worldY >= transformedBounds.minY && worldY <= transformedBounds.maxY;
+            }
+        }
+
+        // Normal case without parallax
+        return WorldPositionUtils.isPointInWorldBounds(worldX, worldY, obj, this.editor.level.objects);
     }
 
-    isPointInGroupBounds(x, y, groupEditMode = null) {
+    isPointInGroupBounds(worldX, worldY, groupEditMode = null) {
         // Use provided groupEditMode or get current one
         const gem = groupEditMode || this.getGroupEditMode();
         if (!gem) return false;
 
         const group = gem.group;
+
+        // Check if parallax is enabled and group participates in it
+        if (this.editor.renderOperations.parallaxRenderer.isParallaxEnabled()) {
+            const effectiveLayerId = this.editor.renderOperations.getEffectiveLayerId(group);
+            if (this.editor.renderOperations.parallaxRenderer.isLayerParallaxEnabled(
+                this.editor.level.getLayerById(effectiveLayerId)
+            )) {
+                // Group is rendered with parallax offset, so we need to check against
+                // the transformed bounds
+                const parallaxOffset = this.editor.renderOperations.parallaxRenderer.getParallaxOffset(
+                    this.editor.level.getLayerById(effectiveLayerId)
+                );
+
+                // Get the original world bounds
+                const originalBounds = WorldPositionUtils.getWorldBounds(group, this.editor.level.objects);
+
+                // Apply parallax transformation to bounds
+                const transformedBounds = {
+                    minX: originalBounds.minX - parallaxOffset.x,
+                    minY: originalBounds.minY - parallaxOffset.y,
+                    maxX: originalBounds.maxX - parallaxOffset.x,
+                    maxY: originalBounds.maxY - parallaxOffset.y
+                };
+
+                // Add some padding to make it easier to drop inside (same as visual frame)
+                const padding = 10;
+                return worldX >= transformedBounds.minX - padding && worldX <= transformedBounds.maxX + padding &&
+                       worldY >= transformedBounds.minY - padding && worldY <= transformedBounds.maxY + padding;
+            }
+        }
+
+        // Normal case without parallax
         const bounds = WorldPositionUtils.getWorldBounds(group, this.editor.level.objects);
 
         // Add some padding to make it easier to drop inside (same as visual frame)
         const padding = 10;
-        return x >= bounds.minX - padding && x <= bounds.maxX + padding &&
-               y >= bounds.minY - padding && y <= bounds.maxY + padding;
+        return worldX >= bounds.minX - padding && worldX <= bounds.maxX + padding &&
+               worldY >= bounds.minY - padding && worldY <= bounds.maxY + padding;
     }
 
     getObjectCenterWorld(obj, parentGroup = null) {
