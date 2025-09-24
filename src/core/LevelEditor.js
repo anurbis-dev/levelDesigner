@@ -37,7 +37,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.14.0';
+    static VERSION = '3.15.0';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -561,11 +561,11 @@ export class LevelEditor {
         this.contextMenuManager.registerMenu('canvas', this.canvasContextMenu);
 
         // Initialize UI panels
-        this.assetPanel = new AssetPanel(assetsPanel, this.assetManager, this.stateManager);
+        this.assetPanel = new AssetPanel(assetsPanel, this.assetManager, this.stateManager, this);
         this.detailsPanel = new DetailsPanel(detailsPanel, this.stateManager, this);
         this.outlinerPanel = new OutlinerPanel(outlinerPanel, this.stateManager, this);
         this.layersPanel = new LayersPanel(layersPanel, this.stateManager, this);
-        this.settingsPanel = new SettingsPanel(document.body, this.configManager);
+        this.settingsPanel = new SettingsPanel(document.body, this.configManager, this);
         
         // Initial render of asset panel
         this.assetPanel.render();
@@ -625,7 +625,10 @@ export class LevelEditor {
             }
         }
 
-        // Initial render (теперь индекс уже построен)
+        // Initialize view states before render to prevent toolbar flickering
+        this.eventHandlers.initializeViewStates();
+
+        // Initial render (теперь индекс уже построен и состояния инициализированы)
         Logger.render.info('🎨 Initial render started');
         this.render();
         Logger.render.info('✅ Level Editor initialized successfully');
@@ -633,16 +636,13 @@ export class LevelEditor {
         // Update version info in UI and page title
         this.updateVersionInfo();
         this.updatePageTitle();
-        
+
         this.updateAllPanels();
-        
+
         } catch (error) {
             this.log('error', 'Failed to initialize editor:', error.message);
             throw error;
         }
-        
-        // Initialize view states after level is created
-        this.eventHandlers.initializeViewStates();
 
         // Auto-set parallax start position to current camera position on startup
         const currentCamera = this.stateManager.get('camera');
@@ -657,6 +657,9 @@ export class LevelEditor {
         // Save initial state
         this.historyManager.saveState(this.level.objects, this.stateManager.get('selectedObjects'), true);
 
+        // Setup auto-save on page unload
+        this.setupAutoSaveOnUnload();
+
         // Test context menu functionality
         this.testContextMenu();
         this.testContextMenuManager();
@@ -664,6 +667,48 @@ export class LevelEditor {
         this.testPanningDetection();
         this.testMenuAutoClose();
         this.testCursorPositioning();
+    }
+
+    /**
+     * Setup auto-save on page unload
+     */
+    setupAutoSaveOnUnload() {
+        window.addEventListener('beforeunload', () => {
+            try {
+                Logger.ui.info('Auto-saving UI state on page unload...');
+
+                // Save toolbar state
+                if (this.toolbar) {
+                    Logger.ui.debug('Saving toolbar state...');
+                    this.toolbar.saveState();
+                }
+
+                // Save current right panel tab
+                const currentRightPanelTab = this.stateManager.get('rightPanelTab');
+                if (currentRightPanelTab) {
+                    Logger.ui.debug('Saving rightPanelTab:', currentRightPanelTab);
+                    this.configManager.set('editor.view.rightPanelTab', currentRightPanelTab);
+                }
+
+                // Save current active asset tabs
+                const currentActiveAssetTabs = this.stateManager.get('activeAssetTabs');
+                if (currentActiveAssetTabs) {
+                    const tabsArray = Array.from(currentActiveAssetTabs);
+                    Logger.ui.debug('Saving activeAssetTabs:', tabsArray);
+                    this.configManager.set('editor.view.activeAssetTabs', tabsArray);
+                }
+
+                // Save settings (this will save all configs including tabs)
+                if (this.configManager) {
+                    Logger.ui.debug('Saving all settings...');
+                    this.configManager.saveSettings();
+                }
+
+                Logger.ui.info('UI state auto-saved successfully');
+            } catch (error) {
+                Logger.ui.error('Failed to auto-save UI state:', error);
+            }
+        });
     }
 
     /**

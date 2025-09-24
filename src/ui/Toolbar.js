@@ -1,5 +1,6 @@
 import { Logger } from '../utils/Logger.js';
 import { BaseContextMenu } from './BaseContextMenu.js';
+import { CommandAvailability } from '../utils/CommandAvailability.js';
 
 /**
  * Toolbar UI component
@@ -30,11 +31,6 @@ export class Toolbar {
         // Setup scrolling events after render
         this.setupScrollingEvents();
         this.setupContextMenu();
-        
-        // Load remaining state after render (button states, collapsed sections)
-        setTimeout(() => {
-            this.loadState();
-        }, 50);
     }
 
     /**
@@ -45,6 +41,40 @@ export class Toolbar {
         this.stateManager.subscribe('view.toolbar', (visible) => {
             this.setVisible(visible);
         });
+
+        // Listen for view option changes to sync toggle buttons and menu checkboxes
+        this.stateManager.subscribe('view.grid', (enabled) => {
+            this.updateToggleButtonState('toggleGrid', enabled);
+            this.levelEditor.eventHandlers.updateViewCheckbox('grid', enabled);
+        });
+        this.stateManager.subscribe('view.snapToGrid', (enabled) => {
+            this.updateToggleButtonState('toggleSnapToGrid', enabled);
+            this.levelEditor.eventHandlers.updateViewCheckbox('snapToGrid', enabled);
+        });
+        this.stateManager.subscribe('view.parallax', (enabled) => {
+            this.updateToggleButtonState('toggleParallax', enabled);
+            this.levelEditor.eventHandlers.updateViewCheckbox('parallax', enabled);
+        });
+        this.stateManager.subscribe('view.objectBoundaries', (enabled) => {
+            this.updateToggleButtonState('toggleObjectBoundaries', enabled);
+            this.levelEditor.eventHandlers.updateViewCheckbox('objectBoundaries', enabled);
+        });
+        this.stateManager.subscribe('view.objectCollisions', (enabled) => {
+            this.updateToggleButtonState('toggleObjectCollisions', enabled);
+            this.levelEditor.eventHandlers.updateViewCheckbox('objectCollisions', enabled);
+        });
+
+        // Listen for selection changes to update command availability
+        this.stateManager.subscribe('selectedObjects', () => {
+            this.updateCommandAvailability();
+        });
+
+        // Listen for history changes to update undo/redo availability
+        // History changes are handled through level editor events, so we listen to a proxy event
+        if (this.levelEditor?.historyManager) {
+            // Since history manager doesn't emit events directly, we'll update on selection changes
+            // and add a manual update after undo/redo operations in handleAction
+        }
     }
 
     /**
@@ -52,13 +82,8 @@ export class Toolbar {
      */
     render() {
         this.container.innerHTML = '';
-        
-        if (!this.isVisible) {
-            this.container.style.display = 'none';
-            return;
-        }
 
-        this.container.style.display = 'flex';
+        this.container.style.display = this.isVisible ? 'flex' : 'none';
         
         // Create toolbar content with horizontal scrolling
         const toolbarContent = document.createElement('div');
@@ -123,6 +148,15 @@ export class Toolbar {
         
         // Apply current display settings immediately
         this.updateButtonDisplay();
+
+        // Apply current toggle states from StateManager
+        this.updateToggleStates();
+
+        // Load collapsed states
+        this.loadCollapsedStates();
+
+        // Update command availability based on current context
+        this.updateCommandAvailability();
     }
 
     /**
@@ -168,7 +202,7 @@ export class Toolbar {
     createButton(config) {
         const button = document.createElement('button');
         button.id = `toolbar-${config.id}`;
-        button.className = 'px-3 py-1 text-sm bg-gray-700 hover:bg-gray-600 rounded flex items-center space-x-1 transition-colors';
+        button.className = 'px-3 py-1 text-sm bg-gray-700 hover:bg-gray-600 rounded flex items-center space-x-1 transition-colors cursor-pointer';
         button.setAttribute('data-action', config.action);
         button.setAttribute('title', config.label);
         
@@ -208,6 +242,8 @@ export class Toolbar {
         buttons.forEach(button => {
             button.addEventListener('click', (e) => {
                 e.preventDefault();
+                // Don't handle clicks on disabled buttons
+                if (button.disabled) return;
                 const action = button.getAttribute('data-action');
                 this.handleAction(action);
             });
@@ -240,9 +276,13 @@ export class Toolbar {
                     break;
                 case 'undo':
                     this.levelEditor.undo();
+                    // Update command availability after undo
+                    requestAnimationFrame(() => this.updateCommandAvailability());
                     break;
                 case 'redo':
                     this.levelEditor.redo();
+                    // Update command availability after redo
+                    requestAnimationFrame(() => this.updateCommandAvailability());
                     break;
                 case 'duplicate':
                     this.levelEditor.duplicateSelectedObjects();
@@ -306,6 +346,10 @@ export class Toolbar {
         requestAnimationFrame(() => {
             const enabled = this.stateManager.get(`view.${option}`);
             this.levelEditor.eventHandlers.applyViewOption(option, enabled);
+            // Update menu checkbox state to match toolbar button
+            this.levelEditor.eventHandlers.updateViewCheckbox(option, enabled);
+            // Save to config for persistence (same as menu View)
+            this.levelEditor.configManager.set(`editor.view.${option}`, enabled);
         });
     }
 
@@ -366,7 +410,7 @@ export class Toolbar {
         if (!button.classList.contains('toggle-button')) return;
 
         let isActive = false;
-        
+
         switch (action) {
             case 'toggleGrid':
                 isActive = this.stateManager.get('view.grid') || false;
@@ -395,15 +439,83 @@ export class Toolbar {
     }
 
     /**
+     * Update specific toggle button state by action
+     */
+    updateToggleButtonState(action, enabled) {
+        const button = this.container.querySelector(`[data-action="${action}"]`);
+        if (!button || !button.classList.contains('toggle-button')) return;
+
+        if (enabled) {
+            button.classList.add('bg-blue-600', 'hover:bg-blue-700');
+            button.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+        } else {
+            button.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+            button.classList.add('bg-gray-700', 'hover:bg-gray-600');
+        }
+    }
+
+    /**
+     * Update command availability for all buttons
+     */
+    updateCommandAvailability() {
+        // Commands that depend on selection context
+        const contextCommands = [
+            'duplicate', 'deleteSelected', 'groupSelected', 'ungroupSelected', 'focusSelection'
+        ];
+
+        // Commands that depend on history
+        const historyCommands = ['undo', 'redo'];
+
+        // Update context-dependent commands
+        contextCommands.forEach(command => {
+            const action = command;
+            const available = CommandAvailability.check(command, this.levelEditor);
+            this.updateButtonAvailability(action, available);
+        });
+
+        // Update history-dependent commands
+        historyCommands.forEach(command => {
+            const action = command;
+            const available = CommandAvailability.check(command, this.levelEditor);
+            this.updateButtonAvailability(action, available);
+        });
+    }
+
+    /**
+     * Update button availability (enabled/disabled state)
+     */
+    updateButtonAvailability(action, available) {
+        const button = this.container.querySelector(`[data-action="${action}"]`);
+        if (!button) return;
+
+        if (available) {
+            button.classList.remove('opacity-50', 'cursor-not-allowed');
+            button.classList.add('cursor-pointer');
+            button.disabled = false;
+        } else {
+            button.classList.add('opacity-50', 'cursor-not-allowed');
+            button.classList.remove('cursor-pointer');
+            button.disabled = true;
+        }
+    }
+
+    /**
      * Set toolbar visibility
      */
     setVisible(visible) {
         this.isVisible = visible;
         if (visible) {
-            this.container.classList.remove('hidden');
+            this.container.style.display = 'flex';
         } else {
-            this.container.classList.add('hidden');
+            this.container.style.display = 'none';
         }
+
+        // Resize canvas to adapt to new available space
+        if (this.levelEditor?.canvasRenderer) {
+            this.levelEditor.canvasRenderer.resizeCanvas();
+            this.levelEditor.render();
+        }
+
         this.saveState();
     }
 
@@ -422,18 +534,29 @@ export class Toolbar {
 
         const buttonStates = {};
         const buttons = this.container.querySelectorAll('button[data-action]');
-        
+
         buttons.forEach(button => {
             const action = button.getAttribute('data-action');
             const isActive = button.classList.contains('bg-blue-600');
             buttonStates[action] = isActive;
         });
 
+        // Save collapsed sections state
+        const collapsedSections = {};
+        const groups = this.container.querySelectorAll('[data-collapsed]');
+        groups.forEach(titleSpan => {
+            const sectionName = titleSpan.textContent.replace('▼', '').trim();
+            const isCollapsed = titleSpan.getAttribute('data-collapsed') === 'true';
+            collapsedSections[sectionName] = isCollapsed;
+        });
+
+        Logger.ui.debug('Saving toolbar buttonStates:', buttonStates);
+        Logger.ui.debug('Saving toolbar collapsedSections:', collapsedSections);
+
         // Save to config manager
         this.levelEditor.configManager.set('toolbar.buttonStates', buttonStates);
-        this.levelEditor.configManager.set('toolbar.visible', this.isVisible);
-        
-        Logger.ui.debug('Toolbar state saved');
+        this.levelEditor.configManager.set('toolbar.collapsedSections', collapsedSections);
+        this.levelEditor.configManager.set('editor.view.toolbar', this.isVisible);
     }
 
     /**
@@ -442,14 +565,15 @@ export class Toolbar {
     loadState() {
         if (!this.levelEditor || !this.levelEditor.configManager) return;
 
-        // Load button states
+        // Load button states from config (for compatibility)
         const buttonStates = this.levelEditor.configManager.get('toolbar.buttonStates') || {};
+        Logger.ui.debug('Loading toolbar buttonStates:', buttonStates);
         const buttons = this.container.querySelectorAll('button[data-action]');
-        
+
         buttons.forEach(button => {
             const action = button.getAttribute('data-action');
             const isActive = buttonStates[action];
-            
+
             if (typeof isActive === 'boolean') {
                 if (isActive) {
                     button.classList.add('bg-blue-600', 'hover:bg-blue-700');
@@ -464,7 +588,8 @@ export class Toolbar {
         // Load collapsed states
         this.loadCollapsedStates();
 
-        Logger.ui.debug('Toolbar state loaded');
+        // Sync with current StateManager state (this will override config states)
+        this.updateToggleStates();
     }
 
     /**
@@ -487,16 +612,17 @@ export class Toolbar {
         if (!this.levelEditor || !this.levelEditor.configManager) return;
 
         const collapsedSections = this.levelEditor.configManager.get('toolbar.collapsedSections') || {};
+        Logger.ui.debug('Loading toolbar collapsedSections:', collapsedSections);
         const groups = this.container.querySelectorAll('[data-collapsed]');
-        
+
         groups.forEach(titleSpan => {
             const sectionName = titleSpan.textContent.replace('▼', '').trim();
             const isCollapsed = collapsedSections[sectionName];
-            
+
             if (typeof isCollapsed === 'boolean' && isCollapsed) {
                 const group = titleSpan.parentElement;
                 const buttonsContainer = group.querySelector('[data-buttons-container="true"]');
-                
+
                 if (buttonsContainer) {
                     buttonsContainer.style.display = 'none';
                     titleSpan.setAttribute('data-collapsed', 'true');
@@ -505,7 +631,6 @@ export class Toolbar {
             }
         });
 
-        Logger.ui.debug('Toolbar collapsed states loaded');
     }
 
     /**
@@ -549,7 +674,7 @@ export class Toolbar {
         if (!this.levelEditor || !this.levelEditor.configManager) return;
 
         // Load visibility
-        const visible = this.levelEditor.configManager.get('toolbar.visible');
+        const visible = this.levelEditor.configManager.get('editor.view.toolbar');
         if (typeof visible === 'boolean') {
             this.isVisible = visible;
         }
@@ -564,19 +689,18 @@ export class Toolbar {
         if (typeof showText === 'boolean') {
             this.showText = showText;
         }
-
-        Logger.ui.debug('Toolbar pre-render state loaded');
     }
 
     /**
      * Update all toggle states
      */
     updateToggleStates() {
-        const toggleButtons = this.container.querySelectorAll('.toggle-button');
-        toggleButtons.forEach(button => {
-            const action = button.getAttribute('data-action');
-            this.updateToggleState(button, action);
-        });
+        // Update each toggle button from StateManager
+        this.updateToggleButtonState('toggleGrid', this.stateManager.get('view.grid') || false);
+        this.updateToggleButtonState('toggleSnapToGrid', this.stateManager.get('view.snapToGrid') || false);
+        this.updateToggleButtonState('toggleParallax', this.stateManager.get('view.parallax') || false);
+        this.updateToggleButtonState('toggleObjectBoundaries', this.stateManager.get('view.objectBoundaries') || false);
+        this.updateToggleButtonState('toggleObjectCollisions', this.stateManager.get('view.objectCollisions') || false);
     }
 
     /**
@@ -708,12 +832,8 @@ export class Toolbar {
      */
     setupContextMenu() {
         this.contextMenu = new BaseContextMenu(this.container, {
-            onMenuShow: () => {
-                Logger.debug('Toolbar context menu shown');
-            },
-            onMenuHide: () => {
-                Logger.debug('Toolbar context menu hidden');
-            }
+            onMenuShow: () => {},
+            onMenuHide: () => {}
         });
 
         // Override positioning to always open downward
@@ -739,6 +859,10 @@ export class Toolbar {
      */
     hideToolbar() {
         this.stateManager.set('view.toolbar', false);
+        // Close context menu after hiding toolbar
+        if (this.contextMenu) {
+            this.contextMenu.hideMenu();
+        }
         Logger.debug('Toolbar hidden via context menu');
     }
 

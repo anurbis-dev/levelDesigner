@@ -249,14 +249,20 @@ export class EventHandlers extends BaseModule {
     initializeViewStates() {
         
         // Initialize grid state from user config or level settings
-        const gridEnabled = this.editor.configManager.get('editor.view.grid') ?? this.editor.level?.settings?.showGrid ?? true;
-        
+        const gridConfig = this.editor.configManager.get('editor.view.grid');
+        const gridLevel = this.editor.level?.settings?.showGrid;
+        const gridEnabled = gridConfig ?? gridLevel ?? true;
+        Logger.ui.debug(`Initializing view.grid: config=${gridConfig}, level=${gridLevel}, final=${gridEnabled}`);
+
         this.editor.stateManager.set('view.grid', gridEnabled);
         this.editor.stateManager.set('canvas.showGrid', gridEnabled);
         this.updateViewCheckbox('grid', gridEnabled);
-        
+
         // Initialize snap to grid state from user config or level settings
-        const snapToGridEnabled = this.editor.configManager.get('editor.view.snapToGrid') ?? this.editor.level?.settings?.snapToGrid ?? false;
+        const snapConfig = this.editor.configManager.get('editor.view.snapToGrid');
+        const snapLevel = this.editor.level?.settings?.snapToGrid;
+        const snapToGridEnabled = snapConfig ?? snapLevel ?? false;
+        Logger.ui.debug(`Initializing view.snapToGrid: config=${snapConfig}, level=${snapLevel}, final=${snapToGridEnabled}`);
         this.editor.stateManager.set('view.snapToGrid', snapToGridEnabled);
         this.editor.stateManager.set('canvas.snapToGrid', snapToGridEnabled);
         this.updateViewCheckbox('snapToGrid', snapToGridEnabled);
@@ -275,15 +281,23 @@ export class EventHandlers extends BaseModule {
         viewStates.forEach(state => {
             // Game Mode should be false by default
             const defaultValue = state === 'gameMode' ? false : false;
-            const enabled = this.editor.configManager.get(`editor.view.${state}`) ?? defaultValue;
+            const configValue = this.editor.configManager.get(`editor.view.${state}`);
+            const enabled = configValue ?? defaultValue;
+            Logger.ui.debug(`Initializing view.${state}: config=${configValue}, default=${defaultValue}, final=${enabled}`);
             this.editor.stateManager.set(`view.${state}`, enabled);
             this.updateViewCheckbox(state, enabled);
-            
+
             // Apply the view option for states that need UI changes
             if (state === 'gameMode') {
                 this.toggleGameMode(enabled);
             }
         });
+
+        // Initialize right panel tab state
+        const rightPanelTab = this.editor.configManager.get('editor.view.rightPanelTab') ?? 'details';
+        Logger.ui.debug('Initializing rightPanelTab:', rightPanelTab);
+        this.editor.stateManager.set('rightPanelTab', rightPanelTab);
+        this.setActiveRightPanelTab(rightPanelTab);
     }
 
     updateViewCheckbox(option, enabled) {
@@ -415,11 +429,6 @@ export class EventHandlers extends BaseModule {
     applyPanelVisibility(panel, visible) {
         switch (panel) {
             case 'toolbar':
-                const toolbarContainer = document.getElementById('toolbar-container');
-                if (toolbarContainer) {
-                    toolbarContainer.classList.toggle('hidden', !visible);
-                    toolbarContainer.style.display = visible ? 'flex' : 'none';
-                }
                 if (this.editor.toolbar) {
                     this.editor.toolbar.setVisible(visible);
                 }
@@ -678,6 +687,8 @@ export class EventHandlers extends BaseModule {
 
                 const tabName = tab.dataset.tab;
                 this.editor.stateManager.set('rightPanelTab', tabName);
+                // Save to config for persistence
+                this.editor.configManager.set('editor.view.rightPanelTab', tabName);
 
                 contents.forEach(content => {
                     content.classList.toggle('hidden', content.id !== `${tabName}-content-panel`);
@@ -699,6 +710,45 @@ export class EventHandlers extends BaseModule {
                 }
             });
         });
+    }
+
+    /**
+     * Set active tab in right panel programmatically
+     * @param {string} tabName - Name of the tab to activate
+     */
+    setActiveRightPanelTab(tabName) {
+        const tabs = document.querySelectorAll('.tab-right');
+        const contents = document.querySelectorAll('.tab-content-right');
+        const searchSection = document.getElementById('right-panel-search');
+
+        // Activate the specified tab
+        tabs.forEach(tab => {
+            if (tab.dataset.tab === tabName) {
+                tab.classList.add('active');
+            } else {
+                tab.classList.remove('active');
+            }
+        });
+
+        // Show corresponding content
+        contents.forEach(content => {
+            content.classList.toggle('hidden', content.id !== `${tabName}-content-panel`);
+        });
+
+        // Show search section for layers and outliner tabs
+        if (searchSection) {
+            const showSearch = tabName === 'layers' || tabName === 'outliner';
+            searchSection.style.display = showSearch ? 'block' : 'none';
+
+            // Render appropriate search controls
+            if (showSearch) {
+                if (tabName === 'layers' && this.editor.layersPanel) {
+                    this.editor.layersPanel.renderLayersSearchControls();
+                } else if (tabName === 'outliner' && this.editor.outlinerPanel) {
+                    this.editor.outlinerPanel.renderOutlinerSearchControls();
+                }
+            }
+        }
     }
 
     setupStateListeners() {

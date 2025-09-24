@@ -5,15 +5,16 @@ import { GridSettings } from './GridSettings.js';
  * Settings Panel UI Component
  */
 export class SettingsPanel {
-    constructor(container, configManager) {
+    constructor(container, configManager, levelEditor = null) {
         this.container = container;
         this.configManager = configManager;
+        this.levelEditor = levelEditor;
         this.isVisible = false;
         this.lastActiveTab = 'general'; // Default tab
-        
+
         // Initialize grid settings module
         this.gridSettings = new GridSettings(configManager);
-        
+
         this.init();
     }
 
@@ -588,7 +589,23 @@ export class SettingsPanel {
                 }
                 
                 this.configManager.set(path, value);
-                
+
+                // Synchronize view options with StateManager in real-time
+                if (path.startsWith('editor.view.')) {
+                    const stateKey = path.replace('editor.view.', 'view.');
+                    // Update StateManager immediately
+                    if (this.levelEditor?.stateManager) {
+                        this.levelEditor.stateManager.set(stateKey, value);
+                        // Apply the view option immediately
+                        if (this.levelEditor.eventHandlers) {
+                            const option = stateKey.replace('view.', '');
+                            this.levelEditor.eventHandlers.applyViewOption(option, value);
+                            // Update menu checkbox state to match settings panel
+                            this.levelEditor.eventHandlers.updateViewCheckbox(option, value);
+                        }
+                    }
+                }
+
                 // Synchronize color inputs for axis constraint
                 if (path === 'editor.axisConstraint.axisColor') {
                     const container = e.target.closest('.axis-color-container');
@@ -601,7 +618,7 @@ export class SettingsPanel {
                         });
                     }
                 }
-                
+
                 // Note: Grid settings are only applied to StateManager when Save is clicked
                 // Real-time changes are not applied to avoid confusion
             });

@@ -25,6 +25,7 @@
 
 import { BaseContextMenu } from './BaseContextMenu.js';
 import { Logger } from '../utils/Logger.js';
+import { CommandAvailability } from '../utils/CommandAvailability.js';
 
 export class CanvasContextMenu extends BaseContextMenu {
     constructor(canvasElement, levelEditor, callbacks = {}) {
@@ -145,58 +146,14 @@ export class CanvasContextMenu extends BaseContextMenu {
     extractContextData(target, event) {
         const contextData = super.extractContextData(target);
 
-        // Add canvas-specific context data
-        contextData.hasSelection = this.hasSelectedObjects();
-        contextData.hasMultipleSelection = this.hasMultipleSelectedObjects();
-        contextData.isGroup = this.isSelectedObjectGroup();
+        // Add canvas-specific context data using CommandAvailability
+        const availability = CommandAvailability.getContext(this.levelEditor);
+        contextData.hasSelection = availability.hasSelection;
+        contextData.hasMultipleSelection = availability.hasMultipleSelection;
+        contextData.isGroup = availability.isGroup;
         contextData.clickPosition = this.getCanvasPosition(event);
 
         return contextData;
-    }
-
-    /**
-     * Check if there are any selected objects
-     * @returns {boolean} - Whether there are selected objects
-     */
-    hasSelectedObjects() {
-        if (!this.levelEditor) return false;
-
-        const selectedObjects = this.levelEditor.stateManager.get('selectedObjects');
-        return selectedObjects && selectedObjects.size > 0;
-    }
-
-    /**
-     * Check if there are at least 2 selected objects (for Group operation)
-     * @returns {boolean} - Whether there are 2 or more selected objects
-     */
-    hasMultipleSelectedObjects() {
-        if (!this.levelEditor) return false;
-
-        const selectedObjects = this.levelEditor.stateManager.get('selectedObjects');
-        return selectedObjects && selectedObjects.size >= 2;
-    }
-
-    /**
-     * Check if any of the selected objects is a group
-     * @returns {boolean} - Whether any selected object is a group
-     */
-    isSelectedObjectGroup() {
-        if (!this.levelEditor) return false;
-
-        const selectedObjects = this.levelEditor.stateManager.get('selectedObjects');
-        if (!selectedObjects || selectedObjects.size === 0) {
-            return false;
-        }
-
-        // Check if any selected object is a group
-        for (const selectedId of selectedObjects) {
-            const object = this.levelEditor.level.findObjectById(selectedId);
-            if (object && object.type === 'group') {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**
@@ -222,38 +179,32 @@ export class CanvasContextMenu extends BaseContextMenu {
     setupMenuItems() {
         // Object operations (work with selected objects)
         this.addMenuItem('Copy', '📋', () => this.callbacks.onCopy(), {
-            visible: (context) => context.hasSelection
+            visible: (context) => CommandAvailability.check('copy', this.levelEditor)
         });
-        
+
         this.addMenuItem('Cut', '✂️', () => this.callbacks.onCut(), {
-            visible: (context) => context.hasSelection
+            visible: (context) => CommandAvailability.check('cut', this.levelEditor)
         });
-        
+
         this.addMenuItem('Paste', '📌', () => this.callbacks.onPaste(), {
-            visible: (context) => navigator.clipboard && window.isSecureContext
+            visible: (context) => CommandAvailability.check('paste', this.levelEditor)
         });
-        
+
         this.addMenuItem('Duplicate', '🔄', () => this.callbacks.onDuplicate(), {
-            visible: (context) => context.hasSelection
+            visible: (context) => CommandAvailability.check('duplicate', this.levelEditor)
         });
-        
+
         this.addMenuItem('Delete', '🗑️', () => this.callbacks.onDelete(), {
-            visible: (context) => context.hasSelection
+            visible: (context) => CommandAvailability.check('delete', this.levelEditor)
         });
-        
+
         // Group operations
         this.addMenuItem('Group', '📦', () => this.callbacks.onGroup(), {
-            visible: (context) => {
-                const visible = context.hasMultipleSelection;
-                return visible;
-            }
+            visible: (context) => CommandAvailability.check('groupSelected', this.levelEditor)
         });
 
         this.addMenuItem('Ungroup', '📭', () => this.callbacks.onUngroup(), {
-            visible: (context) => {
-                const visible = context.hasSelection && context.isGroup;
-                return visible;
-            }
+            visible: (context) => CommandAvailability.check('ungroupSelected', this.levelEditor)
         });
 
         this.addSeparatorWithClass('object-view-separator');

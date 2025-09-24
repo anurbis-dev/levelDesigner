@@ -1,12 +1,14 @@
 import { BasePanel } from './BasePanel.js';
+import { Logger } from '../utils/Logger.js';
 
 /**
  * Asset panel UI component
  */
 export class AssetPanel extends BasePanel {
-    constructor(container, assetManager, stateManager) {
+    constructor(container, assetManager, stateManager, levelEditor) {
         super(container, stateManager);
         this.assetManager = assetManager;
+        this.levelEditor = levelEditor;
         this.tabsContainer = null;
         this.previewsContainer = null;
         this.marqueeDiv = null;
@@ -32,6 +34,20 @@ export class AssetPanel extends BasePanel {
             sensitivity: 1.0,
             target: this.previewsContainer
         });
+
+        // Initialize activeAssetTabs from config
+        this.initializeActiveAssetTabs();
+    }
+
+    /**
+     * Initialize active asset tabs from config
+     */
+    initializeActiveAssetTabs() {
+        const savedTabs = this.levelEditor?.configManager?.get('editor.view.activeAssetTabs');
+        Logger.ui.debug('Initializing activeAssetTabs:', savedTabs);
+        if (savedTabs && Array.isArray(savedTabs) && savedTabs.length > 0) {
+            this.stateManager.set('activeAssetTabs', new Set(savedTabs));
+        }
     }
 
     setupEventListeners() {
@@ -160,6 +176,8 @@ export class AssetPanel extends BasePanel {
         }
         
         this.stateManager.set('activeAssetTabs', activeTabs);
+        // Save to config for persistence
+        this.levelEditor.configManager.set('editor.view.activeAssetTabs', Array.from(activeTabs));
         this.stateManager.set('selectedAssets', new Set());
     }
 
