@@ -49,6 +49,9 @@ export class RenderOperations extends BaseModule {
             return;
         }
 
+        // Get level ID
+        const levelId = this.editor.level?.id || 'default';
+
         this.isBuildingSpatialIndex = true;
 
         const objects = this.editor.level?.objects || [];
@@ -378,7 +381,6 @@ export class RenderOperations extends BaseModule {
         if (duplicate && duplicate.isActive && Array.isArray(duplicate.objects) && duplicate.objects.length > 0) {
             // Log only once per duplicate session (optimized to reduce console spam)
             if (!this._lastRenderState || this._lastRenderState !== 'drawing') {
-                Logger.render.debug('Drawing duplicate objects:', duplicate.objects.length);
                 this._lastRenderState = 'drawing';
             }
             this.drawDuplicateObjects(duplicate.objects, camera);
@@ -386,10 +388,6 @@ export class RenderOperations extends BaseModule {
             // Log state change only when it changes (optimized to reduce console spam)
             const currentState = `${duplicate.isActive}_${duplicate.objects?.length || 0}`;
             if (!this._lastRenderState || this._lastRenderState !== currentState) {
-                Logger.render.debug('Duplicate state changed:', {
-                    isActive: duplicate.isActive,
-                    objectsLength: duplicate.objects?.length || 0
-                });
                 this._lastRenderState = currentState;
             }
         }

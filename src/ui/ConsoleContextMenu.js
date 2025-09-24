@@ -70,14 +70,30 @@ export class ConsoleContextMenu {
             e.stopPropagation();
 
             // Extract message and timestamp from log entry if available
-            const { message, timestamp } = this.extractLogData(e.target);
+            const { message, timestamp, isSelected } = this.extractLogData(e.target);
 
             // Try to use ContextMenuManager if available
             if (window.editor && window.editor.contextMenuManager) {
-                window.editor.contextMenuManager.showMenu('console', e, { message, timestamp });
+                window.editor.contextMenuManager.showMenu('console', e, { message, timestamp, isSelected });
             } else {
                 // Fallback to direct show if manager not available
-                this.showContextMenu(e, message, timestamp);
+                this.showContextMenu(e, message, timestamp, isSelected);
+            }
+        });
+        
+        // Prevent selection loss when interacting with context menu
+        this.consolePanel.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.console-context-menu')) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        });
+        
+        // Prevent selection loss when clicking context menu items
+        this.consolePanel.addEventListener('click', (e) => {
+            if (e.target.closest('.console-context-menu')) {
+                e.preventDefault();
+                e.stopPropagation();
             }
         });
     }
@@ -198,6 +214,22 @@ export class ConsoleContextMenu {
         let message = '';
         let timestamp = '';
         
+        // Check if there's selected text first
+        const selection = window.getSelection();
+        if (selection && selection.toString().trim()) {
+            const selectedText = selection.toString().trim();
+            // Try to extract timestamp from selected text
+            const timestampMatch = selectedText.match(/^\[([^\]]+)\]\s*(.*)$/);
+            if (timestampMatch) {
+                timestamp = timestampMatch[1];
+                message = timestampMatch[2];
+            } else {
+                message = selectedText;
+            }
+            return { message, timestamp, isSelected: true };
+        }
+        
+        // Fallback to log entry extraction
         const logEntry = target.closest('.log-entry');
         if (logEntry) {
             const textContent = logEntry.textContent;
@@ -208,7 +240,7 @@ export class ConsoleContextMenu {
             }
         }
         
-        return { message, timestamp };
+        return { message, timestamp, isSelected: false };
     }
 
     /**
@@ -216,8 +248,9 @@ export class ConsoleContextMenu {
      * @param {Event} event - The context menu event
      * @param {string} message - Log message (if any)
      * @param {string} timestamp - Log timestamp (if any)
+     * @param {boolean} isSelected - Whether text is selected
      */
-    showContextMenu(event, message, timestamp) {
+    showContextMenu(event, message, timestamp, isSelected = false) {
         // Remove existing context menu
         this.removeExistingMenu();
 
@@ -226,7 +259,10 @@ export class ConsoleContextMenu {
         this.lastCursorY = event.clientY;
 
         // Create new context menu
-        const contextMenu = this.createContextMenu(event, message, timestamp);
+        const contextMenu = this.createContextMenu(event, message, timestamp, isSelected);
+        
+        // Add special class to prevent selection loss
+        contextMenu.classList.add('console-context-menu-active');
 
         // Add to document first (hidden)
         document.body.appendChild(contextMenu);
@@ -398,9 +434,10 @@ export class ConsoleContextMenu {
      * @param {Event} event - The context menu event
      * @param {string} message - Log message (if any)
      * @param {string} timestamp - Log timestamp (if any)
+     * @param {boolean} isSelected - Whether text is selected
      * @returns {HTMLElement} - The context menu element
      */
-    createContextMenu(event, message, timestamp) {
+    createContextMenu(event, message, timestamp, isSelected = false) {
         const contextMenu = document.createElement('div');
         contextMenu.className = 'console-context-menu';
         contextMenu.style.left = event.pageX + 'px';
@@ -408,7 +445,7 @@ export class ConsoleContextMenu {
 
         // Add copy options only if there's actual message content
         if (message && message.trim()) {
-            this.addCopyOptions(contextMenu, message, timestamp);
+            this.addCopyOptions(contextMenu, message, timestamp, isSelected);
         }
 
         // Add console management options
@@ -422,21 +459,34 @@ export class ConsoleContextMenu {
      * @param {HTMLElement} menu - The context menu element
      * @param {string} message - Log message
      * @param {string} timestamp - Log timestamp
+     * @param {boolean} isSelected - Whether text is selected
      */
-    addCopyOptions(menu, message, timestamp) {
-        // Copy message option
-        const copyMessageItem = this.createMenuItem('📋 Copy message', () => {
-            this.copyToClipboard(message);
-            this.removeMenu(menu);
-        });
-        menu.appendChild(copyMessageItem);
+    addCopyOptions(menu, message, timestamp, isSelected = false) {
+        if (isSelected) {
+            // Copy selected text option
+            const copySelectedItem = this.createMenuItem('📋 Copy selected text', () => {
+                const selection = window.getSelection();
+                if (selection && selection.toString().trim()) {
+                    this.copyToClipboard(selection.toString().trim());
+                }
+                this.removeMenu(menu);
+            });
+            menu.appendChild(copySelectedItem);
+        } else {
+            // Copy message option
+            const copyMessageItem = this.createMenuItem('📋 Copy message', () => {
+                this.copyToClipboard(message);
+                this.removeMenu(menu);
+            });
+            menu.appendChild(copyMessageItem);
 
-        // Copy with timestamp option
-        const copyWithTimestampItem = this.createMenuItem('🕒 Copy with timestamp', () => {
-            this.copyToClipboard(`[${timestamp}] ${message}`);
-            this.removeMenu(menu);
-        });
-        menu.appendChild(copyWithTimestampItem);
+            // Copy with timestamp option
+            const copyWithTimestampItem = this.createMenuItem('🕒 Copy with timestamp', () => {
+                this.copyToClipboard(`[${timestamp}] ${message}`);
+                this.removeMenu(menu);
+            });
+            menu.appendChild(copyWithTimestampItem);
+        }
     }
 
     /**
@@ -472,7 +522,19 @@ export class ConsoleContextMenu {
         const item = document.createElement('div');
         item.className = 'console-context-menu-item';
         item.innerHTML = text;
-        item.addEventListener('click', onClick);
+        
+        // Prevent selection loss when clicking menu items
+        item.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        });
+        
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            onClick();
+        });
+        
         return item;
     }
 

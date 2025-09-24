@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Panel Toggle</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        button { margin: 5px; padding: 10px; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Test Panel Toggle and Settings Persistence</h1>
+    
+    <div class="test-section">
+        <h2>1. Test Panel Toggle</h2>
+        <button onclick="testToggleToolbar()">Toggle Toolbar</button>
+        <button onclick="testToggleAssetsPanel()">Toggle Assets Panel</button>
+        <button onclick="testToggleRightPanel()">Toggle Right Panel</button>
+        <div id="toggle-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Test Settings Persistence</h2>
+        <button onclick="testSaveSettings()">Save Test Settings</button>
+        <button onclick="testLoadSettings()">Load Settings</button>
+        <button onclick="testClearSettings()">Clear Settings</button>
+        <div id="persistence-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Current Settings</h2>
+        <button onclick="showCurrentSettings()">Show Current Settings</button>
+        <div id="current-settings"></div>
+    </div>
+
+    <script type="module">
+        import { UserPreferencesManager } from '../src/managers/UserPreferencesManager.js';
+        import { LevelEditor } from '../src/core/LevelEditor.js';
+        
+        let userPrefs, editor;
+        
+        // Initialize
+        try {
+            userPrefs = new UserPreferencesManager();
+            editor = new LevelEditor(userPrefs);
+            console.log('Initialized successfully');
+        } catch (error) {
+            console.error('Error initializing:', error);
+        }
+        
+        // Test panel toggle
+        window.testToggleToolbar = function() {
+            const resultsDiv = document.getElementById('toggle-results');
+            try {
+                const currentState = userPrefs.get('toolbarVisible');
+                const newState = !currentState;
+                userPrefs.set('toolbarVisible', newState);
+                resultsDiv.innerHTML = `<div class="success">Toolbar toggled: ${currentState} → ${newState}</div>`;
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">Error toggling toolbar: ${error.message}</div>`;
+            }
+        };
+        
+        window.testToggleAssetsPanel = function() {
+            const resultsDiv = document.getElementById('toggle-results');
+            try {
+                const currentState = userPrefs.get('assetsPanelVisible');
+                const newState = !currentState;
+                userPrefs.set('assetsPanelVisible', newState);
+                resultsDiv.innerHTML = `<div class="success">Assets Panel toggled: ${currentState} → ${newState}</div>`;
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">Error toggling assets panel: ${error.message}</div>`;
+            }
+        };
+        
+        window.testToggleRightPanel = function() {
+            const resultsDiv = document.getElementById('toggle-results');
+            try {
+                const currentState = userPrefs.get('rightPanelVisible');
+                const newState = !currentState;
+                userPrefs.set('rightPanelVisible', newState);
+                resultsDiv.innerHTML = `<div class="success">Right Panel toggled: ${currentState} → ${newState}</div>`;
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">Error toggling right panel: ${error.message}</div>`;
+            }
+        };
+        
+        // Test settings persistence
+        window.testSaveSettings = function() {
+            const resultsDiv = document.getElementById('persistence-results');
+            try {
+                // Save test settings
+                userPrefs.set('toolbarVisible', false);
+                userPrefs.set('assetsPanelVisible', true);
+                userPrefs.set('rightPanelVisible', false);
+                userPrefs.set('rightPanelWidth', 400);
+                userPrefs.set('assetsPanelHeight', 300);
+                
+                resultsDiv.innerHTML = '<div class="success">Test settings saved successfully!</div>';
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">Error saving settings: ${error.message}</div>`;
+            }
+        };
+        
+        window.testLoadSettings = function() {
+            const resultsDiv = document.getElementById('persistence-results');
+            try {
+                // Create new instance to test loading
+                const newUserPrefs = new UserPreferencesManager();
+                
+                const toolbarVisible = newUserPrefs.get('toolbarVisible');
+                const assetsPanelVisible = newUserPrefs.get('assetsPanelVisible');
+                const rightPanelVisible = newUserPrefs.get('rightPanelVisible');
+                const rightPanelWidth = newUserPrefs.get('rightPanelWidth');
+                const assetsPanelHeight = newUserPrefs.get('assetsPanelHeight');
+                
+                resultsDiv.innerHTML = `
+                    <div class="success">Settings loaded successfully:</div>
+                    <ul>
+                        <li>Toolbar visible: ${toolbarVisible}</li>
+                        <li>Assets panel visible: ${assetsPanelVisible}</li>
+                        <li>Right panel visible: ${rightPanelVisible}</li>
+                        <li>Right panel width: ${rightPanelWidth}px</li>
+                        <li>Assets panel height: ${assetsPanelHeight}px</li>
+                    </ul>
+                `;
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">Error loading settings: ${error.message}</div>`;
+            }
+        };
+        
+        window.testClearSettings = function() {
+            const resultsDiv = document.getElementById('persistence-results');
+            try {
+                // Clear localStorage
+                localStorage.removeItem('levelEditor_userConfig_complete');
+                localStorage.removeItem('levelEditor_userConfig_ui');
+                localStorage.removeItem('levelEditor_userConfig_editor');
+                localStorage.removeItem('levelEditor_userConfig_canvas');
+                localStorage.removeItem('levelEditor_userConfig_panels');
+                
+                resultsDiv.innerHTML = '<div class="success">Settings cleared successfully!</div>';
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">Error clearing settings: ${error.message}</div>`;
+            }
+        };
+        
+        // Show current settings
+        window.showCurrentSettings = function() {
+            const resultsDiv = document.getElementById('current-settings');
+            try {
+                const allPrefs = userPrefs.getAll();
+                resultsDiv.innerHTML = `
+                    <div class="info">Current settings:</div>
+                    <pre>${JSON.stringify(allPrefs, null, 2)}</pre>
+                `;
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">Error getting settings: ${error.message}</div>`;
+            }
+        };
+    </script>
+</body>
+</html>

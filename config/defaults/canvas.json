@@ -2,7 +2,11 @@
   "backgroundColor": "#4B5563",
   "gridSize": 32,
   "showGrid": true,
-  "gridColor": "#333333",
-  "gridOpacity": 0.5,
+  "gridColor": "rgba(255, 255, 255, 0.1)",
+  "gridOpacity": 0.1,
+  "gridThickness": 1,
+  "gridSubdivisions": 4,
+  "gridSubdivColor": "#666666",
+  "gridSubdivThickness": 0.5,
   "snapToGrid": false
 }

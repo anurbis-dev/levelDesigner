@@ -57,11 +57,7 @@ export class EventHandlers extends BaseModule {
 
                 // Log only when duplicate state changes (optimized to reduce console spam)
                 if (currentState !== lastDuplicateState) {
-                    if (duplicate && duplicate.isActive) {
-                        Logger.event.debug(`Render loop: Duplicate active, objects: ${duplicate.objects?.length || 0}`);
-                    } else if (lastDuplicateState !== null) {
-                        Logger.event.debug('Render loop: Duplicate deactivated');
-                    }
+                    // Duplicate state change handled
                     lastDuplicateState = currentState;
                 }
 
@@ -252,8 +248,6 @@ export class EventHandlers extends BaseModule {
         const gridConfig = this.editor.configManager.get('editor.view.grid');
         const gridLevel = this.editor.level?.settings?.showGrid;
         const gridEnabled = gridConfig ?? gridLevel ?? true;
-        Logger.ui.debug(`Initializing view.grid: config=${gridConfig}, level=${gridLevel}, final=${gridEnabled}`);
-
         this.editor.stateManager.set('view.grid', gridEnabled);
         this.editor.stateManager.set('canvas.showGrid', gridEnabled);
         this.updateViewCheckbox('grid', gridEnabled);
@@ -262,17 +256,21 @@ export class EventHandlers extends BaseModule {
         const snapConfig = this.editor.configManager.get('editor.view.snapToGrid');
         const snapLevel = this.editor.level?.settings?.snapToGrid;
         const snapToGridEnabled = snapConfig ?? snapLevel ?? false;
-        Logger.ui.debug(`Initializing view.snapToGrid: config=${snapConfig}, level=${snapLevel}, final=${snapToGridEnabled}`);
         this.editor.stateManager.set('view.snapToGrid', snapToGridEnabled);
         this.editor.stateManager.set('canvas.snapToGrid', snapToGridEnabled);
         this.updateViewCheckbox('snapToGrid', snapToGridEnabled);
         
-        // Initialize panel states first (always initialize panels)
+        // Initialize panel states from user preferences (already applied in applyUserSettingsImmediately)
         const panelStates = ['toolbar', 'assetsPanel', 'rightPanel'];
         panelStates.forEach(panel => {
-            const visible = this.editor.configManager.get(`editor.view.${panel}`) ?? true;
+            // Get visibility from user preferences, fallback to configManager, then to true
+            const prefKey = panel + 'Visible'; // toolbarVisible, assetsPanelVisible, rightPanelVisible
+            const visible = this.editor.userPrefs?.get(prefKey) ??
+                           this.editor.configManager.get(`editor.view.${panel}`) ?? true;
+            
             this.editor.stateManager.set(`view.${panel}`, visible);
             this.updateViewCheckbox(panel, visible);
+            // Apply visibility immediately to ensure panels are shown/hidden correctly
             this.applyPanelVisibility(panel, visible);
         });
 
@@ -283,7 +281,6 @@ export class EventHandlers extends BaseModule {
             const defaultValue = state === 'gameMode' ? false : false;
             const configValue = this.editor.configManager.get(`editor.view.${state}`);
             const enabled = configValue ?? defaultValue;
-            Logger.ui.debug(`Initializing view.${state}: config=${configValue}, default=${defaultValue}, final=${enabled}`);
             this.editor.stateManager.set(`view.${state}`, enabled);
             this.updateViewCheckbox(state, enabled);
 
@@ -295,7 +292,6 @@ export class EventHandlers extends BaseModule {
 
         // Initialize right panel tab state
         const rightPanelTab = this.editor.configManager.get('editor.view.rightPanelTab') ?? 'details';
-        Logger.ui.debug('Initializing rightPanelTab:', rightPanelTab);
         this.editor.stateManager.set('rightPanelTab', rightPanelTab);
         this.setActiveRightPanelTab(rightPanelTab);
     }
@@ -371,19 +367,25 @@ export class EventHandlers extends BaseModule {
     togglePanel(panel) {
         const currentState = this.editor.stateManager.get(`view.${panel}`) || false;
         const newState = !currentState;
-        
+
         // Update state
         this.editor.stateManager.set(`view.${panel}`, newState);
-        
-        // Save to user configuration
-        this.editor.configManager.set(`editor.view.${panel}`, newState);
-        
+
+        // Save to user preferences (this will also update the shared ConfigManager)
+        if (this.editor.userPrefs) {
+            const prefKey = panel + 'Visible'; // toolbarVisible, assetsPanelVisible, rightPanelVisible
+            this.editor.userPrefs.set(prefKey, newState);
+        } else {
+            // Fallback to direct ConfigManager if userPrefs is not available
+            this.editor.configManager.set(`editor.view.${panel}`, newState);
+        }
+
         // Update UI checkbox
         this.updateViewCheckbox(panel, newState);
-        
+
         // Apply the panel visibility
         this.applyPanelVisibility(panel, newState);
-        
+
         // Close the menu
         document.querySelectorAll('#menu-level > div, #menu-view > div, #menu-settings > div').forEach(d => d.classList.add('hidden'));
     }
@@ -761,9 +763,7 @@ export class EventHandlers extends BaseModule {
         // Subscribe to camera changes - immediate render for responsive zoom
         this.editor.stateManager.subscribe('camera', () => {
             // Only log camera changes in debug mode to avoid console spam
-            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
-                Logger.event.debug('Camera changed, calling render');
-            }
+            // Camera changed, render called
             // Invalidate selectable objects cache since camera changed
             this.editor.clearSelectableObjectsCache();
             this.editor.render();

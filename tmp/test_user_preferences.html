@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test User Preferences Loading</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+    </style>
+</head>
+<body>
+    <h1>Test User Preferences Loading</h1>
+    
+    <div class="test-section">
+        <h2>Current User Preferences</h2>
+        <div id="current-prefs"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Panel Visibility</h2>
+        <button onclick="testPanelVisibility()">Test Panel Visibility Loading</button>
+        <div id="visibility-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Panel Sizes</h2>
+        <button onclick="testPanelSizes()">Test Panel Sizes Loading</button>
+        <div id="sizes-results"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test Save/Load Cycle</h2>
+        <button onclick="testSaveLoadCycle()">Test Save/Load Cycle</button>
+        <div id="cycle-results"></div>
+    </div>
+
+    <script type="module">
+        import { UserPreferencesManager } from '../src/managers/UserPreferencesManager.js';
+        
+        let userPrefs;
+        
+        // Initialize user preferences manager
+        try {
+            userPrefs = new UserPreferencesManager();
+            console.log('UserPreferencesManager initialized successfully');
+        } catch (error) {
+            console.error('Error initializing UserPreferencesManager:', error);
+        }
+        
+        // Display current preferences
+        function displayCurrentPrefs() {
+            const prefs = userPrefs.getAll();
+            const prefsDiv = document.getElementById('current-prefs');
+            prefsDiv.innerHTML = '<pre>' + JSON.stringify(prefs, null, 2) + '</pre>';
+        }
+        
+        // Test panel visibility loading
+        window.testPanelVisibility = function() {
+            const resultsDiv = document.getElementById('visibility-results');
+            resultsDiv.innerHTML = '<div class="info">Testing panel visibility loading...</div>';
+            
+            try {
+                const toolbarVisible = userPrefs.get('toolbarVisible');
+                const assetsPanelVisible = userPrefs.get('assetsPanelVisible');
+                const rightPanelVisible = userPrefs.get('rightPanelVisible');
+                
+                resultsDiv.innerHTML = `
+                    <div class="success">Panel visibility loaded successfully:</div>
+                    <ul>
+                        <li>Toolbar visible: ${toolbarVisible}</li>
+                        <li>Assets panel visible: ${assetsPanelVisible}</li>
+                        <li>Right panel visible: ${rightPanelVisible}</li>
+                    </ul>
+                `;
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">Error loading panel visibility: ${error.message}</div>`;
+            }
+        };
+        
+        // Test panel sizes loading
+        window.testPanelSizes = function() {
+            const resultsDiv = document.getElementById('sizes-results');
+            resultsDiv.innerHTML = '<div class="info">Testing panel sizes loading...</div>';
+            
+            try {
+                const rightPanelWidth = userPrefs.get('rightPanelWidth');
+                const assetsPanelHeight = userPrefs.get('assetsPanelHeight');
+                const consoleHeight = userPrefs.get('consoleHeight');
+                
+                resultsDiv.innerHTML = `
+                    <div class="success">Panel sizes loaded successfully:</div>
+                    <ul>
+                        <li>Right panel width: ${rightPanelWidth}px</li>
+                        <li>Assets panel height: ${assetsPanelHeight}px</li>
+                        <li>Console height: ${consoleHeight}px</li>
+                    </ul>
+                `;
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">Error loading panel sizes: ${error.message}</div>`;
+            }
+        };
+        
+        // Test save/load cycle
+        window.testSaveLoadCycle = function() {
+            const resultsDiv = document.getElementById('cycle-results');
+            resultsDiv.innerHTML = '<div class="info">Testing save/load cycle...</div>';
+            
+            try {
+                // Save test values
+                userPrefs.set('toolbarVisible', false);
+                userPrefs.set('rightPanelWidth', 400);
+                userPrefs.set('assetsPanelHeight', 300);
+                
+                // Reload preferences
+                const newUserPrefs = new UserPreferencesManager();
+                
+                const toolbarVisible = newUserPrefs.get('toolbarVisible');
+                const rightPanelWidth = newUserPrefs.get('rightPanelWidth');
+                const assetsPanelHeight = newUserPrefs.get('assetsPanelHeight');
+                
+                if (toolbarVisible === false && rightPanelWidth === 400 && assetsPanelHeight === 300) {
+                    resultsDiv.innerHTML = '<div class="success">Save/load cycle successful! Values persisted correctly.</div>';
+                } else {
+                    resultsDiv.innerHTML = `
+                        <div class="error">Save/load cycle failed! Expected: false, 400, 300. Got: ${toolbarVisible}, ${rightPanelWidth}, ${assetsPanelHeight}</div>
+                    `;
+                }
+            } catch (error) {
+                resultsDiv.innerHTML = `<div class="error">Error in save/load cycle: ${error.message}</div>`;
+            }
+        };
+        
+        // Initialize display
+        displayCurrentPrefs();
+    </script>
+</body>
+</html>

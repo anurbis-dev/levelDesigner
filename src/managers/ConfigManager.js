@@ -76,163 +76,201 @@ export class ConfigManager {
     }
 
     /**
-     * Get default configurations from embedded data
+     * Load default configurations from JSON files
+     */
+    async loadDefaultConfigs() {
+        const configs = {};
+        const configNames = ['editor', 'ui', 'canvas', 'panels'];
+
+        for (const configName of configNames) {
+            try {
+                const response = await fetch(`${this.defaultsPath}${configName}.json`);
+                if (response.ok) {
+                    configs[configName] = await response.json();
+                } else {
+                    this.log('warn', `Failed to load default config ${configName}.json: ${response.status}`);
+                }
+            } catch (error) {
+                this.log('error', `Error loading default config ${configName}.json:`, error);
+            }
+        }
+
+        // Add additional default configs that don't have JSON files
+        configs.grid = {
+            showGrid: configs.canvas?.showGrid ?? true,
+            snapToGrid: false,
+            size: configs.canvas?.gridSize ?? 32,
+            color: configs.canvas?.gridColor ?? '#ffffff',
+            opacity: configs.canvas?.gridOpacity ?? 0.1,
+            thickness: configs.canvas?.gridThickness ?? 1,
+            subdivisions: configs.canvas?.gridSubdivisions ?? 4,
+            subdivColor: configs.canvas?.gridSubdivColor ?? '#666666',
+            subdivThickness: configs.canvas?.gridSubdivThickness ?? 0.5
+        };
+
+        configs.camera = {
+            zoomSpeed: 0.1,
+            panSpeed: 1.0,
+            minZoom: 0.1,
+            maxZoom: 10.0,
+            smoothZoom: true
+        };
+
+        configs.selection = {
+            outlineColor: '#3B82F6',
+            outlineWidth: 2,
+            groupOutlineColor: '#3B82F6',
+            groupOutlineWidth: 4,
+            marqueeColor: '#3B82F6',
+            marqueeOpacity: 0.2,
+            hierarchyHighlightColor: '#3B82F6',
+            activeLayerBorderColor: '#3B82F6'
+        };
+
+        configs.assets = {
+            thumbnailSize: 64,
+            showAssetNames: true,
+            defaultAssetPath: './assets/',
+            supportedFormats: ['.png', '.jpg', '.jpeg', '.gif', '.svg']
+        };
+
+        configs.performance = {
+            maxObjectsToRender: 10000,
+            cullingEnabled: true,
+            renderOnlyVisible: true,
+            optimizeGroupRendering: true
+        };
+
+        configs.view = {
+            grid: configs.canvas?.showGrid ?? true,
+            snapToGrid: false,
+            parallax: false,
+            objectBoundaries: false,
+            objectCollisions: false
+        };
+
+        configs.toolbar = {
+            visible: true,
+            position: 'top',
+            buttonGroups: {
+                file: true,
+                edit: true,
+                view: true,
+                group: true
+            },
+            buttonStates: {
+                'toggle-grid': configs.canvas?.showGrid ?? true,
+                'toggle-snap': false,
+                'toggle-parallax': false,
+                'toggle-boundaries': false,
+                'toggle-collisions': false
+            },
+            collapsedSections: {}
+        };
+
+        return configs;
+    }
+
+    /**
+     * Get default configurations from embedded data (synchronous fallback)
      */
     getDefaultConfigs() {
-        return {
-            // Editor behavior settings
-            editor: {
-                autoSave: true,
-                autoSaveInterval: 300000, // 5 minutes
-                undoHistoryLimit: 50,
-                showFPS: false,
-                showObjectCount: true,
-                multiSelectMode: 'additive' // 'additive' or 'replace'
-            },
+        // Try to load from JSON files synchronously using XMLHttpRequest
+        const configs = {};
+        const configNames = ['editor', 'ui', 'canvas', 'panels'];
 
-            // UI settings
-            ui: {
-                theme: 'dark', // 'dark' or 'light'
-                fontSize: 'sm',
-                fontScale: 1.0,
-                compactMode: false,
-                rightPanelWidth: 320,
-                consoleHeight: 300,
-                assetsPanelHeight: 256,
-                consoleVisible: false,
-                consoleMaxLines: 1000,
-                panelWidth: 300,
-                showTooltips: true
-            },
+        configNames.forEach(configName => {
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', `${this.defaultsPath}${configName}.json`, false); // Synchronous
+                xhr.send();
 
-            // Canvas and grid settings
-            canvas: {
-                backgroundColor: '#4B5563',
-                gridSize: 32,
-                showGrid: true,
-                gridColor: 'rgba(255, 255, 255, 0.1)',
-                gridOpacity: 0.1,
-                gridThickness: 1,
-                gridSubdivisions: 4,
-                gridSubdivColor: '#666666',
-                gridSubdivThickness: 0.5,
-                snapToGrid: false
-            },
-
-            // Grid-specific settings (for SettingsPanel compatibility)
-            grid: {
-                showGrid: true,
-                snapToGrid: false,
-                size: 32,
-                color: '#ffffff',
-                opacity: 0.1,
-                thickness: 1,
-                subdivisions: 4,
-                subdivColor: '#666666',
-                subdivThickness: 0.5
-            },
-
-            // Camera settings
-            camera: {
-                zoomSpeed: 0.1,
-                panSpeed: 1.0,
-                minZoom: 0.1,
-                maxZoom: 10.0,
-                smoothZoom: true
-            },
-
-            // Selection settings
-            selection: {
-                outlineColor: '#3B82F6',
-                outlineWidth: 2,
-                groupOutlineColor: '#3B82F6',
-                groupOutlineWidth: 4,
-                marqueeColor: '#3B82F6',
-                marqueeOpacity: 0.2,
-                hierarchyHighlightColor: '#3B82F6',
-                activeLayerBorderColor: '#3B82F6'
-            },
-
-            // Asset settings
-            assets: {
-                thumbnailSize: 64,
-                showAssetNames: true,
-                defaultAssetPath: './assets/',
-                supportedFormats: ['.png', '.jpg', '.jpeg', '.gif', '.svg']
-            },
-
-            // Performance settings
-            performance: {
-                maxObjectsToRender: 10000,
-                cullingEnabled: true,
-                renderOnlyVisible: true,
-                optimizeGroupRendering: true
-            },
-
-            // Panel settings
-            panels: {
-                rightPanelTabOrder: ['details', 'level', 'outliner'],
-                assetTabOrder: []
-            },
-
-            // View settings (display options)
-            view: {
-                grid: true,
-                snapToGrid: false,
-                parallax: false,
-                objectBoundaries: false,
-                objectCollisions: false
-            },
-
-            // Toolbar settings
-            toolbar: {
-                visible: true,
-                position: 'top', // 'top', 'bottom'
-                buttonGroups: {
-                    file: true,
-                    edit: true,
-                    view: true,
-                    group: true
-                },
-                buttonStates: {
-                    // Individual button states will be saved here
-                    'toggle-grid': false,
-                    'toggle-snap': false,
-                    'toggle-parallax': false,
-                    'toggle-boundaries': false,
-                    'toggle-collisions': false
-                },
-                collapsedSections: {
-                    // Collapsed sections will be saved here
-                    'File': false,
-                    'Edit': false,
-                    'View': false,
-                    'Group': false
-                },
-                display: {
-                    // Display settings
-                    showIcons: true,
-                    showText: true
+                if (xhr.status === 200) {
+                    configs[configName] = JSON.parse(xhr.responseText);
+                } else {
+                    this.log('warn', `Failed to load default config ${configName}.json: ${xhr.status}`);
                 }
-            },
-
-            // Keyboard shortcuts
-            shortcuts: {
-                duplicate: 'Shift+D',
-                group: 'Shift+G',
-                ungroup: 'Alt+G',
-                delete: 'Delete',
-                undo: 'Ctrl+Z',
-                redo: 'Ctrl+Y',
-                focusSelection: 'F',
-                focusAll: 'A',
-                newLevel: 'Ctrl+N',
-                openLevel: 'Ctrl+O',
-                saveLevel: 'Ctrl+S',
-                saveLevelAs: 'Ctrl+Shift+S'
+            } catch (error) {
+                this.log('error', `Error loading default config ${configName}.json:`, error);
             }
+        });
+
+        // Add additional default configs that don't have JSON files
+        configs.grid = {
+            showGrid: configs.canvas?.showGrid ?? true,
+            snapToGrid: false,
+            size: configs.canvas?.gridSize ?? 32,
+            color: configs.canvas?.gridColor ?? '#ffffff',
+            opacity: configs.canvas?.gridOpacity ?? 0.1,
+            thickness: configs.canvas?.gridThickness ?? 1,
+            subdivisions: configs.canvas?.gridSubdivisions ?? 4,
+            subdivColor: configs.canvas?.gridSubdivColor ?? '#666666',
+            subdivThickness: configs.canvas?.gridSubdivThickness ?? 0.5
         };
+
+        configs.camera = {
+            zoomSpeed: 0.1,
+            panSpeed: 1.0,
+            minZoom: 0.1,
+            maxZoom: 10.0,
+            smoothZoom: true
+        };
+
+        configs.selection = {
+            outlineColor: '#3B82F6',
+            outlineWidth: 2,
+            groupOutlineColor: '#3B82F6',
+            groupOutlineWidth: 4,
+            marqueeColor: '#3B82F6',
+            marqueeOpacity: 0.2,
+            hierarchyHighlightColor: '#3B82F6',
+            activeLayerBorderColor: '#3B82F6'
+        };
+
+        configs.assets = {
+            thumbnailSize: 64,
+            showAssetNames: true,
+            defaultAssetPath: './assets/',
+            supportedFormats: ['.png', '.jpg', '.jpeg', '.gif', '.svg']
+        };
+
+        configs.performance = {
+            maxObjectsToRender: 10000,
+            cullingEnabled: true,
+            renderOnlyVisible: true,
+            optimizeGroupRendering: true
+        };
+
+        configs.view = {
+            grid: configs.canvas?.showGrid ?? true,
+            snapToGrid: false,
+            parallax: false,
+            objectBoundaries: false,
+            objectCollisions: false
+        };
+
+        configs.toolbar = {
+            visible: true,
+            position: 'top',
+            buttonGroups: {
+                file: true,
+                edit: true,
+                view: true,
+                group: true
+            },
+            buttonStates: {
+                'toggle-grid': configs.canvas?.showGrid ?? true,
+                'toggle-snap': false,
+                'toggle-parallax': false,
+                'toggle-boundaries': false,
+                'toggle-collisions': false
+            },
+            collapsedSections: {}
+        };
+
+        return configs;
     }
+
 
     /**
      * Load user configurations from localStorage and files
@@ -241,64 +279,6 @@ export class ConfigManager {
         const configs = {};
         const configNames = ['editor', 'ui', 'canvas', 'panels', 'camera', 'selection', 'assets', 'performance', 'shortcuts', 'view', 'toolbar', 'grid'];
         
-        // First, try to load from UserPreferencesManager (legacy)
-        const legacyPrefs = this.loadLegacyUserPreferences();
-        if (legacyPrefs) {
-            // Convert legacy preferences to new format
-            if (legacyPrefs.fontSize) {
-                configs.ui = { ...configs.ui, fontSize: legacyPrefs.fontSize };
-            }
-            if (legacyPrefs.fontScale) {
-                configs.ui = { ...configs.ui, fontScale: legacyPrefs.fontScale };
-            }
-            if (legacyPrefs.theme) {
-                configs.ui = { ...configs.ui, theme: legacyPrefs.theme };
-            }
-            if (legacyPrefs.compactMode !== undefined) {
-                configs.ui = { ...configs.ui, compactMode: legacyPrefs.compactMode };
-            }
-            if (legacyPrefs.canvasBackgroundColor) {
-                configs.canvas = { ...configs.canvas, backgroundColor: legacyPrefs.canvasBackgroundColor };
-            }
-            if (legacyPrefs.gridSize) {
-                configs.canvas = { ...configs.canvas, gridSize: legacyPrefs.gridSize };
-                configs.grid = { ...configs.grid, size: legacyPrefs.gridSize };
-            }
-            if (legacyPrefs.gridColor) {
-                configs.canvas = { ...configs.canvas, gridColor: legacyPrefs.gridColor };
-                configs.grid = { ...configs.grid, color: legacyPrefs.gridColor };
-            }
-            if (legacyPrefs.gridOpacity !== undefined) {
-                configs.canvas = { ...configs.canvas, gridOpacity: legacyPrefs.gridOpacity };
-                configs.grid = { ...configs.grid, opacity: legacyPrefs.gridOpacity };
-            }
-            if (legacyPrefs.gridThickness !== undefined) {
-                configs.canvas = { ...configs.canvas, gridThickness: legacyPrefs.gridThickness };
-                configs.grid = { ...configs.grid, thickness: legacyPrefs.gridThickness };
-            }
-            if (legacyPrefs.gridSubdivisions !== undefined) {
-                configs.canvas = { ...configs.canvas, gridSubdivisions: legacyPrefs.gridSubdivisions };
-                configs.grid = { ...configs.grid, subdivisions: legacyPrefs.gridSubdivisions };
-            }
-            if (legacyPrefs.gridSubdivColor) {
-                configs.canvas = { ...configs.canvas, gridSubdivColor: legacyPrefs.gridSubdivColor };
-                configs.grid = { ...configs.grid, subdivColor: legacyPrefs.gridSubdivColor };
-            }
-            if (legacyPrefs.gridSubdivThickness !== undefined) {
-                configs.canvas = { ...configs.canvas, gridSubdivThickness: legacyPrefs.gridSubdivThickness };
-                configs.grid = { ...configs.grid, subdivThickness: legacyPrefs.gridSubdivThickness };
-            }
-            if (legacyPrefs.showGrid !== undefined) {
-                configs.canvas = { ...configs.canvas, showGrid: legacyPrefs.showGrid };
-                configs.grid = { ...configs.grid, showGrid: legacyPrefs.showGrid };
-            }
-            if (legacyPrefs.autoSave !== undefined) {
-                configs.editor = { ...configs.editor, autoSave: legacyPrefs.autoSave };
-            }
-            if (legacyPrefs.autoSaveInterval) {
-                configs.editor = { ...configs.editor, autoSaveInterval: legacyPrefs.autoSaveInterval };
-            }
-        }
         
         configNames.forEach(configName => {
             // Try to load from localStorage first
@@ -306,11 +286,26 @@ export class ConfigManager {
             if (userConfig) {
                 configs[configName] = { ...configs[configName], ...userConfig };
             } else {
-                // Try to load from file if localStorage is empty
-                const fileConfig = this.loadUserConfigFromFile(configName);
-                if (fileConfig) {
-                    configs[configName] = { ...configs[configName], ...fileConfig };
-                    this.log('debug', `Loaded user config ${configName} from file`);
+                // For ui config, use default values - user changes will be loaded from localStorage later
+                if (configName === 'ui') {
+                    configs.ui = {
+                        fontScale: 1.2,
+                        theme: "dark",
+                        rightPanelWidth: 320,
+                        consoleHeight: 400, // Default starting height
+                        assetsPanelHeight: 256,
+                        consoleVisible: false,
+                        consoleMaxLines: 1000,
+                        panelWidth: 300,
+                        showTooltips: true
+                    };
+                } else {
+                    // Try to load from file if localStorage is empty
+                    const fileConfig = this.loadUserConfigFromFile(configName);
+                    if (fileConfig) {
+                        configs[configName] = { ...configs[configName], ...fileConfig };
+                        this.log('debug', `Loaded user config ${configName} from file`);
+                    }
                 }
             }
         });
@@ -318,33 +313,28 @@ export class ConfigManager {
         return configs;
     }
 
-    /**
-     * Load legacy user preferences from UserPreferencesManager
-     */
-    loadLegacyUserPreferences() {
-        try {
-            const stored = localStorage.getItem('levelEditor_userPrefs');
-            if (stored) {
-                return JSON.parse(stored);
-            }
-        } catch (error) {
-            this.log('warn', 'Failed to load legacy user preferences:', error);
-        }
-        return null;
-    }
 
     /**
      * Load user configuration from file (if exists)
      */
     loadUserConfigFromFile(configName) {
         try {
-            // Try to load from config/user directory
+            // Try to load from config/user directory synchronously
             const filePath = `${this.userPath}${configName}.json`;
-            
-            // Since we can't use fetch in this context, we'll use a different approach
-            // For now, we'll return null and rely on localStorage
-            // In a real implementation, you would need to load the file through the server
-            return null;
+
+            // Use XMLHttpRequest for synchronous loading
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', filePath, false); // Synchronous request
+            xhr.send();
+
+            if (xhr.status === 200) {
+                const userConfig = JSON.parse(xhr.responseText);
+                this.log('debug', `Loaded user config ${configName} from file`);
+                return userConfig;
+            } else {
+                this.log('debug', `User config file ${configName}.json not found or not accessible (status: ${xhr.status})`);
+                return null;
+            }
         } catch (error) {
             this.log('warn', `Failed to load user config ${configName} from file:`, error);
             return null;
@@ -356,12 +346,12 @@ export class ConfigManager {
      */
     mergeConfigs(defaultConfigs, userConfigs) {
         const merged = {};
-        
+
         // Start with default configs
         Object.keys(defaultConfigs).forEach(key => {
             merged[key] = { ...defaultConfigs[key] };
         });
-        
+
         // Apply user overrides
         Object.keys(userConfigs).forEach(key => {
             if (merged[key]) {
@@ -430,7 +420,7 @@ export class ConfigManager {
     get(path) {
         const keys = path.split('.');
         let current = this.configs;
-        
+
         for (const key of keys) {
             if (current && typeof current === 'object' && key in current) {
                 current = current[key];
@@ -438,7 +428,7 @@ export class ConfigManager {
                 return undefined;
             }
         }
-        
+
         return current;
     }
 
@@ -787,8 +777,6 @@ export class ConfigManager {
             // Also save the complete configuration as backup
             localStorage.setItem('levelEditor_userConfig_complete', JSON.stringify(this.configs));
             
-            // Also save to UserPreferencesManager format for compatibility
-            this.saveToUserPreferencesManager();
             
             this.log('info', 'All user configurations saved to localStorage');
         } catch (error) {
@@ -796,50 +784,4 @@ export class ConfigManager {
         }
     }
 
-    /**
-     * Save settings to UserPreferencesManager format for compatibility
-     */
-    saveToUserPreferencesManager() {
-        try {
-            const userPrefs = {
-                // Panel sizes
-                rightPanelWidth: this.configs.ui?.rightPanelWidth || 320,
-                consoleHeight: this.configs.ui?.consoleHeight || 300,
-                assetsPanelHeight: this.configs.ui?.assetsPanelHeight || 256,
-                
-                // Tab order
-                rightPanelTabOrder: this.configs.panels?.rightPanelTabOrder || ['details', 'level', 'outliner'],
-                assetTabOrder: this.configs.panels?.assetTabOrder || [],
-                
-                // Console settings
-                consoleVisible: this.configs.ui?.consoleVisible || false,
-                consoleMaxLines: this.configs.ui?.consoleMaxLines || 1000,
-                
-                // Canvas settings
-                canvasBackgroundColor: this.configs.canvas?.backgroundColor || '#4B5563',
-                gridSize: this.configs.grid?.size || this.configs.canvas?.gridSize || 32,
-                showGrid: this.configs.grid?.showGrid || this.configs.canvas?.showGrid || true,
-                gridColor: this.configs.grid?.color || this.configs.canvas?.gridColor || '#ffffff',
-                gridOpacity: this.configs.grid?.opacity || this.configs.canvas?.gridOpacity || 0.1,
-                gridThickness: this.configs.grid?.thickness || this.configs.canvas?.gridThickness || 1,
-                gridSubdivisions: this.configs.grid?.subdivisions || this.configs.canvas?.gridSubdivisions || 4,
-                gridSubdivColor: this.configs.grid?.subdivColor || this.configs.canvas?.gridSubdivColor || '#666666',
-                gridSubdivThickness: this.configs.grid?.subdivThickness || this.configs.canvas?.gridSubdivThickness || 0.5,
-                
-                // Editor settings
-                autoSave: this.configs.editor?.autoSave || true,
-                autoSaveInterval: this.configs.editor?.autoSaveInterval || 30000,
-                
-                // UI settings
-                theme: this.configs.ui?.theme || 'dark',
-                fontSize: this.configs.ui?.fontSize || 'sm',
-                fontScale: this.configs.ui?.fontScale || 1.0,
-                compactMode: this.configs.ui?.compactMode || false
-            };
-            
-            localStorage.setItem('levelEditor_userPrefs', JSON.stringify(userPrefs));
-        } catch (error) {
-            this.log('error', 'Failed to save to UserPreferencesManager format:', error);
-        }
-    }
 }

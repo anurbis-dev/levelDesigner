@@ -18,10 +18,10 @@
         // Apply user settings immediately, before any rendering
         (function() {
             try {
-                const stored = localStorage.getItem('levelEditor_userPrefs');
+                const stored = localStorage.getItem('levelEditor_userConfig_complete');
                 if (stored) {
                     const prefs = JSON.parse(stored);
-                    const fontScale = prefs.fontScale || 1.0;
+                    const fontScale = prefs.ui?.fontScale || 1.0;
                     if (fontScale !== 1.0) {
                         // Set CSS custom property immediately
                         document.documentElement.style.setProperty('--font-scale', fontScale);
@@ -169,6 +169,141 @@
         #assets-panel.drop-target {
             box-shadow: 0 0 0 3px #3B82F6 inset;
         }
+        
+        /* Console Overlay Styles */
+        .console-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: auto; /* Let JavaScript control the height */
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(4px);
+            resize: vertical;
+            min-height: 200px;
+            max-height: 90vh;
+        }
+        
+        .console-resize-handle {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: #374151;
+            cursor: row-resize;
+            z-index: 10000;
+        }
+        
+        .console-resize-handle:hover {
+            background: #4b5563;
+        }
+        
+        .console-overlay.hidden {
+            display: none;
+        }
+        
+        /* Console scrollbar styles to match other panels */
+        .console-overlay .overflow-y-auto::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .console-overlay .overflow-y-auto::-webkit-scrollbar-track {
+            background: #1f2937; /* gray-800 */
+        }
+        
+        .console-overlay .overflow-y-auto::-webkit-scrollbar-thumb {
+            background: #4b5563; /* gray-600 */
+            border-radius: 4px;
+        }
+        
+        .console-overlay .overflow-y-auto::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; /* gray-500 */
+        }
+        
+        /* Console text selection styles */
+        .console-overlay .overflow-y-auto {
+            user-select: text;
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+        }
+        
+        .console-overlay .overflow-y-auto::selection {
+            background: #3B82F6; /* blue-500 */
+            color: white;
+        }
+        
+        .console-overlay .overflow-y-auto::-moz-selection {
+            background: #3B82F6; /* blue-500 */
+            color: white;
+        }
+        
+        /* Console log entry selection highlighting */
+        .console-message.selected {
+            background: rgba(59, 130, 246, 0.15); /* blue-500 with opacity */
+            border-radius: 3px;
+            border-left: 3px solid #3B82F6;
+            padding-left: 4px;
+        }
+        
+        .console-message.selecting {
+            background: rgba(59, 130, 246, 0.08); /* blue-500 with lower opacity */
+            border-radius: 3px;
+        }
+        
+        /* Highlight all selected text in console */
+        .console-overlay .overflow-y-auto ::selection {
+            background: rgba(59, 130, 246, 0.3) !important;
+            color: white !important;
+        }
+        
+        .console-overlay .overflow-y-auto ::-moz-selection {
+            background: rgba(59, 130, 246, 0.3) !important;
+            color: white !important;
+        }
+        
+        /* Better text selection in console */
+        .console-overlay .overflow-y-auto {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+        }
+        
+        /* Prevent text selection on non-text elements */
+        .console-overlay .overflow-y-auto * {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+        }
+        
+        
+        /* Console log message styles */
+        .console-message {
+            margin-bottom: 4px;
+            word-wrap: break-word;
+        }
+        
+        .console-message.log {
+            color: #d1d5db; /* gray-300 */
+        }
+        
+        .console-message.info {
+            color: #60a5fa; /* blue-400 */
+        }
+        
+        .console-message.warn {
+            color: #fbbf24; /* amber-400 */
+        }
+        
+        .console-message.error {
+            color: #f87171; /* red-400 */
+        }
     </style>
 </head>
 <body class="bg-gray-800 text-white font-sans flex flex-col h-screen">
@@ -247,21 +382,23 @@
         </div>
     </footer>
 
-    <!-- Separator for changing console height -->
-    <div id="resizer-console" class="resizer-y hidden"></div>
-
-    <!-- Console Panel (hidden by default) -->
-    <div id="console-panel" class="hidden bg-gray-800 border-t border-gray-700 flex flex-col" style="height: 300px;">
-        <div id="console-output" class="flex-grow p-2 overflow-y-auto text-sm font-mono text-gray-300 bg-gray-800">
-            <!-- Console output will be displayed here -->
+    <!-- Console Panel as Overlay (hidden by default) -->
+    <div id="console-panel" class="console-overlay hidden bg-gray-900 flex flex-col" style="height: 400px !important;">
+        <div class="flex border-b border-gray-700 flex-shrink-0">
+            <span class="flex-1 p-2 text-sm font-medium text-gray-300">Console</span>
+            <button id="console-close" class="p-2 text-gray-400 hover:text-white hover:bg-gray-700">&times;</button>
         </div>
-        <div class="flex items-center p-2 border-t border-gray-700 bg-gray-900">
+        <div class="flex-grow overflow-y-auto">
+            <div id="console-output" class="p-4 text-gray-300 font-mono text-sm">
+                <!-- Console output will be displayed here -->
+            </div>
+        </div>
+        <div class="border-t border-gray-700 flex-shrink-0 p-2 flex items-center">
             <span class="text-gray-400 mr-2">&gt;</span>
             <input id="console-input" name="console-input" type="text" placeholder="Enter command..." 
-                   class="flex-grow bg-transparent text-gray-300 outline-none text-sm font-mono"
-                   style="color: #d1d5db;">
-            <button id="console-close" class="text-gray-400 hover:text-white text-lg ml-2">&times;</button>
+                   class="flex-grow bg-transparent text-gray-300 border-none outline-none font-mono text-sm">
         </div>
+        <div class="console-resize-handle"></div>
     </div>
 
     <!-- Application logic -->
@@ -270,6 +407,7 @@
         import { ConsoleContextMenu } from './src/ui/ConsoleContextMenu.js';
         import { Logger } from './src/utils/Logger.js';
         import { MenuManager } from './src/managers/MenuManager.js';
+        import { UserPreferencesManager } from './src/managers/UserPreferencesManager.js';
 
         // Safe logging function that works even if Logger is not available
         function safeLog(level, message, ...args) {
@@ -289,134 +427,165 @@
             }
         }
 
-        // Apply user settings IMMEDIATELY to prevent visual jumps
+        // Apply basic user settings IMMEDIATELY to prevent visual jumps
         // This must happen before any DOM manipulation
-        function applyUserSettingsImmediately() {
+        function applyUserSettingsImmediately(userPrefs) {
             try {
-                // Load user preferences directly from localStorage
-                const stored = localStorage.getItem('levelEditor_userPrefs');
-                if (stored) {
-                    const prefs = JSON.parse(stored);
-                    
-                    // Apply font scale immediately
-                    const fontScale = prefs.fontScale || 1.0;
-                    if (fontScale !== 1.0) {
-                        try {
-                            document.documentElement.style.fontSize = `${fontScale * 16}px`;
-                            console.log(`[LAYOUT] Applied font scale: ${fontScale}`);
-                        } catch (fontError) {
-                            console.warn('[LAYOUT] Failed to apply font scale:', fontError);
-                        }
+                // Apply font scale immediately
+                const fontScale = userPrefs.get('fontScale') || 1.0;
+                if (fontScale !== 1.0) {
+                    try {
+                        document.documentElement.style.fontSize = `${fontScale * 16}px`;
+                    } catch (fontError) {
+                        console.warn('[LAYOUT] Failed to apply font scale:', fontError);
                     }
-                    
-                    // Apply theme immediately if available
-                    const theme = prefs.theme;
-                    if (theme && theme !== 'dark') {
-                        try {
-                            console.log(`[LAYOUT] Applied theme: ${theme}`);
-                        } catch (themeError) {
-                            console.warn('[LAYOUT] Failed to apply theme:', themeError);
-                        }
-                    }
-                    
-                    console.log('[LAYOUT] User settings applied immediately');
                 }
-            } catch (error) {
-                console.log('[LAYOUT] Failed to apply user settings immediately:', error);
-            }
-        }
 
-        // Apply settings immediately
-        try {
-            applyUserSettingsImmediately();
-        } catch (error) {
-            console.error('Error applying user settings immediately:', error);
+                // Apply theme immediately if available
+                const theme = userPrefs.get('theme');
+                if (theme && theme !== 'dark') {
+                    try {
+                        document.body.classList.add(`theme-${theme}`);
+                    } catch (themeError) {
+                        console.warn('[LAYOUT] Failed to apply theme:', themeError);
+                    }
+                }
+
+                // Apply panel visibility settings immediately
+                const consoleVisible = userPrefs.get('consoleVisible');
+                if (consoleVisible !== undefined) {
+                    try {
+                        const consolePanel = document.getElementById('console-panel');
+                        if (consolePanel) {
+                            if (consoleVisible) {
+                                consolePanel.classList.remove('hidden');
+                            } else {
+                                consolePanel.classList.add('hidden');
+                            }
+                        }
+                    } catch (consoleError) {
+                        console.warn('[LAYOUT] Failed to apply console visibility:', consoleError);
+                    }
+                }
+
+                // Apply toolbar visibility immediately
+                const toolbarVisible = userPrefs.get('toolbarVisible');
+                if (toolbarVisible !== undefined) {
+                    try {
+                        const toolbarContainer = document.getElementById('toolbar-container');
+                        if (toolbarContainer) {
+                            if (toolbarVisible) {
+                                toolbarContainer.classList.remove('hidden');
+                                toolbarContainer.style.display = 'flex';
+                            } else {
+                                toolbarContainer.classList.add('hidden');
+                                toolbarContainer.style.display = 'none';
+                            }
+                        }
+                    } catch (toolbarError) {
+                        console.warn('[LAYOUT] Failed to apply toolbar visibility:', toolbarError);
+                    }
+                }
+
+                // Apply assets panel visibility immediately
+                const assetsPanelVisible = userPrefs.get('assetsPanelVisible');
+                if (assetsPanelVisible !== undefined) {
+                    try {
+                        const assetsPanel = document.getElementById('assets-panel');
+                        const resizerAssets = document.getElementById('resizer-assets');
+                        if (assetsPanel) {
+                            if (assetsPanelVisible) {
+                                assetsPanel.classList.remove('hidden');
+                                assetsPanel.style.display = 'flex';
+                                if (resizerAssets) {
+                                    resizerAssets.classList.remove('hidden');
+                                    resizerAssets.style.display = 'block';
+                                }
+                            } else {
+                                assetsPanel.classList.add('hidden');
+                                assetsPanel.style.display = 'none';
+                                if (resizerAssets) {
+                                    resizerAssets.classList.add('hidden');
+                                    resizerAssets.style.display = 'none';
+                                }
+                            }
+                        }
+                    } catch (assetsError) {
+                        console.warn('[LAYOUT] Failed to apply assets panel visibility:', assetsError);
+                    }
+                }
+
+                // Apply right panel visibility immediately
+                const rightPanelVisible = userPrefs.get('rightPanelVisible');
+                if (rightPanelVisible !== undefined) {
+                    try {
+                        const rightPanel = document.getElementById('right-panel');
+                        const resizerX = document.getElementById('resizer-x');
+                        if (rightPanel) {
+                            if (rightPanelVisible) {
+                                rightPanel.classList.remove('hidden');
+                                rightPanel.style.display = 'flex';
+                                if (resizerX) {
+                                    resizerX.classList.remove('hidden');
+                                    resizerX.style.display = 'block';
+                                }
+                            } else {
+                                rightPanel.classList.add('hidden');
+                                rightPanel.style.display = 'none';
+                                if (resizerX) {
+                                    resizerX.classList.add('hidden');
+                                    resizerX.style.display = 'none';
+                                }
+                            }
+                        }
+                    } catch (rightError) {
+                        console.warn('[LAYOUT] Failed to apply right panel visibility:', rightError);
+                    }
+                }
+
+                // Apply panel sizes immediately to prevent UI flicker
+                try {
+                    // Right panel width
+                    const rightPanelWidth = userPrefs.get('rightPanelWidth');
+                    if (rightPanelWidth) {
+                        const rightPanel = document.getElementById('right-panel');
+                        if (rightPanel) {
+                            rightPanel.style.width = rightPanelWidth + 'px';
+                            rightPanel.style.flexShrink = '0';
+                            rightPanel.style.flexGrow = '0';
+                        }
+                    }
+
+                    // Assets panel height
+                    const assetsPanelHeight = userPrefs.get('assetsPanelHeight');
+                    if (assetsPanelHeight) {
+                        const assetsPanel = document.getElementById('assets-panel');
+                        if (assetsPanel) {
+                            assetsPanel.style.height = assetsPanelHeight + 'px';
+                            assetsPanel.style.flexShrink = '0';
+                        }
+                    }
+
+                    // Console height
+                    const consoleHeight = userPrefs.get('consoleHeight');
+                    if (consoleHeight) {
+                        const consolePanel = document.getElementById('console-panel');
+                        if (consolePanel) {
+                            const height = Math.max(200, Math.min(window.innerHeight * 0.9, consoleHeight));
+                            consolePanel.style.setProperty('height', height + 'px', 'important');
+                            consolePanel.style.setProperty('bottom', 'auto', 'important');
+                        }
+                    }
+                } catch (sizeError) {
+                    console.warn('[LAYOUT] Failed to apply panel sizes:', sizeError);
+                }
+
+            } catch (error) {
+                console.warn('[LAYOUT] Failed to apply user settings immediately:', error);
+            }
         }
 
         // User Preferences Manager - Initialize BEFORE LevelEditor
-        class UserPreferencesManager {
-            constructor() {
-                try {
-                    this.prefsKey = 'levelEditor_userPrefs';
-                    this.defaultPrefs = {
-                        rightPanelWidth: 320,
-                        consoleHeight: 300,
-                        assetsPanelHeight: 256,
-                        rightPanelTabOrder: ['details', 'level', 'outliner'],
-                        assetTabOrder: [],
-                        consoleVisible: false,
-                        canvasBackgroundColor: '#4B5563',
-                        gridSize: 32,
-                        showGrid: true,
-                        autoSave: true,
-                        autoSaveInterval: 30000,
-                        theme: 'dark',
-                        fontSize: 'sm',
-                        compactMode: false
-                    };
-                    this.preferences = this.loadPreferences();
-                } catch (error) {
-                    console.error('Error initializing UserPreferencesManager:', error);
-                    this.preferences = this.defaultPrefs;
-                }
-            }
-
-            loadPreferences() {
-                try {
-                    const stored = localStorage.getItem(this.prefsKey);
-                    if (stored) {
-                        try {
-                            const parsed = JSON.parse(stored);
-                            return { ...this.defaultPrefs, ...parsed };
-                        } catch (parseError) {
-                            console.warn('Failed to parse user preferences:', parseError);
-                            return { ...this.defaultPrefs };
-                        }
-                    }
-                } catch (error) {
-                    console.warn('Failed to load user preferences:', error);
-                }
-                return { ...this.defaultPrefs };
-            }
-
-            savePreferences() {
-                try {
-                    const jsonString = JSON.stringify(this.preferences);
-                    localStorage.setItem(this.prefsKey, jsonString);
-                    return true;
-                } catch (error) {
-                    console.error('Failed to save user preferences:', error);
-                    return false;
-                }
-            }
-
-            get(key) {
-                try {
-                    return this.preferences[key];
-                } catch (error) {
-                    console.warn('Failed to get preference:', key, error);
-                    return undefined;
-                }
-            }
-
-            set(key, value) {
-                try {
-                    this.preferences[key] = value;
-                    this.savePreferences();
-                } catch (error) {
-                    console.warn('Failed to set preference:', key, value, error);
-                }
-            }
-
-            update(updates) {
-                try {
-                    Object.assign(this.preferences, updates);
-                    this.savePreferences();
-                } catch (error) {
-                    console.warn('Failed to update preferences:', updates, error);
-                }
-            }
-        }
 
         // Initialize preferences manager FIRST
         let userPrefs;
@@ -430,6 +599,13 @@
                 set: () => {},
                 update: () => {}
             };
+        }
+
+        // Apply ALL user settings immediately BEFORE LevelEditor initialization
+        try {
+            applyUserSettingsImmediately(userPrefs);
+        } catch (error) {
+            console.error('Error applying user settings immediately:', error);
         }
 
         // Initialize the level editor with user preferences
@@ -449,12 +625,7 @@
         // Initialize the editor
         try {
             editor.init().then(() => {
-            // Apply saved panel sizes after editor initialization
-            try {
-                applySavedPanelSizes();
-            } catch (error) {
-                console.error('Error applying saved panel sizes:', error);
-            }
+            // Panel sizes are now applied immediately before LevelEditor initialization to prevent UI flicker
             }).catch(error => {
                 console.error('Failed to initialize level editor:', error);
                 console.error('Error details:', error);
@@ -473,67 +644,9 @@
 
         // User preferences manager is already initialized above
 
-        // Function to apply saved panel sizes (called only on startup)
-        function applySavedPanelSizes() {
-            try {
-                const savedAssetsPanelHeight = userPrefs.get('assetsPanelHeight');
-                const savedConsoleHeight = userPrefs.get('consoleHeight');
-                const savedConsoleVisible = userPrefs.get('consoleVisible');
-                const savedRightPanelWidth = userPrefs.get('rightPanelWidth');
-                
-                // Get main elements
-                const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
-                const mainPanel = document.getElementById('main-panel');
-                const rightPanel = document.getElementById('right-panel');
-                const assetsPanel = document.getElementById('assets-panel');
-                const consolePanel = document.getElementById('console-panel');
-                
-                // Update right panel width (simple like assets panel)
-                if (savedRightPanelWidth) {
-                    rightPanel.style.width = savedRightPanelWidth + 'px';
-                    rightPanel.style.flexShrink = '0';
-                    rightPanel.style.flexGrow = '0';
-                }
-                
-                // Update assets panel height
-                if (savedAssetsPanelHeight) {
-                    const maxHeight = window.innerHeight * 0.6;
-                    const minHeight = 100;
-                    const assetsHeight = Math.max(minHeight, Math.min(maxHeight, savedAssetsPanelHeight));
-                    assetsPanel.style.height = assetsHeight + 'px';
-                    assetsPanel.style.flexShrink = '0';
-                }
-                
-                // Update console height if visible
-                if (savedConsoleVisible && !consolePanel.classList.contains('hidden')) {
-                    const maxHeight = window.innerHeight * 0.6;
-                    const minHeight = 100;
-                    const consoleHeight = Math.max(minHeight, Math.min(maxHeight, savedConsoleHeight));
-                    consolePanel.style.height = consoleHeight + 'px';
-                    consolePanel.style.flexShrink = '0';
-                }
-                
-                // Update canvas only after applying saved sizes
-                if (window.editor && window.editor.canvasRenderer) {
-                    window.editor.canvasRenderer.resizeCanvas();
-                    window.editor.render();
-                }
-                
-                // Additional render after applying saved sizes
-                setTimeout(() => {
-                    try {
-                        if (window.editor && window.editor.canvasRenderer) {
-                            window.editor.canvasRenderer.resizeCanvas();
-                            window.editor.render();
-                        }
-                    } catch (error) {
-                        console.error('Error in delayed panel size update:', error);
-                    }
-                }, 100);
-            } catch (error) {
-                console.warn('Error applying saved panel sizes:', error);
-            }
-        }
+        // Console height is now applied immediately in applyUserSettingsImmediately() to prevent UI flicker
+
+        // Panel sizes are now applied immediately before LevelEditor initialization to prevent UI flicker
             
             // Function to force complete layout update
             function forceLayoutUpdate() {
@@ -588,7 +701,6 @@
             try {
                 const resizerX = document.getElementById('resizer-x');
                 const resizerAssets = document.getElementById('resizer-assets');
-                const resizerConsole = document.getElementById('resizer-console');
                 const mainPanel = document.getElementById('main-panel');
                 const rightPanel = document.getElementById('right-panel');
                 const assetsPanel = document.getElementById('assets-panel');
@@ -597,7 +709,6 @@
 
             let isResizingX = false;
             let isResizingAssets = false;
-            let isResizingConsole = false;
             let isAnyResizing = false;
             
             // Variables to track initial positions for resizing
@@ -605,11 +716,9 @@
             let initialMouseX = 0;
             let initialAssetsPanelHeight = 0;
             let initialRightPanelWidth = 0;
-            let initialConsolePanelHeight = 0;
             let lastAppliedRightWidth = null; // Track last width to detect boundary stall
 
-            // Note: Panel sizes are now applied in applySavedPanelSizes() function
-            // to avoid conflicts and ensure proper timing
+            // Note: Panel sizes are now applied immediately before LevelEditor initialization to prevent UI flicker
 
             // Horizontal resizer (between main panel and right panel)
             resizerX.addEventListener('mousedown', (e) => {
@@ -638,18 +747,6 @@
                 e.stopPropagation();
             });
 
-            // Console resizer (between assets panel and console)
-            resizerConsole.addEventListener('mousedown', (e) => {
-                isResizingConsole = true;
-                isAnyResizing = true;
-                initialMouseY = e.clientY; // Use Y for vertical resizer
-                initialConsolePanelHeight = consolePanel.offsetHeight;
-                document.body.style.cursor = 'row-resize';
-                document.body.style.userSelect = 'none';
-                document.body.style.pointerEvents = 'none';
-                e.preventDefault();
-                e.stopPropagation();
-            });
 
             // Mouse move handler
             document.addEventListener('mousemove', (e) => {
@@ -711,24 +808,6 @@
                     }
                 }
                 
-                if (isResizingConsole) {
-                    // Use same logic as assets resizer: mouse movement from initial position
-                    const mouseDelta = e.clientY - initialMouseY;
-                    const newHeight = initialConsolePanelHeight - mouseDelta; // Inverted direction (like assets)
-                    
-                    // Apply directly without any limits (like assets)
-                    consolePanel.style.height = newHeight + 'px';
-                    consolePanel.style.flexShrink = '0';
-
-                    // Save preference
-                    userPrefs.set('consoleHeight', newHeight);
-
-                    // Update canvas and render
-                    if (window.editor && window.editor.canvasRenderer) {
-                        window.editor.canvasRenderer.resizeCanvas();
-                        window.editor.render();
-                    }
-                }
             });
 
             // Mouse up handler
@@ -736,7 +815,6 @@
                 if (isAnyResizing) {
                     isResizingX = false;
                     isResizingAssets = false;
-                    isResizingConsole = false;
                     isAnyResizing = false;
                     lastAppliedRightWidth = null;
                     document.body.style.cursor = '';
@@ -931,6 +1009,20 @@
                     logToConsole(`Copied to clipboard: ${text}`, 'info');
                 }
             });
+            
+            // Setup selection for existing console messages
+            setupExistingConsoleMessages();
+            
+            // Global selection change handler for all console messages (throttled)
+            let selectionTimeout = null;
+            document.addEventListener('selectionchange', () => {
+                if (selectionTimeout) {
+                    clearTimeout(selectionTimeout);
+                }
+                selectionTimeout = setTimeout(() => {
+                    updateAllConsoleSelections();
+                }, 50); // Throttle to 50ms
+            });
 
             // Register console context menu with the manager after editor is initialized
             // This will be done after the editor initialization completes
@@ -963,6 +1055,50 @@
                 }
             });
 
+            // Console resize functionality
+            setupConsoleResizing();
+
+            function setupConsoleResizing() {
+                const resizeHandle = consolePanel.querySelector('.console-resize-handle');
+                let isResizing = false;
+                let startY = 0;
+                let startHeight = 0;
+
+                resizeHandle.addEventListener('mousedown', (e) => {
+                    isResizing = true;
+                    startY = e.clientY;
+                    startHeight = consolePanel.offsetHeight;
+                    document.body.style.cursor = 'row-resize';
+                    document.body.style.userSelect = 'none';
+                    e.preventDefault();
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (!isResizing) return;
+
+                    const deltaY = e.clientY - startY;
+                    const newHeight = startHeight + deltaY;
+                    const minHeight = 200;
+                    const maxHeight = window.innerHeight * 0.9;
+
+                    if (newHeight >= minHeight && newHeight <= maxHeight) {
+                        consolePanel.style.height = newHeight + 'px';
+                        consolePanel.style.bottom = 'auto';
+                        
+                        // Save the height preference
+                        userPrefs.set('consoleHeight', newHeight);
+                    }
+                });
+
+                document.addEventListener('mouseup', () => {
+                    if (isResizing) {
+                        isResizing = false;
+                        document.body.style.cursor = '';
+                        document.body.style.userSelect = '';
+                    }
+                });
+            }
+
             function toggleConsole() {
                 if (isConsoleVisible) {
                     hideConsole();
@@ -972,43 +1108,180 @@
             }
 
             function showConsole() {
-                consolePanel.classList.remove('hidden');
-                document.getElementById('resizer-console').classList.remove('hidden');
+                const showConsolePanel = consolePanel; // Use the consolePanel from outer scope
+
+                // Ensure correct height before showing
+                const savedConsoleHeight = userPrefs.get('consoleHeight');
+                if (savedConsoleHeight && savedConsoleHeight > 0) {
+                    const correctHeight = Math.max(200, Math.min(window.innerHeight * 0.9, savedConsoleHeight));
+                    showConsolePanel.style.setProperty('height', correctHeight + 'px', 'important');
+                }
+
+                showConsolePanel.classList.remove('hidden');
                 consoleInput.focus();
                 isConsoleVisible = true;
-                
+
                 // Save preference
                 userPrefs.set('consoleVisible', true);
+
                 
-                // Apply saved console height if available
-                const savedConsoleHeight = userPrefs.get('consoleHeight');
-                if (savedConsoleHeight) {
-                    const maxHeight = window.innerHeight * 0.6;
-                    const minHeight = 100;
-                    const consoleHeight = Math.max(minHeight, Math.min(maxHeight, savedConsoleHeight));
-                    consolePanel.style.height = consoleHeight + 'px';
-                    consolePanel.style.flexShrink = '0';
-                }
-                
-                // Update canvas only (no layout changes to avoid panel drift)
-                if (window.editor && window.editor.canvasRenderer) {
-                    window.editor.canvasRenderer.resizeCanvas();
-                    window.editor.render();
-                }
+                // Console is now an overlay, no need to update canvas layout
+                // The overlay covers everything and doesn't affect the main layout
             }
 
             function hideConsole() {
                 consolePanel.classList.add('hidden');
-                document.getElementById('resizer-console').classList.add('hidden');
                 isConsoleVisible = false;
                 
                 // Save preference
                 userPrefs.set('consoleVisible', false);
                 
-                // Update canvas only (no layout changes to avoid panel drift)
-                if (window.editor && window.editor.canvasRenderer) {
-                    window.editor.canvasRenderer.resizeCanvas();
-                    window.editor.render();
+                // Console is now an overlay, no need to update canvas layout
+                // The overlay covers everything and doesn't affect the main layout
+            }
+
+            function setupLogEntrySelection(logEntry) {
+                let isSelecting = false;
+                
+                // Mouse down - start selection
+                logEntry.addEventListener('mousedown', (e) => {
+                    if (e.button === 0) { // Left mouse button
+                        isSelecting = true;
+                        logEntry.classList.add('selecting');
+                    }
+                });
+                
+                // Double click - select entire line
+                logEntry.addEventListener('dblclick', (e) => {
+                    e.preventDefault();
+                    
+                    // Select all text in this log entry
+                    const range = document.createRange();
+                    range.selectNodeContents(logEntry);
+                    const selection = window.getSelection();
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                    
+                    logEntry.classList.add('selected');
+                });
+                
+                // Mouse up - end selection
+                logEntry.addEventListener('mouseup', (e) => {
+                    if (isSelecting && e.button === 0) {
+                        isSelecting = false;
+                        logEntry.classList.remove('selecting');
+                        
+                        // Check for selection after a short delay
+                        setTimeout(() => {
+                            const selection = window.getSelection();
+                            if (selection && selection.toString().trim()) {
+                                logEntry.classList.add('selected');
+                            } else {
+                                logEntry.classList.remove('selected');
+                            }
+                        }, 10);
+                    }
+                });
+                
+                // Individual selection change handler removed - using global handler
+                
+                // Handle keyboard shortcuts
+                const keyHandler = (e) => {
+                    // Don't interfere with input fields
+                    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+                        return;
+                    }
+                    
+                    if (e.key === 'Escape') {
+                        // Clear selection on Escape
+                        window.getSelection().removeAllRanges();
+                        logEntry.classList.remove('selected');
+                    } else if (e.ctrlKey && e.key === 'a' && logEntry.contains(document.activeElement)) {
+                        // Select all text in this entry
+                        e.preventDefault();
+                        const range = document.createRange();
+                        range.selectNodeContents(logEntry);
+                        const selection = window.getSelection();
+                        selection.removeAllRanges();
+                        selection.addRange(range);
+                    }
+                };
+                
+                document.addEventListener('keydown', keyHandler);
+                logEntry._keyHandler = keyHandler;
+            }
+            
+            function setupExistingConsoleMessages() {
+                // Setup selection for any existing console messages
+                const existingMessages = consoleOutput.querySelectorAll('.console-message:not(.log-entry)');
+                existingMessages.forEach(msg => {
+                    msg.classList.add('log-entry');
+                    setupLogEntrySelection(msg);
+                });
+            }
+            
+            // Cache for performance optimization
+            let lastSelectionState = null;
+            
+            function updateAllConsoleSelections() {
+                const selection = window.getSelection();
+                const selectionText = selection ? selection.toString().trim() : '';
+                
+                // Check if selection state actually changed
+                const currentState = selectionText + '_' + (selection ? selection.rangeCount : 0);
+                if (currentState === lastSelectionState) {
+                    return; // No change, skip update
+                }
+                lastSelectionState = currentState;
+                
+                if (!selectionText) {
+                    // Clear all selections if no text is selected
+                    const selectedMessages = consoleOutput.querySelectorAll('.console-message.selected');
+                    selectedMessages.forEach(msg => msg.classList.remove('selected'));
+                    return;
+                }
+                
+                // Get all ranges in the selection
+                const ranges = [];
+                for (let i = 0; i < selection.rangeCount; i++) {
+                    ranges.push(selection.getRangeAt(i));
+                }
+                
+                // Get all console messages
+                const allMessages = consoleOutput.querySelectorAll('.console-message');
+                const selectedMessages = new Set();
+                
+                // Check each range against all messages
+                ranges.forEach(range => {
+                    const selectionStart = range.startContainer;
+                    const selectionEnd = range.endContainer;
+                    
+                    allMessages.forEach(msg => {
+                        // Simple and fast check: does this message contain selection start or end?
+                        if (msg.contains(selectionStart) || msg.contains(selectionEnd)) {
+                            selectedMessages.add(msg);
+                        }
+                    });
+                });
+                
+                // Update classes efficiently - only change what actually changed
+                allMessages.forEach(msg => {
+                    const shouldBeSelected = selectedMessages.has(msg);
+                    const isCurrentlySelected = msg.classList.contains('selected');
+                    
+                    if (shouldBeSelected && !isCurrentlySelected) {
+                        msg.classList.add('selected');
+                    } else if (!shouldBeSelected && isCurrentlySelected) {
+                        msg.classList.remove('selected');
+                    }
+                });
+            }
+            
+            function cleanupLogEntrySelection(logEntry) {
+                // Clean up event listeners
+                if (logEntry._keyHandler) {
+                    document.removeEventListener('keydown', logEntry._keyHandler);
+                    logEntry._keyHandler = null;
                 }
             }
 
@@ -1017,10 +1290,11 @@
                 
                 const timestamp = new Date().toLocaleTimeString();
                 const logEntry = document.createElement('div');
-                logEntry.className = `mb-1 log-entry ${getLogTypeClass(type)}`;
-                logEntry.innerHTML = `<span class="text-gray-500">[${timestamp}]</span> ${message}`;
+                logEntry.className = `log-entry console-message ${type}`;
+                logEntry.innerHTML = `<span style="color: #6b7280;">[${timestamp}]</span> ${message}`;
 
-                // Context menu is now handled by the console panel itself
+                // Add text selection functionality
+                setupLogEntrySelection(logEntry);
 
                 consoleOutput.appendChild(logEntry);
 
@@ -1032,15 +1306,6 @@
                         console.error('Error scrolling console output:', error);
                     }
                 });
-            }
-
-            function getLogTypeClass(type) {
-                switch (type) {
-                    case 'error': return 'text-red-400';
-                    case 'warn': return 'text-yellow-400';
-                    case 'info': return 'text-blue-400';
-                    default: return 'text-gray-300';
-                }
             }
 
             // Context menu functionality moved to ConsoleContextMenu class
@@ -1172,29 +1437,12 @@
             if (window.editor && window.editor.contextMenuManager) {
                 try {
                     window.editor.contextMenuManager.registerMenu('console', consoleContextMenu);
-                    console.log('[INIT] ConsoleContextMenu registered with ContextMenuManager');
                 } catch (error) {
                     console.error('Error registering console context menu:', error);
                 }
             }
 
-            // Load saved console state
-            const savedConsoleVisible = userPrefs.get('consoleVisible');
-            
-            if (savedConsoleVisible) {
-                try {
-                    showConsole();
-                } catch (error) {
-                    console.error('Error showing console:', error);
-                }
-            } else {
-                // Apply saved panel sizes even if console is hidden
-                try {
-                    applySavedPanelSizes();
-                } catch (error) {
-                    console.error('Error applying saved panel sizes:', error);
-                }
-            }
+            // Console visibility is now applied immediately in applyUserSettingsImmediately() to prevent UI flicker
 
             // Initial console message
             try {
@@ -1222,7 +1470,6 @@
                 const consolePanel = document.getElementById('console-panel');
                 if (consolePanel) {
                     consolePanel.classList.remove('hidden');
-                    document.getElementById('resizer-console').classList.remove('hidden');
                 }
             } catch (error) {
                 console.error('Error in testContextMenu:', error);

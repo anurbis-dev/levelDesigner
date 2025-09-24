@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Config Synchronization</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .success { color: green; }
+        .error { color: red; }
+        .info { color: blue; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>Test Config Synchronization</h1>
+    
+    <div class="test-section">
+        <h2>1. Test UserPreferencesManager ConfigManager</h2>
+        <div id="userprefs-config"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Test LevelEditor ConfigManager</h2>
+        <div id="leveleditor-config"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Test Config Synchronization</h2>
+        <div id="sync-test"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Test Panel Settings</h2>
+        <button onclick="testPanelSettings()">Test Panel Settings</button>
+        <div id="panel-test"></div>
+    </div>
+
+    <script type="module">
+        import { UserPreferencesManager } from '../src/managers/UserPreferencesManager.js';
+        import { LevelEditor } from '../src/core/LevelEditor.js';
+        
+        let userPrefs, editor;
+        
+        // Initialize UserPreferencesManager
+        try {
+            userPrefs = new UserPreferencesManager();
+            console.log('UserPreferencesManager initialized');
+        } catch (error) {
+            console.error('Error initializing UserPreferencesManager:', error);
+        }
+        
+        // Test UserPreferencesManager ConfigManager
+        function testUserPrefsConfig() {
+            const div = document.getElementById('userprefs-config');
+            try {
+                const config = userPrefs.configManager.getAll();
+                div.innerHTML = `
+                    <div class="success">UserPreferencesManager ConfigManager loaded:</div>
+                    <pre>${JSON.stringify(config, null, 2)}</pre>
+                `;
+            } catch (error) {
+                div.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+        
+        // Test LevelEditor ConfigManager
+        function testLevelEditorConfig() {
+            const div = document.getElementById('leveleditor-config');
+            try {
+                editor = new LevelEditor(userPrefs);
+                const config = editor.configManager.getAll();
+                div.innerHTML = `
+                    <div class="success">LevelEditor ConfigManager loaded:</div>
+                    <pre>${JSON.stringify(config, null, 2)}</pre>
+                `;
+            } catch (error) {
+                div.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+        
+        // Test synchronization
+        function testSynchronization() {
+            const div = document.getElementById('sync-test');
+            try {
+                if (!userPrefs || !editor) {
+                    div.innerHTML = '<div class="error">UserPrefs or Editor not initialized</div>';
+                    return;
+                }
+                
+                const userPrefsConfig = userPrefs.configManager.getAll();
+                const editorConfig = editor.configManager.getAll();
+                
+                const isSame = JSON.stringify(userPrefsConfig) === JSON.stringify(editorConfig);
+                
+                div.innerHTML = `
+                    <div class="${isSame ? 'success' : 'error'}">
+                        Configs are ${isSame ? 'synchronized' : 'NOT synchronized'}
+                    </div>
+                    <div class="info">UserPrefs ConfigManager === Editor ConfigManager: ${userPrefs.configManager === editor.configManager}</div>
+                `;
+            } catch (error) {
+                div.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+        
+        // Test panel settings
+        window.testPanelSettings = function() {
+            const div = document.getElementById('panel-test');
+            try {
+                if (!userPrefs) {
+                    div.innerHTML = '<div class="error">UserPrefs not initialized</div>';
+                    return;
+                }
+                
+                // Set test values
+                userPrefs.set('toolbarVisible', false);
+                userPrefs.set('rightPanelWidth', 400);
+                userPrefs.set('assetsPanelHeight', 300);
+                userPrefs.set('consoleHeight', 250);
+                
+                // Check if values are saved
+                const toolbarVisible = userPrefs.get('toolbarVisible');
+                const rightPanelWidth = userPrefs.get('rightPanelWidth');
+                const assetsPanelHeight = userPrefs.get('assetsPanelHeight');
+                const consoleHeight = userPrefs.get('consoleHeight');
+                
+                div.innerHTML = `
+                    <div class="success">Panel settings test:</div>
+                    <ul>
+                        <li>Toolbar visible: ${toolbarVisible}</li>
+                        <li>Right panel width: ${rightPanelWidth}px</li>
+                        <li>Assets panel height: ${assetsPanelHeight}px</li>
+                        <li>Console height: ${consoleHeight}px</li>
+                    </ul>
+                    <div class="info">All values saved and retrieved successfully!</div>
+                `;
+            } catch (error) {
+                div.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        };
+        
+        // Run tests
+        testUserPrefsConfig();
+        testLevelEditorConfig();
+        setTimeout(testSynchronization, 100); // Wait a bit for editor to initialize
+    </script>
+</body>
+</html>

@@ -4,8 +4,11 @@
   "fontScale": 1.0,
   "compactMode": false,
   "rightPanelWidth": 320,
-  "consoleHeight": 300,
+  "consoleHeight": null,
   "assetsPanelHeight": 256,
   "consoleVisible": false,
-  "consoleMaxLines": 1000
+  "consoleMaxLines": 1000,
+  "toolbarVisible": true,
+  "assetsPanelVisible": true,
+  "rightPanelVisible": true
 }

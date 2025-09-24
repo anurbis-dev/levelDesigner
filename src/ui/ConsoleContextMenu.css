@@ -32,12 +32,23 @@
     transform: scale(0.95);
     transition: opacity 0.15s ease-out, transform 0.15s ease-out;
     pointer-events: none;
+    
+    /* Prevent text selection in menu */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 /* Show animation */
 .console-context-menu.show {
     opacity: 1;
     transform: scale(1);
+    pointer-events: auto;
+}
+
+/* Active context menu - prevents selection loss */
+.console-context-menu-active {
     pointer-events: auto;
 }
 

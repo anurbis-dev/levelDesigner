@@ -37,7 +37,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.16.1';
+    static VERSION = '3.17.0';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -46,11 +46,11 @@ export class LevelEditor {
         this.assetManager = new AssetManager();
         this.fileManager = new FileManager();
         
-        // Store user preferences manager (for backward compatibility)
+        // Store user preferences manager
         this.userPrefs = userPreferencesManager;
         
-        // ConfigManager will be initialized in init() method
-        this.configManager = null;
+        // Use ConfigManager from UserPreferencesManager if available, otherwise create new one
+        this.configManager = userPreferencesManager?.configManager || null;
         
         // Initialize UI components
         this.canvasRenderer = null;
@@ -358,14 +358,7 @@ export class LevelEditor {
             this.invalidateSelectableObjectsCacheForObjects(objectIds);
         }
 
-        // Отладка умной инвалидации
-        if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
-            Logger.cache.debug(`Smart cache invalidation (${reason}):`, {
-                objects: objectIds.size,
-                layers: layerIds.size,
-                invalidateAll
-            });
-        }
+        // Cache invalidation logged at info level
     }
 
     /**
@@ -518,11 +511,12 @@ export class LevelEditor {
             this.log('info', `🚀 Level Editor v${LevelEditor.VERSION} - Utility Architecture`);
             this.log('info', 'Initializing editor components...');
         
-        // Initialize configuration manager after Logger is available
-        this.configManager = new ConfigManager();
+        // Initialize configuration manager after Logger is available (only if not already set)
+        if (!this.configManager) {
+            this.configManager = new ConfigManager();
+        }
         
-        // Configuration is already loaded synchronously in constructor
-        // Apply configuration settings
+        // Apply configuration settings immediately after ConfigManager is ready
         this.applyConfiguration();
         
         // Get DOM elements
@@ -579,10 +573,6 @@ export class LevelEditor {
         // Apply configuration to level settings
         this.applyConfigurationToLevel();
         
-        // Apply user preferences to level settings if available (legacy support)
-        if (this.userPrefs) {
-            this.applyUserPreferencesToLevel();
-        }
         
         // Initialize MenuManager
         const menuContainer = document.getElementById('menu-container');
@@ -624,6 +614,9 @@ export class LevelEditor {
                 Logger.render.error('Failed to build spatial index:', error);
             }
         }
+
+        // Apply saved panel sizes BEFORE initializing view states to prevent overwriting
+        this.applySavedPanelSizes();
 
         // Initialize view states before render to prevent toolbar flickering
         this.eventHandlers.initializeViewStates();
@@ -679,14 +672,12 @@ export class LevelEditor {
 
                 // Save toolbar state
                 if (this.toolbar) {
-                    Logger.ui.debug('Saving toolbar state...');
                     this.toolbar.saveState();
                 }
 
                 // Save current right panel tab
                 const currentRightPanelTab = this.stateManager.get('rightPanelTab');
                 if (currentRightPanelTab) {
-                    Logger.ui.debug('Saving rightPanelTab:', currentRightPanelTab);
                     this.configManager.set('editor.view.rightPanelTab', currentRightPanelTab);
                 }
 
@@ -694,7 +685,6 @@ export class LevelEditor {
                 const currentActiveAssetTabs = this.stateManager.get('activeAssetTabs');
                 if (currentActiveAssetTabs) {
                     const tabsArray = Array.from(currentActiveAssetTabs);
-                    Logger.ui.debug('Saving activeAssetTabs:', tabsArray);
                     this.configManager.set('editor.view.activeAssetTabs', tabsArray);
                 }
 
@@ -732,7 +722,6 @@ export class LevelEditor {
 
                 // Save settings (this will save all configs including tabs and grid settings)
                 if (this.configManager) {
-                    Logger.ui.debug('Saving all settings...');
                     this.configManager.saveSettings();
                 }
 
@@ -865,17 +854,12 @@ export class LevelEditor {
      */
     applyConfiguration() {
         if (!this.configManager) {
-            this.log('warn', 'ConfigManager not initialized, skipping configuration');
+            console.warn('[CONFIG] ConfigManager not initialized, skipping configuration');
             return;
         }
         
-        this.log('info', 'Applying configuration settings...');
         
-        // Apply font scale to document
-        const fontScale = this.configManager.get('ui.fontScale');
-        if (fontScale) {
-            document.documentElement.style.fontSize = `${fontScale * 16}px`;
-        }
+        // Note: Font scale and theme are applied immediately in index.html to prevent UI flicker
         
         // Apply grid settings to StateManager
         const gridSize = this.configManager.get('grid.size');
@@ -932,7 +916,6 @@ export class LevelEditor {
             this.settingsPanel.gridSettings.syncAllGridSettingsToState();
         }
         
-        this.log('info', 'Configuration applied successfully');
 
         // Save default settings on first run to ensure they persist
         if (this.configManager) {
@@ -940,96 +923,101 @@ export class LevelEditor {
         }
     }
 
+
     /**
-     * Apply user preferences to editor settings (legacy method)
+     * Apply saved panel sizes to prevent UI flicker
      */
-    applyUserPreferences() {
+    applySavedPanelSizes() {
+        if (!this.userPrefs) return;
+
+        try {
+            // Apply panel sizes from user preferences
+            this.applyPanelSizesFromPreferences();
+
+            // Apply tab order settings to prevent UI flicker
+            this.applyTabOrderSettings();
+
+            // Update canvas after applying saved sizes
+            if (this.canvasRenderer) {
+                this.canvasRenderer.resizeCanvas();
+                this.render();
+            }
+
+        } catch (error) {
+            console.warn('[CONFIG] Failed to apply saved panel settings:', error);
+        }
+    }
+
+    /**
+     * Apply panel sizes from user preferences
+     */
+    applyPanelSizesFromPreferences() {
+        if (!this.userPrefs) return;
+
+        try {
+            // Right panel width
+            const rightPanelWidth = this.userPrefs.get('rightPanelWidth');
+            if (rightPanelWidth) {
+                const rightPanel = document.getElementById('right-panel');
+                if (rightPanel) {
+                    rightPanel.style.width = rightPanelWidth + 'px';
+                    rightPanel.style.flexShrink = '0';
+                    rightPanel.style.flexGrow = '0';
+                }
+            }
+
+            // Assets panel height
+            const assetsPanelHeight = this.userPrefs.get('assetsPanelHeight');
+            if (assetsPanelHeight) {
+                const assetsPanel = document.getElementById('assets-panel');
+                if (assetsPanel) {
+                    assetsPanel.style.height = assetsPanelHeight + 'px';
+                    assetsPanel.style.flexShrink = '0';
+                }
+            }
+
+            // Console height
+            const consoleHeight = this.userPrefs.get('consoleHeight');
+            if (consoleHeight) {
+                const consolePanel = document.getElementById('console-panel');
+                if (consolePanel) {
+                    const height = Math.max(200, Math.min(window.innerHeight * 0.9, consoleHeight));
+                    consolePanel.style.setProperty('height', height + 'px', 'important');
+                    consolePanel.style.setProperty('bottom', 'auto', 'important');
+                }
+            }
+        } catch (error) {
+            console.warn('[CONFIG] Failed to apply panel sizes from preferences:', error);
+        }
+    }
+
+    /**
+     * Apply tab order settings to prevent UI flicker
+     */
+    applyTabOrderSettings() {
         if (!this.userPrefs) return;
         
-        this.log('info', 'Applying user preferences...');
-        
-        // Apply canvas settings
-        const canvasBackgroundColor = this.userPrefs.get('canvasBackgroundColor');
-        const gridSize = this.userPrefs.get('gridSize');
-        const showGrid = this.userPrefs.get('showGrid');
-        const gridColor = this.userPrefs.get('gridColor');
-        const gridOpacity = this.userPrefs.get('gridOpacity');
-        const gridThickness = this.userPrefs.get('gridThickness');
-        const gridSubdivisions = this.userPrefs.get('gridSubdivisions');
-        const gridSubdivColor = this.userPrefs.get('gridSubdivColor');
-        const gridSubdivThickness = this.userPrefs.get('gridSubdivThickness');
-        
-        if (canvasBackgroundColor) {
-            this.settingsManager.set('canvas.backgroundColor', canvasBackgroundColor);
+        try {
+            // Apply asset tab order
+            const assetTabOrder = this.userPrefs.get('assetTabOrder');
+            if (assetTabOrder && Array.isArray(assetTabOrder)) {
+                this.stateManager.set('assetTabOrder', assetTabOrder);
+            }
+            
+            // Apply right panel tab order
+            const rightPanelTabOrder = this.userPrefs.get('rightPanelTabOrder');
+            if (rightPanelTabOrder && Array.isArray(rightPanelTabOrder)) {
+                this.stateManager.set('rightPanelTabOrder', rightPanelTabOrder);
+            }
+            
+            // Re-render panels to apply tab order
+            if (this.assetPanel) {
+                this.assetPanel.render();
+            }
+            
+        } catch (error) {
+            console.warn('[CONFIG] Failed to apply tab order settings:', error);
         }
-        
-        if (gridSize) {
-            this.settingsManager.set('canvas.gridSize', gridSize);
-        }
-        
-        if (showGrid !== undefined) {
-            this.settingsManager.set('canvas.showGrid', showGrid);
-        }
-        
-        if (gridColor) {
-            this.settingsManager.set('canvas.gridColor', gridColor);
-        }
-        
-        if (gridOpacity !== undefined) {
-            this.settingsManager.set('canvas.gridOpacity', gridOpacity);
-        }
-        
-        if (gridThickness) {
-            this.settingsManager.set('canvas.gridThickness', gridThickness);
-        }
-        
-        if (gridSubdivisions) {
-            this.settingsManager.set('canvas.gridSubdivisions', gridSubdivisions);
-        }
-        
-        if (gridSubdivColor) {
-            this.settingsManager.set('canvas.gridSubdivColor', gridSubdivColor);
-        }
-        
-        if (gridSubdivThickness) {
-            this.settingsManager.set('canvas.gridSubdivThickness', gridSubdivThickness);
-        }
-        
-        // Apply editor settings
-        const autoSave = this.userPrefs.get('autoSave');
-        const autoSaveInterval = this.userPrefs.get('autoSaveInterval');
-        
-        if (autoSave !== undefined) {
-            this.settingsManager.set('editor.autoSave', autoSave);
-        }
-        
-        if (autoSaveInterval) {
-            this.settingsManager.set('editor.autoSaveInterval', autoSaveInterval);
-        }
-        
-        // Apply UI settings
-        const theme = this.userPrefs.get('theme');
-        const fontSize = this.userPrefs.get('fontSize');
-        const compactMode = this.userPrefs.get('compactMode');
-        
-        if (theme) {
-            this.settingsManager.set('ui.theme', theme);
-        }
-        
-        if (fontSize) {
-            this.settingsManager.set('ui.fontSize', fontSize);
-        }
-        
-        if (compactMode !== undefined) {
-            this.settingsManager.set('ui.compactMode', compactMode);
-        }
-        
-        // Sync grid settings to ensure proper initialization
-        if (this.settingsPanel && this.settingsPanel.gridSettings) {
-            this.settingsPanel.gridSettings.syncAllGridSettingsToState();
-        }
-        
-        this.log('info', 'User preferences applied successfully');
     }
 
     /**
@@ -1038,7 +1026,6 @@ export class LevelEditor {
     applyConfigurationToLevel() {
         if (!this.level || !this.configManager) return;
         
-        this.log('info', 'Applying configuration to level...');
         
         // Apply canvas settings to level
         const canvasConfig = this.configManager.getCanvas();
@@ -1055,66 +1042,8 @@ export class LevelEditor {
             this.level.settings.showGrid = canvasConfig.showGrid;
         }
         
-        this.log('info', 'Configuration applied to level successfully');
     }
 
-    /**
-     * Apply user preferences to level settings (legacy method)
-     */
-    applyUserPreferencesToLevel() {
-        if (!this.userPrefs || !this.level) return;
-        
-        this.log('info', 'Applying user preferences to level...');
-        
-        // Apply canvas settings to level
-        const canvasBackgroundColor = this.userPrefs.get('canvasBackgroundColor');
-        const gridSize = this.userPrefs.get('gridSize');
-        const showGrid = this.userPrefs.get('showGrid');
-        const gridColor = this.userPrefs.get('gridColor');
-        const gridOpacity = this.userPrefs.get('gridOpacity');
-        const gridThickness = this.userPrefs.get('gridThickness');
-        const gridSubdivisions = this.userPrefs.get('gridSubdivisions');
-        const gridSubdivColor = this.userPrefs.get('gridSubdivColor');
-        const gridSubdivThickness = this.userPrefs.get('gridSubdivThickness');
-        
-        if (canvasBackgroundColor) {
-            this.level.settings.backgroundColor = canvasBackgroundColor;
-        }
-        
-        if (gridSize) {
-            this.level.settings.gridSize = gridSize;
-        }
-        
-        if (showGrid !== undefined) {
-            this.level.settings.showGrid = showGrid;
-        }
-        
-        if (gridColor) {
-            this.level.settings.gridColor = gridColor;
-        }
-        
-        if (gridOpacity !== undefined) {
-            this.level.settings.gridOpacity = gridOpacity;
-        }
-        
-        if (gridThickness) {
-            this.level.settings.gridThickness = gridThickness;
-        }
-        
-        if (gridSubdivisions) {
-            this.level.settings.gridSubdivisions = gridSubdivisions;
-        }
-        
-        if (gridSubdivColor) {
-            this.level.settings.gridSubdivColor = gridSubdivColor;
-        }
-        
-        if (gridSubdivThickness) {
-            this.level.settings.gridSubdivThickness = gridSubdivThickness;
-        }
-        
-        this.log('info', 'User preferences applied to level successfully');
-    }
 
     /**
      * Render the canvas - delegate to render operations
@@ -2640,90 +2569,6 @@ export class LevelEditor {
         }
     }
 
-    /**
-     * Process individual object for layer assignment (legacy version)
-     * @param {string} objId - Object ID to process
-     * @param {string} targetLayerId - Target layer ID
-     * @param {Set} processedGroups - Set of already processed groups
-     * @returns {Object} Result with moved flag and target object info
-     */
-    processObjectForLayerAssignment(objId, targetLayerId, processedGroups) {
-        const targetObj = this.findObjectById(objId);
-        if (!targetObj) {
-            return { moved: false };
-        }
-
-        // Check if this object is already in the target layer
-        const currentEffectiveLayerId = this.renderOperations ?
-            this.renderOperations.getEffectiveLayerId(targetObj) :
-            (targetObj.layerId || this.level.getMainLayerId());
-        if (currentEffectiveLayerId === targetLayerId) {
-            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
-                Logger.layer.debug(`Object already in target layer: ${objId}`);
-            }
-            return { moved: false };
-        }
-
-        // Find the top-level object (could be a group containing this object)
-        const topLevelObj = this.findTopLevelObject(objId);
-        if (!topLevelObj) {
-            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
-                Logger.layer.debug(`Could not find top-level object for: ${objId}`);
-            }
-            return { moved: false };
-        }
-
-        // If we've already processed this top-level object, skip it
-        if (processedGroups.has(topLevelObj.id)) {
-            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
-                Logger.layer.debug(`Top-level object already processed: ${topLevelObj.id}`);
-            }
-            return { moved: false };
-        }
-
-        processedGroups.add(topLevelObj.id);
-
-        // Get the old effective layer ID for notifications
-        const oldEffectiveLayerId = this.renderOperations ?
-            this.renderOperations.getEffectiveLayerId(topLevelObj) :
-            (topLevelObj.layerId || this.level.getMainLayerId());
-
-        // Change layerId of the top-level object
-        const oldLayerId = topLevelObj.layerId;
-        topLevelObj.layerId = targetLayerId;
-
-        // FORCED INHERITANCE: Propagate layerId to all children if this is a group
-        if (topLevelObj.type === 'group' && topLevelObj.children) {
-            topLevelObj.propagateLayerIdToChildren();
-            
-            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
-                Logger.layer.debug(`Propagated layerId ${targetLayerId} to all children of group ${topLevelObj.id}`);
-            }
-        }
-
-        if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
-            Logger.layer.debug(`Changed layerId for top-level object ${topLevelObj.id} from ${oldLayerId} to ${targetLayerId}`);
-        }
-
-        // Notify StateManager about object property change
-        this.stateManager.notifyListeners('objectPropertyChanged', topLevelObj, {
-            property: 'layerId',
-            oldValue: oldLayerId,
-            newValue: targetLayerId
-        });
-
-        // Notify about layer objects count changes (including nested objects)
-        if (oldEffectiveLayerId && oldEffectiveLayerId !== targetLayerId) {
-            // Recalculate counts including nested objects
-            const oldCount = this.level.getLayerObjectsCount(oldEffectiveLayerId);
-            const newCount = this.level.getLayerObjectsCount(targetLayerId);
-            
-            this.level.notifyLayerObjectsCountChange(oldEffectiveLayerId, oldCount, oldCount);
-            this.level.notifyLayerObjectsCountChange(targetLayerId, newCount, newCount);
-        }
-
-        return { moved: true, targetObj: topLevelObj };
-    }
 
     /**
      * Check if objects can be moved to another layer

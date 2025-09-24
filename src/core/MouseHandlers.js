@@ -31,7 +31,6 @@ export class MouseHandlers extends BaseModule {
         }
 
         if (e.button === 2) { // Right mouse button
-            Logger.mouse.debug('Right mouse down at:', e.clientX, e.clientY);
             this.editor.stateManager.update({
                 'mouse.isRightDown': true,
                 'mouse.lastX': e.clientX,
@@ -106,7 +105,6 @@ export class MouseHandlers extends BaseModule {
 
                 // If moved more than 3 pixels, consider this panning (reduced threshold)
                 if (distanceFromStart > 3 && !mouse.wasPanning) {
-                    Logger.mouse.debug('Panning detected! Distance:', distanceFromStart);
                     shouldUpdatePanningFlag = true;
                 }
             }
@@ -121,7 +119,6 @@ export class MouseHandlers extends BaseModule {
 
             if (shouldUpdatePanningFlag) {
                 stateUpdate['mouse.wasPanning'] = true;
-                Logger.mouse.debug('Set wasPanning = true');
             }
 
             this.editor.stateManager.update(stateUpdate);

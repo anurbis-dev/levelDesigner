@@ -1,155 +1,142 @@
 /**
  * User Preferences Manager
- * Handles saving and loading user preferences to/from localStorage
+ * Provides unified access to user preferences through ConfigManager
  */
 
 import { Logger } from '../utils/Logger.js';
+import { ConfigManager } from './ConfigManager.js';
+
 export class UserPreferencesManager {
     constructor() {
-        this.prefsKey = 'levelEditor_userPrefs';
-        this.defaultPrefs = {
-            // Panel sizes
-            rightPanelWidth: 320,
-            consoleHeight: 300,
-            assetsPanelHeight: 256,
-            
-            // Tab order
-            rightPanelTabOrder: ['details', 'level', 'outliner'],
-            assetTabOrder: [],
-            
-            // Console settings
-            consoleVisible: false,
-            consoleMaxLines: 1000,
-            
-            // Canvas settings
-            canvasBackgroundColor: '#4B5563',
-            gridSize: 32,
-            showGrid: true,
-            gridColor: '#ffffff',
-            gridOpacity: 0.1,
-            gridThickness: 1,
-            gridSubdivisions: 4,
-            gridSubdivColor: '#666666',
-            gridSubdivThickness: 0.5,
-            
-            // Editor settings
-            autoSave: true,
-            autoSaveInterval: 30000, // 30 seconds
-            
-            // UI settings
-            theme: 'dark',
-            fontSize: 'sm',
-            fontScale: 1.0,
-            compactMode: false
+        this.configManager = new ConfigManager();
+
+
+        // Map of preference paths to config paths
+        this.pathMapping = {
+            // UI preferences
+            'rightPanelWidth': 'ui.rightPanelWidth',
+            'consoleHeight': 'ui.consoleHeight',
+            'assetsPanelHeight': 'ui.assetsPanelHeight',
+            'rightPanelTabOrder': 'panels.rightPanelTabOrder',
+            'assetTabOrder': 'panels.assetTabOrder',
+            'consoleVisible': 'ui.consoleVisible',
+            'consoleMaxLines': 'ui.consoleMaxLines',
+            'toolbarVisible': 'ui.toolbarVisible',
+            'assetsPanelVisible': 'ui.assetsPanelVisible',
+            'rightPanelVisible': 'ui.rightPanelVisible',
+            'theme': 'ui.theme',
+            'fontSize': 'ui.fontSize',
+            'fontScale': 'ui.fontScale',
+            'compactMode': 'ui.compactMode',
+
+            // Canvas/Grid preferences
+            'canvasBackgroundColor': 'canvas.backgroundColor',
+            'gridSize': 'canvas.gridSize',
+            'showGrid': 'canvas.showGrid',
+            'gridColor': 'canvas.gridColor',
+            'gridOpacity': 'canvas.gridOpacity',
+            'gridThickness': 'canvas.gridThickness',
+            'gridSubdivisions': 'canvas.gridSubdivisions',
+            'gridSubdivColor': 'canvas.gridSubdivColor',
+            'gridSubdivThickness': 'canvas.gridSubdivThickness',
+            'snapToGrid': 'canvas.snapToGrid',
+
+            // Editor preferences
+            'autoSave': 'editor.autoSave',
+            'autoSaveInterval': 'editor.autoSaveInterval'
         };
-        
-        this.preferences = this.loadPreferences();
-    }
-
-    /**
-     * Load preferences from localStorage
-     */
-    loadPreferences() {
-        try {
-            const stored = localStorage.getItem(this.prefsKey);
-            if (stored) {
-                const parsed = JSON.parse(stored);
-                // Merge with defaults to ensure all properties exist
-                return { ...this.defaultPrefs, ...parsed };
-            }
-        } catch (error) {
-            Logger.preferences.warn('Failed to load user preferences:', error);
-        }
-        return { ...this.defaultPrefs };
-    }
-
-    /**
-     * Save preferences to localStorage
-     */
-    savePreferences() {
-        try {
-            localStorage.setItem(this.prefsKey, JSON.stringify(this.preferences));
-            return true;
-        } catch (error) {
-            Logger.preferences.error('Failed to save user preferences:', error);
-            return false;
-        }
     }
 
     /**
      * Get a preference value
      */
     get(key) {
-        return this.preferences[key];
+        const configPath = this.pathMapping[key];
+        if (configPath) {
+            return this.configManager.get(configPath);
+        }
+        Logger.preferences.warn(`Unknown preference key: ${key}`);
+        return undefined;
     }
 
     /**
      * Set a preference value and save
      */
     set(key, value) {
-        this.preferences[key] = value;
-        this.savePreferences();
+        const configPath = this.pathMapping[key];
+        if (configPath) {
+            this.configManager.set(configPath, value);
+            return true;
+        }
+        Logger.preferences.warn(`Unknown preference key: ${key}`);
+        return false;
     }
 
     /**
      * Update multiple preferences at once
      */
     update(updates) {
-        Object.assign(this.preferences, updates);
-        this.savePreferences();
+        const configUpdates = {};
+
+        for (const [key, value] of Object.entries(updates)) {
+            const configPath = this.pathMapping[key];
+            if (configPath) {
+                this.configManager.set(configPath, value);
+            } else {
+                Logger.preferences.warn(`Unknown preference key: ${key}`);
+            }
+        }
     }
 
     /**
      * Reset preferences to defaults
      */
     reset() {
-        this.preferences = { ...this.defaultPrefs };
-        this.savePreferences();
+        this.configManager.reset();
     }
 
     /**
      * Export preferences as JSON string
      */
     export() {
-        return JSON.stringify(this.preferences, null, 2);
+        return this.configManager.export();
     }
 
     /**
      * Import preferences from JSON string
      */
     import(jsonString) {
-        try {
-            const imported = JSON.parse(jsonString);
-            this.preferences = { ...this.defaultPrefs, ...imported };
-            this.savePreferences();
-            return true;
-        } catch (error) {
-            Logger.preferences.error('Failed to import preferences:', error);
-            return false;
-        }
+        return this.configManager.import(jsonString);
     }
 
     /**
      * Get all preferences
      */
     getAll() {
-        return { ...this.preferences };
+        const allPrefs = {};
+        for (const [prefKey, configPath] of Object.entries(this.pathMapping)) {
+            allPrefs[prefKey] = this.configManager.get(configPath);
+        }
+        return allPrefs;
     }
 
     /**
      * Check if a preference exists
      */
     has(key) {
-        return key in this.preferences;
+        return key in this.pathMapping;
     }
 
     /**
      * Remove a preference (reset to default)
      */
     remove(key) {
-        if (key in this.defaultPrefs) {
-            this.preferences[key] = this.defaultPrefs[key];
-            this.savePreferences();
+        const configPath = this.pathMapping[key];
+        if (configPath) {
+            this.configManager.remove(configPath);
+            return true;
         }
+        return false;
     }
+
 }

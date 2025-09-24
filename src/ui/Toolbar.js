@@ -547,13 +547,16 @@ export class Toolbar {
             collapsedSections[sectionName] = isCollapsed;
         });
 
-        Logger.ui.debug('Saving toolbar buttonStates:', buttonStates);
-        Logger.ui.debug('Saving toolbar collapsedSections:', collapsedSections);
+        // Toolbar state saved
 
         // Save to config manager
         this.levelEditor.configManager.set('toolbar.buttonStates', buttonStates);
         this.levelEditor.configManager.set('toolbar.collapsedSections', collapsedSections);
-        this.levelEditor.configManager.set('editor.view.toolbar', this.isVisible);
+
+        // Save toolbar visibility to user preferences
+        if (this.levelEditor.userPrefs) {
+            this.levelEditor.userPrefs.set('toolbarVisible', this.isVisible);
+        }
     }
 
     /**
@@ -564,7 +567,6 @@ export class Toolbar {
 
         // Load button states from config (for compatibility)
         const buttonStates = this.levelEditor.configManager.get('toolbar.buttonStates') || {};
-        Logger.ui.debug('Loading toolbar buttonStates:', buttonStates);
         const buttons = this.container.querySelectorAll('button[data-action]');
 
         buttons.forEach(button => {
@@ -602,7 +604,7 @@ export class Toolbar {
         collapsedSections[sectionName] = isCollapsed;
         this.levelEditor.configManager.set('toolbar.collapsedSections', collapsedSections);
         
-        Logger.ui.debug(`Toolbar section ${sectionName} collapsed state saved: ${isCollapsed}`);
+        // Section collapsed state saved
     }
 
     /**
@@ -612,7 +614,6 @@ export class Toolbar {
         if (!this.levelEditor || !this.levelEditor.configManager) return;
 
         const collapsedSections = this.levelEditor.configManager.get('toolbar.collapsedSections') || {};
-        Logger.ui.debug('Loading toolbar collapsedSections:', collapsedSections);
         const groups = this.container.querySelectorAll('[data-collapsed]');
 
         groups.forEach(titleSpan => {
@@ -642,7 +643,7 @@ export class Toolbar {
         this.levelEditor.configManager.set('toolbar.display.showIcons', this.showIcons);
         this.levelEditor.configManager.set('toolbar.display.showText', this.showText);
         
-        Logger.ui.debug(`Toolbar display state saved: icons=${this.showIcons}, text=${this.showText}`);
+        // Display state saved
     }
 
     /**
@@ -664,7 +665,7 @@ export class Toolbar {
         // Apply the loaded settings
         this.updateButtonDisplay();
 
-        Logger.ui.debug(`Toolbar display state loaded: icons=${this.showIcons}, text=${this.showText}`);
+        // Display state loaded
     }
 
     /**
@@ -673,8 +674,9 @@ export class Toolbar {
     loadStateBeforeRender() {
         if (!this.levelEditor || !this.levelEditor.configManager) return;
 
-        // Load visibility
-        const visible = this.levelEditor.configManager.get('editor.view.toolbar');
+        // Load visibility from user preferences (fallback to configManager)
+        const visible = this.levelEditor.userPrefs?.get('toolbarVisible') ??
+                       this.levelEditor.configManager.get('editor.view.toolbar') ?? true;
         if (typeof visible === 'boolean') {
             this.isVisible = visible;
         }
