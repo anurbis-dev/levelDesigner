@@ -106,7 +106,7 @@ export class ConfigManager {
             subdivisions: configs.canvas?.gridSubdivisions ?? 4,
             subdivColor: configs.canvas?.gridSubdivColor ?? '#666666',
             subdivThickness: configs.canvas?.gridSubdivThickness ?? 0.5,
-            snapTolerance: 40
+            snapTolerance: 80
         };
 
         configs.camera = {
@@ -207,7 +207,7 @@ export class ConfigManager {
             subdivisions: configs.canvas?.gridSubdivisions ?? 4,
             subdivColor: configs.canvas?.gridSubdivColor ?? '#666666',
             subdivThickness: configs.canvas?.gridSubdivThickness ?? 0.5,
-            snapTolerance: 40
+            snapTolerance: 80
         };
 
         configs.camera = {

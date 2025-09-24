@@ -161,7 +161,7 @@ export class DuplicateOperations extends BaseModule {
             const currentAnchorY = worldPos.y;
             
             const gridSize = SnapUtils.getGridSize(this.editor.stateManager, this.editor.level);
-            const snapTolerancePercent = this.editor.userPrefs?.get('snapTolerance') || 40;
+            const snapTolerancePercent = this.editor.userPrefs?.get('snapTolerance') || 80;
             const tolerance = gridSize * (snapTolerancePercent / 100);
             
             // Find nearest grid point for cursor
@@ -226,7 +226,7 @@ export class DuplicateOperations extends BaseModule {
             const currentAnchorY = worldPos.y;
             
             const gridSize = SnapUtils.getGridSize(this.editor.stateManager, this.editor.level);
-            const snapTolerancePercent = this.editor.userPrefs?.get('snapTolerance') || 40;
+            const snapTolerancePercent = this.editor.userPrefs?.get('snapTolerance') || 80;
             const tolerance = gridSize * (snapTolerancePercent / 100);
             
             // Find nearest grid point for cursor

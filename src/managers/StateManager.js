@@ -77,7 +77,7 @@ export class StateManager {
                 gridSubdivisions: 4,
                 gridSubdivColor: '#666666',
                 gridSubdivThickness: 0.5,
-                snapTolerance: 40
+                snapTolerance: 80
             }
         };
         

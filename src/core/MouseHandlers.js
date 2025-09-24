@@ -646,7 +646,7 @@ export class MouseHandlers extends BaseModule {
             const currentAnchorY = worldPos.y;
             
             const gridSize = SnapUtils.getGridSize(this.editor.stateManager, this.editor.level);
-            const snapTolerancePercent = this.editor.userPrefs?.get('snapTolerance') || 40;
+            const snapTolerancePercent = this.editor.userPrefs?.get('snapTolerance') || 80;
             const tolerance = gridSize * (snapTolerancePercent / 100);
             
             // Debug: log cursor position and grid info
