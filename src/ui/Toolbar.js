@@ -22,11 +22,19 @@ export class Toolbar {
         this.showText = true;
         this.contextMenu = null;
         
+        // Load saved state before rendering
+        this.loadStateBeforeRender();
+        
         this.setupEventListeners();
         this.render();
         // Setup scrolling events after render
         this.setupScrollingEvents();
         this.setupContextMenu();
+        
+        // Load remaining state after render (button states, collapsed sections)
+        setTimeout(() => {
+            this.loadState();
+        }, 50);
     }
 
     /**
@@ -92,6 +100,9 @@ export class Toolbar {
         toolbarContent.appendChild(this.createButtonGroup('View', [
             { id: 'toggle-grid', label: 'Grid', icon: '⊞', action: 'toggleGrid', toggle: true },
             { id: 'toggle-snap', label: 'Snap', icon: '🧲', action: 'toggleSnapToGrid', toggle: true },
+            { id: 'toggle-parallax', label: 'Parallax', icon: '🌊', action: 'toggleParallax', toggle: true },
+            { id: 'toggle-boundaries', label: 'Boundaries', icon: '📐', action: 'toggleObjectBoundaries', toggle: true },
+            { id: 'toggle-collisions', label: 'Collisions', icon: '💥', action: 'toggleObjectCollisions', toggle: true },
             { id: 'focus-selection', label: 'Focus', icon: '🎯', action: 'focusSelection' },
             { id: 'focus-all', label: 'Focus All', icon: '🔍', action: 'focusAll' }
         ]));
@@ -110,7 +121,7 @@ export class Toolbar {
         // Setup scrolling events for the new toolbar content
         this.setupScrollingEvents();
         
-        // Apply current display settings
+        // Apply current display settings immediately
         this.updateButtonDisplay();
     }
 
@@ -186,6 +197,12 @@ export class Toolbar {
      * Setup button event listeners
      */
     setupButtonEvents() {
+        // Remove existing event listeners first
+        const existingButtons = this.container.querySelectorAll('button[data-action]');
+        existingButtons.forEach(button => {
+            button.replaceWith(button.cloneNode(true));
+        });
+        
         const buttons = this.container.querySelectorAll('button[data-action]');
         
         buttons.forEach(button => {
@@ -202,7 +219,7 @@ export class Toolbar {
      */
     handleAction(action) {
         try {
-            Logger.log(`Toolbar action: ${action}`);
+            Logger.ui.info(`Toolbar action: ${action}`);
             
             // Handle toggle actions
             if (action.startsWith('toggle')) {
@@ -228,28 +245,28 @@ export class Toolbar {
                     this.levelEditor.redo();
                     break;
                 case 'duplicate':
-                    this.levelEditor.duplicateSelected();
+                    this.levelEditor.duplicateSelectedObjects();
                     break;
                 case 'deleteSelected':
-                    this.levelEditor.deleteSelected();
+                    this.levelEditor.deleteSelectedObjects();
                     break;
                 case 'focusSelection':
-                    this.levelEditor.focusSelection();
+                    this.levelEditor.focusOnSelection();
                     break;
                 case 'focusAll':
-                    this.levelEditor.focusAll();
+                    this.levelEditor.focusOnAll();
                     break;
                 case 'groupSelected':
-                    this.levelEditor.groupSelected();
+                    this.levelEditor.groupSelectedObjects();
                     break;
                 case 'ungroupSelected':
-                    this.levelEditor.ungroupSelected();
+                    this.levelEditor.ungroupSelectedObjects();
                     break;
                 default:
-                    Logger.warn(`Unknown toolbar action: ${action}`);
+                    Logger.ui.warn(`Unknown toolbar action: ${action}`);
             }
         } catch (error) {
-            Logger.error(`Error handling toolbar action ${action}:`, error);
+            Logger.ui.error(`Error handling toolbar action ${action}:`, error);
         }
     }
 
@@ -260,23 +277,90 @@ export class Toolbar {
         const button = this.container.querySelector(`[data-action="${action}"]`);
         if (!button) return;
 
+        // Update button state immediately
+        this.toggleButtonState(button);
+
+        // Get the option name for the method call
+        let option;
         switch (action) {
             case 'toggleGrid':
-                this.levelEditor.toggleViewOption('grid');
+                option = 'grid';
                 break;
             case 'toggleSnapToGrid':
-                this.levelEditor.toggleViewOption('snapToGrid');
+                option = 'snapToGrid';
                 break;
+            case 'toggleParallax':
+                option = 'parallax';
+                break;
+            case 'toggleObjectBoundaries':
+                option = 'objectBoundaries';
+                break;
+            case 'toggleObjectCollisions':
+                option = 'objectCollisions';
+                break;
+            default:
+                return;
         }
 
-        // Update button state after a short delay to allow state to update
-        setTimeout(() => {
-            this.updateToggleState(button, action);
-        }, 50);
+        // Apply the view option (StateManager already updated by toggleButtonState)
+        requestAnimationFrame(() => {
+            const enabled = this.stateManager.get(`view.${option}`);
+            this.levelEditor.eventHandlers.applyViewOption(option, enabled);
+        });
     }
 
     /**
-     * Update toggle button state
+     * Toggle button state immediately
+     */
+    toggleButtonState(button) {
+        if (!button.classList.contains('toggle-button')) return;
+
+        // Get the action to determine the state key
+        const action = button.getAttribute('data-action');
+        let stateKey;
+        
+        switch (action) {
+            case 'toggleGrid':
+                stateKey = 'view.grid';
+                break;
+            case 'toggleSnapToGrid':
+                stateKey = 'view.snapToGrid';
+                break;
+            case 'toggleParallax':
+                stateKey = 'view.parallax';
+                break;
+            case 'toggleObjectBoundaries':
+                stateKey = 'view.objectBoundaries';
+                break;
+            case 'toggleObjectCollisions':
+                stateKey = 'view.objectCollisions';
+                break;
+            default:
+                return;
+        }
+
+        // Get current state from StateManager and toggle it
+        const currentState = this.stateManager.get(stateKey) || false;
+        const newState = !currentState;
+        
+        // Update StateManager immediately
+        this.stateManager.set(stateKey, newState);
+        
+        // Update visual state based on new state
+        if (newState) {
+            button.classList.add('bg-blue-600', 'hover:bg-blue-700');
+            button.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+        } else {
+            button.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+            button.classList.add('bg-gray-700', 'hover:bg-gray-600');
+        }
+
+        // Save state after change
+        this.saveState();
+    }
+
+    /**
+     * Update toggle button state based on StateManager
      */
     updateToggleState(button, action) {
         if (!button.classList.contains('toggle-button')) return;
@@ -289,6 +373,15 @@ export class Toolbar {
                 break;
             case 'toggleSnapToGrid':
                 isActive = this.stateManager.get('view.snapToGrid') || false;
+                break;
+            case 'toggleParallax':
+                isActive = this.stateManager.get('view.parallax') || false;
+                break;
+            case 'toggleObjectBoundaries':
+                isActive = this.stateManager.get('view.objectBoundaries') || false;
+                break;
+            case 'toggleObjectCollisions':
+                isActive = this.stateManager.get('view.objectCollisions') || false;
                 break;
         }
 
@@ -306,7 +399,12 @@ export class Toolbar {
      */
     setVisible(visible) {
         this.isVisible = visible;
-        this.render();
+        if (visible) {
+            this.container.classList.remove('hidden');
+        } else {
+            this.container.classList.add('hidden');
+        }
+        this.saveState();
     }
 
     /**
@@ -314,6 +412,160 @@ export class Toolbar {
      */
     getVisible() {
         return this.isVisible;
+    }
+
+    /**
+     * Save toolbar state to configuration
+     */
+    saveState() {
+        if (!this.levelEditor || !this.levelEditor.configManager) return;
+
+        const buttonStates = {};
+        const buttons = this.container.querySelectorAll('button[data-action]');
+        
+        buttons.forEach(button => {
+            const action = button.getAttribute('data-action');
+            const isActive = button.classList.contains('bg-blue-600');
+            buttonStates[action] = isActive;
+        });
+
+        // Save to config manager
+        this.levelEditor.configManager.set('toolbar.buttonStates', buttonStates);
+        this.levelEditor.configManager.set('toolbar.visible', this.isVisible);
+        
+        Logger.ui.debug('Toolbar state saved');
+    }
+
+    /**
+     * Load toolbar state from configuration
+     */
+    loadState() {
+        if (!this.levelEditor || !this.levelEditor.configManager) return;
+
+        // Load button states
+        const buttonStates = this.levelEditor.configManager.get('toolbar.buttonStates') || {};
+        const buttons = this.container.querySelectorAll('button[data-action]');
+        
+        buttons.forEach(button => {
+            const action = button.getAttribute('data-action');
+            const isActive = buttonStates[action];
+            
+            if (typeof isActive === 'boolean') {
+                if (isActive) {
+                    button.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                    button.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+                } else {
+                    button.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                    button.classList.add('bg-gray-700', 'hover:bg-gray-600');
+                }
+            }
+        });
+
+        // Load collapsed states
+        this.loadCollapsedStates();
+
+        Logger.ui.debug('Toolbar state loaded');
+    }
+
+    /**
+     * Save collapsed state of a section
+     */
+    saveCollapsedState(sectionName, isCollapsed) {
+        if (!this.levelEditor || !this.levelEditor.configManager) return;
+
+        const collapsedSections = this.levelEditor.configManager.get('toolbar.collapsedSections') || {};
+        collapsedSections[sectionName] = isCollapsed;
+        this.levelEditor.configManager.set('toolbar.collapsedSections', collapsedSections);
+        
+        Logger.ui.debug(`Toolbar section ${sectionName} collapsed state saved: ${isCollapsed}`);
+    }
+
+    /**
+     * Load collapsed states of all sections
+     */
+    loadCollapsedStates() {
+        if (!this.levelEditor || !this.levelEditor.configManager) return;
+
+        const collapsedSections = this.levelEditor.configManager.get('toolbar.collapsedSections') || {};
+        const groups = this.container.querySelectorAll('[data-collapsed]');
+        
+        groups.forEach(titleSpan => {
+            const sectionName = titleSpan.textContent.replace('▼', '').trim();
+            const isCollapsed = collapsedSections[sectionName];
+            
+            if (typeof isCollapsed === 'boolean' && isCollapsed) {
+                const group = titleSpan.parentElement;
+                const buttonsContainer = group.querySelector('[data-buttons-container="true"]');
+                
+                if (buttonsContainer) {
+                    buttonsContainer.style.display = 'none';
+                    titleSpan.setAttribute('data-collapsed', 'true');
+                    titleSpan.textContent = '▼ ' + sectionName;
+                }
+            }
+        });
+
+        Logger.ui.debug('Toolbar collapsed states loaded');
+    }
+
+    /**
+     * Save display state (icons and text visibility)
+     */
+    saveDisplayState() {
+        if (!this.levelEditor || !this.levelEditor.configManager) return;
+
+        this.levelEditor.configManager.set('toolbar.display.showIcons', this.showIcons);
+        this.levelEditor.configManager.set('toolbar.display.showText', this.showText);
+        
+        Logger.ui.debug(`Toolbar display state saved: icons=${this.showIcons}, text=${this.showText}`);
+    }
+
+    /**
+     * Load display state (icons and text visibility)
+     */
+    loadDisplayState() {
+        if (!this.levelEditor || !this.levelEditor.configManager) return;
+
+        const showIcons = this.levelEditor.configManager.get('toolbar.display.showIcons');
+        const showText = this.levelEditor.configManager.get('toolbar.display.showText');
+
+        if (typeof showIcons === 'boolean') {
+            this.showIcons = showIcons;
+        }
+        if (typeof showText === 'boolean') {
+            this.showText = showText;
+        }
+
+        // Apply the loaded settings
+        this.updateButtonDisplay();
+
+        Logger.ui.debug(`Toolbar display state loaded: icons=${this.showIcons}, text=${this.showText}`);
+    }
+
+    /**
+     * Load state before rendering (only settings that affect initial render)
+     */
+    loadStateBeforeRender() {
+        if (!this.levelEditor || !this.levelEditor.configManager) return;
+
+        // Load visibility
+        const visible = this.levelEditor.configManager.get('toolbar.visible');
+        if (typeof visible === 'boolean') {
+            this.isVisible = visible;
+        }
+
+        // Load display settings
+        const showIcons = this.levelEditor.configManager.get('toolbar.display.showIcons');
+        const showText = this.levelEditor.configManager.get('toolbar.display.showText');
+
+        if (typeof showIcons === 'boolean') {
+            this.showIcons = showIcons;
+        }
+        if (typeof showText === 'boolean') {
+            this.showText = showText;
+        }
+
+        Logger.ui.debug('Toolbar pre-render state loaded');
     }
 
     /**
@@ -431,18 +683,22 @@ export class Toolbar {
     toggleGroupCollapse(titleSpan, group) {
         const isCollapsed = titleSpan.getAttribute('data-collapsed') === 'true';
         const buttonsContainer = group.querySelector('[data-buttons-container="true"]');
+        const sectionName = titleSpan.textContent.replace('▼', '').trim();
         
         if (isCollapsed) {
             // Expand group
             buttonsContainer.style.display = 'flex';
             titleSpan.setAttribute('data-collapsed', 'false');
-            titleSpan.textContent = titleSpan.textContent.replace('▼', '').trim();
+            titleSpan.textContent = sectionName;
         } else {
             // Collapse group
             buttonsContainer.style.display = 'none';
             titleSpan.setAttribute('data-collapsed', 'true');
-            titleSpan.textContent = '▼ ' + titleSpan.textContent;
+            titleSpan.textContent = '▼ ' + sectionName;
         }
+
+        // Save collapsed state
+        this.saveCollapsedState(sectionName, !isCollapsed);
         
         Logger.debug(`Toolbar group ${isCollapsed ? 'expanded' : 'collapsed'}`);
     }
@@ -492,6 +748,7 @@ export class Toolbar {
     toggleIcons() {
         this.showIcons = !this.showIcons;
         this.updateButtonDisplay();
+        this.saveDisplayState();
         Logger.debug(`Toolbar icons ${this.showIcons ? 'shown' : 'hidden'}`);
     }
 
@@ -501,6 +758,7 @@ export class Toolbar {
     toggleText() {
         this.showText = !this.showText;
         this.updateButtonDisplay();
+        this.saveDisplayState();
         Logger.debug(`Toolbar text ${this.showText ? 'shown' : 'hidden'}`);
     }
 

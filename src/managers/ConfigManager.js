@@ -169,6 +169,47 @@ export class ConfigManager {
                 assetTabOrder: []
             },
 
+            // View settings (display options)
+            view: {
+                grid: true,
+                snapToGrid: false,
+                parallax: false,
+                objectBoundaries: false,
+                objectCollisions: false
+            },
+
+            // Toolbar settings
+            toolbar: {
+                visible: true,
+                position: 'top', // 'top', 'bottom'
+                buttonGroups: {
+                    file: true,
+                    edit: true,
+                    view: true,
+                    group: true
+                },
+                buttonStates: {
+                    // Individual button states will be saved here
+                    'toggle-grid': false,
+                    'toggle-snap': false,
+                    'toggle-parallax': false,
+                    'toggle-boundaries': false,
+                    'toggle-collisions': false
+                },
+                collapsedSections: {
+                    // Collapsed sections will be saved here
+                    'File': false,
+                    'Edit': false,
+                    'View': false,
+                    'Group': false
+                },
+                display: {
+                    // Display settings
+                    showIcons: true,
+                    showText: true
+                }
+            },
+
             // Keyboard shortcuts
             shortcuts: {
                 duplicate: 'Shift+D',
@@ -192,7 +233,7 @@ export class ConfigManager {
      */
     loadUserConfigsFromStorage() {
         const configs = {};
-        const configNames = ['editor', 'ui', 'canvas', 'panels', 'camera', 'selection', 'assets', 'performance', 'shortcuts'];
+        const configNames = ['editor', 'ui', 'canvas', 'panels', 'camera', 'selection', 'assets', 'performance', 'shortcuts', 'view', 'toolbar'];
         
         // First, try to load from UserPreferencesManager (legacy)
         const legacyPrefs = this.loadLegacyUserPreferences();

@@ -113,7 +113,7 @@ export const MENU_CONFIG = {
                 },
                 {
                     id: 'toggle-object-boundaries',
-                    label: 'Object Boundaries',
+                    label: 'Boundaries',
                     type: 'toggle',
                     stateKey: 'view.objectBoundaries',
                     action: 'toggleViewOption',
@@ -121,7 +121,7 @@ export const MENU_CONFIG = {
                 },
                 {
                     id: 'toggle-object-collisions',
-                    label: 'Object Collisions',
+                    label: 'Collisions',
                     type: 'toggle',
                     stateKey: 'view.objectCollisions',
                     action: 'toggleViewOption',

@@ -37,7 +37,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.13.2';
+    static VERSION = '3.14.0';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -566,13 +566,15 @@ export class LevelEditor {
         this.outlinerPanel = new OutlinerPanel(outlinerPanel, this.stateManager, this);
         this.layersPanel = new LayersPanel(layersPanel, this.stateManager, this);
         this.settingsPanel = new SettingsPanel(document.body, this.configManager);
-        this.toolbar = new Toolbar(toolbarContainer, this.stateManager, this);
         
         // Initial render of asset panel
         this.assetPanel.render();
         
         // Create new level
         this.level = this.fileManager.createNewLevel();
+        
+        // Initialize toolbar after level is created
+        this.toolbar = new Toolbar(toolbarContainer, this.stateManager, this);
         
         // Apply configuration to level settings
         this.applyConfigurationToLevel();
