@@ -13,7 +13,7 @@ Level Editor использует **централизованную систе�
 ```javascript
 // src/core/LevelEditor.js
 export class LevelEditor {
-    static VERSION = '2.5.0'; // ← ЕДИНСТВЕННЫЙ ИСТОЧНИК
+    static VERSION = '3.15.0'; // ← ЕДИНСТВЕННЫЙ ИСТОЧНИК
 }
 ```
 

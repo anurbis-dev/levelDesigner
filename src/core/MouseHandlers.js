@@ -24,9 +24,9 @@ export class MouseHandlers extends BaseModule {
         // Ignore middle mouse button if clicked on panels (handled by ScrollUtils)
         if (e.button === 1) { // Middle mouse button
             const target = e.target;
-            // Check if click is on right panel or its contents
-            if (target.closest('#right-panel')) {
-                return; // Let ScrollUtils handle this
+            // Check if click is on right panel or toolbar (let respective handlers handle this)
+            if (target.closest('#right-panel') || target.closest('#toolbar-container')) {
+                return; // Let ScrollUtils or Toolbar handle this
             }
         }
 
@@ -182,8 +182,8 @@ export class MouseHandlers extends BaseModule {
         // Skip processing middle mouse button if event is from panels
         if (e.button === 1) { // Middle mouse button
             const target = e.target;
-            if (target.closest('#right-panel')) {
-                return; // Let ScrollUtils handle this
+            if (target.closest('#right-panel') || target.closest('#toolbar-container')) {
+                return; // Let ScrollUtils or Toolbar handle this
             }
         }
 

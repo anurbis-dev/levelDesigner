@@ -143,9 +143,6 @@ export class Toolbar {
         // Store reference to toolbar content for scrolling
         this.toolbarContent = toolbarContent;
         
-        // Setup scrolling events for the new toolbar content
-        this.setupScrollingEvents();
-        
         // Apply current display settings immediately
         this.updateButtonDisplay();
 
@@ -243,7 +240,7 @@ export class Toolbar {
             button.addEventListener('click', (e) => {
                 e.preventDefault();
                 // Don't handle clicks on disabled buttons
-                if (button.disabled) return;
+                if (button.style.pointerEvents === 'none') return;
                 const action = button.getAttribute('data-action');
                 this.handleAction(action);
             });
@@ -491,11 +488,11 @@ export class Toolbar {
         if (available) {
             button.classList.remove('opacity-50', 'cursor-not-allowed');
             button.classList.add('cursor-pointer');
-            button.disabled = false;
+            button.style.pointerEvents = 'auto';
         } else {
             button.classList.add('opacity-50', 'cursor-not-allowed');
             button.classList.remove('cursor-pointer');
-            button.disabled = true;
+            button.style.pointerEvents = 'none';
         }
     }
 
@@ -590,6 +587,9 @@ export class Toolbar {
 
         // Sync with current StateManager state (this will override config states)
         this.updateToggleStates();
+
+        // Update command availability to set pointer events correctly
+        this.updateCommandAvailability();
     }
 
     /**
@@ -707,12 +707,13 @@ export class Toolbar {
      * Setup scrolling event listeners for middle mouse button
      */
     setupScrollingEvents() {
-        if (!this.toolbarContent) return;
+        if (!this.container || !this.toolbarContent) return;
 
-        // Middle mouse button down - start scrolling
-        this.toolbarContent.addEventListener('mousedown', (e) => {
+        // Middle mouse button down - start scrolling (on entire toolbar container)
+        this.container.addEventListener('mousedown', (e) => {
             if (e.button === 1) { // Middle mouse button
                 e.preventDefault();
+                e.stopPropagation(); // Prevent event bubbling to avoid conflicts
                 this.startScrolling(e);
             }
         });
@@ -736,6 +737,7 @@ export class Toolbar {
         // Mouse wheel scrolling
         this.toolbarContent.addEventListener('wheel', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             const scrollAmount = e.deltaY * 0.5; // Adjust scroll sensitivity
             this.toolbarContent.scrollLeft += scrollAmount;
         });
@@ -744,6 +746,7 @@ export class Toolbar {
         this.toolbarContent.addEventListener('contextmenu', (e) => {
             if (e.button === 1) {
                 e.preventDefault();
+                e.stopPropagation();
             }
         });
 
@@ -751,6 +754,7 @@ export class Toolbar {
         this.toolbarContent.addEventListener('selectstart', (e) => {
             if (this.isScrolling) {
                 e.preventDefault();
+                e.stopPropagation();
             }
         });
     }
@@ -772,17 +776,18 @@ export class Toolbar {
     }
 
     /**
-     * Update scrolling position
+     * Update scrolling position - pan in opposite direction to cursor movement
      */
     updateScrolling(e) {
         if (!this.isScrolling || !this.toolbarContent) return;
 
         const deltaX = e.clientX - this.scrollStartX;
+        // Pan in opposite direction to cursor movement (standard panning behavior)
         const newScrollLeft = this.scrollStartScrollLeft - deltaX;
-        
+
         // Apply scrolling with bounds
         this.toolbarContent.scrollLeft = Math.max(0, Math.min(
-            newScrollLeft, 
+            newScrollLeft,
             this.toolbarContent.scrollWidth - this.toolbarContent.clientWidth
         ));
     }
