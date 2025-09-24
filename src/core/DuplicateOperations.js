@@ -2,6 +2,7 @@ import { BaseModule } from './BaseModule.js';
 import { GameObject } from '../models/GameObject.js';
 import { Group } from '../models/Group.js';
 import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
+import { SnapUtils } from '../utils/SnapUtils.js';
 
 /**
  * Duplicate Operations module
@@ -57,7 +58,7 @@ export class DuplicateOperations extends BaseModule {
             return;
         }
 
-        // Determine current world position under mouse (fallback to canvas center)
+        // Use mouse position as the anchor point for duplication
         const mouse = this.editor.stateManager.get('mouse');
         const camera = this.editor.stateManager.get('camera');
 
@@ -150,7 +151,52 @@ export class DuplicateOperations extends BaseModule {
         const duplicate = this.editor.stateManager.get('duplicate');
         if (!duplicate || !duplicate.isActive || !Array.isArray(duplicate.objects) || duplicate.objects.length === 0) return;
 
-        const updatedObjects = this.editor.duplicateRenderUtils.updatePositions(duplicate.objects, worldPos, this.editor);
+        // Use the same snap logic as dragSelectedObjects
+        const snapEnabled = SnapUtils.isSnapToGridEnabled(this.editor.stateManager, this.editor.level);
+        let dx, dy;
+
+        if (snapEnabled) {
+            // Use cursor position as anchor for snap mode
+            const currentAnchorX = worldPos.x;
+            const currentAnchorY = worldPos.y;
+            
+            const gridSize = SnapUtils.getGridSize(this.editor.stateManager, this.editor.level);
+            const snapTolerancePercent = this.editor.userPrefs?.get('snapTolerance') || 40;
+            const tolerance = gridSize * (snapTolerancePercent / 100);
+            
+            // Find nearest grid point for cursor
+            const nearestGrid = SnapUtils.findNearestGridPoint(currentAnchorX, currentAnchorY, gridSize, tolerance);
+            
+            if (nearestGrid) {
+                // Calculate current position of first duplicate object's bottom-left corner
+                const firstObj = duplicate.objects[0];
+                const firstObjWorldPos = this.editor.objectOperations.getObjectWorldPosition(firstObj);
+                const firstObjHeight = firstObj.height || 32;
+                const currentBottomLeftX = firstObjWorldPos.x;
+                const currentBottomLeftY = firstObjWorldPos.y + firstObjHeight;
+                
+                // Move object so its bottom-left corner goes to grid point
+                dx = nearestGrid.x - currentBottomLeftX;
+                dy = nearestGrid.y - currentBottomLeftY;
+            } else {
+                // No grid point within tolerance - follow cursor normally
+                dx = worldPos.x - duplicate.basePosition.x;
+                dy = worldPos.y - duplicate.basePosition.y;
+            }
+        } else {
+            // Snap disabled - normal relative movement
+            dx = worldPos.x - duplicate.basePosition.x;
+            dy = worldPos.y - duplicate.basePosition.y;
+        }
+
+        // Apply movement to all duplicate objects
+        const updatedObjects = duplicate.objects.map(obj => {
+            const newX = obj.x + dx;
+            const newY = obj.y + dy;
+            return { ...obj, x: newX, y: newY };
+        });
+
+        // Update state with new positions
         this.editor.stateManager.update({
             'duplicate.objects': updatedObjects,
             'duplicate.basePosition': { x: worldPos.x, y: worldPos.y },
@@ -170,46 +216,63 @@ export class DuplicateOperations extends BaseModule {
         const duplicate = this.editor.stateManager.get('duplicate');
         if (!duplicate || !duplicate.isActive || !Array.isArray(duplicate.objects) || duplicate.objects.length === 0) return;
 
-        // Apply snap to grid if enabled (either setting or Ctrl key)
-        let snappedWorldPos = worldPos;
-        const snapToGrid = this.editor.stateManager.get('canvas.snapToGrid') ?? this.editor.level.settings.snapToGrid;
-        const ctrlSnapToGrid = this.editor.stateManager.get('keyboard.ctrlSnapToGrid');
-        
-        if (snapToGrid || ctrlSnapToGrid) {
-            const gridSize = this.editor.stateManager.get('canvas.gridSize') ?? this.editor.level.settings.gridSize;
-            snappedWorldPos = WorldPositionUtils.snapToGrid(worldPos.x, worldPos.y, gridSize);
+        // Use the same snap logic as updatePreview and dragSelectedObjects
+        const snapEnabled = SnapUtils.isSnapToGridEnabled(this.editor.stateManager, this.editor.level);
+        let dx, dy;
+
+        if (snapEnabled) {
+            // Use cursor position as anchor for snap mode
+            const currentAnchorX = worldPos.x;
+            const currentAnchorY = worldPos.y;
+            
+            const gridSize = SnapUtils.getGridSize(this.editor.stateManager, this.editor.level);
+            const snapTolerancePercent = this.editor.userPrefs?.get('snapTolerance') || 40;
+            const tolerance = gridSize * (snapTolerancePercent / 100);
+            
+            // Find nearest grid point for cursor
+            const nearestGrid = SnapUtils.findNearestGridPoint(currentAnchorX, currentAnchorY, gridSize, tolerance);
+            
+            if (nearestGrid) {
+                // Calculate current position of first duplicate object's bottom-left corner
+                const firstObj = duplicate.objects[0];
+                const firstObjWorldPos = this.editor.objectOperations.getObjectWorldPosition(firstObj);
+                const firstObjHeight = firstObj.height || 32;
+                const currentBottomLeftX = firstObjWorldPos.x;
+                const currentBottomLeftY = firstObjWorldPos.y + firstObjHeight;
+                
+                // Move object so its bottom-left corner goes to grid point
+                dx = nearestGrid.x - currentBottomLeftX;
+                dy = nearestGrid.y - currentBottomLeftY;
+            } else {
+                // No grid point within tolerance - follow cursor normally
+                dx = worldPos.x - duplicate.basePosition.x;
+                dy = worldPos.y - duplicate.basePosition.y;
+            }
+        } else {
+            // Snap disabled - normal relative movement
+            dx = worldPos.x - duplicate.basePosition.x;
+            dy = worldPos.y - duplicate.basePosition.y;
         }
 
-        // If parallax is enabled, adjust snappedWorldPos to account for parallax offset of the first object
-        if (this.editor.renderOperations?.parallaxRenderer?.isParallaxEnabled() && duplicate.objects.length > 0) {
-            const firstObj = duplicate.objects[0];
-            const effectiveLayerId = this.editor.renderOperations.getEffectiveLayerId(firstObj);
-            if (this.editor.renderOperations.parallaxRenderer.isLayerParallaxEnabled(
-                this.editor.level.getLayerById(effectiveLayerId)
-            )) {
-                const parallaxOffset = this.editor.renderOperations.parallaxRenderer.getParallaxOffset(
-                    this.editor.level.getLayerById(effectiveLayerId)
-                );
-                // Adjust snapped position to visual coordinates
-                snappedWorldPos.x += parallaxOffset.x;
-                snappedWorldPos.y += parallaxOffset.y;
-            }
-        }
+        // Apply movement to all duplicate objects
+        const updatedObjects = duplicate.objects.map(obj => {
+            const newX = obj.x + dx;
+            const newY = obj.y + dy;
+            return { ...obj, x: newX, y: newY };
+        });
 
         const groupEditMode = this.editor.stateManager.get('groupEditMode');
         const newIds = new Set();
 
-        duplicate.objects.forEach((obj) => {
-            const offsetX = obj._offsetX ?? 0;
-            const offsetY = obj._offsetY ?? 0;
-
+        // Use the updated objects with applied snap for final placement
+        updatedObjects.forEach((obj) => {
             // Sanitize and place
             const base = this._sanitizeForPlacement(this.editor.deepClone(obj));
             this.editor.reassignIdsDeep(base);
             
-            // Calculate world position for the duplicate using snapped position
-            const worldX = snappedWorldPos.x + offsetX;
-            const worldY = snappedWorldPos.y + offsetY;
+            // Use the object's current position (already has snap applied)
+            const worldX = base.x;
+            const worldY = base.y;
 
             if (groupEditMode && groupEditMode.isActive && groupEditMode.group) {
                 // Check if target group's layer is locked

@@ -105,7 +105,8 @@ export class ConfigManager {
             thickness: configs.canvas?.gridThickness ?? 1,
             subdivisions: configs.canvas?.gridSubdivisions ?? 4,
             subdivColor: configs.canvas?.gridSubdivColor ?? '#666666',
-            subdivThickness: configs.canvas?.gridSubdivThickness ?? 0.5
+            subdivThickness: configs.canvas?.gridSubdivThickness ?? 0.5,
+            snapTolerance: 40
         };
 
         configs.camera = {
@@ -205,7 +206,8 @@ export class ConfigManager {
             thickness: configs.canvas?.gridThickness ?? 1,
             subdivisions: configs.canvas?.gridSubdivisions ?? 4,
             subdivColor: configs.canvas?.gridSubdivColor ?? '#666666',
-            subdivThickness: configs.canvas?.gridSubdivThickness ?? 0.5
+            subdivThickness: configs.canvas?.gridSubdivThickness ?? 0.5,
+            snapTolerance: 40
         };
 
         configs.camera = {
@@ -548,6 +550,7 @@ export class ConfigManager {
         this.configs.grid.subdivisions = this.configs.canvas.gridSubdivisions;
         this.configs.grid.subdivColor = this.configs.canvas.gridSubdivColor;
         this.configs.grid.subdivThickness = this.configs.canvas.gridSubdivThickness;
+        this.configs.grid.snapTolerance = this.configs.canvas.snapTolerance || 40;
     }
 
     /**
@@ -566,6 +569,7 @@ export class ConfigManager {
         this.configs.canvas.gridSubdivisions = this.configs.grid.subdivisions;
         this.configs.canvas.gridSubdivColor = this.configs.grid.subdivColor;
         this.configs.canvas.gridSubdivThickness = this.configs.grid.subdivThickness;
+        this.configs.canvas.snapTolerance = this.configs.grid.snapTolerance;
     }
 
     /**
@@ -605,6 +609,9 @@ export class ConfigManager {
                 case 'subdivThickness':
                     this.configs.canvas.gridSubdivThickness = value;
                     break;
+                case 'snapTolerance':
+                    this.configs.canvas.snapTolerance = value;
+                    break;
             }
         } else if (path.startsWith('canvas.')) {
             // Sync from canvas to grid
@@ -636,6 +643,9 @@ export class ConfigManager {
                     break;
                 case 'gridSubdivThickness':
                     this.configs.grid.subdivThickness = value;
+                    break;
+                case 'snapTolerance':
+                    this.configs.grid.snapTolerance = value;
                     break;
             }
         }

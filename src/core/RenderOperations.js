@@ -2,6 +2,7 @@ import { BaseModule } from './BaseModule.js';
 import { Logger } from '../utils/Logger.js';
 import { ParallaxRenderer } from '../utils/ParallaxRenderer.js';
 import { RenderUtils } from '../utils/RenderUtils.js';
+import { SnapUtils } from '../utils/SnapUtils.js';
 
 /**
  * Render Operations module for LevelEditor
@@ -303,8 +304,8 @@ export class RenderOperations extends BaseModule {
         // Draw background and grid
         const showGrid = this.editor.stateManager.get('canvas.showGrid') ?? this.editor.level.settings.showGrid;
         if (showGrid) {
-            // Get grid parameters from StateManager or fallback to level settings
-            const gridSize = this.editor.stateManager.get('canvas.gridSize') ?? this.editor.level.settings.gridSize;
+            // Get grid parameters using centralized SnapUtils
+            const gridSize = SnapUtils.getGridSize(this.editor.stateManager, this.editor.level);
             const gridColor = this.editor.stateManager.get('canvas.gridColor') ?? this.editor.level.settings.gridColor ?? 'rgba(255, 255, 255, 0.1)';
             const gridThickness = this.editor.stateManager.get('canvas.gridThickness') ?? 1;
             const gridOpacity = this.editor.stateManager.get('canvas.gridOpacity') ?? 0.1;

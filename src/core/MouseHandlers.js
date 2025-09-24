@@ -1,6 +1,7 @@
 import { BaseModule } from './BaseModule.js';
 import { Logger } from '../utils/Logger.js';
 import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
+import { SnapUtils } from '../utils/SnapUtils.js';
 
 /**
  * Mouse Handlers module for LevelEditor
@@ -128,7 +129,7 @@ export class MouseHandlers extends BaseModule {
             this.handleMiddleMouseZoom(e);
         } else if (mouse.isLeftDown && mouse.isDragging) {
             // Drag objects
-            this.dragSelectedObjects(worldPos);
+            this.dragSelectedObjects(worldPos, e);
         } else if (mouse.isLeftDown && e.altKey && !this.editor.stateManager.get('duplicate.isActive')) {
             // Check if we should start Alt+drag duplication
             const selectedObjects = this.editor.stateManager.get('selectedObjects');
@@ -234,7 +235,14 @@ export class MouseHandlers extends BaseModule {
                 'mouse.isDragging': false,
                 'mouse.altKey': e.altKey,
                 'mouse.constrainedAxis': null,
-                'mouse.axisCenter': null
+                'mouse.axisCenter': null,
+                'mouse.snappedToGrid': false,
+                'mouse.snapTargetX': null,
+                'mouse.snapTargetY': null,
+                'mouse.anchorX': null,
+                'mouse.anchorY': null,
+                'mouse.offsetX': null,
+                'mouse.offsetY': null
             });
             
             if (mouse.isMarqueeSelecting) {
@@ -414,6 +422,11 @@ export class MouseHandlers extends BaseModule {
             Logger.mouse.warn(`Cannot add objects: current layer '${currentLayer.name}' is locked`);
             return;
         }
+        
+        // If no current layer, try to get Main layer
+        if (!currentLayer) {
+            Logger.mouse.warn('No current layer available, objects may not be visible');
+        }
 
         const droppedAssetIds = JSON.parse(e.dataTransfer.getData('application/json'));
         const worldPos = this.screenToWorld(e);
@@ -427,16 +440,22 @@ export class MouseHandlers extends BaseModule {
                 let y = worldPos.y + index * 10;
 
                 // Apply snap to grid if enabled
-                const snapToGrid = this.editor.stateManager.get('canvas.snapToGrid') ?? this.editor.level.settings.snapToGrid;
-                if (snapToGrid) {
-                    const gridSize = this.editor.stateManager.get('canvas.gridSize') ?? this.editor.level.settings.gridSize;
-                    const snapped = WorldPositionUtils.snapToGrid(x, y, gridSize);
-                    x = snapped.x;
-                    y = snapped.y;
+                if (SnapUtils.isSnapToGridEnabled(this.editor.stateManager, this.editor.level)) {
+                    const gridSize = SnapUtils.getGridSize(this.editor.stateManager, this.editor.level);
+                    const snapTolerancePercent = this.editor.stateManager.get('canvas.snapTolerance') || 40;
+                    const tolerance = gridSize * (snapTolerancePercent / 100);
+                    
+                    // Find nearest grid point for drop position
+                    const nearestGrid = SnapUtils.findNearestGridPoint(x, y, gridSize, tolerance);
+                    
+                    if (nearestGrid) {
+                        x = nearestGrid.x;
+                        y = nearestGrid.y;
+                    }
                 }
 
                 // Get current layer for new objects (already checked above)
-                const newObject = asset.createInstance(x, y, currentLayer.id);
+                const newObject = asset.createInstance(x, y, currentLayer ? currentLayer.id : null);
 
                 // Check if we're in group edit mode and the drop point is inside the group bounds
                 if (this.isInGroupEditMode() && this.editor.objectOperations.isPointInGroupBounds(worldPos.x, worldPos.y)) {
@@ -447,13 +466,26 @@ export class MouseHandlers extends BaseModule {
                     newObject.y -= groupPos.y;
                     groupEditMode.group.children.push(newObject);
                 } else {
-                    // Add to main level with current layer
-                    this.editor.level.addObject(newObject, currentLayer.id);
+                    // Add to main level with current layer (or null if no current layer)
+                    this.editor.level.addObject(newObject, currentLayer ? currentLayer.id : null);
                 }
 
                 newIds.add(newObject.id);
             }
         });
+
+        // Invalidate caches for all new objects
+        newIds.forEach(objId => {
+            this.editor.invalidateObjectCaches(objId);
+        });
+
+        // Schedule full cache invalidation since multiple objects were added
+        this.editor.scheduleCacheInvalidation();
+        
+        // Also invalidate spatial index for immediate visibility
+        if (this.editor.renderOperations) {
+            this.editor.renderOperations.invalidateSpatialIndex();
+        }
 
         // Save state AFTER all objects are added
         this.editor.historyManager.saveState(this.editor.level.objects, newIds);
@@ -475,6 +507,7 @@ export class MouseHandlers extends BaseModule {
             this.editor.groupOperations.openGroupEditMode(clickedObject);
         }
     }
+
 
     // Helper methods for mouse interactions
     handleObjectClick(e, obj, worldPos) {
@@ -521,10 +554,27 @@ export class MouseHandlers extends BaseModule {
         
         // Only start dragging if the clicked object is selected
         if (selectedObjects.has(obj.id)) {
+            // Calculate anchor point (bottom-left corner of object) for snap-to-grid
+            const objWorldPos = this.editor.objectOperations.getObjectWorldPosition(obj);
+            const objHeight = obj.height || 32;
+            const anchorX = objWorldPos.x;
+            const anchorY = objWorldPos.y + objHeight;
+            
+            // Calculate offset from click point to anchor point
+            const offsetX = anchorX - worldPos.x;
+            const offsetY = anchorY - worldPos.y;
+            
             this.editor.stateManager.update({
                 'mouse.isDragging': true,
                 'mouse.dragStartX': worldPos.x,
-                'mouse.dragStartY': worldPos.y
+                'mouse.dragStartY': worldPos.y,
+                'mouse.anchorX': anchorX,
+                'mouse.anchorY': anchorY,
+                'mouse.offsetX': offsetX,
+                'mouse.offsetY': offsetY,
+                'mouse.snappedToGrid': false,
+                'mouse.snapTargetX': null,
+                'mouse.snapTargetY': null
             });
         }
     }
@@ -581,23 +631,129 @@ export class MouseHandlers extends BaseModule {
         });
     }
 
-    dragSelectedObjects(worldPos) {
+    dragSelectedObjects(worldPos, e) {
         const selectedObjects = this.editor.stateManager.get('selectedObjects');
         const mouse = this.editor.stateManager.get('mouse');
         const shiftKey = this.editor.stateManager.get('keyboard.shiftKey');
 
-        // Apply snap to grid if enabled (either setting or Ctrl key)
-        let snappedWorldPos = worldPos;
-        const snapToGrid = this.editor.stateManager.get('canvas.snapToGrid') ?? this.editor.level.settings.snapToGrid;
-        const ctrlSnapToGrid = this.editor.stateManager.get('keyboard.ctrlSnapToGrid');
-        
-        if (snapToGrid || ctrlSnapToGrid) {
-            const gridSize = this.editor.stateManager.get('canvas.gridSize') ?? this.editor.level.settings.gridSize;
-            snappedWorldPos = WorldPositionUtils.snapToGrid(worldPos.x, worldPos.y, gridSize);
-        }
+        // Check if snap to grid is enabled
+        const snapEnabled = SnapUtils.isSnapToGridEnabled(this.editor.stateManager, this.editor.level);
+        let dx, dy;
 
-        let dx = snappedWorldPos.x - mouse.dragStartX;
-        let dy = snappedWorldPos.y - mouse.dragStartY;
+        if (snapEnabled) {
+            // Use cursor position as anchor for snap mode
+            const currentAnchorX = worldPos.x;
+            const currentAnchorY = worldPos.y;
+            
+            const gridSize = SnapUtils.getGridSize(this.editor.stateManager, this.editor.level);
+            const snapTolerancePercent = this.editor.userPrefs?.get('snapTolerance') || 40;
+            const tolerance = gridSize * (snapTolerancePercent / 100);
+            
+            // Debug: log cursor position and grid info
+            console.log(`=== SNAP DEBUG ===`);
+            console.log(`Screen coords: (${e.clientX}, ${e.clientY})`);
+            console.log(`World coords: (${currentAnchorX}, ${currentAnchorY})`);
+            console.log(`GridSize: ${gridSize}, Tolerance: ${tolerance.toFixed(1)}`);
+            
+            // Find nearest grid point for cursor
+            const nearestGrid = SnapUtils.findNearestGridPoint(currentAnchorX, currentAnchorY, gridSize, tolerance);
+            
+            // Debug: log grid detection
+            if (nearestGrid) {
+                const distance = Math.sqrt(Math.pow(currentAnchorX - nearestGrid.x, 2) + Math.pow(currentAnchorY - nearestGrid.y, 2));
+                console.log(`Grid found: cursor(${currentAnchorX.toFixed(1)}, ${currentAnchorY.toFixed(1)}) -> grid(${nearestGrid.x}, ${nearestGrid.y}), distance: ${distance.toFixed(2)}`);
+                console.log(`Object will move by: (${nearestGrid.x - mouse.anchorX}, ${nearestGrid.y - mouse.anchorY})`);
+            } else {
+                console.log(`No grid found within tolerance ${tolerance.toFixed(1)}`);
+            }
+            console.log(`================`);
+            
+            if (nearestGrid) {
+                // Calculate current position of object's bottom-left corner
+                const selectedObjects = this.editor.stateManager.get('selectedObjects');
+                let currentBottomLeftX = mouse.anchorX;
+                let currentBottomLeftY = mouse.anchorY;
+                
+                // If we have selected objects, get the current position of the first one
+                if (selectedObjects && selectedObjects.size > 0) {
+                    const firstObjId = Array.from(selectedObjects)[0];
+                    const firstObj = this.editor.level.findObjectById(firstObjId);
+                    if (firstObj) {
+                        const objWorldPos = this.editor.objectOperations.getObjectWorldPosition(firstObj);
+                        const objHeight = firstObj.height || 32;
+                        currentBottomLeftX = objWorldPos.x;
+                        currentBottomLeftY = objWorldPos.y + objHeight;
+                    }
+                }
+                
+                // Snap to grid - move anchor to grid point
+                if (!mouse.snappedToGrid) {
+                    // First time snapping - record the snap target and calculate movement
+                    this.editor.stateManager.update({
+                        'mouse.snappedToGrid': true,
+                        'mouse.snapTargetX': nearestGrid.x,
+                        'mouse.snapTargetY': nearestGrid.y
+                    });
+                    
+                    // Move object so its bottom-left corner goes to grid point
+                    dx = nearestGrid.x - currentBottomLeftX;
+                    dy = nearestGrid.y - currentBottomLeftY;
+                    
+                    console.log(`First snap: current(${currentBottomLeftX}, ${currentBottomLeftY}) -> grid(${nearestGrid.x}, ${nearestGrid.y}) -> move(${dx}, ${dy})`);
+                } else {
+                    // Already snapped - check if we need to move to a new grid point
+                    if (nearestGrid.x !== mouse.snapTargetX || nearestGrid.y !== mouse.snapTargetY) {
+                        // New grid point found - update target and move
+                        this.editor.stateManager.update({
+                            'mouse.snapTargetX': nearestGrid.x,
+                            'mouse.snapTargetY': nearestGrid.y
+                        });
+                        
+                        // Move object to new grid point
+                        dx = nearestGrid.x - currentBottomLeftX;
+                        dy = nearestGrid.y - currentBottomLeftY;
+                        
+                        console.log(`New grid: current(${currentBottomLeftX}, ${currentBottomLeftY}) -> grid(${nearestGrid.x}, ${nearestGrid.y}) -> move(${dx}, ${dy})`);
+                    } else {
+                        // Same grid point - no movement
+                        dx = 0;
+                        dy = 0;
+                    }
+                }
+            } else {
+                // No grid point within tolerance
+                if (mouse.snappedToGrid) {
+                    // Was snapped, stay on previous grid point until new one is found
+                    // Don't reset snappedToGrid - keep object on current grid point
+                    dx = 0;
+                    dy = 0;
+                    
+                    console.log(`No grid nearby, staying on previous grid point`);
+                } else {
+                    // Not snapped and no grid nearby - follow cursor normally
+                    dx = worldPos.x - mouse.dragStartX;
+                    dy = worldPos.y - mouse.dragStartY;
+                }
+            }
+        } else {
+            // Snap disabled - normal relative movement (no offset)
+            if (mouse.snappedToGrid) {
+                // Was snapped, now unsnap - return to cursor position
+                this.editor.stateManager.update({
+                    'mouse.snappedToGrid': false,
+                    'mouse.snapTargetX': null,
+                    'mouse.snapTargetY': null,
+                    'mouse.dragStartX': worldPos.x,
+                    'mouse.dragStartY': worldPos.y
+                });
+                
+                console.log(`Snap disabled, returning to cursor position`);
+            }
+            
+            // Normal relative movement with original offset
+            dx = worldPos.x - mouse.dragStartX;
+            dy = worldPos.y - mouse.dragStartY;
+        }
 
         // Apply Shift constraint for axis locking
         if (shiftKey && mouse.isDragging) {
@@ -644,6 +800,16 @@ export class MouseHandlers extends BaseModule {
             });
         }
 
+        // Cache group positions to avoid repeated calculations
+        let groupPos = null;
+        let activeGroupPos = null;
+        
+        if (this.isInGroupEditMode()) {
+            const groupEditMode = this.getGroupEditMode();
+            groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
+            activeGroupPos = this.editor.objectOperations.getObjectWorldPosition(this.getActiveGroup());
+        }
+
         selectedObjects.forEach(id => {
             const obj = this.editor.level.findObjectById(id);
             if (obj) {
@@ -670,8 +836,7 @@ export class MouseHandlers extends BaseModule {
                             }
                         }
                         
-                        // Convert world -> relative to group's world position
-                        const groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
+                        // Convert world -> relative to group's world position (use cached position)
                         obj.x -= groupPos.x;
                         obj.y -= groupPos.y;
 
@@ -700,7 +865,6 @@ export class MouseHandlers extends BaseModule {
                     // Object is inside the currently edited group
                     if (this.isAltKeyPressed()) {
                         // Alt+drag: move in world coordinates by converting to world position first
-                        const groupPos = this.editor.objectOperations.getObjectWorldPosition(this.getActiveGroup());
                         const worldX = groupPos.x + obj.x;
                         const worldY = groupPos.y + obj.y;
                         
@@ -708,8 +872,7 @@ export class MouseHandlers extends BaseModule {
                         const newWorldX = worldX + dx;
                         const newWorldY = worldY + dy;
                         
-                        // Convert back to relative coordinates
-                        const activeGroupPos = this.editor.objectOperations.getObjectWorldPosition(this.getActiveGroup());
+                        // Convert back to relative coordinates (use cached position)
                         obj.x = newWorldX - activeGroupPos.x;
                         obj.y = newWorldY - activeGroupPos.y;
                     } else {
@@ -724,10 +887,13 @@ export class MouseHandlers extends BaseModule {
             }
         });
 
-        this.editor.stateManager.update({
-            'mouse.dragStartX': snappedWorldPos.x,
-            'mouse.dragStartY': snappedWorldPos.y
-        });
+        // Update drag start position only when not snapped to grid
+        if (!mouse.snappedToGrid) {
+            this.editor.stateManager.update({
+                'mouse.dragStartX': worldPos.x,
+                'mouse.dragStartY': worldPos.y
+            });
+        }
 
         // Don't update panels during drag to avoid real-time position updates
         // Panels will be updated when drag ends in handleMouseUp
@@ -746,24 +912,6 @@ export class MouseHandlers extends BaseModule {
         }
     }
 
-    updatePlacingObjectsPosition(worldPos) {
-        const duplicate = this.editor.stateManager.get('duplicate');
-        if (!duplicate.isActive || !duplicate.objects || duplicate.objects.length === 0) return;
-
-        // Update positions of duplicate objects to follow mouse
-        // All objects should move together as a group
-        const updatedObjects = this.editor.duplicateRenderUtils.updatePositions(duplicate.objects, worldPos);
-
-        // Update state with new positions
-        this.editor.stateManager.update({
-            'duplicate.objects': updatedObjects,
-            'duplicate.basePosition': { x: worldPos.x, y: worldPos.y },
-            'mouse.placingObjects': updatedObjects
-        });
-
-        // Force render to show updated positions
-        this.editor.render();
-    }
 
     finishMarqueeSelection() {
         const mouse = this.editor.stateManager.get('mouse');

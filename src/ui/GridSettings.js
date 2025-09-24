@@ -33,6 +33,10 @@ export class GridSettings {
                         <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Thickness</label>
                         <input type="number" min="0.1" max="5" step="0.1" class="setting-input" name="setting-input" data-setting="grid.thickness" value="${this.configManager.get('grid.thickness') || 1}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
                     </div>
+                    <div>
+                        <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Snap Tolerance (%)</label>
+                        <input type="number" min="5" max="100" step="5" class="setting-input" name="setting-input" data-setting="canvas.snapTolerance" value="${this.configManager.get('canvas.snapTolerance') || 40}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
+                    </div>
                 </div>
 
                 <!-- Правая колонка -->

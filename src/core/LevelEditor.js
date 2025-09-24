@@ -37,7 +37,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.17.0';
+    static VERSION = '3.0.0';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -2618,6 +2618,11 @@ export class LevelEditor {
      * @returns {Layer} Current layer or Main layer as fallback
      */
     getCurrentLayer() {
+        if (!this.level) {
+            Logger.editor.warn('Cannot get current layer: level not initialized');
+            return null;
+        }
+        
         const currentLayerId = this.stateManager.get('currentLayerId');
         if (currentLayerId) {
             const layer = this.level.getLayerById(currentLayerId);
@@ -2625,7 +2630,13 @@ export class LevelEditor {
         }
         
         // Fallback to Main layer
-        return this.level.getLayerById(this.level.getMainLayerId());
+        const mainLayerId = this.level.getMainLayerId();
+        if (mainLayerId) {
+            return this.level.getLayerById(mainLayerId);
+        }
+        
+        Logger.editor.warn('Cannot get current layer: no Main layer found');
+        return null;
     }
 
     /**

@@ -62,7 +62,8 @@ export class DuplicateUtils {
                 objWorldY = obj.y;
             }
 
-            // Save relative offset from cursor position (maintains relative positions)
+            // Calculate offset from the cursor position (maintains relative positions)
+            // worldPos is the cursor position
             const offsetX = objWorldX - worldPos.x;
             const offsetY = objWorldY - worldPos.y;
 
