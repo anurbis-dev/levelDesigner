@@ -37,7 +37,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.16.0';
+    static VERSION = '3.16.1';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -698,7 +698,39 @@ export class LevelEditor {
                     this.configManager.set('editor.view.activeAssetTabs', tabsArray);
                 }
 
-                // Save settings (this will save all configs including tabs)
+                // Save current grid settings from StateManager
+                const gridSize = this.stateManager.get('canvas.gridSize');
+                const gridColor = this.stateManager.get('canvas.gridColor');
+                const gridThickness = this.stateManager.get('canvas.gridThickness');
+                const gridOpacity = this.stateManager.get('canvas.gridOpacity');
+                const gridSubdivisions = this.stateManager.get('canvas.gridSubdivisions');
+                const gridSubdivColor = this.stateManager.get('canvas.gridSubdivColor');
+                const gridSubdivThickness = this.stateManager.get('canvas.gridSubdivThickness');
+
+
+                if (gridSize !== undefined) {
+                    this.configManager.set('grid.size', gridSize);
+                }
+                if (gridColor !== undefined) {
+                    this.configManager.set('grid.color', gridColor);
+                }
+                if (gridThickness !== undefined) {
+                    this.configManager.set('grid.thickness', gridThickness);
+                }
+                if (gridOpacity !== undefined) {
+                    this.configManager.set('grid.opacity', gridOpacity);
+                }
+                if (gridSubdivisions !== undefined) {
+                    this.configManager.set('grid.subdivisions', gridSubdivisions);
+                }
+                if (gridSubdivColor !== undefined) {
+                    this.configManager.set('grid.subdivColor', gridSubdivColor);
+                }
+                if (gridSubdivThickness !== undefined) {
+                    this.configManager.set('grid.subdivThickness', gridSubdivThickness);
+                }
+
+                // Save settings (this will save all configs including tabs and grid settings)
                 if (this.configManager) {
                     Logger.ui.debug('Saving all settings...');
                     this.configManager.saveSettings();
@@ -850,7 +882,11 @@ export class LevelEditor {
         const gridColor = this.configManager.get('grid.color');
         const gridThickness = this.configManager.get('grid.thickness');
         const gridOpacity = this.configManager.get('grid.opacity');
-        
+        const gridSubdivisions = this.configManager.get('grid.subdivisions');
+        const gridSubdivColor = this.configManager.get('grid.subdivColor');
+        const gridSubdivThickness = this.configManager.get('grid.subdivThickness');
+
+
         if (gridSize !== undefined) {
             this.stateManager.set('canvas.gridSize', gridSize);
         }
@@ -872,8 +908,36 @@ export class LevelEditor {
         if (gridOpacity !== undefined) {
             this.stateManager.set('canvas.gridOpacity', gridOpacity);
         }
+        if (gridSubdivisions !== undefined) {
+            this.stateManager.set('canvas.gridSubdivisions', gridSubdivisions);
+        }
+        if (gridSubdivColor !== undefined) {
+            // Convert hex color to rgba if needed
+            let subdivColorValue = gridSubdivColor;
+            if (gridSubdivColor.startsWith('#')) {
+                const opacity = gridOpacity !== undefined ? gridOpacity : 0.1;
+                const r = parseInt(gridSubdivColor.slice(1, 3), 16);
+                const g = parseInt(gridSubdivColor.slice(3, 5), 16);
+                const b = parseInt(gridSubdivColor.slice(5, 7), 16);
+                subdivColorValue = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+            }
+            this.stateManager.set('canvas.gridSubdivColor', subdivColorValue);
+        }
+        if (gridSubdivThickness !== undefined) {
+            this.stateManager.set('canvas.gridSubdivThickness', gridSubdivThickness);
+        }
+        
+        // Sync grid settings to ensure proper initialization
+        if (this.settingsPanel && this.settingsPanel.gridSettings) {
+            this.settingsPanel.gridSettings.syncAllGridSettingsToState();
+        }
         
         this.log('info', 'Configuration applied successfully');
+
+        // Save default settings on first run to ensure they persist
+        if (this.configManager) {
+            this.configManager.saveSettings();
+        }
     }
 
     /**
@@ -888,6 +952,12 @@ export class LevelEditor {
         const canvasBackgroundColor = this.userPrefs.get('canvasBackgroundColor');
         const gridSize = this.userPrefs.get('gridSize');
         const showGrid = this.userPrefs.get('showGrid');
+        const gridColor = this.userPrefs.get('gridColor');
+        const gridOpacity = this.userPrefs.get('gridOpacity');
+        const gridThickness = this.userPrefs.get('gridThickness');
+        const gridSubdivisions = this.userPrefs.get('gridSubdivisions');
+        const gridSubdivColor = this.userPrefs.get('gridSubdivColor');
+        const gridSubdivThickness = this.userPrefs.get('gridSubdivThickness');
         
         if (canvasBackgroundColor) {
             this.settingsManager.set('canvas.backgroundColor', canvasBackgroundColor);
@@ -899,6 +969,30 @@ export class LevelEditor {
         
         if (showGrid !== undefined) {
             this.settingsManager.set('canvas.showGrid', showGrid);
+        }
+        
+        if (gridColor) {
+            this.settingsManager.set('canvas.gridColor', gridColor);
+        }
+        
+        if (gridOpacity !== undefined) {
+            this.settingsManager.set('canvas.gridOpacity', gridOpacity);
+        }
+        
+        if (gridThickness) {
+            this.settingsManager.set('canvas.gridThickness', gridThickness);
+        }
+        
+        if (gridSubdivisions) {
+            this.settingsManager.set('canvas.gridSubdivisions', gridSubdivisions);
+        }
+        
+        if (gridSubdivColor) {
+            this.settingsManager.set('canvas.gridSubdivColor', gridSubdivColor);
+        }
+        
+        if (gridSubdivThickness) {
+            this.settingsManager.set('canvas.gridSubdivThickness', gridSubdivThickness);
         }
         
         // Apply editor settings
@@ -928,6 +1022,11 @@ export class LevelEditor {
         
         if (compactMode !== undefined) {
             this.settingsManager.set('ui.compactMode', compactMode);
+        }
+        
+        // Sync grid settings to ensure proper initialization
+        if (this.settingsPanel && this.settingsPanel.gridSettings) {
+            this.settingsPanel.gridSettings.syncAllGridSettingsToState();
         }
         
         this.log('info', 'User preferences applied successfully');
@@ -971,6 +1070,12 @@ export class LevelEditor {
         const canvasBackgroundColor = this.userPrefs.get('canvasBackgroundColor');
         const gridSize = this.userPrefs.get('gridSize');
         const showGrid = this.userPrefs.get('showGrid');
+        const gridColor = this.userPrefs.get('gridColor');
+        const gridOpacity = this.userPrefs.get('gridOpacity');
+        const gridThickness = this.userPrefs.get('gridThickness');
+        const gridSubdivisions = this.userPrefs.get('gridSubdivisions');
+        const gridSubdivColor = this.userPrefs.get('gridSubdivColor');
+        const gridSubdivThickness = this.userPrefs.get('gridSubdivThickness');
         
         if (canvasBackgroundColor) {
             this.level.settings.backgroundColor = canvasBackgroundColor;
@@ -982,6 +1087,30 @@ export class LevelEditor {
         
         if (showGrid !== undefined) {
             this.level.settings.showGrid = showGrid;
+        }
+        
+        if (gridColor) {
+            this.level.settings.gridColor = gridColor;
+        }
+        
+        if (gridOpacity !== undefined) {
+            this.level.settings.gridOpacity = gridOpacity;
+        }
+        
+        if (gridThickness) {
+            this.level.settings.gridThickness = gridThickness;
+        }
+        
+        if (gridSubdivisions) {
+            this.level.settings.gridSubdivisions = gridSubdivisions;
+        }
+        
+        if (gridSubdivColor) {
+            this.level.settings.gridSubdivColor = gridSubdivColor;
+        }
+        
+        if (gridSubdivThickness) {
+            this.level.settings.gridSubdivThickness = gridSubdivThickness;
         }
         
         this.log('info', 'User preferences applied to level successfully');
@@ -1930,16 +2059,6 @@ export class LevelEditor {
     }
 
     // Additional utility methods that may be needed by components
-    hexToRgba(hex, alpha = 1) {
-        const normalized = hex.replace('#', '');
-        const bigint = parseInt(normalized.length === 3
-            ? normalized.split('').map(c => c + c).join('')
-            : normalized, 16);
-        const r = (bigint >> 16) & 255;
-        const g = (bigint >> 8) & 255;
-        const b = bigint & 255;
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    }
 
     computeSelectableSet() {
         return this.objectOperations.computeSelectableSet();

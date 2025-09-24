@@ -1,6 +1,7 @@
 import { BaseModule } from './BaseModule.js';
 import { Logger } from '../utils/Logger.js';
 import { ParallaxRenderer } from '../utils/ParallaxRenderer.js';
+import { RenderUtils } from '../utils/RenderUtils.js';
 
 /**
  * Render Operations module for LevelEditor
@@ -304,16 +305,24 @@ export class RenderOperations extends BaseModule {
             const gridColor = this.editor.stateManager.get('canvas.gridColor') ?? this.editor.level.settings.gridColor ?? 'rgba(255, 255, 255, 0.1)';
             const gridThickness = this.editor.stateManager.get('canvas.gridThickness') ?? 1;
             const gridOpacity = this.editor.stateManager.get('canvas.gridOpacity') ?? 0.1;
-            
-            
+            const gridSubdivisions = this.editor.stateManager.get('canvas.gridSubdivisions') ?? 4;
+            const gridSubdivColor = this.editor.stateManager.get('canvas.gridSubdivColor') ?? '#666666';
+            const gridSubdivThickness = this.editor.stateManager.get('canvas.gridSubdivThickness') ?? 0.5;
+
+
+
+
             this.editor.canvasRenderer.drawGrid(
-                gridSize, 
-                camera, 
+                gridSize,
+                camera,
                 this.editor.level.settings.backgroundColor,
                 {
                     color: gridColor,
                     thickness: gridThickness,
-                    opacity: gridOpacity
+                    opacity: gridOpacity,
+                    subdivisions: gridSubdivisions,
+                    subdivColor: gridSubdivColor,
+                    subdivThickness: gridSubdivThickness
                 }
             );
         } else {
@@ -534,7 +543,7 @@ export class RenderOperations extends BaseModule {
         group.children.forEach(child => {
             if (child.type === 'group') {
                 const bounds = this.editor.objectOperations.getObjectWorldBounds(child);
-                const rgba = this.hexToRgba(baseColor, alpha);
+                const rgba = RenderUtils.hexToRgba(baseColor, alpha);
                 this.editor.canvasRenderer.ctx.save();
                 this.editor.canvasRenderer.ctx.fillStyle = rgba;
                 this.editor.canvasRenderer.ctx.fillRect(
@@ -551,16 +560,6 @@ export class RenderOperations extends BaseModule {
         });
     }
 
-    hexToRgba(hex, alpha = 1) {
-        const normalized = hex.replace('#', '');
-        const bigint = parseInt(normalized.length === 3
-            ? normalized.split('').map(c => c + c).join('')
-            : normalized, 16);
-        const r = (bigint >> 16) & 255;
-        const g = (bigint >> 8) & 255;
-        const b = bigint & 255;
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    }
 
     /**
      * Get visible layer IDs for performance optimization
@@ -820,7 +819,7 @@ export class RenderOperations extends BaseModule {
         group.children.forEach(child => {
             if (child.type === 'group') {
                 const bounds = this.getDuplicateObjectBounds(child, groupAbsX, groupAbsY);
-                const rgba = this.hexToRgba(baseColor, alpha);
+                const rgba = RenderUtils.hexToRgba(baseColor, alpha);
                 this.editor.canvasRenderer.ctx.save();
                 this.editor.canvasRenderer.ctx.fillStyle = rgba;
                 this.editor.canvasRenderer.ctx.fillRect(

@@ -1,5 +1,6 @@
 import { ColorChooser } from '../widgets/ColorChooser.js';
 import { GridSettings } from './GridSettings.js';
+import { RenderUtils } from '../utils/RenderUtils.js';
 
 /**
  * Settings Panel UI Component
@@ -17,6 +18,7 @@ export class SettingsPanel {
 
         this.init();
     }
+
 
     init() {
         this.createSettingsPanel();
@@ -227,7 +229,12 @@ export class SettingsPanel {
             
             // Render content for the active tab
             this.renderSettingsContent(activeTab);
-            
+
+            // Sync grid settings to StateManager when panel opens
+            if (this.gridSettings) {
+                this.gridSettings.syncAllGridSettingsToState();
+            }
+
             // Add direct event listeners to tabs after they are visible
             this.setupTabEventListeners();
             
@@ -573,38 +580,51 @@ export class SettingsPanel {
 
     setupSettingsInputs() {
         document.querySelectorAll('.setting-input').forEach(input => {
-            input.addEventListener('change', (e) => {
+            input.addEventListener('input', (e) => {
                 const path = e.target.dataset.setting;
+                if (!path) return;
+
                 let value = e.target.value;
-                
+
                 if (e.target.type === 'checkbox') {
                     value = e.target.checked;
                 } else if (e.target.type === 'number' || e.target.type === 'range') {
                     value = parseFloat(value);
-                    
+
                     // Special handling for autoSaveInterval (convert minutes to milliseconds)
                     if (path === 'editor.autoSaveInterval') {
                         value = value * 60000;
                     }
                 }
-                
-                this.configManager.set(path, value);
+
+                // Handle grid settings with immediate sync to StateManager
+                if (path.startsWith('grid.')) {
+                    // Save to ConfigManager
+                    this.configManager.set(path, value);
+                    // Sync to StateManager for immediate application
+                    if (this.gridSettings) {
+                        this.gridSettings.syncAllGridSettingsToState(path, value);
+                    }
+                    return; // Grid settings handled, don't process further
+                }
 
                 // Synchronize view options with StateManager in real-time
                 if (path.startsWith('editor.view.')) {
                     const stateKey = path.replace('editor.view.', 'view.');
                     // Update StateManager immediately
-                    if (this.levelEditor?.stateManager) {
-                        this.levelEditor.stateManager.set(stateKey, value);
+                    if (window.editor?.stateManager) {
+                        window.editor.stateManager.set(stateKey, value);
                         // Apply the view option immediately
-                        if (this.levelEditor.eventHandlers) {
+                        if (window.editor.eventHandlers) {
                             const option = stateKey.replace('view.', '');
-                            this.levelEditor.eventHandlers.applyViewOption(option, value);
+                            window.editor.eventHandlers.applyViewOption(option, value);
                             // Update menu checkbox state to match settings panel
-                            this.levelEditor.eventHandlers.updateViewCheckbox(option, value);
+                            window.editor.eventHandlers.updateViewCheckbox(option, value);
                         }
                     }
                 }
+
+                this.configManager.set(path, value);
 
                 // Synchronize color inputs for axis constraint
                 if (path === 'editor.axisConstraint.axisColor') {
@@ -618,9 +638,6 @@ export class SettingsPanel {
                         });
                     }
                 }
-
-                // Note: Grid settings are only applied to StateManager when Save is clicked
-                // Real-time changes are not applied to avoid confusion
             });
         });
     }
@@ -629,6 +646,10 @@ export class SettingsPanel {
     resetSettings() {
         if (confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.')) {
             this.configManager.reset();
+            
+            // Sync grid settings after reset to ensure proper initialization
+            this.gridSettings.syncAllGridSettingsToState();
+            
             this.renderSettingsContent(document.querySelector('.settings-tab.active').dataset.tab);
         }
     }
@@ -663,11 +684,39 @@ export class SettingsPanel {
     }
 
     saveSettings() {
+        // Save current grid settings from StateManager to ConfigManager before saving
+        if (window.editor?.stateManager) {
+            const gridSize = window.editor.stateManager.get('canvas.gridSize');
+            const gridColor = window.editor.stateManager.get('canvas.gridColor');
+            const gridThickness = window.editor.stateManager.get('canvas.gridThickness');
+            const gridOpacity = window.editor.stateManager.get('canvas.gridOpacity');
+            const gridSubdivisions = window.editor.stateManager.get('canvas.gridSubdivisions');
+            const gridSubdivColor = window.editor.stateManager.get('canvas.gridSubdivColor');
+            const gridSubdivThickness = window.editor.stateManager.get('canvas.gridSubdivThickness');
+
+
+            if (gridSize !== undefined) this.configManager.set('grid.size', gridSize);
+            if (gridColor !== undefined) {
+                // Convert rgba color to hex for storage
+                const hexColor = RenderUtils.rgbaToHex(gridColor);
+                this.configManager.set('grid.color', hexColor);
+            }
+            if (gridThickness !== undefined) this.configManager.set('grid.thickness', gridThickness);
+            if (gridOpacity !== undefined) this.configManager.set('grid.opacity', gridOpacity);
+            if (gridSubdivisions !== undefined) this.configManager.set('grid.subdivisions', gridSubdivisions);
+            if (gridSubdivColor !== undefined) {
+                // Convert rgba color to hex for storage
+                const hexSubdivColor = RenderUtils.rgbaToHex(gridSubdivColor);
+                this.configManager.set('grid.subdivColor', hexSubdivColor);
+            }
+            if (gridSubdivThickness !== undefined) this.configManager.set('grid.subdivThickness', gridSubdivThickness);
+        }
+
         this.configManager.saveSettings();
-        
-        // Sync all grid settings to StateManager before closing
+
+        // Sync all grid settings to StateManager before closing (for consistency)
         this.gridSettings.syncAllGridSettingsToState();
-        
+
         // Apply UI font scale globally
         const scale = this.configManager.get('ui.fontScale') || 1.0;
         document.documentElement.style.fontSize = `${scale * 16}px`;

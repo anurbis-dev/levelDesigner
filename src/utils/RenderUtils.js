@@ -207,6 +207,28 @@ export class RenderUtils {
     }
 
     /**
+     * Convert rgba color to hex for display in color inputs
+     * @param {string} rgbaColor - RGBA color string (e.g., 'rgba(255, 255, 255, 0.1)')
+     * @returns {string} Hex color string (e.g., '#ffffff')
+     */
+    static rgbaToHex(rgbaColor) {
+        if (!rgbaColor || !rgbaColor.startsWith('rgba')) {
+            return rgbaColor || '#ffffff';
+        }
+        
+        const match = rgbaColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+        if (!match) {
+            return '#ffffff';
+        }
+        
+        const r = parseInt(match[1]);
+        const g = parseInt(match[2]);
+        const b = parseInt(match[3]);
+        
+        return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+    }
+
+    /**
      * Draw grid with performance optimizations
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {number} gridSize - Size of grid cells

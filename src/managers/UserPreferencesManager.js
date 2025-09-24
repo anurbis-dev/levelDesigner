@@ -25,6 +25,12 @@ export class UserPreferencesManager {
             canvasBackgroundColor: '#4B5563',
             gridSize: 32,
             showGrid: true,
+            gridColor: '#ffffff',
+            gridOpacity: 0.1,
+            gridThickness: 1,
+            gridSubdivisions: 4,
+            gridSubdivColor: '#666666',
+            gridSubdivThickness: 0.5,
             
             // Editor settings
             autoSave: true,

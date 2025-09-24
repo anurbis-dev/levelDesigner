@@ -1,5 +1,6 @@
 import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
 import { Logger } from '../utils/Logger.js';
+import { RenderUtils } from '../utils/RenderUtils.js';
 
 /**
  * Canvas rendering system
@@ -107,66 +108,88 @@ export class CanvasRenderer {
         this.ctx.save();
         this.ctx.fillStyle = backgroundColor;
         this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-        
+
         // Skip grid drawing if zoomed out too much (performance optimization)
         const minGridSize = 5; // Minimum grid size in pixels
         if (gridSize * camera.zoom < minGridSize) {
             this.ctx.restore();
             return;
         }
-        
+
         // Apply grid styling options
         const gridColor = options.color || 'rgba(255, 255, 255, 0.1)';
         const gridThickness = options.thickness || 1;
         const gridOpacity = options.opacity || 0.1;
-        
+        const gridSubdivisions = options.subdivisions || 1;
+        const gridSubdivColor = options.subdivColor || '#666666';
+        const gridSubdivThickness = options.subdivThickness || 0.5;
+
+
+
+        const scaledGridSize = gridSize;
+        // Calculate viewport bounds
+        const viewportLeft = camera.x;
+        const viewportTop = camera.y;
+        const viewportRight = camera.x + this.canvas.width / camera.zoom;
+        const viewportBottom = camera.y + this.canvas.height / camera.zoom;
+
+        // Start drawing lines before viewport and end after to ensure full coverage
+        const startX = Math.floor(viewportLeft / gridSize) * gridSize - gridSize;
+        const startY = Math.floor(viewportTop / gridSize) * gridSize - gridSize;
+        const endX = Math.ceil(viewportRight / gridSize) * gridSize + gridSize;
+        const endY = Math.ceil(viewportBottom / gridSize) * gridSize + gridSize;
+
+        // Higher limit for grid lines (grid is less performance-intensive than objects)
+        // Prevents grid from disappearing in chunks during panning
+        const maxLines = 1000;
+
+        // Draw main grid lines
+        this.drawGridLines(gridSize, gridColor, gridThickness, gridOpacity, camera, startX, startY, endX, endY, maxLines);
+
+        // Draw subdivision lines if enabled
+        if (gridSubdivisions > 1) {
+            const subdivSize = gridSize / gridSubdivisions;
+            this.drawGridLines(subdivSize, gridSubdivColor, gridSubdivThickness, gridOpacity, camera, startX, startY, endX, endY, maxLines);
+        }
+
+        this.ctx.restore();
+    }
+
+    /**
+     * Draw grid lines with specified parameters
+     */
+    drawGridLines(gridSize, color, thickness, opacity, camera, startX, startY, endX, endY, maxLines) {
         // Handle both hex and rgba colors
-        if (gridColor.startsWith('rgba')) {
-            this.ctx.strokeStyle = gridColor;
+        if (color.startsWith('rgba')) {
+            this.ctx.strokeStyle = color;
         } else {
             // Convert hex color to rgba with opacity
-            const hexToRgba = (hex, alpha) => {
-                const r = parseInt(hex.slice(1, 3), 16);
-                const g = parseInt(hex.slice(3, 5), 16);
-                const b = parseInt(hex.slice(5, 7), 16);
-                return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-            };
-            this.ctx.strokeStyle = hexToRgba(gridColor, gridOpacity);
+            this.ctx.strokeStyle = RenderUtils.hexToRgba(color, opacity);
         }
-        this.ctx.lineWidth = (gridThickness / camera.zoom);
-        
-        const scaledGridSize = gridSize;
-        const startX = camera.x - (camera.x % gridSize);
-        const startY = camera.y - (camera.y % gridSize);
-        const endX = camera.x + this.canvas.width / camera.zoom;
-        const endY = camera.y + this.canvas.height / camera.zoom;
-        
-        // Limit number of grid lines for performance
-        const maxLines = 200;
-        const totalVerticalLines = Math.floor((endX - startX) / scaledGridSize);
-        const totalHorizontalLines = Math.floor((endY - startY) / scaledGridSize);
-        
+        this.ctx.lineWidth = (thickness / camera.zoom);
+
+        const totalVerticalLines = Math.floor((endX - startX) / gridSize);
+        const totalHorizontalLines = Math.floor((endY - startY) / gridSize);
+
         // Draw vertical lines
         if (totalVerticalLines <= maxLines) {
-            for (let x = startX; x < endX; x += scaledGridSize) {
+            for (let x = startX; x < endX; x += gridSize) {
                 this.ctx.beginPath();
                 this.ctx.moveTo(x, startY);
                 this.ctx.lineTo(x, endY);
                 this.ctx.stroke();
             }
         }
-        
+
         // Draw horizontal lines
         if (totalHorizontalLines <= maxLines) {
-            for (let y = startY; y < endY; y += scaledGridSize) {
+            for (let y = startY; y < endY; y += gridSize) {
                 this.ctx.beginPath();
                 this.ctx.moveTo(startX, y);
                 this.ctx.lineTo(endX, y);
                 this.ctx.stroke();
             }
         }
-        
-        this.ctx.restore();
     }
 
     /**

@@ -1,3 +1,5 @@
+import { RenderUtils } from '../utils/RenderUtils.js';
+
 /**
  * Grid Settings Module
  * Handles all grid-related settings rendering and synchronization
@@ -25,7 +27,7 @@ export class GridSettings {
                     </div>
                     <div>
                         <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Color</label>
-                        <input type="color" class="setting-input" name="setting-input" data-setting="grid.color" value="${this.configManager.get('grid.color') || '#ffffff'}" style="width:100%; height: 2.5rem; border:1px solid #4b5563; border-radius:0.25rem; cursor:pointer;"/>
+                        <input type="color" class="setting-input" name="setting-input" data-setting="grid.color" value="${RenderUtils.rgbaToHex(this.configManager.get('grid.color')) || '#ffffff'}" style="width:100%; height: 2.5rem; border:1px solid #4b5563; border-radius:0.25rem; cursor:pointer;"/>
                     </div>
                     <div>
                         <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Thickness</label>
@@ -45,7 +47,7 @@ export class GridSettings {
                     </div>
                     <div>
                         <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Subdiv. Color</label>
-                        <input type="color" class="setting-input" name="setting-input" data-setting="grid.subdivColor" value="${this.configManager.get('grid.subdivColor') || '#666666'}" style="width:100%; height: 2.5rem; border:1px solid #4b5563; border-radius:0.25rem; cursor:pointer;"/>
+                        <input type="color" class="setting-input" name="setting-input" data-setting="grid.subdivColor" value="${RenderUtils.rgbaToHex(this.configManager.get('grid.subdivColor')) || '#666666'}" style="width:100%; height: 2.5rem; border:1px solid #4b5563; border-radius:0.25rem; cursor:pointer;"/>
                     </div>
                     <div>
                         <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Subdiv. Thickness</label>
@@ -60,41 +62,61 @@ export class GridSettings {
      * Sync all grid settings from ConfigManager to StateManager
      * This method handles the conversion and application of grid settings
      */
-    syncAllGridSettingsToState() {
-        if (!window.levelEditor || !window.levelEditor.stateManager) return;
-        
-        // Get all grid settings from ConfigManager
-        const gridSize = this.configManager.get('grid.size');
-        const gridColor = this.configManager.get('grid.color');
-        const gridThickness = this.configManager.get('grid.thickness');
-        const gridOpacity = this.configManager.get('grid.opacity');
-        
-        // Convert and set each parameter
-        if (gridSize !== undefined) {
-            window.levelEditor.stateManager.set('canvas.gridSize', gridSize);
+    syncAllGridSettingsToState(changedPath = null, changedValue = null) {
+        if (!window.editor || !window.editor.stateManager) return;
+
+        // Get all grid settings from ConfigManager with defaults
+        let gridSize = this.configManager.get('grid.size') ?? 32;
+        let gridColor = this.configManager.get('grid.color') ?? '#ffffff';
+        let gridThickness = this.configManager.get('grid.thickness') ?? 1;
+        let gridOpacity = this.configManager.get('grid.opacity') ?? 0.1;
+        let gridSubdivisions = this.configManager.get('grid.subdivisions') ?? 4;
+        let gridSubdivColor = this.configManager.get('grid.subdivColor') ?? '#666666';
+        let gridSubdivThickness = this.configManager.get('grid.subdivThickness') ?? 0.5;
+
+
+        // If we have a changed value, use it instead of the stored one
+        if (changedPath && changedValue !== undefined) {
+            if (changedPath === 'grid.size') gridSize = changedValue;
+            else if (changedPath === 'grid.color') gridColor = changedValue;
+            else if (changedPath === 'grid.thickness') gridThickness = changedValue;
+            else if (changedPath === 'grid.opacity') gridOpacity = changedValue;
+            else if (changedPath === 'grid.subdivisions') gridSubdivisions = changedValue;
+            else if (changedPath === 'grid.subdivColor') gridSubdivColor = changedValue;
+            else if (changedPath === 'grid.subdivThickness') gridSubdivThickness = changedValue;
         }
-        
-        if (gridColor !== undefined) {
-            let colorValue = gridColor;
-            if (gridColor.startsWith('#')) {
-                const opacity = gridOpacity !== undefined ? gridOpacity : 0.1;
-                const r = parseInt(gridColor.slice(1, 3), 16);
-                const g = parseInt(gridColor.slice(3, 5), 16);
-                const b = parseInt(gridColor.slice(5, 7), 16);
-                colorValue = `rgba(${r}, ${g}, ${b}, ${opacity})`;
-            }
-            window.levelEditor.stateManager.set('canvas.gridColor', colorValue);
+
+
+        // Convert and set each parameter (always set, using defaults)
+        window.editor.stateManager.set('canvas.gridSize', gridSize);
+
+        // Convert main grid color
+        let colorValue = gridColor;
+        if (gridColor.startsWith('#')) {
+            const r = parseInt(gridColor.slice(1, 3), 16);
+            const g = parseInt(gridColor.slice(3, 5), 16);
+            const b = parseInt(gridColor.slice(5, 7), 16);
+            colorValue = `rgba(${r}, ${g}, ${b}, ${gridOpacity})`;
         }
-        
-        if (gridThickness !== undefined) {
-            window.levelEditor.stateManager.set('canvas.gridThickness', gridThickness);
+        window.editor.stateManager.set('canvas.gridColor', colorValue);
+
+        window.editor.stateManager.set('canvas.gridThickness', gridThickness);
+        window.editor.stateManager.set('canvas.gridOpacity', gridOpacity);
+        window.editor.stateManager.set('canvas.gridSubdivisions', gridSubdivisions);
+
+        // Convert subdivision color
+        let subdivColorValue = gridSubdivColor;
+        if (gridSubdivColor.startsWith('#')) {
+            const r = parseInt(gridSubdivColor.slice(1, 3), 16);
+            const g = parseInt(gridSubdivColor.slice(3, 5), 16);
+            const b = parseInt(gridSubdivColor.slice(5, 7), 16);
+            subdivColorValue = `rgba(${r}, ${g}, ${b}, ${gridOpacity})`;
         }
-        
-        if (gridOpacity !== undefined) {
-            window.levelEditor.stateManager.set('canvas.gridOpacity', gridOpacity);
-        }
-        
+        window.editor.stateManager.set('canvas.gridSubdivColor', subdivColorValue);
+
+        window.editor.stateManager.set('canvas.gridSubdivThickness', gridSubdivThickness);
+
         // Trigger re-render to apply changes
-        window.levelEditor.render();
+        window.editor.render();
     }
 }
