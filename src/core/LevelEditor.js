@@ -37,7 +37,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.18.0';
+    static VERSION = '3.19.0';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -869,6 +869,7 @@ export class LevelEditor {
         const gridSubdivisions = this.configManager.get('grid.subdivisions');
         const gridSubdivColor = this.configManager.get('grid.subdivColor');
         const gridSubdivThickness = this.configManager.get('grid.subdivThickness');
+        const gridType = this.configManager.get('canvas.gridType');
 
 
         if (gridSize !== undefined) {
@@ -909,6 +910,9 @@ export class LevelEditor {
         }
         if (gridSubdivThickness !== undefined) {
             this.stateManager.set('canvas.gridSubdivThickness', gridSubdivThickness);
+        }
+        if (gridType !== undefined) {
+            this.stateManager.set('canvas.gridType', gridType);
         }
         
         // Sync grid settings to ensure proper initialization

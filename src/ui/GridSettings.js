@@ -7,6 +7,7 @@ import { RenderUtils } from '../utils/RenderUtils.js';
 export class GridSettings {
     constructor(configManager) {
         this.configManager = configManager;
+        this.renderTimeout = null;
     }
 
     /**
@@ -15,6 +16,16 @@ export class GridSettings {
     renderGridSettings() {
         return `
             <h3 style="font-size: 1.125rem; font-weight: 500; margin-bottom: 1rem;">Grid & Snapping Settings</h3>
+
+            <!-- Grid Type Selection -->
+            <div style="margin-bottom: 1.5rem;">
+                <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Type</label>
+                <select class="setting-input" name="setting-input" data-setting="canvas.gridType" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;">
+                    <option value="rectangular" ${(this.configManager.get('canvas.gridType') || 'rectangular') === 'rectangular' ? 'selected' : ''}>Rectangular Grid</option>
+                    <option value="isometric" ${(this.configManager.get('canvas.gridType') || 'rectangular') === 'isometric' ? 'selected' : ''}>Isometric Grid</option>
+                    <option value="hexagonal" ${(this.configManager.get('canvas.gridType') || 'rectangular') === 'hexagonal' ? 'selected' : ''}>Hexagonal Grid</option>
+                </select>
+            </div>
 
             <!-- Grid Layout для компактного размещения -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
@@ -77,6 +88,7 @@ export class GridSettings {
         let gridSubdivisions = this.configManager.get('grid.subdivisions') ?? 4;
         let gridSubdivColor = this.configManager.get('grid.subdivColor') ?? '#666666';
         let gridSubdivThickness = this.configManager.get('grid.subdivThickness') ?? 0.5;
+        let gridType = this.configManager.get('canvas.gridType') ?? 'rectangular';
 
 
         // If we have a changed value, use it instead of the stored one
@@ -88,6 +100,14 @@ export class GridSettings {
             else if (changedPath === 'grid.subdivisions') gridSubdivisions = changedValue;
             else if (changedPath === 'grid.subdivColor') gridSubdivColor = changedValue;
             else if (changedPath === 'grid.subdivThickness') gridSubdivThickness = changedValue;
+            else if (changedPath === 'canvas.gridType') gridType = changedValue;
+        }
+
+        // If opacity changed, we need to recalculate colors with new opacity
+        if (changedPath === 'grid.opacity') {
+            // Force color recalculation by getting fresh values
+            gridColor = this.configManager.get('grid.color') ?? '#ffffff';
+            gridSubdivColor = this.configManager.get('grid.subdivColor') ?? '#666666';
         }
 
 
@@ -119,8 +139,16 @@ export class GridSettings {
         window.editor.stateManager.set('canvas.gridSubdivColor', subdivColorValue);
 
         window.editor.stateManager.set('canvas.gridSubdivThickness', gridSubdivThickness);
+        window.editor.stateManager.set('canvas.gridType', gridType);
 
-        // Trigger re-render to apply changes
-        window.editor.render();
+        // Trigger re-render with debounce to prevent excessive calls
+        if (this.renderTimeout) {
+            clearTimeout(this.renderTimeout);
+        }
+        this.renderTimeout = setTimeout(() => {
+            if (window.editor && window.editor.render) {
+                window.editor.render();
+            }
+        }, 50); // 50ms debounce
     }
 }

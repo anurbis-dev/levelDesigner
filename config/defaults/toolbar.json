@@ -1,0 +1,22 @@
+{
+  "visible": true,
+  "position": "top",
+  "buttonGroups": {
+    "file": true,
+    "edit": true,
+    "view": true,
+    "group": true
+  },
+  "buttonStates": {
+    "toggle-grid": true,
+    "toggle-snap": false,
+    "toggle-parallax": false,
+    "toggle-boundaries": false,
+    "toggle-collisions": false
+  },
+  "collapsedSections": {},
+  "display": {
+    "showIcons": true,
+    "showText": true
+  }
+}

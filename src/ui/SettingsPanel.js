@@ -598,7 +598,7 @@ export class SettingsPanel {
                 }
 
                 // Handle grid settings with immediate sync to StateManager
-                if (path.startsWith('grid.')) {
+                if (path.startsWith('grid.') || path.startsWith('canvas.')) {
                     // Save to ConfigManager
                     this.configManager.set(path, value);
                     // Sync to StateManager for immediate application
@@ -693,6 +693,7 @@ export class SettingsPanel {
             const gridSubdivisions = window.editor.stateManager.get('canvas.gridSubdivisions');
             const gridSubdivColor = window.editor.stateManager.get('canvas.gridSubdivColor');
             const gridSubdivThickness = window.editor.stateManager.get('canvas.gridSubdivThickness');
+            const gridType = window.editor.stateManager.get('canvas.gridType');
 
 
             if (gridSize !== undefined) this.configManager.set('grid.size', gridSize);
@@ -710,6 +711,7 @@ export class SettingsPanel {
                 this.configManager.set('grid.subdivColor', hexSubdivColor);
             }
             if (gridSubdivThickness !== undefined) this.configManager.set('grid.subdivThickness', gridSubdivThickness);
+            if (gridType !== undefined) this.configManager.set('canvas.gridType', gridType);
         }
 
         this.configManager.saveSettings();

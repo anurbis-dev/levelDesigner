@@ -1074,7 +1074,7 @@
                 });
 
                 document.addEventListener('mousemove', (e) => {
-                    if (!isResizing) return;
+if (!isResizing) return;
 
                     const deltaY = e.clientY - startY;
                     const newHeight = startHeight + deltaY;
@@ -1085,8 +1085,7 @@
                         consolePanel.style.height = newHeight + 'px';
                         consolePanel.style.bottom = 'auto';
                         
-                        // Save the height preference
-                        userPrefs.set('consoleHeight', newHeight);
+                        // Don't save during resize - only save on mouseup
                     }
                 });
 
@@ -1095,6 +1094,10 @@
                         isResizing = false;
                         document.body.style.cursor = '';
                         document.body.style.userSelect = '';
+                        
+                        // Save the final height when resize is complete
+                        const finalHeight = consolePanel.offsetHeight;
+                        userPrefs.set('consoleHeight', finalHeight);
                     }
                 });
             }

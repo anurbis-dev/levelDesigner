@@ -106,6 +106,7 @@ export class ConfigManager {
             subdivisions: configs.canvas?.gridSubdivisions ?? 4,
             subdivColor: configs.canvas?.gridSubdivColor ?? '#666666',
             subdivThickness: configs.canvas?.gridSubdivThickness ?? 0.5,
+            gridType: configs.canvas?.gridType ?? 'rectangular',
             snapTolerance: 80
         };
 
@@ -207,6 +208,7 @@ export class ConfigManager {
             subdivisions: configs.canvas?.gridSubdivisions ?? 4,
             subdivColor: configs.canvas?.gridSubdivColor ?? '#666666',
             subdivThickness: configs.canvas?.gridSubdivThickness ?? 0.5,
+            gridType: configs.canvas?.gridType ?? 'rectangular',
             snapTolerance: 80
         };
 
@@ -375,6 +377,7 @@ export class ConfigManager {
             merged.canvas.gridSubdivisions = merged.grid.subdivisions;
             merged.canvas.gridSubdivColor = merged.grid.subdivColor;
             merged.canvas.gridSubdivThickness = merged.grid.subdivThickness;
+            merged.canvas.gridType = merged.grid.gridType;
 
             // Sync from canvas to grid (for backward compatibility)
             merged.grid.showGrid = merged.canvas.showGrid;
@@ -386,6 +389,7 @@ export class ConfigManager {
             merged.grid.subdivisions = merged.canvas.gridSubdivisions;
             merged.grid.subdivColor = merged.canvas.gridSubdivColor;
             merged.grid.subdivThickness = merged.canvas.gridSubdivThickness;
+            merged.grid.gridType = merged.canvas.gridType;
         }
         
         return merged;

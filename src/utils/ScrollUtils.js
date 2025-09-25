@@ -51,7 +51,7 @@ export class ScrollUtils {
         document.addEventListener('mouseup', this.globalMouseUpHandler);
 
         this.isGlobalHandlersSetup = true;
-        Logger.log('DEBUG', 'debug', 'ScrollUtils: Global handlers setup');
+        Logger.ui.debug('ScrollUtils: Global handlers setup');
     }
 
     /**
@@ -64,7 +64,7 @@ export class ScrollUtils {
      */
     static setupMiddleMouseScrolling(container, options = {}) {
         if (!container) {
-            Logger.warn('ScrollUtils: Container is null or undefined');
+            Logger.ui.warn('ScrollUtils: Container is null or undefined');
             return;
         }
 
@@ -115,7 +115,7 @@ export class ScrollUtils {
             }
         });
 
-        Logger.log('DEBUG', 'debug', `ScrollUtils: Scrolling setup for ${container.tagName}#${container.id || container.className}`);
+        Logger.ui.debug(`ScrollUtils: Scrolling setup for ${container.tagName}#${container.id || container.className}`);
     }
 
     static startScrolling(container, config, e) {
@@ -133,7 +133,7 @@ export class ScrollUtils {
         // Add panning class to body for global panning state
         document.body.classList.add('panning-mode');
 
-        Logger.log('DEBUG', 'debug', `ScrollUtils: Scrolling started on ${container.tagName}#${container.id || container.className}`);
+        Logger.ui.debug(`ScrollUtils: Scrolling started on ${container.tagName}#${container.id || container.className}`);
     }
 
     static updateScrolling(container, config, e) {
@@ -171,7 +171,7 @@ export class ScrollUtils {
         // Remove panning class from body
         document.body.classList.remove('panning-mode');
 
-        Logger.log('DEBUG', 'debug', 'ScrollUtils: Scrolling stopped');
+        Logger.ui.debug('ScrollUtils: Scrolling stopped');
     }
 
     /**

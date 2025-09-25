@@ -25,6 +25,13 @@
             <label>Grid Opacity: <input type="range" id="gridOpacity" value="0.1" min="0" max="1" step="0.05"></label>
         </div>
         <div class="control-group">
+            <label>Grid Type: <select id="gridType">
+                <option value="rectangular">Rectangular</option>
+                <option value="isometric">Isometric</option>
+                <option value="hexagonal">Hexagonal</option>
+            </select></label>
+        </div>
+        <div class="control-group">
             <label>Grid Thickness: <input type="number" id="gridThickness" value="1" min="0.1" max="5" step="0.1"></label>
         </div>
         <div class="control-group">
@@ -53,6 +60,15 @@
         // Mock camera
         const camera = { x: 0, y: 0, zoom: 1 };
 
+        // Test button for hexagonal grid
+        const testHexButton = document.createElement('button');
+        testHexButton.textContent = 'Test Hex Grid';
+        testHexButton.onclick = function() {
+            document.getElementById('gridType').value = 'hexagonal';
+            updateGrid();
+        };
+        document.querySelector('.controls').appendChild(testHexButton);
+
         // Mock level with basic settings
         const mockLevel = {
             settings: {
@@ -80,11 +96,12 @@
             const gridColor = document.getElementById('gridColor').value;
             const gridOpacity = parseFloat(document.getElementById('gridOpacity').value);
             const gridThickness = parseFloat(document.getElementById('gridThickness').value);
+            const gridType = document.getElementById('gridType').value;
             const gridSubdivisions = parseInt(document.getElementById('gridSubdivisions').value);
             const gridSubdivColor = document.getElementById('gridSubdivColor').value;
 
             console.log('Updating grid settings:', {
-                gridSize, gridColor, gridOpacity, gridThickness, gridSubdivisions, gridSubdivColor
+                gridSize, gridColor, gridOpacity, gridThickness, gridType, gridSubdivisions, gridSubdivColor
             });
 
             // Set values in StateManager
@@ -119,6 +136,7 @@
             document.getElementById('gridColor').value = '#ffffff';
             document.getElementById('gridOpacity').value = 0.1;
             document.getElementById('gridThickness').value = 1;
+            document.getElementById('gridType').value = 'hexagonal';
             document.getElementById('gridSubdivisions').value = 4;
             document.getElementById('gridSubdivColor').value = '#666666';
             updateGrid();
@@ -162,7 +180,8 @@
                         opacity: gridOpacity,
                         subdivisions: gridSubdivisions,
                         subdivColor: gridSubdivColor,
-                        subdivThickness: gridSubdivThickness
+                        subdivThickness: gridSubdivThickness,
+                        gridType: gridType
                     }
                 );
             }

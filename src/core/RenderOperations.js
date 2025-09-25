@@ -312,6 +312,7 @@ export class RenderOperations extends BaseModule {
             const gridSubdivisions = this.editor.stateManager.get('canvas.gridSubdivisions') ?? 4;
             const gridSubdivColor = this.editor.stateManager.get('canvas.gridSubdivColor') ?? '#666666';
             const gridSubdivThickness = this.editor.stateManager.get('canvas.gridSubdivThickness') ?? 0.5;
+            const gridType = this.editor.stateManager.get('canvas.gridType') ?? 'rectangular';
 
 
 
@@ -326,7 +327,8 @@ export class RenderOperations extends BaseModule {
                     opacity: gridOpacity,
                     subdivisions: gridSubdivisions,
                     subdivColor: gridSubdivColor,
-                    subdivThickness: gridSubdivThickness
+                    subdivThickness: gridSubdivThickness,
+                    gridType: gridType
                 }
             );
         } else {

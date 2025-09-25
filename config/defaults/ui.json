@@ -9,6 +9,7 @@
   "consoleVisible": false,
   "consoleMaxLines": 1000,
   "toolbarVisible": true,
+  "toolbarScrollLeft": 0,
   "assetsPanelVisible": true,
   "rightPanelVisible": true
 }

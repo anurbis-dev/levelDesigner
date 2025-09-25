@@ -31,6 +31,8 @@ export class Toolbar {
         // Setup scrolling events after render
         this.setupScrollingEvents();
         this.setupContextMenu();
+        // Load scroll position after toolbar is fully rendered
+        this.loadScrollPosition();
     }
 
     /**
@@ -643,6 +645,11 @@ export class Toolbar {
         this.levelEditor.configManager.set('toolbar.display.showIcons', this.showIcons);
         this.levelEditor.configManager.set('toolbar.display.showText', this.showText);
         
+        // Save toolbar scroll position to user preferences
+        if (this.levelEditor.userPrefs && this.toolbarContent) {
+            this.levelEditor.userPrefs.set('toolbarScrollLeft', this.toolbarContent.scrollLeft);
+        }
+        
         // Display state saved
     }
 
@@ -666,6 +673,19 @@ export class Toolbar {
         this.updateButtonDisplay();
 
         // Display state loaded
+    }
+
+    /**
+     * Load toolbar scroll position from user preferences
+     */
+    loadScrollPosition() {
+        if (this.levelEditor && this.levelEditor.userPrefs && this.toolbarContent) {
+            const savedScrollLeft = this.levelEditor.userPrefs.get('toolbarScrollLeft');
+            if (typeof savedScrollLeft === 'number' && savedScrollLeft >= 0) {
+                this.toolbarContent.scrollLeft = savedScrollLeft;
+                Logger.ui.debug(`Toolbar scroll position restored: ${savedScrollLeft}px`);
+            }
+        }
     }
 
     /**
@@ -742,6 +762,11 @@ export class Toolbar {
             e.stopPropagation();
             const scrollAmount = e.deltaY * 0.5; // Adjust scroll sensitivity
             this.toolbarContent.scrollLeft += scrollAmount;
+            
+            // Save scroll position after wheel scroll
+            if (this.levelEditor && this.levelEditor.userPrefs) {
+                this.levelEditor.userPrefs.set('toolbarScrollLeft', this.toolbarContent.scrollLeft);
+            }
         });
 
         // Prevent context menu on middle click
@@ -774,7 +799,7 @@ export class Toolbar {
         document.body.style.cursor = 'grabbing';
         document.body.style.userSelect = 'none';
         
-        Logger.debug('Toolbar scrolling started');
+        Logger.ui.debug('Toolbar scrolling started');
     }
 
     /**
@@ -805,7 +830,12 @@ export class Toolbar {
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
         
-        Logger.debug('Toolbar scrolling stopped');
+        // Save scroll position when scrolling stops
+        if (this.levelEditor && this.levelEditor.userPrefs && this.toolbarContent) {
+            this.levelEditor.userPrefs.set('toolbarScrollLeft', this.toolbarContent.scrollLeft);
+        }
+        
+        Logger.ui.debug('Toolbar scrolling stopped');
     }
 
     /**
@@ -831,7 +861,7 @@ export class Toolbar {
         // Save collapsed state
         this.saveCollapsedState(sectionName, !isCollapsed);
         
-        Logger.debug(`Toolbar group ${isCollapsed ? 'expanded' : 'collapsed'}`);
+        Logger.ui.debug(`Toolbar group ${isCollapsed ? 'expanded' : 'collapsed'}`);
     }
 
     /**
@@ -870,7 +900,7 @@ export class Toolbar {
         if (this.contextMenu) {
             this.contextMenu.hideMenu();
         }
-        Logger.debug('Toolbar hidden via context menu');
+        Logger.ui.debug('Toolbar hidden via context menu');
     }
 
     /**
@@ -880,7 +910,7 @@ export class Toolbar {
         this.showIcons = !this.showIcons;
         this.updateButtonDisplay();
         this.saveDisplayState();
-        Logger.debug(`Toolbar icons ${this.showIcons ? 'shown' : 'hidden'}`);
+        Logger.ui.debug(`Toolbar icons ${this.showIcons ? 'shown' : 'hidden'}`);
     }
 
     /**
@@ -890,7 +920,7 @@ export class Toolbar {
         this.showText = !this.showText;
         this.updateButtonDisplay();
         this.saveDisplayState();
-        Logger.debug(`Toolbar text ${this.showText ? 'shown' : 'hidden'}`);
+        Logger.ui.debug(`Toolbar text ${this.showText ? 'shown' : 'hidden'}`);
     }
 
     /**

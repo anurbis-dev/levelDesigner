@@ -1,0 +1,10 @@
+{
+  "grid": true,
+  "gameMode": false,
+  "snapToGrid": false,
+  "parallax": false,
+  "objectBoundaries": false,
+  "objectCollisions": false,
+  "rightPanelTab": "details",
+  "toolbar": true
+}

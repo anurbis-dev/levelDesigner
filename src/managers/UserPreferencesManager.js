@@ -22,6 +22,7 @@ export class UserPreferencesManager {
             'consoleVisible': 'ui.consoleVisible',
             'consoleMaxLines': 'ui.consoleMaxLines',
             'toolbarVisible': 'ui.toolbarVisible',
+            'toolbarScrollLeft': 'ui.toolbarScrollLeft',
             'assetsPanelVisible': 'ui.assetsPanelVisible',
             'rightPanelVisible': 'ui.rightPanelVisible',
             'theme': 'ui.theme',

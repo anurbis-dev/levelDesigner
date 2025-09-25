@@ -1,0 +1,7 @@
+{
+  "zoomSpeed": 0.1,
+  "panSpeed": 1.0,
+  "minZoom": 0.1,
+  "maxZoom": 10.0,
+  "smoothZoom": true
+}

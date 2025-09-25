@@ -267,6 +267,12 @@ export class ObjectOperations extends BaseModule {
 
         // Clear selection and update UI AFTER all operations are complete
         this.editor.stateManager.set('selectedObjects', new Set());
+        
+        // Invalidate spatial index to ensure deleted objects are not rendered
+        if (this.editor.renderOperations) {
+            this.editor.renderOperations.invalidateSpatialIndex();
+        }
+        
         this.editor.render();
         this.editor.updateAllPanels();
     }

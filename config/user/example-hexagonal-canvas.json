@@ -1,0 +1,13 @@
+{
+  "backgroundColor": "#1A202C",
+  "gridSize": 48,
+  "showGrid": true,
+  "gridType": "hexagonal",
+  "gridColor": "rgba(255, 255, 255, 0.15)",
+  "gridOpacity": 0.15,
+  "gridThickness": 1.2,
+  "gridSubdivisions": 1,
+  "gridSubdivColor": "#A0AEC0",
+  "gridSubdivThickness": 0.6,
+  "snapToGrid": true
+}

@@ -38,7 +38,7 @@ export class BasePanel {
         };
 
         if (!config.target) {
-            Logger.warn('BasePanel: No scroll container found');
+            Logger.ui.warn('BasePanel: No scroll container found');
             return;
         }
 
@@ -52,7 +52,7 @@ export class BasePanel {
         // Add minimal scrollbar styles
         ScrollUtils.addMinimalScrollbarStyles(config.target);
 
-        Logger.log('DEBUG', 'debug', `BasePanel: Scrolling setup for ${this.constructor.name}`);
+        Logger.ui.debug(`BasePanel: Scrolling setup for ${this.constructor.name}`);
     }
 
     /**
