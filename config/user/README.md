@@ -120,7 +120,7 @@ editor.configManager.saveUserConfig('canvas', {
 - `gridColor` - цвет основных линий сетки (rgba или #hex)
 - `gridOpacity` - прозрачность сетки (0.0 - 1.0)
 - `gridThickness` - толщина основных линий (0.1 - 5.0)
-- `gridSubdivisions` - количество подразделений (1 - 10)
+- `gridSubdivisions` - количество подразделений (0 - 10, 0 = отключить)
 - `gridSubdivColor` - цвет линий подразделений (rgba или #hex)
 - `gridSubdivThickness` - толщина линий подразделений (0.1 - 3.0)
 - `snapToGrid` - привязка к сетке (true/false)

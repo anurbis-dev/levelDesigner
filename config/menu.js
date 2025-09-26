@@ -83,7 +83,7 @@ export const MENU_CONFIG = {
                 },
                 {
                     id: 'toggle-grid',
-                    label: 'Grid',
+                    label: 'Grid (G)',
                     type: 'toggle',
                     stateKey: 'view.grid',
                     action: 'toggleViewOption',

@@ -1,140 +1,33 @@
 /**
  * ConsoleContextMenu CSS Styles
  * 
- * Styles for the console context menu system.
- * Provides a dark theme consistent with the application design.
+ * Additional styles for the console context menu system.
+ * Extends the base context menu styles with console-specific customizations.
  * 
  * Key features:
- * - High z-index (10000) to appear above all other elements
- * - Dark theme matching the console panel
- * - Hover and active states for better UX
- * - Responsive design with proper spacing
+ * - Console-specific styling overrides
+ * - Smaller menu items for console context
+ * - Custom icons and spacing
  * 
  * @author Level Designer
  * @version dynamic
  */
 
-/* Console context menu container */
+/* Console context menu extends base menu */
 .console-context-menu {
-    position: absolute;
-    background: #1F2937; /* gray-800 */
-    border: 1px solid #374151; /* gray-700 */
-    border-radius: 0.25rem; /* 4px в rem */
-    padding: 0.25rem 0; /* 4px 0 в rem */
-    z-index: 10000; /* High z-index to appear above all elements */
-    min-width: 7.5rem; /* 120px в rem */
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 
-                0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    
-    /* Animation properties */
-    opacity: 0;
-    transform: scale(0.95);
-    transition: opacity 0.15s ease-out, transform 0.15s ease-out;
-    pointer-events: none;
-    
-    /* Prevent text selection in menu */
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
+    @apply base-context-menu;
+    min-width: 120px; /* Smaller than base for console */
+    padding: 4px 0; /* Tighter padding for console */
 }
 
-/* Show animation */
-.console-context-menu.show {
-    opacity: 1;
-    transform: scale(1);
-    pointer-events: auto;
-}
-
-/* Active context menu - prevents selection loss */
-.console-context-menu-active {
-    pointer-events: auto;
-}
-
-/* Console context menu items */
+/* Console context menu items extend base items */
 .console-context-menu-item {
-    padding: 0.5rem 0.75rem; /* 8px 12px в rem */
-    color: #D1D5DB; /* gray-300 */
-    cursor: pointer;
-    font-size: 0.875rem; /* 14px в rem */
-    display: flex;
-    align-items: center;
-    gap: 0.5rem; /* 8px в rem */
-    transition: background-color 0.15s ease;
-    user-select: none;
+    @apply base-context-menu-item;
+    padding: 8px 12px; /* Smaller padding for console */
+    font-size: 0.875rem; /* 14px */
 }
 
-/* Hover state for menu items */
-.console-context-menu-item:hover {
-    background: #374151; /* gray-700 */
-}
-
-/* Active state for menu items */
-.console-context-menu-item:active {
-    background: #4B5563; /* gray-600 */
-}
-
-/* First menu item styling */
-.console-context-menu-item:first-child {
-    border-top-left-radius: 0.25rem; /* 4px в rem */
-    border-top-right-radius: 0.25rem; /* 4px в rem */
-}
-
-/* Last menu item styling */
-.console-context-menu-item:last-child {
-    border-bottom-left-radius: 0.25rem; /* 4px в rem */
-    border-bottom-right-radius: 0.25rem; /* 4px в rem */
-}
-
-/* Menu item icons */
-.console-context-menu-item::before {
-    font-size: 1rem; /* 16px в rem */
-    width: 1.25rem; /* 20px в rem */
-    text-align: center;
-}
-
-/* Responsive adjustments for smaller screens */
-@media (max-width: 768px) {
-    .console-context-menu {
-        min-width: 6.25rem; /* 100px в rem */
-        font-size: 0.8125rem; /* 13px в rem */
-    }
-    
-    .console-context-menu-item {
-        padding: 0.375rem 0.625rem; /* 6px 10px в rem */
-        font-size: 0.8125rem; /* 13px в rem */
-    }
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-    .console-context-menu {
-        border: 2px solid #FFFFFF;
-        background: #000000;
-    }
-    
-    .console-context-menu-item {
-        color: #FFFFFF;
-    }
-    
-    .console-context-menu-item:hover {
-        background: #333333;
-    }
-}
-
-/* Reduced motion support */
-@media (prefers-reduced-motion: reduce) {
-    .console-context-menu {
-        transition: none;
-    }
-    
-    .console-context-menu-item {
-        transition: none;
-    }
-}
-
-/* Smart positioning indicators */
+/* Console-specific positioning */
 .console-context-menu.positioned-left {
     transform-origin: right top;
 }
@@ -149,24 +42,4 @@
 
 .console-context-menu.positioned-below {
     transform-origin: center top;
-}
-
-/* Enhanced shadow for better visibility */
-.console-context-menu.show {
-    box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 
-                0 4px 6px -2px rgba(0, 0, 0, 0.05),
-                0 0 0 1px rgba(255, 255, 255, 0.05);
-}
-
-/* Mobile optimizations */
-@media (max-width: 480px) {
-    .console-context-menu {
-        min-width: 8.75rem; /* 140px в rem */
-        font-size: 1rem; /* 16px в rem - Larger touch targets */
-    }
-    
-    .console-context-menu-item {
-        padding: 0.75rem 1rem; /* 12px 16px в rem */
-        font-size: 1rem; /* 16px в rem */
-    }
 }

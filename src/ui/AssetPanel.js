@@ -1,5 +1,7 @@
 import { BasePanel } from './BasePanel.js';
 import { Logger } from '../utils/Logger.js';
+import { AssetContextMenu } from './AssetContextMenu.js';
+import { AssetPanelContextMenu } from './AssetPanelContextMenu.js';
 
 /**
  * Asset panel UI component
@@ -14,16 +16,23 @@ export class AssetPanel extends BasePanel {
         this.marqueeDiv = null;
         this.marqueeStart = {};
         
+        // Asset size management
+        this.assetSize = 96; // Default size in pixels (w-24 = 96px)
+        this.minAssetSize = 48; // w-12 = 48px
+        this.maxAssetSize = 192; // w-48 = 192px
+        this.sizeStep = 8; // Step size for zoom
+        this.gapSize = 8; // Fixed gap size in pixels
+        
+        // View mode management
+        this.viewMode = 'grid'; // 'grid', 'list', 'details'
+        
         this.init();
         this.setupEventListeners();
+        this.setupContextMenus();
     }
 
     init() {
-        this.container.innerHTML = `
-            <div id="asset-tabs-container" class="flex border-b border-gray-700"></div>
-            <div id="asset-previews-container" class="flex-grow p-4 overflow-auto"></div>
-        `;
-        
+        // Use existing HTML structure from index.html
         this.tabsContainer = this.container.querySelector('#asset-tabs-container');
         this.previewsContainer = this.container.querySelector('#asset-previews-container');
         
@@ -59,6 +68,13 @@ export class AssetPanel extends BasePanel {
         this.previewsContainer.addEventListener('mousedown', (e) => this.handleAssetMouseDown(e));
         this.previewsContainer.addEventListener('mousemove', (e) => this.handleAssetMouseMove(e));
         this.previewsContainer.addEventListener('mouseup', (e) => this.handleAssetMouseUp(e));
+        
+        // Asset size zoom with Ctrl+scroll
+        this.previewsContainer.addEventListener('wheel', (e) => this.handleAssetWheel(e));
+        
+        // Window resize handler for grid recalculation
+        this.resizeHandler = () => this.render();
+        window.addEventListener('resize', this.resizeHandler);
         
         // Global events for proper marquee handling
         window.addEventListener('mousemove', (e) => this.handleGlobalAssetMouseMove(e));
@@ -100,14 +116,46 @@ export class AssetPanel extends BasePanel {
         this.previewsContainer.innerHTML = '';
         const activeTabs = this.stateManager.get('activeAssetTabs');
         const selectedAssets = this.stateManager.get('selectedAssets');
-        
+
         const assetsToShow = Array.from(activeTabs)
             .flatMap(tabName => this.assetManager.getAssetsByCategory(tabName));
+
+        switch (this.viewMode) {
+            case 'grid':
+                this.renderGridView(assetsToShow, selectedAssets);
+                break;
+            case 'list':
+                this.renderListView(assetsToShow, selectedAssets);
+                break;
+            case 'details':
+                this.renderDetailsView(assetsToShow, selectedAssets);
+                break;
+        }
+    }
+
+    /**
+     * Render assets in grid view
+     * @param {Array} assets - Assets to render
+     * @param {Set} selectedAssets - Selected asset IDs
+     */
+    renderGridView(assets, selectedAssets) {
+        // Restore padding for grid view
+        this.previewsContainer.classList.remove('p-0');
+        this.previewsContainer.classList.add('p-4');
         
         const grid = document.createElement('div');
-        grid.className = 'grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-4';
+        grid.style.display = 'grid';
+        grid.style.gap = `${this.gapSize}px`;
         
-        assetsToShow.forEach(asset => {
+        // Calculate dynamic grid columns based on asset size and container width
+        const containerWidth = this.previewsContainer.clientWidth;
+        const columns = Math.max(1, Math.floor((containerWidth + this.gapSize) / (this.assetSize + this.gapSize)));
+        
+        // Use fixed column width instead of 1fr to prevent jumping
+        const columnWidth = this.assetSize;
+        grid.style.gridTemplateColumns = `repeat(${columns}, ${columnWidth}px)`;
+        
+        assets.forEach(asset => {
             const thumb = this.createAssetThumbnail(asset, selectedAssets);
             grid.appendChild(thumb);
         });
@@ -115,11 +163,76 @@ export class AssetPanel extends BasePanel {
         this.previewsContainer.appendChild(grid);
     }
 
+    /**
+     * Render assets in list view
+     * @param {Array} assets - Assets to render
+     * @param {Set} selectedAssets - Selected asset IDs
+     */
+    renderListView(assets, selectedAssets) {
+        // Restore padding for list view
+        this.previewsContainer.classList.remove('p-0');
+        this.previewsContainer.classList.add('p-4');
+        
+        const list = document.createElement('div');
+        list.style.display = 'flex';
+        list.style.flexWrap = 'wrap';
+        list.style.gap = `${this.gapSize}px`;
+        
+        assets.forEach(asset => {
+            const item = this.createAssetListItem(asset, selectedAssets);
+            list.appendChild(item);
+        });
+        
+        this.previewsContainer.appendChild(list);
+    }
+
+    /**
+     * Render assets in details view
+     * @param {Array} assets - Assets to render
+     * @param {Set} selectedAssets - Selected asset IDs
+     */
+    renderDetailsView(assets, selectedAssets) {
+        // Remove padding from previews container for details view
+        this.previewsContainer.classList.remove('p-4');
+        this.previewsContainer.classList.add('p-0');
+
+        // Create sticky header positioned at the assets panel level
+        const header = document.createElement('div');
+        header.className = 'sticky z-10 grid grid-cols-6 gap-4 p-2 bg-gray-800 text-sm font-medium text-gray-300 border-b border-gray-700';
+        header.style.top = '0px'; // Stick to top of assets panel
+        header.style.minWidth = '600px'; // Minimum width for all columns
+        header.innerHTML = `
+            <div>Preview</div>
+            <div>Name</div>
+            <div>Type</div>
+            <div>Category</div>
+            <div>Size</div>
+            <div>Properties</div>
+        `;
+        this.previewsContainer.appendChild(header);
+
+        // Create scrollable content with both horizontal and vertical scroll
+        const content = document.createElement('div');
+        content.className = 'space-y-1 p-2 overflow-auto'; // Both horizontal and vertical scroll
+        content.style.minWidth = '600px'; // Match header width
+        content.style.paddingTop = '48px'; // Leave space for sticky header (40px + 8px margin)
+
+        // Create rows
+        assets.forEach(asset => {
+            const row = this.createAssetDetailsRow(asset, selectedAssets);
+            content.appendChild(row);
+        });
+
+        this.previewsContainer.appendChild(content);
+    }
+
     createAssetThumbnail(asset, selectedAssets) {
         const thumb = document.createElement('div');
-        thumb.className = `asset-thumbnail w-24 h-24 bg-gray-700 rounded-md flex items-center justify-center cursor-pointer p-1 ${
+        thumb.className = `asset-thumbnail bg-gray-700 rounded flex items-center justify-center cursor-pointer p-1 ${
             selectedAssets.has(asset.id) ? 'selected' : ''
         }`;
+        thumb.style.width = `${this.assetSize}px`;
+        thumb.style.height = `${this.assetSize}px`;
         thumb.dataset.assetId = asset.id;
         thumb.draggable = true;
         
@@ -155,6 +268,133 @@ export class AssetPanel extends BasePanel {
         thumb.addEventListener('dragstart', (e) => this.handleThumbnailDragStart(e, asset));
         
         return thumb;
+    }
+
+    /**
+     * Create asset list item for list view
+     * @param {Object} asset - Asset data
+     * @param {Set} selectedAssets - Selected asset IDs
+     * @returns {HTMLElement} - List item element
+     */
+    createAssetListItem(asset, selectedAssets) {
+        const item = document.createElement('div');
+        item.className = `asset-list-item flex items-center cursor-pointer px-2 py-1 bg-gray-700 rounded ${
+            selectedAssets.has(asset.id) ? 'selected bg-blue-600' : 'hover:bg-gray-600'
+        }`;
+        item.style.width = `${this.assetSize}px`;
+        item.style.height = 'auto';
+        item.style.minHeight = '24px';
+        item.dataset.assetId = asset.id;
+        item.draggable = true;
+        
+        // Create name with truncation
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'flex-1 text-xs text-gray-200 truncate text-center';
+        nameDiv.textContent = this.truncateAssetName(asset.name, this.assetSize * 0.8);
+        nameDiv.title = asset.name; // Full name on hover
+        
+        item.appendChild(nameDiv);
+        
+        // Event listeners
+        item.addEventListener('click', (e) => this.handleThumbnailClick(e, asset));
+        item.addEventListener('dragstart', (e) => this.handleThumbnailDragStart(e, asset));
+        
+        return item;
+    }
+
+    /**
+     * Create asset details row for details view
+     * @param {Object} asset - Asset data
+     * @param {Set} selectedAssets - Selected asset IDs
+     * @returns {HTMLElement} - Details row element
+     */
+    createAssetDetailsRow(asset, selectedAssets) {
+        const row = document.createElement('div');
+        row.className = `asset-details-row grid grid-cols-6 gap-4 p-2 hover:bg-gray-700 cursor-pointer ${
+            selectedAssets.has(asset.id) ? 'bg-blue-900' : ''
+        }`;
+        row.style.minWidth = '600px'; // Match header width
+        row.dataset.assetId = asset.id;
+        row.draggable = true;
+        
+        // Preview column
+        const preview = document.createElement('div');
+        preview.className = 'flex items-center justify-center';
+        preview.style.width = `${this.assetSize * 0.5}px`;
+        preview.style.height = `${this.assetSize * 0.5}px`;
+        
+        if (asset.imgSrc) {
+            const img = document.createElement('img');
+            img.src = asset.imgSrc;
+            img.alt = asset.name;
+            img.className = 'w-full h-full object-cover rounded';
+            img.draggable = false;
+            img.onerror = () => { img.style.display = 'none'; };
+            preview.appendChild(img);
+        } else {
+            const colorDiv = document.createElement('div');
+            colorDiv.className = 'w-full h-full rounded';
+            colorDiv.style.backgroundColor = asset.color;
+            preview.appendChild(colorDiv);
+        }
+        
+        // Name column
+        const name = document.createElement('div');
+        name.className = 'text-sm text-gray-200 truncate';
+        name.textContent = asset.name;
+        name.title = asset.name;
+        
+        // Type column
+        const type = document.createElement('div');
+        type.className = 'text-sm text-gray-400';
+        type.textContent = asset.type || 'object';
+        
+        // Category column
+        const category = document.createElement('div');
+        category.className = 'text-sm text-gray-400';
+        category.textContent = asset.category || 'Misc';
+        
+        // Size column
+        const size = document.createElement('div');
+        size.className = 'text-sm text-gray-400';
+        size.textContent = `${asset.width || 32}×${asset.height || 32}`;
+        
+        // Properties column (placeholder)
+        const properties = document.createElement('div');
+        properties.className = 'text-sm text-gray-400';
+        properties.textContent = '—'; // Placeholder
+        
+        row.appendChild(preview);
+        row.appendChild(name);
+        row.appendChild(type);
+        row.appendChild(category);
+        row.appendChild(size);
+        row.appendChild(properties);
+        
+        // Event listeners
+        row.addEventListener('click', (e) => this.handleThumbnailClick(e, asset));
+        row.addEventListener('dragstart', (e) => this.handleThumbnailDragStart(e, asset));
+        
+        return row;
+    }
+
+    /**
+     * Truncate asset name to fit available space
+     * @param {string} name - Asset name
+     * @param {number} maxWidth - Maximum width in pixels
+     * @returns {string} - Truncated name
+     */
+    truncateAssetName(name, maxWidth) {
+        if (name.length <= 10) return name;
+        
+        // Rough estimation: 8px per character
+        const maxChars = Math.floor(maxWidth / 8);
+        if (name.length <= maxChars) return name;
+        
+        const startChars = Math.floor((maxChars - 3) / 2);
+        const endChars = Math.ceil((maxChars - 3) / 2);
+        
+        return name.substring(0, startChars) + '...' + name.substring(name.length - endChars);
     }
 
     handleTabClick(e, category) {
@@ -417,5 +657,182 @@ export class AssetPanel extends BasePanel {
                 e.preventDefault();
             }
         });
+    }
+
+    /**
+     * Handle wheel event for asset size zoom
+     * @param {WheelEvent} e - The wheel event
+     */
+    handleAssetWheel(e) {
+        // Only handle if Ctrl key is pressed
+        if (!e.ctrlKey) return;
+        
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Calculate new size based on wheel direction
+        const delta = e.deltaY > 0 ? -this.sizeStep : this.sizeStep;
+        const newSize = Math.max(this.minAssetSize, Math.min(this.maxAssetSize, this.assetSize + delta));
+        
+        // Only update if size actually changed
+        if (newSize !== this.assetSize) {
+            this.assetSize = newSize;
+            this.render();
+            
+            // Log the change
+            Logger.ui.debug(`Asset size changed to ${this.assetSize}px in ${this.viewMode} view`);
+        }
+    }
+
+    /**
+     * Setup context menus for assets and panel
+     */
+    setupContextMenus() {
+        // Asset context menu
+        this.assetContextMenu = new AssetContextMenu(this, {
+            onOpenEditor: (asset) => this.handleAssetOpenEditor(asset),
+            onRename: (asset) => this.handleAssetRename(asset),
+            onDuplicate: (asset) => this.handleAssetDuplicate(asset),
+            onDelete: (asset) => this.handleAssetDelete(asset)
+        });
+
+        // Panel context menu
+        this.panelContextMenu = new AssetPanelContextMenu(this, {
+            onResetSize: () => this.handleResetSize(),
+            onToggleGrid: () => this.handleToggleGrid(),
+            onToggleList: () => this.handleToggleList(),
+            onToggleDetails: () => this.handleToggleDetails(),
+            onRefresh: () => this.handleRefresh(),
+            onSettings: () => this.handleSettings(),
+            onSelectAll: () => this.handleSelectAll(),
+            onDeselectAll: () => this.handleDeselectAll()
+        });
+    }
+
+    /**
+     * Handle asset open editor
+     * @param {Object} asset - The asset to open in editor
+     */
+    handleAssetOpenEditor(asset) {
+        Logger.ui.debug('Opening asset editor for:', asset.name);
+        // TODO: Implement asset editor functionality
+    }
+
+    /**
+     * Handle asset rename
+     * @param {Object} asset - The asset to rename
+     */
+    handleAssetRename(asset) {
+        Logger.ui.debug('Renaming asset:', asset.name);
+        // TODO: Implement asset rename functionality
+    }
+
+    /**
+     * Handle asset duplicate
+     * @param {Object} asset - The asset to duplicate
+     */
+    handleAssetDuplicate(asset) {
+        Logger.ui.debug('Duplicating asset:', asset.name);
+        // TODO: Implement asset duplicate functionality
+    }
+
+    /**
+     * Handle asset delete
+     * @param {Object} asset - The asset to delete
+     */
+    handleAssetDelete(asset) {
+        Logger.ui.debug('Deleting asset:', asset.name);
+        // TODO: Implement asset delete functionality
+    }
+
+    /**
+     * Handle reset asset size
+     */
+    handleResetSize() {
+        Logger.ui.debug('Resetting asset size');
+        this.assetSize = 96;
+        this.render();
+    }
+
+    /**
+     * Handle toggle grid view
+     */
+    handleToggleGrid() {
+        Logger.ui.debug('Switching to grid view');
+        this.viewMode = 'grid';
+        this.render();
+    }
+
+    /**
+     * Handle toggle list view
+     */
+    handleToggleList() {
+        Logger.ui.debug('Switching to list view');
+        this.viewMode = 'list';
+        this.render();
+    }
+
+    /**
+     * Handle toggle details view
+     */
+    handleToggleDetails() {
+        Logger.ui.debug('Switching to details view');
+        this.viewMode = 'details';
+        this.render();
+    }
+
+    /**
+     * Handle refresh assets
+     */
+    handleRefresh() {
+        Logger.ui.debug('Refreshing assets');
+        this.render();
+    }
+
+    /**
+     * Handle panel settings
+     */
+    handleSettings() {
+        Logger.ui.debug('Opening panel settings');
+        // TODO: Implement panel settings
+    }
+
+    /**
+     * Handle select all assets
+     */
+    handleSelectAll() {
+        Logger.ui.debug('Selecting all assets');
+        const activeTabs = this.stateManager.get('activeAssetTabs');
+        const allAssets = Array.from(activeTabs)
+            .flatMap(tabName => this.assetManager.getAssetsByCategory(tabName));
+        const allAssetIds = new Set(allAssets.map(asset => asset.id));
+        this.stateManager.set('selectedAssets', allAssetIds);
+    }
+
+    /**
+     * Handle deselect all assets
+     */
+    handleDeselectAll() {
+        Logger.ui.debug('Deselecting all assets');
+        this.stateManager.set('selectedAssets', new Set());
+    }
+
+    /**
+     * Clean up event listeners
+     */
+    destroy() {
+        if (this.resizeHandler) {
+            window.removeEventListener('resize', this.resizeHandler);
+        }
+        window.removeEventListener('mousemove', this.handleGlobalAssetMouseMove);
+        window.removeEventListener('mouseup', this.handleGlobalAssetMouseUp);
+
+        // Clean up context menus
+        if (this.assetContextMenu) {
+            this.assetContextMenu.destroy();
+        }
+        if (this.panelContextMenu) {
+            this.panelContextMenu.destroy();
+        }
     }
 }

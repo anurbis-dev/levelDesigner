@@ -74,7 +74,7 @@ export class StateManager {
                 gridColor: 'rgba(255, 255, 255, 0.1)',
                 gridThickness: 1,
                 gridOpacity: 0.1,
-                gridSubdivisions: 4,
+                gridSubdivisions: 0,
                 gridSubdivColor: '#666666',
                 gridSubdivThickness: 0.5,
                 snapTolerance: 80

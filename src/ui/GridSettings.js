@@ -67,7 +67,7 @@ export class GridSettings {
                     </div>
                     <div>
                         <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Subdivisions</label>
-                        <input type="number" min="1" max="10" step="1" class="setting-input" name="setting-input" data-setting="grid.subdivisions" value="${this.configManager.get('grid.subdivisions') || 4}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
+                        <input type="number" min="0" max="10" step="1" class="setting-input" name="setting-input" data-setting="grid.subdivisions" value="${this.configManager.get('grid.subdivisions') || 0}" oninput="this.value = Math.min(10, Math.max(0, parseInt(this.value) || 0))" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
                     </div>
                     <div>
                         <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Subdiv. Color</label>

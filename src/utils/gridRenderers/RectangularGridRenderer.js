@@ -47,7 +47,7 @@ export class RectangularGridRenderer extends BaseGridRenderer {
         this.drawGridLines(ctx, startX, startY, endX, endY, gridSize);
 
         // Draw subdivision lines if enabled
-        if (gridSubdivisions > 1) {
+        if (gridSubdivisions > 0) {
             const subdivSize = gridSize / gridSubdivisions;
             this.setGridStyle(ctx, gridSubdivColor, gridSubdivThickness, gridOpacity, camera);
             this.drawGridLines(ctx, startX, startY, endX, endY, subdivSize);

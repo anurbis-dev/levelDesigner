@@ -156,6 +156,9 @@ export class EventHandlers extends BaseModule {
                     this.editor.focusOnAll();
                 } else {
                 }
+            } else if (e.key.toLowerCase() === 'g' && !e.shiftKey && !e.altKey && !e.ctrlKey) {
+                e.preventDefault();
+                this.toggleGrid();
             } else if (e.shiftKey && e.key.toLowerCase() === 'g') {
                 e.preventDefault();
                 if (this.editor.groupOperations && typeof this.editor.groupOperations.groupSelectedObjects === 'function') {
@@ -363,6 +366,13 @@ export class EventHandlers extends BaseModule {
         
         // Close the menu
         document.querySelectorAll('#menu-level > div, #menu-view > div, #menu-settings > div').forEach(d => d.classList.add('hidden'));
+    }
+
+    /**
+     * Toggle grid visibility (hotkey G)
+     */
+    toggleGrid() {
+        this.toggleViewOption('grid');
     }
 
     /**

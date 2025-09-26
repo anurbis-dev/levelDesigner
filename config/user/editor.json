@@ -4,5 +4,10 @@
   "undoHistoryLimit": 50,
   "showFPS": false,
   "showObjectCount": true,
-  "multiSelectMode": "additive"
+  "multiSelectMode": "additive",
+  "axisConstraint": {
+    "showAxis": true,
+    "axisColor": "#cccccc",
+    "axisWidth": 1
+  }
 }

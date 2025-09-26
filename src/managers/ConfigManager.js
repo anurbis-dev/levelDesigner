@@ -103,7 +103,7 @@ export class ConfigManager {
             color: configs.canvas?.gridColor ?? '#ffffff',
             opacity: configs.canvas?.gridOpacity ?? 0.1,
             thickness: configs.canvas?.gridThickness ?? 1,
-            subdivisions: configs.canvas?.gridSubdivisions ?? 4,
+            subdivisions: configs.canvas?.gridSubdivisions ?? 0,
             subdivColor: configs.canvas?.gridSubdivColor ?? '#666666',
             subdivThickness: configs.canvas?.gridSubdivThickness ?? 0.5,
             gridType: configs.canvas?.gridType ?? 'rectangular',
@@ -206,7 +206,7 @@ export class ConfigManager {
             color: configs.canvas?.gridColor ?? '#ffffff',
             opacity: configs.canvas?.gridOpacity ?? 0.1,
             thickness: configs.canvas?.gridThickness ?? 1,
-            subdivisions: configs.canvas?.gridSubdivisions ?? 4,
+            subdivisions: configs.canvas?.gridSubdivisions ?? 0,
             subdivColor: configs.canvas?.gridSubdivColor ?? '#666666',
             subdivThickness: configs.canvas?.gridSubdivThickness ?? 0.5,
             gridType: configs.canvas?.gridType ?? 'rectangular',
@@ -736,7 +736,7 @@ export class ConfigManager {
                 if (keys[1] === 'gridThickness' && (typeof value !== 'number' || value < 0.1 || value > 5)) {
                     return false;
                 }
-                if (keys[1] === 'gridSubdivisions' && (typeof value !== 'number' || value < 1 || value > 10)) {
+                if (keys[1] === 'gridSubdivisions' && (typeof value !== 'number' || value < 0 || value > 10)) {
                     return false;
                 }
                 if (keys[1] === 'gridSubdivThickness' && (typeof value !== 'number' || value < 0.1 || value > 3)) {
