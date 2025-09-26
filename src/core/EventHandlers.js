@@ -272,6 +272,7 @@ export class EventHandlers extends BaseModule {
             this.updateViewCheckbox(panel, visible);
             // Apply visibility immediately to ensure panels are shown/hidden correctly
             this.applyPanelVisibility(panel, visible);
+            
         });
 
         // Initialize other view states from user config
@@ -333,7 +334,11 @@ export class EventHandlers extends BaseModule {
             }
             const checkElement = document.getElementById(checkId);
             if (checkElement) {
-                checkElement.classList.toggle('hidden', !enabled);
+                if (enabled) {
+                    checkElement.classList.remove('hidden');
+                } else {
+                    checkElement.classList.add('hidden');
+                }
             }
         }
     }
@@ -557,12 +562,20 @@ export class EventHandlers extends BaseModule {
             }
             
         } else {
-            // Exit Game Mode: Restore panels based on saved states
+            // Exit Game Mode: Restore panel toggle states in menu first
+            this.restorePanelToggleStates();
+            
+            // Then restore panels based on saved states
             this.restorePanelStates();
             
-            // Restore panel toggle states in menu
-            this.restorePanelToggleStates();
+            // Close View menu after exiting Game Mode
+            if (this.menuManager) {
+                this.menuManager.closeAllDropdowns();
+            }
         }
+        
+        // Update Game Mode checkbox in menu
+        this.updateViewCheckbox('gameMode', enabled);
         
         // Resize canvas after panel changes
         if (this.editor.canvasRenderer) {
@@ -589,53 +602,53 @@ export class EventHandlers extends BaseModule {
         // Restore toolbar
         if (this.savedPanelStates.toolbar) {
             toolbarContainer?.classList.remove('hidden');
-            toolbarContainer.style.display = 'flex'; // Reset display style
+            if (toolbarContainer) toolbarContainer.style.display = 'flex'; // Reset display style
             if (this.editor.toolbar) {
                 this.editor.toolbar.setVisible(true);
             }
         } else {
             // Keep toolbar hidden if it was hidden before Game Mode
             toolbarContainer?.classList.add('hidden');
-            toolbarContainer.style.display = 'none';
+            if (toolbarContainer) toolbarContainer.style.display = 'none';
         }
 
         // Restore right panel
         if (this.savedPanelStates.rightPanel) {
             rightPanel?.classList.remove('hidden');
-            rightPanel.style.display = 'flex'; // Reset display style
+            if (rightPanel) rightPanel.style.display = 'flex'; // Reset display style
             resizerX?.classList.remove('hidden');
-            resizerX.style.display = 'block';
+            if (resizerX) resizerX.style.display = 'block';
         } else {
             rightPanel?.classList.add('hidden');
-            rightPanel.style.display = 'none';
+            if (rightPanel) rightPanel.style.display = 'none';
             resizerX?.classList.add('hidden');
-            resizerX.style.display = 'none';
+            if (resizerX) resizerX.style.display = 'none';
         }
 
         // Restore assets panel
         if (this.savedPanelStates.assetsPanel) {
             assetsPanel?.classList.remove('hidden');
-            assetsPanel.style.display = 'flex'; // Reset display style
+            if (assetsPanel) assetsPanel.style.display = 'flex'; // Reset display style
             resizerAssets?.classList.remove('hidden');
-            resizerAssets.style.display = 'block';
+            if (resizerAssets) resizerAssets.style.display = 'block';
         } else {
             assetsPanel?.classList.add('hidden');
-            assetsPanel.style.display = 'none';
+            if (assetsPanel) assetsPanel.style.display = 'none';
             resizerAssets?.classList.add('hidden');
-            resizerAssets.style.display = 'none';
+            if (resizerAssets) resizerAssets.style.display = 'none';
         }
 
         // Restore console panel
         if (this.savedPanelStates.console) {
             consolePanel?.classList.remove('hidden');
-            consolePanel.style.display = 'flex'; // Reset display style
+            if (consolePanel) consolePanel.style.display = 'flex'; // Reset display style
             resizerConsole?.classList.remove('hidden');
-            resizerConsole.style.display = 'block';
+            if (resizerConsole) resizerConsole.style.display = 'block';
         } else {
             consolePanel?.classList.add('hidden');
-            consolePanel.style.display = 'none';
+            if (consolePanel) consolePanel.style.display = 'none';
             resizerConsole?.classList.add('hidden');
-            resizerConsole.style.display = 'none';
+            if (resizerConsole) resizerConsole.style.display = 'none';
         }
 
         // Clear saved states
@@ -666,14 +679,17 @@ export class EventHandlers extends BaseModule {
         // Restore toolbar toggle
         this.editor.stateManager.set('view.toolbar', this.savedPanelStates.toolbar);
         this.updateViewCheckbox('toolbar', this.savedPanelStates.toolbar);
+        this.applyPanelVisibility('toolbar', this.savedPanelStates.toolbar);
 
         // Restore assets panel toggle
         this.editor.stateManager.set('view.assetsPanel', this.savedPanelStates.assetsPanel);
         this.updateViewCheckbox('assetsPanel', this.savedPanelStates.assetsPanel);
+        this.applyPanelVisibility('assetsPanel', this.savedPanelStates.assetsPanel);
 
         // Restore right panel toggle
         this.editor.stateManager.set('view.rightPanel', this.savedPanelStates.rightPanel);
         this.updateViewCheckbox('rightPanel', this.savedPanelStates.rightPanel);
+        this.applyPanelVisibility('rightPanel', this.savedPanelStates.rightPanel);
 
     }
 

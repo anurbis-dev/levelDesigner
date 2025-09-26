@@ -1174,6 +1174,8 @@ export class Toolbar {
      */
     hideToolbar() {
         this.stateManager.set('view.toolbar', false);
+        // Update menu checkbox to reflect toolbar state
+        this.levelEditor.eventHandlers.updateViewCheckbox('toolbar', false);
         // Close context menu after hiding toolbar
         if (this.contextMenu) {
             this.contextMenu.hideMenu();

@@ -1,5 +1,18 @@
 # Changelog
 
+## [3.19.8] - 2025-01-27
+
+### Fixed
+- **View Menu Checkboxes** - исправлено обновление чекбоксов панелей в меню View при скрытии тулбара через контекстное меню
+- **Game Mode Checkboxes** - исправлено обновление чекбокса Game Mode при деактивации режима
+- **Game Mode Menu** - добавлено автоматическое закрытие меню View при отключении Game Mode
+- **Panel State Restoration** - исправлен порядок вызовов при выходе из Game Mode для корректного обновления чекбоксов
+- **Null Reference Error** - исправлена ошибка "Cannot read properties of null (reading 'style')" в restorePanelStates()
+
+### Improved
+- **Checkbox Synchronization** - улучшена синхронизация состояний чекбоксов между различными UI элементами
+- **Game Mode UX** - улучшен пользовательский опыт при переключении Game Mode
+
 ## [3.19.7] - 2025-09-26
 
 ### Fixed

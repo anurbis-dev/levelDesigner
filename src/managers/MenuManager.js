@@ -329,7 +329,11 @@ export class MenuManager {
     updateToggleState(itemId, enabled) {
         const checkElement = document.getElementById(`${itemId}-check`);
         if (checkElement) {
-            checkElement.classList.toggle('hidden', !enabled);
+            if (enabled) {
+                checkElement.classList.remove('hidden');
+            } else {
+                checkElement.classList.add('hidden');
+            }
         }
     }
 
