@@ -642,6 +642,38 @@
 - `screenToWorld(screenX, screenY, camera)` - конвертация экранных координат в мировые
 - `worldToScreen(worldX, worldY, camera)` - конвертация мировых координат в экранные
 
+### GridRenderers (src/utils/gridRenderers/)
+Модульная система рендеринга сетки с поддержкой разных типов.
+
+#### BaseGridRenderer (src/utils/gridRenderers/BaseGridRenderer.js)
+Базовый класс для всех рендереров сетки.
+
+**Методы:**
+- `render(ctx, gridSize, camera, viewport, options)` - основной метод рендеринга (абстрактный)
+- `setGridStyle(ctx, color, thickness, opacity, camera)` - установка стиля линий сетки
+- `calculateViewportBounds(camera, viewport)` - расчет границ видимой области
+- `shouldRenderGrid(gridSize, camera, minGridSize)` - проверка необходимости рендеринга
+- `hexToRgba(hexColor, alpha)` - конвертация hex цвета в rgba
+
+#### RectangularGridRenderer (src/utils/gridRenderers/RectangularGridRenderer.js)
+Рендерер прямоугольной сетки.
+
+**Специфические методы:**
+- `drawGridLines(ctx, startX, startY, endX, endY, gridSize)` - отрисовка вертикальных и горизонтальных линий
+- `render()` - отрисовка с поддержкой субдивизий
+
+#### IsometricGridRenderer (src/utils/gridRenderers/IsometricGridRenderer.js)
+Рендерер изометрической сетки с углами 60° и 120°.
+
+**Специфические методы:**
+- `drawIsometricLines(ctx, gridSize, viewportLeft, viewportTop, viewportRight, viewportBottom)` - отрисовка изометрических линий
+
+#### HexagonalGridRenderer (src/utils/gridRenderers/HexagonalGridRenderer.js)
+Рендерер шестиугольной сетки.
+
+**Специфические методы:**
+- `drawHexagonalGrid(ctx, hexRadius, hexWidth, hexHeight, viewportLeft, viewportTop, viewportRight, viewportBottom)` - отрисовка шестиугольников
+
 ### DetailsPanel (src/ui/DetailsPanel.js)
 Панель деталей.
 

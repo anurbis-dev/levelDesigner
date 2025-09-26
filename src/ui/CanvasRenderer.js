@@ -1,7 +1,9 @@
 import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
 import { Logger } from '../utils/Logger.js';
 import { RenderUtils } from '../utils/RenderUtils.js';
-import { GridRenderer } from '../utils/GridRenderer.js';
+import { RectangularGridRenderer } from '../utils/gridRenderers/RectangularGridRenderer.js';
+import { IsometricGridRenderer } from '../utils/gridRenderers/IsometricGridRenderer.js';
+import { HexagonalGridRenderer } from '../utils/gridRenderers/HexagonalGridRenderer.js';
 
 /**
  * Canvas rendering system
@@ -11,7 +13,12 @@ export class CanvasRenderer {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.imageCache = new Map();
-        this.gridRenderer = new GridRenderer();
+
+        // Initialize grid renderers
+        this.gridRenderers = new Map();
+        this.gridRenderers.set('rectangular', new RectangularGridRenderer());
+        this.gridRenderers.set('isometric', new IsometricGridRenderer());
+        this.gridRenderers.set('hexagonal', new HexagonalGridRenderer());
     }
 
     /**
@@ -119,7 +126,16 @@ export class CanvasRenderer {
             backgroundColor: backgroundColor
         };
 
-        this.gridRenderer.render(this.ctx, gridSize, camera, viewport, gridType, gridOptions);
+        // Get the appropriate grid renderer
+        const gridRenderer = this.gridRenderers.get(gridType);
+        if (!gridRenderer) {
+            console.warn(`Unknown grid type: ${gridType}, falling back to rectangular`);
+            const fallbackRenderer = this.gridRenderers.get('rectangular');
+            fallbackRenderer.render(this.ctx, gridSize, camera, viewport, gridOptions);
+            return;
+        }
+
+        gridRenderer.render(this.ctx, gridSize, camera, viewport, gridOptions);
     }
 
 

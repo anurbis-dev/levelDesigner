@@ -1644,14 +1644,33 @@ new CanvasRenderer(canvas)
 
 Восстанавливает трансформацию камеры.
 
-##### `drawGrid(gridSize, camera, backgroundColor)`
+##### `drawGrid(gridSize, camera, backgroundColor, options)`
 
-Рисует сетку.
+Рисует сетку выбранного типа.
 
 **Параметры:**
 - `gridSize` (number) - размер сетки
 - `camera` (Object) - объект камеры
 - `backgroundColor` (string) - цвет фона
+- `options.gridType` (string) - тип сетки: 'rectangular', 'isometric', 'hexagonal'
+- `options.color` (string) - цвет линий сетки
+- `options.thickness` (number) - толщина линий
+- `options.opacity` (number) - прозрачность линий
+- `options.subdivisions` (number) - количество субдивизий (для rectangular)
+- `options.subdivColor` (string) - цвет субдивизий
+
+**Внутренняя архитектура:**
+```javascript
+// Инициализация рендереров в конструкторе
+this.gridRenderers = new Map();
+this.gridRenderers.set('rectangular', new RectangularGridRenderer());
+this.gridRenderers.set('isometric', new IsometricGridRenderer());
+this.gridRenderers.set('hexagonal', new HexagonalGridRenderer());
+
+// Выбор рендерера в drawGrid()
+const gridRenderer = this.gridRenderers.get(gridType);
+gridRenderer.render(this.ctx, gridSize, camera, viewport, options);
+```
 
 ##### `drawObject(obj, parentX, parentY)`
 
@@ -1760,6 +1779,112 @@ new CanvasRenderer(canvas)
 - `camera` (Object) - объект камеры
 
 **Возвращает:** `Object` - экранные координаты
+
+### GridRenderers (v3.19.0)
+
+Модульная система рендеринга сетки с поддержкой разных типов.
+
+#### BaseGridRenderer
+
+Базовый класс для всех рендереров сетки.
+
+##### Методы
+
+###### `setGridStyle(ctx, color, thickness, opacity, camera)`
+
+Устанавливает стиль линий сетки.
+
+**Параметры:**
+- `ctx` (CanvasRenderingContext2D) - контекст canvas
+- `color` (string) - цвет линий
+- `thickness` (number) - толщина линий
+- `opacity` (number) - прозрачность
+- `camera` (Object) - объект камеры
+
+###### `calculateViewportBounds(camera, viewport)`
+
+Рассчитывает границы видимой области.
+
+**Параметры:**
+- `camera` (Object) - объект камеры
+- `viewport` (Object) - размеры viewport {width, height}
+
+**Возвращает:** `Object` - границы {left, top, right, bottom}
+
+###### `shouldRenderGrid(gridSize, camera, minGridSize)`
+
+Проверяет необходимость рендеринга сетки.
+
+**Параметры:**
+- `gridSize` (number) - размер сетки
+- `camera` (Object) - объект камеры
+- `minGridSize` (number) - минимальный размер сетки в пикселях
+
+**Возвращает:** `boolean`
+
+###### `hexToRgba(hexColor, alpha)`
+
+Конвертирует hex цвет в rgba.
+
+**Параметры:**
+- `hexColor` (string) - hex цвет
+- `alpha` (number) - прозрачность
+
+**Возвращает:** `string` - rgba цвет
+
+#### RectangularGridRenderer
+
+Рендерер прямоугольной сетки.
+
+##### `render(ctx, gridSize, camera, viewport, options)`
+
+Рисует прямоугольную сетку.
+
+**Параметры:**
+- `ctx` (CanvasRenderingContext2D) - контекст canvas
+- `gridSize` (number) - размер ячеек
+- `camera` (Object) - объект камеры
+- `viewport` (Object) - размеры viewport
+- `options.color` (string) - цвет линий
+- `options.thickness` (number) - толщина линий
+- `options.opacity` (number) - прозрачность
+- `options.subdivisions` (number) - количество субдивизий
+- `options.subdivColor` (string) - цвет субдивизий
+- `options.subdivThickness` (number) - толщина субдивизий
+
+#### IsometricGridRenderer
+
+Рендерер изометрической сетки.
+
+##### `render(ctx, gridSize, camera, viewport, options)`
+
+Рисует изометрическую сетку с углами 60° и 120°.
+
+**Параметры:**
+- `ctx` (CanvasRenderingContext2D) - контекст canvas
+- `gridSize` (number) - размер ячеек
+- `camera` (Object) - объект камеры
+- `viewport` (Object) - размеры viewport
+- `options.color` (string) - цвет линий
+- `options.thickness` (number) - толщина линий
+- `options.opacity` (number) - прозрачность
+
+#### HexagonalGridRenderer
+
+Рендерер шестиугольной сетки.
+
+##### `render(ctx, gridSize, camera, viewport, options)`
+
+Рисует шестиугольную сетку.
+
+**Параметры:**
+- `ctx` (CanvasRenderingContext2D) - контекст canvas
+- `gridSize` (number) - размер ячеек
+- `camera` (Object) - объект камеры
+- `viewport` (Object) - размеры viewport
+- `options.color` (string) - цвет линий
+- `options.thickness` (number) - толщина линий
+- `options.opacity` (number) - прозрачность
 
 ### AssetPanel
 

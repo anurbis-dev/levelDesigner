@@ -228,64 +228,6 @@ export class RenderUtils {
         return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
     }
 
-    /**
-     * Draw grid with performance optimizations
-     * @param {CanvasRenderingContext2D} ctx - Canvas context
-     * @param {number} gridSize - Size of grid cells
-     * @param {Object} camera - Camera object {x, y, zoom}
-     * @param {Object} viewport - Viewport dimensions {width, height}
-     * @param {Object} options - Grid options
-     * @param {string} options.color - Grid line color
-     * @param {number} options.alpha - Grid line alpha
-     * @param {number} options.minSize - Minimum grid size in pixels
-     * @param {number} options.maxLines - Maximum number of grid lines
-     */
-    static drawGrid(ctx, gridSize, camera, viewport, options = {}) {
-        const {
-            color = 'rgba(255, 255, 255, 0.1)',
-            alpha = 0.1,
-            minSize = 5,
-            maxLines = 200
-        } = options;
-
-        // Skip grid drawing if zoomed out too much
-        if (gridSize * camera.zoom < minSize) return;
-
-        ctx.save();
-        ctx.strokeStyle = color;
-        ctx.globalAlpha = alpha;
-        ctx.lineWidth = 1 / camera.zoom;
-
-        const startX = camera.x - (camera.x % gridSize);
-        const startY = camera.y - (camera.y % gridSize);
-        const endX = camera.x + viewport.width / camera.zoom;
-        const endY = camera.y + viewport.height / camera.zoom;
-
-        const totalVerticalLines = Math.floor((endX - startX) / gridSize);
-        const totalHorizontalLines = Math.floor((endY - startY) / gridSize);
-
-        // Draw vertical lines
-        if (totalVerticalLines <= maxLines) {
-            for (let x = startX; x < endX; x += gridSize) {
-                ctx.beginPath();
-                ctx.moveTo(x, startY);
-                ctx.lineTo(x, endY);
-                ctx.stroke();
-            }
-        }
-
-        // Draw horizontal lines
-        if (totalHorizontalLines <= maxLines) {
-            for (let y = startY; y < endY; y += gridSize) {
-                ctx.beginPath();
-                ctx.moveTo(startX, y);
-                ctx.lineTo(endX, y);
-                ctx.stroke();
-            }
-        }
-
-        ctx.restore();
-    }
 
     /**
      * Draw text with background
