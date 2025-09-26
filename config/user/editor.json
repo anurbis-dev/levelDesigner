@@ -1,0 +1,8 @@
+{
+  "autoSave": true,
+  "autoSaveInterval": 300000,
+  "undoHistoryLimit": 50,
+  "showFPS": false,
+  "showObjectCount": true,
+  "multiSelectMode": "additive"
+}

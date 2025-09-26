@@ -24,9 +24,6 @@
 ```
 config/user/
 ├── README.md                      # Эта документация
-├── example-ui.json                # Пример UI настроек
-├── example-canvas.json            # Пример canvas настроек (diamond)
-├── example-hexagonal-canvas.json  # Пример hexagonal грида
 ├── canvas.json                    # Canvas настройки (rectangular)
 ├── editor.json                    # Настройки редактора (создать при необходимости)
 ├── ui.json                        # UI настройки (создать при необходимости)
@@ -82,8 +79,8 @@ config/user/
 3. Настройки автоматически сохранятся в localStorage
 
 ### Способ 2: Создать JSON файлы
-1. Скопируйте примеры из `example-*.json`
-2. Переименуйте в нужные имена (`ui.json`, `canvas.json`, etc.)
+1. Создайте файлы с нужными именами (`ui.json`, `canvas.json`, etc.)
+2. Скопируйте структуру из дефолтных настроек в `config/defaults/`
 3. Отредактируйте значения под свои предпочтения
 4. Перезапустите редактор
 
