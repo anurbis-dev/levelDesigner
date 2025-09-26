@@ -342,4 +342,28 @@ export class CanvasRenderer {
             y: (worldY - camera.y) * camera.zoom + rect.top
         };
     }
+
+    /**
+     * Clear grid caches (call when grid settings change)
+     */
+    clearGridCaches() {
+        this.gridRenderers.forEach(renderer => {
+            if (renderer.clearCache) {
+                renderer.clearCache();
+            }
+        });
+    }
+
+    /**
+     * Get grid cache statistics for debugging
+     */
+    getGridCacheStats() {
+        const stats = {};
+        this.gridRenderers.forEach((renderer, type) => {
+            if (renderer.getCacheStats) {
+                stats[type] = renderer.getCacheStats();
+            }
+        });
+        return stats;
+    }
 }

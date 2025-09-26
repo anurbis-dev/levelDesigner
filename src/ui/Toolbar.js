@@ -1099,6 +1099,10 @@ export class Toolbar {
         
         // Trigger re-render
         if (this.levelEditor?.render) {
+            // Clear grid caches when grid type changes
+            if (this.levelEditor.canvasRenderer?.clearGridCaches) {
+                this.levelEditor.canvasRenderer.clearGridCaches();
+            }
             this.levelEditor.render();
         }
         

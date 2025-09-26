@@ -730,7 +730,7 @@ export class ConfigManager {
                 }
                 break;
             case 'canvas':
-                if (keys[1] === 'gridSize' && (typeof value !== 'number' || value < 8 || value > 128)) {
+                if (keys[1] === 'gridSize' && (typeof value !== 'number' || value < 8 || value > 512)) {
                     return false;
                 }
                 if (keys[1] === 'gridThickness' && (typeof value !== 'number' || value < 0.1 || value > 5)) {

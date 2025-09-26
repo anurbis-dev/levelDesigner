@@ -43,7 +43,7 @@ export class GridSettings {
                 <div style="display: flex; flex-direction: column; gap: 1rem;">
                     <div>
                         <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Size (px)</label>
-                        <input type="number" min="8" max="128" step="8" class="setting-input" name="setting-input" data-setting="grid.size" value="${this.configManager.get('grid.size') || 32}" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
+                        <input type="number" min="8" max="512" step="8" class="setting-input" name="setting-input" data-setting="grid.size" value="${this.configManager.get('grid.size') || 32}" oninput="this.value = Math.min(512, Math.max(8, parseInt(this.value) || 8))" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;"/>
                     </div>
                     <div>
                         <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Color</label>
@@ -158,6 +158,11 @@ export class GridSettings {
             clearTimeout(this.renderTimeout);
         }
         this.renderTimeout = setTimeout(() => {
+            // Clear grid caches when settings change
+            if (window.editor?.canvasRenderer?.clearGridCaches) {
+                window.editor.canvasRenderer.clearGridCaches();
+            }
+            
             if (window.editor && window.editor.render) {
                 window.editor.render();
             }

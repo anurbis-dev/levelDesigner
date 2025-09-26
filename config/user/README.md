@@ -114,7 +114,7 @@ editor.configManager.saveUserConfig('canvas', {
 
 ### Canvas настройки (`canvas.json`):
 - `backgroundColor` - цвет фона (#hex)
-- `gridSize` - размер сетки (px)
+- `gridSize` - размер сетки (px) - от 8 до 512
 - `showGrid` - показывать сетку (true/false)
 - `gridType` - тип грида ('rectangular', 'diamond', 'hexagonal')
 - `gridColor` - цвет основных линий сетки (rgba или #hex)

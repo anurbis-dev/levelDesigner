@@ -32,6 +32,10 @@ export class RenderOperations extends BaseModule {
 
         // Parallax renderer
         this.parallaxRenderer = new ParallaxRenderer(levelEditor);
+        
+        // Performance monitoring
+        this.lastRenderTime = 0;
+        this.lastRenderDuration = 0;
     }
 
     /**
@@ -264,6 +268,9 @@ export class RenderOperations extends BaseModule {
      * Render the canvas
      */
     render() {
+        // Performance monitoring
+        const renderStart = performance.now();
+        
         // Счетчик рендеров для периодических логов
         if (!this.renderCount) this.renderCount = 0;
         this.renderCount++;
@@ -297,6 +304,13 @@ export class RenderOperations extends BaseModule {
         if (!camera.zoom || camera.zoom <= 0) {
             return;
         }
+
+        // Performance check - skip rendering if previous frame took too long
+        // Disabled to prevent flickering - LOD system in grid renderers handles performance
+        // if (this.lastRenderDuration && this.lastRenderDuration > 16) {
+        //     // Skip this frame if previous took more than 16ms (60fps threshold)
+        //     return;
+        // }
         
         this.editor.canvasRenderer.clear();
         this.editor.canvasRenderer.setCamera(camera);
@@ -416,10 +430,18 @@ export class RenderOperations extends BaseModule {
         
         this.editor.canvasRenderer.restoreCamera();
 
+        // Performance monitoring - log slow frames
+        const renderTime = performance.now() - renderStart;
+        this.lastRenderDuration = renderTime;
+        
+        if (renderTime > 20) {
+            Logger.render.warn(`🐌 Slow frame: ${renderTime.toFixed(2)}ms (${this.renderCount})`);
+        }
+
         // Периодический лог состояния (каждые 500 рендеров)
         if (this.renderCount % 500 === 0) {
             const visibleCount = visibleObjects.length;
-            Logger.render.info(`🎨 Render #${this.renderCount}: ${visibleCount} visible objects`);
+            Logger.render.info(`🎨 Render #${this.renderCount}: ${visibleCount} visible objects, ${renderTime.toFixed(2)}ms`);
         }
     }
 
