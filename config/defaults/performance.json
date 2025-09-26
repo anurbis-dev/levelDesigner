@@ -1,6 +1,0 @@
-{
-  "maxObjectsToRender": 10000,
-  "cullingEnabled": true,
-  "renderOnlyVisible": true,
-  "optimizeGroupRendering": true
-}

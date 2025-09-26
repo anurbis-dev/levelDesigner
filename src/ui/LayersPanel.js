@@ -734,6 +734,7 @@ export class LayersPanel extends BasePanel {
         const visibilityBtns = this.container.querySelectorAll('.layer-visibility-btn');
         visibilityBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent triggering layer click
                 const layerId = e.target.closest('button').dataset.layerId;
                 const layer = level.getLayerById(layerId);
                 if (layer) {
@@ -772,6 +773,7 @@ export class LayersPanel extends BasePanel {
         const lockBtns = this.container.querySelectorAll('.layer-lock-btn');
         lockBtns.forEach(btn => {
             btn.addEventListener('click', (e) => {
+                e.stopPropagation(); // Prevent triggering layer click
                 const layerId = e.target.closest('button').dataset.layerId;
                 const layer = level.getLayerById(layerId);
                 if (layer) {
@@ -804,6 +806,7 @@ export class LayersPanel extends BasePanel {
         const parallaxInputs = this.container.querySelectorAll('.layer-parallax-input');
         parallaxInputs.forEach(input => {
             input.addEventListener('input', (e) => {
+                e.stopPropagation(); // Prevent triggering layer click
                 const layerId = e.target.dataset.layerId;
                 const layer = level.getLayerById(layerId);
                 if (layer) {
@@ -855,7 +858,11 @@ export class LayersPanel extends BasePanel {
 
             // Context menu for layers
             item.addEventListener('contextmenu', (e) => {
-                const layerId = e.currentTarget.dataset.layerId;
+                // Use closest to find the layer element even if clicking on nested elements
+                const layerElement = e.target.closest('[data-layer-id]');
+                if (!layerElement) return;
+                
+                const layerId = layerElement.dataset.layerId;
                 const level = this.levelEditor.getLevel();
                 const layer = level.getLayerById(layerId);
                 if (layer) {
@@ -1121,7 +1128,8 @@ export class LayersPanel extends BasePanel {
         }
 
         const level = this.levelEditor.getLevel();
-        const isMainLayer = layer.id === level.getMainLayerId();
+        const mainLayerId = level.getMainLayerId();
+        const isMainLayer = layer.id === mainLayerId;
         const isCurrent = layer.id === this.currentLayerId;
 
         const contextMenu = document.createElement('div');
@@ -1384,6 +1392,21 @@ export class LayersPanel extends BasePanel {
         Logger.layer.info(`Selected ${objectIds.length} objects in layer: ${level.getLayerById(layerId)?.name}`);
     }
 
+
+    /**
+     * Move all objects from specified layer to main layer
+     */
+    moveObjectsToMainLayer(layerId) {
+        const level = this.levelEditor.getLevel();
+        const mainLayerId = level.getMainLayerId();
+        const objectsInLayer = level.getLayerObjects(layerId);
+        
+        objectsInLayer.forEach(obj => {
+            level.assignObjectToLayer(obj.id, mainLayerId);
+        });
+        
+        Logger.layer.info(`Moved ${objectsInLayer.length} objects to main layer before deleting layer`);
+    }
 
     /**
      * Delete layer

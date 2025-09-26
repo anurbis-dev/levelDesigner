@@ -649,24 +649,8 @@ export class MouseHandlers extends BaseModule {
             const snapTolerancePercent = this.editor.userPrefs?.get('snapTolerance') || 80;
             const tolerance = gridSize * (snapTolerancePercent / 100);
             
-            // Debug: log cursor position and grid info
-            console.log(`=== SNAP DEBUG ===`);
-            console.log(`Screen coords: (${e.clientX}, ${e.clientY})`);
-            console.log(`World coords: (${currentAnchorX}, ${currentAnchorY})`);
-            console.log(`GridSize: ${gridSize}, Tolerance: ${tolerance.toFixed(1)}`);
-            
             // Find nearest grid point for cursor
             const nearestGrid = SnapUtils.findNearestGridPoint(currentAnchorX, currentAnchorY, gridSize, tolerance);
-            
-            // Debug: log grid detection
-            if (nearestGrid) {
-                const distance = Math.sqrt(Math.pow(currentAnchorX - nearestGrid.x, 2) + Math.pow(currentAnchorY - nearestGrid.y, 2));
-                console.log(`Grid found: cursor(${currentAnchorX.toFixed(1)}, ${currentAnchorY.toFixed(1)}) -> grid(${nearestGrid.x}, ${nearestGrid.y}), distance: ${distance.toFixed(2)}`);
-                console.log(`Object will move by: (${nearestGrid.x - mouse.anchorX}, ${nearestGrid.y - mouse.anchorY})`);
-            } else {
-                console.log(`No grid found within tolerance ${tolerance.toFixed(1)}`);
-            }
-            console.log(`================`);
             
             if (nearestGrid) {
                 // Calculate current position of object's bottom-left corner
@@ -699,7 +683,6 @@ export class MouseHandlers extends BaseModule {
                     dx = nearestGrid.x - currentBottomLeftX;
                     dy = nearestGrid.y - currentBottomLeftY;
                     
-                    console.log(`First snap: current(${currentBottomLeftX}, ${currentBottomLeftY}) -> grid(${nearestGrid.x}, ${nearestGrid.y}) -> move(${dx}, ${dy})`);
                 } else {
                     // Already snapped - check if we need to move to a new grid point
                     if (nearestGrid.x !== mouse.snapTargetX || nearestGrid.y !== mouse.snapTargetY) {
@@ -713,7 +696,6 @@ export class MouseHandlers extends BaseModule {
                         dx = nearestGrid.x - currentBottomLeftX;
                         dy = nearestGrid.y - currentBottomLeftY;
                         
-                        console.log(`New grid: current(${currentBottomLeftX}, ${currentBottomLeftY}) -> grid(${nearestGrid.x}, ${nearestGrid.y}) -> move(${dx}, ${dy})`);
                     } else {
                         // Same grid point - no movement
                         dx = 0;
@@ -728,7 +710,6 @@ export class MouseHandlers extends BaseModule {
                     dx = 0;
                     dy = 0;
                     
-                    console.log(`No grid nearby, staying on previous grid point`);
                 } else {
                     // Not snapped and no grid nearby - follow cursor normally
                     dx = worldPos.x - mouse.dragStartX;
@@ -747,7 +728,6 @@ export class MouseHandlers extends BaseModule {
                     'mouse.dragStartY': worldPos.y
                 });
                 
-                console.log(`Snap disabled, returning to cursor position`);
             }
             
             // Normal relative movement with original offset

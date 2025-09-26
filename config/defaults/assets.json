@@ -1,6 +1,0 @@
-{
-  "thumbnailSize": 64,
-  "showAssetNames": true,
-  "defaultAssetPath": "./assets/",
-  "supportedFormats": [".png", ".jpg", ".jpeg", ".gif", ".svg"]
-}
