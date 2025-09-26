@@ -36,6 +36,9 @@ export class AssetPanel extends BasePanel {
         this.tabsContainer = this.container.querySelector('#asset-tabs-container');
         this.previewsContainer = this.container.querySelector('#asset-previews-container');
         
+        // Set relative positioning for marquee selection
+        this.previewsContainer.style.position = 'relative';
+        
         // Setup scrolling using BasePanel
         this.setupScrolling({
             horizontal: true,
@@ -62,7 +65,7 @@ export class AssetPanel extends BasePanel {
     setupEventListeners() {
         // Subscribe to state changes
         this.stateManager.subscribe('activeAssetTabs', () => this.render());
-        this.stateManager.subscribe('selectedAssets', () => this.render());
+        this.stateManager.subscribe('selectedAssets', () => this.updateSelectionVisuals());
         
         // Asset marquee selection
         this.previewsContainer.addEventListener('mousedown', (e) => this.handleAssetMouseDown(e));
@@ -213,7 +216,7 @@ export class AssetPanel extends BasePanel {
 
         // Create scrollable content with both horizontal and vertical scroll
         const content = document.createElement('div');
-        content.className = 'space-y-1 p-2 overflow-auto'; // Both horizontal and vertical scroll
+        content.className = 'space-y-1 px-2 pt-2 overflow-auto'; // Remove bottom padding
         content.style.minWidth = '600px'; // Match header width
         content.style.paddingTop = '48px'; // Leave space for sticky header (40px + 8px margin)
 
@@ -228,19 +231,38 @@ export class AssetPanel extends BasePanel {
 
     createAssetThumbnail(asset, selectedAssets) {
         const thumb = document.createElement('div');
-        thumb.className = `asset-thumbnail bg-gray-700 rounded flex items-center justify-center cursor-pointer p-1 ${
+        thumb.className = `asset-thumbnail cursor-pointer ${
             selectedAssets.has(asset.id) ? 'selected' : ''
         }`;
         thumb.style.width = `${this.assetSize}px`;
         thumb.style.height = `${this.assetSize}px`;
+        thumb.style.borderRadius = '4px';
+        thumb.style.overflow = 'hidden';
+        thumb.style.transition = 'filter 0.2s ease';
         thumb.dataset.assetId = asset.id;
         thumb.draggable = true;
+        
+        // Add hover effect
+        thumb.addEventListener('mouseenter', () => {
+            if (!thumb.classList.contains('selected')) {
+                thumb.style.filter = 'brightness(1.2)';
+            }
+        });
+        
+        thumb.addEventListener('mouseleave', () => {
+            if (!thumb.classList.contains('selected')) {
+                thumb.style.filter = '';
+            }
+        });
         
         if (asset.imgSrc) {
             const img = document.createElement('img');
             img.src = asset.imgSrc;
             img.alt = asset.name;
             img.draggable = false;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
             img.onerror = () => { img.style.display = 'none'; };
             thumb.appendChild(img);
         } else {
@@ -249,7 +271,6 @@ export class AssetPanel extends BasePanel {
             colorDiv.style.width = '100%';
             colorDiv.style.height = '100%';
             colorDiv.style.backgroundColor = asset.color;
-            colorDiv.style.borderRadius = '4px';
             colorDiv.style.display = 'flex';
             colorDiv.style.alignItems = 'center';
             colorDiv.style.justifyContent = 'center';
@@ -466,22 +487,27 @@ export class AssetPanel extends BasePanel {
         });
         
         if (!e.shiftKey) {
+            // Just clear selection without re-rendering everything
             this.stateManager.set('selectedAssets', new Set());
+            this.updateSelectionVisuals();
         }
-        
-        this.render();
         
         // Create marquee div
         this.marqueeDiv = document.createElement('div');
         this.marqueeDiv.id = 'asset-marquee';
-        this.container.appendChild(this.marqueeDiv);
+        this.previewsContainer.appendChild(this.marqueeDiv);
         
         const rect = this.previewsContainer.getBoundingClientRect();
         this.marqueeStart = { x: e.clientX, y: e.clientY };
+        this.marqueeDiv.style.position = 'absolute';
         this.marqueeDiv.style.left = `${e.clientX - rect.left + this.previewsContainer.scrollLeft}px`;
         this.marqueeDiv.style.top = `${e.clientY - rect.top + this.previewsContainer.scrollTop}px`;
         this.marqueeDiv.style.width = '0px';
         this.marqueeDiv.style.height = '0px';
+        this.marqueeDiv.style.border = '2px dashed #3B82F6';
+        this.marqueeDiv.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+        this.marqueeDiv.style.pointerEvents = 'none';
+        this.marqueeDiv.style.zIndex = '1000';
     }
 
     handleAssetMouseMove(e) {
@@ -495,6 +521,9 @@ export class AssetPanel extends BasePanel {
         this.marqueeDiv.style.height = `${Math.abs(dy)}px`;
         this.marqueeDiv.style.left = `${(dx < 0 ? e.clientX - rect.left : this.marqueeStart.x - rect.left) + this.previewsContainer.scrollLeft}px`;
         this.marqueeDiv.style.top = `${(dy < 0 ? e.clientY - rect.top : this.marqueeStart.y - rect.top) + this.previewsContainer.scrollTop}px`;
+        
+        // Highlight elements that intersect with marquee
+        this.highlightElementsInMarquee();
     }
 
     handleAssetMouseUp(e) {
@@ -558,6 +587,9 @@ export class AssetPanel extends BasePanel {
             
             this.stateManager.set('selectedAssets', selectedAssets);
         }
+        
+        // Clear all marquee highlights
+        this.clearAllMarqueeHighlights();
         
         // Clean up marquee
         if (this.marqueeDiv && this.marqueeDiv.parentNode) {
@@ -684,6 +716,136 @@ export class AssetPanel extends BasePanel {
             
             // Log the change
             Logger.ui.debug(`Asset size changed to ${this.assetSize}px in ${this.viewMode} view`);
+        }
+    }
+
+    /**
+     * Update selection visuals without re-rendering entire content
+     */
+    updateSelectionVisuals() {
+        const selectedAssets = this.stateManager.get('selectedAssets');
+        
+        // Update all asset elements
+        document.querySelectorAll('.asset-thumbnail').forEach(element => {
+            const assetId = element.dataset.assetId;
+            if (assetId) {
+                if (selectedAssets.has(assetId)) {
+                    element.classList.add('selected');
+                    element.style.border = '2px solid #3B82F6';
+                    element.style.boxShadow = '0 0 0 2px rgba(59, 130, 246, 0.3)';
+                } else {
+                    element.classList.remove('selected');
+                    element.style.border = 'none';
+                    element.style.boxShadow = 'none';
+                }
+            }
+        });
+        
+        document.querySelectorAll('.asset-list-item, .asset-details-row').forEach(element => {
+            const assetId = element.dataset.assetId;
+            if (assetId) {
+                if (selectedAssets.has(assetId)) {
+                    element.classList.add('selected');
+                    element.classList.add('bg-blue-600');
+                    element.classList.remove('hover:bg-gray-600');
+                } else {
+                    element.classList.remove('selected');
+                    element.classList.remove('bg-blue-600');
+                    element.classList.add('hover:bg-gray-600');
+                }
+            }
+        });
+    }
+
+    /**
+     * Highlight elements that intersect with marquee selection
+     */
+    highlightElementsInMarquee() {
+        if (!this.marqueeDiv) return;
+        
+        const marqueeRect = this.marqueeDiv.getBoundingClientRect();
+        const containerRect = this.previewsContainer.getBoundingClientRect();
+        
+        // Convert marquee position to container coordinates
+        const marqueeLeft = marqueeRect.left - containerRect.left + this.previewsContainer.scrollLeft;
+        const marqueeTop = marqueeRect.top - containerRect.top + this.previewsContainer.scrollTop;
+        const marqueeRight = marqueeLeft + marqueeRect.width;
+        const marqueeBottom = marqueeTop + marqueeRect.height;
+        
+        // Check all asset elements
+        const assetSelectors = ['.asset-thumbnail', '.asset-list-item', '.asset-details-row'];
+        assetSelectors.forEach(selector => {
+            document.querySelectorAll(selector).forEach(element => {
+                const elementRect = element.getBoundingClientRect();
+                const elementLeft = elementRect.left - containerRect.left + this.previewsContainer.scrollLeft;
+                const elementTop = elementRect.top - containerRect.top + this.previewsContainer.scrollTop;
+                const elementRight = elementLeft + elementRect.width;
+                const elementBottom = elementTop + elementRect.height;
+                
+                // Check if element intersects with marquee
+                const intersects = marqueeLeft < elementRight && marqueeRight > elementLeft &&
+                                 marqueeTop < elementBottom && marqueeBottom > elementTop;
+                
+                if (intersects) {
+                    this.addMarqueeHighlight(element);
+                } else {
+                    this.removeMarqueeHighlight(element);
+                }
+            });
+        });
+    }
+
+    /**
+     * Clear all marquee highlights
+     */
+    clearAllMarqueeHighlights() {
+        const assetSelectors = ['.asset-thumbnail', '.asset-list-item', '.asset-details-row'];
+        assetSelectors.forEach(selector => {
+            document.querySelectorAll(selector).forEach(element => {
+                this.removeMarqueeHighlight(element);
+            });
+        });
+    }
+
+    /**
+     * Add marquee highlight to element using existing hover styles
+     */
+    addMarqueeHighlight(element) {
+        if (element.classList.contains('marquee-highlighted')) return;
+        
+        element.classList.add('marquee-highlighted');
+        
+        // Use existing hover styles by applying them directly
+        if (element.classList.contains('asset-thumbnail')) {
+            // For grid view - use brightness effect like hover
+            element.style.filter = 'brightness(1.2)';
+        } else if (element.classList.contains('asset-list-item')) {
+            // For list view - apply hover background directly
+            element.style.backgroundColor = '#4B5563'; // gray-600
+        } else if (element.classList.contains('asset-details-row')) {
+            // For details view - apply hover background directly
+            element.style.backgroundColor = '#374151'; // gray-700
+        }
+    }
+
+    /**
+     * Remove marquee highlight from element
+     */
+    removeMarqueeHighlight(element) {
+        if (!element.classList.contains('marquee-highlighted')) return;
+        
+        element.classList.remove('marquee-highlighted');
+        
+        // Remove hover effects
+        if (element.classList.contains('asset-thumbnail')) {
+            // For grid view - remove brightness effect
+            element.style.filter = '';
+        } else if (element.classList.contains('asset-list-item')) {
+            // For list view - remove hover background
+            element.style.backgroundColor = '';
+        } else if (element.classList.contains('asset-details-row')) {
+            // For details view - remove hover background
+            element.style.backgroundColor = '';
         }
     }
 

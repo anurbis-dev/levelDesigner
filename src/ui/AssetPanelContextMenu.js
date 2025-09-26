@@ -130,10 +130,6 @@ export class AssetPanelContextMenu extends BaseContextMenu {
             this.callbacks.onSelectAll();
         });
 
-        this.addMenuItem('Deselect All Assets', '☐', () => {
-            this.callbacks.onDeselectAll();
-        });
-
         this.addSeparator();
 
         // Panel operations
