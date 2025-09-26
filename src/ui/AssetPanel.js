@@ -457,8 +457,8 @@ export class AssetPanel extends BasePanel {
         // Only allow marquee selection with left mouse button (button 0)
         if (e.button !== 0) return;
 
-        // Check if click was on background, not a thumbnail
-        if (e.target.closest('.asset-thumbnail')) return;
+        // Check if click was on background, not an asset element
+        if (e.target.closest('.asset-thumbnail, .asset-list-item, .asset-details-row')) return;
         
         const mouse = this.stateManager.get('mouse');
         this.stateManager.update({
@@ -543,14 +543,17 @@ export class AssetPanel extends BasePanel {
         const selectedAssets = new Set(this.stateManager.get('selectedAssets'));
         
         if (marqueeRect && marqueeRect.width > 2 && marqueeRect.height > 2) {
-            // Select assets that intersect with marquee
-            document.querySelectorAll('.asset-thumbnail').forEach(thumb => {
-                const thumbRect = thumb.getBoundingClientRect();
-                
-                if (marqueeRect.left < thumbRect.right && marqueeRect.right > thumbRect.left &&
-                    marqueeRect.top < thumbRect.bottom && marqueeRect.bottom > thumbRect.top) {
-                    selectedAssets.add(thumb.dataset.assetId);
-                }
+            // Select assets that intersect with marquee - check all asset elements
+            const assetSelectors = ['.asset-thumbnail', '.asset-list-item', '.asset-details-row'];
+            assetSelectors.forEach(selector => {
+                document.querySelectorAll(selector).forEach(element => {
+                    const elementRect = element.getBoundingClientRect();
+                    
+                    if (marqueeRect.left < elementRect.right && marqueeRect.right > elementRect.left &&
+                        marqueeRect.top < elementRect.bottom && marqueeRect.bottom > elementRect.top) {
+                        selectedAssets.add(element.dataset.assetId);
+                    }
+                });
             });
             
             this.stateManager.set('selectedAssets', selectedAssets);
