@@ -2,7 +2,7 @@
   "backgroundColor": "#2D3748",
   "gridSize": 64,
   "showGrid": true,
-  "gridType": "isometric",
+  "gridType": "diamond",
   "gridColor": "rgba(74, 85, 104, 0.3)",
   "gridOpacity": 0.3,
   "gridThickness": 1.5,

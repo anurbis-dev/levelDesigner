@@ -82,10 +82,10 @@
   - `drawGridLines()` - вертикальные и горизонтальные линии
   - Поддержка субдивизий для точного позиционирования
 
-#### IsometricGridRenderer (изометрическая сетка)
+#### DiamondGridRenderer (diamond сетка)
 - **Специфическая логика:**
-  - `drawIsometricLines()` - линии под углами 60° и 120°
-  - Правильная изометрическая проекция для 2.5D игр
+  - `drawDiamondLines()` - линии под углами 60° и 120°
+  - Правильная diamond проекция для 2.5D игр
 
 #### HexagonalGridRenderer (шестиугольная сетка)
 - **Специфическая логика:**
@@ -98,7 +98,7 @@
   // Инициализация рендереров
   this.gridRenderers = new Map();
   this.gridRenderers.set('rectangular', new RectangularGridRenderer());
-  this.gridRenderers.set('isometric', new IsometricGridRenderer());
+  this.gridRenderers.set('diamond', new DiamondGridRenderer());
   this.gridRenderers.set('hexagonal', new HexagonalGridRenderer());
 
   // Выбор рендерера в drawGrid()

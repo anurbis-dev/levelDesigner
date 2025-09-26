@@ -23,6 +23,14 @@ export class Toolbar {
         this.showText = true;
         this.contextMenu = null;
         
+        // Grid type carousel state - will be initialized dynamically
+        this.gridTypes = [];
+        this.currentGridTypeIndex = 0;
+        this.gridTypeConfig = new Map();
+        
+        // Initialize grid types from available renderers first
+        this.initializeGridTypes();
+        
         // Load saved state before rendering
         this.loadStateBeforeRender();
         
@@ -125,7 +133,7 @@ export class Toolbar {
         ]));
         
         toolbarContent.appendChild(this.createButtonGroup('View', [
-            { id: 'toggle-grid', label: 'Grid', icon: '⊞', action: 'toggleGrid', toggle: true },
+            { id: 'toggle-grid', label: 'Grid', icon: '⊞', action: 'toggleGrid', toggle: true, gridType: 'rectangular' },
             { id: 'toggle-snap', label: 'Snap', icon: '🧲', action: 'toggleSnapToGrid', toggle: true },
             { id: 'toggle-parallax', label: 'Parallax', icon: '🌊', action: 'toggleParallax', toggle: true },
             { id: 'toggle-boundaries', label: 'Boundaries', icon: '📐', action: 'toggleObjectBoundaries', toggle: true },
@@ -156,6 +164,9 @@ export class Toolbar {
 
         // Update command availability based on current context
         this.updateCommandAvailability();
+        
+        // Update grid button icon after render
+        this.updateGridButtonIcon();
     }
 
     /**
@@ -244,6 +255,13 @@ export class Toolbar {
                 // Don't handle clicks on disabled buttons
                 if (button.style.pointerEvents === 'none') return;
                 const action = button.getAttribute('data-action');
+                
+                // Handle Ctrl+Click for grid type cycling
+                if (action === 'toggleGrid' && e.ctrlKey) {
+                    this.cycleGridType();
+                    return;
+                }
+                
                 this.handleAction(action);
             });
         });
@@ -711,6 +729,19 @@ export class Toolbar {
         if (typeof showText === 'boolean') {
             this.showText = showText;
         }
+
+        // Load saved grid type from user preferences
+        const savedGridType = this.levelEditor.userPrefs?.get('gridType') || 
+                             this.levelEditor.configManager?.get('canvas.gridType') || 
+                             this.gridTypes[0] || 'rectangular';
+        const gridTypeIndex = this.gridTypes.indexOf(savedGridType);
+        if (gridTypeIndex !== -1) {
+            this.currentGridTypeIndex = gridTypeIndex;
+        } else {
+            // Fallback to first available type
+            this.currentGridTypeIndex = 0;
+            Logger.ui.warn(`Saved grid type '${savedGridType}' not found, using first available: '${this.gridTypes[0]}'`);
+        }
     }
 
     /**
@@ -723,6 +754,121 @@ export class Toolbar {
         this.updateToggleButtonState('toggleParallax', this.stateManager.get('view.parallax') || false);
         this.updateToggleButtonState('toggleObjectBoundaries', this.stateManager.get('view.objectBoundaries') || false);
         this.updateToggleButtonState('toggleObjectCollisions', this.stateManager.get('view.objectCollisions') || false);
+        
+        // Update grid button icon based on current grid type
+        this.updateGridButtonIcon();
+    }
+
+    /**
+     * Initialize grid types from available renderers
+     */
+    initializeGridTypes() {
+        // Default grid type configuration
+        const defaultConfig = [
+            { type: 'rectangular', icon: '⊞', label: 'Rectangular' },
+            { type: 'diamond', icon: '◇', label: 'Diamond' },
+            { type: 'hexagonal', icon: '⬡', label: 'Hexagonal' }
+        ];
+
+        // Try to get available renderers from canvas renderer
+        if (this.levelEditor?.canvasRenderer?.gridRenderers) {
+            this.gridTypes = Array.from(this.levelEditor.canvasRenderer.gridRenderers.keys());
+            
+            // Create configuration map
+            this.gridTypeConfig.clear();
+            this.gridTypes.forEach((type, index) => {
+                const config = defaultConfig.find(c => c.type === type) || {
+                    type: type,
+                    icon: '⊞', // fallback icon
+                    label: type.charAt(0).toUpperCase() + type.slice(1)
+                };
+                this.gridTypeConfig.set(type, config);
+            });
+        } else {
+            // Fallback to default configuration
+            this.gridTypes = defaultConfig.map(c => c.type);
+            this.gridTypeConfig.clear();
+            defaultConfig.forEach(config => {
+                this.gridTypeConfig.set(config.type, config);
+            });
+        }
+
+        Logger.ui.debug(`Initialized ${this.gridTypes.length} grid types: ${this.gridTypes.join(', ')}`);
+    }
+
+    /**
+     * Refresh grid types from available renderers
+     * Call this when renderers are added/removed
+     */
+    refreshGridTypes() {
+        const oldTypes = [...this.gridTypes];
+        this.initializeGridTypes();
+        
+        // Check if current type is still available
+        const currentType = this.gridTypes[this.currentGridTypeIndex];
+        if (!currentType || !this.gridTypes.includes(currentType)) {
+            this.currentGridTypeIndex = 0;
+            Logger.ui.warn(`Current grid type no longer available, switched to: ${this.gridTypes[0]}`);
+        }
+        
+        // Update button icon if types changed
+        if (JSON.stringify(oldTypes) !== JSON.stringify(this.gridTypes)) {
+            this.updateGridButtonIcon();
+            Logger.ui.info(`Grid types updated: ${this.gridTypes.join(', ')}`);
+        }
+    }
+
+    /**
+     * Update grid button icon based on current grid type
+     */
+    updateGridButtonIcon() {
+        const gridButton = this.container.querySelector('[data-action="toggleGrid"]');
+        if (!gridButton) return;
+
+        const currentGridType = this.gridTypes[this.currentGridTypeIndex];
+        const config = this.gridTypeConfig.get(currentGridType);
+        const iconElement = gridButton.querySelector('.icon');
+        if (iconElement && config) {
+            iconElement.textContent = config.icon;
+        }
+    }
+
+    /**
+     * Cycle to next grid type
+     */
+    cycleGridType() {
+        if (this.gridTypes.length === 0) {
+            Logger.ui.warn('No grid types available for cycling');
+            return;
+        }
+        
+        this.currentGridTypeIndex = (this.currentGridTypeIndex + 1) % this.gridTypes.length;
+        const newGridType = this.gridTypes[this.currentGridTypeIndex];
+        
+        // Update config manager
+        if (this.levelEditor?.configManager) {
+            this.levelEditor.configManager.set('canvas.gridType', newGridType);
+        }
+        
+        // Update state manager
+        if (this.stateManager) {
+            this.stateManager.set('canvas.gridType', newGridType);
+        }
+        
+        // Save to user preferences
+        if (this.levelEditor?.userPrefs) {
+            this.levelEditor.userPrefs.set('gridType', newGridType);
+        }
+        
+        // Update button icon
+        this.updateGridButtonIcon();
+        
+        // Trigger grid settings sync and re-render
+        if (this.levelEditor?.settingsPanel?.gridSettings) {
+            this.levelEditor.settingsPanel.gridSettings.syncAllGridSettingsToState('canvas.gridType', newGridType);
+        }
+        
+        Logger.ui.info(`Grid type changed to: ${newGridType}`);
     }
 
     /**

@@ -1,6 +1,6 @@
 import { BaseGridRenderer } from './BaseGridRenderer.js';
 
-export class IsometricGridRenderer extends BaseGridRenderer {
+export class DiamondGridRenderer extends BaseGridRenderer {
     render(ctx, gridSize, camera, viewport, options = {}) {
         ctx.save();
 
@@ -27,18 +27,18 @@ export class IsometricGridRenderer extends BaseGridRenderer {
         // Set grid line style (camera is already applied by CanvasRenderer)
         this.setGridStyle(ctx, gridColor, gridThickness, gridOpacity, camera);
 
-        // Draw isometric grid lines (60° and 120° angles)
-        this.drawIsometricLines(ctx, gridSize, viewportLeft, viewportTop, viewportRight, viewportBottom);
+        // Draw diamond grid lines (60° and 120° angles)
+        this.drawDiamondLines(ctx, gridSize, viewportLeft, viewportTop, viewportRight, viewportBottom);
         ctx.restore();
     }
 
 
     /**
-     * Draw isometric grid lines at 60° and 120° angles
+     * Draw diamond grid lines at 60° and 120° angles
      */
-    drawIsometricLines(ctx, gridSize, viewportLeft, viewportTop, viewportRight, viewportBottom) {
-        // Calculate grid line positions with isometric offset
-        // Isometric grid needs to be offset by half grid size for proper centering
+    drawDiamondLines(ctx, gridSize, viewportLeft, viewportTop, viewportRight, viewportBottom) {
+        // Calculate grid line positions with diamond offset
+        // Diamond grid needs to be offset by half grid size for proper centering
         const offsetX = gridSize / 2;
         const offsetY = gridSize / 2;
         

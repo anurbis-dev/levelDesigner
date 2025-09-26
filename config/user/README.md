@@ -25,7 +25,7 @@
 config/user/
 ├── README.md                      # Эта документация
 ├── example-ui.json                # Пример UI настроек
-├── example-canvas.json            # Пример canvas настроек (isometric)
+├── example-canvas.json            # Пример canvas настроек (diamond)
 ├── example-hexagonal-canvas.json  # Пример hexagonal грида
 ├── canvas.json                    # Canvas настройки (rectangular)
 ├── editor.json                    # Настройки редактора (создать при необходимости)
@@ -119,7 +119,7 @@ editor.configManager.saveUserConfig('canvas', {
 - `backgroundColor` - цвет фона (#hex)
 - `gridSize` - размер сетки (px)
 - `showGrid` - показывать сетку (true/false)
-- `gridType` - тип грида ('rectangular', 'isometric', 'hexagonal')
+- `gridType` - тип грида ('rectangular', 'diamond', 'hexagonal')
 - `gridColor` - цвет основных линий сетки (rgba или #hex)
 - `gridOpacity` - прозрачность сетки (0.0 - 1.0)
 - `gridThickness` - толщина основных линий (0.1 - 5.0)

@@ -13,7 +13,7 @@ git commit -m "feat: v3.19.1 GridRenderer refactoring and documentation update
 - Refactored grid rendering system with modular architecture
 - Removed duplicate code and intermediate GridRenderer layer
 - Added BaseGridRenderer with common grid rendering utilities
-- Implemented specialized renderers: Rectangular, Isometric, Hexagonal
+- Implemented specialized renderers: Rectangular, Diamond, Hexagonal
 - Fixed grid positioning and camera integration
 - Updated comprehensive documentation and API references
 - Improved code organization and maintainability"

@@ -2,7 +2,7 @@ import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
 import { Logger } from '../utils/Logger.js';
 import { RenderUtils } from '../utils/RenderUtils.js';
 import { RectangularGridRenderer } from '../utils/gridRenderers/RectangularGridRenderer.js';
-import { IsometricGridRenderer } from '../utils/gridRenderers/IsometricGridRenderer.js';
+import { DiamondGridRenderer } from '../utils/gridRenderers/DiamondGridRenderer.js';
 import { HexagonalGridRenderer } from '../utils/gridRenderers/HexagonalGridRenderer.js';
 
 /**
@@ -17,7 +17,7 @@ export class CanvasRenderer {
         // Initialize grid renderers
         this.gridRenderers = new Map();
         this.gridRenderers.set('rectangular', new RectangularGridRenderer());
-        this.gridRenderers.set('isometric', new IsometricGridRenderer());
+        this.gridRenderers.set('diamond', new DiamondGridRenderer());
         this.gridRenderers.set('hexagonal', new HexagonalGridRenderer());
     }
 

@@ -22,7 +22,7 @@ export class GridSettings {
                 <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Grid Type</label>
                 <select class="setting-input" name="setting-input" data-setting="canvas.gridType" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;">
                     <option value="rectangular" ${(this.configManager.get('canvas.gridType') || 'rectangular') === 'rectangular' ? 'selected' : ''}>Rectangular Grid</option>
-                    <option value="isometric" ${(this.configManager.get('canvas.gridType') || 'rectangular') === 'isometric' ? 'selected' : ''}>Isometric Grid</option>
+                    <option value="diamond" ${(this.configManager.get('canvas.gridType') || 'rectangular') === 'diamond' ? 'selected' : ''}>Diamond Grid</option>
                     <option value="hexagonal" ${(this.configManager.get('canvas.gridType') || 'rectangular') === 'hexagonal' ? 'selected' : ''}>Hexagonal Grid</option>
                 </select>
             </div>

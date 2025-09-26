@@ -42,6 +42,7 @@ export class UserPreferencesManager {
             'gridSubdivThickness': 'canvas.gridSubdivThickness',
             'snapToGrid': 'canvas.snapToGrid',
             'snapTolerance': 'canvas.snapTolerance',
+            'gridType': 'canvas.gridType',
 
             // Editor preferences
             'autoSave': 'editor.autoSave',

@@ -554,7 +554,8 @@ export class ConfigManager {
         this.configs.grid.subdivisions = this.configs.canvas.gridSubdivisions;
         this.configs.grid.subdivColor = this.configs.canvas.gridSubdivColor;
         this.configs.grid.subdivThickness = this.configs.canvas.gridSubdivThickness;
-        this.configs.grid.snapTolerance = this.configs.canvas.snapTolerance || 40;
+        this.configs.grid.snapTolerance = this.configs.canvas.snapTolerance || 80;
+        this.configs.grid.gridType = this.configs.canvas.gridType;
     }
 
     /**
@@ -574,6 +575,7 @@ export class ConfigManager {
         this.configs.canvas.gridSubdivColor = this.configs.grid.subdivColor;
         this.configs.canvas.gridSubdivThickness = this.configs.grid.subdivThickness;
         this.configs.canvas.snapTolerance = this.configs.grid.snapTolerance;
+        this.configs.canvas.gridType = this.configs.grid.gridType;
     }
 
     /**
@@ -616,6 +618,9 @@ export class ConfigManager {
                 case 'snapTolerance':
                     this.configs.canvas.snapTolerance = value;
                     break;
+                case 'gridType':
+                    this.configs.canvas.gridType = value;
+                    break;
             }
         } else if (path.startsWith('canvas.')) {
             // Sync from canvas to grid
@@ -651,6 +656,9 @@ export class ConfigManager {
                 case 'snapTolerance':
                     this.configs.grid.snapTolerance = value;
                     break;
+                case 'gridType':
+                    this.configs.grid.gridType = value;
+                    break;
             }
         }
     }
@@ -678,6 +686,7 @@ export class ConfigManager {
             this.configs.canvas.gridSubdivisions = this.configs.grid.subdivisions;
             this.configs.canvas.gridSubdivColor = this.configs.grid.subdivColor;
             this.configs.canvas.gridSubdivThickness = this.configs.grid.subdivThickness;
+            this.configs.canvas.gridType = this.configs.grid.gridType;
         }
         this.saveUserConfigsToStorage();
     }

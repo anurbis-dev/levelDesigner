@@ -662,11 +662,11 @@
 - `drawGridLines(ctx, startX, startY, endX, endY, gridSize)` - отрисовка вертикальных и горизонтальных линий
 - `render()` - отрисовка с поддержкой субдивизий
 
-#### IsometricGridRenderer (src/utils/gridRenderers/IsometricGridRenderer.js)
-Рендерер изометрической сетки с углами 60° и 120°.
+#### DiamondGridRenderer (src/utils/gridRenderers/DiamondGridRenderer.js)
+Рендерер diamond сетки с углами 60° и 120°.
 
 **Специфические методы:**
-- `drawIsometricLines(ctx, gridSize, viewportLeft, viewportTop, viewportRight, viewportBottom)` - отрисовка изометрических линий
+- `drawDiamondLines(ctx, gridSize, viewportLeft, viewportTop, viewportRight, viewportBottom)` - отрисовка diamond линий
 
 #### HexagonalGridRenderer (src/utils/gridRenderers/HexagonalGridRenderer.js)
 Рендерер шестиугольной сетки.

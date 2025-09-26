@@ -1652,7 +1652,7 @@ new CanvasRenderer(canvas)
 - `gridSize` (number) - размер сетки
 - `camera` (Object) - объект камеры
 - `backgroundColor` (string) - цвет фона
-- `options.gridType` (string) - тип сетки: 'rectangular', 'isometric', 'hexagonal'
+- `options.gridType` (string) - тип сетки: 'rectangular', 'diamond', 'hexagonal'
 - `options.color` (string) - цвет линий сетки
 - `options.thickness` (number) - толщина линий
 - `options.opacity` (number) - прозрачность линий
@@ -1664,7 +1664,7 @@ new CanvasRenderer(canvas)
 // Инициализация рендереров в конструкторе
 this.gridRenderers = new Map();
 this.gridRenderers.set('rectangular', new RectangularGridRenderer());
-this.gridRenderers.set('isometric', new IsometricGridRenderer());
+this.gridRenderers.set('diamond', new DiamondGridRenderer());
 this.gridRenderers.set('hexagonal', new HexagonalGridRenderer());
 
 // Выбор рендерера в drawGrid()
@@ -1852,13 +1852,13 @@ gridRenderer.render(this.ctx, gridSize, camera, viewport, options);
 - `options.subdivColor` (string) - цвет субдивизий
 - `options.subdivThickness` (number) - толщина субдивизий
 
-#### IsometricGridRenderer
+#### DiamondGridRenderer
 
-Рендерер изометрической сетки.
+Рендерер diamond сетки.
 
 ##### `render(ctx, gridSize, camera, viewport, options)`
 
-Рисует изометрическую сетку с углами 60° и 120°.
+Рисует diamond сетку с углами 60° и 120°.
 
 **Параметры:**
 - `ctx` (CanvasRenderingContext2D) - контекст canvas
