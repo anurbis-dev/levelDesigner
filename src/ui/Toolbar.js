@@ -27,6 +27,7 @@ export class Toolbar {
         this.gridTypes = [];
         this.currentGridTypeIndex = 0;
         this.gridTypeConfig = new Map();
+        this.settingsMenuItemAdded = false;
         
         // Initialize grid types from available renderers first
         this.initializeGridTypes();
@@ -794,6 +795,11 @@ export class Toolbar {
         }
 
         Logger.ui.debug(`Initialized ${this.gridTypes.length} grid types: ${this.gridTypes.join(', ')}`);
+        
+        // Update context menu with grid types
+        if (this.contextMenu) {
+            this.addGridTypeMenuItems();
+        }
     }
 
     /**
@@ -815,6 +821,11 @@ export class Toolbar {
         if (JSON.stringify(oldTypes) !== JSON.stringify(this.gridTypes)) {
             this.updateGridButtonIcon();
             Logger.ui.info(`Grid types updated: ${this.gridTypes.join(', ')}`);
+            
+            // Update context menu with new grid types
+            if (this.contextMenu) {
+                this.addGridTypeMenuItems();
+            }
         }
     }
 
@@ -1035,6 +1046,127 @@ export class Toolbar {
         this.contextMenu.addMenuItem('Hide', '👁️', () => this.hideToolbar());
         this.contextMenu.addMenuItem('Icons', '🎨', () => this.toggleIcons());
         this.contextMenu.addMenuItem('Text', '📝', () => this.toggleText());
+        
+        // Add separator before Grid section
+        this.contextMenu.addSeparator();
+        
+        // Add Grid section - will be populated after grid types are initialized
+        this.setupGridContextMenu();
+    }
+
+    /**
+     * Set specific grid type
+     * @param {string} gridType - Grid type to set
+     * @returns {boolean} - true if type was set successfully
+     */
+    setGridType(gridType) {
+        const gridTypeIndex = this.gridTypes.indexOf(gridType);
+        if (gridTypeIndex === -1) {
+            Logger.ui.warn(`Grid type '${gridType}' not found in available types`);
+            return false;
+        }
+        
+        this.currentGridTypeIndex = gridTypeIndex;
+        const newGridType = this.gridTypes[this.currentGridTypeIndex];
+        
+        // Update config manager
+        if (this.levelEditor?.configManager) {
+            this.levelEditor.configManager.set('canvas.gridType', newGridType);
+        }
+        
+        // Update state manager
+        if (this.stateManager) {
+            this.stateManager.set('canvas.gridType', newGridType);
+        }
+        
+        // Save to user preferences
+        if (this.levelEditor?.userPrefs) {
+            this.levelEditor.userPrefs.set('gridType', newGridType);
+        }
+        
+        // Trigger grid settings sync and re-render
+        if (this.levelEditor?.settingsPanel?.gridSettings) {
+            this.levelEditor.settingsPanel.gridSettings.syncAllGridSettingsToState('canvas.gridType', newGridType);
+        }
+        
+        // Update button icon
+        this.updateGridButtonIcon();
+        
+        // Update context menu items disabled state
+        if (this.contextMenu) {
+            this.addGridTypeMenuItems();
+        }
+        
+        // Trigger re-render
+        if (this.levelEditor?.render) {
+            this.levelEditor.render();
+        }
+        
+        Logger.ui.debug(`Grid type changed to: ${newGridType}`);
+        return true;
+    }
+
+    /**
+     * Setup Grid context menu section
+     */
+    setupGridContextMenu() {
+        // Add Settings command first (only once) - this ensures it's always at the bottom
+        if (!this.settingsMenuItemAdded) {
+            this.contextMenu.addMenuItem('Settings...', '⚙️', () => {
+                if (this.levelEditor && typeof this.levelEditor.openSettings === 'function') {
+                    this.levelEditor.openSettings();
+                }
+            }, {
+                id: 'grid-settings'
+            });
+            this.settingsMenuItemAdded = true;
+        }
+        
+        // Add Grid type switching commands dynamically
+        this.addGridTypeMenuItems();
+    }
+
+    /**
+     * Add Grid type menu items dynamically
+     */
+    addGridTypeMenuItems() {
+        // Clear existing grid type items (if any)
+        this.clearGridTypeMenuItems();
+        
+        // Find Settings item position to insert grid types before it
+        const settingsIndex = this.contextMenu.menuItems.findIndex(item => item.id === 'grid-settings');
+        const insertIndex = settingsIndex !== -1 ? settingsIndex : this.contextMenu.menuItems.length;
+        
+        // Add current grid types before Settings
+        this.gridTypes.forEach((gridType, index) => {
+            const config = this.gridTypeConfig.get(gridType);
+            if (config) {
+                const isCurrentType = this.currentGridTypeIndex === index;
+                const menuItem = {
+                    text: config.label,
+                    icon: config.icon,
+                    action: () => this.setGridType(gridType),
+                    visible: () => this.gridTypes.length > 0,
+                    id: `grid-type-${gridType}`,
+                    className: isCurrentType ? 'current-grid-type' : ''
+                };
+                
+                // Insert at the correct position
+                this.contextMenu.menuItems.splice(insertIndex + index, 0, menuItem);
+            }
+        });
+    }
+
+    /**
+     * Clear Grid type menu items
+     */
+    clearGridTypeMenuItems() {
+        if (this.contextMenu && this.contextMenu.menuItems) {
+            // Remove only grid type items, keep Settings and other items
+            this.contextMenu.menuItems = this.contextMenu.menuItems.filter(item => 
+                !item.id || !item.id.startsWith('grid-type-')
+            );
+        }
     }
 
     /**

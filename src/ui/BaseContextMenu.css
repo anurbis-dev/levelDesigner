@@ -233,3 +233,13 @@
     font-family: monospace;
 }
 
+/* Стили для текущего типа грида */
+.base-context-menu-item.current-grid-type {
+    background: #1E40AF; /* blue-800 */
+    color: #FFFFFF;
+}
+
+.base-context-menu-item.current-grid-type:hover {
+    background: #1D4ED8; /* blue-700 */
+}
+

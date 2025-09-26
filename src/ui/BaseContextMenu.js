@@ -245,6 +245,16 @@ export class BaseContextMenu {
      * @returns {HTMLElement} - The menu item element
      */
     createMenuItem(item, contextData) {
+        // Handle separator
+        if (item.type === 'separator') {
+            const separator = document.createElement('div');
+            separator.className = 'base-context-menu-item separator';
+            if (item.className) {
+                separator.classList.add(item.className);
+            }
+            return separator;
+        }
+        
         const menuItem = document.createElement('div');
         menuItem.className = 'base-context-menu-item';
         menuItem.innerHTML = `${item.icon ? item.icon + ' ' : ''}${item.text}`;
@@ -434,6 +444,14 @@ export class BaseContextMenu {
         this.menuItems.push({
             type: 'separator',
             visible: true
+        });
+    }
+
+    addSeparatorWithClass(className) {
+        this.menuItems.push({
+            type: 'separator',
+            visible: true,
+            className: className
         });
     }
 
