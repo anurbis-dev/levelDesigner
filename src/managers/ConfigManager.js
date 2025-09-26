@@ -107,6 +107,7 @@ export class ConfigManager {
             subdivColor: configs.canvas?.gridSubdivColor ?? '#666666',
             subdivThickness: configs.canvas?.gridSubdivThickness ?? 0.5,
             gridType: configs.canvas?.gridType ?? 'rectangular',
+            hexOrientation: configs.canvas?.hexOrientation ?? 'pointy',
             snapTolerance: 80
         };
 
@@ -209,6 +210,7 @@ export class ConfigManager {
             subdivColor: configs.canvas?.gridSubdivColor ?? '#666666',
             subdivThickness: configs.canvas?.gridSubdivThickness ?? 0.5,
             gridType: configs.canvas?.gridType ?? 'rectangular',
+            hexOrientation: configs.canvas?.hexOrientation ?? 'pointy',
             snapTolerance: 80
         };
 

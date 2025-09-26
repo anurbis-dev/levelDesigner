@@ -1906,6 +1906,7 @@ new CanvasRenderer(canvas)
 - `options.opacity` (number) - прозрачность линий
 - `options.subdivisions` (number) - количество субдивизий (для rectangular)
 - `options.subdivColor` (string) - цвет субдивизий
+- `options.hexOrientation` (string) - ориентация хексагонального грида: 'pointy', 'flat'
 
 **Внутренняя архитектура:**
 ```javascript
@@ -2119,20 +2120,27 @@ gridRenderer.render(this.ctx, gridSize, camera, viewport, options);
 
 #### HexagonalGridRenderer
 
-Рендерер шестиугольной сетки.
+Рендерер шестиугольной сетки с поддержкой ориентации.
 
 ##### `render(ctx, gridSize, camera, viewport, options)`
 
-Рисует шестиугольную сетку.
+Рисует шестиугольную сетку с оптимизированным алгоритмом.
 
 **Параметры:**
 - `ctx` (CanvasRenderingContext2D) - контекст canvas
-- `gridSize` (number) - размер ячеек
+- `gridSize` (number) - размер ячеек (используется как радиус хексагона)
 - `camera` (Object) - объект камеры
 - `viewport` (Object) - размеры viewport
 - `options.color` (string) - цвет линий
 - `options.thickness` (number) - толщина линий
 - `options.opacity` (number) - прозрачность
+- `options.hexOrientation` (string) - ориентация: 'pointy' (по умолчанию) или 'flat'
+
+**Особенности:**
+- Оптимизированная отрисовка с использованием Set для избежания дублирования линий
+- Поддержка двух ориентаций: Pointy Top и Flat Top
+- Автоматический расчет размеров и позиций хексагонов
+- Интеграция с системой камеры и viewport
 
 ### AssetPanel
 

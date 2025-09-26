@@ -9,5 +9,6 @@
   "gridSubdivisions": 4,
   "gridSubdivColor": "#666666",
   "gridSubdivThickness": 0.5,
-  "snapToGrid": false
+  "snapToGrid": false,
+  "hexOrientation": "pointy"
 }

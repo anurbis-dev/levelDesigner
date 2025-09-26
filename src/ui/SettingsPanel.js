@@ -240,6 +240,11 @@ export class SettingsPanel {
             
             // Setup input event listeners after content is rendered
             this.setupSettingsInputs();
+            
+            // Initialize grid settings event listeners
+            if (this.gridSettings) {
+                this.gridSettings.initializeEventListeners();
+            }
         }
     }
 
@@ -694,6 +699,7 @@ export class SettingsPanel {
             const gridSubdivColor = window.editor.stateManager.get('canvas.gridSubdivColor');
             const gridSubdivThickness = window.editor.stateManager.get('canvas.gridSubdivThickness');
             const gridType = window.editor.stateManager.get('canvas.gridType');
+            const hexOrientation = window.editor.stateManager.get('canvas.hexOrientation');
 
 
             if (gridSize !== undefined) this.configManager.set('grid.size', gridSize);
@@ -712,6 +718,7 @@ export class SettingsPanel {
             }
             if (gridSubdivThickness !== undefined) this.configManager.set('grid.subdivThickness', gridSubdivThickness);
             if (gridType !== undefined) this.configManager.set('canvas.gridType', gridType);
+            if (hexOrientation !== undefined) this.configManager.set('canvas.hexOrientation', hexOrientation);
         }
 
         this.configManager.saveSettings();

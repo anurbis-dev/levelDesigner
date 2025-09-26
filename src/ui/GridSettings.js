@@ -27,6 +27,15 @@ export class GridSettings {
                 </select>
             </div>
 
+            <!-- Hex Orientation (only visible when hexagonal grid is selected) -->
+            <div id="hexOrientationSection" style="margin-bottom: 1.5rem; display: none;">
+                <label style="display:block; font-size:0.875rem; color:#d1d5db; margin-bottom:0.5rem;">Hex Orientation</label>
+                <select class="setting-input" name="setting-input" data-setting="canvas.hexOrientation" style="width:100%; padding:0.5rem; background:#374151; border:1px solid #4b5563; border-radius:0.25rem; color:white;">
+                    <option value="pointy" ${(this.configManager.get('canvas.hexOrientation') || 'pointy') === 'pointy' ? 'selected' : ''}>Pointy Top</option>
+                    <option value="flat" ${(this.configManager.get('canvas.hexOrientation') || 'pointy') === 'flat' ? 'selected' : ''}>Flat Top</option>
+                </select>
+            </div>
+
             <!-- Grid Layout для компактного размещения -->
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
 
@@ -89,6 +98,7 @@ export class GridSettings {
         let gridSubdivColor = this.configManager.get('grid.subdivColor') ?? '#666666';
         let gridSubdivThickness = this.configManager.get('grid.subdivThickness') ?? 0.5;
         let gridType = this.configManager.get('canvas.gridType') ?? 'rectangular';
+        let hexOrientation = this.configManager.get('canvas.hexOrientation') ?? 'pointy';
 
 
         // If we have a changed value, use it instead of the stored one
@@ -101,6 +111,7 @@ export class GridSettings {
             else if (changedPath === 'grid.subdivColor') gridSubdivColor = changedValue;
             else if (changedPath === 'grid.subdivThickness') gridSubdivThickness = changedValue;
             else if (changedPath === 'canvas.gridType') gridType = changedValue;
+            else if (changedPath === 'canvas.hexOrientation') hexOrientation = changedValue;
         }
 
         // If opacity changed, we need to recalculate colors with new opacity
@@ -140,6 +151,7 @@ export class GridSettings {
 
         window.editor.stateManager.set('canvas.gridSubdivThickness', gridSubdivThickness);
         window.editor.stateManager.set('canvas.gridType', gridType);
+        window.editor.stateManager.set('canvas.hexOrientation', hexOrientation);
 
         // Trigger re-render with debounce to prevent excessive calls
         if (this.renderTimeout) {
@@ -150,5 +162,33 @@ export class GridSettings {
                 window.editor.render();
             }
         }, 50); // 50ms debounce
+    }
+
+    /**
+     * Handle grid type change to show/hide hex orientation section
+     */
+    handleGridTypeChange() {
+        const gridTypeSelect = document.querySelector('[data-setting="canvas.gridType"]');
+        const hexOrientationSection = document.getElementById('hexOrientationSection');
+        
+        if (gridTypeSelect && hexOrientationSection) {
+            const showHexOrientation = gridTypeSelect.value === 'hexagonal';
+            hexOrientationSection.style.display = showHexOrientation ? 'block' : 'none';
+        }
+    }
+
+    /**
+     * Initialize event listeners for grid settings
+     */
+    initializeEventListeners() {
+        // Handle grid type change
+        const gridTypeSelect = document.querySelector('[data-setting="canvas.gridType"]');
+        if (gridTypeSelect) {
+            gridTypeSelect.addEventListener('change', () => {
+                this.handleGridTypeChange();
+            });
+            // Initial call to set correct visibility
+            this.handleGridTypeChange();
+        }
     }
 }

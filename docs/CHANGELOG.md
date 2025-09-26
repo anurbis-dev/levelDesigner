@@ -1,5 +1,24 @@
 # Changelog
 
+## [3.20.0] - 2025-01-27
+
+### Added
+- **Hexagonal Grid Orientation** - добавлена поддержка ориентации хексагонального грида (Pointy Top / Flat Top)
+- **Hex Orientation UI Control** - добавлен селект для выбора ориентации в настройках грида
+- **Enhanced Hexagonal Grid Renderer** - полностью переписан рендерер с оптимизированным алгоритмом отрисовки
+- **Grid Size Integration** - размер хексагона теперь привязан к общему параметру Grid Size
+
+### Improved
+- **Hex Grid Performance** - оптимизирована отрисовка хексагонального грида с использованием Set для избежания дублирования линий
+- **Grid Settings UI** - улучшен интерфейс настроек грида с динамическим показом/скрытием опций ориентации
+- **Configuration Management** - расширена система конфигурации для поддержки hexOrientation параметра
+
+### Technical
+- **ConfigManager** - добавлена поддержка hexOrientation в настройках грида
+- **StateManager** - интегрирован hexOrientation в систему состояний
+- **UserPreferencesManager** - добавлена поддержка hexOrientation в пользовательских настройках
+- **SettingsPanel** - обновлен для сохранения и загрузки hexOrientation
+
 ## [3.19.8] - 2025-01-27
 
 ### Fixed

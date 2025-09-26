@@ -43,6 +43,7 @@ export class UserPreferencesManager {
             'snapToGrid': 'canvas.snapToGrid',
             'snapTolerance': 'canvas.snapTolerance',
             'gridType': 'canvas.gridType',
+            'hexOrientation': 'canvas.hexOrientation',
 
             // Editor preferences
             'autoSave': 'editor.autoSave',
