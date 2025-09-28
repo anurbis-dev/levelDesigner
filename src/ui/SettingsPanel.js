@@ -44,106 +44,42 @@ export class SettingsPanel {
         `;
         
         overlay.innerHTML = `
-            <div style="
-                position: relative;
-                background-color: #1f2937;
-                border-radius: 0.5rem;
-                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-                max-width: 64rem;
-                width: 100%;
-                margin: 1rem auto;
-                height: calc(100vh - 2rem);
-                color: white;
-                display: flex;
-                flex-direction: column;
-            ">
-                <div style="
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    padding: 0.5rem 1rem;
-                    border-bottom: 1px solid #374151;
-                    flex: 0 0 auto;
-                    min-height: 3rem;
-                ">
-                    <h2 style="font-size: 1.125rem; font-weight: 600; margin: 0;">Settings</h2>
-                    <button id="close-settings" style="
-                        color: #9ca3af;
-                        background: none;
-                        border: none;
-                        cursor: pointer;
-                        padding: 0.25rem;
-                        font-size: 1.25rem;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        width: 2rem;
-                        height: 2rem;
-                    ">✕</button>
+            <div class="settings-panel-container">
+                <div class="settings-header">
+                    <h2>Settings</h2>
+                    <button id="close-settings" class="settings-close-btn">✕</button>
                 </div>
                 
-                <div style="display: flex; flex: 1 1 auto; overflow: hidden; position: relative;">
+                <div class="settings-content-area">
                     <!-- Settings Categories -->
-                    <div style="
-                        width: 25%;
-                        min-width: 200px;
-                        background-color: #111827;
-                        padding: 1rem;
-                        overflow-y: auto;
-                        flex: 0 0 auto;
-                        height: 100%;
-                    ">
-                        <nav style="display: flex; flex-direction: column; gap: 0.5rem;">
-                            <button class="settings-tab active" data-tab="general" style="width: 100%; text-align: left; padding: 0.75rem; border-radius: 0.25rem; color: #d1d5db; background: #374151; border: none; cursor: pointer;">General</button>
-                            <button class="settings-tab" data-tab="grid" style="width: 100%; text-align: left; padding: 0.75rem; border-radius: 0.25rem; color: #d1d5db; background: transparent; border: none; cursor: pointer;">Grid & Snapping</button>
-                            <button class="settings-tab" data-tab="camera" style="width: 100%; text-align: left; padding: 0.75rem; border-radius: 0.25rem; color: #d1d5db; background: transparent; border: none; cursor: pointer;">Camera</button>
-                            <button class="settings-tab" data-tab="selection" style="width: 100%; text-align: left; padding: 0.75rem; border-radius: 0.25rem; color: #d1d5db; background: transparent; border: none; cursor: pointer;">Selection</button>
-                            <button class="settings-tab" data-tab="assets" style="width: 100%; text-align: left; padding: 0.75rem; border-radius: 0.25rem; color: #d1d5db; background: transparent; border: none; cursor: pointer;">Assets</button>
-                            <button class="settings-tab" data-tab="shortcuts" style="width: 100%; text-align: left; padding: 0.75rem; border-radius: 0.25rem; color: #d1d5db; background: transparent; border: none; cursor: pointer;">Shortcuts</button>
-                            <button class="settings-tab" data-tab="performance" style="width: 100%; text-align: left; padding: 0.75rem; border-radius: 0.25rem; color: #d1d5db; background: transparent; border: none; cursor: pointer;">Performance</button>
-                        </nav>
+                    <div class="settings-nav">
+                        <button class="settings-tab active" data-tab="general">General</button>
+                        <button class="settings-tab" data-tab="grid">Grid & Snapping</button>
+                        <button class="settings-tab" data-tab="camera">Camera</button>
+                        <button class="settings-tab" data-tab="selection">Selection</button>
+                        <button class="settings-tab" data-tab="assets">Assets</button>
+                        <button class="settings-tab" data-tab="shortcuts">Shortcuts</button>
+                        <button class="settings-tab" data-tab="performance">Performance</button>
                     </div>
                     
                     <!-- Settings Content -->
-                    <div style="
-                        flex: 1 1 auto;
-                        padding: 1rem;
-                        overflow-y: auto;
-                        height: 100%;
-                        padding-bottom: 4rem;
-                    ">
+                    <div class="settings-main-content">
                         <div id="settings-content">
                             <!-- Content will be dynamically generated -->
                         </div>
                     </div>
                 </div>
                 
-                <div style="
-                    display: flex;
-                    align-items: center;
-                    justify-content: space-between;
-                    padding: 0.75rem 1rem;
-                    border-top: 1px solid #374151;
-                    position: fixed;
-                    bottom: 1rem;
-                    left: 1rem;
-                    right: 1rem;
-                    max-width: calc(64rem - 2rem);
-                    margin: 0 auto;
-                    background-color: #1f2937;
-                    z-index: 10;
-                    border-radius: 0 0 0.5rem 0.5rem;
-                    box-shadow: 0 -4px 6px -1px rgba(0, 0, 0, 0.1);
-                ">
-                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                        <button id="reset-settings" style="padding: 0.4rem 0.75rem; background-color: #dc2626; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;">Reset to Defaults</button>
-                        <button id="export-settings" style="padding: 0.4rem 0.75rem; background-color: #2563eb; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;">Export Settings</button>
-                        <button id="import-settings" style="padding: 0.4rem 0.75rem; background-color: #059669; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;">Import Settings</button>
-                        <input type="file" id="import-file" name="import-file" accept=".json" style="display: none;">
+                <div class="settings-footer">
+                    <div class="settings-footer-left">
+                        <button id="reset-settings" class="settings-btn settings-btn-reset">Reset to Defaults</button>
+                        <button id="export-settings" class="settings-btn settings-btn-export">Export Settings</button>
+                        <button id="import-settings" class="settings-btn settings-btn-import">Import Settings</button>
+                        <input type="file" id="import-file" name="import-file" accept=".json" class="settings-input">
                     </div>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <button id="cancel-settings" style="padding: 0.4rem 0.75rem; background-color: #4b5563; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;">Cancel</button>
-                        <button id="save-settings" style="padding: 0.4rem 0.75rem; background-color: #2563eb; color: white; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.875rem;">Save Changes</button>
+                    <div class="settings-footer-right">
+                        <button id="cancel-settings" class="settings-btn settings-btn-cancel">Cancel</button>
+                        <button id="save-settings" class="settings-btn settings-btn-save">Save Changes</button>
                     </div>
                 </div>
             </div>
@@ -309,6 +245,10 @@ export class SettingsPanel {
                 break;
             case 'grid':
                 content.innerHTML = this.gridSettings.renderGridSettings();
+                // Initialize grid settings event listeners after rendering
+                if (this.gridSettings) {
+                    this.gridSettings.initializeEventListeners();
+                }
                 break;
             case 'camera':
                 content.innerHTML = this.renderCameraSettings();
@@ -669,6 +609,15 @@ export class SettingsPanel {
         if (window.editor && window.editor.canvasRenderer) {
             window.editor.canvasRenderer.resizeCanvas();
             window.editor.render();
+        }
+        
+        // Ensure grid settings visibility is maintained after compact mode change
+        if (this.gridSettings && typeof this.gridSettings.handleGridTypeChange === 'function') {
+            setTimeout(() => {
+                this.gridSettings.handleGridTypeChange();
+                // Re-initialize event listeners after DOM update
+                this.gridSettings.initializeEventListeners();
+            }, 100); // Small delay to ensure DOM is updated
         }
     }
     

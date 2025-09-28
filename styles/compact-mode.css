@@ -1,55 +1,1054 @@
-/* Compact Mode Styles */
+/* Compact Mode Styles - Ultra Compact */
 
 .compact-mode {
-    font-size: 0.875rem; /* 14px instead of 16px */
+    font-size: 0.75rem; /* 12px instead of 16px - more compact */
 }
 
 .compact-mode #toolbar-container {
-    padding: 0.25rem; /* Reduced from 0.5rem */
+    padding: 0.125rem; /* Ultra reduced from 0.5rem */
 }
 
 .compact-mode #right-panel {
-    padding: 0.5rem; /* Reduced from 1rem */
+    padding: 0.25rem; /* Ultra reduced from 1rem */
 }
 
 .compact-mode #assets-panel {
-    padding: 0.5rem; /* Reduced from 1rem */
+    padding: 0.25rem; /* Ultra reduced from 1rem */
 }
 
 .compact-mode .panel-header {
-    padding: 0.5rem; /* Reduced from 0.75rem */
-    font-size: 0.875rem; /* Reduced from 1rem */
+    padding: 0.25rem; /* Ultra reduced from 0.75rem */
+    font-size: 0.75rem; /* Ultra reduced from 1rem */
 }
 
 .compact-mode .panel-content {
-    padding: 0.5rem; /* Reduced from 0.75rem */
+    padding: 0.25rem; /* Ultra reduced from 0.75rem */
 }
 
-.compact-mode .layer-item {
-    padding: 0.25rem 0.5rem; /* Reduced from 0.5rem 0.75rem */
-    font-size: 0.875rem; /* Reduced from 1rem */
-}
+/* Layer items - moved to layers section below */
 
 .compact-mode .asset-item {
-    padding: 0.25rem; /* Reduced from 0.5rem */
+    padding: 0.125rem; /* Ultra reduced from 0.5rem */
+    min-height: 1.5rem; /* Ensure minimum touch target */
 }
 
 .compact-mode .menu-item {
-    padding: 0.25rem 0.5rem; /* Reduced from 0.5rem 0.75rem */
-    font-size: 0.875rem; /* Reduced from 1rem */
+    padding: 0.125rem 0.25rem; /* Ultra reduced from 0.5rem 0.75rem */
+    font-size: 0.75rem; /* Ultra reduced from 1rem */
+    min-height: 1.5rem; /* Ensure minimum touch target */
 }
 
 .compact-mode .button {
-    padding: 0.25rem 0.5rem; /* Reduced from 0.5rem 0.75rem */
-    font-size: 0.875rem; /* Reduced from 1rem */
+    padding: 0.125rem 0.25rem; /* Ultra reduced from 0.5rem 0.75rem */
+    font-size: 0.75rem; /* Ultra reduced from 1rem */
+    min-height: 1.5rem; /* Ensure minimum touch target */
 }
 
 .compact-mode .input {
-    padding: 0.25rem; /* Reduced from 0.5rem */
-    font-size: 0.875rem; /* Reduced from 1rem */
+    padding: 0.125rem; /* Ultra reduced from 0.5rem */
+    font-size: 0.75rem; /* Ultra reduced from 1rem */
+    min-height: 1.5rem; /* Ensure minimum touch target */
 }
 
 .compact-mode .tab {
-    padding: 0.25rem 0.5rem; /* Reduced from 0.5rem 0.75rem */
-    font-size: 0.875rem; /* Reduced from 1rem */
+    padding: 0.125rem 0.25rem; /* Ultra reduced from 0.5rem 0.75rem */
+    font-size: 0.75rem; /* Ultra reduced from 1rem */
+    min-height: 1.5rem; /* Ensure minimum touch target */
+}
+
+/* Additional ultra-compact styles */
+.compact-mode .outliner-item {
+    padding: 0.125rem 0.25rem; /* Ultra reduced */
+    font-size: 0.75rem;
+    min-height: 1.25rem;
+}
+
+.compact-mode .asset-thumbnail {
+    width: 24px; /* Reduced from default */
+    height: 24px; /* Reduced from default */
+}
+
+.compact-mode .layer-color {
+    width: 12px; /* Reduced from default */
+    height: 12px; /* Reduced from default */
+}
+
+.compact-mode .icon {
+    width: 12px; /* Reduced icon size */
+    height: 12px; /* Reduced icon size */
+}
+
+.compact-mode .separator {
+    margin: 0.125rem 0; /* Ultra reduced margins */
+}
+
+.compact-mode .context-menu {
+    padding: 0.125rem; /* Ultra reduced context menu padding */
+}
+
+.compact-mode .context-menu .menu-item {
+    padding: 0.125rem 0.25rem; /* Ultra reduced context menu item padding */
+    font-size: 0.75rem;
+}
+
+/* Ultra-compact spacing for form elements */
+.compact-mode .settings-form-group {
+    margin-bottom: 0.25rem; /* Reduced from default */
+}
+
+.compact-mode .form-label {
+    font-size: 0.75rem;
+    margin-bottom: 0.125rem;
+}
+
+/* Ultra-compact scrollbars */
+.compact-mode ::-webkit-scrollbar {
+    width: 6px; /* Reduced from 8px */
+    height: 6px; /* Reduced from 8px */
+}
+
+.compact-mode ::-webkit-scrollbar-thumb {
+    border-radius: 2px; /* Reduced from 4px */
+}
+
+/* Main menu and header compact styles */
+.compact-mode header {
+    padding: 0.25rem; /* Reduced header padding */
+}
+
+.compact-mode nav {
+    padding: 0.125rem; /* Reduced nav padding */
+}
+
+.compact-mode #menu-container {
+    gap: 0.5rem; /* Reduced gap between menu items */
+}
+
+.compact-mode .menu-item {
+    padding: 0.25rem 0.5rem; /* Reduced menu item padding */
+    font-size: 0.75rem;
+    min-height: 1.5rem;
+}
+
+/* Right panel tabs compact styles */
+.compact-mode .tab-right {
+    padding: 0.25rem 0.5rem; /* Reduced tab padding */
+    font-size: 0.75rem;
+    min-height: 1.5rem;
+}
+
+.compact-mode .tab-right.active {
+    padding: 0.25rem 0.5rem; /* Reduced active tab padding */
+}
+
+/* Toolbar buttons compact styles */
+.compact-mode #toolbar-container .button {
+    padding: 0.125rem 0.25rem; /* Ultra reduced button padding */
+    font-size: 0.75rem;
+    min-height: 1.5rem;
+    margin: 0.125rem; /* Reduced margin between buttons */
+}
+
+.compact-mode #toolbar-container .flex {
+    gap: 0.25rem; /* Reduced gap between toolbar elements */
+}
+
+/* Asset panel rows compact styles */
+.compact-mode .asset-row {
+    padding: 0.125rem; /* Reduced asset row padding */
+    min-height: 1.5rem;
+}
+
+.compact-mode .asset-item {
+    padding: 0.125rem; /* Ultra reduced asset item padding */
+    min-height: 1.5rem;
+    font-size: 0.75rem;
+}
+
+.compact-mode .asset-thumbnail {
+    width: 20px; /* Further reduced from 24px */
+    height: 20px; /* Further reduced from 24px */
+}
+
+/* Details panel compact styles */
+.compact-mode .details-panel {
+    padding: 0.25rem; /* Reduced details panel padding */
+}
+
+.compact-mode .details-panel .settings-form-group {
+    margin-bottom: 0.25rem; /* Reduced form group spacing */
+}
+
+.compact-mode .details-panel .form-label {
+    font-size: 0.75rem;
+    margin-bottom: 0.125rem;
+    padding: 0.125rem 0; /* Reduced label padding */
+}
+
+.compact-mode .details-panel .form-input {
+    padding: 0.125rem; /* Reduced input padding */
+    font-size: 0.75rem;
+    min-height: 1.5rem;
+}
+
+.compact-mode .details-panel .form-select {
+    padding: 0.125rem; /* Reduced select padding */
+    font-size: 0.75rem;
+    min-height: 1.5rem;
+}
+
+/* Console panel compact styles */
+.compact-mode .console-overlay {
+    padding: 0.25rem; /* Reduced console padding */
+}
+
+.compact-mode .console-message {
+    padding: 0.125rem; /* Reduced console message padding */
+    font-size: 0.75rem;
+    line-height: 1.2; /* Reduced line height */
+}
+
+/* Layers panel compact styles */
+.compact-mode .layers-panel {
+    padding: 0.25rem; /* Reduced layers panel padding */
+}
+
+.compact-mode .layer-item {
+    padding: 0.125rem 0.25rem; /* Ultra reduced layer item padding */
+    font-size: 0.75rem;
+    min-height: 1.5rem;
+    line-height: 1.2; /* Reduced line height */
+}
+
+.compact-mode .layer-name-display {
+    font-size: 0.75rem;
+    padding: 0.125rem; /* Reduced layer name padding */
+}
+
+.compact-mode .layer-objects-count {
+    font-size: 0.625rem; /* Even smaller for count text */
+    padding: 0.125rem; /* Reduced count padding */
+}
+
+/* Outliner panel compact styles */
+.compact-mode .outliner-panel {
+    padding: 0.25rem; /* Reduced outliner panel padding */
+}
+
+.compact-mode .outliner-item {
+    padding: 0.125rem 0.25rem; /* Ultra reduced outliner item padding */
+    font-size: 0.75rem;
+    min-height: 1.25rem;
+    line-height: 1.2; /* Reduced line height */
+}
+
+.compact-mode .outliner-group-header {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.25rem; /* Reduced group header padding */
+    min-height: 1.25rem;
+}
+
+/* Settings panel compact styles - moved to unified section below */
+
+/* Settings content - moved to unified section below */
+
+/* Setting input - moved to unified section below */
+
+/* General text elements compact styles - avoid conflicts with settings */
+.compact-mode h1, .compact-mode h2 {
+    font-size: 0.875rem; /* Reduced heading sizes */
+    margin: 0.25rem 0; /* Reduced heading margins */
+    padding: 0.125rem 0; /* Reduced heading padding */
+}
+
+/* General h3, h4 - more specific to avoid settings conflicts */
+.compact-mode .panel-content h3,
+.compact-mode .panel-content h4,
+.compact-mode .asset-item h3,
+.compact-mode .asset-item h4,
+.compact-mode .layer-item h3,
+.compact-mode .layer-item h4 {
+    font-size: 0.875rem;
+    margin: 0.25rem 0;
+    padding: 0.125rem 0;
+}
+
+/* General text elements - avoid conflicts with settings */
+.compact-mode p, .compact-mode span {
+    font-size: 0.75rem;
+    line-height: 1.2; /* Reduced line height for better compactness */
+}
+
+/* General div styling - more specific to avoid settings conflicts */
+.compact-mode .panel-content div,
+.compact-mode .asset-item div,
+.compact-mode .layer-item div {
+    font-size: 0.75rem;
+    line-height: 1.2;
+}
+
+/* List items compact styles */
+.compact-mode li {
+    padding: 0.125rem 0; /* Reduced list item padding */
+    font-size: 0.75rem;
+    line-height: 1.2;
+}
+
+/* Table compact styles */
+.compact-mode table {
+    font-size: 0.75rem;
+}
+
+.compact-mode th, .compact-mode td {
+    padding: 0.125rem 0.25rem; /* Reduced table cell padding */
+    font-size: 0.75rem;
+    line-height: 1.2;
+}
+
+/* Tailwind CSS class overrides for compact mode */
+.compact-mode .px-3 {
+    padding-left: 0.25rem !important; /* Reduced from 0.75rem */
+    padding-right: 0.25rem !important;
+}
+
+.compact-mode .py-2 {
+    padding-top: 0.125rem !important; /* Reduced from 0.5rem */
+    padding-bottom: 0.125rem !important;
+}
+
+.compact-mode .py-1 {
+    padding-top: 0.125rem !important; /* Reduced from 0.25rem */
+    padding-bottom: 0.125rem !important;
+}
+
+.compact-mode .px-4 {
+    padding-left: 0.5rem !important; /* Reduced from 1rem */
+    padding-right: 0.5rem !important;
+}
+
+.compact-mode .p-2 {
+    padding: 0.25rem !important; /* Reduced from 0.5rem */
+}
+
+.compact-mode .p-1 {
+    padding: 0.125rem !important; /* Reduced from 0.25rem */
+}
+
+.compact-mode .space-x-2 > * + * {
+    margin-left: 0.25rem !important; /* Reduced from 0.5rem */
+}
+
+.compact-mode .space-x-4 > * + * {
+    margin-left: 0.5rem !important; /* Reduced from 1rem */
+}
+
+.compact-mode .gap-2 {
+    gap: 0.25rem !important; /* Reduced from 0.5rem */
+}
+
+.compact-mode .gap-4 {
+    gap: 0.5rem !important; /* Reduced from 1rem */
+}
+
+/* Specific panel height reductions */
+.compact-mode #right-panel {
+    min-height: auto; /* Allow natural height reduction */
+}
+
+.compact-mode #assets-panel {
+    min-height: auto; /* Allow natural height reduction */
+}
+
+.compact-mode #console-panel {
+    min-height: auto; /* Allow natural height reduction */
+}
+
+/* Text size overrides for all text elements */
+.compact-mode .text-sm {
+    font-size: 0.75rem !important; /* Reduced from 0.875rem */
+}
+
+.compact-mode .text-xs {
+    font-size: 0.625rem !important; /* Reduced from 0.75rem */
+}
+
+.compact-mode .text-base {
+    font-size: 0.75rem !important; /* Reduced from 1rem */
+}
+
+.compact-mode .text-lg {
+    font-size: 0.875rem !important; /* Reduced from 1.125rem */
+}
+
+/* Line height adjustments */
+.compact-mode .leading-tight {
+    line-height: 1.1 !important; /* More compact line height */
+}
+
+.compact-mode .leading-normal {
+    line-height: 1.2 !important; /* More compact line height */
+}
+
+.compact-mode .leading-relaxed {
+    line-height: 1.3 !important; /* More compact line height */
+}
+
+/* Right panel specific compact styles */
+.compact-mode #right-panel-search {
+    padding: 0.25rem !important; /* Reduced from p-4 */
+}
+
+.compact-mode .tab-content-right {
+    padding: 0.25rem !important; /* Reduced from p-4 */
+}
+
+.compact-mode #details-content-panel {
+    padding: 0.25rem !important; /* Reduced from p-4 */
+}
+
+.compact-mode #level-content-panel {
+    padding: 0.25rem !important; /* Reduced from p-4 */
+}
+
+.compact-mode #layers-content-panel {
+    padding: 0.25rem !important; /* Reduced from default */
+}
+
+.compact-mode #outliner-content-panel {
+    padding: 0.25rem !important; /* Reduced from default */
+}
+
+/* Details panel form elements */
+.compact-mode .details-panel .block {
+    margin-bottom: 0.25rem !important; /* Reduced from default */
+}
+
+.compact-mode .details-panel .text-sm {
+    font-size: 0.75rem !important;
+}
+
+.compact-mode .details-panel .text-xs {
+    font-size: 0.625rem !important;
+}
+
+.compact-mode .details-panel .text-md {
+    font-size: 0.875rem !important; /* Reduced from default */
+}
+
+.compact-mode .details-panel .text-lg {
+    font-size: 1rem !important; /* Reduced from default */
+}
+
+.compact-mode .details-panel .mb-2 {
+    margin-bottom: 0.25rem !important; /* Reduced from 0.5rem */
+}
+
+.compact-mode .details-panel .mb-3 {
+    margin-bottom: 0.375rem !important; /* Reduced from 0.75rem */
+}
+
+.compact-mode .details-panel .mt-1 {
+    margin-top: 0.125rem !important; /* Reduced from 0.25rem */
+}
+
+.compact-mode .details-panel .mt-4 {
+    margin-top: 0.5rem !important; /* Reduced from 1rem */
+}
+
+.compact-mode .details-panel .space-x-2 > * + * {
+    margin-left: 0.25rem !important; /* Reduced from 0.5rem */
+}
+
+.compact-mode .details-panel .space-y-1 > * + * {
+    margin-top: 0.125rem !important; /* Reduced from 0.25rem */
+}
+
+/* Form inputs in details panel */
+.compact-mode .details-panel input {
+    padding: 0.125rem 0.25rem !important; /* Reduced from py-2 px-3 */
+    font-size: 0.75rem !important;
+    min-height: 1.5rem !important;
+}
+
+.compact-mode .details-panel .w-4 {
+    width: 0.75rem !important; /* Reduced from 1rem */
+    height: 0.75rem !important;
+}
+
+.compact-mode .details-panel .w-3 {
+    width: 0.625rem !important; /* Reduced from 0.75rem */
+    height: 0.625rem !important;
+}
+
+/* Layers panel specific styles */
+.compact-mode .layers-list {
+    padding: 0.25rem !important; /* Reduced from p-4 */
+}
+
+.compact-mode .layers-list .space-y-1 > * + * {
+    margin-top: 0.125rem !important; /* Reduced from 0.25rem */
+}
+
+.compact-mode .layers-list .space-x-2 > * + * {
+    margin-left: 0.25rem !important; /* Reduced from 0.5rem */
+}
+
+/* Layer item specific styles */
+.compact-mode .layer-item {
+    padding: 0.125rem 0.25rem !important; /* Override p-2 */
+    font-size: 0.75rem !important;
+    min-height: 1.5rem !important;
+    line-height: 1.2 !important;
+}
+
+/* Force override for layer items with p-2 class */
+.compact-mode .layer-item.p-2 {
+    padding: 0.125rem 0.25rem !important; /* Override p-2 specifically */
+}
+
+/* Override all padding classes for layer items */
+.compact-mode .layer-item[class*="p-"] {
+    padding: 0.125rem 0.25rem !important; /* Force compact padding */
+}
+
+/* Specific overrides for common padding classes */
+.compact-mode .layer-item.p-1 {
+    padding: 0.125rem !important; /* Override p-1 */
+}
+
+.compact-mode .layer-item.p-3 {
+    padding: 0.25rem !important; /* Override p-3 */
+}
+
+.compact-mode .layer-item.p-4 {
+    padding: 0.25rem !important; /* Override p-4 */
+}
+
+/* Override padding for layer item children */
+.compact-mode .layer-item > * {
+    padding: 0 !important; /* Remove padding from direct children */
+}
+
+.compact-mode .layer-item .flex {
+    padding: 0 !important; /* Remove padding from flex containers */
+    gap: 0.25rem !important; /* Reduced gap */
+}
+
+/* Layer name display and input */
+.compact-mode .layer-item .layer-name-display {
+    padding: 0.125rem !important; /* Override px-1 py-1 */
+    font-size: 0.75rem !important;
+    line-height: 1.2 !important;
+}
+
+.compact-mode .layer-item .layer-name-input {
+    padding: 0.125rem !important; /* Override px-1 */
+    font-size: 0.75rem !important;
+    line-height: 1.2 !important;
+}
+
+/* Layer objects count */
+.compact-mode .layer-item .layer-objects-count {
+    padding: 0.125rem 0.25rem !important; /* Override px-2 py-1 */
+    font-size: 0.625rem !important;
+    line-height: 1.2 !important;
+}
+
+/* Layer buttons (visibility and lock) */
+.compact-mode .layer-item .layer-visibility-btn,
+.compact-mode .layer-item .layer-lock-btn {
+    padding: 0.125rem !important; /* Override p-1 */
+    width: 1.5rem !important; /* Override w-8 */
+    height: 1.5rem !important; /* Override h-8 */
+    min-width: 1.5rem !important;
+    min-height: 1.5rem !important;
+}
+
+.compact-mode .layer-item .layer-visibility-btn svg,
+.compact-mode .layer-item .layer-lock-btn svg {
+    width: 0.75rem !important; /* Override w-4 */
+    height: 0.75rem !important; /* Override h-4 */
+}
+
+/* Button hover effects work with CSS classes in compact mode */
+
+/* Layer parallax input */
+.compact-mode .layer-item .layer-parallax-input {
+    padding: 0.125rem !important; /* Override px-1 py-1 */
+    width: 2.5rem !important; /* Override w-12 */
+    height: 1.5rem !important; /* Override h-8 */
+    font-size: 0.625rem !important; /* Override text-xs */
+    line-height: 1.2 !important;
+    min-width: 2.5rem !important;
+    min-height: 1.5rem !important;
+}
+
+/* Layer color indicator */
+.compact-mode .layer-item .layer-color {
+    width: 0.75rem !important; /* Override w-4 */
+    height: 0.75rem !important; /* Override h-4 */
+    border-width: 1px !important; /* Override border-2 */
+}
+
+/* Space classes in layer items */
+.compact-mode .layer-item .space-x-1 > * + * {
+    margin-left: 0.125rem !important; /* Override space-x-1 */
+}
+
+.compact-mode .layer-item .space-x-2 > * + * {
+    margin-left: 0.25rem !important; /* Override space-x-2 */
+}
+
+.compact-mode .layer-item .w-4 {
+    width: 0.75rem !important;
+    height: 0.75rem !important;
+}
+
+.compact-mode .layer-item .w-3 {
+    width: 0.625rem !important;
+    height: 0.625rem !important;
+}
+
+/* Layer controls */
+.compact-mode #add-layer-btn,
+.compact-mode #layers-menu-btn {
+    padding: 0.125rem 0.25rem !important; /* Reduced from px-3 py-1 */
+    font-size: 0.75rem !important;
+    min-height: 1.5rem !important;
+}
+
+/* Layer item icons and indicators */
+.compact-mode .layer-item .layer-visibility-icon {
+    width: 0.75rem !important;
+    height: 0.75rem !important;
+    font-size: 0.625rem !important;
+}
+
+.compact-mode .layer-item .layer-lock-icon {
+    width: 0.75rem !important;
+    height: 0.75rem !important;
+    font-size: 0.625rem !important;
+}
+
+.compact-mode .layer-item .layer-color-indicator {
+    width: 0.75rem !important;
+    height: 0.75rem !important;
+    border-radius: 0.125rem !important;
+}
+
+.compact-mode .layer-item .layer-name {
+    font-size: 0.75rem !important;
+    line-height: 1.2 !important;
+    padding: 0.125rem 0 !important;
+}
+
+.compact-mode .layer-item .layer-object-count {
+    font-size: 0.625rem !important;
+    color: #9ca3af !important;
+    margin-left: 0.25rem !important;
+}
+
+/* Layer item states */
+.compact-mode .layer-item.current {
+    border-left: 2px solid #3B82F6 !important;
+    padding-left: 0.125rem !important;
+}
+
+.compact-mode .layer-item.hidden {
+    opacity: 0.5 !important;
+}
+
+.compact-mode .layer-item.locked {
+    opacity: 0.7 !important;
+}
+
+/* Layer item hover effects - work with CSS classes in compact mode */
+.compact-mode .layer-item:hover {
+    border-radius: 0.125rem !important;
+}
+
+/* Layer item selection */
+.compact-mode .layer-item.selected {
+    background-color: #1F2937 !important;
+    border-radius: 0.125rem !important;
+}
+
+.compact-mode .layer-item.selected .layer-name {
+    color: #FFFFFF !important;
+    font-weight: 500 !important;
+}
+
+/* Layer drag and drop */
+.compact-mode .layer-item.dragging {
+    opacity: 0.5 !important;
+    transform: rotate(2deg) !important;
+}
+
+.compact-mode .layer-item.drag-over {
+    border-top: 2px solid #3B82F6 !important;
+    margin-top: 0.125rem !important;
+}
+
+.compact-mode .layer-item.drag-over:last-child {
+    border-bottom: 2px solid #3B82F6 !important;
+    margin-bottom: 0.125rem !important;
+}
+
+/* Layer context menu items */
+.compact-mode .layer-context-menu .base-context-menu-item {
+    padding: 0.125rem 0.25rem !important;
+    font-size: 0.75rem !important;
+    min-height: 1.25rem !important;
+}
+
+.compact-mode .layer-context-menu .base-context-menu-item:hover {
+    background-color: #374151 !important;
+}
+
+.compact-mode .layer-context-menu .base-context-menu-item.separator {
+    height: 1px !important;
+    margin: 0.125rem 0 !important;
+}
+
+/* Layer search and filter */
+.compact-mode .layers-search-container {
+    padding: 0.25rem !important;
+    margin-bottom: 0.25rem !important;
+}
+
+.compact-mode .layers-search-container .search-input {
+    padding: 0.125rem 0.25rem !important;
+    font-size: 0.75rem !important;
+    min-height: 1.5rem !important;
+}
+
+.compact-mode .layers-search-container .search-button {
+    padding: 0.125rem 0.25rem !important;
+    font-size: 0.75rem !important;
+    min-height: 1.5rem !important;
+}
+
+/* Layer empty state */
+.compact-mode .layers-empty-state {
+    padding: 0.5rem !important;
+    text-align: center !important;
+    color: #9ca3af !important;
+    font-size: 0.75rem !important;
+    line-height: 1.2 !important;
+}
+
+.compact-mode .layers-empty-state .empty-icon {
+    font-size: 1.5rem !important;
+    margin-bottom: 0.25rem !important;
+}
+
+.compact-mode .layers-empty-state .empty-text {
+    font-size: 0.75rem !important;
+    margin-bottom: 0.25rem !important;
+}
+
+.compact-mode .layers-empty-state .empty-hint {
+    font-size: 0.625rem !important;
+    color: #6B7280 !important;
+}
+
+/* Outliner panel specific styles */
+.compact-mode .outliner-item {
+    padding: 0.125rem 0.25rem !important;
+    font-size: 0.75rem !important;
+    min-height: 1.25rem !important;
+    line-height: 1.2 !important;
+}
+
+.compact-mode .outliner-group-header {
+    font-size: 0.75rem !important;
+    padding: 0.125rem 0.25rem !important;
+    min-height: 1.25rem !important;
+}
+
+/* Level stats panel */
+.compact-mode #level-stats-content {
+    font-size: 0.75rem !important;
+}
+
+.compact-mode #level-stats-content .text-sm {
+    font-size: 0.75rem !important;
+}
+
+.compact-mode #level-stats-content .text-xs {
+    font-size: 0.625rem !important;
+}
+
+/* Search section */
+.compact-mode #right-panel-search .search-input {
+    padding: 0.125rem 0.25rem !important;
+    font-size: 0.75rem !important;
+    min-height: 1.5rem !important;
+}
+
+.compact-mode #right-panel-search .search-button {
+    padding: 0.125rem 0.25rem !important;
+    font-size: 0.75rem !important;
+    min-height: 1.5rem !important;
+}
+
+/* Outliner filter button - match search input height */
+.compact-mode #outliner-filter-btn {
+    padding: 0.125rem 0.5rem !important; /* Match search input py-1 but keep px-3 */
+    font-size: 0.75rem !important;
+    min-height: 1.5rem !important;
+    height: 1.5rem !important; /* Force exact height match */
+}
+
+/* Settings window compact styles */
+.compact-mode #settings-overlay {
+    font-size: 0.75rem !important; /* Reduced base font size */
+}
+
+/* Settings panel - unified styles */
+.compact-mode .settings-panel,
+.compact-mode #settings-panel {
+    max-width: 95vw !important; /* More compact width */
+    max-height: 95vh !important; /* More compact height */
+    padding: 0.5rem !important; /* Reduced panel padding */
+}
+
+.compact-mode .settings-tab {
+    padding: 0.25rem 0.5rem !important; /* Reduced from 0.75rem */
+    font-size: 0.75rem !important;
+    min-height: 1.5rem !important;
+    margin-bottom: 0.125rem !important; /* Reduced gap between tabs */
+}
+
+/* Settings content - unified styles */
+.compact-mode .settings-content,
+.compact-mode #settings-content {
+    padding: 0.25rem !important; /* Ultra reduced from default */
+    font-size: 0.75rem !important;
+    margin: 0 !important; /* Remove margins */
+}
+
+/* Settings form elements */
+.compact-mode .settings-input {
+    padding: 0.125rem 0.25rem !important; /* Reduced from 0.5rem */
+    font-size: 0.75rem !important;
+    min-height: 1.5rem !important;
+    margin-bottom: 0.25rem !important; /* Reduced margin */
+}
+
+.compact-mode .settings-input[type="range"] {
+    height: 1rem !important; /* Reduced slider height */
+}
+
+.compact-mode .settings-input[type="color"] {
+    width: 2rem !important; /* Reduced color picker size */
+    height: 1.5rem !important;
+    padding: 0.125rem !important;
+}
+
+.compact-mode .settings-input[type="checkbox"] {
+    width: 0.875rem !important; /* Reduced checkbox size */
+    height: 0.875rem !important;
+    margin-right: 0.25rem !important;
+}
+
+/* Compact mode for global checkboxes */
+.compact-mode input[type="checkbox"] {
+    width: 0.875rem !important;
+    height: 0.875rem !important;
+}
+
+.compact-mode input[type="radio"] {
+    width: 0.875rem !important;
+    height: 0.875rem !important;
+}
+
+.compact-mode .settings-input[type="number"] {
+    width: 4rem !important; /* Reduced number input width */
+}
+
+/* Settings labels - more specific selector to avoid conflicts */
+.compact-mode .settings-content label,
+.compact-mode #settings-content label {
+    font-size: 0.75rem !important;
+    margin-bottom: 0.25rem !important; /* Reduced from 0.5rem */
+    line-height: 1.2 !important;
+}
+
+.compact-mode .settings-section h3 {
+    font-size: 0.875rem !important; /* Reduced from default */
+    margin: 0.25rem 0 !important; /* Reduced margins */
+    padding: 0.125rem 0 !important;
+}
+
+.compact-mode .settings-section h4 {
+    font-size: 0.8125rem !important; /* Reduced from default */
+    margin: 0.25rem 0 !important;
+    padding: 0.125rem 0 !important;
+}
+
+/* Settings form groups */
+.compact-mode .settings-form-group {
+    margin-bottom: 0.25rem !important; /* Ultra reduced from default */
+    padding: 0.125rem !important; /* Ultra reduced padding */
+}
+
+.compact-mode .form-row {
+    margin-bottom: 0.125rem !important; /* Ultra reduced spacing */
+    gap: 0.125rem !important; /* Ultra reduced gap between form elements */
+}
+
+.compact-mode .form-col {
+    padding: 0.0625rem !important; /* Ultra reduced column padding */
+}
+
+/* Settings sections spacing */
+.compact-mode .settings-section {
+    margin-bottom: 0.25rem !important; /* Ultra reduced section spacing */
+    padding: 0.125rem !important; /* Ultra reduced section padding */
+}
+
+.compact-mode .settings-section:last-child {
+    margin-bottom: 0 !important;
+}
+
+/* Settings div spacing - target all divs in settings */
+.compact-mode #settings-content > div {
+    margin-bottom: 0.25rem !important; /* Reduced spacing between main sections */
+}
+
+.compact-mode #settings-content > div:last-child {
+    margin-bottom: 0 !important;
+}
+
+/* Settings label spacing */
+.compact-mode #settings-content label {
+    margin-bottom: 0.125rem !important; /* Ultra reduced label spacing */
+    display: block !important;
+}
+
+/* Settings input spacing */
+.compact-mode #settings-content input,
+.compact-mode #settings-content select,
+.compact-mode #settings-content textarea {
+    margin-bottom: 0.25rem !important; /* Reduced input spacing */
+}
+
+.compact-mode #settings-content input:last-child,
+.compact-mode #settings-content select:last-child,
+.compact-mode #settings-content textarea:last-child {
+    margin-bottom: 0 !important;
+}
+
+/* Settings buttons */
+.compact-mode .settings-button {
+    padding: 0.25rem 0.5rem !important; /* Reduced button padding */
+    font-size: 0.75rem !important;
+    min-height: 1.5rem !important;
+    margin: 0.125rem !important; /* Reduced button margins */
+}
+
+.compact-mode .settings-button.primary {
+    padding: 0.25rem 0.75rem !important; /* Slightly more padding for primary buttons */
+}
+
+/* Settings modal header */
+.compact-mode .settings-header {
+    padding: 0.5rem !important; /* Reduced header padding */
+    font-size: 0.875rem !important;
+    min-height: 2rem !important;
+}
+
+.compact-mode .settings-header h2 {
+    font-size: 0.875rem !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Settings modal footer */
+.compact-mode .settings-footer {
+    padding: 0.5rem !important; /* Reduced footer padding */
+    gap: 0.25rem !important; /* Reduced gap between buttons */
+}
+
+/* Settings navigation */
+.compact-mode .settings-nav {
+    gap: 0.125rem !important; /* Reduced gap between nav items */
+    padding: 0.25rem !important; /* Reduced nav padding */
+}
+
+/* Settings content sections - moved to unified section above */
+
+/* Settings grid layouts */
+.compact-mode .settings-grid {
+    gap: 0.25rem !important; /* Reduced grid gap */
+    padding: 0.125rem !important; /* Reduced grid padding */
+}
+
+.compact-mode .settings-grid-2 {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.25rem !important;
+}
+
+.compact-mode .settings-grid-3 {
+    grid-template-columns: 1fr 1fr 1fr !important;
+    gap: 0.25rem !important;
+}
+
+/* Settings descriptions and help text */
+.compact-mode .settings-description {
+    font-size: 0.625rem !important; /* Reduced description text */
+    line-height: 1.2 !important;
+    margin-top: 0.125rem !important;
+    color: #9ca3af !important; /* Slightly lighter for compact mode */
+}
+
+.compact-mode .settings-help {
+    font-size: 0.625rem !important;
+    line-height: 1.2 !important;
+    padding: 0.125rem !important;
+    margin: 0.125rem 0 !important;
+}
+
+/* Settings tabs content */
+.compact-mode .settings-tab-content {
+    padding: 0.25rem !important; /* Reduced tab content padding */
+    font-size: 0.75rem !important;
+}
+
+.compact-mode .settings-tab-content.active {
+    display: block !important;
+}
+
+/* Settings scrollable areas */
+.compact-mode .settings-scrollable {
+    max-height: 60vh !important; /* Reduced max height for compact mode */
+    overflow-y: auto !important;
+    padding: 0.25rem !important;
+}
+
+/* Settings dividers */
+.compact-mode .settings-divider {
+    height: 1px !important; /* Reduced divider height */
+    margin: 0.25rem 0 !important; /* Reduced divider margins */
+}
+
+/* Settings tooltips */
+.compact-mode .settings-tooltip {
+    font-size: 0.625rem !important;
+    padding: 0.125rem 0.25rem !important;
+    max-width: 12rem !important; /* Reduced tooltip width */
+}
+
+/* Settings validation messages */
+.compact-mode .settings-error {
+    font-size: 0.625rem !important;
+    padding: 0.125rem !important;
+    margin: 0.125rem 0 !important;
+}
+
+.compact-mode .settings-success {
+    font-size: 0.625rem !important;
+    padding: 0.125rem !important;
+    margin: 0.125rem 0 !important;
 }

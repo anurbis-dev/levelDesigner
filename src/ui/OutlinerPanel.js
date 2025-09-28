@@ -139,7 +139,7 @@ export class OutlinerPanel extends BasePanel {
         const filterButton = document.createElement('button');
         filterButton.id = 'outliner-filter-btn';
         const hasActiveFilters = this.activeTypeFilters.size > 0 && !this.activeTypeFilters.has('DISABLE_ALL');
-        filterButton.className = `text-white px-3 py-1 rounded text-sm flex items-center justify-center h-8 ${
+        filterButton.className = `text-white px-3 py-1 rounded text-sm flex items-center justify-center ${
             hasActiveFilters ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 hover:bg-gray-700'
         }`;
         filterButton.title = hasActiveFilters ? 'Filter active - click to change' : 'Filter by object types';
@@ -318,7 +318,7 @@ export class OutlinerPanel extends BasePanel {
 
         // Update filter button appearance
         const hasActiveFilters = this.activeTypeFilters.size > 0 && !this.activeTypeFilters.has('DISABLE_ALL');
-        button.className = `text-white px-3 py-1 rounded text-sm flex items-center justify-center h-8 ${
+        button.className = `text-white px-3 py-1 rounded text-sm flex items-center justify-center ${
             hasActiveFilters ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 hover:bg-gray-700'
         }`;
         button.title = hasActiveFilters ? 'Filter active - click to change' : 'Filter by object types';

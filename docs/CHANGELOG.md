@@ -1,5 +1,33 @@
 # Changelog
 
+## [3.24.0] - 2025-01-27
+
+### Fixed
+- **CSS Architecture** - полностью реорганизована CSS архитектура с модульной структурой
+- **Inline Styles Cleanup** - убраны все inline стили из HTML и JavaScript файлов
+- **Duplicate Styles** - устранены дублирующиеся CSS стили между файлами
+- **Checkbox Colors** - исправлен цвет чекбоксов в меню фильтров (зеленый → синий)
+- **Grid Settings Styling** - исправлено отображение настроек грида после рефакторинга CSS
+
+### Improved
+- **Modular CSS** - создана модульная структура CSS файлов в папке `styles/`
+- **Unified Classes** - унифицированы CSS классы для форм и настроек
+- **Hover Effects** - централизована система hover эффектов через HoverEffects utility
+- **Compact Mode** - улучшена поддержка компактного режима для всех компонентов
+- **Performance** - CSS файлы теперь кэшируются браузером
+
+### Technical
+- **CSS Files Created** - созданы специализированные CSS файлы:
+  - `styles/panels.css` - основные стили панелей
+  - `styles/layers-panel.css` - стили панели слоев
+  - `styles/settings-panel.css` - стили панели настроек
+  - `styles/grid-settings.css` - стили настроек грида
+  - `styles/details-panel.css` - стили панели деталей
+  - `styles/color-chooser.css` - стили выбора цвета
+- **HoverEffects Utility** - создан централизованный класс для hover эффектов
+- **CSS Variables** - добавлены CSS переменные для accent-color и font-scale
+- **Global Styles** - добавлены глобальные стили для чекбоксов, радио кнопок и слайдеров
+
 ## [3.23.0] - 2025-01-27
 
 ### Fixed
@@ -11,6 +39,7 @@
 - **Unified Separators** - унифицированы стили сепараторов во всех контекстных меню
 - **Disabled States** - недоступные команды теперь отображаются как неактивные вместо скрытия
 - **Menu Positioning Logic** - улучшена логика позиционирования с учетом границ панели
+- **Ultra-Compact Mode** - значительно усилен компактный режим с размером шрифта 12px и минимальными отступами
 
 ### Technical
 - **LayersContextMenu** - создан специализированный класс для контекстного меню слоев

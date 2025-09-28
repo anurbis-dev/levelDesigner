@@ -4,6 +4,7 @@
 :root {
     --font-scale: 1.0;
     font-size: calc(16px * var(--font-scale, 1.0)); /* Use CSS variable for font scale */
+    --accent-color: #3B82F6; /* blue-500 - стандартный синий цвет приложения */
 }
 
 /* Apply font scale immediately if localStorage has settings */
@@ -76,6 +77,10 @@ html, body {
 .tab, .tab-right {
     transition: background-color 0.2s;
     position: relative;
+}
+
+.tab:hover, .tab-right:hover {
+    background-color: #4B5563; /* gray-600 */
 }
 
 .tab.active, .tab-right.active {
@@ -159,7 +164,7 @@ html, body {
     top: 0;
     left: 0;
     right: 0;
-    height: auto; /* Let JavaScript control the height */
+    height: 400px !important;
     background: rgba(0, 0, 0, 0.8);
     z-index: 9999;
     display: flex;
@@ -263,6 +268,28 @@ html, body {
     -moz-user-select: text;
     -ms-user-select: text;
     user-select: text;
+}
+
+/* Global checkbox styles */
+input[type="checkbox"] {
+    accent-color: var(--accent-color, #3B82F6); /* blue-500 - стандартный синий цвет */
+    width: 1rem;
+    height: 1rem;
+    cursor: pointer;
+}
+
+/* Global radio button styles */
+input[type="radio"] {
+    accent-color: var(--accent-color, #3B82F6); /* blue-500 - стандартный синий цвет */
+    width: 1rem;
+    height: 1rem;
+    cursor: pointer;
+}
+
+/* Global range input styles */
+input[type="range"] {
+    accent-color: var(--accent-color, #3B82F6); /* blue-500 - стандартный синий цвет */
+    cursor: pointer;
 }
 
 /* Console log message styles */

@@ -3,6 +3,7 @@ import { Logger } from '../utils/Logger.js';
 import { SearchUtils } from '../utils/SearchUtils.js';
 import { BasePanel } from './BasePanel.js';
 import { LayersContextMenu } from './LayersContextMenu.js';
+import { HoverEffects } from '../utils/HoverEffects.js';
 
 /**
  * Layers panel UI component
@@ -241,17 +242,16 @@ export class LayersPanel extends BasePanel {
         
         const layerDiv = document.createElement('div');
         layerDiv.className = `layer-item flex items-center justify-between p-2 rounded border border-gray-600 cursor-pointer transition-colors ${
-            isCurrent ? 'bg-blue-600' : 
-            'bg-gray-700 hover:bg-gray-600'
+            isCurrent ? 'bg-blue-600' : 'bg-gray-700'
         }`;
         layerDiv.draggable = true;
         layerDiv.dataset.layerId = layer.id;
         
         layerDiv.innerHTML = `
             <div class="flex items-center space-x-2 flex-1 min-w-0">
-                <div class="layer-color w-4 h-4 rounded-full cursor-pointer border-2 border-gray-500 hover:border-gray-300 transition-colors"
-                     style="background-color: ${layer.color}"
+                <div class="layer-color w-4 h-4 rounded-full cursor-pointer border-2 border-gray-500"
                      data-layer-id="${layer.id}"
+                     data-color="${layer.color}"
                      title="Click to change color"></div>
                 <div class="flex items-center space-x-1 flex-1 min-w-0">
                     <span class="layer-name-display text-white flex-1 px-1 py-1 rounded min-w-0"
@@ -267,7 +267,7 @@ export class LayersPanel extends BasePanel {
             <div class="flex items-center space-x-1 flex-shrink-0">
                 <span class="layer-objects-count text-gray-400 text-sm px-2 py-1 rounded bg-gray-600 min-w-0"
                       data-layer-id="${layer.id}">${objectsCount > 0 ? objectsCount : ''}</span>
-                <button class="layer-visibility-btn p-1 rounded hover:bg-gray-600 w-8 h-8 flex items-center justify-center" 
+                <button class="layer-visibility-btn p-1 rounded w-8 h-8 flex items-center justify-center" 
                         data-layer-id="${layer.id}" 
                         title="${layer.visible ? 'Hide layer' : 'Show layer'}">
                     <svg class="w-4 h-4 ${layer.visible ? 'text-gray-300' : 'text-gray-500'}" fill="currentColor" viewBox="0 0 20 20">
@@ -277,7 +277,7 @@ export class LayersPanel extends BasePanel {
                         }
                     </svg>
                 </button>
-                <button class="layer-lock-btn p-1 rounded hover:bg-gray-600 w-8 h-8 flex items-center justify-center" 
+                <button class="layer-lock-btn p-1 rounded w-8 h-8 flex items-center justify-center" 
                         data-layer-id="${layer.id}" 
                         title="${layer.locked ? 'Unlock layer' : 'Lock layer'}">
                     <svg class="w-4 h-4 ${layer.locked ? 'text-gray-300' : 'text-gray-500'}" fill="currentColor" viewBox="0 0 20 20">
@@ -297,6 +297,27 @@ export class LayersPanel extends BasePanel {
                        title="Parallax offset (0 = no parallax, negative = slower, positive = faster)">
             </div>
         `;
+        
+        // Setup hover effects and set color using CSS variable
+        const colorElement = layerDiv.querySelector('.layer-color');
+        if (colorElement) {
+            colorElement.style.setProperty('--layer-color', layer.color);
+            HoverEffects.setupColorHover(colorElement);
+        }
+        
+        // Setup hover effect for the main layer container
+        HoverEffects.setupListItemHover(layerDiv);
+        
+        // Setup hover effects for buttons using CSS classes
+        const visibilityBtn = layerDiv.querySelector('.layer-visibility-btn');
+        const lockBtn = layerDiv.querySelector('.layer-lock-btn');
+        
+        if (visibilityBtn) {
+            visibilityBtn.classList.add('hover:bg-gray-600');
+        }
+        if (lockBtn) {
+            lockBtn.classList.add('hover:bg-gray-600');
+        }
         
         return layerDiv;
     }
@@ -410,11 +431,11 @@ export class LayersPanel extends BasePanel {
         const isCurrent = this.currentLayerId === layerId;
         
         if (isCurrent) {
-            layerElement.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+            layerElement.classList.remove('bg-gray-700');
             layerElement.classList.add('bg-blue-600');
         } else {
             layerElement.classList.remove('bg-blue-600');
-            layerElement.classList.add('bg-gray-700', 'hover:bg-gray-600');
+            layerElement.classList.add('bg-gray-700');
         }
 
         // Update visibility button icon and title
@@ -611,11 +632,11 @@ export class LayersPanel extends BasePanel {
 
             // Update background color based on state: current > default
             if (isCurrent) {
-                element.classList.remove('bg-gray-700', 'hover:bg-gray-600');
+                element.classList.remove('bg-gray-700');
                 element.classList.add('bg-blue-600');
             } else {
                 element.classList.remove('bg-blue-600');
-                element.classList.add('bg-gray-700', 'hover:bg-gray-600');
+                element.classList.add('bg-gray-700');
             }
 
             // Update border color for active layers (only border, not background)

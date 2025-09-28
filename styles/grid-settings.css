@@ -1,0 +1,73 @@
+/* Grid Settings Styles */
+
+/* Grid layout */
+.settings-grid {
+    display: grid;
+    gap: 1rem;
+}
+
+.settings-grid-2 {
+    grid-template-columns: 1fr 1fr;
+}
+
+/* Form sections */
+.form-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Use settings-panel.css classes */
+
+/* Headers */
+h3 {
+    font-size: 1.125rem;
+    font-weight: 500;
+    margin-bottom: 1rem;
+    color: #ffffff;
+}
+
+h4 {
+    font-size: 1rem;
+    font-weight: 500;
+    margin-bottom: 0.75rem;
+    color: #d1d5db;
+}
+
+/* Compact mode overrides */
+.compact-mode .settings-grid {
+    gap: 0.75rem;
+}
+
+.compact-mode .form-section {
+    gap: 0.75rem;
+}
+
+.compact-mode .form-group {
+    margin-bottom: 0.75rem;
+}
+
+.compact-mode .form-group label {
+    font-size: 0.75rem;
+    margin-bottom: 0.25rem;
+}
+
+.compact-mode .setting-input {
+    padding: 0.375rem;
+    font-size: 0.75rem;
+}
+
+.compact-mode .setting-input[type="color"] {
+    width: 2.5rem;
+    height: 1.5rem;
+}
+
+.compact-mode h3 {
+    font-size: 1rem;
+    margin-bottom: 0.75rem;
+}
+
+.compact-mode h4 {
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}

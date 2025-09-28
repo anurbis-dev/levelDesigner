@@ -248,11 +248,17 @@ export class DetailsPanel {
         layerContainer.innerHTML = `
             <label class="block text-sm font-medium text-gray-300">Current Layer</label>
             <div class="mt-1 flex items-center space-x-2">
-                <div class="w-4 h-4 rounded border" style="background-color: ${layerInfo.color}"></div>
+                <div class="w-4 h-4 rounded border details-layer-color" data-color="${layerInfo.color}"></div>
                 <span class="text-sm text-gray-200">${layerInfo.name}</span>
                 <span class="text-xs text-gray-400">(${layerInfo.objectCount} objects)</span>
             </div>
         `;
+        
+        // Set layer color using CSS variable
+        const colorElement = layerContainer.querySelector('.details-layer-color');
+        if (colorElement) {
+            colorElement.style.setProperty('--layer-color', layerInfo.color);
+        }
 
         section.appendChild(layerContainer);
         this.container.appendChild(section);
@@ -307,11 +313,17 @@ export class DetailsPanel {
             layerContainer.innerHTML = `
                 <label class="block text-sm font-medium text-gray-300">Current Layer</label>
                 <div class="mt-1 flex items-center space-x-2">
-                    <div class="w-4 h-4 rounded border" style="background-color: ${layerInfo.color}"></div>
+                    <div class="w-4 h-4 rounded border details-layer-color" data-color="${layerInfo.color}"></div>
                     <span class="text-sm text-gray-200">${layerInfo.name}</span>
                     <span class="text-xs text-gray-400">(${layerInfo.objectCount} objects, ${objects.length} selected)</span>
                 </div>
             `;
+            
+            // Set layer color using CSS variable
+            const colorElement = layerContainer.querySelector('.details-layer-color');
+            if (colorElement) {
+                colorElement.style.setProperty('--layer-color', layerInfo.color);
+            }
             
             section.appendChild(layerContainer);
         } else {

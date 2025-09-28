@@ -8,10 +8,6 @@
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <!-- Load Tailwind CSS for quick styling -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="user-settings.css">
-    <link rel="stylesheet" href="src/ui/BaseContextMenu.css">
-    <link rel="stylesheet" href="src/ui/CanvasContextMenu.css">
-    <link rel="stylesheet" href="src/ui/ConsoleContextMenu.css">
     
     <!-- Apply user settings immediately to prevent visual jumps -->
     <script>
@@ -37,6 +33,12 @@
     <!-- Main styles -->
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/compact-mode.css">
+    <link rel="stylesheet" href="styles/panels.css">
+    <link rel="stylesheet" href="styles/layers-panel.css">
+    <link rel="stylesheet" href="styles/settings-panel.css">
+    <link rel="stylesheet" href="styles/grid-settings.css">
+    <link rel="stylesheet" href="styles/details-panel.css">
+    <link rel="stylesheet" href="styles/color-chooser.css">
     <link rel="stylesheet" href="styles/base-context-menu.css">
     <link rel="stylesheet" href="styles/canvas-context-menu.css">
     <link rel="stylesheet" href="styles/console-context-menu.css">
@@ -76,7 +78,7 @@
         <div id="resizer-x" class="resizer"></div>
 
         <!-- 4. Details Panel (right) -->
-        <aside id="right-panel" class="bg-gray-900 flex flex-col" style="width: 320px; flex-shrink: 0; flex-grow: 0;">
+        <aside id="right-panel" class="bg-gray-900 flex flex-col">
             <div class="flex border-b border-gray-700 flex-shrink-0">
                 <button data-tab="details" class="tab-right flex-1 p-2 text-sm font-medium active" id="details-tab">Asset</button>
                 <button data-tab="level" class="tab-right flex-1 p-2 text-sm font-medium">Level</button>
@@ -84,7 +86,7 @@
                 <button data-tab="outliner" class="tab-right flex-1 p-2 text-sm font-medium">Outliner</button>
             </div>
             <!-- Search section - non-scrollable -->
-            <div id="right-panel-search" class="border-b border-gray-700 flex-shrink-0 p-4" style="display: none;">
+            <div id="right-panel-search" class="border-b border-gray-700 flex-shrink-0 p-4">
                 <!-- Search controls will be added here dynamically -->
             </div>
             <div class="flex-grow overflow-y-auto">
@@ -119,7 +121,7 @@
     </footer>
 
     <!-- Console Panel as Overlay (hidden by default) -->
-    <div id="console-panel" class="console-overlay hidden bg-gray-900 flex flex-col" style="height: 400px !important;">
+    <div id="console-panel" class="console-overlay hidden bg-gray-900 flex flex-col">
         <div class="flex border-b border-gray-700 flex-shrink-0">
             <span class="flex-1 p-2 text-sm font-medium text-gray-300">Console</span>
             <button id="console-close" class="p-2 text-gray-400 hover:text-white hover:bg-gray-700">&times;</button>
@@ -1040,7 +1042,7 @@ if (!isResizing) return;
                 const timestamp = new Date().toLocaleTimeString();
                 const logEntry = document.createElement('div');
                 logEntry.className = `log-entry console-message ${type}`;
-                logEntry.innerHTML = `<span style="color: #6b7280;">[${timestamp}]</span> ${message}`;
+                logEntry.innerHTML = `<span class="text-gray-500">[${timestamp}]</span> ${message}`;
 
                 // Add text selection functionality
                 setupLogEntrySelection(logEntry);

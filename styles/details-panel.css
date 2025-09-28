@@ -1,0 +1,9 @@
+/* Details Panel Styles */
+
+.details-layer-color {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 0.25rem;
+    border: 1px solid #4b5563;
+    background-color: var(--layer-color, #6b7280);
+}

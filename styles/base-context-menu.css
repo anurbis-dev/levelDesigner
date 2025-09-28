@@ -97,9 +97,6 @@
 }
 
 /* Иконки элементов меню - добавляются через innerHTML */
-.base-context-menu-item {
-    /* Иконки уже включены в innerHTML, дополнительные стили не нужны */
-}
 
 /* Стили для эмодзи иконок */
 .base-context-menu-item {
@@ -242,5 +239,23 @@
     background: linear-gradient(to right, transparent, #6B7280, transparent);
     margin: 6px 0;
     border: none;
+}
+
+/* Стили для чекбоксов в контекстных меню */
+.base-context-menu input[type="checkbox"] {
+    accent-color: #3B82F6; /* blue-500 - стандартный синий цвет приложения */
+    width: 1rem;
+    height: 1rem;
+    margin-right: 0.5rem;
+    cursor: pointer;
+}
+
+/* Стили для лейблов чекбоксов */
+.base-context-menu label {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    width: 100%;
 }
 

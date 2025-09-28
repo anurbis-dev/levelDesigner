@@ -30,9 +30,8 @@ export class ColorChooser {
                 <input type="color" 
                        id="color-picker-full-${Date.now()}"
                        name="color-picker-full-${Date.now()}"
-                       class="color-picker-input w-full h-10 rounded border border-gray-600 bg-gray-700 cursor-pointer"
-                       value="${this.options.initialColor}"
-                       style="border: 1px solid #4b5563; background: #374151;">
+                       class="color-picker-input w-full h-10 rounded border border-gray-600 bg-gray-700 cursor-pointer color-chooser-input"
+                       value="${this.options.initialColor}">
             </div>
             ${this.options.showCancel || this.options.showApply ? `
                 <div class="flex justify-end space-x-2">

@@ -2,6 +2,7 @@ import { BasePanel } from './BasePanel.js';
 import { Logger } from '../utils/Logger.js';
 import { AssetContextMenu } from './AssetContextMenu.js';
 import { AssetPanelContextMenu } from './AssetPanelContextMenu.js';
+import { HoverEffects } from '../utils/HoverEffects.js';
 
 /**
  * Asset panel UI component
@@ -242,18 +243,8 @@ export class AssetPanel extends BasePanel {
         thumb.dataset.assetId = asset.id;
         thumb.draggable = true;
         
-        // Add hover effect
-        thumb.addEventListener('mouseenter', () => {
-            if (!thumb.classList.contains('selected')) {
-                thumb.style.filter = 'brightness(1.2)';
-            }
-        });
-        
-        thumb.addEventListener('mouseleave', () => {
-            if (!thumb.classList.contains('selected')) {
-                thumb.style.filter = '';
-            }
-        });
+        // Add hover effect using utility
+        HoverEffects.setupGridItemHover(thumb);
         
         if (asset.imgSrc) {
             const img = document.createElement('img');
@@ -815,16 +806,11 @@ export class AssetPanel extends BasePanel {
         
         element.classList.add('marquee-highlighted');
         
-        // Use existing hover styles by applying them directly
+        // Use hover effect utility
         if (element.classList.contains('asset-thumbnail')) {
-            // For grid view - use brightness effect like hover
-            element.style.filter = 'brightness(1.2)';
-        } else if (element.classList.contains('asset-list-item')) {
-            // For list view - apply hover background directly
-            element.style.backgroundColor = '#4B5563'; // gray-600
-        } else if (element.classList.contains('asset-details-row')) {
-            // For details view - apply hover background directly
-            element.style.backgroundColor = '#374151'; // gray-700
+            HoverEffects.applyHoverEffect(element, 'brightness');
+        } else if (element.classList.contains('asset-list-item') || element.classList.contains('asset-details-row')) {
+            HoverEffects.applyHoverEffect(element, 'background');
         }
     }
 
@@ -836,17 +822,8 @@ export class AssetPanel extends BasePanel {
         
         element.classList.remove('marquee-highlighted');
         
-        // Remove hover effects
-        if (element.classList.contains('asset-thumbnail')) {
-            // For grid view - remove brightness effect
-            element.style.filter = '';
-        } else if (element.classList.contains('asset-list-item')) {
-            // For list view - remove hover background
-            element.style.backgroundColor = '';
-        } else if (element.classList.contains('asset-details-row')) {
-            // For details view - remove hover background
-            element.style.backgroundColor = '';
-        }
+        // Remove hover effects using utility
+        HoverEffects.removeHoverEffect(element);
     }
 
     /**
