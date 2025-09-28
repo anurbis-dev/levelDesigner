@@ -2,6 +2,7 @@ import { UIFactory } from '../utils/UIFactory.js';
 import { Logger } from '../utils/Logger.js';
 import { SearchUtils } from '../utils/SearchUtils.js';
 import { BasePanel } from './BasePanel.js';
+import { LayersContextMenu } from './LayersContextMenu.js';
 
 /**
  * Layers panel UI component
@@ -14,7 +15,24 @@ export class LayersPanel extends BasePanel {
         this.searchFilter = ''; // Search filter for layers
         this.contextMenu = null; // Context menu instance
 
+        this.setupContextMenus();
         this.setupEventListeners();
+    }
+
+    /**
+     * Setup context menus for layers
+     */
+    setupContextMenus() {
+        // Layer context menu - use the panel element, not the inner container
+        this.layerContextMenu = new LayersContextMenu(this.container.parentElement, this, {
+            onMakeCurrent: (layer) => this.setCurrentLayerAndNotify(layer.id),
+            onRename: (layer) => this.renameLayer(layer.id),
+            onDuplicate: (layer) => this.duplicateLayer(layer.id),
+            onToggleVisibility: (layer) => this.toggleLayerVisibility(layer.id),
+            onToggleLock: (layer) => this.toggleLayerLock(layer.id),
+            onSelectAllObjects: (layer) => this.selectAllObjectsInLayer(layer.id),
+            onDelete: (layer) => this.deleteLayer(layer.id)
+        });
     }
 
     /**
@@ -1119,138 +1137,9 @@ export class LayersPanel extends BasePanel {
      * Show context menu for layer
      */
     showLayerContextMenu(layer, event) {
-        event.preventDefault();
-        event.stopPropagation();
-
-        // Remove existing context menu
-        if (this.contextMenu) {
-            this.contextMenu.remove();
-        }
-
-        const level = this.levelEditor.getLevel();
-        const mainLayerId = level.getMainLayerId();
-        const isMainLayer = layer.id === mainLayerId;
-        const isCurrent = layer.id === this.currentLayerId;
-
-        const contextMenu = document.createElement('div');
-        contextMenu.className = 'fixed bg-gray-800 border border-gray-600 rounded shadow-lg z-50 py-1 min-w-48';
-        
-        // Position menu with boundary checking
-        const menuWidth = 192; // min-w-48 = 12rem = 192px
-        const menuHeight = 200; // Estimated height
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        
-        let left = event.clientX;
-        let top = event.clientY;
-        
-        // Adjust horizontal position if menu would go off screen
-        if (left + menuWidth > viewportWidth) {
-            left = viewportWidth - menuWidth - 10; // 10px margin
-        }
-        
-        // Adjust vertical position if menu would go off screen
-        if (top + menuHeight > viewportHeight) {
-            top = viewportHeight - menuHeight - 10; // 10px margin
-        }
-        
-        // Ensure menu doesn't go off the left or top edge
-        left = Math.max(10, left);
-        top = Math.max(10, top);
-        
-        contextMenu.style.left = `${left}px`;
-        contextMenu.style.top = `${top}px`;
-
-        const menuItems = [
-            {
-                text: 'Make Current',
-                icon: '🎯',
-                action: () => this.setCurrentLayerAndNotify(layer.id),
-                enabled: true,
-                className: isCurrent ? 'text-blue-400' : 'text-gray-200'
-            },
-            { text: '---', enabled: false },
-            {
-                text: 'Rename',
-                icon: '✏️',
-                action: () => this.renameLayer(layer.id),
-                enabled: true
-            },
-            {
-                text: 'Duplicate',
-                icon: '📋',
-                action: () => this.duplicateLayer(layer.id),
-                enabled: true
-            },
-            { text: '---', enabled: false },
-            {
-                text: layer.visible ? 'Hide' : 'Show',
-                icon: layer.visible ? '👁️‍🗨️' : '👁️',
-                action: () => this.toggleLayerVisibility(layer.id),
-                enabled: true
-            },
-            {
-                text: layer.locked ? 'Unlock' : 'Lock',
-                icon: layer.locked ? '🔓' : '🔒',
-                action: () => this.toggleLayerLock(layer.id),
-                enabled: true
-            },
-            { text: '---', enabled: false },
-            {
-                text: 'Select All Objects',
-                icon: '🎯',
-                action: () => this.selectAllObjectsInLayer(layer.id),
-                enabled: true
-            },
-            { text: '---', enabled: false },
-            {
-                text: 'Delete Layer',
-                icon: '🗑️',
-                action: () => this.deleteLayer(layer.id),
-                enabled: !isMainLayer,
-                className: 'text-red-400 hover:bg-red-600'
-            }
-        ];
-
-        menuItems.forEach(item => {
-            if (item.text === '---') {
-                const separator = document.createElement('div');
-                separator.className = 'border-t border-gray-600 my-1';
-                contextMenu.appendChild(separator);
-            } else {
-                const menuItem = document.createElement('div');
-                menuItem.className = `px-3 py-2 text-sm cursor-pointer hover:bg-gray-700 flex items-center space-x-2 ${
-                    item.className || 'text-gray-200'
-                } ${!item.enabled ? 'opacity-50 cursor-not-allowed' : ''}`;
-                menuItem.innerHTML = `<span>${item.icon}</span><span>${item.text}</span>`;
-                
-                if (item.enabled) {
-                    menuItem.addEventListener('click', () => {
-                        item.action();
-                        contextMenu.remove();
-                        this.contextMenu = null;
-                    });
-                }
-                
-                contextMenu.appendChild(menuItem);
-            }
-        });
-
-        document.body.appendChild(contextMenu);
-        this.contextMenu = contextMenu;
-
-        // Close context menu when clicking outside
-        const closeMenu = (e) => {
-            if (!contextMenu.contains(e.target)) {
-                contextMenu.remove();
-                this.contextMenu = null;
-                document.removeEventListener('click', closeMenu);
-            }
-        };
-        
-        setTimeout(() => {
-            document.addEventListener('click', closeMenu);
-        }, 0);
+        // Use the new context menu system
+        // Let LayersContextMenu extract context data from the event target
+        this.layerContextMenu.showContextMenu(event, {});
     }
 
     /**
@@ -1504,7 +1393,6 @@ export class LayersPanel extends BasePanel {
         contextMenu.style.top = `${top}px`;
 
         const menuItems = [
-            { text: '---', enabled: false },
             {
                 text: 'Show All Layers',
                 icon: '👁️',
@@ -1531,7 +1419,7 @@ export class LayersPanel extends BasePanel {
         menuItems.forEach(item => {
             if (item.text === '---') {
                 const separator = document.createElement('div');
-                separator.className = 'border-t border-gray-600 my-1';
+                separator.className = 'base-context-menu-item separator';
                 contextMenu.appendChild(separator);
             } else {
                 const menuItem = document.createElement('div');

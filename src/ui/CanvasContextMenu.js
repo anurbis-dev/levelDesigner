@@ -179,32 +179,32 @@ export class CanvasContextMenu extends BaseContextMenu {
     setupMenuItems() {
         // Object operations (work with selected objects)
         this.addMenuItem('Copy', '📋', () => this.callbacks.onCopy(), {
-            visible: (context) => CommandAvailability.check('copy', this.levelEditor)
+            disabled: (context) => !CommandAvailability.check('copy', this.levelEditor)
         });
 
         this.addMenuItem('Cut', '✂️', () => this.callbacks.onCut(), {
-            visible: (context) => CommandAvailability.check('cut', this.levelEditor)
+            disabled: (context) => !CommandAvailability.check('cut', this.levelEditor)
         });
 
         this.addMenuItem('Paste', '📌', () => this.callbacks.onPaste(), {
-            visible: (context) => CommandAvailability.check('paste', this.levelEditor)
+            disabled: (context) => !CommandAvailability.check('paste', this.levelEditor)
         });
 
         this.addMenuItem('Duplicate', '🔄', () => this.callbacks.onDuplicate(), {
-            visible: (context) => CommandAvailability.check('duplicate', this.levelEditor)
+            disabled: (context) => !CommandAvailability.check('duplicate', this.levelEditor)
         });
 
         this.addMenuItem('Delete', '🗑️', () => this.callbacks.onDelete(), {
-            visible: (context) => CommandAvailability.check('delete', this.levelEditor)
+            disabled: (context) => !CommandAvailability.check('delete', this.levelEditor)
         });
 
         // Group operations
         this.addMenuItem('Group', '📦', () => this.callbacks.onGroup(), {
-            visible: (context) => CommandAvailability.check('groupSelected', this.levelEditor)
+            disabled: (context) => !CommandAvailability.check('groupSelected', this.levelEditor)
         });
 
         this.addMenuItem('Ungroup', '📭', () => this.callbacks.onUngroup(), {
-            visible: (context) => CommandAvailability.check('ungroupSelected', this.levelEditor)
+            disabled: (context) => !CommandAvailability.check('ungroupSelected', this.levelEditor)
         });
 
         this.addSeparatorWithClass('object-view-separator');

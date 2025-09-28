@@ -921,7 +921,8 @@ export class OutlinerPanel extends BasePanel {
             this.contextMenu.destroy();
         }
         
-        this.contextMenu = new OutlinerContextMenu(this.container, this.levelEditor, {
+        // Use the panel element, not the inner container
+        this.contextMenu = new OutlinerContextMenu(this.container.parentElement, this.levelEditor, {
             onRename: (object) => this.handleRenameObject(object),
             onDelete: (object) => this.handleDeleteObject(object),
             onToggleVisibility: (object) => this.handleToggleVisibility(object),

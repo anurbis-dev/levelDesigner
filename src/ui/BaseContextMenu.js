@@ -259,13 +259,21 @@ export class BaseContextMenu {
         menuItem.className = 'base-context-menu-item';
         menuItem.innerHTML = `${item.icon ? item.icon + ' ' : ''}${item.text}`;
         
-        if (item.disabled) {
+        // Check if item should be disabled
+        let isDisabled = false;
+        if (typeof item.disabled === 'function') {
+            isDisabled = item.disabled(contextData);
+        } else if (item.disabled === true) {
+            isDisabled = true;
+        }
+        
+        if (isDisabled) {
             menuItem.classList.add('disabled');
         }
         
         menuItem.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (!item.disabled) {
+            if (!isDisabled) {
                 const result = this.handleMenuItemClick(item, contextData);
                 // Only hide menu if action doesn't return false
                 if (result !== false) {

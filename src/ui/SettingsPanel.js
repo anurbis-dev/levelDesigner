@@ -631,6 +631,11 @@ export class SettingsPanel {
 
                 this.configManager.set(path, value);
 
+                // Apply compact mode immediately
+                if (path === 'ui.compactMode') {
+                    this.applyCompactMode(value);
+                }
+
                 // Synchronize color inputs for axis constraint
                 if (path === 'editor.axisConstraint.axisColor') {
                     const container = e.target.closest('.axis-color-container');
@@ -646,11 +651,34 @@ export class SettingsPanel {
             });
         });
     }
+
+    /**
+     * Apply compact mode to the UI
+     * @param {boolean} enabled - Whether compact mode should be enabled
+     */
+    applyCompactMode(enabled) {
+        const body = document.body;
+        
+        if (enabled) {
+            body.classList.add('compact-mode');
+        } else {
+            body.classList.remove('compact-mode');
+        }
+        
+        // Trigger layout update
+        if (window.editor && window.editor.canvasRenderer) {
+            window.editor.canvasRenderer.resizeCanvas();
+            window.editor.render();
+        }
+    }
     
 
     resetSettings() {
         if (confirm('Are you sure you want to reset all settings to defaults? This cannot be undone.')) {
             this.configManager.reset();
+            
+            // Apply compact mode after reset
+            this.applyCompactMode(false);
             
             // Sync grid settings after reset to ensure proper initialization
             this.gridSettings.syncAllGridSettingsToState();

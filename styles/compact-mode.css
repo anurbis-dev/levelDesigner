@@ -1,0 +1,55 @@
+/* Compact Mode Styles */
+
+.compact-mode {
+    font-size: 0.875rem; /* 14px instead of 16px */
+}
+
+.compact-mode #toolbar-container {
+    padding: 0.25rem; /* Reduced from 0.5rem */
+}
+
+.compact-mode #right-panel {
+    padding: 0.5rem; /* Reduced from 1rem */
+}
+
+.compact-mode #assets-panel {
+    padding: 0.5rem; /* Reduced from 1rem */
+}
+
+.compact-mode .panel-header {
+    padding: 0.5rem; /* Reduced from 0.75rem */
+    font-size: 0.875rem; /* Reduced from 1rem */
+}
+
+.compact-mode .panel-content {
+    padding: 0.5rem; /* Reduced from 0.75rem */
+}
+
+.compact-mode .layer-item {
+    padding: 0.25rem 0.5rem; /* Reduced from 0.5rem 0.75rem */
+    font-size: 0.875rem; /* Reduced from 1rem */
+}
+
+.compact-mode .asset-item {
+    padding: 0.25rem; /* Reduced from 0.5rem */
+}
+
+.compact-mode .menu-item {
+    padding: 0.25rem 0.5rem; /* Reduced from 0.5rem 0.75rem */
+    font-size: 0.875rem; /* Reduced from 1rem */
+}
+
+.compact-mode .button {
+    padding: 0.25rem 0.5rem; /* Reduced from 0.5rem 0.75rem */
+    font-size: 0.875rem; /* Reduced from 1rem */
+}
+
+.compact-mode .input {
+    padding: 0.25rem; /* Reduced from 0.5rem */
+    font-size: 0.875rem; /* Reduced from 1rem */
+}
+
+.compact-mode .tab {
+    padding: 0.25rem 0.5rem; /* Reduced from 0.5rem 0.75rem */
+    font-size: 0.875rem; /* Reduced from 1rem */
+}

@@ -37,13 +37,7 @@
     font-weight: 500;
 }
 
-/* Enhanced separator between object commands and view commands */
-.base-context-menu.canvas-context .base-context-menu-item.separator.object-view-separator {
-    height: 2px;
-    background: linear-gradient(to right, transparent, #6B7280, transparent);
-    margin: 6px 0;
-    border: none;
-}
+/* Enhanced separator between object commands and view commands - now handled by base styles */
 
 /* View operation section */
 .base-context-menu-group.view-operations {

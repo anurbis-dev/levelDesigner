@@ -34,277 +34,13 @@
         })();
     </script>
     
-    <style>
-        /* Apply user settings immediately via CSS to prevent visual jumps */
-        :root {
-            --font-scale: 1.0;
-            font-size: calc(16px * var(--font-scale, 1.0)); /* Use CSS variable for font scale */
-        }
-        
-        /* Apply font scale immediately if localStorage has settings */
-        @media screen {
-            :root {
-                font-size: 16px; /* Default fallback */
-            }
-        }
-        
-        /* Additional styles for improved appearance and functionality */
-        body, html {
-            overflow: hidden; /* Prevent global page scrolling */
-            height: 100%;
-            user-select: none; /* Disable text selection */
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
-        }
-
-        /* Allow text selection only in input fields */
-        input, textarea {
-            user-select: text;
-            -webkit-user-select: text;
-            -moz-user-select: text;
-            -ms-user-select: text;
-        }
-        /* Styles for resizers that allow changing panel sizes */
-        .resizer {
-            background-color: #374151; /* gray-700 */
-            cursor: col-resize;
-            width: 6px;
-            flex-shrink: 0;
-        }
-        .resizer-y {
-            background-color: #374151; /* gray-700 */
-            cursor: row-resize;
-            height: 6px;
-            flex-shrink: 0;
-        }
-        
-        /* Prevent global scrollbars from affecting layout width */
-        html, body {
-            overflow: hidden;
-        }
-        
-        /* Console context menu styles - moved to ConsoleContextMenu.css */
-        
-        .log-entry {
-            position: relative;
-            user-select: text;
-        }
-        
-        .log-entry:hover {
-            background: rgba(55, 65, 81, 0.3);
-        }
-        /* Styles for canvas (main workspace) */
-        #main-canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-            background-color: #4B5563; /* gray-600 */
-            object-fit: none; /* Prevent scaling */
-            image-rendering: pixelated; /* Crisp pixel art rendering */
-        }
-        /* Styles for tabs */
-        .tab, .tab-right {
-            transition: background-color 0.2s;
-            position: relative;
-        }
-        .tab.active, .tab-right.active {
-            background-color: #374151; /* gray-700 */
-            border-bottom-color: transparent;
-        }
-        /* Styles for tab dragging */
-        .tab-right.dragging, .tab.dragging {
-            opacity: 0.5;
-            z-index: 1000;
-        }
-        .tab-right.drag-over, .tab.drag-over {
-            border-left: 2px solid #3B82F6;
-        }
-        .tab-right.drag-over:last-child, .tab.drag-over:last-child {
-            border-right: 2px solid #3B82F6;
-        }
-        /* Styles for asset previews */
-        .asset-thumbnail {
-            border: 2px solid transparent;
-            transition: border-color 0.2s;
-        }
-        .asset-thumbnail.selected {
-            border-color: #3B82F6; /* blue-500 */
-        }
-        /* Styles for selection rectangle in asset panel */
-        #asset-marquee {
-            position: absolute;
-            border: 1px solid rgba(59, 130, 246, 0.8);
-            background-color: rgba(59, 130, 246, 0.2);
-            pointer-events: none; /* so it doesn't interfere with clicks */
-            z-index: 100;
-        }
-        /* Styles for outliner */
-        .outliner-item {
-            padding: 2px 5px;
-            border-radius: 3px;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-        .outliner-item:hover {
-            background-color: #374151;
-        }
-        .outliner-item.selected {
-            background-color: #3B82F6;
-        }
-        .outliner-group-header {
-            cursor: pointer;
-            font-weight: bold;
-            user-select: none;
-        }
-        .outliner-group-header::before {
-            content: '▼ ';
-            display: inline-block;
-            transition: transform 0.2s;
-        }
-        .outliner-group-header.collapsed::before {
-            transform: rotate(-90deg);
-        }
-        /* Styles for group dragging to create prefab */
-        #assets-panel.drop-target {
-            box-shadow: 0 0 0 3px #3B82F6 inset;
-        }
-        
-        /* Console Overlay Styles */
-        .console-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: auto; /* Let JavaScript control the height */
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            backdrop-filter: blur(4px);
-            resize: vertical;
-            min-height: 200px;
-            max-height: 90vh;
-        }
-        
-        .console-resize-handle {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 6px;
-            background: #374151;
-            cursor: row-resize;
-            z-index: 10000;
-        }
-        
-        .console-resize-handle:hover {
-            background: #4b5563;
-        }
-        
-        .console-overlay.hidden {
-            display: none;
-        }
-        
-        /* Console scrollbar styles to match other panels */
-        .console-overlay .overflow-y-auto::-webkit-scrollbar {
-            width: 8px;
-        }
-        
-        .console-overlay .overflow-y-auto::-webkit-scrollbar-track {
-            background: #1f2937; /* gray-800 */
-        }
-        
-        .console-overlay .overflow-y-auto::-webkit-scrollbar-thumb {
-            background: #4b5563; /* gray-600 */
-            border-radius: 4px;
-        }
-        
-        .console-overlay .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-            background: #6b7280; /* gray-500 */
-        }
-        
-        /* Console text selection styles */
-        .console-overlay .overflow-y-auto {
-            user-select: text;
-            -webkit-user-select: text;
-            -moz-user-select: text;
-            -ms-user-select: text;
-        }
-        
-        .console-overlay .overflow-y-auto::selection {
-            background: #3B82F6; /* blue-500 */
-            color: white;
-        }
-        
-        .console-overlay .overflow-y-auto::-moz-selection {
-            background: #3B82F6; /* blue-500 */
-            color: white;
-        }
-        
-        /* Console log entry selection highlighting */
-        .console-message.selected {
-            background: rgba(59, 130, 246, 0.15); /* blue-500 with opacity */
-            border-radius: 3px;
-            border-left: 3px solid #3B82F6;
-            padding-left: 4px;
-        }
-        
-        .console-message.selecting {
-            background: rgba(59, 130, 246, 0.08); /* blue-500 with lower opacity */
-            border-radius: 3px;
-        }
-        
-        /* Highlight all selected text in console */
-        .console-overlay .overflow-y-auto ::selection {
-            background: rgba(59, 130, 246, 0.3) !important;
-            color: white !important;
-        }
-        
-        .console-overlay .overflow-y-auto ::-moz-selection {
-            background: rgba(59, 130, 246, 0.3) !important;
-            color: white !important;
-        }
-        
-        /* Better text selection in console */
-        .console-overlay .overflow-y-auto {
-            -webkit-user-select: text;
-            -moz-user-select: text;
-            -ms-user-select: text;
-            user-select: text;
-        }
-        
-        /* Prevent text selection on non-text elements */
-        .console-overlay .overflow-y-auto * {
-            -webkit-user-select: text;
-            -moz-user-select: text;
-            -ms-user-select: text;
-            user-select: text;
-        }
-        
-        
-        /* Console log message styles */
-        .console-message {
-            margin-bottom: 4px;
-            word-wrap: break-word;
-        }
-        
-        .console-message.log {
-            color: #d1d5db; /* gray-300 */
-        }
-        
-        .console-message.info {
-            color: #60a5fa; /* blue-400 */
-        }
-        
-        .console-message.warn {
-            color: #fbbf24; /* amber-400 */
-        }
-        
-        .console-message.error {
-            color: #f87171; /* red-400 */
-        }
-    </style>
+    <!-- Main styles -->
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/compact-mode.css">
+    <link rel="stylesheet" href="styles/base-context-menu.css">
+    <link rel="stylesheet" href="styles/canvas-context-menu.css">
+    <link rel="stylesheet" href="styles/console-context-menu.css">
+    <link rel="stylesheet" href="styles/user-settings.css">
 </head>
 <body class="bg-gray-800 text-white font-sans flex flex-col h-screen">
 
@@ -448,6 +184,16 @@
                         document.body.classList.add(`theme-${theme}`);
                     } catch (themeError) {
                         console.warn('[LAYOUT] Failed to apply theme:', themeError);
+                    }
+                }
+
+                // Apply compact mode immediately
+                const compactMode = userPrefs.get('compactMode');
+                if (compactMode) {
+                    try {
+                        document.body.classList.add('compact-mode');
+                    } catch (compactError) {
+                        console.warn('[LAYOUT] Failed to apply compact mode:', compactError);
                     }
                 }
 

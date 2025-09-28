@@ -90,17 +90,10 @@
     border-bottom-right-radius: 6px;
 }
 
-/* Разделитель */
+/* Разделитель - базовые стили (переопределяются унифицированными стилями ниже) */
 .base-context-menu-item.separator {
-    height: 1px;
-    background: #374151; /* gray-700 */
-    margin: 4px 0;
     padding: 0;
     cursor: default;
-}
-
-.base-context-menu-item.separator:hover {
-    background: #374151;
 }
 
 /* Иконки элементов меню - добавляются через innerHTML */
@@ -241,5 +234,13 @@
 
 .base-context-menu-item.current-grid-type:hover {
     background: #1D4ED8; /* blue-700 */
+}
+
+/* Унифицированные стили для сепараторов во всех контекстных меню */
+.base-context-menu-item.separator {
+    height: 2px;
+    background: linear-gradient(to right, transparent, #6B7280, transparent);
+    margin: 6px 0;
+    border: none;
 }
 
