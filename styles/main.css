@@ -73,10 +73,18 @@ html, body {
     image-rendering: pixelated; /* Crisp pixel art rendering */
 }
 
-/* Styles for tabs */
+/* Unified tab styles */
 .tab, .tab-right {
     transition: background-color 0.2s;
     position: relative;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    background: transparent;
+    border: none;
+    color: #d1d5db;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
 }
 
 .tab:hover, .tab-right:hover {
@@ -85,7 +93,8 @@ html, body {
 
 .tab.active, .tab-right.active {
     background-color: #374151; /* gray-700 */
-    border-bottom-color: transparent;
+    border-bottom-color: #3B82F6; /* blue-500 */
+    color: #ffffff;
 }
 
 /* Styles for tab dragging */
@@ -164,7 +173,7 @@ html, body {
     top: 0;
     left: 0;
     right: 0;
-    height: 400px !important;
+    height: 400px; /* Default height, can be overridden by JavaScript */
     background: rgba(0, 0, 0, 0.8);
     z-index: 9999;
     display: flex;

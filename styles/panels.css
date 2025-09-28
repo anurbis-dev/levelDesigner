@@ -27,26 +27,6 @@
 
 .tab-right {
     flex: 1;
-    padding: 0.5rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    background: transparent;
-    border: none;
-    color: #9ca3af;
-    cursor: pointer;
-    transition: background-color 0.2s, color 0.2s;
-    border-bottom: 2px solid transparent;
-}
-
-.tab-right:hover {
-    background-color: #4b5563;
-    color: #ffffff;
-}
-
-.tab-right.active {
-    color: #ffffff;
-    border-bottom-color: #3b82f6;
-    background-color: #1f2937;
 }
 
 /* Right panel content */
@@ -347,10 +327,7 @@
     width: 280px;
 }
 
-.compact-mode .tab-right {
-    padding: 0.375rem;
-    font-size: 0.75rem;
-}
+/* Compact mode styles are now handled in compact-mode.css */
 
 .compact-mode .panel-header {
     padding: 0.5rem 0.75rem;

@@ -24,73 +24,87 @@
  */
 
 import { Logger } from '../utils/Logger.js';
+import { BaseContextMenu } from './BaseContextMenu.js';
 
-export class ConsoleContextMenu {
+export class ConsoleContextMenu extends BaseContextMenu {
     constructor(consolePanel, consoleOutput, callbacks = {}) {
-        this.consolePanel = consolePanel;
-        this.consoleOutput = consoleOutput;
-        this.callbacks = {
+        super(consolePanel, {
+            onMenuShow: callbacks.onMenuShow || (() => {}),
+            onMenuHide: callbacks.onMenuHide || (() => {}),
+            onItemClick: callbacks.onItemClick || (() => {}),
             onLoggingToggle: callbacks.onLoggingToggle || (() => {}),
             onConsoleClear: callbacks.onConsoleClear || (() => {}),
             onCopyToClipboard: callbacks.onCopyToClipboard || (() => {})
-        };
+        });
         
+        this.consoleOutput = consoleOutput;
         this.isLoggingEnabled = true;
-        this.currentMenu = null;
 
-        // Animation monitoring properties
-        this.monitoringAnimationFrame = null;
-        this.isMonitoringCursor = false;
-        this.animationStartTime = 0;
-        this.lastCursorX = 0;
-        this.lastCursorY = 0;
-
-        if (!this.consolePanel) {
+        if (!this.panel) {
             Logger.console.error('ConsoleContextMenu: consolePanel not found');
         }
         if (!this.consoleOutput) {
             Logger.console.error('ConsoleContextMenu: consoleOutput not found');
         }
 
-        this.setupContextMenu();
-        this.setupWindowResizeHandler();
-        this.setupCursorTracking();
-        
+        this.setupMenuItems();
         Logger.console.info('ConsoleContextMenu initialized successfully');
     }
 
     /**
-     * Initialize context menu functionality
-     * Sets up event listeners and menu creation
+     * Setup menu items for console context menu
+     */
+    setupMenuItems() {
+        // Add console-specific menu items
+        this.addMenuItem('Toggle Logging', '📝', () => this.toggleLogging());
+        this.addMenuItem('Clear Console', '🗑️', () => this.clearConsole());
+        this.addMenuItem('Copy All', '📋', () => this.copyAll());
+        this.addMenuItem('Copy Selected', '📄', () => this.copySelected());
+    }
+
+    /**
+     * Override extractContextData to extract console-specific information
+     * @param {Element} target - The clicked element
+     * @returns {Object} - Context data including console info
+     */
+    extractContextData(target) {
+        const contextData = super.extractContextData(target);
+        
+        // Extract console-specific data
+        const { message, timestamp, isSelected } = this.extractLogData(target);
+        contextData.message = message;
+        contextData.timestamp = timestamp;
+        contextData.isSelected = isSelected;
+        
+        return contextData;
+    }
+
+    /**
+     * Override setupContextMenu to add console-specific checks
      */
     setupContextMenu() {
-        // Add context menu to entire console panel
-        this.consolePanel.addEventListener('contextmenu', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-
-            // Extract message and timestamp from log entry if available
-            const { message, timestamp, isSelected } = this.extractLogData(e.target);
-
-            // Try to use ContextMenuManager if available
-            if (window.editor && window.editor.contextMenuManager) {
-                window.editor.contextMenuManager.showMenu('console', e, { message, timestamp, isSelected });
-            } else {
-                // Fallback to direct show if manager not available
-                this.showContextMenu(e, message, timestamp, isSelected);
-            }
-        });
+        // Call parent setup first
+        super.setupContextMenu();
         
-        // Prevent selection loss when interacting with context menu
-        this.consolePanel.addEventListener('mousedown', (e) => {
+        // Add console-specific event handlers
+        this.panel.addEventListener('mousedown', (e) => {
+            // Don't interfere with resize handle
+            if (e.target.closest('.console-resize-handle')) {
+                return;
+            }
+            
             if (e.target.closest('.console-context-menu')) {
                 e.preventDefault();
                 e.stopPropagation();
             }
         });
         
-        // Prevent selection loss when clicking context menu items
-        this.consolePanel.addEventListener('click', (e) => {
+        this.panel.addEventListener('click', (e) => {
+            // Don't interfere with resize handle
+            if (e.target.closest('.console-resize-handle')) {
+                return;
+            }
+            
             if (e.target.closest('.console-context-menu')) {
                 e.preventDefault();
                 e.stopPropagation();
@@ -99,506 +113,36 @@ export class ConsoleContextMenu {
     }
 
     /**
-     * Setup window resize handler to reposition menu if needed
+     * Override showContextMenu to add console-specific checks
      */
-    setupWindowResizeHandler() {
-        this.resizeHandler = () => {
-            if (this.currentMenu) {
-                // Hide menu on window resize to avoid positioning issues
-                this.removeMenu(this.currentMenu);
-                this.currentMenu = null;
-            }
-        };
+    showContextMenu(event, contextData) {
+        // Check if console overlay is visible before showing context menu
+        if (this.panel.classList.contains('hidden')) {
+            return; // Don't show context menu if console is hidden
+        }
 
-        window.addEventListener('resize', this.resizeHandler, { passive: true });
+        // Additional check: ensure click is within console bounds
+        const consoleRect = this.panel.getBoundingClientRect();
+        const clickX = event.clientX;
+        const clickY = event.clientY;
+        
+        if (clickX < consoleRect.left || clickX > consoleRect.right || 
+            clickY < consoleRect.top || clickY > consoleRect.bottom) {
+            return; // Click is outside console bounds
+        }
+
+        // Call parent showContextMenu
+        super.showContextMenu(event, contextData);
     }
 
     /**
-     * Setup global mousemove handler to track cursor position in real-time
+     * Force hide context menu when console is closed
+     * This method should be called when console is hidden
      */
-    setupCursorTracking() {
-        if (this.cursorTrackingHandler) {
-            document.removeEventListener('mousemove', this.cursorTrackingHandler);
+    forceHideMenu() {
+        if (this.currentMenu) {
+            this.hideMenu();
         }
-
-        this.cursorTrackingHandler = (e) => {
-            this.lastCursorX = e.clientX;
-            this.lastCursorY = e.clientY;
-        };
-
-        document.addEventListener('mousemove', this.cursorTrackingHandler, { passive: true });
-    }
-
-    /**
-     * Remove cursor tracking handler
-     */
-    removeCursorTracking() {
-        if (this.cursorTrackingHandler) {
-            document.removeEventListener('mousemove', this.cursorTrackingHandler);
-            this.cursorTrackingHandler = null;
-        }
-    }
-
-    /**
-     * Start continuous cursor position monitoring during animation
-     * @param {HTMLElement} menu - The context menu element
-     */
-    startCursorMonitoring(menu) {
-        if (this.isMonitoringCursor) {
-            this.stopCursorMonitoring();
-        }
-
-        this.isMonitoringCursor = true;
-        this.animationStartTime = Date.now();
-
-        // Start monitoring loop
-        this.monitorCursorPosition(menu);
-    }
-
-    /**
-     * Stop cursor position monitoring
-     */
-    stopCursorMonitoring() {
-        if (this.monitoringAnimationFrame) {
-            cancelAnimationFrame(this.monitoringAnimationFrame);
-            this.monitoringAnimationFrame = null;
-        }
-        this.isMonitoringCursor = false;
-    }
-
-    /**
-     * Monitor cursor position during animation and close menu if cursor leaves bounds
-     * @param {HTMLElement} menu - The context menu element
-     */
-    monitorCursorPosition(menu) {
-        if (!this.isMonitoringCursor || !menu || !menu.parentNode) {
-            return;
-        }
-
-        // Check if animation duration exceeded (fallback timeout)
-        const elapsed = Date.now() - this.animationStartTime;
-        if (elapsed > 200) { // 200ms timeout (slightly longer than animation)
-            this.stopCursorMonitoring();
-            return;
-        }
-
-        // Get current cursor position
-        const cursorX = this.lastCursorX;
-        const cursorY = this.lastCursorY;
-
-        // Check if cursor is inside menu bounds
-        const rect = menu.getBoundingClientRect();
-        const isInside = cursorX >= rect.left - 2 &&
-                        cursorX <= rect.right + 2 &&
-                        cursorY >= rect.top - 2 &&
-                        cursorY <= rect.bottom + 2;
-
-        if (!isInside) {
-            this.stopCursorMonitoring();
-            this.removeMenu(menu);
-            return;
-        }
-
-        // Continue monitoring
-        this.monitoringAnimationFrame = requestAnimationFrame(() => {
-            this.monitorCursorPosition(menu);
-        });
-    }
-
-    /**
-     * Extract log message and timestamp from clicked element
-     * @param {Element} target - The clicked element
-     * @returns {Object} - Object with message and timestamp
-     */
-    extractLogData(target) {
-        let message = '';
-        let timestamp = '';
-        
-        // Check if there's selected text first
-        const selection = window.getSelection();
-        if (selection && selection.toString().trim()) {
-            const selectedText = selection.toString().trim();
-            // Try to extract timestamp from selected text
-            const timestampMatch = selectedText.match(/^\[([^\]]+)\]\s*(.*)$/);
-            if (timestampMatch) {
-                timestamp = timestampMatch[1];
-                message = timestampMatch[2];
-            } else {
-                message = selectedText;
-            }
-            return { message, timestamp, isSelected: true };
-        }
-        
-        // Fallback to log entry extraction
-        const logEntry = target.closest('.log-entry');
-        if (logEntry) {
-            const textContent = logEntry.textContent;
-            const timestampMatch = textContent.match(/^\[([^\]]+)\]\s*(.*)$/);
-            if (timestampMatch) {
-                timestamp = timestampMatch[1];
-                message = timestampMatch[2];
-            }
-        }
-        
-        return { message, timestamp, isSelected: false };
-    }
-
-    /**
-     * Show context menu at specified position
-     * @param {Event} event - The context menu event
-     * @param {string} message - Log message (if any)
-     * @param {string} timestamp - Log timestamp (if any)
-     * @param {boolean} isSelected - Whether text is selected
-     */
-    showContextMenu(event, message, timestamp, isSelected = false) {
-        // Remove existing context menu
-        this.removeExistingMenu();
-
-        // Store cursor position for animation monitoring
-        this.lastCursorX = event.clientX;
-        this.lastCursorY = event.clientY;
-
-        // Create new context menu
-        const contextMenu = this.createContextMenu(event, message, timestamp, isSelected);
-        
-        // Add special class to prevent selection loss
-        contextMenu.classList.add('console-context-menu-active');
-
-        // Add to document first (hidden)
-        document.body.appendChild(contextMenu);
-        this.currentMenu = contextMenu;
-        
-        // Calculate optimal position after menu is in DOM
-        const optimalPosition = this.calculateOptimalPosition(event, contextMenu);
-        contextMenu.style.left = optimalPosition.x + 'px';
-        contextMenu.style.top = optimalPosition.y + 'px';
-
-        // Ensure cursor is inside menu bounds by adjusting menu position if needed
-        const cursorOffset = this.ensureCursorInsideMenu(event, optimalPosition, contextMenu);
-        if (cursorOffset.x !== 0 || cursorOffset.y !== 0) {
-            contextMenu.style.left = (optimalPosition.x + cursorOffset.x) + 'px';
-            contextMenu.style.top = (optimalPosition.y + cursorOffset.y) + 'px';
-        }
-
-        // Add positioning classes for better animation
-        this.addPositioningClasses(contextMenu, event, optimalPosition);
-        
-        // Trigger animation and start cursor monitoring
-        requestAnimationFrame(() => {
-            contextMenu.classList.add('show');
-            // Start continuous cursor monitoring during animation
-            this.startCursorMonitoring(contextMenu);
-        });
-
-        // Setup menu closing
-        this.setupMenuClosing(contextMenu);
-    }
-
-    /**
-     * Calculate optimal position for context menu
-     * @param {Event} event - The context menu event
-     * @param {HTMLElement} menu - The context menu element
-     * @returns {Object} - Object with x and y coordinates
-     */
-    calculateOptimalPosition(event, menu) {
-        const viewport = {
-            width: window.innerWidth,
-            height: window.innerHeight
-        };
-        
-        // Get actual menu dimensions after creation
-        const menuSize = this.getMenuDimensions(menu);
-        
-        const margins = {
-            horizontal: 20, // Minimum distance from viewport edges
-            vertical: 20
-        };
-        
-        let x = event.pageX;
-        let y = event.pageY;
-        
-        // Determine optimal horizontal position
-        const spaceRight = viewport.width - event.pageX;
-        const spaceLeft = event.pageX;
-        
-        if (spaceRight >= menuSize.width + margins.horizontal) {
-            // Enough space to the right, show menu to the right
-            x = event.pageX;
-        } else if (spaceLeft >= menuSize.width + margins.horizontal) {
-            // Not enough space to the right, but enough to the left
-            x = event.pageX - menuSize.width;
-        } else {
-            // Not enough space on either side, center the menu
-            x = Math.max(margins.horizontal, 
-                       Math.min(event.pageX - menuSize.width / 2, 
-                               viewport.width - menuSize.width - margins.horizontal));
-        }
-        
-        // Determine optimal vertical position
-        const spaceBelow = viewport.height - event.pageY;
-        const spaceAbove = event.pageY;
-        
-        if (spaceBelow >= menuSize.height + margins.vertical) {
-            // Enough space below, show menu below
-            y = event.pageY;
-        } else if (spaceAbove >= menuSize.height + margins.vertical) {
-            // Not enough space below, but enough above
-            y = event.pageY - menuSize.height;
-        } else {
-            // Not enough space above or below, center the menu
-            y = Math.max(margins.vertical,
-                        Math.min(event.pageY - menuSize.height / 2,
-                                viewport.height - menuSize.height - margins.vertical));
-        }
-        
-        // Ensure menu stays within console panel bounds when possible
-        const consoleRect = this.consolePanel.getBoundingClientRect();
-        const consoleBounds = {
-            left: consoleRect.left,
-            right: consoleRect.right,
-            top: consoleRect.top,
-            bottom: consoleRect.bottom
-        };
-        
-        // Adjust position to stay within console panel when possible
-        if (x < consoleBounds.left) {
-            x = consoleBounds.left + 5;
-        }
-        if (x + menuSize.width > consoleBounds.right) {
-            x = consoleBounds.right - menuSize.width - 5;
-        }
-        if (y < consoleBounds.top) {
-            y = consoleBounds.top + 5;
-        }
-        if (y + menuSize.height > consoleBounds.bottom) {
-            y = consoleBounds.bottom - menuSize.height - 5;
-        }
-        
-        return { x, y };
-    }
-
-    /**
-     * Get actual menu dimensions
-     * @param {HTMLElement} menu - The context menu element
-     * @returns {Object} - Object with width and height
-     */
-    getMenuDimensions(menu) {
-        const rect = menu.getBoundingClientRect();
-        const dimensions = {
-            width: rect.width || 200, // Fallback width
-            height: rect.height || 150 // Fallback height
-        };
-        
-        return dimensions;
-    }
-
-    /**
-     * Add positioning classes for better animation
-     * @param {HTMLElement} menu - The context menu element
-     * @param {Event} event - The context menu event
-     * @param {Object} position - The calculated position
-     */
-    addPositioningClasses(menu, event, position) {
-        const viewport = {
-            width: window.innerWidth,
-            height: window.innerHeight
-        };
-        
-        // Determine horizontal positioning
-        if (position.x < event.pageX) {
-            menu.classList.add('positioned-left');
-        } else {
-            menu.classList.add('positioned-right');
-        }
-        
-        // Determine vertical positioning
-        if (position.y < event.pageY) {
-            menu.classList.add('positioned-above');
-        } else {
-            menu.classList.add('positioned-below');
-        }
-    }
-
-    /**
-     * Remove any existing context menu
-     */
-    removeExistingMenu() {
-        const existingMenu = document.querySelector('.console-context-menu');
-        if (existingMenu) {
-            existingMenu.remove();
-        }
-    }
-
-    /**
-     * Create context menu element with appropriate items
-     * @param {Event} event - The context menu event
-     * @param {string} message - Log message (if any)
-     * @param {string} timestamp - Log timestamp (if any)
-     * @param {boolean} isSelected - Whether text is selected
-     * @returns {HTMLElement} - The context menu element
-     */
-    createContextMenu(event, message, timestamp, isSelected = false) {
-        const contextMenu = document.createElement('div');
-        contextMenu.className = 'console-context-menu';
-        contextMenu.style.left = event.pageX + 'px';
-        contextMenu.style.top = event.pageY + 'px';
-
-        // Add copy options only if there's actual message content
-        if (message && message.trim()) {
-            this.addCopyOptions(contextMenu, message, timestamp, isSelected);
-        }
-
-        // Add console management options
-        this.addConsoleOptions(contextMenu);
-
-        return contextMenu;
-    }
-
-    /**
-     * Add copy-related menu items
-     * @param {HTMLElement} menu - The context menu element
-     * @param {string} message - Log message
-     * @param {string} timestamp - Log timestamp
-     * @param {boolean} isSelected - Whether text is selected
-     */
-    addCopyOptions(menu, message, timestamp, isSelected = false) {
-        if (isSelected) {
-            // Copy selected text option
-            const copySelectedItem = this.createMenuItem('📋 Copy selected text', () => {
-                const selection = window.getSelection();
-                if (selection && selection.toString().trim()) {
-                    this.copyToClipboard(selection.toString().trim());
-                }
-                this.removeMenu(menu);
-            });
-            menu.appendChild(copySelectedItem);
-        } else {
-            // Copy message option
-            const copyMessageItem = this.createMenuItem('📋 Copy message', () => {
-                this.copyToClipboard(message);
-                this.removeMenu(menu);
-            });
-            menu.appendChild(copyMessageItem);
-
-            // Copy with timestamp option
-            const copyWithTimestampItem = this.createMenuItem('🕒 Copy with timestamp', () => {
-                this.copyToClipboard(`[${timestamp}] ${message}`);
-                this.removeMenu(menu);
-            });
-            menu.appendChild(copyWithTimestampItem);
-        }
-    }
-
-    /**
-     * Add console management menu items
-     * @param {HTMLElement} menu - The context menu element
-     */
-    addConsoleOptions(menu) {
-        // Clear console option
-        const clearConsoleItem = this.createMenuItem('🗑️ Clear console', () => {
-            this.clearConsole();
-            this.removeMenu(menu);
-        });
-        menu.appendChild(clearConsoleItem);
-
-        // Logging toggle option
-        const loggingToggleItem = this.createMenuItem(
-            this.isLoggingEnabled ? '🔇 Logging off' : '🔊 Logging on',
-            () => {
-                this.toggleLogging();
-                this.removeMenu(menu);
-            }
-        );
-        menu.appendChild(loggingToggleItem);
-    }
-
-    /**
-     * Create a menu item element
-     * @param {string} text - Menu item text
-     * @param {Function} onClick - Click handler
-     * @returns {HTMLElement} - The menu item element
-     */
-    createMenuItem(text, onClick) {
-        const item = document.createElement('div');
-        item.className = 'console-context-menu-item';
-        item.innerHTML = text;
-        
-        // Prevent selection loss when clicking menu items
-        item.addEventListener('mousedown', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-        });
-        
-        item.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            onClick();
-        });
-        
-        return item;
-    }
-
-    /**
-     * Setup menu closing behavior on mouse leave
-     * @param {HTMLElement} menu - The context menu element
-     */
-    setupMenuClosing(menu) {
-        const closeMenu = () => {
-            // Close menu when mouse leaves its area
-            this.removeMenu(menu);
-        };
-
-        // Close menu when mouse leaves the menu area
-        menu.addEventListener('mouseleave', closeMenu);
-
-        // Also close on click for better UX
-        const closeOnClick = () => {
-            this.removeMenu(menu);
-        };
-        menu.addEventListener('click', closeOnClick);
-
-        // Store references for cleanup
-        menu._closeMenuHandler = closeMenu;
-        menu._closeOnClickHandler = closeOnClick;
-    }
-
-    /**
-     * Remove context menu
-     * @param {HTMLElement} menu - The context menu element
-     */
-    removeMenu(menu) {
-        // Stop cursor monitoring if active
-        this.stopCursorMonitoring();
-
-        if (menu && menu.parentNode) {
-            menu.classList.remove('show');
-
-            // Clean up event listeners
-            if (menu._closeMenuHandler) {
-                menu.removeEventListener('mouseleave', menu._closeMenuHandler);
-            }
-            if (menu._closeOnClickHandler) {
-                menu.removeEventListener('click', menu._closeOnClickHandler);
-            }
-
-            // Wait for animation to complete before removing
-            setTimeout(() => {
-                if (menu.parentNode) {
-                    menu.parentNode.removeChild(menu);
-                }
-            }, 150);
-        }
-        if (this.currentMenu === menu) {
-            this.currentMenu = null;
-        }
-    }
-
-    /**
-     * Clear console output
-     */
-    clearConsole() {
-        this.consoleOutput.innerHTML = '';
-        this.callbacks.onConsoleClear();
     }
 
     /**
@@ -610,20 +154,47 @@ export class ConsoleContextMenu {
     }
 
     /**
+     * Clear console output
+     */
+    clearConsole() {
+        this.consoleOutput.innerHTML = '';
+        this.callbacks.onConsoleClear();
+    }
+
+    /**
+     * Copy all console content
+     */
+    copyAll() {
+        const allText = this.consoleOutput.textContent || this.consoleOutput.innerText || '';
+        this.copyToClipboard(allText);
+    }
+
+    /**
+     * Copy selected text
+     */
+    copySelected() {
+        const selection = window.getSelection();
+        if (selection && selection.toString().trim()) {
+            this.copyToClipboard(selection.toString().trim());
+        } else {
+            // Fallback to copy all if nothing selected
+            this.copyAll();
+        }
+    }
+
+    /**
      * Copy text to clipboard
      * @param {string} text - Text to copy
      */
-    async copyToClipboard(text) {
-        try {
-            if (navigator.clipboard && window.isSecureContext) {
-                await navigator.clipboard.writeText(text);
+    copyToClipboard(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(() => {
                 this.callbacks.onCopyToClipboard(text);
-            } else {
-                // Fallback for older browsers
+            }).catch(err => {
+                console.warn('Clipboard API failed, using fallback:', err);
                 this.fallbackCopyToClipboard(text);
-            }
-        } catch (err) {
-            Logger.console.error('Failed to copy text: ', err);
+            });
+        } else {
             this.fallbackCopyToClipboard(text);
         }
     }
@@ -634,8 +205,6 @@ export class ConsoleContextMenu {
      */
     fallbackCopyToClipboard(text) {
         const textArea = document.createElement('textarea');
-        textArea.id = 'console-copy-textarea';
-        textArea.name = 'console-copy-textarea';
         textArea.value = text;
         textArea.style.position = 'fixed';
         textArea.style.left = '-999999px';
@@ -648,7 +217,7 @@ export class ConsoleContextMenu {
             document.execCommand('copy');
             this.callbacks.onCopyToClipboard(text);
         } catch (err) {
-            Logger.console.error('Fallback copy failed: ', err);
+            console.error('Fallback copy failed:', err);
         }
         
         document.body.removeChild(textArea);
@@ -656,92 +225,38 @@ export class ConsoleContextMenu {
 
     /**
      * Get current logging state
-     * @returns {boolean} - Whether logging is enabled
+     * @returns {boolean} - Current logging state
      */
     getLoggingState() {
         return this.isLoggingEnabled;
     }
 
     /**
-     * Set logging state
-     * @param {boolean} enabled - Whether to enable logging
+     * Extract log data from clicked element
+     * @param {Element} target - The clicked element
+     * @returns {Object} - Object with message, timestamp, and selection info
      */
-    setLoggingState(enabled) {
-        this.isLoggingEnabled = enabled;
-    }
+    extractLogData(target) {
+        let message = '';
+        let timestamp = '';
+        let isSelected = false;
 
-    /**
-     * Ensure cursor is inside menu bounds by adjusting menu position if needed
-     * @param {Event} event - The context menu event
-     * @param {Object} menuPosition - Current menu position
-     * @param {HTMLElement} menu - The context menu element
-     * @returns {Object} - Offset to apply to menu position
-     */
-    ensureCursorInsideMenu(event, menuPosition, menu) {
-        const rect = menu.getBoundingClientRect();
-
-        // Use stored cursor position for consistency, fallback to event
-        const cursorX = this.lastCursorX || event.clientX;
-        const cursorY = this.lastCursorY || event.clientY;
-
-        let offsetX = 0;
-        let offsetY = 0;
-
-        // Check if cursor is to the left of menu (cursor left of menu's left edge)
-        if (cursorX < rect.left) {
-            // Move menu left so cursor ends up 2px inside from the left edge
-            // New menu left = current menu left + offsetX
-            // We want: cursorX = newMenuLeft + 2
-            // So: newMenuLeft = cursorX - 2
-            // Therefore: offsetX = (cursorX - 2) - rect.left = cursorX - rect.left - 2
-            offsetX = cursorX - rect.left - 2;
-        }
-        // Check if cursor is to the right of menu (cursor right of menu's right edge)
-        else if (cursorX > rect.right) {
-            // Move menu right so cursor ends up 2px inside from the right edge
-            // New menu right = current menu right + offsetX
-            // We want: cursorX = newMenuRight - 2
-            // So: newMenuRight = cursorX + 2
-            // Since newMenuRight = rect.right + offsetX, then:
-            // offsetX = (cursorX + 2) - rect.right = cursorX - rect.right + 2
-            offsetX = cursorX - rect.right + 2;
+        // Find the closest log entry
+        const logEntry = target.closest('.console-message, .log-entry');
+        if (logEntry) {
+            // Extract message text
+            message = logEntry.textContent || logEntry.innerText || '';
+            
+            // Check if this entry is selected
+            isSelected = logEntry.classList.contains('selected');
+            
+            // Try to extract timestamp if available
+            const timestampElement = logEntry.querySelector('.timestamp');
+            if (timestampElement) {
+                timestamp = timestampElement.textContent || '';
+            }
         }
 
-        // Check if cursor is above menu (cursor above menu's top edge)
-        if (cursorY < rect.top) {
-            // Move menu up so cursor ends up 2px inside from the top edge
-            // New menu top = current menu top + offsetY
-            // We want: cursorY = newMenuTop + 2
-            // So: newMenuTop = cursorY - 2
-            // Therefore: offsetY = (cursorY - 2) - rect.top = cursorY - rect.top - 2
-            offsetY = cursorY - rect.top - 2;
-        }
-        // Check if cursor is below menu (cursor below menu's bottom edge)
-        else if (cursorY > rect.bottom) {
-            // Move menu down so cursor ends up 2px inside from the bottom edge
-            // New menu bottom = current menu bottom + offsetY
-            // We want: cursorY = newMenuBottom - 2
-            // So: newMenuBottom = cursorY + 2
-            // Since newMenuBottom = rect.bottom + offsetY, then:
-            // offsetY = (cursorY + 2) - rect.bottom = cursorY - rect.bottom + 2
-            offsetY = cursorY - rect.bottom + 2;
-        }
-
-
-        return { x: offsetX, y: offsetY };
-    }
-
-    /**
-     * Destroy context menu and clean up event listeners
-     */
-    destroy() {
-        this.removeExistingMenu();
-        if (this.currentMenu) {
-            this.removeMenu(this.currentMenu);
-        }
-        if (this.resizeHandler) {
-            window.removeEventListener('resize', this.resizeHandler);
-        }
-        // Note: Other event listeners will be cleaned up automatically when elements are removed
+        return { message, timestamp, isSelected };
     }
 }

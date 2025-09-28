@@ -102,7 +102,7 @@ export class AssetPanel extends BasePanel {
 
         finalOrder.forEach(category => {
             const tabButton = document.createElement('button');
-            tabButton.className = `tab px-4 py-2 text-sm font-medium border-b-2 border-transparent hover:bg-gray-700 ${
+            tabButton.className = `tab ${
                 this.stateManager.get('activeAssetTabs').has(category) ? 'active' : ''
             }`;
             tabButton.textContent = category;

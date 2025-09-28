@@ -56,6 +56,14 @@
 - **`settings-input`** - замена `setting-input` на стандартные классы
 - **`settings-label`** - замена `label` на стандартные классы
 
+### Tab Styles Unification - унификация стилей табов
+- **`.tab, .tab-right`** - унифицированные стили для всех табов
+- **Единообразный внешний вид** - одинаковые padding, font-size, hover эффекты
+- **Активные состояния** - синяя нижняя граница для активных табов
+- **Устранение дублирования** - убраны inline классы и дублирующиеся стили
+- **AssetPanel.js** - упрощены классы табов до базового `.tab` + `.active`
+- **index.html** - убраны дублирующиеся классы из HTML табов
+
 ## Изменения v3.21.0
 
 ### AssetPanel - исправление шапки в режиме Details View
@@ -147,7 +155,12 @@
 - **setupExistingConsoleMessages()** - настройка выделения для существующих сообщений
 - **cleanupLogEntrySelection(logEntry)** - очистка обработчиков событий
 
-### ConsoleContextMenu - улучшения
+### ConsoleContextMenu - полный рефакторинг v3.25.0
+- **Наследование от BaseContextMenu** - унифицирована архитектура контекстных меню
+- **Fixed positioning** - контекстное меню позиционируется относительно viewport
+- **Console overlay integration** - полная интеграция с оверлеем консоли
+- **forceHideMenu()** - принудительное скрытие меню при закрытии консоли
+- **State synchronization** - синхронизация состояния логирования между компонентами
 - **extractLogData(target)** - извлечение данных о выделенном тексте
 - **addCopyOptions(menu, message, timestamp, isSelected)** - добавление опций копирования
 - **createMenuItem(text, onClick)** - создание элементов меню с защитой от сброса выделения

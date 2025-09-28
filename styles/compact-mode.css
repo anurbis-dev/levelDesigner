@@ -51,8 +51,8 @@
 }
 
 .compact-mode .tab {
-    padding: 0.125rem 0.25rem; /* Ultra reduced from 0.5rem 0.75rem */
-    font-size: 0.75rem; /* Ultra reduced from 1rem */
+    padding: 0.25rem 0.5rem; /* Reduced from 0.5rem 1rem */
+    font-size: 0.75rem; /* Reduced from 0.875rem */
     min-height: 1.5rem; /* Ensure minimum touch target */
 }
 
@@ -130,15 +130,11 @@
     min-height: 1.5rem;
 }
 
-/* Right panel tabs compact styles */
+/* Right panel tabs compact styles - now unified with .tab */
 .compact-mode .tab-right {
     padding: 0.25rem 0.5rem; /* Reduced tab padding */
     font-size: 0.75rem;
     min-height: 1.5rem;
-}
-
-.compact-mode .tab-right.active {
-    padding: 0.25rem 0.5rem; /* Reduced active tab padding */
 }
 
 /* Toolbar buttons compact styles */

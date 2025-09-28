@@ -80,10 +80,10 @@
         <!-- 4. Details Panel (right) -->
         <aside id="right-panel" class="bg-gray-900 flex flex-col">
             <div class="flex border-b border-gray-700 flex-shrink-0">
-                <button data-tab="details" class="tab-right flex-1 p-2 text-sm font-medium active" id="details-tab">Asset</button>
-                <button data-tab="level" class="tab-right flex-1 p-2 text-sm font-medium">Level</button>
-                <button data-tab="layers" class="tab-right flex-1 p-2 text-sm font-medium">Layers</button>
-                <button data-tab="outliner" class="tab-right flex-1 p-2 text-sm font-medium">Outliner</button>
+                <button data-tab="details" class="tab-right active" id="details-tab">Asset</button>
+                <button data-tab="level" class="tab-right">Level</button>
+                <button data-tab="layers" class="tab-right">Layers</button>
+                <button data-tab="outliner" class="tab-right">Outliner</button>
             </div>
             <!-- Search section - non-scrollable -->
             <div id="right-panel-search" class="border-b border-gray-700 flex-shrink-0 p-4">
@@ -407,10 +407,11 @@
                     const consolePanel = document.getElementById('console-panel');
 
                 // Only reset console styles when hidden - preserve other panel sizes
+                // Don't reset height as it's managed by user preferences
                 if (consolePanel.classList.contains('hidden')) {
-                    consolePanel.style.height = '';
                     consolePanel.style.flexShrink = '';
                     consolePanel.style.display = '';
+                    // Height is preserved and restored from user preferences when shown
                 }
 
                 // Minimal reflow trigger - only for main container to avoid affecting panel positions
@@ -734,19 +735,20 @@
         }
 
         // Console functionality
+        let isConsoleVisible = false; // Global variable for console visibility state
+        
         function setupConsole() {
             try {
                 const consolePanel = document.getElementById('console-panel');
                 const consoleOutput = document.getElementById('console-output');
                 const consoleInput = document.getElementById('console-input');
                 const consoleClose = document.getElementById('console-close');
-                
-                let isConsoleVisible = false;
                 let isLoggingEnabled = true;
 
             // Initialize console context menu
             const consoleContextMenu = new ConsoleContextMenu(consolePanel, consoleOutput, {
                 onLoggingToggle: (enabled) => {
+                    // Update both local and context menu state
                     isLoggingEnabled = enabled;
                     logToConsole(`Logging ${enabled ? 'enabled' : 'disabled'}`, 'info');
                 },
@@ -883,6 +885,11 @@ if (!isResizing) return;
             function hideConsole() {
                 consolePanel.classList.add('hidden');
                 isConsoleVisible = false;
+                
+                // Force hide context menu when console is closed
+                if (consoleContextMenu && typeof consoleContextMenu.forceHideMenu === 'function') {
+                    consoleContextMenu.forceHideMenu();
+                }
                 
                 // Save preference
                 userPrefs.set('consoleVisible', false);
@@ -1037,7 +1044,7 @@ if (!isResizing) return;
             }
 
             function logToConsole(message, type = 'log') {
-                if (!consoleContextMenu.getLoggingState()) return;
+                if (!isLoggingEnabled) return;
                 
                 const timestamp = new Date().toLocaleTimeString();
                 const logEntry = document.createElement('div');
@@ -1158,21 +1165,21 @@ if (!isResizing) return;
 
             console.log = function(...args) {
                 originalLog.apply(console, args);
-                if (consoleContextMenu.getLoggingState()) {
+                if (isLoggingEnabled) {
                     logToConsole(args.join(' '), 'log');
                 }
             };
 
             console.error = function(...args) {
                 originalError.apply(console, args);
-                if (consoleContextMenu.getLoggingState()) {
+                if (isLoggingEnabled) {
                     logToConsole(args.join(' '), 'error');
                 }
             };
 
             console.warn = function(...args) {
                 originalWarn.apply(console, args);
-                if (consoleContextMenu.getLoggingState()) {
+                if (isLoggingEnabled) {
                     logToConsole(args.join(' '), 'warn');
                 }
             };
@@ -1211,6 +1218,13 @@ if (!isResizing) return;
         // Initialize console
         try {
             setupConsole();
+            
+            // Synchronize console visibility state after initialization
+            const consolePanel = document.getElementById('console-panel');
+            if (consolePanel) {
+                // Update isConsoleVisible to match actual state
+                isConsoleVisible = !consolePanel.classList.contains('hidden');
+            }
         } catch (error) {
             console.error('Error initializing console:', error);
         }

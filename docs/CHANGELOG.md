@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.25.0] - 2025-01-27
+
+### Fixed
+- **Console Context Menu Positioning** - исправлено позиционирование контекстного меню консоли после переноса в оверлей
+- **Console Menu Inheritance** - переписан ConsoleContextMenu для наследования от BaseContextMenu
+- **Console State Synchronization** - исправлен рассинхрон состояния консоли при рестарте приложения
+- **Console Height Persistence** - исправлено сохранение размера консоли в пользовательских настройках
+- **Console Resize Functionality** - восстановлена возможность изменения размера консоли
+- **Console Content Display** - исправлена пропажа содержимого консоли после рефакторинга
+
+### Improved
+- **Console Overlay Integration** - консоль полностью интегрирована как оверлей с правильным позиционированием
+- **Context Menu Architecture** - унифицирована архитектура контекстных меню через наследование от BaseContextMenu
+- **Console Menu Management** - добавлено принудительное удаление контекстного меню при закрытии консоли
+- **Console Positioning** - контекстное меню теперь появляется под курсором и поверх всех элементов
+- **Console Visibility Detection** - улучшена логика определения видимости консоли для показа контекстного меню
+
+### Technical
+- **BaseContextMenu Integration** - ConsoleContextMenu теперь наследуется от BaseContextMenu
+- **Fixed Positioning** - изменено позиционирование контекстных меню с absolute на fixed для оверлеев
+- **Event Handling** - улучшена обработка событий мыши для консоли с исключениями для resize handle
+- **State Management** - синхронизировано состояние логирования между ConsoleContextMenu и основным кодом
+
 ## [3.24.0] - 2025-01-27
 
 ### Fixed
@@ -8,6 +31,7 @@
 - **Duplicate Styles** - устранены дублирующиеся CSS стили между файлами
 - **Checkbox Colors** - исправлен цвет чекбоксов в меню фильтров (зеленый → синий)
 - **Grid Settings Styling** - исправлено отображение настроек грида после рефакторинга CSS
+- **Tab Styles Unification** - унифицированы стили табов между AssetPanel и правой панелью
 
 ### Improved
 - **Modular CSS** - создана модульная структура CSS файлов в папке `styles/`
@@ -15,6 +39,7 @@
 - **Hover Effects** - централизована система hover эффектов через HoverEffects utility
 - **Compact Mode** - улучшена поддержка компактного режима для всех компонентов
 - **Performance** - CSS файлы теперь кэшируются браузером
+- **Tab Consistency** - единообразный внешний вид всех табов в приложении
 
 ### Technical
 - **CSS Files Created** - созданы специализированные CSS файлы:
@@ -27,6 +52,7 @@
 - **HoverEffects Utility** - создан централизованный класс для hover эффектов
 - **CSS Variables** - добавлены CSS переменные для accent-color и font-scale
 - **Global Styles** - добавлены глобальные стили для чекбоксов, радио кнопок и слайдеров
+- **Unified Tab System** - создана единая система стилей для всех табов (.tab, .tab-right)
 
 ## [3.23.0] - 2025-01-27
 
