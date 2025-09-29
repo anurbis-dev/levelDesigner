@@ -70,9 +70,16 @@ export class HoverEffects {
         element.style.borderColor = element._originalStyles.borderColor;
         element.style.transition = element._originalStyles.transition;
 
-        // Remove hover classes
+        // Remove hover classes but preserve selection classes
         if (element._originalStyles.classes) {
+            const currentClasses = Array.from(element.classList);
+            const selectionClasses = currentClasses.filter(cls => 
+                cls === 'selected' || cls === 'active' || cls === 'bg-blue-600'
+            );
+            
+            // Restore original classes and add back selection classes
             element.className = element._originalStyles.classes.join(' ');
+            selectionClasses.forEach(cls => element.classList.add(cls));
         }
     }
 

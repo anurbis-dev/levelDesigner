@@ -129,7 +129,11 @@ export class AssetPanel extends BasePanel {
         this.previewsContainer.addEventListener('wheel', (e) => this.handleAssetWheel(e));
         
         // Window resize handler for grid recalculation
-        this.resizeHandler = () => this.render();
+        this.resizeHandler = () => {
+            this.render();
+            // Force visual update after resize to maintain consistent selection colors
+            this.updateSelectionVisuals();
+        };
         window.addEventListener('resize', this.resizeHandler);
         
         // Global events for proper marquee handling
@@ -138,6 +142,9 @@ export class AssetPanel extends BasePanel {
     }
 
     render() {
+        // Clear any lingering hover effects before re-rendering
+        this.clearAllHoverEffects();
+        
         this.renderTabs();
         this.renderPreviews();
     }
@@ -343,7 +350,7 @@ export class AssetPanel extends BasePanel {
     createAssetListItem(asset, selectedAssets) {
         const item = document.createElement('div');
         item.className = `asset-list-item flex items-center cursor-pointer px-2 py-1 bg-gray-700 rounded ${
-            selectedAssets.has(asset.id) ? 'selected bg-blue-600' : 'hover:bg-gray-600'
+            selectedAssets.has(asset.id) ? 'selected' : ''
         }`;
         item.style.width = `${this.assetSize}px`;
         item.style.height = 'auto';
@@ -374,8 +381,8 @@ export class AssetPanel extends BasePanel {
      */
     createAssetDetailsRow(asset, selectedAssets) {
         const row = document.createElement('div');
-        row.className = `asset-details-row grid grid-cols-6 gap-4 p-2 hover:bg-gray-700 cursor-pointer ${
-            selectedAssets.has(asset.id) ? 'bg-blue-900' : ''
+        row.className = `asset-details-row grid grid-cols-6 gap-4 p-2 cursor-pointer ${
+            selectedAssets.has(asset.id) ? 'selected' : ''
         }`;
         row.style.minWidth = '600px'; // Match header width
         row.dataset.assetId = asset.id;
@@ -639,6 +646,9 @@ export class AssetPanel extends BasePanel {
             this.marqueeDiv.parentNode.removeChild(this.marqueeDiv);
         }
         this.marqueeDiv = null;
+        
+        // Force immediate visual update after selection
+        this.updateSelectionVisuals();
     }
 
     /**
@@ -769,18 +779,14 @@ export class AssetPanel extends BasePanel {
     updateSelectionVisuals() {
         const selectedAssets = this.stateManager.get('selectedAssets');
         
-        // Update all asset elements
+        // Update all asset elements - use CSS classes only
         document.querySelectorAll('.asset-thumbnail').forEach(element => {
             const assetId = element.dataset.assetId;
             if (assetId) {
                 if (selectedAssets.has(assetId)) {
                     element.classList.add('selected');
-                    element.style.border = '2px solid #3B82F6';
-                    element.style.boxShadow = '0 0 0 2px rgba(59, 130, 246, 0.3)';
                 } else {
                     element.classList.remove('selected');
-                    element.style.border = 'none';
-                    element.style.boxShadow = 'none';
                 }
             }
         });
@@ -790,12 +796,8 @@ export class AssetPanel extends BasePanel {
             if (assetId) {
                 if (selectedAssets.has(assetId)) {
                     element.classList.add('selected');
-                    element.classList.add('bg-blue-600');
-                    element.classList.remove('hover:bg-gray-600');
                 } else {
                     element.classList.remove('selected');
-                    element.classList.remove('bg-blue-600');
-                    element.classList.add('hover:bg-gray-600');
                 }
             }
         });
@@ -1013,6 +1015,20 @@ export class AssetPanel extends BasePanel {
     handleDeselectAll() {
         Logger.ui.debug('Deselecting all assets');
         this.stateManager.set('selectedAssets', new Set());
+        // Force immediate visual update after deselect
+        this.updateSelectionVisuals();
+    }
+
+    /**
+     * Clear all hover effects from asset elements
+     */
+    clearAllHoverEffects() {
+        const assetSelectors = ['.asset-thumbnail', '.asset-list-item', '.asset-details-row'];
+        assetSelectors.forEach(selector => {
+            document.querySelectorAll(selector).forEach(element => {
+                HoverEffects.removeHoverEffect(element);
+            });
+        });
     }
 
     /**

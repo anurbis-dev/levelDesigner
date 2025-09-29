@@ -1,4 +1,4 @@
-# Полный справочник API Level Editor v3.26.1
+# Полный справочник API Level Editor v3.27.0
 
 ## Обзор
 

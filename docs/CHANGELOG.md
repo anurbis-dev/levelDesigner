@@ -1,5 +1,20 @@
 # Changelog
 
+## [3.27.0] - 2025-01-29
+
+### Fixed
+- **Asset Panel Selection** - исправлена подсветка выбранных элементов в панели ассетов во всех режимах (Grid, List, Details)
+- **CSS Architecture Compliance** - устранены все inline-стили в AssetPanel, теперь используются только CSS-классы
+- **Selection Visual Consistency** - унифицированы стили селекции для всех режимов отображения ассетов
+- **Hover Effects Integration** - исправлена работа HoverEffects с CSS-классами, сохранение селекции при уводе курсора
+- **Empty Space Click** - корректный сброс селекции при клике в пустое место во всех режимах
+
+### Technical
+- **CSS Classes Unification** - добавлены унифицированные CSS-классы `.asset-list-item.selected` и `.asset-details-row.selected`
+- **Inline Styles Removal** - удалены все inline-стили из `updateSelectionVisuals()` и методов создания элементов
+- **HoverEffects Preservation** - исправлен `removeHoverEffect()` для сохранения классов селекции при восстановлении стилей
+- **Selection State Management** - улучшена логика сброса селекции при клике в пустое место
+
 ## [3.26.1] - 2025-01-29
 
 ### Fixed

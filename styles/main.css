@@ -93,7 +93,7 @@ html, body {
 
 .tab.active, .tab-right.active {
     background-color: #374151; /* gray-700 */
-    border-bottom-color: #3B82F6; /* blue-500 */
+    border-bottom-color: transparent; /* removed blue underline */
     color: #ffffff;
 }
 
@@ -119,6 +119,7 @@ html, body {
 
 .asset-thumbnail.selected {
     border-color: #3B82F6; /* blue-500 */
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
 }
 
 /* Styles for selection rectangle in asset panel */
@@ -143,6 +144,27 @@ html, body {
 }
 
 .outliner-item.selected {
+    background-color: #3B82F6;
+}
+
+/* Styles for asset list and details items */
+.asset-list-item, .asset-details-row {
+    padding: 0.5rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.asset-list-item:hover, .asset-details-row:hover {
+    background-color: #374151;
+}
+
+.asset-list-item.selected, .asset-details-row.selected {
+    background-color: #3B82F6;
+    color: #ffffff;
+}
+
+.asset-list-item.selected:hover, .asset-details-row.selected:hover {
     background-color: #3B82F6;
 }
 
