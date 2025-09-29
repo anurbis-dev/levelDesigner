@@ -914,11 +914,9 @@ export class OutlinerPanel extends BasePanel {
     }
 
     setupContextMenu() {
-        // Clean up existing context menu if it exists
+        // Avoid multiple initialization
         if (this.contextMenu) {
-            // Hide menu immediately before destroying
-            this.contextMenu.hideMenu();
-            this.contextMenu.destroy();
+            return;
         }
         
         // Use the panel element, not the inner container

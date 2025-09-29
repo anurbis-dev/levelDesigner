@@ -58,7 +58,13 @@ export class Toolbar {
             this.updateToggleButtonState('toggleGrid', enabled);
             this.levelEditor.eventHandlers.updateViewCheckbox('grid', enabled);
         });
-        this.stateManager.subscribe('view.snapToGrid', (enabled) => {
+        // Also subscribe to canvas.showGrid for settings panel changes
+        this.stateManager.subscribe('canvas.showGrid', (enabled) => {
+            this.updateToggleButtonState('toggleGrid', enabled);
+            this.levelEditor.eventHandlers.updateViewCheckbox('grid', enabled);
+        });
+        // Subscribe to canvas.snapToGrid as primary source (settings panel changes)
+        this.stateManager.subscribe('canvas.snapToGrid', (enabled) => {
             this.updateToggleButtonState('toggleSnapToGrid', enabled);
             this.levelEditor.eventHandlers.updateViewCheckbox('snapToGrid', enabled);
         });
@@ -366,8 +372,14 @@ export class Toolbar {
             this.levelEditor.eventHandlers.applyViewOption(option, enabled);
             // Update menu checkbox state to match toolbar button
             this.levelEditor.eventHandlers.updateViewCheckbox(option, enabled);
-            // Save to config for persistence (same as menu View)
-            this.levelEditor.configManager.set(`editor.view.${option}`, enabled);
+            // Save to config for persistence
+            if (option === 'snapToGrid') {
+                // Snap to grid uses canvas.snapToGrid as primary storage
+                this.levelEditor.configManager.set('canvas.snapToGrid', enabled);
+            } else {
+                // Other view options use editor.view.* path
+                this.levelEditor.configManager.set(`editor.view.${option}`, enabled);
+            }
         });
     }
 
@@ -751,7 +763,7 @@ export class Toolbar {
     updateToggleStates() {
         // Update each toggle button from StateManager
         this.updateToggleButtonState('toggleGrid', this.stateManager.get('view.grid') || false);
-        this.updateToggleButtonState('toggleSnapToGrid', this.stateManager.get('view.snapToGrid') || false);
+        this.updateToggleButtonState('toggleSnapToGrid', this.stateManager.get('canvas.snapToGrid') || false);
         this.updateToggleButtonState('toggleParallax', this.stateManager.get('view.parallax') || false);
         this.updateToggleButtonState('toggleObjectBoundaries', this.stateManager.get('view.objectBoundaries') || false);
         this.updateToggleButtonState('toggleObjectCollisions', this.stateManager.get('view.objectCollisions') || false);

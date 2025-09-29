@@ -1,0 +1,115 @@
+{
+  "editor": {
+    "escape": {
+      "key": "Escape",
+      "description": "Cancel current actions"
+    },
+    "delete": {
+      "key": "Delete",
+      "description": "Delete selected objects"
+    },
+    "deleteAlt": {
+      "key": "X",
+      "description": "Delete selected objects (alternative)"
+    },
+    "duplicate": {
+      "key": "D",
+      "shiftKey": true,
+      "description": "Duplicate selected objects"
+    },
+    "focusSelection": {
+      "key": "F",
+      "description": "Focus on selected objects"
+    },
+    "focusAll": {
+      "key": "A",
+      "description": "Focus on all objects"
+    },
+    "toggleGrid": {
+      "key": "G",
+      "description": "Toggle grid visibility"
+    },
+    "groupObjects": {
+      "key": "G",
+      "shiftKey": true,
+      "description": "Group selected objects"
+    },
+    "ungroupObjects": {
+      "key": "G",
+      "altKey": true,
+      "description": "Ungroup selected objects"
+    },
+    "toggleParallax": {
+      "key": "P",
+      "description": "Toggle parallax"
+    },
+    "undo": {
+      "key": "Z",
+      "ctrlKey": true,
+      "description": "Undo last action"
+    },
+    "redo": {
+      "key": "Z",
+      "ctrlKey": true,
+      "shiftKey": true,
+      "description": "Redo last undone action"
+    },
+    "redoAlt": {
+      "key": "Y",
+      "ctrlKey": true,
+      "description": "Redo last undone action (alternative)"
+    },
+    "newLevel": {
+      "key": "N",
+      "ctrlKey": true,
+      "description": "Create new level"
+    },
+    "openLevel": {
+      "key": "O",
+      "ctrlKey": true,
+      "description": "Open level"
+    },
+    "saveLevel": {
+      "key": "S",
+      "ctrlKey": true,
+      "description": "Save level"
+    },
+    "saveLevelAs": {
+      "key": "S",
+      "ctrlKey": true,
+      "shiftKey": true,
+      "description": "Save level as"
+    },
+    "moveLayerUp": {
+      "key": "PageUp",
+      "description": "Move selected objects to upper layer"
+    },
+    "moveLayerUpExtreme": {
+      "key": "PageUp",
+      "shiftKey": true,
+      "description": "Move selected objects to top layer"
+    },
+    "moveLayerDown": {
+      "key": "PageDown",
+      "description": "Move selected objects to lower layer"
+    },
+    "moveLayerDownExtreme": {
+      "key": "PageDown",
+      "shiftKey": true,
+      "description": "Move selected objects to bottom layer"
+    }
+  },
+  "ui": {
+    "focusLayersSearch": {
+      "key": "L",
+      "ctrlKey": true,
+      "description": "Focus layers search"
+    },
+    "addNewLayer": {
+      "key": "L",
+      "ctrlKey": true,
+      "shiftKey": true,
+      "description": "Add new layer"
+    }
+  }
+}

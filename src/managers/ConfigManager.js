@@ -15,8 +15,17 @@ export class ConfigManager {
             editor: null,
             ui: null,
             canvas: null,
-            panels: null
+            panels: null,
+            toolbar: null,
+            shortcuts: null
         };
+        
+        // Track which configs have been modified for selective saving
+        this.modifiedConfigs = new Set();
+        
+        // Debounce saving to prevent excessive localStorage writes
+        this.saveTimeout = null;
+        this.saveDelay = 100; // 100ms delay
         
         // Load configurations synchronously for immediate application
         this.loadAllConfigsSync();
@@ -180,7 +189,7 @@ export class ConfigManager {
     getDefaultConfigs() {
         // Try to load from JSON files synchronously using XMLHttpRequest
         const configs = {};
-        const configNames = ['editor', 'ui', 'canvas', 'panels'];
+        const configNames = ['editor', 'ui', 'canvas', 'panels', 'toolbar', 'shortcuts'];
 
         configNames.forEach(configName => {
             try {
@@ -483,6 +492,20 @@ export class ConfigManager {
     }
 
     /**
+     * Get toolbar configuration
+     */
+    getToolbar() {
+        return this.configs.toolbar || {};
+    }
+
+    /**
+     * Get shortcuts configuration
+     */
+    getShortcuts() {
+        return this.configs.shortcuts || {};
+    }
+
+    /**
      * Get camera configuration
      */
     getCamera() {
@@ -534,10 +557,11 @@ export class ConfigManager {
 
         current[keys[keys.length - 1]] = value;
 
-        // Synchronize grid and canvas settings
-        this.syncGridCanvasSettings(path, value);
+        // Mark the config section as modified
+        const configSection = keys[0];
+        this.modifiedConfigs.add(configSection);
 
-        this.saveUserConfigsToStorage();
+        // Note: Auto-save disabled - settings will be saved only on page unload/close
     }
 
     /**
@@ -581,11 +605,11 @@ export class ConfigManager {
     }
 
     /**
-     * Synchronize grid and canvas settings
+     * Synchronize grid and canvas settings (DEPRECATED - use SettingsSyncManager instead)
      */
     syncGridCanvasSettings(path, value) {
-        if (!this.configs.grid || !this.configs.canvas) return;
-
+        if (!this.configs.grid || !this.configs.canvas || !this.configs.editor) return;
+        
         if (path.startsWith('grid.')) {
             // Sync from grid to canvas
             const gridKey = path.substring(5); // Remove 'grid.' prefix
@@ -595,6 +619,7 @@ export class ConfigManager {
                     break;
                 case 'snapToGrid':
                     this.configs.canvas.snapToGrid = value;
+                    this.configs.editor.view.snapToGrid = value; // Sync to editor view
                     break;
                 case 'size':
                     this.configs.canvas.gridSize = value;
@@ -633,6 +658,7 @@ export class ConfigManager {
                     break;
                 case 'snapToGrid':
                     this.configs.grid.snapToGrid = value;
+                    this.configs.editor.view.snapToGrid = value; // Sync to editor view
                     break;
                 case 'gridSize':
                     this.configs.grid.size = value;
@@ -660,6 +686,19 @@ export class ConfigManager {
                     break;
                 case 'gridType':
                     this.configs.grid.gridType = value;
+                    break;
+            }
+        } else if (path.startsWith('editor.view.')) {
+            // Sync from editor view to canvas and grid
+            const editorKey = path.substring(12); // Remove 'editor.view.' prefix
+            switch (editorKey) {
+                case 'snapToGrid':
+                    this.configs.canvas.snapToGrid = value;
+                    this.configs.grid.snapToGrid = value;
+                    break;
+                case 'grid':
+                    this.configs.canvas.showGrid = value;
+                    this.configs.grid.showGrid = value;
                     break;
             }
         }
@@ -761,6 +800,16 @@ export class ConfigManager {
     }
 
     /**
+     * Force save all modified settings immediately
+     * Used before page unload/close
+     */
+    forceSaveAllSettings() {
+        if (this.modifiedConfigs.size > 0) {
+            this.saveModifiedConfigs();
+        }
+    }
+
+    /**
      * Save user configuration to localStorage as backup
      */
     saveUserConfig(configName, config) {
@@ -790,6 +839,44 @@ export class ConfigManager {
     }
 
     /**
+     * Debounced save to prevent excessive localStorage writes
+     */
+    debouncedSave() {
+        // Clear existing timeout
+        if (this.saveTimeout) {
+            clearTimeout(this.saveTimeout);
+        }
+        
+        // Set new timeout
+        this.saveTimeout = setTimeout(() => {
+            this.saveModifiedConfigs();
+        }, this.saveDelay);
+    }
+
+    /**
+     * Save only modified configurations to localStorage
+     */
+    saveModifiedConfigs() {
+        try {
+            // Save only modified config sections
+            this.modifiedConfigs.forEach(configName => {
+                if (this.configs[configName]) {
+                    this.saveUserConfig(configName, this.configs[configName]);
+                }
+            });
+            
+            const savedCount = this.modifiedConfigs.size;
+            
+            // Clear the modified set after saving
+            this.modifiedConfigs.clear();
+            
+            this.log('debug', `Saved ${savedCount} modified config sections`);
+        } catch (error) {
+            this.log('error', 'Failed to save modified configurations:', error);
+        }
+    }
+
+    /**
      * Save all user configurations to localStorage
      */
     saveUserConfigsToStorage() {
@@ -802,6 +889,8 @@ export class ConfigManager {
             // Also save the complete configuration as backup
             localStorage.setItem('levelEditor_userConfig_complete', JSON.stringify(this.configs));
             
+            // Clear modified set since we saved everything
+            this.modifiedConfigs.clear();
             
             this.log('info', 'All user configurations saved to localStorage');
         } catch (error) {

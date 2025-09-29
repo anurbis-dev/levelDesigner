@@ -255,10 +255,12 @@ export class EventHandlers extends BaseModule {
         this.editor.stateManager.set('canvas.showGrid', gridEnabled);
         this.updateViewCheckbox('grid', gridEnabled);
 
-        // Initialize snap to grid state from user config or level settings
-        const snapConfig = this.editor.configManager.get('editor.view.snapToGrid');
+        // Initialize snap to grid state - prefer canvas.snapToGrid as primary source
+        const snapCanvas = this.editor.configManager.get('canvas.snapToGrid');
+        const snapView = this.editor.configManager.get('editor.view.snapToGrid');
         const snapLevel = this.editor.level?.settings?.snapToGrid;
-        const snapToGridEnabled = snapConfig ?? snapLevel ?? false;
+        // Use canvas.snapToGrid as primary, fallback to view, then level settings
+        const snapToGridEnabled = snapCanvas ?? snapView ?? snapLevel ?? false;
         this.editor.stateManager.set('view.snapToGrid', snapToGridEnabled);
         this.editor.stateManager.set('canvas.snapToGrid', snapToGridEnabled);
         this.updateViewCheckbox('snapToGrid', snapToGridEnabled);
@@ -356,7 +358,13 @@ export class EventHandlers extends BaseModule {
         this.editor.stateManager.set(`view.${option}`, newState);
         
         // Save to user configuration
-        this.editor.configManager.set(`editor.view.${option}`, newState);
+        if (option === 'snapToGrid') {
+            // Snap to grid uses canvas.snapToGrid as primary storage
+            this.editor.configManager.set('canvas.snapToGrid', newState);
+        } else {
+            // Other view options use editor.view.* path
+            this.editor.configManager.set(`editor.view.${option}`, newState);
+        }
         
         // Update UI checkbox
         this.updateViewCheckbox(option, newState);

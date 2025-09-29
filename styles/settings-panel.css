@@ -435,3 +435,49 @@
     padding: 0.25rem;
     max-width: 150px;
 }
+
+/* Hotkeys section styles */
+.hotkeys-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.hotkey-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem;
+    background-color: #374151;
+    border-radius: 0.25rem;
+}
+
+.hotkey-description {
+    flex: 1;
+    color: #e5e7eb;
+    font-size: 0.875rem;
+}
+
+.hotkey-input {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #60a5fa;
+    background-color: #1f2937;
+    border: 1px solid #4b5563;
+    border-radius: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    text-align: center;
+    min-width: 100px;
+    cursor: pointer;
+}
+
+.hotkey-input:focus {
+    outline: none;
+    border-color: #60a5fa;
+    background-color: #111827;
+}
+
+.hotkey-input:hover {
+    border-color: #6b7280;
+}

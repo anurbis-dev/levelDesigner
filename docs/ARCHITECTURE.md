@@ -1,4 +1,4 @@
-# Архитектура Level Editor v3.24.0
+# Архитектура Level Editor v3.26.1
 
 ## 🏗️ Утилитарная архитектура
 
@@ -136,10 +136,11 @@
 - AssetManager: управление библиотекой ассетов
 - FileManager: сохранение/загрузка уровней
 
-### MenuManager & ConfigManager & UserPreferencesManager
+### MenuManager & ConfigManager & UserPreferencesManager & SettingsSyncManager
 - MenuManager: централизованное управление меню
-- ConfigManager: управление конфигурацией
-- UserPreferencesManager: предпочтения пользователя
+- ConfigManager: управление конфигурацией (editor.json, ui.json, canvas.json, panels.json, shortcuts.json, toolbar.json)
+- UserPreferencesManager: предпочтения пользователя с маппингом на конфиг-пути
+- SettingsSyncManager: двусторонняя синхронизация UI настроек с StateManager
 
 ---
 

@@ -2,7 +2,7 @@
   "theme": "dark",
   "fontSize": "sm",
   "fontScale": 1.0,
-  "compactMode": false,
+  "compactMode": true,
   "rightPanelWidth": 320,
   "consoleHeight": null,
   "assetsPanelHeight": 256,
@@ -11,5 +11,8 @@
   "toolbarVisible": true,
   "toolbarScrollLeft": 0,
   "assetsPanelVisible": true,
-  "rightPanelVisible": true
+  "rightPanelVisible": true,
+  "showTooltips": true,
+  "assetSize": 96,
+  "assetViewMode": "grid"
 }

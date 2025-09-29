@@ -1,3 +1,5 @@
+import { ColorUtils } from '../ColorUtils.js';
+
 /**
  * Base class for all grid renderers
  * Provides common functionality and interface
@@ -78,7 +80,7 @@ export class BaseGridRenderer {
                 ctx.strokeStyle = color;
             }
         } else {
-            ctx.strokeStyle = this.hexToRgba(color, opacity);
+            ctx.strokeStyle = this.colorToRgba(color, opacity);
         }
         ctx.lineWidth = thickness / camera.zoom;
     }
@@ -89,16 +91,7 @@ export class BaseGridRenderer {
      * @param {number} alpha - Alpha value (0-1)
      * @returns {string} RGBA color string
      */
-    hexToRgba(hexColor, alpha = 1) {
-        if (!hexColor || !hexColor.startsWith('#')) {
-            return hexColor || '#ffffff';
-        }
-
-        const hex = hexColor.replace('#', '');
-        const r = parseInt(hex.substr(0, 2), 16);
-        const g = parseInt(hex.substr(2, 2), 16);
-        const b = parseInt(hex.substr(4, 2), 16);
-
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    colorToRgba(color, alpha = 1) {
+        return ColorUtils.toRgba(color, alpha);
     }
 }

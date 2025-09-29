@@ -18,7 +18,7 @@ export class AssetPanel extends BasePanel {
         this.marqueeStart = {};
         
         // Asset size management
-        this.assetSize = 96; // Default size in pixels (w-24 = 96px)
+        this.assetSize = 96; // Default size, will be loaded in init()
         this.minAssetSize = 48; // w-12 = 48px
         this.maxAssetSize = 192; // w-48 = 192px
         this.sizeStep = 8; // Step size for zoom
@@ -48,6 +48,12 @@ export class AssetPanel extends BasePanel {
             target: this.previewsContainer
         });
 
+        // Load asset size from user preferences
+        this.assetSize = this.loadAssetSize();
+
+        // Load view mode from user preferences
+        this.viewMode = this.loadViewMode();
+        
         // Initialize activeAssetTabs from config
         this.initializeActiveAssetTabs();
     }
@@ -60,6 +66,52 @@ export class AssetPanel extends BasePanel {
         Logger.ui.debug('Initializing activeAssetTabs:', savedTabs);
         if (savedTabs && Array.isArray(savedTabs) && savedTabs.length > 0) {
             this.stateManager.set('activeAssetTabs', new Set(savedTabs));
+        }
+    }
+
+    /**
+     * Load asset size from user preferences
+     */
+    loadAssetSize() {
+        const savedSize = this.levelEditor?.userPrefs?.get('assetSize');
+        if (savedSize && typeof savedSize === 'number' && savedSize >= this.minAssetSize && savedSize <= this.maxAssetSize) {
+            Logger.ui.debug('Loaded asset size from preferences:', savedSize);
+            return savedSize;
+        }
+        Logger.ui.debug('Using default asset size:', 96);
+        return 96; // Default size
+    }
+
+    /**
+     * Save asset size to user preferences
+     */
+    saveAssetSize() {
+        if (this.levelEditor?.userPrefs) {
+            this.levelEditor.userPrefs.set('assetSize', this.assetSize);
+            Logger.ui.debug('Saved asset size to preferences:', this.assetSize);
+        }
+    }
+
+    /**
+     * Load view mode from user preferences
+     */
+    loadViewMode() {
+        const savedMode = this.levelEditor?.userPrefs?.get('assetViewMode');
+        if (savedMode && ['grid', 'list', 'details'].includes(savedMode)) {
+            Logger.ui.debug('Loaded asset view mode from preferences:', savedMode);
+            return savedMode;
+        }
+        Logger.ui.debug('Using default asset view mode: grid');
+        return 'grid'; // Default mode
+    }
+
+    /**
+     * Save view mode to user preferences
+     */
+    saveViewMode() {
+        if (this.levelEditor?.userPrefs) {
+            this.levelEditor.userPrefs.set('assetViewMode', this.viewMode);
+            Logger.ui.debug('Saved asset view mode to preferences:', this.viewMode);
         }
     }
 
@@ -703,6 +755,7 @@ export class AssetPanel extends BasePanel {
         // Only update if size actually changed
         if (newSize !== this.assetSize) {
             this.assetSize = newSize;
+            this.saveAssetSize(); // Save to user preferences
             this.render();
             
             // Log the change
@@ -902,6 +955,7 @@ export class AssetPanel extends BasePanel {
     handleToggleGrid() {
         Logger.ui.debug('Switching to grid view');
         this.viewMode = 'grid';
+        this.saveViewMode();
         this.render();
     }
 
@@ -911,6 +965,7 @@ export class AssetPanel extends BasePanel {
     handleToggleList() {
         Logger.ui.debug('Switching to list view');
         this.viewMode = 'list';
+        this.saveViewMode();
         this.render();
     }
 
@@ -920,6 +975,7 @@ export class AssetPanel extends BasePanel {
     handleToggleDetails() {
         Logger.ui.debug('Switching to details view');
         this.viewMode = 'details';
+        this.saveViewMode();
         this.render();
     }
 

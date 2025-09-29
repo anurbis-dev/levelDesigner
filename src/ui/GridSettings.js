@@ -1,4 +1,5 @@
 import { RenderUtils } from '../utils/RenderUtils.js';
+import { ColorUtils } from '../utils/ColorUtils.js';
 
 /**
  * Grid Settings Module
@@ -43,19 +44,25 @@ export class GridSettings {
                 <div class="settings-form-group">
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Size (px)</label>
-                        <input type="number" min="8" max="512" step="8" class="settings-input" name="setting-input" data-setting="grid.size" value="${this.configManager.get('grid.size') || 32}" oninput="this.value = Math.min(512, Math.max(8, parseInt(this.value) || 8))"/>
+                        <input type="number" min="8" max="512" step="8" class="settings-input" name="setting-input" data-setting="grid.size" value="${this.configManager.get('canvas.gridSize') || 32}" oninput="this.value = Math.min(512, Math.max(8, parseInt(this.value) || 8))"/>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Color</label>
-                        <input type="color" class="settings-input" name="setting-input" data-setting="grid.color" value="${RenderUtils.rgbaToHex(this.configManager.get('grid.color')) || '#ffffff'}"/>
+                        <input type="color" class="settings-input" name="setting-input" data-setting="grid.color" value="#ffffff"/>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Thickness</label>
-                        <input type="number" min="0.1" max="5" step="0.1" class="settings-input" name="setting-input" data-setting="grid.thickness" value="${this.configManager.get('grid.thickness') || 1}"/>
+                        <input type="number" min="0.1" max="5" step="0.1" class="settings-input" name="setting-input" data-setting="grid.thickness" value="${this.configManager.get('canvas.gridThickness') || 1}"/>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Snap Tolerance (%)</label>
                         <input type="number" min="5" max="100" step="5" class="settings-input" name="setting-input" data-setting="canvas.snapTolerance" value="${this.configManager.get('canvas.snapTolerance') || 80}"/>
+                    </div>
+                    <div class="settings-form-item">
+                        <label style="display: flex; align-items: center; margin-top: 0.5rem;">
+                            <input type="checkbox" class="settings-input" name="setting-input" data-setting="canvas.snapToGrid" ${this.configManager.get('canvas.snapToGrid') ? 'checked' : ''} style="margin-right: 0.5rem;">
+                            <span style="color: #d1d5db;">Snap To Grid</span>
+                        </label>
                     </div>
                 </div>
 
@@ -63,19 +70,19 @@ export class GridSettings {
                 <div class="settings-form-group">
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Opacity</label>
-                        <input type="range" min="0" max="1" step="0.05" class="settings-input" name="setting-input" data-setting="grid.opacity" value="${this.configManager.get('grid.opacity') || 0.1}"/>
+                        <input type="range" min="0" max="1" step="0.05" class="settings-input" name="setting-input" data-setting="grid.opacity" value="${this.configManager.get('canvas.gridOpacity') || 0.1}"/>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Subdivisions</label>
-                        <input type="number" min="0" max="10" step="1" class="settings-input" name="setting-input" data-setting="grid.subdivisions" value="${this.configManager.get('grid.subdivisions') || 0}" oninput="this.value = Math.min(10, Math.max(0, parseInt(this.value) || 0))"/>
+                        <input type="number" min="0" max="10" step="1" class="settings-input" name="setting-input" data-setting="grid.subdivisions" value="${this.configManager.get('canvas.gridSubdivisions') || 0}" oninput="this.value = Math.min(10, Math.max(0, parseInt(this.value) || 0))"/>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Subdiv. Color</label>
-                        <input type="color" class="settings-input" name="setting-input" data-setting="grid.subdivColor" value="${RenderUtils.rgbaToHex(this.configManager.get('grid.subdivColor')) || '#666666'}"/>
+                        <input type="color" class="settings-input" name="setting-input" data-setting="grid.subdivColor" value="#666666"/>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Subdiv. Thickness</label>
-                        <input type="number" min="0.1" max="3" step="0.1" class="settings-input" name="setting-input" data-setting="grid.subdivThickness" value="${this.configManager.get('grid.subdivThickness') || 0.5}"/>
+                        <input type="number" min="0.1" max="3" step="0.1" class="settings-input" name="setting-input" data-setting="grid.subdivThickness" value="${this.configManager.get('canvas.gridSubdivThickness') || 0.5}"/>
                     </div>
                 </div>
             </div>
@@ -90,68 +97,60 @@ export class GridSettings {
         if (!window.editor || !window.editor.stateManager) return;
 
         // Get all grid settings from ConfigManager with defaults
-        let gridSize = this.configManager.get('grid.size') ?? 32;
-        let gridColor = this.configManager.get('grid.color') ?? '#ffffff';
-        let gridThickness = this.configManager.get('grid.thickness') ?? 1;
-        let gridOpacity = this.configManager.get('grid.opacity') ?? 0.1;
-        let gridSubdivisions = this.configManager.get('grid.subdivisions') ?? 4;
-        let gridSubdivColor = this.configManager.get('grid.subdivColor') ?? '#666666';
-        let gridSubdivThickness = this.configManager.get('grid.subdivThickness') ?? 0.5;
+        let gridSize = this.configManager.get('canvas.gridSize') ?? 32;
+        let gridColor = this.configManager.get('canvas.gridColor') ?? 'rgba(255, 255, 255, 0.1)';
+        let gridThickness = this.configManager.get('canvas.gridThickness') ?? 1;
+        let gridOpacity = this.configManager.get('canvas.gridOpacity') ?? 0.1;
+        let gridSubdivisions = this.configManager.get('canvas.gridSubdivisions') ?? 4;
+        let gridSubdivColor = this.configManager.get('canvas.gridSubdivColor') ?? '#666666';
+        let gridSubdivThickness = this.configManager.get('canvas.gridSubdivThickness') ?? 0.5;
         let gridType = this.configManager.get('canvas.gridType') ?? 'rectangular';
         let hexOrientation = this.configManager.get('canvas.hexOrientation') ?? 'pointy';
+        let snapToGrid = this.configManager.get('canvas.snapToGrid') ?? false;
 
 
         // If we have a changed value, use it instead of the stored one
         if (changedPath && changedValue !== undefined) {
-            if (changedPath === 'grid.size') gridSize = changedValue;
-            else if (changedPath === 'grid.color') gridColor = changedValue;
-            else if (changedPath === 'grid.thickness') gridThickness = changedValue;
-            else if (changedPath === 'grid.opacity') gridOpacity = changedValue;
-            else if (changedPath === 'grid.subdivisions') gridSubdivisions = changedValue;
-            else if (changedPath === 'grid.subdivColor') gridSubdivColor = changedValue;
-            else if (changedPath === 'grid.subdivThickness') gridSubdivThickness = changedValue;
+            if (changedPath === 'grid.size' || changedPath === 'canvas.gridSize') gridSize = changedValue;
+            else if (changedPath === 'grid.color' || changedPath === 'canvas.gridColor') gridColor = changedValue;
+            else if (changedPath === 'grid.thickness' || changedPath === 'canvas.gridThickness') gridThickness = changedValue;
+            else if (changedPath === 'grid.opacity' || changedPath === 'canvas.gridOpacity') gridOpacity = changedValue;
+            else if (changedPath === 'grid.subdivisions' || changedPath === 'canvas.gridSubdivisions') gridSubdivisions = changedValue;
+            else if (changedPath === 'grid.subdivColor' || changedPath === 'canvas.gridSubdivColor') gridSubdivColor = changedValue;
+            else if (changedPath === 'grid.subdivThickness' || changedPath === 'canvas.gridSubdivThickness') gridSubdivThickness = changedValue;
             else if (changedPath === 'canvas.gridType') gridType = changedValue;
             else if (changedPath === 'canvas.hexOrientation') hexOrientation = changedValue;
+            else if (changedPath === 'canvas.snapToGrid') snapToGrid = changedValue;
         }
 
         // If opacity changed, we need to recalculate colors with new opacity
-        if (changedPath === 'grid.opacity') {
+        if (changedPath === 'grid.opacity' || changedPath === 'canvas.gridOpacity') {
             // Force color recalculation by getting fresh values
-            gridColor = this.configManager.get('grid.color') ?? '#ffffff';
-            gridSubdivColor = this.configManager.get('grid.subdivColor') ?? '#666666';
+            gridColor = this.configManager.get('canvas.gridColor') ?? 'rgba(255, 255, 255, 0.1)';
+            gridSubdivColor = this.configManager.get('canvas.gridSubdivColor') ?? '#666666';
         }
 
 
         // Convert and set each parameter (always set, using defaults)
         window.editor.stateManager.set('canvas.gridSize', gridSize);
 
-        // Convert main grid color
-        let colorValue = gridColor;
-        if (gridColor.startsWith('#')) {
-            const r = parseInt(gridColor.slice(1, 3), 16);
-            const g = parseInt(gridColor.slice(3, 5), 16);
-            const b = parseInt(gridColor.slice(5, 7), 16);
-            colorValue = `rgba(${r}, ${g}, ${b}, ${gridOpacity})`;
-        }
+        // Apply opacity to grid color using ColorUtils
+        const colorValue = ColorUtils.toRgba(gridColor, gridOpacity);
         window.editor.stateManager.set('canvas.gridColor', colorValue);
 
         window.editor.stateManager.set('canvas.gridThickness', gridThickness);
         window.editor.stateManager.set('canvas.gridOpacity', gridOpacity);
         window.editor.stateManager.set('canvas.gridSubdivisions', gridSubdivisions);
 
-        // Convert subdivision color
-        let subdivColorValue = gridSubdivColor;
-        if (gridSubdivColor.startsWith('#')) {
-            const r = parseInt(gridSubdivColor.slice(1, 3), 16);
-            const g = parseInt(gridSubdivColor.slice(3, 5), 16);
-            const b = parseInt(gridSubdivColor.slice(5, 7), 16);
-            subdivColorValue = `rgba(${r}, ${g}, ${b}, ${gridOpacity})`;
-        }
+        // Apply opacity to subdivision color using ColorUtils
+        const subdivColorValue = ColorUtils.toRgba(gridSubdivColor, gridOpacity);
         window.editor.stateManager.set('canvas.gridSubdivColor', subdivColorValue);
 
         window.editor.stateManager.set('canvas.gridSubdivThickness', gridSubdivThickness);
         window.editor.stateManager.set('canvas.gridType', gridType);
         window.editor.stateManager.set('canvas.hexOrientation', hexOrientation);
+        window.editor.stateManager.set('canvas.snapToGrid', snapToGrid);
+        window.editor.stateManager.set('view.snapToGrid', snapToGrid); // Sync to view state for toolbar/menu
 
         // Trigger re-render with debounce to prevent excessive calls
         if (this.renderTimeout) {

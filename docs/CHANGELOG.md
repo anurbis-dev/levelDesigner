@@ -1,5 +1,49 @@
 # Changelog
 
+## [3.26.1] - 2025-01-29
+
+### Fixed
+- **Color Conversion Refactoring** - устранен inline код конвертации цветов, теперь используется централизованная утилита ColorUtils
+- **BaseGridRenderer** - заменен дублированный метод hexToRgba на использование ColorUtils.toRgba
+- **GridSettings** - упрощена логика применения opacity к цветам грида через ColorUtils
+- **LevelEditor** - заменены inline конвертации hex→rgba на использование ColorUtils
+
+### Technical
+- **ColorUtils Integration** - все компоненты теперь используют единую утилиту ColorUtils для конвертации цветов
+- **Code Deduplication** - удалены дублированные методы конвертации цветов в разных модулях
+
+## [3.26.0] - 2025-01-29
+
+### Added
+- **Hotkeys Settings Section** - добавлена новая секция "Hotkeys" в окне настроек с полным списком всех горячих клавиш
+- **Hotkey Customization** - возможность переназначения горячих клавиш через интерфейс настроек
+- **Shortcuts Configuration** - вынесены все горячие клавиши в отдельный файл `config/defaults/shortcuts.json`
+- **Toolbar Configuration** - добавлен файл `config/defaults/toolbar.json` для настроек тулбара
+- **Asset Panel Persistence** - сохранение размера элементов и режима отображения (Grid/List/Details) панели assets
+- **Escape Key Support** - добавлена отмена изменений в окне настроек клавишей Esc
+
+### Fixed
+- **Settings Synchronization** - исправлена синхронизация настроек между окном settings, тулбаром и основным меню
+- **Snap to Grid Conflicts** - устранены конфликты в системе snap to grid между различными источниками
+- **Settings Save Performance** - изменена система сохранения настроек - теперь сохраняются только при закрытии/перезагрузке страницы, а не при каждом изменении
+- **Asset Panel State** - исправлено сохранение и восстановление состояния панели assets при рестарте
+- **Configuration Architecture** - улучшена архитектура конфигурации с поддержкой новых типов настроек
+
+### Improved
+- **Settings Panel UX** - улучшен пользовательский интерфейс панели настроек
+- **Real-time Sync** - добавлена двусторонняя синхронизация настроек между UI и StateManager
+- **Compact Settings Style** - упрощен и оптимизирован стиль отображения настроек
+- **Configuration Files** - структурированы конфигурационные файлы по назначению
+- **Performance Optimization** - оптимизирована производительность за счет уменьшения операций с localStorage
+
+### Technical
+- **SettingsSyncManager** - создан универсальный менеджер синхронизации настроек
+- **ConfigManager Extensions** - расширена функциональность ConfigManager для поддержки toolbar и shortcuts
+- **UserPreferencesManager** - добавлена поддержка новых типов пользовательских настроек
+- **Settings Panel Architecture** - реорганизована архитектура панели настроек с поддержкой новых секций
+- **Debounced Saving** - реализована отложенная система сохранения настроек
+- **StateManager Integration** - улучшена интеграция с StateManager для мгновенной синхронизации
+
 ## [3.25.0] - 2025-01-27
 
 ### Fixed

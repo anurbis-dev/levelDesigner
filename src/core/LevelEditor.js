@@ -26,6 +26,7 @@ import { MenuManager } from '../managers/MenuManager.js';
 import { ContextMenuManager } from '../managers/ContextMenuManager.js';
 import { CanvasContextMenu } from '../ui/CanvasContextMenu.js';
 import { Logger } from '../utils/Logger.js';
+import { ColorUtils } from '../utils/ColorUtils.js';
 
 /**
  * Main Level Editor class - Unified version with modular architecture
@@ -37,7 +38,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.25.0';
+    static VERSION = '3.26.1';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
@@ -652,6 +653,9 @@ export class LevelEditor {
 
         // Setup auto-save on page unload
         this.setupAutoSaveOnUnload();
+        
+        // Setup auto-save on page visibility change (tab switch)
+        this.setupAutoSaveOnVisibilityChange();
 
         // Test context menu functionality
         this.testContextMenu();
@@ -664,11 +668,12 @@ export class LevelEditor {
 
     /**
      * Setup auto-save on page unload
+     * Now saves only when page is closed/reloaded, not on every change
      */
     setupAutoSaveOnUnload() {
         window.addEventListener('beforeunload', () => {
             try {
-                Logger.ui.info('Auto-saving UI state on page unload...');
+                Logger.ui.info('Saving user settings on page unload...');
 
                 // Save toolbar state
                 if (this.toolbar) {
@@ -688,6 +693,22 @@ export class LevelEditor {
                     this.configManager.set('editor.view.activeAssetTabs', tabsArray);
                 }
 
+                // Save current asset panel size if it exists
+                if (this.assetsPanel?.assetSize) {
+                    this.configManager.set('ui.assetSize', this.assetsPanel.assetSize);
+                }
+
+                // Save current asset panel view mode if it exists
+                if (this.assetsPanel?.viewMode) {
+                    this.configManager.set('ui.assetViewMode', this.assetsPanel.viewMode);
+                }
+
+                // Save current snap to grid state
+                const snapToGrid = this.stateManager.get('canvas.snapToGrid');
+                if (snapToGrid !== undefined) {
+                    this.configManager.set('canvas.snapToGrid', snapToGrid);
+                }
+
                 // Save current grid settings from StateManager
                 const gridSize = this.stateManager.get('canvas.gridSize');
                 const gridColor = this.stateManager.get('canvas.gridColor');
@@ -696,7 +717,6 @@ export class LevelEditor {
                 const gridSubdivisions = this.stateManager.get('canvas.gridSubdivisions');
                 const gridSubdivColor = this.stateManager.get('canvas.gridSubdivColor');
                 const gridSubdivThickness = this.stateManager.get('canvas.gridSubdivThickness');
-
 
                 if (gridSize !== undefined) {
                     this.configManager.set('grid.size', gridSize);
@@ -720,14 +740,37 @@ export class LevelEditor {
                     this.configManager.set('grid.subdivThickness', gridSubdivThickness);
                 }
 
-                // Save settings (this will save all configs including tabs and grid settings)
+                // Force save all modified settings immediately
                 if (this.configManager) {
-                    this.configManager.saveSettings();
+                    this.configManager.forceSaveAllSettings();
                 }
 
-                Logger.ui.info('UI state auto-saved successfully');
+                Logger.ui.info('User settings saved successfully');
             } catch (error) {
-                Logger.ui.error('Failed to auto-save UI state:', error);
+                Logger.ui.error('Failed to save user settings:', error);
+            }
+        });
+    }
+
+    /**
+     * Setup auto-save on page visibility change (tab switch)
+     * Saves settings when user switches to another tab or minimizes browser
+     */
+    setupAutoSaveOnVisibilityChange() {
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                try {
+                    Logger.ui.info('Saving user settings on tab switch...');
+                    
+                    // Force save all modified settings immediately
+                    if (this.configManager) {
+                        this.configManager.forceSaveAllSettings();
+                    }
+                    
+                    Logger.ui.info('User settings saved on tab switch');
+                } catch (error) {
+                    Logger.ui.error('Failed to save user settings on tab switch:', error);
+                }
             }
         });
     }
@@ -877,15 +920,9 @@ export class LevelEditor {
             this.stateManager.set('canvas.gridSize', gridSize);
         }
         if (gridColor !== undefined) {
-            // Convert hex color to rgba if needed
-            let colorValue = gridColor;
-            if (gridColor.startsWith('#')) {
-                const opacity = gridOpacity !== undefined ? gridOpacity : 0.1;
-                const r = parseInt(gridColor.slice(1, 3), 16);
-                const g = parseInt(gridColor.slice(3, 5), 16);
-                const b = parseInt(gridColor.slice(5, 7), 16);
-                colorValue = `rgba(${r}, ${g}, ${b}, ${opacity})`;
-            }
+            // Convert color to rgba using ColorUtils
+            const opacity = gridOpacity !== undefined ? gridOpacity : 0.1;
+            const colorValue = ColorUtils.toRgba(gridColor, opacity);
             this.stateManager.set('canvas.gridColor', colorValue);
         }
         if (gridThickness !== undefined) {
@@ -898,15 +935,9 @@ export class LevelEditor {
             this.stateManager.set('canvas.gridSubdivisions', gridSubdivisions);
         }
         if (gridSubdivColor !== undefined) {
-            // Convert hex color to rgba if needed
-            let subdivColorValue = gridSubdivColor;
-            if (gridSubdivColor.startsWith('#')) {
-                const opacity = gridOpacity !== undefined ? gridOpacity : 0.1;
-                const r = parseInt(gridSubdivColor.slice(1, 3), 16);
-                const g = parseInt(gridSubdivColor.slice(3, 5), 16);
-                const b = parseInt(gridSubdivColor.slice(5, 7), 16);
-                subdivColorValue = `rgba(${r}, ${g}, ${b}, ${opacity})`;
-            }
+            // Convert color to rgba using ColorUtils
+            const opacity = gridOpacity !== undefined ? gridOpacity : 0.1;
+            const subdivColorValue = ColorUtils.toRgba(gridSubdivColor, opacity);
             this.stateManager.set('canvas.gridSubdivColor', subdivColorValue);
         }
         if (gridSubdivThickness !== undefined) {

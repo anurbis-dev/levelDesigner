@@ -14,7 +14,7 @@
 
 ```javascript
 export class LevelEditor {
-    static VERSION = '3.24.0'; // ← ЕДИНЫЙ ИСТОЧНИК ИСТИНЫ
+    static VERSION = '3.26.1'; // ← ЕДИНЫЙ ИСТОЧНИК ИСТИНЫ
 }
 ```
 
@@ -312,6 +312,131 @@ if (isResizingAssets) {
 3. **Обновление в реальном времени** - canvas обновляется во время перетаскивания
 4. **Сохранение настроек** - размеры панелей сохраняются в localStorage
 5. **Адаптивность** - панели корректно реагируют на изменение размера окна браузера
+
+## Система настроек и конфигурации
+
+### Обзор архитектуры
+
+Редактор использует многоуровневую систему настроек для гибкой конфигурации:
+
+```
+┌─────────────────────────────────────┐
+│         Settings Panel UI          │ ← Пользовательский интерфейс
+├─────────────────────────────────────┤
+│        SettingsSyncManager         │ ← Синхронизация UI ↔ StateManager
+├─────────────────────────────────────┤
+│  UserPreferencesManager  ConfigManager │ ← Управление конфигурацией
+├─────────────────────────────────────┤
+│   localStorage / JSON файлы        │ ← Хранение настроек
+└─────────────────────────────────────┘
+```
+
+### Типы настроек
+
+**1. Системные настройки** (`config/defaults/*.json`):
+- `editor.json` - настройки редактора (autoSave, axis constraints, etc.)
+- `ui.json` - настройки интерфейса (fontScale, compactMode, panel sizes)
+- `canvas.json` - настройки canvas (grid, colors, snap settings)
+- `panels.json` - настройки панелей (tabs order, visibility)
+- `shortcuts.json` - горячие клавиши
+- `toolbar.json` - настройки тулбара
+
+**2. Пользовательские настройки** (`config/user/*.json`):
+- Сохраняются в localStorage
+- Переопределяют дефолтные значения
+- Синхронизируются при каждом запуске
+
+### Менеджеры настроек
+
+**ConfigManager**:
+```javascript
+class ConfigManager {
+    // Загрузка всех конфигураций
+    async loadAllConfigsSync()
+
+    // Получение значений по пути
+    get(path) // 'ui.fontScale' → 1.2
+
+    // Установка значений
+    set(path, value)
+
+    // Сброс к дефолтным
+    reset()
+}
+```
+
+**UserPreferencesManager**:
+```javascript
+class UserPreferencesManager {
+    // Маппинг пользовательских ключей на конфиг-пути
+    pathMapping = {
+        'assetSize': 'ui.assetSize',
+        'toolbarButtonStates': 'toolbar.buttonStates'
+    }
+
+    // Удобный API для пользовательских настроек
+    set(key, value)
+    get(key)
+}
+```
+
+**SettingsSyncManager**:
+```javascript
+class SettingsSyncManager {
+    // Маппинг UI элементов на StateManager
+    stateMapping = {
+        'ui.compactMode': 'ui.compactMode',
+        'canvas.snapToGrid': 'canvas.snapToGrid'
+    }
+
+    // Синхронизация UI ↔ StateManager
+    applyAllUISettingsToState()
+    syncSettingToState(path, value)
+}
+```
+
+### Горячие клавиши
+
+Горячие клавиши вынесены в отдельный файл `config/defaults/shortcuts.json`:
+
+```json
+{
+  "editor": {
+    "undo": {"key": "Z", "ctrlKey": true, "description": "Undo"},
+    "delete": {"key": "Delete", "description": "Delete objects"}
+  },
+  "ui": {
+    "focusLayersSearch": {"key": "L", "ctrlKey": true, "description": "Focus search"}
+  }
+}
+```
+
+**Кастомизация хоткеев**:
+- Доступна через Settings → Hotkeys
+- Изменения сохраняются в `config/user/shortcuts.json`
+- Перезаписывают дефолтные значения
+
+### Сохранение настроек
+
+**Отложенное сохранение**:
+- Настройки накапливаются в памяти (`modifiedConfigs`)
+- Сохраняются только при закрытии страницы (`beforeunload`)
+- Уменьшает нагрузку на localStorage
+
+**События сохранения**:
+```javascript
+// Сохранение при закрытии вкладки
+window.addEventListener('beforeunload', () => {
+    configManager.forceSaveAllSettings();
+});
+
+// Сохранение при переключении вкладок
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        configManager.forceSaveAllSettings();
+    }
+});
+```
 
 ## Добавление новых функций
 
