@@ -119,13 +119,13 @@ export class OutlinerPanel extends BasePanel {
 
         // Create controls row with search and filter
         const controlsRow = document.createElement('div');
-        controlsRow.className = 'flex items-center space-x-2';
+        controlsRow.className = 'flex items-center gap-1';
 
         // Create search input using SearchUtils with same style as LayersPanel
         const searchInput = SearchUtils.createSearchInput(
             'Search objects...',
             'outliner-search',
-            'flex-1 bg-gray-700 text-white px-2 py-1 rounded text-sm border border-gray-600 focus:border-blue-500 focus:outline-none'
+            'flex-1 bg-gray-700 text-white px-1 py-1 rounded text-sm border border-gray-600 focus:border-blue-500 focus:outline-none'
         );
         searchInput.value = this.searchTerm;
 
@@ -139,7 +139,7 @@ export class OutlinerPanel extends BasePanel {
         const filterButton = document.createElement('button');
         filterButton.id = 'outliner-filter-btn';
         const hasActiveFilters = this.activeTypeFilters.size > 0 && !this.activeTypeFilters.has('DISABLE_ALL');
-        filterButton.className = `text-white px-3 py-1 rounded text-sm flex items-center justify-center ${
+        filterButton.className = `text-white px-2 py-1 rounded text-sm flex items-center justify-center ${
             hasActiveFilters ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 hover:bg-gray-700'
         }`;
         filterButton.title = hasActiveFilters ? 'Filter active - click to change' : 'Filter by object types';
@@ -526,7 +526,7 @@ export class OutlinerPanel extends BasePanel {
     renderGroupNode(group, depth, container) {
         const item = document.createElement('div');
         item.className = 'outliner-item outliner-group-item';
-        item.style.paddingLeft = `${5 + depth * 15}px`;
+        item.style.paddingLeft = `calc(${5 + depth * 15}px * max(var(--spacing-scale, 1.0), 0))`;
         item.style.display = 'flex';
         item.style.alignItems = 'center';
         item.dataset.id = group.id;
@@ -549,7 +549,7 @@ export class OutlinerPanel extends BasePanel {
         indicator.style.cursor = 'pointer';
         indicator.style.userSelect = 'none';
         indicator.style.color = '#666';
-        indicator.style.marginRight = '4px';
+        indicator.style.marginRight = 'calc(4px * max(var(--spacing-scale, 1.0), 0))';
         indicator.style.pointerEvents = 'auto';
         indicator.style.display = 'inline-block';
         indicator.style.width = '12px';
@@ -575,7 +575,7 @@ export class OutlinerPanel extends BasePanel {
         const icon = document.createElement('span');
         icon.className = 'outliner-item-icon';
         icon.textContent = this.getObjectIcon('group');
-        icon.style.marginRight = '4px';
+        icon.style.marginRight = 'calc(4px * max(var(--spacing-scale, 1.0), 0))';
         icon.style.flexShrink = '0';
 
         // Create display span with count
@@ -587,7 +587,7 @@ export class OutlinerPanel extends BasePanel {
             nameSpan.textContent += ` (${childCount})`;
         }
         nameSpan.style.flex = '1';
-        nameSpan.style.padding = '1px';
+        nameSpan.style.padding = 'calc(1px * max(var(--spacing-scale, 1.0), 0))';
         nameSpan.style.borderRadius = '3px';
         nameSpan.style.minWidth = '0';
 
@@ -601,7 +601,7 @@ export class OutlinerPanel extends BasePanel {
         nameInput.style.border = 'none';
         nameInput.style.color = 'white';
         nameInput.style.outline = 'none';
-        nameInput.style.padding = '1px';
+        nameInput.style.padding = 'calc(1px * max(var(--spacing-scale, 1.0), 0))';
         nameInput.style.borderRadius = '3px';
         nameInput.style.minWidth = '0';
         nameInput.style.display = 'none';
@@ -677,7 +677,7 @@ export class OutlinerPanel extends BasePanel {
     renderObjectNode(obj, depth, container) {
         const item = document.createElement('div');
         item.className = 'outliner-item';
-        item.style.paddingLeft = `${5 + depth * 15}px`;
+        item.style.paddingLeft = `calc(${5 + depth * 15}px * max(var(--spacing-scale, 1.0), 0))`;
         item.style.display = 'flex';
         item.style.alignItems = 'center';
 
@@ -693,7 +693,7 @@ export class OutlinerPanel extends BasePanel {
         const icon = document.createElement('span');
         icon.className = 'outliner-item-icon';
         icon.textContent = this.getObjectIcon(obj.type);
-        icon.style.marginRight = '4px';
+        icon.style.marginRight = 'calc(4px * max(var(--spacing-scale, 1.0), 0))';
         icon.style.flexShrink = '0';
 
         // Create display span
@@ -701,7 +701,7 @@ export class OutlinerPanel extends BasePanel {
         nameSpan.className = 'outliner-item-name-display';
         nameSpan.textContent = obj.name || `[${obj.type}]`;
         nameSpan.style.flex = '1';
-        nameSpan.style.padding = '1px';
+        nameSpan.style.padding = 'calc(1px * max(var(--spacing-scale, 1.0), 0))';
         nameSpan.style.borderRadius = '3px';
         nameSpan.style.minWidth = '0';
 
@@ -715,7 +715,7 @@ export class OutlinerPanel extends BasePanel {
         nameInput.style.border = 'none';
         nameInput.style.color = 'white';
         nameInput.style.outline = 'none';
-        nameInput.style.padding = '1px';
+        nameInput.style.padding = 'calc(1px * max(var(--spacing-scale, 1.0), 0))';
         nameInput.style.borderRadius = '3px';
         nameInput.style.minWidth = '0';
         nameInput.style.display = 'none';

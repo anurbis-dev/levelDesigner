@@ -5,6 +5,7 @@
     --font-scale: 1.0;
     font-size: calc(16px * var(--font-scale, 1.0)); /* Use CSS variable for font scale */
     --accent-color: #3B82F6; /* blue-500 - стандартный синий цвет приложения */
+    --spacing-scale: 1.0; /* Масштаб отступов и размеров элементов */
 }
 
 /* Apply font scale immediately if localStorage has settings */
@@ -133,7 +134,7 @@ html, body {
 
 /* Styles for outliner */
 .outliner-item {
-    padding: 2px 5px;
+    padding: 0.25rem 0.5rem;
     border-radius: 3px;
     cursor: pointer;
     white-space: nowrap;
@@ -325,8 +326,9 @@ input[type="range"] {
 
 /* Console log message styles */
 .console-message {
-    margin-bottom: 4px;
+    margin-bottom: 0; /* No spacing between lines */
     word-wrap: break-word;
+    line-height: 1.2; /* Tighter line height */
 }
 
 .console-message.log {

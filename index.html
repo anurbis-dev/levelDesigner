@@ -18,10 +18,17 @@
                 if (stored) {
                     const prefs = JSON.parse(stored);
                     const fontScale = prefs.ui?.fontScale || 1.0;
+                    const spacingScale = prefs.ui?.spacing || 1.0;
+                    
                     if (fontScale !== 1.0) {
                         // Set CSS custom property immediately
                         document.documentElement.style.setProperty('--font-scale', fontScale);
                         document.documentElement.style.fontSize = fontScale * 16 + 'px';
+                    }
+                    
+                    if (spacingScale !== 1.0) {
+                        // Set CSS custom property immediately
+                        document.documentElement.style.setProperty('--spacing-scale', spacingScale);
                     }
                 }
             } catch (error) {
@@ -32,7 +39,7 @@
     
     <!-- Main styles -->
     <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/compact-mode.css">
+    <link rel="stylesheet" href="styles/spacing-mode.css">
     <link rel="stylesheet" href="styles/panels.css">
     <link rel="stylesheet" href="styles/layers-panel.css">
     <link rel="stylesheet" href="styles/settings-panel.css">
@@ -48,9 +55,9 @@
 
     <!-- 1. Main menu on top -->
     <header class="bg-gray-900 shadow-md flex-shrink-0">
-        <nav class="flex items-center justify-between p-2">
+        <nav class="flex items-center justify-between">
             <!-- Menu container - will be populated by MenuManager -->
-            <div id="menu-container" class="flex items-center space-x-4">
+            <div id="menu-container" class="flex items-center">
                 <!-- Menus will be dynamically generated here -->
             </div>
             <div class="text-sm text-gray-400">
@@ -64,12 +71,12 @@
         <!-- 2. Main Frame (main workspace) -->
         <main id="main-panel" class="flex-1 flex flex-col bg-gray-700 min-w-0">
             <!-- Toolbar in top part of canvas -->
-            <div id="toolbar-container" class="bg-gray-800 border-b border-gray-700 flex-shrink-0 p-2">
+            <div id="toolbar-container" class="bg-gray-800 flex-shrink-0">
                 <!-- Toolbar will be populated by Toolbar component -->
             </div>
             
             <!-- Canvas area -->
-            <div class="flex-1 p-1 min-h-0">
+            <div class="flex-1 min-h-0">
                 <canvas id="main-canvas"></canvas>
             </div>
         </main>
@@ -86,14 +93,14 @@
                 <button data-tab="outliner" class="tab-right">Outliner</button>
             </div>
             <!-- Search section - non-scrollable -->
-            <div id="right-panel-search" class="border-b border-gray-700 flex-shrink-0 p-4">
+            <div id="right-panel-search" class="border-b border-gray-700 flex-shrink-0">
                 <!-- Search controls will be added here dynamically -->
             </div>
             <div class="flex-grow overflow-y-auto">
-                <div id="details-content-panel" class="p-4 tab-content-right">
+                <div id="details-content-panel" class="tab-content-right">
                      <p class="text-gray-400">Select an object to see its properties.</p>
                 </div>
-                 <div id="level-content-panel" class="p-4 tab-content-right hidden">
+                 <div id="level-content-panel" class="tab-content-right hidden">
                     <h3 class="text-md font-bold mb-2">Level Stats</h3>
                     <div id="level-stats-content"></div>
                 </div>
@@ -115,7 +122,7 @@
         <div id="asset-tabs-container" class="flex border-b border-gray-700">
             <!-- Tabs will be generated dynamically -->
         </div>
-        <div id="asset-previews-container" class="flex-grow p-4 overflow-auto">
+        <div id="asset-previews-container" class="flex-grow overflow-auto p-1">
             <!-- Asset previews container will be generated dynamically -->
         </div>
     </footer>
@@ -123,15 +130,15 @@
     <!-- Console Panel as Overlay (hidden by default) -->
     <div id="console-panel" class="console-overlay hidden bg-gray-900 flex flex-col">
         <div class="flex border-b border-gray-700 flex-shrink-0">
-            <span class="flex-1 p-2 text-sm font-medium text-gray-300">Console</span>
-            <button id="console-close" class="p-2 text-gray-400 hover:text-white hover:bg-gray-700">&times;</button>
+            <span class="flex-1 text-sm font-medium text-gray-300">Console</span>
+            <button id="console-close" class="text-gray-400 hover:text-white hover:bg-gray-700">&times;</button>
         </div>
         <div class="flex-grow overflow-y-auto">
-            <div id="console-output" class="p-4 text-gray-300 font-mono text-sm">
+            <div id="console-output" class="text-gray-300 font-mono text-sm">
                 <!-- Console output will be displayed here -->
             </div>
         </div>
-        <div class="border-t border-gray-700 flex-shrink-0 p-2 flex items-center">
+        <div class="border-t border-gray-700 flex-shrink-0 flex items-center">
             <span class="text-gray-400 mr-2">&gt;</span>
             <input id="console-input" name="console-input" type="text" placeholder="Enter command..." 
                    class="flex-grow bg-transparent text-gray-300 border-none outline-none font-mono text-sm">

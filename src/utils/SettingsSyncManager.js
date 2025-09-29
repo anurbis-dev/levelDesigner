@@ -24,9 +24,15 @@ export class SettingsSyncManager {
         this.stateMapping = {};
         this.reverseMapping = {};
         this.settingCallbacks = {};
+        this.bidirectionalSyncSetup = false;
         
         // Initialize default mappings
         this.initializeDefaultMappings();
+        
+        // Setup bidirectional sync once (deferred to ensure levelEditor is ready)
+        setTimeout(() => {
+            this.setupBidirectionalSync();
+        }, 0);
     }
 
     /**
@@ -44,8 +50,8 @@ export class SettingsSyncManager {
 
         this.stateMapping = {
             // Editor view settings
-            'editor.view.grid': 'view.grid',
-            'editor.view.snapToGrid': 'view.snapToGrid',
+            'editor.view.grid': 'canvas.showGrid',
+            'editor.view.snapToGrid': 'canvas.snapToGrid',
             'editor.view.gameMode': 'view.gameMode',
             'editor.view.objectBoundaries': 'view.objectBoundaries',
             'editor.view.objectCollisions': 'view.objectCollisions',
@@ -57,6 +63,7 @@ export class SettingsSyncManager {
             'editor.undoHistoryLimit': 'editor.undoHistoryLimit',
             'editor.axisConstraint.axisColor': 'editor.axisConstraint.axisColor',
             'editor.axisConstraint.axisWidth': 'editor.axisConstraint.axisWidth',
+            'editor.axisConstraint.showAxis': 'editor.axisConstraint.showAxis',
             
             // Canvas settings
             'canvas.showGrid': 'canvas.showGrid',
@@ -82,9 +89,9 @@ export class SettingsSyncManager {
             'grid.subdivThickness': 'canvas.gridSubdivThickness',
             
             // UI settings
-            'ui.compactMode': 'ui.compactMode',
             'ui.showTooltips': 'ui.showTooltips',
             'ui.fontScale': 'ui.fontScale',
+            'ui.spacing': 'ui.spacing',
 
             // Panel visibility settings
             'ui.rightPanelVisible': 'view.rightPanel',
@@ -148,6 +155,15 @@ export class SettingsSyncManager {
             // Special handling for canvas settings that need re-render
             if (stateKey.startsWith('canvas.') && this.levelEditor.render) {
                 this.levelEditor.render();
+            }
+            
+            // Special handling for spacing that needs immediate visual update
+            if (path === 'ui.spacing') {
+                document.documentElement.style.setProperty('--spacing-scale', value);
+                // Delay inline styles update to ensure DOM is ready
+                setTimeout(() => {
+                    this.updateInlineSpacingStyles(value);
+                }, 50);
             }
             
             // Call custom callback if exists
@@ -261,11 +277,8 @@ export class SettingsSyncManager {
                     this.levelEditor.stateManager.set('canvas.gridSubdivColor', rgbaColor);
                 }
                 
-                // Special handling for autoSaveInterval (convert minutes to milliseconds)
-                if (settingPath === 'editor.autoSaveInterval') {
-                    const milliseconds = value * 60000;
-                    this.levelEditor.stateManager.set('editor.autoSaveInterval', milliseconds);
-                }
+                // Apply to StateManager
+                this.levelEditor.stateManager.set(stateKey, value);
                 
                 // Special handling for snap to grid synchronization
                 if (settingPath === 'canvas.snapToGrid') {
@@ -302,15 +315,143 @@ export class SettingsSyncManager {
             document.documentElement.style.fontSize = `${fontScale * 16}px`;
         }
 
-        // Apply compact mode
-        const compactMode = this.levelEditor.stateManager.get('ui.compactMode');
-        if (compactMode !== undefined) {
-            if (compactMode) {
-                document.body.classList.add('compact-mode');
-            } else {
-                document.body.classList.remove('compact-mode');
-            }
+        // Apply spacing scale globally
+        const spacingScale = this.levelEditor.stateManager.get('ui.spacing');
+        if (spacingScale !== undefined) {
+            document.documentElement.style.setProperty('--spacing-scale', spacingScale);
+            // Delay inline styles update to ensure DOM is ready
+            setTimeout(() => {
+                this.updateInlineSpacingStyles(spacingScale);
+            }, 100);
         }
+
+    }
+
+    /**
+     * Update inline spacing styles for gap and margin properties
+     */
+    updateInlineSpacingStyles(spacingScale) {
+        // Find all elements with inline gap styles
+        const elementsWithGap = document.querySelectorAll('[style*="gap:"]');
+        elementsWithGap.forEach(element => {
+            const style = element.getAttribute('style');
+            const gapMatch = style.match(/gap:\s*([0-9.]+rem)/);
+            if (gapMatch) {
+                const originalGap = gapMatch[1];
+                const newGap = `calc(${originalGap} * max(${spacingScale}, 0))`;
+                element.style.gap = newGap;
+            }
+        });
+
+        // Find all elements with inline margin styles
+        const elementsWithMargin = document.querySelectorAll('[style*="margin"]');
+        elementsWithMargin.forEach(element => {
+            const style = element.getAttribute('style');
+            
+            // Update margin-top
+            const marginTopMatch = style.match(/margin-top:\s*([0-9.]+rem)/);
+            if (marginTopMatch) {
+                const originalMargin = marginTopMatch[1];
+                const newMargin = `calc(${originalMargin} * max(${spacingScale}, 0))`;
+                element.style.marginTop = newMargin;
+            }
+            
+            // Update margin-bottom
+            const marginBottomMatch = style.match(/margin-bottom:\s*([0-9.]+rem)/);
+            if (marginBottomMatch) {
+                const originalMargin = marginBottomMatch[1];
+                const newMargin = `calc(${originalMargin} * max(${spacingScale}, 0))`;
+                element.style.marginBottom = newMargin;
+            }
+            
+            // Update margin-left
+            const marginLeftMatch = style.match(/margin-left:\s*([0-9.]+rem)/);
+            if (marginLeftMatch) {
+                const originalMargin = marginLeftMatch[1];
+                const newMargin = `calc(${originalMargin} * max(${spacingScale}, 0))`;
+                element.style.marginLeft = newMargin;
+            }
+            
+            // Update margin-right
+            const marginRightMatch = style.match(/margin-right:\s*([0-9.]+rem)/);
+            if (marginRightMatch) {
+                const originalMargin = marginRightMatch[1];
+                const newMargin = `calc(${originalMargin} * max(${spacingScale}, 0))`;
+                element.style.marginRight = newMargin;
+            }
+            
+            // Update general margin
+            const marginMatch = style.match(/margin:\s*([0-9.]+rem)/);
+            if (marginMatch) {
+                const originalMargin = marginMatch[1];
+                const newMargin = `calc(${originalMargin} * max(${spacingScale}, 0))`;
+                element.style.margin = newMargin;
+            }
+        });
+
+        // Find all elements with inline padding styles
+        const elementsWithPadding = document.querySelectorAll('[style*="padding"]');
+        elementsWithPadding.forEach(element => {
+            const style = element.getAttribute('style');
+            
+            // Update padding-top
+            const paddingTopMatch = style.match(/padding-top:\s*([0-9.]+rem)/);
+            if (paddingTopMatch) {
+                const originalPadding = paddingTopMatch[1];
+                const newPadding = `calc(${originalPadding} * max(${spacingScale}, 0))`;
+                element.style.paddingTop = newPadding;
+            }
+            
+            // Update padding-bottom
+            const paddingBottomMatch = style.match(/padding-bottom:\s*([0-9.]+rem)/);
+            if (paddingBottomMatch) {
+                const originalPadding = paddingBottomMatch[1];
+                const newPadding = `calc(${originalPadding} * max(${spacingScale}, 0))`;
+                element.style.paddingBottom = newPadding;
+            }
+            
+            // Update padding-left
+            const paddingLeftMatch = style.match(/padding-left:\s*([0-9.]+rem)/);
+            if (paddingLeftMatch) {
+                const originalPadding = paddingLeftMatch[1];
+                const newPadding = `calc(${originalPadding} * max(${spacingScale}, 0))`;
+                element.style.paddingLeft = newPadding;
+            }
+            
+            // Update padding-right
+            const paddingRightMatch = style.match(/padding-right:\s*([0-9.]+rem)/);
+            if (paddingRightMatch) {
+                const originalPadding = paddingRightMatch[1];
+                const newPadding = `calc(${originalPadding} * max(${spacingScale}, 0))`;
+                element.style.paddingRight = newPadding;
+            }
+            
+            // Update general padding
+            const paddingMatch = style.match(/padding:\s*([0-9.]+rem)/);
+            if (paddingMatch) {
+                const originalPadding = paddingMatch[1];
+                const newPadding = `calc(${originalPadding} * max(${spacingScale}, 0))`;
+                element.style.padding = newPadding;
+            }
+        });
+
+        // Find all elements with inline styles containing calc() expressions
+        const elementsWithCalc = document.querySelectorAll('[style*="calc("]');
+        elementsWithCalc.forEach(element => {
+            const style = element.getAttribute('style');
+            
+            // Update calc expressions that don't already have spacing-scale
+            const calcMatch = style.match(/calc\(([^)]*)\)/g);
+            if (calcMatch) {
+                calcMatch.forEach(calcExpr => {
+                    if (!calcExpr.includes('--spacing-scale')) {
+                        // This is a calc expression without spacing-scale, update it
+                        const newCalcExpr = calcExpr.replace(/calc\(([^)]*)\)/, `calc($1 * max(var(--spacing-scale, 1.0), 0))`);
+                        element.style.cssText = element.style.cssText.replace(calcExpr, newCalcExpr);
+                    }
+                });
+            }
+        });
     }
 
     /**
@@ -338,27 +479,59 @@ export class SettingsSyncManager {
     }
 
     /**
-     * Synchronize editor.view settings to canvas settings
-     * This ensures that settings saved by toolbar/menu are properly loaded
+     * Synchronize editor.view settings to canvas settings (bidirectional)
+     * This ensures that settings saved by toolbar/menu are properly loaded and vice versa
      */
     syncEditorViewToCanvas() {
         if (!this.levelEditor?.stateManager) return;
 
-        // Sync grid settings
-        const editorGrid = this.levelEditor.stateManager.get('view.grid');
-        const canvasGrid = this.levelEditor.stateManager.get('canvas.showGrid');
-        if (editorGrid !== undefined && canvasGrid === undefined) {
-            this.levelEditor.stateManager.set('canvas.showGrid', editorGrid);
-        }
+        // Grid is handled by canvas.showGrid as single source of truth
+        // No need to sync between view.grid and canvas.showGrid
 
-        // Sync snap settings
+        // Sync snap settings (bidirectional)
         const editorSnap = this.levelEditor.stateManager.get('view.snapToGrid');
         const canvasSnap = this.levelEditor.stateManager.get('canvas.snapToGrid');
+        
         if (editorSnap !== undefined && canvasSnap === undefined) {
             this.levelEditor.stateManager.set('canvas.snapToGrid', editorSnap);
+        } else if (canvasSnap !== undefined && editorSnap === undefined) {
+            this.levelEditor.stateManager.set('view.snapToGrid', canvasSnap);
+        } else if (editorSnap !== undefined && canvasSnap !== undefined && editorSnap !== canvasSnap) {
+            // If both exist but are different, prefer canvas.snapToGrid as it's the primary source
+            this.levelEditor.stateManager.set('view.snapToGrid', canvasSnap);
         }
     }
 
+    /**
+     * Setup bidirectional synchronization between view and canvas states
+     * This ensures that changes in one state are automatically reflected in the other
+     */
+    setupBidirectionalSync() {
+        if (!this.levelEditor?.stateManager) return;
+
+        // Prevent multiple setups
+        if (this.bidirectionalSyncSetup) return;
+        this.bidirectionalSyncSetup = true;
+
+        // Prevent infinite loops by tracking sync operations
+        this.syncing = new Set();
+
+        // Only sync snapToGrid (grid is handled by canvas.showGrid as single source of truth)
+        // Sync view.snapToGrid <-> canvas.snapToGrid (bidirectional)
+        this.levelEditor.stateManager.subscribe('view.snapToGrid', (value) => {
+            if (this.syncing.has('canvas.snapToGrid')) return;
+            this.syncing.add('view.snapToGrid');
+            this.levelEditor.stateManager.set('canvas.snapToGrid', value);
+            this.syncing.delete('view.snapToGrid');
+        });
+
+        this.levelEditor.stateManager.subscribe('canvas.snapToGrid', (value) => {
+            if (this.syncing.has('view.snapToGrid')) return;
+            this.syncing.add('canvas.snapToGrid');
+            this.levelEditor.stateManager.set('view.snapToGrid', value);
+            this.syncing.delete('canvas.snapToGrid');
+        });
+    }
 
     /**
      * Force update all view options to ensure menu and toolbar synchronization
@@ -374,7 +547,15 @@ export class SettingsSyncManager {
         ];
 
         viewOptions.forEach(option => {
-            const value = this.levelEditor.stateManager.get(`view.${option}`);
+            let value;
+            if (option === 'grid') {
+                value = this.levelEditor.stateManager.get('canvas.showGrid');
+            } else if (option === 'snapToGrid') {
+                value = this.levelEditor.stateManager.get('canvas.snapToGrid');
+            } else {
+                value = this.levelEditor.stateManager.get(`view.${option}`);
+            }
+            
             if (value !== undefined) {
                 // Apply the option to ensure all UI elements are synchronized
                 this.levelEditor.eventHandlers.applyViewOption(option, value);
@@ -397,8 +578,8 @@ export class SettingsSyncManager {
 
         // Update all toolbar toggle buttons based on current StateManager values
         const toolbarMappings = {
-            'toggleGrid': 'view.grid',
-            'toggleSnapToGrid': 'view.snapToGrid', 
+            'toggleGrid': 'canvas.showGrid',
+            'toggleSnapToGrid': 'canvas.snapToGrid', 
             'toggleParallax': 'view.parallax',
             'toggleObjectBoundaries': 'view.objectBoundaries',
             'toggleObjectCollisions': 'view.objectCollisions'
@@ -420,8 +601,8 @@ export class SettingsSyncManager {
 
         // Update all menu toggle states based on current StateManager values
         const menuMappings = {
-            'toggle-grid': 'view.grid',
-            'toggle-snap-to-grid': 'view.snapToGrid',
+            'toggle-grid': 'canvas.showGrid',
+            'toggle-snap-to-grid': 'canvas.snapToGrid',
             'toggle-game-mode': 'view.gameMode',
             'toggle-object-boundaries': 'view.objectBoundaries',
             'toggle-object-collisions': 'view.objectCollisions',
@@ -450,15 +631,8 @@ export class SettingsSyncManager {
         Object.entries(this.stateMapping).forEach(([settingPath, stateKey]) => {
             const value = this.levelEditor.stateManager.get(stateKey);
             if (value !== undefined) {
-                // Special handling for autoSaveInterval (convert milliseconds to minutes for storage)
-                if (settingPath === 'editor.autoSaveInterval') {
-                    // Convert back from milliseconds to minutes for storage
-                    const minutes = Math.round(value / 60000);
-                    this.levelEditor.configManager.set(settingPath, minutes);
-                } else {
-                    // Save value as-is
-                    this.levelEditor.configManager.set(settingPath, value);
-                }
+                // Save value as-is
+                this.levelEditor.configManager.set(settingPath, value);
             }
         });
     }

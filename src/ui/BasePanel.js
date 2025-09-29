@@ -119,4 +119,43 @@ export class BasePanel {
 
         container.classList.add('thin-scrollbar');
     }
+
+    /**
+     * Setup global Ctrl+scroll prevention
+     * This prevents Ctrl+scroll from scrolling the page when panels handle it
+     */
+    setupGlobalCtrlScrollPrevention() {
+        // Only setup once globally
+        if (BasePanel.globalCtrlScrollSetup) return;
+        BasePanel.globalCtrlScrollSetup = true;
+
+        document.addEventListener('wheel', (e) => {
+            // Only prevent if Ctrl key is pressed
+            if (!e.ctrlKey) return;
+
+            // Check if the event is from a panel that should handle Ctrl+scroll
+            const target = e.target;
+            const isPanelElement = target.closest('#assets-panel, #right-panel, #console-panel, #settings-overlay');
+            
+            if (isPanelElement) {
+                // Check if it's specifically the asset previews container
+                const isAssetPreviews = target.closest('#asset-previews-container');
+                if (isAssetPreviews) {
+                    // Let the asset panel handle it (don't prevent)
+                    return;
+                }
+                
+                // For other panel elements, prevent Ctrl+scroll
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+
+            // Prevent Ctrl+scroll for all other elements
+            e.preventDefault();
+            e.stopPropagation();
+        }, { passive: false, capture: true });
+
+        Logger.ui.debug('BasePanel: Global Ctrl+scroll prevention setup');
+    }
 }

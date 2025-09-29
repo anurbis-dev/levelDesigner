@@ -15,6 +15,24 @@ export class GridSettings {
      * Render grid settings section
      */
     renderGridSettings() {
+        // Use StateManager as single source of truth instead of ConfigManager
+        const stateManager = window.editor?.stateManager;
+        if (!stateManager) return '<div>Error: StateManager not available</div>';
+        
+        // Get current values from StateManager
+        const gridType = stateManager.get('canvas.gridType') || 'rectangular';
+        const hexOrientation = stateManager.get('canvas.hexOrientation') || 'pointy';
+        const showGrid = stateManager.get('canvas.showGrid') || false;
+        const snapToGrid = stateManager.get('canvas.snapToGrid') || false;
+        const gridSize = stateManager.get('canvas.gridSize') || 32;
+        const gridColor = stateManager.get('canvas.gridColor') || 'rgba(255, 255, 255, 0.1)';
+        const gridThickness = stateManager.get('canvas.gridThickness') || 1;
+        const gridOpacity = stateManager.get('canvas.gridOpacity') || 0.1;
+        const gridSubdivisions = stateManager.get('canvas.gridSubdivisions') || 0;
+        const gridSubdivColor = stateManager.get('canvas.gridSubdivColor') || '#666666';
+        const gridSubdivThickness = stateManager.get('canvas.gridSubdivThickness') || 0.5;
+        const snapTolerance = stateManager.get('canvas.snapTolerance') || 80;
+        
         return `
             <h3>Grid & Snapping Settings</h3>
 
@@ -22,9 +40,9 @@ export class GridSettings {
             <div class="settings-form-group">
                 <label class="settings-label">Grid Type</label>
                 <select class="settings-input" name="setting-input" data-setting="canvas.gridType">
-                    <option value="rectangular" ${(this.configManager.get('canvas.gridType') || 'rectangular') === 'rectangular' ? 'selected' : ''}>Rectangular Grid</option>
-                    <option value="diamond" ${(this.configManager.get('canvas.gridType') || 'rectangular') === 'diamond' ? 'selected' : ''}>Diamond Grid</option>
-                    <option value="hexagonal" ${(this.configManager.get('canvas.gridType') || 'rectangular') === 'hexagonal' ? 'selected' : ''}>Hexagonal Grid</option>
+                    <option value="rectangular" ${gridType === 'rectangular' ? 'selected' : ''}>Rectangular Grid</option>
+                    <option value="diamond" ${gridType === 'diamond' ? 'selected' : ''}>Diamond Grid</option>
+                    <option value="hexagonal" ${gridType === 'hexagonal' ? 'selected' : ''}>Hexagonal Grid</option>
                 </select>
             </div>
 
@@ -32,8 +50,8 @@ export class GridSettings {
             <div id="hexOrientationSection" class="settings-form-group" style="display: none;">
                 <label class="settings-label">Hex Orientation</label>
                 <select class="settings-input" name="setting-input" data-setting="canvas.hexOrientation">
-                    <option value="pointy" ${(this.configManager.get('canvas.hexOrientation') || 'pointy') === 'pointy' ? 'selected' : ''}>Pointy Top</option>
-                    <option value="flat" ${(this.configManager.get('canvas.hexOrientation') || 'pointy') === 'flat' ? 'selected' : ''}>Flat Top</option>
+                    <option value="pointy" ${hexOrientation === 'pointy' ? 'selected' : ''}>Pointy Top</option>
+                    <option value="flat" ${hexOrientation === 'flat' ? 'selected' : ''}>Flat Top</option>
                 </select>
             </div>
 
@@ -44,24 +62,30 @@ export class GridSettings {
                 <div class="settings-form-group">
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Size (px)</label>
-                        <input type="number" min="8" max="512" step="8" class="settings-input" name="setting-input" data-setting="grid.size" value="${this.configManager.get('canvas.gridSize') || 32}" oninput="this.value = Math.min(512, Math.max(8, parseInt(this.value) || 8))"/>
+                        <input type="number" min="8" max="512" step="8" class="settings-input" name="setting-input" data-setting="grid.size" value="${gridSize}" oninput="this.value = Math.min(512, Math.max(8, parseInt(this.value) || 8))"/>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Color</label>
-                        <input type="color" class="settings-input" name="setting-input" data-setting="grid.color" value="#ffffff"/>
+                        <input type="color" class="settings-input" name="setting-input" data-setting="grid.color" value="${ColorUtils.toHex(gridColor)}"/>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Thickness</label>
-                        <input type="number" min="0.1" max="5" step="0.1" class="settings-input" name="setting-input" data-setting="grid.thickness" value="${this.configManager.get('canvas.gridThickness') || 1}"/>
+                        <input type="number" min="0.1" max="5" step="0.1" class="settings-input" name="setting-input" data-setting="grid.thickness" value="${gridThickness}"/>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Snap Tolerance (%)</label>
-                        <input type="number" min="5" max="100" step="5" class="settings-input" name="setting-input" data-setting="canvas.snapTolerance" value="${this.configManager.get('canvas.snapTolerance') || 80}"/>
+                        <input type="number" min="5" max="100" step="5" class="settings-input" name="setting-input" data-setting="canvas.snapTolerance" value="${snapTolerance}"/>
                     </div>
                     <div class="settings-form-item">
                         <label style="display: flex; align-items: center; margin-top: 0.5rem;">
-                            <input type="checkbox" class="settings-input" name="setting-input" data-setting="canvas.snapToGrid" ${this.configManager.get('canvas.snapToGrid') ? 'checked' : ''} style="margin-right: 0.5rem;">
+                            <input type="checkbox" class="settings-input" name="setting-input" data-setting="canvas.snapToGrid" ${snapToGrid ? 'checked' : ''} style="margin-right: 0.5rem;">
                             <span style="color: #d1d5db;">Snap To Grid</span>
+                        </label>
+                    </div>
+                    <div class="settings-form-item">
+                        <label style="display: flex; align-items: center; margin-top: 0.5rem;">
+                            <input type="checkbox" class="settings-input" name="setting-input" data-setting="canvas.showGrid" ${showGrid ? 'checked' : ''} style="margin-right: 0.5rem;">
+                            <span style="color: #d1d5db;">Show Grid</span>
                         </label>
                     </div>
                 </div>
@@ -70,19 +94,19 @@ export class GridSettings {
                 <div class="settings-form-group">
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Opacity</label>
-                        <input type="range" min="0" max="1" step="0.05" class="settings-input" name="setting-input" data-setting="grid.opacity" value="${this.configManager.get('canvas.gridOpacity') || 0.1}"/>
+                        <input type="range" min="0" max="1" step="0.05" class="settings-input" name="setting-input" data-setting="grid.opacity" value="${gridOpacity}"/>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Subdivisions</label>
-                        <input type="number" min="0" max="10" step="1" class="settings-input" name="setting-input" data-setting="grid.subdivisions" value="${this.configManager.get('canvas.gridSubdivisions') || 0}" oninput="this.value = Math.min(10, Math.max(0, parseInt(this.value) || 0))"/>
+                        <input type="number" min="0" max="10" step="1" class="settings-input" name="setting-input" data-setting="grid.subdivisions" value="${gridSubdivisions}" oninput="this.value = Math.min(10, Math.max(0, parseInt(this.value) || 0))"/>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Subdiv. Color</label>
-                        <input type="color" class="settings-input" name="setting-input" data-setting="grid.subdivColor" value="#666666"/>
+                        <input type="color" class="settings-input" name="setting-input" data-setting="grid.subdivColor" value="${ColorUtils.toHex(gridSubdivColor)}"/>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Subdiv. Thickness</label>
-                        <input type="number" min="0.1" max="3" step="0.1" class="settings-input" name="setting-input" data-setting="grid.subdivThickness" value="${this.configManager.get('canvas.gridSubdivThickness') || 0.5}"/>
+                        <input type="number" min="0.1" max="3" step="0.1" class="settings-input" name="setting-input" data-setting="grid.subdivThickness" value="${gridSubdivThickness}"/>
                     </div>
                 </div>
             </div>
@@ -200,5 +224,8 @@ export class GridSettings {
             // Initial call to set correct visibility
             this.handleGridTypeChange();
         }
+
+        // Show Grid checkbox is already handled by SettingsSyncManager
+        // No additional synchronization needed
     }
 }

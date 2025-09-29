@@ -17,7 +17,7 @@ export class SearchUtils {
         searchInput.type = 'text';
         searchInput.placeholder = placeholder;
         searchInput.id = id;
-        searchInput.className = className || 'search-input w-full px-2 py-1 text-sm border border-gray-300 rounded bg-gray-700 text-white focus:border-blue-500 focus:outline-none';
+        searchInput.className = className || 'search-input w-full px-1 py-1 text-sm border border-gray-300 rounded bg-gray-700 text-white focus:border-blue-500 focus:outline-none';
         
         return searchInput;
     }

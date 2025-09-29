@@ -15,7 +15,14 @@
     display: none;
     border-bottom: 1px solid #374151;
     flex-shrink: 0;
-    padding: 1rem;
+    padding: 0.25rem;
+}
+
+/* Base search container class */
+.search-container {
+    padding: 0.25rem;
+    border-bottom: 1px solid #374151;
+    flex-shrink: 0;
 }
 
 /* Right panel tabs */

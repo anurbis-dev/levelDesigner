@@ -52,7 +52,7 @@ export class MenuManager {
             // If menu-container doesn't exist, create it
             const newMenuContainer = document.createElement('div');
             newMenuContainer.id = 'menu-container';
-            newMenuContainer.className = 'flex items-center space-x-4';
+            newMenuContainer.className = 'flex items-center';
             nav.insertBefore(newMenuContainer, versionInfo);
         }
 

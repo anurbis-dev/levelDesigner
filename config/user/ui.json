@@ -1,5 +1,6 @@
 {
   "fontScale": 1.2,
+  "spacing": 1.0,
   "theme": "dark",
   "rightPanelWidth": 320,
   "consoleHeight": 300,
@@ -7,6 +8,5 @@
   "consoleVisible": false,
   "consoleMaxLines": 1000,
   "panelWidth": 300,
-  "showTooltips": true,
-  "compactMode": true
+  "showTooltips": true
 }

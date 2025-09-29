@@ -1,6 +1,6 @@
 {
-  "autoSave": true,
-  "autoSaveInterval": 300000,
+  "autoSave": false,
+  "autoSaveInterval": 5,
   "undoHistoryLimit": 50,
   "showFPS": false,
   "showObjectCount": true,

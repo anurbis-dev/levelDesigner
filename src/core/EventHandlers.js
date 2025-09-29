@@ -248,10 +248,9 @@ export class EventHandlers extends BaseModule {
     initializeViewStates() {
         
         // Initialize grid state from user config or level settings
-        const gridConfig = this.editor.configManager.get('editor.view.grid');
+        const gridConfig = this.editor.configManager.get('canvas.showGrid');
         const gridLevel = this.editor.level?.settings?.showGrid;
         const gridEnabled = gridConfig ?? gridLevel ?? true;
-        this.editor.stateManager.set('view.grid', gridEnabled);
         this.editor.stateManager.set('canvas.showGrid', gridEnabled);
         this.updateViewCheckbox('grid', gridEnabled);
 
@@ -349,22 +348,33 @@ export class EventHandlers extends BaseModule {
     }
 
     toggleViewOption(option) {
-        // Get current state from editor's state manager
-        const currentState = this.editor.stateManager.get(`view.${option}`) || false;
-        const newState = !currentState;
+        let currentState, newState, stateKey, configKey;
         
+        if (option === 'grid') {
+            // Grid uses canvas.showGrid as single source of truth
+            currentState = this.editor.stateManager.get('canvas.showGrid') || false;
+            newState = !currentState;
+            stateKey = 'canvas.showGrid';
+            configKey = 'canvas.showGrid';
+        } else if (option === 'snapToGrid') {
+            // Snap to grid uses canvas.snapToGrid as primary storage
+            currentState = this.editor.stateManager.get('canvas.snapToGrid') || false;
+            newState = !currentState;
+            stateKey = 'canvas.snapToGrid';
+            configKey = 'canvas.snapToGrid';
+        } else {
+            // Other view options use view.* path
+            currentState = this.editor.stateManager.get(`view.${option}`) || false;
+            newState = !currentState;
+            stateKey = `view.${option}`;
+            configKey = `editor.view.${option}`;
+        }
         
         // Update state
-        this.editor.stateManager.set(`view.${option}`, newState);
+        this.editor.stateManager.set(stateKey, newState);
         
         // Save to user configuration
-        if (option === 'snapToGrid') {
-            // Snap to grid uses canvas.snapToGrid as primary storage
-            this.editor.configManager.set('canvas.snapToGrid', newState);
-        } else {
-            // Other view options use editor.view.* path
-            this.editor.configManager.set(`editor.view.${option}`, newState);
-        }
+        this.editor.configManager.set(configKey, newState);
         
         // Update UI checkbox
         this.updateViewCheckbox(option, newState);
@@ -416,8 +426,7 @@ export class EventHandlers extends BaseModule {
     applyViewOption(option, enabled) {
         switch (option) {
             case 'grid':
-                // Update both view state and canvas state for grid
-                this.editor.stateManager.set('view.grid', enabled);
+                // Update canvas state for grid (single source of truth)
                 this.editor.stateManager.set('canvas.showGrid', enabled);
                 this.editor.render();
                 break;

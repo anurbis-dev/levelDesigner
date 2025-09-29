@@ -1,5 +1,17 @@
 # Changelog
 
+## [3.27.1] - 2025-01-29
+
+### Fixed
+- **Settings Initialization** - исправлена проблема с отображением autoSaveInterval при загрузке окна настроек (показывало 300000 вместо 5 минут)
+- **State Synchronization** - добавлен вызов syncFromConfigToState() в конструктор SettingsPanel для корректной инициализации
+- **Configuration Flow** - исправлен поток инициализации, теперь StateManager правильно синхронизируется с ConfigManager при запуске
+
+### Technical
+- **SettingsPanel.js** - добавлен вызов syncFromConfigToState() в конструктор для правильной инициализации
+- **State Management** - обеспечена корректная синхронизация StateManager с ConfigManager при создании SettingsPanel
+- **Configuration Consistency** - устранено расхождение между загрузкой окна (300000) и сбросом (5) значений
+
 ## [3.27.0] - 2025-01-29
 
 ### Fixed

@@ -85,7 +85,7 @@ export const MENU_CONFIG = {
                     id: 'toggle-grid',
                     label: 'Grid (G)',
                     type: 'toggle',
-                    stateKey: 'view.grid',
+                    stateKey: 'canvas.showGrid',
                     action: 'toggleViewOption',
                     actionParam: 'grid'
                 },
@@ -101,7 +101,7 @@ export const MENU_CONFIG = {
                     id: 'toggle-snap-to-grid',
                     label: 'Snap To Grid',
                     type: 'toggle',
-                    stateKey: 'view.snapToGrid',
+                    stateKey: 'canvas.snapToGrid',
                     action: 'toggleViewOption',
                     actionParam: 'snapToGrid'
                 },

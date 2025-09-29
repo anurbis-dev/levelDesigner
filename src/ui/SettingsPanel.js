@@ -3,6 +3,8 @@ import { GridSettings } from './GridSettings.js';
 import { RenderUtils } from '../utils/RenderUtils.js';
 import { SettingsSyncManager } from '../utils/SettingsSyncManager.js';
 import { ColorUtils } from '../utils/ColorUtils.js';
+import { BaseContextMenu } from './BaseContextMenu.js';
+import { Logger } from '../utils/Logger.js';
 
 /**
  * Settings Panel UI Component
@@ -21,6 +23,14 @@ export class SettingsPanel {
         
         // Initialize settings sync manager
         this.syncManager = new SettingsSyncManager(levelEditor);
+
+        // Initialize context menu
+        this.contextMenu = null;
+
+        // Sync settings from ConfigManager to StateManager on initialization
+        if (this.syncManager) {
+            this.syncManager.syncFromConfigToState();
+        }
 
         this.init();
     }
@@ -49,10 +59,12 @@ export class SettingsPanel {
         `;
         
         overlay.innerHTML = `
-            <div class="settings-panel-container">
-                <div class="settings-header">
+            <div class="settings-panel-container" id="settings-panel-container">
+                <div class="settings-header" id="settings-header">
                     <h2>Settings</h2>
-                    <button id="close-settings" class="settings-close-btn">✕</button>
+                    <div class="settings-header-controls">
+                        <button id="settings-menu-btn" class="settings-menu-btn">⋮</button>
+                    </div>
                 </div>
                 
                 <div class="settings-content-area">
@@ -76,17 +88,15 @@ export class SettingsPanel {
                 </div>
                 
                 <div class="settings-footer">
-                    <div class="settings-footer-left">
-                        <button id="reset-settings" class="settings-btn settings-btn-reset">Reset to Defaults</button>
-                        <button id="export-settings" class="settings-btn settings-btn-export">Export Settings</button>
-                        <button id="import-settings" class="settings-btn settings-btn-import">Import Settings</button>
-                        <input type="file" id="import-file" name="import-file" accept=".json" class="settings-input">
-                    </div>
                     <div class="settings-footer-right">
                         <button id="cancel-settings" class="settings-btn settings-btn-cancel">Cancel</button>
-                        <button id="save-settings" class="settings-btn settings-btn-save">Save Changes</button>
+                        <button id="save-settings" class="settings-btn settings-btn-save">Apply Changes</button>
                     </div>
                 </div>
+                
+                <!-- Hidden file input for import -->
+                <input type="file" id="import-file" name="import-file" accept=".json" class="settings-input" style="display: none;">
+                
             </div>
         `;
         
@@ -99,12 +109,14 @@ export class SettingsPanel {
         if (overlay) {
             overlay.addEventListener('click', (e) => {
                 // Handle close button and overlay click
-                if (e.target.id === 'close-settings' || e.target.id === 'cancel-settings') {
+                if (e.target.id === 'cancel-settings') {
                     this.cancelSettings();
                     return;
                 }
-                if (e.target.id === 'settings-overlay') {
-                    this.cancelSettings();
+
+                // Handle settings menu button
+                if (e.target.id === 'settings-menu-btn') {
+                    this.showContextMenu(e);
                     return;
                 }
 
@@ -122,6 +134,11 @@ export class SettingsPanel {
                     
                     // Render content
                     this.renderSettingsContent(tabName);
+                    
+                    // Initialize grid settings event listeners if grid tab is active
+                    if (tabName === 'grid' && this.gridSettings) {
+                        this.gridSettings.initializeEventListeners();
+                    }
                 }
 
                 // Handle other settings actions
@@ -154,6 +171,15 @@ export class SettingsPanel {
         const overlay = document.getElementById('settings-overlay');
         if (overlay) {
             overlay.style.display = 'flex';
+            
+            // Load window position and size
+            this.loadWindowState();
+            
+            // Setup window handlers and context menu after a short delay to ensure DOM is ready
+            setTimeout(() => {
+                this.setupWindowHandlers();
+                this.setupContextMenu();
+            }, 100);
             
             // Load last active tab from localStorage
             const savedTab = localStorage.getItem('levelEditor_lastActiveSettingsTab');
@@ -195,6 +221,9 @@ export class SettingsPanel {
 
     hide() {
         this.isVisible = false;
+
+        // Save window state before hiding
+        this.saveWindowState();
 
         // Remove escape key handler
         this.removeEscapeKeyHandler();
@@ -258,23 +287,38 @@ export class SettingsPanel {
     }
 
     renderGeneralSettings() {
-        const settings = this.configManager.getAll();
+        // Use StateManager as single source of truth instead of ConfigManager
+        const stateManager = this.levelEditor?.stateManager;
+        if (!stateManager) return '<div>Error: StateManager not available</div>';
+        
+        // Get current values from StateManager
+        const settings = {
+            ui: {
+                showTooltips: stateManager.get('ui.showTooltips'),
+                fontScale: stateManager.get('ui.fontScale'),
+                spacing: stateManager.get('ui.spacing')
+            },
+            editor: {
+                autoSave: stateManager.get('editor.autoSave'),
+                autoSaveInterval: stateManager.get('editor.autoSaveInterval'),
+                undoHistoryLimit: stateManager.get('editor.undoHistoryLimit'),
+                axisConstraint: {
+                    showAxis: stateManager.get('editor.axisConstraint.showAxis'),
+                    axisColor: stateManager.get('editor.axisConstraint.axisColor'),
+                    axisWidth: stateManager.get('editor.axisConstraint.axisWidth')
+                }
+            }
+        };
         
         return `
             <h3>General Settings</h3>
             
-            <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div class="settings-container" style="display: flex; flex-direction: column; gap: 1rem; width: 100%;">
                 <!-- UI Settings -->
                 <div style="border: 1px solid #374151; border-radius: 0.5rem; padding: 1rem;">
                     <h4 style="font-size: 1rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.75rem;">UI Settings</h4>
                     
                     <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                        <div>
-                            <label style="display: flex; align-items: center;">
-                                <input type="checkbox" class="setting-input" name="setting-input" data-setting="ui.compactMode" ${settings.ui?.compactMode ? 'checked' : ''} style="margin-right: 0.5rem;">
-                                <span style="color: #d1d5db;">Compact Mode</span>
-                            </label>
-                        </div>
                         
                         <div>
                             <label style="display: flex; align-items: center;">
@@ -283,13 +327,26 @@ export class SettingsPanel {
                             </label>
                         </div>
                         
-                        <div>
-                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Font Scale</label>
-                            <input type="range" min="0.5" max="2" step="0.1" class="setting-input" name="setting-input" data-setting="ui.fontScale" 
-                                   value="${settings.ui?.fontScale || 1.0}"
-                                   style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
-                            <div style="text-align: center; color: #9ca3af; font-size: 0.75rem; margin-top: 0.25rem;">
-                                ${(settings.ui?.fontScale || 1.0).toFixed(1)}x
+                        <!-- Sliders in columns -->
+                        <div class="settings-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; width: 100%;">
+                            <div>
+                                <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Font Scale</label>
+                                <input type="range" min="0.5" max="2" step="0.1" class="setting-input" name="setting-input" data-setting="ui.fontScale" 
+                                       value="${settings.ui?.fontScale || 1.0}"
+                                       style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                                <div style="text-align: center; color: #9ca3af; font-size: 0.75rem; margin-top: 0.25rem;">
+                                    ${(settings.ui?.fontScale || 1.0).toFixed(1)}x
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Spacing</label>
+                                <input type="range" min="0" max="2" step="0.1" class="setting-input" name="setting-input" data-setting="ui.spacing" 
+                                       value="${settings.ui?.spacing || 1.0}"
+                                       style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                                <div style="text-align: center; color: #9ca3af; font-size: 0.75rem; margin-top: 0.25rem;">
+                                    ${(settings.ui?.spacing || 1.0).toFixed(1)}x
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -310,7 +367,7 @@ export class SettingsPanel {
                         <div>
                             <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Auto Save Interval (minutes)</label>
                             <input type="number" min="1" max="60" step="1" class="setting-input" name="setting-input" data-setting="editor.autoSaveInterval" 
-                                   value="${(settings.editor?.autoSaveInterval || 300000) / 60000}"
+                                   value="${settings.editor?.autoSaveInterval || 5}"
                                    style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white;">
                         </div>
                         
@@ -327,27 +384,29 @@ export class SettingsPanel {
                 <div style="border: 1px solid #374151; border-radius: 0.5rem; padding: 1rem;">
                     <h4 style="font-size: 1rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.75rem;">Axis Constraint</h4>
                     
-                    <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                        <div class="axis-color-container" style="display: flex; gap: 0.5rem; align-items: center;">
-                            <div style="flex: 1;">
-                                <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Axis Color</label>
-                                <input type="color" class="setting-input" name="setting-input" data-setting="editor.axisConstraint.axisColor" 
-                                       value="${settings.editor?.axisConstraint?.axisColor || '#ff0000'}"
-                                       style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white;">
-                            </div>
-                            <div style="flex: 1;">
-                                <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Axis Color</label>
-                                <input type="color" class="setting-input" name="setting-input" data-setting="editor.axisConstraint.axisColor" 
-                                       value="${settings.editor?.axisConstraint?.axisColor || '#ff0000'}"
-                                       style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white;">
-                            </div>
+                    <div class="settings-flex" style="display: flex; gap: 1rem; align-items: center; width: 100%;">
+                        <!-- Show Axis Checkbox -->
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="checkbox" class="setting-input" name="setting-input" data-setting="editor.axisConstraint.showAxis" 
+                                   ${settings.editor?.axisConstraint?.showAxis ? 'checked' : ''}
+                                   style="width: 1rem; height: 1rem;">
+                            <label style="font-size: 0.875rem; color: #d1d5db;">Show Axis</label>
                         </div>
                         
-                        <div>
-                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Axis Width (px)</label>
+                        <!-- Axis Color -->
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <label style="font-size: 0.875rem; color: #d1d5db;">Color:</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="editor.axisConstraint.axisColor" 
+                                   value="${settings.editor?.axisConstraint?.axisColor || '#cccccc'}"
+                                   style="width: 2rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        </div>
+                        
+                        <!-- Axis Width -->
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <label style="font-size: 0.875rem; color: #d1d5db;">Width:</label>
                             <input type="number" step="1" min="1" max="10" class="setting-input" name="setting-input" data-setting="editor.axisConstraint.axisWidth" 
                                    value="${settings.editor?.axisConstraint?.axisWidth || 1}"
-                                   style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white;">
+                                   style="width: 4rem; padding: 0.25rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white; text-align: center;">
                         </div>
                     </div>
                 </div>
@@ -356,13 +415,6 @@ export class SettingsPanel {
                     <h4 style="font-size: 1rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.75rem;">View Settings</h4>
                     
                     <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                        <div>
-                            <label style="display: flex; align-items: center;">
-                                <input type="checkbox" class="setting-input" name="setting-input" data-setting="editor.view.grid" ${settings.editor.view?.grid ? 'checked' : ''} style="margin-right: 0.5rem;">
-                                <span style="color: #d1d5db;">Show Grid</span>
-                            </label>
-                        </div>
-                        
                         <div>
                             <label style="display: flex; align-items: center;">
                                 <input type="checkbox" class="setting-input" name="setting-input" data-setting="editor.view.gameMode" ${settings.editor.view?.gameMode ? 'checked' : ''} style="margin-right: 0.5rem;">
@@ -483,6 +535,19 @@ export class SettingsPanel {
         return parts.join(' + ');
     }
 
+    /**
+     * Update slider display value in real-time
+     */
+    updateSliderDisplay(slider, value) {
+        const container = slider.closest('div');
+        if (!container) return;
+
+        const displayElement = container.querySelector('div[style*="text-align: center"]');
+        if (displayElement) {
+            displayElement.textContent = `${parseFloat(value).toFixed(1)}x`;
+        }
+    }
+
     setupSettingsInputs() {
         document.querySelectorAll('.setting-input').forEach(input => {
             input.addEventListener('input', (e) => {
@@ -496,6 +561,11 @@ export class SettingsPanel {
                     value = input.value;
                 }
 
+                // Update real-time display values for sliders
+                if (input.type === 'range') {
+                    this.updateSliderDisplay(input, value);
+                }
+
                 // Synchronize with StateManager for real-time updates
                 this.syncManager.syncSettingToState(path, value);
 
@@ -504,18 +574,6 @@ export class SettingsPanel {
                     this.applyCompactMode(value);
                 }
 
-                // Synchronize color inputs for axis constraint
-                if (path === 'editor.axisConstraint.axisColor') {
-                    const container = e.target.closest('.axis-color-container');
-                    if (container) {
-                        const colorInputs = container.querySelectorAll('input[data-setting="editor.axisConstraint.axisColor"]');
-                        colorInputs.forEach(input => {
-                            if (input !== e.target) {
-                                input.value = value;
-                            }
-                        });
-                    }
-                }
             });
         });
 
@@ -540,11 +598,6 @@ export class SettingsPanel {
         });
 
         // Sync grid visibility
-        this.levelEditor.stateManager.subscribe('view.grid', (value) => {
-            if (this.isVisible) {
-                this.updateUIInput('canvas.showGrid', value);
-            }
-        });
         this.levelEditor.stateManager.subscribe('canvas.showGrid', (value) => {
             if (this.isVisible) {
                 this.updateUIInput('canvas.showGrid', value);
@@ -814,28 +867,256 @@ export class SettingsPanel {
             this.configManager.set('canvas.gridSubdivColor', hexSubdivColor);
         }
     }
+
+    /**
+     * Setup context menu for settings
+     */
+    setupContextMenu() {
+        const container = document.getElementById('settings-panel-container');
+        if (!container) return;
+
+        this.contextMenu = new BaseContextMenu(container, {
+            onMenuShow: () => {},
+            onMenuHide: () => {}
+        });
+
+        // Add menu items
+        this.contextMenu.addMenuItem('Reset to Defaults', '🔄', () => this.resetToDefaults());
+        this.contextMenu.addMenuItem('Export Settings', '📤', () => this.exportSettings());
+        this.contextMenu.addMenuItem('Import Settings', '📥', () => this.importSettings());
+    }
+
+    /**
+     * Show context menu
+     */
+    showContextMenu(event) {
+        if (this.contextMenu) {
+            this.contextMenu.showContextMenu(event, {});
+        }
+    }
+
+    /**
+     * Reset settings to defaults
+     */
+    resetToDefaults() {
+        if (confirm('Are you sure you want to reset all settings to defaults? This action cannot be undone.')) {
+            // Reset to defaults
+            this.configManager.reset();
+            
+            // Sync settings from ConfigManager to StateManager FIRST
+            this.syncManager.syncFromConfigToState();
+            
+            // Refresh all tabs to show default values (now from StateManager)
+            this.renderSettingsContent(this.lastActiveTab);
+            
+            // Re-setup inputs to reflect new values
+            this.setupSettingsInputs();
+            
+            // Force render update to apply grid and other visual changes
+            if (window.editor && window.editor.render) {
+                window.editor.render();
+            }
+            
+            Logger.ui.info('Settings reset to defaults and applied to state system');
+        }
+    }
+
+    /**
+     * Export settings
+     */
+    exportSettings() {
+        const settings = this.configManager.getAll();
+        const dataStr = JSON.stringify(settings, null, 2);
+        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(dataBlob);
+        link.download = 'level-editor-settings.json';
+        link.click();
+        
+        Logger.ui.info('Settings exported');
+    }
+
+    /**
+     * Import settings
+     */
+    importSettings() {
+        const fileInput = document.getElementById('import-file');
+        if (fileInput) {
+            fileInput.click();
+        }
+    }
+
+    /**
+     * Load window state (position and size)
+     */
+    loadWindowState() {
+        const container = document.getElementById('settings-panel-container');
+        if (!container) return;
+
+        // Get saved state or use defaults
+        const savedState = this.configManager.get('ui.settingsWindow') || {};
+        const defaultState = this.getDefaultWindowState();
+        
+        const state = {
+            x: savedState.x ?? defaultState.x,
+            y: savedState.y ?? defaultState.y,
+            width: savedState.width ?? defaultState.width,
+            height: savedState.height ?? defaultState.height
+        };
+
+        // Apply state
+        container.style.position = 'absolute';
+        container.style.left = `${state.x}px`;
+        container.style.top = `${state.y}px`;
+        container.style.width = `${state.width}px`;
+        container.style.height = `${state.height}px`;
+        container.style.transform = 'none';
+    }
+
+    /**
+     * Get default window state based on browser size
+     */
+    getDefaultWindowState() {
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+        
+        const defaultWidth = Math.min(800, windowWidth * 0.8);
+        const defaultHeight = Math.min(600, windowHeight * 0.8);
+        
+        return {
+            x: (windowWidth - defaultWidth) / 2,
+            y: (windowHeight - defaultHeight) / 2,
+            width: defaultWidth,
+            height: defaultHeight
+        };
+    }
+
+    /**
+     * Save window state
+     */
+    saveWindowState() {
+        const container = document.getElementById('settings-panel-container');
+        if (!container) return;
+
+        const rect = container.getBoundingClientRect();
+        const state = {
+            x: rect.left,
+            y: rect.top,
+            width: rect.width,
+            height: rect.height
+        };
+
+        this.configManager.set('ui.settingsWindow', state);
+    }
+
+    /**
+     * Setup window resize and drag handlers
+     */
+    setupWindowHandlers() {
+        const container = document.getElementById('settings-panel-container');
+        const header = document.getElementById('settings-header');
+        
+        if (!container || !header) return;
+
+        // Make window draggable
+        let isDragging = false;
+        let dragStart = { x: 0, y: 0 };
+
+        header.addEventListener('mousedown', (e) => {
+            if (e.target.closest('.settings-context-menu')) return;
+            
+            isDragging = true;
+            dragStart.x = e.clientX - container.offsetLeft;
+            dragStart.y = e.clientY - container.offsetTop;
+            container.style.cursor = 'grabbing';
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            
+            const newX = e.clientX - dragStart.x;
+            const newY = e.clientY - dragStart.y;
+            
+            // Keep window within viewport
+            const maxX = window.innerWidth - container.offsetWidth;
+            const maxY = window.innerHeight - container.offsetHeight;
+            
+            container.style.left = `${Math.max(0, Math.min(newX, maxX))}px`;
+            container.style.top = `${Math.max(0, Math.min(newY, maxY))}px`;
+            
+            // Auto-save position during drag
+            this.saveWindowState();
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                container.style.cursor = '';
+                this.saveWindowState();
+            }
+        });
+
+        // Handle window resize
+        let isResizing = false;
+        let resizeStart = { x: 0, y: 0, width: 0, height: 0 };
+
+        const handleResize = (e) => {
+            if (!isResizing) return;
+            
+            const newWidth = resizeStart.width + (e.clientX - resizeStart.x);
+            const newHeight = resizeStart.height + (e.clientY - resizeStart.y);
+            
+            const minWidth = 400;
+            const minHeight = 300;
+            
+            container.style.width = `${Math.max(minWidth, newWidth)}px`;
+            container.style.height = `${Math.max(minHeight, newHeight)}px`;
+            
+            // Auto-save size during resize
+            this.saveWindowState();
+        };
+
+        const stopResize = () => {
+            isResizing = false;
+            document.removeEventListener('mousemove', handleResize);
+            document.removeEventListener('mouseup', stopResize);
+            this.saveWindowState();
+        };
+
+        // Add resize handle
+        const resizeHandle = document.createElement('div');
+        resizeHandle.style.cssText = `
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 20px;
+            height: 20px;
+            cursor: se-resize;
+            background: linear-gradient(-45deg, transparent 30%, #374151 30%, #374151 50%, transparent 50%);
+        `;
+        
+        resizeHandle.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            resizeStart.x = e.clientX;
+            resizeStart.y = e.clientY;
+            resizeStart.width = container.offsetWidth;
+            resizeStart.height = container.offsetHeight;
+            
+            document.addEventListener('mousemove', handleResize);
+            document.addEventListener('mouseup', stopResize);
+            e.preventDefault();
+        });
+        
+        container.appendChild(resizeHandle);
+    }
     
     cancelSettings() {
-        // Reload settings from ConfigManager to discard unsaved changes
-        this.configManager.loadAllConfigsSync();
+        // Don't reload from files - just close the window
+        // The current settings in StateManager are already the last user settings
+        // No need to reset anything
         
-        // Sync current saved settings to StateManager (not the unsaved changes)
-        this.gridSettings.syncAllGridSettingsToState();
-        
-        // Sync snap settings from ConfigManager to StateManager
-        if (window.editor?.stateManager) {
-            const snapToGrid = this.configManager.get('canvas.snapToGrid');
-            const viewSnapToGrid = this.configManager.get('editor.view.snapToGrid');
-            
-            if (snapToGrid !== undefined) {
-                window.editor.stateManager.set('canvas.snapToGrid', snapToGrid);
-                window.editor.stateManager.set('view.snapToGrid', snapToGrid);
-            } else if (viewSnapToGrid !== undefined) {
-                window.editor.stateManager.set('view.snapToGrid', viewSnapToGrid);
-                window.editor.stateManager.set('canvas.snapToGrid', viewSnapToGrid);
-            }
-        }
-
         this.hide();
     }
 }

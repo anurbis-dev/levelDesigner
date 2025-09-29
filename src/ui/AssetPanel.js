@@ -22,7 +22,7 @@ export class AssetPanel extends BasePanel {
         this.minAssetSize = 48; // w-12 = 48px
         this.maxAssetSize = 192; // w-48 = 192px
         this.sizeStep = 8; // Step size for zoom
-        this.gapSize = 8; // Fixed gap size in pixels
+        this.gapSize = 8; // Base gap size in pixels, will be scaled by spacing
         
         // View mode management
         this.viewMode = 'grid'; // 'grid', 'list', 'details'
@@ -47,6 +47,9 @@ export class AssetPanel extends BasePanel {
             sensitivity: 1.0,
             target: this.previewsContainer
         });
+
+        // Setup global Ctrl+scroll prevention
+        this.setupGlobalCtrlScrollPrevention();
 
         // Load asset size from user preferences
         this.assetSize = this.loadAssetSize();
@@ -128,6 +131,14 @@ export class AssetPanel extends BasePanel {
         // Asset size zoom with Ctrl+scroll
         this.previewsContainer.addEventListener('wheel', (e) => this.handleAssetWheel(e));
         
+        // Prevent content scroll when Ctrl+scroll is used for resizing
+        this.container.addEventListener('wheel', (e) => {
+            if (e.ctrlKey) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        });
+        
         // Window resize handler for grid recalculation
         this.resizeHandler = () => {
             this.render();
@@ -204,15 +215,17 @@ export class AssetPanel extends BasePanel {
     renderGridView(assets, selectedAssets) {
         // Restore padding for grid view
         this.previewsContainer.classList.remove('p-0');
-        this.previewsContainer.classList.add('p-4');
+        // No padding for main interface elements
         
         const grid = document.createElement('div');
         grid.style.display = 'grid';
-        grid.style.gap = `${this.gapSize}px`;
+        grid.style.gap = `calc(${this.gapSize}px * max(var(--spacing-scale, 1.0), 0))`;
         
         // Calculate dynamic grid columns based on asset size and container width
         const containerWidth = this.previewsContainer.clientWidth;
-        const columns = Math.max(1, Math.floor((containerWidth + this.gapSize) / (this.assetSize + this.gapSize)));
+        const spacingScale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--spacing-scale')) || 1.0;
+        const scaledGapSize = this.gapSize * spacingScale;
+        const columns = Math.max(1, Math.floor((containerWidth + scaledGapSize) / (this.assetSize + scaledGapSize)));
         
         // Use fixed column width instead of 1fr to prevent jumping
         const columnWidth = this.assetSize;
@@ -234,12 +247,12 @@ export class AssetPanel extends BasePanel {
     renderListView(assets, selectedAssets) {
         // Restore padding for list view
         this.previewsContainer.classList.remove('p-0');
-        this.previewsContainer.classList.add('p-4');
+        // No padding for main interface elements
         
         const list = document.createElement('div');
         list.style.display = 'flex';
         list.style.flexWrap = 'wrap';
-        list.style.gap = `${this.gapSize}px`;
+        list.style.gap = `calc(${this.gapSize}px * max(var(--spacing-scale, 1.0), 0))`;
         
         assets.forEach(asset => {
             const item = this.createAssetListItem(asset, selectedAssets);
@@ -256,7 +269,7 @@ export class AssetPanel extends BasePanel {
      */
     renderDetailsView(assets, selectedAssets) {
         // Remove padding from previews container for details view
-        this.previewsContainer.classList.remove('p-4');
+        // No padding for main interface elements
         this.previewsContainer.classList.add('p-0');
 
         // Create sticky header positioned at the assets panel level
@@ -278,7 +291,7 @@ export class AssetPanel extends BasePanel {
         const content = document.createElement('div');
         content.className = 'space-y-1 px-2 pt-2 overflow-auto'; // Remove bottom padding
         content.style.minWidth = '600px'; // Match header width
-        content.style.paddingTop = '48px'; // Leave space for sticky header (40px + 8px margin)
+        content.style.paddingTop = 'calc(48px * max(var(--spacing-scale, 1.0), 0))'; // Leave space for sticky header (40px + 8px margin)
 
         // Create rows
         assets.forEach(asset => {
@@ -490,6 +503,9 @@ export class AssetPanel extends BasePanel {
         // Save to config for persistence
         this.levelEditor.configManager.set('editor.view.activeAssetTabs', Array.from(activeTabs));
         this.stateManager.set('selectedAssets', new Set());
+        
+        // Auto-resize panel height after tab change
+        setTimeout(() => this.autoResizePanelHeight(), 100);
     }
 
     handleThumbnailClick(e, asset) {
@@ -959,6 +975,8 @@ export class AssetPanel extends BasePanel {
         this.viewMode = 'grid';
         this.saveViewMode();
         this.render();
+        // Auto-resize panel height after view mode change
+        setTimeout(() => this.autoResizePanelHeight(), 100);
     }
 
     /**
@@ -969,6 +987,8 @@ export class AssetPanel extends BasePanel {
         this.viewMode = 'list';
         this.saveViewMode();
         this.render();
+        // Auto-resize panel height after view mode change
+        setTimeout(() => this.autoResizePanelHeight(), 100);
     }
 
     /**
@@ -979,6 +999,8 @@ export class AssetPanel extends BasePanel {
         this.viewMode = 'details';
         this.saveViewMode();
         this.render();
+        // Auto-resize panel height after view mode change
+        setTimeout(() => this.autoResizePanelHeight(), 100);
     }
 
     /**
@@ -1048,5 +1070,65 @@ export class AssetPanel extends BasePanel {
         if (this.panelContextMenu) {
             this.panelContextMenu.destroy();
         }
+    }
+
+    /**
+     * Auto-resize panel height based on content
+     */
+    autoResizePanelHeight() {
+        const assetsPanel = document.getElementById('assets-panel');
+        if (!assetsPanel) return;
+
+        const activeTab = this.getActiveTab();
+        if (!activeTab) return;
+
+        const assets = this.assetManager.getAssetsByCategory(activeTab);
+        if (!assets || assets.length === 0) {
+            // If no assets, use default height
+            assetsPanel.style.height = '256px';
+            return;
+        }
+
+        // Calculate height based on view mode and number of assets
+        let calculatedHeight;
+        
+        if (this.viewMode === 'grid') {
+            // Grid mode: calculate rows needed
+            const containerWidth = this.previewsContainer.offsetWidth;
+            const thumbSize = this.assetSize + 8; // size + gap
+            const colsPerRow = Math.floor(containerWidth / thumbSize);
+            const rows = Math.ceil(assets.length / colsPerRow);
+            calculatedHeight = Math.max(256, rows * thumbSize + 100); // 100px for tabs and padding
+        } else if (this.viewMode === 'list') {
+            // List mode: calculate based on item height
+            const itemHeight = 40; // Approximate height per item
+            calculatedHeight = Math.max(256, assets.length * itemHeight + 100);
+        } else if (this.viewMode === 'details') {
+            // Details mode: calculate based on table rows
+            const rowHeight = 32; // Approximate height per row
+            calculatedHeight = Math.max(256, assets.length * rowHeight + 120); // 120px for header and padding
+        } else {
+            calculatedHeight = 256; // Default fallback
+        }
+
+        // Apply calculated height
+        const maxHeight = window.innerHeight * 0.6; // Max 60% of window height
+        const finalHeight = Math.min(calculatedHeight, maxHeight);
+        
+        assetsPanel.style.height = `${finalHeight}px`;
+        assetsPanel.style.flexShrink = '0';
+        
+        // Save the new height to user preferences
+        if (this.stateManager) {
+            this.stateManager.set('ui.assetsPanelHeight', finalHeight);
+        }
+    }
+
+    /**
+     * Get active tab name
+     */
+    getActiveTab() {
+        const activeTab = this.container.querySelector('.asset-tab.active');
+        return activeTab ? activeTab.dataset.category : null;
     }
 }

@@ -1,0 +1,706 @@
+/* Spacing Mode Styles - Dynamic spacing based on --spacing-scale variable */
+
+/* Apply spacing scale to all elements */
+* {
+    --spacing-multiplier: var(--spacing-scale, 1.0);
+}
+
+/* Panel containers - no padding for main interface elements */
+#main-panel {
+    padding: 0; /* No padding for main interface elements */
+}
+
+#toolbar-container {
+    padding: 0.0625rem 0.25rem 0.03125rem 0.25rem; /* Minimal vertical padding - Top, right, bottom, left */
+    border-bottom: 0.5px solid #374151; /* Thinner border */
+    overflow: visible; /* Ensure buttons are not clipped */
+    min-height: 2.5rem; /* Reduced minimum height for more compact toolbar */
+}
+
+#right-panel {
+    padding: 0; /* No padding for main interface elements */
+}
+
+#assets-panel {
+    padding: 0; /* No padding for main interface elements */
+}
+
+#console-panel {
+    padding: 0; /* No padding for main interface elements */
+}
+
+/* Panel headers and content */
+.panel-header {
+    padding: calc(0.75rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.panel-content {
+    padding: calc(0.75rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Asset items */
+.asset-item {
+    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Menu items */
+.menu-item {
+    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0)) calc(0.75rem * max(var(--spacing-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Buttons */
+.button {
+    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0)) calc(0.75rem * max(var(--spacing-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Inputs */
+.input {
+    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Tabs */
+.tab {
+    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0)) calc(1rem * max(var(--spacing-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Outliner items */
+.outliner-item {
+    padding: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)) calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+    min-height: calc(1.5rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Asset thumbnails */
+.asset-thumbnail {
+    width: calc(96px * max(var(--spacing-scale, 1.0), 0));
+    height: calc(96px * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Layer colors */
+.layer-color {
+    width: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+    height: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Icons */
+.icon {
+    width: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+    height: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Separators */
+.separator {
+    margin: calc(0.5rem * max(var(--spacing-scale, 1.0), 0)) 0;
+}
+
+/* Context menus */
+.context-menu {
+    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.context-menu .menu-item {
+    padding: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)) calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Form elements */
+.settings-form-group {
+    margin-bottom: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.form-label {
+    margin-bottom: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+    width: calc(8px * max(var(--spacing-scale, 1.0), 0));
+    height: calc(8px * max(var(--spacing-scale, 1.0), 0));
+}
+
+::-webkit-scrollbar-thumb {
+    border-radius: calc(4px * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Header and navigation - no padding for main interface elements */
+header {
+    padding: 0; /* No padding for main interface elements */
+}
+
+nav {
+    padding: 0; /* No padding for main interface elements */
+}
+
+#menu-container {
+    gap: 0;
+}
+
+/* Right panel tabs */
+.tab-right {
+    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0)) calc(1rem * max(var(--spacing-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Toolbar buttons */
+#toolbar-container .button {
+    padding: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)) calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+    margin: calc(0.125rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+#toolbar-container .flex {
+    gap: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Toolbar specific button styles - prevent icons from moving down */
+#toolbar-container button {
+    padding: calc(0.125rem * max(var(--spacing-scale, 1.0), 0.2)) calc(0.5rem * max(var(--spacing-scale, 1.0), 0.2)) !important;
+    min-height: calc(1.75rem * max(var(--spacing-scale, 1.0), 0.5)) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1 !important;
+}
+
+#toolbar-container button .icon {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-width: 1rem !important;
+    min-height: 1rem !important;
+    width: 1rem !important;
+    height: 1rem !important;
+}
+
+/* Allow dynamic display control for toolbar icons and text */
+#toolbar-container button .icon[style*="display: none"] {
+    display: none !important;
+}
+
+#toolbar-container button .text[style*="display: none"] {
+    display: none !important;
+}
+
+#toolbar-container button .icon[style*="display: inline"] {
+    display: flex !important;
+}
+
+#toolbar-container button .text[style*="display: inline"] {
+    display: flex !important;
+}
+
+#toolbar-container button .text {
+    display: flex !important;
+    align-items: center !important;
+    line-height: 1 !important;
+}
+
+/* Override general px-3 and py-1 classes for toolbar buttons */
+#toolbar-container button.px-3 {
+    padding-left: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.2)) !important;
+    padding-right: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.2)) !important;
+}
+
+#toolbar-container button.py-1 {
+    padding-top: calc(0.125rem * max(var(--spacing-scale, 1.0), 0.2)) !important;
+    padding-bottom: calc(0.125rem * max(var(--spacing-scale, 1.0), 0.2)) !important;
+}
+
+/* Override space-x-1 for toolbar buttons */
+#toolbar-container button.space-x-1 > * + * {
+    margin-left: calc(0.25rem * max(var(--spacing-scale, 1.0), 0.2));
+}
+
+/* Asset panel rows */
+.asset-row {
+    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.asset-item {
+    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Details panel - no padding for main interface elements */
+.details-panel {
+    padding: 0; /* No padding for main interface elements */
+}
+
+.details-panel .settings-form-group {
+    margin-bottom: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.details-panel .form-label {
+    margin-bottom: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+    padding: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)) 0;
+}
+
+.details-panel .form-input {
+    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.details-panel .form-select {
+    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Console panel - no padding for main interface elements */
+.console-overlay {
+    padding: 0; /* No padding for main interface elements */
+}
+
+.console-message {
+    padding: calc(0.125rem * max(var(--spacing-scale, 1.0), 0)); /* Minimal padding for console messages */
+}
+
+/* Layers panel - no padding for main interface elements */
+.layers-panel {
+    padding: 0; /* No padding for main interface elements */
+}
+
+.layer-item {
+    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.layer-name-display {
+    /* No font-size - controlled by Font Scale */
+}
+
+.layer-name-input {
+    /* No font-size - controlled by Font Scale */
+}
+
+.layer-objects-count {
+    /* No font-size - controlled by Font Scale */
+}
+
+.layer-visibility-btn,
+.layer-lock-btn {
+    width: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+    height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+    min-width: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.layer-visibility-btn svg,
+.layer-lock-btn svg {
+    width: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+    height: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Layer context menu */
+.layer-context-menu .base-context-menu-item {
+    padding: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)) calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+    min-height: calc(1.5rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.layer-context-menu .base-context-menu-item.separator {
+    height: calc(1px * max(var(--spacing-scale, 1.0), 0));
+    margin: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)) 0;
+}
+
+/* Text size overrides - REMOVED - controlled by Font Scale only */
+/* .text-sm, .text-xs, .text-base, .text-lg are controlled by Font Scale */
+
+/* Line height adjustments - REMOVED - controlled by Font Scale only */
+/* .leading-tight, .leading-normal, .leading-relaxed are controlled by Font Scale */
+
+/* Right panel specific styles - minimal padding for search elements */
+#right-panel-search {
+    padding: 0.25rem; /* Minimal padding for search elements */
+}
+
+.tab-content-right {
+    padding: 0; /* No padding for main interface elements */
+}
+
+#details-content-panel {
+    padding: 0; /* No padding for main interface elements */
+}
+
+#level-content-panel {
+    padding: 0; /* No padding for main interface elements */
+}
+
+#layers-content-panel {
+    padding: 0; /* No padding for main interface elements */
+}
+
+#outliner-content-panel {
+    padding: 0; /* No padding for main interface elements */
+}
+
+/* List items */
+li {
+    padding: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)) 0;
+}
+
+/* Table styles */
+table {
+    /* No font-size - controlled by Font Scale */
+}
+
+th, td {
+    padding: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)) calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Tailwind CSS class overrides */
+.px-3 {
+    padding-left: calc(0.375rem * max(var(--spacing-scale, 1.0), 0)); /* Reduced from 0.75rem */
+    padding-right: calc(0.375rem * max(var(--spacing-scale, 1.0), 0)); /* Reduced from 0.75rem */
+}
+
+.py-2 {
+    padding-top: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)); /* Reduced from 0.5rem */
+    padding-bottom: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)); /* Reduced from 0.5rem */
+}
+
+.py-1 {
+    padding-top: calc(0.125rem * max(var(--spacing-scale, 1.0), 0)); /* Reduced from 0.25rem */
+    padding-bottom: calc(0.125rem * max(var(--spacing-scale, 1.0), 0)); /* Reduced from 0.25rem */
+}
+
+.px-4 {
+    padding-left: calc(0.5rem * max(var(--spacing-scale, 1.0), 0)); /* Reduced from 1rem */
+    padding-right: calc(0.5rem * max(var(--spacing-scale, 1.0), 0)); /* Reduced from 1rem */
+}
+
+.p-2 {
+    padding: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)); /* Reduced from 0.5rem */
+}
+
+.p-1 {
+    padding: calc(0.125rem * max(var(--spacing-scale, 1.0), 0)); /* Reduced from 0.25rem */
+}
+
+/* Space utilities */
+.space-x-1 > * + * {
+    margin-left: calc(0.25rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.space-x-2 > * + * {
+    margin-left: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.space-x-4 > * + * {
+    margin-left: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.space-y-1 > * + * {
+    margin-top: calc(0.25rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.space-y-2 > * + * {
+    margin-top: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.space-y-4 > * + * {
+    margin-top: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Gap utilities */
+.gap-1 {
+    gap: calc(0.25rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.gap-2 {
+    gap: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.gap-4 {
+    gap: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.gap-6 {
+    gap: calc(1.5rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.gap-8 {
+    gap: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Margin utilities */
+.m-1 {
+    margin: calc(0.25rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.m-2 {
+    margin: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.m-4 {
+    margin: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.mb-1 {
+    margin-bottom: calc(0.25rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.mb-2 {
+    margin-bottom: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.mb-4 {
+    margin-bottom: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.mt-1 {
+    margin-top: calc(0.25rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.mt-2 {
+    margin-top: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.mt-4 {
+    margin-top: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.ml-1 {
+    margin-left: calc(0.25rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.ml-2 {
+    margin-left: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.ml-4 {
+    margin-left: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.mr-1 {
+    margin-right: calc(0.25rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.mr-2 {
+    margin-right: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.mr-4 {
+    margin-right: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Inline style overrides for spacing */
+[style*="gap:"] {
+    gap: calc(var(--gap-value, 1rem) * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin:"] {
+    margin: calc(var(--margin-value, 1rem) * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-top:"] {
+    margin-top: calc(var(--margin-top-value, 1rem) * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-bottom:"] {
+    margin-bottom: calc(var(--margin-bottom-value, 1rem) * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-left:"] {
+    margin-left: calc(var(--margin-left-value, 1rem) * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-right:"] {
+    margin-right: calc(var(--margin-right-value, 1rem) * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+/* Specific overrides for common inline gap values */
+[style*="gap: 0.5rem"] {
+    gap: calc(0.5rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="gap: 0.75rem"] {
+    gap: calc(0.75rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="gap: 1rem"] {
+    gap: calc(1rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="gap: 1.5rem"] {
+    gap: calc(1.5rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="gap: 2rem"] {
+    gap: calc(2rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+/* Specific overrides for common inline margin values */
+[style*="margin: 0.25rem"] {
+    margin: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin: 0.5rem"] {
+    margin: calc(0.5rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin: 0.75rem"] {
+    margin: calc(0.75rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin: 1rem"] {
+    margin: calc(1rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin: 1.5rem"] {
+    margin: calc(1.5rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin: 2rem"] {
+    margin: calc(2rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+/* Specific overrides for margin-top values */
+[style*="margin-top: 0.25rem"] {
+    margin-top: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-top: 0.5rem"] {
+    margin-top: calc(0.5rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-top: 0.75rem"] {
+    margin-top: calc(0.75rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-top: 1rem"] {
+    margin-top: calc(1rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-top: 1.5rem"] {
+    margin-top: calc(1.5rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-top: 2rem"] {
+    margin-top: calc(2rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+/* Specific overrides for margin-bottom values */
+[style*="margin-bottom: 0.25rem"] {
+    margin-bottom: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-bottom: 0.5rem"] {
+    margin-bottom: calc(0.5rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-bottom: 0.75rem"] {
+    margin-bottom: calc(0.75rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-bottom: 1rem"] {
+    margin-bottom: calc(1rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-bottom: 1.5rem"] {
+    margin-bottom: calc(1.5rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-bottom: 2rem"] {
+    margin-bottom: calc(2rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+/* Specific overrides for margin-left values */
+[style*="margin-left: 0.25rem"] {
+    margin-left: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-left: 0.5rem"] {
+    margin-left: calc(0.5rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-left: 0.75rem"] {
+    margin-left: calc(0.75rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-left: 1rem"] {
+    margin-left: calc(1rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-left: 1.5rem"] {
+    margin-left: calc(1.5rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-left: 2rem"] {
+    margin-left: calc(2rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+/* Specific overrides for margin-right values */
+[style*="margin-right: 0.25rem"] {
+    margin-right: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-right: 0.5rem"] {
+    margin-right: calc(0.5rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-right: 0.75rem"] {
+    margin-right: calc(0.75rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-right: 1rem"] {
+    margin-right: calc(1rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-right: 1.5rem"] {
+    margin-right: calc(1.5rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+[style*="margin-right: 2rem"] {
+    margin-right: calc(2rem * max(var(--spacing-scale, 1.0), 0)) !important;
+}
+
+/* Specific element spacing overrides */
+.outliner-item {
+    padding: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)) calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+    min-height: calc(1.5rem * max(var(--spacing-scale, 1.0), 0));
+}
+
+.outliner-item-icon {
+    margin-right: calc(4px * max(var(--spacing-scale, 1.0), 0));
+}
+
+.outliner-collapse-indicator {
+    margin-right: calc(4px * max(var(--spacing-scale, 1.0), 0));
+}
+
+.outliner-item-name-display,
+.outliner-item-name-input {
+    padding: calc(1px * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Asset panel specific spacing */
+.asset-grid {
+    gap: calc(8px * max(var(--spacing-scale, 1.0), 0));
+}
+
+.asset-list {
+    gap: calc(8px * max(var(--spacing-scale, 1.0), 0));
+}
+
+.asset-details-content {
+    padding-top: calc(48px * max(var(--spacing-scale, 1.0), 0));
+}
+
+/* Panel height adjustments */
+#right-panel {
+    min-height: auto;
+}
+
+#assets-panel {
+    min-height: auto;
+}
+
+#console-panel {
+    min-height: auto;
+}

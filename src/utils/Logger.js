@@ -84,18 +84,17 @@ export class Logger {
         }
 
         const categoryConfig = this.CATEGORIES[category] || this.CATEGORIES.DEBUG;
-        const prefix = `%c${categoryConfig.prefix}:`;
-        const style = `color: ${categoryConfig.color}; font-weight: bold;`;
+        const prefix = `${categoryConfig.prefix}:`;
 
         switch (level.toLowerCase()) {
             case 'error':
-                console.error(prefix, style, message, ...args);
+                console.error(prefix, message, ...args);
                 break;
             case 'warn':
-                console.warn(prefix, style, message, ...args);
+                console.warn(prefix, message, ...args);
                 break;
             default:
-                console.log(prefix, style, message, ...args);
+                console.log(prefix, message, ...args);
         }
     }
 
@@ -224,7 +223,7 @@ export class Logger {
      * @param {Function} callback - Function to execute within group
      */
     static group(groupName, callback) {
-        console.group(`%c${groupName}`, 'color: #666; font-weight: bold;');
+        console.group(groupName);
         try {
             callback();
         } finally {
@@ -240,7 +239,7 @@ export class Logger {
      */
     static data(category, title, data) {
         const categoryConfig = this.CATEGORIES[category] || this.CATEGORIES.DEBUG;
-        console.group(`%c${categoryConfig.prefix}: ${title}`, `color: ${categoryConfig.color}; font-weight: bold;`);
+        console.group(`${categoryConfig.prefix}:`, title);
         console.log(data);
         console.groupEnd();
     }

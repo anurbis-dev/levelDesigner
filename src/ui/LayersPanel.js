@@ -153,16 +153,16 @@ export class LayersPanel extends BasePanel {
         const searchInput = SearchUtils.createSearchInput(
             'Search layers...',
             'layers-search',
-            'flex-1 bg-gray-700 text-white px-2 py-1 rounded text-sm border border-gray-600 focus:border-blue-500 focus:outline-none'
+            'flex-1 bg-gray-700 text-white px-1 py-1 rounded text-sm border border-gray-600 focus:border-blue-500 focus:outline-none'
         );
         searchInput.value = this.searchFilter;
 
         // Create controls row
         const controlsRow = document.createElement('div');
-        controlsRow.className = 'flex items-center space-x-2';
+        controlsRow.className = 'flex items-center gap-1';
 
         controlsRow.innerHTML = `
-            <button id="add-layer-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
+            <button id="add-layer-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-sm">
                 + Add
             </button>
             <button id="layers-menu-btn" class="bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 rounded text-sm" title="Layer options">
@@ -191,7 +191,7 @@ export class LayersPanel extends BasePanel {
 
         // Layers list container
         const layersList = document.createElement('div');
-        layersList.className = 'layers-list space-y-1 p-4';
+        layersList.className = 'layers-list space-y-1';
         layersList.id = 'layers-list';
 
         // Filter layers based on search

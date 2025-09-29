@@ -59,11 +59,15 @@ export class StateManager {
             
             // View state
             view: {
-                grid: true,
                 gameMode: false,
                 snapToGrid: false,
                 objectBoundaries: false,
-                objectCollisions: false
+                objectCollisions: false,
+                parallax: false,
+                rightPanel: true,
+                assetsPanel: true,
+                console: true,
+                toolbar: true
             },
             
             // Canvas state
@@ -77,7 +81,35 @@ export class StateManager {
                 gridSubdivisions: 0,
                 gridSubdivColor: '#666666',
                 gridSubdivThickness: 0.5,
-                snapTolerance: 80
+                snapTolerance: 80,
+                gridType: 'rectangular',
+                hexOrientation: 'pointy'
+            },
+            
+            // UI state
+            ui: {
+                fontScale: 1.0,
+                spacing: 1.0,
+                showTooltips: true
+            },
+            
+            // Editor state
+            editor: {
+                autoSave: false,
+                autoSaveInterval: 5,
+                undoHistoryLimit: 50,
+                axisConstraint: {
+                    axisColor: '#ff0000',
+                    axisWidth: 2,
+                    showAxis: true
+                }
+            },
+            
+            // Panel state
+            panels: {
+                rightPanelWidth: 300,
+                assetsPanelHeight: 256,
+                consoleHeight: 200
             }
         };
         
@@ -290,6 +322,7 @@ export class StateManager {
      * Reset state to initial values
      */
     reset() {
+        // Use the same structure as constructor
         this.state = {
             isDirty: false,
             currentLevel: null,
@@ -310,7 +343,13 @@ export class StateManager {
                 isAssetMarqueeSelecting: false, isPlacingObjects: false,
                 placingObjects: [], placingOffsets: [],
                 draggingGroupId: null,
-                altKey: false
+                altKey: false,
+                constrainedAxis: null,
+                axisCenter: null
+            },
+            keyboard: {
+                ctrlSnapToGrid: false,
+                shiftKey: false
             },
             duplicate: {
                 isActive: false,
@@ -321,17 +360,50 @@ export class StateManager {
             outliner: {
                 collapsedTypes: new Set()
             },
+            view: {
+                gameMode: false,
+                snapToGrid: false,
+                objectBoundaries: false,
+                objectCollisions: false,
+                parallax: false,
+                rightPanel: true,
+                assetsPanel: true,
+                console: true,
+                toolbar: true
+            },
             canvas: {
                 showGrid: true,
                 snapToGrid: false,
                 gridSize: 32,
                 gridColor: 'rgba(255, 255, 255, 0.1)',
                 gridThickness: 1,
-                gridOpacity: 0.1
+                gridOpacity: 0.1,
+                gridSubdivisions: 0,
+                gridSubdivColor: '#666666',
+                gridSubdivThickness: 0.5,
+                snapTolerance: 80,
+                gridType: 'rectangular',
+                hexOrientation: 'pointy'
             },
-            parallax: {
-                startPosition: { x: 0, y: 0 },
-                enabled: false
+            ui: {
+                fontScale: 1.0,
+                spacing: 1.0,
+                showTooltips: true
+            },
+            editor: {
+                autoSave: false,
+                autoSaveInterval: 5,
+                undoHistoryLimit: 50,
+                axisConstraint: {
+                    axisColor: '#ff0000',
+                    axisWidth: 2,
+                    showAxis: true
+                }
+            },
+            panels: {
+                rightPanelWidth: 300,
+                assetsPanelHeight: 256,
+                consoleHeight: 200
             }
         };
         

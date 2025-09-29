@@ -53,12 +53,7 @@ export class Toolbar {
             this.setVisible(visible);
         });
 
-        // Listen for view option changes to sync toggle buttons and menu checkboxes
-        this.stateManager.subscribe('view.grid', (enabled) => {
-            this.updateToggleButtonState('toggleGrid', enabled);
-            this.levelEditor.eventHandlers.updateViewCheckbox('grid', enabled);
-        });
-        // Also subscribe to canvas.showGrid for settings panel changes
+        // Listen for grid changes (use canvas.showGrid as single source of truth)
         this.stateManager.subscribe('canvas.showGrid', (enabled) => {
             this.updateToggleButtonState('toggleGrid', enabled);
             this.levelEditor.eventHandlers.updateViewCheckbox('grid', enabled);
@@ -368,12 +363,22 @@ export class Toolbar {
 
         // Apply the view option (StateManager already updated by toggleButtonState)
         requestAnimationFrame(() => {
-            const enabled = this.stateManager.get(`view.${option}`);
+            let enabled;
+            if (action === 'toggleGrid') {
+                // Grid uses canvas.showGrid as single source of truth
+                enabled = this.stateManager.get('canvas.showGrid');
+            } else {
+                enabled = this.stateManager.get(`view.${option}`);
+            }
+            
             this.levelEditor.eventHandlers.applyViewOption(option, enabled);
             // Update menu checkbox state to match toolbar button
             this.levelEditor.eventHandlers.updateViewCheckbox(option, enabled);
             // Save to config for persistence
-            if (option === 'snapToGrid') {
+            if (action === 'toggleGrid') {
+                // Grid uses canvas.showGrid as primary storage
+                this.levelEditor.configManager.set('canvas.showGrid', enabled);
+            } else if (option === 'snapToGrid') {
                 // Snap to grid uses canvas.snapToGrid as primary storage
                 this.levelEditor.configManager.set('canvas.snapToGrid', enabled);
             } else {
@@ -395,7 +400,7 @@ export class Toolbar {
         
         switch (action) {
             case 'toggleGrid':
-                stateKey = 'view.grid';
+                stateKey = 'canvas.showGrid';
                 break;
             case 'toggleSnapToGrid':
                 stateKey = 'view.snapToGrid';
@@ -443,7 +448,7 @@ export class Toolbar {
 
         switch (action) {
             case 'toggleGrid':
-                isActive = this.stateManager.get('view.grid') || false;
+                isActive = this.stateManager.get('canvas.showGrid') || false;
                 break;
             case 'toggleSnapToGrid':
                 isActive = this.stateManager.get('view.snapToGrid') || false;
@@ -762,7 +767,7 @@ export class Toolbar {
      */
     updateToggleStates() {
         // Update each toggle button from StateManager
-        this.updateToggleButtonState('toggleGrid', this.stateManager.get('view.grid') || false);
+        this.updateToggleButtonState('toggleGrid', this.stateManager.get('canvas.showGrid') || false);
         this.updateToggleButtonState('toggleSnapToGrid', this.stateManager.get('canvas.snapToGrid') || false);
         this.updateToggleButtonState('toggleParallax', this.stateManager.get('view.parallax') || false);
         this.updateToggleButtonState('toggleObjectBoundaries', this.stateManager.get('view.objectBoundaries') || false);
