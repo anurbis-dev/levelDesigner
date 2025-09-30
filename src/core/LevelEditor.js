@@ -38,7 +38,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.30.0';
+    static VERSION = '3.30.1';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers

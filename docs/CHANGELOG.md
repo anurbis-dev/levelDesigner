@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.30.1] - 2025-01-29
+
+### Improved
+- **MenuManager Hover Experience** - улучшена обработка курсора в главном меню
+- **Gap Elimination** - убран промежуток между кнопкой и выпадающим меню
+- **Expanded Hover Area** - расширена область выпадающего меню для перекрытия зазора
+- **Immediate Response** - убрана система задержек, меню реагирует мгновенно
+
+### Technical
+- **MenuManager.js** - убрана система `closeTimeouts`, упрощена логика событий
+- **CSS Improvements** - изменен `mt-0.5` на `mt-0` и добавлен `paddingTop: '8px'`
+- **Event Handling** - упрощена обработка `mouseenter`/`mouseleave` событий
+- **Performance** - убраны таймеры и сложная логика задержек
+
 ## [3.30.0] - 2025-01-29
 
 ### Added

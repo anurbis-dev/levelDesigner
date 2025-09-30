@@ -29,6 +29,7 @@ export class MenuManager {
         this.logger.info('Initializing menus...');
         this.renderMenus();
         this.setupMenuEvents();
+        this.setupMenuContainerHoverReset();
         this.logger.info('Menus initialized successfully');
     }
 
@@ -87,7 +88,8 @@ export class MenuManager {
 
         // Create dropdown
         const dropdown = document.createElement('div');
-        dropdown.className = 'absolute left-0 mt-1 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-20 hidden';
+        dropdown.className = 'absolute left-0 mt-0 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-20 hidden';
+        dropdown.style.paddingTop = '8px'; // Add invisible padding to cover the gap
 
         // Create menu items
         menuConfig.items.forEach(itemConfig => {
