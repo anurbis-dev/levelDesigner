@@ -19,6 +19,20 @@ export class StateManager {
             selectedAssets: new Set(),
             rightPanelTab: 'details',
             
+            // Validation state
+            validation: {
+                levelEditorReady: false,
+                componentsReady: {
+                    toolbar: false,
+                    menuManager: false,
+                    configManager: false,
+                    stateManager: true, // Always true since we're in StateManager
+                    eventHandlers: false,
+                    renderOperations: false
+                },
+                cache: new Map() // For caching validation results
+            },
+            
             // Camera state
             camera: { x: 0, y: 0, zoom: 1 },
             
@@ -417,5 +431,78 @@ export class StateManager {
                 }
             });
         });
+    }
+
+    /**
+     * Update component readiness status
+     * @param {string} component - Component name
+     * @param {boolean} ready - Whether component is ready
+     */
+    updateComponentStatus(component, ready) {
+        const validation = this.get('validation');
+        if (validation.componentsReady.hasOwnProperty(component)) {
+            validation.componentsReady[component] = ready;
+            this.set('validation', validation);
+        }
+    }
+
+    /**
+     * Check if required components are ready
+     * @param {string[]} components - Array of component names
+     * @returns {boolean} - Whether all components are ready
+     */
+    areComponentsReady(components) {
+        const validation = this.get('validation');
+        return components.every(comp => validation.componentsReady[comp] === true);
+    }
+
+    /**
+     * Set levelEditor readiness status
+     * @param {boolean} ready - Whether levelEditor is ready
+     */
+    setLevelEditorReady(ready) {
+        const validation = this.get('validation');
+        validation.levelEditorReady = ready;
+        this.set('validation', validation);
+    }
+
+    /**
+     * Get cached validation result
+     * @param {string} key - Cache key
+     * @returns {any} - Cached value or null
+     */
+    getValidationCache(key) {
+        const validation = this.get('validation');
+        return validation.cache.get(key) || null;
+    }
+
+    /**
+     * Set cached validation result
+     * @param {string} key - Cache key
+     * @param {any} value - Value to cache
+     * @param {number} ttl - Time to live in milliseconds (default: 1000)
+     */
+    setValidationCache(key, value, ttl = 1000) {
+        const validation = this.get('validation');
+        validation.cache.set(key, {
+            value: value,
+            timestamp: Date.now(),
+            ttl: ttl
+        });
+        this.set('validation', validation);
+    }
+
+    /**
+     * Clear expired validation cache entries
+     */
+    clearExpiredValidationCache() {
+        const validation = this.get('validation');
+        const now = Date.now();
+        for (const [key, entry] of validation.cache.entries()) {
+            if (now - entry.timestamp > entry.ttl) {
+                validation.cache.delete(key);
+            }
+        }
+        this.set('validation', validation);
     }
 }

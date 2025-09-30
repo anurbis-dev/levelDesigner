@@ -11,6 +11,7 @@ export class MenuManager {
         this.eventHandlers = eventHandlers;
         this.editor = eventHandlers.editor;
         this.menuElements = new Map();
+        this.hoverModeEnabled = false; // Enable hover-open after first click anywhere in the menu bar
         this.logger = Logger.menu || {
             info: console.log,
             error: console.error,
@@ -197,6 +198,42 @@ export class MenuManager {
                 button.addEventListener('click', (e) => {
                     e.preventDefault();
                     this.toggleDropdown(dropdown);
+                    // Enable hover-after-click globally for the menu bar
+                    this.hoverModeEnabled = true;
+                });
+
+                // Add hover events for automatic submenu opening (only after first click)
+                menuElement.addEventListener('mouseenter', () => {
+                    if (this.hoverModeEnabled) {
+                        this.openDropdown(dropdown);
+                    }
+                });
+
+                menuElement.addEventListener('mouseleave', (e) => {
+                    if (this.hoverModeEnabled) {
+                        // Only close if mouse is not moving to the dropdown
+                        const relatedTarget = e.relatedTarget;
+                        if (!relatedTarget || !dropdown.contains(relatedTarget)) {
+                            this.closeDropdown(dropdown);
+                        }
+                    }
+                });
+
+                // Keep dropdown open when hovering over it (only after first click)
+                dropdown.addEventListener('mouseenter', () => {
+                    if (this.hoverModeEnabled) {
+                        this.openDropdown(dropdown);
+                    }
+                });
+
+                dropdown.addEventListener('mouseleave', (e) => {
+                    if (this.hoverModeEnabled) {
+                        // Only close if mouse is not moving back to the button
+                        const relatedTarget = e.relatedTarget;
+                        if (!relatedTarget || !menuElement.contains(relatedTarget)) {
+                            this.closeDropdown(dropdown);
+                        }
+                    }
                 });
             }
         });
@@ -210,6 +247,9 @@ export class MenuManager {
                 this.closeAllDropdowns();
             }
         });
+
+        // Setup hover mode reset when mouse leaves menu container
+        this.setupMenuContainerHoverReset();
 
         this.logger.info('Menu events setup completed');
     }
@@ -314,11 +354,48 @@ export class MenuManager {
     }
 
     /**
+     * Open dropdown
+     * @param {HTMLElement} dropdown - Dropdown element
+     */
+    openDropdown(dropdown) {
+        // Close all other dropdowns first
+        this.closeAllDropdowns();
+        
+        // Open this dropdown
+        dropdown.classList.remove('hidden');
+    }
+
+    /**
+     * Close dropdown
+     * @param {HTMLElement} dropdown - Dropdown element
+     */
+    closeDropdown(dropdown) {
+        dropdown.classList.add('hidden');
+    }
+
+    /**
      * Close all dropdowns
      */
     closeAllDropdowns() {
         document.querySelectorAll('#menu-level > div, #menu-view > div, #menu-settings > div')
             .forEach(dropdown => dropdown.classList.add('hidden'));
+    }
+
+    /**
+     * Setup hover mode reset when mouse leaves menu container
+     */
+    setupMenuContainerHoverReset() {
+        const menuContainer = this.container.querySelector('#menu-container');
+        if (!menuContainer) return;
+
+        menuContainer.addEventListener('mouseleave', (e) => {
+            // Only reset if mouse is not moving to any dropdown
+            const relatedTarget = e.relatedTarget;
+            if (!relatedTarget || !relatedTarget.closest('.relative.group')) {
+                this.hoverModeEnabled = false;
+                this.closeAllDropdowns();
+            }
+        });
     }
 
     /**

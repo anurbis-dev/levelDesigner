@@ -176,15 +176,7 @@
         // This must happen before any DOM manipulation
         function applyUserSettingsImmediately(userPrefs) {
             try {
-                // Apply font scale immediately
-                const fontScale = userPrefs.get('fontScale') || 1.0;
-                if (fontScale !== 1.0) {
-                    try {
-                        document.documentElement.style.fontSize = `${fontScale * 16}px`;
-                    } catch (fontError) {
-                        console.warn('[LAYOUT] Failed to apply font scale:', fontError);
-                    }
-                }
+                // Font scale is applied early in <head> and live via StateManager
 
                 // Apply theme immediately if available
                 const theme = userPrefs.get('theme');

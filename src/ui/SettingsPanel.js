@@ -5,6 +5,7 @@ import { SettingsSyncManager } from '../utils/SettingsSyncManager.js';
 import { ColorUtils } from '../utils/ColorUtils.js';
 import { BaseContextMenu } from './BaseContextMenu.js';
 import { Logger } from '../utils/Logger.js';
+import { ValidationUtils } from '../utils/ValidationUtils.js';
 
 /**
  * Settings Panel UI Component
@@ -544,15 +545,21 @@ export class SettingsPanel {
 
         const displayElement = container.querySelector('div[style*="text-align: center"]');
         if (displayElement) {
-            displayElement.textContent = `${parseFloat(value).toFixed(1)}x`;
+            const numValue = ValidationUtils.validateNumeric(value, 'slider value');
+            if (numValue !== null) {
+                displayElement.textContent = `${numValue.toFixed(1)}x`;
+            }
         }
     }
 
     setupSettingsInputs() {
         document.querySelectorAll('.setting-input').forEach(input => {
             input.addEventListener('input', (e) => {
-                const path = e.target.dataset.setting;
-                if (!path) return;
+                const path = ValidationUtils.validateString(e.target.dataset.setting, 'data-setting attribute');
+                if (!path) {
+                    console.warn('SettingsPanel: No data-setting attribute found for input:', e.target);
+                    return;
+                }
 
                 let value;
                 if (input.type === 'checkbox') {
@@ -561,13 +568,19 @@ export class SettingsPanel {
                     value = input.value;
                 }
 
+                ValidationUtils.logValidation('SettingsPanel', 'Input change detected', { path, value });
+
                 // Update real-time display values for sliders
                 if (input.type === 'range') {
                     this.updateSliderDisplay(input, value);
                 }
 
                 // Synchronize with StateManager for real-time updates
-                this.syncManager.syncSettingToState(path, value);
+                if (this.syncManager) {
+                    this.syncManager.syncSettingToState(path, value);
+                } else {
+                    console.warn('SettingsPanel: syncManager not available for', path, value);
+                }
 
                 // Handle UI-specific immediate updates
                 if (path === 'ui.compactMode') {

@@ -92,22 +92,23 @@
     width: 200px;
     background-color: #111827;
     border-right: 1px solid #374151;
-    padding: 1rem;
+    padding: calc(1rem * max(var(--spacing-scale, 1.0), 0.5));
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.25));
 }
 
 .settings-tab {
     width: 100%;
     text-align: left;
-    padding: 0.75rem;
-    border-radius: 0.25rem;
+    padding: calc(0.75rem * max(var(--spacing-scale, 1.0), 0.125)) !important;
+    border-radius: calc(0.25rem * max(var(--spacing-scale, 1.0), 0.5));
     color: #d1d5db;
     background: transparent;
     border: none;
     cursor: pointer;
     transition: background-color 0.2s;
+    margin: 0 !important;
 }
 
 .settings-tab:hover {
@@ -438,7 +439,7 @@
 
 .compact-mode .settings-nav {
     width: 150px;
-    padding: 0.5rem;
+    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.5));
 }
 
 .compact-mode .settings-main-content {
@@ -450,8 +451,9 @@
 }
 
 .compact-mode .settings-tab {
-    padding: 0.5rem;
+    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.125)) !important;
     font-size: 0.875rem;
+    margin: 0 !important;
 }
 
 .compact-mode .settings-section h3 {

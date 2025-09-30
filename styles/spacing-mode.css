@@ -64,8 +64,8 @@
 
 /* Tabs */
 .tab {
-    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0)) calc(1rem * max(var(--spacing-scale, 1.0), 0));
-    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.5)) calc(1rem * max(var(--spacing-scale, 1.0), 0.5));
+    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0.5));
 }
 
 /* Outliner items */

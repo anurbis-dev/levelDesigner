@@ -1,5 +1,63 @@
 # Changelog
 
+## [3.30.0] - 2025-01-29
+
+### Added
+- **ValidationUtils v2.0** - StateManager-based система валидации с кэшированием
+- **Component Readiness Tracking** - централизованное отслеживание готовности компонентов
+- **Validation Caching** - кэширование результатов валидации с TTL
+- **Enhanced StateManager** - добавлены методы для управления состоянием валидации
+
+### Technical
+- **StateManager.js** - добавлено состояние `validation` с отслеживанием компонентов и кэшем
+- **ValidationUtils.js v2.0** - полная переработка с использованием StateManager
+- **SettingsSyncManager.js** - обновлен для использования новой системы валидации
+- **Logger Integration** - исправлены все вызовы Logger для корректной работы
+
+### Improved
+- **Performance** - кэширование результатов валидации повышает производительность
+- **Reliability** - централизованное отслеживание состояния компонентов
+- **Consistency** - единый подход к fallback логике через StateManager
+- **Debugging** - улучшенное логирование через Logger API
+
+## [3.29.0] - 2025-01-29
+
+### Added
+- **ValidationUtils** - новая утилита для централизованной валидации и проверок
+- **Code Refactoring** - устранение дублированного кода через ValidationUtils
+- **Enhanced Error Handling** - улучшенная обработка ошибок с консистентным логированием
+- **Fallback Mechanisms** - автоматический fallback на window.editor при недоступности levelEditor
+
+### Technical
+- **ValidationUtils.js** - новая утилита с методами валидации, проверки компонентов и fallback логикой
+- **SettingsSyncManager.js** - рефакторинг всех методов для использования ValidationUtils
+- **SettingsPanel.js** - рефакторинг методов валидации через ValidationUtils
+- **Code Deduplication** - устранение 200+ строк дублированного кода проверок
+
+## [3.28.0] - 2025-01-29
+
+### Added
+- **Menu Hover Mode** - добавлен режим автоматического открытия меню при наведении курсора после первого клика
+- **Smart Hover Reset** - автоматическое отключение hover-режима при выходе курсора за пределы контейнера меню
+- **Interactive Font Scaling** - интерактивное изменение размера шрифта при движении слайдера Font Size
+- **Spacing Control Enhancement** - улучшенное управление отступами с минимальными значениями для всех UI элементов
+
+### Fixed
+- **Settings Reset Flow** - исправлен поток сброса настроек: ConfigManager → StateManager → UI → сохранение
+- **Grid Settings Integration** - перенесен параметр "Show Grid" в секцию "Grid & Snapping" для лучшей организации
+- **State Synchronization** - устранены конфликты между `view.grid` и `canvas.showGrid`, установлен единый источник истины
+- **AutoSave Configuration** - исправлены настройки автосохранения: отключено по умолчанию, интервал в минутах
+- **Asset Panel Spacing** - добавлены горизонтальные отступы для табов панели ассетов, унифицированы с правой панелью
+- **Ctrl+Scroll Prevention** - отключен скролл контента при Ctrl+scroll в панели ассетов (только изменение размера элементов)
+
+### Technical
+- **MenuManager.js** - добавлен `hoverModeEnabled` флаг и `setupMenuContainerHoverReset()` для управления hover-режимом
+- **SettingsSyncManager.js** - улучшена синхронизация между UI, ConfigManager и StateManager с защитой от бесконечных циклов
+- **SettingsPanel.js** - исправлен порядок операций в `resetToDefaults()` для корректного сброса настроек
+- **GridSettings.js** - перенесен "Show Grid" из общих настроек в секцию грида
+- **CSS Custom Properties** - добавлены `--font-scale` и `--spacing-scale` для динамического масштабирования UI
+- **State Management** - централизовано управление состоянием через StateManager как единый источник истины
+
 ## [3.27.1] - 2025-01-29
 
 ### Fixed

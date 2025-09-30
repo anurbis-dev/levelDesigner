@@ -1,4 +1,5 @@
 import { ColorUtils } from './ColorUtils.js';
+import { ValidationUtils } from './ValidationUtils.js';
 
 /**
  * Settings Sync Manager
@@ -138,11 +139,21 @@ export class SettingsSyncManager {
      * @param {any} value - Setting value
      */
     syncSettingToState(path, value) {
-        if (!this.levelEditor?.stateManager) return;
+        // Get levelEditor with fallback
+        this.levelEditor = ValidationUtils.getLevelEditor(this.levelEditor, 'syncSettingToState');
+        if (!this.levelEditor) return;
 
         // Check if this setting should be synced to StateManager
         const stateKey = this.stateMapping[path];
         if (stateKey) {
+            // Coerce numeric UI values from range inputs
+            if (path === 'ui.fontScale' || path === 'ui.spacing' || path === 'editor.autoSaveInterval' || path === 'editor.axisConstraint.axisWidth') {
+                const parsed = ValidationUtils.validateNumeric(value, path);
+                if (parsed !== null) {
+                    value = parsed;
+                }
+            }
+
             this.levelEditor.stateManager.set(stateKey, value);
             
             // Special handling for view options that need immediate application
@@ -159,11 +170,27 @@ export class SettingsSyncManager {
             
             // Special handling for spacing that needs immediate visual update
             if (path === 'ui.spacing') {
-                document.documentElement.style.setProperty('--spacing-scale', value);
-                // Delay inline styles update to ensure DOM is ready
-                setTimeout(() => {
-                    this.updateInlineSpacingStyles(value);
-                }, 50);
+                const spacingScale = ValidationUtils.validateSpacingScale(value);
+                if (spacingScale !== null) {
+                    document.documentElement.style.setProperty('--spacing-scale', String(spacingScale));
+                    // Delay inline styles update to ensure DOM is ready
+                    setTimeout(() => {
+                        this.updateInlineSpacingStyles(spacingScale);
+                    }, 50);
+                    ValidationUtils.logValidation('SettingsSyncManager', 'Applied spacing scale', spacingScale);
+                }
+            }
+
+            // Special handling for font scale to update UI immediately on slider move
+            if (path === 'ui.fontScale') {
+                const fontScale = ValidationUtils.validateFontScale(value);
+                if (fontScale !== null) {
+                    // Prefer CSS variable driven sizing for consistency
+                    document.documentElement.style.setProperty('--font-scale', String(fontScale));
+                    // Also set root font-size for components not using var()
+                    document.documentElement.style.fontSize = `${fontScale * 16}px`;
+                    ValidationUtils.logValidation('SettingsSyncManager', 'Applied font scale', fontScale);
+                }
             }
             
             // Call custom callback if exists
@@ -178,7 +205,9 @@ export class SettingsSyncManager {
      * This ensures settings panel shows current state on load
      */
     initializeFromState() {
-        if (!this.levelEditor?.stateManager) return;
+        // Get levelEditor with fallback
+        this.levelEditor = ValidationUtils.getLevelEditor(this.levelEditor, 'initializeFromState');
+        if (!this.levelEditor) return;
 
         // First, sync snap states to ensure consistency
         this.syncSnapToGridStates();
@@ -207,7 +236,11 @@ export class SettingsSyncManager {
      * This ensures StateManager has the latest saved values
      */
     syncFromConfigToState() {
-        if (!this.levelEditor?.stateManager || !this.levelEditor?.configManager) return;
+        // Get levelEditor with fallback and check required components
+        this.levelEditor = ValidationUtils.getLevelEditor(this.levelEditor, 'syncFromConfigToState');
+        if (!ValidationUtils.hasRequiredComponents(this.levelEditor, ['stateManager', 'configManager'], 'syncFromConfigToState')) {
+            return;
+        }
 
         // Sync all mapped settings from ConfigManager to StateManager
         Object.entries(this.stateMapping).forEach(([settingPath, stateKey]) => {
@@ -235,7 +268,9 @@ export class SettingsSyncManager {
      * This is called when Save Settings is pressed
      */
     applyAllUISettingsToState() {
-        if (!this.levelEditor?.stateManager) return;
+        // Get levelEditor with fallback
+        this.levelEditor = ValidationUtils.getLevelEditor(this.levelEditor, 'applyAllUISettingsToState');
+        if (!this.levelEditor) return;
 
         // Apply all mapped settings from UI to StateManager
         Object.entries(this.stateMapping).forEach(([settingPath, stateKey]) => {
@@ -307,22 +342,34 @@ export class SettingsSyncManager {
      * Apply special UI settings that need immediate visual effect
      */
     applySpecialUISettings() {
-        if (!this.levelEditor?.stateManager) return;
+        // Get levelEditor with fallback
+        this.levelEditor = ValidationUtils.getLevelEditor(this.levelEditor, 'applySpecialUISettings');
+        if (!this.levelEditor) return;
 
         // Apply font scale globally
         const fontScale = this.levelEditor.stateManager.get('ui.fontScale');
         if (fontScale !== undefined) {
-            document.documentElement.style.fontSize = `${fontScale * 16}px`;
+            const fontScaleNum = ValidationUtils.validateFontScale(fontScale);
+            if (fontScaleNum !== null) {
+                // Apply both CSS variable and root font-size for widest compatibility
+                document.documentElement.style.setProperty('--font-scale', String(fontScaleNum));
+                document.documentElement.style.fontSize = `${fontScaleNum * 16}px`;
+                ValidationUtils.logValidation('SettingsSyncManager', 'Applied font scale in applySpecialUISettings', fontScaleNum);
+            }
         }
 
         // Apply spacing scale globally
         const spacingScale = this.levelEditor.stateManager.get('ui.spacing');
         if (spacingScale !== undefined) {
-            document.documentElement.style.setProperty('--spacing-scale', spacingScale);
-            // Delay inline styles update to ensure DOM is ready
-            setTimeout(() => {
-                this.updateInlineSpacingStyles(spacingScale);
-            }, 100);
+            const spacingScaleNum = ValidationUtils.validateSpacingScale(spacingScale);
+            if (spacingScaleNum !== null) {
+                document.documentElement.style.setProperty('--spacing-scale', String(spacingScaleNum));
+                // Delay inline styles update to ensure DOM is ready
+                setTimeout(() => {
+                    this.updateInlineSpacingStyles(spacingScaleNum);
+                }, 100);
+                ValidationUtils.logValidation('SettingsSyncManager', 'Applied spacing scale in applySpecialUISettings', spacingScaleNum);
+            }
         }
 
     }
@@ -331,6 +378,10 @@ export class SettingsSyncManager {
      * Update inline spacing styles for gap and margin properties
      */
     updateInlineSpacingStyles(spacingScale) {
+        // Validate spacing scale
+        const validSpacingScale = ValidationUtils.validateSpacingScale(spacingScale);
+        if (validSpacingScale === null) return;
+        
         // Find all elements with inline gap styles
         const elementsWithGap = document.querySelectorAll('[style*="gap:"]');
         elementsWithGap.forEach(element => {
@@ -338,7 +389,7 @@ export class SettingsSyncManager {
             const gapMatch = style.match(/gap:\s*([0-9.]+rem)/);
             if (gapMatch) {
                 const originalGap = gapMatch[1];
-                const newGap = `calc(${originalGap} * max(${spacingScale}, 0))`;
+                const newGap = `calc(${originalGap} * max(${validSpacingScale}, 0))`;
                 element.style.gap = newGap;
             }
         });
@@ -352,7 +403,7 @@ export class SettingsSyncManager {
             const marginTopMatch = style.match(/margin-top:\s*([0-9.]+rem)/);
             if (marginTopMatch) {
                 const originalMargin = marginTopMatch[1];
-                const newMargin = `calc(${originalMargin} * max(${spacingScale}, 0))`;
+                const newMargin = `calc(${originalMargin} * max(${validSpacingScale}, 0))`;
                 element.style.marginTop = newMargin;
             }
             
@@ -360,7 +411,7 @@ export class SettingsSyncManager {
             const marginBottomMatch = style.match(/margin-bottom:\s*([0-9.]+rem)/);
             if (marginBottomMatch) {
                 const originalMargin = marginBottomMatch[1];
-                const newMargin = `calc(${originalMargin} * max(${spacingScale}, 0))`;
+                const newMargin = `calc(${originalMargin} * max(${validSpacingScale}, 0))`;
                 element.style.marginBottom = newMargin;
             }
             
@@ -368,7 +419,7 @@ export class SettingsSyncManager {
             const marginLeftMatch = style.match(/margin-left:\s*([0-9.]+rem)/);
             if (marginLeftMatch) {
                 const originalMargin = marginLeftMatch[1];
-                const newMargin = `calc(${originalMargin} * max(${spacingScale}, 0))`;
+                const newMargin = `calc(${originalMargin} * max(${validSpacingScale}, 0))`;
                 element.style.marginLeft = newMargin;
             }
             
@@ -376,7 +427,7 @@ export class SettingsSyncManager {
             const marginRightMatch = style.match(/margin-right:\s*([0-9.]+rem)/);
             if (marginRightMatch) {
                 const originalMargin = marginRightMatch[1];
-                const newMargin = `calc(${originalMargin} * max(${spacingScale}, 0))`;
+                const newMargin = `calc(${originalMargin} * max(${validSpacingScale}, 0))`;
                 element.style.marginRight = newMargin;
             }
             
@@ -384,7 +435,7 @@ export class SettingsSyncManager {
             const marginMatch = style.match(/margin:\s*([0-9.]+rem)/);
             if (marginMatch) {
                 const originalMargin = marginMatch[1];
-                const newMargin = `calc(${originalMargin} * max(${spacingScale}, 0))`;
+                const newMargin = `calc(${originalMargin} * max(${validSpacingScale}, 0))`;
                 element.style.margin = newMargin;
             }
         });
@@ -398,7 +449,7 @@ export class SettingsSyncManager {
             const paddingTopMatch = style.match(/padding-top:\s*([0-9.]+rem)/);
             if (paddingTopMatch) {
                 const originalPadding = paddingTopMatch[1];
-                const newPadding = `calc(${originalPadding} * max(${spacingScale}, 0))`;
+                const newPadding = `calc(${originalPadding} * max(${validSpacingScale}, 0))`;
                 element.style.paddingTop = newPadding;
             }
             
@@ -406,7 +457,7 @@ export class SettingsSyncManager {
             const paddingBottomMatch = style.match(/padding-bottom:\s*([0-9.]+rem)/);
             if (paddingBottomMatch) {
                 const originalPadding = paddingBottomMatch[1];
-                const newPadding = `calc(${originalPadding} * max(${spacingScale}, 0))`;
+                const newPadding = `calc(${originalPadding} * max(${validSpacingScale}, 0))`;
                 element.style.paddingBottom = newPadding;
             }
             
@@ -414,7 +465,7 @@ export class SettingsSyncManager {
             const paddingLeftMatch = style.match(/padding-left:\s*([0-9.]+rem)/);
             if (paddingLeftMatch) {
                 const originalPadding = paddingLeftMatch[1];
-                const newPadding = `calc(${originalPadding} * max(${spacingScale}, 0))`;
+                const newPadding = `calc(${originalPadding} * max(${validSpacingScale}, 0))`;
                 element.style.paddingLeft = newPadding;
             }
             
@@ -422,7 +473,7 @@ export class SettingsSyncManager {
             const paddingRightMatch = style.match(/padding-right:\s*([0-9.]+rem)/);
             if (paddingRightMatch) {
                 const originalPadding = paddingRightMatch[1];
-                const newPadding = `calc(${originalPadding} * max(${spacingScale}, 0))`;
+                const newPadding = `calc(${originalPadding} * max(${validSpacingScale}, 0))`;
                 element.style.paddingRight = newPadding;
             }
             
@@ -430,7 +481,7 @@ export class SettingsSyncManager {
             const paddingMatch = style.match(/padding:\s*([0-9.]+rem)/);
             if (paddingMatch) {
                 const originalPadding = paddingMatch[1];
-                const newPadding = `calc(${originalPadding} * max(${spacingScale}, 0))`;
+                const newPadding = `calc(${originalPadding} * max(${validSpacingScale}, 0))`;
                 element.style.padding = newPadding;
             }
         });
@@ -459,7 +510,9 @@ export class SettingsSyncManager {
      * Prefers view.snapToGrid as source of truth (set by toolbar/menu)
      */
     syncSnapToGridStates() {
-        if (!this.levelEditor?.stateManager) return;
+        // Get levelEditor with fallback
+        this.levelEditor = ValidationUtils.getLevelEditor(this.levelEditor, 'syncSnapToGridStates');
+        if (!this.levelEditor) return;
 
         const canvasSnap = this.levelEditor.stateManager.get('canvas.snapToGrid');
         const viewSnap = this.levelEditor.stateManager.get('view.snapToGrid');
@@ -483,7 +536,9 @@ export class SettingsSyncManager {
      * This ensures that settings saved by toolbar/menu are properly loaded and vice versa
      */
     syncEditorViewToCanvas() {
-        if (!this.levelEditor?.stateManager) return;
+        // Get levelEditor with fallback
+        this.levelEditor = ValidationUtils.getLevelEditor(this.levelEditor, 'syncEditorViewToCanvas');
+        if (!this.levelEditor) return;
 
         // Grid is handled by canvas.showGrid as single source of truth
         // No need to sync between view.grid and canvas.showGrid
@@ -507,7 +562,9 @@ export class SettingsSyncManager {
      * This ensures that changes in one state are automatically reflected in the other
      */
     setupBidirectionalSync() {
-        if (!this.levelEditor?.stateManager) return;
+        // Get levelEditor with fallback
+        this.levelEditor = ValidationUtils.getLevelEditor(this.levelEditor, 'setupBidirectionalSync');
+        if (!this.levelEditor) return;
 
         // Prevent multiple setups
         if (this.bidirectionalSyncSetup) return;
@@ -574,7 +631,22 @@ export class SettingsSyncManager {
      * Force update all toolbar toggle buttons to ensure they reflect current state
      */
     forceUpdateToolbarButtons() {
-        if (!this.levelEditor?.stateManager || !this.levelEditor?.toolbar) return;
+        // Get levelEditor with fallback and check required components
+        this.levelEditor = ValidationUtils.getLevelEditor(this.levelEditor, 'forceUpdateToolbarButtons');
+        if (!ValidationUtils.hasRequiredComponents(this.levelEditor, ['stateManager'], 'forceUpdateToolbarButtons')) {
+            return;
+        }
+
+        // Check if toolbar is available using StateManager
+        if (!this.levelEditor.toolbar) {
+            ValidationUtils.logValidation('SettingsSyncManager', 'Toolbar not available, skipping toolbar update');
+            // Update component status in StateManager
+            ValidationUtils.updateComponentStatus(this.levelEditor, 'toolbar', false);
+            return;
+        }
+
+        // Update component status in StateManager
+        ValidationUtils.updateComponentStatus(this.levelEditor, 'toolbar', true);
 
         // Update all toolbar toggle buttons based on current StateManager values
         const toolbarMappings = {
@@ -597,7 +669,21 @@ export class SettingsSyncManager {
      * Force update all menu toggle states to ensure they reflect current state
      */
     forceUpdateMenuStates() {
-        if (!this.levelEditor?.stateManager || !this.levelEditor?.eventHandlers?.menuManager) return;
+        // Get levelEditor with fallback and check required components
+        this.levelEditor = ValidationUtils.getLevelEditor(this.levelEditor, 'forceUpdateMenuStates');
+        if (!ValidationUtils.hasRequiredComponents(this.levelEditor, ['stateManager', 'eventHandlers'], 'forceUpdateMenuStates')) {
+            return;
+        }
+        
+        if (!this.levelEditor.eventHandlers.menuManager) {
+            ValidationUtils.logValidation('SettingsSyncManager', 'MenuManager not available, skipping menu update');
+            // Update component status in StateManager
+            ValidationUtils.updateComponentStatus(this.levelEditor, 'menuManager', false);
+            return;
+        }
+
+        // Update component status in StateManager
+        ValidationUtils.updateComponentStatus(this.levelEditor, 'menuManager', true);
 
         // Update all menu toggle states based on current StateManager values
         const menuMappings = {
@@ -625,7 +711,11 @@ export class SettingsSyncManager {
      * This ensures all settings are saved regardless of which tab is active
      */
     saveAllUISettingsToConfig() {
-        if (!this.levelEditor?.configManager || !this.levelEditor?.stateManager) return;
+        // Get levelEditor with fallback and check required components
+        this.levelEditor = ValidationUtils.getLevelEditor(this.levelEditor, 'saveAllUISettingsToConfig');
+        if (!ValidationUtils.hasRequiredComponents(this.levelEditor, ['configManager', 'stateManager'], 'saveAllUISettingsToConfig')) {
+            return;
+        }
 
         // Save all mapped settings from StateManager to ConfigManager
         Object.entries(this.stateMapping).forEach(([settingPath, stateKey]) => {
