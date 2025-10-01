@@ -210,12 +210,18 @@ export class EventHandlers extends BaseModule {
                     e.preventDefault();
                     if (e.shiftKey) {
                         if (typeof this.editor.saveLevelAs === 'function') {
-                            this.editor.saveLevelAs();
+                            // Handle async action
+                            (async () => {
+                                await this.editor.saveLevelAs();
+                            })();
                         } else {
                         }
                     } else {
                         if (typeof this.editor.saveLevel === 'function') {
-                            this.editor.saveLevel();
+                            // Handle async action
+                            (async () => {
+                                await this.editor.saveLevel();
+                            })();
                         } else {
                         }
                     }

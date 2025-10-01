@@ -815,12 +815,12 @@ export class SettingsPanel {
         link.click();
     }
 
-    importSettings(event) {
+    async importSettings(event) {
         const file = event.target.files[0];
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (e) => {
+        reader.onload = async (e) => {
             try {
                 const settings = JSON.parse(e.target.result);
                 this.configManager.importSettings(settings);
@@ -837,9 +837,9 @@ export class SettingsPanel {
                 // Re-setup inputs
                 this.setupSettingsInputs();
                 
-                alert('Settings imported successfully!');
+                await alert('Settings imported successfully!');
             } catch (error) {
-                alert('Error importing settings: ' + error.message);
+                await alert('Error importing settings: ' + error.message);
             }
         };
         reader.readAsText(file);
@@ -911,8 +911,8 @@ export class SettingsPanel {
     /**
      * Reset settings to defaults
      */
-    resetToDefaults() {
-        if (confirm('Are you sure you want to reset all settings to defaults? This action cannot be undone.')) {
+    async resetToDefaults() {
+        if (await confirm('Are you sure you want to reset all settings to defaults? This action cannot be undone.')) {
             // Reset to defaults
             this.configManager.reset();
             

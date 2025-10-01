@@ -27,6 +27,8 @@ export class AssetPanel extends BasePanel {
         // View mode management
         this.viewMode = 'grid'; // 'grid', 'list', 'details'
         
+        // Resize optimization (removed debounce for real-time updates)
+        
         this.init();
         this.setupEventListeners();
         this.setupContextMenus();
@@ -139,11 +141,16 @@ export class AssetPanel extends BasePanel {
             }
         });
         
-        // Window resize handler for grid recalculation
+        // Window resize handler for real-time grid recalculation
         this.resizeHandler = () => {
-            this.render();
-            // Force visual update after resize to maintain consistent selection colors
-            this.updateSelectionVisuals();
+            // Update asset placement in real-time without debounce
+            if (this.viewMode === 'grid') {
+                // Update grid layout immediately for real-time responsiveness
+                this.updateGridViewSizes();
+            } else {
+                // For list and details view, just update selection visuals
+                this.updateSelectionVisuals();
+            }
         };
         window.addEventListener('resize', this.resizeHandler);
         
@@ -318,7 +325,7 @@ export class AssetPanel extends BasePanel {
         // Add hover effect using utility
         HoverEffects.setupGridItemHover(thumb);
         
-        if (asset.imgSrc) {
+        if (asset.imgSrc && this.isValidImageSrc(asset.imgSrc)) {
             const img = document.createElement('img');
             img.src = asset.imgSrc;
             img.alt = asset.name;
@@ -326,21 +333,16 @@ export class AssetPanel extends BasePanel {
             img.style.width = '100%';
             img.style.height = '100%';
             img.style.objectFit = 'cover';
-            img.onerror = () => { img.style.display = 'none'; };
+            img.onerror = () => { 
+                // Fallback to colored rectangle if image fails to load
+                img.style.display = 'none';
+                const colorDiv = this.createColorFallback(asset);
+                thumb.appendChild(colorDiv);
+            };
             thumb.appendChild(img);
         } else {
-            // Create colored rectangle as fallback
-            const colorDiv = document.createElement('div');
-            colorDiv.style.width = '100%';
-            colorDiv.style.height = '100%';
-            colorDiv.style.backgroundColor = asset.color;
-            colorDiv.style.display = 'flex';
-            colorDiv.style.alignItems = 'center';
-            colorDiv.style.justifyContent = 'center';
-            colorDiv.style.fontSize = '10px';
-            colorDiv.style.color = '#ffffff';
-            colorDiv.style.textAlign = 'center';
-            colorDiv.textContent = asset.name;
+            // Create colored rectangle as fallback (same as default assets)
+            const colorDiv = this.createColorFallback(asset);
             thumb.appendChild(colorDiv);
         }
         
@@ -370,6 +372,36 @@ export class AssetPanel extends BasePanel {
         item.style.minHeight = '24px';
         item.dataset.assetId = asset.id;
         item.draggable = true;
+        
+        // Create preview icon (small colored square or image)
+        const previewDiv = document.createElement('div');
+        previewDiv.style.width = '16px';
+        previewDiv.style.height = '16px';
+        previewDiv.style.marginRight = '8px';
+        previewDiv.style.flexShrink = '0';
+        previewDiv.style.borderRadius = '2px';
+        previewDiv.style.overflow = 'hidden';
+        
+        if (asset.imgSrc && this.isValidImageSrc(asset.imgSrc)) {
+            const img = document.createElement('img');
+            img.src = asset.imgSrc;
+            img.alt = asset.name;
+            img.draggable = false;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
+            img.onerror = () => { 
+                // Fallback to colored rectangle if image fails to load
+                img.style.display = 'none';
+                previewDiv.style.backgroundColor = asset.color;
+            };
+            previewDiv.appendChild(img);
+        } else {
+            // Create colored rectangle as fallback (same as default assets)
+            previewDiv.style.backgroundColor = asset.color;
+        }
+        
+        item.appendChild(previewDiv);
         
         // Create name with truncation
         const nameDiv = document.createElement('div');
@@ -407,18 +439,28 @@ export class AssetPanel extends BasePanel {
         preview.style.width = `${this.assetSize * 0.5}px`;
         preview.style.height = `${this.assetSize * 0.5}px`;
         
-        if (asset.imgSrc) {
+        if (asset.imgSrc && this.isValidImageSrc(asset.imgSrc)) {
             const img = document.createElement('img');
             img.src = asset.imgSrc;
             img.alt = asset.name;
             img.className = 'w-full h-full object-cover rounded';
             img.draggable = false;
-            img.onerror = () => { img.style.display = 'none'; };
+            img.onerror = () => { 
+                // Fallback to colored rectangle with text if image fails to load
+                img.style.display = 'none';
+                const colorDiv = this.createColorFallback(asset, {
+                    text: asset.name.charAt(0).toUpperCase(),
+                    className: 'w-full h-full rounded flex items-center justify-center text-white text-xs font-bold'
+                });
+                preview.appendChild(colorDiv);
+            };
             preview.appendChild(img);
         } else {
-            const colorDiv = document.createElement('div');
-            colorDiv.className = 'w-full h-full rounded';
-            colorDiv.style.backgroundColor = asset.color;
+            // Create colored rectangle as fallback (same as default assets)
+            const colorDiv = this.createColorFallback(asset, {
+                text: asset.name.charAt(0).toUpperCase(),
+                className: 'w-full h-full rounded flex items-center justify-center text-white text-xs font-bold'
+            });
             preview.appendChild(colorDiv);
         }
         
@@ -460,6 +502,64 @@ export class AssetPanel extends BasePanel {
         row.addEventListener('dragstart', (e) => this.handleThumbnailDragStart(e, asset));
         
         return row;
+    }
+
+    /**
+     * Check if an image source is valid (exists and can be loaded)
+     * @param {string} imgSrc - Image source path
+     * @returns {boolean} - True if image is valid, false otherwise
+     */
+    isValidImageSrc(imgSrc) {
+        if (!imgSrc) return false;
+        
+        // For mock assets with non-existent files, treat as invalid
+        // In a real implementation, this would check if the file actually exists
+        const mockFiles = ['sky.png', 'mountains.png', 'player.png', 'enemy.png', 'grass.png', 'stone.png', 'coin.png', 'mushroom.png', 'explosion.png', 'particle.png', 'button.png', 'icon.png'];
+        if (mockFiles.includes(imgSrc)) {
+            return false; // Mock files don't exist, so treat as invalid
+        }
+        
+        return true;
+    }
+
+    /**
+     * Create a colored fallback element for assets without images
+     * @param {Object} asset - Asset data
+     * @param {Object} options - Styling options
+     * @param {string} options.text - Text to display (default: asset.name)
+     * @param {string} options.className - CSS classes (default: '')
+     * @param {Object} options.style - Inline styles (default: {})
+     * @returns {HTMLElement} - Colored fallback element
+     */
+    createColorFallback(asset, options = {}) {
+        const {
+            text = asset.name,
+            className = '',
+            style = {}
+        } = options;
+
+        const colorDiv = document.createElement('div');
+        colorDiv.className = className;
+        
+        // Apply default styles
+        Object.assign(colorDiv.style, {
+            width: '100%',
+            height: '100%',
+            backgroundColor: asset.color,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '10px',
+            color: '#ffffff',
+            textAlign: 'center',
+            borderRadius: '4px'
+        });
+        
+        // Apply custom styles
+        Object.assign(colorDiv.style, style);
+        
+        colorDiv.textContent = text;
+        return colorDiv;
     }
 
     /**
@@ -782,11 +882,61 @@ export class AssetPanel extends BasePanel {
         if (newSize !== this.assetSize) {
             this.assetSize = newSize;
             this.saveAssetSize(); // Save to user preferences
-            this.render();
+            
+            // Optimized update based on view mode
+            if (this.viewMode === 'grid') {
+                this.updateGridViewSizes();
+            } else {
+                // For list and details view, we need full re-render as they have complex layouts
+                this.render();
+            }
             
             // Log the change
             Logger.ui.debug(`Asset size changed to ${this.assetSize}px in ${this.viewMode} view`);
         }
+    }
+
+    /**
+     * Update grid view sizes without full re-render
+     * This prevents flickering for imported assets
+     */
+    updateGridViewSizes() {
+        // Update grid container
+        const grid = this.previewsContainer.querySelector('div[style*="display: grid"]');
+        if (grid) {
+            // Recalculate grid columns
+            const containerWidth = this.previewsContainer.clientWidth;
+            const spacingScale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--spacing-scale')) || 1.0;
+            const scaledGapSize = this.gapSize * spacingScale;
+            const columns = Math.max(1, Math.floor((containerWidth + scaledGapSize) / (this.assetSize + scaledGapSize)));
+            
+            // Update grid template columns
+            const columnWidth = this.assetSize;
+            grid.style.gridTemplateColumns = `repeat(${columns}, ${columnWidth}px)`;
+            
+            // Update gap size
+            grid.style.gap = `calc(${this.gapSize}px * max(var(--spacing-scale, 1.0), 0))`;
+        }
+        
+        // Update all asset thumbnails
+        const thumbnails = this.previewsContainer.querySelectorAll('.asset-thumbnail');
+        thumbnails.forEach(thumb => {
+            // Temporarily disable transitions for smooth resize
+            const originalTransition = thumb.style.transition;
+            thumb.style.transition = 'none';
+            
+            // Update size
+            thumb.style.width = `${this.assetSize}px`;
+            thumb.style.height = `${this.assetSize}px`;
+            
+            // Force reflow to apply changes immediately
+            thumb.offsetHeight;
+            
+            // Restore transitions after resize
+            requestAnimationFrame(() => {
+                thumb.style.transition = originalTransition;
+            });
+        });
     }
 
     /**

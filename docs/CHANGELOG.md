@@ -1,5 +1,78 @@
 # Changelog
 
+## [3.31.0] - 2025-01-29
+
+### Added
+- **Custom Dialog System** - полная замена браузерных диалогов на стилистически идентичные редактору
+- **FolderPickerDialog** - кастомный диалог выбора папки с поддержкой File System Access API и Drag & Drop
+- **UniversalDialog** - универсальный диалог для замены alert, confirm, prompt
+- **DialogReplacer** - утилита для автоматической замены браузерных диалогов
+- **File System Access API** - современный API для выбора папок в Chrome/Edge
+- **Drag & Drop Support** - поддержка перетаскивания папок и файлов для всех браузеров
+- **Asset Import Summary** - детальная статистика импортируемых ассетов по категориям
+- **Real-time Path Display** - отображение выбранной папки в реальном времени
+
+### Changed
+- **Asset Import Process** - упрощен процесс импорта ассетов до одного действия
+- **Dialog Consistency** - все диалоги теперь имеют единый стиль редактора
+- **Path Display** - улучшено отображение выбранной папки (только имя папки)
+- **Summary Display** - количество файлов вынесено в отдельную область summary
+- **Error Handling** - улучшена обработка ошибок при выборе папок
+- **User Experience** - значительно улучшен UX процесса импорта ассетов
+
+### Fixed
+- **Syntax Errors** - исправлены все синтаксические ошибки с async/await
+- **File Object Handling** - исправлена работа с File объектами и webkitRelativePath
+- **Dialog Compatibility** - обеспечена совместимость с различными браузерами
+- **Asset Display** - исправлено отображение ассетов без изображений
+- **Path Truncation** - убрано обрезание путей, показывается полное имя папки
+
+### Technical
+- **FolderPickerDialog.js** - новый класс для выбора папок с современными API
+- **UniversalDialog.js** - базовый класс для всех кастомных диалогов
+- **DialogReplacer.js** - утилита для замены браузерных диалогов
+- **AssetImporter.js** - обновлен для работы с новым диалогом выбора папки
+- **LevelEditor.js** - интегрирована система кастомных диалогов
+- **EventHandlers.js** - обновлены обработчики событий для async методов
+- **Toolbar.js** - обновлен для работы с async методами
+- **SettingsPanel.js** - обновлен для работы с кастомными диалогами
+- **OutlinerPanel.js** - обновлен для работы с кастомными диалогами
+- **LayersPanel.js** - обновлен для работы с кастомными диалогами
+
+### Removed
+- **Browser Native Dialogs** - полностью убраны браузерные alert, confirm, prompt
+- **WebkitDirectory Fallback** - убран fallback на webkitdirectory (вызывал двойные диалоги)
+- **File Preview Dialog** - убран промежуточный диалог предварительного просмотра
+- **Path Truncation Logic** - убрана логика обрезания путей
+
+## [3.30.2] - 2025-01-29
+
+### Added
+- **Asset Import System** - новая система импорта внешних ассетов в редактор
+- **External Asset Support** - поддержка импорта ассетов из внешних папок
+- **Dynamic Asset Categories** - динамическое создание категорий ассетов на основе структуры папок
+- **AssetImporter Utility** - новая утилита для импорта и управления внешними ассетами
+- **Folder Structure Analysis** - автоматический анализ структуры папок для определения категорий
+
+### Changed
+- **Menu Command** - заменена команда "Settings - Assets Path..." на "Import Assets..."
+- **Asset Panel Tabs** - табы создаются динамически на основе импортированных категорий
+- **AssetManager Integration** - интеграция с StateManager для синхронизации категорий
+- **Asset Categories** - категории ассетов теперь обновляются в реальном времени
+
+### Technical
+- **AssetImporter.js** - новая утилита с методами импорта, сканирования и управления ассетами
+- **AssetManager.js** - добавлены методы `addExternalAsset()`, `updateStateManagerCategories()`, `clearExternalAssets()`
+- **LevelEditor.js** - добавлен метод `importAssets()` для интеграции с AssetImporter
+- **MenuManager.js** - обновлена команда меню для вызова импорта ассетов
+- **StateManager.js** - добавлено состояние `assetTabOrder` для управления порядком табов
+
+### Improved
+- **Asset Organization** - улучшена организация ассетов с поддержкой внешних источников
+- **User Experience** - упрощен процесс добавления новых ассетов в редактор
+- **Flexibility** - поддержка различных структур папок и категорий ассетов
+- **Integration** - полная интеграция с существующей системой управления ассетами
+
 ## [3.30.1] - 2025-01-29
 
 ### Improved

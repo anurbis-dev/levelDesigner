@@ -1321,13 +1321,13 @@ export class LayersPanel extends BasePanel {
     /**
      * Delete layer
      */
-    deleteLayer(layerId) {
+    async deleteLayer(layerId) {
         const level = this.levelEditor.getLevel();
         const layer = level.getLayerById(layerId);
         
         if (!layer || layerId === level.getMainLayerId()) return;
 
-        if (confirm(`Delete layer "${layer.name}"? All objects in this layer will be moved to the main layer.`)) {
+        if (await confirm(`Delete layer "${layer.name}"? All objects in this layer will be moved to the main layer.`)) {
             // Move objects to main layer before deleting
             this.moveObjectsToMainLayer(layerId);
             

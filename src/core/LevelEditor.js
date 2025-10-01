@@ -27,6 +27,7 @@ import { ContextMenuManager } from '../managers/ContextMenuManager.js';
 import { CanvasContextMenu } from '../ui/CanvasContextMenu.js';
 import { Logger } from '../utils/Logger.js';
 import { ColorUtils } from '../utils/ColorUtils.js';
+import { dialogReplacer } from '../utils/DialogReplacer.js';
 
 /**
  * Main Level Editor class - Unified version with modular architecture
@@ -38,13 +39,13 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.30.1';
+    static VERSION = '3.30.2';
 
     constructor(userPreferencesManager = null) {
         // Initialize managers
         this.stateManager = new StateManager();
         this.historyManager = new HistoryManager();
-        this.assetManager = new AssetManager();
+        this.assetManager = new AssetManager(this.stateManager);
         this.fileManager = new FileManager();
         
         // Store user preferences manager
@@ -52,6 +53,9 @@ export class LevelEditor {
         
         // Use ConfigManager from UserPreferencesManager if available, otherwise create new one
         this.configManager = userPreferencesManager?.configManager || null;
+        
+        // Replace browser dialogs with custom ones
+        dialogReplacer.replace();
         
         // Initialize UI components
         this.canvasRenderer = null;
@@ -1538,7 +1542,7 @@ export class LevelEditor {
      * File operations
      */
     async newLevel() {
-        if (this.stateManager.get('isDirty') && !confirm("You have unsaved changes. Are you sure you want to create a new level?")) {
+        if (this.stateManager.get('isDirty') && !(await confirm("You have unsaved changes. Are you sure you want to create a new level?"))) {
             return;
         }
 
@@ -1579,7 +1583,7 @@ export class LevelEditor {
     }
 
     async openLevel() {
-        if (this.stateManager.get('isDirty') && !confirm("You have unsaved changes. Are you sure you want to open a new level?")) {
+        if (this.stateManager.get('isDirty') && !(await confirm("You have unsaved changes. Are you sure you want to open a new level?"))) {
             return;
         }
 
@@ -1628,7 +1632,7 @@ export class LevelEditor {
             Logger.render.info(`✅ Level loaded: ${this.level.objects.length} objects`);
         } catch (error) {
             Logger.render.error(`❌ Failed to load level: ${error.message}`);
-            alert("Error loading level: " + error.message);
+            await alert("Error loading level: " + error.message);
         }
     }
 
@@ -1694,19 +1698,19 @@ export class LevelEditor {
         return count;
     }
 
-    saveLevel() {
+    async saveLevel() {
         // Check for Player Start objects using cached stats
         const playerStartCount = this.getPlayerStartCount();
 
         // Check if Player Start is missing
         if (playerStartCount === 0) {
-            alert(`Cannot save level!\n\nNo Player Start object found on the level.\nEvery level must have exactly one Player Start object.\n\nPlease add a Player Start object to your level before saving.\n\nYou can find Player Start objects in the Assets panel under the "Collectibles" category.`);
+            await alert(`Cannot save level!\n\nNo Player Start object found on the level.\nEvery level must have exactly one Player Start object.\n\nPlease add a Player Start object to your level before saving.\n\nYou can find Player Start objects in the Assets panel under the "Collectibles" category.`);
             return;
         }
 
         // Check for multiple Player Start objects
         if (playerStartCount > 1) {
-            alert(`Cannot save level!\n\nFound ${playerStartCount} Player Start objects on the level.\nThere should be only one Player Start object.\n\nPlease remove extra Player Start objects before saving the level.`);
+            await alert(`Cannot save level!\n\nFound ${playerStartCount} Player Start objects on the level.\nThere should be only one Player Start object.\n\nPlease remove extra Player Start objects before saving the level.`);
             return;
         }
 
@@ -1715,23 +1719,23 @@ export class LevelEditor {
         Logger.render.info('💾 Level saved successfully');
     }
 
-    saveLevelAs() {
+    async saveLevelAs() {
         // Check for Player Start objects BEFORE prompting for filename using cached stats
         const playerStartCount = this.getPlayerStartCount();
 
         // Check if Player Start is missing
         if (playerStartCount === 0) {
-            alert(`Cannot save level!\n\nNo Player Start object found on the level.\nEvery level must have exactly one Player Start object.\n\nPlease add a Player Start object to your level before saving.\n\nYou can find Player Start objects in the Assets panel under the "Collectibles" category.`);
+            await alert(`Cannot save level!\n\nNo Player Start object found on the level.\nEvery level must have exactly one Player Start object.\n\nPlease add a Player Start object to your level before saving.\n\nYou can find Player Start objects in the Assets panel under the "Collectibles" category.`);
             return;
         }
 
         // Check for multiple Player Start objects
         if (playerStartCount > 1) {
-            alert(`Cannot save level!\n\nFound ${playerStartCount} Player Start objects on the level.\nThere should be only one Player Start object.\n\nPlease remove extra Player Start objects before saving the level.`);
+            await alert(`Cannot save level!\n\nFound ${playerStartCount} Player Start objects on the level.\nThere should be only one Player Start object.\n\nPlease remove extra Player Start objects before saving the level.`);
             return;
         }
 
-        const fileName = prompt("Enter file name:", this.fileManager.getCurrentFileName() || "level.json");
+        const fileName = await prompt("Enter file name:", this.fileManager.getCurrentFileName() || "level.json");
         if (fileName) {
             this.fileManager.saveLevel(this.level, fileName);
             this.stateManager.markClean();
@@ -1739,9 +1743,38 @@ export class LevelEditor {
         }
     }
 
-    openAssetsPath() {
-        // TODO: Implement assets path configuration
-        alert("Assets path configuration not implemented yet");
+    async importAssets() {
+        try {
+            // Import AssetImporter
+            const { AssetImporter } = await import('../utils/AssetImporter.js');
+            
+            // Create importer instance
+            const importer = new AssetImporter(this.assetManager);
+            
+            // Show folder picker
+            const folderPath = await importer.showFolderPicker();
+            if (!folderPath) {
+                return; // User cancelled
+            }
+            
+            // Import assets
+            const result = await importer.importFromFolder(folderPath);
+            
+            // Show success message
+            const message = `Successfully imported ${result.totalImported} assets from ${result.categories.length} categories:\n\n` +
+                result.categories.map(cat => `• ${cat.name}: ${cat.importedCount} assets`).join('\n');
+            
+            await alert(message);
+            
+            // Refresh asset panel
+            if (this.assetPanel) {
+                this.assetPanel.render();
+            }
+            
+        } catch (error) {
+            console.error('Asset import failed:', error);
+            await alert(`Asset import failed: ${error.message}`);
+        }
     }
 
     openSettings() {

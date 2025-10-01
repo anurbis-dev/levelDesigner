@@ -264,7 +264,10 @@ export class Toolbar {
                     return;
                 }
                 
-                this.handleAction(action);
+                // Handle async action
+                (async () => {
+                    await this.handleAction(action);
+                })();
             });
         });
     }
@@ -272,7 +275,7 @@ export class Toolbar {
     /**
      * Handle toolbar action
      */
-    handleAction(action) {
+    async handleAction(action) {
         try {
             Logger.ui.info(`Toolbar action: ${action}`);
             
@@ -291,7 +294,7 @@ export class Toolbar {
                     this.levelEditor.openLevel();
                     break;
                 case 'saveLevel':
-                    this.levelEditor.saveLevel();
+                    await this.levelEditor.saveLevel();
                     break;
                 case 'undo':
                     this.levelEditor.undo();

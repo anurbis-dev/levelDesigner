@@ -5,10 +5,11 @@ import { Logger } from '../utils/Logger.js';
  * Asset library management
  */
 export class AssetManager {
-    constructor() {
+    constructor(stateManager = null) {
         this.assets = new Map();
         this.categories = new Set();
         this.imageCache = new Map();
+        this.stateManager = stateManager;
         this.loadDefaultAssets();
     }
 
@@ -253,6 +254,87 @@ export class AssetManager {
         } catch (error) {
             Logger.asset.error('Failed to import asset library:', error);
             return false;
+        }
+    }
+
+    /**
+     * Add external asset from import
+     * @param {Object} assetData - Asset data from import
+     * @returns {Asset} Created asset instance
+     */
+    addExternalAsset(assetData) {
+        const asset = new Asset(assetData);
+        this.assets.set(asset.id, asset);
+        this.categories.add(asset.category);
+        
+        // Update StateManager if available
+        if (this.stateManager) {
+            this.updateStateManagerCategories();
+        }
+        
+        return asset;
+    }
+
+    /**
+     * Update StateManager with current categories
+     */
+    updateStateManagerCategories() {
+        if (!this.stateManager) return;
+        
+        const currentOrder = this.stateManager.get('assetTabOrder') || [];
+        const newCategories = Array.from(this.categories);
+        
+        // Add new categories to the end of the order
+        const updatedOrder = [...currentOrder];
+        newCategories.forEach(category => {
+            if (!updatedOrder.includes(category)) {
+                updatedOrder.push(category);
+            }
+        });
+        
+        // Update StateManager
+        this.stateManager.set('assetTabOrder', updatedOrder);
+    }
+
+    /**
+     * Get assets by category (including external assets)
+     * @param {string} category - Category name
+     * @returns {Array} Array of assets in category
+     */
+    getAssetsByCategory(category) {
+        return this.getAllAssets().filter(asset => asset.category === category);
+    }
+
+    /**
+     * Get all available categories
+     * @returns {Array} Array of category names
+     */
+    getCategories() {
+        return Array.from(this.categories);
+    }
+
+    /**
+     * Clear all external assets (keep default assets)
+     */
+    clearExternalAssets() {
+        const defaultCategories = ['Tiles', 'Enemies', 'Items', 'Prefabs'];
+        const externalAssets = this.getAllAssets().filter(asset => 
+            !defaultCategories.includes(asset.category)
+        );
+        
+        externalAssets.forEach(asset => {
+            this.assets.delete(asset.id);
+        });
+        
+        // Update categories
+        this.categories.clear();
+        this.getAllAssets().forEach(asset => {
+            this.categories.add(asset.category);
+        });
+        
+        // Update StateManager
+        if (this.stateManager) {
+            this.updateStateManagerCategories();
         }
     }
 }

@@ -937,10 +937,10 @@ export class OutlinerPanel extends BasePanel {
         this.startInlineRename(object);
     }
 
-    handleDeleteObject(object) {
+    async handleDeleteObject(object) {
         Logger.outliner.info('Delete requested for object:', object.name);
 
-        if (confirm(`Delete "${object.name || 'Unnamed object'}"?`)) {
+        if (await confirm(`Delete "${object.name || 'Unnamed object'}"?`)) {
             const level = this.levelEditor.getLevel();
             level.removeObject(object.id);
             this.levelEditor.stateManager.notifyListeners('level', level);

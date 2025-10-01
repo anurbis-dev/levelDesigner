@@ -143,10 +143,10 @@ export const MENU_CONFIG = {
             label: 'Settings',
             items: [
                 {
-                    id: 'assets-path',
-                    label: 'Assets Path...',
+                    id: 'import-assets',
+                    label: 'Import Assets...',
                     type: 'action',
-                    action: 'openAssetsPath'
+                    action: 'importAssets'
                 },
                 {
                     id: 'editor-settings',
