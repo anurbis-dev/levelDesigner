@@ -12,6 +12,7 @@
 
 import { Logger } from '../utils/Logger.js';
 import { ScrollUtils } from '../utils/ScrollUtils.js';
+import { SelectionUtils } from '../utils/SelectionUtils.js';
 
 export class BasePanel {
     constructor(container, stateManager, levelEditor) {
@@ -157,5 +158,166 @@ export class BasePanel {
         }, { passive: false, capture: true });
 
         Logger.ui.debug('BasePanel: Global Ctrl+scroll prevention setup');
+    }
+
+    /**
+     * Setup selection functionality for the panel
+     * @param {Object} options - Selection options
+     * @param {string} options.selectionKey - Key for storing selection in state
+     * @param {string} options.anchorKey - Key for storing selection anchor
+     * @param {Function} options.getItemList - Function to get item list for range selection
+     * @param {Function} options.getSelectableItems - Function to get selectable items for marquee
+     * @param {Function} options.onSelectionChange - Callback when selection changes
+     * @param {Function} options.canSelect - Function to check if item can be selected
+     * @param {string} options.itemSelector - CSS selector for selectable items
+     * @param {string} options.selectedClass - CSS class for selected items
+     * @param {boolean} options.enableMarquee - Enable marquee selection
+     */
+    setupSelection(options = {}) {
+        const {
+            selectionKey = 'selectedObjects',
+            anchorKey = 'outliner.shiftAnchor',
+            getItemList = null,
+            getSelectableItems = null,
+            onSelectionChange = null,
+            canSelect = null,
+            itemSelector = '[data-selectable]',
+            selectedClass = 'selected',
+            enableMarquee = false
+        } = options;
+
+        this.selectionOptions = {
+            selectionKey,
+            anchorKey,
+            getItemList,
+            getSelectableItems,
+            onSelectionChange,
+            canSelect,
+            itemSelector,
+            selectedClass,
+            enableMarquee
+        };
+
+        // Subscribe to selection changes
+        this.stateManager.subscribe(selectionKey, () => {
+            this.updateSelectionVisuals();
+        });
+
+        // Setup marquee selection if enabled
+        if (enableMarquee) {
+            this.setupMarqueeSelection();
+        }
+
+        Logger.ui.debug(`BasePanel: Selection setup for ${this.constructor.name}`);
+    }
+
+    /**
+     * Setup marquee selection
+     */
+    setupMarqueeSelection() {
+        const container = this.getSelectionContainer();
+        if (!container) return;
+
+        // Mouse down for marquee start
+        container.addEventListener('mousedown', (e) => {
+            SelectionUtils.handleMarqueeMouseDown(e, {
+                container,
+                stateManager: this.stateManager,
+                ...this.selectionOptions
+            });
+        });
+
+        // Global mouse move and up for marquee
+        const handleMouseMove = (e) => SelectionUtils.handleMarqueeMouseMove(e, this.stateManager);
+        const handleMouseUp = (e) => SelectionUtils.handleMarqueeMouseUp(e, this.stateManager);
+
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+
+        // Store handlers for cleanup
+        this.marqueeHandlers = { handleMouseMove, handleMouseUp };
+    }
+
+    /**
+     * Get container for selection operations
+     * Override in subclasses to specify custom container
+     * @returns {HTMLElement|null} - The selection container
+     */
+    getSelectionContainer() {
+        // Default: use scroll container or panel container
+        return this.getScrollContainer() || this.container;
+    }
+
+    /**
+     * Handle item click with selection logic
+     * @param {Event} e - Click event
+     * @param {Object} item - Item to select
+     */
+    handleItemClick(e, item) {
+        if (!this.selectionOptions) return;
+
+        SelectionUtils.handleItemClick(e, item, {
+            stateManager: this.stateManager,
+            ...this.selectionOptions
+        });
+    }
+
+    /**
+     * Update selection visuals
+     */
+    updateSelectionVisuals() {
+        if (!this.selectionOptions) return;
+
+        const container = this.getSelectionContainer();
+        if (!container) return;
+
+        const selectedItems = this.stateManager.get(this.selectionOptions.selectionKey);
+        
+        SelectionUtils.updateSelectionVisuals(
+            container,
+            selectedItems,
+            this.selectionOptions.itemSelector,
+            this.selectionOptions.selectedClass
+        );
+    }
+
+    /**
+     * Clear selection
+     */
+    clearSelection() {
+        if (!this.selectionOptions) return;
+
+        SelectionUtils.clearSelection(
+            this.stateManager,
+            this.selectionOptions.selectionKey,
+            this.selectionOptions.onSelectionChange
+        );
+    }
+
+    /**
+     * Select single item
+     * @param {string} itemId - Item ID to select
+     */
+    selectSingleItem(itemId) {
+        if (!this.selectionOptions) return;
+
+        SelectionUtils.selectSingleItem(
+            this.stateManager,
+            itemId,
+            this.selectionOptions.selectionKey,
+            this.selectionOptions.anchorKey,
+            this.selectionOptions.onSelectionChange
+        );
+    }
+
+    /**
+     * Cleanup selection handlers
+     */
+    destroy() {
+        if (this.marqueeHandlers) {
+            window.removeEventListener('mousemove', this.marqueeHandlers.handleMouseMove);
+            window.removeEventListener('mouseup', this.marqueeHandlers.handleMouseUp);
+            this.marqueeHandlers = null;
+        }
     }
 }

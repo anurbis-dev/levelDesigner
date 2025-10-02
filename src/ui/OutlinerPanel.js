@@ -89,8 +89,24 @@ export class OutlinerPanel extends BasePanel {
     }
 
     setupEventListeners() {
-        // Subscribe to selection changes
-        this.stateManager.subscribe('selectedObjects', () => this.render());
+        // Setup selection functionality
+        this.setupSelection({
+            selectionKey: 'selectedObjects',
+            anchorKey: 'outliner.shiftAnchor',
+            getItemList: () => this.getFlatObjectList(),
+            onSelectionChange: () => this.render(),
+            canSelect: (obj) => {
+                const level = this.levelEditor.getLevel();
+                const effectiveLayerId = this.levelEditor.renderOperations ?
+                    this.levelEditor.renderOperations.getEffectiveLayerId(obj) :
+                    (obj.layerId || level.getMainLayerId());
+                const layer = level.getLayerById(effectiveLayerId);
+                return !(layer && layer.locked);
+            },
+            itemSelector: '[data-object-id]',
+            selectedClass: 'selected'
+        });
+
         // Subscribe to level changes
         this.stateManager.subscribe('level', () => this.render());
         // Subscribe to outliner state changes (including filters)
@@ -644,7 +660,7 @@ export class OutlinerPanel extends BasePanel {
             if (e.target.classList.contains('outliner-collapse-indicator')) {
                 return;
             }
-            this.handleObjectClick(e, group);
+            this.handleItemClick(e, group);
         });
         
         container.appendChild(item);
@@ -753,105 +769,14 @@ export class OutlinerPanel extends BasePanel {
         item.addEventListener('click', (e) => {
             // Don't handle selection if right-click (context menu)
             if (e.button === 2) return;
-            this.handleObjectClick(e, obj);
+            this.handleItemClick(e, obj);
         });
         
         container.appendChild(item);
     }
 
-    handleObjectClick(e, obj) {
-        // Check if object is in a locked layer
-        const effectiveLayerId = this.levelEditor.renderOperations ?
-            this.levelEditor.renderOperations.getEffectiveLayerId(obj) :
-            (obj.layerId || this.levelEditor.level.getMainLayerId());
-        const layer = this.levelEditor.level.getLayerById(effectiveLayerId);
-        
-        if (layer && layer.locked) {
-            // Don't allow selection of objects in locked layers
-            return;
-        }
-        
-        const selectedObjects = new Set(this.stateManager.get('selectedObjects'));
-
-        if (e.shiftKey) {
-            // Shift+click: select range from anchor point to current object
-            this.handleShiftClick(obj, selectedObjects);
-        } else if (e.ctrlKey || e.metaKey) {
-            // Ctrl/Cmd+click: toggle single object
-            this.handleCtrlClick(obj, selectedObjects);
-        } else {
-            // Normal click: replace selection and set anchor point
-            selectedObjects.clear();
-            selectedObjects.add(obj.id);
-            // Set anchor point for future shift+click operations
-            this.stateManager.update({
-                'outliner.shiftAnchor': obj.id
-            });
-        }
-        
-        this.stateManager.set('selectedObjects', selectedObjects);
-    }
-
-    /**
-     * Handle Shift+click: select range from anchor point to current object
-     */
-    handleShiftClick(obj, selectedObjects) {
-        const flatObjectList = this.getFlatObjectList();
-        const currentIndex = flatObjectList.findIndex(item => item.id === obj.id);
-
-        if (currentIndex === -1) {
-            // Object not found in flat list, just add it
-            selectedObjects.add(obj.id);
-            return;
-        }
-
-        // Get anchor point from state
-        const anchorId = this.stateManager.get('outliner').shiftAnchor;
-
-        if (!anchorId) {
-            // No anchor point set, set current object as anchor and select it
-            selectedObjects.add(obj.id);
-            this.stateManager.update({
-                'outliner.shiftAnchor': obj.id
-            });
-            return;
-        }
-
-        // Find anchor point in flat list
-        const anchorIndex = flatObjectList.findIndex(item => item.id === anchorId);
-
-        if (anchorIndex === -1) {
-            // Anchor point not found, reset anchor and select current object
-            selectedObjects.add(obj.id);
-            this.stateManager.update({
-                'outliner.shiftAnchor': obj.id
-            });
-            return;
-        }
-
-        // Select range from anchor point to current object
-        const startIndex = Math.min(anchorIndex, currentIndex);
-        const endIndex = Math.max(anchorIndex, currentIndex);
-
-        for (let i = startIndex; i <= endIndex; i++) {
-            selectedObjects.add(flatObjectList[i].id);
-        }
-    }
-
-    /**
-     * Handle Ctrl/Cmd+click: toggle single object
-     */
-    handleCtrlClick(obj, selectedObjects) {
-        if (selectedObjects.has(obj.id)) {
-            selectedObjects.delete(obj.id);
-        } else {
-            selectedObjects.add(obj.id);
-            // Update anchor point to last toggled object
-            this.stateManager.update({
-                'outliner.shiftAnchor': obj.id
-            });
-        }
-    }
+    // Note: handleObjectClick, handleShiftClick, handleCtrlClick methods removed
+    // Now using BasePanel.handleItemClick with SelectionUtils
 
     /**
      * Get flat list of all objects in the outliner (in display order)

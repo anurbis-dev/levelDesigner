@@ -37,6 +37,22 @@ export class LayersPanel extends BasePanel {
     }
 
     /**
+     * Get list of layers for selection operations
+     * @returns {Array} Array of layer objects
+     */
+    getLayerList() {
+        const level = this.levelEditor.getLevel();
+        if (!level) return [];
+        
+        return level.layers.map(layer => ({
+            id: layer.id,
+            name: layer.name,
+            locked: layer.locked,
+            visible: layer.visible
+        }));
+    }
+
+    /**
      * Initialize current layer
      */
     initializeCurrentLayer() {
@@ -49,6 +65,17 @@ export class LayersPanel extends BasePanel {
     }
 
     setupEventListeners() {
+        // Setup selection functionality for layers
+        this.setupSelection({
+            selectionKey: 'selectedObjects',
+            anchorKey: 'layers.shiftAnchor',
+            getItemList: () => this.getLayerList(),
+            onSelectionChange: () => this.updateLayerStyles(),
+            canSelect: (layer) => !layer.locked,
+            itemSelector: '[data-layer-id]',
+            selectedClass: 'selected'
+        });
+
         // Subscribe to level changes
         this.stateManager.subscribe('level', () => {
             // Only initialize current layer if not already set
@@ -61,11 +88,6 @@ export class LayersPanel extends BasePanel {
                 }
             }
             this.render();
-        });
-
-        // Subscribe to selection changes
-        this.stateManager.subscribe('selectedObjects', () => {
-            this.updateLayerStyles();
         });
 
         // Subscribe to layer objects count changes for efficient updates
@@ -885,12 +907,16 @@ export class LayersPanel extends BasePanel {
                 }
                 
                 const layerId = e.currentTarget.dataset.layerId;
+                const level = this.levelEditor.getLevel();
+                const layer = level.getLayerById(layerId);
                 
                 if (e.ctrlKey || e.metaKey) {
                     // Select all objects in the layer
                     this.selectAllObjectsInLayer(layerId);
                 } else {
-                    // Set as current layer
+                    // Use BasePanel selection for layer selection
+                    this.handleItemClick(e, layer);
+                    // Also set as current layer
                     this.setCurrentLayerAndNotify(layerId);
                 }
             });

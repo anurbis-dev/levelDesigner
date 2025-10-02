@@ -115,7 +115,6 @@ html, body {
 /* Styles for asset previews */
 .asset-thumbnail {
     border: 2px solid transparent;
-    transition: border-color 0.2s;
 }
 
 .asset-thumbnail.selected {
@@ -153,11 +152,15 @@ html, body {
     padding: 0.5rem;
     border-radius: 0.25rem;
     cursor: pointer;
-    transition: background-color 0.2s;
 }
 
-.asset-list-item:hover, .asset-details-row:hover {
+.asset-thumbnail:hover, .asset-list-item:hover, .asset-details-row:hover {
     background-color: #374151;
+}
+
+/* Marquee selection highlight */
+.asset-thumbnail.marquee-highlighted, .asset-list-item.marquee-highlighted, .asset-details-row.marquee-highlighted {
+    background-color: #4B5563;
 }
 
 .asset-list-item.selected, .asset-details-row.selected {

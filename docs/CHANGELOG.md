@@ -1,5 +1,29 @@
 # Changelog
 
+## [3.32.0] - 2025-10-02
+
+### Added
+- **SelectionUtils**: режимы marquee replace/add/toggle, единая логика для всех панелей
+
+### Changed
+- **AssetPanel**: 
+  - Ctrl+click+drag запускает рамку в режиме toggle; Ctrl+Shift+drag — add; обычный drag по фону — replace
+  - Ctrl+click без drag — мгновенный toggle без рамки (порог для рамки 4px)
+  - Отключено перетаскивание ассетов по Ctrl+drag во избежание конфликта с рамкой
+  - В режиме Details клик по промежуткам колонок считается кликом по строке
+  - Унифицированный `itemSelector` для всех режимов (Grid/List/Details)
+
+### Fixed
+- **Ctrl+click toggle**: починен переключатель выделения в панели ассетов
+- **Marquee false positive**: обычный drag по элементу больше не запускает рамку
+- **Details gaps**: клики между колонками считаются кликами по элементу
+
+### Technical
+- **SelectionUtils**: отложенный старт рамки для Ctrl с порогом 4px, pending-состояние; финализация по режимам
+- **BasePanel/AssetPanel**: корректная передача `itemSelector` и контейнера селекции
+
+---
+
 ## [3.31.0] - 2025-01-29
 
 ### Added

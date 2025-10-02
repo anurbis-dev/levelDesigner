@@ -33,8 +33,10 @@ export class HoverEffects {
             };
         }
 
-        // Apply transition
-        element.style.transition = config.transition;
+        // Apply transition only if not 'none'
+        if (config.transition !== 'none') {
+            element.style.transition = config.transition;
+        }
 
         switch (effectType) {
             case 'brightness':
@@ -68,7 +70,10 @@ export class HoverEffects {
         element.style.filter = element._originalStyles.filter;
         element.style.backgroundColor = element._originalStyles.backgroundColor;
         element.style.borderColor = element._originalStyles.borderColor;
-        element.style.transition = element._originalStyles.transition;
+        // Only restore transition if it wasn't 'none'
+        if (element._originalStyles.transition !== 'none') {
+            element.style.transition = element._originalStyles.transition;
+        }
 
         // Remove hover classes but preserve selection classes
         if (element._originalStyles.classes) {

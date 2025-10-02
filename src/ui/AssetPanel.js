@@ -2,7 +2,7 @@ import { BasePanel } from './BasePanel.js';
 import { Logger } from '../utils/Logger.js';
 import { AssetContextMenu } from './AssetContextMenu.js';
 import { AssetPanelContextMenu } from './AssetPanelContextMenu.js';
-import { HoverEffects } from '../utils/HoverEffects.js';
+// Note: HoverEffects removed - using CSS hover effects like OutlinerPanel
 
 /**
  * Asset panel UI component
@@ -121,14 +121,21 @@ export class AssetPanel extends BasePanel {
     }
 
     setupEventListeners() {
+        // Setup selection functionality for assets
+        this.setupSelection({
+            selectionKey: 'selectedAssets',
+            anchorKey: 'assets.shiftAnchor',
+            getItemList: () => this.getAssetList(),
+            getSelectableItems: () => this.getSelectableAssetElements(),
+            onSelectionChange: () => this.updateSelectionVisuals(),
+            canSelect: (asset) => true, // All assets can be selected
+            itemSelector: '.asset-thumbnail, .asset-list-item, .asset-details-row, [data-asset-id]',
+            selectedClass: 'selected',
+            enableMarquee: true
+        });
+
         // Subscribe to state changes
         this.stateManager.subscribe('activeAssetTabs', () => this.render());
-        this.stateManager.subscribe('selectedAssets', () => this.updateSelectionVisuals());
-        
-        // Asset marquee selection
-        this.previewsContainer.addEventListener('mousedown', (e) => this.handleAssetMouseDown(e));
-        this.previewsContainer.addEventListener('mousemove', (e) => this.handleAssetMouseMove(e));
-        this.previewsContainer.addEventListener('mouseup', (e) => this.handleAssetMouseUp(e));
         
         // Asset size zoom with Ctrl+scroll
         this.previewsContainer.addEventListener('wheel', (e) => this.handleAssetWheel(e));
@@ -154,15 +161,11 @@ export class AssetPanel extends BasePanel {
         };
         window.addEventListener('resize', this.resizeHandler);
         
-        // Global events for proper marquee handling
-        window.addEventListener('mousemove', (e) => this.handleGlobalAssetMouseMove(e));
-        window.addEventListener('mouseup', (e) => this.handleGlobalAssetMouseUp(e));
+        // Note: Global marquee handling now managed by BasePanel
     }
 
     render() {
-        // Clear any lingering hover effects before re-rendering
-        this.clearAllHoverEffects();
-        
+        // Note: Hover effects now handled by CSS (like OutlinerPanel)
         this.renderTabs();
         this.renderPreviews();
     }
@@ -318,12 +321,11 @@ export class AssetPanel extends BasePanel {
         thumb.style.height = `${this.assetSize}px`;
         thumb.style.borderRadius = '4px';
         thumb.style.overflow = 'hidden';
-        thumb.style.transition = 'filter 0.2s ease';
+        // No transition for immediate selection feedback
         thumb.dataset.assetId = asset.id;
         thumb.draggable = true;
         
-        // Add hover effect using utility
-        HoverEffects.setupGridItemHover(thumb);
+        // Note: Hover effects now handled by CSS (like OutlinerPanel)
         
         if (asset.imgSrc && this.isValidImageSrc(asset.imgSrc)) {
             const img = document.createElement('img');
@@ -350,7 +352,7 @@ export class AssetPanel extends BasePanel {
         thumb.title = `${asset.name} (${asset.type})`;
         
         // Event listeners
-        thumb.addEventListener('click', (e) => this.handleThumbnailClick(e, asset));
+        thumb.addEventListener('click', (e) => this.handleItemClick(e, asset));
         thumb.addEventListener('dragstart', (e) => this.handleThumbnailDragStart(e, asset));
         
         return thumb;
@@ -412,7 +414,7 @@ export class AssetPanel extends BasePanel {
         item.appendChild(nameDiv);
         
         // Event listeners
-        item.addEventListener('click', (e) => this.handleThumbnailClick(e, asset));
+        item.addEventListener('click', (e) => this.handleItemClick(e, asset));
         item.addEventListener('dragstart', (e) => this.handleThumbnailDragStart(e, asset));
         
         return item;
@@ -498,7 +500,7 @@ export class AssetPanel extends BasePanel {
         row.appendChild(properties);
         
         // Event listeners
-        row.addEventListener('click', (e) => this.handleThumbnailClick(e, asset));
+        row.addEventListener('click', (e) => this.handleItemClick(e, asset));
         row.addEventListener('dragstart', (e) => this.handleThumbnailDragStart(e, asset));
         
         return row;
@@ -608,26 +610,17 @@ export class AssetPanel extends BasePanel {
         setTimeout(() => this.autoResizePanelHeight(), 100);
     }
 
-    handleThumbnailClick(e, asset) {
-        const selectedAssets = new Set(this.stateManager.get('selectedAssets'));
-        
-        if (e.shiftKey) {
-            // Toggle selection
-            if (selectedAssets.has(asset.id)) {
-                selectedAssets.delete(asset.id);
-            } else {
-                selectedAssets.add(asset.id);
-            }
-        } else {
-            // Select single asset
-            selectedAssets.clear();
-            selectedAssets.add(asset.id);
-        }
-        
-        this.stateManager.set('selectedAssets', selectedAssets);
-    }
+    // Note: handleThumbnailClick method removed
+    // Now using BasePanel.handleItemClick with SelectionUtils
 
     handleThumbnailDragStart(e, asset) {
+        // Disable dragging when Ctrl/Cmd is held to allow marquee toggle
+        if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+
         const selectedAssets = this.stateManager.get('selectedAssets');
         const draggedAssetIds = selectedAssets.has(asset.id) ? 
             Array.from(selectedAssets) : [asset.id];
@@ -640,132 +633,11 @@ export class AssetPanel extends BasePanel {
         });
     }
 
-    handleAssetMouseDown(e) {
-        // Only allow marquee selection with left mouse button (button 0)
-        if (e.button !== 0) return;
+    // Note: handleAssetMouseDown method removed
+    // Now using BasePanel marquee selection with SelectionUtils
 
-        // Check if click was on background, not an asset element
-        if (e.target.closest('.asset-thumbnail, .asset-list-item, .asset-details-row')) return;
-        
-        const mouse = this.stateManager.get('mouse');
-        this.stateManager.update({
-            'mouse.isAssetMarqueeSelecting': true
-        });
-        
-        if (!e.shiftKey) {
-            // Just clear selection without re-rendering everything
-            this.stateManager.set('selectedAssets', new Set());
-            this.updateSelectionVisuals();
-        }
-        
-        // Create marquee div
-        this.marqueeDiv = document.createElement('div');
-        this.marqueeDiv.id = 'asset-marquee';
-        this.previewsContainer.appendChild(this.marqueeDiv);
-        
-        const rect = this.previewsContainer.getBoundingClientRect();
-        this.marqueeStart = { x: e.clientX, y: e.clientY };
-        this.marqueeDiv.style.position = 'absolute';
-        this.marqueeDiv.style.left = `${e.clientX - rect.left + this.previewsContainer.scrollLeft}px`;
-        this.marqueeDiv.style.top = `${e.clientY - rect.top + this.previewsContainer.scrollTop}px`;
-        this.marqueeDiv.style.width = '0px';
-        this.marqueeDiv.style.height = '0px';
-        this.marqueeDiv.style.border = '2px dashed #3B82F6';
-        this.marqueeDiv.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
-        this.marqueeDiv.style.pointerEvents = 'none';
-        this.marqueeDiv.style.zIndex = '1000';
-    }
-
-    handleAssetMouseMove(e) {
-        if (!this.stateManager.get('mouse.isAssetMarqueeSelecting')) return;
-        
-        const rect = this.previewsContainer.getBoundingClientRect();
-        const dx = e.clientX - this.marqueeStart.x;
-        const dy = e.clientY - this.marqueeStart.y;
-        
-        this.marqueeDiv.style.width = `${Math.abs(dx)}px`;
-        this.marqueeDiv.style.height = `${Math.abs(dy)}px`;
-        this.marqueeDiv.style.left = `${(dx < 0 ? e.clientX - rect.left : this.marqueeStart.x - rect.left) + this.previewsContainer.scrollLeft}px`;
-        this.marqueeDiv.style.top = `${(dy < 0 ? e.clientY - rect.top : this.marqueeStart.y - rect.top) + this.previewsContainer.scrollTop}px`;
-        
-        // Highlight elements that intersect with marquee
-        this.highlightElementsInMarquee();
-    }
-
-    handleAssetMouseUp(e) {
-        if (!this.stateManager.get('mouse.isAssetMarqueeSelecting')) return;
-        this.finishAssetMarqueeSelection();
-    }
-
-    handleGlobalAssetMouseMove(e) {
-        if (!this.stateManager.get('mouse.isAssetMarqueeSelecting')) return;
-        
-        const rect = this.previewsContainer.getBoundingClientRect();
-        
-        // Check if mouse is inside asset panel bounds
-        const isInsidePanel = e.clientX >= rect.left && e.clientX <= rect.right && 
-                             e.clientY >= rect.top && e.clientY <= rect.bottom;
-        
-        if (!isInsidePanel) {
-            // Constrain marquee to panel bounds
-            const constrainedX = Math.max(rect.left, Math.min(rect.right, e.clientX));
-            const constrainedY = Math.max(rect.top, Math.min(rect.bottom, e.clientY));
-            
-            const dx = constrainedX - this.marqueeStart.x;
-            const dy = constrainedY - this.marqueeStart.y;
-            
-            if (this.marqueeDiv) {
-                this.marqueeDiv.style.width = `${Math.abs(dx)}px`;
-                this.marqueeDiv.style.height = `${Math.abs(dy)}px`;
-                this.marqueeDiv.style.left = `${(dx < 0 ? constrainedX - rect.left : this.marqueeStart.x - rect.left) + this.previewsContainer.scrollLeft}px`;
-                this.marqueeDiv.style.top = `${(dy < 0 ? constrainedY - rect.top : this.marqueeStart.y - rect.top) + this.previewsContainer.scrollTop}px`;
-            }
-        }
-    }
-
-    handleGlobalAssetMouseUp(e) {
-        if (this.stateManager.get('mouse.isAssetMarqueeSelecting')) {
-            this.finishAssetMarqueeSelection();
-        }
-    }
-
-    finishAssetMarqueeSelection() {
-        this.stateManager.update({
-            'mouse.isAssetMarqueeSelecting': false
-        });
-        
-        const marqueeRect = this.marqueeDiv ? this.marqueeDiv.getBoundingClientRect() : null;
-        const selectedAssets = new Set(this.stateManager.get('selectedAssets'));
-        
-        if (marqueeRect && marqueeRect.width > 2 && marqueeRect.height > 2) {
-            // Select assets that intersect with marquee - check all asset elements
-            const assetSelectors = ['.asset-thumbnail', '.asset-list-item', '.asset-details-row'];
-            assetSelectors.forEach(selector => {
-                document.querySelectorAll(selector).forEach(element => {
-                    const elementRect = element.getBoundingClientRect();
-                    
-                    if (marqueeRect.left < elementRect.right && marqueeRect.right > elementRect.left &&
-                        marqueeRect.top < elementRect.bottom && marqueeRect.bottom > elementRect.top) {
-                        selectedAssets.add(element.dataset.assetId);
-                    }
-                });
-            });
-            
-            this.stateManager.set('selectedAssets', selectedAssets);
-        }
-        
-        // Clear all marquee highlights
-        this.clearAllMarqueeHighlights();
-        
-        // Clean up marquee
-        if (this.marqueeDiv && this.marqueeDiv.parentNode) {
-            this.marqueeDiv.parentNode.removeChild(this.marqueeDiv);
-        }
-        this.marqueeDiv = null;
-        
-        // Force immediate visual update after selection
-        this.updateSelectionVisuals();
-    }
+    // Note: Old marquee selection methods removed
+    // Now using BasePanel marquee selection with SelectionUtils
 
     /**
      * Add drop target styling
@@ -864,6 +736,32 @@ export class AssetPanel extends BasePanel {
     }
 
     /**
+     * Get container for selection operations
+     * @returns {HTMLElement|null} - The selection container
+     */
+    getSelectionContainer() {
+        return this.previewsContainer;
+    }
+
+    /**
+     * Get list of assets for selection operations
+     * @returns {Array} Array of asset objects
+     */
+    getAssetList() {
+        const activeTabs = this.stateManager.get('activeAssetTabs');
+        return Array.from(activeTabs)
+            .flatMap(tabName => this.assetManager.getAssetsByCategory(tabName));
+    }
+
+    /**
+     * Get selectable asset elements for marquee selection
+     * @returns {Array} Array of selectable elements
+     */
+    getSelectableAssetElements() {
+        return Array.from(this.previewsContainer.querySelectorAll('[data-asset-id]'));
+    }
+
+    /**
      * Handle wheel event for asset size zoom
      * @param {WheelEvent} e - The wheel event
      */
@@ -921,21 +819,9 @@ export class AssetPanel extends BasePanel {
         // Update all asset thumbnails
         const thumbnails = this.previewsContainer.querySelectorAll('.asset-thumbnail');
         thumbnails.forEach(thumb => {
-            // Temporarily disable transitions for smooth resize
-            const originalTransition = thumb.style.transition;
-            thumb.style.transition = 'none';
-            
-            // Update size
+            // Update size immediately without transitions
             thumb.style.width = `${this.assetSize}px`;
             thumb.style.height = `${this.assetSize}px`;
-            
-            // Force reflow to apply changes immediately
-            thumb.offsetHeight;
-            
-            // Restore transitions after resize
-            requestAnimationFrame(() => {
-                thumb.style.transition = originalTransition;
-            });
         });
     }
 
@@ -1026,13 +912,7 @@ export class AssetPanel extends BasePanel {
         if (element.classList.contains('marquee-highlighted')) return;
         
         element.classList.add('marquee-highlighted');
-        
-        // Use hover effect utility
-        if (element.classList.contains('asset-thumbnail')) {
-            HoverEffects.applyHoverEffect(element, 'brightness');
-        } else if (element.classList.contains('asset-list-item') || element.classList.contains('asset-details-row')) {
-            HoverEffects.applyHoverEffect(element, 'background');
-        }
+        // Note: Hover effects now handled by CSS (like OutlinerPanel)
     }
 
     /**
@@ -1042,9 +922,7 @@ export class AssetPanel extends BasePanel {
         if (!element.classList.contains('marquee-highlighted')) return;
         
         element.classList.remove('marquee-highlighted');
-        
-        // Remove hover effects using utility
-        HoverEffects.removeHoverEffect(element);
+        // Note: Hover effects now handled by CSS (like OutlinerPanel)
     }
 
     /**
@@ -1192,13 +1070,13 @@ export class AssetPanel extends BasePanel {
     }
 
     /**
-     * Clear all hover effects from asset elements
+     * Clear all marquee highlights from asset elements
      */
-    clearAllHoverEffects() {
+    clearAllMarqueeHighlights() {
         const assetSelectors = ['.asset-thumbnail', '.asset-list-item', '.asset-details-row'];
         assetSelectors.forEach(selector => {
             document.querySelectorAll(selector).forEach(element => {
-                HoverEffects.removeHoverEffect(element);
+                element.classList.remove('marquee-highlighted');
             });
         });
     }
@@ -1210,8 +1088,7 @@ export class AssetPanel extends BasePanel {
         if (this.resizeHandler) {
             window.removeEventListener('resize', this.resizeHandler);
         }
-        window.removeEventListener('mousemove', this.handleGlobalAssetMouseMove);
-        window.removeEventListener('mouseup', this.handleGlobalAssetMouseUp);
+        // Note: Global marquee handlers now managed by BasePanel
 
         // Clean up context menus
         if (this.assetContextMenu) {
