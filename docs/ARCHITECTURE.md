@@ -54,10 +54,20 @@
 - **Type Validation** - валидация числовых, строковых и булевых значений
 - **Performance Optimization** - кэширование и оптимизированные проверки
 
-### Logger
+### Logger (v3.34.0 - полная миграция)
 **Файл**: `src/utils/Logger.js`
-- Профессиональная система логирования
-- 19 категорий (добавлены: LIFECYCLE, ERROR_HANDLER), 4 уровня (DEBUG, INFO, WARN, ERROR)
+- **Профессиональная система логирования** - централизованное логирование для всего проекта
+- **19 категорий** (v3.33.0: +LIFECYCLE, ERROR_HANDLER), 4 уровня (DEBUG, INFO, WARN, ERROR)
+- **100% покрытие** (v3.34.0) - все прямые вызовы console.* заменены на Logger.*
+- **Компоненты используют Logger:**
+  - CanvasRenderer → Logger.canvas (9 замен)
+  - FileUtils → Logger.file (6 замен)
+  - AssetManager → Logger.asset (2 замены)
+  - ConsoleContextMenu → Logger.console (2 замены)
+  - SettingsPanel → Logger.settings (2 замены)
+  - DetailsPanel → Logger.ui (2 замены)
+  - FolderPickerDialog → Logger.file (2 замены)
+- **Fallback механизм** - безопасное использование console.* если Logger недоступен (LevelEditor, ConfigManager)
 
 ### ErrorHandler (v3.33.0)
 **Файл**: `src/utils/ErrorHandler.js`
@@ -93,8 +103,13 @@
 - Методы: createSearchInput, filterObjects, filterObjectsRecursive, createSearchResultsInfo
 - Устранено дублирование: поиск в OutlinerPanel и LayersPanel
 
-### FileUtils & RenderUtils & DuplicateUtils & GitUtils
-- FileUtils: универсальные файловые операции
+### FileUtils (v3.34.0 - Logger integration)
+**Файл**: `src/utils/FileUtils.js`
+- **Универсальные файловые операции** - единый API для работы с файлами
+- **Logger integration** - все операции логируются через Logger.file
+- **Методы**: pickFile, readFileAsText, readFileAsJSON, downloadData, createDataURL, pickAndReadText, pickAndReadJSON
+
+### RenderUtils & DuplicateUtils & GitUtils
 - RenderUtils: параметризованная система отрисовки
 - DuplicateUtils: операции дублирования объектов
 - GitUtils: интеграция с Git
