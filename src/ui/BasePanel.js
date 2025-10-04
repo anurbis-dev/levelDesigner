@@ -19,7 +19,6 @@ export class BasePanel {
         this.container = container;
         this.stateManager = stateManager;
         this.levelEditor = levelEditor;
-        this.scrollContainer = null;
     }
 
     /**

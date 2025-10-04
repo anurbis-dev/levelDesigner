@@ -18,9 +18,12 @@ export class SettingsPanel {
         this.isVisible = false;
         this.lastActiveTab = 'general'; // Default tab
         this.escapeKeyHandler = null;
+        
+        // Track event listeners for cleanup
+        this.eventListeners = [];
 
         // Initialize grid settings module
-        this.gridSettings = new GridSettings(configManager);
+        this.gridSettings = configManager ? new GridSettings(configManager) : null;
         
         // Initialize settings sync manager
         this.syncManager = new SettingsSyncManager(levelEditor);
@@ -28,8 +31,9 @@ export class SettingsPanel {
         // Initialize context menu
         this.contextMenu = null;
 
-        // Sync settings from ConfigManager to StateManager on initialization
-        if (this.syncManager) {
+        // Sync settings from ConfigManager to StateManager on initialization (only once)
+        if (this.syncManager && !SettingsPanel._initialSyncDone) {
+            SettingsPanel._initialSyncDone = true;
             this.syncManager.syncFromConfigToState();
         }
 
@@ -107,7 +111,8 @@ export class SettingsPanel {
     setupEventListeners() {
         // Settings tabs - delegate to overlay since elements are created dynamically
         const overlay = document.getElementById('settings-overlay');
-        if (overlay) {
+        if (overlay && !overlay._hasEventListener) {
+            overlay._hasEventListener = true;
             overlay.addEventListener('click', (e) => {
                 // Handle close button and overlay click
                 if (e.target.id === 'cancel-settings') {
@@ -160,7 +165,8 @@ export class SettingsPanel {
 
         // File import handler
         const importFile = document.getElementById('import-file');
-        if (importFile) {
+        if (importFile && !importFile._hasEventListener) {
+            importFile._hasEventListener = true;
             importFile.addEventListener('change', (e) => {
                 this.importSettings(e);
             });
@@ -168,55 +174,114 @@ export class SettingsPanel {
     }
 
     show() {
-        this.isVisible = true;
-        const overlay = document.getElementById('settings-overlay');
-        if (overlay) {
-            overlay.style.display = 'flex';
-            
-            // Load window position and size
-            this.loadWindowState();
-            
-            // Setup window handlers and context menu after a short delay to ensure DOM is ready
-            setTimeout(() => {
-                this.setupWindowHandlers();
-                this.setupContextMenu();
-            }, 100);
-            
-            // Load last active tab from localStorage
-            const savedTab = localStorage.getItem('levelEditor_lastActiveSettingsTab');
-            const activeTab = savedTab || 'general';
-            this.lastActiveTab = activeTab;
-            
-            // Activate the correct tab visually
-            this.activateTab(activeTab);
-            
-            // First sync settings from ConfigManager to StateManager (for consistency)
-            this.syncManager.syncFromConfigToState();
+        try {
+            this.isVisible = true;
+            const overlay = document.getElementById('settings-overlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+                
+                // Load window position and size
+                try {
+                    this.loadWindowState();
+                } catch (error) {
+                    Logger.ui.warn('Error loading window state:', error);
+                }
+                
+                // Setup window handlers and context menu after a short delay to ensure DOM is ready
+                setTimeout(() => {
+                    try {
+                        this.setupWindowHandlers();
+                        this.setupContextMenu();
+                    } catch (error) {
+                        Logger.ui.warn('Error setting up window handlers:', error);
+                    }
+                }, 100);
+                
+                // Load last active tab from localStorage
+                const savedTab = localStorage.getItem('levelEditor_lastActiveSettingsTab');
+                const activeTab = savedTab || 'general';
+                this.lastActiveTab = activeTab;
+                
+                // Activate the correct tab visually
+                try {
+                    this.activateTab(activeTab);
+                } catch (error) {
+                    Logger.ui.warn('Error activating tab:', error);
+                }
+                
+                // First sync settings from ConfigManager to StateManager (for consistency)
+                try {
+                    if (this.syncManager) {
+                        this.syncManager.syncFromConfigToState();
+                    }
+                } catch (error) {
+                    Logger.ui.warn('Error syncing from config to state:', error);
+                }
 
-            // Sync grid settings to StateManager when panel opens
-            if (this.gridSettings) {
-                this.gridSettings.syncAllGridSettingsToState();
+                // Sync grid settings to StateManager when panel opens
+                try {
+                    if (this.gridSettings) {
+                        this.gridSettings.syncAllGridSettingsToState();
+                    }
+                } catch (error) {
+                    Logger.ui.warn('Error syncing grid settings:', error);
+                }
+
+                // Render content for the active tab (after StateManager is synced)
+                try {
+                    this.renderSettingsContent(activeTab);
+                } catch (error) {
+                    Logger.ui.warn('Error rendering settings content:', error);
+                }
+
+                // Now sync current StateManager values to UI (to show current state)
+                try {
+                    if (this.syncManager && !this._stateInitialized) {
+                        this._stateInitialized = true;
+                        this.syncManager.initializeFromState();
+                    }
+                } catch (error) {
+                    Logger.ui.warn('Error initializing from state:', error);
+                }
+
+                // Add direct event listeners to tabs after they are visible
+                try {
+                    this.setupTabEventListeners();
+                } catch (error) {
+                    Logger.ui.warn('Error setting up tab event listeners:', error);
+                }
+                
+                // Setup input event listeners after content is rendered
+                try {
+                    this.setupSettingsInputs();
+                } catch (error) {
+                    Logger.ui.warn('Error setting up settings inputs:', error);
+                }
+
+                // Setup escape key handler to cancel settings
+                try {
+                    this.setupEscapeKeyHandler();
+                } catch (error) {
+                    Logger.ui.warn('Error setting up escape key handler:', error);
+                }
+                
+                // Initialize grid settings event listeners
+                try {
+                    if (this.gridSettings) {
+                        this.gridSettings.initializeEventListeners();
+                    }
+                } catch (error) {
+                    Logger.ui.warn('Error initializing grid settings event listeners:', error);
+                }
             }
-
-            // Render content for the active tab (after StateManager is synced)
-            this.renderSettingsContent(activeTab);
-
-            // Now sync current StateManager values to UI (to show current state)
-            this.syncManager.initializeFromState();
-
-            // Add direct event listeners to tabs after they are visible
-            this.setupTabEventListeners();
-            
-            // Setup input event listeners after content is rendered
-            this.setupSettingsInputs();
-
-            // Setup escape key handler to cancel settings
-            this.setupEscapeKeyHandler();
-            
-            // Initialize grid settings event listeners
-            if (this.gridSettings) {
-                this.gridSettings.initializeEventListeners();
+        } catch (error) {
+            Logger.ui.error('Error in SettingsPanel.show():', error);
+            // Ensure overlay is hidden if there was an error
+            const overlay = document.getElementById('settings-overlay');
+            if (overlay) {
+                overlay.style.display = 'none';
             }
+            this.isVisible = false;
         }
     }
 
@@ -258,7 +323,7 @@ export class SettingsPanel {
                 content = this.renderGeneralSettings();
                 break;
             case 'grid':
-                content = this.gridSettings.renderGridSettings();
+                content = this.gridSettings?.renderGridSettings() || '<div>Grid settings not available</div>';
                 break;
             case 'camera':
                 content = this.renderCameraSettings();
@@ -473,7 +538,7 @@ export class SettingsPanel {
      * Render hotkeys settings section
      */
     renderHotkeysSettings() {
-        const shortcuts = this.configManager.getShortcuts();
+        const shortcuts = this.configManager?.getShortcuts() || {};
         let content = '<h3>Keyboard Shortcuts</h3>';
 
         // Editor shortcuts
@@ -554,6 +619,8 @@ export class SettingsPanel {
 
     setupSettingsInputs() {
         document.querySelectorAll('.setting-input').forEach(input => {
+            if (input._hasInputListener) return; // Prevent duplicate listeners
+            input._hasInputListener = true;
             input.addEventListener('input', (e) => {
                 const path = ValidationUtils.validateString(e.target.dataset.setting, 'data-setting attribute');
                 if (!path) {
@@ -639,6 +706,9 @@ export class SettingsPanel {
      */
     setupHotkeyInputs() {
         document.querySelectorAll('.hotkey-input').forEach(input => {
+            if (input._hasHotkeyListeners) return; // Prevent duplicate listeners
+            input._hasHotkeyListeners = true;
+            
             // Make input focusable and editable
             input.addEventListener('click', (e) => {
                 e.target.readOnly = false;
@@ -692,7 +762,7 @@ export class SettingsPanel {
 
         if (action && category && shortcutData.key) {
             // Get current shortcuts
-            const shortcuts = this.configManager.getShortcuts();
+            const shortcuts = this.configManager?.getShortcuts() || {};
 
             // Update the shortcut
             if (!shortcuts[category]) {
@@ -704,7 +774,9 @@ export class SettingsPanel {
             };
 
             // Save to config
-            this.configManager.set(`shortcuts.${category}.${action}`, shortcuts[category][action]);
+            if (this.configManager) {
+                this.configManager.set(`shortcuts.${category}.${action}`, shortcuts[category][action]);
+            }
         }
     }
 
@@ -792,7 +864,9 @@ export class SettingsPanel {
 
     resetSettings() {
         // Reset to default values
-        this.configManager.reset();
+        if (this.configManager) {
+            this.configManager.reset();
+        }
         
         // Sync to StateManager
         this.syncManager.syncFromConfigToState();
@@ -805,7 +879,7 @@ export class SettingsPanel {
     }
 
     exportSettings() {
-        const settings = this.configManager.getAll();
+        const settings = this.configManager?.getAll() || {};
         const dataStr = JSON.stringify(settings, null, 2);
         const dataBlob = new Blob([dataStr], {type: 'application/json'});
         
@@ -823,10 +897,12 @@ export class SettingsPanel {
         reader.onload = async (e) => {
             try {
                 const settings = JSON.parse(e.target.result);
-                this.configManager.importSettings(settings);
-                
-                // Reload all configs
-                this.configManager.loadAllConfigsSync();
+                if (this.configManager) {
+                    this.configManager.importSettings(settings);
+                    
+                    // Reload all configs
+                    this.configManager.loadAllConfigsSync();
+                }
                 
                 // Sync to StateManager
                 this.syncManager.syncFromConfigToState();
@@ -871,11 +947,11 @@ export class SettingsPanel {
         const gridSubdivColor = window.editor.stateManager.get('canvas.gridSubdivColor');
 
         // Convert and save colors to canvas config
-        if (gridColor !== undefined) {
+        if (gridColor !== undefined && this.configManager) {
             const hexColor = ColorUtils.toHex(gridColor);
             this.configManager.set('canvas.gridColor', hexColor);
         }
-        if (gridSubdivColor !== undefined) {
+        if (gridSubdivColor !== undefined && this.configManager) {
             const hexSubdivColor = ColorUtils.toHex(gridSubdivColor);
             this.configManager.set('canvas.gridSubdivColor', hexSubdivColor);
         }
@@ -914,7 +990,9 @@ export class SettingsPanel {
     async resetToDefaults() {
         if (await confirm('Are you sure you want to reset all settings to defaults? This action cannot be undone.')) {
             // Reset to defaults
-            this.configManager.reset();
+            if (this.configManager) {
+                this.configManager.reset();
+            }
             
             // Sync settings from ConfigManager to StateManager FIRST
             this.syncManager.syncFromConfigToState();
@@ -938,7 +1016,7 @@ export class SettingsPanel {
      * Export settings
      */
     exportSettings() {
-        const settings = this.configManager.getAll();
+        const settings = this.configManager?.getAll() || {};
         const dataStr = JSON.stringify(settings, null, 2);
         const dataBlob = new Blob([dataStr], { type: 'application/json' });
         
@@ -968,7 +1046,7 @@ export class SettingsPanel {
         if (!container) return;
 
         // Get saved state or use defaults
-        const savedState = this.configManager.get('ui.settingsWindow') || {};
+        const savedState = this.configManager?.get('ui.settingsWindow') || {};
         const defaultState = this.getDefaultWindowState();
         
         const state = {
@@ -1020,7 +1098,9 @@ export class SettingsPanel {
             height: rect.height
         };
 
-        this.configManager.set('ui.settingsWindow', state);
+        if (this.configManager) {
+            this.configManager.set('ui.settingsWindow', state);
+        }
     }
 
     /**
@@ -1131,5 +1211,66 @@ export class SettingsPanel {
         // No need to reset anything
         
         this.hide();
+    }
+    
+    /**
+     * Cleanup and destroy panel
+     */
+    destroy() {
+        Logger.ui.debug('Destroying SettingsPanel');
+        
+        // Remove all event listeners
+        this.eventListeners.forEach(({ target, event, handler }) => {
+            try {
+                target.removeEventListener(event, handler);
+            } catch (error) {
+                Logger.ui.warn('Failed to remove event listener:', error);
+            }
+        });
+        this.eventListeners = [];
+        
+        // Remove escape key handler
+        if (this.escapeKeyHandler) {
+            try {
+                document.removeEventListener('keydown', this.escapeKeyHandler);
+            } catch (error) {
+                Logger.ui.warn('Failed to remove escape key handler:', error);
+            }
+            this.escapeKeyHandler = null;
+        }
+        
+        // Destroy context menu
+        if (this.contextMenu) {
+            try {
+                this.contextMenu.destroy();
+            } catch (error) {
+                Logger.ui.warn('Failed to destroy context menu:', error);
+            }
+            this.contextMenu = null;
+        }
+        
+        // Destroy sync manager
+        if (this.syncManager) {
+            // SettingsSyncManager doesn't have destroy method, just clear reference
+            this.syncManager = null;
+        }
+        
+        // Destroy grid settings
+        if (this.gridSettings) {
+            this.gridSettings = null;
+        }
+        
+        // Remove overlay from DOM
+        const overlay = document.getElementById('settings-overlay');
+        if (overlay && overlay.parentNode) {
+            overlay.parentNode.removeChild(overlay);
+        }
+        
+        // Clear references
+        this.container = null;
+        this.configManager = null;
+        this.levelEditor = null;
+        
+        Logger.ui.debug('SettingsPanel destroyed');
     }
 }

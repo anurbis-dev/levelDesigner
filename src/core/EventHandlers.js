@@ -11,6 +11,10 @@ export class EventHandlers extends BaseModule {
         super(levelEditor);
         this._rafId = null; // render loop id
         this.menuManager = menuManager;
+        
+        // Track event listeners for cleanup
+        this.eventListeners = [];
+        this._destroyed = false;
     }
 
     /**
@@ -18,10 +22,18 @@ export class EventHandlers extends BaseModule {
      */
     setupEventListeners() {
 
-        // Window resize
-        window.addEventListener('resize', () => {
+        // Window resize with cleanup tracking
+        const resizeHandler = () => {
+            if (this._destroyed) return;
             this.editor.canvasRenderer.resizeCanvas();
             this.editor.render();
+        };
+        
+        window.addEventListener('resize', resizeHandler);
+        this.eventListeners.push({
+            target: window,
+            event: 'resize',
+            handler: resizeHandler
         });
 
         // Canvas events
@@ -48,12 +60,27 @@ export class EventHandlers extends BaseModule {
         // State change listeners
         this.setupStateListeners();
 
-        // Start render loop to ensure the main view renders every frame (decoupled from mouse actions)
+        // Start render loop with proper cleanup support
+        this.startRenderLoop();
+    }
+    
+    /**
+     * Start render loop with cleanup support
+     */
+    startRenderLoop() {
         let lastDuplicateState = null;
+        
         const renderLoop = () => {
+            if (this._destroyed) {
+                // Stop loop if destroyed
+                return;
+            }
+            
             try {
                 const duplicate = this.editor.stateManager.get('duplicate');
-                const currentState = duplicate ? `${duplicate.isActive}_${duplicate.objects?.length || 0}` : 'null';
+                const currentState = duplicate ? 
+                    `${duplicate.isActive}_${duplicate.objects?.length || 0}` : 
+                    'null';
 
                 // Log only when duplicate state changes (optimized to reduce console spam)
                 if (currentState !== lastDuplicateState) {
@@ -63,10 +90,16 @@ export class EventHandlers extends BaseModule {
 
                 this.editor.render();
             } catch (e) {
-                Logger.event.error('Render loop error:', e);
+                if (!this._destroyed) {
+                    Logger.event.error('Render loop error:', e);
+                }
             }
-            this._rafId = requestAnimationFrame(renderLoop);
+            
+            if (!this._destroyed) {
+                this._rafId = requestAnimationFrame(renderLoop);
+            }
         };
+        
         if (!this._rafId) {
             Logger.event.info('Starting render loop');
             this._rafId = requestAnimationFrame(renderLoop);
@@ -76,25 +109,45 @@ export class EventHandlers extends BaseModule {
     setupCanvasEvents() {
         const canvas = this.editor.canvasRenderer.canvas;
 
-        // Mouse events on canvas
-        canvas.addEventListener('mousedown', (e) => this.editor.mouseHandlers.handleMouseDown(e));
-        canvas.addEventListener('mousemove', (e) => this.editor.mouseHandlers.handleMouseMove(e));
-        canvas.addEventListener('mouseup', (e) => this.editor.mouseHandlers.handleMouseUp(e));
-        canvas.addEventListener('wheel', (e) => this.editor.mouseHandlers.handleWheel(e), { passive: false });
-        canvas.addEventListener('dblclick', (e) => this.editor.mouseHandlers.handleDoubleClick(e));
+        // Mouse events on canvas with cleanup tracking
+        const handlers = {
+            mousedown: (e) => this.editor.mouseHandlers.handleMouseDown(e),
+            mousemove: (e) => this.editor.mouseHandlers.handleMouseMove(e),
+            mouseup: (e) => this.editor.mouseHandlers.handleMouseUp(e),
+            wheel: (e) => this.editor.mouseHandlers.handleWheel(e),
+            dblclick: (e) => this.editor.mouseHandlers.handleDoubleClick(e),
+            dragover: (e) => this.editor.mouseHandlers.handleDragOver(e),
+            drop: (e) => this.editor.mouseHandlers.handleDrop(e)
+        };
+        
+        for (const [event, handler] of Object.entries(handlers)) {
+            const options = event === 'wheel' ? { passive: false } : undefined;
+            canvas.addEventListener(event, handler, options);
+            this.eventListeners.push({
+                target: canvas,
+                event,
+                handler,
+                options
+            });
+        }
         
         // Global mouse events for proper marquee handling
-        window.addEventListener('mousemove', (e) => this.editor.mouseHandlers.handleGlobalMouseMove(e));
-        window.addEventListener('mouseup', (e) => this.editor.mouseHandlers.handleGlobalMouseUp(e));
+        const globalMouseMove = (e) => this.editor.mouseHandlers.handleGlobalMouseMove(e);
+        const globalMouseUp = (e) => this.editor.mouseHandlers.handleGlobalMouseUp(e);
         
-        // Drag and drop
-        canvas.addEventListener('dragover', (e) => this.editor.mouseHandlers.handleDragOver(e));
-        canvas.addEventListener('drop', (e) => this.editor.mouseHandlers.handleDrop(e));
+        window.addEventListener('mousemove', globalMouseMove);
+        window.addEventListener('mouseup', globalMouseUp);
+        
+        this.eventListeners.push(
+            { target: window, event: 'mousemove', handler: globalMouseMove },
+            { target: window, event: 'mouseup', handler: globalMouseUp }
+        );
     }
 
     setupKeyboardEvents() {
-        // Handle Ctrl key for snap to grid
-        window.addEventListener('keydown', (e) => {
+        // Handle Ctrl key for snap to grid with cleanup tracking
+        const keydownHandler = (e) => {
+            if (this._destroyed) return;
             if (e.key === 'Control' || e.key === 'Meta') {
                 this.editor.stateManager.update({
                     'keyboard.ctrlSnapToGrid': true
@@ -104,9 +157,12 @@ export class EventHandlers extends BaseModule {
                     'keyboard.shiftKey': true
                 });
             }
-        });
-
-        window.addEventListener('keyup', (e) => {
+            
+            this.handleKeyDown(e);
+        };
+        
+        const keyupHandler = (e) => {
+            if (this._destroyed) return;
             if (e.key === 'Control' || e.key === 'Meta') {
                 this.editor.stateManager.update({
                     'keyboard.ctrlSnapToGrid': false
@@ -116,134 +172,126 @@ export class EventHandlers extends BaseModule {
                     'keyboard.shiftKey': false
                 });
             }
-        });
+        };
+        
+        window.addEventListener('keydown', keydownHandler);
+        window.addEventListener('keyup', keyupHandler);
+        
+        this.eventListeners.push(
+            { target: window, event: 'keydown', handler: keydownHandler },
+            { target: window, event: 'keyup', handler: keyupHandler }
+        );
+    }
+    
+    handleKeyDown(e) {
+        // Allow input fields to work normally
+        if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.contentEditable === 'true')) {
+            return;
+        }
 
-        window.addEventListener('keydown', (e) => {
-            // Allow input fields to work normally
-            if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.contentEditable === 'true')) {
-                return;
+        // Handle escape key to cancel all current actions
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            this.editor.cancelAllActions();
+            return;
+        }
+        
+        if (e.key === 'Delete' || e.key.toLowerCase() === 'x') {
+            e.preventDefault();
+            if (this.editor.objectOperations && typeof this.editor.objectOperations.deleteSelectedObjects === 'function') {
+                this.editor.objectOperations.deleteSelectedObjects();
             }
-
-
-            // Handle escape key to cancel all current actions
-            if (e.key === 'Escape') {
-                e.preventDefault();
-                this.editor.cancelAllActions();
-                return;
+        } else if (e.shiftKey && e.key.toLowerCase() === 'd') {
+            e.preventDefault();
+            if (this.editor.objectOperations && typeof this.editor.objectOperations.duplicateSelectedObjects === 'function') {
+                this.editor.objectOperations.duplicateSelectedObjects();
             }
-            
-            if (e.key === 'Delete' || e.key.toLowerCase() === 'x') {
+        } else if (e.key.toLowerCase() === 'f') {
+            e.preventDefault();
+            if (typeof this.editor.focusOnSelection === 'function') {
+                this.editor.focusOnSelection();
+            }
+        } else if (e.key.toLowerCase() === 'a') {
+            e.preventDefault();
+            if (typeof this.editor.focusOnAll === 'function') {
+                this.editor.focusOnAll();
+            }
+        } else if (e.key.toLowerCase() === 'g' && !e.shiftKey && !e.altKey && !e.ctrlKey) {
+            e.preventDefault();
+            this.toggleGrid();
+        } else if (e.shiftKey && e.key.toLowerCase() === 'g') {
+            e.preventDefault();
+            if (this.editor.groupOperations && typeof this.editor.groupOperations.groupSelectedObjects === 'function') {
+                this.editor.groupOperations.groupSelectedObjects();
+            }
+        } else if (e.altKey && e.key.toLowerCase() === 'g') {
+            e.preventDefault();
+            if (this.editor.groupOperations && typeof this.editor.groupOperations.ungroupSelectedObjects === 'function') {
+                this.editor.groupOperations.ungroupSelectedObjects();
+            }
+        } else if (e.key.toLowerCase() === 'p') {
+            e.preventDefault();
+            this.toggleViewOption('parallax');
+        } else if (e.ctrlKey || e.metaKey) {
+            if (e.key.toLowerCase() === 'z') {
                 e.preventDefault();
-                if (this.editor.objectOperations && typeof this.editor.objectOperations.deleteSelectedObjects === 'function') {
-                    this.editor.objectOperations.deleteSelectedObjects();
-                } else {
-                }
-            } else if (e.shiftKey && e.key.toLowerCase() === 'd') {
-                e.preventDefault();
-                if (this.editor.objectOperations && typeof this.editor.objectOperations.duplicateSelectedObjects === 'function') {
-                    this.editor.objectOperations.duplicateSelectedObjects();
-                } else {
-                }
-            } else if (e.key.toLowerCase() === 'f') {
-                e.preventDefault();
-                if (typeof this.editor.focusOnSelection === 'function') {
-                    this.editor.focusOnSelection();
-                } else {
-                }
-            } else if (e.key.toLowerCase() === 'a') {
-                e.preventDefault();
-                if (typeof this.editor.focusOnAll === 'function') {
-                    this.editor.focusOnAll();
-                } else {
-                }
-            } else if (e.key.toLowerCase() === 'g' && !e.shiftKey && !e.altKey && !e.ctrlKey) {
-                e.preventDefault();
-                this.toggleGrid();
-            } else if (e.shiftKey && e.key.toLowerCase() === 'g') {
-                e.preventDefault();
-                if (this.editor.groupOperations && typeof this.editor.groupOperations.groupSelectedObjects === 'function') {
-                    this.editor.groupOperations.groupSelectedObjects();
-                } else {
-                }
-            } else if (e.altKey && e.key.toLowerCase() === 'g') {
-                e.preventDefault();
-                if (this.editor.groupOperations && typeof this.editor.groupOperations.ungroupSelectedObjects === 'function') {
-                    this.editor.groupOperations.ungroupSelectedObjects();
-                } else {
-                }
-            } else if (e.key.toLowerCase() === 'p') {
-                e.preventDefault();
-                this.toggleViewOption('parallax');
-            } else if (e.ctrlKey || e.metaKey) {
-                if (e.key.toLowerCase() === 'z') {
-                    e.preventDefault();
-                    if (e.shiftKey) {
-                        if (typeof this.editor.redo === 'function') {
-                            this.editor.redo();
-                        } else {
-                        }
-                    } else {
-                        if (typeof this.editor.undo === 'function') {
-                            this.editor.undo();
-                        } else {
-                        }
-                    }
-                } else if (e.key.toLowerCase() === 'y') {
-                    e.preventDefault();
+                if (e.shiftKey) {
                     if (typeof this.editor.redo === 'function') {
                         this.editor.redo();
-                    } else {
-                    }
-                } else if (e.key.toLowerCase() === 'n') {
-                    e.preventDefault();
-                    if (typeof this.editor.newLevel === 'function') {
-                        this.editor.newLevel();
-                    } else {
-                    }
-                } else if (e.key.toLowerCase() === 'o') {
-                    e.preventDefault();
-                    if (typeof this.editor.openLevel === 'function') {
-                        this.editor.openLevel();
-                    } else {
-                    }
-                } else if (e.key.toLowerCase() === 's') {
-                    e.preventDefault();
-                    if (e.shiftKey) {
-                        if (typeof this.editor.saveLevelAs === 'function') {
-                            // Handle async action
-                            (async () => {
-                                await this.editor.saveLevelAs();
-                            })();
-                        } else {
-                        }
-                    } else {
-                        if (typeof this.editor.saveLevel === 'function') {
-                            // Handle async action
-                            (async () => {
-                                await this.editor.saveLevel();
-                            })();
-                        } else {
-                        }
                     }
                 } else {
+                    if (typeof this.editor.undo === 'function') {
+                        this.editor.undo();
+                    }
                 }
-            } else if (e.key === 'PageUp') {
+            } else if (e.key.toLowerCase() === 'y') {
                 e.preventDefault();
-                if (typeof this.editor.moveSelectedObjectsToLayer === 'function') {
-                    const moveToExtreme = e.shiftKey;
-                    this.editor.moveSelectedObjectsToLayer(true, moveToExtreme);
-                } else {
+                if (typeof this.editor.redo === 'function') {
+                    this.editor.redo();
                 }
-            } else if (e.key === 'PageDown') {
+            } else if (e.key.toLowerCase() === 'n') {
                 e.preventDefault();
-                if (typeof this.editor.moveSelectedObjectsToLayer === 'function') {
-                    const moveToExtreme = e.shiftKey;
-                    this.editor.moveSelectedObjectsToLayer(false, moveToExtreme);
-                } else {
+                if (typeof this.editor.newLevel === 'function') {
+                    this.editor.newLevel();
                 }
-            } else {
+            } else if (e.key.toLowerCase() === 'o') {
+                e.preventDefault();
+                if (typeof this.editor.openLevel === 'function') {
+                    this.editor.openLevel();
+                }
+            } else if (e.key.toLowerCase() === 's') {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    if (typeof this.editor.saveLevelAs === 'function') {
+                        // Handle async action
+                        (async () => {
+                            await this.editor.saveLevelAs();
+                        })();
+                    }
+                } else {
+                    if (typeof this.editor.saveLevel === 'function') {
+                        // Handle async action
+                        (async () => {
+                            await this.editor.saveLevel();
+                        })();
+                    }
+                }
             }
-        });
+        } else if (e.key === 'PageUp') {
+            e.preventDefault();
+            if (typeof this.editor.moveSelectedObjectsToLayer === 'function') {
+                const moveToExtreme = e.shiftKey;
+                this.editor.moveSelectedObjectsToLayer(true, moveToExtreme);
+            }
+        } else if (e.key === 'PageDown') {
+            e.preventDefault();
+            if (typeof this.editor.moveSelectedObjectsToLayer === 'function') {
+                const moveToExtreme = e.shiftKey;
+                this.editor.moveSelectedObjectsToLayer(false, moveToExtreme);
+            }
+        } else {
+            // Unknown key combination
+        }
     }
 
     setupMenuEvents() {
@@ -817,5 +865,35 @@ export class EventHandlers extends BaseModule {
             this.editor.clearSelectableObjectsCache();
             this.editor.render();
         });
+    }
+    
+    /**
+     * Destroy and cleanup all event listeners
+     */
+    destroy() {
+        Logger.event.info('Destroying EventHandlers...');
+        
+        // Mark as destroyed to stop render loop
+        this._destroyed = true;
+        
+        // Cancel render loop
+        if (this._rafId) {
+            cancelAnimationFrame(this._rafId);
+            this._rafId = null;
+            Logger.event.debug('Cancelled render loop');
+        }
+        
+        // Remove all event listeners
+        for (const { target, event, handler, options } of this.eventListeners) {
+            try {
+                target.removeEventListener(event, handler, options);
+            } catch (error) {
+                Logger.event.warn('Failed to remove event listener:', { event, error });
+            }
+        }
+        
+        this.eventListeners = [];
+        
+        Logger.event.info('EventHandlers destroyed');
     }
 }

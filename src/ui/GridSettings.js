@@ -209,15 +209,17 @@ export class GridSettings {
      * Initialize event listeners for grid settings
      */
     initializeEventListeners() {
+        // Prevent duplicate initialization
+        if (this._eventListenersInitialized) return;
+        this._eventListenersInitialized = true;
+        
         // Remove existing event listeners to prevent duplicates
         const gridTypeSelect = document.querySelector('[data-setting="canvas.gridType"]');
-        if (gridTypeSelect) {
-            // Clone the element to remove all event listeners
-            const newGridTypeSelect = gridTypeSelect.cloneNode(true);
-            gridTypeSelect.parentNode.replaceChild(newGridTypeSelect, gridTypeSelect);
+        if (gridTypeSelect && !gridTypeSelect._hasGridTypeListener) {
+            gridTypeSelect._hasGridTypeListener = true;
             
             // Add new event listener
-            newGridTypeSelect.addEventListener('change', () => {
+            gridTypeSelect.addEventListener('change', () => {
                 this.handleGridTypeChange();
             });
             

@@ -9,18 +9,25 @@ export class DetailsPanel {
         this.container = container;
         this.stateManager = stateManager;
         this.levelEditor = levelEditor;
+        
+        // Track subscriptions for cleanup
+        this.subscriptions = [];
+        // Track event listeners
+        this.eventListeners = [];
+        
         this.setupEventListeners();
     }
 
     setupEventListeners() {
         // Subscribe to selection changes
-        this.stateManager.subscribe('selectedObjects', () => {
+        const unsubscribeSelected = this.stateManager.subscribe('selectedObjects', () => {
             this.render();
             this.updateTabTitle();
         });
+        this.subscriptions.push(unsubscribeSelected);
 
         // Subscribe to level changes (for object property updates like layer changes)
-        this.stateManager.subscribe('level', (newLevel, oldLevel) => {
+        const unsubscribeLevel = this.stateManager.subscribe('level', (newLevel, oldLevel) => {
 
             // Check if selected objects properties changed (excluding position changes)
             const selectedIds = this.stateManager.get('selectedObjects');
@@ -42,9 +49,10 @@ export class DetailsPanel {
             this.render();
             this.updateTabTitle();
         });
+        this.subscriptions.push(unsubscribeLevel);
 
         // Subscribe to object property changes (for immediate updates like layer changes)
-        this.stateManager.subscribe('objectPropertyChanged', (changedObject, changeData) => {
+        const unsubscribeProperty = this.stateManager.subscribe('objectPropertyChanged', (changedObject, changeData) => {
 
             // Skip real-time updates for position properties to avoid performance issues
             // Position updates will happen on: selection change, drag end, duplicate end
@@ -59,6 +67,7 @@ export class DetailsPanel {
                 this.updateTabTitle();
             }
         });
+        this.subscriptions.push(unsubscribeProperty);
     }
 
     render() {
@@ -531,6 +540,41 @@ export class DetailsPanel {
         } else {
             detailsTab.textContent = 'Assets';
         }
+    }
+    
+    /**
+     * Cleanup and destroy panel
+     */
+    destroy() {
+        // Unsubscribe from all state changes
+        this.subscriptions.forEach(unsubscribe => {
+            try {
+                unsubscribe();
+            } catch (error) {
+                console.warn('Failed to unsubscribe:', error);
+            }
+        });
+        this.subscriptions = [];
+        
+        // Remove all event listeners
+        this.eventListeners.forEach(({ target, event, handler }) => {
+            try {
+                target.removeEventListener(event, handler);
+            } catch (error) {
+                console.warn('Failed to remove event listener:', error);
+            }
+        });
+        this.eventListeners = [];
+        
+        // Clear DOM
+        if (this.container) {
+            this.container.innerHTML = '';
+        }
+        
+        // Clear references
+        this.levelEditor = null;
+        this.stateManager = null;
+        this.container = null;
     }
 
 }

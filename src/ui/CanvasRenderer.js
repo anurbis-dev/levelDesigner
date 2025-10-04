@@ -366,4 +366,28 @@ export class CanvasRenderer {
         });
         return stats;
     }
+    
+    /**
+     * Cleanup and destroy renderer
+     */
+    destroy() {
+        Logger.ui.debug('Destroying CanvasRenderer');
+        
+        // Clear image cache
+        this.imageCache.clear();
+        
+        // Clear grid renderers
+        this.gridRenderers.clear();
+        
+        // Clear canvas
+        if (this.ctx && this.canvas) {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+        
+        // Clear references
+        this.canvas = null;
+        this.ctx = null;
+        
+        Logger.ui.debug('CanvasRenderer destroyed');
+    }
 }

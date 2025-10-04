@@ -10,6 +10,11 @@ export class OutlinerPanel extends BasePanel {
     constructor(container, stateManager, levelEditor) {
         super(container, stateManager, levelEditor);
         this.searchTerm = '';
+        
+        // Track subscriptions for cleanup
+        this.subscriptions = [];
+        // Context menu reference
+        this.contextMenu = null;
 
         // Initialize collapsed groups state if not exists
         if (!this.stateManager.get('outliner')) {
@@ -108,13 +113,16 @@ export class OutlinerPanel extends BasePanel {
         });
 
         // Subscribe to level changes
-        this.stateManager.subscribe('level', () => this.render());
+        const unsubscribeLevel = this.stateManager.subscribe('level', () => this.render());
+        this.subscriptions.push(unsubscribeLevel);
+        
         // Subscribe to outliner state changes (including filters)
-        this.stateManager.subscribe('outliner', () => {
+        const unsubscribeOutliner = this.stateManager.subscribe('outliner', () => {
             // Update activeTypeFilters from state
             this.activeTypeFilters = this.stateManager.get('outliner').activeTypeFilters || new Set();
             this.render();
         });
+        this.subscriptions.push(unsubscribeOutliner);
     }
 
     /**
@@ -1022,6 +1030,42 @@ export class OutlinerPanel extends BasePanel {
         });
 
         this.render();
+    }
+    
+    /**
+     * Cleanup and destroy panel
+     */
+    destroy() {
+        Logger.ui.debug('Destroying OutlinerPanel');
+        
+        // Unsubscribe from all state changes
+        this.subscriptions.forEach(unsubscribe => {
+            try {
+                unsubscribe();
+            } catch (error) {
+                Logger.ui.warn('Failed to unsubscribe:', error);
+            }
+        });
+        this.subscriptions = [];
+        
+        // Destroy context menu
+        if (this.contextMenu) {
+            try {
+                this.contextMenu.destroy();
+            } catch (error) {
+                Logger.ui.warn('Failed to destroy context menu:', error);
+            }
+            this.contextMenu = null;
+        }
+        
+        // Call parent destroy
+        super.destroy();
+        
+        // Clear references
+        this.searchTerm = '';
+        this.activeTypeFilters = null;
+        
+        Logger.ui.debug('OutlinerPanel destroyed');
     }
 
 }

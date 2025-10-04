@@ -433,4 +433,25 @@ export class MenuManager {
         this.renderMenus();
         this.setupMenuEvents();
     }
+    
+    /**
+     * Cleanup and destroy menu manager
+     */
+    destroy() {
+        Logger.ui.debug('Destroying MenuManager');
+        
+        // Close all dropdowns
+        this.closeAllDropdowns();
+        
+        // Clear menu elements
+        this.menuElements.clear();
+        
+        // Clear references
+        this.container = null;
+        this.eventHandlers = null;
+        this.editor = null;
+        this.hoverModeEnabled = false;
+        
+        Logger.ui.debug('MenuManager destroyed');
+    }
 }

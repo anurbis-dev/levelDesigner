@@ -162,6 +162,8 @@ export class AssetPanel extends BasePanel {
         window.addEventListener('resize', this.resizeHandler);
         
         // Note: Global marquee handling now managed by BasePanel
+
+        this.setupAssetEvents();
     }
 
     render() {
@@ -353,6 +355,7 @@ export class AssetPanel extends BasePanel {
         
         // Event listeners
         thumb.addEventListener('click', (e) => this.handleItemClick(e, asset));
+        thumb.addEventListener('dblclick', (e) => this.handleItemDoubleClick(e, asset));
         thumb.addEventListener('dragstart', (e) => this.handleThumbnailDragStart(e, asset));
         
         return thumb;
@@ -415,6 +418,7 @@ export class AssetPanel extends BasePanel {
         
         // Event listeners
         item.addEventListener('click', (e) => this.handleItemClick(e, asset));
+        item.addEventListener('dblclick', (e) => this.handleItemDoubleClick(e, asset));
         item.addEventListener('dragstart', (e) => this.handleThumbnailDragStart(e, asset));
         
         return item;
@@ -501,6 +505,7 @@ export class AssetPanel extends BasePanel {
         
         // Event listeners
         row.addEventListener('click', (e) => this.handleItemClick(e, asset));
+        row.addEventListener('dblclick', (e) => this.handleItemDoubleClick(e, asset));
         row.addEventListener('dragstart', (e) => this.handleThumbnailDragStart(e, asset));
         
         return row;
@@ -612,6 +617,29 @@ export class AssetPanel extends BasePanel {
 
     // Note: handleThumbnailClick method removed
     // Now using BasePanel.handleItemClick with SelectionUtils
+
+    /**
+     * Handle item double click
+     * @param {Event} e - Double click event
+     * @param {Object} asset - Asset that was double clicked
+     */
+    handleItemDoubleClick(e, asset) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (!asset) {
+            Logger.ui.warn('Cannot handle double click: no asset provided');
+            return;
+        }
+
+        // Open Actor Properties Panel
+        if (this.levelEditor && this.levelEditor.showActorPropertiesPanel) {
+            this.levelEditor.showActorPropertiesPanel(asset);
+            Logger.ui.info(`Double-clicked asset: ${asset.name}, opening Actor Properties Panel`);
+        } else {
+            Logger.ui.warn('LevelEditor or showActorPropertiesPanel method not available');
+        }
+    }
 
     handleThumbnailDragStart(e, asset) {
         // Disable dragging when Ctrl/Cmd is held to allow marquee toggle
@@ -1157,5 +1185,17 @@ export class AssetPanel extends BasePanel {
     getActiveTab() {
         const activeTab = this.container.querySelector('.asset-tab.active');
         return activeTab ? activeTab.dataset.category : null;
+    }
+
+    setupAssetEvents() {
+        this.container.querySelectorAll('.asset-thumbnail').forEach(el => {
+            el.addEventListener('dblclick', (e) => {
+                const assetId = el.dataset.assetId;
+                const asset = this.assetManager.getAssetById(assetId);
+                if (asset && this.levelEditor && this.levelEditor.showActorPropertiesPanel) {
+                    this.levelEditor.showActorPropertiesPanel(asset);
+                }
+            });
+        });
     }
 }

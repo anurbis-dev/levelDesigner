@@ -1,5 +1,30 @@
 # Changelog
 
+## [3.33.0] - 2025-10-05
+
+### Added
+- **ErrorHandler**: централизованная обработка ошибок, глобальные перехватчики, стратегии восстановления, история ошибок
+- **ComponentLifecycle**: менеджер жизненного цикла компонентов, приоритеты уничтожения, предотвращение утечек памяти
+- **destroy() методы**: добавлены во все UI компоненты (AssetPanel, DetailsPanel, OutlinerPanel, LayersPanel, SettingsPanel, ActorPropertiesWindow, Toolbar, MenuManager, CanvasRenderer, EventHandlers)
+- **Logger категории**: LIFECYCLE, ERROR_HANDLER для новых систем
+- **LevelEditor.destroy()**: полная очистка редактора с правильным порядком уничтожения компонентов
+
+### Changed
+- **EventHandlers**: трекинг event listeners и RAF для корректной очистки
+- **Logger**: методы-алиасы для новых категорий (Logger.lifecycle, Logger.errorHandler)
+
+### Fixed
+- **Memory leaks**: устранены утечки памяти в event listeners, subscriptions, render loops
+- **Component cleanup**: все зарегистрированные компоненты корректно очищаются при destroy
+
+### Technical
+- **ErrorHandler API**: init(), handle(), logError(), getErrorHistory(), getStatistics(), try(), tryAsync()
+- **ComponentLifecycle API**: register(), destroy(), destroyAll(), приоритеты 1-10
+- **Custom Error types**: NetworkError, ValidationError, PermissionError, FileNotFoundError
+- **Recovery strategies**: автоматическое восстановление для типовых ошибок
+
+---
+
 ## [3.32.0] - 2025-10-02
 
 ### Added

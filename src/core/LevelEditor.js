@@ -28,6 +28,11 @@ import { CanvasContextMenu } from '../ui/CanvasContextMenu.js';
 import { Logger } from '../utils/Logger.js';
 import { ColorUtils } from '../utils/ColorUtils.js';
 import { dialogReplacer } from '../utils/DialogReplacer.js';
+import { ActorPropertiesWindow } from '../ui/ActorPropertiesWindow.js';
+
+// Import new utilities
+import { ErrorHandler } from '../utils/ErrorHandler.js';
+import { ComponentLifecycle } from './ComponentLifecycle.js';
 
 /**
  * Main Level Editor class - Unified version with modular architecture
@@ -39,9 +44,16 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.30.2';
+    static VERSION = '3.33.0';
 
     constructor(userPreferencesManager = null) {
+                // Initialize ErrorHandler first
+                ErrorHandler.init();
+                Logger.lifecycle.info('ErrorHandler initialized');
+        
+        // Create lifecycle manager
+        this.lifecycle = new ComponentLifecycle();
+        
         // Initialize managers
         this.stateManager = new StateManager();
         this.historyManager = new HistoryManager();
@@ -86,6 +98,9 @@ export class LevelEditor {
         this.groupOperations = new GroupOperations(this);
         this.renderOperations = new RenderOperations(this);
         this.duplicateOperations = new DuplicateOperations(this);
+        
+        // Register core handlers in lifecycle (highest priority - destroyed first)
+        this.lifecycle.register('eventHandlers', this.eventHandlers, { priority: 10 });
 
         // Performance optimization caches
         this.objectCache = new Map(); // Cache for object lookups: objId -> object
@@ -531,6 +546,7 @@ export class LevelEditor {
         const outlinerPanel = document.getElementById('outliner-content-panel');
         const layersPanel = document.getElementById('layers-content-panel');
         const toolbarContainer = document.getElementById('toolbar-container');
+        const actorPropsPanelContainer = document.getElementById('actor-properties-panel');
 
 
         if (!canvas || !assetsPanel || !detailsPanel || !outlinerPanel || !layersPanel || !toolbarContainer) {
@@ -540,6 +556,7 @@ export class LevelEditor {
         // Initialize renderer
         this.canvasRenderer = new CanvasRenderer(canvas);
         this.canvasRenderer.resizeCanvas();
+        this.lifecycle.register('canvasRenderer', this.canvasRenderer, { priority: 1 });
 
         // Initialize canvas context menu
         this.canvasContextMenu = new CanvasContextMenu(canvas, this, {
@@ -566,6 +583,17 @@ export class LevelEditor {
         this.layersPanel = new LayersPanel(layersPanel, this.stateManager, this);
         this.settingsPanel = new SettingsPanel(document.body, this.configManager, this);
         
+        // Initialize Actor Properties Window
+        this.actorPropertiesWindow = new ActorPropertiesWindow(document.body, this.stateManager, this);
+        
+        // Register all UI components in lifecycle manager
+        this.lifecycle.register('assetPanel', this.assetPanel, { priority: 3 });
+        this.lifecycle.register('detailsPanel', this.detailsPanel, { priority: 3 });
+        this.lifecycle.register('outlinerPanel', this.outlinerPanel, { priority: 3 });
+        this.lifecycle.register('layersPanel', this.layersPanel, { priority: 3 });
+        this.lifecycle.register('settingsPanel', this.settingsPanel, { priority: 2 });
+        this.lifecycle.register('actorPropertiesWindow', this.actorPropertiesWindow, { priority: 2 });
+        
         // Initial render of asset panel
         this.assetPanel.render();
         
@@ -574,6 +602,7 @@ export class LevelEditor {
         
         // Initialize toolbar after level is created
         this.toolbar = new Toolbar(toolbarContainer, this.stateManager, this);
+        this.lifecycle.register('toolbar', this.toolbar, { priority: 4 });
         
         // Apply configuration to level settings
         this.applyConfigurationToLevel();
@@ -585,6 +614,7 @@ export class LevelEditor {
         if (navElement) {
             this.menuManager = new MenuManager(navElement, this.eventHandlers);
             this.menuManager.initialize();
+            this.lifecycle.register('menuManager', this.menuManager, { priority: 5 });
 
             // Update EventHandlers with MenuManager reference
             this.eventHandlers.menuManager = this.menuManager;
@@ -698,13 +728,13 @@ export class LevelEditor {
                 }
 
                 // Save current asset panel size if it exists
-                if (this.assetsPanel?.assetSize) {
-                    this.configManager.set('ui.assetSize', this.assetsPanel.assetSize);
+                if (this.assetPanel?.assetSize) {
+                    this.configManager.set('ui.assetSize', this.assetPanel.assetSize);
                 }
 
                 // Save current asset panel view mode if it exists
-                if (this.assetsPanel?.viewMode) {
-                    this.configManager.set('ui.assetViewMode', this.assetsPanel.viewMode);
+                if (this.assetPanel?.viewMode) {
+                    this.configManager.set('ui.assetViewMode', this.assetPanel.viewMode);
                 }
 
                 // Save current snap to grid state
@@ -1782,6 +1812,24 @@ export class LevelEditor {
     }
 
     /**
+     * Show Actor Properties Window for the given asset
+     * @param {Object} asset - Asset to show properties for
+     */
+    showActorPropertiesPanel(asset) {
+        if (!asset) {
+            Logger.ui.warn('Cannot show Actor Properties Window: no asset provided');
+            return;
+        }
+
+        if (this.actorPropertiesWindow) {
+            this.actorPropertiesWindow.show(asset);
+            Logger.ui.info(`Opened Actor Properties Window for asset: ${asset.name}`);
+        } else {
+            Logger.ui.warn('Actor Properties Window not initialized');
+        }
+    }
+
+    /**
      * Utility methods
      */
     deepClone(obj) {
@@ -2246,7 +2294,7 @@ export class LevelEditor {
             return topLevelObj;
         }
 
-        // If not found as top-level, search in groups recursively
+        // If not found, search in groups recursively
         for (const obj of this.level.objects) {
             if (obj.type === 'group') {
                 const found = this.findObjectInGroupRecursive(obj, objId);
@@ -2722,5 +2770,71 @@ export class LevelEditor {
         if (this.layersPanel) {
             this.layersPanel.setCurrentLayer(layerId);
         }
+    }
+    
+    /**
+     * Cleanup and destroy editor
+     * Properly destroys all components and cleans up resources
+     */
+    destroy() {
+        Logger.lifecycle.info('Destroying LevelEditor...');
+        
+        // Cancel any pending timers
+        if (this.cacheInvalidationTimeout) {
+            clearTimeout(this.cacheInvalidationTimeout);
+            this.cacheInvalidationTimeout = null;
+        }
+        
+        // Destroy all registered components via lifecycle manager
+        // This will destroy them in proper order based on dependencies and priorities
+        try {
+            this.lifecycle.destroyAll();
+        } catch (error) {
+            ErrorHandler.logError(error, 'LevelEditor Lifecycle Destruction');
+            Logger.lifecycle.error('Error during lifecycle destruction:', error);
+        }
+        
+        // Clear all caches
+        this.clearCaches();
+        this.clearSelectableObjectsCache();
+        
+        // Clear managers
+        if (this.level) {
+            this.level.clearLayerCountsCache();
+            this.level.clearObjectsIndex();
+            this.level = null;
+        }
+        
+        this.stateManager = null;
+        this.fileManager = null;
+        this.assetManager = null;
+        this.historyManager = null;
+        this.configManager = null;
+        this.contextMenuManager = null;
+        
+        // Clear references to UI components
+        this.assetPanel = null;
+        this.detailsPanel = null;
+        this.outlinerPanel = null;
+        this.layersPanel = null;
+        this.settingsPanel = null;
+        this.actorPropertiesWindow = null;
+        this.toolbar = null;
+        this.canvasRenderer = null;
+        this.canvasContextMenu = null;
+        this.menuManager = null;
+        
+        // Clear operation modules
+        this.eventHandlers = null;
+        this.mouseHandlers = null;
+        this.objectOperations = null;
+        this.groupOperations = null;
+        this.renderOperations = null;
+        this.duplicateOperations = null;
+        
+        // Clear lifecycle
+        this.lifecycle = null;
+        
+        Logger.lifecycle.info('LevelEditor destroyed successfully');
     }
 }

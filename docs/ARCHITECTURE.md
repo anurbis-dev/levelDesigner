@@ -57,7 +57,26 @@
 ### Logger
 **Файл**: `src/utils/Logger.js`
 - Профессиональная система логирования
-- 17 категорий, 4 уровня (DEBUG, INFO, WARN, ERROR)
+- 19 категорий (добавлены: LIFECYCLE, ERROR_HANDLER), 4 уровня (DEBUG, INFO, WARN, ERROR)
+
+### ErrorHandler (v3.33.0)
+**Файл**: `src/utils/ErrorHandler.js`
+- **Централизованная обработка ошибок** - единая точка для всех ошибок приложения
+- **Глобальные перехватчики** - window.onerror, unhandledrejection
+- **Стратегии восстановления** - автоматическое восстановление для NetworkError, ValidationError, TypeError
+- **История ошибок** - сохранение последних 100 ошибок с контекстом
+- **Статистика** - подсчет по типам, последние ошибки
+- **API**: init(), handle(), logError(), getErrorHistory(), getStatistics(), try(), tryAsync()
+- **Custom типы**: NetworkError, ValidationError, PermissionError, FileNotFoundError
+
+### ComponentLifecycle (v3.33.0)
+**Файл**: `src/core/ComponentLifecycle.js`
+- **Управление жизненным циклом** - регистрация и уничтожение компонентов
+- **Приоритеты уничтожения** - правильный порядок (1-10): EventHandlers→CanvasRenderer→Panels→Toolbar→MenuManager
+- **Предотвращение утечек памяти** - автоматический вызов destroy() методов
+- **Проверка наличия destroy()** - логирование компонентов без метода
+- **API**: register(name, component, options), destroy(name), destroyAll()
+- **Интеграция**: используется в LevelEditor для управления всеми компонентами
 
 ### HoverEffects
 **Файл**: `src/utils/HoverEffects.js`

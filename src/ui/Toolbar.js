@@ -1246,4 +1246,33 @@ export class Toolbar {
             }
         });
     }
+    
+    /**
+     * Cleanup and destroy toolbar
+     */
+    destroy() {
+        Logger.ui.debug('Destroying Toolbar');
+        
+        // Save current state before destroying
+        this.saveState();
+        this.saveScrollPosition();
+        
+        // Destroy context menu
+        if (this.contextMenu) {
+            try {
+                this.contextMenu.destroy();
+            } catch (error) {
+                Logger.ui.warn('Failed to destroy toolbar context menu:', error);
+            }
+            this.contextMenu = null;
+        }
+        
+        // Clear references
+        this.container = null;
+        this.stateManager = null;
+        this.levelEditor = null;
+        this.gridTypeConfig.clear();
+        
+        Logger.ui.debug('Toolbar destroyed');
+    }
 }

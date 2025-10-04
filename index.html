@@ -372,7 +372,8 @@
         // Initialize the editor
         try {
             editor.init().then(() => {
-            // Panel sizes are now applied immediately before LevelEditor initialization to prevent UI flicker
+                // Panel sizes are now applied immediately before LevelEditor initialization to prevent UI flicker
+                console.log('Level Editor initialized successfully');
             }).catch(error => {
                 console.error('Failed to initialize level editor:', error);
                 console.error('Error details:', error);
@@ -735,6 +736,7 @@
 
         // Console functionality
         let isConsoleVisible = false; // Global variable for console visibility state
+        let isLoggingToConsole = false; // Global variable to prevent infinite recursion in console logging
         
         function setupConsole() {
             try {
@@ -1043,26 +1045,32 @@ if (!isResizing) return;
             }
 
             function logToConsole(message, type = 'log') {
-                if (!isLoggingEnabled) return;
+                if (!isLoggingEnabled || isLoggingToConsole) return;
                 
-                const timestamp = new Date().toLocaleTimeString();
-                const logEntry = document.createElement('div');
-                logEntry.className = `log-entry console-message ${type}`;
-                logEntry.innerHTML = `<span class="text-gray-500">[${timestamp}]</span> ${message}`;
+                isLoggingToConsole = true;
+                try {
+                    const timestamp = new Date().toLocaleTimeString();
+                    const logEntry = document.createElement('div');
+                    logEntry.className = `log-entry console-message ${type}`;
+                    logEntry.innerHTML = `<span class="text-gray-500">[${timestamp}]</span> ${message}`;
 
-                // Add text selection functionality
-                setupLogEntrySelection(logEntry);
+                    // Add text selection functionality
+                    setupLogEntrySelection(logEntry);
 
-                consoleOutput.appendChild(logEntry);
+                    consoleOutput.appendChild(logEntry);
 
-                // Batch scroll update to minimize reflow
-                requestAnimationFrame(() => {
-                    try {
-                        consoleOutput.scrollTop = consoleOutput.scrollHeight;
-                    } catch (error) {
-                        console.error('Error scrolling console output:', error);
-                    }
-                });
+                    // Batch scroll update to minimize reflow
+                    requestAnimationFrame(() => {
+                        try {
+                            consoleOutput.scrollTop = consoleOutput.scrollHeight;
+                        } catch (error) {
+                            // Don't use console.error here to avoid recursion
+                            console.warn('Error scrolling console output:', error);
+                        }
+                    });
+                } finally {
+                    isLoggingToConsole = false;
+                }
             }
 
             // Context menu functionality moved to ConsoleContextMenu class
@@ -1163,22 +1171,28 @@ if (!isResizing) return;
             const originalWarn = console.warn;
 
             console.log = function(...args) {
-                originalLog.apply(console, args);
-                if (isLoggingEnabled) {
+                if (originalLog && typeof originalLog === 'function') {
+                    originalLog.apply(console, args);
+                }
+                if (isLoggingEnabled && !isLoggingToConsole) {
                     logToConsole(args.join(' '), 'log');
                 }
             };
 
             console.error = function(...args) {
-                originalError.apply(console, args);
-                if (isLoggingEnabled) {
+                if (originalError && typeof originalError === 'function') {
+                    originalError.apply(console, args);
+                }
+                if (isLoggingEnabled && !isLoggingToConsole) {
                     logToConsole(args.join(' '), 'error');
                 }
             };
 
             console.warn = function(...args) {
-                originalWarn.apply(console, args);
-                if (isLoggingEnabled) {
+                if (originalWarn && typeof originalWarn === 'function') {
+                    originalWarn.apply(console, args);
+                }
+                if (isLoggingEnabled && !isLoggingToConsole) {
                     logToConsole(args.join(' '), 'warn');
                 }
             };
@@ -1209,10 +1223,11 @@ if (!isResizing) return;
             } catch (error) {
                 console.error('Error logging initial console message:', error);
             }
-            } catch (error) {
-                console.error('Error setting up console:', error);
-            }
+            
+        } catch (error) {
+            console.error('Error in setupConsole:', error);
         }
+    }
 
         // Initialize console
         try {

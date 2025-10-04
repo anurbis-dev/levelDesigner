@@ -15,6 +15,10 @@ export class LayersPanel extends BasePanel {
         this.currentLayerId = null; // Track current layer (for new objects, blue highlight)
         this.searchFilter = ''; // Search filter for layers
         this.contextMenu = null; // Context menu instance
+        
+        // Track subscriptions for cleanup
+        this.subscriptions = [];
+        this.layerContextMenu = null; // Layer context menu reference
 
         this.setupContextMenus();
         this.setupEventListeners();
@@ -77,7 +81,7 @@ export class LayersPanel extends BasePanel {
         });
 
         // Subscribe to level changes
-        this.stateManager.subscribe('level', () => {
+        const unsubscribeLevel = this.stateManager.subscribe('level', () => {
             // Only initialize current layer if not already set
             if (!this.currentLayerId) {
                 const level = this.levelEditor.getLevel();
@@ -89,9 +93,10 @@ export class LayersPanel extends BasePanel {
             }
             this.render();
         });
+        this.subscriptions.push(unsubscribeLevel);
 
         // Subscribe to layer objects count changes for efficient updates
-        this.stateManager.subscribe('layerObjectsCountChanged', (layerId, changeData) => {
+        const unsubscribeLayerCount = this.stateManager.subscribe('layerObjectsCountChanged', (layerId, changeData) => {
 
             // Update only the specific layer's object count
             this.updateLayerObjectsCount(layerId);
@@ -99,9 +104,10 @@ export class LayersPanel extends BasePanel {
             // Update global stats
             this.updateLayersStats();
         });
+        this.subscriptions.push(unsubscribeLayerCount);
 
         // Subscribe to layer property changes for real-time updates
-        this.stateManager.subscribe('layerChanged', (layerId, changeData) => {
+        const unsubscribeLayerChanged = this.stateManager.subscribe('layerChanged', (layerId, changeData) => {
             // Update the specific layer element
             const level = this.levelEditor.getLevel();
             const layer = level.getLayerById(layerId);
@@ -109,6 +115,7 @@ export class LayersPanel extends BasePanel {
                 this.updateLayerElement(layerId, layer);
             }
         });
+        this.subscriptions.push(unsubscribeLayerChanged);
 
         // Subscribe to config changes (for active layer border color)
         if (this.levelEditor.configManager) {
@@ -1626,5 +1633,43 @@ export class LayersPanel extends BasePanel {
         
         // Update all panels to reflect the change
         this.levelEditor.updateAllPanels();
+    }
+    
+    /**
+     * Cleanup and destroy panel
+     */
+    destroy() {
+        Logger.ui.debug('Destroying LayersPanel');
+        
+        // Unsubscribe from all state changes
+        this.subscriptions.forEach(unsubscribe => {
+            try {
+                unsubscribe();
+            } catch (error) {
+                Logger.ui.warn('Failed to unsubscribe:', error);
+            }
+        });
+        this.subscriptions = [];
+        
+        // Destroy context menu
+        if (this.layerContextMenu) {
+            try {
+                this.layerContextMenu.destroy();
+            } catch (error) {
+                Logger.ui.warn('Failed to destroy layer context menu:', error);
+            }
+            this.layerContextMenu = null;
+        }
+        
+        // Call parent destroy
+        super.destroy();
+        
+        // Clear references
+        this.activeLayerId = null;
+        this.currentLayerId = null;
+        this.searchFilter = '';
+        this.contextMenu = null;
+        
+        Logger.ui.debug('LayersPanel destroyed');
     }
 }

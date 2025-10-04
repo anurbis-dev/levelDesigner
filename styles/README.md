@@ -16,6 +16,14 @@ This directory contains all CSS styles for the Level Editor, organized by functi
 ### User Settings
 - **`user-settings.css`** - Dynamic user-customizable styles
 
+### Panel Styles
+- **`panels.css`** - Main panel styles
+- **`layers-panel.css`** - Layers panel styles
+- **`settings-panel.css`** - Settings panel styles
+- **`grid-settings.css`** - Grid settings styles
+- **`details-panel.css`** - Details panel styles
+- **`color-chooser.css`** - Color chooser widget styles
+
 ## Usage
 
 All styles are automatically loaded in `index.html`:

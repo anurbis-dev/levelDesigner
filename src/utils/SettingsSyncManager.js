@@ -30,10 +30,13 @@ export class SettingsSyncManager {
         // Initialize default mappings
         this.initializeDefaultMappings();
         
-        // Setup bidirectional sync once (deferred to ensure levelEditor is ready)
-        setTimeout(() => {
-            this.setupBidirectionalSync();
-        }, 0);
+        // Setup bidirectional sync once globally (deferred to ensure levelEditor is ready)
+        if (!SettingsSyncManager._globalSyncSetup) {
+            SettingsSyncManager._globalSyncSetup = true;
+            setTimeout(() => {
+                this.setupBidirectionalSync();
+            }, 0);
+        }
     }
 
     /**
@@ -572,6 +575,10 @@ export class SettingsSyncManager {
 
         // Prevent infinite loops by tracking sync operations
         this.syncing = new Set();
+
+        // Check if subscriptions already exist to prevent duplicates
+        if (this.levelEditor.stateManager._hasSyncManagerSubscriptions) return;
+        this.levelEditor.stateManager._hasSyncManagerSubscriptions = true;
 
         // Only sync snapToGrid (grid is handled by canvas.showGrid as single source of truth)
         // Sync view.snapToGrid <-> canvas.snapToGrid (bidirectional)

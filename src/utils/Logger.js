@@ -49,7 +49,9 @@ export class Logger {
         CACHE: { color: '#4CAF50', prefix: 'CACHE' },
         OUTLINER: { color: '#9C27B0', prefix: 'OUTLINER' },
         PARALLAX: { color: '#FF1493', prefix: 'PARALLAX' },
-        OBJECT_OPERATIONS: { color: '#9C27B0', prefix: 'OBJECT_OPS' }
+        OBJECT_OPERATIONS: { color: '#9C27B0', prefix: 'OBJECT_OPS' },
+        LIFECYCLE: { color: '#00BCD4', prefix: 'LIFECYCLE' },
+        ERROR_HANDLER: { color: '#F44336', prefix: 'ERROR_HANDLER' }
     };
 
     /**
@@ -410,5 +412,25 @@ export class Logger {
         debug: (message, ...args) => Logger.log('OBJECT_OPERATIONS', 'debug', message, ...args),
         warn: (message, ...args) => Logger.log('OBJECT_OPERATIONS', 'warn', message, ...args),
         error: (message, ...args) => Logger.log('OBJECT_OPERATIONS', 'error', message, ...args)
+    };
+
+    /**
+     * Component lifecycle logging
+     */
+    static lifecycle = {
+        info: (message, ...args) => Logger.log('LIFECYCLE', 'info', message, ...args),
+        debug: (message, ...args) => Logger.log('LIFECYCLE', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('LIFECYCLE', 'warn', message, ...args),
+        error: (message, ...args) => Logger.log('LIFECYCLE', 'error', message, ...args)
+    };
+
+    /**
+     * Error handler logging
+     */
+    static errorHandler = {
+        info: (message, ...args) => Logger.log('ERROR_HANDLER', 'info', message, ...args),
+        debug: (message, ...args) => Logger.log('ERROR_HANDLER', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('ERROR_HANDLER', 'warn', message, ...args),
+        error: (message, ...args) => Logger.log('ERROR_HANDLER', 'error', message, ...args)
     };
 }
