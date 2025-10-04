@@ -3,6 +3,7 @@ import { GameObject } from '../models/GameObject.js';
 import { Group } from '../models/Group.js';
 import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
 import { SnapUtils } from '../utils/SnapUtils.js';
+import { DEFAULT_OBJECT } from '../constants/EditorConstants.js';
 
 /**
  * Duplicate Operations module
@@ -10,7 +11,27 @@ import { SnapUtils } from '../utils/SnapUtils.js';
  */
 export class DuplicateOperations extends BaseModule {
 
-    // Remove helper fields recursively and ensure visibility defaults
+    /**
+     * Normalize object properties to defaults
+     * Extracted to eliminate code duplication
+     * @private
+     */
+    _normalizeObjectProperties(obj) {
+        if (!obj) return obj;
+        
+        obj.visible = obj.visible !== undefined ? obj.visible : DEFAULT_OBJECT.VISIBLE;
+        obj.locked = obj.locked !== undefined ? obj.locked : DEFAULT_OBJECT.LOCKED;
+        obj.width = obj.width || DEFAULT_OBJECT.WIDTH;
+        obj.height = obj.height || DEFAULT_OBJECT.HEIGHT;
+        obj.color = obj.color || DEFAULT_OBJECT.COLOR;
+        
+        return obj;
+    }
+
+    /**
+     * Remove helper fields recursively and ensure visibility defaults
+     * @private
+     */
     _sanitizeForPlacement(obj) {
         if (!obj) return obj;
 
@@ -23,12 +44,8 @@ export class DuplicateOperations extends BaseModule {
         delete cleaned._offsetX;
         delete cleaned._offsetY;
 
-        // Ensure essential properties have defaults
-        cleaned.visible = cleaned.visible !== undefined ? cleaned.visible : true;
-        cleaned.locked = cleaned.locked !== undefined ? cleaned.locked : false;
-        cleaned.width = cleaned.width || 32;
-        cleaned.height = cleaned.height || 32;
-        cleaned.color = cleaned.color || '#cccccc';
+        // Normalize properties using extracted method
+        this._normalizeObjectProperties(cleaned);
 
         // CRITICAL: Preserve layerId to maintain layer assignment
         // If layerId is missing, it will be assigned to Main layer by Level.addObject()
@@ -79,22 +96,12 @@ export class DuplicateOperations extends BaseModule {
             // Assign unique ids to the entire subtree
             this.editor.reassignIdsDeep(cloned);
 
-            // Ensure essential properties
-            cloned.visible = cloned.visible !== undefined ? cloned.visible : true;
-            cloned.locked = cloned.locked !== undefined ? cloned.locked : false;
-            cloned.width = cloned.width || 32;
-            cloned.height = cloned.height || 32;
-            cloned.color = cloned.color || '#cccccc';
+            // Normalize properties using extracted method
+            this._normalizeObjectProperties(cloned);
 
             // Normalize children if group
             if (cloned.type === 'group' && Array.isArray(cloned.children)) {
-                cloned.children.forEach(child => {
-                    child.visible = child.visible !== undefined ? child.visible : true;
-                    child.locked = child.locked !== undefined ? child.locked : false;
-                    child.width = child.width || 32;
-                    child.height = child.height || 32;
-                    child.color = child.color || '#cccccc';
-                });
+                cloned.children.forEach(child => this._normalizeObjectProperties(child));
             }
             return cloned;
         });

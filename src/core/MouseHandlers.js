@@ -2,6 +2,8 @@ import { BaseModule } from './BaseModule.js';
 import { Logger } from '../utils/Logger.js';
 import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
 import { SnapUtils } from '../utils/SnapUtils.js';
+import { throttle } from '../utils/PerformanceUtils.js';
+import { PERFORMANCE } from '../constants/EditorConstants.js';
 
 /**
  * Mouse Handlers module for LevelEditor
@@ -13,6 +15,16 @@ export class MouseHandlers extends BaseModule {
         
         // Performance optimization for zoom
         this.zoomAnimationFrame = null;
+        
+        // Create throttled versions of frequent event handlers
+        this._throttledMouseMove = throttle(
+            (e) => this._handleMouseMoveImpl(e), 
+            PERFORMANCE.MOUSE_MOVE_THROTTLE_MS
+        );
+        this._throttledWheel = throttle(
+            (e) => this._handleWheelImpl(e), 
+            PERFORMANCE.WHEEL_THROTTLE_MS
+        );
     }
 
     /**
@@ -76,7 +88,19 @@ export class MouseHandlers extends BaseModule {
         }
     }
 
+    /**
+     * Mouse move handler (throttled for performance)
+     * Delegates to _handleMouseMoveImpl
+     */
     handleMouseMove(e) {
+        this._throttledMouseMove(e);
+    }
+
+    /**
+     * Internal implementation of mouse move (called by throttled handler)
+     * @private
+     */
+    _handleMouseMoveImpl(e) {
         const worldPos = this.screenToWorld(e);
         const mouse = this.getMouseState();
 
@@ -361,8 +385,20 @@ export class MouseHandlers extends BaseModule {
         }
     }
 
+    /**
+     * Mouse wheel handler (throttled for performance)
+     * Delegates to _handleWheelImpl
+     */
     handleWheel(e) {
         e.preventDefault();
+        this._throttledWheel(e);
+    }
+
+    /**
+     * Internal implementation of mouse wheel (called by throttled handler)
+     * @private
+     */
+    _handleWheelImpl(e) {
         
         // Cancel previous animation frame if still pending
         if (this.zoomAnimationFrame) {

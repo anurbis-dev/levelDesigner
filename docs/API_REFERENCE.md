@@ -1,4 +1,4 @@
-# API Reference - 2D Level Editor v3.34.0
+# API Reference - 2D Level Editor v3.37.0
 
 ## Обзор
 
@@ -3404,3 +3404,112 @@ const sanitized = value.replace(/[<>]/g, '');
 2. **Количество объектов** - ограничение на количество объектов в уровне
 3. **Глубина вложенности** - ограничение на глубину групп
 4. **Размер истории** - ограничение на размер стека Undo/Redo
+
+---
+
+## Обновления v3.35.0-3.37.0
+
+### EditorConstants (v3.36.0)
+
+**Файл**: `src/constants/EditorConstants.js`
+
+Централизованные константы редактора, устраняющие magic numbers и улучшающие maintainability.
+
+#### DEFAULT_OBJECT
+
+```javascript
+DEFAULT_OBJECT: {
+    WIDTH: 32,
+    HEIGHT: 32,
+    COLOR: '#cccccc',
+    VISIBLE: true,
+    LOCKED: false
+}
+```
+
+#### PERFORMANCE
+
+```javascript
+PERFORMANCE: {
+    CACHE_TIMEOUT_MS: 100,
+    SPATIAL_GRID_SIZE: 256,
+    MAX_HISTORY_SIZE: 100,
+    RENDER_THROTTLE_MS: 16,
+    MOUSE_MOVE_THROTTLE_MS: 8,
+    WHEEL_THROTTLE_MS: 16,
+    RESIZE_DEBOUNCE_MS: 150,
+    INPUT_DEBOUNCE_MS: 300
+}
+```
+
+**Применение**: DuplicateOperations, RenderOperations, ErrorHandler, MouseHandlers
+
+---
+
+### PerformanceUtils (v3.37.0)
+
+**Файл**: `src/utils/PerformanceUtils.js`
+
+Утилиты для оптимизации производительности.
+
+#### throttle(fn, delay)
+
+Ограничивает частоту вызова функции.
+
+```javascript
+import { throttle } from './utils/PerformanceUtils.js';
+
+const throttledMove = throttle((e) => handleMove(e), 16);
+canvas.addEventListener('mousemove', throttledMove);
+```
+
+#### debounce(fn, delay)
+
+Откладывает выполнение до паузы.
+
+```javascript
+const debouncedSearch = debounce((query) => search(query), 300);
+input.addEventListener('input', (e) => debouncedSearch(e.target.value));
+```
+
+#### memoize(fn, keyFn)
+
+Кэширует результаты чистых функций.
+
+```javascript
+const memoizedCalc = memoize((x, y) => expensiveCalc(x, y));
+const result = memoizedCalc(5, 10); // Вычисляет
+const cached = memoizedCalc(5, 10); // Из кэша
+```
+
+#### LRUCache
+
+LRU кэш с автоматическим вытеснением.
+
+```javascript
+import { LRUCache } from './utils/PerformanceUtils.js';
+
+const cache = new LRUCache(100);
+cache.set('key', value);
+const val = cache.get('key');
+```
+
+**Применение**: MouseHandlers throttled (8ms mousemove, 16ms wheel), CPU -20-30%
+
+---
+
+### ErrorHandler JSDoc (v3.35.0)
+
+**Файл**: `src/utils/ErrorHandler.js`
+
+**Обновления:**
+- 100% JSDoc типизация (17 методов)
+- Документация Custom Error классов (4 класса)
+- 10+ примеров использования
+- Полная IDE поддержка
+
+См. исходный код для детальной документации всех методов.
+
+---
+
+*Последнее обновление: 2025-10-05 | Версия: 3.37.0*

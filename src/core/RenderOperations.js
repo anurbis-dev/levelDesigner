@@ -3,6 +3,8 @@ import { Logger } from '../utils/Logger.js';
 import { ParallaxRenderer } from '../utils/ParallaxRenderer.js';
 import { RenderUtils } from '../utils/RenderUtils.js';
 import { SnapUtils } from '../utils/SnapUtils.js';
+import { PERFORMANCE } from '../constants/EditorConstants.js';
+import { throttle } from '../utils/PerformanceUtils.js';
 
 /**
  * Render Operations module for LevelEditor
@@ -15,7 +17,7 @@ export class RenderOperations extends BaseModule {
         // Performance optimization caches
         this.visibleObjectsCache = new Map();
         this.lastCameraState = null;
-        this.cacheTimeout = 100; // Cache timeout in ms
+        this.cacheTimeout = PERFORMANCE.CACHE_TIMEOUT_MS;
 
         // Layer visibility cache for performance
         this.visibleLayersCache = null;
@@ -23,7 +25,7 @@ export class RenderOperations extends BaseModule {
 
         // Пространственный индекс для быстрого поиска объектов в области видимости
         this.spatialIndex = new Map(); // levelId -> {grid, bounds, lastUpdate}
-        this.spatialGridSize = 256; // Размер ячейки пространственного индекса
+        this.spatialGridSize = PERFORMANCE.SPATIAL_GRID_SIZE;
         this.isBuildingSpatialIndex = false; // Флаг для предотвращения повторного построения
 
         // Кеш для разных уровней масштаба камеры
@@ -36,6 +38,11 @@ export class RenderOperations extends BaseModule {
         // Performance monitoring
         this.lastRenderTime = 0;
         this.lastRenderDuration = 0;
+        
+        // Throttled slow frame logging (max once per 2 seconds to avoid console spam)
+        this._throttledSlowFrameLog = throttle((renderTime, renderCount) => {
+            Logger.render.warn(`🐌 Slow frame: ${renderTime.toFixed(2)}ms (${renderCount})`);
+        }, 2000);
     }
 
     /**
@@ -430,12 +437,12 @@ export class RenderOperations extends BaseModule {
         
         this.editor.canvasRenderer.restoreCamera();
 
-        // Performance monitoring - log slow frames
+        // Performance monitoring - log slow frames (throttled to avoid console spam)
         const renderTime = performance.now() - renderStart;
         this.lastRenderDuration = renderTime;
         
         if (renderTime > 20) {
-            Logger.render.warn(`🐌 Slow frame: ${renderTime.toFixed(2)}ms (${this.renderCount})`);
+            this._throttledSlowFrameLog(renderTime, this.renderCount);
         }
 
         // Периодический лог состояния (каждые 500 рендеров)
