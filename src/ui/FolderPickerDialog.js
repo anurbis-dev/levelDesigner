@@ -506,7 +506,7 @@ export class FolderPickerDialog {
                 return;
             } catch (error) {
                 if (error.name !== 'AbortError') {
-                    console.warn('File System Access API failed:', error);
+                    Logger.file.warn('File System Access API failed:', error);
                 }
                 // User cancelled, do nothing
                 return;
@@ -515,7 +515,7 @@ export class FolderPickerDialog {
         
         // For browsers without File System Access API, use drag & drop only
         // Don't show webkitdirectory dialog as it causes double dialogs
-        console.log('File System Access API not supported. Please use drag & drop instead.');
+        Logger.file.info('File System Access API not supported. Please use drag & drop instead.');
     }
 
     /**

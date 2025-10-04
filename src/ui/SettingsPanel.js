@@ -624,7 +624,7 @@ export class SettingsPanel {
             input.addEventListener('input', (e) => {
                 const path = ValidationUtils.validateString(e.target.dataset.setting, 'data-setting attribute');
                 if (!path) {
-                    console.warn('SettingsPanel: No data-setting attribute found for input:', e.target);
+                    Logger.settings.warn('SettingsPanel: No data-setting attribute found for input:', e.target);
                     return;
                 }
 
@@ -646,7 +646,7 @@ export class SettingsPanel {
                 if (this.syncManager) {
                     this.syncManager.syncSettingToState(path, value);
                 } else {
-                    console.warn('SettingsPanel: syncManager not available for', path, value);
+                    Logger.settings.warn('SettingsPanel: syncManager not available for', path, value);
                 }
 
                 // Handle UI-specific immediate updates

@@ -27,7 +27,7 @@ export class CanvasRenderer {
     resizeCanvas() {
         const container = this.canvas.parentElement;
         if (!container) {
-            console.warn('CanvasRenderer.resizeCanvas: No parent container found');
+            Logger.canvas.warn('CanvasRenderer.resizeCanvas: No parent container found');
             return;
         }
 
@@ -35,7 +35,7 @@ export class CanvasRenderer {
 
         // Проверки на валидность размеров контейнера
         if (!rect.width || !rect.height || rect.width <= 0 || rect.height <= 0) {
-            console.warn(`CanvasRenderer.resizeCanvas: Invalid container dimensions ${rect.width}x${rect.height}`);
+            Logger.canvas.warn(`CanvasRenderer.resizeCanvas: Invalid container dimensions ${rect.width}x${rect.height}`);
             return;
         }
 
@@ -61,12 +61,12 @@ export class CanvasRenderer {
     clear() {
         // Проверки на валидность canvas
         if (!this.canvas || !this.ctx) {
-            console.warn('CanvasRenderer.clear: Canvas or context not available');
+            Logger.canvas.warn('CanvasRenderer.clear: Canvas or context not available');
             return;
         }
 
         if (!this.canvas.width || !this.canvas.height || this.canvas.width <= 0 || this.canvas.height <= 0) {
-            console.warn(`CanvasRenderer.clear: Invalid canvas dimensions ${this.canvas.width}x${this.canvas.height}`);
+            Logger.canvas.warn(`CanvasRenderer.clear: Invalid canvas dimensions ${this.canvas.width}x${this.canvas.height}`);
             return;
         }
 
@@ -79,17 +79,17 @@ export class CanvasRenderer {
     setCamera(camera) {
         // Проверки на валидность camera
         if (!camera) {
-            console.warn('CanvasRenderer.setCamera: Camera not provided');
+            Logger.canvas.warn('CanvasRenderer.setCamera: Camera not provided');
             return;
         }
 
         if (!camera.zoom || camera.zoom <= 0 || !isFinite(camera.zoom)) {
-            console.warn(`CanvasRenderer.setCamera: Invalid camera zoom ${camera.zoom}`);
+            Logger.canvas.warn(`CanvasRenderer.setCamera: Invalid camera zoom ${camera.zoom}`);
             return;
         }
 
         if (!this.ctx) {
-            console.warn('CanvasRenderer.setCamera: Context not available');
+            Logger.canvas.warn('CanvasRenderer.setCamera: Context not available');
             return;
         }
 
@@ -103,7 +103,7 @@ export class CanvasRenderer {
      */
     restoreCamera() {
         if (!this.ctx) {
-            console.warn('CanvasRenderer.restoreCamera: Context not available');
+            Logger.canvas.warn('CanvasRenderer.restoreCamera: Context not available');
             return;
         }
 
@@ -129,7 +129,7 @@ export class CanvasRenderer {
         // Get the appropriate grid renderer
         const gridRenderer = this.gridRenderers.get(gridType);
         if (!gridRenderer) {
-            console.warn(`Unknown grid type: ${gridType}, falling back to rectangular`);
+            Logger.canvas.warn(`Unknown grid type: ${gridType}, falling back to rectangular`);
             const fallbackRenderer = this.gridRenderers.get('rectangular');
             fallbackRenderer.render(this.ctx, gridSize, camera, viewport, gridOptions);
             return;

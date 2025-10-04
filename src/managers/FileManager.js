@@ -1,5 +1,6 @@
 import { Level } from '../models/Level.js';
 import { FileUtils } from '../utils/FileUtils.js';
+import { ErrorHandler } from '../utils/ErrorHandler.js';
 
 /**
  * File operations for level editor
@@ -69,38 +70,45 @@ export class FileManager {
      * Load level from file
      */
     async loadLevel(file) {
-        if (!file) {
-            throw new Error('No file provided');
-        }
+        return ErrorHandler.tryAsync(
+            async () => {
+                if (!file) {
+                    throw new Error('No file provided');
+                }
 
-        if (!this.isValidFile(file)) {
-            throw new Error('Invalid file format');
-        }
+                if (!this.isValidFile(file)) {
+                    throw new Error('Invalid file format');
+                }
 
-        try {
-            const data = await FileUtils.readFileAsJSON(file);
-            const level = Level.fromJSON(data);
-            this.currentFileName = file.name;
-            return level;
-        } catch (error) {
-            throw new Error('Failed to parse level file: ' + error.message);
-        }
+                const data = await FileUtils.readFileAsJSON(file);
+                const level = Level.fromJSON(data);
+                this.currentFileName = file.name;
+                return level;
+            },
+            null,
+            { 
+                source: 'FileManager.loadLevel', 
+                showUser: true,
+                userMessage: 'Не удалось загрузить уровень. Проверьте формат файла.' 
+            }
+        );
     }
 
     /**
      * Load level from file input
      */
     async loadLevelFromFileInput() {
-        try {
-            const file = await FileUtils.pickFile(this.supportedFormats, false);
-            return await this.loadLevel(file);
-        } catch (error) {
-            // Don't throw for user cancellation
-            if (error.message && error.message.includes('cancelled')) {
-                throw error;
+        return ErrorHandler.tryAsync(
+            async () => {
+                const file = await FileUtils.pickFile(this.supportedFormats, false);
+                return await this.loadLevel(file);
+            },
+            null,
+            { 
+                source: 'FileManager.loadLevelFromFileInput',
+                showUser: false // loadLevel already shows error
             }
-            throw new Error('Failed to load level: ' + error.message);
-        }
+        );
     }
 
     /**
@@ -136,12 +144,18 @@ export class FileManager {
      * Import level data from JSON string
      */
     importLevelData(jsonString) {
-        try {
-            const data = JSON.parse(jsonString);
-            return Level.fromJSON(data);
-        } catch (error) {
-            throw new Error('Failed to parse level data: ' + error.message);
-        }
+        return ErrorHandler.try(
+            () => {
+                const data = JSON.parse(jsonString);
+                return Level.fromJSON(data);
+            },
+            null,
+            { 
+                source: 'FileManager.importLevelData',
+                showUser: true,
+                userMessage: 'Не удалось импортировать данные уровня. Проверьте формат JSON.' 
+            }
+        );
     }
 
     /**
@@ -156,21 +170,23 @@ export class FileManager {
      * Load asset library from file
      */
     async loadAssetLibrary(assetManager) {
-        try {
-            const { file, content } = await FileUtils.pickAndReadText('.json');
-            const success = assetManager.importFromJSON(content);
-            
-            if (!success) {
-                throw new Error('Failed to import asset library');
+        return ErrorHandler.tryAsync(
+            async () => {
+                const { file, content } = await FileUtils.pickAndReadText('.json');
+                const success = assetManager.importFromJSON(content);
+                
+                if (!success) {
+                    throw new Error('Failed to import asset library');
+                }
+                
+                return true;
+            },
+            false,
+            { 
+                source: 'FileManager.loadAssetLibrary',
+                showUser: true,
+                userMessage: 'Не удалось загрузить библиотеку ассетов. Проверьте формат файла.' 
             }
-            
-            return true;
-        } catch (error) {
-            // Don't throw for user cancellation
-            if (error.message && error.message.includes('cancelled')) {
-                throw error;
-            }
-            throw new Error('Failed to load asset library: ' + error.message);
-        }
+        );
     }
 }

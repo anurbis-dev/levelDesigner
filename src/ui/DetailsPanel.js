@@ -551,7 +551,7 @@ export class DetailsPanel {
             try {
                 unsubscribe();
             } catch (error) {
-                console.warn('Failed to unsubscribe:', error);
+                Logger.ui.warn('Failed to unsubscribe:', error);
             }
         });
         this.subscriptions = [];
@@ -561,7 +561,7 @@ export class DetailsPanel {
             try {
                 target.removeEventListener(event, handler);
             } catch (error) {
-                console.warn('Failed to remove event listener:', error);
+                Logger.ui.warn('Failed to remove event listener:', error);
             }
         });
         this.eventListeners = [];

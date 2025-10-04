@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.34.0] - 2025-10-05
+
+### Changed
+- **Logger migration**: 100% замена console.* на Logger.* (23 файла, 40+ вызовов)
+  - CanvasRenderer → Logger.canvas
+  - FileUtils → Logger.file
+  - AssetManager → Logger.asset
+  - SettingsPanel, DetailsPanel → Logger.settings, Logger.ui
+  - FolderPickerDialog → Logger.file
+  - ConsoleContextMenu → Logger.console
+- **ErrorHandler integration**: критичные файловые операции (FileManager: loadLevel, loadLevelFromFileInput, importLevelData, loadAssetLibrary)
+
+### Fixed
+- Единый стиль логирования во всем проекте
+- Улучшенная обработка ошибок в файловых операциях
+
+### Technical
+- Fallback console.* оставлен в Logger.js и ConfigManager (правильно)
+- Пользовательские сообщения об ошибках на русском языке
+- ErrorHandler.try/tryAsync обертки для критичных операций
+
+---
+
 ## [3.33.0] - 2025-10-05
 
 ### Added

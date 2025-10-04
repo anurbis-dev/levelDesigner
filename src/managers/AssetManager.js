@@ -180,7 +180,7 @@ export class AssetManager {
             
             await Promise.all(promises);
         } catch (error) {
-            console.warn('Failed to preload some images:', error);
+            Logger.asset.warn('Failed to preload some images:', error);
             // Don't throw - let the editor continue with partial asset loading
         }
     }
@@ -201,7 +201,7 @@ export class AssetManager {
                 resolve(img);
             };
             img.onerror = (error) => {
-                console.warn(`Failed to load image: ${src}`, error);
+                Logger.asset.warn(`Failed to load image: ${src}`, error);
                 reject(error);
             };
             img.src = src;

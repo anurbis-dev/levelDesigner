@@ -191,7 +191,7 @@ export class ConsoleContextMenu extends BaseContextMenu {
             navigator.clipboard.writeText(text).then(() => {
                 this.callbacks.onCopyToClipboard(text);
             }).catch(err => {
-                console.warn('Clipboard API failed, using fallback:', err);
+                Logger.console.warn('Clipboard API failed, using fallback:', err);
                 this.fallbackCopyToClipboard(text);
             });
         } else {
@@ -217,7 +217,7 @@ export class ConsoleContextMenu extends BaseContextMenu {
             document.execCommand('copy');
             this.callbacks.onCopyToClipboard(text);
         } catch (err) {
-            console.error('Fallback copy failed:', err);
+            Logger.console.error('Fallback copy failed:', err);
         }
         
         document.body.removeChild(textArea);

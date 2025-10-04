@@ -1,3 +1,5 @@
+import { Logger } from './Logger.js';
+
 /**
  * Utility class for common file operations
  * Eliminates file operation duplication and provides consistent API
@@ -64,7 +66,7 @@ export class FileUtils {
             const reader = new FileReader();
             reader.onload = (event) => resolve(event.target.result);
             reader.onerror = (error) => {
-                console.warn('FileReader error:', error);
+                Logger.file.warn('FileReader error:', error);
                 reject(new Error('Failed to read file'));
             };
             reader.readAsText(file);
@@ -146,7 +148,7 @@ export class FileUtils {
             const content = await this.readFileAsText(file);
             return { file, content };
         } catch (error) {
-            console.warn('Error in pickAndReadText:', error);
+            Logger.file.warn('Error in pickAndReadText:', error);
             throw error;
         }
     }
@@ -162,7 +164,7 @@ export class FileUtils {
             const data = await this.readFileAsJSON(file);
             return { file, data };
         } catch (error) {
-            console.warn('Error in pickAndReadJSON:', error);
+            Logger.file.warn('Error in pickAndReadJSON:', error);
             throw error;
         }
     }
@@ -227,7 +229,7 @@ export class FileUtils {
             const reader = new FileReader();
             reader.onload = (e) => resolve(e.target.result);
             reader.onerror = (error) => {
-                console.warn('FileReader error creating data URL:', error);
+                Logger.file.warn('FileReader error creating data URL:', error);
                 reject(new Error('Failed to create data URL'));
             };
             reader.readAsDataURL(file);
@@ -258,7 +260,7 @@ export class FileUtils {
                 }
             }
         } catch (error) {
-            console.warn('Error in downloadBatch:', error);
+            Logger.file.warn('Error in downloadBatch:', error);
             throw error;
         }
     }
@@ -277,7 +279,7 @@ export class FileUtils {
 
             return Promise.all(promises);
         } catch (error) {
-            console.warn('Error reading multiple files:', error);
+            Logger.file.warn('Error reading multiple files:', error);
             throw error;
         }
     }
