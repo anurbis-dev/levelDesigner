@@ -9,5 +9,15 @@
     "showAxis": true,
     "axisColor": "#cccccc",
     "axisWidth": 1
+  },
+  "ui": {
+    "backgroundColor": "#1f2937",
+    "textColor": "#d1d5db",
+    "activeColor": "#3b82f6",
+    "activeTextColor": "#ffffff",
+    "activeTabColor": "#374151"
+  },
+  "canvas": {
+    "backgroundColor": "#4b5563"
   }
 }

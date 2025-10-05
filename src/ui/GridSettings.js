@@ -32,6 +32,11 @@ export class GridSettings {
         const gridSubdivColor = stateManager.get('canvas.gridSubdivColor') || '#666666';
         const gridSubdivThickness = stateManager.get('canvas.gridSubdivThickness') || 0.5;
         const snapTolerance = stateManager.get('canvas.snapTolerance') || 80;
+
+        // Axis Constraint settings
+        const showAxis = stateManager.get('editor.axisConstraint.showAxis') || true;
+        const axisColor = stateManager.get('editor.axisConstraint.axisColor') || '#cccccc';
+        const axisWidth = stateManager.get('editor.axisConstraint.axisWidth') || 1;
         
         return `
             <h3>Grid & Snapping Settings</h3>
@@ -110,6 +115,37 @@ export class GridSettings {
                     </div>
                 </div>
             </div>
+
+            <!-- Axis Constraint Settings -->
+            <div class="settings-form-group" style="margin-top: 1.5rem; border-top: 1px solid #374151; padding-top: 1rem;">
+                <h4 style="font-size: 1rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.75rem;">Axis Constraint</h4>
+
+                <div class="settings-flex" style="display: flex; gap: 1rem; align-items: center; width: 100%;">
+                    <!-- Show Axis Checkbox -->
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input type="checkbox" class="settings-input" name="setting-input" data-setting="editor.axisConstraint.showAxis"
+                               ${showAxis ? 'checked' : ''}
+                               style="width: 1rem; height: 1rem;">
+                        <label style="font-size: 0.875rem; color: #d1d5db;">Show Axis</label>
+                    </div>
+
+                    <!-- Axis Color -->
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <label style="font-size: 0.875rem; color: #d1d5db;">Color:</label>
+                        <input type="color" class="settings-input" name="setting-input" data-setting="editor.axisConstraint.axisColor"
+                               value="${ColorUtils.toHex(axisColor)}"
+                               style="width: 2rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                    </div>
+
+                    <!-- Axis Width -->
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <label style="font-size: 0.875rem; color: #d1d5db;">Width:</label>
+                        <input type="number" step="1" min="1" max="10" class="settings-input" name="setting-input" data-setting="editor.axisConstraint.axisWidth"
+                               value="${axisWidth}"
+                               style="width: 4rem; padding: 0.25rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white; text-align: center;">
+                    </div>
+                </div>
+            </div>
         `;
     }
 
@@ -132,6 +168,11 @@ export class GridSettings {
         let hexOrientation = this.configManager.get('canvas.hexOrientation') ?? 'pointy';
         let snapToGrid = this.configManager.get('canvas.snapToGrid') ?? false;
 
+        // Axis constraint settings
+        let showAxis = this.configManager.get('editor.axisConstraint.showAxis') ?? true;
+        let axisColor = this.configManager.get('editor.axisConstraint.axisColor') ?? '#cccccc';
+        let axisWidth = this.configManager.get('editor.axisConstraint.axisWidth') ?? 1;
+
 
         // If we have a changed value, use it instead of the stored one
         if (changedPath && changedValue !== undefined) {
@@ -145,6 +186,9 @@ export class GridSettings {
             else if (changedPath === 'canvas.gridType') gridType = changedValue;
             else if (changedPath === 'canvas.hexOrientation') hexOrientation = changedValue;
             else if (changedPath === 'canvas.snapToGrid') snapToGrid = changedValue;
+            else if (changedPath === 'editor.axisConstraint.showAxis') showAxis = changedValue;
+            else if (changedPath === 'editor.axisConstraint.axisColor') axisColor = changedValue;
+            else if (changedPath === 'editor.axisConstraint.axisWidth') axisWidth = changedValue;
         }
 
         // If opacity changed, we need to recalculate colors with new opacity
@@ -175,6 +219,11 @@ export class GridSettings {
         window.editor.stateManager.set('canvas.hexOrientation', hexOrientation);
         window.editor.stateManager.set('canvas.snapToGrid', snapToGrid);
         window.editor.stateManager.set('view.snapToGrid', snapToGrid); // Sync to view state for toolbar/menu
+
+        // Set axis constraint settings
+        window.editor.stateManager.set('editor.axisConstraint.showAxis', showAxis);
+        window.editor.stateManager.set('editor.axisConstraint.axisColor', axisColor);
+        window.editor.stateManager.set('editor.axisConstraint.axisWidth', axisWidth);
 
         // Trigger re-render with debounce to prevent excessive calls
         if (this.renderTimeout) {

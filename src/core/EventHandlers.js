@@ -121,7 +121,7 @@ export class EventHandlers extends BaseModule {
         };
         
         for (const [event, handler] of Object.entries(handlers)) {
-            const options = event === 'wheel' ? { passive: false } : undefined;
+            const options = event === 'wheel' ? { passive: false } : { passive: true };
             canvas.addEventListener(event, handler, options);
             this.eventListeners.push({
                 target: canvas,
@@ -135,8 +135,8 @@ export class EventHandlers extends BaseModule {
         const globalMouseMove = (e) => this.editor.mouseHandlers.handleGlobalMouseMove(e);
         const globalMouseUp = (e) => this.editor.mouseHandlers.handleGlobalMouseUp(e);
         
-        window.addEventListener('mousemove', globalMouseMove);
-        window.addEventListener('mouseup', globalMouseUp);
+        window.addEventListener('mousemove', globalMouseMove, { passive: true });
+        window.addEventListener('mouseup', globalMouseUp, { passive: true });
         
         this.eventListeners.push(
             { target: window, event: 'mousemove', handler: globalMouseMove },

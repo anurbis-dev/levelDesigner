@@ -202,13 +202,27 @@ export class CanvasRenderer {
     drawMarquee(marqueeRect, camera) {
         if (!marqueeRect) return;
         
+        // Get marquee settings from StateManager
+        const marqueeColor = window.editor?.stateManager?.get('selection.marqueeColor') || '#3B82F6';
+        const marqueeOpacity = window.editor?.stateManager?.get('selection.marqueeOpacity') || 0.2;
+        
         this.ctx.save();
-        this.ctx.fillStyle = 'rgba(59, 130, 246, 0.2)';
+        this.ctx.fillStyle = `rgba(${this.hexToRgb(marqueeColor)}, ${marqueeOpacity})`;
         this.ctx.fillRect(marqueeRect.x, marqueeRect.y, marqueeRect.width, marqueeRect.height);
-        this.ctx.strokeStyle = 'rgba(59, 130, 246, 0.8)';
+        this.ctx.strokeStyle = `rgba(${this.hexToRgb(marqueeColor)}, 0.8)`;
         this.ctx.lineWidth = 1 / camera.zoom;
         this.ctx.strokeRect(marqueeRect.x, marqueeRect.y, marqueeRect.width, marqueeRect.height);
         this.ctx.restore();
+    }
+    
+    /**
+     * Convert hex color to RGB values
+     */
+    hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? 
+            `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : 
+            '59, 130, 246';
     }
 
     /**

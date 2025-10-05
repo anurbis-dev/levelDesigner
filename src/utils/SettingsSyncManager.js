@@ -35,7 +35,9 @@ export class SettingsSyncManager {
             SettingsSyncManager._globalSyncSetup = true;
             setTimeout(() => {
                 this.setupBidirectionalSync();
-            }, 0);
+                // Apply initial color settings
+                this.applyInitialColorSettings();
+            }, 100);
         }
     }
 
@@ -65,6 +67,7 @@ export class SettingsSyncManager {
             'editor.autoSave': 'editor.autoSave',
             'editor.autoSaveInterval': 'editor.autoSaveInterval',
             'editor.undoHistoryLimit': 'editor.undoHistoryLimit',
+            'editor.multiSelectMode': 'editor.multiSelectMode',
             'editor.axisConstraint.axisColor': 'editor.axisConstraint.axisColor',
             'editor.axisConstraint.axisWidth': 'editor.axisConstraint.axisWidth',
             'editor.axisConstraint.showAxis': 'editor.axisConstraint.showAxis',
@@ -96,6 +99,22 @@ export class SettingsSyncManager {
             'ui.showTooltips': 'ui.showTooltips',
             'ui.fontScale': 'ui.fontScale',
             'ui.spacing': 'ui.spacing',
+            'ui.backgroundColor': 'ui.backgroundColor',
+            'ui.textColor': 'ui.textColor',
+            'ui.activeColor': 'ui.activeColor',
+            
+            // Editor UI settings (from editor.json)
+            'editor.ui.backgroundColor': 'ui.backgroundColor',
+            'editor.ui.textColor': 'ui.textColor',
+            'editor.ui.activeColor': 'ui.activeColor',
+            'editor.ui.activeTextColor': 'ui.activeTextColor',
+            'editor.ui.activeTabColor': 'ui.activeTabColor',
+            
+            // Canvas settings
+            'canvas.backgroundColor': 'canvas.backgroundColor',
+            
+            // Editor Canvas settings (from editor.json)
+            'editor.canvas.backgroundColor': 'canvas.backgroundColor',
 
             // Panel visibility settings
             'ui.rightPanelVisible': 'view.rightPanel',
@@ -106,7 +125,16 @@ export class SettingsSyncManager {
             // Panel settings
             'panels.rightPanelWidth': 'panels.rightPanelWidth',
             'panels.assetsPanelHeight': 'panels.assetsPanelHeight',
-            'panels.consoleHeight': 'panels.consoleHeight'
+            'panels.consoleHeight': 'panels.consoleHeight',
+            
+            // Selection settings
+            'panels.selection.outlineColor': 'selection.outlineColor',
+            'panels.selection.outlineWidth': 'selection.outlineWidth',
+            'panels.selection.groupOutlineColor': 'selection.groupOutlineColor',
+            'panels.selection.groupOutlineWidth': 'selection.groupOutlineWidth',
+            'panels.selection.marqueeColor': 'selection.marqueeColor',
+            'panels.selection.marqueeOpacity': 'selection.marqueeOpacity',
+            'panels.selection.hierarchyHighlightColor': 'selection.hierarchyHighlightColor'
         };
 
         // Create reverse mapping
@@ -375,6 +403,134 @@ export class SettingsSyncManager {
             }
         }
 
+        // Apply color settings globally
+        const backgroundColor = this.levelEditor.stateManager.get('ui.backgroundColor');
+        const textColor = this.levelEditor.stateManager.get('ui.textColor');
+        const activeColor = this.levelEditor.stateManager.get('ui.activeColor');
+        const activeTextColor = this.levelEditor.stateManager.get('ui.activeTextColor');
+        const activeTabColor = this.levelEditor.stateManager.get('ui.activeTabColor');
+        const canvasBackgroundColor = this.levelEditor.stateManager.get('canvas.backgroundColor');
+        
+        if (backgroundColor) {
+            document.documentElement.style.setProperty('--ui-background-color', backgroundColor);
+        }
+        if (textColor) {
+            document.documentElement.style.setProperty('--ui-text-color', textColor);
+        }
+        if (activeColor) {
+            document.documentElement.style.setProperty('--ui-active-color', activeColor);
+        }
+        if (activeTextColor) {
+            document.documentElement.style.setProperty('--ui-active-text-color', activeTextColor);
+        }
+        if (activeTabColor) {
+            document.documentElement.style.setProperty('--ui-active-tab-color', activeTabColor);
+        }
+        if (canvasBackgroundColor) {
+            document.documentElement.style.setProperty('--canvas-background-color', canvasBackgroundColor);
+            // Force canvas re-render to apply new background color immediately
+            if (this.levelEditor && typeof this.levelEditor.render === 'function') {
+                this.levelEditor.render();
+            }
+        }
+
+        // Apply selection settings globally
+        const outlineColor = this.levelEditor.stateManager.get('selection.outlineColor');
+        const outlineWidth = this.levelEditor.stateManager.get('selection.outlineWidth');
+        const groupOutlineColor = this.levelEditor.stateManager.get('selection.groupOutlineColor');
+        const groupOutlineWidth = this.levelEditor.stateManager.get('selection.groupOutlineWidth');
+        const marqueeColor = this.levelEditor.stateManager.get('selection.marqueeColor');
+        const marqueeOpacity = this.levelEditor.stateManager.get('selection.marqueeOpacity');
+        const hierarchyHighlightColor = this.levelEditor.stateManager.get('selection.hierarchyHighlightColor');
+        
+        if (outlineColor) {
+            document.documentElement.style.setProperty('--selection-outline-color', outlineColor);
+        }
+        if (outlineWidth) {
+            document.documentElement.style.setProperty('--selection-outline-width', `${outlineWidth}px`);
+        }
+        if (groupOutlineColor) {
+            document.documentElement.style.setProperty('--selection-group-outline-color', groupOutlineColor);
+        }
+        if (groupOutlineWidth) {
+            document.documentElement.style.setProperty('--selection-group-outline-width', `${groupOutlineWidth}px`);
+        }
+        if (marqueeColor) {
+            document.documentElement.style.setProperty('--selection-marquee-color', marqueeColor);
+        }
+        if (marqueeOpacity !== undefined) {
+            document.documentElement.style.setProperty('--selection-marquee-opacity', marqueeOpacity);
+        }
+        if (hierarchyHighlightColor) {
+            document.documentElement.style.setProperty('--selection-hierarchy-highlight-color', hierarchyHighlightColor);
+        }
+    }
+
+    /**
+     * Apply initial color settings on startup
+     */
+    applyInitialColorSettings() {
+        // Get levelEditor with fallback
+        this.levelEditor = ValidationUtils.getLevelEditor(this.levelEditor, 'applyInitialColorSettings');
+        if (!this.levelEditor) return;
+
+        // Apply color settings from StateManager (which should have defaults or loaded values)
+        const backgroundColor = this.levelEditor.stateManager.get('ui.backgroundColor');
+        const textColor = this.levelEditor.stateManager.get('ui.textColor');
+        const activeColor = this.levelEditor.stateManager.get('ui.activeColor');
+        const activeTextColor = this.levelEditor.stateManager.get('ui.activeTextColor');
+        const activeTabColor = this.levelEditor.stateManager.get('ui.activeTabColor');
+        const canvasBackgroundColor = this.levelEditor.stateManager.get('canvas.backgroundColor');
+        
+        if (backgroundColor) {
+            document.documentElement.style.setProperty('--ui-background-color', backgroundColor);
+        }
+        if (textColor) {
+            document.documentElement.style.setProperty('--ui-text-color', textColor);
+        }
+        if (activeColor) {
+            document.documentElement.style.setProperty('--ui-active-color', activeColor);
+        }
+        if (activeTextColor) {
+            document.documentElement.style.setProperty('--ui-active-text-color', activeTextColor);
+        }
+        if (activeTabColor) {
+            document.documentElement.style.setProperty('--ui-active-tab-color', activeTabColor);
+        }
+        if (canvasBackgroundColor) {
+            document.documentElement.style.setProperty('--canvas-background-color', canvasBackgroundColor);
+        }
+
+        // Apply selection settings globally
+        const outlineColor = this.levelEditor.stateManager.get('selection.outlineColor');
+        const outlineWidth = this.levelEditor.stateManager.get('selection.outlineWidth');
+        const groupOutlineColor = this.levelEditor.stateManager.get('selection.groupOutlineColor');
+        const groupOutlineWidth = this.levelEditor.stateManager.get('selection.groupOutlineWidth');
+        const marqueeColor = this.levelEditor.stateManager.get('selection.marqueeColor');
+        const marqueeOpacity = this.levelEditor.stateManager.get('selection.marqueeOpacity');
+        const hierarchyHighlightColor = this.levelEditor.stateManager.get('selection.hierarchyHighlightColor');
+        
+        if (outlineColor) {
+            document.documentElement.style.setProperty('--selection-outline-color', outlineColor);
+        }
+        if (outlineWidth) {
+            document.documentElement.style.setProperty('--selection-outline-width', `${outlineWidth}px`);
+        }
+        if (groupOutlineColor) {
+            document.documentElement.style.setProperty('--selection-group-outline-color', groupOutlineColor);
+        }
+        if (groupOutlineWidth) {
+            document.documentElement.style.setProperty('--selection-group-outline-width', `${groupOutlineWidth}px`);
+        }
+        if (marqueeColor) {
+            document.documentElement.style.setProperty('--selection-marquee-color', marqueeColor);
+        }
+        if (marqueeOpacity !== undefined) {
+            document.documentElement.style.setProperty('--selection-marquee-opacity', marqueeOpacity);
+        }
+        if (hierarchyHighlightColor) {
+            document.documentElement.style.setProperty('--selection-hierarchy-highlight-color', hierarchyHighlightColor);
+        }
     }
 
     /**

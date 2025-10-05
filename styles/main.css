@@ -6,6 +6,23 @@
     font-size: calc(16px * var(--font-scale, 1.0)); /* Use CSS variable for font scale */
     --accent-color: #3B82F6; /* blue-500 - стандартный синий цвет приложения */
     --spacing-scale: 1.0; /* Масштаб отступов и размеров элементов */
+    
+    /* UI Color Variables */
+    --ui-background-color: #1f2937; /* gray-800 */
+    --ui-text-color: #d1d5db; /* gray-300 */
+    --ui-active-color: #3b82f6; /* blue-500 */
+    --ui-active-text-color: #ffffff; /* white */
+    --ui-active-tab-color: #374151; /* gray-700 */
+    --canvas-background-color: #4b5563; /* gray-600 */
+    
+    /* Selection Variables */
+    --selection-outline-color: #3B82F6; /* blue-500 */
+    --selection-outline-width: 2px;
+    --selection-group-outline-color: #3B82F6; /* blue-500 */
+    --selection-group-outline-width: 4px;
+    --selection-marquee-color: #3B82F6; /* blue-500 */
+    --selection-marquee-opacity: 0.2;
+    --selection-hierarchy-highlight-color: #3B82F6; /* blue-500 */
 }
 
 /* Apply font scale immediately if localStorage has settings */
@@ -64,12 +81,37 @@ html, body {
     background: rgba(55, 65, 81, 0.3);
 }
 
+/* Main panel background */
+#main-panel {
+    background-color: var(--ui-background-color, #374151) !important;
+}
+
+/* Toolbar background */
+#toolbar-container {
+    background-color: var(--ui-background-color, #1f2937) !important;
+}
+
+/* Assets panel background */
+#assets-panel {
+    background-color: var(--ui-background-color, #111827) !important;
+}
+
+/* Console panel background */
+#console-panel {
+    background-color: var(--ui-background-color, #111827) !important;
+}
+
+/* Header/Menu background */
+header {
+    background-color: var(--ui-background-color, #111827) !important;
+}
+
 /* Styles for canvas (main workspace) */
 #main-canvas {
     display: block;
     width: 100%;
     height: 100%;
-    background-color: #4B5563; /* gray-600 */
+    background-color: var(--canvas-background-color, #4B5563); /* gray-600 */
     object-fit: none; /* Prevent scaling */
     image-rendering: pixelated; /* Crisp pixel art rendering */
 }
@@ -83,7 +125,7 @@ html, body {
     font-weight: 500;
     background: transparent;
     border: none;
-    color: #d1d5db;
+    color: var(--ui-text-color, #d1d5db);
     cursor: pointer;
     border-bottom: 2px solid transparent;
 }
@@ -93,9 +135,9 @@ html, body {
 }
 
 .tab.active, .tab-right.active {
-    background-color: #374151; /* gray-700 */
+    background-color: var(--ui-active-tab-color, #374151);
     border-bottom-color: transparent; /* removed blue underline */
-    color: #ffffff;
+    color: var(--ui-active-text-color, #ffffff);
 }
 
 /* Styles for tab dragging */
@@ -105,11 +147,11 @@ html, body {
 }
 
 .tab-right.drag-over, .tab.drag-over {
-    border-left: 2px solid #3B82F6;
+    border-left: 2px solid var(--ui-active-color, #3B82F6);
 }
 
 .tab-right.drag-over:last-child, .tab.drag-over:last-child {
-    border-right: 2px solid #3B82F6;
+    border-right: 2px solid var(--ui-active-color, #3B82F6);
 }
 
 /* Styles for asset previews */
@@ -118,15 +160,16 @@ html, body {
 }
 
 .asset-thumbnail.selected {
-    border-color: #3B82F6; /* blue-500 */
+    border-color: var(--ui-active-color, #3B82F6); /* blue-500 */
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
 }
 
 /* Styles for selection rectangle in asset panel */
 #asset-marquee {
     position: absolute;
-    border: 1px solid rgba(59, 130, 246, 0.8);
-    background-color: rgba(59, 130, 246, 0.2);
+    border: 1px solid var(--selection-marquee-color, #3B82F6);
+    background-color: var(--selection-marquee-color, #3B82F6);
+    opacity: var(--selection-marquee-opacity, 0.2);
     pointer-events: none; /* so it doesn't interfere with clicks */
     z-index: 100;
 }

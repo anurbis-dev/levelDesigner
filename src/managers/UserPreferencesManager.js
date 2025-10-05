@@ -53,7 +53,17 @@ export class UserPreferencesManager {
 
             // Editor preferences
             'autoSave': 'editor.autoSave',
-            'autoSaveInterval': 'editor.autoSaveInterval'
+            'autoSaveInterval': 'editor.autoSaveInterval',
+            'multiSelectMode': 'editor.multiSelectMode',
+
+            // Selection preferences
+            'selectionOutlineColor': 'panels.selection.outlineColor',
+            'selectionOutlineWidth': 'panels.selection.outlineWidth',
+            'selectionGroupOutlineColor': 'panels.selection.groupOutlineColor',
+            'selectionGroupOutlineWidth': 'panels.selection.groupOutlineWidth',
+            'selectionMarqueeColor': 'panels.selection.marqueeColor',
+            'selectionMarqueeOpacity': 'panels.selection.marqueeOpacity',
+            'selectionHierarchyHighlightColor': 'panels.selection.hierarchyHighlightColor'
         };
     }
 

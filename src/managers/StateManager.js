@@ -97,24 +97,31 @@ export class StateManager {
                 gridSubdivThickness: 0.5,
                 snapTolerance: 80,
                 gridType: 'rectangular',
-                hexOrientation: 'pointy'
+                hexOrientation: 'pointy',
+                backgroundColor: '#4b5563'
             },
             
-            // UI state
-            ui: {
-                fontScale: 1.0,
-                spacing: 1.0,
-                showTooltips: true
-            },
+                // UI state
+                ui: {
+                    fontScale: 1.0,
+                    spacing: 1.0,
+                    showTooltips: true,
+                    backgroundColor: '#1f2937',
+                    textColor: '#d1d5db',
+                    activeColor: '#3b82f6',
+                    activeTextColor: '#ffffff',
+                    activeTabColor: '#374151'
+                },
             
             // Editor state
             editor: {
                 autoSave: false,
                 autoSaveInterval: 5,
                 undoHistoryLimit: 50,
+                multiSelectMode: 'additive',
                 axisConstraint: {
-                    axisColor: '#ff0000',
-                    axisWidth: 2,
+                    axisColor: '#cccccc',
+                    axisWidth: 1,
                     showAxis: true
                 }
             },
@@ -124,6 +131,17 @@ export class StateManager {
                 rightPanelWidth: 300,
                 assetsPanelHeight: 256,
                 consoleHeight: 200
+            },
+            
+            // Selection state
+            selection: {
+                outlineColor: '#3B82F6',
+                outlineWidth: 2,
+                groupOutlineColor: '#3B82F6',
+                groupOutlineWidth: 4,
+                marqueeColor: '#3B82F6',
+                marqueeOpacity: 0.2,
+                hierarchyHighlightColor: '#3B82F6'
             }
         };
         
@@ -409,8 +427,8 @@ export class StateManager {
                 autoSaveInterval: 5,
                 undoHistoryLimit: 50,
                 axisConstraint: {
-                    axisColor: '#ff0000',
-                    axisWidth: 2,
+                    axisColor: '#cccccc',
+                    axisWidth: 1,
                     showAxis: true
                 }
             },

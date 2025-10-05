@@ -92,7 +92,7 @@ export class ScrollUtils {
                 e.stopPropagation();
                 this.startScrolling(container, config, e);
             }
-        });
+        }, { passive: false });
 
         // Mouse wheel scrolling
         container.addEventListener('wheel', (e) => {
@@ -106,14 +106,14 @@ export class ScrollUtils {
             if (config.vertical) {
                 container.scrollTop += scrollAmount;
             }
-        });
+        }, { passive: false });
 
         // Prevent context menu on middle click
         container.addEventListener('contextmenu', (e) => {
             if (e.button === 1) {
                 e.preventDefault();
             }
-        });
+        }, { passive: false });
 
         Logger.ui.debug(`ScrollUtils: Scrolling setup for ${container.tagName}#${container.id || container.className}`);
     }

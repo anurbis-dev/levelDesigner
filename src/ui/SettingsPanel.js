@@ -113,6 +113,13 @@ export class SettingsPanel {
         const overlay = document.getElementById('settings-overlay');
         if (overlay && !overlay._hasEventListener) {
             overlay._hasEventListener = true;
+            
+            // Prevent context menu on right click
+            overlay.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+            
             overlay.addEventListener('click', (e) => {
                 // Handle close button and overlay click
                 if (e.target.id === 'cancel-settings') {
@@ -213,6 +220,8 @@ export class SettingsPanel {
                 try {
                     if (this.syncManager) {
                         this.syncManager.syncFromConfigToState();
+                        // Apply color settings immediately after sync
+                        this.syncManager.applyInitialColorSettings();
                     }
                 } catch (error) {
                     Logger.ui.warn('Error syncing from config to state:', error);
@@ -362,7 +371,15 @@ export class SettingsPanel {
             ui: {
                 showTooltips: stateManager.get('ui.showTooltips'),
                 fontScale: stateManager.get('ui.fontScale'),
-                spacing: stateManager.get('ui.spacing')
+                spacing: stateManager.get('ui.spacing'),
+                backgroundColor: stateManager.get('ui.backgroundColor') || '#1f2937',
+                textColor: stateManager.get('ui.textColor') || '#d1d5db',
+                activeColor: stateManager.get('ui.activeColor') || '#3b82f6',
+                activeTextColor: stateManager.get('ui.activeTextColor') || '#ffffff',
+                activeTabColor: stateManager.get('ui.activeTabColor') || '#374151'
+            },
+            canvas: {
+                backgroundColor: stateManager.get('canvas.backgroundColor') || '#4b5563'
             },
             editor: {
                 autoSave: stateManager.get('editor.autoSave'),
@@ -446,36 +463,61 @@ export class SettingsPanel {
                     </div>
                 </div>
 
-                <!-- Axis Constraint Settings -->
+                <!-- Color Settings -->
                 <div style="border: 1px solid #374151; border-radius: 0.5rem; padding: 1rem;">
-                    <h4 style="font-size: 1rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.75rem;">Axis Constraint</h4>
+                    <h4 style="font-size: 1rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.75rem;">Color Settings</h4>
                     
-                    <div class="settings-flex" style="display: flex; gap: 1rem; align-items: center; width: 100%;">
-                        <!-- Show Axis Checkbox -->
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="checkbox" class="setting-input" name="setting-input" data-setting="editor.axisConstraint.showAxis" 
-                                   ${settings.editor?.axisConstraint?.showAxis ? 'checked' : ''}
-                                   style="width: 1rem; height: 1rem;">
-                            <label style="font-size: 0.875rem; color: #d1d5db;">Show Axis</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <!-- Canvas Background Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Canvas Background</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="canvas.backgroundColor"
+                                   value="${settings.canvas?.backgroundColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                         </div>
                         
-                        <!-- Axis Color -->
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <label style="font-size: 0.875rem; color: #d1d5db;">Color:</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="editor.axisConstraint.axisColor" 
-                                   value="${settings.editor?.axisConstraint?.axisColor || '#cccccc'}"
-                                   style="width: 2rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        <!-- UI Background Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">UI Background</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="ui.backgroundColor"
+                                   value="${settings.ui?.backgroundColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                         </div>
                         
-                        <!-- Axis Width -->
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <label style="font-size: 0.875rem; color: #d1d5db;">Width:</label>
-                            <input type="number" step="1" min="1" max="10" class="setting-input" name="setting-input" data-setting="editor.axisConstraint.axisWidth" 
-                                   value="${settings.editor?.axisConstraint?.axisWidth || 1}"
-                                   style="width: 4rem; padding: 0.25rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white; text-align: center;">
+                        <!-- UI Text Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">UI Text Color</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="ui.textColor"
+                                   value="${settings.ui?.textColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        </div>
+
+                        <!-- Active Elements Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Active Elements</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="ui.activeColor"
+                                   value="${settings.ui?.activeColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                    </div>
+
+                        <!-- Active Text Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Active Text Color</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="ui.activeTextColor"
+                                   value="${settings.ui?.activeTextColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                </div>
+
+                        <!-- Active Tab Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Active Tab Color</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="ui.activeTabColor"
+                                   value="${settings.ui?.activeTabColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                         </div>
                     </div>
                 </div>
+
                 
                 <div style="border-top: 1px solid #374151; padding-top: 1rem; margin-top: 1rem;">
                     <h4 style="font-size: 1rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.75rem;">View Settings</h4>
@@ -519,7 +561,126 @@ export class SettingsPanel {
     }
 
     renderSelectionSettings() {
-        return `<h3>Selection Settings</h3><p>Selection settings will be implemented here.</p>`;
+        // Use StateManager as single source of truth
+        const stateManager = this.levelEditor?.stateManager;
+        if (!stateManager) return '<div>Error: StateManager not available</div>';
+        
+        // Get current values from StateManager
+        const settings = {
+            editor: {
+                multiSelectMode: stateManager.get('editor.multiSelectMode') || 'additive'
+            },
+            selection: {
+                outlineColor: stateManager.get('selection.outlineColor') || '#3B82F6',
+                outlineWidth: stateManager.get('selection.outlineWidth') || 2,
+                groupOutlineColor: stateManager.get('selection.groupOutlineColor') || '#3B82F6',
+                groupOutlineWidth: stateManager.get('selection.groupOutlineWidth') || 4,
+                marqueeColor: stateManager.get('selection.marqueeColor') || '#3B82F6',
+                marqueeOpacity: stateManager.get('selection.marqueeOpacity') || 0.2,
+                hierarchyHighlightColor: stateManager.get('selection.hierarchyHighlightColor') || '#3B82F6'
+            }
+        };
+        
+        return `
+            <h3>Selection Settings</h3>
+            
+            <div class="settings-container" style="display: flex; flex-direction: column; gap: 1rem; width: 100%;">
+                
+                <!-- Multi-Select Mode -->
+                <div style="border: 1px solid #374151; border-radius: 0.5rem; padding: 1rem;">
+                    <h4 style="font-size: 1rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.75rem;">Multi-Select Behavior</h4>
+                    
+                    <div>
+                        <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Multi-Select Mode</label>
+                        <select class="setting-input" name="setting-input" data-setting="editor.multiSelectMode"
+                                style="width: 100%; padding: 0.5rem; background-color: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: #d1d5db;">
+                            <option value="additive" ${settings.editor?.multiSelectMode === 'additive' ? 'selected' : ''}>Additive (Ctrl+Click to add)</option>
+                            <option value="replace" ${settings.editor?.multiSelectMode === 'replace' ? 'selected' : ''}>Replace (Click to select only)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Selection Visual Settings -->
+                <div style="border: 1px solid #374151; border-radius: 0.5rem; padding: 1rem;">
+                    <h4 style="font-size: 1rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.75rem;">Selection Visual</h4>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <!-- Outline Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Outline Color</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="panels.selection.outlineColor"
+                                   value="${settings.selection?.outlineColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        </div>
+
+                        <!-- Outline Width -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Outline Width</label>
+                            <input type="range" class="setting-input" name="setting-input" data-setting="panels.selection.outlineWidth"
+                                   min="1" max="5" step="1" value="${settings.selection?.outlineWidth}"
+                                   style="width: 100%; height: 2rem;">
+                            <div style="text-align: center; font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem;">${settings.selection?.outlineWidth}px</div>
+                        </div>
+
+                        <!-- Group Outline Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Group Outline Color</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="panels.selection.groupOutlineColor"
+                                   value="${settings.selection?.groupOutlineColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        </div>
+
+                        <!-- Group Outline Width -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Group Outline Width</label>
+                            <input type="range" class="setting-input" name="setting-input" data-setting="panels.selection.groupOutlineWidth"
+                                   min="1" max="8" step="1" value="${settings.selection?.groupOutlineWidth}"
+                                   style="width: 100%; height: 2rem;">
+                            <div style="text-align: center; font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem;">${settings.selection?.groupOutlineWidth}px</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Marquee Selection Settings -->
+                <div style="border: 1px solid #374151; border-radius: 0.5rem; padding: 1rem;">
+                    <h4 style="font-size: 1rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.75rem;">Marquee Selection</h4>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <!-- Marquee Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Marquee Color</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="panels.selection.marqueeColor"
+                                   value="${settings.selection?.marqueeColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        </div>
+
+                        <!-- Marquee Opacity -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Marquee Opacity</label>
+                            <input type="range" class="setting-input" name="setting-input" data-setting="panels.selection.marqueeOpacity"
+                                   min="0.1" max="1" step="0.1" value="${settings.selection?.marqueeOpacity}"
+                                   style="width: 100%; height: 2rem;">
+                            <div style="text-align: center; font-size: 0.75rem; color: #9ca3af; margin-top: 0.25rem;">${Math.round((settings.selection?.marqueeOpacity || 0.2) * 100)}%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hierarchy Settings -->
+                <div style="border: 1px solid #374151; border-radius: 0.5rem; padding: 1rem;">
+                    <h4 style="font-size: 1rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.75rem;">Hierarchy Highlight</h4>
+                    
+                    <div>
+                        <!-- Hierarchy Highlight Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Highlight Color</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="panels.selection.hierarchyHighlightColor"
+                                   value="${settings.selection?.hierarchyHighlightColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
     }
 
     renderAssetsSettings() {
@@ -907,6 +1068,9 @@ export class SettingsPanel {
                 // Sync to StateManager
                 this.syncManager.syncFromConfigToState();
                 
+                // Apply color settings immediately after import
+                this.syncManager.applyInitialColorSettings();
+                
                 // Re-render current tab
                 this.renderSettingsContent(this.lastActiveTab);
                 
@@ -931,7 +1095,13 @@ export class SettingsPanel {
         // Handle special grid settings that need color conversion
         this.saveGridSettingsWithColorConversion();
 
-        // Note: Settings are now saved only on page unload/close, not immediately
+        // Apply all settings to UI (colors, etc.)
+        this.syncManager.applySpecialUISettings();
+
+        // Force save settings to localStorage immediately
+        if (this.levelEditor?.configManager) {
+            this.levelEditor.configManager.saveUserConfigsToStorage();
+        }
 
         this.hide();
     }
@@ -969,6 +1139,11 @@ export class SettingsPanel {
             onMenuHide: () => {}
         });
 
+        // Remove the contextmenu listener that BaseContextMenu added
+        if (this.contextMenu.contextMenuHandler) {
+            container.removeEventListener('contextmenu', this.contextMenu.contextMenuHandler);
+        }
+
         // Add menu items
         this.contextMenu.addMenuItem('Reset to Defaults', '🔄', () => this.resetToDefaults());
         this.contextMenu.addMenuItem('Export Settings', '📤', () => this.exportSettings());
@@ -996,6 +1171,9 @@ export class SettingsPanel {
             
             // Sync settings from ConfigManager to StateManager FIRST
             this.syncManager.syncFromConfigToState();
+            
+            // Apply color settings immediately after reset
+            this.syncManager.applyInitialColorSettings();
             
             // Refresh all tabs to show default values (now from StateManager)
             this.renderSettingsContent(this.lastActiveTab);

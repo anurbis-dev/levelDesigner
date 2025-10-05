@@ -339,10 +339,13 @@ export class RenderOperations extends BaseModule {
 
 
 
+            // Get canvas background color from StateManager
+            const canvasBackgroundColor = this.editor.stateManager.get('canvas.backgroundColor') || this.editor.level.settings.backgroundColor || '#4b5563';
+            
             this.editor.canvasRenderer.drawGrid(
                 gridSize,
                 camera,
-                this.editor.level.settings.backgroundColor,
+                canvasBackgroundColor,
                 {
                     color: gridColor,
                     thickness: gridThickness,
@@ -425,12 +428,16 @@ export class RenderOperations extends BaseModule {
         
         // Draw axis constraint line
         if (mouse.constrainedAxis && mouse.isDragging && mouse.axisCenter) {
-            const axisConfig = this.editor.configManager.get('editor.axisConstraint') || {};
+            const axisConfig = {
+                showAxis: this.editor.stateManager.get('editor.axisConstraint.showAxis'),
+                axisColor: this.editor.stateManager.get('editor.axisConstraint.axisColor'),
+                axisWidth: this.editor.stateManager.get('editor.axisConstraint.axisWidth')
+            };
             this.editor.canvasRenderer.drawAxisConstraint(
-                mouse.constrainedAxis, 
-                mouse.axisCenter.x, 
-                mouse.axisCenter.y, 
-                camera, 
+                mouse.constrainedAxis,
+                mouse.axisCenter.x,
+                mouse.axisCenter.y,
+                camera,
                 axisConfig
             );
         }
@@ -490,10 +497,13 @@ export class RenderOperations extends BaseModule {
     }
 
     drawSelectionRect(bounds, isGroup, camera) {
-        const selectionColor = this.editor.settingsManager?.get('selection.outlineColor') || '#3B82F6';
+        const selectionColor = isGroup 
+            ? (this.editor.stateManager.get('selection.groupOutlineColor') || '#3B82F6')
+            : (this.editor.stateManager.get('selection.outlineColor') || '#3B82F6');
         const outlineWidth = (isGroup
-            ? (this.editor.settingsManager?.get('selection.groupOutlineWidth') || 4)
-            : (this.editor.settingsManager?.get('selection.outlineWidth') || 2)) / camera.zoom;
+            ? (this.editor.stateManager.get('selection.groupOutlineWidth') || 4)
+            : (this.editor.stateManager.get('selection.outlineWidth') || 2)) / camera.zoom;
+
 
         this.editor.canvasRenderer.ctx.save();
         this.editor.canvasRenderer.ctx.strokeStyle = selectionColor;
@@ -564,7 +574,7 @@ export class RenderOperations extends BaseModule {
 
     drawHierarchyHighlightForGroup(group, depth = 0) {
         const camera = this.editor.stateManager.get('camera');
-        const baseColor = this.editor.settingsManager?.get('selection.hierarchyHighlightColor') || '#3B82F6';
+        const baseColor = this.editor.stateManager.get('selection.hierarchyHighlightColor') || '#3B82F6';
         const maxAlpha = 0.25; // base alpha
         const decay = 0.6; // alpha decay per depth
         const alpha = Math.max(0, maxAlpha * Math.pow(decay, depth));
@@ -837,7 +847,7 @@ export class RenderOperations extends BaseModule {
      */
     drawDuplicateHierarchyHighlight(group, depth = 0, parentX = 0, parentY = 0) {
         const camera = this.editor.stateManager.get('camera');
-        const baseColor = this.editor.settingsManager?.get('selection.hierarchyHighlightColor') || '#3B82F6';
+        const baseColor = this.editor.stateManager.get('selection.hierarchyHighlightColor') || '#3B82F6';
         const maxAlpha = 0.25; // base alpha
         const decay = 0.6; // alpha decay per depth
         const alpha = Math.max(0, maxAlpha * Math.pow(decay, depth));

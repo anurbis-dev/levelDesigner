@@ -17,7 +17,7 @@
 /* Settings panel container */
 .settings-panel-container {
     position: relative;
-    background-color: #1f2937;
+    background-color: var(--ui-background-color, #1f2937);
     border-radius: 0.5rem;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     max-width: 90vw;
@@ -90,7 +90,7 @@
 /* Settings navigation */
 .settings-nav {
     width: 200px;
-    background-color: #111827;
+    background-color: var(--ui-background-color, #111827);
     border-right: 1px solid #374151;
     padding: calc(1rem * max(var(--spacing-scale, 1.0), 0.5));
     display: flex;
@@ -103,7 +103,7 @@
     text-align: left;
     padding: calc(0.75rem * max(var(--spacing-scale, 1.0), 0.125)) !important;
     border-radius: calc(0.25rem * max(var(--spacing-scale, 1.0), 0.5));
-    color: #d1d5db;
+    color: var(--ui-text-color, #d1d5db);
     background: transparent;
     border: none;
     cursor: pointer;
@@ -124,7 +124,7 @@
     flex: 1;
     padding: 1.5rem;
     overflow-y: auto;
-    background-color: #1f2937;
+    background-color: var(--ui-background-color, #1f2937);
     width: 100%;
 }
 
@@ -185,7 +185,7 @@
 .settings-footer {
     padding: 1rem 1.5rem;
     border-top: 1px solid #374151;
-    background-color: #111827;
+    background-color: var(--ui-background-color, #111827);
     display: flex;
     justify-content: flex-end;
     align-items: center;

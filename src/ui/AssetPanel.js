@@ -138,7 +138,7 @@ export class AssetPanel extends BasePanel {
         this.stateManager.subscribe('activeAssetTabs', () => this.render());
         
         // Asset size zoom with Ctrl+scroll
-        this.previewsContainer.addEventListener('wheel', (e) => this.handleAssetWheel(e));
+        this.previewsContainer.addEventListener('wheel', (e) => this.handleAssetWheel(e), { passive: false });
         
         // Prevent content scroll when Ctrl+scroll is used for resizing
         this.container.addEventListener('wheel', (e) => {
@@ -146,7 +146,7 @@ export class AssetPanel extends BasePanel {
                 e.preventDefault();
                 e.stopPropagation();
             }
-        });
+        }, { passive: false });
         
         // Window resize handler for real-time grid recalculation
         this.resizeHandler = () => {
@@ -159,7 +159,7 @@ export class AssetPanel extends BasePanel {
                 this.updateSelectionVisuals();
             }
         };
-        window.addEventListener('resize', this.resizeHandler);
+        window.addEventListener('resize', this.resizeHandler, { passive: true });
         
         // Note: Global marquee handling now managed by BasePanel
 

@@ -915,7 +915,7 @@ export class Toolbar {
                 e.stopPropagation(); // Prevent event bubbling to avoid conflicts
                 this.startScrolling(e);
             }
-        });
+        }, { passive: false });
 
         // Mouse move - continue scrolling
         document.addEventListener('mousemove', (e) => {
@@ -923,7 +923,7 @@ export class Toolbar {
                 e.preventDefault();
                 this.updateScrolling(e);
             }
-        });
+        }, { passive: false });
 
         // Mouse up - stop scrolling
         document.addEventListener('mouseup', (e) => {
@@ -931,7 +931,7 @@ export class Toolbar {
                 e.preventDefault();
                 this.stopScrolling();
             }
-        });
+        }, { passive: false });
 
         // Mouse wheel scrolling
         this.toolbarContent.addEventListener('wheel', (e) => {
@@ -944,7 +944,7 @@ export class Toolbar {
             if (this.levelEditor && this.levelEditor.userPrefs) {
                 this.levelEditor.userPrefs.set('toolbarScrollLeft', this.toolbarContent.scrollLeft);
             }
-        });
+        }, { passive: false });
 
         // Prevent context menu on middle click
         this.toolbarContent.addEventListener('contextmenu', (e) => {
@@ -952,7 +952,7 @@ export class Toolbar {
                 e.preventDefault();
                 e.stopPropagation();
             }
-        });
+        }, { passive: false });
 
         // Prevent text selection during scrolling
         this.toolbarContent.addEventListener('selectstart', (e) => {
