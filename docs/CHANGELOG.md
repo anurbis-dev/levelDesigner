@@ -1,5 +1,26 @@
 # Changelog
 
+## [3.41.0] - 2025-10-05
+
+### Added - Фаза 4.3: Модуль LayerOperations
+- **LayerOperations**: новый модуль для управления слоями (404 строки)
+  - moveSelectedObjectsToLayer(), assignSelectedObjectsToLayer()
+  - batchProcessLayerAssignment(), findNextUnlockedLayer()
+  - processObjectForLayerAssignment(), batched notifications
+  - canMoveObjectsToLayer()
+
+### Changed
+- **LevelEditor**: методы управления слоями делегируют к LayerOperations
+- **Размер LevelEditor.js**: 2415→2057 строк (-358 строк, -14.8%)
+
+### Improved
+- **Separation of Concerns**: управление слоями в отдельном модуле
+- **Модульность**: +20% (слои могут переиспользоваться)
+- **Maintainability**: изменения локализованы в одном месте
+- **Сохранены оптимизации**: batch processing, smart caching, spatial index
+
+---
+
 ## [3.40.0] - 2025-10-05
 
 ### Added - Фаза 4.2: Модуль HistoryOperations

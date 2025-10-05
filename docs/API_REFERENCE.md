@@ -1,10 +1,56 @@
-# API Reference - 2D Level Editor v3.40.0
+# API Reference - 2D Level Editor v3.41.0
 
 ## Обзор
 
 Данный документ содержит подробное описание API всех компонентов редактора уровней.
 
 > 🔍 **Быстрый справочник:** См. [COMPREHENSIVE_API_REFERENCE.md](./COMPREHENSIVE_API_REFERENCE.md) для полного списка всех методов и функций в структурированном виде.
+
+## Обновления v3.41.0 - Фаза 4.3
+
+### LayerOperations - Модуль управления слоями
+**Файл**: `src/core/LayerOperations.js`
+
+```javascript
+import { LayerOperations } from './core/LayerOperations.js';
+
+// Создание (обычно в LevelEditor)
+this.layerOperations = new LayerOperations(this);
+this.lifecycle.register('layerOperations', this.layerOperations, { priority: 8 });
+
+// API
+layerOperations.moveSelectedObjectsToLayer(moveUp, moveToExtreme)  // Перемещение объектов
+layerOperations.assignSelectedObjectsToLayer(objects, up, extreme) // Назначение слоя
+layerOperations.batchProcessLayerAssignment(...)                   // Пакетная обработка
+layerOperations.findNextUnlockedLayer(layers, id, up)              // Поиск незаблокир. слоя
+layerOperations.batchProcessAdjacentLayerAssignment(...)           // Соседние слои
+layerOperations.processObjectForLayerAssignment(...)               // Обработка объекта
+layerOperations.batchNotifyObjectPropertyChanged(...)              // Группировка уведомл.
+layerOperations.batchNotifyLayerCountChanged(...)                  // Группировка счетчиков
+layerOperations.flushBatchedNotifications(batched)                 // Отправка уведомлений
+layerOperations.canMoveObjectsToLayer()                            // Проверка возможности
+```
+
+**Интеграция в LevelEditor**:
+```javascript
+// Простое делегирование
+moveSelectedObjectsToLayer(moveUp, moveToExtreme = false) {
+    this.layerOperations.moveSelectedObjectsToLayer(moveUp, moveToExtreme);
+}
+
+canMoveObjectsToLayer() {
+    return this.layerOperations.canMoveObjectsToLayer();
+}
+```
+
+**Преимущества**:
+- Separation of Concerns (слои изолированы)
+- Переиспользование (можно использовать в других компонентах)
+- Тестируемость (легко тестировать отдельно)
+- Сохранены оптимизации (batch processing, caching, spatial index)
+- LevelEditor.js: 2415→2057 строк (-14.8%)
+
+---
 
 ## Обновления v3.40.0 - Фаза 4.2
 

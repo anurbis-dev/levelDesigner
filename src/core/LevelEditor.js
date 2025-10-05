@@ -23,6 +23,7 @@ import { GroupOperations } from './GroupOperations.js';
 import { RenderOperations } from './RenderOperations.js';
 import { DuplicateOperations } from './DuplicateOperations.js';
 import { HistoryOperations } from './HistoryOperations.js';
+import { LayerOperations } from './LayerOperations.js';
 import { MenuManager } from '../managers/MenuManager.js';
 import { ContextMenuManager } from '../managers/ContextMenuManager.js';
 import { CanvasContextMenu } from '../ui/CanvasContextMenu.js';
@@ -45,7 +46,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.40.0';
+    static VERSION = '3.41.0';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -100,10 +101,12 @@ export class LevelEditor {
         this.renderOperations = new RenderOperations(this);
         this.duplicateOperations = new DuplicateOperations(this);
         this.historyOperations = new HistoryOperations(this);
+        this.layerOperations = new LayerOperations(this);
         
         // Register core handlers in lifecycle (highest priority - destroyed first)
         this.lifecycle.register('eventHandlers', this.eventHandlers, { priority: 10 });
         this.lifecycle.register('historyOperations', this.historyOperations, { priority: 9 });
+        this.lifecycle.register('layerOperations', this.layerOperations, { priority: 8 });
 
         // Performance optimization caches
         this.objectCache = new Map(); // Cache for object lookups: objId -> object
@@ -614,7 +617,7 @@ export class LevelEditor {
         try {
             this.log('info', `🚀 Level Editor v${LevelEditor.VERSION} - Utility Architecture`);
             this.log('info', 'Initializing editor components...');
-            
+        
             await this.initializeConfiguration();
             const domElements = this.initializeDOMElements();
             this.initializeRenderer(domElements.canvas);
@@ -709,7 +712,7 @@ export class LevelEditor {
      */
     initializeUIComponents(domElements) {
         const { assetsPanel, detailsPanel, outlinerPanel, layersPanel, toolbarContainer } = domElements;
-        
+
         // Initialize UI panels
         this.assetPanel = new AssetPanel(assetsPanel, this.assetManager, this.stateManager, this);
         this.detailsPanel = new DetailsPanel(detailsPanel, this.stateManager, this);
@@ -2081,55 +2084,12 @@ export class LevelEditor {
     }
 
     /**
-     * Move selected objects to next layer (up/down) with improved nested object handling
+     * Move selected objects to next layer (delegated to LayerOperations)
      * @param {boolean} moveUp - true to move to upper layer, false to move to lower layer
      * @param {boolean} moveToExtreme - true to move to first/last layer, false to move to adjacent layer
      */
     moveSelectedObjectsToLayer(moveUp, moveToExtreme = false) {
-
-        // Quick check for selected objects
-        const selectedObjects = this.stateManager.get('selectedObjects');
-        if (!selectedObjects || selectedObjects.size === 0) {
-            return;
-        }
-
-        // Check for active duplication only
-        const duplicate = this.stateManager.get('duplicate');
-        if (duplicate && duplicate.isActive) {
-            Logger.layer.warn('Cannot move objects while duplication is active');
-            return;
-        }
-
-
-        // Save state for undo with current group edit mode
-        this.historyManager.saveState(
-            this.level.objects, 
-            this.stateManager.get('selectedObjects'), 
-            false, 
-            this.stateManager.get('groupEditMode')
-        );
-
-        let movedCount = 0;
-
-        // Use improved layer assignment logic
-        movedCount = this.assignSelectedObjectsToLayer(selectedObjects, moveUp, moveToExtreme);
-
-        if (movedCount > 0) {
-            // Mark level as modified and update UI
-            this.stateManager.markDirty();
-            this.level.updateModified();
-
-            // Update all panels to reflect changes
-            this.updateAllPanels();
-
-            // Notify subscribers about level changes
-            // Force level update by creating a deep copy to trigger state manager listeners
-            this.stateManager.set('level', JSON.parse(JSON.stringify(this.level)));
-
-            Logger.layer.info(`Moved ${movedCount} objects to ${moveToExtreme ? (moveUp ? 'first' : 'last') : (moveUp ? 'upper' : 'lower')} layer`);
-        } else {
-            Logger.layer.info('No objects were moved (already in target layer or no valid objects found)');
-        }
+        this.layerOperations.moveSelectedObjectsToLayer(moveUp, moveToExtreme);
     }
 
     /**
@@ -2270,394 +2230,11 @@ export class LevelEditor {
     }
 
     /**
-     * Assign selected objects to a layer with improved nested object handling
-     * @param {Set} selectedObjects - Set of selected object IDs
-     * @param {boolean} moveUp - true to move to upper layer, false to move to lower layer
-     * @param {boolean} moveToExtreme - true to move to first/last layer, false to move to adjacent layer
-     * @returns {number} Number of objects moved
-     */
-    assignSelectedObjectsToLayer(selectedObjects, moveUp, moveToExtreme) {
-        let movedCount = 0;
-        const processedGroups = new Set(); // Track groups that have already been processed
-        const layersSorted = this.level.getLayersSorted();
-
-        // Система группировки уведомлений для оптимизации производительности
-        const batchedNotifications = {
-            objectPropertyChanges: new Map(), // property -> [{obj, oldValue, newValue}, ...]
-            layerCountChanges: new Map() // layerId -> {oldCount, newCount}
-        };
-
-        // Отслеживание измененных объектов и слоев для умной инвалидации кешей
-        const changedObjectIds = new Set();
-        const affectedLayers = new Set();
-
-        if (moveToExtreme) {
-            // Move all selected objects to first/last unlocked layer
-            let targetLayerId = null;
-            
-            if (moveUp) {
-                // Find first unlocked layer from the top
-                for (let i = 0; i < layersSorted.length; i++) {
-                    if (!layersSorted[i].locked) {
-                        targetLayerId = layersSorted[i].id;
-                        break;
-                    }
-                }
-            } else {
-                // Find last unlocked layer from the bottom
-                for (let i = layersSorted.length - 1; i >= 0; i--) {
-                    if (!layersSorted[i].locked) {
-                        targetLayerId = layersSorted[i].id;
-                        break;
-                    }
-                }
-            }
-
-            if (!targetLayerId) {
-                Logger.layer.warn('No unlocked layer found for extreme move');
-                return 0;
-            }
-
-            // Batch process objects for better performance
-            const batchResults = this.batchProcessLayerAssignment(selectedObjects, targetLayerId, processedGroups, batchedNotifications, changedObjectIds, affectedLayers);
-            movedCount = batchResults.movedCount;
-
-            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
-                Logger.layer.debug(`Batch moved ${movedCount} objects to extreme layer ${targetLayerId}`);
-            }
-        } else {
-            // Move each object/group to adjacent layer based on its current effective layer
-            const batchResults = this.batchProcessAdjacentLayerAssignment(selectedObjects, layersSorted, moveUp, processedGroups, batchedNotifications, changedObjectIds, affectedLayers);
-            movedCount = batchResults.movedCount;
-
-            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
-                Logger.layer.debug(`Batch moved ${movedCount} objects to adjacent layers`);
-            }
-        }
-
-        // Отправляем сгруппированные уведомления для оптимизации производительности
-        this.flushBatchedNotifications(batchedNotifications);
-
-        // Умная инвалидация кешей только для измененных объектов и слоев
-        this.invalidateAfterLayerChanges(changedObjectIds, affectedLayers);
-
-        // При массовых изменениях слоев перестраиваем пространственный индекс
-        if (changedObjectIds.size > 10) {
-            setTimeout(() => {
-                if (this.renderOperations) {
-                    this.renderOperations.buildSpatialIndex();
-                }
-            }, 0);
-        }
-
-        return movedCount;
-    }
-
-    /**
-     * Batch process layer assignment for multiple objects
-     * @param {Set} selectedObjects - Set of object IDs
-     * @param {string} targetLayerId - Target layer ID
-     * @param {Set} processedGroups - Set of processed groups
-     * @returns {Object} Results with movedCount
-     */
-    batchProcessLayerAssignment(selectedObjects, targetLayerId, processedGroups, batchedNotifications, changedObjectIds, affectedLayers) {
-        let movedCount = 0;
-        const objectsToProcess = [];
-
-        // Pre-filter objects that need processing
-        selectedObjects.forEach(objId => {
-            const targetObj = this.getCachedObject(objId);
-            if (!targetObj) return;
-
-            // Check if object is already in target layer
-            const currentEffectiveLayerId = this.getCachedEffectiveLayerId(targetObj);
-            if (currentEffectiveLayerId !== targetLayerId) {
-                objectsToProcess.push(objId);
-            }
-        });
-
-        // Process objects in batch
-        objectsToProcess.forEach(objId => {
-            const result = this.processObjectForLayerAssignmentOptimized(objId, targetLayerId, processedGroups, batchedNotifications, changedObjectIds, affectedLayers);
-            if (result.moved) {
-                movedCount++;
-            }
-        });
-
-        return { movedCount };
-    }
-
-    /**
-     * Find next unlocked layer in the specified direction
-     * @param {Array} layersSorted - Sorted layers array
-     * @param {string} currentLayerId - Current layer ID
-     * @param {boolean} moveUp - Direction to move
-     * @returns {string|null} Next unlocked layer ID or null if not found
-     */
-    findNextUnlockedLayer(layersSorted, currentLayerId, moveUp) {
-        const currentLayerIndex = layersSorted.findIndex(layer => layer.id === currentLayerId);
-        if (currentLayerIndex === -1) return null;
-
-        const direction = moveUp ? -1 : 1;
-        let targetIndex = currentLayerIndex + direction;
-
-        // Search for next unlocked layer
-        while (targetIndex >= 0 && targetIndex < layersSorted.length) {
-            const targetLayer = layersSorted[targetIndex];
-            if (!targetLayer.locked) {
-                return targetLayer.id;
-            }
-            targetIndex += direction;
-        }
-
-        return null;
-    }
-
-    /**
-     * Batch process adjacent layer assignment
-     * @param {Set} selectedObjects - Set of object IDs
-     * @param {Array} layersSorted - Sorted layers array
-     * @param {boolean} moveUp - Direction to move
-     * @param {Set} processedGroups - Set of processed groups
-     * @returns {Object} Results with movedCount
-     */
-    batchProcessAdjacentLayerAssignment(selectedObjects, layersSorted, moveUp, processedGroups, batchedNotifications, changedObjectIds, affectedLayers) {
-        let movedCount = 0;
-        const objectsByTargetLayer = new Map();
-
-        // Group objects by their target layer for batch processing
-        selectedObjects.forEach(objId => {
-            const targetObj = this.getCachedObject(objId);
-            if (!targetObj) return;
-
-            const currentEffectiveLayerId = this.getCachedEffectiveLayerId(targetObj);
-            const currentLayerIndex = layersSorted.findIndex(layer => layer.id === currentEffectiveLayerId);
-            if (currentLayerIndex === -1) return;
-
-            // Find next unlocked layer instead of just adjacent layer
-            const targetLayerId = this.findNextUnlockedLayer(layersSorted, currentEffectiveLayerId, moveUp);
-            if (!targetLayerId) return; // No unlocked layer found in this direction
-
-            if (!objectsByTargetLayer.has(targetLayerId)) {
-                objectsByTargetLayer.set(targetLayerId, []);
-            }
-            objectsByTargetLayer.get(targetLayerId).push(objId);
-        });
-
-        // Process each group of objects going to the same layer
-        objectsByTargetLayer.forEach((objIds, targetLayerId) => {
-            objIds.forEach(objId => {
-                const result = this.processObjectForLayerAssignmentOptimized(objId, targetLayerId, processedGroups, batchedNotifications, changedObjectIds, affectedLayers);
-                if (result.moved) {
-                    movedCount++;
-                }
-            });
-        });
-
-        return { movedCount };
-    }
-
-    /**
-     * Optimized version of processObjectForLayerAssignment for batch operations
-     * @param {string} objId - Object ID to process
-     * @param {string} targetLayerId - Target layer ID
-     * @param {Set} processedGroups - Set of already processed groups
-     * @returns {Object} Result with moved flag and target object info
-     */
-    processObjectForLayerAssignmentOptimized(objId, targetLayerId, processedGroups, batchedNotifications = null, changedObjectIds = null, affectedLayers = null) {
-        // Use cached object lookup
-        const targetObj = this.getCachedObject(objId);
-        if (!targetObj) {
-            return { moved: false };
-        }
-
-        // Use cached effective layer ID
-        const currentEffectiveLayerId = this.getCachedEffectiveLayerId(targetObj);
-        if (currentEffectiveLayerId === targetLayerId) {
-            return { moved: false };
-        }
-
-        // Use cached top-level object lookup
-        const topLevelObj = this.getCachedTopLevelObject(objId);
-        if (!topLevelObj) {
-            return { moved: false };
-        }
-
-        // If we've already processed this top-level object, skip it
-        if (processedGroups.has(topLevelObj.id)) {
-            return { moved: false };
-        }
-
-        processedGroups.add(topLevelObj.id);
-
-        // Get the old effective layer ID for notifications (use cache)
-        const oldEffectiveLayerId = this.getCachedEffectiveLayerId(topLevelObj);
-
-        // Change layerId of the top-level object
-        const oldLayerId = topLevelObj.layerId;
-        topLevelObj.layerId = targetLayerId;
-
-        // FORCED INHERITANCE: Propagate layerId to all children if this is a group
-        if (topLevelObj.type === 'group' && topLevelObj.children) {
-            topLevelObj.propagateLayerIdToChildren();
-            
-            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
-                Logger.layer.debug(`Propagated layerId ${targetLayerId} to all children of group ${topLevelObj.id}`);
-            }
-        }
-
-        // Отслеживаем измененные объекты и слои для умной инвалидации кешей
-        if (changedObjectIds) {
-            changedObjectIds.add(topLevelObj.id);
-        }
-        if (affectedLayers && oldLayerId) {
-            affectedLayers.add(oldLayerId);
-        }
-        if (affectedLayers && targetLayerId) {
-            affectedLayers.add(targetLayerId);
-        }
-
-        // Invalidate cache for this object since layerId changed
-        this.invalidateObjectCaches(topLevelObj.id);
-
-        // Группируем уведомления или отправляем сразу для обратной совместимости
-        if (batchedNotifications) {
-            // Группируем уведомления для оптимизации производительности
-            this.batchNotifyObjectPropertyChanged(batchedNotifications, topLevelObj, 'layerId', oldLayerId, targetLayerId);
-
-            if (oldEffectiveLayerId && oldEffectiveLayerId !== targetLayerId) {
-                this.batchNotifyLayerCountChanged(batchedNotifications, oldEffectiveLayerId, targetLayerId);
-            }
-        } else {
-            // Отправляем уведомления сразу (обратная совместимость)
-            this.stateManager.notifyListeners('objectPropertyChanged', topLevelObj, {
-                property: 'layerId',
-                oldValue: oldLayerId,
-                newValue: targetLayerId
-            });
-
-            // Notify about layer objects count changes
-            if (oldEffectiveLayerId && oldEffectiveLayerId !== targetLayerId) {
-                const oldCount = this.level.getLayerObjectsCount(oldEffectiveLayerId);
-                this.level.notifyLayerObjectsCountChange(oldEffectiveLayerId, oldCount, oldCount + 1);
-
-                const newCount = this.level.getLayerObjectsCount(targetLayerId);
-                this.level.notifyLayerObjectsCountChange(targetLayerId, newCount, newCount - 1);
-            }
-        }
-
-        return { moved: true, targetObj: topLevelObj };
-    }
-
-    /**
-     * Группирует уведомления об изменении свойств объектов для оптимизации производительности
-     * @param {Object} batchedNotifications - Структура для группировки уведомлений
-     * @param {Object} obj - Объект, свойство которого изменилось
-     * @param {string} property - Название свойства
-     * @param {*} oldValue - Старое значение
-     * @param {*} newValue - Новое значение
-     */
-    batchNotifyObjectPropertyChanged(batchedNotifications, obj, property, oldValue, newValue) {
-        if (!batchedNotifications.objectPropertyChanges.has(property)) {
-            batchedNotifications.objectPropertyChanges.set(property, []);
-        }
-
-        batchedNotifications.objectPropertyChanges.get(property).push({
-            obj,
-            oldValue,
-            newValue
-        });
-    }
-
-    /**
-     * Группирует уведомления об изменении счетчиков слоев
-     * @param {Object} batchedNotifications - Структура для группировки уведомлений
-     * @param {string} oldLayerId - ID старого слоя
-     * @param {string} newLayerId - ID нового слоя
-     */
-    batchNotifyLayerCountChanged(batchedNotifications, oldLayerId, newLayerId) {
-        // Группируем изменения счетчиков слоев
-        if (!batchedNotifications.layerCountChanges.has(oldLayerId)) {
-            const oldCount = this.level.getLayerObjectsCount(oldLayerId);
-            batchedNotifications.layerCountChanges.set(oldLayerId, {
-                oldCount,
-                newCount: oldCount - 1 // Уменьшаем счетчик для старого слоя
-            });
-        }
-
-        if (!batchedNotifications.layerCountChanges.has(newLayerId)) {
-            const newCount = this.level.getLayerObjectsCount(newLayerId);
-            batchedNotifications.layerCountChanges.set(newLayerId, {
-                oldCount: newCount + 1, // Старый счетчик был на 1 больше
-                newCount
-            });
-        }
-    }
-
-    /**
-     * Отправляет все сгруппированные уведомления
-     * @param {Object} batchedNotifications - Структура сгруппированных уведомлений
-     */
-    flushBatchedNotifications(batchedNotifications) {
-        // Отправляем уведомления об изменении свойств объектов
-        for (const [property, changes] of batchedNotifications.objectPropertyChanges) {
-            // Отправляем сводное уведомление для каждого свойства
-            this.stateManager.notifyListeners('objectsPropertyChanged', changes, {
-                property,
-                count: changes.length
-            });
-
-            // Для обратной совместимости отправляем отдельные уведомления
-            changes.forEach(change => {
-                this.stateManager.notifyListeners('objectPropertyChanged', change.obj, {
-                    property,
-                    oldValue: change.oldValue,
-                    newValue: change.newValue
-                });
-            });
-        }
-
-        // Отправляем уведомления об изменении счетчиков слоев
-        for (const [layerId, countInfo] of batchedNotifications.layerCountChanges) {
-            this.level.notifyLayerObjectsCountChange(layerId, countInfo.newCount, countInfo.oldCount);
-        }
-    }
-
-
-    /**
-     * Check if objects can be moved to another layer
+     * Check if objects can be moved to another layer (delegated to LayerOperations)
      * @returns {boolean} true if all conditions are met
      */
     canMoveObjectsToLayer() {
-        if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
-            Logger.layer.debug('canMoveObjectsToLayer called');
-        }
-
-        // Condition 1: Selected objects list is not empty
-        const selectedObjects = this.stateManager.get('selectedObjects');
-
-        if (!selectedObjects || selectedObjects.size === 0) {
-            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
-                Logger.layer.debug('Condition 1 failed: No selected objects');
-            }
-            return false;
-        }
-
-        // Condition 2: No active duplication (the only action we check for)
-        const duplicate = this.stateManager.get('duplicate');
-
-        if (duplicate && duplicate.isActive) {
-            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
-                Logger.layer.debug('Condition 2 failed: Duplication active');
-            }
-            Logger.layer.warn('Cannot move objects while duplication is active');
-            return false;
-        }
-
-        if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
-            Logger.layer.debug('All conditions passed');
-        }
-        return true;
+        return this.layerOperations.canMoveObjectsToLayer();
     }
 
     /**
