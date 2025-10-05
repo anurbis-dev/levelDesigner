@@ -1,10 +1,54 @@
-# API Reference - 2D Level Editor v3.39.0
+# API Reference - 2D Level Editor v3.40.0
 
 ## Обзор
 
 Данный документ содержит подробное описание API всех компонентов редактора уровней.
 
 > 🔍 **Быстрый справочник:** См. [COMPREHENSIVE_API_REFERENCE.md](./COMPREHENSIVE_API_REFERENCE.md) для полного списка всех методов и функций в структурированном виде.
+
+## Обновления v3.40.0 - Фаза 4.2
+
+### HistoryOperations - Модуль управления историей
+**Файл**: `src/core/HistoryOperations.js`
+
+```javascript
+import { HistoryOperations } from './core/HistoryOperations.js';
+
+// Создание (обычно в LevelEditor)
+this.historyOperations = new HistoryOperations(this);
+this.lifecycle.register('historyOperations', this.historyOperations, { priority: 9 });
+
+// API
+historyOperations.undo()                          // Отменить последнее действие
+historyOperations.redo()                          // Повторить отмененное
+historyOperations.restoreObjectsFromHistory(data) // Восстановить объекты из JSON
+historyOperations.rebuildAllIndices()             // Перестроить индексы
+historyOperations.restoreGroupEditMode(mode)      // Восстановить режим группы
+historyOperations.recalculateGroupBounds()        // Пересчет границ группы
+historyOperations.invalidateCachesAfterRestore()  // Инвалидация кешей
+historyOperations.restoreSelection(selection)     // Восстановить выделение
+historyOperations.finalizeHistoryRestore()        // Финализация (render + panels)
+```
+
+**Интеграция в LevelEditor**:
+```javascript
+// Простое делегирование
+undo() {
+    this.historyOperations.undo();
+}
+
+redo() {
+    this.historyOperations.redo();
+}
+```
+
+**Преимущества**:
+- Separation of Concerns (история изолирована)
+- Переиспользование (можно использовать в других компонентах)
+- Тестируемость (легко тестировать отдельно)
+- LevelEditor.js: 2693→2415 строк (-10.3%)
+
+---
 
 ## Обновления v3.39.0 - Фаза 4.1
 

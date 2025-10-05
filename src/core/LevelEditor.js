@@ -22,6 +22,7 @@ import { ObjectOperations } from './ObjectOperations.js';
 import { GroupOperations } from './GroupOperations.js';
 import { RenderOperations } from './RenderOperations.js';
 import { DuplicateOperations } from './DuplicateOperations.js';
+import { HistoryOperations } from './HistoryOperations.js';
 import { MenuManager } from '../managers/MenuManager.js';
 import { ContextMenuManager } from '../managers/ContextMenuManager.js';
 import { CanvasContextMenu } from '../ui/CanvasContextMenu.js';
@@ -44,7 +45,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.39.0';
+    static VERSION = '3.40.0';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -98,9 +99,11 @@ export class LevelEditor {
         this.groupOperations = new GroupOperations(this);
         this.renderOperations = new RenderOperations(this);
         this.duplicateOperations = new DuplicateOperations(this);
+        this.historyOperations = new HistoryOperations(this);
         
         // Register core handlers in lifecycle (highest priority - destroyed first)
         this.lifecycle.register('eventHandlers', this.eventHandlers, { priority: 10 });
+        this.lifecycle.register('historyOperations', this.historyOperations, { priority: 9 });
 
         // Performance optimization caches
         this.objectCache = new Map(); // Cache for object lookups: objId -> object
@@ -1474,136 +1477,14 @@ export class LevelEditor {
     }
 
     /**
-     * History operations
+     * History operations (delegated to HistoryOperations module)
      */
     undo() {
-        const previousState = this.historyManager.undo();
-        if (!previousState) return;
-        
-        this._restoreObjectsFromHistory(previousState.objects);
-        this._rebuildAllIndices();
-        this._restoreGroupEditMode(previousState.groupEditMode);
-        this._recalculateGroupBounds();
-        this._invalidateCachesAfterRestore();
-        this._restoreSelection(previousState.selection);
-        this._finalizeUndoRedo();
-    }
-
-    /**
-     * Restore objects from history (deserialize from JSON)
-     * @private
-     * @param {Array} objectsData - Serialized objects data
-     */
-    _restoreObjectsFromHistory(objectsData) {
-        this.level.objects = objectsData.map(objData => {
-            if (objData.type === 'group') {
-                return Group.fromJSON(objData);
-            } else {
-                return GameObject.fromJSON(objData);
-            }
-        });
-    }
-
-    /**
-     * Rebuild all indices after restore
-     * @private
-     */
-    _rebuildAllIndices() {
-        this.level.buildObjectsIndex();
-        this.level.rebuildLayerCountsCache();
-        
-        if (this.renderOperations) {
-            this.renderOperations.buildSpatialIndex();
-        }
-    }
-
-    /**
-     * Restore group edit mode from saved state
-     * @private
-     * @param {Object|null} savedGroupEditMode - Saved group edit mode state
-     */
-    _restoreGroupEditMode(savedGroupEditMode) {
-        this.updateGroupEditModeAfterRestore(savedGroupEditMode);
-    }
-
-    /**
-     * Recalculate group bounds for active group if in group edit mode
-     * @private
-     */
-    _recalculateGroupBounds() {
-        const groupEditMode = this.stateManager.get('groupEditMode');
-        if (groupEditMode && groupEditMode.isActive && groupEditMode.group) {
-            const freshBounds = this.objectOperations.getObjectWorldBounds(groupEditMode.group);
-            
-            const updatedState = this.stateManager.get('groupEditMode');
-            if (updatedState.frameFrozen === false) {
-                updatedState.frozenBounds = freshBounds;
-                this.stateManager.set('groupEditMode', updatedState);
-            }
-        }
-    }
-
-    /**
-     * Invalidate caches after restore
-     * @private
-     */
-    _invalidateCachesAfterRestore() {
-        const allRestoredObjectIds = new Set(this.level.objects.map(obj => obj.id));
-        this.smartCacheInvalidation({
-            objectIds: allRestoredObjectIds,
-            invalidateAll: true,
-            reason: 'history_restore'
-        });
-        
-        this.objectOperations.computeSelectableSet();
-        this.clearSelectableObjectsCache();
-        this.getSelectableObjectsInViewport();
-    }
-
-    /**
-     * Restore selection from history
-     * @private
-     * @param {Set|Array} selectionData - Selection data from history
-     */
-    _restoreSelection(selectionData) {
-        const validSelection = new Set();
-        const objectIds = new Set(this.level.objects.map(obj => obj.id));
-        
-        // In group edit mode, restore selection as-is from history
-        const currentGroupEditMode = this.stateManager.get('groupEditMode');
-        const isInGroupEditMode = currentGroupEditMode && currentGroupEditMode.isActive && currentGroupEditMode.group;
-        
-        // Filter selection to only include objects that actually exist
-        selectionData.forEach(id => {
-            if (objectIds.has(id)) {
-                validSelection.add(id);
-            }
-        });
-        
-        this.stateManager.set('selectedObjects', validSelection);
-    }
-
-    /**
-     * Finalize undo/redo operation (render, update panels)
-     * @private
-     */
-    _finalizeUndoRedo() {
-        this.render();
-        this.updateAllPanels();
-        // Note: Don't call markDirty() after undo/redo - we're restoring previous state
+        this.historyOperations.undo();
     }
 
     redo() {
-        const nextState = this.historyManager.redo();
-        if (!nextState) return;
-        
-        this._restoreObjectsFromHistory(nextState.objects);
-        this._rebuildAllIndices();
-        this._restoreGroupEditMode(nextState.groupEditMode);
-        this._recalculateGroupBounds();
-        this._invalidateCachesAfterRestore();
-        this._restoreSelection(nextState.selection);
-        this._finalizeUndoRedo();
+        this.historyOperations.redo();
     }
 
     /**

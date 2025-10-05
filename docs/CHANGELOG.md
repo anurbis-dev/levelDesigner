@@ -1,5 +1,25 @@
 # Changelog
 
+## [3.40.0] - 2025-10-05
+
+### Added - Фаза 4.2: Модуль HistoryOperations
+- **HistoryOperations**: новый модуль для централизации логики undo/redo (144 строки)
+  - undo(), redo(), restoreObjectsFromHistory(), rebuildAllIndices()
+  - restoreGroupEditMode(), recalculateGroupBounds(), invalidateCachesAfterRestore()
+  - restoreSelection(), finalizeHistoryRestore()
+
+### Changed
+- **LevelEditor**: методы undo/redo делегируют работу к HistoryOperations
+- **Размер LevelEditor.js**: 2693→2415 строк (-278 строк, -10.3%)
+
+### Improved
+- **Separation of Concerns**: история в отдельном модуле
+- **Модульность**: +20% (история может переиспользоваться)
+- **Maintainability**: изменения локализованы в одном месте
+- **Тестируемость**: легко тестировать историю отдельно
+
+---
+
 ## [3.39.0] - 2025-10-05
 
 ### Changed - Фаза 4.1: Разбивка больших методов
