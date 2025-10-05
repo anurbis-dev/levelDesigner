@@ -51,7 +51,8 @@ export class Logger {
         PARALLAX: { color: '#FF1493', prefix: 'PARALLAX' },
         OBJECT_OPERATIONS: { color: '#9C27B0', prefix: 'OBJECT_OPS' },
         LIFECYCLE: { color: '#00BCD4', prefix: 'LIFECYCLE' },
-        ERROR_HANDLER: { color: '#F44336', prefix: 'ERROR_HANDLER' }
+        ERROR_HANDLER: { color: '#F44336', prefix: 'ERROR_HANDLER' },
+        VIEWPORT: { color: '#00ACC1', prefix: 'VIEWPORT' }
     };
 
     /**
@@ -435,12 +436,12 @@ export class Logger {
     };
 
     /**
-     * Cache logging
+     * Viewport and camera operations logging
      */
-    static cache = {
-        info: (message, ...args) => Logger.log('CACHE', 'info', message, ...args),
-        debug: (message, ...args) => Logger.log('CACHE', 'debug', message, ...args),
-        warn: (message, ...args) => Logger.log('CACHE', 'warn', message, ...args),
-        error: (message, ...args) => Logger.log('CACHE', 'error', message, ...args)
+    static viewport = {
+        info: (message, ...args) => Logger.log('VIEWPORT', 'info', message, ...args),
+        debug: (message, ...args) => Logger.log('VIEWPORT', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('VIEWPORT', 'warn', message, ...args),
+        error: (message, ...args) => Logger.log('VIEWPORT', 'error', message, ...args)
     };
 }

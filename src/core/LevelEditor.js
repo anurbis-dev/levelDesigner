@@ -25,6 +25,8 @@ import { RenderOperations } from './RenderOperations.js';
 import { DuplicateOperations } from './DuplicateOperations.js';
 import { HistoryOperations } from './HistoryOperations.js';
 import { LayerOperations } from './LayerOperations.js';
+import { ViewportOperations } from './ViewportOperations.js';
+import { LevelFileOperations } from './LevelFileOperations.js';
 import { MenuManager } from '../managers/MenuManager.js';
 import { ContextMenuManager } from '../managers/ContextMenuManager.js';
 import { CanvasContextMenu } from '../ui/CanvasContextMenu.js';
@@ -47,7 +49,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.43.0';
+    static VERSION = '3.44.0';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -107,11 +109,15 @@ export class LevelEditor {
         this.duplicateOperations = new DuplicateOperations(this);
         this.historyOperations = new HistoryOperations(this);
         this.layerOperations = new LayerOperations(this);
+        this.viewportOperations = new ViewportOperations(this);
+        this.levelFileOperations = new LevelFileOperations(this);
         
         // Register core handlers in lifecycle (highest priority - destroyed first)
         this.lifecycle.register('eventHandlers', this.eventHandlers, { priority: 10 });
         this.lifecycle.register('historyOperations', this.historyOperations, { priority: 9 });
         this.lifecycle.register('layerOperations', this.layerOperations, { priority: 8 });
+        this.lifecycle.register('viewportOperations', this.viewportOperations, { priority: 7 });
+        this.lifecycle.register('levelFileOperations', this.levelFileOperations, { priority: 6 });
         
         // Store reference to duplicate render utils
         this.duplicateRenderUtils = duplicateRenderUtils;
@@ -1275,111 +1281,14 @@ export class LevelEditor {
     }
 
     /**
-     * File operations
+     * File operations (delegated to LevelFileOperations)
      */
     async newLevel() {
-        if (this.stateManager.get('isDirty') && !(await confirm("You have unsaved changes. Are you sure you want to create a new level?"))) {
-            return;
-        }
-
-        // Save current View states before resetting
-        const savedViewStates = this.eventHandlers.saveViewStates();
-
-        this.level = this.fileManager.createNewLevel();
-        this.stateManager.reset();
-
-        // Re-initialize group edit mode state after reset
-        this.stateManager.set('groupEditMode', {
-            isActive: false,
-            groupId: null,
-            group: null,
-            openGroups: []
-        });
-
-        // Apply saved View states after reset
-        this.eventHandlers.applySavedViewStates(savedViewStates);
-
-        // Auto-set parallax start position to current camera position after reset
-        const currentCamera = this.stateManager.get('camera');
-        this.stateManager.set('parallax.startPosition', {
-            x: currentCamera.x,
-            y: currentCamera.y
-        });
-
-        // Update cached level statistics
-        this.updateCachedLevelStats();
-
-        // Initialize current layer to Main layer
-        this.setCurrentLayer(this.level.getMainLayerId());
-
-        this.historyManager.clear();
-        this.historyManager.saveState(
-            this.level.objects, 
-            this.stateManager.get('selectedObjects'), 
-            true, 
-            this.stateManager.get('groupEditMode')
-        );
-        this.render();
-        this.updateAllPanels();
+        return this.levelFileOperations.newLevel();
     }
 
     async openLevel() {
-        if (this.stateManager.get('isDirty') && !(await confirm("You have unsaved changes. Are you sure you want to open a new level?"))) {
-            return;
-        }
-
-        try {
-            Logger.render.info('📂 Opening level...');
-
-            // Save current View states before resetting
-            const savedViewStates = this.eventHandlers.saveViewStates();
-
-            this.level = await this.fileManager.loadLevelFromFileInput();
-            this.stateManager.reset();
-
-            // Re-initialize group edit mode state after reset
-            this.stateManager.set('groupEditMode', {
-                isActive: false,
-                groupId: null,
-                group: null,
-                openGroups: []
-            });
-
-            // Apply saved View states after reset
-            this.eventHandlers.applySavedViewStates(savedViewStates);
-
-            // Auto-set parallax start position to current camera position after loading
-            const currentCamera = this.stateManager.get('camera');
-            this.stateManager.set('parallax.startPosition', {
-                x: currentCamera.x,
-                y: currentCamera.y
-            });
-
-            // Update cached level statistics
-            this.updateCachedLevelStats();
-
-            // Initialize current layer to Main layer
-            this.setCurrentLayer(this.level.getMainLayerId());
-
-            this.historyManager.clear();
-
-            // Ensure selection is clear before saving initial state
-            this.stateManager.set('selectedObjects', new Set());
-
-            this.historyManager.saveState(
-                this.level.objects, 
-                this.stateManager.get('selectedObjects'), 
-                true, 
-                this.stateManager.get('groupEditMode')
-            );
-            this.render();
-            this.updateAllPanels();
-
-            Logger.render.info(`✅ Level loaded: ${this.level.objects.length} objects`);
-        } catch (error) {
-            Logger.render.error(`❌ Failed to load level: ${error.message}`);
-            await alert("Error loading level: " + error.message);
-        }
+        return this.levelFileOperations.openLevel();
     }
 
     /**
@@ -1445,82 +1354,15 @@ export class LevelEditor {
     }
 
     async saveLevel() {
-        // Check for Player Start objects using cached stats
-        const playerStartCount = this.getPlayerStartCount();
-
-        // Check if Player Start is missing
-        if (playerStartCount === 0) {
-            await alert(`Cannot save level!\n\nNo Player Start object found on the level.\nEvery level must have exactly one Player Start object.\n\nPlease add a Player Start object to your level before saving.\n\nYou can find Player Start objects in the Assets panel under the "Collectibles" category.`);
-            return;
-        }
-
-        // Check for multiple Player Start objects
-        if (playerStartCount > 1) {
-            await alert(`Cannot save level!\n\nFound ${playerStartCount} Player Start objects on the level.\nThere should be only one Player Start object.\n\nPlease remove extra Player Start objects before saving the level.`);
-            return;
-        }
-
-        this.fileManager.saveLevel(this.level);
-        this.stateManager.markClean();
-        Logger.render.info('💾 Level saved successfully');
+        return this.levelFileOperations.saveLevel();
     }
 
     async saveLevelAs() {
-        // Check for Player Start objects BEFORE prompting for filename using cached stats
-        const playerStartCount = this.getPlayerStartCount();
-
-        // Check if Player Start is missing
-        if (playerStartCount === 0) {
-            await alert(`Cannot save level!\n\nNo Player Start object found on the level.\nEvery level must have exactly one Player Start object.\n\nPlease add a Player Start object to your level before saving.\n\nYou can find Player Start objects in the Assets panel under the "Collectibles" category.`);
-            return;
-        }
-
-        // Check for multiple Player Start objects
-        if (playerStartCount > 1) {
-            await alert(`Cannot save level!\n\nFound ${playerStartCount} Player Start objects on the level.\nThere should be only one Player Start object.\n\nPlease remove extra Player Start objects before saving the level.`);
-            return;
-        }
-
-        const fileName = await prompt("Enter file name:", this.fileManager.getCurrentFileName() || "level.json");
-        if (fileName) {
-            this.fileManager.saveLevel(this.level, fileName);
-            this.stateManager.markClean();
-            Logger.render.info(`💾 Level saved as: ${fileName}`);
-        }
+        return this.levelFileOperations.saveLevelAs();
     }
 
     async importAssets() {
-        try {
-            // Import AssetImporter
-            const { AssetImporter } = await import('../utils/AssetImporter.js');
-            
-            // Create importer instance
-            const importer = new AssetImporter(this.assetManager);
-            
-            // Show folder picker
-            const folderPath = await importer.showFolderPicker();
-            if (!folderPath) {
-                return; // User cancelled
-            }
-            
-            // Import assets
-            const result = await importer.importFromFolder(folderPath);
-            
-            // Show success message
-            const message = `Successfully imported ${result.totalImported} assets from ${result.categories.length} categories:\n\n` +
-                result.categories.map(cat => `• ${cat.name}: ${cat.importedCount} assets`).join('\n');
-            
-            await alert(message);
-            
-            // Refresh asset panel
-            if (this.assetPanel) {
-                this.assetPanel.render();
-            }
-            
-        } catch (error) {
-            console.error('Asset import failed:', error);
-            await alert(`Asset import failed: ${error.message}`);
-        }
+        return this.levelFileOperations.importAssets();
     }
 
     openSettings() {
@@ -1583,11 +1425,11 @@ export class LevelEditor {
 
     // Delegate methods to appropriate modules
     focusOnSelection() {
-        this.objectOperations.focusOnSelection();
+        this.viewportOperations.focusOnSelection();
     }
 
     focusOnAll() {
-        this.objectOperations.focusOnAll();
+        this.viewportOperations.focusOnAll();
     }
 
     deleteSelectedObjects() {
@@ -1674,78 +1516,31 @@ export class LevelEditor {
     }
 
     /**
-     * Zoom in canvas view
+     * Zoom in canvas view (delegated to ViewportOperations)
      */
     zoomIn() {
-        const camera = this.stateManager.get('camera');
-        const newZoom = Math.min(camera.zoom * 1.2, 5.0); // Max zoom 5x
-        this.stateManager.update({
-            'camera.zoom': newZoom
-        });
-        this.render();
+        this.viewportOperations.zoomIn();
     }
 
     /**
-     * Zoom out canvas view
+     * Zoom out canvas view (delegated to ViewportOperations)
      */
     zoomOut() {
-        const camera = this.stateManager.get('camera');
-        const newZoom = Math.max(camera.zoom / 1.2, 0.1); // Min zoom 0.1x
-        this.stateManager.update({
-            'camera.zoom': newZoom
-        });
-        this.render();
+        this.viewportOperations.zoomOut();
     }
 
     /**
-     * Zoom to fit all objects in view
+     * Zoom to fit all objects in view (delegated to ViewportOperations)
      */
     zoomToFit() {
-        if (!this.level || this.level.objects.length === 0) {
-            this.resetView();
-            return;
-        }
-
-        const bounds = this.getSelectionBounds(this.level.objects);
-        if (!bounds) {
-            this.resetView();
-            return;
-        }
-
-        const canvas = document.getElementById('main-canvas');
-        const canvasRect = canvas.getBoundingClientRect();
-        const canvasWidth = canvasRect.width;
-        const canvasHeight = canvasRect.height;
-
-        // Calculate zoom to fit all objects with some padding
-        const padding = 50;
-        const zoomX = (canvasWidth - padding) / bounds.width;
-        const zoomY = (canvasHeight - padding) / bounds.height;
-        const zoom = Math.min(zoomX, zoomY, 1.0); // Don't zoom in beyond 1:1
-
-        // Center the view on the objects
-        const centerX = bounds.centerX;
-        const centerY = bounds.centerY;
-
-        this.stateManager.update({
-            'camera.x': centerX,
-            'camera.y': centerY,
-            'camera.zoom': zoom
-        });
-
-        this.render();
+        this.viewportOperations.zoomToFit();
     }
 
     /**
-     * Reset canvas view to default position and zoom
+     * Reset canvas view to default position and zoom (delegated to ViewportOperations)
      */
     resetView() {
-        this.stateManager.update({
-            'camera.x': 0,
-            'camera.y': 0,
-            'camera.zoom': 1.0
-        });
-        this.render();
+        this.viewportOperations.resetView();
     }
 
     // Group edit helpers - delegate to group operations

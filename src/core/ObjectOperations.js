@@ -286,21 +286,6 @@ export class ObjectOperations extends BaseModule {
         this.editor.duplicateOperations.startFromSelection();
     }
 
-    focusOnSelection() {
-        const selection = this.getSelectedObjects();
-        this.focusOnBounds(this.getSelectionBounds(selection));
-    }
-
-    focusOnAll() {
-        this.focusOnBounds(this.getSelectionBounds(this.editor.level.objects));
-    }
-
-    // These methods are now inherited from BaseModule and automatically trigger render
-    focusOnBounds(bounds) {
-        super.focusOnBounds(bounds);
-        this.editor.render();
-    }
-
     // Compute a set of selectable IDs depending on current edit state
     computeSelectableSet() {
         const selectable = new Set();

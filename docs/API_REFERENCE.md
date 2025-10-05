@@ -1,10 +1,83 @@
-# API Reference - 2D Level Editor v3.43.0
+# API Reference - 2D Level Editor v3.44.0
 
 ## Обзор
 
 Данный документ содержит подробное описание API всех компонентов редактора уровней.
 
 > 🔍 **Быстрый справочник:** См. [COMPREHENSIVE_API_REFERENCE.md](./COMPREHENSIVE_API_REFERENCE.md) для полного списка всех методов и функций в структурированном виде.
+
+## Обновления v3.44.0 - Фаза 5
+
+### ViewportOperations - Управление viewport и камерой
+**Файл**: `src/core/ViewportOperations.js`
+
+```javascript
+import { ViewportOperations } from './core/ViewportOperations.js';
+
+// Создание (обычно в LevelEditor)
+this.viewportOperations = new ViewportOperations(this);
+this.lifecycle.register('viewportOperations', this.viewportOperations, { priority: 7 });
+
+// Zoom operations
+viewportOperations.zoomIn(factor = 1.2, maxZoom = 5.0)
+viewportOperations.zoomOut(factor = 1.2, minZoom = 0.1)
+viewportOperations.zoomToFit(padding = 50, maxZoom = 1.0)
+viewportOperations.resetView(defaults = {x: 0, y: 0, zoom: 1.0})
+
+// Focus operations
+viewportOperations.focusOnSelection()                    // Фокус на выбранных объектах
+viewportOperations.focusOnAll()                         // Фокус на всех объектах
+viewportOperations.focusOnBounds(bounds, padding = 50)  // Фокус на заданных границах
+```
+
+**Пример использования**:
+```javascript
+// Зум к выбранным объектам
+editor.viewportOperations.focusOnSelection();
+
+// Зум с пользовательским фактором
+editor.viewportOperations.zoomIn(1.5, 10.0);  // Увеличить в 1.5 раз, макс 10x
+
+// Сброс с пользовательскими дефолтами
+editor.viewportOperations.resetView({x: 100, y: 100, zoom: 0.5});
+```
+
+---
+
+### LevelFileOperations - Файловые операции
+**Файл**: `src/core/LevelFileOperations.js`
+
+```javascript
+import { LevelFileOperations } from './core/LevelFileOperations.js';
+
+// Создание (обычно в LevelEditor)
+this.levelFileOperations = new LevelFileOperations(this);
+this.lifecycle.register('levelFileOperations', this.levelFileOperations, { priority: 6 });
+
+// File operations
+await levelFileOperations.newLevel()           // Создать новый уровень
+await levelFileOperations.openLevel()          // Открыть существующий уровень
+await levelFileOperations.saveLevel()          // Сохранить текущий уровень
+await levelFileOperations.saveLevelAs()        // Сохранить как новый файл
+await levelFileOperations.importAssets()       // Импортировать ассеты
+```
+
+**Пример использования**:
+```javascript
+// Создать новый уровень
+await editor.levelFileOperations.newLevel();
+
+// Импортировать ассеты
+await editor.levelFileOperations.importAssets();
+```
+
+**Особенности**:
+- Автоматическая валидация Player Start (ровно 1 объект)
+- Сохранение/восстановление view states (камера, zoom)
+- Автоматическая инициализация групп, слоев, параллакса, истории
+- Поддержка отмены операций
+
+---
 
 ## Обновления v3.43.0 - Фаза 4.5
 

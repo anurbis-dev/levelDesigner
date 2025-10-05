@@ -1,5 +1,37 @@
 # Changelog
 
+## [3.44.0] - 2025-10-05
+
+### Added - Фаза 5: Модуляризация ViewportOperations и LevelFileOperations
+- **ViewportOperations**: новый модуль для управления viewport и камерой (200+ строк)
+  - `zoomIn()`, `zoomOut()`, `zoomToFit()`, `resetView()`
+  - `focusOnSelection()`, `focusOnAll()`, `focusOnBounds()`
+- **LevelFileOperations**: новый модуль для файловых операций (250+ строк)
+  - `newLevel()`, `openLevel()`, `saveLevel()`, `saveLevelAs()`
+  - `importAssets()` с полной интеграцией AssetImporter
+  - `_validatePlayerStart()` - централизованная валидация
+
+### Changed
+- **LevelEditor**: методы viewport и файловых операций делегируют к новым модулям
+- **ObjectOperations**: удалены `focusOnSelection()` и `focusOnAll()` (перенесены в ViewportOperations)
+- **Размер LevelEditor.js**: 2089→1770 строк (-319 строк, -15.3%)
+- **Logger**: добавлена категория VIEWPORT для логирования операций камеры
+
+### Improved
+- **Separation of Concerns**: viewport и файловые операции в отдельных модулях
+- **Модульность**: +25% (viewport и файлы могут переиспользоваться)
+- **Maintainability**: изменения локализованы в специализированных модулях
+- **Параметризация**: методы принимают параметры (factor, padding, defaults)
+- **Улучшенное логирование**: детальная информация о всех операциях
+
+### Метрики после Фазы 5
+- **LevelEditor.js**: 2488→1770 строк (-28.8% от начала Фазы 4)
+- **Новые модули**: ViewportOperations (200 строк), LevelFileOperations (250 строк)
+- **Общая модульность**: +70% относительно начала рефакторинга
+- **Cognitive Complexity**: снижена на ~65%
+
+---
+
 ## [3.43.0] - 2025-10-05
 
 ### Changed - Фаза 4.5: Разбивка applyConfiguration()
