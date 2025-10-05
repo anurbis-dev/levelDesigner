@@ -47,7 +47,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.42.0';
+    static VERSION = '3.43.0';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -800,6 +800,8 @@ export class LevelEditor {
 
     /**
      * Apply configuration settings to editor
+     * @description Main entry point for applying configuration. Note: Font scale 
+     * and theme are applied immediately in index.html to prevent UI flicker.
      */
     applyConfiguration() {
         if (!this.configManager) {
@@ -807,62 +809,125 @@ export class LevelEditor {
             return;
         }
         
-        
-        // Note: Font scale and theme are applied immediately in index.html to prevent UI flicker
-        
-        // Apply grid settings to StateManager
-        const gridSize = this.configManager.get('grid.size');
-        const gridColor = this.configManager.get('grid.color');
-        const gridThickness = this.configManager.get('grid.thickness');
-        const gridOpacity = this.configManager.get('grid.opacity');
-        const gridSubdivisions = this.configManager.get('grid.subdivisions');
-        const gridSubdivColor = this.configManager.get('grid.subdivColor');
-        const gridSubdivThickness = this.configManager.get('grid.subdivThickness');
-        const gridType = this.configManager.get('canvas.gridType');
-        const hexOrientation = this.configManager.get('canvas.hexOrientation');
+        // Apply different configuration sections
+        this._applyGridConfiguration();
+        this._syncGridSettingsToUI();
+        this._saveDefaultConfiguration();
+    }
 
+    /**
+     * Apply grid configuration settings to StateManager
+     * @private
+     */
+    _applyGridConfiguration() {
+        // Get all grid settings from config
+        const gridSettings = this._getGridSettingsFromConfig();
+        
+        // Apply basic grid settings
+        this._applyBasicGridSettings(gridSettings);
+        
+        // Apply grid subdivision settings
+        this._applyGridSubdivisionSettings(gridSettings);
+        
+        // Apply grid type settings
+        this._applyGridTypeSettings(gridSettings);
+    }
 
-        if (gridSize !== undefined) {
-            this.stateManager.set('canvas.gridSize', gridSize);
+    /**
+     * Get grid settings from configuration manager
+     * @private
+     * @returns {Object} Grid settings object
+     */
+    _getGridSettingsFromConfig() {
+        return {
+            size: this.configManager.get('grid.size'),
+            color: this.configManager.get('grid.color'),
+            thickness: this.configManager.get('grid.thickness'),
+            opacity: this.configManager.get('grid.opacity'),
+            subdivisions: this.configManager.get('grid.subdivisions'),
+            subdivColor: this.configManager.get('grid.subdivColor'),
+            subdivThickness: this.configManager.get('grid.subdivThickness'),
+            type: this.configManager.get('canvas.gridType'),
+            hexOrientation: this.configManager.get('canvas.hexOrientation')
+        };
+    }
+
+    /**
+     * Apply basic grid settings (size, color, thickness, opacity)
+     * @private
+     * @param {Object} settings - Grid settings object
+     */
+    _applyBasicGridSettings(settings) {
+        if (settings.size !== undefined) {
+            this.stateManager.set('canvas.gridSize', settings.size);
         }
-        if (gridColor !== undefined) {
-            // Convert color to rgba using ColorUtils
-            const opacity = gridOpacity !== undefined ? gridOpacity : 0.1;
-            const colorValue = ColorUtils.toRgba(gridColor, opacity);
+        
+        if (settings.color !== undefined) {
+            const opacity = settings.opacity !== undefined ? settings.opacity : 0.1;
+            const colorValue = ColorUtils.toRgba(settings.color, opacity);
             this.stateManager.set('canvas.gridColor', colorValue);
         }
-        if (gridThickness !== undefined) {
-            this.stateManager.set('canvas.gridThickness', gridThickness);
-        }
-        if (gridOpacity !== undefined) {
-            this.stateManager.set('canvas.gridOpacity', gridOpacity);
-        }
-        if (gridSubdivisions !== undefined) {
-            this.stateManager.set('canvas.gridSubdivisions', gridSubdivisions);
-        }
-        if (gridSubdivColor !== undefined) {
-            // Convert color to rgba using ColorUtils
-            const opacity = gridOpacity !== undefined ? gridOpacity : 0.1;
-            const subdivColorValue = ColorUtils.toRgba(gridSubdivColor, opacity);
-            this.stateManager.set('canvas.gridSubdivColor', subdivColorValue);
-        }
-        if (gridSubdivThickness !== undefined) {
-            this.stateManager.set('canvas.gridSubdivThickness', gridSubdivThickness);
-        }
-        if (gridType !== undefined) {
-            this.stateManager.set('canvas.gridType', gridType);
-        }
-        if (hexOrientation !== undefined) {
-            this.stateManager.set('canvas.hexOrientation', hexOrientation);
+        
+        if (settings.thickness !== undefined) {
+            this.stateManager.set('canvas.gridThickness', settings.thickness);
         }
         
-        // Sync grid settings to ensure proper initialization
+        if (settings.opacity !== undefined) {
+            this.stateManager.set('canvas.gridOpacity', settings.opacity);
+        }
+    }
+
+    /**
+     * Apply grid subdivision settings
+     * @private
+     * @param {Object} settings - Grid settings object
+     */
+    _applyGridSubdivisionSettings(settings) {
+        if (settings.subdivisions !== undefined) {
+            this.stateManager.set('canvas.gridSubdivisions', settings.subdivisions);
+        }
+        
+        if (settings.subdivColor !== undefined) {
+            const opacity = settings.opacity !== undefined ? settings.opacity : 0.1;
+            const subdivColorValue = ColorUtils.toRgba(settings.subdivColor, opacity);
+            this.stateManager.set('canvas.gridSubdivColor', subdivColorValue);
+        }
+        
+        if (settings.subdivThickness !== undefined) {
+            this.stateManager.set('canvas.gridSubdivThickness', settings.subdivThickness);
+        }
+    }
+
+    /**
+     * Apply grid type settings (rectangular, hexagonal, etc.)
+     * @private
+     * @param {Object} settings - Grid settings object
+     */
+    _applyGridTypeSettings(settings) {
+        if (settings.type !== undefined) {
+            this.stateManager.set('canvas.gridType', settings.type);
+        }
+        
+        if (settings.hexOrientation !== undefined) {
+            this.stateManager.set('canvas.hexOrientation', settings.hexOrientation);
+        }
+    }
+
+    /**
+     * Sync grid settings to UI components
+     * @private
+     */
+    _syncGridSettingsToUI() {
         if (this.settingsPanel && this.settingsPanel.gridSettings) {
             this.settingsPanel.gridSettings.syncAllGridSettingsToState();
         }
-        
+    }
 
-        // Save default settings on first run to ensure they persist
+    /**
+     * Save default configuration settings
+     * @private
+     */
+    _saveDefaultConfiguration() {
         if (this.configManager) {
             this.configManager.saveSettings();
         }

@@ -1,10 +1,88 @@
-# API Reference - 2D Level Editor v3.42.0
+# API Reference - 2D Level Editor v3.43.0
 
 ## Обзор
 
 Данный документ содержит подробное описание API всех компонентов редактора уровней.
 
 > 🔍 **Быстрый справочник:** См. [COMPREHENSIVE_API_REFERENCE.md](./COMPREHENSIVE_API_REFERENCE.md) для полного списка всех методов и функций в структурированном виде.
+
+## Обновления v3.43.0 - Фаза 4.5
+
+### LevelEditor.applyConfiguration() - Разбивка метода
+Метод `applyConfiguration()` разбит на 7 специализированных методов для улучшения читаемости и maintainability.
+
+**Основной метод** (публичный):
+```javascript
+/**
+ * Apply configuration settings to editor
+ * @description Main entry point for applying configuration. Note: Font scale 
+ * and theme are applied immediately in index.html to prevent UI flicker.
+ */
+applyConfiguration()
+```
+
+**Приватные методы**:
+```javascript
+/**
+ * Apply grid configuration settings to StateManager
+ * @private
+ */
+_applyGridConfiguration()
+
+/**
+ * Get grid settings from configuration manager
+ * @private
+ * @returns {Object} Grid settings object
+ */
+_getGridSettingsFromConfig()
+
+/**
+ * Apply basic grid settings (size, color, thickness, opacity)
+ * @private
+ * @param {Object} settings - Grid settings object
+ */
+_applyBasicGridSettings(settings)
+
+/**
+ * Apply grid subdivision settings
+ * @private
+ * @param {Object} settings - Grid settings object
+ */
+_applyGridSubdivisionSettings(settings)
+
+/**
+ * Apply grid type settings (rectangular, hexagonal, etc.)
+ * @private
+ * @param {Object} settings - Grid settings object
+ */
+_applyGridTypeSettings(settings)
+
+/**
+ * Sync grid settings to UI components
+ * @private
+ */
+_syncGridSettingsToUI()
+
+/**
+ * Save default configuration settings
+ * @private
+ */
+_saveDefaultConfiguration()
+```
+
+**Пример использования** (без изменений для внешнего кода):
+```javascript
+// Применить настройки конфигурации
+levelEditor.applyConfiguration();
+```
+
+**Преимущества**:
+- Метод стал значительно короче (65→10 строк)
+- Каждый метод отвечает за одну задачу (Single Responsibility Principle)
+- Легче тестировать и поддерживать
+- Полная JSDoc документация
+
+---
 
 ## Обновления v3.42.0 - Фаза 4.4
 
