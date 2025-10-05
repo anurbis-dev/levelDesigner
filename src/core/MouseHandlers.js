@@ -247,7 +247,12 @@ export class MouseHandlers extends BaseModule {
             const wasDragging = mouse.isDragging; // Save dragging state before resetting
             
             if (mouse.isDragging) {
-                this.editor.historyManager.saveState(this.editor.level.objects, this.editor.stateManager.get('selectedObjects'));
+                this.editor.historyManager.saveState(
+                    this.editor.level.objects, 
+                    this.editor.stateManager.get('selectedObjects'), 
+                    false, 
+                    this.editor.stateManager.get('groupEditMode')
+                );
                 this.editor.stateManager.markDirty();
                 
                 // Update panels after drag ends to show final position
@@ -524,7 +529,12 @@ export class MouseHandlers extends BaseModule {
         }
 
         // Save state AFTER all objects are added
-        this.editor.historyManager.saveState(this.editor.level.objects, newIds);
+        this.editor.historyManager.saveState(
+            this.editor.level.objects, 
+            newIds, 
+            false, 
+            this.editor.stateManager.get('groupEditMode')
+        );
 
         this.editor.stateManager.set('selectedObjects', newIds);
         this.editor.stateManager.update({

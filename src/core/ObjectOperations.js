@@ -263,7 +263,12 @@ export class ObjectOperations extends BaseModule {
         }
 
         // Save state AFTER all deletions and cleanup are complete
-        this.editor.historyManager.saveState(this.editor.level.objects, selectedObjects);
+        this.editor.historyManager.saveState(
+            this.editor.level.objects, 
+            selectedObjects, 
+            false, 
+            this.editor.stateManager.get('groupEditMode')
+        );
 
         // Clear selection and update UI AFTER all operations are complete
         this.editor.stateManager.set('selectedObjects', new Set());

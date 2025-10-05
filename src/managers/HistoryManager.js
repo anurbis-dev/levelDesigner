@@ -17,14 +17,21 @@ export class HistoryManager {
      * @param {Array} objects - Level objects array
      * @param {Set} selection - Selected objects set
      * @param {boolean} isInitial - Whether this is initial state
+     * @param {Object} groupEditMode - Current group edit mode state (optional)
      */
-    saveState(objects, selection = null, isInitial = false) {
+    saveState(objects, selection = null, isInitial = false, groupEditMode = null) {
         if (!this.isRecording && !isInitial) return;
 
-        // Create state object with objects and selection
+        // Create state object with objects, selection, and group edit mode
         const stateData = {
             objects: objects,
-            selection: selection ? Array.from(selection) : []
+            selection: selection ? Array.from(selection) : [],
+            groupEditMode: groupEditMode ? {
+                isActive: groupEditMode.isActive,
+                groupId: groupEditMode.group?.id || null,
+                openGroupIds: groupEditMode.openGroups?.map(g => g.id) || [],
+                frameFrozen: groupEditMode.frameFrozen || false
+            } : null
         };
 
         const stateSnapshot = JSON.stringify(stateData);
@@ -48,7 +55,7 @@ export class HistoryManager {
 
     /**
      * Undo last action
-     * @returns {Object|null} State object with objects and selection arrays
+     * @returns {Object|null} State object with objects, selection, and groupEditMode
      */
     undo() {
         if (this.undoStack.length <= 1) return null;
@@ -65,7 +72,8 @@ export class HistoryManager {
             // Convert selection array back to Set
             return {
                 objects: parsedState.objects,
-                selection: new Set(parsedState.selection || [])
+                selection: new Set(parsedState.selection || []),
+                groupEditMode: parsedState.groupEditMode || null
             };
         } finally {
             // Delay clearing the flag to prevent accidental selection clearing by empty clicks
@@ -78,7 +86,7 @@ export class HistoryManager {
 
     /**
      * Redo last undone action
-     * @returns {Object|null} State object with objects and selection arrays
+     * @returns {Object|null} State object with objects, selection, and groupEditMode
      */
     redo() {
         if (this.redoStack.length === 0) return null;
@@ -94,7 +102,8 @@ export class HistoryManager {
             // Convert selection array back to Set
             return {
                 objects: parsedState.objects,
-                selection: new Set(parsedState.selection || [])
+                selection: new Set(parsedState.selection || []),
+                groupEditMode: parsedState.groupEditMode || null
             };
         } finally {
             // Delay clearing the flag to prevent accidental selection clearing by empty clicks

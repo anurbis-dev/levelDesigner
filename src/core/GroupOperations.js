@@ -90,7 +90,12 @@ export class GroupOperations extends BaseModule {
             this.editor.level.addGroupObjectsToIndex(newGroup);
 
             // Save state AFTER all changes are complete
-            this.editor.historyManager.saveState(this.editor.level.objects, new Set([newGroup.id]));
+            this.editor.historyManager.saveState(
+                this.editor.level.objects, 
+                new Set([newGroup.id]), 
+                false, 
+                this.editor.stateManager.get('groupEditMode')
+            );
 
             // Clear the old selection and select only the new group
             this.editor.stateManager.set('selectedObjects', new Set([newGroup.id]));
@@ -207,7 +212,12 @@ export class GroupOperations extends BaseModule {
 
         if (groupsToUngroup.length === 0) return;
 
-        this.editor.historyManager.saveState(this.editor.level.objects, selectedObjects);
+        this.editor.historyManager.saveState(
+            this.editor.level.objects, 
+            selectedObjects, 
+            false, 
+            this.editor.stateManager.get('groupEditMode')
+        );
 
         const newTopLevelObjects = [];
 

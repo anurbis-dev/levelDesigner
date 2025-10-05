@@ -44,7 +44,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.37.0';
+    static VERSION = '3.38.1';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -288,18 +288,35 @@ export class LevelEditor {
 
     /**
      * Update group edit mode references after undo/redo restore
-     * @param {Array} previousSelection - Selection from the restored state
+     * @param {Object|null} savedGroupEditMode - Saved group edit mode state from history
      */
-    updateGroupEditModeAfterRestore(previousSelection) {
-        const groupEditMode = this.stateManager.get('groupEditMode');
-        if (!groupEditMode || !groupEditMode.isActive) {
-            return; // Not in group edit mode, nothing to update
+    updateGroupEditModeAfterRestore(savedGroupEditMode) {
+        // If no saved state or not active, exit group edit mode
+        if (!savedGroupEditMode || !savedGroupEditMode.isActive) {
+            this.stateManager.set('groupEditMode', {
+                isActive: false,
+                group: null,
+                openGroups: []
+            });
+            // Clear _isEditing flag from all groups since we're exiting group edit mode
+            this.level.objects.forEach(obj => {
+                if (obj.type === 'group') {
+                    delete obj._isEditing;
+                    delete obj.originalChildren;
+                    this.clearGroupEditingFlagsRecursive(obj);
+                }
+            });
+            return;
         }
 
-        // Check if the active group still exists in the restored level
-        const activeGroup = this.getCachedObject(groupEditMode.group.id);
-        if (!activeGroup || activeGroup.type !== 'group') {
-            // Active group no longer exists or is not a group, exit group edit mode
+        // Restore group edit mode from saved state
+        const activeGroupId = savedGroupEditMode.groupId;
+        const openGroupIds = savedGroupEditMode.openGroupIds || [];
+
+        // Validate consistency: activeGroupId should be the last element in openGroupIds
+        // This ensures proper nesting hierarchy (parent -> child -> grandchild)
+        if (openGroupIds.length > 0 && openGroupIds[openGroupIds.length - 1] !== activeGroupId) {
+            Logger.lifecycle.warn('Inconsistent group state: activeGroupId does not match last openGroupId. Exiting group edit mode.');
             this.stateManager.set('groupEditMode', {
                 isActive: false,
                 group: null,
@@ -308,37 +325,102 @@ export class LevelEditor {
             return;
         }
 
-        // Update references to point to restored objects
-        const updatedOpenGroups = groupEditMode.openGroups.map(oldGroup => {
-            const restoredGroup = this.getCachedObject(oldGroup.id);
-            return restoredGroup && restoredGroup.type === 'group' ? restoredGroup : null;
-        }).filter(group => group !== null);
+        // Check if the active group still exists in the restored level
+        const activeGroup = this.getCachedObject(activeGroupId);
+        if (!activeGroup || activeGroup.type !== 'group') {
+            // Active group no longer exists, exit group edit mode
+            this.stateManager.set('groupEditMode', {
+                isActive: false,
+                group: null,
+                openGroups: []
+            });
+            return;
+        }
 
-        // Update group edit mode state with restored object references
-        // Clear frozen frame state since object hierarchy may have changed
-        const updatedGroupEditMode = {
-            isActive: true,
-            group: activeGroup,
-            openGroups: updatedOpenGroups,
-            frameFrozen: false, // Clear frozen state after restore
-            frozenBounds: null   // Clear frozen bounds after restore
-        };
+        // Restore references to open groups
+        const updatedOpenGroups = openGroupIds
+            .map(groupId => this.getCachedObject(groupId))
+            .filter(group => group && group.type === 'group');
 
-        // Set _isEditing flag and originalChildren for all open groups (like in openGroupEditMode)
-        updatedOpenGroups.forEach(openGroup => {
-            openGroup._isEditing = true;
-            // Restore originalChildren if not set, or keep existing
-            if (!openGroup.originalChildren) {
-                openGroup.originalChildren = [...openGroup.children];
+        // Validate that activeGroup is in the restored openGroups
+        // If not, it means the group hierarchy was broken - exit group edit mode
+        if (updatedOpenGroups.length === 0 || !updatedOpenGroups.some(g => g.id === activeGroupId)) {
+            Logger.lifecycle.warn('Active group not found in restored openGroups. Exiting group edit mode.');
+            this.stateManager.set('groupEditMode', {
+                isActive: false,
+                group: null,
+                openGroups: []
+            });
+            return;
+        }
+
+        // Validate nesting hierarchy: each group (except first) should be a child of the previous group
+        // This ensures the restored state maintains proper parent->child relationships
+        for (let i = 1; i < updatedOpenGroups.length; i++) {
+            const parentGroup = updatedOpenGroups[i - 1];
+            const childGroup = updatedOpenGroups[i];
+            
+            // Check if childGroup is a direct child of parentGroup
+            const isDirectChild = parentGroup.children && parentGroup.children.some(c => c.id === childGroup.id);
+            
+            if (!isDirectChild) {
+                Logger.lifecycle.warn(`Broken nesting hierarchy: ${childGroup.id} is not a child of ${parentGroup.id}. Exiting group edit mode.`);
+                this.stateManager.set('groupEditMode', {
+                    isActive: false,
+                    group: null,
+                    openGroups: []
+                });
+                return;
+            }
+        }
+
+        // Clear ALL _isEditing flags first
+        this.level.objects.forEach(obj => {
+            if (obj.type === 'group') {
+                delete obj._isEditing;
+                delete obj.originalChildren;
+                this.clearGroupEditingFlagsRecursive(obj);
             }
         });
 
+        // Set _isEditing flag ONLY for groups that should be open
+        updatedOpenGroups.forEach(openGroup => {
+            openGroup._isEditing = true;
+            // Don't set originalChildren here - it will be managed by group operations
+        });
+
+        // Restore group edit mode state with all required properties
+        // Note: activeGroup should be the LAST group in openGroups (deepest nested)
+        const updatedGroupEditMode = {
+            isActive: true,
+            groupId: activeGroupId,  // ID of the active (deepest) group
+            group: activeGroup,      // Reference to the active group
+            openGroups: updatedOpenGroups,
+            originalChildren: activeGroup.children ? [...activeGroup.children] : [], // Snapshot of children
+            frameFrozen: savedGroupEditMode.frameFrozen || false,
+            frozenBounds: null // Clear frozen bounds, will be recalculated
+        };
+
         this.stateManager.set('groupEditMode', updatedGroupEditMode);
 
-        // Force update of group state (similar to opening/closing group)
-        // This ensures all internal group state is properly updated
-        this.render();
-        this.updateAllPanels();
+        // Note: render() and updateAllPanels() will be called by undo/redo methods
+        // No need to call them here to avoid double rendering
+    }
+
+    /**
+     * Recursively clear _isEditing and originalChildren flags from group children
+     * @param {Object} group - Group to clear flags from
+     */
+    clearGroupEditingFlagsRecursive(group) {
+        if (!group.children) return;
+        
+        group.children.forEach(child => {
+            if (child.type === 'group') {
+                delete child._isEditing;
+                delete child.originalChildren;
+                this.clearGroupEditingFlagsRecursive(child);
+            }
+        });
     }
 
     /**
@@ -682,8 +764,13 @@ export class LevelEditor {
         // Ensure selection is clear before saving initial state
         this.stateManager.set('selectedObjects', new Set());
 
-        // Save initial state
-        this.historyManager.saveState(this.level.objects, this.stateManager.get('selectedObjects'), true);
+        // Save initial state with current group edit mode
+        this.historyManager.saveState(
+            this.level.objects, 
+            this.stateManager.get('selectedObjects'), 
+            true, 
+            this.stateManager.get('groupEditMode')
+        );
 
         // Setup auto-save on page unload
         this.setupAutoSaveOnUnload();
@@ -1171,8 +1258,13 @@ export class LevelEditor {
             // Invalidate caches since new object was added
             this.invalidateObjectCaches(playerStartObject.id);
 
-            // Update history
-            this.historyManager.saveState(this.level.objects, this.stateManager.get('selectedObjects'), false);
+            // Update history with current group edit mode
+            this.historyManager.saveState(
+                this.level.objects, 
+                this.stateManager.get('selectedObjects'), 
+                false, 
+                this.stateManager.get('groupEditMode')
+            );
 
             // Update cached stats after creation
             this.updateCachedLevelStats();
@@ -1347,10 +1439,10 @@ export class LevelEditor {
                     this.renderOperations.buildSpatialIndex();
                 }
 
-            // Update group edit mode references to restored objects
-            this.updateGroupEditModeAfterRestore(previousState.selection);
+        // Update group edit mode to match restored state
+        this.updateGroupEditModeAfterRestore(previousState.groupEditMode);
 
-            // Force recalculation of group bounds for active group if in group edit mode
+        // Force recalculation of group bounds for active group if in group edit mode
         // This ensures the group frame displays correct boundaries immediately
         const updatedGroupEditMode = this.stateManager.get('groupEditMode');
         if (updatedGroupEditMode && updatedGroupEditMode.isActive && updatedGroupEditMode.group) {
@@ -1375,24 +1467,7 @@ export class LevelEditor {
                     reason: 'undo_restore'
                 });
 
-                // Ensure all restored objects have correct visibility
-                // Ensure all restored objects have correct visibility
-                this.level.objects.forEach(obj => {
-                    // Ensure object visibility is set correctly
-                    // By default, all objects should be visible unless there's a specific reason to hide them
-                    if (!obj.visible) {
-                        obj.visible = true;
-                    }
-
-                    // Special handling for groups - they should always be visible
-                    if (obj.type === 'group') {
-                        if (!obj.visible) {
-                            obj.visible = true;
-                        }
-                    }
-                });
-
-                // Force update of selectable set after visibility corrections
+                // Force update of selectable set after restore
                 const selectableSetAfterCorrection = this.objectOperations.computeSelectableSet();
 
                 // Clear viewport selectable objects cache to ensure it gets recalculated
@@ -1440,7 +1515,7 @@ export class LevelEditor {
 
             this.render();
             this.updateAllPanels();
-            this.stateManager.markDirty();
+            // Note: Don't call markDirty() after undo - we're restoring previous state
 
             // Check Player Start count after updateAllPanels
             const playerStartCountAfter = this.level.objects.filter(obj => obj.type === 'player_start').length;
@@ -1485,8 +1560,8 @@ export class LevelEditor {
                 this.renderOperations.buildSpatialIndex();
             }
 
-            // Update group edit mode references to restored objects
-            this.updateGroupEditModeAfterRestore(nextState.selection);
+            // Update group edit mode to match restored state
+            this.updateGroupEditModeAfterRestore(nextState.groupEditMode);
 
             // Force recalculation of group bounds for active group if in group edit mode
             // This ensures the group frame displays correct boundaries immediately
@@ -1513,23 +1588,7 @@ export class LevelEditor {
                 reason: 'redo_restore'
             });
 
-            // Ensure all restored objects have correct visibility
-            this.level.objects.forEach(obj => {
-                // Ensure object visibility is set correctly
-                // By default, all objects should be visible unless there's a specific reason to hide them
-                if (!obj.visible) {
-                    obj.visible = true;
-                }
-
-                // Special handling for groups - they should always be visible
-                if (obj.type === 'group') {
-                    if (!obj.visible) {
-                        obj.visible = true;
-                    }
-                }
-            });
-
-            // Force update of selectable set after visibility corrections
+            // Force update of selectable set after restore
             const selectableSetAfterCorrection = this.objectOperations.computeSelectableSet();
 
             // Clear viewport selectable objects cache to ensure it gets recalculated
@@ -1564,7 +1623,7 @@ export class LevelEditor {
             this.stateManager.set('selectedObjects', validSelection);
             this.render();
             this.updateAllPanels();
-            this.stateManager.markDirty();
+            // Note: Don't call markDirty() after redo - we're restoring next state
         }
     }
 
@@ -1607,7 +1666,12 @@ export class LevelEditor {
         this.setCurrentLayer(this.level.getMainLayerId());
 
         this.historyManager.clear();
-        this.historyManager.saveState(this.level.objects, this.stateManager.get('selectedObjects'), true);
+        this.historyManager.saveState(
+            this.level.objects, 
+            this.stateManager.get('selectedObjects'), 
+            true, 
+            this.stateManager.get('groupEditMode')
+        );
         this.render();
         this.updateAllPanels();
     }
@@ -1655,7 +1719,12 @@ export class LevelEditor {
             // Ensure selection is clear before saving initial state
             this.stateManager.set('selectedObjects', new Set());
 
-            this.historyManager.saveState(this.level.objects, this.stateManager.get('selectedObjects'), true);
+            this.historyManager.saveState(
+                this.level.objects, 
+                this.stateManager.get('selectedObjects'), 
+                true, 
+                this.stateManager.get('groupEditMode')
+            );
             this.render();
             this.updateAllPanels();
 
@@ -2172,8 +2241,13 @@ export class LevelEditor {
         }
 
 
-        // Save state for undo
-        this.historyManager.saveState(this.level.objects, this.stateManager.get('selectedObjects'), false);
+        // Save state for undo with current group edit mode
+        this.historyManager.saveState(
+            this.level.objects, 
+            this.stateManager.get('selectedObjects'), 
+            false, 
+            this.stateManager.get('groupEditMode')
+        );
 
         let movedCount = 0;
 

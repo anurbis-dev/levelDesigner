@@ -339,7 +339,12 @@ export class DuplicateOperations extends BaseModule {
         this.editor.scheduleCacheInvalidation();
 
         // Save state AFTER placing objects but BEFORE changing selection
-        this.editor.historyManager.saveState(this.editor.level.objects, newIds);
+        this.editor.historyManager.saveState(
+            this.editor.level.objects, 
+            newIds, 
+            false, 
+            this.editor.stateManager.get('groupEditMode')
+        );
 
         // Use the same reset method as cancel for consistency
         this.cancel();
