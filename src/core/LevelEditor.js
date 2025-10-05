@@ -44,7 +44,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.38.1';
+    static VERSION = '3.39.0';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -609,19 +609,43 @@ export class LevelEditor {
      */
     async init() {
         try {
-            // Log version info
             this.log('info', `🚀 Level Editor v${LevelEditor.VERSION} - Utility Architecture`);
             this.log('info', 'Initializing editor components...');
-        
-        // Initialize configuration manager after Logger is available (only if not already set)
+            
+            await this.initializeConfiguration();
+            const domElements = this.initializeDOMElements();
+            this.initializeRenderer(domElements.canvas);
+            this.initializeUIComponents(domElements);
+            this.initializeMenuAndEvents();
+            await this.initializeLevelAndData();
+            this.finalizeInitialization();
+            
+        } catch (error) {
+            this.log('error', 'Failed to initialize editor:', error.message);
+            throw error;
+        }
+    }
+
+    /**
+     * Initialize configuration manager and apply settings
+     * @private
+     */
+    async initializeConfiguration() {
+        // Initialize configuration manager if not already set
         if (!this.configManager) {
             this.configManager = new ConfigManager();
         }
         
-        // Apply configuration settings immediately after ConfigManager is ready
+        // Apply configuration settings immediately
         this.applyConfiguration();
-        
-        // Get DOM elements
+    }
+
+    /**
+     * Get and validate required DOM elements
+     * @private
+     * @returns {Object} DOM elements
+     */
+    initializeDOMElements() {
         const canvas = document.getElementById('main-canvas');
         const assetsPanel = document.getElementById('assets-panel');
         const detailsPanel = document.getElementById('details-content-panel');
@@ -630,11 +654,27 @@ export class LevelEditor {
         const toolbarContainer = document.getElementById('toolbar-container');
         const actorPropsPanelContainer = document.getElementById('actor-properties-panel');
 
-
         if (!canvas || !assetsPanel || !detailsPanel || !outlinerPanel || !layersPanel || !toolbarContainer) {
             throw new Error('Required DOM elements not found');
         }
         
+        return {
+            canvas,
+            assetsPanel,
+            detailsPanel,
+            outlinerPanel,
+            layersPanel,
+            toolbarContainer,
+            actorPropsPanelContainer
+        };
+    }
+
+    /**
+     * Initialize canvas renderer and context menu
+     * @private
+     * @param {HTMLCanvasElement} canvas - Canvas element
+     */
+    initializeRenderer(canvas) {
         // Initialize renderer
         this.canvasRenderer = new CanvasRenderer(canvas);
         this.canvasRenderer.resizeCanvas();
@@ -657,7 +697,16 @@ export class LevelEditor {
 
         // Register canvas context menu with the manager
         this.contextMenuManager.registerMenu('canvas', this.canvasContextMenu);
+    }
 
+    /**
+     * Initialize UI components (panels, toolbar, etc.)
+     * @private
+     * @param {Object} domElements - DOM elements
+     */
+    initializeUIComponents(domElements) {
+        const { assetsPanel, detailsPanel, outlinerPanel, layersPanel, toolbarContainer } = domElements;
+        
         // Initialize UI panels
         this.assetPanel = new AssetPanel(assetsPanel, this.assetManager, this.stateManager, this);
         this.detailsPanel = new DetailsPanel(detailsPanel, this.stateManager, this);
@@ -688,8 +737,13 @@ export class LevelEditor {
         
         // Apply configuration to level settings
         this.applyConfigurationToLevel();
-        
-        
+    }
+
+    /**
+     * Initialize menu manager and event listeners
+     * @private
+     */
+    initializeMenuAndEvents() {
         // Initialize MenuManager
         const menuContainer = document.getElementById('menu-container');
         const navElement = menuContainer?.closest('nav');
@@ -709,7 +763,13 @@ export class LevelEditor {
 
         // Initialize search controls for current tab
         this.initializeSearchControls();
+    }
 
+    /**
+     * Initialize level and preload data
+     * @private
+     */
+    async initializeLevelAndData() {
         // Preload assets
         try {
             await this.assetManager.preloadImages();
@@ -723,7 +783,7 @@ export class LevelEditor {
         // Set up layer objects count change callback
         this.setupLayerObjectsCountTracking();
         
-        // Построение пространственного индекса ДО первого рендеринга
+        // Build spatial index BEFORE first render
         if (this.renderOperations) {
             try {
                 this.renderOperations.buildSpatialIndex();
@@ -732,13 +792,19 @@ export class LevelEditor {
             }
         }
 
-        // Apply saved panel sizes BEFORE initializing view states to prevent overwriting
+        // Apply saved panel sizes BEFORE initializing view states
         this.applySavedPanelSizes();
 
         // Initialize view states before render to prevent toolbar flickering
         this.eventHandlers.initializeViewStates();
+    }
 
-        // Initial render (теперь индекс уже построен и состояния инициализированы)
+    /**
+     * Finalize initialization (render, save state, setup tests)
+     * @private
+     */
+    finalizeInitialization() {
+        // Initial render
         Logger.render.info('🎨 Initial render started');
         this.render();
         Logger.render.info('✅ Level Editor initialized successfully');
@@ -747,14 +813,10 @@ export class LevelEditor {
         this.updateVersionInfo();
         this.updatePageTitle();
 
+        // Update all panels
         this.updateAllPanels();
 
-        } catch (error) {
-            this.log('error', 'Failed to initialize editor:', error.message);
-            throw error;
-        }
-
-        // Auto-set parallax start position to current camera position on startup
+        // Auto-set parallax start position to current camera position
         const currentCamera = this.stateManager.get('camera');
         this.stateManager.set('parallax.startPosition', {
             x: currentCamera.x,
@@ -772,10 +834,8 @@ export class LevelEditor {
             this.stateManager.get('groupEditMode')
         );
 
-        // Setup auto-save on page unload
+        // Setup auto-save handlers
         this.setupAutoSaveOnUnload();
-        
-        // Setup auto-save on page visibility change (tab switch)
         this.setupAutoSaveOnVisibilityChange();
 
         // Test context menu functionality
@@ -1417,214 +1477,133 @@ export class LevelEditor {
      * History operations
      */
     undo() {
+        const previousState = this.historyManager.undo();
+        if (!previousState) return;
+        
+        this._restoreObjectsFromHistory(previousState.objects);
+        this._rebuildAllIndices();
+        this._restoreGroupEditMode(previousState.groupEditMode);
+        this._recalculateGroupBounds();
+        this._invalidateCachesAfterRestore();
+        this._restoreSelection(previousState.selection);
+        this._finalizeUndoRedo();
+    }
 
-            const previousState = this.historyManager.undo();
-            if (previousState) {
+    /**
+     * Restore objects from history (deserialize from JSON)
+     * @private
+     * @param {Array} objectsData - Serialized objects data
+     */
+    _restoreObjectsFromHistory(objectsData) {
+        this.level.objects = objectsData.map(objData => {
+            if (objData.type === 'group') {
+                return Group.fromJSON(objData);
+            } else {
+                return GameObject.fromJSON(objData);
+            }
+        });
+    }
 
-                // Properly restore objects from JSON using fromJSON methods to maintain class instances
-                this.level.objects = previousState.objects.map(objData => {
-                    if (objData.type === 'group') {
-                        return Group.fromJSON(objData);
-                    } else {
-                        return GameObject.fromJSON(objData);
-                    }
-                });
+    /**
+     * Rebuild all indices after restore
+     * @private
+     */
+    _rebuildAllIndices() {
+        this.level.buildObjectsIndex();
+        this.level.rebuildLayerCountsCache();
+        
+        if (this.renderOperations) {
+            this.renderOperations.buildSpatialIndex();
+        }
+    }
 
-                // Rebuild object index and caches after restoring objects
-                this.level.buildObjectsIndex();
-                this.level.rebuildLayerCountsCache();
+    /**
+     * Restore group edit mode from saved state
+     * @private
+     * @param {Object|null} savedGroupEditMode - Saved group edit mode state
+     */
+    _restoreGroupEditMode(savedGroupEditMode) {
+        this.updateGroupEditModeAfterRestore(savedGroupEditMode);
+    }
 
-                // Rebuild spatial index for correct group bounds calculation
-                if (this.renderOperations) {
-                    this.renderOperations.buildSpatialIndex();
-                }
-
-        // Update group edit mode to match restored state
-        this.updateGroupEditModeAfterRestore(previousState.groupEditMode);
-
-        // Force recalculation of group bounds for active group if in group edit mode
-        // This ensures the group frame displays correct boundaries immediately
-        const updatedGroupEditMode = this.stateManager.get('groupEditMode');
-        if (updatedGroupEditMode && updatedGroupEditMode.isActive && updatedGroupEditMode.group) {
-            // Force bounds recalculation by calling getObjectWorldBounds
-            const freshBounds = this.objectOperations.getObjectWorldBounds(updatedGroupEditMode.group);
-
-            // Update frozenBounds with fresh bounds to ensure immediate correct display
-            // (since drawGroupEditFrame uses frozenBounds when available)
+    /**
+     * Recalculate group bounds for active group if in group edit mode
+     * @private
+     */
+    _recalculateGroupBounds() {
+        const groupEditMode = this.stateManager.get('groupEditMode');
+        if (groupEditMode && groupEditMode.isActive && groupEditMode.group) {
+            const freshBounds = this.objectOperations.getObjectWorldBounds(groupEditMode.group);
+            
             const updatedState = this.stateManager.get('groupEditMode');
             if (updatedState.frameFrozen === false) {
-                // If not frozen, we can update with fresh bounds for immediate display
                 updatedState.frozenBounds = freshBounds;
                 this.stateManager.set('groupEditMode', updatedState);
             }
         }
+    }
 
-                // Smart cache invalidation for all restored objects
-                const allRestoredObjectIds = new Set(this.level.objects.map(obj => obj.id));
-                this.smartCacheInvalidation({
-                    objectIds: allRestoredObjectIds,
-                    invalidateAll: true, // Since all objects were restored, invalidate everything
-                    reason: 'undo_restore'
-                });
+    /**
+     * Invalidate caches after restore
+     * @private
+     */
+    _invalidateCachesAfterRestore() {
+        const allRestoredObjectIds = new Set(this.level.objects.map(obj => obj.id));
+        this.smartCacheInvalidation({
+            objectIds: allRestoredObjectIds,
+            invalidateAll: true,
+            reason: 'history_restore'
+        });
+        
+        this.objectOperations.computeSelectableSet();
+        this.clearSelectableObjectsCache();
+        this.getSelectableObjectsInViewport();
+    }
 
-                // Force update of selectable set after restore
-                const selectableSetAfterCorrection = this.objectOperations.computeSelectableSet();
-
-                // Clear viewport selectable objects cache to ensure it gets recalculated
-                this.clearSelectableObjectsCache();
-
-                // Force recalculation of viewport selectable set
-                const viewportSelectableAfter = this.getSelectableObjectsInViewport();
-
-            // Filter selection to only include objects that actually exist
-            const validSelection = new Set();
-            const objectIds = new Set(this.level.objects.map(obj => obj.id));
-
-            // Debug groups specifically
-            const groups = this.level.objects.filter(obj => obj.type === 'group');
-
-            // Check if selection contains group IDs
-            const selectionContainsGroups = Array.from(previousState.selection).some(id => {
-                const obj = this.level.findObjectById(id);
-                return obj && obj.type === 'group';
-            });
-
-            // In group edit mode, restore selection as-is from history
-            const currentGroupEditMode = this.stateManager.get('groupEditMode');
-            if (currentGroupEditMode && currentGroupEditMode.isActive && currentGroupEditMode.group) {
-                // In group edit mode, restore selection as-is from history
-                // The history should contain the correct selection for the group edit context
-                previousState.selection.forEach(id => {
-                    if (objectIds.has(id)) {
-                        validSelection.add(id);
-                    }
-                });
-            } else {
-                // Normal mode: include all existing objects from previous selection
-                previousState.selection.forEach(id => {
-                    if (objectIds.has(id)) {
-                        validSelection.add(id);
-                    }
-                });
+    /**
+     * Restore selection from history
+     * @private
+     * @param {Set|Array} selectionData - Selection data from history
+     */
+    _restoreSelection(selectionData) {
+        const validSelection = new Set();
+        const objectIds = new Set(this.level.objects.map(obj => obj.id));
+        
+        // In group edit mode, restore selection as-is from history
+        const currentGroupEditMode = this.stateManager.get('groupEditMode');
+        const isInGroupEditMode = currentGroupEditMode && currentGroupEditMode.isActive && currentGroupEditMode.group;
+        
+        // Filter selection to only include objects that actually exist
+        selectionData.forEach(id => {
+            if (objectIds.has(id)) {
+                validSelection.add(id);
             }
+        });
+        
+        this.stateManager.set('selectedObjects', validSelection);
+    }
 
-            this.stateManager.set('selectedObjects', validSelection);
-
-            // Verify selection was set correctly
-            const currentSelection = this.stateManager.get('selectedObjects');
-
-            this.render();
-            this.updateAllPanels();
-            // Note: Don't call markDirty() after undo - we're restoring previous state
-
-            // Check Player Start count after updateAllPanels
-            const playerStartCountAfter = this.level.objects.filter(obj => obj.type === 'player_start').length;
-
-            // Check selectable set after updateAllPanels
-            const selectableSet = this.objectOperations.computeSelectableSet();
-
-            // Check if our selected objects are in selectable set
-            const finalSelection = this.stateManager.get('selectedObjects');
-            const missingFromSelectable = Array.from(finalSelection).filter(id => !selectableSet.has(id));
-            if (missingFromSelectable.length > 0) {
-                // Debug why they're not selectable
-                missingFromSelectable.forEach(id => {
-                    const obj = this.level.findObjectById(id);
-                    if (obj) {
-                    }
-                });
-            }
-
-        } else {
-        }
+    /**
+     * Finalize undo/redo operation (render, update panels)
+     * @private
+     */
+    _finalizeUndoRedo() {
+        this.render();
+        this.updateAllPanels();
+        // Note: Don't call markDirty() after undo/redo - we're restoring previous state
     }
 
     redo() {
         const nextState = this.historyManager.redo();
-        if (nextState) {
-            // Properly restore objects from JSON using fromJSON methods to maintain class instances
-            this.level.objects = nextState.objects.map(objData => {
-                if (objData.type === 'group') {
-                    return Group.fromJSON(objData);
-                } else {
-                    return GameObject.fromJSON(objData);
-                }
-            });
-
-            // Rebuild object index and caches after restoring objects
-            this.level.buildObjectsIndex();
-            this.level.rebuildLayerCountsCache();
-
-            // Rebuild spatial index for correct group bounds calculation
-            if (this.renderOperations) {
-                this.renderOperations.buildSpatialIndex();
-            }
-
-            // Update group edit mode to match restored state
-            this.updateGroupEditModeAfterRestore(nextState.groupEditMode);
-
-            // Force recalculation of group bounds for active group if in group edit mode
-            // This ensures the group frame displays correct boundaries immediately
-            const updatedGroupEditMode = this.stateManager.get('groupEditMode');
-            if (updatedGroupEditMode && updatedGroupEditMode.isActive && updatedGroupEditMode.group) {
-                // Force bounds recalculation by calling getObjectWorldBounds
-                const freshBounds = this.objectOperations.getObjectWorldBounds(updatedGroupEditMode.group);
-
-                // Update frozenBounds with fresh bounds to ensure immediate correct display
-                // (since drawGroupEditFrame uses frozenBounds when available)
-                const updatedState = this.stateManager.get('groupEditMode');
-                if (updatedState.frameFrozen === false) {
-                    // If not frozen, we can update with fresh bounds for immediate display
-                    updatedState.frozenBounds = freshBounds;
-                    this.stateManager.set('groupEditMode', updatedState);
-                }
-            }
-
-            // Smart cache invalidation for all restored objects
-            const allRestoredObjectIds = new Set(this.level.objects.map(obj => obj.id));
-            this.smartCacheInvalidation({
-                objectIds: allRestoredObjectIds,
-                invalidateAll: true, // Since all objects were restored, invalidate everything
-                reason: 'redo_restore'
-            });
-
-            // Force update of selectable set after restore
-            const selectableSetAfterCorrection = this.objectOperations.computeSelectableSet();
-
-            // Clear viewport selectable objects cache to ensure it gets recalculated
-            this.clearSelectableObjectsCache();
-
-            // Force recalculation of viewport selectable set
-            const viewportSelectableAfter = this.getSelectableObjectsInViewport();
-
-            // Filter selection to only include objects that actually exist
-            const validSelection = new Set();
-            const objectIds = new Set(this.level.objects.map(obj => obj.id));
-
-            // In group edit mode, restore selection as-is from history
-            const currentGroupEditMode = this.stateManager.get('groupEditMode');
-            if (currentGroupEditMode && currentGroupEditMode.isActive && currentGroupEditMode.group) {
-                // In group edit mode, restore selection as-is from history
-                // The history should contain the correct selection for the group edit context
-                nextState.selection.forEach(id => {
-                    if (objectIds.has(id)) {
-                        validSelection.add(id);
-                    }
-                });
-            } else {
-                // Normal mode: include all existing objects from next selection
-                nextState.selection.forEach(id => {
-                    if (objectIds.has(id)) {
-                        validSelection.add(id);
-                    }
-                });
-            }
-
-            this.stateManager.set('selectedObjects', validSelection);
-            this.render();
-            this.updateAllPanels();
-            // Note: Don't call markDirty() after redo - we're restoring next state
-        }
+        if (!nextState) return;
+        
+        this._restoreObjectsFromHistory(nextState.objects);
+        this._rebuildAllIndices();
+        this._restoreGroupEditMode(nextState.groupEditMode);
+        this._recalculateGroupBounds();
+        this._invalidateCachesAfterRestore();
+        this._restoreSelection(nextState.selection);
+        this._finalizeUndoRedo();
     }
 
     /**

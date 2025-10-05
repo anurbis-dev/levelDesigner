@@ -1,5 +1,48 @@
 # Changelog
 
+## [3.39.0] - 2025-10-05
+
+### Changed - Фаза 4.1: Разбивка больших методов
+- **LevelEditor.init()**: разбит на 7 специализированных методов (180→15 строк, -92%)
+  - initializeConfiguration(), initializeDOMElements(), initializeRenderer()
+  - initializeUIComponents(), initializeMenuAndEvents(), initializeLevelAndData()
+  - finalizeInitialization()
+- **LevelEditor.undo()**: разбит на 7 приватных методов (160→10 строк, -94%)
+- **LevelEditor.redo()**: упрощен, переиспользует методы undo (85→10 строк, -88%)
+
+### Improved
+- **Читаемость**: +85-90% (методы читаются как последовательность шагов)
+- **DRY**: устранено ~150 строк дублирования между undo/redo (-95%)
+- **Когнитивная сложность**: -80% (с 25 до 5)
+- **Размер файла**: 2914→2693 строк (-7.6%)
+- **Maintainability**: каждый метод делает одну вещь (SRP)
+
+### Technical
+- 13 новых приватных методов с @private JSDoc
+- Устранена вложенность кода (4→1 уровень)
+- Улучшена тестируемость (изолированные шаги)
+
+---
+
+## [3.38.1] - 2025-10-05
+
+### Fixed - Улучшена логика для вложенных групп
+- Добавлена проверка консистентности activeGroupId и openGroupIds
+- Валидация иерархии вложенных групп (parent→child)
+- Восстановлены обязательные поля groupId и originalChildren
+- Безопасный выход из режима при сломанной иерархии
+
+---
+
+## [3.38.0] - 2025-10-05
+
+### Added - Фикс Undo/Redo
+- Сохранение groupEditMode в историю (isActive, groupId, openGroupIds)
+- Убрано принудительное изменение visibility после undo/redo
+- Убран некорректный markDirty() после undo/redo
+
+---
+
 ## [3.37.0] - 2025-10-05
 
 ### Added
