@@ -3,6 +3,7 @@ import { HistoryManager } from '../managers/HistoryManager.js';
 import { AssetManager } from '../managers/AssetManager.js';
 import { FileManager } from '../managers/FileManager.js';
 import { ConfigManager } from '../managers/ConfigManager.js';
+import { CacheManager } from '../managers/CacheManager.js';
 import { CanvasRenderer } from '../ui/CanvasRenderer.js';
 import { AssetPanel } from '../ui/AssetPanel.js';
 import { DetailsPanel } from '../ui/DetailsPanel.js';
@@ -46,7 +47,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.41.0';
+    static VERSION = '3.42.0';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -93,6 +94,10 @@ export class LevelEditor {
         // Initialize ContextMenuManager
         this.contextMenuManager = new ContextMenuManager();
 
+        // Initialize CacheManager
+        this.cacheManager = new CacheManager(this);
+        this.lifecycle.register('cacheManager', this.cacheManager, { priority: 5 });
+
         // Initialize operation modules
         this.eventHandlers = new EventHandlers(this);
         this.mouseHandlers = new MouseHandlers(this);
@@ -107,189 +112,44 @@ export class LevelEditor {
         this.lifecycle.register('eventHandlers', this.eventHandlers, { priority: 10 });
         this.lifecycle.register('historyOperations', this.historyOperations, { priority: 9 });
         this.lifecycle.register('layerOperations', this.layerOperations, { priority: 8 });
-
-        // Performance optimization caches
-        this.objectCache = new Map(); // Cache for object lookups: objId -> object
-        this.topLevelObjectCache = new Map(); // Cache for top-level object lookups: objId -> topLevelObject
-        this.effectiveLayerCache = new Map(); // Cache for effective layer IDs: objId -> effectiveLayerId
-        this.selectableObjectsCache = new Map(); // Cache for selectable objects in viewport: cameraKey -> Set<objectIds>
-        this.selectableObjectsCacheTimestamp = 0;
-        this.cacheInvalidationTimeout = null;
         
         // Store reference to duplicate render utils
         this.duplicateRenderUtils = duplicateRenderUtils;
     }
 
     /**
-     * Cache management methods for performance optimization
-     */
-
-    /**
-     * Get object from cache or find it in level
-     * @param {string} objId - Object ID to find
-     * @returns {Object|null} Found object or null
+     * Cache management methods (delegated to CacheManager)
      */
     getCachedObject(objId) {
-        if (this.objectCache.has(objId)) {
-            return this.objectCache.get(objId);
-        }
-
-        // Сначала пытаемся найти через индекс уровня - O(1)
-        const obj = this.level.findObjectByIdFast(objId);
-        if (obj) {
-            this.objectCache.set(objId, obj);
-            return obj;
-        }
-
-        // Fallback на старый метод поиска - O(N×D)
-        const fallbackObj = this.findObjectById(objId);
-        if (fallbackObj) {
-            this.objectCache.set(objId, fallbackObj);
-        }
-        return fallbackObj;
+        return this.cacheManager.getCachedObject(objId);
     }
 
-    /**
-     * Get top-level object from cache or find it
-     * @param {string} objId - Object ID to find
-     * @returns {Object|null} Top-level object or null
-     */
     getCachedTopLevelObject(objId) {
-        if (this.topLevelObjectCache.has(objId)) {
-            return this.topLevelObjectCache.get(objId);
-        }
-
-        const topLevelObj = this.findTopLevelObject(objId);
-        if (topLevelObj) {
-            this.topLevelObjectCache.set(objId, topLevelObj);
-        }
-        return topLevelObj;
+        return this.cacheManager.getCachedTopLevelObject(objId);
     }
 
-    /**
-     * Get effective layer ID from cache or calculate it
-     * @param {Object} obj - Object to get effective layer for
-     * @returns {string} Effective layer ID
-     */
     getCachedEffectiveLayerId(obj) {
-        if (this.effectiveLayerCache.has(obj.id)) {
-            return this.effectiveLayerCache.get(obj.id);
-        }
-
-        const effectiveLayerId = this.renderOperations ?
-            this.renderOperations.getEffectiveLayerId(obj) :
-            (obj.layerId || this.level.getMainLayerId());
-
-        this.effectiveLayerCache.set(obj.id, effectiveLayerId);
-        return effectiveLayerId;
+        return this.cacheManager.getCachedEffectiveLayerId(obj);
     }
 
-    /**
-     * Clear all caches (call when level changes or objects are modified)
-     */
     clearCaches() {
-        this.objectCache.clear();
-        this.topLevelObjectCache.clear();
-        this.effectiveLayerCache.clear();
-        this.clearSelectableObjectsCache();
+        this.cacheManager.clearCaches();
     }
 
-    /**
-     * Invalidate specific object caches (call when object is modified)
-     * @param {string} objId - Object ID to invalidate
-     */
     invalidateObjectCaches(objId) {
-        this.objectCache.delete(objId);
-        this.topLevelObjectCache.delete(objId);
-        this.effectiveLayerCache.delete(objId);
+        this.cacheManager.invalidateObjectCaches(objId);
+    }
+
+    clearSelectableObjectsCache() {
+        this.cacheManager.clearSelectableObjectsCache();
     }
 
     /**
-     * Get selectable objects within viewport (with frustum culling)
+     * Get selectable objects within viewport (delegated to CacheManager)
      * @returns {Set<string>} Set of selectable object IDs in viewport
      */
     getSelectableObjectsInViewport() {
-        const camera = this.stateManager.get('camera');
-        const cameraKey = `${camera.x.toFixed(1)},${camera.y.toFixed(1)},${camera.zoom.toFixed(2)}`;
-
-        // Check cache first
-        const currentTime = performance.now();
-        if (this.selectableObjectsCache.has(cameraKey) &&
-            currentTime - this.selectableObjectsCacheTimestamp < 200) { // 200ms cache timeout
-            return this.selectableObjectsCache.get(cameraKey);
-        }
-
-        // Calculate viewport bounds
-        const canvas = this.canvasRenderer.canvas;
-        const viewportLeft = camera.x;
-        const viewportTop = camera.y;
-        const viewportRight = camera.x + canvas.width / camera.zoom;
-        const viewportBottom = camera.y + canvas.height / camera.zoom;
-
-        // Debug viewport bounds only during undo operations
-        if (this.historyManager && (this.historyManager.isUndoing || this.historyManager.isRedoing)) {
-        }
-
-        // Add padding for better UX (objects near edge should still be selectable)
-        const padding = 50;
-        const extendedLeft = viewportLeft - padding;
-        const extendedTop = viewportTop - padding;
-        const extendedRight = viewportRight + padding;
-        const extendedBottom = viewportBottom + padding;
-
-        // Get visible layer IDs
-        const visibleLayerIds = this.renderOperations.getVisibleLayerIds();
-
-        // Get all selectable objects from computeSelectableSet
-        const selectableSet = this.objectOperations.computeSelectableSet();
-
-        // Filter by viewport and visibility
-        const selectableInViewport = new Set();
-
-        // Debug only during undo operations
-        const isDebugMode = this.historyManager && (this.historyManager.isUndoing || this.historyManager.isRedoing);
-        if (isDebugMode) {
-        }
-
-        selectableSet.forEach(objId => {
-            const obj = this.getCachedObject(objId);
-            if (!obj) {
-                return;
-            }
-
-            // In group edit mode, include ALL selectable objects (no viewport filtering)
-            // This ensures nested objects in groups can be selected even if outside viewport
-            if (this.objectOperations.isInGroupEditMode()) {
-                selectableInViewport.add(objId);
-            } else {
-                // Normal mode - check if object is in viewport
-                const isVisible = this.renderOperations.isObjectVisible(obj, extendedLeft, extendedTop, extendedRight, extendedBottom);
-                if (isVisible) {
-                    selectableInViewport.add(objId);
-                }
-            }
-        });
-
-
-        // Cache the result
-        this.selectableObjectsCache.set(cameraKey, selectableInViewport);
-        this.selectableObjectsCacheTimestamp = currentTime;
-
-        // Clean old cache entries
-        if (this.selectableObjectsCache.size > 5) {
-            const oldestKey = this.selectableObjectsCache.keys().next().value;
-            this.selectableObjectsCache.delete(oldestKey);
-        }
-
-        return selectableInViewport;
-    }
-
-    /**
-     * Clear selectable objects cache
-     */
-    clearSelectableObjectsCache() {
-        this.selectableObjectsCache.clear();
-        this.selectableObjectsCacheTimestamp = 0;
+        return this.cacheManager.getSelectableObjectsInViewport();
     }
 
     /**
@@ -433,167 +293,26 @@ export class LevelEditor {
      * Schedule cache invalidation (debounced for performance)
      */
     /**
-     * Умная инвалидация кешей - инвалидирует только необходимые кеши
-     * @param {Object} invalidationSpec - спецификация того, что нужно инвалидировать
+     * Cache invalidation methods (delegated to CacheManager)
      */
     smartCacheInvalidation(invalidationSpec = {}) {
-        const {
-            objectIds = new Set(), // ID объектов, которые изменились
-            layerIds = new Set(), // ID слоев, которые изменились
-            invalidateAll = false, // Полная инвалидация
-            reason = 'unknown' // Причина инвалидации для отладки
-        } = invalidationSpec;
-
-        if (invalidateAll) {
-            // Полная инвалидация (fallback для сложных случаев)
-            this.scheduleCacheInvalidation();
-            return;
-        }
-
-        // Умная инвалидация только измененных объектов
-        objectIds.forEach(objId => {
-            this.invalidateObjectCaches(objId);
-        });
-
-        // Инвалидация кешей слоев
-        layerIds.forEach(layerId => {
-            // Вместо полной очистки счетчиков слоев, помечаем их как грязные
-            this.markLayerCountCacheDirty(layerId);
-        });
-
-        // Инвалидация кеша выбираемых объектов (только если изменились объекты)
-        if (objectIds.size > 0) {
-            this.invalidateSelectableObjectsCacheForObjects(objectIds);
-        }
-
-        // Cache invalidation logged at info level
+        this.cacheManager.smartCacheInvalidation(invalidationSpec);
     }
 
-    /**
-     * Помечает кеш счетчика слоя как грязный (нуждается в пересчете)
-     * @param {string} layerId - ID слоя
-     */
-    markLayerCountCacheDirty(layerId) {
-        // Добавляем слой в список грязных для отложенного пересчета
-        if (!this.dirtyLayerCounts) {
-            this.dirtyLayerCounts = new Set();
-        }
-        this.dirtyLayerCounts.add(layerId);
-    }
-
-    /**
-     * Инвалидирует кеш выбираемых объектов только для указанных объектов
-     * @param {Set} objectIds - ID объектов, которые изменились
-     */
-    invalidateSelectableObjectsCacheForObjects(objectIds) {
-        // Вместо полной очистки, удаляем только записи для измененных объектов
-        if (this.selectableObjectsCache) {
-            // Находим и удаляем кешированные записи, содержащие измененные объекты
-            for (const [cacheKey, cachedSet] of this.selectableObjectsCache) {
-                let hasChangedObjects = false;
-                for (const objId of objectIds) {
-                    if (cachedSet.has(objId)) {
-                        hasChangedObjects = true;
-                        break;
-                    }
-                }
-                if (hasChangedObjects) {
-                    this.selectableObjectsCache.delete(cacheKey);
-                }
-            }
-        }
-    }
-
-    /**
-     * Пересчитывает грязные счетчики слоев (отложенная операция)
-     */
-    recalculateDirtyLayerCounts() {
-        if (!this.dirtyLayerCounts || this.dirtyLayerCounts.size === 0) {
-            return;
-        }
-
-        // Пересчитываем только грязные счетчики
-        for (const layerId of this.dirtyLayerCounts) {
-            // Удаляем старый кеш для этого слоя
-            this.level.layerCountsCache.delete(layerId);
-
-            // При следующем обращении будет пересчитан автоматически
-            // this.level.getLayerObjectsCount(layerId) - пересчитает и закэширует
-        }
-
-        this.dirtyLayerCounts.clear();
-    }
-
-    /**
-     * Умная инвалидация после изменения слоев объектов
-     * @param {Set} changedObjectIds - ID объектов, слои которых изменились
-     * @param {Set} affectedLayers - ID слоев, которые были затронуты
-     */
     invalidateAfterLayerChanges(changedObjectIds, affectedLayers) {
-        this.smartCacheInvalidation({
-            objectIds: changedObjectIds,
-            layerIds: affectedLayers,
-            reason: 'layer_changes'
-        });
-
-        // Отложенный пересчет счетчиков слоев
-        setTimeout(() => {
-            this.recalculateDirtyLayerCounts();
-        }, 0);
+        this.cacheManager.invalidateAfterLayerChanges(changedObjectIds, affectedLayers);
     }
 
-    /**
-     * Умная инвалидация после групповых операций
-     * @param {Set} affectedObjectIds - ID объектов, которые были затронуты
-     */
     invalidateAfterGroupOperations(affectedObjectIds) {
-        this.smartCacheInvalidation({
-            objectIds: affectedObjectIds,
-            invalidateAll: false, // Не нужна полная инвалидация для групповых операций
-            reason: 'group_operations'
-        });
+        this.cacheManager.invalidateAfterGroupOperations(affectedObjectIds);
     }
 
-    /**
-     * Умная инвалидация после операций дублирования
-     * @param {Set} newObjectIds - ID новых объектов
-     */
     invalidateAfterDuplicateOperations(newObjectIds) {
-        this.smartCacheInvalidation({
-            objectIds: newObjectIds,
-            reason: 'duplicate_operations'
-        });
-
-        // Для новых объектов нужно обновить индекс
-        setTimeout(() => {
-            this.level.buildObjectsIndex();
-        }, 0);
+        this.cacheManager.invalidateAfterDuplicateOperations(newObjectIds);
     }
 
-    /**
-     * Устаревший метод полной инвалидации (сохраняется для совместимости)
-     */
     scheduleCacheInvalidation() {
-        if (this.cacheInvalidationTimeout) {
-            clearTimeout(this.cacheInvalidationTimeout);
-        }
-
-        this.cacheInvalidationTimeout = setTimeout(() => {
-            this.clearCaches();
-            this.clearSelectableObjectsCache();
-            this.level.clearLayerCountsCache();
-            this.level.clearObjectsIndex();
-
-            // Перестраиваем индекс после очистки
-            setTimeout(() => {
-                this.level.buildObjectsIndex();
-                // Также перестраиваем пространственный индекс для рендеринга
-                if (this.renderOperations) {
-                    this.renderOperations.buildSpatialIndex();
-                }
-            }, 0);
-            this.cacheInvalidationTimeout = null;
-        }, 100); // Debounce cache invalidation by 100ms
+        this.cacheManager.scheduleCacheInvalidation();
     }
 
     /**

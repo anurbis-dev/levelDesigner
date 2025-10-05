@@ -1,5 +1,27 @@
 # Changelog
 
+## [3.42.0] - 2025-10-05
+
+### Added - Фаза 4.4: CacheManager
+- **CacheManager**: новый менеджер для централизации логики кэширования (269 строк)
+  - getCachedObject(), getCachedTopLevelObject(), getCachedEffectiveLayerId()
+  - getSelectableObjectsInViewport(), smartCacheInvalidation()
+  - invalidateAfterLayerChanges/GroupOperations/DuplicateOperations()
+  - scheduleCacheInvalidation() с debouncing
+
+### Changed
+- **LevelEditor**: методы кэширования делегируют к CacheManager
+- **Размер LevelEditor.js**: 2057→1811 строк (-246 строк, -12%)
+- **Logger**: добавлена категория CACHE для логирования кэширования
+
+### Improved
+- **Separation of Concerns**: кэширование в отдельном менеджере
+- **Модульность**: +15% (кэширование может переиспользоваться)
+- **Maintainability**: изменения локализованы в одном месте
+- **Сохранены оптимизации**: smart invalidation, debouncing, TTL cache
+
+---
+
 ## [3.41.0] - 2025-10-05
 
 ### Added - Фаза 4.3: Модуль LayerOperations

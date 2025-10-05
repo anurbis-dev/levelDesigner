@@ -1,10 +1,66 @@
-# API Reference - 2D Level Editor v3.41.0
+# API Reference - 2D Level Editor v3.42.0
 
 ## Обзор
 
 Данный документ содержит подробное описание API всех компонентов редактора уровней.
 
 > 🔍 **Быстрый справочник:** См. [COMPREHENSIVE_API_REFERENCE.md](./COMPREHENSIVE_API_REFERENCE.md) для полного списка всех методов и функций в структурированном виде.
+
+## Обновления v3.42.0 - Фаза 4.4
+
+### CacheManager - Менеджер кэширования
+**Файл**: `src/managers/CacheManager.js`
+
+```javascript
+import { CacheManager } from './managers/CacheManager.js';
+
+// Создание (обычно в LevelEditor)
+this.cacheManager = new CacheManager(this);
+this.lifecycle.register('cacheManager', this.cacheManager, { priority: 5 });
+
+// API кэширования объектов
+cacheManager.getCachedObject(objId)             // O(1) поиск объекта
+cacheManager.getCachedTopLevelObject(objId)     // O(1) top-level объект
+cacheManager.getCachedEffectiveLayerId(obj)     // O(1) layerId с наследованием
+cacheManager.getSelectableObjectsInViewport()   // Кэш с TTL 200ms
+
+// Управление кэшами
+cacheManager.clearCaches()                      // Очистить все
+cacheManager.invalidateObjectCaches(objId)      // Инвалидация объекта
+cacheManager.clearSelectableObjectsCache()      // Очистить viewport кэш
+
+// Умная инвалидация
+cacheManager.smartCacheInvalidation({           // Избирательная инвалидация
+    objectIds: new Set([...]),
+    layerIds: new Set([...]),
+    invalidateAll: false,
+    reason: 'reason'
+})
+cacheManager.invalidateAfterLayerChanges(objIds, layerIds)
+cacheManager.invalidateAfterGroupOperations(objIds)
+cacheManager.invalidateAfterDuplicateOperations(objIds)
+cacheManager.scheduleCacheInvalidation()        // Debounced полная (100ms)
+```
+
+**Интеграция в LevelEditor**:
+```javascript
+// Простое делегирование
+getCachedObject(objId) {
+    return this.cacheManager.getCachedObject(objId);
+}
+
+smartCacheInvalidation(spec) {
+    this.cacheManager.smartCacheInvalidation(spec);
+}
+```
+
+**Преимущества**:
+- Separation of Concerns (кэширование изолировано)
+- O(1) операции для производительности
+- Smart invalidation вместо полной очистки
+- LevelEditor.js: 2057→1811 строк (-12%)
+
+---
 
 ## Обновления v3.41.0 - Фаза 4.3
 

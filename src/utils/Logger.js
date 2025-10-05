@@ -433,4 +433,14 @@ export class Logger {
         warn: (message, ...args) => Logger.log('ERROR_HANDLER', 'warn', message, ...args),
         error: (message, ...args) => Logger.log('ERROR_HANDLER', 'error', message, ...args)
     };
+
+    /**
+     * Cache logging
+     */
+    static cache = {
+        info: (message, ...args) => Logger.log('CACHE', 'info', message, ...args),
+        debug: (message, ...args) => Logger.log('CACHE', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('CACHE', 'warn', message, ...args),
+        error: (message, ...args) => Logger.log('CACHE', 'error', message, ...args)
+    };
 }
