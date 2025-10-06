@@ -216,6 +216,22 @@ export class AssetManager {
     }
 
     /**
+     * Sync image to CanvasRenderer cache
+     * @param {string} src - Image source
+     * @param {HTMLImageElement} img - Image element
+     */
+    syncImageToCanvasRenderer(src, img) {
+        // Try to find CanvasRenderer through StateManager
+        if (this.stateManager && this.stateManager.get('canvasRenderer')) {
+            const canvasRenderer = this.stateManager.get('canvasRenderer');
+            if (canvasRenderer && canvasRenderer.cacheImage) {
+                canvasRenderer.cacheImage(src, img);
+                Logger.asset.debug(`✅ AssetManager: Image synced to CanvasRenderer for ${src}`);
+            }
+        }
+    }
+
+    /**
      * Export asset library to JSON
      */
     exportToJSON() {
@@ -263,15 +279,42 @@ export class AssetManager {
      * @returns {Asset} Created asset instance
      */
     addExternalAsset(assetData) {
+        Logger.asset.info(`💾 AssetManager.addExternalAsset CALLED with:`, {
+            id: assetData.id,
+            name: assetData.name,
+            category: assetData.category,
+            path: assetData.path,
+            type: assetData.type,
+            hasImgSrc: !!assetData.imgSrc,
+            imgSrcLength: assetData.imgSrc ? assetData.imgSrc.length : 0,
+            imgSrcStart: assetData.imgSrc ? assetData.imgSrc.substring(0, 50) + '...' : 'null'
+        });
+        
         const asset = new Asset(assetData);
         this.assets.set(asset.id, asset);
         this.categories.add(asset.category);
-        
+
+        // Load image into cache if imgSrc is available
+        if (asset.imgSrc && asset.imgSrc.trim() !== '') {
+            this.loadImage(asset.imgSrc).then((img) => {
+                Logger.asset.debug(`✅ AssetManager: Image cached for ${asset.name}`);
+                // Also cache in CanvasRenderer if available
+                this.syncImageToCanvasRenderer(asset.imgSrc, img);
+            }).catch(error => {
+                Logger.asset.warn(`⚠️ AssetManager: Failed to cache image for ${asset.name}:`, error);
+            });
+        }
+
+        Logger.asset.info(`✅ AssetManager: Stored asset ${asset.name} with path: ${asset.path} | Total assets: ${this.assets.size}`);
+
         // Update StateManager if available
         if (this.stateManager) {
             this.updateStateManagerCategories();
+            // Notify about asset changes
+            this.stateManager.set('assetsChanged', Date.now());
+            Logger.asset.debug('AssetManager: StateManager notified of asset changes');
         }
-        
+
         return asset;
     }
 
@@ -311,6 +354,43 @@ export class AssetManager {
      */
     getCategories() {
         return Array.from(this.categories);
+    }
+
+    /**
+     * Update an existing asset
+     * @param {string} assetId - Asset ID
+     * @param {Object} updatedData - Updated asset data
+     */
+    updateAsset(assetId, updatedData) {
+        const asset = this.assets.get(assetId);
+        if (!asset) {
+            Logger.asset.warn(`Asset not found for update: ${assetId}`);
+            return false;
+        }
+
+        // Update asset properties
+        Object.assign(asset, updatedData);
+        
+        // Update categories if category changed
+        if (updatedData.category && updatedData.category !== asset.category) {
+            this.categories.add(updatedData.category);
+            this.updateStateManagerCategories();
+        }
+
+        // Mark asset as modified
+        if (asset.properties) {
+            asset.properties.lastModified = Date.now();
+            asset.properties.hasUnsavedChanges = true;
+        }
+
+        Logger.asset.info(`Updated asset: ${asset.name}`);
+        
+        // Notify UI components
+        if (this.stateManager) {
+            this.stateManager.notify('assetsChanged');
+        }
+        
+        return true;
     }
 
     /**

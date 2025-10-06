@@ -35,6 +35,8 @@ export class UserPreferencesManager {
             'fontSize': 'ui.fontSize',
             'fontScale': 'ui.fontScale',
             'compactMode': 'ui.compactMode',
+            'foldersPosition': 'ui.foldersPosition',
+            'foldersWidth': 'ui.foldersWidth',
 
             // Canvas/Grid preferences
             'canvasBackgroundColor': 'canvas.backgroundColor',

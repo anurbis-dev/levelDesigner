@@ -225,23 +225,42 @@ export class ActorPropertiesWindow extends SettingsPanel {
         const color = document.getElementById('actor-color')?.value || '#3B82F6';
         const category = document.getElementById('actor-category')?.value || '';
 
-        // Update actor properties
-        this.currentActor.name = name;
-        this.currentActor.x = x;
-        this.currentActor.y = y;
-        this.currentActor.width = width;
-        this.currentActor.height = height;
-        this.currentActor.color = color;
-        this.currentActor.category = category;
+        // Create updated data object
+        const updatedData = {
+            name: name,
+            x: x,
+            y: y,
+            width: width,
+            height: height,
+            color: color,
+            category: category
+        };
 
         // Update in asset manager if it's an asset
         if (this.levelEditor && this.levelEditor.assetManager) {
-            this.levelEditor.assetManager.updateAsset(this.currentActor.id, this.currentActor);
+            const success = this.levelEditor.assetManager.updateAsset(this.currentActor.id, updatedData);
+            if (!success) {
+                Logger.ui.error('Failed to update asset in AssetManager');
+                return;
+            }
+        } else {
+            // Fallback: update directly
+            Object.assign(this.currentActor, updatedData);
         }
 
         // Mark state as dirty for re-render
         if (this.stateManager && this.stateManager.markDirty) {
             this.stateManager.markDirty();
+        }
+
+        // Trigger UI refresh
+        if (this.levelEditor && this.levelEditor.render) {
+            this.levelEditor.render();
+        }
+
+        // Update asset panel if available
+        if (this.levelEditor && this.levelEditor.assetPanel && this.levelEditor.assetPanel.render) {
+            this.levelEditor.assetPanel.render();
         }
 
         Logger.ui.info(`Applied changes to actor: ${this.currentActor.name}`);

@@ -49,7 +49,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.44.0';
+    static VERSION = '3.45.0';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -410,6 +410,9 @@ export class LevelEditor {
         this.canvasRenderer = new CanvasRenderer(canvas);
         this.canvasRenderer.resizeCanvas();
         this.lifecycle.register('canvasRenderer', this.canvasRenderer, { priority: 1 });
+        
+        // Register CanvasRenderer in StateManager for AssetManager sync
+        this.stateManager.set('canvasRenderer', this.canvasRenderer);
 
         // Initialize canvas context menu
         this.canvasContextMenu = new CanvasContextMenu(canvas, this, {

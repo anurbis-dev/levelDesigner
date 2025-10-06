@@ -1,525 +1,183 @@
 /**
- * Folder Picker Dialog
- * Custom dialog for selecting folders, styled to match the editor
+ * FolderPickerDialog - Dialog for selecting folders and importing assets
+ * Handles both File System Access API and fallback methods
  */
+
+import { Logger } from '../utils/Logger.js';
+
 export class FolderPickerDialog {
     constructor() {
-        this.overlay = null;
-        this.dialog = null;
-        this.selectedPath = null;
-        this.selectedFiles = null;
-        this.selectedDirectoryHandle = null;
-        this.resolve = null;
-        this.reject = null;
+        this.selectedFiles = [];
+        this.folderName = '';
+        this.isOpen = false;
     }
 
     /**
-     * Show folder picker dialog
-     * @returns {Promise<string|null>} Selected folder name or null
+     * Show the folder picker dialog
+     * @returns {Promise<Object|null>} Selected folder data or null if cancelled
      */
     async show() {
-        return new Promise((resolve, reject) => {
-            this.resolve = resolve;
-            this.reject = reject;
-            this.createDialog();
-            this.showDialog();
-        });
+        Logger.ui.info('📁 Opening folder picker dialog');
+        
+        try {
+            // Try File System Access API first
+            if ('showDirectoryPicker' in window) {
+                return await this.showDirectoryPicker();
+            } else {
+                // Fallback to input element
+                return await this.showInputDialog();
+            }
+        } catch (error) {
+            Logger.ui.error('Folder picker failed:', error);
+            return null;
+        }
     }
 
     /**
-     * Create the dialog HTML structure
+     * Show directory picker using File System Access API
+     * @returns {Promise<Object|null>} Selected folder data
      */
-    createDialog() {
-        // Create overlay
-        this.overlay = document.createElement('div');
-        this.overlay.id = 'folder-picker-overlay';
-        this.overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 10000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-        `;
-
-        // Create dialog container
-        this.dialog = document.createElement('div');
-        this.dialog.id = 'folder-picker-dialog';
-        this.dialog.style.cssText = `
-            background-color: #1f2937;
-            border: 1px solid #374151;
-            border-radius: 8px;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-            min-width: 500px;
-            max-width: 600px;
-            max-height: 80vh;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        `;
-
-        // Create header
-        const header = document.createElement('div');
-        header.style.cssText = `
-            background-color: #111827;
-            border-bottom: 1px solid #374151;
-            padding: 1rem 1.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        `;
-
-        const title = document.createElement('h2');
-        title.textContent = 'Select Assets Folder';
-        title.style.cssText = `
-            color: #f9fafb;
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin: 0;
-        `;
-
-        const closeBtn = document.createElement('button');
-        closeBtn.innerHTML = '×';
-        closeBtn.style.cssText = `
-            background: none;
-            border: none;
-            color: #9ca3af;
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 0;
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 4px;
-        `;
-        closeBtn.addEventListener('mouseenter', () => {
-            closeBtn.style.color = '#f9fafb';
-            closeBtn.style.backgroundColor = '#374151';
-        });
-        closeBtn.addEventListener('mouseleave', () => {
-            closeBtn.style.color = '#9ca3af';
-            closeBtn.style.backgroundColor = 'transparent';
-        });
-        closeBtn.addEventListener('click', () => this.cancel());
-
-        header.appendChild(title);
-        header.appendChild(closeBtn);
-
-        // Create content
-        const content = document.createElement('div');
-        content.style.cssText = `
-            padding: 1.5rem;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        `;
-
-        // Description
-        const description = document.createElement('div');
-        description.innerHTML = `
-            <p style="color: #d1d5db; font-size: 0.875rem; line-height: 1.5; margin: 0 0 0.5rem 0;">
-                Choose a folder containing your game assets. The folder should contain subfolders for different asset categories (e.g., backgrounds, characters, items).
-            </p>
-            <p style="color: #9ca3af; font-size: 0.75rem; line-height: 1.4; margin: 0;">
-                <strong>Browse...</strong> - Select folder (Chrome/Edge only)<br>
-                <strong>Drag & Drop</strong> - Drag folder directly into the area below (all browsers)<br>
-                <em>Note: Only folder name and file count will be displayed for security reasons.</em>
-            </p>
-        `;
-
-        // Path input group
-        const pathGroup = document.createElement('div');
-        pathGroup.style.cssText = `
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        `;
-
-        const pathLabel = document.createElement('label');
-        pathLabel.textContent = 'Folder Path:';
-        pathLabel.style.cssText = `
-            color: #f9fafb;
-            font-size: 0.875rem;
-            font-weight: 500;
-        `;
-
-        const pathInputGroup = document.createElement('div');
-        pathInputGroup.style.cssText = `
-            display: flex;
-            gap: 0.5rem;
-        `;
-
-        const pathInput = document.createElement('input');
-        pathInput.type = 'text';
-        pathInput.placeholder = 'Selected folder name will appear here';
-        pathInput.id = 'folder-path-input';
-        pathInput.style.cssText = `
-            flex: 1;
-            background-color: #374151;
-            border: 1px solid #4b5563;
-            border-radius: 4px;
-            color: #f9fafb;
-            padding: 0.5rem 0.75rem;
-            font-size: 0.875rem;
-            font-family: monospace;
-        `;
-        pathInput.addEventListener('focus', () => {
-            pathInput.style.borderColor = '#3b82f6';
-            pathInput.style.outline = 'none';
-        });
-        pathInput.addEventListener('blur', () => {
-            pathInput.style.borderColor = '#4b5563';
-        });
-
-        const browseBtn = document.createElement('button');
-        browseBtn.textContent = 'Browse...';
-        browseBtn.style.cssText = `
-            background-color: #3b82f6;
-            border: 1px solid #3b82f6;
-            border-radius: 4px;
-            color: #ffffff;
-            padding: 0.5rem 1rem;
-            font-size: 0.875rem;
-            cursor: pointer;
-            white-space: nowrap;
-        `;
-        browseBtn.addEventListener('mouseenter', () => {
-            browseBtn.style.backgroundColor = '#2563eb';
-            browseBtn.style.borderColor = '#2563eb';
-        });
-        browseBtn.addEventListener('mouseleave', () => {
-            browseBtn.style.backgroundColor = '#3b82f6';
-            browseBtn.style.borderColor = '#3b82f6';
-        });
-        browseBtn.addEventListener('click', () => this.browseFolder(pathInput));
-
-        pathInputGroup.appendChild(pathInput);
-        pathInputGroup.appendChild(browseBtn);
-
-        pathGroup.appendChild(pathLabel);
-        pathGroup.appendChild(pathInputGroup);
-
-        // Note: No hidden input needed as we use File System Access API and Drag & Drop
-
-        // Drag & Drop area
-        const dropArea = document.createElement('div');
-        dropArea.id = 'folder-drop-area';
-        dropArea.style.cssText = `
-            border: 2px dashed #4b5563;
-            border-radius: 8px;
-            padding: 2rem;
-            text-align: center;
-            background-color: #111827;
-            transition: all 0.2s ease;
-            cursor: pointer;
-        `;
-        dropArea.innerHTML = `
-            <div style="color: #9ca3af; font-size: 0.875rem; margin-bottom: 0.5rem;">
-                📁 Drag & Drop folder here
-            </div>
-            <div style="color: #6b7280; font-size: 0.75rem;">
-                or click Browse... button above (Chrome/Edge only)
-            </div>
-        `;
-
-        // Drag & Drop event handlers
-        dropArea.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            dropArea.style.borderColor = '#3b82f6';
-            dropArea.style.backgroundColor = '#1e3a8a';
-        });
-
-        dropArea.addEventListener('dragleave', (e) => {
-            e.preventDefault();
-            dropArea.style.borderColor = '#4b5563';
-            dropArea.style.backgroundColor = '#111827';
-        });
-
-        dropArea.addEventListener('drop', (e) => {
-            e.preventDefault();
-            dropArea.style.borderColor = '#4b5563';
-            dropArea.style.backgroundColor = '#111827';
+    async showDirectoryPicker() {
+        try {
+            const directoryHandle = await window.showDirectoryPicker({
+                mode: 'read',
+                startIn: 'documents'
+            });
             
-            const items = e.dataTransfer.items;
-            if (items && items.length > 0) {
-                this.handleDragDrop(items, pathInput);
+            Logger.ui.info('📁 Directory selected via File System Access API');
+            
+            // Get files from directory
+            const files = await this.getFilesFromDirectory(directoryHandle);
+            
+            if (files.length === 0) {
+                Logger.ui.warn('⚠️ No files found in selected directory');
+                return null;
             }
-        });
-
-        dropArea.addEventListener('click', () => {
-            this.browseFolder(pathInput);
-        });
-
-        // Summary area
-        const summaryArea = document.createElement('div');
-        summaryArea.id = 'folder-summary-area';
-        summaryArea.style.cssText = `
-            background-color: #111827;
-            border: 1px solid #374151;
-            border-radius: 4px;
-            padding: 1rem;
-            margin-top: 1rem;
-            display: none;
-        `;
-        summaryArea.innerHTML = `
-            <div style="color: #f9fafb; font-size: 0.875rem; font-weight: 600; margin-bottom: 0.5rem;">
-                Import Summary
-            </div>
-            <div id="summary-content" style="color: #d1d5db; font-size: 0.75rem;">
-                No files selected
-            </div>
-        `;
-
-        content.appendChild(description);
-        content.appendChild(pathGroup);
-        content.appendChild(dropArea);
-        content.appendChild(summaryArea);
-
-        // Create footer
-        const footer = document.createElement('div');
-        footer.style.cssText = `
-            background-color: #111827;
-            border-top: 1px solid #374151;
-            padding: 1rem 1.5rem;
-            display: flex;
-            justify-content: flex-end;
-            gap: 0.5rem;
-        `;
-
-        const cancelBtn = document.createElement('button');
-        cancelBtn.textContent = 'Cancel';
-        cancelBtn.style.cssText = `
-            background-color: #374151;
-            border: 1px solid #4b5563;
-            border-radius: 4px;
-            color: #f9fafb;
-            padding: 0.5rem 1rem;
-            font-size: 0.875rem;
-            cursor: pointer;
-        `;
-        cancelBtn.addEventListener('mouseenter', () => {
-            cancelBtn.style.backgroundColor = '#4b5563';
-        });
-        cancelBtn.addEventListener('mouseleave', () => {
-            cancelBtn.style.backgroundColor = '#374151';
-        });
-        cancelBtn.addEventListener('click', () => this.cancel());
-
-        const okBtn = document.createElement('button');
-        okBtn.textContent = 'Import Assets';
-        okBtn.id = 'import-assets-btn';
-        okBtn.style.cssText = `
-            background-color: #3b82f6;
-            border: 1px solid #3b82f6;
-            border-radius: 4px;
-            color: #ffffff;
-            padding: 0.5rem 1rem;
-            font-size: 0.875rem;
-            cursor: pointer;
-        `;
-        okBtn.addEventListener('mouseenter', () => {
-            if (!okBtn.disabled) {
-                okBtn.style.backgroundColor = '#2563eb';
-                okBtn.style.borderColor = '#2563eb';
+            
+            // Get folder name from first file
+            const folderName = files[0]?.webkitRelativePath?.split('/')[0] || 'Selected Folder';
+            
+            return {
+                folderName,
+                files,
+                method: 'directory-picker'
+            };
+            
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                Logger.ui.info('📁 Directory picker cancelled by user');
+                return null;
             }
-        });
-        okBtn.addEventListener('mouseleave', () => {
-            if (!okBtn.disabled) {
-                okBtn.style.backgroundColor = '#3b82f6';
-                okBtn.style.borderColor = '#3b82f6';
-            }
-        });
-        okBtn.addEventListener('click', () => this.confirm(pathInput));
-        
-        // Initially disabled
-        okBtn.disabled = true;
-        okBtn.style.backgroundColor = '#6b7280';
-        okBtn.style.borderColor = '#6b7280';
-        okBtn.style.cursor = 'not-allowed';
-
-        footer.appendChild(cancelBtn);
-        footer.appendChild(okBtn);
-
-        // Assemble dialog
-        this.dialog.appendChild(header);
-        this.dialog.appendChild(content);
-        this.dialog.appendChild(footer);
-
-        this.overlay.appendChild(this.dialog);
+            throw error;
+        }
     }
 
     /**
-     * Show the dialog
+     * Show input dialog as fallback
+     * @returns {Promise<Object|null>} Selected folder data
      */
-    showDialog() {
-        document.body.appendChild(this.overlay);
-        
-        // Focus the path input
-        setTimeout(() => {
-            const pathInput = document.getElementById('folder-path-input');
-            if (pathInput) {
-                pathInput.focus();
-            }
-        }, 100);
-
-        // Handle escape key
-        this.escapeHandler = (e) => {
-            if (e.key === 'Escape') {
-                this.cancel();
-            }
-        };
-        document.addEventListener('keydown', this.escapeHandler);
-
-        // Handle enter key in input
-        const pathInput = document.getElementById('folder-path-input');
-        if (pathInput) {
-            pathInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    this.confirm(pathInput);
+    async showInputDialog() {
+        return new Promise((resolve) => {
+            // Create input element
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.webkitdirectory = true; // Allows directory selection
+            fileInput.multiple = true;
+            fileInput.style.display = 'none';
+            
+            // Add to DOM temporarily
+            document.body.appendChild(fileInput);
+            
+            // Handle file selection
+            fileInput.addEventListener('change', async (e) => {
+                const fileList = e.target.files;
+                
+                if (fileList.length === 0) {
+                    Logger.ui.info('📁 No files selected');
+                    resolve(null);
+                return;
+                }
+                
+                try {
+                    // Get files from input
+                    const files = await this.getFilesFromInput(fileList);
+                    
+                    if (files.length === 0) {
+                        Logger.ui.warn('⚠️ No valid files found');
+                        resolve(null);
+                        return;
+                    }
+                    
+                    // Get folder name from first file
+                    const folderName = files[0]?.webkitRelativePath?.split('/')[0] || 'Selected Folder';
+                    
+                    resolve({
+                        folderName,
+                        files,
+                        method: 'input-dialog'
+                    });
+                    
+                } catch (error) {
+                    Logger.ui.error('Error processing selected files:', error);
+                    resolve(null);
+                } finally {
+                    // Clean up
+                    document.body.removeChild(fileInput);
                 }
             });
-        }
-    }
-
-    /**
-     * Truncate long path for display
-     */
-    truncatePath(path, maxLength = 50) {
-        if (path.length <= maxLength) return path;
-        
-        const start = Math.floor(maxLength * 0.4);
-        const end = Math.floor(maxLength * 0.6);
-        return path.substring(0, start) + '...' + path.substring(path.length - end);
-    }
-
-    /**
-     * Update path display with truncation
-     */
-    updatePathDisplay(pathInput, fullPath) {
-        // Show full path without truncation
-        pathInput.value = fullPath;
-        pathInput.title = fullPath; // Show full path on hover
-    }
-
-    /**
-     * Update import summary
-     */
-    updateSummary() {
-        const summaryArea = this.overlay.querySelector('#folder-summary-area');
-        const summaryContent = this.overlay.querySelector('#summary-content');
-        
-        if (!this.selectedFiles || this.selectedFiles.length === 0) {
-            summaryArea.style.display = 'none';
-            this.updateImportButton(false);
-            return;
-        }
-
-        // Group files by category
-        const filesByCategory = {};
-        this.selectedFiles.forEach(file => {
-            const pathParts = file.webkitRelativePath.split('/');
-            const category = pathParts.length > 1 ? pathParts[0] : 'Root';
-            if (!filesByCategory[category]) {
-                filesByCategory[category] = 0;
-            }
-            filesByCategory[category]++;
-        });
-
-        // Create summary HTML
-        const totalFiles = this.selectedFiles.length;
-        const categoryCount = Object.keys(filesByCategory).length;
-        
-        let summaryHTML = `
-            <div style="margin-bottom: 0.5rem;">
-                <strong>${totalFiles}</strong> files in <strong>${categoryCount}</strong> categories
-            </div>
-        `;
-
-        // Add category breakdown
-        Object.entries(filesByCategory)
-            .sort(([a], [b]) => a.localeCompare(b))
-            .forEach(([category, count]) => {
-                summaryHTML += `
-                    <div style="margin: 0.25rem 0; padding-left: 1rem;">
-                        • <strong>${category}</strong>: ${count} file${count !== 1 ? 's' : ''}
-                    </div>
-                `;
+            
+            // Handle cancellation
+            fileInput.addEventListener('cancel', () => {
+                Logger.ui.info('📁 File input cancelled by user');
+                document.body.removeChild(fileInput);
+                resolve(null);
             });
-
-        summaryContent.innerHTML = summaryHTML;
-        summaryArea.style.display = 'block';
-        
-        // Enable import button
-        this.updateImportButton(true);
+            
+            // Trigger file picker
+        fileInput.click();
+        });
     }
 
     /**
-     * Update import button state
+     * Get files from input element
+     * @param {FileList} fileList - Files from input element
+     * @returns {Promise<Array>} Array of processed files
      */
-    updateImportButton(enabled) {
-        const importBtn = this.overlay.querySelector('#import-assets-btn');
-        if (!importBtn) return;
+    async getFilesFromInput(fileList) {
+        const files = [];
 
-        importBtn.disabled = !enabled;
-        
-        if (enabled) {
-            importBtn.style.backgroundColor = '#3b82f6';
-            importBtn.style.borderColor = '#3b82f6';
-            importBtn.style.cursor = 'pointer';
+        // Check if we have access to webkitRelativePath (modern browsers)
+        const hasRelativePath = Array.from(fileList).some(file => file.webkitRelativePath);
+
+        if (hasRelativePath) {
+            // Use standard webkitdirectory approach - preserve original File objects
+            for (const file of fileList) {
+                // File already has webkitRelativePath, use as is
+                files.push(file);
+            }
         } else {
-            importBtn.style.backgroundColor = '#6b7280';
-            importBtn.style.borderColor = '#6b7280';
-            importBtn.style.cursor = 'not-allowed';
-        }
-    }
-
-    /**
-     * Browse for folder - simplified single action
-     */
-    async browseFolder(pathInput) {
-        // Use File System Access API if available (Chrome/Edge)
-        if ('showDirectoryPicker' in window) {
-            try {
-                const directoryHandle = await window.showDirectoryPicker();
-                const folderName = directoryHandle.name;
-                
-                // Get files from directory
-                const files = await this.getFilesFromDirectory(directoryHandle);
-                this.selectedFiles = files;
-                
-                // Store directory handle for potential future use
-                this.selectedDirectoryHandle = directoryHandle;
-                
-                // Update path display with folder name only
-                this.updatePathDisplay(pathInput, folderName);
-                
-                // Update summary
-                this.updateSummary();
-                return;
-            } catch (error) {
-                if (error.name !== 'AbortError') {
-                    Logger.file.warn('File System Access API failed:', error);
-                }
-                // User cancelled, do nothing
-                return;
+            // Fallback: try to reconstruct paths - create File-like objects
+            for (const file of fileList) {
+                // Create a File-like object that preserves Blob nature but allows webkitRelativePath modification
+                const fileWithPath = Object.assign(Object.create(null), file);
+                Object.defineProperty(fileWithPath, 'webkitRelativePath', {
+                    value: file.name,
+                    writable: true,
+                    enumerable: true,
+                    configurable: true
+                });
+                files.push(fileWithPath);
             }
         }
-        
-        // For browsers without File System Access API, use drag & drop only
-        // Don't show webkitdirectory dialog as it causes double dialogs
-        Logger.file.info('File System Access API not supported. Please use drag & drop instead.');
+
+        return files;
     }
 
     /**
      * Get files from directory handle (File System Access API)
+     * @param {FileSystemDirectoryHandle} directoryHandle - Directory handle
+     * @param {string} path - Current path
+     * @returns {Promise<Array>} Array of files
      */
     async getFilesFromDirectory(directoryHandle, path = '') {
         const files = [];
@@ -527,12 +185,24 @@ export class FolderPickerDialog {
         for await (const [name, handle] of directoryHandle.entries()) {
             if (handle.kind === 'file') {
                 const file = await handle.getFile();
-                // Create a new object with all file properties and custom webkitRelativePath
-                const fileWithPath = {
-                    ...file,
-                    webkitRelativePath: path ? `${path}/${name}` : name
-                };
+                
+                // Create a new object that preserves Blob nature but allows webkitRelativePath modification
+                const fileWithPath = new Blob([file], { type: file.type });
+
+                // Add properties to make it file-like
+                fileWithPath.name = file.name;
+                fileWithPath.lastModified = file.lastModified;
+
+                // Add webkitRelativePath using Object.defineProperty
+                Object.defineProperty(fileWithPath, 'webkitRelativePath', {
+                    value: path ? `${path}/${name}` : name,
+                    writable: true,
+                    enumerable: true,
+                    configurable: true
+                });
+
                 files.push(fileWithPath);
+
             } else if (handle.kind === 'directory') {
                 const subPath = path ? `${path}/${name}` : name;
                 const subFiles = await this.getFilesFromDirectory(handle, subPath);
@@ -565,100 +235,116 @@ export class FolderPickerDialog {
                     } else {
                         // Handle single file
                         const file = item.getAsFile();
-                        // Create a new object with all file properties and custom webkitRelativePath
-                        const fileWithPath = {
-                            ...file,
-                            webkitRelativePath: file.name
-                        };
+                        
+                        // Create a new object that preserves Blob nature but allows webkitRelativePath modification
+                        const fileWithPath = new Blob([file], { type: file.type });
+                        
+                        // Add properties to make it file-like
+                        fileWithPath.name = file.name;
+                        fileWithPath.lastModified = file.lastModified;
+
+                        // Add webkitRelativePath using Object.defineProperty
+                        Object.defineProperty(fileWithPath, 'webkitRelativePath', {
+                            value: file.name,
+                            writable: true,
+                            enumerable: true,
+                            configurable: true
+                        });
+                        
                         files.push(fileWithPath);
                     }
                 }
             }
         }
         
-        if (files.length > 0) {
-            this.selectedFiles = files;
-            
-            // Update path display with folder name only
-            this.updatePathDisplay(pathInput, folderName);
-            
-            // Update summary
-            this.updateSummary();
-        }
+        return {
+            folderName,
+            files,
+            method: 'drag-drop'
+        };
     }
 
     /**
-     * Get files from FileSystemEntry (for drag & drop)
+     * Get files from directory entry (drag & drop)
+     * @param {FileSystemDirectoryEntry} entry - Directory entry
+     * @param {string} path - Current path
+     * @returns {Promise<Array>} Array of files
      */
-    async getFilesFromEntry(entry, path) {
+    async getFilesFromEntry(entry, path = '') {
         const files = [];
         
         return new Promise((resolve) => {
-            if (entry.isFile) {
-                entry.file((file) => {
-                    // Create a new object with all file properties and custom webkitRelativePath
-                    const fileWithPath = {
-                        ...file,
-                        webkitRelativePath: path ? `${path}/${file.name}` : file.name
-                    };
-                    files.push(fileWithPath);
-                    resolve(files);
-                });
-            } else if (entry.isDirectory) {
-                const dirReader = entry.createReader();
-                dirReader.readEntries(async (entries) => {
-                    const promises = entries.map(subEntry => 
-                        this.getFilesFromEntry(subEntry, path ? `${path}/${entry.name}` : entry.name)
-                    );
-                    const results = await Promise.all(promises);
-                    results.forEach(subFiles => files.push(...subFiles));
-                    resolve(files);
-                });
-            } else {
+            const reader = entry.createReader();
+            
+            reader.readEntries(async (entries) => {
+                for (const subEntry of entries) {
+                    if (subEntry.isDirectory) {
+                        const subPath = path ? `${path}/${subEntry.name}` : subEntry.name;
+                        const subFiles = await this.getFilesFromEntry(subEntry, subPath);
+                        files.push(...subFiles);
+                    } else {
+                        // Get file from entry
+                        subEntry.file((file) => {
+                            // Create a File-like object that preserves Blob nature but allows webkitRelativePath modification
+                            const fileWithPath = Object.assign(Object.create(null), file);
+                            Object.defineProperty(fileWithPath, 'webkitRelativePath', {
+                                value: path ? `${path}/${file.name}` : file.name,
+                                writable: true,
+                                enumerable: true,
+                                configurable: true
+                            });
+                            files.push(fileWithPath);
+                        });
+                    }
+                }
                 resolve(files);
-            }
+            });
         });
     }
 
-    // Note: handleFolderSelection method removed as we no longer use webkitdirectory
-
-    // Note: showFilePreview method removed - only summary is shown now
-
-    // Note: confirmImport method removed - import happens directly from main dialog
-
     /**
-     * Confirm selection
+     * Get summary of selected files
+     * @returns {Object} Summary object
      */
-    confirm(pathInput) {
-        if (this.selectedFiles && this.selectedFiles.length > 0) {
-            // Return the folder name as path (since we can't get full path from File System Access API)
-            const folderName = this.selectedFiles[0]?.webkitRelativePath?.split('/')[0] || 'Selected Folder';
-            this.close();
-            this.resolve(folderName);
-        } else {
-            // Show error or focus input
-            pathInput.focus();
-        }
+    getSummary() {
+        const totalFiles = this.selectedFiles.length;
+        const fileTypes = {};
+        
+        this.selectedFiles.forEach(file => {
+            const ext = file.name.split('.').pop()?.toLowerCase() || 'unknown';
+            fileTypes[ext] = (fileTypes[ext] || 0) + 1;
+        });
+        
+        return {
+            totalFiles,
+            fileTypes,
+            folderName: this.folderName
+        };
     }
 
     /**
-     * Cancel selection
+     * Check if File System Access API is supported
+     * @returns {boolean} Whether API is supported
      */
-    cancel() {
-        this.close();
-        this.resolve(null);
+    static isSupported() {
+        return 'showDirectoryPicker' in window;
     }
 
     /**
-     * Close the dialog
+     * Get supported methods
+     * @returns {Array<string>} Array of supported methods
      */
-    close() {
-        if (this.overlay && this.overlay.parentNode) {
-            this.overlay.parentNode.removeChild(this.overlay);
+    static getSupportedMethods() {
+        const methods = [];
+        
+        if ('showDirectoryPicker' in window) {
+            methods.push('directory-picker');
         }
         
-        if (this.escapeHandler) {
-            document.removeEventListener('keydown', this.escapeHandler);
+        if (window.File && window.FileReader && window.FileList && window.Blob) {
+            methods.push('input-dialog');
         }
+        
+        return methods;
     }
 }

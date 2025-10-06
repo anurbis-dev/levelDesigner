@@ -16,7 +16,7 @@ export class FileUtils {
     };
 
     /**
-     * Download data as a file
+     * Download data as a file (fallback method)
      * @param {string|Object} data - Data to download (string or object to JSON stringify)
      * @param {string} filename - Name of the file to download
      * @param {string} mimeType - MIME type of the file (default: application/json)
@@ -49,6 +49,63 @@ export class FileUtils {
         }
 
         return filename;
+    }
+
+    /**
+     * Save data directly to file system using File System Access API
+     * @param {string|Object} data - Data to save (string or object to JSON stringify)
+     * @param {string} filename - Name of the file to save
+     * @param {string} mimeType - MIME type of the file (default: application/json)
+     * @param {boolean} prettyJson - Whether to pretty-format JSON (default: true)
+     * @returns {Promise<string>} The filename that was used
+     */
+    static async saveDataDirectly(data, filename, mimeType = FileUtils.TYPES.JSON, prettyJson = true) {
+        // Check if File System Access API is supported
+        if (!('showSaveFilePicker' in window)) {
+            Logger.file.warn('File System Access API not supported, falling back to download');
+            return this.downloadData(data, filename, mimeType, prettyJson);
+        }
+
+        let fileData;
+        
+        if (typeof data === 'string') {
+            fileData = data;
+        } else {
+            // Convert object to JSON
+            fileData = prettyJson ? JSON.stringify(data, null, 2) : JSON.stringify(data);
+        }
+
+        try {
+            // Create file picker for saving
+            const fileHandle = await window.showSaveFilePicker({
+                suggestedName: filename,
+                types: [{
+                    description: 'JSON files',
+                    accept: {
+                        'application/json': ['.json']
+                    }
+                }]
+            });
+
+            // Create writable stream
+            const writable = await fileHandle.createWritable();
+            
+            // Write data to file
+            await writable.write(fileData);
+            await writable.close();
+
+            Logger.file.info(`✅ File saved directly: ${filename}`);
+            return filename;
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                Logger.file.info('File save cancelled by user');
+                return null;
+            }
+            
+            Logger.file.error('Failed to save file directly:', error);
+            // Fallback to download method
+            return this.downloadData(data, filename, mimeType, prettyJson);
+        }
     }
 
     /**

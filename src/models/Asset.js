@@ -9,6 +9,7 @@ export class Asset {
         this.name = data.name || 'Unnamed Asset';
         this.type = data.type || 'object';
         this.category = data.category || 'Misc';
+        this.path = data.path || ''; // Relative path from root folder
         this.width = data.width || 32;
         this.height = data.height || 32;
         this.color = data.color || '#cccccc';
@@ -57,6 +58,7 @@ export class Asset {
             name: this.name,
             type: this.type,
             category: this.category,
+            path: this.path,
             width: this.width,
             height: this.height,
             color: this.color,

@@ -261,6 +261,15 @@ export class StateManager {
     }
 
     /**
+     * Notify listeners with a specific event name
+     * @param {string} eventName - Event name to notify
+     * @param {*} data - Data to pass to listeners
+     */
+    notify(eventName, data = null) {
+        this.notifyListeners(eventName, data, null);
+    }
+
+    /**
      * Mark level as dirty (has unsaved changes)
      */
     markDirty() {

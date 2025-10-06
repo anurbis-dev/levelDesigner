@@ -257,7 +257,10 @@ export class BaseContextMenu {
         
         const menuItem = document.createElement('div');
         menuItem.className = 'base-context-menu-item';
-        menuItem.innerHTML = `${item.icon ? item.icon + ' ' : ''}${item.text}`;
+        
+        // Handle dynamic text (function) or static text (string)
+        const displayText = typeof item.text === 'function' ? item.text(contextData) : item.text;
+        menuItem.innerHTML = `${item.icon ? item.icon + ' ' : ''}${displayText}`;
         
         // Check if item should be disabled
         let isDisabled = false;
@@ -441,7 +444,7 @@ export class BaseContextMenu {
             action,
             visible: options.visible,
             disabled: options.disabled,
-            id: options.id || text.toLowerCase().replace(/\s+/g, '-')
+            id: options.id || (typeof text === 'string' ? text.toLowerCase().replace(/\s+/g, '-') : 'dynamic-item')
         });
     }
 

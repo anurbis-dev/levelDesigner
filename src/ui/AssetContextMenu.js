@@ -33,6 +33,9 @@ export class AssetContextMenu extends BaseContextMenu {
             onOpenEditor: callbacks.onOpenEditor || (() => {}),
             onRename: callbacks.onRename || (() => {}),
             onDuplicate: callbacks.onDuplicate || (() => {}),
+            onSaveAsset: callbacks.onSaveAsset || (() => {}),
+            onSaveAssetChanges: callbacks.onSaveAssetChanges || (() => {}),
+            onShowInExplorer: callbacks.onShowInExplorer || (() => {}),
             onDelete: callbacks.onDelete || (() => {})
         });
 
@@ -55,12 +58,20 @@ export class AssetContextMenu extends BaseContextMenu {
             const assetId = assetThumbnail.dataset.assetId;
             const asset = this.assetPanel.assetManager.getAsset(assetId);
             
+            // Get selected assets count
+            const selectedAssets = this.assetPanel.stateManager.get('selectedAssets') || new Set();
+            const selectedCount = selectedAssets.size;
+            
             contextData.asset = asset;
             contextData.assetId = assetId;
             contextData.assetThumbnail = assetThumbnail;
             contextData.isAsset = true;
+            contextData.selectedCount = selectedCount;
+            contextData.isMultiple = selectedCount > 1;
         } else {
             contextData.isAsset = false;
+            contextData.selectedCount = 0;
+            contextData.isMultiple = false;
         }
         
         return contextData;
@@ -124,6 +135,39 @@ export class AssetContextMenu extends BaseContextMenu {
         // Duplicate asset
         this.addMenuItem('Duplicate', '🔄', (contextData) => {
             this.callbacks.onDuplicate(contextData.asset);
+        });
+
+        // Save Asset(s) (for assets with unsaved changes)
+        this.addMenuItem((contextData) => {
+            return contextData.isMultiple ? 'Save Assets' : 'Save Asset';
+        }, '💾', (contextData) => {
+            this.callbacks.onSaveAssetChanges(contextData.asset);
+        }, (contextData) => {
+            // Only show for assets with unsaved changes and not temporary
+            return contextData.asset && 
+                   contextData.asset.properties && 
+                   !contextData.asset.properties.isTemporary &&
+                   (contextData.asset.properties.hasUnsavedChanges || 
+                    (contextData.asset.properties.lastModified && contextData.asset.properties.lastSaved && 
+                     contextData.asset.properties.lastModified > contextData.asset.properties.lastSaved));
+        });
+
+        // Save Asset(s) To... (for temporary assets)
+        this.addMenuItem((contextData) => {
+            return contextData.isMultiple ? 'Save Assets To...' : 'Save Asset To...';
+        }, '💾', (contextData) => {
+            this.callbacks.onSaveAsset(contextData.asset);
+        }, (contextData) => {
+            // Only show for temporary assets
+            return contextData.asset && contextData.asset.properties && contextData.asset.properties.isTemporary;
+        });
+
+        // Show in Explorer (for all assets)
+        this.addMenuItem('Show In Explorer', '📁', (contextData) => {
+            this.callbacks.onShowInExplorer(contextData.asset);
+        }, (contextData) => {
+            // Show for all assets (both with file paths and temporary)
+            return contextData.asset;
         });
 
         this.addSeparator();

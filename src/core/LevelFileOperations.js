@@ -155,32 +155,50 @@ export class LevelFileOperations extends BaseModule {
      */
     async importAssets() {
         try {
-            // Dynamic import to avoid loading on startup
-            const { AssetImporter } = await import('../utils/AssetImporter.js');
+            Logger.file.info('🚀 IMPORT ASSETS STARTED from LevelFileOperations');
             
+            // Dynamic import to avoid loading on startup - force cache busting
+            const timestamp = Date.now();
+            const { AssetImporter } = await import(`../utils/AssetImporter.js?v=${timestamp}`);
+            Logger.file.info('✅ AssetImporter imported successfully with cache busting');
+
             // Create importer instance
             const importer = new AssetImporter(this.editor.assetManager);
-            
+            Logger.file.info('✅ AssetImporter instance created');
+
             // Show folder picker
-            const folderPath = await importer.showFolderPicker();
-            if (!folderPath) {
+            Logger.file.info('📂 Showing folder picker...');
+            const folderData = await importer.showFolderPicker();
+            Logger.file.info(`📁 Folder picker result:`, folderData ? {
+                folderName: folderData.folderName,
+                filesCount: folderData.files ? folderData.files.length : 0
+            } : 'null (user cancelled)');
+            
+            if (!folderData) {
+                Logger.file.warn('❌ User cancelled folder selection');
                 return; // User cancelled
             }
-            
+
             // Import assets
-            const result = await importer.importFromFolder(folderPath);
-            
+            Logger.file.info(`🔄 Calling importer.importFromFolder with folder: "${folderData.folderName}", files: ${folderData.files.length}`);
+            const result = await importer.importFromFolder(folderData.folderName, folderData.files);
+
             // Show success message
             const message = `Successfully imported ${result.totalImported} assets from ${result.categories.length} categories:\n\n` +
                 result.categories.map(cat => `• ${cat.name}: ${cat.importedCount} assets`).join('\n');
-            
+
             await alert(message);
-            
-            // Refresh asset panel
+
+            // Refresh asset panel and folders panel
             if (this.editor.assetPanel) {
                 this.editor.assetPanel.render();
+                
+                // Explicitly refresh folders panel to ensure nested structure is displayed
+                if (this.editor.assetPanel.foldersPanel) {
+                    this.editor.assetPanel.foldersPanel.refresh();
+                }
             }
-            
+
             Logger.file.info(`✅ Imported ${result.totalImported} assets from ${result.categories.length} categories`);
         } catch (error) {
             Logger.file.error(`❌ Asset import failed: ${error.message}`);

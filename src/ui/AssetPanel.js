@@ -2,6 +2,7 @@ import { BasePanel } from './BasePanel.js';
 import { Logger } from '../utils/Logger.js';
 import { AssetContextMenu } from './AssetContextMenu.js';
 import { AssetPanelContextMenu } from './AssetPanelContextMenu.js';
+import { FoldersPanel } from './FoldersPanel.js';
 // Note: HoverEffects removed - using CSS hover effects like OutlinerPanel
 
 /**
@@ -14,21 +15,24 @@ export class AssetPanel extends BasePanel {
         this.levelEditor = levelEditor;
         this.tabsContainer = null;
         this.previewsContainer = null;
+        this.foldersContainer = null;
+        this.foldersPanel = null;
+        this.foldersPosition = 'left'; // 'left' or 'right'
         this.marqueeDiv = null;
         this.marqueeStart = {};
-        
+
         // Asset size management
         this.assetSize = 96; // Default size, will be loaded in init()
         this.minAssetSize = 48; // w-12 = 48px
         this.maxAssetSize = 192; // w-48 = 192px
         this.sizeStep = 8; // Step size for zoom
         this.gapSize = 8; // Base gap size in pixels, will be scaled by spacing
-        
+
         // View mode management
         this.viewMode = 'grid'; // 'grid', 'list', 'details'
-        
+
         // Resize optimization (removed debounce for real-time updates)
-        
+
         this.init();
         this.setupEventListeners();
         this.setupContextMenus();
@@ -38,10 +42,13 @@ export class AssetPanel extends BasePanel {
         // Use existing HTML structure from index.html
         this.tabsContainer = this.container.querySelector('#asset-tabs-container');
         this.previewsContainer = this.container.querySelector('#asset-previews-container');
-        
+
+        // Create folders container
+        this.createFoldersContainer();
+
         // Set relative positioning for marquee selection
         this.previewsContainer.style.position = 'relative';
-        
+
         // Setup scrolling using BasePanel
         this.setupScrolling({
             horizontal: true,
@@ -58,9 +65,30 @@ export class AssetPanel extends BasePanel {
 
         // Load view mode from user preferences
         this.viewMode = this.loadViewMode();
-        
+
+        // Load folders position from user preferences
+        this.foldersPosition = this.loadFoldersPosition();
+
+        // Initialize FoldersPanel
+        this.initializeFoldersPanel();
+
         // Initialize activeAssetTabs from config
         this.initializeActiveAssetTabs();
+
+        // Update layout based on folders position
+        this.updateFoldersLayout();
+
+        // Setup folders resizer
+        this.setupFoldersResizer();
+
+        // Listen for asset changes to refresh panels
+        this.stateManager.subscribe('assetsChanged', () => {
+            if (this.foldersPanel) {
+                this.foldersPanel.refresh();
+            }
+            // Also refresh the asset panel itself
+            this.render();
+        });
     }
 
     /**
@@ -120,6 +148,337 @@ export class AssetPanel extends BasePanel {
         }
     }
 
+    /**
+     * Load folders position from user preferences
+     */
+    loadFoldersPosition() {
+        const savedPosition = this.levelEditor?.userPrefs?.get('foldersPosition');
+        if (savedPosition && ['left', 'right'].includes(savedPosition)) {
+            Logger.ui.debug('Loaded folders position from preferences:', savedPosition);
+            return savedPosition;
+        }
+        Logger.ui.debug('Using default folders position:', 'left');
+        return 'left'; // Default position
+    }
+
+    /**
+     * Save folders position to user preferences
+     */
+    saveFoldersPosition() {
+        if (this.levelEditor?.userPrefs) {
+            this.levelEditor.userPrefs.set('foldersPosition', this.foldersPosition);
+            Logger.ui.debug('Saved folders position to preferences:', this.foldersPosition);
+        }
+    }
+
+    /**
+     * Create folders container
+     */
+    createFoldersContainer() {
+        // Create main container for folders and content
+        const mainContainer = document.createElement('div');
+        mainContainer.id = 'asset-main-container';
+        mainContainer.className = 'flex flex-grow overflow-hidden';
+
+        // Create folders container
+        this.foldersContainer = document.createElement('div');
+        this.foldersContainer.id = 'asset-folders-container';
+        this.foldersContainer.className = 'w-48 bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0';
+
+        // Create resizer for folders panel
+        this.foldersResizer = document.createElement('div');
+        this.foldersResizer.id = 'folders-resizer';
+        this.foldersResizer.className = 'resizer-x';
+        this.foldersResizer.style.cssText = `
+            width: 4px;
+            background-color: transparent;
+            cursor: ew-resize;
+            position: relative;
+            z-index: 10;
+        `;
+        this.foldersResizer.innerHTML = '<div class="resize-indicator"></div>';
+
+        // Create content container (tabs + previews)
+        const contentContainer = document.createElement('div');
+        contentContainer.id = 'asset-content-container';
+        contentContainer.className = 'flex flex-col flex-grow overflow-hidden';
+
+        // Move existing tabs and previews containers into content container
+        if (this.tabsContainer && this.tabsContainer.parentNode) {
+            this.tabsContainer.parentNode.removeChild(this.tabsContainer);
+            contentContainer.appendChild(this.tabsContainer);
+        }
+
+        if (this.previewsContainer && this.previewsContainer.parentNode) {
+            this.previewsContainer.parentNode.removeChild(this.previewsContainer);
+            contentContainer.appendChild(this.previewsContainer);
+        }
+
+        // Add folders and content to main container
+        mainContainer.appendChild(this.foldersContainer);
+        mainContainer.appendChild(contentContainer);
+
+        // Add main container to asset panel
+        this.container.appendChild(mainContainer);
+    }
+
+    /**
+     * Initialize FoldersPanel
+     */
+    initializeFoldersPanel() {
+        if (!this.foldersContainer) {
+            Logger.ui.error('AssetPanel: foldersContainer not created yet');
+            return;
+        }
+
+        if (!this.assetManager) {
+            Logger.ui.error('AssetPanel: assetManager not available');
+            return;
+        }
+
+        if (!this.stateManager) {
+            Logger.ui.error('AssetPanel: stateManager not available');
+            return;
+        }
+
+        if (!this.levelEditor) {
+            Logger.ui.error('AssetPanel: levelEditor not available');
+            return;
+        }
+
+        Logger.ui.debug('AssetPanel: Initializing FoldersPanel');
+        this.foldersPanel = new FoldersPanel(this.foldersContainer, this.assetManager, this.stateManager, this.levelEditor, this);
+    }
+
+    /**
+     * Update folders layout based on position
+     */
+    updateFoldersLayout() {
+        const mainContainer = this.container.querySelector('#asset-main-container');
+        const foldersContainer = this.container.querySelector('#asset-folders-container');
+        const contentContainer = this.container.querySelector('#asset-content-container');
+
+        if (!mainContainer || !foldersContainer || !contentContainer) return;
+
+        // Clear existing layout
+        mainContainer.innerHTML = '';
+
+        if (this.foldersPosition === 'left') {
+            // Folders on left, content on right
+            mainContainer.appendChild(foldersContainer);
+            mainContainer.appendChild(this.foldersResizer);
+            mainContainer.appendChild(contentContainer);
+            foldersContainer.className = 'bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0';
+            contentContainer.className = 'flex flex-col flex-grow overflow-hidden';
+        } else {
+            // Content on left, folders on right
+            mainContainer.appendChild(contentContainer);
+            mainContainer.appendChild(this.foldersResizer);
+            mainContainer.appendChild(foldersContainer);
+            contentContainer.className = 'flex flex-col flex-grow overflow-hidden';
+            foldersContainer.className = 'bg-gray-800 border-l border-gray-700 flex flex-col flex-shrink-0';
+        }
+
+        // Re-append tabs and previews to content container
+        contentContainer.appendChild(this.tabsContainer);
+        contentContainer.appendChild(this.previewsContainer);
+    }
+
+    /**
+     * Toggle folders position (left/right)
+     */
+    toggleFoldersPosition() {
+        this.foldersPosition = this.foldersPosition === 'left' ? 'right' : 'left';
+        this.saveFoldersPosition();
+        this.updateFoldersLayout();
+        Logger.ui.info(`Folders panel moved to ${this.foldersPosition}`);
+    }
+
+    /**
+     * Filter assets by selected folder
+     */
+    filterByFolder(folder) {
+        if (!folder) {
+            Logger.ui.warn('AssetPanel: filterByFolder called with null/undefined folder');
+            return;
+        }
+
+        if (!folder.name) {
+            Logger.ui.warn('AssetPanel: folder has no name property:', folder);
+            return;
+        }
+
+        if (!this.assetManager || !this.assetManager.assets) {
+            Logger.ui.error('AssetPanel: assetManager not available for filterByFolder');
+            return;
+        }
+
+        Logger.ui.debug('AssetPanel: filterByFolder called with folder:', folder.name);
+
+        // For now, filter by category - later can be more sophisticated
+        const categoryName = folder.name;
+        const categoryAssets = Array.from(this.assetManager.assets.values())
+            .filter(asset => asset.category === categoryName);
+
+        Logger.ui.debug(`AssetPanel: Found ${categoryAssets.length} assets in category ${categoryName}`);
+
+        // Update the active tabs to show only this category
+        if (categoryAssets.length > 0) {
+            const categorySet = new Set([categoryName]);
+            this.stateManager.set('activeAssetTabs', categorySet);
+            this.render();
+        }
+
+        Logger.ui.debug(`Filtered assets by folder: ${categoryName}, found ${categoryAssets.length} assets`);
+    }
+
+    /**
+     * Select specific asset
+     */
+    selectAsset(assetId) {
+        if (!assetId) {
+            Logger.ui.warn('AssetPanel: selectAsset called with invalid assetId');
+            return;
+        }
+
+        if (!this.assetManager || !this.assetManager.assets) {
+            Logger.ui.error('AssetPanel: assetManager or assets not available');
+            return;
+        }
+
+        const asset = this.assetManager.assets.get(assetId);
+        if (!asset) {
+            Logger.ui.warn('AssetPanel: Asset not found:', assetId);
+            return;
+        }
+
+        // Find the tab for this asset's category
+        const categoryName = asset.category;
+        if (!categoryName) {
+            Logger.ui.warn('AssetPanel: Asset has no category:', assetId);
+            return;
+        }
+
+        const categorySet = new Set([categoryName]);
+        this.stateManager.set('activeAssetTabs', categorySet);
+
+        // Switch to the tab and select the asset
+        this.render();
+
+        // Scroll to and highlight the asset
+        setTimeout(() => {
+            if (this.previewsContainer) {
+                const assetElement = this.previewsContainer.querySelector(`[data-asset-id="${assetId}"]`);
+                if (assetElement) {
+                    assetElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    assetElement.classList.add('ring-2', 'ring-blue-500');
+                    setTimeout(() => {
+                        assetElement.classList.remove('ring-2', 'ring-blue-500');
+                    }, 2000);
+                }
+            }
+        }, 100);
+
+        Logger.ui.debug('Selected asset from folders panel:', assetId);
+    }
+
+    /**
+     * Setup folders panel resizer
+     */
+    setupFoldersResizer() {
+        if (!this.foldersResizer) return;
+
+        let isResizingFolders = false;
+        let initialMouseX = 0;
+        let initialFoldersWidth = 0;
+        let lastAppliedFoldersWidth = null;
+
+        this.foldersResizer.addEventListener('mousedown', (e) => {
+            isResizingFolders = true;
+            initialMouseX = e.clientX;
+            initialFoldersWidth = this.foldersContainer.offsetWidth;
+            lastAppliedFoldersWidth = null;
+
+            // Visual feedback
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            this.foldersResizer.style.backgroundColor = '#4b5563';
+
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        // Global mousemove handler
+        const handleMouseMove = (e) => {
+            if (!isResizingFolders) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            const mouseDelta = e.clientX - initialMouseX;
+            const containerWidth = this.container.clientWidth;
+            const resizerWidth = 4;
+            const minWidth = 120; // Minimum folders width
+            const maxWidth = Math.max(minWidth, containerWidth - 200); // Leave space for content
+
+            let newWidth;
+            if (this.foldersPosition === 'left') {
+                newWidth = initialFoldersWidth + mouseDelta;
+            } else {
+                newWidth = initialFoldersWidth - mouseDelta;
+            }
+
+            // Apply constraints
+            newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+
+            // If width didn't change compared to last applied, skip work
+            if (lastAppliedFoldersWidth !== null && newWidth === lastAppliedFoldersWidth) {
+                return;
+            }
+
+            // Apply new width
+            this.foldersContainer.style.width = newWidth + 'px';
+            this.foldersContainer.style.flexShrink = '0';
+            this.foldersContainer.style.flexGrow = '0';
+
+            // Save to preferences
+            if (this.levelEditor?.userPrefs) {
+                this.levelEditor.userPrefs.set('foldersWidth', newWidth);
+            }
+
+            lastAppliedFoldersWidth = newWidth;
+
+            Logger.ui.debug('Folders panel resized to:', newWidth);
+        };
+
+        // Global mouseup handler
+        const handleMouseUp = () => {
+            if (isResizingFolders) {
+                isResizingFolders = false;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                this.foldersResizer.style.backgroundColor = '';
+
+                Logger.ui.debug('Folders panel resize completed');
+            }
+        };
+
+        // Add global listeners
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+
+        // Load saved width
+        if (this.levelEditor?.userPrefs) {
+            const savedWidth = this.levelEditor.userPrefs.get('foldersWidth');
+            if (savedWidth && typeof savedWidth === 'number' && savedWidth >= 120) {
+                this.foldersContainer.style.width = savedWidth + 'px';
+                this.foldersContainer.style.flexShrink = '0';
+                this.foldersContainer.style.flexGrow = '0';
+                Logger.ui.debug('Loaded folders width from preferences:', savedWidth);
+            }
+        }
+    }
+
     setupEventListeners() {
         // Setup selection functionality for assets
         this.setupSelection({
@@ -147,6 +506,9 @@ export class AssetPanel extends BasePanel {
                 e.stopPropagation();
             }
         }, { passive: false });
+
+        // Drag-n-drop for PNG files
+        this.setupDragAndDrop();
         
         // Window resize handler for real-time grid recalculation
         this.resizeHandler = () => {
@@ -205,6 +567,12 @@ export class AssetPanel extends BasePanel {
 
         const assetsToShow = Array.from(activeTabs)
             .flatMap(tabName => this.assetManager.getAssetsByCategory(tabName));
+
+        // Log asset details for debugging
+        Logger.ui.debug(`AssetPanel: Rendering ${assetsToShow.length} assets`);
+        assetsToShow.forEach(asset => {
+            Logger.ui.debug(`Asset: ${asset.name} | imgSrc: ${asset.imgSrc ? 'YES' : 'NO'} | isValid: ${this.isValidImageSrc(asset.imgSrc)}`);
+        });
 
         switch (this.viewMode) {
             case 'grid':
@@ -330,6 +698,7 @@ export class AssetPanel extends BasePanel {
         // Note: Hover effects now handled by CSS (like OutlinerPanel)
         
         if (asset.imgSrc && this.isValidImageSrc(asset.imgSrc)) {
+            Logger.ui.debug(`🎨 Creating image thumbnail for ${asset.name} with imgSrc: ${asset.imgSrc.substring(0, 50)}...`);
             const img = document.createElement('img');
             img.src = asset.imgSrc;
             img.alt = asset.name;
@@ -337,7 +706,11 @@ export class AssetPanel extends BasePanel {
             img.style.width = '100%';
             img.style.height = '100%';
             img.style.objectFit = 'cover';
-            img.onerror = () => { 
+            img.onload = () => {
+                Logger.ui.debug(`✅ Image loaded successfully for ${asset.name}`);
+            };
+            img.onerror = (error) => { 
+                Logger.ui.warn(`❌ Image failed to load for ${asset.name}:`, error);
                 // Fallback to colored rectangle if image fails to load
                 img.style.display = 'none';
                 const colorDiv = this.createColorFallback(asset);
@@ -345,13 +718,52 @@ export class AssetPanel extends BasePanel {
             };
             thumb.appendChild(img);
         } else {
+            Logger.ui.debug(`🎨 Creating color fallback for ${asset.name} - imgSrc: ${asset.imgSrc}, isValid: ${this.isValidImageSrc(asset.imgSrc)}`);
             // Create colored rectangle as fallback (same as default assets)
             const colorDiv = this.createColorFallback(asset);
             thumb.appendChild(colorDiv);
         }
         
-        // Add tooltip
-        thumb.title = `${asset.name} (${asset.type})`;
+        // Add tooltip with temporary indicator if needed
+        const tooltipText = asset.properties && asset.properties.isTemporary 
+            ? `${asset.name} (${asset.type}) - TEMPORARY`
+            : `${asset.name} (${asset.type})`;
+        thumb.title = tooltipText;
+        
+        // Add unsaved changes indicator if needed
+        if (this.shouldShowUnsavedIndicator(asset)) {
+            const indicator = document.createElement('div');
+            indicator.className = 'asset-unsaved-indicator';
+            indicator.title = 'Unsaved changes';
+            thumb.appendChild(indicator);
+        }
+        
+        // Add asset name label for Grid View
+        const nameLabel = document.createElement('div');
+        nameLabel.className = 'asset-name-label';
+        nameLabel.style.position = 'absolute';
+        nameLabel.style.bottom = '0';
+        nameLabel.style.left = '0';
+        nameLabel.style.right = '0';
+        nameLabel.style.background = 'rgba(0, 0, 0, 0.7)';
+        nameLabel.style.color = 'white';
+        nameLabel.style.fontSize = '10px';
+        nameLabel.style.padding = '2px 4px';
+        nameLabel.style.textAlign = 'center';
+        nameLabel.style.whiteSpace = 'nowrap';
+        nameLabel.style.overflow = 'hidden';
+        nameLabel.style.textOverflow = 'ellipsis';
+        nameLabel.style.borderRadius = '0 0 4px 4px';
+        
+        const displayName = asset.properties && asset.properties.isTemporary 
+            ? `⏳ ${asset.name}`
+            : asset.name;
+        nameLabel.textContent = this.truncateAssetName(displayName, this.assetSize * 0.8);
+        nameLabel.title = asset.properties && asset.properties.isTemporary 
+            ? `${asset.name} - TEMPORARY`
+            : asset.name;
+        
+        thumb.appendChild(nameLabel);
         
         // Event listeners
         thumb.addEventListener('click', (e) => this.handleItemClick(e, asset));
@@ -411,8 +823,13 @@ export class AssetPanel extends BasePanel {
         // Create name with truncation
         const nameDiv = document.createElement('div');
         nameDiv.className = 'flex-1 text-xs text-gray-200 truncate text-center';
-        nameDiv.textContent = this.truncateAssetName(asset.name, this.assetSize * 0.8);
-        nameDiv.title = asset.name; // Full name on hover
+        const displayName = asset.properties && asset.properties.isTemporary 
+            ? `⏳ ${asset.name}`
+            : asset.name;
+        nameDiv.textContent = this.truncateAssetName(displayName, this.assetSize * 0.8);
+        nameDiv.title = asset.properties && asset.properties.isTemporary 
+            ? `${asset.name} - TEMPORARY`
+            : asset.name; // Full name on hover
         
         item.appendChild(nameDiv);
         
@@ -473,8 +890,12 @@ export class AssetPanel extends BasePanel {
         // Name column
         const name = document.createElement('div');
         name.className = 'text-sm text-gray-200 truncate';
-        name.textContent = asset.name;
-        name.title = asset.name;
+        name.textContent = asset.properties && asset.properties.isTemporary 
+            ? `⏳ ${asset.name}`
+            : asset.name;
+        name.title = asset.properties && asset.properties.isTemporary 
+            ? `${asset.name} - TEMPORARY`
+            : asset.name;
         
         // Type column
         const type = document.createElement('div');
@@ -491,10 +912,21 @@ export class AssetPanel extends BasePanel {
         size.className = 'text-sm text-gray-400';
         size.textContent = `${asset.width || 32}×${asset.height || 32}`;
         
-        // Properties column (placeholder)
+        // Properties column - show PNG paths
         const properties = document.createElement('div');
         properties.className = 'text-sm text-gray-400';
-        properties.textContent = '—'; // Placeholder
+        
+        // Show PNG paths if available
+        if (asset.imageSources && asset.imageSources.length > 0) {
+            const paths = asset.imageSources.map(source => source.path || source.filename).join(', ');
+            properties.textContent = paths;
+            properties.title = `PNG files: ${paths}`;
+        } else if (asset.properties && asset.properties.sourceFile) {
+            properties.textContent = asset.properties.sourceFile;
+            properties.title = `PNG file: ${asset.properties.sourceFile}`;
+        } else {
+            properties.textContent = '—';
+        }
         
         row.appendChild(preview);
         row.appendChild(name);
@@ -518,6 +950,11 @@ export class AssetPanel extends BasePanel {
      */
     isValidImageSrc(imgSrc) {
         if (!imgSrc) return false;
+        
+        // Check if it's a data URL (starts with data:)
+        if (imgSrc.startsWith('data:')) {
+            return true; // Data URLs are valid
+        }
         
         // For mock assets with non-existent files, treat as invalid
         // In a real implementation, this would check if the file actually exists
@@ -962,6 +1399,9 @@ export class AssetPanel extends BasePanel {
             onOpenEditor: (asset) => this.handleAssetOpenEditor(asset),
             onRename: (asset) => this.handleAssetRename(asset),
             onDuplicate: (asset) => this.handleAssetDuplicate(asset),
+            onSaveAsset: (asset) => this.handleAssetSave(asset),
+            onSaveAssetChanges: (asset) => this.handleAssetSaveChanges(asset),
+            onShowInExplorer: (asset) => this.handleAssetShowInExplorer(asset),
             onDelete: (asset) => this.handleAssetDelete(asset)
         });
 
@@ -1003,6 +1443,344 @@ export class AssetPanel extends BasePanel {
     handleAssetDuplicate(asset) {
         Logger.ui.debug('Duplicating asset:', asset.name);
         // TODO: Implement asset duplicate functionality
+    }
+
+    /**
+     * Get current tab folder for directory picker
+     * @returns {string|null} Current tab folder or null
+     */
+    getCurrentTabFolder() {
+        const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
+        if (activeTabs.size === 0) return null;
+        
+        // Get the first active tab as the current folder
+        const currentTab = Array.from(activeTabs)[0];
+        
+        // Map tab names to folder names
+        const tabToFolderMap = {
+            'objects': 'objects',
+            'backgrounds': 'backgrounds', 
+            'characters': 'characters',
+            'collectibles': 'collectibles',
+            'enemies': 'enemies',
+            'environment': 'environment'
+        };
+        
+        return tabToFolderMap[currentTab] || null;
+    }
+
+    /**
+     * Check if asset should show unsaved changes indicator
+     * @param {Object} asset - The asset to check
+     * @returns {boolean} Whether to show the indicator
+     */
+    shouldShowUnsavedIndicator(asset) {
+        // Show for temporary assets
+        if (asset.properties && asset.properties.isTemporary) {
+            return true;
+        }
+        
+        // Show for assets with unsaved changes
+        if (asset.properties && asset.properties.hasUnsavedChanges) {
+            return true;
+        }
+        
+        // Show for assets that were modified but not saved
+        if (asset.properties && asset.properties.lastModified && asset.properties.lastSaved) {
+            return asset.properties.lastModified > asset.properties.lastSaved;
+        }
+        
+        return false;
+    }
+
+    /**
+     * Handle save asset changes (without dialog)
+     * @param {Object} asset - The asset to save changes for
+     */
+    async handleAssetSaveChanges(asset) {
+        Logger.ui.info(`💾 Saving changes for asset: ${asset.name}`);
+        
+        try {
+            // Check if asset has a file path (not temporary)
+            if (!asset.path || asset.properties.isTemporary) {
+                Logger.ui.warn('Cannot save changes for temporary asset without file path');
+                this.showErrorMessage('Cannot save changes for temporary asset');
+                return;
+            }
+
+            // Create JSON data for the asset
+            const jsonData = {
+                name: asset.name,
+                type: asset.type,
+                category: asset.category,
+                // Support multiple image sources
+                imgSrc: asset.imageSources ? asset.imageSources.map(source => source.path || source.filename) : 
+                        (asset.properties.sourceFile ? [asset.properties.sourceFile] : []),
+                // Legacy single image support
+                image: asset.properties.sourceFile,
+                color: asset.color,
+                width: asset.width,
+                height: asset.height,
+                properties: {
+                    created: asset.properties.created || new Date().toISOString(),
+                    isTemporary: false,
+                    wasDragDropped: asset.properties.isDragDropped || false,
+                    lastSaved: Date.now()
+                }
+            };
+
+            // Create filename based on asset name
+            const filename = `${asset.name}.json`;
+            
+            // Use FileUtils to save the JSON file directly to the same location
+            const { FileUtils } = await import('../utils/FileUtils.js');
+            await FileUtils.saveDataDirectly(jsonData, filename, 'application/json');
+            
+            Logger.ui.info(`✅ Asset changes saved: ${filename}`);
+            
+            // Update asset properties to mark as saved
+            if (asset.properties) {
+                asset.properties.lastSaved = Date.now();
+                asset.properties.hasUnsavedChanges = false;
+            }
+            
+            // Refresh the display to update indicators
+            this.render();
+            
+            // Show success message
+            this.showSaveSuccessMessage(asset.name, filename);
+            
+        } catch (error) {
+            Logger.ui.error('Failed to save asset changes:', error);
+            this.showSaveErrorMessage(asset.name, error);
+        }
+    }
+
+    /**
+     * Handle show asset in explorer
+     * @param {Object} asset - The asset to show
+     */
+    async handleAssetShowInExplorer(asset) {
+        Logger.ui.info(`📁 Showing asset in explorer: ${asset.name}`);
+        
+        try {
+            // Check if File System Access API is supported
+            if (!('showDirectoryPicker' in window)) {
+                Logger.ui.warn('File System Access API not supported for showing in explorer');
+                this.showErrorMessage('File System Access API not supported in this browser');
+                return;
+            }
+
+            // For temporary assets, suggest a default location
+            if (asset.properties && asset.properties.isTemporary) {
+                Logger.ui.info('Opening directory picker for temporary asset');
+                
+                // Get current tab folder for starting directory
+                const currentTabFolder = this.getCurrentTabFolder();
+                
+                try {
+                    const directoryHandle = await window.showDirectoryPicker({
+                        mode: 'readwrite',
+                        startIn: currentTabFolder || 'documents'
+                    });
+                    
+                    Logger.ui.info('Directory picker opened for temporary asset');
+                    
+                } catch (error) {
+                    if (error.name === 'AbortError') {
+                        Logger.ui.info('Directory picker cancelled by user');
+                        return;
+                    }
+                    throw error;
+                }
+            } else {
+                // For regular assets with file paths
+                const assetPath = asset.path || '';
+                const pathParts = assetPath.split('/');
+                const directoryPath = pathParts.slice(0, -1).join('/');
+                
+                if (!directoryPath) {
+                    Logger.ui.warn('No directory path found for asset');
+                    this.showErrorMessage('No directory path found for this asset');
+                    return;
+                }
+
+                // Try to open directory picker to navigate to the folder
+                try {
+                    const directoryHandle = await window.showDirectoryPicker({
+                        mode: 'read'
+                    });
+                    
+                    Logger.ui.info('Directory picker opened - user can navigate to asset folder');
+                    
+                } catch (error) {
+                    if (error.name === 'AbortError') {
+                        Logger.ui.info('Directory picker cancelled by user');
+                        return;
+                    }
+                    throw error;
+                }
+            }
+            
+        } catch (error) {
+            Logger.ui.error('Failed to show asset in explorer:', error);
+            this.showErrorMessage(`Failed to show asset in explorer: ${error.message}`);
+        }
+    }
+
+    /**
+     * Handle asset save
+     * @param {Object} asset - The asset to save
+     */
+    async handleAssetSave(asset) {
+        Logger.ui.info(`💾 Saving asset: ${asset.name}`);
+        
+        try {
+            // Check if File System Access API is supported
+            if (!('showDirectoryPicker' in window)) {
+                Logger.ui.warn('File System Access API not supported, falling back to download');
+                this.showErrorMessage('File System Access API not supported in this browser');
+                return;
+            }
+
+            // Create JSON data for the asset
+            const jsonData = {
+                name: asset.name,
+                type: asset.type,
+                category: asset.category,
+                // Support multiple image sources
+                imgSrc: asset.properties.sourceFile ? [asset.properties.sourceFile] : [],
+                // Legacy single image support
+                image: asset.properties.sourceFile,
+                color: asset.color,
+                width: asset.width,
+                height: asset.height,
+                properties: {
+                    created: new Date().toISOString(),
+                    isTemporary: false,
+                    wasDragDropped: asset.properties.isDragDropped || false
+                }
+            };
+
+            // Create filename based on asset name
+            const jsonFilename = `${asset.name}.json`;
+            const pngFilename = `${asset.name}.png`;
+            
+            // Get current tab folder for starting directory
+            const currentTabFolder = this.getCurrentTabFolder();
+            
+            // Open directory picker for saving both files
+            const directoryHandle = await window.showDirectoryPicker({
+                mode: 'readwrite',
+                startIn: currentTabFolder || 'documents'
+            });
+
+            // Save JSON file
+            const jsonFileHandle = await directoryHandle.getFileHandle(jsonFilename, { create: true });
+            const jsonWritable = await jsonFileHandle.createWritable();
+            await jsonWritable.write(JSON.stringify(jsonData, null, 2));
+            await jsonWritable.close();
+
+            // Save PNG file if asset has image data
+            if (asset.imgSrc && asset.imgSrc.startsWith('data:')) {
+                try {
+                    // Convert data URL to blob
+                    const response = await fetch(asset.imgSrc);
+                    const blob = await response.blob();
+                    
+                    // Save PNG file
+                    const pngFileHandle = await directoryHandle.getFileHandle(pngFilename, { create: true });
+                    const pngWritable = await pngFileHandle.createWritable();
+                    await pngWritable.write(blob);
+                    await pngWritable.close();
+                    
+                    Logger.ui.info(`✅ PNG file saved: ${pngFilename}`);
+                } catch (pngError) {
+                    Logger.ui.warn('Failed to save PNG file:', pngError);
+                }
+            }
+            
+            Logger.ui.info(`✅ Asset saved as: ${jsonFilename}`);
+            
+            // Update asset properties to mark as saved
+            if (asset.properties) {
+                asset.properties.isTemporary = false;
+                asset.properties.lastSaved = Date.now();
+                asset.properties.hasUnsavedChanges = false;
+            }
+            
+            // Refresh the display to update indicators
+            this.render();
+            
+            // Show success message
+            this.showSaveSuccessMessage(asset.name, jsonFilename);
+            
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                Logger.ui.info('Asset save cancelled by user');
+                return;
+            }
+            
+            Logger.ui.error('Failed to save asset:', error);
+            this.showSaveErrorMessage(asset.name, error);
+        }
+    }
+
+    /**
+     * Show save success message
+     */
+    showSaveSuccessMessage(assetName, filename) {
+        // Create temporary success message
+        const message = document.createElement('div');
+        message.className = 'fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+        message.textContent = `✅ Asset "${assetName}" saved as ${filename}`;
+        
+        document.body.appendChild(message);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            if (message.parentNode) {
+                message.parentNode.removeChild(message);
+            }
+        }, 3000);
+    }
+
+    /**
+     * Show save error message
+     */
+    showSaveErrorMessage(assetName, error) {
+        // Create temporary error message
+        const message = document.createElement('div');
+        message.className = 'fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+        message.textContent = `❌ Failed to save asset "${assetName}": ${error.message}`;
+        
+        document.body.appendChild(message);
+        
+        // Remove after 5 seconds
+        setTimeout(() => {
+            if (message.parentNode) {
+                message.parentNode.removeChild(message);
+            }
+        }, 5000);
+    }
+
+    /**
+     * Show general error message
+     */
+    showErrorMessage(message) {
+        // Create temporary error message
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+        errorDiv.textContent = `❌ ${message}`;
+        
+        document.body.appendChild(errorDiv);
+        
+        // Remove after 5 seconds
+        setTimeout(() => {
+            if (errorDiv.parentNode) {
+                errorDiv.parentNode.removeChild(errorDiv);
+            }
+        }, 5000);
     }
 
     /**
@@ -1073,6 +1851,187 @@ export class AssetPanel extends BasePanel {
     handleSettings() {
         Logger.ui.debug('Opening panel settings');
         // TODO: Implement panel settings
+    }
+
+    /**
+     * Setup drag-n-drop functionality for PNG files
+     */
+    setupDragAndDrop() {
+        const dropZone = this.previewsContainer;
+        
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, this.preventDefaults, false);
+            document.body.addEventListener(eventName, this.preventDefaults, false);
+        });
+
+        // Highlight drop zone
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, this.highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, this.unhighlight, false);
+        });
+
+        // Handle dropped files
+        dropZone.addEventListener('drop', this.handleDrop.bind(this), false);
+    }
+
+    preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+
+    highlight(e) {
+        this.classList.add('drag-over');
+    }
+
+    unhighlight(e) {
+        this.classList.remove('drag-over');
+    }
+
+    /**
+     * Handle dropped files
+     * @param {DragEvent} e - Drop event
+     */
+    async handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+
+        Logger.ui.info(`📁 Files dropped: ${files.length}`);
+
+        // Filter for PNG files only
+        const pngFiles = Array.from(files).filter(file => 
+            file.type === 'image/png' || file.name.toLowerCase().endsWith('.png')
+        );
+
+        if (pngFiles.length === 0) {
+            Logger.ui.warn('⚠️ No PNG files found in dropped files');
+            return;
+        }
+
+        Logger.ui.info(`🖼️ Processing ${pngFiles.length} PNG files`);
+
+        // Get active tab (last selected if multiple)
+        const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
+        const activeTab = Array.from(activeTabs).pop() || 'objects';
+
+        Logger.ui.info(`📂 Adding assets to tab: ${activeTab}`);
+
+        // Create temporary assets for each PNG file
+        for (const pngFile of pngFiles) {
+            try {
+                await this.createTemporaryAssetFromFile(pngFile, activeTab);
+            } catch (error) {
+                Logger.ui.error(`❌ Failed to create asset from ${pngFile.name}:`, error);
+            }
+        }
+
+        // Refresh the panel
+        this.render();
+    }
+
+    /**
+     * Create temporary asset from PNG file
+     * @param {File} pngFile - PNG file
+     * @param {string} category - Asset category
+     */
+    async createTemporaryAssetFromFile(pngFile, category) {
+        Logger.ui.info(`🎨 Creating temporary asset from: ${pngFile.name}`);
+
+        try {
+            // Create data URL for image
+            const { FileUtils } = await import('../utils/FileUtils.js');
+            const imgSrc = await FileUtils.createDataURL(pngFile);
+
+            // Get image dimensions
+            const dimensions = await this.getImageDimensions(imgSrc);
+
+            // Create asset data
+            const assetId = `temp_${category}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            
+            const assetData = {
+                id: assetId,
+                name: pngFile.name.replace(/\.[^/.]+$/, ""), // Remove extension
+                type: this.getAssetTypeFromCategory(category),
+                category: category,
+                path: `temp/${pngFile.name}`, // Temporary path
+                width: dimensions.width,
+                height: dimensions.height,
+                color: this.getDefaultColor(category),
+                imgSrc: imgSrc,
+                properties: {
+                    sourceFile: pngFile.name,
+                    fileSize: pngFile.size,
+                    lastModified: Date.now(),
+                    isTemporary: true,
+                    isDragDropped: true
+                },
+                tags: [category, 'imported', 'temporary', 'drag-dropped']
+            };
+
+            // Add to asset manager
+            this.assetManager.addExternalAsset(assetData);
+            Logger.ui.info(`✅ Temporary asset created: ${assetData.name}`);
+
+        } catch (error) {
+            Logger.ui.error(`❌ Failed to create temporary asset:`, error);
+            throw error;
+        }
+    }
+
+    /**
+     * Get image dimensions from data URL
+     * @param {string} dataUrl - Image data URL
+     * @returns {Promise<{width: number, height: number}>} Image dimensions
+     */
+    getImageDimensions(dataUrl) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                resolve({
+                    width: img.naturalWidth,
+                    height: img.naturalHeight
+                });
+            };
+            img.onerror = () => reject(new Error('Failed to load image'));
+            img.src = dataUrl;
+        });
+    }
+
+    /**
+     * Get asset type from category
+     * @param {string} category - Category name
+     * @returns {string} Asset type
+     */
+    getAssetTypeFromCategory(category) {
+        const typeMap = {
+            'backgrounds': 'background',
+            'characters': 'character',
+            'collectibles': 'collectible',
+            'enemies': 'enemy',
+            'environment': 'environment',
+            'objects': 'object'
+        };
+        return typeMap[category] || 'object';
+    }
+
+    /**
+     * Get default color for category
+     * @param {string} category - Category name
+     * @returns {string} Color hex
+     */
+    getDefaultColor(category) {
+        const colorMap = {
+            'backgrounds': '#87CEEB',
+            'characters': '#FF6B6B',
+            'collectibles': '#F1C40F',
+            'enemies': '#E74C3C',
+            'environment': '#2ECC71',
+            'objects': '#95A5A6'
+        };
+        return colorMap[category] || '#CCCCCC';
     }
 
     /**

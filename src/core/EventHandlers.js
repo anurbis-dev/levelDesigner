@@ -121,7 +121,7 @@ export class EventHandlers extends BaseModule {
         };
         
         for (const [event, handler] of Object.entries(handlers)) {
-            const options = event === 'wheel' ? { passive: false } : { passive: true };
+            const options = (event === 'wheel' || event === 'dragover' || event === 'drop') ? { passive: false } : { passive: true };
             canvas.addEventListener(event, handler, options);
             this.eventListeners.push({
                 target: canvas,
