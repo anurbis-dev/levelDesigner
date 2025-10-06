@@ -1857,38 +1857,95 @@ export class AssetPanel extends BasePanel {
      * Setup drag-n-drop functionality for PNG files
      */
     setupDragAndDrop() {
-        const dropZone = this.previewsContainer;
+        const dropZone = this.container;
         
-        // Prevent default drag behaviors
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, this.preventDefaults, false);
-            document.body.addEventListener(eventName, this.preventDefaults, false);
-        });
-
-        // Highlight drop zone
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropZone.addEventListener(eventName, this.highlight, false);
-        });
-
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, this.unhighlight, false);
-        });
-
-        // Handle dropped files
-        dropZone.addEventListener('drop', this.handleDrop.bind(this), false);
+        // Create drop overlay element
+        this.dropOverlay = document.createElement('div');
+        this.dropOverlay.style.cssText = `
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(59, 130, 246, 0.1);
+            border: 2px dashed rgba(59, 130, 246, 0.5);
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        `;
+        
+        // Create text container with background
+        const textContainer = document.createElement('div');
+        textContainer.style.cssText = `
+            padding: 20px 40px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid rgba(59, 130, 246, 0.8);
+            border-radius: 8px;
+            font-size: 24px;
+            color: rgba(59, 130, 246, 1);
+            font-weight: bold;
+            text-align: center;
+        `;
+        textContainer.textContent = 'Drop PNG image(s) to Import as Assets';
+        this.dropOverlay.appendChild(textContainer);
+        this.container.style.position = 'relative';
+        this.container.appendChild(this.dropOverlay);
+        
+        // Bind methods to preserve context
+        this.boundHandleDragEnter = this.handleDragEnter.bind(this);
+        this.boundHandleDragOver = this.handleDragOver.bind(this);
+        this.boundHandleDragLeave = this.handleDragLeave.bind(this);
+        this.boundHandleDrop = this.handleDrop.bind(this);
+        
+        // Setup drag-n-drop handlers on container
+        dropZone.addEventListener('dragenter', this.boundHandleDragEnter, false);
+        dropZone.addEventListener('dragover', this.boundHandleDragOver, false);
+        dropZone.addEventListener('dragleave', this.boundHandleDragLeave, false);
+        dropZone.addEventListener('drop', this.boundHandleDrop, false);
     }
 
-    preventDefaults(e) {
+    handleDragEnter(e) {
         e.preventDefault();
         e.stopPropagation();
+        
+        // Check if we're entering the container area
+        const rect = this.container.getBoundingClientRect();
+        if (e.clientX >= rect.left && e.clientX <= rect.right &&
+            e.clientY >= rect.top && e.clientY <= rect.bottom) {
+            if (this.dropOverlay) {
+                this.dropOverlay.style.display = 'flex';
+            }
+        }
     }
 
-    highlight(e) {
-        this.classList.add('drag-over');
+    handleDragOver(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Continuously check if still inside container
+        const rect = this.container.getBoundingClientRect();
+        if (e.clientX >= rect.left && e.clientX <= rect.right &&
+            e.clientY >= rect.top && e.clientY <= rect.bottom) {
+            if (this.dropOverlay) {
+                this.dropOverlay.style.display = 'flex';
+            }
+        }
     }
 
-    unhighlight(e) {
-        this.classList.remove('drag-over');
+    handleDragLeave(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Check if actually leaving the container
+        const rect = this.container.getBoundingClientRect();
+        const isOutside = e.clientX < rect.left || e.clientX > rect.right ||
+                         e.clientY < rect.top || e.clientY > rect.bottom;
+        
+        if (isOutside && this.dropOverlay) {
+            this.dropOverlay.style.display = 'none';
+        }
     }
 
     /**
@@ -1896,6 +1953,14 @@ export class AssetPanel extends BasePanel {
      * @param {DragEvent} e - Drop event
      */
     async handleDrop(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Hide overlay immediately after drop
+        if (this.dropOverlay) {
+            this.dropOverlay.style.display = 'none';
+        }
+        
         const dt = e.dataTransfer;
         const files = dt.files;
 
@@ -1956,7 +2021,7 @@ export class AssetPanel extends BasePanel {
                 name: pngFile.name.replace(/\.[^/.]+$/, ""), // Remove extension
                 type: this.getAssetTypeFromCategory(category),
                 category: category,
-                path: `temp/${pngFile.name}`, // Temporary path
+                path: `${category}/${pngFile.name}`, // Path based on active tab category
                 width: dimensions.width,
                 height: dimensions.height,
                 color: this.getDefaultColor(category),

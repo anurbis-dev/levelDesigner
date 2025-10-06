@@ -15,20 +15,21 @@ export class FoldersPanel extends BasePanel {
         this.expandedFolders = new Set(['root']); // Root is always expanded
         this.selectedFolders = new Set(['root']); // Support multiple selection
         this.shiftAnchor = null; // For shift+click selection
+        this.isRendering = false; // Flag to prevent rapid re-rendering
 
         this.init();
         this.setupEventListeners();
     }
 
     init() {
-        this.render();
+        this.renderStructure();
         this.buildFolderStructure();
     }
 
     /**
-     * Render the folders panel UI
+     * Render the folders panel structure (only on initialization)
      */
-    render() {
+    renderStructure() {
         this.container.innerHTML = `
             <div class="flex border-b border-gray-700 flex-shrink-0 px-3 py-2">
                 <span class="text-sm font-medium text-gray-300 flex-1">Folders</span>
@@ -36,13 +37,13 @@ export class FoldersPanel extends BasePanel {
                     ⇄
                 </button>
             </div>
-            <div id="folders-tree" class="flex-grow overflow-y-auto p-2 text-sm">
+            <div id="folders-tree" class="flex-grow overflow-y-auto p-2 text-sm" style="overflow-x: hidden; word-wrap: nowrap; line-height: 1.2; word-break: keep-all; hyphens: none;">
                 <!-- Folder tree will be rendered here -->
             </div>
         `;
 
         this.folderTree = this.container.querySelector('#folders-tree');
-        Logger.ui.debug('FoldersPanel: Rendered, folderTree element:', this.folderTree);
+        Logger.ui.debug('FoldersPanel: Rendered structure, folderTree element:', this.folderTree);
 
         if (this.folderTree) {
             Logger.ui.debug('FoldersPanel: folderTree computed style:', window.getComputedStyle(this.folderTree));
@@ -50,6 +51,46 @@ export class FoldersPanel extends BasePanel {
         }
 
         this.setupPositionToggle();
+    }
+
+    /**
+     * Render the folders panel UI (updates content only)
+     */
+    render() {
+        // Only re-render if structure is already created
+        if (!this.folderTree) {
+            this.renderStructure();
+        }
+        
+        // Update folder content without clearing structure
+        this.renderFolderContent();
+    }
+
+    /**
+     * Render folder content (updates only the folder tree content)
+     */
+    renderFolderContent() {
+        if (!this.folderTree) {
+            Logger.ui.error('FoldersPanel: folderTree is null in renderFolderContent');
+            return;
+        }
+
+        if (!this.folderStructure) {
+            Logger.ui.debug('FoldersPanel: No folder structure to render');
+            this.folderTree.innerHTML = '<div class="text-gray-400 text-center py-4">No folders available</div>';
+            return;
+        }
+
+        // Prevent rapid re-rendering during resize
+        if (this.isRendering) {
+            return;
+        }
+        
+        this.isRendering = true;
+        requestAnimationFrame(() => {
+            this.renderFolderTree();
+            this.isRendering = false;
+        });
     }
 
     /**
@@ -65,6 +106,67 @@ export class FoldersPanel extends BasePanel {
         } else {
             Logger.ui.warn('FoldersPanel: Position toggle button or assetPanel not available');
         }
+    }
+
+    /**
+     * Truncate name to fit available space
+     * @param {string} name - Name to truncate
+     * @param {number} maxWidth - Maximum width in pixels
+     * @returns {string} - Truncated name
+     */
+    truncateName(name, maxWidth) {
+        if (name.length <= 8) return name;
+        
+        // Get actual container width
+        const containerWidth = this.container ? this.container.offsetWidth : 200;
+        
+        // Calculate available width more precisely
+        // Account for: expand icon (16px) + folder icon (20px) + count (40px) + padding (6px) = 82px
+        const reservedSpace = 82;
+        const availableWidth = Math.max(containerWidth - reservedSpace, 50);
+        
+        // Use canvas for accurate text measurement
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        ctx.font = '12px system-ui, -apple-system, sans-serif';
+        
+        const fullTextWidth = ctx.measureText(name).width;
+        if (fullTextWidth <= availableWidth) return name;
+        
+        // Truncation with ellipsis in the middle
+        const ellipsis = '...';
+        const ellipsisWidth = ctx.measureText(ellipsis).width;
+        const availableForText = availableWidth - ellipsisWidth;
+        
+        // Binary search for optimal character count
+        let left = 1;
+        let right = name.length;
+        let bestLength = 0;
+        
+        while (left <= right) {
+            const mid = Math.floor((left + right) / 2);
+            const startChars = Math.floor(mid / 2);
+            const endChars = Math.ceil(mid / 2);
+            
+            if (startChars <= 0 || endChars <= 0) break;
+            
+            const testText = name.substring(0, startChars) + ellipsis + name.substring(name.length - endChars);
+            const testWidth = ctx.measureText(testText).width;
+            
+            if (testWidth <= availableWidth) {
+                bestLength = mid;
+                left = mid + 1;
+            } else {
+                right = mid - 1;
+            }
+        }
+        
+        if (bestLength <= 0) return name.substring(0, 3) + ellipsis;
+        
+        const startChars = Math.floor(bestLength / 2);
+        const endChars = Math.ceil(bestLength / 2);
+        
+        return name.substring(0, startChars) + ellipsis + name.substring(name.length - endChars);
     }
 
     /**
@@ -157,11 +259,6 @@ export class FoldersPanel extends BasePanel {
                         isExpanded: false
                     };
                     
-                    // Automatically expand first level folders for better UX
-                    if (pathParts.slice(0, i + 1).length === 1) {
-                        this.expandedFolders.add(folderPath);
-                        Logger.ui.debug(`FoldersPanel: Auto-expanding first level folder: ${folderPath}`);
-                    }
                     
                     Logger.ui.debug(`FoldersPanel: Created folder ${folderName} at path ${folderPath}`);
                 }
@@ -220,12 +317,12 @@ export class FoldersPanel extends BasePanel {
             html += `
                 <div class="folder-item ${isSelected ? 'selected' : ''} cursor-pointer hover:bg-gray-700 p-1 rounded mb-1"
                      data-path="${folder.path}"
-                     style="padding-left: ${depth * 16 + 4}px; pointer-events: auto; z-index: 1;"
-                    <div class="flex items-center">
-                        ${expandIcon ? `<span class="expand-icon mr-1 text-xs">${expandIcon}</span>` : '<span class="w-3 mr-1"></span>'}
-                        <span class="folder-icon mr-2">${toggleIcon}</span>
-                        <span class="folder-name flex-1 truncate">${folder.name}</span>
-                        <span class="folder-count text-xs text-gray-400 ml-2">
+                     style="padding-left: ${depth * 16 + 4}px; pointer-events: auto; z-index: 1; display: block; width: 100%; overflow: hidden; line-height: 1.2; height: 24px; word-break: keep-all; hyphens: none;"
+                    <div class="flex items-center" style="min-width: 0; width: 100%; position: relative; line-height: 1.2; align-items: center; flex-wrap: nowrap;">
+                        ${expandIcon ? `<span class="expand-icon text-xs" style="min-width: 16px; flex-shrink: 0; margin-right: 4px;">${expandIcon}</span>` : '<span style="min-width: 16px; flex-shrink: 0; margin-right: 4px;"></span>'}
+                        <span class="folder-icon" style="min-width: 20px; flex-shrink: 0; margin-right: 8px;">${toggleIcon}</span>
+                        <span class="folder-name truncate" style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: calc(100% - 82px); position: relative; z-index: 1; line-height: 1.2;">${this.truncateName(folder.name)}</span>
+                        <span class="folder-count text-xs text-gray-400" style="white-space: nowrap; min-width: 40px; flex-shrink: 0; text-align: right; margin-left: 4px;">
                             ${folder.path === 'root' ? `(${folder.totalAssets || 0})` : hasChildren ? `(${folder.assets.length})` : ''}
                         </span>
                     </div>
@@ -249,10 +346,10 @@ export class FoldersPanel extends BasePanel {
                         <div class="asset-item cursor-pointer hover:bg-gray-700 p-1 rounded mb-1 text-gray-400"
                              data-path="${folder.path}/asset-${asset.id}"
                              data-asset-id="${asset.id}"
-                             style="padding-left: ${(depth + 1) * 16 + 4}px; pointer-events: auto; z-index: 1;"
-                            <div class="flex items-center">
-                                <span class="asset-icon mr-2">📄</span>
-                                <span class="asset-name flex-1 truncate">${asset.name}</span>
+                             style="padding-left: ${(depth + 1) * 16 + 4}px; pointer-events: auto; z-index: 1; display: block; width: 100%; overflow: hidden; line-height: 1.2; height: 24px; word-break: keep-all; hyphens: none;"
+                            <div class="flex items-center" style="min-width: 0; width: 100%; position: relative; line-height: 1.2; align-items: center; flex-wrap: nowrap;">
+                                <span class="asset-icon" style="min-width: 20px; flex-shrink: 0; margin-right: 8px;">📄</span>
+                                <span class="asset-name truncate" style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: calc(100% - 28px); position: relative; z-index: 1; line-height: 1.2;">${this.truncateName(asset.name)}</span>
                             </div>
                         </div>
                     `;
@@ -433,7 +530,7 @@ export class FoldersPanel extends BasePanel {
             this.shiftAnchor = path;
         }
 
-        this.renderFolderTree();
+        this.renderFolderContent();
         this.syncFoldersToTabs();
 
         Logger.ui.debug('FoldersPanel: Selected folders updated:', Array.from(this.selectedFolders));
@@ -501,7 +598,7 @@ export class FoldersPanel extends BasePanel {
         } else {
             this.expandedFolders.add(path);
         }
-        this.renderFolderTree();
+        this.renderFolderContent();
         Logger.ui.debug('Toggled folder expansion:', path);
     }
 
@@ -570,7 +667,7 @@ export class FoldersPanel extends BasePanel {
         Logger.ui.debug('FoldersPanel: Refresh called');
         this.buildFolderStructure();
         // Always re-render, even if buildFolderStructure did nothing
-        this.renderFolderTree();
+        this.renderFolderContent();
     }
 
     /**
@@ -586,6 +683,77 @@ export class FoldersPanel extends BasePanel {
         this.stateManager.subscribe('activeAssetTabs', (activeTabs) => {
             this.syncTabsToFolders(activeTabs);
         });
+
+        // Setup resize observer for dynamic truncation
+        this.setupResizeObserver();
+    }
+
+    /**
+     * Setup resize observer to update truncation when panel size changes
+     */
+    setupResizeObserver() {
+        if (!this.container) return;
+
+        // Track previous size to avoid unnecessary updates
+        this.lastContainerWidth = this.container.offsetWidth;
+        this.lastContainerHeight = this.container.offsetHeight;
+
+        // Use ResizeObserver if available
+        if (window.ResizeObserver) {
+            this.resizeObserver = new ResizeObserver((entries) => {
+                // Check if size actually changed significantly
+                const entry = entries[0];
+                if (entry) {
+                    const { width, height } = entry.contentRect;
+                    const widthChanged = Math.abs(width - this.lastContainerWidth) > 5;
+                    const heightChanged = Math.abs(height - this.lastContainerHeight) > 5;
+                    
+                    if (widthChanged || heightChanged) {
+                        this.lastContainerWidth = width;
+                        this.lastContainerHeight = height;
+                        
+                        // Debounce the resize event with longer delay
+                        clearTimeout(this.resizeTimeout);
+                        this.resizeTimeout = setTimeout(() => {
+                            this.renderFolderContent();
+                        }, 150);
+                    }
+                }
+            });
+            this.resizeObserver.observe(this.container);
+        } else {
+            // Fallback to window resize event
+            window.addEventListener('resize', () => {
+                const currentWidth = this.container.offsetWidth;
+                const currentHeight = this.container.offsetHeight;
+                const widthChanged = Math.abs(currentWidth - this.lastContainerWidth) > 5;
+                const heightChanged = Math.abs(currentHeight - this.lastContainerHeight) > 5;
+                
+                if (widthChanged || heightChanged) {
+                    this.lastContainerWidth = currentWidth;
+                    this.lastContainerHeight = currentHeight;
+                    
+                    clearTimeout(this.resizeTimeout);
+                    this.resizeTimeout = setTimeout(() => {
+                        this.renderFolderContent();
+                    }, 150);
+                }
+            });
+        }
+    }
+
+    /**
+     * Cleanup resources when panel is destroyed
+     */
+    destroy() {
+        if (this.resizeObserver) {
+            this.resizeObserver.disconnect();
+            this.resizeObserver = null;
+        }
+        if (this.resizeTimeout) {
+            clearTimeout(this.resizeTimeout);
+            this.resizeTimeout = null;
+        }
     }
 
     syncTabsToFolders(activeTabs) {
@@ -623,7 +791,7 @@ export class FoldersPanel extends BasePanel {
             this.selectedFolders = selectedPaths;
         }
 
-        this.renderFolderTree();
+        this.renderFolderContent();
         Logger.ui.debug('FoldersPanel: Synced tabs to folders:', Array.from(this.selectedFolders));
     }
 }
