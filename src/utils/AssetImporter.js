@@ -843,34 +843,7 @@ export class AssetImporter {
      * @returns {Array} Array of mock asset data
      */
     generateMockAssetsForCategory(categoryName) {
-        const mockAssets = {
-            'backgrounds': [
-                { id: 'bg-sky', name: 'Sky Background', type: 'background', width: 1024, height: 768, color: '#87CEEB', imgSrc: 'sky.png', properties: { parallax: true }, tags: ['sky', 'background'] },
-                { id: 'bg-mountains', name: 'Mountains', type: 'background', width: 1024, height: 512, color: '#8B7355', imgSrc: 'mountains.png', properties: { parallax: true }, tags: ['mountains', 'background'] }
-            ],
-            'characters': [
-                { id: 'char-player', name: 'Player', type: 'character', width: 32, height: 32, color: '#FF6B6B', imgSrc: 'player.png', properties: { health: 100, speed: 5 }, tags: ['player', 'character'] },
-                { id: 'char-enemy', name: 'Enemy', type: 'character', width: 32, height: 32, color: '#4ECDC4', imgSrc: 'enemy.png', properties: { health: 50, speed: 3 }, tags: ['enemy', 'character'] }
-            ],
-            'platforms': [
-                { id: 'platform-grass', name: 'Grass Platform', type: 'platform', width: 32, height: 32, color: '#2ECC71', imgSrc: 'grass.png', properties: { solid: true, breakable: false }, tags: ['platform', 'grass'] },
-                { id: 'platform-stone', name: 'Stone Platform', type: 'platform', width: 32, height: 32, color: '#95A5A6', imgSrc: 'stone.png', properties: { solid: true, breakable: false }, tags: ['platform', 'stone'] }
-            ],
-            'collectibles': [
-                { id: 'coin-gold', name: 'Gold Coin', type: 'collectible', width: 16, height: 16, color: '#F1C40F', imgSrc: 'coin.png', properties: { value: 10, collectible: true }, tags: ['coin', 'collectible'] },
-                { id: 'powerup-mushroom', name: 'Mushroom', type: 'powerup', width: 32, height: 32, color: '#E74C3C', imgSrc: 'mushroom.png', properties: { effect: 'grow', duration: 10000 }, tags: ['powerup', 'mushroom'] }
-            ],
-            'effects': [
-                { id: 'effect-explosion', name: 'Explosion', type: 'effect', width: 64, height: 64, color: '#FF9500', imgSrc: 'explosion.png', properties: { animation: true, duration: 1000 }, tags: ['effect', 'explosion'] },
-                { id: 'effect-particle', name: 'Particle', type: 'effect', width: 8, height: 8, color: '#FFD700', imgSrc: 'particle.png', properties: { animation: true, duration: 500 }, tags: ['effect', 'particle'] }
-            ],
-            'ui': [
-                { id: 'ui-button', name: 'Button', type: 'ui', width: 128, height: 32, color: '#3498DB', imgSrc: 'button.png', properties: { interactive: true }, tags: ['ui', 'button'] },
-                { id: 'ui-icon', name: 'Icon', type: 'ui', width: 24, height: 24, color: '#9B59B6', imgSrc: 'icon.png', properties: { interactive: false }, tags: ['ui', 'icon'] }
-            ]
-        };
-
-        return mockAssets[categoryName] || [];
+        return [];
     }
 
     /**

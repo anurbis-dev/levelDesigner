@@ -956,12 +956,7 @@ export class AssetPanel extends BasePanel {
             return true; // Data URLs are valid
         }
         
-        // For mock assets with non-existent files, treat as invalid
         // In a real implementation, this would check if the file actually exists
-        const mockFiles = ['sky.png', 'mountains.png', 'player.png', 'enemy.png', 'grass.png', 'stone.png', 'coin.png', 'mushroom.png', 'explosion.png', 'particle.png', 'button.png', 'icon.png'];
-        if (mockFiles.includes(imgSrc)) {
-            return false; // Mock files don't exist, so treat as invalid
-        }
         
         return true;
     }

@@ -1040,7 +1040,7 @@ describe('Level Editor E2E', () => {
 
     test('should place asset on canvas', async () => {
         // Выбрать ассет
-        await page.click('.asset-thumbnail[data-asset-id="tile_grass"]');
+        await page.click('.asset-thumbnail[data-asset-id="any_asset_id"]');
         
         // Перетащить на canvas
         const canvas = await page.$('#main-canvas');
@@ -1060,7 +1060,7 @@ describe('Level Editor E2E', () => {
 
     test('should save and load level', async () => {
         // Создать объект
-        await page.click('.asset-thumbnail[data-asset-id="tile_grass"]');
+        await page.click('.asset-thumbnail[data-asset-id="any_asset_id"]');
         const canvas = await page.$('#main-canvas');
         const canvasBox = await canvas.boundingBox();
         await page.mouse.move(canvasBox.x + 100, canvasBox.y + 100);

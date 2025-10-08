@@ -1,0 +1,17 @@
+{
+  "name": "FG_flora_001",
+  "type": "object",
+  "category": "TEST",
+  "imgSrc": [
+    "FG_flora_001.png"
+  ],
+  "image": "FG_flora_002.png",
+  "color": "#cccccc",
+  "width": 63,
+  "height": 38,
+  "properties": {
+    "created": "2025-10-08T09:52:56.784Z",
+    "isTemporary": false,
+    "wasDragDropped": true
+  }
+}

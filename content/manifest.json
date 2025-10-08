@@ -1,0 +1,44 @@
+{
+  "version": "1.0.0",
+  "generated": "2025-10-08",
+  "structure": {
+    "assets": {
+      "backgrounds": {
+        "parallax": {},
+        "static": {}
+      },
+      "characters": {
+        "enemies": {},
+        "player": {}
+      },
+      "collectibles": {
+        "coins": {},
+        "items": {},
+        "powerups": {}
+      },
+      "effects": {
+        "explosions": {},
+        "particles": {},
+        "ui-effects": {}
+      },
+      "flora": {},
+      "platforms": {
+        "blocks": {},
+        "ground": {},
+        "pipes": {}
+      },
+      "TEST": {}
+    },
+    "graphs": {},
+    "maps": {}
+  },
+  "files": [
+    "assets/TEST/FG_flora_02.json",
+    "assets/TEST/map_miningFacility_LVL01_prototype_v01.json",
+    "assets/platforms/FG_flora_02.json",
+    "assets/platforms/map_miningFacility_LVL01_prototype_v01.json",
+    "graphs/FG_flora_001.json",
+    "maps/FG_flora_001.json",
+    "maps/FG_flora_002.json"
+  ]
+}

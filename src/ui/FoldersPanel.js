@@ -32,7 +32,7 @@ export class FoldersPanel extends BasePanel {
     renderStructure() {
         this.container.innerHTML = `
             <div class="flex border-b border-gray-700 flex-shrink-0 px-3 py-2">
-                <span class="text-sm font-medium text-gray-300 flex-1">Folders</span>
+                <span class="text-sm font-medium text-gray-300 flex-1">Content</span>
                 <button id="folders-position-toggle" class="text-gray-400 hover:text-white hover:bg-gray-700 px-1 py-0.5 rounded text-xs" title="Toggle position">
                     ⇄
                 </button>
@@ -170,6 +170,50 @@ export class FoldersPanel extends BasePanel {
     }
 
     /**
+     * Build folder structure from manifest structure
+     * @param {Object} parentFolder - Parent folder object
+     * @param {Object} structure - Manifest structure object
+     * @param {string} parentPath - Parent path
+     */
+    buildFromManifestStructure(parentFolder, structure, parentPath) {
+        for (const [folderName, subStructure] of Object.entries(structure)) {
+            const folderPath = `${parentPath}/${folderName}`;
+            
+            // Create folder node
+            const folder = {
+                name: folderName,
+                path: folderPath,
+                children: {},
+                assets: [],
+                isExpanded: false
+            };
+
+            // Add to parent
+            parentFolder.children[folderName] = folder;
+
+            Logger.ui.debug(`FoldersPanel: Created folder "${folderName}" at path "${folderPath}"`);
+
+            // Recursively process subfolders
+            if (subStructure && typeof subStructure === 'object' && Object.keys(subStructure).length > 0) {
+                this.buildFromManifestStructure(folder, subStructure, folderPath);
+            }
+
+            // Get assets for this folder from assetManager
+            // Build the actual path prefix to check (remove 'root/' prefix)
+            const pathPrefix = folderPath.replace(/^root\//, '');
+            if (this.assetManager.assets) {
+                for (const asset of this.assetManager.assets.values()) {
+                    // Check if asset belongs to this folder or its subfolders
+                    if (asset.path && asset.path.startsWith(pathPrefix + '/')) {
+                        folder.assets.push(asset);
+                        Logger.ui.debug(`FoldersPanel: Added asset "${asset.name}" to folder "${folderName}" (path: ${pathPrefix})`);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * Build folder structure from asset manager
      */
     buildFolderStructure() {
@@ -178,8 +222,31 @@ export class FoldersPanel extends BasePanel {
             return;
         }
 
+        // Always initialize base folder structure
+        const folderStructure = {
+            root: {
+                name: 'Content',
+                path: 'root',
+                children: {},
+                assets: [],
+                isExpanded: true
+            }
+        };
+
+        // Build from contentStructure if available
+        if (this.assetManager.contentStructure) {
+            Logger.ui.info('FoldersPanel: Building structure from manifest');
+            this.buildFromManifestStructure(folderStructure.root, this.assetManager.contentStructure, 'root');
+            this.folderStructure = folderStructure;
+            this.renderFolderContent();
+            return;
+        }
+
+        // Fallback: build from assets if no manifest
         if (!this.assetManager.assets || this.assetManager.assets.size === 0) {
-            Logger.ui.debug('FoldersPanel: No assets available yet, skipping folder structure build');
+            Logger.ui.debug('FoldersPanel: No assets or manifest available, creating empty folder structure');
+            this.folderStructure = folderStructure;
+            this.renderFolderContent();
             return;
         }
 
@@ -200,17 +267,6 @@ export class FoldersPanel extends BasePanel {
             }
         }
         Logger.ui.info(`FoldersPanel: Found ${assetsWithPaths} assets with paths, deepest level: ${deepestLevel}`);
-
-
-        const folderStructure = {
-            root: {
-                name: 'Assets',
-                path: 'root',
-                children: {},
-                assets: [],
-                isExpanded: true
-            }
-        };
 
         let totalAssets = 0;
 
@@ -300,9 +356,18 @@ export class FoldersPanel extends BasePanel {
         }
 
 
+        // Helper function to count assets recursively
+        const countAssetsRecursive = (folder) => {
+            let count = folder.assets ? folder.assets.length : 0;
+            for (const child of Object.values(folder.children || {})) {
+                count += countAssetsRecursive(child);
+            }
+            return count;
+        };
+
         const renderFolder = (folder, depth = 0) => {
             const isExpanded = this.expandedFolders.has(folder.path);
-            const hasChildren = Object.keys(folder.children).length > 0 || folder.assets.length > 0;
+            const hasChildren = Object.keys(folder.children).length > 0; // Only check for child folders
             const isSelected = this.selectedFolders.has(folder.path);
 
             Logger.ui.debug(`FoldersPanel: Rendering folder "${folder.name}" (path: ${folder.path}), depth: ${depth}, children: ${Object.keys(folder.children).length}, assets: ${folder.assets.length}, expanded: ${isExpanded}, selected: ${isSelected}`);
@@ -310,52 +375,42 @@ export class FoldersPanel extends BasePanel {
             let html = '';
 
             // Folder header
-            const toggleIcon = hasChildren ? (isExpanded ? '📂' : '📁') : '📄';
-            const expandIcon = hasChildren && Object.keys(folder.children).length > 0 ?
+            // Always show folder icon for folders, even if empty
+            const toggleIcon = isExpanded ? '📂' : '📁';
+            const expandIcon = Object.keys(folder.children).length > 0 ?
                 (isExpanded ? '▼' : '▶') : '';
+            
+            // Count assets recursively (including all subfolders)
+            const totalAssetsInFolder = countAssetsRecursive(folder);
+            const hasAssets = totalAssetsInFolder > 0;
+            const textColor = hasAssets ? 'text-gray-300' : 'text-gray-500';
 
             html += `
-                <div class="folder-item ${isSelected ? 'selected' : ''} cursor-pointer hover:bg-gray-700 p-1 rounded mb-1"
+                <div class="folder-item ${isSelected ? 'selected' : ''} cursor-pointer ${isSelected ? '' : 'hover:bg-gray-700'} p-1 rounded mb-1"
                      data-path="${folder.path}"
-                     style="padding-left: ${depth * 16 + 4}px; pointer-events: auto; z-index: 1; display: block; width: 100%; overflow: hidden; line-height: 1.2; height: 24px; word-break: keep-all; hyphens: none;"
+                     style="padding-left: ${depth * 16 + 4}px; pointer-events: auto; z-index: 1; display: block; width: 100%; overflow: hidden; line-height: 1.2; height: 24px; word-break: keep-all; hyphens: none; ${isSelected ? 'background-color: rgba(59, 130, 246, 0.3) !important;' : ''}"
                     <div class="flex items-center" style="min-width: 0; width: 100%; position: relative; line-height: 1.2; align-items: center; flex-wrap: nowrap;">
-                        ${expandIcon ? `<span class="expand-icon text-xs" style="min-width: 16px; flex-shrink: 0; margin-right: 4px;">${expandIcon}</span>` : '<span style="min-width: 16px; flex-shrink: 0; margin-right: 4px;"></span>'}
+                        ${expandIcon ? `<span class="expand-icon text-xs ${textColor}" style="min-width: 16px; flex-shrink: 0; margin-right: 4px; cursor: pointer;">${expandIcon}</span>` : '<span style="min-width: 16px; flex-shrink: 0; margin-right: 4px;"></span>'}
                         <span class="folder-icon" style="min-width: 20px; flex-shrink: 0; margin-right: 8px;">${toggleIcon}</span>
-                        <span class="folder-name truncate" style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: calc(100% - 82px); position: relative; z-index: 1; line-height: 1.2;">${this.truncateName(folder.name)}</span>
+                        <span class="folder-name truncate ${textColor}" style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: calc(100% - 82px); position: relative; z-index: 1; line-height: 1.2;">${this.truncateName(folder.name)}</span>
                         <span class="folder-count text-xs text-gray-400" style="white-space: nowrap; min-width: 40px; flex-shrink: 0; text-align: right; margin-left: 4px;">
-                            ${folder.path === 'root' ? `(${folder.totalAssets || 0})` : hasChildren ? `(${folder.assets.length})` : ''}
+                            ${totalAssetsInFolder > 0 ? `(${totalAssetsInFolder})` : ''}
                         </span>
                     </div>
                 </div>
             `;
 
-            // Children folders and assets (only if expanded)
+            // Children folders only (only if expanded)
             if (isExpanded) {
-                Logger.ui.debug(`FoldersPanel: Rendering ${Object.keys(folder.children).length} child folders and ${folder.assets.length} assets for "${folder.name}"`);
+                Logger.ui.debug(`FoldersPanel: Rendering ${Object.keys(folder.children).length} child folders for "${folder.name}"`);
                 
-                // Render child folders first
+                // Render child folders only (assets are not shown in folder tree)
                 for (const childFolder of Object.values(folder.children)) {
                     Logger.ui.debug(`FoldersPanel: Rendering child folder "${childFolder.name}" of "${folder.name}"`);
                     html += renderFolder(childFolder, depth + 1);
                 }
-
-                // Then render assets in this folder
-                for (const asset of folder.assets) {
-                    Logger.ui.debug(`FoldersPanel: Rendering asset "${asset.name}" in folder "${folder.name}"`);
-                    html += `
-                        <div class="asset-item cursor-pointer hover:bg-gray-700 p-1 rounded mb-1 text-gray-400"
-                             data-path="${folder.path}/asset-${asset.id}"
-                             data-asset-id="${asset.id}"
-                             style="padding-left: ${(depth + 1) * 16 + 4}px; pointer-events: auto; z-index: 1; display: block; width: 100%; overflow: hidden; line-height: 1.2; height: 24px; word-break: keep-all; hyphens: none;"
-                            <div class="flex items-center" style="min-width: 0; width: 100%; position: relative; line-height: 1.2; align-items: center; flex-wrap: nowrap;">
-                                <span class="asset-icon" style="min-width: 20px; flex-shrink: 0; margin-right: 8px;">📄</span>
-                                <span class="asset-name truncate" style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: calc(100% - 28px); position: relative; z-index: 1; line-height: 1.2;">${this.truncateName(asset.name)}</span>
-                            </div>
-                        </div>
-                    `;
-                }
             } else {
-                Logger.ui.debug(`FoldersPanel: Folder "${folder.name}" is collapsed, skipping ${Object.keys(folder.children).length} children and ${folder.assets.length} assets`);
+                Logger.ui.debug(`FoldersPanel: Folder "${folder.name}" is collapsed, skipping ${Object.keys(folder.children).length} children`);
             }
 
             return html;
@@ -380,43 +435,45 @@ export class FoldersPanel extends BasePanel {
 
         // Verify elements exist after setting HTML
         const folderItems = this.folderTree.querySelectorAll('.folder-item');
-        const assetItems = this.folderTree.querySelectorAll('.asset-item');
-        Logger.ui.debug('FoldersPanel: Found folder items:', folderItems.length, 'asset items:', assetItems.length);
+        Logger.ui.debug('FoldersPanel: Found folder items:', folderItems.length);
 
         // Debug: Log data-path attributes
         folderItems.forEach((item, index) => {
             Logger.ui.debug(`FoldersPanel: Folder item ${index}: data-path="${item.dataset.path}" text="${item.textContent.trim()}"`);
         });
 
-        // Try direct event listeners as fallback
-        Logger.ui.debug('FoldersPanel: Adding direct event listeners to elements');
+        // Add event listeners to folder items
+        Logger.ui.debug('FoldersPanel: Adding direct event listeners to folder elements');
         folderItems.forEach((item, index) => {
             Logger.ui.debug('FoldersPanel: Adding listener to folder item', index, item.dataset.path);
+            
+            // Click on folder name - only select
             item.addEventListener('click', (e) => {
-                Logger.ui.debug('FoldersPanel: Direct folder click handler called');
+                // Check if click was on expand icon
+                if (e.target.classList.contains('expand-icon')) {
+                    return; // Let expand icon handler deal with it
+                }
+                
+                Logger.ui.debug('FoldersPanel: Folder click - selecting only');
                 e.stopPropagation();
                 const path = item.dataset.path;
                 if (path) {
                     this.selectFolder(path);
-                    const folder = this.getFolderByPath(path);
-                    if (folder && folder.children && folder.assets &&
-                        (Object.keys(folder.children).length > 0 || folder.assets.length > 0)) {
+                }
+            });
+            
+            // Click on expand icon - toggle expansion
+            const expandIcon = item.querySelector('.expand-icon');
+            if (expandIcon) {
+                expandIcon.addEventListener('click', (e) => {
+                    Logger.ui.debug('FoldersPanel: Expand icon clicked');
+                    e.stopPropagation();
+                    const path = item.dataset.path;
+                    if (path) {
                         this.toggleFolderExpansion(path);
                     }
-                }
-            });
-        });
-
-        assetItems.forEach((item, index) => {
-            Logger.ui.debug('FoldersPanel: Adding listener to asset item', index, item.dataset.assetId);
-            item.addEventListener('click', (e) => {
-                Logger.ui.debug('FoldersPanel: Direct asset click handler called');
-                e.stopPropagation();
-                const assetId = item.dataset.assetId;
-                if (assetId) {
-                    this.selectAsset(assetId);
-                }
-            });
+                });
+            }
         });
 
         this.setupFolderEventListeners();
@@ -554,25 +611,59 @@ export class FoldersPanel extends BasePanel {
         for (const folderPath of this.selectedFolders) {
             if (folderPath === 'root') {
                 // Root means show all categories
-                this.assetPanel.stateManager.set('activeAssetTabs', new Set(this.assetManager.getCategories()));
+                const allCategories = this.assetManager.getCategoriesWithAssets();
+                this.assetPanel.stateManager.set('activeAssetTabs', new Set(allCategories));
+                Logger.ui.debug('FoldersPanel: Root selected, showing all categories:', allCategories);
                 return;
             }
 
             const folder = this.getFolderByPath(folderPath);
             if (folder) {
-                // For now, map folder name to category
-                // This could be enhanced to map folder paths to categories more intelligently
-                const category = folder.name;
-                if (this.assetManager.getCategories().includes(category)) {
-                    selectedCategories.add(category);
-                }
+                // Get all categories that have assets in this folder or subfolders
+                const categoriesInFolder = this.getCategoriesInFolder(folder);
+                categoriesInFolder.forEach(cat => selectedCategories.add(cat));
+                Logger.ui.debug(`FoldersPanel: Folder "${folder.name}" contains categories:`, categoriesInFolder);
             }
         }
 
         if (selectedCategories.size > 0) {
             this.assetPanel.stateManager.set('activeAssetTabs', selectedCategories);
             this.assetPanel.render();
+            Logger.ui.debug('FoldersPanel: Synced categories to tabs:', Array.from(selectedCategories));
+        } else {
+            // Empty folder selected - clear all tabs and show nothing
+            this.assetPanel.stateManager.set('activeAssetTabs', new Set());
+            this.assetPanel.render();
+            Logger.ui.debug('FoldersPanel: Empty folder selected, cleared all tabs');
         }
+    }
+
+    /**
+     * Get all categories that have assets in this folder or its subfolders
+     * @param {Object} folder - Folder object
+     * @returns {Array<string>} Array of category names
+     */
+    getCategoriesInFolder(folder) {
+        const categories = new Set();
+        
+        // Get categories from assets in this folder
+        if (folder.assets) {
+            for (const asset of folder.assets) {
+                if (asset.category) {
+                    categories.add(asset.category);
+                }
+            }
+        }
+        
+        // Recursively get categories from child folders
+        if (folder.children) {
+            for (const child of Object.values(folder.children)) {
+                const childCategories = this.getCategoriesInFolder(child);
+                childCategories.forEach(cat => categories.add(cat));
+            }
+        }
+        
+        return Array.from(categories);
     }
 
     /**

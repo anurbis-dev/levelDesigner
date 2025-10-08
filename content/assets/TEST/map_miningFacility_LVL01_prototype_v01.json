@@ -1,0 +1,17 @@
+{
+  "name": "map_miningFacility_LVL01_prototype_v01",
+  "type": "object",
+  "category": "Enemies",
+  "imgSrc": [
+    "map_miningFacility_LVL01_prototype_v01.png"
+  ],
+  "image": "map_miningFacility_LVL01_prototype_v01.png",
+  "color": "#CCCCCC",
+  "width": 1451,
+  "height": 341,
+  "properties": {
+    "created": "2025-10-06T20:59:22.477Z",
+    "isTemporary": false,
+    "wasDragDropped": true
+  }
+}

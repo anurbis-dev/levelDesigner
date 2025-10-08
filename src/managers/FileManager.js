@@ -36,19 +36,6 @@ export class FileManager {
             properties: {}
         });
         
-        level.addObject({
-            name: 'Enemy Spawn',
-            type: 'enemy_spawn',
-            x: 150,
-            y: 100,
-            width: 32,
-            height: 32,
-            color: 'lightgreen',
-            visible: true,
-            locked: false,
-            properties: {}
-        });
-        
         this.currentFileName = null;
         return level;
     }

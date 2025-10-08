@@ -1,5 +1,46 @@
 # Changelog
 
+## [3.45.0] - 2025-10-08
+
+### Changed - Система ассетов переработана
+- **Удалены заглушки**: Grass, Dirt, Stone, Slime, Goblin, Coin, Health Potion
+- **Удалены дефолтные табы**: Tiles, Enemies, Items, Prefabs
+- **Удалён Enemy Spawn** из начальных объектов уровня
+- **Переименована панель**: Folders → Content
+
+### Added - Автоматическая загрузка ассетов
+- **AssetManager.scanContentFolder()**: сканирование ./content при старте
+- **content/manifest.json**: манифест со структурой папок и списком файлов
+- **update_manifest.bat/py/js**: скрипты для обновления манифеста
+- **AssetManager.loadAssetFromFile()**: загрузка ассетов из JSON
+- **AssetManager.getCategoriesWithAssets()**: только категории с ассетами
+- **Автогенерация ID**: уникальные ID из полного пути файла
+- **Cache busting**: для манифеста и JSON файлов
+
+### Changed - FoldersPanel
+- **Структура из манифеста**: buildFromManifestStructure()
+- **Только папки**: ассеты не отображаются в дереве
+- **Рекурсивный счётчик**: countAssetsRecursive()
+- **Раскрытие по стрелке**: клик по папке только выделяет
+- **Серый цвет**: для пустых папок
+- **Подсветка**: работает на всех уровнях
+- **Синхронизация табов**: getCategoriesInFolder() рекурсивно
+
+### Changed - Обработка изображений
+- **Только одна картинка**: массив imgSrc → первый элемент
+- **Поддержка image field**: альтернативное поле
+- **Полные пути**: ./content/path/to/image.png
+- **Синхронизация кешей**: preloadImages() синхронизирует с CanvasRenderer
+
+### Fixed
+- **FoldersPanel.folderStructure**: всегда инициализируется
+- **Уникальность ID**: одинаковые файлы в разных папках
+- **Категории**: из имени родительской папки
+- **Табы**: только для категорий с ассетами
+- **Пустые папки**: очищают табы
+
+---
+
 ## [3.44.0] - 2025-10-05
 
 ### Added - Фаза 5: Модуляризация ViewportOperations и LevelFileOperations

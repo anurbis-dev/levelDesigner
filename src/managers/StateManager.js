@@ -14,8 +14,8 @@ export class StateManager {
             
             // UI state
             selectedObjects: new Set(),
-            activeAssetTabs: new Set(['Tiles']),
-            assetTabOrder: ['Tiles', 'Characters', 'Collectibles', 'Enemies', 'Environment', 'Objects'],
+            activeAssetTabs: new Set(), // No default tabs - loaded from content
+            assetTabOrder: [], // No default tabs - loaded from content
             selectedAssets: new Set(),
             rightPanelTab: 'details',
             
@@ -369,8 +369,8 @@ export class StateManager {
             currentLevel: null,
             currentLevelFileName: null,
             selectedObjects: new Set(),
-            activeAssetTabs: new Set(['Tiles']),
-            assetTabOrder: ['Tiles', 'Characters', 'Collectibles', 'Enemies', 'Environment', 'Objects'],
+            activeAssetTabs: new Set(), // No default tabs - loaded from content
+            assetTabOrder: [], // No default tabs - loaded from content
             selectedAssets: new Set(),
             rightPanelTab: 'details',
             camera: { x: 0, y: 0, zoom: 1 },

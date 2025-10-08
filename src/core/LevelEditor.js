@@ -504,6 +504,13 @@ export class LevelEditor {
      * @private
      */
     async initializeLevelAndData() {
+        // Scan content folder for assets
+        try {
+            await this.assetManager.scanContentFolder();
+        } catch (error) {
+            this.log('warn', 'Failed to scan content folder:', error.message);
+        }
+
         // Preload assets
         try {
             await this.assetManager.preloadImages();

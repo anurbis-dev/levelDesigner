@@ -1,0 +1,17 @@
+{
+  "name": "FG_flora_02",
+  "type": "object",
+  "category": "Enemies",
+  "imgSrc": [
+    "FG_flora_02.png"
+  ],
+  "image": "FG_flora_02.png",
+  "color": "#CCCCCC",
+  "width": 63,
+  "height": 38,
+  "properties": {
+    "created": "2025-10-06T21:04:21.915Z",
+    "isTemporary": false,
+    "wasDragDropped": true
+  }
+}
