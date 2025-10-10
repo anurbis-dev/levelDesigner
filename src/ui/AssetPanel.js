@@ -490,7 +490,9 @@ export class AssetPanel extends BasePanel {
             canSelect: (asset) => true, // All assets can be selected
             itemSelector: '.asset-thumbnail, .asset-list-item, .asset-details-row, [data-asset-id]',
             selectedClass: 'selected',
-            enableMarquee: true
+            enableMarquee: true,
+            mouseStateKey: 'mouse.isAssetMarqueeSelecting',
+            marqueeId: 'asset-marquee-selection'
         });
 
         // Subscribe to state changes
@@ -1391,6 +1393,7 @@ export class AssetPanel extends BasePanel {
     setupContextMenus() {
         // Asset context menu
         this.assetContextMenu = new AssetContextMenu(this, {
+            stateManager: this.stateManager, // Pass StateManager for marquee check
             onOpenEditor: (asset) => this.handleAssetOpenEditor(asset),
             onRename: (asset) => this.handleAssetRename(asset),
             onDuplicate: (asset) => this.handleAssetDuplicate(asset),
@@ -1402,6 +1405,7 @@ export class AssetPanel extends BasePanel {
 
         // Panel context menu
         this.panelContextMenu = new AssetPanelContextMenu(this, {
+            stateManager: this.stateManager, // Pass StateManager for marquee check
             onResetSize: () => this.handleResetSize(),
             onToggleGrid: () => this.handleToggleGrid(),
             onToggleList: () => this.handleToggleList(),
@@ -1411,6 +1415,14 @@ export class AssetPanel extends BasePanel {
             onSelectAll: () => this.handleSelectAll(),
             onDeselectAll: () => this.handleDeselectAll()
         });
+
+        // Complete deferred initialization for context menus
+        if (this.assetContextMenu && this.assetContextMenu.completeDeferredInit) {
+            this.assetContextMenu.completeDeferredInit();
+        }
+        if (this.panelContextMenu && this.panelContextMenu.completeDeferredInit) {
+            this.panelContextMenu.completeDeferredInit();
+        }
     }
 
     /**
@@ -1902,6 +1914,11 @@ export class AssetPanel extends BasePanel {
     }
 
     handleDragEnter(e) {
+        // Only handle external file drops, not internal asset dragging
+        if (!e.dataTransfer.types.includes('Files')) {
+            return;
+        }
+        
         e.preventDefault();
         e.stopPropagation();
         
@@ -1916,6 +1933,11 @@ export class AssetPanel extends BasePanel {
     }
 
     handleDragOver(e) {
+        // Only handle external file drops, not internal asset dragging
+        if (!e.dataTransfer.types.includes('Files')) {
+            return;
+        }
+        
         e.preventDefault();
         e.stopPropagation();
         
@@ -1930,6 +1952,11 @@ export class AssetPanel extends BasePanel {
     }
 
     handleDragLeave(e) {
+        // Only handle external file drops
+        if (!e.dataTransfer.types.includes('Files')) {
+            return;
+        }
+        
         e.preventDefault();
         e.stopPropagation();
         
@@ -1948,6 +1975,11 @@ export class AssetPanel extends BasePanel {
      * @param {DragEvent} e - Drop event
      */
     async handleDrop(e) {
+        // Only handle external file drops, not internal asset dragging
+        if (!e.dataTransfer.types.includes('Files') || !e.dataTransfer.files.length) {
+            return;
+        }
+        
         e.preventDefault();
         e.stopPropagation();
         

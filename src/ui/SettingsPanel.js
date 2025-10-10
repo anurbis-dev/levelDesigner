@@ -148,6 +148,9 @@ export class SettingsPanel {
                     // Render content
                     this.renderSettingsContent(tabName);
                     
+                    // Re-setup input event listeners after rendering
+                    this.setupSettingsInputs();
+                    
                     // Initialize grid settings event listeners if grid tab is active
                     if (tabName === 'grid' && this.gridSettings) {
                         this.gridSettings.initializeEventListeners();
@@ -780,9 +783,13 @@ export class SettingsPanel {
 
     setupSettingsInputs() {
         document.querySelectorAll('.setting-input').forEach(input => {
-            if (input._hasInputListener) return; // Prevent duplicate listeners
-            input._hasInputListener = true;
-            input.addEventListener('input', (e) => {
+            // Remove old listener if exists
+            if (input._inputHandler) {
+                input.removeEventListener('input', input._inputHandler);
+            }
+            
+            // Create and store new handler
+            input._inputHandler = (e) => {
                 const path = ValidationUtils.validateString(e.target.dataset.setting, 'data-setting attribute');
                 if (!path) {
                     Logger.settings.warn('SettingsPanel: No data-setting attribute found for input:', e.target);
@@ -815,7 +822,10 @@ export class SettingsPanel {
                     this.applyCompactMode(value);
                 }
 
-            });
+            };
+            
+            // Add the listener
+            input.addEventListener('input', input._inputHandler);
         });
 
         // Setup real-time sync from StateManager to UI (for toolbar/menu changes)

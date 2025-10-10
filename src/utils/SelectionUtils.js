@@ -1,12 +1,12 @@
 /**
- * SelectionUtils - Утилиты для работы с селектом элементов
- * 
- * Предоставляет общие методы для селекта элементов в панелях:
- * - Обработка кликов (обычный, Shift+клик, Ctrl+клик)
- * - Marquee selection (выделение рамкой)
- * - Управление состоянием селекта
- * - Визуальное обновление селекта
- * 
+ * SelectionUtils - Utilities for element selection
+ *
+ * Provides common methods for element selection in panels:
+ * - Click handling (regular, Shift+click, Ctrl+click)
+ * - Marquee selection (selection by frame)
+ * - Selection state management
+ * - Visual selection updates
+ *
  * @author Level Designer
  * @version 3.31.0
  */
@@ -15,16 +15,16 @@ import { Logger } from './Logger.js';
 
 export class SelectionUtils {
     /**
-     * Обработка клика по элементу с поддержкой различных модификаторов
-     * @param {Event} e - Событие клика
-     * @param {Object} item - Элемент для селекта
-     * @param {Object} options - Опции селекта
-     * @param {StateManager} options.stateManager - Менеджер состояния
-     * @param {string} options.selectionKey - Ключ для хранения селекта в состоянии
-     * @param {string} options.anchorKey - Ключ для хранения якоря селекта
-     * @param {Function} options.getItemList - Функция получения списка элементов для range selection
-     * @param {Function} options.onSelectionChange - Callback при изменении селекта
-     * @param {Function} options.canSelect - Функция проверки возможности селекта элемента
+     * Handle item click with support for various modifiers
+     * @param {Event} e - Click event
+     * @param {Object} item - Item to select
+     * @param {Object} options - Selection options
+     * @param {StateManager} options.stateManager - State manager
+     * @param {string} options.selectionKey - Key for storing selection in state
+     * @param {string} options.anchorKey - Key for storing selection anchor
+     * @param {Function} options.getItemList - Function to get item list for range selection
+     * @param {Function} options.onSelectionChange - Callback when selection changes
+     * @param {Function} options.canSelect - Function to check if item can be selected
      */
     static handleItemClick(e, item, options) {
         const {
@@ -36,7 +36,7 @@ export class SelectionUtils {
             canSelect = null
         } = options;
 
-        // Проверка возможности селекта
+        // Check if selection is possible
         if (canSelect && !canSelect(item)) {
             return;
         }
@@ -44,7 +44,7 @@ export class SelectionUtils {
         const selectedItems = new Set(stateManager.get(selectionKey));
 
         if (e.shiftKey) {
-            // Shift+клик: селект диапазона от якоря до текущего элемента
+            // Shift+click: select range from anchor to current item
             this.handleShiftClick(item, selectedItems, {
                 stateManager,
                 selectionKey,
@@ -52,17 +52,17 @@ export class SelectionUtils {
                 getItemList
             });
         } else if (e.ctrlKey || e.metaKey) {
-            // Ctrl/Cmd+клик: переключение селекта элемента
+            // Ctrl/Cmd+click: toggle item selection
             this.handleCtrlClick(item, selectedItems, {
                 stateManager,
                 selectionKey,
                 anchorKey
             });
         } else {
-            // Обычный клик: замена селекта и установка якоря
+            // Regular click: replace selection and set anchor
             selectedItems.clear();
             selectedItems.add(item.id);
-            // Установка якоря для будущих shift+клик операций
+            // Set anchor for future shift+click operations
             stateManager.update({
                 [anchorKey]: item.id
             });
@@ -70,17 +70,17 @@ export class SelectionUtils {
 
         stateManager.set(selectionKey, selectedItems);
 
-        // Вызов callback при изменении селекта
+        // Call callback when selection changes
         if (onSelectionChange) {
             onSelectionChange(selectedItems);
         }
     }
 
     /**
-     * Обработка Shift+клик: селект диапазона от якоря до текущего элемента
-     * @param {Object} item - Текущий элемент
-     * @param {Set} selectedItems - Текущий селект
-     * @param {Object} options - Опции
+     * Handle Shift+click: select range from anchor to current item
+     * @param {Object} item - Current item
+     * @param {Set} selectedItems - Current selection
+     * @param {Object} options - Options
      */
     static handleShiftClick(item, selectedItems, options) {
         const {
@@ -91,7 +91,7 @@ export class SelectionUtils {
         } = options;
 
         if (!getItemList) {
-            // Если нет функции получения списка, просто добавить элемент
+            // If no function to get list, just add the item
             selectedItems.add(item.id);
             return;
         }
@@ -100,16 +100,16 @@ export class SelectionUtils {
         const currentIndex = itemList.findIndex(listItem => listItem.id === item.id);
 
         if (currentIndex === -1) {
-            // Элемент не найден в списке, просто добавить его
+            // Item not found in list, just add it
             selectedItems.add(item.id);
             return;
         }
 
-        // Получение якоря
+        // Get anchor
         const anchorId = stateManager.get(anchorKey);
 
         if (!anchorId) {
-            // Нет якоря, установить текущий элемент как якорь и выбрать его
+            // No anchor, set current item as anchor and select it
             selectedItems.add(item.id);
             stateManager.update({
                 [anchorKey]: item.id
@@ -117,11 +117,11 @@ export class SelectionUtils {
             return;
         }
 
-        // Поиск якоря в списке
+        // Find anchor in list
         const anchorIndex = itemList.findIndex(listItem => listItem.id === anchorId);
 
         if (anchorIndex === -1) {
-            // Якорь не найден, сбросить якорь и выбрать текущий элемент
+            // Anchor not found, reset anchor and select current item
             selectedItems.add(item.id);
             stateManager.update({
                 [anchorKey]: item.id
@@ -129,7 +129,7 @@ export class SelectionUtils {
             return;
         }
 
-        // Выбор диапазона от якоря до текущего элемента
+        // Select range from anchor to current item
         const startIndex = Math.min(anchorIndex, currentIndex);
         const endIndex = Math.max(anchorIndex, currentIndex);
 
@@ -139,10 +139,10 @@ export class SelectionUtils {
     }
 
     /**
-     * Обработка Ctrl/Cmd+клик: переключение селекта элемента
-     * @param {Object} item - Элемент для переключения
-     * @param {Set} selectedItems - Текущий селект
-     * @param {Object} options - Опции
+     * Handle Ctrl/Cmd+click: toggle item selection
+     * @param {Object} item - Item to toggle
+     * @param {Set} selectedItems - Current selection
+     * @param {Object} options - Options
      */
     static handleCtrlClick(item, selectedItems, options) {
         const {
@@ -155,13 +155,13 @@ export class SelectionUtils {
             selectedItems.delete(item.id);
         } else {
             selectedItems.add(item.id);
-            // Обновление якоря на последний переключенный элемент
+            // Update anchor to last toggled item
             stateManager.update({
                 [anchorKey]: item.id
             });
         }
 
-        // Сохранение изменений в состоянии
+        // Save changes to state
         stateManager.set(selectionKey, selectedItems);
     }
 
@@ -178,7 +178,7 @@ export class SelectionUtils {
      * @param {string} options.mouseStateKey - Ключ для состояния мыши
      */
     static handleMarqueeMouseDown(e, options) {
-        // Только левая кнопка мыши
+        // Only left mouse button
         if (e.button !== 0) return;
 
         const {
@@ -192,7 +192,26 @@ export class SelectionUtils {
             mouseStateKey = 'mouse.isMarqueeSelecting'
         } = options;
 
-        // Определяем режим marquee selection
+        // Check if any marquee selection is currently active - if so, don't start a new one
+        const allMarqueeKeys = [
+            'mouse.isMarqueeSelecting',
+            'mouse.isAssetMarqueeSelecting',
+            'mouse.isOutlinerMarqueeSelecting',
+            'mouse.isLayerMarqueeSelecting'
+        ];
+
+        for (const key of allMarqueeKeys) {
+            if (stateManager.get(key)) {
+                return;
+            }
+        }
+
+        // Also check for pending marquee state (Ctrl+drag scenarios)
+        if (stateManager.get('marquee.pendingStartPos') || stateManager.get('marquee.pendingMode')) {
+            return;
+        }
+
+        // Determine marquee selection mode
         let marqueeMode = 'replace'; // replace, toggle, add
         
         if (e.ctrlKey || e.metaKey) {
@@ -204,19 +223,19 @@ export class SelectionUtils {
         } else if (e.shiftKey) {
             marqueeMode = 'add'; // Shift+drag = add to selection
         } else {
-            marqueeMode = 'replace'; // обычный drag = replace selection
+            marqueeMode = 'replace'; // regular drag = replace selection
         }
 
-        // Не запускать рамку при обычном перетаскивании элемента (без модификаторов)
+        // Don't start marquee on regular item dragging (without modifiers)
         const isOnItem = !!e.target.closest(itemSelector);
         if (isOnItem && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
             return;
         }
 
-        // Разрешить Ctrl/Cmd+click+drag и по элементу: рамка в режиме toggle
+        // Allow Ctrl/Cmd+click+drag on item: marquee in toggle mode
 
-        // Если Ctrl/Cmd зажат — запускаем отложенный старт рамки с порогом 4px,
-        // чтобы не перехватывать обычный Ctrl+click
+        // If Ctrl/Cmd is pressed - start delayed marquee with 4px threshold,
+        // to not intercept regular Ctrl+click
         if (e.ctrlKey || e.metaKey) {
             const pendingStartPos = { x: e.clientX, y: e.clientY };
             stateManager.set('marquee.pendingStartPos', pendingStartPos);
@@ -228,7 +247,7 @@ export class SelectionUtils {
             return;
         }
 
-        // Для остальных режимов (replace/add без Ctrl) стартуем сразу
+        // For other modes (replace/add without Ctrl) start immediately
         if (marqueeMode === 'replace') {
             stateManager.set(selectionKey, new Set());
             if (onSelectionChange) {
@@ -252,12 +271,13 @@ export class SelectionUtils {
         marqueeDiv.style.pointerEvents = 'none';
         marqueeDiv.style.zIndex = '1000';
 
-        stateManager.set(mouseStateKey, true);
-        stateManager.set('marquee.startPos', startPos);
-        stateManager.set('marquee.element', marqueeDiv);
-        stateManager.set('marquee.container', container);
-        stateManager.set('marquee.options', options);
-        stateManager.set('marquee.mode', marqueeMode);
+                stateManager.set(mouseStateKey, true);
+                stateManager.set('marquee.startPos', startPos);
+                stateManager.set('marquee.element', marqueeDiv);
+                stateManager.set('marquee.container', container);
+                stateManager.set('marquee.options', options);
+                stateManager.set('marquee.mode', marqueeMode);
+                stateManager.set('marquee.pendingMouseKey', mouseStateKey);
     }
 
     /**
@@ -266,14 +286,37 @@ export class SelectionUtils {
      * @param {StateManager} stateManager - Менеджер состояния
      */
     static handleMarqueeMouseMove(e, stateManager) {
-        // Если есть pending для Ctrl — активируем при пороге 4px
+        // Check active marquee selection
+        const mouseStateKey = stateManager.get('marquee.pendingMouseKey') || 'mouse.isMarqueeSelecting';
+        if (stateManager.get(mouseStateKey)) {
+            // Marquee already active - update it
+            const marqueeDiv = stateManager.get('marquee.element');
+            const container = stateManager.get('marquee.container');
+            if (marqueeDiv && container) {
+                const rect = container.getBoundingClientRect();
+                const startPos = stateManager.get('marquee.startPos');
+
+                const left = Math.min(startPos.x, e.clientX) - rect.left + container.scrollLeft;
+                const top = Math.min(startPos.y, e.clientY) - rect.top + container.scrollTop;
+                const width = Math.abs(e.clientX - startPos.x);
+                const height = Math.abs(e.clientY - startPos.y);
+
+                marqueeDiv.style.left = `${left}px`;
+                marqueeDiv.style.top = `${top}px`;
+                marqueeDiv.style.width = `${width}px`;
+                marqueeDiv.style.height = `${height}px`;
+            }
+            return;
+        }
+
+        // If there is pending for Ctrl - activate at 4px threshold
         const pendingStartPos = stateManager.get('marquee.pendingStartPos');
         if (pendingStartPos) {
             const dxp = e.clientX - pendingStartPos.x;
             const dyp = e.clientY - pendingStartPos.y;
             const dist = Math.sqrt(dxp * dxp + dyp * dyp);
             if (dist >= 4) {
-                // Активируем рамку
+                // Activate marquee
                 const container = stateManager.get('marquee.pendingContainer');
                 const options = stateManager.get('marquee.pendingOptions');
                 const marqueeMode = stateManager.get('marquee.pendingMode');
@@ -281,7 +324,7 @@ export class SelectionUtils {
 
                 const rect = container.getBoundingClientRect();
                 const marqueeDiv = document.createElement('div');
-                marqueeDiv.id = 'marquee-selection';
+                marqueeDiv.id = options?.marqueeId || 'marquee-selection';
                 container.appendChild(marqueeDiv);
 
                 marqueeDiv.style.position = 'absolute';
@@ -301,7 +344,7 @@ export class SelectionUtils {
                 stateManager.set('marquee.options', options);
                 stateManager.set('marquee.mode', marqueeMode);
 
-                // Очистить pending
+                // Clear pending
                 stateManager.set('marquee.pendingStartPos', null);
                 stateManager.set('marquee.pendingMode', null);
                 stateManager.set('marquee.pendingOptions', null);
@@ -310,36 +353,6 @@ export class SelectionUtils {
                 stateManager.set('marquee.pendingMouseKey', null);
             }
         }
-
-        if (!stateManager.get('mouse.isMarqueeSelecting')) return;
-
-        const startPos = stateManager.get('marquee.startPos');
-        const marqueeDiv = stateManager.get('marquee.element');
-        const container = stateManager.get('marquee.container');
-
-        if (!startPos || !marqueeDiv || !container) return;
-
-        const rect = container.getBoundingClientRect();
-        const dx = e.clientX - startPos.x;
-        const dy = e.clientY - startPos.y;
-
-        // Обновление позиции и размера marquee
-        if (dx < 0) {
-            marqueeDiv.style.left = `${e.clientX - rect.left + container.scrollLeft}px`;
-            marqueeDiv.style.width = `${Math.abs(dx)}px`;
-        } else {
-            marqueeDiv.style.width = `${dx}px`;
-        }
-
-        if (dy < 0) {
-            marqueeDiv.style.top = `${e.clientY - rect.top + container.scrollTop}px`;
-            marqueeDiv.style.height = `${Math.abs(dy)}px`;
-        } else {
-            marqueeDiv.style.height = `${dy}px`;
-        }
-
-        // Обновление селекта элементов в marquee
-        this.updateMarqueeSelection(container, marqueeDiv, stateManager);
     }
 
     /**
@@ -347,8 +360,8 @@ export class SelectionUtils {
      * @param {Event} e - Событие mouseup
      * @param {StateManager} stateManager - Менеджер состояния
      */
-    static handleMarqueeMouseUp(e, stateManager) {
-        // Сброс pending, если рамка не активировалась (клик с микросмещением)
+    static handleMarqueeMouseUp(e, stateManager, options = {}) {
+        // Reset pending if marquee wasn't activated (click with micro-movement)
         stateManager.set('marquee.pendingStartPos', null);
         stateManager.set('marquee.pendingMode', null);
         stateManager.set('marquee.pendingOptions', null);
@@ -356,34 +369,52 @@ export class SelectionUtils {
         stateManager.set('marquee.pendingSelector', null);
         stateManager.set('marquee.pendingMouseKey', null);
 
-        if (!stateManager.get('mouse.isMarqueeSelecting')) return;
+        // Check if marquee is active using the correct state key
+        const mouseStateKey = stateManager.get('marquee.pendingMouseKey') || options?.mouseStateKey || 'mouse.isMarqueeSelecting';
+        if (!stateManager.get(mouseStateKey)) return;
 
         const marqueeDiv = stateManager.get('marquee.element');
         const container = stateManager.get('marquee.container');
-        const options = stateManager.get('marquee.options');
+        const marqueeOptions = stateManager.get('marquee.options');
 
-        // Финальный селект элементов в marquee
-        if (marqueeDiv && container && options) {
+        // Final selection of elements in marquee
+        if (marqueeDiv && container && marqueeOptions) {
             this.finalizeMarqueeSelection(container, marqueeDiv, stateManager);
         }
 
-        // Очистка marquee элемента
+        // Clean up marquee element
         if (marqueeDiv && marqueeDiv.parentNode) {
             marqueeDiv.parentNode.removeChild(marqueeDiv);
         }
 
-        // Сброс состояния
-        stateManager.set('mouse.isMarqueeSelecting', false);
+        // Reset state - clear all possible marquee selection keys
+        stateManager.set(mouseStateKey, false);
+
+        // Clear all related marquee state keys
         stateManager.set('marquee.startPos', null);
         stateManager.set('marquee.element', null);
         stateManager.set('marquee.container', null);
         stateManager.set('marquee.options', null);
         stateManager.set('marquee.mode', null);
 
-        // Финальное обновление селекта
-        if (options && options.onSelectionChange) {
-            const selectedItems = stateManager.get(options.selectionKey || 'selectedObjects');
-            options.onSelectionChange(selectedItems);
+        // Clear pending state
+        stateManager.set('marquee.pendingStartPos', null);
+        stateManager.set('marquee.pendingMode', null);
+        stateManager.set('marquee.pendingOptions', null);
+        stateManager.set('marquee.pendingContainer', null);
+        stateManager.set('marquee.pendingSelector', null);
+        stateManager.set('marquee.pendingMouseKey', null);
+
+        // Clear all possible active marquee selection keys
+        stateManager.set('mouse.isMarqueeSelecting', false);
+        stateManager.set('mouse.isAssetMarqueeSelecting', false);
+        stateManager.set('mouse.isOutlinerMarqueeSelecting', false);
+        stateManager.set('mouse.isLayerMarqueeSelecting', false);
+
+        // Final selection update
+        if (marqueeOptions && marqueeOptions.onSelectionChange) {
+            const selectedItems = stateManager.get(marqueeOptions.selectionKey || 'selectedObjects');
+            marqueeOptions.onSelectionChange(selectedItems);
         }
     }
 
@@ -400,7 +431,7 @@ export class SelectionUtils {
         const selectableItems = options.getSelectableItems();
         const marqueeRect = marqueeDiv.getBoundingClientRect();
 
-        // Только подсветка элементов, без изменения селекта
+        // Only highlight elements, without changing selection
         selectableItems.forEach(item => {
             const itemRect = item.getBoundingClientRect();
             const isIntersecting = !(
@@ -433,12 +464,12 @@ export class SelectionUtils {
         const marqueeRect = marqueeDiv.getBoundingClientRect();
         const selectedItems = new Set(stateManager.get(options.selectionKey || 'selectedObjects'));
 
-        // Очистка предыдущих подсветок
+        // Clear previous highlights
         selectableItems.forEach(item => {
             item.classList.remove('marquee-highlighted');
         });
 
-        // Найти элементы, пересекающиеся с marquee
+        // Find elements intersecting with marquee
         const intersectingItems = [];
         selectableItems.forEach(item => {
             const itemRect = item.getBoundingClientRect();
@@ -454,21 +485,21 @@ export class SelectionUtils {
             }
         });
 
-        // Применить режим marquee
+        // Apply marquee mode
         switch (marqueeMode) {
             case 'replace':
-                // Заменить селект новыми элементами
+                // Replace selection with new elements
                 selectedItems.clear();
                 intersectingItems.forEach(id => selectedItems.add(id));
                 break;
-                
+
             case 'add':
-                // Добавить элементы к существующему селекту
+                // Add elements to existing selection
                 intersectingItems.forEach(id => selectedItems.add(id));
                 break;
-                
+
             case 'toggle':
-                // Переключить элементы в селекте
+                // Toggle elements in selection
                 intersectingItems.forEach(id => {
                     if (selectedItems.has(id)) {
                         selectedItems.delete(id);

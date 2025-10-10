@@ -26,6 +26,14 @@ import { Logger } from '../utils/Logger.js';
 
 export class AssetContextMenu extends BaseContextMenu {
     constructor(assetPanel, callbacks = {}) {
+        // Ensure previewsContainer exists before initializing
+        if (!assetPanel.previewsContainer) {
+            Logger.ui.warn('AssetContextMenu: previewsContainer not found, deferring initialization');
+            // Store parameters for later initialization
+            this._deferredInit = { assetPanel, callbacks };
+            return;
+        }
+
         super(assetPanel.previewsContainer, {
             onMenuShow: callbacks.onMenuShow || (() => {}),
             onMenuHide: callbacks.onMenuHide || (() => {}),
@@ -36,12 +44,47 @@ export class AssetContextMenu extends BaseContextMenu {
             onSaveAsset: callbacks.onSaveAsset || (() => {}),
             onSaveAssetChanges: callbacks.onSaveAssetChanges || (() => {}),
             onShowInExplorer: callbacks.onShowInExplorer || (() => {}),
-            onDelete: callbacks.onDelete || (() => {})
+            onDelete: callbacks.onDelete || (() => {}),
+            stateManager: callbacks.stateManager || null
         });
 
         this.assetPanel = assetPanel;
         this.setupMenuItems();
         Logger.ui.info('AssetContextMenu initialized successfully');
+    }
+
+    /**
+     * Complete deferred initialization
+     */
+    completeDeferredInit() {
+        if (this._deferredInit) {
+            const { assetPanel, callbacks } = this._deferredInit;
+
+            Logger.ui.info('Completing deferred AssetContextMenu initialization');
+
+            // Call the constructor logic again now that previewsContainer exists
+            BaseContextMenu.call(this, assetPanel.previewsContainer, {
+                onMenuShow: callbacks.onMenuShow || (() => {}),
+                onMenuHide: callbacks.onMenuHide || (() => {}),
+                onItemClick: callbacks.onItemClick || (() => {}),
+                onOpenEditor: callbacks.onOpenEditor || (() => {}),
+                onRename: callbacks.onRename || (() => {}),
+                onDuplicate: callbacks.onDuplicate || (() => {}),
+                onSaveAsset: callbacks.onSaveAsset || (() => {}),
+                onSaveAssetChanges: callbacks.onSaveAssetChanges || (() => {}),
+                onShowInExplorer: callbacks.onShowInExplorer || (() => {}),
+                onDelete: callbacks.onDelete || (() => {}),
+                stateManager: callbacks.stateManager || null
+            });
+
+            this.assetPanel = assetPanel;
+            this.setupMenuItems();
+
+            // Clean up
+            delete this._deferredInit;
+
+            Logger.ui.info('AssetContextMenu deferred initialization completed');
+        }
     }
 
     /**

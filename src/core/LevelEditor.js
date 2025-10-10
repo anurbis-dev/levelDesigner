@@ -49,7 +49,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.45.0';
+    static VERSION = '3.46.0';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -1217,15 +1217,8 @@ export class LevelEditor {
                 'mouse.placingObjects': []
             });
         }
-        
-        // Cancel marquee selection
-        if (mouse.isMarqueeSelecting) {
-            this.stateManager.update({
-                'mouse.isMarqueeSelecting': false,
-                'mouse.marqueeStart': null,
-                'mouse.marqueeEnd': null
-            });
-        }
+
+        // Note: Marquee selection is now cancelled globally by BaseContextMenu
         
         // Cancel dragging
         if (mouse.isDragging) {

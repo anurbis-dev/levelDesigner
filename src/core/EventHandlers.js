@@ -132,15 +132,28 @@ export class EventHandlers extends BaseModule {
         }
         
         // Global mouse events for proper marquee handling
+        const globalMouseDown = (e) => this.editor.mouseHandlers.handleGlobalMouseDown(e);
         const globalMouseMove = (e) => this.editor.mouseHandlers.handleGlobalMouseMove(e);
         const globalMouseUp = (e) => this.editor.mouseHandlers.handleGlobalMouseUp(e);
-        
-        window.addEventListener('mousemove', globalMouseMove, { passive: true });
-        window.addEventListener('mouseup', globalMouseUp, { passive: true });
-        
+
+        // Try multiple targets for maximum event capture coverage
+        // Window for events outside document bounds
+        window.addEventListener('mousedown', globalMouseDown, { passive: true, capture: true });
+        window.addEventListener('mousemove', globalMouseMove, { passive: true, capture: true });
+        window.addEventListener('mouseup', globalMouseUp, { passive: true, capture: true });
+
+        // Document body as fallback
+        document.body.addEventListener('mousedown', globalMouseDown, { passive: true, capture: true });
+        document.body.addEventListener('mousemove', globalMouseMove, { passive: true, capture: true });
+        document.body.addEventListener('mouseup', globalMouseUp, { passive: true, capture: true });
+
         this.eventListeners.push(
-            { target: window, event: 'mousemove', handler: globalMouseMove },
-            { target: window, event: 'mouseup', handler: globalMouseUp }
+            { target: window, event: 'mousedown', handler: globalMouseDown, options: { capture: true } },
+            { target: window, event: 'mousemove', handler: globalMouseMove, options: { capture: true } },
+            { target: window, event: 'mouseup', handler: globalMouseUp, options: { capture: true } },
+            { target: document.body, event: 'mousedown', handler: globalMouseDown, options: { capture: true } },
+            { target: document.body, event: 'mousemove', handler: globalMouseMove, options: { capture: true } },
+            { target: document.body, event: 'mouseup', handler: globalMouseUp, options: { capture: true } }
         );
     }
 

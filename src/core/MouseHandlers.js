@@ -44,16 +44,8 @@ export class MouseHandlers extends BaseModule {
         }
 
         if (e.button === 2) { // Right mouse button
-            this.editor.stateManager.update({
-                'mouse.isRightDown': true,
-                'mouse.lastX': e.clientX,
-                'mouse.lastY': e.clientY,
-                'mouse.rightClickStartX': e.clientX,
-                'mouse.rightClickStartY': e.clientY,
-                'mouse.wasPanning': false, // Reset panning flag
-                'mouse.altKey': e.altKey
-            });
-            this.editor.canvasRenderer.canvas.style.cursor = 'grabbing';
+            // Right click handling is now done globally in handleGlobalMouseDown
+            // This ensures it works even when clicking outside canvas
             return;
         }
         
@@ -214,6 +206,7 @@ export class MouseHandlers extends BaseModule {
 
             // Don't reset wasPanning immediately - let contextmenu handler do it
             // This prevents race condition between mouseup and contextmenu events
+
             this.editor.stateManager.update({
                 'mouse.isRightDown': false,
                 'mouse.altKey': e.altKey
@@ -230,7 +223,7 @@ export class MouseHandlers extends BaseModule {
 
             this.editor.canvasRenderer.canvas.style.cursor = 'default';
 
-            // Right click cancels all current actions
+            // Right click cancels all current actions (except marquee - handled globally)
             this.editor.cancelAllActions();
         }
         
@@ -355,20 +348,41 @@ export class MouseHandlers extends BaseModule {
         }
     }
 
+    handleGlobalMouseDown(e) {
+        Logger.mouse.debug(`Global mousedown: button=${e.button}, target=${e.target.tagName}, (${e.clientX}, ${e.clientY})`);
+
+        // Right mouse button marquee cancellation is now handled in BaseContextMenu
+        // This ensures consistent behavior across all panels and prevents conflicts
+        if (e.button === 2) { // Right mouse button
+            // Update right mouse state
+            this.editor.stateManager.update({
+                'mouse.isRightDown': true,
+                'mouse.lastX': e.clientX,
+                'mouse.lastY': e.clientY,
+                'mouse.rightClickStartX': e.clientX,
+                'mouse.rightClickStartY': e.clientY,
+                'mouse.wasPanning': false,
+                'mouse.altKey': e.altKey
+            });
+
+            this.editor.canvasRenderer.canvas.style.cursor = 'grabbing';
+        }
+    }
+
     handleGlobalMouseMove(e) {
         const mouse = this.editor.stateManager.get('mouse');
         const canvas = this.editor.canvasRenderer.canvas;
         const rect = canvas.getBoundingClientRect();
-        
+
         // Check if mouse is inside canvas bounds
-        const isInsideCanvas = e.clientX >= rect.left && e.clientX <= rect.right && 
+        const isInsideCanvas = e.clientX >= rect.left && e.clientX <= rect.right &&
                               e.clientY >= rect.top && e.clientY <= rect.bottom;
-        
+
         if (mouse.isMarqueeSelecting && !isInsideCanvas) {
             // Constrain marquee to canvas bounds
             const constrainedX = Math.max(rect.left, Math.min(rect.right, e.clientX));
             const constrainedY = Math.max(rect.top, Math.min(rect.bottom, e.clientY));
-            
+
             const worldPos = this.editor.canvasRenderer.screenToWorld(constrainedX, constrainedY, this.editor.stateManager.get('camera'));
             this.updateMarquee(worldPos);
             this.editor.render();
@@ -376,13 +390,55 @@ export class MouseHandlers extends BaseModule {
     }
 
     handleGlobalMouseUp(e) {
+        Logger.mouse.debug(`Global mouseup: button=${e.button}, target=${e.target.tagName}, (${e.clientX}, ${e.clientY})`);
+
         const mouse = this.editor.stateManager.get('mouse');
+        const canvas = this.editor.canvasRenderer.canvas;
+        const rect = canvas.getBoundingClientRect();
+
+        // Check if mouse is outside canvas (with some tolerance for edge cases)
+        const tolerance = 10; // pixels
+        const isOutsideCanvas = e.clientX < (rect.left - tolerance) || e.clientX > (rect.right + tolerance) ||
+                               e.clientY < (rect.top - tolerance) || e.clientY > (rect.bottom + tolerance);
+
+        // Also check for very large coordinates that indicate mouse is outside window bounds
+        const isOutsideWindow = e.clientX < -1000 || e.clientX > 10000 || e.clientY < -1000 || e.clientY > 10000;
+        const shouldCancel = isOutsideCanvas || isOutsideWindow;
+
+        Logger.mouse.debug(`Global mouseup at (${e.clientX}, ${e.clientY}), canvas rect:`, rect, 'isOutside:', isOutsideCanvas);
         
-        if (e.button === 0 && mouse.isMarqueeSelecting) {
-            this.finishMarqueeSelection();
+        if (e.button === 0) {
+            // Handle marquee selection completion (both inside and outside canvas)
+            if (mouse.isMarqueeSelecting) {
+                Logger.mouse.info(`Left mouse released - finishing marquee selection (${isOutsideCanvas ? 'outside' : 'inside'} canvas)`);
+                this.finishMarqueeSelection();
+            }
+
+            // Cancel object dragging if outside canvas
+            if (mouse.isDragging && shouldCancel) {
+                Logger.mouse.info('Mouse released outside canvas - canceling drag');
+                this.editor.stateManager.update({
+                    'mouse.isLeftDown': false,
+                    'mouse.isDragging': false,
+                    'mouse.constrainedAxis': null,
+                    'mouse.axisCenter': null,
+                    'mouse.snappedToGrid': false,
+                    'mouse.snapTargetX': null,
+                    'mouse.snapTargetY': null,
+                    'mouse.anchorX': null,
+                    'mouse.anchorY': null,
+                    'mouse.offsetX': null,
+                    'mouse.offsetY': null
+                });
+                this.editor.historyManager.undo();
+                this.editor.render();
+            }
         }
         
         if (e.button === 2) {
+            // Right mouse button marquee cancellation is now handled in BaseContextMenu
+            // This ensures consistent behavior and prevents conflicts
+
             this.editor.stateManager.update({
                 'mouse.isRightDown': false
             });

@@ -26,6 +26,14 @@ import { Logger } from '../utils/Logger.js';
 
 export class AssetPanelContextMenu extends BaseContextMenu {
     constructor(assetPanel, callbacks = {}) {
+        // Ensure previewsContainer exists before initializing
+        if (!assetPanel.previewsContainer) {
+            Logger.ui.warn('AssetPanelContextMenu: previewsContainer not found, deferring initialization');
+            // Store parameters for later initialization
+            this._deferredInit = { assetPanel, callbacks };
+            return;
+        }
+
         super(assetPanel.previewsContainer, {
             onMenuShow: callbacks.onMenuShow || (() => {}),
             onMenuHide: callbacks.onMenuHide || (() => {}),
@@ -37,12 +45,48 @@ export class AssetPanelContextMenu extends BaseContextMenu {
             onRefresh: callbacks.onRefresh || (() => {}),
             onSettings: callbacks.onSettings || (() => {}),
             onSelectAll: callbacks.onSelectAll || (() => {}),
-            onDeselectAll: callbacks.onDeselectAll || (() => {})
+            onDeselectAll: callbacks.onDeselectAll || (() => {}),
+            stateManager: callbacks.stateManager || null
         });
 
         this.assetPanel = assetPanel;
         this.setupMenuItems();
         Logger.ui.info('AssetPanelContextMenu initialized successfully');
+    }
+
+    /**
+     * Complete deferred initialization
+     */
+    completeDeferredInit() {
+        if (this._deferredInit) {
+            const { assetPanel, callbacks } = this._deferredInit;
+
+            Logger.ui.info('Completing deferred AssetPanelContextMenu initialization');
+
+            // Call the constructor logic again now that previewsContainer exists
+            BaseContextMenu.call(this, assetPanel.previewsContainer, {
+                onMenuShow: callbacks.onMenuShow || (() => {}),
+                onMenuHide: callbacks.onMenuHide || (() => {}),
+                onItemClick: callbacks.onItemClick || (() => {}),
+                onResetSize: callbacks.onResetSize || (() => {}),
+                onToggleGrid: callbacks.onToggleGrid || (() => {}),
+                onToggleList: callbacks.onToggleList || (() => {}),
+                onToggleDetails: callbacks.onToggleDetails || (() => {}),
+                onRefresh: callbacks.onRefresh || (() => {}),
+                onSettings: callbacks.onSettings || (() => {}),
+                onSelectAll: callbacks.onSelectAll || (() => {}),
+                onDeselectAll: callbacks.onDeselectAll || (() => {}),
+                stateManager: callbacks.stateManager || null
+            });
+
+            this.assetPanel = assetPanel;
+            this.setupMenuItems();
+
+            // Clean up
+            delete this._deferredInit;
+
+            Logger.ui.info('AssetPanelContextMenu deferred initialization completed');
+        }
     }
 
     /**

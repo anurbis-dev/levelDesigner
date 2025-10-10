@@ -432,7 +432,7 @@
 - `render()` - отрисовка canvas
 - `updateAllPanels()` - обновление всех панелей UI
 - `updateLevelStatsPanel()` - обновление статистики уровня
-- `cancelAllActions()` - отмена всех текущих действий
+- `cancelAllActions()` - отмена всех текущих действий (кроме рамки выделения, которая отменяется глобально)
 
 #### Операции с файлами
 - `async newLevel()` - создание нового уровня
@@ -583,7 +583,7 @@
 - `handleEmptyClick(e, worldPos)` - обработка клика по пустому месту
 - `dragSelectedObjects(worldPos)` - перетаскивание выделенных объектов
 - `updateMarquee(worldPos)` - обновление выделения рамкой
-- `finishMarqueeSelection()` - завершение выделения рамкой
+- `finishMarqueeSelection()` - завершение выделения рамкой (устарело, используйте глобальную отмену)
 - `finishPlacingObjects(worldPos)` - завершение размещения объектов
 
 ### ObjectOperations (src/core/ObjectOperations.js)

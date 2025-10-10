@@ -58,10 +58,156 @@ export class BaseContextMenu {
         this.animationStartTime = 0;
 
         this.setupContextMenu();
+        this.setupGlobalRightClickHandler();
         this.setupWindowResizeHandler();
         this.setupCursorTracking();
 
-        Logger.ui.info(`${this.constructor.name} initialized successfully`);
+        Logger.ui.info(`${this.constructor.name} initialized successfully for panel:`, this.panel);
+    }
+
+    /**
+     * Setup global handler to cancel marquee selection on any mouse button except left
+     */
+    setupGlobalRightClickHandler() {
+        // Use a static property to ensure only one global handler exists
+        if (!BaseContextMenu.globalRightClickHandler) {
+            BaseContextMenu.globalRightClickHandler = (e) => {
+                // Cancel marquee on any button except left mouse button (which creates marquee)
+                if (e.button === 0) return;
+
+                // Get StateManager from window.editor (most reliable source)
+                const stateManager = window.editor?.stateManager;
+                if (!stateManager) {
+                    Logger.ui.warn('Global right-click: StateManager not found');
+                    return;
+                }
+
+                // Check all possible marquee systems (both canvas and panel marquees)
+                const mouseStateKeys = [
+                    'mouse.isMarqueeSelecting',        // Canvas marquee (old system)
+                    'mouse.isAssetMarqueeSelecting',    // AssetPanel marquee
+                    'mouse.isOutlinerMarqueeSelecting', // OutlinerPanel marquee
+                    'mouse.isLayerMarqueeSelecting'     // LayersPanel marquee
+                ];
+
+                let isMarqueeActive = false;
+                let activeStateKey = null;
+
+                // Check boolean flags for all marquee systems
+                for (const key of mouseStateKeys) {
+                    const value = stateManager.get(key);
+                    if (value === true) {
+                        isMarqueeActive = true;
+                        activeStateKey = key;
+                        break;
+                    }
+                }
+
+                // Also check for marquee element existence (new panel system)
+                const marqueeElement = stateManager.get('marquee.element');
+                if (!isMarqueeActive && marqueeElement) {
+                    isMarqueeActive = true;
+                }
+
+                // Also check for canvas marquee rect (old canvas system)
+                const canvasMarqueeRect = stateManager.get('mouse.marqueeRect');
+                if (!isMarqueeActive && canvasMarqueeRect) {
+                    isMarqueeActive = true;
+                }
+
+                if (isMarqueeActive) {
+                    // Cancel marquee selection - use aggressive prevention
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    e.stopPropagation();
+
+                    // Remove marquee element if it exists
+                    if (marqueeElement && marqueeElement.parentNode) {
+                        marqueeElement.parentNode.removeChild(marqueeElement);
+                    }
+
+                    // Aggressively clear ALL marquee-related state for both systems
+                    const allMarqueeKeys = [
+                        // New panel system
+                        'mouse.isAssetMarqueeSelecting',
+                        'mouse.isOutlinerMarqueeSelecting',
+                        'mouse.isLayerMarqueeSelecting',
+                        'marquee.startPos',
+                        'marquee.element',
+                        'marquee.container',
+                        'marquee.options',
+                        'marquee.mode',
+                        'marquee.pendingStartPos',
+                        'marquee.pendingMode',
+                        'marquee.pendingOptions',
+                        'marquee.pendingContainer',
+                        'marquee.pendingSelector',
+                        'marquee.pendingMouseKey',
+                        // Old canvas system
+                        'mouse.isMarqueeSelecting',
+                        'mouse.marqueeRect',
+                        'mouse.marqueeStartX',
+                        'mouse.marqueeStartY'
+                    ];
+
+                    for (const key of allMarqueeKeys) {
+                        stateManager.set(key, null);
+                    }
+
+                    // Explicitly set boolean flags to false
+                    stateManager.set('mouse.isMarqueeSelecting', false);
+                    stateManager.set('mouse.isAssetMarqueeSelecting', false);
+                    stateManager.set('mouse.isOutlinerMarqueeSelecting', false);
+                    stateManager.set('mouse.isLayerMarqueeSelecting', false);
+
+                    // Clear any selection that was made by the cancelled marquee
+                    // Try to find the panel that has active selection and clear it
+                    if (window.editor?.assetPanel && typeof window.editor.assetPanel.clearSelection === 'function') {
+                        window.editor.assetPanel.clearSelection();
+                    } else if (window.editor?.outlinerPanel && typeof window.editor.outlinerPanel.clearSelection === 'function') {
+                        window.editor.outlinerPanel.clearSelection();
+                    } else if (window.editor?.layersPanel && typeof window.editor.layersPanel.clearSelection === 'function') {
+                        window.editor.layersPanel.clearSelection();
+                    } else if (window.editor?.stateManager) {
+                        // Fallback: clear canvas selection
+                        window.editor.stateManager.set('selectedObjects', new Set());
+                        window.editor.updateAllPanels();
+                    }
+
+                    // Force re-render to clear any canvas marquee visuals
+                    if (window.editor?.render) {
+                        window.editor.render();
+                    }
+
+                    Logger.ui.info('Marquee selection cancelled by global right-click');
+                }
+            };
+
+            // Add multiple global handlers for maximum coverage
+
+            // 1. Context menu handler (capture phase, highest priority)
+            document.addEventListener('contextmenu', BaseContextMenu.globalRightClickHandler, { capture: true, passive: false });
+
+            // 2. Mouse down handler as backup (catches any button except left)
+            const globalMouseDownHandler = (e) => {
+                if (e.button !== 0) { // Any button except left
+                    BaseContextMenu.globalRightClickHandler(e);
+                }
+            };
+            document.addEventListener('mousedown', globalMouseDownHandler, { capture: true, passive: false });
+
+            // 3. Window-level handler as last resort
+            const globalWindowHandler = (e) => {
+                if (e.type === 'contextmenu' && e.button !== undefined && e.button !== 0) {
+                    BaseContextMenu.globalRightClickHandler(e);
+                }
+            };
+            window.addEventListener('contextmenu', globalWindowHandler, { capture: true, passive: false });
+
+            // Store handlers for cleanup if needed
+            BaseContextMenu.globalMouseDownHandler = globalMouseDownHandler;
+            BaseContextMenu.globalWindowHandler = globalWindowHandler;
+        }
     }
 
     /**
@@ -76,14 +222,14 @@ export class BaseContextMenu {
         
         // Add context menu to panel
         this.contextMenuHandler = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
+            // Note: Marquee cancellation is now handled globally by setupGlobalRightClickHandler
+            // This local handler only shows context menu when marquee is not active
+
             // Extract context data from clicked element
             const contextData = this.extractContextData(e.target);
             this.showContextMenu(e, contextData);
         };
-        
+
         this.panel.addEventListener('contextmenu', this.contextMenuHandler);
     }
 

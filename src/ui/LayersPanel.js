@@ -30,6 +30,7 @@ export class LayersPanel extends BasePanel {
     setupContextMenus() {
         // Layer context menu - use the panel element, not the inner container
         this.layerContextMenu = new LayersContextMenu(this.container.parentElement, this, {
+            stateManager: this.stateManager, // Pass StateManager for marquee check
             onMakeCurrent: (layer) => this.setCurrentLayerAndNotify(layer.id),
             onRename: (layer) => this.renameLayer(layer.id),
             onDuplicate: (layer) => this.duplicateLayer(layer.id),

@@ -228,13 +228,16 @@ export class BasePanel {
 
         // Global mouse move and up for marquee
         const handleMouseMove = (e) => SelectionUtils.handleMarqueeMouseMove(e, this.stateManager);
-        const handleMouseUp = (e) => SelectionUtils.handleMarqueeMouseUp(e, this.stateManager);
+        const handleMouseUp = (e) => SelectionUtils.handleMarqueeMouseUp(e, this.stateManager, this.selectionOptions);
 
         window.addEventListener('mousemove', handleMouseMove);
         window.addEventListener('mouseup', handleMouseUp);
 
         // Store handlers for cleanup
-        this.marqueeHandlers = { handleMouseMove, handleMouseUp };
+        this.marqueeHandlers = { 
+            handleMouseMove, 
+            handleMouseUp
+        };
     }
 
     /**
@@ -316,6 +319,7 @@ export class BasePanel {
         if (this.marqueeHandlers) {
             window.removeEventListener('mousemove', this.marqueeHandlers.handleMouseMove);
             window.removeEventListener('mouseup', this.marqueeHandlers.handleMouseUp);
+            
             this.marqueeHandlers = null;
         }
     }

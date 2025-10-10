@@ -854,6 +854,7 @@ export class OutlinerPanel extends BasePanel {
         
         // Use the panel element, not the inner container
         this.contextMenu = new OutlinerContextMenu(this.container.parentElement, this.levelEditor, {
+            stateManager: this.stateManager, // Pass StateManager for marquee check
             onRename: (object) => this.handleRenameObject(object),
             onDelete: (object) => this.handleDeleteObject(object),
             onToggleVisibility: (object) => this.handleToggleVisibility(object),
