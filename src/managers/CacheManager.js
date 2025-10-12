@@ -212,11 +212,18 @@ export class CacheManager {
             this.clearSelectableObjectsCache();
         }
 
+        // Clear visible objects cache when objects or layers change (zIndex affects rendering order)
+        if (objectIds.size > 0 || layerIds.size > 0) {
+            if (this.editor && this.editor.renderOperations && typeof this.editor.renderOperations.clearVisibleObjectsCache === 'function') {
+                this.editor.renderOperations.clearVisibleObjectsCache();
+            }
+        }
+
         // If layer IDs are affected, we might need to invalidate effectiveLayerCache for related objects
         if (layerIds.size > 0) {
             // Clear effective layer cache for all objects (since inheritance might have changed)
             this.effectiveLayerCache.clear();
-            
+
             if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
                 Logger.cache.debug(`Cleared effectiveLayerCache due to ${layerIds.size} layer changes (${reason})`);
             }

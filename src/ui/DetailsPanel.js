@@ -152,7 +152,7 @@ export class DetailsPanel {
 
     renderObjectDetails(obj) {
 
-        const properties = ['name', 'type', 'x', 'y', 'width', 'height', 'color'];
+        const properties = ['name', 'type', 'x', 'y', 'width', 'height', 'color', 'zIndex'];
 
         // Use UIFactory to create property editor
         const propertyEditor = UIFactory.createPropertyEditor(obj, properties, (prop, newValue, object) => {
@@ -168,6 +168,11 @@ export class DetailsPanel {
 
             // Trigger redraw of selected objects
             this.stateManager.notifyListeners('selectedObjects', this.stateManager.get('selectedObjects'), this.stateManager.get('selectedObjects'));
+
+            // Force canvas redraw (important for zIndex changes to re-sort and redraw objects)
+            if (this.levelEditor && this.levelEditor.render) {
+                this.levelEditor.render();
+            }
 
             // Update tab title immediately
             this.updateTabTitle();
@@ -186,19 +191,48 @@ export class DetailsPanel {
     renderMultipleObjects(objects) {
         this.container.innerHTML = '<h3 class="text-lg font-bold mb-3">Multiple Selection</h3>';
         
-        const commonProps = ['x', 'y', 'width', 'height', 'name'];
+        const commonProps = ['x', 'y', 'width', 'height', 'name', 'zIndex'];
         
         commonProps.forEach(prop => {
-            const firstValue = objects[0][prop];
-            const allSame = objects.every(obj => obj[prop] === firstValue);
-            const displayValue = allSame ? (typeof firstValue === 'number' ? firstValue.toFixed(1) : firstValue) : '';
+            // Handle undefined values (e.g., zIndex for old objects)
+            let firstValue = objects[0][prop];
+            if (firstValue === undefined && prop === 'zIndex') {
+                firstValue = 0;
+                // Don't set objects[0][prop] = 0 here - let the system handle zIndex properly
+            }
+
+            // For zIndex, display only the object index (thousandths part)
+            let displayValue;
+            if (prop === 'zIndex' && typeof firstValue === 'number' && firstValue > 0) {
+                const objectIndex = Math.floor((firstValue % 1) * 1000);
+                displayValue = allSame ? objectIndex.toString() : '';
+            } else {
+                displayValue = allSame ? (typeof firstValue === 'number' ? firstValue.toFixed(1) : firstValue) : '';
+            }
+
+            const allSame = objects.every(obj => {
+                let val = obj[prop];
+                if (val === undefined && prop === 'zIndex') {
+                    val = 0;
+                    // Don't set obj[prop] = 0 here - let the system handle zIndex properly
+                }
+                return val === firstValue;
+            });
+            
+            // Format property label
+            const formatLabel = (propName) => {
+                if (propName === 'zIndex') return 'Z-Index';
+                return propName.charAt(0).toUpperCase() + propName.slice(1);
+            };
             
             const propContainer = document.createElement('div');
             propContainer.className = 'mb-3';
             
+            const inputType = typeof firstValue === 'number' ? 'number' : 'text';
+            
             propContainer.innerHTML = `
-                <label class="block text-sm font-medium text-gray-300 capitalize">${prop}</label>
-                <input type="text" 
+                <label class="block text-sm font-medium text-gray-300">${formatLabel(prop)}</label>
+                <input type="${inputType}" 
                        id="property-${prop}-${Date.now()}"
                        name="property-${prop}-${Date.now()}"
                        value="${displayValue}" 
@@ -210,26 +244,51 @@ export class DetailsPanel {
             input.addEventListener('change', (e) => {
                 let newValue = e.target.value;
 
-                if (typeof firstValue === 'number') {
-                    newValue = parseFloat(newValue) || 0;
-                }
+                if (prop === 'zIndex') {
+                    // For zIndex, update each object's zIndex with the same object index but current layer
+                    objects.forEach(obj => {
+                        const currentLayerIndex = Math.floor(obj.zIndex || 0);
+                        const objectIndex = parseInt(newValue) || 0;
+                        const newZIndex = currentLayerIndex + (objectIndex / 1000);
 
-                objects.forEach(obj => {
-                    const oldValue = obj[prop];
-                    obj[prop] = newValue;
+                        const oldValue = obj[prop];
+                        obj[prop] = newZIndex;
 
-                    // Notify about each object property change
-                    this.stateManager.notifyListeners('objectPropertyChanged', obj, {
-                        property: prop,
-                        oldValue: oldValue,
-                        newValue: newValue
+                        // Notify about each object property change
+                        this.stateManager.notifyListeners('objectPropertyChanged', obj, {
+                            property: prop,
+                            oldValue: oldValue,
+                            newValue: newZIndex
+                        });
                     });
-                });
+                } else if (typeof firstValue === 'number') {
+                    newValue = parseFloat(newValue);
+                    if (isNaN(newValue)) {
+                        newValue = 0;
+                    }
+
+                    objects.forEach(obj => {
+                        const oldValue = obj[prop];
+                        obj[prop] = newValue;
+
+                        // Notify about each object property change
+                        this.stateManager.notifyListeners('objectPropertyChanged', obj, {
+                            property: prop,
+                            oldValue: oldValue,
+                            newValue: newValue
+                        });
+                    });
+                }
 
                 this.stateManager.markDirty();
 
-                // Trigger redraw
+                // Trigger redraw (important for zIndex changes to re-sort objects)
                 this.stateManager.notifyListeners('selectedObjects', this.stateManager.get('selectedObjects'), this.stateManager.get('selectedObjects'));
+
+                // Force canvas redraw (important for zIndex changes to re-sort and redraw objects)
+                if (this.levelEditor && this.levelEditor.render) {
+                    this.levelEditor.render();
+                }
 
                 // Update tab title immediately
                 this.updateTabTitle();

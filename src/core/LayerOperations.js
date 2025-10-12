@@ -144,6 +144,9 @@ export class LayerOperations extends BaseModule {
             }, 0);
         }
 
+        // Mark state as dirty to trigger re-render
+        this.editor.stateManager.markDirty();
+
         return movedCount;
     }
 
@@ -300,10 +303,21 @@ export class LayerOperations extends BaseModule {
         const oldLayerId = topLevelObj.layerId;
         topLevelObj.layerId = targetLayerId;
 
+        // Log object layer change with zIndex information
+        if (Logger.currentLevel <= Logger.LEVELS.INFO) {
+            const oldLayer = oldLayerId ? this.editor.level.getLayerById(oldLayerId) : null;
+            const newLayer = this.editor.level.getLayerById(targetLayerId);
+            const oldLayerIndex = oldLayer ? oldLayer.getIndex() : 'none';
+            const newLayerIndex = newLayer ? newLayer.getIndex() : 'none';
+            const objectIndex = topLevelObj.zIndex !== undefined ? Math.floor((topLevelObj.zIndex % 1) * 1000) : 'none';
+
+            Logger.layer.info(`Object ${topLevelObj.name || topLevelObj.id} moved from layer "${oldLayer?.name || 'none'}" (index: ${oldLayerIndex}) to layer "${newLayer?.name || 'none'}" (index: ${newLayerIndex}), object index: ${objectIndex}`);
+        }
+
         // FORCED INHERITANCE: Propagate layerId to all children if this is a group
         if (topLevelObj.type === 'group' && topLevelObj.children) {
             topLevelObj.propagateLayerIdToChildren();
-            
+
             if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
                 Logger.layer.debug(`Propagated layerId ${targetLayerId} to all children of group ${topLevelObj.id}`);
             }

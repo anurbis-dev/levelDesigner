@@ -1551,6 +1551,13 @@ export class AssetPanel extends BasePanel {
                 asset.properties.hasUnsavedChanges = false;
             }
             
+            // Update original state after successful save
+            // This makes the current state the new "original" state (state 1)
+            if (asset.saveOriginalState) {
+                asset.saveOriginalState();
+                Logger.ui.debug(`Updated original state for asset: ${asset.name}`);
+            }
+            
             // Refresh the display to update indicators
             this.render();
             

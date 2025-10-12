@@ -15,6 +15,8 @@ export class GameObject {
         this.visible = data.visible !== undefined ? data.visible : true;
         this.locked = data.locked || false;
         this.layerId = data.layerId || null;
+        // Don't set zIndex here - it will be handled by Level.addObject() or Level.fromJSON()
+        // This ensures proper zIndex assignment for all objects
         this.properties = data.properties || {};
     }
 
@@ -69,6 +71,7 @@ export class GameObject {
             visible: this.visible,
             locked: this.locked,
             layerId: this.layerId,
+            zIndex: this.zIndex,
             properties: this.properties
         };
     }

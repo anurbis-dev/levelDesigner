@@ -13,6 +13,8 @@ export class ActorPropertiesWindow extends SettingsPanel {
         this.stateManager = stateManager;
         this.levelEditor = levelEditor;
         this.currentActor = null;
+        this.initialState = null; // Store initial state of properties
+        this.hasChanges = false; // Track if any changes were made
         
         // Override the overlay ID to avoid conflicts
         this.overlayId = 'actor-properties-overlay';
@@ -69,7 +71,7 @@ export class ActorPropertiesWindow extends SettingsPanel {
                 <div class="settings-footer">
                     <div class="settings-footer-right">
                         <button id="actor-props-cancel" class="settings-btn settings-btn-cancel">Cancel</button>
-                        <button id="actor-props-apply" class="settings-btn settings-btn-save">Apply Changes</button>
+                        <button id="actor-props-apply" class="settings-btn settings-btn-save">Close</button>
                     </div>
                 </div>
             </div>
@@ -92,10 +94,16 @@ export class ActorPropertiesWindow extends SettingsPanel {
             cancelBtn.addEventListener('click', () => this.hide());
         }
 
-        // Apply button
+        // Apply/Close button
         const applyBtn = document.getElementById('actor-props-apply');
         if (applyBtn) {
-            applyBtn.addEventListener('click', () => this.applyChanges());
+            applyBtn.addEventListener('click', () => {
+                if (this.hasChanges) {
+                    this.applyChanges();
+                } else {
+                    this.hide();
+                }
+            });
         }
 
         // Escape key handler
@@ -129,6 +137,14 @@ export class ActorPropertiesWindow extends SettingsPanel {
             }
             
             this.renderActorProperties();
+            
+            // Use setTimeout to ensure DOM is fully rendered before saving initial state
+            setTimeout(() => {
+                this.saveInitialState();
+                this.hasChanges = false;
+                this.updateApplyButton();
+                this.setupChangeListeners();
+            }, 0);
         }
     }
 
@@ -144,6 +160,8 @@ export class ActorPropertiesWindow extends SettingsPanel {
             this.stateManager.set('selectedActor', null);
         }
         this.currentActor = null;
+        this.initialState = null;
+        this.hasChanges = false;
     }
 
     renderActorProperties() {
@@ -204,14 +222,119 @@ export class ActorPropertiesWindow extends SettingsPanel {
                 </div>
                 
                 <div>
+                    <label class="block text-sm font-medium text-gray-300 mb-1">Image Path:</label>
+                    <input type="text" id="actor-imgSrc" value="${(actor.imgSrc !== null && actor.imgSrc !== undefined) ? actor.imgSrc : ''}" 
+                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                           placeholder="path/to/image.png">
+                </div>
+                
+                <div>
                     <label class="block text-sm font-medium text-gray-300 mb-1">Category:</label>
-                    <input type="text" id="actor-category" value="${actor.category || ''}" 
+                    <input type="text" id="actor-category" value="${(actor.category !== null && actor.category !== undefined) ? actor.category : ''}" 
                            class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white">
                 </div>
             </div>
         `;
 
         Logger.ui.info(`Rendered properties for actor: ${actor.name}`);
+    }
+
+    /**
+     * Save initial state of all properties
+     */
+    saveInitialState() {
+        const getNumericValue = (id, defaultVal) => {
+            const value = parseFloat(document.getElementById(id)?.value);
+            return isNaN(value) ? defaultVal : value;
+        };
+
+        this.initialState = {
+            name: document.getElementById('actor-name')?.value || '',
+            x: getNumericValue('actor-x', 0),
+            y: getNumericValue('actor-y', 0),
+            width: getNumericValue('actor-width', 32),
+            height: getNumericValue('actor-height', 32),
+            color: document.getElementById('actor-color')?.value || '#3B82F6',
+            imgSrc: document.getElementById('actor-imgSrc')?.value || '',
+            category: document.getElementById('actor-category')?.value || ''
+        };
+        
+        Logger.ui.debug('Initial state saved:', this.initialState);
+    }
+
+    /**
+     * Check if current values differ from initial state
+     */
+    checkForChanges() {
+        if (!this.initialState) return false;
+
+        const getNumericValue = (id, defaultVal) => {
+            const value = parseFloat(document.getElementById(id)?.value);
+            return isNaN(value) ? defaultVal : value;
+        };
+
+        const currentState = {
+            name: document.getElementById('actor-name')?.value || '',
+            x: getNumericValue('actor-x', 0),
+            y: getNumericValue('actor-y', 0),
+            width: getNumericValue('actor-width', 32),
+            height: getNumericValue('actor-height', 32),
+            color: document.getElementById('actor-color')?.value || '#3B82F6',
+            imgSrc: document.getElementById('actor-imgSrc')?.value || '',
+            category: document.getElementById('actor-category')?.value || ''
+        };
+
+        // Compare all properties
+        const hasChanges = Object.keys(this.initialState).some(key => {
+            const initial = this.initialState[key];
+            const current = currentState[key];
+            return initial !== current;
+        });
+
+        return hasChanges;
+    }
+
+    /**
+     * Update Apply button text based on changes
+     */
+    updateApplyButton() {
+        const applyBtn = document.getElementById('actor-props-apply');
+        if (!applyBtn) return;
+
+        this.hasChanges = this.checkForChanges();
+        applyBtn.textContent = this.hasChanges ? 'Apply Changes' : 'Close';
+    }
+
+    /**
+     * Setup change listeners on all input fields
+     */
+    setupChangeListeners() {
+        const inputs = [
+            'actor-name',
+            'actor-x',
+            'actor-y',
+            'actor-width',
+            'actor-height',
+            'actor-color',
+            'actor-imgSrc',
+            'actor-category'
+        ];
+
+        inputs.forEach(inputId => {
+            const input = document.getElementById(inputId);
+            if (input) {
+                // Remove old listener if exists
+                if (input._changeHandler) {
+                    input.removeEventListener('input', input._changeHandler);
+                }
+                
+                // Create and store new handler
+                input._changeHandler = () => this.updateApplyButton();
+                
+                // Add listener
+                input.addEventListener('input', input._changeHandler);
+            }
+        });
     }
 
     applyChanges() {
@@ -223,9 +346,10 @@ export class ActorPropertiesWindow extends SettingsPanel {
         const width = parseFloat(document.getElementById('actor-width')?.value) || 32;
         const height = parseFloat(document.getElementById('actor-height')?.value) || 32;
         const color = document.getElementById('actor-color')?.value || '#3B82F6';
+        const imgSrc = document.getElementById('actor-imgSrc')?.value || '';
         const category = document.getElementById('actor-category')?.value || '';
 
-        // Create updated data object
+        // Create updated data object (state 2 - current editor state)
         const updatedData = {
             name: name,
             x: x,
@@ -233,10 +357,12 @@ export class ActorPropertiesWindow extends SettingsPanel {
             width: width,
             height: height,
             color: color,
+            imgSrc: imgSrc,
             category: category
         };
 
         // Update in asset manager if it's an asset
+        // AssetManager will compare with original state (state 1) and set hasUnsavedChanges flag
         if (this.levelEditor && this.levelEditor.assetManager) {
             const success = this.levelEditor.assetManager.updateAsset(this.currentActor.id, updatedData);
             if (!success) {
@@ -264,6 +390,9 @@ export class ActorPropertiesWindow extends SettingsPanel {
         }
 
         Logger.ui.info(`Applied changes to actor: ${this.currentActor.name}`);
+        
+        // Reset change tracking (state 3 - temporary window state cleared)
+        this.hasChanges = false;
         
         // Close the window
         this.hide();

@@ -1,3 +1,5 @@
+import { Logger } from '../utils/Logger.js';
+
 /**
  * Layer data model for level editor
  */
@@ -10,6 +12,8 @@ export class Layer {
         this.order = data.order || 0;
         this.color = data.color || '#3B82F6'; // Default blue color for layer indicator
         this.parallaxOffset = data.parallaxOffset !== undefined ? data.parallaxOffset : 0;
+        // Layer index for z-index calculation (calculated based on order)
+        this.index = data.index !== undefined ? data.index : 0;
     }
 
     /**
@@ -47,6 +51,28 @@ export class Layer {
      */
     setOrder(order) {
         this.order = order;
+        // Update layer index based on order (0-based index)
+        this.index = order;
+    }
+
+    /**
+     * Update layer index (for z-index calculation)
+     */
+    setIndex(index) {
+        const oldIndex = this.index;
+        this.index = index;
+
+        // Log index change
+        if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+            Logger.layer.debug(`Layer "${this.name}" index updated: ${oldIndex} → ${index}`);
+        }
+    }
+
+    /**
+     * Get layer index for z-index calculation
+     */
+    getIndex() {
+        return this.index;
     }
 
     /**
@@ -60,7 +86,8 @@ export class Layer {
             locked: this.locked,
             order: this.order,
             color: this.color,
-            parallaxOffset: this.parallaxOffset
+            parallaxOffset: this.parallaxOffset,
+            index: this.index
         };
     }
 

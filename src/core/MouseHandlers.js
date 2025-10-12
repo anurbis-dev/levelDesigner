@@ -561,6 +561,20 @@ export class MouseHandlers extends BaseModule {
                     const groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
                     newObject.x -= groupPos.x;
                     newObject.y -= groupPos.y;
+                    
+                    // Assign zIndex if not set (for objects dropped into groups)
+                    if (newObject.zIndex === undefined) {
+                        // For objects dropped into groups, assign next zIndex in the group's layer
+                        const layerIndex = groupEditMode.group.layerId ? this.editor.level.getLayerById(groupEditMode.group.layerId)?.getIndex() || 0 : 0;
+                        const nextObjectIndex = this.editor.level.getNextZIndex() % 1; // Get object index part
+                        newObject.zIndex = layerIndex + nextObjectIndex;
+
+                        // Log zIndex assignment for dropped objects
+                        if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+                            Logger.mouse.debug(`Object ${newObject.name || newObject.id} dropped into group ${groupEditMode.group.name}, assigned zIndex: ${newObject.zIndex} (layer ${layerIndex}, object index: ${Math.floor(nextObjectIndex * 1000)})`);
+                        }
+                    }
+                    
                     groupEditMode.group.children.push(newObject);
                 } else {
                     // Add to main level with current layer (or null if no current layer)

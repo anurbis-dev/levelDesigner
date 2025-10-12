@@ -44,6 +44,10 @@ export class DuplicateOperations extends BaseModule {
         delete cleaned._offsetX;
         delete cleaned._offsetY;
 
+        // Reset zIndex to undefined so Level.addObject() will assign new zIndex
+        // This ensures duplicated objects get a higher zIndex than the original
+        cleaned.zIndex = undefined;
+
         // Normalize properties using extracted method
         this._normalizeObjectProperties(cleaned);
 
@@ -300,6 +304,19 @@ export class DuplicateOperations extends BaseModule {
                 const groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
                 base.x = worldX - groupPos.x;
                 base.y = worldY - groupPos.y;
+
+                // Assign zIndex if not set (for duplicated objects in groups)
+                if (base.zIndex === undefined) {
+                    // For duplicated objects, assign next zIndex in the current layer
+                    const layerIndex = groupEditMode.group.layerId ? this.editor.level.getLayerById(groupEditMode.group.layerId)?.getIndex() || 0 : 0;
+                    const nextObjectIndex = this.editor.level.getNextZIndex() % 1; // Get object index part
+                    base.zIndex = layerIndex + nextObjectIndex;
+
+                    // Log zIndex assignment for duplicated objects
+                    if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+                        Logger.duplicate.debug(`Duplicated object ${base.name || base.id} placed in group ${groupEditMode.group.name}, assigned zIndex: ${base.zIndex} (layer ${layerIndex}, object index: ${Math.floor(nextObjectIndex * 1000)})`);
+                    }
+                }
 
                 // FORCED INHERITANCE: Always inherit layerId from parent group
                 if (groupEditMode.group.layerId) {

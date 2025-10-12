@@ -368,11 +368,21 @@ export class RenderOperations extends BaseModule {
         const groupEditMode = this.editor.stateManager.get('groupEditMode');
         const visibleObjects = this.getVisibleObjects(camera);
 
+        // Sort objects by zIndex for proper layering (lower zIndex = drawn first = behind)
+        const sortedObjects = visibleObjects.slice().sort((a, b) => {
+            // Ensure zIndex is set for all objects (handle undefined for old objects)
+            if (a.zIndex === undefined) a.zIndex = 0;
+            if (b.zIndex === undefined) b.zIndex = 0;
+
+            // Use numeric comparison for proper sorting
+            return a.zIndex - b.zIndex;
+        });
+
         // Check if parallax mode is enabled
         if (this.parallaxRenderer.isParallaxEnabled()) {
-            this.parallaxRenderer.renderParallaxObjects(visibleObjects, camera);
+            this.parallaxRenderer.renderParallaxObjects(sortedObjects, camera);
         } else {
-            visibleObjects.forEach(obj => {
+            sortedObjects.forEach(obj => {
                 this.editor.canvasRenderer.drawObject(obj);
             });
         }
@@ -660,6 +670,14 @@ export class RenderOperations extends BaseModule {
 
         const cameraKey = `${camera.x.toFixed(1)},${camera.y.toFixed(1)},${camera.zoom.toFixed(2)}`;
         this.visibleObjectsCache.delete(cameraKey);
+    }
+
+    /**
+     * Clear all visible objects cache
+     * Use when object positions or zIndex change
+     */
+    clearVisibleObjectsCache() {
+        this.visibleObjectsCache.clear();
     }
 
     /**

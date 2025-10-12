@@ -2,6 +2,7 @@ import { GameObject } from './GameObject.js';
 import { Group } from './Group.js';
 import { Layer } from './Layer.js';
 import { GroupTraversalUtils } from '../utils/GroupTraversalUtils.js';
+import { Logger } from '../utils/Logger.js';
 
 /**
  * Level data model
@@ -45,6 +46,9 @@ export class Level {
         // Initialize layers system
         this.layers = this.initializeLayers(data.layers);
 
+        // Update layer indices based on their order
+        this.updateLayerIndices();
+
         // Store Main layer ID for consistent reference
         this.mainLayerId = this.layers.length > 0 ? this.layers[0].id : null;
 
@@ -53,6 +57,109 @@ export class Level {
 
         // Инициализируем индекс объектов для быстрого поиска
         this.buildObjectsIndex();
+    }
+
+    /**
+     * Get next available zIndex for new objects
+     * @returns {number} Next zIndex value (layerIndex + objectIndex/1000)
+     */
+    getNextZIndex() {
+        // Get the highest layer index (layers are 0-based)
+        const maxLayerIndex = Math.max(...this.layers.map(layer => layer.getIndex()), 0);
+
+        // Find max object index within each layer
+        let maxObjectIndex = -1;
+
+        // Find max zIndex among all objects (including nested in groups)
+        const checkObjects = (objects) => {
+            objects.forEach(obj => {
+                if (obj.zIndex !== undefined && obj.zIndex > 0) {
+                    // Extract object index (thousandths part)
+                    const objectIndex = Math.floor((obj.zIndex % 1) * 1000);
+                    maxObjectIndex = Math.max(maxObjectIndex, objectIndex);
+                }
+
+                // Check children in groups
+                if (obj.type === 'group' && obj.children) {
+                    checkObjects(obj.children);
+                }
+            });
+        };
+
+        checkObjects(this.objects);
+
+        // If maxObjectIndex is 999, start from 0 for next object
+        const nextObjectIndex = maxObjectIndex >= 999 ? 0 : maxObjectIndex + 1;
+
+        const result = maxLayerIndex + (nextObjectIndex / 1000);
+
+        // Log zIndex calculation for new objects
+        if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+            Logger.level.debug(`Level.getNextZIndex(): maxLayerIndex=${maxLayerIndex}, maxObjectIndex=${maxObjectIndex}, nextObjectIndex=${nextObjectIndex}, returning=${result}`);
+        }
+
+        return result;
+    }
+
+    /**
+     * Update layer indices based on their order
+     */
+    updateLayerIndices() {
+        // Sort layers by order
+        const sortedLayers = [...this.layers].sort((a, b) => a.order - b.order);
+
+        // Log layer indices before update
+        if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+            Logger.level.debug('Updating layer indices:');
+            sortedLayers.forEach((layer, index) => {
+                Logger.level.debug(`Layer "${layer.name}" (order: ${layer.order}) → index: ${index}`);
+            });
+        }
+
+        // Assign indices based on order (0, 1, 2, ...)
+        sortedLayers.forEach((layer, index) => {
+            layer.setIndex(index);
+        });
+
+        // Update all object zIndices to reflect new layer indices
+        this.updateAllObjectZIndices();
+    }
+
+    /**
+     * Update zIndex for all objects based on their layer
+     */
+    updateAllObjectZIndices() {
+        const updateObjects = (objects) => {
+            objects.forEach(obj => {
+                const layer = obj.layerId ? this.getLayerById(obj.layerId) : null;
+                if (layer && obj.zIndex !== undefined) {
+                    // Extract current object index (thousandths part)
+                    const currentObjectIndex = Math.floor((obj.zIndex % 1) * 1000);
+
+                    // Update zIndex with new layer index + object index
+                    obj.zIndex = layer.getIndex() + (currentObjectIndex / 1000);
+                }
+
+                // Update children in groups
+                if (obj.type === 'group' && obj.children) {
+                    updateObjects(obj.children);
+                }
+            });
+        };
+
+        updateObjects(this.objects);
+
+        // Log zIndex updates for all objects
+        if (Logger.currentLevel <= Logger.LEVELS.INFO) {
+            Logger.level.info('Level.updateAllObjectZIndices(): Updated zIndex for all objects after layer reordering');
+            this.objects.forEach(obj => {
+                if (obj.zIndex !== undefined) {
+                    const layerIndex = Math.floor(obj.zIndex);
+                    const objectIndex = Math.floor((obj.zIndex % 1) * 1000);
+                    Logger.level.debug(`Object ${obj.name || obj.id}: zIndex=${obj.zIndex}, layer=${layerIndex}, object=${objectIndex}`);
+                }
+            });
+        }
     }
 
     /**
@@ -72,6 +179,19 @@ export class Level {
         // Only assign ID if not already set (for groups created elsewhere)
         if (!properObj.id) {
             properObj.id = this.nextObjectId++;
+        }
+
+        // Assign zIndex only if undefined (for new objects from assets)
+        if (properObj.zIndex === undefined) {
+            const oldZIndex = properObj.zIndex;
+            properObj.zIndex = this.getNextZIndex();
+
+            // Log zIndex assignment for new objects
+            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+                const layerIndex = Math.floor(properObj.zIndex);
+                const objectIndex = Math.floor((properObj.zIndex % 1) * 1000);
+                Logger.level.debug(`New object ${properObj.name || properObj.id} added with zIndex: ${properObj.zIndex} (layer ${layerIndex}, object index: ${objectIndex})`);
+            }
         }
 
         // Assign to current layer if provided, otherwise Main layer by default
@@ -219,8 +339,9 @@ export class Level {
             visible: true,
             locked: false
         });
-        
+
         this.layers.push(newLayer);
+        this.updateLayerIndices(); // Update layer indices after adding new layer
         this.updateModified();
         return newLayer;
     }
@@ -233,8 +354,9 @@ export class Level {
         if (!layer || layerId === this.getMainLayerId()) {
             return false;
         }
-        
+
         this.layers = this.layers.filter(l => l.id !== layerId);
+        this.updateLayerIndices(); // Update layer indices after removing layer
         this.updateModified();
         return true;
     }
@@ -303,6 +425,7 @@ export class Level {
         });
 
         this.layers = reorderedLayers;
+        this.updateLayerIndices(); // Update layer indices and object zIndices
         this.updateModified();
     }
 
@@ -536,12 +659,32 @@ export class Level {
         if (obj) {
             const oldLayerId = obj.layerId;
             obj.layerId = layerId;
-            
+
+            // Update zIndex based on new layer
+            if (obj.zIndex !== undefined) {
+                const newLayer = this.getLayerById(layerId);
+                if (newLayer) {
+                    // Extract current object index (thousandths part)
+                    const currentObjectIndex = Math.floor((obj.zIndex % 1) * 1000);
+                    const oldZIndex = obj.zIndex;
+                    // Update zIndex with new layer index + object index
+                    obj.zIndex = newLayer.getIndex() + (currentObjectIndex / 1000);
+
+                    // Log zIndex change
+                    if (Logger.currentLevel <= Logger.LEVELS.INFO) {
+                        const oldLayer = oldLayerId ? this.getLayerById(oldLayerId) : null;
+                        const oldLayerIndex = oldLayer ? oldLayer.getIndex() : 'none';
+                        const newLayerIndex = newLayer.getIndex();
+                        Logger.layer.info(`Object ${obj.name || obj.id} zIndex updated: ${oldZIndex} (layer ${oldLayerIndex}) → ${obj.zIndex} (layer ${newLayerIndex}), object index: ${currentObjectIndex}`);
+                    }
+                }
+            }
+
             // FORCED INHERITANCE: Propagate layerId to all children if this is a group
             if (obj.type === 'group' && obj.children) {
                 obj.propagateLayerIdToChildren();
             }
-            
+
             this.updateModified();
 
             // Обновляем кеш счетчиков слоев с учетом вложенных объектов
@@ -549,7 +692,7 @@ export class Level {
                 // Decrease count for old layer (including nested objects)
                 const oldCount = this.getLayerObjectsCount(oldLayerId);
                 this.layerCountsCache.set(oldLayerId, oldCount - 1);
-                
+
                 // Increase count for new layer (including nested objects)
                 const newCount = this.getLayerObjectsCount(layerId);
                 this.layerCountsCache.set(layerId, newCount + 1);
@@ -667,6 +810,8 @@ export class Level {
      */
     static fromJSON(data) {
         const level = new Level(data);
+
+        // Create objects from JSON data
         level.objects = data.objects ? data.objects.map(objData => {
             if (objData.type === 'group') {
                 return Group.fromJSON(objData);
@@ -675,10 +820,34 @@ export class Level {
             }
         }) : [];
 
+        // Update layer indices first
+        level.updateLayerIndices();
+
+        // Assign proper zIndex to all objects based on their layers
+        // This ensures consistency and proper layering
+        level.objects.forEach(obj => {
+            if (obj.zIndex === undefined || obj.zIndex === 0) {
+                // Assign next available zIndex for objects without proper zIndex
+                obj.zIndex = level.getNextZIndex();
+            } else {
+                // For objects with existing zIndex, ensure they use the correct layer index
+                const layer = obj.layerId ? level.getLayerById(obj.layerId) : null;
+                if (layer) {
+                    // Extract current object index (thousandths part)
+                    const currentObjectIndex = Math.floor((obj.zIndex % 1) * 1000);
+                    // Update zIndex with correct layer index + object index
+                    obj.zIndex = layer.getIndex() + (currentObjectIndex / 1000);
+                }
+            }
+        });
+
         // Restore Main layer ID from saved data or use first layer
         if (data.mainLayerId) {
             level.mainLayerId = data.mainLayerId;
         }
+
+        // Update layer indices based on their order
+        level.updateLayerIndices();
 
         // Перестраиваем кеши после загрузки объектов
         level.rebuildLayerCountsCache();

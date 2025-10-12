@@ -16,10 +16,57 @@ export class Asset {
         this.imgSrc = data.imgSrc || null;
         this.properties = data.properties || {};
         this.tags = data.tags || [];
+        
+        // Store original state for comparison (state 1 - from JSON file)
+        this._originalState = null;
+        if (!data._isClone) {
+            this.saveOriginalState();
+        }
     }
 
     generateId() {
         return `asset_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    }
+
+    /**
+     * Save current state as original state (from JSON file)
+     */
+    saveOriginalState() {
+        this._originalState = {
+            name: this.name,
+            type: this.type,
+            category: this.category,
+            width: this.width,
+            height: this.height,
+            color: this.color,
+            imgSrc: this.imgSrc
+        };
+    }
+
+    /**
+     * Check if current state differs from original state
+     * @returns {boolean} True if asset has been modified
+     */
+    hasChangesFromOriginal() {
+        if (!this._originalState) return false;
+
+        return (
+            this.name !== this._originalState.name ||
+            this.type !== this._originalState.type ||
+            this.category !== this._originalState.category ||
+            this.width !== this._originalState.width ||
+            this.height !== this._originalState.height ||
+            this.color !== this._originalState.color ||
+            this.imgSrc !== this._originalState.imgSrc
+        );
+    }
+
+    /**
+     * Get original state
+     * @returns {Object} Original state object
+     */
+    getOriginalState() {
+        return this._originalState ? { ...this._originalState } : null;
     }
 
     /**
@@ -39,6 +86,7 @@ export class Asset {
             height: this.height,
             color: this.color,
             imgSrc: this.imgSrc,
+            // Don't set zIndex here - it will be assigned by Level.addObject()
             visible: true,
             locked: false,
             layerId: layerId, // Will be set by level.addObject() if not provided

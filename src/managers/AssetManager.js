@@ -518,7 +518,7 @@ export class AssetManager {
             return false;
         }
 
-        // Update asset properties
+        // Update asset properties (current state - state 2)
         Object.assign(asset, updatedData);
         
         // Update categories if category changed
@@ -527,12 +527,18 @@ export class AssetManager {
             this.updateStateManagerCategories();
         }
 
-        // Mark asset as modified
-        if (asset.properties) {
-            asset.properties.lastModified = Date.now();
-            asset.properties.hasUnsavedChanges = true;
-        }
+        // Check if current state differs from original state (from JSON file)
+        const hasChanges = asset.hasChangesFromOriginal ? asset.hasChangesFromOriginal() : false;
 
+        // Update properties and set hasUnsavedChanges flag only if differs from original
+        if (!asset.properties) {
+            asset.properties = {};
+        }
+        
+        asset.properties.lastModified = Date.now();
+        asset.properties.hasUnsavedChanges = hasChanges;
+        
+        Logger.asset.debug(`Asset ${asset.name}: hasUnsavedChanges = ${hasChanges}`);
         Logger.asset.info(`Updated asset: ${asset.name}`);
         
         // Notify UI components

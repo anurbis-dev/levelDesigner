@@ -46,6 +46,7 @@ export class Logger {
         PREFERENCES: { color: '#673AB7', prefix: 'PREFS' },
         CONFIG: { color: '#00E676', prefix: 'CONFIG' },
         LAYER: { color: '#03A9F4', prefix: 'LAYER' },
+        LEVEL: { color: '#8BC34A', prefix: 'LEVEL' },
         CACHE: { color: '#4CAF50', prefix: 'CACHE' },
         OUTLINER: { color: '#9C27B0', prefix: 'OUTLINER' },
         PARALLAX: { color: '#FF1493', prefix: 'PARALLAX' },
@@ -383,6 +384,16 @@ export class Logger {
         debug: (message, ...args) => Logger.log('LAYER', 'debug', message, ...args),
         warn: (message, ...args) => Logger.log('LAYER', 'warn', message, ...args),
         error: (message, ...args) => Logger.log('LAYER', 'error', message, ...args)
+    };
+
+    /**
+     * Level operations logging
+     */
+    static level = {
+        info: (message, ...args) => Logger.log('LEVEL', 'info', message, ...args),
+        debug: (message, ...args) => Logger.log('LEVEL', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('LEVEL', 'warn', message, ...args),
+        error: (message, ...args) => Logger.log('LEVEL', 'error', message, ...args)
     };
 
     /**

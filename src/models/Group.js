@@ -1,4 +1,5 @@
 import { GameObject } from './GameObject.js';
+import { Logger } from '../utils/Logger.js';
 
 /**
  * Group object that can contain other objects
@@ -32,8 +33,8 @@ export class Group extends GameObject {
             properChild.layerId = this.layerId;
 
             // Log forced inheritance
-            if (typeof window !== 'undefined' && window.Logger) {
-                window.Logger.layer.info(`Forced inheritance: ${properChild.name || properChild.id} layerId ${oldLayerId || 'none'} → ${this.layerId}`);
+            if (Logger && Logger.currentLevel <= Logger.LEVELS.INFO) {
+                Logger.layer.info(`Forced inheritance: ${properChild.name || properChild.id} layerId ${oldLayerId || 'none'} → ${this.layerId}`);
             }
 
             // If child is a group, propagate layerId to all its children recursively
@@ -71,9 +72,29 @@ export class Group extends GameObject {
             const oldLayerId = child.layerId;
             child.layerId = group.layerId;
 
+            // Update zIndex based on new layer
+            if (child.zIndex !== undefined && typeof window !== 'undefined' && window.LevelEditor) {
+                const editor = window.LevelEditor.getInstance();
+                if (editor && editor.level) {
+                    const newLayer = editor.level.getLayerById(group.layerId);
+                    if (newLayer) {
+                        // Extract current object index (thousandths part)
+                        const currentObjectIndex = Math.floor((child.zIndex % 1) * 1000);
+                        const oldZIndex = child.zIndex;
+                        // Update zIndex with new layer index + object index
+                        child.zIndex = newLayer.getIndex() + (currentObjectIndex / 1000);
+
+                        // Log zIndex change for child objects
+                        if (Logger && Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+                            Logger.layer.debug(`Child object ${child.name || child.id} zIndex updated: ${oldZIndex} → ${child.zIndex} (layer ${newLayer.getIndex()}, object index: ${currentObjectIndex})`);
+                        }
+                    }
+                }
+            }
+
             // Log forced inheritance
-            if (typeof window !== 'undefined' && window.Logger) {
-                window.Logger.layer.info(`Propagated inheritance: ${child.name || child.id} layerId ${oldLayerId || 'none'} → ${group.layerId}`);
+            if (Logger && Logger.currentLevel <= Logger.LEVELS.INFO) {
+                Logger.layer.info(`Propagated inheritance: ${child.name || child.id} layerId ${oldLayerId || 'none'} → ${group.layerId}, zIndex updated`);
             }
 
             // Clear effective layer cache for this child

@@ -258,21 +258,25 @@ export class GridSettings {
      * Initialize event listeners for grid settings
      */
     initializeEventListeners() {
-        // Prevent duplicate initialization
-        if (this._eventListenersInitialized) return;
-        this._eventListenersInitialized = true;
+        // Don't prevent reinitialization - we need to set up listener every time tab is rendered
+        // Remove this line: if (this._eventListenersInitialized) return;
         
-        // Remove existing event listeners to prevent duplicates
         const gridTypeSelect = document.querySelector('[data-setting="canvas.gridType"]');
-        if (gridTypeSelect && !gridTypeSelect._hasGridTypeListener) {
-            gridTypeSelect._hasGridTypeListener = true;
+        if (gridTypeSelect) {
+            // Remove old listener if exists
+            if (gridTypeSelect._gridTypeChangeHandler) {
+                gridTypeSelect.removeEventListener('change', gridTypeSelect._gridTypeChangeHandler);
+            }
+            
+            // Create and store new handler
+            gridTypeSelect._gridTypeChangeHandler = () => {
+                this.handleGridTypeChange();
+            };
             
             // Add new event listener
-            gridTypeSelect.addEventListener('change', () => {
-                this.handleGridTypeChange();
-            });
+            gridTypeSelect.addEventListener('change', gridTypeSelect._gridTypeChangeHandler);
             
-            // Initial call to set correct visibility
+            // IMPORTANT: Initial call to set correct visibility based on current grid type
             this.handleGridTypeChange();
         }
 
