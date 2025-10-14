@@ -1,0 +1,32 @@
+{
+  "colors": {
+    "DUPLICATE": "#4CAF50",
+    "RENDER": "#2196F3",
+    "CANVAS": "#FF9800",
+    "MOUSE": "#9C27B0",
+    "EVENT": "#607D8B",
+    "GROUP": "#795548",
+    "STATE": "#E91E63",
+    "FILE": "#009688",
+    "ASSET": "#FF5722",
+    "UI": "#3F51B5",
+    "MENU": "#FF9800",
+    "PERFORMANCE": "#CDDC39",
+    "DEBUG": "#9E9E9E",
+    "GIT": "#FF6B35",
+    "CONSOLE": "#00BCD4",
+    "LAYOUT": "#8BC34A",
+    "SETTINGS": "#FFC107",
+    "PREFERENCES": "#673AB7",
+    "CONFIG": "#00E676",
+    "LAYER": "#03A9F4",
+    "LEVEL": "#8BC34A",
+    "CACHE": "#4CAF50",
+    "OUTLINER": "#9C27B0",
+    "PARALLAX": "#FF1493",
+    "OBJECT_OPERATIONS": "#9C27B0",
+    "LIFECYCLE": "#00BCD4",
+    "ERROR_HANDLER": "#F44336",
+    "VIEWPORT": "#00ACC1"
+  }
+}

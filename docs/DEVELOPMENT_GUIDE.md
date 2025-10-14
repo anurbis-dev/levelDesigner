@@ -14,7 +14,7 @@
 
 ```javascript
 export class LevelEditor {
-    static VERSION = '3.26.1'; // ← ЕДИНЫЙ ИСТОЧНИК ИСТИНЫ
+    static VERSION = '3.48.0'; // ← ЕДИНСТВЕННЫЙ ИСТОЧНИК ИСТИНЫ
 }
 ```
 

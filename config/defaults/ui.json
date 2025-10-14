@@ -15,6 +15,12 @@
   "showTooltips": true,
   "assetSize": 96,
   "assetViewMode": "grid",
+  "backgroundColor": "#1f2937",
+  "textColor": "#d1d5db",
+  "activeColor": "#3b82f6",
+  "activeTextColor": "#ffffff",
+  "activeTabColor": "#374151",
+  "accentColor": "#3B82F6",
   "settingsWindow": {
     "x": null,
     "y": null,

@@ -118,10 +118,12 @@ export class LayersPanel extends BasePanel {
         });
         this.subscriptions.push(unsubscribeLayerChanged);
 
-        // Subscribe to config changes (for active layer border color)
-        if (this.levelEditor.configManager) {
-            // Since ConfigManager doesn't have built-in events, we'll update on render
-            // This could be enhanced by adding event system to ConfigManager if needed
+        // Subscribe to StateManager changes for active layer border color (real-time updates)
+        if (this.stateManager) {
+            const unsubscribeColorChange = this.stateManager.subscribe('selection.activeLayerBorderColor', () => {
+                this.updateLayerStyles();
+            });
+            this.subscriptions.push(unsubscribeColorChange);
         }
 
         // Setup keyboard shortcuts
@@ -652,8 +654,9 @@ export class LayersPanel extends BasePanel {
         const activeLayerIds = this.getActiveLayerIds();
         const layerElements = this.container.querySelectorAll('.layer-item');
 
-        // Get active layer border color from settings
-        const activeLayerBorderColor = this.levelEditor.configManager?.get('selection.activeLayerBorderColor') || '#3B82F6';
+        // Get active layer border color from StateManager (for real-time updates)
+        const activeLayerBorderColor = this.stateManager?.get('selection.activeLayerBorderColor') ||
+                                      this.levelEditor.configManager?.get('selection.activeLayerBorderColor') || '#3B82F6';
 
         layerElements.forEach(element => {
             const layerId = element.dataset.layerId;

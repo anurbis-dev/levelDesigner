@@ -108,8 +108,8 @@ export class GroupOperations extends BaseModule {
             // Clear cache for new group as well
             this.editor.renderOperations.clearEffectiveLayerCacheForObject(newGroup.id);
 
-            // Clear visible objects cache only for current camera position
-            this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
+            // Clear entire visible objects cache since object structure changed completely
+            this.editor.renderOperations.clearVisibleObjectsCache();
 
             // Invalidate spatial index since structure changed
             this.editor.renderOperations.invalidateSpatialIndex();
@@ -140,7 +140,7 @@ export class GroupOperations extends BaseModule {
 
         // Clear selection
         // Selective cache invalidation for group edit mode
-        this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
+        this.editor.renderOperations.clearVisibleObjectsCache();
         this.editor.renderOperations.invalidateSpatialIndex();
 
         this.editor.stateManager.set('selectedObjects', new Set());
@@ -187,7 +187,7 @@ export class GroupOperations extends BaseModule {
         }
 
         // Selective cache invalidation for closing group edit mode
-        this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
+        this.editor.renderOperations.clearVisibleObjectsCache();
         this.editor.renderOperations.invalidateSpatialIndex();
 
         this.editor.stateManager.set('selectedObjects', new Set());
@@ -251,8 +251,8 @@ export class GroupOperations extends BaseModule {
             this.editor.renderOperations.clearEffectiveLayerCacheForObject(obj.id);
         });
 
-        // Clear visible objects cache only for current camera position
-        this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
+        // Clear entire visible objects cache since object structure changed completely
+        this.editor.renderOperations.clearVisibleObjectsCache();
 
         // Invalidate spatial index since structure changed
         this.editor.renderOperations.invalidateSpatialIndex();

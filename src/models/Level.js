@@ -181,19 +181,6 @@ export class Level {
             properObj.id = this.nextObjectId++;
         }
 
-        // Assign zIndex only if undefined (for new objects from assets)
-        if (properObj.zIndex === undefined) {
-            const oldZIndex = properObj.zIndex;
-            properObj.zIndex = this.getNextZIndex();
-
-            // Log zIndex assignment for new objects
-            if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
-                const layerIndex = Math.floor(properObj.zIndex);
-                const objectIndex = Math.floor((properObj.zIndex % 1) * 1000);
-                Logger.level.debug(`New object ${properObj.name || properObj.id} added with zIndex: ${properObj.zIndex} (layer ${layerIndex}, object index: ${objectIndex})`);
-            }
-        }
-
         // Assign to current layer if provided, otherwise Main layer by default
         // Only if layerId is not already set
         if (!properObj.layerId) {
@@ -207,6 +194,10 @@ export class Level {
 
         // Добавляем объект в индекс (top-level объект)
         this.addObjectToIndex(properObj, null);
+
+        // Assign zIndex only if undefined (for new objects from assets)
+        // Do this AFTER adding to objects array and setting layerId
+        this.assignInitialZIndex(properObj, properObj.layerId);
 
         // Обновляем кеш счетчиков слоев при добавлении объекта
         if (properObj.layerId) {
@@ -649,6 +640,17 @@ export class Level {
      */
     clearObjectsIndex() {
         this.objectsIndex.clear();
+    }
+
+    /**
+     * Assign initial zIndex to a new object
+     */
+    assignInitialZIndex(obj, layerId) {
+        if (obj.zIndex === undefined) {
+            // For new objects, assign zIndex first, then use assignObjectToLayer to ensure correct layer index
+            obj.zIndex = this.getNextZIndex();
+            this.assignObjectToLayer(obj.id, layerId);
+        }
     }
 
     /**

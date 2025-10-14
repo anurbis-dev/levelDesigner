@@ -256,18 +256,20 @@ export class RenderOperations extends BaseModule {
 
         // Фильтруем кандидаты по точным критериям видимости
         const visibleLayerIds = this.getVisibleLayerIds();
-        const visibleObjects = Array.from(candidates).filter(obj => {
-            // Проверяем видимость слоя
-            const effectiveLayerId = this.getEffectiveLayerId(obj);
-            if (!visibleLayerIds.has(effectiveLayerId)) {
-                return false;
-            }
 
-            // Проверяем точную видимость в viewport
-            return this.isObjectVisible(obj, extendedLeft, extendedTop, extendedRight, extendedBottom);
+        // Use common method to collect visible objects recursively
+        // First filter candidates by layer visibility and basic viewport check
+        const filteredCandidates = Array.from(candidates).filter(obj => {
+            const effectiveLayerId = this.getEffectiveLayerId(obj);
+            return visibleLayerIds.has(effectiveLayerId) && obj.visible;
         });
 
-        return visibleObjects;
+        // Then use common recursive method for detailed collection
+        return this.collectVisibleObjectsRecursive(
+            filteredCandidates,
+            visibleLayerIds,
+            extendedLeft, extendedTop, extendedRight, extendedBottom
+        );
     }
 
 
@@ -371,19 +373,21 @@ export class RenderOperations extends BaseModule {
         // Sort objects by zIndex for proper layering (lower zIndex = drawn first = behind)
         const sortedObjects = visibleObjects.slice().sort((a, b) => {
             // Ensure zIndex is set for all objects (handle undefined for old objects)
-            if (a.zIndex === undefined) a.zIndex = 0;
-            if (b.zIndex === undefined) b.zIndex = 0;
+            const aZIndex = a.obj.zIndex !== undefined ? a.obj.zIndex : 0;
+            const bZIndex = b.obj.zIndex !== undefined ? b.obj.zIndex : 0;
 
             // Use numeric comparison for proper sorting
-            return a.zIndex - b.zIndex;
+            return aZIndex - bZIndex;
         });
 
         // Check if parallax mode is enabled
         if (this.parallaxRenderer.isParallaxEnabled()) {
-            this.parallaxRenderer.renderParallaxObjects(sortedObjects, camera);
+            // For parallax, we need to convert back to simple objects for compatibility
+            const simpleObjects = sortedObjects.map(item => item.obj);
+            this.parallaxRenderer.renderParallaxObjects(simpleObjects, camera);
         } else {
-            sortedObjects.forEach(obj => {
-                this.editor.canvasRenderer.drawObject(obj);
+            sortedObjects.forEach(item => {
+                this.editor.canvasRenderer.drawObject(item.obj, item.parentX, item.parentY);
             });
         }
         
@@ -706,6 +710,52 @@ export class RenderOperations extends BaseModule {
      * Get objects visible in the current viewport (frustum culling) with caching
      */
     /**
+     * Common method to recursively collect visible objects with their parent positions
+     */
+    collectVisibleObjectsRecursive(objects, visibleLayerIds, left, top, right, bottom, parentX = 0, parentY = 0) {
+        const result = [];
+
+        objects.forEach(obj => {
+            // Check if object's effective layer is visible (considering inheritance from parent groups)
+            const effectiveLayerId = this.getEffectiveLayerId(obj);
+            if (!visibleLayerIds.has(effectiveLayerId)) {
+                return;
+            }
+
+            // Check if object itself is visible
+            if (!obj.visible) {
+                return;
+            }
+
+            // Calculate absolute position for viewport check
+            const absX = obj.x + parentX;
+            const absY = obj.y + parentY;
+
+            // Check if object is in viewport (adjust viewport for parent offset)
+            const adjustedLeft = left - parentX;
+            const adjustedTop = top - parentY;
+            const adjustedRight = right - parentX;
+            const adjustedBottom = bottom - parentY;
+
+            if (this.isObjectVisible(obj, adjustedLeft, adjustedTop, adjustedRight, adjustedBottom)) {
+                result.push({
+                    obj: obj,
+                    parentX: parentX,
+                    parentY: parentY
+                });
+            }
+
+            // Recursively collect children if this is a group
+            if (obj.type === 'group' && obj.children) {
+                const children = this.collectVisibleObjectsRecursive(obj.children, visibleLayerIds, left, top, right, bottom, absX, absY);
+                result.push(...children);
+            }
+        });
+
+        return result;
+    }
+
+    /**
      * Обычный метод поиска видимых объектов (fallback)
      */
     getVisibleObjectsRegular(camera) {
@@ -751,23 +801,14 @@ export class RenderOperations extends BaseModule {
         // Get visible layer IDs for performance
         const visibleLayerIds = this.getVisibleLayerIds();
 
-        const visibleObjects = this.editor.level.objects.filter(obj => {
-            // Check if object's effective layer is visible (considering inheritance from parent groups)
-            const effectiveLayerId = this.getEffectiveLayerId(obj);
-            if (!visibleLayerIds.has(effectiveLayerId)) {
-                return false;
-            }
+        // Use common method to collect all visible objects recursively
+        const visibleObjectsWithPosition = this.collectVisibleObjectsRecursive(
+            this.editor.level.objects,
+            visibleLayerIds,
+            extendedLeft, extendedTop, extendedRight, extendedBottom
+        );
 
-            // Check if object itself is visible
-            if (!obj.visible) {
-                return false;
-            }
-
-            // Check if object is in viewport
-            return this.isObjectVisible(obj, extendedLeft, extendedTop, extendedRight, extendedBottom);
-        });
-
-        return visibleObjects;
+        return visibleObjectsWithPosition;
     }
 
     getVisibleObjects(camera) {

@@ -17,7 +17,8 @@ export class ConfigManager {
             canvas: null,
             panels: null,
             toolbar: null,
-            shortcuts: null
+            shortcuts: null,
+            logger: null
         };
         
         // Track which configs have been modified for selective saving
@@ -189,7 +190,7 @@ export class ConfigManager {
     getDefaultConfigs() {
         // Try to load from JSON files synchronously using XMLHttpRequest
         const configs = {};
-        const configNames = ['editor', 'ui', 'canvas', 'panels', 'toolbar', 'shortcuts'];
+        const configNames = ['editor', 'ui', 'canvas', 'panels', 'toolbar', 'shortcuts', 'logger'];
 
         configNames.forEach(configName => {
             try {

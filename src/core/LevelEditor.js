@@ -49,7 +49,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.46.0';
+    static VERSION = '3.49.0';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -827,8 +827,51 @@ export class LevelEditor {
         
         // Apply different configuration sections
         this._applyGridConfiguration();
+        this._applyColorConfiguration();
         this._syncGridSettingsToUI();
         this._saveDefaultConfiguration();
+    }
+
+    /**
+     * Apply color configuration settings to StateManager
+     * @private
+     */
+    _applyColorConfiguration() {
+        // Apply UI colors
+        const uiColors = this.configManager.get('ui');
+        if (uiColors) {
+            this.stateManager.set('ui.backgroundColor', uiColors.backgroundColor);
+            this.stateManager.set('ui.textColor', uiColors.textColor);
+            this.stateManager.set('ui.activeColor', uiColors.activeColor);
+            this.stateManager.set('ui.activeTextColor', uiColors.activeTextColor);
+            this.stateManager.set('ui.activeTabColor', uiColors.activeTabColor);
+            this.stateManager.set('ui.accentColor', uiColors.accentColor);
+        }
+
+        // Apply canvas colors
+        const canvasColors = this.configManager.get('canvas');
+        if (canvasColors) {
+            this.stateManager.set('canvas.backgroundColor', canvasColors.backgroundColor);
+        }
+
+        // Apply selection colors
+        const selectionColors = this.configManager.get('selection');
+        if (selectionColors) {
+            this.stateManager.set('selection.outlineColor', selectionColors.outlineColor);
+            this.stateManager.set('selection.outlineWidth', selectionColors.outlineWidth);
+            this.stateManager.set('selection.groupOutlineColor', selectionColors.groupOutlineColor);
+            this.stateManager.set('selection.groupOutlineWidth', selectionColors.groupOutlineWidth);
+            this.stateManager.set('selection.marqueeColor', selectionColors.marqueeColor);
+            this.stateManager.set('selection.marqueeOpacity', selectionColors.marqueeOpacity);
+            this.stateManager.set('selection.hierarchyHighlightColor', selectionColors.hierarchyHighlightColor);
+            this.stateManager.set('selection.activeLayerBorderColor', selectionColors.activeLayerBorderColor);
+        }
+
+        // Apply logger colors
+        const loggerColors = this.configManager.get('logger.colors');
+        if (loggerColors) {
+            this.stateManager.set('logger.colors', loggerColors);
+        }
     }
 
     /**

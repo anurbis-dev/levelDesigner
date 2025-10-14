@@ -1,4 +1,4 @@
-# API Reference - 2D Level Editor v3.47.0
+# API Reference - 2D Level Editor v3.49.0
 
 ## Обзор
 
@@ -6,12 +6,15 @@
 
 > 🔍 **Быстрый справочник:** См. [COMPREHENSIVE_API_REFERENCE.md](./COMPREHENSIVE_API_REFERENCE.md) для полного списка всех методов и функций в структурированном виде.
 
-## Обновления v3.47.0 - Система индексов глубины (Z-Index)
+## Обновления v3.49.0 - Исправления zIndex и рендеринга
 
-### 🎯 Level Operations - Система индексов глубины
+### 🎯 Level Operations - Унифицированное управление zIndex
 **Файл**: `src/models/Level.js`
 
 ```javascript
+// Присваивание начального zIndex новому объекту (унифицированный метод)
+level.assignInitialZIndex(object, layerId);
+
 // Получение следующего доступного zIndex для нового объекта
 const nextZIndex = level.getNextZIndex();
 
@@ -24,6 +27,54 @@ level.updateAllObjectZIndices();
 // Назначение объекта на слой с пересчетом zIndex
 level.assignObjectToLayer(objectId, targetLayerId);
 ```
+
+**Пример использования**:
+```javascript
+// Присвоить начальный zIndex новому объекту
+const newObject = createGameObject();
+editor.level.assignInitialZIndex(newObject, targetLayerId);
+
+// Получить следующий zIndex для нового объекта
+const zIndex = editor.level.getNextZIndex();
+console.log('Next zIndex:', zIndex); // 1.003 (layer 1, object index 3)
+```
+
+### 🎨 Render Operations - Рекурсивный сбор объектов
+**Файл**: `src/core/RenderOperations.js`
+
+```javascript
+// Рекурсивный сбор всех видимых объектов с их parent позициями
+const visibleObjects = renderOps.collectVisibleObjectsRecursive(
+    objects,           // массив объектов для обработки
+    visibleLayerIds,   // видимые ID слоев
+    left, top,         // границы viewport
+    right, bottom
+);
+
+// Получение всех видимых объектов (использует collectVisibleObjectsRecursive)
+const visibleObjects = renderOps.getVisibleObjects(camera);
+```
+
+**Пример использования**:
+```javascript
+// Получить все видимые объекты рекурсивно
+const visibleObjects = editor.renderOperations.collectVisibleObjectsRecursive(
+    editor.level.objects,
+    visibleLayerIds,
+    viewportLeft, viewportTop,
+    viewportRight, viewportBottom
+);
+
+// Каждый объект имеет формат: { obj, parentX, parentY }
+visibleObjects.forEach(item => {
+    const { obj, parentX, parentY } = item;
+    console.log('Object:', obj.name, 'at position:', obj.x + parentX, obj.y + parentY);
+});
+```
+
+## Предыдущие обновления v3.47.0 - Система индексов глубины (Z-Index)
+
+### 🎯 Level Operations - Система индексов глубины
 
 **Пример использования**:
 ```javascript

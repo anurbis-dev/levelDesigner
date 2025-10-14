@@ -18,13 +18,16 @@ export class SettingsPanel {
         this.isVisible = false;
         this.lastActiveTab = 'general'; // Default tab
         this.escapeKeyHandler = null;
-        
+
         // Track event listeners for cleanup
         this.eventListeners = [];
 
+        // Store original values for cancel functionality
+        this.originalValues = {};
+
         // Initialize grid settings module
         this.gridSettings = configManager ? new GridSettings(configManager) : null;
-        
+
         // Initialize settings sync manager
         this.syncManager = new SettingsSyncManager(levelEditor);
 
@@ -76,6 +79,7 @@ export class SettingsPanel {
                     <!-- Settings Categories -->
                     <div class="settings-nav">
                         <button class="settings-tab active" data-tab="general">General</button>
+                        <button class="settings-tab" data-tab="colors">Colors</button>
                         <button class="settings-tab" data-tab="grid">Grid & Snapping</button>
                         <button class="settings-tab" data-tab="camera">Camera</button>
                         <button class="settings-tab" data-tab="selection">Selection</button>
@@ -185,11 +189,14 @@ export class SettingsPanel {
 
     show() {
         try {
+            // Store original values before showing panel
+            this.storeOriginalValues();
+
             this.isVisible = true;
             const overlay = document.getElementById('settings-overlay');
             if (overlay) {
                 overlay.style.display = 'flex';
-                
+
                 // Load window position and size
                 try {
                     this.loadWindowState();
@@ -334,6 +341,9 @@ export class SettingsPanel {
             case 'general':
                 content = this.renderGeneralSettings();
                 break;
+            case 'colors':
+                content = this.renderColorsSettings();
+                break;
             case 'grid':
                 content = this.gridSettings?.renderGridSettings() || '<div>Grid settings not available</div>';
                 break;
@@ -466,60 +476,6 @@ export class SettingsPanel {
                     </div>
                 </div>
 
-                <!-- Color Settings -->
-                <div style="border: 1px solid #374151; border-radius: 0.5rem; padding: 1rem;">
-                    <h4 style="font-size: 1rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.75rem;">Color Settings</h4>
-                    
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-                        <!-- Canvas Background Color -->
-                        <div>
-                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Canvas Background</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="canvas.backgroundColor"
-                                   value="${settings.canvas?.backgroundColor}"
-                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
-                        </div>
-                        
-                        <!-- UI Background Color -->
-                        <div>
-                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">UI Background</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="ui.backgroundColor"
-                                   value="${settings.ui?.backgroundColor}"
-                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
-                        </div>
-                        
-                        <!-- UI Text Color -->
-                        <div>
-                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">UI Text Color</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="ui.textColor"
-                                   value="${settings.ui?.textColor}"
-                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
-                        </div>
-
-                        <!-- Active Elements Color -->
-                        <div>
-                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Active Elements</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="ui.activeColor"
-                                   value="${settings.ui?.activeColor}"
-                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
-                    </div>
-
-                        <!-- Active Text Color -->
-                        <div>
-                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Active Text Color</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="ui.activeTextColor"
-                                   value="${settings.ui?.activeTextColor}"
-                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
-                </div>
-
-                        <!-- Active Tab Color -->
-                        <div>
-                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Active Tab Color</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="ui.activeTabColor"
-                                   value="${settings.ui?.activeTabColor}"
-                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
-                        </div>
-                    </div>
-                </div>
 
                 
                 <div style="border-top: 1px solid #374151; padding-top: 1rem; margin-top: 1rem;">
@@ -555,6 +511,230 @@ export class SettingsPanel {
                         </div>
                     </div>
                 </div>
+            </div>
+        `;
+    }
+
+    renderColorsSettings() {
+        // Use StateManager as single source of truth
+        const stateManager = this.levelEditor?.stateManager;
+        if (!stateManager) return '<div>Error: StateManager not available</div>';
+
+        // Get current color values from StateManager
+        const colors = {
+            // UI Colors
+            ui: {
+                backgroundColor: stateManager.get('ui.backgroundColor') || '#1f2937',
+                textColor: stateManager.get('ui.textColor') || '#d1d5db',
+                activeColor: stateManager.get('ui.activeColor') || '#3b82f6',
+                activeTextColor: stateManager.get('ui.activeTextColor') || '#ffffff',
+                activeTabColor: stateManager.get('ui.activeTabColor') || '#374151',
+                accentColor: stateManager.get('ui.accentColor') || '#3B82F6'
+            },
+            // Canvas Colors
+            canvas: {
+                backgroundColor: stateManager.get('canvas.backgroundColor') || '#4b5563'
+            },
+            // Selection Colors
+            selection: {
+                outlineColor: stateManager.get('selection.outlineColor') || '#3B82F6',
+                groupOutlineColor: stateManager.get('selection.groupOutlineColor') || '#3B82F6',
+                marqueeColor: stateManager.get('selection.marqueeColor') || '#3B82F6',
+                hierarchyHighlightColor: stateManager.get('selection.hierarchyHighlightColor') || '#3B82F6',
+                activeLayerBorderColor: stateManager.get('selection.activeLayerBorderColor') || '#3B82F6'
+            },
+            // Grid Colors
+            grid: {
+                color: stateManager.get('canvas.gridColor') || 'rgba(255, 255, 255, 0.1)',
+                subdivColor: stateManager.get('canvas.gridSubdivColor') || '#666666'
+            },
+            // Logger Colors
+            logger: stateManager.get('logger.colors') || {
+                DUPLICATE: '#4CAF50',
+                RENDER: '#2196F3',
+                CANVAS: '#FF9800',
+                MOUSE: '#9C27B0',
+                EVENT: '#607D8B',
+                GROUP: '#795548',
+                STATE: '#E91E63',
+                FILE: '#009688',
+                ASSET: '#FF5722',
+                UI: '#3F51B5',
+                MENU: '#FF9800',
+                PERFORMANCE: '#CDDC39',
+                DEBUG: '#9E9E9E',
+                GIT: '#FF6B35',
+                CONSOLE: '#00BCD4',
+                LAYOUT: '#8BC34A',
+                SETTINGS: '#FFC107',
+                PREFERENCES: '#673AB7',
+                CONFIG: '#00E676',
+                LAYER: '#03A9F4',
+                LEVEL: '#8BC34A',
+                CACHE: '#4CAF50',
+                OUTLINER: '#9C27B0',
+                PARALLAX: '#FF1493',
+                OBJECT_OPERATIONS: '#9C27B0',
+                LIFECYCLE: '#00BCD4',
+                ERROR_HANDLER: '#F44336',
+                VIEWPORT: '#00ACC1'
+            }
+        };
+
+        return `
+            <h3>Color Settings</h3>
+
+            <div class="settings-container" style="display: flex; flex-direction: column; gap: 1rem; width: 100%;">
+
+                <!-- UI Colors -->
+                <div style="border: 1px solid #374151; border-radius: 0.5rem; padding: 1rem;">
+                    <h4 style="font-size: 1rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.75rem;">UI Colors</h4>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <!-- UI Background Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">UI Background</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="ui.backgroundColor"
+                                   value="${colors.ui.backgroundColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        </div>
+
+                        <!-- UI Text Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">UI Text Color</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="ui.textColor"
+                                   value="${colors.ui.textColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        </div>
+
+                        <!-- Active Elements Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Active Elements</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="ui.activeColor"
+                                   value="${colors.ui.activeColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        </div>
+
+                        <!-- Active Text Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Active Text Color</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="ui.activeTextColor"
+                                   value="${colors.ui.activeTextColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        </div>
+
+                        <!-- Active Tab Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Active Tab Color</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="ui.activeTabColor"
+                                   value="${colors.ui.activeTabColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        </div>
+
+                        <!-- Accent Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Accent Color</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="ui.accentColor"
+                                   value="${colors.ui.accentColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Canvas Colors -->
+                <div style="border: 1px solid #374151; border-radius: 0.5rem; padding: 1rem;">
+                    <h4 style="font-size: 1rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.75rem;">Canvas Colors</h4>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <!-- Canvas Background Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Canvas Background</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="canvas.backgroundColor"
+                                   value="${colors.canvas.backgroundColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        </div>
+
+                        <!-- Grid Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Grid Color</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="canvas.gridColor"
+                                   value="${ColorUtils.toHex(colors.grid.color)}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        </div>
+
+                        <!-- Grid Subdivision Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Grid Subdivision</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="canvas.gridSubdivColor"
+                                   value="${ColorUtils.toHex(colors.grid.subdivColor)}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Selection Colors -->
+                <div style="border: 1px solid #374151; border-radius: 0.5rem; padding: 1rem;">
+                    <h4 style="font-size: 1rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.75rem;">Selection Colors</h4>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <!-- Selection Outline Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Selection Outline</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="selection.outlineColor"
+                                   value="${colors.selection.outlineColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        </div>
+
+                        <!-- Group Outline Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Group Outline</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="selection.groupOutlineColor"
+                                   value="${colors.selection.groupOutlineColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        </div>
+
+                        <!-- Marquee Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Marquee Selection</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="selection.marqueeColor"
+                                   value="${colors.selection.marqueeColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        </div>
+
+                        <!-- Hierarchy Highlight Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Hierarchy Highlight</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="selection.hierarchyHighlightColor"
+                                   value="${colors.selection.hierarchyHighlightColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        </div>
+
+                        <!-- Active Layer Border Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.5rem;">Active Layer Border</label>
+                            <input type="color" class="setting-input" name="setting-input" data-setting="panels.selection.activeLayerBorderColor"
+                                   value="${colors.selection.activeLayerBorderColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Logger Colors -->
+                <div style="border: 1px solid #374151; border-radius: 0.5rem; padding: 1rem;">
+                    <h4 style="font-size: 1rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.75rem;">Logger Colors</h4>
+
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem;">
+                        ${Object.entries(colors.logger).map(([category, color]) => `
+                            <div>
+                                <label style="display: block; font-size: 0.75rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.25rem;">${category}</label>
+                                <input type="color" class="setting-input" name="setting-input" data-setting="logger.colors.${category}"
+                                       value="${color}"
+                                       style="width: 2.5rem; height: 1.5rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
             </div>
         `;
     }
@@ -810,16 +990,41 @@ export class SettingsPanel {
                     this.updateSliderDisplay(input, value);
                 }
 
-                // Synchronize with StateManager for real-time updates
-                if (this.syncManager) {
-                    this.syncManager.syncSettingToState(path, value);
-                } else {
-                    Logger.settings.warn('SettingsPanel: syncManager not available for', path, value);
-                }
+                // Handle nested logger color settings
+                if (path.startsWith('logger.colors.')) {
+                    const category = path.split('.')[2];
+                    const currentLoggerColors = this.levelEditor?.stateManager?.get('logger.colors') || {};
+                    const updatedLoggerColors = { ...currentLoggerColors, [category]: value };
 
-                // Handle UI-specific immediate updates
-                if (path === 'ui.compactMode') {
-                    this.applyCompactMode(value);
+                    // Update StateManager
+                    if (this.levelEditor?.stateManager) {
+                        this.levelEditor.stateManager.set('logger.colors', updatedLoggerColors);
+                    }
+
+                    // Apply logger colors immediately
+                    this.applyLoggerColors(updatedLoggerColors);
+
+                    // Sync to ConfigManager for persistence
+                    if (this.configManager) {
+                        this.configManager.set('logger.colors', updatedLoggerColors);
+                    }
+                }
+                // Handle grid color settings with proper opacity conversion
+                else if (path === 'canvas.gridColor' || path === 'canvas.gridSubdivColor') {
+                    this.applyGridColorSetting(path, value);
+                }
+                else {
+                    // Synchronize with StateManager for real-time updates
+                    if (this.syncManager) {
+                        this.syncManager.syncSettingToState(path, value);
+                    } else {
+                        Logger.settings.warn('SettingsPanel: syncManager not available for', path, value);
+                    }
+
+                    // Handle UI-specific immediate updates
+                    if (path === 'ui.compactMode') {
+                        this.applyCompactMode(value);
+                    }
                 }
 
             };
@@ -1025,11 +1230,62 @@ export class SettingsPanel {
      */
     applyCompactMode(enabled) {
         const body = document.body;
-        
+
         if (enabled) {
             body.classList.add('compact-mode');
         } else {
             body.classList.remove('compact-mode');
+        }
+    }
+
+    /**
+     * Apply logger colors in real-time
+     * @param {Object} loggerColors - Logger color configuration
+     */
+    applyLoggerColors(loggerColors) {
+        if (!loggerColors || typeof loggerColors !== 'object') return;
+
+        // Apply colors to Logger instance if available
+        if (window.Logger && typeof window.Logger.updateColors === 'function') {
+            window.Logger.updateColors(loggerColors);
+        } else if (Logger && typeof Logger.updateColors === 'function') {
+            Logger.updateColors(loggerColors);
+        } else {
+            // Fallback: update the global LoggerColors object if it exists
+            if (window.LoggerColors) {
+                Object.assign(window.LoggerColors, loggerColors);
+            }
+        }
+    }
+
+    /**
+     * Apply grid color setting with proper opacity conversion
+     * @param {string} path - Setting path (canvas.gridColor or canvas.gridSubdivColor)
+     * @param {string} hexColor - Hex color value
+     */
+    applyGridColorSetting(path, hexColor) {
+        // Get current opacity
+        const opacity = this.levelEditor?.stateManager?.get('canvas.gridOpacity') || 0.1;
+
+        // Convert hex color to rgba with current opacity
+        const rgbaColor = ColorUtils.toRgba(hexColor, opacity);
+
+        // Update StateManager with rgba color
+        if (this.levelEditor?.stateManager) {
+            this.levelEditor.stateManager.set(path, rgbaColor);
+        }
+
+        // Sync to ConfigManager for persistence (store hex color)
+        if (this.configManager) {
+            this.configManager.set(path, hexColor);
+        }
+
+        // Trigger grid re-render
+        if (window.editor?.canvasRenderer?.clearGridCaches) {
+            window.editor.canvasRenderer.clearGridCaches();
+        }
+        if (window.editor?.render) {
+            window.editor.render();
         }
     }
 
@@ -1102,9 +1358,6 @@ export class SettingsPanel {
         // Save all UI settings to ConfigManager
         this.syncManager.saveAllUISettingsToConfig();
 
-        // Handle special grid settings that need color conversion
-        this.saveGridSettingsWithColorConversion();
-
         // Apply all settings to UI (colors, etc.)
         this.syncManager.applySpecialUISettings();
 
@@ -1116,26 +1369,6 @@ export class SettingsPanel {
         this.hide();
     }
 
-    /**
-     * Save grid settings with proper color conversion
-     */
-    saveGridSettingsWithColorConversion() {
-        if (!window.editor?.stateManager) return;
-
-        // Get grid color values from StateManager
-        const gridColor = window.editor.stateManager.get('canvas.gridColor');
-        const gridSubdivColor = window.editor.stateManager.get('canvas.gridSubdivColor');
-
-        // Convert and save colors to canvas config
-        if (gridColor !== undefined && this.configManager) {
-            const hexColor = ColorUtils.toHex(gridColor);
-            this.configManager.set('canvas.gridColor', hexColor);
-        }
-        if (gridSubdivColor !== undefined && this.configManager) {
-            const hexSubdivColor = ColorUtils.toHex(gridSubdivColor);
-            this.configManager.set('canvas.gridSubdivColor', hexSubdivColor);
-        }
-    }
 
     /**
      * Setup context menu for settings
@@ -1393,11 +1626,76 @@ export class SettingsPanel {
         container.appendChild(resizeHandle);
     }
     
+    /**
+     * Store original values before opening settings panel
+     */
+    storeOriginalValues() {
+        if (!this.levelEditor?.stateManager) return;
+
+        // Store all relevant settings that can be modified in the settings panel
+        const settingsToStore = [
+            // UI colors
+            'ui.backgroundColor',
+            'ui.textColor',
+            'ui.activeColor',
+            'ui.activeTextColor',
+            'ui.activeTabColor',
+            'ui.accentColor',
+            // Canvas colors
+            'canvas.backgroundColor',
+            'canvas.gridColor',
+            'canvas.gridSubdivColor',
+            // Selection colors
+            'selection.outlineColor',
+            'selection.groupOutlineColor',
+            'selection.marqueeColor',
+            'selection.hierarchyHighlightColor',
+            'panels.selection.activeLayerBorderColor',
+            // Logger colors
+            'logger.colors'
+        ];
+
+        this.originalValues = {};
+        settingsToStore.forEach(path => {
+            this.originalValues[path] = this.levelEditor.stateManager.get(path);
+        });
+
+        Logger.ui.debug('Stored original settings values for cancel functionality');
+    }
+
+    /**
+     * Restore original values when canceling settings
+     */
+    restoreOriginalValues() {
+        if (!this.levelEditor?.stateManager || !this.originalValues) return;
+
+        // Restore all stored original values
+        Object.entries(this.originalValues).forEach(([path, value]) => {
+            if (value !== undefined) {
+                this.levelEditor.stateManager.set(path, value);
+            }
+        });
+
+        // Apply color settings immediately after restoration
+        if (this.syncManager) {
+            this.syncManager.applyInitialColorSettings();
+        }
+
+        // Trigger re-render to apply restored grid colors
+        if (window.editor?.canvasRenderer?.clearGridCaches) {
+            window.editor.canvasRenderer.clearGridCaches();
+        }
+        if (window.editor?.render) {
+            window.editor.render();
+        }
+
+        Logger.ui.debug('Restored original settings values');
+    }
+
     cancelSettings() {
-        // Don't reload from files - just close the window
-        // The current settings in StateManager are already the last user settings
-        // No need to reset anything
-        
+        // Restore original values from StateManager
+        this.restoreOriginalValues();
+
         this.hide();
     }
     

@@ -144,8 +144,9 @@ export class LayerOperations extends BaseModule {
             }, 0);
         }
 
-        // Mark state as dirty to trigger re-render
+        // Mark state as dirty and force immediate re-render to apply zIndex changes
         this.editor.stateManager.markDirty();
+        this.editor.render();
 
         return movedCount;
     }
@@ -299,9 +300,9 @@ export class LayerOperations extends BaseModule {
         // Get the old effective layer ID for notifications (use cache)
         const oldEffectiveLayerId = this.editor.getCachedEffectiveLayerId(topLevelObj);
 
-        // Change layerId of the top-level object
+        // Change layerId of the top-level object using Level.assignObjectToLayer for proper zIndex handling
         const oldLayerId = topLevelObj.layerId;
-        topLevelObj.layerId = targetLayerId;
+        this.editor.level.assignObjectToLayer(topLevelObj.id, targetLayerId);
 
         // Log object layer change with zIndex information
         if (Logger.currentLevel <= Logger.LEVELS.INFO) {

@@ -201,15 +201,6 @@ export class DetailsPanel {
                 // Don't set objects[0][prop] = 0 here - let the system handle zIndex properly
             }
 
-            // For zIndex, display only the object index (thousandths part)
-            let displayValue;
-            if (prop === 'zIndex' && typeof firstValue === 'number' && firstValue > 0) {
-                const objectIndex = Math.floor((firstValue % 1) * 1000);
-                displayValue = allSame ? objectIndex.toString() : '';
-            } else {
-                displayValue = allSame ? (typeof firstValue === 'number' ? firstValue.toFixed(1) : firstValue) : '';
-            }
-
             const allSame = objects.every(obj => {
                 let val = obj[prop];
                 if (val === undefined && prop === 'zIndex') {
@@ -218,6 +209,15 @@ export class DetailsPanel {
                 }
                 return val === firstValue;
             });
+
+            // For zIndex, display only the object index (thousandths part)
+            let displayValue;
+            if (prop === 'zIndex' && typeof firstValue === 'number' && firstValue > 0) {
+                const objectIndex = Math.floor((firstValue % 1) * 1000);
+                displayValue = allSame ? objectIndex.toString() : '';
+            } else {
+                displayValue = allSame ? (typeof firstValue === 'number' ? firstValue.toFixed(1) : firstValue) : '';
+            }
             
             // Format property label
             const formatLabel = (propName) => {

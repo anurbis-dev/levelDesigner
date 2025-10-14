@@ -268,6 +268,20 @@ export class Logger {
     }
 
     /**
+     * Update colors for logging categories
+     * @param {Object} colorMap - Object mapping category names to color values
+     */
+    static updateColors(colorMap) {
+        if (!colorMap || typeof colorMap !== 'object') return;
+
+        Object.keys(colorMap).forEach(category => {
+            if (this.CATEGORIES[category]) {
+                this.CATEGORIES[category].color = colorMap[category];
+            }
+        });
+    }
+
+    /**
      * Create a logger function bound to specific category and level
      * @param {string} category - Category name
      * @param {string} level - Log level

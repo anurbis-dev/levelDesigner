@@ -102,6 +102,9 @@ export class SettingsSyncManager {
             'ui.backgroundColor': 'ui.backgroundColor',
             'ui.textColor': 'ui.textColor',
             'ui.activeColor': 'ui.activeColor',
+            'ui.activeTextColor': 'ui.activeTextColor',
+            'ui.activeTabColor': 'ui.activeTabColor',
+            'ui.accentColor': 'ui.accentColor',
             
             // Editor UI settings (from editor.json)
             'editor.ui.backgroundColor': 'ui.backgroundColor',
@@ -134,7 +137,8 @@ export class SettingsSyncManager {
             'panels.selection.groupOutlineWidth': 'selection.groupOutlineWidth',
             'panels.selection.marqueeColor': 'selection.marqueeColor',
             'panels.selection.marqueeOpacity': 'selection.marqueeOpacity',
-            'panels.selection.hierarchyHighlightColor': 'selection.hierarchyHighlightColor'
+            'panels.selection.hierarchyHighlightColor': 'selection.hierarchyHighlightColor',
+            'panels.selection.activeLayerBorderColor': 'selection.activeLayerBorderColor'
         };
 
         // Create reverse mapping
@@ -480,8 +484,9 @@ export class SettingsSyncManager {
         const activeColor = this.levelEditor.stateManager.get('ui.activeColor');
         const activeTextColor = this.levelEditor.stateManager.get('ui.activeTextColor');
         const activeTabColor = this.levelEditor.stateManager.get('ui.activeTabColor');
+        const accentColor = this.levelEditor.stateManager.get('ui.accentColor');
         const canvasBackgroundColor = this.levelEditor.stateManager.get('canvas.backgroundColor');
-        
+
         if (backgroundColor) {
             document.documentElement.style.setProperty('--ui-background-color', backgroundColor);
         }
@@ -496,6 +501,9 @@ export class SettingsSyncManager {
         }
         if (activeTabColor) {
             document.documentElement.style.setProperty('--ui-active-tab-color', activeTabColor);
+        }
+        if (accentColor) {
+            document.documentElement.style.setProperty('--accent-color', accentColor);
         }
         if (canvasBackgroundColor) {
             document.documentElement.style.setProperty('--canvas-background-color', canvasBackgroundColor);
