@@ -9,6 +9,20 @@ import { Logger } from '../utils/Logger.js';
 export class ObjectOperations extends BaseModule {
 
     /**
+     * Sort objects by zIndex in descending order (highest zIndex first)
+     * @param {Array} objects - Array of objects to sort
+     * @returns {Array} Sorted array
+     * @private
+     */
+    _sortObjectsByZIndexDescending(objects) {
+        return objects.sort((a, b) => {
+            const aZIndex = a.zIndex !== undefined ? a.zIndex : 0;
+            const bZIndex = b.zIndex !== undefined ? b.zIndex : 0;
+            return bZIndex - aZIndex; // descending order - highest zIndex first
+        });
+    }
+
+    /**
      * Object manipulation methods
      */
     findObjectAtPoint(x, y) {
@@ -19,19 +33,19 @@ export class ObjectOperations extends BaseModule {
            const openIds = new Set(openGroups.map(g => g.id));
            const selectable = this.computeSelectableSet();
 
-           // 1) Groups first (excluding ALL open groups)
-           const allGroups = this.editor.level.getAllObjects().filter(o => o.type === 'group' && !openIds.has(o.id) && selectable.has(o.id));
-           for (const grp of [...allGroups].reverse()) {
-               if (this.isPointInObject(x, y, grp)) return grp;
-           }
+           // Collect ALL selectable objects: external groups, external objects, and descendants
+           // All objects are treated equally based on their zIndex
+           const allSelectableObjects = [];
+
+           // 1) External groups (excluding ALL open groups)
+           const externalGroups = this.editor.level.getAllObjects().filter(o => o.type === 'group' && !openIds.has(o.id) && selectable.has(o.id));
+           allSelectableObjects.push(...externalGroups);
 
            // 2) External objects (not in any open group)
            const externalObjects = this.editor.level.objects.filter(o => o.type !== 'group' && selectable.has(o.id));
-           for (const obj of [...externalObjects].reverse()) {
-               if (this.isPointInObject(x, y, obj)) return obj;
-           }
+           allSelectableObjects.push(...externalObjects);
 
-           // 3) Then descendants of the deepest open group (check ALL descendants, not just those in viewport)
+           // 3) Descendants of the deepest open group (check ALL descendants, not just those in viewport)
            const activeGroup = openGroups.length > 0 ? openGroups[openGroups.length - 1] : null;
            if (activeGroup) {
                const collect = (g) => {
@@ -45,9 +59,15 @@ export class ObjectOperations extends BaseModule {
                    return res;
                };
                const descendants = collect(activeGroup);
-               for (const obj of [...descendants].reverse()) {
-                   if (this.isPointInObject(x, y, obj)) return obj;
-               }
+               allSelectableObjects.push(...descendants);
+           }
+
+           // Sort ALL objects by zIndex descending to select object with highest zIndex (front-most)
+           const sortedAllObjects = this._sortObjectsByZIndexDescending(allSelectableObjects);
+
+           // Hit-test all objects in zIndex order
+           for (const obj of sortedAllObjects) {
+               if (this.isPointInObject(x, y, obj)) return obj;
            }
            return null;
        }
@@ -55,15 +75,12 @@ export class ObjectOperations extends BaseModule {
         // Normal mode - use viewport optimization
         const selectableInViewport = this.editor.getSelectableObjectsInViewport();
 
-        // Hit-test groups first (highest priority) among top-level - only those in viewport
-        const topLevelGroups = this.editor.level.objects.filter(o => o.type === 'group' && selectableInViewport.has(o.id));
-        for (const grp of [...topLevelGroups].reverse()) {
-            if (this.isPointInObject(x, y, grp)) return grp;
-        }
-
-        // Then hit-test top-level non-group objects - only those in viewport
-        const topLevelObjects = this.editor.level.objects.filter(o => o.type !== 'group' && selectableInViewport.has(o.id));
-        for (const obj of [...topLevelObjects].reverse()) {
+        // Hit-test ALL top-level objects together - only those in viewport
+        // Sort by zIndex descending to select object with highest zIndex (front-most)
+        // Groups and non-groups are treated equally based on their zIndex
+        const topLevelObjects = this.editor.level.objects.filter(o => selectableInViewport.has(o.id));
+        const sortedObjects = this._sortObjectsByZIndexDescending(topLevelObjects);
+        for (const obj of sortedObjects) {
             if (this.isPointInObject(x, y, obj)) {
                 return obj;
             }

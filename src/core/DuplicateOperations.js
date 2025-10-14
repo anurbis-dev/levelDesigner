@@ -4,6 +4,7 @@ import { Group } from '../models/Group.js';
 import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
 import { SnapUtils } from '../utils/SnapUtils.js';
 import { DEFAULT_OBJECT } from '../constants/EditorConstants.js';
+import { Logger } from '../utils/Logger.js';
 
 /**
  * Duplicate Operations module

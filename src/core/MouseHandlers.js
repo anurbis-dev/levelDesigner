@@ -95,6 +95,9 @@ export class MouseHandlers extends BaseModule {
     _handleMouseMoveImpl(e) {
         const worldPos = this.screenToWorld(e);
         const mouse = this.getMouseState();
+        
+        // Track if any objects are being moved into groups to delay rendering
+        let objectsMovedToGroup = false;
 
         this.updateMouseState(e, worldPos);
 
@@ -145,7 +148,7 @@ export class MouseHandlers extends BaseModule {
             this.handleMiddleMouseZoom(e);
         } else if (mouse.isLeftDown && mouse.isDragging) {
             // Drag objects
-            this.dragSelectedObjects(worldPos, e);
+            objectsMovedToGroup = this.dragSelectedObjects(worldPos, e);
         } else if (mouse.isLeftDown && e.altKey && !this.editor.stateManager.get('duplicate.isActive')) {
             // Check if we should start Alt+drag duplication
             const selectedObjects = this.editor.stateManager.get('selectedObjects');
@@ -185,7 +188,13 @@ export class MouseHandlers extends BaseModule {
         }
 
         // Only render if something actually changed
-        if (mouse.isPlacingObjects || mouse.isRightDown || mouse.isMiddleDown || (mouse.isLeftDown && mouse.isDragging) || mouse.isMarqueeSelecting || this.editor.stateManager.get('duplicate.isActive')) {
+        // Skip rendering if objects are being moved into groups to prevent flicker
+        if (!objectsMovedToGroup && (mouse.isPlacingObjects || mouse.isRightDown || mouse.isMiddleDown || (mouse.isLeftDown && mouse.isDragging) || mouse.isMarqueeSelecting || this.editor.stateManager.get('duplicate.isActive'))) {
+            this.editor.render();
+        }
+        
+        // If objects were moved into groups, render after all operations are complete
+        if (objectsMovedToGroup) {
             this.editor.render();
         }
     }
@@ -313,11 +322,17 @@ export class MouseHandlers extends BaseModule {
                                               objBounds.maxY > bounds.minY;
 
                         if (!hasIntersection) {
+                            // CRITICAL FIX: Invalidate spatial index BEFORE moving objects
+                            this.editor.renderOperations.invalidateSpatialIndex();
+
                             // Move object out of group
                             groupEditMode.group.children = groupEditMode.group.children.filter(c => c.id !== obj.id);
                             obj.x = worldX;
                             obj.y = worldY;
-                            this.editor.level.objects.push(obj);
+                            
+                            // CRITICAL FIX: Clear cache for moved objects to prevent phantom references
+                            this.editor.invalidateObjectCaches(obj.id);
+                            this.editor.level.addObject(obj);
                             movedObjectsCount++;
                         }
                     }
@@ -749,6 +764,9 @@ export class MouseHandlers extends BaseModule {
 
     dragSelectedObjects(worldPos, e) {
         const selectedObjects = this.editor.stateManager.get('selectedObjects');
+        
+        // Track if any objects are being moved into groups to delay rendering
+        let objectsMovedToGroup = false;
         const mouse = this.editor.stateManager.get('mouse');
         const shiftKey = this.editor.stateManager.get('keyboard.shiftKey');
 
@@ -942,7 +960,7 @@ export class MouseHandlers extends BaseModule {
                             obj.layerId = groupEditMode.group.layerId;
 
                             // Log forced inheritance
-                            this.editor.logger?.layer?.info(`Drag inheritance: ${obj.name || obj.id} layerId ${oldLayerId || 'none'} → ${groupEditMode.group.layerId}`);
+                            Logger.layer.info(`Drag inheritance: ${obj.name || obj.id} layerId ${oldLayerId || 'none'} → ${groupEditMode.group.layerId}`);
 
                             // Clear effective layer cache for this object
                             this.editor.renderOperations.clearEffectiveLayerCacheForObject(obj.id);
@@ -953,9 +971,16 @@ export class MouseHandlers extends BaseModule {
                             }
                         }
 
-                        // Remove from main level and append into group
-                        this.editor.level.objects = this.editor.level.objects.filter(top => top.id !== obj.id);
+                        // CRITICAL FIX: Invalidate spatial index BEFORE moving objects
+                        this.editor.renderOperations.invalidateSpatialIndex();
+                        
+                        // Set flag to delay rendering until all operations are complete
+                        objectsMovedToGroup = true;
+                        
+                        // Move object into group FIRST, then remove from main level
+                        // This prevents the object from appearing in both places simultaneously
                         groupEditMode.group.children.push(obj);
+                        this.editor.level.removeObject(obj.id);
                     }
                 } else if (isInEditedGroup) {
                     // Object is inside the currently edited group
@@ -993,6 +1018,8 @@ export class MouseHandlers extends BaseModule {
 
         // Don't update panels during drag to avoid real-time position updates
         // Panels will be updated when drag ends in handleMouseUp
+        
+        return objectsMovedToGroup;
     }
 
     updateMarquee(worldPos) {
