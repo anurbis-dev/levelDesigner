@@ -747,8 +747,9 @@ export class RenderOperations extends BaseModule {
 
             // Recursively collect children if this is a group
             if (obj.type === 'group' && obj.children) {
-                const children = this.collectVisibleObjectsRecursive(obj.children, visibleLayerIds, left, top, right, bottom, absX, absY);
-                result.push(...children);
+                // Children are rendered as part of the group, not as separate objects
+                // const children = this.collectVisibleObjectsRecursive(obj.children, visibleLayerIds, left, top, right, bottom, absX, absY);
+                // result.push(...children);
             }
         });
 

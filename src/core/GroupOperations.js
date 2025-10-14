@@ -52,8 +52,11 @@ export class GroupOperations extends BaseModule {
             const idsToRemove = new Set();
             selectedTopLevelObjects.forEach(obj => {
                 idsToRemove.add(obj.id);
+                
                 // Create a deep copy of the object to place inside the group
                 const newChild = this.editor.deepClone(obj);
+                // CRITICAL FIX: Assign new unique ID to prevent phantom objects
+                this.editor.reassignIdsDeep(newChild);
                 // Recalculate the child's coordinates to be relative to the new group's origin
                 newChild.x -= newGroup.x;
                 newChild.y -= newGroup.y;
@@ -78,16 +81,29 @@ export class GroupOperations extends BaseModule {
                 newGroup.children.push(newChild);
             });
 
+            // CRITICAL FIX: Invalidate spatial index BEFORE removing objects
+            this.editor.renderOperations.invalidateSpatialIndex();
+
             // Remove the original objects from the main level scene
+            // This will also remove them from the index automatically
             idsToRemove.forEach(id => {
+                // CRITICAL FIX: Clear cache for removed objects to prevent phantom references
+                this.editor.invalidateObjectCaches(id);
                 this.editor.level.removeObject(id);
             });
 
             // Add the newly created group to the scene using addObject method
             this.editor.level.addObject(newGroup);
 
-            // Add all child objects to the index with correct topLevelParent
-            this.editor.level.addGroupObjectsToIndex(newGroup);
+            // CRITICAL FIX: Don't add group children to index - they are already in the group
+            // Adding them to index causes getAllObjects() to find them twice
+            // this.editor.level.addGroupObjectsToIndex(newGroup); // REMOVED: causes duplicate objects
+
+            // CRITICAL FIX: Clear cache for new group and its children to ensure fresh references
+            this.editor.invalidateObjectCaches(newGroup.id);
+            newGroup.children.forEach(child => {
+                this.editor.invalidateObjectCaches(child.id);
+            });
 
             // Save state AFTER all changes are complete
             this.editor.historyManager.saveState(
@@ -108,12 +124,19 @@ export class GroupOperations extends BaseModule {
             // Clear cache for new group as well
             this.editor.renderOperations.clearEffectiveLayerCacheForObject(newGroup.id);
 
-            // Clear entire visible objects cache since object structure changed completely
-            this.editor.renderOperations.clearVisibleObjectsCache();
+            // CRITICAL FIX: Clear all caches to prevent phantom object references
+            this.editor.clearCaches();
+            
+            // Clear visible objects cache only for current camera position
+            this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
 
             // Invalidate spatial index since structure changed
             this.editor.renderOperations.invalidateSpatialIndex();
+            // CRITICAL FIX: Force rebuild spatial index to ensure consistency
+            this.editor.renderOperations.buildSpatialIndex();
 
+            
+            
             // Refresh all UI panels and redraw the canvas
             this.editor.render();
             this.editor.updateAllPanels();
@@ -140,7 +163,7 @@ export class GroupOperations extends BaseModule {
 
         // Clear selection
         // Selective cache invalidation for group edit mode
-        this.editor.renderOperations.clearVisibleObjectsCache();
+        this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
         this.editor.renderOperations.invalidateSpatialIndex();
 
         this.editor.stateManager.set('selectedObjects', new Set());
@@ -187,7 +210,7 @@ export class GroupOperations extends BaseModule {
         }
 
         // Selective cache invalidation for closing group edit mode
-        this.editor.renderOperations.clearVisibleObjectsCache();
+        this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
         this.editor.renderOperations.invalidateSpatialIndex();
 
         this.editor.stateManager.set('selectedObjects', new Set());
@@ -222,6 +245,9 @@ export class GroupOperations extends BaseModule {
         const newTopLevelObjects = [];
 
         groupsToUngroup.forEach(group => {
+            // CRITICAL FIX: Remove group from index BEFORE processing children
+            this.editor.level.removeObjectFromIndex(group.id);
+            
             // Convert children back to world coordinates and prepare them for "move"
             group.children.forEach(child => {
                 child.x += group.x;
@@ -251,8 +277,8 @@ export class GroupOperations extends BaseModule {
             this.editor.renderOperations.clearEffectiveLayerCacheForObject(obj.id);
         });
 
-        // Clear entire visible objects cache since object structure changed completely
-        this.editor.renderOperations.clearVisibleObjectsCache();
+        // Clear visible objects cache only for current camera position
+        this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
 
         // Invalidate spatial index since structure changed
         this.editor.renderOperations.invalidateSpatialIndex();
