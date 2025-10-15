@@ -205,6 +205,13 @@ export class EventHandlers extends BaseModule {
         // Handle escape key to cancel all current actions
         if (e.key === 'Escape') {
             e.preventDefault();
+
+            // Close group edit mode if active (same as clicking outside group bounds)
+            if (this.editor.groupOperations && this.editor.groupOperations.isInGroupEditMode()) {
+                this.editor.groupOperations.closeGroupEditMode();
+                return;
+            }
+
             this.editor.cancelAllActions();
             return;
         }

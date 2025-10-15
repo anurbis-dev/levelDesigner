@@ -600,21 +600,21 @@ export class Level {
     }
 
     /**
-     * Построить полный индекс объекта в иерархии групп для сортировки
-     * @param {Object} obj - Объект для которого строится индекс
-     * @returns {string} Полный индекс в формате "layerIndex.objectIndex" или "layerIndex.groupPath.objectIndex"
+     * Build full hierarchical index for object sorting in groups
+     * @param {Object} obj - Object to build index for
+     * @returns {string} Full index in format "layerIndex.objectIndex" or "layerIndex.groupPath.objectIndex"
      */
     buildFullObjectIndex(obj) {
         if (!obj) return "0.0";
 
-        // Для объектов верхнего уровня используем обычный zIndex
+        // For top-level objects use regular zIndex
         if (!this.isObjectInAnyGroup(obj.id)) {
             const layerIndex = obj.layerId ? this.getLayerById(obj.layerId)?.getIndex() || 0 : 0;
             const objectIndex = obj.zIndex ? Math.floor((obj.zIndex % 1) * 1000) : 0;
             return `${layerIndex}.${objectIndex}`;
         }
 
-        // Для объектов в группах строим полный путь
+        // For objects in groups build full hierarchical path
         const path = this.buildObjectPath(obj.id);
         const layerIndex = obj.layerId ? this.getLayerById(obj.layerId)?.getIndex() || 0 : 0;
         const objectIndex = obj.zIndex ? Math.floor((obj.zIndex % 1) * 1000) : 0;
@@ -623,9 +623,9 @@ export class Level {
     }
 
     /**
-     * Построить путь объекта в иерархии групп
-     * @param {string} objId - ID объекта
-     * @returns {string} Путь в формате "groupIndex.childIndex.grandchildIndex"
+     * Build object path in group hierarchy
+     * @param {string} objId - Object ID
+     * @returns {string} Path in format "groupIndex.childIndex.grandchildIndex"
      */
     buildObjectPath(objId) {
         const entry = this.objectsIndex.get(objId);
@@ -636,7 +636,7 @@ export class Level {
         const path = [];
         let current = entry.topLevelParent;
 
-        // Строим цепочку от корневой группы к объекту
+        // Build chain from root group to object
         while (current) {
             const currentIndex = current.zIndex ? Math.floor((current.zIndex % 1) * 1000) : 0;
             path.unshift(currentIndex.toString());
@@ -647,9 +647,9 @@ export class Level {
     }
 
     /**
-     * Проверить, находится ли объект в какой-либо группе
-     * @param {string} objId - ID объекта
-     * @returns {boolean} true если объект в группе
+     * Check if object is in any group
+     * @param {string} objId - Object ID
+     * @returns {boolean} true if object is in a group
      */
     isObjectInAnyGroup(objId) {
         const entry = this.objectsIndex.get(objId);

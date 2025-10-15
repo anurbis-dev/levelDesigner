@@ -62,22 +62,27 @@ export class ObjectOperations extends BaseModule {
            const externalObjects = this.editor.level.objects.filter(o => o.type !== 'group' && selectable.has(o.id));
            allSelectableObjects.push(...externalObjects);
 
-           // 3) Descendants of the deepest open group (check ALL descendants, not just those in viewport)
-           const activeGroup = openGroups.length > 0 ? openGroups[openGroups.length - 1] : null;
-           if (activeGroup) {
-               const collect = (g) => {
-                   const res = [];
-                   g.children.forEach(ch => {
-                       if (selectable.has(ch.id)) {
-                           res.push(ch);
-                       }
-                       if (ch.type === 'group') res.push(...collect(ch));
-                   });
-                   return res;
-               };
-               const descendants = collect(activeGroup);
-               allSelectableObjects.push(...descendants);
-           }
+           // 3) Descendants of ALL open groups (check ALL descendants from all open groups)
+           const collectAllDescendants = (groups) => {
+               const res = [];
+               groups.forEach(g => {
+                   const collect = (group) => {
+                       const descendants = [];
+                       group.children.forEach(ch => {
+                           if (selectable.has(ch.id)) {
+                               descendants.push(ch);
+                           }
+                           if (ch.type === 'group') descendants.push(...collect(ch));
+                       });
+                       return descendants;
+                   };
+                   res.push(...collect(g));
+               });
+               return res;
+           };
+
+           const allDescendants = collectAllDescendants(openGroups);
+           allSelectableObjects.push(...allDescendants);
 
            // Sort ALL objects by zIndex descending to select object with highest zIndex (front-most)
            const sortedAllObjects = this._sortObjectsByZIndexDescending(allSelectableObjects);
@@ -354,22 +359,32 @@ export class ObjectOperations extends BaseModule {
 
         if (this.isInGroupEditMode()) {
             const groupEditMode = this.getGroupEditMode();
-            // Only descendants of the deepest open group are selectable; all other open groups are transparent
+            // Descendants of all open groups are selectable; this allows editing nested groups
             const openGroups = Array.isArray(groupEditMode.openGroups) ? groupEditMode.openGroups : (groupEditMode.group ? [groupEditMode.group] : []);
-            const active = openGroups[openGroups.length - 1];
-            if (active && isObjectSelectable(active)) {
-                const collect = (g) => {
-                    const res = [];
-                    g.children.forEach(ch => {
-                        if (isObjectSelectable(ch)) {
-                            res.push(ch);
-                        }
-                        if (ch.type === 'group') res.push(...collect(ch));
-                    });
-                    return res;
-                };
-                collect(active).forEach(o => selectable.add(o.id));
-            }
+
+            // Collect all descendants from all open groups
+            const collectAllDescendants = (groups) => {
+                const res = [];
+                groups.forEach(g => {
+                    if (isObjectSelectable(g)) {
+                        const collect = (group) => {
+                            const descendants = [];
+                            group.children.forEach(ch => {
+                                if (isObjectSelectable(ch)) {
+                                    descendants.push(ch);
+                                }
+                                if (ch.type === 'group') descendants.push(...collect(ch));
+                            });
+                            return descendants;
+                        };
+                        res.push(...collect(g));
+                    }
+                });
+                return res;
+            };
+
+            collectAllDescendants(openGroups).forEach(o => selectable.add(o.id));
+
             // All non-open groups on any level are still selectable (priority for groups), exclude open ones
             const openIds = new Set(openGroups.map(g => g.id));
             this.editor.level.getAllObjects().forEach(o => {

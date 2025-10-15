@@ -927,10 +927,12 @@ export class MouseHandlers extends BaseModule {
         selectedObjects.forEach(id => {
             const obj = this.editor.level.findObjectById(id);
             if (obj) {
-                // Check if object is on main level or inside the currently edited group (including nested subgroups)
+                // Check if object is on main level or inside any of the open groups (including nested subgroups)
                 const isOnMainLevel = this.editor.level.objects.some(topObj => topObj.id === obj.id);
-                const isInEditedGroup = this.isInGroupEditMode() &&
-                    this.editor.objectOperations.isObjectInGroupRecursive(obj, this.getActiveGroup());
+                const isInAnyOpenGroup = this.isInGroupEditMode() &&
+                    this.editor.groupOperations.getOpenGroups().some(group =>
+                        this.editor.objectOperations.isObjectInGroupRecursive(obj, group)
+                    );
 
                 if (isOnMainLevel) {
                     // Object is on main level - move it normally
@@ -982,8 +984,8 @@ export class MouseHandlers extends BaseModule {
                         groupEditMode.group.children.push(obj);
                         this.editor.level.removeObject(obj.id);
                     }
-                } else if (isInEditedGroup) {
-                    // Object is inside the currently edited group
+                } else if (isInAnyOpenGroup) {
+                    // Object is inside any of the open groups
                     if (this.isAltKeyPressed()) {
                         // Alt+drag: move in world coordinates by converting to world position first
                         const worldX = groupPos.x + obj.x;
