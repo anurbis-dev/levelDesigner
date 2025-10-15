@@ -107,47 +107,54 @@ export class DetailsPanel {
 
     renderGroupDetails(group) {
         const level = this.levelEditor.getLevel();
+
+        // Use same properties as regular objects for consistency
+        const properties = ['name', 'x', 'y', 'width', 'height', 'color', 'zIndex'];
+
+        // Use UIFactory to create property editor (same as for regular objects)
+        const propertyEditor = UIFactory.createPropertyEditor(group, properties, (prop, newValue, object) => {
+            const oldValue = object[prop];
+            this.stateManager.markDirty();
+
+            // Notify about object property change
+            this.stateManager.notifyListeners('objectPropertyChanged', object, {
+                property: prop,
+                oldValue: oldValue,
+                newValue: newValue
+            });
+
+            // Trigger redraw of selected objects
+            this.stateManager.notifyListeners('selectedObjects', this.stateManager.get('selectedObjects'), this.stateManager.get('selectedObjects'));
+
+            // Force canvas redraw (important for zIndex changes to re-sort and redraw objects)
+            if (this.levelEditor && this.levelEditor.render) {
+                this.levelEditor.render();
+            }
+
+            // Update tab title immediately
+            this.updateTabTitle();
+        });
+
+        // Add statistics section for groups
+        const statsDiv = document.createElement('div');
+        statsDiv.className = 'mt-4 text-sm text-gray-400';
         const childAssets = this.getAllChildren(group).filter(o => o.type !== 'group').length;
         const childGroups = this.getAllChildren(group).filter(o => o.type === 'group').length;
-        
-        const nameInput = UIFactory.createLabeledInput({
-            label: 'Group Name',
-            value: group.name,
-            id: 'group-name-input',
-            onChange: (e) => {
-                const oldValue = group.name;
-                const newValue = e.target.value;
-                group.name = newValue;
-                this.stateManager.markDirty();
-
-                // Notify about group name change
-                this.stateManager.notifyListeners('objectPropertyChanged', group, {
-                    property: 'name',
-                    oldValue: oldValue,
-                    newValue: newValue
-                });
-
-                // Trigger outliner update
-                this.stateManager.notifyListeners('selectedObjects', this.stateManager.get('selectedObjects'), this.stateManager.get('selectedObjects'));
-
-                // Update tab title immediately
-                this.updateTabTitle();
-            }
-        });
-        
-        const statsDiv = document.createElement('div');
-        statsDiv.className = 'text-sm text-gray-400';
         statsDiv.innerHTML = `
+            <h4 class="text-md font-bold mb-2">Group Contents</h4>
             <p>Assets: ${childAssets}</p>
             <p>Groups: ${childGroups}</p>
         `;
-        
+
         this.container.innerHTML = '';
-        this.container.appendChild(nameInput);
+        this.container.appendChild(propertyEditor);
         this.container.appendChild(statsDiv);
-        
+
         // Add layer information section for groups
         this.renderLayerInfo(group);
+
+        // Add custom properties section if group has them
+        this.renderCustomProperties(group);
     }
 
     renderObjectDetails(obj) {
