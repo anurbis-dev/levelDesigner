@@ -739,7 +739,45 @@
                 const consoleOutput = document.getElementById('console-output');
                 const consoleInput = document.getElementById('console-input');
                 const consoleClose = document.getElementById('console-close');
+                // Get the scrollable container (parent of console-output)
+                const consoleScrollContainer = consoleOutput.parentElement;
                 let isLoggingEnabled = true;
+                
+                // Global auto-scroll state (moved here to be accessible by all console functions)
+                let isAutoScrollEnabled = true;
+
+            // Function to toggle auto-scroll
+            function toggleAutoScroll() {
+                isAutoScrollEnabled = !isAutoScrollEnabled;
+                logToConsole(`Auto-scroll ${isAutoScrollEnabled ? 'enabled' : 'disabled'}`, 'info');
+                
+                // If enabling auto-scroll, scroll to bottom immediately
+                if (isAutoScrollEnabled) {
+                    requestAnimationFrame(() => {
+                        try {
+                            consoleScrollContainer.scrollTop = consoleScrollContainer.scrollHeight;
+                        } catch (error) {
+                            console.warn('Error scrolling console output:', error);
+                        }
+                    });
+                }
+            }
+
+            // Function to force scroll to bottom (used when enabling auto-scroll)
+            function scrollToBottom() {
+                if (isAutoScrollEnabled) {
+                    requestAnimationFrame(() => {
+                        try {
+                            consoleScrollContainer.scrollTop = consoleScrollContainer.scrollHeight;
+                        } catch (error) {
+                            console.warn('Error scrolling console output:', error);
+                        }
+                    });
+                }
+            }
+
+            // Make toggleAutoScroll globally accessible for console commands
+            window.toggleAutoScroll = toggleAutoScroll;
 
             // Initialize console context menu
             const consoleContextMenu = new ConsoleContextMenu(consolePanel, consoleOutput, {
@@ -748,12 +786,35 @@
                     isLoggingEnabled = enabled;
                     logToConsole(`Logging ${enabled ? 'enabled' : 'disabled'}`, 'info');
                 },
+                onAutoScrollToggle: () => {
+                    toggleAutoScroll();
+                },
                 onConsoleClear: () => {
                     logToConsole('Console cleared', 'info');
                 },
                 onCopyToClipboard: (text) => {
                     logToConsole(`Copied to clipboard: ${text}`, 'info');
                 }
+            });
+
+            // Setup scroll listener to detect manual scrolling
+            let scrollTimeout = null;
+            consoleScrollContainer.addEventListener('scroll', () => {
+                // Clear existing timeout
+                if (scrollTimeout) {
+                    clearTimeout(scrollTimeout);
+                }
+                
+                // Set a timeout to detect if user scrolled manually
+                scrollTimeout = setTimeout(() => {
+                    const isAtBottom = Math.abs(consoleScrollContainer.scrollTop - (consoleScrollContainer.scrollHeight - consoleScrollContainer.clientHeight)) < 5;
+                    
+                    // If user scrolled up manually and auto-scroll was enabled, disable it
+                    if (!isAtBottom && isAutoScrollEnabled) {
+                        isAutoScrollEnabled = false;
+                        logToConsole('Auto-scroll disabled (user scrolled up)', 'info');
+                    }
+                }, 150); // Small delay to distinguish between manual and automatic scrolling
             });
             
             // Setup selection for existing console messages
@@ -873,6 +934,16 @@ if (!isResizing) return;
                 // Save preference
                 userPrefs.set('consoleVisible', true);
 
+                // Scroll to bottom when console is opened
+                if (isAutoScrollEnabled) {
+                    requestAnimationFrame(() => {
+                        try {
+                            consoleScrollContainer.scrollTop = consoleScrollContainer.scrollHeight;
+                        } catch (error) {
+                            console.warn('Error scrolling console output on show:', error);
+                        }
+                    });
+                }
                 
                 // Console is now an overlay, no need to update canvas layout
                 // The overlay covers everything and doesn't affect the main layout
@@ -1054,19 +1125,24 @@ if (!isResizing) return;
 
                     consoleOutput.appendChild(logEntry);
 
-                    // Batch scroll update to minimize reflow
-                    requestAnimationFrame(() => {
-                        try {
-                            consoleOutput.scrollTop = consoleOutput.scrollHeight;
-                        } catch (error) {
-                            // Don't use console.error here to avoid recursion
-                            console.warn('Error scrolling console output:', error);
-                        }
-                    });
+                    // Auto-scroll to bottom if enabled
+                    if (isAutoScrollEnabled) {
+                        // Batch scroll update to minimize reflow
+                        requestAnimationFrame(() => {
+                            try {
+                                consoleScrollContainer.scrollTop = consoleScrollContainer.scrollHeight;
+                            } catch (error) {
+                                // Don't use console.error here to avoid recursion
+                                console.warn('Error scrolling console output:', error);
+                            }
+                        });
+                    }
                 } finally {
                     isLoggingToConsole = false;
                 }
             }
+
+
 
             // Context menu functionality moved to ConsoleContextMenu class
 
@@ -1118,6 +1194,7 @@ if (!isResizing) return;
                             logToConsole('Available commands:', 'info');
                             logToConsole('  help - Show this help message', 'info');
                             logToConsole('  clear - Clear console output', 'info');
+                            logToConsole('  autoscroll - Toggle auto-scroll', 'info');
                             logToConsole('  version - Show editor version', 'info');
                             logToConsole('  objects - Show object count', 'info');
                             logToConsole('  level - Show level info', 'info');
@@ -1125,6 +1202,14 @@ if (!isResizing) return;
                             
                         case 'clear':
                             consoleOutput.innerHTML = '';
+                            break;
+                            
+                        case 'autoscroll':
+                            if (window.toggleAutoScroll) {
+                                window.toggleAutoScroll();
+                            } else {
+                                logToConsole('Auto-scroll function not available', 'error');
+                            }
                             break;
                             
                         case 'version':
@@ -1215,6 +1300,17 @@ if (!isResizing) return;
                 const version = window.editor ? window.editor.constructor.VERSION : 'unknown';
                 logToConsole(`2D Level Editor v${version} - Console ready`, 'info');
                 logToConsole('Press ` to toggle console, type "help" for commands', 'info');
+                
+                // Scroll to bottom after initial messages if console is visible
+                if (!consolePanel.classList.contains('hidden') && isAutoScrollEnabled) {
+                    requestAnimationFrame(() => {
+                        try {
+                            consoleScrollContainer.scrollTop = consoleScrollContainer.scrollHeight;
+                        } catch (error) {
+                            console.warn('Error scrolling console output on init:', error);
+                        }
+                    });
+                }
             } catch (error) {
                 console.error('Error logging initial console message:', error);
             }

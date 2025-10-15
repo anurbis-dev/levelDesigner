@@ -33,6 +33,7 @@ export class ConsoleContextMenu extends BaseContextMenu {
             onMenuHide: callbacks.onMenuHide || (() => {}),
             onItemClick: callbacks.onItemClick || (() => {}),
             onLoggingToggle: callbacks.onLoggingToggle || (() => {}),
+            onAutoScrollToggle: callbacks.onAutoScrollToggle || (() => {}),
             onConsoleClear: callbacks.onConsoleClear || (() => {}),
             onCopyToClipboard: callbacks.onCopyToClipboard || (() => {})
         });
@@ -57,6 +58,7 @@ export class ConsoleContextMenu extends BaseContextMenu {
     setupMenuItems() {
         // Add console-specific menu items
         this.addMenuItem('Toggle Logging', '📝', () => this.toggleLogging());
+        this.addMenuItem('Toggle Auto Scroll', '📜', () => this.toggleAutoScroll());
         this.addMenuItem('Clear Console', '🗑️', () => this.clearConsole());
         this.addMenuItem('Copy All', '📋', () => this.copyAll());
         this.addMenuItem('Copy Selected', '📄', () => this.copySelected());
@@ -151,6 +153,13 @@ export class ConsoleContextMenu extends BaseContextMenu {
     toggleLogging() {
         this.isLoggingEnabled = !this.isLoggingEnabled;
         this.callbacks.onLoggingToggle(this.isLoggingEnabled);
+    }
+
+    /**
+     * Toggle auto-scroll state
+     */
+    toggleAutoScroll() {
+        this.callbacks.onAutoScrollToggle();
     }
 
     /**
