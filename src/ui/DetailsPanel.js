@@ -117,70 +117,293 @@ export class DetailsPanel {
     }
 
     renderGroupDetails(group) {
-        const level = this.levelEditor.getLevel();
+        this.container.innerHTML = '';
 
-        // Use same properties as regular objects for consistency
-        const properties = ['name', 'x', 'y', 'width', 'height', 'color', 'zIndex'];
-
-        // Use UIFactory to create property editor (same as for regular objects)
-        const propertyEditor = UIFactory.createPropertyEditor(group, properties, (prop, newValue, object) => {
-            const oldValue = object[prop];
-            this.stateManager.markDirty();
-
-            // Notify about object property change
-            this.stateManager.notifyListeners('objectPropertyChanged', object, {
-                property: prop,
-                oldValue: oldValue,
-                newValue: newValue
-            });
-
-            // Trigger redraw of selected objects
-            this.stateManager.notifyListeners('selectedObjects', this.stateManager.get('selectedObjects'), this.stateManager.get('selectedObjects'));
-
-            // Force canvas redraw (important for zIndex changes to re-sort and redraw objects)
-            if (this.levelEditor && this.levelEditor.render) {
-                this.levelEditor.render();
-            }
-
-            // Update tab title immediately
-            this.updateTabTitle();
-        });
+        // Create compact layout with sections (same as for objects)
+        this.renderCompactObjectDetails(group);
 
         // Add statistics section for groups
-        const statsDiv = document.createElement('div');
-        statsDiv.className = 'mt-4 text-sm text-gray-400';
-        const childAssets = this.getAllChildren(group).filter(o => o.type !== 'group').length;
-        const childGroups = this.getAllChildren(group).filter(o => o.type === 'group').length;
-        statsDiv.innerHTML = `
-            <h4 class="text-md font-bold mb-2">Group Contents</h4>
-            <p>Assets: ${childAssets}</p>
-            <p>Groups: ${childGroups}</p>
-        `;
-
-        this.container.innerHTML = '';
-        this.container.appendChild(propertyEditor);
-        this.container.appendChild(statsDiv);
+        this.renderGroupStatistics(group);
 
         // Add layer information section for groups
         this.renderLayerInfo(group);
-
-        // Add custom properties section if group has them
-        this.renderCustomProperties(group);
     }
 
-    renderObjectDetails(obj) {
+    /**
+     * Render group statistics section
+     * @param {Object} group - Group object
+     */
+    renderGroupStatistics(group) {
+        const section = this.createSection('Group Contents');
+        
+        const childAssets = this.getAllChildren(group).filter(o => o.type !== 'group').length;
+        const childGroups = this.getAllChildren(group).filter(o => o.type === 'group').length;
+        
+        section.innerHTML += `
+            <div class="grid grid-cols-2 gap-4 text-sm">
+                <div class="text-center">
+                    <div class="text-lg font-bold text-blue-400">${childAssets}</div>
+                    <div class="text-gray-400">Assets</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-lg font-bold text-green-400">${childGroups}</div>
+                    <div class="text-gray-400">Groups</div>
+                </div>
+            </div>
+        `;
+        
+        this.container.appendChild(section);
+    }
 
-        const properties = ['name', 'type', 'x', 'y', 'width', 'height', 'color', 'zIndex'];
+    /**
+     * Render compact object details with sections
+     * @param {Object} obj - Object to render details for
+     */
+    renderCompactObjectDetails(obj) {
+        // Basic Properties Section
+        this.renderBasicProperties(obj);
+        
+        // Transforms Section (Position & Size)
+        this.renderTransformsSection(obj);
+        
+        // Visual Properties Section
+        this.renderVisualProperties(obj);
+        
+        // Advanced Properties Section
+        this.renderAdvancedProperties(obj);
+        
+        // Custom Properties Section
+        this.renderCustomProperties(obj);
+    }
 
-        // Use UIFactory to create property editor
-        const propertyEditor = UIFactory.createPropertyEditor(obj, properties, (prop, newValue, object) => {
-            const oldValue = object[prop];
+    /**
+     * Render basic properties (name, type)
+     */
+    renderBasicProperties(obj) {
+        const section = this.createSection('Basic Properties');
+        
+        // Name
+        const nameContainer = UIFactory.createLabeledInput({
+            label: 'Name',
+            type: 'text',
+            value: obj.name || '',
+            onChange: (e) => obj.name = e.target.value,
+            onBlur: () => this.notifyPropertyChange(obj, 'name', obj.name)
+        });
+        section.appendChild(nameContainer);
+
+        // Type (read-only)
+        const typeContainer = UIFactory.createLabeledInput({
+            label: 'Type',
+            type: 'text',
+            value: obj.type || 'unknown',
+            disabled: true
+        });
+        section.appendChild(typeContainer);
+
+        this.container.appendChild(section);
+    }
+
+    /**
+     * Render transforms section with compact position and size inputs
+     */
+    renderTransformsSection(obj) {
+        const section = this.createTransformsSectionHTML(obj);
+        
+        // Set initial values
+        const inputs = section.querySelectorAll('input[data-property]');
+        inputs.forEach(input => {
+            const property = input.dataset.property;
+            input.value = (obj[property] || 0).toFixed(1);
+        });
+        
+        // Add event listeners for transforms
+        this.setupTransformsListeners(section, obj);
+        
+        this.container.appendChild(section);
+    }
+
+    /**
+     * Render visual properties (color)
+     */
+    renderVisualProperties(obj) {
+        const section = this.createSection('Visual');
+        
+        // Color
+        const colorContainer = UIFactory.createLabeledInput({
+            label: 'Color',
+            type: 'color',
+            value: obj.color || '#3B82F6',
+            onChange: (e) => {
+                obj.color = e.target.value;
+                this.notifyPropertyChange(obj, 'color', obj.color);
+            }
+        });
+        section.appendChild(colorContainer);
+        
+        this.container.appendChild(section);
+    }
+
+    /**
+     * Render advanced properties (zIndex)
+     */
+    renderAdvancedProperties(obj) {
+        const section = this.createSection('Advanced');
+        
+        // Z-Index
+        let displayValue;
+        if (obj.zIndex !== undefined && typeof obj.zIndex === 'number') {
+            const objectIndex = Math.floor((obj.zIndex % 1) * 1000);
+            displayValue = objectIndex.toString();
+        } else {
+            displayValue = '0';
+        }
+        
+        const zIndexContainer = UIFactory.createLabeledInput({
+            label: 'Z-Index',
+            type: 'number',
+            value: displayValue,
+            onChange: (e) => {
+                const layerIndex = Math.floor(obj.zIndex || 0);
+                const objectIndex = parseInt(e.target.value) || 0;
+                obj.zIndex = layerIndex + (objectIndex / 1000);
+            },
+            onBlur: (e) => {
+                const layerIndex = Math.floor(obj.zIndex || 0);
+                const objectIndex = parseInt(e.target.value) || 0;
+                const newValue = layerIndex + (objectIndex / 1000);
+                obj.zIndex = newValue;
+                this.notifyPropertyChange(obj, 'zIndex', newValue);
+            }
+        });
+        section.appendChild(zIndexContainer);
+        
+        this.container.appendChild(section);
+    }
+
+    /**
+     * Create a section container with title
+     * @param {string} title - Section title
+     * @returns {HTMLElement} Section container
+     */
+    createSection(title) {
+        const section = document.createElement('div');
+        section.className = 'mb-4 p-3 bg-gray-800 rounded-lg border border-gray-700';
+        
+        const titleElement = document.createElement('h3');
+        titleElement.className = 'text-sm font-semibold text-gray-300 mb-3';
+        titleElement.textContent = title;
+        
+        section.appendChild(titleElement);
+        return section;
+    }
+
+    /**
+     * Create transforms section HTML
+     * @param {Object|Array} objOrObjects - Single object or array of objects
+     * @returns {HTMLElement} Section container
+     */
+    createTransformsSectionHTML(objOrObjects) {
+        const section = this.createSection('Transforms');
+        
+        // Create compact grid for position and size
+        const gridContainer = document.createElement('div');
+        gridContainer.className = 'grid grid-cols-2 gap-3';
+        
+        // Position row
+        const positionRow = document.createElement('div');
+        positionRow.className = 'col-span-2';
+        positionRow.innerHTML = `
+            <label class="block text-sm font-medium text-gray-300 mb-1">Position</label>
+            <div class="flex gap-2">
+                <div class="flex-1 relative">
+                    <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 pointer-events-none">X</span>
+                    <input type="number" 
+                           class="w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm" 
+                           placeholder="0" 
+                           data-property="x">
+                </div>
+                <div class="flex-1 relative">
+                    <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 pointer-events-none">Y</span>
+                    <input type="number" 
+                           class="w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm" 
+                           placeholder="0" 
+                           data-property="y">
+                </div>
+            </div>
+        `;
+        
+        // Size row
+        const sizeRow = document.createElement('div');
+        sizeRow.className = 'col-span-2';
+        sizeRow.innerHTML = `
+            <label class="block text-sm font-medium text-gray-300 mb-1">Size</label>
+            <div class="flex gap-2">
+                <div class="flex-1 relative">
+                    <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 pointer-events-none">W</span>
+                    <input type="number" 
+                           class="w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm" 
+                           placeholder="0" 
+                           data-property="width">
+                </div>
+                <div class="flex-1 relative">
+                    <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 pointer-events-none">H</span>
+                    <input type="number" 
+                           class="w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm" 
+                           placeholder="0" 
+                           data-property="height">
+                </div>
+            </div>
+        `;
+        
+        gridContainer.appendChild(positionRow);
+        gridContainer.appendChild(sizeRow);
+        section.appendChild(gridContainer);
+        
+        return section;
+    }
+
+    /**
+     * Setup event listeners for transforms section
+     * @param {HTMLElement} section - Section container
+     * @param {Object} obj - Object being edited
+     */
+    setupTransformsListeners(section, obj) {
+        const inputs = section.querySelectorAll('input[data-property]');
+        
+        inputs.forEach(input => {
+            input.addEventListener('input', (e) => {
+                const property = e.target.dataset.property;
+                let value = parseFloat(e.target.value);
+                if (isNaN(value)) value = 0;
+                
+                obj[property] = value;
+            });
+            
+            input.addEventListener('blur', (e) => {
+                const property = e.target.dataset.property;
+                let value = parseFloat(e.target.value);
+                if (isNaN(value)) value = 0;
+                
+                obj[property] = value;
+                this.notifyPropertyChange(obj, property, value);
+            });
+        });
+    }
+
+    /**
+     * Notify about property change
+     * @param {Object} obj - Object that changed
+     * @param {string} property - Property name
+     * @param {any} newValue - New value
+     */
+    notifyPropertyChange(obj, property, newValue) {
             this.stateManager.markDirty();
 
             // Notify about object property change
-            this.stateManager.notifyListeners('objectPropertyChanged', object, {
-                property: prop,
-                oldValue: oldValue,
+        this.stateManager.notifyListeners('objectPropertyChanged', obj, {
+            property: property,
+            oldValue: obj[property],
                 newValue: newValue
             });
 
@@ -194,161 +417,319 @@ export class DetailsPanel {
 
             // Update tab title immediately
             this.updateTabTitle();
-        });
+    }
 
+    renderObjectDetails(obj) {
         this.container.innerHTML = '';
-        this.container.appendChild(propertyEditor);
+
+        // Create compact layout with sections
+        this.renderCompactObjectDetails(obj);
 
         // Add layer information section
         this.renderLayerInfo(obj);
-
-        // Add custom properties section
-        this.renderCustomProperties(obj);
     }
 
     renderMultipleObjects(objects) {
-        this.container.innerHTML = '<h3 class="text-lg font-bold mb-3">Multiple Selection</h3>';
+        this.container.innerHTML = '';
+
+        // Create compact layout with sections (same as single object)
+        this.renderCompactMultipleObjects(objects);
+    }
+
+    /**
+     * Render compact multiple objects details with sections
+     * @param {Array} objects - Array of objects to render details for
+     */
+    renderCompactMultipleObjects(objects) {
+        // Basic Properties Section
+        this.renderMultipleBasicProperties(objects);
         
-        const commonProps = ['x', 'y', 'width', 'height', 'name', 'zIndex'];
+        // Transforms Section (Position & Size)
+        this.renderMultipleTransformsSection(objects);
         
-        commonProps.forEach(prop => {
-            // Handle undefined values (e.g., zIndex for old objects)
-            let firstValue = objects[0][prop];
-            if (firstValue === undefined && prop === 'zIndex') {
-                firstValue = 0;
-                // Don't set objects[0][prop] = 0 here - let the system handle zIndex properly
-            }
-
-            const allSame = objects.every(obj => {
-                let val = obj[prop];
-                if (val === undefined && prop === 'zIndex') {
-                    val = 0;
-                    // Don't set obj[prop] = 0 here - let the system handle zIndex properly
-                }
-                return val === firstValue;
-            });
-
-            // For zIndex, display only the object index (thousandths part)
-            let displayValue;
-            if (prop === 'zIndex' && typeof firstValue === 'number' && firstValue > 0) {
-                const objectIndex = Math.floor((firstValue % 1) * 1000);
-                displayValue = allSame ? objectIndex.toString() : '';
-            } else {
-                displayValue = allSame ? (typeof firstValue === 'number' ? firstValue.toFixed(1) : firstValue) : '';
-            }
-            
-            // Format property label
-            const formatLabel = (propName) => {
-                if (propName === 'zIndex') return 'Z-Index';
-                return propName.charAt(0).toUpperCase() + propName.slice(1);
-            };
-            
-            const propContainer = document.createElement('div');
-            propContainer.className = 'mb-3';
-            
-            const inputType = typeof firstValue === 'number' ? 'number' : 'text';
-            
-            propContainer.innerHTML = `
-                <label class="block text-sm font-medium text-gray-300">${formatLabel(prop)}</label>
-                <input type="${inputType}" 
-                       id="property-${prop}-${Date.now()}"
-                       name="property-${prop}-${Date.now()}"
-                       value="${displayValue}" 
-                       placeholder="${allSame ? '' : 'multiple values'}"
-                       class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-            `;
-            
-            const input = propContainer.querySelector('input');
-            input.addEventListener('change', (e) => {
-                let newValue = e.target.value;
-
-                if (prop === 'zIndex') {
-                    // For zIndex, update each object's zIndex with the same object index but current layer
-                    objects.forEach(obj => {
-                        const currentLayerIndex = Math.floor(obj.zIndex || 0);
-                        const objectIndex = parseInt(newValue) || 0;
-                        const newZIndex = currentLayerIndex + (objectIndex / 1000);
-
-                        const oldValue = obj[prop];
-                        obj[prop] = newZIndex;
-
-                        // Notify about each object property change
-                        this.stateManager.notifyListeners('objectPropertyChanged', obj, {
-                            property: prop,
-                            oldValue: oldValue,
-                            newValue: newZIndex
-                        });
-                    });
-                } else if (typeof firstValue === 'number') {
-                    newValue = parseFloat(newValue);
-                    if (isNaN(newValue)) {
-                        newValue = 0;
-                    }
-
-                    objects.forEach(obj => {
-                        const oldValue = obj[prop];
-                        obj[prop] = newValue;
-
-                        // Notify about each object property change
-                        this.stateManager.notifyListeners('objectPropertyChanged', obj, {
-                            property: prop,
-                            oldValue: oldValue,
-                            newValue: newValue
-                        });
-                    });
-                }
-
-                this.stateManager.markDirty();
-
-                // Trigger redraw (important for zIndex changes to re-sort objects)
-                this.stateManager.notifyListeners('selectedObjects', this.stateManager.get('selectedObjects'), this.stateManager.get('selectedObjects'));
-
-                // Force canvas redraw (important for zIndex changes to re-sort and redraw objects)
-                if (this.levelEditor && this.levelEditor.render) {
-                    this.levelEditor.render();
-                }
-
-                // Update tab title immediately
-                this.updateTabTitle();
-            });
-            
-            this.container.appendChild(propContainer);
-        });
+        // Visual Properties Section
+        this.renderMultipleVisualProperties(objects);
         
-        // Add layer information for multiple selection
+        // Advanced Properties Section
+        this.renderMultipleAdvancedProperties(objects);
+        
+        // Custom Properties Section
+        this.renderMultipleCustomProperties(objects);
+        
+        // Layer Information Section
         this.renderMultipleLayerInfo(objects);
     }
 
-    renderLayerInfo(obj) {
+    /**
+     * Render basic properties for multiple objects (name)
+     */
+    renderMultipleBasicProperties(objects) {
+        const section = this.createSection('Basic Properties');
+        
+        // Name - check if all objects have the same name
+        const firstName = objects[0].name || '';
+        const allSameName = objects.every(obj => (obj.name || '') === firstName);
+        
+        const nameContainer = UIFactory.createLabeledInput({
+            label: 'Name',
+            type: 'text',
+            value: allSameName ? firstName : '',
+            placeholder: allSameName ? '' : 'multiple values',
+            onChange: (e) => {
+                objects.forEach(obj => obj.name = e.target.value);
+            },
+            onBlur: () => {
+                objects.forEach(obj => this.notifyPropertyChange(obj, 'name', obj.name));
+            }
+        });
+        section.appendChild(nameContainer);
 
+        // Type - show if all objects have the same type
+        const firstType = objects[0].type || 'unknown';
+        const allSameType = objects.every(obj => (obj.type || 'unknown') === firstType);
+        
+        if (allSameType) {
+            const typeContainer = UIFactory.createLabeledInput({
+                label: 'Type',
+                type: 'text',
+                value: firstType,
+                disabled: true
+            });
+            section.appendChild(typeContainer);
+        }
+
+        this.container.appendChild(section);
+    }
+
+    /**
+     * Render transforms section for multiple objects with compact position and size inputs
+     */
+    renderMultipleTransformsSection(objects) {
+        const section = this.createTransformsSectionHTML(objects);
+        
+        // Add event listeners for transforms
+        this.setupMultipleTransformsListeners(section, objects);
+        
+        this.container.appendChild(section);
+    }
+
+    /**
+     * Render visual properties for multiple objects (color)
+     */
+    renderMultipleVisualProperties(objects) {
+        const section = this.createSection('Visual');
+        
+        // Color - check if all objects have the same color
+        const firstColor = objects[0].color || '#3B82F6';
+        const allSameColor = objects.every(obj => (obj.color || '#3B82F6') === firstColor);
+        
+        const colorContainer = UIFactory.createLabeledInput({
+            label: 'Color',
+            type: 'color',
+            value: allSameColor ? firstColor : '#3B82F6',
+            onChange: (e) => {
+                objects.forEach(obj => obj.color = e.target.value);
+                this.notifyPropertyChange(objects[0], 'color', e.target.value);
+            }
+        });
+        section.appendChild(colorContainer);
+        
+        this.container.appendChild(section);
+    }
+
+    /**
+     * Render custom properties for multiple objects
+     */
+    renderMultipleCustomProperties(objects) {
+        const section = this.createSection('Custom Properties');
+        
+        // Get all unique custom property keys from all objects
+        const allCustomKeys = new Set();
+                    objects.forEach(obj => {
+            // Support both customProperties and properties (legacy)
+            const customProps = obj.customProperties || obj.properties || {};
+            Object.keys(customProps).forEach(key => allCustomKeys.add(key));
+        });
+        
+        // Show existing custom properties
+        if (allCustomKeys.size > 0) {
+            allCustomKeys.forEach(key => {
+                // Check if all objects have the same value for this custom property
+                const firstCustomProps = objects[0].customProperties || objects[0].properties || {};
+                const firstValue = firstCustomProps[key] || '';
+                const allSameValue = objects.every(obj => {
+                    const objCustomProps = obj.customProperties || obj.properties || {};
+                    const objValue = objCustomProps[key] || '';
+                    return objValue === firstValue;
+                });
+                
+                const propContainer = UIFactory.createLabeledInput({
+                    label: key,
+                    type: 'text',
+                    value: allSameValue ? firstValue : '',
+                    placeholder: allSameValue ? '' : 'multiple values',
+                    onChange: (e) => {
+                        objects.forEach(obj => {
+                            if (!obj.customProperties) {
+                                obj.customProperties = {};
+                            }
+                            obj.customProperties[key] = e.target.value;
+                        });
+                    },
+                    onBlur: (e) => {
+                        objects.forEach(obj => {
+                            if (!obj.customProperties) {
+                                obj.customProperties = {};
+                            }
+                            obj.customProperties[key] = e.target.value;
+                            this.notifyPropertyChange(obj, 'customProperties', obj.customProperties);
+                        });
+                    }
+                });
+                section.appendChild(propContainer);
+            });
+        } else {
+            // Show message when no custom properties exist
+            const noPropsMsg = document.createElement('div');
+            noPropsMsg.className = 'text-sm text-gray-400 italic';
+            noPropsMsg.textContent = 'No custom properties';
+            section.appendChild(noPropsMsg);
+        }
+        
+        // Add "Add Property" button
+        const addButton = document.createElement('button');
+        addButton.className = 'mt-2 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700';
+        addButton.textContent = 'Add Property';
+        addButton.addEventListener('click', () => {
+            const key = prompt('Enter property name:');
+            if (key && key.trim()) {
+                // Add the property to all objects
+                    objects.forEach(obj => {
+                    if (!obj.customProperties) {
+                        obj.customProperties = {};
+                    }
+                    obj.customProperties[key.trim()] = '';
+                });
+                
+                // Re-render the panel to show the new property
+                this.render();
+            }
+        });
+        section.appendChild(addButton);
+        
+        this.container.appendChild(section);
+    }
+
+    /**
+     * Render advanced properties for multiple objects (zIndex)
+     */
+    renderMultipleAdvancedProperties(objects) {
+        const section = this.createSection('Advanced');
+        
+        // Z-Index - check if all objects have the same zIndex
+        const firstZIndex = objects[0].zIndex || 0;
+        const allSameZIndex = objects.every(obj => {
+            const objZIndex = obj.zIndex || 0;
+            const firstObjectIndex = Math.floor((firstZIndex % 1) * 1000);
+            const objObjectIndex = Math.floor((objZIndex % 1) * 1000);
+            return firstObjectIndex === objObjectIndex;
+        });
+        
+        let displayValue = '';
+        if (allSameZIndex && firstZIndex !== undefined && typeof firstZIndex === 'number') {
+            const objectIndex = Math.floor((firstZIndex % 1) * 1000);
+            displayValue = objectIndex.toString();
+        }
+        
+        const zIndexContainer = UIFactory.createLabeledInput({
+            label: 'Z-Index',
+            type: 'number',
+            value: displayValue,
+            placeholder: allSameZIndex ? '' : 'multiple values',
+            onChange: (e) => {
+                const objectIndex = parseInt(e.target.value) || 0;
+                    objects.forEach(obj => {
+                    const layerIndex = Math.floor(obj.zIndex || 0);
+                    obj.zIndex = layerIndex + (objectIndex / 1000);
+                });
+            },
+            onBlur: (e) => {
+                const objectIndex = parseInt(e.target.value) || 0;
+                objects.forEach(obj => {
+                    const layerIndex = Math.floor(obj.zIndex || 0);
+                    const newValue = layerIndex + (objectIndex / 1000);
+                    obj.zIndex = newValue;
+                    this.notifyPropertyChange(obj, 'zIndex', newValue);
+                });
+            }
+        });
+        section.appendChild(zIndexContainer);
+        
+        this.container.appendChild(section);
+    }
+
+    /**
+     * Setup event listeners for multiple objects transforms section
+     * @param {HTMLElement} section - Section container
+     * @param {Array} objects - Array of objects being edited
+     */
+    setupMultipleTransformsListeners(section, objects) {
+        const inputs = section.querySelectorAll('input[data-property]');
+        
+        // Set initial values based on common values
+        inputs.forEach(input => {
+            const property = input.dataset.property;
+            const firstValue = objects[0][property] || 0;
+            const allSame = objects.every(obj => (obj[property] || 0) === firstValue);
+            
+            if (allSame) {
+                input.value = firstValue.toFixed(1);
+            } else {
+                input.placeholder = 'multiple values';
+            }
+        });
+        
+        inputs.forEach(input => {
+            input.addEventListener('input', (e) => {
+                const property = e.target.dataset.property;
+                let value = parseFloat(e.target.value);
+                if (isNaN(value)) value = 0;
+                
+                objects.forEach(obj => obj[property] = value);
+            });
+            
+            input.addEventListener('blur', (e) => {
+                const property = e.target.dataset.property;
+                let value = parseFloat(e.target.value);
+                if (isNaN(value)) value = 0;
+                
+                objects.forEach(obj => {
+                    obj[property] = value;
+                    this.notifyPropertyChange(obj, property, value);
+                });
+            });
+        });
+    }
+
+    renderLayerInfo(obj) {
         const level = this.levelEditor.getLevel();
         const layerInfo = this.getObjectLayerInfo(obj, level);
 
-        const section = document.createElement('div');
-        section.className = 'mt-4';
-        section.innerHTML = '<h4 class="text-md font-bold mb-2">Layer Information</h4>';
+        const section = this.createSection('Layer Information');
 
         const layerContainer = document.createElement('div');
-        layerContainer.className = 'mb-2';
+        layerContainer.className = 'flex items-center space-x-2';
 
         layerContainer.innerHTML = `
-            <label class="block text-sm font-medium text-gray-300">Current Layer</label>
-            <div class="mt-1 flex items-center space-x-2">
-                <div class="w-4 h-4 rounded border details-layer-color" data-color="${layerInfo.color}"></div>
-                <span class="text-sm text-gray-200">${layerInfo.name}</span>
-                <span class="text-xs text-gray-400">(${layerInfo.objectCount} objects)</span>
+            <div class="w-4 h-4 rounded border details-layer-color" data-color="${layerInfo.color}" style="background-color: ${layerInfo.color}"></div>
+            <div class="flex-1">
+                <div class="text-sm font-medium text-gray-200">${layerInfo.name}</div>
+                <div class="text-xs text-gray-400">${layerInfo.objectCount} objects</div>
             </div>
         `;
-        
-        // Set layer color using CSS variable
-        const colorElement = layerContainer.querySelector('.details-layer-color');
-        if (colorElement) {
-            colorElement.style.setProperty('--layer-color', layerInfo.color);
-        }
 
         section.appendChild(layerContainer);
         this.container.appendChild(section);
-
     }
 
     getObjectLayerInfo(obj, level) {
@@ -386,49 +767,40 @@ export class DetailsPanel {
         const level = this.levelEditor.getLevel();
         const layerAnalysis = this.analyzeMultipleLayers(objects, level);
         
-        const section = document.createElement('div');
-        section.className = 'mt-4';
-        section.innerHTML = '<h4 class="text-md font-bold mb-2">Layer Information</h4>';
+        const section = this.createSection('Layer Information');
         
         if (layerAnalysis.allSameLayer) {
             // All objects are on the same layer
             const layerInfo = layerAnalysis.layers[0];
             const layerContainer = document.createElement('div');
-            layerContainer.className = 'mb-2';
+            layerContainer.className = 'flex items-center space-x-2';
             
             layerContainer.innerHTML = `
-                <label class="block text-sm font-medium text-gray-300">Current Layer</label>
-                <div class="mt-1 flex items-center space-x-2">
-                    <div class="w-4 h-4 rounded border details-layer-color" data-color="${layerInfo.color}"></div>
-                    <span class="text-sm text-gray-200">${layerInfo.name}</span>
-                    <span class="text-xs text-gray-400">(${layerInfo.objectCount} objects, ${objects.length} selected)</span>
+                <div class="w-4 h-4 rounded border" style="background-color: ${layerInfo.color}"></div>
+                <div class="flex-1">
+                    <div class="text-sm font-medium text-gray-200">${layerInfo.name}</div>
+                    <div class="text-xs text-gray-400">${layerInfo.objectCount} objects, ${objects.length} selected</div>
                 </div>
             `;
-            
-            // Set layer color using CSS variable
-            const colorElement = layerContainer.querySelector('.details-layer-color');
-            if (colorElement) {
-                colorElement.style.setProperty('--layer-color', layerInfo.color);
-            }
             
             section.appendChild(layerContainer);
         } else {
             // Objects are on different layers
             const layerContainer = document.createElement('div');
-            layerContainer.className = 'mb-2';
-            
             layerContainer.innerHTML = `
-                <label class="block text-sm font-medium text-gray-300">Layers (${layerAnalysis.layers.length} different)</label>
-                <div class="mt-1 space-y-1">
+                <div class="text-sm font-medium text-gray-300 mb-2">Layers (${layerAnalysis.layers.length} different)</div>
+                <div class="space-y-2">
             `;
             
             layerAnalysis.layers.forEach(layerInfo => {
                 const layerItem = document.createElement('div');
-                layerItem.className = 'flex items-center space-x-2 text-sm';
+                layerItem.className = 'flex items-center space-x-2';
                 layerItem.innerHTML = `
                     <div class="w-3 h-3 rounded border" style="background-color: ${layerInfo.color}"></div>
-                    <span class="text-gray-200">${layerInfo.name}</span>
-                    <span class="text-xs text-gray-400">(${layerInfo.selectedCount} selected, ${layerInfo.objectCount} total)</span>
+                    <div class="flex-1">
+                        <div class="text-sm text-gray-200">${layerInfo.name}</div>
+                        <div class="text-xs text-gray-400">${layerInfo.selectedCount} selected, ${layerInfo.objectCount} total</div>
+                    </div>
                 `;
                 layerContainer.appendChild(layerItem);
             });
@@ -475,47 +847,60 @@ export class DetailsPanel {
     }
 
     renderCustomProperties(obj) {
-        if (!obj.properties || Object.keys(obj.properties).length === 0) {
-            return;
+        const section = this.createSection('Custom Properties');
+        
+        // Use customProperties instead of properties for consistency
+        const customProps = obj.customProperties || obj.properties || {};
+        
+        if (Object.keys(customProps).length > 0) {
+            Object.entries(customProps).forEach(([key, value]) => {
+                const propContainer = UIFactory.createLabeledInput({
+                    label: key,
+                    type: 'text',
+                    value: value || '',
+                    onChange: (e) => {
+                        if (!obj.customProperties) {
+                            obj.customProperties = {};
+                        }
+                        obj.customProperties[key] = e.target.value;
+                    },
+                    onBlur: (e) => {
+                        if (!obj.customProperties) {
+                            obj.customProperties = {};
+                        }
+                        const oldValue = customProps[key];
+                const newValue = e.target.value;
+                        obj.customProperties[key] = newValue;
+                        this.notifyPropertyChange(obj, 'customProperties', obj.customProperties);
+                    }
+                });
+                section.appendChild(propContainer);
+            });
+        } else {
+            // Show message when no custom properties exist
+            const noPropsMsg = document.createElement('div');
+            noPropsMsg.className = 'text-sm text-gray-400 italic';
+            noPropsMsg.textContent = 'No custom properties';
+            section.appendChild(noPropsMsg);
         }
         
-        const section = document.createElement('div');
-        section.className = 'mt-4';
-        section.innerHTML = '<h4 class="text-md font-bold mb-2">Custom Properties</h4>';
-        
-        Object.entries(obj.properties).forEach(([key, value]) => {
-            const propContainer = document.createElement('div');
-            propContainer.className = 'mb-2';
-            
-            propContainer.innerHTML = `
-                <label class="block text-sm font-medium text-gray-300">${key}</label>
-                <input type="text" 
-                       id="custom-property-${key}-${Date.now()}"
-                       name="custom-property-${key}-${Date.now()}"
-                       value="${value}" 
-                       class="mt-1 block w-full bg-gray-700 border border-gray-600 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-            `;
-            
-            const input = propContainer.querySelector('input');
-            input.addEventListener('change', (e) => {
-                const oldValue = obj.properties[key];
-                const newValue = e.target.value;
-                obj.properties[key] = newValue;
-                this.stateManager.markDirty();
-
-                // Notify about custom property change
-                this.stateManager.notifyListeners('objectPropertyChanged', obj, {
-                    property: `properties.${key}`,
-                    oldValue: oldValue,
-                    newValue: newValue
-                });
-
-                // Update tab title immediately
-                this.updateTabTitle();
-            });
-            
-            section.appendChild(propContainer);
+        // Add "Add Property" button
+        const addButton = document.createElement('button');
+        addButton.className = 'mt-2 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700';
+        addButton.textContent = 'Add Property';
+        addButton.addEventListener('click', () => {
+            const key = prompt('Enter property name:');
+            if (key && key.trim()) {
+                if (!obj.customProperties) {
+                    obj.customProperties = {};
+                }
+                obj.customProperties[key.trim()] = '';
+                
+                // Re-render the panel to show the new property
+                this.render();
+            }
         });
+        section.appendChild(addButton);
         
         this.container.appendChild(section);
     }
@@ -604,7 +989,31 @@ export class DetailsPanel {
     }
 
     renderLevelContent() {
+        this.container.innerHTML = '';
+
+        // Create compact layout with sections
+        this.renderCompactLevelDetails();
+    }
+
+    /**
+     * Render compact level details with sections
+     */
+    renderCompactLevelDetails() {
         const stats = this.levelEditor.cachedLevelStats;
+        
+        // Statistics Section
+        this.renderLevelStatistics(stats);
+        
+        // Actions Section
+        this.renderLevelActions();
+    }
+
+    /**
+     * Render level statistics section
+     */
+    renderLevelStatistics(stats) {
+        const section = this.createSection('Level Statistics');
+        
         const playerStartCount = stats?.byType?.player_start || 0;
 
         // Generate Player Start display with color coding
@@ -615,29 +1024,63 @@ export class DetailsPanel {
                                 playerStartCount === 0 ? 'text-yellow-400' :
                                 'text-red-400 font-bold';
 
-        this.container.innerHTML = `
-            <h3 class="text-lg font-bold mb-3">Level Statistics</h3>
-            <p class="text-sm">Total Objects: ${stats.totalObjects}</p>
-            <p class="text-sm">Groups: ${stats.groups}</p>
-            <div class="mt-2">
-                <p class="text-sm font-medium">By Type:</p>
-                ${Object.entries(stats.byType || {}).map(([type, count]) => {
-                    if (type === 'player_start') {
-                        return `<p class="text-sm ml-2 ${playerStartClass}">${playerStartText}</p>`;
-                    }
-                    return `<p class="text-sm ml-2">${type}: ${count}</p>`;
-                }).join('')}
+        // Overview stats
+        const overviewDiv = document.createElement('div');
+        overviewDiv.className = 'grid grid-cols-2 gap-4 mb-4';
+        overviewDiv.innerHTML = `
+            <div class="text-center">
+                <div class="text-lg font-bold text-blue-400">${stats.totalObjects}</div>
+                <div class="text-gray-400 text-sm">Total Objects</div>
             </div>
-            <div class="mt-4">
-                <button id="set-camera-start-position-btn"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors">
-                    Set Camera Start Position
-                </button>
-                <p class="text-xs text-gray-400 mt-1">
-                    Sets current camera position as parallax reference point
-                </p>
+            <div class="text-center">
+                <div class="text-lg font-bold text-green-400">${stats.groups}</div>
+                <div class="text-gray-400 text-sm">Groups</div>
             </div>
         `;
+        section.appendChild(overviewDiv);
+        
+        // By Type breakdown
+        const typeDiv = document.createElement('div');
+        typeDiv.innerHTML = `
+            <div class="text-sm font-medium text-gray-300 mb-2">By Type:</div>
+            <div class="space-y-1">
+                ${Object.entries(stats.byType || {}).map(([type, count]) => {
+                    if (type === 'player_start') {
+                        return `<div class="flex justify-between items-center">
+                            <span class="text-sm ${playerStartClass}">${playerStartText}</span>
+                        </div>`;
+                    }
+                    return `<div class="flex justify-between items-center">
+                        <span class="text-sm text-gray-200">${type}</span>
+                        <span class="text-sm text-gray-400">${count}</span>
+                    </div>`;
+                }).join('')}
+            </div>
+        `;
+        section.appendChild(typeDiv);
+        
+        this.container.appendChild(section);
+    }
+
+    /**
+     * Render level actions section
+     */
+    renderLevelActions() {
+        const section = this.createSection('Actions');
+        
+        const buttonContainer = document.createElement('div');
+        buttonContainer.innerHTML = `
+                <button id="set-camera-start-position-btn"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors">
+                    Set Camera Start Position
+                </button>
+            <div class="text-xs text-gray-400 mt-2 text-center">
+                    Sets current camera position as parallax reference point
+            </div>
+        `;
+        
+        section.appendChild(buttonContainer);
+        this.container.appendChild(section);
 
         // Setup button event listener
         this.setupCameraStartPositionButton();
