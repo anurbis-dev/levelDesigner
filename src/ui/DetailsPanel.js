@@ -91,9 +91,20 @@ export class DetailsPanel {
     }
 
     renderNoSelection() {
-        this.container.innerHTML = '<p class="text-gray-400">Select an object to see its properties.</p>';
-        // Update tab title for no selection case
-        this.updateTabTitle();
+        // Show level content when no object is selected
+        if (this.levelEditor && this.levelEditor.cachedLevelStats) {
+            this.renderLevelContent();
+
+            // Update tab title to show we're showing level content
+            const detailsTab = document.getElementById('details-tab');
+            if (detailsTab) {
+                detailsTab.textContent = 'Level';
+            }
+        } else {
+            this.container.innerHTML = '<p class="text-gray-400">Select an object to see its properties.</p>';
+            // Update tab title for no selection case
+            this.updateTabTitle();
+        }
     }
 
     renderSingleObject(obj) {
@@ -592,15 +603,80 @@ export class DetailsPanel {
         return null;
     }
 
+    renderLevelContent() {
+        const stats = this.levelEditor.cachedLevelStats;
+        const playerStartCount = stats?.byType?.player_start || 0;
+
+        // Generate Player Start display with color coding
+        const playerStartText = playerStartCount === 1 ? 'Player Start: 1' :
+                               playerStartCount === 0 ? 'Player Start: 0' :
+                               `Player Start: ${playerStartCount}`;
+        const playerStartClass = playerStartCount === 1 ? 'text-green-400' :
+                                playerStartCount === 0 ? 'text-yellow-400' :
+                                'text-red-400 font-bold';
+
+        this.container.innerHTML = `
+            <h3 class="text-lg font-bold mb-3">Level Statistics</h3>
+            <p class="text-sm">Total Objects: ${stats.totalObjects}</p>
+            <p class="text-sm">Groups: ${stats.groups}</p>
+            <div class="mt-2">
+                <p class="text-sm font-medium">By Type:</p>
+                ${Object.entries(stats.byType || {}).map(([type, count]) => {
+                    if (type === 'player_start') {
+                        return `<p class="text-sm ml-2 ${playerStartClass}">${playerStartText}</p>`;
+                    }
+                    return `<p class="text-sm ml-2">${type}: ${count}</p>`;
+                }).join('')}
+            </div>
+            <div class="mt-4">
+                <button id="set-camera-start-position-btn"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors">
+                    Set Camera Start Position
+                </button>
+                <p class="text-xs text-gray-400 mt-1">
+                    Sets current camera position as parallax reference point
+                </p>
+            </div>
+        `;
+
+        // Setup button event listener
+        this.setupCameraStartPositionButton();
+    }
+
+    setupCameraStartPositionButton() {
+        const btn = this.container.querySelector('#set-camera-start-position-btn');
+        if (!btn) return;
+
+        // Remove existing listener to avoid duplicates
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+
+        newBtn.addEventListener('click', () => {
+            const currentCamera = this.levelEditor.stateManager.get('camera');
+            this.levelEditor.stateManager.set('parallax.startPosition', {
+                x: currentCamera.x,
+                y: currentCamera.y
+            });
+
+            // Show feedback (optional)
+            console.log(`Set camera start position: (${currentCamera.x}, ${currentCamera.y})`);
+        });
+    }
+
     updateTabTitle() {
         const detailsTab = document.getElementById('details-tab');
         if (!detailsTab) return;
-        
+
         const selectedObjects = this.getSelectedObjects();
         const count = selectedObjects.length;
-        
+
         if (count === 0) {
-            detailsTab.textContent = 'Details';
+            // Check if we're showing level content
+            if (this.levelEditor && this.levelEditor.cachedLevelStats) {
+                detailsTab.textContent = 'Level';
+            } else {
+                detailsTab.textContent = 'Details';
+            }
         } else if (count === 1) {
             detailsTab.textContent = 'Asset';
         } else {

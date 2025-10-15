@@ -1131,7 +1131,6 @@ export class LevelEditor {
         this.detailsPanel.render();
         this.outlinerPanel.render();
         this.layersPanel.render();
-        this.updateLevelStatsPanel();
     }
 
 
