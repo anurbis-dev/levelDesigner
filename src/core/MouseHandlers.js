@@ -518,11 +518,21 @@ export class MouseHandlers extends BaseModule {
     }
 
     handleDragOver(e) {
+        // Skip if tab dragging is active
+        if (e.target.closest('.tab') || this.editor.assetPanel?.isDraggingTab) {
+            return;
+        }
+        
         e.preventDefault();
         e.dataTransfer.dropEffect = 'copy';
     }
 
     handleDrop(e) {
+        // Skip if tab dragging is active
+        if (e.target.closest('.tab') || this.editor.assetPanel?.isDraggingTab) {
+            return;
+        }
+        
         e.preventDefault();
 
         const mouse = this.editor.stateManager.get('mouse');

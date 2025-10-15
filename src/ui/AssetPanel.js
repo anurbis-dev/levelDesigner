@@ -20,6 +20,8 @@ export class AssetPanel extends BasePanel {
         this.foldersPosition = 'left'; // 'left' or 'right'
         this.marqueeDiv = null;
         this.marqueeStart = {};
+        this.isDraggingTab = false; // Flag to track tab dragging
+        this.tabDraggingSetup = false; // Flag to track if tab dragging is already setup
 
         // Asset size management
         this.assetSize = 96; // Default size, will be loaded in init()
@@ -463,9 +465,13 @@ export class AssetPanel extends BasePanel {
             }
         };
 
+        // Store references for cleanup
+        this.foldersMouseMoveHandler = handleMouseMove;
+        this.foldersMouseUpHandler = handleMouseUp;
+        
         // Add global listeners
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
+        document.addEventListener('mousemove', this.foldersMouseMoveHandler);
+        document.addEventListener('mouseup', this.foldersMouseUpHandler);
 
         // Load saved width
         if (this.levelEditor?.userPrefs) {
@@ -558,8 +564,11 @@ export class AssetPanel extends BasePanel {
             this.tabsContainer.appendChild(tabButton);
         });
 
-        // Setup tab dragging after rendering
-        this.setupTabDragging();
+        // Setup tab dragging after rendering (only once)
+        if (!this.tabDraggingSetup) {
+            this.setupTabDragging();
+            this.tabDraggingSetup = true;
+        }
     }
 
     renderPreviews() {
@@ -1121,6 +1130,9 @@ export class AssetPanel extends BasePanel {
     setupTabDragging() {
         let draggedTab = null;
         let draggedIndex = -1;
+        
+        // Store reference to mouseup handler for cleanup
+        this.tabMouseUpHandler = null;
 
         // Make tabs draggable
         this.tabsContainer.addEventListener('mousedown', (e) => {
@@ -1129,6 +1141,7 @@ export class AssetPanel extends BasePanel {
 
             draggedTab = tab;
             draggedIndex = Array.from(this.tabsContainer.children).indexOf(tab);
+            this.isDraggingTab = true; // Set flag for tab dragging
             
             // Add dragging class
             tab.classList.add('dragging');
@@ -1144,34 +1157,35 @@ export class AssetPanel extends BasePanel {
             const tab = e.target.closest('.tab');
             if (!tab || tab === draggedTab) {
                 // Remove drag-over from all tabs
-                this.tabsContainer.querySelectorAll('.tab').forEach(t => t.classList.remove('drag-over'));
+                this.tabsContainer.querySelectorAll('.tab').forEach(t => t.classList.remove('tab-drag-over'));
                 return;
             }
 
             const targetIndex = Array.from(this.tabsContainer.children).indexOf(tab);
             
             // Remove drag-over from all tabs
-            this.tabsContainer.querySelectorAll('.tab').forEach(t => t.classList.remove('drag-over'));
+            this.tabsContainer.querySelectorAll('.tab').forEach(t => t.classList.remove('tab-drag-over'));
             
             // Add drag-over to target tab
-            tab.classList.add('drag-over');
+            tab.classList.add('tab-drag-over');
         });
 
         // Handle mouse up to complete drag
-        document.addEventListener('mouseup', (e) => {
+        this.tabMouseUpHandler = (e) => {
             if (!draggedTab) return;
 
+            const tabContainer = draggedTab.parentElement;
             const targetTab = e.target.closest('.tab');
-
+            
             if (targetTab && targetTab !== draggedTab) {
-                const targetIndex = Array.from(this.tabsContainer.children).indexOf(targetTab);
-                const draggedIndex = Array.from(this.tabsContainer.children).indexOf(draggedTab);
-
+                const targetIndex = Array.from(tabContainer.children).indexOf(targetTab);
+                const draggedIndex = Array.from(tabContainer.children).indexOf(draggedTab);
+                
                 // Move the tab
                 if (draggedIndex < targetIndex) {
-                    this.tabsContainer.insertBefore(draggedTab, targetTab.nextSibling);
+                    tabContainer.insertBefore(draggedTab, targetTab.nextSibling);
                 } else {
-                    this.tabsContainer.insertBefore(draggedTab, targetTab);
+                    tabContainer.insertBefore(draggedTab, targetTab);
                 }
 
                 // Save new tab order to state
@@ -1182,12 +1196,15 @@ export class AssetPanel extends BasePanel {
 
             // Clean up
             this.tabsContainer.querySelectorAll('.tab').forEach(t => {
-                t.classList.remove('dragging', 'drag-over');
+                t.classList.remove('dragging', 'tab-drag-over');
             });
 
+            this.isDraggingTab = false; // Reset flag
             draggedTab = null;
             draggedIndex = -1;
-        });
+        };
+        
+        document.addEventListener('mouseup', this.tabMouseUpHandler);
 
         // Prevent text selection during drag
         this.tabsContainer.addEventListener('selectstart', (e) => {
@@ -1873,7 +1890,7 @@ export class AssetPanel extends BasePanel {
     setupDragAndDrop() {
         const dropZone = this.container;
         
-        // Create drop overlay element
+        // Create drop overlay element - positioned relative to content container
         this.dropOverlay = document.createElement('div');
         this.dropOverlay.style.cssText = `
             position: absolute;
@@ -1904,7 +1921,36 @@ export class AssetPanel extends BasePanel {
         `;
         textContainer.textContent = 'Drop PNG image(s) to Import as Assets';
         this.dropOverlay.appendChild(textContainer);
+        
+        // Position overlay relative to main container but size it to match previews container
         this.container.style.position = 'relative';
+
+        // Size overlay to match previews container dimensions and position
+        if (this.previewsContainer) {
+            const updateOverlaySize = () => {
+                const rect = this.previewsContainer.getBoundingClientRect();
+                const containerRect = this.container.getBoundingClientRect();
+
+                this.dropOverlay.style.position = 'absolute';
+                this.dropOverlay.style.top = `${rect.top - containerRect.top}px`;
+                this.dropOverlay.style.left = `${rect.left - containerRect.left}px`;
+                this.dropOverlay.style.width = `${rect.width}px`;
+                this.dropOverlay.style.height = `${rect.height}px`;
+                this.dropOverlay.style.zIndex = '9999'; // Very high z-index to be above everything
+            };
+
+            // Initial sizing
+            updateOverlaySize();
+
+            // Update size on window resize or container changes
+            const resizeObserver = new ResizeObserver(updateOverlaySize);
+            resizeObserver.observe(this.previewsContainer);
+            resizeObserver.observe(this.container);
+
+            // Store reference for cleanup
+            this.dropOverlayResizeObserver = resizeObserver;
+        }
+
         this.container.appendChild(this.dropOverlay);
         
         // Bind methods to preserve context
@@ -1921,59 +1967,65 @@ export class AssetPanel extends BasePanel {
     }
 
     handleDragEnter(e) {
-        // Only handle external file drops, not internal asset dragging
-        if (!e.dataTransfer.types.includes('Files')) {
+        // Only handle external file drops, not internal asset dragging or tab dragging
+        if (!e.dataTransfer.types.includes('Files') || e.target.closest('.tab') || this.isDraggingTab) {
             return;
         }
         
         e.preventDefault();
         e.stopPropagation();
         
-        // Check if we're entering the container area
-        const rect = this.container.getBoundingClientRect();
-        if (e.clientX >= rect.left && e.clientX <= rect.right &&
-            e.clientY >= rect.top && e.clientY <= rect.bottom) {
-            if (this.dropOverlay) {
-                this.dropOverlay.style.display = 'flex';
+        // Check if we're entering the previews container area (only assets area, not tabs)
+        if (this.previewsContainer) {
+            const rect = this.previewsContainer.getBoundingClientRect();
+            if (e.clientX >= rect.left && e.clientX <= rect.right &&
+                e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                if (this.dropOverlay) {
+                    this.dropOverlay.style.display = 'flex';
+                }
             }
         }
     }
 
     handleDragOver(e) {
-        // Only handle external file drops, not internal asset dragging
-        if (!e.dataTransfer.types.includes('Files')) {
+        // Only handle external file drops, not internal asset dragging or tab dragging
+        if (!e.dataTransfer.types.includes('Files') || e.target.closest('.tab') || this.isDraggingTab) {
             return;
         }
         
         e.preventDefault();
         e.stopPropagation();
         
-        // Continuously check if still inside container
-        const rect = this.container.getBoundingClientRect();
-        if (e.clientX >= rect.left && e.clientX <= rect.right &&
-            e.clientY >= rect.top && e.clientY <= rect.bottom) {
-            if (this.dropOverlay) {
-                this.dropOverlay.style.display = 'flex';
+        // Continuously check if still inside previews container (assets area only)
+        if (this.previewsContainer) {
+            const rect = this.previewsContainer.getBoundingClientRect();
+            if (e.clientX >= rect.left && e.clientX <= rect.right &&
+                e.clientY >= rect.top && e.clientY <= rect.bottom) {
+                if (this.dropOverlay) {
+                    this.dropOverlay.style.display = 'flex';
+                }
             }
         }
     }
 
     handleDragLeave(e) {
-        // Only handle external file drops
-        if (!e.dataTransfer.types.includes('Files')) {
+        // Only handle external file drops, not tab dragging
+        if (!e.dataTransfer.types.includes('Files') || e.target.closest('.tab') || this.isDraggingTab) {
             return;
         }
         
         e.preventDefault();
         e.stopPropagation();
         
-        // Check if actually leaving the container
-        const rect = this.container.getBoundingClientRect();
-        const isOutside = e.clientX < rect.left || e.clientX > rect.right ||
-                         e.clientY < rect.top || e.clientY > rect.bottom;
-        
-        if (isOutside && this.dropOverlay) {
-            this.dropOverlay.style.display = 'none';
+        // Check if actually leaving the previews container (assets area only)
+        if (this.previewsContainer) {
+            const rect = this.previewsContainer.getBoundingClientRect();
+            const isOutside = e.clientX < rect.left || e.clientX > rect.right ||
+                             e.clientY < rect.top || e.clientY > rect.bottom;
+
+            if (isOutside && this.dropOverlay) {
+                this.dropOverlay.style.display = 'none';
+            }
         }
     }
 
@@ -1982,8 +2034,8 @@ export class AssetPanel extends BasePanel {
      * @param {DragEvent} e - Drop event
      */
     async handleDrop(e) {
-        // Only handle external file drops, not internal asset dragging
-        if (!e.dataTransfer.types.includes('Files') || !e.dataTransfer.files.length) {
+        // Only handle external file drops, not internal asset dragging or tab dragging
+        if (!e.dataTransfer.types.includes('Files') || !e.dataTransfer.files.length || e.target.closest('.tab') || this.isDraggingTab) {
             return;
         }
         
@@ -2174,6 +2226,24 @@ export class AssetPanel extends BasePanel {
         if (this.resizeHandler) {
             window.removeEventListener('resize', this.resizeHandler);
         }
+        
+        if (this.tabMouseUpHandler) {
+            document.removeEventListener('mouseup', this.tabMouseUpHandler);
+        }
+        
+        if (this.foldersMouseMoveHandler) {
+            document.removeEventListener('mousemove', this.foldersMouseMoveHandler);
+        }
+        
+        if (this.foldersMouseUpHandler) {
+            document.removeEventListener('mouseup', this.foldersMouseUpHandler);
+        }
+
+        // Clean up ResizeObserver for drop overlay
+        if (this.dropOverlayResizeObserver) {
+            this.dropOverlayResizeObserver.disconnect();
+        }
+
         // Note: Global marquee handlers now managed by BasePanel
 
         // Clean up context menus

@@ -1,10 +1,92 @@
-# API Reference - 2D Level Editor v3.49.4
+# API Reference - 2D Level Editor v3.49.6
 
 ## Обзор
 
 Данный документ содержит подробное описание API всех компонентов редактора уровней.
 
 > 🔍 **Быстрый справочник:** См. [COMPREHENSIVE_API_REFERENCE.md](./COMPREHENSIVE_API_REFERENCE.md) для полного списка всех методов и функций в структурированном виде.
+
+## Обновления v3.49.6 - Исправления drag-n-drop и tab dragging
+
+### 🎯 AssetPanel - Исправление конфликтов drag-n-drop
+**Файл**: `src/ui/AssetPanel.js`
+
+```javascript
+// ИСПРАВЛЕНО: Разделены CSS классы для разных типов drag операций
+// Для табов используется tab-drag-over
+tab.classList.add('tab-drag-over');
+
+// Для файлов остается drag-over
+element.classList.add('drag-over');
+```
+
+**Исправленные проблемы:**
+- **Было**: При перетаскивании табов срабатывала подсветка drop для файлов
+- **Стало**: Табы и файлы используют разные CSS классы, конфликтов нет
+
+### 🎯 AssetPanel - Исправление множественных обработчиков
+**Файл**: `src/ui/AssetPanel.js`
+
+```javascript
+// ИСПРАВЛЕНО: Обработчики добавляются только один раз
+if (!this.tabDraggingSetup) {
+    this.setupTabDragging();
+    this.tabDraggingSetup = true;
+}
+
+// Сохранение ссылок для cleanup
+this.tabMouseUpHandler = (e) => { /* ... */ };
+this.foldersMouseMoveHandler = handleMouseMove;
+this.foldersMouseUpHandler = handleMouseUp;
+
+// Корректный cleanup
+destroy() {
+    if (this.tabMouseUpHandler) {
+        document.removeEventListener('mouseup', this.tabMouseUpHandler);
+    }
+    if (this.foldersMouseMoveHandler) {
+        document.removeEventListener('mousemove', this.foldersMouseMoveHandler);
+    }
+    if (this.foldersMouseUpHandler) {
+        document.removeEventListener('mouseup', this.foldersMouseUpHandler);
+    }
+}
+```
+
+**Исправленные проблемы:**
+- **Было**: Обработчики добавлялись многократно при каждом рендере табов
+- **Стало**: Обработчики добавляются один раз с корректным cleanup
+
+### 🎯 MouseHandlers - Проверки на tab dragging
+**Файл**: `src/core/MouseHandlers.js`
+
+```javascript
+// ДОБАВЛЕНО: Проверки на перетаскивание табов
+handleDragOver(e) {
+    // Skip if tab dragging is active
+    if (e.target.closest('.tab') || this.editor.assetPanel?.isDraggingTab) {
+        return;
+    }
+    
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+}
+
+handleDrop(e) {
+    // Skip if tab dragging is active
+    if (e.target.closest('.tab') || this.editor.assetPanel?.isDraggingTab) {
+        return;
+    }
+    
+    e.preventDefault();
+    // ... остальная логика
+}
+```
+
+**Технические детали:**
+- Добавлены проверки `isDraggingTab` во всех drag обработчиках
+- Предотвращены конфликты между tab dragging и file drag-n-drop
+- Сохранена полная функциональность для обоих типов операций
 
 ## Обновления v3.49.3 - Исправление дублирования в группах
 

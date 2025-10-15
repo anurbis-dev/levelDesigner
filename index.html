@@ -670,17 +670,17 @@
                 const tab = e.target.closest('.tab-right');
                 if (!tab || tab === draggedTab) {
                     // Remove drag-over from all tabs
-                    tabContainer.querySelectorAll('.tab-right').forEach(t => t.classList.remove('drag-over'));
+                    tabContainer.querySelectorAll('.tab-right').forEach(t => t.classList.remove('tab-drag-over'));
                     return;
                 }
 
                 const targetIndex = Array.from(tabContainer.children).indexOf(tab);
                 
                 // Remove drag-over from all tabs
-                tabContainer.querySelectorAll('.tab-right').forEach(t => t.classList.remove('drag-over'));
+                tabContainer.querySelectorAll('.tab-right').forEach(t => t.classList.remove('tab-drag-over'));
                 
                 // Add drag-over to target tab
-                tab.classList.add('drag-over');
+                tab.classList.add('tab-drag-over');
             });
 
             // Handle mouse up to complete drag
@@ -704,7 +704,7 @@
 
                 // Clean up
                 tabContainer.querySelectorAll('.tab-right').forEach(t => {
-                    t.classList.remove('dragging', 'drag-over');
+                    t.classList.remove('dragging', 'tab-drag-over');
                 });
                 
                 draggedTab = null;

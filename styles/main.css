@@ -146,11 +146,11 @@ header {
     z-index: 1000;
 }
 
-.tab-right.drag-over, .tab.drag-over {
+.tab-right.drag-over, .tab.drag-over, .tab-right.tab-drag-over, .tab.tab-drag-over {
     border-left: 2px solid var(--ui-active-color, #3B82F6);
 }
 
-.tab-right.drag-over:last-child, .tab.drag-over:last-child {
+.tab-right.drag-over:last-child, .tab.drag-over:last-child, .tab-right.tab-drag-over:last-child, .tab.tab-drag-over:last-child {
     border-right: 2px solid var(--ui-active-color, #3B82F6);
 }
 
