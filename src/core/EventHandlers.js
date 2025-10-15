@@ -212,6 +212,13 @@ export class EventHandlers extends BaseModule {
                 return;
             }
 
+            // Clear selection if objects are selected
+            const selectedObjects = this.editor.stateManager.get('selectedObjects');
+            if (selectedObjects && selectedObjects.size > 0) {
+                this.editor.stateManager.set('selectedObjects', new Set());
+                return;
+            }
+
             this.editor.cancelAllActions();
             return;
         }
