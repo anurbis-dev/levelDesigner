@@ -300,7 +300,51 @@ export class GroupOperations extends BaseModule {
     }
 
     /**
-     * Remove a specific group if it's empty
+     * Extract single object from group and move it to parent level
+     * @param {Object} group - Group containing the object
+     * @param {Object} childObject - Object to extract from group
+     * @returns {boolean} - True if object was successfully extracted
+     */
+    extractObjectFromGroup(group, childObject) {
+        if (!group || !childObject || group.type !== 'group' || !group.children) {
+            return false;
+        }
+
+        // Check if object is actually in this group
+        if (!group.children.some(child => child.id === childObject.id)) {
+            return false;
+        }
+
+        // Save state for history
+        this.editor.historyManager.saveState(
+            this.editor.level.objects, 
+            this.editor.stateManager.get('selectedObjects'), 
+            false, 
+            this.editor.stateManager.get('groupEditMode')
+        );
+
+        // Convert child coordinates back to world coordinates (same logic as MouseHandlers)
+        const worldX = childObject.x + group.x;
+        const worldY = childObject.y + group.y;
+        
+        // Remove object from group (same logic as MouseHandlers)
+        group.children = group.children.filter(c => c.id !== childObject.id);
+        
+        // Update object world position
+        childObject.x = worldX;
+        childObject.y = worldY;
+
+        // Add object to top level (same logic as MouseHandlers)
+        this.editor.level.addObject(childObject);
+
+        // Clear caches for extracted object (same logic as MouseHandlers)
+        this.editor.invalidateObjectCaches(childObject.id);
+
+        return true;
+    }
+
+    /**
+     * Remove a specific group if it's empty or has only one child
      * @param {Object} targetGroup - The specific group to check and potentially remove
      * @returns {boolean} - True if the group was removed
      */
@@ -313,8 +357,8 @@ export class GroupOperations extends BaseModule {
         // Fix: Handle case where children is undefined or null
         const childrenArray = targetGroup.children || [];
 
-        // Don't remove if it's not empty
-        if (childrenArray.length > 0) {
+        // Don't remove if it has more than one child
+        if (childrenArray.length > 1) {
             return false;
         }
 
@@ -328,17 +372,20 @@ export class GroupOperations extends BaseModule {
             }
         }
 
-
-        // Check if group actually exists in the level first
-        const existsInMainLevel = this.editor.level.objects.some(obj => obj.id === targetGroup.id);
+        // If group has exactly one child, extract it before removing the group
+        if (childrenArray.length === 1) {
+            const childObject = childrenArray[0];
+            const extracted = this.extractObjectFromGroup(targetGroup, childObject);
+            if (!extracted) {
+                return false; // Failed to extract, don't remove group
+            }
+        }
 
         // Remove from main level
         const initialCount = this.editor.level.objects.length;
-        
         this.editor.level.objects = this.editor.level.objects.filter(obj => obj.id !== targetGroup.id);
-        const finalCount = this.editor.level.objects.length;
         
-        if (finalCount < initialCount) {
+        if (this.editor.level.objects.length < initialCount) {
             return true; // Group was removed from main level
         }
 
@@ -369,7 +416,7 @@ export class GroupOperations extends BaseModule {
     }
 
     /**
-     * Remove empty groups from the level automatically
+     * Remove empty groups or groups with only one child from the level automatically
      * Groups that are currently being edited are protected from deletion
      */
     removeEmptyGroups() {
@@ -388,35 +435,50 @@ export class GroupOperations extends BaseModule {
         // Track if any groups were removed
         let groupsRemoved = false;
 
-        // Remove empty groups from main level
+        // Remove empty groups or groups with one child from main level
         const beforeCount = this.editor.level.objects.length;
         this.editor.level.objects = this.editor.level.objects.filter(obj => {
             if (obj.type === 'group' && 
                 obj.children && 
-                obj.children.length === 0 && 
+                obj.children.length <= 1 && 
                 !protectedGroupIds.has(obj.id)) {
-                return false; // Remove empty group
+                
+                // If group has exactly one child, extract it first
+                if (obj.children.length === 1) {
+                    const childObject = obj.children[0];
+                    this.extractObjectFromGroup(obj, childObject);
+                }
+                
+                return false; // Remove group (now empty after extraction)
             }
-            return true; // Keep non-empty groups and other objects
+            return true; // Keep groups with more than one child and other objects
         });
         
         if (this.editor.level.objects.length < beforeCount) {
             groupsRemoved = true;
         }
 
-        // Recursively remove empty groups from nested groups
+        // Recursively remove empty groups or groups with one child from nested groups
         const removeEmptyNestedGroups = (objects) => {
             for (const obj of objects) {
                 if (obj.type === 'group' && obj.children) {
                     const beforeNestedCount = obj.children.length;
+                    
                     obj.children = obj.children.filter(child => {
                         if (child.type === 'group' && 
                             child.children && 
-                            child.children.length === 0 && 
+                            child.children.length <= 1 && 
                             !protectedGroupIds.has(child.id)) {
-                            return false; // Remove empty nested group
+                            
+                            // If nested group has exactly one child, extract it first
+                            if (child.children.length === 1) {
+                                const childObject = child.children[0];
+                                this.extractObjectFromGroup(child, childObject);
+                            }
+                            
+                            return false; // Remove group (now empty after extraction)
                         }
-                        return true; // Keep non-empty groups and other objects
+                        return true; // Keep groups with more than one child and other objects
                     });
                     
                     if (obj.children.length < beforeNestedCount) {
