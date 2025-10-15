@@ -212,7 +212,17 @@ export class EventHandlers extends BaseModule {
                 return;
             }
 
-            // Clear selection if objects are selected
+            // Check if any active processes are running that shouldn't be interrupted
+            const mouse = this.editor.stateManager.get('mouse');
+            const hasActiveProcess = mouse.isPlacingObjects || mouse.isDragging || mouse.isRightDown;
+
+            if (hasActiveProcess) {
+                // Don't clear selection during active processes
+                this.editor.cancelAllActions();
+                return;
+            }
+
+            // Clear selection if objects are selected and no active processes
             const selectedObjects = this.editor.stateManager.get('selectedObjects');
             if (selectedObjects && selectedObjects.size > 0) {
                 this.editor.stateManager.set('selectedObjects', new Set());
