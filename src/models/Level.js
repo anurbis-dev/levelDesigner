@@ -600,6 +600,63 @@ export class Level {
     }
 
     /**
+     * Построить полный индекс объекта в иерархии групп для сортировки
+     * @param {Object} obj - Объект для которого строится индекс
+     * @returns {string} Полный индекс в формате "layerIndex.objectIndex" или "layerIndex.groupPath.objectIndex"
+     */
+    buildFullObjectIndex(obj) {
+        if (!obj) return "0.0";
+
+        // Для объектов верхнего уровня используем обычный zIndex
+        if (!this.isObjectInAnyGroup(obj.id)) {
+            const layerIndex = obj.layerId ? this.getLayerById(obj.layerId)?.getIndex() || 0 : 0;
+            const objectIndex = obj.zIndex ? Math.floor((obj.zIndex % 1) * 1000) : 0;
+            return `${layerIndex}.${objectIndex}`;
+        }
+
+        // Для объектов в группах строим полный путь
+        const path = this.buildObjectPath(obj.id);
+        const layerIndex = obj.layerId ? this.getLayerById(obj.layerId)?.getIndex() || 0 : 0;
+        const objectIndex = obj.zIndex ? Math.floor((obj.zIndex % 1) * 1000) : 0;
+
+        return `${layerIndex}.${path}.${objectIndex}`;
+    }
+
+    /**
+     * Построить путь объекта в иерархии групп
+     * @param {string} objId - ID объекта
+     * @returns {string} Путь в формате "groupIndex.childIndex.grandchildIndex"
+     */
+    buildObjectPath(objId) {
+        const entry = this.objectsIndex.get(objId);
+        if (!entry || !entry.topLevelParent) {
+            return "0";
+        }
+
+        const path = [];
+        let current = entry.topLevelParent;
+
+        // Строим цепочку от корневой группы к объекту
+        while (current) {
+            const currentIndex = current.zIndex ? Math.floor((current.zIndex % 1) * 1000) : 0;
+            path.unshift(currentIndex.toString());
+            current = this.objectsIndex.get(current.id)?.topLevelParent || null;
+        }
+
+        return path.join('.');
+    }
+
+    /**
+     * Проверить, находится ли объект в какой-либо группе
+     * @param {string} objId - ID объекта
+     * @returns {boolean} true если объект в группе
+     */
+    isObjectInAnyGroup(objId) {
+        const entry = this.objectsIndex.get(objId);
+        return entry && entry.topLevelParent !== null;
+    }
+
+    /**
      * Добавить объект в индекс
      * @param {Object} obj - Объект для добавления
      * @param {Object|null} topLevelParent - Top-level родитель

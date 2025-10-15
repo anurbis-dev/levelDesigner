@@ -284,12 +284,21 @@ export class DuplicateOperations extends BaseModule {
                 if (base.zIndex === undefined) {
                     // For duplicated objects, assign next zIndex in the current layer
                     const layerIndex = groupEditMode.group.layerId ? this.editor.level.getLayerById(groupEditMode.group.layerId)?.getIndex() || 0 : 0;
-                    const nextObjectIndex = this.editor.level.getNextZIndex() % 1; // Get object index part
+
+                    // Build full hierarchical index for proper sorting in groups
+                    const fullIndex = this.editor.level.buildFullObjectIndex(groupEditMode.group);
+                    const indexParts = fullIndex.split('.').map(Number);
+
+                    // Find the next object index in the current hierarchy level
+                    const hierarchyLevel = indexParts.length;
+                    const maxObjectIndex = this.editor.level.getNextZIndex() % 1;
+                    const nextObjectIndex = maxObjectIndex;
+
                     base.zIndex = layerIndex + nextObjectIndex;
 
                     // Log zIndex assignment for duplicated objects
                     if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
-                        Logger.duplicate.debug(`Duplicated object ${base.name || base.id} placed in group ${groupEditMode.group.name}, assigned zIndex: ${base.zIndex} (layer ${layerIndex}, object index: ${Math.floor(nextObjectIndex * 1000)})`);
+                        Logger.duplicate.debug(`Duplicated object ${base.name || base.id} placed in group ${groupEditMode.group.name}, assigned zIndex: ${base.zIndex} (layer ${layerIndex}, full hierarchy: ${fullIndex}, object index: ${Math.floor(nextObjectIndex * 1000)})`);
                     }
                 }
 

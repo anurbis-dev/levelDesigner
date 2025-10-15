@@ -9,16 +9,33 @@ import { Logger } from '../utils/Logger.js';
 export class ObjectOperations extends BaseModule {
 
     /**
-     * Sort objects by zIndex in descending order (highest zIndex first)
+     * Sort objects by full hierarchical index in descending order (highest index first)
      * @param {Array} objects - Array of objects to sort
      * @returns {Array} Sorted array
      * @private
      */
     _sortObjectsByZIndexDescending(objects) {
         return objects.sort((a, b) => {
-            const aZIndex = a.zIndex !== undefined ? a.zIndex : 0;
-            const bZIndex = b.zIndex !== undefined ? b.zIndex : 0;
-            return bZIndex - aZIndex; // descending order - highest zIndex first
+            // Use full hierarchical index for proper sorting in groups
+            const aFullIndex = this.editor.level.buildFullObjectIndex(a);
+            const bFullIndex = this.editor.level.buildFullObjectIndex(b);
+
+            // Convert string indices to comparable numbers
+            const aParts = aFullIndex.split('.').map(Number);
+            const bParts = bFullIndex.split('.').map(Number);
+
+            // Compare each part of the hierarchical index
+            const maxLength = Math.max(aParts.length, bParts.length);
+            for (let i = 0; i < maxLength; i++) {
+                const aVal = aParts[i] || 0;
+                const bVal = bParts[i] || 0;
+
+                if (aVal !== bVal) {
+                    return bVal - aVal; // descending order - highest index first
+                }
+            }
+
+            return 0; // equal indices
         });
     }
 
