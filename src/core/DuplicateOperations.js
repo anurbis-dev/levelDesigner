@@ -145,7 +145,8 @@ export class DuplicateOperations extends BaseModule {
             'duplicate.isActive': true,
             'duplicate.objects': positioned,
             'duplicate.basePosition': { x: worldPos.x, y: worldPos.y },
-            'duplicate.isAltDragMode': isAltDragMode
+            'duplicate.isAltDragMode': isAltDragMode,
+            'duplicate.originalObjects': selected // Save original objects for group membership check
         });
 
         // Selective cache invalidation for duplicate preview
@@ -163,50 +164,11 @@ export class DuplicateOperations extends BaseModule {
         const duplicate = this.editor.stateManager.get('duplicate');
         if (!duplicate || !duplicate.isActive || !Array.isArray(duplicate.objects) || duplicate.objects.length === 0) return;
 
-        // Use the same snap logic as dragSelectedObjects
-        const snapEnabled = SnapUtils.isSnapToGridEnabled(this.editor.stateManager, this.editor.level);
-        let dx, dy;
+        // Snap logic is now handled inside DuplicateUtils.updatePositions
+        // This ensures consistent behavior with group edit mode
 
-        if (snapEnabled) {
-            // Use cursor position as anchor for snap mode
-            const currentAnchorX = worldPos.x;
-            const currentAnchorY = worldPos.y;
-            
-            const gridSize = SnapUtils.getGridSize(this.editor.stateManager, this.editor.level);
-            const snapTolerancePercent = this.editor.userPrefs?.get('snapTolerance') || 80;
-            const tolerance = gridSize * (snapTolerancePercent / 100);
-            
-            // Find nearest grid point for cursor
-            const nearestGrid = SnapUtils.findNearestGridPoint(currentAnchorX, currentAnchorY, gridSize, tolerance);
-            
-            if (nearestGrid) {
-                // Calculate current position of first duplicate object's bottom-left corner
-                const firstObj = duplicate.objects[0];
-                const firstObjWorldPos = this.editor.objectOperations.getObjectWorldPosition(firstObj);
-                const firstObjHeight = firstObj.height || 32;
-                const currentBottomLeftX = firstObjWorldPos.x;
-                const currentBottomLeftY = firstObjWorldPos.y + firstObjHeight;
-                
-                // Move object so its bottom-left corner goes to grid point
-                dx = nearestGrid.x - currentBottomLeftX;
-                dy = nearestGrid.y - currentBottomLeftY;
-            } else {
-                // No grid point within tolerance - follow cursor normally
-                dx = worldPos.x - duplicate.basePosition.x;
-                dy = worldPos.y - duplicate.basePosition.y;
-            }
-        } else {
-            // Snap disabled - normal relative movement
-            dx = worldPos.x - duplicate.basePosition.x;
-            dy = worldPos.y - duplicate.basePosition.y;
-        }
-
-        // Apply movement to all duplicate objects
-        const updatedObjects = duplicate.objects.map(obj => {
-            const newX = obj.x + dx;
-            const newY = obj.y + dy;
-            return { ...obj, x: newX, y: newY };
-        });
+        // Apply movement using DuplicateUtils for proper group edit mode handling
+        const updatedObjects = this.editor.duplicateRenderUtils.updatePositions(duplicate.objects, worldPos, this.editor);
 
         // Update state with new positions
         this.editor.stateManager.update({
@@ -287,24 +249,36 @@ export class DuplicateOperations extends BaseModule {
             const worldY = base.y;
 
             if (groupEditMode && groupEditMode.isActive && groupEditMode.group) {
-                // Check if target group's layer is locked
-                if (groupEditMode.group.layerId) {
-                    const targetLayer = this.editor.level.getLayerById(groupEditMode.group.layerId);
-                    if (targetLayer && targetLayer.locked) {
-                        // Skip placing in locked layer - place on main level instead
-                        base.x = worldX;
-                        base.y = worldY;
-                        this.editor.level.addObject(base);
-                        newIds.add(base.id);
-                        this.editor.invalidateObjectCaches(base.id);
-                        return;
-                    }
-                }
+                // Check if this object was originally inside the group
+                const wasInGroup = duplicate.originalObjects && 
+                    duplicate.originalObjects.some(orig => orig.id === obj.id && 
+                        this.editor.objectOperations.isObjectInGroupRecursive(orig, groupEditMode.group));
                 
-                // Convert world coordinates to relative coordinates within the group
-                const groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
-                base.x = worldX - groupPos.x;
-                base.y = worldY - groupPos.y;
+                if (wasInGroup) {
+                    // Check if target group's layer is locked
+                    if (groupEditMode.group.layerId) {
+                        const targetLayer = this.editor.level.getLayerById(groupEditMode.group.layerId);
+                        if (targetLayer && targetLayer.locked) {
+                            // Skip placing in locked layer - place on main level instead
+                            base.x = worldX;
+                            base.y = worldY;
+                            this.editor.level.addObject(base);
+                            newIds.add(base.id);
+                            this.editor.invalidateObjectCaches(base.id);
+                            return;
+                        }
+                    }
+                    
+                    // Convert world coordinates to relative coordinates within the group
+                    // This matches the Alt+drag logic in MouseHandlers.dragSelectedObjects
+                    const groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
+                    base.x = worldX - groupPos.x;
+                    base.y = worldY - groupPos.y;
+                } else {
+                    // External object - keep world coordinates for main level placement
+                    base.x = worldX;
+                    base.y = worldY;
+                }
 
                 // Assign zIndex if not set (for duplicated objects in groups)
                 if (base.zIndex === undefined) {

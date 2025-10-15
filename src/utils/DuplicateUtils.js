@@ -19,8 +19,12 @@ export class DuplicateUtils {
             const offsetY = obj._offsetY ?? 0;
 
             // Calculate new position based on cursor position and saved offset
-            const newX = worldPos.x + offsetX;
-            const newY = worldPos.y + offsetY;
+            let newX, newY;
+
+            // Simplified: always place preview at cursor position (world coordinates)
+            // This matches how objects appear under cursor during normal placement
+            newX = worldPos.x + offsetX;
+            newY = worldPos.y + offsetY;
 
             return { ...obj, x: newX, y: newY };
         });
@@ -37,25 +41,25 @@ export class DuplicateUtils {
             let objWorldX, objWorldY;
 
             if (editor && editor.objectOperations) {
-                // Special handling for group edit mode
+                // Check if object is inside a group and group edit mode is active
                 if (editor.objectOperations.isInGroupEditMode()) {
                     const groupEditMode = editor.objectOperations.getGroupEditMode();
                     const activeGroup = groupEditMode.group;
 
-                    // Calculate world position relative to the active group
-                    const groupWorldPos = editor.objectOperations.getObjectWorldPosition(activeGroup);
-                    objWorldX = groupWorldPos.x + obj.x;
-                    objWorldY = groupWorldPos.y + obj.y;
-                } else {
-                    // Use standard method for normal mode
-                    const objPos = editor.objectOperations.getObjectWorldPosition(obj);
-                    objWorldX = objPos.x;
-                    objWorldY = objPos.y;
+                    // Check if this object belongs to the active group
+                    const isObjectInActiveGroup = editor.objectOperations.isObjectInGroupRecursive(obj, activeGroup);
+
+                    if (isObjectInActiveGroup) {
+                        // For objects inside the group, we want preview to appear at cursor position
+                        // So offset should be 0 (object appears exactly at cursor)
+                        return { ...obj, _offsetX: 0, _offsetY: 0 };
+                    }
                 }
 
-                // For parallax-enabled objects, we need to account for the fact that users see objects
-                // at their visual positions (internal + parallax offset). Since cursor coordinates
-                // are already in world space, we work with internal coordinates but adjust the logic.
+                // For external objects or normal mode, use standard world positioning
+                const objPos = editor.objectOperations.getObjectWorldPosition(obj);
+                objWorldX = objPos.x;
+                objWorldY = objPos.y;
             } else {
                 // Fallback to local coordinates if editor not available
                 objWorldX = obj.x;
@@ -91,8 +95,8 @@ export const duplicateRenderUtils = {
     /**
      * Update object positions
      */
-    updatePositions: (objects, worldPos) => {
-        return DuplicateUtils.updatePositions(objects, worldPos);
+    updatePositions: (objects, worldPos, editor = null) => {
+        return DuplicateUtils.updatePositions(objects, worldPos, editor);
     },
 
     /**
