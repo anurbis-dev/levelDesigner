@@ -130,7 +130,8 @@ export class StateManager {
             panels: {
                 rightPanelWidth: 300,
                 assetsPanelHeight: 256,
-                consoleHeight: 200
+                consoleHeight: 200,
+                foldersWidth: 192
             },
             
             // Selection state
@@ -444,7 +445,8 @@ export class StateManager {
             panels: {
                 rightPanelWidth: 300,
                 assetsPanelHeight: 256,
-                consoleHeight: 200
+                consoleHeight: 200,
+                foldersWidth: 192
             }
         };
         

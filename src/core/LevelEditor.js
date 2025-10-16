@@ -49,7 +49,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.50.2';
+    static VERSION = '3.50.3';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -67,9 +67,12 @@ export class LevelEditor {
         
         // Store user preferences manager
         this.userPrefs = userPreferencesManager;
-        
+
         // Use ConfigManager from UserPreferencesManager if available, otherwise create new one
         this.configManager = userPreferencesManager?.configManager || null;
+
+        // Initialize subscriptions array for StateManager listeners
+        this.subscriptions = [];
         
         // Replace browser dialogs with custom ones
         dialogReplacer.replace();
@@ -495,8 +498,63 @@ export class LevelEditor {
         // Setup event listeners
         this.eventHandlers.setupEventListeners();
 
+        // Setup panel size listeners for StateManager changes
+        this.setupPanelSizeListeners();
+
         // Initialize search controls for current tab
         this.initializeSearchControls();
+    }
+
+    /**
+     * Setup listeners for panel size changes from StateManager
+     * @private
+     */
+    setupPanelSizeListeners() {
+        // Listen for right panel width changes
+        const rightPanelUnsubscribe = this.stateManager.subscribe('panels.rightPanelWidth', (width) => {
+            const rightPanel = document.getElementById('right-panel');
+            if (rightPanel && width !== undefined) {
+                if (width === 0) {
+                    // Hide panel completely when collapsed
+                    rightPanel.style.display = 'none';
+                } else {
+                    // Apply width and show panel
+                    rightPanel.style.width = width + 'px';
+                    rightPanel.style.flex = '0 0 auto';
+                    rightPanel.style.display = 'flex';
+                }
+
+                // Update canvas and render
+                if (this.canvasRenderer) {
+                    this.canvasRenderer.resizeCanvas();
+                    this.render();
+                }
+            }
+        });
+        this.subscriptions.push(rightPanelUnsubscribe);
+
+        // Listen for assets panel height changes
+        const assetsPanelUnsubscribe = this.stateManager.subscribe('panels.assetsPanelHeight', (height) => {
+            const assetsPanel = document.getElementById('assets-panel');
+            if (assetsPanel && height !== undefined) {
+                if (height === 0) {
+                    // Hide panel completely when collapsed
+                    assetsPanel.style.display = 'none';
+                } else {
+                    // Apply height and show panel
+                    assetsPanel.style.height = height + 'px';
+                    assetsPanel.style.flexShrink = '0';
+                    assetsPanel.style.display = 'flex';
+                }
+
+                // Update canvas and render
+                if (this.canvasRenderer) {
+                    this.canvasRenderer.resizeCanvas();
+                    this.render();
+                }
+            }
+        });
+        this.subscriptions.push(assetsPanelUnsubscribe);
     }
 
     /**
@@ -821,7 +879,7 @@ export class LevelEditor {
      */
     applyConfiguration() {
         if (!this.configManager) {
-            console.warn('[CONFIG] ConfigManager not initialized, skipping configuration');
+            Logger.settings.warn('ConfigManager not initialized, skipping configuration');
             return;
         }
         
@@ -1013,7 +1071,7 @@ export class LevelEditor {
             }
 
         } catch (error) {
-            console.warn('[CONFIG] Failed to apply saved panel settings:', error);
+            Logger.layout.warn('Failed to apply saved panel settings:', error);
         }
     }
 
@@ -1033,6 +1091,10 @@ export class LevelEditor {
                     rightPanel.style.flexShrink = '0';
                     rightPanel.style.flexGrow = '0';
                 }
+                // Sync to StateManager
+                if (this.stateManager) {
+                    this.stateManager.set('panels.rightPanelWidth', rightPanelWidth);
+                }
             }
 
             // Assets panel height
@@ -1042,6 +1104,10 @@ export class LevelEditor {
                 if (assetsPanel) {
                     assetsPanel.style.height = assetsPanelHeight + 'px';
                     assetsPanel.style.flexShrink = '0';
+                }
+                // Sync to StateManager
+                if (this.stateManager) {
+                    this.stateManager.set('panels.assetsPanelHeight', assetsPanelHeight);
                 }
             }
 
@@ -1056,7 +1122,7 @@ export class LevelEditor {
                 }
             }
         } catch (error) {
-            console.warn('[CONFIG] Failed to apply panel sizes from preferences:', error);
+            Logger.layout.warn('Failed to apply panel sizes from preferences:', error);
         }
     }
 
@@ -1085,7 +1151,7 @@ export class LevelEditor {
             }
             
         } catch (error) {
-            console.warn('[CONFIG] Failed to apply tab order settings:', error);
+            Logger.ui.warn('Failed to apply tab order settings:', error);
         }
     }
 
@@ -1929,17 +1995,29 @@ export class LevelEditor {
             Logger.lifecycle.error('Error during lifecycle destruction:', error);
         }
         
+        // Cancel all StateManager subscriptions
+        if (this.subscriptions) {
+            this.subscriptions.forEach(unsubscribe => {
+                try {
+                    unsubscribe();
+                } catch (error) {
+                    Logger.lifecycle.warn('Error unsubscribing from StateManager:', error);
+                }
+            });
+            this.subscriptions = [];
+        }
+
         // Clear all caches
         this.clearCaches();
         this.clearSelectableObjectsCache();
-        
+
         // Clear managers
         if (this.level) {
             this.level.clearLayerCountsCache();
             this.level.clearObjectsIndex();
             this.level = null;
         }
-        
+
         this.stateManager = null;
         this.fileManager = null;
         this.assetManager = null;

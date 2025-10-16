@@ -185,7 +185,7 @@ export class AssetPanel extends BasePanel {
         // Create folders container
         this.foldersContainer = document.createElement('div');
         this.foldersContainer.id = 'asset-folders-container';
-        this.foldersContainer.className = 'w-48 bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0';
+        this.foldersContainer.className = 'bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0';
 
         // Create resizer for folders panel
         this.foldersResizer = document.createElement('div');
@@ -385,6 +385,18 @@ export class AssetPanel extends BasePanel {
     }
 
     /**
+     * Update content visibility based on folders width
+     */
+    updateContentVisibility(foldersWidth) {
+        // Hide folders container completely when width is very small
+        if (foldersWidth < 50) {
+            this.foldersContainer.style.display = 'none';
+        } else {
+            this.foldersContainer.style.display = 'flex';
+        }
+    }
+
+    /**
      * Setup folders panel resizer
      */
     setupFoldersResizer() {
@@ -394,6 +406,7 @@ export class AssetPanel extends BasePanel {
         let initialMouseX = 0;
         let initialFoldersWidth = 0;
         let lastAppliedFoldersWidth = null;
+        let previousFoldersWidth = 192; // Default width (w-48)
 
         this.foldersResizer.addEventListener('mousedown', (e) => {
             isResizingFolders = true;
@@ -410,6 +423,49 @@ export class AssetPanel extends BasePanel {
             e.stopPropagation();
         });
 
+        // Double-click handler for foldersResizer
+        this.foldersResizer.addEventListener('dblclick', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const currentWidth = this.foldersContainer.offsetWidth;
+            const containerWidth = this.container.clientWidth;
+            const resizerWidth = 4;
+            const minWidth = 0;
+            const maxWidth = containerWidth - resizerWidth;
+            
+            // Check if already at minimum (collapsed)
+            if (currentWidth <= minWidth) {
+                // Restore to previous width
+                const newWidth = Math.min(previousFoldersWidth, maxWidth);
+                
+                // Update StateManager instead of direct styles
+                if (this.levelEditor?.stateManager) {
+                    this.levelEditor.stateManager.set('panels.foldersWidth', newWidth);
+                }
+                this.updateContentVisibility(newWidth);
+                
+                // Save to preferences
+                if (this.levelEditor?.userPrefs) {
+                    this.levelEditor.userPrefs.set('foldersWidth', newWidth);
+                }
+            } else {
+                // Save current width and collapse
+                previousFoldersWidth = currentWidth;
+                
+                // Update StateManager instead of direct styles
+                if (this.levelEditor?.stateManager) {
+                    this.levelEditor.stateManager.set('panels.foldersWidth', 0);
+                }
+                this.updateContentVisibility(0);
+                
+                // Save to preferences
+                if (this.levelEditor?.userPrefs) {
+                    this.levelEditor.userPrefs.set('foldersWidth', 0);
+                }
+            }
+        });
+
         // Global mousemove handler
         const handleMouseMove = (e) => {
             if (!isResizingFolders) return;
@@ -420,8 +476,8 @@ export class AssetPanel extends BasePanel {
             const mouseDelta = e.clientX - initialMouseX;
             const containerWidth = this.container.clientWidth;
             const resizerWidth = 4;
-            const minWidth = 120; // Minimum folders width
-            const maxWidth = Math.max(minWidth, containerWidth - 200); // Leave space for content
+            const minWidth = 0; // Allow folders to be completely hidden
+            const maxWidth = containerWidth - resizerWidth; // Allow resizer to reach the edge
 
             let newWidth;
             if (this.foldersPosition === 'left') {
@@ -442,6 +498,9 @@ export class AssetPanel extends BasePanel {
             this.foldersContainer.style.width = newWidth + 'px';
             this.foldersContainer.style.flexShrink = '0';
             this.foldersContainer.style.flexGrow = '0';
+
+            // Hide/show content elements based on folders width
+            this.updateContentVisibility(newWidth);
 
             // Save to preferences
             if (this.levelEditor?.userPrefs) {
@@ -476,10 +535,19 @@ export class AssetPanel extends BasePanel {
         // Load saved width
         if (this.levelEditor?.userPrefs) {
             const savedWidth = this.levelEditor.userPrefs.get('foldersWidth');
-            if (savedWidth && typeof savedWidth === 'number' && savedWidth >= 120) {
+            if (savedWidth && typeof savedWidth === 'number' && savedWidth >= 0) {
                 this.foldersContainer.style.width = savedWidth + 'px';
                 this.foldersContainer.style.flexShrink = '0';
                 this.foldersContainer.style.flexGrow = '0';
+                
+                // Update visibility based on loaded width
+                this.updateContentVisibility(savedWidth);
+                
+                // Initialize previous width for double-click toggle
+                if (savedWidth > 0) {
+                    previousFoldersWidth = savedWidth;
+                }
+                
                 Logger.ui.debug('Loaded folders width from preferences:', savedWidth);
             }
         }

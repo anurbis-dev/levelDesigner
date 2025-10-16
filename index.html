@@ -159,7 +159,7 @@
                 }
             } catch (error) {
                 try {
-                    console.log(`[LAYOUT] ${message}`, ...args);
+                    Logger.layout.info(message, ...args);
                 } catch (fallbackError) {
                     // Last resort - just log to console
                     console.log(`[LAYOUT] ${message}`);
@@ -179,7 +179,7 @@
                     try {
                         document.body.classList.add(`theme-${theme}`);
                     } catch (themeError) {
-                        console.warn('[LAYOUT] Failed to apply theme:', themeError);
+                        Logger.layout.warn('Failed to apply theme:', themeError);
                     }
                 }
 
@@ -189,7 +189,7 @@
                     try {
                         document.body.classList.add('compact-mode');
                     } catch (compactError) {
-                        console.warn('[LAYOUT] Failed to apply compact mode:', compactError);
+                        Logger.layout.warn('Failed to apply compact mode:', compactError);
                     }
                 }
 
@@ -206,7 +206,7 @@
                             }
                         }
                     } catch (consoleError) {
-                        console.warn('[LAYOUT] Failed to apply console visibility:', consoleError);
+                        Logger.layout.warn('Failed to apply console visibility:', consoleError);
                     }
                 }
 
@@ -225,7 +225,7 @@
                             }
                         }
                     } catch (toolbarError) {
-                        console.warn('[LAYOUT] Failed to apply toolbar visibility:', toolbarError);
+                        Logger.layout.warn('Failed to apply toolbar visibility:', toolbarError);
                     }
                 }
 
@@ -253,7 +253,7 @@
                             }
                         }
                     } catch (assetsError) {
-                        console.warn('[LAYOUT] Failed to apply assets panel visibility:', assetsError);
+                        Logger.layout.warn('Failed to apply assets panel visibility:', assetsError);
                     }
                 }
 
@@ -281,7 +281,7 @@
                             }
                         }
                     } catch (rightError) {
-                        console.warn('[LAYOUT] Failed to apply right panel visibility:', rightError);
+                        Logger.layout.warn('Failed to apply right panel visibility:', rightError);
                     }
                 }
 
@@ -295,6 +295,8 @@
                             rightPanel.style.width = rightPanelWidth + 'px';
                             rightPanel.style.flexShrink = '0';
                             rightPanel.style.flexGrow = '0';
+                            
+                            // Previous width will be initialized in setupPanelResizing()
                         }
                     }
 
@@ -305,6 +307,8 @@
                         if (assetsPanel) {
                             assetsPanel.style.height = assetsPanelHeight + 'px';
                             assetsPanel.style.flexShrink = '0';
+                            
+                            // Previous height will be initialized in setupPanelResizing()
                         }
                     }
 
@@ -319,11 +323,11 @@
                         }
                     }
                 } catch (sizeError) {
-                    console.warn('[LAYOUT] Failed to apply panel sizes:', sizeError);
+                    Logger.layout.warn('Failed to apply panel sizes:', sizeError);
                 }
 
             } catch (error) {
-                console.warn('[LAYOUT] Failed to apply user settings immediately:', error);
+                Logger.layout.warn('Failed to apply user settings immediately:', error);
             }
         }
 
@@ -334,7 +338,7 @@
         try {
             userPrefs = new UserPreferencesManager();
         } catch (error) {
-            console.error('Error creating UserPreferencesManager:', error);
+            Logger.preferences.error('Error creating UserPreferencesManager:', error);
             // Create a fallback preferences manager
             userPrefs = {
                 get: () => undefined,
@@ -347,7 +351,7 @@
         try {
             applyUserSettingsImmediately(userPrefs);
         } catch (error) {
-            console.error('Error applying user settings immediately:', error);
+            Logger.layout.error('Error applying user settings immediately:', error);
         }
 
         // Initialize the level editor with user preferences
@@ -355,7 +359,7 @@
         try {
             editor = new LevelEditor(userPrefs);
         } catch (error) {
-            console.error('Error creating LevelEditor:', error);
+            Logger.lifecycle.error('Error creating LevelEditor:', error);
             // Create a fallback editor
             editor = {
                 init: () => Promise.resolve(),
@@ -368,7 +372,7 @@
         try {
             editor.init().then(() => {
                 // Panel sizes are now applied immediately before LevelEditor initialization to prevent UI flicker
-                console.log('Level Editor initialized successfully');
+                Logger.lifecycle.info('Level Editor initialized successfully');
             }).catch(error => {
                 console.error('Failed to initialize level editor:', error);
                 console.error('Error details:', error);
@@ -451,6 +455,18 @@
                 const consolePanel = document.getElementById('console-panel');
                 const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
 
+                // Universal function for applying panel styles
+                function applyPanelStyles(panel, size, direction = 'width', display = 'flex') {
+                    if (direction === 'width') {
+                        panel.style.width = size + 'px';
+                        panel.style.flex = '0 0 auto';
+                    } else {
+                        panel.style.height = size + 'px';
+                        panel.style.flexShrink = '0';
+                    }
+                    panel.style.display = display;
+                }
+
             let isResizingX = false;
             let isResizingAssets = false;
             let isAnyResizing = false;
@@ -461,6 +477,21 @@
             let initialAssetsPanelHeight = 0;
             let initialRightPanelWidth = 0;
             let lastAppliedRightWidth = null; // Track last width to detect boundary stall
+            
+            // Previous states for double-click toggle
+            let previousRightPanelWidth = 300; // Default width
+            let previousAssetsPanelHeight = 256; // Default height
+
+            // Initialize previous states from saved preferences
+            const savedRightPanelWidth = userPrefs.get('rightPanelWidth');
+            if (savedRightPanelWidth && savedRightPanelWidth > 0) {
+                previousRightPanelWidth = savedRightPanelWidth;
+            }
+            
+            const savedAssetsPanelHeight = userPrefs.get('assetsPanelHeight');
+            if (savedAssetsPanelHeight && savedAssetsPanelHeight > 0) {
+                previousAssetsPanelHeight = savedAssetsPanelHeight;
+            }
 
             // Note: Panel sizes are now applied immediately before LevelEditor initialization to prevent UI flicker
 
@@ -472,10 +503,44 @@
                 initialRightPanelWidth = rightPanel.offsetWidth;
                 document.body.style.cursor = 'col-resize';
                 document.body.style.userSelect = 'none';
-                document.body.style.pointerEvents = 'none';
                 resizerX.classList.add('resizing');
                 e.preventDefault();
                 e.stopPropagation();
+            });
+
+            // Double-click handler for resizerX
+            resizerX.addEventListener('dblclick', (e) => {
+                Logger.layout.info('Right panel resizer double-click triggered');
+                e.preventDefault();
+                e.stopPropagation();
+
+                const currentWidth = rightPanel.offsetWidth;
+                const containerWidth = mainContainer.clientWidth;
+                const resizerWidth = 6;
+                const minWidth = 0;
+                const maxWidth = containerWidth - resizerWidth;
+
+                // Check if already at minimum (collapsed)
+                if (currentWidth <= minWidth) {
+                    // Restore to previous width
+                    const newWidth = Math.min(previousRightPanelWidth, maxWidth);
+                    if (window.editor && window.editor.stateManager) {
+                        window.editor.stateManager.set('panels.rightPanelWidth', newWidth);
+                    }
+                    userPrefs.set('rightPanelWidth', newWidth);
+                } else {
+                    // Save current width and collapse
+                    previousRightPanelWidth = currentWidth;
+                    if (window.editor && window.editor.stateManager) {
+                        window.editor.stateManager.set('panels.rightPanelWidth', 0);
+                    }
+                    userPrefs.set('rightPanelWidth', 0);
+                }
+
+                if (window.editor && window.editor.canvasRenderer) {
+                    window.editor.canvasRenderer.resizeCanvas();
+                    window.editor.render();
+                }
             });
 
             // Assets panel resizer (between main area and assets panel)
@@ -486,11 +551,40 @@
                 initialAssetsPanelHeight = assetsPanel.offsetHeight;
                 document.body.style.cursor = 'row-resize';
                 document.body.style.userSelect = 'none';
-                document.body.style.pointerEvents = 'none';
                 resizerAssets.classList.add('resizing');
-                
                 e.preventDefault();
                 e.stopPropagation();
+            });
+
+            // Double-click handler for resizerAssets
+            resizerAssets.addEventListener('dblclick', (e) => {
+                Logger.layout.info('Assets panel resizer double-click triggered');
+                e.preventDefault();
+                e.stopPropagation();
+
+                const currentHeight = assetsPanel.offsetHeight;
+                const minHeight = 0;
+
+                // Check if already at minimum (collapsed)
+                if (currentHeight <= minHeight) {
+                    // Restore to previous height
+                    if (window.editor && window.editor.stateManager) {
+                        window.editor.stateManager.set('panels.assetsPanelHeight', previousAssetsPanelHeight);
+                    }
+                    userPrefs.set('assetsPanelHeight', previousAssetsPanelHeight);
+                } else {
+                    // Save current height and collapse
+                    previousAssetsPanelHeight = currentHeight;
+                    if (window.editor && window.editor.stateManager) {
+                        window.editor.stateManager.set('panels.assetsPanelHeight', 0);
+                    }
+                    userPrefs.set('assetsPanelHeight', 0);
+                }
+
+                if (window.editor && window.editor.canvasRenderer) {
+                    window.editor.canvasRenderer.resizeCanvas();
+                    window.editor.render();
+                }
             });
 
 
@@ -565,7 +659,6 @@
                     lastAppliedRightWidth = null;
                     document.body.style.cursor = '';
                     document.body.style.userSelect = '';
-                    document.body.style.pointerEvents = '';
                     resizerX.classList.remove('resizing');
                     resizerAssets.classList.remove('resizing');
                     e.preventDefault();
@@ -634,13 +727,6 @@
             } catch (error) {
                 console.error('Error setting up panel resizing:', error);
             }
-        }
-
-        // Initialize panel resizing
-        try {
-            setupPanelResizing();
-        } catch (error) {
-            console.error('Error initializing panel resizing:', error);
         }
 
         // Tab dragging functionality
@@ -1288,6 +1374,13 @@ if (!isResizing) return;
                 window.editor = editor;
             } catch (error) {
                 console.error('Error setting global editor:', error);
+            }
+
+            // Initialize panel resizing after editor is available
+            try {
+                setupPanelResizing();
+            } catch (error) {
+                Logger.layout.error('Error initializing panel resizing:', error);
             }
 
             // Register console context menu with the manager

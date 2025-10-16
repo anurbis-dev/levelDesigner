@@ -243,7 +243,84 @@ styles/
 
 ## Система разделителей панелей
 
-Редактор использует гибкую систему разделителей для настройки размеров панелей:
+Редактор использует гибкую систему разделителей для настройки размеров панелей с поддержкой дабл-клика для сворачивания/разворачивания:
+
+### Универсальная функция применения стилей
+
+```javascript
+// Универсальная функция для всех разделителей панелей
+function applyPanelStyles(panel, size, direction = 'width', display = 'flex') {
+    if (direction === 'width') {
+        panel.style.width = size + 'px';
+        panel.style.flex = '0 0 auto';
+    } else {
+        panel.style.height = size + 'px';
+        panel.style.flexShrink = '0';
+    }
+    panel.style.display = display;
+}
+```
+
+**Параметры:**
+- `panel` - DOM элемент панели
+- `size` - размер в пикселях
+- `direction` - направление: `'width'` или `'height'`
+- `display` - отображение: `'flex'` или `'none'`
+
+**Использование:**
+```javascript
+// Для правой панели (вертикальный разделитель)
+applyPanelStyles(rightPanel, newWidth, 'width', 'flex');
+
+// Для панели ассетов (горизонтальный разделитель)
+applyPanelStyles(assetsPanel, newHeight, 'height', 'flex');
+
+// Сворачивание любой панели
+applyPanelStyles(anyPanel, 0, 'width', 'none');
+```
+
+### Дабл-клик разделителей
+
+Все разделители поддерживают дабл-клик для быстрого сворачивания/разворачивания:
+
+```javascript
+// Обработчик дабл-клика для правого разделителя
+resizerX.addEventListener('dblclick', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const currentWidth = rightPanel.offsetWidth;
+    const minWidth = 0;
+    
+    if (currentWidth <= minWidth) {
+        // Восстановить предыдущий размер
+        const newWidth = Math.min(previousRightPanelWidth, maxWidth);
+        applyPanelStyles(rightPanel, newWidth, 'width', 'flex');
+        
+        // Обновить StateManager и preferences
+        if (window.editor && window.editor.stateManager) {
+            window.editor.stateManager.set('panels.rightPanelWidth', newWidth);
+        }
+        userPrefs.set('rightPanelWidth', newWidth);
+    } else {
+        // Сохранить текущий размер и свернуть
+        previousRightPanelWidth = currentWidth;
+        applyPanelStyles(rightPanel, 0, 'width', 'none');
+        
+        // Обновить StateManager и preferences
+        if (window.editor && window.editor.stateManager) {
+            window.editor.stateManager.set('panels.rightPanelWidth', 0);
+        }
+        userPrefs.set('rightPanelWidth', 0);
+    }
+    
+    // Обновить canvas
+    if (window.editor && window.editor.canvasRenderer) {
+        window.editor.canvasRenderer.resizeCanvas();
+        window.editor.render();
+    }
+});
+```
 
 ### Вертикальный разделитель (между canvas и правой панелью)
 
