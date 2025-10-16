@@ -13,6 +13,8 @@
     --ui-active-color: #3b82f6; /* blue-500 */
     --ui-active-text-color: #ffffff; /* white */
     --ui-active-tab-color: #374151; /* gray-700 */
+    --ui-hover-bg-color: #374151; /* gray-700 */
+    --ui-active-color-alpha: rgba(59, 130, 246, 0.3); /* blue-500 with alpha */
     --canvas-background-color: #4b5563; /* gray-600 */
     
     /* Selection Variables */
@@ -148,6 +150,24 @@ input, textarea {
     background-color: var(--ui-background-color, #1f2937) !important;
 }
 
+/* Toolbar buttons text color */
+#toolbar-container button {
+    color: var(--ui-text-color, #d1d5db) !important;
+}
+
+#toolbar-container button .text {
+    color: var(--ui-text-color, #d1d5db) !important;
+}
+
+#toolbar-container button .icon {
+    color: var(--ui-text-color, #d1d5db) !important;
+}
+
+/* Toolbar section titles */
+#toolbar-container span {
+    color: var(--ui-text-color, #9ca3af) !important;
+}
+
 /* Assets panel background */
 #assets-panel {
     background-color: var(--ui-background-color, #111827) !important;
@@ -161,6 +181,15 @@ input, textarea {
 /* Header/Menu background */
 header {
     background-color: var(--ui-background-color, #111827) !important;
+}
+
+/* Menu buttons and text */
+header button {
+    color: var(--ui-text-color, #d1d5db) !important;
+}
+
+header .text-sm {
+    color: var(--ui-text-color, #9ca3af) !important;
 }
 
 /* Styles for canvas (main workspace) */
@@ -222,6 +251,49 @@ header {
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
 }
 
+/* Styles for asset name labels in Grid View */
+.asset-name-label {
+    color: var(--ui-text-color, #e5e7eb);
+}
+
+.asset-thumbnail.selected .asset-name-label {
+    color: var(--ui-active-text-color, #ffffff) !important;
+}
+
+/* Asset details header */
+.asset-details-header {
+    color: var(--ui-text-color, #d1d5db);
+}
+
+/* Notification messages */
+.notification-message {
+    color: var(--ui-active-text-color, #ffffff);
+}
+
+/* Folders panel styles */
+.folder-item {
+    background-color: transparent;
+}
+
+.folder-item:hover {
+    background-color: var(--ui-hover-bg-color, #374151);
+}
+
+.folder-item.selected {
+    background-color: var(--ui-active-color-alpha, rgba(59, 130, 246, 0.3));
+}
+
+/* UIFactory styles */
+.block.text-sm.font-medium {
+    color: var(--ui-text-color, #d1d5db);
+}
+
+/* Input fields - UIFactory and Transforms section */
+.mt-1.block.w-full.bg-gray-700,
+.w-full.bg-gray-700.border.border-gray-600 {
+    color: var(--ui-text-color, #d1d5db);
+}
+
 /* Styles for selection rectangle in asset panel */
 #asset-marquee {
     position: absolute;
@@ -238,6 +310,11 @@ header {
     border-radius: 3px;
     cursor: pointer;
     white-space: nowrap;
+    color: var(--ui-text-color, #e5e7eb);
+}
+
+.outliner-item * {
+    color: var(--ui-text-color, #e5e7eb);
 }
 
 .outliner-item:hover {
@@ -245,7 +322,12 @@ header {
 }
 
 .outliner-item.selected {
-    background-color: #3B82F6;
+    background-color: var(--ui-active-color, #3B82F6);
+    color: var(--ui-active-text-color, #ffffff);
+}
+
+.outliner-item.selected * {
+    color: var(--ui-active-text-color, #ffffff) !important;
 }
 
 /* Styles for asset list and details items */
@@ -253,6 +335,11 @@ header {
     padding: 0.5rem;
     border-radius: 0.25rem;
     cursor: pointer;
+    color: var(--ui-text-color, #e5e7eb);
+}
+
+.asset-list-item *, .asset-details-row * {
+    color: var(--ui-text-color, #e5e7eb);
 }
 
 .asset-thumbnail:hover, .asset-list-item:hover, .asset-details-row:hover {
@@ -265,12 +352,16 @@ header {
 }
 
 .asset-list-item.selected, .asset-details-row.selected {
-    background-color: #3B82F6;
-    color: #ffffff;
+    background-color: var(--ui-active-color, #3B82F6);
+    color: var(--ui-active-text-color, #ffffff);
+}
+
+.asset-list-item.selected *, .asset-details-row.selected * {
+    color: var(--ui-active-text-color, #ffffff) !important;
 }
 
 .asset-list-item.selected:hover, .asset-details-row.selected:hover {
-    background-color: #3B82F6;
+    background-color: var(--ui-active-color, #3B82F6);
 }
 
 .outliner-group-header {
@@ -462,7 +553,7 @@ input[type="range"] {
 }
 
 .console-message.log {
-    color: #d1d5db; /* gray-300 */
+    color: var(--ui-text-color, #d1d5db); /* gray-300 */
 }
 
 .console-message.info {

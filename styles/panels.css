@@ -180,7 +180,7 @@
 }
 
 .panel-input::placeholder {
-    color: #9ca3af;
+    color: var(--ui-text-color, #9ca3af);
 }
 
 /* Panel buttons */
@@ -247,7 +247,7 @@
 
 .panel-list-item.selected {
     background-color: #1e40af;
-    color: #ffffff;
+    color: var(--ui-active-text-color, #ffffff);
 }
 
 /* Panel search */
@@ -262,7 +262,7 @@
     background-color: #374151;
     border: 1px solid #4b5563;
     border-radius: 0.25rem;
-    color: #ffffff;
+    color: var(--ui-active-text-color, #ffffff);
     font-size: 0.875rem;
 }
 
@@ -279,7 +279,7 @@
     transform: translateY(-50%);
     background: none;
     border: none;
-    color: #9ca3af;
+    color: var(--ui-text-color, #9ca3af);
     cursor: pointer;
     padding: 0.25rem;
     border-radius: 0.25rem;
@@ -287,7 +287,7 @@
 }
 
 .panel-search-clear:hover {
-    color: #ffffff;
+    color: var(--ui-active-text-color, #ffffff);
     background-color: #4b5563;
 }
 
@@ -302,7 +302,7 @@
 .panel-filter-btn {
     padding: 0.25rem 0.75rem;
     background-color: #374151;
-    color: #d1d5db;
+    color: var(--ui-text-color, #d1d5db);
     border: 1px solid #4b5563;
     border-radius: 0.25rem;
     font-size: 0.75rem;
@@ -312,12 +312,12 @@
 
 .panel-filter-btn:hover {
     background-color: #4b5563;
-    color: #ffffff;
+    color: var(--ui-active-text-color, #ffffff);
 }
 
 .panel-filter-btn.active {
     background-color: #2563eb;
-    color: #ffffff;
+    color: var(--ui-active-text-color, #ffffff);
     border-color: #2563eb;
 }
 
@@ -325,7 +325,7 @@
 .panel-empty {
     text-align: center;
     padding: 2rem;
-    color: #9ca3af;
+    color: var(--ui-text-color, #9ca3af);
 }
 
 .panel-empty-icon {
@@ -345,7 +345,7 @@
     align-items: center;
     justify-content: center;
     padding: 2rem;
-    color: #9ca3af;
+    color: var(--ui-text-color, #9ca3af);
 }
 
 .panel-loading-spinner {

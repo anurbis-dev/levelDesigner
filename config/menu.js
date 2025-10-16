@@ -182,12 +182,14 @@ export const MENU_CONFIG = {
         action: {
             tagName: 'a',
             classes: 'block px-4 py-2 text-sm hover:bg-gray-700',
-            href: '#'
+            href: '#',
+            style: 'color: var(--ui-text-color, #d1d5db);'
         },
         toggle: {
             tagName: 'a',
             classes: 'block px-4 py-2 text-sm hover:bg-gray-700 flex items-center',
             href: '#',
+            style: 'color: var(--ui-text-color, #d1d5db);',
             checkboxHtml: `
                 <span class="w-4 h-4 border border-gray-500 mr-2 flex items-center justify-center">
                     <span class="w-2 h-2 bg-gray-500 hidden" id="{id}-check"></span>
@@ -200,7 +202,8 @@ export const MENU_CONFIG = {
         },
         section: {
             tagName: 'div',
-            classes: 'px-4 py-2 text-xs text-gray-400 text-center border-b border-gray-600'
+            classes: 'px-4 py-2 text-xs text-center border-b border-gray-600',
+            style: 'color: var(--ui-text-color, #9ca3af);'
         }
     }
 };

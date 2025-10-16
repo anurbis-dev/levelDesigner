@@ -84,13 +84,13 @@ export class GridSettings {
                     <div class="settings-form-item">
                         <label style="display: flex; align-items: center; margin-top: 0.5rem;">
                             <input type="checkbox" class="settings-input" name="setting-input" data-setting="canvas.snapToGrid" ${snapToGrid ? 'checked' : ''} style="margin-right: 0.5rem;">
-                            <span style="color: #d1d5db;">Snap To Grid</span>
+                            <span style="color: var(--ui-text-color, #d1d5db);">Snap To Grid</span>
                         </label>
                     </div>
                     <div class="settings-form-item">
                         <label style="display: flex; align-items: center; margin-top: 0.5rem;">
                             <input type="checkbox" class="settings-input" name="setting-input" data-setting="canvas.showGrid" ${showGrid ? 'checked' : ''} style="margin-right: 0.5rem;">
-                            <span style="color: #d1d5db;">Show Grid</span>
+                            <span style="color: var(--ui-text-color, #d1d5db);">Show Grid</span>
                         </label>
                     </div>
                 </div>
@@ -118,7 +118,7 @@ export class GridSettings {
 
             <!-- Axis Constraint Settings -->
             <div class="settings-form-group" style="margin-top: 1.5rem; border-top: 1px solid #374151; padding-top: 1rem;">
-                <h4 style="font-size: 1rem; font-weight: 500; color: #d1d5db; margin-bottom: 0.75rem;">Axis Constraint</h4>
+                <h4 style="font-size: 1rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.75rem;">Axis Constraint</h4>
 
                 <div class="settings-flex" style="display: flex; gap: 1rem; align-items: center; width: 100%;">
                     <!-- Show Axis Checkbox -->
@@ -126,12 +126,12 @@ export class GridSettings {
                         <input type="checkbox" class="settings-input" name="setting-input" data-setting="editor.axisConstraint.showAxis"
                                ${showAxis ? 'checked' : ''}
                                style="width: 1rem; height: 1rem;">
-                        <label style="font-size: 0.875rem; color: #d1d5db;">Show Axis</label>
+                        <label style="font-size: 0.875rem; color: var(--ui-text-color, #d1d5db);">Show Axis</label>
                     </div>
 
                     <!-- Axis Color -->
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <label style="font-size: 0.875rem; color: #d1d5db;">Color:</label>
+                        <label style="font-size: 0.875rem; color: var(--ui-text-color, #d1d5db);">Color:</label>
                         <input type="color" class="settings-input" name="setting-input" data-setting="editor.axisConstraint.axisColor"
                                value="${ColorUtils.toHex(axisColor)}"
                                style="width: 2rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
@@ -139,7 +139,7 @@ export class GridSettings {
 
                     <!-- Axis Width -->
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <label style="font-size: 0.875rem; color: #d1d5db;">Width:</label>
+                        <label style="font-size: 0.875rem; color: var(--ui-text-color, #d1d5db);">Width:</label>
                         <input type="number" step="1" min="1" max="10" class="settings-input" name="setting-input" data-setting="editor.axisConstraint.axisWidth"
                                value="${axisWidth}"
                                style="width: 4rem; padding: 0.25rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white; text-align: center;">

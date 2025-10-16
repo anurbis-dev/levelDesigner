@@ -186,7 +186,8 @@ export class AssetPanel extends BasePanel {
         // Create folders container
         this.foldersContainer = document.createElement('div');
         this.foldersContainer.id = 'asset-folders-container';
-        this.foldersContainer.className = 'bg-gray-800 border-r border-gray-700 flex flex-col flex-shrink-0';
+        this.foldersContainer.className = 'border-r border-gray-700 flex flex-col flex-shrink-0';
+        this.foldersContainer.style.backgroundColor = 'var(--ui-background-color, #1f2937)';
 
         // Create resizer for folders panel
         this.foldersResizer = document.createElement('div');
@@ -734,7 +735,7 @@ export class AssetPanel extends BasePanel {
 
         // Create sticky header positioned at the assets panel level
         const header = document.createElement('div');
-        header.className = 'sticky z-10 grid grid-cols-6 gap-4 p-2 bg-gray-800 text-sm font-medium text-gray-300 border-b border-gray-700';
+        header.className = 'asset-details-header sticky z-10 grid grid-cols-6 gap-4 p-2 bg-gray-800 text-sm font-medium border-b border-gray-700';
         header.style.top = '0px'; // Stick to top of assets panel
         header.style.minWidth = '600px'; // Minimum width for all columns
         header.innerHTML = `
@@ -826,7 +827,7 @@ export class AssetPanel extends BasePanel {
         nameLabel.style.left = '0';
         nameLabel.style.right = '0';
         nameLabel.style.background = 'rgba(0, 0, 0, 0.7)';
-        nameLabel.style.color = 'white';
+        // Color handled by CSS
         nameLabel.style.fontSize = '10px';
         nameLabel.style.padding = '2px 4px';
         nameLabel.style.textAlign = 'center';
@@ -902,7 +903,8 @@ export class AssetPanel extends BasePanel {
         
         // Create name with truncation
         const nameDiv = document.createElement('div');
-        nameDiv.className = 'flex-1 text-xs text-gray-200 truncate text-center';
+        nameDiv.className = 'flex-1 text-xs truncate text-center';
+        // Color handled by CSS
         const displayName = asset.properties && asset.properties.isTemporary 
             ? `⏳ ${asset.name}`
             : asset.name;
@@ -953,7 +955,8 @@ export class AssetPanel extends BasePanel {
                 img.style.display = 'none';
                 const colorDiv = this.createColorFallback(asset, {
                     text: asset.name.charAt(0).toUpperCase(),
-                    className: 'w-full h-full rounded flex items-center justify-center text-white text-xs font-bold'
+                    className: 'w-full h-full rounded flex items-center justify-center text-xs font-bold',
+                    style: { color: 'var(--ui-active-text-color, #ffffff)' }
                 });
                 preview.appendChild(colorDiv);
             };
@@ -962,14 +965,16 @@ export class AssetPanel extends BasePanel {
             // Create colored rectangle as fallback (same as default assets)
             const colorDiv = this.createColorFallback(asset, {
                 text: asset.name.charAt(0).toUpperCase(),
-                className: 'w-full h-full rounded flex items-center justify-center text-white text-xs font-bold'
+                className: 'w-full h-full rounded flex items-center justify-center text-xs font-bold',
+                style: { color: 'var(--ui-active-text-color, #ffffff)' }
             });
             preview.appendChild(colorDiv);
         }
         
         // Name column
         const name = document.createElement('div');
-        name.className = 'text-sm text-gray-200 truncate';
+        name.className = 'text-sm truncate';
+        // Color handled by CSS
         name.textContent = asset.properties && asset.properties.isTemporary 
             ? `⏳ ${asset.name}`
             : asset.name;
@@ -979,22 +984,26 @@ export class AssetPanel extends BasePanel {
         
         // Type column
         const type = document.createElement('div');
-        type.className = 'text-sm text-gray-400';
+        type.className = 'text-sm';
+        // Color handled by CSS
         type.textContent = asset.type || 'object';
         
         // Category column
         const category = document.createElement('div');
-        category.className = 'text-sm text-gray-400';
+        category.className = 'text-sm';
+        // Color handled by CSS
         category.textContent = asset.category || 'Misc';
         
         // Size column
         const size = document.createElement('div');
-        size.className = 'text-sm text-gray-400';
+        size.className = 'text-sm';
+        // Color handled by CSS
         size.textContent = `${asset.width || 32}×${asset.height || 32}`;
         
         // Properties column - show PNG paths
         const properties = document.createElement('div');
-        properties.className = 'text-sm text-gray-400';
+        properties.className = 'text-sm';
+        // Color handled by CSS
         
         // Show PNG paths if available
         if (asset.imageSources && asset.imageSources.length > 0) {
@@ -1069,7 +1078,7 @@ export class AssetPanel extends BasePanel {
             alignItems: 'center',
             justifyContent: 'center',
             fontSize: '10px',
-            color: '#ffffff',
+            color: 'var(--ui-active-text-color, #ffffff)',
             textAlign: 'center',
             borderRadius: '4px'
         });
@@ -1844,7 +1853,7 @@ export class AssetPanel extends BasePanel {
     showSaveSuccessMessage(assetName, filename) {
         // Create temporary success message
         const message = document.createElement('div');
-        message.className = 'fixed top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+        message.className = 'notification-message fixed top-4 right-4 bg-green-600 px-4 py-2 rounded-lg shadow-lg z-50';
         message.textContent = `✅ Asset "${assetName}" saved as ${filename}`;
         
         document.body.appendChild(message);
@@ -1863,7 +1872,7 @@ export class AssetPanel extends BasePanel {
     showSaveErrorMessage(assetName, error) {
         // Create temporary error message
         const message = document.createElement('div');
-        message.className = 'fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+        message.className = 'notification-message fixed top-4 right-4 bg-red-600 px-4 py-2 rounded-lg shadow-lg z-50';
         message.textContent = `❌ Failed to save asset "${assetName}": ${error.message}`;
         
         document.body.appendChild(message);
@@ -1882,7 +1891,7 @@ export class AssetPanel extends BasePanel {
     showErrorMessage(message) {
         // Create temporary error message
         const errorDiv = document.createElement('div');
-        errorDiv.className = 'fixed top-4 right-4 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg z-50';
+        errorDiv.className = 'notification-message fixed top-4 right-4 bg-red-600 px-4 py-2 rounded-lg shadow-lg z-50';
         errorDiv.textContent = `❌ ${message}`;
         
         document.body.appendChild(errorDiv);

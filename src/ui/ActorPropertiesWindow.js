@@ -63,7 +63,7 @@ export class ActorPropertiesWindow extends SettingsPanel {
                 <div class="settings-content-area">
                     <div class="settings-main-content">
                         <div id="actor-properties-content">
-                            <div class="text-gray-400">No actor selected</div>
+                            <div style="color: var(--ui-text-color, #9ca3af);">No actor selected</div>
                         </div>
                     </div>
                 </div>
@@ -169,7 +169,7 @@ export class ActorPropertiesWindow extends SettingsPanel {
         if (!content) return;
 
         if (!this.currentActor) {
-            content.innerHTML = '<div class="text-gray-400">No actor selected</div>';
+            content.innerHTML = '<div style="color: var(--ui-text-color, #9ca3af);">No actor selected</div>';
             return;
         }
 
@@ -178,60 +178,60 @@ export class ActorPropertiesWindow extends SettingsPanel {
             <div class="space-y-4">
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-1">Name:</label>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Name:</label>
                         <input type="text" id="actor-name" value="${actor.name || ''}" 
-                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white">
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded" style="color: var(--ui-active-text-color, #ffffff);">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-1">Type:</label>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Type:</label>
                         <input type="text" id="actor-type" value="${actor.type || ''}" 
-                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white" readonly>
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded" readonly style="color: var(--ui-active-text-color, #ffffff);">
                     </div>
                 </div>
                 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-1">X Position:</label>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">X Position:</label>
                         <input type="number" id="actor-x" value="${actor.x || 0}" 
-                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white">
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded" style="color: var(--ui-active-text-color, #ffffff);">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-1">Y Position:</label>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Y Position:</label>
                         <input type="number" id="actor-y" value="${actor.y || 0}" 
-                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white">
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded" style="color: var(--ui-active-text-color, #ffffff);">
                     </div>
                 </div>
                 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-1">Width:</label>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Width:</label>
                         <input type="number" id="actor-width" value="${actor.width || 32}" 
-                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white">
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded" style="color: var(--ui-active-text-color, #ffffff);">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-300 mb-1">Height:</label>
+                        <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Height:</label>
                         <input type="number" id="actor-height" value="${actor.height || 32}" 
-                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white">
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded" style="color: var(--ui-active-text-color, #ffffff);">
                     </div>
                 </div>
                 
                 <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-1">Color:</label>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Color:</label>
                     <input type="color" id="actor-color" value="${actor.color || '#3B82F6'}" 
                            class="w-full h-10 bg-gray-700 border border-gray-600 rounded">
                 </div>
                 
                 <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-1">Image Path:</label>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Image Path:</label>
                     <input type="text" id="actor-imgSrc" value="${(actor.imgSrc !== null && actor.imgSrc !== undefined) ? actor.imgSrc : ''}" 
-                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white"
+                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded" style="color: var(--ui-active-text-color, #ffffff);"
                            placeholder="path/to/image.png">
                 </div>
                 
                 <div>
-                    <label class="block text-sm font-medium text-gray-300 mb-1">Category:</label>
+                    <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Category:</label>
                     <input type="text" id="actor-category" value="${(actor.category !== null && actor.category !== undefined) ? actor.category : ''}" 
-                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white">
+                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded" style="color: var(--ui-active-text-color, #ffffff);">
                 </div>
             </div>
         `;

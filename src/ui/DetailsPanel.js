@@ -101,7 +101,7 @@ export class DetailsPanel {
                 detailsTab.textContent = 'Level';
             }
         } else {
-            this.container.innerHTML = '<p class="text-gray-400">Select an object to see its properties.</p>';
+            this.container.innerHTML = '<p style="color: var(--ui-text-color, #9ca3af);">Select an object to see its properties.</p>';
             // Update tab title for no selection case
             this.updateTabTitle();
         }
@@ -139,15 +139,15 @@ export class DetailsPanel {
         const childAssets = this.getAllChildren(group).filter(o => o.type !== 'group').length;
         const childGroups = this.getAllChildren(group).filter(o => o.type === 'group').length;
         
-        section.innerHTML += `
+        section._content.innerHTML += `
             <div class="grid grid-cols-2 gap-4 text-sm">
                 <div class="text-center">
                     <div class="text-lg font-bold text-blue-400">${childAssets}</div>
-                    <div class="text-gray-400">Assets</div>
+                    <div style="color: var(--ui-text-color, #9ca3af);">Assets</div>
                 </div>
                 <div class="text-center">
                     <div class="text-lg font-bold text-green-400">${childGroups}</div>
-                    <div class="text-gray-400">Groups</div>
+                    <div style="color: var(--ui-text-color, #9ca3af);">Groups</div>
                 </div>
             </div>
         `;
@@ -190,7 +190,7 @@ export class DetailsPanel {
             onChange: (e) => obj.name = e.target.value,
             onBlur: () => this.notifyPropertyChange(obj, 'name', obj.name)
         });
-        section.appendChild(nameContainer);
+        section._content.appendChild(nameContainer);
 
         // Type (read-only)
         const typeContainer = UIFactory.createLabeledInput({
@@ -199,7 +199,7 @@ export class DetailsPanel {
             value: obj.type || 'unknown',
             disabled: true
         });
-        section.appendChild(typeContainer);
+        section._content.appendChild(typeContainer);
 
         this.container.appendChild(section);
     }
@@ -239,7 +239,7 @@ export class DetailsPanel {
                 this.notifyPropertyChange(obj, 'color', obj.color);
             }
         });
-        section.appendChild(colorContainer);
+        section._content.appendChild(colorContainer);
         
         this.container.appendChild(section);
     }
@@ -276,7 +276,7 @@ export class DetailsPanel {
                 this.notifyPropertyChange(obj, 'zIndex', newValue);
             }
         });
-        section.appendChild(zIndexContainer);
+        section._content.appendChild(zIndexContainer);
         
         this.container.appendChild(section);
     }
@@ -288,13 +288,33 @@ export class DetailsPanel {
      */
     createSection(title) {
         const section = document.createElement('div');
-        section.className = 'mb-4 p-3 bg-gray-800 rounded-lg border border-gray-700';
+        section.className = 'mb-6';
+        
+        // Create section header with separator line
+        const header = document.createElement('div');
+        header.className = 'flex items-center mb-3';
         
         const titleElement = document.createElement('h3');
-        titleElement.className = 'text-sm font-semibold text-gray-300 mb-3';
+        titleElement.className = 'text-sm font-semibold mr-3 flex-shrink-0';
+        titleElement.style.color = 'var(--ui-text-color, #d1d5db)';
         titleElement.textContent = title;
         
-        section.appendChild(titleElement);
+        // Add separator line
+        const separator = document.createElement('div');
+        separator.className = 'flex-1 h-px bg-gray-700';
+        
+        header.appendChild(titleElement);
+        header.appendChild(separator);
+        
+        // Create content container with padding
+        const content = document.createElement('div');
+        content.className = 'px-3';
+        
+        section.appendChild(header);
+        section.appendChild(content);
+        
+        // Store reference to content container for adding elements
+        section._content = content;
         return section;
     }
 
@@ -314,17 +334,17 @@ export class DetailsPanel {
         const positionRow = document.createElement('div');
         positionRow.className = 'col-span-2';
         positionRow.innerHTML = `
-            <label class="block text-sm font-medium text-gray-300 mb-1">Position</label>
+            <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Position</label>
             <div class="flex gap-2">
                 <div class="flex-1 relative">
-                    <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 pointer-events-none">X</span>
+                    <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs pointer-events-none" style="color: var(--ui-text-color, #9ca3af);">X</span>
                     <input type="number" 
                            class="w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm" 
                            placeholder="0" 
                            data-property="x">
                 </div>
                 <div class="flex-1 relative">
-                    <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 pointer-events-none">Y</span>
+                    <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs pointer-events-none" style="color: var(--ui-text-color, #9ca3af);">Y</span>
                     <input type="number" 
                            class="w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm" 
                            placeholder="0" 
@@ -337,17 +357,17 @@ export class DetailsPanel {
         const sizeRow = document.createElement('div');
         sizeRow.className = 'col-span-2';
         sizeRow.innerHTML = `
-            <label class="block text-sm font-medium text-gray-300 mb-1">Size</label>
+            <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Size</label>
             <div class="flex gap-2">
                 <div class="flex-1 relative">
-                    <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 pointer-events-none">W</span>
+                    <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs pointer-events-none" style="color: var(--ui-text-color, #9ca3af);">W</span>
                     <input type="number" 
                            class="w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm" 
                            placeholder="0" 
                            data-property="width">
                 </div>
                 <div class="flex-1 relative">
-                    <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs text-gray-400 pointer-events-none">H</span>
+                    <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs pointer-events-none" style="color: var(--ui-text-color, #9ca3af);">H</span>
                     <input type="number" 
                            class="w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm" 
                            placeholder="0" 
@@ -358,7 +378,7 @@ export class DetailsPanel {
         
         gridContainer.appendChild(positionRow);
         gridContainer.appendChild(sizeRow);
-        section.appendChild(gridContainer);
+        section._content.appendChild(gridContainer);
         
         return section;
     }
@@ -482,7 +502,7 @@ export class DetailsPanel {
                 objects.forEach(obj => this.notifyPropertyChange(obj, 'name', obj.name));
             }
         });
-        section.appendChild(nameContainer);
+        section._content.appendChild(nameContainer);
 
         // Type - show if all objects have the same type
         const firstType = objects[0].type || 'unknown';
@@ -495,7 +515,7 @@ export class DetailsPanel {
                 value: firstType,
                 disabled: true
             });
-            section.appendChild(typeContainer);
+            section._content.appendChild(typeContainer);
         }
 
         this.container.appendChild(section);
@@ -532,7 +552,7 @@ export class DetailsPanel {
                 this.notifyPropertyChange(objects[0], 'color', e.target.value);
             }
         });
-        section.appendChild(colorContainer);
+        section._content.appendChild(colorContainer);
         
         this.container.appendChild(section);
     }
@@ -586,19 +606,21 @@ export class DetailsPanel {
                         });
                     }
                 });
-                section.appendChild(propContainer);
+                section._content.appendChild(propContainer);
             });
         } else {
             // Show message when no custom properties exist
             const noPropsMsg = document.createElement('div');
-            noPropsMsg.className = 'text-sm text-gray-400 italic';
+            noPropsMsg.className = 'text-sm italic';
+            noPropsMsg.style.color = 'var(--ui-text-color, #9ca3af)';
             noPropsMsg.textContent = 'No custom properties';
-            section.appendChild(noPropsMsg);
+            section._content.appendChild(noPropsMsg);
         }
         
         // Add "Add Property" button
         const addButton = document.createElement('button');
-        addButton.className = 'mt-2 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700';
+        addButton.className = 'mt-2 px-3 py-1 bg-blue-600 text-sm rounded hover:bg-blue-700';
+        addButton.style.color = 'var(--ui-active-text-color, #ffffff)';
         addButton.textContent = 'Add Property';
         addButton.addEventListener('click', () => {
             const key = prompt('Enter property name:');
@@ -615,7 +637,7 @@ export class DetailsPanel {
                 this.render();
             }
         });
-        section.appendChild(addButton);
+        section._content.appendChild(addButton);
         
         this.container.appendChild(section);
     }
@@ -663,7 +685,7 @@ export class DetailsPanel {
                 });
             }
         });
-        section.appendChild(zIndexContainer);
+        section._content.appendChild(zIndexContainer);
         
         this.container.appendChild(section);
     }
@@ -723,12 +745,12 @@ export class DetailsPanel {
         layerContainer.innerHTML = `
             <div class="w-4 h-4 rounded border details-layer-color" data-color="${layerInfo.color}" style="background-color: ${layerInfo.color}"></div>
             <div class="flex-1">
-                <div class="text-sm font-medium text-gray-200">${layerInfo.name}</div>
-                <div class="text-xs text-gray-400">${layerInfo.objectCount} objects</div>
+                <div class="text-sm font-medium" style="color: var(--ui-text-color, #e5e7eb);">${layerInfo.name}</div>
+                <div class="text-xs" style="color: var(--ui-text-color, #9ca3af);">${layerInfo.objectCount} objects</div>
             </div>
         `;
 
-        section.appendChild(layerContainer);
+        section._content.appendChild(layerContainer);
         this.container.appendChild(section);
     }
 
@@ -778,17 +800,17 @@ export class DetailsPanel {
             layerContainer.innerHTML = `
                 <div class="w-4 h-4 rounded border" style="background-color: ${layerInfo.color}"></div>
                 <div class="flex-1">
-                    <div class="text-sm font-medium text-gray-200">${layerInfo.name}</div>
-                    <div class="text-xs text-gray-400">${layerInfo.objectCount} objects, ${objects.length} selected</div>
+                    <div class="text-sm font-medium" style="color: var(--ui-text-color, #e5e7eb);">${layerInfo.name}</div>
+                    <div class="text-xs" style="color: var(--ui-text-color, #9ca3af);">${layerInfo.objectCount} objects, ${objects.length} selected</div>
                 </div>
             `;
             
-            section.appendChild(layerContainer);
+            section._content.appendChild(layerContainer);
         } else {
             // Objects are on different layers
             const layerContainer = document.createElement('div');
             layerContainer.innerHTML = `
-                <div class="text-sm font-medium text-gray-300 mb-2">Layers (${layerAnalysis.layers.length} different)</div>
+                <div class="text-sm font-medium mb-2" style="color: var(--ui-text-color, #d1d5db);">Layers (${layerAnalysis.layers.length} different)</div>
                 <div class="space-y-2">
             `;
             
@@ -798,15 +820,15 @@ export class DetailsPanel {
                 layerItem.innerHTML = `
                     <div class="w-3 h-3 rounded border" style="background-color: ${layerInfo.color}"></div>
                     <div class="flex-1">
-                        <div class="text-sm text-gray-200">${layerInfo.name}</div>
-                        <div class="text-xs text-gray-400">${layerInfo.selectedCount} selected, ${layerInfo.objectCount} total</div>
+                        <div class="text-sm" style="color: var(--ui-text-color, #e5e7eb);">${layerInfo.name}</div>
+                        <div class="text-xs" style="color: var(--ui-text-color, #9ca3af);">${layerInfo.selectedCount} selected, ${layerInfo.objectCount} total</div>
                     </div>
                 `;
                 layerContainer.appendChild(layerItem);
             });
             
             layerContainer.innerHTML += '</div>';
-            section.appendChild(layerContainer);
+            section._content.appendChild(layerContainer);
         }
         
         this.container.appendChild(section);
@@ -874,19 +896,21 @@ export class DetailsPanel {
                         this.notifyPropertyChange(obj, 'customProperties', obj.customProperties);
                     }
                 });
-                section.appendChild(propContainer);
+                section._content.appendChild(propContainer);
             });
         } else {
             // Show message when no custom properties exist
             const noPropsMsg = document.createElement('div');
-            noPropsMsg.className = 'text-sm text-gray-400 italic';
+            noPropsMsg.className = 'text-sm italic';
+            noPropsMsg.style.color = 'var(--ui-text-color, #9ca3af)';
             noPropsMsg.textContent = 'No custom properties';
-            section.appendChild(noPropsMsg);
+            section._content.appendChild(noPropsMsg);
         }
         
         // Add "Add Property" button
         const addButton = document.createElement('button');
-        addButton.className = 'mt-2 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700';
+        addButton.className = 'mt-2 px-3 py-1 bg-blue-600 text-sm rounded hover:bg-blue-700';
+        addButton.style.color = 'var(--ui-active-text-color, #ffffff)';
         addButton.textContent = 'Add Property';
         addButton.addEventListener('click', () => {
             const key = prompt('Enter property name:');
@@ -900,7 +924,7 @@ export class DetailsPanel {
                 this.render();
             }
         });
-        section.appendChild(addButton);
+        section._content.appendChild(addButton);
         
         this.container.appendChild(section);
     }
@@ -1030,19 +1054,19 @@ export class DetailsPanel {
         overviewDiv.innerHTML = `
             <div class="text-center">
                 <div class="text-lg font-bold text-blue-400">${stats.totalObjects}</div>
-                <div class="text-gray-400 text-sm">Total Objects</div>
+                <div class="text-sm" style="color: var(--ui-text-color, #9ca3af);">Total Objects</div>
             </div>
             <div class="text-center">
                 <div class="text-lg font-bold text-green-400">${stats.groups}</div>
-                <div class="text-gray-400 text-sm">Groups</div>
+                <div class="text-sm" style="color: var(--ui-text-color, #9ca3af);">Groups</div>
             </div>
         `;
-        section.appendChild(overviewDiv);
+        section._content.appendChild(overviewDiv);
         
         // By Type breakdown
         const typeDiv = document.createElement('div');
         typeDiv.innerHTML = `
-            <div class="text-sm font-medium text-gray-300 mb-2">By Type:</div>
+            <div class="text-sm font-medium mb-2" style="color: var(--ui-text-color, #d1d5db);">By Type:</div>
             <div class="space-y-1">
                 ${Object.entries(stats.byType || {}).map(([type, count]) => {
                     if (type === 'player_start') {
@@ -1051,13 +1075,13 @@ export class DetailsPanel {
                         </div>`;
                     }
                     return `<div class="flex justify-between items-center">
-                        <span class="text-sm text-gray-200">${type}</span>
-                        <span class="text-sm text-gray-400">${count}</span>
+                        <span class="text-sm" style="color: var(--ui-text-color, #e5e7eb);">${type}</span>
+                        <span class="text-sm" style="color: var(--ui-text-color, #9ca3af);">${count}</span>
                     </div>`;
                 }).join('')}
             </div>
         `;
-        section.appendChild(typeDiv);
+        section._content.appendChild(typeDiv);
         
         this.container.appendChild(section);
     }
@@ -1071,15 +1095,16 @@ export class DetailsPanel {
         const buttonContainer = document.createElement('div');
         buttonContainer.innerHTML = `
                 <button id="set-camera-start-position-btn"
-                    class="w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded text-sm font-medium transition-colors">
+                    class="w-full bg-blue-600 hover:bg-blue-700 px-3 py-2 rounded text-sm font-medium transition-colors"
+                    style="color: var(--ui-active-text-color, #ffffff);">
                     Set Camera Start Position
                 </button>
-            <div class="text-xs text-gray-400 mt-2 text-center">
+            <div class="text-xs mt-2 text-center" style="color: var(--ui-text-color, #9ca3af);">
                     Sets current camera position as parallax reference point
             </div>
         `;
         
-        section.appendChild(buttonContainer);
+        section._content.appendChild(buttonContainer);
         this.container.appendChild(section);
 
         // Setup button event listener

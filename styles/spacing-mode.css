@@ -166,6 +166,7 @@ nav {
     align-items: center !important;
     justify-content: center !important;
     line-height: 1 !important;
+    color: var(--ui-text-color, #d1d5db) !important;
 }
 
 #toolbar-container button .icon {

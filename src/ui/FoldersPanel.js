@@ -32,8 +32,8 @@ export class FoldersPanel extends BasePanel {
     renderStructure() {
         this.container.innerHTML = `
             <div class="flex border-b border-gray-700 flex-shrink-0 px-3 py-2">
-                <span class="text-sm font-medium text-gray-300 flex-1">Content</span>
-                <button id="folders-position-toggle" class="text-gray-400 hover:text-white hover:bg-gray-700 px-1 py-0.5 rounded text-xs" title="Toggle position">
+                <span class="text-sm font-medium flex-1" style="color: var(--ui-text-color, #d1d5db);">Content</span>
+                <button id="folders-position-toggle" class="px-1 py-0.5 rounded text-xs" title="Toggle position" style="color: var(--ui-text-color, #9ca3af);">
                     ⇄
                 </button>
             </div>
@@ -77,7 +77,7 @@ export class FoldersPanel extends BasePanel {
 
         if (!this.folderStructure) {
             Logger.ui.debug('FoldersPanel: No folder structure to render');
-            this.folderTree.innerHTML = '<div class="text-gray-400 text-center py-4">No folders available</div>';
+            this.folderTree.innerHTML = '<div class="text-center py-4" style="color: var(--ui-text-color, #9ca3af);">No folders available</div>';
             return;
         }
 
@@ -383,17 +383,17 @@ export class FoldersPanel extends BasePanel {
             // Count assets recursively (including all subfolders)
             const totalAssetsInFolder = countAssetsRecursive(folder);
             const hasAssets = totalAssetsInFolder > 0;
-            const textColor = hasAssets ? 'text-gray-300' : 'text-gray-500';
+            const textColor = hasAssets ? 'var(--ui-text-color, #d1d5db)' : 'var(--ui-text-color, #6b7280)';
 
             html += `
-                <div class="folder-item ${isSelected ? 'selected' : ''} cursor-pointer ${isSelected ? '' : 'hover:bg-gray-700'} p-1 rounded mb-1"
+                <div class="folder-item ${isSelected ? 'selected' : ''} cursor-pointer p-1 rounded mb-1"
                      data-path="${folder.path}"
-                     style="padding-left: ${depth * 16 + 4}px; pointer-events: auto; z-index: 1; display: block; width: 100%; overflow: hidden; line-height: 1.2; height: 24px; word-break: keep-all; hyphens: none; ${isSelected ? 'background-color: rgba(59, 130, 246, 0.3) !important;' : ''}"
+                     style="padding-left: ${depth * 16 + 4}px; pointer-events: auto; z-index: 1; display: block; width: 100%; overflow: hidden; line-height: 1.2; height: 24px; word-break: keep-all; hyphens: none;"
                     <div class="flex items-center" style="min-width: 0; width: 100%; position: relative; line-height: 1.2; align-items: center; flex-wrap: nowrap;">
                         ${expandIcon ? `<span class="expand-icon text-xs ${textColor}" style="min-width: 16px; flex-shrink: 0; margin-right: 4px; cursor: pointer;">${expandIcon}</span>` : '<span style="min-width: 16px; flex-shrink: 0; margin-right: 4px;"></span>'}
                         <span class="folder-icon" style="min-width: 20px; flex-shrink: 0; margin-right: 8px;">${toggleIcon}</span>
-                        <span class="folder-name truncate ${textColor}" style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: calc(100% - 82px); position: relative; z-index: 1; line-height: 1.2;">${this.truncateName(folder.name)}</span>
-                        <span class="folder-count text-xs text-gray-400" style="white-space: nowrap; min-width: 40px; flex-shrink: 0; text-align: right; margin-left: 4px;">
+                        <span class="folder-name truncate" style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: calc(100% - 82px); position: relative; z-index: 1; line-height: 1.2; color: ${textColor};">${this.truncateName(folder.name)}</span>
+                        <span class="folder-count text-xs" style="white-space: nowrap; min-width: 40px; flex-shrink: 0; text-align: right; margin-left: 4px; color: var(--ui-text-color, #9ca3af);">
                             ${totalAssetsInFolder > 0 ? `(${totalAssetsInFolder})` : ''}
                         </span>
                     </div>

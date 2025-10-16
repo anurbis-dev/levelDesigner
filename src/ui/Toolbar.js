@@ -180,7 +180,14 @@ export class Toolbar {
         
         // Add collapsible title
         const titleSpan = document.createElement('span');
-        titleSpan.className = 'text-xs text-gray-400 mr-2 cursor-pointer hover:text-gray-300 select-none';
+        titleSpan.className = 'text-xs mr-2 cursor-pointer select-none';
+        titleSpan.style.color = 'var(--ui-text-color, #9ca3af)';
+        titleSpan.addEventListener('mouseenter', () => {
+            titleSpan.style.color = 'var(--ui-text-color, #d1d5db)';
+        });
+        titleSpan.addEventListener('mouseleave', () => {
+            titleSpan.style.color = 'var(--ui-text-color, #9ca3af)';
+        });
         titleSpan.textContent = title;
         titleSpan.setAttribute('data-collapsed', 'false');
         

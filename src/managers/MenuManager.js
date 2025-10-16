@@ -88,7 +88,8 @@ export class MenuManager {
 
         // Create dropdown
         const dropdown = document.createElement('div');
-        dropdown.className = 'absolute left-0 mt-0 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-20 hidden';
+        dropdown.className = 'absolute left-0 mt-0 w-48 rounded-md shadow-lg py-1 z-20 hidden';
+        dropdown.style.backgroundColor = 'var(--ui-background-color, #1f2937)';
         dropdown.style.paddingTop = '8px'; // Add invisible padding to cover the gap
 
         // Create menu items
@@ -129,6 +130,11 @@ export class MenuManager {
         element.id = itemConfig.id;
         element.className = template.classes;
         element.href = template.href || '#';
+        
+        // Apply style from template if available
+        if (template.style) {
+            element.style.cssText = template.style;
+        }
 
         // Set up content based on item type
         let contentHtml = '';
@@ -145,7 +151,8 @@ export class MenuManager {
             element.innerHTML = contentHtml;
 
             const shortcutSpan = document.createElement('span');
-            shortcutSpan.className = 'text-xs text-gray-400 ml-4';
+            shortcutSpan.className = 'text-xs ml-4';
+            shortcutSpan.style.color = 'var(--ui-text-color, #9ca3af)';
             shortcutSpan.textContent = itemConfig.shortcut;
             element.appendChild(shortcutSpan);
         } else {
@@ -177,7 +184,8 @@ export class MenuManager {
      */
     createSection(itemConfig) {
         const section = document.createElement('div');
-        section.className = 'px-4 py-2 text-xs text-gray-400 text-center border-b border-gray-600';
+        section.className = 'px-4 py-2 text-xs text-center border-b border-gray-600';
+        section.style.color = 'var(--ui-text-color, #9ca3af)';
         section.textContent = itemConfig.label;
         return section;
     }

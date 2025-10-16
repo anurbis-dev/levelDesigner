@@ -149,7 +149,7 @@ export class OutlinerPanel extends BasePanel {
         const searchInput = SearchUtils.createSearchInput(
             'Search objects...',
             'outliner-search',
-            'flex-1 bg-gray-700 text-white px-1 py-1 rounded text-sm border border-gray-600 focus:border-blue-500 focus:outline-none'
+            'flex-1 bg-gray-700 px-1 py-1 rounded text-sm border border-gray-600 focus:border-blue-500 focus:outline-none'
         );
         searchInput.value = this.searchTerm;
 
@@ -163,9 +163,10 @@ export class OutlinerPanel extends BasePanel {
         const filterButton = document.createElement('button');
         filterButton.id = 'outliner-filter-btn';
         const hasActiveFilters = this.activeTypeFilters.size > 0 && !this.activeTypeFilters.has('DISABLE_ALL');
-        filterButton.className = `text-white px-2 py-1 rounded text-sm flex items-center justify-center ${
+        filterButton.className = `px-2 py-1 rounded text-sm flex items-center justify-center ${
             hasActiveFilters ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 hover:bg-gray-700'
         }`;
+        filterButton.style.color = 'var(--ui-text-color, #d1d5db)';
         filterButton.title = hasActiveFilters ? 'Filter active - click to change' : 'Filter by object types';
         filterButton.innerHTML = `
             <svg width="14" height="14" viewBox="0 0 12 12" fill="currentColor">
@@ -206,7 +207,8 @@ export class OutlinerPanel extends BasePanel {
         // Add "Toggle All" option
         const allTypesActive = this.activeTypeFilters.size === 0;
         const allOption = document.createElement('div');
-        allOption.className = 'flex items-center p-2 hover:bg-gray-700 cursor-pointer text-sm text-white';
+        allOption.className = 'flex items-center p-2 hover:bg-gray-700 cursor-pointer text-sm';
+        allOption.style.color = 'var(--ui-text-color, #d1d5db)';
         allOption.innerHTML = `
             <input type="checkbox" id="filter-all" class="mr-2" ${allTypesActive ? 'checked' : ''}>
             <label for="filter-all">Toggle All</label>
@@ -242,7 +244,8 @@ export class OutlinerPanel extends BasePanel {
         // Add individual type options
         Array.from(availableTypes).sort().forEach(type => {
             const option = document.createElement('div');
-            option.className = 'flex items-center p-2 hover:bg-gray-700 cursor-pointer text-sm text-white';
+            option.className = 'flex items-center p-2 hover:bg-gray-700 cursor-pointer text-sm';
+            option.style.color = 'var(--ui-text-color, #d1d5db)';
 
             // Type is active if: no filters (show all) OR specifically selected OR not in DISABLE_ALL mode
             const isActive = this.activeTypeFilters.size === 0 ||
@@ -342,7 +345,7 @@ export class OutlinerPanel extends BasePanel {
 
         // Update filter button appearance
         const hasActiveFilters = this.activeTypeFilters.size > 0 && !this.activeTypeFilters.has('DISABLE_ALL');
-        button.className = `text-white px-3 py-1 rounded text-sm flex items-center justify-center ${
+        button.className = `px-3 py-1 rounded text-sm flex items-center justify-center ${
             hasActiveFilters ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 hover:bg-gray-700'
         }`;
         button.title = hasActiveFilters ? 'Filter active - click to change' : 'Filter by object types';
@@ -623,7 +626,7 @@ export class OutlinerPanel extends BasePanel {
         nameInput.style.flex = '1';
         nameInput.style.background = 'transparent';
         nameInput.style.border = 'none';
-        nameInput.style.color = 'white';
+        nameInput.style.color = 'var(--ui-text-color, #d1d5db)';
         nameInput.style.outline = 'none';
         nameInput.style.padding = 'calc(1px * max(var(--spacing-scale, 1.0), 0))';
         nameInput.style.borderRadius = '3px';
@@ -737,7 +740,7 @@ export class OutlinerPanel extends BasePanel {
         nameInput.style.flex = '1';
         nameInput.style.background = 'transparent';
         nameInput.style.border = 'none';
-        nameInput.style.color = 'white';
+        nameInput.style.color = 'var(--ui-text-color, #d1d5db)';
         nameInput.style.outline = 'none';
         nameInput.style.padding = 'calc(1px * max(var(--spacing-scale, 1.0), 0))';
         nameInput.style.borderRadius = '3px';

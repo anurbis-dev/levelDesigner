@@ -55,7 +55,7 @@
 }
 
 .settings-menu-btn {
-    color: #9ca3af;
+    color: var(--ui-text-color, #9ca3af);
     background: none;
     border: none;
     font-size: 1.25rem;
@@ -71,7 +71,7 @@
 }
 
 .settings-menu-btn:hover {
-    color: #ffffff;
+    color: var(--ui-active-text-color, #ffffff);
     background-color: #374151;
 }
 
@@ -267,14 +267,14 @@
     font-size: 1.125rem;
     font-weight: 500;
     margin-bottom: 1rem;
-    color: #ffffff;
+    color: var(--ui-active-text-color, #ffffff);
 }
 
 .settings-section h4 {
     font-size: 1rem;
     font-weight: 500;
     margin-bottom: 0.75rem;
-    color: #d1d5db;
+    color: var(--ui-text-color, #d1d5db);
 }
 
 .settings-form-group {
@@ -294,7 +294,7 @@
 .settings-label {
     display: block;
     font-size: 0.875rem;
-    color: #d1d5db;
+    color: var(--ui-text-color, #d1d5db);
     margin-bottom: 0.5rem;
 }
 
@@ -348,7 +348,7 @@
 /* Settings descriptions */
 .settings-description {
     font-size: 0.75rem;
-    color: #9ca3af;
+    color: var(--ui-text-color, #9ca3af);
     margin-top: 0.25rem;
     line-height: 1.4;
 }
@@ -389,7 +389,7 @@
 .settings-tooltip {
     position: absolute;
     background-color: #1f2937;
-    color: #ffffff;
+    color: var(--ui-active-text-color, #ffffff);
     padding: 0.5rem;
     border-radius: 0.25rem;
     font-size: 0.75rem;

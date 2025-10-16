@@ -44,7 +44,7 @@
 
 .layer-item.current {
     background-color: #1e40af;
-    color: #ffffff;
+    color: var(--ui-text-color, #d1d5db);
 }
 
 .layer-item.locked {
@@ -70,7 +70,7 @@
 
 .layer-name {
     font-size: 0.875rem;
-    color: #d1d5db;
+    color: var(--ui-text-color, #d1d5db);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -80,7 +80,7 @@
 
 .layer-count {
     font-size: 0.75rem;
-    color: #9ca3af;
+    color: var(--ui-text-color, #9ca3af);
     background-color: #374151;
     padding: 0.125rem 0.375rem;
     border-radius: 0.75rem;
@@ -102,7 +102,7 @@
     height: 1.5rem;
     border: none;
     background: transparent;
-    color: #9ca3af;
+    color: var(--ui-text-color, #9ca3af);
     cursor: pointer;
     border-radius: 0.25rem;
     display: flex;
@@ -114,7 +114,7 @@
 .layer-visibility-btn:hover,
 .layer-lock-btn:hover {
     background-color: #4b5563;
-    color: #ffffff;
+    color: var(--ui-text-color, #d1d5db);
 }
 
 .layer-visibility-btn svg,
@@ -130,7 +130,7 @@
     background-color: #374151;
     border: 1px solid #4b5563;
     border-radius: 0.25rem;
-    color: #ffffff;
+    color: var(--ui-text-color, #d1d5db);
     font-size: 0.75rem;
     text-align: center;
 }
@@ -174,7 +174,7 @@
 
 .layer-context-menu-item {
     padding: 0.5rem 0.75rem;
-    color: #d1d5db;
+    color: var(--ui-text-color, #d1d5db);
     cursor: pointer;
     border-radius: 0.25rem;
     font-size: 0.875rem;

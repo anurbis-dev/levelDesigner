@@ -149,7 +149,7 @@ export class UniversalDialog {
         closeBtn.style.cssText = `
             background: none;
             border: none;
-            color: #9ca3af;
+            color: var(--ui-text-color, #9ca3af);
             font-size: 1.5rem;
             cursor: pointer;
             padding: 0;
@@ -187,7 +187,7 @@ export class UniversalDialog {
         const messageDiv = document.createElement('div');
         messageDiv.textContent = message;
         messageDiv.style.cssText = `
-            color: #d1d5db;
+            color: var(--ui-text-color, #d1d5db);
             font-size: 0.875rem;
             line-height: 1.5;
             white-space: pre-line;
@@ -277,7 +277,7 @@ export class UniversalDialog {
                 background-color: #3b82f6;
                 border: 1px solid #3b82f6;
                 border-radius: 4px;
-                color: #ffffff;
+                color: var(--ui-active-text-color, #ffffff);
                 padding: 0.5rem 1rem;
                 font-size: 0.875rem;
                 cursor: pointer;

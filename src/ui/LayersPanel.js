@@ -185,7 +185,7 @@ export class LayersPanel extends BasePanel {
         const searchInput = SearchUtils.createSearchInput(
             'Search layers...',
             'layers-search',
-            'flex-1 bg-gray-700 text-white px-1 py-1 rounded text-sm border border-gray-600 focus:border-blue-500 focus:outline-none'
+            'flex-1 bg-gray-700 px-1 py-1 rounded text-sm border border-gray-600 focus:border-blue-500 focus:outline-none'
         );
         searchInput.value = this.searchFilter;
 
@@ -194,10 +194,10 @@ export class LayersPanel extends BasePanel {
         controlsRow.className = 'flex items-center gap-1';
 
         controlsRow.innerHTML = `
-            <button id="add-layer-btn" class="bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-sm">
+            <button id="add-layer-btn" class="bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-sm" style="color: var(--ui-text-color, #d1d5db);">
                 + Add
             </button>
-            <button id="layers-menu-btn" class="bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 rounded text-sm" title="Layer options">
+            <button id="layers-menu-btn" class="bg-gray-600 hover:bg-gray-700 px-2 py-1 rounded text-sm" title="Layer options" style="color: var(--ui-text-color, #d1d5db);">
                 ⋮
             </button>
         `;
@@ -286,23 +286,23 @@ export class LayersPanel extends BasePanel {
                      data-color="${layer.color}"
                      title="Click to change color"></div>
                 <div class="flex items-center space-x-1 flex-1 min-w-0">
-                    <span class="layer-name-display text-white flex-1 px-1 py-1 rounded min-w-0"
+                    <span class="layer-name-display flex-1 px-1 py-1 rounded min-w-0" style="color: var(--ui-text-color, #d1d5db);"
                           data-layer-id="${layer.id}">${layer.name}</span>
                     <input type="text"
                            id="layer-name-${layer.id}"
                            name="layer-name-${layer.id}"
                            value="${layer.name}"
-                           class="layer-name-input bg-transparent border-none text-white flex-1 focus:outline-none focus:bg-gray-600 px-1 rounded min-w-0 hidden"
+                           class="layer-name-input bg-transparent border-none flex-1 focus:outline-none focus:bg-gray-600 px-1 rounded min-w-0 hidden" style="color: var(--ui-text-color, #d1d5db);"
                            data-layer-id="${layer.id}">
                 </div>
             </div>
             <div class="flex items-center space-x-1 flex-shrink-0">
-                <span class="layer-objects-count text-gray-400 text-sm px-2 py-1 rounded bg-gray-600 min-w-0"
+                <span class="layer-objects-count text-sm px-2 py-1 rounded bg-gray-600 min-w-0" style="color: var(--ui-text-color, #9ca3af);"
                       data-layer-id="${layer.id}">${objectsCount > 0 ? objectsCount : ''}</span>
                 <button class="layer-visibility-btn p-1 rounded w-8 h-8 flex items-center justify-center" 
                         data-layer-id="${layer.id}" 
                         title="${layer.visible ? 'Hide layer' : 'Show layer'}">
-                    <svg class="w-4 h-4 ${layer.visible ? 'text-gray-300' : 'text-gray-500'}" fill="currentColor" viewBox="0 0 20 20">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style="color: ${layer.visible ? 'var(--ui-text-color, #d1d5db)' : 'var(--ui-text-color, #6b7280)'};">
                         ${layer.visible ? 
                             '<path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>' :
                             '<path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd"/><path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z"/>'
@@ -312,7 +312,7 @@ export class LayersPanel extends BasePanel {
                 <button class="layer-lock-btn p-1 rounded w-8 h-8 flex items-center justify-center" 
                         data-layer-id="${layer.id}" 
                         title="${layer.locked ? 'Unlock layer' : 'Lock layer'}">
-                    <svg class="w-4 h-4 ${layer.locked ? 'text-gray-300' : 'text-gray-500'}" fill="currentColor" viewBox="0 0 20 20">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style="color: ${layer.locked ? 'var(--ui-text-color, #d1d5db)' : 'var(--ui-text-color, #6b7280)'};">
                         ${layer.locked ? 
                             '<path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>' :
                             '<path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 015.905-.75 1 1 0 001.937-.5A5.002 5.002 0 0010 2z"/>'
@@ -320,7 +320,7 @@ export class LayersPanel extends BasePanel {
                     </svg>
                 </button>
                 <input type="number"
-                       class="layer-parallax-input bg-gray-600 border border-gray-500 text-white text-xs rounded px-1 py-1 w-12 h-8 text-center focus:outline-none focus:border-blue-500"
+                       class="layer-parallax-input bg-gray-600 border border-gray-500 text-xs rounded px-1 py-1 w-12 h-8 text-center focus:outline-none focus:border-blue-500" style="color: var(--ui-text-color, #d1d5db);"
                        data-layer-id="${layer.id}"
                        value="${layer.parallaxOffset}"
                        step="0.1"
@@ -370,7 +370,7 @@ export class LayersPanel extends BasePanel {
         colorInput.style.top = `${buttonRect.bottom + 5}px`;
         colorInput.style.width = '40px';
         colorInput.style.height = '40px';
-        colorInput.style.border = '2px solid #3B82F6';
+        colorInput.style.border = '2px solid var(--ui-active-color, #3B82F6)';
         colorInput.style.borderRadius = '4px';
         colorInput.style.zIndex = '10000';
         colorInput.style.cursor = 'pointer';
@@ -476,7 +476,8 @@ export class LayersPanel extends BasePanel {
             visibilityBtn.title = layer.visible ? 'Hide layer' : 'Show layer';
             const svg = visibilityBtn.querySelector('svg');
             if (svg) {
-                svg.setAttribute('class', `w-4 h-4 ${layer.visible ? 'text-gray-300' : 'text-gray-500'}`);
+                svg.setAttribute('class', 'w-4 h-4');
+                svg.style.color = layer.visible ? 'var(--ui-text-color, #d1d5db)' : 'var(--ui-text-color, #6b7280)';
                 svg.innerHTML = layer.visible ? 
                     '<path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>' :
                     '<path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd"/><path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z"/>';
@@ -489,7 +490,8 @@ export class LayersPanel extends BasePanel {
             lockBtn.title = layer.locked ? 'Unlock layer' : 'Lock layer';
             const svg = lockBtn.querySelector('svg');
             if (svg) {
-                svg.setAttribute('class', `w-4 h-4 ${layer.locked ? 'text-gray-300' : 'text-gray-500'}`);
+                svg.setAttribute('class', 'w-4 h-4');
+                svg.style.color = layer.locked ? 'var(--ui-text-color, #d1d5db)' : 'var(--ui-text-color, #6b7280)';
                 svg.innerHTML = layer.locked ? 
                     '<path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>' :
                     '<path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 015.905-.75 1 1 0 001.937-.5A5.002 5.002 0 0010 2z"/>';
@@ -1481,7 +1483,8 @@ export class LayersPanel extends BasePanel {
                 contextMenu.appendChild(separator);
             } else {
                 const menuItem = document.createElement('div');
-                menuItem.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-gray-700 flex items-center space-x-2 text-gray-200';
+                menuItem.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-gray-700 flex items-center space-x-2';
+                menuItem.style.color = 'var(--ui-text-color, #e5e7eb)';
                 menuItem.innerHTML = `<span>${item.icon}</span><span>${item.text}</span>`;
                 menuItem.addEventListener('click', () => {
                     item.action();

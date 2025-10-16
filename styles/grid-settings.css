@@ -24,14 +24,14 @@ h3 {
     font-size: 1.125rem;
     font-weight: 500;
     margin-bottom: 1rem;
-    color: #ffffff;
+    color: var(--ui-active-text-color, #ffffff);
 }
 
 h4 {
     font-size: 1rem;
     font-weight: 500;
     margin-bottom: 0.75rem;
-    color: #d1d5db;
+    color: var(--ui-text-color, #d1d5db);
 }
 
 /* Compact mode overrides */
