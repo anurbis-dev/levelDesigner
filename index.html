@@ -146,6 +146,7 @@
         import { LevelEditor } from './src/core/LevelEditor.js';
         import { ConsoleContextMenu } from './src/ui/ConsoleContextMenu.js';
         import { Logger } from './src/utils/Logger.js';
+        import { ExtensionErrorUtils } from './src/utils/ExtensionErrorUtils.js';
         import { MenuManager } from './src/managers/MenuManager.js';
         import { UserPreferencesManager } from './src/managers/UserPreferencesManager.js';
 
@@ -166,6 +167,7 @@
                 }
             }
         }
+
 
         // Apply basic user settings IMMEDIATELY to prevent visual jumps
         // This must happen before any DOM manipulation
@@ -347,6 +349,25 @@
             };
         }
 
+        // Set up global error handler to filter extension errors
+        window.addEventListener('error', (event) => {
+            if (ExtensionErrorUtils.isExtensionError(event.error)) {
+                // Silently ignore extension errors to prevent user confusion
+                console.warn('Extension error filtered:', event.error?.message || event.message);
+                event.preventDefault();
+                return false;
+            }
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            if (ExtensionErrorUtils.isExtensionError(event.reason)) {
+                // Silently ignore extension-related promise rejections
+                console.warn('Extension promise rejection filtered:', event.reason?.message || event.reason);
+                event.preventDefault();
+                return false;
+            }
+        });
+
         // Apply ALL user settings immediately BEFORE LevelEditor initialization
         try {
             applyUserSettingsImmediately(userPrefs);
@@ -377,12 +398,15 @@
                 console.error('Failed to initialize level editor:', error);
                 console.error('Error details:', error);
                 // Don't show alert for async response errors from extensions
-                if (!error.message || !error.message.includes('message channel closed')) {
+                if (!ExtensionErrorUtils.isExtensionError(error)) {
                     try {
                         alert('Failed to initialize level editor: ' + (error.message || error));
                     } catch (alertError) {
                         console.error('Failed to show alert:', alertError);
                     }
+                } else {
+                    // Log extension error silently to avoid user confusion
+                    console.warn('Extension-related error ignored:', error.message);
                 }
             });
         } catch (error) {

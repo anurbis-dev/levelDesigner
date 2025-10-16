@@ -4,6 +4,7 @@
  */
 
 import { Logger } from '../utils/Logger.js';
+import { ExtensionErrorUtils } from '../utils/ExtensionErrorUtils.js';
 
 export class FolderPickerDialog {
     constructor() {
@@ -39,15 +40,24 @@ export class FolderPickerDialog {
      */
     async showDirectoryPicker() {
         try {
-            const directoryHandle = await window.showDirectoryPicker({
-                mode: 'read',
-                startIn: 'documents'
-            });
+            // Use ExtensionErrorUtils for timeout protection
+            const directoryHandle = await ExtensionErrorUtils.withTimeout(
+                window.showDirectoryPicker({
+                    mode: 'read',
+                    startIn: 'documents'
+                }),
+                10000,
+                'Directory picker'
+            );
             
             Logger.ui.info('📁 Directory selected via File System Access API');
             
-            // Get files from directory
-            const files = await this.getFilesFromDirectory(directoryHandle);
+            // Get files from directory with timeout
+            const files = await ExtensionErrorUtils.withTimeout(
+                this.getFilesFromDirectory(directoryHandle),
+                15000,
+                'File reading'
+            );
             
             if (files.length === 0) {
                 Logger.ui.warn('⚠️ No files found in selected directory');
@@ -64,13 +74,14 @@ export class FolderPickerDialog {
             };
             
         } catch (error) {
-            if (error.name === 'AbortError') {
-                Logger.ui.info('📁 Directory picker cancelled by user');
-                return null;
-            }
-            throw error;
+            return await ExtensionErrorUtils.handleFileSystemError(
+                error,
+                () => this.showInputDialog(),
+                { logger: Logger.ui, operation: 'Directory picker' }
+            );
         }
     }
+
 
     /**
      * Show input dialog as fallback

@@ -14,7 +14,7 @@
 
 ```javascript
 export class LevelEditor {
-    static VERSION = '3.48.0'; // ← ЕДИНСТВЕННЫЙ ИСТОЧНИК ИСТИНЫ
+    static VERSION = '3.50.4'; // ← ЕДИНСТВЕННЫЙ ИСТОЧНИК ИСТИНЫ
 }
 ```
 
@@ -145,6 +145,58 @@ static currentLevel = Logger.LEVELS.DEBUG;
 // Верните обратно для production:
 static currentLevel = Logger.LEVELS.INFO;
 ```
+
+## Работа с File System Access API
+
+### Обработка ошибок расширений
+
+**ВАЖНО**: File System Access API может конфликтовать с браузерными расширениями (блокировщики рекламы, средства безопасности). Всегда используйте `ExtensionErrorUtils` для работы с этими API.
+
+```javascript
+import { ExtensionErrorUtils } from '../utils/ExtensionErrorUtils.js';
+
+// ✅ ПРАВИЛЬНО - с таймаутом и fallback
+const directoryHandle = await ExtensionErrorUtils.withTimeout(
+    window.showDirectoryPicker({ mode: 'read' }),
+    10000,
+    'Directory picker'
+);
+
+// ✅ ПРАВИЛЬНО - автоматическая обработка ошибок
+await ExtensionErrorUtils.handleFileSystemError(
+    error,
+    () => this.showInputDialog(), // fallback
+    { logger: Logger.ui, operation: 'Directory picker' }
+);
+
+// ❌ НЕПРАВИЛЬНО - без защиты от расширений
+const directoryHandle = await window.showDirectoryPicker({ mode: 'read' });
+```
+
+### Паттерны ошибок расширений
+
+ExtensionErrorUtils автоматически определяет следующие типы ошибок:
+- `message channel closed`
+- `extension context invalidated`
+- `receiving end does not exist`
+- `could not establish connection`
+- `timeout - possible extension conflict`
+
+### Таймауты для File System Access API
+
+**Рекомендуемые таймауты**:
+- **Directory picker**: 10 секунд
+- **File picker**: 10 секунд
+- **File reading**: 15 секунд
+- **File writing**: 10 секунд
+- **Stream operations**: 5 секунд
+
+### Fallback стратегии
+
+При конфликтах с расширениями используйте fallback методы:
+- **FolderPickerDialog**: fallback на input dialog
+- **FileUtils**: fallback на download метод
+- **AssetPanel**: пользовательские сообщения об ошибках
 
 ### Запуск локального сервера
 

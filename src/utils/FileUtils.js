@@ -1,4 +1,5 @@
 import { Logger } from './Logger.js';
+import { ExtensionErrorUtils } from './ExtensionErrorUtils.js';
 
 /**
  * Utility class for common file operations
@@ -76,37 +77,48 @@ export class FileUtils {
         }
 
         try {
-            // Create file picker for saving
-            const fileHandle = await window.showSaveFilePicker({
-                suggestedName: filename,
-                types: [{
-                    description: 'JSON files',
-                    accept: {
-                        'application/json': ['.json']
-                    }
-                }]
-            });
+            // Create file picker for saving with timeout protection
+            const fileHandle = await ExtensionErrorUtils.withTimeout(
+                window.showSaveFilePicker({
+                    suggestedName: filename,
+                    types: [{
+                        description: 'JSON files',
+                        accept: {
+                            'application/json': ['.json']
+                        }
+                    }]
+                }),
+                10000,
+                'File picker'
+            );
 
-            // Create writable stream
-            const writable = await fileHandle.createWritable();
+            // Create writable stream with timeout
+            const writable = await ExtensionErrorUtils.withTimeout(
+                fileHandle.createWritable(),
+                5000,
+                'File writing'
+            );
             
-            // Write data to file
-            await writable.write(fileData);
+            // Write data to file with timeout
+            await ExtensionErrorUtils.withTimeout(
+                writable.write(fileData),
+                10000,
+                'File write operation'
+            );
+            
             await writable.close();
 
             Logger.file.info(`✅ File saved directly: ${filename}`);
             return filename;
         } catch (error) {
-            if (error.name === 'AbortError') {
-                Logger.file.info('File save cancelled by user');
-                return null;
-            }
-            
-            Logger.file.error('Failed to save file directly:', error);
-            // Fallback to download method
-            return this.downloadData(data, filename, mimeType, prettyJson);
+            return await ExtensionErrorUtils.handleFileSystemError(
+                error,
+                () => this.downloadData(data, filename, mimeType, prettyJson),
+                { logger: Logger.file, operation: 'File save' }
+            );
         }
     }
+
 
     /**
      * Read file content as text

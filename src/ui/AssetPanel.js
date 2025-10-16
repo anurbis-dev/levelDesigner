@@ -1,5 +1,6 @@
 import { BasePanel } from './BasePanel.js';
 import { Logger } from '../utils/Logger.js';
+import { ExtensionErrorUtils } from '../utils/ExtensionErrorUtils.js';
 import { AssetContextMenu } from './AssetContextMenu.js';
 import { AssetPanelContextMenu } from './AssetPanelContextMenu.js';
 import { FoldersPanel } from './FoldersPanel.js';
@@ -1768,11 +1769,15 @@ export class AssetPanel extends BasePanel {
             // Get current tab folder for starting directory
             const currentTabFolder = this.getCurrentTabFolder();
             
-            // Open directory picker for saving both files
-            const directoryHandle = await window.showDirectoryPicker({
-                mode: 'readwrite',
-                startIn: currentTabFolder || 'documents'
-            });
+            // Open directory picker for saving both files with timeout protection
+            const directoryHandle = await ExtensionErrorUtils.withTimeout(
+                window.showDirectoryPicker({
+                    mode: 'readwrite',
+                    startIn: currentTabFolder || 'documents'
+                }),
+                10000,
+                'Directory picker'
+            );
 
             // Save JSON file
             const jsonFileHandle = await directoryHandle.getFileHandle(jsonFilename, { create: true });
@@ -1815,15 +1820,23 @@ export class AssetPanel extends BasePanel {
             this.showSaveSuccessMessage(asset.name, jsonFilename);
             
         } catch (error) {
-            if (error.name === 'AbortError') {
-                Logger.ui.info('Asset save cancelled by user');
-                return;
-            }
+            await ExtensionErrorUtils.handleFileSystemError(
+                error,
+                () => {
+                    this.showSaveErrorMessage(asset.name, new Error(ExtensionErrorUtils.getExtensionConflictMessage('Asset save')));
+                    return null;
+                },
+                { logger: Logger.ui, operation: 'Asset save' }
+            );
             
-            Logger.ui.error('Failed to save asset:', error);
-            this.showSaveErrorMessage(asset.name, error);
+            // If not an extension error, show the original error
+            if (!ExtensionErrorUtils.isExtensionError(error)) {
+                Logger.ui.error('Failed to save asset:', error);
+                this.showSaveErrorMessage(asset.name, error);
+            }
         }
     }
+
 
     /**
      * Show save success message
