@@ -49,7 +49,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.50.3';
+    static VERSION = '3.50.5';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -1197,23 +1197,32 @@ export class LevelEditor {
         this.detailsPanel.render();
         this.outlinerPanel.render();
         this.layersPanel.render();
+        
+        // Update level stats panel (includes Player Start restoration logic)
+        this.updateLevelStatsPanel();
     }
 
 
-    updateLevelStatsPanel() {
-        const levelStatsContent = document.getElementById('level-stats-content');
-        if (!levelStatsContent) return;
+    /**
+     * Check and auto-create Player Start if missing
+     * This method is called during level updates to ensure at least one Player Start exists
+     */
+    ensurePlayerStartExists() {
+        if (!this.level) return;
 
         // Use cached statistics (already updated in updateAllPanels)
         const stats = this.cachedLevelStats;
+        if (!stats) return;
 
         // Check Player Start objects from cached stats
         const playerStartCount = stats?.byType?.player_start || 0;
 
-        // Auto-create Player Start if missing (but don't call updateAllPanels recursively)
+        // Auto-create Player Start if missing
         // Skip auto-creation during undo/redo operations to avoid history corruption
         const isDuringUndoRedo = this.historyManager.isUndoing || this.historyManager.isRedoing;
         if (playerStartCount === 0 && !isDuringUndoRedo) {
+            Logger.lifecycle.info('No Player Start found, creating one automatically');
+            
             const playerStartObject = new GameObject({
                 name: 'Player Start',
                 type: 'player_start',
@@ -1240,24 +1249,21 @@ export class LevelEditor {
                 this.stateManager.get('groupEditMode')
             );
 
-            // Update cached stats after creation
-            this.updateCachedLevelStats();
-            const updatedStats = this.cachedLevelStats;
-            const newPlayerStartCount = updatedStats?.byType?.player_start || 1;
-
-            // Generate display with the new count
-            this.renderLevelStats(levelStatsContent, updatedStats, newPlayerStartCount);
-
-            // Render the new object (but don't call updateAllPanels)
+            // Update cached stats after creation (without recursive call to ensurePlayerStartExists)
+            if (this.level) {
+                this.cachedLevelStats = this.level.getStats();
+            }
+            
+            // Re-render to show the new object
             this.render();
-            return;
+            
+            Logger.lifecycle.info('Player Start object created successfully');
         }
+    }
 
-        // Use cached stats for normal case
-        this.renderLevelStats(levelStatsContent, stats, playerStartCount);
-
-        // Setup camera start position button handler
-        this.setupCameraStartPositionButton();
+    updateLevelStatsPanel() {
+        // This method is kept for backward compatibility but now just calls the main logic
+        this.ensurePlayerStartExists();
     }
 
     renderLevelStats(container, stats, playerStartCount) {
@@ -1423,6 +1429,9 @@ export class LevelEditor {
     updateCachedLevelStats() {
         if (this.level) {
             this.cachedLevelStats = this.level.getStats();
+            
+            // Ensure Player Start exists after updating stats
+            this.ensurePlayerStartExists();
         }
     }
 
@@ -1442,27 +1451,6 @@ export class LevelEditor {
         }
     }
 
-    countPlayerStartObjects() {
-        let count = 0;
-
-        // Count in top-level objects
-        count += this.level.objects.filter(obj => obj.type === 'player_start').length;
-
-        // Count in nested groups recursively
-        const countInGroups = (objects) => {
-            let groupCount = 0;
-            for (const obj of objects) {
-                if (obj.type === 'group' && obj.children) {
-                    groupCount += obj.children.filter(child => child.type === 'player_start').length;
-                    groupCount += countInGroups(obj.children);
-                }
-            }
-            return groupCount;
-        };
-
-        count += countInGroups(this.level.objects);
-        return count;
-    }
 
     async saveLevel() {
         return this.levelFileOperations.saveLevel();
@@ -1557,6 +1545,9 @@ export class LevelEditor {
 
         // Schedule full cache invalidation since multiple objects were affected
         this.scheduleCacheInvalidation();
+        
+        // Ensure Player Start exists after deletion
+        this.updateCachedLevelStats();
     }
 
     duplicateSelectedObjects() {
