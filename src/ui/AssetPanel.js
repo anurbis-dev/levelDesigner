@@ -404,7 +404,7 @@ export class AssetPanel extends BasePanel {
             // Visual feedback
             document.body.style.cursor = 'col-resize';
             document.body.style.userSelect = 'none';
-            this.foldersResizer.style.backgroundColor = '#4b5563';
+            this.foldersResizer.classList.add('resizing');
 
             e.preventDefault();
             e.stopPropagation();
@@ -459,7 +459,7 @@ export class AssetPanel extends BasePanel {
                 isResizingFolders = false;
                 document.body.style.cursor = '';
                 document.body.style.userSelect = '';
-                this.foldersResizer.style.backgroundColor = '';
+                this.foldersResizer.classList.remove('resizing');
 
                 Logger.ui.debug('Folders panel resize completed');
             }

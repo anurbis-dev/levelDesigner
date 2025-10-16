@@ -51,24 +51,81 @@ input, textarea {
 }
 
 /* Styles for resizers that allow changing panel sizes */
-.resizer {
-    background-color: #374151; /* gray-700 */
+.resizer,
+.resizer-x {
+    background-color: transparent;
     cursor: col-resize;
     width: 6px;
     flex-shrink: 0;
+    position: relative;
 }
 
 .resizer-y {
-    background-color: #374151; /* gray-700 */
+    background-color: transparent;
     cursor: row-resize;
     height: 6px;
     flex-shrink: 0;
+    position: relative;
 }
 
-/* Prevent global scrollbars from affecting layout width */
-html, body {
-    overflow: hidden;
+/* Resize indicator - appears on hover */
+.resizer::after,
+.resizer-x::after,
+.resizer-y::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: #6b7280;
+    border-radius: 1px;
+    opacity: 0;
+    transition: opacity 0.2s;
 }
+
+.resizer::after,
+.resizer-x::after {
+    width: 2px;
+    height: 20px;
+}
+
+.resizer-y::after {
+    width: 20px;
+    height: 2px;
+}
+
+.resizer:hover::after,
+.resizer-x:hover::after,
+.resizer-y:hover::after {
+    opacity: 1;
+}
+
+/* Active state during dragging */
+.resizer.resizing,
+.resizer-x.resizing,
+.resizer-y.resizing {
+    background-color: #374151;
+}
+
+.resizer.resizing::after,
+.resizer-x.resizing::after,
+.resizer-y.resizing::after {
+    opacity: 1;
+    background-color: #ffffff;
+}
+
+.resizer.resizing::after,
+.resizer-x.resizing::after {
+    width: 3px;
+    height: 24px;
+}
+
+.resizer-y.resizing::after {
+    width: 24px;
+    height: 3px;
+}
+
+/* Prevent global scrollbars from affecting layout width - already defined above */
 
 /* Console context menu styles - moved to ConsoleContextMenu.css */
 
@@ -260,13 +317,39 @@ header {
     left: 0;
     right: 0;
     height: 6px;
-    background: #374151;
+    background-color: transparent;
     cursor: row-resize;
     z-index: 10000;
 }
 
-.console-resize-handle:hover {
-    background: #4b5563;
+.console-resize-handle::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 2px;
+    background-color: #6b7280;
+    border-radius: 1px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.console-resize-handle:hover::after {
+    opacity: 1;
+}
+
+/* Active state during console resizing */
+.console-resize-handle.resizing {
+    background-color: #374151;
+}
+
+.console-resize-handle.resizing::after {
+    opacity: 1;
+    background-color: #ffffff;
+    width: 50px;
+    height: 3px;
 }
 
 .console-overlay.hidden {

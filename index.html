@@ -473,6 +473,7 @@
                 document.body.style.cursor = 'col-resize';
                 document.body.style.userSelect = 'none';
                 document.body.style.pointerEvents = 'none';
+                resizerX.classList.add('resizing');
                 e.preventDefault();
                 e.stopPropagation();
             });
@@ -486,6 +487,7 @@
                 document.body.style.cursor = 'row-resize';
                 document.body.style.userSelect = 'none';
                 document.body.style.pointerEvents = 'none';
+                resizerAssets.classList.add('resizing');
                 
                 e.preventDefault();
                 e.stopPropagation();
@@ -564,6 +566,8 @@
                     document.body.style.cursor = '';
                     document.body.style.userSelect = '';
                     document.body.style.pointerEvents = '';
+                    resizerX.classList.remove('resizing');
+                    resizerAssets.classList.remove('resizing');
                     e.preventDefault();
                     e.stopPropagation();
                 }
@@ -877,6 +881,7 @@
                     startHeight = consolePanel.offsetHeight;
                     document.body.style.cursor = 'row-resize';
                     document.body.style.userSelect = 'none';
+                    resizeHandle.classList.add('resizing');
                     e.preventDefault();
                 });
 
@@ -901,6 +906,7 @@ if (!isResizing) return;
                         isResizing = false;
                         document.body.style.cursor = '';
                         document.body.style.userSelect = '';
+                        resizeHandle.classList.remove('resizing');
                         
                         // Save the final height when resize is complete
                         const finalHeight = consolePanel.offsetHeight;

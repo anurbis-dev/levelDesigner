@@ -43,11 +43,7 @@
     background-color: var(--ui-background-color, #111827);
 }
 
-/* Resizer */
-.resizer {
-    background-color: #374151;
-    transition: background-color 0.2s;
-}
+/* Resizer styles moved to main.css for consistency */
 
 /* Drag-n-drop styles for AssetPanel */
 .drag-over {
@@ -100,36 +96,6 @@
     }
 }
 
-.resizer:hover {
-    background-color: #4b5563;
-}
-
-.resizer-x {
-    width: 4px;
-    cursor: col-resize;
-}
-
-.resize-indicator {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 2px;
-    height: 20px;
-    background-color: #6b7280;
-    border-radius: 1px;
-    opacity: 0;
-    transition: opacity 0.2s;
-}
-
-.resizer-x:hover .resize-indicator {
-    opacity: 1;
-}
-
-.resizer-y {
-    height: 4px;
-    cursor: row-resize;
-}
 
 /* Panel headers */
 .panel-header {
