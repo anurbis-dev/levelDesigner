@@ -37,6 +37,7 @@ export class UserPreferencesManager {
             'compactMode': 'ui.compactMode',
             'foldersPosition': 'ui.foldersPosition',
             'foldersWidth': 'ui.foldersWidth',
+            'rightPanelPosition': 'ui.rightPanelPosition',
 
             // Canvas/Grid preferences
             'canvasBackgroundColor': 'canvas.backgroundColor',

@@ -90,6 +90,9 @@
                 <button data-tab="details" class="tab-right active" id="details-tab">Asset</button>
                 <button data-tab="layers" class="tab-right">Layers</button>
                 <button data-tab="outliner" class="tab-right">Outliner</button>
+                <button id="right-panel-position-toggle" class="px-1 py-0.5 rounded text-xs ml-auto mr-2" title="Toggle position" style="color: var(--ui-text-color, #9ca3af);">
+                    ⇄
+                </button>
             </div>
             <!-- Search section - non-scrollable -->
             <div id="right-panel-search" class="border-b border-gray-700 flex-shrink-0">
@@ -446,10 +449,7 @@
                 }
 
                 // Update canvas and render immediately
-                if (window.editor && window.editor.canvasRenderer) {
-                    window.editor.canvasRenderer.resizeCanvas();
-                    window.editor.render();
-                }
+                updateCanvas();
                 } catch (error) {
                     console.error('Error in forceLayoutUpdate:', error);
                 }
@@ -467,6 +467,14 @@
                     console.error('Error in updateCanvasLayout:', error);
                 }
             }
+
+        // Optimized canvas update function to avoid duplicate calls (global)
+        function updateCanvas() {
+            if (window.editor && window.editor.canvasRenderer) {
+                window.editor.canvasRenderer.resizeCanvas();
+                window.editor.render();
+            }
+        }
 
         // Panel resizing functionality
         function setupPanelResizing() {
@@ -561,10 +569,7 @@
                     userPrefs.set('rightPanelWidth', 0);
                 }
 
-                if (window.editor && window.editor.canvasRenderer) {
-                    window.editor.canvasRenderer.resizeCanvas();
-                    window.editor.render();
-                }
+                updateCanvas();
             });
 
             // Assets panel resizer (between main area and assets panel)
@@ -605,10 +610,7 @@
                     userPrefs.set('assetsPanelHeight', 0);
                 }
 
-                if (window.editor && window.editor.canvasRenderer) {
-                    window.editor.canvasRenderer.resizeCanvas();
-                    window.editor.render();
-                }
+                updateCanvas();
             });
 
 
@@ -620,12 +622,22 @@
                 e.stopPropagation();
                 
                 if (isResizingX) {
-                    // Use same logic as assets resizer: mouse movement from initial position
+                    // Get current panel position from StateManager
+                    const panelPosition = window.editor?.stateManager?.get('rightPanelPosition') || 'right';
+                    
                     const mouseDelta = e.clientX - initialMouseX;
                     const containerWidth = mainContainer.clientWidth;
                     const resizerWidth = 6;
-                    // Right panel can range from 0 to (containerWidth - resizerWidth)
-                    let newWidth = initialRightPanelWidth - mouseDelta;
+                    
+                    let newWidth;
+                    if (panelPosition === 'right') {
+                        // Panel is on the right side - normal logic
+                        newWidth = initialRightPanelWidth - mouseDelta;
+                    } else {
+                        // Panel is on the left side - inverted logic
+                        newWidth = initialRightPanelWidth + mouseDelta;
+                    }
+                    
                     if (newWidth < 0) newWidth = 0;
                     const maxWidth = Math.max(0, containerWidth - resizerWidth);
                     if (newWidth > maxWidth) newWidth = maxWidth;
@@ -722,32 +734,7 @@
                 }
             });
 
-            // Handle window resize to maintain panel proportions
-            window.addEventListener('resize', () => {
-                // Get saved panel sizes
-                const savedRightPanelWidth = userPrefs.get('rightPanelWidth');
-                const savedAssetsPanelHeight = userPrefs.get('assetsPanelHeight');
-                const savedConsoleHeight = userPrefs.get('consoleHeight');
-
-                // Restore right panel width (simple like assets panel)
-                if (savedRightPanelWidth) {
-                    rightPanel.style.width = savedRightPanelWidth + 'px';
-                    rightPanel.style.flexShrink = '0';
-                    rightPanel.style.flexGrow = '0';
-                }
-
-                // Restore assets panel height if saved
-                if (savedAssetsPanelHeight) {
-                    assetsPanel.style.height = savedAssetsPanelHeight + 'px';
-                    assetsPanel.style.flexShrink = '0';
-                }
-
-                // Update canvas only (don't call full layout update to avoid drift)
-                if (window.editor && window.editor.canvasRenderer) {
-                    window.editor.canvasRenderer.resizeCanvas();
-                    window.editor.render();
-                }
-            });
+            // Note: Window resize is handled by EventHandlers to avoid duplication
             } catch (error) {
                 console.error('Error setting up panel resizing:', error);
             }
@@ -1473,10 +1460,7 @@ if (!isResizing) return;
         const updateCanvasOnStartup = () => {
             try {
                 // Update canvas only (no layout changes to avoid panel drift)
-                if (window.editor && window.editor.canvasRenderer) {
-                    window.editor.canvasRenderer.resizeCanvas();
-                    window.editor.render();
-                }
+                updateCanvas();
                 
                 // Additional update after a longer delay to ensure everything is settled
                 setTimeout(() => {

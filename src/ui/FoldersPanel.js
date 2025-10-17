@@ -814,7 +814,7 @@ export class FoldersPanel extends BasePanel {
             this.resizeObserver.observe(this.container);
         } else {
             // Fallback to window resize event
-            window.addEventListener('resize', () => {
+            this.resizeHandler = () => {
                 const currentWidth = this.container.offsetWidth;
                 const currentHeight = this.container.offsetHeight;
                 const widthChanged = Math.abs(currentWidth - this.lastContainerWidth) > 5;
@@ -829,7 +829,8 @@ export class FoldersPanel extends BasePanel {
                         this.renderFolderContent();
                     }, 150);
                 }
-            });
+            };
+            window.addEventListener('resize', this.resizeHandler);
         }
     }
 
@@ -840,6 +841,10 @@ export class FoldersPanel extends BasePanel {
         if (this.resizeObserver) {
             this.resizeObserver.disconnect();
             this.resizeObserver = null;
+        }
+        if (this.resizeHandler) {
+            window.removeEventListener('resize', this.resizeHandler);
+            this.resizeHandler = null;
         }
         if (this.resizeTimeout) {
             clearTimeout(this.resizeTimeout);

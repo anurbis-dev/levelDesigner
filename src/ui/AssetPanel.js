@@ -292,10 +292,15 @@ export class AssetPanel extends BasePanel {
      * Toggle folders position (left/right)
      */
     toggleFoldersPosition() {
-        this.foldersPosition = this.foldersPosition === 'left' ? 'right' : 'left';
-        this.saveFoldersPosition();
-        this.updateFoldersLayout();
-        Logger.ui.info(`Folders panel moved to ${this.foldersPosition}`);
+        if (this.levelEditor.panelPositionManager) {
+            this.levelEditor.panelPositionManager.togglePanelPosition('folders');
+        } else {
+            // Fallback to old method if PanelPositionManager not available
+            this.foldersPosition = this.foldersPosition === 'left' ? 'right' : 'left';
+            this.saveFoldersPosition();
+            this.updateFoldersLayout();
+            Logger.ui.info(`Folders panel moved to ${this.foldersPosition}`);
+        }
     }
 
     /**

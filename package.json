@@ -1,6 +1,6 @@
 {
   "name": "level-editor-2d",
-  "version": "3.50.3",
+  "version": "3.50.8",
   "description": "Профессиональный 2D редактор уровней с утилитарной архитектурой мирового класса",
   "main": "index.html",
   "type": "module",

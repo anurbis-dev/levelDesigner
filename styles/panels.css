@@ -10,6 +10,16 @@
     flex-direction: column;
 }
 
+/* Right panel position toggle button */
+#right-panel-position-toggle {
+    transition: color 0.2s ease;
+}
+
+#right-panel-position-toggle:hover {
+    color: var(--ui-active-text-color, #ffffff) !important;
+    background-color: var(--ui-hover-background-color, #374151);
+}
+
 /* Right panel search */
 #right-panel-search {
     display: none;

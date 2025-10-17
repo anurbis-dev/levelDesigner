@@ -390,6 +390,11 @@ export class EventHandlers extends BaseModule {
         const rightPanelTab = this.editor.configManager.get('editor.view.rightPanelTab') ?? 'details';
         this.editor.stateManager.set('rightPanelTab', rightPanelTab);
         this.setActiveRightPanelTab(rightPanelTab);
+
+        // Initialize panel positions using PanelPositionManager
+        if (this.editor.panelPositionManager) {
+            this.editor.panelPositionManager.initializePanelPositions();
+        }
     }
 
     updateViewCheckbox(option, enabled) {
@@ -846,6 +851,14 @@ export class EventHandlers extends BaseModule {
                 }
             });
         });
+
+        // Setup right panel position toggle button
+        const positionToggleBtn = document.getElementById('right-panel-position-toggle');
+        if (positionToggleBtn) {
+            positionToggleBtn.addEventListener('click', () => {
+                this.editor.toggleRightPanelPosition();
+            });
+        }
     }
 
     /**

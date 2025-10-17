@@ -34,6 +34,7 @@ import { Logger } from '../utils/Logger.js';
 import { ColorUtils } from '../utils/ColorUtils.js';
 import { dialogReplacer } from '../utils/DialogReplacer.js';
 import { ActorPropertiesWindow } from '../ui/ActorPropertiesWindow.js';
+import { PanelPositionManager } from '../ui/PanelPositionManager.js';
 
 // Import new utilities
 import { ErrorHandler } from '../utils/ErrorHandler.js';
@@ -49,7 +50,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.50.7';
+    static VERSION = '3.50.8';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -98,6 +99,10 @@ export class LevelEditor {
 
         // Initialize ContextMenuManager
         this.contextMenuManager = new ContextMenuManager();
+
+        // Initialize Panel Position Manager
+        this.panelPositionManager = new PanelPositionManager(this);
+        this.lifecycle.register('panelPositionManager', this.panelPositionManager, { priority: 2 });
 
         // Initialize CacheManager
         this.cacheManager = new CacheManager(this);
@@ -555,6 +560,13 @@ export class LevelEditor {
             }
         });
         this.subscriptions.push(assetsPanelUnsubscribe);
+    }
+
+    /**
+     * Toggle right panel position (left/right)
+     */
+    toggleRightPanelPosition() {
+        this.panelPositionManager.togglePanelPosition('rightPanel');
     }
 
     /**
