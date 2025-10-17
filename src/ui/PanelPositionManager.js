@@ -107,10 +107,32 @@ export class PanelPositionManager {
             this.levelEditor.assetPanel.updateFoldersLayout();
         }
 
-        // Initialize right panel position
+        // Initialize right panel position (but don't update layout - it's managed by index.html)
         const rightPanelPosition = this.userPrefs?.get('rightPanelPosition') ?? 'right';
         this.stateManager.set('rightPanelPosition', rightPanelPosition);
-        this.updateRightPanelLayout(rightPanelPosition);
+
+        // Initialize tab positions
+        this.initializeTabPositions();
+    }
+
+    /**
+     * Initialize tab positions from saved preferences
+     */
+    initializeTabPositions() {
+        const tabPositions = {
+            details: this.userPrefs?.get('tabPosition_details') ?? 'right',
+            layers: this.userPrefs?.get('tabPosition_layers') ?? 'right',
+            outliner: this.userPrefs?.get('tabPosition_outliner') ?? 'right'
+        };
+        
+        this.stateManager.set('tabPositions', tabPositions);
+        
+        // Move tabs to their saved positions
+        Object.entries(tabPositions).forEach(([tabName, position]) => {
+            if (position === 'left') {
+                this.moveTab(tabName, 'right', 'left');
+            }
+        });
     }
 
     /**
@@ -123,9 +145,588 @@ export class PanelPositionManager {
     }
 
     /**
+     * Move a tab to a different panel
+     * @param {string} tabName - Name of the tab (details, layers, outliner)
+     * @param {string} fromPanel - Current panel ('right' or 'left')
+     * @param {string} toPanel - Target panel ('right' or 'left')
+     */
+    moveTab(tabName, fromPanel, toPanel) {
+        if (fromPanel === toPanel) return;
+
+        // Get current tab positions
+        const tabPositions = this.stateManager.get('tabPositions') || {
+            details: 'right',
+            layers: 'right', 
+            outliner: 'right'
+        };
+
+        // Update state
+        tabPositions[tabName] = toPanel;
+        this.stateManager.set('tabPositions', tabPositions);
+
+        // Save to user preferences
+        if (this.userPrefs) {
+            this.userPrefs.set(`tabPosition_${tabName}`, toPanel);
+        }
+
+        // Create target panel if it doesn't exist
+        this.ensurePanelExists(toPanel);
+
+        // Move the tab physically
+        this.moveTabDOM(tabName, fromPanel, toPanel);
+        
+        // Remove empty panel if needed
+        this.removeEmptyPanel(fromPanel);
+
+        Logger.ui.info(`Tab ${tabName} moved from ${fromPanel} to ${toPanel}`);
+    }
+
+    /**
+     * Ensure a panel exists (create if needed)
+     * @param {string} panelSide - 'left' or 'right'
+     */
+    ensurePanelExists(panelSide) {
+        const panelId = `${panelSide}-tabs-panel`;
+        let panel = document.getElementById(panelId);
+
+        if (!panel) {
+            // Create the panel
+            panel = this.createTabsPanel(panelSide);
+            
+            // Insert into layout
+            this.insertPanelIntoLayout(panel, panelSide);
+            
+            Logger.ui.info(`Created ${panelSide} tabs panel`);
+        } else {
+            // Panel exists, check if it has tabs or is hidden
+            const tabContainer = panel.querySelector('.flex.border-b.border-gray-700');
+            const hasTabs = tabContainer && tabContainer.children.length > 0;
+            const isHidden = panel.style.display === 'none' || panel.classList.contains('hidden');
+            
+            if (!hasTabs || isHidden) {
+                // Panel exists but is empty or hidden, recreate its structure
+                Logger.ui.info(`Recreating ${isHidden ? 'hidden' : 'empty'} ${panelSide} tabs panel structure`);
+                
+                // Clear the panel and recreate structure
+                panel.innerHTML = '';
+                const newStructure = this.createTabsPanel(panelSide);
+                
+                // Copy the new structure content to existing panel
+                while (newStructure.firstChild) {
+                    panel.appendChild(newStructure.firstChild);
+                }
+                
+                // Ensure panel and its resizer are visible
+                panel.style.display = 'flex';
+                panel.classList.remove('hidden');
+                
+                if (panelSide === 'right') {
+                    // Ensure right panel resizer is visible
+                    const resizer = document.getElementById('resizer-right-tabs-panel');
+                    if (resizer) {
+                        resizer.style.display = 'block';
+                        resizer.classList.remove('hidden');
+                    }
+                }
+            }
+            
+            // Ensure it has dragging functionality
+            if (panelSide === 'left') {
+                this.setupTabDraggingForPanel(panel);
+            }
+            
+            // Update canvas after panel is restored
+            if (window.updateCanvas) {
+                window.updateCanvas();
+            }
+        }
+
+        return panel;
+    }
+
+    /**
+     * Create a tabs panel structure
+     * @param {string} panelSide - 'left' or 'right'
+     * @returns {HTMLElement} - Created panel element
+     */
+    createTabsPanel(panelSide) {
+        const panel = document.createElement('aside');
+        panel.id = `${panelSide}-tabs-panel`;
+        panel.className = `bg-gray-900 flex flex-col ${panelSide === 'left' ? 'border-r border-gray-700' : 'border-l border-gray-700'}`;
+        
+        // Create tabs container
+        const tabsContainer = document.createElement('div');
+        tabsContainer.className = 'flex border-b border-gray-700 flex-shrink-0';
+        
+        // Create search section
+        const searchSection = document.createElement('div');
+        searchSection.id = `${panelSide}-panel-search`;
+        searchSection.className = 'border-b border-gray-700 flex-shrink-0';
+        
+        // Create content container
+        const contentContainer = document.createElement('div');
+        contentContainer.className = 'flex-grow overflow-y-auto';
+        
+        // Content panels will be moved here dynamically when tabs are moved
+        
+        panel.appendChild(tabsContainer);
+        panel.appendChild(searchSection);
+        panel.appendChild(contentContainer);
+
+        return panel;
+    }
+
+    /**
+     * Insert panel into layout at correct position
+     * @param {HTMLElement} panel - Panel element
+     * @param {string} panelSide - 'left' or 'right'
+     */
+    insertPanelIntoLayout(panel, panelSide) {
+        const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
+        const mainPanel = document.getElementById('main-panel');
+
+        if (panelSide === 'left') {
+            // Insert before main panel
+            mainContainer.insertBefore(panel, mainPanel);
+            
+            // Create resizer for left panel
+            this.createPanelResizer(panel, 'left');
+        } else {
+            // Insert after main panel (before existing right panel)
+            const rightPanel = document.getElementById('right-tabs-panel');
+            if (rightPanel) {
+                mainContainer.insertBefore(panel, rightPanel);
+            } else {
+                mainContainer.appendChild(panel);
+            }
+            
+            // Don't create resizer for right panel - it already exists in index.html
+            // Just setup tab dragging functionality
+            this.setupTabDraggingForPanel(panel);
+        }
+        
+        // Update canvas after panel is added
+        if (window.updateCanvas) {
+            window.updateCanvas();
+        }
+    }
+
+    /**
+     * Create resizer for a panel
+     * @param {HTMLElement} panel - Panel element
+     * @param {string} panelSide - 'left' or 'right'
+     */
+    createPanelResizer(panel, panelSide) {
+        const resizerId = `resizer-${panelSide}-tabs-panel`;
+        let resizer = document.getElementById(resizerId);
+        
+        if (!resizer) {
+            resizer = document.createElement('div');
+            resizer.id = resizerId;
+            resizer.className = 'resizer';
+            
+            // Insert resizer into layout
+            const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
+            if (panelSide === 'left') {
+                mainContainer.insertBefore(resizer, panel.nextSibling);
+            } else {
+                mainContainer.insertBefore(resizer, panel.nextSibling);
+            }
+            
+            // Setup resizer functionality
+            this.setupPanelResizer(resizer, panel, panelSide);
+            
+            // Setup tab dragging for the new panel
+            this.setupTabDraggingForPanel(panel);
+        }
+    }
+
+    /**
+     * Move tab DOM elements between panels
+     * @param {string} tabName - Tab name
+     * @param {string} fromPanel - Source panel
+     * @param {string} toPanel - Target panel
+     */
+    moveTabDOM(tabName, fromPanel, toPanel) {
+        // Get source and target containers
+        const fromContainer = document.getElementById(`${fromPanel}-tabs-panel`);
+        const toContainer = document.getElementById(`${toPanel}-tabs-panel`);
+        
+        if (!fromContainer) {
+            Logger.ui.warn(`Source container ${fromPanel}-tabs-panel not found`);
+            return;
+        }
+        
+        if (!toContainer) {
+            Logger.ui.warn(`Target container ${toPanel}-tabs-panel not found, creating it`);
+            this.ensurePanelExists(toPanel);
+            // Try again after creating
+            const newToContainer = document.getElementById(`${toPanel}-tabs-panel`);
+            if (!newToContainer) {
+                Logger.ui.error(`Failed to create target container ${toPanel}-tabs-panel`);
+                return;
+            }
+            // Continue with the newly created container
+            const updatedFromContainer = fromContainer;
+            const updatedToContainer = newToContainer;
+            this.moveTabElements(tabName, updatedFromContainer, updatedToContainer, toPanel);
+            return;
+        }
+        
+        this.moveTabElements(tabName, fromContainer, toContainer, toPanel);
+    }
+
+    /**
+     * Move tab elements between containers
+     * @param {string} tabName - Tab name
+     * @param {HTMLElement} fromContainer - Source container
+     * @param {HTMLElement} toContainer - Target container
+     * @param {string} toPanel - Target panel side
+     */
+    moveTabElements(tabName, fromContainer, toContainer, toPanel) {
+        // Find tab button
+        const tabButton = document.querySelector(`[data-tab="${tabName}"]`);
+        if (!tabButton) {
+            Logger.ui.warn(`Tab button not found for ${tabName}`);
+            return;
+        }
+
+        // Find the original tab content
+        const tabContent = document.getElementById(`${tabName}-content-panel`);
+        if (!tabContent) {
+            Logger.ui.warn(`Tab content not found for ${tabName}`);
+            return;
+        }
+
+        // Move tab button
+        const fromTabsContainer = fromContainer.querySelector('.flex.border-b.border-gray-700');
+        const toTabsContainer = toContainer.querySelector('.flex.border-b.border-gray-700');
+        
+        if (fromTabsContainer && toTabsContainer) {
+            fromTabsContainer.removeChild(tabButton);
+            toTabsContainer.appendChild(tabButton);
+            Logger.ui.debug(`Moved tab button ${tabName} to ${toPanel} panel`);
+        } else {
+            Logger.ui.warn(`Tab containers not found for moving ${tabName}`);
+        }
+
+        // Move tab content to target container
+        const fromContentContainer = fromContainer.querySelector('.flex-grow.overflow-y-auto');
+        const toContentContainer = toContainer.querySelector('.flex-grow.overflow-y-auto');
+        
+        if (fromContentContainer && toContentContainer) {
+            // Remove from old container and add to new container
+            fromContentContainer.removeChild(tabContent);
+            toContentContainer.appendChild(tabContent);
+            
+            // Update CSS class to reflect new panel side
+            tabContent.className = tabContent.className
+                .replace('tab-content-right', `tab-content-${toPanel}`)
+                .replace('tab-content-left', `tab-content-${toPanel}`);
+            
+            Logger.ui.debug(`Moved tab content ${tabName} to ${toPanel} panel`);
+        } else {
+            Logger.ui.warn(`Content containers not found for moving ${tabName}`);
+        }
+
+        // Update CSS classes
+        tabButton.className = tabButton.className
+            .replace('tab-right', `tab-${toPanel}`)
+            .replace('tab-left', `tab-${toPanel}`);
+        
+        Logger.ui.info(`Tab ${tabName} successfully moved to ${toPanel} panel`);
+    }
+
+    /**
+     * Setup resizer functionality for a panel
+     * @param {HTMLElement} resizer - Resizer element
+     * @param {HTMLElement} panel - Panel element
+     * @param {string} panelSide - 'left' or 'right'
+     */
+    setupPanelResizer(resizer, panel, panelSide) {
+        let isResizing = false;
+        
+        // Get saved width and previous width from StateManager
+        const savedWidth = this.stateManager?.get(`panels.${panelSide}PanelWidth`) ?? null;
+        const savedPreviousWidth = this.stateManager?.get(`panels.${panelSide}PanelPreviousWidth`) ?? null;
+        
+        let previousWidth = 300; // Default previous width
+        if (savedPreviousWidth !== null && savedPreviousWidth !== undefined) {
+            previousWidth = savedPreviousWidth;
+        }
+        
+        if (savedWidth !== null && savedWidth !== undefined) {
+            if (savedWidth > 0) {
+                // Panel is expanded, use saved width as current
+                panel.style.width = savedWidth + 'px';
+            } else {
+                // Panel is collapsed
+                panel.style.width = '0px';
+            }
+            panel.style.flexShrink = '0';
+            panel.style.flexGrow = '0';
+        } else {
+            // Set default width if no saved width
+            panel.style.width = previousWidth + 'px';
+            panel.style.flexShrink = '0';
+            panel.style.flexGrow = '0';
+            
+            // Save initial state to StateManager
+            if (this.stateManager) {
+                this.stateManager.set(`panels.${panelSide}PanelWidth`, previousWidth);
+                this.stateManager.set(`panels.${panelSide}PanelPreviousWidth`, previousWidth);
+            }
+        }
+
+        // Mouse down - start resizing
+        resizer.addEventListener('mousedown', (e) => {
+            isResizing = true;
+            e.preventDefault();
+            e.stopPropagation();
+        });
+
+        // Mouse move - resize panel
+        const handleMouseMove = (e) => {
+            if (!isResizing) return;
+            
+            const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
+            const containerWidth = mainContainer.clientWidth;
+            const resizerWidth = 6;
+            const minWidth = 0;
+            const maxWidth = containerWidth - resizerWidth;
+            
+            let newWidth;
+            if (panelSide === 'left') {
+                newWidth = Math.max(minWidth, Math.min(e.clientX, maxWidth));
+            } else {
+                newWidth = Math.max(minWidth, Math.min(containerWidth - e.clientX, maxWidth));
+            }
+            
+            panel.style.width = newWidth + 'px';
+            panel.style.flexShrink = '0';
+            panel.style.flexGrow = '0';
+            
+            // Update canvas
+            if (window.updateCanvas) {
+                window.updateCanvas();
+            }
+        };
+
+        // Mouse up - stop resizing
+        const handleMouseUp = () => {
+            if (isResizing) {
+                isResizing = false;
+                
+                // Save width to StateManager
+                const currentWidth = panel.offsetWidth;
+                if (this.stateManager) {
+                    this.stateManager.set(`panels.${panelSide}PanelWidth`, currentWidth);
+                    this.stateManager.set(`panels.${panelSide}PanelPreviousWidth`, currentWidth);
+                }
+                
+                Logger.ui.debug(`Saved ${panelSide} panel width: ${currentWidth}px`);
+            }
+        };
+
+        // Add global mouse events
+        document.addEventListener('mousemove', handleMouseMove);
+        document.addEventListener('mouseup', handleMouseUp);
+
+        // Double-click to toggle collapse/expand
+        resizer.addEventListener('dblclick', (e) => {
+            Logger.ui.info(`${panelSide} panel resizer double-click triggered`);
+            e.preventDefault();
+            e.stopPropagation();
+
+            const currentWidth = panel.offsetWidth;
+            const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
+            const containerWidth = mainContainer.clientWidth;
+            const resizerWidth = 6;
+            const minWidth = 0;
+            const maxWidth = containerWidth - resizerWidth;
+
+            // Check if panel is collapsed by looking at StateManager
+            const savedWidth = this.stateManager?.get(`panels.${panelSide}PanelWidth`) ?? 300;
+            const isCollapsed = savedWidth <= 5; // Small threshold for collapsed panels
+            
+            Logger.ui.info(`${panelSide} panel double-click: currentWidth=${currentWidth}, savedWidth=${savedWidth}, isCollapsed=${isCollapsed}, previousWidth=${previousWidth}`);
+            
+            if (isCollapsed) {
+                // Restore to previous width
+                const newWidth = Math.min(previousWidth, maxWidth);
+                panel.style.width = newWidth + 'px';
+                panel.style.flexShrink = '0';
+                panel.style.flexGrow = '0';
+                
+                // Save to StateManager
+                if (this.stateManager) {
+                    this.stateManager.set(`panels.${panelSide}PanelWidth`, newWidth);
+                }
+                
+                Logger.ui.info(`Expanded ${panelSide} panel to ${newWidth}px`);
+            } else {
+                // Save current width and collapse
+                previousWidth = currentWidth;
+                panel.style.width = '0px';
+                panel.style.flexShrink = '0';
+                panel.style.flexGrow = '0';
+                
+                // Save current width as 0 and previous width to StateManager
+                if (this.stateManager) {
+                    this.stateManager.set(`panels.${panelSide}PanelWidth`, 0);
+                    this.stateManager.set(`panels.${panelSide}PanelPreviousWidth`, previousWidth);
+                }
+                
+                Logger.ui.info(`Collapsed ${panelSide} panel (saved width: ${previousWidth}px)`);
+            }
+
+            // Update canvas
+            if (window.updateCanvas) {
+                window.updateCanvas();
+            }
+        });
+
+        // Store cleanup function on the resizer element
+        resizer._cleanup = () => {
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+
+        Logger.ui.debug(`Setup resizer for ${panelSide} panel with full functionality`);
+    }
+
+    /**
+     * Setup tab dragging functionality for a panel
+     * @param {HTMLElement} panel - Panel element
+     */
+    setupTabDraggingForPanel(panel) {
+        const tabContainer = panel.querySelector('.flex.border-b.border-gray-700');
+        if (!tabContainer) return;
+
+        // Check if dragging is already setup for this container
+        if (tabContainer._draggingSetup) return;
+
+        // Get global dragging state from window
+        if (!window.tabDraggingState) {
+            window.tabDraggingState = {
+                draggedTab: null,
+                draggedIndex: -1,
+                draggedPanel: null
+            };
+        }
+
+        const draggingState = window.tabDraggingState;
+
+        // Make tabs draggable
+        tabContainer.addEventListener('mousedown', (e) => {
+            const tab = e.target.closest('.tab-right, .tab-left');
+            if (!tab) return;
+
+            draggingState.draggedTab = tab;
+            draggingState.draggedIndex = Array.from(tabContainer.children).indexOf(tab);
+            draggingState.draggedPanel = panel;
+            
+            // Add dragging class
+            tab.classList.add('dragging');
+            
+            // Prevent default to avoid text selection
+            e.preventDefault();
+        });
+
+        // Handle mouse move for drag over effects
+        tabContainer.addEventListener('mousemove', (e) => {
+            if (!draggingState.draggedTab || draggingState.draggedPanel !== panel) return;
+
+            const tab = e.target.closest('.tab-right, .tab-left');
+            if (!tab || tab === draggingState.draggedTab) {
+                // Remove drag-over from all tabs in this container
+                tabContainer.querySelectorAll('.tab-right, .tab-left').forEach(t => t.classList.remove('tab-drag-over'));
+                return;
+            }
+
+            const targetIndex = Array.from(tabContainer.children).indexOf(tab);
+            
+            // Remove drag-over from all tabs in this container
+            tabContainer.querySelectorAll('.tab-right, .tab-left').forEach(t => t.classList.remove('tab-drag-over'));
+            
+            // Add drag-over to target tab
+            tab.classList.add('tab-drag-over');
+        });
+
+        // Prevent text selection during drag
+        tabContainer.addEventListener('selectstart', (e) => {
+            if (draggingState.draggedTab) {
+                e.preventDefault();
+            }
+        });
+
+        // Mark as setup
+        tabContainer._draggingSetup = true;
+
+        Logger.ui.debug(`Setup tab dragging for panel ${panel.id}`);
+    }
+
+    /**
+     * Remove panel if it has no tabs
+     * @param {string} panelSide - 'left' or 'right'
+     */
+    removeEmptyPanel(panelSide) {
+        const panel = document.getElementById(`${panelSide}-tabs-panel`);
+        if (!panel) return;
+
+        const tabsContainer = panel.querySelector('.flex.border-b.border-gray-700');
+        if (tabsContainer && tabsContainer.children.length === 0) {
+            if (panelSide === 'left') {
+                // Remove left panel and its resizer (it's dynamically created)
+                panel.remove();
+                
+                const resizer = document.getElementById(`resizer-${panelSide}-tabs-panel`);
+                if (resizer) {
+                    // Cleanup event listeners before removing
+                    if (resizer._cleanup) {
+                        resizer._cleanup();
+                    }
+                    resizer.remove();
+                }
+                
+                Logger.ui.info(`Removed empty ${panelSide} panel`);
+            } else if (panelSide === 'right') {
+                // Hide right panel and its resizer (it's part of HTML structure)
+                panel.style.display = 'none';
+                panel.classList.add('hidden');
+                
+                const resizer = document.getElementById(`resizer-${panelSide}-tabs-panel`);
+                if (resizer) {
+                    resizer.style.display = 'none';
+                    resizer.classList.add('hidden');
+                }
+                
+                Logger.ui.info(`Hidden empty ${panelSide} panel`);
+            }
+            
+            // Update canvas after panel is removed/hidden
+            if (window.updateCanvas) {
+                window.updateCanvas();
+            }
+        }
+    }
+
+    /**
      * Destroy and cleanup resources
      */
     destroy() {
+        // Cleanup resizer event listeners
+        const leftResizer = document.getElementById('resizer-left-tabs-panel');
+        const rightResizer = document.getElementById('resizer-right-tabs-panel');
+        
+        if (leftResizer && leftResizer._cleanup) {
+            leftResizer._cleanup();
+        }
+        
+        if (rightResizer && rightResizer._cleanup) {
+            rightResizer._cleanup();
+        }
+        
         // Clear references
         this.levelEditor = null;
         this.stateManager = null;

@@ -38,6 +38,9 @@ export class UserPreferencesManager {
             'foldersPosition': 'ui.foldersPosition',
             'foldersWidth': 'ui.foldersWidth',
             'rightPanelPosition': 'ui.rightPanelPosition',
+            'tabPosition_details': 'ui.tabPosition_details',
+            'tabPosition_layers': 'ui.tabPosition_layers',
+            'tabPosition_outliner': 'ui.tabPosition_outliner',
 
             // Canvas/Grid preferences
             'canvasBackgroundColor': 'canvas.backgroundColor',

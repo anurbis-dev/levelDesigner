@@ -42,7 +42,7 @@
     flex-shrink: 0;
 }
 
-.tab-right {
+.tab-right, .tab-left {
     flex: 1;
 }
 

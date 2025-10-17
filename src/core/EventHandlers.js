@@ -57,6 +57,9 @@ export class EventHandlers extends BaseModule {
         // Right panel tabs
         this.setupRightPanelTabs();
         
+        // Tab context menus
+        this.setupTabContextMenus();
+        
         // State change listeners
         this.setupStateListeners();
 
@@ -576,7 +579,7 @@ export class EventHandlers extends BaseModule {
                 }
                 break;
             case 'rightPanel':
-                const rightPanel = document.getElementById('right-panel');
+                const rightPanel = document.getElementById('right-tabs-panel');
                 const resizerX = document.getElementById('resizer-x');
                 if (rightPanel) {
                     rightPanel.classList.toggle('hidden', !visible);
@@ -852,6 +855,136 @@ export class EventHandlers extends BaseModule {
             });
         });
 
+    }
+
+    /**
+     * Setup context menus for tabs
+     */
+    setupTabContextMenus() {
+        // Setup context menu for existing tabs
+        this.updateTabContextMenus();
+        
+        // Use MutationObserver to detect new tabs
+        const observer = new MutationObserver((mutations) => {
+            let tabsChanged = false;
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList') {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            if (node.classList && (node.classList.contains('tab-right') || node.classList.contains('tab-left'))) {
+                                tabsChanged = true;
+                            }
+                            // Check child elements too
+                            if (node.querySelector && (node.querySelector('.tab-right') || node.querySelector('.tab-left'))) {
+                                tabsChanged = true;
+                            }
+                        }
+                    });
+                }
+            });
+            
+            if (tabsChanged) {
+                this.updateTabContextMenus();
+            }
+        });
+        
+        // Observe all panels for tab changes
+        const panels = document.querySelectorAll('#right-tabs-panel, #left-tabs-panel');
+        panels.forEach(panel => {
+            observer.observe(panel, { childList: true, subtree: true });
+        });
+    }
+
+    /**
+     * Update context menus for all tabs
+     */
+    updateTabContextMenus() {
+        // Remove existing context menu handlers
+        document.querySelectorAll('.tab-right, .tab-left').forEach(tab => {
+            tab.removeEventListener('contextmenu', this.handleTabContextMenu);
+        });
+        
+        // Add context menu handlers to all tabs
+        document.querySelectorAll('.tab-right, .tab-left').forEach(tab => {
+            tab.addEventListener('contextmenu', this.handleTabContextMenu.bind(this));
+        });
+    }
+
+    /**
+     * Handle context menu on tab
+     * @param {Event} event - Context menu event
+     */
+    handleTabContextMenu(event) {
+        event.preventDefault();
+        
+        const tab = event.target.closest('.tab-right, .tab-left');
+        if (!tab) return;
+        
+        const tabName = tab.dataset.tab;
+        
+        // Determine current panel by finding which panel contains this tab
+        const leftPanel = document.getElementById('left-tabs-panel');
+        const rightPanel = document.getElementById('right-tabs-panel');
+        
+        let currentPanel = 'right'; // default
+        if (leftPanel && leftPanel.contains(tab)) {
+            currentPanel = 'left';
+        } else if (rightPanel && rightPanel.contains(tab)) {
+            currentPanel = 'right';
+        }
+        
+        const targetPanel = currentPanel === 'right' ? 'left' : 'right';
+        
+        // Create simple context menu
+        this.showTabContextMenu(event, tabName, currentPanel, targetPanel);
+    }
+
+    /**
+     * Show context menu for tab
+     * @param {Event} event - Context menu event
+     * @param {string} tabName - Name of the tab
+     * @param {string} currentPanel - Current panel side
+     * @param {string} targetPanel - Target panel side
+     */
+    showTabContextMenu(event, tabName, currentPanel, targetPanel) {
+        // Remove existing menu
+        const existingMenu = document.querySelector('.tab-context-menu');
+        if (existingMenu) {
+            existingMenu.remove();
+        }
+        
+        // Create menu
+        const menu = document.createElement('div');
+        menu.className = 'tab-context-menu fixed bg-gray-800 border border-gray-600 rounded shadow-lg z-50';
+        menu.style.left = event.pageX + 'px';
+        menu.style.top = event.pageY + 'px';
+        
+        // Create menu item
+        const menuItem = document.createElement('div');
+        menuItem.className = 'px-3 py-2 text-sm text-gray-200 hover:bg-gray-700 cursor-pointer';
+        menuItem.innerHTML = `⇄ Swap to ${targetPanel} side`;
+        
+        menuItem.addEventListener('click', () => {
+            if (this.editor && this.editor.panelPositionManager) {
+                this.editor.panelPositionManager.moveTab(tabName, currentPanel, targetPanel);
+            }
+            menu.remove();
+        });
+        
+        menu.appendChild(menuItem);
+        document.body.appendChild(menu);
+        
+        // Close menu when clicking outside
+        const closeMenu = (e) => {
+            if (!menu.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        };
+        
+        setTimeout(() => {
+            document.addEventListener('click', closeMenu);
+        }, 0);
     }
 
     /**

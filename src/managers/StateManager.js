@@ -129,6 +129,9 @@ export class StateManager {
             // Panel state
             panels: {
                 rightPanelWidth: 300,
+                rightPanelPreviousWidth: 300,
+                leftPanelWidth: 300,
+                leftPanelPreviousWidth: 300,
                 assetsPanelHeight: 256,
                 consoleHeight: 200,
                 foldersWidth: 192
@@ -444,6 +447,9 @@ export class StateManager {
             },
             panels: {
                 rightPanelWidth: 300,
+                rightPanelPreviousWidth: 300,
+                leftPanelWidth: 300,
+                leftPanelPreviousWidth: 300,
                 assetsPanelHeight: 256,
                 consoleHeight: 200,
                 foldersWidth: 192

@@ -54,7 +54,8 @@ input, textarea {
 
 /* Styles for resizers that allow changing panel sizes */
 .resizer,
-.resizer-x {
+.resizer-right-tabs-panel,
+.resizer-left-tabs-panel {
     background-color: transparent;
     cursor: col-resize;
     width: 6px;
@@ -72,7 +73,8 @@ input, textarea {
 
 /* Resize indicator - appears on hover */
 .resizer::after,
-.resizer-x::after,
+.resizer-right-tabs-panel::after,
+.resizer-left-tabs-panel::after,
 .resizer-y::after {
     content: '';
     position: absolute;
@@ -86,7 +88,8 @@ input, textarea {
 }
 
 .resizer::after,
-.resizer-x::after {
+.resizer-right-tabs-panel::after,
+.resizer-left-tabs-panel::after {
     width: 2px;
     height: 20px;
 }
@@ -97,27 +100,31 @@ input, textarea {
 }
 
 .resizer:hover::after,
-.resizer-x:hover::after,
+.resizer-right-tabs-panel:hover::after,
+.resizer-left-tabs-panel:hover::after,
 .resizer-y:hover::after {
     opacity: 1;
 }
 
 /* Active state during dragging */
 .resizer.resizing,
-.resizer-x.resizing,
+.resizer-right-tabs-panel.resizing,
+.resizer-left-tabs-panel.resizing,
 .resizer-y.resizing {
     background-color: #374151;
 }
 
 .resizer.resizing::after,
-.resizer-x.resizing::after,
+.resizer-right-tabs-panel.resizing::after,
+.resizer-left-tabs-panel.resizing::after,
 .resizer-y.resizing::after {
     opacity: 1;
     background-color: #ffffff;
 }
 
 .resizer.resizing::after,
-.resizer-x.resizing::after {
+.resizer-right-tabs-panel.resizing::after,
+.resizer-left-tabs-panel.resizing::after {
     width: 3px;
     height: 24px;
 }
@@ -203,7 +210,7 @@ header .text-sm {
 }
 
 /* Unified tab styles */
-.tab, .tab-right {
+.tab, .tab-right, .tab-left {
     transition: background-color 0.2s;
     position: relative;
     padding: 0.5rem 1rem;
@@ -216,27 +223,27 @@ header .text-sm {
     border-bottom: 2px solid transparent;
 }
 
-.tab:hover, .tab-right:hover {
+.tab:hover, .tab-right:hover, .tab-left:hover {
     background-color: #4B5563; /* gray-600 */
 }
 
-.tab.active, .tab-right.active {
+.tab.active, .tab-right.active, .tab-left.active {
     background-color: var(--ui-active-tab-color, #374151);
     border-bottom-color: transparent; /* removed blue underline */
     color: var(--ui-active-text-color, #ffffff);
 }
 
 /* Styles for tab dragging */
-.tab-right.dragging, .tab.dragging {
+.tab-right.dragging, .tab.dragging, .tab-left.dragging {
     opacity: 0.5;
     z-index: 1000;
 }
 
-.tab-right.drag-over, .tab.drag-over, .tab-right.tab-drag-over, .tab.tab-drag-over {
+.tab-right.drag-over, .tab.drag-over, .tab-right.tab-drag-over, .tab.tab-drag-over, .tab-left.drag-over, .tab-left.tab-drag-over {
     border-left: 2px solid var(--ui-active-color, #3B82F6);
 }
 
-.tab-right.drag-over:last-child, .tab.drag-over:last-child, .tab-right.tab-drag-over:last-child, .tab.tab-drag-over:last-child {
+.tab-right.drag-over:last-child, .tab.drag-over:last-child, .tab-right.tab-drag-over:last-child, .tab.tab-drag-over:last-child, .tab-left.drag-over:last-child, .tab-left.tab-drag-over:last-child {
     border-right: 2px solid var(--ui-active-color, #3B82F6);
 }
 

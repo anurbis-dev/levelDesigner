@@ -141,8 +141,8 @@ nav {
     gap: 0;
 }
 
-/* Right panel tabs */
-.tab-right {
+/* Panel tabs */
+.tab-right, .tab-left {
     padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0)) calc(1rem * max(var(--spacing-scale, 1.0), 0));
     min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
 }
@@ -320,7 +320,7 @@ nav {
     padding: 0.25rem; /* Minimal padding for search elements */
 }
 
-.tab-content-right {
+.tab-content-right, .tab-content-left {
     padding: 0; /* No padding for main interface elements */
 }
 
