@@ -169,9 +169,8 @@ export class AssetPanelContextMenu extends BaseContextMenu {
 
         this.addSeparator();
 
-        // Folders panel position toggle
-        const currentPosition = this.assetPanel.foldersPosition === 'left' ? 'Right' : 'Left';
-        this.addMenuItem(`Move Folders to ${currentPosition}`, '⇄', () => {
+        // Swap panels command
+        this.addMenuItem('Swap Panels', '⇄', () => {
             this.assetPanel.toggleFoldersPosition();
         });
 

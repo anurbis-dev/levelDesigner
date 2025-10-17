@@ -852,13 +852,6 @@ export class EventHandlers extends BaseModule {
             });
         });
 
-        // Setup right panel position toggle button
-        const positionToggleBtn = document.getElementById('right-panel-position-toggle');
-        if (positionToggleBtn) {
-            positionToggleBtn.addEventListener('click', () => {
-                this.editor.toggleRightPanelPosition();
-            });
-        }
     }
 
     /**

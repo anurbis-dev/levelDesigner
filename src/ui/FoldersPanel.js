@@ -33,9 +33,6 @@ export class FoldersPanel extends BasePanel {
         this.container.innerHTML = `
             <div class="flex border-b border-gray-700 flex-shrink-0 px-3 py-2">
                 <span class="text-sm font-medium flex-1" style="color: var(--ui-text-color, #d1d5db);">Content</span>
-                <button id="folders-position-toggle" class="px-1 py-0.5 rounded text-xs" title="Toggle position" style="color: var(--ui-text-color, #9ca3af);">
-                    ⇄
-                </button>
             </div>
             <div id="folders-tree" class="flex-grow overflow-y-auto p-2 text-sm" style="overflow-x: hidden; word-wrap: nowrap; line-height: 1.2; word-break: keep-all; hyphens: none;">
                 <!-- Folder tree will be rendered here -->
@@ -50,7 +47,6 @@ export class FoldersPanel extends BasePanel {
             Logger.ui.debug('FoldersPanel: folderTree is visible:', this.folderTree.offsetWidth > 0 && this.folderTree.offsetHeight > 0);
         }
 
-        this.setupPositionToggle();
     }
 
     /**
@@ -93,20 +89,6 @@ export class FoldersPanel extends BasePanel {
         });
     }
 
-    /**
-     * Setup position toggle button
-     */
-    setupPositionToggle() {
-        const toggleBtn = this.container.querySelector('#folders-position-toggle');
-        if (toggleBtn && this.assetPanel) {
-            toggleBtn.addEventListener('click', () => {
-                Logger.ui.debug('FoldersPanel: Position toggle clicked');
-                this.assetPanel.toggleFoldersPosition();
-            });
-        } else {
-            Logger.ui.warn('FoldersPanel: Position toggle button or assetPanel not available');
-        }
-    }
 
     /**
      * Truncate name to fit available space
