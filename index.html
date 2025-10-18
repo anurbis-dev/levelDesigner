@@ -654,10 +654,10 @@
                     let newWidth;
                     if (panelPosition === 'right') {
                         // Panel is on the right side - normal logic
-                        newWidth = initialRightPanelWidth - mouseDelta;
+                        newWidth = initialRightPanelWidth + mouseDelta;
                     } else {
                         // Panel is on the left side - inverted logic
-                        newWidth = initialRightPanelWidth + mouseDelta;
+                        newWidth = initialRightPanelWidth - mouseDelta;
                     }
                     
                     if (newWidth < 0) newWidth = 0;
