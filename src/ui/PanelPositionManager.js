@@ -326,6 +326,9 @@ export class PanelPositionManager {
             }
         }
 
+        // Ensure tab dragging is setup for this panel
+        this.setupTabDraggingForPanel(panel);
+
         return panel;
     }
 
@@ -880,12 +883,56 @@ export class PanelPositionManager {
             tab.classList.add('tab-drag-over');
         });
 
+        // Handle mouse up to complete drag
+        tabContainer.addEventListener('mouseup', (e) => {
+            if (!draggingState.draggedTab || draggingState.draggedPanel !== panel) return;
+
+            const targetTab = e.target.closest('.tab-right, .tab-left');
+            if (targetTab && targetTab !== draggingState.draggedTab) {
+                const targetIndex = Array.from(tabContainer.children).indexOf(targetTab);
+                const draggedIndex = draggingState.draggedIndex;
+                
+                // Move the tab to new position
+                if (targetIndex > draggedIndex) {
+                    tabContainer.insertBefore(draggingState.draggedTab, targetTab.nextSibling);
+                } else {
+                    tabContainer.insertBefore(draggingState.draggedTab, targetTab);
+                }
+                
+                Logger.ui.debug(`Moved tab ${draggingState.draggedTab.dataset.tab} to position ${targetIndex}`);
+            }
+
+            // Clean up dragging state
+            draggingState.draggedTab.classList.remove('dragging');
+            tabContainer.querySelectorAll('.tab-right, .tab-left').forEach(t => t.classList.remove('tab-drag-over'));
+            
+            draggingState.draggedTab = null;
+            draggingState.draggedIndex = -1;
+            draggingState.draggedPanel = null;
+        });
+
         // Prevent text selection during drag
         tabContainer.addEventListener('selectstart', (e) => {
             if (draggingState.draggedTab) {
                 e.preventDefault();
             }
         });
+
+        // Add global mouseup handler to clean up if mouse is released outside container
+        if (!window.tabDraggingGlobalMouseUp) {
+            window.tabDraggingGlobalMouseUp = (e) => {
+                if (draggingState.draggedTab) {
+                    // Clean up dragging state
+                    draggingState.draggedTab.classList.remove('dragging');
+                    document.querySelectorAll('.tab-right, .tab-left').forEach(t => t.classList.remove('tab-drag-over'));
+                    
+                    draggingState.draggedTab = null;
+                    draggingState.draggedIndex = -1;
+                    draggingState.draggedPanel = null;
+                }
+            };
+            document.addEventListener('mouseup', window.tabDraggingGlobalMouseUp);
+        }
 
         // Mark as setup
         tabContainer._draggingSetup = true;
