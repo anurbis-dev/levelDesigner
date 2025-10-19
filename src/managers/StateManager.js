@@ -133,6 +133,7 @@ export class StateManager {
                 leftPanelWidth: 300,
                 leftPanelPreviousWidth: 300,
                 assetsPanelHeight: 256,
+                assetsPanelPreviousHeight: 256,
                 consoleHeight: 200,
                 foldersWidth: 192
             },
@@ -451,6 +452,7 @@ export class StateManager {
                 leftPanelWidth: 300,
                 leftPanelPreviousWidth: 300,
                 assetsPanelHeight: 256,
+                assetsPanelPreviousHeight: 256,
                 consoleHeight: 200,
                 foldersWidth: 192
             }

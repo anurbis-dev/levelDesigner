@@ -72,6 +72,8 @@ input, textarea {
     height: 6px;
     flex-shrink: 0;
     position: relative;
+    touch-action: none;
+    user-select: none;
 }
 
 /* Resize indicator - appears on hover */

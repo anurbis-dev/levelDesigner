@@ -4,6 +4,7 @@ import { AssetManager } from '../managers/AssetManager.js';
 import { FileManager } from '../managers/FileManager.js';
 import { ConfigManager } from '../managers/ConfigManager.js';
 import { CacheManager } from '../managers/CacheManager.js';
+import { TouchSupportManager } from '../managers/TouchSupportManager.js';
 import { SearchSectionUtils } from '../utils/SearchSectionUtils.js';
 import { CanvasRenderer } from '../ui/CanvasRenderer.js';
 import { AssetPanel } from '../ui/AssetPanel.js';
@@ -52,7 +53,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.50.9';
+    static VERSION = '3.51.0';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -67,6 +68,7 @@ export class LevelEditor {
         this.historyManager = new HistoryManager();
         this.assetManager = new AssetManager(this.stateManager);
         this.fileManager = new FileManager();
+        this.touchSupportManager = new TouchSupportManager();
         
         // Store user preferences manager
         this.userPrefs = userPreferencesManager;

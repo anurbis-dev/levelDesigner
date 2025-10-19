@@ -14,6 +14,7 @@ export class UserPreferencesManager {
         // Map of preference paths to config paths
         this.pathMapping = {
             // UI preferences
+            'leftPanelWidth': 'ui.leftPanelWidth',
             'rightPanelWidth': 'ui.rightPanelWidth',
             'consoleHeight': 'ui.consoleHeight',
             'assetsPanelHeight': 'ui.assetsPanelHeight',

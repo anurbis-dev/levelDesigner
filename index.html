@@ -445,10 +445,7 @@
         // Make updateCanvas globally available
         window.updateCanvas = updateCanvas;
 
-        // Panel resizing functionality
-        function setupPanelResizing() {
-            try {
-                // Initialize panel sizes from StateManager
+        // Assets panel resizing is now handled by PanelPositionManager
                 if (window.editor?.stateManager) {
                     const assetsPanelHeight = window.editor.stateManager.get('panels.assetsPanelHeight');
                     
@@ -613,11 +610,6 @@
                 }
             });
 
-            // Note: Window resize is handled by EventHandlers to avoid duplication
-            } catch (error) {
-                console.error('Error setting up panel resizing:', error);
-            }
-        }
 
         // Tab dragging functionality
         function setupTabDragging() {
@@ -1287,12 +1279,7 @@ if (!isResizing) return;
                 console.error('Error setting global editor:', error);
             }
 
-            // Initialize panel resizing after editor is available
-            try {
-                setupPanelResizing();
-            } catch (error) {
-                Logger.layout.error('Error initializing panel resizing:', error);
-            }
+            // Assets panel resizing is now handled by PanelPositionManager
 
             // Register console context menu with the manager
             if (window.editor && window.editor.contextMenuManager) {

@@ -4,6 +4,7 @@
   "fontScale": 1.0,
   "spacing": 0.4,
   "consoleHeight": null,
+  "leftPanelWidth": 300,
   "assetsPanelHeight": 256,
   "consoleVisible": false,
   "consoleMaxLines": 1000,
