@@ -19,6 +19,40 @@ export class BasePanel {
         this.container = container;
         this.stateManager = stateManager;
         this.levelEditor = levelEditor;
+
+        // Custom sections will be created lazily when first requested
+        this._customSectionsInitialized = false;
+    }
+
+    /**
+     * Setup custom sections (top and bottom) around the content container
+     * This method should be overridden by subclasses that need custom sections
+     */
+    setupCustomSections() {
+        // Base implementation does nothing - subclasses should override this
+        Logger.ui.debug(`BasePanel: Skipping custom sections setup for ${this.constructor.name} - no custom sections needed`);
+    }
+
+    /**
+     * Get the top custom section for adding custom controls
+     * @returns {HTMLElement|null} Top custom section element or null if not available
+     */
+    getTopCustomSection() {
+        if (!this._customSectionsInitialized) {
+            this.setupCustomSections();
+        }
+        return this.topCustomSection || null;
+    }
+
+    /**
+     * Get the bottom custom section for adding custom controls
+     * @returns {HTMLElement|null} Bottom custom section element or null if not available
+     */
+    getBottomCustomSection() {
+        if (!this._customSectionsInitialized) {
+            this.setupCustomSections();
+        }
+        return this.bottomCustomSection || null;
     }
 
     /**

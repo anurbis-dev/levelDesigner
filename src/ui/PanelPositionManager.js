@@ -9,7 +9,9 @@ export class PanelPositionManager {
         this.levelEditor = levelEditor;
         this.stateManager = levelEditor.stateManager;
         this.userPrefs = levelEditor.userPrefs;
+        this._initializing = false; // Flag to prevent loops during initialization
     }
+
 
     /**
      * Toggle panel position (left/right)
@@ -99,6 +101,8 @@ export class PanelPositionManager {
      * Initialize panel positions from saved preferences
      */
     initializePanelPositions() {
+        Logger.ui.info('Initializing panel positions...');
+        
         // Initialize folders panel position
         const foldersPosition = this.userPrefs?.get('foldersPosition') ?? 'left';
         this.stateManager.set('foldersPosition', foldersPosition);
@@ -111,28 +115,111 @@ export class PanelPositionManager {
         const rightPanelPosition = this.userPrefs?.get('rightPanelPosition') ?? 'right';
         this.stateManager.set('rightPanelPosition', rightPanelPosition);
 
-        // Initialize tab positions
+        // Initialize tab positions (this will create panels only if needed)
         this.initializeTabPositions();
+        
+        console.log('✅ Panel positions initialization completed');
+        window.panelInitializationCompleted = true; // Global flag for debugging
+        Logger.ui.info('Panel positions initialization completed');
     }
 
     /**
      * Initialize tab positions from saved preferences
      */
     initializeTabPositions() {
-        const tabPositions = {
-            details: this.userPrefs?.get('tabPosition_details') ?? 'right',
-            layers: this.userPrefs?.get('tabPosition_layers') ?? 'right',
-            outliner: this.userPrefs?.get('tabPosition_outliner') ?? 'right'
-        };
+        this._initializing = true;
         
-        this.stateManager.set('tabPositions', tabPositions);
+        try {
+            const tabPositions = {
+                details: this.userPrefs?.get('tabPosition_details') ?? 'right',
+                layers: this.userPrefs?.get('tabPosition_layers') ?? 'right',
+                outliner: this.userPrefs?.get('tabPosition_outliner') ?? 'right'
+            };
+            
+            this.stateManager.set('tabPositions', tabPositions);
+            
+            // Create a temporary source container with all tabs and content
+            this.createTemporaryTabContainer();
+            
+            // Move tabs to their saved positions using existing moveTab method
+            Object.entries(tabPositions).forEach(([tabName, position]) => {
+                // This will create panels if they don't exist
+                this.moveTab(tabName, 'temp', position);
+            });
+            
+            // Remove temporary container
+            this.removeTemporaryTabContainer();
+        } finally {
+            this._initializing = false;
+        }
+    }
+
+    /**
+     * Create temporary container with all tabs and content
+     */
+    createTemporaryTabContainer() {
+        const tempContainer = document.createElement('div');
+        tempContainer.id = 'temp-tabs-panel';
+        tempContainer.style.display = 'none';
         
-        // Move tabs to their saved positions
-        Object.entries(tabPositions).forEach(([tabName, position]) => {
-            if (position === 'left') {
-                this.moveTab(tabName, 'right', 'left');
+        // Create tabs container
+        const tabsContainer = document.createElement('div');
+        tabsContainer.className = 'flex border-b border-gray-700 flex-shrink-0';
+        
+        // Create content container
+        const contentContainer = document.createElement('div');
+        contentContainer.className = 'flex-grow overflow-y-auto';
+        
+        // Create default tabs
+        const defaultTabs = [
+            { name: 'details', text: 'Asset', active: true },
+            { name: 'layers', text: 'Layers', active: false },
+            { name: 'outliner', text: 'Outliner', active: false }
+        ];
+
+        defaultTabs.forEach(tab => {
+            const tabButton = document.createElement('button');
+            tabButton.setAttribute('data-tab', tab.name);
+            tabButton.className = `tab-right ${tab.active ? 'active' : ''}`;
+            tabButton.id = `${tab.name}-tab`;
+            tabButton.textContent = tab.text;
+            tabsContainer.appendChild(tabButton);
+        });
+
+        // Move existing content panels to temporary container
+        const contentPanels = [
+            'details-content-panel',
+            'layers-content-panel', 
+            'outliner-content-panel'
+        ];
+        
+        contentPanels.forEach(panelId => {
+            const contentPanel = document.getElementById(panelId);
+            if (contentPanel) {
+                // Remove from current parent and add to content container
+                contentPanel.parentNode?.removeChild(contentPanel);
+                contentContainer.appendChild(contentPanel);
             }
         });
+
+        tempContainer.appendChild(tabsContainer);
+        tempContainer.appendChild(contentContainer);
+        
+        // Add to DOM (hidden)
+        document.body.appendChild(tempContainer);
+        
+        Logger.ui.debug('Created temporary tab container with content panels');
+    }
+
+    /**
+     * Remove temporary container
+     */
+    removeTemporaryTabContainer() {
+        const tempContainer = document.getElementById('temp-tabs-panel');
+        if (tempContainer) {
+            tempContainer.remove();
+            Logger.ui.debug('Removed temporary tab container');
+        }
     }
 
     /**
@@ -175,6 +262,12 @@ export class PanelPositionManager {
         // Move the tab physically
         this.moveTabDOM(tabName, fromPanel, toPanel);
         
+        // Update active tab state if this was the active tab
+        this.updateActiveTabAfterMove(tabName, toPanel);
+        
+        // Update event listeners for moved tabs
+        this.updateTabEventListeners();
+        
         // Remove empty panel if needed
         this.removeEmptyPanel(fromPanel);
 
@@ -196,18 +289,24 @@ export class PanelPositionManager {
             // Insert into layout
             this.insertPanelIntoLayout(panel, panelSide);
             
-            Logger.ui.info(`Created ${panelSide} tabs panel`);
+            // Mark as newly created to prevent recreation
+            panel._newlyCreated = true;
+            
+        Logger.ui.info(`Created ${panelSide} tabs panel`);
         } else {
             // Panel exists, check if it has tabs or is hidden
             const tabContainer = panel.querySelector('.flex.border-b.border-gray-700');
             const hasTabs = tabContainer && tabContainer.children.length > 0;
             const isHidden = panel.style.display === 'none' || panel.classList.contains('hidden');
             
-            if (!hasTabs || isHidden) {
+            // Don't recreate if panel was just created or if we're initializing
+            if ((!hasTabs || isHidden) && !panel._newlyCreated && !this._initializing) {
                 // Panel exists but is empty or hidden, recreate its structure
                 Logger.ui.info(`Recreating ${isHidden ? 'hidden' : 'empty'} ${panelSide} tabs panel structure`);
                 
                 // Clear the panel and recreate structure
+                // Temporarily disable any observers during DOM manipulation
+                const originalInnerHTML = panel.innerHTML;
                 panel.innerHTML = '';
                 const newStructure = this.createTabsPanel(panelSide);
                 
@@ -216,23 +315,9 @@ export class PanelPositionManager {
                     panel.appendChild(newStructure.firstChild);
                 }
                 
-                // Ensure panel and its resizer are visible
+                // Ensure panel is visible
                 panel.style.display = 'flex';
                 panel.classList.remove('hidden');
-                
-                if (panelSide === 'right') {
-                    // Ensure right panel resizer is visible
-                    const resizer = document.getElementById('resizer-right-tabs-panel');
-                    if (resizer) {
-                        resizer.style.display = 'block';
-                        resizer.classList.remove('hidden');
-                    }
-                }
-            }
-            
-            // Ensure it has dragging functionality
-            if (panelSide === 'left') {
-                this.setupTabDraggingForPanel(panel);
             }
             
             // Update canvas after panel is restored
@@ -257,20 +342,14 @@ export class PanelPositionManager {
         // Create tabs container
         const tabsContainer = document.createElement('div');
         tabsContainer.className = 'flex border-b border-gray-700 flex-shrink-0';
-        
-        // Create search section
-        const searchSection = document.createElement('div');
-        searchSection.id = `${panelSide}-panel-search`;
-        searchSection.className = 'border-b border-gray-700 flex-shrink-0';
-        
+
         // Create content container
         const contentContainer = document.createElement('div');
         contentContainer.className = 'flex-grow overflow-y-auto';
-        
-        // Content panels will be moved here dynamically when tabs are moved
-        
+
+        // Content panels will be moved here by moveTabElements method
+
         panel.appendChild(tabsContainer);
-        panel.appendChild(searchSection);
         panel.appendChild(contentContainer);
 
         return panel;
@@ -292,17 +371,11 @@ export class PanelPositionManager {
             // Create resizer for left panel
             this.createPanelResizer(panel, 'left');
         } else {
-            // Insert after main panel (before existing right panel)
-            const rightPanel = document.getElementById('right-tabs-panel');
-            if (rightPanel) {
-                mainContainer.insertBefore(panel, rightPanel);
-            } else {
-                mainContainer.appendChild(panel);
-            }
+            // Insert after main panel
+            mainContainer.appendChild(panel);
             
-            // Don't create resizer for right panel - it already exists in index.html
-            // Just setup tab dragging functionality
-            this.setupTabDraggingForPanel(panel);
+            // Create resizer for right panel (same as left panel)
+            this.createPanelResizer(panel, 'right');
         }
         
         // Update canvas after panel is added
@@ -330,14 +403,12 @@ export class PanelPositionManager {
             if (panelSide === 'left') {
                 mainContainer.insertBefore(resizer, panel.nextSibling);
             } else {
-                mainContainer.insertBefore(resizer, panel.nextSibling);
+                // For right panel, insert before the panel (between main and right panel)
+                mainContainer.insertBefore(resizer, panel);
             }
             
             // Setup resizer functionality
             this.setupPanelResizer(resizer, panel, panelSide);
-            
-            // Setup tab dragging for the new panel
-            this.setupTabDraggingForPanel(panel);
         }
     }
 
@@ -405,6 +476,17 @@ export class PanelPositionManager {
         if (fromTabsContainer && toTabsContainer) {
             fromTabsContainer.removeChild(tabButton);
             toTabsContainer.appendChild(tabButton);
+            
+            // Remove newly created flag since panel now has tabs
+            if (toContainer._newlyCreated) {
+                toContainer._newlyCreated = false;
+            }
+            
+            // If this is the first tab in the panel, make it active
+            if (toTabsContainer.children.length === 1) {
+                tabButton.classList.add('active');
+            }
+            
             Logger.ui.debug(`Moved tab button ${tabName} to ${toPanel} panel`);
         } else {
             Logger.ui.warn(`Tab containers not found for moving ${tabName}`);
@@ -413,6 +495,8 @@ export class PanelPositionManager {
         // Move tab content to target container
         const fromContentContainer = fromContainer.querySelector('.flex-grow.overflow-y-auto');
         const toContentContainer = toContainer.querySelector('.flex-grow.overflow-y-auto');
+        
+        // Content containers found successfully
         
         if (fromContentContainer && toContentContainer) {
             // Remove from old container and add to new container
@@ -424,10 +508,22 @@ export class PanelPositionManager {
                 .replace('tab-content-right', `tab-content-${toPanel}`)
                 .replace('tab-content-left', `tab-content-${toPanel}`);
             
+            // Make content visible (remove display: none from HTML)
+            tabContent.style.display = '';
+            
+            // If this tab is active, show its content
+            if (tabButton.classList.contains('active')) {
+                tabContent.classList.remove('hidden');
+            } else {
+                tabContent.classList.add('hidden');
+            }
+            
             Logger.ui.debug(`Moved tab content ${tabName} to ${toPanel} panel`);
         } else {
             Logger.ui.warn(`Content containers not found for moving ${tabName}`);
         }
+
+        // Search sections are now part of the panel content and move automatically
 
         // Update CSS classes
         tabButton.className = tabButton.className
@@ -437,6 +533,72 @@ export class PanelPositionManager {
         Logger.ui.info(`Tab ${tabName} successfully moved to ${toPanel} panel`);
     }
 
+
+    /**
+     * Update active tab state after moving a tab
+     * @param {string} tabName - Name of the moved tab
+     * @param {string} toPanel - Target panel side
+     */
+    updateActiveTabAfterMove(tabName, toPanel) {
+        // Skip during initialization to prevent loops
+        if (this._initializing) {
+            Logger.ui.debug('Skipping active tab update during initialization');
+            return;
+        }
+        
+        // Check if the moved tab was the active tab
+        const activeTab = document.querySelector('.tab-right.active, .tab-left.active');
+        if (activeTab && activeTab.dataset.tab === tabName) {
+            // Update the active tab's CSS classes to match new panel
+            activeTab.className = activeTab.className
+                .replace('tab-right', `tab-${toPanel}`)
+                .replace('tab-left', `tab-${toPanel}`);
+            
+            // Update StateManager with new active tab position
+            if (this.stateManager) {
+                this.stateManager.set('rightPanelTab', tabName);
+            }
+            
+            // Update search controls for the moved tab
+            if (this.levelEditor && this.levelEditor.initializeSearchControls) {
+                this.levelEditor.initializeSearchControls();
+            }
+            
+            Logger.ui.debug(`Updated active tab ${tabName} after move to ${toPanel} panel`);
+        }
+    }
+
+    /**
+     * Update event listeners for tabs after they are moved
+     */
+    updateTabEventListeners() {
+        // Skip during initialization to prevent loops
+        if (this._initializing) {
+            Logger.ui.debug('Skipping tab event listeners update during initialization');
+            return;
+        }
+        
+        // Notify EventHandlers to update tab event listeners
+        if (this.levelEditor && this.levelEditor.eventHandlers) {
+            if (this.levelEditor.eventHandlers.updateTabClickHandlers) {
+                this.levelEditor.eventHandlers.updateTabClickHandlers();
+            }
+            if (this.levelEditor.eventHandlers.updateTabContextMenus) {
+                this.levelEditor.eventHandlers.updateTabContextMenus();
+            }
+        }
+        
+        // Search sections are now part of panel content and update automatically
+        
+        // Update panels when tab structure changes
+        if (this.levelEditor && this.levelEditor.updateAllPanels) {
+            this.levelEditor.updateAllPanels();
+        }
+        
+        Logger.ui.debug('Updated tab event listeners after move');
+    }
+
+
     /**
      * Setup resizer functionality for a panel
      * @param {HTMLElement} resizer - Resizer element
@@ -444,6 +606,8 @@ export class PanelPositionManager {
      * @param {string} panelSide - 'left' or 'right'
      */
     setupPanelResizer(resizer, panel, panelSide) {
+        console.log(`⚙️ Setting up panel resizer for ${panelSide} panel...`);
+        Logger.ui.info(`Setting up panel resizer for ${panelSide} panel...`);
         let isResizing = false;
         
         // Get saved width and previous width from StateManager
@@ -478,14 +642,69 @@ export class PanelPositionManager {
             }
         }
 
-        // Mouse down - start resizing
+        // Mouse down - start resizing (same as left panel)
         resizer.addEventListener('mousedown', (e) => {
             isResizing = true;
             e.preventDefault();
             e.stopPropagation();
         });
 
-        // Mouse move - resize panel
+        // Touch events for better touchpad/touchscreen support
+        resizer.addEventListener('touchstart', (e) => {
+            console.log(`👆 ${panelSide} panel resizer touchstart detected`);
+            if (e.touches.length === 1) {
+                isResizing = true;
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        });
+
+        resizer.addEventListener('touchmove', (e) => {
+            if (!isResizing || e.touches.length !== 1) return;
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const touch = e.touches[0];
+            const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
+            const containerWidth = mainContainer.clientWidth;
+            const resizerWidth = 6;
+            const minWidth = 0;
+            const maxWidth = containerWidth - resizerWidth;
+            
+            let newWidth;
+            if (panelSide === 'left') {
+                newWidth = Math.max(minWidth, Math.min(touch.clientX, maxWidth));
+            } else {
+                newWidth = Math.max(minWidth, Math.min(containerWidth - touch.clientX, maxWidth));
+            }
+            
+            panel.style.width = newWidth + 'px';
+            panel.style.flexShrink = '0';
+            panel.style.flexGrow = '0';
+            
+            // Update canvas
+            if (window.updateCanvas) {
+                window.updateCanvas();
+            }
+        });
+
+        resizer.addEventListener('touchend', (e) => {
+            if (isResizing) {
+                console.log(`👆 ${panelSide} panel resizer touchend detected`);
+                isResizing = false;
+                
+                // Save width to StateManager
+                const currentWidth = panel.offsetWidth;
+                if (this.stateManager) {
+                    this.stateManager.set(`panels.${panelSide}PanelWidth`, currentWidth);
+                    this.stateManager.set(`panels.${panelSide}PanelPreviousWidth`, currentWidth);
+                }
+                
+                Logger.ui.debug(`Saved ${panelSide} panel width from touch: ${currentWidth}px`);
+            }
+        });
+
+        // Mouse move - resize panel (same logic as left panel)
         const handleMouseMove = (e) => {
             if (!isResizing) return;
             
@@ -528,9 +747,13 @@ export class PanelPositionManager {
             }
         };
 
-        // Add global mouse events
-        document.addEventListener('mousemove', handleMouseMove);
-        document.addEventListener('mouseup', handleMouseUp);
+        // Add global mouse events (only if not already added)
+        if (!resizer._globalListenersAdded) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            resizer._globalListenersAdded = true;
+        }
+
 
         // Double-click to toggle collapse/expand
         resizer.addEventListener('dblclick', (e) => {
@@ -588,12 +811,16 @@ export class PanelPositionManager {
 
         // Store cleanup function on the resizer element
         resizer._cleanup = () => {
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
+            if (resizer._globalListenersAdded) {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+                resizer._globalListenersAdded = false;
+            }
         };
 
         Logger.ui.debug(`Setup resizer for ${panelSide} panel with full functionality`);
     }
+
 
     /**
      * Setup tab dragging functionality for a panel

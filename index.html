@@ -84,32 +84,19 @@
             </div>
         </main>
 
-        <!-- Separator for changing right panel width -->
-        <div id="resizer-right-tabs-panel" class="resizer"></div>
+        <!-- 3. Right Tabs Panel (dynamic, created when needed) -->
+        <!-- This will be created dynamically by PanelPositionManager -->
+    </div>
 
-        <!-- 4. Right Tabs Panel (default) -->
-        <aside id="right-tabs-panel" class="bg-gray-900 flex flex-col border-l border-gray-700">
-            <div class="flex border-b border-gray-700 flex-shrink-0">
-                <button data-tab="details" class="tab-right active" id="details-tab">Asset</button>
-                <button data-tab="layers" class="tab-right">Layers</button>
-                <button data-tab="outliner" class="tab-right">Outliner</button>
-            </div>
-            <!-- Search section - non-scrollable -->
-            <div id="right-panel-search" class="border-b border-gray-700 flex-shrink-0">
-                <!-- Search controls will be added here dynamically -->
-            </div>
-            <div class="flex-grow overflow-y-auto">
-                <div id="details-content-panel" class="tab-content-right">
-                     <p class="text-gray-400">Select an object to see its properties.</p>
-                </div>
-                <div id="layers-content-panel" class="tab-content-right hidden">
-                     <!-- Layers content here -->
-                </div>
-                <div id="outliner-content-panel" class="tab-content-right hidden">
-                     <!-- Outliner content here -->
-                </div>
-            </div>
-        </aside>
+    <!-- Content panels for right panel tabs (required for initialization) -->
+    <div id="details-content-panel" class="tab-content-right" style="display: none;">
+        <p class="text-gray-400">Select an object to see its properties.</p>
+    </div>
+    <div id="layers-content-panel" class="tab-content-right" style="display: none;">
+        <!-- Layers content here -->
+    </div>
+    <div id="outliner-content-panel" class="tab-content-right" style="display: none;">
+        <!-- Outliner content here -->
     </div>
 
         <!-- Separator for changing asset panel height -->
@@ -463,18 +450,9 @@
             try {
                 // Initialize panel sizes from StateManager
                 if (window.editor?.stateManager) {
-                    const rightPanelWidth = window.editor.stateManager.get('panels.rightPanelWidth');
                     const assetsPanelHeight = window.editor.stateManager.get('panels.assetsPanelHeight');
                     
-                    // Apply right panel width
-                    if (rightPanelWidth !== undefined) {
-                        const rightPanel = document.getElementById('right-tabs-panel');
-                        if (rightPanel) {
-                            rightPanel.style.width = rightPanelWidth + 'px';
-                            rightPanel.style.flexShrink = '0';
-                            rightPanel.style.flexGrow = '0';
-                        }
-                    }
+                    // Note: Right panel width is now handled by PanelPositionManager
                     
                     // Apply assets panel height
                     if (assetsPanelHeight !== undefined) {
@@ -486,13 +464,8 @@
                     }
                 }
                 
-                const resizerX = document.getElementById('resizer-right-tabs-panel');
                 const resizerAssets = document.getElementById('resizer-assets');
-                const mainPanel = document.getElementById('main-panel');
-                const rightPanel = document.getElementById('right-tabs-panel');
                 const assetsPanel = document.getElementById('assets-panel');
-                const consolePanel = document.getElementById('console-panel');
-                const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
 
                 // Universal function for applying panel styles
                 function applyPanelStyles(panel, size, direction = 'width', display = 'flex') {
@@ -506,95 +479,23 @@
                     panel.style.display = display;
                 }
 
-            let isResizingX = false;
             let isResizingAssets = false;
-            let isAnyResizing = false;
+            let isAnyResizing = false; // Track any resizing activity
             
             // Variables to track initial positions for resizing
             let initialMouseY = 0;
-            let initialMouseX = 0;
             let initialAssetsPanelHeight = 0;
-            let initialRightPanelWidth = 0;
-            let lastAppliedRightWidth = null; // Track last width to detect boundary stall
             
             // Previous states for double-click toggle
-            let previousRightPanelWidth = 300; // Default width
             let previousAssetsPanelHeight = 256; // Default height
 
             // Initialize previous states from StateManager
-            const savedRightPanelPreviousWidth = window.editor?.stateManager?.get('panels.rightPanelPreviousWidth');
-            if (savedRightPanelPreviousWidth !== null && savedRightPanelPreviousWidth !== undefined) {
-                previousRightPanelWidth = savedRightPanelPreviousWidth;
-            }
-            
             const savedAssetsPanelHeight = window.editor?.stateManager?.get('panels.assetsPanelHeight');
             if (savedAssetsPanelHeight && savedAssetsPanelHeight > 0) {
                 previousAssetsPanelHeight = savedAssetsPanelHeight;
             }
 
-            // Note: Panel sizes are now applied immediately before LevelEditor initialization to prevent UI flicker
-
-            // Horizontal resizer (between main panel and right panel)
-            resizerX.addEventListener('mousedown', (e) => {
-                isResizingX = true;
-                isAnyResizing = true;
-                initialMouseX = e.clientX;
-                initialRightPanelWidth = rightPanel.offsetWidth;
-                document.body.style.cursor = 'col-resize';
-                document.body.style.userSelect = 'none';
-                resizerX.classList.add('resizing');
-                e.preventDefault();
-                e.stopPropagation();
-            });
-
-            // Double-click handler for resizerX
-            resizerX.addEventListener('dblclick', (e) => {
-                Logger.layout.info('Right panel resizer double-click triggered');
-                e.preventDefault();
-                e.stopPropagation();
-
-                const currentWidth = rightPanel.offsetWidth;
-                const containerWidth = mainContainer.clientWidth;
-                const resizerWidth = 6;
-                const minWidth = 0;
-                const maxWidth = containerWidth - resizerWidth;
-                
-
-                // Check if panel is collapsed by looking at StateManager
-                const savedWidth = window.editor?.stateManager?.get('panels.rightPanelWidth') ?? 300;
-                const isCollapsed = savedWidth <= 5; // Small threshold for collapsed panels
-                
-                Logger.layout.info(`Double-click: currentWidth=${currentWidth}, savedWidth=${savedWidth}, isCollapsed=${isCollapsed}, previousRightPanelWidth=${previousRightPanelWidth}`);
-                
-                if (isCollapsed) {
-                    // Restore to previous width
-                    const newWidth = Math.min(previousRightPanelWidth, maxWidth);
-                    rightPanel.style.width = newWidth + 'px';
-                    rightPanel.style.flexShrink = '0';
-                    rightPanel.style.flexGrow = '0';
-                    
-                    if (window.editor?.stateManager) {
-                        window.editor.stateManager.set('panels.rightPanelWidth', newWidth);
-                    }
-                    
-                    Logger.layout.info(`Expanded right panel to ${newWidth}px`);
-                } else {
-                    // Save current width and collapse
-                    previousRightPanelWidth = currentWidth;
-                    rightPanel.style.width = '0px';
-                    rightPanel.style.flexShrink = '0';
-                    rightPanel.style.flexGrow = '0';
-                    
-                    if (window.editor?.stateManager) {
-                        window.editor.stateManager.set('panels.rightPanelWidth', 0);
-                        window.editor.stateManager.set('panels.rightPanelPreviousWidth', previousRightPanelWidth);
-                    }
-                    
-                    Logger.layout.info(`Collapsed right panel (saved width: ${previousRightPanelWidth}px)`);
-                }
-
-                updateCanvas();
-            });
+            // Note: Right panel resizer is now handled by PanelPositionManager
 
             // Assets panel resizer (between main area and assets panel)
             resizerAssets.addEventListener('mousedown', (e) => {
@@ -638,56 +539,10 @@
 
             // Mouse move handler
             document.addEventListener('mousemove', (e) => {
-                if (!isAnyResizing) return;
+                if (!isResizingAssets) return;
                 
                 e.preventDefault();
                 e.stopPropagation();
-                
-                if (isResizingX) {
-                    // Get current panel position from StateManager
-                    const panelPosition = window.editor?.stateManager?.get('rightPanelPosition') || 'right';
-                    
-                    const mouseDelta = e.clientX - initialMouseX;
-                    const containerWidth = mainContainer.clientWidth;
-                    const resizerWidth = 6;
-                    
-                    let newWidth;
-                    if (panelPosition === 'right') {
-                        // Panel is on the right side - normal logic
-                        newWidth = initialRightPanelWidth + mouseDelta;
-                    } else {
-                        // Panel is on the left side - inverted logic
-                        newWidth = initialRightPanelWidth - mouseDelta;
-                    }
-                    
-                    if (newWidth < 0) newWidth = 0;
-                    const maxWidth = Math.max(0, containerWidth - resizerWidth);
-                    if (newWidth > maxWidth) newWidth = maxWidth;
-
-                    // If width didn't change compared to last applied (stuck at boundary), skip work
-                    if (lastAppliedRightWidth !== null && newWidth === lastAppliedRightWidth) {
-                        return;
-                    }
-                    
-                    // Apply directly
-                    rightPanel.style.width = newWidth + 'px';
-                    rightPanel.style.flexShrink = '0';
-                    rightPanel.style.flexGrow = '0';
-
-                    lastAppliedRightWidth = newWidth;
-
-                    // Save to StateManager
-                    if (window.editor?.stateManager) {
-                        window.editor.stateManager.set('panels.rightPanelWidth', newWidth);
-                        window.editor.stateManager.set('panels.rightPanelPreviousWidth', newWidth);
-                    }
-
-                    // Update canvas
-                    if (window.editor && window.editor.canvasRenderer) {
-                        window.editor.canvasRenderer.resizeCanvas();
-                        window.editor.render();
-                    }
-                }
                 
                 if (isResizingAssets) {
                     // Calculate height based on mouse movement from initial position
@@ -715,14 +570,11 @@
 
             // Mouse up handler
             document.addEventListener('mouseup', (e) => {
-                if (isAnyResizing) {
-                    isResizingX = false;
+                if (isResizingAssets) {
                     isResizingAssets = false;
                     isAnyResizing = false;
-                    lastAppliedRightWidth = null;
                     document.body.style.cursor = '';
                     document.body.style.userSelect = '';
-                    resizerX.classList.remove('resizing');
                     resizerAssets.classList.remove('resizing');
                     e.preventDefault();
                     e.stopPropagation();
@@ -731,7 +583,7 @@
 
             // Prevent text selection during resize
             document.addEventListener('selectstart', (e) => {
-                if (isAnyResizing) {
+                if (isResizingAssets) {
                     e.preventDefault();
                     e.stopPropagation();
                 }
@@ -739,7 +591,7 @@
 
             // Prevent context menu during resize
             document.addEventListener('contextmenu', (e) => {
-                if (isAnyResizing) {
+                if (isResizingAssets) {
                     e.preventDefault();
                     e.stopPropagation();
                 }
@@ -747,7 +599,7 @@
 
             // Prevent drag during resize
             document.addEventListener('dragstart', (e) => {
-                if (isAnyResizing) {
+                if (isResizingAssets) {
                     e.preventDefault();
                     e.stopPropagation();
                 }
@@ -755,7 +607,7 @@
 
             // Prevent focus changes during resize
             document.addEventListener('focusin', (e) => {
-                if (isAnyResizing) {
+                if (isResizingAssets) {
                     e.preventDefault();
                     e.stopPropagation();
                 }

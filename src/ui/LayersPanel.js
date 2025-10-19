@@ -4,6 +4,8 @@ import { SearchUtils } from '../utils/SearchUtils.js';
 import { BasePanel } from './BasePanel.js';
 import { LayersContextMenu } from './LayersContextMenu.js';
 import { HoverEffects } from '../utils/HoverEffects.js';
+import { createLayersPanelStructure, renderLayersControls } from './panel-structures/LayersPanelStructure.js';
+import { searchManager } from '../utils/SearchManager.js';
 
 /**
  * Layers panel UI component
@@ -15,9 +17,27 @@ export class LayersPanel extends BasePanel {
         this.currentLayerId = null; // Track current layer (for new objects, blue highlight)
         this.searchFilter = ''; // Search filter for layers
         this.contextMenu = null; // Context menu instance
-        
+
         // Track subscriptions for cleanup
         this.subscriptions = [];
+
+        // Initialize panel structure
+        this.panelElements = createLayersPanelStructure(this.container);
+
+        // Register search in universal search manager
+        searchManager.registerSearch(
+            'layers',
+            'layers-search',
+            (searchFilter) => {
+                this.searchFilter = searchFilter;
+                Logger.layer.debug('Search filter changed:', searchFilter);
+                this.renderLayersSection();
+            },
+            () => {
+                // Clear callback - could be used for additional cleanup
+                Logger.layer.debug('Search filter cleared');
+            }
+        );
         this.layerContextMenu = null; // Layer context menu reference
 
         this.setupContextMenus();
@@ -70,6 +90,8 @@ export class LayersPanel extends BasePanel {
     }
 
     setupEventListeners() {
+        // Context menu setup is done in render() when containers are available
+
         // Setup selection functionality for layers
         this.setupSelection({
             selectionKey: 'selectedObjects',
@@ -130,13 +152,57 @@ export class LayersPanel extends BasePanel {
         this.setupKeyboardShortcuts();
     }
 
+    /**
+     * Setup context menu for the layers list area (empty space)
+     * @param {HTMLElement} targetContainer - Container to attach context menu to
+     */
+    setupLayersListContextMenu(targetContainer) {
+        Logger.ui.debug('LayersPanel: setupLayersListContextMenu called with', targetContainer);
+        if (!targetContainer || this._layersListContextMenuSetup) {
+            Logger.ui.debug('LayersPanel: Skipping setup - container missing or already setup');
+            return;
+        }
+
+        // Remove existing listener if any
+        if (this._layersListContextMenuHandler) {
+            targetContainer.removeEventListener('contextmenu', this._layersListContextMenuHandler);
+        }
+
+        // Create new handler
+        this._layersListContextMenuHandler = (event) => {
+            Logger.ui.debug('LayersPanel: Context menu event triggered on', event.target);
+
+            // Show menu if not clicking on a layer item
+            if (!event.target.closest('[data-layer-id]')) {
+                Logger.ui.debug('LayersPanel: Showing menu - not on layer item');
+                event.preventDefault();
+                this.showLayersMenu(event);
+            } else {
+                Logger.ui.debug('LayersPanel: Not showing menu - clicked on layer item');
+            }
+        };
+
+        targetContainer.addEventListener('contextmenu', this._layersListContextMenuHandler);
+        this._layersListContextMenuSetup = true;
+        Logger.ui.debug('LayersPanel: Context menu listener added to layersList');
+    }
+
     render() {
+        // Reset context menu setup flag since DOM is being recreated
+        this._layersListContextMenuSetup = false;
+
         // Save search input state before clearing
         const searchInput = document.getElementById('layers-search');
         const wasSearchFocused = searchInput && document.activeElement === searchInput;
         const searchValue = this.searchFilter;
 
-        this.container.innerHTML = '';
+        // Remove only non-custom children to preserve custom sections
+        Array.from(this.container.children).forEach(child => {
+            if (!child.classList.contains('panel-top-custom') && 
+                !child.classList.contains('panel-bottom-custom')) {
+                this.container.removeChild(child);
+            }
+        });
 
         // Initialize current layer if not set
         if (!this.currentLayerId) {
@@ -166,49 +232,83 @@ export class LayersPanel extends BasePanel {
     }
 
     /**
-     * Render layers search controls in the shared search section
+     * Render layers controls in the top custom section
      */
     renderLayersSearchControls() {
-        const searchSection = document.getElementById('right-panel-search');
-        if (!searchSection) return;
+        Logger.ui.debug('LayersPanel: renderLayersSearchControls called');
+
+        // Get the top custom section from panel structure
+        const topSection = this.panelElements?.topCustom;
+        if (!topSection) {
+            Logger.ui.warn('LayersPanel: Top custom section not available, skipping controls render');
+            return;
+        }
 
         // Check if layers panel is currently active
         const layersPanel = document.getElementById('layers-content-panel');
         if (!layersPanel || layersPanel.classList.contains('hidden')) {
+            Logger.ui.debug('LayersPanel: Panel not active, skipping render');
             return; // Don't render if layers is not active
         }
 
-        // Clear existing content
-        searchSection.innerHTML = '';
+        Logger.ui.debug('LayersPanel: Panel is active, proceeding with render');
 
-        // Create search input using SearchUtils
-        const searchInput = SearchUtils.createSearchInput(
-            'Search layers...',
-            'layers-search',
-            'flex-1 bg-gray-700 px-1 py-1 rounded text-sm border border-gray-600 focus:border-blue-500 focus:outline-none'
-        );
-        searchInput.value = this.searchFilter;
+        // Check if controls are already rendered (avoid unnecessary re-rendering)
+        const searchInput = topSection.querySelector('#layers-search');
+        const addButton = topSection.querySelector('#add-layer-btn');
 
-        // Create controls row
-        const controlsRow = document.createElement('div');
-        controlsRow.className = 'flex items-center gap-1';
+        Logger.ui.debug(`LayersPanel: Checking controls - search: ${!!searchInput}, add: ${!!addButton}`);
 
-        controlsRow.innerHTML = `
-            <button id="add-layer-btn" class="bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-sm" style="color: var(--ui-text-color, #d1d5db);">
-                + Add
-            </button>
-            <button id="layers-menu-btn" class="bg-gray-600 hover:bg-gray-700 px-2 py-1 rounded text-sm" title="Layer options" style="color: var(--ui-text-color, #d1d5db);">
-                ⋮
-            </button>
-        `;
+        if (searchInput && addButton) {
+            // Controls already exist, just update search value
+            const currentTerm = searchManager.getSearchTerm('layers');
+            if (searchInput.value !== currentTerm) {
+                searchInput.value = currentTerm;
+            }
+            Logger.ui.debug('Layers controls already rendered, skipping re-render');
 
-        controlsRow.insertBefore(searchInput, controlsRow.firstChild);
-        searchSection.appendChild(controlsRow);
+            // Always check and ensure search listeners are properly set up
+            if (!searchInput.hasAttribute('data-search-managed')) {
+                Logger.ui.warn('LayersPanel: Search input exists but no listeners set up, forcing refresh');
+                searchManager.setupSearchListeners('layers');
+            } else {
+                Logger.ui.debug('LayersPanel: Search listeners are properly set up');
+            }
 
-        // Setup event listeners for search controls
-        this.setupSearch();
-        this.setupLayersMenu();
-        this.setupSearchButtons();
+            return;
+        }
+
+        Logger.ui.debug('LayersPanel: Controls not found, will render them');
+
+        Logger.ui.debug('LayersPanel: Rendering new controls');
+
+        // Use the structure's render function with callbacks
+        renderLayersControls(topSection, {
+            getSearchFilter: () => searchManager.getSearchTerm('layers'),
+            onSearch: (searchFilter) => {
+                this.searchFilter = searchFilter;
+                Logger.layer.debug('Search filter changed:', searchFilter);
+                this.renderLayersSection();
+            },
+            onAddLayer: () => {
+                const level = this.levelEditor.getLevel();
+                const newLayer = level.addLayer();
+                this.render();
+                this.stateManager.markDirty();
+                Logger.layer.info(`Added new layer: ${newLayer.name}`);
+            }
+        });
+
+        // Setup button event listeners (search is handled by SearchManager, add button by createButton)
+
+        // Immediately ensure search listeners are set up after creating new controls
+        const newSearchInput = topSection.querySelector('#layers-search');
+        if (newSearchInput && !newSearchInput.hasAttribute('data-search-managed')) {
+            Logger.ui.debug('LayersPanel: Setting up search listeners for newly created controls');
+            searchManager.setupSearchListeners('layers');
+        }
+
+        Logger.ui.debug('Layers controls rendered in top section');
     }
 
     /**
@@ -218,8 +318,23 @@ export class LayersPanel extends BasePanel {
         const level = this.levelEditor.getLevel();
         const layers = level.getLayersSorted();
 
-        // Clear existing content
-        this.container.innerHTML = '';
+        // Clear container but preserve custom sections
+        // Remove all children except custom sections
+        const children = Array.from(this.container.children);
+        children.forEach(child => {
+            if (!child.classList.contains('panel-top-custom') &&
+                !child.classList.contains('panel-bottom-custom')) {
+                this.container.removeChild(child);
+            }
+        });
+
+        // Ensure custom sections exist (recreate if needed)
+        if (!this.panelElements?.topCustom || !this.container.contains(this.panelElements.topCustom)) {
+            this.panelElements = createLayersPanelStructure(this.container);
+        }
+
+        // Render layers controls in top custom section
+        this.renderLayersSearchControls();
 
         // Layers list container
         const layersList = document.createElement('div');
@@ -247,6 +362,9 @@ export class LayersPanel extends BasePanel {
             sensitivity: 1.0,
             target: scrollableContainer || rightPanel
         });
+
+        // Setup context menu for the layers list area
+        this.setupLayersListContextMenu(layersList);
 
         // Update layer styles to show current layer highlight
         this.updateLayerStyles();
@@ -1402,17 +1520,6 @@ export class LayersPanel extends BasePanel {
         });
     }
 
-    /**
-     * Setup layers menu button
-     */
-    setupLayersMenu() {
-        const menuBtn = document.getElementById('layers-menu-btn');
-        if (!menuBtn) return;
-
-        menuBtn.addEventListener('click', (e) => {
-            this.showLayersMenu(e);
-        });
-    }
 
     /**
      * Show layers menu
@@ -1421,36 +1528,74 @@ export class LayersPanel extends BasePanel {
         // Remove existing context menu
         if (this.contextMenu) {
             this.contextMenu.remove();
+            this.contextMenu = null;
         }
 
         const contextMenu = document.createElement('div');
         contextMenu.className = 'fixed bg-gray-800 border border-gray-600 rounded shadow-lg z-50 py-1 min-w-48';
-        
-        // Position menu with boundary checking
-        const menuWidth = 192; // min-w-48 = 12rem = 192px
-        const menuHeight = 200; // Estimated height
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        
-        let left = event.clientX;
-        let top = event.clientY;
-        
-        // Adjust horizontal position if menu would go off screen
-        if (left + menuWidth > viewportWidth) {
-            left = viewportWidth - menuWidth - 10; // 10px margin
+
+        // Use BaseContextMenu positioning logic
+        // Create a temporary menu element to measure dimensions
+        const tempMenu = document.createElement('div');
+        tempMenu.className = 'fixed bg-gray-800 border border-gray-600 rounded shadow-lg z-50 py-1 min-w-48';
+        tempMenu.style.visibility = 'hidden';
+        tempMenu.style.position = 'absolute';
+        document.body.appendChild(tempMenu);
+
+        // Add temporary menu items to measure height
+        const tempMenuItems = [
+            { text: 'Show All Layers', icon: '👁️' },
+            { text: 'Hide All Layers', icon: '👁️‍🗨️' },
+            { text: '---' },
+            { text: 'Lock All Layers', icon: '🔒' },
+            { text: 'Unlock All Layers', icon: '🔓' }
+        ];
+
+        tempMenuItems.forEach(item => {
+            if (item.text === '---') {
+                const separator = document.createElement('div');
+                separator.className = 'h-px bg-gray-600 my-1';
+                tempMenu.appendChild(separator);
+            } else {
+                const menuItem = document.createElement('div');
+                menuItem.className = 'px-3 py-2 text-sm flex items-center space-x-2';
+                menuItem.innerHTML = `<span>${item.icon}</span><span>${item.text}</span>`;
+                tempMenu.appendChild(menuItem);
+            }
+        });
+
+        // Calculate optimal position using BaseContextMenu logic
+        const menuSize = {
+            width: tempMenu.offsetWidth || 192,
+            height: tempMenu.offsetHeight || 120
+        };
+        document.body.removeChild(tempMenu);
+
+        // Simple positioning logic (can be improved to use full BaseContextMenu.calculateOptimalPosition)
+        const viewport = { width: window.innerWidth, height: window.innerHeight };
+        const margins = { horizontal: 10, vertical: 10 };
+
+        let x = event.clientX;
+        let y = event.clientY;
+
+        // Horizontal positioning
+        if (event.clientX + menuSize.width + margins.horizontal > viewport.width) {
+            x = event.clientX - menuSize.width;
         }
-        
-        // Adjust vertical position if menu would go off screen
-        if (top + menuHeight > viewportHeight) {
-            top = viewportHeight - menuHeight - 10; // 10px margin
+        if (x < margins.horizontal) {
+            x = margins.horizontal;
         }
-        
-        // Ensure menu doesn't go off the left or top edge
-        left = Math.max(10, left);
-        top = Math.max(10, top);
-        
-        contextMenu.style.left = `${left}px`;
-        contextMenu.style.top = `${top}px`;
+
+        // Vertical positioning
+        if (event.clientY + menuSize.height + margins.vertical > viewport.height) {
+            y = event.clientY - menuSize.height;
+        }
+        if (y < margins.vertical) {
+            y = margins.vertical;
+        }
+
+        contextMenu.style.left = x + 'px';
+        contextMenu.style.top = y + 'px';
 
         const menuItems = [
             {
@@ -1658,6 +1803,9 @@ export class LayersPanel extends BasePanel {
         });
         this.subscriptions = [];
         
+        // Unregister search from SearchManager
+        searchManager.unregisterSearch('layers');
+
         // Destroy context menu
         if (this.layerContextMenu) {
             try {
@@ -1667,7 +1815,7 @@ export class LayersPanel extends BasePanel {
             }
             this.layerContextMenu = null;
         }
-        
+
         // Call parent destroy
         super.destroy();
         

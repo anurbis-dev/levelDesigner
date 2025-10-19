@@ -393,12 +393,14 @@ export class Logger {
         error: (message, ...args) => Logger.log('CACHE', 'error', message, ...args)
     };
 
-    static layer = {
-        info: (message, ...args) => Logger.log('LAYER', 'info', message, ...args),
-        debug: (message, ...args) => Logger.log('LAYER', 'debug', message, ...args),
-        warn: (message, ...args) => Logger.log('LAYER', 'warn', message, ...args),
-        error: (message, ...args) => Logger.log('LAYER', 'error', message, ...args)
-    };
+    static get layer() {
+        return {
+            info: (message, ...args) => Logger.log('LAYER', 'info', message, ...args),
+            debug: (message, ...args) => Logger.log('LAYER', 'debug', message, ...args),
+            warn: (message, ...args) => Logger.log('LAYER', 'warn', message, ...args),
+            error: (message, ...args) => Logger.log('LAYER', 'error', message, ...args)
+        };
+    }
 
     /**
      * Level operations logging
@@ -413,12 +415,14 @@ export class Logger {
     /**
      * Outliner panel logging
      */
-    static outliner = {
-        info: (message, ...args) => Logger.log('OUTLINER', 'info', message, ...args),
-        debug: (message, ...args) => Logger.log('OUTLINER', 'debug', message, ...args),
-        warn: (message, ...args) => Logger.log('OUTLINER', 'warn', message, ...args),
-        error: (message, ...args) => Logger.log('OUTLINER', 'error', message, ...args)
-    };
+    static get outliner() {
+        return {
+            info: (message, ...args) => Logger.log('OUTLINER', 'info', message, ...args),
+            debug: (message, ...args) => Logger.log('OUTLINER', 'debug', message, ...args),
+            warn: (message, ...args) => Logger.log('OUTLINER', 'warn', message, ...args),
+            error: (message, ...args) => Logger.log('OUTLINER', 'error', message, ...args)
+        };
+    }
 
     /**
      * Parallax effects logging

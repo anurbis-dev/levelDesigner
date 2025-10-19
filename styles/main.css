@@ -61,6 +61,9 @@ input, textarea {
     width: 6px;
     flex-shrink: 0;
     position: relative;
+    /* Improve touch handling */
+    touch-action: none;
+    user-select: none;
 }
 
 .resizer-y {

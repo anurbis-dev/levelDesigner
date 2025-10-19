@@ -1,5 +1,6 @@
 import { BaseModule } from './BaseModule.js';
 import { Logger } from '../utils/Logger.js';
+import { SearchSectionUtils } from '../utils/SearchSectionUtils.js';
 import { MENU_CONFIG, getShortcutTarget } from '../../config/menu.js';
 
 /**
@@ -15,6 +16,9 @@ export class EventHandlers extends BaseModule {
         // Track event listeners for cleanup
         this.eventListeners = [];
         this._destroyed = false;
+        
+        // Track MutationObservers for cleanup
+        this.mutationObservers = [];
     }
 
     /**
@@ -54,11 +58,7 @@ export class EventHandlers extends BaseModule {
         // Menu events
         this.setupMenuEvents();
         
-        // Right panel tabs
-        this.setupRightPanelTabs();
-        
-        // Tab context menus
-        this.setupTabContextMenus();
+        // Tab event listeners will be setup after panels are created in initializeViewStates
         
         // State change listeners
         this.setupStateListeners();
@@ -389,15 +389,32 @@ export class EventHandlers extends BaseModule {
             }
         });
 
-        // Initialize right panel tab state
+        // Initialize right panel tab state (but don't activate yet)
         const rightPanelTab = this.editor.configManager.get('editor.view.rightPanelTab') ?? 'details';
         this.editor.stateManager.set('rightPanelTab', rightPanelTab);
-        this.setActiveRightPanelTab(rightPanelTab);
 
         // Initialize panel positions using PanelPositionManager
         if (this.editor.panelPositionManager) {
             this.editor.panelPositionManager.initializePanelPositions();
+            
+            // Update panels after tab positions are initialized
+            if (this.editor.updateAllPanels) {
+                this.editor.updateAllPanels();
+            }
+        } else {
+            console.log('❌ EventHandlers: PanelPositionManager not found!');
         }
+
+        // Now activate the right panel tab after panels are created
+        this.setActiveRightPanelTab(rightPanelTab);
+
+        // Initialize search controls after panels are created
+        if (this.editor.initializeSearchControls) {
+            this.editor.initializeSearchControls();
+        }
+
+        // Setup tab event listeners after panels are created
+        this.setupTabEventListeners();
     }
 
     updateViewCheckbox(option, enabled) {
@@ -579,14 +596,20 @@ export class EventHandlers extends BaseModule {
                 }
                 break;
             case 'rightPanel':
-                const rightPanel = document.getElementById('right-tabs-panel');
-                const resizerX = document.getElementById('resizer-x');
-                if (rightPanel) {
-                    rightPanel.classList.toggle('hidden', !visible);
-                    rightPanel.style.display = visible ? 'flex' : 'none';
-                    if (resizerX) {
-                        resizerX.classList.toggle('hidden', !visible);
-                        resizerX.style.display = visible ? 'block' : 'none';
+                if (visible) {
+                    // Create right panel dynamically if it doesn't exist
+                    this.editor.panelPositionManager.ensurePanelExists('right');
+                } else {
+                    // Hide existing right panel
+                    const rightPanel = document.getElementById('right-tabs-panel');
+                    const resizerRight = document.getElementById('resizer-right-tabs-panel');
+                    if (rightPanel) {
+                        rightPanel.classList.toggle('hidden', !visible);
+                        rightPanel.style.display = visible ? 'flex' : 'none';
+                        if (resizerRight) {
+                            resizerRight.classList.toggle('hidden', !visible);
+                            resizerRight.style.display = visible ? 'block' : 'none';
+                        }
                     }
                 }
                 break;
@@ -819,53 +842,29 @@ export class EventHandlers extends BaseModule {
 
     }
 
-    setupRightPanelTabs() {
-        const tabs = document.querySelectorAll('.tab-right');
-        const contents = document.querySelectorAll('.tab-content-right');
-        const searchSection = document.getElementById('right-panel-search');
-
-        tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                tabs.forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-
-                const tabName = tab.dataset.tab;
-                this.editor.stateManager.set('rightPanelTab', tabName);
-                // Save to config for persistence
-                this.editor.configManager.set('editor.view.rightPanelTab', tabName);
-
-                contents.forEach(content => {
-                    content.classList.toggle('hidden', content.id !== `${tabName}-content-panel`);
-                });
-
-                // Show search section for layers and outliner tabs
-                if (searchSection) {
-                    const showSearch = tabName === 'layers' || tabName === 'outliner';
-                    searchSection.style.display = showSearch ? 'block' : 'none';
-
-                    // Render appropriate search controls
-                    if (showSearch) {
-                        if (tabName === 'layers' && this.editor.layersPanel) {
-                            this.editor.layersPanel.renderLayersSearchControls();
-                        } else if (tabName === 'outliner' && this.editor.outlinerPanel) {
-                            this.editor.outlinerPanel.renderOutlinerSearchControls();
-                        }
-                    }
-                }
-            });
-        });
-
-    }
-
     /**
-     * Setup context menus for tabs
+     * Setup all tab event listeners (click handlers and context menus)
      */
-    setupTabContextMenus() {
-        // Setup context menu for existing tabs
+    setupTabEventListeners() {
+        if (this._destroyed) return;
+        
+        // Check if required DOM elements exist
+        const rightPanel = document.getElementById('right-tabs-panel');
+        const leftPanel = document.getElementById('left-tabs-panel');
+        
+        if (!rightPanel && !leftPanel) {
+            Logger.ui.warn('Tab panels not found, skipping tab setup');
+            return;
+        }
+        
+        // Setup tab click handlers and context menus for all tabs
+        this.updateTabClickHandlers();
         this.updateTabContextMenus();
         
-        // Use MutationObserver to detect new tabs
+        // Use single MutationObserver to detect tab changes and re-setup all handlers
         const observer = new MutationObserver((mutations) => {
+            if (this._destroyed) return; // Prevent processing if destroyed
+            
             let tabsChanged = false;
             mutations.forEach((mutation) => {
                 if (mutation.type === 'childList') {
@@ -884,9 +883,18 @@ export class EventHandlers extends BaseModule {
             });
             
             if (tabsChanged) {
+                this.updateTabClickHandlers();
                 this.updateTabContextMenus();
+                
+                // Update panels when tab count changes
+                if (this.editor && this.editor.updateAllPanels) {
+                    this.editor.updateAllPanels();
+                }
             }
         });
+        
+        // Store observer for cleanup
+        this.mutationObservers.push(observer);
         
         // Observe all panels for tab changes
         const panels = document.querySelectorAll('#right-tabs-panel, #left-tabs-panel');
@@ -896,18 +904,100 @@ export class EventHandlers extends BaseModule {
     }
 
     /**
+     * Update tab click handlers for all tabs
+     */
+    updateTabClickHandlers() {
+        if (this._destroyed) return; // Prevent processing if destroyed
+        
+        // Use a flag to prevent infinite loops during DOM manipulation
+        if (this._updatingTabHandlers) return;
+        this._updatingTabHandlers = true;
+        
+        try {
+            // Check if tabs exist before processing
+            const tabs = document.querySelectorAll('.tab-right, .tab-left');
+            if (tabs.length === 0) {
+                Logger.ui.debug('No tabs found, skipping click handler update');
+                return;
+            }
+            
+            // Temporarily disconnect MutationObservers to prevent infinite loops
+            const disconnectedObservers = [];
+            this.mutationObservers.forEach(observer => {
+                observer.disconnect();
+                disconnectedObservers.push(observer);
+            });
+            
+            // Add click handlers to all tabs (no need to remove existing ones since we're replacing them)
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const tabName = tab.dataset.tab;
+                    
+                    // Use the centralized method to handle tab activation
+                    this.setActiveRightPanelTab(tabName);
+                    
+                    // Update state manager and config
+                    this.editor.stateManager.set('rightPanelTab', tabName);
+                    // Save to config for persistence
+                    this.editor.configManager.set('editor.view.rightPanelTab', tabName);
+                });
+            });
+            
+            // Reconnect MutationObservers
+            disconnectedObservers.forEach(observer => {
+                const panels = document.querySelectorAll('#right-tabs-panel, #left-tabs-panel');
+                panels.forEach(panel => {
+                    observer.observe(panel, { childList: true, subtree: true });
+                });
+            });
+            
+        } finally {
+            this._updatingTabHandlers = false;
+        }
+    }
+
+
+    /**
      * Update context menus for all tabs
      */
     updateTabContextMenus() {
-        // Remove existing context menu handlers
-        document.querySelectorAll('.tab-right, .tab-left').forEach(tab => {
-            tab.removeEventListener('contextmenu', this.handleTabContextMenu);
-        });
+        if (this._destroyed) return; // Prevent processing if destroyed
         
-        // Add context menu handlers to all tabs
-        document.querySelectorAll('.tab-right, .tab-left').forEach(tab => {
-            tab.addEventListener('contextmenu', this.handleTabContextMenu.bind(this));
-        });
+        // Use a flag to prevent infinite loops during DOM manipulation
+        if (this._updatingContextMenus) return;
+        this._updatingContextMenus = true;
+        
+        try {
+            // Check if tabs exist before processing
+            const tabs = document.querySelectorAll('.tab-right, .tab-left');
+            if (tabs.length === 0) {
+                Logger.ui.debug('No tabs found, skipping context menu update');
+                return;
+            }
+            
+            // Temporarily disconnect MutationObservers to prevent infinite loops
+            const disconnectedObservers = [];
+            this.mutationObservers.forEach(observer => {
+                observer.disconnect();
+                disconnectedObservers.push(observer);
+            });
+            
+            // Add context menu handlers to all tabs (no need to remove existing ones since we're replacing them)
+            tabs.forEach(tab => {
+                tab.addEventListener('contextmenu', this.handleTabContextMenu.bind(this));
+            });
+            
+            // Reconnect MutationObservers
+            disconnectedObservers.forEach(observer => {
+                const panels = document.querySelectorAll('#right-tabs-panel, #left-tabs-panel');
+                panels.forEach(panel => {
+                    observer.observe(panel, { childList: true, subtree: true });
+                });
+            });
+            
+        } finally {
+            this._updatingContextMenus = false;
+        }
     }
 
     /**
@@ -952,28 +1042,73 @@ export class EventHandlers extends BaseModule {
         if (existingMenu) {
             existingMenu.remove();
         }
-        
-        // Create menu
+
+        // Create menu with advanced positioning (similar to BaseContextMenu)
         const menu = document.createElement('div');
-        menu.className = 'tab-context-menu fixed bg-gray-800 border border-gray-600 rounded shadow-lg z-50';
-        menu.style.left = event.pageX + 'px';
-        menu.style.top = event.pageY + 'px';
-        
+        menu.className = 'tab-context-menu fixed bg-gray-800 border border-gray-600 rounded shadow-lg z-50 min-w-48';
+        menu.style.pointerEvents = 'auto'; // Ensure menu captures events
+        menu.style.userSelect = 'none'; // Prevent text selection
+
+        // Advanced positioning with boundary checking
+        const menuWidth = 160; // Estimated width
+        const menuHeight = 40; // Height for single item
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const margin = 10;
+
+        let left = event.clientX;
+        let top = event.clientY;
+
+        // Horizontal positioning (prefer right side of cursor)
+        const spaceRight = viewportWidth - event.clientX;
+        const spaceLeft = event.clientX;
+
+        if (spaceRight >= menuWidth + margin) {
+            left = event.clientX;
+        } else if (spaceLeft >= menuWidth + margin) {
+            left = event.clientX - menuWidth;
+        } else {
+            left = Math.max(margin, Math.min(event.clientX - menuWidth / 2, viewportWidth - menuWidth - margin));
+        }
+
+        // Vertical positioning (prefer below cursor)
+        const spaceBelow = viewportHeight - event.clientY;
+        const spaceAbove = event.clientY;
+
+        if (spaceBelow >= menuHeight + margin) {
+            top = event.clientY;
+        } else if (spaceAbove >= menuHeight + margin) {
+            top = event.clientY - menuHeight;
+        } else {
+            top = event.clientY;
+        }
+
+        // Ensure menu stays within viewport bounds
+        left = Math.max(margin, Math.min(left, viewportWidth - menuWidth - margin));
+        top = Math.max(margin, Math.min(top, viewportHeight - menuHeight - margin));
+
+        menu.style.left = left + 'px';
+        menu.style.top = top + 'px';
+
         // Create menu item
         const menuItem = document.createElement('div');
-        menuItem.className = 'px-3 py-2 text-sm text-gray-200 hover:bg-gray-700 cursor-pointer';
-        menuItem.innerHTML = `⇄ Swap to ${targetPanel} side`;
-        
+        menuItem.className = 'px-3 py-2 text-sm text-gray-200 hover:bg-gray-700 cursor-pointer whitespace-nowrap';
+        menuItem.innerHTML = `Move to ${targetPanel === 'right' ? 'Right' : 'Left'} Panel`;
+
         menuItem.addEventListener('click', () => {
             if (this.editor && this.editor.panelPositionManager) {
                 this.editor.panelPositionManager.moveTab(tabName, currentPanel, targetPanel);
             }
             menu.remove();
         });
-        
+
         menu.appendChild(menuItem);
         document.body.appendChild(menu);
-        
+
+        // Prevent menu from being resized or minimized
+        menu.style.minWidth = menuWidth + 'px';
+        menu.style.minHeight = menuHeight + 'px';
+
         // Close menu when clicking outside
         const closeMenu = (e) => {
             if (!menu.contains(e.target)) {
@@ -981,7 +1116,7 @@ export class EventHandlers extends BaseModule {
                 document.removeEventListener('click', closeMenu);
             }
         };
-        
+
         setTimeout(() => {
             document.addEventListener('click', closeMenu);
         }, 0);
@@ -992,38 +1127,36 @@ export class EventHandlers extends BaseModule {
      * @param {string} tabName - Name of the tab to activate
      */
     setActiveRightPanelTab(tabName) {
-        const tabs = document.querySelectorAll('.tab-right');
-        const contents = document.querySelectorAll('.tab-content-right');
-        const searchSection = document.getElementById('right-panel-search');
+        // Ensure right panel exists before trying to find tabs
+        this.editor.panelPositionManager.ensurePanelExists('right');
+        
+        // Find the tab in either left or right panel
+        const tab = document.querySelector(`[data-tab="${tabName}"]`);
+        if (!tab) {
+            Logger.ui.warn(`Tab ${tabName} not found`);
+            return;
+        }
 
+        // Get the panel that contains this tab
+        const panel = tab.closest('[id$="-tabs-panel"]');
+        if (!panel) {
+            Logger.ui.warn(`Panel not found for tab ${tabName}`);
+            return;
+        }
+
+        // Remove active class from all tabs in the same panel
+        panel.querySelectorAll('.tab-right, .tab-left').forEach(t => t.classList.remove('active'));
+        
         // Activate the specified tab
-        tabs.forEach(tab => {
-            if (tab.dataset.tab === tabName) {
-                tab.classList.add('active');
-            } else {
-                tab.classList.remove('active');
-            }
-        });
+        tab.classList.add('active');
 
-        // Show corresponding content
-        contents.forEach(content => {
+        // Show corresponding content (content can be in either panel)
+        document.querySelectorAll('.tab-content-right, .tab-content-left').forEach(content => {
             content.classList.toggle('hidden', content.id !== `${tabName}-content-panel`);
         });
 
         // Show search section for layers and outliner tabs
-        if (searchSection) {
-            const showSearch = tabName === 'layers' || tabName === 'outliner';
-            searchSection.style.display = showSearch ? 'block' : 'none';
-
-            // Render appropriate search controls
-            if (showSearch) {
-                if (tabName === 'layers' && this.editor.layersPanel) {
-                    this.editor.layersPanel.renderLayersSearchControls();
-                } else if (tabName === 'outliner' && this.editor.outlinerPanel) {
-                    this.editor.outlinerPanel.renderOutlinerSearchControls();
-                }
-            }
-        }
+        SearchSectionUtils.showSearchSectionForTab(tabName, this.editor);
     }
 
     setupStateListeners() {
@@ -1069,6 +1202,17 @@ export class EventHandlers extends BaseModule {
         }
         
         this.eventListeners = [];
+        
+        // Disconnect all MutationObservers
+        for (const observer of this.mutationObservers) {
+            try {
+                observer.disconnect();
+            } catch (error) {
+                Logger.event.warn('Failed to disconnect MutationObserver:', error);
+            }
+        }
+        
+        this.mutationObservers = [];
         
         Logger.event.info('EventHandlers destroyed');
     }

@@ -4,6 +4,7 @@ import { AssetManager } from '../managers/AssetManager.js';
 import { FileManager } from '../managers/FileManager.js';
 import { ConfigManager } from '../managers/ConfigManager.js';
 import { CacheManager } from '../managers/CacheManager.js';
+import { SearchSectionUtils } from '../utils/SearchSectionUtils.js';
 import { CanvasRenderer } from '../ui/CanvasRenderer.js';
 import { AssetPanel } from '../ui/AssetPanel.js';
 import { DetailsPanel } from '../ui/DetailsPanel.js';
@@ -39,6 +40,7 @@ import { PanelPositionManager } from '../ui/PanelPositionManager.js';
 // Import new utilities
 import { ErrorHandler } from '../utils/ErrorHandler.js';
 import { ComponentLifecycle } from './ComponentLifecycle.js';
+import { searchManager } from '../utils/SearchManager.js';
 
 /**
  * Main Level Editor class - Unified version with modular architecture
@@ -50,7 +52,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.50.8';
+    static VERSION = '3.50.9';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -505,9 +507,6 @@ export class LevelEditor {
 
         // Setup panel size listeners for StateManager changes
         this.setupPanelSizeListeners();
-
-        // Initialize search controls for current tab
-        this.initializeSearchControls();
     }
 
     /**
@@ -560,6 +559,32 @@ export class LevelEditor {
             }
         });
         this.subscriptions.push(assetsPanelUnsubscribe);
+
+        // Listen for tab position changes
+        const tabPositionsUnsubscribe = this.stateManager.subscribe('tabPositions', (tabPositions) => {
+            if (tabPositions && this.panelPositionManager && !this.panelPositionManager._initializing) {
+                Logger.ui.debug('Tab positions changed:', tabPositions);
+
+                // Refresh search listeners when tabs move between panels
+                searchManager.refreshAllSearches();
+
+                // Update search controls for active tabs
+                this.initializeSearchControls();
+
+                // Force search listener refresh after a short delay to ensure DOM is updated
+                setTimeout(() => {
+                    Logger.ui.debug('LevelEditor: Delayed search refresh after tab move');
+                    searchManager.refreshAllSearches();
+                }, 50);
+
+                // Update canvas layout
+                if (this.canvasRenderer) {
+                    this.canvasRenderer.resizeCanvas();
+                    this.render();
+                }
+            }
+        });
+        this.subscriptions.push(tabPositionsUnsubscribe);
     }
 
     /**
@@ -607,7 +632,9 @@ export class LevelEditor {
         this.applySavedPanelSizes();
 
         // Initialize view states before render to prevent toolbar flickering
+        console.log('🚀 LevelEditor: About to call initializeViewStates...');
         this.eventHandlers.initializeViewStates();
+        console.log('✅ LevelEditor: initializeViewStates completed');
     }
 
     /**
@@ -699,6 +726,17 @@ export class LevelEditor {
                 const snapToGrid = this.stateManager.get('canvas.snapToGrid');
                 if (snapToGrid !== undefined) {
                     this.configManager.set('canvas.snapToGrid', snapToGrid);
+                }
+
+                // Save current panel sizes
+                const rightPanelWidth = this.stateManager.get('panels.rightPanelWidth');
+                if (rightPanelWidth && rightPanelWidth > 0) {
+                    this.userPrefs.set('rightPanelWidth', rightPanelWidth);
+                }
+
+                const assetsPanelHeight = this.stateManager.get('panels.assetsPanelHeight');
+                if (assetsPanelHeight && assetsPanelHeight > 0) {
+                    this.userPrefs.set('assetsPanelHeight', assetsPanelHeight);
                 }
 
                 // Save current grid settings from StateManager
@@ -1742,28 +1780,9 @@ export class LevelEditor {
      * Initialize search controls for the current active tab
      */
     initializeSearchControls() {
-        const searchSection = document.getElementById('right-panel-search');
-        if (!searchSection) return;
-
-        // Get current active tab
-        const activeTab = document.querySelector('.tab-right.active');
-        if (!activeTab) return;
-
-        const tabName = activeTab.dataset.tab;
-
-        // Show search section for layers and outliner tabs
-        const showSearch = tabName === 'layers' || tabName === 'outliner';
-        searchSection.style.display = showSearch ? 'block' : 'none';
-
-        // Render appropriate search controls
-        if (showSearch) {
-            if (tabName === 'layers' && this.layersPanel) {
-                this.layersPanel.renderLayersSearchControls();
-            } else if (tabName === 'outliner' && this.outlinerPanel) {
-                this.outlinerPanel.renderOutlinerSearchControls();
-            }
-        }
+        SearchSectionUtils.initializeSearchControls(this);
     }
+
 
     /**
      * Update version info in UI

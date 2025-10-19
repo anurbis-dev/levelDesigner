@@ -2,6 +2,8 @@ import { Logger } from '../utils/Logger.js';
 import { SearchUtils } from '../utils/SearchUtils.js';
 import { OutlinerContextMenu } from './OutlinerContextMenu.js';
 import { BasePanel } from './BasePanel.js';
+import { createOutlinerPanelStructure, renderOutlinerSearchControls } from './panel-structures/OutlinerPanelStructure.js';
+import { searchManager } from '../utils/SearchManager.js';
 
 /**
  * Outliner panel UI component
@@ -10,11 +12,29 @@ export class OutlinerPanel extends BasePanel {
     constructor(container, stateManager, levelEditor) {
         super(container, stateManager, levelEditor);
         this.searchTerm = '';
-        
+
         // Track subscriptions for cleanup
         this.subscriptions = [];
         // Context menu reference
         this.contextMenu = null;
+
+        // Initialize panel structure
+        this.panelElements = createOutlinerPanelStructure(this.container);
+
+        // Register search in universal search manager
+        searchManager.registerSearch(
+            'outliner',
+            'outliner-search',
+            (searchTerm) => {
+                this.searchTerm = searchTerm;
+                Logger.outliner.debug('Search term changed:', searchTerm);
+                this.render();
+            },
+            () => {
+                // Clear callback - could be used for additional cleanup
+                Logger.outliner.debug('Search cleared');
+            }
+        );
 
         // Initialize collapsed groups state if not exists
         if (!this.stateManager.get('outliner')) {
@@ -126,11 +146,15 @@ export class OutlinerPanel extends BasePanel {
     }
 
     /**
-     * Render outliner search controls in the shared search section
+     * Render outliner search controls in the top custom section
      */
     renderOutlinerSearchControls() {
-        const searchSection = document.getElementById('right-panel-search');
-        if (!searchSection) return;
+        // Get the top custom section from panel structure
+        const topSection = this.panelElements?.topCustom;
+        if (!topSection) {
+            Logger.ui.warn('OutlinerPanel: Top custom section not available, skipping search controls render');
+            return;
+        }
 
         // Check if outliner panel is currently active
         const outlinerPanel = document.getElementById('outliner-content-panel');
@@ -138,50 +162,33 @@ export class OutlinerPanel extends BasePanel {
             return; // Don't render if outliner is not active
         }
 
-        // Clear existing content
-        searchSection.innerHTML = '';
+        // Check if controls are already rendered (avoid unnecessary re-rendering)
+        const searchInput = topSection.querySelector('#outliner-search');
+        const filterButton = topSection.querySelector('#outliner-filter-btn');
 
-        // Create controls row with search and filter
-        const controlsRow = document.createElement('div');
-        controlsRow.className = 'flex items-center gap-1';
+        if (searchInput && filterButton) {
+            // Controls already exist, just update search value
+            const currentTerm = searchManager.getSearchTerm('outliner');
+            if (searchInput.value !== currentTerm) {
+                searchInput.value = currentTerm;
+            }
+            Logger.outliner.debug('Outliner controls already rendered, skipping re-render');
+            return;
+        }
 
-        // Create search input using SearchUtils with same style as LayersPanel
-        const searchInput = SearchUtils.createSearchInput(
-            'Search objects...',
-            'outliner-search',
-            'flex-1 bg-gray-700 px-1 py-1 rounded text-sm border border-gray-600 focus:border-blue-500 focus:outline-none'
-        );
-        searchInput.value = this.searchTerm;
-
-        SearchUtils.setupSearchListeners(searchInput, (searchTerm) => {
-            this.searchTerm = searchTerm;
-            Logger.outliner.debug('Search term changed:', searchTerm);
-            this.render();
+        // Use the structure's render function with callbacks
+        renderOutlinerSearchControls(topSection, {
+            getSearchTerm: () => searchManager.getSearchTerm('outliner'),
+            onSearch: (searchTerm) => {
+                this.searchTerm = searchTerm;
+                Logger.outliner.debug('Search term changed:', searchTerm);
+                this.render();
+            },
+            getActiveFilters: () => this.activeTypeFilters,
+            onFilterClick: (button) => this.showFilterMenu(button)
         });
 
-        // Create filter button
-        const filterButton = document.createElement('button');
-        filterButton.id = 'outliner-filter-btn';
-        const hasActiveFilters = this.activeTypeFilters.size > 0 && !this.activeTypeFilters.has('DISABLE_ALL');
-        filterButton.className = `px-2 py-1 rounded text-sm flex items-center justify-center ${
-            hasActiveFilters ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 hover:bg-gray-700'
-        }`;
-        filterButton.style.color = 'var(--ui-text-color, #d1d5db)';
-        filterButton.title = hasActiveFilters ? 'Filter active - click to change' : 'Filter by object types';
-        filterButton.innerHTML = `
-            <svg width="14" height="14" viewBox="0 0 12 12" fill="currentColor">
-                <path d="M2 3h8l-3 3v3l-2 1V6L2 3z"/>
-            </svg>
-        `;
-
-        filterButton.addEventListener('click', (e) => {
-            e.stopPropagation();
-            this.showFilterMenu(filterButton);
-        });
-
-        controlsRow.appendChild(searchInput);
-        controlsRow.appendChild(filterButton);
-        searchSection.appendChild(controlsRow);
+        Logger.outliner.debug('Outliner search controls rendered in top section');
     }
 
     /**
@@ -486,10 +493,22 @@ export class OutlinerPanel extends BasePanel {
         const wasSearchFocused = searchInput && document.activeElement === searchInput;
         const searchValue = this.searchTerm;
 
-        // Clear container
-        this.container.innerHTML = '';
+        // Clear container but preserve custom sections
+        // Remove all children except custom sections
+        const children = Array.from(this.container.children);
+        children.forEach(child => {
+            if (!child.classList.contains('panel-top-custom') &&
+                !child.classList.contains('panel-bottom-custom')) {
+                this.container.removeChild(child);
+            }
+        });
 
-        // Render outliner search controls in shared section
+        // Ensure custom sections exist (recreate if needed)
+        if (!this.panelElements?.topCustom || !this.container.contains(this.panelElements.topCustom)) {
+            this.panelElements = createOutlinerPanelStructure(this.container);
+        }
+
+        // Render outliner search controls in top custom section
         this.renderOutlinerSearchControls();
 
         const level = this.levelEditor.getLevel();
@@ -1052,6 +1071,9 @@ export class OutlinerPanel extends BasePanel {
         });
         this.subscriptions = [];
         
+        // Unregister search from SearchManager
+        searchManager.unregisterSearch('outliner');
+
         // Destroy context menu
         if (this.contextMenu) {
             try {
@@ -1061,7 +1083,7 @@ export class OutlinerPanel extends BasePanel {
             }
             this.contextMenu = null;
         }
-        
+
         // Call parent destroy
         super.destroy();
         
