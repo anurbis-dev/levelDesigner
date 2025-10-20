@@ -134,6 +134,7 @@ editor.configManager.saveUserConfig('canvas', {
 
 ### Panels настройки (`panels.json`):
 - `rightPanelTabOrder` - порядок вкладок правой панели
+- `leftPanelTabOrder` - порядок вкладок левой панели
 - `assetTabOrder` - порядок вкладок ассетов
 - `selection.*` - настройки выделения объектов
 

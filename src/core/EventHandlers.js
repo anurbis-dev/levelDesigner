@@ -389,11 +389,7 @@ export class EventHandlers extends BaseModule {
             }
         });
 
-        // Initialize right panel tab state (but don't activate yet)
-        const rightPanelTab = this.editor.configManager.get('editor.view.rightPanelTab') ?? 'details';
-        this.editor.stateManager.set('rightPanelTab', rightPanelTab);
-
-        // Initialize panel positions using PanelPositionManager
+        // Initialize panel positions using PanelPositionManager FIRST
         if (this.editor.panelPositionManager) {
             this.editor.panelPositionManager.initializePanelPositions();
             
@@ -405,8 +401,8 @@ export class EventHandlers extends BaseModule {
             console.log('❌ EventHandlers: PanelPositionManager not found!');
         }
 
-        // Now activate the right panel tab after panels are created
-        this.setActiveRightPanelTab(rightPanelTab);
+        // Activate tabs after panel positions are initialized
+        this.activateTabsAfterPanelInitialization();
 
         // Initialize search controls after panels are created
         if (this.editor.initializeSearchControls) {
@@ -933,13 +929,21 @@ export class EventHandlers extends BaseModule {
                 tab.addEventListener('click', () => {
                     const tabName = tab.dataset.tab;
                     
-                    // Use the centralized method to handle tab activation
-                    this.setActiveRightPanelTab(tabName);
+                    // Determine which panel this tab belongs to
+                    const panel = tab.closest('[id$="-tabs-panel"]');
+                    const panelSide = panel ? (panel.id.includes('left') ? 'left' : 'right') : 'right';
                     
-                    // Update state manager and config
+                    // Use the centralized method to handle tab activation
+                    this.setActivePanelTab(tabName, panelSide);
+                    
+                    // Update state manager and config for the appropriate panel
+                    if (panelSide === 'right') {
                     this.editor.stateManager.set('rightPanelTab', tabName);
-                    // Save to config for persistence
                     this.editor.configManager.set('editor.view.rightPanelTab', tabName);
+                    } else if (panelSide === 'left') {
+                        this.editor.stateManager.set('leftPanelTab', tabName);
+                        this.editor.configManager.set('editor.view.leftPanelTab', tabName);
+                    }
                 });
             });
             
@@ -1123,24 +1127,72 @@ export class EventHandlers extends BaseModule {
     }
 
     /**
-     * Set active tab in right panel programmatically
-     * @param {string} tabName - Name of the tab to activate
+     * Activate tabs after panel initialization
      */
-    setActiveRightPanelTab(tabName) {
-        // Ensure right panel exists before trying to find tabs
-        this.editor.panelPositionManager.ensurePanelExists('right');
+    activateTabsAfterPanelInitialization() {
+        // Get saved active tabs from ConfigManager
+        const rightPanelTab = this.editor.configManager.get('editor.view.rightPanelTab') ?? 'details';
+        const leftPanelTab = this.editor.configManager.get('editor.view.leftPanelTab') ?? 'details';
         
-        // Find the tab in either left or right panel
-        const tab = document.querySelector(`[data-tab="${tabName}"]`);
-        if (!tab) {
-            Logger.ui.warn(`Tab ${tabName} not found`);
+        // Get current tab positions
+        const tabPositions = this.editor.stateManager.get('tabPositions') || {};
+        
+        // Activate tabs for both panels
+        this._activatePanelTab('right', rightPanelTab, tabPositions);
+        this._activatePanelTab('left', leftPanelTab, tabPositions);
+        
+        Logger.ui.debug('Activated tabs after panel initialization:', { rightPanelTab, leftPanelTab });
+    }
+
+    /**
+     * Activate tab for a panel with validation
+     * @private
+     * @param {string} panelSide - 'left' or 'right' panel
+     * @param {string} preferredTab - Preferred tab name
+     * @param {Object} tabPositions - Current tab positions
+     */
+    _activatePanelTab(panelSide, preferredTab, tabPositions) {
+        // Use setActivePanelTab which will update both StateManager and ConfigManager
+        if (tabPositions[preferredTab] === panelSide) {
+            // Preferred tab is in the correct panel
+            this.setActivePanelTab(preferredTab, panelSide);
+        } else {
+            // Find a valid tab for this panel - use the one closest to separator
+            const panelTabs = Object.entries(tabPositions)
+                .filter(([_, position]) => position === panelSide)
+                .map(([tabName, _]) => tabName);
+            
+            if (panelTabs.length > 0) {
+                // Use the tab closest to separator (same logic as PanelPositionManager)
+                let validTab;
+                if (panelSide === 'left') {
+                    validTab = panelTabs[0]; // First tab is closest to main panel
+                } else {
+                    validTab = panelTabs[panelTabs.length - 1]; // Last tab is closest to main panel
+                }
+                
+                this.setActivePanelTab(validTab, panelSide);
+            }
+        }
+    }
+
+    /**
+     * Set active tab in panel programmatically
+     * @param {string} tabName - Name of the tab to activate
+     * @param {string} panelSide - 'left' or 'right' panel
+     */
+    setActivePanelTab(tabName, panelSide = 'right') {
+        // Find the tab in the specified panel
+        const panelId = `${panelSide}-tabs-panel`;
+        const panel = document.getElementById(panelId);
+        if (!panel) {
+            Logger.ui.warn(`Panel ${panelId} not found - skipping tab activation`);
             return;
         }
 
-        // Get the panel that contains this tab
-        const panel = tab.closest('[id$="-tabs-panel"]');
-        if (!panel) {
-            Logger.ui.warn(`Panel not found for tab ${tabName}`);
+        const tab = panel.querySelector(`[data-tab="${tabName}"]`);
+        if (!tab) {
+            Logger.ui.warn(`Tab ${tabName} not found in ${panelSide} panel - skipping activation`);
             return;
         }
 
@@ -1150,14 +1202,47 @@ export class EventHandlers extends BaseModule {
         // Activate the specified tab
         tab.classList.add('active');
 
-        // Show corresponding content (content can be in either panel)
+        // Update state manager with the active tab for this panel
+        // ConfigManager will be updated automatically via subscription in LevelEditor
+        if (panelSide === 'right') {
+            this.editor.stateManager.set('rightPanelTab', tabName);
+        } else if (panelSide === 'left') {
+            this.editor.stateManager.set('leftPanelTab', tabName);
+        }
+
+        // Show corresponding content only for the active tab in this panel
+        // Get current active tabs for both panels
+        const rightPanelActiveTab = this.editor.stateManager.get('rightPanelTab');
+        const leftPanelActiveTab = this.editor.stateManager.get('leftPanelTab');
+        
+        // Hide all content panels first
         document.querySelectorAll('.tab-content-right, .tab-content-left').forEach(content => {
-            content.classList.toggle('hidden', content.id !== `${tabName}-content-panel`);
+            content.classList.add('hidden');
         });
+        
+        // Show content for active tabs in both panels
+        // Find content panels in the correct panel containers
+        const rightPanel = document.getElementById('right-tabs-panel');
+        const leftPanel = document.getElementById('left-tabs-panel');
+        
+        if (rightPanelActiveTab && rightPanel) {
+            const rightContentPanel = rightPanel.querySelector(`#${rightPanelActiveTab}-content-panel`);
+            if (rightContentPanel) {
+                rightContentPanel.classList.remove('hidden');
+            }
+        }
+        
+        if (leftPanelActiveTab && leftPanel) {
+            const leftContentPanel = leftPanel.querySelector(`#${leftPanelActiveTab}-content-panel`);
+            if (leftContentPanel) {
+                leftContentPanel.classList.remove('hidden');
+            }
+        }
 
         // Show search section for layers and outliner tabs
         SearchSectionUtils.showSearchSectionForTab(tabName, this.editor);
     }
+
 
     setupStateListeners() {
         // Subscribe to selection changes

@@ -609,12 +609,17 @@ export class AssetPanel extends BasePanel {
         // Note: Global marquee handling now managed by BasePanel
 
         this.setupAssetEvents();
+        
+        // Setup touch gestures for asset panel
+        this.setupTouchGestures();
     }
 
     render() {
         // Note: Hover effects now handled by CSS (like OutlinerPanel)
         this.renderTabs();
         this.renderPreviews();
+        
+        // Touch gestures are set up once in setupTouchGestures
     }
 
     renderTabs() {
@@ -855,6 +860,7 @@ export class AssetPanel extends BasePanel {
         thumb.addEventListener('click', (e) => this.handleItemClick(e, asset));
         thumb.addEventListener('dblclick', (e) => this.handleItemDoubleClick(e, asset));
         thumb.addEventListener('dragstart', (e) => this.handleThumbnailDragStart(e, asset));
+        thumb.addEventListener('dragend', (e) => this.handleThumbnailDragEnd(e, asset));
         
         return thumb;
     }
@@ -924,6 +930,7 @@ export class AssetPanel extends BasePanel {
         item.addEventListener('click', (e) => this.handleItemClick(e, asset));
         item.addEventListener('dblclick', (e) => this.handleItemDoubleClick(e, asset));
         item.addEventListener('dragstart', (e) => this.handleThumbnailDragStart(e, asset));
+        item.addEventListener('dragend', (e) => this.handleThumbnailDragEnd(e, asset));
         
         return item;
     }
@@ -1033,6 +1040,7 @@ export class AssetPanel extends BasePanel {
         row.addEventListener('click', (e) => this.handleItemClick(e, asset));
         row.addEventListener('dblclick', (e) => this.handleItemDoubleClick(e, asset));
         row.addEventListener('dragstart', (e) => this.handleThumbnailDragStart(e, asset));
+        row.addEventListener('dragend', (e) => this.handleThumbnailDragEnd(e, asset));
         
         return row;
     }
@@ -1179,11 +1187,20 @@ export class AssetPanel extends BasePanel {
         const draggedAssetIds = selectedAssets.has(asset.id) ? 
             Array.from(selectedAssets) : [asset.id];
         
+        Logger.ui.debug('Drag start for asset:', asset.id, 'draggedAssetIds:', draggedAssetIds, 'selectedAssets:', Array.from(selectedAssets));
+        
         e.dataTransfer.setData('application/json', JSON.stringify(draggedAssetIds));
         e.dataTransfer.effectAllowed = 'copy';
         
         this.stateManager.update({
             'mouse.isDraggingAsset': true
+        });
+    }
+
+    handleThumbnailDragEnd(e, asset) {
+        // Reset dragging flag when drag ends
+        this.stateManager.update({
+            'mouse.isDraggingAsset': false
         });
     }
 
@@ -2420,5 +2437,243 @@ export class AssetPanel extends BasePanel {
                 }
             });
         });
+    }
+
+    /**
+     * Setup touch gestures for asset panel
+     */
+    setupTouchGestures() {
+        Logger.ui.debug('setupTouchGestures called');
+        
+        if (!this.levelEditor || !this.levelEditor.touchSupportManager) {
+            Logger.ui.warn('TouchSupportManager not available for asset panel gestures');
+            return;
+        }
+
+        // Register combined touch support for asset panel
+        Logger.ui.debug('Registering touch support on previewsContainer:', this.previewsContainer);
+        this.levelEditor.touchSupportManager.registerElement(this.previewsContainer, 'longPressMarquee', {
+            onMarqueeStart: (element, touch, data) => {
+                // Check if touch started on an asset element
+                const elementAtPoint = document.elementFromPoint(data.startX, data.startY);
+                const assetElement = elementAtPoint?.closest('[data-asset-id]');
+                
+                if (assetElement) {
+                    // Touch started on asset - start drag
+                    const assetId = assetElement.dataset.assetId;
+                    const asset = this.assetManager.getAsset(assetId);
+                    if (asset) {
+                        Logger.ui.debug('Asset touch drag start for asset:', asset.id);
+                        this.startAssetTouchDrag(data.startX, data.startY, asset);
+                        return;
+                    }
+                }
+                
+                // Touch started on empty space - start marquee
+                Logger.ui.debug('Asset panel long press marquee start:', data);
+                this.startAssetTouchMarquee(data.startX, data.startY);
+            },
+            onMarqueeMove: (element, touch, data) => {
+                // Check if we're in drag mode or marquee mode
+                if (this.stateManager.get('mouse.isDraggingAsset')) {
+                    // We're dragging an asset, don't update marquee
+                    return;
+                }
+                
+                // Update marquee
+                Logger.ui.debug('Asset panel long press marquee move:', data);
+                this.updateAssetTouchMarquee(data.currentX, data.currentY);
+            },
+            onMarqueeEnd: (element, data) => {
+                // Check if we're in drag mode or marquee mode
+                if (this.stateManager.get('mouse.isDraggingAsset')) {
+                    // We're dragging an asset, end drag
+                    Logger.ui.debug('Asset touch drag end');
+                    this.endAssetTouchDrag(data.endX, data.endY);
+                    return;
+                }
+                
+                // End marquee
+                Logger.ui.debug('Asset panel long press marquee end:', data);
+                this.endAssetTouchMarquee(data.endX, data.endY);
+            },
+            longPressDelay: 500 // 500ms long press delay
+        });
+
+        Logger.ui.info('Asset panel touch gestures initialized');
+    }
+
+    /**
+     * Start touch marquee selection in asset panel
+     * @param {number} startX - Start X coordinate
+     * @param {number} startY - Start Y coordinate
+     */
+    startAssetTouchMarquee(startX, startY) {
+        // Check if touch started on an asset (not empty space)
+        const elementAtPoint = document.elementFromPoint(startX, startY);
+        
+        // If touch started on an asset or its child elements, don't start marquee
+        if (elementAtPoint && (
+            elementAtPoint.closest('.asset-thumbnail') || 
+            elementAtPoint.closest('.asset-item') ||
+            elementAtPoint.closest('.asset-row') ||
+            elementAtPoint.closest('.asset-details-row') ||
+            elementAtPoint.closest('[data-asset-id]') ||
+            elementAtPoint.closest('[draggable="true"]')
+        )) {
+            Logger.ui.debug('Asset panel touch started on draggable asset, skipping marquee');
+            return;
+        }
+        
+        // Create synthetic mouse event and pass to SelectionUtils
+        const syntheticEvent = {
+            button: 0, // Left mouse button
+            clientX: startX,
+            clientY: startY,
+            target: this.previewsContainer, // Set target to container
+            preventDefault: () => {},
+            stopPropagation: () => {}
+        };
+        
+        // Use SelectionUtils to handle marquee start
+        import('../utils/SelectionUtils.js').then(({ SelectionUtils }) => {
+            SelectionUtils.handleMarqueeMouseDown(syntheticEvent, {
+                container: this.previewsContainer,
+                stateManager: this.stateManager,
+                ...this.selectionOptions
+            });
+        }).catch(error => {
+            Logger.ui.error('Failed to load SelectionUtils for marquee start:', error);
+        });
+        
+        Logger.ui.debug('Asset panel touch marquee started at:', startX, startY);
+    }
+
+    /**
+     * Update touch marquee selection in asset panel
+     * @param {number} currentX - Current X coordinate
+     * @param {number} currentY - Current Y coordinate
+     */
+    updateAssetTouchMarquee(currentX, currentY) {
+        // Create synthetic mouse event and pass to SelectionUtils
+        const syntheticEvent = {
+            clientX: currentX,
+            clientY: currentY,
+            target: this.previewsContainer, // Set target to container
+            preventDefault: () => {},
+            stopPropagation: () => {}
+        };
+        
+        // Use SelectionUtils to handle marquee move
+        import('../utils/SelectionUtils.js').then(({ SelectionUtils }) => {
+            SelectionUtils.handleMarqueeMouseMove(syntheticEvent, this.stateManager);
+        }).catch(error => {
+            Logger.ui.error('Failed to load SelectionUtils for marquee move:', error);
+        });
+    }
+
+    /**
+     * End touch marquee selection in asset panel
+     * @param {number} endX - End X coordinate
+     * @param {number} endY - End Y coordinate
+     */
+    endAssetTouchMarquee(endX, endY) {
+        // Create synthetic mouse event and pass to SelectionUtils
+        const syntheticEvent = {
+            clientX: endX,
+            clientY: endY,
+            target: this.previewsContainer, // Set target to container
+            preventDefault: () => {},
+            stopPropagation: () => {}
+        };
+        
+        // Use SelectionUtils to handle marquee end
+        import('../utils/SelectionUtils.js').then(({ SelectionUtils }) => {
+            SelectionUtils.handleMarqueeMouseUp(syntheticEvent, this.stateManager, this.selectionOptions);
+        }).catch(error => {
+            Logger.ui.error('Failed to load SelectionUtils for marquee end:', error);
+        });
+        
+        Logger.ui.debug('Asset panel touch marquee ended at:', endX, endY);
+    }
+
+    // ===== TOUCH DRAG AND DROP HANDLERS =====
+
+    /**
+     * Start touch drag for asset - emulate dragstart event
+     * @param {number} startX - Start X coordinate
+     * @param {number} startY - Start Y coordinate
+     * @param {Object} asset - Asset being dragged
+     */
+    startAssetTouchDrag(startX, startY, asset) {
+        // Create synthetic dragstart event
+        const syntheticDragStartEvent = {
+            target: document.querySelector(`[data-asset-id="${asset.id}"]`),
+            ctrlKey: false,
+            metaKey: false,
+            dataTransfer: {
+                setData: (type, data) => {
+                    this._dragData = data;
+                },
+                getData: (type) => this._dragData,
+                effectAllowed: 'copy'
+            },
+            preventDefault: () => {},
+            stopPropagation: () => {}
+        };
+
+        // Call existing dragstart handler
+        this.handleThumbnailDragStart(syntheticDragStartEvent, asset);
+        
+        Logger.ui.debug('Asset touch drag started:', asset.id);
+    }
+
+    /**
+     * End touch drag for asset - emulate drop event
+     * @param {number} endX - End X coordinate
+     * @param {number} endY - End Y coordinate
+     */
+    endAssetTouchDrag(endX, endY) {
+        // Check if we're over the canvas
+        const canvas = document.getElementById('canvas');
+        if (!canvas) {
+            this.handleThumbnailDragEnd({}, null);
+            return;
+        }
+
+        const canvasRect = canvas.getBoundingClientRect();
+        const isOverCanvas = endX >= canvasRect.left && 
+                            endX <= canvasRect.right && 
+                            endY >= canvasRect.top && 
+                            endY <= canvasRect.bottom;
+
+        if (isOverCanvas) {
+            Logger.ui.debug('Touch drag ended over canvas, calling handleDrop with dragData:', this._dragData);
+            
+            // Create synthetic drop event
+            const syntheticDropEvent = {
+                target: {
+                    ...canvas,
+                    closest: (selector) => canvas.closest(selector)
+                },
+                clientX: endX,
+                clientY: endY,
+                dataTransfer: {
+                    getData: (type) => this._dragData
+                },
+                preventDefault: () => {},
+                stopPropagation: () => {}
+            };
+
+            // Call existing drop handler
+            this.levelEditor.mouseHandlers.handleDrop(syntheticDropEvent);
+        } else {
+            Logger.ui.debug('Touch drag ended outside canvas');
+        }
+
+        // Always call dragend to reset state
+        this.handleThumbnailDragEnd({}, null);
+        
+        Logger.ui.debug('Asset touch drag ended');
     }
 }

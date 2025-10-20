@@ -50,6 +50,179 @@ export class TouchSupportUtils {
     }
 
     /**
+     * Add marquee selection touch support
+     * @param {HTMLElement} element - Element to add marquee support to
+     * @param {Function} onMarqueeStart - Marquee start handler
+     * @param {Function} onMarqueeMove - Marquee move handler
+     * @param {Function} onMarqueeEnd - Marquee end handler
+     * @param {TouchSupportManager} touchManager - Touch support manager
+     */
+    static addMarqueeTouchSupport(element, onMarqueeStart, onMarqueeMove, onMarqueeEnd, touchManager) {
+        if (!touchManager) {
+            Logger.ui.warn('TouchSupportUtils: TouchSupportManager not provided');
+            return;
+        }
+
+        touchManager.registerElement(element, 'marqueeSelection', {
+            onMarqueeStart: onMarqueeStart,
+            onMarqueeMove: onMarqueeMove,
+            onMarqueeEnd: onMarqueeEnd
+        });
+    }
+
+    /**
+     * Add long press marquee selection touch support
+     * @param {HTMLElement} element - Element to add long press marquee support to
+     * @param {Function} onMarqueeStart - Marquee start handler
+     * @param {Function} onMarqueeMove - Marquee move handler
+     * @param {Function} onMarqueeEnd - Marquee end handler
+     * @param {TouchSupportManager} touchManager - Touch support manager
+     * @param {number} longPressDelay - Long press delay in milliseconds (default: 500)
+     */
+    static addLongPressMarqueeTouchSupport(element, onMarqueeStart, onMarqueeMove, onMarqueeEnd, touchManager, longPressDelay = 500) {
+        if (!touchManager) {
+            Logger.ui.warn('TouchSupportUtils: TouchSupportManager not provided');
+            return;
+        }
+
+        touchManager.registerElement(element, 'longPressMarquee', {
+            onMarqueeStart: onMarqueeStart,
+            onMarqueeMove: onMarqueeMove,
+            onMarqueeEnd: onMarqueeEnd,
+            longPressDelay: longPressDelay
+        });
+    }
+
+    /**
+     * Add two finger pan touch support
+     * @param {HTMLElement} element - Element to add pan support to
+     * @param {Function} onPanStart - Pan start handler
+     * @param {Function} onPanMove - Pan move handler
+     * @param {Function} onPanEnd - Pan end handler
+     * @param {TouchSupportManager} touchManager - Touch support manager
+     */
+    static addTwoFingerPanSupport(element, onPanStart, onPanMove, onPanEnd, touchManager) {
+        if (!touchManager) {
+            Logger.ui.warn('TouchSupportUtils: TouchSupportManager not provided');
+            return;
+        }
+
+        touchManager.registerElement(element, 'twoFingerPan', {
+            onPanStart: onPanStart,
+            onPanMove: onPanMove,
+            onPanEnd: onPanEnd
+        });
+    }
+
+    /**
+     * Add two finger context menu touch support
+     * @param {HTMLElement} element - Element to add context support to
+     * @param {Function} onTwoFingerTap - Two finger tap handler
+     * @param {TouchSupportManager} touchManager - Touch support manager
+     */
+    static addTwoFingerContextSupport(element, onTwoFingerTap, touchManager) {
+        if (!touchManager) {
+            Logger.ui.warn('TouchSupportUtils: TouchSupportManager not provided');
+            return;
+        }
+
+        touchManager.registerElement(element, 'twoFingerContext', {
+            onTwoFingerTap: onTwoFingerTap
+        });
+    }
+
+    /**
+     * Add two finger zoom touch support
+     * @param {HTMLElement} element - Element to add zoom support to
+     * @param {Function} onZoomStart - Zoom start handler
+     * @param {Function} onZoomMove - Zoom move handler
+     * @param {Function} onZoomEnd - Zoom end handler
+     * @param {TouchSupportManager} touchManager - Touch support manager
+     */
+    static addTwoFingerZoomSupport(element, onZoomStart, onZoomMove, onZoomEnd, touchManager) {
+        if (!touchManager) {
+            Logger.ui.warn('TouchSupportUtils: TouchSupportManager not provided');
+            return;
+        }
+
+        touchManager.registerElement(element, 'twoFingerZoom', {
+            onZoomStart: onZoomStart,
+            onZoomMove: onZoomMove,
+            onZoomEnd: onZoomEnd
+        });
+    }
+
+    /**
+     * Add combined two finger pan and zoom support to an element
+     * @param {HTMLElement} element - Target element
+     * @param {Function} onPanStart - Pan start handler
+     * @param {Function} onPanMove - Pan move handler
+     * @param {Function} onPanEnd - Pan end handler
+     * @param {Function} onZoomStart - Zoom start handler
+     * @param {Function} onZoomMove - Zoom move handler
+     * @param {Function} onZoomEnd - Zoom end handler
+     * @param {TouchSupportManager} touchManager - Touch support manager
+     */
+    static addTwoFingerPanZoomSupport(element, onPanStart, onPanMove, onPanEnd, onZoomStart, onZoomMove, onZoomEnd, touchManager) {
+        if (!touchManager) {
+            Logger.ui.warn('TouchSupportUtils: TouchSupportManager not provided');
+            return;
+        }
+
+        touchManager.registerElement(element, 'twoFingerPanZoom', {
+            onPanStart: onPanStart,
+            onPanMove: onPanMove,
+            onPanEnd: onPanEnd,
+            onZoomStart: onZoomStart,
+            onZoomMove: onZoomMove,
+            onZoomEnd: onZoomEnd
+        });
+    }
+
+    /**
+     * Update touch action for an element
+     * @param {HTMLElement} element - Element to update
+     * @param {string} gestureType - New gesture type
+     * @param {TouchSupportManager} touchManager - Touch support manager
+     */
+    static updateTouchAction(element, gestureType, touchManager) {
+        if (!touchManager) {
+            Logger.ui.warn('TouchSupportUtils: TouchSupportManager not provided');
+            return;
+        }
+
+        touchManager.updateTouchAction(element, gestureType);
+    }
+
+    /**
+     * Temporarily disable touch gestures for an element
+     * @param {HTMLElement} element - Element to disable
+     * @param {TouchSupportManager} touchManager - Touch support manager
+     */
+    static disableTouchGestures(element, touchManager) {
+        if (!touchManager) {
+            Logger.ui.warn('TouchSupportUtils: TouchSupportManager not provided');
+            return;
+        }
+
+        touchManager.disableTouchGestures(element);
+    }
+
+    /**
+     * Re-enable touch gestures for an element
+     * @param {HTMLElement} element - Element to re-enable
+     * @param {TouchSupportManager} touchManager - Touch support manager
+     */
+    static enableTouchGestures(element, touchManager) {
+        if (!touchManager) {
+            Logger.ui.warn('TouchSupportUtils: TouchSupportManager not provided');
+            return;
+        }
+
+        touchManager.enableTouchGestures(element);
+    }
+
+    /**
      * Add touch support to a resizable element
      * @param {HTMLElement} resizer - Resizer element
      * @param {string} direction - 'horizontal' or 'vertical'
@@ -176,7 +349,7 @@ export class TouchSupportUtils {
         const defaults = {
             minHeight: this.getOptimalTouchSize(),
             minWidth: this.getOptimalTouchSize(),
-            touchAction: 'none',
+            touchAction: 'manipulation', // Allow tap but prevent other gestures
             userSelect: 'none',
             cursor: 'pointer'
         };

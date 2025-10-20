@@ -53,7 +53,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.51.0';
+    static VERSION = '3.51.2';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -68,7 +68,7 @@ export class LevelEditor {
         this.historyManager = new HistoryManager();
         this.assetManager = new AssetManager(this.stateManager);
         this.fileManager = new FileManager();
-        this.touchSupportManager = new TouchSupportManager();
+        this.touchSupportManager = new TouchSupportManager(this.stateManager);
         
         // Store user preferences manager
         this.userPrefs = userPreferencesManager;
@@ -443,6 +443,169 @@ export class LevelEditor {
 
         // Register canvas context menu with the manager
         this.contextMenuManager.registerMenu('canvas', this.canvasContextMenu);
+
+        // Setup touch gestures for canvas
+        this.setupCanvasTouchGestures(canvas);
+        
+        // Setup global browser navigation prevention
+        this.setupGlobalNavigationPrevention();
+    }
+
+    /**
+     * Setup touch gestures for canvas element
+     * @private
+     * @param {HTMLCanvasElement} canvas - Canvas element
+     */
+    setupCanvasTouchGestures(canvas) {
+        if (!this.touchSupportManager) {
+            Logger.ui.warn('TouchSupportManager not available for canvas gestures');
+            return;
+        }
+
+        // Import TouchSupportUtils
+        import('../utils/TouchSupportUtils.js').then(({ TouchSupportUtils }) => {
+            // Marquee selection (single finger tap + drag)
+            TouchSupportUtils.addMarqueeTouchSupport(
+                canvas,
+                (element, touch, data) => {
+                    // Start marquee selection
+                    Logger.ui.debug('Touch marquee start:', data);
+                    this.startTouchMarquee(data.startX, data.startY);
+                },
+                (element, touch, data) => {
+                    // Update marquee selection
+                    Logger.ui.debug('Touch marquee move:', data);
+                    this.updateTouchMarquee(data.currentX, data.currentY);
+                },
+                (element, data) => {
+                    // End marquee selection
+                    Logger.ui.debug('Touch marquee end:', data);
+                    this.endTouchMarquee(data.endX, data.endY);
+                },
+                this.touchSupportManager
+            );
+
+            // Combined two finger pan and zoom
+            TouchSupportUtils.addTwoFingerPanZoomSupport(
+                canvas,
+                // Pan handlers
+                (element, data) => {
+                    // Start panning
+                    Logger.ui.debug('Touch pan start:', data);
+                    this.startTouchPan(data.centerX, data.centerY);
+                },
+                (element, data) => {
+                    // Update panning
+                    Logger.ui.debug('Touch pan move:', data);
+                    this.updateTouchPan(data.deltaX, data.deltaY);
+                },
+                (element, data) => {
+                    // End panning
+                    Logger.ui.debug('Touch pan end:', data);
+                    this.endTouchPan();
+                },
+                // Zoom handlers
+                (element, data) => {
+                    // Start zoom
+                    Logger.ui.debug('Touch zoom start:', data);
+                    this.startTouchZoom(data.centerX, data.centerY);
+                },
+                (element, data) => {
+                    // Update zoom
+                    Logger.ui.debug('Touch zoom move:', data);
+                    this.updateTouchZoom(data.scale, data.centerX, data.centerY);
+                },
+                (element, data) => {
+                    // End zoom
+                    Logger.ui.debug('Touch zoom end:', data);
+                    this.endTouchZoom();
+                },
+                this.touchSupportManager
+            );
+
+            // Two finger context menu
+            TouchSupportUtils.addTwoFingerContextSupport(
+                canvas,
+                (element, data) => {
+                    // Show context menu
+                    Logger.ui.debug('Touch context menu:', data);
+                    this.showTouchContextMenu(data.centerX, data.centerY);
+                },
+                this.touchSupportManager
+            );
+
+
+            Logger.ui.info('Canvas touch gestures initialized');
+        }).catch(error => {
+            Logger.ui.error('Failed to load TouchSupportUtils:', error);
+        });
+    }
+
+    /**
+     * Setup global browser navigation prevention
+     * @private
+     */
+    setupGlobalNavigationPrevention() {
+        // Prevent browser swipe navigation globally
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let touchStartTime = 0;
+
+        // Add global touch event listeners to prevent browser navigation
+        document.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
+                touchStartTime = Date.now();
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 1 && touchStartX !== 0) {
+                const touch = e.touches[0];
+                const deltaX = touch.clientX - touchStartX;
+                const deltaY = touch.clientY - touchStartY;
+                const deltaTime = Date.now() - touchStartTime;
+                
+                // Block ALL horizontal swipes that could trigger browser navigation
+                if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.stopImmediatePropagation();
+                }
+            }
+        }, { passive: false });
+
+        document.addEventListener('touchend', () => {
+            touchStartX = 0;
+            touchStartY = 0;
+            touchStartTime = 0;
+        }, { passive: true });
+
+        // Also prevent context menu globally on touch devices
+        document.addEventListener('contextmenu', (e) => {
+            // Only prevent on touch devices
+            if ('ontouchstart' in window) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        }, { passive: false });
+
+        // Add CSS to prevent browser navigation gestures
+        this.addNavigationPreventionCSS();
+
+        Logger.ui.info('Global browser navigation prevention setup');
+    }
+
+    /**
+     * Add CSS to prevent browser navigation gestures
+     * @private
+     */
+    addNavigationPreventionCSS() {
+        // CSS is already loaded via index.html
+        // This method is kept for potential future dynamic loading needs
+        Logger.ui.debug('Touch navigation prevention styles should be loaded via index.html');
     }
 
     /**
@@ -587,6 +750,21 @@ export class LevelEditor {
             }
         });
         this.subscriptions.push(tabPositionsUnsubscribe);
+
+        // Listen for active tab changes and save to ConfigManager
+        const rightPanelTabUnsubscribe = this.stateManager.subscribe('rightPanelTab', (tabName) => {
+            if (tabName && this.configManager) {
+                this.configManager.set('editor.view.rightPanelTab', tabName);
+            }
+        });
+        this.subscriptions.push(rightPanelTabUnsubscribe);
+
+        const leftPanelTabUnsubscribe = this.stateManager.subscribe('leftPanelTab', (tabName) => {
+            if (tabName && this.configManager) {
+                this.configManager.set('editor.view.leftPanelTab', tabName);
+            }
+        });
+        this.subscriptions.push(leftPanelTabUnsubscribe);
     }
 
     /**
@@ -701,10 +879,15 @@ export class LevelEditor {
                     this.toolbar.saveState();
                 }
 
-                // Save current right panel tab
+                // Save current panel tabs
                 const currentRightPanelTab = this.stateManager.get('rightPanelTab');
                 if (currentRightPanelTab) {
                     this.configManager.set('editor.view.rightPanelTab', currentRightPanelTab);
+                }
+                
+                const currentLeftPanelTab = this.stateManager.get('leftPanelTab');
+                if (currentLeftPanelTab) {
+                    this.configManager.set('editor.view.leftPanelTab', currentLeftPanelTab);
                 }
 
                 // Save current active asset tabs
@@ -736,9 +919,57 @@ export class LevelEditor {
                     this.userPrefs.set('rightPanelWidth', rightPanelWidth);
                 }
 
+                const leftPanelWidth = this.stateManager.get('panels.leftPanelWidth');
+                if (leftPanelWidth && leftPanelWidth > 0) {
+                    this.userPrefs.set('leftPanelWidth', leftPanelWidth);
+                }
+
                 const assetsPanelHeight = this.stateManager.get('panels.assetsPanelHeight');
                 if (assetsPanelHeight && assetsPanelHeight > 0) {
                     this.userPrefs.set('assetsPanelHeight', assetsPanelHeight);
+                }
+
+                // Save panel tab orders
+                const rightPanelTabOrder = this.stateManager.get('rightPanelTabOrder');
+                if (rightPanelTabOrder && Array.isArray(rightPanelTabOrder)) {
+                    this.userPrefs.set('rightPanelTabOrder', rightPanelTabOrder);
+                }
+
+                const leftPanelTabOrder = this.stateManager.get('leftPanelTabOrder');
+                if (leftPanelTabOrder && Array.isArray(leftPanelTabOrder)) {
+                    this.userPrefs.set('leftPanelTabOrder', leftPanelTabOrder);
+                }
+
+                const assetTabOrder = this.stateManager.get('assetTabOrder');
+                if (assetTabOrder && Array.isArray(assetTabOrder)) {
+                    this.userPrefs.set('assetTabOrder', assetTabOrder);
+                }
+
+                // Save tab positions (which panel each tab is in)
+                const tabPositions = this.stateManager.get('tabPositions');
+                if (tabPositions) {
+                    Object.entries(tabPositions).forEach(([tabName, position]) => {
+                        this.userPrefs.set(`tabPosition_${tabName}`, position);
+                    });
+                }
+
+                // Save panel visibility states
+                const rightPanel = document.getElementById('right-panel');
+                if (rightPanel) {
+                    const isRightPanelVisible = rightPanel.style.display !== 'none';
+                    this.userPrefs.set('rightPanelVisible', isRightPanelVisible);
+                }
+
+                const leftPanel = document.getElementById('left-panel');
+                if (leftPanel) {
+                    const isLeftPanelVisible = leftPanel.style.display !== 'none';
+                    this.userPrefs.set('leftPanelVisible', isLeftPanelVisible);
+                }
+
+                const assetsPanel = document.getElementById('assets-panel');
+                if (assetsPanel) {
+                    const isAssetsPanelVisible = assetsPanel.style.display !== 'none';
+                    this.userPrefs.set('assetsPanelVisible', isAssetsPanelVisible);
                 }
 
                 // Save current grid settings from StateManager
@@ -1149,6 +1380,21 @@ export class LevelEditor {
                 }
             }
 
+            // Left panel width
+            const leftPanelWidth = this.userPrefs.get('leftPanelWidth');
+            if (leftPanelWidth) {
+                const leftPanel = document.getElementById('left-panel');
+                if (leftPanel) {
+                    leftPanel.style.width = leftPanelWidth + 'px';
+                    leftPanel.style.flexShrink = '0';
+                    leftPanel.style.flexGrow = '0';
+                }
+                // Sync to StateManager
+                if (this.stateManager) {
+                    this.stateManager.set('panels.leftPanelWidth', leftPanelWidth);
+                }
+            }
+
             // Assets panel height
             const assetsPanelHeight = this.userPrefs.get('assetsPanelHeight');
             if (assetsPanelHeight) {
@@ -1173,6 +1419,31 @@ export class LevelEditor {
                     consolePanel.style.setProperty('bottom', 'auto', 'important');
                 }
             }
+
+            // Apply panel visibility states
+            const rightPanelVisible = this.userPrefs.get('rightPanelVisible');
+            if (rightPanelVisible !== undefined) {
+                const rightPanel = document.getElementById('right-panel');
+                if (rightPanel) {
+                    rightPanel.style.display = rightPanelVisible ? 'flex' : 'none';
+                }
+            }
+
+            const leftPanelVisible = this.userPrefs.get('leftPanelVisible');
+            if (leftPanelVisible !== undefined) {
+                const leftPanel = document.getElementById('left-panel');
+                if (leftPanel) {
+                    leftPanel.style.display = leftPanelVisible ? 'flex' : 'none';
+                }
+            }
+
+            const assetsPanelVisible = this.userPrefs.get('assetsPanelVisible');
+            if (assetsPanelVisible !== undefined) {
+                const assetsPanel = document.getElementById('assets-panel');
+                if (assetsPanel) {
+                    assetsPanel.style.display = assetsPanelVisible ? 'flex' : 'none';
+                }
+            }
         } catch (error) {
             Logger.layout.warn('Failed to apply panel sizes from preferences:', error);
         }
@@ -1191,10 +1462,15 @@ export class LevelEditor {
                 this.stateManager.set('assetTabOrder', assetTabOrder);
             }
             
-            // Apply right panel tab order
+            // Apply panel tab orders
             const rightPanelTabOrder = this.userPrefs.get('rightPanelTabOrder');
             if (rightPanelTabOrder && Array.isArray(rightPanelTabOrder)) {
                 this.stateManager.set('rightPanelTabOrder', rightPanelTabOrder);
+            }
+            
+            const leftPanelTabOrder = this.userPrefs.get('leftPanelTabOrder');
+            if (leftPanelTabOrder && Array.isArray(leftPanelTabOrder)) {
+                this.stateManager.set('leftPanelTabOrder', leftPanelTabOrder);
             }
             
             // Re-render panels to apply tab order
@@ -2074,4 +2350,314 @@ export class LevelEditor {
         
         Logger.lifecycle.info('LevelEditor destroyed successfully');
     }
+
+    // ===== TOUCH GESTURE HANDLERS =====
+
+    /**
+     * Start touch marquee selection
+     * @param {number} startX - Start X coordinate
+     * @param {number} startY - Start Y coordinate
+     */
+    startTouchMarquee(startX, startY) {
+        // Convert screen coordinates to world coordinates
+        const camera = this.stateManager.get('camera');
+        const worldPos = this.canvasRenderer.screenToWorld(startX, startY, camera);
+        
+        // Check if touching an object
+        const clickedObject = this.objectOperations.findObjectAtPoint(worldPos.x, worldPos.y);
+        
+        if (clickedObject) {
+            // If touching an object, cancel marquee and start object move instead
+            this.stateManager.set('mouse.isMarqueeSelecting', false);
+            this.stateManager.set('mouse.marqueeStartX', null);
+            this.stateManager.set('mouse.marqueeStartY', null);
+            this.stateManager.set('mouse.marqueeRect', null);
+            
+            this.startTouchObjectMove(clickedObject, worldPos);
+        } else {
+            // If touching empty space, start marquee selection
+            this.stateManager.set('mouse.isMarqueeSelecting', true);
+            this.stateManager.set('mouse.marqueeStartX', worldPos.x);
+            this.stateManager.set('mouse.marqueeStartY', worldPos.y);
+            this.stateManager.set('mouse.marqueeRect', {
+                x: worldPos.x,
+                y: worldPos.y,
+                width: 0,
+                height: 0
+            });
+            
+            Logger.ui.debug('Touch marquee started at:', worldPos);
+        }
+    }
+
+    /**
+     * Update touch marquee selection
+     * @param {number} currentX - Current X coordinate
+     * @param {number} currentY - Current Y coordinate
+     */
+    updateTouchMarquee(currentX, currentY) {
+        // Check if we're in marquee mode or object move mode
+        if (this.stateManager.get('mouse.isMarqueeSelecting')) {
+            // Update marquee selection
+            const camera = this.stateManager.get('camera');
+            const worldPos = this.canvasRenderer.screenToWorld(currentX, currentY, camera);
+            
+            const startX = this.stateManager.get('mouse.marqueeStartX');
+            const startY = this.stateManager.get('mouse.marqueeStartY');
+            
+            // Only update marquee if we have valid start coordinates
+            if (startX !== null && startY !== null) {
+                // Update marquee rectangle
+                const marqueeRect = {
+                    x: Math.min(startX, worldPos.x),
+                    y: Math.min(startY, worldPos.y),
+                    width: Math.abs(worldPos.x - startX),
+                    height: Math.abs(worldPos.y - startY)
+                };
+                
+                this.stateManager.set('mouse.marqueeRect', marqueeRect);
+                this.render(); // Trigger re-render to show marquee
+            }
+        } else if (this.stateManager.get('touch.isObjectMoving')) {
+            // Update object move
+            this.updateTouchObjectMove(currentX, currentY);
+        }
+    }
+
+    /**
+     * End touch marquee selection
+     * @param {number} endX - End X coordinate
+     * @param {number} endY - End Y coordinate
+     */
+    endTouchMarquee(endX, endY) {
+        // Check if we're in marquee mode or object move mode
+        if (this.stateManager.get('mouse.isMarqueeSelecting')) {
+            // End marquee selection
+            const camera = this.stateManager.get('camera');
+            const worldPos = this.canvasRenderer.screenToWorld(endX, endY, camera);
+            
+            // Use existing marquee selection logic
+            this.mouseHandlers.finishMarqueeSelection();
+            
+            Logger.ui.debug('Touch marquee ended at:', worldPos);
+        } else if (this.stateManager.get('touch.isObjectMoving')) {
+            // End object move
+            this.endTouchObjectMove(endX, endY);
+        } else {
+            // If neither marquee nor object move is active, just clean up
+            Logger.ui.debug('Touch gesture ended without active mode');
+        }
+    }
+
+    /**
+     * Start touch object move
+     * @param {Object} clickedObject - The object that was clicked
+     * @param {Object} worldPos - World position of the touch
+     */
+    startTouchObjectMove(clickedObject, worldPos) {
+        // Check if object is selected
+        const selectedObjects = new Set(this.stateManager.get('selectedObjects'));
+        const isSelected = selectedObjects.has(clickedObject.id);
+        
+        if (!isSelected) {
+            // If object is not selected, select it first (replace current selection)
+            selectedObjects.clear();
+            selectedObjects.add(clickedObject.id);
+            this.stateManager.set('selectedObjects', selectedObjects);
+            this.updateAllPanels();
+        }
+        
+        // Start object move using existing mouse handler logic
+        this.stateManager.set('touch.isObjectMoving', true);
+        this.stateManager.set('touch.moveStartX', worldPos.x);
+        this.stateManager.set('touch.moveStartY', worldPos.y);
+        this.stateManager.set('touch.moveObject', clickedObject);
+        
+        // Set mouse state for compatibility with existing move logic
+        this.stateManager.set('mouse.isDragging', true);
+        this.stateManager.set('mouse.dragStartX', worldPos.x);
+        this.stateManager.set('mouse.dragStartY', worldPos.y);
+        
+        Logger.ui.debug('Touch object move started for object:', clickedObject.id);
+    }
+
+    /**
+     * Update touch object move
+     * @param {number} currentX - Current X coordinate
+     * @param {number} currentY - Current Y coordinate
+     */
+    updateTouchObjectMove(currentX, currentY) {
+        if (!this.stateManager.get('touch.isObjectMoving')) return;
+        
+        // Convert screen coordinates to world coordinates
+        const camera = this.stateManager.get('camera');
+        const worldPos = this.canvasRenderer.screenToWorld(currentX, currentY, camera);
+        
+        const startX = this.stateManager.get('touch.moveStartX');
+        const startY = this.stateManager.get('touch.moveStartY');
+        
+        // Calculate delta movement
+        const deltaX = worldPos.x - startX;
+        const deltaY = worldPos.y - startY;
+        
+        // Move selected objects directly
+        const selectedObjects = this.stateManager.get('selectedObjects');
+        if (selectedObjects && selectedObjects.size > 0) {
+            selectedObjects.forEach(id => {
+                const obj = this.level.findObjectById(id);
+                if (obj) {
+                    obj.x += deltaX;
+                    obj.y += deltaY;
+                }
+            });
+        }
+        
+        // Update start position for next frame
+        this.stateManager.set('touch.moveStartX', worldPos.x);
+        this.stateManager.set('touch.moveStartY', worldPos.y);
+        
+        this.render(); // Trigger re-render
+    }
+
+    /**
+     * End touch object move
+     * @param {number} endX - End X coordinate
+     * @param {number} endY - End Y coordinate
+     */
+    endTouchObjectMove(endX, endY) {
+        if (!this.stateManager.get('touch.isObjectMoving')) return;
+        
+        // Convert screen coordinates to world coordinates
+        const camera = this.stateManager.get('camera');
+        const worldPos = this.canvasRenderer.screenToWorld(endX, endY, camera);
+        
+        // Clean up touch move state
+        this.stateManager.set('touch.isObjectMoving', false);
+        this.stateManager.set('touch.moveStartX', null);
+        this.stateManager.set('touch.moveStartY', null);
+        this.stateManager.set('touch.moveObject', null);
+        
+        // Clean up mouse state
+        this.stateManager.set('mouse.isDragging', false);
+        this.stateManager.set('mouse.dragStartX', null);
+        this.stateManager.set('mouse.dragStartY', null);
+        
+        Logger.ui.debug('Touch object move ended at:', worldPos);
+    }
+
+    /**
+     * Start touch panning
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     */
+    startTouchPan(centerX, centerY) {
+        // Store initial pan position
+        this.stateManager.set('touch.panStartX', centerX);
+        this.stateManager.set('touch.panStartY', centerY);
+        this.stateManager.set('touch.isPanning', true);
+        
+        Logger.ui.debug('Touch pan started at:', centerX, centerY);
+    }
+
+    /**
+     * Update touch panning
+     * @param {number} deltaX - Delta X movement
+     * @param {number} deltaY - Delta Y movement
+     */
+    updateTouchPan(deltaX, deltaY) {
+        if (!this.stateManager.get('touch.isPanning')) return;
+        
+        // Apply pan to camera (same logic as mouse panning)
+        const camera = this.stateManager.get('camera');
+        const newCameraX = camera.x - deltaX / camera.zoom;
+        const newCameraY = camera.y - deltaY / camera.zoom;
+        
+        // Update camera in one operation (same as mouse panning)
+        this.stateManager.update({
+            'camera.x': newCameraX,
+            'camera.y': newCameraY
+        });
+        
+        this.render();
+    }
+
+    /**
+     * End touch panning
+     */
+    endTouchPan() {
+        this.stateManager.set('touch.isPanning', false);
+        Logger.ui.debug('Touch pan ended');
+    }
+
+    /**
+     * Show touch context menu
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     */
+    showTouchContextMenu(centerX, centerY) {
+        // Show canvas context menu at touch position
+        if (this.canvasContextMenu) {
+            this.canvasContextMenu.show(centerX, centerY);
+        }
+    }
+
+    /**
+     * Start touch zoom
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     */
+    startTouchZoom(centerX, centerY) {
+        // Store initial zoom center
+        this.stateManager.set('touch.zoomCenterX', centerX);
+        this.stateManager.set('touch.zoomCenterY', centerY);
+        this.stateManager.set('touch.isZooming', true);
+        
+        Logger.ui.debug('Touch zoom started at:', centerX, centerY);
+    }
+
+    /**
+     * Update touch zoom
+     * @param {number} scale - Zoom scale factor
+     * @param {number} centerX - Center X coordinate
+     * @param {number} centerY - Center Y coordinate
+     */
+    updateTouchZoom(scale, centerX, centerY) {
+        if (!this.stateManager.get('touch.isZooming')) return;
+        
+        // Use same logic as mouse wheel zoom
+        const zoomIntensity = this.stateManager.get('touch.zoomIntensity') || 0.1;
+        const direction = scale; // scale is now direction: 1 for zoom in, -1 for zoom out
+        const camera = this.stateManager.get('camera');
+        
+        const oldZoom = camera.zoom;
+        const newZoom = Math.max(0.1, Math.min(10, oldZoom * (1 + direction * zoomIntensity)));
+        
+        // Calculate new camera position to keep center point fixed (same as mouse wheel)
+        const centerWorldPosBeforeZoom = this.canvasRenderer.screenToWorld(centerX, centerY, camera);
+        
+        // Create a temporary camera object for calculations
+        const tempCamera = { ...camera, zoom: newZoom };
+        const centerWorldPosAfterZoom = this.canvasRenderer.screenToWorld(centerX, centerY, tempCamera);
+        
+        const newCameraX = camera.x + centerWorldPosBeforeZoom.x - centerWorldPosAfterZoom.x;
+        const newCameraY = camera.y + centerWorldPosBeforeZoom.y - centerWorldPosAfterZoom.y;
+        
+        // Update camera in one operation (same as mouse wheel)
+        this.stateManager.update({
+            'camera.zoom': newZoom,
+            'camera.x': newCameraX,
+            'camera.y': newCameraY
+        });
+        
+        this.render();
+    }
+
+    /**
+     * End touch zoom
+     */
+    endTouchZoom() {
+        this.stateManager.set('touch.isZooming', false);
+        Logger.ui.debug('Touch zoom ended');
+    }
+
 }

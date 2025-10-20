@@ -1,5 +1,6 @@
 {
   "rightPanelTabOrder": ["details", "level", "outliner"],
+  "leftPanelTabOrder": ["details", "level", "outliner"],
   "assetTabOrder": [],
   "selection": {
     "outlineColor": "#3B82F6",

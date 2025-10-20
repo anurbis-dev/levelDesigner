@@ -212,12 +212,20 @@
     transition: background-color 0.2s;
 }
 
-.layers-controls .add-layer-btn {
+.layers-controls .add-layer-btn,
+#add-layer-btn {
     background-color: #2563eb;
     color: white;
+    min-height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
-.layers-controls .add-layer-btn:hover {
+.layers-controls .add-layer-btn:hover,
+#add-layer-btn:hover {
     background-color: #1d4ed8;
 }
 
@@ -306,6 +314,11 @@
 .compact-mode .layers-controls button {
     padding: 0.125rem 0.375rem;
     font-size: 0.75rem;
+}
+
+.compact-mode .layers-controls .add-layer-btn,
+.compact-mode #add-layer-btn {
+    min-height: 1.5rem;
 }
 
 .compact-mode .layers-list {

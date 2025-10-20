@@ -154,6 +154,14 @@ export class ConfigManager {
             optimizeGroupRendering: true
         };
 
+        configs.touch = {
+            panThreshold: 2,
+            zoomThreshold: 0.03,
+            panSensitivity: 1.0,
+            zoomIntensity: 0.05,
+            longPressDelay: 500
+        };
+
         configs.view = {
             grid: configs.canvas?.showGrid ?? true,
             snapToGrid: false,
@@ -257,6 +265,14 @@ export class ConfigManager {
             optimizeGroupRendering: true
         };
 
+        configs.touch = {
+            panThreshold: 2,
+            zoomThreshold: 0.03,
+            panSensitivity: 1.0,
+            zoomIntensity: 0.05,
+            longPressDelay: 500
+        };
+
         configs.view = {
             grid: configs.canvas?.showGrid ?? true,
             snapToGrid: false,
@@ -308,12 +324,17 @@ export class ConfigManager {
                         fontScale: 1.2,
                         theme: "dark",
                         rightPanelWidth: 320,
+                        leftPanelWidth: 300,
                         consoleHeight: 400, // Default starting height
                         assetsPanelHeight: 256,
                         consoleVisible: false,
                         consoleMaxLines: 1000,
                         panelWidth: 300,
-                        showTooltips: true
+                        showTooltips: true,
+                        // Panel visibility states
+                        rightPanelVisible: true,
+                        leftPanelVisible: true,
+                        assetsPanelVisible: true
                     };
                 } else {
                     // Try to load from file if localStorage is empty
@@ -532,6 +553,13 @@ export class ConfigManager {
      */
     getPerformance() {
         return this.configs.performance || {};
+    }
+
+    /**
+     * Get touch configuration
+     */
+    getTouch() {
+        return this.configs.touch || {};
     }
 
     /**

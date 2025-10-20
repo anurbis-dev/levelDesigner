@@ -94,10 +94,10 @@ export class ScrollUtils {
             }
         }, { passive: false });
 
-        // Mouse wheel scrolling
+        // Mouse wheel scrolling - only handle if not using standard scroll
         container.addEventListener('wheel', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
+            // Allow standard wheel scrolling to work normally
+            // Only prevent default if we need custom behavior
             const scrollAmount = e.deltaY * config.sensitivity * 0.5;
 
             if (config.horizontal) {
@@ -106,7 +106,9 @@ export class ScrollUtils {
             if (config.vertical) {
                 container.scrollTop += scrollAmount;
             }
-        }, { passive: false });
+            
+            // Don't prevent default - let browser handle normal scrolling
+        }, { passive: true });
 
         // Prevent context menu on middle click
         container.addEventListener('contextmenu', (e) => {

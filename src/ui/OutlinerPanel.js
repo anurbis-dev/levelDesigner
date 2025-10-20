@@ -4,6 +4,7 @@ import { OutlinerContextMenu } from './OutlinerContextMenu.js';
 import { BasePanel } from './BasePanel.js';
 import { createOutlinerPanelStructure, renderOutlinerSearchControls } from './panel-structures/OutlinerPanelStructure.js';
 import { searchManager } from '../utils/SearchManager.js';
+import { MenuPositioningUtils } from '../utils/MenuPositioningUtils.js';
 
 /**
  * Outliner panel UI component
@@ -198,28 +199,26 @@ export class OutlinerPanel extends BasePanel {
         // Get all available object types from current level
         const level = this.levelEditor.getLevel();
         const allObjects = level.getAllObjects();
-        const availableTypes = new Set();
+        const availableTypes = MenuPositioningUtils.getObjectTypes(allObjects);
 
-        allObjects.forEach(obj => {
-            const type = obj.type === 'group' ? 'Groups' : obj.type || 'Untyped';
-            availableTypes.add(type);
+        // Create menu using utility
+        const menu = MenuPositioningUtils.createMenuElement({ className: 'p-2' });
+        
+        // Position menu using utility
+        MenuPositioningUtils.showMenu(menu, button, {
+            alignment: 'right',
+            direction: 'below',
+            menuWidth: 192,
+            menuHeight: 200
         });
 
-        // Create menu
-        const menu = document.createElement('div');
-        menu.className = 'absolute z-50 bg-gray-800 border border-gray-600 rounded shadow-lg p-2 min-w-48';
-        menu.style.top = `${button.offsetTop + button.offsetHeight + 4}px`;
-        menu.style.right = `${document.body.offsetWidth - button.offsetLeft - button.offsetWidth}px`;
-
-        // Add "Toggle All" option
+        // Add "Toggle All" option using utility
         const allTypesActive = this.activeTypeFilters.size === 0;
-        const allOption = document.createElement('div');
-        allOption.className = 'flex items-center p-2 hover:bg-gray-700 cursor-pointer text-sm';
-        allOption.style.color = 'var(--ui-text-color, #d1d5db)';
-        allOption.innerHTML = `
-            <input type="checkbox" id="filter-all" class="mr-2" ${allTypesActive ? 'checked' : ''}>
-            <label for="filter-all">Toggle All</label>
-        `;
+        const allOption = MenuPositioningUtils.createMenuItem({
+            text: 'Toggle All',
+            checked: allTypesActive
+        });
+        allOption.querySelector('input').id = 'filter-all';
 
         allOption.addEventListener('click', () => {
             // Check current state at the time of click
@@ -248,20 +247,17 @@ export class OutlinerPanel extends BasePanel {
         separator.className = 'border-t border-gray-600 my-1';
         menu.appendChild(separator);
 
-        // Add individual type options
+        // Add individual type options using utility
         Array.from(availableTypes).sort().forEach(type => {
-            const option = document.createElement('div');
-            option.className = 'flex items-center p-2 hover:bg-gray-700 cursor-pointer text-sm';
-            option.style.color = 'var(--ui-text-color, #d1d5db)';
-
             // Type is active if: no filters (show all) OR specifically selected OR not in DISABLE_ALL mode
             const isActive = this.activeTypeFilters.size === 0 ||
                            (this.activeTypeFilters.has(type) && !this.activeTypeFilters.has('DISABLE_ALL'));
 
-            option.innerHTML = `
-                <input type="checkbox" id="filter-${type}" class="mr-2" ${isActive ? 'checked' : ''}>
-                <label for="filter-${type}">${type}</label>
-            `;
+            const option = MenuPositioningUtils.createMenuItem({
+                text: type,
+                checked: isActive
+            });
+            option.querySelector('input').id = `filter-${type}`;
 
             option.addEventListener('click', () => {
                 if (this.activeTypeFilters.has('DISABLE_ALL')) {
@@ -271,11 +267,7 @@ export class OutlinerPanel extends BasePanel {
                     // If all were active, exclude this type (show all except this one)
                     const level = this.levelEditor.getLevel();
                     const allObjects = level.getAllObjects();
-                    const allTypes = new Set();
-                    allObjects.forEach(obj => {
-                        const objType = obj.type === 'group' ? 'Groups' : obj.type || 'Untyped';
-                        allTypes.add(objType);
-                    });
+                    const allTypes = MenuPositioningUtils.getObjectTypes(allObjects);
                     // Create set with all types except the clicked one
                     this.activeTypeFilters = new Set([...allTypes].filter(t => t !== type));
                 } else if (this.activeTypeFilters.has(type)) {
@@ -300,32 +292,16 @@ export class OutlinerPanel extends BasePanel {
 
             menu.appendChild(option);
         });
-
-        // Close menu when clicking outside
-        const closeMenu = (e) => {
-            if (!menu.contains(e.target) && e.target !== button) {
-                document.body.removeChild(menu);
-                document.removeEventListener('click', closeMenu);
-            }
-        };
-
-        document.addEventListener('click', closeMenu);
-        document.body.appendChild(menu);
     }
 
     /**
      * Update filter menu to reflect current filter state
      */
     updateFilterMenu(menu, button) {
-        // Get all available object types from current level
+        // Get all available object types from current level using utility
         const level = this.levelEditor.getLevel();
         const allObjects = level.getAllObjects();
-        const availableTypes = new Set();
-
-        allObjects.forEach(obj => {
-            const type = obj.type === 'group' ? 'Groups' : obj.type || 'Untyped';
-            availableTypes.add(type);
-        });
+        const availableTypes = MenuPositioningUtils.getObjectTypes(allObjects);
 
         // Update "Toggle All" option
         const allOption = menu.querySelector('#filter-all');

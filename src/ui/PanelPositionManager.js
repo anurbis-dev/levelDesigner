@@ -12,6 +12,21 @@ export class PanelPositionManager {
         this._initializing = false; // Flag to prevent loops during initialization
     }
 
+    /**
+     * Update UI after panel changes
+     * @private
+     */
+    _updateUI() {
+        // Update canvas
+        if (window.updateCanvas) {
+            window.updateCanvas();
+        }
+        // Update panels
+        if (this.levelEditor && this.levelEditor.updateAllPanels) {
+            this.levelEditor.updateAllPanels();
+        }
+    }
+
 
     /**
      * Toggle panel position (left/right)
@@ -145,16 +160,24 @@ export class PanelPositionManager {
             
             // Move tabs to their saved positions using existing moveTab method
             Object.entries(tabPositions).forEach(([tabName, position]) => {
+                // Only move tab if it's not already in the correct position
                 // This will create panels if they don't exist
                 this.moveTab(tabName, 'temp', position);
             });
             
             // Remove temporary container
             this.removeTemporaryTabContainer();
+            
+            // Tab activation will be handled by EventHandlers after initialization
+            
+            // Remove empty panels after initialization
+            this.removeEmptyPanel('left');
+            this.removeEmptyPanel('right');
         } finally {
             this._initializing = false;
         }
     }
+
 
     /**
      * Create temporary container with all tabs and content
@@ -166,7 +189,7 @@ export class PanelPositionManager {
         
         // Create tabs container
         const tabsContainer = document.createElement('div');
-        tabsContainer.className = 'flex border-b border-gray-700 flex-shrink-0';
+        tabsContainer.className = 'flex border-b border-gray-700 flex-shrink-0 overflow-hidden';
         
         // Create content container
         const contentContainer = document.createElement('div');
@@ -265,7 +288,7 @@ export class PanelPositionManager {
         this.moveTabDOM(tabName, fromPanel, toPanel);
         
         // Update active tab state if this was the active tab
-        this.updateActiveTabAfterMove(tabName, toPanel);
+        this.updateActiveTabAfterMove(tabName, fromPanel, toPanel);
         
         // Update event listeners for moved tabs
         this.updateTabEventListeners();
@@ -294,21 +317,23 @@ export class PanelPositionManager {
             // Mark as newly created to prevent recreation
             panel._newlyCreated = true;
             
+            // Update UI after creating new panel
+            this._updateUI();
+            
         Logger.ui.info(`Created ${panelSide} tabs panel`);
         } else {
-            // Panel exists, check if it has tabs or is hidden
+            // Panel exists, check if it has tabs
             const tabContainer = panel.querySelector('.flex.border-b.border-gray-700');
             const hasTabs = tabContainer && tabContainer.children.length > 0;
-            const isHidden = panel.style.display === 'none' || panel.classList.contains('hidden');
             
-            // Don't recreate if panel was just created or if we're initializing
-            if ((!hasTabs || isHidden) && !panel._newlyCreated && !this._initializing) {
-                // Panel exists but is empty or hidden, recreate its structure
-                Logger.ui.info(`Recreating ${isHidden ? 'hidden' : 'empty'} ${panelSide} tabs panel structure`);
+            Logger.ui.debug(`Panel ${panelSide} exists: hasTabs=${hasTabs}, _newlyCreated=${panel._newlyCreated}, _initializing=${this._initializing}`);
+            
+            // Only recreate structure if panel is empty and not newly created
+            if (!hasTabs && !panel._newlyCreated && !this._initializing) {
+                // Panel exists but is empty, recreate its structure
+                Logger.ui.info(`Recreating empty ${panelSide} tabs panel structure`);
                 
                 // Clear the panel and recreate structure
-                // Temporarily disable any observers during DOM manipulation
-                const originalInnerHTML = panel.innerHTML;
                 panel.innerHTML = '';
                 const newStructure = this.createTabsPanel(panelSide);
                 
@@ -317,14 +342,8 @@ export class PanelPositionManager {
                     panel.appendChild(newStructure.firstChild);
                 }
                 
-                // Ensure panel is visible
-                panel.style.display = 'flex';
-                panel.classList.remove('hidden');
-            }
-            
-            // Update canvas after panel is restored
-            if (window.updateCanvas) {
-                window.updateCanvas();
+                // Update UI after recreating structure
+                this._updateUI();
             }
         }
 
@@ -346,7 +365,7 @@ export class PanelPositionManager {
         
         // Create tabs container
         const tabsContainer = document.createElement('div');
-        tabsContainer.className = 'flex border-b border-gray-700 flex-shrink-0';
+        tabsContainer.className = 'flex border-b border-gray-700 flex-shrink-0 overflow-hidden';
 
         // Create content container
         const contentContainer = document.createElement('div');
@@ -383,10 +402,8 @@ export class PanelPositionManager {
             this.createPanelResizer(panel, 'right');
         }
         
-        // Update canvas after panel is added
-        if (window.updateCanvas) {
-            window.updateCanvas();
-        }
+        // Update UI after panel is added
+        this._updateUI();
     }
 
     /**
@@ -487,9 +504,16 @@ export class PanelPositionManager {
                 toContainer._newlyCreated = false;
             }
             
-            // If this is the first tab in the panel, make it active
-            if (toTabsContainer.children.length === 1) {
-                tabButton.classList.add('active');
+            // Don't auto-activate tabs during initialization - let EventHandlers handle it
+            // Auto-activation only happens during manual tab moves (not during initialization)
+            if (toTabsContainer.children.length === 1 && !this._initializing) {
+                // Use EventHandlers to properly activate the tab
+                if (this.levelEditor && this.levelEditor.eventHandlers) {
+                    this.levelEditor.eventHandlers.setActivePanelTab(tabName, toPanel);
+                } else {
+                    // Fallback: just add active class
+                    tabButton.classList.add('active');
+                }
             }
             
             Logger.ui.debug(`Moved tab button ${tabName} to ${toPanel} panel`);
@@ -542,34 +566,62 @@ export class PanelPositionManager {
     /**
      * Update active tab state after moving a tab
      * @param {string} tabName - Name of the moved tab
+     * @param {string} fromPanel - Source panel side
      * @param {string} toPanel - Target panel side
      */
-    updateActiveTabAfterMove(tabName, toPanel) {
+    updateActiveTabAfterMove(tabName, fromPanel, toPanel) {
         // Skip during initialization to prevent loops
         if (this._initializing) {
             Logger.ui.debug('Skipping active tab update during initialization');
             return;
         }
         
-        // Check if the moved tab was the active tab
-        const activeTab = document.querySelector('.tab-right.active, .tab-left.active');
-        if (activeTab && activeTab.dataset.tab === tabName) {
-            // Update the active tab's CSS classes to match new panel
-            activeTab.className = activeTab.className
-                .replace('tab-right', `tab-${toPanel}`)
-                .replace('tab-left', `tab-${toPanel}`);
-            
-            // Update StateManager with new active tab position
-            if (this.stateManager) {
-                this.stateManager.set('rightPanelTab', tabName);
+        // Always activate the moved tab in the target panel
+        if (this.levelEditor && this.levelEditor.eventHandlers) {
+            this.levelEditor.eventHandlers.setActivePanelTab(tabName, toPanel);
+        }
+        
+        // Check if there are remaining tabs in the source panel and activate the one closest to separator
+        const fromPanelElement = document.getElementById(`${fromPanel}-tabs-panel`);
+        if (fromPanelElement) {
+            const remainingTabs = fromPanelElement.querySelectorAll('.tab-right, .tab-left');
+            if (remainingTabs.length > 0) {
+                // Find the tab closest to the separator (main panel)
+                const tabClosestToSeparator = this.getTabClosestToSeparator(remainingTabs, fromPanel);
+                if (tabClosestToSeparator) {
+                    const tabName = tabClosestToSeparator.dataset.tab;
+                    if (this.levelEditor && this.levelEditor.eventHandlers) {
+                        this.levelEditor.eventHandlers.setActivePanelTab(tabName, fromPanel);
+                    }
+                    Logger.ui.debug(`Auto-activated tab closest to separator: ${tabName} in ${fromPanel} panel`);
+                }
             }
-            
-            // Update search controls for the moved tab
-            if (this.levelEditor && this.levelEditor.initializeSearchControls) {
-                this.levelEditor.initializeSearchControls();
-            }
-            
-            Logger.ui.debug(`Updated active tab ${tabName} after move to ${toPanel} panel`);
+        }
+        
+        // Update search controls for the moved tab
+        if (this.levelEditor && this.levelEditor.initializeSearchControls) {
+            this.levelEditor.initializeSearchControls();
+        }
+        
+        Logger.ui.debug(`Updated active tab ${tabName} after move to ${toPanel} panel`);
+    }
+
+    /**
+     * Get the tab closest to the separator (main panel) in a given panel
+     * @param {NodeList} tabs - List of tab elements
+     * @param {string} panelSide - 'left' or 'right'
+     * @returns {HTMLElement|null} - The tab closest to separator
+     */
+    getTabClosestToSeparator(tabs, panelSide) {
+        if (tabs.length === 0) return null;
+        if (tabs.length === 1) return tabs[0];
+        
+        // For left panel: first tab (index 0) is closest to main panel
+        // For right panel: last tab (index length-1) is closest to main panel
+        if (panelSide === 'left') {
+            return tabs[0]; // First tab is closest to main panel
+        } else {
+            return tabs[tabs.length - 1]; // Last tab is closest to main panel
         }
     }
 
@@ -595,10 +647,8 @@ export class PanelPositionManager {
         
         // Search sections are now part of panel content and update automatically
         
-        // Update panels when tab structure changes
-        if (this.levelEditor && this.levelEditor.updateAllPanels) {
-            this.levelEditor.updateAllPanels();
-        }
+        // Update UI when tab structure changes
+        this._updateUI();
         
         Logger.ui.debug('Updated tab event listeners after move');
     }
@@ -781,10 +831,8 @@ export class PanelPositionManager {
             panel.style.flexShrink = '0';
         }
         
-        // Update canvas
-        if (window.updateCanvas) {
-            window.updateCanvas();
-        }
+        // Update UI
+        this._updateUI();
     }
 
     /**
@@ -912,38 +960,25 @@ export class PanelPositionManager {
 
         const tabsContainer = panel.querySelector('.flex.border-b.border-gray-700');
         if (tabsContainer && tabsContainer.children.length === 0) {
-            if (panelSide === 'left') {
-                // Remove left panel and its resizer (it's dynamically created)
-                panel.remove();
-                
-                const resizer = document.getElementById(`resizer-${panelSide}-tabs-panel`);
-                if (resizer) {
-                    // Cleanup event listeners before removing
-                    if (resizer._cleanup) {
-                        resizer._cleanup();
-                    }
-                    resizer.remove();
-                }
-                
-                Logger.ui.info(`Removed empty ${panelSide} panel`);
-            } else if (panelSide === 'right') {
-                // Hide right panel and its resizer (it's part of HTML structure)
-                panel.style.display = 'none';
-                panel.classList.add('hidden');
-                
-                const resizer = document.getElementById(`resizer-${panelSide}-tabs-panel`);
-                if (resizer) {
-                    resizer.style.display = 'none';
-                    resizer.classList.add('hidden');
-                }
-                
-                Logger.ui.info(`Hidden empty ${panelSide} panel`);
+            // Always remove empty panels completely for consistency
+            // This prevents accumulation of hidden panels in DOM
+            
+            // Cleanup event listeners before removing
+            const resizer = document.getElementById(`resizer-${panelSide}-tabs-panel`);
+            if (resizer && resizer._cleanup) {
+                resizer._cleanup();
             }
             
-            // Update canvas after panel is removed/hidden
-            if (window.updateCanvas) {
-                window.updateCanvas();
+            // Remove panel and resizer completely
+            panel.remove();
+            if (resizer) {
+                resizer.remove();
             }
+            
+            Logger.ui.info(`Removed empty ${panelSide} panel completely`);
+            
+            // Update UI after panel is removed
+            this._updateUI();
         }
     }
 
@@ -1021,10 +1056,8 @@ export class PanelPositionManager {
             this.userPrefs?.set('assetsPanelHeight', currentHeight);
             
             
-            // Update canvas
-            if (window.updateCanvas) {
-                window.updateCanvas();
-            }
+            // Update UI
+            this._updateUI();
             
             document.removeEventListener('mousemove', handleMouseMove);
             document.removeEventListener('mouseup', handleMouseUp);

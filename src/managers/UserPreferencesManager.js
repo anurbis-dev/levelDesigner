@@ -21,7 +21,12 @@ export class UserPreferencesManager {
             'assetSize': 'ui.assetSize',
             'assetViewMode': 'ui.assetViewMode',
             'rightPanelTabOrder': 'panels.rightPanelTabOrder',
+            'leftPanelTabOrder': 'panels.leftPanelTabOrder',
             'assetTabOrder': 'panels.assetTabOrder',
+            // Panel visibility states
+            'rightPanelVisible': 'ui.rightPanelVisible',
+            'leftPanelVisible': 'ui.leftPanelVisible',
+            'assetsPanelVisible': 'ui.assetsPanelVisible',
             'consoleVisible': 'ui.consoleVisible',
             'consoleMaxLines': 'ui.consoleMaxLines',
             'toolbarVisible': 'ui.toolbarVisible',

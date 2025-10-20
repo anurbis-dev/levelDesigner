@@ -6,7 +6,16 @@ import { Logger } from '../utils/Logger.js';
 
 export class StateManager {
     constructor() {
-        this.state = {
+        this.state = this.createInitialState();
+        this.listeners = new Map();
+    }
+
+    /**
+     * Create initial state structure
+     * @returns {Object} Initial state object
+     */
+    createInitialState() {
+        return {
             // Editor state
             isDirty: false,
             currentLevel: null,
@@ -18,6 +27,7 @@ export class StateManager {
             assetTabOrder: [], // No default tabs - loaded from content
             selectedAssets: new Set(),
             rightPanelTab: 'details',
+            leftPanelTab: 'details', // Separate tab state for left panel
             
             // Validation state
             validation: {
@@ -147,6 +157,17 @@ export class StateManager {
                 marqueeColor: '#3B82F6',
                 marqueeOpacity: 0.2,
                 hierarchyHighlightColor: '#3B82F6'
+            },
+            
+            // Touch state
+            touch: {
+                isPanning: false,
+                isZooming: false,
+                panThreshold: 2,
+                zoomThreshold: 0.03,
+                panSensitivity: 1.0,
+                zoomIntensity: 0.05,
+                longPressDelay: 500
             }
         };
         
@@ -369,94 +390,7 @@ export class StateManager {
      */
     reset() {
         // Use the same structure as constructor
-        this.state = {
-            isDirty: false,
-            currentLevel: null,
-            currentLevelFileName: null,
-            selectedObjects: new Set(),
-            activeAssetTabs: new Set(), // No default tabs - loaded from content
-            assetTabOrder: [], // No default tabs - loaded from content
-            selectedAssets: new Set(),
-            rightPanelTab: 'details',
-            camera: { x: 0, y: 0, zoom: 1 },
-            mouse: {
-                x: 0, y: 0, worldX: 0, worldY: 0,
-                isLeftDown: false, isRightDown: false, isMiddleDown: false, isDragging: false,
-                dragStartX: 0, dragStartY: 0, lastX: 0, lastY: 0,
-                zoomStartX: 0, zoomStartY: 0,
-                isDraggingAsset: false, isMarqueeSelecting: false, marqueeRect: null,
-                marqueeStartX: null, marqueeStartY: null,
-                isAssetMarqueeSelecting: false, isPlacingObjects: false,
-                placingObjects: [], placingOffsets: [],
-                draggingGroupId: null,
-                altKey: false,
-                constrainedAxis: null,
-                axisCenter: null
-            },
-            keyboard: {
-                ctrlSnapToGrid: false,
-                shiftKey: false
-            },
-            duplicate: {
-                isActive: false,
-                objects: [],
-                basePosition: { x: 0, y: 0 },
-                isAltDragMode: false
-            },
-            outliner: {
-                collapsedTypes: new Set()
-            },
-            view: {
-                gameMode: false,
-                snapToGrid: false,
-                objectBoundaries: false,
-                objectCollisions: false,
-                parallax: false,
-                rightPanel: true,
-                assetsPanel: true,
-                console: true,
-                toolbar: true
-            },
-            canvas: {
-                showGrid: true,
-                snapToGrid: false,
-                gridSize: 32,
-                gridColor: 'rgba(255, 255, 255, 0.1)',
-                gridThickness: 1,
-                gridOpacity: 0.1,
-                gridSubdivisions: 0,
-                gridSubdivColor: '#666666',
-                gridSubdivThickness: 0.5,
-                snapTolerance: 80,
-                gridType: 'rectangular',
-                hexOrientation: 'pointy'
-            },
-            ui: {
-                fontScale: 1.0,
-                spacing: 1.0,
-                showTooltips: true
-            },
-            editor: {
-                autoSave: false,
-                autoSaveInterval: 5,
-                undoHistoryLimit: 50,
-                axisConstraint: {
-                    axisColor: '#cccccc',
-                    axisWidth: 1,
-                    showAxis: true
-                }
-            },
-            panels: {
-                rightPanelWidth: 300,
-                rightPanelPreviousWidth: 300,
-                leftPanelWidth: 300,
-                leftPanelPreviousWidth: 300,
-                assetsPanelHeight: 256,
-                assetsPanelPreviousHeight: 256,
-                consoleHeight: 200,
-                foldersWidth: 192
-            }
-        };
+        this.state = this.createInitialState();
         
         // Notify all listeners
         this.listeners.forEach((callbacks, key) => {

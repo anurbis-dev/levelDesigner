@@ -16,7 +16,11 @@
       "doubleTap": true,
       "longPress": true,
       "swipe": false,
-      "pinch": false
+      "pinch": true,
+      "marquee": true,
+      "twoFingerPan": true,
+      "twoFingerContext": true,
+      "twoFingerZoom": true
     },
     "elements": {
       "panelResizers": {
@@ -44,6 +48,32 @@
         "enabled": true,
         "longPressDelay": 500,
         "tapToClose": true
+      },
+      "marqueeSelection": {
+        "enabled": true,
+        "minMovement": 5,
+        "visualFeedback": true
+      },
+      "longPressMarquee": {
+        "enabled": true,
+        "minMovement": 5,
+        "longPressDelay": 500,
+        "visualFeedback": true
+      },
+      "twoFingerPan": {
+        "enabled": true,
+        "minMovement": 5,
+        "sensitivity": 1.0
+      },
+      "twoFingerContext": {
+        "enabled": true,
+        "tapThreshold": 200
+      },
+      "twoFingerZoom": {
+        "enabled": true,
+        "minScale": 0.1,
+        "maxScale": 10,
+        "sensitivity": 1.0
       }
     },
     "accessibility": {

@@ -123,6 +123,150 @@ TouchSupportUtils.addDragTouchSupport(
 - `touchcancel` - отмена касания
 
 ### Gesture Events
+
+## Новые жесты (v3.51.1)
+
+### Рамка селекта (Marquee Selection)
+Однопальцевый тап + драг для создания рамки выбора объектов.
+
+```javascript
+TouchSupportUtils.addMarqueeTouchSupport(
+    canvasElement,
+    (element, touch, data) => {
+        // Начало рамки селекта
+        console.log('Marquee start:', data.startX, data.startY);
+    },
+    (element, touch, data) => {
+        // Обновление рамки селекта
+        console.log('Marquee move:', data.deltaX, data.deltaY);
+    },
+    (element, data) => {
+        // Завершение рамки селекта
+        console.log('Marquee end:', data.deltaX, data.deltaY);
+    },
+    touchManager
+);
+```
+
+**Touch-action**: `pan-x pan-y` - разрешает панарамирование, блокирует зум
+
+### Рамка селекта с длительным нажатием (Long Press Marquee)
+Длительное нажатие + драг для создания рамки выбора (позволяет обычный скролл при коротком тапе+драге).
+
+```javascript
+TouchSupportUtils.addLongPressMarqueeTouchSupport(
+    assetPanelElement,
+    (element, touch, data) => {
+        // Начало рамки селекта после длительного нажатия
+        console.log('Long press marquee start:', data.startX, data.startY);
+    },
+    (element, touch, data) => {
+        // Обновление рамки селекта
+        console.log('Long press marquee move:', data.deltaX, data.deltaY);
+    },
+    (element, data) => {
+        // Завершение рамки селекта
+        console.log('Long press marquee end:', data.deltaX, data.deltaY);
+    },
+    touchManager,
+    500 // Задержка длительного нажатия в миллисекундах
+);
+```
+
+**Touch-action**: `auto` - разрешает все стандартные жесты браузера (включая скролл)
+
+### Двухпальцевое панарамирование
+Два пальца + драг для перемещения канвы.
+
+```javascript
+TouchSupportUtils.addTwoFingerPanSupport(
+    canvasElement,
+    (element, data) => {
+        // Начало панарамирования
+        console.log('Pan start:', data.centerX, data.centerY);
+    },
+    (element, data) => {
+        // Обновление панарамирования
+        console.log('Pan move:', data.deltaX, data.deltaY);
+    },
+    (element, data) => {
+        // Завершение панарамирования
+        console.log('Pan end:', data.deltaX, data.deltaY);
+    },
+    touchManager
+);
+```
+
+**Touch-action**: `pan-x pan-y` - разрешает панарамирование, блокирует зум
+
+### Двухпальцевое контекстное меню
+Краткий тап двумя пальцами для вызова контекстного меню.
+
+```javascript
+TouchSupportUtils.addTwoFingerContextSupport(
+    canvasElement,
+    (element, data) => {
+        // Двухпальцевый тап
+        console.log('Two finger tap:', data.centerX, data.centerY);
+        // Показать контекстное меню
+        showContextMenu(data.centerX, data.centerY);
+    },
+    touchManager
+);
+```
+
+**Touch-action**: `auto` - разрешает все стандартные жесты браузера
+
+### Двухпальцевый зум
+Два пальца + разведение/сведение для масштабирования.
+
+```javascript
+TouchSupportUtils.addTwoFingerZoomSupport(
+    canvasElement,
+    (element, data) => {
+        // Начало зума
+        console.log('Zoom start:', data.scale);
+    },
+    (element, data) => {
+        // Обновление зума
+        console.log('Zoom move:', data.scale, data.scaleDelta);
+        // Применить зум к канве
+        applyZoom(data.scale, data.centerX, data.centerY);
+    },
+    (element, data) => {
+        // Завершение зума
+        console.log('Zoom end:', data.scale);
+    },
+    touchManager
+);
+```
+
+**Touch-action**: `manipulation` - разрешает зум, блокирует панарамирование
+
+## Управление Touch-Action
+
+### Динамическое изменение жестов
+```javascript
+// Переключить элемент на другой тип жеста
+TouchSupportUtils.updateTouchAction(element, 'twoFingerZoom', touchManager);
+
+// Временно отключить все жесты
+TouchSupportUtils.disableTouchGestures(element, touchManager);
+
+// Включить жесты обратно
+TouchSupportUtils.enableTouchGestures(element, touchManager);
+```
+
+### Значения Touch-Action
+
+- `auto` - разрешает все стандартные жесты браузера
+- `none` - блокирует все жесты (для точного контроля)
+- `manipulation` - разрешает тап и зум, блокирует панарамирование
+- `pan-x pan-y` - разрешает панарамирование, блокирует зум
+- `pan-x` - разрешает только горизонтальное панарамирование
+- `pan-y` - разрешает только вертикальное панарамирование
+
+### Gesture Events
 - `tap` - одиночное касание
 - `doubleTap` - двойное касание
 - `longPress` - длительное нажатие

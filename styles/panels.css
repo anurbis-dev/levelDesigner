@@ -42,8 +42,17 @@
     flex-shrink: 0;
 }
 
+/* Panel tabs containers - ensure tabs are clipped when panel is too narrow */
+.flex.border-b.border-gray-700 {
+    overflow: hidden;
+}
+
 .tab-right, .tab-left {
     flex: 1;
+    min-width: 0; /* Allow tabs to shrink below their content size */
+    white-space: nowrap; /* Prevent text wrapping */
+    overflow: hidden; /* Hide overflowing text */
+    text-overflow: ellipsis; /* Show ellipsis for overflowing text */
 }
 
 /* Right panel content */
@@ -135,6 +144,23 @@
     flex: 1;
     overflow-y: auto;
     padding: 1rem;
+}
+
+/* Panel custom sections - prevent top section from scrolling */
+.panel-top-custom {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background-color: var(--ui-background-color, #111827);
+    border-bottom: 1px solid #374151;
+}
+
+.panel-bottom-custom {
+    position: sticky;
+    bottom: 0;
+    z-index: 10;
+    background-color: var(--ui-background-color, #111827);
+    border-top: 1px solid #374151;
 }
 
 /* Panel sections */

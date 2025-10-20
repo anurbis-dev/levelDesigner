@@ -138,7 +138,14 @@ export class SettingsSyncManager {
             'panels.selection.marqueeColor': 'selection.marqueeColor',
             'panels.selection.marqueeOpacity': 'selection.marqueeOpacity',
             'panels.selection.hierarchyHighlightColor': 'selection.hierarchyHighlightColor',
-            'panels.selection.activeLayerBorderColor': 'selection.activeLayerBorderColor'
+            'panels.selection.activeLayerBorderColor': 'selection.activeLayerBorderColor',
+            
+            // Touch settings
+            'touch.panThreshold': 'touch.panThreshold',
+            'touch.zoomThreshold': 'touch.zoomThreshold',
+            'touch.panSensitivity': 'touch.panSensitivity',
+            'touch.zoomIntensity': 'touch.zoomIntensity',
+            'touch.longPressDelay': 'touch.longPressDelay'
         };
 
         // Create reverse mapping

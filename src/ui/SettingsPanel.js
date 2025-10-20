@@ -85,6 +85,7 @@ export class SettingsPanel {
                         <button class="settings-tab" data-tab="selection">Selection</button>
                         <button class="settings-tab" data-tab="assets">Assets</button>
                         <button class="settings-tab" data-tab="hotkeys">Hotkeys</button>
+                        <button class="settings-tab" data-tab="touch">Touch</button>
                         <button class="settings-tab" data-tab="performance">Performance</button>
                     </div>
                     
@@ -358,6 +359,9 @@ export class SettingsPanel {
                 break;
             case 'hotkeys':
                 content = this.renderHotkeysSettings();
+                break;
+            case 'touch':
+                content = this.renderTouchSettings();
                 break;
             case 'performance':
                 content = this.renderPerformanceSettings();
@@ -925,6 +929,106 @@ export class SettingsPanel {
     }
 
     /**
+     * Render touch settings section
+     */
+    renderTouchSettings() {
+        const stateManager = this.levelEditor?.stateManager;
+        if (!stateManager) return '<div>Error: StateManager not available</div>';
+
+        // Get current touch settings from StateManager
+        const touchSettings = {
+            panThreshold: stateManager.get('touch.panThreshold') || 5,
+            zoomThreshold: stateManager.get('touch.zoomThreshold') || 0.03,
+            panSensitivity: stateManager.get('touch.panSensitivity') || 2.0,
+            zoomIntensity: stateManager.get('touch.zoomIntensity') || 0.1,
+            longPressDelay: stateManager.get('touch.longPressDelay') || 500
+        };
+
+        return `
+            <h3>Touch Gestures</h3>
+            
+            <div class="settings-container" style="display: flex; flex-direction: column; gap: 1rem; width: 100%;">
+                <!-- Pan & Zoom Settings -->
+                <div style="border: 1px solid #374151; border-radius: 0.5rem; padding: 1rem;">
+                    <h4 style="font-size: 1rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.75rem;">Pan & Zoom Settings</h4>
+                    
+                    <div class="settings-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; width: 100%;">
+                        <!-- Pan Threshold -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Pan Threshold (px)</label>
+                            <input type="range" min="1" max="50" step="1" class="setting-input" name="setting-input" data-setting="touch.panThreshold" 
+                                   value="${touchSettings.panThreshold}"
+                                   style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                            <div style="text-align: center; color: var(--ui-text-color, #9ca3af); font-size: 0.75rem; margin-top: 0.25rem;">
+                                ${touchSettings.panThreshold}px
+                            </div>
+                        </div>
+                        
+                        <!-- Pan Sensitivity -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Pan Sensitivity</label>
+                            <input type="range" min="0.1" max="5.0" step="0.1" class="setting-input" name="setting-input" data-setting="touch.panSensitivity" 
+                                   value="${touchSettings.panSensitivity}"
+                                   style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                            <div style="text-align: center; color: var(--ui-text-color, #9ca3af); font-size: 0.75rem; margin-top: 0.25rem;">
+                                ${touchSettings.panSensitivity}x
+                            </div>
+                        </div>
+                        
+                        <!-- Zoom Threshold -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Zoom Threshold (%)</label>
+                            <input type="range" min="0.01" max="0.5" step="0.01" class="setting-input" name="setting-input" data-setting="touch.zoomThreshold" 
+                                   value="${touchSettings.zoomThreshold}"
+                                   style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                            <div style="text-align: center; color: var(--ui-text-color, #9ca3af); font-size: 0.75rem; margin-top: 0.25rem;">
+                                ${(touchSettings.zoomThreshold * 100).toFixed(1)}%
+                            </div>
+                        </div>
+                        
+                        <!-- Zoom Intensity -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Zoom Intensity</label>
+                            <input type="range" min="0.01" max="0.5" step="0.01" class="setting-input" name="setting-input" data-setting="touch.zoomIntensity" 
+                                   value="${touchSettings.zoomIntensity}"
+                                   style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                            <div style="text-align: center; color: var(--ui-text-color, #9ca3af); font-size: 0.75rem; margin-top: 0.25rem;">
+                                ${touchSettings.zoomIntensity}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Long Press Settings -->
+                <div style="border: 1px solid #374151; border-radius: 0.5rem; padding: 1rem;">
+                    <h4 style="font-size: 1rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.75rem;">Long Press Settings</h4>
+                    
+                    <div>
+                        <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Long Press Delay (ms)</label>
+                        <input type="range" min="100" max="2000" step="50" class="setting-input" name="setting-input" data-setting="touch.longPressDelay" 
+                               value="${touchSettings.longPressDelay}"
+                               style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        <div style="text-align: center; color: var(--ui-text-color, #9ca3af); font-size: 0.75rem; margin-top: 0.25rem;">
+                            ${touchSettings.longPressDelay}ms
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Gesture Information -->
+                <div style="border: 1px solid #374151; border-radius: 0.5rem; padding: 1rem;">
+                    <h4 style="font-size: 1rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.75rem;">Gesture Information</h4>
+                    
+                    <div style="display: flex; flex-direction: column; gap: 0.5rem; color: var(--ui-text-color, #9ca3af); font-size: 0.875rem;">
+                        <p><strong style="color: var(--ui-text-color, #d1d5db);">Single Finger:</strong> Tap + drag for marquee selection</p>
+                        <p><strong style="color: var(--ui-text-color, #d1d5db);">Two Fingers:</strong> Pan (move) or zoom (pinch/spread)</p>
+                        <p><strong style="color: var(--ui-text-color, #d1d5db);">Long Press:</strong> Context menu or asset drag</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    /**
      * Format shortcut object to readable string
      * @param {Object} shortcut - Shortcut definition
      * @returns {string} Formatted shortcut string
@@ -1031,6 +1135,34 @@ export class SettingsPanel {
             
             // Add the listener
             input.addEventListener('input', input._inputHandler);
+            
+            // Handle range slider value display updates
+            if (input.type === 'range') {
+                const valueDisplay = input.parentElement.querySelector('div[style*="text-align: center"]');
+                if (valueDisplay) {
+                    const updateRangeValue = () => {
+                        let displayValue = input.value;
+                        const setting = input.getAttribute('data-setting');
+                        
+                        if (setting === 'touch.panThreshold') {
+                            displayValue = input.value + 'px';
+                        } else if (setting === 'touch.panSensitivity') {
+                            displayValue = input.value + 'x';
+                        } else if (setting === 'touch.zoomThreshold') {
+                            displayValue = (parseFloat(input.value) * 100).toFixed(1) + '%';
+                        } else if (setting === 'touch.zoomIntensity') {
+                            displayValue = input.value;
+                        } else if (setting === 'touch.longPressDelay') {
+                            displayValue = input.value + 'ms';
+                        }
+                        
+                        valueDisplay.textContent = displayValue;
+                    };
+                    
+                    input.addEventListener('input', updateRangeValue);
+                    updateRangeValue(); // Set initial value
+                }
+            }
         });
 
         // Setup real-time sync from StateManager to UI (for toolbar/menu changes)
@@ -1652,7 +1784,13 @@ export class SettingsPanel {
             'selection.hierarchyHighlightColor',
             'panels.selection.activeLayerBorderColor',
             // Logger colors
-            'logger.colors'
+            'logger.colors',
+            // Touch settings
+            'touch.panThreshold',
+            'touch.zoomThreshold',
+            'touch.panSensitivity',
+            'touch.zoomIntensity',
+            'touch.longPressDelay'
         ];
 
         this.originalValues = {};
