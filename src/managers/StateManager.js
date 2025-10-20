@@ -65,7 +65,8 @@ export class StateManager {
             // Keyboard state
             keyboard: {
                 ctrlSnapToGrid: false,
-                shiftKey: false
+                shiftKey: false,
+                altKey: false
             },
             
             // Duplicate state

@@ -172,6 +172,10 @@ export class EventHandlers extends BaseModule {
                 this.editor.stateManager.update({
                     'keyboard.shiftKey': true
                 });
+            } else if (e.key === 'Alt') {
+                this.editor.stateManager.update({
+                    'keyboard.altKey': true
+                });
             }
             
             this.handleKeyDown(e);
@@ -186,6 +190,10 @@ export class EventHandlers extends BaseModule {
             } else if (e.key === 'Shift') {
                 this.editor.stateManager.update({
                     'keyboard.shiftKey': false
+                });
+            } else if (e.key === 'Alt') {
+                this.editor.stateManager.update({
+                    'keyboard.altKey': false
                 });
             }
         };

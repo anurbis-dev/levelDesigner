@@ -40,7 +40,8 @@ export class BaseModule {
      */
     isAltKeyPressed() {
         const mouse = this.editor.stateManager.get('mouse');
-        return mouse && mouse.altKey;
+        const keyboard = this.editor.stateManager.get('keyboard');
+        return (mouse && mouse.altKey) || (keyboard && keyboard.altKey);
     }
 
     /**
