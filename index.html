@@ -975,6 +975,16 @@
                     resizeHandle._globalListenersAdded = true;
                 }
 
+                // Double-click handler for console resizer
+                resizeHandle.addEventListener('dblclick', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // Close console on double-click
+                    closeConsole();
+                    Logger.ui.info('Console closed via double-click on resizer');
+                });
+
                 // Touch support for console resizer will be handled by LevelEditor
             }
 
