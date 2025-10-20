@@ -30,6 +30,17 @@
 - `addResizeTouchSupport()` - используется для сепаратора консоли с адаптивными ограничениями
 - `isMobile()` - детекция мобильных устройств для адаптивных ограничений
 
+### PanelPositionManager (src/ui/PanelPositionManager.js) - исправления
+- **Исправлены конфликты сепараторов** - устранены конфликты между mouse и touch обработчиками
+- **Унифицированная touch архитектура** - все сепараторы используют TouchSupportUtils
+- `setupPanelResizer()` - теперь использует TouchSupportUtils.addResizeTouchSupport()
+- `setupAssetsPanelResizer()` - теперь использует TouchSupportUtils.addResizeTouchSupport()
+
+### AssetPanel (src/ui/AssetPanel.js) - исправления
+- **Правильная touch регистрация** - использует TouchSupportUtils.addLongPressMarqueeTouchSupport()
+- **Устранено дублирование** - убрана прямая регистрация через touchSupportManager.registerElement()
+- **Унифицированный подход** - следует общей архитектуре touch поддержки
+
 ## Обновления v3.51.3
 
 ### EventHandlers (src/core/EventHandlers.js) - добавлена поддержка консоли

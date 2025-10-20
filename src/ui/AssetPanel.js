@@ -2450,54 +2450,61 @@ export class AssetPanel extends BasePanel {
             return;
         }
 
-        // Register combined touch support for asset panel
+        // Register combined touch support for asset panel using TouchSupportUtils
         Logger.ui.debug('Registering touch support on previewsContainer:', this.previewsContainer);
-        this.levelEditor.touchSupportManager.registerElement(this.previewsContainer, 'longPressMarquee', {
-            onMarqueeStart: (element, touch, data) => {
-                // Check if touch started on an asset element
-                const elementAtPoint = document.elementFromPoint(data.startX, data.startY);
-                const assetElement = elementAtPoint?.closest('[data-asset-id]');
-                
-                if (assetElement) {
-                    // Touch started on asset - start drag
-                    const assetId = assetElement.dataset.assetId;
-                    const asset = this.assetManager.getAsset(assetId);
-                    if (asset) {
-                        Logger.ui.debug('Asset touch drag start for asset:', asset.id);
-                        this.startAssetTouchDrag(data.startX, data.startY, asset);
+        
+        import('../../utils/TouchSupportUtils.js').then(({ TouchSupportUtils }) => {
+            TouchSupportUtils.addLongPressMarqueeTouchSupport(
+                this.previewsContainer,
+                (element, touch, data) => {
+                    // Check if touch started on an asset element
+                    const elementAtPoint = document.elementFromPoint(data.startX, data.startY);
+                    const assetElement = elementAtPoint?.closest('[data-asset-id]');
+                    
+                    if (assetElement) {
+                        // Touch started on asset - start drag
+                        const assetId = assetElement.dataset.assetId;
+                        const asset = this.assetManager.getAsset(assetId);
+                        if (asset) {
+                            Logger.ui.debug('Asset touch drag start for asset:', asset.id);
+                            this.startAssetTouchDrag(data.startX, data.startY, asset);
+                            return;
+                        }
+                    }
+                    
+                    // Touch started on empty space - start marquee
+                    Logger.ui.debug('Asset panel long press marquee start:', data);
+                    this.startAssetTouchMarquee(data.startX, data.startY);
+                },
+                (element, touch, data) => {
+                    // Check if we're in drag mode or marquee mode
+                    if (this.stateManager.get('mouse.isDraggingAsset')) {
+                        // We're dragging an asset, don't update marquee
                         return;
                     }
-                }
-                
-                // Touch started on empty space - start marquee
-                Logger.ui.debug('Asset panel long press marquee start:', data);
-                this.startAssetTouchMarquee(data.startX, data.startY);
-            },
-            onMarqueeMove: (element, touch, data) => {
-                // Check if we're in drag mode or marquee mode
-                if (this.stateManager.get('mouse.isDraggingAsset')) {
-                    // We're dragging an asset, don't update marquee
-                    return;
-                }
-                
-                // Update marquee
-                Logger.ui.debug('Asset panel long press marquee move:', data);
-                this.updateAssetTouchMarquee(data.currentX, data.currentY);
-            },
-            onMarqueeEnd: (element, data) => {
-                // Check if we're in drag mode or marquee mode
-                if (this.stateManager.get('mouse.isDraggingAsset')) {
-                    // We're dragging an asset, end drag
-                    Logger.ui.debug('Asset touch drag end');
-                    this.endAssetTouchDrag(data.endX, data.endY);
-                    return;
-                }
-                
-                // End marquee
-                Logger.ui.debug('Asset panel long press marquee end:', data);
-                this.endAssetTouchMarquee(data.endX, data.endY);
-            },
-            longPressDelay: 500 // 500ms long press delay
+                    
+                    // Update marquee
+                    Logger.ui.debug('Asset panel long press marquee move:', data);
+                    this.updateAssetTouchMarquee(data.currentX, data.currentY);
+                },
+                (element, data) => {
+                    // Check if we're in drag mode or marquee mode
+                    if (this.stateManager.get('mouse.isDraggingAsset')) {
+                        // We're dragging an asset, end drag
+                        Logger.ui.debug('Asset touch drag end');
+                        this.endAssetTouchDrag(data.endX, data.endY);
+                        return;
+                    }
+                    
+                    // End marquee
+                    Logger.ui.debug('Asset panel long press marquee end:', data);
+                    this.endAssetTouchMarquee(data.endX, data.endY);
+                },
+                this.levelEditor.touchSupportManager,
+                500 // 500ms long press delay
+            );
+        }).catch(error => {
+            console.warn('Failed to load TouchSupportUtils for asset panel:', error);
         });
 
         Logger.ui.info('Asset panel touch gestures initialized');

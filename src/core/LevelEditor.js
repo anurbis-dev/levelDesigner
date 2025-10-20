@@ -467,8 +467,111 @@ export class LevelEditor {
         // Setup touch gestures for canvas
         this.setupCanvasTouchGestures(canvas);
         
+        // Setup touch support for panel resizers
+        this.setupPanelResizerTouchSupport();
+        
         // Setup global browser navigation prevention
         this.setupGlobalNavigationPrevention();
+    }
+
+    /**
+     * Setup touch support for panel resizers
+     * @private
+     */
+    setupPanelResizerTouchSupport() {
+        if (!this.touchSupportManager) {
+            Logger.ui.warn('TouchSupportManager not available for panel resizers');
+            return;
+        }
+
+        // Import TouchSupportUtils
+        import('../utils/TouchSupportUtils.js').then(({ TouchSupportUtils }) => {
+            // Assets panel resizer is handled by PanelPositionManager
+
+            // Console resizer
+            const consolePanel = document.getElementById('console-panel');
+            const resizeHandle = consolePanel?.querySelector('.console-resize-handle');
+            
+            if (resizeHandle && consolePanel) {
+                // Calculate max size based on device type and window size
+                const isMobile = TouchSupportUtils.isMobile() || window.innerWidth <= 768;
+                const maxSize = isMobile ? window.innerHeight * 0.7 : window.innerHeight * 0.9;
+                
+                TouchSupportUtils.addResizeTouchSupport(
+                    resizeHandle,
+                    'vertical',
+                    200, // minSize
+                    maxSize, // maxSize - adaptive based on device
+                    (element, targetPanel, touch) => {
+                        Logger.ui.debug('Console resize started via touch');
+                    },
+                    (element, targetPanel, newSize, touch) => {
+                        // Apply new height with mobile-aware limits
+                        const currentMaxSize = TouchSupportUtils.isMobile() || window.innerWidth <= 768 
+                            ? window.innerHeight * 0.7 
+                            : window.innerHeight * 0.9;
+                        const clampedSize = Math.min(newSize, currentMaxSize);
+                        consolePanel.style.height = clampedSize + 'px';
+                        consolePanel.style.bottom = 'auto';
+                    },
+                    (element, targetPanel, currentSize) => {
+                        // Save final height
+                        if (this.userPrefs) {
+                            this.userPrefs.set('consoleHeight', currentSize);
+                        }
+                        if (this.stateManager) {
+                            this.stateManager.set('panels.consoleHeight', currentSize);
+                        }
+                        Logger.ui.debug(`Console resize ended: ${currentSize}px`);
+                    },
+                    (element, touch) => {
+                        // Double tap to close console
+                        if (this.eventHandlers) {
+                            this.eventHandlers.togglePanel('console');
+                        }
+                        Logger.ui.info('Console closed via double-tap on resizer');
+                    },
+                    this.touchSupportManager
+                );
+            }
+
+            // Console header and close button
+            const consoleHeader = document.getElementById('console-header');
+            const consoleClose = document.getElementById('console-close');
+            
+            if (consoleHeader) {
+                TouchSupportUtils.addButtonTouchSupport(
+                    consoleHeader,
+                    () => {
+                        // Close console
+                        if (this.eventHandlers) {
+                            this.eventHandlers.togglePanel('console');
+                        }
+                    },
+                    null, // no double tap
+                    null, // no long press
+                    this.touchSupportManager
+                );
+            }
+            
+            if (consoleClose) {
+                TouchSupportUtils.addButtonTouchSupport(
+                    consoleClose,
+                    () => {
+                        // Close console
+                        if (this.eventHandlers) {
+                            this.eventHandlers.togglePanel('console');
+                        }
+                    },
+                    null, // no double tap
+                    null, // no long press
+                    this.touchSupportManager
+                );
+            }
+
+        }).catch(error => {
+            console.warn('Failed to load TouchSupportUtils for panel resizers:', error);
+        });
     }
 
     /**

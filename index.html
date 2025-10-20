@@ -556,39 +556,35 @@
             });
 
 
-            // Mouse move handler
-            document.addEventListener('mousemove', (e) => {
+            // Mouse move handler for assets panel resizer
+            const handleAssetsMouseMove = (e) => {
                 if (!isResizingAssets) return;
                 
                 e.preventDefault();
                 e.stopPropagation();
                 
-                if (isResizingAssets) {
-                    // Calculate height based on mouse movement from initial position
-                    const mouseDelta = e.clientY - initialMouseY;
-                    const newHeight = initialAssetsPanelHeight - mouseDelta; // Inverted direction
-                    
-                    
-                    // Apply directly without any limits
-                    assetsPanel.style.height = newHeight + 'px';
-                    assetsPanel.style.flexShrink = '0';
-
-                    // Save to StateManager
-                    if (window.editor?.stateManager) {
-                        window.editor.stateManager.set('panels.assetsPanelHeight', newHeight);
-                    }
-
-                    // Update canvas and render
-                    if (window.editor && window.editor.canvasRenderer) {
-                        window.editor.canvasRenderer.resizeCanvas();
-                        window.editor.render();
-                    }
-                }
+                // Calculate height based on mouse movement from initial position
+                const mouseDelta = e.clientY - initialMouseY;
+                const newHeight = initialAssetsPanelHeight - mouseDelta; // Inverted direction
                 
-            });
+                // Apply directly without any limits
+                assetsPanel.style.height = newHeight + 'px';
+                assetsPanel.style.flexShrink = '0';
 
-            // Mouse up handler
-            document.addEventListener('mouseup', (e) => {
+                // Save to StateManager
+                if (window.editor?.stateManager) {
+                    window.editor.stateManager.set('panels.assetsPanelHeight', newHeight);
+                }
+
+                // Update canvas and render
+                if (window.editor && window.editor.canvasRenderer) {
+                    window.editor.canvasRenderer.resizeCanvas();
+                    window.editor.render();
+                }
+            };
+
+            // Mouse up handler for assets panel resizer
+            const handleAssetsMouseUp = (e) => {
                 if (isResizingAssets) {
                     isResizingAssets = false;
                     isAnyResizing = false;
@@ -598,7 +594,16 @@
                     e.preventDefault();
                     e.stopPropagation();
                 }
-            });
+            };
+
+            // Add global mouse events for assets resizer (only if not already added)
+            if (!resizerAssets._globalListenersAdded) {
+                document.addEventListener('mousemove', handleAssetsMouseMove);
+                document.addEventListener('mouseup', handleAssetsMouseUp);
+                resizerAssets._globalListenersAdded = true;
+            }
+
+            // Touch support for assets panel resizer will be handled by LevelEditor
 
             // Prevent text selection during resize
             document.addEventListener('selectstart', (e) => {
@@ -887,31 +892,7 @@
             // Close console button
             consoleClose.addEventListener('click', closeConsole);
 
-            // Add touch support to console header and close button using TouchSupportUtils
-            if (window.editor && window.editor.touchSupportManager) {
-                // Import TouchSupportUtils for console elements
-                import('../src/utils/TouchSupportUtils.js').then(({ TouchSupportUtils }) => {
-                    // Touch support for console header
-                    TouchSupportUtils.addButtonTouchSupport(
-                        consoleHeader,
-                        closeConsole,
-                        null, // no double tap
-                        null, // no long press
-                        window.editor.touchSupportManager
-                    );
-                    
-                    // Touch support for console close button
-                    TouchSupportUtils.addButtonTouchSupport(
-                        consoleClose,
-                        closeConsole,
-                        null, // no double tap
-                        null, // no long press
-                        window.editor.touchSupportManager
-                    );
-                }).catch(error => {
-                    console.warn('Failed to load TouchSupportUtils for console:', error);
-                });
-            }
+            // Touch support for console header and close button will be handled by LevelEditor
 
             // Context menu is now handled by ConsoleContextMenu class
 
@@ -948,7 +929,8 @@
                     e.preventDefault();
                 });
 
-                document.addEventListener('mousemove', (e) => {
+                // Mouse move handler for console resizer
+                const handleConsoleMouseMove = (e) => {
                     if (!isResizing) return;
 
                     const deltaY = e.clientY - startY;
@@ -965,9 +947,10 @@
                         
                         // Don't save during resize - only save on mouseup
                     }
-                });
+                };
 
-                document.addEventListener('mouseup', () => {
+                // Mouse up handler for console resizer
+                const handleConsoleMouseUp = () => {
                     if (isResizing) {
                         isResizing = false;
                         document.body.style.cursor = '';
@@ -983,51 +966,16 @@
                             window.editor.stateManager.set('panels.consoleHeight', finalHeight);
                         }
                     }
-                });
+                };
 
-                // Add touch support for console resizer using TouchSupportUtils
-                if (window.editor && window.editor.touchSupportManager) {
-                    import('../src/utils/TouchSupportUtils.js').then(({ TouchSupportUtils }) => {
-                        // Calculate max size based on device type and window size
-                        const isMobile = TouchSupportUtils.isMobile() || window.innerWidth <= 768;
-                        const maxSize = isMobile ? window.innerHeight * 0.7 : window.innerHeight * 0.9;
-                        
-                        TouchSupportUtils.addResizeTouchSupport(
-                            resizeHandle,
-                            'vertical',
-                            200, // minSize
-                            maxSize, // maxSize - adaptive based on device
-                            (element, targetPanel, touch) => {
-                                Logger.ui.debug('Console resize started via touch');
-                            },
-                            (element, targetPanel, newSize, touch) => {
-                                // Apply new height with mobile-aware limits
-                                const currentMaxSize = TouchSupportUtils.isMobile() || window.innerWidth <= 768 
-                                    ? window.innerHeight * 0.7 
-                                    : window.innerHeight * 0.9;
-                                const clampedSize = Math.min(newSize, currentMaxSize);
-                                consolePanel.style.height = clampedSize + 'px';
-                                consolePanel.style.bottom = 'auto';
-                            },
-                            (element, targetPanel, currentSize) => {
-                                // Save final height
-                                userPrefs.set('consoleHeight', currentSize);
-                                if (window.editor && window.editor.stateManager) {
-                                    window.editor.stateManager.set('panels.consoleHeight', currentSize);
-                                }
-                                Logger.ui.debug(`Console resize ended: ${currentSize}px`);
-                            },
-                            (element, touch) => {
-                                // Double tap to close console
-                                closeConsole();
-                                Logger.ui.info('Console closed via double-tap on resizer');
-                            },
-                            window.editor.touchSupportManager
-                        );
-                    }).catch(error => {
-                        console.warn('Failed to load TouchSupportUtils for console resizer:', error);
-                    });
+                // Add global mouse events for console resizer (only if not already added)
+                if (!resizeHandle._globalListenersAdded) {
+                    document.addEventListener('mousemove', handleConsoleMouseMove);
+                    document.addEventListener('mouseup', handleConsoleMouseUp);
+                    resizeHandle._globalListenersAdded = true;
                 }
+
+                // Touch support for console resizer will be handled by LevelEditor
             }
 
             function toggleConsole() {
