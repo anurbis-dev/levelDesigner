@@ -688,6 +688,13 @@ export class EventHandlers extends BaseModule {
                         } else {
                             el.classList.add('hidden');
                             el.style.display = 'none';
+                            
+                            // Special handling for console panel - hide context menu when console is hidden
+                            if (element.id === 'console-panel' && window.consoleContextMenu) {
+                                if (typeof window.consoleContextMenu.forceHideMenu === 'function') {
+                                    window.consoleContextMenu.forceHideMenu();
+                                }
+                            }
                         }
                     }
                 });

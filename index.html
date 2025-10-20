@@ -115,9 +115,9 @@
 
     <!-- Console Panel as Overlay (hidden by default) -->
     <div id="console-panel" class="console-overlay hidden bg-gray-900 flex flex-col">
-        <div class="flex border-b border-gray-700 flex-shrink-0">
-            <span class="flex-1 text-sm font-medium text-gray-300">Console</span>
-            <button id="console-close" class="text-gray-400 hover:text-white hover:bg-gray-700">&times;</button>
+        <div id="console-header" class="flex border-b border-gray-700 flex-shrink-0 cursor-pointer hover:bg-gray-800">
+            <span class="flex-1 text-sm font-medium text-gray-300 py-2 px-3">Console</span>
+            <button id="console-close" class="text-gray-400 hover:text-white hover:bg-gray-700 px-3 py-2 text-lg">&times;</button>
         </div>
         <div class="flex-grow overflow-y-auto">
             <div id="console-output" class="text-gray-300 font-mono text-sm">
@@ -291,12 +291,15 @@
 
                     // Assets panel height (will be set by StateManager after editor initialization)
 
-                    // Console height
+                    // Console height with mobile-aware limits
                     const consoleHeight = userPrefs.get('consoleHeight');
                     if (consoleHeight) {
                         const consolePanel = document.getElementById('console-panel');
                         if (consolePanel) {
-                            const height = Math.max(200, Math.min(window.innerHeight * 0.9, consoleHeight));
+                            // Adaptive max height based on device type and window size
+                            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+                            const maxHeight = isMobile ? window.innerHeight * 0.7 : window.innerHeight * 0.9;
+                            const height = Math.max(200, Math.min(maxHeight, consoleHeight));
                             consolePanel.style.setProperty('height', height + 'px', 'important');
                             consolePanel.style.setProperty('bottom', 'auto', 'important');
                         }
@@ -860,10 +863,55 @@
                 }
             });
 
+            // Unified console close handler
+            function closeConsole(e) {
+                if (e) e.stopPropagation(); // Prevent event bubbling
+                
+                // Force hide context menu when console is closed
+                if (consoleContextMenu && typeof consoleContextMenu.forceHideMenu === 'function') {
+                    consoleContextMenu.forceHideMenu();
+                }
+                
+                // Use unified panel system
+                if (window.editor && window.editor.eventHandlers) {
+                    window.editor.eventHandlers.togglePanel('console');
+                } else {
+                    hideConsole(); // Fallback
+                }
+            }
+
+            // Console header click to close
+            const consoleHeader = document.getElementById('console-header');
+            consoleHeader.addEventListener('click', closeConsole);
+
             // Close console button
-            consoleClose.addEventListener('click', () => {
-                hideConsole();
-            });
+            consoleClose.addEventListener('click', closeConsole);
+
+            // Add touch support to console header and close button using TouchSupportUtils
+            if (window.editor && window.editor.touchSupportManager) {
+                // Import TouchSupportUtils for console elements
+                import('../src/utils/TouchSupportUtils.js').then(({ TouchSupportUtils }) => {
+                    // Touch support for console header
+                    TouchSupportUtils.addButtonTouchSupport(
+                        consoleHeader,
+                        closeConsole,
+                        null, // no double tap
+                        null, // no long press
+                        window.editor.touchSupportManager
+                    );
+                    
+                    // Touch support for console close button
+                    TouchSupportUtils.addButtonTouchSupport(
+                        consoleClose,
+                        closeConsole,
+                        null, // no double tap
+                        null, // no long press
+                        window.editor.touchSupportManager
+                    );
+                }).catch(error => {
+                    console.warn('Failed to load TouchSupportUtils for console:', error);
+                });
+            }
 
             // Context menu is now handled by ConsoleContextMenu class
 
@@ -889,6 +937,7 @@
                 let startY = 0;
                 let startHeight = 0;
 
+                // Mouse resize functionality
                 resizeHandle.addEventListener('mousedown', (e) => {
                     isResizing = true;
                     startY = e.clientY;
@@ -900,12 +949,15 @@
                 });
 
                 document.addEventListener('mousemove', (e) => {
-if (!isResizing) return;
+                    if (!isResizing) return;
 
                     const deltaY = e.clientY - startY;
                     const newHeight = startHeight + deltaY;
                     const minHeight = 200;
-                    const maxHeight = window.innerHeight * 0.9;
+                    
+                    // Adaptive max height based on device type and window size
+                    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768;
+                    const maxHeight = isMobile ? window.innerHeight * 0.7 : window.innerHeight * 0.9;
 
                     if (newHeight >= minHeight && newHeight <= maxHeight) {
                         consolePanel.style.height = newHeight + 'px';
@@ -925,8 +977,57 @@ if (!isResizing) return;
                         // Save the final height when resize is complete
                         const finalHeight = consolePanel.offsetHeight;
                         userPrefs.set('consoleHeight', finalHeight);
+                        
+                        // Also save to StateManager if available
+                        if (window.editor && window.editor.stateManager) {
+                            window.editor.stateManager.set('panels.consoleHeight', finalHeight);
+                        }
                     }
                 });
+
+                // Add touch support for console resizer using TouchSupportUtils
+                if (window.editor && window.editor.touchSupportManager) {
+                    import('../src/utils/TouchSupportUtils.js').then(({ TouchSupportUtils }) => {
+                        // Calculate max size based on device type and window size
+                        const isMobile = TouchSupportUtils.isMobile() || window.innerWidth <= 768;
+                        const maxSize = isMobile ? window.innerHeight * 0.7 : window.innerHeight * 0.9;
+                        
+                        TouchSupportUtils.addResizeTouchSupport(
+                            resizeHandle,
+                            'vertical',
+                            200, // minSize
+                            maxSize, // maxSize - adaptive based on device
+                            (element, targetPanel, touch) => {
+                                Logger.ui.debug('Console resize started via touch');
+                            },
+                            (element, targetPanel, newSize, touch) => {
+                                // Apply new height with mobile-aware limits
+                                const currentMaxSize = TouchSupportUtils.isMobile() || window.innerWidth <= 768 
+                                    ? window.innerHeight * 0.7 
+                                    : window.innerHeight * 0.9;
+                                const clampedSize = Math.min(newSize, currentMaxSize);
+                                consolePanel.style.height = clampedSize + 'px';
+                                consolePanel.style.bottom = 'auto';
+                            },
+                            (element, targetPanel, currentSize) => {
+                                // Save final height
+                                userPrefs.set('consoleHeight', currentSize);
+                                if (window.editor && window.editor.stateManager) {
+                                    window.editor.stateManager.set('panels.consoleHeight', currentSize);
+                                }
+                                Logger.ui.debug(`Console resize ended: ${currentSize}px`);
+                            },
+                            (element, touch) => {
+                                // Double tap to close console
+                                closeConsole();
+                                Logger.ui.info('Console closed via double-tap on resizer');
+                            },
+                            window.editor.touchSupportManager
+                        );
+                    }).catch(error => {
+                        console.warn('Failed to load TouchSupportUtils for console resizer:', error);
+                    });
+                }
             }
 
             function toggleConsole() {
@@ -1305,9 +1406,10 @@ if (!isResizing) return;
                 }
             };
 
-            // Make editor available globally for console commands
+            // Make editor and console context menu available globally
             try {
                 window.editor = editor;
+                window.consoleContextMenu = consoleContextMenu;
             } catch (error) {
                 console.error('Error setting global editor:', error);
             }
