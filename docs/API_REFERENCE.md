@@ -1367,6 +1367,19 @@ await ExtensionErrorUtils.handleFileSystemError(
 - **Инициализация консоли** - использует `stateManager.get('console.visible')` с fallback на `userPrefs.get('consoleVisible')`
 - **Синхронизация после инициализации** - обновляет StateManager с актуальным состоянием консоли
 
+### EventHandlers - исправления клавиатуры (v3.51.3)
+- **`setupKeyboardEvents()`** - добавлена обработка клавиши Alt в keydownHandler и keyupHandler
+- **`keyboard.altKey`** - добавлено состояние для отслеживания Alt клавиши в StateManager
+- **`isAltKeyPressed()`** - обновлен для проверки как mouse.altKey, так и keyboard.altKey
+
+### MobileScalingUtils - мобильная адаптация (v3.51.3) - НОВЫЙ
+- **`initializeScaling()`** - автоматическое определение устройства и применение масштабирования
+- **`isMobileDevice()`** - определение мобильных устройств по userAgent и touch поддержке
+- **`applyScaling(scaleFactor)`** - применение масштабирования через CSS переменные
+- **`getOptimalTouchSize()`** - получение оптимального размера touch-элементов для устройства
+- **`setupMobileListeners()`** - настройка обработчиков поворота экрана и предотвращение зума
+- **`getDeviceInfo()`** - получение информации об устройстве для отладки
+
 ### MenuManager - улучшения
 - **`closeAllDropdowns()`** - используется для закрытия меню View при отключении Game Mode
 

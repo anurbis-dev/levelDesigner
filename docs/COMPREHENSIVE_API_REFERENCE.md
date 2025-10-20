@@ -28,6 +28,22 @@
 - Инициализация консоли - использует `stateManager.get('console.visible')` с fallback на `userPrefs`
 - Синхронизация после инициализации - обновляет StateManager с актуальным состоянием
 
+### EventHandlers (src/core/EventHandlers.js) - исправления клавиатуры
+- `setupKeyboardEvents()` - добавлена обработка клавиши Alt в keydownHandler и keyupHandler
+- `keyboard.altKey` - добавлено состояние для отслеживания Alt клавиши в StateManager
+- `isAltKeyPressed()` - обновлен для проверки как mouse.altKey, так и keyboard.altKey
+
+### MobileScalingUtils (src/utils/MobileScalingUtils.js) - НОВЫЙ
+- `initializeScaling()` - автоматическое определение устройства и применение масштабирования
+- `isMobileDevice()` - определение мобильных устройств по userAgent и touch поддержке
+- `applyScaling(scaleFactor)` - применение масштабирования через CSS переменные
+- `getOptimalTouchSize()` - получение оптимального размера touch-элементов для устройства
+- `setupMobileListeners()` - настройка обработчиков поворота экрана и предотвращение зума
+- `getDeviceInfo()` - получение информации об устройстве для отладки
+
+### StateManager (src/managers/StateManager.js) - расширение состояний
+- `keyboard.altKey` - добавлено состояние для отслеживания Alt клавиши
+
 ## Обновления v3.51.2
 
 ### MenuPositioningUtils (src/utils/MenuPositioningUtils.js) - НОВЫЙ
