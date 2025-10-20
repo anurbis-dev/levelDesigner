@@ -467,9 +467,6 @@ export class LevelEditor {
         // Setup touch gestures for canvas
         this.setupCanvasTouchGestures(canvas);
         
-        // Setup touch support for panel resizers
-        this.setupPanelResizerTouchSupport();
-        
         // Setup global browser navigation prevention
         this.setupGlobalNavigationPrevention();
     }

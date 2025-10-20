@@ -431,6 +431,11 @@ export class EventHandlers extends BaseModule {
                 this.editor.updateAllPanels();
             }
             
+            // Setup touch support for panel resizers after they are created
+            if (this.editor.setupPanelResizerTouchSupport) {
+                this.editor.setupPanelResizerTouchSupport();
+            }
+            
             // Don't re-apply panel visibility here - PanelPositionManager handles it
             // based on actual tab positions and panel existence
         } else {
