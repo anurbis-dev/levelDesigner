@@ -438,6 +438,7 @@ export class LayersPanel extends BasePanel {
                     </svg>
                 </button>
                 <input type="number"
+                       id="layer-parallax-${layer.id}"
                        class="layer-parallax-input bg-gray-600 border border-gray-500 text-xs rounded px-1 py-1 w-12 h-8 text-center focus:outline-none focus:border-blue-500" style="color: var(--ui-text-color, #d1d5db);"
                        data-layer-id="${layer.id}"
                        value="${layer.parallaxOffset}"
@@ -482,6 +483,8 @@ export class LayersPanel extends BasePanel {
         
         const colorInput = document.createElement('input');
         colorInput.type = 'color';
+        colorInput.id = `layer-color-input-${layer.id}`;
+        colorInput.name = `layer-color-input-${layer.id}`;
         colorInput.value = layer.color;
         colorInput.style.position = 'fixed';
         colorInput.style.left = `${buttonRect.left}px`;

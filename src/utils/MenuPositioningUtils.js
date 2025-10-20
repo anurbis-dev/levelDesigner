@@ -132,7 +132,7 @@ export class MenuPositioningUtils {
         if (checked !== undefined) {
             // Checkbox item
             item.innerHTML = `
-                <input type="checkbox" class="mr-2" ${checked ? 'checked' : ''}>
+                <input type="checkbox" id="menu-checkbox-${text.replace(/\s+/g, '-').toLowerCase()}" class="mr-2" ${checked ? 'checked' : ''}>
                 <label>${icon}${text}</label>
             `;
         } else {

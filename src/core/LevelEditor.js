@@ -53,7 +53,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.51.2';
+    static VERSION = '3.51.5';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -379,8 +379,28 @@ export class LevelEditor {
             this.configManager = new ConfigManager();
         }
         
-        // Apply configuration settings immediately
+        // Wait for configuration to be fully loaded
+        await this.configManager.loadAllConfigsAsync();
+        
+        // Verify configuration is ready
+        if (!this.configManager.isConfigReady()) {
+            this.log('warn', 'Configuration not ready after loading, using fallback');
+        }
+        
+        // Apply configuration settings after loading
         this.applyConfiguration();
+
+        // Initialize view states if all required components are ready
+        // This handles the case where configurations were loaded asynchronously
+        if (this.eventHandlers && this.stateManager && this.userPrefs) {
+            // Defer view state initialization to ensure UI components are ready
+            setTimeout(() => {
+                if (this.eventHandlers && this.configManager?.isConfigReady()) {
+                    this.log('info', 'Initializing deferred view states after config load');
+                    this.eventHandlers.initializeViewStates();
+                }
+            }, 0);
+        }
     }
 
     /**
@@ -765,6 +785,21 @@ export class LevelEditor {
             }
         });
         this.subscriptions.push(leftPanelTabUnsubscribe);
+
+        // Listen for panel visibility changes to update menu checkboxes
+        const rightPanelVisibilityUnsubscribe = this.stateManager.subscribe('view.rightPanel', (visible) => {
+            if (this.eventHandlers && this.eventHandlers.updateViewCheckbox) {
+                this.eventHandlers.updateViewCheckbox('rightPanel', visible);
+            }
+        });
+        this.subscriptions.push(rightPanelVisibilityUnsubscribe);
+
+        const leftPanelVisibilityUnsubscribe = this.stateManager.subscribe('view.leftPanel', (visible) => {
+            if (this.eventHandlers && this.eventHandlers.updateViewCheckbox) {
+                this.eventHandlers.updateViewCheckbox('leftPanel', visible);
+            }
+        });
+        this.subscriptions.push(leftPanelVisibilityUnsubscribe);
     }
 
     /**
@@ -808,13 +843,13 @@ export class LevelEditor {
             }
         }
 
-        // Apply saved panel sizes BEFORE initializing view states
-        this.applySavedPanelSizes();
-
-        // Initialize view states before render to prevent toolbar flickering
+        // Initialize view states before applying panel sizes to prevent UI flicker
         console.log('🚀 LevelEditor: About to call initializeViewStates...');
         this.eventHandlers.initializeViewStates();
         console.log('✅ LevelEditor: initializeViewStates completed');
+
+        // Apply saved panel sizes AFTER initializing view states
+        this.applySavedPanelSizes();
     }
 
     /**
@@ -1365,49 +1400,11 @@ export class LevelEditor {
         if (!this.userPrefs) return;
 
         try {
-            // Right panel width
-            const rightPanelWidth = this.userPrefs.get('rightPanelWidth');
-            if (rightPanelWidth) {
-                const rightPanel = document.getElementById('right-panel');
-                if (rightPanel) {
-                    rightPanel.style.width = rightPanelWidth + 'px';
-                    rightPanel.style.flexShrink = '0';
-                    rightPanel.style.flexGrow = '0';
-                }
-                // Sync to StateManager
-                if (this.stateManager) {
-                    this.stateManager.set('panels.rightPanelWidth', rightPanelWidth);
-                }
-            }
+            // Right/Left panel widths - handled by PanelPositionManager resizers
+            // Skip to avoid double application of styles
 
-            // Left panel width
-            const leftPanelWidth = this.userPrefs.get('leftPanelWidth');
-            if (leftPanelWidth) {
-                const leftPanel = document.getElementById('left-panel');
-                if (leftPanel) {
-                    leftPanel.style.width = leftPanelWidth + 'px';
-                    leftPanel.style.flexShrink = '0';
-                    leftPanel.style.flexGrow = '0';
-                }
-                // Sync to StateManager
-                if (this.stateManager) {
-                    this.stateManager.set('panels.leftPanelWidth', leftPanelWidth);
-                }
-            }
-
-            // Assets panel height
-            const assetsPanelHeight = this.userPrefs.get('assetsPanelHeight');
-            if (assetsPanelHeight) {
-                const assetsPanel = document.getElementById('assets-panel');
-                if (assetsPanel) {
-                    assetsPanel.style.height = assetsPanelHeight + 'px';
-                    assetsPanel.style.flexShrink = '0';
-                }
-                // Sync to StateManager
-                if (this.stateManager) {
-                    this.stateManager.set('panels.assetsPanelHeight', assetsPanelHeight);
-                }
-            }
+            // Assets panel height - handled by PanelPositionManager.initializeAssetsPanel()
+            // Skip to avoid double application of styles
 
             // Console height
             const consoleHeight = this.userPrefs.get('consoleHeight');

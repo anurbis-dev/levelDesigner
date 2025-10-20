@@ -123,8 +123,8 @@ export class UserPreferencesManager {
     /**
      * Reset preferences to defaults
      */
-    reset() {
-        this.configManager.reset();
+    async reset() {
+        await this.configManager.reset();
     }
 
     /**

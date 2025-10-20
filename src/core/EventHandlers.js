@@ -348,6 +348,17 @@ export class EventHandlers extends BaseModule {
     }
 
     initializeViewStates() {
+        // Ensure configManager is available and loaded
+        if (!this.editor.configManager) {
+            console.warn('ConfigManager not available during view state initialization');
+            return;
+        }
+
+        // Ensure configuration is fully loaded before proceeding
+        if (!this.editor.configManager.isConfigReady()) {
+            console.warn('Configuration not ready during view state initialization - deferring');
+            return;
+        }
         
         // Initialize grid state from user config or level settings
         const gridConfig = this.editor.configManager.get('canvas.showGrid');
@@ -366,11 +377,11 @@ export class EventHandlers extends BaseModule {
         this.editor.stateManager.set('canvas.snapToGrid', snapToGridEnabled);
         this.updateViewCheckbox('snapToGrid', snapToGridEnabled);
         
-        // Initialize panel states from user preferences (already applied in applyUserSettingsImmediately)
-        const panelStates = ['toolbar', 'assetsPanel', 'rightPanel', 'leftPanel', 'console'];
+        // Initialize panel states from user preferences
+        const panelStates = ['toolbar', 'assetsPanel', 'console'];
         panelStates.forEach(panel => {
             // Get visibility from user preferences, fallback to configManager, then to true
-            const prefKey = panel + 'Visible'; // toolbarVisible, assetsPanelVisible, rightPanelVisible, leftPanelVisible
+            const prefKey = panel + 'Visible'; // toolbarVisible, assetsPanelVisible, consoleVisible
             const visible = this.editor.userPrefs?.get(prefKey) ??
                            this.editor.configManager.get(`editor.view.${panel}`) ?? true;
             
@@ -378,7 +389,19 @@ export class EventHandlers extends BaseModule {
             this.updateViewCheckbox(panel, visible);
             // Apply visibility immediately to ensure panels are shown/hidden correctly
             this.applyPanelVisibility(panel, visible);
+        });
+
+        // Initialize left/right panel states but don't apply visibility yet
+        // PanelPositionManager will handle visibility based on actual tab positions
+        const tabPanelStates = ['rightPanel', 'leftPanel'];
+        tabPanelStates.forEach(panel => {
+            const prefKey = panel + 'Visible';
+            const visible = this.editor.userPrefs?.get(prefKey) ??
+                           this.editor.configManager.get(`editor.view.${panel}`) ?? true;
             
+            this.editor.stateManager.set(`view.${panel}`, visible);
+            this.updateViewCheckbox(panel, visible);
+            // Don't apply visibility here - let PanelPositionManager handle it
         });
 
         // Initialize other view states from user config
@@ -408,11 +431,8 @@ export class EventHandlers extends BaseModule {
                 this.editor.updateAllPanels();
             }
             
-            // Re-apply panel visibility after panels are created
-            panelStates.forEach(panel => {
-                const visible = this.editor.stateManager.get(`view.${panel}`);
-                this.applyPanelVisibility(panel, visible);
-            });
+            // Don't re-apply panel visibility here - PanelPositionManager handles it
+            // based on actual tab positions and panel existence
         } else {
             console.log('❌ EventHandlers: PanelPositionManager not found!');
         }

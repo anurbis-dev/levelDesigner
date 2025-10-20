@@ -67,29 +67,29 @@ export class GridSettings {
                 <div class="settings-form-group">
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Size (px)</label>
-                        <input type="number" min="8" max="512" step="8" class="settings-input" name="setting-input" data-setting="grid.size" value="${gridSize}" oninput="this.value = Math.min(512, Math.max(8, parseInt(this.value) || 8))"/>
+                        <input type="number" id="grid-size" min="8" max="512" step="8" class="settings-input" name="setting-input" data-setting="grid.size" value="${gridSize}" oninput="this.value = Math.min(512, Math.max(8, parseInt(this.value) || 8))"/>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Color</label>
-                        <input type="color" class="settings-input" name="setting-input" data-setting="grid.color" value="${ColorUtils.toHex(gridColor)}"/>
+                        <input type="color" id="grid-color" class="settings-input" name="setting-input" data-setting="grid.color" value="${ColorUtils.toHex(gridColor)}"/>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Thickness</label>
-                        <input type="number" min="0.1" max="5" step="0.1" class="settings-input" name="setting-input" data-setting="grid.thickness" value="${gridThickness}"/>
+                        <input type="number" id="grid-thickness" min="0.1" max="5" step="0.1" class="settings-input" name="setting-input" data-setting="grid.thickness" value="${gridThickness}"/>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Snap Tolerance (%)</label>
-                        <input type="number" min="5" max="100" step="5" class="settings-input" name="setting-input" data-setting="canvas.snapTolerance" value="${snapTolerance}"/>
+                        <input type="number" id="snap-tolerance" min="5" max="100" step="5" class="settings-input" name="setting-input" data-setting="canvas.snapTolerance" value="${snapTolerance}"/>
                     </div>
                     <div class="settings-form-item">
                         <label style="display: flex; align-items: center; margin-top: 0.5rem;">
-                            <input type="checkbox" class="settings-input" name="setting-input" data-setting="canvas.snapToGrid" ${snapToGrid ? 'checked' : ''} style="margin-right: 0.5rem;">
+                            <input type="checkbox" id="snap-to-grid" class="settings-input" name="setting-input" data-setting="canvas.snapToGrid" ${snapToGrid ? 'checked' : ''} style="margin-right: 0.5rem;">
                             <span style="color: var(--ui-text-color, #d1d5db);">Snap To Grid</span>
                         </label>
                     </div>
                     <div class="settings-form-item">
                         <label style="display: flex; align-items: center; margin-top: 0.5rem;">
-                            <input type="checkbox" class="settings-input" name="setting-input" data-setting="canvas.showGrid" ${showGrid ? 'checked' : ''} style="margin-right: 0.5rem;">
+                            <input type="checkbox" id="show-grid" class="settings-input" name="setting-input" data-setting="canvas.showGrid" ${showGrid ? 'checked' : ''} style="margin-right: 0.5rem;">
                             <span style="color: var(--ui-text-color, #d1d5db);">Show Grid</span>
                         </label>
                     </div>
@@ -99,19 +99,19 @@ export class GridSettings {
                 <div class="settings-form-group">
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Opacity</label>
-                        <input type="range" min="0" max="1" step="0.05" class="settings-input" name="setting-input" data-setting="grid.opacity" value="${gridOpacity}"/>
+                        <input type="range" id="grid-opacity" min="0" max="1" step="0.05" class="settings-input" name="setting-input" data-setting="grid.opacity" value="${gridOpacity}"/>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Subdivisions</label>
-                        <input type="number" min="0" max="10" step="1" class="settings-input" name="setting-input" data-setting="grid.subdivisions" value="${gridSubdivisions}" oninput="this.value = Math.min(10, Math.max(0, parseInt(this.value) || 0))"/>
+                        <input type="number" id="grid-subdivisions" min="0" max="10" step="1" class="settings-input" name="setting-input" data-setting="grid.subdivisions" value="${gridSubdivisions}" oninput="this.value = Math.min(10, Math.max(0, parseInt(this.value) || 0))"/>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Subdiv. Color</label>
-                        <input type="color" class="settings-input" name="setting-input" data-setting="grid.subdivColor" value="${ColorUtils.toHex(gridSubdivColor)}"/>
+                        <input type="color" id="grid-subdiv-color" class="settings-input" name="setting-input" data-setting="grid.subdivColor" value="${ColorUtils.toHex(gridSubdivColor)}"/>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Subdiv. Thickness</label>
-                        <input type="number" min="0.1" max="3" step="0.1" class="settings-input" name="setting-input" data-setting="grid.subdivThickness" value="${gridSubdivThickness}"/>
+                        <input type="number" id="grid-subdiv-thickness" min="0.1" max="3" step="0.1" class="settings-input" name="setting-input" data-setting="grid.subdivThickness" value="${gridSubdivThickness}"/>
                     </div>
                 </div>
             </div>
@@ -123,7 +123,7 @@ export class GridSettings {
                 <div class="settings-flex" style="display: flex; gap: 1rem; align-items: center; width: 100%;">
                     <!-- Show Axis Checkbox -->
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <input type="checkbox" class="settings-input" name="setting-input" data-setting="editor.axisConstraint.showAxis"
+                        <input type="checkbox" id="show-axis" class="settings-input" name="setting-input" data-setting="editor.axisConstraint.showAxis"
                                ${showAxis ? 'checked' : ''}
                                style="width: 1rem; height: 1rem;">
                         <label style="font-size: 0.875rem; color: var(--ui-text-color, #d1d5db);">Show Axis</label>
@@ -132,7 +132,7 @@ export class GridSettings {
                     <!-- Axis Color -->
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <label style="font-size: 0.875rem; color: var(--ui-text-color, #d1d5db);">Color:</label>
-                        <input type="color" class="settings-input" name="setting-input" data-setting="editor.axisConstraint.axisColor"
+                        <input type="color" id="axis-color" class="settings-input" name="setting-input" data-setting="editor.axisConstraint.axisColor"
                                value="${ColorUtils.toHex(axisColor)}"
                                style="width: 2rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                     </div>
@@ -140,7 +140,7 @@ export class GridSettings {
                     <!-- Axis Width -->
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <label style="font-size: 0.875rem; color: var(--ui-text-color, #d1d5db);">Width:</label>
-                        <input type="number" step="1" min="1" max="10" class="settings-input" name="setting-input" data-setting="editor.axisConstraint.axisWidth"
+                        <input type="number" id="axis-width" step="1" min="1" max="10" class="settings-input" name="setting-input" data-setting="editor.axisConstraint.axisWidth"
                                value="${axisWidth}"
                                style="width: 4rem; padding: 0.25rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white; text-align: center;">
                     </div>

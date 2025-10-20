@@ -422,7 +422,7 @@ export class SettingsPanel {
                         
                         <div>
                             <label style="display: flex; align-items: center;">
-                                <input type="checkbox" class="setting-input" name="setting-input" data-setting="ui.showTooltips" ${settings.ui?.showTooltips ? 'checked' : ''} style="margin-right: 0.5rem;">
+                                <input type="checkbox" id="ui-show-tooltips" class="setting-input" name="setting-input" data-setting="ui.showTooltips" ${settings.ui?.showTooltips ? 'checked' : ''} style="margin-right: 0.5rem;">
                                 <span style="color: var(--ui-text-color, #d1d5db);">Show Tooltips</span>
                             </label>
                         </div>
@@ -431,7 +431,7 @@ export class SettingsPanel {
                         <div class="settings-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; width: 100%;">
                             <div>
                                 <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Font Scale</label>
-                                <input type="range" min="0.5" max="2" step="0.1" class="setting-input" name="setting-input" data-setting="ui.fontScale" 
+                                <input type="range" id="ui-font-scale" min="0.5" max="2" step="0.1" class="setting-input" name="setting-input" data-setting="ui.fontScale" 
                                        value="${settings.ui?.fontScale || 1.0}"
                                        style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                                 <div style="text-align: center; color: var(--ui-text-color, #9ca3af); font-size: 0.75rem; margin-top: 0.25rem;">
@@ -441,7 +441,7 @@ export class SettingsPanel {
                             
                             <div>
                                 <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Spacing</label>
-                                <input type="range" min="0" max="2" step="0.1" class="setting-input" name="setting-input" data-setting="ui.spacing" 
+                                <input type="range" id="ui-spacing" min="0" max="2" step="0.1" class="setting-input" name="setting-input" data-setting="ui.spacing" 
                                        value="${settings.ui?.spacing || 1.0}"
                                        style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                                 <div style="text-align: center; color: var(--ui-text-color, #9ca3af); font-size: 0.75rem; margin-top: 0.25rem;">
@@ -459,21 +459,21 @@ export class SettingsPanel {
                     <div style="display: flex; flex-direction: column; gap: 0.75rem;">
                         <div>
                             <label style="display: flex; align-items: center;">
-                                <input type="checkbox" class="setting-input" name="setting-input" data-setting="editor.autoSave" ${settings.editor?.autoSave ? 'checked' : ''} style="margin-right: 0.5rem;">
+                                <input type="checkbox" id="editor-auto-save" class="setting-input" name="setting-input" data-setting="editor.autoSave" ${settings.editor?.autoSave ? 'checked' : ''} style="margin-right: 0.5rem;">
                                 <span style="color: var(--ui-text-color, #d1d5db);">Auto Save</span>
                             </label>
                         </div>
                         
                         <div>
                             <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Auto Save Interval (minutes)</label>
-                            <input type="number" min="1" max="60" step="1" class="setting-input" name="setting-input" data-setting="editor.autoSaveInterval" 
+                            <input type="number" id="auto-save-interval" min="1" max="60" step="1" class="setting-input" name="setting-input" data-setting="editor.autoSaveInterval" 
                                    value="${settings.editor?.autoSaveInterval || 5}"
                                    style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white;">
                         </div>
                         
                         <div>
                             <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Undo History Limit</label>
-                            <input type="number" min="10" max="1000" step="10" class="setting-input" name="setting-input" data-setting="editor.undoHistoryLimit" 
+                            <input type="number" id="undo-history-limit" min="10" max="1000" step="10" class="setting-input" name="setting-input" data-setting="editor.undoHistoryLimit" 
                                    value="${settings.editor?.undoHistoryLimit || 100}"
                                    style="width: 100%; padding: 0.5rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white;">
                         </div>
@@ -488,28 +488,28 @@ export class SettingsPanel {
                     <div style="display: flex; flex-direction: column; gap: 0.75rem;">
                         <div>
                             <label style="display: flex; align-items: center;">
-                                <input type="checkbox" class="setting-input" name="setting-input" data-setting="editor.view.gameMode" ${settings.editor.view?.gameMode ? 'checked' : ''} style="margin-right: 0.5rem;">
+                                <input type="checkbox" id="editor-game-mode" class="setting-input" name="setting-input" data-setting="editor.view.gameMode" ${settings.editor.view?.gameMode ? 'checked' : ''} style="margin-right: 0.5rem;">
                                 <span style="color: var(--ui-text-color, #d1d5db);">Immersive Mode</span>
                             </label>
                         </div>
                         
                         <div>
                             <label style="display: flex; align-items: center;">
-                                <input type="checkbox" class="setting-input" name="setting-input" data-setting="editor.view.objectBoundaries" ${settings.editor.view?.objectBoundaries ? 'checked' : ''} style="margin-right: 0.5rem;">
+                                <input type="checkbox" id="editor-object-boundaries" class="setting-input" name="setting-input" data-setting="editor.view.objectBoundaries" ${settings.editor.view?.objectBoundaries ? 'checked' : ''} style="margin-right: 0.5rem;">
                                 <span style="color: var(--ui-text-color, #d1d5db);">Object Boundaries</span>
                             </label>
                         </div>
                         
                         <div>
                             <label style="display: flex; align-items: center;">
-                                <input type="checkbox" class="setting-input" name="setting-input" data-setting="editor.view.objectCollisions" ${settings.editor.view?.objectCollisions ? 'checked' : ''} style="margin-right: 0.5rem;">
+                                <input type="checkbox" id="editor-object-collisions" class="setting-input" name="setting-input" data-setting="editor.view.objectCollisions" ${settings.editor.view?.objectCollisions ? 'checked' : ''} style="margin-right: 0.5rem;">
                                 <span style="color: var(--ui-text-color, #d1d5db);">Object Collisions</span>
                             </label>
                         </div>
                         
                         <div>
                             <label style="display: flex; align-items: center;">
-                                <input type="checkbox" class="setting-input" name="setting-input" data-setting="editor.view.parallax" ${settings.editor.view?.parallax ? 'checked' : ''} style="margin-right: 0.5rem;">
+                                <input type="checkbox" id="editor-parallax" class="setting-input" name="setting-input" data-setting="editor.view.parallax" ${settings.editor.view?.parallax ? 'checked' : ''} style="margin-right: 0.5rem;">
                                 <span style="color: var(--ui-text-color, #d1d5db);">Parallax</span>
                             </label>
                         </div>
@@ -598,7 +598,7 @@ export class SettingsPanel {
                         <!-- UI Background Color -->
                         <div>
                             <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">UI Background</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="ui.backgroundColor"
+                            <input type="color" id="ui-background-color" class="setting-input" name="setting-input" data-setting="ui.backgroundColor"
                                    value="${colors.ui.backgroundColor}"
                                    style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                         </div>
@@ -606,7 +606,7 @@ export class SettingsPanel {
                         <!-- UI Text Color -->
                         <div>
                             <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">UI Text Color</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="ui.textColor"
+                            <input type="color" id="ui-text-color" class="setting-input" name="setting-input" data-setting="ui.textColor"
                                    value="${colors.ui.textColor}"
                                    style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                         </div>
@@ -614,7 +614,7 @@ export class SettingsPanel {
                         <!-- Active Elements Color -->
                         <div>
                             <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Active Elements</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="ui.activeColor"
+                            <input type="color" id="ui-active-color" class="setting-input" name="setting-input" data-setting="ui.activeColor"
                                    value="${colors.ui.activeColor}"
                                    style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                         </div>
@@ -622,7 +622,7 @@ export class SettingsPanel {
                         <!-- Active Text Color -->
                         <div>
                             <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Active Text Color</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="ui.activeTextColor"
+                            <input type="color" id="ui-active-text-color" class="setting-input" name="setting-input" data-setting="ui.activeTextColor"
                                    value="${colors.ui.activeTextColor}"
                                    style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                         </div>
@@ -630,7 +630,7 @@ export class SettingsPanel {
                         <!-- Active Tab Color -->
                         <div>
                             <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Active Tab Color</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="ui.activeTabColor"
+                            <input type="color" id="ui-active-tab-color" class="setting-input" name="setting-input" data-setting="ui.activeTabColor"
                                    value="${colors.ui.activeTabColor}"
                                    style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                         </div>
@@ -638,7 +638,7 @@ export class SettingsPanel {
                         <!-- Accent Color -->
                         <div>
                             <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Accent Color</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="ui.accentColor"
+                            <input type="color" id="ui-accent-color" class="setting-input" name="setting-input" data-setting="ui.accentColor"
                                    value="${colors.ui.accentColor}"
                                    style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                         </div>
@@ -653,7 +653,7 @@ export class SettingsPanel {
                         <!-- Canvas Background Color -->
                         <div>
                             <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Canvas Background</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="canvas.backgroundColor"
+                            <input type="color" id="canvas-background-color" class="setting-input" name="setting-input" data-setting="canvas.backgroundColor"
                                    value="${colors.canvas.backgroundColor}"
                                    style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                         </div>
@@ -661,7 +661,7 @@ export class SettingsPanel {
                         <!-- Grid Color -->
                         <div>
                             <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Grid Color</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="canvas.gridColor"
+                            <input type="color" id="canvas-grid-color" class="setting-input" name="setting-input" data-setting="canvas.gridColor"
                                    value="${ColorUtils.toHex(colors.grid.color)}"
                                    style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                         </div>
@@ -669,7 +669,7 @@ export class SettingsPanel {
                         <!-- Grid Subdivision Color -->
                         <div>
                             <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Grid Subdivision</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="canvas.gridSubdivColor"
+                            <input type="color" id="canvas-grid-subdiv-color" class="setting-input" name="setting-input" data-setting="canvas.gridSubdivColor"
                                    value="${ColorUtils.toHex(colors.grid.subdivColor)}"
                                    style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                         </div>
@@ -684,7 +684,7 @@ export class SettingsPanel {
                         <!-- Selection Outline Color -->
                         <div>
                             <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Selection Outline</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="selection.outlineColor"
+                            <input type="color" id="selection-outline-color" class="setting-input" name="setting-input" data-setting="selection.outlineColor"
                                    value="${colors.selection.outlineColor}"
                                    style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                         </div>
@@ -692,7 +692,7 @@ export class SettingsPanel {
                         <!-- Group Outline Color -->
                         <div>
                             <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Group Outline</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="selection.groupOutlineColor"
+                            <input type="color" id="selection-group-outline-color" class="setting-input" name="setting-input" data-setting="selection.groupOutlineColor"
                                    value="${colors.selection.groupOutlineColor}"
                                    style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                         </div>
@@ -700,7 +700,7 @@ export class SettingsPanel {
                         <!-- Marquee Color -->
                         <div>
                             <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Marquee Selection</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="selection.marqueeColor"
+                            <input type="color" id="selection-marquee-color" class="setting-input" name="setting-input" data-setting="selection.marqueeColor"
                                    value="${colors.selection.marqueeColor}"
                                    style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                         </div>
@@ -708,7 +708,7 @@ export class SettingsPanel {
                         <!-- Hierarchy Highlight Color -->
                         <div>
                             <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Hierarchy Highlight</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="selection.hierarchyHighlightColor"
+                            <input type="color" id="selection-hierarchy-highlight-color" class="setting-input" name="setting-input" data-setting="selection.hierarchyHighlightColor"
                                    value="${colors.selection.hierarchyHighlightColor}"
                                    style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                         </div>
@@ -716,7 +716,7 @@ export class SettingsPanel {
                         <!-- Active Layer Border Color -->
                         <div>
                             <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Active Layer Border</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="panels.selection.activeLayerBorderColor"
+                            <input type="color" id="active-layer-border-color" class="setting-input" name="setting-input" data-setting="panels.selection.activeLayerBorderColor"
                                    value="${colors.selection.activeLayerBorderColor}"
                                    style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                         </div>
@@ -731,7 +731,7 @@ export class SettingsPanel {
                         ${Object.entries(colors.logger).map(([category, color]) => `
                             <div>
                                 <label style="display: block; font-size: 0.75rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.25rem;">${category}</label>
-                                <input type="color" class="setting-input" name="setting-input" data-setting="logger.colors.${category}"
+                                <input type="color" id="logger-color-${category}" class="setting-input" name="setting-input" data-setting="logger.colors.${category}"
                                        value="${color}"
                                        style="width: 2.5rem; height: 1.5rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                             </div>
@@ -795,7 +795,7 @@ export class SettingsPanel {
                         <!-- Outline Color -->
                         <div>
                             <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Outline Color</label>
-                            <input type="color" class="setting-input" name="setting-input" data-setting="panels.selection.outlineColor"
+                            <input type="color" id="panels-selection-outline-color" class="setting-input" name="setting-input" data-setting="panels.selection.outlineColor"
                                    value="${settings.selection?.outlineColor}"
                                    style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                         </div>
@@ -899,7 +899,7 @@ export class SettingsPanel {
                 content += `
                     <div class="hotkey-item">
                         <div class="hotkey-description">${shortcut.description}</div>
-                        <input type="text" class="hotkey-input" data-shortcut="${action}" data-category="editor" value="${keyCombo}" readonly>
+                        <input type="text" id="hotkey-editor-${action}" class="hotkey-input" data-shortcut="${action}" data-category="editor" value="${keyCombo}" readonly>
                     </div>
                 `;
             });
@@ -917,7 +917,7 @@ export class SettingsPanel {
                 content += `
                     <div class="hotkey-item">
                         <div class="hotkey-description">${shortcut.description}</div>
-                        <input type="text" class="hotkey-input" data-shortcut="${action}" data-category="ui" value="${keyCombo}" readonly>
+                        <input type="text" id="hotkey-ui-${action}" class="hotkey-input" data-shortcut="${action}" data-category="ui" value="${keyCombo}" readonly>
                     </div>
                 `;
             });
@@ -1421,10 +1421,10 @@ export class SettingsPanel {
         }
     }
 
-    resetSettings() {
+    async resetSettings() {
         // Reset to default values
         if (this.configManager) {
-            this.configManager.reset();
+            await this.configManager.reset();
         }
         
         // Sync to StateManager
@@ -1457,10 +1457,10 @@ export class SettingsPanel {
             try {
                 const settings = JSON.parse(e.target.result);
                 if (this.configManager) {
-                    this.configManager.importSettings(settings);
+                    await this.configManager.importSettings(settings);
                     
                     // Reload all configs
-                    this.configManager.loadAllConfigsSync();
+                    await this.configManager.loadAllConfigsAsync();
                 }
                 
                 // Sync to StateManager
@@ -1541,7 +1541,7 @@ export class SettingsPanel {
         if (await confirm('Are you sure you want to reset all settings to defaults? This action cannot be undone.')) {
             // Reset to defaults
             if (this.configManager) {
-                this.configManager.reset();
+                await this.configManager.reset();
             }
             
             // Sync settings from ConfigManager to StateManager FIRST

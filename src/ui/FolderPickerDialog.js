@@ -92,6 +92,8 @@ export class FolderPickerDialog {
             // Create input element
             const fileInput = document.createElement('input');
             fileInput.type = 'file';
+            fileInput.id = 'folder-picker-input';
+            fileInput.name = 'folder-picker-input';
             fileInput.webkitdirectory = true; // Allows directory selection
             fileInput.multiple = true;
             fileInput.style.display = 'none';

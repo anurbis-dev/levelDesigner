@@ -339,6 +339,7 @@ export class DetailsPanel {
                 <div class="flex-1 relative">
                     <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs pointer-events-none" style="color: var(--ui-text-color, #9ca3af);">X</span>
                     <input type="number" 
+                           id="details-position-x" 
                            class="w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm" 
                            placeholder="0" 
                            data-property="x">
@@ -346,6 +347,7 @@ export class DetailsPanel {
                 <div class="flex-1 relative">
                     <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs pointer-events-none" style="color: var(--ui-text-color, #9ca3af);">Y</span>
                     <input type="number" 
+                           id="details-position-y" 
                            class="w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm" 
                            placeholder="0" 
                            data-property="y">
@@ -362,6 +364,7 @@ export class DetailsPanel {
                 <div class="flex-1 relative">
                     <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs pointer-events-none" style="color: var(--ui-text-color, #9ca3af);">W</span>
                     <input type="number" 
+                           id="details-size-width" 
                            class="w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm" 
                            placeholder="0" 
                            data-property="width">
@@ -369,6 +372,7 @@ export class DetailsPanel {
                 <div class="flex-1 relative">
                     <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs pointer-events-none" style="color: var(--ui-text-color, #9ca3af);">H</span>
                     <input type="number" 
+                           id="details-size-height" 
                            class="w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm" 
                            placeholder="0" 
                            data-property="height">

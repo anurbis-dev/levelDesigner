@@ -616,6 +616,8 @@ export class OutlinerPanel extends BasePanel {
         // Create input element
         const nameInput = document.createElement('input');
         nameInput.type = 'text';
+        nameInput.id = `group-name-input-${group.id}`;
+        nameInput.name = `group-name-input-${group.id}`;
         nameInput.value = group.name || '';
         nameInput.className = 'outliner-item-name-input';
         nameInput.style.flex = '1';
@@ -730,6 +732,8 @@ export class OutlinerPanel extends BasePanel {
         // Create input element
         const nameInput = document.createElement('input');
         nameInput.type = 'text';
+        nameInput.id = `object-name-input-${obj.id}`;
+        nameInput.name = `object-name-input-${obj.id}`;
         nameInput.value = obj.name || '';
         nameInput.className = 'outliner-item-name-input';
         nameInput.style.flex = '1';

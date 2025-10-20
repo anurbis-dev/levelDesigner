@@ -28,8 +28,9 @@ export class ConfigManager {
         this.saveTimeout = null;
         this.saveDelay = 100; // 100ms delay
         
-        // Load configurations synchronously for immediate application
-        this.loadAllConfigsSync();
+        // Load configurations asynchronously for immediate application
+        // Note: This is called in constructor but also explicitly awaited in LevelEditor.initializeConfiguration()
+        this.loadAllConfigsAsync();
     }
 
     /**
@@ -47,17 +48,17 @@ export class ConfigManager {
     }
 
     /**
-     * Load all configuration files synchronously
+     * Load all configuration files asynchronously
      */
-    loadAllConfigsSync() {
+    async loadAllConfigsAsync() {
         try {
-            this.log('info', 'Loading configuration files synchronously...');
+            this.log('info', 'Loading configuration files asynchronously...');
             
             // Load default configurations from embedded data
-            const defaultConfigs = this.getDefaultConfigs();
+            const defaultConfigs = await this.getDefaultConfigs();
             
             // Load user configurations from localStorage
-            const userConfigs = this.loadUserConfigsFromStorage();
+            const userConfigs = await this.loadUserConfigsFromStorage();
             
             // Merge configurations (user overrides defaults)
             this.configs = this.mergeConfigs(defaultConfigs, userConfigs);
@@ -71,10 +72,14 @@ export class ConfigManager {
             this.log('info', 'Configuration loaded successfully');
             this.log('debug', 'Loaded configs:', this.configs);
             
+            // Signal that configuration is ready
+            this._configReady = true;
+            
         } catch (error) {
             this.log('error', 'Failed to load configurations:', error);
             // Fallback to hardcoded defaults
-            this.loadFallbackConfigs();
+            await this.loadFallbackConfigs();
+            this._configReady = true;
         }
     }
 
@@ -82,7 +87,7 @@ export class ConfigManager {
      * Load all configuration files (async version for backward compatibility)
      */
     async loadAllConfigs() {
-        this.loadAllConfigsSync();
+        await this.loadAllConfigsAsync();
     }
 
     /**
@@ -193,28 +198,28 @@ export class ConfigManager {
     }
 
     /**
-     * Get default configurations from embedded data (synchronous fallback)
+     * Get default configurations from embedded data (async fallback)
      */
-    getDefaultConfigs() {
-        // Try to load from JSON files synchronously using XMLHttpRequest
+    async getDefaultConfigs() {
+        // Try to load from JSON files asynchronously using fetch
         const configs = {};
         const configNames = ['editor', 'ui', 'canvas', 'panels', 'toolbar', 'shortcuts', 'logger'];
 
-        configNames.forEach(configName => {
+        const loadPromises = configNames.map(async (configName) => {
             try {
-                const xhr = new XMLHttpRequest();
-                xhr.open('GET', `${this.defaultsPath}${configName}.json`, false); // Synchronous
-                xhr.send();
-
-                if (xhr.status === 200) {
-                    configs[configName] = JSON.parse(xhr.responseText);
+                const response = await fetch(`${this.defaultsPath}${configName}.json`);
+                if (response.ok) {
+                    const configData = await response.json();
+                    configs[configName] = configData;
                 } else {
-                    this.log('warn', `Failed to load default config ${configName}.json: ${xhr.status}`);
+                    this.log('warn', `Failed to load default config ${configName}.json: ${response.status}`);
                 }
             } catch (error) {
                 this.log('error', `Error loading default config ${configName}.json:`, error);
             }
         });
+
+        await Promise.all(loadPromises);
 
         // Add additional default configs that don't have JSON files
         configs.grid = {
@@ -307,12 +312,12 @@ export class ConfigManager {
     /**
      * Load user configurations from localStorage and files
      */
-    loadUserConfigsFromStorage() {
+    async loadUserConfigsFromStorage() {
         const configs = {};
         const configNames = ['editor', 'ui', 'canvas', 'panels', 'camera', 'selection', 'assets', 'performance', 'shortcuts', 'view', 'toolbar', 'grid'];
         
         
-        configNames.forEach(configName => {
+        for (const configName of configNames) {
             // Try to load from localStorage first
             const userConfig = this.loadUserConfig(configName);
             if (userConfig) {
@@ -338,14 +343,14 @@ export class ConfigManager {
                     };
                 } else {
                     // Try to load from file if localStorage is empty
-                    const fileConfig = this.loadUserConfigFromFile(configName);
+                    const fileConfig = await this.loadUserConfigFromFile(configName);
                     if (fileConfig) {
                         configs[configName] = { ...configs[configName], ...fileConfig };
                         this.log('debug', `Loaded user config ${configName} from file`);
                     }
                 }
             }
-        });
+        }
         
         return configs;
     }
@@ -354,22 +359,19 @@ export class ConfigManager {
     /**
      * Load user configuration from file (if exists)
      */
-    loadUserConfigFromFile(configName) {
+    async loadUserConfigFromFile(configName) {
         try {
-            // Try to load from config/user directory synchronously
+            // Try to load from config/user directory asynchronously
             const filePath = `${this.userPath}${configName}.json`;
 
-            // Use XMLHttpRequest for synchronous loading
-            const xhr = new XMLHttpRequest();
-            xhr.open('GET', filePath, false); // Synchronous request
-            xhr.send();
-
-            if (xhr.status === 200) {
-                const userConfig = JSON.parse(xhr.responseText);
+            // Use fetch for asynchronous loading
+            const response = await fetch(filePath);
+            if (response.ok) {
+                const userConfig = await response.json();
                 this.log('debug', `Loaded user config ${configName} from file`);
                 return userConfig;
             } else {
-                this.log('debug', `User config file ${configName}.json not found or not accessible (status: ${xhr.status})`);
+                this.log('debug', `User config file ${configName}.json not found or not accessible (status: ${response.status})`);
                 return null;
             }
         } catch (error) {
@@ -448,9 +450,16 @@ export class ConfigManager {
     /**
      * Load fallback configurations if files fail to load
      */
-    loadFallbackConfigs() {
+    async loadFallbackConfigs() {
         this.log('warn', 'Loading fallback configurations...');
-        this.configs = this.getDefaultConfigs();
+        this.configs = await this.getDefaultConfigs();
+    }
+
+    /**
+     * Check if configuration is ready
+     */
+    isConfigReady() {
+        return this._configReady === true;
     }
 
     /**
@@ -743,8 +752,8 @@ export class ConfigManager {
     /**
      * Reset settings to defaults
      */
-    reset() {
-        this.configs = this.getDefaultConfigs();
+    async reset() {
+        this.configs = await this.getDefaultConfigs();
         // Synchronize grid and canvas settings after reset
         if (this.configs.grid && this.configs.canvas) {
             this.configs.canvas.showGrid = this.configs.grid.showGrid;
@@ -771,10 +780,10 @@ export class ConfigManager {
     /**
      * Import settings from JSON string
      */
-    importSettings(jsonString) {
+    async importSettings(jsonString) {
         try {
             const importedSettings = JSON.parse(jsonString);
-            this.configs = this.mergeConfigs(this.getDefaultConfigs(), importedSettings);
+            this.configs = this.mergeConfigs(await this.getDefaultConfigs(), importedSettings);
             this.saveUserConfigsToStorage();
             return true;
         } catch (error) {

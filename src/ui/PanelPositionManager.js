@@ -82,10 +82,10 @@ export class PanelPositionManager {
         if (!parent) return;
         
         // Remove panel and resizer from current position
-        if (rightPanel.parentElement) {
+        if (rightPanel.parentElement && rightPanel.parentElement.contains(rightPanel)) {
             rightPanel.parentElement.removeChild(rightPanel);
         }
-        if (resizerX.parentElement) {
+        if (resizerX.parentElement && resizerX.parentElement.contains(resizerX)) {
             resizerX.parentElement.removeChild(resizerX);
         }
         
@@ -130,6 +130,9 @@ export class PanelPositionManager {
         const rightPanelPosition = this.userPrefs?.get('rightPanelPosition') ?? 'right';
         this.stateManager.set('rightPanelPosition', rightPanelPosition);
 
+        // Initialize panel widths from user preferences
+        this.initializePanelWidths();
+
         // Initialize tab positions (this will create panels only if needed)
         this.initializeTabPositions();
         
@@ -138,6 +141,23 @@ export class PanelPositionManager {
         
         window.panelInitializationCompleted = true; // Global flag for debugging
         Logger.ui.info('Panel positions initialization completed');
+    }
+
+    /**
+     * Initialize panel widths from user preferences
+     */
+    initializePanelWidths() {
+        Logger.ui.info('Initializing panel widths...');
+        
+        // Initialize right panel width
+        const rightPanelWidth = this.userPrefs?.get('rightPanelWidth') ?? 300;
+        this.stateManager.set('panels.rightPanelWidth', rightPanelWidth);
+        
+        // Initialize left panel width
+        const leftPanelWidth = this.userPrefs?.get('leftPanelWidth') ?? 300;
+        this.stateManager.set('panels.leftPanelWidth', leftPanelWidth);
+        
+        Logger.ui.info(`Panel widths initialized: right=${rightPanelWidth}px, left=${leftPanelWidth}px`);
     }
 
     /**
@@ -222,7 +242,9 @@ export class PanelPositionManager {
             const contentPanel = document.getElementById(panelId);
             if (contentPanel) {
                 // Remove from current parent and add to content container
-                contentPanel.parentNode?.removeChild(contentPanel);
+                if (contentPanel.parentNode && contentPanel.parentNode.contains(contentPanel)) {
+                    contentPanel.parentNode.removeChild(contentPanel);
+                }
                 contentContainer.appendChild(contentPanel);
             }
         });
@@ -345,6 +367,11 @@ export class PanelPositionManager {
                 // Update UI after recreating structure
                 this._updateUI();
             }
+            
+            // If panel exists with tabs, ensure menu state is correct
+            if (hasTabs) {
+                this.updatePanelStateAfterTabAddition(panelSide);
+            }
         }
 
         // Ensure tab dragging is setup for this panel
@@ -401,6 +428,9 @@ export class PanelPositionManager {
             // Create resizer for right panel (same as left panel)
             this.createPanelResizer(panel, 'right');
         }
+        
+        // Update panel state to true and enable menu item since panel is created
+        this.updatePanelStateAfterCreation(panelSide);
         
         // Update UI after panel is added
         this._updateUI();
@@ -496,12 +526,19 @@ export class PanelPositionManager {
         const toTabsContainer = toContainer.querySelector('.flex.border-b.border-gray-700');
         
         if (fromTabsContainer && toTabsContainer) {
-            fromTabsContainer.removeChild(tabButton);
+            if (fromTabsContainer.contains(tabButton)) {
+                fromTabsContainer.removeChild(tabButton);
+            }
             toTabsContainer.appendChild(tabButton);
             
             // Remove newly created flag since panel now has tabs
             if (toContainer._newlyCreated) {
                 toContainer._newlyCreated = false;
+            }
+            
+            // Check if this is the first tab in the panel - enable menu toggle if panel was empty
+            if (toTabsContainer.children.length === 1) {
+                this.updatePanelStateAfterTabAddition(toPanel);
             }
             
             // Don't auto-activate tabs during initialization - let EventHandlers handle it
@@ -529,7 +566,9 @@ export class PanelPositionManager {
         
         if (fromContentContainer && toContentContainer) {
             // Remove from old container and add to new container
-            fromContentContainer.removeChild(tabContent);
+            if (fromContentContainer.contains(tabContent)) {
+                fromContentContainer.removeChild(tabContent);
+            }
             toContentContainer.appendChild(tabContent);
             
             // Update CSS class to reflect new panel side
@@ -765,10 +804,13 @@ export class PanelPositionManager {
             if (isResizing) {
                 isResizing = false;
                 
-                // Save width to StateManager
+                // Save width to StateManager and user preferences
                 const currentWidth = panel.offsetWidth;
                 if (this.stateManager) {
                     this.stateManager.set(`panels.${panelSide}PanelWidth`, currentWidth);
+                }
+                if (this.userPrefs) {
+                    this.userPrefs.set(`${panelSide}PanelWidth`, currentWidth);
                 }
                 
                 
@@ -977,8 +1019,90 @@ export class PanelPositionManager {
             
             Logger.ui.info(`Removed empty ${panelSide} panel completely`);
             
+            // Update panel state to false and disable menu item since panel is empty
+            this.updatePanelStateAfterRemoval(panelSide);
+            
             // Update UI after panel is removed
             this._updateUI();
+        }
+    }
+
+    /**
+     * Update panel state after removal - disable menu toggle when panel becomes empty
+     * @param {string} panelSide - 'left' or 'right'
+     */
+    updatePanelStateAfterRemoval(panelSide) {
+        // Map panel side to state key
+        const panelKey = panelSide === 'left' ? 'leftPanel' : 'rightPanel';
+        const menuItemId = `toggle-${panelKey}`;
+
+        // Set panel state to false
+        this.stateManager.set(`view.${panelKey}`, false);
+
+        // Save to user preferences
+        if (this.levelEditor.userPrefs) {
+            this.levelEditor.userPrefs.set(`${panelKey}Visible`, false);
+        }
+
+        // Update menu item state - disable and uncheck
+        if (this.levelEditor.eventHandlers && this.levelEditor.eventHandlers.menuManager) {
+            this.levelEditor.eventHandlers.menuManager.updateToggleState(menuItemId, false);
+        }
+
+        Logger.ui.debug(`Disabled menu toggle for empty ${panelSide} panel`);
+    }
+
+    /**
+     * Update panel state after creation - enable menu toggle when panel is created
+     * @param {string} panelSide - 'left' or 'right'
+     */
+    updatePanelStateAfterCreation(panelSide) {
+        // Map panel side to state key
+        const panelKey = panelSide === 'left' ? 'leftPanel' : 'rightPanel';
+        const menuItemId = `toggle-${panelKey}`;
+
+        // Set panel state to true
+        this.stateManager.set(`view.${panelKey}`, true);
+
+        // Save to user preferences
+        if (this.levelEditor.userPrefs) {
+            this.levelEditor.userPrefs.set(`${panelKey}Visible`, true);
+        }
+
+        // Update menu item state - enable and check
+        if (this.levelEditor.eventHandlers && this.levelEditor.eventHandlers.menuManager) {
+            this.levelEditor.eventHandlers.menuManager.updateToggleState(menuItemId, true);
+        }
+
+        Logger.ui.debug(`Enabled menu toggle for ${panelSide} panel after creation`);
+    }
+
+    /**
+     * Update panel state after tab addition - enable menu toggle when panel gets first tab
+     * @param {string} panelSide - 'left' or 'right'
+     */
+    updatePanelStateAfterTabAddition(panelSide) {
+        // Map panel side to state key
+        const panelKey = panelSide === 'left' ? 'leftPanel' : 'rightPanel';
+        const menuItemId = `toggle-${panelKey}`;
+
+        // Set panel state to true if it was disabled due to being empty
+        const currentState = this.stateManager.get(`view.${panelKey}`);
+        if (currentState === false) {
+            // Only enable if panel was disabled due to being empty
+            this.stateManager.set(`view.${panelKey}`, true);
+
+            // Save to user preferences
+            if (this.levelEditor.userPrefs) {
+                this.levelEditor.userPrefs.set(`${panelKey}Visible`, true);
+            }
+
+            // Update menu item state - enable and check
+            if (this.levelEditor.eventHandlers && this.levelEditor.eventHandlers.menuManager) {
+                this.levelEditor.eventHandlers.menuManager.updateToggleState(menuItemId, true);
+            }
+
+            Logger.ui.debug(`Enabled menu toggle for ${panelSide} panel after tab addition`);
         }
     }
 
