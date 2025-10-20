@@ -47,6 +47,31 @@ export const MENU_CONFIG = {
             label: 'View',
             items: [
                 {
+                    id: 'toggle-fullscreen',
+                    label: 'Full Screen',
+                    type: 'toggle',
+                    stateKey: 'view.fullscreen',
+                    action: 'toggleViewOption',
+                    actionParam: 'fullscreen'
+                },
+                {
+                    id: 'toggle-game-mode',
+                    label: 'Immersive Mode',
+                    type: 'toggle',
+                    stateKey: 'view.gameMode',
+                    action: 'toggleViewOption',
+                    actionParam: 'gameMode'
+                },
+                {
+                    id: 'toggle-parallax',
+                    label: 'Parallax Mode',
+                    type: 'toggle',
+                    stateKey: 'view.parallax',
+                    action: 'toggleViewOption',
+                    actionParam: 'parallax'
+                },
+                { type: 'separator' },
+                {
                     id: 'panels-section',
                     label: 'Panels',
                     type: 'section'
@@ -75,6 +100,22 @@ export const MENU_CONFIG = {
                     action: 'togglePanel',
                     actionParam: 'rightPanel'
                 },
+                {
+                    id: 'toggle-left-panel',
+                    label: 'Left Panel',
+                    type: 'toggle',
+                    stateKey: 'view.leftPanel',
+                    action: 'togglePanel',
+                    actionParam: 'leftPanel'
+                },
+                {
+                    id: 'toggle-console',
+                    label: 'Console',
+                    type: 'toggle',
+                    stateKey: 'console.visible',
+                    action: 'togglePanel',
+                    actionParam: 'console'
+                },
                 { type: 'separator' },
                 {
                     id: 'canvas-section',
@@ -88,14 +129,6 @@ export const MENU_CONFIG = {
                     stateKey: 'canvas.showGrid',
                     action: 'toggleViewOption',
                     actionParam: 'grid'
-                },
-                {
-                    id: 'toggle-game-mode',
-                    label: 'Game Mode',
-                    type: 'toggle',
-                    stateKey: 'view.gameMode',
-                    action: 'toggleViewOption',
-                    actionParam: 'gameMode'
                 },
                 {
                     id: 'toggle-snap-to-grid',
@@ -127,15 +160,7 @@ export const MENU_CONFIG = {
                     action: 'toggleViewOption',
                     actionParam: 'objectCollisions'
                 },
-                { type: 'separator' },
-                {
-                    id: 'toggle-parallax',
-                    label: 'Parallax',
-                    type: 'toggle',
-                    stateKey: 'view.parallax',
-                    action: 'toggleViewOption',
-                    actionParam: 'parallax'
-                }
+                { type: 'separator' }
             ]
         },
         {

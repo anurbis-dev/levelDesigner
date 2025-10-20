@@ -489,7 +489,7 @@ export class SettingsPanel {
                         <div>
                             <label style="display: flex; align-items: center;">
                                 <input type="checkbox" class="setting-input" name="setting-input" data-setting="editor.view.gameMode" ${settings.editor.view?.gameMode ? 'checked' : ''} style="margin-right: 0.5rem;">
-                                <span style="color: var(--ui-text-color, #d1d5db);">Game Mode</span>
+                                <span style="color: var(--ui-text-color, #d1d5db);">Immersive Mode</span>
                             </label>
                         </div>
                         

@@ -83,11 +83,13 @@ export class StateManager {
             
             // View state
             view: {
+                fullscreen: false,
                 gameMode: false,
                 snapToGrid: false,
                 objectBoundaries: false,
                 objectCollisions: false,
                 parallax: false,
+                leftPanel: true,
                 rightPanel: true,
                 assetsPanel: true,
                 console: true,

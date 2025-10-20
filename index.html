@@ -187,7 +187,14 @@
                 }
 
                 // Apply panel visibility settings immediately
-                const consoleVisible = userPrefs.get('consoleVisible');
+                // Use stateManager if available, fallback to userPrefs
+                let consoleVisible;
+                if (window.editor && window.editor.stateManager) {
+                    consoleVisible = window.editor.stateManager.get('console.visible');
+                } else {
+                    consoleVisible = userPrefs.get('consoleVisible');
+                }
+                
                 if (consoleVisible !== undefined) {
                     try {
                         const consolePanel = document.getElementById('console-panel');
@@ -832,7 +839,13 @@
             document.addEventListener('keydown', (e) => {
                 if (e.key === '`' && !e.ctrlKey && !e.altKey && !e.shiftKey) {
                     e.preventDefault();
-                    toggleConsole();
+                    // Use the new unified panel system instead of old toggleConsole()
+                    if (window.editor && window.editor.eventHandlers) {
+                        window.editor.eventHandlers.togglePanel('console');
+                    } else {
+                        // Fallback to old method if editor not ready
+                        toggleConsole();
+                    }
                 }
             });
 
@@ -927,8 +940,12 @@ if (!isResizing) return;
                 consoleInput.focus();
                 isConsoleVisible = true;
 
-                // Save preference
-                userPrefs.set('consoleVisible', true);
+                // Save preference - use stateManager if available
+                if (window.editor && window.editor.stateManager) {
+                    window.editor.stateManager.set('console.visible', true);
+                } else {
+                    userPrefs.set('consoleVisible', true);
+                }
 
                 // Scroll to bottom when console is opened
                 if (isAutoScrollEnabled) {
@@ -954,8 +971,12 @@ if (!isResizing) return;
                     consoleContextMenu.forceHideMenu();
                 }
                 
-                // Save preference
-                userPrefs.set('consoleVisible', false);
+                // Save preference - use stateManager if available
+                if (window.editor && window.editor.stateManager) {
+                    window.editor.stateManager.set('console.visible', false);
+                } else {
+                    userPrefs.set('consoleVisible', false);
+                }
                 
                 // Console is now an overlay, no need to update canvas layout
                 // The overlay covers everything and doesn't affect the main layout
@@ -1327,6 +1348,11 @@ if (!isResizing) return;
             if (consolePanel) {
                 // Update isConsoleVisible to match actual state
                 isConsoleVisible = !consolePanel.classList.contains('hidden');
+                
+                // Also sync with stateManager if available
+                if (window.editor && window.editor.stateManager) {
+                    window.editor.stateManager.set('console.visible', isConsoleVisible);
+                }
             }
         } catch (error) {
             console.error('Error initializing console:', error);
