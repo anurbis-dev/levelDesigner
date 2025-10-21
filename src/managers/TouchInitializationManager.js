@@ -316,16 +316,16 @@ export class TouchInitializationManager {
                 Logger.ui.debug(`Saved ${panelSide} panel ${isVertical ? 'height' : 'width'} from touch: ${currentSize}px`);
             },
             (element, touch) => {
-                // Use universal double-click handler
-                this.touchSupportManager.handlePanelDoubleClick(element, {
-                    panel,
-                    panelSide,
-                    stateManager: this.stateManager,
-                    userPrefs: this.userPrefs,
-                    direction: direction,
-                    stateKey: isVertical ? 'panels.assetsPanelHeight' : `panels.${panelSide}PanelWidth`,
-                    prefKey: isVertical ? 'assetsPanelHeight' : `${panelSide}PanelWidth`,
-                });
+                // Use universal panel collapse/expand method directly
+                const stateKey = isVertical ? 'panels.assetsPanelHeight' : `panels.${panelSide}PanelWidth`;
+                const savedSize = this.stateManager.get(stateKey) ?? (isVertical ? 256 : 300);
+                const isCollapsed = savedSize <= 5;
+                const shouldCollapse = !isCollapsed;
+                
+                this.levelEditor.panelPositionManager.togglePanelCollapse(
+                    isVertical ? 'assets' : panelSide, 
+                    shouldCollapse
+                );
             },
             this.touchSupportManager
         );

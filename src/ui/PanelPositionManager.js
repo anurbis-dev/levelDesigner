@@ -748,7 +748,6 @@ export class PanelPositionManager {
      * @param {string} panelSide - 'left' or 'right'
      */
     setupPanelResizer(resizer, panel, panelSide) {
-        console.log(`⚙️ Setting up panel resizer for ${panelSide} panel...`);
         Logger.ui.info(`Setting up panel resizer for ${panelSide} panel...`);
         let isResizing = false;
         
@@ -862,16 +861,12 @@ export class PanelPositionManager {
             e.preventDefault();
             e.stopPropagation();
             
-            // Use universal double-click handler
-            this.levelEditor.touchSupportManager.handlePanelDoubleClick(resizer, {
-                panel,
-                panelSide,
-                stateManager: this.stateManager,
-                userPrefs: this.userPrefs,
-                direction: 'horizontal',
-                stateKey: `panels.${panelSide}PanelWidth`,
-                prefKey: `${panelSide}PanelWidth`,
-            });
+            // Use universal panel collapse/expand method directly
+            const savedSize = this.stateManager?.get(`panels.${panelSide}PanelWidth`) ?? 300;
+            const isCollapsed = savedSize <= 5;
+            const shouldCollapse = !isCollapsed;
+            
+            this.togglePanelCollapse(panelSide, shouldCollapse);
         });
 
         // Store cleanup function on the resizer element
@@ -904,16 +899,170 @@ export class PanelPositionManager {
     }
 
     /**
-     * Update resizer position for left panel
-     * @param {string} panelSide - Panel side ('left', 'right')
+     * Universal method to update resizer position for any resizer type
+     * @param {string} resizerType - Type of resizer ('left', 'right', 'assets', 'folders')
      * @param {number} newSize - New panel size
      */
-    updateResizerPosition(panelSide, newSize) {
-        if (panelSide === 'left') {
-            const resizer = document.getElementById(`resizer-${panelSide}-tabs-panel`);
-            if (resizer) {
-                resizer.style.left = newSize + 'px';
+    updateResizerPosition(resizerType, newSize) {
+        switch (resizerType) {
+            case 'left':
+                // Left panel - absolute positioning
+                const leftResizer = document.getElementById(`resizer-${resizerType}-tabs-panel`);
+                if (leftResizer) {
+                    leftResizer.style.left = newSize + 'px';
+                }
+                break;
+                
+            case 'right':
+                // Right panel - flex positioning, no special handling needed
+                break;
+                
+            case 'assets':
+                // Assets panel - vertical resizer, no position update needed
+                break;
+                
+            case 'folders':
+                // Folders resizer - handled by AssetPanel, no position update needed
+                break;
+                
+            default:
+                Logger.ui.warn(`Unknown resizer type: ${resizerType}`);
+        }
+    }
+
+    /**
+     * Universal method to collapse/expand panels
+     * @param {string} panelType - Type of panel ('left', 'right', 'assets', 'folders')
+     * @param {boolean} collapse - true to collapse, false to expand
+     */
+    togglePanelCollapse(panelType, collapse) {
+        switch (panelType) {
+            case 'left':
+            case 'right':
+                this.toggleTabPanelCollapse(panelType, collapse);
+                break;
+                
+            case 'assets':
+                this.toggleAssetsPanelCollapse(collapse);
+                break;
+                
+            case 'folders':
+                this.toggleFoldersPanelCollapse(collapse);
+                break;
+                
+            default:
+                Logger.ui.warn(`Unknown panel type: ${panelType}`);
+        }
+    }
+
+    /**
+     * Toggle collapse/expand for left/right tab panels
+     * @param {string} panelSide - 'left' or 'right'
+     * @param {boolean} collapse - true to collapse, false to expand
+     */
+    toggleTabPanelCollapse(panelSide, collapse) {
+        const panel = document.getElementById(`${panelSide}-tabs-panel`);
+        if (!panel) return;
+
+        const stateKey = `panels.${panelSide}PanelWidth`;
+        const prefKey = `${panelSide}PanelWidth`;
+        const previousStateKey = `panels.${panelSide}PanelPreviousWidth`;
+
+        if (collapse) {
+            // Save current size and collapse
+            const currentSize = panel.offsetWidth;
+            this.stateManager.set(previousStateKey, currentSize);
+            
+            panel.style.width = '0px';
+            if (panelSide === 'left') {
+                panel.style.flexShrink = '';
+                panel.style.flexGrow = '';
+            } else {
+                panel.style.flexShrink = '1';
+                panel.style.flexGrow = '0';
             }
+            
+            // Update resizer position and save state
+            this.updateResizerPosition(panelSide, 0);
+            this.stateManager.set(stateKey, 0);
+            if (this.userPrefs) {
+                this.userPrefs.set(prefKey, 0);
+            }
+        } else {
+            // Expand to last known size
+            const maxSize = 800;
+            const lastKnownSize = this.stateManager.get(previousStateKey) ?? 300;
+            const newSize = Math.min(lastKnownSize, maxSize);
+            
+            panel.style.width = newSize + 'px';
+            if (panelSide === 'left') {
+                panel.style.flexShrink = '';
+                panel.style.flexGrow = '';
+            } else {
+                panel.style.flexShrink = '0';
+                panel.style.flexGrow = '0';
+            }
+            
+            // Update resizer position and save state
+            this.updateResizerPosition(panelSide, newSize);
+            this.stateManager.set(stateKey, newSize);
+            if (this.userPrefs) {
+                this.userPrefs.set(prefKey, newSize);
+            }
+        }
+    }
+
+    /**
+     * Toggle collapse/expand for assets panel
+     * @param {boolean} collapse - true to collapse, false to expand
+     */
+    toggleAssetsPanelCollapse(collapse) {
+        const panel = document.getElementById('assets-panel');
+        if (!panel) return;
+
+        const stateKey = 'panels.assetsPanelHeight';
+        const prefKey = 'assetsPanelHeight';
+        const previousStateKey = 'panels.assetsPanelPreviousHeight';
+
+        if (collapse) {
+            // Save current size and collapse
+            const currentSize = panel.offsetHeight;
+            this.stateManager.set(previousStateKey, currentSize);
+            
+            panel.style.height = '0px';
+            panel.style.display = 'none';
+            
+            // Save state
+            this.stateManager.set(stateKey, 0);
+            if (this.userPrefs) {
+                this.userPrefs.set(prefKey, 0);
+            }
+        } else {
+            // Expand to last known size
+            const maxSize = 600;
+            const lastKnownSize = this.stateManager.get(previousStateKey) ?? 256;
+            const newSize = Math.min(lastKnownSize, maxSize);
+            
+            panel.style.height = newSize + 'px';
+            panel.style.display = 'flex';
+            
+            // Save state
+            this.stateManager.set(stateKey, newSize);
+            if (this.userPrefs) {
+                this.userPrefs.set(prefKey, newSize);
+            }
+        }
+    }
+
+    /**
+     * Toggle collapse/expand for folders panel
+     * @param {boolean} collapse - true to collapse, false to expand
+     */
+    toggleFoldersPanelCollapse(collapse) {
+        // This method would be implemented in AssetPanel
+        // For now, just delegate to AssetPanel if available
+        if (this.levelEditor.assetPanel && this.levelEditor.assetPanel.toggleFoldersCollapse) {
+            this.levelEditor.assetPanel.toggleFoldersCollapse(collapse);
         }
     }
 
@@ -1329,17 +1478,12 @@ export class PanelPositionManager {
             // Prevent mousedown timeout from starting resize
             isResizing = false;
             
-            // Use universal double-click handler
-            this.levelEditor.touchSupportManager.handlePanelDoubleClick(resizer, {
-                panel,
-                panelSide: 'assets',
-                stateManager: this.stateManager,
-                userPrefs: this.userPrefs,
-                direction: 'vertical',
-                stateKey: 'panels.assetsPanelHeight',
-                prefKey: 'assetsPanelHeight',
-                previousSizeRef: previousHeightRef
-            }); 
+            // Use universal panel collapse/expand method directly
+            const savedSize = this.stateManager?.get('panels.assetsPanelHeight') ?? 256;
+            const isCollapsed = savedSize <= 5;
+            const shouldCollapse = !isCollapsed;
+            
+            this.togglePanelCollapse('assets', shouldCollapse);
         });
 
         Logger.ui.debug('Setup assets panel resizer with full functionality');
