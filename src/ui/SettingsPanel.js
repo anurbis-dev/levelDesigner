@@ -6,6 +6,8 @@ import { ColorUtils } from '../utils/ColorUtils.js';
 import { BaseContextMenu } from './BaseContextMenu.js';
 import { Logger } from '../utils/Logger.js';
 import { ValidationUtils } from '../utils/ValidationUtils.js';
+import { eventHandlerManager } from '../managers/EventHandlerManager.js';
+import { EventHandlerUtils } from '../utils/EventHandlerUtils.js';
 
 /**
  * Settings Panel UI Component
@@ -17,7 +19,6 @@ export class SettingsPanel {
         this.levelEditor = levelEditor;
         this.isVisible = false;
         this.lastActiveTab = 'general'; // Default tab
-        this.escapeKeyHandler = null;
 
         // Track event listeners for cleanup
         this.eventListeners = [];
@@ -45,33 +46,26 @@ export class SettingsPanel {
 
     init() {
         this.createSettingsPanel();
-        this.setupEventListeners();
+        // setupEventListeners() будет вызван в show() после создания DOM
     }
 
     createSettingsPanel() {
+        // Import mobile interface manager
+        import('../managers/MobileInterfaceManager.js').then(({ mobileInterfaceManager }) => {
+            this.mobileManager = mobileInterfaceManager;
+        });
+        
         // Create settings overlay element
         const overlay = document.createElement('div');
         overlay.id = 'settings-overlay';
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 9999;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-        `;
+        overlay.style.display = 'none'; // Only set display, let CSS handle the rest
         
         overlay.innerHTML = `
-            <div class="settings-panel-container" id="settings-panel-container">
+            <div class="settings-panel-container mobile-dialog" id="settings-panel-container">
                 <div class="settings-header" id="settings-header">
                     <h2>Settings</h2>
                     <div class="settings-header-controls">
-                        <button id="settings-menu-btn" class="settings-menu-btn">⋮</button>
+                        <button id="settings-menu-btn" class="settings-menu-btn mobile-touch-target">⋮</button>
                     </div>
                 </div>
                 
@@ -99,8 +93,8 @@ export class SettingsPanel {
                 
                 <div class="settings-footer">
                     <div class="settings-footer-right">
-                        <button id="cancel-settings" class="settings-btn settings-btn-cancel">Cancel</button>
-                        <button id="save-settings" class="settings-btn settings-btn-save">Apply Changes</button>
+                        <button id="cancel-settings" class="settings-btn settings-btn-cancel mobile-button">Cancel</button>
+                        <button id="save-settings" class="settings-btn settings-btn-save mobile-button">Apply Changes</button>
                     </div>
                 </div>
                 
@@ -113,80 +107,6 @@ export class SettingsPanel {
         document.body.appendChild(overlay);
     }
 
-    setupEventListeners() {
-        // Settings tabs - delegate to overlay since elements are created dynamically
-        const overlay = document.getElementById('settings-overlay');
-        if (overlay && !overlay._hasEventListener) {
-            overlay._hasEventListener = true;
-            
-            // Prevent context menu on right click
-            overlay.addEventListener('contextmenu', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-            });
-            
-            overlay.addEventListener('click', (e) => {
-                // Handle close button and overlay click
-                if (e.target.id === 'cancel-settings') {
-                    this.cancelSettings();
-                    return;
-                }
-
-                // Handle settings menu button
-                if (e.target.id === 'settings-menu-btn') {
-                    this.showContextMenu(e);
-                    return;
-                }
-
-                // Handle settings tabs (fallback for delegated events)
-                const tabButton = e.target.closest('.settings-tab');
-                if (tabButton) {
-                    const tabName = tabButton.dataset.tab;
-                    
-                    // Update last active tab
-                    this.lastActiveTab = tabName;
-                    localStorage.setItem('levelEditor_lastActiveSettingsTab', tabName);
-                    
-                    // Activate tab visually
-                    this.activateTab(tabName);
-                    
-                    // Render content
-                    this.renderSettingsContent(tabName);
-                    
-                    // Re-setup input event listeners after rendering
-                    this.setupSettingsInputs();
-                    
-                    // Initialize grid settings event listeners if grid tab is active
-                    if (tabName === 'grid' && this.gridSettings) {
-                        this.gridSettings.initializeEventListeners();
-                    }
-                }
-
-                // Handle other settings actions
-                if (e.target.id === 'reset-settings') {
-                    this.resetSettings();
-                }
-                if (e.target.id === 'export-settings') {
-                    this.exportSettings();
-                }
-                if (e.target.id === 'import-settings') {
-                    document.getElementById('import-file').click();
-                }
-                if (e.target.id === 'save-settings') {
-                    this.saveSettings();
-                }
-            });
-        }
-
-        // File import handler
-        const importFile = document.getElementById('import-file');
-        if (importFile && !importFile._hasEventListener) {
-            importFile._hasEventListener = true;
-            importFile.addEventListener('change', (e) => {
-                this.importSettings(e);
-            });
-        }
-    }
 
     show() {
         try {
@@ -198,20 +118,26 @@ export class SettingsPanel {
             if (overlay) {
                 overlay.style.display = 'flex';
 
-                // Load window position and size
-                try {
-                    this.loadWindowState();
-                } catch (error) {
-                    Logger.ui.warn('Error loading window state:', error);
+                // Apply mobile interface adaptations
+                let isMobile = false;
+                if (this.mobileManager) {
+                    this.mobileManager.adaptElement(overlay);
+                    const container = overlay.querySelector('.settings-panel-container');
+                    if (container) {
+                        this.mobileManager.applyMobileStyles(container, 'settings');
+                        isMobile = this.mobileManager.isMobile();
+                    }
                 }
+
+                // Window positioning is now handled by CSS only
                 
-                // Setup window handlers and context menu after a short delay to ensure DOM is ready
+                // Setup event handlers and context menu after a short delay to ensure DOM is ready
                 setTimeout(() => {
                     try {
-                        this.setupWindowHandlers();
+                        this.setupNewEventHandlers();
                         this.setupContextMenu();
                     } catch (error) {
-                        Logger.ui.warn('Error setting up window handlers:', error);
+                        Logger.ui.warn('Error setting up event handlers:', error);
                     }
                 }, 100);
                 
@@ -278,12 +204,7 @@ export class SettingsPanel {
                     Logger.ui.warn('Error setting up settings inputs:', error);
                 }
 
-                // Setup escape key handler to cancel settings
-                try {
-                    this.setupEscapeKeyHandler();
-                } catch (error) {
-                    Logger.ui.warn('Error setting up escape key handler:', error);
-                }
+                // Escape key handler is now handled by EventHandlerManager
                 
                 // Initialize grid settings event listeners
                 try {
@@ -308,11 +229,8 @@ export class SettingsPanel {
     hide() {
         this.isVisible = false;
 
-        // Save window state before hiding
-        this.saveWindowState();
-
-        // Remove escape key handler
-        this.removeEscapeKeyHandler();
+        // Remove event handlers
+        EventHandlerUtils.removeDialogEventHandling('settings-overlay', eventHandlerManager);
 
         const overlay = document.getElementById('settings-overlay');
         if (overlay) {
@@ -1289,32 +1207,134 @@ export class SettingsPanel {
     }
 
     /**
-     * Setup escape key handler to cancel settings
+     * Setup new event handlers using EventHandlerManager
      */
-    setupEscapeKeyHandler() {
-        // Remove existing handler if any
-        this.removeEscapeKeyHandler();
+    setupNewEventHandlers() {
+        const overlay = document.getElementById('settings-overlay');
+        const container = document.getElementById('settings-panel-container');
+        
+        if (!overlay || !container) {
+            Logger.ui.warn('SettingsPanel: Overlay or container not found');
+            return;
+        }
 
-        // Add new handler
-        this.escapeKeyHandler = (e) => {
-            if (e.key === 'Escape') {
+        // Create dialog handlers with all necessary functionality
+        const dialogHandlers = {
+            onEscape: this.cancelSettings.bind(this),
+            onOverlayClick: this.cancelSettings.bind(this),
+            onClick: (e) => {
+                // Handle close button and overlay click
+                if (e.target.id === 'cancel-settings') {
+                    this.cancelSettings();
+                    return;
+                }
+
+                // Handle settings menu button
+                if (e.target.id === 'settings-menu-btn') {
+                    this.showContextMenu(e);
+                    return;
+                }
+
+                // Handle settings tabs
+                const tabButton = e.target.closest('.settings-tab');
+                if (tabButton) {
+                    const tabName = tabButton.dataset.tab;
+                    
+                    // Update last active tab
+                    this.lastActiveTab = tabName;
+                    localStorage.setItem('levelEditor_lastActiveSettingsTab', tabName);
+                    
+                    // Activate tab visually
+                    this.activateTab(tabName);
+                    
+                    // Render content
+                    this.renderSettingsContent(tabName);
+                    
+                    // Re-setup input event listeners after rendering
+                    this.setupSettingsInputs();
+                    
+                    // Initialize grid settings event listeners if grid tab is active
+                    if (tabName === 'grid' && this.gridSettings) {
+                        this.gridSettings.initializeEventListeners();
+                    }
+                }
+
+                // Handle other settings actions
+                if (e.target.id === 'reset-settings') {
+                    this.resetSettings();
+                }
+                if (e.target.id === 'export-settings') {
+                    this.exportSettings();
+                }
+                if (e.target.id === 'import-settings') {
+                    document.getElementById('import-file').click();
+                }
+                if (e.target.id === 'save-settings') {
+                    this.saveSettings();
+                }
+            },
+            onContextMenu: (e) => {
                 e.preventDefault();
-                this.cancelSettings();
+                e.stopPropagation();
             }
         };
 
-        document.addEventListener('keydown', this.escapeKeyHandler);
+        // Register dialog with event manager
+        EventHandlerUtils.addDialogEventHandling(
+            overlay,
+            'settings-overlay',
+            dialogHandlers,
+            this,
+            eventHandlerManager
+        );
+
+        // Setup input handlers for all inputs
+        const inputs = container.querySelectorAll('input, textarea, select');
+        inputs.forEach(input => {
+            const inputHandlers = EventHandlerUtils.createInputHandlers(
+                this,
+                null, // onChange
+                null, // onFocus
+                null, // onBlur
+                (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.saveSettings();
+                    }
+                }
+            );
+
+            EventHandlerUtils.addInputEventHandling(
+                input,
+                inputHandlers,
+                this,
+                eventHandlerManager
+            );
+        });
+
+        // Setup file import handler
+        const importFile = document.getElementById('import-file');
+        if (importFile) {
+            const fileHandlers = {
+                onChange: (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        this.importSettings(file);
+                    }
+                }
+            };
+
+            EventHandlerUtils.addInputEventHandling(
+                importFile,
+                fileHandlers,
+                this,
+                eventHandlerManager
+            );
+        }
+
+        Logger.ui.debug('SettingsPanel: New event handlers setup complete');
     }
 
-    /**
-     * Remove escape key handler
-     */
-    removeEscapeKeyHandler() {
-        if (this.escapeKeyHandler) {
-            document.removeEventListener('keydown', this.escapeKeyHandler);
-            this.escapeKeyHandler = null;
-        }
-    }
 
     /**
      * Register a new setting mapping for automatic StateManager synchronization
@@ -1591,32 +1611,6 @@ export class SettingsPanel {
         }
     }
 
-    /**
-     * Load window state (position and size)
-     */
-    loadWindowState() {
-        const container = document.getElementById('settings-panel-container');
-        if (!container) return;
-
-        // Get saved state or use defaults
-        const savedState = this.configManager?.get('ui.settingsWindow') || {};
-        const defaultState = this.getDefaultWindowState();
-        
-        const state = {
-            x: savedState.x ?? defaultState.x,
-            y: savedState.y ?? defaultState.y,
-            width: savedState.width ?? defaultState.width,
-            height: savedState.height ?? defaultState.height
-        };
-
-        // Apply state
-        container.style.position = 'absolute';
-        container.style.left = `${state.x}px`;
-        container.style.top = `${state.y}px`;
-        container.style.width = `${state.width}px`;
-        container.style.height = `${state.height}px`;
-        container.style.transform = 'none';
-    }
 
     /**
      * Get default window state based on browser size
@@ -1636,127 +1630,7 @@ export class SettingsPanel {
         };
     }
 
-    /**
-     * Save window state
-     */
-    saveWindowState() {
-        const container = document.getElementById('settings-panel-container');
-        if (!container) return;
 
-        const rect = container.getBoundingClientRect();
-        const state = {
-            x: rect.left,
-            y: rect.top,
-            width: rect.width,
-            height: rect.height
-        };
-
-        if (this.configManager) {
-            this.configManager.set('ui.settingsWindow', state);
-        }
-    }
-
-    /**
-     * Setup window resize and drag handlers
-     */
-    setupWindowHandlers() {
-        const container = document.getElementById('settings-panel-container');
-        const header = document.getElementById('settings-header');
-        
-        if (!container || !header) return;
-
-        // Make window draggable
-        let isDragging = false;
-        let dragStart = { x: 0, y: 0 };
-
-        header.addEventListener('mousedown', (e) => {
-            if (e.target.closest('.settings-context-menu')) return;
-            
-            isDragging = true;
-            dragStart.x = e.clientX - container.offsetLeft;
-            dragStart.y = e.clientY - container.offsetTop;
-            container.style.cursor = 'grabbing';
-            e.preventDefault();
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isDragging) return;
-            
-            const newX = e.clientX - dragStart.x;
-            const newY = e.clientY - dragStart.y;
-            
-            // Keep window within viewport
-            const maxX = window.innerWidth - container.offsetWidth;
-            const maxY = window.innerHeight - container.offsetHeight;
-            
-            container.style.left = `${Math.max(0, Math.min(newX, maxX))}px`;
-            container.style.top = `${Math.max(0, Math.min(newY, maxY))}px`;
-            
-            // Auto-save position during drag
-            this.saveWindowState();
-        });
-
-        document.addEventListener('mouseup', () => {
-            if (isDragging) {
-                isDragging = false;
-                container.style.cursor = '';
-                this.saveWindowState();
-            }
-        });
-
-        // Handle window resize
-        let isResizing = false;
-        let resizeStart = { x: 0, y: 0, width: 0, height: 0 };
-
-        const handleResize = (e) => {
-            if (!isResizing) return;
-            
-            const newWidth = resizeStart.width + (e.clientX - resizeStart.x);
-            const newHeight = resizeStart.height + (e.clientY - resizeStart.y);
-            
-            const minWidth = 400;
-            const minHeight = 300;
-            
-            container.style.width = `${Math.max(minWidth, newWidth)}px`;
-            container.style.height = `${Math.max(minHeight, newHeight)}px`;
-            
-            // Auto-save size during resize
-            this.saveWindowState();
-        };
-
-        const stopResize = () => {
-            isResizing = false;
-            document.removeEventListener('mousemove', handleResize);
-            document.removeEventListener('mouseup', stopResize);
-            this.saveWindowState();
-        };
-
-        // Add resize handle
-        const resizeHandle = document.createElement('div');
-        resizeHandle.style.cssText = `
-            position: absolute;
-            bottom: 0;
-            right: 0;
-            width: 20px;
-            height: 20px;
-            cursor: se-resize;
-            background: linear-gradient(-45deg, transparent 30%, #374151 30%, #374151 50%, transparent 50%);
-        `;
-        
-        resizeHandle.addEventListener('mousedown', (e) => {
-            isResizing = true;
-            resizeStart.x = e.clientX;
-            resizeStart.y = e.clientY;
-            resizeStart.width = container.offsetWidth;
-            resizeStart.height = container.offsetHeight;
-            
-            document.addEventListener('mousemove', handleResize);
-            document.addEventListener('mouseup', stopResize);
-            e.preventDefault();
-        });
-        
-        container.appendChild(resizeHandle);
-    }
     
     /**
      * Store original values before opening settings panel
@@ -1853,15 +1727,8 @@ export class SettingsPanel {
         });
         this.eventListeners = [];
         
-        // Remove escape key handler
-        if (this.escapeKeyHandler) {
-            try {
-                document.removeEventListener('keydown', this.escapeKeyHandler);
-            } catch (error) {
-                Logger.ui.warn('Failed to remove escape key handler:', error);
-            }
-            this.escapeKeyHandler = null;
-        }
+        // Remove all event handlers
+        EventHandlerUtils.removeDialogEventHandling('settings-overlay', eventHandlerManager);
         
         // Destroy context menu
         if (this.contextMenu) {

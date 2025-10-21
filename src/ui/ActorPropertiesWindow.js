@@ -25,7 +25,8 @@ export class ActorPropertiesWindow extends SettingsPanel {
     }
 
     initActorProperties() {
-        this.createActorPropertiesWindow();
+        // Don't create DOM element in constructor - create it when first shown
+        // This ensures AutoEventHandlerManager is already initialized
         this.setupActorEventListeners();
     }
 
@@ -34,32 +35,22 @@ export class ActorPropertiesWindow extends SettingsPanel {
     }
 
     createActorPropertiesWindow() {
+        Logger.ui.info('ActorPropertiesWindow: Creating window element');
+
         // Create actor properties overlay element (similar to settings)
         const overlay = document.createElement('div');
         overlay.id = this.overlayId;
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 9999;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-        `;
-        
+        overlay.style.display = 'none'; // Only set display, let CSS handle the rest
+
         overlay.innerHTML = `
-            <div class="settings-panel-container mobile-dialog" id="${this.containerId}">
+            <div class="actor-properties-container mobile-dialog" id="${this.containerId}">
                 <div class="settings-header" id="actor-properties-header">
                     <h2>Actor Properties</h2>
                     <div class="settings-header-controls">
                         <button id="actor-props-close" class="settings-menu-btn mobile-touch-target">×</button>
                     </div>
                 </div>
-                
+
                 <div class="settings-content-area">
                     <div class="settings-main-content">
                         <div id="actor-properties-content">
@@ -67,7 +58,7 @@ export class ActorPropertiesWindow extends SettingsPanel {
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="settings-footer">
                     <div class="settings-footer-right">
                         <button id="actor-props-cancel" class="settings-btn settings-btn-cancel mobile-button">Cancel</button>
@@ -76,43 +67,16 @@ export class ActorPropertiesWindow extends SettingsPanel {
                 </div>
             </div>
         `;
-        
+
         // Append to container
         this.container.appendChild(overlay);
+
+        Logger.ui.info('ActorPropertiesWindow: Window element created and appended to DOM');
+        Logger.ui.info(`ActorPropertiesWindow: Overlay ID: ${this.overlayId}, Container ID: ${this.containerId}`);
     }
 
     setupActorEventListeners() {
-        // Close button
-        const closeBtn = document.getElementById('actor-props-close');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => this.hide());
-        }
-
-        // Cancel button
-        const cancelBtn = document.getElementById('actor-props-cancel');
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', () => this.hide());
-        }
-
-        // Apply/Close button
-        const applyBtn = document.getElementById('actor-props-apply');
-        if (applyBtn) {
-            applyBtn.addEventListener('click', () => {
-                if (this.hasChanges) {
-                    this.applyChanges();
-                } else {
-                    this.hide();
-                }
-            });
-        }
-
-        // Escape key handler
-        this.escapeKeyHandler = (e) => {
-            if (e.key === 'Escape' && this.isVisible) {
-                this.hide();
-            }
-        };
-        document.addEventListener('keydown', this.escapeKeyHandler);
+        // Event handlers are now managed by EventHandlerManager
 
         // Subscribe to selectedActor changes if stateManager is available
         if (this.stateManager && this.stateManager.subscribe) {
@@ -124,8 +88,17 @@ export class ActorPropertiesWindow extends SettingsPanel {
     }
 
     show(actor = null) {
+        Logger.ui.info('ActorPropertiesWindow: show() called');
         this.isVisible = true;
-        const overlay = document.getElementById(this.overlayId);
+        
+        // Create DOM element if it doesn't exist (first time showing)
+        let overlay = document.getElementById(this.overlayId);
+        if (!overlay) {
+            Logger.ui.info('ActorPropertiesWindow: Creating DOM element for first time');
+            this.createActorPropertiesWindow();
+            overlay = document.getElementById(this.overlayId);
+        }
+        
         if (overlay) {
             overlay.style.display = 'flex';
             
@@ -144,12 +117,16 @@ export class ActorPropertiesWindow extends SettingsPanel {
                 this.hasChanges = false;
                 this.updateApplyButton();
                 this.setupChangeListeners();
+                // Event handlers will be set up automatically by AutoEventHandlerManager
             }, 0);
         }
     }
 
     hide() {
         this.isVisible = false;
+        
+        // Event handlers will be removed automatically by AutoEventHandlerManager
+        
         const overlay = document.getElementById(this.overlayId);
         if (overlay) {
             overlay.style.display = 'none';
@@ -163,6 +140,7 @@ export class ActorPropertiesWindow extends SettingsPanel {
         this.initialState = null;
         this.hasChanges = false;
     }
+
 
     renderActorProperties() {
         const content = document.getElementById('actor-properties-content');
@@ -236,7 +214,7 @@ export class ActorPropertiesWindow extends SettingsPanel {
             </div>
         `;
 
-        Logger.ui.info(`Rendered properties for actor: ${actor.name}`);
+        Logger.ui.debug(`Rendered properties for actor: ${actor.name}`);
     }
 
     /**
@@ -389,13 +367,47 @@ export class ActorPropertiesWindow extends SettingsPanel {
             this.levelEditor.assetPanel.render();
         }
 
-        Logger.ui.info(`Applied changes to actor: ${this.currentActor.name}`);
+        Logger.ui.debug(`Applied changes to actor: ${this.currentActor.name}`);
         
         // Reset change tracking (state 3 - temporary window state cleared)
         this.hasChanges = false;
         
         // Close the window
         this.hide();
+    }
+
+    /**
+     * Cancel changes and close window
+     * Override parent method for ActorPropertiesWindow
+     */
+    cancelSettings() {
+        Logger.ui.debug('ActorPropertiesWindow: Cancel called');
+        this.hide();
+    }
+
+    /**
+     * Apply changes and close window
+     * Override parent method for ActorPropertiesWindow
+     */
+    saveSettings() {
+        Logger.ui.debug('ActorPropertiesWindow: Apply called');
+        this.applyChanges();
+    }
+
+    /**
+     * Universal cancel method - required by centralized event system
+     */
+    cancel() {
+        Logger.ui.debug('ActorPropertiesWindow: Universal cancel called');
+        this.cancelSettings();
+    }
+
+    /**
+     * Universal apply method - required by centralized event system
+     */
+    apply() {
+        Logger.ui.debug('ActorPropertiesWindow: Universal apply called');
+        this.saveSettings();
     }
 
     // Override parent methods to prevent conflicts

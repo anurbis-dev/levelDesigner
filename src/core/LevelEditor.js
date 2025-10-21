@@ -39,6 +39,7 @@ import { ActorPropertiesWindow } from '../ui/ActorPropertiesWindow.js';
 import { PanelPositionManager } from '../ui/PanelPositionManager.js';
 import { TouchInitializationManager } from '../managers/TouchInitializationManager.js';
 import { BrowserGesturePreventionManager } from '../managers/BrowserGesturePreventionManager.js';
+import { autoEventHandlerManager } from '../managers/AutoEventHandlerManager.js';
 
 // Import new utilities
 import { ErrorHandler } from '../utils/ErrorHandler.js';
@@ -55,7 +56,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.51.7';
+    static VERSION = '3.51.8';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -1943,7 +1944,8 @@ export class LevelEditor {
         // Update version in header (main window for users)
         const headerVersionElement = document.getElementById('header-version-info');
         if (headerVersionElement) {
-            headerVersionElement.textContent = `2D Level Editor v${LevelEditor.VERSION}`;
+            headerVersionElement.textContent = `v${LevelEditor.VERSION}`;
+            headerVersionElement.style.marginRight = '4px';
         }
     }
 

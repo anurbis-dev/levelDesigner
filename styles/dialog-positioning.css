@@ -1,0 +1,339 @@
+/**
+ * Dialog Positioning Styles
+ * 
+ * Универсальные стили для правильного позиционирования всех всплывающих окон.
+ * Обеспечивает центрирование по середине экрана с отступами сверху и снизу.
+ * 
+ * Key features:
+ * - Центрирование по середине экрана браузера
+ * - Отступы сверху и снизу для всех диалогов
+ * - Горизонтальный размер определяется контентом
+ * - Адаптивные отступы для разных размеров экрана
+ * 
+ * @author Level Designer
+ * @version 3.51.8
+ */
+
+/* ===== УНИВЕРСАЛЬНЫЕ СТИЛИ ДЛЯ ВСЕХ ДИАЛОГОВ ===== */
+
+/* Базовые стили для всех overlay элементов */
+#universal-dialog-overlay,
+#actor-properties-overlay,
+#settings-overlay,
+.dialog-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    background-color: rgba(0, 0, 0, 0.5) !important;
+    z-index: 10000 !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 2rem 1rem !important; /* Отступы сверху и снизу */
+}
+
+/* Стили для показанных диалогов */
+#universal-dialog-overlay[style*="display: flex"],
+#actor-properties-overlay[style*="display: flex"],
+#settings-overlay[style*="display: flex"],
+.dialog-overlay[style*="display: flex"] {
+    display: flex !important;
+}
+
+/* Специальный z-index для UniversalDialog */
+#universal-dialog-overlay {
+    z-index: 10001 !important;
+}
+
+/* Базовые стили для всех контейнеров диалогов */
+#universal-dialog,
+.settings-panel-container,
+.actor-properties-container,
+.dialog-container {
+    position: relative !important;
+    background-color: var(--ui-background-color, #1f2937) !important;
+    border: 1px solid #374151 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
+    max-height: calc(100vh - 4rem) !important; /* Учитываем отступы */
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    
+    /* Горизонтальный размер определяется контентом */
+    width: auto !important;
+    min-width: 300px !important;
+    max-width: 90vw !important;
+}
+
+/* ===== СПЕЦИФИЧНЫЕ СТИЛИ ДЛЯ РАЗНЫХ ТИПОВ ДИАЛОГОВ ===== */
+
+/* UniversalDialog */
+#universal-dialog {
+    min-width: 400px !important;
+    max-width: 500px !important;
+}
+
+/* SettingsPanel - базовые размеры для desktop */
+.settings-panel-container {
+    min-width: 600px;
+    max-width: 800px;
+    width: auto;
+}
+
+/* ActorPropertiesWindow */
+.actor-properties-container {
+    min-width: 500px !important;
+    max-width: 700px !important;
+}
+
+/* Базовые стили для всех кнопок в диалогах */
+.settings-btn,
+.dialog-btn {
+    padding: 0.75rem 1rem;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-size: 1rem;
+    min-height: 2.75rem;
+    transition: background-color 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #374151;
+    color: white;
+}
+
+.settings-btn:hover,
+.dialog-btn:hover {
+    background-color: #4b5563;
+}
+
+.settings-btn-cancel,
+.dialog-btn-cancel {
+    background-color: #6b7280;
+}
+
+.settings-btn-cancel:hover,
+.dialog-btn-cancel:hover {
+    background-color: #9ca3af;
+}
+
+.settings-btn-save,
+.dialog-btn-save {
+    background-color: #2563eb;
+}
+
+.settings-btn-save:hover,
+.dialog-btn-save:hover {
+    background-color: #1d4ed8;
+}
+
+/* Базовые стили для всех input полей в диалогах */
+.settings-input,
+.dialog-input,
+.mobile-input {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #4b5563;
+    border-radius: 0.375rem;
+    background-color: #374151;
+    color: #f9fafb;
+    font-size: 0.875rem;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.settings-input:focus,
+.dialog-input:focus,
+.mobile-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background-color: #4b5563;
+}
+
+.settings-input::placeholder,
+.dialog-input::placeholder,
+.mobile-input::placeholder {
+    color: #9ca3af;
+}
+
+/* ===== АДАПТИВНЫЕ РАЗМЕРЫ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ ===== */
+
+/* Планшеты и маленькие экраны */
+@media screen and (max-width: 1024px) {
+    #universal-dialog-overlay,
+    #actor-properties-overlay,
+    #settings-overlay,
+    .dialog-overlay {
+        padding: 1.5rem 0.75rem !important;
+    }
+    
+    #universal-dialog,
+    .settings-panel-container,
+    .actor-properties-container,
+    .dialog-container {
+        max-height: calc(100vh - 3rem) !important;
+        max-width: 95vw !important;
+    }
+    
+    .settings-panel-container {
+        width: 95vw !important;
+        min-width: unset !important;
+    }
+}
+
+/* Мобильные устройства */
+@media screen and (max-width: 768px) {
+    #universal-dialog-overlay,
+    #actor-properties-overlay,
+    #settings-overlay,
+    .dialog-overlay {
+        padding: 1rem 0.5rem !important;
+        align-items: flex-start !important;
+        padding-top: 2rem !important;
+    }
+    
+    #universal-dialog,
+    .settings-panel-container,
+    .actor-properties-container,
+    .dialog-container {
+        max-height: calc(100vh - 4rem) !important;
+        max-width: calc(100vw - 1rem) !important;
+        width: calc(100vw - 1rem) !important;
+        min-width: unset !important;
+    }
+    
+    .settings-panel-container {
+        width: calc(100vw - 1rem) !important;
+    }
+}
+
+/* Очень маленькие экраны */
+@media screen and (max-width: 480px) {
+    #universal-dialog-overlay,
+    #actor-properties-overlay,
+    #settings-overlay,
+    .dialog-overlay {
+        padding: 0.5rem 0.25rem !important;
+        padding-top: 1rem !important;
+    }
+    
+    #universal-dialog,
+    .settings-panel-container,
+    .actor-properties-container,
+    .dialog-container {
+        max-height: calc(100vh - 2rem) !important;
+        max-width: calc(100vw - 0.5rem) !important;
+        width: calc(100vw - 0.5rem) !important;
+    }
+}
+
+/* ===== ОРИЕНТАЦИЯ ЭКРАНА ===== */
+
+/* Альбомная ориентация на мобильных */
+@media screen and (max-width: 768px) and (orientation: landscape) {
+    #universal-dialog-overlay,
+    #actor-properties-overlay,
+    #settings-overlay,
+    .dialog-overlay {
+        padding-top: 0.5rem !important;
+        align-items: flex-start !important;
+    }
+    
+    #universal-dialog,
+    .settings-panel-container,
+    .actor-properties-container,
+    .dialog-container {
+        max-height: calc(100vh - 1rem) !important;
+    }
+}
+
+/* ===== ПЕРЕОПРЕДЕЛЕНИЕ СУЩЕСТВУЮЩИХ СТИЛЕЙ ===== */
+
+/* Принудительное применение правильного позиционирования */
+.dialog-overlay,
+#universal-dialog-overlay,
+#actor-properties-overlay,
+#settings-overlay {
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Убираем фиксированные размеры, которые мешают центрированию */
+/* .settings-panel-container стили уже определены выше */
+
+/* ===== УТИЛИТАРНЫЕ КЛАССЫ ===== */
+
+/* Класс для принудительного центрирования */
+.dialog-centered {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Класс для правильных отступов */
+.dialog-padded {
+    padding: 2rem 1rem !important;
+}
+
+/* Класс для адаптивных размеров */
+.dialog-responsive {
+    max-height: calc(100vh - 4rem) !important;
+    max-width: 90vw !important;
+    width: auto !important;
+}
+
+/* ===== ОСОБЫЕ СЛУЧАИ ===== */
+
+/* Диалоги с большим контентом */
+.dialog-large .dialog-container,
+.dialog-large .settings-panel-container {
+    max-height: calc(100vh - 2rem) !important;
+    max-width: 95vw !important;
+}
+
+/* Диалоги с маленьким контентом */
+.dialog-small .dialog-container,
+.dialog-small #universal-dialog {
+    min-width: 300px !important;
+    max-width: 500px !important;
+}
+
+/* ===== ИСПРАВЛЕНИЯ КОНФЛИКТОВ ===== */
+
+/* Переопределение мобильных стилей для правильного центрирования */
+@media screen and (max-width: 768px) {
+    .mobile-dialog {
+        width: auto !important;
+        min-width: unset !important;
+        max-width: calc(100vw - 1rem) !important;
+    }
+    
+    .mobile-dialog.settings-panel-container {
+        width: calc(100vw - 1rem) !important;
+        min-width: unset !important;
+    }
+}
+
+/* ===== ACCESSIBILITY ===== */
+
+/* Высокий контраст */
+@media (prefers-contrast: high) {
+    .dialog-container,
+    .settings-panel-container,
+    #universal-dialog {
+        border: 2px solid #ffffff !important;
+        background: #000000 !important;
+        color: #ffffff !important;
+    }
+}
+
+/* Уменьшенная анимация */
+@media (prefers-reduced-motion: reduce) {
+    .dialog-container,
+    .settings-panel-container,
+    #universal-dialog {
+        transition: none !important;
+        animation: none !important;
+    }
+}

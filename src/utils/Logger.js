@@ -53,7 +53,8 @@ export class Logger {
         OBJECT_OPERATIONS: { color: '#9C27B0', prefix: 'OBJECT_OPS' },
         LIFECYCLE: { color: '#00BCD4', prefix: 'LIFECYCLE' },
         ERROR_HANDLER: { color: '#F44336', prefix: 'ERROR_HANDLER' },
-        VIEWPORT: { color: '#00ACC1', prefix: 'VIEWPORT' }
+        VIEWPORT: { color: '#00ACC1', prefix: 'VIEWPORT' },
+        MOBILE: { color: '#FF6B35', prefix: 'MOBILE' }
     };
 
     /**
@@ -472,5 +473,15 @@ export class Logger {
         debug: (message, ...args) => Logger.log('VIEWPORT', 'debug', message, ...args),
         warn: (message, ...args) => Logger.log('VIEWPORT', 'warn', message, ...args),
         error: (message, ...args) => Logger.log('VIEWPORT', 'error', message, ...args)
+    };
+
+    /**
+     * Mobile interface operations logging
+     */
+    static mobile = {
+        info: (message, ...args) => Logger.log('MOBILE', 'info', message, ...args),
+        debug: (message, ...args) => Logger.log('MOBILE', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('MOBILE', 'warn', message, ...args),
+        error: (message, ...args) => Logger.log('MOBILE', 'error', message, ...args)
     };
 }

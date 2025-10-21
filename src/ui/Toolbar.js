@@ -1,6 +1,8 @@
 import { Logger } from '../utils/Logger.js';
 import { BaseContextMenu } from './BaseContextMenu.js';
 import { CommandAvailability } from '../utils/CommandAvailability.js';
+import { eventHandlerManager } from '../managers/EventHandlerManager.js';
+import { EventHandlerUtils } from '../utils/EventHandlerUtils.js';
 
 /**
  * Toolbar UI component
@@ -40,8 +42,141 @@ export class Toolbar {
         // Setup scrolling events after render
         this.setupScrollingEvents();
         this.setupContextMenu();
+        // Setup new event handlers
+        this.setupNewEventHandlers();
         // Load scroll position after toolbar is fully rendered
         this.loadScrollPosition();
+    }
+
+    /**
+     * Setup new event handlers using EventHandlerManager
+     */
+    setupNewEventHandlers() {
+        if (!this.container) {
+            Logger.ui.warn('Toolbar: Container not found');
+            return;
+        }
+
+        // Setup button handlers for toolbar buttons
+        const buttons = this.container.querySelectorAll('button');
+        buttons.forEach(button => {
+            const buttonHandlers = EventHandlerUtils.createButtonHandlers(
+                this,
+                this.onButtonClick.bind(this),
+                this.onButtonHover.bind(this),
+                this.onButtonLeave.bind(this)
+            );
+
+            EventHandlerUtils.addButtonEventHandling(
+                button,
+                buttonHandlers,
+                this,
+                eventHandlerManager
+            );
+        });
+
+        // Setup input handlers for toolbar inputs
+        const inputs = this.container.querySelectorAll('input, textarea, select');
+        inputs.forEach(input => {
+            const inputHandlers = EventHandlerUtils.createInputHandlers(
+                this,
+                this.onInputChange.bind(this),
+                this.onInputFocus.bind(this),
+                this.onInputBlur.bind(this),
+                this.onInputKeyDown.bind(this)
+            );
+
+            EventHandlerUtils.addInputEventHandling(
+                input,
+                inputHandlers,
+                this,
+                eventHandlerManager
+            );
+        });
+
+        Logger.ui.debug('Toolbar: New event handlers setup complete');
+    }
+
+    /**
+     * Handle button clicks
+     * @param {Event} e - Click event
+     */
+    onButtonClick(e) {
+        const button = e.target;
+        const buttonId = button.id;
+        
+        Logger.ui.debug('Toolbar: Button clicked:', buttonId);
+        
+        // Handle specific button actions
+        if (buttonId === 'toggleGrid') {
+            this.levelEditor.toggleGrid();
+        } else if (buttonId === 'toggleSnapToGrid') {
+            this.levelEditor.toggleSnapToGrid();
+        } else if (buttonId === 'toggleParallax') {
+            this.levelEditor.toggleParallax();
+        } else if (buttonId === 'toggleObjectBoundaries') {
+            this.levelEditor.toggleObjectBoundaries();
+        } else if (buttonId === 'toggleObjectCollisions') {
+            this.levelEditor.toggleObjectCollisions();
+        }
+        // Add more button handlers as needed
+    }
+
+    /**
+     * Handle button hover
+     * @param {Event} e - Mouse enter event
+     */
+    onButtonHover(e) {
+        Logger.ui.debug('Toolbar: Button hover:', e.target.id);
+    }
+
+    /**
+     * Handle button leave
+     * @param {Event} e - Mouse leave event
+     */
+    onButtonLeave(e) {
+        Logger.ui.debug('Toolbar: Button leave:', e.target.id);
+    }
+
+    /**
+     * Handle input changes
+     * @param {Event} e - Input event
+     */
+    onInputChange(e) {
+        const input = e.target;
+        const inputId = input.id;
+        
+        Logger.ui.debug('Toolbar: Input changed:', inputId);
+        
+        // Handle specific input actions
+        if (inputId === 'grid-size') {
+            this.levelEditor.setGridSize(parseInt(input.value));
+        }
+        // Add more input handlers as needed
+    }
+
+    /**
+     * Handle input focus
+     * @param {Event} e - Focus event
+     */
+    onInputFocus(e) {
+        Logger.ui.debug('Toolbar: Input focus:', e.target.id);
+    }
+
+    /**
+     * Handle input blur
+     * @param {Event} e - Blur event
+     */
+    onInputBlur(e) {
+        Logger.ui.debug('Toolbar: Input blur:', e.target.id);
+    }
+
+    /**
+     * Handle input key down
+     * @param {Event} e - Key down event
+     */
+    onInputKeyDown(e) {
+        Logger.ui.debug('Toolbar: Input key down:', e.target.id, e.key);
     }
 
     /**

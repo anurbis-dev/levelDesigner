@@ -12,6 +12,7 @@
     align-items: center;
     justify-content: center;
     z-index: 10000;
+    padding: 2rem 1rem; /* Отступы сверху и снизу */
 }
 
 /* Settings panel container */
@@ -20,14 +21,13 @@
     background-color: var(--ui-background-color, #1f2937);
     border-radius: 0.5rem;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    max-width: 90vw;
-    max-height: 90vh;
-    width: 800px;
+    max-width: 800px;
+    max-height: calc(100vh - 4rem); /* Учитываем отступы */
+    width: auto;
     min-width: 600px;
     min-height: 400px;
     display: flex;
     flex-direction: column;
-    resize: both;
     overflow: hidden;
 }
 
@@ -205,12 +205,16 @@
 
 /* Settings buttons */
 .settings-btn {
-    padding: 0.4rem 0.75rem;
+    padding: 0.75rem 1rem;
     border: none;
-    border-radius: 0.25rem;
+    border-radius: 0.5rem;
     cursor: pointer;
-    font-size: 0.875rem;
+    font-size: 1rem;
+    min-height: 2.75rem;
     transition: background-color 0.2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .settings-btn-reset {

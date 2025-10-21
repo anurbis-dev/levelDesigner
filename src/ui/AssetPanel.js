@@ -4,6 +4,7 @@ import { ExtensionErrorUtils } from '../utils/ExtensionErrorUtils.js';
 import { AssetContextMenu } from './AssetContextMenu.js';
 import { AssetPanelContextMenu } from './AssetPanelContextMenu.js';
 import { FoldersPanel } from './FoldersPanel.js';
+import { eventHandlerManager } from '../managers/EventHandlerManager.js';
 // Note: HoverEffects removed - using CSS hover effects like OutlinerPanel
 
 /**
@@ -77,10 +78,69 @@ export class AssetPanel extends BasePanel {
 
         // Initialize activeAssetTabs from config
         this.initializeActiveAssetTabs();
+        
+        // Event handlers will be set up automatically by AutoEventHandlerManager
+        
+        // Setup folders and listeners
+        this.setupFoldersAndListeners();
 
         // Update layout based on folders position
         this.updateFoldersLayout();
+    }
 
+
+    /**
+     * Handle search input
+     * @param {string} value - Search value
+     */
+    handleSearch(value) {
+        Logger.ui.debug('AssetPanel: Search:', value);
+        // TODO: Implement search functionality
+    }
+
+    /**
+     * Decrease asset size
+     */
+    decreaseAssetSize() {
+        const newSize = Math.max(this.minAssetSize, this.assetSize - this.sizeStep);
+        if (newSize !== this.assetSize) {
+            this.assetSize = newSize;
+            this.saveAssetSize();
+            this.render();
+            Logger.ui.debug('Asset size decreased to:', this.assetSize);
+        }
+    }
+
+    /**
+     * Increase asset size
+     */
+    increaseAssetSize() {
+        const newSize = Math.min(this.maxAssetSize, this.assetSize + this.sizeStep);
+        if (newSize !== this.assetSize) {
+            this.assetSize = newSize;
+            this.saveAssetSize();
+            this.render();
+            Logger.ui.debug('Asset size increased to:', this.assetSize);
+        }
+    }
+
+    /**
+     * Set view mode
+     * @param {string} mode - View mode ('grid', 'list', 'details')
+     */
+    setViewMode(mode) {
+        if (['grid', 'list', 'details'].includes(mode)) {
+            this.viewMode = mode;
+            this.saveViewMode();
+            this.render();
+            Logger.ui.debug('View mode changed to:', mode);
+        }
+    }
+
+    /**
+     * Setup folders resizer and asset change listeners
+     */
+    setupFoldersAndListeners() {
         // Setup folders resizer
         this.setupFoldersResizer();
 

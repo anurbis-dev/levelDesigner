@@ -1,3 +1,7 @@
+import { eventHandlerManager } from '../managers/EventHandlerManager.js';
+import { EventHandlerUtils } from '../utils/EventHandlerUtils.js';
+import { Logger } from '../utils/Logger.js';
+
 /**
  * Universal Dialog
  * Replaces browser dialogs (alert, confirm, prompt) with custom styled dialogs
@@ -91,22 +95,15 @@ export class UniversalDialog {
      * @param {string} defaultValue - Default value for prompt
      */
     createDialog(type, message, defaultValue = '') {
+        // Import mobile interface manager
+        import('../managers/MobileInterfaceManager.js').then(({ mobileInterfaceManager }) => {
+            this.mobileManager = mobileInterfaceManager;
+        });
+        
         // Create overlay
         this.overlay = document.createElement('div');
         this.overlay.id = 'universal-dialog-overlay';
-        this.overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 10001;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem;
-        `;
+        this.overlay.style.display = 'flex'; // Only set display, let CSS handle the rest
 
         // Create dialog container
         this.dialog = document.createElement('div');
@@ -119,7 +116,7 @@ export class UniversalDialog {
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
             min-width: 400px;
             max-width: 500px;
-            max-height: 80vh;
+            max-height: calc(100vh - 4rem);
             overflow: hidden;
             display: flex;
             flex-direction: column;
@@ -164,15 +161,7 @@ export class UniversalDialog {
             justify-content: center;
             border-radius: 4px;
         `;
-        closeBtn.addEventListener('mouseenter', () => {
-            closeBtn.style.color = '#f9fafb';
-            closeBtn.style.backgroundColor = '#374151';
-        });
-        closeBtn.addEventListener('mouseleave', () => {
-            closeBtn.style.color = '#9ca3af';
-            closeBtn.style.backgroundColor = 'transparent';
-        });
-        closeBtn.addEventListener('click', () => this.cancel());
+        // Event handlers will be set up by EventHandlerManager
 
         header.appendChild(title);
         header.appendChild(closeBtn);
@@ -209,22 +198,7 @@ export class UniversalDialog {
             input.value = defaultValue;
             input.id = 'universal-dialog-input';
             input.className = 'dialog-input mobile-input';
-            input.style.cssText = `
-                background-color: #374151;
-                border: 1px solid #4b5563;
-                border-radius: 4px;
-                color: #f9fafb;
-                padding: 0.5rem 0.75rem;
-                font-size: 0.875rem;
-                width: 100%;
-            `;
-            input.addEventListener('focus', () => {
-                input.style.borderColor = '#3b82f6';
-                input.style.outline = 'none';
-            });
-            input.addEventListener('blur', () => {
-                input.style.borderColor = '#4b5563';
-            });
+            input.style.width = '100%';
             content.appendChild(input);
         }
 
@@ -263,6 +237,12 @@ export class UniversalDialog {
 
         this.overlay.appendChild(this.dialog);
 
+        // Apply mobile interface adaptations
+        if (this.mobileManager) {
+            this.mobileManager.adaptElement(this.overlay);
+            this.mobileManager.applyMobileStyles(this.dialog, 'dialog');
+        }
+
         // Store input reference for prompt
         if (input) {
             this.input = input;
@@ -279,45 +259,9 @@ export class UniversalDialog {
     createButton(text, type, onClick) {
         const button = document.createElement('button');
         button.textContent = text;
-        button.className = 'dialog-btn mobile-button';
+        button.className = `dialog-btn mobile-button ${type === 'primary' ? 'dialog-btn-save' : 'dialog-btn-cancel'}`;
         
-        if (type === 'primary') {
-            button.style.cssText = `
-                background-color: #3b82f6;
-                border: 1px solid #3b82f6;
-                border-radius: 4px;
-                color: var(--ui-active-text-color, #ffffff);
-                padding: 0.5rem 1rem;
-                font-size: 0.875rem;
-                cursor: pointer;
-            `;
-            button.addEventListener('mouseenter', () => {
-                button.style.backgroundColor = '#2563eb';
-                button.style.borderColor = '#2563eb';
-            });
-            button.addEventListener('mouseleave', () => {
-                button.style.backgroundColor = '#3b82f6';
-                button.style.borderColor = '#3b82f6';
-            });
-        } else {
-            button.style.cssText = `
-                background-color: #374151;
-                border: 1px solid #4b5563;
-                border-radius: 4px;
-                color: #f9fafb;
-                padding: 0.5rem 1rem;
-                font-size: 0.875rem;
-                cursor: pointer;
-            `;
-            button.addEventListener('mouseenter', () => {
-                button.style.backgroundColor = '#4b5563';
-            });
-            button.addEventListener('mouseleave', () => {
-                button.style.backgroundColor = '#374151';
-            });
-        }
-
-        button.addEventListener('click', onClick);
+        // Event handlers will be set up by EventHandlerManager
         return button;
     }
 
@@ -349,22 +293,8 @@ export class UniversalDialog {
             }, 100);
         }
 
-        // Handle escape key
-        this.escapeHandler = (e) => {
-            if (e.key === 'Escape') {
-                this.cancel();
-            }
-        };
-        document.addEventListener('keydown', this.escapeHandler);
-
-        // Handle enter key for prompt
-        if (this.input) {
-            this.input.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    this.confirm(this.input);
-                }
-            });
-        }
+        // Setup new event handlers
+        this.setupNewEventHandlers();
     }
 
     /**
@@ -389,15 +319,79 @@ export class UniversalDialog {
     }
 
     /**
+     * Setup new event handlers using EventHandlerManager
+     */
+    setupNewEventHandlers() {
+        if (!this.overlay) {
+            Logger.ui.warn('UniversalDialog: Overlay not found');
+            return;
+        }
+
+        // Create dialog handlers
+        const dialogHandlers = {
+            onEscape: this.cancel.bind(this),
+            onOverlayClick: this.cancel.bind(this),
+            onClick: (e) => {
+                // Handle button clicks
+                if (e.target.classList.contains('dialog-btn')) {
+                    const buttonType = e.target.dataset.type;
+                    if (buttonType === 'primary') {
+                        this.confirm(this.input);
+                    } else {
+                        this.cancel();
+                    }
+                }
+                // Handle close button
+                if (e.target.classList.contains('dialog-close-btn')) {
+                    this.cancel();
+                }
+            }
+        };
+
+        // Register dialog with event manager
+        EventHandlerUtils.addDialogEventHandling(
+            this.overlay,
+            'universal-dialog-overlay',
+            dialogHandlers,
+            this,
+            eventHandlerManager
+        );
+
+        // Setup input handlers for prompt
+        if (this.input) {
+            const inputHandlers = EventHandlerUtils.createInputHandlers(
+                this,
+                null, // onChange
+                null, // onFocus
+                null, // onBlur
+                (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.confirm(this.input);
+                    }
+                }
+            );
+
+            EventHandlerUtils.addInputEventHandling(
+                this.input,
+                inputHandlers,
+                this,
+                eventHandlerManager
+            );
+        }
+
+        Logger.ui.debug('UniversalDialog: New event handlers setup complete');
+    }
+
+    /**
      * Close the dialog
      */
     close() {
+        // Remove event handlers
+        EventHandlerUtils.removeDialogEventHandling('universal-dialog-overlay', eventHandlerManager);
+        
         if (this.overlay && this.overlay.parentNode) {
             this.overlay.parentNode.removeChild(this.overlay);
-        }
-        
-        if (this.escapeHandler) {
-            document.removeEventListener('keydown', this.escapeHandler);
         }
     }
 }

@@ -117,6 +117,13 @@ export class MobileScalingUtils {
             if ('ontouchstart' in window) {
                 document.body.classList.add('touch-device');
             }
+            
+            // Debug: Log mobile dialog scaling
+            console.log('📱 Mobile dialog scaling applied:', {
+                isMobile,
+                screenWidth,
+                classes: Array.from(document.body.classList).filter(c => c.includes('mobile') || c.includes('touch'))
+            });
         } else {
             // Remove mobile dialog classes
             document.body.classList.remove('mobile-dialogs-enabled', 'mobile-dialogs-small', 'mobile-dialogs-medium', 'touch-device');

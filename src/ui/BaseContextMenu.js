@@ -1,3 +1,7 @@
+import { eventHandlerManager } from '../managers/EventHandlerManager.js';
+import { EventHandlerUtils } from '../utils/EventHandlerUtils.js';
+import { Logger } from '../utils/Logger.js';
+
 /**
  * BaseContextMenu - Base class for context menus
  * 
@@ -30,8 +34,6 @@
  * @author Level Designer
  * @version dynamic
  */
-
-import { Logger } from '../utils/Logger.js';
 
 export class BaseContextMenu {
     constructor(panel, callbacks = {}) {
@@ -327,6 +329,9 @@ export class BaseContextMenu {
 
         // Ensure cursor is inside menu bounds by adjusting menu position if needed
         const cursorOffset = this.ensureCursorInsideMenu(event, optimalPosition, contextMenu);
+
+        // Setup new event handlers
+        this.setupNewEventHandlers();
         if (cursorOffset.x !== 0 || cursorOffset.y !== 0) {
             contextMenu.style.left = (optimalPosition.x + cursorOffset.x) + 'px';
             contextMenu.style.top = (optimalPosition.y + cursorOffset.y) + 'px';
@@ -420,16 +425,7 @@ export class BaseContextMenu {
             menuItem.classList.add('disabled');
         }
         
-        menuItem.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (!isDisabled) {
-                const result = this.handleMenuItemClick(item, contextData);
-                // Only hide menu if action doesn't return false
-                if (result !== false) {
-                    this.hideMenu();
-                }
-            }
-        });
+        // Event handlers are now managed by EventHandlerManager
         
         return menuItem;
     }
@@ -734,16 +730,8 @@ export class BaseContextMenu {
             this.hideMenu();
         };
 
-        // Close menu when mouse leaves the menu area
-        menu.addEventListener('mouseleave', closeMenu);
-
-        // Also close on click for better UX
-        const closeOnClick = () => {
-            this.hideMenu();
-        };
-        menu.addEventListener('click', closeOnClick);
-
-        // Store references for cleanup
+        // Event handlers are now managed by EventHandlerManager
+        // Store references for cleanup (legacy)
         menu._closeMenuHandler = closeMenu;
         menu._closeOnClickHandler = closeOnClick;
     }
@@ -821,11 +809,62 @@ export class BaseContextMenu {
     }
 
     /**
+     * Setup new event handlers using EventHandlerManager
+     */
+    setupNewEventHandlers() {
+        if (!this.currentMenu) {
+            Logger.ui.warn('BaseContextMenu: Current menu not found');
+            return;
+        }
+
+        // Generate unique ID for the menu
+        const menuId = `context-menu-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        this.currentMenu.id = menuId;
+
+        // Create context menu handlers
+        const menuHandlers = {
+            onClick: (e) => {
+                // Handle menu item clicks
+                const menuItem = e.target.closest('.context-menu-item');
+                if (menuItem && !menuItem.classList.contains('disabled')) {
+                    const result = this.handleMenuItemClick(menuItem, this.lastContextData);
+                    if (result !== false) {
+                        this.hideMenu();
+                    }
+                }
+            },
+            onMouseLeave: () => {
+                // Close menu when mouse leaves
+                this.hideMenu();
+            },
+            onContextMenu: (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+        };
+
+        // Register context menu with event manager
+        EventHandlerUtils.addContextMenuEventHandling(
+            this.currentMenu,
+            menuHandlers,
+            this,
+            eventHandlerManager
+        );
+
+        Logger.ui.debug('BaseContextMenu: New event handlers setup complete');
+    }
+
+    /**
      * Hide context menu
      */
     hideMenu() {
         // Stop cursor monitoring if active
         this.stopCursorMonitoring();
+
+        // Remove event handlers
+        if (this.currentMenu && this.currentMenu.id) {
+            EventHandlerUtils.removeEventHandling(this.currentMenu, eventHandlerManager);
+        }
 
         if (this.currentMenu) {
             // Remove cursor tracking if this is the last menu
@@ -834,7 +873,7 @@ export class BaseContextMenu {
             if (this.currentMenu.parentNode) {
                 this.currentMenu.classList.remove('show');
 
-                // Clean up event listeners
+                // Clean up old event listeners (legacy)
                 if (this.currentMenu._closeMenuHandler) {
                     this.currentMenu.removeEventListener('mouseleave', this.currentMenu._closeMenuHandler);
                 }

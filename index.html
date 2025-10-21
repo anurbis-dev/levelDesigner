@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2D Level Editor</title>
+    <title>2D Level Editor v3.51.8</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <!-- Load Tailwind CSS for quick styling -->
@@ -49,6 +49,8 @@
     <link rel="stylesheet" href="styles/base-context-menu.css">
     <link rel="stylesheet" href="styles/canvas-context-menu.css">
     <link rel="stylesheet" href="styles/mobile-dialogs.css">
+    <link rel="stylesheet" href="styles/mobile-platform-styles.css">
+    <link rel="stylesheet" href="styles/dialog-positioning.css">
     <link rel="stylesheet" href="styles/touch-navigation-prevention.css">
     <link rel="stylesheet" href="styles/console-context-menu.css">
     <link rel="stylesheet" href="styles/user-settings.css">
@@ -63,7 +65,7 @@
                 <!-- Menus will be dynamically generated here -->
             </div>
             <div class="text-sm text-gray-400">
-                <span id="header-version-info">2D Level Editor</span>
+                <span id="header-version-info">v3.51.8</span>
             </div>
         </nav>
     </header>
@@ -141,6 +143,8 @@
         import { ExtensionErrorUtils } from './src/utils/ExtensionErrorUtils.js';
         import { MenuManager } from './src/managers/MenuManager.js';
         import { UserPreferencesManager } from './src/managers/UserPreferencesManager.js';
+            import { eventHandlerManager } from './src/managers/EventHandlerManager.js';
+            import { autoEventHandlerManager } from './src/managers/AutoEventHandlerManager.js'; // NEW
 
         // Safe logging function that works even if Logger is not available
         function safeLog(level, message, ...args) {
@@ -314,7 +318,25 @@
             }
         }
 
-        // Mobile Scaling - Initialize FIRST
+        // Mobile Interface Manager - Initialize FIRST
+        let MobileInterfaceManager;
+        try {
+            const { mobileInterfaceManager } = await import('./src/managers/MobileInterfaceManager.js');
+            MobileInterfaceManager = mobileInterfaceManager;
+            Logger.mobile.info('📱 Mobile Interface Manager initialized');
+        } catch (error) {
+            Logger.mobile.warn('Mobile Interface Manager initialization failed:', error);
+            // Create fallback mobile manager
+            MobileInterfaceManager = {
+                isMobile: () => false,
+                isIOS: () => false,
+                isAndroid: () => false,
+                adaptElement: () => {},
+                applyMobileStyles: () => {}
+            };
+        }
+
+        // Mobile Scaling - Initialize SECOND
         let MobileScalingUtils;
         try {
             const { MobileScalingUtils: MS } = await import('./src/utils/MobileScalingUtils.js');
@@ -322,7 +344,14 @@
             MobileScalingUtils.initializeScaling();
             MobileScalingUtils.setupMobileListeners();
         } catch (error) {
-            console.warn('Mobile scaling initialization failed:', error);
+            Logger.mobile.warn('Mobile scaling initialization failed:', error);
+            // Create fallback mobile scaling utils
+            MobileScalingUtils = {
+                initializeScaling: () => {},
+                setupMobileListeners: () => {},
+                isMobileDevice: () => false,
+                applyMobileDialogScaling: () => {}
+            };
         }
 
         // User Preferences Manager - Initialize BEFORE LevelEditor
@@ -332,7 +361,7 @@
         try {
             userPrefs = new UserPreferencesManager();
         } catch (error) {
-            Logger.preferences.error('Error creating UserPreferencesManager:', error);
+            Logger.preferences.warn('Error creating UserPreferencesManager:', error);
             // Create a fallback preferences manager
             userPrefs = {
                 get: () => undefined,
@@ -364,7 +393,20 @@
         try {
             applyUserSettingsImmediately(userPrefs);
         } catch (error) {
-            Logger.layout.error('Error applying user settings immediately:', error);
+            Logger.layout.warn('Error applying user settings immediately:', error);
+        }
+
+        // Initialize AutoEventHandlerManager first, before creating LevelEditor
+        try {
+            window.autoEventHandlerManager = autoEventHandlerManager;
+            
+            // Initialize AutoEventHandlerManager after DOM is ready
+            if (autoEventHandlerManager && typeof autoEventHandlerManager.init === 'function') {
+                autoEventHandlerManager.init();
+                Logger.lifecycle.info('AutoEventHandlerManager initialized');
+            }
+        } catch (error) {
+            Logger.lifecycle.warn('Error initializing AutoEventHandlerManager:', error);
         }
 
         // Initialize the level editor with user preferences
@@ -372,13 +414,33 @@
         try {
             editor = new LevelEditor(userPrefs);
         } catch (error) {
-            Logger.lifecycle.error('Error creating LevelEditor:', error);
+            Logger.lifecycle.warn('Error creating LevelEditor:', error);
             // Create a fallback editor
             editor = {
                 init: () => Promise.resolve(),
                 render: () => {},
-                canvasRenderer: { resizeCanvas: () => {} }
+                canvasRenderer: { resizeCanvas: () => {} },
+                stateManager: { get: () => undefined, set: () => {} },
+                eventHandlers: { togglePanel: () => {} },
+                contextMenuManager: { registerMenu: () => {} }
             };
+        }
+
+        // Make editor globally available
+        try {
+            window.editor = editor;
+            window.consoleContextMenu = consoleContextMenu;
+
+            // Force check for any windows that might have been created during LevelEditor initialization
+            if (autoEventHandlerManager && typeof autoEventHandlerManager.checkForNewWindow === 'function') {
+                // Check document.body for any windows that might have been created
+                const windows = document.querySelectorAll('[id*="overlay"], [id*="dialog"], [id*="window"]');
+                windows.forEach(window => {
+                    autoEventHandlerManager.checkForNewWindow(window);
+                });
+            }
+        } catch (error) {
+            Logger.console.error('Error setting global editor early:', error);
         }
 
         // Initialize the editor
@@ -386,23 +448,32 @@
             editor.init().then(() => {
                 // Panel sizes are now applied immediately before LevelEditor initialization to prevent UI flicker
                 Logger.lifecycle.info('Level Editor initialized successfully');
+
+                // Register pending windows after LevelEditor initialization
+                try {
+                    if (autoEventHandlerManager && typeof autoEventHandlerManager.registerPendingWindows === 'function') {
+                        Logger.lifecycle.debug('Registering pending windows after LevelEditor init');
+                        autoEventHandlerManager.registerPendingWindows();
+                    }
+                } catch (error) {
+                    Logger.lifecycle.warn('Error registering pending windows:', error);
+                }
             }).catch(error => {
-                console.error('Failed to initialize level editor:', error);
-                console.error('Error details:', error);
+                Logger.lifecycle.warn('Failed to initialize level editor:', error);
                 // Don't show alert for async response errors from extensions
                 if (!ExtensionErrorUtils.isExtensionError(error)) {
                     try {
                         alert('Failed to initialize level editor: ' + (error.message || error));
                     } catch (alertError) {
-                        console.error('Failed to show alert:', alertError);
+                        Logger.lifecycle.warn('Failed to show alert:', alertError);
                     }
                 } else {
                     // Log extension error silently to avoid user confusion
-                    console.warn('Extension-related error ignored:', error.message);
+                    Logger.lifecycle.warn('Extension-related error ignored:', error.message);
                 }
             });
         } catch (error) {
-            console.error('Error calling editor.init():', error);
+            Logger.lifecycle.warn('Error calling editor.init():', error);
         }
 
         // User preferences manager is already initialized above
@@ -410,7 +481,7 @@
         // Console height is now applied immediately in applyUserSettingsImmediately() to prevent UI flicker
 
         // Panel sizes are now applied immediately before LevelEditor initialization to prevent UI flicker
-            
+
             // Function to force complete layout update
             function forceLayoutUpdate() {
                 try {
@@ -440,10 +511,10 @@
                 // Update canvas and render immediately
                 updateCanvas();
                 } catch (error) {
-                    console.error('Error in forceLayoutUpdate:', error);
+                    Logger.layout.error('Error in forceLayoutUpdate:', error);
                 }
             }
-            
+
             // Function to update canvas layout (called when panels show/hide)
             function updateCanvasLayout() {
                 try {
@@ -453,7 +524,7 @@
                         window.editor.render();
                     }
                 } catch (error) {
-                    console.error('Error in updateCanvasLayout:', error);
+                    Logger.layout.error('Error in updateCanvasLayout:', error);
                 }
             }
 
@@ -464,7 +535,7 @@
                 window.editor.render();
             }
         }
-        
+
         // Make updateCanvas globally available
         window.updateCanvas = updateCanvas;
 
@@ -739,7 +810,7 @@
                     draggingState.draggedPanel = null;
                 });
             } catch (error) {
-                console.error('Error setting up tab dragging:', error);
+                Logger.layout.error('Error setting up tab dragging:', error);
             }
         }
 
@@ -747,7 +818,7 @@
         try {
             setupTabDragging();
         } catch (error) {
-            console.error('Error initializing tab dragging:', error);
+            Logger.layout.error('Error initializing tab dragging:', error);
         }
 
         // Console functionality
@@ -778,7 +849,7 @@
                         try {
                             consoleScrollContainer.scrollTop = consoleScrollContainer.scrollHeight;
                         } catch (error) {
-                            console.warn('Error scrolling console output:', error);
+                            Logger.console.warn('Error scrolling console output:', error);
                         }
                     });
                 }
@@ -791,7 +862,7 @@
                         try {
                             consoleScrollContainer.scrollTop = consoleScrollContainer.scrollHeight;
                         } catch (error) {
-                            console.warn('Error scrolling console output:', error);
+                            Logger.console.warn('Error scrolling console output:', error);
                         }
                     });
                 }
@@ -1024,7 +1095,7 @@
                         try {
                             consoleScrollContainer.scrollTop = consoleScrollContainer.scrollHeight;
                         } catch (error) {
-                            console.warn('Error scrolling console output on show:', error);
+                            Logger.console.warn('Error scrolling console output on show:', error);
                         }
                     });
                 }
@@ -1221,7 +1292,7 @@
                                 consoleScrollContainer.scrollTop = consoleScrollContainer.scrollHeight;
                             } catch (error) {
                                 // Don't use console.error here to avoid recursion
-                                console.warn('Error scrolling console output:', error);
+                                Logger.console.warn('Error scrolling console output:', error);
                             }
                         });
                     }
@@ -1240,7 +1311,7 @@
                     navigator.clipboard.writeText(text).then(() => {
                         logToConsole(`Copied to clipboard: ${text}`, 'info');
                     }).catch(err => {
-                        console.warn('Clipboard API failed, using fallback:', err);
+                        Logger.console.warn('Clipboard API failed, using fallback:', err);
                         fallbackCopyToClipboard(text);
                     });
                 } else {
@@ -1365,13 +1436,6 @@
                 }
             };
 
-            // Make editor and console context menu available globally
-            try {
-                window.editor = editor;
-                window.consoleContextMenu = consoleContextMenu;
-            } catch (error) {
-                console.error('Error setting global editor:', error);
-            }
 
             // Assets panel resizing is now handled by PanelPositionManager
 
@@ -1380,7 +1444,7 @@
                 try {
                     window.editor.contextMenuManager.registerMenu('console', consoleContextMenu);
                 } catch (error) {
-                    console.error('Error registering console context menu:', error);
+                    Logger.console.error('Error registering console context menu:', error);
                 }
             }
 
@@ -1398,16 +1462,16 @@
                         try {
                             consoleScrollContainer.scrollTop = consoleScrollContainer.scrollHeight;
                         } catch (error) {
-                            console.warn('Error scrolling console output on init:', error);
+                            Logger.console.warn('Error scrolling console output on init:', error);
                         }
                     });
                 }
             } catch (error) {
-                console.error('Error logging initial console message:', error);
+                Logger.console.error('Error logging initial console message:', error);
             }
             
         } catch (error) {
-            console.error('Error in setupConsole:', error);
+            Logger.console.error('Error in setupConsole:', error);
         }
     }
 
@@ -1427,7 +1491,7 @@
                 }
             }
         } catch (error) {
-            console.error('Error initializing console:', error);
+            Logger.console.error('Error initializing console:', error);
         }
         
         // Test context menu functionality
@@ -1438,7 +1502,7 @@
                     consolePanel.classList.remove('hidden');
                 }
             } catch (error) {
-                console.error('Error in testContextMenu:', error);
+                Logger.console.error('Error in testContextMenu:', error);
             }
         };
         
@@ -1456,11 +1520,11 @@
                             window.editor.render();
                         }
                     } catch (error) {
-                        console.error('Error in delayed canvas update:', error);
+                        Logger.layout.error('Error in delayed canvas update:', error);
                     }
                 }, 500);
             } catch (error) {
-                console.error('Error updating canvas on startup:', error);
+                Logger.layout.error('Error updating canvas on startup:', error);
             }
         };
         
@@ -1469,14 +1533,14 @@
             try {
                 setTimeout(updateCanvasOnStartup, 100);
             } catch (error) {
-                console.error('Error in setTimeout:', error);
+                Logger.layout.error('Error in setTimeout:', error);
             }
         } else {
             window.addEventListener('load', () => {
                 try {
                     setTimeout(updateCanvasOnStartup, 100);
                 } catch (error) {
-                    console.error('Error in load event handler:', error);
+                    Logger.layout.error('Error in load event handler:', error);
                 }
             });
         }
