@@ -90,6 +90,37 @@ export class MobileScalingUtils {
         if (window.devicePixelRatio >= 3) {
             document.body.classList.add('very-high-dpi');
         }
+        
+        // Apply mobile dialog scaling
+        this.applyMobileDialogScaling();
+    }
+    
+    /**
+     * Apply mobile dialog scaling
+     */
+    static applyMobileDialogScaling() {
+        const isMobile = this.isMobileDevice();
+        const screenWidth = window.innerWidth;
+        
+        if (isMobile) {
+            // Add mobile dialog classes to body
+            document.body.classList.add('mobile-dialogs-enabled');
+            
+            // Apply specific scaling for different screen sizes
+            if (screenWidth <= 480) {
+                document.body.classList.add('mobile-dialogs-small');
+            } else if (screenWidth <= 768) {
+                document.body.classList.add('mobile-dialogs-medium');
+            }
+            
+            // Apply touch-specific classes
+            if ('ontouchstart' in window) {
+                document.body.classList.add('touch-device');
+            }
+        } else {
+            // Remove mobile dialog classes
+            document.body.classList.remove('mobile-dialogs-enabled', 'mobile-dialogs-small', 'mobile-dialogs-medium', 'touch-device');
+        }
     }
     
     /**
@@ -149,6 +180,8 @@ export class MobileScalingUtils {
             // Handle resize events
             window.addEventListener('resize', () => {
                 this.handleOrientationChange();
+                // Re-apply mobile dialog scaling on resize
+                this.applyMobileDialogScaling();
             });
             
             // Prevent zoom on double tap
@@ -161,5 +194,44 @@ export class MobileScalingUtils {
                 lastTouchEnd = now;
             }, false);
         }
+        
+        // Setup dialog-specific listeners
+        this.setupDialogListeners();
+    }
+    
+    /**
+     * Setup dialog-specific event listeners
+     */
+    static setupDialogListeners() {
+        // Use MutationObserver for better performance than DOMNodeInserted
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        // Check if a dialog was added
+                        if (node.id === 'universal-dialog-overlay' || 
+                            node.id === 'actor-properties-overlay' ||
+                            node.id === 'settings-overlay' ||
+                            node.querySelector && (
+                                node.querySelector('#universal-dialog-overlay') ||
+                                node.querySelector('#actor-properties-overlay') ||
+                                node.querySelector('#settings-overlay')
+                            )) {
+                            
+                            // Apply mobile dialog classes
+                            setTimeout(() => {
+                                this.applyMobileDialogScaling();
+                            }, 10);
+                        }
+                    }
+                });
+            });
+        });
+        
+        // Start observing
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
     }
 }

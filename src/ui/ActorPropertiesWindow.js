@@ -52,11 +52,11 @@ export class ActorPropertiesWindow extends SettingsPanel {
         `;
         
         overlay.innerHTML = `
-            <div class="settings-panel-container" id="${this.containerId}">
+            <div class="settings-panel-container mobile-dialog" id="${this.containerId}">
                 <div class="settings-header" id="actor-properties-header">
                     <h2>Actor Properties</h2>
                     <div class="settings-header-controls">
-                        <button id="actor-props-close" class="settings-menu-btn">×</button>
+                        <button id="actor-props-close" class="settings-menu-btn mobile-touch-target">×</button>
                     </div>
                 </div>
                 
@@ -70,8 +70,8 @@ export class ActorPropertiesWindow extends SettingsPanel {
                 
                 <div class="settings-footer">
                     <div class="settings-footer-right">
-                        <button id="actor-props-cancel" class="settings-btn settings-btn-cancel">Cancel</button>
-                        <button id="actor-props-apply" class="settings-btn settings-btn-save">Close</button>
+                        <button id="actor-props-cancel" class="settings-btn settings-btn-cancel mobile-button">Cancel</button>
+                        <button id="actor-props-apply" class="settings-btn settings-btn-save mobile-button">Close</button>
                     </div>
                 </div>
             </div>
@@ -180,12 +180,12 @@ export class ActorPropertiesWindow extends SettingsPanel {
                     <div>
                         <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Name:</label>
                         <input type="text" id="actor-name" value="${actor.name || ''}" 
-                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded" style="color: var(--ui-active-text-color, #ffffff);">
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded mobile-input" style="color: var(--ui-active-text-color, #ffffff);">
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Type:</label>
                         <input type="text" id="actor-type" value="${actor.type || ''}" 
-                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded" readonly style="color: var(--ui-active-text-color, #ffffff);">
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded mobile-input" readonly style="color: var(--ui-active-text-color, #ffffff);">
                     </div>
                 </div>
                 
@@ -193,12 +193,12 @@ export class ActorPropertiesWindow extends SettingsPanel {
                     <div>
                         <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">X Position:</label>
                         <input type="number" id="actor-x" value="${actor.x || 0}" 
-                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded" style="color: var(--ui-active-text-color, #ffffff);">
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded mobile-input" style="color: var(--ui-active-text-color, #ffffff);">
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Y Position:</label>
                         <input type="number" id="actor-y" value="${actor.y || 0}" 
-                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded" style="color: var(--ui-active-text-color, #ffffff);">
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded mobile-input" style="color: var(--ui-active-text-color, #ffffff);">
                     </div>
                 </div>
                 
@@ -206,32 +206,32 @@ export class ActorPropertiesWindow extends SettingsPanel {
                     <div>
                         <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Width:</label>
                         <input type="number" id="actor-width" value="${actor.width || 32}" 
-                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded" style="color: var(--ui-active-text-color, #ffffff);">
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded mobile-input" style="color: var(--ui-active-text-color, #ffffff);">
                     </div>
                     <div>
                         <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Height:</label>
                         <input type="number" id="actor-height" value="${actor.height || 32}" 
-                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded" style="color: var(--ui-active-text-color, #ffffff);">
+                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded mobile-input" style="color: var(--ui-active-text-color, #ffffff);">
                     </div>
                 </div>
                 
                 <div>
                     <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Color:</label>
                     <input type="color" id="actor-color" value="${actor.color || '#3B82F6'}" 
-                           class="w-full h-10 bg-gray-700 border border-gray-600 rounded">
+                           class="w-full h-10 bg-gray-700 border border-gray-600 rounded mobile-input">
                 </div>
                 
                 <div>
                     <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Image Path:</label>
                     <input type="text" id="actor-imgSrc" value="${(actor.imgSrc !== null && actor.imgSrc !== undefined) ? actor.imgSrc : ''}" 
-                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded" style="color: var(--ui-active-text-color, #ffffff);"
+                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded mobile-input" style="color: var(--ui-active-text-color, #ffffff);"
                            placeholder="path/to/image.png">
                 </div>
                 
                 <div>
                     <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Category:</label>
                     <input type="text" id="actor-category" value="${(actor.category !== null && actor.category !== undefined) ? actor.category : ''}" 
-                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded" style="color: var(--ui-active-text-color, #ffffff);">
+                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded mobile-input" style="color: var(--ui-active-text-color, #ffffff);">
                 </div>
             </div>
         `;

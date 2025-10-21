@@ -111,6 +111,7 @@ export class UniversalDialog {
         // Create dialog container
         this.dialog = document.createElement('div');
         this.dialog.id = 'universal-dialog';
+        this.dialog.className = 'mobile-dialog';
         this.dialog.style.cssText = `
             background-color: #1f2937;
             border: 1px solid #374151;
@@ -126,6 +127,7 @@ export class UniversalDialog {
 
         // Create header
         const header = document.createElement('div');
+        header.className = 'dialog-header';
         header.style.cssText = `
             background-color: #111827;
             border-bottom: 1px solid #374151;
@@ -136,6 +138,7 @@ export class UniversalDialog {
         `;
 
         const title = document.createElement('h2');
+        title.className = 'dialog-title';
         title.textContent = this.getTitle(type);
         title.style.cssText = `
             color: #f9fafb;
@@ -145,6 +148,7 @@ export class UniversalDialog {
         `;
 
         const closeBtn = document.createElement('button');
+        closeBtn.className = 'dialog-close-btn';
         closeBtn.innerHTML = '×';
         closeBtn.style.cssText = `
             background: none;
@@ -175,6 +179,7 @@ export class UniversalDialog {
 
         // Create content
         const content = document.createElement('div');
+        content.className = 'dialog-content';
         content.style.cssText = `
             padding: 1.5rem;
             flex: 1;
@@ -185,6 +190,7 @@ export class UniversalDialog {
 
         // Message
         const messageDiv = document.createElement('div');
+        messageDiv.className = 'dialog-message';
         messageDiv.textContent = message;
         messageDiv.style.cssText = `
             color: var(--ui-text-color, #d1d5db);
@@ -202,6 +208,7 @@ export class UniversalDialog {
             input.type = 'text';
             input.value = defaultValue;
             input.id = 'universal-dialog-input';
+            input.className = 'dialog-input mobile-input';
             input.style.cssText = `
                 background-color: #374151;
                 border: 1px solid #4b5563;
@@ -223,6 +230,7 @@ export class UniversalDialog {
 
         // Create footer
         const footer = document.createElement('div');
+        footer.className = 'dialog-footer';
         footer.style.cssText = `
             background-color: #111827;
             border-top: 1px solid #374151;
@@ -271,6 +279,7 @@ export class UniversalDialog {
     createButton(text, type, onClick) {
         const button = document.createElement('button');
         button.textContent = text;
+        button.className = 'dialog-btn mobile-button';
         
         if (type === 'primary') {
             button.style.cssText = `
