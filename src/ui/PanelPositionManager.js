@@ -831,60 +831,13 @@ export class PanelPositionManager {
      * @param {string} direction - Resize direction ('horizontal', 'vertical')
      */
     registerTouchSupportForResizer(resizer, panel, panelSide, direction) {
-        if (!this.levelEditor.touchSupportManager) {
-            Logger.ui.warn('TouchSupportManager not available for resizer touch support');
+        if (!this.levelEditor.touchInitializationManager) {
+            Logger.ui.warn('TouchInitializationManager not available for resizer touch support');
             return;
         }
 
-        import('../utils/TouchSupportUtils.js').then(({ TouchSupportUtils }) => {
-            const isVertical = direction === 'vertical';
-            const minSize = isVertical ? 100 : 0;
-            const maxSize = isVertical ? 600 : 800;
-            
-            TouchSupportUtils.addResizeTouchSupport(
-                resizer,
-                direction,
-                minSize,
-                maxSize,
-                (element, targetPanel, touch) => {
-                    Logger.ui.debug(`${panelSide} panel resize started via touch`);
-                },
-                (element, targetPanel, newSize, touch) => {
-                    // Use unified resize logic
-                    this.handlePanelResize(panel, panelSide, direction, newSize);
-                },
-                (element, targetPanel, currentSize) => {
-                    // Save size to StateManager
-                    const stateKey = isVertical ? 'panels.assetsPanelHeight' : `panels.${panelSide}PanelWidth`;
-                    const prefKey = isVertical ? 'assetsPanelHeight' : `${panelSide}PanelWidth`;
-                    
-                    if (this.stateManager) {
-                        this.stateManager.set(stateKey, currentSize);
-                    }
-                    if (this.userPrefs) {
-                        this.userPrefs.set(prefKey, currentSize);
-                    }
-                    Logger.ui.debug(`Saved ${panelSide} panel ${isVertical ? 'height' : 'width'} from touch: ${currentSize}px`);
-                },
-                (element, touch) => {
-                    // Use universal double-click handler
-                    this.levelEditor.touchSupportManager.handlePanelDoubleClick(element, {
-                        panel,
-                        panelSide,
-                        stateManager: this.stateManager,
-                        userPrefs: this.userPrefs,
-                        direction: direction,
-                        stateKey: isVertical ? 'panels.assetsPanelHeight' : `panels.${panelSide}PanelWidth`,
-                        prefKey: isVertical ? 'assetsPanelHeight' : `${panelSide}PanelWidth`,
-                    });
-                },
-                this.levelEditor.touchSupportManager
-            );
-            
-            Logger.ui.debug(`Registered touch support for ${panelSide} panel resizer (${direction})`);
-        }).catch(error => {
-            console.warn('Failed to load TouchSupportUtils for panel resizer:', error);
-        });
+        // Use centralized touch initialization manager
+        this.levelEditor.touchInitializationManager.registerPanelResizerTouchSupport(resizer, panel, panelSide, direction);
     }
 
     /**

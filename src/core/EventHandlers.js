@@ -431,11 +431,8 @@ export class EventHandlers extends BaseModule {
                 this.editor.updateAllPanels();
             }
             
-            // Touch support for panel resizers is now registered immediately when resizers are created
-            // But we still need to setup console touch support
-            if (this.editor.setupPanelResizerTouchSupport) {
-                this.editor.setupPanelResizerTouchSupport();
-            }
+            // Touch support is now handled by TouchInitializationManager
+            // No need to call individual touch setup methods
             
             // Don't re-apply panel visibility here - PanelPositionManager handles it
             // based on actual tab positions and panel existence

@@ -12,9 +12,11 @@
 import { Logger } from '../utils/Logger.js';
 
 export class TouchSupportManager {
-    constructor(stateManager = null) {
+    constructor(stateManager = null, browserGesturePreventionManager = null) {
         this.stateManager = stateManager;
-        this.touchConfigs = new Map();
+        this.browserGesturePreventionManager = browserGesturePreventionManager;
+        this.touchConfigs = new Map(); // Map<element, config>
+        this.elementConfigs = new Map(); // Map<element, Set<configType>> - track multiple configs per element
         this.activeTouches = new Map();
         this.doubleTapTimers = new Map();
         
@@ -123,12 +125,30 @@ export class TouchSupportManager {
 
         Logger.ui.debug('TouchSupportManager: Registering element', element, 'with config type', configType);
 
-        const config = { ...this.defaultConfigs[configType], ...customConfig };
-        this.touchConfigs.set(element, config);
-        
-        this.setupTouchEvents(element, config);
-        
-        Logger.ui.debug(`TouchSupportManager: Registered ${configType} for element`, element);
+        // Initialize element configs tracking if not exists
+        if (!this.elementConfigs.has(element)) {
+            this.elementConfigs.set(element, new Set());
+        }
+
+        // Check if this specific config type is already registered for this element
+        if (this.elementConfigs.get(element).has(configType)) {
+            Logger.ui.debug(`TouchSupportManager: ${configType} already registered for element, skipping`);
+            return;
+        }
+
+        // Add config type to tracking
+        this.elementConfigs.get(element).add(configType);
+
+        // If this is the first config for this element, setup touch events
+        if (!this.touchConfigs.has(element)) {
+            const config = { ...this.defaultConfigs[configType], ...customConfig };
+            this.touchConfigs.set(element, config);
+            this.setupTouchEvents(element, config);
+            Logger.ui.debug(`TouchSupportManager: First registration for element with ${configType}`);
+        } else {
+            // Element already has touch events, just track the additional config type
+            Logger.ui.debug(`TouchSupportManager: Additional config type ${configType} registered for element`);
+        }
     }
 
     /**
@@ -139,42 +159,86 @@ export class TouchSupportManager {
     setupTouchEvents(element, config) {
         Logger.ui.debug('TouchSupportManager: setupTouchEvents called for', config.type, element);
         
-        // Add CSS properties for better touch handling
-        // Use selective touch-action based on gesture type
-        this.setTouchAction(element, config);
-        element.style.userSelect = 'none';
-        
-        // Mark element as touch-enabled for global navigation prevention (only for specific types)
-        if (config.type === 'marqueeSelection' || config.type === 'twoFingerPan' || config.type === 'twoFingerZoom' || config.type === 'twoFingerPanZoom') {
-            element.setAttribute('data-touch-enabled', 'true');
+        // Register element with browser gesture prevention manager
+        if (this.browserGesturePreventionManager) {
+            const preventionOptions = this.getPreventionOptions(config);
+            this.browserGesturePreventionManager.registerElement(element, preventionOptions);
         }
+        
+        // Create bound event handlers and store them for later removal
+        const touchStartHandler = (e) => this.handleTouchStart(e, element, config);
+        const touchMoveHandler = (e) => this.handleTouchMove(e, element, config);
+        const touchEndHandler = (e) => this.handleTouchEnd(e, element, config);
+        const touchCancelHandler = (e) => this.handleTouchCancel(e, element, config);
+        
+        // Store handlers on element for cleanup
+        element._touchHandlers = {
+            touchstart: touchStartHandler,
+            touchmove: touchMoveHandler,
+            touchend: touchEndHandler,
+            touchcancel: touchCancelHandler
+        };
         
         // Touch start - passive to avoid intervention warnings
-        element.addEventListener('touchstart', (e) => this.handleTouchStart(e, element, config), { passive: true });
+        element.addEventListener('touchstart', touchStartHandler, { passive: true });
         
         // Touch move - passive to avoid intervention warnings
-        element.addEventListener('touchmove', (e) => this.handleTouchMove(e, element, config), { passive: true });
+        element.addEventListener('touchmove', touchMoveHandler, { passive: true });
         
         // Touch end - passive for better performance
-        element.addEventListener('touchend', (e) => this.handleTouchEnd(e, element, config), { passive: true });
+        element.addEventListener('touchend', touchEndHandler, { passive: true });
         
         // Touch cancel - passive
-        element.addEventListener('touchcancel', (e) => this.handleTouchCancel(e, element, config), { passive: true });
+        element.addEventListener('touchcancel', touchCancelHandler, { passive: true });
+    }
 
-        // Prevent browser navigation gestures (swipe back/forward) - only for specific types
-        if (config.type === 'marqueeSelection' || config.type === 'twoFingerPan' || config.type === 'twoFingerZoom' || config.type === 'twoFingerPanZoom') {
-            this.setupNavigationPrevention(element, config);
+    /**
+     * Get prevention options for a configuration type
+     * @private
+     */
+    getPreventionOptions(config) {
+        const options = {
+            touchAction: 'none',
+            preventContextMenu: true
+        };
+
+        switch (config.type) {
+            case 'marqueeSelection':
+                options.preventHorizontalSwipe = true;
+                options.preventVerticalSwipe = true;
+                break;
+            case 'twoFingerPan':
+            case 'twoFingerZoom':
+            case 'twoFingerPanZoom':
+                // Don't prevent gestures for pan/zoom - they need to work
+                options.preventHorizontalSwipe = false;
+                options.preventVerticalSwipe = false;
+                break;
+            case 'resize':
+                options.preventHorizontalSwipe = true;
+                break;
+            case 'drag':
+                options.preventHorizontalSwipe = true;
+                options.preventVerticalSwipe = true;
+                break;
+            case 'button':
+                options.preventHorizontalSwipe = false;
+                options.preventVerticalSwipe = false;
+                break;
         }
+
+        return options;
     }
 
     /**
      * Setup navigation prevention for elements that need to block browser gestures
+     * @deprecated - Use BrowserGesturePreventionManager instead
      */
     setupNavigationPrevention(element, config) {
         // Only prevent navigation for elements that handle their own gestures
         if (config.type === 'marqueeSelection' || config.type === 'twoFingerPan' || config.type === 'twoFingerZoom' || config.type === 'twoFingerPanZoom') {
-            // More aggressive prevention - block all horizontal movements that could trigger navigation
-            element.addEventListener('touchstart', (e) => {
+            // Create bound event handlers and store them for later removal
+            const navTouchStartHandler = (e) => {
                 // Store initial touch position for movement detection
                 if (e.touches.length === 1) {
                     const touch = e.touches[0];
@@ -183,9 +247,9 @@ export class TouchSupportManager {
                     element._touchStartTime = Date.now();
                     element._hasMoved = false;
                 }
-            }, { passive: true });
+            };
 
-            element.addEventListener('touchmove', (e) => {
+            const navTouchMoveHandler = (e) => {
                 // Block horizontal movements that could trigger browser navigation
                 if (e.touches.length === 1 && element._touchStartX !== undefined) {
                     const touch = e.touches[0];
@@ -204,21 +268,33 @@ export class TouchSupportManager {
                         }
                     }
                 }
-            }, { passive: false });
+            };
 
-            // Clean up touch data on end
-            element.addEventListener('touchend', () => {
+            const navTouchEndHandler = () => {
                 delete element._touchStartX;
                 delete element._touchStartY;
                 delete element._touchStartTime;
                 delete element._hasMoved;
-            }, { passive: true });
+            };
 
-            // Also prevent context menu on long press (can interfere with gestures)
-            element.addEventListener('contextmenu', (e) => {
+            const navContextMenuHandler = (e) => {
                 e.preventDefault();
                 e.stopPropagation();
-            }, { passive: false });
+            };
+
+            // Store handlers on element for cleanup
+            element._navPreventionHandlers = {
+                touchstart: navTouchStartHandler,
+                touchmove: navTouchMoveHandler,
+                touchend: navTouchEndHandler,
+                contextmenu: navContextMenuHandler
+            };
+
+            // More aggressive prevention - block all horizontal movements that could trigger navigation
+            element.addEventListener('touchstart', navTouchStartHandler, { passive: true });
+            element.addEventListener('touchmove', navTouchMoveHandler, { passive: false });
+            element.addEventListener('touchend', navTouchEndHandler, { passive: true });
+            element.addEventListener('contextmenu', navContextMenuHandler, { passive: false });
         }
     }
 
@@ -399,6 +475,7 @@ export class TouchSupportManager {
                 this.handleClickStart(element, config, touch);
                 break;
             case 'marquee':
+            case 'marqueeSelection':
                 this.handleMarqueeStart(element, config, touch);
                 break;
             case 'longPressMarquee':
@@ -416,6 +493,8 @@ export class TouchSupportManager {
     handleTwoTouchStart(e, element, config, currentTime) {
         const touch1 = e.touches[0];
         const touch2 = e.touches[1];
+        
+        Logger.ui.debug('TouchSupportManager: Two touch start', { type: config.type, element: element.tagName });
         
         // Store both touches
         this.activeTouches.set(touch1.identifier, {
@@ -1038,13 +1117,35 @@ export class TouchSupportManager {
      */
     unregisterElement(element) {
         this.touchConfigs.delete(element);
+        this.elementConfigs.delete(element);
         this.clearElementTimers(element);
         
-        // Remove touch event listeners
-        element.removeEventListener('touchstart', this.handleTouchStart);
-        element.removeEventListener('touchmove', this.handleTouchMove);
-        element.removeEventListener('touchend', this.handleTouchEnd);
-        element.removeEventListener('touchcancel', this.handleTouchCancel);
+        // Remove touch event listeners using stored handlers
+        if (element._touchHandlers) {
+            element.removeEventListener('touchstart', element._touchHandlers.touchstart);
+            element.removeEventListener('touchmove', element._touchHandlers.touchmove);
+            element.removeEventListener('touchend', element._touchHandlers.touchend);
+            element.removeEventListener('touchcancel', element._touchHandlers.touchcancel);
+            
+            // Clean up stored handlers
+            delete element._touchHandlers;
+        }
+        
+        // Remove navigation prevention handlers if they exist (legacy)
+        if (element._navPreventionHandlers) {
+            element.removeEventListener('touchstart', element._navPreventionHandlers.touchstart);
+            element.removeEventListener('touchmove', element._navPreventionHandlers.touchmove);
+            element.removeEventListener('touchend', element._navPreventionHandlers.touchend);
+            element.removeEventListener('contextmenu', element._navPreventionHandlers.contextmenu);
+            
+            // Clean up stored handlers
+            delete element._navPreventionHandlers;
+        }
+        
+        // Unregister from browser gesture prevention manager
+        if (this.browserGesturePreventionManager) {
+            this.browserGesturePreventionManager.unregisterElement(element);
+        }
         
         Logger.ui.debug('TouchSupportManager: Unregistered element', element);
     }
@@ -1129,12 +1230,15 @@ export class TouchSupportManager {
             touchData.marqueeStartY = touch.clientY;
         }
         
+        // Call the marquee start handler
         if (config.onMarqueeStart) {
             config.onMarqueeStart(element, touch, {
                 startX: touch.clientX,
                 startY: touch.clientY
             });
         }
+        
+        Logger.ui.debug('TouchSupportManager: Marquee start handled');
     }
 
     /**
@@ -1371,6 +1475,8 @@ export class TouchSupportManager {
         const centerX = (touch1.clientX + touch2.clientX) / 2;
         const centerY = (touch1.clientY + touch2.clientY) / 2;
         
+        Logger.ui.debug('TouchSupportManager: Two finger pan/zoom start', { centerX, centerY, distance });
+        
         // Initialize lastScale and lastCenter for both touches
         const touchData1 = this.activeTouches.get(touch1.identifier);
         const touchData2 = this.activeTouches.get(touch2.identifier);
@@ -1387,6 +1493,7 @@ export class TouchSupportManager {
         
         // Call both pan and zoom start handlers
         if (config.onPanStart) {
+            Logger.ui.debug('TouchSupportManager: Calling onPanStart');
             config.onPanStart(element, {
                 centerX,
                 centerY,
@@ -1396,6 +1503,7 @@ export class TouchSupportManager {
         }
         
         if (config.onZoomStart) {
+            Logger.ui.debug('TouchSupportManager: Calling onZoomStart');
             config.onZoomStart(element, {
                 distance,
                 centerX,

@@ -37,6 +37,8 @@ import { ColorUtils } from '../utils/ColorUtils.js';
 import { dialogReplacer } from '../utils/DialogReplacer.js';
 import { ActorPropertiesWindow } from '../ui/ActorPropertiesWindow.js';
 import { PanelPositionManager } from '../ui/PanelPositionManager.js';
+import { TouchInitializationManager } from '../managers/TouchInitializationManager.js';
+import { BrowserGesturePreventionManager } from '../managers/BrowserGesturePreventionManager.js';
 
 // Import new utilities
 import { ErrorHandler } from '../utils/ErrorHandler.js';
@@ -53,7 +55,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.51.6';
+    static VERSION = '3.51.7';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -68,7 +70,9 @@ export class LevelEditor {
         this.historyManager = new HistoryManager();
         this.assetManager = new AssetManager(this.stateManager);
         this.fileManager = new FileManager();
-        this.touchSupportManager = new TouchSupportManager(this.stateManager);
+        this.browserGesturePreventionManager = new BrowserGesturePreventionManager();
+        this.touchSupportManager = new TouchSupportManager(this.stateManager, this.browserGesturePreventionManager);
+        this.touchInitializationManager = new TouchInitializationManager(this);
         
         // Store user preferences manager
         this.userPrefs = userPreferencesManager;
@@ -464,270 +468,15 @@ export class LevelEditor {
         // Register canvas context menu with the manager
         this.contextMenuManager.registerMenu('canvas', this.canvasContextMenu);
 
-        // Setup touch gestures for canvas
-        this.setupCanvasTouchGestures(canvas);
+        // Touch gestures for canvas will be initialized by TouchInitializationManager
         
-        // Setup global browser navigation prevention
-        this.setupGlobalNavigationPrevention();
+        // Initialize browser gesture prevention system
+        this.browserGesturePreventionManager.initialize();
     }
 
-    /**
-     * Setup touch support for console elements
-     * @private
-     */
-    setupPanelResizerTouchSupport() {
-        if (!this.touchSupportManager) {
-            Logger.ui.warn('TouchSupportManager not available for panel resizers');
-            return;
-        }
-
-        // Import TouchSupportUtils
-        import('../utils/TouchSupportUtils.js').then(({ TouchSupportUtils }) => {
-            // Assets panel resizer is now handled by PanelPositionManager
-            // This method only handles console touch support
-
-            // Console resizer
-            const consolePanel = document.getElementById('console-panel');
-            const resizeHandle = consolePanel?.querySelector('.console-resize-handle');
-            
-            if (resizeHandle && consolePanel) {
-                // Calculate max size based on device type and window size
-                const isMobile = TouchSupportUtils.isMobile() || window.innerWidth <= 768;
-                const maxSize = isMobile ? window.innerHeight * 0.7 : window.innerHeight * 0.9;
-                
-                TouchSupportUtils.addResizeTouchSupport(
-                    resizeHandle,
-                    'vertical',
-                    200, // minSize
-                    maxSize, // maxSize - adaptive based on device
-                    (element, targetPanel, touch) => {
-                        Logger.ui.debug('Console resize started via touch');
-                    },
-                    (element, targetPanel, newSize, touch) => {
-                        // Apply new height with mobile-aware limits
-                        const currentMaxSize = TouchSupportUtils.isMobile() || window.innerWidth <= 768 
-                            ? window.innerHeight * 0.7 
-                            : window.innerHeight * 0.9;
-                        const clampedSize = Math.min(newSize, currentMaxSize);
-                        consolePanel.style.height = clampedSize + 'px';
-                        consolePanel.style.bottom = 'auto';
-                    },
-                    (element, targetPanel, currentSize) => {
-                        // Save final height
-                        if (this.userPrefs) {
-                            this.userPrefs.set('consoleHeight', currentSize);
-                        }
-                        if (this.stateManager) {
-                            this.stateManager.set('panels.consoleHeight', currentSize);
-                        }
-                        Logger.ui.debug(`Console resize ended: ${currentSize}px`);
-                    },
-                    (element, touch) => {
-                        // Double tap to close console
-                        if (this.eventHandlers) {
-                            this.eventHandlers.togglePanel('console');
-                        }
-                        Logger.ui.info('Console closed via double-tap on resizer');
-                    },
-                    this.touchSupportManager
-                );
-            }
-
-            // Console header and close button
-            const consoleHeader = document.getElementById('console-header');
-            const consoleClose = document.getElementById('console-close');
-            
-            if (consoleHeader) {
-                TouchSupportUtils.addButtonTouchSupport(
-                    consoleHeader,
-                    () => {
-                        // Close console
-                        if (this.eventHandlers) {
-                            this.eventHandlers.togglePanel('console');
-                        }
-                    },
-                    null, // no double tap
-                    null, // no long press
-                    this.touchSupportManager
-                );
-            }
-            
-            if (consoleClose) {
-                TouchSupportUtils.addButtonTouchSupport(
-                    consoleClose,
-                    () => {
-                        // Close console
-                        if (this.eventHandlers) {
-                            this.eventHandlers.togglePanel('console');
-                        }
-                    },
-                    null, // no double tap
-                    null, // no long press
-                    this.touchSupportManager
-                );
-            }
-
-        }).catch(error => {
-            console.warn('Failed to load TouchSupportUtils for panel resizers:', error);
-        });
-    }
-
-    /**
-     * Setup touch gestures for canvas element
-     * @private
-     * @param {HTMLCanvasElement} canvas - Canvas element
-     */
-    setupCanvasTouchGestures(canvas) {
-        if (!this.touchSupportManager) {
-            Logger.ui.warn('TouchSupportManager not available for canvas gestures');
-            return;
-        }
-
-        // Import TouchSupportUtils
-        import('../utils/TouchSupportUtils.js').then(({ TouchSupportUtils }) => {
-            // Marquee selection (single finger tap + drag)
-            TouchSupportUtils.addMarqueeTouchSupport(
-                canvas,
-                (element, touch, data) => {
-                    // Start marquee selection
-                    Logger.ui.debug('Touch marquee start:', data);
-                    this.startTouchMarquee(data.startX, data.startY);
-                },
-                (element, touch, data) => {
-                    // Update marquee selection
-                    Logger.ui.debug('Touch marquee move:', data);
-                    this.updateTouchMarquee(data.currentX, data.currentY);
-                },
-                (element, data) => {
-                    // End marquee selection
-                    Logger.ui.debug('Touch marquee end:', data);
-                    this.endTouchMarquee(data.endX, data.endY);
-                },
-                this.touchSupportManager
-            );
-
-            // Combined two finger pan and zoom
-            TouchSupportUtils.addTwoFingerPanZoomSupport(
-                canvas,
-                // Pan handlers
-                (element, data) => {
-                    // Start panning
-                    Logger.ui.debug('Touch pan start:', data);
-                    this.startTouchPan(data.centerX, data.centerY);
-                },
-                (element, data) => {
-                    // Update panning
-                    Logger.ui.debug('Touch pan move:', data);
-                    this.updateTouchPan(data.deltaX, data.deltaY);
-                },
-                (element, data) => {
-                    // End panning
-                    Logger.ui.debug('Touch pan end:', data);
-                    this.endTouchPan();
-                },
-                // Zoom handlers
-                (element, data) => {
-                    // Start zoom
-                    Logger.ui.debug('Touch zoom start:', data);
-                    this.startTouchZoom(data.centerX, data.centerY);
-                },
-                (element, data) => {
-                    // Update zoom
-                    Logger.ui.debug('Touch zoom move:', data);
-                    this.updateTouchZoom(data.scale, data.centerX, data.centerY);
-                },
-                (element, data) => {
-                    // End zoom
-                    Logger.ui.debug('Touch zoom end:', data);
-                    this.endTouchZoom();
-                },
-                this.touchSupportManager
-            );
-
-            // Two finger context menu
-            TouchSupportUtils.addTwoFingerContextSupport(
-                canvas,
-                (element, data) => {
-                    // Show context menu
-                    Logger.ui.debug('Touch context menu:', data);
-                    this.showTouchContextMenu(data.centerX, data.centerY);
-                },
-                this.touchSupportManager
-            );
 
 
-            Logger.ui.info('Canvas touch gestures initialized');
-        }).catch(error => {
-            Logger.ui.error('Failed to load TouchSupportUtils:', error);
-        });
-    }
 
-    /**
-     * Setup global browser navigation prevention
-     * @private
-     */
-    setupGlobalNavigationPrevention() {
-        // Prevent browser swipe navigation globally
-        let touchStartX = 0;
-        let touchStartY = 0;
-        let touchStartTime = 0;
-
-        // Add global touch event listeners to prevent browser navigation
-        document.addEventListener('touchstart', (e) => {
-            if (e.touches.length === 1) {
-                const touch = e.touches[0];
-                touchStartX = touch.clientX;
-                touchStartY = touch.clientY;
-                touchStartTime = Date.now();
-            }
-        }, { passive: true });
-
-        document.addEventListener('touchmove', (e) => {
-            if (e.touches.length === 1 && touchStartX !== 0) {
-                const touch = e.touches[0];
-                const deltaX = touch.clientX - touchStartX;
-                const deltaY = touch.clientY - touchStartY;
-                const deltaTime = Date.now() - touchStartTime;
-                
-                // Block ALL horizontal swipes that could trigger browser navigation
-                if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 30) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.stopImmediatePropagation();
-                }
-            }
-        }, { passive: false });
-
-        document.addEventListener('touchend', () => {
-            touchStartX = 0;
-            touchStartY = 0;
-            touchStartTime = 0;
-        }, { passive: true });
-
-        // Also prevent context menu globally on touch devices
-        document.addEventListener('contextmenu', (e) => {
-            // Only prevent on touch devices
-            if ('ontouchstart' in window) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-        }, { passive: false });
-
-        // Add CSS to prevent browser navigation gestures
-        this.addNavigationPreventionCSS();
-
-        Logger.ui.info('Global browser navigation prevention setup');
-    }
-
-    /**
-     * Add CSS to prevent browser navigation gestures
-     * @private
-     */
-    addNavigationPreventionCSS() {
-        // CSS is already loaded via index.html
-        // This method is kept for potential future dynamic loading needs
-        Logger.ui.debug('Touch navigation prevention styles should be loaded via index.html');
-    }
 
     /**
      * Initialize UI components (panels, toolbar, etc.)
@@ -970,6 +719,9 @@ export class LevelEditor {
         // Update all panels
         this.updateAllPanels();
 
+        // Initialize touch support after all UI elements are ready
+        this.initializeTouchSupport();
+
         // Auto-set parallax start position to current camera position
         const currentCamera = this.stateManager.get('camera');
         this.stateManager.set('parallax.startPosition', {
@@ -999,6 +751,19 @@ export class LevelEditor {
         this.testPanningDetection();
         this.testMenuAutoClose();
         this.testCursorPositioning();
+    }
+
+    /**
+     * Initialize touch support for all UI elements
+     * @private
+     */
+    async initializeTouchSupport() {
+        try {
+            await this.touchInitializationManager.initializeAllTouchSupport();
+            Logger.ui.info('Touch support initialized successfully');
+        } catch (error) {
+            Logger.ui.error('Failed to initialize touch support:', error);
+        }
     }
 
     /**
