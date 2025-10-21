@@ -2415,7 +2415,7 @@ export class AssetPanel extends BasePanel {
         
         // Save the new height to user preferences
         if (this.stateManager) {
-            this.stateManager.set('ui.assetsPanelHeight', finalHeight);
+            this.stateManager.set('panels.assetsPanelHeight', finalHeight);
         }
     }
 
@@ -2453,7 +2453,7 @@ export class AssetPanel extends BasePanel {
         // Register combined touch support for asset panel using TouchSupportUtils
         Logger.ui.debug('Registering touch support on previewsContainer:', this.previewsContainer);
         
-        import('../../utils/TouchSupportUtils.js').then(({ TouchSupportUtils }) => {
+        import('../utils/TouchSupportUtils.js').then(({ TouchSupportUtils }) => {
             TouchSupportUtils.addLongPressMarqueeTouchSupport(
                 this.previewsContainer,
                 (element, touch, data) => {

@@ -472,7 +472,7 @@ export class LevelEditor {
     }
 
     /**
-     * Setup touch support for panel resizers
+     * Setup touch support for console elements
      * @private
      */
     setupPanelResizerTouchSupport() {
@@ -483,7 +483,8 @@ export class LevelEditor {
 
         // Import TouchSupportUtils
         import('../utils/TouchSupportUtils.js').then(({ TouchSupportUtils }) => {
-            // Assets panel resizer is handled by PanelPositionManager
+            // Assets panel resizer is now handled by PanelPositionManager
+            // This method only handles console touch support
 
             // Console resizer
             const consolePanel = document.getElementById('console-panel');

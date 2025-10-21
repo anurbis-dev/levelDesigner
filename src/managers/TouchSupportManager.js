@@ -382,7 +382,15 @@ export class TouchSupportManager {
         // Handle different interaction types
         switch (config.type) {
             case 'resize':
-                this.handleResizeStart(element, config, touch);
+                // For resize type, check if this is a panel resizer with double-tap support
+                if (config.onDoubleTap) {
+                    // This is a panel resizer - don't start resize immediately
+                    // Wait for potential double-tap or movement
+                    Logger.ui.debug('TouchSupportManager: Panel resizer touch start - waiting for double-tap or movement');
+                } else {
+                    // Regular resize element - start resize immediately
+                    this.handleResizeStart(element, config, touch);
+                }
                 break;
             case 'drag':
                 this.handleDragStart(element, config, touch);
@@ -488,6 +496,13 @@ export class TouchSupportManager {
         // Handle different interaction types
         switch (config.type) {
             case 'resize':
+                // For panel resizers, start resize on first movement
+                if (config.onDoubleTap && !touchData.resizeStarted) {
+                    // This is a panel resizer - start resize on first movement
+                    touchData.resizeStarted = true;
+                    this.handleResizeStart(element, config, touch);
+                    Logger.ui.debug('TouchSupportManager: Panel resizer resize started on movement');
+                }
                 this.handleResizeMove(element, config, touch, touchData);
                 break;
             case 'drag':
@@ -553,7 +568,13 @@ export class TouchSupportManager {
         // Handle different interaction types
         switch (config.type) {
             case 'resize':
-                this.handleResizeEnd(element, config, touchData);
+                // For panel resizers, check if resize was started
+                if (config.onDoubleTap && !touchData.resizeStarted) {
+                    // This was a tap without movement - don't call resize end
+                    Logger.ui.debug('TouchSupportManager: Panel resizer tap ended without movement');
+                } else {
+                    this.handleResizeEnd(element, config, touchData);
+                }
                 break;
             case 'drag':
                 this.handleDragEnd(element, config, touchData);
@@ -683,10 +704,15 @@ export class TouchSupportManager {
                 delta = -delta;
             }
         } else {
-            // For vertical resizers (assets panel) - match mouse logic
-            // Mouse uses: initialPanelHeight - deltaY
-            // So we need to invert the delta for touch to match
-            delta = -(touch.clientY - touchData.startY);
+            // For vertical resizers - check if it's console or assets panel
+            const isConsole = element.classList.contains('console-resize-handle');
+            if (isConsole) {
+                // Console logic: movement down increases height (like mouse)
+                delta = touch.clientY - touchData.startY;
+            } else {
+                // Assets panel logic: movement down decreases height
+                delta = -(touch.clientY - touchData.startY);
+            }
         }
         
         const newSize = Math.max(
@@ -965,6 +991,11 @@ export class TouchSupportManager {
      * @returns {HTMLElement|null} - Target panel element
      */
     getTargetPanel(element) {
+        // Check if it's console resizer
+        if (element.classList.contains('console-resize-handle')) {
+            return document.getElementById('console-panel');
+        }
+        
         // Try to find panel by ID pattern
         const resizerId = element.id;
         if (resizerId) {

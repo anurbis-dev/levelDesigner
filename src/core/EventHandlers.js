@@ -431,7 +431,8 @@ export class EventHandlers extends BaseModule {
                 this.editor.updateAllPanels();
             }
             
-            // Setup touch support for panel resizers after they are created
+            // Touch support for panel resizers is now registered immediately when resizers are created
+            // But we still need to setup console touch support
             if (this.editor.setupPanelResizerTouchSupport) {
                 this.editor.setupPanelResizerTouchSupport();
             }

@@ -742,48 +742,8 @@ export class PanelPositionManager {
         });
 
         // Register with TouchSupportManager using TouchSupportUtils
-        if (this.levelEditor.touchSupportManager) {
-            import('../../utils/TouchSupportUtils.js').then(({ TouchSupportUtils }) => {
-                TouchSupportUtils.addResizeTouchSupport(
-                    resizer,
-                    'horizontal',
-                    0, // minSize
-                    800, // maxSize
-                    (element, targetPanel, touch) => {
-                        Logger.ui.debug(`${panelSide} panel resize started via touch`);
-                    },
-                    (element, targetPanel, newSize, touch) => {
-                        // Use unified resize logic
-                        this.handlePanelResize(panel, panelSide, 'horizontal', newSize);
-                    },
-                    (element, targetPanel, currentSize) => {
-                        // Save width to StateManager
-                        if (this.stateManager) {
-                            this.stateManager.set(`panels.${panelSide}PanelWidth`, currentSize);
-                        }
-                        if (this.userPrefs) {
-                            this.userPrefs.set(`${panelSide}PanelWidth`, currentSize);
-                        }
-                        Logger.ui.debug(`Saved ${panelSide} panel width from touch: ${currentSize}px`);
-                    },
-                    (element, touch) => {
-                        // Use universal double-click handler
-                        this.levelEditor.touchSupportManager.handlePanelDoubleClick(element, {
-                            panel,
-                            panelSide,
-                            stateManager: this.stateManager,
-                            userPrefs: this.userPrefs,
-                            direction: 'horizontal',
-                            stateKey: `panels.${panelSide}PanelWidth`,
-                            prefKey: `${panelSide}PanelWidth`,
-                        });
-                    },
-                    this.levelEditor.touchSupportManager
-                );
-            }).catch(error => {
-                console.warn('Failed to load TouchSupportUtils for panel resizer:', error);
-            });
-        }
+        // Register touch support immediately after resizer is created
+        this.registerTouchSupportForResizer(resizer, panel, panelSide, 'horizontal');
 
         // Mouse move - resize panel using unified logic
         const handleMouseMove = (e) => {
@@ -861,6 +821,70 @@ export class PanelPositionManager {
         };
 
         Logger.ui.debug(`Setup resizer for ${panelSide} panel with full functionality`);
+    }
+
+    /**
+     * Register touch support for a resizer element
+     * @param {HTMLElement} resizer - Resizer element
+     * @param {HTMLElement} panel - Panel element
+     * @param {string} panelSide - Panel side ('left', 'right', 'assets')
+     * @param {string} direction - Resize direction ('horizontal', 'vertical')
+     */
+    registerTouchSupportForResizer(resizer, panel, panelSide, direction) {
+        if (!this.levelEditor.touchSupportManager) {
+            Logger.ui.warn('TouchSupportManager not available for resizer touch support');
+            return;
+        }
+
+        import('../utils/TouchSupportUtils.js').then(({ TouchSupportUtils }) => {
+            const isVertical = direction === 'vertical';
+            const minSize = isVertical ? 100 : 0;
+            const maxSize = isVertical ? 600 : 800;
+            
+            TouchSupportUtils.addResizeTouchSupport(
+                resizer,
+                direction,
+                minSize,
+                maxSize,
+                (element, targetPanel, touch) => {
+                    Logger.ui.debug(`${panelSide} panel resize started via touch`);
+                },
+                (element, targetPanel, newSize, touch) => {
+                    // Use unified resize logic
+                    this.handlePanelResize(panel, panelSide, direction, newSize);
+                },
+                (element, targetPanel, currentSize) => {
+                    // Save size to StateManager
+                    const stateKey = isVertical ? 'panels.assetsPanelHeight' : `panels.${panelSide}PanelWidth`;
+                    const prefKey = isVertical ? 'assetsPanelHeight' : `${panelSide}PanelWidth`;
+                    
+                    if (this.stateManager) {
+                        this.stateManager.set(stateKey, currentSize);
+                    }
+                    if (this.userPrefs) {
+                        this.userPrefs.set(prefKey, currentSize);
+                    }
+                    Logger.ui.debug(`Saved ${panelSide} panel ${isVertical ? 'height' : 'width'} from touch: ${currentSize}px`);
+                },
+                (element, touch) => {
+                    // Use universal double-click handler
+                    this.levelEditor.touchSupportManager.handlePanelDoubleClick(element, {
+                        panel,
+                        panelSide,
+                        stateManager: this.stateManager,
+                        userPrefs: this.userPrefs,
+                        direction: direction,
+                        stateKey: isVertical ? 'panels.assetsPanelHeight' : `panels.${panelSide}PanelWidth`,
+                        prefKey: isVertical ? 'assetsPanelHeight' : `${panelSide}PanelWidth`,
+                    });
+                },
+                this.levelEditor.touchSupportManager
+            );
+            
+            Logger.ui.debug(`Registered touch support for ${panelSide} panel resizer (${direction})`);
+        }).catch(error => {
+            console.warn('Failed to load TouchSupportUtils for panel resizer:', error);
+        });
     }
 
     /**
@@ -1220,44 +1244,8 @@ export class PanelPositionManager {
         });
 
         // Register with TouchSupportManager using TouchSupportUtils
-        if (this.levelEditor.touchSupportManager) {
-            import('../../utils/TouchSupportUtils.js').then(({ TouchSupportUtils }) => {
-                TouchSupportUtils.addResizeTouchSupport(
-                    resizer,
-                    'vertical',
-                    100, // minSize
-                    600, // maxSize
-                    (element, targetPanel, touch) => {
-                        Logger.ui.debug('Assets panel resize started via touch');
-                    },
-                    (element, targetPanel, newSize, touch) => {
-                        // Use unified resize logic
-                        this.handlePanelResize(panel, 'assets', 'vertical', newSize);
-                    },
-                    (element, targetPanel, currentSize) => {
-                        // Save new height
-                        this.stateManager.set('panels.assetsPanelHeight', currentSize);
-                        this.userPrefs?.set('assetsPanelHeight', currentSize);
-                        Logger.ui.debug(`Saved assets panel height from touch: ${currentSize}px`);
-                    },
-                    (element, touch) => {
-                        // Use universal double-click handler
-                        this.levelEditor.touchSupportManager.handlePanelDoubleClick(element, {
-                            panel,
-                            panelSide: 'assets',
-                            stateManager: this.stateManager,
-                            userPrefs: this.userPrefs,
-                            direction: 'vertical',
-                            stateKey: 'panels.assetsPanelHeight',
-                            prefKey: 'assetsPanelHeight',
-                        });
-                    },
-                    this.levelEditor.touchSupportManager
-                );
-            }).catch(error => {
-                console.warn('Failed to load TouchSupportUtils for assets resizer:', error);
-            });
-        }
+        // Register touch support immediately after resizer is created
+        this.registerTouchSupportForResizer(resizer, panel, 'assets', 'vertical');
 
         // Double-click to toggle collapse/expand
         resizer.addEventListener('dblclick', (e) => {
