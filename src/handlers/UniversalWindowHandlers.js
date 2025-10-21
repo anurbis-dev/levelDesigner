@@ -97,7 +97,7 @@ export class UniversalWindowHandlers {
 
         // Универсальные обработчики кнопок
         if (target.tagName === 'BUTTON') {
-            UniversalWindowHandlers.handleButtonClick(target, windowInstance, windowType);
+            UniversalWindowHandlers.handleButtonClick(target, windowInstance, windowType, e);
         }
         
         // Обработка закрытия по кнопке
@@ -116,8 +116,9 @@ export class UniversalWindowHandlers {
      * @param {HTMLElement} button - Элемент кнопки
      * @param {Object} windowInstance - Экземпляр окна
      * @param {string} windowType - Тип окна
+     * @param {Event} event - Событие клика (опционально)
      */
-    static handleButtonClick(button, windowInstance, windowType) {
+    static handleButtonClick(button, windowInstance, windowType, event = null) {
         const buttonId = button.id;
         const buttonClass = button.className;
         
@@ -133,7 +134,7 @@ export class UniversalWindowHandlers {
         if (windowType === 'asset-panel' && windowInstance) {
             UniversalWindowHandlers.handleAssetPanelButton(button, windowInstance);
         } else if (windowType === 'layers-panel' && windowInstance) {
-            UniversalWindowHandlers.handleLayersPanelButton(button, windowInstance);
+            UniversalWindowHandlers.handleLayersPanelButton(button, windowInstance, event);
         } else if (windowType === 'actor-properties' && windowInstance) {
             UniversalWindowHandlers.handleActorPropertiesButton(button, windowInstance);
         } else {
@@ -208,14 +209,15 @@ export class UniversalWindowHandlers {
      * Обработка кнопок LayersPanel
      * @param {HTMLElement} button - Элемент кнопки
      * @param {Object} layersPanel - Экземпляр LayersPanel
+     * @param {Event} event - Событие клика (опционально)
      */
-    static handleLayersPanelButton(button, layersPanel) {
+    static handleLayersPanelButton(button, layersPanel, event = null) {
         const buttonId = button.id;
 
         // Обработка специфичных кнопок LayersPanel
         if (buttonId === 'add-layer-btn') {
             if (typeof layersPanel.onAddLayer === 'function') {
-                layersPanel.onAddLayer();
+                layersPanel.onAddLayer(event);
             } else {
                 Logger.ui.debug(`UniversalWindowHandlers: add-layer-btn clicked, but no handler found`);
             }

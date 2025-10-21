@@ -43,7 +43,7 @@ export const LayersPanelStructure = {
         addButton: {
             id: 'add-layer-btn',
             classes: 'bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded text-sm',
-            title: 'Add new layer',
+            title: 'Add new layer (Shift+Click to add 3 layers)',
             text: '+ Add'
         },
     },

@@ -30,12 +30,10 @@ export class LayersPanel extends BasePanel {
             'layers-search',
             (searchFilter) => {
                 this.searchFilter = searchFilter;
-                Logger.layer.debug('Search filter changed:', searchFilter);
                 this.renderLayersSection();
             },
             () => {
                 // Clear callback - could be used for additional cleanup
-                Logger.layer.debug('Search filter cleared');
             }
         );
         this.layerContextMenu = null; // Layer context menu reference
@@ -92,16 +90,8 @@ export class LayersPanel extends BasePanel {
     setupEventListeners() {
         // Context menu setup is done in render() when containers are available
 
-        // Setup selection functionality for layers
-        this.setupSelection({
-            selectionKey: 'selectedObjects',
-            anchorKey: 'layers.shiftAnchor',
-            getItemList: () => this.getLayerList(),
-            onSelectionChange: () => this.updateLayerStyles(),
-            canSelect: (layer) => !layer.locked,
-            itemSelector: '[data-layer-id]',
-            selectedClass: 'selected'
-        });
+        // Selection functionality is now handled by AutoEventHandlerManager
+        // No need to setup BasePanel selection for layers
 
         // Subscribe to level changes
         const unsubscribeLevel = this.stateManager.subscribe('level', () => {
@@ -157,9 +147,7 @@ export class LayersPanel extends BasePanel {
      * @param {HTMLElement} targetContainer - Container to attach context menu to
      */
     setupLayersListContextMenu(targetContainer) {
-        Logger.ui.debug('LayersPanel: setupLayersListContextMenu called with', targetContainer);
         if (!targetContainer || this._layersListContextMenuSetup) {
-            Logger.ui.debug('LayersPanel: Skipping setup - container missing or already setup');
             return;
         }
 
@@ -170,21 +158,17 @@ export class LayersPanel extends BasePanel {
 
         // Create new handler
         this._layersListContextMenuHandler = (event) => {
-            Logger.ui.debug('LayersPanel: Context menu event triggered on', event.target);
 
             // Show menu if not clicking on a layer item
             if (!event.target.closest('[data-layer-id]')) {
-                Logger.ui.debug('LayersPanel: Showing menu - not on layer item');
                 event.preventDefault();
                 this.showLayersMenu(event);
             } else {
-                Logger.ui.debug('LayersPanel: Not showing menu - clicked on layer item');
             }
         };
 
         targetContainer.addEventListener('contextmenu', this._layersListContextMenuHandler);
         this._layersListContextMenuSetup = true;
-        Logger.ui.debug('LayersPanel: Context menu listener added to layersList');
     }
 
     render() {
@@ -235,29 +219,24 @@ export class LayersPanel extends BasePanel {
      * Render layers controls in the top custom section
      */
     renderLayersSearchControls() {
-        Logger.ui.debug('LayersPanel: renderLayersSearchControls called');
 
         // Get the top custom section from panel structure
         const topSection = this.panelElements?.topCustom;
         if (!topSection) {
-            Logger.ui.warn('LayersPanel: Top custom section not available, skipping controls render');
             return;
         }
 
         // Check if layers panel is currently active
         const layersPanel = document.getElementById('layers-content-panel');
         if (!layersPanel || layersPanel.classList.contains('hidden')) {
-            Logger.ui.debug('LayersPanel: Panel not active, skipping render');
             return; // Don't render if layers is not active
         }
 
-        Logger.ui.debug('LayersPanel: Panel is active, proceeding with render');
 
         // Check if controls are already rendered (avoid unnecessary re-rendering)
         const searchInput = topSection.querySelector('#layers-search');
         const addButton = topSection.querySelector('#add-layer-btn');
 
-        Logger.ui.debug(`LayersPanel: Checking controls - search: ${!!searchInput}, add: ${!!addButton}`);
 
         if (searchInput && addButton) {
             // Controls already exist, just update search value
@@ -265,37 +244,27 @@ export class LayersPanel extends BasePanel {
             if (searchInput.value !== currentTerm) {
                 searchInput.value = currentTerm;
             }
-            Logger.ui.debug('Layers controls already rendered, skipping re-render');
 
             // Always check and ensure search listeners are properly set up
             if (!searchInput.hasAttribute('data-search-managed')) {
-                Logger.ui.warn('LayersPanel: Search input exists but no listeners set up, forcing refresh');
                 searchManager.setupSearchListeners('layers');
             } else {
-                Logger.ui.debug('LayersPanel: Search listeners are properly set up');
             }
 
             return;
         }
 
-        Logger.ui.debug('LayersPanel: Controls not found, will render them');
 
-        Logger.ui.debug('LayersPanel: Rendering new controls');
 
         // Use the structure's render function with callbacks
         renderLayersControls(topSection, {
             getSearchFilter: () => searchManager.getSearchTerm('layers'),
             onSearch: (searchFilter) => {
                 this.searchFilter = searchFilter;
-                Logger.layer.debug('Search filter changed:', searchFilter);
                 this.renderLayersSection();
             },
             onAddLayer: () => {
-                const level = this.levelEditor.getLevel();
-                const newLayer = level.addLayer();
-                this.render();
-                this.stateManager.markDirty();
-                Logger.layer.info(`Added new layer: ${newLayer.name}`);
+                // Now handled automatically by AutoEventHandlerManager
             }
         });
 
@@ -304,11 +273,9 @@ export class LayersPanel extends BasePanel {
         // Immediately ensure search listeners are set up after creating new controls
         const newSearchInput = topSection.querySelector('#layers-search');
         if (newSearchInput && !newSearchInput.hasAttribute('data-search-managed')) {
-            Logger.ui.debug('LayersPanel: Setting up search listeners for newly created controls');
             searchManager.setupSearchListeners('layers');
         }
 
-        Logger.ui.debug('Layers controls rendered in top section');
     }
 
     /**
@@ -804,31 +771,6 @@ export class LayersPanel extends BasePanel {
         });
     }
 
-    /**
-     * Setup search buttons event listeners
-     */
-    setupSearchButtons() {
-        const level = this.levelEditor.getLevel();
-
-        // Add layer button - remove existing listeners first
-        const addLayerBtn = document.getElementById('add-layer-btn');
-        if (addLayerBtn) {
-            // Clone the button to remove all event listeners
-            const newAddLayerBtn = addLayerBtn.cloneNode(true);
-            addLayerBtn.parentNode.replaceChild(newAddLayerBtn, addLayerBtn);
-
-            newAddLayerBtn.addEventListener('click', () => {
-                const newLayer = level.addLayer();
-                this.render();
-                this.stateManager.markDirty();
-
-                // Invalidate cache when new layer is added
-                if (this.levelEditor.renderOperations) {
-                    this.levelEditor.renderOperations.invalidateLayerVisibilityCache();
-                }
-            });
-        }
-    }
 
     /**
      * Setup layers event listeners
@@ -925,77 +867,8 @@ export class LayersPanel extends BasePanel {
             });
         });
         
-        // Visibility toggle
-        const visibilityBtns = this.container.querySelectorAll('.layer-visibility-btn');
-        visibilityBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation(); // Prevent triggering layer click
-                const layerId = e.target.closest('button').dataset.layerId;
-                const layer = level.getLayerById(layerId);
-                if (layer) {
-                    const wasVisible = layer.visible;
-                    layer.toggleVisibility();
-
-                    // Force update the layer element immediately
-                    this.updateLayerElement(layerId, layer);
-                    this.stateManager.markDirty();
-
-                    // Notify about layer visibility change
-                    this.stateManager.notifyLayerChanged(layerId, 'visible', layer.visible, wasVisible);
-
-                    // Handle visibility changes
-                    if (wasVisible && !layer.visible) {
-                        // Layer became invisible
-                        this.handleLayerVisibilityChanged(layerId, false);
-                    } else if (!wasVisible && layer.visible) {
-                        // Layer became visible - update selection to include objects from this layer
-                        this.handleLayerVisibilityChanged(layerId, true);
-                    }
-
-                    // Invalidate layer visibility cache for performance
-                    if (this.levelEditor.renderOperations) {
-                        this.levelEditor.renderOperations.invalidateLayerVisibilityCache();
-                        this.levelEditor.render();
-                    }
-                }
-
-                // Update layer styles after visibility change
-                this.updateLayerStyles();
-            });
-        });
-        
-        // Lock toggle
-        const lockBtns = this.container.querySelectorAll('.layer-lock-btn');
-        lockBtns.forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation(); // Prevent triggering layer click
-                const layerId = e.target.closest('button').dataset.layerId;
-                const layer = level.getLayerById(layerId);
-                if (layer) {
-                    const wasLocked = layer.locked;
-                    layer.toggleLock();
-
-                    // Force update the layer element immediately
-                    this.updateLayerElement(layerId, layer);
-                    this.stateManager.markDirty();
-
-                    // Notify about layer lock change
-                    this.stateManager.notifyLayerChanged(layerId, 'locked', layer.locked, wasLocked);
-
-                    // Handle lock state changes
-                    if (!wasLocked && layer.locked) {
-                        // Layer became locked - remove selection from objects in this layer
-                        this.handleLayerLockChanged(layerId, true);
-                    } else if (wasLocked && !layer.locked) {
-                        // Layer became unlocked - update outliner to show objects as selectable
-                        this.handleLayerLockChanged(layerId, false);
-                    }
-
-                    // Update all panels to reflect changes (especially outliner)
-                    this.levelEditor.updateAllPanels();
-                }
-            });
-        });
+        // Button handlers are now handled by AutoEventHandlerManager
+        // No manual event listeners needed for visibility and lock buttons
         
         // Parallax offset input
         const parallaxInputs = this.container.querySelectorAll('.layer-parallax-input');
@@ -1013,7 +886,6 @@ export class LayersPanel extends BasePanel {
                     // Notify about layer parallax change
                     this.stateManager.notifyLayerChanged(layerId, 'parallaxOffset', newOffset, oldOffset);
 
-                    Logger.layer.debug(`Updated parallax offset for layer ${layer.name}: ${newOffset}`);
                 }
             });
 
@@ -1031,31 +903,12 @@ export class LayersPanel extends BasePanel {
             });
         });
         
-        // Layer click handler for current layer selection
+        // Layer click handler is now handled by AutoEventHandlerManager
+        // No local event listeners needed - the universal system handles all clicks
+        
+        // Context menu for layers
         const layerItems = this.container.querySelectorAll('.layer-item');
         layerItems.forEach(item => {
-            item.addEventListener('click', (e) => {
-                // Don't trigger if clicking on buttons or inputs
-                if (e.target.closest('button') || e.target.closest('input')) {
-                    return;
-                }
-                
-                const layerId = e.currentTarget.dataset.layerId;
-                const level = this.levelEditor.getLevel();
-                const layer = level.getLayerById(layerId);
-                
-                if (e.ctrlKey || e.metaKey) {
-                    // Select all objects in the layer
-                    this.selectAllObjectsInLayer(layerId);
-                } else {
-                    // Use BasePanel selection for layer selection
-                    this.handleItemClick(e, layer);
-                    // Also set as current layer
-                    this.setCurrentLayerAndNotify(layerId);
-                }
-            });
-
-            // Context menu for layers
             item.addEventListener('contextmenu', (e) => {
                 // Use closest to find the layer element even if clicking on nested elements
                 const layerElement = e.target.closest('[data-layer-id]');
@@ -1358,7 +1211,6 @@ export class LayersPanel extends BasePanel {
                 searchManager.setSearchTerm('layers', '');
             }
             this.render();
-            Logger.layer.debug('LayersPanel: Search cleared');
         }
     }
 
@@ -1373,19 +1225,101 @@ export class LayersPanel extends BasePanel {
             searchManager.setSearchTerm('layers', searchTerm);
         }
         this.render();
-        Logger.layer.debug(`LayersPanel: Search updated to: ${searchTerm}`);
     }
 
     /**
      * Handle add layer button
+     * @param {Event} e - Click event (optional, for checking modifier keys)
      */
-    onAddLayer() {
+    onAddLayer(e = null) {
         const level = this.levelEditor.getLevel();
         if (level) {
-            const newLayer = level.addLayer();
+            const layersBefore = level.layers.length;
+            const shiftPressed = e && (e.shiftKey || e.ctrlKey);
+
+            // If Shift is pressed, add 3 layers instead of 1
+            const layersToAdd = shiftPressed ? 3 : 1;
+
+            for (let i = 0; i < layersToAdd; i++) {
+                level.addLayer();
+            }
+
+            const layersAfter = level.layers.length;
             this.render();
             this.stateManager.markDirty();
-            Logger.layer.info(`Added new layer: ${newLayer.name}`);
+            Logger.layer.info(`Added ${layersToAdd} layer(s) (${layersBefore} → ${layersAfter} layers)`);
+        }
+    }
+
+    /**
+     * Toggle layer visibility (for auto-registration system)
+     * @param {string} layerId - Layer ID
+     */
+    toggleLayerVisibility(layerId) {
+        const level = this.levelEditor.getLevel();
+        const layer = level.getLayerById(layerId);
+        if (layer) {
+            const wasVisible = layer.visible;
+            layer.toggleVisibility();
+
+            // Force update the layer element immediately
+            this.updateLayerElement(layerId, layer);
+            this.stateManager.markDirty();
+
+            // Notify about layer visibility change
+            this.stateManager.notifyLayerChanged(layerId, 'visible', layer.visible, wasVisible);
+
+            // Handle visibility changes
+            if (wasVisible && !layer.visible) {
+                // Layer became invisible
+                this.handleLayerVisibilityChanged(layerId, false);
+            } else if (!wasVisible && layer.visible) {
+                // Layer became visible - update selection to include objects from this layer
+                this.handleLayerVisibilityChanged(layerId, true);
+            }
+
+            // Invalidate layer visibility cache for performance
+            if (this.levelEditor.renderOperations) {
+                this.levelEditor.renderOperations.invalidateLayerVisibilityCache();
+                this.levelEditor.render();
+            }
+
+            // Update layer styles after visibility change
+            this.updateLayerStyles();
+        }
+    }
+
+    /**
+     * Toggle layer lock (for auto-registration system)
+     * @param {string} layerId - Layer ID
+     */
+    toggleLayerLock(layerId) {
+        const level = this.levelEditor.getLevel();
+        const layer = level.getLayerById(layerId);
+        if (layer) {
+            const wasLocked = layer.locked;
+            layer.toggleLock();
+
+            // Force update the layer element immediately
+            this.updateLayerElement(layerId, layer);
+            this.stateManager.markDirty();
+
+            // Notify about layer lock change
+            this.stateManager.notifyLayerChanged(layerId, 'locked', layer.locked, wasLocked);
+
+            // Handle lock state changes
+            if (!wasLocked && layer.locked) {
+                // Layer became locked - remove selection from objects in this layer
+                this.handleLayerLockChanged(layerId, true);
+            } else if (wasLocked && !layer.locked) {
+                // Layer became unlocked - update outliner to show objects as selectable
+                this.handleLayerLockChanged(layerId, false);
+            }
+
+            // Update only outliner panel to reflect changes, not all panels
+            if (this.levelEditor.outlinerPanel) {
+                this.levelEditor.outlinerPanel.render();
+            }
         }
     }
 
@@ -1437,57 +1371,10 @@ export class LayersPanel extends BasePanel {
     /**
      * Toggle layer visibility
      */
-    toggleLayerVisibility(layerId) {
-        const level = this.levelEditor.getLevel();
-        const layer = level.getLayerById(layerId);
-        if (!layer) return;
-
-        const wasVisible = layer.visible;
-        layer.toggleVisibility();
-        this.updateLayerElement(layerId, layer);
-        this.stateManager.markDirty();
-
-        // Notify about layer visibility change
-        this.stateManager.notifyLayerChanged(layerId, 'visible', layer.visible, wasVisible);
-
-        if (wasVisible && !layer.visible) {
-            this.handleLayerVisibilityChanged(layerId, false);
-        } else if (!wasVisible && layer.visible) {
-            this.handleLayerVisibilityChanged(layerId, true);
-        }
-
-        if (this.levelEditor.renderOperations) {
-            this.levelEditor.renderOperations.invalidateLayerVisibilityCache();
-            this.levelEditor.render();
-        }
-
-        this.updateLayerStyles();
-    }
 
     /**
      * Toggle layer lock
      */
-    toggleLayerLock(layerId) {
-        const level = this.levelEditor.getLevel();
-        const layer = level.getLayerById(layerId);
-        if (!layer) return;
-
-        const wasLocked = layer.locked;
-        layer.toggleLock();
-        this.updateLayerElement(layerId, layer);
-        this.stateManager.markDirty();
-
-        // Notify about layer lock change
-        this.stateManager.notifyLayerChanged(layerId, 'locked', layer.locked, wasLocked);
-
-        if (!wasLocked && layer.locked) {
-            this.handleLayerLockChanged(layerId, true);
-        } else if (wasLocked && !layer.locked) {
-            this.handleLayerLockChanged(layerId, false);
-        }
-
-        this.levelEditor.updateAllPanels();
-    }
 
     /**
      * Select all objects in layer
@@ -1839,7 +1726,6 @@ export class LayersPanel extends BasePanel {
      * Cleanup and destroy panel
      */
     destroy() {
-        Logger.ui.debug('Destroying LayersPanel');
         
         // Unsubscribe from all state changes
         this.subscriptions.forEach(unsubscribe => {
@@ -1873,6 +1759,5 @@ export class LayersPanel extends BasePanel {
         this.searchFilter = '';
         this.contextMenu = null;
         
-        Logger.ui.debug('LayersPanel destroyed');
     }
 }

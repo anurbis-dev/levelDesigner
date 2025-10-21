@@ -81,10 +81,10 @@ export class AutoEventHandlerManager {
         const childWindows = element.querySelectorAll('[id*="overlay"], [id*="dialog"], [id*="window"]');
         childWindows.forEach(child => {
             if (child !== element) { // Avoid checking the same element twice
-                const childWindowInfo = this.detectWindowType(child);
-                if (childWindowInfo) {
-                    Logger.event.debug(`AutoEventHandlerManager: Found child window ${child.id} of type ${childWindowInfo.type}`);
-                    this.registerWindowAutomatically(child, childWindowInfo);
+            const childWindowInfo = this.detectWindowType(child);
+            if (childWindowInfo) {
+                Logger.event.debug(`AutoEventHandlerManager: Found child window ${child.id} of type ${childWindowInfo.type}`);
+                this.registerWindowAutomatically(child, childWindowInfo);
                 }
             }
         });
@@ -113,13 +113,17 @@ export class AutoEventHandlerManager {
     registerPanelChildElements(panel, panelInfo) {
         const { type, instance } = panelInfo;
 
-        // Register handlers for different element types within the panel
-        this.registerElementTypeHandlers(panel, '.layer-item', 'layerItem', instance);
+        // Register handlers for buttons with proper event isolation
         this.registerElementTypeHandlers(panel, '.layer-visibility-btn', 'layerButton', instance);
         this.registerElementTypeHandlers(panel, '.layer-lock-btn', 'layerButton', instance);
         this.registerElementTypeHandlers(panel, '.layer-color', 'layerColor', instance);
+
+        // Register handlers for layer items (main content area)
+        this.registerElementTypeHandlers(panel, '.layer-item', 'layerItem', instance);
+
+        // Register handlers for other elements
         this.registerElementTypeHandlers(panel, '#layers-search', 'searchInput', instance);
-        this.registerElementTypeHandlers(panel, '#add-layer-btn', 'addButton', instance);
+        // Note: #add-layer-btn is handled through panel click handlers, not as separate element
 
         // Register input handlers for layer name editing
         this.registerInputHandlers(panel, '[id^="layer-name-"]', 'layerNameInput', instance);
@@ -363,9 +367,9 @@ export class AutoEventHandlerManager {
     detectWindowType(element) {
         const id = element.id;
         const className = typeof element.className === 'string' ? element.className : '';
-
+        
         Logger.event.debug(`AutoEventHandlerManager: Checking element ${id} with class ${className}`);
-
+        
         // Check by ID and classes
         const windowTypes = [
             { id: 'settings-overlay', class: 'settings-panel-container', type: 'settings', instance: 'SettingsPanel' },
@@ -374,14 +378,14 @@ export class AutoEventHandlerManager {
             { id: 'asset-panel-container', class: 'asset-panel-container', type: 'asset-panel', instance: 'AssetPanel' },
             { id: 'layers-content-panel', class: 'layers-panel-container', type: 'layers-panel', instance: 'LayersPanel' }
         ];
-
+        
         for (const windowType of windowTypes) {
             if (id === windowType.id || className.includes(windowType.class)) {
                 Logger.event.info(`AutoEventHandlerManager: Detected window type ${windowType.type} for element ${id}`);
                 return { type: windowType.type, instance: this.findWindowInstance(windowType.instance) };
             }
         }
-
+        
         return null;
     }
 
@@ -565,14 +569,22 @@ export class AutoEventHandlerManager {
     handleCommonElementClick(e, instance) {
         const target = e.target;
 
-        // Handle layer item clicks
-        if (target.closest('.layer-item')) {
-            this.handleLayerItemClick(e, instance);
+        // Handle button clicks first (they are inside layer items) - highest priority
+        const isButtonClick = target.closest('.layer-visibility-btn, .layer-lock-btn, .layer-color');
+        if (isButtonClick) {
+            this.handleLayerButtonClick(e, instance);
+            return; // Don't process further if it's a button click
         }
 
-        // Handle button clicks (visibility, lock, etc.)
-        if (target.closest('.layer-visibility-btn, .layer-lock-btn, .layer-color')) {
-            this.handleLayerButtonClick(e, instance);
+        // Handle input clicks (they are inside layer items)
+        const isInputClick = target.closest('.layer-name-input, .layer-parallax-input');
+        if (isInputClick) {
+            return; // Inputs are handled by their own handlers in LayersPanel.js
+        }
+
+        // Handle layer item clicks (but not if clicking on interactive elements inside)
+        if (target.closest('.layer-item')) {
+            this.handleLayerItemClick(e, instance);
         }
 
         // Handle search input clicks (handled by input handlers)
@@ -596,6 +608,21 @@ export class AutoEventHandlerManager {
         const layerElement = target.closest('.layer-item');
 
         if (layerElement) {
+            // Only handle clicks on the layer name display area or the main content area
+            // Don't handle clicks on buttons, inputs, or other interactive elements
+            const isInteractiveElement = target.closest('.layer-visibility-btn, .layer-lock-btn, .layer-color, .layer-name-input, .layer-parallax-input, .layer-objects-count');
+            if (isInteractiveElement) {
+                return;
+            }
+
+            // Check if clicking on the name display area or main content
+            const isNameArea = target.closest('.layer-name-display');
+            const isMainContent = target === layerElement || target.closest('.flex.items-center.space-x-2');
+
+            if (!isNameArea && !isMainContent) {
+                return; // Only allow selection when clicking on name or main content area
+            }
+
             const layerId = layerElement.dataset.layerId;
 
             if (e.ctrlKey || e.metaKey) {
@@ -618,6 +645,8 @@ export class AutoEventHandlerManager {
      * @param {Object} instance - Panel instance
      */
     handleLayerButtonClick(e, instance) {
+        e.stopPropagation(); // Prevent triggering layer click
+        e.preventDefault(); // Prevent default behavior
         const target = e.target;
         const button = target.closest('button');
 
@@ -627,10 +656,14 @@ export class AutoEventHandlerManager {
             if (button.classList.contains('layer-visibility-btn')) {
                 if (typeof instance.toggleLayerVisibility === 'function') {
                     instance.toggleLayerVisibility(layerId);
+                } else {
+                    Logger.ui.warn('LayersPanel: toggleLayerVisibility method not found');
                 }
             } else if (button.classList.contains('layer-lock-btn')) {
                 if (typeof instance.toggleLayerLock === 'function') {
                     instance.toggleLayerLock(layerId);
+                } else {
+                    Logger.ui.warn('LayersPanel: toggleLayerLock method not found');
                 }
             }
         }
@@ -647,8 +680,11 @@ export class AutoEventHandlerManager {
 
         if (button) {
             if (button.id === 'add-layer-btn') {
+                Logger.ui.debug(`AutoEventHandlerManager: handleAddButtonClick called for ${button.id}`);
                 if (instance && typeof instance.onAddLayer === 'function') {
-                    instance.onAddLayer();
+                    instance.onAddLayer(e);
+                } else {
+                    Logger.ui.warn(`AutoEventHandlerManager: No onAddLayer method found on instance`);
                 }
             }
         }
@@ -686,7 +722,7 @@ export class AutoEventHandlerManager {
 
         // Create handlers depending on window type
         const elementConfig = this.createElementHandlers(element, type, instance, windowId);
-
+        
         // Register in EventHandlerManager
         try {
             eventHandlerManager.registerElement(

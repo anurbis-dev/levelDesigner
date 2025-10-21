@@ -268,7 +268,7 @@ EventHandlerUtils.addDialogEventHandling(
 // - .layer-lock-btn - кнопки блокировки
 // - .layer-color - цветовые индикаторы
 // - #layers-search - поле поиска
-// - #add-layer-btn - кнопка добавления слоя
+// - #add-layer-btn - кнопка добавления слоя (Shift+Click для добавления 3 слоев)
 // - [id^="layer-name-"] - поля редактирования имен слоев
 // - .layer-parallax-input - поля параллакса
 ```
