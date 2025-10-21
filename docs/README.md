@@ -1,4 +1,4 @@
-# 2D Level Editor v3.51.11
+# 2D Level Editor v3.52.0
 
 Редактор уровней для 2D игр.
 

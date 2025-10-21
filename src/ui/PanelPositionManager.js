@@ -17,14 +17,11 @@ export class PanelPositionManager {
      * @private
      */
     _updateUI() {
-        // Update canvas
-        if (window.updateCanvas) {
-            window.updateCanvas();
-        }
-        // Update panels
+        // Update panels only - canvas is in separate container and doesn't need updates
         if (this.levelEditor && this.levelEditor.updateAllPanels) {
             this.levelEditor.updateAllPanels();
         }
+        // Canvas is now in separate container, no need to update it when panels change
     }
 
 
@@ -424,7 +421,7 @@ export class PanelPositionManager {
     createTabsPanel(panelSide) {
         const panel = document.createElement('aside');
         panel.id = `${panelSide}-tabs-panel`;
-        panel.className = `bg-gray-900 flex flex-col ${panelSide === 'left' ? 'border-r border-gray-700' : 'border-l border-gray-700'}`;
+        panel.className = `tab-panel`;
         
         // Create tabs container
         const tabsContainer = document.createElement('div');
@@ -448,26 +445,20 @@ export class PanelPositionManager {
      * @param {string} panelSide - 'left' or 'right'
      */
     insertPanelIntoLayout(panel, panelSide) {
-        const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
+        const mainContainer = document.querySelector('.flex.flex-grow.min-h-0.relative.z-10');
         const mainPanel = document.getElementById('main-panel');
 
         if (panelSide === 'left') {
-            // Insert as absolute positioned overlay on main container
-            mainContainer.style.position = 'relative';
-            panel.style.position = 'absolute';
-            panel.style.left = '0';
-            panel.style.top = '0';
-            panel.style.height = '100%';
-            panel.style.zIndex = '10';
-            mainContainer.appendChild(panel);
+            // Insert left panel at the beginning of flex container
+            mainContainer.insertBefore(panel, mainContainer.firstChild);
             
             // Create resizer for left panel
             this.createPanelResizer(panel, 'left');
         } else {
-            // Insert after main panel
+            // Insert right panel at the end of flex container
             mainContainer.appendChild(panel);
             
-            // Create resizer for right panel (same as left panel)
+            // Create resizer for right panel
             this.createPanelResizer(panel, 'right');
         }
         
@@ -490,21 +481,26 @@ export class PanelPositionManager {
         if (!resizer) {
             resizer = document.createElement('div');
             resizer.id = resizerId;
-            resizer.className = `resizer resizer-${panelSide}-tabs-panel`;
+            resizer.className = `resizer panel-resizer resizer-${panelSide}-tabs-panel`;
             
             // Insert resizer into layout
-            const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
+            const mainContainer = document.querySelector('.flex.flex-grow.min-h-0.relative.z-10');
             if (panelSide === 'left') {
-                // For left panel, insert as absolute positioned element after the panel
-                resizer.style.position = 'absolute';
-                resizer.style.left = '0';
-                resizer.style.top = '0';
-                resizer.style.height = '100%';
-                resizer.style.zIndex = '15'; // Higher than panel
-                mainContainer.appendChild(resizer);
+                // Insert after left panel
+                const leftPanel = document.getElementById('left-tabs-panel');
+                if (leftPanel && leftPanel.nextSibling) {
+                    mainContainer.insertBefore(resizer, leftPanel.nextSibling);
+                } else {
+                    mainContainer.insertBefore(resizer, mainContainer.children[1]);
+                }
             } else {
-                // For right panel, insert before the panel (between main and right panel)
-                mainContainer.insertBefore(resizer, panel);
+                // Insert before right panel
+                const rightPanel = document.getElementById('right-tabs-panel');
+                if (rightPanel) {
+                    mainContainer.insertBefore(resizer, rightPanel);
+                } else {
+                    mainContainer.appendChild(resizer);
+                }
             }
             
             // Setup resizer functionality
@@ -767,14 +763,8 @@ export class PanelPositionManager {
             }
             // Update resizer position
             this.updateResizerPosition(panelSide, savedWidth);
-            if (panelSide === 'left') {
-                // Left panel is absolutely positioned, don't set flex properties
-                panel.style.flexShrink = '';
-                panel.style.flexGrow = '';
-            } else {
-                panel.style.flexShrink = '0';
-                panel.style.flexGrow = '0';
-            }
+            panel.style.flexShrink = '0';
+            panel.style.flexGrow = '0';
         } else {
             // Set default width if no saved width
             panel.style.width = previousWidth + 'px';
@@ -811,7 +801,7 @@ export class PanelPositionManager {
         const handleMouseMove = (e) => {
             if (!isResizing) return;
             
-            const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
+            const mainContainer = document.querySelector('.flex.flex-grow.min-h-0.relative.z-10');
             const containerWidth = mainContainer.clientWidth;
             const resizerWidth = 6;
             const minWidth = 0;
@@ -904,30 +894,9 @@ export class PanelPositionManager {
      * @param {number} newSize - New panel size
      */
     updateResizerPosition(resizerType, newSize) {
-        switch (resizerType) {
-            case 'left':
-                // Left panel - absolute positioning
-                const leftResizer = document.getElementById(`resizer-${resizerType}-tabs-panel`);
-                if (leftResizer) {
-                    leftResizer.style.left = newSize + 'px';
-                }
-                break;
-                
-            case 'right':
-                // Right panel - flex positioning, no special handling needed
-                break;
-                
-            case 'assets':
-                // Assets panel - vertical resizer, no position update needed
-                break;
-                
-            case 'folders':
-                // Folders resizer - handled by AssetPanel, no position update needed
-                break;
-                
-            default:
-                Logger.ui.warn(`Unknown resizer type: ${resizerType}`);
-        }
+        // For flex-based layout, resizer position is handled automatically
+        // by the flex container, no manual positioning needed
+        Logger.ui.debug(`Resizer position updated for ${resizerType}: ${newSize}px`);
     }
 
     /**
@@ -974,13 +943,8 @@ export class PanelPositionManager {
             this.stateManager.set(previousStateKey, currentSize);
             
             panel.style.width = '0px';
-            if (panelSide === 'left') {
-                panel.style.flexShrink = '';
-                panel.style.flexGrow = '';
-            } else {
-                panel.style.flexShrink = '1';
-                panel.style.flexGrow = '0';
-            }
+            panel.style.flexShrink = '0';
+            panel.style.flexGrow = '0';
             
             // Update resizer position and save state
             this.updateResizerPosition(panelSide, 0);
@@ -995,13 +959,8 @@ export class PanelPositionManager {
             const newSize = Math.min(lastKnownSize, maxSize);
             
             panel.style.width = newSize + 'px';
-            if (panelSide === 'left') {
-                panel.style.flexShrink = '';
-                panel.style.flexGrow = '';
-            } else {
-                panel.style.flexShrink = '0';
-                panel.style.flexGrow = '0';
-            }
+            panel.style.flexShrink = '0';
+            panel.style.flexGrow = '0';
             
             // Update resizer position and save state
             this.updateResizerPosition(panelSide, newSize);
@@ -1076,14 +1035,8 @@ export class PanelPositionManager {
     handlePanelResize(panel, panelSide, direction, newSize) {
         if (direction === 'horizontal') {
             panel.style.width = newSize + 'px';
-            if (panelSide === 'left') {
-                // Left panel is absolutely positioned, don't set flex properties
-                panel.style.flexShrink = '';
-                panel.style.flexGrow = '';
-            } else {
-                panel.style.flexShrink = '0';
-                panel.style.flexGrow = '0';
-            }
+            panel.style.flexShrink = '0';
+            panel.style.flexGrow = '0';
             // Update resizer position
             this.updateResizerPosition(panelSide, newSize);
             
@@ -1247,22 +1200,6 @@ export class PanelPositionManager {
                 resizer._cleanup();
             }
             
-            // Clean up absolute positioning for left panel
-            if (panelSide === 'left') {
-                const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
-                if (mainContainer) {
-                    mainContainer.style.position = '';
-                }
-                // Remove absolute positioned resizer
-                const resizer = document.getElementById(`resizer-${panelSide}-tabs-panel`);
-                if (resizer) {
-                    resizer.style.position = '';
-                    resizer.style.left = '';
-                    resizer.style.top = '';
-                    resizer.style.height = '';
-                    resizer.style.zIndex = '';
-                }
-            }
             
             // Remove panel and resizer completely
             panel.remove();

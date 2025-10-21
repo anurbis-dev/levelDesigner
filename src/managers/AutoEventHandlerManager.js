@@ -376,7 +376,9 @@ export class AutoEventHandlerManager {
             { id: 'actor-properties-overlay', class: 'actor-properties-container', type: 'actor-properties', instance: 'ActorPropertiesWindow' },
             { id: 'universal-dialog-overlay', class: 'universal-dialog', type: 'universal-dialog', instance: 'UniversalDialog' },
             { id: 'asset-panel-container', class: 'asset-panel-container', type: 'asset-panel', instance: 'AssetPanel' },
-            { id: 'layers-content-panel', class: 'layers-panel-container', type: 'layers-panel', instance: 'LayersPanel' }
+            { id: 'layers-content-panel', class: 'layers-panel-container', type: 'layers-panel', instance: 'LayersPanel' },
+            { id: 'canvas-container', class: 'canvas-container', type: 'canvas-container', instance: 'CanvasRenderer' },
+            { id: 'main-canvas', class: 'main-canvas', type: 'canvas', instance: 'CanvasRenderer' }
         ];
         
         for (const windowType of windowTypes) {
@@ -458,6 +460,11 @@ export class AutoEventHandlerManager {
             return this.createPanelHandlers(element, type, instance, windowId);
         }
 
+        // Use canvas handlers for canvas elements
+        if (type === 'canvas-container' || type === 'canvas') {
+            return this.createCanvasHandlers(element, type, instance, windowId);
+        }
+
         // Fallback for unknown types
         Logger.event.warn(`AutoEventHandlerManager: Unknown window type ${type}, using default handlers`);
         const handlers = UniversalWindowHandlers.createUniversalHandlers(instance, type);
@@ -468,6 +475,36 @@ export class AutoEventHandlerManager {
                 handlers: {
                     click: handlers.onClick,
                     contextmenu: handlers.onContextMenu
+                },
+                context: instance || this
+            }
+        };
+    }
+
+    /**
+     * Create handlers for canvas elements
+     * @param {HTMLElement} element - Canvas element
+     * @param {string} type - Canvas type
+     * @param {Object} instance - Canvas instance
+     * @param {string} windowId - Window ID
+     * @returns {Object} Configuration for EventHandlerManager
+     */
+    createCanvasHandlers(element, type, instance, windowId) {
+        Logger.event.debug(`AutoEventHandlerManager: Creating canvas handlers for ${type}`);
+        
+        return {
+            elementType: 'canvas',
+            config: {
+                handlers: {
+                    click: (e) => {
+                        Logger.event.debug(`Canvas ${type} clicked`);
+                        // Canvas click events are handled by the canvas renderer
+                        // No need to prevent default or stop propagation
+                    },
+                    contextmenu: (e) => {
+                        Logger.event.debug(`Canvas ${type} context menu`);
+                        // Canvas context menu events are handled by the canvas renderer
+                    }
                 },
                 context: instance || this
             }

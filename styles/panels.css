@@ -1,16 +1,27 @@
 /* Main Panels Styles */
 
-/* Left panel - absolutely positioned overlay */
-#left-tabs-panel {
+/* Base styles for tab panels */
+.tab-panel {
     width: 320px;
     background-color: var(--ui-background-color, #111827);
     display: flex;
     flex-direction: column;
+    pointer-events: auto;
+}
+
+/* Left panel specific styles */
+#left-tabs-panel {
     border-right: 1px solid #374151;
     box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
 }
 
-/* Right panel */
+/* Right panel specific styles */
+#right-tabs-panel {
+    border-left: 1px solid #374151;
+    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Legacy right panel (for compatibility) */
 #right-panel {
     width: 320px;
     flex-shrink: 0;

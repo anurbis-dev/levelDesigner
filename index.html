@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2D Level Editor v3.51.11</title>
+    <title>2D Level Editor v3.52.0</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <!-- Load Tailwind CSS for quick styling -->
@@ -65,28 +65,36 @@
                 <!-- Menus will be dynamically generated here -->
             </div>
             <div class="text-sm text-gray-400">
-                <span id="header-version-info">v3.51.11</span>
+                <span id="header-version-info">v3.52.0</span>
             </div>
         </nav>
     </header>
 
-    <!-- Main container with working areas -->
-    <div class="flex flex-grow min-h-0">
+    <!-- Canvas container - bottom layer -->
+    <div id="canvas-container" class="absolute inset-0 z-0" style="top: 40px;">
+        <canvas id="main-canvas"></canvas>
+    </div>
+
+    <!-- Main container with working areas - top layer -->
+    <div class="flex flex-grow min-h-0 relative z-10">
         <!-- 1. Left Tabs Panel (dynamic, created when needed) -->
         <!-- This will be created dynamically by PanelPositionManager -->
         
-        <!-- 2. Main Frame (main workspace) -->
-        <main id="main-panel" class="flex-1 flex flex-col bg-gray-700 min-w-0">
-            <!-- Toolbar in top part of canvas -->
-            <div id="toolbar-container" class="bg-gray-800 flex-shrink-0">
-                <!-- Toolbar will be populated by Toolbar component -->
-            </div>
-            
-            <!-- Canvas area -->
-            <div class="flex-1 min-h-0">
-                <canvas id="main-canvas"></canvas>
-            </div>
-        </main>
+        <!-- 2. Main workspace container -->
+        <div id="main-workspace" class="flex-1 flex flex-col min-w-0">
+            <!-- Main Frame (main workspace) -->
+            <main id="main-panel" class="flex-1 flex flex-col bg-transparent min-w-0">
+                <!-- Toolbar in top part of canvas -->
+                <div id="toolbar-container" class="bg-gray-800 flex-shrink-0">
+                    <!-- Toolbar will be populated by Toolbar component -->
+                </div>
+                
+                <!-- Canvas area - transparent to show canvas below -->
+                <div class="flex-1 min-h-0 bg-transparent">
+                    <!-- Canvas is now in separate container below -->
+                </div>
+            </main>
+        </div>
 
         <!-- 3. Right Tabs Panel (dynamic, created when needed) -->
         <!-- This will be created dynamically by PanelPositionManager -->
@@ -530,6 +538,7 @@
         // Optimized canvas update function to avoid duplicate calls (global)
         function updateCanvas() {
             if (window.editor && window.editor.canvasRenderer) {
+                // Canvas is now in separate container, no need to update layout
                 window.editor.canvasRenderer.resizeCanvas();
                 window.editor.render();
             }

@@ -161,13 +161,23 @@ input, textarea {
     user-select: none;
 }
 
-/* Left panel resizer - absolute positioning override */
+/* Base styles for panel resizers */
+.panel-resizer {
+    background-color: transparent;
+    cursor: col-resize;
+    width: 6px;
+    flex-shrink: 0;
+    pointer-events: auto;
+}
+
+/* Left panel resizer specific styles */
 .resizer-left-tabs-panel {
-    position: absolute !important;
-    left: 0;
-    top: 0;
-    height: 100%;
-    z-index: 15;
+    /* Inherits from .panel-resizer */
+}
+
+/* Right panel resizer specific styles */
+.resizer-right-tabs-panel {
+    /* Inherits from .panel-resizer */
 }
 
 .resizer-y {
@@ -246,14 +256,26 @@ input, textarea {
     background: rgba(55, 65, 81, 0.3);
 }
 
-/* Main panel background */
+/* Main flex container - transparent for events */
+.flex.flex-grow.min-h-0.relative.z-10 {
+    pointer-events: none; /* Allow events to pass through to canvas below */
+}
+
+/* Main workspace - transparent for events */
+#main-workspace {
+    pointer-events: none; /* Allow events to pass through to canvas below */
+}
+
+/* Main panel background - transparent to show canvas below */
 #main-panel {
-    background-color: var(--ui-background-color, #374151) !important;
+    background-color: transparent !important;
+    pointer-events: none; /* Allow events to pass through to canvas below */
 }
 
 /* Toolbar background */
 #toolbar-container {
     background-color: var(--ui-background-color, #1f2937) !important;
+    pointer-events: auto; /* Enable events for toolbar elements */
 }
 
 /* Toolbar buttons text color */
@@ -287,6 +309,8 @@ input, textarea {
 /* Header/Menu background */
 header {
     background-color: var(--ui-background-color, #111827) !important;
+    z-index: 20; /* Above canvas and panels */
+    position: relative;
 }
 
 /* Menu buttons and text */
@@ -299,6 +323,16 @@ header .text-sm {
 }
 
 /* Styles for canvas (main workspace) */
+/* Canvas container - bottom layer */
+#canvas-container {
+    position: absolute;
+    top: 40px; /* Start below header */
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 0;
+}
+
 #main-canvas {
     display: block;
     width: 100%;
