@@ -965,6 +965,7 @@ export class TouchSupportManager {
         Logger.ui.debug('TouchSupportManager: Double tap detected');
     }
 
+
     /**
      * Universal double-click/double-tap handler for panel resizers
      * @param {HTMLElement} element - Resizer element
@@ -1001,8 +1002,18 @@ export class TouchSupportManager {
             
             if (direction === 'horizontal') {
                 panel.style.width = newSize + 'px';
-                panel.style.flexShrink = '0';
-                panel.style.flexGrow = '0';
+                if (panelSide === 'left') {
+                    // Left panel is absolutely positioned, don't set flex properties
+                    panel.style.flexShrink = '';
+                    panel.style.flexGrow = '';
+                } else {
+                    panel.style.flexShrink = '0';
+                    panel.style.flexGrow = '0';
+                }
+                // Update resizer position
+                if (this.levelEditor.panelPositionManager) {
+                    this.levelEditor.panelPositionManager.updateResizerPosition(panelSide, newSize);
+                }
             } else {
                 panel.style.display = 'flex';
                 panel.style.height = newSize + 'px';
@@ -1022,8 +1033,18 @@ export class TouchSupportManager {
             
             if (direction === 'horizontal') {
                 panel.style.width = '0px';
-                panel.style.flexShrink = '1';
-                panel.style.flexGrow = '0';
+                if (panelSide === 'left') {
+                    // Left panel is absolutely positioned, don't set flex properties
+                    panel.style.flexShrink = '';
+                    panel.style.flexGrow = '';
+                } else {
+                    panel.style.flexShrink = '1';
+                    panel.style.flexGrow = '0';
+                }
+                // Update resizer position
+                if (this.levelEditor.panelPositionManager) {
+                    this.levelEditor.panelPositionManager.updateResizerPosition(panelSide, 0);
+                }
             } else {
                 panel.style.height = '0px';
                 panel.style.display = 'none';

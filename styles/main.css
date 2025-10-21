@@ -150,9 +150,7 @@ input, textarea {
 }
 
 /* Base styles for all horizontal resizers */
-.resizer,
-.resizer-right-tabs-panel,
-.resizer-left-tabs-panel {
+.resizer {
     background-color: #374151;
     cursor: col-resize;
     width: 6px;
@@ -184,8 +182,6 @@ input, textarea {
 
 /* Resize indicator - appears on hover */
 .resizer::after,
-.resizer-right-tabs-panel::after,
-.resizer-left-tabs-panel::after,
 .resizer-y::after {
     content: '';
     position: absolute;
@@ -199,9 +195,7 @@ input, textarea {
 }
 
 /* Horizontal resizer indicator (left and right panels) */
-.resizer::after,
-.resizer-right-tabs-panel::after,
-.resizer-left-tabs-panel::after {
+.resizer::after {
     width: 2px;
     height: 20px;
 }
@@ -212,32 +206,24 @@ input, textarea {
 }
 
 .resizer:hover::after,
-.resizer-right-tabs-panel:hover::after,
-.resizer-left-tabs-panel:hover::after,
 .resizer-y:hover::after {
     opacity: 1;
 }
 
 /* Active state during dragging */
 .resizer.resizing,
-.resizer-right-tabs-panel.resizing,
-.resizer-left-tabs-panel.resizing,
 .resizer-y.resizing {
     background-color: #374151;
 }
 
 .resizer.resizing::after,
-.resizer-right-tabs-panel.resizing::after,
-.resizer-left-tabs-panel.resizing::after,
 .resizer-y.resizing::after {
     opacity: 1;
     background-color: #ffffff;
 }
 
 /* Horizontal resizer active state (left and right panels) */
-.resizer.resizing::after,
-.resizer-right-tabs-panel.resizing::after,
-.resizer-left-tabs-panel.resizing::after {
+.resizer.resizing::after {
     width: 3px;
     height: 24px;
 }

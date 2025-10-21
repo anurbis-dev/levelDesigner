@@ -136,6 +136,9 @@ export class PanelPositionManager {
         // Initialize tab positions (this will create panels only if needed)
         this.initializeTabPositions();
         
+        // Initialize panel states in StateManager even if panels don't exist
+        this.initializePanelStates();
+        
         // Initialize assets panel
         this.initializeAssetsPanel();
         
@@ -198,6 +201,39 @@ export class PanelPositionManager {
         }
     }
 
+
+    /**
+     * Initialize panel states in StateManager even if panels don't exist
+     */
+    initializePanelStates() {
+        // Check if left panel exists
+        const leftPanel = document.getElementById('left-tabs-panel');
+        const leftPanelExists = leftPanel && leftPanel.querySelector('.flex.border-b.border-gray-700')?.children.length > 0;
+        
+        // Check if right panel exists
+        const rightPanel = document.getElementById('right-tabs-panel');
+        const rightPanelExists = rightPanel && rightPanel.querySelector('.flex.border-b.border-gray-700')?.children.length > 0;
+        
+        // Set panel states in StateManager
+        if (this.stateManager) {
+            this.stateManager.set('view.leftPanel', leftPanelExists);
+            this.stateManager.set('view.rightPanel', rightPanelExists);
+        }
+        
+        // Save to user preferences
+        if (this.levelEditor.userPrefs) {
+            this.levelEditor.userPrefs.set('leftPanelVisible', leftPanelExists);
+            this.levelEditor.userPrefs.set('rightPanelVisible', rightPanelExists);
+        }
+        
+        // Update menu item states
+        if (this.levelEditor.eventHandlers && this.levelEditor.eventHandlers.menuManager) {
+            this.levelEditor.eventHandlers.menuManager.updateToggleState('toggle-leftPanel', leftPanelExists);
+            this.levelEditor.eventHandlers.menuManager.updateToggleState('toggle-rightPanel', rightPanelExists);
+        }
+        
+        Logger.ui.info(`Initialized panel states: left=${leftPanelExists}, right=${rightPanelExists}`);
+    }
 
     /**
      * Create temporary container with all tabs and content
@@ -726,18 +762,12 @@ export class PanelPositionManager {
             if (savedWidth > 0) {
                 // Panel is expanded, use saved width as current
                 panel.style.width = savedWidth + 'px';
-                // Update resizer position for left panel
-                if (panelSide === 'left') {
-                    resizer.style.left = savedWidth + 'px';
-                }
             } else {
                 // Panel is collapsed
                 panel.style.width = '0px';
-                // Update resizer position for left panel
-                if (panelSide === 'left') {
-                    resizer.style.left = '0px';
-                }
             }
+            // Update resizer position
+            this.updateResizerPosition(panelSide, savedWidth);
             if (panelSide === 'left') {
                 // Left panel is absolutely positioned, don't set flex properties
                 panel.style.flexShrink = '';
@@ -749,9 +779,9 @@ export class PanelPositionManager {
         } else {
             // Set default width if no saved width
             panel.style.width = previousWidth + 'px';
-            // Update resizer position for left panel
+            // Update resizer position
+            this.updateResizerPosition(panelSide, previousWidth);
             if (panelSide === 'left') {
-                resizer.style.left = previousWidth + 'px';
                 panel.style.flexShrink = '';
                 panel.style.flexGrow = '';
             } else {
@@ -874,6 +904,20 @@ export class PanelPositionManager {
     }
 
     /**
+     * Update resizer position for left panel
+     * @param {string} panelSide - Panel side ('left', 'right')
+     * @param {number} newSize - New panel size
+     */
+    updateResizerPosition(panelSide, newSize) {
+        if (panelSide === 'left') {
+            const resizer = document.getElementById(`resizer-${panelSide}-tabs-panel`);
+            if (resizer) {
+                resizer.style.left = newSize + 'px';
+            }
+        }
+    }
+
+    /**
      * Unified panel resize logic for both mouse and touch
      * @param {HTMLElement} panel - Panel element
      * @param {string} panelSide - Panel side ('left', 'right', 'assets')
@@ -887,19 +931,33 @@ export class PanelPositionManager {
                 // Left panel is absolutely positioned, don't set flex properties
                 panel.style.flexShrink = '';
                 panel.style.flexGrow = '';
-                
-                // Update resizer position for left panel
-                const resizer = document.getElementById(`resizer-${panelSide}-tabs-panel`);
-                if (resizer) {
-                    resizer.style.left = newSize + 'px';
-                }
             } else {
                 panel.style.flexShrink = '0';
                 panel.style.flexGrow = '0';
             }
+            // Update resizer position
+            this.updateResizerPosition(panelSide, newSize);
+            
+            // Save width to StateManager and user preferences
+            if (this.stateManager) {
+                this.stateManager.set(`panels.${panelSide}PanelWidth`, newSize);
+            }
+            if (this.userPrefs) {
+                this.userPrefs.set(`${panelSide}PanelWidth`, newSize);
+            }
         } else {
             panel.style.height = newSize + 'px';
             panel.style.flexShrink = '0';
+            
+            // Save height to StateManager and user preferences (for assets panel)
+            if (panelSide === 'assets') {
+                if (this.stateManager) {
+                    this.stateManager.set('panels.assetsPanelHeight', newSize);
+                }
+                if (this.userPrefs) {
+                    this.userPrefs.set('assetsPanelHeight', newSize);
+                }
+            }
         }
         
         // Update UI
