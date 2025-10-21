@@ -599,6 +599,16 @@ export class AssetPanel extends BasePanel {
         document.addEventListener('mousemove', this.foldersMouseMoveHandler);
         document.addEventListener('mouseup', this.foldersMouseUpHandler);
 
+        // Register touch support for folders resizer
+        if (this.levelEditor?.panelPositionManager) {
+            this.levelEditor.panelPositionManager.registerTouchSupportForResizer(
+                this.foldersResizer, 
+                this.foldersContainer, 
+                'folders', 
+                'horizontal'
+            );
+        }
+
         // Load saved width
         if (this.levelEditor?.userPrefs) {
             const savedWidth = this.levelEditor.userPrefs.get('foldersWidth');

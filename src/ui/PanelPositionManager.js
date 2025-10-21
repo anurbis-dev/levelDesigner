@@ -1041,11 +1041,25 @@ export class PanelPositionManager {
             this.updateResizerPosition(panelSide, newSize);
             
             // Save width to StateManager and user preferences
-            if (this.stateManager) {
-                this.stateManager.set(`panels.${panelSide}PanelWidth`, newSize);
-            }
-            if (this.userPrefs) {
-                this.userPrefs.set(`${panelSide}PanelWidth`, newSize);
+            if (panelSide === 'folders') {
+                // Special handling for folders panel
+                if (this.stateManager) {
+                    this.stateManager.set('panels.foldersWidth', newSize);
+                }
+                if (this.userPrefs) {
+                    this.userPrefs.set('foldersWidth', newSize);
+                }
+                // Update content visibility for folders panel
+                if (this.levelEditor?.assetPanel) {
+                    this.levelEditor.assetPanel.updateContentVisibility(newSize);
+                }
+            } else {
+                if (this.stateManager) {
+                    this.stateManager.set(`panels.${panelSide}PanelWidth`, newSize);
+                }
+                if (this.userPrefs) {
+                    this.userPrefs.set(`${panelSide}PanelWidth`, newSize);
+                }
             }
         } else {
             panel.style.height = newSize + 'px';
