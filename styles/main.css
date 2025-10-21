@@ -149,11 +149,11 @@ input, textarea {
     -ms-user-select: text;
 }
 
-/* Styles for resizers that allow changing panel sizes */
+/* Base styles for all horizontal resizers */
 .resizer,
 .resizer-right-tabs-panel,
 .resizer-left-tabs-panel {
-    background-color: transparent;
+    background-color: #374151;
     cursor: col-resize;
     width: 6px;
     flex-shrink: 0;
@@ -161,6 +161,15 @@ input, textarea {
     /* Improve touch handling */
     touch-action: none;
     user-select: none;
+}
+
+/* Left panel resizer - absolute positioning override */
+.resizer-left-tabs-panel {
+    position: absolute !important;
+    left: 0;
+    top: 0;
+    height: 100%;
+    z-index: 15;
 }
 
 .resizer-y {
@@ -189,6 +198,7 @@ input, textarea {
     transition: opacity 0.2s;
 }
 
+/* Horizontal resizer indicator (left and right panels) */
 .resizer::after,
 .resizer-right-tabs-panel::after,
 .resizer-left-tabs-panel::after {
@@ -224,6 +234,7 @@ input, textarea {
     background-color: #ffffff;
 }
 
+/* Horizontal resizer active state (left and right panels) */
 .resizer.resizing::after,
 .resizer-right-tabs-panel.resizing::after,
 .resizer-left-tabs-panel.resizing::after {

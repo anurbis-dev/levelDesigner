@@ -416,8 +416,14 @@ export class PanelPositionManager {
         const mainPanel = document.getElementById('main-panel');
 
         if (panelSide === 'left') {
-            // Insert before main panel
-            mainContainer.insertBefore(panel, mainPanel);
+            // Insert as absolute positioned overlay on main container
+            mainContainer.style.position = 'relative';
+            panel.style.position = 'absolute';
+            panel.style.left = '0';
+            panel.style.top = '0';
+            panel.style.height = '100%';
+            panel.style.zIndex = '10';
+            mainContainer.appendChild(panel);
             
             // Create resizer for left panel
             this.createPanelResizer(panel, 'left');
@@ -448,12 +454,18 @@ export class PanelPositionManager {
         if (!resizer) {
             resizer = document.createElement('div');
             resizer.id = resizerId;
-            resizer.className = 'resizer';
+            resizer.className = `resizer resizer-${panelSide}-tabs-panel`;
             
             // Insert resizer into layout
             const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
             if (panelSide === 'left') {
-                mainContainer.insertBefore(resizer, panel.nextSibling);
+                // For left panel, insert as absolute positioned element after the panel
+                resizer.style.position = 'absolute';
+                resizer.style.left = '0';
+                resizer.style.top = '0';
+                resizer.style.height = '100%';
+                resizer.style.zIndex = '15'; // Higher than panel
+                mainContainer.appendChild(resizer);
             } else {
                 // For right panel, insert before the panel (between main and right panel)
                 mainContainer.insertBefore(resizer, panel);
@@ -714,17 +726,38 @@ export class PanelPositionManager {
             if (savedWidth > 0) {
                 // Panel is expanded, use saved width as current
                 panel.style.width = savedWidth + 'px';
+                // Update resizer position for left panel
+                if (panelSide === 'left') {
+                    resizer.style.left = savedWidth + 'px';
+                }
             } else {
                 // Panel is collapsed
                 panel.style.width = '0px';
+                // Update resizer position for left panel
+                if (panelSide === 'left') {
+                    resizer.style.left = '0px';
+                }
             }
-            panel.style.flexShrink = '0';
-            panel.style.flexGrow = '0';
+            if (panelSide === 'left') {
+                // Left panel is absolutely positioned, don't set flex properties
+                panel.style.flexShrink = '';
+                panel.style.flexGrow = '';
+            } else {
+                panel.style.flexShrink = '0';
+                panel.style.flexGrow = '0';
+            }
         } else {
             // Set default width if no saved width
             panel.style.width = previousWidth + 'px';
-            panel.style.flexShrink = '0';
-            panel.style.flexGrow = '0';
+            // Update resizer position for left panel
+            if (panelSide === 'left') {
+                resizer.style.left = previousWidth + 'px';
+                panel.style.flexShrink = '';
+                panel.style.flexGrow = '';
+            } else {
+                panel.style.flexShrink = '0';
+                panel.style.flexGrow = '0';
+            }
             
             // Save initial state to StateManager
             if (this.stateManager) {
@@ -850,8 +883,20 @@ export class PanelPositionManager {
     handlePanelResize(panel, panelSide, direction, newSize) {
         if (direction === 'horizontal') {
             panel.style.width = newSize + 'px';
-            panel.style.flexShrink = '0';
-            panel.style.flexGrow = '0';
+            if (panelSide === 'left') {
+                // Left panel is absolutely positioned, don't set flex properties
+                panel.style.flexShrink = '';
+                panel.style.flexGrow = '';
+                
+                // Update resizer position for left panel
+                const resizer = document.getElementById(`resizer-${panelSide}-tabs-panel`);
+                if (resizer) {
+                    resizer.style.left = newSize + 'px';
+                }
+            } else {
+                panel.style.flexShrink = '0';
+                panel.style.flexGrow = '0';
+            }
         } else {
             panel.style.height = newSize + 'px';
             panel.style.flexShrink = '0';
@@ -993,6 +1038,23 @@ export class PanelPositionManager {
             const resizer = document.getElementById(`resizer-${panelSide}-tabs-panel`);
             if (resizer && resizer._cleanup) {
                 resizer._cleanup();
+            }
+            
+            // Clean up absolute positioning for left panel
+            if (panelSide === 'left') {
+                const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
+                if (mainContainer) {
+                    mainContainer.style.position = '';
+                }
+                // Remove absolute positioned resizer
+                const resizer = document.getElementById(`resizer-${panelSide}-tabs-panel`);
+                if (resizer) {
+                    resizer.style.position = '';
+                    resizer.style.left = '';
+                    resizer.style.top = '';
+                    resizer.style.height = '';
+                    resizer.style.zIndex = '';
+                }
             }
             
             // Remove panel and resizer completely
@@ -1144,7 +1206,7 @@ export class PanelPositionManager {
             e.stopPropagation();
             
             const deltaY = e.clientY - initialMouseY;
-            const newHeight = Math.max(100, Math.min(600, initialPanelHeight - deltaY));
+            const newHeight = Math.max(0, Math.min(600, initialPanelHeight - deltaY));
             
             // Use unified resize logic
             this.handlePanelResize(panel, 'assets', 'vertical', newHeight);
