@@ -3,6 +3,8 @@
  * Handles device-specific scaling and DPI adjustments for mobile devices
  */
 
+import { TouchSupportUtils } from './TouchSupportUtils.js';
+
 export class MobileScalingUtils {
     /**
      * Initialize mobile scaling based on device characteristics
@@ -107,13 +109,6 @@ export class MobileScalingUtils {
         return 44; // Desktop
     }
     
-    /**
-     * Check if device supports touch
-     * @returns {boolean} True if touch supported
-     */
-    static isTouchSupported() {
-        return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    }
     
     /**
      * Get device information for debugging
@@ -122,7 +117,7 @@ export class MobileScalingUtils {
     static getDeviceInfo() {
         return {
             isMobile: this.isMobileDevice(),
-            isTouch: this.isTouchSupported(),
+            isTouch: TouchSupportUtils.isTouchSupported(),
             devicePixelRatio: window.devicePixelRatio || 1,
             screenWidth: window.innerWidth,
             screenHeight: window.innerHeight,

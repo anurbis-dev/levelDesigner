@@ -108,7 +108,7 @@ export class TouchSupportManager {
             }
         };
         
-        Logger.ui.info('TouchSupportManager initialized');
+        Logger.ui.debug('TouchSupportManager initialized');
     }
 
     /**
@@ -123,7 +123,7 @@ export class TouchSupportManager {
             return;
         }
 
-        Logger.ui.debug('TouchSupportManager: Registering element', element, 'with config type', configType);
+        Logger.ui.debug('TouchSupportManager: Registering element', element.tagName, element.id, 'with config type', configType);
 
         // Initialize element configs tracking if not exists
         if (!this.elementConfigs.has(element)) {
@@ -146,10 +146,39 @@ export class TouchSupportManager {
             this.setupTouchEvents(element, config);
             Logger.ui.debug(`TouchSupportManager: First registration for element with ${configType}`);
         } else {
-            // Element already has touch events, just track the additional config type
-            Logger.ui.debug(`TouchSupportManager: Additional config type ${configType} registered for element`);
+            // Element already has touch events, merge the additional config type
+            const existingConfig = this.touchConfigs.get(element);
+            const newConfig = { ...this.defaultConfigs[configType], ...customConfig };
+            
+            Logger.ui.debug(`TouchSupportManager: Merging config type ${configType}`);
+            
+            // Merge configurations - preserve all handlers
+            const mergedConfig = {
+                ...existingConfig,
+                // Only add new properties that don't exist in existing config
+                ...Object.fromEntries(
+                    Object.entries(newConfig).filter(([key, value]) => 
+                        !existingConfig.hasOwnProperty(key) || !existingConfig[key]
+                    )
+                ),
+                // Explicitly preserve all handlers - prioritize existing handlers
+                onPanStart: existingConfig.onPanStart || newConfig.onPanStart,
+                onPanMove: existingConfig.onPanMove || newConfig.onPanMove,
+                onPanEnd: existingConfig.onPanEnd || newConfig.onPanEnd,
+                onZoomStart: existingConfig.onZoomStart || newConfig.onZoomStart,
+                onZoomMove: existingConfig.onZoomMove || newConfig.onZoomMove,
+                onZoomEnd: existingConfig.onZoomEnd || newConfig.onZoomEnd,
+                onMarqueeStart: existingConfig.onMarqueeStart || newConfig.onMarqueeStart,
+                onMarqueeMove: existingConfig.onMarqueeMove || newConfig.onMarqueeMove,
+                onMarqueeEnd: existingConfig.onMarqueeEnd || newConfig.onMarqueeEnd,
+                onTwoFingerTap: existingConfig.onTwoFingerTap || newConfig.onTwoFingerTap
+            };
+            
+            this.touchConfigs.set(element, mergedConfig);
+            Logger.ui.debug('TouchSupportManager: Configuration merged successfully');
         }
     }
+
 
     /**
      * Setup touch events for an element
@@ -157,7 +186,7 @@ export class TouchSupportManager {
      * @param {Object} config - Configuration object
      */
     setupTouchEvents(element, config) {
-        Logger.ui.debug('TouchSupportManager: setupTouchEvents called for', config.type, element);
+        Logger.ui.debug('TouchSupportManager: setupTouchEvents called for', config.type, element.tagName, element.id);
         
         // Register element with browser gesture prevention manager
         if (this.browserGesturePreventionManager) {
@@ -165,11 +194,31 @@ export class TouchSupportManager {
             this.browserGesturePreventionManager.registerElement(element, preventionOptions);
         }
         
-        // Create bound event handlers and store them for later removal
-        const touchStartHandler = (e) => this.handleTouchStart(e, element, config);
-        const touchMoveHandler = (e) => this.handleTouchMove(e, element, config);
-        const touchEndHandler = (e) => this.handleTouchEnd(e, element, config);
-        const touchCancelHandler = (e) => this.handleTouchCancel(e, element, config);
+        // Create bound event handlers that always get the latest config
+        const touchStartHandler = (e) => {
+            const currentConfig = this.touchConfigs.get(element);
+            if (currentConfig) {
+                this.handleTouchStart(e, element, currentConfig);
+            }
+        };
+        const touchMoveHandler = (e) => {
+            const currentConfig = this.touchConfigs.get(element);
+            if (currentConfig) {
+                this.handleTouchMove(e, element, currentConfig);
+            }
+        };
+        const touchEndHandler = (e) => {
+            const currentConfig = this.touchConfigs.get(element);
+            if (currentConfig) {
+                this.handleTouchEnd(e, element, currentConfig);
+            }
+        };
+        const touchCancelHandler = (e) => {
+            const currentConfig = this.touchConfigs.get(element);
+            if (currentConfig) {
+                this.handleTouchCancel(e, element, currentConfig);
+            }
+        };
         
         // Store handlers on element for cleanup
         element._touchHandlers = {
@@ -182,8 +231,9 @@ export class TouchSupportManager {
         // Touch start - passive to avoid intervention warnings
         element.addEventListener('touchstart', touchStartHandler, { passive: true });
         
-        // Touch move - passive to avoid intervention warnings
-        element.addEventListener('touchmove', touchMoveHandler, { passive: true });
+        // Touch move - non-passive for pan/zoom gestures that need preventDefault
+        const isPanZoomGesture = config.type === 'twoFingerPan' || config.type === 'twoFingerZoom' || config.type === 'twoFingerPanZoom';
+        element.addEventListener('touchmove', touchMoveHandler, { passive: !isPanZoomGesture });
         
         // Touch end - passive for better performance
         element.addEventListener('touchend', touchEndHandler, { passive: true });
@@ -213,6 +263,7 @@ export class TouchSupportManager {
                 // Don't prevent gestures for pan/zoom - they need to work
                 options.preventHorizontalSwipe = false;
                 options.preventVerticalSwipe = false;
+                options.touchAction = 'auto';
                 break;
             case 'resize':
                 options.preventHorizontalSwipe = true;
@@ -230,73 +281,6 @@ export class TouchSupportManager {
         return options;
     }
 
-    /**
-     * Setup navigation prevention for elements that need to block browser gestures
-     * @deprecated - Use BrowserGesturePreventionManager instead
-     */
-    setupNavigationPrevention(element, config) {
-        // Only prevent navigation for elements that handle their own gestures
-        if (config.type === 'marqueeSelection' || config.type === 'twoFingerPan' || config.type === 'twoFingerZoom' || config.type === 'twoFingerPanZoom') {
-            // Create bound event handlers and store them for later removal
-            const navTouchStartHandler = (e) => {
-                // Store initial touch position for movement detection
-                if (e.touches.length === 1) {
-                    const touch = e.touches[0];
-                    element._touchStartX = touch.clientX;
-                    element._touchStartY = touch.clientY;
-                    element._touchStartTime = Date.now();
-                    element._hasMoved = false;
-                }
-            };
-
-            const navTouchMoveHandler = (e) => {
-                // Block horizontal movements that could trigger browser navigation
-                if (e.touches.length === 1 && element._touchStartX !== undefined) {
-                    const touch = e.touches[0];
-                    const deltaX = touch.clientX - element._touchStartX;
-                    const deltaY = touch.clientY - element._touchStartY;
-                    
-                    // If there's significant horizontal movement, block it
-                    if (Math.abs(deltaX) > 10) {
-                        element._hasMoved = true;
-                        
-                        // Block if horizontal movement is greater than vertical (potential swipe navigation)
-                        if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            e.stopImmediatePropagation();
-                        }
-                    }
-                }
-            };
-
-            const navTouchEndHandler = () => {
-                delete element._touchStartX;
-                delete element._touchStartY;
-                delete element._touchStartTime;
-                delete element._hasMoved;
-            };
-
-            const navContextMenuHandler = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-            };
-
-            // Store handlers on element for cleanup
-            element._navPreventionHandlers = {
-                touchstart: navTouchStartHandler,
-                touchmove: navTouchMoveHandler,
-                touchend: navTouchEndHandler,
-                contextmenu: navContextMenuHandler
-            };
-
-            // More aggressive prevention - block all horizontal movements that could trigger navigation
-            element.addEventListener('touchstart', navTouchStartHandler, { passive: true });
-            element.addEventListener('touchmove', navTouchMoveHandler, { passive: false });
-            element.addEventListener('touchend', navTouchEndHandler, { passive: true });
-            element.addEventListener('contextmenu', navContextMenuHandler, { passive: false });
-        }
-    }
 
     /**
      * Set appropriate touch-action CSS property based on gesture type
@@ -312,16 +296,16 @@ export class TouchSupportManager {
                 element.style.touchAction = 'auto';
                 break;
             case 'twoFingerPan':
-                // Prevent browser navigation completely
-                element.style.touchAction = 'none';
+                // Allow panning but prevent zoom
+                element.style.touchAction = 'pan-x pan-y';
                 break;
             case 'twoFingerZoom':
                 // Allow zoom but prevent panning
                 element.style.touchAction = 'manipulation';
                 break;
             case 'twoFingerPanZoom':
-                // Block browser gestures for combined pan/zoom
-                element.style.touchAction = 'none';
+                // Allow both pan and zoom
+                element.style.touchAction = 'auto';
                 break;
             case 'twoFingerContext':
                 // Allow all gestures for context menu
@@ -345,39 +329,6 @@ export class TouchSupportManager {
         }
     }
 
-    /**
-     * Update touch-action for an element (useful for dynamic gesture switching)
-     * @param {HTMLElement} element - Element to update
-     * @param {string} gestureType - New gesture type
-     */
-    updateTouchAction(element, gestureType) {
-        const config = this.touchConfigs.get(element);
-        if (config) {
-            config.type = gestureType;
-            this.setTouchAction(element, config);
-        }
-    }
-
-    /**
-     * Temporarily disable touch gestures (useful for preventing conflicts)
-     * @param {HTMLElement} element - Element to disable
-     */
-    disableTouchGestures(element) {
-        element.style.touchAction = 'none';
-    }
-
-    /**
-     * Re-enable touch gestures
-     * @param {HTMLElement} element - Element to re-enable
-     */
-    enableTouchGestures(element) {
-        const config = this.touchConfigs.get(element);
-        if (config) {
-            this.setTouchAction(element, config);
-        } else {
-            element.style.touchAction = 'auto';
-        }
-    }
 
     /**
      * Handle touch start event
@@ -388,7 +339,13 @@ export class TouchSupportManager {
     handleTouchStart(e, element, config) {
         const currentTime = Date.now();
         
-        Logger.ui.debug('TouchSupportManager: handleTouchStart called', config.type, element);
+        Logger.ui.debug('TouchSupportManager: handleTouchStart called', config.type, element.tagName, element.id, 'touches:', e.touches.length);
+        
+        // Prevent default browser behavior for pan/zoom gestures
+        if (config.type === 'twoFingerPan' || config.type === 'twoFingerZoom' || config.type === 'twoFingerPanZoom') {
+            e.preventDefault();
+            e.stopPropagation();
+        }
         
         // Handle different touch counts
         if (e.touches.length === 1) {
@@ -494,7 +451,7 @@ export class TouchSupportManager {
         const touch1 = e.touches[0];
         const touch2 = e.touches[1];
         
-        Logger.ui.debug('TouchSupportManager: Two touch start', { type: config.type, element: element.tagName });
+        Logger.ui.debug('TouchSupportManager: Two touch start', 'type:', config.type, 'element:', element.tagName, 'elementId:', element.id);
         
         // Store both touches
         this.activeTouches.set(touch1.identifier, {
@@ -523,20 +480,34 @@ export class TouchSupportManager {
             partnerId: touch1.identifier
         });
         
-        // Handle different two-finger interaction types
-        switch (config.type) {
-            case 'twoFingerPan':
-                this.handleTwoFingerPanStart(element, config, touch1, touch2);
-                break;
-            case 'twoFingerContext':
-                this.handleTwoFingerContextStart(element, config, touch1, touch2);
-                break;
-            case 'twoFingerZoom':
-                this.handleTwoFingerZoomStart(element, config, touch1, touch2);
-                break;
-            case 'twoFingerPanZoom':
-                this.handleTwoFingerPanZoomStart(element, config, touch1, touch2);
-                break;
+        // Handle different two-finger interaction types based on available handlers
+        Logger.ui.debug('TouchSupportManager: Checking handlers for two-finger gesture');
+        
+        if (config.onPanStart || config.onZoomStart) {
+            // Combined pan/zoom support
+            Logger.ui.debug('TouchSupportManager: Using pan/zoom handlers');
+            this.handleTwoFingerPanZoomStart(element, config, touch1, touch2);
+        } else if (config.onTwoFingerTap) {
+            // Two finger context menu
+            Logger.ui.debug('TouchSupportManager: Using context menu handlers');
+            this.handleTwoFingerContextStart(element, config, touch1, touch2);
+        } else {
+            // Fallback to type-based handling
+            Logger.ui.debug('TouchSupportManager: Using type-based handling for', config.type);
+            switch (config.type) {
+                case 'twoFingerPan':
+                    this.handleTwoFingerPanStart(element, config, touch1, touch2);
+                    break;
+                case 'twoFingerContext':
+                    this.handleTwoFingerContextStart(element, config, touch1, touch2);
+                    break;
+                case 'twoFingerZoom':
+                    this.handleTwoFingerZoomStart(element, config, touch1, touch2);
+                    break;
+                case 'twoFingerPanZoom':
+                    this.handleTwoFingerPanZoomStart(element, config, touch1, touch2);
+                    break;
+            }
         }
     }
 
@@ -547,6 +518,12 @@ export class TouchSupportManager {
      * @param {Object} config - Configuration
      */
     handleTouchMove(e, element, config) {
+        // Prevent default browser behavior for pan/zoom gestures
+        if (config.type === 'twoFingerPan' || config.type === 'twoFingerZoom' || config.type === 'twoFingerPanZoom') {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
         // Handle different touch counts
         if (e.touches.length === 1) {
             this.handleSingleTouchMove(e, element, config);
@@ -615,17 +592,23 @@ export class TouchSupportManager {
         touchData2.lastX = touch2.clientX;
         touchData2.lastY = touch2.clientY;
         
-        // Handle different two-finger interaction types
-        switch (config.type) {
-            case 'twoFingerPan':
-                this.handleTwoFingerPanMove(element, config, touch1, touch2, touchData1, touchData2);
-                break;
-            case 'twoFingerZoom':
-                this.handleTwoFingerZoomMove(element, config, touch1, touch2, touchData1, touchData2);
-                break;
-            case 'twoFingerPanZoom':
-                this.handleTwoFingerPanZoomMove(element, config, touch1, touch2, touchData1, touchData2);
-                break;
+        // Handle different two-finger interaction types based on available handlers
+        if (config.onPanMove || config.onZoomMove) {
+            // Combined pan/zoom support
+            this.handleTwoFingerPanZoomMove(element, config, touch1, touch2, touchData1, touchData2);
+        } else {
+            // Fallback to type-based handling
+            switch (config.type) {
+                case 'twoFingerPan':
+                    this.handleTwoFingerPanMove(element, config, touch1, touch2, touchData1, touchData2);
+                    break;
+                case 'twoFingerZoom':
+                    this.handleTwoFingerZoomMove(element, config, touch1, touch2, touchData1, touchData2);
+                    break;
+                case 'twoFingerPanZoom':
+                    this.handleTwoFingerPanZoomMove(element, config, touch1, touch2, touchData1, touchData2);
+                    break;
+            }
         }
     }
 
@@ -645,7 +628,40 @@ export class TouchSupportManager {
         touchData.isActive = false;
         
         // Handle different interaction types
-        switch (config.type) {
+        // Check for two-finger gestures first
+        if (touchData.touchCount === 2 && touchData.partnerId) {
+            const partnerData = this.activeTouches.get(touchData.partnerId);
+            if (partnerData) {
+                // Handle two-finger gestures based on available handlers
+                if (config.onPanEnd || config.onZoomEnd) {
+                    // Combined pan/zoom support
+                    this.handleTwoFingerPanZoomEnd(element, config, touchData, partnerData);
+                } else if (config.onTwoFingerTap) {
+                    // Two finger context menu
+                    this.handleTwoFingerContextEnd(element, config, touchData, partnerData);
+                } else {
+                    // Fallback to type-based handling
+                    switch (config.type) {
+                        case 'twoFingerPan':
+                            this.handleTwoFingerPanEnd(element, config, touchData, partnerData);
+                            break;
+                        case 'twoFingerContext':
+                            this.handleTwoFingerContextEnd(element, config, touchData, partnerData);
+                            break;
+                        case 'twoFingerZoom':
+                            this.handleTwoFingerZoomEnd(element, config, touchData, partnerData);
+                            break;
+                        case 'twoFingerPanZoom':
+                            this.handleTwoFingerPanZoomEnd(element, config, touchData, partnerData);
+                            break;
+                    }
+                }
+                // Clean up partner data
+                this.activeTouches.delete(touchData.partnerId);
+            }
+        } else {
+            // Handle single-finger gestures
+            switch (config.type) {
             case 'resize':
                 // For panel resizers, check if resize was started
                 if (config.onDoubleTap && !touchData.resizeStarted) {
@@ -670,42 +686,7 @@ export class TouchSupportManager {
             case 'assetDragDrop':
                 this.handleAssetDragEnd(element, config, touchData);
                 break;
-            case 'twoFingerPan':
-                // Handle two finger pan end - need both touches
-                if (touchData.partnerId) {
-                    const partnerData = this.activeTouches.get(touchData.partnerId);
-                    if (partnerData) {
-                        this.handleTwoFingerPanEnd(element, config, touchData, partnerData);
-                    }
-                }
-                break;
-            case 'twoFingerContext':
-                // Handle two finger context end - need both touches
-                if (touchData.partnerId) {
-                    const partnerData = this.activeTouches.get(touchData.partnerId);
-                    if (partnerData) {
-                        this.handleTwoFingerContextEnd(element, config, touchData, partnerData);
-                    }
-                }
-                break;
-            case 'twoFingerZoom':
-                // Handle two finger zoom end - need both touches
-                if (touchData.partnerId) {
-                    const partnerData = this.activeTouches.get(touchData.partnerId);
-                    if (partnerData) {
-                        this.handleTwoFingerZoomEnd(element, config, touchData, partnerData);
-                    }
-                }
-                break;
-            case 'twoFingerPanZoom':
-                // Handle two finger pan/zoom end - need both touches
-                if (touchData.partnerId) {
-                    const partnerData = this.activeTouches.get(touchData.partnerId);
-                    if (partnerData) {
-                        this.handleTwoFingerPanZoomEnd(element, config, touchData, partnerData);
-                    }
-                }
-                break;
+            }
         }
         
         // Clean up touch data
@@ -1131,16 +1112,6 @@ export class TouchSupportManager {
             delete element._touchHandlers;
         }
         
-        // Remove navigation prevention handlers if they exist (legacy)
-        if (element._navPreventionHandlers) {
-            element.removeEventListener('touchstart', element._navPreventionHandlers.touchstart);
-            element.removeEventListener('touchmove', element._navPreventionHandlers.touchmove);
-            element.removeEventListener('touchend', element._navPreventionHandlers.touchend);
-            element.removeEventListener('contextmenu', element._navPreventionHandlers.contextmenu);
-            
-            // Clean up stored handlers
-            delete element._navPreventionHandlers;
-        }
         
         // Unregister from browser gesture prevention manager
         if (this.browserGesturePreventionManager) {
@@ -1198,7 +1169,7 @@ export class TouchSupportManager {
         this.activeTouches.clear();
         this.doubleTapTimers.clear();
         
-        Logger.ui.info('TouchSupportManager: Cleared all registrations');
+        Logger.ui.debug('TouchSupportManager: Cleared all registrations');
     }
 
     /**
@@ -1212,7 +1183,7 @@ export class TouchSupportManager {
         
         this.clear();
         
-        Logger.ui.info('TouchSupportManager: Destroyed');
+        Logger.ui.debug('TouchSupportManager: Destroyed');
     }
 
     // ===== NEW GESTURE HANDLERS =====

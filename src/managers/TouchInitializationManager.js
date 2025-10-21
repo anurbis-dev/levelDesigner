@@ -17,7 +17,7 @@ export class TouchInitializationManager {
         this.initialized = false;
         this.initializationQueue = [];
         
-        Logger.ui.info('TouchInitializationManager created');
+        Logger.ui.debug('TouchInitializationManager created');
     }
 
     /**
@@ -30,7 +30,7 @@ export class TouchInitializationManager {
             return;
         }
 
-        Logger.ui.info('TouchInitializationManager: Starting touch support initialization...');
+        Logger.ui.debug('TouchInitializationManager: Starting touch support initialization...');
 
         try {
             // Import TouchSupportUtils once
@@ -47,7 +47,7 @@ export class TouchInitializationManager {
             // Process any queued panel resizer initializations
             await this.processInitializationQueue();
             
-            Logger.ui.info('TouchInitializationManager: All touch support initialized successfully');
+            Logger.ui.debug('TouchInitializationManager: All touch support initialized successfully');
             
         } catch (error) {
             Logger.ui.error('TouchInitializationManager: Failed to initialize touch support:', error);
@@ -63,8 +63,6 @@ export class TouchInitializationManager {
             Logger.ui.warn('TouchInitializationManager: Canvas not found');
             return;
         }
-
-        Logger.ui.debug('TouchInitializationManager: Initializing canvas touch support');
 
         // Marquee selection (single finger tap + drag)
         this.TouchSupportUtils.addMarqueeTouchSupport(
@@ -85,32 +83,29 @@ export class TouchInitializationManager {
         );
 
         // Combined two finger pan and zoom
+        const panStartHandler = (element, data) => {
+            this.levelEditor.startTouchPan(data.centerX, data.centerY);
+        };
+        
+        const zoomStartHandler = (element, data) => {
+            this.levelEditor.startTouchZoom(data.centerX, data.centerY);
+        };
         this.TouchSupportUtils.addTwoFingerPanZoomSupport(
             canvas,
             // Pan handlers
+            panStartHandler,
             (element, data) => {
-                Logger.ui.debug('Touch pan start:', data);
-                this.levelEditor.startTouchPan(data.centerX, data.centerY);
-            },
-            (element, data) => {
-                Logger.ui.debug('Touch pan move:', data);
                 this.levelEditor.updateTouchPan(data.deltaX, data.deltaY);
             },
             (element, data) => {
-                Logger.ui.debug('Touch pan end:', data);
                 this.levelEditor.endTouchPan();
             },
             // Zoom handlers
+            zoomStartHandler,
             (element, data) => {
-                Logger.ui.debug('Touch zoom start:', data);
-                this.levelEditor.startTouchZoom(data.centerX, data.centerY);
-            },
-            (element, data) => {
-                Logger.ui.debug('Touch zoom move:', data);
                 this.levelEditor.updateTouchZoom(data.scale, data.centerX, data.centerY);
             },
             (element, data) => {
-                Logger.ui.debug('Touch zoom end:', data);
                 this.levelEditor.endTouchZoom();
             },
             this.touchSupportManager
@@ -365,6 +360,6 @@ export class TouchInitializationManager {
         this.stateManager = null;
         this.userPrefs = null;
         
-        Logger.ui.info('TouchInitializationManager destroyed');
+        Logger.ui.debug('TouchInitializationManager destroyed');
     }
 }

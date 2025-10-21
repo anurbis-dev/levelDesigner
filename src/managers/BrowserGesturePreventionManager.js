@@ -118,17 +118,26 @@ export class BrowserGesturePreventionManager {
     setupGlobalTouchHandlers() {
         // Global touch start handler
         const globalTouchStartHandler = (e) => {
+            // Only track single touch for navigation prevention
+            // Multi-touch gestures are handled by TouchSupportManager
             if (e.touches.length === 1) {
                 const touch = e.touches[0];
                 this.touchStartData.x = touch.clientX;
                 this.touchStartData.y = touch.clientY;
                 this.touchStartData.time = Date.now();
                 this.touchStartData.element = e.target;
+            } else if (e.touches.length > 1) {
+                // Clear single touch data when multi-touch starts
+                this.touchStartData.x = 0;
+                this.touchStartData.y = 0;
+                this.touchStartData.time = 0;
+                this.touchStartData.element = null;
             }
         };
 
         // Global touch move handler - prevent browser navigation
         const globalTouchMoveHandler = (e) => {
+            // Only handle single touch gestures - let multi-touch gestures be handled by TouchSupportManager
             if (e.touches.length === 1 && this.touchStartData.x !== 0) {
                 const touch = e.touches[0];
                 const deltaX = touch.clientX - this.touchStartData.x;
@@ -146,11 +155,14 @@ export class BrowserGesturePreventionManager {
         };
 
         // Global touch end handler
-        const globalTouchEndHandler = () => {
-            this.touchStartData.x = 0;
-            this.touchStartData.y = 0;
-            this.touchStartData.time = 0;
-            this.touchStartData.element = null;
+        const globalTouchEndHandler = (e) => {
+            // Only clear data if this was the last touch
+            if (e.touches.length === 0) {
+                this.touchStartData.x = 0;
+                this.touchStartData.y = 0;
+                this.touchStartData.time = 0;
+                this.touchStartData.element = null;
+            }
         };
 
         // Add global event listeners

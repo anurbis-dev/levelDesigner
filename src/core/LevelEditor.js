@@ -365,7 +365,7 @@ export class LevelEditor {
             this.initializeUIComponents(domElements);
             this.initializeMenuAndEvents();
             await this.initializeLevelAndData();
-            this.finalizeInitialization();
+            await this.finalizeInitialization();
             
         } catch (error) {
             this.log('error', 'Failed to initialize editor:', error.message);
@@ -706,7 +706,7 @@ export class LevelEditor {
      * Finalize initialization (render, save state, setup tests)
      * @private
      */
-    finalizeInitialization() {
+    async finalizeInitialization() {
         // Initial render
         Logger.render.info('🎨 Initial render started');
         this.render();
@@ -720,7 +720,16 @@ export class LevelEditor {
         this.updateAllPanels();
 
         // Initialize touch support after all UI elements are ready
-        this.initializeTouchSupport();
+        await this.initializeTouchSupport();
+        
+        // Initialize touch gesture thresholds from user configuration
+        const touchConfig = this.configManager?.get('touchSupport.elements.twoFingerPan') || {};
+        const zoomConfig = this.configManager?.get('touchSupport.elements.twoFingerZoom') || {};
+        
+        this.stateManager.set('touch.panThreshold', touchConfig.minMovement || 5);
+        this.stateManager.set('touch.zoomThreshold', 0.03); // Fixed threshold for zoom detection
+        this.stateManager.set('touch.panSensitivity', touchConfig.sensitivity || 1.0);
+        this.stateManager.set('touch.zoomIntensity', zoomConfig.sensitivity || 0.1);
 
         // Auto-set parallax start position to current camera position
         const currentCamera = this.stateManager.get('camera');
@@ -758,9 +767,11 @@ export class LevelEditor {
      * @private
      */
     async initializeTouchSupport() {
+        Logger.ui.debug('LevelEditor: initializeTouchSupport called');
+        Logger.ui.debug('LevelEditor: touchInitializationManager available:', !!this.touchInitializationManager);
         try {
             await this.touchInitializationManager.initializeAllTouchSupport();
-            Logger.ui.info('Touch support initialized successfully');
+            Logger.ui.debug('Touch support initialized successfully');
         } catch (error) {
             Logger.ui.error('Failed to initialize touch support:', error);
         }
@@ -2430,6 +2441,8 @@ export class LevelEditor {
     updateTouchPan(deltaX, deltaY) {
         if (!this.stateManager.get('touch.isPanning')) return;
         
+        Logger.ui.debug('Touch pan update:', deltaX, deltaY);
+        
         // Apply pan to camera (same logic as mouse panning)
         const camera = this.stateManager.get('camera');
         const newCameraX = camera.x - deltaX / camera.zoom;
@@ -2486,6 +2499,8 @@ export class LevelEditor {
      */
     updateTouchZoom(scale, centerX, centerY) {
         if (!this.stateManager.get('touch.isZooming')) return;
+        
+        Logger.ui.debug('Touch zoom update:', scale, centerX, centerY);
         
         // Use same logic as mouse wheel zoom
         const zoomIntensity = this.stateManager.get('touch.zoomIntensity') || 0.1;

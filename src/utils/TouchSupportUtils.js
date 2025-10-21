@@ -169,6 +169,7 @@ export class TouchSupportUtils {
             return;
         }
 
+
         touchManager.registerElement(element, 'twoFingerPanZoom', {
             onPanStart: onPanStart,
             onPanMove: onPanMove,
@@ -179,48 +180,6 @@ export class TouchSupportUtils {
         });
     }
 
-    /**
-     * Update touch action for an element
-     * @param {HTMLElement} element - Element to update
-     * @param {string} gestureType - New gesture type
-     * @param {TouchSupportManager} touchManager - Touch support manager
-     */
-    static updateTouchAction(element, gestureType, touchManager) {
-        if (!touchManager) {
-            Logger.ui.warn('TouchSupportUtils: TouchSupportManager not provided');
-            return;
-        }
-
-        touchManager.updateTouchAction(element, gestureType);
-    }
-
-    /**
-     * Temporarily disable touch gestures for an element
-     * @param {HTMLElement} element - Element to disable
-     * @param {TouchSupportManager} touchManager - Touch support manager
-     */
-    static disableTouchGestures(element, touchManager) {
-        if (!touchManager) {
-            Logger.ui.warn('TouchSupportUtils: TouchSupportManager not provided');
-            return;
-        }
-
-        touchManager.disableTouchGestures(element);
-    }
-
-    /**
-     * Re-enable touch gestures for an element
-     * @param {HTMLElement} element - Element to re-enable
-     * @param {TouchSupportManager} touchManager - Touch support manager
-     */
-    static enableTouchGestures(element, touchManager) {
-        if (!touchManager) {
-            Logger.ui.warn('TouchSupportUtils: TouchSupportManager not provided');
-            return;
-        }
-
-        touchManager.enableTouchGestures(element);
-    }
 
     /**
      * Add touch support to a resizable element

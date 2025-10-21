@@ -77,6 +77,65 @@ TouchSupportUtils.addDragTouchSupport(
 );
 ```
 
+## Объединение обработчиков
+
+### Множественные конфигурации на одном элементе
+
+TouchSupportManager поддерживает объединение нескольких типов жестов на одном элементе. Это позволяет, например, canvas поддерживать одновременно marquee selection, pan, zoom и context menu.
+
+#### Как работает объединение
+
+1. **Первая регистрация** - элемент регистрируется с первым типом конфигурации
+2. **Последующие регистрации** - дополнительные типы объединяются с существующей конфигурацией
+3. **Сохранение обработчиков** - все обработчики сохраняются без конфликтов
+
+#### Пример объединения
+
+```javascript
+// Первая регистрация - marquee selection
+touchManager.registerElement(canvas, 'marqueeSelection', {
+    onMarqueeStart: (element, data) => { /* ... */ },
+    onMarqueeMove: (element, data) => { /* ... */ },
+    onMarqueeEnd: (element, data) => { /* ... */ }
+});
+
+// Вторая регистрация - pan/zoom (объединяется с существующей)
+touchManager.registerElement(canvas, 'twoFingerPanZoom', {
+    onPanStart: (element, data) => { /* ... */ },
+    onPanMove: (element, data) => { /* ... */ },
+    onPanEnd: (element, data) => { /* ... */ },
+    onZoomStart: (element, data) => { /* ... */ },
+    onZoomMove: (element, data) => { /* ... */ },
+    onZoomEnd: (element, data) => { /* ... */ }
+});
+
+// Третья регистрация - context menu (объединяется с существующей)
+touchManager.registerElement(canvas, 'twoFingerContext', {
+    onTwoFingerTap: (element, data) => { /* ... */ }
+});
+```
+
+#### Правила объединения
+
+1. **Приоритет существующих обработчиков** - существующие обработчики сохраняются
+2. **Добавление новых обработчиков** - новые обработчики добавляются к существующим
+3. **Обработчики событий настраиваются один раз** - при первой регистрации элемента
+4. **Динамическое получение конфигурации** - обработчики всегда получают актуальную конфигурацию
+
+#### Поддерживаемые комбинации
+
+- **Marquee + Pan/Zoom** - выделение рамкой + панорамирование/масштабирование
+- **Pan + Zoom + Context** - полный набор двухпальцевых жестов
+- **Button + Long Press** - кнопка с поддержкой длительного нажатия
+- **Resizer + Double Tap** - разделитель с переключением по двойному тапу
+
+#### Важные замечания
+
+- **Не перезаписывайте обработчики** - используйте объединение вместо замены
+- **Проверяйте наличие обработчиков** - перед вызовом проверяйте `if (config.onHandler)`
+- **Используйте TouchSupportUtils** - для стандартных комбинаций жестов
+- **Тестируйте комбинации** - убедитесь, что все жесты работают корректно
+
 ## Типы конфигураций
 
 ### panelResizer
@@ -282,6 +341,31 @@ TouchSupportUtils.enableTouchGestures(element, touchManager);
 - `resize` - изменение размера
 
 ## Конфигурация
+
+### Настройки пользователя
+
+Touch жесты автоматически загружают настройки из конфигурации пользователя при инициализации:
+
+```javascript
+// Настройки pan/zoom загружаются из конфигурации
+const touchConfig = this.configManager?.get('touchSupport.elements.twoFingerPan') || {};
+const zoomConfig = this.configManager?.get('touchSupport.elements.twoFingerZoom') || {};
+
+// Применение настроек
+this.stateManager.set('touch.panThreshold', touchConfig.minMovement || 5);
+this.stateManager.set('touch.panSensitivity', touchConfig.sensitivity || 1.0);
+this.stateManager.set('touch.zoomIntensity', zoomConfig.sensitivity || 0.1);
+```
+
+#### Доступные настройки
+
+- **`touchSupport.elements.twoFingerPan.minMovement`** - минимальное движение для pan (по умолчанию: 5)
+- **`touchSupport.elements.twoFingerPan.sensitivity`** - чувствительность pan (по умолчанию: 1.0)
+- **`touchSupport.elements.twoFingerZoom.sensitivity`** - чувствительность zoom (по умолчанию: 1.0)
+
+#### Сохранение настроек
+
+Настройки автоматически сохраняются при изменении в окне настроек редактора.
 
 ### Основные настройки
 
