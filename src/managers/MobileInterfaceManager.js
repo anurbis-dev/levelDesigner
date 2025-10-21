@@ -12,7 +12,7 @@
  * - Централизованное управление мобильными стилями
  * 
  * @author Level Designer
- * @version 3.51.8
+ * @version 3.51.9
  */
 
 import { Logger } from '../utils/Logger.js';

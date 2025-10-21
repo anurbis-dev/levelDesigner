@@ -64,7 +64,7 @@ export class Level {
      * @returns {number} Next zIndex value (layerIndex + objectIndex/1000)
      */
     getNextZIndex() {
-        // Get the highest layer index (layers are 0-based)
+        // Get the highest layer index (top layer has max index)
         const maxLayerIndex = Math.max(...this.layers.map(layer => layer.getIndex()), 0);
 
         // Find max object index within each layer
@@ -112,13 +112,15 @@ export class Level {
         if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
             Logger.level.debug('Updating layer indices:');
             sortedLayers.forEach((layer, index) => {
-                Logger.level.debug(`Layer "${layer.name}" (order: ${layer.order}) → index: ${index}`);
+                const reversedIndex = sortedLayers.length - 1 - index;
+                Logger.level.debug(`Layer "${layer.name}" (order: ${layer.order}) → index: ${reversedIndex}`);
             });
         }
 
-        // Assign indices based on order (0, 1, 2, ...)
+        // Assign indices based on order (reversed: top layer has max index)
         sortedLayers.forEach((layer, index) => {
-            layer.setIndex(index);
+            const reversedIndex = sortedLayers.length - 1 - index;
+            layer.setIndex(reversedIndex);
         });
 
         // Update all object zIndices to reflect new layer indices

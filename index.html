@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2D Level Editor v3.51.8</title>
+    <title>2D Level Editor v3.51.9</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <!-- Load Tailwind CSS for quick styling -->
@@ -65,7 +65,7 @@
                 <!-- Menus will be dynamically generated here -->
             </div>
             <div class="text-sm text-gray-400">
-                <span id="header-version-info">v3.51.8</span>
+                <span id="header-version-info">v3.51.9</span>
             </div>
         </nav>
     </header>
@@ -429,7 +429,6 @@
         // Make editor globally available
         try {
             window.editor = editor;
-            window.consoleContextMenu = consoleContextMenu;
 
             // Force check for any windows that might have been created during LevelEditor initialization
             if (autoEventHandlerManager && typeof autoEventHandlerManager.checkForNewWindow === 'function') {
@@ -888,6 +887,9 @@
                     logToConsole(`Copied to clipboard: ${text}`, 'info');
                 }
             });
+
+            // Make consoleContextMenu globally available
+            window.consoleContextMenu = consoleContextMenu;
 
             // Setup scroll listener to detect manual scrolling
             let scrollTimeout = null;

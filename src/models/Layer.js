@@ -51,8 +51,7 @@ export class Layer {
      */
     setOrder(order) {
         this.order = order;
-        // Update layer index based on order (0-based index)
-        this.index = order;
+        // Note: layer index is managed separately by Level.updateLayerIndices()
     }
 
     /**
