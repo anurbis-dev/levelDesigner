@@ -170,10 +170,15 @@ export class EventHandlerManager {
             if (handler && typeof handler === 'function') {
                 const wrappedHandler = (e) => {
                     try {
-                        // Check if dialog is currently visible
-                        const dialogElement = document.getElementById(dialogId);
-                        if (dialogElement && dialogElement.style.display !== 'none') {
+                        // For ESC key, always call handler - let the handler decide if window should close
+                        if (eventType === 'keydown' && e.key === 'Escape') {
                             handler.call(this, e);
+                        } else {
+                            // For other events, check if dialog is currently visible
+                            const dialogElement = document.getElementById(dialogId);
+                            if (dialogElement && dialogElement.style.display !== 'none') {
+                                handler.call(this, e);
+                            }
                         }
                     } catch (error) {
                         Logger.ui.error('Global event handler error:', error);

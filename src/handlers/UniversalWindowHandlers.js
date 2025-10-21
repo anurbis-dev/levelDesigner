@@ -45,6 +45,13 @@ export class UniversalWindowHandlers {
      */
     static handleEscape(windowInstance, windowType) {
         Logger.ui.info(`UniversalWindowHandlers: ESC pressed for ${windowType}, instance: ${windowInstance ? 'found' : 'not found'}`);
+        
+        // Check if window is visible before closing
+        if (windowInstance && windowInstance.isVisible === false) {
+            Logger.ui.debug(`UniversalWindowHandlers: Window ${windowType} is not visible, ignoring ESC`);
+            return;
+        }
+        
         // Универсальные методы закрытия
         if (typeof windowInstance.cancel === 'function') {
             windowInstance.cancel();
