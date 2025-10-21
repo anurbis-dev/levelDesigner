@@ -32,6 +32,34 @@ export class EventHandlerManager {
                     enter: null
                 }
             },
+            panel: {
+                type: 'panel',
+                handlers: {
+                    click: null,
+                    contextmenu: null,
+                    // Panels may have specific handlers
+                    layerItemClick: null,
+                    layerButtonClick: null,
+                    assetItemClick: null
+                },
+                globalHandlers: {
+                    // Panels don't have global handlers like dialogs
+                }
+            },
+            custom: {
+                type: 'custom',
+                handlers: {
+                    click: null,
+                    blur: null,
+                    input: null,
+                    keydown: null,
+                    focus: null,
+                    change: null
+                },
+                globalHandlers: {
+                    // Custom elements may have their own global handlers
+                }
+            },
             button: {
                 type: 'button',
                 handlers: {

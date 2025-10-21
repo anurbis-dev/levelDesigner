@@ -129,12 +129,14 @@ export class UniversalWindowHandlers {
         } else if (buttonId.includes('apply') || buttonId.includes('save') || buttonClass.includes('apply') || buttonClass.includes('save')) {
             UniversalWindowHandlers.handleApply(windowInstance, windowType);
         } else {
-            // Специфичные обработчики для разных типов окон
-            if (windowType === 'asset-panel' && windowInstance) {
-                UniversalWindowHandlers.handleAssetPanelButton(button, windowInstance);
-            } else if (windowType === 'actor-properties' && windowInstance) {
-                UniversalWindowHandlers.handleActorPropertiesButton(button, windowInstance);
-            } else {
+        // Специфичные обработчики для разных типов окон
+        if (windowType === 'asset-panel' && windowInstance) {
+            UniversalWindowHandlers.handleAssetPanelButton(button, windowInstance);
+        } else if (windowType === 'layers-panel' && windowInstance) {
+            UniversalWindowHandlers.handleLayersPanelButton(button, windowInstance);
+        } else if (windowType === 'actor-properties' && windowInstance) {
+            UniversalWindowHandlers.handleActorPropertiesButton(button, windowInstance);
+        } else {
                 // Попытка вызвать специфичный обработчик
                 const methodName = `handle${buttonId.charAt(0).toUpperCase() + buttonId.slice(1)}Click`;
                 if (typeof windowInstance[methodName] === 'function') {
@@ -187,7 +189,7 @@ export class UniversalWindowHandlers {
      */
     static handleActorPropertiesButton(button, actorPropertiesWindow) {
         const buttonId = button.id;
-        
+
         // Обработка специфичных кнопок ActorPropertiesWindow
         if (buttonId === 'actor-props-cancel') {
             if (typeof actorPropertiesWindow.cancel === 'function') {
@@ -199,6 +201,52 @@ export class UniversalWindowHandlers {
             }
         } else {
             Logger.ui.debug(`UniversalWindowHandlers: Unknown ActorPropertiesWindow button: ${buttonId}`);
+        }
+    }
+
+    /**
+     * Обработка кнопок LayersPanel
+     * @param {HTMLElement} button - Элемент кнопки
+     * @param {Object} layersPanel - Экземпляр LayersPanel
+     */
+    static handleLayersPanelButton(button, layersPanel) {
+        const buttonId = button.id;
+
+        // Обработка специфичных кнопок LayersPanel
+        if (buttonId === 'add-layer-btn') {
+            if (typeof layersPanel.onAddLayer === 'function') {
+                layersPanel.onAddLayer();
+            } else {
+                Logger.ui.debug(`UniversalWindowHandlers: add-layer-btn clicked, but no handler found`);
+            }
+        } else if (buttonId === 'layers-search-clear') {
+            if (typeof layersPanel.clearSearch === 'function') {
+                layersPanel.clearSearch();
+            } else {
+                Logger.ui.debug(`UniversalWindowHandlers: layers-search-clear clicked, but no handler found`);
+            }
+        } else {
+            Logger.ui.debug(`UniversalWindowHandlers: Unknown LayersPanel button: ${buttonId}`);
+        }
+    }
+
+    /**
+     * Обработка полей ввода LayersPanel
+     * @param {HTMLElement} input - Элемент поля ввода
+     * @param {Object} layersPanel - Экземпляр LayersPanel
+     */
+    static handleLayersPanelInput(input, layersPanel) {
+        const inputId = input.id;
+
+        // Обработка специфичных полей ввода LayersPanel
+        if (inputId === 'layers-search') {
+            if (typeof layersPanel.handleSearch === 'function') {
+                layersPanel.handleSearch(input.value);
+            } else {
+                Logger.ui.debug(`UniversalWindowHandlers: layers-search input changed, but no handler found`);
+            }
+        } else {
+            Logger.ui.debug(`UniversalWindowHandlers: Unknown LayersPanel input: ${inputId}`);
         }
     }
 
@@ -256,6 +304,8 @@ export class UniversalWindowHandlers {
         // Специфичные обработчики для разных типов окон
         if (windowType === 'asset-panel' && windowInstance) {
             UniversalWindowHandlers.handleAssetPanelInput(input, windowInstance);
+        } else if (windowType === 'layers-panel' && windowInstance) {
+            UniversalWindowHandlers.handleLayersPanelInput(input, windowInstance);
         } else if (windowType === 'actor-properties' && windowInstance) {
             UniversalWindowHandlers.handleActorPropertiesInput(input, windowInstance);
         } else {

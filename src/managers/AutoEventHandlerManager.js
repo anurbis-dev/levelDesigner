@@ -1,6 +1,6 @@
 /**
  * Auto Event Handler Manager
- * Автоматическая система регистрации обработчиков для всех окон
+ * Automatic system for registering handlers for all windows
  */
 
 import { Logger } from '../utils/Logger.js';
@@ -16,7 +16,7 @@ export class AutoEventHandlerManager {
     }
 
     /**
-     * Инициализация AutoEventHandlerManager после загрузки DOM
+     * Initialize AutoEventHandlerManager after DOM is loaded
      */
     init() {
         if (this.initialized) return;
@@ -27,10 +27,10 @@ export class AutoEventHandlerManager {
     }
 
     /**
-     * Настройка автоматической регистрации обработчиков
+     * Setup automatic handler registration
      */
     setupAutoRegistration() {
-        // Используем MutationObserver для отслеживания новых окон
+        // Use MutationObserver to track new windows
         this.observer = new MutationObserver((mutations) => {
             mutations.forEach((mutation) => {
                 mutation.addedNodes.forEach((node) => {
@@ -41,7 +41,7 @@ export class AutoEventHandlerManager {
             });
         });
 
-        // Начинаем наблюдение за изменениями в DOM
+        // Start observing DOM changes
         this.observer.observe(document.body, {
             childList: true,
             subtree: true
@@ -51,61 +51,344 @@ export class AutoEventHandlerManager {
     }
 
     /**
-     * Проверка нового элемента на наличие окон
-     * @param {HTMLElement} element - Проверяемый элемент
+     * Check new element for windows
+     * @param {HTMLElement} element - Element to check
      */
     checkForNewWindow(element) {
-        // Проверяем, является ли элемент окном
+        // Only check elements that could potentially be windows or panels
+        if (!element || !element.tagName) return;
+
+        // Skip elements that are unlikely to be windows or panels
+        const tagName = element.tagName.toLowerCase();
+        if (!['div', 'section', 'main', 'article', 'aside'].includes(tagName)) return;
+
+        // Skip elements that don't have IDs or classes that suggest they might be windows/panels
+        if (!element.id && !element.className) return;
+
+        // Check if element itself is a window or panel
         const windowInfo = this.detectWindowType(element);
         if (windowInfo) {
             Logger.event.info(`AutoEventHandlerManager: Found window ${element.id} of type ${windowInfo.type}, instance: ${windowInfo.instance ? 'found' : 'not found'}`);
             this.registerWindowAutomatically(element, windowInfo);
+
+            // If it's a panel, also register child element handlers
+            if (windowInfo.type === 'layers-panel' || windowInfo.type === 'asset-panel') {
+                this.registerPanelChildElements(element, windowInfo);
+            }
         }
 
-        // Проверяем дочерние элементы
+        // Check child elements (dialogs and windows)
         const childWindows = element.querySelectorAll('[id*="overlay"], [id*="dialog"], [id*="window"]');
         childWindows.forEach(child => {
-            const childWindowInfo = this.detectWindowType(child);
-            if (childWindowInfo) {
-                Logger.event.debug(`AutoEventHandlerManager: Found child window ${child.id} of type ${childWindowInfo.type}`);
-                this.registerWindowAutomatically(child, childWindowInfo);
+            if (child !== element) { // Avoid checking the same element twice
+                const childWindowInfo = this.detectWindowType(child);
+                if (childWindowInfo) {
+                    Logger.event.debug(`AutoEventHandlerManager: Found child window ${child.id} of type ${childWindowInfo.type}`);
+                    this.registerWindowAutomatically(child, childWindowInfo);
+                }
+            }
+        });
+
+        // Check panels (separately from windows)
+        const panels = element.querySelectorAll('[id*="panel"][class*="panel-container"]');
+        panels.forEach(panel => {
+            if (panel !== element) { // Avoid checking the same element twice
+                const panelWindowInfo = this.detectWindowType(panel);
+                if (panelWindowInfo) {
+                    Logger.event.debug(`AutoEventHandlerManager: Found panel ${panel.id} of type ${panelWindowInfo.type}`);
+                    this.registerWindowAutomatically(panel, panelWindowInfo);
+
+                    // Also register handlers for child elements within the panel
+                    this.registerPanelChildElements(panel, panelWindowInfo);
+                }
             }
         });
     }
 
     /**
-     * Определение типа окна по элементу
-     * @param {HTMLElement} element - Элемент для проверки
-     * @returns {Object|null} Информация о типе окна или null
+     * Register handlers for child elements within a panel
+     * @param {HTMLElement} panel - Panel element
+     * @param {Object} panelInfo - Panel type information
+     */
+    registerPanelChildElements(panel, panelInfo) {
+        const { type, instance } = panelInfo;
+
+        // Register handlers for different element types within the panel
+        this.registerElementTypeHandlers(panel, '.layer-item', 'layerItem', instance);
+        this.registerElementTypeHandlers(panel, '.layer-visibility-btn', 'layerButton', instance);
+        this.registerElementTypeHandlers(panel, '.layer-lock-btn', 'layerButton', instance);
+        this.registerElementTypeHandlers(panel, '.layer-color', 'layerColor', instance);
+        this.registerElementTypeHandlers(panel, '#layers-search', 'searchInput', instance);
+        this.registerElementTypeHandlers(panel, '#add-layer-btn', 'addButton', instance);
+
+        // Register input handlers for layer name editing
+        this.registerInputHandlers(panel, '[id^="layer-name-"]', 'layerNameInput', instance);
+        this.registerInputHandlers(panel, '.layer-parallax-input', 'parallaxInput', instance);
+    }
+
+    /**
+     * Register handlers for specific element types within a panel
+     * @param {HTMLElement} panel - Panel element
+     * @param {string} selector - CSS selector for elements
+     * @param {string} elementType - Type of element for handler lookup
+     * @param {Object} panelInstance - Panel instance
+     */
+    registerElementTypeHandlers(panel, selector, elementType, panelInstance) {
+        const elements = panel.querySelectorAll(selector);
+
+        elements.forEach((element, index) => {
+            const elementId = element.id || `${elementType}_${Date.now()}_${index}`;
+
+            // Create handlers based on element type
+            const handlers = this.createElementTypeHandlers(elementType, panelInstance);
+
+            if (handlers) {
+                try {
+                    eventHandlerManager.registerElement(
+                        element,
+                        'custom',
+                        {
+                            handlers: handlers,
+                            context: panelInstance || this
+                        },
+                        elementId
+                    );
+                    Logger.event.debug(`AutoEventHandlerManager: Registered ${elementType} handler for ${elementId}`);
+                } catch (error) {
+                    Logger.event.warn(`AutoEventHandlerManager: Failed to register ${elementType} handler for ${elementId}:`, error);
+                }
+            }
+        });
+    }
+
+    /**
+     * Register input handlers for form elements
+     * @param {HTMLElement} panel - Panel element
+     * @param {string} selector - CSS selector for input elements
+     * @param {string} inputType - Type of input for handler lookup
+     * @param {Object} panelInstance - Panel instance
+     */
+    registerInputHandlers(panel, selector, inputType, panelInstance) {
+        const inputs = panel.querySelectorAll(selector);
+
+        inputs.forEach((input, index) => {
+            const inputId = input.id || `${inputType}_${Date.now()}_${index}`;
+
+            const inputHandlers = this.createInputTypeHandlers(inputType, panelInstance);
+
+            if (inputHandlers) {
+                try {
+                    eventHandlerManager.registerElement(
+                        input,
+                        'input',
+                        {
+                            handlers: inputHandlers,
+                            context: panelInstance || this
+                        },
+                        inputId
+                    );
+                    Logger.event.debug(`AutoEventHandlerManager: Registered ${inputType} input handler for ${inputId}`);
+                } catch (error) {
+                    Logger.event.warn(`AutoEventHandlerManager: Failed to register ${inputType} input handler for ${inputId}:`, error);
+                }
+            }
+        });
+    }
+
+    /**
+     * Create handlers for specific element types
+     * @param {string} elementType - Type of element
+     * @param {Object} panelInstance - Panel instance
+     * @returns {Object} Handlers object or null
+     */
+    createElementTypeHandlers(elementType, panelInstance) {
+        switch (elementType) {
+            case 'layerItem':
+                return {
+                    click: (e) => this.handleLayerItemClick(e, panelInstance)
+                };
+
+            case 'layerButton':
+                return {
+                    click: (e) => this.handleLayerButtonClick(e, panelInstance)
+                };
+
+            case 'layerColor':
+                return {
+                    click: (e) => this.handleLayerColorClick(e, panelInstance)
+                };
+
+            case 'searchInput':
+                return {
+                    // Search inputs are handled by SearchManager, no additional handlers needed
+                };
+
+            case 'addButton':
+                return {
+                    click: (e) => this.handleAddButtonClick(e, panelInstance)
+                };
+
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Create input handlers for specific input types
+     * @param {string} inputType - Type of input
+     * @param {Object} panelInstance - Panel instance
+     * @returns {Object} Input handlers object or null
+     */
+    createInputTypeHandlers(inputType, panelInstance) {
+        switch (inputType) {
+            case 'layerNameInput':
+                return {
+                    blur: (e) => this.handleLayerNameInputBlur(e, panelInstance),
+                    keydown: (e) => {
+                        if (e.key === 'Enter') {
+                            e.target.blur();
+                        }
+                    }
+                };
+
+            case 'parallaxInput':
+                return {
+                    input: (e) => this.handleParallaxInputChange(e, panelInstance),
+                    blur: (e) => this.handleParallaxInputBlur(e, panelInstance)
+                };
+
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Handle layer color click
+     * @param {Event} e - Click event
+     * @param {Object} panelInstance - Panel instance
+     */
+    handleLayerColorClick(e, panelInstance) {
+        const colorElement = e.target.closest('.layer-color');
+        if (colorElement && panelInstance) {
+            const layerId = colorElement.dataset.layerId;
+            const level = panelInstance.levelEditor?.getLevel();
+
+            if (level) {
+                const layer = level.getLayerById(layerId);
+                if (layer && panelInstance.showColorPicker) {
+                    panelInstance.showColorPicker(layer, e);
+                }
+            }
+        }
+    }
+
+    /**
+     * Handle layer name input blur
+     * @param {Event} e - Blur event
+     * @param {Object} panelInstance - Panel instance
+     */
+    handleLayerNameInputBlur(e, panelInstance) {
+        const input = e.target;
+        const layerId = input.dataset.layerId;
+
+        if (layerId && panelInstance && panelInstance.levelEditor) {
+            const level = panelInstance.levelEditor.getLevel();
+            const layer = level?.getLayerById(layerId);
+
+            if (layer) {
+                const oldName = layer.name;
+                layer.setName(input.value);
+                panelInstance.stateManager.markDirty();
+
+                // Notify about layer name change
+                panelInstance.stateManager.notifyLayerChanged(layerId, 'name', layer.name, oldName);
+            }
+        }
+    }
+
+    /**
+     * Handle parallax input change
+     * @param {Event} e - Input event
+     * @param {Object} panelInstance - Panel instance
+     */
+    handleParallaxInputChange(e, panelInstance) {
+        const input = e.target;
+        const layerId = input.dataset.layerId;
+
+        if (layerId && panelInstance && panelInstance.levelEditor) {
+            const level = panelInstance.levelEditor.getLevel();
+            const layer = level?.getLayerById(layerId);
+
+            if (layer) {
+                const oldOffset = layer.parallaxOffset;
+                const newOffset = parseFloat(input.value) || 0;
+                layer.parallaxOffset = newOffset;
+                panelInstance.stateManager.markDirty();
+
+                // Notify about layer parallax change
+                panelInstance.stateManager.notifyLayerChanged(layerId, 'parallaxOffset', newOffset, oldOffset);
+            }
+        }
+    }
+
+    /**
+     * Handle parallax input blur (validation)
+     * @param {Event} e - Blur event
+     * @param {Object} panelInstance - Panel instance
+     */
+    handleParallaxInputBlur(e, panelInstance) {
+        const input = e.target;
+        const value = parseFloat(input.value);
+
+        if (isNaN(value)) {
+            input.value = 0;
+            const layerId = input.dataset.layerId;
+
+            if (layerId && panelInstance && panelInstance.levelEditor) {
+                const level = panelInstance.levelEditor.getLevel();
+                const layer = level?.getLayerById(layerId);
+
+                if (layer) {
+                    layer.parallaxOffset = 0;
+                }
+            }
+        }
+    }
+
+    /**
+     * Detect window type from element
+     * @param {HTMLElement} element - Element to check
+     * @returns {Object|null} Window type information or null
      */
     detectWindowType(element) {
         const id = element.id;
-        const className = element.className;
-        
+        const className = typeof element.className === 'string' ? element.className : '';
+
         Logger.event.debug(`AutoEventHandlerManager: Checking element ${id} with class ${className}`);
-        
-        // Проверяем по ID и классам
+
+        // Check by ID and classes
         const windowTypes = [
             { id: 'settings-overlay', class: 'settings-panel-container', type: 'settings', instance: 'SettingsPanel' },
             { id: 'actor-properties-overlay', class: 'actor-properties-container', type: 'actor-properties', instance: 'ActorPropertiesWindow' },
             { id: 'universal-dialog-overlay', class: 'universal-dialog', type: 'universal-dialog', instance: 'UniversalDialog' },
-            { id: 'asset-panel-container', class: 'asset-panel-container', type: 'asset-panel', instance: 'AssetPanel' }
+            { id: 'asset-panel-container', class: 'asset-panel-container', type: 'asset-panel', instance: 'AssetPanel' },
+            { id: 'layers-content-panel', class: 'layers-panel-container', type: 'layers-panel', instance: 'LayersPanel' }
         ];
-        
+
         for (const windowType of windowTypes) {
             if (id === windowType.id || className.includes(windowType.class)) {
                 Logger.event.info(`AutoEventHandlerManager: Detected window type ${windowType.type} for element ${id}`);
                 return { type: windowType.type, instance: this.findWindowInstance(windowType.instance) };
             }
         }
-        
+
         return null;
     }
 
     /**
-     * Поиск экземпляра окна в глобальных объектах
-     * @param {string} windowType - Тип окна
-     * @returns {Object|null} Экземпляр окна или null
+     * Find window instance in global objects
+     * @param {string} windowType - Window type
+     * @returns {Object|null} Window instance or null
      */
     findWindowInstance(windowType) {
         if (!window.editor) {
@@ -117,7 +400,8 @@ export class AutoEventHandlerManager {
             'SettingsPanel': 'settingsPanel',
             'ActorPropertiesWindow': 'actorPropertiesWindow',
             'AssetPanel': 'assetPanel',
-            'UniversalDialog': null // Создается динамически
+            'LayersPanel': 'layersPanel',
+            'UniversalDialog': null // Created dynamically
         };
         
         const propertyName = instanceMap[windowType];
@@ -132,46 +416,22 @@ export class AutoEventHandlerManager {
         return instance;
     }
 
-
     /**
-     * Автоматическая регистрация окна
-     * @param {HTMLElement} element - Элемент окна
-     * @param {Object} windowInfo - Информация о типе окна
+     * Creates handlers depending on window type
+     * @param {HTMLElement} element - Window element
+     * @param {string} type - Window type
+     * @param {Object} instance - Window instance
+     * @param {string} windowId - Window ID
+     * @returns {Object} Configuration for EventHandlerManager
      */
-    registerWindowAutomatically(element, windowInfo) {
-        const { type, instance } = windowInfo;
-        const windowId = element.id || `auto-window-${Date.now()}`;
+    createElementHandlers(element, type, instance, windowId) {
+        // Use universal handlers for dialogs
+        if (type === 'settings' || type === 'actor-properties' || type === 'universal-dialog') {
+            const handlers = UniversalWindowHandlers.createUniversalHandlers(instance, type);
 
-        Logger.event.debug(`AutoEventHandlerManager: Registering window ${windowId} of type ${type}, instance: ${instance ? 'found' : 'not found'}`);
-
-        // Проверяем, не зарегистрировано ли уже
-        if (this.registeredWindows.has(windowId)) {
-            Logger.event.debug(`AutoEventHandlerManager: Window ${windowId} already registered`);
-            return;
-        }
-
-        // Если экземпляр не найден, сохраняем окно для регистрации позже
-        if (!instance) {
-            Logger.event.debug(`AutoEventHandlerManager: Instance not found for ${windowId}, will register later`);
-            this.registeredWindows.set(windowId, {
-                instance: null,
-                type,
-                handlers: null,
-                element,
-                pending: true
-            });
-            return;
-        }
-
-        // Создаем универсальные обработчики
-        const handlers = UniversalWindowHandlers.createUniversalHandlers(instance, type);
-        
-        // Регистрируем в EventHandlerManager
-        try {
-            eventHandlerManager.registerElement(
-                element,
-                'dialog',
-                {
+            return {
+                elementType: 'dialog',
+                config: {
                     handlers: {
                         click: handlers.onClick,
                         contextmenu: handlers.onContextMenu
@@ -185,22 +445,269 @@ export class AutoEventHandlerManager {
                         },
                         overlayClick: handlers.onOverlayClick
                     }
+                }
+            };
+        }
+
+        // Use panel handlers for panels
+        if (type === 'asset-panel' || type === 'layers-panel') {
+            return this.createPanelHandlers(element, type, instance, windowId);
+        }
+
+        // Fallback for unknown types
+        Logger.event.warn(`AutoEventHandlerManager: Unknown window type ${type}, using default handlers`);
+        const handlers = UniversalWindowHandlers.createUniversalHandlers(instance, type);
+
+        return {
+            elementType: 'dialog',
+            config: {
+                handlers: {
+                    click: handlers.onClick,
+                    contextmenu: handlers.onContextMenu
                 },
+                context: instance || this
+            }
+        };
+    }
+
+    /**
+     * Creates handlers for panels
+     * @param {HTMLElement} element - Panel element
+     * @param {string} type - Panel type
+     * @param {Object} instance - Panel instance
+     * @param {string} windowId - Panel ID
+     * @returns {Object} Configuration for EventHandlerManager
+     */
+    createPanelHandlers(element, type, instance, windowId) {
+        const handlers = this.createPanelSpecificHandlers(type, instance);
+
+        return {
+            elementType: 'panel',
+            config: {
+                handlers: {
+                    click: handlers.onClick,
+                    contextmenu: handlers.onContextMenu,
+                    // Add specific panel handlers
+                    ...handlers.panelHandlers
+                },
+                context: instance || this,
+                // Panels don't have global handlers like dialogs
+                globalHandlers: handlers.globalHandlers || {}
+            }
+        };
+    }
+
+    /**
+     * Creates specific handlers for different panel types
+     * @param {string} type - Panel type
+     * @param {Object} instance - Panel instance
+     * @returns {Object} Handlers for the panel
+     */
+    createPanelSpecificHandlers(type, instance) {
+        const baseHandlers = {
+            onClick: (e) => {
+                Logger.ui.debug(`Panel ${type}: Click event on`, e.target);
+                this.handlePanelClick(e, type, instance);
+            },
+            onContextMenu: (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                Logger.ui.debug(`Panel ${type}: Context menu on`, e.target);
+            }
+        };
+
+        if (type === 'layers-panel') {
+            return {
+                ...baseHandlers,
+                panelHandlers: {
+                    // Specific handlers for layers-panel
+                    layerItemClick: (e) => this.handleLayerItemClick(e, instance),
+                    layerButtonClick: (e) => this.handleLayerButtonClick(e, instance)
+                },
+                globalHandlers: {
+                    // Panels may have their own global handlers
+                }
+            };
+        }
+
+        if (type === 'asset-panel') {
+            return {
+                ...baseHandlers,
+                panelHandlers: {
+                    // Specific handlers for asset-panel
+                    assetItemClick: (e) => this.handleAssetItemClick(e, instance)
+                }
+            };
+        }
+
+        return baseHandlers;
+    }
+
+    /**
+     * Handles clicks in panels
+     * @param {Event} e - Click event
+     * @param {string} type - Panel type
+     * @param {Object} instance - Panel instance
+     */
+    handlePanelClick(e, type, instance) {
+        const target = e.target;
+        Logger.ui.debug(`Panel ${type}: Handling click on ${target.className} ${target.id}`);
+
+        // Use common element type handlers instead of panel-specific logic
+        this.handleCommonElementClick(e, instance);
+    }
+
+    /**
+     * Handles clicks using common element type logic
+     * @param {Event} e - Click event
+     * @param {Object} instance - Panel instance
+     */
+    handleCommonElementClick(e, instance) {
+        const target = e.target;
+
+        // Handle layer item clicks
+        if (target.closest('.layer-item')) {
+            this.handleLayerItemClick(e, instance);
+        }
+
+        // Handle button clicks (visibility, lock, etc.)
+        if (target.closest('.layer-visibility-btn, .layer-lock-btn, .layer-color')) {
+            this.handleLayerButtonClick(e, instance);
+        }
+
+        // Handle search input clicks (handled by input handlers)
+        if (target.closest('#layers-search, #asset-search')) {
+            return;
+        }
+
+        // Handle add buttons
+        if (target.closest('#add-layer-btn, #add-asset-btn')) {
+            this.handleAddButtonClick(e, instance);
+        }
+    }
+
+    /**
+     * Handles clicks on layer items
+     * @param {Event} e - Click event
+     * @param {Object} instance - Panel instance
+     */
+    handleLayerItemClick(e, instance) {
+        const target = e.target;
+        const layerElement = target.closest('.layer-item');
+
+        if (layerElement) {
+            const layerId = layerElement.dataset.layerId;
+
+            if (e.ctrlKey || e.metaKey) {
+                // Ctrl+Click - select all objects in layer
+                if (instance && typeof instance.selectAllObjectsInLayer === 'function') {
+                    instance.selectAllObjectsInLayer(layerId);
+                }
+            } else {
+                // Normal click - set current layer
+                if (instance && typeof instance.setCurrentLayer === 'function') {
+                    instance.setCurrentLayer(layerId);
+                }
+            }
+        }
+    }
+
+    /**
+     * Handles clicks on layer buttons
+     * @param {Event} e - Click event
+     * @param {Object} instance - Panel instance
+     */
+    handleLayerButtonClick(e, instance) {
+        const target = e.target;
+        const button = target.closest('button');
+
+        if (button && instance) {
+            const layerId = button.dataset.layerId;
+
+            if (button.classList.contains('layer-visibility-btn')) {
+                if (typeof instance.toggleLayerVisibility === 'function') {
+                    instance.toggleLayerVisibility(layerId);
+                }
+            } else if (button.classList.contains('layer-lock-btn')) {
+                if (typeof instance.toggleLayerLock === 'function') {
+                    instance.toggleLayerLock(layerId);
+                }
+            }
+        }
+    }
+
+    /**
+     * Handles clicks on add buttons
+     * @param {Event} e - Click event
+     * @param {Object} instance - Panel instance
+     */
+    handleAddButtonClick(e, instance) {
+        const target = e.target;
+        const button = target.closest('button');
+
+        if (button) {
+            if (button.id === 'add-layer-btn') {
+                if (instance && typeof instance.onAddLayer === 'function') {
+                    instance.onAddLayer();
+                }
+            }
+        }
+    }
+
+    /**
+     * Automatic window registration
+     * @param {HTMLElement} element - Window element
+     * @param {Object} windowInfo - Window type information
+     */
+    registerWindowAutomatically(element, windowInfo) {
+        const { type, instance } = windowInfo;
+        const windowId = element.id || `auto-window-${Date.now()}`;
+
+        Logger.event.debug(`AutoEventHandlerManager: Registering window ${windowId} of type ${type}, instance: ${instance ? 'found' : 'not found'}`);
+
+        // Check if already registered
+        if (this.registeredWindows.has(windowId)) {
+            Logger.event.debug(`AutoEventHandlerManager: Window ${windowId} already registered`);
+            return;
+        }
+
+        // If instance not found, save window for later registration
+        if (!instance) {
+            Logger.event.debug(`AutoEventHandlerManager: Instance not found for ${windowId}, will register later`);
+            this.registeredWindows.set(windowId, {
+                instance: null,
+                type,
+                handlers: null,
+                element,
+                pending: true
+            });
+            return;
+        }
+
+        // Create handlers depending on window type
+        const elementConfig = this.createElementHandlers(element, type, instance, windowId);
+
+        // Register in EventHandlerManager
+        try {
+            eventHandlerManager.registerElement(
+                element,
+                elementConfig.elementType,
+                elementConfig.config,
                 windowId
             );
 
-            // Сохраняем информацию о зарегистрированном окне
+            // Save information about registered window
             this.registeredWindows.set(windowId, {
                 instance,
                 type,
-                handlers,
+                handlers: elementConfig,
                 element,
                 pending: false
             });
 
             Logger.event.info(`AutoEventHandlerManager: Window ${windowId} (${type}) registered automatically`);
 
-            // Добавляем обработчики для полей ввода
+            // Add handlers for input fields
             this.setupInputHandlers(element, instance, type);
 
         } catch (error) {
@@ -209,7 +716,7 @@ export class AutoEventHandlerManager {
     }
 
     /**
-     * Настройка обработчиков для полей ввода
+     * Setup handlers for input fields
      * @param {HTMLElement} element - Элемент окна
      * @param {Object} instance - Экземпляр окна
      * @param {string} type - Тип окна
@@ -239,17 +746,17 @@ export class AutoEventHandlerManager {
 
 
     /**
-     * Отмена регистрации окна
+     * Unregister window
      * @param {string} windowId - ID окна
      */
     unregisterWindow(windowId) {
         if (this.registeredWindows.has(windowId)) {
             const windowInfo = this.registeredWindows.get(windowId);
             
-            // Удаляем из EventHandlerManager
+            // Remove from EventHandlerManager
             eventHandlerManager.unregisterElement(windowId);
             
-            // Удаляем из нашего списка
+            // Remove from our list
             this.registeredWindows.delete(windowId);
             
             Logger.event.info(`AutoEventHandlerManager: Window ${windowId} unregistered`);
@@ -257,51 +764,37 @@ export class AutoEventHandlerManager {
     }
 
     /**
-     * Регистрация отложенных окон (когда экземпляр становится доступен)
+     * Register pending windows (when instance becomes available)
      */
     registerPendingWindows() {
         for (const [windowId, windowInfo] of this.registeredWindows) {
             if (windowInfo.pending) {
-                // Попробуем найти экземпляр снова через detectWindowType
+                // Try to find instance again through detectWindowType
                 const windowTypeInfo = this.detectWindowType(windowInfo.element);
                 const instance = windowTypeInfo ? windowTypeInfo.instance : null;
                 if (instance) {
                     Logger.event.debug(`AutoEventHandlerManager: Found instance for pending window ${windowId}`);
                     
-                    // Создаем универсальные обработчики
-                    const handlers = UniversalWindowHandlers.createUniversalHandlers(instance, windowInfo.type);
+                    // Create handlers depending on window type
+                    const elementConfig = this.createElementHandlers(windowInfo.element, windowInfo.type, instance, windowId);
                     
-                    // Регистрируем в EventHandlerManager
+                    // Register in EventHandlerManager
                     try {
                         eventHandlerManager.registerElement(
                             windowInfo.element,
-                            'dialog',
-                            {
-                                handlers: {
-                                    click: handlers.onClick,
-                                    contextmenu: handlers.onContextMenu
-                                },
-                                context: instance,
-                                globalHandlers: {
-                                    keydown: (e) => {
-                                        if (e.key === 'Escape') {
-                                            handlers.onEscape();
-                                        }
-                                    },
-                                    overlayClick: handlers.onOverlayClick
-                                }
-                            },
+                            elementConfig.elementType,
+                            elementConfig.config,
                             windowId
                         );
 
-                        // Обновляем информацию о зарегистрированном окне
+                        // Update information about registered window
                         windowInfo.instance = instance;
-                        windowInfo.handlers = handlers;
+                        windowInfo.handlers = elementConfig;
                         windowInfo.pending = false;
 
                         Logger.event.info(`AutoEventHandlerManager: Pending window ${windowId} (${windowInfo.type}) registered`);
 
-                        // Добавляем обработчики для полей ввода
+                        // Add handlers for input fields
                         this.setupInputHandlers(windowInfo.element, instance, windowInfo.type);
 
                     } catch (error) {
@@ -313,8 +806,8 @@ export class AutoEventHandlerManager {
     }
 
     /**
-     * Получение информации о зарегистрированных окнах
-     * @returns {Array} Список зарегистрированных окон
+     * Get information about registered windows
+     * @returns {Array} List of registered windows
      */
     getRegisteredWindows() {
         return Array.from(this.registeredWindows.entries()).map(([id, info]) => ({
@@ -327,15 +820,15 @@ export class AutoEventHandlerManager {
     }
 
     /**
-     * Очистка всех обработчиков
+     * Cleanup all handlers
      */
     destroy() {
-        // Останавливаем наблюдение
+        // Stop observing
         if (this.observer) {
             this.observer.disconnect();
         }
 
-        // Удаляем все зарегистрированные окна
+        // Remove all registered windows
         this.registeredWindows.forEach((_, windowId) => {
             this.unregisterWindow(windowId);
         });
@@ -344,5 +837,5 @@ export class AutoEventHandlerManager {
     }
 }
 
-// Создаем глобальный экземпляр
+// Create global instance
 export const autoEventHandlerManager = new AutoEventHandlerManager();

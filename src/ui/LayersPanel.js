@@ -1344,6 +1344,51 @@ export class LayersPanel extends BasePanel {
         return this.currentLayerId;
     }
 
+    // Panels don't need universal cancel/apply methods,
+    // specific logic is handled through event handlers
+
+    /**
+     * Clear search filter
+     */
+    clearSearch() {
+        if (this.searchFilter) {
+            this.searchFilter = '';
+            // Update search manager
+            if (typeof searchManager !== 'undefined' && searchManager.setSearchTerm) {
+                searchManager.setSearchTerm('layers', '');
+            }
+            this.render();
+            Logger.layer.debug('LayersPanel: Search cleared');
+        }
+    }
+
+    /**
+     * Handle search input changes
+     * @param {string} searchTerm - Search term
+     */
+    handleSearch(searchTerm) {
+        this.searchFilter = searchTerm;
+        // Update search manager
+        if (typeof searchManager !== 'undefined' && searchManager.setSearchTerm) {
+            searchManager.setSearchTerm('layers', searchTerm);
+        }
+        this.render();
+        Logger.layer.debug(`LayersPanel: Search updated to: ${searchTerm}`);
+    }
+
+    /**
+     * Handle add layer button
+     */
+    onAddLayer() {
+        const level = this.levelEditor.getLevel();
+        if (level) {
+            const newLayer = level.addLayer();
+            this.render();
+            this.stateManager.markDirty();
+            Logger.layer.info(`Added new layer: ${newLayer.name}`);
+        }
+    }
+
     /**
      * Rename layer
      */
