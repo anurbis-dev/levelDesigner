@@ -15,6 +15,7 @@
     --ui-active-tab-color: #374151; /* gray-700 */
     --ui-hover-bg-color: #374151; /* gray-700 */
     --ui-active-color-alpha: rgba(59, 130, 246, 0.3); /* blue-500 with alpha */
+    --ui-resizer-color: #374151; /* gray-700 - цвет разделителей панелей */
     --canvas-background-color: #4b5563; /* gray-600 */
     
     /* Selection Variables */
@@ -163,25 +164,17 @@ input, textarea {
 
 /* Base styles for panel resizers */
 .panel-resizer {
-    background-color: transparent;
+    background-color: var(--ui-resizer-color, #374151);
     cursor: col-resize;
     width: 6px;
     flex-shrink: 0;
     pointer-events: auto;
 }
 
-/* Left panel resizer specific styles */
-.resizer-left-tabs-panel {
-    /* Inherits from .panel-resizer */
-}
-
-/* Right panel resizer specific styles */
-.resizer-right-tabs-panel {
-    /* Inherits from .panel-resizer */
-}
+/* Left and right panel resizers inherit from .panel-resizer */
 
 .resizer-y {
-    background-color: transparent;
+    background-color: var(--ui-resizer-color, #374151);
     cursor: row-resize;
     height: 6px;
     flex-shrink: 0;
@@ -223,7 +216,7 @@ input, textarea {
 /* Active state during dragging */
 .resizer.resizing,
 .resizer-y.resizing {
-    background-color: #374151;
+    background-color: var(--ui-resizer-color, #374151);
 }
 
 .resizer.resizing::after,

@@ -104,6 +104,7 @@ export class SettingsSyncManager {
             'ui.activeColor': 'ui.activeColor',
             'ui.activeTextColor': 'ui.activeTextColor',
             'ui.activeTabColor': 'ui.activeTabColor',
+            'ui.resizerColor': 'ui.resizerColor',
             'ui.accentColor': 'ui.accentColor',
             
             // Editor UI settings (from editor.json)
@@ -420,6 +421,7 @@ export class SettingsSyncManager {
         const activeColor = this.levelEditor.stateManager.get('ui.activeColor');
         const activeTextColor = this.levelEditor.stateManager.get('ui.activeTextColor');
         const activeTabColor = this.levelEditor.stateManager.get('ui.activeTabColor');
+        const resizerColor = this.levelEditor.stateManager.get('ui.resizerColor');
         const canvasBackgroundColor = this.levelEditor.stateManager.get('canvas.backgroundColor');
         
         if (backgroundColor) {
@@ -436,6 +438,9 @@ export class SettingsSyncManager {
         }
         if (activeTabColor) {
             document.documentElement.style.setProperty('--ui-active-tab-color', activeTabColor);
+        }
+        if (resizerColor) {
+            document.documentElement.style.setProperty('--ui-resizer-color', resizerColor);
         }
         if (canvasBackgroundColor) {
             document.documentElement.style.setProperty('--canvas-background-color', canvasBackgroundColor);
@@ -491,6 +496,7 @@ export class SettingsSyncManager {
         const activeColor = this.levelEditor.stateManager.get('ui.activeColor');
         const activeTextColor = this.levelEditor.stateManager.get('ui.activeTextColor');
         const activeTabColor = this.levelEditor.stateManager.get('ui.activeTabColor');
+        const resizerColor = this.levelEditor.stateManager.get('ui.resizerColor');
         const accentColor = this.levelEditor.stateManager.get('ui.accentColor');
         const canvasBackgroundColor = this.levelEditor.stateManager.get('canvas.backgroundColor');
 
@@ -508,6 +514,9 @@ export class SettingsSyncManager {
         }
         if (activeTabColor) {
             document.documentElement.style.setProperty('--ui-active-tab-color', activeTabColor);
+        }
+        if (resizerColor) {
+            document.documentElement.style.setProperty('--ui-resizer-color', resizerColor);
         }
         if (accentColor) {
             document.documentElement.style.setProperty('--accent-color', accentColor);
@@ -766,6 +775,7 @@ export class SettingsSyncManager {
             this.levelEditor.stateManager.set('view.snapToGrid', value);
             this.syncing.delete('canvas.snapToGrid');
         });
+
     }
 
     /**

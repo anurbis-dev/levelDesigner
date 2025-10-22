@@ -451,6 +451,7 @@ export class SettingsPanel {
                 activeColor: stateManager.get('ui.activeColor') || '#3b82f6',
                 activeTextColor: stateManager.get('ui.activeTextColor') || '#ffffff',
                 activeTabColor: stateManager.get('ui.activeTabColor') || '#374151',
+                resizerColor: stateManager.get('ui.resizerColor') || '#374151',
                 accentColor: stateManager.get('ui.accentColor') || '#3B82F6'
             },
             // Canvas Colors
@@ -526,6 +527,14 @@ export class SettingsPanel {
                             <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">UI Text Color</label>
                             <input type="color" id="ui-text-color" class="setting-input" name="setting-input" data-setting="ui.textColor"
                                    value="${colors.ui.textColor}"
+                                   style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
+                        </div>
+
+                        <!-- UI Resizer Color -->
+                        <div>
+                            <label style="display: block; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); margin-bottom: 0.5rem;">Panel Resizers</label>
+                            <input type="color" id="ui-resizer-color" class="setting-input" name="setting-input" data-setting="ui.resizerColor"
+                                   value="${colors.ui.resizerColor}"
                                    style="width: 3rem; height: 2rem; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem;">
                         </div>
 
@@ -1646,6 +1655,7 @@ export class SettingsPanel {
             'ui.activeColor',
             'ui.activeTextColor',
             'ui.activeTabColor',
+            'ui.resizerColor',
             'ui.accentColor',
             // Canvas colors
             'canvas.backgroundColor',
