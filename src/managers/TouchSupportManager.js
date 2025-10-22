@@ -755,14 +755,28 @@ export class TouchSupportManager {
         
         let delta;
         if (config.direction === 'horizontal') {
-            // For horizontal resizers, check if it's right panel
+            // For horizontal resizers, check panel type
             const isRightPanel = element.id && element.id.includes('right');
+            const isFoldersResizer = element.id === 'folders-resizer';
+            
             delta = touch.clientX - touchData.startX;
-            // Right panel: finger right = panel smaller (negative delta)
-            // Left panel: finger right = panel bigger (positive delta)
+            
             if (isRightPanel) {
+                // Right panel: finger right = panel smaller (negative delta)
                 delta = -delta;
+            } else if (isFoldersResizer) {
+                // Folders resizer: check position (left/right)
+                const assetPanel = document.querySelector('#asset-panel');
+                if (assetPanel && assetPanel.assetPanel) {
+                    const foldersPosition = assetPanel.assetPanel.foldersPosition;
+                    if (foldersPosition === 'right') {
+                        // Right position: finger right = panel smaller (negative delta)
+                        delta = -delta;
+                    }
+                    // Left position: finger right = panel bigger (positive delta) - no change needed
+                }
             }
+            // Left panel: finger right = panel bigger (positive delta) - no change needed
         } else {
             // For vertical resizers - check if it's console or assets panel
             const isConsole = element.classList.contains('console-resize-handle');
@@ -988,6 +1002,11 @@ export class TouchSupportManager {
             // Try assets panel
             if (resizerId === 'resizer-assets') {
                 return document.getElementById('assets-panel');
+            }
+            
+            // Try folders resizer
+            if (resizerId === 'folders-resizer') {
+                return document.getElementById('asset-folders-container');
             }
         }
         
