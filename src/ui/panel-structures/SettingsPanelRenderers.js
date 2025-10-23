@@ -1,5 +1,5 @@
 /**
- * Settings Panel - Complete Refactored Version
+ * Settings Panel - Complete Renderers
  * 
  * This file contains all refactored render methods for SettingsPanel
  * using the SettingsSectionConstructor for consistent styling and maintainability.
@@ -26,7 +26,7 @@ import { ColorUtils } from '../../utils/ColorUtils.js';
  * @param {Object} stateManager - StateManager instance
  * @returns {string} - HTML string for general settings
  */
-export function renderGeneralSettingsRefactored(stateManager) {
+export function renderGeneralSettings(stateManager) {
     if (!stateManager) return '<div>Error: StateManager not available</div>';
     
     // Get current values from StateManager
@@ -191,7 +191,7 @@ export function renderGeneralSettingsRefactored(stateManager) {
  * @param {Object} stateManager - StateManager instance
  * @returns {string} - HTML string for colors settings
  */
-export function renderColorsSettingsRefactored(stateManager) {
+export function renderColorsSettings(stateManager) {
     if (!stateManager) return '<div>Error: StateManager not available</div>';
 
     // Get current color values from StateManager
@@ -401,7 +401,7 @@ export function renderColorsSettingsRefactored(stateManager) {
  * @param {Object} stateManager - StateManager instance
  * @returns {string} - HTML string for selection settings
  */
-export function renderSelectionSettingsRefactored(stateManager) {
+export function renderSelectionSettings(stateManager) {
     if (!stateManager) return '<div>Error: StateManager not available</div>';
     
     // Get current values from StateManager
@@ -526,7 +526,7 @@ export function renderSelectionSettingsRefactored(stateManager) {
  * @param {Object} stateManager - StateManager instance
  * @returns {string} - HTML string for touch settings
  */
-export function renderTouchSettingsRefactored(stateManager) {
+export function renderTouchSettings(stateManager) {
     if (!stateManager) return '<div>Error: StateManager not available</div>';
     
     // Get current values from StateManager
@@ -650,7 +650,7 @@ export function renderTouchSettingsRefactored(stateManager) {
  * @param {Object} stateManager - StateManager instance
  * @returns {string} - HTML string for camera settings
  */
-export function renderCameraSettingsRefactored(stateManager) {
+export function renderCameraSettings(stateManager) {
     if (!stateManager) return '<div>Error: StateManager not available</div>';
     
     // Get current values from StateManager
@@ -784,7 +784,7 @@ export function renderCameraSettingsRefactored(stateManager) {
  * @param {Object} stateManager - StateManager instance
  * @returns {string} - HTML string for assets settings
  */
-export function renderAssetsSettingsRefactored(stateManager) {
+export function renderAssetsSettings(stateManager) {
     if (!stateManager) return '<div>Error: StateManager not available</div>';
     
     // Get current values from StateManager
@@ -886,7 +886,7 @@ export function renderAssetsSettingsRefactored(stateManager) {
  * @param {Object} stateManager - StateManager instance
  * @returns {string} - HTML string for performance settings
  */
-export function renderPerformanceSettingsRefactored(stateManager) {
+export function renderPerformanceSettings(stateManager) {
     if (!stateManager) return '<div>Error: StateManager not available</div>';
     
     // Get current values from StateManager

@@ -8,14 +8,14 @@ import { eventHandlerManager } from '../managers/EventHandlerManager.js';
 import { EventHandlerUtils } from '../utils/EventHandlerUtils.js';
 import { dialogSizeManager } from '../utils/DialogSizeManager.js';
 import {
-    renderGeneralSettingsRefactored,
-    renderColorsSettingsRefactored,
-    renderSelectionSettingsRefactored,
-    renderTouchSettingsRefactored,
-    renderCameraSettingsRefactored,
-    renderAssetsSettingsRefactored,
-    renderPerformanceSettingsRefactored
-} from './panel-structures/SettingsPanelRefactoredComplete.js';
+    renderGeneralSettings,
+    renderColorsSettings,
+    renderSelectionSettings,
+    renderTouchSettings,
+    renderCameraSettings,
+    renderAssetsSettings,
+    renderPerformanceSettings
+} from './panel-structures/SettingsPanelRenderers.js';
 
 /**
  * Settings Panel UI Component
@@ -316,7 +316,7 @@ export class SettingsPanel {
     }
 
     renderGeneralSettings() {
-        return renderGeneralSettingsRefactored(this.levelEditor?.stateManager);
+        return renderGeneralSettings(this.levelEditor?.stateManager);
     }
 
     /**
@@ -328,13 +328,13 @@ export class SettingsPanel {
         }
 
         const sectionRenderers = [
-            renderGeneralSettingsRefactored,
-            renderColorsSettingsRefactored,
-            renderSelectionSettingsRefactored,
-            renderTouchSettingsRefactored,
-            renderCameraSettingsRefactored,
-            renderAssetsSettingsRefactored,
-            renderPerformanceSettingsRefactored
+            renderGeneralSettings,
+            renderColorsSettings,
+            renderSelectionSettings,
+            renderTouchSettings,
+            renderCameraSettings,
+            renderAssetsSettings,
+            renderPerformanceSettings
         ];
 
         const optimalWidth = dialogSizeManager.calculateOptimalWidth(
@@ -357,24 +357,24 @@ export class SettingsPanel {
     }
 
     renderColorsSettings() {
-        return renderColorsSettingsRefactored(this.levelEditor?.stateManager);
+        return renderColorsSettings(this.levelEditor?.stateManager);
     }
 
     renderCameraSettings() {
-        return renderCameraSettingsRefactored(this.levelEditor?.stateManager);
+        return renderCameraSettings(this.levelEditor?.stateManager);
     }
 
     renderSelectionSettings() {
-        return renderSelectionSettingsRefactored(this.levelEditor?.stateManager);
+        return renderSelectionSettings(this.levelEditor?.stateManager);
     }
 
     renderAssetsSettings() {
-        return renderAssetsSettingsRefactored(this.levelEditor?.stateManager);
+        return renderAssetsSettings(this.levelEditor?.stateManager);
     }
 
 
     renderPerformanceSettings() {
-        return renderPerformanceSettingsRefactored(this.levelEditor?.stateManager);
+        return renderPerformanceSettings(this.levelEditor?.stateManager);
     }
 
     /**
@@ -427,7 +427,7 @@ export class SettingsPanel {
      * Render touch settings section
      */
     renderTouchSettings() {
-        return renderTouchSettingsRefactored(this.levelEditor?.stateManager);
+        return renderTouchSettings(this.levelEditor?.stateManager);
     }
 
     /**

@@ -57,12 +57,8 @@ export class DialogSizeManager {
                 if (typeof renderer === 'function') {
                     let content;
                     
-                    // Check if it's a refactored renderer that needs stateManager
-                    if (renderer.name && renderer.name.includes('Refactored')) {
-                        content = stateManager ? renderer(stateManager) : renderer();
-                    } else {
-                        content = renderer();
-                    }
+                    // All renderers now accept stateManager parameter
+                    content = stateManager ? renderer(stateManager) : renderer();
                     
                     if (content) {
                         tempContainer.innerHTML = content;
