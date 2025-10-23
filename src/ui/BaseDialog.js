@@ -68,11 +68,16 @@ export class BaseDialog {
         this.overlay.id = `${this.config.id}-overlay`;
         this.overlay.className = 'dialog-overlay';
         this.overlay.style.display = 'none';
+        
+        // Overlay styles are handled by CSS - no JavaScript intervention needed
 
         // Create dialog container
         this.container = document.createElement('div');
         this.container.id = this.config.id;
         this.container.className = 'dialog-container mobile-dialog';
+        
+        // Store reference to BaseDialog instance for MobileInterfaceManager
+        this.container._baseDialogInstance = this;
         
         // Set initial styles - width will be calculated later
         this.container.style.cssText = `
@@ -252,6 +257,8 @@ export class BaseDialog {
         }
 
         this.isVisible = true;
+        // Update display to flex while preserving other styles
+        this.overlay.classList.add('dialog-visible');
         this.overlay.style.display = 'flex';
 
         // Apply mobile interface adaptations
@@ -283,11 +290,14 @@ export class BaseDialog {
         if (!this.overlay) return;
 
         this.isVisible = false;
+        // Update display to none while preserving other styles
+        this.overlay.classList.remove('dialog-visible');
         this.overlay.style.display = 'none';
         this.config.onHide();
 
         Logger.ui.info(`${this.constructor.name}: Dialog hidden`);
     }
+
 
     /**
      * Apply UI scaling (Font Scale and Spacing) before calculating sizes

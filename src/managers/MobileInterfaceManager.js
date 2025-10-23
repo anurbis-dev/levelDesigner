@@ -161,8 +161,8 @@ export class MobileInterfaceManager {
                 // iOS-specific dialog adaptations
                 element.classList.add('ios-dialog');
                 
-                // Handle safe area insets
-                if (this.deviceInfo.safeAreaInsets) {
+                // Handle safe area insets only for dialog containers, not overlays
+                if (this.deviceInfo.safeAreaInsets && !element.id?.endsWith('-overlay')) {
                     element.style.paddingTop = 'env(safe-area-inset-top)';
                     element.style.paddingBottom = 'env(safe-area-inset-bottom)';
                 }
@@ -314,6 +314,7 @@ export class MobileInterfaceManager {
         
         // Dialog creation observer
         this.setupDialogObserver();
+        
     }
     
     /**
@@ -351,7 +352,12 @@ export class MobileInterfaceManager {
      * Check if element is a dialog
      */
     isDialog(element) {
-        const dialogIds = ['universal-dialog-overlay', 'actor-properties-overlay', 'settings-overlay'];
+        // Don't treat overlay elements as dialogs for mobile adaptation
+        if (element.id && element.id.endsWith('-overlay')) {
+            return false;
+        }
+        
+        const dialogIds = ['universal-dialog', 'actor-properties-container', 'settings-panel-container'];
         return dialogIds.includes(element.id) || 
                element.querySelector && dialogIds.some(id => element.querySelector(`#${id}`));
     }
@@ -371,6 +377,11 @@ export class MobileInterfaceManager {
     adaptElement(element) {
         // Don't adapt hidden elements
         if (element.style.display === 'none' || element.classList.contains('hidden')) {
+            return;
+        }
+        
+        // Don't adapt overlay elements - they should use CSS positioning only
+        if (element.id && element.id.endsWith('-overlay')) {
             return;
         }
         
@@ -397,6 +408,11 @@ export class MobileInterfaceManager {
      * Register dialog for tracking
      */
     registerDialog(element) {
+        // Don't register overlay elements - they should use CSS positioning only
+        if (element.id && element.id.endsWith('-overlay')) {
+            return;
+        }
+        
         this.dialogRegistry.add(element);
         
         // Clean up when dialog is removed
@@ -506,13 +522,20 @@ export class MobileInterfaceManager {
     applyMobileStyles(element, type = 'dialog') {
         const dimensions = this.getDialogDimensions();
         
-        Object.assign(element.style, {
-            maxWidth: dimensions.maxWidth,
-            maxHeight: dimensions.maxHeight,
-            margin: dimensions.margin,
-            width: 'auto',
-            minWidth: 'unset'
-        });
+        // For overlay elements, don't apply mobile styles - let CSS handle positioning
+        if (element.id && element.id.endsWith('-overlay')) {
+            // Overlay elements use CSS positioning, no JavaScript intervention needed
+            return;
+        } else {
+            // For dialog containers, apply normal mobile styles
+            Object.assign(element.style, {
+                maxWidth: dimensions.maxWidth,
+                maxHeight: dimensions.maxHeight,
+                margin: dimensions.margin,
+                width: 'auto',
+                minWidth: 'unset'
+            });
+        }
         
         // Add mobile-adapted class to mark element as mobile-adapted
         element.classList.add('mobile-adapted');

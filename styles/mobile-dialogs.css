@@ -21,6 +21,13 @@
 /* Mobile overlay adjustments */
 @media screen and (max-width: 768px) {
     #universal-dialog-overlay {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
         padding: 1rem 0.5rem !important;
         align-items: center !important;
         justify-content: center !important;
@@ -39,6 +46,13 @@
 /* Very small screens */
 @media screen and (max-width: 480px) {
     #universal-dialog-overlay {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
         padding: 0.5rem 0.25rem !important;
         align-items: center !important;
         justify-content: center !important;
@@ -112,6 +126,13 @@
 /* Mobile actor properties overlay */
 @media screen and (max-width: 768px) {
     #actor-properties-overlay {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
         padding: 1rem 0.5rem !important;
         align-items: center !important;
         justify-content: center !important;
@@ -129,6 +150,13 @@
 /* Very small screens for actor properties */
 @media screen and (max-width: 480px) {
     #actor-properties-overlay {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
         padding: 0.5rem 0.25rem !important;
         align-items: center !important;
         justify-content: center !important;
@@ -251,6 +279,13 @@
 /* Mobile settings panel */
 @media screen and (max-width: 768px) {
     #settings-overlay {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
         padding: 1rem 0.5rem !important;
         align-items: center !important;
         justify-content: center !important;
@@ -292,6 +327,13 @@
 /* Very small screens for settings */
 @media screen and (max-width: 480px) {
     #settings-overlay {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
         padding: 0.5rem 0.25rem !important;
         align-items: center !important;
         justify-content: center !important;
@@ -419,6 +461,13 @@
     #universal-dialog-overlay,
     #actor-properties-overlay,
     #settings-overlay {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
         padding: 0.5rem !important;
         align-items: center !important;
         justify-content: center !important;

@@ -37,7 +37,8 @@
 #universal-dialog-overlay[style*="display: flex"],
 #actor-properties-overlay[style*="display: flex"],
 #settings-overlay[style*="display: flex"],
-.dialog-overlay[style*="display: flex"] {
+.dialog-overlay[style*="display: flex"],
+.dialog-overlay.dialog-visible {
     display: flex !important;
 }
 

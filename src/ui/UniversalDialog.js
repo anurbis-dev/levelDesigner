@@ -103,6 +103,7 @@ export class UniversalDialog {
         // Create overlay
         this.overlay = document.createElement('div');
         this.overlay.id = 'universal-dialog-overlay';
+        this.overlay.className = 'dialog-overlay dialog-visible';
         this.overlay.style.display = 'flex'; // Only set display, let CSS handle the rest
 
         // Create dialog container

@@ -69,6 +69,7 @@ export class SettingsPanel {
         // Create settings overlay element
         const overlay = document.createElement('div');
         overlay.id = 'settings-overlay';
+        overlay.className = 'dialog-overlay';
         overlay.style.display = 'none'; // Only set display, let CSS handle the rest
         
         overlay.innerHTML = `
@@ -127,6 +128,8 @@ export class SettingsPanel {
             this.isVisible = true;
             const overlay = document.getElementById('settings-overlay');
             if (overlay) {
+                // Use CSS class instead of direct style manipulation
+                overlay.classList.add('dialog-visible');
                 overlay.style.display = 'flex';
 
                 // Apply mobile interface adaptations
@@ -238,6 +241,7 @@ export class SettingsPanel {
             // Ensure overlay is hidden if there was an error
             const overlay = document.getElementById('settings-overlay');
             if (overlay) {
+                overlay.classList.remove('dialog-visible');
                 overlay.style.display = 'none';
             }
             this.isVisible = false;
@@ -253,6 +257,7 @@ export class SettingsPanel {
 
         const overlay = document.getElementById('settings-overlay');
         if (overlay) {
+            overlay.classList.remove('dialog-visible');
             overlay.style.display = 'none';
         }
     }

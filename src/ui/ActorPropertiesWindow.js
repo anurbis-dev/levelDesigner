@@ -40,6 +40,7 @@ export class ActorPropertiesWindow extends SettingsPanel {
         // Create actor properties overlay element (similar to settings)
         const overlay = document.createElement('div');
         overlay.id = this.overlayId;
+        overlay.className = 'dialog-overlay';
         overlay.style.display = 'none'; // Only set display, let CSS handle the rest
 
         overlay.innerHTML = `
@@ -100,6 +101,7 @@ export class ActorPropertiesWindow extends SettingsPanel {
         }
         
         if (overlay) {
+            overlay.classList.add('dialog-visible');
             overlay.style.display = 'flex';
             
             if (actor) {
@@ -129,6 +131,7 @@ export class ActorPropertiesWindow extends SettingsPanel {
         
         const overlay = document.getElementById(this.overlayId);
         if (overlay) {
+            overlay.classList.remove('dialog-visible');
             overlay.style.display = 'none';
         }
         
