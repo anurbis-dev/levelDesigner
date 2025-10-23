@@ -753,50 +753,72 @@ export class TouchSupportManager {
         const targetPanel = this.getTargetPanel(element);
         if (!targetPanel) return;
         
-        let delta;
+        let newSize;
         if (config.direction === 'horizontal') {
-            // For horizontal resizers, check panel type
+            // For horizontal resizers, use absolute coordinates like mouse handlers
             const isRightPanel = element.id && element.id.includes('right');
             const isFoldersResizer = element.id === 'folders-resizer';
             
-            delta = touch.clientX - touchData.startX;
+            // Get container width for constraints
+            const container = isFoldersResizer ? 
+                document.querySelector('#asset-panel') : 
+                document.querySelector('.flex.flex-grow.min-h-0.relative.z-10');
+            const containerWidth = container ? container.clientWidth : window.innerWidth;
+            const resizerWidth = isFoldersResizer ? 4 : 6;
+            const minWidth = 0;
+            const maxWidth = containerWidth - resizerWidth;
             
             if (isRightPanel) {
-                // Right panel: finger right = panel smaller (negative delta)
-                delta = -delta;
+                // Right panel: use distance from right edge
+                newSize = Math.max(minWidth, Math.min(containerWidth - touch.clientX, maxWidth));
             } else if (isFoldersResizer) {
-                // Folders resizer: check position (left/right)
+                // Folders resizer: check position (left/right) and use appropriate logic
                 const assetPanel = document.querySelector('#asset-panel');
                 if (assetPanel && assetPanel.assetPanel) {
                     const foldersPosition = assetPanel.assetPanel.foldersPosition;
                     if (foldersPosition === 'right') {
-                        // Right position: finger right = panel smaller (negative delta)
-                        delta = -delta;
+                        // Right position: use distance from right edge
+                        newSize = Math.max(minWidth, Math.min(containerWidth - touch.clientX, maxWidth));
+                    } else {
+                        // Left position: use distance from left edge
+                        newSize = Math.max(minWidth, Math.min(touch.clientX, maxWidth));
                     }
-                    // Left position: finger right = panel bigger (positive delta) - no change needed
+                } else {
+                    // Fallback: use distance from left edge
+                    newSize = Math.max(minWidth, Math.min(touch.clientX, maxWidth));
                 }
-            }
-            // Left panel: finger right = panel bigger (positive delta) - no change needed
-        } else {
-            // For vertical resizers - check if it's console or assets panel
-            const isConsole = element.classList.contains('console-resize-handle');
-            if (isConsole) {
-                // Console logic: movement down increases height (like mouse)
-                delta = touch.clientY - touchData.startY;
             } else {
-                // Assets panel logic: movement down decreases height
-                delta = -(touch.clientY - touchData.startY);
+                // Left panel: use distance from left edge
+                newSize = Math.max(minWidth, Math.min(touch.clientX, maxWidth));
+            }
+        } else {
+            // For vertical resizers - use delta approach like mouse handlers
+            const isConsole = element.classList.contains('console-resize-handle');
+            const isAssets = element.id === 'resizer-assets';
+            
+            const delta = touch.clientY - touchData.startY;
+            
+            if (isConsole) {
+                // Console resizer: finger down = panel bigger (positive delta)
+                newSize = Math.max(0, touchData.initialSize + delta);
+            } else if (isAssets) {
+                // Assets resizer: finger down = panel smaller (negative delta)
+                newSize = Math.max(0, touchData.initialSize - delta);
+            } else {
+                // Fallback: use delta approach
+                newSize = Math.max(0, touchData.initialSize + delta);
             }
         }
         
-        const newSize = Math.max(
+        // Apply constraints
+        const constrainedSize = Math.max(
             config.minSize, 
-            Math.min(config.maxSize, touchData.initialSize + delta)
+            Math.min(config.maxSize, newSize)
         );
         
         // Call custom handler (which will handle the resize logic)
         if (config.onResize) {
-            config.onResize(element, targetPanel, newSize, touch);
+            config.onResize(element, targetPanel, constrainedSize, touch);
         }
     }
 
