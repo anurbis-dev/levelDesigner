@@ -135,6 +135,7 @@ touchManager.registerElement(canvas, 'twoFingerContext', {
 - **Проверяйте наличие обработчиков** - перед вызовом проверяйте `if (config.onHandler)`
 - **Используйте TouchSupportUtils** - для стандартных комбинаций жестов
 - **Тестируйте комбинации** - убедитесь, что все жесты работают корректно
+- **Используйте унифицированные методы** - для resize логики используйте `calculatePanelSize()` и связанные методы
 
 ## Типы конфигураций
 
@@ -530,11 +531,67 @@ class TouchPanel {
 }
 ```
 
+## Унифицированная система resize
+
+### Единая логика для touch и mouse
+
+TouchSupportManager предоставляет унифицированные методы расчета размеров панелей, которые используются как для touch, так и для mouse событий. Это устраняет дублирование кода и обеспечивает консистентное поведение.
+
+#### Основные методы
+
+```javascript
+// Главный метод для расчета размера панели
+touchSupportManager.calculatePanelSize(element, config, input, initialData)
+
+// Специализированные методы
+touchSupportManager.calculateHorizontalPanelSize(element, input, initialData)
+touchSupportManager.calculateVerticalPanelSize(element, input, initialData)
+
+// Получить методы для внешнего использования
+const resizeMethods = touchSupportManager.getUnifiedResizeMethods();
+```
+
+#### Поддерживаемые типы разделителей
+
+**Горизонтальные разделители:**
+- **Left panel** - использует расстояние от левого края
+- **Right panel** - использует расстояние от правого края  
+- **Folders resizer** - автоматически определяет позицию (left/right)
+
+**Вертикальные разделители:**
+- **Console resizer** - палец вниз = панель больше
+- **Assets resizer** - палец вниз = панель меньше
+
+#### Пример использования
+
+```javascript
+// В mouse handler
+const handleMouseMove = (e) => {
+    const newSize = this.levelEditor.touchSupportManager.calculateHorizontalPanelSize(
+        resizer, 
+        e, 
+        { startX: e.clientX, startY: e.clientY }
+    );
+    this.handlePanelResize(panel, panelSide, 'horizontal', newSize);
+};
+
+// В touch handler (автоматически используется)
+// TouchSupportManager автоматически вызывает calculatePanelSize
+```
+
+#### Преимущества унификации
+
+- **Единая логика** - touch и mouse используют одинаковые расчеты
+- **Легкость поддержки** - изменения в одном месте
+- **Консистентность** - поведение идентично для всех типов ввода
+- **Меньше багов** - нет расхождений между touch и mouse
+- **Переиспользование** - методы доступны для других частей кода
+
 ## API Reference
 
 ### TouchSupportManager
 
-#### Методы
+#### Основные методы
 - `registerElement(element, configType, customConfig)` - регистрация элемента
 - `unregisterElement(element)` - отмена регистрации
 - `updateConfig(element, newConfig)` - обновление конфигурации
@@ -542,6 +599,12 @@ class TouchPanel {
 - `isRegistered(element)` - проверка регистрации
 - `clear()` - очистка всех регистраций
 - `destroy()` - уничтожение менеджера
+
+#### Унифицированные методы resize
+- `calculatePanelSize(element, config, input, initialData)` - расчет размера панели
+- `calculateHorizontalPanelSize(element, input, initialData)` - расчет ширины
+- `calculateVerticalPanelSize(element, input, initialData)` - расчет высоты
+- `getUnifiedResizeMethods()` - получение методов для внешнего использования
 
 ### TouchSupportUtils
 

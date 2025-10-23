@@ -540,21 +540,12 @@ export class AssetPanel extends BasePanel {
             e.preventDefault();
             e.stopPropagation();
 
-            const mouseDelta = e.clientX - initialMouseX;
-            const containerWidth = this.container.clientWidth;
-            const resizerWidth = 4;
-            const minWidth = 0; // Allow folders to be completely hidden
-            const maxWidth = containerWidth - resizerWidth; // Allow resizer to reach the edge
-
-            let newWidth;
-            if (this.foldersPosition === 'left') {
-                newWidth = initialFoldersWidth + mouseDelta;
-            } else {
-                newWidth = initialFoldersWidth - mouseDelta;
-            }
-
-            // Apply constraints
-            newWidth = Math.max(minWidth, Math.min(maxWidth, newWidth));
+            // Use unified resize calculation from TouchSupportManager
+            const newWidth = this.levelEditor.touchSupportManager.calculateHorizontalPanelSize(
+                this.foldersResizer, 
+                e, 
+                { startX: initialMouseX, startY: e.clientY }
+            );
 
             // If width didn't change compared to last applied, skip work
             if (lastAppliedFoldersWidth !== null && newWidth === lastAppliedFoldersWidth) {

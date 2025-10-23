@@ -801,18 +801,12 @@ export class PanelPositionManager {
         const handleMouseMove = (e) => {
             if (!isResizing) return;
             
-            const mainContainer = document.querySelector('.flex.flex-grow.min-h-0.relative.z-10');
-            const containerWidth = mainContainer.clientWidth;
-            const resizerWidth = 6;
-            const minWidth = 0;
-            const maxWidth = containerWidth - resizerWidth;
-            
-            let newWidth;
-            if (panelSide === 'left') {
-                newWidth = Math.max(minWidth, Math.min(e.clientX, maxWidth));
-            } else {
-                newWidth = Math.max(minWidth, Math.min(containerWidth - e.clientX, maxWidth));
-            }
+            // Use unified resize calculation from TouchSupportManager
+            const newWidth = this.levelEditor.touchSupportManager.calculateHorizontalPanelSize(
+                resizer, 
+                e, 
+                { startX: e.clientX, startY: e.clientY }
+            );
             
             // Use unified resize logic
             this.handlePanelResize(panel, panelSide, 'horizontal', newWidth);
@@ -1363,8 +1357,12 @@ export class PanelPositionManager {
             e.preventDefault();
             e.stopPropagation();
             
-            const deltaY = e.clientY - initialMouseY;
-            const newHeight = Math.max(0, Math.min(600, initialPanelHeight - deltaY));
+            // Use unified resize calculation from TouchSupportManager
+            const newHeight = this.levelEditor.touchSupportManager.calculateVerticalPanelSize(
+                resizer, 
+                e, 
+                { startY: initialMouseY, initialSize: initialPanelHeight }
+            );
             
             // Use unified resize logic
             this.handlePanelResize(panel, 'assets', 'vertical', newHeight);

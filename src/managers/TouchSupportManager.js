@@ -753,62 +753,8 @@ export class TouchSupportManager {
         const targetPanel = this.getTargetPanel(element);
         if (!targetPanel) return;
         
-        let newSize;
-        if (config.direction === 'horizontal') {
-            // For horizontal resizers, use absolute coordinates like mouse handlers
-            const isRightPanel = element.id && element.id.includes('right');
-            const isFoldersResizer = element.id === 'folders-resizer';
-            
-            // Get container width for constraints
-            const container = isFoldersResizer ? 
-                document.querySelector('#asset-panel') : 
-                document.querySelector('.flex.flex-grow.min-h-0.relative.z-10');
-            const containerWidth = container ? container.clientWidth : window.innerWidth;
-            const resizerWidth = isFoldersResizer ? 4 : 6;
-            const minWidth = 0;
-            const maxWidth = containerWidth - resizerWidth;
-            
-            if (isRightPanel) {
-                // Right panel: use distance from right edge
-                newSize = Math.max(minWidth, Math.min(containerWidth - touch.clientX, maxWidth));
-            } else if (isFoldersResizer) {
-                // Folders resizer: check position (left/right) and use appropriate logic
-                const assetPanel = document.querySelector('#asset-panel');
-                if (assetPanel && assetPanel.assetPanel) {
-                    const foldersPosition = assetPanel.assetPanel.foldersPosition;
-                    if (foldersPosition === 'right') {
-                        // Right position: use distance from right edge
-                        newSize = Math.max(minWidth, Math.min(containerWidth - touch.clientX, maxWidth));
-                    } else {
-                        // Left position: use distance from left edge
-                        newSize = Math.max(minWidth, Math.min(touch.clientX, maxWidth));
-                    }
-                } else {
-                    // Fallback: use distance from left edge
-                    newSize = Math.max(minWidth, Math.min(touch.clientX, maxWidth));
-                }
-            } else {
-                // Left panel: use distance from left edge
-                newSize = Math.max(minWidth, Math.min(touch.clientX, maxWidth));
-            }
-        } else {
-            // For vertical resizers - use delta approach like mouse handlers
-            const isConsole = element.classList.contains('console-resize-handle');
-            const isAssets = element.id === 'resizer-assets';
-            
-            const delta = touch.clientY - touchData.startY;
-            
-            if (isConsole) {
-                // Console resizer: finger down = panel bigger (positive delta)
-                newSize = Math.max(0, touchData.initialSize + delta);
-            } else if (isAssets) {
-                // Assets resizer: finger down = panel smaller (negative delta)
-                newSize = Math.max(0, touchData.initialSize - delta);
-            } else {
-                // Fallback: use delta approach
-                newSize = Math.max(0, touchData.initialSize + delta);
-            }
-        }
+        // Use unified resize calculation logic
+        const newSize = this.calculatePanelSize(element, config, touch, touchData);
         
         // Apply constraints
         const constrainedSize = Math.max(
@@ -820,6 +766,107 @@ export class TouchSupportManager {
         if (config.onResize) {
             config.onResize(element, targetPanel, constrainedSize, touch);
         }
+    }
+
+    /**
+     * Unified panel size calculation for both mouse and touch events
+     * @param {HTMLElement} element - Resizer element
+     * @param {Object} config - Configuration
+     * @param {Object} input - Input data (mouse event or touch object)
+     * @param {Object} initialData - Initial data (mouse initial or touchData)
+     * @returns {number} - Calculated panel size
+     */
+    calculatePanelSize(element, config, input, initialData) {
+        if (config.direction === 'horizontal') {
+            return this.calculateHorizontalPanelSize(element, input, initialData);
+        } else {
+            return this.calculateVerticalPanelSize(element, input, initialData);
+        }
+    }
+
+    /**
+     * Calculate horizontal panel size
+     * @param {HTMLElement} element - Resizer element
+     * @param {Object} input - Input data (mouse event or touch object)
+     * @param {Object} initialData - Initial data
+     * @returns {number} - Calculated width
+     */
+    calculateHorizontalPanelSize(element, input, initialData) {
+        const isRightPanel = element.id && element.id.includes('right');
+        const isFoldersResizer = element.id === 'folders-resizer';
+        
+        // Get container width for constraints
+        const container = isFoldersResizer ? 
+            document.querySelector('#asset-panel') : 
+            document.querySelector('.flex.flex-grow.min-h-0.relative.z-10');
+        const containerWidth = container ? container.clientWidth : window.innerWidth;
+        const resizerWidth = isFoldersResizer ? 4 : 6;
+        const minWidth = 0;
+        const maxWidth = containerWidth - resizerWidth;
+        
+        if (isRightPanel) {
+            // Right panel: use distance from right edge
+            return Math.max(minWidth, Math.min(containerWidth - input.clientX, maxWidth));
+        } else if (isFoldersResizer) {
+            // Folders resizer: check position (left/right) and use appropriate logic
+            const assetPanel = document.querySelector('#asset-panel');
+            if (assetPanel && assetPanel.assetPanel) {
+                const foldersPosition = assetPanel.assetPanel.foldersPosition;
+                if (foldersPosition === 'right') {
+                    // Right position: use distance from right edge
+                    return Math.max(minWidth, Math.min(containerWidth - input.clientX, maxWidth));
+                } else {
+                    // Left position: use distance from left edge
+                    return Math.max(minWidth, Math.min(input.clientX, maxWidth));
+                }
+            } else {
+                // Fallback: use distance from left edge
+                return Math.max(minWidth, Math.min(input.clientX, maxWidth));
+            }
+        } else {
+            // Left panel: use distance from left edge
+            return Math.max(minWidth, Math.min(input.clientX, maxWidth));
+        }
+    }
+
+    /**
+     * Calculate vertical panel size
+     * @param {HTMLElement} element - Resizer element
+     * @param {Object} input - Input data (mouse event or touch object)
+     * @param {Object} initialData - Initial data
+     * @returns {number} - Calculated height
+     */
+    calculateVerticalPanelSize(element, input, initialData) {
+        const isConsole = element.classList.contains('console-resize-handle');
+        const isAssets = element.id === 'resizer-assets';
+        
+        const delta = input.clientY - initialData.startY;
+        
+        if (isConsole) {
+            // Console resizer: movement down = panel bigger (positive delta)
+            return Math.max(0, initialData.initialSize + delta);
+        } else if (isAssets) {
+            // Assets resizer: movement down = panel smaller (negative delta)
+            return Math.max(0, initialData.initialSize - delta);
+        } else {
+            // Fallback: use delta approach
+            return Math.max(0, initialData.initialSize + delta);
+        }
+    }
+
+    /**
+     * Get unified resize calculation methods for external use
+     * @returns {Object} - Object with calculation methods
+     */
+    getUnifiedResizeMethods() {
+        return {
+            calculatePanelSize: (element, config, input, initialData) => 
+                this.calculatePanelSize(element, config, input, initialData),
+            calculateHorizontalPanelSize: (element, input, initialData) => 
+                this.calculateHorizontalPanelSize(element, input, initialData),
+            calculateVerticalPanelSize: (element, input, initialData) => 
+                this.calculateVerticalPanelSize(element, input, initialData)
+        };
     }
 
     /**
