@@ -132,13 +132,12 @@ export class SettingsPanel {
                 overlay.classList.add('dialog-visible');
                 overlay.style.display = 'flex';
 
-                // Apply mobile interface adaptations
+                // Apply mobile interface adaptations for dialog container only
                 let isMobile = false;
                 if (this.mobileManager) {
-                    this.mobileManager.adaptElement(overlay);
                     const container = overlay.querySelector('.settings-panel-container');
                     if (container) {
-                        this.mobileManager.applyMobileStyles(container, 'settings');
+                        this.mobileManager.adaptElement(container);
                         isMobile = this.mobileManager.isMobile();
                     }
                 }

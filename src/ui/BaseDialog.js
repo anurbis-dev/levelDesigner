@@ -261,10 +261,7 @@ export class BaseDialog {
         this.overlay.classList.add('dialog-visible');
         this.overlay.style.display = 'flex';
 
-        // Apply mobile interface adaptations
-        if (this.mobileManager) {
-            this.mobileManager.adaptElement(this.overlay);
-        }
+        // Mobile interface adaptations are not needed for overlay elements
 
         // Setup event handlers and calculate size after DOM is ready
         setTimeout(() => {

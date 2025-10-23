@@ -353,7 +353,7 @@ export class MobileInterfaceManager {
      */
     isDialog(element) {
         // Don't treat overlay elements as dialogs for mobile adaptation
-        if (element.id && element.id.endsWith('-overlay')) {
+        if (this.isOverlayElement(element)) {
             return false;
         }
         
@@ -372,6 +372,13 @@ export class MobileInterfaceManager {
     }
     
     /**
+     * Check if element is an overlay element
+     */
+    isOverlayElement(element) {
+        return element.id && element.id.endsWith('-overlay');
+    }
+    
+    /**
      * Adapt element for mobile interface
      */
     adaptElement(element) {
@@ -381,7 +388,7 @@ export class MobileInterfaceManager {
         }
         
         // Don't adapt overlay elements - they should use CSS positioning only
-        if (element.id && element.id.endsWith('-overlay')) {
+        if (this.isOverlayElement(element)) {
             return;
         }
         
@@ -409,7 +416,7 @@ export class MobileInterfaceManager {
      */
     registerDialog(element) {
         // Don't register overlay elements - they should use CSS positioning only
-        if (element.id && element.id.endsWith('-overlay')) {
+        if (this.isOverlayElement(element)) {
             return;
         }
         
@@ -497,55 +504,6 @@ export class MobileInterfaceManager {
         this.emit('resize', { width: newWidth, height: newHeight });
         
         Logger.mobile.debug('📱 Window resized', { width: newWidth, height: newHeight });
-    }
-    
-    /**
-     * Get optimal dimensions for dialog
-     */
-    getDialogDimensions() {
-        const dialogStrategy = this.adaptationStrategies.get('dialog');
-        if (dialogStrategy && dialogStrategy.getDimensions) {
-            return dialogStrategy.getDimensions();
-        }
-        
-        // Default dimensions
-        return {
-            maxWidth: 'calc(100vw - 1rem)',
-            maxHeight: 'calc(100vh - 1rem)',
-            margin: '0.5rem'
-        };
-    }
-    
-    /**
-     * Apply mobile styles to element
-     */
-    applyMobileStyles(element, type = 'dialog') {
-        const dimensions = this.getDialogDimensions();
-        
-        // For overlay elements, don't apply mobile styles - let CSS handle positioning
-        if (element.id && element.id.endsWith('-overlay')) {
-            // Overlay elements use CSS positioning, no JavaScript intervention needed
-            return;
-        } else {
-            // For dialog containers, apply normal mobile styles
-            Object.assign(element.style, {
-                maxWidth: dimensions.maxWidth,
-                maxHeight: dimensions.maxHeight,
-                margin: dimensions.margin,
-                width: 'auto',
-                minWidth: 'unset'
-            });
-        }
-        
-        // Add mobile-adapted class to mark element as mobile-adapted
-        element.classList.add('mobile-adapted');
-        
-        // Apply platform-specific styles
-        const inputStrategy = this.adaptationStrategies.get('input');
-        if (inputStrategy) {
-            const inputs = element.querySelectorAll('input, textarea, select');
-            inputs.forEach(input => inputStrategy.apply(input));
-        }
     }
     
     /**

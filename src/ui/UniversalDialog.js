@@ -239,10 +239,9 @@ export class UniversalDialog {
 
         this.overlay.appendChild(this.dialog);
 
-        // Apply mobile interface adaptations
+        // Apply mobile interface adaptations for dialog container only
         if (this.mobileManager) {
-            this.mobileManager.adaptElement(this.overlay);
-            this.mobileManager.applyMobileStyles(this.dialog, 'dialog');
+            this.mobileManager.adaptElement(this.dialog);
         }
 
         // Store input reference for prompt
