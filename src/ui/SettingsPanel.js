@@ -376,7 +376,6 @@ export class SettingsPanel {
         return renderAssetsSettings(this.levelEditor?.stateManager);
     }
 
-
     renderPerformanceSettings() {
         return renderPerformanceSettings(this.levelEditor?.stateManager);
     }
@@ -471,11 +470,15 @@ export class SettingsPanel {
         }
     }
 
+
     setupSettingsInputs() {
         document.querySelectorAll('.setting-input').forEach(input => {
-            // Remove old listener if exists
+            // Remove old listeners if exist
             if (input._inputHandler) {
                 input.removeEventListener('input', input._inputHandler);
+            }
+            if (input._changeHandler) {
+                input.removeEventListener('change', input._changeHandler);
             }
             
             // Create and store new handler
@@ -498,6 +501,13 @@ export class SettingsPanel {
                 // Update real-time display values for sliders
                 if (input.type === 'range') {
                     this.updateSliderDisplay(input, value);
+                }
+
+                // Handle scaling sliders - only update display, don't apply changes yet
+                if (input.type === 'range' && (path === 'ui.fontScale' || path === 'ui.spacing')) {
+                    // Only update display, don't apply the setting change
+                    this.updateSliderDisplay(input, value);
+                    return; // Skip normal processing for scaling sliders
                 }
 
                 // Handle nested logger color settings
@@ -541,6 +551,20 @@ export class SettingsPanel {
             
             // Add the listener
             input.addEventListener('input', input._inputHandler);
+            
+            // Add change listener for scaling sliders (when user releases)
+            if (input.type === 'range' && (input.dataset.setting === 'ui.fontScale' || input.dataset.setting === 'ui.spacing')) {
+                input._changeHandler = (e) => {
+                    const path = e.target.dataset.setting;
+                    const value = e.target.value;
+                    
+                    // Apply the setting change when user releases the slider
+                    if (this.syncManager) {
+                        this.syncManager.syncSettingToState(path, value);
+                    }
+                };
+                input.addEventListener('change', input._changeHandler);
+            }
             
             // Handle range slider value display updates
             if (input.type === 'range') {

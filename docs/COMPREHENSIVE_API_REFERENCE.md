@@ -1080,14 +1080,13 @@
 - `static readMultipleFiles(files, format)` - чтение нескольких файлов
 - `static createBackupFilename(originalFilename, suffix)` - создание имени резервной копии
 
-### GitUtils (src/utils/GitUtils.js)
-Утилиты для работы с Git.
+### SystemUtils (src/utils/SystemUtils.js)
+Утилиты для системных операций.
 
 #### Основные методы
-- `static async getLogs(commits, format)` - получение логов Git
-- `static async getCurrentBranch()` - получение текущей ветки
-- `static async getStatus()` - получение статуса Git
-- `static async saveLogsToFile(commits, filename)` - сохранение логов в файл
+- `static async getSystemInfo()` - получение информации о системе
+- `static async getStatus()` - получение статуса системы
+- `static async saveSystemInfo(filename)` - сохранение информации о системе
 
 ### GroupTraversalUtils (src/utils/GroupTraversalUtils.js)
 Утилиты для обхода иерархии групп.

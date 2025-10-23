@@ -28,7 +28,7 @@
 - **Интерактивный зум** - зум средней кнопкой мыши
 - **Контекстные меню** - ContextMenuManager
 - **Эффект параллакса** - настройка скорости движения слоев
-- **Git интеграция** - GitUtils для работы с репозиторием
+- **Системные операции** - утилиты для работы с системой
 - **Интерактивная консоль** - выделение текста, контекстное меню
 - **Asset Import System** - импорт внешних ассетов
 - **Custom Dialog System** - замена браузерных диалогов
@@ -49,7 +49,7 @@
 - **RenderUtils** - система отрисовки
 - **GridRenderers** - рендеринг сетки
 - **DuplicateUtils** - дублирование объектов
-- **GitUtils** - работа с Git
+- **SystemUtils** - системные операции
 - **MobileInterfaceManager** - централизованное управление мобильным интерфейсом
 - **EventHandlerManager** - централизованное управление обработчиками событий
 
@@ -148,7 +148,7 @@
 │   │   ├── ErrorHandler.js       # Обработка ошибок
 │   │   ├── ExtensionErrorUtils.js # Обработка ошибок расширений
 │   │   ├── FileUtils.js          # Файловые утилиты
-│   │   ├── GitUtils.js           # Git утилиты
+│   │   ├── SystemUtils.js        # Системные утилиты
 │   │   ├── gridRenderers/        # Рендереры сетки
 │   │   ├── GroupTraversalUtils.js # Обход групп
 │   │   ├── HoverEffects.js       # Hover эффекты
@@ -201,10 +201,6 @@
 ├── index.html        # Главный HTML файл
 ├── package.json      # Зависимости проекта
 ├── start_Editor.bat  # Запуск редактора (Windows)
-├── git_commit.bat    # Git операции
-├── git_operations.bat # Git операции
-├── git_push.ps1      # Git push (PowerShell)
-├── push.bat          # Git push (Windows)
 ├── update_manifest.bat # Обновление манифеста (Windows)
 ├── update_manifest.js  # Обновление манифеста (Node.js)
 ├── update_manifest.ps1 # Обновление манифеста (PowerShell)

@@ -357,7 +357,7 @@ export class MobileInterfaceManager {
             return false;
         }
         
-        const dialogIds = ['universal-dialog', 'actor-properties-container', 'settings-panel-container'];
+        const dialogIds = ['universal-dialog', 'actor-properties-container', 'settings'];
         return dialogIds.includes(element.id) || 
                element.querySelector && dialogIds.some(id => element.querySelector(`#${id}`));
     }

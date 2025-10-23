@@ -52,7 +52,7 @@ export const SettingsDialogStructure = {
         },
         {
             id: 'save',
-            text: 'Apply Changes',
+            text: 'Apply',
             class: 'settings-btn-save',
             backgroundColor: '#2563eb',
             textColor: 'white'

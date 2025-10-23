@@ -372,7 +372,7 @@ export class AutoEventHandlerManager {
         
         // Check by ID and classes
         const windowTypes = [
-            { id: 'settings-overlay', class: 'settings-panel-container', type: 'settings', instance: 'SettingsPanel' },
+            { id: 'settings-overlay', class: 'settings', type: 'settings', instance: 'SettingsPanel' },
             { id: 'actor-properties-overlay', class: 'actor-properties-container', type: 'actor-properties', instance: 'ActorPropertiesWindow' },
             { id: 'universal-dialog-overlay', class: 'universal-dialog', type: 'universal-dialog', instance: 'UniversalDialog' },
             { id: 'asset-panel-container', class: 'asset-panel-container', type: 'asset-panel', instance: 'AssetPanel' },

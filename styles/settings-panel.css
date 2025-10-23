@@ -185,13 +185,14 @@
 
 /* Settings footer */
 .settings-footer {
-    padding: 1rem 1.5rem;
+    padding: calc(1rem * max(var(--spacing-scale, 1.0), 0.5)) calc(1.5rem * max(var(--spacing-scale, 1.0), 0.5));
     border-top: 1px solid #374151;
     background-color: var(--ui-background-color, #111827);
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    gap: 0.75rem;
+    gap: calc(0.75rem * max(var(--spacing-scale, 1.0), 0.5));
+    flex-shrink: 0;
 }
 
 .settings-footer-left {
@@ -206,18 +207,7 @@
 }
 
 /* Settings buttons */
-.settings-btn {
-    padding: 0.75rem 1rem;
-    border: none;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    font-size: 1rem;
-    min-height: 2.75rem;
-    transition: background-color 0.2s;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-}
+/* Settings button styles are now handled by dialog-positioning.css */
 
 .settings-btn-reset {
     background-color: #dc2626;
@@ -246,23 +236,7 @@
     background-color: #047857;
 }
 
-.settings-btn-cancel {
-    background-color: #4b5563;
-    color: white;
-}
-
-.settings-btn-cancel:hover {
-    background-color: #374151;
-}
-
-.settings-btn-save {
-    background-color: #2563eb;
-    color: white;
-}
-
-.settings-btn-save:hover {
-    background-color: #1d4ed8;
-}
+/* Settings button styles are now handled by dialog-positioning.css */
 
 /* Settings form elements */
 .settings-section {
@@ -455,7 +429,7 @@
 }
 
 .compact-mode .settings-footer {
-    padding: 0.5rem 1rem;
+    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.5)) calc(1rem * max(var(--spacing-scale, 1.0), 0.5));
 }
 
 .compact-mode .settings-tab {
@@ -493,7 +467,7 @@
 }
 
 .compact-mode .settings-btn {
-    padding: 0.25rem 0.5rem;
+    padding: calc(0.25rem * max(var(--spacing-scale, 1.0), 0.5)) calc(0.5rem * max(var(--spacing-scale, 1.0), 0.5));
     font-size: 0.75rem;
 }
 

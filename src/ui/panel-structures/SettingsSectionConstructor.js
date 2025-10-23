@@ -8,6 +8,8 @@
  * @version 3.52.1
  */
 
+import { ColorUtils } from '../../utils/ColorUtils.js';
+
 /**
  * Create a settings section container with consistent styling
  * @param {string} title - Section title
@@ -199,7 +201,7 @@ export function createSettingsColorInput(colorConfig) {
 
     const idAttr = id ? ` id="${id}"` : '';
     const nameAttr = name ? ` name="${name}"` : '';
-    const valueAttr = value ? ` value="${value}"` : '';
+    const valueAttr = value ? ` value="${ColorUtils.toHex(value)}"` : '';
     const dataSettingAttr = dataSetting ? ` data-setting="${dataSetting}"` : '';
     const sizeStyle = `width: ${width}; height: ${height};`;
 

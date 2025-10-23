@@ -77,7 +77,7 @@ export class DialogSizeManager {
             maxWidth += padding.left + padding.right + margin.left + margin.right + border.left + border.right;
             
             // Add navigation width (if it's a settings panel)
-            if (dialogId === 'settings-panel-container') {
+            if (dialogId === 'settings') {
                 const navElement = document.querySelector('.settings-nav');
                 if (navElement) {
                     const navWidth = navElement.offsetWidth || 200; // fallback to 200px

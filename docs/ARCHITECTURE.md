@@ -25,6 +25,7 @@
 - **Настройка цвета разделителей (v3.52.1)** - CSS переменная `--ui-resizer-color` для централизованного управления цветом всех разделителей панелей, интеграция с системой настроек
 - **Единая система диалогов (v3.52.3)** - BaseDialog класс для всех всплывающих окон с фиксированной высотой, динамической шириной и плавной инициализацией без скачков размеров
 - **Полная пересборка Settings Panel (v3.52.3)** - все методы render переведены на рефакторированные конструкторы, удален дублирующий код (~400+ строк), DialogSizeManager обновлен для работы с новой структурой
+- **Принципы диалогов (v3.52.3)** - SettingsPanel создается с levelEditor, stateManager доступен, использовать наследование от BaseDialog
 
 ---
 
@@ -228,10 +229,9 @@
 - **Logger integration** - все операции логируются через Logger.file
 - **Методы**: pickFile, readFileAsText, readFileAsJSON, downloadData, createDataURL, pickAndReadText, pickAndReadJSON
 
-### RenderUtils & DuplicateUtils & GitUtils
+### RenderUtils & DuplicateUtils
 - RenderUtils: параметризованная система отрисовки
 - DuplicateUtils: операции дублирования объектов
-- GitUtils: интеграция с Git
 
 ### GridRenderers (v3.19.0)
 **Файлы**: `src/utils/gridRenderers/`

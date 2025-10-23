@@ -1,14 +1,29 @@
-import { SettingsPanel } from './SettingsPanel.js';
+import { BaseDialog } from './BaseDialog.js';
+import { getDialogStructure } from './panel-structures/DialogStructures.js';
+import { 
+    createSettingsSection, 
+    createSettingsFormGroup, 
+    createSettingsGrid, 
+    createSettingsInput, 
+    createSettingsLabel 
+} from './panel-structures/SettingsSectionConstructor.js';
 import { Logger } from '../utils/Logger.js';
 
 /**
- * Actor Properties Window - inherits from SettingsPanel
+ * Actor Properties Window - extends BaseDialog
  * Provides a modal window for editing actor properties
  */
-export class ActorPropertiesWindow extends SettingsPanel {
-    constructor(container, stateManager, levelEditor) {
-        // Initialize with minimal config since we'll override most functionality
-        super(container, levelEditor?.configManager || null, levelEditor);
+export class ActorPropertiesWindow extends BaseDialog {
+    constructor(stateManager, levelEditor) {
+        super({
+            ...getDialogStructure('actor-properties'),
+            id: 'actor-properties',
+            contentRenderer: () => this.renderActorPropertiesContent(),
+            onShow: () => this.onShow(),
+            onHide: () => this.onHide(),
+            onConfirm: () => this.onConfirm(),
+            onCancel: () => this.onCancel()
+        });
         
         this.stateManager = stateManager;
         this.levelEditor = levelEditor;
@@ -16,64 +31,13 @@ export class ActorPropertiesWindow extends SettingsPanel {
         this.initialState = null; // Store initial state of properties
         this.hasChanges = false; // Track if any changes were made
         
-        // Override the overlay ID to avoid conflicts
-        this.overlayId = 'actor-properties-overlay';
-        this.containerId = 'actor-properties-container';
-        
         // Initialize our own functionality
         this.initActorProperties();
     }
 
     initActorProperties() {
-        // Don't create DOM element in constructor - create it when first shown
-        // This ensures AutoEventHandlerManager is already initialized
+        // Setup event listeners for actor changes
         this.setupActorEventListeners();
-    }
-
-    init() {
-        // Do nothing - initialization is handled in initActorProperties()
-    }
-
-    createActorPropertiesWindow() {
-        Logger.ui.info('ActorPropertiesWindow: Creating window element');
-
-        // Create actor properties overlay element (similar to settings)
-        const overlay = document.createElement('div');
-        overlay.id = this.overlayId;
-        overlay.className = 'dialog-overlay';
-        overlay.style.display = 'none'; // Only set display, let CSS handle the rest
-
-        overlay.innerHTML = `
-            <div class="actor-properties-container mobile-dialog" id="${this.containerId}">
-                <div class="settings-header" id="actor-properties-header">
-                    <h2>Actor Properties</h2>
-                    <div class="settings-header-controls">
-                        <button id="actor-props-close" class="settings-menu-btn mobile-touch-target">×</button>
-                    </div>
-                </div>
-
-                <div class="settings-content-area">
-                    <div class="settings-main-content">
-                        <div id="actor-properties-content">
-                            <div style="color: var(--ui-text-color, #9ca3af);">No actor selected</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="settings-footer">
-                    <div class="settings-footer-right">
-                        <button id="actor-props-cancel" class="settings-btn settings-btn-cancel mobile-button">Cancel</button>
-                        <button id="actor-props-apply" class="settings-btn settings-btn-save mobile-button">Close</button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        // Append to container
-        this.container.appendChild(overlay);
-
-        Logger.ui.info('ActorPropertiesWindow: Window element created and appended to DOM');
-        Logger.ui.info(`ActorPropertiesWindow: Overlay ID: ${this.overlayId}, Container ID: ${this.containerId}`);
     }
 
     setupActorEventListeners() {
@@ -83,26 +47,16 @@ export class ActorPropertiesWindow extends SettingsPanel {
         if (this.stateManager && this.stateManager.subscribe) {
             this.stateManager.subscribe('selectedActor', (actor) => {
                 this.currentActor = actor;
-                this.renderActorProperties();
+                // Trigger content re-render if dialog is visible
+                if (this.isVisible && this.overlay) {
+                    this.renderContent();
+                }
             });
         }
     }
 
     show(actor = null) {
         Logger.ui.info('ActorPropertiesWindow: show() called');
-        this.isVisible = true;
-        
-        // Create DOM element if it doesn't exist (first time showing)
-        let overlay = document.getElementById(this.overlayId);
-        if (!overlay) {
-            Logger.ui.info('ActorPropertiesWindow: Creating DOM element for first time');
-            this.createActorPropertiesWindow();
-            overlay = document.getElementById(this.overlayId);
-        }
-        
-        if (overlay) {
-            overlay.classList.add('dialog-visible');
-            overlay.style.display = 'flex';
             
             if (actor) {
                 this.currentActor = actor;
@@ -111,29 +65,13 @@ export class ActorPropertiesWindow extends SettingsPanel {
                 }
             }
             
-            this.renderActorProperties();
-            
-            // Use setTimeout to ensure DOM is fully rendered before saving initial state
-            setTimeout(() => {
-                this.saveInitialState();
-                this.hasChanges = false;
-                this.updateApplyButton();
-                this.setupChangeListeners();
-                // Event handlers will be set up automatically by AutoEventHandlerManager
-            }, 0);
-        }
+        // Use BaseDialog's show method
+        super.show();
     }
 
     hide() {
-        this.isVisible = false;
-        
-        // Event handlers will be removed automatically by AutoEventHandlerManager
-        
-        const overlay = document.getElementById(this.overlayId);
-        if (overlay) {
-            overlay.classList.remove('dialog-visible');
-            overlay.style.display = 'none';
-        }
+        // Use BaseDialog's hide method
+        super.hide();
         
         // Clear selected actor
         if (this.stateManager && this.stateManager.set) {
@@ -144,80 +82,141 @@ export class ActorPropertiesWindow extends SettingsPanel {
         this.hasChanges = false;
     }
 
+    onShow() {
+        // Called after dialog is shown
+        // Use setTimeout to ensure DOM is fully rendered before saving initial state
+        setTimeout(() => {
+            this.saveInitialState();
+            this.hasChanges = false;
+            this.updateApplyButton();
+            this.setupChangeListeners();
+            // Event handlers will be set up automatically by AutoEventHandlerManager
+        }, 0);
+    }
 
-    renderActorProperties() {
-        const content = document.getElementById('actor-properties-content');
-        if (!content) return;
+    onHide() {
+        // Called after dialog is hidden
+        Logger.ui.info('ActorPropertiesWindow: Dialog hidden');
+    }
 
+    onConfirm() {
+        // Called when Apply button is clicked
+        this.applyChanges();
+        this.hide();
+    }
+
+    onCancel() {
+        // Called when Cancel button is clicked
+        this.hide();
+    }
+
+
+    renderActorPropertiesContent() {
         if (!this.currentActor) {
-            content.innerHTML = '<div style="color: var(--ui-text-color, #9ca3af);">No actor selected</div>';
-            return;
+            return '<div style="color: var(--ui-text-color, #9ca3af);">No actor selected</div>';
         }
 
         const actor = this.currentActor;
-        content.innerHTML = `
-            <div class="space-y-4">
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Name:</label>
-                        <input type="text" id="actor-name" value="${actor.name || ''}" 
-                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded mobile-input" style="color: var(--ui-active-text-color, #ffffff);">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Type:</label>
-                        <input type="text" id="actor-type" value="${actor.type || ''}" 
-                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded mobile-input" readonly style="color: var(--ui-active-text-color, #ffffff);">
-                    </div>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">X Position:</label>
-                        <input type="number" id="actor-x" value="${actor.x || 0}" 
-                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded mobile-input" style="color: var(--ui-active-text-color, #ffffff);">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Y Position:</label>
-                        <input type="number" id="actor-y" value="${actor.y || 0}" 
-                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded mobile-input" style="color: var(--ui-active-text-color, #ffffff);">
-                    </div>
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Width:</label>
-                        <input type="number" id="actor-width" value="${actor.width || 32}" 
-                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded mobile-input" style="color: var(--ui-active-text-color, #ffffff);">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Height:</label>
-                        <input type="number" id="actor-height" value="${actor.height || 32}" 
-                               class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded mobile-input" style="color: var(--ui-active-text-color, #ffffff);">
-                    </div>
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Color:</label>
-                    <input type="color" id="actor-color" value="${actor.color || '#3B82F6'}" 
-                           class="w-full h-10 bg-gray-700 border border-gray-600 rounded mobile-input">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Image Path:</label>
-                    <input type="text" id="actor-imgSrc" value="${(actor.imgSrc !== null && actor.imgSrc !== undefined) ? actor.imgSrc : ''}" 
-                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded mobile-input" style="color: var(--ui-active-text-color, #ffffff);"
-                           placeholder="path/to/image.png">
-                </div>
-                
-                <div>
-                    <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Category:</label>
-                    <input type="text" id="actor-category" value="${(actor.category !== null && actor.category !== undefined) ? actor.category : ''}" 
-                           class="w-full px-3 py-2 bg-gray-700 border border-gray-600 rounded mobile-input" style="color: var(--ui-active-text-color, #ffffff);">
-                </div>
-            </div>
-        `;
-
-        Logger.ui.debug(`Rendered properties for actor: ${actor.name}`);
+        
+        return createSettingsFormGroup(`
+            ${createSettingsSection('Basic Properties', createSettingsFormGroup(`
+                ${createSettingsGrid(`
+                    ${createSettingsFormGroup(`
+                        ${createSettingsLabel('Name:', 'actor-name')}
+                        ${createSettingsInput({
+                            id: 'actor-name',
+                            type: 'text',
+                            value: actor.name || '',
+                            placeholder: 'Actor name'
+                        })}
+                    `)}
+                    ${createSettingsFormGroup(`
+                        ${createSettingsLabel('Type:', 'actor-type')}
+                        ${createSettingsInput({
+                            id: 'actor-type',
+                            type: 'text',
+                            value: actor.type || '',
+                            readonly: true
+                        })}
+                    `)}
+                `, { columns: 2 })}
+            `))}
+            
+            ${createSettingsSection('Position', createSettingsFormGroup(`
+                ${createSettingsGrid(`
+                    ${createSettingsFormGroup(`
+                        ${createSettingsLabel('X Position:', 'actor-x')}
+                        ${createSettingsInput({
+                            id: 'actor-x',
+                            type: 'number',
+                            value: actor.x || 0,
+                            placeholder: '0'
+                        })}
+                    `)}
+                    ${createSettingsFormGroup(`
+                        ${createSettingsLabel('Y Position:', 'actor-y')}
+                        ${createSettingsInput({
+                            id: 'actor-y',
+                            type: 'number',
+                            value: actor.y || 0,
+                            placeholder: '0'
+                        })}
+                    `)}
+                `, { columns: 2 })}
+            `))}
+            
+            ${createSettingsSection('Size', createSettingsFormGroup(`
+                ${createSettingsGrid(`
+                    ${createSettingsFormGroup(`
+                        ${createSettingsLabel('Width:', 'actor-width')}
+                        ${createSettingsInput({
+                            id: 'actor-width',
+                            type: 'number',
+                            value: actor.width || 32,
+                            placeholder: '32'
+                        })}
+                    `)}
+                    ${createSettingsFormGroup(`
+                        ${createSettingsLabel('Height:', 'actor-height')}
+                        ${createSettingsInput({
+                            id: 'actor-height',
+                            type: 'number',
+                            value: actor.height || 32,
+                            placeholder: '32'
+                        })}
+                    `)}
+                `, { columns: 2 })}
+            `))}
+            
+            ${createSettingsSection('Appearance', createSettingsFormGroup(`
+                ${createSettingsFormGroup(`
+                    ${createSettingsLabel('Color:', 'actor-color')}
+                    ${createSettingsInput({
+                        id: 'actor-color',
+                        type: 'color',
+                        value: actor.color || '#3B82F6'
+                    })}
+                `)}
+                ${createSettingsFormGroup(`
+                    ${createSettingsLabel('Image Path:', 'actor-imgSrc')}
+                    ${createSettingsInput({
+                        id: 'actor-imgSrc',
+                        type: 'text',
+                        value: (actor.imgSrc !== null && actor.imgSrc !== undefined) ? actor.imgSrc : '',
+                        placeholder: 'path/to/image.png'
+                    })}
+                `)}
+                ${createSettingsFormGroup(`
+                    ${createSettingsLabel('Category:', 'actor-category')}
+                    ${createSettingsInput({
+                        id: 'actor-category',
+                        type: 'text',
+                        value: (actor.category !== null && actor.category !== undefined) ? actor.category : '',
+                        placeholder: 'Category name'
+                    })}
+                `)}
+            `))}
+        `, { gap: '1.5rem' });
     }
 
     /**
@@ -380,72 +379,15 @@ export class ActorPropertiesWindow extends SettingsPanel {
     }
 
     /**
-     * Cancel changes and close window
-     * Override parent method for ActorPropertiesWindow
-     */
-    cancelSettings() {
-        Logger.ui.debug('ActorPropertiesWindow: Cancel called');
-        this.hide();
-    }
-
-    /**
-     * Apply changes and close window
-     * Override parent method for ActorPropertiesWindow
-     */
-    saveSettings() {
-        Logger.ui.debug('ActorPropertiesWindow: Apply called');
-        this.applyChanges();
-    }
-
-    /**
-     * Universal cancel method - required by centralized event system
-     */
-    cancel() {
-        Logger.ui.debug('ActorPropertiesWindow: Universal cancel called');
-        this.cancelSettings();
-    }
-
-    /**
-     * Universal apply method - required by centralized event system
-     */
-    apply() {
-        Logger.ui.debug('ActorPropertiesWindow: Universal apply called');
-        this.saveSettings();
-    }
-
-    // Override parent methods to prevent conflicts
-    createSettingsPanel() {
-        // Do nothing - we create our own window
-    }
-
-    renderSettingsContent() {
-        // Do nothing - we render actor properties instead
-    }
-
-    setupTabEventListeners() {
-        // Do nothing - we don't use tabs
-    }
-
-    setupSettingsInputs() {
-        // Do nothing - we handle inputs in renderActorProperties
-    }
-    
-    /**
      * Cleanup and destroy window
-     * Extends parent destroy() method
      */
     destroy() {
         Logger.ui.debug('Destroying ActorPropertiesWindow');
         
-        // Remove overlay from DOM
-        const overlay = document.getElementById(this.overlayId);
-        if (overlay && overlay.parentNode) {
-            overlay.parentNode.removeChild(overlay);
-        }
-        
         // Clear references
         this.currentActor = null;
         this.stateManager = null;
+        this.levelEditor = null;
         
         // Call parent destroy
         super.destroy();

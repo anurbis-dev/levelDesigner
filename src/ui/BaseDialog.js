@@ -202,23 +202,9 @@ export class BaseDialog {
     createFooter() {
         const footer = document.createElement('div');
         footer.className = 'dialog-footer';
-        footer.style.cssText = `
-            padding: calc(1rem * max(var(--spacing-scale, 1.0), 0.5)) calc(1.5rem * max(var(--spacing-scale, 1.0), 0.5));
-            border-top: 1px solid #374151;
-            background-color: var(--ui-background-color, #111827);
-            display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            gap: calc(0.75rem * max(var(--spacing-scale, 1.0), 0.5));
-            flex-shrink: 0;
-        `;
 
         const footerRight = document.createElement('div');
         footerRight.className = 'dialog-footer-right';
-        footerRight.style.cssText = `
-            display: flex;
-            gap: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.5));
-        `;
 
         // Add footer buttons
         this.config.footerButtons.forEach(button => {
@@ -226,20 +212,19 @@ export class BaseDialog {
             btn.id = `${this.config.id}-${button.id}`;
             btn.className = `dialog-btn ${button.class || 'dialog-btn-default'}`;
             btn.textContent = button.text;
-            btn.style.cssText = `
-                padding: calc(0.75rem * max(var(--spacing-scale, 1.0), 0.5)) calc(1rem * max(var(--spacing-scale, 1.0), 0.5));
-                border: none;
-                border-radius: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.5));
-                cursor: pointer;
-                font-size: 1rem;
-                min-height: calc(2.75rem * max(var(--spacing-scale, 1.0), 0.5));
-                transition: background-color 0.2s;
-                display: inline-flex;
-                align-items: center;
-                justify-content: center;
-                background-color: ${button.backgroundColor || '#374151'};
-                color: ${button.textColor || 'white'};
-            `;
+            
+            // Only set custom background and text color if specified
+            if (button.backgroundColor) {
+                btn.style.backgroundColor = button.backgroundColor;
+            }
+            if (button.textColor) {
+                btn.style.color = button.textColor;
+            }
+            
+            // Ensure button width adapts to text content
+            btn.style.width = 'auto';
+            btn.style.minWidth = 'auto';
+            
             footerRight.appendChild(btn);
         });
 

@@ -102,7 +102,7 @@ export class StateManager {
                 showGrid: true,
                 snapToGrid: false,
                 gridSize: 32,
-                gridColor: 'rgba(255, 255, 255, 0.1)',
+                gridColor: '#ffffff',
                 gridThickness: 1,
                 gridOpacity: 0.1,
                 gridSubdivisions: 0,
