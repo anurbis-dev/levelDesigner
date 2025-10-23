@@ -498,16 +498,16 @@ export class SettingsPanel {
 
                 ValidationUtils.logValidation('SettingsPanel', 'Input change detected', { path, value });
 
-                // Update real-time display values for sliders
-                if (input.type === 'range') {
-                    this.updateSliderDisplay(input, value);
-                }
-
                 // Handle scaling sliders - only update display, don't apply changes yet
                 if (input.type === 'range' && (path === 'ui.fontScale' || path === 'ui.spacing')) {
                     // Only update display, don't apply the setting change
                     this.updateSliderDisplay(input, value);
                     return; // Skip normal processing for scaling sliders
+                }
+
+                // Update real-time display values for other sliders
+                if (input.type === 'range') {
+                    this.updateSliderDisplay(input, value);
                 }
 
                 // Handle nested logger color settings
