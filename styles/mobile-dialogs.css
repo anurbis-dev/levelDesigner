@@ -30,6 +30,7 @@
         min-width: unset !important;
         max-width: calc(100vw - 1rem) !important;
         width: calc(100vw - 1rem) !important;
+        height: calc(100vh - 4rem) !important;
         max-height: calc(100vh - 4rem) !important;
         margin: 0 !important;
     }
@@ -46,6 +47,7 @@
     #universal-dialog {
         max-width: calc(100vw - 0.5rem) !important;
         width: calc(100vw - 0.5rem) !important;
+        height: calc(100vh - 2rem) !important;
         max-height: calc(100vh - 2rem) !important;
         border-radius: 0.5rem !important;
     }

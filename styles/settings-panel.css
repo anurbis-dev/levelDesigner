@@ -21,11 +21,11 @@
     background-color: var(--ui-background-color, #1f2937);
     border-radius: 0.5rem;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-    max-width: 800px;
-    max-height: calc(100vh - 4rem); /* Учитываем отступы */
+    max-width: 90vw;
+    height: calc(100vh - 4rem); /* Фиксированная высота по размеру окна */
+    max-height: calc(100vh - 4rem);
     width: auto;
     min-width: 600px;
-    min-height: 400px;
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -51,7 +51,7 @@
 .settings-header-controls {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.5));
 }
 
 .settings-menu-btn {
@@ -89,19 +89,21 @@
 
 /* Settings navigation */
 .settings-nav {
-    width: 200px;
+    width: auto;
+    min-width: fit-content;
+    max-width: 200px;
     background-color: var(--ui-background-color, #111827);
     border-right: 1px solid #374151;
-    padding: calc(1rem * max(var(--spacing-scale, 1.0), 0.5));
+    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.5));
     display: flex;
     flex-direction: column;
-    gap: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.25));
+    gap: calc(0.25rem * max(var(--spacing-scale, 1.0), 0.25));
 }
 
 .settings-tab {
     width: 100%;
     text-align: left;
-    padding: calc(0.75rem * max(var(--spacing-scale, 1.0), 0.125)) !important;
+    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.125)) !important;
     border-radius: calc(0.25rem * max(var(--spacing-scale, 1.0), 0.5));
     color: var(--ui-text-color, #d1d5db);
     background: transparent;
@@ -122,7 +124,7 @@
 /* Settings main content */
 .settings-main-content {
     flex: 1;
-    padding: 1.5rem;
+    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.5));
     overflow-y: auto;
     background-color: var(--ui-background-color, #1f2937);
     width: 100%;
@@ -194,13 +196,13 @@
 
 .settings-footer-left {
     display: flex;
-    gap: 0.5rem;
+    gap: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.5));
     flex-wrap: wrap;
 }
 
 .settings-footer-right {
     display: flex;
-    gap: 0.5rem;
+    gap: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.5));
 }
 
 /* Settings buttons */
@@ -264,50 +266,50 @@
 
 /* Settings form elements */
 .settings-section {
-    margin-bottom: 1.5rem;
+    margin-bottom: calc(1.5rem * max(var(--spacing-scale, 1.0), 0.5));
 }
 
 .settings-section h3 {
     font-size: 1.125rem;
     font-weight: 500;
-    margin-bottom: 1rem;
+    margin-bottom: calc(1rem * max(var(--spacing-scale, 1.0), 0.5));
     color: var(--ui-active-text-color, #ffffff);
 }
 
 .settings-section h4 {
     font-size: 1rem;
     font-weight: 500;
-    margin-bottom: 0.75rem;
+    margin-bottom: calc(0.75rem * max(var(--spacing-scale, 1.0), 0.5));
     color: var(--ui-text-color, #d1d5db);
 }
 
 .settings-form-group {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
-    padding-left: 0.5rem;
+    gap: calc(1rem * max(var(--spacing-scale, 1.0), 0.5));
+    padding-left: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.5));
     border-left: 2px solid #374151;
 }
 
 .settings-form-item {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.5));
 }
 
 .settings-label {
     display: block;
     font-size: 0.875rem;
     color: var(--ui-text-color, #d1d5db);
-    margin-bottom: 0.5rem;
+    margin-bottom: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.5));
 }
 
 .settings-input {
     width: 100%;
-    padding: 0.5rem;
+    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.5));
     background: #374151;
     border: 1px solid #4b5563;
-    border-radius: 0.25rem;
+    border-radius: calc(0.25rem * max(var(--spacing-scale, 1.0), 0.5));
     color: white;
     font-size: 0.875rem;
 }
@@ -338,7 +340,7 @@
 /* Settings grid layouts */
 .settings-grid {
     display: grid;
-    gap: 1rem;
+    gap: calc(1rem * max(var(--spacing-scale, 1.0), 0.5));
 }
 
 .settings-grid-2 {
@@ -353,7 +355,7 @@
 .settings-description {
     font-size: 0.75rem;
     color: var(--ui-text-color, #9ca3af);
-    margin-top: 0.25rem;
+    margin-top: calc(0.25rem * max(var(--spacing-scale, 1.0), 0.5));
     line-height: 1.4;
 }
 
@@ -361,10 +363,10 @@
 .settings-help {
     font-size: 0.75rem;
     color: #6b7280;
-    margin-top: 0.25rem;
-    padding: 0.5rem;
+    margin-top: calc(0.25rem * max(var(--spacing-scale, 1.0), 0.5));
+    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.5));
     background-color: #1f2937;
-    border-radius: 0.25rem;
+    border-radius: calc(0.25rem * max(var(--spacing-scale, 1.0), 0.5));
     border-left: 3px solid #3b82f6;
 }
 
@@ -442,12 +444,14 @@
 }
 
 .compact-mode .settings-nav {
-    width: 150px;
-    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.5));
+    width: auto;
+    min-width: fit-content;
+    max-width: 150px;
+    padding: calc(0.25rem * max(var(--spacing-scale, 1.0), 0.5));
 }
 
 .compact-mode .settings-main-content {
-    padding: 1rem;
+    padding: calc(0.25rem * max(var(--spacing-scale, 1.0), 0.5));
 }
 
 .compact-mode .settings-footer {
@@ -455,7 +459,7 @@
 }
 
 .compact-mode .settings-tab {
-    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.125)) !important;
+    padding: calc(0.375rem * max(var(--spacing-scale, 1.0), 0.125)) !important;
     font-size: 0.875rem;
     margin: 0 !important;
 }

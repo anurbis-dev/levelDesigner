@@ -14,7 +14,7 @@
 
 ```javascript
 export class LevelEditor {
-    static VERSION = '3.51.0'; // ← ЕДИНСТВЕННЫЙ ИСТОЧНИК ИСТИНЫ
+    static VERSION = '3.52.3'; // ← ЕДИНСТВЕННЫЙ ИСТОЧНИК ИСТИНЫ
 }
 ```
 
@@ -248,6 +248,8 @@ levelDesigner/
 │   ├── models/            # Модели данных
 │   ├── managers/          # Менеджеры системы
 │   ├── ui/                # UI компоненты
+│   │   ├── BaseDialog.js  # Базовый класс для диалогов
+│   │   └── panel-structures/ # Структуры панелей и диалогов
 │   └── core/              # Основная логика
 ├── docs/                  # Документация
 └── README.md              # Основная документация
@@ -569,7 +571,39 @@ document.addEventListener('visibilitychange', () => {
 
 ## Добавление новых функций
 
-### 1. Добавление нового типа объекта
+### 1. Создание новых диалогов
+
+**⚠️ КРИТИЧЕСКИ ВАЖНО v3.52.3**: Все методы render в Settings Panel переведены на рефакторированные конструкторы. При создании новых диалогов используйте **BaseDialog** и **SettingsSectionConstructor** для единообразия.
+
+Для создания новых всплывающих окон используйте **BaseDialog**:
+
+```javascript
+import { BaseDialog } from './BaseDialog.js';
+import { getDialogStructure } from './panel-structures/DialogStructures.js';
+
+// Создание диалога с предопределенной структурой
+const config = {
+    ...getDialogStructure('standard'),
+    title: 'My Dialog',
+    contentRenderer: () => '<div>Dialog content</div>',
+    onConfirm: () => console.log('Confirmed'),
+    onCancel: () => console.log('Cancelled')
+};
+
+const dialog = new BaseDialog(config);
+dialog.show();
+```
+
+**Преимущества BaseDialog:**
+- Фиксированная высота по размеру окна браузера
+- Динамическая ширина на основе контента
+- Плавная инициализация без скачков размеров
+- Автоматическая мобильная адаптация
+- Единообразное управление событиями
+
+**См. подробную документацию:** `docs/DIALOG_SYSTEM.md`
+
+### 2. Добавление нового типа объекта
 
 #### Создание класса объекта
 

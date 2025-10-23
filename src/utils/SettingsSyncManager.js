@@ -401,16 +401,14 @@ export class SettingsSyncManager {
             }
         }
 
-        // Apply spacing scale globally
+        // Apply spacing scale globally - IMMEDIATELY, no delay
         const spacingScale = this.levelEditor.stateManager.get('ui.spacing');
         if (spacingScale !== undefined) {
             const spacingScaleNum = ValidationUtils.validateSpacingScale(spacingScale);
             if (spacingScaleNum !== null) {
                 document.documentElement.style.setProperty('--spacing-scale', String(spacingScaleNum));
-                // Delay inline styles update to ensure DOM is ready
-                setTimeout(() => {
-                    this.updateInlineSpacingStyles(spacingScaleNum);
-                }, 100);
+                // Apply inline styles immediately for dialog elements
+                this.updateInlineSpacingStyles(spacingScaleNum);
                 ValidationUtils.logValidation('SettingsSyncManager', 'Applied spacing scale in applySpecialUISettings', spacingScaleNum);
             }
         }

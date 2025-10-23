@@ -116,6 +116,7 @@ export class UniversalDialog {
             box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
             min-width: 400px;
             max-width: 500px;
+            height: calc(100vh - 4rem);
             max-height: calc(100vh - 4rem);
             overflow: hidden;
             display: flex;

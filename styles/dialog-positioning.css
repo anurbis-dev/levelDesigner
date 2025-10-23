@@ -56,12 +56,15 @@
     border: 1px solid #374151 !important;
     border-radius: 8px !important;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25) !important;
-    max-height: calc(100vh - 4rem) !important; /* Учитываем отступы */
+    
+    /* Фиксированная высота по размеру окна браузера с отступами */
+    height: calc(100vh - 4rem) !important;
+    max-height: calc(100vh - 4rem) !important;
     overflow: hidden !important;
     display: flex !important;
     flex-direction: column !important;
     
-    /* Горизонтальный размер определяется контентом */
+    /* Горизонтальный размер будет устанавливаться динамически по самому широкому контенту */
     width: auto !important;
     min-width: 300px !important;
     max-width: 90vw !important;
@@ -75,11 +78,35 @@
     max-width: 500px !important;
 }
 
-/* SettingsPanel - базовые размеры для desktop */
+/* SettingsPanel - размеры будут устанавливаться динамически */
 .settings-panel-container {
     min-width: 600px;
-    max-width: 800px;
+    max-width: 90vw;
     width: auto;
+}
+
+/* Override mobile styles to preserve fixed width */
+.settings-panel-container[style*="width"] {
+    width: var(--fixed-dialog-width) !important;
+    min-width: var(--fixed-dialog-width) !important;
+    max-width: var(--fixed-dialog-width) !important;
+}
+
+/* Override all mobile dialog width rules */
+@media screen and (max-width: 768px) {
+    .settings-panel-container[style*="width"] {
+        width: var(--fixed-dialog-width) !important;
+        min-width: var(--fixed-dialog-width) !important;
+        max-width: var(--fixed-dialog-width) !important;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .settings-panel-container[style*="width"] {
+        width: var(--fixed-dialog-width) !important;
+        min-width: var(--fixed-dialog-width) !important;
+        max-width: var(--fixed-dialog-width) !important;
+    }
 }
 
 /* ActorPropertiesWindow */
@@ -197,6 +224,7 @@
     .settings-panel-container,
     .actor-properties-container,
     .dialog-container {
+        height: calc(100vh - 4rem) !important;
         max-height: calc(100vh - 4rem) !important;
         max-width: calc(100vw - 1rem) !important;
         width: calc(100vw - 1rem) !important;
@@ -222,6 +250,7 @@
     .settings-panel-container,
     .actor-properties-container,
     .dialog-container {
+        height: calc(100vh - 2rem) !important;
         max-height: calc(100vh - 2rem) !important;
         max-width: calc(100vw - 0.5rem) !important;
         width: calc(100vw - 0.5rem) !important;
@@ -244,6 +273,7 @@
     .settings-panel-container,
     .actor-properties-container,
     .dialog-container {
+        height: calc(100vh - 1rem) !important;
         max-height: calc(100vh - 1rem) !important;
     }
 }
@@ -278,6 +308,7 @@
 
 /* Класс для адаптивных размеров */
 .dialog-responsive {
+    height: calc(100vh - 4rem) !important;
     max-height: calc(100vh - 4rem) !important;
     max-width: 90vw !important;
     width: auto !important;
@@ -288,6 +319,7 @@
 /* Диалоги с большим контентом */
 .dialog-large .dialog-container,
 .dialog-large .settings-panel-container {
+    height: calc(100vh - 2rem) !important;
     max-height: calc(100vh - 2rem) !important;
     max-width: 95vw !important;
 }
