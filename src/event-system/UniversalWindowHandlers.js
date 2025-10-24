@@ -365,4 +365,93 @@ export class UniversalWindowHandlers {
             Logger.ui.debug(`UniversalWindowHandlers: Unknown ActorPropertiesWindow input: ${inputId}`);
         }
     }
+
+    /**
+     * Создает универсальные обработчики для контекстных меню
+     * @param {Object} contextMenuInstance - Экземпляр контекстного меню
+     * @param {string} menuType - Тип контекстного меню
+     * @returns {Object} Конфигурация обработчиков
+     */
+    static createContextMenuHandlers(contextMenuInstance, menuType) {
+        return {
+            // Обработчики контекстного меню
+            onClick: (e) => {
+                Logger.ui.debug(`UniversalWindowHandlers: Context menu click for ${menuType}`);
+                UniversalWindowHandlers.handleContextMenuClick(e, contextMenuInstance, menuType);
+            },
+            
+            onContextMenu: (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                Logger.ui.debug(`UniversalWindowHandlers: Context menu context menu event for ${menuType}`);
+            },
+            
+            onMouseEnter: (e) => {
+                Logger.ui.debug(`UniversalWindowHandlers: Context menu mouse enter for ${menuType}`);
+            },
+            
+            onMouseLeave: (e) => {
+                Logger.ui.debug(`UniversalWindowHandlers: Context menu mouse leave for ${menuType}`);
+                UniversalWindowHandlers.handleContextMenuMouseLeave(e, contextMenuInstance, menuType);
+            }
+        };
+    }
+
+    /**
+     * Обработка кликов в контекстном меню
+     * @param {Event} e - Событие клика
+     * @param {Object} contextMenuInstance - Экземпляр контекстного меню
+     * @param {string} menuType - Тип контекстного меню
+     */
+    static handleContextMenuClick(e, contextMenuInstance, menuType) {
+        const target = e.target;
+        const menuItem = target.closest('.base-context-menu-item');
+        
+        if (menuItem && !menuItem.classList.contains('disabled')) {
+            Logger.ui.debug(`UniversalWindowHandlers: Menu item clicked in ${menuType}`, menuItem);
+            
+            // If we have an instance, let it handle the click
+            if (contextMenuInstance && typeof contextMenuInstance.handleMenuItemClick === 'function') {
+                const result = contextMenuInstance.handleMenuItemClick(menuItem, contextMenuInstance.lastContextData);
+                if (result !== false && typeof contextMenuInstance.hideMenu === 'function') {
+                    contextMenuInstance.hideMenu();
+                }
+            } else {
+                // Handle case when no context menu instance is found
+                Logger.ui.warn(`UniversalWindowHandlers: No context menu instance found for ${menuType}`);
+                
+                // Fallback: try to find the menu item's action
+                const action = menuItem.dataset.action;
+                if (action) {
+                    Logger.ui.debug(`UniversalWindowHandlers: Executing action ${action} for ${menuType}`);
+                    // Could implement generic action handling here
+                }
+                
+                // Try to hide the menu by finding it in the DOM
+                const contextMenu = target.closest('.context-menu, .base-context-menu');
+                if (contextMenu) {
+                    contextMenu.style.display = 'none';
+                    contextMenu.classList.remove('visible');
+                }
+            }
+        }
+    }
+
+    /**
+     * Обработка mouse leave в контекстном меню
+     * @param {Event} e - Событие mouse leave
+     * @param {Object} contextMenuInstance - Экземпляр контекстного меню
+     * @param {string} menuType - Тип контекстного меню
+     */
+    static handleContextMenuMouseLeave(e, contextMenuInstance, menuType) {
+        Logger.ui.debug(`UniversalWindowHandlers: Mouse left context menu ${menuType}`);
+        
+        // If we have an instance, let it handle the mouse leave
+        if (contextMenuInstance && typeof contextMenuInstance.hideMenu === 'function') {
+            Logger.ui.debug(`UniversalWindowHandlers: Calling hideMenu for ${menuType}`);
+            contextMenuInstance.hideMenu();
+        } else {
+            Logger.ui.warn(`UniversalWindowHandlers: No hideMenu method found for ${menuType}`);
+        }
+    }
 }

@@ -1,4 +1,4 @@
-import { BaseModule } from './BaseModule.js';
+import { BaseModule } from '../core/BaseModule.js';
 import { Logger } from '../utils/Logger.js';
 import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
 import { SnapUtils } from '../utils/SnapUtils.js';

@@ -5,7 +5,7 @@
 
 import { Logger } from '../utils/Logger.js';
 import { eventHandlerManager } from './EventHandlerManager.js';
-import { UniversalWindowHandlers } from '../handlers/UniversalWindowHandlers.js';
+import { UniversalWindowHandlers } from './UniversalWindowHandlers.js';
 
 export class AutoEventHandlerManager {
     constructor() {
@@ -47,7 +47,6 @@ export class AutoEventHandlerManager {
             subtree: true
         });
 
-        Logger.event.debug('AutoEventHandlerManager: Auto-registration observer started');
     }
 
     /**
@@ -77,13 +76,15 @@ export class AutoEventHandlerManager {
             }
         }
 
+        // Check if element itself is a context menu
+        this.checkAndRegisterContextMenu(element);
+
         // Check child elements (dialogs and windows)
         const childWindows = element.querySelectorAll('[id*="overlay"], [id*="dialog"], [id*="window"]');
         childWindows.forEach(child => {
             if (child !== element) { // Avoid checking the same element twice
             const childWindowInfo = this.detectWindowType(child);
             if (childWindowInfo) {
-                Logger.event.debug(`AutoEventHandlerManager: Found child window ${child.id} of type ${childWindowInfo.type}`);
                 this.registerWindowAutomatically(child, childWindowInfo);
                 }
             }
@@ -95,7 +96,6 @@ export class AutoEventHandlerManager {
             if (panel !== element) { // Avoid checking the same element twice
                 const panelWindowInfo = this.detectWindowType(panel);
                 if (panelWindowInfo) {
-                    Logger.event.debug(`AutoEventHandlerManager: Found panel ${panel.id} of type ${panelWindowInfo.type}`);
                     this.registerWindowAutomatically(panel, panelWindowInfo);
 
                     // Also register handlers for child elements within the panel
@@ -103,6 +103,27 @@ export class AutoEventHandlerManager {
                 }
             }
         });
+
+        // Check context menus (separately from windows and panels)
+        const contextMenus = element.querySelectorAll('[class*="context-menu"]');
+        contextMenus.forEach(menu => {
+            if (menu !== element) { // Avoid checking the same element twice
+                this.checkAndRegisterContextMenu(menu);
+            }
+        });
+    }
+
+    /**
+     * Check and register context menu if found
+     * @param {HTMLElement} element - Element to check
+     */
+    checkAndRegisterContextMenu(element) {
+        const contextMenuInfo = this.detectContextMenuType(element);
+        if (contextMenuInfo) {
+            if (contextMenuInfo.instance) {
+                this.registerContextMenuAutomatically(element, contextMenuInfo);
+            }
+        }
     }
 
     /**
@@ -157,7 +178,6 @@ export class AutoEventHandlerManager {
                         },
                         elementId
                     );
-                    Logger.event.debug(`AutoEventHandlerManager: Registered ${elementType} handler for ${elementId}`);
                 } catch (error) {
                     Logger.event.warn(`AutoEventHandlerManager: Failed to register ${elementType} handler for ${elementId}:`, error);
                 }
@@ -191,7 +211,6 @@ export class AutoEventHandlerManager {
                         },
                         inputId
                     );
-                    Logger.event.debug(`AutoEventHandlerManager: Registered ${inputType} input handler for ${inputId}`);
                 } catch (error) {
                     Logger.event.warn(`AutoEventHandlerManager: Failed to register ${inputType} input handler for ${inputId}:`, error);
                 }
@@ -360,6 +379,87 @@ export class AutoEventHandlerManager {
     }
 
     /**
+     * Detect context menu type from element
+     * @param {HTMLElement} element - Element to check
+     * @returns {Object|null} Context menu type information or null
+     */
+    detectContextMenuType(element) {
+        const className = typeof element.className === 'string' ? element.className : '';
+        
+        // Check by ID and classes for context menus
+        const contextMenuTypes = [
+            { class: 'base-context-menu', type: 'base-context-menu', instance: 'BaseContextMenu' },
+            { class: 'canvas-context-menu', type: 'canvas-context-menu', instance: 'CanvasContextMenu' },
+            { class: 'asset-context-menu', type: 'asset-context-menu', instance: 'AssetContextMenu' },
+            { class: 'asset-panel-context-menu', type: 'asset-panel-context-menu', instance: 'AssetPanelContextMenu' },
+            { class: 'console-context-menu', type: 'console-context-menu', instance: 'ConsoleContextMenu' },
+            { class: 'layers-context-menu', type: 'layers-context-menu', instance: 'LayersContextMenu' },
+            { class: 'outliner-context-menu', type: 'outliner-context-menu', instance: 'OutlinerContextMenu' }
+        ];
+        
+        for (const menuType of contextMenuTypes) {
+            if (className.includes(menuType.class)) {
+                // Check if element has stored instance (for dynamic context menus)
+                if (element && element._contextMenuInstance) {
+                    return { type: menuType.type, instance: element._contextMenuInstance };
+                }
+                
+                // For BaseContextMenu, if no stored instance, return null
+                if (menuType.instance === 'BaseContextMenu') {
+                    return { type: menuType.type, instance: null };
+                }
+                
+                return { type: menuType.type, instance: this.findContextMenuInstance(menuType.instance, element) };
+            }
+        }
+        
+        return null;
+    }
+
+    /**
+     * Find context menu instance in global objects
+     * @param {string} menuType - Context menu type
+     * @param {HTMLElement} element - Context menu element (optional)
+     * @returns {Object|null} Context menu instance or null
+     */
+    findContextMenuInstance(menuType, element = null) {
+        // First, try to find instance stored on the element itself
+        if (element && element._contextMenuInstance) {
+            return element._contextMenuInstance;
+        }
+        
+        if (!window.editor) {
+            return null;
+        }
+        
+        // Context menus are typically created dynamically and stored in panel instances
+        // We'll try to find them through the panel instances
+        const instanceMap = {
+            'BaseContextMenu': null, // Generic context menu
+            'CanvasContextMenu': 'canvasContextMenu',
+            'AssetContextMenu': 'assetContextMenu',
+            'AssetPanelContextMenu': 'panelContextMenu',
+            'ConsoleContextMenu': 'consoleContextMenu',
+            'LayersContextMenu': 'layersContextMenu',
+            'OutlinerContextMenu': 'outlinerContextMenu'
+        };
+        
+        const propertyName = instanceMap[menuType];
+        if (propertyName) {
+            // Try to find in editor panels
+            const panels = ['assetPanel', 'layersPanel', 'outlinerPanel'];
+            for (const panelName of panels) {
+                const panel = window.editor[panelName];
+                if (panel && panel[propertyName]) {
+                    return panel[propertyName];
+                }
+            }
+        }
+        
+        return null;
+    }
+
+    /**
      * Detect window type from element
      * @param {HTMLElement} element - Element to check
      * @returns {Object|null} Window type information or null
@@ -368,7 +468,6 @@ export class AutoEventHandlerManager {
         const id = element.id;
         const className = typeof element.className === 'string' ? element.className : '';
         
-        Logger.event.debug(`AutoEventHandlerManager: Checking element ${id} with class ${className}`);
         
         // Check by ID and classes
         const windowTypes = [
@@ -490,19 +589,16 @@ export class AutoEventHandlerManager {
      * @returns {Object} Configuration for EventHandlerManager
      */
     createCanvasHandlers(element, type, instance, windowId) {
-        Logger.event.debug(`AutoEventHandlerManager: Creating canvas handlers for ${type}`);
         
         return {
             elementType: 'canvas',
             config: {
                 handlers: {
                     click: (e) => {
-                        Logger.event.debug(`Canvas ${type} clicked`);
                         // Canvas click events are handled by the canvas renderer
                         // No need to prevent default or stop propagation
                     },
                     contextmenu: (e) => {
-                        Logger.event.debug(`Canvas ${type} context menu`);
                         // Canvas context menu events are handled by the canvas renderer
                     }
                 },
@@ -728,6 +824,75 @@ export class AutoEventHandlerManager {
     }
 
     /**
+     * Automatic context menu registration
+     * @param {HTMLElement} element - Context menu element
+     * @param {Object} menuInfo - Context menu type information
+     */
+    registerContextMenuAutomatically(element, menuInfo) {
+        const { type, instance } = menuInfo;
+        const menuId = element.id || `auto-context-menu-${Date.now()}`;
+
+        // Check if already registered
+        if (this.registeredWindows.has(menuId)) {
+            return;
+        }
+
+        // Check if element already has event handlers registered
+        if (eventHandlerManager.isElementRegistered(element)) {
+            return;
+        }
+
+        // Create handlers for context menu
+        const elementConfig = this.createContextMenuHandlers(element, type, instance, menuId);
+        
+        // Register in EventHandlerManager
+        try {
+            eventHandlerManager.registerElement(
+                element,
+                'contextMenu',
+                elementConfig,
+                menuId
+            );
+
+            // Save information about registered context menu
+            this.registeredWindows.set(menuId, {
+                instance,
+                type,
+                handlers: elementConfig,
+                element,
+                pending: false
+            });
+
+        } catch (error) {
+            Logger.event.error(`AutoEventHandlerManager: Failed to register context menu ${menuId}:`, error);
+        }
+    }
+
+    /**
+     * Create handlers for context menus
+     * @param {HTMLElement} element - Context menu element
+     * @param {string} type - Context menu type
+     * @param {Object} instance - Context menu instance
+     * @param {string} menuId - Context menu ID
+     * @returns {Object} Configuration for EventHandlerManager
+     */
+    createContextMenuHandlers(element, type, instance, menuId) {
+        // Use UniversalWindowHandlers for context menus
+        const handlers = UniversalWindowHandlers.createContextMenuHandlers(instance, type);
+        
+        return {
+            handlers: {
+                click: handlers.onClick,
+                contextmenu: handlers.onContextMenu,
+                mouseenter: handlers.onMouseEnter,
+                mouseleave: handlers.onMouseLeave
+            },
+            context: instance || this
+        };
+    }
+
+
+    /**
      * Automatic window registration
      * @param {HTMLElement} element - Window element
      * @param {Object} windowInfo - Window type information
@@ -736,17 +901,13 @@ export class AutoEventHandlerManager {
         const { type, instance } = windowInfo;
         const windowId = element.id || `auto-window-${Date.now()}`;
 
-        Logger.event.debug(`AutoEventHandlerManager: Registering window ${windowId} of type ${type}, instance: ${instance ? 'found' : 'not found'}`);
-
         // Check if already registered
         if (this.registeredWindows.has(windowId)) {
-            Logger.event.debug(`AutoEventHandlerManager: Window ${windowId} already registered`);
             return;
         }
 
         // If instance not found, save window for later registration
         if (!instance) {
-            Logger.event.debug(`AutoEventHandlerManager: Instance not found for ${windowId}, will register later`);
             this.registeredWindows.set(windowId, {
                 instance: null,
                 type,
@@ -846,7 +1007,6 @@ export class AutoEventHandlerManager {
                 const windowTypeInfo = this.detectWindowType(windowInfo.element);
                 const instance = windowTypeInfo ? windowTypeInfo.instance : null;
                 if (instance) {
-                    Logger.event.debug(`AutoEventHandlerManager: Found instance for pending window ${windowId}`);
                     
                     // Create handlers depending on window type
                     const elementConfig = this.createElementHandlers(windowInfo.element, windowInfo.type, instance, windowId);

@@ -4,7 +4,7 @@
  * Provides helper functions to quickly add event handling to common UI elements
  */
 
-import { Logger } from './Logger.js';
+import { Logger } from '../utils/Logger.js';
 
 export class EventHandlerUtils {
     /**

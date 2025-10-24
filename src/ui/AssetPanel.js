@@ -4,7 +4,7 @@ import { ExtensionErrorUtils } from '../utils/ExtensionErrorUtils.js';
 import { AssetContextMenu } from './AssetContextMenu.js';
 import { AssetPanelContextMenu } from './AssetPanelContextMenu.js';
 import { FoldersPanel } from './FoldersPanel.js';
-import { eventHandlerManager } from '../managers/EventHandlerManager.js';
+import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 // Note: HoverEffects removed - using CSS hover effects like OutlinerPanel
 
 /**

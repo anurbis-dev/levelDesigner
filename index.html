@@ -151,8 +151,8 @@
         import { ExtensionErrorUtils } from './src/utils/ExtensionErrorUtils.js';
         import { MenuManager } from './src/managers/MenuManager.js';
         import { UserPreferencesManager } from './src/managers/UserPreferencesManager.js';
-            import { eventHandlerManager } from './src/managers/EventHandlerManager.js';
-            import { autoEventHandlerManager } from './src/managers/AutoEventHandlerManager.js'; // NEW
+            import { eventHandlerManager } from './src/event-system/EventHandlerManager.js';
+            import { autoEventHandlerManager } from './src/event-system/AutoEventHandlerManager.js'; // NEW
 
         // Safe logging function that works even if Logger is not available
         function safeLog(level, message, ...args) {

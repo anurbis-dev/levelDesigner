@@ -1,5 +1,5 @@
-import { eventHandlerManager } from '../managers/EventHandlerManager.js';
-import { EventHandlerUtils } from '../utils/EventHandlerUtils.js';
+import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
+import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
 import { Logger } from '../utils/Logger.js';
 
 /**

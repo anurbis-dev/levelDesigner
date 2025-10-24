@@ -4,8 +4,8 @@ import { ColorUtils } from '../utils/ColorUtils.js';
 import { BaseContextMenu } from './BaseContextMenu.js';
 import { Logger } from '../utils/Logger.js';
 import { ValidationUtils } from '../utils/ValidationUtils.js';
-import { eventHandlerManager } from '../managers/EventHandlerManager.js';
-import { EventHandlerUtils } from '../utils/EventHandlerUtils.js';
+import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
+import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
 import { dialogSizeManager } from '../utils/DialogSizeManager.js';
 import {
     renderGeneralSettings,

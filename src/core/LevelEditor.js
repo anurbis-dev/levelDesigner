@@ -19,8 +19,8 @@ import { Group } from '../models/Group.js';
 import { duplicateRenderUtils } from '../utils/DuplicateUtils.js';
 
 // Import new modules
-import { EventHandlers } from './EventHandlers.js';
-import { MouseHandlers } from './MouseHandlers.js';
+import { EventHandlers } from '../event-system/EventHandlers.js';
+import { MouseHandlers } from '../event-system/MouseHandlers.js';
 import { ObjectOperations } from './ObjectOperations.js';
 import { GroupOperations } from './GroupOperations.js';
 import { RenderOperations } from './RenderOperations.js';
@@ -39,7 +39,7 @@ import { ActorPropertiesWindow } from '../ui/ActorPropertiesWindow.js';
 import { PanelPositionManager } from '../ui/PanelPositionManager.js';
 import { TouchInitializationManager } from '../managers/TouchInitializationManager.js';
 import { BrowserGesturePreventionManager } from '../managers/BrowserGesturePreventionManager.js';
-import { autoEventHandlerManager } from '../managers/AutoEventHandlerManager.js';
+import { autoEventHandlerManager } from '../event-system/AutoEventHandlerManager.js';
 
 // Import new utilities
 import { ErrorHandler } from '../utils/ErrorHandler.js';

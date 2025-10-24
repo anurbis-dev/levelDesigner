@@ -1,4 +1,4 @@
-import { BaseModule } from './BaseModule.js';
+import { BaseModule } from '../core/BaseModule.js';
 import { Logger } from '../utils/Logger.js';
 import { SearchSectionUtils } from '../utils/SearchSectionUtils.js';
 import { MENU_CONFIG, getShortcutTarget } from '../../config/menu.js';

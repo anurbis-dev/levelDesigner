@@ -14,8 +14,8 @@
 
 import { Logger } from '../utils/Logger.js';
 import { dialogSizeManager } from '../utils/DialogSizeManager.js';
-import { eventHandlerManager } from '../managers/EventHandlerManager.js';
-import { EventHandlerUtils } from '../utils/EventHandlerUtils.js';
+import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
+import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
 
 export class BaseDialog {
     constructor(config = {}) {
