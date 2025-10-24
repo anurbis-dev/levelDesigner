@@ -8,5 +8,6 @@
   "consoleVisible": false,
   "consoleMaxLines": 1000,
   "panelWidth": 300,
-  "showTooltips": true
+  "showTooltips": true,
+  "resizerColor": "#1f2937"
 }

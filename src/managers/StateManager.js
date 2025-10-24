@@ -123,7 +123,8 @@ export class StateManager {
                     textColor: '#d1d5db',
                     activeColor: '#3b82f6',
                     activeTextColor: '#ffffff',
-                    activeTabColor: '#374151'
+                    activeTabColor: '#374151',
+                    resizerColor: '#1f2937'
                 },
             
             // Editor state

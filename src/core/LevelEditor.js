@@ -56,7 +56,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.52.3';
+    static VERSION = '3.52.5';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -1100,6 +1100,7 @@ export class LevelEditor {
             this.stateManager.set('ui.activeTextColor', uiColors.activeTextColor);
             this.stateManager.set('ui.activeTabColor', uiColors.activeTabColor);
             this.stateManager.set('ui.accentColor', uiColors.accentColor);
+            this.stateManager.set('ui.resizerColor', uiColors.resizerColor);
         }
 
         // Apply canvas colors

@@ -14,7 +14,7 @@
 
 ```javascript
 export class LevelEditor {
-    static VERSION = '3.52.3'; // ← ЕДИНСТВЕННЫЙ ИСТОЧНИК ИСТИНЫ
+    static VERSION = '3.52.5'; // ← ЕДИНСТВЕННЫЙ ИСТОЧНИК ИСТИНЫ
 }
 ```
 
@@ -230,7 +230,7 @@ levelDesigner/
 └── README.md              # Основная документация
 ```
 
-## CSS Architecture (v3.24.0)
+## CSS Architecture (v3.52.5)
 
 **Модульная структура стилей** в папке `styles/`:
 

@@ -483,6 +483,12 @@ export class AutoEventHandlerManager {
         for (const windowType of windowTypes) {
             if (id === windowType.id || className.includes(windowType.class)) {
                 Logger.event.info(`AutoEventHandlerManager: Detected window type ${windowType.type} for element ${id}`);
+                
+                // Special handling for UniversalDialog - no instance needed
+                if (windowType.instance === 'UniversalDialog') {
+                    return { type: windowType.type, instance: null };
+                }
+                
                 return { type: windowType.type, instance: this.findWindowInstance(windowType.instance) };
             }
         }
@@ -501,12 +507,16 @@ export class AutoEventHandlerManager {
             return null;
         }
         
+        // Special handling for UniversalDialog - no instance needed
+        if (windowType === 'UniversalDialog') {
+            return { type: 'universal-dialog', instance: null };
+        }
+        
         const instanceMap = {
             'SettingsPanel': 'settingsPanel',
             'ActorPropertiesWindow': 'actorPropertiesWindow',
             'AssetPanel': 'assetPanel',
-            'LayersPanel': 'layersPanel',
-            'UniversalDialog': null // Created dynamically
+            'LayersPanel': 'layersPanel'
         };
         
         const propertyName = instanceMap[windowType];
@@ -900,6 +910,7 @@ export class AutoEventHandlerManager {
     registerWindowAutomatically(element, windowInfo) {
         const { type, instance } = windowInfo;
         const windowId = element.id || `auto-window-${Date.now()}`;
+
 
         // Check if already registered
         if (this.registeredWindows.has(windowId)) {

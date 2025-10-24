@@ -238,6 +238,9 @@ export class UniversalDialog {
         this.dialog.appendChild(footer);
 
         this.overlay.appendChild(this.dialog);
+        
+        // Store dialog instance reference for external handlers
+        this.overlay._dialogInstance = this;
 
         // Apply mobile interface adaptations for dialog container only
         if (this.mobileManager) {
@@ -261,7 +264,8 @@ export class UniversalDialog {
         const button = document.createElement('button');
         button.textContent = text;
         button.className = `dialog-btn mobile-button ${type === 'primary' ? 'dialog-btn-save' : 'dialog-btn-cancel'}`;
-        
+        button.dataset.type = type; // Add data-type attribute for UniversalWindowHandlers
+
         // Event handlers will be set up by EventHandlerManager
         return button;
     }

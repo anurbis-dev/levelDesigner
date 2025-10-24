@@ -27,6 +27,7 @@
   "activeTextColor": "#ffffff",
   "activeTabColor": "#374151",
   "accentColor": "#3B82F6",
+  "resizerColor": "#1f2937",
   "settingsWindow": {
     "x": null,
     "y": null,

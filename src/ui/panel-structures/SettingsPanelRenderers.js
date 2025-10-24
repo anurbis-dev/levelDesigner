@@ -203,7 +203,7 @@ export function renderColorsSettings(stateManager) {
             activeColor: stateManager.get('ui.activeColor') || '#3b82f6',
             activeTextColor: stateManager.get('ui.activeTextColor') || '#ffffff',
             activeTabColor: stateManager.get('ui.activeTabColor') || '#374151',
-            resizerColor: stateManager.get('ui.resizerColor') || '#374151',
+            resizerColor: stateManager.get('ui.resizerColor') || '#1f2937',
             accentColor: stateManager.get('ui.accentColor') || '#3B82F6'
         },
         // Canvas Colors

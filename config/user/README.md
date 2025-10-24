@@ -40,7 +40,8 @@ config/user/
   "rightPanelWidth": 400,
   "consoleHeight": 400,
   "assetsPanelHeight": 300,
-  "consoleVisible": true
+  "consoleVisible": true,
+  "resizerColor": "#1f2937"
 }
 ```
 
@@ -111,6 +112,7 @@ editor.configManager.saveUserConfig('canvas', {
 - `assetsPanelHeight` - высота панели ассетов (px)
 - `consoleVisible` - видимость консоли (true/false)
 - `compactMode` - компактный режим (true/false)
+- `resizerColor` - цвет разделителей панелей (#hex)
 
 ### Canvas настройки (`canvas.json`):
 - `backgroundColor` - цвет фона (#hex)

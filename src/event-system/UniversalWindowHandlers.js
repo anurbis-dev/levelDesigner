@@ -45,13 +45,19 @@ export class UniversalWindowHandlers {
      */
     static handleEscape(windowInstance, windowType) {
         Logger.ui.info(`UniversalWindowHandlers: ESC pressed for ${windowType}, instance: ${windowInstance ? 'found' : 'not found'}`);
-        
+
+        // Special handling for UniversalDialog - let the dialog handle ESC
+        if (windowType === 'universal-dialog') {
+            // Dialog handles ESC through EventHandlerManager
+            return;
+        }
+
         // Check if window is visible before closing
         if (windowInstance && windowInstance.isVisible === false) {
             Logger.ui.debug(`UniversalWindowHandlers: Window ${windowType} is not visible, ignoring ESC`);
             return;
         }
-        
+
         // Универсальные методы закрытия
         if (typeof windowInstance.cancel === 'function') {
             windowInstance.cancel();
@@ -64,12 +70,20 @@ export class UniversalWindowHandlers {
         }
     }
 
+
+
     /**
      * Обработка клика по overlay
      * @param {Object} windowInstance - Экземпляр окна
      * @param {string} windowType - Тип окна
      */
     static handleOverlayClick(windowInstance, windowType) {
+        // Special handling for UniversalDialog - let the dialog handle overlay clicks
+        if (windowType === 'universal-dialog') {
+            // Dialog handles overlay clicks through EventHandlerManager
+            return;
+        }
+
         // Универсальные методы закрытия
         if (typeof windowInstance.cancel === 'function') {
             windowInstance.cancel();
@@ -94,6 +108,12 @@ export class UniversalWindowHandlers {
         const targetClass = target.className;
         
         Logger.ui.debug(`UniversalWindowHandlers: Click on ${targetId || targetClass} in ${windowType}`);
+
+        // Special handling for UniversalDialog - let the dialog handle its own buttons
+        if (windowType === 'universal-dialog') {
+            // Dialog handles its own button clicks through EventHandlerManager
+            return;
+        }
 
         // Универсальные обработчики кнопок
         if (target.tagName === 'BUTTON') {
