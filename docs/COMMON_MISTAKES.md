@@ -142,6 +142,76 @@ eventManager.registerElement(button, 'button', {
 });
 ```
 
+## ❌ НЕПРАВИЛЬНО: Дублирование методов в окнах
+
+```javascript
+// ❌ НЕ ДЕЛАЙТЕ ТАК
+class ActorPropertiesWindow {
+    onConfirm() {
+        this.applyChanges();  // Вызов старого метода
+    }
+    
+    applyChanges() {
+        // ... логика применения изменений
+    }
+    
+    apply() {
+        this.applyChanges();  // Дублирующий метод-обертка
+    }
+}
+```
+
+## ✅ ПРАВИЛЬНО: Унифицированные методы
+
+```javascript
+// ✅ ДЕЛАЙТЕ ТАК
+class ActorPropertiesWindow {
+    onConfirm() {
+        this.apply();  // Прямой вызов унифицированного метода
+    }
+    
+    apply() {
+        // ... вся логика применения изменений в одном месте
+    }
+}
+```
+
+## ❌ НЕПРАВИЛЬНО: Дублирование обработчиков разделителей
+
+```javascript
+// ❌ НЕ ДЕЛАЙТЕ ТАК
+class PanelPositionManager {
+    setupPanelResizer(resizer, panel, panelSide) {
+        // Mouse события
+        resizer.addEventListener('mousedown', (e) => {
+            // ... mouse логика
+        });
+        
+        // Touch события
+        this.registerTouchSupportForResizer(resizer, panel, panelSide, 'horizontal');
+        
+        // Дублирование логики!
+    }
+}
+```
+
+## ✅ ПРАВИЛЬНО: Использование ResizerManager
+
+```javascript
+// ✅ ДЕЛАЙТЕ ТАК
+class PanelPositionManager {
+    setupPanelResizer(resizer, panel, panelSide) {
+        // Единая система управления
+        if (this.levelEditor?.resizerManager) {
+            this.levelEditor.resizerManager.registerResizer(resizer, panel, panelSide, 'horizontal');
+        } else {
+            // Fallback на legacy код
+            this.setupLegacyPanelResizer(resizer, panel, panelSide);
+        }
+    }
+}
+```
+
 ## ❌ НЕПРАВИЛЬНО: Прямая работа с тач-событиями
 
 ```javascript

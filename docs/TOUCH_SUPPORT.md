@@ -571,6 +571,22 @@ if (TouchSupportUtils.isMobile()) {
 
 ## Интеграция
 
+### С ResizerManager
+```javascript
+// Автоматическая регистрация разделителей через ResizerManager
+this.levelEditor.resizerManager.registerResizer(
+    resizerElement, 
+    panelElement, 
+    'left', 
+    'horizontal'
+);
+
+// Автоматическое переключение touch поддержки
+this.stateManager.subscribe('touch.enabled', (enabled) => {
+    this.resizerManager.updateAllResizersTouchSupport();
+});
+```
+
 ### С PanelPositionManager
 ```javascript
 // Автоматическая регистрация разделителей

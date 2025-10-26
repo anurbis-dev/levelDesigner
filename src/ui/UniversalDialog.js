@@ -316,6 +316,14 @@ export class UniversalDialog {
     }
 
     /**
+     * UniversalWindowHandlers compatibility method
+     * Maps to confirm() for consistency
+     */
+    apply() {
+        this.confirm(this.input);
+    }
+
+    /**
      * Cancel dialog
      */
     cancel() {

@@ -333,6 +333,110 @@ styles/
 - **Классы**: `.tab`, `.tab-right` - унифицированные стили
 - **Особенности**: одинаковые padding, font-size, hover эффекты, активные состояния
 
+## Унификация методов диалогов (обновлено v3.52.7)
+
+### Принципы унификации
+Все диалоговые окна должны использовать единые методы для совместимости с UniversalWindowHandlers.
+
+#### Стандартные методы:
+- `apply()` - применение изменений (обязательный)
+- `cancel()` - отмена изменений (опциональный)
+- `hide()` - скрытие окна (обязательный)
+
+#### Пример унификации ActorPropertiesWindow:
+```javascript
+// ❌ ДО (дублирование)
+class ActorPropertiesWindow {
+    onConfirm() {
+        this.applyChanges();  // Вызов старого метода
+    }
+    
+    applyChanges() {
+        // ... логика применения изменений
+    }
+    
+    apply() {
+        this.applyChanges();  // Дублирующий метод-обертка
+    }
+}
+
+// ✅ ПОСЛЕ (унификация)
+class ActorPropertiesWindow {
+    onConfirm() {
+        this.apply();  // Прямой вызов унифицированного метода
+    }
+    
+    apply() {
+        // ... вся логика применения изменений в одном месте
+    }
+}
+```
+
+#### Преимущества унификации:
+- **Совместимость с UniversalWindowHandlers** - автоматическое обнаружение методов
+- **Устранение дублирования** - один метод вместо нескольких
+- **Упрощение архитектуры** - меньше кода для поддержки
+- **Единая точка изменений** - вся логика в одном месте
+
+## Система разделителей (обновлено v3.52.6)
+
+### ResizerManager - Унифицированная система
+Все разделители панелей теперь управляются через единый ResizerManager.
+
+#### Основные принципы:
+- **Единая точка управления** - все разделители регистрируются в ResizerManager
+- **Автоматическое переключение** - touch поддержка включается/отключается автоматически
+- **Fallback совместимость** - система работает даже при недоступности ResizerManager
+- **Централизованное сохранение** - все размеры сохраняются автоматически
+
+#### Регистрация разделителя:
+```javascript
+// В PanelPositionManager или AssetPanel
+if (this.levelEditor?.resizerManager) {
+    this.levelEditor.resizerManager.registerResizer(
+        resizerElement,    // DOM элемент разделителя
+        panelElement,      // DOM элемент панели
+        'left',            // Сторона панели ('left', 'right', 'assets', 'folders')
+        'horizontal'       // Направление ('horizontal', 'vertical')
+    );
+} else {
+    // Fallback на legacy код
+    this.setupLegacyResizer(resizerElement, panelElement, panelSide);
+}
+```
+
+#### Настройка touch поддержки:
+```javascript
+// ResizerManager автоматически подписывается на изменения
+this.stateManager.subscribe('touch.enabled', (enabled) => {
+    this.isTouchEnabled = enabled;
+    this.updateAllResizersTouchSupport();
+});
+
+// Динамическое переключение
+if (this.isTouchEnabled && !resizerData.touchRegistered) {
+    // Включить touch поддержку
+    this.setupTouchEvents(resizer, resizerData.panel, resizerData.panelSide, resizerData.direction);
+} else if (!this.isTouchEnabled && resizerData.touchRegistered) {
+    // Отключить touch поддержку
+    this.touchSupportManager?.unregisterElement(resizer);
+}
+```
+
+#### Legacy поддержка:
+```javascript
+// Fallback методы для совместимости
+setupLegacyPanelResizer(resizer, panel, panelSide) {
+    // Старая логика mouse событий
+    resizer.addEventListener('mousedown', (e) => {
+        // ... legacy код
+    });
+    
+    // Регистрация touch поддержки
+    this.registerTouchSupportForResizer(resizer, panel, panelSide, 'horizontal');
+}
+```
+
 ## Система разделителей панелей
 
 Редактор использует гибкую систему разделителей для настройки размеров панелей с поддержкой дабл-клика для сворачивания/разворачивания:

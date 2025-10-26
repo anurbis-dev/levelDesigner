@@ -469,27 +469,6 @@ export class AssetPanel extends BasePanel {
     setupFoldersResizer() {
         if (!this.foldersResizer) return;
 
-        let isResizingFolders = false;
-        let initialMouseX = 0;
-        let initialFoldersWidth = 0;
-        let lastAppliedFoldersWidth = null;
-        let previousFoldersWidth = 192; // Default width (w-48)
-
-        this.foldersResizer.addEventListener('mousedown', (e) => {
-            isResizingFolders = true;
-            initialMouseX = e.clientX;
-            initialFoldersWidth = this.foldersContainer.offsetWidth;
-            lastAppliedFoldersWidth = null;
-
-            // Visual feedback
-            document.body.style.cursor = 'col-resize';
-            document.body.style.userSelect = 'none';
-            this.foldersResizer.classList.add('resizing');
-
-            e.preventDefault();
-            e.stopPropagation();
-        });
-
         // Double-click handler for foldersResizer
         this.foldersResizer.addEventListener('dblclick', (e) => {
             e.preventDefault();
@@ -500,6 +479,7 @@ export class AssetPanel extends BasePanel {
             const resizerWidth = 4;
             const minWidth = 0;
             const maxWidth = containerWidth - resizerWidth;
+            const previousFoldersWidth = 192; // Default width (w-48)
             
             // Check if already at minimum (collapsed)
             if (currentWidth <= minWidth) {
@@ -518,19 +498,75 @@ export class AssetPanel extends BasePanel {
                 }
             } else {
                 // Save current width and collapse
-                previousFoldersWidth = currentWidth;
+                const newWidth = minWidth;
                 
                 // Update StateManager instead of direct styles
                 if (this.levelEditor?.stateManager) {
-                    this.levelEditor.stateManager.set('panels.foldersWidth', 0);
+                    this.levelEditor.stateManager.set('panels.foldersWidth', newWidth);
                 }
-                this.updateContentVisibility(0);
+                this.updateContentVisibility(newWidth);
                 
                 // Save to preferences
                 if (this.levelEditor?.userPrefs) {
-                    this.levelEditor.userPrefs.set('foldersWidth', 0);
+                    this.levelEditor.userPrefs.set('foldersWidth', newWidth);
                 }
             }
+        });
+
+        // Register with unified ResizerManager
+        if (this.levelEditor?.resizerManager) {
+            this.levelEditor.resizerManager.registerResizer(
+                this.foldersResizer, 
+                this.foldersContainer, 
+                'folders', 
+                'horizontal'
+            );
+        } else {
+            Logger.ui.warn('ResizerManager not available, falling back to legacy setup');
+            // Fallback to legacy setup if ResizerManager is not available
+            this.setupLegacyFoldersResizer();
+        }
+
+        // Load saved width
+        if (this.levelEditor?.userPrefs) {
+            const savedWidth = this.levelEditor.userPrefs.get('foldersWidth');
+            if (savedWidth && typeof savedWidth === 'number' && savedWidth >= 0) {
+                this.foldersContainer.style.width = savedWidth + 'px';
+                this.foldersContainer.style.flexShrink = '0';
+                this.foldersContainer.style.flexGrow = '0';
+                
+                // Update visibility based on loaded width
+                this.updateContentVisibility(savedWidth);
+                
+                Logger.ui.debug('Loaded saved folders width:', savedWidth);
+            }
+        }
+
+        Logger.ui.debug('AssetPanel: Setup folders resizer with unified ResizerManager');
+    }
+
+    /**
+     * Legacy folders resizer setup (fallback)
+     */
+    setupLegacyFoldersResizer() {
+        let isResizingFolders = false;
+        let initialMouseX = 0;
+        let initialFoldersWidth = 0;
+        let lastAppliedFoldersWidth = null;
+
+        this.foldersResizer.addEventListener('mousedown', (e) => {
+            isResizingFolders = true;
+            initialMouseX = e.clientX;
+            initialFoldersWidth = this.foldersContainer.offsetWidth;
+            lastAppliedFoldersWidth = null;
+
+            // Visual feedback
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            this.foldersResizer.classList.add('resizing');
+
+            e.preventDefault();
+            e.stopPropagation();
         });
 
         // Global mousemove handler
@@ -598,26 +634,6 @@ export class AssetPanel extends BasePanel {
                 'folders', 
                 'horizontal'
             );
-        }
-
-        // Load saved width
-        if (this.levelEditor?.userPrefs) {
-            const savedWidth = this.levelEditor.userPrefs.get('foldersWidth');
-            if (savedWidth && typeof savedWidth === 'number' && savedWidth >= 0) {
-                this.foldersContainer.style.width = savedWidth + 'px';
-                this.foldersContainer.style.flexShrink = '0';
-                this.foldersContainer.style.flexGrow = '0';
-                
-                // Update visibility based on loaded width
-                this.updateContentVisibility(savedWidth);
-                
-                // Initialize previous width for double-click toggle
-                if (savedWidth > 0) {
-                    previousFoldersWidth = savedWidth;
-                }
-                
-                Logger.ui.debug('Loaded folders width from preferences:', savedWidth);
-            }
         }
     }
 

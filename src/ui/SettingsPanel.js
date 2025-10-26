@@ -1033,6 +1033,14 @@ export class SettingsPanel {
         this.hide();
     }
 
+    /**
+     * UniversalWindowHandlers compatibility method
+     * Maps to saveSettings() for consistency
+     */
+    apply() {
+        this.saveSettings();
+    }
+
 
     /**
      * Setup context menu for settings

@@ -416,7 +416,7 @@ export class TouchSupportManager {
         switch (config.type) {
             case 'resize':
                 // For resize type, check if this is a panel resizer with double-tap support
-                if (config.onDoubleTap) {
+                if (config.onDoubleTap && typeof config.onDoubleTap === 'function') {
                     // This is a panel resizer - don't start resize immediately
                     // Wait for potential double-tap or movement
                     Logger.ui.debug('TouchSupportManager: Panel resizer touch start - waiting for double-tap or movement');
@@ -553,7 +553,7 @@ export class TouchSupportManager {
         switch (config.type) {
             case 'resize':
                 // For panel resizers, start resize on first movement
-                if (config.onDoubleTap && !touchData.resizeStarted) {
+                if (config.onDoubleTap && typeof config.onDoubleTap === 'function' && !touchData.resizeStarted) {
                     // This is a panel resizer - start resize on first movement
                     touchData.resizeStarted = true;
                     this.handleResizeStart(element, config, touch);
@@ -664,7 +664,7 @@ export class TouchSupportManager {
             switch (config.type) {
             case 'resize':
                 // For panel resizers, check if resize was started
-                if (config.onDoubleTap && !touchData.resizeStarted) {
+                if (config.onDoubleTap && typeof config.onDoubleTap === 'function' && !touchData.resizeStarted) {
                     // This was a tap without movement - don't call resize end
                     Logger.ui.debug('TouchSupportManager: Panel resizer tap ended without movement');
                 } else {

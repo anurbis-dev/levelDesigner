@@ -745,15 +745,11 @@ export class PanelPositionManager {
      */
     setupPanelResizer(resizer, panel, panelSide) {
         Logger.ui.info(`Setting up panel resizer for ${panelSide} panel...`);
-        let isResizing = false;
         
         // Get saved width from StateManager
         const savedWidth = this.stateManager?.get(`panels.${panelSide}PanelWidth`) ?? null;
         
-
-        
         if (savedWidth !== null && savedWidth !== undefined) {
-            
             if (savedWidth > 0) {
                 // Panel is expanded, use saved width as current
                 panel.style.width = savedWidth + 'px';
@@ -782,19 +778,55 @@ export class PanelPositionManager {
             if (this.stateManager) {
                 this.stateManager.set(`panels.${panelSide}PanelWidth`, previousWidth);
                 this.stateManager.set(`panels.${panelSide}PanelPreviousWidth`, previousWidth);
-                
             }
         }
 
-        // Mouse down - start resizing (same as left panel)
+        // Double-click to toggle collapse/expand
+        resizer.addEventListener('dblclick', (e) => {
+            Logger.ui.info(`${panelSide} panel resizer double-click triggered`);
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Use universal panel collapse/expand method directly
+            const savedSize = this.stateManager?.get(`panels.${panelSide}PanelWidth`) ?? 300;
+            const isCollapsed = savedSize <= 5;
+            const shouldCollapse = !isCollapsed;
+            
+            this.togglePanelCollapse(panelSide, shouldCollapse);
+        });
+
+        // Register with unified ResizerManager
+        if (this.levelEditor?.resizerManager) {
+            this.levelEditor.resizerManager.registerResizer(resizer, panel, panelSide, 'horizontal');
+        } else {
+            Logger.ui.warn('ResizerManager not available, falling back to legacy setup');
+            // Fallback to legacy setup if ResizerManager is not available
+            this.setupLegacyPanelResizer(resizer, panel, panelSide);
+        }
+
+        Logger.ui.debug(`Setup ${panelSide} panel resizer with unified ResizerManager`);
+    }
+
+    /**
+     * Legacy panel resizer setup (fallback)
+     */
+    setupLegacyPanelResizer(resizer, panel, panelSide) {
+        let isResizing = false;
+
+        // Mouse down - start resizing
         resizer.addEventListener('mousedown', (e) => {
             isResizing = true;
+            
+            // Apply visual feedback
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+            resizer.classList.add('resizing');
+            
             e.preventDefault();
             e.stopPropagation();
         });
 
         // Register with TouchSupportManager using TouchSupportUtils
-        // Register touch support immediately after resizer is created
         this.registerTouchSupportForResizer(resizer, panel, panelSide, 'horizontal');
 
         // Mouse move - resize panel using unified logic
@@ -817,6 +849,11 @@ export class PanelPositionManager {
             if (isResizing) {
                 isResizing = false;
                 
+                // Remove visual feedback
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                resizer.classList.remove('resizing');
+                
                 // Save width to StateManager and user preferences
                 const currentWidth = panel.offsetWidth;
                 if (this.stateManager) {
@@ -825,7 +862,6 @@ export class PanelPositionManager {
                 if (this.userPrefs) {
                     this.userPrefs.set(`${panelSide}PanelWidth`, currentWidth);
                 }
-                
                 
                 Logger.ui.debug(`Saved ${panelSide} panel width: ${currentWidth}px`);
             }
@@ -838,21 +874,6 @@ export class PanelPositionManager {
             resizer._globalListenersAdded = true;
         }
 
-
-        // Double-click to toggle collapse/expand
-        resizer.addEventListener('dblclick', (e) => {
-            Logger.ui.info(`${panelSide} panel resizer double-click triggered`);
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Use universal panel collapse/expand method directly
-            const savedSize = this.stateManager?.get(`panels.${panelSide}PanelWidth`) ?? 300;
-            const isCollapsed = savedSize <= 5;
-            const shouldCollapse = !isCollapsed;
-            
-            this.togglePanelCollapse(panelSide, shouldCollapse);
-        });
-
         // Store cleanup function on the resizer element
         resizer._cleanup = () => {
             if (resizer._globalListenersAdded) {
@@ -861,8 +882,6 @@ export class PanelPositionManager {
                 resizer._globalListenersAdded = false;
             }
         };
-
-        Logger.ui.debug(`Setup resizer for ${panelSide} panel with full functionality`);
     }
 
     /**

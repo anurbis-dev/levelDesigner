@@ -5,6 +5,7 @@ import { FileManager } from '../managers/FileManager.js';
 import { ConfigManager } from '../managers/ConfigManager.js';
 import { CacheManager } from '../managers/CacheManager.js';
 import { TouchSupportManager } from '../managers/TouchSupportManager.js';
+import { ResizerManager } from '../managers/ResizerManager.js';
 import { SearchSectionUtils } from '../utils/SearchSectionUtils.js';
 import { CanvasRenderer } from '../ui/CanvasRenderer.js';
 import { AssetPanel } from '../ui/AssetPanel.js';
@@ -74,6 +75,7 @@ export class LevelEditor {
         this.browserGesturePreventionManager = new BrowserGesturePreventionManager();
         this.touchSupportManager = new TouchSupportManager(this.stateManager, this.browserGesturePreventionManager);
         this.touchInitializationManager = new TouchInitializationManager(this);
+        this.resizerManager = new ResizerManager(this);
         
         // Store user preferences manager
         this.userPrefs = userPreferencesManager;

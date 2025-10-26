@@ -89,6 +89,62 @@
 - `isBrowserNavigationGesture(deltaX, deltaY, deltaTime, target)` - проверка навигационных жестов
 - `updateElementOptions(element, options)` - обновление настроек элемента
 
+### ActorPropertiesWindow (src/ui/ActorPropertiesWindow.js) - ОБНОВЛЕН
+Окно редактирования свойств актера с унифицированными методами.
+
+#### Основные методы:
+- `constructor(stateManager, levelEditor)` - инициализация с BaseDialog
+- `show(actor)` - отображение окна с данными актера
+- `hide()` - скрытие окна
+- `onShow()` - обработчик показа окна
+- `onHide()` - обработчик скрытия окна
+- `onConfirm()` - обработчик подтверждения (вызывает apply)
+- `onCancel()` - обработчик отмены
+- `apply()` - **УНИФИЦИРОВАННЫЙ** метод применения изменений
+- `renderActorPropertiesContent()` - рендеринг содержимого окна
+- `updateApplyButton()` - обновление текста кнопки Apply
+- `setupChangeListeners()` - настройка слушателей изменений
+- `destroy()` - очистка и уничтожение окна
+
+#### Унификация методов (v3.52.7):
+- **Удален дублирующий метод** `applyChanges()`
+- **Переименован основной метод** в `apply()` для совместимости с UniversalWindowHandlers
+- **Обновлен `onConfirm()`** для прямого вызова `apply()`
+
+#### Совместимость с UniversalWindowHandlers:
+```javascript
+// UniversalWindowHandlers автоматически находит метод apply()
+if (typeof windowInstance.apply === 'function') {
+    windowInstance.apply();  // ✅ Теперь работает для ActorPropertiesWindow
+}
+```
+
+### ResizerManager (src/managers/ResizerManager.js) - НОВЫЙ
+Унифицированный менеджер для всех разделителей панелей.
+
+#### Основные методы:
+- `constructor(levelEditor)` - инициализация с подпиской на touch.enabled
+- `registerResizer(resizer, panel, panelSide, direction)` - регистрация разделителя
+- `unregisterResizer(resizer)` - удаление разделителя
+- `setupMouseEvents(resizer, panel, panelSide, direction)` - настройка mouse событий
+- `setupTouchEvents(resizer, panel, panelSide, direction)` - настройка touch событий
+- `updateAllResizersTouchSupport()` - обновление touch поддержки для всех разделителей
+- `handlePanelResize(panel, panelSide, direction, newSize)` - унифицированная логика изменения размера
+- `savePanelSize(panelSide, direction, size)` - сохранение размера панели
+- `getResizerData(resizer)` - получение данных разделителя
+- `isTouchSupportEnabled()` - проверка включения touch поддержки
+- `destroy()` - уничтожение менеджера и очистка всех разделителей
+
+#### Поддерживаемые параметры:
+- `panelSide`: 'left', 'right', 'assets', 'folders'
+- `direction`: 'horizontal', 'vertical'
+
+#### Автоматические функции:
+- Подписка на изменения `touch.enabled`
+- Динамическое включение/отключение touch событий
+- Централизованное сохранение размеров
+- Fallback на legacy код
+
 ### TouchSupportManager (обновлен)
 - `getPreventionOptions(config)` - получение опций блокировки для типа конфигурации
 - Интеграция с BrowserGesturePreventionManager

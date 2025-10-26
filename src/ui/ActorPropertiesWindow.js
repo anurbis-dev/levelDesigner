@@ -101,8 +101,7 @@ export class ActorPropertiesWindow extends BaseDialog {
 
     onConfirm() {
         // Called when Apply button is clicked
-        this.applyChanges();
-        this.hide();
+        this.apply();
     }
 
     onCancel() {
@@ -317,7 +316,7 @@ export class ActorPropertiesWindow extends BaseDialog {
         });
     }
 
-    applyChanges() {
+    apply() {
         if (!this.currentActor) return;
 
         const name = document.getElementById('actor-name')?.value || '';

@@ -26,6 +26,7 @@
 - **Единая система диалогов** - BaseDialog класс для всех всплывающих окон с фиксированной высотой, динамической шириной и плавной инициализацией без скачков размеров
 - **Полная пересборка Settings Panel** - все методы render переведены на рефакторированные конструкторы, удален дублирующий код (~400+ строк), DialogSizeManager обновлен для работы с новой структурой
 - **Принципы диалогов** - SettingsPanel создается с levelEditor, stateManager доступен, использовать наследование от BaseDialog
+- **Унификация методов ActorPropertiesWindow (v3.52.7)** - устранено дублирование методов apply/applyChanges, единый метод apply() для совместимости с UniversalWindowHandlers
 
 ---
 
@@ -38,6 +39,7 @@
 - Централизованное сохранение позиций в StateManager
 - Интеграция с StateManager для синхронизации состояния
 - Динамическое создание панелей с защитой от дублирования слушателей
+- **Интеграция с ResizerManager (v3.52.6)** - использование унифицированной системы разделителей
 - **Оптимизированные CSS классы** - .tab-panel и .panel-resizer для устранения дублирования
 
 ### Canvas Container Architecture
@@ -66,6 +68,16 @@
 - **Унифицированная система управления панелями (v3.51.12)** - централизованное сворачивание/разворачивание через togglePanelCollapse, универсальное позиционирование разделителей
 - Методы: togglePanelPosition, ensurePanelExists, createPanelResizer, setupPanelResizer, moveTab, updateActiveTabAfterMove, getTabClosestToSeparator, handlePanelResize, _updateUI, removeEmptyPanel, togglePanelCollapse, updateResizerPosition, toggleTabPanelCollapse, toggleAssetsPanelCollapse, toggleFoldersPanelCollapse
 
+### ResizerManager
+**Файл**: `src/managers/ResizerManager.js`
+- Унифицированный менеджер для всех разделителей панелей
+- Автоматическое определение устройства и маршрутизация событий
+- Подписка на изменения `touch.enabled` с динамическим переключением
+- Fallback на legacy код при недоступности ResizerManager
+- Поддержка горизонтальных и вертикальных разделителей
+- Централизованное управление mouse и touch событиями
+- Методы: registerResizer, unregisterResizer, setupMouseEvents, setupTouchEvents, updateAllResizersTouchSupport
+
 ### TouchSupportManager
 **Файл**: `src/managers/TouchSupportManager.js`
 - Централизованный менеджер для обработки тач-событий и жестов
@@ -75,7 +87,7 @@
 - Контекстные меню через long-press
 - Настраиваемые жесты: marquee selection, two-finger pan/zoom, long-press context menu
 - Конфигурация через `config/defaults/touch.json`
-- **Упрощенная архитектура (v3.51.12)** - удален неиспользуемый метод handlePanelDoubleClick
+- **Интеграция с ResizerManager (v3.52.6)** - унифицированное управление разделителями
 - Методы: registerElement, handleTouchStart, handleTouchMove, handleTouchEnd, getPreventionOptions
 
 ### BrowserGesturePreventionManager
