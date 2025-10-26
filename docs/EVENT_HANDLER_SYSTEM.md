@@ -1,14 +1,41 @@
 # Руководство по системе обработчиков событий v3.52.5
 
+## 🔗 Быстрые ссылки
+
+- **🚀 Быстрый старт**: [QUICK_START.md](./QUICK_START.md)
+- **🏗️ Архитектура**: [ARCHITECTURE.md](./ARCHITECTURE.md)
+- **📖 API**: [API_REFERENCE.md](./API_REFERENCE.md)
+- **🤖 Примеры**: [DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md#-быстрые-примеры-для-агента)
+- **⚠️ Ошибки**: [COMMON_MISTAKES.md](./COMMON_MISTAKES.md)
+- **🎯 UI**: [UI_CONSTRUCTORS_GUIDE.md](./UI_CONSTRUCTORS_GUIDE.md)
+
+---
+
 ## Обзор
 
 Централизованная система обработчиков событий (EventHandlerManager) предоставляет унифицированный способ управления всеми событиями UI элементов в редакторе уровней. Система автоматически обрабатывает регистрацию, очистку и управление обработчиками событий.
 
-**Ключевые принципы:**
-- **Централизация**: Все обработчики событий управляются через EventHandlerManager
-- **Делегирование**: Использование event delegation для эффективности
-- **Изоляция**: Обработчики вынесены в отдельные классы, панели содержат только бизнес-логику
-- **Автоматическая очистка**: Система автоматически удаляет обработчики при уничтожении элементов
+## 📋 Краткое резюме системы
+
+### 🎯 Назначение обработчиков
+1. **Прямое назначение**: `eventHandlerManager.registerElement(element, type, config)`
+2. **Автоматическое назначение**: AutoEventHandlerManager обнаруживает новые окна через MutationObserver
+3. **Универсальные обработчики**: UniversalWindowHandlers создает стандартные обработчики для всех типов окон
+
+### 🧹 Очистка обработчиков
+1. **Автоматическая очистка**: `eventHandlerManager.unregisterElement(element)` или `unregisterDialog(dialogId)`
+2. **Полная очистка**: `eventHandlerManager.destroy()`
+3. **Предотвращение утечек**: Все обработчики сохраняются в `cleanupFunctions` Map и автоматически удаляются
+
+### 🔄 Жизненный цикл
+```
+Создание элемента → Регистрация обработчиков → Использование → Очистка → Удаление
+```
+
+### ⚠️ Критически важно
+- **Порядок инициализации**: AutoEventHandlerManager ДО LevelEditor
+- **Обязательная очистка**: Всегда вызывайте `unregisterElement()` перед удалением DOM
+- **Привязка контекста**: Используйте `.bind(this)` для всех обработчиков
 
 ## 📝 Изменения в v3.51.10
 
@@ -98,6 +125,11 @@ const windows = document.querySelectorAll('[id*="overlay"], [id*="dialog"], [id*
 windows.forEach(window => {
     autoEventHandlerManager.checkForNewWindow(window);
 });
+
+// ✅ ПРАВИЛЬНО - регистрация отложенных окон после инициализации LevelEditor
+if (autoEventHandlerManager && typeof autoEventHandlerManager.registerPendingWindows === 'function') {
+    autoEventHandlerManager.registerPendingWindows();
+}
 ```
 
 ### ❌ НЕПРАВИЛЬНО:
@@ -116,14 +148,40 @@ autoEventHandlerManager.init(); // Слишком поздно!
 - Делегированные обработчики для контейнеров
 - Автоматическую очистку при уничтожении элементов
 
+**Основные методы:**
+- `registerElement(element, type, config, dialogId)` - регистрация элемента с обработчиками
+- `unregisterElement(element)` - удаление обработчиков элемента
+- `unregisterDialog(dialogId)` - удаление всех обработчиков диалога
+- `getElementConfig(element)` - получение конфигурации элемента
+- `getDialogHandlers(dialogId)` - получение обработчиков диалога
+- `isElementRegistered(element)` - проверка регистрации элемента
+- `getAllRegisteredElements()` - получение всех зарегистрированных элементов
+- `getAllRegisteredDialogs()` - получение всех зарегистрированных диалогов
+- `destroy()` - уничтожение менеджера
+
 ### EventHandlerUtils
 Утилиты для упрощения работы с EventHandlerManager.
 
 ### AutoEventHandlerManager
 Автоматическая система регистрации обработчиков для всех окон. Автоматически обнаруживает новые окна и регистрирует для них обработчики без изменения кода.
 
+**Основные методы:**
+- `init()` - инициализация менеджера
+- `checkForNewWindow(element)` - проверка нового элемента на наличие окон
+- `detectWindowType(element)` - определение типа окна по ID и классам
+- `registerPendingWindows()` - регистрация отложенных окон после инициализации LevelEditor
+- `getRegisteredWindows()` - получение списка зарегистрированных окон
+
 ### UniversalWindowHandlers
 Универсальные обработчики для всех типов окон. Автоматически определяют методы закрытия, применения и обработки событий. **Единый файл для всех компонентов** - больше не нужны отдельные файлы обработчиков для каждого элемента.
+
+**Основные методы:**
+- `createUniversalHandlers(windowInstance, windowType)` - создание универсальных обработчиков для окон
+- `createContextMenuHandlers(contextMenuInstance, menuType)` - создание обработчиков для контекстных меню
+- `createPanelHandlers(panelInstance, panelType)` - создание обработчиков для панелей
+- `handleEscape(windowInstance, windowType)` - обработка нажатия ESC
+- `handleOverlayClick(windowInstance, windowType)` - обработка клика по overlay
+- `handleClick(e, windowInstance, windowType)` - обработка кликов внутри окна
 
 ## 🔧 Важные технические детали
 
@@ -298,11 +356,364 @@ const registeredWindows = autoEventHandlerManager.getRegisteredWindows();
 console.log('Registered windows:', registeredWindows);
 ```
 
-### 4. Очистка обработчиков
+## 🎯 Система назначения обработчиков
 
+### Как работает назначение обработчиков
+
+Система назначения работает через **централизованную регистрацию** - все обработчики регистрируются через EventHandlerManager, который управляет их жизненным циклом.
+
+#### Процесс назначения:
 ```javascript
-// Автоматическая очистка - система сама удаляет обработчики при закрытии окон
-// Никаких дополнительных действий не требуется!
+// 1. Создание элемента
+const button = document.createElement('button');
+button.id = 'my-button';
+
+// 2. Регистрация обработчиков через EventHandlerManager
+eventHandlerManager.registerElement(button, 'button', {
+    handlers: {
+        click: this.onClick.bind(this),
+        mouseenter: this.onHover.bind(this),
+        mouseleave: this.onLeave.bind(this)
+    },
+    context: this,
+    dialogId: 'my-dialog' // опционально
+});
+
+// 3. EventHandlerManager автоматически:
+// - Добавляет обработчики к элементу
+// - Сохраняет cleanup functions
+// - Регистрирует элемент в Map
+```
+
+#### Автоматическое назначение (AutoEventHandlerManager):
+```javascript
+// 1. Создание DOM элемента
+const dialog = document.createElement('div');
+dialog.id = 'settings-overlay';
+dialog.className = 'settings-container';
+
+// 2. Добавление в DOM
+document.body.appendChild(dialog);
+
+// 3. AutoEventHandlerManager автоматически:
+// - Обнаруживает новый элемент через MutationObserver
+// - Определяет тип окна по ID и классам
+// - Создает универсальные обработчики
+// - Регистрирует их в EventHandlerManager
+```
+
+### Типы назначения обработчиков
+
+#### 1. Прямое назначение (для отдельных элементов):
+```javascript
+// Для кнопок, полей ввода, etc.
+eventHandlerManager.registerElement(element, 'button', {
+    handlers: {
+        click: this.onClick.bind(this)
+    },
+    context: this
+});
+```
+
+#### 2. Диалоговые обработчики (для окон):
+```javascript
+// Для диалогов с глобальными обработчиками
+eventHandlerManager.registerElement(dialogElement, 'dialog', {
+    handlers: {
+        click: this.onDialogClick.bind(this)
+    },
+    globalHandlers: {
+        keydown: this.onGlobalKeyDown.bind(this)
+    },
+    context: this,
+    dialogId: 'settings-dialog'
+});
+```
+
+#### 3. Автоматическое назначение (для панелей):
+```javascript
+// Для панелей интерфейса - автоматически через AutoEventHandlerManager
+// Просто создайте элемент с правильным ID/классом:
+const panel = document.createElement('div');
+panel.id = 'layers-content-panel';
+panel.className = 'layers-panel-container';
+
+// Обработчики добавятся автоматически!
+```
+
+### Конфигурация обработчиков
+
+#### Базовая конфигурация:
+```javascript
+const config = {
+    handlers: {
+        // Локальные обработчики элемента
+        click: this.onClick.bind(this),
+        mouseenter: this.onHover.bind(this),
+        mouseleave: this.onLeave.bind(this)
+    },
+    globalHandlers: {
+        // Глобальные обработчики (ESC, overlay click)
+        keydown: this.onGlobalKeyDown.bind(this),
+        click: this.onOverlayClick.bind(this)
+    },
+    context: this, // Контекст для вызова методов
+    dialogId: 'my-dialog' // ID диалога для группировки
+};
+```
+
+#### Расширенная конфигурация:
+```javascript
+const config = {
+    handlers: {
+        click: this.onClick.bind(this),
+        keydown: this.onKeyDown.bind(this),
+        contextmenu: this.onContextMenu.bind(this)
+    },
+    globalHandlers: {
+        keydown: (e) => {
+            if (e.key === 'Escape') {
+                this.onEscape();
+            }
+        },
+        click: (e) => {
+            if (e.target === this.overlay) {
+                this.onOverlayClick();
+            }
+        }
+    },
+    context: this,
+    dialogId: 'settings-dialog',
+    elementId: 'settings-button', // ID элемента для отладки
+    type: 'dialog' // Тип элемента
+};
+```
+
+### Универсальные обработчики (UniversalWindowHandlers)
+
+#### Создание универсальных обработчиков:
+```javascript
+// Для диалогов
+const dialogHandlers = UniversalWindowHandlers.createUniversalHandlers(
+    dialogInstance, 'settings'
+);
+
+// Для контекстных меню
+const contextMenuHandlers = UniversalWindowHandlers.createContextMenuHandlers(
+    contextMenuInstance, 'asset-context-menu'
+);
+
+// Для панелей
+const panelHandlers = UniversalWindowHandlers.createPanelHandlers(
+    panelInstance, 'layers-panel'
+);
+```
+
+#### Автоматическое определение методов:
+```javascript
+// UniversalWindowHandlers автоматически определяет:
+// - Методы закрытия (close, hide, destroy)
+// - Методы применения (apply, save, confirm)
+// - Обработчики событий (onClick, onEscape, onOverlayClick)
+
+// Если методы не найдены, используются стандартные:
+// - close() -> hide()
+// - apply() -> save()
+// - onEscape() -> close()
+```
+
+### Отладка назначения обработчиков
+
+#### Проверка зарегистрированных элементов:
+```javascript
+// Получить все зарегистрированные элементы
+const elements = eventHandlerManager.getAllRegisteredElements();
+console.log('Registered elements:', elements);
+
+// Проверить конкретный элемент
+const config = eventHandlerManager.getElementConfig(element);
+console.log('Element config:', config);
+
+// Проверить диалоговые обработчики
+const dialogHandlers = eventHandlerManager.getDialogHandlers('settings-dialog');
+console.log('Dialog handlers:', dialogHandlers);
+```
+
+#### Логирование назначения:
+```javascript
+// EventHandlerManager автоматически логирует назначение:
+// "🎯 Element registered" - при регистрации элемента
+// "🎯 Dialog registered" - при регистрации диалога
+// "🎯 Global handlers registered" - при регистрации глобальных обработчиков
+
+// AutoEventHandlerManager логирует:
+// "🔄 AutoEventHandlerManager: Window detected" - при обнаружении окна
+// "🔄 AutoEventHandlerManager: Window registered" - при регистрации окна
+```
+
+### Как работает автоматическая очистка
+
+Система очистки работает через **cleanup functions** - функции, которые сохраняются при регистрации обработчиков и вызываются при их удалении.
+
+#### Процесс регистрации:
+```javascript
+// При регистрации элемента
+eventHandlerManager.registerElement(element, 'button', config);
+
+// Внутри EventHandlerManager:
+// 1. Добавляются обработчики событий
+element.addEventListener('click', handler);
+
+// 2. Сохраняются cleanup functions
+cleanupFunctions.push(() => {
+    element.removeEventListener('click', handler);
+});
+
+// 3. Cleanup functions сохраняются в Map
+this.cleanupFunctions.set(element, cleanupFunctions);
+```
+
+#### Процесс очистки:
+```javascript
+// При удалении элемента
+eventHandlerManager.unregisterElement(element);
+
+// Внутри EventHandlerManager:
+// 1. Получаются cleanup functions
+const cleanupFunctions = this.cleanupFunctions.get(element);
+
+// 2. Вызываются все cleanup functions
+cleanupFunctions.forEach(cleanup => cleanup());
+
+// 3. Удаляются из Map
+this.cleanupFunctions.delete(element);
+```
+
+### Когда происходит очистка
+
+#### ✅ Автоматическая очистка (рекомендуется):
+```javascript
+// 1. При закрытии диалога
+dialogElement.style.display = 'none';
+eventHandlerManager.unregisterElement(dialogElement);
+
+// 2. При уничтожении компонента
+component.destroy();
+eventHandlerManager.unregisterElement(component.element);
+
+// 3. При полной очистке
+eventHandlerManager.destroy();
+```
+
+#### ❌ Проблемы при неправильной очистке:
+```javascript
+// ❌ НЕПРАВИЛЬНО - удаление DOM элемента без очистки обработчиков
+element.remove(); // Обработчики остаются в памяти!
+
+// ❌ НЕПРАВИЛЬНО - прямая очистка без EventHandlerManager
+element.removeEventListener('click', handler); // Частичная очистка
+```
+
+### Ручная очистка обработчиков
+
+#### Для отдельных элементов:
+```javascript
+// Удаление обработчиков конкретного элемента
+eventHandlerManager.unregisterElement(buttonElement);
+
+// Проверка регистрации
+if (eventHandlerManager.isElementRegistered(element)) {
+    eventHandlerManager.unregisterElement(element);
+}
+```
+
+#### Для диалогов:
+```javascript
+// Удаление всех обработчиков диалога
+eventHandlerManager.unregisterDialog('settings-dialog');
+
+// Это удалит:
+// - Обработчики самого диалога
+// - Глобальные обработчики (ESC, overlay click)
+// - Все дочерние элементы диалога
+```
+
+#### Полная очистка:
+```javascript
+// Уничтожение всего EventHandlerManager
+eventHandlerManager.destroy();
+
+// Это удалит:
+// - Все зарегистрированные элементы
+// - Все глобальные обработчики
+// - Все диалоговые обработчики
+// - Все cleanup functions
+```
+
+### Предотвращение утечек памяти
+
+#### ✅ Правильный паттерн:
+```javascript
+class MyDialog {
+    constructor() {
+        this.element = document.createElement('div');
+        this.element.id = 'my-dialog';
+        
+        // Регистрация обработчиков
+        eventHandlerManager.registerElement(this.element, 'dialog', {
+            handlers: {
+                click: this.onClick.bind(this),
+                keydown: this.onKeyDown.bind(this)
+            },
+            context: this
+        });
+    }
+    
+    destroy() {
+        // ✅ ПРАВИЛЬНО - очистка перед удалением DOM
+        eventHandlerManager.unregisterElement(this.element);
+        this.element.remove();
+    }
+}
+```
+
+#### ❌ Неправильный паттерн:
+```javascript
+class MyDialog {
+    constructor() {
+        this.element = document.createElement('div');
+        
+        // Прямая регистрация обработчиков
+        this.element.addEventListener('click', this.onClick.bind(this));
+    }
+    
+    destroy() {
+        // ❌ НЕПРАВИЛЬНО - удаление DOM без очистки обработчиков
+        this.element.remove(); // Утечка памяти!
+    }
+}
+```
+
+### Отладка системы очистки
+
+#### Проверка зарегистрированных элементов:
+```javascript
+// Получить все зарегистрированные элементы
+const registeredElements = eventHandlerManager.getAllRegisteredElements();
+console.log('Registered elements:', registeredElements);
+
+// Проверить конкретный элемент
+const isRegistered = eventHandlerManager.isElementRegistered(element);
+console.log('Element registered:', isRegistered);
+```
+
+#### Логирование очистки:
+```javascript
+// EventHandlerManager автоматически логирует очистку
+// В консоли будут сообщения:
+// "🎯 Element unregistered" - при удалении элемента
+// "🎯 Dialog unregistered" - при удалении диалога
+// "🎯 EventHandlerManager destroyed" - при полной очистке
 ```
 
 ## Детальное руководство
@@ -886,11 +1297,11 @@ AutoEventHandlerManager автоматически обнаруживает но
 4. **Автоматическая регистрация** в EventHandlerManager
 
 ### Поддерживаемые типы окон и панелей
-- `settings` - окна настроек
-- `actor-properties` - окна свойств актеров
-- `universal-dialog` - универсальные диалоги
-- `asset-panel` - панель ассетов
-- `layers-panel` - панель слоев
+- `settings` - окна настроек (ID: `settings-overlay`, класс: `settings-container`)
+- `actor-properties` - окна свойств актеров (ID: `actor-properties-overlay`, класс: `actor-properties-container`)
+- `universal-dialog` - универсальные диалоги (ID: `universal-dialog-overlay`, класс: `universal-dialog-container`)
+- `asset-panel` - панель ассетов (ID: `asset-panel-container`, класс: `asset-panel-container`)
+- `layers-panel` - панель слоев (ID: `layers-content-panel`, класс: `layers-panel-container`)
 - Любые новые окна и панели с соответствующими ID/классами
 
 ### Поддерживаемые типы контекстных меню

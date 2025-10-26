@@ -301,6 +301,20 @@
 - `openAssetsPath()` - открытие настроек путей к ассетам
 - `openSettings()` - открытие панели настроек
 
+#### Кэширование и производительность
+- `getCachedObject(objId)` - получение кэшированного объекта
+- `getCachedTopLevelObject(objId)` - получение кэшированного верхнеуровневого объекта
+- `getCachedEffectiveLayerId(obj)` - получение эффективного ID слоя
+- `clearCaches()` - очистка всех кэшей
+- `invalidateObjectCaches(objId)` - инвалидация кэшей объекта
+- `clearSelectableObjectsCache()` - очистка кэша выбираемых объектов
+- `getSelectableObjectsInViewport()` - получение выбираемых объектов в viewport
+- `smartCacheInvalidation(invalidationSpec)` - умная инвалидация кэша
+- `invalidateAfterLayerChanges(changedObjectIds, affectedLayers)` - инвалидация после изменений слоев
+- `invalidateAfterGroupOperations(affectedObjectIds)` - инвалидация после операций с группами
+- `invalidateAfterDuplicateOperations(newObjectIds)` - инвалидация после дублирования
+- `scheduleCacheInvalidation()` - планирование инвалидации кэша
+
 #### История операций
 - `undo()` - отмена последнего действия
 - `redo()` - повтор последнего действия
@@ -508,12 +522,24 @@
 Управление состоянием редактора.
 
 #### Основные методы
+- `constructor()` - создание экземпляра StateManager
+- `createInitialState()` - создание начального состояния
 - `getState()` - получение всего состояния
 - `get(key)` - получение свойства по ключу (поддержка вложенных ключей)
 - `set(key, value)` - установка свойства (поддержка вложенных ключей)
 - `update(updates)` - обновление нескольких свойств
 - `subscribe(key, callback)` - подписка на изменения
 - `notifyListeners(key, newValue, oldValue)` - уведомление слушателей
+- `notify(eventName, data)` - отправка событий
+- `markDirty()` - пометка как грязное
+- `markClean()` - пометка как чистое
+- `reset()` - сброс состояния
+- `updateComponentStatus(component, ready)` - обновление статуса компонента
+- `areComponentsReady(components)` - проверка готовности компонентов
+- `setLevelEditorReady(ready)` - установка готовности LevelEditor
+- `getValidationCache(key)` - получение кэша валидации
+- `setValidationCache(key, value, ttl)` - установка кэша валидации
+- `clearExpiredValidationCache()` - очистка истекшего кэша валидации
 
 #### Состояния отображения
 - `view.grid` - отображение сетки
@@ -594,13 +620,24 @@
 Централизованное управление всеми настройками редактора.
 
 #### Основные методы
+- `constructor()` - создание экземпляра ConfigManager
+- `async loadAllConfigs()` - загрузка всех конфигураций
+- `async loadUserConfig(configName)` - загрузка пользовательской конфигурации
+- `async saveUserConfig(configName, config)` - сохранение пользовательской конфигурации
+- `mergeConfigs(defaultConfigs, userConfigs)` - слияние конфигураций
+- `deepMerge(target, source)` - глубокое слияние объектов
+- `isConfigReady()` - проверка готовности конфигурации
 - `get(path)` - получение настройки по пути
 - `set(path, value)` - установка настройки
+- `getAll()` - получение всех конфигураций
 - `reset()` - сброс к значениям по умолчанию
 - `getAllSettings()` - получение всех настроек
 - `exportSettings()` - экспорт настроек
 - `importSettings(jsonString)` - импорт настроек
 - `validateSetting(path, value)` - валидация настройки
+- `syncAllCanvasToGrid()` - синхронизация всех настроек канваса с сеткой
+- `syncAllGridToCanvas()` - синхронизация всех настроек сетки с канвасом
+- `syncGridCanvasSettings(path, value)` - синхронизация настроек сетки и канваса
 
 #### Специфичные конфигурации
 - `getEditor()` - настройки редактора

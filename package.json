@@ -37,7 +37,6 @@
     "src/",
     "docs/", 
     "index.html",
-    "start_server.bat",
-    "start_server.ps1"
+    "start_Editor.bat"
   ]
 }

@@ -18,14 +18,56 @@
 ### TouchSupportManager
 Центральный менеджер для регистрации и обработки тач-событий.
 
+**Основные методы:**
+- `registerElement(element, configType, customConfig)` - регистрация элемента
+- `unregisterElement(element)` - отмена регистрации
+- `updateConfig(element, newConfig)` - обновление конфигурации
+- `getConfig(element)` - получение конфигурации
+- `isRegistered(element)` - проверка регистрации
+- `clear()` - очистка всех регистраций
+- `destroy()` - уничтожение менеджера
+- `calculatePanelSize(element, config, input, initialData)` - расчет размера панели
+- `calculateHorizontalPanelSize(element, input, initialData)` - расчет ширины
+- `calculateVerticalPanelSize(element, input, initialData)` - расчет высоты
+- `getUnifiedResizeMethods()` - получение методов для внешнего использования
+- `getPreventionOptions(config)` - получение опций блокировки жестов
+
 ### BrowserGesturePreventionManager
 Единая система блокировки браузерных жестов с умным определением навигационных жестов.
+
+**Основные методы:**
+- `initialize()` - инициализация глобальной системы блокировки жестов
+- `registerElement(element, options)` - регистрация элемента для блокировки жестов
+- `unregisterElement(element)` - отмена регистрации элемента
+- `isBrowserNavigationGesture(deltaX, deltaY, deltaTime, target)` - проверка навигационных жестов
+- `updateElementOptions(element, options)` - обновление настроек элемента
 
 ### TouchSupportUtils
 Утилиты для быстрого добавления тач-поддержки к элементам.
 
+**Основные методы:**
+- `addButtonTouchSupport()` - тач-поддержка для кнопок
+- `addDragTouchSupport()` - тач-поддержка для перетаскивания
+- `addMarqueeTouchSupport()` - тач-поддержка для рамки селекта
+- `addLongPressMarqueeTouchSupport()` - тач-поддержка для рамки селекта с длительным нажатием
+- `addTwoFingerPanSupport()` - тач-поддержка для двухпальцевого панарамирования
+- `addTwoFingerZoomSupport()` - тач-поддержка для двухпальцевого зума
+- `addTwoFingerPanZoomSupport()` - комбинированная поддержка панарамирования и зума
+- `addTwoFingerContextSupport()` - тач-поддержка для двухпальцевого контекстного меню
+- `updateTouchAction()` - обновление touch-action для элемента
+- `disableTouchGestures()` - отключение жестов для элемента
+- `enableTouchGestures()` - включение жестов для элемента
+- `isTouchSupported()` - проверка поддержки тач-событий
+- `isMobile()` - проверка мобильного устройства
+
 ### TouchInitializationManager
 Централизованная инициализация всех тач-обработчиков при старте редактора.
+
+**Основные методы:**
+- `initializeAllTouchSupport()` - инициализация всех тач-обработчиков
+- `initializeCanvasTouchSupport()` - инициализация тач-поддержки для канваса
+- `initializeConsoleTouchSupport()` - инициализация тач-поддержки для консоли
+- `initializeAssetPanelTouchSupport()` - инициализация тач-поддержки для панели ассетов
 
 ### Конфигурация
 Настройки в `config/defaults/touch.json` для кастомизации поведения.
@@ -192,7 +234,7 @@ touchManager.registerElement(canvas, 'twoFingerContext', {
 
 ### Gesture Events
 
-## Новые жесты (v3.51.1)
+## Новые жесты (v3.52.5)
 
 ### Рамка селекта (Marquee Selection)
 Однопальцевый тап + драг для создания рамки выбора объектов.
@@ -377,7 +419,34 @@ this.stateManager.set('touch.zoomIntensity', zoomConfig.sensitivity || 0.1);
     "doubleTapThreshold": 300,
     "singleTapDelay": 50,
     "longPressDelay": 500,
-    "minTouchSize": 44
+    "minTouchSize": 44,
+    "minMovement": 5,
+    "visualFeedback": {
+      "enabled": true,
+      "resizeCursor": true,
+      "dragOpacity": 0.7,
+      "highlightColor": "#3b82f6"
+    },
+    "gestures": {
+      "doubleTap": true,
+      "longPress": true,
+      "swipe": false,
+      "pinch": true,
+      "marquee": true,
+      "twoFingerPan": true,
+      "twoFingerContext": true,
+      "twoFingerZoom": true
+    },
+    "accessibility": {
+      "announceChanges": false,
+      "highContrast": false,
+      "reducedMotion": false
+    },
+    "performance": {
+      "throttleResize": true,
+      "throttleDrag": true,
+      "throttleInterval": 16
+    }
   }
 }
 ```
@@ -392,13 +461,52 @@ this.stateManager.set('touch.zoomIntensity', zoomConfig.sensitivity || 0.1);
       "direction": "auto",
       "minSize": 100,
       "maxSize": 800,
-      "doubleTapToggle": true
+      "doubleTapToggle": true,
+      "minMovement": 5
     },
     "tabDraggers": {
       "enabled": true,
       "direction": "horizontal",
       "doubleTapThreshold": 300,
-      "dragThreshold": 10
+      "dragThreshold": 10,
+      "minMovement": 5
+    },
+    "buttons": {
+      "enabled": true,
+      "doubleTapThreshold": 300,
+      "longPressDelay": 500,
+      "visualFeedback": true
+    },
+    "contextMenus": {
+      "enabled": true,
+      "longPressDelay": 500,
+      "tapToClose": true
+    },
+    "marqueeSelection": {
+      "enabled": true,
+      "minMovement": 5,
+      "visualFeedback": true
+    },
+    "longPressMarquee": {
+      "enabled": true,
+      "minMovement": 5,
+      "longPressDelay": 500,
+      "visualFeedback": true
+    },
+    "twoFingerPan": {
+      "enabled": true,
+      "minMovement": 5,
+      "sensitivity": 1.0
+    },
+    "twoFingerContext": {
+      "enabled": true,
+      "tapThreshold": 200
+    },
+    "twoFingerZoom": {
+      "enabled": true,
+      "minScale": 0.1,
+      "maxScale": 10,
+      "sensitivity": 1.0
     }
   }
 }
