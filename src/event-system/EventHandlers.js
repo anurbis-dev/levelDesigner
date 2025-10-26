@@ -151,12 +151,15 @@ export class EventHandlers extends BaseModule {
         // Register all window events in one call
         eventHandlerManager.registerElement(window, windowHandlers, 'window-all');
         
-        // Register global mouse handlers on document.body as fallback
+        // Register global mouse handlers on document for centralized handling
         const globalMouseHandlers = {
             mousedown: (e) => this.editor.mouseHandlers.handleGlobalMouseDown(e),
             mousemove: (e) => this.editor.mouseHandlers.handleGlobalMouseMove(e),
             mouseup: (e) => this.editor.mouseHandlers.handleGlobalMouseUp(e)
         };
+        eventHandlerManager.registerElement(document, globalMouseHandlers, 'global-mouse-document');
+        
+        // Also register on document.body as fallback
         eventHandlerManager.registerElement(document.body, globalMouseHandlers, 'global-mouse-body');
     }
     
@@ -1107,6 +1110,12 @@ export class EventHandlers extends BaseModule {
             
             // Add click handlers to all tabs using EventHandlerManager
             tabs.forEach(tab => {
+                // Check if tab is already registered
+                if (eventHandlerManager.isElementRegistered(tab)) {
+                    Logger.ui.debug(`Tab ${tab.dataset.tab} already registered, skipping`);
+                    return;
+                }
+                
                 const tabHandlers = {
                     click: () => {
                     const tabName = tab.dataset.tab;
@@ -1173,11 +1182,18 @@ export class EventHandlers extends BaseModule {
             
             // Add context menu handlers to all tabs using EventHandlerManager
             tabs.forEach(tab => {
+                // Check if tab context menu is already registered
+                const contextId = `tab-context-${tab.dataset.tab}`;
+                if (eventHandlerManager.isElementRegistered(tab, contextId)) {
+                    Logger.ui.debug(`Tab context ${tab.dataset.tab} already registered, skipping`);
+                    return;
+                }
+                
                 const contextMenuHandlers = {
                     contextmenu: (e) => this.handleTabContextMenu(e)
                 };
                 
-                eventHandlerManager.registerElement(tab, contextMenuHandlers, `tab-context-${tab.dataset.tab}`);
+                eventHandlerManager.registerElement(tab, contextMenuHandlers, contextId);
             });
             
             // Reconnect MutationObservers

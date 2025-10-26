@@ -5,6 +5,7 @@ import { AssetContextMenu } from './AssetContextMenu.js';
 import { AssetPanelContextMenu } from './AssetPanelContextMenu.js';
 import { FoldersPanel } from './FoldersPanel.js';
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
+import { globalEventRegistry } from '../event-system/GlobalEventRegistry.js';
 import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
 // Note: HoverEffects removed - using CSS hover effects like OutlinerPanel
 
@@ -627,9 +628,13 @@ export class AssetPanel extends BasePanel {
         this.foldersMouseMoveHandler = handleMouseMove;
         this.foldersMouseUpHandler = handleMouseUp;
         
-        // Add global listeners
-        document.addEventListener('mousemove', this.foldersMouseMoveHandler);
-        document.addEventListener('mouseup', this.foldersMouseUpHandler);
+        // Register document mouse handlers with GlobalEventRegistry
+        const documentMouseHandlers = {
+            mousemove: this.foldersMouseMoveHandler,
+            mouseup: this.foldersMouseUpHandler
+        };
+        
+        globalEventRegistry.registerComponentHandlers('asset-panel-folders', documentMouseHandlers, 'document');
     }
 
     /**
@@ -767,17 +772,21 @@ export class AssetPanel extends BasePanel {
         this.setupAssetPanelHandlers();
         
         // Window resize handler for real-time grid recalculation
-        this.resizeHandler = () => {
-            // Update asset placement in real-time without debounce
-            if (this.viewMode === 'grid') {
-                // Update grid layout immediately for real-time responsiveness
-                this.updateGridViewSizes();
-            } else {
-                // For list and details view, just update selection visuals
-                this.updateSelectionVisuals();
+        // Register window resize handler with GlobalEventRegistry
+        const windowResizeHandlers = {
+            resize: () => {
+                // Update asset placement in real-time without debounce
+                if (this.viewMode === 'grid') {
+                    // Update grid layout immediately for real-time responsiveness
+                    this.updateGridViewSizes();
+                } else {
+                    // For list and details view, just update selection visuals
+                    this.updateSelectionVisuals();
+                }
             }
         };
-        window.addEventListener('resize', this.resizeHandler, { passive: true });
+        
+        globalEventRegistry.registerComponentHandlers('asset-panel', windowResizeHandlers, 'window');
         
         // Note: Global marquee handling now managed by BasePanel
 
@@ -2511,6 +2520,11 @@ export class AssetPanel extends BasePanel {
         eventHandlerManager.unregisterContainer(this.container);
         eventHandlerManager.unregisterContainer(this.previewsContainer);
         
+        // Clean up global event handlers using GlobalEventRegistry
+        globalEventRegistry.unregisterComponentHandlers('asset-panel');
+        globalEventRegistry.unregisterComponentHandlers('asset-panel-folders');
+        
+        // Legacy cleanup (should be removed after migration)
         if (this.resizeHandler) {
             window.removeEventListener('resize', this.resizeHandler);
         }

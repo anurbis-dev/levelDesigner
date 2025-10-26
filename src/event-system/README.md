@@ -8,6 +8,7 @@
 - **EventHandlerManager.js** - единый менеджер для управления всеми обработчиками событий
 - **EventHandlerUtils.js** - утилиты для упрощения работы с обработчиками
 - **UnifiedTouchManager.js** - унифицированная система обработки тач-событий
+- **GlobalEventRegistry.js** - централизованная система управления глобальными событиями
 
 ### Обработчики событий
 - **EventHandlers.js** - основные обработчики событий редактора
@@ -21,6 +22,8 @@
 - **Автоматическая очистка**: Система автоматически удаляет обработчики при уничтожении элементов
 - **Простота**: Минимальный API для максимальной надежности
 - **Унификация**: Единая система для мышиных и тач-событий
+- **Предотвращение дублирования**: Автоматическая проверка и предотвращение повторной регистрации
+- **Глобальное управление**: Централизованное управление document/window событиями
 
 ## Использование
 
@@ -72,6 +75,32 @@ unifiedTouchManager.registerElement(resizer, 'panelResizer', {
     onResize: (element, targetPanel, newSize, touch) => console.log('Resizing to:', newSize),
     onResizeEnd: (element, targetPanel, currentSize) => console.log('Resize ended:', currentSize)
 });
+```
+
+### Глобальные события
+
+GlobalEventRegistry обеспечивает централизованное управление document/window событиями:
+
+```javascript
+import { globalEventRegistry } from '../event-system/GlobalEventRegistry.js';
+
+// Регистрация window событий
+const windowHandlers = {
+    resize: () => console.log('Window resized'),
+    beforeunload: () => console.log('Window closing')
+};
+globalEventRegistry.registerComponentHandlers('my-component', windowHandlers, 'window');
+
+// Регистрация document событий
+const documentHandlers = {
+    mousemove: (e) => console.log('Mouse moved'),
+    mouseup: (e) => console.log('Mouse up'),
+    keydown: (e) => console.log('Key pressed')
+};
+globalEventRegistry.registerComponentHandlers('my-component', documentHandlers, 'document');
+
+// Отмена регистрации при уничтожении компонента
+globalEventRegistry.unregisterComponentHandlers('my-component');
 ```
 
 ### Типы обработчиков
@@ -193,6 +222,10 @@ const advancedHandlers = EventHandlerUtils.createAdvancedTouchHandlers(
 - **-60% зависимостей** - один импорт вместо множества
 - **-80% времени настройки** - один вызов вместо множества
 - **0 утечек памяти** - автоматическая очистка
+- **Предотвращение дублирования** - автоматическая проверка повторной регистрации
+- **Централизованное управление** - единая система для всех типов событий
+- **Глобальные события** - централизованное управление document/window событиями
+- **Унификация touch/mouse** - единый API для всех типов взаимодействий
 - **Централизованная обработка** - все события в одном месте
 - **Делегирование событий** - один обработчик на контейнер
 - **Полная тач поддержка** - единообразная обработка мыши и тач событий

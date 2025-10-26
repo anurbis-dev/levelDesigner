@@ -11,17 +11,29 @@
 - **TouchSupportManager** - продвинутое распознавание жестов
 - **TouchHandlers** - обработка raw touch событий (legacy поддержка)
 - **EventHandlerManager** - централизованная регистрация событий
+- **Предотвращение дублирования** - автоматическая проверка повторной регистрации
 
 #### Основные методы:
 - `registerElement(element, configType, customConfig, elementId)` - регистрация элемента
 - `unregisterElement(element)` - отмена регистрации
 - `destroy()` - уничтожение менеджера
+- `calculateHorizontalPanelSize()` - расчет размера горизонтальных панелей
+- `calculateVerticalPanelSize()` - расчет размера вертикальных панелей
 
 #### Интеграция с EventHandlerManager:
 ```javascript
 // Автоматическая интеграция через EventHandlerManager
 eventHandlerManager.registerTouchElement(element, 'panelResizer', config, 'my-resizer');
 ```
+
+### GlobalEventRegistry
+**Файл**: `src/event-system/GlobalEventRegistry.js`
+
+Централизованная система управления глобальными событиями:
+- **Document события** - централизованное управление document событиями
+- **Window события** - централизованное управление window событиями
+- **Предотвращение дублирования** - автоматическая проверка повторной регистрации
+- **Автоматическая очистка** - при уничтожении компонентов
 
 ---
 
@@ -139,6 +151,21 @@ eventHandlerManager.registerTouchElement(element, 'panelResizer', {
         console.log('Double tap detected');
     }
 }, 'my-resizer');
+
+// Глобальные события через GlobalEventRegistry
+import { globalEventRegistry } from '../event-system/GlobalEventRegistry.js';
+
+const windowHandlers = {
+    resize: () => console.log('Window resized'),
+    orientationchange: () => console.log('Orientation changed')
+};
+globalEventRegistry.registerComponentHandlers('touch-component', windowHandlers, 'window');
+
+const documentHandlers = {
+    touchstart: (e) => console.log('Touch started'),
+    touchend: (e) => console.log('Touch ended')
+};
+globalEventRegistry.registerComponentHandlers('touch-component', documentHandlers, 'document');
 ```
 
 ### Использование утилит (ОБНОВЛЕНО v3.52.5)
@@ -772,6 +799,20 @@ const handleMouseMove = (e) => {
 #### Интеграция с EventHandlerManager
 - `eventHandlerManager.registerTouchElement(element, configType, customConfig, elementId)` - автоматическая интеграция
 - `eventHandlerManager.unregisterTouchElement(element)` - автоматическая отмена регистрации
+
+### GlobalEventRegistry (НОВЫЙ v3.52.5)
+
+#### Основные методы
+- `registerComponentHandlers(componentId, handlers, target)` - регистрация глобальных событий
+- `unregisterComponentHandlers(componentId)` - отмена регистрации
+- `isComponentRegistered(componentId)` - проверка регистрации
+- `getRegisteredComponents()` - получение списка компонентов
+- `cleanup()` - очистка всех компонентов
+
+#### Параметры
+- `componentId` (string) - уникальный идентификатор компонента
+- `handlers` (Object) - объект с обработчиками событий
+- `target` (string) - цель регистрации ('document' или 'window')
 
 ### TouchSupportManager (Legacy - используется внутри UnifiedTouchManager)
 

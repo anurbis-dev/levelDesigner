@@ -1,4 +1,6 @@
 import { Logger } from '../utils/Logger.js';
+import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
+import { globalEventRegistry } from '../event-system/GlobalEventRegistry.js';
 
 /**
  * Universal panel position manager
@@ -867,20 +869,17 @@ export class PanelPositionManager {
             }
         };
 
-        // Add global mouse events (only if not already added)
-        if (!resizer._globalListenersAdded) {
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-            resizer._globalListenersAdded = true;
-        }
+        // Register document mouse handlers with GlobalEventRegistry
+        const documentMouseHandlers = {
+            mousemove: handleMouseMove,
+            mouseup: handleMouseUp
+        };
+        
+        globalEventRegistry.registerComponentHandlers(`panel-resizer-${panelSide}`, documentMouseHandlers, 'document');
 
         // Store cleanup function on the resizer element
         resizer._cleanup = () => {
-            if (resizer._globalListenersAdded) {
-                document.removeEventListener('mousemove', handleMouseMove);
-                document.removeEventListener('mouseup', handleMouseUp);
-                resizer._globalListenersAdded = false;
-            }
+            globalEventRegistry.unregisterComponentHandlers(`panel-resizer-${panelSide}`);
         };
     }
 
@@ -894,6 +893,12 @@ export class PanelPositionManager {
     registerTouchSupportForResizer(resizer, panel, panelSide, direction) {
         if (!this.levelEditor.unifiedTouchManager) {
             Logger.ui.warn('UnifiedTouchManager not available for resizer touch support');
+            return;
+        }
+
+        // Check if resizer is already registered
+        if (eventHandlerManager.isElementRegistered(resizer)) {
+            Logger.ui.debug(`Resizer ${panelSide}-${direction} already registered, skipping`);
             return;
         }
 
@@ -1220,7 +1225,12 @@ export class PanelPositionManager {
                     draggingState.draggedPanel = null;
                 }
             };
-            document.addEventListener('mouseup', window.tabDraggingGlobalMouseUp);
+            // Register tab dragging mouseup handler with GlobalEventRegistry
+            const tabDragHandlers = {
+                mouseup: window.tabDraggingGlobalMouseUp
+            };
+            
+            globalEventRegistry.registerComponentHandlers('panel-tab-dragging', tabDragHandlers, 'document');
         }
 
         // Mark as setup
@@ -1449,8 +1459,13 @@ export class PanelPositionManager {
                 e.preventDefault();
                 e.stopPropagation();
                 
-                document.addEventListener('mousemove', handleMouseMove);
-                document.addEventListener('mouseup', handleMouseUp);
+                // Register assets panel resizer mouse handlers with GlobalEventRegistry
+                const assetsResizerHandlers = {
+                    mousemove: handleMouseMove,
+                    mouseup: handleMouseUp
+                };
+                
+                globalEventRegistry.registerComponentHandlers('assets-panel-resizer', assetsResizerHandlers, 'document');
             }, 50);
         });
 

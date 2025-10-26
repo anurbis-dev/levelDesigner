@@ -18,7 +18,7 @@
 #### Основные компоненты:
 - **LevelEditor** - главный класс редактора
 - **13 менеджеров** - StateManager, ConfigManager, TouchSupportManager, и др.
-- **event-system/** - унифицированная система событий (EventHandlerManager, UnifiedTouchManager, EventHandlerUtils)
+- **event-system/** - унифицированная система событий (EventHandlerManager, UnifiedTouchManager, GlobalEventRegistry, EventHandlerUtils)
 - **UI компоненты** - панели, диалоги, контекстные меню
 - **Core модули** - операции с объектами, слоями, файлами
 
@@ -28,6 +28,7 @@
 - **ConfigManager**: `get()`, `set()`, `loadAllConfigs()`, `syncAllCanvasToGrid()`
 - **UnifiedTouchManager**: `registerElement()`, `unregisterElement()`, `destroy()` - унифицированная обработка touch событий
 - **EventHandlerManager**: `registerElement()`, `registerCanvas()`, `unregisterElement()` - централизованная регистрация событий
+- **GlobalEventRegistry**: `registerComponentHandlers()`, `unregisterComponentHandlers()` - централизованное управление глобальными событиями
 
 ### 📁 Панель Content
 - Левая сторона Assets (можно переключить вправо)
@@ -43,9 +44,11 @@
 ### 🎮 Тач-поддержка (v3.52.5)
 - **UnifiedTouchManager** - унифицированный менеджер touch событий (объединяет TouchSupportManager + TouchHandlers)
 - **EventHandlerManager** - централизованная регистрация всех событий (mouse + touch)
+- **GlobalEventRegistry** - централизованное управление глобальными событиями (document/window)
 - **BrowserGesturePreventionManager** - блокировка браузерных жестов
 - **TouchInitializationManager** - централизованная инициализация
 - **Canvas pan/zoom** - жесты двумя пальцами
+- **Предотвращение дублирования** - автоматическая проверка повторной регистрации
 - **Унифицированные методы** - `calculatePanelSize()`, `getUnifiedResizeMethods()`
 
 ### 🔧 Практические примеры для агента
@@ -93,6 +96,9 @@ unifiedTouchManager.registerElement(element, 'panelResizer', { direction: 'horiz
 
 // Централизованная обработка событий
 eventHandlerManager.registerElement(button, { click: this.onClick.bind(this) }, 'my-button');
+
+// Глобальные события
+globalEventRegistry.registerComponentHandlers('my-component', { resize: this.onResize.bind(this) }, 'window');
 ```
 
 #### Основные операции:
@@ -101,9 +107,10 @@ eventHandlerManager.registerElement(button, { click: this.onClick.bind(this) }, 
 - **Работа с конфигурацией**: `configManager.get/set/loadAllConfigs()`
 - **Унифицированная тач-поддержка**: `unifiedTouchManager.registerElement()`
 - **Централизованная обработка событий**: `eventHandlerManager.registerElement()`
+- **Глобальные события**: `globalEventRegistry.registerComponentHandlers()`
 
 #### Ключевые принципы:
-- Используйте централизованные системы (StateManager, ConfigManager, EventHandlerManager, UnifiedTouchManager)
+- Используйте централизованные системы (StateManager, ConfigManager, EventHandlerManager, UnifiedTouchManager, GlobalEventRegistry)
 - Доверяйте архитектуре - не добавляйте избыточные проверки
 - Всегда используйте Logger вместо console
 - Наследуйтесь от BaseDialog для диалогов
