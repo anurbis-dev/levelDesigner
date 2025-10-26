@@ -41,7 +41,7 @@ export class ActorPropertiesWindow extends BaseDialog {
     }
 
     setupActorEventListeners() {
-        // Event handlers are now managed by EventHandlerManager
+        // Event handlers are now managed by EventHandlerManager via BaseDialog
 
         // Subscribe to selectedActor changes if stateManager is available
         if (this.stateManager && this.stateManager.subscribe) {
@@ -90,7 +90,7 @@ export class ActorPropertiesWindow extends BaseDialog {
             this.hasChanges = false;
             this.updateApplyButton();
             this.setupChangeListeners();
-            // Event handlers will be set up automatically by AutoEventHandlerManager
+            // Event handlers will be set up automatically by EventHandlerManager via BaseDialog
         }, 0);
     }
 

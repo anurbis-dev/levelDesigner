@@ -1,438 +1,462 @@
 /**
- * EventHandlerManager - Centralized event handling system for UI elements
+ * Simple Event Handler Manager
+ * Unified event handling system with event delegation and automatic cleanup
  * 
- * Provides unified event handling for:
- * - Dialog windows (Settings, ActorProperties, UniversalDialog)
- * - Button interactions
- * - Keyboard shortcuts (ESC, Enter, etc.)
- * - Context menus
- * - Any other UI elements that need event handling
+ * Replaces: EventHandlerManager, AutoEventHandlerManager, UniversalWindowHandlers, EventHandlerUtils
+ * 
+ * Key features:
+ * - Event delegation (one handler per container)
+ * - Automatic cleanup on element removal
+ * - Simple API for registration
+ * - No automatic detection (explicit registration only)
+ * - Built-in error handling and logging
  */
 
 import { Logger } from '../utils/Logger.js';
 
 export class EventHandlerManager {
     constructor() {
-        this.registeredElements = new Map(); // Map<element, config>
-        this.globalHandlers = new Map(); // Map<eventType, handler>
-        this.dialogHandlers = new Map(); // Map<dialogId, handlers>
-        this.cleanupFunctions = new Map(); // Map<element, cleanupFunction>
+        // Map<container, { handlers, cleanup }>
+        this.containers = new Map();
         
-        // Default configurations for different element types
-        this.defaultConfigs = {
-            dialog: {
-                type: 'dialog',
-                handlers: {
-                    click: null,
-                    keydown: null,
-                    contextmenu: null
-                },
-                globalHandlers: {
-                    escape: null,
-                    enter: null
-                }
-            },
-            panel: {
-                type: 'panel',
-                handlers: {
-                    click: null,
-                    contextmenu: null,
-                    // Panels may have specific handlers
-                    layerItemClick: null,
-                    layerButtonClick: null,
-                    assetItemClick: null
-                },
-                globalHandlers: {
-                    // Panels don't have global handlers like dialogs
-                }
-            },
-            custom: {
-                type: 'custom',
-                handlers: {
-                    click: null,
-                    blur: null,
-                    input: null,
-                    keydown: null,
-                    focus: null,
-                    change: null
-                },
-                globalHandlers: {
-                    // Custom elements may have their own global handlers
-                }
-            },
-            button: {
-                type: 'button',
-                handlers: {
-                    click: null,
-                    mouseenter: null,
-                    mouseleave: null
-                }
-            },
-            input: {
-                type: 'input',
-                handlers: {
-                    focus: null,
-                    blur: null,
-                    keydown: null,
-                    change: null
-                }
-            }
-        };
+        // Map<element, container> for quick lookup
+        this.elementToContainer = new Map();
         
-        this.init();
+        // Global handlers (ESC, etc.)
+        this.globalHandlers = new Map();
+        
+        this.initialized = false;
+        
+        Logger.event.info('🎯 EventHandlerManager created');
     }
-    
-    init() {
-        // Setup global event listeners
-        this.setupGlobalEventListeners();
-        
-        Logger.ui.info('🎯 EventHandlerManager initialized');
-    }
-    
+
     /**
-     * Register an element with event handlers
-     * @param {HTMLElement} element - Element to register
-     * @param {string} type - Element type (dialog, button, input, etc.)
-     * @param {Object} config - Configuration object
-     * @param {string} dialogId - Optional dialog ID for dialog-specific handlers
+     * Initialize the manager
      */
-    registerElement(element, type, config, dialogId = null) {
-        if (!element || !type) {
-            Logger.ui.warn('EventHandlerManager: Invalid element or type provided');
+    init() {
+        if (this.initialized) return;
+        
+        this.setupGlobalHandlers();
+        this.initialized = true;
+        
+        Logger.event.info('🎯 EventHandlerManager initialized');
+    }
+
+    /**
+     * Register event handlers for a container using event delegation
+     * @param {HTMLElement} container - Container element
+     * @param {Object} config - Handler configuration
+     * @param {string} containerId - Unique ID for the container
+     */
+    registerContainer(container, config, containerId = null) {
+        if (!container || !config) {
+            Logger.event.warn('EventHandlerManager: Invalid container or config');
             return;
         }
         
-        const elementId = element.id || `element_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const id = containerId || container.id || `container_${Date.now()}`;
         
-        // Merge with default config
-        const defaultConfig = this.defaultConfigs[type] || {};
-        const mergedConfig = {
-            ...defaultConfig,
-            ...config,
-            elementId,
-            dialogId,
-            registeredAt: Date.now()
-        };
-        
-        // Store element configuration
-        this.registeredElements.set(element, mergedConfig);
-        
-        // Setup event listeners
-        this.setupElementEventListeners(element, mergedConfig);
-        
-        // If it's a dialog, register dialog-specific handlers
-        if (dialogId) {
-            this.registerDialogHandlers(dialogId, element, mergedConfig);
+        // Check if already registered
+        if (this.containers.has(container)) {
+            Logger.event.warn(`EventHandlerManager: Container ${id} already registered`);
+            return;
         }
+
+        // Create delegated handlers
+        const handlers = this.createDelegatedHandlers(container, config);
         
-        Logger.ui.debug('🎯 Element registered', {
-            elementId,
-            type,
-            dialogId,
-            handlers: Object.keys(mergedConfig.handlers || {})
+        // Store container info
+        this.containers.set(container, {
+            id,
+            config,
+            handlers,
+            cleanup: []
         });
+
+        // Register event listeners
+        this.setupContainerEventListeners(container, handlers);
+
+        Logger.event.debug('🎯 Container registered', { id, handlers: Object.keys(handlers) });
     }
-    
+
     /**
-     * Register dialog-specific handlers
-     * @param {string} dialogId - Dialog ID
-     * @param {HTMLElement} element - Dialog element
-     * @param {Object} config - Configuration
+     * Register a single element with specific handlers
+     * @param {HTMLElement} element - Element to register
+     * @param {Object} handlers - Event handlers
+     * @param {string} elementId - Element ID for debugging
      */
-    registerDialogHandlers(dialogId, element, config) {
-        if (!this.dialogHandlers.has(dialogId)) {
-            this.dialogHandlers.set(dialogId, new Map());
+    registerElement(element, handlers, elementId = null) {
+        if (!element || !handlers) {
+            Logger.event.warn('EventHandlerManager: Invalid element or handlers');
+            return;
         }
-        
-        const dialogHandlers = this.dialogHandlers.get(dialogId);
-        dialogHandlers.set(element, config);
-        
-        // Setup dialog-specific global handlers (like ESC)
-        if (config.globalHandlers) {
-            this.setupDialogGlobalHandlers(dialogId, config.globalHandlers);
-        }
-    }
-    
-    /**
-     * Setup element-specific event listeners
-     * @param {HTMLElement} element - Element
-     * @param {Object} config - Configuration
-     */
-    setupElementEventListeners(element, config) {
-        const cleanupFunctions = [];
-        
-        if (config.handlers) {
-            // Setup individual event listeners
-            Object.entries(config.handlers).forEach(([eventType, handler]) => {
-                if (handler && typeof handler === 'function') {
+
+        const id = elementId || element.id || `element_${Date.now()}`;
+        const cleanup = [];
+
+        // Register each event handler
+        Object.entries(handlers).forEach(([eventType, handler]) => {
+            if (typeof handler === 'function') {
                     const wrappedHandler = (e) => {
                         try {
-                            handler.call(config.context || this, e);
+                        handler.call(element, e);
                         } catch (error) {
-                            Logger.ui.error('Event handler error:', error);
+                        Logger.event.error(`Event handler error for ${id}:`, error);
                         }
                     };
                     
                     element.addEventListener(eventType, wrappedHandler);
-                    cleanupFunctions.push(() => {
+                cleanup.push(() => {
                         element.removeEventListener(eventType, wrappedHandler);
                     });
                 }
             });
-        }
         
         // Store cleanup functions
-        this.cleanupFunctions.set(element, cleanupFunctions);
+        this.elementToContainer.set(element, {
+            id,
+            cleanup,
+            handlers: Object.keys(handlers)
+        });
+
+        Logger.event.debug('🎯 Element registered', { id, handlers: Object.keys(handlers) });
     }
 
-    
     /**
-     * Setup dialog-specific global handlers
-     * @param {string} dialogId - Dialog ID
-     * @param {Object} globalHandlers - Global handlers config
+     * Register global handlers (ESC, etc.)
+     * @param {Object} handlers - Global event handlers
+     * @param {string} handlerId - Unique ID for the handlers
      */
-    setupDialogGlobalHandlers(dialogId, globalHandlers) {
-        const cleanupFunctions = [];
-        
-        Object.entries(globalHandlers).forEach(([eventType, handler]) => {
-            if (handler && typeof handler === 'function') {
+    registerGlobalHandlers(handlers, handlerId) {
+        if (!handlers || !handlerId) {
+            Logger.event.warn('EventHandlerManager: Invalid global handlers or ID');
+            return;
+        }
+
+        const cleanup = [];
+
+        Object.entries(handlers).forEach(([eventType, handler]) => {
+            if (typeof handler === 'function') {
                 const wrappedHandler = (e) => {
                     try {
-                        // For ESC key, always call handler - let the handler decide if window should close
-                        if (eventType === 'keydown' && e.key === 'Escape') {
-                            handler.call(this, e);
-                        } else {
-                            // For other events, check if dialog is currently visible
-                            const dialogElement = document.getElementById(dialogId);
-                            if (dialogElement && dialogElement.style.display !== 'none') {
-                                handler.call(this, e);
-                            }
-                        }
+                        handler(e);
                     } catch (error) {
-                        Logger.ui.error('Global event handler error:', error);
+                        Logger.event.error(`Global handler error for ${handlerId}:`, error);
                     }
                 };
                 
                 document.addEventListener(eventType, wrappedHandler);
-                cleanupFunctions.push(() => {
+                cleanup.push(() => {
                     document.removeEventListener(eventType, wrappedHandler);
                 });
             }
         });
         
-        // Store cleanup functions for dialog
-        if (!this.cleanupFunctions.has(dialogId)) {
-            this.cleanupFunctions.set(dialogId, []);
+        this.globalHandlers.set(handlerId, {
+            handlers: Object.keys(handlers),
+            cleanup
+        });
+
+        Logger.event.debug('🎯 Global handlers registered', { handlerId, handlers: Object.keys(handlers) });
+    }
+
+    /**
+     * Create delegated event handlers for a container
+     * @param {HTMLElement} container - Container element
+     * @param {Object} config - Handler configuration
+     * @returns {Object} Delegated handlers
+     */
+    createDelegatedHandlers(container, config) {
+        const handlers = {};
+
+        // Click delegation
+        if (config.click) {
+            handlers.click = (e) => {
+                const target = e.target;
+                const selector = config.click.selector || '*';
+                
+                // Find matching element
+                const element = target.closest(selector);
+                if (element) {
+                    const handler = config.click.handler;
+                    if (typeof handler === 'function') {
+                        handler.call(element, e, target);
+                    }
+                }
+            };
         }
-        this.cleanupFunctions.get(dialogId).push(...cleanupFunctions);
+
+        // Context menu delegation
+        if (config.contextmenu) {
+            handlers.contextmenu = (e) => {
+                const target = e.target;
+                const selector = config.contextmenu.selector || '*';
+                
+                const element = target.closest(selector);
+                if (element) {
+                    const handler = config.contextmenu.handler;
+                    if (typeof handler === 'function') {
+                        handler.call(element, e, target);
+                    }
+                }
+            };
+        }
+
+        // Input delegation
+        if (config.input) {
+            handlers.input = (e) => {
+                const target = e.target;
+                const selector = config.input.selector || 'input, textarea, select';
+                
+                if (target.matches(selector)) {
+                    const handler = config.input.handler;
+                    if (typeof handler === 'function') {
+                        handler.call(target, e);
+                    }
+                }
+            };
+        }
+
+        // Change delegation
+        if (config.change) {
+            handlers.change = (e) => {
+                const target = e.target;
+                const selector = config.change.selector || 'input, textarea, select';
+                
+                if (target.matches(selector)) {
+                    const handler = config.change.handler;
+                    if (typeof handler === 'function') {
+                        handler.call(target, e);
+                    }
+                }
+            };
+        }
+
+        // Focus/blur delegation
+        if (config.focus) {
+            handlers.focus = (e) => {
+                const target = e.target;
+                const selector = config.focus.selector || 'input, textarea, select';
+                
+                if (target.matches(selector)) {
+                    const handler = config.focus.handler;
+                    if (typeof handler === 'function') {
+                        handler.call(target, e);
+                    }
+                }
+            };
+        }
+
+        if (config.blur) {
+            handlers.blur = (e) => {
+                const target = e.target;
+                const selector = config.blur.selector || 'input, textarea, select';
+                
+                if (target.matches(selector)) {
+                    const handler = config.blur.handler;
+                    if (typeof handler === 'function') {
+                        handler.call(target, e);
+                    }
+                }
+            };
+        }
+
+        // Keydown delegation
+        if (config.keydown) {
+            handlers.keydown = (e) => {
+                const target = e.target;
+                const selector = config.keydown.selector || '*';
+                
+                const element = target.closest(selector);
+                if (element) {
+                    const handler = config.keydown.handler;
+                    if (typeof handler === 'function') {
+                        handler.call(element, e, target);
+                    }
+                }
+            };
+        }
+
+        return handlers;
+    }
+
+    /**
+     * Setup event listeners for a container
+     * @param {HTMLElement} container - Container element
+     * @param {Object} handlers - Event handlers
+     */
+    setupContainerEventListeners(container, handlers) {
+        const containerInfo = this.containers.get(container);
+        if (!containerInfo) return;
+
+        Object.entries(handlers).forEach(([eventType, handler]) => {
+            if (typeof handler === 'function') {
+                container.addEventListener(eventType, handler);
+                containerInfo.cleanup.push(() => {
+                    container.removeEventListener(eventType, handler);
+                });
+            }
+        });
     }
     
     /**
-     * Setup global event listeners
+     * Setup global event handlers
      */
-    setupGlobalEventListeners() {
-        // Global ESC handler for any visible dialog
-        document.addEventListener('keydown', (e) => {
+    setupGlobalHandlers() {
+        // Global ESC handler
+        const globalEscHandler = (e) => {
             if (e.key === 'Escape') {
-                this.handleGlobalEscape(e);
-            }
-        });
-        
-        // Global click handler for overlay clicks
-        document.addEventListener('click', (e) => {
-            this.handleGlobalClick(e);
-        });
-    }
-    
-    /**
-     * Handle global ESC key
-     * @param {KeyboardEvent} e - Keyboard event
-     */
-    handleGlobalEscape(e) {
-        // Find the topmost visible dialog
-        const visibleDialogs = Array.from(this.dialogHandlers.keys()).filter(dialogId => {
-            const dialogElement = document.getElementById(dialogId);
-            return dialogElement && dialogElement.style.display !== 'none';
-        });
-        
-        if (visibleDialogs.length > 0) {
-            const topDialog = visibleDialogs[visibleDialogs.length - 1];
-            const dialogHandlers = this.dialogHandlers.get(topDialog);
-            
-            if (dialogHandlers) {
-                // Find ESC handler for this dialog
-                for (const [element, config] of dialogHandlers) {
-                    if (config.globalHandlers && config.globalHandlers.escape) {
-                        config.globalHandlers.escape.call(config.context || this, e);
-                        break;
+                // Find the topmost visible dialog/overlay
+                const overlays = document.querySelectorAll('[id$="-overlay"]:not([style*="display: none"])');
+                if (overlays.length > 0) {
+                    const topOverlay = overlays[overlays.length - 1];
+                    const containerInfo = this.containers.get(topOverlay);
+                    if (containerInfo && containerInfo.config.escape) {
+                        containerInfo.config.escape(e);
                     }
                 }
             }
-        }
+        };
+
+        document.addEventListener('keydown', globalEscHandler);
+        
+        // Store cleanup function
+        this.globalHandlers.set('global', {
+            handlers: ['keydown'],
+            cleanup: [() => document.removeEventListener('keydown', globalEscHandler)]
+        });
     }
-    
+
     /**
-     * Handle global click events
-     * @param {MouseEvent} e - Mouse event
+     * Unregister a container and all its handlers
+     * @param {HTMLElement} container - Container to unregister
      */
-    handleGlobalClick(e) {
-        // Check if click is on dialog overlay
-        const overlay = e.target.closest('[id$="-overlay"]');
-        if (overlay && e.target === overlay) {
-            const dialogId = overlay.id.replace('-overlay', '');
-            const dialogHandlers = this.dialogHandlers.get(dialogId);
-            
-            if (dialogHandlers) {
-                // Find overlay click handler
-                for (const [element, config] of dialogHandlers) {
-                    if (config.handlers && config.handlers.overlayClick) {
-                        config.handlers.overlayClick.call(config.context || this, e);
-                        break;
-                    }
-                }
-            }
-        }
+    unregisterContainer(container) {
+        const containerInfo = this.containers.get(container);
+        if (!containerInfo) return;
+
+        // Cleanup event listeners
+        containerInfo.cleanup.forEach(cleanup => cleanup());
+        
+        // Remove from containers map
+        this.containers.delete(container);
+
+        Logger.event.debug('🎯 Container unregistered', { id: containerInfo.id });
     }
-    
+
     /**
-     * Unregister an element
+     * Unregister a single element
      * @param {HTMLElement} element - Element to unregister
      */
     unregisterElement(element) {
-        if (!this.registeredElements.has(element)) {
-            return;
-        }
+        const elementInfo = this.elementToContainer.get(element);
+        if (!elementInfo) return;
+
+        // Cleanup event listeners
+        elementInfo.cleanup.forEach(cleanup => cleanup());
         
-        const config = this.registeredElements.get(element);
-        
-        // Cleanup element event listeners
-        const cleanupFunctions = this.cleanupFunctions.get(element);
-        if (cleanupFunctions) {
-            cleanupFunctions.forEach(cleanup => cleanup());
-            this.cleanupFunctions.delete(element);
-        }
-        
-        // Cleanup dialog handlers if applicable
-        if (config.dialogId) {
-            this.unregisterDialogHandlers(config.dialogId, element);
-        }
-        
-        // Remove from registered elements
-        this.registeredElements.delete(element);
-        
-        Logger.ui.debug('🎯 Element unregistered', {
-            elementId: config.elementId,
-            type: config.type,
-            dialogId: config.dialogId
-        });
+        // Remove from element map
+        this.elementToContainer.delete(element);
+
+        Logger.event.debug('🎯 Element unregistered', { id: elementInfo.id });
     }
-    
+
     /**
-     * Unregister dialog handlers
-     * @param {string} dialogId - Dialog ID
-     * @param {HTMLElement} element - Dialog element
+     * Unregister global handlers
+     * @param {string} handlerId - Handler ID to unregister
      */
-    unregisterDialogHandlers(dialogId, element) {
-        const dialogHandlers = this.dialogHandlers.get(dialogId);
-        if (dialogHandlers) {
-            dialogHandlers.delete(element);
-            
-            // If no more handlers for this dialog, cleanup global handlers
-            if (dialogHandlers.size === 0) {
-                const cleanupFunctions = this.cleanupFunctions.get(dialogId);
-                if (cleanupFunctions) {
-                    cleanupFunctions.forEach(cleanup => cleanup());
-                    this.cleanupFunctions.delete(dialogId);
-                }
-                this.dialogHandlers.delete(dialogId);
-            }
-        }
+    unregisterGlobalHandlers(handlerId) {
+        const handlerInfo = this.globalHandlers.get(handlerId);
+        if (!handlerInfo) return;
+
+        // Cleanup event listeners
+        handlerInfo.cleanup.forEach(cleanup => cleanup());
+        
+        // Remove from global handlers map
+        this.globalHandlers.delete(handlerId);
+
+        Logger.event.debug('🎯 Global handlers unregistered', { handlerId });
     }
-    
+
     /**
-     * Unregister all handlers for a dialog
-     * @param {string} dialogId - Dialog ID
+     * Check if container is registered
+     * @param {HTMLElement} container - Container to check
+     * @returns {boolean} Is registered
      */
-    unregisterDialog(dialogId) {
-        const dialogHandlers = this.dialogHandlers.get(dialogId);
-        if (dialogHandlers) {
-            // Unregister all elements for this dialog
-            for (const [element, config] of dialogHandlers) {
-                this.unregisterElement(element);
-            }
-            
-            // Cleanup dialog-specific handlers
-            const cleanupFunctions = this.cleanupFunctions.get(dialogId);
-            if (cleanupFunctions) {
-                cleanupFunctions.forEach(cleanup => cleanup());
-                this.cleanupFunctions.delete(dialogId);
-            }
-            
-            this.dialogHandlers.delete(dialogId);
-            
-            Logger.ui.debug('🎯 Dialog unregistered', { dialogId });
-        }
-    }
-    
-    /**
-     * Get registered element configuration
-     * @param {HTMLElement} element - Element
-     * @returns {Object|null} Configuration
-     */
-    getElementConfig(element) {
-        return this.registeredElements.get(element) || null;
-    }
-    
-    /**
-     * Get dialog handlers
-     * @param {string} dialogId - Dialog ID
-     * @returns {Map|null} Dialog handlers
-     */
-    getDialogHandlers(dialogId) {
-        return this.dialogHandlers.get(dialogId) || null;
+    isContainerRegistered(container) {
+        return this.containers.has(container);
     }
     
     /**
      * Check if element is registered
-     * @param {HTMLElement} element - Element
+     * @param {HTMLElement} element - Element to check
      * @returns {boolean} Is registered
      */
     isElementRegistered(element) {
-        return this.registeredElements.has(element);
+        return this.elementToContainer.has(element);
     }
-    
+
+    /**
+     * Get container info
+     * @param {HTMLElement} container - Container element
+     * @returns {Object|null} Container info
+     */
+    getContainerInfo(container) {
+        return this.containers.get(container) || null;
+    }
+
+    /**
+     * Get element info
+     * @param {HTMLElement} element - Element
+     * @returns {Object|null} Element info
+     */
+    getElementInfo(element) {
+        return this.elementToContainer.get(element) || null;
+    }
+
+    /**
+     * Get all registered containers
+     * @returns {Array} List of registered containers
+     */
+    getAllContainers() {
+        return Array.from(this.containers.keys());
+    }
+
     /**
      * Get all registered elements
-     * @returns {Map} All registered elements
+     * @returns {Array} List of registered elements
      */
-    getAllRegisteredElements() {
-        return new Map(this.registeredElements);
+    getAllElements() {
+        return Array.from(this.elementToContainer.keys());
     }
-    
+
     /**
-     * Get all registered dialogs
-     * @returns {Map} All registered dialogs
-     */
-    getAllRegisteredDialogs() {
-        return new Map(this.dialogHandlers);
-    }
-    
-    /**
-     * Cleanup all handlers
+     * Destroy the manager and cleanup all handlers
      */
     destroy() {
-        // Cleanup all element handlers
-        for (const [element, cleanupFunctions] of this.cleanupFunctions) {
-            cleanupFunctions.forEach(cleanup => cleanup());
-        }
+        // Cleanup all containers
+        this.containers.forEach((info, container) => {
+            info.cleanup.forEach(cleanup => cleanup());
+        });
+
+        // Cleanup all elements
+        this.elementToContainer.forEach((info, element) => {
+            info.cleanup.forEach(cleanup => cleanup());
+        });
+
+        // Cleanup global handlers
+        this.globalHandlers.forEach((info, handlerId) => {
+            info.cleanup.forEach(cleanup => cleanup());
+        });
         
         // Clear all maps
-        this.registeredElements.clear();
+        this.containers.clear();
+        this.elementToContainer.clear();
         this.globalHandlers.clear();
-        this.dialogHandlers.clear();
-        this.cleanupFunctions.clear();
+
+        this.initialized = false;
         
-        Logger.ui.info('🎯 EventHandlerManager destroyed');
+        Logger.event.info('🎯 EventHandlerManager destroyed');
     }
 }
 

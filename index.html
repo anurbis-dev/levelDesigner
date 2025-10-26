@@ -152,7 +152,6 @@
         import { MenuManager } from './src/managers/MenuManager.js';
         import { UserPreferencesManager } from './src/managers/UserPreferencesManager.js';
             import { eventHandlerManager } from './src/event-system/EventHandlerManager.js';
-            import { autoEventHandlerManager } from './src/event-system/AutoEventHandlerManager.js'; // NEW
 
         // Safe logging function that works even if Logger is not available
         function safeLog(level, message, ...args) {
@@ -404,19 +403,6 @@
             Logger.layout.warn('Error applying user settings immediately:', error);
         }
 
-        // Initialize AutoEventHandlerManager first, before creating LevelEditor
-        try {
-            window.autoEventHandlerManager = autoEventHandlerManager;
-            
-            // Initialize AutoEventHandlerManager after DOM is ready
-            if (autoEventHandlerManager && typeof autoEventHandlerManager.init === 'function') {
-                autoEventHandlerManager.init();
-                Logger.lifecycle.info('AutoEventHandlerManager initialized');
-            }
-        } catch (error) {
-            Logger.lifecycle.warn('Error initializing AutoEventHandlerManager:', error);
-        }
-
         // Initialize the level editor with user preferences
         let editor;
         try {
@@ -437,15 +423,6 @@
         // Make editor globally available
         try {
             window.editor = editor;
-
-            // Force check for any windows that might have been created during LevelEditor initialization
-            if (autoEventHandlerManager && typeof autoEventHandlerManager.checkForNewWindow === 'function') {
-                // Check document.body for any windows that might have been created
-                const windows = document.querySelectorAll('[id*="overlay"], [id*="dialog"], [id*="window"]');
-                windows.forEach(window => {
-                    autoEventHandlerManager.checkForNewWindow(window);
-                });
-            }
         } catch (error) {
             Logger.console.error('Error setting global editor early:', error);
         }
@@ -455,16 +432,6 @@
             editor.init().then(() => {
                 // Panel sizes are now applied immediately before LevelEditor initialization to prevent UI flicker
                 Logger.lifecycle.info('Level Editor initialized successfully');
-
-                // Register pending windows after LevelEditor initialization
-                try {
-                    if (autoEventHandlerManager && typeof autoEventHandlerManager.registerPendingWindows === 'function') {
-                        Logger.lifecycle.debug('Registering pending windows after LevelEditor init');
-                        autoEventHandlerManager.registerPendingWindows();
-                    }
-                } catch (error) {
-                    Logger.lifecycle.warn('Error registering pending windows:', error);
-                }
             }).catch(error => {
                 Logger.lifecycle.warn('Failed to initialize level editor:', error);
                 // Don't show alert for async response errors from extensions

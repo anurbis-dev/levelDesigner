@@ -22,6 +22,7 @@ import { duplicateRenderUtils } from '../utils/DuplicateUtils.js';
 // Import new modules
 import { EventHandlers } from '../event-system/EventHandlers.js';
 import { MouseHandlers } from '../event-system/MouseHandlers.js';
+import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 import { ObjectOperations } from './ObjectOperations.js';
 import { GroupOperations } from './GroupOperations.js';
 import { RenderOperations } from './RenderOperations.js';
@@ -40,7 +41,6 @@ import { ActorPropertiesWindow } from '../ui/ActorPropertiesWindow.js';
 import { PanelPositionManager } from '../ui/PanelPositionManager.js';
 import { TouchInitializationManager } from '../managers/TouchInitializationManager.js';
 import { BrowserGesturePreventionManager } from '../managers/BrowserGesturePreventionManager.js';
-import { autoEventHandlerManager } from '../event-system/AutoEventHandlerManager.js';
 
 // Import new utilities
 import { ErrorHandler } from '../utils/ErrorHandler.js';
@@ -366,6 +366,7 @@ export class LevelEditor {
             const domElements = this.initializeDOMElements();
             this.initializeRenderer(domElements.canvas);
             this.initializeUIComponents(domElements);
+            this.initializeEventHandlerManager();
             this.initializeMenuAndEvents();
             await this.initializeLevelAndData();
             await this.finalizeInitialization();
@@ -519,6 +520,19 @@ export class LevelEditor {
         
         // Apply configuration to level settings
         this.applyConfigurationToLevel();
+    }
+
+    /**
+     * Initialize EventHandlerManager
+     */
+    initializeEventHandlerManager() {
+        try {
+            eventHandlerManager.init();
+            this.log('info', 'EventHandlerManager initialized');
+        } catch (error) {
+            this.log('error', 'Failed to initialize EventHandlerManager:', error.message);
+            throw error;
+        }
     }
 
     /**

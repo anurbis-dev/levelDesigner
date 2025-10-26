@@ -340,11 +340,11 @@ export class UniversalDialog {
             return;
         }
 
-        // Create dialog handlers
-        const dialogHandlers = {
-            onEscape: this.cancel.bind(this),
-            onOverlayClick: this.cancel.bind(this),
-            onClick: (e) => {
+        // Create dialog handlers configuration using new system
+        const dialogHandlers = EventHandlerUtils.createDialogHandlers(
+            this.cancel.bind(this), // ESC handler
+            this.cancel.bind(this), // Overlay click handler
+            (e) => {
                 // Handle button clicks
                 if (e.target.classList.contains('dialog-btn')) {
                     const buttonType = e.target.dataset.type;
@@ -359,21 +359,14 @@ export class UniversalDialog {
                     this.cancel();
                 }
             }
-        };
-
-        // Register dialog with event manager
-        EventHandlerUtils.addDialogEventHandling(
-            this.overlay,
-            'universal-dialog-overlay',
-            dialogHandlers,
-            this,
-            eventHandlerManager
         );
 
-        // Setup input handlers for prompt
+        // Register dialog with new event manager
+        eventHandlerManager.registerContainer(this.overlay, dialogHandlers);
+
+        // Setup input handlers for prompt using new system
         if (this.input) {
             const inputHandlers = EventHandlerUtils.createInputHandlers(
-                this,
                 null, // onChange
                 null, // onFocus
                 null, // onBlur
@@ -385,12 +378,7 @@ export class UniversalDialog {
                 }
             );
 
-            EventHandlerUtils.addInputEventHandling(
-                this.input,
-                inputHandlers,
-                this,
-                eventHandlerManager
-            );
+            eventHandlerManager.registerContainer(this.input.parentElement, inputHandlers);
         }
 
         Logger.ui.debug('UniversalDialog: New event handlers setup complete');
@@ -400,8 +388,14 @@ export class UniversalDialog {
      * Close the dialog
      */
     close() {
-        // Remove event handlers
-        EventHandlerUtils.removeDialogEventHandling('universal-dialog-overlay', eventHandlerManager);
+        // Remove event handlers using new system
+        if (this.overlay) {
+            eventHandlerManager.unregisterContainer(this.overlay);
+        }
+        
+        if (this.input && this.input.parentElement) {
+            eventHandlerManager.unregisterContainer(this.input.parentElement);
+        }
         
         if (this.overlay && this.overlay.parentNode) {
             this.overlay.parentNode.removeChild(this.overlay);

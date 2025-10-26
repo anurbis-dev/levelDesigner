@@ -4,6 +4,8 @@ import { SearchUtils } from '../utils/SearchUtils.js';
 import { BasePanel } from './BasePanel.js';
 import { LayersContextMenu } from './LayersContextMenu.js';
 import { HoverEffects } from '../utils/HoverEffects.js';
+import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
+import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
 import { createLayersPanelStructure, renderLayersControls } from './panel-structures/LayersPanelStructure.js';
 import { searchManager } from '../utils/SearchManager.js';
 
@@ -90,7 +92,7 @@ export class LayersPanel extends BasePanel {
     setupEventListeners() {
         // Context menu setup is done in render() when containers are available
 
-        // Selection functionality is now handled by AutoEventHandlerManager
+        // Selection functionality is now handled by EventHandlerManager
         // No need to setup BasePanel selection for layers
 
         // Subscribe to level changes
@@ -140,6 +142,8 @@ export class LayersPanel extends BasePanel {
 
         // Setup keyboard shortcuts
         this.setupKeyboardShortcuts();
+        
+        // EventHandlerManager will be setup in render() after elements are created
     }
 
     /**
@@ -263,9 +267,7 @@ export class LayersPanel extends BasePanel {
                 this.searchFilter = searchFilter;
                 this.renderLayersSection();
             },
-            onAddLayer: () => {
-                // Now handled automatically by AutoEventHandlerManager
-            }
+            onAddLayer: null
         });
 
         // Setup button event listeners (search is handled by SearchManager, add button by createButton)
@@ -274,6 +276,20 @@ export class LayersPanel extends BasePanel {
         const newSearchInput = topSection.querySelector('#layers-search');
         if (newSearchInput && !newSearchInput.hasAttribute('data-search-managed')) {
             searchManager.setupSearchListeners('layers');
+        }
+        
+        // Register EventHandlerManager for top section if not already registered
+        if (!this._topSectionHandlersRegistered) {
+            const topSectionHandlers = {
+                click: {
+                    selector: '#add-layer-btn',
+                    handler: (e) => {
+                        this.onAddLayer(e);
+                    }
+                }
+            };
+            eventHandlerManager.registerContainer(topSection, topSectionHandlers);
+            this._topSectionHandlersRegistered = true;
         }
 
     }
@@ -338,6 +354,9 @@ export class LayersPanel extends BasePanel {
 
         // Setup event listeners for layer elements
         this.setupLayersEventListeners();
+        
+        // Setup EventHandlerManager after elements are created
+        this.setupLayersPanelHandlers();
     }
 
     /**
@@ -867,7 +886,7 @@ export class LayersPanel extends BasePanel {
             });
         });
         
-        // Button handlers are now handled by AutoEventHandlerManager
+        // Button handlers are now handled by EventHandlerManager
         // No manual event listeners needed for visibility and lock buttons
         
         // Parallax offset input
@@ -903,7 +922,7 @@ export class LayersPanel extends BasePanel {
             });
         });
         
-        // Layer click handler is now handled by AutoEventHandlerManager
+        // Layer click handler is now handled by EventHandlerManager
         // No local event listeners needed - the universal system handles all clicks
         
         // Context menu for layers
@@ -1676,6 +1695,117 @@ export class LayersPanel extends BasePanel {
     /**
      * Setup keyboard shortcuts for layers panel
      */
+    /**
+     * Setup layers panel handlers using new event system
+     */
+    setupLayersPanelHandlers() {
+        // Check if already registered to avoid duplicate registration
+        if (this._eventHandlersRegistered) {
+            return;
+        }
+        
+        // Create layers panel handlers configuration
+        const layersHandlers = {
+            click: {
+                selector: '.layer-item, [data-layer-id], .layer-visibility-btn, .layer-lock-btn',
+                handler: (e) => {
+                    // Handle layer clicks
+                    const layerElement = e.target.closest('.layer-item, [data-layer-id]');
+                    if (layerElement && layerElement.classList.contains('layer-item')) {
+                        const layerId = layerElement.dataset.layerId;
+                        if (layerId) {
+                            this.handleLayerClick(e, layerId);
+                        }
+                        return;
+                    }
+
+                    // Handle button clicks
+                    const button = e.target.closest('button');
+                    if (button) {
+                        console.log('Button clicked:', button.className, button.id);
+                        
+                        if (button.classList.contains('layer-visibility-btn')) {
+                            const layerId = button.closest('[data-layer-id]')?.dataset.layerId;
+                            if (layerId) {
+                                this.toggleLayerVisibility(layerId);
+                            }
+                            return;
+                        }
+                        
+                        if (button.classList.contains('layer-lock-btn')) {
+                            const layerId = button.closest('[data-layer-id]')?.dataset.layerId;
+                            if (layerId) {
+                                this.toggleLayerLock(layerId);
+                            }
+                            return;
+                        }
+                        
+                        if (button.classList.contains('add-layer-btn')) {
+                            console.log('Add layer button clicked, shift:', e.shiftKey);
+                            this.onAddLayer(e);
+                            return;
+                        }
+                    }
+                }
+            },
+            change: {
+                selector: 'input, textarea, select',
+                handler: (e) => {
+                    // Handle input changes
+                    if (e.target.classList.contains('layer-parallax-input')) {
+                        const layerId = e.target.closest('[data-layer-id]')?.dataset.layerId;
+                        if (layerId) {
+                            const value = parseFloat(e.target.value) || 0;
+                            this.updateLayerParallax(layerId, value);
+                        }
+                        return;
+                    }
+                }
+            }
+        };
+
+        // Register container with new event manager
+        eventHandlerManager.registerContainer(this.container, layersHandlers);
+
+        Logger.ui.debug('LayersPanel: New event handlers setup complete');
+        
+        // Mark as registered to avoid duplicate registration
+        this._eventHandlersRegistered = true;
+    }
+
+    /**
+     * Handle layer click events
+     * @param {Event} e - Click event
+     * @param {string} layerId - Layer ID
+     */
+    handleLayerClick(e, layerId) {
+        // Handle single click to set current layer
+        if (e.detail === 1) {
+            this.setCurrentLayerAndNotify(layerId);
+        }
+        
+        // Handle double click to rename layer
+        if (e.detail === 2) {
+            this.renameLayer(layerId);
+        }
+    }
+
+    /**
+     * Update layer parallax offset
+     * @param {string} layerId - Layer ID
+     * @param {number} value - Parallax value
+     */
+    updateLayerParallax(layerId, value) {
+        const level = this.levelEditor.getLevel();
+        if (level) {
+            const layer = level.getLayerById(layerId);
+            if (layer) {
+                layer.parallaxOffset = value;
+                this.stateManager.set('layerChanged', { layerId, property: 'parallaxOffset', value });
+            }
+        }
+    }
+
     setupKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
             // Only handle shortcuts when layers panel is focused or no other input is focused
@@ -1726,6 +1856,17 @@ export class LayersPanel extends BasePanel {
      * Cleanup and destroy panel
      */
     destroy() {
+        // Remove event handlers using new system
+        eventHandlerManager.unregisterContainer(this.container);
+        
+        // Also unregister top section
+        const topSection = this.panelElements?.topCustom;
+        if (topSection) {
+            eventHandlerManager.unregisterContainer(topSection);
+        }
+        
+        this._eventHandlersRegistered = false;
+        this._topSectionHandlersRegistered = false;
         
         // Unsubscribe from all state changes
         this.subscriptions.forEach(unsubscribe => {

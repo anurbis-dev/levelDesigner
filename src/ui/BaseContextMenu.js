@@ -53,6 +53,9 @@ export class BaseContextMenu {
         // Store cursor position for animation end checks
         this.lastCursorX = 0;
         this.lastCursorY = 0;
+        
+        // Store context data for menu item handlers
+        this.lastContextData = null;
 
         // Animation monitoring
         this.monitoringAnimationFrame = null;
@@ -307,6 +310,9 @@ export class BaseContextMenu {
         // Store cursor position for animation end checks
         this.lastCursorX = event.clientX;
         this.lastCursorY = event.clientY;
+        
+        // Store context data for menu item handlers
+        this.lastContextData = contextData;
 
         // Create new context menu
         const contextMenu = this.createContextMenu(event, contextData);
@@ -442,13 +448,18 @@ export class BaseContextMenu {
     handleMenuItemClick(item, contextData) {
         let result;
         
+        Logger.ui.debug('BaseContextMenu: handleMenuItemClick called', { item, contextData });
+        
         // Handle DOM element case
         if (item && item.nodeType === Node.ELEMENT_NODE) {
             // Find the corresponding menu item object
             const menuItemId = item.dataset.menuItemId;
             const menuItem = this.menuItems.find(mi => mi.id === menuItemId);
             
+            Logger.ui.debug('BaseContextMenu: Found menu item', { menuItemId, menuItem });
+            
             if (menuItem && menuItem.action) {
+                Logger.ui.debug('BaseContextMenu: Executing action', menuItem.action);
                 result = menuItem.action(contextData);
             }
             
@@ -457,11 +468,13 @@ export class BaseContextMenu {
         } else {
             // Handle object case (legacy)
             if (item && item.action) {
+                Logger.ui.debug('BaseContextMenu: Executing legacy action', item.action);
                 result = item.action(contextData);
             }
             this.callbacks.onItemClick(item, contextData);
         }
         
+        Logger.ui.debug('BaseContextMenu: handleMenuItemClick result', result);
         return result;
     }
 
@@ -757,10 +770,10 @@ export class BaseContextMenu {
                 }
             };
 
-        // Check if using automatic system
-        if (window.autoEventHandlerManager && window.autoEventHandlerManager.initialized) {
-            // Automatic system handles mouse events, just store references for legacy cleanup
-            Logger.ui.debug('BaseContextMenu: Using automatic mouse leave handling');
+        // Check if using new event system
+        if (window.eventHandlerManager && window.eventHandlerManager.initialized) {
+            // New system handles mouse events, just store references for legacy cleanup
+            Logger.ui.debug('BaseContextMenu: Using new event system mouse leave handling');
             menu._closeMenuHandler = closeMenu;
             menu._closeOnClickHandler = closeOnClick;
         } else {
@@ -848,7 +861,6 @@ export class BaseContextMenu {
 
     /**
      * Setup new event handlers using EventHandlerManager
-     * Now integrates with AutoEventHandlerManager for automatic registration
      */
     setupNewEventHandlers() {
         if (!this.currentMenu) {
@@ -860,60 +872,33 @@ export class BaseContextMenu {
         const menuId = `context-menu-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         this.currentMenu.id = menuId;
 
-        // Check if AutoEventHandlerManager is available and initialized
-        if (window.autoEventHandlerManager && window.autoEventHandlerManager.initialized) {
-            Logger.ui.debug('BaseContextMenu: Using automatic event handler registration');
-            
-            // Add context-menu class for AutoEventHandlerManager detection
-            this.currentMenu.classList.add('context-menu');
-            
-            // Let AutoEventHandlerManager handle the registration
-            // It will detect the context-menu class and register handlers automatically
-            // We just need to ensure the menu is properly set up for detection
-            this.currentMenu.dataset.contextMenuType = this.constructor.name.toLowerCase().replace('contextmenu', '');
-            
-            // Store the context menu instance on the element for AutoEventHandlerManager to find
-            this.currentMenu._contextMenuInstance = this;
-            Logger.ui.debug('BaseContextMenu: Stored context menu instance on element:', this.constructor.name);
-            
-            // Trigger a manual check for this specific element
-            // Use setTimeout to ensure DOM is ready and avoid double registration
-            setTimeout(() => {
-                window.autoEventHandlerManager.checkForNewWindow(this.currentMenu);
-            }, 0);
-        } else {
-            Logger.ui.debug('BaseContextMenu: AutoEventHandlerManager not available, using manual registration');
-            
-            // Fallback to manual registration if AutoEventHandlerManager is not available
-            const menuHandlers = {
-                onClick: (e) => {
-                    // Handle menu item clicks
-                    const menuItem = e.target.closest('.base-context-menu-item');
-                    if (menuItem && !menuItem.classList.contains('disabled')) {
-                        const result = this.handleMenuItemClick(menuItem, this.lastContextData);
-                        if (result !== false) {
-                            this.hideMenu();
-                        }
+        // Create context menu handlers configuration using new system
+        const contextMenuHandlers = EventHandlerUtils.createContextMenuHandlers(
+            (e) => {
+                Logger.ui.debug('BaseContextMenu: Click event received', e.target);
+                
+                // Handle menu item clicks
+                const menuItem = e.target.closest('.base-context-menu-item');
+                Logger.ui.debug('BaseContextMenu: Found menu item element', menuItem);
+                
+                if (menuItem && !menuItem.classList.contains('disabled')) {
+                    Logger.ui.debug('BaseContextMenu: Processing menu item click', { menuItem, contextData: this.lastContextData });
+                    const result = this.handleMenuItemClick(menuItem, this.lastContextData);
+                    if (result !== false) {
+                        this.hideMenu();
                     }
-                },
-                onMouseLeave: () => {
-                    // Close menu when mouse leaves
-                    this.hideMenu();
-                },
-                onContextMenu: (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
+                } else {
+                    Logger.ui.debug('BaseContextMenu: Menu item not found or disabled', { menuItem, disabled: menuItem?.classList.contains('disabled') });
                 }
-            };
+            },
+            () => {
+                // Close menu handler
+                this.hideMenu();
+            }
+        );
 
-            // Register context menu with event manager
-            EventHandlerUtils.addContextMenuEventHandling(
-                this.currentMenu,
-                menuHandlers,
-                this,
-                eventHandlerManager
-            );
-        }
+        // Register context menu with new event manager
+        eventHandlerManager.registerContainer(this.currentMenu, contextMenuHandlers);
 
         Logger.ui.debug('BaseContextMenu: New event handlers setup complete');
     }
@@ -925,24 +910,9 @@ export class BaseContextMenu {
         // Stop cursor monitoring if active
         this.stopCursorMonitoring();
 
-        // Remove event handlers
-        if (this.currentMenu && this.currentMenu.id) {
-            // Check if using automatic system
-            if (window.autoEventHandlerManager && window.autoEventHandlerManager.initialized) {
-                // AutoEventHandlerManager handles cleanup automatically
-                Logger.ui.debug('BaseContextMenu: Using automatic cleanup via AutoEventHandlerManager');
-            } else {
-                // Manual cleanup for fallback mode
-                EventHandlerUtils.removeEventHandling(this.currentMenu, eventHandlerManager);
-                
-                // Clean up legacy event listeners
-                if (this.currentMenu._closeMenuHandler) {
-                    this.currentMenu.removeEventListener('mouseleave', this.currentMenu._closeMenuHandler);
-                }
-                if (this.currentMenu._closeOnClickHandler) {
-                    this.currentMenu.removeEventListener('click', this.currentMenu._closeOnClickHandler);
-                }
-            }
+        // Remove event handlers using new system
+        if (this.currentMenu) {
+            eventHandlerManager.unregisterContainer(this.currentMenu);
         }
 
         if (this.currentMenu) {

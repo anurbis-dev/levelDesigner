@@ -88,7 +88,7 @@ export function createButton(id, className, title, text, onClick = null) {
     button.textContent = text;
     button.style.color = 'var(--ui-text-color, #d1d5db)';
 
-    if (onClick) {
+    if (onClick && typeof onClick === 'function') {
         button.addEventListener('click', onClick);
     }
 

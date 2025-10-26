@@ -19,6 +19,10 @@ export class Toolbar {
         this.isScrolling = false;
         this.scrollStartX = 0;
         this.scrollStartScrollLeft = 0;
+        this.isTouchScrolling = false; // Track if scrolling is initiated by touch
+        
+        // Scrolling event handlers for cleanup
+        this.scrollingHandlers = [];
         
         // Context menu state
         this.showIcons = true;
@@ -57,42 +61,47 @@ export class Toolbar {
             return;
         }
 
-        // Setup button handlers for toolbar buttons
-        const buttons = this.container.querySelectorAll('button');
-        buttons.forEach(button => {
-            const buttonHandlers = EventHandlerUtils.createButtonHandlers(
-                this,
-                this.onButtonClick.bind(this),
-                this.onButtonHover.bind(this),
-                this.onButtonLeave.bind(this)
-            );
+        // Create toolbar handlers configuration using new system
+        const toolbarHandlers = EventHandlerUtils.createPanelHandlers(
+            (e) => {
+                // Handle button clicks
+                const button = e.target.closest('button');
+                if (button) {
+                    this.onButtonClick(e);
+                    return;
+                }
+            },
+            (e) => {
+                // Handle button hover/leave
+                const button = e.target.closest('button');
+                if (button) {
+                    if (e.type === 'mouseenter') {
+                        this.onButtonHover(e);
+                    } else if (e.type === 'mouseleave') {
+                        this.onButtonLeave(e);
+                    }
+                    return;
+                }
+            },
+            (e) => {
+                // Handle input changes
+                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+                    if (e.type === 'change') {
+                        this.onInputChange(e);
+                    } else if (e.type === 'focus') {
+                        this.onInputFocus(e);
+                    } else if (e.type === 'blur') {
+                        this.onInputBlur(e);
+                    } else if (e.type === 'keydown') {
+                        this.onInputKeyDown(e);
+                    }
+                    return;
+                }
+            }
+        );
 
-            EventHandlerUtils.addButtonEventHandling(
-                button,
-                buttonHandlers,
-                this,
-                eventHandlerManager
-            );
-        });
-
-        // Setup input handlers for toolbar inputs
-        const inputs = this.container.querySelectorAll('input, textarea, select');
-        inputs.forEach(input => {
-            const inputHandlers = EventHandlerUtils.createInputHandlers(
-                this,
-                this.onInputChange.bind(this),
-                this.onInputFocus.bind(this),
-                this.onInputBlur.bind(this),
-                this.onInputKeyDown.bind(this)
-            );
-
-            EventHandlerUtils.addInputEventHandling(
-                input,
-                inputHandlers,
-                this,
-                eventHandlerManager
-            );
-        });
+        // Register container with new event manager
+        eventHandlerManager.registerContainer(this.container, toolbarHandlers);
 
         Logger.ui.debug('Toolbar: New event handlers setup complete');
     }
@@ -1045,38 +1054,90 @@ export class Toolbar {
     }
 
     /**
-     * Setup scrolling event listeners for middle mouse button
+     * Setup scrolling event listeners for middle mouse button and touch
      */
     setupScrollingEvents() {
         if (!this.container || !this.toolbarContent) return;
 
+        // Clear existing handlers
+        this.scrollingHandlers.forEach(({ element, event, handler, options }) => {
+            element.removeEventListener(event, handler, options);
+        });
+        this.scrollingHandlers = [];
+
         // Middle mouse button down - start scrolling (on entire toolbar container)
-        this.container.addEventListener('mousedown', (e) => {
+        const mousedownHandler = (e) => {
             if (e.button === 1) { // Middle mouse button
                 e.preventDefault();
                 e.stopPropagation(); // Prevent event bubbling to avoid conflicts
                 this.startScrolling(e);
             }
-        }, { passive: false });
+        };
+        this.container.addEventListener('mousedown', mousedownHandler, { passive: false });
+        this.scrollingHandlers.push({ element: this.container, event: 'mousedown', handler: mousedownHandler, options: { passive: false } });
+
+        // Touch start - start scrolling
+        const touchstartHandler = (e) => {
+            if (e.touches.length === 1 && !this.isScrolling) {
+                const touch = e.touches[0];
+                this.isTouchScrolling = true;
+                this.startScrolling({ clientX: touch.clientX, clientY: touch.clientY });
+            }
+        };
+        this.container.addEventListener('touchstart', touchstartHandler, { passive: true });
+        this.scrollingHandlers.push({ element: this.container, event: 'touchstart', handler: touchstartHandler, options: { passive: true } });
 
         // Mouse move - continue scrolling
-        document.addEventListener('mousemove', (e) => {
-            if (this.isScrolling) {
+        const mousemoveHandler = (e) => {
+            if (this.isScrolling && !this.isTouchScrolling) {
                 e.preventDefault();
                 this.updateScrolling(e);
             }
-        }, { passive: false });
+        };
+        document.addEventListener('mousemove', mousemoveHandler, { passive: false });
+        this.scrollingHandlers.push({ element: document, event: 'mousemove', handler: mousemoveHandler, options: { passive: false } });
+
+        // Touch move - continue scrolling
+        const touchmoveHandler = (e) => {
+            if (this.isScrolling && this.isTouchScrolling && e.touches.length === 1) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                this.updateScrolling({ clientX: touch.clientX, clientY: touch.clientY });
+            }
+        };
+        document.addEventListener('touchmove', touchmoveHandler, { passive: false });
+        this.scrollingHandlers.push({ element: document, event: 'touchmove', handler: touchmoveHandler, options: { passive: false } });
 
         // Mouse up - stop scrolling
-        document.addEventListener('mouseup', (e) => {
-            if (this.isScrolling && e.button === 1) {
+        const mouseupHandler = (e) => {
+            if (this.isScrolling && !this.isTouchScrolling && e.button === 1) {
                 e.preventDefault();
                 this.stopScrolling();
             }
-        }, { passive: false });
+        };
+        document.addEventListener('mouseup', mouseupHandler, { passive: false });
+        this.scrollingHandlers.push({ element: document, event: 'mouseup', handler: mouseupHandler, options: { passive: false } });
+
+        // Touch end - stop scrolling
+        const touchendHandler = (e) => {
+            if (this.isScrolling && this.isTouchScrolling) {
+                this.stopScrolling();
+            }
+        };
+        document.addEventListener('touchend', touchendHandler, { passive: true });
+        this.scrollingHandlers.push({ element: document, event: 'touchend', handler: touchendHandler, options: { passive: true } });
+
+        // Touch cancel - stop scrolling
+        const touchcancelHandler = (e) => {
+            if (this.isScrolling && this.isTouchScrolling) {
+                this.stopScrolling();
+            }
+        };
+        document.addEventListener('touchcancel', touchcancelHandler, { passive: true });
+        this.scrollingHandlers.push({ element: document, event: 'touchcancel', handler: touchcancelHandler, options: { passive: true } });
 
         // Mouse wheel scrolling
-        this.toolbarContent.addEventListener('wheel', (e) => {
+        const wheelHandler = (e) => {
             e.preventDefault();
             e.stopPropagation();
             const scrollAmount = e.deltaY * 0.5; // Adjust scroll sensitivity
@@ -1086,39 +1147,52 @@ export class Toolbar {
             if (this.levelEditor && this.levelEditor.userPrefs) {
                 this.levelEditor.userPrefs.set('toolbarScrollLeft', this.toolbarContent.scrollLeft);
             }
-        }, { passive: false });
+        };
+        this.toolbarContent.addEventListener('wheel', wheelHandler, { passive: false });
+        this.scrollingHandlers.push({ element: this.toolbarContent, event: 'wheel', handler: wheelHandler, options: { passive: false } });
 
         // Prevent context menu on middle click
-        this.toolbarContent.addEventListener('contextmenu', (e) => {
+        const contextmenuHandler = (e) => {
             if (e.button === 1) {
                 e.preventDefault();
                 e.stopPropagation();
             }
-        }, { passive: false });
+        };
+        this.toolbarContent.addEventListener('contextmenu', contextmenuHandler, { passive: false });
+        this.scrollingHandlers.push({ element: this.toolbarContent, event: 'contextmenu', handler: contextmenuHandler, options: { passive: false } });
 
         // Prevent text selection during scrolling
-        this.toolbarContent.addEventListener('selectstart', (e) => {
+        const selectstartHandler = (e) => {
             if (this.isScrolling) {
                 e.preventDefault();
                 e.stopPropagation();
             }
-        });
+        };
+        this.toolbarContent.addEventListener('selectstart', selectstartHandler);
+        this.scrollingHandlers.push({ element: this.toolbarContent, event: 'selectstart', handler: selectstartHandler, options: undefined });
     }
 
     /**
      * Start horizontal scrolling
      */
     startScrolling(e) {
+        // Prevent starting scrolling if already scrolling
+        if (this.isScrolling) {
+            return;
+        }
+        
         this.isScrolling = true;
         this.scrollStartX = e.clientX;
         this.scrollStartScrollLeft = this.toolbarContent.scrollLeft;
         
-        // Change cursor to indicate scrolling
-        this.toolbarContent.style.cursor = 'grabbing';
-        document.body.style.cursor = 'grabbing';
-        document.body.style.userSelect = 'none';
+        // Change cursor to indicate scrolling (only for mouse)
+        if (!this.isTouchScrolling) {
+            this.toolbarContent.style.cursor = 'grabbing';
+            document.body.style.cursor = 'grabbing';
+            document.body.style.userSelect = 'none';
+        }
         
-        Logger.ui.debug('Toolbar scrolling started');
+        Logger.ui.debug('Toolbar scrolling started', this.isTouchScrolling ? '(touch)' : '(mouse)');
     }
 
     /**
@@ -1132,10 +1206,10 @@ export class Toolbar {
         const newScrollLeft = this.scrollStartScrollLeft - deltaX;
 
         // Apply scrolling with bounds
-        this.toolbarContent.scrollLeft = Math.max(0, Math.min(
-            newScrollLeft,
-            this.toolbarContent.scrollWidth - this.toolbarContent.clientWidth
-        ));
+        const maxScrollLeft = this.toolbarContent.scrollWidth - this.toolbarContent.clientWidth;
+        this.toolbarContent.scrollLeft = Math.max(0, Math.min(newScrollLeft, maxScrollLeft));
+        
+        Logger.ui.debug('Toolbar scrolling updated', `deltaX: ${deltaX}, scrollLeft: ${this.toolbarContent.scrollLeft}`);
     }
 
     /**
@@ -1143,9 +1217,12 @@ export class Toolbar {
      */
     stopScrolling() {
         this.isScrolling = false;
+        this.isTouchScrolling = false;
         
         // Restore cursor
-        this.toolbarContent.style.cursor = '';
+        if (this.toolbarContent) {
+            this.toolbarContent.style.cursor = '';
+        }
         document.body.style.cursor = '';
         document.body.style.userSelect = '';
         
@@ -1394,6 +1471,19 @@ export class Toolbar {
      */
     destroy() {
         Logger.ui.debug('Destroying Toolbar');
+        
+        // Remove event handlers using new system
+        eventHandlerManager.unregisterContainer(this.container);
+        
+        // Remove scrolling event handlers
+        this.scrollingHandlers.forEach(({ element, event, handler, options }) => {
+            try {
+                element.removeEventListener(event, handler, options);
+            } catch (error) {
+                Logger.ui.warn('Failed to remove scrolling event handler:', error);
+            }
+        });
+        this.scrollingHandlers = [];
         
         // Save current state before destroying
         this.saveState();

@@ -251,10 +251,17 @@ export class SettingsPanel {
         this.isVisible = false;
         this.widthCalculated = false; // Reset width calculation flag
 
-        // Remove event handlers
-        EventHandlerUtils.removeDialogEventHandling('settings-overlay', eventHandlerManager);
-
+        // Remove event handlers using new system
         const overlay = document.getElementById('settings-overlay');
+        const container = document.getElementById('settings-panel-container');
+        
+        if (overlay) {
+            eventHandlerManager.unregisterContainer(overlay);
+        }
+        if (container) {
+            eventHandlerManager.unregisterContainer(container);
+        }
+
         if (overlay) {
             overlay.classList.remove('dialog-visible');
             overlay.style.display = 'none';
@@ -730,12 +737,12 @@ export class SettingsPanel {
             return;
         }
 
-        // Create dialog handlers with all necessary functionality
-        const dialogHandlers = {
-            onEscape: this.cancelSettings.bind(this),
-            onOverlayClick: this.cancelSettings.bind(this),
-            onClick: (e) => {
-                // Handle close button and overlay click
+        // Create dialog handlers configuration using new system
+        const dialogHandlers = EventHandlerUtils.createDialogHandlers(
+            this.cancelSettings.bind(this), // ESC handler
+            this.cancelSettings.bind(this), // Overlay click handler
+            (e) => {
+                // Handle close button
                 if (e.target.id === 'cancel-settings') {
                     this.cancelSettings();
                     return;
@@ -784,64 +791,40 @@ export class SettingsPanel {
                 if (e.target.id === 'save-settings') {
                     this.saveSettings();
                 }
-            },
-            onContextMenu: (e) => {
-                e.preventDefault();
-                e.stopPropagation();
             }
-        };
-
-        // Register dialog with event manager
-        EventHandlerUtils.addDialogEventHandling(
-            overlay,
-            'settings-overlay',
-            dialogHandlers,
-            this,
-            eventHandlerManager
         );
 
-        // Setup input handlers for all inputs
-        const inputs = container.querySelectorAll('input, textarea, select');
-        inputs.forEach(input => {
-            const inputHandlers = EventHandlerUtils.createInputHandlers(
-                this,
-                null, // onChange
-                null, // onFocus
-                null, // onBlur
-                (e) => {
-                    if (e.key === 'Enter') {
-                        e.preventDefault();
-                        this.saveSettings();
-                    }
-                }
-            );
+        // Register dialog with new event manager
+        eventHandlerManager.registerContainer(overlay, dialogHandlers);
 
-            EventHandlerUtils.addInputEventHandling(
-                input,
-                inputHandlers,
-                this,
-                eventHandlerManager
-            );
-        });
+        // Setup input handlers for all inputs using new system
+        const inputHandlers = EventHandlerUtils.createInputHandlers(
+            null, // onChange
+            null, // onFocus
+            null, // onBlur
+            (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    this.saveSettings();
+                }
+            }
+        );
+
+        eventHandlerManager.registerContainer(container, inputHandlers);
 
         // Setup file import handler
         const importFile = document.getElementById('import-file');
         if (importFile) {
-            const fileHandlers = {
-                onChange: (e) => {
+            const fileHandlers = EventHandlerUtils.createInputHandlers(
+                (e) => {
                     const file = e.target.files[0];
                     if (file) {
                         this.importSettings(file);
                     }
                 }
-            };
-
-            EventHandlerUtils.addInputEventHandling(
-                importFile,
-                fileHandlers,
-                this,
-                eventHandlerManager
             );
+
+            eventHandlerManager.registerContainer(importFile.parentElement, fileHandlers);
         }
 
         Logger.ui.debug('SettingsPanel: New event handlers setup complete');
@@ -1233,8 +1216,16 @@ export class SettingsPanel {
         });
         this.eventListeners = [];
         
-        // Remove all event handlers
-        EventHandlerUtils.removeDialogEventHandling('settings-overlay', eventHandlerManager);
+        // Remove all event handlers using new system
+        const settingsOverlay = document.getElementById('settings-overlay');
+        const settingsContainer = document.getElementById('settings-panel-container');
+        
+        if (settingsOverlay) {
+            eventHandlerManager.unregisterContainer(settingsOverlay);
+        }
+        if (settingsContainer) {
+            eventHandlerManager.unregisterContainer(settingsContainer);
+        }
         
         // Destroy context menu
         if (this.contextMenu) {
@@ -1258,9 +1249,9 @@ export class SettingsPanel {
         }
         
         // Remove overlay from DOM
-        const overlay = document.getElementById('settings-overlay');
-        if (overlay && overlay.parentNode) {
-            overlay.parentNode.removeChild(overlay);
+        const destroyOverlay = document.getElementById('settings-overlay');
+        if (destroyOverlay && destroyOverlay.parentNode) {
+            destroyOverlay.parentNode.removeChild(destroyOverlay);
         }
         
         // Clear references

@@ -405,43 +405,50 @@ export class BaseDialog {
      * Setup event handlers
      */
     setupEventHandlers() {
-        const dialogHandlers = {
-            // Close button
-            [`${this.config.id}-close`]: () => {
+        // Create dialog handlers configuration using new system
+        const dialogHandlers = EventHandlerUtils.createDialogHandlers(
+            () => {
+                // ESC handler
                 this.hide();
                 this.config.onCancel();
             },
-            
-            // Overlay click to close
-            [`${this.config.id}-overlay`]: (e) => {
+            (e) => {
+                // Overlay click handler
                 if (e.target === this.overlay) {
                     this.hide();
                     this.config.onCancel();
                 }
-            }
-        };
-
-        // Add footer button handlers
-        this.config.footerButtons.forEach(button => {
-            dialogHandlers[`${this.config.id}-${button.id}`] = () => {
-                if (button.action) {
-                    button.action();
-                } else if (button.id === 'confirm' || button.id === 'save') {
-                    this.config.onConfirm();
-                } else if (button.id === 'cancel') {
+            },
+            (e) => {
+                // Handle close button
+                if (e.target.id === `${this.config.id}-close`) {
+                    this.hide();
                     this.config.onCancel();
+                    return;
                 }
-                this.hide();
-            };
-        });
 
-        EventHandlerUtils.addDialogEventHandling(
-            this.overlay,
-            `${this.config.id}-overlay`,
-            dialogHandlers,
-            this,
-            eventHandlerManager
+                // Handle footer buttons
+                const button = e.target.closest('button');
+                if (button) {
+                    const buttonId = button.id.replace(`${this.config.id}-`, '');
+                    const footerButton = this.config.footerButtons.find(btn => btn.id === buttonId);
+                    
+                    if (footerButton) {
+                        if (footerButton.action) {
+                            footerButton.action();
+                        } else if (buttonId === 'confirm' || buttonId === 'save') {
+                            this.config.onConfirm();
+                        } else if (buttonId === 'cancel') {
+                            this.config.onCancel();
+                        }
+                        this.hide();
+                    }
+                }
+            }
         );
+
+        // Register dialog with new event manager
+        eventHandlerManager.registerContainer(this.overlay, dialogHandlers);
     }
 
     /**
@@ -449,8 +456,8 @@ export class BaseDialog {
      */
     destroy() {
         if (this.overlay) {
-            // Remove event handlers
-            EventHandlerUtils.removeDialogEventHandling(`${this.config.id}-overlay`, eventHandlerManager);
+            // Remove event handlers using new system
+            eventHandlerManager.unregisterContainer(this.overlay);
             
             // Remove from DOM
             if (this.overlay.parentNode) {

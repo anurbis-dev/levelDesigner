@@ -5,6 +5,7 @@ import { AssetContextMenu } from './AssetContextMenu.js';
 import { AssetPanelContextMenu } from './AssetPanelContextMenu.js';
 import { FoldersPanel } from './FoldersPanel.js';
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
+import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
 // Note: HoverEffects removed - using CSS hover effects like OutlinerPanel
 
 /**
@@ -79,7 +80,7 @@ export class AssetPanel extends BasePanel {
         // Initialize activeAssetTabs from config
         this.initializeActiveAssetTabs();
         
-        // Event handlers will be set up automatically by AutoEventHandlerManager
+        // Event handlers will be set up by EventHandlerManager
         
         // Setup folders and listeners
         this.setupFoldersAndListeners();
@@ -656,19 +657,8 @@ export class AssetPanel extends BasePanel {
         // Subscribe to state changes
         this.stateManager.subscribe('activeAssetTabs', () => this.render());
         
-        // Asset size zoom with Ctrl+scroll
-        this.previewsContainer.addEventListener('wheel', (e) => this.handleAssetWheel(e), { passive: false });
-        
-        // Prevent content scroll when Ctrl+scroll is used for resizing
-        this.container.addEventListener('wheel', (e) => {
-            if (e.ctrlKey) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-        }, { passive: false });
-
-        // Drag-n-drop for PNG files
-        this.setupDragAndDrop();
+        // Setup asset panel handlers using new system
+        this.setupAssetPanelHandlers();
         
         // Window resize handler for real-time grid recalculation
         this.resizeHandler = () => {
@@ -2411,6 +2401,10 @@ export class AssetPanel extends BasePanel {
      * Clean up event listeners
      */
     destroy() {
+        // Remove event handlers using new system
+        eventHandlerManager.unregisterContainer(this.container);
+        eventHandlerManager.unregisterContainer(this.previewsContainer);
+        
         if (this.resizeHandler) {
             window.removeEventListener('resize', this.resizeHandler);
         }
@@ -2503,16 +2497,95 @@ export class AssetPanel extends BasePanel {
         return activeTab ? activeTab.dataset.category : null;
     }
 
-    setupAssetEvents() {
-        this.container.querySelectorAll('.asset-thumbnail').forEach(el => {
-            el.addEventListener('dblclick', (e) => {
-                const assetId = el.dataset.assetId;
+    /**
+     * Setup asset panel handlers using new event system
+     */
+    setupAssetPanelHandlers() {
+        // Create asset panel handlers configuration
+        const assetHandlers = EventHandlerUtils.createPanelHandlers(
+            (e) => {
+                // Handle tab clicks
+                const tabButton = e.target.closest('.tab');
+                if (tabButton) {
+                    const category = tabButton.dataset.category;
+                    this.handleTabClick(e, category);
+                    return;
+                }
+
+                // Handle asset clicks
+                const assetElement = e.target.closest('.asset-thumbnail, .asset-list-item, .asset-details-row, [data-asset-id]');
+                if (assetElement) {
+                    const assetId = assetElement.dataset.assetId;
+                    if (assetId) {
+                        this.handleAssetClick(e, assetId);
+                    }
+                    return;
+                }
+            },
+            (e) => {
+                // Handle button clicks
+                if (e.target.classList.contains('view-mode-btn')) {
+                    const mode = e.target.dataset.mode;
+                    this.setViewMode(mode);
+                    return;
+                }
+                
+                if (e.target.classList.contains('size-btn')) {
+                    const action = e.target.dataset.action;
+                    if (action === 'increase') {
+                        this.increaseAssetSize();
+                    } else if (action === 'decrease') {
+                        this.decreaseAssetSize();
+                    }
+                    return;
+                }
+            }
+        );
+
+        // Register container with new event manager
+        eventHandlerManager.registerContainer(this.container, assetHandlers);
+
+        // Setup wheel handlers for asset size zoom
+        const wheelHandlers = EventHandlerUtils.createInputHandlers(
+            null, // onChange
+            null, // onFocus
+            null, // onBlur
+            (e) => {
+                if (e.ctrlKey) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.handleAssetWheel(e);
+                }
+            }
+        );
+
+        eventHandlerManager.registerContainer(this.previewsContainer, wheelHandlers);
+
+        // Setup drag and drop
+        this.setupDragAndDrop();
+
+        Logger.ui.debug('AssetPanel: New event handlers setup complete');
+    }
+
+    /**
+     * Handle asset click events
+     * @param {Event} e - Click event
+     * @param {string} assetId - Asset ID
+     */
+    handleAssetClick(e, assetId) {
+        // Handle double click for asset properties
+        if (e.detail === 2) {
                 const asset = this.assetManager.getAssetById(assetId);
                 if (asset && this.levelEditor && this.levelEditor.showActorPropertiesPanel) {
                     this.levelEditor.showActorPropertiesPanel(asset);
                 }
-            });
-        });
+        }
+    }
+
+    setupAssetEvents() {
+        // Asset events are now handled by setupAssetPanelHandlers
+        // This method is kept for compatibility but functionality moved to new system
+        Logger.ui.debug('AssetPanel: Asset events handled by new event system');
     }
 
 
