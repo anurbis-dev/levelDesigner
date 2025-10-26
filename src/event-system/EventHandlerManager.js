@@ -25,6 +25,12 @@ export class EventHandlerManager {
         // Global handlers (ESC, etc.)
         this.globalHandlers = new Map();
         
+        // TouchSupportManager instance for touch integration
+        this.touchSupportManager = null;
+        
+        // UnifiedTouchManager instance for unified touch handling
+        this.unifiedTouchManager = null;
+        
         this.initialized = false;
         
         Logger.event.info('🎯 EventHandlerManager created');
@@ -501,6 +507,105 @@ export class EventHandlerManager {
      */
     getAllElements() {
         return Array.from(this.elementToContainer.keys());
+    }
+
+    /**
+     * Set UnifiedTouchManager instance
+     * @param {UnifiedTouchManager} unifiedTouchManager - UnifiedTouchManager instance
+     */
+    setUnifiedTouchManager(unifiedTouchManager) {
+        this.unifiedTouchManager = unifiedTouchManager;
+        Logger.event.debug('🎯 UnifiedTouchManager set in EventHandlerManager');
+    }
+
+    /**
+     * Register touch element with TouchSupportManager integration
+     * @param {HTMLElement} element - Element to register
+     * @param {string} configType - Touch configuration type
+     * @param {Object} customConfig - Custom configuration
+     * @param {string} elementId - Element ID for debugging
+     */
+    registerTouchElement(element, configType, customConfig = {}, elementId = null) {
+        if (!element) {
+            Logger.event.warn('EventHandlerManager: Invalid element for touch registration');
+            return;
+        }
+
+        const id = elementId || element.id || `touch_${Date.now()}`;
+        
+        // Use UnifiedTouchManager if available
+        if (this.unifiedTouchManager) {
+            this.unifiedTouchManager.registerElement(element, configType, customConfig, id);
+            Logger.event.debug('🎯 Touch element registered via UnifiedTouchManager', { id, configType });
+            return;
+        }
+        
+        // Fallback to TouchSupportManager
+        import('../managers/TouchSupportManager.js').then(({ TouchSupportManager }) => {
+            // Create TouchSupportManager instance if not exists
+            if (!this.touchSupportManager) {
+                this.touchSupportManager = new TouchSupportManager();
+            }
+            
+            // Register with TouchSupportManager
+            this.touchSupportManager.registerElement(element, configType, customConfig);
+            
+            Logger.event.debug('🎯 Touch element registered via TouchSupportManager', { id, configType });
+        }).catch(error => {
+            Logger.event.error('EventHandlerManager: Failed to load TouchSupportManager:', error);
+        });
+    }
+
+    /**
+     * Unregister touch element
+     * @param {HTMLElement} element - Element to unregister
+     */
+    unregisterTouchElement(element) {
+        if (this.touchSupportManager) {
+            this.touchSupportManager.unregisterElement(element);
+            Logger.event.debug('🎯 Touch element unregistered', element.id || 'unknown');
+        }
+    }
+
+    /**
+     * Register canvas with unified touch and mouse handlers
+     * @param {HTMLElement} canvas - Canvas element
+     * @param {Object} config - Handler configuration
+     * @param {string} canvasId - Canvas ID for debugging
+     */
+    registerCanvas(canvas, config = {}, canvasId = 'main-canvas') {
+        if (!canvas) {
+            Logger.event.warn('EventHandlerManager: Invalid canvas element');
+            return;
+        }
+
+        // Import EventHandlerUtils dynamically
+        import('./EventHandlerUtils.js').then(({ EventHandlerUtils }) => {
+            // Create unified handlers for canvas
+            const canvasHandlers = {
+                // Mouse events
+                mousedown: config.onMouseDown || (() => {}),
+                mousemove: config.onMouseMove || (() => {}),
+                mouseup: config.onMouseUp || (() => {}),
+                wheel: config.onWheel || (() => {}),
+                dragover: config.onDragOver || (() => {}),
+                drop: config.onDrop || (() => {}),
+                dblclick: config.onDoubleClick || (() => {}),
+                
+                // Touch events
+                touchstart: config.onTouchStart || (() => {}),
+                touchmove: config.onTouchMove || (() => {}),
+                touchend: config.onTouchEnd || (() => {}),
+                touchcancel: config.onTouchCancel || (() => {})
+            };
+
+            // Register canvas with EventHandlerManager
+            this.registerElement(canvas, canvasHandlers, canvasId);
+            
+            Logger.event.debug('🎯 Canvas registered with unified handlers', { canvasId });
+        }).catch(error => {
+            Logger.event.error('EventHandlerManager: Failed to load EventHandlerUtils:', error);
+        });
     }
 
     /**

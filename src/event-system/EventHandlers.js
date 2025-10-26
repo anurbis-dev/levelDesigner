@@ -3,6 +3,8 @@ import { Logger } from '../utils/Logger.js';
 import { SearchSectionUtils } from '../utils/SearchSectionUtils.js';
 import { MENU_CONFIG, getShortcutTarget } from '../../config/menu.js';
 import { TouchHandlers } from './TouchHandlers.js';
+import { eventHandlerManager } from './EventHandlerManager.js';
+import { UnifiedTouchManager } from './UnifiedTouchManager.js';
 
 /**
  * Event Handlers module for LevelEditor
@@ -14,36 +16,37 @@ export class EventHandlers extends BaseModule {
         this._rafId = null; // render loop id
         this.menuManager = menuManager;
         
-        // Track event listeners for cleanup
-        this.eventListeners = [];
         this._destroyed = false;
         
         // Track MutationObservers for cleanup
         this.mutationObservers = [];
         
-        // Initialize touch handlers
+        // Initialize touch handlers (legacy support)
         this.touchHandlers = new TouchHandlers(levelEditor);
         levelEditor.touchHandlers = this.touchHandlers;
+        
+        // Initialize unified touch manager
+        this.unifiedTouchManager = new UnifiedTouchManager(levelEditor, eventHandlerManager);
+        levelEditor.unifiedTouchManager = this.unifiedTouchManager;
+        
+        // Set UnifiedTouchManager in EventHandlerManager
+        eventHandlerManager.setUnifiedTouchManager(this.unifiedTouchManager);
     }
 
     /**
      * Setup all event listeners
      */
     setupEventListeners() {
-
-        // Window resize with cleanup tracking
-        const resizeHandler = () => {
-            if (this._destroyed) return;
-            this.editor.canvasRenderer.resizeCanvas();
-            this.editor.render();
+        // Window resize with EventHandlerManager
+        const resizeHandlers = {
+            resize: () => {
+                if (this._destroyed) return;
+                this.editor.canvasRenderer.resizeCanvas();
+                this.editor.render();
+            }
         };
         
-        window.addEventListener('resize', resizeHandler);
-        this.eventListeners.push({
-            target: window,
-            event: 'resize',
-            handler: resizeHandler
-        });
+        eventHandlerManager.registerElement(window, resizeHandlers, 'window-resize');
 
         // Canvas events
         this.setupCanvasEvents();
@@ -120,8 +123,8 @@ export class EventHandlers extends BaseModule {
     setupCanvasEvents() {
         const canvas = this.editor.canvasRenderer.canvas;
 
-        // Mouse events on canvas with cleanup tracking
-        const handlers = {
+        // Mouse events on canvas using EventHandlerManager
+        const canvasHandlers = {
             mousedown: (e) => this.editor.mouseHandlers.handleMouseDown(e),
             mousemove: (e) => this.editor.mouseHandlers.handleMouseMove(e),
             mouseup: (e) => this.editor.mouseHandlers.handleMouseUp(e),
@@ -131,131 +134,100 @@ export class EventHandlers extends BaseModule {
             drop: (e) => this.editor.mouseHandlers.handleDrop(e)
         };
         
-        for (const [event, handler] of Object.entries(handlers)) {
-            const options = (event === 'wheel' || event === 'dragover' || event === 'drop') ? { passive: false } : { passive: true };
-            canvas.addEventListener(event, handler, options);
-            this.eventListeners.push({
-                target: canvas,
-                event,
-                handler,
-                options
-            });
-        }
+        // Register canvas with EventHandlerManager
+        eventHandlerManager.registerElement(canvas, canvasHandlers, 'main-canvas');
         
         // Global mouse events for proper marquee handling
-        const globalMouseDown = (e) => this.editor.mouseHandlers.handleGlobalMouseDown(e);
-        const globalMouseMove = (e) => this.editor.mouseHandlers.handleGlobalMouseMove(e);
-        const globalMouseUp = (e) => this.editor.mouseHandlers.handleGlobalMouseUp(e);
+        const globalMouseHandlers = {
+            mousedown: (e) => this.editor.mouseHandlers.handleGlobalMouseDown(e),
+            mousemove: (e) => this.editor.mouseHandlers.handleGlobalMouseMove(e),
+            mouseup: (e) => this.editor.mouseHandlers.handleGlobalMouseUp(e)
+        };
 
-        // Try multiple targets for maximum event capture coverage
-        // Window for events outside document bounds
-        window.addEventListener('mousedown', globalMouseDown, { passive: true, capture: true });
-        window.addEventListener('mousemove', globalMouseMove, { passive: true, capture: true });
-        window.addEventListener('mouseup', globalMouseUp, { passive: true, capture: true });
-
-        // Document body as fallback
-        document.body.addEventListener('mousedown', globalMouseDown, { passive: true, capture: true });
-        document.body.addEventListener('mousemove', globalMouseMove, { passive: true, capture: true });
-        document.body.addEventListener('mouseup', globalMouseUp, { passive: true, capture: true });
-
-        this.eventListeners.push(
-            { target: window, event: 'mousedown', handler: globalMouseDown, options: { capture: true } },
-            { target: window, event: 'mousemove', handler: globalMouseMove, options: { capture: true } },
-            { target: window, event: 'mouseup', handler: globalMouseUp, options: { capture: true } },
-            { target: document.body, event: 'mousedown', handler: globalMouseDown, options: { capture: true } },
-            { target: document.body, event: 'mousemove', handler: globalMouseMove, options: { capture: true } },
-            { target: document.body, event: 'mouseup', handler: globalMouseUp, options: { capture: true } }
-        );
+        // Register global mouse handlers on window
+        eventHandlerManager.registerElement(window, globalMouseHandlers, 'global-mouse');
+        
+        // Register global mouse handlers on document.body as fallback
+        eventHandlerManager.registerElement(document.body, globalMouseHandlers, 'global-mouse-body');
     }
 
     setupTouchEvents() {
         const canvas = this.editor.canvasRenderer.canvas;
 
-        // Touch events on canvas with cleanup tracking
-        const touchHandlers = {
+        // Register canvas with UnifiedTouchManager
+        this.unifiedTouchManager.registerElement(canvas, 'canvas', {
+            enablePan: true,
+            enableZoom: true,
+            enableMarquee: true,
+            enableContextMenu: true,
+            onTouchStart: (element, touch) => {
+                // Legacy support - call TouchHandlers if needed
+                this.touchHandlers.handleTouchStart({ touches: [touch] });
+            },
+            onTouchMove: (element, touch) => {
+                this.touchHandlers.handleTouchMove({ touches: [touch] });
+            },
+            onTouchEnd: (element, touch) => {
+                this.touchHandlers.handleTouchEnd({ changedTouches: [touch] });
+            },
+            onTouchCancel: (element, touch) => {
+                this.touchHandlers.handleTouchCancel({ changedTouches: [touch] });
+            }
+        }, 'main-canvas');
+        
+        // Global touch events for proper touch handling using EventHandlerManager
+        const globalTouchHandlers = {
             touchstart: (e) => this.touchHandlers.handleTouchStart(e),
             touchmove: (e) => this.touchHandlers.handleTouchMove(e),
             touchend: (e) => this.touchHandlers.handleTouchEnd(e),
             touchcancel: (e) => this.touchHandlers.handleTouchCancel(e)
         };
-        
-        for (const [event, handler] of Object.entries(touchHandlers)) {
-            // Touch events need special options
-            const options = event === 'touchmove' ? { passive: false } : { passive: true };
-            canvas.addEventListener(event, handler, options);
-            this.eventListeners.push({
-                target: canvas,
-                event,
-                handler,
-                options
-            });
-        }
-        
-        // Global touch events for proper touch handling
-        const globalTouchStart = (e) => this.touchHandlers.handleTouchStart(e);
-        const globalTouchMove = (e) => this.touchHandlers.handleTouchMove(e);
-        const globalTouchEnd = (e) => this.touchHandlers.handleTouchEnd(e);
-        const globalTouchCancel = (e) => this.touchHandlers.handleTouchCancel(e);
 
-        // Register global touch events
-        window.addEventListener('touchstart', globalTouchStart, { passive: true, capture: true });
-        window.addEventListener('touchmove', globalTouchMove, { passive: false, capture: true });
-        window.addEventListener('touchend', globalTouchEnd, { passive: true, capture: true });
-        window.addEventListener('touchcancel', globalTouchCancel, { passive: true, capture: true });
-
-        this.eventListeners.push(
-            { target: window, event: 'touchstart', handler: globalTouchStart, options: { capture: true } },
-            { target: window, event: 'touchmove', handler: globalTouchMove, options: { capture: true } },
-            { target: window, event: 'touchend', handler: globalTouchEnd, options: { capture: true } },
-            { target: window, event: 'touchcancel', handler: globalTouchCancel, options: { capture: true } }
-        );
+        // Register global touch handlers on window
+        eventHandlerManager.registerElement(window, globalTouchHandlers, 'global-touch');
     }
 
     setupKeyboardEvents() {
-        // Handle Ctrl key for snap to grid with cleanup tracking
-        const keydownHandler = (e) => {
-            if (this._destroyed) return;
-            if (e.key === 'Control' || e.key === 'Meta') {
-                this.editor.stateManager.update({
-                    'keyboard.ctrlSnapToGrid': true
-                });
-            } else if (e.key === 'Shift') {
-                this.editor.stateManager.update({
-                    'keyboard.shiftKey': true
-                });
-            } else if (e.key === 'Alt') {
-                this.editor.stateManager.update({
-                    'keyboard.altKey': true
-                });
+        // Handle Ctrl key for snap to grid using EventHandlerManager
+        const keyboardHandlers = {
+            keydown: (e) => {
+                if (this._destroyed) return;
+                if (e.key === 'Control' || e.key === 'Meta') {
+                    this.editor.stateManager.update({
+                        'keyboard.ctrlSnapToGrid': true
+                    });
+                } else if (e.key === 'Shift') {
+                    this.editor.stateManager.update({
+                        'keyboard.shiftKey': true
+                    });
+                } else if (e.key === 'Alt') {
+                    this.editor.stateManager.update({
+                        'keyboard.altKey': true
+                    });
+                }
+                
+                this.handleKeyDown(e);
+            },
+            keyup: (e) => {
+                if (this._destroyed) return;
+                if (e.key === 'Control' || e.key === 'Meta') {
+                    this.editor.stateManager.update({
+                        'keyboard.ctrlSnapToGrid': false
+                    });
+                } else if (e.key === 'Shift') {
+                    this.editor.stateManager.update({
+                        'keyboard.shiftKey': false
+                    });
+                } else if (e.key === 'Alt') {
+                    this.editor.stateManager.update({
+                        'keyboard.altKey': false
+                    });
+                }
             }
-            
-            this.handleKeyDown(e);
         };
         
-        const keyupHandler = (e) => {
-            if (this._destroyed) return;
-            if (e.key === 'Control' || e.key === 'Meta') {
-                this.editor.stateManager.update({
-                    'keyboard.ctrlSnapToGrid': false
-                });
-            } else if (e.key === 'Shift') {
-                this.editor.stateManager.update({
-                    'keyboard.shiftKey': false
-                });
-            } else if (e.key === 'Alt') {
-                this.editor.stateManager.update({
-                    'keyboard.altKey': false
-                });
-            }
-        };
-        
-        window.addEventListener('keydown', keydownHandler);
-        window.addEventListener('keyup', keyupHandler);
-        
-        this.eventListeners.push(
-            { target: window, event: 'keydown', handler: keydownHandler },
-            { target: window, event: 'keyup', handler: keyupHandler }
-        );
+        // Register keyboard handlers with EventHandlerManager
+        eventHandlerManager.registerElement(window, keyboardHandlers, 'keyboard-handlers');
     }
     
     handleKeyDown(e) {
@@ -1107,27 +1079,31 @@ export class EventHandlers extends BaseModule {
                 disconnectedObservers.push(observer);
             });
             
-            // Add click handlers to all tabs (no need to remove existing ones since we're replacing them)
+            // Add click handlers to all tabs using EventHandlerManager
             tabs.forEach(tab => {
-                tab.addEventListener('click', () => {
-                    const tabName = tab.dataset.tab;
-                    
-                    // Determine which panel this tab belongs to
-                    const panel = tab.closest('[id$="-tabs-panel"]');
-                    const panelSide = panel ? (panel.id.includes('left') ? 'left' : 'right') : 'right';
-                    
-                    // Use the centralized method to handle tab activation
-                    this.setActivePanelTab(tabName, panelSide);
-                    
-                    // Update state manager and config for the appropriate panel
-                    if (panelSide === 'right') {
-                    this.editor.stateManager.set('rightPanelTab', tabName);
-                    this.editor.configManager.set('editor.view.rightPanelTab', tabName);
-                    } else if (panelSide === 'left') {
-                        this.editor.stateManager.set('leftPanelTab', tabName);
-                        this.editor.configManager.set('editor.view.leftPanelTab', tabName);
+                const tabHandlers = {
+                    click: () => {
+                        const tabName = tab.dataset.tab;
+                        
+                        // Determine which panel this tab belongs to
+                        const panel = tab.closest('[id$="-tabs-panel"]');
+                        const panelSide = panel ? (panel.id.includes('left') ? 'left' : 'right') : 'right';
+                        
+                        // Use the centralized method to handle tab activation
+                        this.setActivePanelTab(tabName, panelSide);
+                        
+                        // Update state manager and config for the appropriate panel
+                        if (panelSide === 'right') {
+                        this.editor.stateManager.set('rightPanelTab', tabName);
+                        this.editor.configManager.set('editor.view.rightPanelTab', tabName);
+                        } else if (panelSide === 'left') {
+                            this.editor.stateManager.set('leftPanelTab', tabName);
+                            this.editor.configManager.set('editor.view.leftPanelTab', tabName);
+                        }
                     }
-                });
+                };
+                
+                eventHandlerManager.registerElement(tab, tabHandlers, `tab-${tab.dataset.tab}`);
             });
             
             // Reconnect MutationObservers
@@ -1169,9 +1145,13 @@ export class EventHandlers extends BaseModule {
                 disconnectedObservers.push(observer);
             });
             
-            // Add context menu handlers to all tabs (no need to remove existing ones since we're replacing them)
+            // Add context menu handlers to all tabs using EventHandlerManager
             tabs.forEach(tab => {
-                tab.addEventListener('contextmenu', this.handleTabContextMenu.bind(this));
+                const contextMenuHandlers = {
+                    contextmenu: (e) => this.handleTabContextMenu(e)
+                };
+                
+                eventHandlerManager.registerElement(tab, contextMenuHandlers, `tab-context-${tab.dataset.tab}`);
             });
             
             // Reconnect MutationObservers
@@ -1277,17 +1257,21 @@ export class EventHandlers extends BaseModule {
         menu.style.left = left + 'px';
         menu.style.top = top + 'px';
 
-        // Create menu item
+        // Create menu item with EventHandlerManager
         const menuItem = document.createElement('div');
         menuItem.className = 'px-3 py-2 text-sm text-gray-200 hover:bg-gray-700 cursor-pointer whitespace-nowrap';
         menuItem.innerHTML = `Move to ${targetPanel === 'right' ? 'Right' : 'Left'} Panel`;
 
-        menuItem.addEventListener('click', () => {
-            if (this.editor && this.editor.panelPositionManager) {
-                this.editor.panelPositionManager.moveTab(tabName, currentPanel, targetPanel);
+        const menuItemHandlers = {
+            click: () => {
+                if (this.editor && this.editor.panelPositionManager) {
+                    this.editor.panelPositionManager.moveTab(tabName, currentPanel, targetPanel);
+                }
+                menu.remove();
             }
-            menu.remove();
-        });
+        };
+        
+        eventHandlerManager.registerElement(menuItem, menuItemHandlers, `menu-item-${tabName}`);
 
         menu.appendChild(menuItem);
         document.body.appendChild(menu);
@@ -1296,16 +1280,19 @@ export class EventHandlers extends BaseModule {
         menu.style.minWidth = menuWidth + 'px';
         menu.style.minHeight = menuHeight + 'px';
 
-        // Close menu when clicking outside
+        // Close menu when clicking outside using EventHandlerManager
         const closeMenu = (e) => {
             if (!menu.contains(e.target)) {
                 menu.remove();
-                document.removeEventListener('click', closeMenu);
+                eventHandlerManager.unregisterElement(document);
             }
         };
 
         setTimeout(() => {
-            document.addEventListener('click', closeMenu);
+            const documentHandlers = {
+                click: closeMenu
+            };
+            eventHandlerManager.registerElement(document, documentHandlers, 'menu-close');
         }, 0);
     }
 
@@ -1460,16 +1447,10 @@ export class EventHandlers extends BaseModule {
             Logger.event.debug('Cancelled render loop');
         }
         
-        // Remove all event listeners
-        for (const { target, event, handler, options } of this.eventListeners) {
-            try {
-                target.removeEventListener(event, handler, options);
-            } catch (error) {
-                Logger.event.warn('Failed to remove event listener:', { event, error });
-            }
+        // Clean up UnifiedTouchManager
+        if (this.unifiedTouchManager) {
+            this.unifiedTouchManager.destroy();
         }
-        
-        this.eventListeners = [];
         
         // Disconnect all MutationObservers
         for (const observer of this.mutationObservers) {

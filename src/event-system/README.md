@@ -7,11 +7,12 @@
 ### Основные компоненты
 - **EventHandlerManager.js** - единый менеджер для управления всеми обработчиками событий
 - **EventHandlerUtils.js** - утилиты для упрощения работы с обработчиками
+- **UnifiedTouchManager.js** - унифицированная система обработки тач-событий
 
 ### Обработчики событий
 - **EventHandlers.js** - основные обработчики событий редактора
 - **MouseHandlers.js** - обработчики мыши для канваса и панелей
-- **TouchHandlers.js** - обработчики тач событий для мобильных устройств (поддерживает все жесты: тап, дабл-тап, лонг-пресс, тач-драг, тап двумя/тремя пальцами)
+- **TouchHandlers.js** - обработчики тач событий для мобильных устройств (legacy support)
 
 ## Принципы
 
@@ -19,6 +20,7 @@
 - **Делегирование**: Использование event delegation для эффективности
 - **Автоматическая очистка**: Система автоматически удаляет обработчики при уничтожении элементов
 - **Простота**: Минимальный API для максимальной надежности
+- **Унификация**: Единая система для мышиных и тач-событий
 
 ## Использование
 
@@ -43,39 +45,33 @@ eventHandlerManager.unregisterContainer(element);
 
 ### Тач события
 
-TouchHandlers автоматически интегрируется с системой событий и поддерживает все жесты:
+UnifiedTouchManager предоставляет единую систему обработки всех тач-событий:
 
 ```javascript
-// Регистрация тач обработчиков
-const touchHandlers = EventHandlerUtils.createTouchHandlers(
-    (e) => console.log('Touch start'),
-    (e) => console.log('Touch move'),
-    (e) => console.log('Touch end'),
-    (e) => console.log('Touch cancel')
-);
+// Регистрация элемента с тач-поддержкой
+unifiedTouchManager.registerElement(element, 'button', {
+    onTap: (element, touch) => console.log('Button tapped'),
+    onDoubleTap: (element, touch) => console.log('Button double-tapped'),
+    onLongPress: (element, touch) => console.log('Button long-pressed')
+});
 
-eventHandlerManager.registerElement(element, touchHandlers);
+// Регистрация канваса с полной поддержкой жестов
+unifiedTouchManager.registerElement(canvas, 'canvas', {
+    enablePan: true,
+    enableZoom: true,
+    enableMarquee: true,
+    enableContextMenu: true
+});
 
-// Регистрация тач жестов для канваса
-const gestureHandlers = EventHandlerUtils.createTouchGestureHandlers(
-    (e, touch) => console.log('Single touch:', touch),
-    (e, touches) => console.log('Two touches:', touches),
-    (e) => console.log('Touch ended')
-);
-
-eventHandlerManager.registerContainer(canvas, gestureHandlers, 'canvas-touch');
-
-// Продвинутые жесты (автоматически обрабатываются TouchHandlers)
-const advancedHandlers = EventHandlerUtils.createAdvancedTouchHandlers(
-    (detail) => console.log('Single tap:', detail),
-    (detail) => console.log('Double tap:', detail),
-    (detail) => console.log('Long press:', detail),
-    (phase, detail) => console.log('Touch drag:', phase, detail),
-    (detail) => console.log('Two finger tap:', detail),
-    (detail) => console.log('Three finger tap:', detail)
-);
-
-eventHandlerManager.registerElement(element, advancedHandlers, 'advanced-touch');
+// Регистрация разделителя панели
+unifiedTouchManager.registerElement(resizer, 'panelResizer', {
+    direction: 'horizontal',
+    minSize: 100,
+    maxSize: 800,
+    onResizeStart: (element, targetPanel, touch) => console.log('Resize started'),
+    onResize: (element, targetPanel, newSize, touch) => console.log('Resizing to:', newSize),
+    onResizeEnd: (element, targetPanel, currentSize) => console.log('Resize ended:', currentSize)
+});
 ```
 
 ### Типы обработчиков
@@ -203,6 +199,8 @@ const advancedHandlers = EventHandlerUtils.createAdvancedTouchHandlers(
 - **Мобильная совместимость** - автоматическая поддержка жестов и панорамирования
 - **Продвинутые жесты** - поддержка тач-драга, дабл-тапа, тапа двумя и тремя пальцами
 - **Гибкая настройка** - возможность настройки пороговых значений для жестов
+- **Унифицированная система** - единый интерфейс для всех типов взаимодействий
+- **Отсутствие конфликтов** - нет дублирования обработчиков событий
 
 ## Дополнительные методы
 
@@ -376,6 +374,30 @@ EventHandlerUtils.registerTouchButton(
     (e, touch) => this.handleDoubleTap(e, touch),
     eventHandlerManager
 );
+```
+
+## Тестирование
+
+### EventSystemIntegrationTest
+Базовый тест интеграции системы событий:
+
+```javascript
+import { EventSystemIntegrationTest } from './EventSystemIntegrationTest.js';
+
+const test = new EventSystemIntegrationTest();
+await test.runTests();
+test.cleanup();
+```
+
+### TouchGestureTest
+Комплексный тест всех тач-жестов:
+
+```javascript
+import { TouchGestureTest } from './TouchGestureTest.js';
+
+const test = new TouchGestureTest();
+await test.runAllTests();
+test.cleanup();
 ```
 
 ## Документация
