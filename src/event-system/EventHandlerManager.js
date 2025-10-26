@@ -277,6 +277,67 @@ export class EventHandlerManager {
             };
         }
 
+        // Touch event delegation
+        if (config.touchstart) {
+            handlers.touchstart = (e) => {
+                const target = e.target;
+                const selector = config.touchstart.selector || '*';
+                
+                const element = target.closest(selector);
+                if (element) {
+                    const handler = config.touchstart.handler;
+                    if (typeof handler === 'function') {
+                        handler.call(element, e, target);
+                    }
+                }
+            };
+        }
+
+        if (config.touchmove) {
+            handlers.touchmove = (e) => {
+                const target = e.target;
+                const selector = config.touchmove.selector || '*';
+                
+                const element = target.closest(selector);
+                if (element) {
+                    const handler = config.touchmove.handler;
+                    if (typeof handler === 'function') {
+                        handler.call(element, e, target);
+                    }
+                }
+            };
+        }
+
+        if (config.touchend) {
+            handlers.touchend = (e) => {
+                const target = e.target;
+                const selector = config.touchend.selector || '*';
+                
+                const element = target.closest(selector);
+                if (element) {
+                    const handler = config.touchend.handler;
+                    if (typeof handler === 'function') {
+                        handler.call(element, e, target);
+                    }
+                }
+            };
+        }
+
+        if (config.touchcancel) {
+            handlers.touchcancel = (e) => {
+                const target = e.target;
+                const selector = config.touchcancel.selector || '*';
+                
+                const element = target.closest(selector);
+                if (element) {
+                    const handler = config.touchcancel.handler;
+                    if (typeof handler === 'function') {
+                        handler.call(element, e, target);
+                    }
+                }
+            };
+        }
+
         return handlers;
     }
 
@@ -291,9 +352,21 @@ export class EventHandlerManager {
 
         Object.entries(handlers).forEach(([eventType, handler]) => {
             if (typeof handler === 'function') {
-                container.addEventListener(eventType, handler);
+                // Set appropriate options for touch events
+                let options = {};
+                if (eventType.startsWith('touch')) {
+                    // Touch events need special handling
+                    if (eventType === 'touchstart' || eventType === 'touchend' || eventType === 'touchcancel') {
+                        options = { passive: true };
+                    } else if (eventType === 'touchmove') {
+                        // Touch move might need preventDefault, so non-passive
+                        options = { passive: false };
+                    }
+                }
+                
+                container.addEventListener(eventType, handler, options);
                 containerInfo.cleanup.push(() => {
-                    container.removeEventListener(eventType, handler);
+                    container.removeEventListener(eventType, handler, options);
                 });
             }
         });

@@ -122,6 +122,7 @@ export class LevelEditor {
         // Initialize operation modules
         this.eventHandlers = new EventHandlers(this);
         this.mouseHandlers = new MouseHandlers(this);
+        this.touchHandlers = null; // Will be initialized by EventHandlers
         this.objectOperations = new ObjectOperations(this);
         this.groupOperations = new GroupOperations(this);
         this.renderOperations = new RenderOperations(this);

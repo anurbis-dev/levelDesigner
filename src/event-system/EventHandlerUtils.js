@@ -210,6 +210,277 @@ export class EventHandlerUtils {
     }
 
     /**
+     * Create touch handlers for a single element
+     * @param {Function} onTouchStart - Touch start handler
+     * @param {Function} onTouchMove - Touch move handler (optional)
+     * @param {Function} onTouchEnd - Touch end handler (optional)
+     * @param {Function} onTouchCancel - Touch cancel handler (optional)
+     * @returns {Object} Touch handlers
+     */
+    static createTouchHandlers(onTouchStart, onTouchMove = null, onTouchEnd = null, onTouchCancel = null) {
+        const handlers = {
+            touchstart: onTouchStart
+        };
+
+        if (onTouchMove) handlers.touchmove = onTouchMove;
+        if (onTouchEnd) handlers.touchend = onTouchEnd;
+        if (onTouchCancel) handlers.touchcancel = onTouchCancel;
+
+        return handlers;
+    }
+
+    /**
+     * Create touch gesture handlers for canvas-like elements
+     * @param {Function} onSingleTouch - Single touch handler (tap, drag)
+     * @param {Function} onTwoTouch - Two touch handler (pan, zoom)
+     * @param {Function} onTouchEnd - Touch end handler
+     * @returns {Object} Touch gesture configuration
+     */
+    static createTouchGestureHandlers(onSingleTouch, onTwoTouch, onTouchEnd) {
+        return {
+            touchstart: {
+                selector: '*',
+                handler: (e, target) => {
+                    const touches = Array.from(e.touches);
+                    if (touches.length === 1) {
+                        onSingleTouch(e, touches[0], target);
+                    } else if (touches.length === 2) {
+                        onTwoTouch(e, touches, target);
+                    }
+                }
+            },
+            touchend: {
+                selector: '*',
+                handler: (e, target) => {
+                    onTouchEnd(e, target);
+                }
+            }
+        };
+    }
+
+    /**
+     * Create touch panel handlers for resizable panels
+     * @param {Function} onResizeStart - Resize start handler
+     * @param {Function} onResizeMove - Resize move handler
+     * @param {Function} onResizeEnd - Resize end handler
+     * @param {Function} onDoubleTap - Double tap handler (optional)
+     * @returns {Object} Touch panel configuration
+     */
+    static createTouchPanelHandlers(onResizeStart, onResizeMove, onResizeEnd, onDoubleTap = null) {
+        const config = {
+            touchstart: {
+                selector: '.resizer, .resizer-y, .resizer-x',
+                handler: (e, target) => {
+                    const touch = e.touches[0];
+                    onResizeStart(e, touch, target);
+                }
+            },
+            touchmove: {
+                selector: '.resizer, .resizer-y, .resizer-x',
+                handler: (e, target) => {
+                    const touch = e.touches[0];
+                    onResizeMove(e, touch, target);
+                }
+            },
+            touchend: {
+                selector: '.resizer, .resizer-y, .resizer-x',
+                handler: (e, target) => {
+                    onResizeEnd(e, target);
+                }
+            }
+        };
+
+        if (onDoubleTap) {
+            config.doubleTap = onDoubleTap;
+        }
+
+        return config;
+    }
+
+    /**
+     * Create touch button handlers for interactive buttons
+     * @param {Function} onTap - Tap handler
+     * @param {Function} onLongPress - Long press handler (optional)
+     * @param {Function} onDoubleTap - Double tap handler (optional)
+     * @returns {Object} Touch button configuration
+     */
+    static createTouchButtonHandlers(onTap, onLongPress = null, onDoubleTap = null) {
+        const config = {
+            touchstart: {
+                selector: 'button, [role="button"], .touch-button',
+                handler: (e, target) => {
+                    const touch = e.touches[0];
+                    // Handle tap, long press, and double tap logic here
+                    onTap(e, touch, target);
+                }
+            }
+        };
+
+        if (onLongPress) {
+            config.longPress = onLongPress;
+        }
+
+        if (onDoubleTap) {
+            config.doubleTap = onDoubleTap;
+        }
+
+        return config;
+    }
+
+    /**
+     * Create advanced touch gesture handlers
+     * @param {Function} onSingleTap - Single tap handler
+     * @param {Function} onDoubleTap - Double tap handler
+     * @param {Function} onLongPress - Long press handler
+     * @param {Function} onTouchDrag - Touch drag handler
+     * @param {Function} onTwoFingerTap - Two finger tap handler
+     * @param {Function} onThreeFingerTap - Three finger tap handler
+     * @returns {Object} Advanced touch gesture configuration
+     */
+    static createAdvancedTouchHandlers(onSingleTap, onDoubleTap, onLongPress, onTouchDrag, onTwoFingerTap, onThreeFingerTap) {
+        return {
+            // Listen for custom touch events dispatched by TouchHandlers
+            touchsingletap: {
+                selector: '*',
+                handler: (e, target) => {
+                    if (typeof onSingleTap === 'function') {
+                        onSingleTap(e.detail, target);
+                    }
+                }
+            },
+            touchdoubletap: {
+                selector: '*',
+                handler: (e, target) => {
+                    if (typeof onDoubleTap === 'function') {
+                        onDoubleTap(e.detail, target);
+                    }
+                }
+            },
+            touchlongpress: {
+                selector: '*',
+                handler: (e, target) => {
+                    if (typeof onLongPress === 'function') {
+                        onLongPress(e.detail, target);
+                    }
+                }
+            },
+            touchdragstart: {
+                selector: '*',
+                handler: (e, target) => {
+                    if (typeof onTouchDrag === 'function') {
+                        onTouchDrag('start', e.detail, target);
+                    }
+                }
+            },
+            touchdrag: {
+                selector: '*',
+                handler: (e, target) => {
+                    if (typeof onTouchDrag === 'function') {
+                        onTouchDrag('move', e.detail, target);
+                    }
+                }
+            },
+            touchdragend: {
+                selector: '*',
+                handler: (e, target) => {
+                    if (typeof onTouchDrag === 'function') {
+                        onTouchDrag('end', e.detail, target);
+                    }
+                }
+            },
+            touchtwofingertap: {
+                selector: '*',
+                handler: (e, target) => {
+                    if (typeof onTwoFingerTap === 'function') {
+                        onTwoFingerTap(e.detail, target);
+                    }
+                }
+            },
+            touchthreefingertap: {
+                selector: '*',
+                handler: (e, target) => {
+                    if (typeof onThreeFingerTap === 'function') {
+                        onThreeFingerTap(e.detail, target);
+                    }
+                }
+            }
+        };
+    }
+
+    /**
+     * Register advanced touch gesture handlers
+     * @param {HTMLElement} element - Element to register
+     * @param {string} elementId - Element ID
+     * @param {Function} onSingleTap - Single tap handler
+     * @param {Function} onDoubleTap - Double tap handler
+     * @param {Function} onLongPress - Long press handler
+     * @param {Function} onTouchDrag - Touch drag handler
+     * @param {Function} onTwoFingerTap - Two finger tap handler
+     * @param {Function} onThreeFingerTap - Three finger tap handler
+     * @param {EventHandlerManager} manager - Event manager
+     */
+    static registerAdvancedTouchElement(element, elementId, onSingleTap, onDoubleTap, onLongPress, onTouchDrag, onTwoFingerTap, onThreeFingerTap, manager) {
+        const config = EventHandlerUtils.createAdvancedTouchHandlers(onSingleTap, onDoubleTap, onLongPress, onTouchDrag, onTwoFingerTap, onThreeFingerTap);
+        manager.registerElement(element, config, elementId);
+    }
+
+    /**
+     * Register a touch-enabled element
+     * @param {HTMLElement} element - Element to register
+     * @param {Function} onTouchStart - Touch start handler
+     * @param {Function} onTouchMove - Touch move handler (optional)
+     * @param {Function} onTouchEnd - Touch end handler (optional)
+     * @param {Function} onTouchCancel - Touch cancel handler (optional)
+     * @param {EventHandlerManager} manager - Event manager
+     */
+    static registerTouchElement(element, onTouchStart, onTouchMove = null, onTouchEnd = null, onTouchCancel = null, manager) {
+        const handlers = EventHandlerUtils.createTouchHandlers(onTouchStart, onTouchMove, onTouchEnd, onTouchCancel);
+        manager.registerElement(element, handlers);
+    }
+
+    /**
+     * Register a touch gesture container
+     * @param {HTMLElement} containerElement - Container element
+     * @param {string} containerId - Container ID
+     * @param {Function} onSingleTouch - Single touch handler
+     * @param {Function} onTwoTouch - Two touch handler
+     * @param {Function} onTouchEnd - Touch end handler
+     * @param {EventHandlerManager} manager - Event manager
+     */
+    static registerTouchGestureContainer(containerElement, containerId, onSingleTouch, onTwoTouch, onTouchEnd, manager) {
+        const config = EventHandlerUtils.createTouchGestureHandlers(onSingleTouch, onTwoTouch, onTouchEnd);
+        manager.registerContainer(containerElement, config, containerId);
+    }
+
+    /**
+     * Register a touch panel with resize support
+     * @param {HTMLElement} panelElement - Panel element
+     * @param {string} panelId - Panel ID
+     * @param {Function} onResizeStart - Resize start handler
+     * @param {Function} onResizeMove - Resize move handler
+     * @param {Function} onResizeEnd - Resize end handler
+     * @param {Function} onDoubleTap - Double tap handler (optional)
+     * @param {EventHandlerManager} manager - Event manager
+     */
+    static registerTouchPanel(panelElement, panelId, onResizeStart, onResizeMove, onResizeEnd, onDoubleTap = null, manager) {
+        const config = EventHandlerUtils.createTouchPanelHandlers(onResizeStart, onResizeMove, onResizeEnd, onDoubleTap);
+        manager.registerContainer(panelElement, config, panelId);
+    }
+
+    /**
+     * Register touch button handlers
+     * @param {HTMLElement} buttonElement - Button element
+     * @param {Function} onTap - Tap handler
+     * @param {Function} onLongPress - Long press handler (optional)
+     * @param {Function} onDoubleTap - Double tap handler (optional)
+     * @param {EventHandlerManager} manager - Event manager
+     */
+    static registerTouchButton(buttonElement, onTap, onLongPress = null, onDoubleTap = null, manager) {
+        const config = EventHandlerUtils.createTouchButtonHandlers(onTap, onLongPress, onDoubleTap);
+        manager.registerContainer(buttonElement, config);
+    }
+
+    /**
      * Create universal window handlers (for backward compatibility)
      * @param {Object} windowInstance - Window instance
      * @param {string} windowType - Window type

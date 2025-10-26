@@ -440,6 +440,14 @@ export class RenderOperations extends BaseModule {
             this.editor.canvasRenderer.drawMarquee(mouse.marqueeRect, camera);
         }
         
+        // Draw touch marquee selection
+        if (this.editor.touchHandlers) {
+            const touchState = this.editor.touchHandlers.getTouchState();
+            if (touchState && touchState.marqueeRect) {
+                this.editor.canvasRenderer.drawMarquee(touchState.marqueeRect, camera);
+            }
+        }
+        
         // Draw axis constraint line
         if (mouse.constrainedAxis && mouse.isDragging && mouse.axisCenter) {
             const axisConfig = {

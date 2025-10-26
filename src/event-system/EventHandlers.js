@@ -2,6 +2,7 @@ import { BaseModule } from '../core/BaseModule.js';
 import { Logger } from '../utils/Logger.js';
 import { SearchSectionUtils } from '../utils/SearchSectionUtils.js';
 import { MENU_CONFIG, getShortcutTarget } from '../../config/menu.js';
+import { TouchHandlers } from './TouchHandlers.js';
 
 /**
  * Event Handlers module for LevelEditor
@@ -19,6 +20,10 @@ export class EventHandlers extends BaseModule {
         
         // Track MutationObservers for cleanup
         this.mutationObservers = [];
+        
+        // Initialize touch handlers
+        this.touchHandlers = new TouchHandlers(levelEditor);
+        levelEditor.touchHandlers = this.touchHandlers;
     }
 
     /**
@@ -42,6 +47,9 @@ export class EventHandlers extends BaseModule {
 
         // Canvas events
         this.setupCanvasEvents();
+        
+        // Touch events
+        this.setupTouchEvents();
 
         // Keyboard events
         this.setupKeyboardEvents();
@@ -157,6 +165,49 @@ export class EventHandlers extends BaseModule {
             { target: document.body, event: 'mousedown', handler: globalMouseDown, options: { capture: true } },
             { target: document.body, event: 'mousemove', handler: globalMouseMove, options: { capture: true } },
             { target: document.body, event: 'mouseup', handler: globalMouseUp, options: { capture: true } }
+        );
+    }
+
+    setupTouchEvents() {
+        const canvas = this.editor.canvasRenderer.canvas;
+
+        // Touch events on canvas with cleanup tracking
+        const touchHandlers = {
+            touchstart: (e) => this.touchHandlers.handleTouchStart(e),
+            touchmove: (e) => this.touchHandlers.handleTouchMove(e),
+            touchend: (e) => this.touchHandlers.handleTouchEnd(e),
+            touchcancel: (e) => this.touchHandlers.handleTouchCancel(e)
+        };
+        
+        for (const [event, handler] of Object.entries(touchHandlers)) {
+            // Touch events need special options
+            const options = event === 'touchmove' ? { passive: false } : { passive: true };
+            canvas.addEventListener(event, handler, options);
+            this.eventListeners.push({
+                target: canvas,
+                event,
+                handler,
+                options
+            });
+        }
+        
+        // Global touch events for proper touch handling
+        const globalTouchStart = (e) => this.touchHandlers.handleTouchStart(e);
+        const globalTouchMove = (e) => this.touchHandlers.handleTouchMove(e);
+        const globalTouchEnd = (e) => this.touchHandlers.handleTouchEnd(e);
+        const globalTouchCancel = (e) => this.touchHandlers.handleTouchCancel(e);
+
+        // Register global touch events
+        window.addEventListener('touchstart', globalTouchStart, { passive: true, capture: true });
+        window.addEventListener('touchmove', globalTouchMove, { passive: false, capture: true });
+        window.addEventListener('touchend', globalTouchEnd, { passive: true, capture: true });
+        window.addEventListener('touchcancel', globalTouchCancel, { passive: true, capture: true });
+
+        this.eventListeners.push(
+            { target: window, event: 'touchstart', handler: globalTouchStart, options: { capture: true } },
+            { target: window, event: 'touchmove', handler: globalTouchMove, options: { capture: true } },
+            { target: window, event: 'touchend', handler: globalTouchEnd, options: { capture: true } },
+            { target: window, event: 'touchcancel', handler: globalTouchCancel, options: { capture: true } }
         );
     }
 
@@ -1430,6 +1481,11 @@ export class EventHandlers extends BaseModule {
         }
         
         this.mutationObservers = [];
+        
+        // Clean up touch handlers
+        if (this.touchHandlers) {
+            this.touchHandlers.resetTouchState();
+        }
         
         Logger.event.info('EventHandlers destroyed');
     }
