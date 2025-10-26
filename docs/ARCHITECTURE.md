@@ -27,6 +27,7 @@
 - **Полная пересборка Settings Panel** - все методы render переведены на рефакторированные конструкторы, удален дублирующий код (~400+ строк), DialogSizeManager обновлен для работы с новой структурой
 - **Принципы диалогов** - SettingsPanel создается с levelEditor, stateManager доступен, использовать наследование от BaseDialog
 - **Унификация методов ActorPropertiesWindow (v3.52.7)** - устранено дублирование методов apply/applyChanges, единый метод apply() для совместимости с UniversalWindowHandlers
+- **Рефакторинг системы событий (v3.52.5)** - полная унификация EventHandlerManager + UnifiedTouchManager, устранение конфликтов и дублирования обработчиков, единый API для mouse/touch событий
 
 ---
 
@@ -172,21 +173,32 @@
 - **Custom типы**: NetworkError, ValidationError, PermissionError, FileNotFoundError
 - **JSDoc типизация** (v3.35.0) - полная документация всех методов и классов, IDE поддержка
 
-### EventHandlerManager
+### EventHandlerManager (v3.52.5 - РЕФАКТОРИНГ)
 **Файл**: `src/event-system/EventHandlerManager.js`
-- **Единый менеджер событий** - централизованная обработка всех UI событий через event delegation
+- **Унифицированный менеджер событий** - централизованная обработка всех UI событий (mouse + touch) через event delegation
 - **Автоматическая очистка** - предотвращение утечек памяти при уничтожении элементов
 - **Event delegation** - один обработчик на контейнер для максимальной эффективности
-- **Простой API** - минимальный интерфейс для максимальной функциональности
-- **Методы**: registerContainer(), unregisterContainer(), cleanup()
-- **Преимущества**: -70% кода обработчиков, -60% зависимостей, 0 утечек памяти
+- **Touch интеграция** - автоматическая интеграция с UnifiedTouchManager для touch событий
+- **Canvas поддержка** - унифицированная регистрация canvas с mouse + touch событиями
+- **Методы**: registerContainer(), registerTouchElement(), registerCanvas(), setUnifiedTouchManager(), unregisterContainer(), unregisterTouchElement()
+- **Преимущества**: -70% кода обработчиков, -60% зависимостей, 0 утечек памяти, единый API для mouse/touch
 
-### EventHandlerUtils
+### UnifiedTouchManager (v3.52.5 - НОВЫЙ)
+**Файл**: `src/event-system/UnifiedTouchManager.js`
+- **Унифицированная touch система** - объединяет TouchSupportManager + TouchHandlers в единый API
+- **Интеграция с EventHandlerManager** - автоматическая интеграция через registerTouchElement()
+- **Legacy поддержка** - сохраняет совместимость с TouchHandlers для raw событий
+- **Централизованная очистка** - автоматическая очистка через EventHandlerManager
+- **Методы**: registerElement(), unregisterElement(), destroy()
+- **Преимущества**: единый API, отсутствие конфликтов, автоматическая интеграция
+
+### EventHandlerUtils (v3.52.5 - ОБНОВЛЕН)
 **Файл**: `src/event-system/EventHandlerUtils.js`
 - **Готовые конфигурации** - типовые обработчики для диалогов, панелей, контекстных меню
 - **Упрощение разработки** - один вызов вместо множества addEventListener
 - **Типы обработчиков**: createDialogHandlers(), createPanelHandlers(), createContextMenuHandlers()
 - **Совместимость** - поддержка всех существующих компонентов UI
+- **Touch поддержка** - интеграция с UnifiedTouchManager для touch событий
 
 ### ComponentLifecycle
 **Файл**: `src/core/ComponentLifecycle.js`

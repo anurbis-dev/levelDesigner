@@ -25,9 +25,6 @@ export class EventHandlerManager {
         // Global handlers (ESC, etc.)
         this.globalHandlers = new Map();
         
-        // TouchSupportManager instance for touch integration
-        this.touchSupportManager = null;
-        
         // UnifiedTouchManager instance for unified touch handling
         this.unifiedTouchManager = null;
         
@@ -98,6 +95,13 @@ export class EventHandlerManager {
         }
 
         const id = elementId || element.id || `element_${Date.now()}`;
+        
+        // Check if element is already registered
+        if (this.elementToContainer.has(element)) {
+            Logger.event.warn(`Element ${id} is already registered. Unregistering previous handlers.`);
+            this.unregisterElement(element);
+        }
+        
         const cleanup = [];
 
         // Register each event handler
@@ -540,20 +544,7 @@ export class EventHandlerManager {
             return;
         }
         
-        // Fallback to TouchSupportManager
-        import('../managers/TouchSupportManager.js').then(({ TouchSupportManager }) => {
-            // Create TouchSupportManager instance if not exists
-            if (!this.touchSupportManager) {
-                this.touchSupportManager = new TouchSupportManager();
-            }
-            
-            // Register with TouchSupportManager
-            this.touchSupportManager.registerElement(element, configType, customConfig);
-            
-            Logger.event.debug('🎯 Touch element registered via TouchSupportManager', { id, configType });
-        }).catch(error => {
-            Logger.event.error('EventHandlerManager: Failed to load TouchSupportManager:', error);
-        });
+        Logger.event.warn('EventHandlerManager: UnifiedTouchManager not available for touch registration', { id, configType });
     }
 
     /**
@@ -561,8 +552,8 @@ export class EventHandlerManager {
      * @param {HTMLElement} element - Element to unregister
      */
     unregisterTouchElement(element) {
-        if (this.touchSupportManager) {
-            this.touchSupportManager.unregisterElement(element);
+        if (this.unifiedTouchManager) {
+            this.unifiedTouchManager.unregisterElement(element);
             Logger.event.debug('🎯 Touch element unregistered', element.id || 'unknown');
         }
     }

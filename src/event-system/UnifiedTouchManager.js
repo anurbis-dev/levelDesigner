@@ -255,6 +255,11 @@ export class UnifiedTouchManager {
         this.gestureState.isZooming = false;
         this.gestureState.isMarqueeSelecting = false;
         
+        // Call TouchHandlers for canvas events (legacy integration)
+        if (config.type === 'canvas' && this.levelEditor.touchHandlers) {
+            this.levelEditor.touchHandlers.handleTouchCancel(e);
+        }
+        
         Logger.event.debug('🎯 Touch cancelled', { touchId, element: element.id });
     }
 
@@ -263,6 +268,11 @@ export class UnifiedTouchManager {
      */
     handleCanvasTouchStart(e, element, config) {
         const touch = e.touches[0];
+        
+        // Call TouchHandlers for canvas events (legacy integration)
+        if (this.levelEditor.touchHandlers) {
+            this.levelEditor.touchHandlers.handleTouchStart(e);
+        }
         
         if (e.touches.length === 1) {
             // Single touch - start marquee selection or object interaction
@@ -282,6 +292,11 @@ export class UnifiedTouchManager {
      * Handle canvas touch move
      */
     handleCanvasTouchMove(e, element, config, touchData) {
+        // Call TouchHandlers for canvas events (legacy integration)
+        if (this.levelEditor.touchHandlers) {
+            this.levelEditor.touchHandlers.handleTouchMove(e);
+        }
+        
         if (e.touches.length === 1 && this.gestureState.isMarqueeSelecting) {
             // Update marquee selection
             this.updateMarqueeSelection(e.touches[0]);
@@ -295,6 +310,11 @@ export class UnifiedTouchManager {
      * Handle canvas touch end
      */
     handleCanvasTouchEnd(e, element, config, touchData, distance, duration) {
+        // Call TouchHandlers for canvas events (legacy integration)
+        if (this.levelEditor.touchHandlers) {
+            this.levelEditor.touchHandlers.handleTouchEnd(e);
+        }
+        
         if (this.gestureState.isMarqueeSelecting) {
             this.finishMarqueeSelection();
         }
@@ -578,6 +598,72 @@ export class UnifiedTouchManager {
         this.gestureState.lastTouchTime = 0;
         
         Logger.event.debug('🎯 Touch state reset');
+    }
+
+    /**
+     * Calculate horizontal panel size (moved from TouchSupportManager)
+     * @param {HTMLElement} element - Resizer element
+     * @param {Object} input - Input data (mouse event or touch object)
+     * @param {Object} initialData - Initial data
+     * @returns {number} - Calculated width
+     */
+    calculateHorizontalPanelSize(element, input, initialData) {
+        const isRightPanel = element.id && element.id.includes('right');
+        const isFoldersResizer = element.id === 'folders-resizer';
+        
+        // Get container width for constraints
+        const container = isFoldersResizer ? 
+            document.querySelector('.folders-container') : 
+            document.querySelector('.panel-container');
+        
+        const containerWidth = container ? container.offsetWidth : window.innerWidth;
+        const delta = input.clientX - initialData.startX;
+        
+        // Calculate new width based on panel type
+        let newWidth;
+        if (isRightPanel) {
+            // Right panel grows leftward
+            newWidth = initialData.startWidth - delta;
+        } else {
+            // Left panel or folders grows rightward
+            newWidth = initialData.startWidth + delta;
+        }
+        
+        // Apply constraints
+        const minWidth = 100;
+        const maxWidth = Math.min(800, containerWidth * 0.8);
+        
+        return Math.max(minWidth, Math.min(maxWidth, newWidth));
+    }
+
+    /**
+     * Calculate vertical panel size (moved from TouchSupportManager)
+     * @param {HTMLElement} element - Resizer element
+     * @param {Object} input - Input data (mouse event or touch object)
+     * @param {Object} initialData - Initial data
+     * @returns {number} - Calculated height
+     */
+    calculateVerticalPanelSize(element, input, initialData) {
+        const isConsole = element.classList.contains('console-resize-handle');
+        const isAssets = element.id === 'resizer-assets';
+        
+        const delta = input.clientY - initialData.startY;
+        
+        // Calculate new height based on panel type
+        let newHeight;
+        if (isConsole) {
+            // Console grows upward
+            newHeight = initialData.startHeight - delta;
+        } else {
+            // Assets panel grows downward
+            newHeight = initialData.startHeight + delta;
+        }
+        
+        // Apply constraints
+        const minHeight = 100;
+        const maxHeight = window.innerHeight * 0.8;
+        
+        return Math.max(minHeight, Math.min(maxHeight, newHeight));
     }
 
     /**

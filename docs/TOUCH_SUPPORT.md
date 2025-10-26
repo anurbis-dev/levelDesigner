@@ -1,4 +1,29 @@
-# Touch Support System
+# Touch Support System v3.52.5
+
+> **🔄 ОБНОВЛЕНИЕ v3.52.5**: Система тач-поддержки была полностью рефакторена и унифицирована. Теперь используется **UnifiedTouchManager** вместо отдельных TouchSupportManager и TouchHandlers.
+
+## 🆕 Новая унифицированная архитектура
+
+### UnifiedTouchManager
+**Файл**: `src/event-system/UnifiedTouchManager.js`
+
+Новый унифицированный менеджер, который объединяет функциональность:
+- **TouchSupportManager** - продвинутое распознавание жестов
+- **TouchHandlers** - обработка raw touch событий (legacy поддержка)
+- **EventHandlerManager** - централизованная регистрация событий
+
+#### Основные методы:
+- `registerElement(element, configType, customConfig, elementId)` - регистрация элемента
+- `unregisterElement(element)` - отмена регистрации
+- `destroy()` - уничтожение менеджера
+
+#### Интеграция с EventHandlerManager:
+```javascript
+// Автоматическая интеграция через EventHandlerManager
+eventHandlerManager.registerTouchElement(element, 'panelResizer', config, 'my-resizer');
+```
+
+---
 
 Централизованная система поддержки тач-скрина для мобильных устройств.
 
@@ -74,11 +99,11 @@
 
 ## Использование
 
-### Базовое использование
+### Базовое использование (НОВЫЙ API v3.52.5)
 
 ```javascript
-// Регистрация элемента для тач-поддержки
-touchManager.registerElement(element, 'panelResizer', {
+// Через UnifiedTouchManager (рекомендуемый способ)
+unifiedTouchManager.registerElement(element, 'panelResizer', {
     direction: 'horizontal',
     minSize: 100,
     maxSize: 800,
@@ -94,19 +119,38 @@ touchManager.registerElement(element, 'panelResizer', {
     onDoubleTap: (element, touch) => {
         console.log('Double tap detected');
     }
-});
+}, 'my-resizer');
+
+// Через EventHandlerManager (автоматическая интеграция)
+eventHandlerManager.registerTouchElement(element, 'panelResizer', {
+    direction: 'horizontal',
+    minSize: 100,
+    maxSize: 800,
+    onResizeStart: (element, targetPanel, touch) => {
+        console.log('Resize started');
+    },
+    onResize: (element, targetPanel, newSize, touch) => {
+        console.log('Resizing to:', newSize);
+    },
+    onResizeEnd: (element, targetPanel, currentSize) => {
+        console.log('Resize ended:', currentSize);
+    },
+    onDoubleTap: (element, touch) => {
+        console.log('Double tap detected');
+    }
+}, 'my-resizer');
 ```
 
-### Использование утилит
+### Использование утилит (ОБНОВЛЕНО v3.52.5)
 
 ```javascript
-// Добавление тач-поддержки к кнопке
+// Добавление тач-поддержки к кнопке (через UnifiedTouchManager)
 TouchSupportUtils.addButtonTouchSupport(
     button, 
     () => console.log('Button tapped'),
     () => console.log('Button double-tapped'),
     () => console.log('Button long-pressed'),
-    touchManager
+    unifiedTouchManager  // Используем UnifiedTouchManager вместо TouchSupportManager
 );
 
 // Добавление тач-поддержки к перетаскиваемому элементу
@@ -115,15 +159,15 @@ TouchSupportUtils.addDragTouchSupport(
     (element, touch) => console.log('Drag started'),
     (element, touch, touchData) => console.log('Dragging'),
     (element, touchData) => console.log('Drag ended'),
-    touchManager
+    unifiedTouchManager  // Используем UnifiedTouchManager
 );
 ```
 
 ## Объединение обработчиков
 
-### Множественные конфигурации на одном элементе
+### Множественные конфигурации на одном элементе (ОБНОВЛЕНО v3.52.5)
 
-TouchSupportManager поддерживает объединение нескольких типов жестов на одном элементе. Это позволяет, например, canvas поддерживать одновременно marquee selection, pan, zoom и context menu.
+UnifiedTouchManager поддерживает объединение нескольких типов жестов на одном элементе. Это позволяет, например, canvas поддерживать одновременно marquee selection, pan, zoom и context menu.
 
 #### Как работает объединение
 
@@ -131,30 +175,30 @@ TouchSupportManager поддерживает объединение нескол
 2. **Последующие регистрации** - дополнительные типы объединяются с существующей конфигурацией
 3. **Сохранение обработчиков** - все обработчики сохраняются без конфликтов
 
-#### Пример объединения
+#### Пример объединения (НОВЫЙ API)
 
 ```javascript
 // Первая регистрация - marquee selection
-touchManager.registerElement(canvas, 'marqueeSelection', {
+unifiedTouchManager.registerElement(canvas, 'marqueeSelection', {
     onMarqueeStart: (element, data) => { /* ... */ },
     onMarqueeMove: (element, data) => { /* ... */ },
     onMarqueeEnd: (element, data) => { /* ... */ }
-});
+}, 'canvas-marquee');
 
 // Вторая регистрация - pan/zoom (объединяется с существующей)
-touchManager.registerElement(canvas, 'twoFingerPanZoom', {
+unifiedTouchManager.registerElement(canvas, 'twoFingerPanZoom', {
     onPanStart: (element, data) => { /* ... */ },
     onPanMove: (element, data) => { /* ... */ },
     onPanEnd: (element, data) => { /* ... */ },
     onZoomStart: (element, data) => { /* ... */ },
     onZoomMove: (element, data) => { /* ... */ },
     onZoomEnd: (element, data) => { /* ... */ }
-});
+}, 'canvas-pan-zoom');
 
 // Третья регистрация - context menu (объединяется с существующей)
-touchManager.registerElement(canvas, 'twoFingerContext', {
+unifiedTouchManager.registerElement(canvas, 'twoFingerContext', {
     onTwoFingerTap: (element, data) => { /* ... */ }
-});
+}, 'canvas-context');
 ```
 
 #### Правила объединения
@@ -571,7 +615,7 @@ if (TouchSupportUtils.isMobile()) {
 
 ## Интеграция
 
-### С ResizerManager
+### С ResizerManager (ОБНОВЛЕНО v3.52.5)
 ```javascript
 // Автоматическая регистрация разделителей через ResizerManager
 this.levelEditor.resizerManager.registerResizer(
@@ -581,48 +625,48 @@ this.levelEditor.resizerManager.registerResizer(
     'horizontal'
 );
 
-// Автоматическое переключение touch поддержки
+// Автоматическое переключение touch поддержки через UnifiedTouchManager
 this.stateManager.subscribe('touch.enabled', (enabled) => {
     this.resizerManager.updateAllResizersTouchSupport();
 });
 ```
 
-### С PanelPositionManager
+### С PanelPositionManager (ОБНОВЛЕНО v3.52.5)
 ```javascript
-// Автоматическая регистрация разделителей
-this.levelEditor.touchSupportManager.registerElement(resizer, 'panelResizer', config);
+// Автоматическая регистрация разделителей через UnifiedTouchManager
+this.levelEditor.unifiedTouchManager.registerElement(resizer, 'panelResizer', config, 'panel-resizer');
 ```
 
-### С контекстными меню
+### С контекстными меню (ОБНОВЛЕНО v3.52.5)
 ```javascript
-// Long-press для вызова меню
+// Long-press для вызова меню через UnifiedTouchManager
 TouchSupportUtils.addContextMenuTouchSupport(
     element,
     (element) => showContextMenu(element),
-    touchManager
+    unifiedTouchManager  // Используем UnifiedTouchManager
 );
 ```
 
-### С перетаскиванием табов
+### С перетаскиванием табов (ОБНОВЛЕНО v3.52.5)
 ```javascript
-// Тач-поддержка для перетаскивания
+// Тач-поддержка для перетаскивания через UnifiedTouchManager
 TouchSupportUtils.addDragTouchSupport(
     tabContainer,
     onDragStart,
     onDrag,
     onDragEnd,
-    touchManager
+    unifiedTouchManager  // Используем UnifiedTouchManager
 );
 ```
 
 ## Примеры
 
-### Полный пример панели с тач-поддержкой
+### Полный пример панели с тач-поддержкой (ОБНОВЛЕНО v3.52.5)
 
 ```javascript
 class TouchPanel {
-    constructor(touchManager) {
-        this.touchManager = touchManager;
+    constructor(unifiedTouchManager) {
+        this.unifiedTouchManager = unifiedTouchManager;
         this.setupPanel();
     }
     
@@ -630,8 +674,8 @@ class TouchPanel {
         const panel = document.createElement('div');
         const resizer = document.createElement('div');
         
-        // Добавить тач-поддержку к разделителю
-        this.touchManager.registerElement(resizer, 'panelResizer', {
+        // Добавить тач-поддержку к разделителю через UnifiedTouchManager
+        this.unifiedTouchManager.registerElement(resizer, 'panelResizer', {
             direction: 'horizontal',
             minSize: 200,
             maxSize: 600,
@@ -648,9 +692,14 @@ class TouchPanel {
             onDoubleTap: (element, touch) => {
                 this.toggleCollapse();
             }
-        });
+        }, 'panel-resizer');
         
         return panel;
+    }
+    
+    destroy() {
+        // Автоматическая очистка через UnifiedTouchManager
+        this.unifiedTouchManager.unregisterElement(this.resizer);
     }
 }
 ```
@@ -711,9 +760,20 @@ const handleMouseMove = (e) => {
 - **Меньше багов** - нет расхождений между touch и mouse
 - **Переиспользование** - методы доступны для других частей кода
 
-## API Reference
+## API Reference (ОБНОВЛЕНО v3.52.5)
 
-### TouchSupportManager
+### UnifiedTouchManager
+
+#### Основные методы
+- `registerElement(element, configType, customConfig, elementId)` - регистрация элемента
+- `unregisterElement(element)` - отмена регистрации
+- `destroy()` - уничтожение менеджера
+
+#### Интеграция с EventHandlerManager
+- `eventHandlerManager.registerTouchElement(element, configType, customConfig, elementId)` - автоматическая интеграция
+- `eventHandlerManager.unregisterTouchElement(element)` - автоматическая отмена регистрации
+
+### TouchSupportManager (Legacy - используется внутри UnifiedTouchManager)
 
 #### Основные методы
 - `registerElement(element, configType, customConfig)` - регистрация элемента
@@ -730,16 +790,19 @@ const handleMouseMove = (e) => {
 - `calculateVerticalPanelSize(element, input, initialData)` - расчет высоты
 - `getUnifiedResizeMethods()` - получение методов для внешнего использования
 
-### TouchSupportUtils
+### TouchSupportUtils (ОБНОВЛЕНО v3.52.5)
 
 #### Методы
-- `addButtonTouchSupport()` - тач-поддержка для кнопок
-- `addDragTouchSupport()` - тач-поддержка для перетаскивания
-- `addResizeTouchSupport()` - тач-поддержка для изменения размера
-- `addContextMenuTouchSupport()` - тач-поддержка для контекстных меню
+- `addButtonTouchSupport(element, onTap, onDoubleTap, onLongPress, touchManager)` - тач-поддержка для кнопок
+- `addDragTouchSupport(element, onDragStart, onDrag, onDragEnd, touchManager)` - тач-поддержка для перетаскивания
+- `addMarqueeTouchSupport(element, onMarqueeStart, onMarqueeMove, onMarqueeEnd, touchManager)` - тач-поддержка для рамки селекта
+- `addLongPressMarqueeTouchSupport(element, onMarqueeStart, onMarqueeMove, onMarqueeEnd, touchManager, longPressDelay)` - тач-поддержка для рамки селекта с длительным нажатием
+- `addTwoFingerPanSupport(element, onPanStart, onPanMove, onPanEnd, touchManager)` - тач-поддержка для двухпальцевого панарамирования
+- `addTwoFingerZoomSupport(element, onZoomStart, onZoomMove, onZoomEnd, touchManager)` - тач-поддержка для двухпальцевого зума
+- `addTwoFingerPanZoomSupport(element, onPanStart, onPanMove, onPanEnd, onZoomStart, onZoomMove, onZoomEnd, touchManager)` - комбинированная поддержка панарамирования и зума
+- `addTwoFingerContextSupport(element, onTwoFingerTap, touchManager)` - тач-поддержка для двухпальцевого контекстного меню
+- `updateTouchAction(element, actionType, touchManager)` - обновление touch-action для элемента
+- `disableTouchGestures(element, touchManager)` - отключение жестов для элемента
+- `enableTouchGestures(element, touchManager)` - включение жестов для элемента
 - `isTouchSupported()` - проверка поддержки тач-событий
 - `isMobile()` - проверка мобильного устройства
-- `getOptimalTouchSize()` - оптимальный размер тач-цели
-- `applyTouchStyles()` - применение тач-стилей
-- `createTouchButton()` - создание тач-кнопки
-- `hapticFeedback()` - тактильная обратная связь

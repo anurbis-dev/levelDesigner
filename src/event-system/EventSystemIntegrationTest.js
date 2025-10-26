@@ -1,17 +1,17 @@
 /**
- * Test script for EventHandlerManager and TouchSupportAdapter integration
+ * Test script for EventHandlerManager and UnifiedTouchManager integration
  * 
  * This script tests the integration between the unified event system
  * and touch support without affecting the main application
  */
 
-import { EventHandlerManager } from './EventHandlerManager.js';
-import { TouchSupportAdapter } from './TouchSupportAdapter.js';
+import { eventHandlerManager } from './EventHandlerManager.js';
+import { UnifiedTouchManager } from './UnifiedTouchManager.js';
 
 export class EventSystemIntegrationTest {
     constructor() {
-        this.eventHandlerManager = new EventHandlerManager();
-        this.touchAdapter = new TouchSupportAdapter(this.eventHandlerManager);
+        this.eventHandlerManager = eventHandlerManager;
+        this.unifiedTouchManager = null;
         this.testResults = [];
     }
 
@@ -22,13 +22,10 @@ export class EventSystemIntegrationTest {
         console.log('🧪 Starting Event System Integration Tests...');
         
         try {
-            // Initialize EventHandlerManager
-            this.eventHandlerManager.init();
-            this.testResults.push({ test: 'EventHandlerManager.init()', status: 'PASS' });
-            
-            // Test TouchSupportAdapter initialization
-            await this.touchAdapter.initializeTouchSupportManager();
-            this.testResults.push({ test: 'TouchSupportAdapter initialization', status: 'PASS' });
+            // Initialize UnifiedTouchManager
+            this.unifiedTouchManager = new UnifiedTouchManager(null, this.eventHandlerManager);
+            this.eventHandlerManager.setUnifiedTouchManager(this.unifiedTouchManager);
+            this.testResults.push({ test: 'UnifiedTouchManager initialization', status: 'PASS' });
             
             // Test element registration
             await this.testElementRegistration();
@@ -48,7 +45,7 @@ export class EventSystemIntegrationTest {
     }
 
     /**
-     * Test element registration with TouchSupportAdapter
+     * Test element registration with UnifiedTouchManager
      */
     async testElementRegistration() {
         try {
@@ -59,7 +56,6 @@ export class EventSystemIntegrationTest {
             
             // Mock configuration
             const config = {
-                type: 'resize',
                 direction: 'horizontal',
                 minSize: 100,
                 maxSize: 800,
@@ -74,20 +70,20 @@ export class EventSystemIntegrationTest {
                 }
             };
             
-            // Register element
-            await this.touchAdapter.registerElement(mockElement, 'panelResizer', config, 'test-resizer');
+            // Register element through EventHandlerManager
+            this.eventHandlerManager.registerTouchElement(mockElement, 'panelResizer', config, 'test-resizer');
             
-            // Check if element is registered in EventHandlerManager
+            // Check if element is registered
             const isRegistered = this.eventHandlerManager.isElementRegistered(mockElement);
             
             if (isRegistered) {
-                this.testResults.push({ test: 'Element registration', status: 'PASS' });
+                this.testResults.push({ test: 'Touch element registration', status: 'PASS' });
             } else {
-                this.testResults.push({ test: 'Element registration', status: 'FAIL' });
+                this.testResults.push({ test: 'Touch element registration', status: 'FAIL' });
             }
             
         } catch (error) {
-            this.testResults.push({ test: 'Element registration', status: 'FAIL', error: error.message });
+            this.testResults.push({ test: 'Touch element registration', status: 'FAIL', error: error.message });
         }
     }
 
@@ -133,15 +129,15 @@ export class EventSystemIntegrationTest {
     async testCleanup() {
         try {
             // Get all registered elements
-            const elements = this.eventHandlerManager.getAllElements();
+            const elements = this.eventHandlerManager.getAllRegisteredElements();
             
             // Unregister all elements
             elements.forEach(element => {
-                this.touchAdapter.unregisterElement(element);
+                this.eventHandlerManager.unregisterElement(element);
             });
             
             // Check if all elements are unregistered
-            const remainingElements = this.eventHandlerManager.getAllElements();
+            const remainingElements = this.eventHandlerManager.getAllRegisteredElements();
             
             if (remainingElements.length === 0) {
                 this.testResults.push({ test: 'Cleanup', status: 'PASS' });
@@ -195,8 +191,9 @@ export class EventSystemIntegrationTest {
      * Cleanup test resources
      */
     cleanup() {
-        this.touchAdapter.destroy();
-        this.eventHandlerManager.destroy();
+        if (this.unifiedTouchManager) {
+            this.unifiedTouchManager.destroy();
+        }
         console.log('🧹 Test cleanup completed');
     }
 }

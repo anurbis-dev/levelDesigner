@@ -4,14 +4,15 @@
  * Tests all touch gestures and interactions in the unified event system
  */
 
-import { EventHandlerManager } from './EventHandlerManager.js';
+import { eventHandlerManager } from './EventHandlerManager.js';
 import { UnifiedTouchManager } from './UnifiedTouchManager.js';
 import { EventSystemIntegrationTest } from './EventSystemIntegrationTest.js';
 
 export class TouchGestureTest {
     constructor() {
-        this.eventHandlerManager = new EventHandlerManager();
+        this.eventHandlerManager = eventHandlerManager;
         this.unifiedTouchManager = new UnifiedTouchManager(null, this.eventHandlerManager);
+        this.eventHandlerManager.setUnifiedTouchManager(this.unifiedTouchManager);
         this.testResults = [];
         this.mockLevelEditor = this.createMockLevelEditor();
     }

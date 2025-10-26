@@ -205,6 +205,16 @@ export class Logger {
     };
 
     /**
+     * Touch event logging
+     */
+    static touch = {
+        info: (message, ...args) => Logger.log('TOUCH', 'info', message, ...args),
+        debug: (message, ...args) => Logger.log('TOUCH', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('TOUCH', 'warn', message, ...args),
+        error: (message, ...args) => Logger.log('TOUCH', 'error', message, ...args)
+    };
+
+    /**
      * Performance timing methods
      */
     static time(label) {

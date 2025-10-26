@@ -37,17 +37,9 @@ export class EventHandlers extends BaseModule {
      * Setup all event listeners
      */
     setupEventListeners() {
-        // Window resize with EventHandlerManager
-        const resizeHandlers = {
-            resize: () => {
-                if (this._destroyed) return;
-                this.editor.canvasRenderer.resizeCanvas();
-                this.editor.render();
-            }
-        };
+        // Window events - combine all window handlers
+        this.setupWindowEvents();
         
-        eventHandlerManager.registerElement(window, resizeHandlers, 'window-resize');
-
         // Canvas events
         this.setupCanvasEvents();
         
@@ -56,7 +48,6 @@ export class EventHandlers extends BaseModule {
 
         // Keyboard events
         this.setupKeyboardEvents();
-
 
         // Initialize group edit mode state
         this.editor.stateManager.set('groupEditMode', {
@@ -76,6 +67,97 @@ export class EventHandlers extends BaseModule {
 
         // Start render loop with proper cleanup support
         this.startRenderLoop();
+    }
+
+    /**
+     * Setup all window events in one call
+     */
+    setupWindowEvents() {
+        // Combined window handlers
+        const windowHandlers = {
+            // Resize events
+            resize: () => {
+                if (this._destroyed) return;
+                this.editor.canvasRenderer.resizeCanvas();
+                this.editor.render();
+            },
+            
+            // Global mouse events for proper marquee handling
+            mousedown: (e) => this.editor.mouseHandlers.handleGlobalMouseDown(e),
+            mousemove: (e) => this.editor.mouseHandlers.handleGlobalMouseMove(e),
+            mouseup: (e) => this.editor.mouseHandlers.handleGlobalMouseUp(e),
+            
+            // Global touch events (only for non-canvas elements)
+            touchstart: (e) => {
+                if (e.target !== this.editor.canvasRenderer.canvas) {
+                    this.touchHandlers.handleTouchStart(e);
+                }
+            },
+            touchmove: (e) => {
+                if (e.target !== this.editor.canvasRenderer.canvas) {
+                    this.touchHandlers.handleTouchMove(e);
+                }
+            },
+            touchend: (e) => {
+                if (e.target !== this.editor.canvasRenderer.canvas) {
+                    this.touchHandlers.handleTouchEnd(e);
+                }
+            },
+            touchcancel: (e) => {
+                if (e.target !== this.editor.canvasRenderer.canvas) {
+                    this.touchHandlers.handleTouchCancel(e);
+                }
+            },
+            
+            // Keyboard events
+            keydown: (e) => {
+                if (this._destroyed) return;
+                if (e.key === 'Control' || e.key === 'Meta') {
+                    this.editor.stateManager.update({
+                        'keyboard.ctrlSnapToGrid': true
+                    });
+                } else if (e.key === 'Shift') {
+                    this.editor.stateManager.update({
+                        'keyboard.shiftKey': true
+                    });
+                } else if (e.key === 'Alt') {
+                    this.editor.stateManager.update({
+                        'keyboard.altKey': true
+                    });
+                }
+                
+                this.handleKeyDown(e);
+            },
+            keyup: (e) => {
+                if (this._destroyed) return;
+                if (e.key === 'Control' || e.key === 'Meta') {
+                    this.editor.stateManager.update({
+                        'keyboard.ctrlSnapToGrid': false
+                    });
+                } else if (e.key === 'Shift') {
+                    this.editor.stateManager.update({
+                        'keyboard.shiftKey': false
+                    });
+                } else if (e.key === 'Alt') {
+                    this.editor.stateManager.update({
+                        'keyboard.altKey': false
+                    });
+                }
+                
+                this.handleKeyUp(e);
+            }
+        };
+        
+        // Register all window events in one call
+        eventHandlerManager.registerElement(window, windowHandlers, 'window-all');
+        
+        // Register global mouse handlers on document.body as fallback
+        const globalMouseHandlers = {
+            mousedown: (e) => this.editor.mouseHandlers.handleGlobalMouseDown(e),
+            mousemove: (e) => this.editor.mouseHandlers.handleGlobalMouseMove(e),
+            mouseup: (e) => this.editor.mouseHandlers.handleGlobalMouseUp(e)
+        };
+        eventHandlerManager.registerElement(document.body, globalMouseHandlers, 'global-mouse-body');
     }
     
     /**
@@ -123,111 +205,55 @@ export class EventHandlers extends BaseModule {
     setupCanvasEvents() {
         const canvas = this.editor.canvasRenderer.canvas;
 
-        // Mouse events on canvas using EventHandlerManager
+        // Combined mouse and touch events for canvas
         const canvasHandlers = {
+            // Mouse events
             mousedown: (e) => this.editor.mouseHandlers.handleMouseDown(e),
             mousemove: (e) => this.editor.mouseHandlers.handleMouseMove(e),
             mouseup: (e) => this.editor.mouseHandlers.handleMouseUp(e),
             wheel: (e) => this.editor.mouseHandlers.handleWheel(e),
             dblclick: (e) => this.editor.mouseHandlers.handleDoubleClick(e),
             dragover: (e) => this.editor.mouseHandlers.handleDragOver(e),
-            drop: (e) => this.editor.mouseHandlers.handleDrop(e)
+            drop: (e) => this.editor.mouseHandlers.handleDrop(e),
+            
+            // Touch events
+            touchstart: (e) => this.handleCanvasTouchStart(e),
+            touchmove: (e) => this.handleCanvasTouchMove(e),
+            touchend: (e) => this.handleCanvasTouchEnd(e),
+            touchcancel: (e) => this.handleCanvasTouchCancel(e)
         };
         
-        // Register canvas with EventHandlerManager
+        // Register canvas with all events in one call
         eventHandlerManager.registerElement(canvas, canvasHandlers, 'main-canvas');
-        
-        // Global mouse events for proper marquee handling
-        const globalMouseHandlers = {
-            mousedown: (e) => this.editor.mouseHandlers.handleGlobalMouseDown(e),
-            mousemove: (e) => this.editor.mouseHandlers.handleGlobalMouseMove(e),
-            mouseup: (e) => this.editor.mouseHandlers.handleGlobalMouseUp(e)
-        };
-
-        // Register global mouse handlers on window
-        eventHandlerManager.registerElement(window, globalMouseHandlers, 'global-mouse');
-        
-        // Register global mouse handlers on document.body as fallback
-        eventHandlerManager.registerElement(document.body, globalMouseHandlers, 'global-mouse-body');
     }
 
     setupTouchEvents() {
-        const canvas = this.editor.canvasRenderer.canvas;
+        // Touch events are now handled in setupWindowEvents
+        // This method is kept for compatibility but does nothing
+    }
 
-        // Register canvas with UnifiedTouchManager
-        this.unifiedTouchManager.registerElement(canvas, 'canvas', {
-            enablePan: true,
-            enableZoom: true,
-            enableMarquee: true,
-            enableContextMenu: true,
-            onTouchStart: (element, touch) => {
-                // Legacy support - call TouchHandlers if needed
-                this.touchHandlers.handleTouchStart({ touches: [touch] });
-            },
-            onTouchMove: (element, touch) => {
-                this.touchHandlers.handleTouchMove({ touches: [touch] });
-            },
-            onTouchEnd: (element, touch) => {
-                this.touchHandlers.handleTouchEnd({ changedTouches: [touch] });
-            },
-            onTouchCancel: (element, touch) => {
-                this.touchHandlers.handleTouchCancel({ changedTouches: [touch] });
-            }
-        }, 'main-canvas');
-        
-        // Global touch events for proper touch handling using EventHandlerManager
-        const globalTouchHandlers = {
-            touchstart: (e) => this.touchHandlers.handleTouchStart(e),
-            touchmove: (e) => this.touchHandlers.handleTouchMove(e),
-            touchend: (e) => this.touchHandlers.handleTouchEnd(e),
-            touchcancel: (e) => this.touchHandlers.handleTouchCancel(e)
-        };
+    /**
+     * Handle canvas touch events (delegate to TouchHandlers)
+     */
+    handleCanvasTouchStart(e) {
+        this.touchHandlers.handleTouchStart(e);
+    }
 
-        // Register global touch handlers on window
-        eventHandlerManager.registerElement(window, globalTouchHandlers, 'global-touch');
+    handleCanvasTouchMove(e) {
+        this.touchHandlers.handleTouchMove(e);
+    }
+
+    handleCanvasTouchEnd(e) {
+        this.touchHandlers.handleTouchEnd(e);
+    }
+
+    handleCanvasTouchCancel(e) {
+        this.touchHandlers.handleTouchCancel(e);
     }
 
     setupKeyboardEvents() {
-        // Handle Ctrl key for snap to grid using EventHandlerManager
-        const keyboardHandlers = {
-            keydown: (e) => {
-                if (this._destroyed) return;
-                if (e.key === 'Control' || e.key === 'Meta') {
-                    this.editor.stateManager.update({
-                        'keyboard.ctrlSnapToGrid': true
-                    });
-                } else if (e.key === 'Shift') {
-                    this.editor.stateManager.update({
-                        'keyboard.shiftKey': true
-                    });
-                } else if (e.key === 'Alt') {
-                    this.editor.stateManager.update({
-                        'keyboard.altKey': true
-                    });
-                }
-                
-                this.handleKeyDown(e);
-            },
-            keyup: (e) => {
-                if (this._destroyed) return;
-                if (e.key === 'Control' || e.key === 'Meta') {
-                    this.editor.stateManager.update({
-                        'keyboard.ctrlSnapToGrid': false
-                    });
-                } else if (e.key === 'Shift') {
-                    this.editor.stateManager.update({
-                        'keyboard.shiftKey': false
-                    });
-                } else if (e.key === 'Alt') {
-                    this.editor.stateManager.update({
-                        'keyboard.altKey': false
-                    });
-                }
-            }
-        };
-        
-        // Register keyboard handlers with EventHandlerManager
-        eventHandlerManager.registerElement(window, keyboardHandlers, 'keyboard-handlers');
+        // Keyboard events are now handled in setupWindowEvents
+        // This method is kept for compatibility but does nothing
     }
     
     handleKeyDown(e) {
@@ -1083,23 +1109,23 @@ export class EventHandlers extends BaseModule {
             tabs.forEach(tab => {
                 const tabHandlers = {
                     click: () => {
-                        const tabName = tab.dataset.tab;
-                        
-                        // Determine which panel this tab belongs to
-                        const panel = tab.closest('[id$="-tabs-panel"]');
-                        const panelSide = panel ? (panel.id.includes('left') ? 'left' : 'right') : 'right';
-                        
-                        // Use the centralized method to handle tab activation
-                        this.setActivePanelTab(tabName, panelSide);
-                        
-                        // Update state manager and config for the appropriate panel
-                        if (panelSide === 'right') {
-                        this.editor.stateManager.set('rightPanelTab', tabName);
-                        this.editor.configManager.set('editor.view.rightPanelTab', tabName);
-                        } else if (panelSide === 'left') {
-                            this.editor.stateManager.set('leftPanelTab', tabName);
-                            this.editor.configManager.set('editor.view.leftPanelTab', tabName);
-                        }
+                    const tabName = tab.dataset.tab;
+                    
+                    // Determine which panel this tab belongs to
+                    const panel = tab.closest('[id$="-tabs-panel"]');
+                    const panelSide = panel ? (panel.id.includes('left') ? 'left' : 'right') : 'right';
+                    
+                    // Use the centralized method to handle tab activation
+                    this.setActivePanelTab(tabName, panelSide);
+                    
+                    // Update state manager and config for the appropriate panel
+                    if (panelSide === 'right') {
+                    this.editor.stateManager.set('rightPanelTab', tabName);
+                    this.editor.configManager.set('editor.view.rightPanelTab', tabName);
+                    } else if (panelSide === 'left') {
+                        this.editor.stateManager.set('leftPanelTab', tabName);
+                        this.editor.configManager.set('editor.view.leftPanelTab', tabName);
+                    }
                     }
                 };
                 
@@ -1264,10 +1290,10 @@ export class EventHandlers extends BaseModule {
 
         const menuItemHandlers = {
             click: () => {
-                if (this.editor && this.editor.panelPositionManager) {
-                    this.editor.panelPositionManager.moveTab(tabName, currentPanel, targetPanel);
-                }
-                menu.remove();
+            if (this.editor && this.editor.panelPositionManager) {
+                this.editor.panelPositionManager.moveTab(tabName, currentPanel, targetPanel);
+            }
+            menu.remove();
             }
         };
         

@@ -18,7 +18,7 @@
 #### Основные компоненты:
 - **LevelEditor** - главный класс редактора
 - **13 менеджеров** - StateManager, ConfigManager, TouchSupportManager, и др.
-- **event-system/** - система обработки событий (EventHandlerManager, AutoEventHandlerManager, UniversalWindowHandlers)
+- **event-system/** - унифицированная система событий (EventHandlerManager, UnifiedTouchManager, EventHandlerUtils)
 - **UI компоненты** - панели, диалоги, контекстные меню
 - **Core модули** - операции с объектами, слоями, файлами
 
@@ -26,7 +26,8 @@
 - **LevelEditor**: `init()`, `saveLevel()`, `createObject()`, `selectObject()`, `getCachedObject()`
 - **StateManager**: `get()`, `set()`, `subscribe()`, `notify()`, `updateComponentStatus()`
 - **ConfigManager**: `get()`, `set()`, `loadAllConfigs()`, `syncAllCanvasToGrid()`
-- **TouchSupportManager**: `registerElement()`, `calculatePanelSize()`, `getUnifiedResizeMethods()`
+- **UnifiedTouchManager**: `registerElement()`, `unregisterElement()`, `destroy()` - унифицированная обработка touch событий
+- **EventHandlerManager**: `registerElement()`, `registerCanvas()`, `unregisterElement()` - централизованная регистрация событий
 
 ### 📁 Панель Content
 - Левая сторона Assets (можно переключить вправо)
@@ -40,7 +41,8 @@
 - JSON файлы с полями name, type, imgSrc, width, height, color, properties
 
 ### 🎮 Тач-поддержка (v3.52.5)
-- **TouchSupportManager** - центральный менеджер тач-событий
+- **UnifiedTouchManager** - унифицированный менеджер touch событий (объединяет TouchSupportManager + TouchHandlers)
+- **EventHandlerManager** - централизованная регистрация всех событий (mouse + touch)
 - **BrowserGesturePreventionManager** - блокировка браузерных жестов
 - **TouchInitializationManager** - централизованная инициализация
 - **Canvas pan/zoom** - жесты двумя пальцами
@@ -86,22 +88,22 @@ const selected = stateManager.get('selectedObject');
 configManager.set('grid.size', 32);
 const gridSize = configManager.get('grid.size');
 
-// Тач-поддержка
-touchManager.registerElement(element, 'panelResizer', { direction: 'horizontal' });
+// Унифицированная тач-поддержка
+unifiedTouchManager.registerElement(element, 'panelResizer', { direction: 'horizontal' });
 
-// Обработка событий
-eventManager.registerElement(button, 'button', { handlers: { click: this.onClick.bind(this) } });
+// Централизованная обработка событий
+eventHandlerManager.registerElement(button, { click: this.onClick.bind(this) }, 'my-button');
 ```
 
 #### Основные операции:
 - **Создание объектов**: `levelEditor.createObject(type, x, y, properties)`
 - **Управление состоянием**: `stateManager.get/set/subscribe()`
 - **Работа с конфигурацией**: `configManager.get/set/loadAllConfigs()`
-- **Тач-поддержка**: `touchManager.registerElement()`
-- **Обработка событий**: `eventManager.registerElement()`
+- **Унифицированная тач-поддержка**: `unifiedTouchManager.registerElement()`
+- **Централизованная обработка событий**: `eventHandlerManager.registerElement()`
 
 #### Ключевые принципы:
-- Используйте централизованные системы (StateManager, ConfigManager, EventHandlerManager)
+- Используйте централизованные системы (StateManager, ConfigManager, EventHandlerManager, UnifiedTouchManager)
 - Доверяйте архитектуре - не добавляйте избыточные проверки
 - Всегда используйте Logger вместо console
 - Наследуйтесь от BaseDialog для диалогов

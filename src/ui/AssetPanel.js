@@ -470,49 +470,55 @@ export class AssetPanel extends BasePanel {
     setupFoldersResizer() {
         if (!this.foldersResizer) return;
 
-        // Double-click handler for foldersResizer
-        this.foldersResizer.addEventListener('dblclick', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const currentWidth = this.foldersContainer.offsetWidth;
-            const containerWidth = this.container.clientWidth;
-            const resizerWidth = 4;
-            const minWidth = 0;
-            const maxWidth = containerWidth - resizerWidth;
-            const previousFoldersWidth = 192; // Default width (w-48)
-            
-            // Check if already at minimum (collapsed)
-            if (currentWidth <= minWidth) {
-                // Restore to previous width
-                const newWidth = Math.min(previousFoldersWidth, maxWidth);
+        // Register folders resizer with EventHandlerManager
+        const resizerHandlers = {
+            dblclick: (e) => {
+                e.preventDefault();
+                e.stopPropagation();
                 
-                // Update StateManager instead of direct styles
-                if (this.levelEditor?.stateManager) {
-                    this.levelEditor.stateManager.set('panels.foldersWidth', newWidth);
-                }
-                this.updateContentVisibility(newWidth);
+                const currentWidth = this.foldersContainer.offsetWidth;
+                const containerWidth = this.container.clientWidth;
+                const resizerWidth = 4;
+                const minWidth = 0;
+                const maxWidth = containerWidth - resizerWidth;
+                const previousFoldersWidth = 192; // Default width (w-48)
                 
-                // Save to preferences
-                if (this.levelEditor?.userPrefs) {
-                    this.levelEditor.userPrefs.set('foldersWidth', newWidth);
+                // Check if already at minimum (collapsed)
+                if (currentWidth <= minWidth) {
+                    // Restore to previous width
+                    const newWidth = Math.min(previousFoldersWidth, maxWidth);
+                    
+                    // Update StateManager instead of direct styles
+                    if (this.levelEditor?.stateManager) {
+                        this.levelEditor.stateManager.set('panels.foldersWidth', newWidth);
+                    }
+                    this.updateContentVisibility(newWidth);
+                    
+                    // Save to preferences
+                    if (this.levelEditor?.userPrefs) {
+                        this.levelEditor.userPrefs.set('foldersWidth', newWidth);
+                    }
+                } else {
+                    // Save current width and collapse
+                    const newWidth = minWidth;
+                    
+                    // Update StateManager instead of direct styles
+                    if (this.levelEditor?.stateManager) {
+                        this.levelEditor.stateManager.set('panels.foldersWidth', newWidth);
+                    }
+                    this.updateContentVisibility(newWidth);
+                    
+                    // Save to preferences
+                    if (this.levelEditor?.userPrefs) {
+                        this.levelEditor.userPrefs.set('foldersWidth', newWidth);
+                    }
                 }
-            } else {
-                // Save current width and collapse
-                const newWidth = minWidth;
-                
-                // Update StateManager instead of direct styles
-                if (this.levelEditor?.stateManager) {
-                    this.levelEditor.stateManager.set('panels.foldersWidth', newWidth);
-                }
-                this.updateContentVisibility(newWidth);
-                
-                // Save to preferences
-                if (this.levelEditor?.userPrefs) {
-                    this.levelEditor.userPrefs.set('foldersWidth', newWidth);
-                }
-            }
-        });
+            },
+            mousedown: (e) => this.handleFoldersResizerMouseDown(e)
+        };
+        
+        // Register with EventHandlerManager
+        eventHandlerManager.registerElement(this.foldersResizer, resizerHandlers, 'folders-resizer');
 
         // Register with unified ResizerManager
         if (this.levelEditor?.resizerManager) {
@@ -547,6 +553,86 @@ export class AssetPanel extends BasePanel {
     }
 
     /**
+     * Handle folders resizer mouse down
+     */
+    handleFoldersResizerMouseDown(e) {
+        let isResizingFolders = false;
+        let initialMouseX = 0;
+        let initialFoldersWidth = 0;
+        let lastAppliedFoldersWidth = null;
+
+        isResizingFolders = true;
+        initialMouseX = e.clientX;
+        initialFoldersWidth = this.foldersContainer.offsetWidth;
+        lastAppliedFoldersWidth = null;
+
+        // Visual feedback
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+        this.foldersResizer.classList.add('resizing');
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        // Global mousemove handler
+        const handleMouseMove = (e) => {
+            if (!isResizingFolders) return;
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            // Use unified resize calculation from UnifiedTouchManager
+            const newWidth = this.levelEditor.unifiedTouchManager.calculateHorizontalPanelSize(
+                this.foldersResizer, 
+                e, 
+                { startX: initialMouseX, startY: e.clientY }
+            );
+
+            // If width didn't change compared to last applied, skip work
+            if (lastAppliedFoldersWidth !== null && newWidth === lastAppliedFoldersWidth) {
+                return;
+            }
+
+            // Apply new width
+            this.foldersContainer.style.width = newWidth + 'px';
+            this.foldersContainer.style.flexShrink = '0';
+            this.foldersContainer.style.flexGrow = '0';
+
+            // Hide/show content elements based on folders width
+            this.updateContentVisibility(newWidth);
+
+            // Save to preferences
+            if (this.levelEditor?.userPrefs) {
+                this.levelEditor.userPrefs.set('foldersWidth', newWidth);
+            }
+
+            lastAppliedFoldersWidth = newWidth;
+
+            Logger.ui.debug(`Folders panel resized to ${newWidth}px`);
+        };
+
+        // Global mouseup handler
+        const handleMouseUp = (e) => {
+            if (isResizingFolders) {
+                isResizingFolders = false;
+                document.body.style.cursor = '';
+                document.body.style.userSelect = '';
+                this.foldersResizer.classList.remove('resizing');
+
+                Logger.ui.debug('Folders panel resize completed');
+            }
+        };
+
+        // Store handlers for cleanup
+        this.foldersMouseMoveHandler = handleMouseMove;
+        this.foldersMouseUpHandler = handleMouseUp;
+        
+        // Add global listeners
+        document.addEventListener('mousemove', this.foldersMouseMoveHandler);
+        document.addEventListener('mouseup', this.foldersMouseUpHandler);
+    }
+
+    /**
      * Legacy folders resizer setup (fallback)
      */
     setupLegacyFoldersResizer() {
@@ -577,8 +663,8 @@ export class AssetPanel extends BasePanel {
             e.preventDefault();
             e.stopPropagation();
 
-            // Use unified resize calculation from TouchSupportManager
-            const newWidth = this.levelEditor.touchSupportManager.calculateHorizontalPanelSize(
+            // Use unified resize calculation from UnifiedTouchManager
+            const newWidth = this.levelEditor.unifiedTouchManager.calculateHorizontalPanelSize(
                 this.foldersResizer, 
                 e, 
                 { startX: initialMouseX, startY: e.clientY }
@@ -627,13 +713,33 @@ export class AssetPanel extends BasePanel {
         document.addEventListener('mousemove', this.foldersMouseMoveHandler);
         document.addEventListener('mouseup', this.foldersMouseUpHandler);
 
-        // Register touch support for folders resizer
-        if (this.levelEditor?.panelPositionManager) {
-            this.levelEditor.panelPositionManager.registerTouchSupportForResizer(
+        // Register touch support for folders resizer using UnifiedTouchManager
+        if (this.levelEditor?.unifiedTouchManager) {
+            const config = {
+                direction: 'horizontal',
+                minSize: 100,
+                maxSize: 800,
+                onResizeStart: (element, touch) => {
+                    Logger.ui.debug('Folders resizer touch start');
+                },
+                onResize: (element, touch, touchData) => {
+                    // Calculate new width
+                    const deltaX = touch.clientX - touchData.startX;
+                    const newWidth = initialFoldersWidth + deltaX;
+                    
+                    // Apply resize logic here
+                    Logger.ui.debug(`Folders resizer touch move, delta: ${deltaX}, newWidth: ${newWidth}`);
+                },
+                onResizeEnd: (element, touch, touchData) => {
+                    Logger.ui.debug('Folders resizer touch end');
+                }
+            };
+
+            this.levelEditor.unifiedTouchManager.registerElement(
                 this.foldersResizer, 
-                this.foldersContainer, 
-                'folders', 
-                'horizontal'
+                'panelResizer', 
+                config, 
+                'folders-resizer'
             );
         }
     }
