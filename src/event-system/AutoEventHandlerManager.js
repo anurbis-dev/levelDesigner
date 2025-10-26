@@ -753,14 +753,14 @@ export class AutoEventHandlerManager {
         if (layerElement) {
             // Only handle clicks on the layer name display area or the main content area
             // Don't handle clicks on buttons, inputs, or other interactive elements
-            const isInteractiveElement = target.closest('.layer-visibility-btn, .layer-lock-btn, .layer-color, .layer-name-input, .layer-parallax-input, .layer-objects-count');
+            const isInteractiveElement = target.closest('.layer-visibility-btn, .layer-lock-btn, .layer-color, .layer-name-input, .layer-parallax-input');
             if (isInteractiveElement) {
                 return;
             }
 
             // Check if clicking on the name display area or main content
             const isNameArea = target.closest('.layer-name-display');
-            const isMainContent = target === layerElement || target.closest('.flex.items-center.space-x-2');
+            const isMainContent = target === layerElement || target.closest('.flex.items-center.space-x-2, .flex.items-center.space-x-1');
 
             if (!isNameArea && !isMainContent) {
                 return; // Only allow selection when clicking on name or main content area
