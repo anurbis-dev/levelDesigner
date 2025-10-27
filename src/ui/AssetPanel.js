@@ -12,6 +12,7 @@ import { createSearchInput, createButton, createControlsRow } from './panel-stru
 import { searchManager } from '../utils/SearchManager.js';
 import { SearchUtils } from '../utils/SearchUtils.js';
 import { MenuPositioningUtils } from '../utils/MenuPositioningUtils.js';
+import { PanelSizeCalculator } from '../utils/PanelSizeCalculator.js';
 
 /**
  * Context menu for asset tabs - using EventHandlerManager approach like other tabs
@@ -19,35 +20,9 @@ import { MenuPositioningUtils } from '../utils/MenuPositioningUtils.js';
 class AssetTabContextMenu {
     constructor(assetPanel) {
         this.assetPanel = assetPanel;
-        // Don't setup handlers immediately - they will be setup in setupAssetTabContextMenu()
+        // Context menu handlers are now set up through delegated handlers in setupAssetPanelHandlers()
     }
 
-    /**
-     * Setup context menu handlers for asset tabs using EventHandlerManager
-     */
-    setupTabHandlers() {
-        // Get all asset tabs
-        const assetTabs = this.assetPanel.container.querySelectorAll('.tab');
-        
-        assetTabs.forEach(tab => {
-            const category = tab.dataset.category;
-            if (!category) return;
-            
-            const tabId = `asset-tab-${category}`;
-            
-            // Unregister existing handlers first
-            eventHandlerManager.unregisterElement(tab);
-            
-            const tabHandlers = {
-                contextmenu: (e) => this.handleTabContextMenu(e, category, tab)
-            };
-            
-            // Register with EventHandlerManager
-            eventHandlerManager.registerElement(tab, tabHandlers, tabId);
-        });
-        
-        Logger.ui.debug(`AssetTabContextMenu: Registered handlers for ${assetTabs.length} tabs`);
-    }
 
     /**
      * Handle context menu on asset tab
@@ -174,6 +149,9 @@ export class AssetPanel extends BasePanel {
 
         // View mode management
         this.viewMode = 'grid'; // 'grid', 'list', 'details'
+
+        // Initialize panel size calculator
+        this.panelSizeCalculator = new PanelSizeCalculator();
 
         // Search and filter management
         this.searchTerm = '';
@@ -745,11 +723,11 @@ export class AssetPanel extends BasePanel {
             e.preventDefault();
             e.stopPropagation();
 
-            // Use unified resize calculation from UnifiedTouchManager
-            const newWidth = this.levelEditor.unifiedTouchManager.calculateHorizontalPanelSize(
+            // Use panel size calculator
+            const newWidth = this.panelSizeCalculator.calculateHorizontalPanelSize(
                 this.foldersResizer, 
                 e, 
-                { startX: initialMouseX, startY: e.clientY }
+                { startX: initialMouseX, startWidth: initialFoldersWidth }
             );
 
             // If width didn't change compared to last applied, skip work
@@ -831,11 +809,11 @@ export class AssetPanel extends BasePanel {
             e.preventDefault();
             e.stopPropagation();
 
-            // Use unified resize calculation from UnifiedTouchManager
-            const newWidth = this.levelEditor.unifiedTouchManager.calculateHorizontalPanelSize(
+            // Use panel size calculator
+            const newWidth = this.panelSizeCalculator.calculateHorizontalPanelSize(
                 this.foldersResizer, 
                 e, 
-                { startX: initialMouseX, startY: e.clientY }
+                { startX: initialMouseX, startWidth: initialFoldersWidth }
             );
 
             // If width didn't change compared to last applied, skip work
@@ -999,11 +977,11 @@ export class AssetPanel extends BasePanel {
             return;
         }
 
-        // Re-setup context menu handler after tabs are recreated
-        this.assetTabContextMenu.setupTabHandlers();
+        // Context menu is now handled through delegated handlers in setupAssetPanelHandlers
+        // No need to register individual tab handlers
         this._assetTabContextMenuSetup = true;
         
-        Logger.ui.debug('AssetPanel: Asset tab context menu setup completed');
+        Logger.ui.debug('AssetPanel: Asset tab context menu setup completed (delegated)');
     }
 
     /**
@@ -3043,8 +3021,19 @@ export class AssetPanel extends BasePanel {
                     return;
                 }
             },
-            null // onInputChange - not used
-            // Context menu is now handled by AssetTabContextMenu class
+            null, // onInputChange - not used
+            (e) => {
+                // Handle context menu on tabs
+                const tabButton = e.target.closest('.tab');
+                if (tabButton) {
+                    const category = tabButton.dataset.category;
+                    if (category) {
+                        console.log('AssetPanel: Context menu triggered for tab:', category);
+                        this.assetTabContextMenu.handleTabContextMenu(e, category, tabButton);
+                    }
+                    return;
+                }
+            }
         );
 
         // Register container with new event manager

@@ -73,12 +73,7 @@ export class EventHandlers extends BaseModule {
             resize: () => {
                 if (this._destroyed) return;
                 this.editor.canvasRenderer.resizeCanvas();
-                // Re-register canvas events after resize (canvas element is recreated)
-                this.setupCanvasEvents();
-                // Re-register canvas context menu handler
-                if (this.editor.canvasContextMenu) {
-                    this.editor.canvasContextMenu.setupContextMenu();
-                }
+                // Canvas element is not recreated, so no need to re-register events
                 this.editor.render();
             },
             

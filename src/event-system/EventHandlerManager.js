@@ -26,9 +26,6 @@ export class EventHandlerManager {
         // Global handlers (ESC, etc.)
         this.globalHandlers = new Map();
         
-        // UnifiedTouchManager instance for unified touch handling
-        this.unifiedTouchManager = null;
-        
         this.initialized = false;
         
         Logger.event.info('🎯 EventHandlerManager created');
@@ -320,67 +317,6 @@ export class EventHandlerManager {
             };
         }
 
-        // Touch event delegation
-        if (config.touchstart) {
-            handlers.touchstart = (e) => {
-                const target = e.target;
-                const selector = config.touchstart.selector || '*';
-                
-                const element = target.closest(selector);
-                if (element) {
-                    const handler = config.touchstart.handler;
-                    if (typeof handler === 'function') {
-                        handler.call(element, e, target);
-                    }
-                }
-            };
-        }
-
-        if (config.touchmove) {
-            handlers.touchmove = (e) => {
-                const target = e.target;
-                const selector = config.touchmove.selector || '*';
-                
-                const element = target.closest(selector);
-                if (element) {
-                    const handler = config.touchmove.handler;
-                    if (typeof handler === 'function') {
-                        handler.call(element, e, target);
-                    }
-                }
-            };
-        }
-
-        if (config.touchend) {
-            handlers.touchend = (e) => {
-                const target = e.target;
-                const selector = config.touchend.selector || '*';
-                
-                const element = target.closest(selector);
-                if (element) {
-                    const handler = config.touchend.handler;
-                    if (typeof handler === 'function') {
-                        handler.call(element, e, target);
-                    }
-                }
-            };
-        }
-
-        if (config.touchcancel) {
-            handlers.touchcancel = (e) => {
-                const target = e.target;
-                const selector = config.touchcancel.selector || '*';
-                
-                const element = target.closest(selector);
-                if (element) {
-                    const handler = config.touchcancel.handler;
-                    if (typeof handler === 'function') {
-                        handler.call(element, e, target);
-                    }
-                }
-            };
-        }
-
         return handlers;
     }
 
@@ -397,17 +333,7 @@ export class EventHandlerManager {
             if (typeof handler === 'function') {
                 // Set appropriate options for different event types
                 let options = {};
-                if (eventType.startsWith('touch')) {
-                    // Touch events need special handling
-                    if (eventType === 'touchstart' || eventType === 'touchend' || eventType === 'touchcancel') {
-                        // Check if this is a resizer element that needs preventDefault
-                        const isResizer = container.id && container.id.includes('resizer');
-                        options = { passive: !isResizer };
-                    } else if (eventType === 'touchmove') {
-                        // Touch move might need preventDefault, so non-passive
-                        options = { passive: false };
-                    }
-                } else if (eventType === 'wheel') {
+                if (eventType === 'wheel') {
                     // Wheel events need preventDefault capability for Ctrl+scroll handling
                     options = { passive: false };
                 }
@@ -552,52 +478,26 @@ export class EventHandlerManager {
     }
 
     /**
-     * Set UnifiedTouchManager instance
-     * @param {UnifiedTouchManager} unifiedTouchManager - UnifiedTouchManager instance
-     */
-    setUnifiedTouchManager(unifiedTouchManager) {
-        this.unifiedTouchManager = unifiedTouchManager;
-        Logger.event.debug('🎯 UnifiedTouchManager set in EventHandlerManager');
-    }
-
-    /**
-     * Register touch element with integration
+     * Register touch element (deprecated - touch support removed)
      * @param {HTMLElement} element - Element to register
      * @param {string} configType - Configuration type
      * @param {Object} customConfig - Custom configuration
      * @param {string} elementId - Element ID for debugging
      */
     registerTouchElement(element, configType, customConfig = {}, elementId = null) {
-        if (!element) {
-            Logger.event.warn('EventHandlerManager: Invalid element for touch registration');
-            return;
-        }
-
-        const id = elementId || element.id || `touch_${Date.now()}`;
-        
-        // Use UnifiedTouchManager if available
-        if (this.unifiedTouchManager) {
-            this.unifiedTouchManager.registerElement(element, configType, customConfig, id);
-            Logger.event.debug('🎯 Touch element registered via UnifiedTouchManager', { id, configType });
-            return;
-        }
-        
-        Logger.event.warn('EventHandlerManager: UnifiedTouchManager not available for touch registration', { id, configType });
+        Logger.ui.warn('Touch support has been removed. Use registerElement instead.');
     }
 
     /**
-     * Unregister touch element
+     * Unregister touch element (deprecated - touch support removed)
      * @param {HTMLElement} element - Element to unregister
      */
     unregisterTouchElement(element) {
-        if (this.unifiedTouchManager) {
-            this.unifiedTouchManager.unregisterElement(element);
-            Logger.event.debug('🎯 Touch element unregistered', element.id || 'unknown');
-        }
+        Logger.ui.warn('Touch support has been removed. Use unregisterElement instead.');
     }
 
     /**
-     * Register canvas with unified touch and mouse handlers
+     * Register canvas with mouse handlers (touch support removed)
      * @param {HTMLElement} canvas - Canvas element
      * @param {Object} config - Handler configuration
      * @param {string} canvasId - Canvas ID for debugging
@@ -608,7 +508,7 @@ export class EventHandlerManager {
             return;
         }
 
-        // Create unified handlers for canvas
+        // Create mouse handlers for canvas
         const canvasHandlers = {
             // Mouse events
             mousedown: config.onMouseDown || (() => {}),
@@ -618,18 +518,13 @@ export class EventHandlerManager {
             dragover: config.onDragOver || (() => {}),
             drop: config.onDrop || (() => {}),
             dblclick: config.onDoubleClick || (() => {}),
-
-            // Touch events
-            touchstart: config.onTouchStart || (() => {}),
-            touchmove: config.onTouchMove || (() => {}),
-            touchend: config.onTouchEnd || (() => {}),
-            touchcancel: config.onTouchCancel || (() => {})
+            contextmenu: config.onContextMenu || (() => {})
         };
 
         // Register canvas with EventHandlerManager
         this.registerElement(canvas, canvasHandlers, canvasId);
 
-        Logger.event.debug('🎯 Canvas registered with unified handlers', { canvasId, canvasElement: canvas });
+        Logger.event.debug('🎯 Canvas registered with mouse handlers', { canvasId, canvasElement: canvas });
     }
 
     /**

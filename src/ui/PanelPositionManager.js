@@ -1,6 +1,7 @@
 import { Logger } from '../utils/Logger.js';
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 import { globalEventRegistry } from '../event-system/GlobalEventRegistry.js';
+import { PanelSizeCalculator } from '../utils/PanelSizeCalculator.js';
 
 /**
  * Universal panel position manager
@@ -12,6 +13,9 @@ export class PanelPositionManager {
         this.stateManager = levelEditor.stateManager;
         this.userPrefs = levelEditor.userPrefs;
         this._initializing = false; // Flag to prevent loops during initialization
+        
+        // Initialize panel size calculator
+        this.panelSizeCalculator = new PanelSizeCalculator();
         
         // Initialize global tab dragging handler once
         this._initGlobalTabDraggingHandler();
@@ -878,11 +882,11 @@ export class PanelPositionManager {
         const handleMouseMove = (e) => {
             if (!isResizing) return;
             
-            // Use unified resize calculation from UnifiedTouchManager
-            const newWidth = this.levelEditor.unifiedTouchManager.calculateHorizontalPanelSize(
+            // Use panel size calculator
+            const newWidth = this.panelSizeCalculator.calculateHorizontalPanelSize(
                 resizer, 
                 e, 
-                { startX: e.clientX, startY: e.clientY }
+                { startX: initialMouseX, startWidth: initialPanelSize }
             );
             
             // Use unified resize logic
@@ -924,70 +928,6 @@ export class PanelPositionManager {
         resizer._cleanup = () => {
             globalEventRegistry.unregisterComponentHandlers(`panel-resizer-${panelSide}`);
         };
-    }
-
-    /**
-     * Register touch support for a resizer element
-     * @param {HTMLElement} resizer - Resizer element
-     * @param {HTMLElement} panel - Panel element
-     * @param {string} panelSide - Panel side ('left', 'right', 'assets')
-     * @param {string} direction - Resize direction ('horizontal', 'vertical')
-     */
-    registerTouchSupportForResizer(resizer, panel, panelSide, direction) {
-        if (!this.levelEditor.unifiedTouchManager) {
-            Logger.ui.warn('UnifiedTouchManager not available for resizer touch support');
-            return;
-        }
-
-        // Check if resizer is already registered
-        if (eventHandlerManager.isElementRegistered(resizer)) {
-            Logger.ui.debug(`Resizer ${panelSide}-${direction} already registered, skipping`);
-            return;
-        }
-
-        // Register touch support for resizer
-        const config = {
-            direction: direction,
-            minSize: 100,
-            maxSize: 800,
-            onResizeStart: (element, touch) => {
-                Logger.ui.debug(`Resizer touch start: ${panelSide} ${direction}`);
-            },
-            onResize: (element, touch, touchData) => {
-                // Calculate new size using UnifiedTouchManager
-                const initialData = {
-                    startY: touchData.startY,
-                    startX: touchData.startX,
-                    initialSize: direction === 'vertical' ? panel.offsetHeight : panel.offsetWidth
-                };
-                
-                let newSize;
-                if (direction === 'vertical') {
-                    newSize = this.levelEditor.unifiedTouchManager.calculateVerticalPanelSize(element, touch, initialData);
-                } else {
-                    newSize = this.levelEditor.unifiedTouchManager.calculateHorizontalPanelSize(element, touch, initialData);
-                }
-                
-                // Apply resize using unified logic
-                this.handlePanelResize(panel, panelSide, direction, newSize);
-            },
-            onResizeEnd: (element, touch, touchData) => {
-                // Save final size to StateManager and UserPreferences
-                const currentSize = direction === 'vertical' ? panel.offsetHeight : panel.offsetWidth;
-                
-                if (direction === 'vertical') {
-                    this.stateManager.set('panels.assetsPanelHeight', currentSize);
-                    this.userPrefs?.set('assetsPanelHeight', currentSize);
-                } else {
-                    this.stateManager.set(`panels.${panelSide}PanelWidth`, currentSize);
-                    this.userPrefs?.set(`${panelSide}PanelWidth`, currentSize);
-                }
-                
-                Logger.ui.debug(`Resizer touch end: ${panelSide} ${direction}, final size: ${currentSize}px`);
-            }
-        };
-
-        this.levelEditor.unifiedTouchManager.registerElement(resizer, 'panelResizer', config, `${panelSide}-resizer`);
     }
 
     /**
@@ -1465,7 +1405,8 @@ export class PanelPositionManager {
             
             // Calculate new height based on mouse movement
             const deltaY = e.clientY - initialMouseY;
-            const newHeight = Math.max(100, Math.min(800, initialPanelHeight + deltaY));
+            // For assets panel (bottom panel), resize should work in opposite direction
+            const newHeight = Math.max(100, Math.min(800, initialPanelHeight - deltaY));
             
             // Use unified resize logic
             this.handlePanelResize(panel, 'assets', 'vertical', newHeight);

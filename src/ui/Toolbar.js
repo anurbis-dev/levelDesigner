@@ -19,7 +19,6 @@ export class Toolbar {
         this.isScrolling = false;
         this.scrollStartX = 0;
         this.scrollStartScrollLeft = 0;
-        this.isTouchScrolling = false; // Track if scrolling is initiated by touch
         
         // Scrolling event handlers for cleanup
         this.scrollingHandlers = [];
@@ -48,8 +47,6 @@ export class Toolbar {
         this.setupContextMenu();
         // Setup new event handlers
         this.setupNewEventHandlers();
-        // Setup touch scrolling with UnifiedTouchManager
-        this.setupTouchScrolling();
         // Load scroll position after toolbar is fully rendered
         this.loadScrollPosition();
     }
@@ -104,29 +101,6 @@ export class Toolbar {
         eventHandlerManager.registerContainer(this.container, toolbarHandlers);
 
         Logger.ui.debug('Toolbar: New event handlers setup complete');
-    }
-
-    /**
-     * Setup touch scrolling with UnifiedTouchManager
-     */
-    setupTouchScrolling() {
-        if (!this.container || !this.toolbarContent) return;
-        
-        // Register toolbar container for touch scrolling
-        if (this.levelEditor.eventHandlers.unifiedTouchManager) {
-            this.levelEditor.eventHandlers.unifiedTouchManager.registerElement(
-                this.container,
-                'scrollable',
-                {
-                    scrollElement: this.toolbarContent,
-                    minMovement: 5,
-                    direction: 'horizontal'
-                },
-                'toolbar-scroll'
-            );
-            
-            Logger.ui.debug('Toolbar: Touch scrolling setup complete');
-        }
     }
 
     /**
@@ -1086,11 +1060,9 @@ export class Toolbar {
         this.container.addEventListener('mousedown', mousedownHandler, { passive: false });
         this.scrollingHandlers.push({ element: this.container, event: 'mousedown', handler: mousedownHandler, options: { passive: false } });
 
-        // Touch events are now handled by UnifiedTouchManager
-
         // Mouse move - continue scrolling
         const mousemoveHandler = (e) => {
-            if (this.isScrolling && !this.isTouchScrolling) {
+            if (this.isScrolling) {
                 e.preventDefault();
                 this.updateScrolling(e);
             }
@@ -1098,19 +1070,15 @@ export class Toolbar {
         document.addEventListener('mousemove', mousemoveHandler, { passive: false });
         this.scrollingHandlers.push({ element: document, event: 'mousemove', handler: mousemoveHandler, options: { passive: false } });
 
-        // Touch events are now handled by UnifiedTouchManager
-
         // Mouse up - stop scrolling
         const mouseupHandler = (e) => {
-            if (this.isScrolling && !this.isTouchScrolling && e.button === 1) {
+            if (this.isScrolling && e.button === 1) {
                 e.preventDefault();
                 this.stopScrolling();
             }
         };
         document.addEventListener('mouseup', mouseupHandler, { passive: false });
         this.scrollingHandlers.push({ element: document, event: 'mouseup', handler: mouseupHandler, options: { passive: false } });
-
-        // Touch events are now handled by UnifiedTouchManager
 
         // Mouse wheel scrolling
         const wheelHandler = (e) => {
@@ -1161,14 +1129,12 @@ export class Toolbar {
         this.scrollStartX = e.clientX;
         this.scrollStartScrollLeft = this.toolbarContent.scrollLeft;
         
-        // Change cursor to indicate scrolling (only for mouse)
-        if (!this.isTouchScrolling) {
-            this.toolbarContent.style.cursor = 'grabbing';
-            document.body.style.cursor = 'grabbing';
-            document.body.style.userSelect = 'none';
-        }
+        // Change cursor to indicate scrolling
+        this.toolbarContent.style.cursor = 'grabbing';
+        document.body.style.cursor = 'grabbing';
+        document.body.style.userSelect = 'none';
         
-        Logger.ui.debug('Toolbar scrolling started', this.isTouchScrolling ? '(touch)' : '(mouse)');
+        Logger.ui.debug('Toolbar scrolling started');
     }
 
     /**
@@ -1193,7 +1159,6 @@ export class Toolbar {
      */
     stopScrolling() {
         this.isScrolling = false;
-        this.isTouchScrolling = false;
         
         // Restore cursor
         if (this.toolbarContent) {

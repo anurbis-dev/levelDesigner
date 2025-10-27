@@ -1,11 +1,10 @@
 /**
  * ResizerManager - Unified manager for all panel resizers
  * 
- * Handles both mouse and touch events for panel resizers:
+ * Handles mouse events for panel resizers:
  * - Horizontal resizers (left/right panels, folders)
  * - Vertical resizers (assets panel, console)
  * - Automatic device detection and event routing
- * - Touch support toggle based on settings
  */
 
 import { Logger } from '../utils/Logger.js';
@@ -14,37 +13,12 @@ export class ResizerManager {
     constructor(levelEditor) {
         this.levelEditor = levelEditor;
         this.stateManager = levelEditor?.stateManager;
-        this.touchSupportManager = levelEditor?.touchSupportManager;
-        this.touchInitializationManager = levelEditor?.touchInitializationManager;
         this.userPrefs = levelEditor?.userPrefs;
         
         // Track active resizers
         this.activeResizers = new Map(); // Map<element, resizerData>
-        this.isTouchEnabled = true; // Default to enabled
-        
-        // Subscribe to touch.enabled setting changes
-        this.setupTouchEnabledSubscription();
         
         Logger.ui.debug('ResizerManager: Initialized');
-    }
-
-    /**
-     * Setup subscription to touch.enabled setting changes
-     */
-    setupTouchEnabledSubscription() {
-        if (!this.stateManager) return;
-        
-        // Get initial value
-        this.isTouchEnabled = this.stateManager.get('touch.enabled') ?? true;
-        
-        // Subscribe to changes
-        this.stateManager.subscribe('touch.enabled', (enabled) => {
-            this.isTouchEnabled = enabled;
-            Logger.ui.debug('ResizerManager: Touch support toggled:', enabled);
-            
-            // Update all registered resizers
-            this.updateAllResizersTouchSupport();
-        });
     }
 
     /**
@@ -71,7 +45,6 @@ export class ResizerManager {
             direction: direction,
             isActive: false,
             mouseHandlers: null,
-            touchRegistered: false,
             onDoubleClick: onDoubleClick
         };
         
@@ -79,11 +52,6 @@ export class ResizerManager {
         
         // Setup mouse events (always enabled)
         this.setupMouseEvents(resizer, panel, panelSide, direction);
-        
-        // Setup touch events (if touch support is enabled)
-        if (this.isTouchEnabled) {
-            this.setupTouchEvents(resizer, panel, panelSide, direction);
-        }
         
         Logger.ui.debug(`ResizerManager: Registered ${direction} resizer for ${panelSide} panel`);
     }
@@ -131,11 +99,15 @@ export class ResizerManager {
             if (direction === 'horizontal') {
                 // Calculate new width based on mouse movement
                 const deltaX = e.clientX - initialMouseX;
-                newSize = Math.max(100, Math.min(800, initialPanelSize + deltaX));
+                // For right panel, resize should work in opposite direction
+                const isRightPanel = panelSide === 'right';
+                newSize = Math.max(100, Math.min(800, initialPanelSize + (isRightPanel ? -deltaX : deltaX)));
             } else {
                 // Calculate new height based on mouse movement
                 const deltaY = e.clientY - initialMouseY;
-                newSize = Math.max(100, Math.min(800, initialPanelSize + deltaY));
+                // For assets panel (bottom panel), resize should work in opposite direction
+                const isAssetsPanel = panelSide === 'assets';
+                newSize = Math.max(100, Math.min(800, initialPanelSize + (isAssetsPanel ? -deltaY : deltaY)));
             }
             
             // Apply resize using unified logic
@@ -186,35 +158,6 @@ export class ResizerManager {
         // Add event listeners
         resizer.addEventListener('mousedown', handleMouseDown);
         resizer.addEventListener('dblclick', handleDoubleClick);
-    }
-
-    /**
-     * Setup touch event handlers for resizer
-     */
-    setupTouchEvents(resizer, panel, panelSide, direction) {
-        const resizerData = this.activeResizers.get(resizer);
-        if (!resizerData || resizerData.touchRegistered) return;
-
-        // Touch support is no longer needed
-        resizerData.touchRegistered = true;
-        Logger.ui.debug(`ResizerManager: Touch support disabled for ${panelSide} resizer`);
-    }
-
-    /**
-     * Update touch support for all resizers
-     */
-    updateAllResizersTouchSupport() {
-        this.activeResizers.forEach((resizerData, resizer) => {
-            if (this.isTouchEnabled && !resizerData.touchRegistered) {
-                // Enable touch support
-                this.setupTouchEvents(resizer, resizerData.panel, resizerData.panelSide, resizerData.direction);
-            } else if (!this.isTouchEnabled && resizerData.touchRegistered) {
-                // Disable touch support
-                this.touchSupportManager?.unregisterElement(resizer);
-                resizerData.touchRegistered = false;
-                Logger.ui.debug(`ResizerManager: Touch support disabled for ${resizerData.panelSide} resizer`);
-            }
-        });
     }
 
     /**
@@ -281,11 +224,6 @@ export class ResizerManager {
             document.removeEventListener('mouseup', resizerData.mouseHandlers.mouseup);
         }
 
-        // Remove touch event listeners
-        if (resizerData.touchRegistered) {
-            this.touchSupportManager?.unregisterElement(resizer);
-        }
-
         // Clean up global listeners flag
         if (resizer._globalListenersAdded) {
             delete resizer._globalListenersAdded;
@@ -300,13 +238,6 @@ export class ResizerManager {
      */
     getResizerData(resizer) {
         return this.activeResizers.get(resizer);
-    }
-
-    /**
-     * Check if touch support is enabled
-     */
-    isTouchSupportEnabled() {
-        return this.isTouchEnabled;
     }
 
     /**
