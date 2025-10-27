@@ -15,8 +15,8 @@ import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
  */
 class AssetTabContextMenu extends BaseContextMenu {
     constructor(assetPanel) {
-        // Use the panel element, not the inner container (like other panels)
-        super(assetPanel.container.parentElement, {
+        // Use the main container element that doesn't get recreated
+        super(assetPanel.container, {
             onMenuShow: () => Logger.ui.debug('AssetTabContextMenu: Menu shown'),
             onMenuHide: () => Logger.ui.debug('AssetTabContextMenu: Menu hidden'),
             onItemClick: (action, contextData) => {

@@ -59,6 +59,7 @@ export function createSearchInput(placeholder, id, className, value = '', onChan
     input.placeholder = placeholder;
     input.className = className;
     input.value = value;
+    input.style.minWidth = '10px';
 
     if (onChange) {
         let timeout;
