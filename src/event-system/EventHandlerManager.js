@@ -87,8 +87,9 @@ export class EventHandlerManager {
      * @param {HTMLElement} element - Element to register
      * @param {Object} handlers - Event handlers
      * @param {string} elementId - Element ID for debugging
+     * @param {Object} options - addEventListener options (capture, passive, etc.)
      */
-    registerElement(element, handlers, elementId = null) {
+    registerElement(element, handlers, elementId = null, options = {}) {
         if (!element || !handlers) {
             Logger.event.warn('EventHandlerManager: Invalid element or handlers');
             return;
@@ -114,10 +115,10 @@ export class EventHandlerManager {
                         Logger.event.error(`Event handler error for ${id}:`, error);
                         }
                     };
-                    
-                    element.addEventListener(eventType, wrappedHandler);
+
+                    element.addEventListener(eventType, wrappedHandler, options);
                 cleanup.push(() => {
-                        element.removeEventListener(eventType, wrappedHandler);
+                        element.removeEventListener(eventType, wrappedHandler, options);
                     });
                 }
             });

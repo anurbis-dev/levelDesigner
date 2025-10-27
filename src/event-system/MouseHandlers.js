@@ -276,9 +276,10 @@ export class MouseHandlers extends BaseModule {
                 'mouse.offsetY': null
             });
             
+            // Handle marquee completion for canvas events
+            // Global handler will also handle it, but we need this for immediate response
             if (mouse.isMarqueeSelecting) {
                 this.finishMarqueeSelection();
-                // Note: finishMarqueeSelection now handles Alt+drag duplication internally
             }
 
             // If we are in group edit mode and released after dragging with Alt
@@ -424,6 +425,7 @@ export class MouseHandlers extends BaseModule {
         
         if (e.button === 0) {
             // Handle marquee selection completion (both inside and outside canvas)
+            // Only finish marquee if it's still active (not already finished by canvas handler)
             if (mouse.isMarqueeSelecting) {
                 Logger.mouse.info(`Left mouse released - finishing marquee selection (${isOutsideCanvas ? 'outside' : 'inside'} canvas)`);
                 this.finishMarqueeSelection();
@@ -1099,7 +1101,8 @@ export class MouseHandlers extends BaseModule {
         this.editor.stateManager.update({
             'mouse.marqueeRect': null,
             'mouse.marqueeStartX': null,
-            'mouse.marqueeStartY': null
+            'mouse.marqueeStartY': null,
+            'mouse.isMarqueeSelecting': false
         });
         
         // Check if Alt is still pressed after marquee selection to start duplication

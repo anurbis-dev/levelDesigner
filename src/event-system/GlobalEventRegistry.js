@@ -27,14 +27,22 @@ class GlobalEventRegistry {
         const targetElement = target === 'window' ? window : document;
         const targetId = `${target}-${componentId}`;
 
+        // Use capture for mouseup events to ensure they work outside canvas
+        const options = {};
+        const hasMouseUp = Object.keys(handlers).some(eventType => eventType.toLowerCase().includes('mouseup'));
+        if (hasMouseUp) {
+            options.capture = true;
+        }
+
         // Register with EventHandlerManager
-        eventHandlerManager.registerElement(targetElement, handlers, targetId);
+        eventHandlerManager.registerElement(targetElement, handlers, targetId, options);
 
         // Store for cleanup
         this.registeredComponents.set(componentId, {
             target,
             targetId,
-            handlers
+            handlers,
+            options
         });
 
         Logger.event.debug(`Component ${componentId} registered global handlers on ${target}`);

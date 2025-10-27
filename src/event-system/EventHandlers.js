@@ -159,6 +159,12 @@ export class EventHandlers extends BaseModule {
             mouseup: (e) => this.editor.mouseHandlers.handleGlobalMouseUp(e)
         };
         globalEventRegistry.registerComponentHandlers('global-mouse-document', globalMouseHandlers, 'document');
+        
+        // Also register on window for marquee completion (like BasePanel does)
+        const windowMouseHandlers = {
+            mouseup: (e) => this.editor.mouseHandlers.handleGlobalMouseUp(e)
+        };
+        globalEventRegistry.registerComponentHandlers('global-mouse-window', windowMouseHandlers, 'window');
     }
     
     /**
@@ -206,26 +212,36 @@ export class EventHandlers extends BaseModule {
     setupCanvasEvents() {
         const canvas = this.editor.canvasRenderer.canvas;
 
-        // Combined mouse and touch events for canvas
-        const canvasHandlers = {
+        // Use unified canvas registration with EventHandlerManager
+        const canvasConfig = {
             // Mouse events
-            mousedown: (e) => this.editor.mouseHandlers.handleMouseDown(e),
-            mousemove: (e) => this.editor.mouseHandlers.handleMouseMove(e),
-            mouseup: (e) => this.editor.mouseHandlers.handleMouseUp(e),
-            wheel: (e) => this.editor.mouseHandlers.handleWheel(e),
-            dblclick: (e) => this.editor.mouseHandlers.handleDoubleClick(e),
-            dragover: (e) => this.editor.mouseHandlers.handleDragOver(e),
-            drop: (e) => this.editor.mouseHandlers.handleDrop(e),
+            onMouseDown: (e) => this.editor.mouseHandlers.handleMouseDown(e),
+            onMouseMove: (e) => this.editor.mouseHandlers.handleMouseMove(e),
+            onMouseUp: (e) => this.editor.mouseHandlers.handleMouseUp(e),
+            onWheel: (e) => this.editor.mouseHandlers.handleWheel(e),
+            onDoubleClick: (e) => this.editor.mouseHandlers.handleDoubleClick(e),
+            onDragOver: (e) => this.editor.mouseHandlers.handleDragOver(e),
+            onDrop: (e) => this.editor.mouseHandlers.handleDrop(e),
             
             // Touch events
-            touchstart: (e) => this.handleCanvasTouchStart(e),
-            touchmove: (e) => this.handleCanvasTouchMove(e),
-            touchend: (e) => this.handleCanvasTouchEnd(e),
-            touchcancel: (e) => this.handleCanvasTouchCancel(e)
+            onTouchStart: (e) => this.handleCanvasTouchStart(e),
+            onTouchMove: (e) => this.handleCanvasTouchMove(e),
+            onTouchEnd: (e) => this.handleCanvasTouchEnd(e),
+            onTouchCancel: (e) => this.handleCanvasTouchCancel(e)
         };
         
-        // Register canvas with all events in one call
-        eventHandlerManager.registerElement(canvas, canvasHandlers, 'main-canvas');
+        // Register canvas with unified handlers
+        eventHandlerManager.registerCanvas(canvas, canvasConfig, 'main-canvas');
+        
+        // Also register with UnifiedTouchManager for advanced touch gestures
+        if (this.unifiedTouchManager) {
+            this.unifiedTouchManager.registerElement(canvas, 'canvas', {
+                enablePan: true,
+                enableZoom: true,
+                enableMarquee: true,
+                enableContextMenu: true
+            }, 'main-canvas');
+        }
     }
 
     setupTouchEvents() {
