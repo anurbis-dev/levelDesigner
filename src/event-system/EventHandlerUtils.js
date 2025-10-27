@@ -29,12 +29,13 @@ export class EventHandlerUtils {
      * @param {Function} onItemClick - Item click handler
      * @param {Function} onButtonClick - Button click handler
      * @param {Function} onInputChange - Input change handler
+     * @param {Function} onContextMenu - Context menu handler (optional)
      * @returns {Object} Panel configuration
      */
-    static createPanelHandlers(onItemClick, onButtonClick, onInputChange) {
-        return {
+    static createPanelHandlers(onItemClick, onButtonClick, onInputChange, onContextMenu = null) {
+        const config = {
             click: {
-                selector: '.panel-item, .layer-item, .asset-item',
+                selector: '.panel-item, .layer-item, .asset-item, .tab, .settings-tab',
                 handler: onItemClick
             },
             buttonClick: {
@@ -46,6 +47,15 @@ export class EventHandlerUtils {
                 handler: onInputChange
             }
         };
+
+        if (onContextMenu) {
+            config.contextmenu = {
+                selector: '.panel-item, .layer-item, .asset-item, .tab, .settings-tab',
+                handler: onContextMenu
+            };
+        }
+
+        return config;
     }
 
     /**
@@ -148,10 +158,11 @@ export class EventHandlerUtils {
      * @param {Function} onItemClick - Item click handler
      * @param {Function} onButtonClick - Button click handler
      * @param {Function} onInputChange - Input change handler
+     * @param {Function} onContextMenu - Context menu handler (optional)
      * @param {EventHandlerManager} manager - Event manager
      */
-    static registerPanel(panelElement, panelId, onItemClick, onButtonClick, onInputChange, manager) {
-        const config = EventHandlerUtils.createPanelHandlers(onItemClick, onButtonClick, onInputChange);
+    static registerPanel(panelElement, panelId, onItemClick, onButtonClick, onInputChange, onContextMenu = null, manager) {
+        const config = EventHandlerUtils.createPanelHandlers(onItemClick, onButtonClick, onInputChange, onContextMenu);
         manager.registerContainer(panelElement, config, panelId);
     }
 

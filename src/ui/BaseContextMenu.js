@@ -36,6 +36,12 @@ import { Logger } from '../utils/Logger.js';
  */
 
 export class BaseContextMenu {
+    // Constants for menu positioning and animation
+    static CURSOR_MENU_MARGIN = 2;        // pixels from cursor to menu edge
+    static MENU_VIEWPORT_MARGIN = 20;     // pixels from viewport edge
+    static ANIMATION_DURATION = 150;      // ms for hide animation
+    static MONITORING_TIMEOUT = 200;      // ms max for cursor monitoring
+
     constructor(panel, callbacks = {}) {
         this.panel = panel;
         this.callbacks = {
@@ -71,6 +77,100 @@ export class BaseContextMenu {
     }
 
     /**
+     * Check if any marquee selection is currently active
+     * @returns {boolean} - True if marquee is active
+     */
+    isMarqueeActive() {
+        const stateManager = window.editor?.stateManager;
+        if (!stateManager) return false;
+
+        // Check all possible marquee systems
+        const marqueeKeys = [
+            'mouse.isMarqueeSelecting',
+            'mouse.isAssetMarqueeSelecting',
+            'mouse.isOutlinerMarqueeSelecting',
+            'mouse.isLayerMarqueeSelecting'
+        ];
+
+        // Check boolean flags for all marquee systems
+        for (const key of marqueeKeys) {
+            if (stateManager.get(key) === true) {
+                return true;
+            }
+        }
+
+        // Check for marquee element existence
+        if (stateManager.get('marquee.element')) {
+            return true;
+        }
+
+        // Check for canvas marquee rect
+        if (stateManager.get('mouse.marqueeRect')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Clear all active marquee selections
+     */
+    clearMarqueeSelections() {
+        const stateManager = window.editor?.stateManager;
+        if (!stateManager) return;
+
+        // Aggressively clear ALL marquee-related state
+        const marqueeKeys = [
+            'mouse.isAssetMarqueeSelecting',
+            'mouse.isOutlinerMarqueeSelecting',
+            'mouse.isLayerMarqueeSelecting',
+            'marquee.startPos',
+            'marquee.element',
+            'marquee.container',
+            'marquee.options',
+            'marquee.mode',
+            'marquee.pendingStartPos',
+            'marquee.pendingMode',
+            'marquee.pendingOptions',
+            'marquee.pendingContainer',
+            'marquee.pendingSelector',
+            'marquee.pendingMouseKey',
+            'mouse.isMarqueeSelecting',
+            'mouse.marqueeRect',
+            'mouse.marqueeStartX',
+            'mouse.marqueeStartY'
+        ];
+
+        for (const key of marqueeKeys) {
+            stateManager.set(key, null);
+        }
+
+        // Remove marquee element if it exists
+        const marqueeElement = stateManager.get('marquee.element');
+        if (marqueeElement && marqueeElement.parentNode) {
+            marqueeElement.parentNode.removeChild(marqueeElement);
+        }
+
+        // Clear selections in panels
+        const panels = ['assetPanel', 'outlinerPanel', 'layersPanel'];
+        for (const panelName of panels) {
+            const panel = window.editor?.[panelName];
+            if (panel && typeof panel.clearSelection === 'function') {
+                panel.clearSelection();
+            }
+        }
+
+        // Fallback: clear canvas selection
+        stateManager.set('selectedObjects', new Set());
+        window.editor?.updateAllPanels?.();
+
+        // Force re-render
+        if (window.editor?.render) {
+            window.editor.render();
+        }
+    }
+
+    /**
      * Setup global handler to cancel marquee selection on any mouse button except left
      */
     setupGlobalRightClickHandler() {
@@ -80,109 +180,15 @@ export class BaseContextMenu {
                 // Cancel marquee on any button except left mouse button (which creates marquee)
                 if (e.button === 0) return;
 
-                // Get StateManager from window.editor (most reliable source)
-                const stateManager = window.editor?.stateManager;
-                if (!stateManager) {
-                    Logger.ui.warn('Global right-click: StateManager not found');
-                    return;
-                }
-
-                // Check all possible marquee systems (both canvas and panel marquees)
-                const mouseStateKeys = [
-                    'mouse.isMarqueeSelecting',        // Canvas marquee (old system)
-                    'mouse.isAssetMarqueeSelecting',    // AssetPanel marquee
-                    'mouse.isOutlinerMarqueeSelecting', // OutlinerPanel marquee
-                    'mouse.isLayerMarqueeSelecting'     // LayersPanel marquee
-                ];
-
-                let isMarqueeActive = false;
-                let activeStateKey = null;
-
-                // Check boolean flags for all marquee systems
-                for (const key of mouseStateKeys) {
-                    const value = stateManager.get(key);
-                    if (value === true) {
-                        isMarqueeActive = true;
-                        activeStateKey = key;
-                        break;
-                    }
-                }
-
-                // Also check for marquee element existence (new panel system)
-                const marqueeElement = stateManager.get('marquee.element');
-                if (!isMarqueeActive && marqueeElement) {
-                    isMarqueeActive = true;
-                }
-
-                // Also check for canvas marquee rect (old canvas system)
-                const canvasMarqueeRect = stateManager.get('mouse.marqueeRect');
-                if (!isMarqueeActive && canvasMarqueeRect) {
-                    isMarqueeActive = true;
-                }
-
-                if (isMarqueeActive) {
-                    // Cancel marquee selection - use aggressive prevention
+                // Check if marquee is active
+                if (this.isMarqueeActive()) {
+                    // Cancel marquee selection
                     e.preventDefault();
                     e.stopImmediatePropagation();
                     e.stopPropagation();
 
-                    // Remove marquee element if it exists
-                    if (marqueeElement && marqueeElement.parentNode) {
-                        marqueeElement.parentNode.removeChild(marqueeElement);
-                    }
-
-                    // Aggressively clear ALL marquee-related state for both systems
-                    const allMarqueeKeys = [
-                        // New panel system
-                        'mouse.isAssetMarqueeSelecting',
-                        'mouse.isOutlinerMarqueeSelecting',
-                        'mouse.isLayerMarqueeSelecting',
-                        'marquee.startPos',
-                        'marquee.element',
-                        'marquee.container',
-                        'marquee.options',
-                        'marquee.mode',
-                        'marquee.pendingStartPos',
-                        'marquee.pendingMode',
-                        'marquee.pendingOptions',
-                        'marquee.pendingContainer',
-                        'marquee.pendingSelector',
-                        'marquee.pendingMouseKey',
-                        // Old canvas system
-                        'mouse.isMarqueeSelecting',
-                        'mouse.marqueeRect',
-                        'mouse.marqueeStartX',
-                        'mouse.marqueeStartY'
-                    ];
-
-                    for (const key of allMarqueeKeys) {
-                        stateManager.set(key, null);
-                    }
-
-                    // Explicitly set boolean flags to false
-                    stateManager.set('mouse.isMarqueeSelecting', false);
-                    stateManager.set('mouse.isAssetMarqueeSelecting', false);
-                    stateManager.set('mouse.isOutlinerMarqueeSelecting', false);
-                    stateManager.set('mouse.isLayerMarqueeSelecting', false);
-
-                    // Clear any selection that was made by the cancelled marquee
-                    // Try to find the panel that has active selection and clear it
-                    if (window.editor?.assetPanel && typeof window.editor.assetPanel.clearSelection === 'function') {
-                        window.editor.assetPanel.clearSelection();
-                    } else if (window.editor?.outlinerPanel && typeof window.editor.outlinerPanel.clearSelection === 'function') {
-                        window.editor.outlinerPanel.clearSelection();
-                    } else if (window.editor?.layersPanel && typeof window.editor.layersPanel.clearSelection === 'function') {
-                        window.editor.layersPanel.clearSelection();
-                    } else if (window.editor?.stateManager) {
-                        // Fallback: clear canvas selection
-                        window.editor.stateManager.set('selectedObjects', new Set());
-                        window.editor.updateAllPanels();
-                    }
-
-                    // Force re-render to clear any canvas marquee visuals
-                    if (window.editor?.render) {
-                        window.editor.render();
-                    }
+                    // Clear all marquee selections
+                    this.clearMarqueeSelections();
 
                     Logger.ui.info('Marquee selection cancelled by global right-click');
                 }
@@ -194,24 +200,18 @@ export class BaseContextMenu {
             document.addEventListener('contextmenu', BaseContextMenu.globalRightClickHandler, { capture: true, passive: false });
 
             // 2. Mouse down handler as backup (catches any button except left)
-            const globalMouseDownHandler = (e) => {
+            document.addEventListener('mousedown', (e) => {
                 if (e.button !== 0) { // Any button except left
                     BaseContextMenu.globalRightClickHandler(e);
                 }
-            };
-            document.addEventListener('mousedown', globalMouseDownHandler, { capture: true, passive: false });
+            }, { capture: true, passive: false });
 
             // 3. Window-level handler as last resort
-            const globalWindowHandler = (e) => {
+            window.addEventListener('contextmenu', (e) => {
                 if (e.type === 'contextmenu' && e.button !== undefined && e.button !== 0) {
                     BaseContextMenu.globalRightClickHandler(e);
                 }
-            };
-            window.addEventListener('contextmenu', globalWindowHandler, { capture: true, passive: false });
-
-            // Store handlers for cleanup if needed
-            BaseContextMenu.globalMouseDownHandler = globalMouseDownHandler;
-            BaseContextMenu.globalWindowHandler = globalWindowHandler;
+            }, { capture: true, passive: false });
         }
     }
 
@@ -255,10 +255,6 @@ export class BaseContextMenu {
      * Setup global mousemove handler to track cursor position in real-time
      */
     setupCursorTracking() {
-        if (this.cursorTrackingHandler) {
-            document.removeEventListener('mousemove', this.cursorTrackingHandler);
-        }
-
         this.cursorTrackingHandler = (e) => {
             this.lastCursorX = e.clientX;
             this.lastCursorY = e.clientY;
@@ -298,13 +294,21 @@ export class BaseContextMenu {
      * @param {Object} contextData - Context data from clicked element
      */
     showContextMenu(event, contextData) {
-        // Hide existing menu immediately (without animation for responsiveness)
+        // Hide existing menu with proper cleanup (without animation for responsiveness)
         if (this.currentMenu) {
+            // Stop cursor monitoring if active
+            this.stopCursorMonitoring();
+
+            // Remove event handlers using new system
+            eventHandlerManager.unregisterContainer(this.currentMenu);
+
+            // Remove from DOM immediately for responsiveness
             if (this.currentMenu.parentNode) {
                 this.currentMenu.parentNode.removeChild(this.currentMenu);
             }
             this.currentMenu = null;
             this.isVisible = false;
+            this.callbacks.onMenuHide();
         }
 
         // Store cursor position for animation end checks
@@ -327,21 +331,18 @@ export class BaseContextMenu {
         contextMenu.style.left = optimalPosition.x + 'px';
         contextMenu.style.top = optimalPosition.y + 'px';
 
-        // Adjust cursor position to be inside menu bounds (3px offset)
-        this.adjustCursorPosition(event, optimalPosition, contextMenu);
-
         // Add positioning classes for better animation
         this.addPositioningClasses(contextMenu, event, optimalPosition);
 
         // Ensure cursor is inside menu bounds by adjusting menu position if needed
         const cursorOffset = this.ensureCursorInsideMenu(event, optimalPosition, contextMenu);
-
-        // Setup new event handlers
-        this.setupNewEventHandlers();
         if (cursorOffset.x !== 0 || cursorOffset.y !== 0) {
             contextMenu.style.left = (optimalPosition.x + cursorOffset.x) + 'px';
             contextMenu.style.top = (optimalPosition.y + cursorOffset.y) + 'px';
         }
+
+        // Setup new event handlers
+        this.setupNewEventHandlers();
 
         // Trigger animation and start cursor monitoring
         requestAnimationFrame(() => {
@@ -447,33 +448,26 @@ export class BaseContextMenu {
      */
     handleMenuItemClick(item, contextData) {
         let result;
-        
+        let menuItem = item;
+
         Logger.ui.debug('BaseContextMenu: handleMenuItemClick called', { item, contextData });
-        
-        // Handle DOM element case
+
+        // Handle DOM element case - find corresponding menu item object
         if (item && item.nodeType === Node.ELEMENT_NODE) {
-            // Find the corresponding menu item object
             const menuItemId = item.dataset.menuItemId;
-            const menuItem = this.menuItems.find(mi => mi.id === menuItemId);
-            
+            menuItem = this.menuItems.find(mi => mi.id === menuItemId);
             Logger.ui.debug('BaseContextMenu: Found menu item', { menuItemId, menuItem });
-            
-            if (menuItem && menuItem.action) {
-                Logger.ui.debug('BaseContextMenu: Executing action', menuItem.action);
-                result = menuItem.action(contextData);
-            }
-            
-            // Also call the callback with the menu item object
-            this.callbacks.onItemClick(menuItem || item, contextData);
-        } else {
-            // Handle object case (legacy)
-            if (item && item.action) {
-                Logger.ui.debug('BaseContextMenu: Executing legacy action', item.action);
-                result = item.action(contextData);
-            }
-            this.callbacks.onItemClick(item, contextData);
         }
-        
+
+        // Execute action if available
+        if (menuItem && menuItem.action) {
+            Logger.ui.debug('BaseContextMenu: Executing action', menuItem.action);
+            result = menuItem.action(contextData);
+        }
+
+        // Call callback with menu item object
+        this.callbacks.onItemClick(menuItem || item, contextData);
+
         Logger.ui.debug('BaseContextMenu: handleMenuItemClick result', result);
         return result;
     }
@@ -484,16 +478,15 @@ export class BaseContextMenu {
      * @returns {boolean} - True if cursor is inside menu bounds
      */
     isCursorInsideMenu(menu) {
-        if (!menu) return false;
-
         const rect = menu.getBoundingClientRect();
         const cursorX = this.lastCursorX || 0;
         const cursorY = this.lastCursorY || 0;
 
-        return cursorX >= rect.left - 2 &&
-               cursorX <= rect.right + 2 &&
-               cursorY >= rect.top - 2 &&
-               cursorY <= rect.bottom + 2;
+        const margin = BaseContextMenu.CURSOR_MENU_MARGIN;
+        return cursorX >= rect.left - margin &&
+               cursorX <= rect.right + margin &&
+               cursorY >= rect.top - margin &&
+               cursorY <= rect.bottom + margin;
     }
 
     /**
@@ -560,7 +553,7 @@ export class BaseContextMenu {
 
         // Check if animation duration exceeded (fallback timeout)
         const elapsed = Date.now() - this.animationStartTime;
-        if (elapsed > 200) { // 200ms timeout (slightly longer than animation)
+        if (elapsed > BaseContextMenu.MONITORING_TIMEOUT) { // Timeout for cursor monitoring
             this.stopCursorMonitoring();
             return;
         }
@@ -570,11 +563,7 @@ export class BaseContextMenu {
         const cursorY = this.lastCursorY;
 
         // Check if cursor is inside menu bounds
-        const rect = menu.getBoundingClientRect();
-        const isInside = cursorX >= rect.left - 2 &&
-                        cursorX <= rect.right + 2 &&
-                        cursorY >= rect.top - 2 &&
-                        cursorY <= rect.bottom + 2;
+        const isInside = this.isCursorInsideMenu(menu);
 
         if (!isInside) {
             this.stopCursorMonitoring();
@@ -625,15 +614,9 @@ export class BaseContextMenu {
 
     /**
      * Add separator
+     * @param {string} className - Optional CSS class name for the separator
      */
-    addSeparator() {
-        this.menuItems.push({
-            type: 'separator',
-            visible: true
-        });
-    }
-
-    addSeparatorWithClass(className) {
+    addSeparator(className) {
         this.menuItems.push({
             type: 'separator',
             visible: true,
@@ -656,10 +639,7 @@ export class BaseContextMenu {
         // Get actual menu dimensions
         const menuSize = this.getMenuDimensions(menu);
         
-        const margins = {
-            horizontal: 20,
-            vertical: 20
-        };
+        const margin = BaseContextMenu.MENU_VIEWPORT_MARGIN;
         
         let x = event.pageX;
         let y = event.pageY;
@@ -668,28 +648,28 @@ export class BaseContextMenu {
         const spaceRight = viewport.width - event.pageX;
         const spaceLeft = event.pageX;
         
-        if (spaceRight >= menuSize.width + margins.horizontal) {
+        if (spaceRight >= menuSize.width + margin) {
             x = event.pageX;
-        } else if (spaceLeft >= menuSize.width + margins.horizontal) {
+        } else if (spaceLeft >= menuSize.width + margin) {
             x = event.pageX - menuSize.width;
         } else {
-            x = Math.max(margins.horizontal, 
-                       Math.min(event.pageX - menuSize.width / 2, 
-                               viewport.width - menuSize.width - margins.horizontal));
+            x = Math.max(margin,
+                       Math.min(event.pageX - menuSize.width / 2,
+                               viewport.width - menuSize.width - margin));
         }
         
         // Determine optimal vertical position
         const spaceBelow = viewport.height - event.pageY;
         const spaceAbove = event.pageY;
         
-        if (spaceBelow >= menuSize.height + margins.vertical) {
+        if (spaceBelow >= menuSize.height + margin) {
             y = event.pageY;
-        } else if (spaceAbove >= menuSize.height + margins.vertical) {
+        } else if (spaceAbove >= menuSize.height + margin) {
             y = event.pageY - menuSize.height;
         } else {
-            y = Math.max(margins.vertical,
+            y = Math.max(margin,
                         Math.min(event.pageY - menuSize.height / 2,
-                                viewport.height - menuSize.height - margins.vertical));
+                                viewport.height - menuSize.height - margin));
         }
         
         // Ensure menu stays within panel bounds when possible
@@ -702,17 +682,18 @@ export class BaseContextMenu {
         };
         
         // Adjust position to stay within panel when possible
+        const panelMargin = 5; // Margin from panel edges
         if (x < panelBounds.left) {
-            x = panelBounds.left + 5;
+            x = panelBounds.left + panelMargin;
         }
         if (x + menuSize.width > panelBounds.right) {
-            x = panelBounds.right - menuSize.width - 5;
+            x = panelBounds.right - menuSize.width - panelMargin;
         }
         if (y < panelBounds.top) {
-            y = panelBounds.top + 5;
+            y = panelBounds.top + panelMargin;
         }
         if (y + menuSize.height > panelBounds.bottom) {
-            y = panelBounds.bottom - menuSize.height - 5;
+            y = panelBounds.bottom - menuSize.height - panelMargin;
         }
         
         return { x, y };
@@ -770,20 +751,18 @@ export class BaseContextMenu {
                 }
             };
 
+        // Store handler references for cleanup
+        menu._closeMenuHandler = closeMenu;
+        menu._closeOnClickHandler = closeOnClick;
+
         // Check if using new event system
         if (window.eventHandlerManager && window.eventHandlerManager.initialized) {
-            // New system handles mouse events, just store references for legacy cleanup
+            // New system handles mouse events
             Logger.ui.debug('BaseContextMenu: Using new event system mouse leave handling');
-            menu._closeMenuHandler = closeMenu;
-            menu._closeOnClickHandler = closeOnClick;
         } else {
             // Manual registration for fallback mode
             menu.addEventListener('mouseleave', closeMenu);
             menu.addEventListener('click', closeOnClick);
-            
-            // Store references for cleanup
-            menu._closeMenuHandler = closeMenu;
-            menu._closeOnClickHandler = closeOnClick;
         }
     }
 
@@ -804,60 +783,25 @@ export class BaseContextMenu {
         let offsetX = 0;
         let offsetY = 0;
 
-        // Check if cursor is to the left of menu (cursor left of menu's left edge)
+        const margin = BaseContextMenu.CURSOR_MENU_MARGIN;
+
+        // Adjust horizontal position if cursor is outside menu bounds
         if (cursorX < rect.left) {
-            // Move menu left so cursor ends up 2px inside from the left edge
-            // New menu left = current menu left + offsetX
-            // We want: cursorX = newMenuLeft + 2
-            // So: newMenuLeft = cursorX - 2
-            // Therefore: offsetX = (cursorX - 2) - rect.left = cursorX - rect.left - 2
-            offsetX = cursorX - rect.left - 2;
-        }
-        // Check if cursor is to the right of menu (cursor right of menu's right edge)
-        else if (cursorX > rect.right) {
-            // Move menu right so cursor ends up 2px inside from the right edge
-            // New menu right = current menu right + offsetX
-            // We want: cursorX = newMenuRight - 2
-            // So: newMenuRight = cursorX + 2
-            // Since newMenuRight = rect.right + offsetX, then:
-            // offsetX = (cursorX + 2) - rect.right = cursorX - rect.right + 2
-            offsetX = cursorX - rect.right + 2;
+            offsetX = cursorX - rect.left - margin;
+        } else if (cursorX > rect.right) {
+            offsetX = cursorX - rect.right + margin;
         }
 
-        // Check if cursor is above menu (cursor above menu's top edge)
+        // Adjust vertical position if cursor is outside menu bounds
         if (cursorY < rect.top) {
-            // Move menu up so cursor ends up 2px inside from the top edge
-            // New menu top = current menu top + offsetY
-            // We want: cursorY = newMenuTop + 2
-            // So: newMenuTop = cursorY - 2
-            // Therefore: offsetY = (cursorY - 2) - rect.top = cursorY - rect.top - 2
-            offsetY = cursorY - rect.top - 2;
+            offsetY = cursorY - rect.top - margin;
+        } else if (cursorY > rect.bottom) {
+            offsetY = cursorY - rect.bottom + margin;
         }
-        // Check if cursor is below menu (cursor below menu's bottom edge)
-        else if (cursorY > rect.bottom) {
-            // Move menu down so cursor ends up 2px inside from the bottom edge
-            // New menu bottom = current menu bottom + offsetY
-            // We want: cursorY = newMenuBottom - 2
-            // So: newMenuBottom = cursorY + 2
-            // Since newMenuBottom = rect.bottom + offsetY, then:
-            // offsetY = (cursorY + 2) - rect.bottom = cursorY - rect.bottom + 2
-            offsetY = cursorY - rect.bottom + 2;
-        }
-
 
         return { x: offsetX, y: offsetY };
     }
 
-    /**
-     * Adjust cursor position to be inside menu bounds (legacy method)
-     * @param {Event} event - The context menu event
-     * @param {Object} menuPosition - Menu position
-     * @param {HTMLElement} menu - The context menu element
-     */
-    adjustCursorPosition(event, menuPosition, menu) {
-        // This method is now handled by ensureCursorInsideMenu
-        // Kept for backward compatibility
-    }
 
     /**
      * Setup new event handlers using EventHandlerManager
@@ -910,14 +854,10 @@ export class BaseContextMenu {
         // Stop cursor monitoring if active
         this.stopCursorMonitoring();
 
-        // Remove event handlers using new system
         if (this.currentMenu) {
+            // Remove event handlers using new system
             eventHandlerManager.unregisterContainer(this.currentMenu);
-        }
 
-        if (this.currentMenu) {
-            // Remove cursor tracking if this is the last menu
-            // Note: We keep cursor tracking active as it might be needed by other components
             // Check if menu is still in DOM
             if (this.currentMenu.parentNode) {
                 this.currentMenu.classList.remove('show');
@@ -936,7 +876,7 @@ export class BaseContextMenu {
                     this.currentMenu = null;
                     this.isVisible = false;
                     this.callbacks.onMenuHide();
-                }, 150);
+                }, BaseContextMenu.ANIMATION_DURATION);
             } else {
                 // Menu already removed, just clean up state
                 this.currentMenu = null;

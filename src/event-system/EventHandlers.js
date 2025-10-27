@@ -1415,6 +1415,8 @@ export class EventHandlers extends BaseModule {
         };
 
         setTimeout(() => {
+            // Unregister previous menu-close handler to avoid conflicts
+            eventHandlerManager.unregisterElement(document, 'menu-close');
             const documentHandlers = {
                 click: closeMenu
             };

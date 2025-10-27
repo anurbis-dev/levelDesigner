@@ -3,11 +3,110 @@ import { Logger } from '../utils/Logger.js';
 import { ExtensionErrorUtils } from '../utils/ExtensionErrorUtils.js';
 import { AssetContextMenu } from './AssetContextMenu.js';
 import { AssetPanelContextMenu } from './AssetPanelContextMenu.js';
+import { BaseContextMenu } from './BaseContextMenu.js';
 import { FoldersPanel } from './FoldersPanel.js';
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 import { globalEventRegistry } from '../event-system/GlobalEventRegistry.js';
 import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
 // Note: HoverEffects removed - using CSS hover effects like OutlinerPanel
+
+/**
+ * Context menu for asset tabs - simplified implementation
+ */
+class AssetTabContextMenu extends BaseContextMenu {
+    constructor(assetPanel) {
+        // Use the panel element, not the inner container (like other panels)
+        super(assetPanel.container.parentElement, {
+            onMenuShow: () => Logger.ui.debug('AssetTabContextMenu: Menu shown'),
+            onMenuHide: () => Logger.ui.debug('AssetTabContextMenu: Menu hidden'),
+            onItemClick: (action, contextData) => {
+                Logger.ui.debug('AssetTabContextMenu: Item clicked', { action, contextData });
+            }
+        });
+
+        this.assetPanel = assetPanel;
+        
+        // Override the context menu handler to only work on tabs
+        this.setupTabSpecificHandler();
+    }
+
+    /**
+     * Setup context menu handler that only responds to tab clicks
+     */
+    setupTabSpecificHandler() {
+        // Remove the default handler from BaseContextMenu
+        if (this.contextMenuHandler) {
+            this.panel.removeEventListener('contextmenu', this.contextMenuHandler);
+        }
+
+        // Add custom handler that only works on tabs
+        this.contextMenuHandler = (e) => {
+            // Only show menu if clicked on a tab
+            const tabButton = e.target.closest('.tab');
+            if (!tabButton) {
+                return; // Don't show menu if not clicked on a tab
+            }
+
+            // Extract context data from clicked element
+            const contextData = this.extractContextData(e.target);
+            this.showContextMenu(e, contextData);
+        };
+
+        // Add to document.body for global coverage
+        this.panel.addEventListener('contextmenu', this.contextMenuHandler);
+    }
+
+    /**
+     * Override extractContextData to detect tab clicks
+     */
+    extractContextData(target) {
+        const tabButton = target.closest('.tab');
+        if (tabButton) {
+            return {
+                category: tabButton.dataset.category,
+                tabElement: tabButton
+            };
+        }
+        return null;
+    }
+
+
+
+    /**
+     * Override showContextMenu to always show for tab context
+     */
+    showContextMenu(event, contextData) {
+        // Always show menu for tab context, regardless of selection state
+        if (!contextData || !contextData.category) {
+            return;
+        }
+
+        // Clear existing menu items
+        this.menuItems = [];
+
+        // Always add close option - logic simplified
+        this.addMenuItem('Close', '❌', () => {
+            const category = contextData.category;
+            const activeTabs = new Set(this.assetPanel.stateManager.get('activeAssetTabs'));
+            activeTabs.delete(category);
+
+            // Ensure at least one tab remains active
+            if (activeTabs.size === 0) {
+                const availableCategories = this.assetPanel.assetManager.getCategories();
+                if (availableCategories.length > 0) {
+                    activeTabs.add(availableCategories[0]);
+                }
+            }
+
+            this.assetPanel.stateManager.set('activeAssetTabs', activeTabs);
+            this.assetPanel.levelEditor.configManager.set('editor.view.activeAssetTabs', Array.from(activeTabs));
+            this.assetPanel.render();
+        });
+
+        // Call parent method to show menu
+        super.showContextMenu(event, contextData);
+    }
+}
 
 /**
  * Asset panel UI component
@@ -40,6 +139,9 @@ export class AssetPanel extends BasePanel {
         this.init();
         this.setupEventListeners();
         this.setupContextMenus();
+
+        // Initialize asset tab context menu - now works globally
+        this.assetTabContextMenu = new AssetTabContextMenu(this);
     }
 
     init() {
@@ -86,14 +188,6 @@ export class AssetPanel extends BasePanel {
     }
 
 
-    /**
-     * Handle search input
-     * @param {string} value - Search value
-     */
-    handleSearch(value) {
-        Logger.ui.debug('AssetPanel: Search:', value);
-        // TODO: Implement search functionality
-    }
 
     /**
      * Decrease asset size
@@ -720,35 +814,6 @@ export class AssetPanel extends BasePanel {
         document.addEventListener('mousemove', this.foldersMouseMoveHandler);
         document.addEventListener('mouseup', this.foldersMouseUpHandler);
 
-        // Register touch support for folders resizer using UnifiedTouchManager (disabled temporarily)
-        // if (this.levelEditor?.unifiedTouchManager) {
-        //     const config = {
-        //         direction: 'horizontal',
-        //         minSize: 100,
-        //         maxSize: 800,
-        //         onResizeStart: (element, touch) => {
-        //             Logger.ui.debug('Folders resizer touch start');
-        //         },
-        //         onResize: (element, touch, touchData) => {
-        //             // Calculate new width
-        //             const deltaX = touch.clientX - touchData.startX;
-        //             const newWidth = initialFoldersWidth + deltaX;
-        //             
-        //             // Apply resize logic here
-        //             Logger.ui.debug(`Folders resizer touch move, delta: ${deltaX}, newWidth: ${newWidth}`);
-        //         },
-        //         onResizeEnd: (element, touch, touchData) => {
-        //             Logger.ui.debug('Folders resizer touch end');
-        //         }
-        //     };
-        //
-        //     this.levelEditor.unifiedTouchManager.registerElement(
-        //         this.foldersResizer, 
-        //         'panelResizer', 
-        //         config, 
-        //         'folders-resizer'
-        //     );
-        // }
     }
 
     setupEventListeners() {
@@ -802,7 +867,6 @@ export class AssetPanel extends BasePanel {
 
         this.setupAssetEvents();
         
-        // Touch gestures are now handled by TouchInitializationManager
     }
 
     render() {
@@ -810,7 +874,6 @@ export class AssetPanel extends BasePanel {
         this.renderTabs();
         this.renderPreviews();
         
-        // Touch gestures are handled by TouchInitializationManager
     }
 
     renderTabs() {
@@ -831,22 +894,8 @@ export class AssetPanel extends BasePanel {
             tabButton.textContent = category;
             tabButton.dataset.category = category;
 
-            // Register click and context menu handlers through EventHandlerManager
-            // Only register if not already registered to avoid duplicates
-            const tabId = `tab-${category}`;
-            if (!this._registeredAssetTabs || !this._registeredAssetTabs.has(tabId)) {
-                const tabHandlers = {
-                    click: (e) => this.handleTabClick(e, category),
-                    contextmenu: (e) => this.handleAssetTabContextMenu(e, category)
-                };
-                eventHandlerManager.registerElement(tabButton, tabHandlers, tabId);
-                
-                // Track registered tabs
-                if (!this._registeredAssetTabs) {
-                    this._registeredAssetTabs = new Set();
-                }
-                this._registeredAssetTabs.add(tabId);
-            }
+            // Event handlers are now registered through setupAssetPanelHandlers() using event delegation
+            // No need for individual tab registration
             
             this.tabsContainer.appendChild(tabButton);
         });
@@ -1356,59 +1405,6 @@ export class AssetPanel extends BasePanel {
         setTimeout(() => this.autoResizePanelHeight(), 100);
     }
 
-    /**
-     * Handle context menu on asset tab
-     * @param {Event} e - Context menu event
-     * @param {string} category - Tab category
-     */
-    handleAssetTabContextMenu(e, category) {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const activeTabs = this.stateManager.get('activeAssetTabs');
-        
-        // Don't allow closing if it's the only active tab
-        const canClose = activeTabs.size > 1;
-
-        // Create simple context menu
-        const menu = document.createElement('div');
-        menu.className = 'context-menu';
-        menu.style.position = 'fixed';
-        menu.style.left = `${e.clientX}px`;
-        menu.style.top = `${e.clientY}px`;
-        menu.style.zIndex = '10000';
-        
-        menu.innerHTML = `
-            <div class="context-menu-item ${canClose ? '' : 'disabled'}" data-action="close">
-                Close
-            </div>
-        `;
-        
-        document.body.appendChild(menu);
-
-        // Handle menu item clicks
-        const handleMenuClick = (e2) => {
-            const action = e2.target.dataset.action;
-            
-            if (action === 'close' && canClose) {
-                activeTabs.delete(category);
-                this.stateManager.set('activeAssetTabs', new Set(activeTabs));
-                this.levelEditor.configManager.set('editor.view.activeAssetTabs', Array.from(activeTabs));
-                this.render();
-            }
-            
-            // Cleanup
-            document.body.removeChild(menu);
-            document.removeEventListener('click', handleMenuClick);
-            document.removeEventListener('contextmenu', handleMenuClick);
-        };
-
-        // Close on outside click or context menu
-        setTimeout(() => {
-            document.addEventListener('click', handleMenuClick);
-            document.addEventListener('contextmenu', handleMenuClick);
-        }, 0);
-    }
 
     // Note: handleThumbnailClick method removed
     // Now using BasePanel.handleItemClick with SelectionUtils
@@ -2555,22 +2551,6 @@ export class AssetPanel extends BasePanel {
         globalEventRegistry.unregisterComponentHandlers('asset-panel');
         globalEventRegistry.unregisterComponentHandlers('asset-panel-folders');
         
-        // Legacy cleanup (should be removed after migration)
-        if (this.resizeHandler) {
-            window.removeEventListener('resize', this.resizeHandler);
-        }
-        
-        if (this.tabMouseUpHandler) {
-            document.removeEventListener('mouseup', this.tabMouseUpHandler);
-        }
-        
-        if (this.foldersMouseMoveHandler) {
-            document.removeEventListener('mousemove', this.foldersMouseMoveHandler);
-        }
-        
-        if (this.foldersMouseUpHandler) {
-            document.removeEventListener('mouseup', this.foldersMouseUpHandler);
-        }
 
         // Clean up ResizeObserver for drop overlay
         if (this.dropOverlayResizeObserver) {
@@ -2590,6 +2570,9 @@ export class AssetPanel extends BasePanel {
         }
         if (this.panelContextMenu) {
             this.panelContextMenu.destroy();
+        }
+        if (this.assetTabContextMenu) {
+            this.assetTabContextMenu.destroy();
         }
     }
 
@@ -2695,7 +2678,9 @@ export class AssetPanel extends BasePanel {
                     }
                     return;
                 }
-            }
+            },
+            null // onInputChange - not used
+            // Context menu is now handled by AssetTabContextMenu class
         );
 
         // Register container with new event manager
@@ -2748,177 +2733,4 @@ export class AssetPanel extends BasePanel {
     }
 
 
-    /**
-     * Start touch marquee selection in asset panel
-     * @param {number} startX - Start X coordinate
-     * @param {number} startY - Start Y coordinate
-     */
-    startAssetTouchMarquee(startX, startY) {
-        // Check if touch started on an asset (not empty space)
-        const elementAtPoint = document.elementFromPoint(startX, startY);
-        
-        // If touch started on an asset or its child elements, don't start marquee
-        if (elementAtPoint && (
-            elementAtPoint.closest('.asset-thumbnail') || 
-            elementAtPoint.closest('.asset-item') ||
-            elementAtPoint.closest('.asset-row') ||
-            elementAtPoint.closest('.asset-details-row') ||
-            elementAtPoint.closest('[data-asset-id]') ||
-            elementAtPoint.closest('[draggable="true"]')
-        )) {
-            Logger.ui.debug('Asset panel touch started on draggable asset, skipping marquee');
-            return;
-        }
-        
-        // Create synthetic mouse event and pass to SelectionUtils
-        const syntheticEvent = {
-            button: 0, // Left mouse button
-            clientX: startX,
-            clientY: startY,
-            target: this.previewsContainer, // Set target to container
-            preventDefault: () => {},
-            stopPropagation: () => {}
-        };
-        
-        // Use SelectionUtils to handle marquee start
-        import('../utils/SelectionUtils.js').then(({ SelectionUtils }) => {
-            SelectionUtils.handleMarqueeMouseDown(syntheticEvent, {
-                container: this.previewsContainer,
-                stateManager: this.stateManager,
-                ...this.selectionOptions
-            });
-        }).catch(error => {
-            Logger.ui.error('Failed to load SelectionUtils for marquee start:', error);
-        });
-        
-        Logger.ui.debug('Asset panel touch marquee started at:', startX, startY);
-    }
-
-    /**
-     * Update touch marquee selection in asset panel
-     * @param {number} currentX - Current X coordinate
-     * @param {number} currentY - Current Y coordinate
-     */
-    updateAssetTouchMarquee(currentX, currentY) {
-        // Create synthetic mouse event and pass to SelectionUtils
-        const syntheticEvent = {
-            clientX: currentX,
-            clientY: currentY,
-            target: this.previewsContainer, // Set target to container
-            preventDefault: () => {},
-            stopPropagation: () => {}
-        };
-        
-        // Use SelectionUtils to handle marquee move
-        import('../utils/SelectionUtils.js').then(({ SelectionUtils }) => {
-            SelectionUtils.handleMarqueeMouseMove(syntheticEvent, this.stateManager);
-        }).catch(error => {
-            Logger.ui.error('Failed to load SelectionUtils for marquee move:', error);
-        });
-    }
-
-    /**
-     * End touch marquee selection in asset panel
-     * @param {number} endX - End X coordinate
-     * @param {number} endY - End Y coordinate
-     */
-    endAssetTouchMarquee(endX, endY) {
-        // Create synthetic mouse event and pass to SelectionUtils
-        const syntheticEvent = {
-            clientX: endX,
-            clientY: endY,
-            target: this.previewsContainer, // Set target to container
-            preventDefault: () => {},
-            stopPropagation: () => {}
-        };
-        
-        // Use SelectionUtils to handle marquee end
-        import('../utils/SelectionUtils.js').then(({ SelectionUtils }) => {
-            SelectionUtils.handleMarqueeMouseUp(syntheticEvent, this.stateManager, this.selectionOptions);
-        }).catch(error => {
-            Logger.ui.error('Failed to load SelectionUtils for marquee end:', error);
-        });
-        
-        Logger.ui.debug('Asset panel touch marquee ended at:', endX, endY);
-    }
-
-    // ===== TOUCH DRAG AND DROP HANDLERS =====
-
-    /**
-     * Start touch drag for asset - emulate dragstart event
-     * @param {number} startX - Start X coordinate
-     * @param {number} startY - Start Y coordinate
-     * @param {Object} asset - Asset being dragged
-     */
-    startAssetTouchDrag(startX, startY, asset) {
-        // Create synthetic dragstart event
-        const syntheticDragStartEvent = {
-            target: document.querySelector(`[data-asset-id="${asset.id}"]`),
-            ctrlKey: false,
-            metaKey: false,
-            dataTransfer: {
-                setData: (type, data) => {
-                    this._dragData = data;
-                },
-                getData: (type) => this._dragData,
-                effectAllowed: 'copy'
-            },
-            preventDefault: () => {},
-            stopPropagation: () => {}
-        };
-
-        // Call existing dragstart handler
-        this.handleThumbnailDragStart(syntheticDragStartEvent, asset);
-        
-        Logger.ui.debug('Asset touch drag started:', asset.id);
-    }
-
-    /**
-     * End touch drag for asset - emulate drop event
-     * @param {number} endX - End X coordinate
-     * @param {number} endY - End Y coordinate
-     */
-    endAssetTouchDrag(endX, endY) {
-        // Check if we're over the canvas
-        const canvas = document.getElementById('main-canvas');
-        if (!canvas) {
-            this.handleThumbnailDragEnd({}, null);
-            return;
-        }
-
-        const canvasRect = canvas.getBoundingClientRect();
-        const isOverCanvas = endX >= canvasRect.left && 
-                            endX <= canvasRect.right && 
-                            endY >= canvasRect.top && 
-                            endY <= canvasRect.bottom;
-
-        if (isOverCanvas) {
-            Logger.ui.debug('Touch drag ended over canvas, calling handleDrop with dragData:', this._dragData);
-            
-            // Create synthetic drop event
-            const syntheticDropEvent = {
-                target: {
-                    ...canvas,
-                    closest: (selector) => canvas.closest(selector)
-                },
-                clientX: endX,
-                clientY: endY,
-                dataTransfer: {
-                    getData: (type) => this._dragData
-                },
-                preventDefault: () => {},
-                stopPropagation: () => {}
-            };
-
-            // Call existing drop handler
-            this.levelEditor.mouseHandlers.handleDrop(syntheticDropEvent);
-        } else {
-            Logger.ui.debug('Touch drag ended outside canvas');
-        }
-
-        // Always call dragend to reset state
-        this.handleThumbnailDragEnd({}, null);
-        
-        Logger.ui.debug('Asset touch drag ended');
-    }
 }
