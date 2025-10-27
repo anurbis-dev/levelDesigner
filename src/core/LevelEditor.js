@@ -512,6 +512,11 @@ export class LevelEditor {
         // Initial render of asset panel
         this.assetPanel.render();
         
+        // Setup context menus for asset panel tabs after rendering
+        if (this.eventHandlers && this.eventHandlers.updateTabContextMenus) {
+            this.eventHandlers.updateTabContextMenus();
+        }
+        
         // Create new level
         this.level = this.fileManager.createNewLevel();
         

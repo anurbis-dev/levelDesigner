@@ -63,8 +63,8 @@ export class TouchHandlers extends BaseModule {
      * Touch event handlers
      */
     handleTouchStart(e) {
-        // Prevent default browser behavior for touch events
-        e.preventDefault();
+        // Note: preventDefault() removed to avoid passive event listener intervention
+        // Touch events are handled by UnifiedTouchManager and TouchSupportManager
         
         const touches = Array.from(e.touches);
         const currentTime = Date.now();
@@ -153,7 +153,8 @@ export class TouchHandlers extends BaseModule {
      * Touch move handler (throttled for performance)
      */
     handleTouchMove(e) {
-        e.preventDefault();
+        // Note: preventDefault() removed to avoid passive event listener intervention
+        // Touch events are handled by UnifiedTouchManager and TouchSupportManager
         this._throttledTouchMove(e);
     }
 

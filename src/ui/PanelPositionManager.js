@@ -783,23 +783,21 @@ export class PanelPositionManager {
             }
         }
 
-        // Double-click to toggle collapse/expand
-        resizer.addEventListener('dblclick', (e) => {
-            Logger.ui.info(`${panelSide} panel resizer double-click triggered`);
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Use universal panel collapse/expand method directly
-            const savedSize = this.stateManager?.get(`panels.${panelSide}PanelWidth`) ?? 300;
-            const isCollapsed = savedSize <= 5;
-            const shouldCollapse = !isCollapsed;
-            
-            this.togglePanelCollapse(panelSide, shouldCollapse);
-        });
-
         // Register with unified ResizerManager
         if (this.levelEditor?.resizerManager) {
-            this.levelEditor.resizerManager.registerResizer(resizer, panel, panelSide, 'horizontal');
+            // Create double-click handler for panel collapse/expand
+            const onDoubleClick = (e, resizerElement, panelElement, panelSide) => {
+                Logger.ui.info(`${panelSide} panel resizer double-click triggered`);
+                
+                // Use universal panel collapse/expand method directly
+                const savedSize = this.stateManager?.get(`panels.${panelSide}PanelWidth`) ?? 300;
+                const isCollapsed = savedSize <= 5;
+                const shouldCollapse = !isCollapsed;
+                
+                this.togglePanelCollapse(panelSide, shouldCollapse);
+            };
+            
+            this.levelEditor.resizerManager.registerResizer(resizer, panel, panelSide, 'horizontal', onDoubleClick);
         } else {
             Logger.ui.warn('ResizerManager not available, falling back to legacy setup');
             // Fallback to legacy setup if ResizerManager is not available
@@ -911,16 +909,36 @@ export class PanelPositionManager {
                 Logger.ui.debug(`Resizer touch start: ${panelSide} ${direction}`);
             },
             onResize: (element, touch, touchData) => {
-                // Calculate new size
-                const deltaX = touch.clientX - touchData.startX;
-                const deltaY = touch.clientY - touchData.startY;
-                const delta = direction === 'horizontal' ? deltaX : deltaY;
+                // Calculate new size using UnifiedTouchManager
+                const initialData = {
+                    startY: touchData.startY,
+                    startX: touchData.startX,
+                    initialSize: direction === 'vertical' ? panel.offsetHeight : panel.offsetWidth
+                };
                 
-                // Apply resize logic here
-                Logger.ui.debug(`Resizer touch move: ${panelSide} ${direction}, delta: ${delta}`);
+                let newSize;
+                if (direction === 'vertical') {
+                    newSize = this.levelEditor.unifiedTouchManager.calculateVerticalPanelSize(element, touch, initialData);
+                } else {
+                    newSize = this.levelEditor.unifiedTouchManager.calculateHorizontalPanelSize(element, touch, initialData);
+                }
+                
+                // Apply resize using unified logic
+                this.handlePanelResize(panel, panelSide, direction, newSize);
             },
             onResizeEnd: (element, touch, touchData) => {
-                Logger.ui.debug(`Resizer touch end: ${panelSide} ${direction}`);
+                // Save final size to StateManager and UserPreferences
+                const currentSize = direction === 'vertical' ? panel.offsetHeight : panel.offsetWidth;
+                
+                if (direction === 'vertical') {
+                    this.stateManager.set('panels.assetsPanelHeight', currentSize);
+                    this.userPrefs?.set('assetsPanelHeight', currentSize);
+                } else {
+                    this.stateManager.set(`panels.${panelSide}PanelWidth`, currentSize);
+                    this.userPrefs?.set(`${panelSide}PanelWidth`, currentSize);
+                }
+                
+                Logger.ui.debug(`Resizer touch end: ${panelSide} ${direction}, final size: ${currentSize}px`);
             }
         };
 
@@ -1212,26 +1230,26 @@ export class PanelPositionManager {
             }
         });
 
-        // Add global mouseup handler to clean up if mouse is released outside container
+        // Register global tab dragging handler using GlobalEventRegistry (handles duplicates automatically)
         if (!window.tabDraggingGlobalMouseUp) {
             window.tabDraggingGlobalMouseUp = (e) => {
-                if (draggingState.draggedTab) {
+                if (window.tabDraggingState && window.tabDraggingState.draggedTab) {
                     // Clean up dragging state
-                    draggingState.draggedTab.classList.remove('dragging');
+                    window.tabDraggingState.draggedTab.classList.remove('dragging');
                     document.querySelectorAll('.tab-right, .tab-left').forEach(t => t.classList.remove('tab-drag-over'));
                     
-                    draggingState.draggedTab = null;
-                    draggingState.draggedIndex = -1;
-                    draggingState.draggedPanel = null;
+                    window.tabDraggingState.draggedTab = null;
+                    window.tabDraggingState.draggedIndex = -1;
+                    window.tabDraggingState.draggedPanel = null;
                 }
             };
-            // Register tab dragging mouseup handler with GlobalEventRegistry
-            const tabDragHandlers = {
-                mouseup: window.tabDraggingGlobalMouseUp
-            };
-            
-            globalEventRegistry.registerComponentHandlers('panel-tab-dragging', tabDragHandlers, 'document');
         }
+        
+        const tabDragHandlers = {
+            mouseup: window.tabDraggingGlobalMouseUp
+        };
+        
+        globalEventRegistry.registerComponentHandlers('panel-tab-dragging', tabDragHandlers, 'document');
 
         // Mark as setup
         tabContainer._draggingSetup = true;
@@ -1398,8 +1416,31 @@ export class PanelPositionManager {
             return;
         }
 
-        let isResizing = false;
+        Logger.ui.info('Setting up assets panel resizer...');
 
+        // Check if already registered to prevent duplicate registration
+        if (eventHandlerManager.isElementRegistered(resizer)) {
+            Logger.ui.debug('Assets panel resizer already registered, skipping');
+            return;
+        }
+
+        // Register with unified ResizerManager
+        if (this.levelEditor?.resizerManager) {
+            this.levelEditor.resizerManager.registerResizer(resizer, panel, 'assets', 'vertical');
+        } else {
+            Logger.ui.warn('ResizerManager not available, falling back to legacy setup');
+            // Fallback to legacy setup if ResizerManager is not available
+            this.setupLegacyAssetsPanelResizer(resizer, panel);
+        }
+
+        Logger.ui.debug('Setup assets panel resizer with unified ResizerManager');
+    }
+
+    /**
+     * Legacy assets panel resizer setup (fallback)
+     */
+    setupLegacyAssetsPanelResizer(resizer, panel) {
+        let isResizing = false;
 
         const handleMouseMove = (e) => {
             if (!isResizing) return;
@@ -1407,8 +1448,8 @@ export class PanelPositionManager {
             e.preventDefault();
             e.stopPropagation();
             
-            // Use unified resize calculation from UnifiedTouchManager
-            const newHeight = this.levelEditor.unifiedTouchManager.calculateVerticalPanelSize(
+            // Use unified resize calculation from TouchSupportManager
+            const newHeight = this.levelEditor.touchSupportManager.calculateVerticalPanelSize(
                 resizer, 
                 e, 
                 { startY: initialMouseY, initialSize: initialPanelHeight }
@@ -1431,7 +1472,6 @@ export class PanelPositionManager {
             this.stateManager.set('panels.assetsPanelHeight', currentHeight);
             this.userPrefs?.set('assetsPanelHeight', currentHeight);
             
-            
             // Update UI
             this._updateUI();
             
@@ -1444,34 +1484,30 @@ export class PanelPositionManager {
 
         // Mouse down - start resizing (with delay to allow dblclick)
         resizer.addEventListener('mousedown', (e) => {
-            // Add small delay to allow dblclick to register
+            Logger.ui.debug('Assets panel resizer mousedown');
+            
+            // Set initial values immediately
+            initialMouseY = e.clientY;
+            initialPanelHeight = panel.offsetHeight;
+            
+            // Add delay to allow double-click detection
             setTimeout(() => {
-                if (isResizing) return; // Already handled by dblclick
-                
-                isResizing = true;
-                initialMouseY = e.clientY;
-                initialPanelHeight = panel.offsetHeight;
-                
-                document.body.style.cursor = 'row-resize';
-                document.body.style.userSelect = 'none';
-                resizer.classList.add('resizing');
-                
-                e.preventDefault();
-                e.stopPropagation();
-                
-                // Register assets panel resizer mouse handlers with GlobalEventRegistry
-                const assetsResizerHandlers = {
-                    mousemove: handleMouseMove,
-                    mouseup: handleMouseUp
-                };
-                
-                globalEventRegistry.registerComponentHandlers('assets-panel-resizer', assetsResizerHandlers, 'document');
+                if (!isResizing) {
+                    isResizing = true;
+                    document.body.style.cursor = 'row-resize';
+                    document.body.style.userSelect = 'none';
+                    resizer.classList.add('resizing');
+                    
+                    // Prevent default behavior only after delay
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // Register document event listeners
+                    document.addEventListener('mousemove', handleMouseMove);
+                    document.addEventListener('mouseup', handleMouseUp);
+                }
             }, 50);
         });
-
-        // Register with TouchSupportManager using TouchSupportUtils
-        // Register touch support immediately after resizer is created
-        this.registerTouchSupportForResizer(resizer, panel, 'assets', 'vertical');
 
         // Double-click to toggle collapse/expand
         resizer.addEventListener('dblclick', (e) => {
@@ -1490,7 +1526,11 @@ export class PanelPositionManager {
             this.togglePanelCollapse('assets', shouldCollapse);
         });
 
-        Logger.ui.debug('Setup assets panel resizer with full functionality');
+        // Register with TouchSupportManager using TouchSupportUtils
+        // Register touch support immediately after resizer is created
+        this.registerTouchSupportForResizer(resizer, panel, 'assets', 'vertical');
+
+        Logger.ui.debug('Setup assets panel resizer with legacy functionality');
     }
 
     /**

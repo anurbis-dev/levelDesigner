@@ -287,6 +287,37 @@ export class EventHandlerManager {
             };
         }
 
+        // Mouse enter/leave delegation
+        if (config.mouseenter) {
+            handlers.mouseenter = (e) => {
+                const target = e.target;
+                const selector = config.mouseenter.selector || '*';
+                
+                const element = target.closest(selector);
+                if (element) {
+                    const handler = config.mouseenter.handler;
+                    if (typeof handler === 'function') {
+                        handler.call(element, e, target);
+                    }
+                }
+            };
+        }
+
+        if (config.mouseleave) {
+            handlers.mouseleave = (e) => {
+                const target = e.target;
+                const selector = config.mouseleave.selector || '*';
+                
+                const element = target.closest(selector);
+                if (element) {
+                    const handler = config.mouseleave.handler;
+                    if (typeof handler === 'function') {
+                        handler.call(element, e, target);
+                    }
+                }
+            };
+        }
+
         // Touch event delegation
         if (config.touchstart) {
             handlers.touchstart = (e) => {
@@ -367,7 +398,9 @@ export class EventHandlerManager {
                 if (eventType.startsWith('touch')) {
                     // Touch events need special handling
                     if (eventType === 'touchstart' || eventType === 'touchend' || eventType === 'touchcancel') {
-                        options = { passive: true };
+                        // Check if this is a resizer element that needs preventDefault
+                        const isResizer = element.id && element.id.includes('resizer');
+                        options = { passive: !isResizer };
                     } else if (eventType === 'touchmove') {
                         // Touch move might need preventDefault, so non-passive
                         options = { passive: false };

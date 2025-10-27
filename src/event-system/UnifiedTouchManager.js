@@ -156,6 +156,9 @@ export class UnifiedTouchManager {
             case 'button':
                 this.handleButtonTouchStart(e, element, config);
                 break;
+            case 'scrollable':
+                this.handleScrollableTouchStart(e, element, config);
+                break;
             default:
                 this.handleGenericTouchStart(e, element, config);
         }
@@ -193,6 +196,9 @@ export class UnifiedTouchManager {
                 break;
             case 'panelResizer':
                 this.handleResizerTouchMove(e, element, config, touchData);
+                break;
+            case 'scrollable':
+                this.handleScrollableTouchMove(e, element, config, touchData);
                 break;
             default:
                 this.handleGenericTouchMove(e, element, config, touchData);
@@ -328,6 +334,9 @@ export class UnifiedTouchManager {
      * Handle resizer touch start
      */
     handleResizerTouchStart(e, element, config) {
+        // Prevent default browser behavior for resizer touch events
+        e.preventDefault();
+        
         if (config.onResizeStart) {
             const touch = e.touches[0];
             config.onResizeStart(element, element.parentElement, touch);
@@ -338,6 +347,9 @@ export class UnifiedTouchManager {
      * Handle resizer touch move
      */
     handleResizerTouchMove(e, element, config, touchData) {
+        // Prevent default browser behavior for resizer touch events
+        e.preventDefault();
+        
         if (config.onResize) {
             const touch = e.touches[0];
             const newSize = this.calculateResizeSize(element, config, touch, touchData);
@@ -664,6 +676,55 @@ export class UnifiedTouchManager {
         const maxHeight = window.innerHeight * 0.8;
         
         return Math.max(minHeight, Math.min(maxHeight, newHeight));
+    }
+
+    /**
+     * Handle scrollable touch start
+     * @param {TouchEvent} e - Touch event
+     * @param {HTMLElement} element - Target element
+     * @param {Object} config - Configuration
+     */
+    handleScrollableTouchStart(e, element, config) {
+        const touch = e.touches[0];
+        const touchId = touch.identifier;
+        
+        // Store touch data
+        this.activeTouches.set(touchId, {
+            startX: touch.clientX,
+            startY: touch.clientY,
+            lastX: touch.clientX,
+            lastY: touch.clientY,
+            startTime: Date.now(),
+            element: element,
+            config: config,
+            isActive: true,
+            startScrollLeft: config.scrollElement ? config.scrollElement.scrollLeft : 0
+        });
+        
+        Logger.event.debug('🎯 Scrollable touch start', { touchId, element: element.id });
+    }
+
+    /**
+     * Handle scrollable touch move
+     * @param {TouchEvent} e - Touch event
+     * @param {HTMLElement} element - Target element
+     * @param {Object} config - Configuration
+     * @param {Object} touchData - Touch data
+     */
+    handleScrollableTouchMove(e, element, config, touchData) {
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - touchData.startX;
+        
+        // Apply smooth scrolling
+        if (config.scrollElement) {
+            const scrollElement = config.scrollElement;
+            const newScrollLeft = touchData.startScrollLeft - deltaX;
+            const maxScrollLeft = scrollElement.scrollWidth - scrollElement.clientWidth;
+            
+            scrollElement.scrollLeft = Math.max(0, Math.min(newScrollLeft, maxScrollLeft));
+        }
+        
+        Logger.event.debug('🎯 Scrollable touch move', { deltaX, scrollLeft: config.scrollElement?.scrollLeft });
     }
 
     /**

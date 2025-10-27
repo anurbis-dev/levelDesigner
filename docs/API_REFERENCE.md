@@ -122,7 +122,7 @@ apply() {
 Новый унифицированный менеджер для всех разделителей панелей.
 
 #### Основные методы:
-- `registerResizer(resizer, panel, panelSide, direction)` - регистрация разделителя
+- `registerResizer(resizer, panel, panelSide, direction, onDoubleClick)` - регистрация разделителя с поддержкой двойного клика
 - `unregisterResizer(resizer)` - удаление разделителя
 - `setupMouseEvents(resizer, panel, panelSide, direction)` - настройка mouse событий
 - `setupTouchEvents(resizer, panel, panelSide, direction)` - настройка touch событий
@@ -130,6 +130,11 @@ apply() {
 - `handlePanelResize(panel, panelSide, direction, newSize)` - унифицированная логика изменения размера
 - `savePanelSize(panelSide, direction, size)` - сохранение размера панели
 - `isTouchSupportEnabled()` - проверка включения touch поддержки
+
+#### Новые функции v3.52.6:
+- **Поддержка двойного клика** - новый параметр `onDoubleClick` для регистрации обработчика двойного клика
+- **Унифицированная обработка** - все разделители используют единую систему обработки двойного клика
+- **Предотвращение конфликтов** - устранены конфликты между обработчиками мыши и двойного клика
 
 #### Поддерживаемые типы разделителей:
 - `horizontal` - горизонтальные разделители (левая/правая панели, folders)
@@ -146,9 +151,17 @@ apply() {
 // Автоматическая интеграция в LevelEditor
 this.resizerManager = new ResizerManager(this);
 
-// Использование в PanelPositionManager
+// Использование в PanelPositionManager с поддержкой двойного клика
 if (this.levelEditor?.resizerManager) {
-    this.levelEditor.resizerManager.registerResizer(resizer, panel, panelSide, 'horizontal');
+    const onDoubleClick = (e, resizerElement, panelElement, panelSide) => {
+        // Логика сворачивания/разворачивания панели
+        const savedSize = this.stateManager?.get(`panels.${panelSide}PanelWidth`) ?? 300;
+        const isCollapsed = savedSize <= 5;
+        const shouldCollapse = !isCollapsed;
+        this.togglePanelCollapse(panelSide, shouldCollapse);
+    };
+    
+    this.levelEditor.resizerManager.registerResizer(resizer, panel, panelSide, 'horizontal', onDoubleClick);
 } else {
     // Fallback на legacy код
     this.setupLegacyPanelResizer(resizer, panel, panelSide);
@@ -5118,6 +5131,87 @@ handleWheel(e)
 
 **Параметры:**
 - `e` (WheelEvent) - событие колесика мыши
+
+#### Новые функции v3.52.6:
+
+##### `updateTabHandlers()`
+Объединенная регистрация обработчиков клика и контекстного меню для всех табов.
+
+```javascript
+updateTabHandlers()
+```
+
+**Функциональность:**
+- Автоматическая регистрация обработчиков клика для табов панелей (`.tab-right`, `.tab-left`)
+- Автоматическая регистрация контекстных меню для всех типов табов
+- Предотвращение дублирования регистрации
+- Автоматическая перерегистрация при изменениях DOM
+
+##### `handleTabContextMenu(event)`
+Обработка правого клика на табах.
+
+```javascript
+handleTabContextMenu(event)
+```
+
+**Параметры:**
+- `event` (MouseEvent) - событие правого клика
+
+**Логика:**
+- Определение типа таба и панели
+- Показ соответствующего контекстного меню
+- Перемещение табов между панелями или закрытие assets табов
+
+##### `showAssetTabContextMenu(event, tabName, tab)`
+Показ контекстного меню для табов assets панели.
+
+```javascript
+showAssetTabContextMenu(event, tabName, tab)
+```
+
+**Параметры:**
+- `event` (MouseEvent) - событие правого клика
+- `tabName` (string) - имя таба
+- `tab` (HTMLElement) - элемент таба
+
+**Функциональность:**
+- Создание меню с опцией "Close"
+- Умное позиционирование относительно viewport
+- Защита от закрытия последнего таба
+
+##### `closeAssetTab(tabName, tab)`
+Закрытие таба assets панели.
+
+```javascript
+closeAssetTab(tabName, tab)
+```
+
+**Параметры:**
+- `tabName` (string) - имя таба для закрытия
+- `tab` (HTMLElement) - элемент таба
+
+**Функциональность:**
+- Проверка на последний таб
+- Обновление состояния в StateManager и ConfigManager
+- Перерендер assets панели
+
+##### `showTabContextMenu(event, tabName, currentPanel, targetPanel)`
+Показ контекстного меню для табов панелей.
+
+```javascript
+showTabContextMenu(event, tabName, currentPanel, targetPanel)
+```
+
+**Параметры:**
+- `event` (MouseEvent) - событие правого клика
+- `tabName` (string) - имя таба
+- `currentPanel` (string) - текущая панель ('left' или 'right')
+- `targetPanel` (string) - целевая панель для перемещения
+
+**Функциональность:**
+- Создание меню с опцией перемещения
+- Перемещение таба между панелями
+- Обновление активного таба и состояния панелей
 
 ## BaseModule
 

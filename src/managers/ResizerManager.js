@@ -53,8 +53,9 @@ export class ResizerManager {
      * @param {HTMLElement} panel - Target panel element
      * @param {string} panelSide - Panel side ('left', 'right', 'assets', 'folders')
      * @param {string} direction - Resize direction ('horizontal', 'vertical')
+     * @param {Function} onDoubleClick - Double click handler (optional)
      */
-    registerResizer(resizer, panel, panelSide, direction) {
+    registerResizer(resizer, panel, panelSide, direction, onDoubleClick = null) {
         if (!resizer || !panel) {
             Logger.ui.warn('ResizerManager: Invalid resizer or panel element');
             return;
@@ -70,7 +71,8 @@ export class ResizerManager {
             direction: direction,
             isActive: false,
             mouseHandlers: null,
-            touchRegistered: false
+            touchRegistered: false,
+            onDoubleClick: onDoubleClick
         };
         
         this.activeResizers.set(resizer, resizerData);
@@ -113,6 +115,10 @@ export class ResizerManager {
             document.body.style.userSelect = 'none';
             resizer.classList.add('resizing');
             
+            // Add global listeners for this resize operation
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            
             e.preventDefault();
             e.stopPropagation();
         };
@@ -134,7 +140,7 @@ export class ResizerManager {
                 newSize = this.touchSupportManager?.calculateVerticalPanelSize(
                     resizer, 
                     e, 
-                    { startX: initialMouseX, startY: initialMouseY }
+                    { startY: initialMouseY, initialSize: initialPanelSize }
                 ) || initialPanelSize;
             }
             
@@ -154,6 +160,10 @@ export class ResizerManager {
             document.body.style.userSelect = '';
             resizer.classList.remove('resizing');
             
+            // Remove global listeners
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+            
             // Save final size
             const currentSize = direction === 'horizontal' ? panel.offsetWidth : panel.offsetHeight;
             this.savePanelSize(panelSide, direction, currentSize);
@@ -161,22 +171,27 @@ export class ResizerManager {
             Logger.ui.debug(`ResizerManager: ${direction} resize completed for ${panelSide} panel: ${currentSize}px`);
         };
 
+        // Double click handler
+        const handleDoubleClick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (resizerData.onDoubleClick) {
+                resizerData.onDoubleClick(e, resizer, panel, panelSide);
+            }
+        };
+
         // Store handlers for cleanup
         resizerData.mouseHandlers = {
             mousedown: handleMouseDown,
             mousemove: handleMouseMove,
-            mouseup: handleMouseUp
+            mouseup: handleMouseUp,
+            dblclick: handleDoubleClick
         };
 
         // Add event listeners
         resizer.addEventListener('mousedown', handleMouseDown);
-        
-        // Add global listeners (only once per resizer)
-        if (!resizer._globalListenersAdded) {
-            document.addEventListener('mousemove', handleMouseMove);
-            document.addEventListener('mouseup', handleMouseUp);
-            resizer._globalListenersAdded = true;
-        }
+        resizer.addEventListener('dblclick', handleDoubleClick);
     }
 
     /**
@@ -270,6 +285,7 @@ export class ResizerManager {
         // Remove mouse event listeners
         if (resizerData.mouseHandlers) {
             resizer.removeEventListener('mousedown', resizerData.mouseHandlers.mousedown);
+            resizer.removeEventListener('dblclick', resizerData.mouseHandlers.dblclick);
             document.removeEventListener('mousemove', resizerData.mouseHandlers.mousemove);
             document.removeEventListener('mouseup', resizerData.mouseHandlers.mouseup);
         }

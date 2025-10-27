@@ -48,6 +48,8 @@ export class Toolbar {
         this.setupContextMenu();
         // Setup new event handlers
         this.setupNewEventHandlers();
+        // Setup touch scrolling with UnifiedTouchManager
+        this.setupTouchScrolling();
         // Load scroll position after toolbar is fully rendered
         this.loadScrollPosition();
     }
@@ -61,44 +63,42 @@ export class Toolbar {
             return;
         }
 
-        // Create toolbar handlers configuration using new system
-        const toolbarHandlers = EventHandlerUtils.createPanelHandlers(
-            (e) => {
-                // Handle button clicks
-                const button = e.target.closest('button');
-                if (button) {
-                    this.onButtonClick(e);
-                    return;
+        // Create toolbar handlers configuration manually (not using createPanelHandlers)
+        const toolbarHandlers = {
+            click: {
+                selector: 'button',
+                handler: (e) => {
+                    const button = e.target.closest('button');
+                    if (button) {
+                        this.onButtonClick(e);
+                    }
                 }
             },
-            (e) => {
-                // Handle button hover/leave
-                const button = e.target.closest('button');
-                if (button) {
-                    if (e.type === 'mouseenter') {
-                        this.onButtonHover(e);
-                    } else if (e.type === 'mouseleave') {
-                        this.onButtonLeave(e);
-                    }
-                    return;
-                }
+            change: {
+                selector: 'input, textarea, select',
+                handler: (e) => this.onInputChange(e)
             },
-            (e) => {
-                // Handle input changes
-                if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
-                    if (e.type === 'change') {
-                        this.onInputChange(e);
-                    } else if (e.type === 'focus') {
-                        this.onInputFocus(e);
-                    } else if (e.type === 'blur') {
-                        this.onInputBlur(e);
-                    } else if (e.type === 'keydown') {
-                        this.onInputKeyDown(e);
-                    }
-                    return;
-                }
+            mouseenter: {
+                selector: 'button',
+                handler: (e) => this.onButtonHover(e)
+            },
+            mouseleave: {
+                selector: 'button',
+                handler: (e) => this.onButtonLeave(e)
+            },
+            focus: {
+                selector: 'input, textarea, select',
+                handler: (e) => this.onInputFocus(e)
+            },
+            blur: {
+                selector: 'input, textarea, select',
+                handler: (e) => this.onInputBlur(e)
+            },
+            keydown: {
+                selector: 'input, textarea, select',
+                handler: (e) => this.onInputKeyDown(e)
             }
-        );
+        };
 
         // Register container with new event manager
         eventHandlerManager.registerContainer(this.container, toolbarHandlers);
@@ -107,16 +107,60 @@ export class Toolbar {
     }
 
     /**
+     * Setup touch scrolling with UnifiedTouchManager
+     */
+    setupTouchScrolling() {
+        if (!this.container || !this.toolbarContent) return;
+        
+        // Register toolbar container for touch scrolling
+        if (this.levelEditor.eventHandlers.unifiedTouchManager) {
+            this.levelEditor.eventHandlers.unifiedTouchManager.registerElement(
+                this.container,
+                'scrollable',
+                {
+                    scrollElement: this.toolbarContent,
+                    minMovement: 5,
+                    direction: 'horizontal'
+                },
+                'toolbar-scroll'
+            );
+            
+            Logger.ui.debug('Toolbar: Touch scrolling setup complete');
+        }
+    }
+
+    /**
      * Handle button clicks
      * @param {Event} e - Click event
      */
     onButtonClick(e) {
-        const button = e.target;
+        e.preventDefault();
+        
+        const button = e.target.closest('button');
+        if (!button) return;
+        
+        // Don't handle clicks on disabled buttons
+        if (button.style.pointerEvents === 'none') return;
+        
+        const action = button.getAttribute('data-action');
         const buttonId = button.id;
         
-        Logger.ui.debug('Toolbar: Button clicked:', buttonId);
+        Logger.ui.debug('Toolbar: Button clicked:', { buttonId, action });
         
-        // Handle specific button actions
+        // Handle Ctrl+Click for grid type cycling
+        if (action === 'toggleGrid' && e.ctrlKey) {
+            this.cycleGridType();
+            return;
+        }
+        
+        // Handle async action
+        if (action) {
+            (async () => {
+                await this.handleAction(action);
+            })();
+        }
+        
+        // Handle specific button actions by ID (legacy support)
         if (buttonId === 'toggleGrid') {
             this.levelEditor.toggleGrid();
         } else if (buttonId === 'toggleSnapToGrid') {
@@ -128,7 +172,6 @@ export class Toolbar {
         } else if (buttonId === 'toggleObjectCollisions') {
             this.levelEditor.toggleObjectCollisions();
         }
-        // Add more button handlers as needed
     }
 
     /**
@@ -294,7 +337,6 @@ export class Toolbar {
         ]));
 
         this.container.appendChild(toolbarContent);
-        this.setupButtonEvents();
         
         // Store reference to toolbar content for scrolling
         this.toolbarContent = toolbarContent;
@@ -390,38 +432,6 @@ export class Toolbar {
         return button;
     }
 
-    /**
-     * Setup button event listeners
-     */
-    setupButtonEvents() {
-        // Remove existing event listeners first
-        const existingButtons = this.container.querySelectorAll('button[data-action]');
-        existingButtons.forEach(button => {
-            button.replaceWith(button.cloneNode(true));
-        });
-        
-        const buttons = this.container.querySelectorAll('button[data-action]');
-        
-        buttons.forEach(button => {
-            button.addEventListener('click', (e) => {
-                e.preventDefault();
-                // Don't handle clicks on disabled buttons
-                if (button.style.pointerEvents === 'none') return;
-                const action = button.getAttribute('data-action');
-                
-                // Handle Ctrl+Click for grid type cycling
-                if (action === 'toggleGrid' && e.ctrlKey) {
-                    this.cycleGridType();
-                    return;
-                }
-                
-                // Handle async action
-                (async () => {
-                    await this.handleAction(action);
-                })();
-            });
-        });
-    }
 
     /**
      * Handle toolbar action
@@ -1076,16 +1086,7 @@ export class Toolbar {
         this.container.addEventListener('mousedown', mousedownHandler, { passive: false });
         this.scrollingHandlers.push({ element: this.container, event: 'mousedown', handler: mousedownHandler, options: { passive: false } });
 
-        // Touch start - start scrolling
-        const touchstartHandler = (e) => {
-            if (e.touches.length === 1 && !this.isScrolling) {
-                const touch = e.touches[0];
-                this.isTouchScrolling = true;
-                this.startScrolling({ clientX: touch.clientX, clientY: touch.clientY });
-            }
-        };
-        this.container.addEventListener('touchstart', touchstartHandler, { passive: true });
-        this.scrollingHandlers.push({ element: this.container, event: 'touchstart', handler: touchstartHandler, options: { passive: true } });
+        // Touch events are now handled by UnifiedTouchManager
 
         // Mouse move - continue scrolling
         const mousemoveHandler = (e) => {
@@ -1097,16 +1098,7 @@ export class Toolbar {
         document.addEventListener('mousemove', mousemoveHandler, { passive: false });
         this.scrollingHandlers.push({ element: document, event: 'mousemove', handler: mousemoveHandler, options: { passive: false } });
 
-        // Touch move - continue scrolling
-        const touchmoveHandler = (e) => {
-            if (this.isScrolling && this.isTouchScrolling && e.touches.length === 1) {
-                e.preventDefault();
-                const touch = e.touches[0];
-                this.updateScrolling({ clientX: touch.clientX, clientY: touch.clientY });
-            }
-        };
-        document.addEventListener('touchmove', touchmoveHandler, { passive: false });
-        this.scrollingHandlers.push({ element: document, event: 'touchmove', handler: touchmoveHandler, options: { passive: false } });
+        // Touch events are now handled by UnifiedTouchManager
 
         // Mouse up - stop scrolling
         const mouseupHandler = (e) => {
@@ -1118,23 +1110,7 @@ export class Toolbar {
         document.addEventListener('mouseup', mouseupHandler, { passive: false });
         this.scrollingHandlers.push({ element: document, event: 'mouseup', handler: mouseupHandler, options: { passive: false } });
 
-        // Touch end - stop scrolling
-        const touchendHandler = (e) => {
-            if (this.isScrolling && this.isTouchScrolling) {
-                this.stopScrolling();
-            }
-        };
-        document.addEventListener('touchend', touchendHandler, { passive: true });
-        this.scrollingHandlers.push({ element: document, event: 'touchend', handler: touchendHandler, options: { passive: true } });
-
-        // Touch cancel - stop scrolling
-        const touchcancelHandler = (e) => {
-            if (this.isScrolling && this.isTouchScrolling) {
-                this.stopScrolling();
-            }
-        };
-        document.addEventListener('touchcancel', touchcancelHandler, { passive: true });
-        this.scrollingHandlers.push({ element: document, event: 'touchcancel', handler: touchcancelHandler, options: { passive: true } });
+        // Touch events are now handled by UnifiedTouchManager
 
         // Mouse wheel scrolling
         const wheelHandler = (e) => {

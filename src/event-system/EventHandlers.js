@@ -5,6 +5,7 @@ import { MENU_CONFIG, getShortcutTarget } from '../../config/menu.js';
 import { TouchHandlers } from './TouchHandlers.js';
 import { eventHandlerManager } from './EventHandlerManager.js';
 import { UnifiedTouchManager } from './UnifiedTouchManager.js';
+import { globalEventRegistry } from './GlobalEventRegistry.js';
 
 /**
  * Event Handlers module for LevelEditor
@@ -148,19 +149,16 @@ export class EventHandlers extends BaseModule {
             }
         };
         
-        // Register all window events in one call
-        eventHandlerManager.registerElement(window, windowHandlers, 'window-all');
+        // Register window events using GlobalEventRegistry (handles duplicates automatically)
+        globalEventRegistry.registerComponentHandlers('window-all', windowHandlers, 'window');
         
-        // Register global mouse handlers on document for centralized handling
+        // Register global mouse handlers using GlobalEventRegistry
         const globalMouseHandlers = {
             mousedown: (e) => this.editor.mouseHandlers.handleGlobalMouseDown(e),
             mousemove: (e) => this.editor.mouseHandlers.handleGlobalMouseMove(e),
             mouseup: (e) => this.editor.mouseHandlers.handleGlobalMouseUp(e)
         };
-        eventHandlerManager.registerElement(document, globalMouseHandlers, 'global-mouse-document');
-        
-        // Also register on document.body as fallback
-        eventHandlerManager.registerElement(document.body, globalMouseHandlers, 'global-mouse-body');
+        globalEventRegistry.registerComponentHandlers('global-mouse-document', globalMouseHandlers, 'document');
     }
     
     /**
@@ -482,6 +480,9 @@ export class EventHandlers extends BaseModule {
             if (this.editor.updateAllPanels) {
                 this.editor.updateAllPanels();
             }
+            
+            // Setup context menus for tabs after panels are created
+            this.updateTabHandlers();
             
             // Touch support is now handled by TouchInitializationManager
             // No need to call individual touch setup methods
@@ -1028,18 +1029,8 @@ export class EventHandlers extends BaseModule {
     setupTabEventListeners() {
         if (this._destroyed) return;
         
-        // Check if required DOM elements exist
-        const rightPanel = document.getElementById('right-tabs-panel');
-        const leftPanel = document.getElementById('left-tabs-panel');
-        
-        if (!rightPanel && !leftPanel) {
-            Logger.ui.warn('Tab panels not found, skipping tab setup');
-            return;
-        }
-        
         // Setup tab click handlers and context menus for all tabs
-        this.updateTabClickHandlers();
-        this.updateTabContextMenus();
+            this.updateTabHandlers();
         
         // Use single MutationObserver to detect tab changes and re-setup all handlers
         const observer = new MutationObserver((mutations) => {
@@ -1050,11 +1041,11 @@ export class EventHandlers extends BaseModule {
                 if (mutation.type === 'childList') {
                     mutation.addedNodes.forEach((node) => {
                         if (node.nodeType === Node.ELEMENT_NODE) {
-                            if (node.classList && (node.classList.contains('tab-right') || node.classList.contains('tab-left'))) {
+                            if (node.classList && (node.classList.contains('tab-right') || node.classList.contains('tab-left') || node.classList.contains('tab'))) {
                                 tabsChanged = true;
                             }
                             // Check child elements too
-                            if (node.querySelector && (node.querySelector('.tab-right') || node.querySelector('.tab-left'))) {
+                            if (node.querySelector && (node.querySelector('.tab-right') || node.querySelector('.tab-left') || node.querySelector('.tab'))) {
                                 tabsChanged = true;
                             }
                         }
@@ -1063,8 +1054,7 @@ export class EventHandlers extends BaseModule {
             });
             
             if (tabsChanged) {
-                this.updateTabClickHandlers();
-                this.updateTabContextMenus();
+            this.updateTabHandlers();
                 
                 // Update panels when tab count changes
                 if (this.editor && this.editor.updateAllPanels) {
@@ -1077,27 +1067,25 @@ export class EventHandlers extends BaseModule {
         this.mutationObservers.push(observer);
         
         // Observe all panels for tab changes
-        const panels = document.querySelectorAll('#right-tabs-panel, #left-tabs-panel');
+        const panels = document.querySelectorAll('#right-tabs-panel, #left-tabs-panel, #assets-panel');
         panels.forEach(panel => {
             observer.observe(panel, { childList: true, subtree: true });
         });
     }
 
     /**
-     * Update tab click handlers for all tabs
+     * Update both click and context menu handlers for all tabs
      */
-    updateTabClickHandlers() {
-        if (this._destroyed) return; // Prevent processing if destroyed
-        
-        // Use a flag to prevent infinite loops during DOM manipulation
+    updateTabHandlers() {
+        if (this._destroyed) return;
         if (this._updatingTabHandlers) return;
         this._updatingTabHandlers = true;
-        
+
         try {
             // Check if tabs exist before processing
-            const tabs = document.querySelectorAll('.tab-right, .tab-left');
+            const tabs = document.querySelectorAll('.tab-right, .tab-left, .tab');
             if (tabs.length === 0) {
-                Logger.ui.debug('No tabs found, skipping click handler update');
+                Logger.ui.debug('No tabs found, skipping tab handler update');
                 return;
             }
             
@@ -1108,42 +1096,47 @@ export class EventHandlers extends BaseModule {
                 disconnectedObservers.push(observer);
             });
             
-            // Add click handlers to all tabs using EventHandlerManager
+            // Add both click and context menu handlers to all tabs
             tabs.forEach(tab => {
-                // Check if tab is already registered
-                if (eventHandlerManager.isElementRegistered(tab)) {
-                    Logger.ui.debug(`Tab ${tab.dataset.tab} already registered, skipping`);
-                    return;
+                const tabName = tab.dataset.tab || tab.dataset.category || 'unknown';
+                
+                // Skip asset tabs for click handlers - they have their own click handlers
+                const isAssetTab = tab.classList.contains('tab') && tab.dataset.category;
+                
+                const tabHandlers = {};
+                
+                // Add click handler only for panel tabs
+                if (!isAssetTab) {
+                    tabHandlers.click = () => {
+                        const clickedTabName = tab.dataset.tab;
+                        
+                        // Determine which panel this tab belongs to
+                        const panel = tab.closest('[id$="-tabs-panel"]');
+                        const panelSide = panel ? (panel.id.includes('left') ? 'left' : 'right') : 'right';
+                        
+                        // Use the centralized method to handle tab activation
+                        this.setActivePanelTab(clickedTabName, panelSide);
+                        
+                        // Update state manager and config for the appropriate panel
+                        if (panelSide === 'right') {
+                            this.editor.stateManager.set('rightPanelTab', clickedTabName);
+                            this.editor.configManager.set('editor.view.rightPanelTab', clickedTabName);
+                        } else if (panelSide === 'left') {
+                            this.editor.stateManager.set('leftPanelTab', clickedTabName);
+                            this.editor.configManager.set('editor.view.leftPanelTab', clickedTabName);
+                        }
+                    };
                 }
                 
-                const tabHandlers = {
-                    click: () => {
-                    const tabName = tab.dataset.tab;
-                    
-                    // Determine which panel this tab belongs to
-                    const panel = tab.closest('[id$="-tabs-panel"]');
-                    const panelSide = panel ? (panel.id.includes('left') ? 'left' : 'right') : 'right';
-                    
-                    // Use the centralized method to handle tab activation
-                    this.setActivePanelTab(tabName, panelSide);
-                    
-                    // Update state manager and config for the appropriate panel
-                    if (panelSide === 'right') {
-                    this.editor.stateManager.set('rightPanelTab', tabName);
-                    this.editor.configManager.set('editor.view.rightPanelTab', tabName);
-                    } else if (panelSide === 'left') {
-                        this.editor.stateManager.set('leftPanelTab', tabName);
-                        this.editor.configManager.set('editor.view.leftPanelTab', tabName);
-                    }
-                    }
-                };
+                // Add context menu handler for all tabs
+                tabHandlers.contextmenu = (e) => this.handleTabContextMenu(e);
                 
-                eventHandlerManager.registerElement(tab, tabHandlers, `tab-${tab.dataset.tab}`);
+                eventHandlerManager.registerElement(tab, tabHandlers, `tab-${tabName}`);
             });
             
             // Reconnect MutationObservers
             disconnectedObservers.forEach(observer => {
-                const panels = document.querySelectorAll('#right-tabs-panel, #left-tabs-panel');
+                const panels = document.querySelectorAll('#right-tabs-panel, #left-tabs-panel, #assets-panel');
                 panels.forEach(panel => {
                     observer.observe(panel, { childList: true, subtree: true });
                 });
@@ -1155,59 +1148,6 @@ export class EventHandlers extends BaseModule {
     }
 
 
-    /**
-     * Update context menus for all tabs
-     */
-    updateTabContextMenus() {
-        if (this._destroyed) return; // Prevent processing if destroyed
-        
-        // Use a flag to prevent infinite loops during DOM manipulation
-        if (this._updatingContextMenus) return;
-        this._updatingContextMenus = true;
-        
-        try {
-            // Check if tabs exist before processing
-            const tabs = document.querySelectorAll('.tab-right, .tab-left');
-            if (tabs.length === 0) {
-                Logger.ui.debug('No tabs found, skipping context menu update');
-                return;
-            }
-            
-            // Temporarily disconnect MutationObservers to prevent infinite loops
-            const disconnectedObservers = [];
-            this.mutationObservers.forEach(observer => {
-                observer.disconnect();
-                disconnectedObservers.push(observer);
-            });
-            
-            // Add context menu handlers to all tabs using EventHandlerManager
-            tabs.forEach(tab => {
-                // Check if tab context menu is already registered
-                const contextId = `tab-context-${tab.dataset.tab}`;
-                if (eventHandlerManager.isElementRegistered(tab, contextId)) {
-                    Logger.ui.debug(`Tab context ${tab.dataset.tab} already registered, skipping`);
-                    return;
-                }
-                
-                const contextMenuHandlers = {
-                    contextmenu: (e) => this.handleTabContextMenu(e)
-                };
-                
-                eventHandlerManager.registerElement(tab, contextMenuHandlers, contextId);
-            });
-            
-            // Reconnect MutationObservers
-            disconnectedObservers.forEach(observer => {
-                const panels = document.querySelectorAll('#right-tabs-panel, #left-tabs-panel');
-                panels.forEach(panel => {
-                    observer.observe(panel, { childList: true, subtree: true });
-                });
-            });
-            
-        } finally {
-            this._updatingContextMenus = false;
-        }
-    }
 
     /**
      * Handle context menu on tab
@@ -1216,26 +1156,152 @@ export class EventHandlers extends BaseModule {
     handleTabContextMenu(event) {
         event.preventDefault();
         
-        const tab = event.target.closest('.tab-right, .tab-left');
+        const tab = event.target.closest('.tab-right, .tab-left, .tab');
         if (!tab) return;
         
-        const tabName = tab.dataset.tab;
+        const tabName = tab.dataset.tab || tab.dataset.category;
+        if (!tabName) return;
         
         // Determine current panel by finding which panel contains this tab
         const leftPanel = document.getElementById('left-tabs-panel');
         const rightPanel = document.getElementById('right-tabs-panel');
+        const assetsPanel = document.getElementById('assets-panel');
         
         let currentPanel = 'right'; // default
         if (leftPanel && leftPanel.contains(tab)) {
             currentPanel = 'left';
         } else if (rightPanel && rightPanel.contains(tab)) {
             currentPanel = 'right';
+        } else if (assetsPanel && assetsPanel.contains(tab)) {
+            // Asset tabs have different context menu with Close option
+            this.showAssetTabContextMenu(event, tabName, tab);
+            return;
         }
         
         const targetPanel = currentPanel === 'right' ? 'left' : 'right';
         
         // Create simple context menu
         this.showTabContextMenu(event, tabName, currentPanel, targetPanel);
+    }
+
+    /**
+     * Show context menu for asset tab
+     * @param {Event} event - Context menu event
+     * @param {string} tabName - Name of the tab
+     * @param {HTMLElement} tab - Tab element
+     */
+    showAssetTabContextMenu(event, tabName, tab) {
+        // Remove existing menu
+        const existingMenu = document.querySelector('.tab-context-menu');
+        if (existingMenu) {
+            existingMenu.remove();
+        }
+
+        // Create menu with advanced positioning
+        const menu = document.createElement('div');
+        menu.className = 'tab-context-menu fixed bg-gray-800 border border-gray-600 rounded shadow-lg z-50 min-w-48';
+        menu.style.pointerEvents = 'auto';
+        menu.style.userSelect = 'none';
+
+        // Advanced positioning with boundary checking
+        const menuWidth = 120;
+        const menuHeight = 40;
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const margin = 10;
+
+        let left = event.clientX;
+        let top = event.clientY;
+
+        // Horizontal positioning
+        const spaceRight = viewportWidth - event.clientX;
+        const spaceLeft = event.clientX;
+
+        if (spaceRight >= menuWidth + margin) {
+            left = event.clientX;
+        } else if (spaceLeft >= menuWidth + margin) {
+            left = event.clientX - menuWidth;
+        } else {
+            left = margin;
+        }
+
+        // Vertical positioning
+        const spaceBelow = viewportHeight - event.clientY;
+        const spaceAbove = event.clientY;
+
+        if (spaceBelow >= menuHeight + margin) {
+            top = event.clientY;
+        } else if (spaceAbove >= menuHeight + margin) {
+            top = event.clientY - menuHeight;
+        } else {
+            top = margin;
+        }
+
+        menu.style.left = left + 'px';
+        menu.style.top = top + 'px';
+
+        // Create Close menu item
+        const closeItem = document.createElement('div');
+        closeItem.className = 'px-4 py-2 hover:bg-gray-700 cursor-pointer text-sm';
+        closeItem.textContent = 'Close';
+        closeItem.addEventListener('click', () => {
+            this.closeAssetTab(tabName, tab);
+            menu.remove();
+        });
+
+        menu.appendChild(closeItem);
+
+        // Add to document
+        document.body.appendChild(menu);
+
+        // Add click outside to close
+        const closeMenu = (e) => {
+            if (!menu.contains(e.target)) {
+                menu.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        };
+
+        // Use setTimeout to avoid immediate closure
+        setTimeout(() => {
+            document.addEventListener('click', closeMenu);
+        }, 10);
+    }
+
+    /**
+     * Close asset tab
+     * @param {string} tabName - Name of the tab to close
+     * @param {HTMLElement} tab - Tab element
+     */
+    closeAssetTab(tabName, tab) {
+        if (!this.editor.assetPanel) {
+            Logger.ui.warn('AssetPanel not found');
+            return;
+        }
+
+        // Get current active tabs
+        const activeTabs = new Set(this.editor.stateManager.get('activeAssetTabs'));
+        
+        // Don't close if it's the last tab
+        if (activeTabs.size <= 1) {
+            Logger.ui.debug('Cannot close last asset tab');
+            return;
+        }
+
+        // Remove tab from active tabs
+        activeTabs.delete(tabName);
+        this.editor.stateManager.set('activeAssetTabs', activeTabs);
+        
+        // Save to config for persistence
+        this.editor.configManager.set('editor.view.activeAssetTabs', Array.from(activeTabs));
+        
+        // Clear selection if this tab was selected
+        this.editor.stateManager.set('selectedAssets', new Set());
+        
+        // Re-render asset panel
+        this.editor.assetPanel.render();
+        
+        Logger.ui.info(`Asset tab ${tabName} closed`);
     }
 
     /**
