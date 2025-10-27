@@ -8,7 +8,10 @@ import { FoldersPanel } from './FoldersPanel.js';
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 import { globalEventRegistry } from '../event-system/GlobalEventRegistry.js';
 import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
-// Note: HoverEffects removed - using CSS hover effects like OutlinerPanel
+import { createSearchInput, createButton, createControlsRow } from './panel-structures/BasePanelStructure.js';
+import { searchManager } from '../utils/SearchManager.js';
+import { SearchUtils } from '../utils/SearchUtils.js';
+import { MenuPositioningUtils } from '../utils/MenuPositioningUtils.js';
 
 /**
  * Context menu for asset tabs - simplified implementation
@@ -134,11 +137,37 @@ export class AssetPanel extends BasePanel {
         // View mode management
         this.viewMode = 'grid'; // 'grid', 'list', 'details'
 
-        // Resize optimization (removed debounce for real-time updates)
+        // Search and filter management
+        this.searchTerm = '';
+        this.activeTypeFilters = new Set(); // Set of active asset type filters
+
+        // Initialize asset type filters state if not exists
+        if (!this.stateManager.get('assetTypeFilters')) {
+            this.stateManager.set('assetTypeFilters', new Set());
+        } else {
+            // Load existing filters from state
+            this.activeTypeFilters = this.stateManager.get('assetTypeFilters') || new Set();
+        }
+
 
         this.init();
         this.setupEventListeners();
         this.setupContextMenus();
+
+        // Register search in universal search manager
+        searchManager.registerSearch(
+            'assets',
+            'assets-search',
+            (searchTerm) => {
+                this.searchTerm = searchTerm;
+                Logger.ui.debug('Asset search term changed:', searchTerm);
+                this.renderPreviews(); // Only re-render previews, not entire panel
+            },
+            () => {
+                // Clear callback - could be used for additional cleanup
+                Logger.ui.debug('Asset search cleared');
+            }
+        );
 
         // Initialize asset tab context menu - now works globally
         this.assetTabContextMenu = new AssetTabContextMenu(this);
@@ -863,14 +892,12 @@ export class AssetPanel extends BasePanel {
         });
         this.containerResizeObserver.observe(this.previewsContainer);
 
-        // Note: Global marquee handling now managed by BasePanel
 
         this.setupAssetEvents();
         
     }
 
     render() {
-        // Note: Hover effects now handled by CSS (like OutlinerPanel)
         this.renderTabs();
         this.renderPreviews();
         
@@ -905,6 +932,267 @@ export class AssetPanel extends BasePanel {
             this.setupTabDragging();
             this.tabDraggingSetup = true;
         }
+
+        // Render search and filter controls in footer
+        this.renderAssetSearchControls();
+    }
+
+    /**
+     * Render asset search and filter controls in the tabs footer
+     */
+    renderAssetSearchControls() {
+        // Check if controls are already rendered (avoid unnecessary re-rendering)
+        const existingControls = this.tabsContainer.querySelector('#asset-search-controls');
+        if (existingControls) {
+            // Controls already exist, just update search value
+            const searchInput = existingControls.querySelector('#assets-search');
+            if (searchInput) {
+                const currentTerm = searchManager.getSearchTerm('assets');
+                if (searchInput.value !== currentTerm) {
+                    searchInput.value = currentTerm;
+                }
+            }
+            return;
+        }
+
+        // Create controls container
+        const controlsContainer = document.createElement('div');
+        controlsContainer.id = 'asset-search-controls';
+        controlsContainer.className = 'flex items-center justify-end gap-1 p-1 border-t border-gray-700 bg-gray-800 ml-auto';
+
+        // Create search input with ESC support
+        const searchInput = createSearchInput(
+            'Search assets...',
+            'assets-search',
+            'w-32 bg-gray-700 px-2 py-1 rounded text-sm border border-gray-600 focus:border-blue-500 focus:outline-none',
+            searchManager.getSearchTerm('assets') || '',
+            (searchTerm) => {
+                // Direct callback for immediate filtering
+                this.searchTerm = searchTerm;
+                Logger.ui.debug('Asset search term changed directly:', searchTerm);
+                this.renderPreviews();
+            }
+        );
+
+        // Create filter button
+        const filterButton = document.createElement('button');
+        filterButton.id = 'assets-filter-btn';
+        filterButton.className = 'px-2 py-1 rounded text-sm flex items-center justify-center bg-gray-600 hover:bg-gray-700';
+        filterButton.title = 'Filter by asset types';
+        
+        // Set button state based on active filters
+        const hasActiveFilters = this.activeTypeFilters.size > 0 && !this.activeTypeFilters.has('DISABLE_ALL');
+        filterButton.className += hasActiveFilters ? ' bg-blue-600 hover:bg-blue-700' : ' bg-gray-600 hover:bg-gray-700';
+
+        filterButton.innerHTML = `
+            <svg width="14" height="14" viewBox="0 0 12 12" fill="currentColor">
+                <path d="M2 3h8l-3 3v3l-2 1V6L2 3z"/>
+            </svg>
+        `;
+
+        // Setup filter button listener
+        filterButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.showAssetFilterMenu(filterButton);
+        });
+
+        // Assemble controls
+        controlsContainer.appendChild(searchInput);
+        controlsContainer.appendChild(filterButton);
+        
+        // Insert controls container at the end of tabs container (right side)
+        this.tabsContainer.appendChild(controlsContainer);
+
+        Logger.ui.debug('Asset search controls rendered in tabs footer');
+    }
+
+    /**
+     * Show filter menu with asset types using MenuPositioningUtils
+     */
+    showAssetFilterMenu(button) {
+        // Get all available asset types from current assets
+        const allAssets = Array.from(this.assetManager.assets.values());
+        let allTypes = [...new Set(allAssets.map(asset => asset.type).filter(type => type))];
+        
+        // If no types found, use categories as fallback
+        if (allTypes.length === 0) {
+            allTypes = Array.from(this.assetManager.categories);
+            Logger.ui.debug('No asset types found, using categories as types:', allTypes);
+        }
+        
+        if (allTypes.length === 0) {
+            Logger.ui.warn('No asset types or categories available for filtering');
+            return;
+        }
+
+        // Create menu using utility
+        const menu = MenuPositioningUtils.createMenuElement({ className: 'p-2' });
+        
+        // Position menu using utility
+        MenuPositioningUtils.showMenu(menu, button, {
+            alignment: 'right',
+            direction: 'below',
+            menuWidth: 192,
+            menuHeight: 200
+        });
+
+        // Add "Toggle All" option using utility
+        const allTypesActive = this.activeTypeFilters.size === 0;
+        const allOption = MenuPositioningUtils.createMenuItem({
+            text: 'Toggle All',
+            checked: allTypesActive
+        });
+        allOption.querySelector('input').id = 'filter-all';
+
+        allOption.addEventListener('click', () => {
+            // Check current state at the time of click
+            const currentlyAllActive = this.activeTypeFilters.size === 0;
+            
+            if (currentlyAllActive) {
+                // Currently all types are active, deactivate all
+                this.activeTypeFilters = new Set(['DISABLE_ALL']);
+            } else {
+                // Currently some types are filtered or disabled, activate all
+                this.activeTypeFilters.clear();
+            }
+            // Save state (like OutlinerPanel does)
+            this.stateManager.set('assetTypeFilters', this.activeTypeFilters);
+            this.renderPreviews();
+            // Update menu instead of closing it
+            this.updateAssetFilterMenu(menu, button);
+        });
+
+        menu.appendChild(allOption);
+
+        // Add separator
+        const separator = document.createElement('div');
+        separator.className = 'border-t border-gray-600 my-1';
+        menu.appendChild(separator);
+
+        // Add individual type options using utility
+        allTypes.sort().forEach(type => {
+            // Type is active if: no filters (show all) OR specifically selected OR not in DISABLE_ALL mode
+            const isActive = this.activeTypeFilters.size === 0 ||
+                           (this.activeTypeFilters.has(type) && !this.activeTypeFilters.has('DISABLE_ALL'));
+
+            const option = MenuPositioningUtils.createMenuItem({
+                text: type,
+                checked: isActive
+            });
+            option.querySelector('input').id = `filter-${type}`;
+
+            option.addEventListener('click', () => {
+                if (this.activeTypeFilters.has('DISABLE_ALL')) {
+                    // If in DISABLE_ALL mode, start with this type only
+                    this.activeTypeFilters = new Set([type]);
+                } else if (this.activeTypeFilters.size === 0) {
+                    // If all were active, exclude this type (show all except this one)
+                    this.activeTypeFilters = new Set(allTypes.filter(t => t !== type));
+                } else if (this.activeTypeFilters.has(type)) {
+                    // Remove this type
+                    this.activeTypeFilters.delete(type);
+                    // If no types left, disable all (show nothing)
+                    if (this.activeTypeFilters.size === 0) {
+                        this.activeTypeFilters = new Set(['DISABLE_ALL']);
+                    }
+                } else {
+                    // Add this type
+                    this.activeTypeFilters.add(type);
+                }
+                // Save state (like OutlinerPanel does)
+                this.stateManager.set('assetTypeFilters', this.activeTypeFilters);
+                this.renderPreviews();
+                // Update menu instead of closing it
+                this.updateAssetFilterMenu(menu, button);
+            });
+
+            menu.appendChild(option);
+        });
+    }
+
+    /**
+     * Update filter menu to reflect current filter state
+     */
+    updateAssetFilterMenu(menu, button) {
+        // Update "Toggle All" option
+        const allOption = menu.querySelector('#filter-all');
+        if (allOption) {
+            allOption.checked = this.activeTypeFilters.size === 0;
+        }
+
+        // Update individual type options
+        const allAssets = Array.from(this.assetManager.assets.values());
+        let allTypes = [...new Set(allAssets.map(asset => asset.type).filter(type => type))];
+        
+        // If no types found, use categories as fallback
+        if (allTypes.length === 0) {
+            allTypes = Array.from(this.assetManager.categories);
+        }
+        
+        allTypes.forEach(type => {
+            const option = menu.querySelector(`#filter-${type}`);
+            if (option) {
+                const isActive = this.activeTypeFilters.size === 0 ||
+                               (this.activeTypeFilters.has(type) && !this.activeTypeFilters.has('DISABLE_ALL'));
+                option.checked = isActive;
+            }
+        });
+
+        // Update filter button appearance
+        const filterButton = document.querySelector('#assets-filter-btn');
+        if (filterButton) {
+            const hasActiveFilters = this.activeTypeFilters.size > 0 && !this.activeTypeFilters.has('DISABLE_ALL');
+            filterButton.className = filterButton.className.replace(/bg-(blue|gray)-600/, hasActiveFilters ? 'bg-blue-600' : 'bg-gray-600');
+            filterButton.className = filterButton.className.replace(/hover:bg-(blue|gray)-700/, hasActiveFilters ? 'hover:bg-blue-700' : 'hover:bg-gray-700');
+        }
+    }
+
+    /**
+     * Check if asset should be shown based on filters
+     */
+    shouldShowAsset(asset) {
+        // If no filters active (size === 0), show all
+        if (this.activeTypeFilters.size === 0) {
+            return true;
+        }
+
+        // If DISABLE_ALL is active, show nothing
+        if (this.activeTypeFilters.has('DISABLE_ALL')) {
+            return false;
+        }
+
+        // Check if asset type is in active filters
+        const assetType = asset.type || asset.category;
+        return this.activeTypeFilters.has(assetType);
+    }
+
+    /**
+     * Clear search filter
+     */
+    clearSearch() {
+        if (this.searchTerm) {
+            this.searchTerm = '';
+            // Update search manager
+            if (typeof searchManager !== 'undefined' && searchManager.setSearchTerm) {
+                searchManager.setSearchTerm('assets', '');
+            }
+            this.renderPreviews();
+        }
+    }
+    filterAssets(assets) {
+        let filtered = assets;
+
+        // Apply search filter first
+        if (this.searchTerm) {
+            filtered = SearchUtils.filterObjects(filtered, this.searchTerm, 'name');
+        }
+
+        // Apply type filter only if there are active filters
+        if (this.activeTypeFilters.size > 0) {
+            filtered = filtered.filter(asset => this.shouldShowAsset(asset));
+        }
+
+        return filtered;
     }
 
     renderPreviews() {
@@ -912,8 +1200,11 @@ export class AssetPanel extends BasePanel {
         const activeTabs = this.stateManager.get('activeAssetTabs');
         const selectedAssets = this.stateManager.get('selectedAssets');
 
-        const assetsToShow = Array.from(activeTabs)
+        let assetsToShow = Array.from(activeTabs)
             .flatMap(tabName => this.assetManager.getAssetsByCategory(tabName));
+
+        // Apply search and type filters
+        assetsToShow = this.filterAssets(assetsToShow);
 
         // Log asset details for debugging
         Logger.ui.debug(`AssetPanel: Rendering ${assetsToShow.length} assets`);
@@ -1042,7 +1333,6 @@ export class AssetPanel extends BasePanel {
         thumb.dataset.assetId = asset.id;
         thumb.draggable = true;
         
-        // Note: Hover effects now handled by CSS (like OutlinerPanel)
         
         if (asset.imgSrc && this.isValidImageSrc(asset.imgSrc)) {
             Logger.ui.debug(`🎨 Creating image thumbnail for ${asset.name} with imgSrc: ${asset.imgSrc.substring(0, 50)}...`);
@@ -1406,7 +1696,6 @@ export class AssetPanel extends BasePanel {
     }
 
 
-    // Note: handleThumbnailClick method removed
     // Now using BasePanel.handleItemClick with SelectionUtils
 
     /**
@@ -1461,10 +1750,8 @@ export class AssetPanel extends BasePanel {
         });
     }
 
-    // Note: handleAssetMouseDown method removed
     // Now using BasePanel marquee selection with SelectionUtils
 
-    // Note: Old marquee selection methods removed
     // Now using BasePanel marquee selection with SelectionUtils
 
     /**
@@ -1693,26 +1980,19 @@ export class AssetPanel extends BasePanel {
         const selectedAssets = this.stateManager.get('selectedAssets');
         
         // Update all asset elements - use CSS classes only
-        document.querySelectorAll('.asset-thumbnail').forEach(element => {
-            const assetId = element.dataset.assetId;
-            if (assetId) {
-                if (selectedAssets.has(assetId)) {
-                    element.classList.add('selected');
-                } else {
-                    element.classList.remove('selected');
-                }
-            }
-        });
+        const selectors = ['.asset-thumbnail', '.asset-list-item', '.asset-details-row'];
         
-        document.querySelectorAll('.asset-list-item, .asset-details-row').forEach(element => {
-            const assetId = element.dataset.assetId;
-            if (assetId) {
-                if (selectedAssets.has(assetId)) {
-                    element.classList.add('selected');
-                } else {
-                    element.classList.remove('selected');
+        selectors.forEach(selector => {
+            document.querySelectorAll(selector).forEach(element => {
+                const assetId = element.dataset.assetId;
+                if (assetId) {
+                    if (selectedAssets.has(assetId)) {
+                        element.classList.add('selected');
+                    } else {
+                        element.classList.remove('selected');
+                    }
                 }
-            }
+            });
         });
     }
 
@@ -2562,7 +2842,6 @@ export class AssetPanel extends BasePanel {
             this.containerResizeObserver.disconnect();
         }
 
-        // Note: Global marquee handlers now managed by BasePanel
 
         // Clean up context menus
         if (this.assetContextMenu) {
@@ -2574,6 +2853,9 @@ export class AssetPanel extends BasePanel {
         if (this.assetTabContextMenu) {
             this.assetTabContextMenu.destroy();
         }
+
+        // Unregister search from SearchManager
+        searchManager.unregisterSearch('assets');
     }
 
     /**

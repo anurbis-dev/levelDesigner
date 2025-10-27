@@ -75,12 +75,13 @@ export function renderOutlinerSearchControls(topSection, callbacks = {}) {
     // Create controls row
     const controlsRow = createControlsRow();
 
-    // Create search input (SearchManager will handle events)
+    // Create search input with callback for ESC support
     const searchInput = createSearchInput(
         OutlinerPanelStructure.searchControls.searchInput.placeholder,
         OutlinerPanelStructure.searchControls.searchInput.id,
         OutlinerPanelStructure.searchControls.searchInput.classes,
-        callbacks.getSearchTerm ? callbacks.getSearchTerm() : ''
+        callbacks.getSearchTerm ? callbacks.getSearchTerm() : '',
+        callbacks.onSearch || null
     );
 
     // Create filter button

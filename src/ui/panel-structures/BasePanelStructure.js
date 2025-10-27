@@ -67,6 +67,14 @@ export function createSearchInput(placeholder, id, className, value = '', onChan
             clearTimeout(timeout);
             timeout = setTimeout(() => onChange(e.target.value), 150);
         });
+        
+        // Add ESC key support for clearing search
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                e.target.value = '';
+                onChange('');
+            }
+        });
     }
 
     return input;
