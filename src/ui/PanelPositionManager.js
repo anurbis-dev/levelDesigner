@@ -12,6 +12,57 @@ export class PanelPositionManager {
         this.stateManager = levelEditor.stateManager;
         this.userPrefs = levelEditor.userPrefs;
         this._initializing = false; // Flag to prevent loops during initialization
+        
+        // Initialize global tab dragging handler once
+        this._initGlobalTabDraggingHandler();
+    }
+    
+    /**
+     * Initialize global tab dragging handler (called once in constructor)
+     * @private
+     */
+    _initGlobalTabDraggingHandler() {
+        // Check if already initialized to prevent duplicates
+        if (this._tabDraggingInitialized) {
+            return;
+        }
+        
+        // Initialize global dragging state
+        if (!window.tabDraggingState) {
+            window.tabDraggingState = {
+                draggedTab: null,
+                draggedIndex: -1,
+                draggedPanel: null
+            };
+        }
+        
+        // Create global mouseup handler once
+        if (!window.tabDraggingGlobalMouseUp) {
+            window.tabDraggingGlobalMouseUp = (e) => {
+                if (window.tabDraggingState && window.tabDraggingState.draggedTab) {
+                    // Clean up dragging state
+                    window.tabDraggingState.draggedTab.classList.remove('dragging');
+                    document.querySelectorAll('.tab-right, .tab-left').forEach(t => t.classList.remove('tab-drag-over'));
+                    
+                    window.tabDraggingState.draggedTab = null;
+                    window.tabDraggingState.draggedIndex = -1;
+                    window.tabDraggingState.draggedPanel = null;
+                }
+            };
+        }
+        
+        // Register global handler once
+        if (!window._tabDraggingRegistered) {
+            const tabDragHandlers = {
+                mouseup: window.tabDraggingGlobalMouseUp
+            };
+            
+            globalEventRegistry.registerComponentHandlers('panel-tab-dragging', tabDragHandlers, 'document');
+            window._tabDraggingRegistered = true;
+        }
+        
+        // Mark as initialized
+        this._tabDraggingInitialized = true;
     }
 
     /**
@@ -1148,15 +1199,6 @@ export class PanelPositionManager {
         // Check if dragging is already setup for this container
         if (tabContainer._draggingSetup) return;
 
-        // Get global dragging state from window
-        if (!window.tabDraggingState) {
-            window.tabDraggingState = {
-                draggedTab: null,
-                draggedIndex: -1,
-                draggedPanel: null
-            };
-        }
-
         const draggingState = window.tabDraggingState;
 
         // Make tabs draggable
@@ -1229,27 +1271,6 @@ export class PanelPositionManager {
                 e.preventDefault();
             }
         });
-
-        // Register global tab dragging handler using GlobalEventRegistry (handles duplicates automatically)
-        if (!window.tabDraggingGlobalMouseUp) {
-            window.tabDraggingGlobalMouseUp = (e) => {
-                if (window.tabDraggingState && window.tabDraggingState.draggedTab) {
-                    // Clean up dragging state
-                    window.tabDraggingState.draggedTab.classList.remove('dragging');
-                    document.querySelectorAll('.tab-right, .tab-left').forEach(t => t.classList.remove('tab-drag-over'));
-                    
-                    window.tabDraggingState.draggedTab = null;
-                    window.tabDraggingState.draggedIndex = -1;
-                    window.tabDraggingState.draggedPanel = null;
-                }
-            };
-        }
-        
-        const tabDragHandlers = {
-            mouseup: window.tabDraggingGlobalMouseUp
-        };
-        
-        globalEventRegistry.registerComponentHandlers('panel-tab-dragging', tabDragHandlers, 'document');
 
         // Mark as setup
         tabContainer._draggingSetup = true;

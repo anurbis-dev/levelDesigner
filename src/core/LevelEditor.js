@@ -399,17 +399,8 @@ export class LevelEditor {
         // Apply configuration settings after loading
         this.applyConfiguration();
 
-        // Initialize view states if all required components are ready
-        // This handles the case where configurations were loaded asynchronously
-        if (this.eventHandlers && this.stateManager && this.userPrefs) {
-            // Defer view state initialization to ensure UI components are ready
-            setTimeout(() => {
-                if (this.eventHandlers && this.configManager?.isConfigReady()) {
-                    this.log('info', 'Initializing deferred view states after config load');
-                    this.eventHandlers.initializeViewStates();
-                }
-            }, 0);
-        }
+        // View states will be initialized later in initializeLevelAndData
+        // after all components are ready
     }
 
     /**
@@ -512,10 +503,7 @@ export class LevelEditor {
         // Initial render of asset panel
         this.assetPanel.render();
         
-        // Setup context menus for asset panel tabs after rendering
-        if (this.eventHandlers && this.eventHandlers.updateTabContextMenus) {
-            this.eventHandlers.updateTabContextMenus();
-        }
+        // Context menus for asset panel tabs will be setup by EventHandlers after panels are created
         
         // Create new level
         this.level = this.fileManager.createNewLevel();
@@ -717,9 +705,7 @@ export class LevelEditor {
         }
 
         // Initialize view states before applying panel sizes to prevent UI flicker
-        console.log('🚀 LevelEditor: About to call initializeViewStates...');
         this.eventHandlers.initializeViewStates();
-        console.log('✅ LevelEditor: initializeViewStates completed');
 
         // Apply saved panel sizes AFTER initializing view states
         this.applySavedPanelSizes();

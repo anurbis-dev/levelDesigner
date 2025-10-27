@@ -394,18 +394,21 @@ export class EventHandlerManager {
 
         Object.entries(handlers).forEach(([eventType, handler]) => {
             if (typeof handler === 'function') {
-                // Set appropriate options for touch events
+                // Set appropriate options for different event types
                 let options = {};
                 if (eventType.startsWith('touch')) {
                     // Touch events need special handling
                     if (eventType === 'touchstart' || eventType === 'touchend' || eventType === 'touchcancel') {
                         // Check if this is a resizer element that needs preventDefault
-                        const isResizer = element.id && element.id.includes('resizer');
+                        const isResizer = container.id && container.id.includes('resizer');
                         options = { passive: !isResizer };
                     } else if (eventType === 'touchmove') {
                         // Touch move might need preventDefault, so non-passive
                         options = { passive: false };
                     }
+                } else if (eventType === 'wheel') {
+                    // Wheel events need preventDefault capability for Ctrl+scroll handling
+                    options = { passive: false };
                 }
                 
                 container.addEventListener(eventType, handler, options);

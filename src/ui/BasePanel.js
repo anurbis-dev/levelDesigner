@@ -175,9 +175,8 @@ export class BasePanel {
                 // Check if it's specifically the asset previews container
                 const isAssetPreviews = target.closest('#asset-previews-container');
                 if (isAssetPreviews) {
-                    // Prevent browser zoom but let the asset panel handle it
-                    e.preventDefault();
-                    // Don't stop propagation - let the asset panel handle it
+                    // Don't prevent default here - let the asset panel handle it completely
+                    // The asset panel will call preventDefault() in its own handler
                     return;
                 }
                 

@@ -18,6 +18,7 @@ export class EventHandlers extends BaseModule {
         this.menuManager = menuManager;
         
         this._destroyed = false;
+        this._updatingTabHandlers = false;
         
         // Track MutationObservers for cleanup
         this.mutationObservers = [];
@@ -74,6 +75,12 @@ export class EventHandlers extends BaseModule {
      * Setup all window events in one call
      */
     setupWindowEvents() {
+        // Check if already registered to prevent duplicates
+        if (this._windowEventsRegistered) {
+            Logger.event.debug('Window events already registered, skipping');
+            return;
+        }
+        
         // Combined window handlers
         const windowHandlers = {
             // Resize events
@@ -88,27 +95,27 @@ export class EventHandlers extends BaseModule {
             mousemove: (e) => this.editor.mouseHandlers.handleGlobalMouseMove(e),
             mouseup: (e) => this.editor.mouseHandlers.handleGlobalMouseUp(e),
             
-            // Global touch events (only for non-canvas elements)
-            touchstart: (e) => {
-                if (e.target !== this.editor.canvasRenderer.canvas) {
-                    this.touchHandlers.handleTouchStart(e);
-                }
-            },
-            touchmove: (e) => {
-                if (e.target !== this.editor.canvasRenderer.canvas) {
-                    this.touchHandlers.handleTouchMove(e);
-                }
-            },
-            touchend: (e) => {
-                if (e.target !== this.editor.canvasRenderer.canvas) {
-                    this.touchHandlers.handleTouchEnd(e);
-                }
-            },
-            touchcancel: (e) => {
-                if (e.target !== this.editor.canvasRenderer.canvas) {
-                    this.touchHandlers.handleTouchCancel(e);
-                }
-            },
+            // Global touch events disabled temporarily
+            // touchstart: (e) => {
+            //     if (e.target !== this.editor.canvasRenderer.canvas) {
+            //         this.touchHandlers.handleTouchStart(e);
+            //     }
+            // },
+            // touchmove: (e) => {
+            //     if (e.target !== this.editor.canvasRenderer.canvas) {
+            //         this.touchHandlers.handleTouchMove(e);
+            //     }
+            // },
+            // touchend: (e) => {
+            //     if (e.target !== this.editor.canvasRenderer.canvas) {
+            //         this.touchHandlers.handleTouchEnd(e);
+            //     }
+            // },
+            // touchcancel: (e) => {
+            //     if (e.target !== this.editor.canvasRenderer.canvas) {
+            //         this.touchHandlers.handleTouchCancel(e);
+            //     }
+            // },
             
             // Keyboard events
             keydown: (e) => {
@@ -165,6 +172,9 @@ export class EventHandlers extends BaseModule {
             mouseup: (e) => this.editor.mouseHandlers.handleGlobalMouseUp(e)
         };
         globalEventRegistry.registerComponentHandlers('global-mouse-window', windowMouseHandlers, 'window');
+        
+        // Mark as registered
+        this._windowEventsRegistered = true;
     }
     
     /**
@@ -223,25 +233,25 @@ export class EventHandlers extends BaseModule {
             onDragOver: (e) => this.editor.mouseHandlers.handleDragOver(e),
             onDrop: (e) => this.editor.mouseHandlers.handleDrop(e),
             
-            // Touch events
-            onTouchStart: (e) => this.handleCanvasTouchStart(e),
-            onTouchMove: (e) => this.handleCanvasTouchMove(e),
-            onTouchEnd: (e) => this.handleCanvasTouchEnd(e),
-            onTouchCancel: (e) => this.handleCanvasTouchCancel(e)
+            // Touch events disabled temporarily
+            // onTouchStart: (e) => this.handleCanvasTouchStart(e),
+            // onTouchMove: (e) => this.handleCanvasTouchMove(e),
+            // onTouchEnd: (e) => this.handleCanvasTouchEnd(e),
+            // onTouchCancel: (e) => this.handleCanvasTouchCancel(e)
         };
         
         // Register canvas with unified handlers
         eventHandlerManager.registerCanvas(canvas, canvasConfig, 'main-canvas');
         
-        // Also register with UnifiedTouchManager for advanced touch gestures
-        if (this.unifiedTouchManager) {
-            this.unifiedTouchManager.registerElement(canvas, 'canvas', {
-                enablePan: true,
-                enableZoom: true,
-                enableMarquee: true,
-                enableContextMenu: true
-            }, 'main-canvas');
-        }
+        // UnifiedTouchManager registration disabled temporarily
+        // if (this.unifiedTouchManager) {
+        //     this.unifiedTouchManager.registerElement(canvas, 'canvas', {
+        //         enablePan: true,
+        //         enableZoom: true,
+        //         enableMarquee: true,
+        //         enableContextMenu: true
+        //     }, 'main-canvas');
+        // }
     }
 
     setupTouchEvents() {
@@ -408,6 +418,30 @@ export class EventHandlers extends BaseModule {
         }
     }
 
+    /**
+     * Handle key up events
+     * @param {KeyboardEvent} e - The keyboard event
+     */
+    handleKeyUp(e) {
+        // Allow input fields to work normally
+        if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.contentEditable === 'true')) {
+            return;
+        }
+
+        // Handle modifier key releases
+        if (e.key === 'Control' || e.key === 'Meta') {
+            // Reset ctrl/meta key state
+            this.editor.stateManager.set('keyboard.ctrlKey', false);
+            this.editor.stateManager.set('keyboard.metaKey', false);
+        } else if (e.key === 'Shift') {
+            // Reset shift key state
+            this.editor.stateManager.set('keyboard.shiftKey', false);
+        } else if (e.key === 'Alt') {
+            // Reset alt key state
+            this.editor.stateManager.set('keyboard.altKey', false);
+        }
+    }
+
     setupMenuEvents() {
         // Menu events are now handled by MenuManager
         // This method is kept for backward compatibility
@@ -497,9 +531,6 @@ export class EventHandlers extends BaseModule {
                 this.editor.updateAllPanels();
             }
             
-            // Setup context menus for tabs after panels are created
-            this.updateTabHandlers();
-            
             // Touch support is now handled by TouchInitializationManager
             // No need to call individual touch setup methods
             
@@ -517,7 +548,7 @@ export class EventHandlers extends BaseModule {
             this.editor.initializeSearchControls();
         }
 
-        // Setup tab event listeners after panels are created
+        // Setup tab event listeners after panels are created (this will call updateTabHandlers)
         this.setupTabEventListeners();
     }
 
@@ -1045,37 +1076,26 @@ export class EventHandlers extends BaseModule {
     setupTabEventListeners() {
         if (this._destroyed) return;
         
-        // Setup tab click handlers and context menus for all tabs
-            this.updateTabHandlers();
+        // Setup tab handlers immediately - DOM should be ready by this point
+        this.updateTabHandlers();
         
-        // Use single MutationObserver to detect tab changes and re-setup all handlers
+        // Use MutationObserver to detect tab changes and re-setup handlers
         const observer = new MutationObserver((mutations) => {
-            if (this._destroyed) return; // Prevent processing if destroyed
+            if (this._destroyed || this._updatingTabHandlers) return;
             
-            let tabsChanged = false;
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'childList') {
-                    mutation.addedNodes.forEach((node) => {
-                        if (node.nodeType === Node.ELEMENT_NODE) {
-                            if (node.classList && (node.classList.contains('tab-right') || node.classList.contains('tab-left') || node.classList.contains('tab'))) {
-                                tabsChanged = true;
-                            }
-                            // Check child elements too
-                            if (node.querySelector && (node.querySelector('.tab-right') || node.querySelector('.tab-left') || node.querySelector('.tab'))) {
-                                tabsChanged = true;
-                            }
-                        }
-                    });
-                }
-            });
+            // Check if any new tabs were added
+            const hasNewTab = mutations.some(mutation => 
+                mutation.type === 'childList' && 
+                Array.from(mutation.addedNodes).some(node => 
+                    node.nodeType === Node.ELEMENT_NODE && 
+                    (node.classList?.contains('tab-right') || 
+                     node.classList?.contains('tab-left') || 
+                     node.classList?.contains('tab'))
+                )
+            );
             
-            if (tabsChanged) {
-            this.updateTabHandlers();
-                
-                // Update panels when tab count changes
-                if (this.editor && this.editor.updateAllPanels) {
-                    this.editor.updateAllPanels();
-                }
+            if (hasNewTab) {
+                this.updateTabHandlers();
             }
         });
         
@@ -1093,47 +1113,39 @@ export class EventHandlers extends BaseModule {
      * Update both click and context menu handlers for all tabs
      */
     updateTabHandlers() {
-        if (this._destroyed) return;
-        if (this._updatingTabHandlers) return;
+        if (this._destroyed || this._updatingTabHandlers) return;
         this._updatingTabHandlers = true;
 
         try {
-            // Check if tabs exist before processing
             const tabs = document.querySelectorAll('.tab-right, .tab-left, .tab');
             if (tabs.length === 0) {
-                Logger.ui.debug('No tabs found, skipping tab handler update');
+                Logger.ui.debug('No tabs found, skipping handler registration');
                 return;
             }
             
-            // Temporarily disconnect MutationObservers to prevent infinite loops
-            const disconnectedObservers = [];
-            this.mutationObservers.forEach(observer => {
-                observer.disconnect();
-                disconnectedObservers.push(observer);
-            });
+            Logger.ui.debug(`Registering handlers for ${tabs.length} tabs`);
             
-            // Add both click and context menu handlers to all tabs
+            // Register handlers for each tab
             tabs.forEach(tab => {
                 const tabName = tab.dataset.tab || tab.dataset.category || 'unknown';
+                const tabId = `tab-${tabName}`;
                 
-                // Skip asset tabs for click handlers - they have their own click handlers
-                const isAssetTab = tab.classList.contains('tab') && tab.dataset.category;
+                // Skip asset tabs - they have their own registration in AssetPanel
+                if (tab.classList.contains('tab') && tab.dataset.category && tab.closest('#assets-panel')) {
+                    return;
+                }
                 
-                const tabHandlers = {};
+                // Unregister existing handlers first
+                eventHandlerManager.unregisterElement(tab);
                 
-                // Add click handler only for panel tabs
-                if (!isAssetTab) {
-                    tabHandlers.click = () => {
+                const tabHandlers = {
+                    click: () => {
                         const clickedTabName = tab.dataset.tab;
-                        
-                        // Determine which panel this tab belongs to
                         const panel = tab.closest('[id$="-tabs-panel"]');
                         const panelSide = panel ? (panel.id.includes('left') ? 'left' : 'right') : 'right';
                         
-                        // Use the centralized method to handle tab activation
                         this.setActivePanelTab(clickedTabName, panelSide);
                         
-                        // Update state manager and config for the appropriate panel
                         if (panelSide === 'right') {
                             this.editor.stateManager.set('rightPanelTab', clickedTabName);
                             this.editor.configManager.set('editor.view.rightPanelTab', clickedTabName);
@@ -1141,21 +1153,11 @@ export class EventHandlers extends BaseModule {
                             this.editor.stateManager.set('leftPanelTab', clickedTabName);
                             this.editor.configManager.set('editor.view.leftPanelTab', clickedTabName);
                         }
-                    };
-                }
+                    },
+                    contextmenu: (e) => this.handleTabContextMenu(e)
+                };
                 
-                // Add context menu handler for all tabs
-                tabHandlers.contextmenu = (e) => this.handleTabContextMenu(e);
-                
-                eventHandlerManager.registerElement(tab, tabHandlers, `tab-${tabName}`);
-            });
-            
-            // Reconnect MutationObservers
-            disconnectedObservers.forEach(observer => {
-                const panels = document.querySelectorAll('#right-tabs-panel, #left-tabs-panel, #assets-panel');
-                panels.forEach(panel => {
-                    observer.observe(panel, { childList: true, subtree: true });
-                });
+                eventHandlerManager.registerElement(tab, tabHandlers, tabId);
             });
             
         } finally {
@@ -1595,3 +1597,4 @@ export class EventHandlers extends BaseModule {
         Logger.event.info('EventHandlers destroyed');
     }
 }
+

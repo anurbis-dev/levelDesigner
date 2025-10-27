@@ -61,9 +61,6 @@ export class AssetPanel extends BasePanel {
             target: this.previewsContainer
         });
 
-        // Setup global Ctrl+scroll prevention
-        this.setupGlobalCtrlScrollPrevention();
-
         // Load asset size from user preferences
         this.assetSize = this.loadAssetSize();
 
@@ -716,35 +713,35 @@ export class AssetPanel extends BasePanel {
         document.addEventListener('mousemove', this.foldersMouseMoveHandler);
         document.addEventListener('mouseup', this.foldersMouseUpHandler);
 
-        // Register touch support for folders resizer using UnifiedTouchManager
-        if (this.levelEditor?.unifiedTouchManager) {
-            const config = {
-                direction: 'horizontal',
-                minSize: 100,
-                maxSize: 800,
-                onResizeStart: (element, touch) => {
-                    Logger.ui.debug('Folders resizer touch start');
-                },
-                onResize: (element, touch, touchData) => {
-                    // Calculate new width
-                    const deltaX = touch.clientX - touchData.startX;
-                    const newWidth = initialFoldersWidth + deltaX;
-                    
-                    // Apply resize logic here
-                    Logger.ui.debug(`Folders resizer touch move, delta: ${deltaX}, newWidth: ${newWidth}`);
-                },
-                onResizeEnd: (element, touch, touchData) => {
-                    Logger.ui.debug('Folders resizer touch end');
-                }
-            };
-
-            this.levelEditor.unifiedTouchManager.registerElement(
-                this.foldersResizer, 
-                'panelResizer', 
-                config, 
-                'folders-resizer'
-            );
-        }
+        // Register touch support for folders resizer using UnifiedTouchManager (disabled temporarily)
+        // if (this.levelEditor?.unifiedTouchManager) {
+        //     const config = {
+        //         direction: 'horizontal',
+        //         minSize: 100,
+        //         maxSize: 800,
+        //         onResizeStart: (element, touch) => {
+        //             Logger.ui.debug('Folders resizer touch start');
+        //         },
+        //         onResize: (element, touch, touchData) => {
+        //             // Calculate new width
+        //             const deltaX = touch.clientX - touchData.startX;
+        //             const newWidth = initialFoldersWidth + deltaX;
+        //             
+        //             // Apply resize logic here
+        //             Logger.ui.debug(`Folders resizer touch move, delta: ${deltaX}, newWidth: ${newWidth}`);
+        //         },
+        //         onResizeEnd: (element, touch, touchData) => {
+        //             Logger.ui.debug('Folders resizer touch end');
+        //         }
+        //     };
+        //
+        //     this.levelEditor.unifiedTouchManager.registerElement(
+        //         this.foldersResizer, 
+        //         'panelResizer', 
+        //         config, 
+        //         'folders-resizer'
+        //     );
+        // }
     }
 
     setupEventListeners() {
@@ -819,7 +816,23 @@ export class AssetPanel extends BasePanel {
             tabButton.textContent = category;
             tabButton.dataset.category = category;
 
-            tabButton.addEventListener('click', (e) => this.handleTabClick(e, category));
+            // Register click and context menu handlers through EventHandlerManager
+            // Only register if not already registered to avoid duplicates
+            const tabId = `tab-${category}`;
+            if (!this._registeredAssetTabs || !this._registeredAssetTabs.has(tabId)) {
+                const tabHandlers = {
+                    click: (e) => this.handleTabClick(e, category),
+                    contextmenu: (e) => this.handleAssetTabContextMenu(e, category)
+                };
+                eventHandlerManager.registerElement(tabButton, tabHandlers, tabId);
+                
+                // Track registered tabs
+                if (!this._registeredAssetTabs) {
+                    this._registeredAssetTabs = new Set();
+                }
+                this._registeredAssetTabs.add(tabId);
+            }
+            
             this.tabsContainer.appendChild(tabButton);
         });
 
@@ -1328,6 +1341,60 @@ export class AssetPanel extends BasePanel {
         setTimeout(() => this.autoResizePanelHeight(), 100);
     }
 
+    /**
+     * Handle context menu on asset tab
+     * @param {Event} e - Context menu event
+     * @param {string} category - Tab category
+     */
+    handleAssetTabContextMenu(e, category) {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const activeTabs = this.stateManager.get('activeAssetTabs');
+        
+        // Don't allow closing if it's the only active tab
+        const canClose = activeTabs.size > 1;
+
+        // Create simple context menu
+        const menu = document.createElement('div');
+        menu.className = 'context-menu';
+        menu.style.position = 'fixed';
+        menu.style.left = `${e.clientX}px`;
+        menu.style.top = `${e.clientY}px`;
+        menu.style.zIndex = '10000';
+        
+        menu.innerHTML = `
+            <div class="context-menu-item ${canClose ? '' : 'disabled'}" data-action="close">
+                Close
+            </div>
+        `;
+        
+        document.body.appendChild(menu);
+
+        // Handle menu item clicks
+        const handleMenuClick = (e2) => {
+            const action = e2.target.dataset.action;
+            
+            if (action === 'close' && canClose) {
+                activeTabs.delete(category);
+                this.stateManager.set('activeAssetTabs', new Set(activeTabs));
+                this.levelEditor.configManager.set('editor.view.activeAssetTabs', Array.from(activeTabs));
+                this.render();
+            }
+            
+            // Cleanup
+            document.body.removeChild(menu);
+            document.removeEventListener('click', handleMenuClick);
+            document.removeEventListener('contextmenu', handleMenuClick);
+        };
+
+        // Close on outside click or context menu
+        setTimeout(() => {
+            document.addEventListener('click', handleMenuClick);
+            document.addEventListener('contextmenu', handleMenuClick);
+        }, 0);
+    }
+
     // Note: handleThumbnailClick method removed
     // Now using BasePanel.handleItemClick with SelectionUtils
 
@@ -1405,32 +1472,14 @@ export class AssetPanel extends BasePanel {
 
     /**
      * Setup tab dragging functionality
+     * Now uses EventHandlerManager for proper registration
      */
     setupTabDragging() {
         let draggedTab = null;
         let draggedIndex = -1;
         
-        // Store reference to mouseup handler for cleanup
-        this.tabMouseUpHandler = null;
-
-        // Make tabs draggable
-        this.tabsContainer.addEventListener('mousedown', (e) => {
-            const tab = e.target.closest('.tab');
-            if (!tab) return;
-
-            draggedTab = tab;
-            draggedIndex = Array.from(this.tabsContainer.children).indexOf(tab);
-            this.isDraggingTab = true; // Set flag for tab dragging
-            
-            // Add dragging class
-            tab.classList.add('dragging');
-            
-            // Prevent default to avoid text selection
-            e.preventDefault();
-        });
-
         // Handle mouse move for drag over effects
-        this.tabsContainer.addEventListener('mousemove', (e) => {
+        const handleMouseMove = (e) => {
             if (!draggedTab) return;
 
             const tab = e.target.closest('.tab');
@@ -1447,10 +1496,10 @@ export class AssetPanel extends BasePanel {
             
             // Add drag-over to target tab
             tab.classList.add('tab-drag-over');
-        });
+        };
 
         // Handle mouse up to complete drag
-        this.tabMouseUpHandler = (e) => {
+        const handleMouseUp = (e) => {
             if (!draggedTab) return;
 
             const tabContainer = draggedTab.parentElement;
@@ -1481,16 +1530,40 @@ export class AssetPanel extends BasePanel {
             this.isDraggingTab = false; // Reset flag
             draggedTab = null;
             draggedIndex = -1;
+            
+            // Remove global handlers
+            document.removeEventListener('mousemove', handleMouseMove);
+            document.removeEventListener('mouseup', handleMouseUp);
+        };
+
+        // Register container handlers through EventHandlerManager
+        const tabDraggingHandlers = {
+            mousedown: (e) => {
+                const tab = e.target.closest('.tab');
+                if (!tab) return;
+
+                draggedTab = tab;
+                draggedIndex = Array.from(this.tabsContainer.children).indexOf(tab);
+                this.isDraggingTab = true; // Set flag for tab dragging
+                
+                // Add dragging class
+                tab.classList.add('dragging');
+                
+                // Prevent default to avoid text selection
+                e.preventDefault();
+                
+                // Add global handlers for drag completion
+                document.addEventListener('mousemove', handleMouseMove);
+                document.addEventListener('mouseup', handleMouseUp);
+            },
+            selectstart: (e) => {
+                if (draggedTab) {
+                    e.preventDefault();
+                }
+            }
         };
         
-        document.addEventListener('mouseup', this.tabMouseUpHandler);
-
-        // Prevent text selection during drag
-        this.tabsContainer.addEventListener('selectstart', (e) => {
-            if (draggedTab) {
-                e.preventDefault();
-            }
-        });
+        eventHandlerManager.registerElement(this.tabsContainer, tabDraggingHandlers, 'asset-tab-dragging-container');
     }
 
     /**
@@ -1538,8 +1611,13 @@ export class AssetPanel extends BasePanel {
      * @param {WheelEvent} e - The wheel event
      */
     handleAssetWheel(e) {
+        // Check Ctrl key state from both event and state manager
+        const ctrlPressed = e.ctrlKey || e.metaKey || 
+                           this.levelEditor.stateManager.get('keyboard.ctrlKey') ||
+                           this.levelEditor.stateManager.get('keyboard.metaKey');
+        
         // Only handle if Ctrl key is pressed
-        if (!e.ctrlKey) return;
+        if (!ctrlPressed) return;
         
         e.preventDefault();
         e.stopPropagation();
@@ -2455,6 +2533,9 @@ export class AssetPanel extends BasePanel {
         eventHandlerManager.unregisterContainer(this.container);
         eventHandlerManager.unregisterContainer(this.previewsContainer);
         
+        // Remove wheel handlers from EventHandlerManager
+        eventHandlerManager.unregisterElement(this.container);
+        
         // Clean up global event handlers using GlobalEventRegistry
         globalEventRegistry.unregisterComponentHandlers('asset-panel');
         globalEventRegistry.unregisterComponentHandlers('asset-panel-folders');
@@ -2600,10 +2681,15 @@ export class AssetPanel extends BasePanel {
         // Register container with new event manager
         eventHandlerManager.registerContainer(this.container, assetHandlers);
 
-        // Setup wheel handlers for asset size zoom
-        const wheelHandlers = {
+        // Register wheel handlers for asset size zoom directly on the container
+        const assetWheelHandlers = {
             wheel: (e) => {
-                if (e.ctrlKey) {
+                // Check Ctrl key state from both event and state manager
+                const ctrlPressed = e.ctrlKey || e.metaKey || 
+                                   this.levelEditor.stateManager.get('keyboard.ctrlKey') ||
+                                   this.levelEditor.stateManager.get('keyboard.metaKey');
+                
+                if (ctrlPressed) {
                     e.preventDefault();
                     e.stopPropagation();
                     this.handleAssetWheel(e);
@@ -2611,7 +2697,8 @@ export class AssetPanel extends BasePanel {
             }
         };
 
-        eventHandlerManager.registerContainer(this.previewsContainer, wheelHandlers);
+        // Register wheel handler directly on the asset panel container to prevent bubbling
+        eventHandlerManager.registerElement(this.container, assetWheelHandlers, 'asset-panel-wheel');
 
         // Setup drag and drop
         this.setupDragAndDrop();
