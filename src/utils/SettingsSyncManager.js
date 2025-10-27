@@ -126,10 +126,10 @@ export class SettingsSyncManager {
             'ui.consoleVisible': 'view.console',
             'ui.toolbarVisible': 'view.toolbar',
             
-            // Panel settings
-            'panels.rightPanelWidth': 'panels.rightPanelWidth',
-            'panels.assetsPanelHeight': 'panels.assetsPanelHeight',
-            'panels.consoleHeight': 'panels.consoleHeight',
+            // Panel settings - excluded from sync to prevent unwanted resizing
+            // 'panels.rightPanelWidth': 'panels.rightPanelWidth',
+            // 'panels.assetsPanelHeight': 'panels.assetsPanelHeight',
+            // 'panels.consoleHeight': 'panels.consoleHeight',
             
             // Selection settings
             'panels.selection.outlineColor': 'selection.outlineColor',

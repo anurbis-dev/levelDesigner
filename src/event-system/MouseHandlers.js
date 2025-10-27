@@ -44,8 +44,18 @@ export class MouseHandlers extends BaseModule {
         }
 
         if (e.button === 2) { // Right mouse button
-            // Right click handling is now done globally in handleGlobalMouseDown
-            // This ensures it works even when clicking outside canvas
+            // Handle right click for canvas panning
+            this.editor.stateManager.update({
+                'mouse.isRightDown': true,
+                'mouse.lastX': e.clientX,
+                'mouse.lastY': e.clientY,
+                'mouse.rightClickStartX': e.clientX,
+                'mouse.rightClickStartY': e.clientY,
+                'mouse.wasPanning': false,
+                'mouse.altKey': e.altKey
+            });
+
+            this.editor.canvasRenderer.canvas.style.cursor = 'grabbing';
             return;
         }
         

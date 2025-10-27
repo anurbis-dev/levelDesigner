@@ -22,8 +22,6 @@ export class AssetPanel extends BasePanel {
         this.foldersContainer = null;
         this.foldersPanel = null;
         this.foldersPosition = 'left'; // 'left' or 'right'
-        this.marqueeDiv = null;
-        this.marqueeStart = {};
         this.isDraggingTab = false; // Flag to track tab dragging
         this.tabDraggingSetup = false; // Flag to track if tab dragging is already setup
 
@@ -1357,8 +1355,8 @@ export class AssetPanel extends BasePanel {
     }
 
     handleThumbnailDragStart(e, asset) {
-        // Disable dragging when Ctrl/Cmd is held to allow marquee toggle
-        if (e.ctrlKey || e.metaKey) {
+        // Disable dragging when Ctrl/Cmd or Shift is held to allow marquee selection
+        if (e.ctrlKey || e.metaKey || e.shiftKey) {
             e.preventDefault();
             e.stopPropagation();
             return;
@@ -1518,7 +1516,21 @@ export class AssetPanel extends BasePanel {
      * @returns {Array} Array of selectable elements
      */
     getSelectableAssetElements() {
-        return Array.from(this.previewsContainer.querySelectorAll('[data-asset-id]'));
+        // Search in all possible containers (grid, list, details)
+        const selectors = [
+            '.asset-thumbnail[data-asset-id]',  // Grid view
+            '.asset-list-item[data-asset-id]',  // List view  
+            '.asset-details-row[data-asset-id]' // Details view
+        ];
+        
+        const elements = [];
+        selectors.forEach(selector => {
+            const found = this.previewsContainer.querySelectorAll(selector);
+            elements.push(...Array.from(found));
+        });
+        
+        Logger.ui.debug(`Found ${elements.length} selectable asset elements`);
+        return elements;
     }
 
     /**
@@ -1615,75 +1627,9 @@ export class AssetPanel extends BasePanel {
         });
     }
 
-    /**
-     * Highlight elements that intersect with marquee selection
-     */
-    highlightElementsInMarquee() {
-        if (!this.marqueeDiv) return;
-        
-        const marqueeRect = this.marqueeDiv.getBoundingClientRect();
-        const containerRect = this.previewsContainer.getBoundingClientRect();
-        
-        // Convert marquee position to container coordinates
-        const marqueeLeft = marqueeRect.left - containerRect.left + this.previewsContainer.scrollLeft;
-        const marqueeTop = marqueeRect.top - containerRect.top + this.previewsContainer.scrollTop;
-        const marqueeRight = marqueeLeft + marqueeRect.width;
-        const marqueeBottom = marqueeTop + marqueeRect.height;
-        
-        // Check all asset elements
-        const assetSelectors = ['.asset-thumbnail', '.asset-list-item', '.asset-details-row'];
-        assetSelectors.forEach(selector => {
-            document.querySelectorAll(selector).forEach(element => {
-                const elementRect = element.getBoundingClientRect();
-                const elementLeft = elementRect.left - containerRect.left + this.previewsContainer.scrollLeft;
-                const elementTop = elementRect.top - containerRect.top + this.previewsContainer.scrollTop;
-                const elementRight = elementLeft + elementRect.width;
-                const elementBottom = elementTop + elementRect.height;
-                
-                // Check if element intersects with marquee
-                const intersects = marqueeLeft < elementRight && marqueeRight > elementLeft &&
-                                 marqueeTop < elementBottom && marqueeBottom > elementTop;
-                
-                if (intersects) {
-                    this.addMarqueeHighlight(element);
-                } else {
-                    this.removeMarqueeHighlight(element);
-                }
-            });
-        });
-    }
 
-    /**
-     * Clear all marquee highlights
-     */
-    clearAllMarqueeHighlights() {
-        const assetSelectors = ['.asset-thumbnail', '.asset-list-item', '.asset-details-row'];
-        assetSelectors.forEach(selector => {
-            document.querySelectorAll(selector).forEach(element => {
-                this.removeMarqueeHighlight(element);
-            });
-        });
-    }
 
-    /**
-     * Add marquee highlight to element using existing hover styles
-     */
-    addMarqueeHighlight(element) {
-        if (element.classList.contains('marquee-highlighted')) return;
-        
-        element.classList.add('marquee-highlighted');
-        // Note: Hover effects now handled by CSS (like OutlinerPanel)
-    }
 
-    /**
-     * Remove marquee highlight from element
-     */
-    removeMarqueeHighlight(element) {
-        if (!element.classList.contains('marquee-highlighted')) return;
-        
-        element.classList.remove('marquee-highlighted');
-        // Note: Hover effects now handled by CSS (like OutlinerPanel)
-    }
 
     /**
      * Setup context menus for assets and panel
@@ -2500,17 +2446,6 @@ export class AssetPanel extends BasePanel {
         this.updateSelectionVisuals();
     }
 
-    /**
-     * Clear all marquee highlights from asset elements
-     */
-    clearAllMarqueeHighlights() {
-        const assetSelectors = ['.asset-thumbnail', '.asset-list-item', '.asset-details-row'];
-        assetSelectors.forEach(selector => {
-            document.querySelectorAll(selector).forEach(element => {
-                element.classList.remove('marquee-highlighted');
-            });
-        });
-    }
 
     /**
      * Clean up event listeners
@@ -2666,18 +2601,15 @@ export class AssetPanel extends BasePanel {
         eventHandlerManager.registerContainer(this.container, assetHandlers);
 
         // Setup wheel handlers for asset size zoom
-        const wheelHandlers = EventHandlerUtils.createInputHandlers(
-            null, // onChange
-            null, // onFocus
-            null, // onBlur
-            (e) => {
+        const wheelHandlers = {
+            wheel: (e) => {
                 if (e.ctrlKey) {
                     e.preventDefault();
                     e.stopPropagation();
                     this.handleAssetWheel(e);
                 }
             }
-        );
+        };
 
         eventHandlerManager.registerContainer(this.previewsContainer, wheelHandlers);
 

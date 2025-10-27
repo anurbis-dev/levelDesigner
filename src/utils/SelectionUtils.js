@@ -233,10 +233,11 @@ export class SelectionUtils {
         }
 
         // Allow Ctrl/Cmd+click+drag on item: marquee in toggle mode
+        // Allow Shift+click+drag on item: marquee in add mode
 
-        // If Ctrl/Cmd is pressed - start delayed marquee with 4px threshold,
-        // to not intercept regular Ctrl+click
-        if (e.ctrlKey || e.metaKey) {
+        // If Ctrl/Cmd or Shift is pressed - start delayed marquee with 4px threshold,
+        // to not intercept regular Ctrl+click or Shift+click
+        if (e.ctrlKey || e.metaKey || e.shiftKey) {
             const pendingStartPos = { x: e.clientX, y: e.clientY };
             stateManager.set('marquee.pendingStartPos', pendingStartPos);
             stateManager.set('marquee.pendingMode', marqueeMode);
@@ -305,6 +306,9 @@ export class SelectionUtils {
                 marqueeDiv.style.top = `${top}px`;
                 marqueeDiv.style.width = `${width}px`;
                 marqueeDiv.style.height = `${height}px`;
+                
+                // Update visual highlighting of elements
+                this.updateMarqueeSelection(container, marqueeDiv, stateManager);
             }
             return;
         }
@@ -343,6 +347,9 @@ export class SelectionUtils {
                 stateManager.set('marquee.container', container);
                 stateManager.set('marquee.options', options);
                 stateManager.set('marquee.mode', marqueeMode);
+
+                // Update visual highlighting of elements
+                this.updateMarqueeSelection(container, marqueeDiv, stateManager);
 
                 // Clear pending
                 stateManager.set('marquee.pendingStartPos', null);
