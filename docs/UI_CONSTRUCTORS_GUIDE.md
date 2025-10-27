@@ -4,7 +4,7 @@
 
 - **🚀 Быстрый старт**: [QUICK_START.md](./QUICK_START.md)
 - **🏗️ Архитектура**: [ARCHITECTURE.md](./ARCHITECTURE.md)
-- **📖 API**: [API_REFERENCE.md](./API_REFERENCE.md)
+- **📖 API**: [API_GUIDE.md](./API_GUIDE.md)
 - **🤖 Примеры**: [DEVELOPMENT_GUIDE.md](./DEVELOPMENT_GUIDE.md#-быстрые-примеры-для-агента)
 - **⚠️ Ошибки**: [COMMON_MISTAKES.md](./COMMON_MISTAKES.md)
 - **⚡ События**: [EVENT_HANDLER_SYSTEM.md](./EVENT_HANDLER_SYSTEM.md)

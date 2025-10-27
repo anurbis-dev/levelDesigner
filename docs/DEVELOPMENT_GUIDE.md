@@ -1,5 +1,32 @@
 # Руководство разработчика - 2D Level Editor
 
+**📚 Навигация:**
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - архитектура системы
+- [API_GUIDE.md](./API_GUIDE.md) - API методы
+- [TOUCH_SUPPORT.md](./TOUCH_SUPPORT.md) - тач-события
+- [COMMON_MISTAKES.md](./COMMON_MISTAKES.md) - частые ошибки
+
+## ⚠️ КРИТИЧЕСКИ ВАЖНО ДЛЯ АГЕНТА
+
+**ПЕРЕД ДОБАВЛЕНИЕМ ЛЮБОГО КОДА:**
+1. **Прочитай документацию** - особенно [ARCHITECTURE.md](./ARCHITECTURE.md), [API_GUIDE.md](./API_GUIDE.md) и [COMMON_MISTAKES.md](./COMMON_MISTAKES.md)
+2. **Проверь существующие решения** - используй готовые компоненты (BaseDialog, UIFactory, Logger)
+3. **Изучи похожий код** - найди примеры аналогичной функциональности
+4. **Следуй архитектуре** - не дублируй код, используй централизованные системы
+
+**Всегда используй:**
+- ✅ `Logger.category.method()` вместо `console.log()`
+- ✅ `stateManager` для состояния
+- ✅ `eventHandlerManager` для событий
+- ✅ `BaseDialog` для диалогов
+- ✅ `UIFactory` для UI элементов
+
+**Никогда не делай:**
+- ❌ Не проверяй `if (!stateManager)` - доверяй архитектуре
+- ❌ Не создавай новые диалоги без наследования от BaseDialog
+- ❌ Не используй прямые addEventListener
+- ❌ Не дублируй существующую функциональность
+
 ## 🤖 Быстрые примеры для агента
 
 ### Создание объекта:
@@ -58,8 +85,6 @@ eventManager.registerElement(button, 'button', {
     context: this
 });
 ```
-
-**📖 Подробные примеры:** [DEVELOPMENT_GUIDE.md#-практические-примеры-для-агента](./DEVELOPMENT_GUIDE.md#-практические-примеры-для-агента)
 
 **⚠️ Частые ошибки:** [COMMON_MISTAKES.md](./COMMON_MISTAKES.md)
 
@@ -1614,174 +1639,9 @@ handleAltDragInGroup(object, group) {
 }
 ```
 
-## 🤖 Практические примеры для агента
+## 📚 Дополнительная информация
 
-### Создание и управление объектами
-
-```javascript
-// Создание объекта
-const levelEditor = window.levelEditor;
-const newObject = levelEditor.createObject('player', 100, 200, {
-    name: 'Player Start',
-    color: '#ff0000',
-    width: 32,
-    height: 32
-});
-
-// Выделение объекта
-levelEditor.selectObject(newObject.id);
-
-// Перемещение объекта
-levelEditor.moveObject(newObject.id, 150, 250);
-
-// Группировка объектов
-const objIds = [obj1.id, obj2.id, obj3.id];
-levelEditor.groupObjects(objIds);
-```
-
-### Работа с состоянием
-
-```javascript
-const stateManager = levelEditor.stateManager;
-
-// Получение состояния
-const selectedObjects = stateManager.get('selectedObjects');
-const gridVisible = stateManager.get('view.grid');
-
-// Установка состояния
-stateManager.set('selectedObjects', [objId]);
-stateManager.set('view.grid', true);
-
-// Подписка на изменения
-stateManager.subscribe('selectedObjects', (newSelection) => {
-    console.log('Selection changed:', newSelection);
-    // Обновить UI
-});
-
-// Обновление нескольких значений
-stateManager.update({
-    'view.grid': true,
-    'view.snapToGrid': false,
-    'canvas.showGrid': true
-});
-```
-
-### Работа с конфигурацией
-
-```javascript
-const configManager = levelEditor.configManager;
-
-// Получение настроек
-const gridSize = configManager.get('grid.size');
-const canvasSettings = configManager.getCanvas();
-
-// Установка настроек
-configManager.set('grid.size', 32);
-configManager.set('canvas.backgroundColor', '#ffffff');
-
-// Синхронизация настроек
-configManager.syncAllCanvasToGrid();
-configManager.syncAllGridToCanvas();
-
-// Загрузка всех конфигураций
-await configManager.loadAllConfigs();
-```
-
-### Работа с тач-поддержкой
-
-```javascript
-const touchManager = levelEditor.touchSupportManager;
-
-// Регистрация элемента для изменения размера
-touchManager.registerElement(resizerElement, 'panelResizer', {
-    direction: 'horizontal',
-    minSize: 100,
-    maxSize: 800,
-    onResize: (element, targetPanel, newSize) => {
-        targetPanel.style.width = newSize + 'px';
-    },
-    onDoubleTap: (element) => {
-        // Переключить панель
-        togglePanel();
-    }
-});
-
-// Расчет размера панели
-const newSize = touchManager.calculateHorizontalPanelSize(
-    resizerElement, 
-    mouseEvent, 
-    { startX: 100, startY: 200 }
-);
-
-// Получение унифицированных методов
-const resizeMethods = touchManager.getUnifiedResizeMethods();
-```
-
-### Работа с событиями
-
-```javascript
-const eventManager = levelEditor.eventHandlerManager;
-
-// Регистрация обработчиков для диалога
-eventManager.registerElement(dialogElement, 'dialog', {
-    onCancel: () => closeDialog(),
-    onApply: () => saveSettings(),
-    onOverlayClick: () => closeDialog()
-}, 'settings-dialog');
-
-// Регистрация обработчиков для кнопки
-eventManager.registerElement(buttonElement, 'button', {
-    onClick: () => handleButtonClick(),
-    onMouseEnter: () => showTooltip(),
-    onMouseLeave: () => hideTooltip()
-});
-```
-
-### Работа с UI компонентами
-
-```javascript
-// Открытие панелей
-levelEditor.openSettings();
-levelEditor.openAssetsPath();
-
-// Обновление интерфейса
-levelEditor.updateAllPanels();
-levelEditor.updateLevelStatsPanel();
-
-// Работа с диалогами через EventHandlerManager
-const dialogHandlers = eventManager.getDialogHandlers('settings-dialog');
-```
-
-### Дублирование с сохранением позиций
-
-```javascript
-// Использование DuplicateRenderer
-import { duplicateRenderUtils } from '../utils/DuplicateUtils.js';
-
-duplicateSelectedObjects() {
-    const selected = this.getSelectedObjects();
-    if (selected.length > 0) {
-        const clonedObjects = selected.map(obj => {
-            const cloned = this.deepClone(obj);
-            this.reassignIdsDeep(cloned);
-            return cloned;
-        });
-        
-        // Инициализация позиций
-        const currentWorldPos = this.getCurrentMouseWorldPosition();
-        const initialized = duplicateRenderUtils.initializePositions(clonedObjects, currentWorldPos);
-        
-        this.stateManager.update({
-            'duplicate.isActive': true,
-            'duplicate.objects': initialized,
-            'duplicate.basePosition': currentWorldPos
-        });
-        
-        this.render();
-    }
-}
-```
-
-## Заключение
-
-Это руководство покрывает основные аспекты разработки и расширения 2D Level Editor, включая новые возможности дублирования, режима редактирования групп и Alt+Drag функциональности. Для получения дополнительной информации обратитесь к API Reference и Architecture документации.
+Дополнительные примеры и подробные описания API доступны в:
+- [API_GUIDE.md](./API_GUIDE.md) - полный список методов
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - архитектурные решения
+- [COMMON_MISTAKES.md](./COMMON_MISTAKES.md) - частые ошибки

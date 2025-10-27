@@ -1,137 +1,155 @@
 # Context Map - Level Designer v3.52.7
 
-## 📚 Документы для работы с проектом
+## ⚠️ КРИТИЧЕСКИ ВАЖНО - ЧИТАТЬ ПЕРВЫМ
 
-### 🔧 Основные документы (обязательные для изучения)
+**ПЕРЕД ДОБАВЛЕНИЕМ КОДА:**
+1. **Прочитай документацию** - [DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md), [ARCHITECTURE.md](./docs/ARCHITECTURE.md), [API_GUIDE.md](./docs/API_GUIDE.md)
+2. **Проверь готовые решения** - используй BaseDialog, UIFactory, Logger
+3. **Не дублируй код** - следуй архитектуре
 
-1. **[ARCHITECTURE.md](./docs/ARCHITECTURE.md)** - архитектура проекта, 13 менеджеров, модули
-2. **[DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md)** - настройка, логирование, правила кода
-3. **[QUICK_START.md](./docs/QUICK_START.md)** - быстрый запуск, операции, интерфейс
-4. **[API_REFERENCE.md](./docs/API_REFERENCE.md)** - API методы, примеры использования
-5. **[COMPREHENSIVE_API_REFERENCE.md](./docs/COMPREHENSIVE_API_REFERENCE.md)** - полный список всех методов
-6. **[TOUCH_SUPPORT.md](./docs/TOUCH_SUPPORT.md)** - тач-события, жесты, блокировка
-7. **[MOBILE_INTERFACE_SYSTEM.md](./docs/MOBILE_INTERFACE_SYSTEM.md)** - мобильный интерфейс
-8. **[EVENT_HANDLER_SYSTEM.md](./docs/EVENT_HANDLER_SYSTEM.md)** - обработчики событий
+**Всегда:** ✅ Logger, stateManager, eventHandlerManager, BaseDialog  
+**Никогда:** ❌ console.log, if (!stateManager), прямые addEventListener
 
-### 🏗️ Архитектура проекта
+## 🎯 Быстрый старт для агента
 
-#### Основные компоненты:
-- **LevelEditor** - главный класс редактора
-- **13 менеджеров** - StateManager, ConfigManager, TouchSupportManager, и др.
-- **event-system/** - унифицированная система событий (EventHandlerManager, UnifiedTouchManager, GlobalEventRegistry, EventHandlerUtils)
-- **UI компоненты** - панели, диалоги, контекстные меню
-- **Core модули** - операции с объектами, слоями, файлами
+### Основные компоненты
+- **LevelEditor** - главный класс, координатор всех систем
+- **13 менеджеров** - StateManager, ConfigManager, HistoryManager, TouchSupportManager, EventHandlerManager, UnifiedTouchManager, GlobalEventRegistry
+- **13 core операций** - ObjectOperations, LayerOperations, HistoryOperations, DuplicateOperations, GroupOperations, RenderOperations, ViewportOperations, LevelFileOperations
+- **UI компоненты** - панели (AssetPanel, DetailsPanel, LayersPanel, OutlinerPanel, SettingsPanel), диалоги (BaseDialog)
 
-#### Ключевые API методы:
-- **LevelEditor**: `init()`, `saveLevel()`, `createObject()`, `selectObject()`, `getCachedObject()`
-- **StateManager**: `get()`, `set()`, `subscribe()`, `notify()`, `updateComponentStatus()`
-- **ConfigManager**: `get()`, `set()`, `loadAllConfigs()`, `syncAllCanvasToGrid()`
-- **UnifiedTouchManager**: `registerElement()`, `unregisterElement()`, `destroy()` - унифицированная обработка touch событий
-- **EventHandlerManager**: `registerElement()`, `registerCanvas()`, `unregisterElement()` - централизованная регистрация событий
-- **GlobalEventRegistry**: `registerComponentHandlers()`, `unregisterComponentHandlers()` - централизованное управление глобальными событиями
-
-### 📁 Панель Content
-- Левая сторона Assets (можно переключить вправо)
-- Древовидная структура папок из ./content
-- Клик по папке → выбор и фильтрация табов
-
-### 📦 Система ассетов
-- Автоматическое сканирование ./content при старте
-- Манифест: content/manifest.json
-- Обновление: update_manifest.bat
-- JSON файлы с полями name, type, imgSrc, width, height, color, properties
-
-### 🎮 Тач-поддержка (v3.52.7)
-- **UnifiedTouchManager** - унифицированный менеджер touch событий (объединяет TouchSupportManager + TouchHandlers)
-- **EventHandlerManager** - централизованная регистрация всех событий (mouse + touch)
-- **GlobalEventRegistry** - централизованное управление глобальными событиями (document/window)
-- **BrowserGesturePreventionManager** - блокировка браузерных жестов
-- **TouchInitializationManager** - централизованная инициализация
-- **Canvas pan/zoom** - жесты двумя пальцами
-
-### 🖱️ Контекстные меню для табов (v3.52.7)
-- **Табы панелей** - правый клик для перемещения между левой и правой панелями
-- **Assets табы** - правый клик для закрытия табов с защитой от закрытия последнего
-- **Умное позиционирование** - автоматическое позиционирование относительно viewport
-- **MutationObserver** - автоматическое отслеживание изменений DOM для всех типов табов
-
-### 🔧 ResizerManager с поддержкой двойного клика (v3.52.7)
-- **Поддержка двойного клика** - новый параметр `onDoubleClick` в методе `registerResizer`
-- **Унифицированная обработка** - все разделители используют единую систему обработки двойного клика
-- **Предотвращение конфликтов** - устранены конфликты между обработчиками мыши и двойного клика
-- **Автоматическое сохранение** - размеры панелей сохраняются в StateManager и UserPreferences
-
-### 🔧 Практические примеры для агента
-
-**📖 Подробные примеры:** См. [DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md#-практические-примеры-для-агента)
-
-**⚠️ Частые ошибки:** См. [COMMON_MISTAKES.md](./docs/COMMON_MISTAKES.md)
-
-### 📖 Дополнительные документы
-
-- **[USER_MANUAL.md](./docs/USER_MANUAL.md)** - руководство пользователя
-- **[UI_CONSTRUCTORS_GUIDE.md](./docs/UI_CONSTRUCTORS_GUIDE.md)** - создание UI компонентов
-- **[VERSIONING_GUIDE.md](./docs/VERSIONING_GUIDE.md)** - версионирование
-- **[CHANGELOG.md](./docs/CHANGELOG.md)** - история изменений
-- **[COMMON_MISTAKES.md](./docs/COMMON_MISTAKES.md)** - частые ошибки
-- **[README.md](./docs/README.md)** - обзор документации
-- **[content/README.md](./content/README.md)** - структура ассетов
-
-### 🎯 Приоритеты
-
-1. **ARCHITECTURE.md** - структура проекта
-2. **DEVELOPMENT_GUIDE.md** - правила работы
-3. **API_REFERENCE.md** - использование API
-4. **QUICK_START.md** - запуск и операции
-
-### 🤖 Типичные задачи для агента
-
-**📖 Подробные примеры:** См. [DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md#-практические-примеры-для-агента)
-
-#### Быстрые примеры:
+### Ключевые API
 ```javascript
-// Создание объекта
-const obj = levelEditor.createObject('player', 100, 200, { name: 'Player' });
+// LevelEditor
+levelEditor.createObject(type, x, y, properties)
+levelEditor.selectObject(id)
+levelEditor.saveLevel()
+levelEditor.getCachedObject(id)
 
-// Управление состоянием
-stateManager.set('selectedObject', obj);
-const selected = stateManager.get('selectedObject');
+// StateManager
+stateManager.get(key)
+stateManager.set(key, value)
+stateManager.subscribe(key, callback)
 
-// Работа с конфигурацией
-configManager.set('grid.size', 32);
-const gridSize = configManager.get('grid.size');
+// ConfigManager
+configManager.get(path)
+configManager.set(path, value)
+configManager.loadAllConfigs()
 
-// Унифицированная тач-поддержка
-unifiedTouchManager.registerElement(element, 'panelResizer', { direction: 'horizontal' });
+// EventHandlerManager
+eventHandlerManager.registerElement(element, handlers, elementId)
+eventHandlerManager.registerTouchElement(element, configType, config, elementId)
 
-// Централизованная обработка событий
-eventHandlerManager.registerElement(button, { click: this.onClick.bind(this) }, 'my-button');
+// UnifiedTouchManager
+unifiedTouchManager.registerElement(element, configType, config, elementId)
 
-// Глобальные события
-globalEventRegistry.registerComponentHandlers('my-component', { resize: this.onResize.bind(this) }, 'window');
+// GlobalEventRegistry
+globalEventRegistry.registerComponentHandlers(componentId, handlers, target)
 ```
 
-#### Основные операции:
-- **Создание объектов**: `levelEditor.createObject(type, x, y, properties)`
-- **Управление состоянием**: `stateManager.get/set/subscribe()`
-- **Работа с конфигурацией**: `configManager.get/set/loadAllConfigs()`
-- **Унифицированная тач-поддержка**: `unifiedTouchManager.registerElement()`
-- **Централизованная обработка событий**: `eventHandlerManager.registerElement()`
-- **Глобальные события**: `globalEventRegistry.registerComponentHandlers()`
+## 📁 Основные файлы
 
-#### Ключевые принципы:
-- Используйте централизованные системы (StateManager, ConfigManager, EventHandlerManager, UnifiedTouchManager, GlobalEventRegistry)
-- Доверяйте архитектуре - не добавляйте избыточные проверки
-- Всегда используйте Logger вместо console
-- Наследуйтесь от BaseDialog для диалогов
+### Core
+- `src/core/LevelEditor.js` - главный класс
+- `src/core/ObjectOperations.js` - операции с объектами
+- `src/core/LayerOperations.js` - операции со слоями
+- `src/core/RenderOperations.js` - рендеринг
+- `src/core/MouseHandlers.js` - обработка мыши
 
-### 🔗 Быстрая навигация
+### Managers
+- `src/managers/StateManager.js` - состояние
+- `src/managers/ConfigManager.js` - конфигурация
+- `src/managers/HistoryManager.js` - undo/redo
+- `src/managers/EventHandlerManager.js` - события
+- `src/event-system/UnifiedTouchManager.js` - тач-события
+- `src/event-system/GlobalEventRegistry.js` - глобальные события
 
-- **🚀 Запуск**: [QUICK_START.md](./docs/QUICK_START.md#-запуск-за-3-шага)
-- **🏗️ Архитектура**: [ARCHITECTURE.md](./docs/ARCHITECTURE.md#-утилитарная-архитектура)
-- **📖 API**: [API_REFERENCE.md](./docs/API_REFERENCE.md) | [COMPREHENSIVE_API_REFERENCE.md](./docs/COMPREHENSIVE_API_REFERENCE.md)
-- **🤖 Примеры**: [DEVELOPMENT_GUIDE.md](./docs/DEVELOPMENT_GUIDE.md#-практические-примеры-для-агента)
-- **⚠️ Ошибки**: [COMMON_MISTAKES.md](./docs/COMMON_MISTAKES.md)
-- **📱 Тач**: [TOUCH_SUPPORT.md](./docs/TOUCH_SUPPORT.md)
-- **📱 Мобильный**: [MOBILE_INTERFACE_SYSTEM.md](./docs/MOBILE_INTERFACE_SYSTEM.md)
-- **⚡ События**: [EVENT_HANDLER_SYSTEM.md](./docs/EVENT_HANDLER_SYSTEM.md)
+### UI
+- `src/ui/BaseDialog.js` - базовый диалог
+- `src/ui/AssetPanel.js` - панель ассетов
+- `src/ui/LayersPanel.js` - панель слоев
+- `src/ui/DetailsPanel.js` - свойства
+
+### Utils
+- `src/utils/Logger.js` - логирование (19 категорий)
+- `src/utils/UIFactory.js` - создание UI
+- `src/utils/ValidationUtils.js` - валидация
+
+## 🏗️ Архитектурные принципы
+
+### Централизованные системы
+1. **StateManager** - единый источник состояния
+2. **ConfigManager** - конфигурация
+3. **EventHandlerManager** - все события UI
+4. **UnifiedTouchManager** - тач-события
+5. **GlobalEventRegistry** - глобальные события
+6. **CacheManager** - кэширование
+
+### Модульная архитектура
+- Каждая операция в отдельном файле (ObjectOperations, LayerOperations, etc.)
+- BaseModule паттерн с 25+ helper-методами
+- Lifecycle через ComponentLifecycle
+
+### Принципы
+- **DRY** - нет дублирования
+- **SOLID** - single responsibility
+- **Clean Code** - понятный код
+- **Централизация** - единые точки изменений
+
+## 🎮 Типичные задачи
+
+### Создание объекта
+```javascript
+const obj = levelEditor.createObject('player', 100, 200, { name: 'Player' });
+levelEditor.selectObject(obj.id);
+```
+
+### Управление состоянием
+```javascript
+stateManager.set('selectedObject', obj);
+const selected = stateManager.get('selectedObject');
+```
+
+### Работа с конфигурацией
+```javascript
+configManager.set('grid.size', 32);
+const gridSize = configManager.get('grid.size');
+```
+
+### Регистрация событий
+```javascript
+eventHandlerManager.registerElement(button, { click: onClick }, 'button-id');
+```
+
+### Тач-поддержка
+```javascript
+unifiedTouchManager.registerElement(element, 'panelResizer', { direction: 'horizontal' });
+```
+
+## 📚 Документация (приоритет)
+
+1. **DEVELOPMENT_GUIDE.md** - настройка, примеры, правила кода
+2. **ARCHITECTURE.md** - архитектура, менеджеры, модули
+3. **API_GUIDE.md** - методы, примеры
+4. **QUICK_START.md** - запуск, операции
+
+## ⚠️ Частые ошибки
+
+- ❌ `console.log` → ✅ `Logger.category.method()`
+- ❌ Проверка `if (!stateManager)` → ✅ Доверяй архитектуре
+- ❌ Дублирование BaseDialog → ✅ Наследование
+- ❌ Прямые события → ✅ EventHandlerManager
+
+## 🔧 Версионирование
+
+Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '3.52.7'`
+
+## 🚀 Команды
+
+```bash
+# Запуск
+./start_Editor.bat
+
+# Обновление манифеста
+./update_manifest.bat
+```
