@@ -48,22 +48,11 @@ class AssetTabContextMenu {
 
         // Create context menu
         const contextMenu = document.createElement('div');
-        contextMenu.className = 'asset-tab-context-menu base-context-menu';
-        contextMenu.style.cssText = `
-            position: fixed;
-            background: var(--ui-bg-color, #374151);
-            border: 1px solid var(--ui-border-color, #4b5563);
-            border-radius: 6px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            z-index: 10000;
-            min-width: 150px;
-            padding: 4px 0;
-        `;
+        contextMenu.className = 'asset-tab-context-menu base-context-menu show';
 
         // Add close option
         const closeItem = document.createElement('div');
-        closeItem.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-gray-700 flex items-center space-x-2';
-        closeItem.style.color = 'var(--ui-text-color, #e5e7eb)';
+        closeItem.className = 'base-context-menu-item';
         closeItem.innerHTML = '<span>❌</span><span>Close</span>';
         closeItem.addEventListener('click', () => {
             const activeTabs = new Set(this.assetPanel.stateManager.get('activeAssetTabs'));
@@ -139,6 +128,7 @@ export class AssetPanel extends BasePanel {
         this.isDraggingTab = false; // Flag to track tab dragging
         this.tabDraggingSetup = false; // Flag to track if tab dragging is already setup
         this._assetTabContextMenuSetup = false; // Flag to track context menu setup (similar to LayersPanel)
+        this._assetPanelHandlersSetup = false; // Flag to track panel handlers setup
 
         // Asset size management
         this.assetSize = 96; // Default size, will be loaded in init()
@@ -169,6 +159,9 @@ export class AssetPanel extends BasePanel {
         this.init();
         this.setupEventListeners();
         this.setupContextMenus();
+        
+        // Initial render to create tabs
+        this.render();
 
         // Register search in universal search manager
         searchManager.registerSearch(
@@ -883,8 +876,7 @@ export class AssetPanel extends BasePanel {
             this.render();
         });
         
-        // Setup asset panel handlers using new system
-        this.setupAssetPanelHandlers();
+        // Event handlers will be setup in render() after elements are created
         
         // Window resize handler for real-time grid recalculation
         // Register window resize handler with GlobalEventRegistry
@@ -926,13 +918,11 @@ export class AssetPanel extends BasePanel {
     }
 
     renderTabs() {
-        console.log('AssetPanel: renderTabs called - tabs will be recreated');
         Logger.ui.debug('AssetPanel: renderTabs called - tabs will be recreated');
         
         // Reset context menu setup flag since DOM is being recreated (similar to LayersPanel)
         this._assetTabContextMenuSetup = false;
         
-        console.log('AssetPanel: Clearing tabsContainer innerHTML');
         this.tabsContainer.innerHTML = '';
         const tabOrder = this.stateManager.get('assetTabOrder') || [];
         const availableCategories = this.assetManager.getCategories();
@@ -964,6 +954,9 @@ export class AssetPanel extends BasePanel {
 
         // Setup context menu for tabs after rendering (similar to LayersPanel pattern)
         this.setupAssetTabContextMenu();
+
+        // Setup event handlers after elements are created (similar to LayersPanel pattern)
+        this.setupAssetPanelHandlers();
 
         // Render search and filter controls in footer
         this.renderAssetSearchControls();
@@ -2982,6 +2975,11 @@ export class AssetPanel extends BasePanel {
      * Setup asset panel handlers using new event system
      */
     setupAssetPanelHandlers() {
+        // Check if handlers are already registered
+        if (this._assetPanelHandlersSetup) {
+            return;
+        }
+        
         // Create asset panel handlers configuration
         const assetHandlers = EventHandlerUtils.createPanelHandlers(
             (e) => {
@@ -3028,7 +3026,6 @@ export class AssetPanel extends BasePanel {
                 if (tabButton) {
                     const category = tabButton.dataset.category;
                     if (category) {
-                        console.log('AssetPanel: Context menu triggered for tab:', category);
                         this.assetTabContextMenu.handleTabContextMenu(e, category, tabButton);
                     }
                     return;
@@ -3037,7 +3034,10 @@ export class AssetPanel extends BasePanel {
         );
 
         // Register container with new event manager
-        eventHandlerManager.registerContainer(this.container, assetHandlers);
+        eventHandlerManager.registerContainer(this.tabsContainer, assetHandlers);
+        
+        // Mark handlers as setup
+        this._assetPanelHandlersSetup = true;
 
         // Register wheel handlers for asset size zoom directly on the container
         const assetWheelHandlers = {
