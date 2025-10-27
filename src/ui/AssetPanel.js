@@ -537,10 +537,17 @@ export class AssetPanel extends BasePanel {
                 this.foldersContainer.style.width = savedWidth + 'px';
                 this.foldersContainer.style.flexShrink = '0';
                 this.foldersContainer.style.flexGrow = '0';
-                
+
                 // Update visibility based on loaded width
                 this.updateContentVisibility(savedWidth);
-                
+
+                // Update grid layout if in grid view (deferred to ensure grid is rendered)
+                setTimeout(() => {
+                    if (this.viewMode === 'grid') {
+                        this.updateGridViewSizes();
+                    }
+                }, 0);
+
                 Logger.ui.debug('Loaded saved folders width:', savedWidth);
             }
         }
@@ -780,9 +787,17 @@ export class AssetPanel extends BasePanel {
                 }
             }
         };
-        
+
         globalEventRegistry.registerComponentHandlers('asset-panel', windowResizeHandlers, 'window');
-        
+
+        // ResizeObserver for asset panel container to handle all internal resizes (folders, other panels, etc.)
+        this.containerResizeObserver = new ResizeObserver(() => {
+            if (this.viewMode === 'grid') {
+                this.updateGridViewSizes();
+            }
+        });
+        this.containerResizeObserver.observe(this.previewsContainer);
+
         // Note: Global marquee handling now managed by BasePanel
 
         this.setupAssetEvents();
@@ -2560,6 +2575,11 @@ export class AssetPanel extends BasePanel {
         // Clean up ResizeObserver for drop overlay
         if (this.dropOverlayResizeObserver) {
             this.dropOverlayResizeObserver.disconnect();
+        }
+
+        // Clean up ResizeObserver for container
+        if (this.containerResizeObserver) {
+            this.containerResizeObserver.disconnect();
         }
 
         // Note: Global marquee handlers now managed by BasePanel
