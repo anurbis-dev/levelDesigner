@@ -191,10 +191,7 @@ class PanelPositionManager {
         resizer.addEventListener('mousedown', (e) => {
             // ... mouse логика
         });
-        
-        // Touch события
-        this.registerTouchSupportForResizer(resizer, panel, panelSide, 'horizontal');
-        
+
         // Дублирование логики!
     }
 }
@@ -217,26 +214,6 @@ class PanelPositionManager {
 }
 ```
 
-## ❌ НЕПРАВИЛЬНО: Прямая работа с тач-событиями
-
-```javascript
-// ❌ НЕ ДЕЛАЙТЕ ТАК
-element.addEventListener('touchstart', (e) => {
-    // обработка тач-событий
-});
-```
-
-## ✅ ПРАВИЛЬНО: Использование TouchSupportManager
-
-```javascript
-// ✅ ДЕЛАЙТЕ ТАК
-touchManager.registerElement(element, 'panelResizer', {
-    direction: 'horizontal',
-    onResize: (element, targetPanel, newSize) => {
-        targetPanel.style.width = newSize + 'px';
-    }
-});
-```
 
 ## Принципы
 
@@ -270,7 +247,3 @@ touchManager.registerElement(element, 'panelResizer', {
 - Не работайте с DOM напрямую
 - Используйте готовые CSS классы из UIFactory.CSS
 
-### 7. Тач-поддержка
-- Используйте TouchSupportManager для тач-событий
-- Не обрабатывайте тач-события напрямую
-- Используйте готовые конфигурации тач-поддержки

@@ -120,31 +120,6 @@
     transform-origin: center top;
 }
 
-/* Адаптивные настройки для маленьких экранов */
-@media (max-width: 768px) {
-    .base-context-menu {
-        min-width: 7.5rem; /* 120px в rem */
-        font-size: 0.8125rem; /* 13px в rem */
-    }
-    
-    .base-context-menu-item {
-        padding: 0.5rem 0.75rem; /* 8px 12px в rem */
-        font-size: 0.8125rem; /* 13px в rem */
-    }
-}
-
-/* Мобильная оптимизация */
-@media (max-width: 480px) {
-    .base-context-menu {
-        min-width: 10rem; /* 160px в rem */
-        font-size: 1rem; /* 16px в rem - увеличенные touch-цели */
-    }
-    
-    .base-context-menu-item {
-        padding: 0.75rem 1rem; /* 12px 16px в rem */
-        font-size: 1rem; /* 16px в rem */
-    }
-}
 
 /* Поддержка высокого контраста */
 @media (prefers-contrast: high) {

@@ -25,7 +25,6 @@
 - **StateManager** - управление состоянием с кешированием
 - **HistoryManager** - Undo/Redo
 - **EventHandlerManager** - события UI
-- **UnifiedTouchManager** - тач-события
 - **GlobalEventRegistry** - глобальные события
 - **CacheManager** - кэширование
 
@@ -65,16 +64,13 @@ const selected = stateManager.get('selectedObject');
 // События
 eventHandlerManager.registerElement(button, { click: onClick }, 'button-id');
 
-// Тач-поддержка
-unifiedTouchManager.registerElement(element, 'panelResizer', { direction: 'horizontal' });
 ```
 
 ### Ключевые API
 - **LevelEditor**: `init()`, `createObject()`, `selectObject()`, `saveLevel()`
 - **StateManager**: `get()`, `set()`, `subscribe()`
 - **ConfigManager**: `get()`, `set()`, `loadAllConfigs()`
-- **EventHandlerManager**: `registerElement()`, `registerTouchElement()`
-- **UnifiedTouchManager**: `registerElement()`
+- **EventHandlerManager**: `registerElement()`
 
 ### Принципы
 - Используйте централизованные системы

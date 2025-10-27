@@ -35,39 +35,6 @@
     }
 }
 
-/* Mobile device scaling */
-@media screen and (max-width: 768px) {
-    :root {
-        /* Scale down UI for mobile devices */
-        --font-scale: 0.8;
-        --spacing-scale: 0.8;
-        font-size: calc(14px * var(--font-scale, 0.8));
-    }
-    
-    /* Reduce panel widths for mobile */
-    .panel {
-        width: 280px !important;
-        min-width: 280px !important;
-    }
-    
-    /* Smaller toolbar buttons */
-    #toolbar-container button {
-        padding: 0.375rem 0.5rem !important;
-        font-size: 0.75rem !important;
-    }
-    
-    /* Smaller menu items */
-    .menu-item {
-        padding: 0.5rem 0.75rem !important;
-        font-size: 0.875rem !important;
-    }
-    
-    /* Smaller input fields */
-    input, select, textarea {
-        padding: 0.375rem 0.5rem !important;
-        font-size: 0.875rem !important;
-    }
-}
 
 /* High DPI device scaling */
 @media screen and (-webkit-min-device-pixel-ratio: 2), 
@@ -79,7 +46,7 @@
     }
 }
 
-/* Very high DPI device scaling (mobile phones) */
+/* Very high DPI device scaling */
 @media screen and (-webkit-min-device-pixel-ratio: 3), 
        screen and (min-resolution: 288dpi) {
     :root {
@@ -89,37 +56,6 @@
     }
 }
 
-/* Mobile device specific styles */
-.mobile-device {
-    /* Prevent text selection on mobile */
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-    
-    /* Prevent touch callouts */
-    -webkit-touch-callout: none;
-    
-    /* Smooth scrolling */
-    -webkit-overflow-scrolling: touch;
-}
-
-.mobile-device .panel {
-    /* Ensure panels fit on mobile screens */
-    max-width: 90vw;
-}
-
-.mobile-device #toolbar-container {
-    /* Make toolbar more compact on mobile */
-    padding: 0.25rem;
-}
-
-.mobile-device .menu-item {
-    /* Larger touch targets for mobile */
-    min-height: 44px;
-    display: flex;
-    align-items: center;
-}
 
 /* High DPI specific adjustments */
 .high-dpi {

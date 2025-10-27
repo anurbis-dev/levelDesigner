@@ -86,29 +86,13 @@
     width: auto;
 }
 
-/* Override mobile styles to preserve fixed width */
+/* Override styles to preserve fixed width */
 .settings-panel-container[style*="width"] {
     width: var(--fixed-dialog-width) !important;
     min-width: var(--fixed-dialog-width) !important;
     max-width: var(--fixed-dialog-width) !important;
 }
 
-/* Override all mobile dialog width rules */
-@media screen and (max-width: 768px) {
-    .settings-panel-container[style*="width"] {
-        width: var(--fixed-dialog-width) !important;
-        min-width: var(--fixed-dialog-width) !important;
-        max-width: var(--fixed-dialog-width) !important;
-    }
-}
-
-@media screen and (max-width: 480px) {
-    .settings-panel-container[style*="width"] {
-        width: var(--fixed-dialog-width) !important;
-        min-width: var(--fixed-dialog-width) !important;
-        max-width: var(--fixed-dialog-width) !important;
-    }
-}
 
 /* ActorPropertiesWindow */
 .actor-properties-container {
@@ -181,8 +165,7 @@
 
 /* Базовые стили для всех input полей в диалогах */
 .settings-input,
-.dialog-input,
-.mobile-input {
+.dialog-input {
     padding: 0.5rem 0.75rem;
     border: 1px solid #4b5563;
     border-radius: 0.375rem;
@@ -193,112 +176,18 @@
 }
 
 .settings-input:focus,
-.dialog-input:focus,
-.mobile-input:focus {
+.dialog-input:focus {
     outline: none;
     border-color: #3b82f6;
     background-color: #4b5563;
 }
 
 .settings-input::placeholder,
-.dialog-input::placeholder,
-.mobile-input::placeholder {
+.dialog-input::placeholder {
     color: #9ca3af;
 }
 
-/* ===== АДАПТИВНЫЕ РАЗМЕРЫ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ ===== */
 
-/* Планшеты и маленькие экраны */
-@media screen and (max-width: 1024px) {
-    #universal-dialog-overlay,
-    #actor-properties-overlay,
-    #settings-overlay,
-    .dialog-overlay {
-        padding: 1.5rem 0.75rem !important;
-    }
-    
-    #universal-dialog,
-    .settings-panel-container,
-    .actor-properties-container,
-    .dialog-container {
-        max-height: calc(100vh - 3rem) !important;
-        max-width: 95vw !important;
-    }
-    
-    .settings-panel-container {
-        width: 95vw !important;
-        min-width: unset !important;
-    }
-}
-
-/* Мобильные устройства */
-@media screen and (max-width: 768px) {
-    #universal-dialog-overlay,
-    #actor-properties-overlay,
-    #settings-overlay,
-    .dialog-overlay {
-        padding: 1rem 0.5rem !important;
-        align-items: flex-start !important;
-        padding-top: 2rem !important;
-    }
-    
-    #universal-dialog,
-    .settings-panel-container,
-    .actor-properties-container,
-    .dialog-container {
-        height: calc(100vh - 4rem) !important;
-        max-height: calc(100vh - 4rem) !important;
-        max-width: calc(100vw - 1rem) !important;
-        width: calc(100vw - 1rem) !important;
-        min-width: unset !important;
-    }
-    
-    .settings-panel-container {
-        width: calc(100vw - 1rem) !important;
-    }
-}
-
-/* Очень маленькие экраны */
-@media screen and (max-width: 480px) {
-    #universal-dialog-overlay,
-    #actor-properties-overlay,
-    #settings-overlay,
-    .dialog-overlay {
-        padding: 0.5rem 0.25rem !important;
-        padding-top: 1rem !important;
-    }
-    
-    #universal-dialog,
-    .settings-panel-container,
-    .actor-properties-container,
-    .dialog-container {
-        height: calc(100vh - 2rem) !important;
-        max-height: calc(100vh - 2rem) !important;
-        max-width: calc(100vw - 0.5rem) !important;
-        width: calc(100vw - 0.5rem) !important;
-    }
-}
-
-/* ===== ОРИЕНТАЦИЯ ЭКРАНА ===== */
-
-/* Альбомная ориентация на мобильных */
-@media screen and (max-width: 768px) and (orientation: landscape) {
-    #universal-dialog-overlay,
-    #actor-properties-overlay,
-    #settings-overlay,
-    .dialog-overlay {
-        padding-top: 0.5rem !important;
-        align-items: flex-start !important;
-    }
-    
-    #universal-dialog,
-    .settings-panel-container,
-    .actor-properties-container,
-    .dialog-container {
-        height: calc(100vh - 1rem) !important;
-        max-height: calc(100vh - 1rem) !important;
-    }
-}
 
 /* ===== ПЕРЕОПРЕДЕЛЕНИЕ СУЩЕСТВУЮЩИХ СТИЛЕЙ ===== */
 
@@ -353,21 +242,6 @@
     max-width: 500px !important;
 }
 
-/* ===== ИСПРАВЛЕНИЯ КОНФЛИКТОВ ===== */
-
-/* Переопределение мобильных стилей для правильного центрирования */
-@media screen and (max-width: 768px) {
-    .mobile-dialog {
-        width: auto !important;
-        min-width: unset !important;
-        max-width: calc(100vw - 1rem) !important;
-    }
-    
-    .mobile-dialog.settings-panel-container {
-        width: calc(100vw - 1rem) !important;
-        min-width: unset !important;
-    }
-}
 
 /* ===== ACCESSIBILITY ===== */
 

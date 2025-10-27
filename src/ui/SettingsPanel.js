@@ -11,7 +11,6 @@ import {
     renderGeneralSettings,
     renderColorsSettings,
     renderSelectionSettings,
-    renderTouchSettings,
     renderCameraSettings,
     renderAssetsSettings,
     renderPerformanceSettings
@@ -61,11 +60,6 @@ export class SettingsPanel {
     }
 
     createSettingsPanel() {
-        // Import mobile interface manager
-        import('../managers/MobileInterfaceManager.js').then(({ mobileInterfaceManager }) => {
-            this.mobileManager = mobileInterfaceManager;
-        });
-        
         // Create settings overlay element
         const overlay = document.createElement('div');
         overlay.id = 'settings-overlay';
@@ -73,11 +67,11 @@ export class SettingsPanel {
         overlay.style.display = 'none'; // Only set display, let CSS handle the rest
         
         overlay.innerHTML = `
-            <div class="settings-panel-container mobile-dialog" id="settings-panel-container">
+            <div class="settings-panel-container dialog-container" id="settings-panel-container">
                 <div class="settings-header" id="settings-header">
                     <h2>Settings</h2>
                     <div class="settings-header-controls">
-                        <button id="settings-menu-btn" class="settings-menu-btn mobile-touch-target">⋮</button>
+                        <button id="settings-menu-btn" class="settings-menu-btn">⋮</button>
                     </div>
                 </div>
                 
@@ -91,7 +85,6 @@ export class SettingsPanel {
                         <button class="settings-tab" data-tab="selection">Selection</button>
                         <button class="settings-tab" data-tab="assets">Assets</button>
                         <button class="settings-tab" data-tab="hotkeys">Hotkeys</button>
-                        <button class="settings-tab" data-tab="touch">Touch</button>
                         <button class="settings-tab" data-tab="performance">Performance</button>
                     </div>
                     
@@ -105,8 +98,8 @@ export class SettingsPanel {
                 
                 <div class="settings-footer">
                     <div class="settings-footer-right">
-                        <button id="cancel-settings" class="settings-btn settings-btn-cancel mobile-button">Cancel</button>
-                        <button id="save-settings" class="settings-btn settings-btn-save mobile-button">Apply Changes</button>
+                        <button id="cancel-settings" class="settings-btn settings-btn-cancel">Cancel</button>
+                        <button id="save-settings" class="settings-btn settings-btn-save">Apply Changes</button>
                     </div>
                 </div>
                 
@@ -131,16 +124,6 @@ export class SettingsPanel {
                 // Use CSS class instead of direct style manipulation
                 overlay.classList.add('dialog-visible');
                 overlay.style.display = 'flex';
-
-                // Apply mobile interface adaptations for dialog container only
-                let isMobile = false;
-                if (this.mobileManager) {
-                    const container = overlay.querySelector('.settings-panel-container');
-                    if (container) {
-                        this.mobileManager.adaptElement(container);
-                        isMobile = this.mobileManager.isMobile();
-                    }
-                }
 
                 // Window positioning is now handled by CSS only
                 
@@ -308,9 +291,6 @@ export class SettingsPanel {
             case 'hotkeys':
                 content = this.renderHotkeysSettings();
                 break;
-            case 'touch':
-                content = this.renderTouchSettings();
-                break;
             case 'performance':
                 content = this.renderPerformanceSettings();
                 break;
@@ -342,7 +322,6 @@ export class SettingsPanel {
             renderGeneralSettings,
             renderColorsSettings,
             renderSelectionSettings,
-            renderTouchSettings,
             renderCameraSettings,
             renderAssetsSettings,
             renderPerformanceSettings
@@ -431,13 +410,6 @@ export class SettingsPanel {
         }
 
         return content;
-    }
-
-    /**
-     * Render touch settings section
-     */
-    renderTouchSettings() {
-        return renderTouchSettings(this.levelEditor?.stateManager);
     }
 
     /**
@@ -581,16 +553,14 @@ export class SettingsPanel {
                         let displayValue = input.value;
                         const setting = input.getAttribute('data-setting');
                         
-                        if (setting === 'touch.panThreshold') {
-                            displayValue = input.value + 'px';
-                        } else if (setting === 'touch.panSensitivity') {
-                            displayValue = input.value + 'x';
-                        } else if (setting === 'touch.zoomThreshold') {
-                            displayValue = (parseFloat(input.value) * 100).toFixed(1) + '%';
-                        } else if (setting === 'touch.zoomIntensity') {
-                            displayValue = input.value;
-                        } else if (setting === 'touch.longPressDelay') {
-                            displayValue = input.value + 'ms';
+                        // Format display value based on setting type
+                        if (setting && setting.includes('.')) {
+                            const [category, key] = setting.split('.');
+                            if (category === 'performance') {
+                                displayValue = input.value + 'ms';
+                            } else if (category === 'camera') {
+                                displayValue = input.value + 'x';
+                            }
                         }
                         
                         valueDisplay.textContent = displayValue;
@@ -1147,13 +1117,7 @@ export class SettingsPanel {
             'selection.hierarchyHighlightColor',
             'panels.selection.activeLayerBorderColor',
             // Logger colors
-            'logger.colors',
-            // Touch settings
-            'touch.panThreshold',
-            'touch.zoomThreshold',
-            'touch.panSensitivity',
-            'touch.zoomIntensity',
-            'touch.longPressDelay'
+            'logger.colors'
         ];
 
         this.originalValues = {};

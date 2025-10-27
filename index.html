@@ -48,10 +48,7 @@
     <link rel="stylesheet" href="styles/color-chooser.css">
     <link rel="stylesheet" href="styles/base-context-menu.css">
     <link rel="stylesheet" href="styles/canvas-context-menu.css">
-    <link rel="stylesheet" href="styles/mobile-dialogs.css">
-    <link rel="stylesheet" href="styles/mobile-platform-styles.css">
     <link rel="stylesheet" href="styles/dialog-positioning.css">
-    <link rel="stylesheet" href="styles/touch-navigation-prevention.css">
     <link rel="stylesheet" href="styles/console-context-menu.css">
     <link rel="stylesheet" href="styles/user-settings.css">
 </head>
@@ -323,42 +320,6 @@
             } catch (error) {
                 Logger.layout.warn('Failed to apply user settings immediately:', error);
             }
-        }
-
-        // Mobile Interface Manager - Initialize FIRST
-        let MobileInterfaceManager;
-        try {
-            const { mobileInterfaceManager } = await import('./src/managers/MobileInterfaceManager.js');
-            MobileInterfaceManager = mobileInterfaceManager;
-            Logger.mobile.info('📱 Mobile Interface Manager initialized');
-        } catch (error) {
-            Logger.mobile.warn('Mobile Interface Manager initialization failed:', error);
-            // Create fallback mobile manager
-            MobileInterfaceManager = {
-                isMobile: () => false,
-                isIOS: () => false,
-                isAndroid: () => false,
-                adaptElement: () => {},
-                applyMobileStyles: () => {}
-            };
-        }
-
-        // Mobile Scaling - Initialize SECOND
-        let MobileScalingUtils;
-        try {
-            const { MobileScalingUtils: MS } = await import('./src/utils/MobileScalingUtils.js');
-            MobileScalingUtils = MS;
-            MobileScalingUtils.initializeScaling();
-            MobileScalingUtils.setupMobileListeners();
-        } catch (error) {
-            Logger.mobile.warn('Mobile scaling initialization failed:', error);
-            // Create fallback mobile scaling utils
-            MobileScalingUtils = {
-                initializeScaling: () => {},
-                setupMobileListeners: () => {},
-                isMobileDevice: () => false,
-                applyMobileDialogScaling: () => {}
-            };
         }
 
         // User Preferences Manager - Initialize BEFORE LevelEditor

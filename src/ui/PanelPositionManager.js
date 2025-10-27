@@ -874,9 +874,6 @@ export class PanelPositionManager {
             e.stopPropagation();
         });
 
-        // Register with TouchSupportManager using TouchSupportUtils
-        this.registerTouchSupportForResizer(resizer, panel, panelSide, 'horizontal');
-
         // Mouse move - resize panel using unified logic
         const handleMouseMove = (e) => {
             if (!isResizing) return;
@@ -948,7 +945,7 @@ export class PanelPositionManager {
             return;
         }
 
-        // Use UnifiedTouchManager instead of TouchSupportManager
+        // Register touch support for resizer
         const config = {
             direction: direction,
             minSize: 100,
@@ -1466,12 +1463,9 @@ export class PanelPositionManager {
             e.preventDefault();
             e.stopPropagation();
             
-            // Use unified resize calculation from TouchSupportManager
-            const newHeight = this.levelEditor.touchSupportManager.calculateVerticalPanelSize(
-                resizer, 
-                e, 
-                { startY: initialMouseY, initialSize: initialPanelHeight }
-            );
+            // Calculate new height based on mouse movement
+            const deltaY = e.clientY - initialMouseY;
+            const newHeight = Math.max(100, Math.min(800, initialPanelHeight + deltaY));
             
             // Use unified resize logic
             this.handlePanelResize(panel, 'assets', 'vertical', newHeight);
@@ -1543,10 +1537,6 @@ export class PanelPositionManager {
             
             this.togglePanelCollapse('assets', shouldCollapse);
         });
-
-        // Register with TouchSupportManager using TouchSupportUtils
-        // Register touch support immediately after resizer is created
-        this.registerTouchSupportForResizer(resizer, panel, 'assets', 'vertical');
 
         Logger.ui.debug('Setup assets panel resizer with legacy functionality');
     }

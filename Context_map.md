@@ -14,7 +14,7 @@
 
 ### Основные компоненты
 - **LevelEditor** - главный класс, координатор всех систем
-- **13 менеджеров** - StateManager, ConfigManager, HistoryManager, TouchSupportManager, EventHandlerManager, UnifiedTouchManager, GlobalEventRegistry
+- **11 менеджеров** - StateManager, ConfigManager, HistoryManager, EventHandlerManager, GlobalEventRegistry
 - **13 core операций** - ObjectOperations, LayerOperations, HistoryOperations, DuplicateOperations, GroupOperations, RenderOperations, ViewportOperations, LevelFileOperations
 - **UI компоненты** - панели (AssetPanel, DetailsPanel, LayersPanel, OutlinerPanel, SettingsPanel), диалоги (BaseDialog)
 
@@ -40,9 +40,6 @@ configManager.loadAllConfigs()
 eventHandlerManager.registerElement(element, handlers, elementId)
 eventHandlerManager.registerTouchElement(element, configType, config, elementId)
 
-// UnifiedTouchManager
-unifiedTouchManager.registerElement(element, configType, config, elementId)
-
 // GlobalEventRegistry
 globalEventRegistry.registerComponentHandlers(componentId, handlers, target)
 ```
@@ -61,7 +58,6 @@ globalEventRegistry.registerComponentHandlers(componentId, handlers, target)
 - `src/managers/ConfigManager.js` - конфигурация
 - `src/managers/HistoryManager.js` - undo/redo
 - `src/managers/EventHandlerManager.js` - события
-- `src/event-system/UnifiedTouchManager.js` - тач-события
 - `src/event-system/GlobalEventRegistry.js` - глобальные события
 
 ### UI
@@ -81,9 +77,8 @@ globalEventRegistry.registerComponentHandlers(componentId, handlers, target)
 1. **StateManager** - единый источник состояния
 2. **ConfigManager** - конфигурация
 3. **EventHandlerManager** - все события UI
-4. **UnifiedTouchManager** - тач-события
-5. **GlobalEventRegistry** - глобальные события
-6. **CacheManager** - кэширование
+4. **GlobalEventRegistry** - глобальные события
+5. **CacheManager** - кэширование
 
 ### Модульная архитектура
 - Каждая операция в отдельном файле (ObjectOperations, LayerOperations, etc.)
@@ -119,11 +114,6 @@ const gridSize = configManager.get('grid.size');
 ### Регистрация событий
 ```javascript
 eventHandlerManager.registerElement(button, { click: onClick }, 'button-id');
-```
-
-### Тач-поддержка
-```javascript
-unifiedTouchManager.registerElement(element, 'panelResizer', { direction: 'horizontal' });
 ```
 
 ## 📚 Документация (приоритет)

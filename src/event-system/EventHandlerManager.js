@@ -13,6 +13,7 @@
  */
 
 import { Logger } from '../utils/Logger.js';
+import { EventHandlerUtils } from './EventHandlerUtils.js';
 
 export class EventHandlerManager {
     constructor() {
@@ -560,9 +561,9 @@ export class EventHandlerManager {
     }
 
     /**
-     * Register touch element with TouchSupportManager integration
+     * Register touch element with integration
      * @param {HTMLElement} element - Element to register
-     * @param {string} configType - Touch configuration type
+     * @param {string} configType - Configuration type
      * @param {Object} customConfig - Custom configuration
      * @param {string} elementId - Element ID for debugging
      */
@@ -607,33 +608,28 @@ export class EventHandlerManager {
             return;
         }
 
-        // Import EventHandlerUtils dynamically
-        import('./EventHandlerUtils.js').then(({ EventHandlerUtils }) => {
-            // Create unified handlers for canvas
-            const canvasHandlers = {
-                // Mouse events
-                mousedown: config.onMouseDown || (() => {}),
-                mousemove: config.onMouseMove || (() => {}),
-                mouseup: config.onMouseUp || (() => {}),
-                wheel: config.onWheel || (() => {}),
-                dragover: config.onDragOver || (() => {}),
-                drop: config.onDrop || (() => {}),
-                dblclick: config.onDoubleClick || (() => {}),
-                
-                // Touch events
-                touchstart: config.onTouchStart || (() => {}),
-                touchmove: config.onTouchMove || (() => {}),
-                touchend: config.onTouchEnd || (() => {}),
-                touchcancel: config.onTouchCancel || (() => {})
-            };
+        // Create unified handlers for canvas
+        const canvasHandlers = {
+            // Mouse events
+            mousedown: config.onMouseDown || (() => {}),
+            mousemove: config.onMouseMove || (() => {}),
+            mouseup: config.onMouseUp || (() => {}),
+            wheel: config.onWheel || (() => {}),
+            dragover: config.onDragOver || (() => {}),
+            drop: config.onDrop || (() => {}),
+            dblclick: config.onDoubleClick || (() => {}),
 
-            // Register canvas with EventHandlerManager
-            this.registerElement(canvas, canvasHandlers, canvasId);
-            
-            Logger.event.debug('🎯 Canvas registered with unified handlers', { canvasId });
-        }).catch(error => {
-            Logger.event.error('EventHandlerManager: Failed to load EventHandlerUtils:', error);
-        });
+            // Touch events
+            touchstart: config.onTouchStart || (() => {}),
+            touchmove: config.onTouchMove || (() => {}),
+            touchend: config.onTouchEnd || (() => {}),
+            touchcancel: config.onTouchCancel || (() => {})
+        };
+
+        // Register canvas with EventHandlerManager
+        this.registerElement(canvas, canvasHandlers, canvasId);
+
+        Logger.event.debug('🎯 Canvas registered with unified handlers', { canvasId, canvasElement: canvas });
     }
 
     /**

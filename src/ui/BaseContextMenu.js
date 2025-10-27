@@ -14,7 +14,7 @@ import { Logger } from '../utils/Logger.js';
  * - Smooth show/hide animations
  * - Browser context menu blocking
  * - Support for different menu item types
- * - Responsiveness and mobile optimization
+ * - Responsiveness optimization
  * 
  * Usage:
  * ```javascript
@@ -318,7 +318,7 @@ export class BaseContextMenu {
         // Store cursor position for animation end checks
         this.lastCursorX = event.clientX;
         this.lastCursorY = event.clientY;
-        
+
         // Store context data for menu item handlers
         this.lastContextData = contextData;
 
@@ -351,8 +351,12 @@ export class BaseContextMenu {
         // Trigger animation and start cursor monitoring
         requestAnimationFrame(() => {
             contextMenu.classList.add('show');
-            // Start continuous cursor monitoring during animation
-            this.startCursorMonitoring(contextMenu);
+
+            // For canvas context menu, skip cursor monitoring as it's not needed
+            if (this.constructor.name !== 'CanvasContextMenu') {
+                // Start continuous cursor monitoring during animation
+                this.startCursorMonitoring(contextMenu);
+            }
         });
 
         // Setup menu closing on mouse leave

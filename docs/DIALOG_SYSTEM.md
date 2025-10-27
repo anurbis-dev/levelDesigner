@@ -53,7 +53,6 @@
 - `renderGeneralSettings()` → `renderGeneralSettingsRefactored()`
 - `renderColorsSettings()` → `renderColorsSettingsRefactored()`
 - `renderSelectionSettings()` → `renderSelectionSettingsRefactored()`
-- `renderTouchSettings()` → `renderTouchSettingsRefactored()`
 - `renderCameraSettings()` → `renderCameraSettingsRefactored()`
 - `renderAssetsSettings()` → `renderAssetsSettingsRefactored()`
 - `renderPerformanceSettings()` → `renderPerformanceSettingsRefactored()`
@@ -91,7 +90,6 @@ dialog.show();
 - `.dialog-header` - заголовок
 - `.dialog-content` - контент
 - `.dialog-footer` - подвал
-- `.mobile-dialog` - мобильная адаптация
 
 ## Параметры
 

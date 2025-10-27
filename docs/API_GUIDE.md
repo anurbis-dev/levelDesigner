@@ -1,13 +1,3 @@
-### UnifiedTouchManager (src/event-system/UnifiedTouchManager.js)
-Унифицированная система тач-событий.
-
-#### Основные методы:
-- `registerElement(element, configType, customConfig, elementId)` - регистрация элемента
-- `unregisterElement(element)` - отмена регистрации
-- `destroy()` - уничтожение менеджера
-- `calculateHorizontalPanelSize()` - расчет размера горизонтальных панелей
-- `calculateVerticalPanelSize()` - расчет размера вертикальных панелей
-
 ### GlobalEventRegistry (src/event-system/GlobalEventRegistry.js)
 Глобальная регистрация событий компонентов.
 
@@ -96,7 +86,6 @@
 - `registerResizer(resizer, panel, panelSide, direction, onDoubleClick)` - регистрация разделителя
 - `unregisterResizer(resizer)` - удаление разделителя
 - `setupMouseEvents(resizer, panel, panelSide, direction)` - настройка mouse событий
-- `setupTouchEvents(resizer, panel, panelSide, direction)` - настройка touch событий
 - `handlePanelResize(panel, panelSide, direction, newSize)` - унифицированная логика изменения размера
 - `savePanelSize(panelSide, direction, size)` - сохранение размера панели
 - `destroy()` - уничтожение менеджера и очистка всех разделителей

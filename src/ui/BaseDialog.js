@@ -4,7 +4,6 @@
  * Provides common functionality for all dialog windows including:
  * - Fixed height based on viewport size
  * - Dynamic width calculation based on content
- * - Mobile interface adaptations
  * - Event handling and cleanup
  * - Consistent styling and positioning
  * 
@@ -39,25 +38,10 @@ export class BaseDialog {
         this.container = null;
         this.isVisible = false;
         this.widthCalculated = false;
-        this.mobileManager = null;
-        
-        // Initialize mobile interface manager
-        this.initMobileManager();
         
         Logger.ui.info(`${this.constructor.name} initialized with config:`, this.config);
     }
 
-    /**
-     * Initialize mobile interface manager
-     */
-    async initMobileManager() {
-        try {
-            const { mobileInterfaceManager } = await import('../managers/MobileInterfaceManager.js');
-            this.mobileManager = mobileInterfaceManager;
-        } catch (error) {
-            Logger.ui.warn('Failed to load mobile interface manager:', error);
-        }
-    }
 
     /**
      * Create dialog HTML structure
@@ -74,9 +58,7 @@ export class BaseDialog {
         // Create dialog container
         this.container = document.createElement('div');
         this.container.id = this.config.id;
-        this.container.className = 'dialog-container mobile-dialog';
-        
-        // Store reference to BaseDialog instance for MobileInterfaceManager
+        this.container.className = 'dialog-container';
         this.container._baseDialogInstance = this;
         
         // Set initial styles - width will be calculated later
@@ -245,8 +227,6 @@ export class BaseDialog {
         // Update display to flex while preserving other styles
         this.overlay.classList.add('dialog-visible');
         this.overlay.style.display = 'flex';
-
-        // Mobile interface adaptations are not needed for overlay elements
 
         // Setup event handlers and calculate size after DOM is ready
         setTimeout(() => {

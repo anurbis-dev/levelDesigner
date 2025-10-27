@@ -95,11 +95,6 @@ export class UniversalDialog {
      * @param {string} defaultValue - Default value for prompt
      */
     createDialog(type, message, defaultValue = '') {
-        // Import mobile interface manager
-        import('../managers/MobileInterfaceManager.js').then(({ mobileInterfaceManager }) => {
-            this.mobileManager = mobileInterfaceManager;
-        });
-        
         // Create overlay
         this.overlay = document.createElement('div');
         this.overlay.id = 'universal-dialog-overlay';
@@ -109,7 +104,7 @@ export class UniversalDialog {
         // Create dialog container
         this.dialog = document.createElement('div');
         this.dialog.id = 'universal-dialog';
-        this.dialog.className = 'mobile-dialog';
+        this.dialog.className = 'dialog-container';
         this.dialog.style.cssText = `
             background-color: #1f2937;
             border: 1px solid #374151;
@@ -199,7 +194,7 @@ export class UniversalDialog {
             input.type = 'text';
             input.value = defaultValue;
             input.id = 'universal-dialog-input';
-            input.className = 'dialog-input mobile-input';
+            input.className = 'dialog-input';
             input.style.width = '100%';
             content.appendChild(input);
         }
@@ -242,11 +237,6 @@ export class UniversalDialog {
         // Store dialog instance reference for external handlers
         this.overlay._dialogInstance = this;
 
-        // Apply mobile interface adaptations for dialog container only
-        if (this.mobileManager) {
-            this.mobileManager.adaptElement(this.dialog);
-        }
-
         // Store input reference for prompt
         if (input) {
             this.input = input;
@@ -263,7 +253,7 @@ export class UniversalDialog {
     createButton(text, type, onClick) {
         const button = document.createElement('button');
         button.textContent = text;
-        button.className = `dialog-btn mobile-button ${type === 'primary' ? 'dialog-btn-save' : 'dialog-btn-cancel'}`;
+        button.className = `dialog-btn ${type === 'primary' ? 'dialog-btn-save' : 'dialog-btn-cancel'}`;
         button.dataset.type = type; // Add data-type attribute for UniversalWindowHandlers
 
         // Event handlers will be set up by EventHandlerManager

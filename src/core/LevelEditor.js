@@ -4,7 +4,6 @@ import { AssetManager } from '../managers/AssetManager.js';
 import { FileManager } from '../managers/FileManager.js';
 import { ConfigManager } from '../managers/ConfigManager.js';
 import { CacheManager } from '../managers/CacheManager.js';
-import { TouchSupportManager } from '../managers/TouchSupportManager.js';
 import { ResizerManager } from '../managers/ResizerManager.js';
 import { SearchSectionUtils } from '../utils/SearchSectionUtils.js';
 import { CanvasRenderer } from '../ui/CanvasRenderer.js';
@@ -39,7 +38,6 @@ import { ColorUtils } from '../utils/ColorUtils.js';
 import { dialogReplacer } from '../utils/DialogReplacer.js';
 import { ActorPropertiesWindow } from '../ui/ActorPropertiesWindow.js';
 import { PanelPositionManager } from '../ui/PanelPositionManager.js';
-import { TouchInitializationManager } from '../managers/TouchInitializationManager.js';
 import { BrowserGesturePreventionManager } from '../managers/BrowserGesturePreventionManager.js';
 
 // Import new utilities
@@ -73,8 +71,6 @@ export class LevelEditor {
         this.assetManager = new AssetManager(this.stateManager);
         this.fileManager = new FileManager();
         this.browserGesturePreventionManager = new BrowserGesturePreventionManager();
-        this.touchSupportManager = new TouchSupportManager(this.stateManager, this.browserGesturePreventionManager);
-        this.touchInitializationManager = new TouchInitializationManager(this);
         this.resizerManager = new ResizerManager(this);
         
         // Store user preferences manager
@@ -122,7 +118,6 @@ export class LevelEditor {
         // Initialize operation modules
         this.eventHandlers = new EventHandlers(this);
         this.mouseHandlers = new MouseHandlers(this);
-        this.touchHandlers = null; // Will be initialized by EventHandlers
         this.objectOperations = new ObjectOperations(this);
         this.groupOperations = new GroupOperations(this);
         this.renderOperations = new RenderOperations(this);
@@ -463,8 +458,6 @@ export class LevelEditor {
 
         // Register canvas context menu with the manager
         this.contextMenuManager.registerMenu('canvas', this.canvasContextMenu);
-
-        // Touch gestures for canvas will be initialized by TouchInitializationManager
         
         // Initialize browser gesture prevention system
         this.browserGesturePreventionManager.initialize();
@@ -728,18 +721,6 @@ export class LevelEditor {
         // Update all panels
         this.updateAllPanels();
 
-        // Initialize touch support after all UI elements are ready
-        await this.initializeTouchSupport();
-        
-        // Initialize touch gesture thresholds from user configuration
-        const touchConfig = this.configManager?.get('touchSupport.elements.twoFingerPan') || {};
-        const zoomConfig = this.configManager?.get('touchSupport.elements.twoFingerZoom') || {};
-        
-        this.stateManager.set('touch.panThreshold', touchConfig.minMovement || 5);
-        this.stateManager.set('touch.zoomThreshold', 0.03); // Fixed threshold for zoom detection
-        this.stateManager.set('touch.panSensitivity', touchConfig.sensitivity || 1.0);
-        this.stateManager.set('touch.zoomIntensity', zoomConfig.sensitivity || 0.1);
-
         // Auto-set parallax start position to current camera position
         const currentCamera = this.stateManager.get('camera');
         this.stateManager.set('parallax.startPosition', {
@@ -769,21 +750,6 @@ export class LevelEditor {
         this.testPanningDetection();
         this.testMenuAutoClose();
         this.testCursorPositioning();
-    }
-
-    /**
-     * Initialize touch support for all UI elements
-     * @private
-     */
-    async initializeTouchSupport() {
-        Logger.ui.debug('LevelEditor: initializeTouchSupport called');
-        Logger.ui.debug('LevelEditor: touchInitializationManager available:', !!this.touchInitializationManager);
-        try {
-            await this.touchInitializationManager.initializeAllTouchSupport();
-            Logger.ui.debug('Touch support initialized successfully');
-        } catch (error) {
-            Logger.ui.error('Failed to initialize touch support:', error);
-        }
     }
 
     /**
@@ -2235,45 +2201,6 @@ export class LevelEditor {
         this.lifecycle = null;
         
         Logger.lifecycle.info('LevelEditor destroyed successfully');
-    }
-
-    // ===== TOUCH GESTURE HANDLERS =====
-
-    /**
-     * Start touch marquee selection
-     * @param {number} startX - Start X coordinate
-     * @param {number} startY - Start Y coordinate
-     */
-    startTouchMarquee(startX, startY) {
-        // Convert screen coordinates to world coordinates
-        const camera = this.stateManager.get('camera');
-        const worldPos = this.canvasRenderer.screenToWorld(startX, startY, camera);
-        
-        // Check if touching an object
-        const clickedObject = this.objectOperations.findObjectAtPoint(worldPos.x, worldPos.y);
-        
-        if (clickedObject) {
-            // If touching an object, cancel marquee and start object move instead
-            this.stateManager.set('mouse.isMarqueeSelecting', false);
-            this.stateManager.set('mouse.marqueeStartX', null);
-            this.stateManager.set('mouse.marqueeStartY', null);
-            this.stateManager.set('mouse.marqueeRect', null);
-            
-            this.startTouchObjectMove(clickedObject, worldPos);
-        } else {
-            // If touching empty space, start marquee selection
-            this.stateManager.set('mouse.isMarqueeSelecting', true);
-            this.stateManager.set('mouse.marqueeStartX', worldPos.x);
-            this.stateManager.set('mouse.marqueeStartY', worldPos.y);
-            this.stateManager.set('mouse.marqueeRect', {
-                x: worldPos.x,
-                y: worldPos.y,
-                width: 0,
-                height: 0
-            });
-            
-            Logger.ui.debug('Touch marquee started at:', worldPos);
-        }
     }
 
     /**

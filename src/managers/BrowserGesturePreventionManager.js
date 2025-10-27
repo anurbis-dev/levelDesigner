@@ -119,7 +119,6 @@ export class BrowserGesturePreventionManager {
         // Global touch start handler
         const globalTouchStartHandler = (e) => {
             // Only track single touch for navigation prevention
-            // Multi-touch gestures are handled by TouchSupportManager
             if (e.touches.length === 1) {
                 const touch = e.touches[0];
                 this.touchStartData.x = touch.clientX;
@@ -137,7 +136,7 @@ export class BrowserGesturePreventionManager {
 
         // Global touch move handler - prevent browser navigation
         const globalTouchMoveHandler = (e) => {
-            // Only handle single touch gestures - let multi-touch gestures be handled by TouchSupportManager
+            // Only handle single touch gestures
             if (e.touches.length === 1 && this.touchStartData.x !== 0) {
                 const touch = e.touches[0];
                 const deltaX = touch.clientX - this.touchStartData.x;

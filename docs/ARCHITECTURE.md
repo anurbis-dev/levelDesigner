@@ -3,7 +3,6 @@
 **📚 Навигация:**
 - [Development Guide](./DEVELOPMENT_GUIDE.md) - примеры использования
 - [API Guide](./API_GUIDE.md) - API методы
-- [Touch Support](./TOUCH_SUPPORT.md) - тач-система
 
 ## 🏗️ Утилитарная архитектура
 
@@ -24,16 +23,9 @@
 
 ### EventHandlerManager (v3.52.5)
 **Файл**: `src/event-system/EventHandlerManager.js`
-- Унифицированный менеджер событий UI (mouse + touch)
+- Унифицированный менеджер событий UI
 - Event delegation для эффективности
-- Автоматическая интеграция с UnifiedTouchManager
 - Предотвращение дублирования обработчиков
-
-### UnifiedTouchManager (v3.52.5)
-**Файл**: `src/event-system/UnifiedTouchManager.js`
-- Унифицированная touch система
-- Интеграция с EventHandlerManager
-- Централизованная очистка
 
 ### GlobalEventRegistry (v3.52.5)
 **Файл**: `src/event-system/GlobalEventRegistry.js`

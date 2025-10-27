@@ -46,13 +46,3 @@
     padding-top: 4px;
 }
 
-/* Mobile optimization for canvas menu */
-@media (max-width: 480px) {
-    .base-context-menu.canvas-context {
-        min-width: 180px;
-    }
-    
-    .base-context-menu.canvas-context .base-context-menu-item {
-        padding: 14px 16px; /* Larger touch targets for canvas operations */
-    }
-}

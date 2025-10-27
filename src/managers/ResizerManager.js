@@ -129,19 +129,13 @@ export class ResizerManager {
             
             let newSize;
             if (direction === 'horizontal') {
-                // Use unified resize calculation from TouchSupportManager
-                newSize = this.touchSupportManager?.calculateHorizontalPanelSize(
-                    resizer, 
-                    e, 
-                    { startX: initialMouseX, startY: initialMouseY }
-                ) || initialPanelSize;
+                // Calculate new width based on mouse movement
+                const deltaX = e.clientX - initialMouseX;
+                newSize = Math.max(100, Math.min(800, initialPanelSize + deltaX));
             } else {
-                // Use unified resize calculation from TouchSupportManager
-                newSize = this.touchSupportManager?.calculateVerticalPanelSize(
-                    resizer, 
-                    e, 
-                    { startY: initialMouseY, initialSize: initialPanelSize }
-                ) || initialPanelSize;
+                // Calculate new height based on mouse movement
+                const deltaY = e.clientY - initialMouseY;
+                newSize = Math.max(100, Math.min(800, initialPanelSize + deltaY));
             }
             
             // Apply resize using unified logic
@@ -201,12 +195,9 @@ export class ResizerManager {
         const resizerData = this.activeResizers.get(resizer);
         if (!resizerData || resizerData.touchRegistered) return;
 
-        // Register with TouchSupportManager using TouchSupportUtils
-        if (this.touchInitializationManager) {
-            this.touchInitializationManager.registerPanelResizerTouchSupport(resizer, panel, panelSide, direction);
-            resizerData.touchRegistered = true;
-            Logger.ui.debug(`ResizerManager: Touch support registered for ${panelSide} resizer`);
-        }
+        // Touch support is no longer needed
+        resizerData.touchRegistered = true;
+        Logger.ui.debug(`ResizerManager: Touch support disabled for ${panelSide} resizer`);
     }
 
     /**

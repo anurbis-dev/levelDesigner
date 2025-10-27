@@ -89,7 +89,6 @@ export class ContextMenuManager {
      * @param {Object} contextData - Additional context data
      */
     showMenu(menuName, event, contextData = {}) {
-
         // Check if the requested menu is already active
         const isSameMenuType = this.currentActiveMenu === menuName;
 
@@ -118,7 +117,6 @@ export class ContextMenuManager {
             }
 
             this.currentActiveMenu = menuName;
-        } else {
         }
     }
 

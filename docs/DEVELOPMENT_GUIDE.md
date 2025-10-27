@@ -68,15 +68,6 @@ const input = UIFactory.createLabeledInput({
 });
 ```
 
-### Тач-поддержка:
-```javascript
-touchManager.registerElement(element, 'panelResizer', { 
-    direction: 'horizontal',
-    onResize: (element, targetPanel, newSize) => {
-        targetPanel.style.width = newSize + 'px';
-    }
-});
-```
 
 ### Обработка событий:
 ```javascript
@@ -410,7 +401,6 @@ class ActorPropertiesWindow {
 
 #### Основные принципы:
 - **Единая точка управления** - все разделители регистрируются в ResizerManager
-- **Автоматическое переключение** - touch поддержка включается/отключается автоматически
 - **Fallback совместимость** - система работает даже при недоступности ResizerManager
 - **Централизованное сохранение** - все размеры сохраняются автоматически
 
@@ -430,24 +420,6 @@ if (this.levelEditor?.resizerManager) {
 }
 ```
 
-#### Настройка touch поддержки:
-```javascript
-// ResizerManager автоматически подписывается на изменения
-this.stateManager.subscribe('touch.enabled', (enabled) => {
-    this.isTouchEnabled = enabled;
-    this.updateAllResizersTouchSupport();
-});
-
-// Динамическое переключение
-if (this.isTouchEnabled && !resizerData.touchRegistered) {
-    // Включить touch поддержку
-    this.setupTouchEvents(resizer, resizerData.panel, resizerData.panelSide, resizerData.direction);
-} else if (!this.isTouchEnabled && resizerData.touchRegistered) {
-    // Отключить touch поддержку
-    this.touchSupportManager?.unregisterElement(resizer);
-}
-```
-
 #### Legacy поддержка:
 ```javascript
 // Fallback методы для совместимости
@@ -456,9 +428,6 @@ setupLegacyPanelResizer(resizer, panel, panelSide) {
     resizer.addEventListener('mousedown', (e) => {
         // ... legacy код
     });
-    
-    // Регистрация touch поддержки
-    this.registerTouchSupportForResizer(resizer, panel, panelSide, 'horizontal');
 }
 ```
 

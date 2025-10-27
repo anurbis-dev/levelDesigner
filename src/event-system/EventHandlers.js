@@ -2,9 +2,7 @@ import { BaseModule } from '../core/BaseModule.js';
 import { Logger } from '../utils/Logger.js';
 import { SearchSectionUtils } from '../utils/SearchSectionUtils.js';
 import { MENU_CONFIG, getShortcutTarget } from '../../config/menu.js';
-import { TouchHandlers } from './TouchHandlers.js';
 import { eventHandlerManager } from './EventHandlerManager.js';
-import { UnifiedTouchManager } from './UnifiedTouchManager.js';
 import { globalEventRegistry } from './GlobalEventRegistry.js';
 
 /**
@@ -23,16 +21,7 @@ export class EventHandlers extends BaseModule {
         // Track MutationObservers for cleanup
         this.mutationObservers = [];
         
-        // Initialize touch handlers (legacy support)
-        this.touchHandlers = new TouchHandlers(levelEditor);
-        levelEditor.touchHandlers = this.touchHandlers;
-        
-        // Initialize unified touch manager
-        this.unifiedTouchManager = new UnifiedTouchManager(levelEditor, eventHandlerManager);
-        levelEditor.unifiedTouchManager = this.unifiedTouchManager;
-        
-        // Set UnifiedTouchManager in EventHandlerManager
-        eventHandlerManager.setUnifiedTouchManager(this.unifiedTouchManager);
+        Logger.event.info('EventHandlers initialized');
     }
 
     /**
@@ -45,9 +34,6 @@ export class EventHandlers extends BaseModule {
         // Canvas events
         this.setupCanvasEvents();
         
-        // Touch events
-        this.setupTouchEvents();
-
         // Keyboard events
         this.setupKeyboardEvents();
 
@@ -87,6 +73,12 @@ export class EventHandlers extends BaseModule {
             resize: () => {
                 if (this._destroyed) return;
                 this.editor.canvasRenderer.resizeCanvas();
+                // Re-register canvas events after resize (canvas element is recreated)
+                this.setupCanvasEvents();
+                // Re-register canvas context menu handler
+                if (this.editor.canvasContextMenu) {
+                    this.editor.canvasContextMenu.setupContextMenu();
+                }
                 this.editor.render();
             },
             
@@ -94,28 +86,6 @@ export class EventHandlers extends BaseModule {
             mousedown: (e) => this.editor.mouseHandlers.handleGlobalMouseDown(e),
             mousemove: (e) => this.editor.mouseHandlers.handleGlobalMouseMove(e),
             mouseup: (e) => this.editor.mouseHandlers.handleGlobalMouseUp(e),
-            
-            // Global touch events disabled temporarily
-            // touchstart: (e) => {
-            //     if (e.target !== this.editor.canvasRenderer.canvas) {
-            //         this.touchHandlers.handleTouchStart(e);
-            //     }
-            // },
-            // touchmove: (e) => {
-            //     if (e.target !== this.editor.canvasRenderer.canvas) {
-            //         this.touchHandlers.handleTouchMove(e);
-            //     }
-            // },
-            // touchend: (e) => {
-            //     if (e.target !== this.editor.canvasRenderer.canvas) {
-            //         this.touchHandlers.handleTouchEnd(e);
-            //     }
-            // },
-            // touchcancel: (e) => {
-            //     if (e.target !== this.editor.canvasRenderer.canvas) {
-            //         this.touchHandlers.handleTouchCancel(e);
-            //     }
-            // },
             
             // Keyboard events
             keydown: (e) => {
@@ -231,52 +201,16 @@ export class EventHandlers extends BaseModule {
             onWheel: (e) => this.editor.mouseHandlers.handleWheel(e),
             onDoubleClick: (e) => this.editor.mouseHandlers.handleDoubleClick(e),
             onDragOver: (e) => this.editor.mouseHandlers.handleDragOver(e),
-            onDrop: (e) => this.editor.mouseHandlers.handleDrop(e),
-            
-            // Touch events disabled temporarily
-            // onTouchStart: (e) => this.handleCanvasTouchStart(e),
-            // onTouchMove: (e) => this.handleCanvasTouchMove(e),
-            // onTouchEnd: (e) => this.handleCanvasTouchEnd(e),
-            // onTouchCancel: (e) => this.handleCanvasTouchCancel(e)
+            onDrop: (e) => this.editor.mouseHandlers.handleDrop(e)
         };
         
         // Register canvas with unified handlers
         eventHandlerManager.registerCanvas(canvas, canvasConfig, 'main-canvas');
-        
-        // UnifiedTouchManager registration disabled temporarily
-        // if (this.unifiedTouchManager) {
-        //     this.unifiedTouchManager.registerElement(canvas, 'canvas', {
-        //         enablePan: true,
-        //         enableZoom: true,
-        //         enableMarquee: true,
-        //         enableContextMenu: true
-        //     }, 'main-canvas');
-        // }
-    }
-
-    setupTouchEvents() {
-        // Touch events are now handled in setupWindowEvents
-        // This method is kept for compatibility but does nothing
     }
 
     /**
-     * Handle canvas touch events (delegate to TouchHandlers)
+     * Setup keyboard event handlers
      */
-    handleCanvasTouchStart(e) {
-        this.touchHandlers.handleTouchStart(e);
-    }
-
-    handleCanvasTouchMove(e) {
-        this.touchHandlers.handleTouchMove(e);
-    }
-
-    handleCanvasTouchEnd(e) {
-        this.touchHandlers.handleTouchEnd(e);
-    }
-
-    handleCanvasTouchCancel(e) {
-        this.touchHandlers.handleTouchCancel(e);
-    }
 
     setupKeyboardEvents() {
         // Keyboard events are now handled in setupWindowEvents
@@ -530,9 +464,6 @@ export class EventHandlers extends BaseModule {
             if (this.editor.updateAllPanels) {
                 this.editor.updateAllPanels();
             }
-            
-            // Touch support is now handled by TouchInitializationManager
-            // No need to call individual touch setup methods
             
             // Don't re-apply panel visibility here - PanelPositionManager handles it
             // based on actual tab positions and panel existence
@@ -1575,11 +1506,6 @@ export class EventHandlers extends BaseModule {
             Logger.event.debug('Cancelled render loop');
         }
         
-        // Clean up UnifiedTouchManager
-        if (this.unifiedTouchManager) {
-            this.unifiedTouchManager.destroy();
-        }
-        
         // Disconnect all MutationObservers
         for (const observer of this.mutationObservers) {
             try {
@@ -1590,11 +1516,6 @@ export class EventHandlers extends BaseModule {
         }
         
         this.mutationObservers = [];
-        
-        // Clean up touch handlers
-        if (this.touchHandlers) {
-            this.touchHandlers.resetTouchState();
-        }
         
         Logger.event.info('EventHandlers destroyed');
     }

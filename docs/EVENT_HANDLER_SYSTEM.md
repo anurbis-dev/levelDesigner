@@ -1,13 +1,12 @@
 # Руководство по системе обработчиков событий v3.52.7
 
 **📚 Связанные документы:**
-- [Touch Support](./TOUCH_SUPPORT.md) - тач-события и жесты
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - архитектура проекта
 - [API Guide](./API_GUIDE.md) - API методы
 
 > **🔄 ОБНОВЛЕНИЕ v3.52.7**: Исправлена проблема с рамкой селекта при отпускании клика за пределами канвы. Добавлена поддержка опций `addEventListener` для надежного захвата событий.
 >
-> **🔄 ОБНОВЛЕНИЕ v3.52.6**: Система событий была полностью рефакторена и унифицирована. Теперь используется **EventHandlerManager** как единый центр регистрации всех событий, включая интеграцию с **UnifiedTouchManager** для touch событий. Добавлена поддержка контекстных меню для табов и исправлена работа двойного клика на разделителях.
+> **🔄 ОБНОВЛЕНИЕ v3.52.6**: Система событий была полностью рефакторена и унифицирована. Теперь используется **EventHandlerManager** как единый центр регистрации всех событий. Добавлена поддержка контекстных меню для табов и исправлена работа двойного клика на разделителях.
 
 ## 🆕 Новая унифицированная архитектура
 
@@ -16,26 +15,14 @@
 
 Теперь поддерживает:
 - **Mouse события** - стандартная регистрация элементов
-- **Touch события** - интеграция с UnifiedTouchManager
-- **Canvas события** - унифицированная регистрация canvas с mouse + touch
+- **Canvas события** - унифицированная регистрация canvas
 - **Глобальные события** - window, document события
 - **Опции addEventListener** - поддержка capture, passive и других опций
 - **Предотвращение дублирования** - автоматическая проверка повторной регистрации
 
 #### Новые методы:
-- `registerTouchElement(element, configType, customConfig, elementId)` - регистрация touch элементов
-- `unregisterTouchElement(element)` - отмена регистрации touch элементов
 - `registerCanvas(canvas, config, canvasId)` - унифицированная регистрация canvas
-- `setUnifiedTouchManager(unifiedTouchManager)` - установка UnifiedTouchManager
 - `isElementRegistered(element, elementId)` - проверка регистрации элемента
-
-### UnifiedTouchManager (новый)
-**Файл**: `src/event-system/UnifiedTouchManager.js`
-
-Объединяет функциональность:
-- **TouchSupportManager** - продвинутое распознавание жестов
-- **TouchHandlers** - обработка raw touch событий (legacy поддержка)
-- **EventHandlerManager** - централизованная регистрация событий
 
 ### GlobalEventRegistry (новый)
 **Файл**: `src/event-system/GlobalEventRegistry.js`
@@ -87,7 +74,6 @@
 ```javascript
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
-import { UnifiedTouchManager } from '../event-system/UnifiedTouchManager.js';
 
 // Создание обработчиков для диалога
 const dialogHandlers = EventHandlerUtils.createDialogHandlers(
@@ -99,21 +85,8 @@ const dialogHandlers = EventHandlerUtils.createDialogHandlers(
 // Регистрация контейнера
 eventHandlerManager.registerContainer(dialogElement, dialogHandlers);
 
-// Регистрация touch элементов через UnifiedTouchManager
-const unifiedTouchManager = new UnifiedTouchManager(levelEditor, eventHandlerManager);
-eventHandlerManager.setUnifiedTouchManager(unifiedTouchManager);
-
-// Регистрация touch элемента
-eventHandlerManager.registerTouchElement(element, 'panelResizer', {
-    direction: 'horizontal',
-    onResize: (element, targetPanel, newSize) => {
-        targetPanel.style.width = newSize + 'px';
-    }
-}, 'my-resizer');
-
 // Очистка при уничтожении
 eventHandlerManager.unregisterContainer(dialogElement);
-eventHandlerManager.unregisterTouchElement(element);
 ```
 
 ### Типы обработчиков
@@ -144,37 +117,12 @@ const contextMenuHandlers = SimpleEventHandlerUtils.createContextMenuHandlers(
 );
 ```
 
-#### Touch события (НОВЫЙ раздел v3.52.5)
-```javascript
-// Регистрация touch элемента через EventHandlerManager
-eventHandlerManager.registerTouchElement(element, 'panelResizer', {
-    direction: 'horizontal',
-    minSize: 100,
-    maxSize: 800,
-    onResizeStart: (element, targetPanel, touch) => {
-        console.log('Resize started');
-    },
-    onResize: (element, targetPanel, newSize, touch) => {
-        console.log('Resizing to:', newSize);
-    },
-    onResizeEnd: (element, targetPanel, currentSize) => {
-        console.log('Resize ended:', currentSize);
-    },
-    onDoubleTap: (element, touch) => {
-        console.log('Double tap detected');
-    }
-}, 'my-resizer');
-
-// Регистрация canvas с унифицированными mouse + touch событиями
+// Регистрация canvas с mouse событиями
 eventHandlerManager.registerCanvas(canvas, {
     onMouseDown: (e) => console.log('Mouse down'),
     onMouseMove: (e) => console.log('Mouse move'),
-    onMouseUp: (e) => console.log('Mouse up'),
-    onTouchStart: (e) => console.log('Touch start'),
-    onTouchMove: (e) => console.log('Touch move'),
-    onTouchEnd: (e) => console.log('Touch end')
+    onMouseUp: (e) => console.log('Mouse up')
 }, 'main-canvas');
-```
 
 #### Глобальные события (НОВЫЙ раздел v3.52.5)
 ```javascript
@@ -204,16 +152,10 @@ globalEventRegistry.unregisterComponentHandlers('my-component');
 ### Основные компоненты (ОБНОВЛЕНО v3.52.5)
 
 #### EventHandlerManager (расширенный)
-- **Назначение**: Единый менеджер для всех обработчиков событий (mouse + touch)
+- **Назначение**: Единый менеджер для всех обработчиков событий
 - **Принцип**: Event delegation - один обработчик на контейнер
 - **Очистка**: Автоматическое удаление обработчиков при уничтожении элементов
-- **Интеграция**: Поддержка UnifiedTouchManager для touch событий
 
-#### UnifiedTouchManager (новый)
-- **Назначение**: Унифицированная обработка touch событий
-- **Функциональность**: Объединяет TouchSupportManager + TouchHandlers
-- **Интеграция**: Автоматическая интеграция с EventHandlerManager
-- **Преимущество**: Единый API для всех touch операций
 
 #### EventHandlerUtils
 - **Назначение**: Готовые конфигурации для типовых случаев
@@ -238,13 +180,10 @@ globalEventRegistry.unregisterComponentHandlers('my-component');
 - **Производительность** - event delegation и меньше обработчиков
 - **Надежность** - автоматическая очистка без утечек памяти
 - **Централизация** - все события в одном месте
-- **Унификация** - единый API для mouse и touch событий
 - **Предотвращение дублирования** - автоматическая проверка повторной регистрации
 - **Глобальные события** - централизованное управление document/window событиями
 - **Отслеживание** - централизованное логирование всех операций
-- **Унификация** - единый API для mouse и touch событий
 - **Отсутствие конфликтов** - нет дублирования обработчиков
-- **Интеграция** - автоматическая интеграция touch и mouse систем
 
 ## 🔧 API Reference
 
@@ -258,28 +197,13 @@ globalEventRegistry.unregisterComponentHandlers('my-component');
 - `handlers` (Object) - объект с обработчиками событий
 - `id` (string, optional) - уникальный идентификатор
 
-#### registerTouchElement(element, configType, customConfig, elementId) - НОВЫЙ
-Регистрирует элемент для touch поддержки через UnifiedTouchManager.
-
-**Параметры:**
-- `element` (HTMLElement) - DOM элемент
-- `configType` (string) - тип конфигурации ('panelResizer', 'button', 'canvas', etc.)
-- `customConfig` (Object) - пользовательская конфигурация
-- `elementId` (string, optional) - уникальный идентификатор
-
 #### registerCanvas(canvas, config, canvasId) - НОВЫЙ
-Регистрирует canvas с унифицированными mouse и touch обработчиками.
+Регистрирует canvas с mouse обработчиками.
 
 **Параметры:**
 - `canvas` (HTMLCanvasElement) - canvas элемент
 - `config` (Object) - конфигурация обработчиков
 - `canvasId` (string, optional) - идентификатор canvas
-
-#### setUnifiedTouchManager(unifiedTouchManager) - НОВЫЙ
-Устанавливает UnifiedTouchManager для интеграции touch событий.
-
-**Параметры:**
-- `unifiedTouchManager` (UnifiedTouchManager) - экземпляр UnifiedTouchManager
 
 **Пример:**
 ```javascript
@@ -289,38 +213,6 @@ eventHandlerManager.registerContainer(
     'my-dialog'
 );
 ```
-
-### UnifiedTouchManager (НОВЫЙ v3.52.5)
-
-#### registerElement(element, configType, customConfig, elementId)
-Регистрирует элемент для унифицированной touch поддержки.
-
-**Параметры:**
-- `element` (HTMLElement) - DOM элемент
-- `configType` (string) - тип конфигурации ('panelResizer', 'button', 'canvas', etc.)
-- `customConfig` (Object) - пользовательская конфигурация
-- `elementId` (string, optional) - уникальный идентификатор
-
-**Пример:**
-```javascript
-unifiedTouchManager.registerElement(element, 'panelResizer', {
-    direction: 'horizontal',
-    minSize: 100,
-    maxSize: 800,
-    onResize: (element, targetPanel, newSize) => {
-        targetPanel.style.width = newSize + 'px';
-    }
-}, 'my-resizer');
-```
-
-#### unregisterElement(element)
-Отменяет регистрацию элемента.
-
-**Параметры:**
-- `element` (HTMLElement) - DOM элемент
-
-#### destroy()
-Уничтожает менеджер и очищает все зарегистрированные обработчики.
 
 ### GlobalEventRegistry (НОВЫЙ v3.52.5)
 

@@ -55,13 +55,11 @@ export class CanvasContextMenu extends BaseContextMenu {
      * Override setupContextMenu to use ContextMenuManager
      */
     setupContextMenu() {
-        console.log('CanvasContextMenu: setupContextMenu called for canvas', this.panel);
         // Remove existing context menu handler if it exists
         if (this.contextMenuHandler) {
-            console.log('CanvasContextMenu: Removing existing context menu handler from canvas');
             this.panel.removeEventListener('contextmenu', this.contextMenuHandler);
         }
-        
+
         // Add context menu to panel
         this.contextMenuHandler = (e) => {
             e.preventDefault();
@@ -72,8 +70,7 @@ export class CanvasContextMenu extends BaseContextMenu {
                 this.handleContextMenuEvent(e);
             });
         };
-        
-        console.log('CanvasContextMenu: Adding context menu handler to canvas');
+
         this.panel.addEventListener('contextmenu', this.contextMenuHandler);
     }
 
@@ -82,7 +79,6 @@ export class CanvasContextMenu extends BaseContextMenu {
      * @param {Event} e - The context menu event
      */
     handleContextMenuEvent(e) {
-
         // Check if user was panning (don't show menu after panning)
         const mouseState = this.levelEditor?.stateManager.get('mouse');
 
@@ -102,7 +98,6 @@ export class CanvasContextMenu extends BaseContextMenu {
             // Don't reset here - let the scheduled cleanup in handleMouseUp do it
             return;
         }
-
 
         // Extract context data from clicked element and event
         const contextData = this.extractContextData(e.target, e);

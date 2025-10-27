@@ -486,12 +486,12 @@ export class Logger {
     };
 
     /**
-     * Mobile interface operations logging
+     * Interface operations logging
      */
-    static mobile = {
-        info: (message, ...args) => Logger.log('MOBILE', 'info', message, ...args),
-        debug: (message, ...args) => Logger.log('MOBILE', 'debug', message, ...args),
-        warn: (message, ...args) => Logger.log('MOBILE', 'warn', message, ...args),
-        error: (message, ...args) => Logger.log('MOBILE', 'error', message, ...args)
+    static interface = {
+        info: (message, ...args) => Logger.log('INTERFACE', 'info', message, ...args),
+        debug: (message, ...args) => Logger.log('INTERFACE', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('INTERFACE', 'warn', message, ...args),
+        error: (message, ...args) => Logger.log('INTERFACE', 'error', message, ...args)
     };
 }
