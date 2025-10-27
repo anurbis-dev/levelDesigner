@@ -70,7 +70,12 @@ export class BaseContextMenu {
 
         console.log('BaseContextMenu: Constructor called for panel', panel);
         this.setupContextMenu();
-        this.setupGlobalRightClickHandler();
+        
+        // Only setup global handlers if not disabled
+        if (!callbacks.disableGlobalHandlers) {
+            this.setupGlobalRightClickHandler();
+        }
+        
         this.setupWindowResizeHandler();
         this.setupCursorTracking();
 

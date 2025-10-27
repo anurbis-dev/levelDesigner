@@ -15,14 +15,15 @@ import { MenuPositioningUtils } from '../utils/MenuPositioningUtils.js';
 import { PanelSizeCalculator } from '../utils/PanelSizeCalculator.js';
 
 /**
- * Context menu for asset tabs - using EventHandlerManager approach like other tabs
+ * Context menu for asset tabs - simple implementation without BaseContextMenu
  */
 class AssetTabContextMenu {
     constructor(assetPanel) {
         this.assetPanel = assetPanel;
-        // Context menu handlers are now set up through delegated handlers in setupAssetPanelHandlers()
+        this.currentMenu = null;
+        this.isVisible = false;
+        this.lastContextData = null;
     }
-
 
     /**
      * Handle context menu on asset tab
@@ -32,29 +33,35 @@ class AssetTabContextMenu {
         
         Logger.ui.debug('AssetTabContextMenu: Tab context menu triggered', { category, tab });
 
-        // Create simple context menu
-        this.showTabContextMenu(event, category, tab);
+        // Show context menu with context data
+        this.showMenu(event, { category, tab });
     }
 
     /**
      * Show context menu for asset tab
      */
-    showTabContextMenu(event, category, tab) {
-        // Remove existing context menu
-        const existingMenu = document.querySelector('.asset-tab-context-menu');
-        if (existingMenu) {
-            existingMenu.remove();
+    showMenu(event, contextData) {
+        // Remove existing menu
+        if (this.currentMenu) {
+            this.currentMenu.remove();
+            this.currentMenu = null;
         }
 
-        // Create context menu
+        // Store context data
+        this.lastContextData = contextData;
+        
+        // Create context menu element
         const contextMenu = document.createElement('div');
-        contextMenu.className = 'asset-tab-context-menu base-context-menu show';
+        contextMenu.className = 'asset-tab-context-menu base-context-menu';
+        contextMenu.style.pointerEvents = 'auto';
+        contextMenu.style.userSelect = 'none';
 
-        // Add close option
+        // Add Close menu item
         const closeItem = document.createElement('div');
         closeItem.className = 'base-context-menu-item';
         closeItem.innerHTML = '<span>❌</span><span>Close</span>';
         closeItem.addEventListener('click', () => {
+            const { category } = contextData;
             const activeTabs = new Set(this.assetPanel.stateManager.get('activeAssetTabs'));
             activeTabs.delete(category);
 
@@ -71,29 +78,30 @@ class AssetTabContextMenu {
             this.assetPanel.render();
             
             contextMenu.remove();
+            this.currentMenu = null;
         });
         contextMenu.appendChild(closeItem);
 
-        // Position menu
-        const rect = tab.getBoundingClientRect();
-        contextMenu.style.left = `${event.clientX}px`;
-        contextMenu.style.top = `${event.clientY}px`;
-
-        // Ensure menu stays within viewport
-        const menuRect = contextMenu.getBoundingClientRect();
-        if (menuRect.right > window.innerWidth) {
-            contextMenu.style.left = `${window.innerWidth - menuRect.width - 10}px`;
-        }
-        if (menuRect.bottom > window.innerHeight) {
-            contextMenu.style.top = `${window.innerHeight - menuRect.height - 10}px`;
-        }
-
+        // Add to document
         document.body.appendChild(contextMenu);
 
-        // Close context menu when clicking outside
+        // Position menu using BaseContextMenu logic
+        this.positionContextMenu(event, contextMenu);
+
+        // Store current menu reference
+        this.currentMenu = contextMenu;
+        this.isVisible = true;
+
+        // Show menu with animation
+        requestAnimationFrame(() => {
+            contextMenu.classList.add('show');
+        });
+
+        // Close menu when clicking outside
         const closeMenu = (e) => {
             if (!contextMenu.contains(e.target)) {
                 contextMenu.remove();
+                this.currentMenu = null;
                 document.removeEventListener('click', closeMenu);
             }
         };
@@ -104,11 +112,88 @@ class AssetTabContextMenu {
     }
 
     /**
+     * Position context menu using BaseContextMenu logic
+     * @param {Event} event - The context menu event
+     * @param {HTMLElement} menu - The context menu element
+     */
+    positionContextMenu(event, menu) {
+        const viewport = {
+            width: window.innerWidth,
+            height: window.innerHeight
+        };
+        
+        // Get actual menu dimensions
+        const menuSize = this.getMenuDimensions(menu);
+        
+        const margin = 20; // BaseContextMenu.MENU_VIEWPORT_MARGIN
+        
+        let x = event.pageX;
+        let y = event.pageY;
+        
+        // Determine optimal horizontal position
+        const spaceRight = viewport.width - event.pageX;
+        const spaceLeft = event.pageX;
+        
+        if (spaceRight >= menuSize.width + margin) {
+            x = event.pageX;
+        } else if (spaceLeft >= menuSize.width + margin) {
+            x = event.pageX - menuSize.width;
+        } else {
+            x = Math.max(margin,
+                       Math.min(event.pageX - menuSize.width / 2,
+                               viewport.width - menuSize.width - margin));
+        }
+        
+        // Determine optimal vertical position
+        const spaceBelow = viewport.height - event.pageY;
+        const spaceAbove = event.pageY;
+        
+        if (spaceBelow >= menuSize.height + margin) {
+            y = event.pageY;
+        } else if (spaceAbove >= menuSize.height + margin) {
+            y = event.pageY - menuSize.height;
+        } else {
+            y = Math.max(margin,
+                        Math.min(event.pageY - menuSize.height / 2,
+                                viewport.height - menuSize.height - margin));
+        }
+        
+        menu.style.left = x + 'px';
+        menu.style.top = y + 'px';
+    }
+
+    /**
+     * Get menu dimensions
+     * @param {HTMLElement} menu - The context menu element
+     * @returns {Object} - Object with width and height
+     */
+    getMenuDimensions(menu) {
+        // Force layout calculation
+        menu.style.visibility = 'hidden';
+        menu.style.display = 'block';
+        
+        const rect = menu.getBoundingClientRect();
+        const dimensions = {
+            width: rect.width || 150, // fallback width
+            height: rect.height || 50 // fallback height
+        };
+        
+        // Reset styles
+        menu.style.visibility = '';
+        menu.style.display = '';
+        
+        return dimensions;
+    }
+
+    /**
      * Clean up event handlers
      */
     destroy() {
-        // EventHandlerManager will handle cleanup automatically
-        Logger.ui.debug('AssetTabContextMenu: Destroyed');
+        // Remove current menu if exists
+        if (this.currentMenu) {
+            this.currentMenu.remove();
+            this.currentMenu = null;
+        }
     }
 }
 
@@ -2053,7 +2138,8 @@ export class AssetPanel extends BasePanel {
             onSaveAsset: (asset) => this.handleAssetSave(asset),
             onSaveAssetChanges: (asset) => this.handleAssetSaveChanges(asset),
             onShowInExplorer: (asset) => this.handleAssetShowInExplorer(asset),
-            onDelete: (asset) => this.handleAssetDelete(asset)
+            onDelete: (asset) => this.handleAssetDelete(asset),
+            disableGlobalHandlers: true // Disable global handlers since we use delegated events
         });
 
         // Panel context menu
@@ -2066,7 +2152,8 @@ export class AssetPanel extends BasePanel {
             onRefresh: () => this.handleRefresh(),
             onSettings: () => this.handleSettings(),
             onSelectAll: () => this.handleSelectAll(),
-            onDeselectAll: () => this.handleDeselectAll()
+            onDeselectAll: () => this.handleDeselectAll(),
+            disableGlobalHandlers: true // Disable global handlers since we use delegated events
         });
 
         // Complete deferred initialization for context menus
@@ -2085,9 +2172,7 @@ export class AssetPanel extends BasePanel {
             if (this.panelContextMenu) {
                 this.levelEditor.contextMenuManager.registerMenu('assetPanel', this.panelContextMenu);
             }
-            if (this.assetTabContextMenu) {
-                this.levelEditor.contextMenuManager.registerMenu('assetTab', this.assetTabContextMenu);
-            }
+            // AssetTabContextMenu handles events through delegation, no global registration needed
         }
     }
 

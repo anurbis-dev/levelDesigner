@@ -1,9 +1,180 @@
-import { BaseModule } from '../core/BaseModule.js';
+﻿import { BaseModule } from '../core/BaseModule.js';
 import { Logger } from '../utils/Logger.js';
 import { SearchSectionUtils } from '../utils/SearchSectionUtils.js';
 import { MENU_CONFIG, getShortcutTarget } from '../../config/menu.js';
 import { eventHandlerManager } from './EventHandlerManager.js';
 import { globalEventRegistry } from './GlobalEventRegistry.js';
+
+/**
+ * Context menu for tab movement - simple implementation without BaseContextMenu
+ */
+class TabMoveContextMenu {
+    constructor(editor) {
+        this.editor = editor;
+        this.currentMenu = null;
+        this.isVisible = false;
+        this.lastContextData = null;
+    }
+
+    /**
+     * Show context menu for tab movement
+     */
+    showTabMoveMenu(event, tabName, currentPanel, targetPanel) {
+        // Remove existing menu
+        if (this.currentMenu) {
+            this.currentMenu.remove();
+            this.currentMenu = null;
+        }
+
+        // Store context data
+        this.lastContextData = { tabName, currentPanel, targetPanel };
+        
+        // Create context menu element
+        const contextMenu = document.createElement('div');
+        contextMenu.className = 'tab-move-context-menu base-context-menu';
+        contextMenu.style.pointerEvents = 'auto';
+        contextMenu.style.userSelect = 'none';
+
+        // Determine target panel name
+        const targetPanelName = targetPanel === 'left' ? 'Left' : 'Right';
+
+        // Store reference to this for use in event handler
+        const self = this;
+
+        // Add Move menu item
+        const moveItem = document.createElement('div');
+        moveItem.className = 'base-context-menu-item';
+        moveItem.innerHTML = `<span>↔️</span><span>Move to ${targetPanelName} Panel</span>`;
+        moveItem.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
+            self.editor.panelPositionManager.moveTab(tabName, currentPanel, targetPanel);
+            contextMenu.remove();
+            self.currentMenu = null;
+        });
+        contextMenu.appendChild(moveItem);
+
+        // Add to document
+        document.body.appendChild(contextMenu);
+
+        // Position menu using BaseContextMenu logic
+        this.positionContextMenu(event, contextMenu);
+
+        // Store current menu reference
+        this.currentMenu = contextMenu;
+        this.isVisible = true;
+
+        // Show menu with animation
+        requestAnimationFrame(() => {
+            contextMenu.classList.add('show');
+        });
+
+        // Close menu when clicking outside
+        const closeMenu = (e) => {
+            if (!contextMenu.contains(e.target)) {
+                contextMenu.remove();
+                self.currentMenu = null;
+                document.removeEventListener('click', closeMenu);
+            }
+        };
+        
+        // Add click handler to context menu to prevent closing
+        contextMenu.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+        
+        setTimeout(() => {
+            document.addEventListener('click', closeMenu);
+        }, 0);
+    }
+
+    /**
+     * Position context menu using BaseContextMenu logic
+     * @param {Event} event - The context menu event
+     * @param {HTMLElement} menu - The context menu element
+     */
+    positionContextMenu(event, menu) {
+        const viewport = {
+            width: window.innerWidth,
+            height: window.innerHeight
+        };
+        
+        // Get actual menu dimensions
+        const menuSize = this.getMenuDimensions(menu);
+        
+        const margin = 20; // BaseContextMenu.MENU_VIEWPORT_MARGIN
+        
+        let x = event.pageX;
+        let y = event.pageY;
+        
+        // Determine optimal horizontal position
+        const spaceRight = viewport.width - event.pageX;
+        const spaceLeft = event.pageX;
+        
+        if (spaceRight >= menuSize.width + margin) {
+            x = event.pageX;
+        } else if (spaceLeft >= menuSize.width + margin) {
+            x = event.pageX - menuSize.width;
+        } else {
+            x = Math.max(margin,
+                       Math.min(event.pageX - menuSize.width / 2,
+                               viewport.width - menuSize.width - margin));
+        }
+        
+        // Determine optimal vertical position
+        const spaceBelow = viewport.height - event.pageY;
+        const spaceAbove = event.pageY;
+        
+        if (spaceBelow >= menuSize.height + margin) {
+            y = event.pageY;
+        } else if (spaceAbove >= menuSize.height + margin) {
+            y = event.pageY - menuSize.height;
+        } else {
+            y = Math.max(margin,
+                        Math.min(event.pageY - menuSize.height / 2,
+                                viewport.height - menuSize.height - margin));
+        }
+        
+        menu.style.left = x + 'px';
+        menu.style.top = y + 'px';
+    }
+
+    /**
+     * Get menu dimensions
+     * @param {HTMLElement} menu - The context menu element
+     * @returns {Object} - Object with width and height
+     */
+    getMenuDimensions(menu) {
+        // Force layout calculation
+        menu.style.visibility = 'hidden';
+        menu.style.display = 'block';
+        
+        const rect = menu.getBoundingClientRect();
+        const dimensions = {
+            width: rect.width || 200, // fallback width
+            height: rect.height || 50 // fallback height
+        };
+        
+        // Reset styles
+        menu.style.visibility = '';
+        menu.style.display = '';
+        
+        return dimensions;
+    }
+
+    /**
+     * Clean up event handlers
+     */
+    destroy() {
+        // Remove current menu if exists
+        if (this.currentMenu) {
+            this.currentMenu.remove();
+            this.currentMenu = null;
+        }
+    }
+}
 
 /**
  * Event Handlers module for LevelEditor
@@ -20,6 +191,9 @@ export class EventHandlers extends BaseModule {
         
         // Track MutationObservers for cleanup
         this.mutationObservers = [];
+        
+        // Initialize tab move context menu
+        this.tabMoveContextMenu = new TabMoveContextMenu(this.editor);
         
         Logger.event.info('EventHandlers initialized');
     }
@@ -379,13 +553,11 @@ export class EventHandlers extends BaseModule {
     initializeViewStates() {
         // Ensure configManager is available and loaded
         if (!this.editor.configManager) {
-            console.warn('ConfigManager not available during view state initialization');
             return;
         }
 
         // Ensure configuration is fully loaded before proceeding
         if (!this.editor.configManager.isConfigReady()) {
-            console.warn('Configuration not ready during view state initialization - deferring');
             return;
         }
         
@@ -463,7 +635,7 @@ export class EventHandlers extends BaseModule {
             // Don't re-apply panel visibility here - PanelPositionManager handles it
             // based on actual tab positions and panel existence
         } else {
-            console.log('❌ EventHandlers: PanelPositionManager not found!');
+            // PanelPositionManager not found - this is expected during early initialization
         }
 
         // Activate tabs after panel positions are initialized
@@ -1117,242 +1289,20 @@ export class EventHandlers extends BaseModule {
         } else if (rightPanel && rightPanel.contains(tab)) {
             currentPanel = 'right';
         } else if (assetsPanel && assetsPanel.contains(tab)) {
-            // Asset tabs have different context menu with Close option
-            this.showAssetTabContextMenu(event, tabName, tab);
+            // Asset tabs are handled by AssetTabContextMenu through delegation
+            // Don't create duplicate menu here
             return;
         }
         
         const targetPanel = currentPanel === 'right' ? 'left' : 'right';
         
-        // Create simple context menu
-        this.showTabContextMenu(event, tabName, currentPanel, targetPanel);
+        // Create context menu using TabMoveContextMenu
+        this.tabMoveContextMenu.showTabMoveMenu(event, tabName, currentPanel, targetPanel);
     }
 
-    /**
-     * Show context menu for asset tab
-     * @param {Event} event - Context menu event
-     * @param {string} tabName - Name of the tab
-     * @param {HTMLElement} tab - Tab element
-     */
-    showAssetTabContextMenu(event, tabName, tab) {
-        // Remove existing menu
-        const existingMenu = document.querySelector('.tab-context-menu');
-        if (existingMenu) {
-            existingMenu.remove();
-        }
 
-        // Create menu with advanced positioning
-        const menu = document.createElement('div');
-        menu.className = 'tab-context-menu fixed bg-gray-800 border border-gray-600 rounded shadow-lg z-50 min-w-48';
-        menu.style.pointerEvents = 'auto';
-        menu.style.userSelect = 'none';
 
-        // Advanced positioning with boundary checking
-        const menuWidth = 120;
-        const menuHeight = 40;
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        const margin = 10;
 
-        let left = event.clientX;
-        let top = event.clientY;
-
-        // Horizontal positioning
-        const spaceRight = viewportWidth - event.clientX;
-        const spaceLeft = event.clientX;
-
-        if (spaceRight >= menuWidth + margin) {
-            left = event.clientX;
-        } else if (spaceLeft >= menuWidth + margin) {
-            left = event.clientX - menuWidth;
-        } else {
-            left = margin;
-        }
-
-        // Vertical positioning
-        const spaceBelow = viewportHeight - event.clientY;
-        const spaceAbove = event.clientY;
-
-        if (spaceBelow >= menuHeight + margin) {
-            top = event.clientY;
-        } else if (spaceAbove >= menuHeight + margin) {
-            top = event.clientY - menuHeight;
-        } else {
-            top = margin;
-        }
-
-        menu.style.left = left + 'px';
-        menu.style.top = top + 'px';
-
-        // Create Close menu item
-        const closeItem = document.createElement('div');
-        closeItem.className = 'px-4 py-2 hover:bg-gray-700 cursor-pointer text-sm';
-        closeItem.textContent = 'Close';
-        closeItem.addEventListener('click', () => {
-            this.closeAssetTab(tabName, tab);
-            menu.remove();
-        });
-
-        menu.appendChild(closeItem);
-
-        // Add to document
-        document.body.appendChild(menu);
-
-        // Add click outside to close
-        const closeMenu = (e) => {
-            if (!menu.contains(e.target)) {
-                menu.remove();
-                document.removeEventListener('click', closeMenu);
-            }
-        };
-
-        // Use setTimeout to avoid immediate closure
-        setTimeout(() => {
-            document.addEventListener('click', closeMenu);
-        }, 10);
-    }
-
-    /**
-     * Close asset tab
-     * @param {string} tabName - Name of the tab to close
-     * @param {HTMLElement} tab - Tab element
-     */
-    closeAssetTab(tabName, tab) {
-        if (!this.editor.assetPanel) {
-            Logger.ui.warn('AssetPanel not found');
-            return;
-        }
-
-        // Get current active tabs
-        const activeTabs = new Set(this.editor.stateManager.get('activeAssetTabs'));
-        
-        // Don't close if it's the last tab
-        if (activeTabs.size <= 1) {
-            Logger.ui.debug('Cannot close last asset tab');
-            return;
-        }
-
-        // Remove tab from active tabs
-        activeTabs.delete(tabName);
-        this.editor.stateManager.set('activeAssetTabs', activeTabs);
-        
-        // Save to config for persistence
-        this.editor.configManager.set('editor.view.activeAssetTabs', Array.from(activeTabs));
-        
-        // Clear selection if this tab was selected
-        this.editor.stateManager.set('selectedAssets', new Set());
-        
-        // Re-render asset panel
-        this.editor.assetPanel.render();
-        
-        Logger.ui.info(`Asset tab ${tabName} closed`);
-    }
-
-    /**
-     * Show context menu for tab
-     * @param {Event} event - Context menu event
-     * @param {string} tabName - Name of the tab
-     * @param {string} currentPanel - Current panel side
-     * @param {string} targetPanel - Target panel side
-     */
-    showTabContextMenu(event, tabName, currentPanel, targetPanel) {
-        // Remove existing menu
-        const existingMenu = document.querySelector('.tab-context-menu');
-        if (existingMenu) {
-            existingMenu.remove();
-        }
-
-        // Create menu with advanced positioning (similar to BaseContextMenu)
-        const menu = document.createElement('div');
-        menu.className = 'tab-context-menu fixed bg-gray-800 border border-gray-600 rounded shadow-lg z-50 min-w-48';
-        menu.style.pointerEvents = 'auto'; // Ensure menu captures events
-        menu.style.userSelect = 'none'; // Prevent text selection
-
-        // Advanced positioning with boundary checking
-        const menuWidth = 160; // Estimated width
-        const menuHeight = 40; // Height for single item
-        const viewportWidth = window.innerWidth;
-        const viewportHeight = window.innerHeight;
-        const margin = 10;
-
-        let left = event.clientX;
-        let top = event.clientY;
-
-        // Horizontal positioning (prefer right side of cursor)
-        const spaceRight = viewportWidth - event.clientX;
-        const spaceLeft = event.clientX;
-
-        if (spaceRight >= menuWidth + margin) {
-            left = event.clientX;
-        } else if (spaceLeft >= menuWidth + margin) {
-            left = event.clientX - menuWidth;
-        } else {
-            left = Math.max(margin, Math.min(event.clientX - menuWidth / 2, viewportWidth - menuWidth - margin));
-        }
-
-        // Vertical positioning (prefer below cursor)
-        const spaceBelow = viewportHeight - event.clientY;
-        const spaceAbove = event.clientY;
-
-        if (spaceBelow >= menuHeight + margin) {
-            top = event.clientY;
-        } else if (spaceAbove >= menuHeight + margin) {
-            top = event.clientY - menuHeight;
-        } else {
-            top = event.clientY;
-        }
-
-        // Ensure menu stays within viewport bounds
-        left = Math.max(margin, Math.min(left, viewportWidth - menuWidth - margin));
-        top = Math.max(margin, Math.min(top, viewportHeight - menuHeight - margin));
-
-        menu.style.left = left + 'px';
-        menu.style.top = top + 'px';
-
-        // Create menu item with EventHandlerManager
-        const menuItem = document.createElement('div');
-        menuItem.className = 'px-3 py-2 text-sm text-gray-200 hover:bg-gray-700 cursor-pointer whitespace-nowrap';
-        menuItem.innerHTML = `Move to ${targetPanel === 'right' ? 'Right' : 'Left'} Panel`;
-
-        const menuItemHandlers = {
-            click: () => {
-            if (this.editor && this.editor.panelPositionManager) {
-                this.editor.panelPositionManager.moveTab(tabName, currentPanel, targetPanel);
-            }
-            menu.remove();
-            }
-        };
-        
-        eventHandlerManager.registerElement(menuItem, menuItemHandlers, `menu-item-${tabName}`);
-
-        menu.appendChild(menuItem);
-        document.body.appendChild(menu);
-
-        // Prevent menu from being resized or minimized
-        menu.style.minWidth = menuWidth + 'px';
-        menu.style.minHeight = menuHeight + 'px';
-
-        // Close menu when clicking outside using EventHandlerManager
-        const closeMenu = (e) => {
-            if (!menu.contains(e.target)) {
-                menu.remove();
-                eventHandlerManager.unregisterElement(document);
-            }
-        };
-
-        setTimeout(() => {
-            // Unregister previous menu-close handler to avoid conflicts
-            eventHandlerManager.unregisterElement(document, 'menu-close');
-            const documentHandlers = {
-                click: closeMenu
-            };
-            eventHandlerManager.registerElement(document, documentHandlers, 'menu-close');
-        }, 0);
-    }
-
-    /**
-     * Activate tabs after panel initialization
-     */
     activateTabsAfterPanelInitialization() {
         // Get saved active tabs from ConfigManager
         const rightPanelTab = this.editor.configManager.get('editor.view.rightPanelTab') ?? 'details';
