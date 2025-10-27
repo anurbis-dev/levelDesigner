@@ -70,10 +70,7 @@ export class PanelPositionManager {
      * @private
      */
     _updateUI() {
-        // Update panels only - canvas is in separate container and doesn't need updates
-        if (this.levelEditor && this.levelEditor.updateAllPanels) {
-            this.levelEditor.updateAllPanels();
-        }
+        // No need to update panels content when only sizes change
         // Canvas is now in separate container, no need to update it when panels change
     }
 

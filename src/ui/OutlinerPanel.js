@@ -464,6 +464,7 @@ export class OutlinerPanel extends BasePanel {
 
 
     render() {
+        console.log('OutlinerPanel: render() called');
         // Save search input state before clearing
         const searchInput = document.getElementById('outliner-search');
         const wasSearchFocused = searchInput && document.activeElement === searchInput;
@@ -472,6 +473,7 @@ export class OutlinerPanel extends BasePanel {
         // Clear container but preserve custom sections
         // Remove all children except custom sections
         const children = Array.from(this.container.children);
+        console.log('OutlinerPanel: Removing', children.length, 'children from container');
         children.forEach(child => {
             if (!child.classList.contains('panel-top-custom') &&
                 !child.classList.contains('panel-bottom-custom')) {
@@ -865,6 +867,11 @@ export class OutlinerPanel extends BasePanel {
             onExpandAllGroups: () => this.handleExpandAllGroups(),
             onCollapseAllGroups: () => this.handleCollapseAllGroups()
         });
+
+        // Register context menu with ContextMenuManager for global resize handling
+        if (this.levelEditor && this.levelEditor.contextMenuManager && this.contextMenu) {
+            this.levelEditor.contextMenuManager.registerMenu('outliner', this.contextMenu);
+        }
     }
 
     handleRenameObject(object) {

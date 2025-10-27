@@ -1403,6 +1403,7 @@ export class LevelEditor {
      * Update all panels
      */
     updateAllPanels() {
+        console.log('LevelEditor: updateAllPanels() called - stack trace:', new Error().stack);
         // Update cached level statistics for quick access
         this.updateCachedLevelStats();
 

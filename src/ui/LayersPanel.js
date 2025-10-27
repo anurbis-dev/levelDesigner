@@ -59,6 +59,11 @@ export class LayersPanel extends BasePanel {
             onSelectAllObjects: (layer) => this.selectAllObjectsInLayer(layer.id),
             onDelete: (layer) => this.deleteLayer(layer.id)
         });
+
+        // Register context menu with ContextMenuManager for global resize handling
+        if (this.levelEditor && this.levelEditor.contextMenuManager && this.layerContextMenu) {
+            this.levelEditor.contextMenuManager.registerMenu('layers', this.layerContextMenu);
+        }
     }
 
     /**
@@ -176,6 +181,7 @@ export class LayersPanel extends BasePanel {
     }
 
     render() {
+        console.log('LayersPanel: render() called');
         // Reset context menu setup flag since DOM is being recreated
         this._layersListContextMenuSetup = false;
 
@@ -185,7 +191,9 @@ export class LayersPanel extends BasePanel {
         const searchValue = this.searchFilter;
 
         // Remove only non-custom children to preserve custom sections
-        Array.from(this.container.children).forEach(child => {
+        const children = Array.from(this.container.children);
+        console.log('LayersPanel: Removing', children.length, 'children from container');
+        children.forEach(child => {
             if (!child.classList.contains('panel-top-custom') && 
                 !child.classList.contains('panel-bottom-custom')) {
                 this.container.removeChild(child);

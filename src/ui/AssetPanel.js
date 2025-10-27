@@ -14,82 +14,83 @@ import { SearchUtils } from '../utils/SearchUtils.js';
 import { MenuPositioningUtils } from '../utils/MenuPositioningUtils.js';
 
 /**
- * Context menu for asset tabs - simplified implementation
+ * Context menu for asset tabs - using EventHandlerManager approach like other tabs
  */
-class AssetTabContextMenu extends BaseContextMenu {
+class AssetTabContextMenu {
     constructor(assetPanel) {
-        // Use the main container element that doesn't get recreated
-        super(assetPanel.container, {
-            onMenuShow: () => Logger.ui.debug('AssetTabContextMenu: Menu shown'),
-            onMenuHide: () => Logger.ui.debug('AssetTabContextMenu: Menu hidden'),
-            onItemClick: (action, contextData) => {
-                Logger.ui.debug('AssetTabContextMenu: Item clicked', { action, contextData });
-            }
-        });
-
         this.assetPanel = assetPanel;
+        // Don't setup handlers immediately - they will be setup in setupAssetTabContextMenu()
+    }
+
+    /**
+     * Setup context menu handlers for asset tabs using EventHandlerManager
+     */
+    setupTabHandlers() {
+        // Get all asset tabs
+        const assetTabs = this.assetPanel.container.querySelectorAll('.tab');
         
-        // Override the context menu handler to only work on tabs
-        this.setupTabSpecificHandler();
-    }
-
-    /**
-     * Setup context menu handler that only responds to tab clicks
-     */
-    setupTabSpecificHandler() {
-        // Remove the default handler from BaseContextMenu
-        if (this.contextMenuHandler) {
-            this.panel.removeEventListener('contextmenu', this.contextMenuHandler);
-        }
-
-        // Add custom handler that only works on tabs
-        this.contextMenuHandler = (e) => {
-            // Only show menu if clicked on a tab
-            const tabButton = e.target.closest('.tab');
-            if (!tabButton) {
-                return; // Don't show menu if not clicked on a tab
-            }
-
-            // Extract context data from clicked element
-            const contextData = this.extractContextData(e.target);
-            this.showContextMenu(e, contextData);
-        };
-
-        // Add to document.body for global coverage
-        this.panel.addEventListener('contextmenu', this.contextMenuHandler);
-    }
-
-    /**
-     * Override extractContextData to detect tab clicks
-     */
-    extractContextData(target) {
-        const tabButton = target.closest('.tab');
-        if (tabButton) {
-            return {
-                category: tabButton.dataset.category,
-                tabElement: tabButton
+        assetTabs.forEach(tab => {
+            const category = tab.dataset.category;
+            if (!category) return;
+            
+            const tabId = `asset-tab-${category}`;
+            
+            // Unregister existing handlers first
+            eventHandlerManager.unregisterElement(tab);
+            
+            const tabHandlers = {
+                contextmenu: (e) => this.handleTabContextMenu(e, category, tab)
             };
-        }
-        return null;
+            
+            // Register with EventHandlerManager
+            eventHandlerManager.registerElement(tab, tabHandlers, tabId);
+        });
+        
+        Logger.ui.debug(`AssetTabContextMenu: Registered handlers for ${assetTabs.length} tabs`);
     }
 
+    /**
+     * Handle context menu on asset tab
+     */
+    handleTabContextMenu(event, category, tab) {
+        event.preventDefault();
+        
+        Logger.ui.debug('AssetTabContextMenu: Tab context menu triggered', { category, tab });
 
+        // Create simple context menu
+        this.showTabContextMenu(event, category, tab);
+    }
 
     /**
-     * Override showContextMenu to always show for tab context
+     * Show context menu for asset tab
      */
-    showContextMenu(event, contextData) {
-        // Always show menu for tab context, regardless of selection state
-        if (!contextData || !contextData.category) {
-            return;
+    showTabContextMenu(event, category, tab) {
+        // Remove existing context menu
+        const existingMenu = document.querySelector('.asset-tab-context-menu');
+        if (existingMenu) {
+            existingMenu.remove();
         }
 
-        // Clear existing menu items
-        this.menuItems = [];
+        // Create context menu
+        const contextMenu = document.createElement('div');
+        contextMenu.className = 'asset-tab-context-menu base-context-menu';
+        contextMenu.style.cssText = `
+            position: fixed;
+            background: var(--ui-bg-color, #374151);
+            border: 1px solid var(--ui-border-color, #4b5563);
+            border-radius: 6px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            z-index: 10000;
+            min-width: 150px;
+            padding: 4px 0;
+        `;
 
-        // Always add close option - logic simplified
-        this.addMenuItem('Close', '❌', () => {
-            const category = contextData.category;
+        // Add close option
+        const closeItem = document.createElement('div');
+        closeItem.className = 'px-3 py-2 text-sm cursor-pointer hover:bg-gray-700 flex items-center space-x-2';
+        closeItem.style.color = 'var(--ui-text-color, #e5e7eb)';
+        closeItem.innerHTML = '<span>❌</span><span>Close</span>';
+        closeItem.addEventListener('click', () => {
             const activeTabs = new Set(this.assetPanel.stateManager.get('activeAssetTabs'));
             activeTabs.delete(category);
 
@@ -104,10 +105,46 @@ class AssetTabContextMenu extends BaseContextMenu {
             this.assetPanel.stateManager.set('activeAssetTabs', activeTabs);
             this.assetPanel.levelEditor.configManager.set('editor.view.activeAssetTabs', Array.from(activeTabs));
             this.assetPanel.render();
+            
+            contextMenu.remove();
         });
+        contextMenu.appendChild(closeItem);
 
-        // Call parent method to show menu
-        super.showContextMenu(event, contextData);
+        // Position menu
+        const rect = tab.getBoundingClientRect();
+        contextMenu.style.left = `${event.clientX}px`;
+        contextMenu.style.top = `${event.clientY}px`;
+
+        // Ensure menu stays within viewport
+        const menuRect = contextMenu.getBoundingClientRect();
+        if (menuRect.right > window.innerWidth) {
+            contextMenu.style.left = `${window.innerWidth - menuRect.width - 10}px`;
+        }
+        if (menuRect.bottom > window.innerHeight) {
+            contextMenu.style.top = `${window.innerHeight - menuRect.height - 10}px`;
+        }
+
+        document.body.appendChild(contextMenu);
+
+        // Close context menu when clicking outside
+        const closeMenu = (e) => {
+            if (!contextMenu.contains(e.target)) {
+                contextMenu.remove();
+                document.removeEventListener('click', closeMenu);
+            }
+        };
+        
+        setTimeout(() => {
+            document.addEventListener('click', closeMenu);
+        }, 0);
+    }
+
+    /**
+     * Clean up event handlers
+     */
+    destroy() {
+        // EventHandlerManager will handle cleanup automatically
+        Logger.ui.debug('AssetTabContextMenu: Destroyed');
     }
 }
 
@@ -126,6 +163,7 @@ export class AssetPanel extends BasePanel {
         this.foldersPosition = 'left'; // 'left' or 'right'
         this.isDraggingTab = false; // Flag to track tab dragging
         this.tabDraggingSetup = false; // Flag to track if tab dragging is already setup
+        this._assetTabContextMenuSetup = false; // Flag to track context menu setup (similar to LayersPanel)
 
         // Asset size management
         this.assetSize = 96; // Default size, will be loaded in init()
@@ -862,7 +900,10 @@ export class AssetPanel extends BasePanel {
         });
 
         // Subscribe to state changes
-        this.stateManager.subscribe('activeAssetTabs', () => this.render());
+        this.stateManager.subscribe('activeAssetTabs', () => {
+            Logger.ui.debug('AssetPanel: activeAssetTabs changed - render will be called');
+            this.render();
+        });
         
         // Setup asset panel handlers using new system
         this.setupAssetPanelHandlers();
@@ -871,6 +912,7 @@ export class AssetPanel extends BasePanel {
         // Register window resize handler with GlobalEventRegistry
         const windowResizeHandlers = {
             resize: () => {
+                Logger.ui.debug('AssetPanel: Window resize detected');
                 // Update asset placement in real-time without debounce
                 if (this.viewMode === 'grid') {
                     // Update grid layout immediately for real-time responsiveness
@@ -886,6 +928,7 @@ export class AssetPanel extends BasePanel {
 
         // ResizeObserver for asset panel container to handle all internal resizes (folders, other panels, etc.)
         this.containerResizeObserver = new ResizeObserver(() => {
+            Logger.ui.debug('AssetPanel: Container resize detected');
             if (this.viewMode === 'grid') {
                 this.updateGridViewSizes();
             }
@@ -898,12 +941,20 @@ export class AssetPanel extends BasePanel {
     }
 
     render() {
+        Logger.ui.debug('AssetPanel: render called');
         this.renderTabs();
         this.renderPreviews();
         
     }
 
     renderTabs() {
+        console.log('AssetPanel: renderTabs called - tabs will be recreated');
+        Logger.ui.debug('AssetPanel: renderTabs called - tabs will be recreated');
+        
+        // Reset context menu setup flag since DOM is being recreated (similar to LayersPanel)
+        this._assetTabContextMenuSetup = false;
+        
+        console.log('AssetPanel: Clearing tabsContainer innerHTML');
         this.tabsContainer.innerHTML = '';
         const tabOrder = this.stateManager.get('assetTabOrder') || [];
         const availableCategories = this.assetManager.getCategories();
@@ -933,8 +984,26 @@ export class AssetPanel extends BasePanel {
             this.tabDraggingSetup = true;
         }
 
+        // Setup context menu for tabs after rendering (similar to LayersPanel pattern)
+        this.setupAssetTabContextMenu();
+
         // Render search and filter controls in footer
         this.renderAssetSearchControls();
+    }
+
+    /**
+     * Setup context menu for asset tabs (similar to LayersPanel pattern)
+     */
+    setupAssetTabContextMenu() {
+        if (!this.assetTabContextMenu || this._assetTabContextMenuSetup) {
+            return;
+        }
+
+        // Re-setup context menu handler after tabs are recreated
+        this.assetTabContextMenu.setupTabHandlers();
+        this._assetTabContextMenuSetup = true;
+        
+        Logger.ui.debug('AssetPanel: Asset tab context menu setup completed');
     }
 
     /**
@@ -2035,6 +2104,19 @@ export class AssetPanel extends BasePanel {
         }
         if (this.panelContextMenu && this.panelContextMenu.completeDeferredInit) {
             this.panelContextMenu.completeDeferredInit();
+        }
+
+        // Register context menus with ContextMenuManager for global resize handling
+        if (this.levelEditor && this.levelEditor.contextMenuManager) {
+            if (this.assetContextMenu) {
+                this.levelEditor.contextMenuManager.registerMenu('asset', this.assetContextMenu);
+            }
+            if (this.panelContextMenu) {
+                this.levelEditor.contextMenuManager.registerMenu('assetPanel', this.panelContextMenu);
+            }
+            if (this.assetTabContextMenu) {
+                this.levelEditor.contextMenuManager.registerMenu('assetTab', this.assetTabContextMenu);
+            }
         }
     }
 

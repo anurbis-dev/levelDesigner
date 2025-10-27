@@ -54,6 +54,7 @@ export class ContextMenuManager {
         }, { passive: false });
     }
 
+
     /**
      * Register a context menu instance
      * @param {string} name - Unique name for the menu

@@ -55,8 +55,15 @@ export class CanvasContextMenu extends BaseContextMenu {
      * Override setupContextMenu to use ContextMenuManager
      */
     setupContextMenu() {
+        console.log('CanvasContextMenu: setupContextMenu called for canvas', this.panel);
+        // Remove existing context menu handler if it exists
+        if (this.contextMenuHandler) {
+            console.log('CanvasContextMenu: Removing existing context menu handler from canvas');
+            this.panel.removeEventListener('contextmenu', this.contextMenuHandler);
+        }
+        
         // Add context menu to panel
-        this.panel.addEventListener('contextmenu', (e) => {
+        this.contextMenuHandler = (e) => {
             e.preventDefault();
             e.stopPropagation();
 
@@ -64,7 +71,10 @@ export class CanvasContextMenu extends BaseContextMenu {
             requestAnimationFrame(() => {
                 this.handleContextMenuEvent(e);
             });
-        });
+        };
+        
+        console.log('CanvasContextMenu: Adding context menu handler to canvas');
+        this.panel.addEventListener('contextmenu', this.contextMenuHandler);
     }
 
     /**

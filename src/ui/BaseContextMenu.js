@@ -68,6 +68,7 @@ export class BaseContextMenu {
         this.isMonitoringCursor = false;
         this.animationStartTime = 0;
 
+        console.log('BaseContextMenu: Constructor called for panel', panel);
         this.setupContextMenu();
         this.setupGlobalRightClickHandler();
         this.setupWindowResizeHandler();
@@ -222,6 +223,7 @@ export class BaseContextMenu {
     setupContextMenu() {
         // Remove existing context menu handler if it exists
         if (this.contextMenuHandler) {
+            console.log('BaseContextMenu: Removing existing context menu handler from', this.panel);
             this.panel.removeEventListener('contextmenu', this.contextMenuHandler);
         }
         
@@ -235,6 +237,7 @@ export class BaseContextMenu {
             this.showContextMenu(e, contextData);
         };
 
+        console.log('BaseContextMenu: Adding context menu handler to', this.panel);
         this.panel.addEventListener('contextmenu', this.contextMenuHandler);
     }
 
@@ -246,6 +249,7 @@ export class BaseContextMenu {
             if (this.currentMenu) {
                 this.hideMenu();
             }
+            // No need to re-initialize context menu handlers - DOM elements are not recreated on resize
         };
 
         window.addEventListener('resize', this.resizeHandler, { passive: true });
@@ -913,11 +917,13 @@ export class BaseContextMenu {
      * Destroy context menu and clean up event listeners
      */
     destroy() {
+        console.log('BaseContextMenu: Destroying context menu for', this.panel);
         this.hideMenu();
         if (this.resizeHandler) {
             window.removeEventListener('resize', this.resizeHandler);
         }
         if (this.contextMenuHandler) {
+            console.log('BaseContextMenu: Removing context menu handler from', this.panel);
             this.panel.removeEventListener('contextmenu', this.contextMenuHandler);
         }
         this.removeCursorTracking();
