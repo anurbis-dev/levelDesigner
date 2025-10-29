@@ -36,15 +36,24 @@
 Управление табами панели ассетов.
 
 #### Основные методы:
-- `render()` - отрисовка всех табов
-- `syncDefaultTab()` - синхронизация дефолтного таба с выбранной папкой
-- `addFolderTab(folderPath)` - добавление таба для папки
+- `render()` - отрисовка всех табов с визуальным выделением активных (поддержка multi-select)
+- `syncTabToFolder()` - синхронизация визуального выделения табов с выбранными папками (не создает табы автоматически)
+- `addFolderTab(folderPath)` - добавление таба для папки (только при дропе)
 - `removeFolderTab(folderPath)` - удаление таба папки
-- `handleTabClick(folderPath)` - обработка клика по табу
+- `handleTabClick(e, folderPath)` - обработка клика по табу (поддержка Shift+клик для multi-select)
+- `getFolderName(folderPath)` - получение имени папки для отображения в табе
 - `setupContextMenu()` - настройка контекстного меню для табов
 - `setupTabDragging()` - настройка drag-and-drop для табов
 - `setupFolderDragToTabs()` - настройка дропа папок на контейнер табов
+- `saveTabOrder()` - сохранение порядка табов
 - `destroy()` - очистка ресурсов
+
+#### Особенности:
+- Табы создаются **только** при перетаскивании папок на контейнер табов
+- Поддержка **multi-select** через Shift+клик (как на табах, так и на фолдерах)
+- Визуальное выделение всех выбранных табов при multi-select
+- Синхронизация с выбором папок в FoldersPanel
+- Управление состоянием через StateManager (`activeAssetTabs`, `activeAssetTab`)
 
 ### FileManager (src/managers/FileManager.js)
 Управление файлами.
