@@ -721,17 +721,31 @@ export class PanelPositionManager {
         // Check if there are remaining tabs in the source panel and activate the one closest to separator
         const fromPanelElement = document.getElementById(`${fromPanel}-tabs-panel`);
         if (fromPanelElement) {
-            // Only query tabs with data-tab attribute (exclude asset panel tabs with data-folder-path)
-            const remainingTabs = fromPanelElement.querySelectorAll('.tab-right[data-tab], .tab-left[data-tab]');
+            // Exclude asset panel tabs container - asset tabs are managed by AssetTabsManager
+            const assetTabsContainer = fromPanelElement.querySelector('#asset-tabs-container');
+            
+            // Find all tabs with data-tab attribute, excluding those inside asset tabs container
+            const allTabs = fromPanelElement.querySelectorAll('.tab-right[data-tab], .tab-left[data-tab]');
+            
+            // Filter out asset tabs (those inside #asset-tabs-container)
+            const remainingTabs = Array.from(allTabs).filter(tab => {
+                // Skip if tab is inside asset tabs container
+                if (assetTabsContainer && assetTabsContainer.contains(tab)) {
+                    return false;
+                }
+                // Ensure tab has valid data-tab attribute
+                return tab.dataset.tab && tab.dataset.tab.trim() !== '';
+            });
+            
             if (remainingTabs.length > 0) {
                 // Find the tab closest to the separator (main panel)
                 const tabClosestToSeparator = this.getTabClosestToSeparator(remainingTabs, fromPanel);
-                if (tabClosestToSeparator) {
+                if (tabClosestToSeparator && tabClosestToSeparator.dataset.tab) {
                     const tabName = tabClosestToSeparator.dataset.tab;
                     if (this.levelEditor && this.levelEditor.eventHandlers) {
                         this.levelEditor.eventHandlers.setActivePanelTab(tabName, fromPanel);
+                        Logger.ui.debug(`Auto-activated tab closest to separator: ${tabName} in ${fromPanel} panel`);
                     }
-                    Logger.ui.debug(`Auto-activated tab closest to separator: ${tabName} in ${fromPanel} panel`);
                 }
             }
         }

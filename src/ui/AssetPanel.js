@@ -241,41 +241,80 @@ export class AssetPanel extends BasePanel {
             this.render();
         });
         
-        // Listen for folder selection changes to sync default tab
+        // Listen for folder selection changes to sync active tab
         // Sync happens BEFORE render to avoid recursion
         this.stateManager.subscribe('selectedFolders', (selectedFolders) => {
             if (this.foldersPanel && selectedFolders && this.tabsManager) {
-                // Update foldersPanel's selectedFolders if needed
+                // Normalize selectedFolders to Set format
                 const foldersSet = Array.isArray(selectedFolders) 
                     ? new Set(selectedFolders) 
-                    : selectedFolders;
+                    : (selectedFolders instanceof Set ? selectedFolders : new Set());
+                
+                // Update foldersPanel's selectedFolders
                 if (foldersSet.size > 0) {
                     this.foldersPanel.selectedFolders = foldersSet;
-                    // Sync tab BEFORE render - this will update state if needed
-                    this.tabsManager.syncDefaultTab();
-                    // render() will be triggered by activeAssetTabs subscription if state changed
+                    // Sync tab - this will activate existing tab or clear active tab if no tab exists
+                    this.tabsManager.syncTabToFolder();
+                    // render() will be triggered by subscriptions in AssetTabsManager
                 }
             }
+            
+            // Always update previews when folder selection changes (default behavior when no tabs)
+            // This ensures content updates even when no tabs exist
+            this.renderPreviews();
         });
     }
 
     /**
      * Initialize active asset tabs from config
      * Now uses folder paths instead of categories
-     * Always creates only one default 'root' tab at startup
+     * No default tab is created - tabs are added only by user dragging folders
      */
     initializeActiveAssetTabs() {
-        // Always create only one default tab 'root' at startup
-        // Other tabs are created by user dragging folders to tabs container
-        const defaultTab = 'root';
-        this.stateManager.set('activeAssetTabs', new Set([defaultTab]));
+        // Start with empty tabs - user will add tabs by dragging folders
+        this.stateManager.set('activeAssetTabs', new Set());
+        this.stateManager.set('activeAssetTab', null);
         
-        // Save to config to ensure consistency
-        if (this.levelEditor?.configManager) {
-            this.levelEditor.configManager.set('editor.view.activeAssetTabs', [defaultTab]);
+        Logger.ui.debug('AssetPanel: Initialized with empty tabs');
+    }
+    
+    /**
+     * Get currently active tab folder paths
+     * If no active tab, returns selected folders from FoldersPanel
+     * Supports multiple selection
+     * @returns {Array<string>} Array of folder paths
+     */
+    getActiveTabPaths() {
+        const activeTab = this.stateManager.get('activeAssetTab');
+        const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
+        
+        // If there's an active tab and it exists in activeTabs, check selected folders
+        if (activeTab && activeTabs.has(activeTab)) {
+            // Check if multiple folders are selected
+            if (this.foldersPanel?.selectedFolders && this.foldersPanel.selectedFolders.size > 1) {
+                // Return all selected folders that have tabs
+                return Array.from(this.foldersPanel.selectedFolders).filter(path => activeTabs.has(path));
+            }
+            // Single selection - return active tab
+            return [activeTab];
         }
         
-        Logger.ui.debug('AssetPanel: Created default tab with root folder');
+        // No active tab - return selected folders from FoldersPanel
+        if (this.foldersPanel?.selectedFolders && this.foldersPanel.selectedFolders.size > 0) {
+            return Array.from(this.foldersPanel.selectedFolders);
+        }
+        
+        // Fallback to 'root' if no folder selected
+        return ['root'];
+    }
+    
+    /**
+     * Get currently active tab folder path (for backward compatibility)
+     * @returns {string} Active folder path
+     */
+    getActiveTabPath() {
+        const paths = this.getActiveTabPaths();
+        return paths[0] || 'root';
     }
     
     /**
@@ -563,10 +602,11 @@ export class AssetPanel extends BasePanel {
 
         Logger.ui.debug('AssetPanel: filterByFolder called with folder:', folder.path);
 
-        // Update the active tabs to show only this folder
-        const folderSet = new Set([folder.path]);
-        this.stateManager.set('activeAssetTabs', folderSet);
-        this.render();
+        // Delegate folder selection to foldersPanel
+        // This will trigger tab sync via selectedFolders subscription
+        if (this.foldersPanel) {
+            this.foldersPanel.selectFolder(folder.path, null);
+        }
 
         Logger.ui.debug(`Filtered assets by folder: ${folder.path}`);
     }
@@ -601,18 +641,15 @@ export class AssetPanel extends BasePanel {
             }
         }
 
-        // Ensure folder tab exists and activate it
-        const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
-        if (!activeTabs.has(folderPath)) {
-            activeTabs.add(folderPath);
-            this.stateManager.set('activeAssetTabs', activeTabs);
+        // Delegate tab activation to tabsManager/foldersPanel
+        if (this.foldersPanel) {
+            this.foldersPanel.selectFolder(folderPath, null);
         }
-        
-        // Activate single tab
-        this.stateManager.set('activeAssetTabs', new Set([folderPath]));
 
-        // Switch to the tab and select the asset
-        this.render();
+        // Select the asset
+        const selectedAssets = this.stateManager.get('selectedAssets') || new Set();
+        selectedAssets.add(assetId);
+        this.stateManager.set('selectedAssets', selectedAssets);
 
         // Scroll to and highlight the asset
         setTimeout(() => {
@@ -927,6 +964,12 @@ export class AssetPanel extends BasePanel {
             this.render();
         });
         
+        // Subscribe to active tab changes to update content
+        this.stateManager.subscribe('activeAssetTab', () => {
+            Logger.ui.debug('AssetPanel: activeAssetTab changed - updating previews');
+            this.renderPreviews();
+        });
+        
         // Event handlers will be setup in render() after elements are created
         
         // Window resize handler for real-time grid recalculation
@@ -971,7 +1014,7 @@ export class AssetPanel extends BasePanel {
     }
 
     renderTabs() {
-        // DO NOT call syncDefaultTab() here - it modifies state and causes recursion
+        // DO NOT call syncTabToFolder() here - it modifies state and causes recursion
         // Sync happens only when selectedFolders changes (via subscription)
         if (this.tabsManager) {
             this.tabsManager.render();
@@ -1285,24 +1328,22 @@ export class AssetPanel extends BasePanel {
 
     renderPreviews() {
         this.previewsContainer.innerHTML = '';
-        const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
+        // Get folder paths to show:
+        // - If there's an active tab, use it (or multiple if multi-select)
+        // - If no tabs exist, use selected folders from FoldersPanel (default behavior)
+        const folderPathsToShow = this.getActiveTabPaths();
         const selectedAssets = this.stateManager.get('selectedAssets');
 
-        // Collect assets from all active folder tabs recursively
-        let assetsToShow = [];
-        for (const folderPath of activeTabs) {
+        // Collect assets from all selected folders recursively
+        const allAssets = [];
+        for (const folderPath of folderPathsToShow) {
             const folderAssets = this.getAssetsFromFolder(folderPath);
-            assetsToShow.push(...folderAssets);
+            allAssets.push(...folderAssets);
         }
         
-        // Remove duplicates (same asset might be in multiple folders)
-        const uniqueAssets = new Map();
-        for (const asset of assetsToShow) {
-            if (asset.id && !uniqueAssets.has(asset.id)) {
-                uniqueAssets.set(asset.id, asset);
-            }
-        }
-        assetsToShow = Array.from(uniqueAssets.values());
+        // Remove duplicates by asset ID
+        const uniqueAssets = Array.from(new Map(allAssets.map(asset => [asset.id, asset])).values());
+        let assetsToShow = uniqueAssets;
 
         // Apply search and type filters
         assetsToShow = this.filterAssets(assetsToShow);
@@ -1851,19 +1892,18 @@ export class AssetPanel extends BasePanel {
      * @returns {Array} Array of asset objects
      */
     getAssetList() {
-        const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
-        const assets = [];
-        for (const folderPath of activeTabs) {
-            assets.push(...this.getAssetsFromFolder(folderPath));
+        // Support multiple folder selection
+        const folderPathsToShow = this.getActiveTabPaths();
+        
+        // Collect assets from all selected folders
+        const allAssets = [];
+        for (const folderPath of folderPathsToShow) {
+            const folderAssets = this.getAssetsFromFolder(folderPath);
+            allAssets.push(...folderAssets);
         }
-        // Remove duplicates
-        const uniqueAssets = new Map();
-        for (const asset of assets) {
-            if (asset.id && !uniqueAssets.has(asset.id)) {
-                uniqueAssets.set(asset.id, asset);
-            }
-        }
-        return Array.from(uniqueAssets.values());
+        
+        // Remove duplicates by asset ID
+        return Array.from(new Map(allAssets.map(asset => [asset.id, asset])).values());
     }
 
     /**
@@ -2067,23 +2107,21 @@ export class AssetPanel extends BasePanel {
      * @returns {string|null} Current tab folder or null
      */
     getCurrentTabFolder() {
-        const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
-        if (activeTabs.size === 0) return null;
+        // Use getActiveTabPath() which handles both tabs and folder selection
+        const folderPath = this.getActiveTabPath();
         
-        // Get the first active tab as the current folder
-        const currentTab = Array.from(activeTabs)[0];
+        // Convert folder path to category if needed (for backward compatibility)
+        if (folderPath === 'root') {
+            return null; // Root doesn't map to a specific category
+        }
         
-        // Map tab names to folder names
-        const tabToFolderMap = {
-            'objects': 'objects',
-            'backgrounds': 'backgrounds', 
-            'characters': 'characters',
-            'collectibles': 'collectibles',
-            'enemies': 'enemies',
-            'environment': 'environment'
-        };
+        // Extract category from path (e.g., 'root/maps' -> 'maps')
+        const pathParts = folderPath.split('/');
+        if (pathParts.length > 1) {
+            return pathParts[pathParts.length - 1]; // Return last part as category
+        }
         
-        return tabToFolderMap[currentTab] || null;
+        return folderPath;
     }
 
     /**
@@ -2552,8 +2590,7 @@ export class AssetPanel extends BasePanel {
      * @returns {boolean} True if dropping is allowed, false otherwise
      */
     canDropToActiveFolder() {
-        const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
-        const activeTabPath = Array.from(activeTabs).pop() || 'root';
+        const activeTabPath = this.getActiveTabPath();
         
         // Cannot drop to root folder
         return activeTabPath !== 'root';
@@ -2753,8 +2790,7 @@ export class AssetPanel extends BasePanel {
         Logger.ui.info(`🖼️ Processing ${pngFiles.length} PNG files`);
 
         // Get active tab path and extract category
-        const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
-        const activeTabPath = Array.from(activeTabs).pop() || 'root';
+        const activeTabPath = this.getActiveTabPath();
         
         // Convert folder path to category for asset creation
         // Extract category from folder path (e.g., 'root/assets/characters' -> 'characters')
@@ -2900,10 +2936,20 @@ export class AssetPanel extends BasePanel {
      */
     handleSelectAll() {
         Logger.ui.debug('Selecting all assets');
-        const activeTabs = this.stateManager.get('activeAssetTabs');
-        const allAssets = Array.from(activeTabs)
-            .flatMap(tabName => this.assetManager.getAssetsByCategory(tabName));
-        const allAssetIds = new Set(allAssets.map(asset => asset.id));
+        
+        // Get assets from currently active folder(s)
+        const folderPaths = this.getActiveTabPaths();
+        const allAssets = [];
+        
+        for (const folderPath of folderPaths) {
+            const folderAssets = this.getAssetsFromFolder(folderPath);
+            allAssets.push(...folderAssets);
+        }
+        
+        // Remove duplicates by asset ID
+        const uniqueAssets = Array.from(new Map(allAssets.map(asset => [asset.id, asset])).values());
+        const allAssetIds = new Set(uniqueAssets.map(asset => asset.id));
+        
         this.stateManager.set('selectedAssets', allAssetIds);
     }
 

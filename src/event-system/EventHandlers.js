@@ -1215,7 +1215,27 @@ export class EventHandlers extends BaseModule {
         this._updatingTabHandlers = true;
 
         try {
-            const tabs = document.querySelectorAll('.tab-right, .tab-left, .tab');
+            // Find only panel tabs (with data-tab), exclude asset tabs (with data-folder-path)
+            const leftPanel = document.getElementById('left-tabs-panel');
+            const rightPanel = document.getElementById('right-tabs-panel');
+            const assetTabsContainer = document.querySelector('#asset-tabs-container, #asset-tabs-left');
+            
+            let tabs = [];
+            if (leftPanel) {
+                const leftTabs = leftPanel.querySelectorAll('.tab-right[data-tab], .tab-left[data-tab]');
+                tabs.push(...Array.from(leftTabs).filter(tab => {
+                    // Exclude asset tabs
+                    return !tab.dataset.folderPath && (!assetTabsContainer || !assetTabsContainer.contains(tab));
+                }));
+            }
+            if (rightPanel) {
+                const rightTabs = rightPanel.querySelectorAll('.tab-right[data-tab], .tab-left[data-tab]');
+                tabs.push(...Array.from(rightTabs).filter(tab => {
+                    // Exclude asset tabs
+                    return !tab.dataset.folderPath && (!assetTabsContainer || !assetTabsContainer.contains(tab));
+                }));
+            }
+            
             if (tabs.length === 0) {
                 Logger.ui.debug('No tabs found, skipping handler registration');
                 return;
@@ -1229,7 +1249,13 @@ export class EventHandlers extends BaseModule {
                 const tabId = `tab-${tabName}`;
                 
                 // Skip asset tabs - they have their own registration in AssetPanel
-                if (tab.classList.contains('tab') && tab.dataset.category && tab.closest('#assets-panel')) {
+                // Asset tabs use data-folder-path, not data-tab
+                if (tab.classList.contains('tab') && (tab.dataset.folderPath || tab.closest('#asset-tabs-container') || tab.closest('#asset-tabs-left'))) {
+                    return;
+                }
+                
+                // Skip if tab doesn't have data-tab attribute (might be asset tab)
+                if (!tab.dataset.tab) {
                     return;
                 }
                 
@@ -1239,6 +1265,11 @@ export class EventHandlers extends BaseModule {
                 const tabHandlers = {
                     click: () => {
                         const clickedTabName = tab.dataset.tab;
+                        // Double-check that we have valid tab name
+                        if (!clickedTabName) {
+                            return;
+                        }
+                        
                         const panel = tab.closest('[id$="-tabs-panel"]');
                         const panelSide = panel ? (panel.id.includes('left') ? 'left' : 'right') : 'right';
                         

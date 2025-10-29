@@ -548,7 +548,7 @@ export class FoldersPanel extends BasePanel {
                 e.stopPropagation();
                 const path = item.dataset.path;
                 if (path) {
-                    this.selectFolder(path);
+                    this.selectFolder(path, e);
                 }
             });
             
@@ -676,11 +676,34 @@ export class FoldersPanel extends BasePanel {
         if (isShift && this.shiftAnchor) {
             // Range selection from shiftAnchor to current path
             this.selectFolderRange(this.shiftAnchor, path);
+        } else if (isShift) {
+            // Shift+click - toggle selection
+            if (this.selectedFolders.has(path)) {
+                // Already selected - remove if multiple selected
+                if (this.selectedFolders.size > 1) {
+                    this.selectedFolders.delete(path);
+                    // Update shift anchor if needed
+                    if (this.shiftAnchor === path) {
+                        this.shiftAnchor = Array.from(this.selectedFolders)[0] || null;
+                    }
+                }
+            } else {
+                // Not selected - add to selection
+                this.selectedFolders.add(path);
+                // Set as shift anchor if not already set
+                if (!this.shiftAnchor) {
+                    this.shiftAnchor = path;
+                }
+            }
         } else if (isCtrl) {
             // Toggle selection
             if (this.selectedFolders.has(path)) {
                 if (this.selectedFolders.size > 1) {
                     this.selectedFolders.delete(path);
+                    // Update shift anchor if needed
+                    if (this.shiftAnchor === path) {
+                        this.shiftAnchor = Array.from(this.selectedFolders)[0] || null;
+                    }
                 }
             } else {
                 this.selectedFolders.add(path);
@@ -706,9 +729,9 @@ export class FoldersPanel extends BasePanel {
     }
 
     selectFolderRange(startPath, endPath) {
-        // For simplicity, implement basic range selection
-        // In a full implementation, you'd need to flatten the tree and find range
-        this.selectedFolders.clear();
+        // Range selection: select all folders between startPath and endPath
+        // For now, just add both endpoints - full range implementation would require flattening tree
+        // Don't clear selection - add to existing selection
         this.selectedFolders.add(startPath);
         this.selectedFolders.add(endPath);
         Logger.ui.debug('FoldersPanel: Range selection from', startPath, 'to', endPath);
@@ -717,13 +740,13 @@ export class FoldersPanel extends BasePanel {
     syncFoldersToTabs() {
         if (!this.assetPanel) return;
 
-        // Sync selected folder to default tab in AssetPanel
+        // Sync selected folder to active tab in AssetPanel
         // DO NOT call render() here - subscription to activeAssetTabs will handle it
         if (this.assetPanel.tabsManager) {
-            this.assetPanel.tabsManager.syncDefaultTab();
+            this.assetPanel.tabsManager.syncTabToFolder();
         }
         
-        Logger.ui.debug('FoldersPanel: Synced folder to default tab');
+        Logger.ui.debug('FoldersPanel: Synced folder to tabs');
     }
 
     /**

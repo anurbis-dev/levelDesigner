@@ -193,6 +193,118 @@ export class AssetTabsManager {
         
         // Setup folder drag and drop to tabs container
         this.setupFolderDragToTabs();
+        
+        // Subscribe to activeAssetTab changes to update visual selection
+        this.stateManager.subscribe('activeAssetTab', () => {
+            // Re-render tabs to update visual selection (active class)
+            this.render();
+            
+            // Sync folder selection when tab is activated (e.g., via drag-and-drop)
+            // Only for single selection - multi-select is handled in handleTabClick
+            const activeTab = this.stateManager.get('activeAssetTab');
+            const selectedFolders = this.foldersPanel?.selectedFolders;
+            if (activeTab && this.foldersPanel && (!selectedFolders || selectedFolders.size === 1)) {
+                // Only select folder if it's not already selected
+                if (!selectedFolders || !selectedFolders.has(activeTab)) {
+                    this.foldersPanel.selectFolder(activeTab, null);
+                }
+            }
+        });
+        
+        // Subscribe to selectedFolders changes to update visual selection
+        // syncTabToFolder is called from AssetPanel subscription, this only handles visual updates
+        this.stateManager.subscribe('selectedFolders', () => {
+            this.render();
+        });
+    }
+    
+    /**
+     * Helper: Convert selectedFolders to Set format
+     * @param {Array|Set} selectedFolders - Selected folders from state
+     * @returns {Set} Selected folders as Set
+     */
+    _normalizeSelectedFolders(selectedFolders) {
+        if (!selectedFolders) {
+            return new Set();
+        }
+        return Array.isArray(selectedFolders) 
+            ? new Set(selectedFolders) 
+            : (selectedFolders instanceof Set ? selectedFolders : new Set());
+    }
+    
+    /**
+     * Sync active tab to match selected folder in FoldersPanel
+     * Returns true if state was actually changed, false otherwise
+     * 
+     * Logic:
+     * - Only syncs visual selection (activeAssetTab) - does NOT create tabs
+     * - Tabs are created only by user dragging folders
+     * - If multiple folders selected - updates visual selection only
+     * - If single folder selected and tab exists - activate it
+     * - If no tab exists - asset panel will show folder content directly (no tab needed)
+     */
+    syncTabToFolder() {
+        if (!this.foldersPanel) {
+            return false;
+        }
+        
+        const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
+        const selectedFoldersSet = this._normalizeSelectedFolders(
+            this.stateManager.get('selectedFolders') || []
+        );
+        
+        // Sync foldersPanel's selectedFolders if needed
+        if (this.foldersPanel.selectedFolders !== selectedFoldersSet) {
+            this.foldersPanel.selectedFolders = selectedFoldersSet;
+        }
+        
+        // Handle multiple folders selection
+        if (selectedFoldersSet.size > 1) {
+            // Multiple folders selected - update visual selection only
+            // DO NOT filter tabs - keep all tabs in activeTabs
+            // Visual highlighting will be handled in render() based on selectedFolders
+            
+            // Find first selected folder that has a tab for visual selection
+            const firstSelectedWithTab = Array.from(selectedFoldersSet).find(path => activeTabs.has(path));
+            if (firstSelectedWithTab) {
+                const currentActiveTab = this.stateManager.get('activeAssetTab');
+                if (currentActiveTab !== firstSelectedWithTab) {
+                    this.stateManager.set('activeAssetTab', firstSelectedWithTab);
+                    Logger.ui.debug(`AssetTabsManager: Multi-select - set active tab to ${firstSelectedWithTab}`);
+                    return true;
+                }
+            }
+            
+            return false;
+        }
+        
+        // Single folder selection
+        const selectedFolderPath = selectedFoldersSet.size > 0 
+            ? Array.from(selectedFoldersSet)[0] 
+            : 'root';
+        
+        // If tab with selected folder name exists - activate it
+        if (activeTabs.has(selectedFolderPath)) {
+            const currentActiveTab = this.stateManager.get('activeAssetTab');
+            if (currentActiveTab !== selectedFolderPath) {
+                this.stateManager.set('activeAssetTab', selectedFolderPath);
+                Logger.ui.debug(`AssetTabsManager: Activated tab for folder ${selectedFolderPath}`);
+                return true;
+            }
+            // Tab already active - no changes needed
+            return false;
+        }
+        
+        // No tab exists for selected folder - clear active tab
+        // Asset panel will show folder content directly via getActiveTabPath()
+        const currentActiveTab = this.stateManager.get('activeAssetTab');
+        if (currentActiveTab !== null) {
+            this.stateManager.set('activeAssetTab', null);
+            Logger.ui.debug(`AssetTabsManager: Cleared active tab, showing folder ${selectedFolderPath} directly`);
+            return true;
+        }
+        
+        return false;
     }
     
     /**
@@ -214,47 +326,6 @@ export class AssetTabsManager {
     }
     
     /**
-     * Sync default tab with selected folder in FoldersPanel
-     * Returns true if state was actually changed, false otherwise
-     */
-    syncDefaultTab() {
-        if (!this.foldersPanel) {
-            return false;
-        }
-        
-        const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
-        const selectedFolders = this.foldersPanel.selectedFolders || new Set();
-        
-        // Get first selected folder or root
-        const selectedFolderPath = selectedFolders.size > 0 
-            ? Array.from(selectedFolders)[0] 
-            : 'root';
-        
-        // Update default tab (first tab should always be default)
-        const tabsArray = Array.from(activeTabs);
-        
-        // Only update if actually needed
-        if (tabsArray.length === 0 || tabsArray[0] !== selectedFolderPath) {
-            // Update or create default tab
-            const newTabs = new Set(activeTabs);
-            if (tabsArray.length > 0) {
-                // Replace first tab
-                newTabs.delete(tabsArray[0]);
-            }
-            newTabs.add(selectedFolderPath);
-            
-            // Reorder: put default tab first
-            const reorderedTabs = [selectedFolderPath, ...Array.from(newTabs).filter(p => p !== selectedFolderPath)];
-            this.stateManager.set('activeAssetTabs', new Set(reorderedTabs));
-            
-            Logger.ui.debug(`AssetTabsManager: Synced default tab with folder ${selectedFolderPath}`);
-            return true; // State was changed
-        }
-        
-        return false; // No changes needed
-    }
-    
-    /**
      * Add tab for folder
      * @param {string} folderPath - Folder path
      */
@@ -267,25 +338,23 @@ export class AssetTabsManager {
         const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
         if (activeTabs.has(folderPath)) {
             Logger.ui.debug(`AssetTabsManager: Tab for folder ${folderPath} already exists`);
+            // Just activate it
+            this.stateManager.set('activeAssetTab', folderPath);
             return;
         }
         
         activeTabs.add(folderPath);
         this.stateManager.set('activeAssetTabs', activeTabs);
         
+        // Set as active tab
+        this.stateManager.set('activeAssetTab', folderPath);
+        
         // Save to config
         if (this.levelEditor?.configManager) {
             this.levelEditor.configManager.set('editor.view.activeAssetTabs', Array.from(activeTabs));
         }
         
-        // Notify parent panel to re-render only if tabs actually changed
-        // Use setTimeout to avoid recursion if render triggers syncDefaultTab
-        setTimeout(() => {
-            if (this.assetPanel && typeof this.assetPanel.render === 'function') {
-                this.assetPanel.render();
-            }
-        }, 0);
-        
+        // No need to call render() here - subscriptions to activeAssetTabs and activeAssetTab will handle it
         Logger.ui.debug(`AssetTabsManager: Added tab for folder ${folderPath}`);
     }
     
@@ -300,14 +369,14 @@ export class AssetTabsManager {
             return;
         }
         
-        // Ensure at least one tab remains (default tab)
-        if (activeTabs.size <= 1) {
-            Logger.ui.debug('AssetTabsManager: Cannot remove last tab');
-            return;
-        }
-        
         activeTabs.delete(folderPath);
         this.stateManager.set('activeAssetTabs', activeTabs);
+        
+        // Clear active tab if it was the removed tab
+        const currentActiveTab = this.stateManager.get('activeAssetTab');
+        if (currentActiveTab === folderPath) {
+            this.stateManager.set('activeAssetTab', null);
+        }
         
         // Save to config
         if (this.levelEditor?.configManager) {
@@ -339,19 +408,28 @@ export class AssetTabsManager {
         const missingTabs = Array.from(currentActiveTabs).filter(path => !orderedTabs.includes(path));
         const finalOrder = [...orderedTabs, ...missingTabs];
 
-        // DO NOT call syncDefaultTab() here - it modifies state and causes recursion
+        // DO NOT call syncTabToFolder() here - it modifies state and causes recursion
         // Sync should happen BEFORE render, not during render
         
         // Add tabs to left container
-        finalOrder.forEach(folderPath => {
+        // Active tab is stored separately in activeAssetTab state
+        const activeTab = this.stateManager.get('activeAssetTab');
+        const selectedFolders = this.foldersPanel?.selectedFolders;
+        const isMultiSelect = selectedFolders && selectedFolders.size > 1;
+        
+        finalOrder.forEach((folderPath) => {
             if (!currentActiveTabs.has(folderPath)) {
                 return; // Skip if not in active tabs
             }
             
             const tabButton = document.createElement('button');
-            tabButton.className = `tab ${
-                currentActiveTabs.has(folderPath) ? 'active' : ''
-            }`;
+            // Mark as active if:
+            // - Single selection: matches activeTab
+            // - Multi-select: is in selectedFolders
+            const isActive = isMultiSelect 
+                ? (selectedFolders && selectedFolders.has(folderPath))
+                : (folderPath === activeTab);
+            tabButton.className = `tab ${isActive ? 'active' : ''}`;
             tabButton.textContent = this.getFolderName(folderPath);
             tabButton.dataset.folderPath = folderPath;
             tabButton.draggable = true;
@@ -360,7 +438,6 @@ export class AssetTabsManager {
         });
 
         // Setup tab dragging after rendering (only once)
-        // Use tabsWrapper for dragging setup
         if (!this.tabDraggingSetup) {
             this.setupTabDragging();
             this.tabDraggingSetup = true;
@@ -372,17 +449,6 @@ export class AssetTabsManager {
         // Setup event handlers after elements are created
         // Re-register handlers to ensure they work on new DOM elements
         this.setupEventHandlers();
-        
-        // Also re-register tab dragging handlers on new tabs
-        // Note: tabDraggingSetup will prevent duplicate registration, but we need to ensure
-        // handlers are attached to new elements
-        if (this.tabDraggingSetup) {
-            // Unregister old handlers and re-register
-            eventHandlerManager.unregisterElement(this.tabsContainer);
-            this.tabDraggingSetup = false; // Reset to allow re-registration
-            this.setupTabDragging();
-            this.tabDraggingSetup = true;
-        }
     }
     
     /**
@@ -391,30 +457,38 @@ export class AssetTabsManager {
      * @param {string} folderPath - Folder path
      */
     handleTabClick(e, folderPath) {
-        const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
-        
         if (e.shiftKey) {
-            // Toggle tab
-            if (activeTabs.has(folderPath)) {
-                if (activeTabs.size > 1) {
-                    activeTabs.delete(folderPath);
+            // Multi-select: toggle folder selection
+            // Ensure shiftAnchor is set from current selection if not already set
+            if (this.foldersPanel && folderPath) {
+                // Get current selected folders to preserve shiftAnchor
+                const currentSelected = this.foldersPanel.selectedFolders || new Set();
+                if (currentSelected.size > 0 && !this.foldersPanel.shiftAnchor) {
+                    // Set shift anchor from first selected folder
+                    this.foldersPanel.shiftAnchor = Array.from(currentSelected)[0];
                 }
-            } else {
-                activeTabs.add(folderPath);
+                
+                // Create a synthetic event object with shiftKey for proper handling
+                const syntheticEvent = { shiftKey: true };
+                this.foldersPanel.selectFolder(folderPath, syntheticEvent);
             }
-        } else {
-            // Select single tab
-            activeTabs.clear();
-            activeTabs.add(folderPath);
+            
+            this.stateManager.set('selectedAssets', new Set());
+            Logger.ui.debug(`AssetTabsManager: Tab Shift+clicked ${folderPath}`);
+            return;
         }
         
-        this.stateManager.set('activeAssetTabs', activeTabs);
-        // Save to config for persistence
-        this.levelEditor.configManager.set('editor.view.activeAssetTabs', Array.from(activeTabs));
-        this.stateManager.set('selectedAssets', new Set());
+        // Simple click - just select the folder
+        // This will trigger syncTabToFolder which will activate the tab if it exists
+        if (this.foldersPanel && folderPath) {
+            this.foldersPanel.selectFolder(folderPath, null);
+        }
         
-        // DO NOT call render() here - subscription to activeAssetTabs will handle it
-        Logger.ui.debug(`AssetTabsManager: Tab clicked ${folderPath}`);
+        // Don't create tabs automatically - tabs are created only by drag-and-drop
+        // Just activate existing tab if it exists (handled by syncTabToFolder)
+        
+        this.stateManager.set('selectedAssets', new Set());
+        Logger.ui.debug(`AssetTabsManager: Tab clicked ${folderPath} - folder selected`);
     }
     
     /**
