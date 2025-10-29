@@ -161,6 +161,11 @@
     flex-shrink: 0;
 }
 
+/* Tab text - prevent wrapping */
+.tab {
+    white-space: nowrap;
+}
+
 /* Horizontal scroll styles for tabs and toolbar */
 .horizontal-scroll-container {
     overflow-x: auto;

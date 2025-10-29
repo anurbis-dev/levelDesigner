@@ -217,12 +217,32 @@ export class AssetTabsManager {
      * @returns {Set} Selected folders as Set
      */
     _normalizeSelectedFolders(selectedFolders) {
-        if (!selectedFolders) {
-            return new Set();
-        }
+        if (!selectedFolders) return new Set();
         return Array.isArray(selectedFolders) 
             ? new Set(selectedFolders) 
             : (selectedFolders instanceof Set ? selectedFolders : new Set());
+    }
+    
+    /**
+     * Save tab state to config
+     * @param {string} activeTab - Active tab path
+     * @param {Set} activeTabs - All active tabs
+     * @param {Array} tabOrder - Tab order
+     */
+    _saveTabStateToConfig(activeTab, activeTabs, tabOrder) {
+        if (!this.levelEditor?.configManager) return;
+        
+        // Get current state if not provided
+        const currentActiveTabs = activeTabs || this.stateManager.get('activeAssetTabs');
+        const currentTabOrder = tabOrder || this.stateManager.get('assetTabOrder');
+        
+        this.levelEditor.configManager.set('editor.view.activeAssetTabs', Array.from(currentActiveTabs));
+        if (activeTab !== undefined) {
+            this.levelEditor.configManager.set('editor.view.activeAssetTab', activeTab);
+        }
+        if (currentTabOrder !== undefined) {
+            this.levelEditor.configManager.set('editor.view.assetTabOrder', currentTabOrder);
+        }
     }
     
     /**
@@ -268,9 +288,7 @@ export class AssetTabsManager {
                 if (currentActiveTab !== firstSelectedWithTab) {
                     this.stateManager.set('activeAssetTab', firstSelectedWithTab);
                     // Save to config
-                    if (this.levelEditor?.configManager) {
-                        this.levelEditor.configManager.set('editor.view.activeAssetTab', firstSelectedWithTab);
-                    }
+                    this._saveTabStateToConfig(firstSelectedWithTab);
                     Logger.ui.debug(`AssetTabsManager: Multi-select - set active tab to ${firstSelectedWithTab}`);
                     return true;
                 }
@@ -289,10 +307,8 @@ export class AssetTabsManager {
             const currentActiveTab = this.stateManager.get('activeAssetTab');
             if (currentActiveTab !== selectedFolderPath) {
                 this.stateManager.set('activeAssetTab', selectedFolderPath);
-                // Save to config
-                if (this.levelEditor?.configManager) {
-                    this.levelEditor.configManager.set('editor.view.activeAssetTab', selectedFolderPath);
-                }
+                    // Save to config
+                    this._saveTabStateToConfig(selectedFolderPath);
                 Logger.ui.debug(`AssetTabsManager: Activated tab for folder ${selectedFolderPath}`);
                 return true;
             }
@@ -306,9 +322,7 @@ export class AssetTabsManager {
         if (currentActiveTab !== null) {
             this.stateManager.set('activeAssetTab', null);
             // Save to config
-            if (this.levelEditor?.configManager) {
-                this.levelEditor.configManager.set('editor.view.activeAssetTab', null);
-            }
+            this._saveTabStateToConfig(null);
             Logger.ui.debug(`AssetTabsManager: Cleared active tab, showing folder ${selectedFolderPath} directly`);
             return true;
         }
@@ -358,11 +372,15 @@ export class AssetTabsManager {
         // Set as active tab
         this.stateManager.set('activeAssetTab', folderPath);
         
-        // Save to config
-        if (this.levelEditor?.configManager) {
-            this.levelEditor.configManager.set('editor.view.activeAssetTabs', Array.from(activeTabs));
-            this.levelEditor.configManager.set('editor.view.activeAssetTab', folderPath);
+        // Update tab order to include new tab at the end
+        const currentOrder = this.stateManager.get('assetTabOrder') || [];
+        if (!currentOrder.includes(folderPath)) {
+            const newOrder = [...currentOrder, folderPath];
+            this.stateManager.set('assetTabOrder', newOrder);
         }
+        
+        // Save to config
+        this._saveTabStateToConfig(folderPath);
         
         // No need to call render() here - subscriptions to activeAssetTabs and activeAssetTab will handle it
         Logger.ui.debug(`AssetTabsManager: Added tab for folder ${folderPath}`);
@@ -389,10 +407,7 @@ export class AssetTabsManager {
         }
         
         // Save to config
-        if (this.levelEditor?.configManager) {
-            this.levelEditor.configManager.set('editor.view.activeAssetTabs', Array.from(activeTabs));
-            this.levelEditor.configManager.set('editor.view.activeAssetTab', this.stateManager.get('activeAssetTab'));
-        }
+        this._saveTabStateToConfig();
         
         // DO NOT call render() here - subscription to activeAssetTabs will handle it
         Logger.ui.debug(`AssetTabsManager: Removed tab for folder ${folderPath}`);
@@ -498,9 +513,7 @@ export class AssetTabsManager {
             // Tab exists - activate it directly
             this.stateManager.set('activeAssetTab', folderPath);
             // Save to config
-            if (this.levelEditor?.configManager) {
-                this.levelEditor.configManager.set('editor.view.activeAssetTab', folderPath);
-            }
+                        this._saveTabStateToConfig(folderPath);
         }
         
         // Also select the folder to keep them in sync
@@ -611,6 +624,10 @@ export class AssetTabsManager {
                 // Set drag data
                 e.dataTransfer.effectAllowed = 'move';
                 e.dataTransfer.setData('text/html', tab.innerHTML);
+                // Mark this drag as a tab-drag with custom MIME type and folder path
+                if (tab.dataset.folderPath) {
+                    e.dataTransfer.setData('application/x-asset-tab', tab.dataset.folderPath);
+                }
             },
             dragover: (e) => {
                 if (!draggedTab) return;
@@ -627,9 +644,20 @@ export class AssetTabsManager {
                 }
             },
             drop: (e) => {
+                // Only handle tab reordering when an actual tab drag is in progress
+                if (!this.isDraggingTab || !draggedTab) return;
+
+                // Ignore drops that are not marked as asset-tab drags
+                if (!e.dataTransfer.types.includes('application/x-asset-tab')) {
+                    return;
+                }
+
+                // Ensure we don't interfere with folder drops
+                if (e.dataTransfer.types.includes('application/x-folder-path')) {
+                    return;
+                }
+
                 e.preventDefault();
-                
-                if (!draggedTab) return;
 
                 const tabContainer = draggedTab.parentElement;
                 const targetTab = e.target.closest('.tab');
@@ -647,6 +675,16 @@ export class AssetTabsManager {
 
                     // Save new tab order to state
                     this.saveTabOrder();
+                    
+                    // Activate the dragged tab after drop and sync folder selection
+                    const folderPath = draggedTab.dataset.folderPath;
+                    if (folderPath) {
+                        this.stateManager.set('activeAssetTab', folderPath);
+                        this._saveTabStateToConfig(folderPath);
+                        if (this.foldersPanel) {
+                            this.foldersPanel.selectFolder(folderPath, null);
+                        }
+                    }
                 }
 
                 // Clean up
@@ -690,9 +728,7 @@ export class AssetTabsManager {
         this.stateManager.set('assetTabOrder', newOrder);
         
         // Save to config
-        if (this.levelEditor?.configManager) {
-            this.levelEditor.configManager.set('editor.view.assetTabOrder', newOrder);
-        }
+        this._saveTabStateToConfig(undefined, undefined, newOrder);
         
         Logger.ui.debug('AssetTabsManager: Saved tab order:', newOrder);
     }
@@ -726,7 +762,12 @@ export class AssetTabsManager {
             
             const folderPath = e.dataTransfer.getData('application/x-folder-path');
             if (folderPath) {
+                Logger.ui.debug(`AssetTabsManager: Processing folder drop for ${folderPath}`);
                 this.addFolderTab(folderPath);
+                // Sync folder selection to show content
+                if (this.foldersPanel) {
+                    this.foldersPanel.selectFolder(folderPath, null);
+                }
                 Logger.ui.debug(`AssetTabsManager: Dropped folder ${folderPath} on tabs container`);
             }
         });

@@ -306,20 +306,14 @@ export class AssetPanel extends BasePanel {
         const activeTab = this.stateManager.get('activeAssetTab');
         const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
         
-        // If there's an active tab and it exists in activeTabs, check selected folders
-        if (activeTab && activeTabs.has(activeTab)) {
-            // Check if multiple folders are selected
-            if (this.foldersPanel?.selectedFolders && this.foldersPanel.selectedFolders.size > 1) {
-                // Return all selected folders that have tabs
-                return Array.from(this.foldersPanel.selectedFolders).filter(path => activeTabs.has(path));
-            }
-            // Single selection - return active tab
-            return [activeTab];
-        }
-        
-        // No active tab - return selected folders from FoldersPanel
+        // Always prioritize selected folders from FoldersPanel for content display
         if (this.foldersPanel?.selectedFolders && this.foldersPanel.selectedFolders.size > 0) {
             return Array.from(this.foldersPanel.selectedFolders);
+        }
+        
+        // If there's an active tab and it exists in activeTabs, use it
+        if (activeTab && activeTabs.has(activeTab)) {
+            return [activeTab];
         }
         
         // Fallback to 'root' if no folder selected
