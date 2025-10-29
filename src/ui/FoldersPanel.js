@@ -466,7 +466,7 @@ export class FoldersPanel extends BasePanel {
             // Folder header
             // Always show folder icon for folders, even if empty
             const toggleIcon = isExpanded ? '📂' : '📁';
-            const expandIcon = Object.keys(folder.children).length > 0 ?
+            const expandIcon = Object.keys(folder.children).length > 0 || folder.path === 'root' ?
                 (isExpanded ? '▼' : '▶') : '';
             
             // Count assets recursively (including all subfolders)
@@ -506,7 +506,12 @@ export class FoldersPanel extends BasePanel {
             return html;
         };
 
-        const html = renderFolder(this.folderStructure.root);
+        // Render tree starting from root's children (hide root "Content" in UI)
+        let html = '';
+        const rootChildren = Object.values(this.folderStructure.root.children || {});
+        for (const childFolder of rootChildren) {
+            html += renderFolder(childFolder, 0);
+        }
         Logger.ui.debug('FoldersPanel: Generated HTML length:', html.length);
         Logger.ui.debug('FoldersPanel: Generated HTML preview:', html.substring(0, 500) + '...');
         
@@ -560,7 +565,13 @@ export class FoldersPanel extends BasePanel {
                     e.stopPropagation();
                     const path = item.dataset.path;
                     if (path) {
-                        this.toggleFolderExpansion(path);
+                        if (e.shiftKey) {
+                            // Shift+click: recursive expand/collapse
+                            this.toggleFolderExpansionRecursive(path);
+                        } else {
+                            // Normal click: single level toggle
+                            this.toggleFolderExpansion(path);
+                        }
                     }
                 });
             }
@@ -802,6 +813,63 @@ export class FoldersPanel extends BasePanel {
         }
         this.renderFolderContent();
         Logger.ui.debug('Toggled folder expansion:', path);
+    }
+
+    /**
+     * Toggle folder expansion recursively (all children)
+     */
+    toggleFolderExpansionRecursive(path) {
+        const folder = this.getFolderByPath(path);
+        if (!folder) {
+            Logger.ui.warn('FoldersPanel: Folder not found for recursive toggle:', path);
+            return;
+        }
+
+        const isExpanded = this.expandedFolders.has(path);
+        Logger.ui.debug('FoldersPanel: Recursive toggle - path:', path, 'isExpanded:', isExpanded, 'folder.children:', Object.keys(folder.children || {}));
+        
+        if (isExpanded) {
+            // Collapse: remove this folder and all its children from expanded
+            this.collapseFolderRecursively(path, folder);
+        } else {
+            // Expand: add this folder and all its children to expanded
+            this.expandFolderRecursively(path, folder);
+        }
+        
+        this.renderFolderContent();
+        Logger.ui.debug('Toggled folder expansion recursively:', path, isExpanded ? 'collapsed' : 'expanded');
+    }
+
+    /**
+     * Collapse folder and all its children recursively
+     */
+    collapseFolderRecursively(path, folder) {
+        Logger.ui.debug('FoldersPanel: Collapsing folder:', path);
+        this.expandedFolders.delete(path);
+        
+        if (folder.children) {
+            for (const [childName, childFolder] of Object.entries(folder.children)) {
+                const childPath = path === 'root' ? childName : `${path}/${childName}`;
+                Logger.ui.debug('FoldersPanel: Collapsing child:', childPath);
+                this.collapseFolderRecursively(childPath, childFolder);
+            }
+        }
+    }
+
+    /**
+     * Expand folder and all its children recursively
+     */
+    expandFolderRecursively(path, folder) {
+        Logger.ui.debug('FoldersPanel: Expanding folder:', path);
+        this.expandedFolders.add(path);
+        
+        if (folder.children) {
+            for (const [childName, childFolder] of Object.entries(folder.children)) {
+                const childPath = path === 'root' ? childName : `${path}/${childName}`;
+                Logger.ui.debug('FoldersPanel: Expanding child:', childPath);
+                this.expandFolderRecursively(childPath, childFolder);
+            }
+        }
     }
 
     /**
