@@ -71,12 +71,10 @@ export class AssetPanel extends BasePanel {
             'assets-search',
             (searchTerm) => {
                 this.searchTerm = searchTerm;
-                Logger.ui.debug('Asset search term changed:', searchTerm);
                 this.renderPreviews(); // Only re-render previews, not entire panel
             },
             () => {
                 // Clear callback - could be used for additional cleanup
-                Logger.ui.debug('Asset search cleared');
             }
         );
 
@@ -170,7 +168,6 @@ export class AssetPanel extends BasePanel {
             
             tabsLeftContainer = tabsLeft;
             
-            Logger.ui.debug('AssetPanel: Created two-part tabs container structure');
         }
         
         this.tabsManager = new AssetTabsManager(
@@ -181,7 +178,6 @@ export class AssetPanel extends BasePanel {
             this
         );
         
-        Logger.ui.debug('AssetPanel: AssetTabsManager initialized');
     }
 
 
@@ -195,7 +191,6 @@ export class AssetPanel extends BasePanel {
             this.assetSize = newSize;
             this.saveAssetSize();
             this.render();
-            Logger.ui.debug('Asset size decreased to:', this.assetSize);
         }
     }
 
@@ -208,7 +203,6 @@ export class AssetPanel extends BasePanel {
             this.assetSize = newSize;
             this.saveAssetSize();
             this.render();
-            Logger.ui.debug('Asset size increased to:', this.assetSize);
         }
     }
 

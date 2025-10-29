@@ -40,12 +40,7 @@ export class FoldersPanel extends BasePanel {
         `;
 
         this.folderTree = this.container.querySelector('#folders-tree');
-        Logger.ui.debug('FoldersPanel: Rendered structure, folderTree element:', this.folderTree);
 
-        if (this.folderTree) {
-            Logger.ui.debug('FoldersPanel: folderTree computed style:', window.getComputedStyle(this.folderTree));
-            Logger.ui.debug('FoldersPanel: folderTree is visible:', this.folderTree.offsetWidth > 0 && this.folderTree.offsetHeight > 0);
-        }
 
     }
 
@@ -72,7 +67,6 @@ export class FoldersPanel extends BasePanel {
         }
 
         if (!this.folderStructure) {
-            Logger.ui.debug('FoldersPanel: No folder structure to render');
             this.folderTree.innerHTML = '<div class="text-center py-4" style="color: var(--ui-text-color, #9ca3af);">No folders available</div>';
             return;
         }
@@ -151,37 +145,6 @@ export class FoldersPanel extends BasePanel {
         return name.substring(0, startChars) + ellipsis + name.substring(name.length - endChars);
     }
 
-    /**
-     * Add empty folders from manifest structure (folders without assets)
-     * @param {Object} parentFolder - Parent folder object
-     * @param {Object} structure - Manifest structure object
-     * @param {string} parentPath - Parent path
-     */
-    addEmptyFoldersFromManifest(parentFolder, structure, parentPath) {
-        for (const [folderName, subStructure] of Object.entries(structure)) {
-            const folderPath = `${parentPath}/${folderName}`;
-            
-            // Only add if folder doesn't already exist
-            if (!parentFolder.children[folderName]) {
-                const folder = {
-                    name: folderName,
-                    path: folderPath,
-                    children: {},
-                    assets: [],
-                    isExpanded: false
-                };
-
-                // Add to parent
-                parentFolder.children[folderName] = folder;
-                Logger.ui.debug(`FoldersPanel: Added empty folder "${folderName}" at path "${folderPath}"`);
-            }
-
-            // Recursively process subfolders
-            if (subStructure && typeof subStructure === 'object' && Object.keys(subStructure).length > 0) {
-                this.addEmptyFoldersFromManifest(parentFolder.children[folderName], subStructure, folderPath);
-            }
-        }
-    }
 
     /**
      * Build folder structure from manifest structure
@@ -191,7 +154,9 @@ export class FoldersPanel extends BasePanel {
      */
     buildFromManifestStructure(parentFolder, structure, parentPath) {
         for (const [folderName, subStructure] of Object.entries(structure)) {
-            const folderPath = `${parentPath}/${folderName}`;
+            // Remove 'root/' prefix from parentPath if present
+            const normalizedParentPath = parentPath.replace(/^root\//, '');
+            const folderPath = normalizedParentPath ? `${normalizedParentPath}/${folderName}` : folderName;
             
             // Create folder node
             const folder = {
@@ -205,7 +170,6 @@ export class FoldersPanel extends BasePanel {
             // Add to parent
             parentFolder.children[folderName] = folder;
 
-            Logger.ui.debug(`FoldersPanel: Created folder "${folderName}" at path "${folderPath}"`);
 
             // Recursively process subfolders
             if (subStructure && typeof subStructure === 'object' && Object.keys(subStructure).length > 0) {
@@ -230,8 +194,10 @@ export class FoldersPanel extends BasePanel {
                         if (remainingPath && !remainingPath.includes('/')) {
                             // It's directly in this folder, add it
                             folder.assets.push(asset);
-                            Logger.ui.debug(`FoldersPanel: Added asset "${asset.name}" to folder "${folderName}" (path: ${folderPath})`);
                         }
+                    } else if (normalizedAssetPath === normalizedFolderPath) {
+                        // Asset is directly in this folder (no subfolder)
+                        folder.assets.push(asset);
                     }
                 }
             }
@@ -301,7 +267,7 @@ export class FoldersPanel extends BasePanel {
             
             for (let i = 0; i < pathParts.length - 1; i++) {
                 const folderName = pathParts[i];
-                const folderPath = 'root/' + pathParts.slice(0, i + 1).join('/');
+                const folderPath = pathParts.slice(0, i + 1).join('/');
                 
                 if (!currentFolder.children[folderName]) {
                     // Create folder if it doesn't exist
@@ -312,7 +278,6 @@ export class FoldersPanel extends BasePanel {
                         assets: [],
                         isExpanded: false
                     };
-                    Logger.ui.debug(`FoldersPanel: Created folder "${folderName}" at path "${folderPath}" for asset "${asset.name}"`);
                 }
                 
                 currentFolder = currentFolder.children[folderName];
@@ -321,7 +286,6 @@ export class FoldersPanel extends BasePanel {
             // Add asset to final folder
             if (!currentFolder.assets.find(a => a.id === asset.id)) {
                 currentFolder.assets.push(asset);
-                Logger.ui.debug(`FoldersPanel: Added asset "${asset.name}" to folder "${currentFolder.path}"`);
             }
         }
     }
@@ -346,17 +310,19 @@ export class FoldersPanel extends BasePanel {
             }
         };
 
-        // Always build structure dynamically from assets, not from static manifest
+        // First, create folder structure from manifest
         // This ensures empty folders are included and structure is always up-to-date
-        if (this.assetManager.assets && this.assetManager.assets.size > 0) {
-            Logger.ui.info('FoldersPanel: Building structure dynamically from assets');
-            this.addAssetsToStructure(folderStructure.root, this.assetManager.assets.values());
+        if (this.assetManager.contentStructure) {
+            Logger.ui.debug('FoldersPanel: Building folder structure from manifest');
+            this.buildFromManifestStructure(folderStructure.root, this.assetManager.contentStructure, 'root');
         }
         
-        // Also add any folders from manifest structure that might not have assets
-        if (this.assetManager.contentStructure) {
-            Logger.ui.debug('FoldersPanel: Adding empty folders from manifest structure');
-            this.addEmptyFoldersFromManifest(folderStructure.root, this.assetManager.contentStructure, 'root');
+        // Then add any remaining assets that don't fit manifest structure
+        if (this.assetManager.assets && this.assetManager.assets.size > 0) {
+            Logger.ui.info(`FoldersPanel: Adding assets to structure (${this.assetManager.assets.size} total assets)`);
+            this.addAssetsToStructure(folderStructure.root, this.assetManager.assets.values());
+        } else {
+            Logger.ui.warn('FoldersPanel: No assets available in AssetManager');
         }
         
         this.folderStructure = folderStructure;
@@ -390,7 +356,6 @@ export class FoldersPanel extends BasePanel {
             const hasChildren = Object.keys(folder.children).length > 0; // Only check for child folders
             const isSelected = this.selectedFolders.has(folder.path);
 
-            Logger.ui.debug(`FoldersPanel: Rendering folder "${folder.name}" (path: ${folder.path}), depth: ${depth}, children: ${Object.keys(folder.children).length}, assets: ${folder.assets.length}, expanded: ${isExpanded}, selected: ${isSelected}`);
 
             let html = '';
 
@@ -423,32 +388,54 @@ export class FoldersPanel extends BasePanel {
 
             // Children folders only (only if expanded)
             if (isExpanded) {
-                Logger.ui.debug(`FoldersPanel: Rendering ${Object.keys(folder.children).length} child folders for "${folder.name}"`);
-                
                 // Render child folders only (assets are not shown in folder tree)
                 // Sort children alphabetically by name
                 const sortedChildren = Object.values(folder.children).sort((a, b) => a.name.localeCompare(b.name));
                 for (const childFolder of sortedChildren) {
-                    Logger.ui.debug(`FoldersPanel: Rendering child folder "${childFolder.name}" of "${folder.name}"`);
                     html += renderFolder(childFolder, depth + 1);
                 }
-            } else {
-                Logger.ui.debug(`FoldersPanel: Folder "${folder.name}" is collapsed, skipping ${Object.keys(folder.children).length} children`);
             }
 
             return html;
         };
 
-        // Render tree starting from root's children (hide root "Content" in UI)
+        // Render tree starting from root folder (show "Content" in UI)
         let html = '';
-        // Sort root children alphabetically by name
-        const rootChildren = Object.values(this.folderStructure.root.children || {}).sort((a, b) => a.name.localeCompare(b.name));
-        for (const childFolder of rootChildren) {
-            html += renderFolder(childFolder, 0);
-        }
-        Logger.ui.debug('FoldersPanel: Generated HTML length:', html.length);
-        Logger.ui.debug('FoldersPanel: Generated HTML preview:', html.substring(0, 500) + '...');
         
+        // Always render root folder first to ensure it's selectable
+        // This ensures assets in root folder are accessible
+        const rootFolder = this.folderStructure.root;
+        if (rootFolder) {
+            // Render root folder with normal styling
+            const isRootExpanded = this.expandedFolders.has('root');
+            const isRootSelected = this.selectedFolders.has('root');
+            const totalAssetsInRoot = countAssetsRecursive(rootFolder);
+            
+            html += `
+                <div class="folder-item ${isRootSelected ? 'selected' : ''} cursor-pointer p-1 rounded mb-1"
+                     data-path="root"
+                     draggable="true"
+                     style="padding-left: 4px; pointer-events: auto; z-index: 1; width: 100%; overflow: hidden; line-height: 1.2; height: 24px; word-break: keep-all; hyphens: none;">
+                    <div class="flex items-center" style="min-width: 0; width: 100%; position: relative; line-height: 1.2; align-items: center; flex-wrap: nowrap;">
+                        <span class="expand-icon text-xs" style="min-width: 16px; flex-shrink: 0; margin-right: 4px; cursor: pointer;">${Object.keys(rootFolder.children).length > 0 ? (isRootExpanded ? '▼' : '▶') : ''}</span>
+                        <span class="folder-icon" style="min-width: 20px; flex-shrink: 0; margin-right: 8px;">${isRootExpanded ? '📂' : '📁'}</span>
+                        <span class="folder-name truncate" style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: calc(100% - 82px); position: relative; z-index: 1; line-height: 1.2; color: var(--ui-text-color, #d1d5db);">Content</span>
+                        <span class="folder-count text-xs" style="white-space: nowrap; min-width: 40px; flex-shrink: 0; text-align: right; margin-left: 4px; color: var(--ui-text-color, #9ca3af);">
+                            ${totalAssetsInRoot > 0 ? `(${totalAssetsInRoot})` : ''}
+                        </span>
+                    </div>
+                </div>
+            `;
+            
+            // Render root children if expanded
+            if (isRootExpanded) {
+                // Sort root children alphabetically by name
+                const rootChildren = Object.values(this.folderStructure.root.children || {}).sort((a, b) => a.name.localeCompare(b.name));
+                for (const childFolder of rootChildren) {
+                    html += renderFolder(childFolder, 1);
+                }
+            }
+        }
         // Count elements in generated HTML
         const folderMatches = (html.match(/class="folder-item"/g) || []).length;
         const assetMatches = (html.match(/class="asset-item"/g) || []).length;
@@ -460,22 +447,12 @@ export class FoldersPanel extends BasePanel {
         const insertedFolders = this.folderTree.querySelectorAll('.folder-item').length;
         const insertedAssets = this.folderTree.querySelectorAll('.asset-item').length;
         Logger.ui.info(`FoldersPanel: DOM contains ${insertedFolders} folder elements and ${insertedAssets} asset elements`);
-        Logger.ui.debug('FoldersPanel: Folder tree HTML set, calling setupFolderEventListeners');
 
         // Verify elements exist after setting HTML
         const folderItems = this.folderTree.querySelectorAll('.folder-item');
-        Logger.ui.debug('FoldersPanel: Found folder items:', folderItems.length);
-
-        // Debug: Log data-path attributes
-        folderItems.forEach((item, index) => {
-            Logger.ui.debug(`FoldersPanel: Folder item ${index}: data-path="${item.dataset.path}" text="${item.textContent.trim()}"`);
-        });
 
         // Add event listeners to folder items
-        Logger.ui.debug('FoldersPanel: Adding direct event listeners to folder elements');
-        folderItems.forEach((item, index) => {
-            Logger.ui.debug('FoldersPanel: Adding listener to folder item', index, item.dataset.path);
-            
+        folderItems.forEach((item) => {
             // Click on folder name - only select
             item.addEventListener('click', (e) => {
                 // Check if click was on expand icon
@@ -483,7 +460,6 @@ export class FoldersPanel extends BasePanel {
                     return; // Let expand icon handler deal with it
                 }
                 
-                Logger.ui.debug('FoldersPanel: Folder click - selecting only');
                 e.stopPropagation();
                 const path = item.dataset.path;
                 if (path) {
@@ -495,7 +471,6 @@ export class FoldersPanel extends BasePanel {
             const expandIcon = item.querySelector('.expand-icon');
             if (expandIcon) {
                 expandIcon.addEventListener('click', (e) => {
-                    Logger.ui.debug('FoldersPanel: Expand icon clicked');
                     e.stopPropagation();
                     const path = item.dataset.path;
                     if (path) {
@@ -517,103 +492,21 @@ export class FoldersPanel extends BasePanel {
                     e.dataTransfer.setData('application/x-folder-path', path);
                     e.dataTransfer.effectAllowed = 'copy';
                     item.classList.add('dragging');
-                    Logger.ui.debug('FoldersPanel: Started dragging folder', path);
                 }
             });
             
             item.addEventListener('dragend', (e) => {
                 item.classList.remove('dragging');
-                Logger.ui.debug('FoldersPanel: Finished dragging folder');
             });
         });
 
-        this.setupFolderEventListeners();
     }
 
-    /**
-     * Setup event listeners for folder items
-     */
-    setupFolderEventListeners() {
-        // Only setup listener once
-        if (this.eventListenerAttached) {
-            Logger.ui.debug('FoldersPanel: Event listener already attached');
-            return;
-        }
-
-        const folderTree = this.container.querySelector('#folders-tree');
-        if (!folderTree) {
-            Logger.ui.error('FoldersPanel: folderTree element not found!');
-            return;
-        }
-
-        Logger.ui.debug('FoldersPanel: Setting up event listener on folderTree');
-
-        // Add a general click listener to the container to debug
-        folderTree.addEventListener('click', (e) => {
-            Logger.ui.debug('FoldersPanel: General click on folderTree container', e.target);
-        });
-
-        // Use event delegation instead of individual listeners
-        folderTree.addEventListener('click', (e) => {
-            Logger.ui.debug('FoldersPanel: Click event received', e.target);
-
-            const target = e.target.closest('.folder-item, .asset-item');
-            Logger.ui.debug('FoldersPanel: Closest target found:', target);
-
-            if (!target) {
-                Logger.ui.debug('FoldersPanel: Click target not found, clicked on:', e.target);
-                return;
-            }
-
-            e.stopPropagation();
-
-            Logger.ui.debug('FoldersPanel: Target classes:', target.classList);
-            Logger.ui.debug('FoldersPanel: Target dataset:', target.dataset);
-
-                if (target.classList.contains('folder-item')) {
-                    const path = target.dataset.path;
-                    if (!path) {
-                        Logger.ui.warn('FoldersPanel: Folder item missing data-path attribute');
-                        return;
-                    }
-                    Logger.ui.debug('FoldersPanel: Clicking folder:', path);
-                    this.selectFolder(path, e);
-
-                    // Toggle expansion for folders with children
-                    const folder = this.getFolderByPath(path);
-                    if (folder && folder.children && folder.assets &&
-                        (Object.keys(folder.children).length > 0 || folder.assets.length > 0)) {
-                        this.toggleFolderExpansion(path);
-                    }
-            } else if (target.classList.contains('asset-item')) {
-                const assetId = target.dataset.assetId;
-                if (!assetId) {
-                    Logger.ui.warn('FoldersPanel: Asset item missing data-asset-id attribute');
-                    return;
-                }
-                Logger.ui.debug('FoldersPanel: Clicking asset:', assetId);
-                this.selectAsset(assetId);
-            } else {
-                Logger.ui.debug('FoldersPanel: Target has neither folder-item nor asset-item class');
-            }
-        });
-
-        this.eventListenerAttached = true;
-        Logger.ui.debug('FoldersPanel: Event listener attached successfully');
-
-        // Debug: Add global click listener to check if clicks reach the component
-        document.addEventListener('click', (e) => {
-            if (this.container.contains(e.target)) {
-                Logger.ui.debug('FoldersPanel: Click detected within container', e.target);
-            }
-        });
-    }
 
     /**
      * Select a folder
      */
     selectFolder(path, event = null) {
-        Logger.ui.debug('FoldersPanel: selectFolder called with path:', path, 'event:', event);
 
         const isShift = event && event.shiftKey;
         const isCtrl = event && (event.ctrlKey || event.metaKey);
@@ -670,7 +563,6 @@ export class FoldersPanel extends BasePanel {
             this.stateManager.set('selectedFolders', Array.from(this.selectedFolders));
         }
 
-        Logger.ui.debug('FoldersPanel: Selected folders updated:', Array.from(this.selectedFolders));
     }
 
     selectFolderRange(startPath, endPath) {
@@ -679,7 +571,6 @@ export class FoldersPanel extends BasePanel {
         // Don't clear selection - add to existing selection
         this.selectedFolders.add(startPath);
         this.selectedFolders.add(endPath);
-        Logger.ui.debug('FoldersPanel: Range selection from', startPath, 'to', endPath);
     }
 
     syncFoldersToTabs() {
@@ -691,7 +582,6 @@ export class FoldersPanel extends BasePanel {
             this.assetPanel.tabsManager.syncTabToFolder();
         }
         
-        Logger.ui.debug('FoldersPanel: Synced folder to tabs');
     }
 
     /**
@@ -733,7 +623,6 @@ export class FoldersPanel extends BasePanel {
             Logger.ui.warn('FoldersPanel: assetPanel not available for selectAsset');
         }
 
-        Logger.ui.debug('Selected asset:', assetId);
     }
 
     /**
@@ -746,7 +635,6 @@ export class FoldersPanel extends BasePanel {
             this.expandedFolders.add(path);
         }
         this.renderFolderContent();
-        Logger.ui.debug('Toggled folder expansion:', path);
     }
 
     /**
@@ -771,20 +659,17 @@ export class FoldersPanel extends BasePanel {
         }
         
         this.renderFolderContent();
-        Logger.ui.debug('Toggled folder expansion recursively:', path, isExpanded ? 'collapsed' : 'expanded');
     }
 
     /**
      * Collapse folder and all its children recursively
      */
     collapseFolderRecursively(path, folder) {
-        Logger.ui.debug('FoldersPanel: Collapsing folder:', path);
         this.expandedFolders.delete(path);
         
         if (folder.children) {
             for (const [childName, childFolder] of Object.entries(folder.children)) {
                 const childPath = path === 'root' ? childName : `${path}/${childName}`;
-                Logger.ui.debug('FoldersPanel: Collapsing child:', childPath);
                 this.collapseFolderRecursively(childPath, childFolder);
             }
         }
@@ -794,13 +679,11 @@ export class FoldersPanel extends BasePanel {
      * Expand folder and all its children recursively
      */
     expandFolderRecursively(path, folder) {
-        Logger.ui.debug('FoldersPanel: Expanding folder:', path);
         this.expandedFolders.add(path);
         
         if (folder.children) {
             for (const [childName, childFolder] of Object.entries(folder.children)) {
                 const childPath = path === 'root' ? childName : `${path}/${childName}`;
-                Logger.ui.debug('FoldersPanel: Expanding child:', childPath);
                 this.expandFolderRecursively(childPath, childFolder);
             }
         }
@@ -815,18 +698,6 @@ export class FoldersPanel extends BasePanel {
             return null;
         }
 
-        Logger.ui.debug('FoldersPanel: getFolderByPath called with path:', path);
-        Logger.ui.debug('FoldersPanel: folderStructure keys:', Object.keys(this.folderStructure));
-        Logger.ui.debug('FoldersPanel: available categories in folderStructure:', Object.keys(this.folderStructure.root.children));
-
-        // Debug: Check what assets exist
-        if (this.assetManager) {
-            const assetCategories = new Set();
-            for (const [assetId, asset] of this.assetManager.assets) {
-                assetCategories.add(asset.category || 'Uncategorized');
-            }
-            Logger.ui.debug('FoldersPanel: asset categories in assetManager:', Array.from(assetCategories));
-        }
 
         if (!this.folderStructure || !this.folderStructure.root) {
             Logger.ui.error('FoldersPanel: folderStructure or folderStructure.root not initialized');
@@ -836,22 +707,14 @@ export class FoldersPanel extends BasePanel {
         const parts = path.split('/');
         let current = this.folderStructure.root; // Start from root, not folderStructure
 
-        Logger.ui.debug('FoldersPanel: Starting path resolution for:', path, 'parts:', parts, 'starting from root:', current.name);
-
         for (const part of parts) {
             if (part === 'root') {
-                Logger.ui.debug('FoldersPanel: Skipping root part, already at root');
                 continue;
             }
-            Logger.ui.debug('FoldersPanel: checking part:', part, 'current:', current, 'current.children exists:', !!current.children);
             if (current && current.children) {
-                Logger.ui.debug('FoldersPanel: current.children keys:', Object.keys(current.children));
                 if (current.children[part]) {
                     current = current.children[part];
-                    Logger.ui.debug('FoldersPanel: moved to child:', part, 'new current:', current);
                 } else {
-                    Logger.ui.debug('FoldersPanel: part not found:', part, 'available children:', Object.keys(current.children));
-                    Logger.ui.debug('FoldersPanel: Full folderStructure:', this.folderStructure);
                     return null;
                 }
             } else {
@@ -859,8 +722,6 @@ export class FoldersPanel extends BasePanel {
                 return null;
             }
         }
-
-        Logger.ui.debug('FoldersPanel: found folder:', current);
         return current;
     }
 
@@ -868,7 +729,6 @@ export class FoldersPanel extends BasePanel {
      * Refresh folder structure when assets change
      */
     refresh() {
-        Logger.ui.debug('FoldersPanel: Refresh called');
         this.buildFolderStructure();
         // Always re-render, even if buildFolderStructure did nothing
         this.renderFolderContent();
@@ -990,23 +850,18 @@ export class FoldersPanel extends BasePanel {
                 const folder = this.getFolderByPath(folderPath);
                 if (folder) {
                     selectedPaths.add(folderPath);
-                    Logger.ui.debug(`FoldersPanel: Found existing folder for tab ${category}: ${folderPath}`);
-                } else {
-                    Logger.ui.debug(`FoldersPanel: Tab ${category} has no corresponding folder, skipping sync`);
                 }
             }
 
             // If no folders found, select root to show all assets
             if (selectedPaths.size === 0 && activeTabs.size > 0) {
                 selectedPaths.add('root');
-                Logger.ui.debug('FoldersPanel: No matching folders found, selecting root');
             }
 
             this.selectedFolders = selectedPaths;
         }
 
         this.renderFolderContent();
-        Logger.ui.debug('FoldersPanel: Synced tabs to folders:', Array.from(this.selectedFolders));
     }
 }
 

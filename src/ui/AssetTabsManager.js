@@ -20,8 +20,6 @@ class AssetTabContextMenu {
     handleTabContextMenu(event, folderPath, tab) {
         event.preventDefault();
         
-        Logger.ui.debug('AssetTabContextMenu: Tab context menu triggered', { folderPath, tab });
-
         // Show context menu with context data
         this.showMenu(event, { folderPath, tab });
     }
@@ -289,7 +287,6 @@ export class AssetTabsManager {
                     this.stateManager.set('activeAssetTab', firstSelectedWithTab);
                     // Save to config
                     this._saveTabStateToConfig(firstSelectedWithTab);
-                    Logger.ui.debug(`AssetTabsManager: Multi-select - set active tab to ${firstSelectedWithTab}`);
                     return true;
                 }
             }
@@ -309,7 +306,6 @@ export class AssetTabsManager {
                 this.stateManager.set('activeAssetTab', selectedFolderPath);
                     // Save to config
                     this._saveTabStateToConfig(selectedFolderPath);
-                Logger.ui.debug(`AssetTabsManager: Activated tab for folder ${selectedFolderPath}`);
                 return true;
             }
             // Tab already active - no changes needed
@@ -323,7 +319,6 @@ export class AssetTabsManager {
             this.stateManager.set('activeAssetTab', null);
             // Save to config
             this._saveTabStateToConfig(null);
-            Logger.ui.debug(`AssetTabsManager: Cleared active tab, showing folder ${selectedFolderPath} directly`);
             return true;
         }
         
@@ -360,7 +355,6 @@ export class AssetTabsManager {
         
         const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
         if (activeTabs.has(folderPath)) {
-            Logger.ui.debug(`AssetTabsManager: Tab for folder ${folderPath} already exists`);
             // Just activate it
             this.stateManager.set('activeAssetTab', folderPath);
             return;
@@ -383,7 +377,6 @@ export class AssetTabsManager {
         this._saveTabStateToConfig(folderPath);
         
         // No need to call render() here - subscriptions to activeAssetTabs and activeAssetTab will handle it
-        Logger.ui.debug(`AssetTabsManager: Added tab for folder ${folderPath}`);
     }
     
     /**
@@ -393,7 +386,6 @@ export class AssetTabsManager {
     removeFolderTab(folderPath) {
         const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
         if (!activeTabs.has(folderPath)) {
-            Logger.ui.debug(`AssetTabsManager: Tab for folder ${folderPath} does not exist`);
             return;
         }
         
@@ -410,14 +402,12 @@ export class AssetTabsManager {
         this._saveTabStateToConfig();
         
         // DO NOT call render() here - subscription to activeAssetTabs will handle it
-        Logger.ui.debug(`AssetTabsManager: Removed tab for folder ${folderPath}`);
     }
     
     /**
      * Render tabs
      */
     render() {
-        Logger.ui.debug('AssetTabsManager: render called - tabs will be recreated');
         
         // Reset context menu setup flag since DOM is being recreated
         this._contextMenuSetup = false;
@@ -503,7 +493,6 @@ export class AssetTabsManager {
             }
             
             this.stateManager.set('selectedAssets', new Set());
-            Logger.ui.debug(`AssetTabsManager: Tab Shift+clicked ${folderPath}`);
             return;
         }
         
@@ -522,7 +511,6 @@ export class AssetTabsManager {
         }
         
         this.stateManager.set('selectedAssets', new Set());
-        Logger.ui.debug(`AssetTabsManager: Tab clicked ${folderPath} - folder selected`);
     }
     
     /**
@@ -536,7 +524,6 @@ export class AssetTabsManager {
         // Context menu is handled through delegated handlers in setupEventHandlers
         this._contextMenuSetup = true;
         
-        Logger.ui.debug('AssetTabsManager: Context menu setup completed (delegated)');
     }
     
     /**
@@ -579,7 +566,6 @@ export class AssetTabsManager {
         // Re-register after DOM updates to ensure handlers work on new elements
         eventHandlerManager.registerContainer(this.tabsContainer, tabHandlers);
         
-        Logger.ui.debug('AssetTabsManager: Event handlers registered on tabs container');
     }
     
     /**
@@ -691,6 +677,10 @@ export class AssetTabsManager {
                 this.tabsContainer.querySelectorAll('.tab').forEach(t => {
                     t.classList.remove('dragging', 'tab-drag-over');
                 });
+                
+                // Remove dragging class and reset cursor
+                document.body.classList.remove('tab-dragging');
+                document.body.style.cursor = '';
 
                 this.isDraggingTab = false; // Reset flag
                 draggedTab = null;
@@ -702,8 +692,9 @@ export class AssetTabsManager {
                     t.classList.remove('dragging', 'tab-drag-over');
                 });
                 
-                // Remove dragging class
+                // Remove dragging class and reset cursor
                 document.body.classList.remove('tab-dragging');
+                document.body.style.cursor = '';
                 
                 this.isDraggingTab = false;
                 draggedTab = null;
@@ -713,7 +704,6 @@ export class AssetTabsManager {
         
         eventHandlerManager.registerElement(this.tabsContainer, tabDraggingHandlers, 'asset-tab-dragging-container');
         
-        Logger.ui.debug('AssetTabsManager: Tab dragging setup completed');
     }
     
     /**
@@ -730,7 +720,6 @@ export class AssetTabsManager {
         // Save to config
         this._saveTabStateToConfig(undefined, undefined, newOrder);
         
-        Logger.ui.debug('AssetTabsManager: Saved tab order:', newOrder);
     }
     
     /**
@@ -762,13 +751,11 @@ export class AssetTabsManager {
             
             const folderPath = e.dataTransfer.getData('application/x-folder-path');
             if (folderPath) {
-                Logger.ui.debug(`AssetTabsManager: Processing folder drop for ${folderPath}`);
                 this.addFolderTab(folderPath);
                 // Sync folder selection to show content
                 if (this.foldersPanel) {
                     this.foldersPanel.selectFolder(folderPath, null);
                 }
-                Logger.ui.debug(`AssetTabsManager: Dropped folder ${folderPath} on tabs container`);
             }
         });
     }
@@ -788,11 +775,10 @@ export class AssetTabsManager {
             scrollKey: 'assetTabsScrollLeft',
             userPrefs: this.levelEditor?.userPrefs,
             onScrollChange: (scrollLeft) => {
-                Logger.ui.debug(`AssetTabsManager: Scroll position changed to ${scrollLeft}px`);
+                // Scroll position is automatically saved by HorizontalScrollUtils
             }
         });
         
-        Logger.ui.debug('AssetTabsManager: Horizontal scrolling setup completed');
     }
 
     /**
@@ -803,7 +789,6 @@ export class AssetTabsManager {
             const savedScrollLeft = this.levelEditor.userPrefs.get('assetTabsScrollLeft');
             if (savedScrollLeft !== null && savedScrollLeft !== undefined) {
                 this.tabsContainer.scrollLeft = savedScrollLeft;
-                Logger.ui.debug(`AssetTabsManager: Scroll position restored: ${savedScrollLeft}px`);
             }
         }
     }
@@ -829,7 +814,6 @@ export class AssetTabsManager {
             this.tabDraggingMousedownHandler = null;
         }
         
-        Logger.ui.debug('AssetTabsManager: Destroyed');
     }
 }
 

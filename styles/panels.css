@@ -198,9 +198,11 @@ body.tab-dragging {
     cursor: grabbing !important;
 }
 
-body.tab-dragging * {
+/* Only apply grabbing cursor to specific elements during tab dragging */
+body.tab-dragging .tab {
     cursor: grabbing !important;
 }
+
 
 /* Drop target styles for folder drag to tabs */
 .drop-target {
