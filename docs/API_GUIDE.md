@@ -32,6 +32,20 @@
 - `getCategories()` - получение всех категорий
 - `searchAssets(query)` - поиск ассетов
 
+### AssetTabsManager (src/ui/AssetTabsManager.js)
+Управление табами панели ассетов.
+
+#### Основные методы:
+- `render()` - отрисовка всех табов
+- `syncDefaultTab()` - синхронизация дефолтного таба с выбранной папкой
+- `addFolderTab(folderPath)` - добавление таба для папки
+- `removeFolderTab(folderPath)` - удаление таба папки
+- `handleTabClick(folderPath)` - обработка клика по табу
+- `setupContextMenu()` - настройка контекстного меню для табов
+- `setupTabDragging()` - настройка drag-and-drop для табов
+- `setupFolderDragToTabs()` - настройка дропа папок на контейнер табов
+- `destroy()` - очистка ресурсов
+
 ### FileManager (src/managers/FileManager.js)
 Управление файлами.
 
