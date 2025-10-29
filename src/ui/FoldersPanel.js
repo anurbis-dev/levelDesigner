@@ -181,16 +181,115 @@ export class FoldersPanel extends BasePanel {
             }
 
             // Get assets for this folder from assetManager
-            // Build the actual path prefix to check (remove 'root/' prefix)
-            const pathPrefix = folderPath.replace(/^root\//, '');
+            // Check if asset path matches this folder path (with or without 'root/' prefix)
             if (this.assetManager.assets) {
                 for (const asset of this.assetManager.assets.values()) {
-                    // Check if asset belongs to this folder or its subfolders
-                    if (asset.path && asset.path.startsWith(pathPrefix + '/')) {
-                        folder.assets.push(asset);
-                        Logger.ui.debug(`FoldersPanel: Added asset "${asset.name}" to folder "${folderName}" (path: ${pathPrefix})`);
+                    if (!asset.path) continue;
+                    
+                    // Normalize paths: remove 'root/' prefix if present
+                    const normalizedAssetPath = asset.path.replace(/^root\//, '');
+                    const normalizedFolderPath = folderPath.replace(/^root\//, '');
+                    
+                    // Check if asset belongs to this folder (exact match) or its immediate subfolders
+                    // Don't add assets that belong to subfolders - they'll be added by their parent folders
+                    if (normalizedAssetPath.startsWith(normalizedFolderPath + '/')) {
+                        // Check if it's directly in this folder (not in a subfolder)
+                        const remainingPath = normalizedAssetPath.substring(normalizedFolderPath.length + 1);
+                        if (remainingPath && !remainingPath.includes('/')) {
+                            // It's directly in this folder, add it
+                            folder.assets.push(asset);
+                            Logger.ui.debug(`FoldersPanel: Added asset "${asset.name}" to folder "${folderName}" (path: ${folderPath})`);
+                        }
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * Add assets to folder structure that don't fit manifest structure
+     * Creates folders as needed for assets not in manifest
+     * @param {Object} parentFolder - Parent folder object
+     * @param {Iterator} assets - Iterator of asset objects
+     */
+    addAssetsToStructure(parentFolder, assets) {
+        const processedAssets = new Set(); // Track which assets we've already added
+        
+        // First pass: collect all assets that are already in manifest folders
+        for (const asset of assets) {
+            if (!asset.path) continue;
+            
+            const normalizedAssetPath = asset.path.replace(/^root\//, '');
+            const pathParts = normalizedAssetPath.split('/').filter(p => p.trim() !== '');
+            
+            if (pathParts.length === 0) continue; // Skip assets without path
+            
+            // Try to find folder in structure
+            let currentFolder = parentFolder;
+            let foundInManifest = false;
+            
+            for (let i = 0; i < pathParts.length - 1; i++) {
+                const folderName = pathParts[i];
+                if (currentFolder.children && currentFolder.children[folderName]) {
+                    currentFolder = currentFolder.children[folderName];
+                    foundInManifest = true;
+                } else {
+                    foundInManifest = false;
+                    break;
+                }
+            }
+            
+            if (foundInManifest) {
+                // Asset belongs to an existing manifest folder
+                // It should already be added by buildFromManifestStructure
+                // But check if it's directly in this folder
+                const remainingPath = normalizedAssetPath.substring(currentFolder.path.replace(/^root\//, '').length + 1);
+                if (remainingPath && !remainingPath.includes('/')) {
+                    // It's directly in the folder, mark as processed
+                    processedAssets.add(asset.id);
+                }
+            }
+        }
+        
+        // Second pass: add assets that don't fit manifest structure
+        for (const asset of assets) {
+            if (!asset.path || processedAssets.has(asset.id)) continue;
+            
+            const normalizedAssetPath = asset.path.replace(/^root\//, '');
+            const pathParts = normalizedAssetPath.split('/').filter(p => p.trim() !== '');
+            
+            if (pathParts.length === 0) {
+                // Asset without path goes to root
+                parentFolder.assets.push(asset);
+                continue;
+            }
+            
+            // Navigate/create folder hierarchy for this asset
+            let currentFolder = parentFolder;
+            
+            for (let i = 0; i < pathParts.length - 1; i++) {
+                const folderName = pathParts[i];
+                const folderPath = 'root/' + pathParts.slice(0, i + 1).join('/');
+                
+                if (!currentFolder.children[folderName]) {
+                    // Create folder if it doesn't exist
+                    currentFolder.children[folderName] = {
+                        name: folderName,
+                        path: folderPath,
+                        children: {},
+                        assets: [],
+                        isExpanded: false
+                    };
+                    Logger.ui.debug(`FoldersPanel: Created folder "${folderName}" at path "${folderPath}" for asset "${asset.name}"`);
+                }
+                
+                currentFolder = currentFolder.children[folderName];
+            }
+            
+            // Add asset to final folder
+            if (!currentFolder.assets.find(a => a.id === asset.id)) {
+                currentFolder.assets.push(asset);
+                Logger.ui.debug(`FoldersPanel: Added asset "${asset.name}" to folder "${currentFolder.path}"`);
             }
         }
     }
@@ -219,6 +318,14 @@ export class FoldersPanel extends BasePanel {
         if (this.assetManager.contentStructure) {
             Logger.ui.info('FoldersPanel: Building structure from manifest');
             this.buildFromManifestStructure(folderStructure.root, this.assetManager.contentStructure, 'root');
+            
+            // After building from manifest, add any assets that don't fit the manifest structure
+            // This handles dynamically added assets (like drag-dropped files)
+            if (this.assetManager.assets && this.assetManager.assets.size > 0) {
+                Logger.ui.debug('FoldersPanel: Adding assets not in manifest structure');
+                this.addAssetsToStructure(folderStructure.root, this.assetManager.assets.values());
+            }
+            
             this.folderStructure = folderStructure;
             this.renderFolderContent();
             return;
@@ -370,6 +477,7 @@ export class FoldersPanel extends BasePanel {
             html += `
                 <div class="folder-item ${isSelected ? 'selected' : ''} cursor-pointer p-1 rounded mb-1"
                      data-path="${folder.path}"
+                     draggable="true"
                      style="padding-left: ${depth * 16 + 4}px; pointer-events: auto; z-index: 1; display: block; width: 100%; overflow: hidden; line-height: 1.2; height: 24px; word-break: keep-all; hyphens: none;"
                     <div class="flex items-center" style="min-width: 0; width: 100%; position: relative; line-height: 1.2; align-items: center; flex-wrap: nowrap;">
                         ${expandIcon ? `<span class="expand-icon text-xs ${textColor}" style="min-width: 16px; flex-shrink: 0; margin-right: 4px; cursor: pointer;">${expandIcon}</span>` : '<span style="min-width: 16px; flex-shrink: 0; margin-right: 4px;"></span>'}
@@ -456,6 +564,22 @@ export class FoldersPanel extends BasePanel {
                     }
                 });
             }
+            
+            // Setup drag and drop for folder items
+            item.addEventListener('dragstart', (e) => {
+                const path = item.dataset.path;
+                if (path) {
+                    e.dataTransfer.setData('application/x-folder-path', path);
+                    e.dataTransfer.effectAllowed = 'copy';
+                    item.classList.add('dragging');
+                    Logger.ui.debug('FoldersPanel: Started dragging folder', path);
+                }
+            });
+            
+            item.addEventListener('dragend', (e) => {
+                item.classList.remove('dragging');
+                Logger.ui.debug('FoldersPanel: Finished dragging folder');
+            });
         });
 
         this.setupFolderEventListeners();
@@ -570,7 +694,13 @@ export class FoldersPanel extends BasePanel {
         }
 
         this.renderFolderContent();
-        this.syncFoldersToTabs();
+        
+        // Notify state manager about folder selection change
+        // This will trigger subscription in AssetPanel which will sync tabs
+        // DO NOT call syncFoldersToTabs() here - it causes double sync
+        if (this.stateManager) {
+            this.stateManager.set('selectedFolders', Array.from(this.selectedFolders));
+        }
 
         Logger.ui.debug('FoldersPanel: Selected folders updated:', Array.from(this.selectedFolders));
     }
@@ -587,37 +717,13 @@ export class FoldersPanel extends BasePanel {
     syncFoldersToTabs() {
         if (!this.assetPanel) return;
 
-        // Convert selected folder paths to categories for tab synchronization
-        const selectedCategories = new Set();
-
-        for (const folderPath of this.selectedFolders) {
-            if (folderPath === 'root') {
-                // Root means show all categories
-                const allCategories = this.assetManager.getCategoriesWithAssets();
-                this.assetPanel.stateManager.set('activeAssetTabs', new Set(allCategories));
-                Logger.ui.debug('FoldersPanel: Root selected, showing all categories:', allCategories);
-                return;
-            }
-
-            const folder = this.getFolderByPath(folderPath);
-            if (folder) {
-                // Get all categories that have assets in this folder or subfolders
-                const categoriesInFolder = this.getCategoriesInFolder(folder);
-                categoriesInFolder.forEach(cat => selectedCategories.add(cat));
-                Logger.ui.debug(`FoldersPanel: Folder "${folder.name}" contains categories:`, categoriesInFolder);
-            }
+        // Sync selected folder to default tab in AssetPanel
+        // DO NOT call render() here - subscription to activeAssetTabs will handle it
+        if (this.assetPanel.tabsManager) {
+            this.assetPanel.tabsManager.syncDefaultTab();
         }
-
-        if (selectedCategories.size > 0) {
-            this.assetPanel.stateManager.set('activeAssetTabs', selectedCategories);
-            this.assetPanel.render();
-            Logger.ui.debug('FoldersPanel: Synced categories to tabs:', Array.from(selectedCategories));
-        } else {
-            // Empty folder selected - clear all tabs and show nothing
-            this.assetPanel.stateManager.set('activeAssetTabs', new Set());
-            this.assetPanel.render();
-            Logger.ui.debug('FoldersPanel: Empty folder selected, cleared all tabs');
-        }
+        
+        Logger.ui.debug('FoldersPanel: Synced folder to default tab');
     }
 
     /**
@@ -753,8 +859,13 @@ export class FoldersPanel extends BasePanel {
         });
 
         // Listen for tab changes to sync with folder selection
+        // Note: Do not call set('selectedFolders') here to avoid recursion
+        // syncTabsToFolders only updates visual selection, not state
         this.stateManager.subscribe('activeAssetTabs', (activeTabs) => {
-            this.syncTabsToFolders(activeTabs);
+            if (activeTabs && activeTabs.size > 0) {
+                // Only update visual selection, don't modify state
+                this.syncTabsToFolders(activeTabs);
+            }
         });
 
         // Setup resize observer for dynamic truncation

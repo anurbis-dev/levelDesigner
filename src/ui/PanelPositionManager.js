@@ -721,7 +721,8 @@ export class PanelPositionManager {
         // Check if there are remaining tabs in the source panel and activate the one closest to separator
         const fromPanelElement = document.getElementById(`${fromPanel}-tabs-panel`);
         if (fromPanelElement) {
-            const remainingTabs = fromPanelElement.querySelectorAll('.tab-right, .tab-left');
+            // Only query tabs with data-tab attribute (exclude asset panel tabs with data-folder-path)
+            const remainingTabs = fromPanelElement.querySelectorAll('.tab-right[data-tab], .tab-left[data-tab]');
             if (remainingTabs.length > 0) {
                 // Find the tab closest to the separator (main panel)
                 const tabClosestToSeparator = this.getTabClosestToSeparator(remainingTabs, fromPanel);

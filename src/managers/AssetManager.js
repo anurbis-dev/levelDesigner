@@ -78,15 +78,9 @@ export class AssetManager {
                 Logger.asset.info(`AssetManager: Content scan complete. Loaded ${result.loadedAssets} assets from ${result.totalFiles} files`);
                 Logger.asset.info(`AssetManager: Categories found: ${Array.from(result.categories).join(', ')}`);
 
-                // Update active tabs only with categories that have assets
-                if (this.stateManager && result.loadedAssets > 0) {
-                    const categoriesWithAssets = this.getCategoriesWithAssets();
-                    if (categoriesWithAssets.length > 0) {
-                        this.stateManager.set('assetTabOrder', categoriesWithAssets);
-                        this.stateManager.set('activeAssetTabs', new Set(categoriesWithAssets));
-                        Logger.asset.info('AssetManager: Updated asset tabs (only with assets):', categoriesWithAssets);
-                    }
-                }
+                // DO NOT create tabs here - tabs are managed by AssetPanel
+                // AssetPanel will create only one default tab 'root' at initialization
+                // Other tabs are created by user dragging folders to tabs container
 
                 // Notify state manager about asset changes
                 if (this.stateManager) {

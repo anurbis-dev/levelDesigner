@@ -5,6 +5,7 @@ import { AssetContextMenu } from './AssetContextMenu.js';
 import { AssetPanelContextMenu } from './AssetPanelContextMenu.js';
 import { BaseContextMenu } from './BaseContextMenu.js';
 import { FoldersPanel } from './FoldersPanel.js';
+import { AssetTabsManager } from './AssetTabsManager.js';
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 import { globalEventRegistry } from '../event-system/GlobalEventRegistry.js';
 import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
@@ -13,189 +14,6 @@ import { searchManager } from '../utils/SearchManager.js';
 import { SearchUtils } from '../utils/SearchUtils.js';
 import { MenuPositioningUtils } from '../utils/MenuPositioningUtils.js';
 import { PanelSizeCalculator } from '../utils/PanelSizeCalculator.js';
-
-/**
- * Context menu for asset tabs - simple implementation without BaseContextMenu
- */
-class AssetTabContextMenu {
-    constructor(assetPanel) {
-        this.assetPanel = assetPanel;
-        this.currentMenu = null;
-        this.isVisible = false;
-        this.lastContextData = null;
-    }
-
-    /**
-     * Handle context menu on asset tab
-     */
-    handleTabContextMenu(event, category, tab) {
-        event.preventDefault();
-        
-        Logger.ui.debug('AssetTabContextMenu: Tab context menu triggered', { category, tab });
-
-        // Show context menu with context data
-        this.showMenu(event, { category, tab });
-    }
-
-    /**
-     * Show context menu for asset tab
-     */
-    showMenu(event, contextData) {
-        // Remove existing menu
-        if (this.currentMenu) {
-            this.currentMenu.remove();
-            this.currentMenu = null;
-        }
-
-        // Store context data
-        this.lastContextData = contextData;
-        
-        // Create context menu element
-        const contextMenu = document.createElement('div');
-        contextMenu.className = 'asset-tab-context-menu base-context-menu';
-        contextMenu.style.pointerEvents = 'auto';
-        contextMenu.style.userSelect = 'none';
-
-        // Add Close menu item
-        const closeItem = document.createElement('div');
-        closeItem.className = 'base-context-menu-item';
-        closeItem.innerHTML = '<span>❌</span><span>Close</span>';
-        closeItem.addEventListener('click', () => {
-            const { category } = contextData;
-            const activeTabs = new Set(this.assetPanel.stateManager.get('activeAssetTabs'));
-            activeTabs.delete(category);
-
-            // Ensure at least one tab remains active
-            if (activeTabs.size === 0) {
-                const availableCategories = this.assetPanel.assetManager.getCategories();
-                if (availableCategories.length > 0) {
-                    activeTabs.add(availableCategories[0]);
-                }
-            }
-
-            this.assetPanel.stateManager.set('activeAssetTabs', activeTabs);
-            this.assetPanel.levelEditor.configManager.set('editor.view.activeAssetTabs', Array.from(activeTabs));
-            this.assetPanel.render();
-            
-            contextMenu.remove();
-            this.currentMenu = null;
-        });
-        contextMenu.appendChild(closeItem);
-
-        // Add to document
-        document.body.appendChild(contextMenu);
-
-        // Position menu using BaseContextMenu logic
-        this.positionContextMenu(event, contextMenu);
-
-        // Store current menu reference
-        this.currentMenu = contextMenu;
-        this.isVisible = true;
-
-        // Show menu with animation
-        requestAnimationFrame(() => {
-            contextMenu.classList.add('show');
-        });
-
-        // Close menu when clicking outside
-        const closeMenu = (e) => {
-            if (!contextMenu.contains(e.target)) {
-                contextMenu.remove();
-                this.currentMenu = null;
-                document.removeEventListener('click', closeMenu);
-            }
-        };
-        
-        setTimeout(() => {
-            document.addEventListener('click', closeMenu);
-        }, 0);
-    }
-
-    /**
-     * Position context menu using BaseContextMenu logic
-     * @param {Event} event - The context menu event
-     * @param {HTMLElement} menu - The context menu element
-     */
-    positionContextMenu(event, menu) {
-        const viewport = {
-            width: window.innerWidth,
-            height: window.innerHeight
-        };
-        
-        // Get actual menu dimensions
-        const menuSize = this.getMenuDimensions(menu);
-        
-        const margin = 20; // BaseContextMenu.MENU_VIEWPORT_MARGIN
-        
-        let x = event.pageX;
-        let y = event.pageY;
-        
-        // Determine optimal horizontal position
-        const spaceRight = viewport.width - event.pageX;
-        const spaceLeft = event.pageX;
-        
-        if (spaceRight >= menuSize.width + margin) {
-            x = event.pageX;
-        } else if (spaceLeft >= menuSize.width + margin) {
-            x = event.pageX - menuSize.width;
-        } else {
-            x = Math.max(margin,
-                       Math.min(event.pageX - menuSize.width / 2,
-                               viewport.width - menuSize.width - margin));
-        }
-        
-        // Determine optimal vertical position
-        const spaceBelow = viewport.height - event.pageY;
-        const spaceAbove = event.pageY;
-        
-        if (spaceBelow >= menuSize.height + margin) {
-            y = event.pageY;
-        } else if (spaceAbove >= menuSize.height + margin) {
-            y = event.pageY - menuSize.height;
-        } else {
-            y = Math.max(margin,
-                        Math.min(event.pageY - menuSize.height / 2,
-                                viewport.height - menuSize.height - margin));
-        }
-        
-        menu.style.left = x + 'px';
-        menu.style.top = y + 'px';
-    }
-
-    /**
-     * Get menu dimensions
-     * @param {HTMLElement} menu - The context menu element
-     * @returns {Object} - Object with width and height
-     */
-    getMenuDimensions(menu) {
-        // Force layout calculation
-        menu.style.visibility = 'hidden';
-        menu.style.display = 'block';
-        
-        const rect = menu.getBoundingClientRect();
-        const dimensions = {
-            width: rect.width || 150, // fallback width
-            height: rect.height || 50 // fallback height
-        };
-        
-        // Reset styles
-        menu.style.visibility = '';
-        menu.style.display = '';
-        
-        return dimensions;
-    }
-
-    /**
-     * Clean up event handlers
-     */
-    destroy() {
-        // Remove current menu if exists
-        if (this.currentMenu) {
-            this.currentMenu.remove();
-            this.currentMenu = null;
-        }
-    }
-}
 
 /**
  * Asset panel UI component
@@ -210,9 +28,8 @@ export class AssetPanel extends BasePanel {
         this.foldersContainer = null;
         this.foldersPanel = null;
         this.foldersPosition = 'left'; // 'left' or 'right'
-        this.isDraggingTab = false; // Flag to track tab dragging
-        this.tabDraggingSetup = false; // Flag to track if tab dragging is already setup
-        this._assetTabContextMenuSetup = false; // Flag to track context menu setup (similar to LayersPanel)
+        this.tabsManager = null; // AssetTabsManager instance
+        
         this._assetPanelHandlersSetup = false; // Flag to track panel handlers setup
 
         // Asset size management
@@ -263,8 +80,8 @@ export class AssetPanel extends BasePanel {
             }
         );
 
-        // Initialize asset tab context menu - now works globally
-        this.assetTabContextMenu = new AssetTabContextMenu(this);
+        // Initialize asset tab context menu - now handled by AssetTabsManager
+        // this.assetTabContextMenu removed - handled by tabsManager
     }
 
     init() {
@@ -298,8 +115,11 @@ export class AssetPanel extends BasePanel {
         // Initialize FoldersPanel
         this.initializeFoldersPanel();
 
-        // Initialize activeAssetTabs from config
+        // Initialize activeAssetTabs from config (now folder paths)
         this.initializeActiveAssetTabs();
+        
+        // Initialize AssetTabsManager
+        this.initializeTabsManager();
         
         // Event handlers will be set up by EventHandlerManager
         
@@ -308,6 +128,60 @@ export class AssetPanel extends BasePanel {
 
         // Update layout based on folders position
         this.updateFoldersLayout();
+    }
+    
+    /**
+     * Initialize AssetTabsManager
+     * Must be called after foldersPanel is initialized
+     */
+    initializeTabsManager() {
+        if (!this.tabsContainer) {
+            Logger.ui.error('AssetPanel: tabsContainer not available for tabs manager');
+            return;
+        }
+        
+        // Ensure foldersPanel is initialized first
+        if (!this.foldersPanel) {
+            Logger.ui.warn('AssetPanel: FoldersPanel not initialized, delaying tabs manager initialization');
+            // Retry after a short delay
+            setTimeout(() => {
+                if (this.foldersPanel) {
+                    this.initializeTabsManager();
+                }
+            }, 100);
+            return;
+        }
+        
+        // Create two-part structure: left for tabs, right for controls
+        let tabsLeftContainer = this.tabsContainer.querySelector('#asset-tabs-left');
+        if (!tabsLeftContainer) {
+            const tabsLeft = document.createElement('div');
+            tabsLeft.id = 'asset-tabs-left';
+            tabsLeft.className = 'flex flex-1 overflow-x-auto';
+            
+            const tabsRight = document.createElement('div');
+            tabsRight.id = 'asset-tabs-right';
+            tabsRight.className = 'flex items-center flex-shrink-0';
+            
+            // Clear container and add new structure
+            this.tabsContainer.innerHTML = '';
+            this.tabsContainer.appendChild(tabsLeft);
+            this.tabsContainer.appendChild(tabsRight);
+            
+            tabsLeftContainer = tabsLeft;
+            
+            Logger.ui.debug('AssetPanel: Created two-part tabs container structure');
+        }
+        
+        this.tabsManager = new AssetTabsManager(
+            tabsLeftContainer,
+            this.stateManager,
+            this.foldersPanel,
+            this.levelEditor,
+            this
+        );
+        
+        Logger.ui.debug('AssetPanel: AssetTabsManager initialized');
     }
 
 
@@ -366,16 +240,112 @@ export class AssetPanel extends BasePanel {
             // Also refresh the asset panel itself
             this.render();
         });
+        
+        // Listen for folder selection changes to sync default tab
+        // Sync happens BEFORE render to avoid recursion
+        this.stateManager.subscribe('selectedFolders', (selectedFolders) => {
+            if (this.foldersPanel && selectedFolders && this.tabsManager) {
+                // Update foldersPanel's selectedFolders if needed
+                const foldersSet = Array.isArray(selectedFolders) 
+                    ? new Set(selectedFolders) 
+                    : selectedFolders;
+                if (foldersSet.size > 0) {
+                    this.foldersPanel.selectedFolders = foldersSet;
+                    // Sync tab BEFORE render - this will update state if needed
+                    this.tabsManager.syncDefaultTab();
+                    // render() will be triggered by activeAssetTabs subscription if state changed
+                }
+            }
+        });
     }
 
     /**
      * Initialize active asset tabs from config
+     * Now uses folder paths instead of categories
+     * Always creates only one default 'root' tab at startup
      */
     initializeActiveAssetTabs() {
-        const savedTabs = this.levelEditor?.configManager?.get('editor.view.activeAssetTabs');
-        Logger.ui.debug('Initializing activeAssetTabs:', savedTabs);
-        if (savedTabs && Array.isArray(savedTabs) && savedTabs.length > 0) {
-            this.stateManager.set('activeAssetTabs', new Set(savedTabs));
+        // Always create only one default tab 'root' at startup
+        // Other tabs are created by user dragging folders to tabs container
+        const defaultTab = 'root';
+        this.stateManager.set('activeAssetTabs', new Set([defaultTab]));
+        
+        // Save to config to ensure consistency
+        if (this.levelEditor?.configManager) {
+            this.levelEditor.configManager.set('editor.view.activeAssetTabs', [defaultTab]);
+        }
+        
+        Logger.ui.debug('AssetPanel: Created default tab with root folder');
+    }
+    
+    /**
+     * Get all assets from folder recursively (including all subfolders)
+     * @param {string} folderPath - Folder path (e.g., 'root' or 'root/assets/characters')
+     * @returns {Array} Array of asset objects
+     */
+    getAssetsFromFolder(folderPath) {
+        if (!this.foldersPanel || !this.foldersPanel.folderStructure) {
+            Logger.ui.warn('AssetPanel: FoldersPanel not initialized');
+            return [];
+        }
+        
+        const folder = this.foldersPanel.getFolderByPath(folderPath);
+        if (!folder) {
+            Logger.ui.warn(`AssetPanel: Folder not found: ${folderPath}`);
+            return [];
+        }
+        
+        const assets = [];
+        
+        // Helper function to recursively collect assets
+        const collectAssetsRecursive = (f) => {
+            // Add assets from current folder
+            if (f.assets && Array.isArray(f.assets)) {
+                assets.push(...f.assets);
+            }
+            
+            // Recursively collect from child folders
+            if (f.children && typeof f.children === 'object') {
+                for (const childFolder of Object.values(f.children)) {
+                    collectAssetsRecursive(childFolder);
+                }
+            }
+        };
+        
+        collectAssetsRecursive(folder);
+        
+        return assets;
+    }
+    
+    /**
+     * Get folder name by path
+     * @param {string} folderPath - Folder path
+     * @returns {string} Folder name
+     */
+    getFolderName(folderPath) {
+        if (this.tabsManager) {
+            return this.tabsManager.getFolderName(folderPath);
+        }
+        return folderPath;
+    }
+    
+    /**
+     * Add tab for folder
+     * @param {string} folderPath - Folder path
+     */
+    addFolderTab(folderPath) {
+        if (this.tabsManager) {
+            this.tabsManager.addFolderTab(folderPath);
+        }
+    }
+    
+    /**
+     * Remove tab for folder
+     * @param {string} folderPath - Folder path
+     */
+    removeFolderTab(folderPath) {
+        if (this.tabsManager) {
+            this.tabsManager.removeFolderTab(folderPath);
         }
     }
 
@@ -586,33 +556,19 @@ export class AssetPanel extends BasePanel {
             return;
         }
 
-        if (!folder.name) {
-            Logger.ui.warn('AssetPanel: folder has no name property:', folder);
+        if (!folder.path) {
+            Logger.ui.warn('AssetPanel: folder has no path property:', folder);
             return;
         }
 
-        if (!this.assetManager || !this.assetManager.assets) {
-            Logger.ui.error('AssetPanel: assetManager not available for filterByFolder');
-            return;
-        }
+        Logger.ui.debug('AssetPanel: filterByFolder called with folder:', folder.path);
 
-        Logger.ui.debug('AssetPanel: filterByFolder called with folder:', folder.name);
+        // Update the active tabs to show only this folder
+        const folderSet = new Set([folder.path]);
+        this.stateManager.set('activeAssetTabs', folderSet);
+        this.render();
 
-        // For now, filter by category - later can be more sophisticated
-        const categoryName = folder.name;
-        const categoryAssets = Array.from(this.assetManager.assets.values())
-            .filter(asset => asset.category === categoryName);
-
-        Logger.ui.debug(`AssetPanel: Found ${categoryAssets.length} assets in category ${categoryName}`);
-
-        // Update the active tabs to show only this category
-        if (categoryAssets.length > 0) {
-            const categorySet = new Set([categoryName]);
-            this.stateManager.set('activeAssetTabs', categorySet);
-            this.render();
-        }
-
-        Logger.ui.debug(`Filtered assets by folder: ${categoryName}, found ${categoryAssets.length} assets`);
+        Logger.ui.debug(`Filtered assets by folder: ${folder.path}`);
     }
 
     /**
@@ -635,15 +591,25 @@ export class AssetPanel extends BasePanel {
             return;
         }
 
-        // Find the tab for this asset's category
-        const categoryName = asset.category;
-        if (!categoryName) {
-            Logger.ui.warn('AssetPanel: Asset has no category:', assetId);
-            return;
+        // Find folder path for this asset
+        let folderPath = 'root';
+        if (asset.path) {
+            // Extract folder path from asset path
+            const pathParts = asset.path.split('/').slice(0, -1); // Remove filename
+            if (pathParts.length > 0) {
+                folderPath = 'root/' + pathParts.join('/');
+            }
         }
 
-        const categorySet = new Set([categoryName]);
-        this.stateManager.set('activeAssetTabs', categorySet);
+        // Ensure folder tab exists and activate it
+        const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
+        if (!activeTabs.has(folderPath)) {
+            activeTabs.add(folderPath);
+            this.stateManager.set('activeAssetTabs', activeTabs);
+        }
+        
+        // Activate single tab
+        this.stateManager.set('activeAssetTabs', new Set([folderPath]));
 
         // Switch to the tab and select the asset
         this.render();
@@ -993,6 +959,8 @@ export class AssetPanel extends BasePanel {
 
         this.setupAssetEvents();
         
+        // Setup asset panel handlers (must be called after previewsContainer is available)
+        this.setupAssetPanelHandlers();
     }
 
     render() {
@@ -1003,71 +971,66 @@ export class AssetPanel extends BasePanel {
     }
 
     renderTabs() {
-        Logger.ui.debug('AssetPanel: renderTabs called - tabs will be recreated');
-        
-        // Reset context menu setup flag since DOM is being recreated (similar to LayersPanel)
-        this._assetTabContextMenuSetup = false;
-        
-        this.tabsContainer.innerHTML = '';
-        const tabOrder = this.stateManager.get('assetTabOrder') || [];
-        const availableCategories = this.assetManager.getCategories();
-
-        // Filter tabOrder to only include available categories, and add any missing categories at the end
-        const orderedCategories = tabOrder.filter(cat => availableCategories.includes(cat));
-        const missingCategories = availableCategories.filter(cat => !orderedCategories.includes(cat));
-        const finalOrder = [...orderedCategories, ...missingCategories];
-
-        finalOrder.forEach(category => {
-            const tabButton = document.createElement('button');
-            tabButton.className = `tab ${
-                this.stateManager.get('activeAssetTabs').has(category) ? 'active' : ''
-            }`;
-            tabButton.textContent = category;
-            tabButton.dataset.category = category;
-
-            // Event handlers are now registered through setupAssetPanelHandlers() using event delegation
-            // No need for individual tab registration
-            
-            this.tabsContainer.appendChild(tabButton);
-        });
-
-        // Setup tab dragging after rendering (only once)
-        if (!this.tabDraggingSetup) {
-            this.setupTabDragging();
-            this.tabDraggingSetup = true;
+        // DO NOT call syncDefaultTab() here - it modifies state and causes recursion
+        // Sync happens only when selectedFolders changes (via subscription)
+        if (this.tabsManager) {
+            this.tabsManager.render();
         }
-
-        // Setup context menu for tabs after rendering (similar to LayersPanel pattern)
-        this.setupAssetTabContextMenu();
-
-        // Setup event handlers after elements are created (similar to LayersPanel pattern)
-        this.setupAssetPanelHandlers();
-
+        
         // Render search and filter controls in footer
         this.renderAssetSearchControls();
-    }
-
-    /**
-     * Setup context menu for asset tabs (similar to LayersPanel pattern)
-     */
-    setupAssetTabContextMenu() {
-        if (!this.assetTabContextMenu || this._assetTabContextMenuSetup) {
-            return;
-        }
-
-        // Context menu is now handled through delegated handlers in setupAssetPanelHandlers
-        // No need to register individual tab handlers
-        this._assetTabContextMenuSetup = true;
-        
-        Logger.ui.debug('AssetPanel: Asset tab context menu setup completed (delegated)');
     }
 
     /**
      * Render asset search and filter controls in the tabs footer
      */
     renderAssetSearchControls() {
+        // Get right container for controls
+        const tabsRightContainer = this.tabsContainer?.querySelector('#asset-tabs-right');
+        if (!tabsRightContainer) {
+            // If structure not created yet, create it
+            if (this.tabsContainer) {
+                const tabsLeft = document.createElement('div');
+                tabsLeft.id = 'asset-tabs-left';
+                tabsLeft.className = 'flex flex-1 overflow-x-auto';
+                
+                const tabsRight = document.createElement('div');
+                tabsRight.id = 'asset-tabs-right';
+                tabsRight.className = 'flex items-center flex-shrink-0';
+                
+                // Check if container already has content
+                if (this.tabsContainer.children.length > 0) {
+                    // Preserve existing content
+                    const existingContent = Array.from(this.tabsContainer.children);
+                    this.tabsContainer.innerHTML = '';
+                    this.tabsContainer.appendChild(tabsLeft);
+                    
+                    // Move existing tabs to left container
+                    existingContent.forEach(child => {
+                        if (child.classList.contains('tab')) {
+                            tabsLeft.appendChild(child);
+                        } else {
+                            tabsRight.appendChild(child);
+                        }
+                    });
+                } else {
+                    this.tabsContainer.innerHTML = '';
+                    this.tabsContainer.appendChild(tabsLeft);
+                }
+                
+                this.tabsContainer.appendChild(tabsRight);
+                Logger.ui.debug('AssetPanel: Created tabs structure in renderAssetSearchControls');
+                
+                // Retry with new container
+                return this.renderAssetSearchControls();
+            }
+            
+            Logger.ui.warn('AssetPanel: tabsRightContainer not found and cannot create structure');
+            return;
+        }
+        
         // Check if controls are already rendered (avoid unnecessary re-rendering)
-        const existingControls = this.tabsContainer.querySelector('#asset-search-controls');
+        const existingControls = tabsRightContainer.querySelector('#asset-search-controls');
         if (existingControls) {
             // Controls already exist, just update search value
             const searchInput = existingControls.querySelector('#assets-search');
@@ -1083,7 +1046,7 @@ export class AssetPanel extends BasePanel {
         // Create controls container
         const controlsContainer = document.createElement('div');
         controlsContainer.id = 'asset-search-controls';
-        controlsContainer.className = 'flex items-center justify-end gap-1 p-1 border-t border-gray-700 bg-gray-800 ml-auto';
+        controlsContainer.className = 'flex items-center justify-end gap-1 p-1 border-t border-gray-700 bg-gray-800';
 
         // Create search input with ESC support
         const searchInput = createSearchInput(
@@ -1125,8 +1088,8 @@ export class AssetPanel extends BasePanel {
         controlsContainer.appendChild(searchInput);
         controlsContainer.appendChild(filterButton);
         
-        // Insert controls container at the end of tabs container (right side)
-        this.tabsContainer.appendChild(controlsContainer);
+        // Insert controls container into right container
+        tabsRightContainer.appendChild(controlsContainer);
 
         Logger.ui.debug('Asset search controls rendered in tabs footer');
     }
@@ -1322,20 +1285,27 @@ export class AssetPanel extends BasePanel {
 
     renderPreviews() {
         this.previewsContainer.innerHTML = '';
-        const activeTabs = this.stateManager.get('activeAssetTabs');
+        const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
         const selectedAssets = this.stateManager.get('selectedAssets');
 
-        let assetsToShow = Array.from(activeTabs)
-            .flatMap(tabName => this.assetManager.getAssetsByCategory(tabName));
+        // Collect assets from all active folder tabs recursively
+        let assetsToShow = [];
+        for (const folderPath of activeTabs) {
+            const folderAssets = this.getAssetsFromFolder(folderPath);
+            assetsToShow.push(...folderAssets);
+        }
+        
+        // Remove duplicates (same asset might be in multiple folders)
+        const uniqueAssets = new Map();
+        for (const asset of assetsToShow) {
+            if (asset.id && !uniqueAssets.has(asset.id)) {
+                uniqueAssets.set(asset.id, asset);
+            }
+        }
+        assetsToShow = Array.from(uniqueAssets.values());
 
         // Apply search and type filters
         assetsToShow = this.filterAssets(assetsToShow);
-
-        // Log asset details for debugging
-        Logger.ui.debug(`AssetPanel: Rendering ${assetsToShow.length} assets`);
-        assetsToShow.forEach(asset => {
-            Logger.ui.debug(`Asset: ${asset.name} | imgSrc: ${asset.imgSrc ? 'YES' : 'NO'} | isValid: ${this.isValidImageSrc(asset.imgSrc)}`);
-        });
 
         switch (this.viewMode) {
             case 'grid':
@@ -1793,32 +1763,6 @@ export class AssetPanel extends BasePanel {
         return name.substring(0, startChars) + '...' + name.substring(name.length - endChars);
     }
 
-    handleTabClick(e, category) {
-        const activeTabs = new Set(this.stateManager.get('activeAssetTabs'));
-        
-        if (e.shiftKey) {
-            // Toggle tab
-            if (activeTabs.has(category)) {
-                if (activeTabs.size > 1) {
-                    activeTabs.delete(category);
-                }
-            } else {
-                activeTabs.add(category);
-            }
-        } else {
-            // Select single tab
-            activeTabs.clear();
-            activeTabs.add(category);
-        }
-        
-        this.stateManager.set('activeAssetTabs', activeTabs);
-        // Save to config for persistence
-        this.levelEditor.configManager.set('editor.view.activeAssetTabs', Array.from(activeTabs));
-        this.stateManager.set('selectedAssets', new Set());
-        
-        // Auto-resize panel height after tab change
-        setTimeout(() => this.autoResizePanelHeight(), 100);
-    }
 
 
     // Now using BasePanel.handleItemClick with SelectionUtils
@@ -1893,101 +1837,6 @@ export class AssetPanel extends BasePanel {
         this.container.classList.remove('drop-target');
     }
 
-    /**
-     * Setup tab dragging functionality
-     * Now uses EventHandlerManager for proper registration
-     */
-    setupTabDragging() {
-        let draggedTab = null;
-        let draggedIndex = -1;
-        
-        // Handle mouse move for drag over effects
-        const handleMouseMove = (e) => {
-            if (!draggedTab) return;
-
-            const tab = e.target.closest('.tab');
-            if (!tab || tab === draggedTab) {
-                // Remove drag-over from all tabs
-                this.tabsContainer.querySelectorAll('.tab').forEach(t => t.classList.remove('tab-drag-over'));
-                return;
-            }
-
-            const targetIndex = Array.from(this.tabsContainer.children).indexOf(tab);
-            
-            // Remove drag-over from all tabs
-            this.tabsContainer.querySelectorAll('.tab').forEach(t => t.classList.remove('tab-drag-over'));
-            
-            // Add drag-over to target tab
-            tab.classList.add('tab-drag-over');
-        };
-
-        // Handle mouse up to complete drag
-        const handleMouseUp = (e) => {
-            if (!draggedTab) return;
-
-            const tabContainer = draggedTab.parentElement;
-            const targetTab = e.target.closest('.tab');
-            
-            if (targetTab && targetTab !== draggedTab) {
-                const targetIndex = Array.from(tabContainer.children).indexOf(targetTab);
-                const draggedIndex = Array.from(tabContainer.children).indexOf(draggedTab);
-                
-                // Move the tab
-                if (draggedIndex < targetIndex) {
-                    tabContainer.insertBefore(draggedTab, targetTab.nextSibling);
-                } else {
-                    tabContainer.insertBefore(draggedTab, targetTab);
-                }
-
-                // Save new tab order to state
-                const newOrder = Array.from(this.tabsContainer.children)
-                    .map(tab => tab.dataset.category);
-                this.stateManager.set('assetTabOrder', newOrder);
-            }
-
-            // Clean up
-            this.tabsContainer.querySelectorAll('.tab').forEach(t => {
-                t.classList.remove('dragging', 'tab-drag-over');
-            });
-
-            this.isDraggingTab = false; // Reset flag
-            draggedTab = null;
-            draggedIndex = -1;
-            
-            // Remove global handlers
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-
-        // Register container handlers through EventHandlerManager
-        const tabDraggingHandlers = {
-            mousedown: (e) => {
-                const tab = e.target.closest('.tab');
-                if (!tab) return;
-
-                draggedTab = tab;
-                draggedIndex = Array.from(this.tabsContainer.children).indexOf(tab);
-                this.isDraggingTab = true; // Set flag for tab dragging
-                
-                // Add dragging class
-                tab.classList.add('dragging');
-                
-                // Prevent default to avoid text selection
-                e.preventDefault();
-                
-                // Add global handlers for drag completion
-                document.addEventListener('mousemove', handleMouseMove);
-                document.addEventListener('mouseup', handleMouseUp);
-            },
-            selectstart: (e) => {
-                if (draggedTab) {
-                    e.preventDefault();
-                }
-            }
-        };
-        
-        eventHandlerManager.registerElement(this.tabsContainer, tabDraggingHandlers, 'asset-tab-dragging-container');
-    }
 
     /**
      * Get container for selection operations
@@ -2002,9 +1851,19 @@ export class AssetPanel extends BasePanel {
      * @returns {Array} Array of asset objects
      */
     getAssetList() {
-        const activeTabs = this.stateManager.get('activeAssetTabs');
-        return Array.from(activeTabs)
-            .flatMap(tabName => this.assetManager.getAssetsByCategory(tabName));
+        const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
+        const assets = [];
+        for (const folderPath of activeTabs) {
+            assets.push(...this.getAssetsFromFolder(folderPath));
+        }
+        // Remove duplicates
+        const uniqueAssets = new Map();
+        for (const asset of assets) {
+            if (asset.id && !uniqueAssets.has(asset.id)) {
+                uniqueAssets.set(asset.id, asset);
+            }
+        }
+        return Array.from(uniqueAssets.values());
     }
 
     /**
@@ -2634,37 +2493,20 @@ export class AssetPanel extends BasePanel {
      * Setup drag-n-drop functionality for PNG files
      */
     setupDragAndDrop() {
+        if (!this.container || !this.previewsContainer) {
+            Logger.ui.warn('AssetPanel: Container or previewsContainer not available for drag-and-drop setup');
+            return;
+        }
+        
         const dropZone = this.container;
         
         // Create drop overlay element - positioned relative to content container
         this.dropOverlay = document.createElement('div');
-        this.dropOverlay.style.cssText = `
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(59, 130, 246, 0.1);
-            border: 2px dashed rgba(59, 130, 246, 0.5);
-            pointer-events: none;
-            z-index: 1000;
-            display: none;
-            align-items: center;
-            justify-content: center;
-        `;
+        this.dropOverlay.className = 'drop-overlay';
         
         // Create text container with background
         const textContainer = document.createElement('div');
-        textContainer.style.cssText = `
-            padding: 20px 40px;
-            background: rgba(0, 0, 0, 0.7);
-            border: 2px solid rgba(59, 130, 246, 0.8);
-            border-radius: 8px;
-            font-size: 24px;
-            color: rgba(59, 130, 246, 1);
-            font-weight: bold;
-            text-align: center;
-        `;
+        textContainer.className = 'drop-overlay-text';
         textContainer.textContent = 'Drop PNG image(s) to Import as Assets';
         this.dropOverlay.appendChild(textContainer);
         
@@ -2674,15 +2516,7 @@ export class AssetPanel extends BasePanel {
         // Size overlay to match previews container dimensions and position
         if (this.previewsContainer) {
             const updateOverlaySize = () => {
-                const rect = this.previewsContainer.getBoundingClientRect();
-                const containerRect = this.container.getBoundingClientRect();
-
-                this.dropOverlay.style.position = 'absolute';
-                this.dropOverlay.style.top = `${rect.top - containerRect.top}px`;
-                this.dropOverlay.style.left = `${rect.left - containerRect.left}px`;
-                this.dropOverlay.style.width = `${rect.width}px`;
-                this.dropOverlay.style.height = `${rect.height}px`;
-                this.dropOverlay.style.zIndex = '9999'; // Very high z-index to be above everything
+                this.updateOverlayPosition();
             };
 
             // Initial sizing
@@ -2706,72 +2540,167 @@ export class AssetPanel extends BasePanel {
         this.boundHandleDrop = this.handleDrop.bind(this);
         
         // Setup drag-n-drop handlers on container
-        dropZone.addEventListener('dragenter', this.boundHandleDragEnter, false);
-        dropZone.addEventListener('dragover', this.boundHandleDragOver, false);
-        dropZone.addEventListener('dragleave', this.boundHandleDragLeave, false);
-        dropZone.addEventListener('drop', this.boundHandleDrop, false);
+        // Use capture phase to ensure we catch events before other handlers
+        dropZone.addEventListener('dragenter', this.boundHandleDragEnter, true);
+        dropZone.addEventListener('dragover', this.boundHandleDragOver, true);
+        dropZone.addEventListener('dragleave', this.boundHandleDragLeave, true);
+        dropZone.addEventListener('drop', this.boundHandleDrop, true);
+    }
+
+    /**
+     * Check if assets can be dropped to the currently active folder
+     * @returns {boolean} True if dropping is allowed, false otherwise
+     */
+    canDropToActiveFolder() {
+        const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
+        const activeTabPath = Array.from(activeTabs).pop() || 'root';
+        
+        // Cannot drop to root folder
+        return activeTabPath !== 'root';
+    }
+
+    /**
+     * Check if drag event is for external files
+     * @param {DragEvent} e - Drag event
+     * @returns {boolean} True if external files
+     */
+    isExternalFilesDrag(e) {
+        return e.dataTransfer.types.includes('Files');
+    }
+
+    /**
+     * Check if drag coordinates are over tabs container
+     * @param {DragEvent} e - Drag event
+     * @returns {boolean} True if over tabs container
+     */
+    isOverTabsContainer(e) {
+        if (!this.tabsContainer) return false;
+        const tabsRect = this.tabsContainer.getBoundingClientRect();
+        return e.clientX >= tabsRect.left && e.clientX <= tabsRect.right &&
+               e.clientY >= tabsRect.top && e.clientY <= tabsRect.bottom;
+    }
+
+    /**
+     * Check if drag coordinates are over previews container
+     * @param {DragEvent} e - Drag event
+     * @returns {boolean} True if over previews container
+     */
+    isOverPreviewsContainer(e) {
+        if (!this.previewsContainer) return false;
+        const rect = this.previewsContainer.getBoundingClientRect();
+        return e.clientX >= rect.left && e.clientX <= rect.right &&
+               e.clientY >= rect.top && e.clientY <= rect.bottom;
+    }
+
+    /**
+     * Update overlay position and size to match previewsContainer
+     * This is a shared method used by both ResizeObserver and updateDropOverlayStyle
+     * Note: Does not change display property - overlay visibility is controlled elsewhere
+     */
+    updateOverlayPosition() {
+        if (!this.dropOverlay || !this.previewsContainer) return;
+        
+        const rect = this.previewsContainer.getBoundingClientRect();
+        const containerRect = this.container.getBoundingClientRect();
+
+        this.dropOverlay.style.position = 'absolute';
+        this.dropOverlay.style.top = `${rect.top - containerRect.top}px`;
+        this.dropOverlay.style.left = `${rect.left - containerRect.left}px`;
+        this.dropOverlay.style.width = `${rect.width}px`;
+        this.dropOverlay.style.height = `${rect.height}px`;
+        this.dropOverlay.style.zIndex = '9999';
+        this.dropOverlay.style.pointerEvents = 'none';
+    }
+
+    /**
+     * Update drop overlay style based on whether dropping is allowed
+     * @param {boolean} allowed - Whether dropping is allowed
+     */
+    updateDropOverlayStyle(allowed) {
+        if (!this.dropOverlay) return;
+        
+        const textContainer = this.dropOverlay.querySelector('.drop-overlay-text');
+        if (!textContainer) return;
+        
+        // Update overlay position and size to match previewsContainer
+        this.updateOverlayPosition();
+        
+        // Remove previous state classes
+        this.dropOverlay.classList.remove('drop-overlay-allowed', 'drop-overlay-disallowed');
+        textContainer.classList.remove('drop-overlay-text-allowed', 'drop-overlay-text-disallowed');
+        
+        // Show overlay when updating style
+        this.dropOverlay.classList.add('drop-overlay-visible');
+        
+        if (allowed) {
+            // Normal style: blue
+            this.dropOverlay.classList.add('drop-overlay-allowed');
+            textContainer.classList.add('drop-overlay-text-allowed');
+            textContainer.textContent = 'Drop PNG image(s) to Import as Assets';
+        } else {
+            // Error style: red
+            this.dropOverlay.classList.add('drop-overlay-disallowed');
+            textContainer.classList.add('drop-overlay-text-disallowed');
+            textContainer.textContent = 'Can not create assets in this location';
+        }
     }
 
     handleDragEnter(e) {
-        // Only handle external file drops, not internal asset dragging or tab dragging
-        if (!e.dataTransfer.types.includes('Files') || e.target.closest('.tab') || this.isDraggingTab) {
+        // Only handle external file drops
+        if (!this.isExternalFilesDrag(e)) {
+            return;
+        }
+        
+        // Skip if over tabs container
+        if (this.isOverTabsContainer(e)) {
             return;
         }
         
         e.preventDefault();
         e.stopPropagation();
         
-        // Check if we're entering the previews container area (only assets area, not tabs)
-        if (this.previewsContainer) {
-            const rect = this.previewsContainer.getBoundingClientRect();
-            if (e.clientX >= rect.left && e.clientX <= rect.right &&
-                e.clientY >= rect.top && e.clientY <= rect.bottom) {
-                if (this.dropOverlay) {
-                    this.dropOverlay.style.display = 'flex';
-                }
-            }
+        // Show overlay if over previews container
+        if (this.isOverPreviewsContainer(e) && this.dropOverlay) {
+            const canDrop = this.canDropToActiveFolder();
+            this.updateDropOverlayStyle(canDrop);
         }
     }
 
     handleDragOver(e) {
-        // Only handle external file drops, not internal asset dragging or tab dragging
-        if (!e.dataTransfer.types.includes('Files') || e.target.closest('.tab') || this.isDraggingTab) {
+        // Only handle external file drops
+        if (!this.isExternalFilesDrag(e)) {
+            return;
+        }
+        
+        // Skip if over tabs container
+        if (this.isOverTabsContainer(e)) {
             return;
         }
         
         e.preventDefault();
         e.stopPropagation();
         
-        // Continuously check if still inside previews container (assets area only)
-        if (this.previewsContainer) {
-            const rect = this.previewsContainer.getBoundingClientRect();
-            if (e.clientX >= rect.left && e.clientX <= rect.right &&
-                e.clientY >= rect.top && e.clientY <= rect.bottom) {
-                if (this.dropOverlay) {
-                    this.dropOverlay.style.display = 'flex';
-                }
+        // Update overlay if over previews container
+        if (this.isOverPreviewsContainer(e)) {
+            if (this.dropOverlay) {
+                const canDrop = this.canDropToActiveFolder();
+                this.updateDropOverlayStyle(canDrop);
             }
+        } else if (this.dropOverlay) {
+            // Hide overlay if outside previews container
+            this.dropOverlay.classList.remove('drop-overlay-visible');
         }
     }
 
     handleDragLeave(e) {
-        // Only handle external file drops, not tab dragging
-        if (!e.dataTransfer.types.includes('Files') || e.target.closest('.tab') || this.isDraggingTab) {
+        // Only handle external file drops
+        if (!this.isExternalFilesDrag(e)) {
             return;
         }
         
-        e.preventDefault();
-        e.stopPropagation();
-        
-        // Check if actually leaving the previews container (assets area only)
-        if (this.previewsContainer) {
-            const rect = this.previewsContainer.getBoundingClientRect();
-            const isOutside = e.clientX < rect.left || e.clientX > rect.right ||
-                             e.clientY < rect.top || e.clientY > rect.bottom;
-
-            if (isOutside && this.dropOverlay) {
-                this.dropOverlay.style.display = 'none';
-            }
+        // Hide overlay if leaving previews container
+        if (!this.isOverPreviewsContainer(e) && this.dropOverlay) {
+            this.dropOverlay.classList.remove('drop-overlay-visible');
         }
     }
 
@@ -2780,17 +2709,30 @@ export class AssetPanel extends BasePanel {
      * @param {DragEvent} e - Drop event
      */
     async handleDrop(e) {
-        // Only handle external file drops, not internal asset dragging or tab dragging
-        if (!e.dataTransfer.types.includes('Files') || !e.dataTransfer.files.length || e.target.closest('.tab') || this.isDraggingTab) {
+        // Only handle external file drops
+        if (!this.isExternalFilesDrag(e) || !e.dataTransfer.files.length) {
+            return;
+        }
+        
+        // Skip if over tabs container
+        if (this.isOverTabsContainer(e)) {
             return;
         }
         
         e.preventDefault();
         e.stopPropagation();
         
+        // Check if we can drop to the active folder
+        if (!this.canDropToActiveFolder()) {
+            if (this.dropOverlay) {
+                this.dropOverlay.classList.remove('drop-overlay-visible');
+            }
+            return;
+        }
+        
         // Hide overlay immediately after drop
         if (this.dropOverlay) {
-            this.dropOverlay.style.display = 'none';
+            this.dropOverlay.classList.remove('drop-overlay-visible');
         }
         
         const dt = e.dataTransfer;
@@ -2810,21 +2752,37 @@ export class AssetPanel extends BasePanel {
 
         Logger.ui.info(`🖼️ Processing ${pngFiles.length} PNG files`);
 
-        // Get active tab (last selected if multiple)
+        // Get active tab path and extract category
         const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
-        const activeTab = Array.from(activeTabs).pop() || 'objects';
+        const activeTabPath = Array.from(activeTabs).pop() || 'root';
+        
+        // Convert folder path to category for asset creation
+        // Extract category from folder path (e.g., 'root/assets/characters' -> 'characters')
+        let category = 'objects'; // Default category
+        if (activeTabPath !== 'root') {
+            const pathParts = activeTabPath.split('/').filter(p => p && p !== 'root');
+            if (pathParts.length > 0) {
+                // Get last part of path as category
+                category = pathParts[pathParts.length - 1];
+            }
+        }
 
-        Logger.ui.info(`📂 Adding assets to tab: ${activeTab}`);
+        Logger.ui.info(`📂 Adding assets to folder: ${activeTabPath}, category: ${category}`);
 
         // Create temporary assets for each PNG file
         for (const pngFile of pngFiles) {
             try {
-                await this.createTemporaryAssetFromFile(pngFile, activeTab);
+                await this.createTemporaryAssetFromFile(pngFile, category, activeTabPath);
             } catch (error) {
                 Logger.ui.error(`❌ Failed to create asset from ${pngFile.name}:`, error);
             }
         }
 
+        // Ensure folder structure is updated before rendering
+        if (this.foldersPanel) {
+            this.foldersPanel.refresh();
+        }
+        
         // Refresh the panel
         this.render();
     }
@@ -2833,9 +2791,10 @@ export class AssetPanel extends BasePanel {
      * Create temporary asset from PNG file
      * @param {File} pngFile - PNG file
      * @param {string} category - Asset category
+     * @param {string} folderPath - Folder path where asset should be created
      */
-    async createTemporaryAssetFromFile(pngFile, category) {
-        Logger.ui.info(`🎨 Creating temporary asset from: ${pngFile.name}`);
+    async createTemporaryAssetFromFile(pngFile, category, folderPath = 'root') {
+        Logger.ui.info(`🎨 Creating temporary asset from: ${pngFile.name}, category: ${category}, folder: ${folderPath}`);
 
         try {
             // Create data URL for image
@@ -2848,12 +2807,17 @@ export class AssetPanel extends BasePanel {
             // Create asset data
             const assetId = `temp_${category}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
             
+            // Build asset path based on folder path
+            let assetPath = folderPath === 'root' 
+                ? `${category}/${pngFile.name}`
+                : `${folderPath}/${pngFile.name}`;
+            
             const assetData = {
                 id: assetId,
                 name: pngFile.name.replace(/\.[^/.]+$/, ""), // Remove extension
                 type: this.getAssetTypeFromCategory(category),
                 category: category,
-                path: `${category}/${pngFile.name}`, // Path based on active tab category
+                path: assetPath,
                 width: dimensions.width,
                 height: dimensions.height,
                 color: this.getDefaultColor(category),
@@ -2988,8 +2952,8 @@ export class AssetPanel extends BasePanel {
         if (this.panelContextMenu) {
             this.panelContextMenu.destroy();
         }
-        if (this.assetTabContextMenu) {
-            this.assetTabContextMenu.destroy();
+        if (this.tabsManager) {
+            this.tabsManager.destroy();
         }
 
         // Unregister search from SearchManager
@@ -3066,17 +3030,10 @@ export class AssetPanel extends BasePanel {
         }
         
         // Create asset panel handlers configuration
+        // Note: Tab clicks and context menu are handled by AssetTabsManager
         const assetHandlers = EventHandlerUtils.createPanelHandlers(
             (e) => {
-                // Handle tab clicks
-                const tabButton = e.target.closest('.tab');
-                if (tabButton) {
-                    const category = tabButton.dataset.category;
-                    this.handleTabClick(e, category);
-                    return;
-                }
-
-                // Handle asset clicks
+                // Handle asset clicks (tabs are handled by AssetTabsManager)
                 const assetElement = e.target.closest('.asset-thumbnail, .asset-list-item, .asset-details-row, [data-asset-id]');
                 if (assetElement) {
                     const assetId = assetElement.dataset.assetId;
@@ -3105,21 +3062,15 @@ export class AssetPanel extends BasePanel {
                 }
             },
             null, // onInputChange - not used
-            (e) => {
-                // Handle context menu on tabs
-                const tabButton = e.target.closest('.tab');
-                if (tabButton) {
-                    const category = tabButton.dataset.category;
-                    if (category) {
-                        this.assetTabContextMenu.handleTabContextMenu(e, category, tabButton);
-                    }
-                    return;
-                }
-            }
+            null // Context menu handled by AssetTabsManager
         );
 
         // Register container with new event manager
-        eventHandlerManager.registerContainer(this.tabsContainer, assetHandlers);
+        // Note: tabsContainer handlers are managed by AssetTabsManager
+        // Register on previewsContainer instead for asset-specific handlers
+        if (this.previewsContainer) {
+            eventHandlerManager.registerContainer(this.previewsContainer, assetHandlers);
+        }
         
         // Mark handlers as setup
         this._assetPanelHandlersSetup = true;

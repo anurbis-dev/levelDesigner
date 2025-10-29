@@ -110,6 +110,61 @@
     border: 2px solid #3b82f6;
 }
 
+/* Drop overlay styles - reusable across the interface */
+.drop-overlay {
+    position: absolute;
+    pointer-events: none;
+    z-index: 9999;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.drop-overlay-visible {
+    display: flex;
+}
+
+.drop-overlay-allowed {
+    background: rgba(59, 130, 246, 0.1);
+    border: 2px dashed rgba(59, 130, 246, 0.5);
+}
+
+.drop-overlay-disallowed {
+    background: rgba(239, 68, 68, 0.1);
+    border: 2px dashed rgba(239, 68, 68, 0.5);
+}
+
+.drop-overlay-text {
+    padding: 20px 40px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 8px;
+    font-size: 24px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.drop-overlay-text-allowed {
+    border: 2px solid rgba(59, 130, 246, 0.8);
+    color: rgba(59, 130, 246, 1);
+}
+
+.drop-overlay-text-disallowed {
+    border: 2px solid rgba(239, 68, 68, 0.8);
+    color: rgba(239, 68, 68, 1);
+}
+
+/* Drop target styles for folder drag to tabs */
+.drop-target {
+    background-color: rgba(59, 130, 246, 0.2) !important;
+    border: 2px dashed #3b82f6 !important;
+    border-radius: 4px;
+}
+
+.folder-item.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+
 /* Unsaved changes indicator */
 .asset-unsaved-indicator {
     position: absolute;
