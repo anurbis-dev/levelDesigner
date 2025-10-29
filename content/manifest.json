@@ -2,7 +2,9 @@
   "version": "1.0.0",
   "generated": "2025-10-29",
   "structure": {
+    "NEW_TEST": {},
     "assets": {
+      "TEST": {},
       "backgrounds": {
         "parallax": {},
         "static": {}
@@ -26,8 +28,10 @@
         "blocks": {},
         "ground": {},
         "pipes": {}
-      },
-      "TEST": {}
+      }
+    },
+    "editorEssentials": {
+      "misc": {}
     },
     "graphs": {},
     "maps": {}

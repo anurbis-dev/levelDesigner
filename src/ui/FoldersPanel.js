@@ -152,6 +152,38 @@ export class FoldersPanel extends BasePanel {
     }
 
     /**
+     * Add empty folders from manifest structure (folders without assets)
+     * @param {Object} parentFolder - Parent folder object
+     * @param {Object} structure - Manifest structure object
+     * @param {string} parentPath - Parent path
+     */
+    addEmptyFoldersFromManifest(parentFolder, structure, parentPath) {
+        for (const [folderName, subStructure] of Object.entries(structure)) {
+            const folderPath = `${parentPath}/${folderName}`;
+            
+            // Only add if folder doesn't already exist
+            if (!parentFolder.children[folderName]) {
+                const folder = {
+                    name: folderName,
+                    path: folderPath,
+                    children: {},
+                    assets: [],
+                    isExpanded: false
+                };
+
+                // Add to parent
+                parentFolder.children[folderName] = folder;
+                Logger.ui.debug(`FoldersPanel: Added empty folder "${folderName}" at path "${folderPath}"`);
+            }
+
+            // Recursively process subfolders
+            if (subStructure && typeof subStructure === 'object' && Object.keys(subStructure).length > 0) {
+                this.addEmptyFoldersFromManifest(parentFolder.children[folderName], subStructure, folderPath);
+            }
+        }
+    }
+
+    /**
      * Build folder structure from manifest structure
      * @param {Object} parentFolder - Parent folder object
      * @param {Object} structure - Manifest structure object
@@ -314,125 +346,22 @@ export class FoldersPanel extends BasePanel {
             }
         };
 
-        // Build from contentStructure if available
+        // Always build structure dynamically from assets, not from static manifest
+        // This ensures empty folders are included and structure is always up-to-date
+        if (this.assetManager.assets && this.assetManager.assets.size > 0) {
+            Logger.ui.info('FoldersPanel: Building structure dynamically from assets');
+            this.addAssetsToStructure(folderStructure.root, this.assetManager.assets.values());
+        }
+        
+        // Also add any folders from manifest structure that might not have assets
         if (this.assetManager.contentStructure) {
-            Logger.ui.info('FoldersPanel: Building structure from manifest');
-            this.buildFromManifestStructure(folderStructure.root, this.assetManager.contentStructure, 'root');
-            
-            // After building from manifest, add any assets that don't fit the manifest structure
-            // This handles dynamically added assets (like drag-dropped files)
-            if (this.assetManager.assets && this.assetManager.assets.size > 0) {
-                Logger.ui.debug('FoldersPanel: Adding assets not in manifest structure');
-                this.addAssetsToStructure(folderStructure.root, this.assetManager.assets.values());
-            }
-            
-            this.folderStructure = folderStructure;
-            this.renderFolderContent();
-            return;
+            Logger.ui.debug('FoldersPanel: Adding empty folders from manifest structure');
+            this.addEmptyFoldersFromManifest(folderStructure.root, this.assetManager.contentStructure, 'root');
         }
-
-        // Fallback: build from assets if no manifest
-        if (!this.assetManager.assets || this.assetManager.assets.size === 0) {
-            Logger.ui.debug('FoldersPanel: No assets or manifest available, creating empty folder structure');
-            this.folderStructure = folderStructure;
-            this.renderFolderContent();
-            return;
-        }
-
-        Logger.ui.debug('FoldersPanel: Building folder structure from asset paths, assets count:', this.assetManager.assets.size);
         
-        // Debug: Log all asset paths with detailed analysis
-        Logger.ui.info('FoldersPanel: === ASSET PATH ANALYSIS ===');
-        let assetsWithPaths = 0;
-        let deepestLevel = 0;
-        for (const [assetId, asset] of this.assetManager.assets) {
-            if (asset.path && asset.path.includes('/')) {
-                assetsWithPaths++;
-                const depth = asset.path.split('/').length - 1;
-                deepestLevel = Math.max(deepestLevel, depth);
-                Logger.ui.debug(`Asset: ${asset.name} | Path: "${asset.path}" | Depth: ${depth} | Category: ${asset.category}`);
-            } else {
-                Logger.ui.debug(`Asset: ${asset.name} | Path: "${asset.path || 'EMPTY'}" | NO FOLDER STRUCTURE`);
-            }
-        }
-        Logger.ui.info(`FoldersPanel: Found ${assetsWithPaths} assets with paths, deepest level: ${deepestLevel}`);
-
-        let totalAssets = 0;
-
-        // Build hierarchical structure from asset paths
-        for (const [assetId, asset] of this.assetManager.assets) {
-            let assetPath = asset.path || '';
-
-            // Fallback: if no path but has category, create path from category
-            if (!assetPath && asset.category && asset.category !== 'Uncategorized') {
-                assetPath = `${asset.category}/${asset.name}.png`; // Assume png for simplicity
-            }
-
-            if (!assetPath) {
-                // Asset without path goes to root
-                folderStructure.root.assets.push(asset);
-                totalAssets++;
-                continue;
-            }
-
-            // Split path into parts
-            const pathParts = assetPath.split('/').filter(part => part.trim() !== '');
-
-            Logger.ui.debug(`FoldersPanel: Processing asset "${asset.name}" with path "${assetPath}" -> ${pathParts.length} parts: [${pathParts.join(', ')}]`);
-
-            if (pathParts.length === 0) {
-                folderStructure.root.assets.push(asset);
-                totalAssets++;
-                Logger.ui.debug(`FoldersPanel: Added asset "${asset.name}" to root (no path parts)`);
-                continue;
-            }
-
-            // Navigate/create the folder hierarchy
-            let currentFolder = folderStructure.root;
-
-            // Process creating full folder path for each file
-            for (let i = 0; i < pathParts.length - 1; i++) { // -1 because last part is filename
-                const folderName = pathParts[i];
-                const folderPath = 'root/' + pathParts.slice(0, i + 1).join('/');
-
-                if (!currentFolder.children[folderName]) {
-                    currentFolder.children[folderName] = {
-                        name: folderName,
-                        path: folderPath,
-                        children: {},
-                        assets: [],
-                        isExpanded: false
-                    };
-                    
-                    
-                    Logger.ui.debug(`FoldersPanel: Created folder ${folderName} at path ${folderPath}`);
-                }
-
-                currentFolder = currentFolder.children[folderName];
-            }
-
-            // Add asset to the final folder
-            currentFolder.assets.push(asset);
-            totalAssets++;
-            Logger.ui.debug(`FoldersPanel: Added asset "${asset.name}" to folder "${currentFolder.name}" (path: ${currentFolder.path})`);
-        }
-
-        Logger.ui.debug('FoldersPanel: Final folder structure:', folderStructure);
-        
-        // Debug: Log created folder hierarchy
-        const logFolderHierarchy = (folder, depth = 0) => {
-            const indent = '  '.repeat(depth);
-            Logger.ui.debug(`${indent}📁 ${folder.name} (${folder.assets.length} assets, ${Object.keys(folder.children).length} children)`);
-            Object.values(folder.children).forEach(child => logFolderHierarchy(child, depth + 1));
-        };
-        logFolderHierarchy(folderStructure.root);
-
-        // Store total count for root display
-        folderStructure.root.totalAssets = totalAssets;
-
         this.folderStructure = folderStructure;
-        Logger.ui.debug('FoldersPanel: Folder structure built from paths');
-        this.renderFolderTree();
+        this.renderFolderContent();
+        return;
     }
 
     /**
@@ -448,7 +377,9 @@ export class FoldersPanel extends BasePanel {
         // Helper function to count assets recursively
         const countAssetsRecursive = (folder) => {
             let count = folder.assets ? folder.assets.length : 0;
-            for (const child of Object.values(folder.children || {})) {
+            // Sort children alphabetically for consistent counting
+            const sortedChildren = Object.values(folder.children || {}).sort((a, b) => a.name.localeCompare(b.name));
+            for (const child of sortedChildren) {
                 count += countAssetsRecursive(child);
             }
             return count;
@@ -495,7 +426,9 @@ export class FoldersPanel extends BasePanel {
                 Logger.ui.debug(`FoldersPanel: Rendering ${Object.keys(folder.children).length} child folders for "${folder.name}"`);
                 
                 // Render child folders only (assets are not shown in folder tree)
-                for (const childFolder of Object.values(folder.children)) {
+                // Sort children alphabetically by name
+                const sortedChildren = Object.values(folder.children).sort((a, b) => a.name.localeCompare(b.name));
+                for (const childFolder of sortedChildren) {
                     Logger.ui.debug(`FoldersPanel: Rendering child folder "${childFolder.name}" of "${folder.name}"`);
                     html += renderFolder(childFolder, depth + 1);
                 }
@@ -508,7 +441,8 @@ export class FoldersPanel extends BasePanel {
 
         // Render tree starting from root's children (hide root "Content" in UI)
         let html = '';
-        const rootChildren = Object.values(this.folderStructure.root.children || {});
+        // Sort root children alphabetically by name
+        const rootChildren = Object.values(this.folderStructure.root.children || {}).sort((a, b) => a.name.localeCompare(b.name));
         for (const childFolder of rootChildren) {
             html += renderFolder(childFolder, 0);
         }
