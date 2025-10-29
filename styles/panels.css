@@ -153,6 +153,14 @@
     color: rgba(239, 68, 68, 1);
 }
 
+/* Asset tabs container - ensure visibility */
+#asset-tabs-container {
+    position: relative;
+    z-index: 10;
+    background-color: var(--ui-background-color, #111827);
+    flex-shrink: 0;
+}
+
 /* Horizontal scroll styles for tabs and toolbar */
 .horizontal-scroll-container {
     overflow-x: auto;

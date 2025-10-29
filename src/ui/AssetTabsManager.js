@@ -202,17 +202,6 @@ export class AssetTabsManager {
         this.stateManager.subscribe('activeAssetTab', () => {
             // Re-render tabs to update visual selection (active class)
             this.render();
-            
-            // Sync folder selection when tab is activated (e.g., via drag-and-drop)
-            // Only for single selection - multi-select is handled in handleTabClick
-            const activeTab = this.stateManager.get('activeAssetTab');
-            const selectedFolders = this.foldersPanel?.selectedFolders;
-            if (activeTab && this.foldersPanel && (!selectedFolders || selectedFolders.size === 1)) {
-                // Only select folder if it's not already selected
-                if (!selectedFolders || !selectedFolders.has(activeTab)) {
-                    this.foldersPanel.selectFolder(activeTab, null);
-                }
-            }
         });
         
         // Subscribe to selectedFolders changes to update visual selection
@@ -252,6 +241,10 @@ export class AssetTabsManager {
             return false;
         }
         
+        // This method is called from folder selection changes
+        // It should NOT be called when we're syncing from tab clicks
+        // Tab clicks should directly activate the tab without going through this sync
+        
         const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
         const selectedFoldersSet = this._normalizeSelectedFolders(
             this.stateManager.get('selectedFolders') || []
@@ -274,6 +267,10 @@ export class AssetTabsManager {
                 const currentActiveTab = this.stateManager.get('activeAssetTab');
                 if (currentActiveTab !== firstSelectedWithTab) {
                     this.stateManager.set('activeAssetTab', firstSelectedWithTab);
+                    // Save to config
+                    if (this.levelEditor?.configManager) {
+                        this.levelEditor.configManager.set('editor.view.activeAssetTab', firstSelectedWithTab);
+                    }
                     Logger.ui.debug(`AssetTabsManager: Multi-select - set active tab to ${firstSelectedWithTab}`);
                     return true;
                 }
@@ -292,6 +289,10 @@ export class AssetTabsManager {
             const currentActiveTab = this.stateManager.get('activeAssetTab');
             if (currentActiveTab !== selectedFolderPath) {
                 this.stateManager.set('activeAssetTab', selectedFolderPath);
+                // Save to config
+                if (this.levelEditor?.configManager) {
+                    this.levelEditor.configManager.set('editor.view.activeAssetTab', selectedFolderPath);
+                }
                 Logger.ui.debug(`AssetTabsManager: Activated tab for folder ${selectedFolderPath}`);
                 return true;
             }
@@ -304,6 +305,10 @@ export class AssetTabsManager {
         const currentActiveTab = this.stateManager.get('activeAssetTab');
         if (currentActiveTab !== null) {
             this.stateManager.set('activeAssetTab', null);
+            // Save to config
+            if (this.levelEditor?.configManager) {
+                this.levelEditor.configManager.set('editor.view.activeAssetTab', null);
+            }
             Logger.ui.debug(`AssetTabsManager: Cleared active tab, showing folder ${selectedFolderPath} directly`);
             return true;
         }
@@ -356,6 +361,7 @@ export class AssetTabsManager {
         // Save to config
         if (this.levelEditor?.configManager) {
             this.levelEditor.configManager.set('editor.view.activeAssetTabs', Array.from(activeTabs));
+            this.levelEditor.configManager.set('editor.view.activeAssetTab', folderPath);
         }
         
         // No need to call render() here - subscriptions to activeAssetTabs and activeAssetTab will handle it
@@ -385,6 +391,7 @@ export class AssetTabsManager {
         // Save to config
         if (this.levelEditor?.configManager) {
             this.levelEditor.configManager.set('editor.view.activeAssetTabs', Array.from(activeTabs));
+            this.levelEditor.configManager.set('editor.view.activeAssetTab', this.stateManager.get('activeAssetTab'));
         }
         
         // DO NOT call render() here - subscription to activeAssetTabs will handle it
@@ -485,14 +492,21 @@ export class AssetTabsManager {
             return;
         }
         
-        // Simple click - just select the folder
-        // This will trigger syncTabToFolder which will activate the tab if it exists
+        // Simple click - activate tab directly and select folder
+        const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
+        if (activeTabs.has(folderPath)) {
+            // Tab exists - activate it directly
+            this.stateManager.set('activeAssetTab', folderPath);
+            // Save to config
+            if (this.levelEditor?.configManager) {
+                this.levelEditor.configManager.set('editor.view.activeAssetTab', folderPath);
+            }
+        }
+        
+        // Also select the folder to keep them in sync
         if (this.foldersPanel && folderPath) {
             this.foldersPanel.selectFolder(folderPath, null);
         }
-        
-        // Don't create tabs automatically - tabs are created only by drag-and-drop
-        // Just activate existing tab if it exists (handled by syncTabToFolder)
         
         this.stateManager.set('selectedAssets', new Set());
         Logger.ui.debug(`AssetTabsManager: Tab clicked ${folderPath} - folder selected`);
@@ -591,8 +605,7 @@ export class AssetTabsManager {
                 // Add dragging class
                 tab.classList.add('dragging');
                 
-                // Add dragging class to container and body for CSS cursor control
-                this.tabsContainer.classList.add('tab-dragging');
+                // Add dragging class to body for CSS cursor control
                 document.body.classList.add('tab-dragging');
                 
                 // Set drag data
@@ -652,7 +665,6 @@ export class AssetTabsManager {
                 });
                 
                 // Remove dragging class
-                this.tabsContainer.classList.remove('tab-dragging');
                 document.body.classList.remove('tab-dragging');
                 
                 this.isDraggingTab = false;

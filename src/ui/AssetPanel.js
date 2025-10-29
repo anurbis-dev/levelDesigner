@@ -157,7 +157,7 @@ export class AssetPanel extends BasePanel {
         if (!tabsLeftContainer) {
             const tabsLeft = document.createElement('div');
             tabsLeft.id = 'asset-tabs-left';
-            tabsLeft.className = 'flex flex-1 overflow-x-auto';
+            tabsLeft.className = 'flex flex-1';
             
             const tabsRight = document.createElement('div');
             tabsRight.id = 'asset-tabs-right';
@@ -271,11 +271,29 @@ export class AssetPanel extends BasePanel {
      * No default tab is created - tabs are added only by user dragging folders
      */
     initializeActiveAssetTabs() {
-        // Start with empty tabs - user will add tabs by dragging folders
-        this.stateManager.set('activeAssetTabs', new Set());
-        this.stateManager.set('activeAssetTab', null);
+        // Load tabs from config if available
+        let activeTabs = new Set();
+        let activeTab = null;
         
-        Logger.ui.debug('AssetPanel: Initialized with empty tabs');
+        if (this.levelEditor?.configManager) {
+            const savedTabs = this.levelEditor.configManager.get('editor.view.activeAssetTabs');
+            const savedActiveTab = this.levelEditor.configManager.get('editor.view.activeAssetTab');
+            
+            if (savedTabs && Array.isArray(savedTabs)) {
+                activeTabs = new Set(savedTabs);
+            }
+            if (savedActiveTab) {
+                activeTab = savedActiveTab;
+            }
+        }
+        
+        this.stateManager.set('activeAssetTabs', activeTabs);
+        this.stateManager.set('activeAssetTab', activeTab);
+        
+        Logger.ui.debug('AssetPanel: Initialized tabs from config', { 
+            activeTabs: Array.from(activeTabs), 
+            activeTab 
+        });
     }
     
     /**
@@ -1035,7 +1053,7 @@ export class AssetPanel extends BasePanel {
             if (this.tabsContainer) {
                 const tabsLeft = document.createElement('div');
                 tabsLeft.id = 'asset-tabs-left';
-                tabsLeft.className = 'flex flex-1 overflow-x-auto';
+                tabsLeft.className = 'flex flex-1';
                 
                 const tabsRight = document.createElement('div');
                 tabsRight.id = 'asset-tabs-right';
