@@ -10,6 +10,7 @@
   "consoleMaxLines": 1000,
   "toolbarVisible": true,
   "toolbarScrollLeft": 0,
+  "assetTabsScrollLeft": 0,
   "assetsPanelVisible": true,
   "rightPanelVisible": true,
   "rightPanelPosition": "right",

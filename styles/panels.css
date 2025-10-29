@@ -153,6 +153,42 @@
     color: rgba(239, 68, 68, 1);
 }
 
+/* Horizontal scroll styles for tabs and toolbar */
+.horizontal-scroll-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none; /* Firefox - hide scrollbar */
+    -ms-overflow-style: none; /* IE and Edge - hide scrollbar */
+    cursor: default; /* Default cursor for empty container */
+}
+
+.horizontal-scroll-container::-webkit-scrollbar {
+    display: none; /* Webkit browsers - hide scrollbar */
+}
+
+/* Tab cursor - pointer for selection */
+.horizontal-scroll-container .tab {
+    cursor: pointer;
+}
+
+/* Scrolling mode - grabbing cursor */
+.horizontal-scroll-container.scrolling {
+    cursor: grabbing !important;
+}
+
+.horizontal-scroll-container.scrolling * {
+    cursor: grabbing !important;
+}
+
+/* Tab dragging mode - grabbing cursor globally */
+body.tab-dragging {
+    cursor: grabbing !important;
+}
+
+body.tab-dragging * {
+    cursor: grabbing !important;
+}
+
 /* Drop target styles for folder drag to tabs */
 .drop-target {
     background-color: rgba(59, 130, 246, 0.2) !important;

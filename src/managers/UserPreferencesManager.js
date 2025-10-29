@@ -31,6 +31,7 @@ export class UserPreferencesManager {
             'consoleMaxLines': 'ui.consoleMaxLines',
             'toolbarVisible': 'ui.toolbarVisible',
             'toolbarScrollLeft': 'ui.toolbarScrollLeft',
+            'assetTabsScrollLeft': 'ui.assetTabsScrollLeft',
             'toolbarButtonStates': 'toolbar.buttonStates',
             'toolbarCollapsedSections': 'toolbar.collapsedSections',
             'toolbarShowIcons': 'toolbar.display.showIcons',

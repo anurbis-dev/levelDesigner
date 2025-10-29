@@ -54,7 +54,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.53.0';
+    static VERSION = '3.54.0';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first

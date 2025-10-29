@@ -129,7 +129,7 @@ export class AssetPanel extends BasePanel {
         // Update layout based on folders position
         this.updateFoldersLayout();
     }
-    
+
     /**
      * Initialize AssetTabsManager
      * Must be called after foldersPanel is initialized
@@ -1071,7 +1071,7 @@ export class AssetPanel extends BasePanel {
             Logger.ui.warn('AssetPanel: tabsRightContainer not found and cannot create structure');
             return;
         }
-        
+
         // Check if controls are already rendered (avoid unnecessary re-rendering)
         const existingControls = tabsRightContainer.querySelector('#asset-search-controls');
         if (existingControls) {
@@ -2624,7 +2624,7 @@ export class AssetPanel extends BasePanel {
      */
     isOverPreviewsContainer(e) {
         if (!this.previewsContainer) return false;
-        const rect = this.previewsContainer.getBoundingClientRect();
+            const rect = this.previewsContainer.getBoundingClientRect();
         return e.clientX >= rect.left && e.clientX <= rect.right &&
                e.clientY >= rect.top && e.clientY <= rect.bottom;
     }
@@ -2818,7 +2818,7 @@ export class AssetPanel extends BasePanel {
         if (this.foldersPanel) {
             this.foldersPanel.refresh();
         }
-        
+
         // Refresh the panel
         this.render();
     }

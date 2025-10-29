@@ -1,6 +1,7 @@
 import { Logger } from '../utils/Logger.js';
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
+import { HorizontalScrollUtils } from '../utils/HorizontalScrollUtils.js';
 
 /**
  * Context menu for asset tabs
@@ -190,6 +191,9 @@ export class AssetTabsManager {
         
         // Initialize context menu
         this.contextMenu = new AssetTabContextMenu(this);
+        
+        // Setup horizontal scrolling for tabs container
+        this.setupHorizontalScrolling();
         
         // Setup folder drag and drop to tabs container
         this.setupFolderDragToTabs();
@@ -432,7 +436,7 @@ export class AssetTabsManager {
             tabButton.className = `tab ${isActive ? 'active' : ''}`;
             tabButton.textContent = this.getFolderName(folderPath);
             tabButton.dataset.folderPath = folderPath;
-            tabButton.draggable = true;
+            tabButton.draggable = true; // Enable tab dragging
             
             this.tabsContainer.appendChild(tabButton);
         });
@@ -449,6 +453,9 @@ export class AssetTabsManager {
         // Setup event handlers after elements are created
         // Re-register handlers to ensure they work on new DOM elements
         this.setupEventHandlers();
+        
+        // Load scroll position after rendering
+        this.loadScrollPosition();
     }
     
     /**
@@ -554,66 +561,26 @@ export class AssetTabsManager {
     setupTabDragging() {
         let draggedTab = null;
         let draggedIndex = -1;
+
+        // Track last mouse button pressed to distinguish drag from scroll
+        let lastMouseButton = 0;
         
-        // Handle mouse move for drag over effects
-        const handleMouseMove = (e) => {
-            if (!draggedTab) return;
-
-            const tab = e.target.closest('.tab');
-            if (!tab || tab === draggedTab) {
-                // Remove drag-over from all tabs
-                this.tabsContainer.querySelectorAll('.tab').forEach(t => t.classList.remove('tab-drag-over'));
-                return;
-            }
-
-            const targetIndex = Array.from(this.tabsContainer.children).indexOf(tab);
-            
-            // Remove drag-over from all tabs
-            this.tabsContainer.querySelectorAll('.tab').forEach(t => t.classList.remove('tab-drag-over'));
-            
-            // Add drag-over to target tab
-            tab.classList.add('tab-drag-over');
+        // Track mousedown to detect button (capture phase to run before drag events)
+        this.tabDraggingMousedownHandler = (e) => {
+            lastMouseButton = e.button;
         };
-
-        // Handle mouse up to complete drag
-        const handleMouseUp = (e) => {
-            if (!draggedTab) return;
-
-            const tabContainer = draggedTab.parentElement;
-            const targetTab = e.target.closest('.tab');
-            
-            if (targetTab && targetTab !== draggedTab) {
-                const targetIndex = Array.from(tabContainer.children).indexOf(targetTab);
-                const draggedIndex = Array.from(tabContainer.children).indexOf(draggedTab);
-                
-                // Move the tab
-                if (draggedIndex < targetIndex) {
-                    tabContainer.insertBefore(draggedTab, targetTab.nextSibling);
-                } else {
-                    tabContainer.insertBefore(draggedTab, targetTab);
-                }
-
-                // Save new tab order to state
-                this.saveTabOrder();
-            }
-
-            // Clean up
-            this.tabsContainer.querySelectorAll('.tab').forEach(t => {
-                t.classList.remove('dragging', 'tab-drag-over');
-            });
-
-            this.isDraggingTab = false; // Reset flag
-            draggedTab = null;
-            draggedIndex = -1;
-            
-            // Remove global handlers
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-
+        this.tabsContainer.addEventListener('mousedown', this.tabDraggingMousedownHandler, { capture: true });
+        
         // Register container handlers through EventHandlerManager
         const tabDraggingHandlers = {
-            mousedown: (e) => {
+            dragstart: (e) => {
+                // Skip if middle mouse button was pressed (used for scrolling)
+                if (lastMouseButton === 1) {
+                    e.preventDefault();
+                    lastMouseButton = 0; // Reset
+                    return;
+                }
+                
                 const tab = e.target.closest('.tab');
                 if (!tab) return;
 
@@ -624,21 +591,79 @@ export class AssetTabsManager {
                 // Add dragging class
                 tab.classList.add('dragging');
                 
-                // Prevent default to avoid text selection
+                // Add dragging class to container and body for CSS cursor control
+                this.tabsContainer.classList.add('tab-dragging');
+                document.body.classList.add('tab-dragging');
+                
+                // Set drag data
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/html', tab.innerHTML);
+            },
+            dragover: (e) => {
+                if (!draggedTab) return;
+                
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                
+                const tab = e.target.closest('.tab');
+                if (tab && tab !== draggedTab) {
+                    // Remove drag-over from all tabs
+                    this.tabsContainer.querySelectorAll('.tab').forEach(t => t.classList.remove('tab-drag-over'));
+                    // Add drag-over to target tab
+                    tab.classList.add('tab-drag-over');
+                }
+            },
+            drop: (e) => {
                 e.preventDefault();
                 
-                // Add global handlers for drag completion
-                document.addEventListener('mousemove', handleMouseMove);
-                document.addEventListener('mouseup', handleMouseUp);
-            },
-            selectstart: (e) => {
-                if (draggedTab) {
-                    e.preventDefault();
+                if (!draggedTab) return;
+
+                const tabContainer = draggedTab.parentElement;
+                const targetTab = e.target.closest('.tab');
+                
+                if (targetTab && targetTab !== draggedTab) {
+                    const targetIndex = Array.from(tabContainer.children).indexOf(targetTab);
+                    const draggedIndex = Array.from(tabContainer.children).indexOf(draggedTab);
+                    
+                    // Move the tab
+                    if (draggedIndex < targetIndex) {
+                        tabContainer.insertBefore(draggedTab, targetTab.nextSibling);
+                    } else {
+                        tabContainer.insertBefore(draggedTab, targetTab);
+                    }
+
+                    // Save new tab order to state
+                    this.saveTabOrder();
                 }
+
+                // Clean up
+                this.tabsContainer.querySelectorAll('.tab').forEach(t => {
+                    t.classList.remove('dragging', 'tab-drag-over');
+                });
+
+                this.isDraggingTab = false; // Reset flag
+                draggedTab = null;
+                draggedIndex = -1;
+            },
+            dragend: (e) => {
+                // Clean up
+                this.tabsContainer.querySelectorAll('.tab').forEach(t => {
+                    t.classList.remove('dragging', 'tab-drag-over');
+                });
+                
+                // Remove dragging class
+                this.tabsContainer.classList.remove('tab-dragging');
+                document.body.classList.remove('tab-dragging');
+                
+                this.isDraggingTab = false;
+                draggedTab = null;
+                draggedIndex = -1;
             }
         };
         
         eventHandlerManager.registerElement(this.tabsContainer, tabDraggingHandlers, 'asset-tab-dragging-container');
+        
+        Logger.ui.debug('AssetTabsManager: Tab dragging setup completed');
     }
     
     /**
@@ -696,9 +721,47 @@ export class AssetTabsManager {
     }
     
     /**
+     * Setup horizontal scrolling for tabs container
+     */
+    setupHorizontalScrolling() {
+        if (!this.tabsContainer) return;
+        
+        // Add horizontal scroll styles to tabs container
+        this.tabsContainer.classList.add('horizontal-scroll-container');
+        
+        // Setup horizontal scrolling with wheel and drag
+        HorizontalScrollUtils.setupHorizontalScrolling(this.tabsContainer, {
+            sensitivity: 0.5,
+            scrollKey: 'assetTabsScrollLeft',
+            userPrefs: this.levelEditor?.userPrefs,
+            onScrollChange: (scrollLeft) => {
+                Logger.ui.debug(`AssetTabsManager: Scroll position changed to ${scrollLeft}px`);
+            }
+        });
+        
+        Logger.ui.debug('AssetTabsManager: Horizontal scrolling setup completed');
+    }
+
+    /**
+     * Load scroll position from user preferences
+     */
+    loadScrollPosition() {
+        if (this.tabsContainer && this.levelEditor?.userPrefs) {
+            const savedScrollLeft = this.levelEditor.userPrefs.get('assetTabsScrollLeft');
+            if (savedScrollLeft !== null && savedScrollLeft !== undefined) {
+                this.tabsContainer.scrollLeft = savedScrollLeft;
+                Logger.ui.debug(`AssetTabsManager: Scroll position restored: ${savedScrollLeft}px`);
+            }
+        }
+    }
+
+    /**
      * Destroy and cleanup
      */
     destroy() {
+        // Remove horizontal scrolling
+        HorizontalScrollUtils.removeScrolling(this.tabsContainer);
+        
         if (this.contextMenu) {
             this.contextMenu.destroy();
         }
@@ -707,9 +770,11 @@ export class AssetTabsManager {
         eventHandlerManager.unregisterContainer(this.tabsContainer);
         eventHandlerManager.unregisterElement(this.tabsContainer);
         
-        // Remove drag and drop listeners
-        // Note: These are direct listeners, not managed by EventHandlerManager
-        // So we need to remove them manually if they were added
+        // Cleanup tab dragging handlers
+        if (this.tabDraggingMousedownHandler) {
+            this.tabsContainer.removeEventListener('mousedown', this.tabDraggingMousedownHandler, { capture: true });
+            this.tabDraggingMousedownHandler = null;
+        }
         
         Logger.ui.debug('AssetTabsManager: Destroyed');
     }

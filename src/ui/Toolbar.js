@@ -3,6 +3,7 @@ import { BaseContextMenu } from './BaseContextMenu.js';
 import { CommandAvailability } from '../utils/CommandAvailability.js';
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
+import { HorizontalScrollUtils } from '../utils/HorizontalScrollUtils.js';
 
 /**
  * Toolbar UI component
@@ -15,13 +16,7 @@ export class Toolbar {
         this.levelEditor = levelEditor;
         this.isVisible = true;
         
-        // Scrolling state
-        this.isScrolling = false;
-        this.scrollStartX = 0;
-        this.scrollStartScrollLeft = 0;
-        
-        // Scrolling event handlers for cleanup
-        this.scrollingHandlers = [];
+        // Scrolling will be handled by HorizontalScrollUtils
         
         // Context menu state
         this.showIcons = true;
@@ -42,8 +37,8 @@ export class Toolbar {
         
         this.setupEventListeners();
         this.render();
-        // Setup scrolling events after render
-        this.setupScrollingEvents();
+        // Setup horizontal scrolling after render
+        this.setupHorizontalScrolling();
         this.setupContextMenu();
         // Setup new event handlers
         this.setupNewEventHandlers();
@@ -1038,141 +1033,22 @@ export class Toolbar {
     }
 
     /**
-     * Setup scrolling event listeners for middle mouse button and touch
+     * Setup horizontal scrolling for toolbar
      */
-    setupScrollingEvents() {
+    setupHorizontalScrolling() {
         if (!this.container || !this.toolbarContent) return;
-
-        // Clear existing handlers
-        this.scrollingHandlers.forEach(({ element, event, handler, options }) => {
-            element.removeEventListener(event, handler, options);
+        
+        // Setup horizontal scrolling with wheel and drag
+        HorizontalScrollUtils.setupHorizontalScrolling(this.toolbarContent, {
+            sensitivity: 0.5,
+            scrollKey: 'toolbarScrollLeft',
+            userPrefs: this.levelEditor?.userPrefs,
+            onScrollChange: (scrollLeft) => {
+                Logger.ui.debug(`Toolbar: Scroll position changed to ${scrollLeft}px`);
+            }
         });
-        this.scrollingHandlers = [];
-
-        // Middle mouse button down - start scrolling (on entire toolbar container)
-        const mousedownHandler = (e) => {
-            if (e.button === 1) { // Middle mouse button
-                e.preventDefault();
-                e.stopPropagation(); // Prevent event bubbling to avoid conflicts
-                this.startScrolling(e);
-            }
-        };
-        this.container.addEventListener('mousedown', mousedownHandler, { passive: false });
-        this.scrollingHandlers.push({ element: this.container, event: 'mousedown', handler: mousedownHandler, options: { passive: false } });
-
-        // Mouse move - continue scrolling
-        const mousemoveHandler = (e) => {
-            if (this.isScrolling) {
-                e.preventDefault();
-                this.updateScrolling(e);
-            }
-        };
-        document.addEventListener('mousemove', mousemoveHandler, { passive: false });
-        this.scrollingHandlers.push({ element: document, event: 'mousemove', handler: mousemoveHandler, options: { passive: false } });
-
-        // Mouse up - stop scrolling
-        const mouseupHandler = (e) => {
-            if (this.isScrolling && e.button === 1) {
-                e.preventDefault();
-                this.stopScrolling();
-            }
-        };
-        document.addEventListener('mouseup', mouseupHandler, { passive: false });
-        this.scrollingHandlers.push({ element: document, event: 'mouseup', handler: mouseupHandler, options: { passive: false } });
-
-        // Mouse wheel scrolling
-        const wheelHandler = (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const scrollAmount = e.deltaY * 0.5; // Adjust scroll sensitivity
-            this.toolbarContent.scrollLeft += scrollAmount;
-            
-            // Save scroll position after wheel scroll
-            if (this.levelEditor && this.levelEditor.userPrefs) {
-                this.levelEditor.userPrefs.set('toolbarScrollLeft', this.toolbarContent.scrollLeft);
-            }
-        };
-        this.toolbarContent.addEventListener('wheel', wheelHandler, { passive: false });
-        this.scrollingHandlers.push({ element: this.toolbarContent, event: 'wheel', handler: wheelHandler, options: { passive: false } });
-
-        // Prevent context menu on middle click
-        const contextmenuHandler = (e) => {
-            if (e.button === 1) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-        };
-        this.toolbarContent.addEventListener('contextmenu', contextmenuHandler, { passive: false });
-        this.scrollingHandlers.push({ element: this.toolbarContent, event: 'contextmenu', handler: contextmenuHandler, options: { passive: false } });
-
-        // Prevent text selection during scrolling
-        const selectstartHandler = (e) => {
-            if (this.isScrolling) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-        };
-        this.toolbarContent.addEventListener('selectstart', selectstartHandler);
-        this.scrollingHandlers.push({ element: this.toolbarContent, event: 'selectstart', handler: selectstartHandler, options: undefined });
-    }
-
-    /**
-     * Start horizontal scrolling
-     */
-    startScrolling(e) {
-        // Prevent starting scrolling if already scrolling
-        if (this.isScrolling) {
-            return;
-        }
         
-        this.isScrolling = true;
-        this.scrollStartX = e.clientX;
-        this.scrollStartScrollLeft = this.toolbarContent.scrollLeft;
-        
-        // Change cursor to indicate scrolling
-        this.toolbarContent.style.cursor = 'grabbing';
-        document.body.style.cursor = 'grabbing';
-        document.body.style.userSelect = 'none';
-        
-        Logger.ui.debug('Toolbar scrolling started');
-    }
-
-    /**
-     * Update scrolling position - pan in opposite direction to cursor movement
-     */
-    updateScrolling(e) {
-        if (!this.isScrolling || !this.toolbarContent) return;
-
-        const deltaX = e.clientX - this.scrollStartX;
-        // Pan in opposite direction to cursor movement (standard panning behavior)
-        const newScrollLeft = this.scrollStartScrollLeft - deltaX;
-
-        // Apply scrolling with bounds
-        const maxScrollLeft = this.toolbarContent.scrollWidth - this.toolbarContent.clientWidth;
-        this.toolbarContent.scrollLeft = Math.max(0, Math.min(newScrollLeft, maxScrollLeft));
-        
-        Logger.ui.debug('Toolbar scrolling updated', `deltaX: ${deltaX}, scrollLeft: ${this.toolbarContent.scrollLeft}`);
-    }
-
-    /**
-     * Stop horizontal scrolling
-     */
-    stopScrolling() {
-        this.isScrolling = false;
-        
-        // Restore cursor
-        if (this.toolbarContent) {
-            this.toolbarContent.style.cursor = '';
-        }
-        document.body.style.cursor = '';
-        document.body.style.userSelect = '';
-        
-        // Save scroll position when scrolling stops
-        if (this.levelEditor && this.levelEditor.userPrefs && this.toolbarContent) {
-            this.levelEditor.userPrefs.set('toolbarScrollLeft', this.toolbarContent.scrollLeft);
-        }
-        
-        Logger.ui.debug('Toolbar scrolling stopped');
+        Logger.ui.debug('Toolbar: Horizontal scrolling setup completed');
     }
 
     /**
@@ -1416,19 +1292,11 @@ export class Toolbar {
         // Remove event handlers using new system
         eventHandlerManager.unregisterContainer(this.container);
         
-        // Remove scrolling event handlers
-        this.scrollingHandlers.forEach(({ element, event, handler, options }) => {
-            try {
-                element.removeEventListener(event, handler, options);
-            } catch (error) {
-                Logger.ui.warn('Failed to remove scrolling event handler:', error);
-            }
-        });
-        this.scrollingHandlers = [];
+        // Remove horizontal scrolling
+        HorizontalScrollUtils.removeScrolling(this.toolbarContent);
         
         // Save current state before destroying
         this.saveState();
-        this.saveScrollPosition();
         
         // Destroy context menu
         if (this.contextMenu) {
