@@ -31,65 +31,65 @@
 
 /* Panel headers and content */
 .panel-header {
-    padding: calc(0.75rem * max(var(--spacing-scale, 1.0), 0));
+    padding: calc(0.75rem * max(var(--element-size-scale, 1.0), 0));
 }
 
 .panel-content {
-    padding: calc(0.75rem * max(var(--spacing-scale, 1.0), 0));
+    padding: calc(0.75rem * max(var(--element-size-scale, 1.0), 0));
 }
 
 /* Asset items */
 .asset-item {
-    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
-    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+    padding: calc(1.75rem * max(var(--element-size-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--element-size-scale, 1.0), 0));
 }
 
 /* Menu items */
 .menu-item {
-    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0)) calc(0.75rem * max(var(--spacing-scale, 1.0), 0));
-    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+    padding: calc(1.75rem * max(var(--element-size-scale, 1.0), 0)) calc(0.75rem * max(var(--element-size-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--element-size-scale, 1.0), 0));
 }
 
 /* Buttons */
 .button {
-    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0)) calc(0.75rem * max(var(--spacing-scale, 1.0), 0));
-    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+    padding: calc(0.5rem * max(var(--element-size-scale, 1.0), 0)) calc(0.75rem * max(var(--element-size-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--element-size-scale, 1.0), 0));
 }
 
 /* Inputs */
 .input {
-    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
-    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+    padding: calc(0.5rem * max(var(--element-size-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--element-size-scale, 1.0), 0));
 }
 
 /* Tabs */
 .tab {
-    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.5)) calc(1rem * max(var(--spacing-scale, 1.0), 0.5));
-    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0.5));
+    padding: calc(0.5rem * max(var(--element-size-scale, 1.0), 0.5)) calc(1rem * max(var(--element-size-scale, 1.0), 0.5));
+    min-height: calc(2rem * max(var(--element-size-scale, 1.0), 0.5));
 }
 
 /* Outliner items */
 .outliner-item {
-    padding: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)) calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
-    min-height: calc(1.5rem * max(var(--spacing-scale, 1.0), 0));
+    padding: calc(0.25rem * max(var(--element-size-scale, 1.0), 0)) calc(0.5rem * max(var(--element-size-scale, 1.0), 0));
+    min-height: calc(1.5rem * max(var(--element-size-scale, 1.0), 0));
 }
 
 /* Asset thumbnails */
 .asset-thumbnail {
-    width: calc(96px * max(var(--spacing-scale, 1.0), 0));
-    height: calc(96px * max(var(--spacing-scale, 1.0), 0));
+    width: calc(96px * max(var(--element-size-scale, 1.0), 0));
+    height: calc(96px * max(var(--element-size-scale, 1.0), 0));
 }
 
 /* Layer colors */
 .layer-color {
-    width: calc(1rem * max(var(--spacing-scale, 1.0), 0));
-    height: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+    width: calc(1rem * max(var(--element-size-scale, 1.0), 0));
+    height: calc(1rem * max(var(--element-size-scale, 1.0), 0));
 }
 
 /* Icons */
 .icon {
-    width: calc(1rem * max(var(--spacing-scale, 1.0), 0));
-    height: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+    width: calc(1rem * max(var(--element-size-scale, 1.0), 0));
+    height: calc(1rem * max(var(--element-size-scale, 1.0), 0));
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -97,7 +97,7 @@
 
 /* Separators */
 .separator {
-    margin: calc(0.5rem * max(var(--spacing-scale, 1.0), 0)) 0;
+    margin: calc(0.5rem * max(var(--spacing-scale-v, 1.0), 0)) 0;
 }
 
 /* Context menus */
@@ -111,11 +111,11 @@
 
 /* Form elements */
 .settings-form-group {
-    margin-bottom: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+    margin-bottom: calc(1rem * max(var(--spacing-scale-v, 1.0), 0));
 }
 
 .form-label {
-    margin-bottom: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+    margin-bottom: calc(0.5rem * max(var(--spacing-scale-v, 1.0), 0));
 }
 
 /* Scrollbars */
@@ -138,30 +138,31 @@ nav {
 }
 
 #menu-container {
-    gap: 0;
+    /* Sum base gap with spacing H */
+    gap: calc(var(--menu-gap-base, 0.5rem) + (0.5rem * max(var(--spacing-scale-h, 1.0), 0)));
 }
 
 /* Panel tabs */
 .tab-right, .tab-left {
-    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0)) calc(1rem * max(var(--spacing-scale, 1.0), 0));
-    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+    padding: calc(0.5rem * max(var(--element-size-scale, 1.0), 0)) calc(1rem * max(var(--element-size-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--element-size-scale, 1.0), 0));
 }
 
 /* Toolbar buttons */
 #toolbar-container .button {
-    padding: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)) calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
-    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
-    margin: calc(0.125rem * max(var(--spacing-scale, 1.0), 0));
+    padding: calc(0.25rem * max(var(--element-size-scale, 1.0), 0)) calc(0.5rem * max(var(--element-size-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--element-size-scale, 1.0), 0));
+    margin: calc(0.125rem * max(var(--spacing-scale-v, 1.0), 0));
 }
 
 #toolbar-container .flex {
-    gap: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+    gap: calc(20px * max(var(--spacing-scale-h, 1.0), 0));
 }
 
 /* Toolbar specific button styles - prevent icons from moving down */
 #toolbar-container button {
-    padding: calc(0.125rem * max(var(--spacing-scale, 1.0), 0.2)) calc(0.5rem * max(var(--spacing-scale, 1.0), 0.2)) !important;
-    min-height: calc(1.75rem * max(var(--spacing-scale, 1.0), 0.5)) !important;
+    padding: calc(0.125rem * max(var(--element-size-scale, 1.0), 0.2)) calc(0.5rem * max(var(--element-size-scale, 1.0), 0.2)) !important;
+    min-height: calc(1.75rem * max(var(--element-size-scale, 1.0), 0.5)) !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -204,29 +205,29 @@ nav {
 
 /* Override general px-3 and py-1 classes for toolbar buttons */
 #toolbar-container button.px-3 {
-    padding-left: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.2)) !important;
-    padding-right: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.2)) !important;
+    padding-left: calc(0.5rem * max(var(--element-size-scale, 1.0), 0.2)) !important;
+    padding-right: calc(0.5rem * max(var(--element-size-scale, 1.0), 0.2)) !important;
 }
 
 #toolbar-container button.py-1 {
-    padding-top: calc(0.125rem * max(var(--spacing-scale, 1.0), 0.2)) !important;
-    padding-bottom: calc(0.125rem * max(var(--spacing-scale, 1.0), 0.2)) !important;
+    padding-top: calc(0.125rem * max(var(--element-size-scale, 1.0), 0.2)) !important;
+    padding-bottom: calc(0.125rem * max(var(--element-size-scale, 1.0), 0.2)) !important;
 }
 
 /* Override space-x-1 for toolbar buttons */
 #toolbar-container button.space-x-1 > * + * {
-    margin-left: calc(0.25rem * max(var(--spacing-scale, 1.0), 0.2));
+    margin-left: calc(0.25rem * max(var(--spacing-scale-h, 1.0), 0.2));
 }
 
 /* Asset panel rows */
 .asset-row {
-    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
-    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+    padding: calc(0.5rem * max(var(--element-size-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--element-size-scale, 1.0), 0));
 }
 
 .asset-item {
-    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
-    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+    padding: calc(0.5rem * max(var(--element-size-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--element-size-scale, 1.0), 0));
 }
 
 /* Details panel - no padding for main interface elements */
@@ -235,22 +236,22 @@ nav {
 }
 
 .details-panel .settings-form-group {
-    margin-bottom: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+    margin-bottom: calc(1rem * max(var(--spacing-scale-v, 1.0), 0));
 }
 
 .details-panel .form-label {
-    margin-bottom: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
-    padding: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)) 0;
+    margin-bottom: calc(0.5rem * max(var(--spacing-scale-v, 1.0), 0));
+    padding: calc(0.25rem * max(var(--element-size-scale, 1.0), 0)) 0;
 }
 
 .details-panel .form-input {
-    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
-    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+    padding: calc(0.5rem * max(var(--element-size-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--element-size-scale, 1.0), 0));
 }
 
 .details-panel .form-select {
-    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
-    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+    padding: calc(0.5rem * max(var(--element-size-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--element-size-scale, 1.0), 0));
 }
 
 /* Console panel - no padding for main interface elements */
@@ -259,7 +260,7 @@ nav {
 }
 
 .console-message {
-    padding: calc(0.125rem * max(var(--spacing-scale, 1.0), 0)); /* Minimal padding for console messages */
+    padding: calc(0.125rem * max(var(--element-size-scale, 1.0), 0)); /* Minimal padding for console messages */
 }
 
 /* Layers panel - no padding for main interface elements */
@@ -268,8 +269,8 @@ nav {
 }
 
 .layer-item {
-    padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
-    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+    padding: calc(0.5rem * max(var(--element-size-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--element-size-scale, 1.0), 0));
 }
 
 .layer-name-display {
@@ -286,27 +287,27 @@ nav {
 
 .layer-visibility-btn,
 .layer-lock-btn {
-    width: calc(2rem * max(var(--spacing-scale, 1.0), 0));
-    height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
-    min-width: calc(2rem * max(var(--spacing-scale, 1.0), 0));
-    min-height: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+    width: calc(2rem * max(var(--element-size-scale, 1.0), 0));
+    height: calc(2rem * max(var(--element-size-scale, 1.0), 0));
+    min-width: calc(2rem * max(var(--element-size-scale, 1.0), 0));
+    min-height: calc(2rem * max(var(--element-size-scale, 1.0), 0));
 }
 
 .layer-visibility-btn svg,
 .layer-lock-btn svg {
-    width: calc(1rem * max(var(--spacing-scale, 1.0), 0));
-    height: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+    width: calc(1rem * max(var(--element-size-scale, 1.0), 0));
+    height: calc(1rem * max(var(--element-size-scale, 1.0), 0));
 }
 
 /* Layer context menu */
 .layer-context-menu .base-context-menu-item {
-    padding: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)) calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
-    min-height: calc(1.5rem * max(var(--spacing-scale, 1.0), 0));
+    padding: calc(0.25rem * max(var(--element-size-scale, 1.0), 0)) calc(0.5rem * max(var(--element-size-scale, 1.0), 0));
+    min-height: calc(1.5rem * max(var(--element-size-scale, 1.0), 0));
 }
 
 .layer-context-menu .base-context-menu-item.separator {
-    height: calc(1px * max(var(--spacing-scale, 1.0), 0));
-    margin: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)) 0;
+    height: 1px;
+    margin: calc(0.25rem * max(var(--spacing-scale-v, 1.0), 0)) 0;
 }
 
 /* Text size overrides - REMOVED - controlled by Font Scale only */
@@ -342,7 +343,7 @@ nav {
 
 /* List items */
 li {
-    padding: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)) 0;
+    padding: calc(0.25rem * max(var(--element-size-scale, 1.0), 0)) 0;
 }
 
 /* Table styles */
@@ -351,7 +352,7 @@ table {
 }
 
 th, td {
-    padding: calc(0.25rem * max(var(--spacing-scale, 1.0), 0)) calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+    padding: calc(0.25rem * max(var(--element-size-scale, 1.0), 0)) calc(0.5rem * max(var(--element-size-scale, 1.0), 0));
 }
 
 /* Tailwind CSS class overrides */
@@ -385,48 +386,48 @@ th, td {
 
 /* Space utilities */
 .space-x-1 > * + * {
-    margin-left: calc(0.25rem * max(var(--spacing-scale, 1.0), 0));
+    margin-left: calc(0.25rem * max(var(--spacing-scale-h, 1.0), 0));
 }
 
 .space-x-2 > * + * {
-    margin-left: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+    margin-left: calc(0.5rem * max(var(--spacing-scale-h, 1.0), 0));
 }
 
 .space-x-4 > * + * {
-    margin-left: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+    margin-left: calc(1rem * max(var(--spacing-scale-h, 1.0), 0));
 }
 
 .space-y-1 > * + * {
-    margin-top: calc(0.25rem * max(var(--spacing-scale, 1.0), 0));
+    margin-top: calc(0.25rem * max(var(--spacing-scale-v, 1.0), 0));
 }
 
 .space-y-2 > * + * {
-    margin-top: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+    margin-top: calc(0.5rem * max(var(--spacing-scale-v, 1.0), 0));
 }
 
 .space-y-4 > * + * {
-    margin-top: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+    margin-top: calc(1rem * max(var(--spacing-scale-v, 1.0), 0));
 }
 
 /* Gap utilities */
 .gap-1 {
-    gap: calc(0.25rem * max(var(--spacing-scale, 1.0), 0));
+    gap: calc(0.25rem * max(var(--spacing-scale-h, 1.0), 0));
 }
 
 .gap-2 {
-    gap: calc(0.5rem * max(var(--spacing-scale, 1.0), 0));
+    gap: calc(0.5rem * max(var(--spacing-scale-h, 1.0), 0));
 }
 
 .gap-4 {
-    gap: calc(1rem * max(var(--spacing-scale, 1.0), 0));
+    gap: calc(1rem * max(var(--spacing-scale-h, 1.0), 0));
 }
 
 .gap-6 {
-    gap: calc(1.5rem * max(var(--spacing-scale, 1.0), 0));
+    gap: calc(1.5rem * max(var(--spacing-scale-h, 1.0), 0));
 }
 
 .gap-8 {
-    gap: calc(2rem * max(var(--spacing-scale, 1.0), 0));
+    gap: calc(2rem * max(var(--spacing-scale-h, 1.0), 0));
 }
 
 /* Margin utilities */
@@ -492,48 +493,49 @@ th, td {
 
 /* Inline style overrides for spacing */
 [style*="gap:"] {
-    gap: calc(var(--gap-value, 1rem) * max(var(--spacing-scale, 1.0), 0)) !important;
+    gap: calc(var(--gap-value, 1rem) * max(var(--spacing-scale-h, 1.0), 0)) !important;
 }
 
 [style*="margin:"] {
-    margin: calc(var(--margin-value, 1rem) * max(var(--spacing-scale, 1.0), 0)) !important;
+    /* fallback apply equally */
+    margin: calc(var(--margin-value, 1rem) * max(var(--spacing-scale-v, 1.0), 0)) !important;
 }
 
 [style*="margin-top:"] {
-    margin-top: calc(var(--margin-top-value, 1rem) * max(var(--spacing-scale, 1.0), 0)) !important;
+    margin-top: calc(var(--margin-top-value, 1rem) * max(var(--spacing-scale-v, 1.0), 0)) !important;
 }
 
 [style*="margin-bottom:"] {
-    margin-bottom: calc(var(--margin-bottom-value, 1rem) * max(var(--spacing-scale, 1.0), 0)) !important;
+    margin-bottom: calc(var(--margin-bottom-value, 1rem) * max(var(--spacing-scale-v, 1.0), 0)) !important;
 }
 
 [style*="margin-left:"] {
-    margin-left: calc(var(--margin-left-value, 1rem) * max(var(--spacing-scale, 1.0), 0)) !important;
+    margin-left: calc(var(--margin-left-value, 1rem) * max(var(--spacing-scale-h, 1.0), 0)) !important;
 }
 
 [style*="margin-right:"] {
-    margin-right: calc(var(--margin-right-value, 1rem) * max(var(--spacing-scale, 1.0), 0)) !important;
+    margin-right: calc(var(--margin-right-value, 1rem) * max(var(--spacing-scale-h, 1.0), 0)) !important;
 }
 
 /* Specific overrides for common inline gap values */
 [style*="gap: 0.5rem"] {
-    gap: calc(0.5rem * max(var(--spacing-scale, 1.0), 0)) !important;
+    gap: calc(0.5rem * max(var(--spacing-scale-h, 1.0), 0)) !important;
 }
 
 [style*="gap: 0.75rem"] {
-    gap: calc(0.75rem * max(var(--spacing-scale, 1.0), 0)) !important;
+    gap: calc(0.75rem * max(var(--spacing-scale-h, 1.0), 0)) !important;
 }
 
 [style*="gap: 1rem"] {
-    gap: calc(1rem * max(var(--spacing-scale, 1.0), 0)) !important;
+    gap: calc(1rem * max(var(--spacing-scale-h, 1.0), 0)) !important;
 }
 
 [style*="gap: 1.5rem"] {
-    gap: calc(1.5rem * max(var(--spacing-scale, 1.0), 0)) !important;
+    gap: calc(1.5rem * max(var(--spacing-scale-h, 1.0), 0)) !important;
 }
 
 [style*="gap: 2rem"] {
-    gap: calc(2rem * max(var(--spacing-scale, 1.0), 0)) !important;
+    gap: calc(2rem * max(var(--spacing-scale-h, 1.0), 0)) !important;
 }
 
 /* Specific overrides for common inline margin values */

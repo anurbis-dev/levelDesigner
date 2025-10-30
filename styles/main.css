@@ -5,7 +5,10 @@
     --font-scale: 1.0;
     font-size: calc(16px * var(--font-scale, 1.0)); /* Use CSS variable for font scale */
     --accent-color: #3B82F6; /* blue-500 - стандартный синий цвет приложения */
-    --spacing-scale: 1.0; /* Масштаб отступов и размеров элементов */
+    --spacing-scale: 1.0; /* legacy */
+    --spacing-scale-h: var(--spacing-scale, 1.0);
+    --spacing-scale-v: var(--spacing-scale, 1.0);
+    --element-size-scale: var(--spacing-scale, 1.0);
     
     /* UI Color Variables */
     --ui-background-color: #1f2937; /* gray-800 */
