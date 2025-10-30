@@ -602,7 +602,7 @@ if (isResizingAssets) {
 
 **1. Системные настройки** (`config/defaults/*.json`):
 - `editor.json` - настройки редактора (autoSave, axis constraints, etc.)
-- `ui.json` - настройки интерфейса (fontScale, compactMode, panel sizes)
+- `ui.json` - настройки интерфейса (fontScale, spacingH, spacingV, elementSize, panel sizes)
 - `canvas.json` - настройки canvas (grid, colors, snap settings)
 - `panels.json` - настройки панелей (tabs order, visibility)
 - `shortcuts.json` - горячие клавиши

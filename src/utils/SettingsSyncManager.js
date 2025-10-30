@@ -51,6 +51,12 @@ export class SettingsSyncManager {
                 // Apply showTooltips setting (when tooltips are implemented)
                 this.levelEditor.stateManager.set('ui.showTooltips', value);
                 // TODO: Apply to actual tooltip system when implemented
+            },
+            'ui.menuGapBase': (value) => {
+                const num = parseFloat(value);
+                if (!Number.isNaN(num) && num >= 0) {
+                    document.documentElement.style.setProperty('--menu-gap-base', `${num}rem`);
+                }
             }
         };
 
@@ -98,7 +104,10 @@ export class SettingsSyncManager {
             // UI settings
             'ui.showTooltips': 'ui.showTooltips',
             'ui.fontScale': 'ui.fontScale',
-            'ui.spacing': 'ui.spacing',
+            'ui.spacingH': 'ui.spacingH',
+            'ui.spacingV': 'ui.spacingV',
+            'ui.elementSize': 'ui.elementSize',
+            'ui.menuGapBase': 'ui.menuGapBase',
             'ui.backgroundColor': 'ui.backgroundColor',
             'ui.textColor': 'ui.textColor',
             'ui.activeColor': 'ui.activeColor',
@@ -190,7 +199,7 @@ export class SettingsSyncManager {
         const stateKey = this.stateMapping[path];
         if (stateKey) {
             // Coerce numeric UI values from range inputs
-            if (path === 'ui.fontScale' || path === 'ui.spacing' || path === 'editor.autoSaveInterval' || path === 'editor.axisConstraint.axisWidth') {
+            if (path === 'ui.fontScale' || path === 'ui.spacingH' || path === 'ui.spacingV' || path === 'ui.elementSize' || path === 'ui.menuGapBase' || path === 'editor.autoSaveInterval' || path === 'editor.axisConstraint.axisWidth') {
                 const parsed = ValidationUtils.validateNumeric(value, path);
                 if (parsed !== null) {
                     value = parsed;
@@ -198,6 +207,14 @@ export class SettingsSyncManager {
             }
 
             this.levelEditor.stateManager.set(stateKey, value);
+            
+            // Special handling
+            if (path === 'ui.menuGapBase') {
+                const num = parseFloat(value);
+                if (!Number.isNaN(num) && num >= 0) {
+                    document.documentElement.style.setProperty('--menu-gap-base', `${num}rem`);
+                }
+            }
             
             // Special handling for view options that need immediate application
             if (stateKey.startsWith('view.') && this.levelEditor.eventHandlers) {
@@ -211,16 +228,25 @@ export class SettingsSyncManager {
                 this.levelEditor.render();
             }
             
-            // Special handling for spacing that needs immediate visual update
-            if (path === 'ui.spacing') {
-                const spacingScale = ValidationUtils.validateSpacingScale(value);
-                if (spacingScale !== null) {
-                    document.documentElement.style.setProperty('--spacing-scale', String(spacingScale));
-                    // Delay inline styles update to ensure DOM is ready
-                    setTimeout(() => {
-                        this.updateInlineSpacingStyles(spacingScale);
-                    }, 50);
-                    ValidationUtils.logValidation('SettingsSyncManager', 'Applied spacing scale', spacingScale);
+            // Special handling for spacing H/V
+            if (path === 'ui.spacingH') {
+                const h = ValidationUtils.validateSpacingScale(value);
+                if (h !== null) {
+                    document.documentElement.style.setProperty('--spacing-scale-h', String(h));
+                }
+            }
+            if (path === 'ui.spacingV') {
+                const v = ValidationUtils.validateSpacingScale(value);
+                if (v !== null) {
+                    document.documentElement.style.setProperty('--spacing-scale-v', String(v));
+                }
+            }
+
+            // Special handling for element size scale
+            if (path === 'ui.elementSize') {
+                const sizeScale = parseFloat(value);
+                if (!Number.isNaN(sizeScale) && sizeScale >= 0) {
+                    document.documentElement.style.setProperty('--element-size-scale', String(sizeScale));
                 }
             }
 
@@ -401,15 +427,33 @@ export class SettingsSyncManager {
             }
         }
 
-        // Apply spacing scale globally - IMMEDIATELY, no delay
-        const spacingScale = this.levelEditor.stateManager.get('ui.spacing');
-        if (spacingScale !== undefined) {
-            const spacingScaleNum = ValidationUtils.validateSpacingScale(spacingScale);
-            if (spacingScaleNum !== null) {
-                document.documentElement.style.setProperty('--spacing-scale', String(spacingScaleNum));
-                // Apply inline styles immediately for dialog elements
-                this.updateInlineSpacingStyles(spacingScaleNum);
-                ValidationUtils.logValidation('SettingsSyncManager', 'Applied spacing scale in applySpecialUISettings', spacingScaleNum);
+        // Apply spacing H/V globally
+        const spacingH = this.levelEditor.stateManager.get('ui.spacingH');
+        const spacingV = this.levelEditor.stateManager.get('ui.spacingV');
+        if (spacingH !== undefined) {
+            const h = ValidationUtils.validateSpacingScale(spacingH);
+            if (h !== null) document.documentElement.style.setProperty('--spacing-scale-h', String(h));
+        }
+        if (spacingV !== undefined) {
+            const v = ValidationUtils.validateSpacingScale(spacingV);
+            if (v !== null) document.documentElement.style.setProperty('--spacing-scale-v', String(v));
+        }
+
+        // Apply element size scale globally
+        const elementSize = this.levelEditor.stateManager.get('ui.elementSize');
+        if (elementSize !== undefined && elementSize !== null) {
+            const num = parseFloat(elementSize);
+            if (!Number.isNaN(num) && num >= 0) {
+                document.documentElement.style.setProperty('--element-size-scale', String(num));
+            }
+        }
+
+        // Apply main menu gap base
+        const menuGapBase = this.levelEditor.stateManager.get('ui.menuGapBase');
+        if (menuGapBase !== undefined && menuGapBase !== null) {
+            const num = parseFloat(menuGapBase);
+            if (!Number.isNaN(num) && num >= 0) {
+                document.documentElement.style.setProperty('--menu-gap-base', `${num}rem`);
             }
         }
 

@@ -205,15 +205,7 @@
                     }
                 }
 
-                // Apply compact mode immediately
-                const compactMode = userPrefs.get('compactMode');
-                if (compactMode) {
-                    try {
-                        document.body.classList.add('compact-mode');
-                    } catch (compactError) {
-                        Logger.layout.warn('Failed to apply compact mode:', compactError);
-                    }
-                }
+                // Compact mode removed
 
                 // Apply panel visibility settings immediately
                 // Use stateManager if available, fallback to userPrefs

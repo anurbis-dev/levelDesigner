@@ -477,11 +477,12 @@ export class SettingsPanel {
 
                 ValidationUtils.logValidation('SettingsPanel', 'Input change detected', { path, value });
 
-                // Handle scaling sliders - only update display, don't apply changes yet
-                if (input.type === 'range' && (path === 'ui.fontScale' || path === 'ui.spacing')) {
-                    // Only update display, don't apply the setting change
+                // For range sliders (font scale, spacing H/V, element size, menu gap) - update display and apply immediately for live preview
+                if (input.type === 'range' && (path === 'ui.fontScale' || path === 'ui.spacingH' || path === 'ui.spacingV' || path === 'ui.elementSize' || path === 'ui.menuGapBase')) {
                     this.updateSliderDisplay(input, value);
-                    return; // Skip normal processing for scaling sliders
+                    if (this.syncManager) {
+                        this.syncManager.syncSettingToState(path, value);
+                    }
                 }
 
                 // Update real-time display values for other sliders
@@ -531,8 +532,8 @@ export class SettingsPanel {
             // Add the listener
             input.addEventListener('input', input._inputHandler);
             
-            // Add change listener for scaling sliders (when user releases)
-            if (input.type === 'range' && (input.dataset.setting === 'ui.fontScale' || input.dataset.setting === 'ui.spacing')) {
+            // Add change listener for scaling sliders (ensure final value applied)
+            if (input.type === 'range' && (input.dataset.setting === 'ui.fontScale' || input.dataset.setting === 'ui.spacingH' || input.dataset.setting === 'ui.spacingV' || input.dataset.setting === 'ui.elementSize' || input.dataset.setting === 'ui.menuGapBase')) {
                 input._changeHandler = (e) => {
                     const path = e.target.dataset.setting;
                     const value = e.target.value;
@@ -597,6 +598,16 @@ export class SettingsPanel {
             if (this.isVisible) {
                 this.updateUIInput('canvas.showGrid', value);
             }
+        });
+
+        // Sync UI spacing and size sliders from StateManager
+        const uiKeys = ['ui.fontScale', 'ui.spacingH', 'ui.spacingV', 'ui.elementSize', 'ui.menuGapBase'];
+        uiKeys.forEach((key) => {
+            this.levelEditor.stateManager.subscribe(key, (value) => {
+                if (this.isVisible) {
+                    this.updateUIInput(key, value);
+                }
+            });
         });
     }
 
@@ -764,8 +775,15 @@ export class SettingsPanel {
             }
         );
 
-        // Register dialog with new event manager
-        eventHandlerManager.registerContainer(overlay, dialogHandlers);
+        // Register dialog with new event manager (avoid duplicate registration)
+        try {
+            if (eventHandlerManager.isContainerRegistered(overlay)) {
+                eventHandlerManager.unregisterContainer(overlay);
+            }
+            eventHandlerManager.registerContainer(overlay, dialogHandlers);
+        } catch (e) {
+            Logger.ui.warn('SettingsPanel: overlay registration issue:', e);
+        }
 
         // Setup input handlers for all inputs using new system
         const inputHandlers = EventHandlerUtils.createInputHandlers(
@@ -780,7 +798,14 @@ export class SettingsPanel {
             }
         );
 
-        eventHandlerManager.registerContainer(container, inputHandlers);
+        try {
+            if (eventHandlerManager.isContainerRegistered(container)) {
+                eventHandlerManager.unregisterContainer(container);
+            }
+            eventHandlerManager.registerContainer(container, inputHandlers);
+        } catch (e) {
+            Logger.ui.warn('SettingsPanel: container registration issue:', e);
+        }
 
         // Setup file import handler
         const importFile = document.getElementById('import-file');
@@ -794,7 +819,15 @@ export class SettingsPanel {
                 }
             );
 
-            eventHandlerManager.registerContainer(importFile.parentElement, fileHandlers);
+            try {
+                const parent = importFile.parentElement;
+                if (eventHandlerManager.isContainerRegistered(parent)) {
+                    eventHandlerManager.unregisterContainer(parent);
+                }
+                eventHandlerManager.registerContainer(parent, fileHandlers);
+            } catch (e) {
+                Logger.ui.warn('SettingsPanel: import file registration issue:', e);
+            }
         }
 
         Logger.ui.debug('SettingsPanel: New event handlers setup complete');

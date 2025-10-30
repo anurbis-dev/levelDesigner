@@ -35,6 +35,8 @@ export function renderGeneralSettings(stateManager) {
             showTooltips: stateManager.get('ui.showTooltips'),
             fontScale: stateManager.get('ui.fontScale'),
             spacing: stateManager.get('ui.spacing'),
+            elementSize: stateManager.get('ui.elementSize') ?? 1.0,
+            menuGapBase: stateManager.get('ui.menuGapBase') ?? 0.5,
             backgroundColor: stateManager.get('ui.backgroundColor') || '#1f2937',
             textColor: stateManager.get('ui.textColor') || '#d1d5db',
             activeColor: stateManager.get('ui.activeColor') || '#3b82f6',
@@ -81,13 +83,52 @@ export function renderGeneralSettings(stateManager) {
             </div>
             <div>
                 ${createSettingsRange({
-                    id: 'ui-spacing',
-                    dataSetting: 'ui.spacing',
-                    value: settings.ui?.spacing || 1.0,
+                    id: 'ui-element-size',
+                    dataSetting: 'ui.elementSize',
+                    value: settings.ui?.elementSize,
                     min: 0,
-                    max: 2,
+                    max: 4,
                     step: 0.1,
-                    label: 'Spacing'
+                    label: 'UI Element Size'
+                })}
+            </div>
+        `, { columns: 2, gap: '1rem' })}
+
+        ${createSettingsGrid(`
+            <div>
+                ${createSettingsRange({
+                    id: 'ui-spacing-h',
+                    dataSetting: 'ui.spacingH',
+                    value: settings.ui?.spacingH || settings.ui?.spacing || 1.0,
+                    min: 0,
+                    max: 4,
+                    step: 0.1,
+                    label: 'Spacing H'
+                })}
+            </div>
+            <div>
+                ${createSettingsRange({
+                    id: 'ui-spacing-v',
+                    dataSetting: 'ui.spacingV',
+                    value: settings.ui?.spacingV || settings.ui?.spacing || 1.0,
+                    min: 0,
+                    max: 4,
+                    step: 0.1,
+                    label: 'Spacing V'
+                })}
+            </div>
+        `, { columns: 2, gap: '1rem' })}
+
+        ${createSettingsGrid(`
+            <div>
+                ${createSettingsRange({
+                    id: 'ui-menu-gap-base',
+                    dataSetting: 'ui.menuGapBase',
+                    value: settings.ui?.menuGapBase,
+                    min: 0,
+                    max: 4,
+                    step: 0.05,
+                    label: 'Main Menu Spacing'
                 })}
             </div>
         `, { columns: 2, gap: '1rem' })}

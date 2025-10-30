@@ -279,8 +279,8 @@ export class PanelPositionManager {
         
         // Update menu item states
         if (this.levelEditor.eventHandlers && this.levelEditor.eventHandlers.menuManager) {
-            this.levelEditor.eventHandlers.menuManager.updateToggleState('toggle-leftPanel', leftPanelExists);
-            this.levelEditor.eventHandlers.menuManager.updateToggleState('toggle-rightPanel', rightPanelExists);
+            this.levelEditor.eventHandlers.menuManager.updateToggleState('toggle-left-panel', leftPanelExists);
+            this.levelEditor.eventHandlers.menuManager.updateToggleState('toggle-right-panel', rightPanelExists);
         }
         
         Logger.ui.info(`Initialized panel states: left=${leftPanelExists}, right=${rightPanelExists}`);

@@ -60,6 +60,7 @@ export class MenuManager {
 
         // Get the menu container (either existing or newly created)
         const targetContainer = nav.querySelector('#menu-container');
+        // Gap is controlled via CSS (styles/spacing-mode.css) using --spacing-scale; avoid inline/class gap here.
 
         // Render each menu
         MENU_CONFIG.menus.forEach(menuConfig => {
