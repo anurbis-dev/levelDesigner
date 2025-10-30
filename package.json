@@ -7,13 +7,15 @@
   "scripts": {
     "start": "python -m http.server 8000",
     "start:node": "npx serve .",
-    "dev": "python -m http.server 8000"
+    "dev": "python -m http.server 8000",
+    "build:css": "tailwindcss -i styles/tailwind.css -o styles/tailwind.build.css --minify",
+    "watch:css": "tailwindcss -i styles/tailwind.css -o styles/tailwind.build.css --watch"
   },
   "keywords": [
     "level-editor",
     "2d",
     "game-development",
-    "javascript", 
+    "javascript",
     "es6-modules",
     "utility-architecture",
     "clean-code",
@@ -35,8 +37,13 @@
   },
   "files": [
     "src/",
-    "docs/", 
+    "docs/",
     "index.html",
     "start_Editor.bat"
-  ]
+  ],
+  "devDependencies": {
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.13"
+  }
 }

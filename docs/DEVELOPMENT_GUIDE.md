@@ -309,7 +309,7 @@ levelDesigner/
 └── README.md              # Основная документация
 ```
 
-## CSS Architecture (v3.52.5)
+## CSS Architecture (updated)
 
 **Модульная структура стилей** в папке `styles/`:
 
@@ -1499,13 +1499,22 @@ npx imagemin assets/*.png --out-dir=dist/assets
 zip -r level-editor.zip dist/ index-modular.html
 ```
 
-### CDN развертывание
+### Tailwind CSS (локальная сборка)
 
-```html
-<!-- Использование CDN для зависимостей -->
-<script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/terser@5.0.0/dist/bundle.min.js"></script>
+- Не используем CDN `cdn.tailwindcss.com` в продакшене.
+- Локальная сборка подключается как `styles/tailwind.build.css`.
+
+Скрипты:
+```bash
+npm run build:css   # одноразовая сборка
+npm run watch:css   # вотч в разработке
 ```
+
+Исходники:
+- `tailwind.config.js`
+- `styles/tailwind.css` → `styles/tailwind.build.css`
+
+Dev-фолбек: если `tailwind.build.css` отсутствует, `index.html` загружает CDN автоматически, но это только для разработки.
 
 ## Поддержка браузеров
 

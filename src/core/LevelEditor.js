@@ -358,7 +358,30 @@ export class LevelEditor {
         
             await this.initializeConfiguration();
             const domElements = this.initializeDOMElements();
+
+            // Load assets before UI to avoid empty FoldersPanel on first render
+            try {
+                await this.assetManager.scanContentFolder();
+            } catch (error) {
+                this.log('warn', 'Failed to scan content folder:', error.message);
+            }
+            try {
+                await this.assetManager.preloadImages();
+            } catch (error) {
+                this.log('warn', 'Failed to preload some assets:', error.message);
+            }
+
             this.initializeRenderer(domElements.canvas);
+            // Sync any preloaded images into CanvasRenderer cache now that renderer exists
+            try {
+                if (this.assetManager && this.assetManager.imageCache && this.assetManager.imageCache.size > 0) {
+                    this.assetManager.imageCache.forEach((img, src) => {
+                        this.assetManager.syncImageToCanvasRenderer(src, img);
+                    });
+                }
+            } catch (error) {
+                this.log('warn', 'Failed to sync preloaded images to CanvasRenderer:', error.message);
+            }
             this.initializeUIComponents(domElements);
             this.initializeEventHandlerManager();
             this.initializeMenuAndEvents();
@@ -663,18 +686,19 @@ export class LevelEditor {
      * @private
      */
     async initializeLevelAndData() {
-        // Scan content folder for assets
-        try {
-            await this.assetManager.scanContentFolder();
-        } catch (error) {
-            this.log('warn', 'Failed to scan content folder:', error.message);
-        }
+        // Scan content folder only if not already loaded earlier
+        if (!this.assetManager || this.assetManager.assets.size === 0) {
+            try {
+                await this.assetManager.scanContentFolder();
+            } catch (error) {
+                this.log('warn', 'Failed to scan content folder:', error.message);
+            }
 
-        // Preload assets
-        try {
-            await this.assetManager.preloadImages();
-        } catch (error) {
-            this.log('warn', 'Failed to preload some assets:', error.message);
+            try {
+                await this.assetManager.preloadImages();
+            } catch (error) {
+                this.log('warn', 'Failed to preload some assets:', error.message);
+            }
         }
 
         // Initialize cached level statistics
