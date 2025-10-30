@@ -6,8 +6,28 @@
     <title>2D Level Editor v3.52.5</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
-    <!-- Load Tailwind CSS for quick styling -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tailwind CSS (built locally) -->
+    <link id="tailwind-css" rel="stylesheet" href="styles/tailwind.build.css">
+    <script>
+        (function(){
+            try {
+                const link = document.getElementById('tailwind-css');
+                function loadCdn(){
+                    var s=document.createElement('script');
+                    s.src='https://cdn.tailwindcss.com';
+                    document.head.appendChild(s);
+                }
+                if (link) {
+                    link.addEventListener('error', loadCdn);
+                }
+                // Fallback if stylesheet not loaded yet (404 on static server)
+                setTimeout(function(){
+                    const ok = Array.from(document.styleSheets||[]).some(ss => (ss.href||'').includes('tailwind.build.css'));
+                    if (!ok) loadCdn();
+                }, 100);
+            } catch(_){}
+        })();
+    </script>
     
     <!-- Apply user settings immediately to prevent visual jumps -->
     <script>
@@ -340,21 +360,28 @@
 
         // Set up global error handler to filter extension errors
         window.addEventListener('error', (event) => {
-            if (ExtensionErrorUtils.isExtensionError(event.error)) {
-                // Silently ignore extension errors to prevent user confusion
-                console.warn('Extension error filtered:', event.error?.message || event.message);
-                event.preventDefault();
-                return false;
-            }
+            try {
+                const maybeError = event.error || (event.message ? new Error(String(event.message)) : null);
+                if (ExtensionErrorUtils.isExtensionError(maybeError)) {
+                    // Silently ignore extension errors to prevent user confusion
+                    console.warn('Extension error filtered:', maybeError?.message || event.message);
+                    event.preventDefault();
+                    return false;
+                }
+            } catch (_) {}
         });
 
         window.addEventListener('unhandledrejection', (event) => {
-            if (ExtensionErrorUtils.isExtensionError(event.reason)) {
-                // Silently ignore extension-related promise rejections
-                console.warn('Extension promise rejection filtered:', event.reason?.message || event.reason);
-                event.preventDefault();
-                return false;
-            }
+            try {
+                const maybeReason = event.reason || null;
+                const maybeError = maybeReason instanceof Error ? maybeReason : (maybeReason ? new Error(String(maybeReason)) : null);
+                if (ExtensionErrorUtils.isExtensionError(maybeError)) {
+                    // Silently ignore extension-related promise rejections
+                    console.warn('Extension promise rejection filtered:', maybeError?.message || String(maybeReason));
+                    event.preventDefault();
+                    return false;
+                }
+            } catch (_) {}
         });
 
         // Apply ALL user settings immediately BEFORE LevelEditor initialization

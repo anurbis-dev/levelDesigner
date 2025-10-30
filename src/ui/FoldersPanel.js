@@ -322,7 +322,8 @@ export class FoldersPanel extends BasePanel {
             Logger.ui.info(`FoldersPanel: Adding assets to structure (${this.assetManager.assets.size} total assets)`);
             this.addAssetsToStructure(folderStructure.root, this.assetManager.assets.values());
         } else {
-            Logger.ui.warn('FoldersPanel: No assets available in AssetManager');
+            // No assets loaded yet; this is normal during initial startup before AssetManager scan completes
+            Logger.ui.info('FoldersPanel: No assets loaded yet — waiting for AssetManager scan');
         }
         
         this.folderStructure = folderStructure;

@@ -3144,7 +3144,8 @@ export class AssetPanel extends BasePanel {
         };
 
         // Register wheel handler directly on the asset panel container to prevent bubbling
-        eventHandlerManager.registerElement(this.container, assetWheelHandlers, 'asset-panel-wheel');
+        // Requires preventDefault on Ctrl+wheel to zoom previews
+        eventHandlerManager.registerElement(this.container, assetWheelHandlers, 'asset-panel-wheel', { passive: false });
 
         // Setup drag and drop
         this.setupDragAndDrop();

@@ -1,5 +1,22 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+- Tailwind CDN removed in favor of local build (`styles/tailwind.build.css`).
+- Default wheel listeners are now passive; explicit `{ passive: false }` kept where `preventDefault()` is required (canvas zoom, AssetPanel Ctrl+wheel).
+- Asset loading runs before UI initialization; preloaded images are synced into `CanvasRenderer` to ensure dropped assets render with images immediately.
+
+### Fixed
+- Suppressed extension-related async errors in `index.html` with safer global handlers.
+- `FoldersPanel`: early "No assets available" message downgraded to info during startup scanning.
+
+### Added
+- `tailwind.config.js`, `styles/tailwind.css`, npm scripts: `build:css`, `watch:css`.
+
+### Files
+- `index.html`, `src/core/LevelEditor.js`, `src/event-system/EventHandlerManager.js`, `src/ui/AssetPanel.js`, `src/ui/FoldersPanel.js`, `package.json`, `tailwind.config.js`, `styles/tailwind.css`.
+
 ## [3.54.0] - 2025-01-28
 
 ### Enhanced - Улучшения системы курсоров и горизонтального скролла для табов ассетов

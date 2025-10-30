@@ -114,9 +114,16 @@ export class EventHandlerManager {
                         }
                     };
 
-                    element.addEventListener(eventType, wrappedHandler, options);
+                    // Default to passive for wheel unless explicitly overridden
+                    let effectiveOptions = options;
+                    if (eventType === 'wheel') {
+                        const hasExplicitPassive = Object.prototype.hasOwnProperty.call(options, 'passive');
+                        effectiveOptions = hasExplicitPassive ? options : { passive: true };
+                    }
+
+                    element.addEventListener(eventType, wrappedHandler, effectiveOptions);
                 cleanup.push(() => {
-                        element.removeEventListener(eventType, wrappedHandler, options);
+                        element.removeEventListener(eventType, wrappedHandler, effectiveOptions);
                     });
                 }
             });
@@ -522,7 +529,8 @@ export class EventHandlerManager {
         };
 
         // Register canvas with EventHandlerManager
-        this.registerElement(canvas, canvasHandlers, canvasId);
+        // Wheel needs preventDefault for zoom; force non-passive for canvas
+        this.registerElement(canvas, canvasHandlers, canvasId, { passive: false });
 
         Logger.event.debug('🎯 Canvas registered with mouse handlers', { canvasId, canvasElement: canvas });
     }
