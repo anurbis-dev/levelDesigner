@@ -38,6 +38,7 @@ export class BaseDialog {
         this.container = null;
         this.isVisible = false;
         this.widthCalculated = false;
+        this.contentRendered = false;
         
         Logger.ui.info(`${this.constructor.name} initialized with config:`, this.config);
     }
@@ -235,8 +236,11 @@ export class BaseDialog {
             // Apply Font Scale and Spacing BEFORE content is rendered
             this.applyUIScaling();
             
-            // Render content AFTER scaling is applied
-            this.renderContent();
+            // Render content AFTER scaling is applied (only if not already rendered)
+            if (!this.contentRendered) {
+                this.renderContent();
+                this.contentRendered = true;
+            }
             
             this.updateDialogSize();
             this.config.onShow();

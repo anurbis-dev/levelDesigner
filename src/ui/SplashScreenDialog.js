@@ -25,6 +25,7 @@ export class SplashScreenDialog extends BaseDialog {
 
         this.splashImagePath = config.splashImagePath || 'HAPLO_editor_SplashScreen_v3-54.png';
         this.textContent = config.textContent || this.getDefaultTextContent();
+        this.contentRendered = false;
     }
 
     /**
@@ -100,6 +101,7 @@ export class SplashScreenDialog extends BaseDialog {
             max-width: 90vw;
             visibility: hidden;
             position: relative;
+            z-index: 10001;
         `;
 
         // Create content area
@@ -197,6 +199,10 @@ export class SplashScreenDialog extends BaseDialog {
         // Ensure container has auto height after show (no max-height restriction)
         if (this.container) {
             this.container.style.height = 'auto';
+            // Ensure high z-index to prevent text flickering from other elements
+            if (this.overlay) {
+                this.overlay.style.zIndex = '10000';
+            }
         }
         
         // Setup overlay click handler
