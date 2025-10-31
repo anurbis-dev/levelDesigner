@@ -385,6 +385,11 @@ export class BaseDialog {
      * Setup event handlers
      */
     setupEventHandlers() {
+        // Check if container is already registered to avoid duplicate registration
+        if (eventHandlerManager.getContainerInfo(this.overlay)) {
+            return;
+        }
+
         // Create dialog handlers configuration using new system
         const dialogHandlers = EventHandlerUtils.createDialogHandlers(
             () => {

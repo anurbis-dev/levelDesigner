@@ -62,6 +62,12 @@ export class MenuManager {
         const targetContainer = nav.querySelector('#menu-container');
         // Gap is controlled via CSS (styles/spacing-mode.css) using --spacing-scale; avoid inline/class gap here.
 
+        // Add editor logo button as first item
+        const logoButton = this.createEditorLogoButton();
+        if (logoButton) {
+            targetContainer.appendChild(logoButton);
+        }
+
         // Render each menu
         MENU_CONFIG.menus.forEach(menuConfig => {
             const menuElement = this.createMenu(menuConfig);
@@ -69,6 +75,47 @@ export class MenuManager {
         });
 
         this.logger.info('Menus rendered successfully');
+    }
+
+    /**
+     * Create editor logo button
+     * @returns {HTMLElement|null} Logo button element
+     */
+    createEditorLogoButton() {
+        const buttonDiv = document.createElement('div');
+        buttonDiv.className = 'relative';
+        buttonDiv.id = 'menu-editor-logo';
+
+        const button = document.createElement('button');
+        button.className = 'px-3 py-1 rounded hover:bg-gray-700 transition';
+        button.style.cssText = 'display: flex; align-items: center; justify-content: center; padding: 0.5rem;';
+        
+        const img = document.createElement('img');
+        img.src = 'editor_logo_lightGray_128.png';
+        img.alt = 'Editor Logo';
+        img.style.cssText = 'width: 24px; height: 24px; object-fit: contain;';
+        img.onerror = () => {
+            this.logger.warn('Failed to load editor logo, using fallback');
+            button.textContent = 'G';
+            button.style.fontSize = '1.25rem';
+            button.style.fontWeight = 'bold';
+        };
+        
+        button.appendChild(img);
+        buttonDiv.appendChild(button);
+
+        // Add click handler
+        button.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (this.editor && typeof this.editor.showSplashScreen === 'function') {
+                this.editor.showSplashScreen();
+            } else {
+                this.logger.error('Editor or showSplashScreen method not found');
+            }
+            this.closeAllDropdowns();
+        });
+
+        return buttonDiv;
     }
 
     /**
