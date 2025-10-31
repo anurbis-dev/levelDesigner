@@ -71,6 +71,12 @@
     max-width: 90vw !important;
 }
 
+/* Стиль для диалогов с высотой, определяемой контентом */
+.dialog-container-auto-height {
+    height: auto !important;
+    max-height: none !important;
+}
+
 /* ===== СПЕЦИФИЧНЫЕ СТИЛИ ДЛЯ РАЗНЫХ ТИПОВ ДИАЛОГОВ ===== */
 
 /* UniversalDialog */

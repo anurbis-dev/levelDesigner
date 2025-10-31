@@ -1667,6 +1667,33 @@ export class LevelEditor {
     }
 
     /**
+     * Show splash screen dialog
+     */
+    async showSplashScreen() {
+        if (!this.splashScreenDialog) {
+            const { SplashScreenDialog } = await import('../ui/SplashScreenDialog.js');
+            this.splashScreenDialog = new SplashScreenDialog({
+                textContent: this.getSplashTextContent()
+            });
+        }
+        this.splashScreenDialog.show();
+    }
+
+    /**
+     * Get splash screen text content
+     */
+    getSplashTextContent() {
+        return `
+            <h2 style="color: var(--ui-text-color, #f9fafb); margin-bottom: 1rem; font-size: 1.5rem;">
+                Welcome to Level Editor
+            </h2>
+            <p style="color: var(--ui-text-color, #d1d5db); line-height: 1.6; margin-bottom: 1rem;">
+                Professional 2D level editor with utility architecture.
+            </p>
+        `;
+    }
+
+    /**
      * Show Actor Properties Window for the given asset
      * @param {Object} asset - Asset to show properties for
      */
