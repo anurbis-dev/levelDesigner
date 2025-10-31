@@ -24,8 +24,16 @@ export class SplashScreenDialog extends BaseDialog {
         });
 
         this.splashImagePath = config.splashImagePath || 'HAPLO_editor_SplashScreen_v3-54.png';
-        this.textContent = config.textContent || this.getDefaultTextContent();
+        // textContent can be overridden via config, but default is always fresh
+        this.textContent = config.textContent;
         this.contentRendered = false;
+    }
+
+    /**
+     * Get current text content (always fresh from getDefaultTextContent)
+     */
+    getTextContent() {
+        return this.textContent || this.getDefaultTextContent();
     }
 
     /**
@@ -50,7 +58,7 @@ export class SplashScreenDialog extends BaseDialog {
                             background-color: var(--ui-background-color, #1f2937);
                             overflow-y: auto;
                             flex: 1;">
-                    ${this.textContent}
+                    ${this.getTextContent()}
                 </div>
             </div>
         `;
@@ -60,12 +68,32 @@ export class SplashScreenDialog extends BaseDialog {
      * Get default text content
      */
     getDefaultTextContent() {
+        // GitHub repository URL - update these if repository URL changes
+        const githubRepo = 'https://github.com/username/repo'; // Update with actual repository URL
+        
         return `
-            <h2 style="color: var(--ui-text-color, #f9fafb); margin-bottom: 1rem; font-size: 1.5rem;">
-                Welcome to Level Editor
+            <h2 class="text-2xl mb-4" style="color: var(--ui-active-text-color, #ffffff);">
+                Welcome to HAPLO Level Editor
             </h2>
-            <p style="color: var(--ui-text-color, #d1d5db); line-height: 1.6; margin-bottom: 1rem;">
-                Professional 2D level editor with utility architecture.
+            <p class="text-base mb-4 leading-relaxed" style="color: var(--ui-text-color, #d1d5db);">
+                Designed by Alexey Borzykh aka NURB.<br>
+                Built to help you design game levels for classic scrolling games of any genre.
+            </p>
+            <p class="text-base mt-4 leading-relaxed" style="color: var(--ui-text-color, #d1d5db);">
+                Refer to the <a href="${githubRepo}/blob/main/docs/CHANGELOG.md" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   class="underline"
+                   style="color: var(--ui-active-color, #3b82f6);">
+                    Changelog
+                </a><br>
+                Scroll through the <a href="${githubRepo}/blob/main/docs/USER_MANUAL.md" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   class="underline"
+                   style="color: var(--ui-active-color, #3b82f6);">
+                    User Manual
+                </a>
             </p>
         `;
     }
@@ -187,14 +215,36 @@ export class SplashScreenDialog extends BaseDialog {
     }
 
     /**
+     * Override renderContent to always update text
+     */
+    renderContent() {
+        const contentElement = document.getElementById(`${this.config.id}-content`);
+        if (contentElement) {
+            contentElement.innerHTML = this.renderSplashContent();
+        }
+    }
+
+    /**
      * Show dialog with custom height handling
      */
     show() {
         // Override height to auto for splash screen before calling super
         this.config.height = 'auto';
         
+        // Reset contentRendered to always update text on show
+        this.contentRendered = false;
+        
         // Call parent show
         super.show();
+        
+        // Always update text content after show (simple and reliable)
+        setTimeout(() => {
+            const textContainer = this.container?.querySelector('.splash-text-container');
+            if (textContainer) {
+                // Use getTextContent() to always get fresh default text
+                textContainer.innerHTML = this.getTextContent();
+            }
+        }, 150);
         
         // Ensure container has auto height after show (no max-height restriction)
         if (this.container) {

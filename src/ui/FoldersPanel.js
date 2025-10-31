@@ -454,26 +454,13 @@ export class FoldersPanel extends BasePanel {
 
         // Add event listeners to folder items
         folderItems.forEach((item) => {
-            // Click on folder name - only select
-            item.addEventListener('click', (e) => {
-                // Check if click was on expand icon
-                if (e.target.classList.contains('expand-icon')) {
-                    return; // Let expand icon handler deal with it
-                }
-                
-                e.stopPropagation();
-                const path = item.dataset.path;
-                if (path) {
-                    this.selectFolder(path, e);
-                }
-            });
+            const path = item.dataset.path;
             
-            // Click on expand icon - toggle expansion
+            // Click on expand icon - toggle expansion (register first to handle before item click)
             const expandIcon = item.querySelector('.expand-icon');
             if (expandIcon) {
                 expandIcon.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    const path = item.dataset.path;
                     if (path) {
                         if (e.shiftKey) {
                             // Shift+click: recursive expand/collapse
@@ -483,8 +470,21 @@ export class FoldersPanel extends BasePanel {
                             this.toggleFolderExpansion(path);
                         }
                     }
-                });
+                }, true); // Use capture phase
             }
+            
+            // Click on folder name - only select
+            item.addEventListener('click', (e) => {
+                // Check if click was on expand icon
+                if (e.target.classList.contains('expand-icon')) {
+                    return; // Already handled by expand icon handler
+                }
+                
+                e.stopPropagation();
+                if (path) {
+                    this.selectFolder(path, e);
+                }
+            });
             
             // Setup drag and drop for folder items
             item.addEventListener('dragstart', (e) => {
@@ -670,7 +670,8 @@ export class FoldersPanel extends BasePanel {
         
         if (folder.children) {
             for (const [childName, childFolder] of Object.entries(folder.children)) {
-                const childPath = path === 'root' ? childName : `${path}/${childName}`;
+                // Use folder.path from structure instead of manually constructing path
+                const childPath = childFolder.path;
                 this.collapseFolderRecursively(childPath, childFolder);
             }
         }
@@ -684,7 +685,8 @@ export class FoldersPanel extends BasePanel {
         
         if (folder.children) {
             for (const [childName, childFolder] of Object.entries(folder.children)) {
-                const childPath = path === 'root' ? childName : `${path}/${childName}`;
+                // Use folder.path from structure instead of manually constructing path
+                const childPath = childFolder.path;
                 this.expandFolderRecursively(childPath, childFolder);
             }
         }

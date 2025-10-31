@@ -575,6 +575,9 @@ export class AssetPanel extends BasePanel {
         // Re-append tabs and previews to content container
         contentContainer.appendChild(this.tabsContainer);
         contentContainer.appendChild(this.previewsContainer);
+        
+        // Re-register resizer to update position-aware handlers with current position
+        this.setupFoldersResizer();
     }
 
     /**
@@ -692,69 +695,62 @@ export class AssetPanel extends BasePanel {
     setupFoldersResizer() {
         if (!this.foldersResizer) return;
 
-        // Register folders resizer with EventHandlerManager
-        const resizerHandlers = {
-            dblclick: (e) => {
-                e.preventDefault();
-                e.stopPropagation();
+        // Unregister old handlers if they exist to prevent duplicates
+        this.levelEditor.resizerManager.unregisterResizer(this.foldersResizer);
+        eventHandlerManager.unregisterElement(this.foldersResizer);
+
+        // Double click handler for collapse/expand
+        const onDoubleClick = (e, resizerElement, panelElement, panelSide) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const currentWidth = this.foldersContainer.offsetWidth;
+            const containerWidth = this.container.clientWidth;
+            const resizerWidth = 4;
+            const minWidth = 0;
+            const maxWidth = containerWidth - resizerWidth;
+            const previousFoldersWidth = 192; // Default width (w-48)
+            
+            // Check if already at minimum (collapsed)
+            if (currentWidth <= minWidth) {
+                // Restore to previous width
+                const newWidth = Math.min(previousFoldersWidth, maxWidth);
                 
-                const currentWidth = this.foldersContainer.offsetWidth;
-                const containerWidth = this.container.clientWidth;
-                const resizerWidth = 4;
-                const minWidth = 0;
-                const maxWidth = containerWidth - resizerWidth;
-                const previousFoldersWidth = 192; // Default width (w-48)
-                
-                // Check if already at minimum (collapsed)
-                if (currentWidth <= minWidth) {
-                    // Restore to previous width
-                    const newWidth = Math.min(previousFoldersWidth, maxWidth);
-                    
-                    // Update StateManager instead of direct styles
-                    if (this.levelEditor?.stateManager) {
-                        this.levelEditor.stateManager.set('panels.foldersWidth', newWidth);
-                    }
-                    this.updateContentVisibility(newWidth);
-                    
-                    // Save to preferences
-                    if (this.levelEditor?.userPrefs) {
-                        this.levelEditor.userPrefs.set('foldersWidth', newWidth);
-                    }
-                } else {
-                    // Save current width and collapse
-                    const newWidth = minWidth;
-                    
-                    // Update StateManager instead of direct styles
-                    if (this.levelEditor?.stateManager) {
-                        this.levelEditor.stateManager.set('panels.foldersWidth', newWidth);
-                    }
-                    this.updateContentVisibility(newWidth);
-                    
-                    // Save to preferences
-                    if (this.levelEditor?.userPrefs) {
-                        this.levelEditor.userPrefs.set('foldersWidth', newWidth);
-                    }
+                // Update StateManager instead of direct styles
+                if (this.levelEditor?.stateManager) {
+                    this.levelEditor.stateManager.set('panels.foldersWidth', newWidth);
                 }
-            },
-            mousedown: (e) => this.handleFoldersResizerMouseDown(e)
+                this.updateContentVisibility(newWidth);
+                
+                // Save to preferences
+                if (this.levelEditor?.userPrefs) {
+                    this.levelEditor.userPrefs.set('foldersWidth', newWidth);
+                }
+            } else {
+                // Save current width and collapse
+                const newWidth = minWidth;
+                
+                // Update StateManager instead of direct styles
+                if (this.levelEditor?.stateManager) {
+                    this.levelEditor.stateManager.set('panels.foldersWidth', newWidth);
+                }
+                this.updateContentVisibility(newWidth);
+                
+                // Save to preferences
+                if (this.levelEditor?.userPrefs) {
+                    this.levelEditor.userPrefs.set('foldersWidth', newWidth);
+                }
+            }
         };
         
-        // Register with EventHandlerManager
-        eventHandlerManager.registerElement(this.foldersResizer, resizerHandlers, 'folders-resizer');
-
         // Register with unified ResizerManager
-        if (this.levelEditor?.resizerManager) {
-            this.levelEditor.resizerManager.registerResizer(
-                this.foldersResizer, 
-                this.foldersContainer, 
-                'folders', 
-                'horizontal'
-            );
-        } else {
-            Logger.ui.warn('ResizerManager not available, falling back to legacy setup');
-            // Fallback to legacy setup if ResizerManager is not available
-            this.setupLegacyFoldersResizer();
-        }
+        this.levelEditor.resizerManager.registerResizer(
+            this.foldersResizer, 
+            this.foldersContainer, 
+            'folders', 
+            'horizontal',
+            onDoubleClick
+        );
 
         // Load saved width
         if (this.levelEditor?.userPrefs) {
@@ -779,173 +775,6 @@ export class AssetPanel extends BasePanel {
         }
 
         Logger.ui.debug('AssetPanel: Setup folders resizer with unified ResizerManager');
-    }
-
-    /**
-     * Handle folders resizer mouse down
-     */
-    handleFoldersResizerMouseDown(e) {
-        let isResizingFolders = false;
-        let initialMouseX = 0;
-        let initialFoldersWidth = 0;
-        let lastAppliedFoldersWidth = null;
-
-        isResizingFolders = true;
-        initialMouseX = e.clientX;
-        initialFoldersWidth = this.foldersContainer.offsetWidth;
-        lastAppliedFoldersWidth = null;
-
-        // Visual feedback
-        document.body.style.cursor = 'col-resize';
-        document.body.style.userSelect = 'none';
-        this.foldersResizer.classList.add('resizing');
-
-        e.preventDefault();
-        e.stopPropagation();
-
-        // Global mousemove handler
-        const handleMouseMove = (e) => {
-            if (!isResizingFolders) return;
-
-            e.preventDefault();
-            e.stopPropagation();
-
-            // Use panel size calculator
-            const newWidth = this.panelSizeCalculator.calculateHorizontalPanelSize(
-                this.foldersResizer, 
-                e, 
-                { startX: initialMouseX, startWidth: initialFoldersWidth }
-            );
-
-            // If width didn't change compared to last applied, skip work
-            if (lastAppliedFoldersWidth !== null && newWidth === lastAppliedFoldersWidth) {
-                return;
-            }
-
-            // Apply new width
-            this.foldersContainer.style.width = newWidth + 'px';
-            this.foldersContainer.style.flexShrink = '0';
-            this.foldersContainer.style.flexGrow = '0';
-
-            // Hide/show content elements based on folders width
-            this.updateContentVisibility(newWidth);
-
-            // Save to preferences
-            if (this.levelEditor?.userPrefs) {
-                this.levelEditor.userPrefs.set('foldersWidth', newWidth);
-            }
-
-            lastAppliedFoldersWidth = newWidth;
-
-            Logger.ui.debug(`Folders panel resized to ${newWidth}px`);
-        };
-
-        // Global mouseup handler
-        const handleMouseUp = (e) => {
-            if (isResizingFolders) {
-                isResizingFolders = false;
-                document.body.style.cursor = '';
-                document.body.style.userSelect = '';
-                this.foldersResizer.classList.remove('resizing');
-
-                Logger.ui.debug('Folders panel resize completed');
-            }
-        };
-
-        // Store handlers for cleanup
-        this.foldersMouseMoveHandler = handleMouseMove;
-        this.foldersMouseUpHandler = handleMouseUp;
-        
-        // Register document mouse handlers with GlobalEventRegistry
-        const documentMouseHandlers = {
-            mousemove: this.foldersMouseMoveHandler,
-            mouseup: this.foldersMouseUpHandler
-        };
-        
-        globalEventRegistry.registerComponentHandlers('asset-panel-folders', documentMouseHandlers, 'document');
-    }
-
-    /**
-     * Legacy folders resizer setup (fallback)
-     */
-    setupLegacyFoldersResizer() {
-        let isResizingFolders = false;
-        let initialMouseX = 0;
-        let initialFoldersWidth = 0;
-        let lastAppliedFoldersWidth = null;
-
-        this.foldersResizer.addEventListener('mousedown', (e) => {
-            isResizingFolders = true;
-            initialMouseX = e.clientX;
-            initialFoldersWidth = this.foldersContainer.offsetWidth;
-            lastAppliedFoldersWidth = null;
-
-            // Visual feedback
-            document.body.style.cursor = 'col-resize';
-            document.body.style.userSelect = 'none';
-            this.foldersResizer.classList.add('resizing');
-
-            e.preventDefault();
-            e.stopPropagation();
-        });
-
-        // Global mousemove handler
-        const handleMouseMove = (e) => {
-            if (!isResizingFolders) return;
-
-            e.preventDefault();
-            e.stopPropagation();
-
-            // Use panel size calculator
-            const newWidth = this.panelSizeCalculator.calculateHorizontalPanelSize(
-                this.foldersResizer, 
-                e, 
-                { startX: initialMouseX, startWidth: initialFoldersWidth }
-            );
-
-            // If width didn't change compared to last applied, skip work
-            if (lastAppliedFoldersWidth !== null && newWidth === lastAppliedFoldersWidth) {
-                return;
-            }
-
-            // Apply new width
-            this.foldersContainer.style.width = newWidth + 'px';
-            this.foldersContainer.style.flexShrink = '0';
-            this.foldersContainer.style.flexGrow = '0';
-
-            // Hide/show content elements based on folders width
-            this.updateContentVisibility(newWidth);
-
-            // Save to preferences
-            if (this.levelEditor?.userPrefs) {
-                this.levelEditor.userPrefs.set('foldersWidth', newWidth);
-            }
-
-            lastAppliedFoldersWidth = newWidth;
-
-            Logger.ui.debug('Folders panel resized to:', newWidth);
-        };
-
-        // Global mouseup handler
-        const handleMouseUp = () => {
-            if (isResizingFolders) {
-                isResizingFolders = false;
-                document.body.style.cursor = '';
-                document.body.style.userSelect = '';
-                this.foldersResizer.classList.remove('resizing');
-
-                Logger.ui.debug('Folders panel resize completed');
-            }
-        };
-
-        // Store references for cleanup
-        this.foldersMouseMoveHandler = handleMouseMove;
-        this.foldersMouseUpHandler = handleMouseUp;
-        
-        // Add global listeners
-        document.addEventListener('mousemove', this.foldersMouseMoveHandler);
-        document.addEventListener('mouseup', this.foldersMouseUpHandler);
-
     }
 
     setupEventListeners() {
@@ -2983,7 +2812,6 @@ export class AssetPanel extends BasePanel {
         
         // Clean up global event handlers using GlobalEventRegistry
         globalEventRegistry.unregisterComponentHandlers('asset-panel');
-        globalEventRegistry.unregisterComponentHandlers('asset-panel-folders');
         
 
         // Clean up ResizeObserver for drop overlay

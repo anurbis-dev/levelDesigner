@@ -1,4 +1,4 @@
-# Context Map - Level Designer v3.52.7
+# Context Map - Level Designer v3.54.0
 
 ## ⚠️ КРИТИЧЕСКИ ВАЖНО - ЧИТАТЬ ПЕРВЫМ
 
@@ -16,7 +16,7 @@
 - **LevelEditor** - главный класс, координатор всех систем
 - **11 менеджеров** - StateManager, ConfigManager, HistoryManager, EventHandlerManager, GlobalEventRegistry
 - **13 core операций** - ObjectOperations, LayerOperations, HistoryOperations, DuplicateOperations, GroupOperations, RenderOperations, ViewportOperations, LevelFileOperations
-- **UI компоненты** - панели (AssetPanel, DetailsPanel, LayersPanel, OutlinerPanel, SettingsPanel), диалоги (BaseDialog)
+- **UI компоненты** - панели (AssetPanel, DetailsPanel, LayersPanel, OutlinerPanel, SettingsPanel), диалоги (BaseDialog, SplashScreenDialog)
 
 ### Ключевые API
 ```javascript
@@ -25,6 +25,7 @@ levelEditor.createObject(type, x, y, properties)
 levelEditor.selectObject(id)
 levelEditor.saveLevel()
 levelEditor.getCachedObject(id)
+levelEditor.showSplashScreen() // v3.54.0
 
 // StateManager
 stateManager.get(key)
@@ -62,6 +63,7 @@ globalEventRegistry.registerComponentHandlers(componentId, handlers, target)
 
 ### UI
 - `src/ui/BaseDialog.js` - базовый диалог
+- `src/ui/SplashScreenDialog.js` - splash screen диалог
 - `src/ui/AssetPanel.js` - панель ассетов
 - `src/ui/LayersPanel.js` - панель слоев
 - `src/ui/DetailsPanel.js` - свойства
@@ -132,7 +134,7 @@ eventHandlerManager.registerElement(button, { click: onClick }, 'button-id');
 
 ## 🔧 Версионирование
 
-Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '3.52.7'`
+Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '3.54.0'`
 
 ## 🚀 Команды
 

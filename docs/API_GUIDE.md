@@ -1,3 +1,21 @@
+### LevelEditor (src/core/LevelEditor.js)
+Главный класс редактора уровней.
+
+#### Диалоги и окна:
+- `async showSplashScreen()` - отображение splash screen диалога с информацией о версии
+- `openSettings()` - открытие панели настроек
+- `async importAssets()` - импорт ассетов из внешних папок
+
+#### Файловые операции:
+- `newLevel()` - создание нового уровня
+- `saveLevel()` - сохранение текущего уровня
+- `async loadLevel(file)` - загрузка уровня из файла
+- `async saveLevelAs()` - сохранение уровня с выбором файла
+
+#### Версия:
+- `static VERSION` - текущая версия редактора (строка, например '3.54.0')
+- `updateVersionInfo()` - обновление отображения версии в UI
+
 ### HorizontalScrollUtils (src/utils/HorizontalScrollUtils.js)
 Утилита для настройки горизонтального скролла с поддержкой колеса мыши и средней кнопки.
 

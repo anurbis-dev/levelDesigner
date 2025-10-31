@@ -17,11 +17,13 @@ export class PanelSizeCalculator {
      * @param {HTMLElement} element - Resizer element
      * @param {Object} input - Input data (mouse event)
      * @param {Object} initialData - Initial data
+     * @param {Object} options - Additional options (e.g., foldersPosition for folders resizer)
      * @returns {number} - Calculated width
      */
-    calculateHorizontalPanelSize(element, input, initialData) {
+    calculateHorizontalPanelSize(element, input, initialData, options = {}) {
         const isRightPanel = element.id && element.id.includes('right');
         const isFoldersResizer = element.id === 'folders-resizer';
+        const foldersPosition = options.foldersPosition || 'left';
         
         // Get container width for constraints
         const container = isFoldersResizer ? 
@@ -31,13 +33,16 @@ export class PanelSizeCalculator {
         const containerWidth = container ? container.offsetWidth : window.innerWidth;
         const delta = input.clientX - initialData.startX;
         
-        // Calculate new width based on panel type
+        // Calculate new width based on panel type and position
         let newWidth;
-        if (isRightPanel) {
+        if (isFoldersResizer && foldersPosition === 'right') {
+            // Folders panel on right: resizer is on the left, so moving right decreases width
+            newWidth = initialData.startWidth - delta;
+        } else if (isRightPanel) {
             // Right panel grows rightward (should expand when cursor moves right)
             newWidth = initialData.startWidth + delta;
         } else {
-            // Left panel or folders grows rightward
+            // Left panel or folders on left: grows rightward
             newWidth = initialData.startWidth + delta;
         }
         

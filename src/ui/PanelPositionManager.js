@@ -850,99 +850,26 @@ export class PanelPositionManager {
             }
         }
 
-        // Register with unified ResizerManager
-        if (this.levelEditor?.resizerManager) {
-            // Create double-click handler for panel collapse/expand
-            const onDoubleClick = (e, resizerElement, panelElement, panelSide) => {
-                Logger.ui.info(`${panelSide} panel resizer double-click triggered`);
-                
-                // Use universal panel collapse/expand method directly
-                const savedSize = this.stateManager?.get(`panels.${panelSide}PanelWidth`) ?? 300;
-                const isCollapsed = savedSize <= 5;
-                const shouldCollapse = !isCollapsed;
-                
-                this.togglePanelCollapse(panelSide, shouldCollapse);
-            };
+        // Unregister old handlers if they exist to prevent duplicates
+        this.levelEditor.resizerManager.unregisterResizer(resizer);
+        eventHandlerManager.unregisterElement(resizer);
+
+        // Create double-click handler for panel collapse/expand
+        const onDoubleClick = (e, resizerElement, panelElement, panelSide) => {
+            Logger.ui.info(`${panelSide} panel resizer double-click triggered`);
             
-            this.levelEditor.resizerManager.registerResizer(resizer, panel, panelSide, 'horizontal', onDoubleClick);
-        } else {
-            Logger.ui.warn('ResizerManager not available, falling back to legacy setup');
-            // Fallback to legacy setup if ResizerManager is not available
-            this.setupLegacyPanelResizer(resizer, panel, panelSide);
-        }
-
-        Logger.ui.debug(`Setup ${panelSide} panel resizer with unified ResizerManager`);
-    }
-
-    /**
-     * Legacy panel resizer setup (fallback)
-     */
-    setupLegacyPanelResizer(resizer, panel, panelSide) {
-        let isResizing = false;
-
-        // Mouse down - start resizing
-        resizer.addEventListener('mousedown', (e) => {
-            isResizing = true;
+            // Use universal panel collapse/expand method directly
+            const savedSize = this.stateManager?.get(`panels.${panelSide}PanelWidth`) ?? 300;
+            const isCollapsed = savedSize <= 5;
+            const shouldCollapse = !isCollapsed;
             
-            // Apply visual feedback
-            document.body.style.cursor = 'col-resize';
-            document.body.style.userSelect = 'none';
-            resizer.classList.add('resizing');
-            
-            e.preventDefault();
-            e.stopPropagation();
-        });
-
-        // Mouse move - resize panel using unified logic
-        const handleMouseMove = (e) => {
-            if (!isResizing) return;
-            
-            // Use panel size calculator
-            const newWidth = this.panelSizeCalculator.calculateHorizontalPanelSize(
-                resizer, 
-                e, 
-                { startX: initialMouseX, startWidth: initialPanelSize }
-            );
-            
-            // Use unified resize logic
-            this.handlePanelResize(panel, panelSide, 'horizontal', newWidth);
-        };
-
-        // Mouse up - stop resizing
-        const handleMouseUp = () => {
-            if (isResizing) {
-                isResizing = false;
-                
-                // Remove visual feedback
-                document.body.style.cursor = '';
-                document.body.style.userSelect = '';
-                resizer.classList.remove('resizing');
-                
-                // Save width to StateManager and user preferences
-                const currentWidth = panel.offsetWidth;
-                if (this.stateManager) {
-                    this.stateManager.set(`panels.${panelSide}PanelWidth`, currentWidth);
-                }
-                if (this.userPrefs) {
-                    this.userPrefs.set(`${panelSide}PanelWidth`, currentWidth);
-                }
-                
-                Logger.ui.debug(`Saved ${panelSide} panel width: ${currentWidth}px`);
-            }
-        };
-
-        // Register document mouse handlers with GlobalEventRegistry
-        const documentMouseHandlers = {
-            mousemove: handleMouseMove,
-            mouseup: handleMouseUp
+            this.togglePanelCollapse(panelSide, shouldCollapse);
         };
         
-        globalEventRegistry.registerComponentHandlers(`panel-resizer-${panelSide}`, documentMouseHandlers, 'document');
+        // Register with unified ResizerManager
+        this.levelEditor.resizerManager.registerResizer(resizer, panel, panelSide, 'horizontal', onDoubleClick);
 
-        // Store cleanup function on the resizer element
-        resizer._cleanup = () => {
-            globalEventRegistry.unregisterComponentHandlers(`panel-resizer-${panelSide}`);
-        };
+        Logger.ui.debug(`Setup ${panelSide} panel resizer with unified ResizerManager`);
     }
 
     /**
@@ -1242,8 +1169,11 @@ export class PanelPositionManager {
             
             // Cleanup event listeners before removing
             const resizer = document.getElementById(`resizer-${panelSide}-tabs-panel`);
-            if (resizer && resizer._cleanup) {
-                resizer._cleanup();
+            if (resizer) {
+                if (this.levelEditor?.resizerManager) {
+                    this.levelEditor.resizerManager.unregisterResizer(resizer);
+                }
+                eventHandlerManager.unregisterElement(resizer);
             }
             
             
@@ -1388,113 +1318,33 @@ export class PanelPositionManager {
 
         Logger.ui.info('Setting up assets panel resizer...');
 
-        // Check if already registered to prevent duplicate registration
-        if (eventHandlerManager.isElementRegistered(resizer)) {
-            Logger.ui.debug('Assets panel resizer already registered, skipping');
-            return;
-        }
+        // Unregister old handlers if they exist to prevent duplicates
+        this.levelEditor.resizerManager.unregisterResizer(resizer);
+        eventHandlerManager.unregisterElement(resizer);
 
-        // Register with unified ResizerManager
-        if (this.levelEditor?.resizerManager) {
-            this.levelEditor.resizerManager.registerResizer(resizer, panel, 'assets', 'vertical');
-        } else {
-            Logger.ui.warn('ResizerManager not available, falling back to legacy setup');
-            // Fallback to legacy setup if ResizerManager is not available
-            this.setupLegacyAssetsPanelResizer(resizer, panel);
-        }
-
-        Logger.ui.debug('Setup assets panel resizer with unified ResizerManager');
-    }
-
-    /**
-     * Legacy assets panel resizer setup (fallback)
-     */
-    setupLegacyAssetsPanelResizer(resizer, panel) {
-        let isResizing = false;
-
-        const handleMouseMove = (e) => {
-            if (!isResizing) return;
-            
+        // Double click handler for collapse/expand
+        const onDoubleClick = (e, resizerElement, panelElement, panelSide) => {
             e.preventDefault();
             e.stopPropagation();
             
-            // Calculate new height based on mouse movement
-            const deltaY = e.clientY - initialMouseY;
-            // For assets panel (bottom panel), resize should work in opposite direction
-            const newHeight = Math.max(100, Math.min(800, initialPanelHeight - deltaY));
-            
-            // Use unified resize logic
-            this.handlePanelResize(panel, 'assets', 'vertical', newHeight);
-        };
-
-        const handleMouseUp = (e) => {
-            if (!isResizing) return;
-            
-            isResizing = false;
-            document.body.style.cursor = '';
-            document.body.style.userSelect = '';
-            resizer.classList.remove('resizing');
-            
-            // Save new height
-            const currentHeight = panel.offsetHeight;
-            this.stateManager.set('panels.assetsPanelHeight', currentHeight);
-            this.userPrefs?.set('assetsPanelHeight', currentHeight);
-            
-            // Update UI
-            this._updateUI();
-            
-            document.removeEventListener('mousemove', handleMouseMove);
-            document.removeEventListener('mouseup', handleMouseUp);
-        };
-
-        let initialMouseY = 0;
-        let initialPanelHeight = 0;
-
-        // Mouse down - start resizing (with delay to allow dblclick)
-        resizer.addEventListener('mousedown', (e) => {
-            Logger.ui.debug('Assets panel resizer mousedown');
-            
-            // Set initial values immediately
-            initialMouseY = e.clientY;
-            initialPanelHeight = panel.offsetHeight;
-            
-            // Add delay to allow double-click detection
-            setTimeout(() => {
-                if (!isResizing) {
-                    isResizing = true;
-                    document.body.style.cursor = 'row-resize';
-                    document.body.style.userSelect = 'none';
-                    resizer.classList.add('resizing');
-                    
-                    // Prevent default behavior only after delay
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    // Register document event listeners
-                    document.addEventListener('mousemove', handleMouseMove);
-                    document.addEventListener('mouseup', handleMouseUp);
-                }
-            }, 50);
-        });
-
-        // Double-click to toggle collapse/expand
-        resizer.addEventListener('dblclick', (e) => {
-            Logger.ui.info('Assets panel resizer double-click triggered');
-            e.preventDefault();
-            e.stopPropagation();
-            
-            // Prevent mousedown timeout from starting resize
-            isResizing = false;
-            
-            // Use universal panel collapse/expand method directly
+            // Use universal panel collapse/expand method
             const savedSize = this.stateManager?.get('panels.assetsPanelHeight') ?? 256;
             const isCollapsed = savedSize <= 5;
             const shouldCollapse = !isCollapsed;
             
             this.togglePanelCollapse('assets', shouldCollapse);
-        });
+        };
+        
+        // Register with unified ResizerManager
+        this.levelEditor.resizerManager.registerResizer(
+            resizer, 
+            panel, 
+            'assets', 
+            'vertical',
+            onDoubleClick
+        );
 
-        Logger.ui.debug('Setup assets panel resizer with legacy functionality');
+        Logger.ui.debug('Setup assets panel resizer with unified ResizerManager');
     }
 
     /**
@@ -1505,12 +1355,14 @@ export class PanelPositionManager {
         const leftResizer = document.getElementById('resizer-left-tabs-panel');
         const rightResizer = document.getElementById('resizer-right-tabs-panel');
         
-        if (leftResizer && leftResizer._cleanup) {
-            leftResizer._cleanup();
+        if (leftResizer) {
+            this.levelEditor.resizerManager.unregisterResizer(leftResizer);
+            eventHandlerManager.unregisterElement(leftResizer);
         }
         
-        if (rightResizer && rightResizer._cleanup) {
-            rightResizer._cleanup();
+        if (rightResizer) {
+            this.levelEditor.resizerManager.unregisterResizer(rightResizer);
+            eventHandlerManager.unregisterElement(rightResizer);
         }
         
         // Clear references
