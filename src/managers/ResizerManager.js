@@ -99,9 +99,11 @@ export class ResizerManager {
             if (direction === 'horizontal') {
                 // Calculate new width based on mouse movement
                 const deltaX = e.clientX - initialMouseX;
-                // For right panel, resize should work in opposite direction
+                // For right panel or folders on right, resize should work in opposite direction
                 const isRightPanel = panelSide === 'right';
-                newSize = Math.max(100, Math.min(800, initialPanelSize + (isRightPanel ? -deltaX : deltaX)));
+                const isFoldersOnRight = panelSide === 'folders' && 
+                    this.levelEditor?.assetPanel?.foldersPosition === 'right';
+                newSize = Math.max(100, Math.min(800, initialPanelSize + ((isRightPanel || isFoldersOnRight) ? -deltaX : deltaX)));
             } else {
                 // Calculate new height based on mouse movement
                 const deltaY = e.clientY - initialMouseY;

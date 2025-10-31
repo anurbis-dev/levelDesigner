@@ -2,19 +2,30 @@
 
 ## [Unreleased]
 
+### Added
+- **SplashScreenDialog** - новое окно splash screen с изображением, текстовым контентом и версией
+- **Иконка редактора в главном меню** - добавлена кнопка с логотипом редактора первым пунктом меню, открывающая splash screen
+- **Метод showSplashScreen()** - добавлен в LevelEditor для отображения splash screen
+- **CSS класс dialog-container-auto-height** - для диалогов с высотой, определяемой контентом
+- `tailwind.config.js`, `styles/tailwind.css`, npm scripts: `build:css`, `watch:css`.
+
 ### Changed
 - Tailwind CDN removed in favor of local build (`styles/tailwind.build.css`).
 - Default wheel listeners are now passive; explicit `{ passive: false }` kept where `preventDefault()` is required (canvas zoom, AssetPanel Ctrl+wheel).
 - Asset loading runs before UI initialization; preloaded images are synced into `CanvasRenderer` to ensure dropped assets render with images immediately.
+- **BaseDialog** - добавлена проверка на повторную регистрацию обработчиков, предотвращение повторного рендеринга контента
 
 ### Fixed
 - Suppressed extension-related async errors in `index.html` with safer global handlers.
 - `FoldersPanel`: early "No assets available" message downgraded to info during startup scanning.
-
-### Added
-- `tailwind.config.js`, `styles/tailwind.css`, npm scripts: `build:css`, `watch:css`.
+- **Повторная регистрация обработчиков** - исправлена проблема с дублирующимися предупреждениями при повторном показе диалогов
+- **Мерцание текста** - предотвращено повторное рендерирование контента при повторном показе диалогов
 
 ### Files
+- `src/ui/SplashScreenDialog.js` - новый класс для splash screen диалога
+- `src/managers/MenuManager.js` - добавлена кнопка с иконкой редактора
+- `src/core/LevelEditor.js` - добавлен метод showSplashScreen()
+- `styles/dialog-positioning.css` - добавлен класс dialog-container-auto-height
 - `index.html`, `src/core/LevelEditor.js`, `src/event-system/EventHandlerManager.js`, `src/ui/AssetPanel.js`, `src/ui/FoldersPanel.js`, `package.json`, `tailwind.config.js`, `styles/tailwind.css`.
 
 ## [3.54.0] - 2025-01-28

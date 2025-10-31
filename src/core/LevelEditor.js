@@ -1672,25 +1672,11 @@ export class LevelEditor {
     async showSplashScreen() {
         if (!this.splashScreenDialog) {
             const { SplashScreenDialog } = await import('../ui/SplashScreenDialog.js');
-            this.splashScreenDialog = new SplashScreenDialog({
-                textContent: this.getSplashTextContent()
-            });
+            // Don't pass textContent - let SplashScreenDialog use its default text
+            // This allows easy text editing in SplashScreenDialog.getDefaultTextContent()
+            this.splashScreenDialog = new SplashScreenDialog();
         }
         this.splashScreenDialog.show();
-    }
-
-    /**
-     * Get splash screen text content
-     */
-    getSplashTextContent() {
-        return `
-            <h2 style="color: var(--ui-text-color, #f9fafb); margin-bottom: 1rem; font-size: 1.5rem;">
-                Welcome to Level Editor
-            </h2>
-            <p style="color: var(--ui-text-color, #d1d5db); line-height: 1.6; margin-bottom: 1rem;">
-                Professional 2D level editor with utility architecture.
-            </p>
-        `;
     }
 
     /**
