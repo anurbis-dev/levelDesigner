@@ -28,7 +28,7 @@
 - `FolderPickerDialogStructure` - диалог выбора папки
 - `GridSettingsDialogStructure` - диалог настроек сетки
 
-### SplashScreenDialog (v3.54.0)
+### SplashScreenDialog (v3.54.1)
 **Файл**: `src/ui/SplashScreenDialog.js`
 
 Специальный диалог для отображения splash screen при запуске редактора:
@@ -37,13 +37,22 @@
 - **Футер с версией** - отображает текущую версию редактора
 - **Высота по контенту** - использует класс `dialog-container-auto-height` для автоопределения высоты
 - **Закрытие по клику вне окна** - поддерживает закрытие любой кнопкой мыши на overlay
+- **Закрытие по клику на окне** - можно закрыть кликом на само окно (container, изображение или текстовый блок)
 - **Предотвращение повторного рендеринга** - контент рендерится только один раз
+- **Единая система обработчиков** - использует `EventHandlerManager` для всех обработчиков событий
 
 #### Особенности:
 - Наследуется от BaseDialog
 - Не имеет заголовка и кнопки закрытия
 - Ширина определяется размером изображения
 - Версия получается динамически из `window.editor.constructor.VERSION`
+- Переопределяет `setupEventHandlers()` для добавления обработчика клика на container
+- Использует `eventHandlerManager.registerElement()` для регистрации обработчиков (не inline `addEventListener`)
+
+#### Методы:
+- `setupEventHandlers()` - переопределяет родительский метод, добавляет обработчик клика на container
+- `renderSplashContent()` - рендерит контент с изображением и текстом
+- `getTextContent()` - возвращает актуальный текст контента
 
 ### SettingsSectionConstructor
 **Файл**: `src/ui/panel-structures/SettingsSectionConstructor.js`
@@ -86,6 +95,8 @@
 - **Используйте наследование** от BaseDialog
 - **НЕ дублируйте логику** - используйте super.method()
 - **НЕ добавляйте проверки** `if (!stateManager)` - это нарушает архитектуру
+- **Единая система обработчиков** - всегда используйте `EventHandlerManager`, не inline `addEventListener`
+- **Переопределение setupEventHandlers()** - для добавления специфичных обработчиков вызывайте `super.setupEventHandlers()` первым
 
 ## Использование
 

@@ -1,4 +1,4 @@
-# Context Map - Level Designer v3.54.0
+# Context Map - Level Designer v3.54.1
 
 ## ⚠️ КРИТИЧЕСКИ ВАЖНО - ЧИТАТЬ ПЕРВЫМ
 
@@ -25,7 +25,7 @@ levelEditor.createObject(type, x, y, properties)
 levelEditor.selectObject(id)
 levelEditor.saveLevel()
 levelEditor.getCachedObject(id)
-levelEditor.showSplashScreen() // v3.54.0
+levelEditor.showSplashScreen() // v3.54.1
 
 // StateManager
 stateManager.get(key)
@@ -134,7 +134,7 @@ eventHandlerManager.registerElement(button, { click: onClick }, 'button-id');
 
 ## 🔧 Версионирование
 
-Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '3.54.0'`
+Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '3.54.1'`
 
 ## 🚀 Команды
 

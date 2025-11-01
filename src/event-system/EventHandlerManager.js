@@ -185,8 +185,35 @@ export class EventHandlerManager {
     createDelegatedHandlers(container, config) {
         const handlers = {};
 
-        // Click delegation
-        if (config.click) {
+        // Overlay click handler (special case for dialogs)
+        if (config.overlayClick) {
+            handlers.click = (e) => {
+                // Check if click is on overlay itself (not on child elements)
+                // Container is the overlay, so check if target is exactly the overlay
+                if (e.target === container) {
+                    const handler = config.overlayClick;
+                    if (typeof handler === 'function') {
+                        handler(e);
+                        return; // Don't process click delegation for overlay clicks
+                    }
+                }
+                // Also handle click delegation if configured (for clicks on children)
+                if (config.click) {
+                    const target = e.target;
+                    const selector = config.click.selector || '*';
+                    
+                    // Find matching element
+                    const element = target.closest(selector);
+                    if (element) {
+                        const clickHandler = config.click.handler;
+                        if (typeof clickHandler === 'function') {
+                            clickHandler.call(element, e, target);
+                        }
+                    }
+                }
+            };
+        } else if (config.click) {
+            // Click delegation
             handlers.click = (e) => {
                 const target = e.target;
                 const selector = config.click.selector || '*';

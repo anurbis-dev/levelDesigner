@@ -98,11 +98,7 @@ export class BaseDialog {
             this.container.appendChild(footer);
         }
 
-        // Create resizer for width adjustment (vertical resizer on right side)
-        if (this.config.resizable !== false) {
-            this.resizer = this.createDialogResizer();
-            this.container.appendChild(this.resizer);
-        }
+        // Resizer will be created in setupDialogResizer() after container is ready
 
         this.overlay.appendChild(this.container);
         document.body.appendChild(this.overlay);
@@ -191,41 +187,10 @@ export class BaseDialog {
     }
 
     /**
-     * Create dialog resizer (vertical resizer on right side for width adjustment)
-     */
-    createDialogResizer() {
-        const resizer = document.createElement('div');
-        resizer.id = `${this.config.id}-resizer`;
-        resizer.className = 'dialog-resizer';
-        resizer.style.cssText = `
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 4px;
-            height: 100%;
-            cursor: col-resize;
-            background-color: transparent;
-            z-index: 10;
-        `;
-        
-        // Add hover effect
-        resizer.addEventListener('mouseenter', () => {
-            resizer.style.backgroundColor = 'var(--ui-active-color, #3b82f6)';
-        });
-        resizer.addEventListener('mouseleave', () => {
-            if (!resizer.classList.contains('resizing')) {
-                resizer.style.backgroundColor = 'transparent';
-            }
-        });
-        
-        return resizer;
-    }
-
-    /**
      * Setup dialog resizer for width adjustment
      */
     setupDialogResizer() {
-        if (!this.resizer || !this.container) {
+        if (!this.container || this.config.resizable === false) {
             return;
         }
         
@@ -303,9 +268,7 @@ export class BaseDialog {
             this.updateDialogSize();
             
             // Setup dialog resizer after size is calculated
-            if (this.resizer) {
-                this.setupDialogResizer();
-            }
+            this.setupDialogResizer();
             
             this.config.onShow();
         }, 100);
@@ -471,10 +434,13 @@ export class BaseDialog {
                 this.config.onCancel();
             },
             (e) => {
-                // Overlay click handler
+                // Overlay click handler - close dialog when clicking outside container
+                // Check if click is on overlay itself (not on container or its children)
                 if (e.target === this.overlay) {
                     this.hide();
-                    this.config.onCancel();
+                    if (this.config.onCancel) {
+                        this.config.onCancel();
+                    }
                 }
             },
             (e) => {
