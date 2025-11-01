@@ -15,6 +15,7 @@ import { Logger } from '../utils/Logger.js';
 import { dialogSizeManager } from '../utils/DialogSizeManager.js';
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
+import { DialogResizer } from '../utils/DialogResizer.js';
 
 export class BaseDialog {
     constructor(config = {}) {
@@ -36,9 +37,13 @@ export class BaseDialog {
         
         this.overlay = null;
         this.container = null;
+        this.resizer = null;
         this.isVisible = false;
         this.widthCalculated = false;
         this.contentRendered = false;
+        
+        // Get levelEditor for resizer and state management
+        this.levelEditor = config.levelEditor || window.editor || null;
         
         Logger.ui.info(`${this.constructor.name} initialized with config:`, this.config);
     }
@@ -91,6 +96,12 @@ export class BaseDialog {
         if (this.config.showFooter) {
             const footer = this.createFooter();
             this.container.appendChild(footer);
+        }
+
+        // Create resizer for width adjustment (vertical resizer on right side)
+        if (this.config.resizable !== false) {
+            this.resizer = this.createDialogResizer();
+            this.container.appendChild(this.resizer);
         }
 
         this.overlay.appendChild(this.container);
@@ -180,6 +191,53 @@ export class BaseDialog {
     }
 
     /**
+     * Create dialog resizer (vertical resizer on right side for width adjustment)
+     */
+    createDialogResizer() {
+        const resizer = document.createElement('div');
+        resizer.id = `${this.config.id}-resizer`;
+        resizer.className = 'dialog-resizer';
+        resizer.style.cssText = `
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 4px;
+            height: 100%;
+            cursor: col-resize;
+            background-color: transparent;
+            z-index: 10;
+        `;
+        
+        // Add hover effect
+        resizer.addEventListener('mouseenter', () => {
+            resizer.style.backgroundColor = 'var(--ui-active-color, #3b82f6)';
+        });
+        resizer.addEventListener('mouseleave', () => {
+            if (!resizer.classList.contains('resizing')) {
+                resizer.style.backgroundColor = 'transparent';
+            }
+        });
+        
+        return resizer;
+    }
+
+    /**
+     * Setup dialog resizer for width adjustment
+     */
+    setupDialogResizer() {
+        if (!this.resizer || !this.container) {
+            return;
+        }
+        
+        // Use unified DialogResizer utility
+        this.resizer = DialogResizer.setupResizer(
+            this.container, 
+            this.config.id, 
+            { levelEditor: this.levelEditor }
+        );
+    }
+
+    /**
      * Create dialog footer
      */
     createFooter() {
@@ -243,6 +301,12 @@ export class BaseDialog {
             }
             
             this.updateDialogSize();
+            
+            // Setup dialog resizer after size is calculated
+            if (this.resizer) {
+                this.setupDialogResizer();
+            }
+            
             this.config.onShow();
         }, 100);
 
@@ -348,7 +412,7 @@ export class BaseDialog {
     }
 
     /**
-     * Update dialog size based on content
+     * Update dialog size
      */
     updateDialogSize() {
         // Only calculate width once to prevent jumping
@@ -356,17 +420,22 @@ export class BaseDialog {
             return;
         }
 
-        const sectionRenderers = [this.config.contentRenderer];
-        const optimalWidth = dialogSizeManager.calculateOptimalWidth(this.config.id, sectionRenderers);
+        // Try to restore saved width from StateManager first
+        let dialogWidth = DialogResizer.getSavedWidth(this.config.id, this.levelEditor);
         
-        // Apply the fixed width to prevent jumping
+        // If no saved width, use default 50% of viewport width
+        if (!dialogWidth) {
+            dialogWidth = window.innerWidth * 0.5;
+        }
+        
+        // Apply the width with !important to override CSS
         if (this.container) {
-            this.container.style.width = `${optimalWidth}px`;
-            this.container.style.minWidth = `${optimalWidth}px`;
-            this.container.style.maxWidth = `${optimalWidth}px`;
+            this.container.style.setProperty('width', `${dialogWidth}px`, 'important');
+            this.container.style.setProperty('min-width', `${dialogWidth}px`, 'important');
+            this.container.style.setProperty('max-width', `${dialogWidth}px`, 'important');
             
             // Set CSS variable for override rules
-            this.container.style.setProperty('--fixed-dialog-width', `${optimalWidth}px`);
+            this.container.style.setProperty('--fixed-dialog-width', `${dialogWidth}px`);
             
             // Make dialog visible only after width is calculated
             this.container.style.visibility = 'visible';
@@ -444,6 +513,11 @@ export class BaseDialog {
      * Destroy dialog
      */
     destroy() {
+        // Cleanup resizer if exists
+        if (this.resizer && this.levelEditor?.resizerManager) {
+            this.levelEditor.resizerManager.unregisterResizer(this.resizer);
+        }
+        
         if (this.overlay) {
             // Remove event handlers using new system
             eventHandlerManager.unregisterContainer(this.overlay);
@@ -455,6 +529,7 @@ export class BaseDialog {
             
             this.overlay = null;
             this.container = null;
+            this.resizer = null;
         }
         
         Logger.ui.info(`${this.constructor.name}: Dialog destroyed`);

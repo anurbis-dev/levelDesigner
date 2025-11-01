@@ -701,56 +701,56 @@ export class AssetPanel extends BasePanel {
 
         // Double click handler for collapse/expand
         const onDoubleClick = (e, resizerElement, panelElement, panelSide) => {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            const currentWidth = this.foldersContainer.offsetWidth;
-            const containerWidth = this.container.clientWidth;
-            const resizerWidth = 4;
-            const minWidth = 0;
-            const maxWidth = containerWidth - resizerWidth;
-            const previousFoldersWidth = 192; // Default width (w-48)
-            
-            // Check if already at minimum (collapsed)
-            if (currentWidth <= minWidth) {
-                // Restore to previous width
-                const newWidth = Math.min(previousFoldersWidth, maxWidth);
+                e.preventDefault();
+                e.stopPropagation();
                 
-                // Update StateManager instead of direct styles
-                if (this.levelEditor?.stateManager) {
-                    this.levelEditor.stateManager.set('panels.foldersWidth', newWidth);
-                }
-                this.updateContentVisibility(newWidth);
+                const currentWidth = this.foldersContainer.offsetWidth;
+                const containerWidth = this.container.clientWidth;
+                const resizerWidth = 4;
+                const minWidth = 0;
+                const maxWidth = containerWidth - resizerWidth;
+                const previousFoldersWidth = 192; // Default width (w-48)
                 
-                // Save to preferences
-                if (this.levelEditor?.userPrefs) {
-                    this.levelEditor.userPrefs.set('foldersWidth', newWidth);
+                // Check if already at minimum (collapsed)
+                if (currentWidth <= minWidth) {
+                    // Restore to previous width
+                    const newWidth = Math.min(previousFoldersWidth, maxWidth);
+                    
+                    // Update StateManager instead of direct styles
+                    if (this.levelEditor?.stateManager) {
+                        this.levelEditor.stateManager.set('panels.foldersWidth', newWidth);
+                    }
+                    this.updateContentVisibility(newWidth);
+                    
+                    // Save to preferences
+                    if (this.levelEditor?.userPrefs) {
+                        this.levelEditor.userPrefs.set('foldersWidth', newWidth);
+                    }
+                } else {
+                    // Save current width and collapse
+                    const newWidth = minWidth;
+                    
+                    // Update StateManager instead of direct styles
+                    if (this.levelEditor?.stateManager) {
+                        this.levelEditor.stateManager.set('panels.foldersWidth', newWidth);
+                    }
+                    this.updateContentVisibility(newWidth);
+                    
+                    // Save to preferences
+                    if (this.levelEditor?.userPrefs) {
+                        this.levelEditor.userPrefs.set('foldersWidth', newWidth);
+                    }
                 }
-            } else {
-                // Save current width and collapse
-                const newWidth = minWidth;
-                
-                // Update StateManager instead of direct styles
-                if (this.levelEditor?.stateManager) {
-                    this.levelEditor.stateManager.set('panels.foldersWidth', newWidth);
-                }
-                this.updateContentVisibility(newWidth);
-                
-                // Save to preferences
-                if (this.levelEditor?.userPrefs) {
-                    this.levelEditor.userPrefs.set('foldersWidth', newWidth);
-                }
-            }
         };
-        
+
         // Register with unified ResizerManager
-        this.levelEditor.resizerManager.registerResizer(
-            this.foldersResizer, 
-            this.foldersContainer, 
-            'folders', 
+            this.levelEditor.resizerManager.registerResizer(
+                this.foldersResizer, 
+                this.foldersContainer, 
+                'folders', 
             'horizontal',
             onDoubleClick
-        );
+            );
 
         // Load saved width
         if (this.levelEditor?.userPrefs) {

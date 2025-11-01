@@ -65,8 +65,7 @@
     display: flex !important;
     flex-direction: column !important;
     
-    /* Горизонтальный размер будет устанавливаться динамически по самому широкому контенту */
-    width: auto !important;
+    /* Горизонтальный размер устанавливается через JavaScript (50% по умолчанию, с возможностью изменения через ресайзер) */
     min-width: 300px !important;
     max-width: 90vw !important;
 }

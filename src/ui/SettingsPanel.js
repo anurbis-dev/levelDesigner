@@ -7,6 +7,7 @@ import { ValidationUtils } from '../utils/ValidationUtils.js';
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
 import { dialogSizeManager } from '../utils/DialogSizeManager.js';
+import { DialogResizer } from '../utils/DialogResizer.js';
 import {
     renderGeneralSettings,
     renderColorsSettings,
@@ -110,6 +111,27 @@ export class SettingsPanel {
         `;
         
         document.body.appendChild(overlay);
+        
+        // Add resizer for width adjustment
+        this.setupSettingsPanelResizer();
+    }
+    
+    /**
+     * Setup resizer for settings panel width adjustment
+     */
+    setupSettingsPanelResizer() {
+        const container = document.getElementById('settings-panel-container');
+        if (!container) return;
+        
+        // Use unified DialogResizer utility
+        this.resizer = DialogResizer.setupResizer(
+            container, 
+            'settings-panel-container', 
+            { 
+                levelEditor: this.levelEditor, 
+                resizerId: 'settings-panel-resizer' 
+            }
+        );
     }
 
 
@@ -126,6 +148,15 @@ export class SettingsPanel {
                 overlay.style.display = 'flex';
 
                 // Window positioning is now handled by CSS only
+                
+                // Update dialog size (restore saved width or use default)
+                this.updateDialogSize();
+                
+                // Ensure resizer is set up
+                const container = document.getElementById('settings-panel-container');
+                if (container && !document.getElementById('settings-panel-resizer')) {
+                    this.setupSettingsPanelResizer();
+                }
                 
                 // Setup event handlers and context menu after a short delay to ensure DOM is ready
                 setTimeout(() => {
@@ -232,7 +263,7 @@ export class SettingsPanel {
 
     hide() {
         this.isVisible = false;
-        this.widthCalculated = false; // Reset width calculation flag
+        // Don't reset widthCalculated - preserve saved width for next show
 
         // Remove event handlers using new system
         const overlay = document.getElementById('settings-overlay');
@@ -318,32 +349,24 @@ export class SettingsPanel {
             return;
         }
 
-        const sectionRenderers = [
-            renderGeneralSettings,
-            renderColorsSettings,
-            renderSelectionSettings,
-            renderCameraSettings,
-            renderAssetsSettings,
-            renderPerformanceSettings
-        ];
-
-        const optimalWidth = dialogSizeManager.calculateOptimalWidth(
-            'settings-panel-container', 
-            sectionRenderers, 
-            this.levelEditor?.stateManager
-        );
-
         const container = document.getElementById('settings-panel-container');
-        if (container) {
-            container.style.width = `${optimalWidth}px`;
-            container.style.minWidth = `${optimalWidth}px`;
-            container.style.maxWidth = `${optimalWidth}px`;
+        if (!container) return;
 
-            // Set CSS variable for override rules
-            container.style.setProperty('--fixed-dialog-width', `${optimalWidth}px`);
-
-            this.widthCalculated = true;
+        // Try to restore saved width from StateManager first
+        let dialogWidth = DialogResizer.getSavedWidth('settings-panel-container', this.levelEditor);
+        
+        // If no saved width, use default 50% of viewport width
+        if (!dialogWidth) {
+            dialogWidth = window.innerWidth * 0.5;
         }
+
+        // Apply the width with !important to override CSS
+        container.style.setProperty('width', `${dialogWidth}px`, 'important');
+        container.style.setProperty('min-width', `${dialogWidth}px`, 'important');
+        container.style.setProperty('max-width', `${dialogWidth}px`, 'important');
+        container.style.setProperty('--fixed-dialog-width', `${dialogWidth}px`);
+
+        this.widthCalculated = true;
     }
 
     renderColorsSettings() {
