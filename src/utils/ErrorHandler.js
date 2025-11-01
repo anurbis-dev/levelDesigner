@@ -8,6 +8,7 @@
  */
 import { Logger } from './Logger.js';
 import { PERFORMANCE } from '../constants/EditorConstants.js';
+import { ExtensionErrorUtils } from './ExtensionErrorUtils.js';
 
 export class ErrorHandler {
     /** @type {Object|null} Monitoring service instance */
@@ -73,20 +74,49 @@ export class ErrorHandler {
     static setupGlobalHandlers() {
         // Unhandled errors
         window.addEventListener('error', (event) => {
-            this.handle(event.error || new Error(event.message), {
-                type: 'uncaught',
-                filename: event.filename,
-                lineno: event.lineno,
-                colno: event.colno
-            });
-        });
+            try {
+                const error = event.error || (event.message ? new Error(event.message) : null);
+                
+                // Filter extension errors silently - these are not real errors
+                if (ExtensionErrorUtils.isExtensionError(error)) {
+                    Logger.errorHandler.debug('Extension error filtered:', error?.message || event.message);
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                    return;
+                }
+                
+                this.handle(error, {
+                    type: 'uncaught',
+                    filename: event.filename,
+                    lineno: event.lineno,
+                    colno: event.colno
+                });
+            } catch (err) {
+                Logger.errorHandler.error('Error in error handler:', err);
+            }
+        }, { capture: true });
         
         // Unhandled promise rejections
         window.addEventListener('unhandledrejection', (event) => {
-            this.handle(event.reason || new Error('Unhandled Promise Rejection'), {
-                type: 'unhandledPromise',
-                promise: event.promise
-            });
+            try {
+                const reason = event.reason;
+                
+                // Filter extension errors silently - these are not real errors
+                if (ExtensionErrorUtils.isExtensionError(reason)) {
+                    Logger.errorHandler.debug('Extension promise rejection filtered:', 
+                        reason?.message || String(reason));
+                    event.preventDefault();
+                    event.stopImmediatePropagation();
+                    return;
+                }
+                
+                this.handle(reason instanceof Error ? reason : new Error(String(reason || 'Unhandled Promise Rejection')), {
+                    type: 'unhandledPromise',
+                    promise: event.promise
+                });
+            } catch (err) {
+                Logger.errorHandler.error('Error in unhandledrejection handler:', err);
+            }
         });
         
         Logger.errorHandler.debug('Global error handlers registered');

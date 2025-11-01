@@ -351,6 +351,7 @@
         }
 
         // Set up global error handler to filter extension errors
+        // Note: This handler runs BEFORE ErrorHandler to catch extension errors early
         window.addEventListener('error', (event) => {
             try {
                 const maybeError = event.error || (event.message ? new Error(String(event.message)) : null);
@@ -358,10 +359,11 @@
                     // Silently ignore extension errors to prevent user confusion
                     console.warn('Extension error filtered:', maybeError?.message || event.message);
                     event.preventDefault();
+                    event.stopImmediatePropagation();
                     return false;
                 }
             } catch (_) {}
-        });
+        }, { capture: true });
 
         window.addEventListener('unhandledrejection', (event) => {
             try {
@@ -371,6 +373,7 @@
                     // Silently ignore extension-related promise rejections
                     console.warn('Extension promise rejection filtered:', maybeError?.message || String(maybeReason));
                     event.preventDefault();
+                    event.stopImmediatePropagation();
                     return false;
                 }
             } catch (_) {}
