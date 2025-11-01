@@ -454,7 +454,7 @@ export class FoldersPanel extends BasePanel {
 
         // Add event listeners to folder items
         folderItems.forEach((item) => {
-            const path = item.dataset.path;
+                const path = item.dataset.path;
             
             // Click on expand icon - toggle expansion (register first to handle before item click)
             const expandIcon = item.querySelector('.expand-icon');
@@ -483,7 +483,7 @@ export class FoldersPanel extends BasePanel {
                 e.stopPropagation();
                 if (path) {
                     this.selectFolder(path, e);
-                }
+            }
             });
             
             // Setup drag and drop for folder items
