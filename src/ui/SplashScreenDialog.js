@@ -171,38 +171,34 @@ export class SplashScreenDialog extends BaseDialog {
 
     /**
      * Override updateDialogSize to use image width
+     * Returns promise that resolves when dialog is fully ready
      */
-    updateDialogSize() {
-        if (this.widthCalculated) {
+    async updateDialogSize() {
+        const imageContainer = this.container?.querySelector('.splash-image-container');
+        const img = imageContainer?.querySelector('img');
+        
+        if (!img || !this.container) {
             return;
         }
-
-        // Wait for image to load
-        setTimeout(() => {
-            const imageContainer = this.container?.querySelector('.splash-image-container');
-            const img = imageContainer?.querySelector('img');
+        
+        const applySize = () => {
+            const imageWidth = img.naturalWidth || img.width || 600;
+            const maxWidth = window.innerWidth * 0.9;
+            const dialogWidth = Math.min(imageWidth, maxWidth);
             
-            if (img && img.complete && img.naturalWidth) {
-                // Use image width as dialog width
-                const imageWidth = img.naturalWidth;
-                const maxWidth = window.innerWidth * 0.9;
-                const dialogWidth = Math.min(imageWidth, maxWidth);
-                
-                if (this.container) {
-                    this.container.style.width = `${dialogWidth}px`;
-                    this.container.style.minWidth = `${dialogWidth}px`;
-                    this.container.style.maxWidth = `${dialogWidth}px`;
-                    this.container.style.visibility = 'visible';
-                }
-                
-                this.widthCalculated = true;
-            } else if (img) {
-                // Image not loaded yet, wait for load event
-                img.addEventListener('load', () => {
-                    this.updateDialogSize();
-                });
-            }
-        }, 100);
+            this.container.style.width = `${dialogWidth}px`;
+            this.container.style.minWidth = `${dialogWidth}px`;
+            this.container.style.maxWidth = `${dialogWidth}px`;
+        };
+        
+        if (img.complete && img.naturalWidth) {
+            applySize();
+        } else {
+            return new Promise((resolve) => {
+                img.addEventListener('load', () => { applySize(); resolve(); }, { once: true });
+                img.addEventListener('error', () => { applySize(); resolve(); }, { once: true });
+            });
+        }
     }
 
     /**
@@ -217,37 +213,72 @@ export class SplashScreenDialog extends BaseDialog {
 
     /**
      * Show dialog with custom height handling
+     * Ensures all styles and sizes are applied before displaying
      */
-    show() {
-        // Override height to auto for splash screen before calling super
+    async show() {
         this.config.height = 'auto';
-        
-        // Reset contentRendered to always update text on show
         this.contentRendered = false;
         
-        // Call parent show
-        super.show();
+        // Ensure dialog exists
+        if (!this.overlay) {
+            this.createDialog();
+        }
         
-        // Always update text content after show (simple and reliable)
-        setTimeout(() => {
-            const textContainer = this.container?.querySelector('.splash-text-container');
-            if (textContainer) {
-                // Use getTextContent() to always get fresh default text
-                textContainer.innerHTML = this.getTextContent();
-            }
-        }, 150);
+        // Keep hidden until ready
+        if (this.container) {
+            this.container.style.visibility = 'hidden';
+        }
+        if (this.overlay) {
+            this.overlay.style.display = 'none';
+        }
         
-        // Ensure container has auto height after show (no max-height restriction)
+        this.isVisible = true;
+        
+        // Prepare content (hidden)
+        this.setupEventHandlers();
+        this.applyUIScaling();
+        if (!this.contentRendered) {
+            this.renderContent();
+            this.contentRendered = true;
+        }
+        
+        // Update text content
+        const textContainer = this.container?.querySelector('.splash-text-container');
+        if (textContainer) {
+            textContainer.innerHTML = this.getTextContent();
+        }
+        
+        // Apply container styles
         if (this.container) {
             this.container.style.height = 'auto';
-            // Ensure high z-index to prevent text flickering from other elements
             if (this.overlay) {
                 this.overlay.style.zIndex = '10000';
             }
         }
         
-        // Setup overlay click handler
+        // Wait for size calculation (image loaded)
+        await this.updateDialogSize();
+        
+        // Force one layout pass to ensure everything is calculated
+        if (this.container) {
+            void this.container.offsetHeight;
+        }
+        
+        // Show dialog - everything is ready
+        if (this.overlay) {
+            this.overlay.style.display = 'flex';
+            this.overlay.classList.add('dialog-visible');
+        }
+        if (this.container) {
+            this.container.style.visibility = 'visible';
+        }
+        
+        if (this.config.onShow) {
+            this.config.onShow();
+        }
+        
         this.setupOverlayClickHandler();
+        Logger.ui.info(`${this.constructor.name}: Dialog shown`);
     }
 
     /**
