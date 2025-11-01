@@ -2,7 +2,7 @@
  * SplashScreenDialog - Splash screen dialog with image, text content, and version footer
  * 
  * @author Alexey Borzykh aka NURB
- * @version 3.54.0
+ * @version 3.54.1
  */
 
 import { BaseDialog } from './BaseDialog.js';
@@ -277,45 +277,61 @@ export class SplashScreenDialog extends BaseDialog {
             this.config.onShow();
         }
         
-        this.setupOverlayClickHandler();
         Logger.ui.info(`${this.constructor.name}: Dialog shown`);
     }
 
     /**
-     * Setup mouse button handler on overlay to close dialog
-     * Handles all mouse buttons (left, right, middle)
+     * Override setupEventHandlers to add container click handler
+     * Uses unified event handler system
      */
-    setupOverlayClickHandler() {
-        if (!this.overlay) return;
+    setupEventHandlers() {
+        // Call parent to setup overlay handlers
+        super.setupEventHandlers();
 
-        // Check if overlay is already registered as container or element to avoid duplicate registration
-        if (eventHandlerManager.getContainerInfo(this.overlay) || eventHandlerManager.isElementRegistered(this.overlay)) {
-            return;
-        }
-
-        // Register mousedown handler on overlay for all mouse buttons
-        const handlers = {
-            mousedown: (e) => {
-                // Close dialog if clicking on overlay (not on container)
-                if (e.target === this.overlay) {
-                    this.hide();
-                    if (this.config.onCancel) {
-                        this.config.onCancel();
+        // Register click handler on container itself to close dialog
+        // This uses unified event handler system (not inline addEventListener)
+        if (this.container && !eventHandlerManager.isElementRegistered(this.container)) {
+            const containerHandlers = {
+                click: (e) => {
+                    // Close dialog when clicking on container itself or its direct children
+                    // Check if click target is container or immediate child elements (image, text container)
+                    const isContainerClick = e.target === this.container;
+                    const isDirectChild = this.container.contains(e.target) && 
+                                         (e.target.classList.contains('splash-image-container') || 
+                                          e.target.classList.contains('splash-text-container') ||
+                                          e.target.tagName === 'IMG' ||
+                                          e.target.closest('.splash-image-container') ||
+                                          e.target.closest('.splash-text-container'));
+                    
+                    // Don't close on footer clicks (version info)
+                    const isFooterClick = e.target.closest('.dialog-footer') || e.target.classList.contains('dialog-footer');
+                    
+                    if ((isContainerClick || isDirectChild) && !isFooterClick) {
+                        e.stopPropagation(); // Prevent event bubbling
+                        this.hide();
+                        if (this.config.onCancel) {
+                            this.config.onCancel();
+                        }
                     }
                 }
-            }
-        };
+            };
 
-        eventHandlerManager.registerElement(this.overlay, handlers, `${this.config.id}-overlay-click`);
+            eventHandlerManager.registerElement(this.container, containerHandlers, `${this.config.id}-container-click`);
+        }
     }
 
     /**
-     * Override destroy to cleanup overlay click handler
+     * Override destroy to cleanup overlay and container click handlers
      */
     destroy() {
         // Unregister overlay click handler
         if (this.overlay) {
             eventHandlerManager.unregisterElement(this.overlay);
+        }
+        
+        // Unregister container click handler
+        if (this.container) {
+            eventHandlerManager.unregisterElement(this.container);
         }
         
         // Call parent destroy

@@ -13,7 +13,7 @@
 - `async saveLevelAs()` - сохранение уровня с выбором файла
 
 #### Версия:
-- `static VERSION` - текущая версия редактора (строка, например '3.54.0')
+- `static VERSION` - текущая версия редактора (строка, например '3.54.1')
 - `updateVersionInfo()` - обновление отображения версии в UI
 
 ### HorizontalScrollUtils (src/utils/HorizontalScrollUtils.js)

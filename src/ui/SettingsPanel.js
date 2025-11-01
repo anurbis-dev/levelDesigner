@@ -111,27 +111,6 @@ export class SettingsPanel {
         `;
         
         document.body.appendChild(overlay);
-        
-        // Add resizer for width adjustment
-        this.setupSettingsPanelResizer();
-    }
-    
-    /**
-     * Setup resizer for settings panel width adjustment
-     */
-    setupSettingsPanelResizer() {
-        const container = document.getElementById('settings-panel-container');
-        if (!container) return;
-        
-        // Use unified DialogResizer utility
-        this.resizer = DialogResizer.setupResizer(
-            container, 
-            'settings-panel-container', 
-            { 
-                levelEditor: this.levelEditor, 
-                resizerId: 'settings-panel-resizer' 
-            }
-        );
     }
 
 
@@ -152,10 +131,17 @@ export class SettingsPanel {
                 // Update dialog size (restore saved width or use default)
                 this.updateDialogSize();
                 
-                // Ensure resizer is set up
+                // Setup resizer after size is calculated
                 const container = document.getElementById('settings-panel-container');
-                if (container && !document.getElementById('settings-panel-resizer')) {
-                    this.setupSettingsPanelResizer();
+                if (container) {
+                    this.resizer = DialogResizer.setupResizer(
+                        container, 
+                        'settings-panel-container', 
+                        { 
+                            levelEditor: this.levelEditor, 
+                            resizerId: 'settings-panel-resizer' 
+                        }
+                    );
                 }
                 
                 // Setup event handlers and context menu after a short delay to ensure DOM is ready
