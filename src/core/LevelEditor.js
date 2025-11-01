@@ -2130,10 +2130,10 @@ export class LevelEditor {
     }
 
     /**
-     * Update page title (simplified without version)
+     * Update page title with version
      */
     updatePageTitle() {
-        document.title = '2D Level Editor';
+        document.title = `2D Level Editor v${LevelEditor.VERSION}`;
     }
 
     /**
