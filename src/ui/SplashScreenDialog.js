@@ -71,29 +71,20 @@ export class SplashScreenDialog extends BaseDialog {
         // GitHub repository URL - update these if repository URL changes
         const githubRepo = 'https://github.com/username/repo'; // Update with actual repository URL
         
+        // Common styles
+        const textStyle = 'color: var(--ui-text-color, #d1d5db); font-size: 1rem; line-height: 1.75rem; margin: 0 0 1rem 0;';
+        const linkStyle = 'color: var(--ui-active-color, #3b82f6); text-decoration: underline;';
+        const headingStyle = 'color: var(--ui-active-text-color, #ffffff); font-size: 1.5rem; line-height: 2rem; margin: 0 0 1rem 0; font-weight: 600;';
+        
         return `
-            <h2 class="text-2xl mb-4" style="color: var(--ui-active-text-color, #ffffff);">
-                Welcome to HAPLO Level Editor
-            </h2>
-            <p class="text-base mb-4 leading-relaxed" style="color: var(--ui-text-color, #d1d5db);">
+            <h2 style="${headingStyle}">Welcome to HAPLO Level Editor</h2>
+            <p style="${textStyle}">
                 Designed by Alexey Borzykh aka NURB.<br>
                 Built to help you design game levels for classic scrolling games of any genre.
             </p>
-            <p class="text-base mt-4 leading-relaxed" style="color: var(--ui-text-color, #d1d5db);">
-                Refer to the <a href="${githubRepo}/blob/main/docs/CHANGELOG.md" 
-                   target="_blank" 
-                   rel="noopener noreferrer"
-                   class="underline"
-                   style="color: var(--ui-active-color, #3b82f6);">
-                    Changelog
-                </a><br>
-                Scroll through the <a href="${githubRepo}/blob/main/docs/USER_MANUAL.md" 
-                   target="_blank" 
-                   rel="noopener noreferrer"
-                   class="underline"
-                   style="color: var(--ui-active-color, #3b82f6);">
-                    User Manual
-                </a>
+            <p style="${textStyle}margin-top: 1rem;">
+                Refer to the <a href="${githubRepo}/blob/main/docs/CHANGELOG.md" target="_blank" rel="noopener noreferrer" style="${linkStyle}">Changelog</a><br>
+                Scroll through the <a href="${githubRepo}/blob/main/docs/USER_MANUAL.md" target="_blank" rel="noopener noreferrer" style="${linkStyle}">User Manual</a>
             </p>
         `;
     }
