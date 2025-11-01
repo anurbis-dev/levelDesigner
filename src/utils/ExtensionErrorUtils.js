@@ -12,6 +12,9 @@ export class ExtensionErrorUtils {
     static get EXTENSION_ERROR_PATTERNS() {
         return [
             'message channel closed',
+            'asynchronous response',
+            'listener indicated an asynchronous response',
+            'message channel closed before a response was received',
             'extension context invalidated',
             'receiving end does not exist',
             'could not establish connection',
@@ -29,14 +32,37 @@ export class ExtensionErrorUtils {
 
     /**
      * Check if error is related to browser extensions
-     * @param {Error} error - Error to check
+     * @param {Error|string|any} error - Error to check (can be Error object, string, or any value)
      * @returns {boolean} True if extension-related error
      */
     static isExtensionError(error) {
-        if (!error || !error.message) return false;
+        if (!error) return false;
         
-        const message = error.message.toLowerCase();
-        return this.EXTENSION_ERROR_PATTERNS.some(pattern => message.includes(pattern));
+        // Handle string errors
+        if (typeof error === 'string') {
+            const message = error.toLowerCase();
+            return this.EXTENSION_ERROR_PATTERNS.some(pattern => message.includes(pattern.toLowerCase()));
+        }
+        
+        // Handle Error objects
+        if (error instanceof Error) {
+            const message = error.message.toLowerCase();
+            return this.EXTENSION_ERROR_PATTERNS.some(pattern => message.includes(pattern.toLowerCase()));
+        }
+        
+        // Handle objects with message property
+        if (error && typeof error === 'object' && error.message) {
+            const message = String(error.message).toLowerCase();
+            return this.EXTENSION_ERROR_PATTERNS.some(pattern => message.includes(pattern.toLowerCase()));
+        }
+        
+        // Handle toString for other types
+        try {
+            const message = String(error).toLowerCase();
+            return this.EXTENSION_ERROR_PATTERNS.some(pattern => message.includes(pattern.toLowerCase()));
+        } catch (_) {
+            return false;
+        }
     }
 
     /**
