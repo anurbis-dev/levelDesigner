@@ -71,7 +71,7 @@ export class FoldersPanel extends BasePanel {
             return;
         }
 
-        // Prevent rapid re-rendering during resize
+        // Prevent rapid re-rendering when called from multiple sources
         if (this.isRendering) {
             return;
         }
@@ -80,6 +80,49 @@ export class FoldersPanel extends BasePanel {
         requestAnimationFrame(() => {
             this.renderFolderTree();
             this.isRendering = false;
+        });
+    }
+
+    /**
+     * Update layout without recreating elements - only updates truncation
+     * Used during window resize when element count doesn't change
+     */
+    updateLayout() {
+        if (!this.folderTree || !this.folderStructure) {
+            return;
+        }
+
+        // Update truncation for all folder items without recreating them
+        const folderItems = this.folderTree.querySelectorAll('.folder-item');
+        folderItems.forEach(item => {
+            const folderNameElement = item.querySelector('.folder-name');
+            if (folderNameElement) {
+                const path = item.dataset.path;
+                if (path) {
+                    // Find folder in structure to get original name
+                    let folder = null;
+                    if (path === 'root') {
+                        folder = this.folderStructure.root;
+                    } else {
+                        const pathParts = path.replace(/^root\//, '').split('/');
+                        folder = this.folderStructure.root;
+                        for (const part of pathParts) {
+                            if (folder && folder.children && folder.children[part]) {
+                                folder = folder.children[part];
+                            } else {
+                                folder = null;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (folder) {
+                        const displayName = path === 'root' ? 'Content' : folder.name;
+                        const truncatedName = this.truncateName(displayName, this.container?.offsetWidth || 200);
+                        folderNameElement.textContent = truncatedName;
+                    }
+                }
+            }
         });
     }
 
@@ -784,10 +827,10 @@ export class FoldersPanel extends BasePanel {
                         this.lastContainerWidth = width;
                         this.lastContainerHeight = height;
                         
-                        // Debounce the resize event with longer delay
+                        // Use updateLayout() instead of renderFolderContent() to avoid recreating elements
                         clearTimeout(this.resizeTimeout);
                         this.resizeTimeout = setTimeout(() => {
-                            this.renderFolderContent();
+                            this.updateLayout();
                         }, 150);
                     }
                 }
@@ -807,7 +850,7 @@ export class FoldersPanel extends BasePanel {
                     
                     clearTimeout(this.resizeTimeout);
                     this.resizeTimeout = setTimeout(() => {
-                        this.renderFolderContent();
+                        this.updateLayout();
                     }, 150);
                 }
             };
