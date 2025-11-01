@@ -477,16 +477,17 @@ export class SettingsPanel {
 
                 ValidationUtils.logValidation('SettingsPanel', 'Input change detected', { path, value });
 
-                // For range sliders (font scale, spacing H/V, element size, menu gap) - update display and apply immediately for live preview
+                // For range sliders - update display only during drag (font scale applies on release only)
                 if (input.type === 'range' && (path === 'ui.fontScale' || path === 'ui.spacingH' || path === 'ui.spacingV' || path === 'ui.elementSize' || path === 'ui.menuGapBase')) {
                     this.updateSliderDisplay(input, value);
-                    if (this.syncManager) {
+                    // Only apply immediately for non-font-scale sliders (font scale applies on mouse release)
+                    if (path !== 'ui.fontScale' && this.syncManager) {
                         this.syncManager.syncSettingToState(path, value);
                     }
                 }
 
-                // Update real-time display values for other sliders
-                if (input.type === 'range') {
+                // Update real-time display values for other sliders (excluding font scale)
+                if (input.type === 'range' && path !== 'ui.fontScale') {
                     this.updateSliderDisplay(input, value);
                 }
 
@@ -513,7 +514,8 @@ export class SettingsPanel {
                 else if (path === 'canvas.gridColor' || path === 'canvas.gridSubdivColor') {
                     this.applyGridColorSetting(path, value);
                 }
-                else {
+                // Skip font scale here - it applies only on mouse release
+                else if (path !== 'ui.fontScale') {
                     // Synchronize with StateManager for real-time updates
                     if (this.syncManager) {
                         this.syncManager.syncSettingToState(path, value);
@@ -546,7 +548,7 @@ export class SettingsPanel {
                 input.addEventListener('change', input._changeHandler);
             }
             
-            // Handle range slider value display updates
+            // Handle range slider value display updates (font scale updates display only, not the actual value)
             if (input.type === 'range') {
                 const valueDisplay = input.parentElement.querySelector('div[style*="text-align: center"]');
                 if (valueDisplay) {
@@ -567,6 +569,8 @@ export class SettingsPanel {
                         valueDisplay.textContent = displayValue;
                     };
                     
+                    // For font scale, update display on input but don't apply changes (they apply on change/mouse release)
+                    // For other sliders, update display normally
                     input.addEventListener('input', updateRangeValue);
                     updateRangeValue(); // Set initial value
                 }
