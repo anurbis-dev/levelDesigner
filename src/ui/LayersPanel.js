@@ -5,7 +5,6 @@ import { BasePanel } from './BasePanel.js';
 import { LayersContextMenu } from './LayersContextMenu.js';
 import { HoverEffects } from '../utils/HoverEffects.js';
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
-import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
 import { createLayersPanelStructure, renderLayersControls } from './panel-structures/LayersPanelStructure.js';
 import { searchManager } from '../utils/SearchManager.js';
 
@@ -19,6 +18,7 @@ export class LayersPanel extends BasePanel {
         this.currentLayerId = null; // Track current layer (for new objects, blue highlight)
         this.searchFilter = ''; // Search filter for layers
         this.contextMenu = null; // Context menu instance
+        this._draggedElement = null; // Track dragged element for drag and drop
 
         // Track subscriptions for cleanup
         this.subscriptions = [];
@@ -115,6 +115,13 @@ export class LayersPanel extends BasePanel {
         });
         this.subscriptions.push(unsubscribeLevel);
 
+        // Subscribe to selection changes - optimize by only updating styles instead of full render
+        const unsubscribeSelected = this.stateManager.subscribe('selectedObjects', () => {
+            // Only update layer styles for active layer highlighting, not full render
+            this.updateLayerStyles();
+        });
+        this.subscriptions.push(unsubscribeSelected);
+
         // Subscribe to layer objects count changes for efficient updates
         const unsubscribeLayerCount = this.stateManager.subscribe('layerObjectsCountChanged', (layerId, changeData) => {
 
@@ -156,43 +163,17 @@ export class LayersPanel extends BasePanel {
      * @param {HTMLElement} targetContainer - Container to attach context menu to
      */
     setupLayersListContextMenu(targetContainer) {
-        if (!targetContainer || this._layersListContextMenuSetup) {
-            return;
-        }
-
-        // Remove existing listener if any
-        if (this._layersListContextMenuHandler) {
-            targetContainer.removeEventListener('contextmenu', this._layersListContextMenuHandler);
-        }
-
-        // Create new handler
-        this._layersListContextMenuHandler = (event) => {
-
-            // Show menu if not clicking on a layer item
-            if (!event.target.closest('[data-layer-id]')) {
-                event.preventDefault();
-                this.showLayersMenu(event);
-            } else {
-            }
-        };
-
-        targetContainer.addEventListener('contextmenu', this._layersListContextMenuHandler);
-        this._layersListContextMenuSetup = true;
+        // Context menu is now handled by EventHandlerManager in setupLayersPanelHandlers
+        // This method is kept for compatibility
     }
 
     render() {
-        console.log('LayersPanel: render() called');
-        // Reset context menu setup flag since DOM is being recreated
-        this._layersListContextMenuSetup = false;
-
         // Save search input state before clearing
         const searchInput = document.getElementById('layers-search');
         const wasSearchFocused = searchInput && document.activeElement === searchInput;
-        const searchValue = this.searchFilter;
 
         // Remove only non-custom children to preserve custom sections
         const children = Array.from(this.container.children);
-        console.log('LayersPanel: Removing', children.length, 'children from container');
         children.forEach(child => {
             if (!child.classList.contains('panel-top-custom') && 
                 !child.classList.contains('panel-bottom-custom')) {
@@ -364,6 +345,11 @@ export class LayersPanel extends BasePanel {
         this.setupLayersEventListeners();
         
         // Setup EventHandlerManager after elements are created
+        // Unregister old handlers before re-registering to avoid duplicates
+        if (this._eventHandlersRegistered) {
+            eventHandlerManager.unregisterContainer(this.container);
+        }
+        this._eventHandlersRegistered = false;
         this.setupLayersPanelHandlers();
     }
 
@@ -801,236 +787,20 @@ export class LayersPanel extends BasePanel {
 
     /**
      * Setup layers event listeners
+     * All handlers are now managed by EventHandlerManager in setupLayersPanelHandlers()
      */
     setupLayersEventListeners() {
-        const level = this.levelEditor.getLevel();
-        
-        // Layer name editing - double click to edit
-        const nameDisplays = this.container.querySelectorAll('.layer-name-display');
-        nameDisplays.forEach(display => {
-            display.addEventListener('dblclick', (e) => {
-                e.stopPropagation();
-                const layerId = e.target.dataset.layerId;
-                const layer = level.getLayerById(layerId);
-                if (layer) {
-                    const input = this.container.querySelector(`#layer-name-${layerId}`);
-                    const display = this.container.querySelector(`[data-layer-id="${layerId}"].layer-name-display`);
-                    const layerElement = this.container.querySelector(`[data-layer-id="${layerId}"]`);
-                    
-                    if (input && display && layerElement) {
-                        // Disable dragging for this layer during rename
-                        layerElement.draggable = false;
-                        
-                        display.classList.add('hidden');
-                        input.classList.remove('hidden');
-                        input.focus();
-                        input.select();
-                    }
-                }
-            });
-        });
-
-        const nameInputs = this.container.querySelectorAll('.layer-name-input');
-        nameInputs.forEach(input => {
-            input.addEventListener('blur', (e) => {
-                const layerId = e.target.dataset.layerId;
-                const layer = level.getLayerById(layerId);
-                if (layer) {
-                    const oldName = layer.name;
-                    layer.setName(e.target.value);
-                    this.stateManager.markDirty();
-
-                    // Notify about layer name change
-                    this.stateManager.notifyLayerChanged(layerId, 'name', layer.name, oldName);
-                    
-                    // Update display text (name only)
-                    const display = this.container.querySelector(`[data-layer-id="${layerId}"].layer-name-display`);
-                    if (display) {
-                        display.textContent = layer.name;
-                    }
-                    
-                    // Update objects count in separate element
-                    const countElement = this.container.querySelector(`[data-layer-id="${layerId}"].layer-objects-count`);
-                    if (countElement) {
-                        // Force update cached stats if not available
-                        if (!this.levelEditor.cachedLevelStats) {
-                            this.levelEditor.updateCachedLevelStats();
-                        }
-                        
-                        const cachedStats = this.levelEditor.cachedLevelStats;
-                        const objectsCount = level.getCachedLayerObjectsCount(layerId, cachedStats);
-                        countElement.textContent = objectsCount > 0 ? objectsCount : '';
-                    }
-                    
-                    // Hide input, show display
-                    e.target.classList.add('hidden');
-                    display.classList.remove('hidden');
-                    
-                    // Re-enable dragging for this layer
-                    const layerElement = this.container.querySelector(`[data-layer-id="${layerId}"]`);
-                    if (layerElement) {
-                        layerElement.draggable = true;
-                    }
-                }
-            });
-            
-            input.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    e.target.blur();
-                }
-            });
-            
-            // Also handle Escape key to cancel rename
-            input.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    const layerId = e.target.dataset.layerId;
-                    const layer = level.getLayerById(layerId);
-                    if (layer) {
-                        // Restore original name
-                        e.target.value = layer.name;
-                        e.target.blur();
-                    }
-                }
-            });
-        });
-        
-        // Button handlers are now handled by EventHandlerManager
-        // No manual event listeners needed for visibility and lock buttons
-        
-        // Parallax offset input
-        const parallaxInputs = this.container.querySelectorAll('.layer-parallax-input');
-        parallaxInputs.forEach(input => {
-            input.addEventListener('input', (e) => {
-                e.stopPropagation(); // Prevent triggering layer click
-                const layerId = e.target.dataset.layerId;
-                const layer = level.getLayerById(layerId);
-                if (layer) {
-                    const oldOffset = layer.parallaxOffset;
-                    const newOffset = parseFloat(e.target.value) || 0;
-                    layer.parallaxOffset = newOffset;
-                    this.stateManager.markDirty();
-
-                    // Notify about layer parallax change
-                    this.stateManager.notifyLayerChanged(layerId, 'parallaxOffset', newOffset, oldOffset);
-
-                }
-            });
-
-            input.addEventListener('blur', (e) => {
-                // Ensure value is valid
-                const value = parseFloat(e.target.value);
-                if (isNaN(value)) {
-                    e.target.value = 0;
-                    const layerId = e.target.dataset.layerId;
-                    const layer = level.getLayerById(layerId);
-                    if (layer) {
-                        layer.parallaxOffset = 0;
-                    }
-                }
-            });
-        });
-        
-        // Layer click handler is now handled by EventHandlerManager
-        // No local event listeners needed - the universal system handles all clicks
-        
-        // Context menu for layers
-        const layerItems = this.container.querySelectorAll('.layer-item');
-        layerItems.forEach(item => {
-            item.addEventListener('contextmenu', (e) => {
-                // Use closest to find the layer element even if clicking on nested elements
-                const layerElement = e.target.closest('[data-layer-id]');
-                if (!layerElement) return;
-                
-                const layerId = layerElement.dataset.layerId;
-                const level = this.levelEditor.getLevel();
-                const layer = level.getLayerById(layerId);
-                if (layer) {
-                    this.showLayerContextMenu(layer, e);
-                }
-            });
-        });
-
-        // Color picker for layers
-        const colorIndicators = this.container.querySelectorAll('.layer-color');
-        colorIndicators.forEach(indicator => {
-            indicator.addEventListener('click', (e) => {
-                e.stopPropagation(); // Prevent triggering outside click handler
-                const layerId = e.target.dataset.layerId;
-                const layer = level.getLayerById(layerId);
-                if (layer) {
-                    this.showColorPicker(layer, e);
-                }
-            });
-        });
-        
-        // Drag and drop for reordering
-        this.setupLayersDragAndDrop();
+        // All event handlers are registered via EventHandlerManager in setupLayersPanelHandlers()
+        // This method is kept for compatibility
     }
 
     /**
      * Setup drag and drop for layer reordering
+     * Handlers are registered via EventHandlerManager in setupLayersPanelHandlers()
      */
     setupLayersDragAndDrop() {
-        const layersList = document.getElementById('layers-list');
-        if (!layersList) return;
-        
-        let draggedElement = null;
-        
-        layersList.addEventListener('dragstart', (e) => {
-            if (e.target.classList.contains('layer-item')) {
-                // Check if any layer name input is currently visible (renaming in progress)
-                const visibleInput = layersList.querySelector('.layer-name-input:not(.hidden)');
-                if (visibleInput) {
-                    e.preventDefault();
-                    return;
-                }
-                
-                draggedElement = e.target;
-                e.target.style.opacity = '0.5';
-            }
-        });
-        
-        layersList.addEventListener('dragend', (e) => {
-            if (e.target.classList.contains('layer-item')) {
-                e.target.style.opacity = '1';
-                draggedElement = null;
-            }
-        });
-        
-        layersList.addEventListener('dragover', (e) => {
-            e.preventDefault();
-        });
-        
-        layersList.addEventListener('drop', (e) => {
-            e.preventDefault();
-            
-            if (!draggedElement) return;
-            
-            const dropTarget = e.target.closest('.layer-item');
-            if (!dropTarget || dropTarget === draggedElement) return;
-            
-            const level = this.levelEditor.getLevel();
-            const layers = level.getLayersSorted();
-            
-            // Get current order
-            const currentOrder = Array.from(layersList.children).map(el => el.dataset.layerId);
-            
-            // Find positions
-            const draggedIndex = currentOrder.indexOf(draggedElement.dataset.layerId);
-            const dropIndex = currentOrder.indexOf(dropTarget.dataset.layerId);
-            
-            if (draggedIndex === -1 || dropIndex === -1) return;
-            
-            // Reorder array
-            const newOrder = [...currentOrder];
-            newOrder.splice(draggedIndex, 1);
-            newOrder.splice(dropIndex, 0, draggedElement.dataset.layerId);
-            
-            // Update layer order
-            level.reorderLayers(newOrder);
-            this.render();
-            this.stateManager.markDirty();
-        });
+        // Drag and drop handlers are registered via EventHandlerManager in setupLayersPanelHandlers()
+        // This method is kept for compatibility
     }
 
     /**
@@ -1404,21 +1174,49 @@ export class LayersPanel extends BasePanel {
      */
 
     /**
-     * Select all objects in layer
+     * Get all objects in layer by effective layer ID
+     * @param {string} layerId - Layer ID
+     * @returns {Array} Array of objects in the layer
+     * @private
      */
-    selectAllObjectsInLayer(layerId) {
+    _getObjectsInLayer(layerId) {
         const level = this.levelEditor.getLevel();
-        const objectsInLayer = level.objects.filter(obj => {
+        return level.objects.filter(obj => {
             const effectiveLayerId = this.levelEditor.renderOperations ?
                 this.levelEditor.renderOperations.getEffectiveLayerId(obj) :
                 (obj.layerId || level.getMainLayerId());
             return effectiveLayerId === layerId;
         });
+    }
 
+    /**
+     * Select all objects in layer (replace current selection)
+     */
+    selectAllObjectsInLayer(layerId) {
+        const level = this.levelEditor.getLevel();
+        const objectsInLayer = this._getObjectsInLayer(layerId);
         const objectIds = objectsInLayer.map(obj => obj.id);
+        
         this.stateManager.set('selectedObjects', new Set(objectIds));
         
         Logger.layer.info(`Selected ${objectIds.length} objects in layer: ${level.getLayerById(layerId)?.name}`);
+    }
+
+    /**
+     * Add all objects in layer to current selection
+     */
+    addAllObjectsInLayerToSelection(layerId) {
+        const level = this.levelEditor.getLevel();
+        const objectsInLayer = this._getObjectsInLayer(layerId);
+        const objectIds = objectsInLayer.map(obj => obj.id);
+        const currentSelection = new Set(this.stateManager.get('selectedObjects') || []);
+        
+        // Add objects from layer to current selection
+        objectIds.forEach(id => currentSelection.add(id));
+        
+        this.stateManager.set('selectedObjects', currentSelection);
+        
+        Logger.layer.info(`Added ${objectIds.length} objects from layer "${level.getLayerById(layerId)?.name}" to selection (total: ${currentSelection.size})`);
     }
 
 
@@ -1715,23 +1513,30 @@ export class LayersPanel extends BasePanel {
         // Create layers panel handlers configuration
         const layersHandlers = {
             click: {
-                selector: '.layer-item, [data-layer-id], .layer-visibility-btn, .layer-lock-btn',
+                // Use wide selector to catch all clicks - EventHandlerManager will call handler
+                // for any click where target or its parent matches selector
+                selector: '.layer-item, .layer-color, button, [data-layer-id], .layers-list',
                 handler: (e) => {
-                    // Handle layer clicks
-                    const layerElement = e.target.closest('.layer-item, [data-layer-id]');
-                    if (layerElement && layerElement.classList.contains('layer-item')) {
-                        const layerId = layerElement.dataset.layerId;
+                    const target = e.target;
+                    
+                    // Handle color picker clicks first (before other handlers)
+                    const colorIndicator = target.closest('.layer-color');
+                    if (colorIndicator) {
+                        e.stopPropagation(); // Prevent triggering layer click
+                        const layerId = colorIndicator.dataset.layerId;
                         if (layerId) {
-                            this.handleLayerClick(e, layerId);
+                            const level = this.levelEditor.getLevel();
+                            const layer = level.getLayerById(layerId);
+                            if (layer) {
+                                this.showColorPicker(layer, e);
+                            }
                         }
                         return;
                     }
 
                     // Handle button clicks
-                    const button = e.target.closest('button');
+                    const button = target.closest('button');
                     if (button) {
-                        console.log('Button clicked:', button.className, button.id);
-                        
                         if (button.classList.contains('layer-visibility-btn')) {
                             const layerId = button.closest('[data-layer-id]')?.dataset.layerId;
                             if (layerId) {
@@ -1749,25 +1554,248 @@ export class LayersPanel extends BasePanel {
                         }
                         
                         if (button.classList.contains('add-layer-btn')) {
-                            console.log('Add layer button clicked, shift:', e.shiftKey);
                             this.onAddLayer(e);
                             return;
+                        }
+                        // Other buttons - let them handle their own clicks
+                        return;
+                    }
+
+                    // Handle layer clicks (check for any element with data-layer-id)
+                    // This must be last to catch clicks on layer items that weren't handled above
+                    // Informative elements (.layer-name-display, .layer-objects-count) are transparent - clicks pass through
+                    const layerElement = target.closest('.layer-item');
+                    if (layerElement) {
+                        const layerId = layerElement.dataset.layerId;
+                        if (layerId) {
+                            // Only handle if not clicking on interactive elements
+                            const interactiveElement = target.closest('button, input, .layer-color');
+                            if (!interactiveElement) {
+                                this.handleLayerClick(e, layerId);
+                            }
+                        }
+                        return;
+                    }
+                }
+            },
+            input: {
+                selector: '.layer-parallax-input',
+                handler: (e) => {
+                    e.stopPropagation(); // Prevent triggering layer click
+                    const layerId = e.target.closest('[data-layer-id]')?.dataset.layerId;
+                    if (layerId) {
+                        const level = this.levelEditor.getLevel();
+                        const layer = level.getLayerById(layerId);
+                        if (layer) {
+                            const oldOffset = layer.parallaxOffset;
+                            const newOffset = parseFloat(e.target.value) || 0;
+                            layer.parallaxOffset = newOffset;
+                            this.stateManager.markDirty();
+                            // Notify about layer parallax change
+                            this.stateManager.notifyLayerChanged(layerId, 'parallaxOffset', newOffset, oldOffset);
                         }
                     }
                 }
             },
-            change: {
-                selector: 'input, textarea, select',
+            blur: {
+                selector: '.layer-parallax-input, .layer-name-input',
                 handler: (e) => {
-                    // Handle input changes
                     if (e.target.classList.contains('layer-parallax-input')) {
-                        const layerId = e.target.closest('[data-layer-id]')?.dataset.layerId;
-                        if (layerId) {
-                            const value = parseFloat(e.target.value) || 0;
-                            this.updateLayerParallax(layerId, value);
+                        // Ensure value is valid for parallax
+                        const value = parseFloat(e.target.value);
+                        if (isNaN(value)) {
+                            e.target.value = 0;
+                            const layerId = e.target.closest('[data-layer-id]')?.dataset.layerId;
+                            if (layerId) {
+                                const level = this.levelEditor.getLevel();
+                                const layer = level.getLayerById(layerId);
+                                if (layer) {
+                                    layer.parallaxOffset = 0;
+                                }
+                            }
+                        }
+                    } else if (e.target.classList.contains('layer-name-input')) {
+                        // Handle layer name editing
+                        const layerId = e.target.dataset.layerId;
+                        const level = this.levelEditor.getLevel();
+                        const layer = level.getLayerById(layerId);
+                        if (layer) {
+                            const oldName = layer.name;
+                            layer.setName(e.target.value);
+                            this.stateManager.markDirty();
+
+                            // Notify about layer name change
+                            this.stateManager.notifyLayerChanged(layerId, 'name', layer.name, oldName);
+                            
+                            // Update display text (name only)
+                            const display = this.container.querySelector(`[data-layer-id="${layerId}"].layer-name-display`);
+                            if (display) {
+                                display.textContent = layer.name;
+                            }
+                            
+                            // Update objects count in separate element
+                            const countElement = this.container.querySelector(`[data-layer-id="${layerId}"].layer-objects-count`);
+                            if (countElement) {
+                                if (!this.levelEditor.cachedLevelStats) {
+                                    this.levelEditor.updateCachedLevelStats();
+                                }
+                                const cachedStats = this.levelEditor.cachedLevelStats;
+                                const objectsCount = level.getCachedLayerObjectsCount(layerId, cachedStats);
+                                countElement.textContent = objectsCount > 0 ? objectsCount : '';
+                            }
+                            
+                            // Hide input, show display
+                            e.target.classList.add('hidden');
+                            if (display) {
+                                display.classList.remove('hidden');
+                            }
+                            
+                            // Re-enable dragging for this layer
+                            const layerElement = this.container.querySelector(`[data-layer-id="${layerId}"]`);
+                            if (layerElement) {
+                                layerElement.draggable = true;
+                            }
+                        }
+                    }
+                }
+            },
+            dblclick: {
+                selector: '.layer-name-display',
+                handler: (e) => {
+                    e.stopPropagation();
+                    const layerId = e.target.dataset.layerId;
+                    const level = this.levelEditor.getLevel();
+                    const layer = level.getLayerById(layerId);
+                    if (layer) {
+                        const input = this.container.querySelector(`#layer-name-${layerId}`);
+                        const display = this.container.querySelector(`[data-layer-id="${layerId}"].layer-name-display`);
+                        const layerElement = this.container.querySelector(`[data-layer-id="${layerId}"]`);
+                        
+                        if (input && display && layerElement) {
+                            // Disable dragging for this layer during rename
+                            layerElement.draggable = false;
+                            
+                            display.classList.add('hidden');
+                            input.classList.remove('hidden');
+                            input.focus();
+                            input.select();
+                        }
+                    }
+                }
+            },
+            keypress: {
+                selector: '.layer-name-input',
+                handler: (e) => {
+                    if (e.key === 'Enter') {
+                        e.target.blur();
+                    }
+                }
+            },
+            keydown: {
+                selector: '.layer-name-input',
+                handler: (e) => {
+                    if (e.key === 'Escape') {
+                        const layerId = e.target.dataset.layerId;
+                        const level = this.levelEditor.getLevel();
+                        const layer = level.getLayerById(layerId);
+                        if (layer) {
+                            // Restore original name
+                            e.target.value = layer.name;
+                            e.target.blur();
+                        }
+                    }
+                }
+            },
+            contextmenu: {
+                selector: '.layer-item, .layers-list',
+                handler: (e) => {
+                    // Handle context menu on layer items
+                    const layerElement = e.target.closest('[data-layer-id]');
+                    if (layerElement && layerElement.classList.contains('layer-item')) {
+                        const layerId = layerElement.dataset.layerId;
+                        const level = this.levelEditor.getLevel();
+                        const layer = level.getLayerById(layerId);
+                        if (layer) {
+                            this.showLayerContextMenu(layer, e);
                         }
                         return;
                     }
+                    
+                    // Handle context menu on empty space in layers list
+                    const layersList = e.target.closest('.layers-list');
+                    if (layersList && !e.target.closest('[data-layer-id]')) {
+                        e.preventDefault();
+                        this.showLayersMenu(e);
+                    }
+                }
+            },
+            dragstart: {
+                selector: '.layer-item',
+                handler: (e) => {
+                    const layersList = document.getElementById('layers-list');
+                    if (!layersList) return;
+                    
+                    if (e.target.classList.contains('layer-item')) {
+                        // Check if any layer name input is currently visible (renaming in progress)
+                        const visibleInput = layersList.querySelector('.layer-name-input:not(.hidden)');
+                        if (visibleInput) {
+                            e.preventDefault();
+                            return;
+                        }
+                        
+                        this._draggedElement = e.target;
+                        e.target.style.opacity = '0.5';
+                    }
+                }
+            },
+            dragend: {
+                selector: '.layer-item',
+                handler: (e) => {
+                    if (e.target.classList.contains('layer-item')) {
+                        e.target.style.opacity = '1';
+                        this._draggedElement = null;
+                    }
+                }
+            },
+            dragover: {
+                selector: '.layers-list',
+                handler: (e) => {
+                    e.preventDefault();
+                }
+            },
+            drop: {
+                selector: '.layers-list',
+                handler: (e) => {
+                    e.preventDefault();
+                    
+                    if (!this._draggedElement) return;
+                    
+                    const dropTarget = e.target.closest('.layer-item');
+                    if (!dropTarget || dropTarget === this._draggedElement) return;
+                    
+                    const layersList = document.getElementById('layers-list');
+                    if (!layersList) return;
+                    
+                    const level = this.levelEditor.getLevel();
+                    
+                    // Get current order
+                    const currentOrder = Array.from(layersList.children).map(el => el.dataset.layerId);
+                    
+                    // Find positions
+                    const draggedIndex = currentOrder.indexOf(this._draggedElement.dataset.layerId);
+                    const dropIndex = currentOrder.indexOf(dropTarget.dataset.layerId);
+                    
+                    if (draggedIndex === -1 || dropIndex === -1) return;
+                    
+                    // Reorder array
+                    const newOrder = [...currentOrder];
+                    newOrder.splice(draggedIndex, 1);
+                    newOrder.splice(dropIndex, 0, this._draggedElement.dataset.layerId);
+                    
+                    // Update layer order
+                    level.reorderLayers(newOrder);
+                    this.render();
+                    this.stateManager.markDirty();
                 }
             }
         };
@@ -1787,6 +1815,24 @@ export class LayersPanel extends BasePanel {
      * @param {string} layerId - Layer ID
      */
     handleLayerClick(e, layerId) {
+        // Handle Shift+Ctrl/Cmd+click to add all objects in layer to current selection
+        if ((e.ctrlKey || e.metaKey) && e.shiftKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.addAllObjectsInLayerToSelection(layerId);
+            this.levelEditor.updateAllPanels();
+            return;
+        }
+        
+        // Handle Ctrl/Cmd+click to select all objects in layer (replace selection)
+        if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            e.stopPropagation();
+            this.selectAllObjectsInLayer(layerId);
+            this.levelEditor.updateAllPanels();
+            return;
+        }
+        
         // Handle single click to set current layer
         if (e.detail === 1) {
             this.setCurrentLayerAndNotify(layerId);

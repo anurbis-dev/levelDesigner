@@ -351,6 +351,98 @@ export class EventHandlerManager {
             };
         }
 
+        // Double click delegation
+        if (config.dblclick) {
+            handlers.dblclick = (e) => {
+                const target = e.target;
+                const selector = config.dblclick.selector || '*';
+                
+                const element = target.closest(selector);
+                if (element) {
+                    const handler = config.dblclick.handler;
+                    if (typeof handler === 'function') {
+                        handler.call(element, e, target);
+                    }
+                }
+            };
+        }
+
+        // Keypress delegation
+        if (config.keypress) {
+            handlers.keypress = (e) => {
+                const target = e.target;
+                const selector = config.keypress.selector || '*';
+                
+                if (target.matches(selector)) {
+                    const handler = config.keypress.handler;
+                    if (typeof handler === 'function') {
+                        handler.call(target, e);
+                    }
+                }
+            };
+        }
+
+        // Drag events delegation
+        if (config.dragstart) {
+            handlers.dragstart = (e) => {
+                const target = e.target;
+                const selector = config.dragstart.selector || '*';
+                
+                const element = target.closest(selector);
+                if (element) {
+                    const handler = config.dragstart.handler;
+                    if (typeof handler === 'function') {
+                        handler.call(element, e, target);
+                    }
+                }
+            };
+        }
+
+        if (config.dragend) {
+            handlers.dragend = (e) => {
+                const target = e.target;
+                const selector = config.dragend.selector || '*';
+                
+                const element = target.closest(selector);
+                if (element) {
+                    const handler = config.dragend.handler;
+                    if (typeof handler === 'function') {
+                        handler.call(element, e, target);
+                    }
+                }
+            };
+        }
+
+        if (config.dragover) {
+            handlers.dragover = (e) => {
+                const target = e.target;
+                const selector = config.dragover.selector || '*';
+                
+                const element = target.closest(selector);
+                if (element) {
+                    const handler = config.dragover.handler;
+                    if (typeof handler === 'function') {
+                        handler.call(element, e, target);
+                    }
+                }
+            };
+        }
+
+        if (config.drop) {
+            handlers.drop = (e) => {
+                const target = e.target;
+                const selector = config.drop.selector || '*';
+                
+                const element = target.closest(selector);
+                if (element) {
+                    const handler = config.drop.handler;
+                    if (typeof handler === 'function') {
+                        handler.call(element, e, target);
+                    }
+                }
+            };
+        }
+
         return handlers;
     }
 
