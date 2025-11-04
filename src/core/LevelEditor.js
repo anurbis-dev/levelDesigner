@@ -500,8 +500,8 @@ export class LevelEditor {
         this.layersPanel = new LayersPanel(layersPanel, this.stateManager, this);
         this.settingsPanel = new SettingsPanel(document.body, this.configManager, this);
         
-        // Initialize Actor Properties Window
-        this.actorPropertiesWindow = new ActorPropertiesWindow(document.body, this.stateManager, this);
+        // Initialize Asset Properties Window
+        this.actorPropertiesWindow = new ActorPropertiesWindow(this.stateManager, this);
         
         // Register all UI components in lifecycle manager
         this.lifecycle.register('assetPanel', this.assetPanel, { priority: 3 });
@@ -1680,20 +1680,20 @@ export class LevelEditor {
     }
 
     /**
-     * Show Actor Properties Window for the given asset
+     * Show Asset Properties Window for the given asset
      * @param {Object} asset - Asset to show properties for
      */
     showActorPropertiesPanel(asset) {
         if (!asset) {
-            Logger.ui.warn('Cannot show Actor Properties Window: no asset provided');
+            Logger.ui.warn('Cannot show Asset Properties Window: no asset provided');
             return;
         }
 
         if (this.actorPropertiesWindow) {
             this.actorPropertiesWindow.show(asset);
-            Logger.ui.info(`Opened Actor Properties Window for asset: ${asset.name}`);
+            Logger.ui.info(`Opened Asset Properties Window for asset: ${asset.name}`);
         } else {
-            Logger.ui.warn('Actor Properties Window not initialized');
+            Logger.ui.warn('Asset Properties Window not initialized');
         }
     }
 

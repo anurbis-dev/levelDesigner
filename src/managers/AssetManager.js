@@ -512,6 +512,13 @@ export class AssetManager {
             return false;
         }
 
+        // Ensure _originalState exists - if not set, save current state as original
+        // This handles cases where asset was created without proper initialization
+        if (!asset._originalState && asset.saveOriginalState) {
+            asset.saveOriginalState();
+            Logger.asset.debug(`Asset ${asset.name}: _originalState was missing, saved current state as original`);
+        }
+        
         // Update asset properties (current state - state 2)
         Object.assign(asset, updatedData);
         
@@ -522,6 +529,7 @@ export class AssetManager {
         }
 
         // Check if current state differs from original state (from JSON file)
+        // Must be called AFTER Object.assign to compare updated values
         const hasChanges = asset.hasChangesFromOriginal ? asset.hasChangesFromOriginal() : false;
 
         // Update properties and set hasUnsavedChanges flag only if differs from original
