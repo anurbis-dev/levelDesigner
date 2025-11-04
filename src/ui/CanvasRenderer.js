@@ -25,21 +25,21 @@ export class CanvasRenderer {
      * Resize canvas to fit container
      */
     resizeCanvas() {
-        const container = this.canvas.parentElement;
-        if (!container) {
-            Logger.canvas.warn('CanvasRenderer.resizeCanvas: No parent container found');
+        const viewport = document.getElementById('canvas-viewport');
+        if (!viewport) {
+            Logger.canvas.warn('CanvasRenderer.resizeCanvas: canvas-viewport not found');
             return;
         }
 
-        const rect = container.getBoundingClientRect();
+        const rect = viewport.getBoundingClientRect();
 
         // Проверки на валидность размеров контейнера
         if (!rect.width || !rect.height || rect.width <= 0 || rect.height <= 0) {
-            Logger.canvas.warn(`CanvasRenderer.resizeCanvas: Invalid container dimensions ${rect.width}x${rect.height}`);
+            Logger.canvas.warn(`CanvasRenderer.resizeCanvas: Invalid viewport dimensions ${rect.width}x${rect.height}`);
             return;
         }
 
-        // Set canvas size to container size (минимум 1 пиксель для избежания ошибок)
+        // Set canvas size to viewport size (минимум 1 пиксель для избежания ошибок)
         const width = Math.max(1, Math.floor(rect.width));
         const height = Math.max(1, Math.floor(rect.height));
 
@@ -52,7 +52,24 @@ export class CanvasRenderer {
         this.canvas.style.display = 'block';
         this.canvas.style.objectFit = 'none'; // Prevent scaling
 
-        Logger.canvas.debug(`Canvas resized to ${width}x${height}`);
+        // Update canvas-container position and size to match viewport
+        const canvasContainer = document.getElementById('canvas-container');
+        if (canvasContainer) {
+            canvasContainer.style.left = rect.left + 'px';
+            canvasContainer.style.top = rect.top + 'px';
+            canvasContainer.style.width = width + 'px';
+            canvasContainer.style.height = height + 'px';
+            canvasContainer.style.right = 'auto';
+            canvasContainer.style.bottom = 'auto';
+        }
+
+        // Update stateManager with canvas position and size
+        if (this.stateManager) {
+            this.stateManager.set('canvas.position', { x: rect.left, y: rect.top });
+            this.stateManager.set('canvas.size', { width, height });
+        }
+
+        Logger.canvas.debug(`Canvas resized to ${width}x${height} at position (${rect.left}, ${rect.top})`);
     }
 
     /**

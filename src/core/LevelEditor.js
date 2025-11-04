@@ -456,6 +456,7 @@ export class LevelEditor {
     initializeRenderer(canvas) {
         // Initialize renderer
         this.canvasRenderer = new CanvasRenderer(canvas);
+        this.canvasRenderer.stateManager = this.stateManager; // Store reference for state updates
         this.canvasRenderer.resizeCanvas();
         this.lifecycle.register('canvasRenderer', this.canvasRenderer, { priority: 1 });
         
@@ -586,10 +587,7 @@ export class LevelEditor {
                 }
 
                 // Update canvas and render
-                if (this.canvasRenderer) {
-                    this.canvasRenderer.resizeCanvas();
-                    this.render();
-                }
+                this.updateCanvas();
             }
         });
         this.subscriptions.push(rightPanelUnsubscribe);
@@ -609,10 +607,7 @@ export class LevelEditor {
                 }
 
                 // Update canvas and render
-                if (this.canvasRenderer) {
-                    this.canvasRenderer.resizeCanvas();
-                    this.render();
-                }
+                this.updateCanvas();
             }
         });
         this.subscriptions.push(assetsPanelUnsubscribe);
@@ -635,10 +630,7 @@ export class LevelEditor {
                 }, 50);
 
                 // Update canvas layout
-                if (this.canvasRenderer) {
-                    this.canvasRenderer.resizeCanvas();
-                    this.render();
-                }
+                this.updateCanvas();
             }
         });
         this.subscriptions.push(tabPositionsUnsubscribe);
@@ -650,6 +642,20 @@ export class LevelEditor {
             }
         });
         this.subscriptions.push(rightPanelTabUnsubscribe);
+
+        // Setup ResizeObserver for canvas-viewport to update canvas interactively
+        const setupViewportObserver = (retryCount = 0) => {
+            const viewport = document.getElementById('canvas-viewport');
+            if (viewport && window.ResizeObserver) {
+                this.viewportResizeObserver = new ResizeObserver(() => {
+                    this.updateCanvas();
+                });
+                this.viewportResizeObserver.observe(viewport);
+            } else if (!viewport && retryCount < 10) {
+                requestAnimationFrame(() => setupViewportObserver(retryCount + 1));
+            }
+        };
+        setupViewportObserver();
 
         const leftPanelTabUnsubscribe = this.stateManager.subscribe('leftPanelTab', (tabName) => {
             if (tabName && this.configManager) {
@@ -672,6 +678,18 @@ export class LevelEditor {
             }
         });
         this.subscriptions.push(leftPanelVisibilityUnsubscribe);
+    }
+
+    /**
+     * Update canvas size and render
+     * Helper method to avoid code duplication
+     * @private
+     */
+    updateCanvas() {
+        if (this.canvasRenderer) {
+            this.canvasRenderer.resizeCanvas();
+            this.render();
+        }
     }
 
     /**
@@ -2189,6 +2207,12 @@ export class LevelEditor {
                 }
             });
             this.subscriptions = [];
+        }
+
+        // Disconnect ResizeObserver for canvas-viewport
+        if (this.viewportResizeObserver) {
+            this.viewportResizeObserver.disconnect();
+            this.viewportResizeObserver = null;
         }
 
         // Clear all caches
