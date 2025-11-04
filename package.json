@@ -9,7 +9,8 @@
     "start:node": "npx serve .",
     "dev": "python -m http.server 8000",
     "build:css": "tailwindcss -i styles/tailwind.css -o styles/tailwind.build.css --minify",
-    "watch:css": "tailwindcss -i styles/tailwind.css -o styles/tailwind.build.css --watch"
+    "watch:css": "tailwindcss -i styles/tailwind.css -o styles/tailwind.build.css --watch",
+    "validate:version": "node scripts/validate-version.js"
   },
   "keywords": [
     "level-editor",
