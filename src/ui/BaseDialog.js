@@ -462,16 +462,15 @@ export class BaseDialog {
                             footerButton.action();
                         } else if (buttonId === 'confirm' || buttonId === 'save' || buttonId === 'apply') {
                             this.config.onConfirm();
-                            // Don't hide here - let onConfirm() handle it (e.g., apply() calls hide() itself)
-                            // Only hide for confirm/save if they don't handle it themselves
+                            // Don't hide for 'apply' - let onConfirm() handle it (e.g., apply() calls hide() itself)
                             if (buttonId !== 'apply') {
                                 this.hide();
                             }
                         } else if (buttonId === 'cancel') {
                             this.config.onCancel();
-                        }
-                        // Hide for cancel and other buttons
-                        if (buttonId !== 'apply' && buttonId !== 'confirm' && buttonId !== 'save') {
+                            this.hide();
+                        } else {
+                            // Hide for other buttons
                             this.hide();
                         }
                     }

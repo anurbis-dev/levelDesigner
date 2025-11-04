@@ -106,7 +106,36 @@ export class ActorPropertiesWindow extends BaseDialog {
 
     onCancel() {
         // Called when Cancel button is clicked
+        // Restore values to initial state before closing
+        if (this.initialState) {
+            this.restoreInitialState();
+        }
         this.hide();
+    }
+
+    /**
+     * Restore form values to initial state (when window was opened)
+     */
+    restoreInitialState() {
+        if (!this.initialState) return;
+
+        const nameInput = document.getElementById('actor-name');
+        const xInput = document.getElementById('actor-x');
+        const yInput = document.getElementById('actor-y');
+        const widthInput = document.getElementById('actor-width');
+        const heightInput = document.getElementById('actor-height');
+        const colorInput = document.getElementById('actor-color');
+        const imgSrcInput = document.getElementById('actor-imgSrc');
+        const categoryInput = document.getElementById('actor-category');
+
+        if (nameInput) nameInput.value = this.initialState.name || '';
+        if (xInput) xInput.value = this.initialState.x || 0;
+        if (yInput) yInput.value = this.initialState.y || 0;
+        if (widthInput) widthInput.value = this.initialState.width || 32;
+        if (heightInput) heightInput.value = this.initialState.height || 32;
+        if (colorInput) colorInput.value = this.initialState.color || '#3B82F6';
+        if (imgSrcInput) imgSrcInput.value = this.initialState.imgSrc || '';
+        if (categoryInput) categoryInput.value = this.initialState.category || '';
     }
 
 
@@ -219,20 +248,24 @@ export class ActorPropertiesWindow extends BaseDialog {
     }
 
     /**
+     * Get numeric value from input field
+     * @private
+     */
+    _getNumericValue(id, defaultVal) {
+        const value = parseFloat(document.getElementById(id)?.value);
+        return isNaN(value) ? defaultVal : value;
+    }
+
+    /**
      * Save initial state of all properties
      */
     saveInitialState() {
-        const getNumericValue = (id, defaultVal) => {
-            const value = parseFloat(document.getElementById(id)?.value);
-            return isNaN(value) ? defaultVal : value;
-        };
-
         this.initialState = {
             name: document.getElementById('actor-name')?.value || '',
-            x: getNumericValue('actor-x', 0),
-            y: getNumericValue('actor-y', 0),
-            width: getNumericValue('actor-width', 32),
-            height: getNumericValue('actor-height', 32),
+            x: this._getNumericValue('actor-x', 0),
+            y: this._getNumericValue('actor-y', 0),
+            width: this._getNumericValue('actor-width', 32),
+            height: this._getNumericValue('actor-height', 32),
             color: document.getElementById('actor-color')?.value || '#3B82F6',
             imgSrc: document.getElementById('actor-imgSrc')?.value || '',
             category: document.getElementById('actor-category')?.value || ''
@@ -247,30 +280,30 @@ export class ActorPropertiesWindow extends BaseDialog {
     checkForChanges() {
         if (!this.initialState) return false;
 
-        const getNumericValue = (id, defaultVal) => {
-            const value = parseFloat(document.getElementById(id)?.value);
-            return isNaN(value) ? defaultVal : value;
-        };
+        const normalizeColor = (c) => (c || '').toUpperCase().trim();
+        const normalizeString = (s) => (s || '').trim();
+        const normalizeImgSrc = (src) => (src === null || src === undefined || src === '') ? null : src;
 
-        const currentState = {
-            name: document.getElementById('actor-name')?.value || '',
-            x: getNumericValue('actor-x', 0),
-            y: getNumericValue('actor-y', 0),
-            width: getNumericValue('actor-width', 32),
-            height: getNumericValue('actor-height', 32),
-            color: document.getElementById('actor-color')?.value || '#3B82F6',
-            imgSrc: document.getElementById('actor-imgSrc')?.value || '',
-            category: document.getElementById('actor-category')?.value || ''
-        };
+        const name = normalizeString(document.getElementById('actor-name')?.value || '');
+        const width = this._getNumericValue('actor-width', 32);
+        const height = this._getNumericValue('actor-height', 32);
+        const color = normalizeColor(document.getElementById('actor-color')?.value || '#3B82F6');
+        const imgSrcValue = document.getElementById('actor-imgSrc')?.value || '';
+        const imgSrc = normalizeImgSrc(imgSrcValue === '' ? null : imgSrcValue);
+        const category = normalizeString(document.getElementById('actor-category')?.value || '');
 
-        // Compare all properties
-        const hasChanges = Object.keys(this.initialState).some(key => {
-            const initial = this.initialState[key];
-            const current = currentState[key];
-            return initial !== current;
-        });
-
-        return hasChanges;
+        // Compare with normalized initial state values
+        const initialWidth = Number(this.initialState.width || 32);
+        const initialHeight = Number(this.initialState.height || 32);
+        
+        return (
+            name !== normalizeString(this.initialState.name || '') ||
+            width !== initialWidth ||
+            height !== initialHeight ||
+            color !== normalizeColor(this.initialState.color || '#3B82F6') ||
+            imgSrc !== normalizeImgSrc(this.initialState.imgSrc) ||
+            category !== normalizeString(this.initialState.category || '')
+        );
     }
 
     /**
@@ -332,18 +365,10 @@ export class ActorPropertiesWindow extends BaseDialog {
         const imgSrc = imgSrcValue === '' ? null : imgSrcValue;
         const category = document.getElementById('actor-category')?.value || '';
 
-        // Check if there are actual changes before updating
-        // Compare with current asset values to avoid unnecessary updates
-        const hasActualChanges = (
-            (name.trim() !== (this.currentActor.name || '').trim()) ||
-            (Number(width) !== Number(this.currentActor.width || 32)) ||
-            (Number(height) !== Number(this.currentActor.height || 32)) ||
-            (color.toUpperCase().trim() !== (this.currentActor.color || '#3B82F6').toUpperCase().trim()) ||
-            (imgSrc !== (this.currentActor.imgSrc || null)) ||
-            (category.trim() !== (this.currentActor.category || '').trim())
-        );
-        
-        if (!hasActualChanges) {
+        // Check if there are actual changes from initial state (when window was opened)
+        // This handles cases where user changed values but then reverted them back
+        if (!this.checkForChanges()) {
+            // No changes from initial state - close without update
             this.hide();
             return;
         }
@@ -360,13 +385,9 @@ export class ActorPropertiesWindow extends BaseDialog {
             category: category
         };
 
-        // Update in asset manager if it's an asset
-        // AssetManager will compare with original state (state 1) and set hasUnsavedChanges flag
-        // Try to get assetManager from levelEditor or directly from assetPanel
-        let assetManager = this.levelEditor?.assetManager;
-        if (!assetManager && this.levelEditor?.assetPanel?.assetManager) {
-            assetManager = this.levelEditor.assetPanel.assetManager;
-        }
+        // Update in asset manager
+        // AssetManager will compare with original state and set hasUnsavedChanges flag
+        const assetManager = this.levelEditor?.assetManager || this.levelEditor?.assetPanel?.assetManager;
         
         if (assetManager) {
             const success = assetManager.updateAsset(this.currentActor.id, updatedData);
@@ -378,21 +399,7 @@ export class ActorPropertiesWindow extends BaseDialog {
             // AssetManager.updateAsset() already calls stateManager.notify('assetsChanged')
             // which triggers AssetPanel re-render via subscription
         } else {
-            // Fallback: update directly (for non-asset objects)
-            Object.assign(this.currentActor, updatedData);
-            // Also update x and y for level objects (not assets)
-            if (x !== undefined) this.currentActor.x = x;
-            if (y !== undefined) this.currentActor.y = y;
-        }
-
-        // Mark state as dirty for re-render
-        if (this.stateManager && this.stateManager.markDirty) {
-            this.stateManager.markDirty();
-        }
-
-        // Trigger UI refresh
-        if (this.levelEditor && this.levelEditor.render) {
-            this.levelEditor.render();
+            Logger.ui.warn('ActorPropertiesWindow: No assetManager available');
         }
 
         Logger.ui.debug(`Applied changes to actor: ${this.currentActor.name}`);
