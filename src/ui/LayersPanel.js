@@ -1,4 +1,3 @@
-import { UIFactory } from '../utils/UIFactory.js';
 import { Logger } from '../utils/Logger.js';
 import { SearchUtils } from '../utils/SearchUtils.js';
 import { BasePanel } from './BasePanel.js';
@@ -14,7 +13,6 @@ import { searchManager } from '../utils/SearchManager.js';
 export class LayersPanel extends BasePanel {
     constructor(container, stateManager, levelEditor) {
         super(container, stateManager, levelEditor);
-        this.activeLayerId = null; // Track active layer (for border highlight)
         this.currentLayerId = null; // Track current layer (for new objects, blue highlight)
         this.searchFilter = ''; // Search filter for layers
         this.contextMenu = null; // Context menu instance
@@ -34,9 +32,7 @@ export class LayersPanel extends BasePanel {
                 this.searchFilter = searchFilter;
                 this.renderLayersSection();
             },
-            () => {
-                // Clear callback - could be used for additional cleanup
-            }
+            null
         );
         this.layerContextMenu = null; // Layer context menu reference
 
@@ -158,14 +154,6 @@ export class LayersPanel extends BasePanel {
         // EventHandlerManager will be setup in render() after elements are created
     }
 
-    /**
-     * Setup context menu for the layers list area (empty space)
-     * @param {HTMLElement} targetContainer - Container to attach context menu to
-     */
-    setupLayersListContextMenu(targetContainer) {
-        // Context menu is now handled by EventHandlerManager in setupLayersPanelHandlers
-        // This method is kept for compatibility
-    }
 
     render() {
         // Save search input state before clearing
@@ -335,14 +323,8 @@ export class LayersPanel extends BasePanel {
             target: scrollableContainer || rightPanel
         });
 
-        // Setup context menu for the layers list area
-        this.setupLayersListContextMenu(layersList);
-
         // Update layer styles to show current layer highlight
         this.updateLayerStyles();
-
-        // Setup event listeners for layer elements
-        this.setupLayersEventListeners();
         
         // Setup EventHandlerManager after elements are created
         // Unregister old handlers before re-registering to avoid duplicates
@@ -367,7 +349,6 @@ export class LayersPanel extends BasePanel {
         const cachedStats = this.levelEditor.cachedLevelStats;
         const objectsCount = level.getCachedLayerObjectsCount(layer.id, cachedStats);
         const isMainLayer = layer.id === level.getMainLayerId();
-        const isActive = this.activeLayerId === layer.id;
         const isCurrent = this.currentLayerId === layer.id;
         
         const layerDiv = document.createElement('div');
@@ -437,6 +418,7 @@ export class LayersPanel extends BasePanel {
         }
         
         // Setup hover effect for the main layer container
+        // CSS will handle blocking hover on selected layers (bg-blue-600)
         HoverEffects.setupListItemHover(layerDiv);
         
         // Setup hover effects for buttons using CSS classes
@@ -516,13 +498,6 @@ export class LayersPanel extends BasePanel {
         }, { once: true });
     }
 
-    /**
-     * Set active layer (for border highlight only)
-     */
-    setActiveLayer(layerId) {
-        this.activeLayerId = layerId;
-        this.updateLayerStyles();
-    }
 
     /**
      * Update layer element visual state without recreating it
@@ -767,6 +742,7 @@ export class LayersPanel extends BasePanel {
             const isCurrent = this.currentLayerId === layerId;
 
             // Update background color based on state: current > default
+            // CSS will handle blocking hover on selected layers (bg-blue-600)
             if (isCurrent) {
                 element.classList.remove('bg-gray-700');
                 element.classList.add('bg-blue-600');
@@ -785,23 +761,6 @@ export class LayersPanel extends BasePanel {
     }
 
 
-    /**
-     * Setup layers event listeners
-     * All handlers are now managed by EventHandlerManager in setupLayersPanelHandlers()
-     */
-    setupLayersEventListeners() {
-        // All event handlers are registered via EventHandlerManager in setupLayersPanelHandlers()
-        // This method is kept for compatibility
-    }
-
-    /**
-     * Setup drag and drop for layer reordering
-     * Handlers are registered via EventHandlerManager in setupLayersPanelHandlers()
-     */
-    setupLayersDragAndDrop() {
-        // Drag and drop handlers are registered via EventHandlerManager in setupLayersPanelHandlers()
-        // This method is kept for compatibility
-    }
 
     /**
      * Handle layer visibility change - remove selection and close groups when hidden
@@ -1949,7 +1908,6 @@ export class LayersPanel extends BasePanel {
         super.destroy();
         
         // Clear references
-        this.activeLayerId = null;
         this.currentLayerId = null;
         this.searchFilter = '';
         this.contextMenu = null;

@@ -37,6 +37,13 @@
     background-color: #4b5563;
 }
 
+/* Disable hover for selected layers - they should keep their blue highlight */
+/* Use higher specificity to override Tailwind hover classes */
+.layer-item.bg-blue-600:hover,
+.layer-item.bg-blue-600.hover\:bg-gray-600:hover {
+    background-color: #2563eb !important; /* blue-600 - keep selection color on hover */
+}
+
 .layer-item.selected {
     background-color: #1f2937;
     border-radius: 0.25rem;
