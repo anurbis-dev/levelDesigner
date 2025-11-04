@@ -28,13 +28,14 @@
     padding: 0.5rem;
     margin-bottom: 0.25rem;
     border-radius: 0.25rem;
-    transition: background-color 0.2s;
     cursor: pointer;
     position: relative;
 }
 
+/* Instant hover response - no transition for immediate feedback */
 .layer-item:hover {
     background-color: #4b5563;
+    transition: none;
 }
 
 /* Disable hover for selected layers - they should keep their blue highlight */
