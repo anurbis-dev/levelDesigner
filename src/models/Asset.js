@@ -32,6 +32,9 @@ export class Asset {
      * Save current state as original state (from JSON file)
      */
     saveOriginalState() {
+        // Normalize imgSrc when saving original state to match comparison logic
+        const normalizedImgSrc = (this.imgSrc === null || this.imgSrc === undefined || this.imgSrc === '') ? null : this.imgSrc;
+        
         this._originalState = {
             name: this.name,
             type: this.type,
@@ -39,7 +42,7 @@ export class Asset {
             width: this.width,
             height: this.height,
             color: this.color,
-            imgSrc: this.imgSrc
+            imgSrc: normalizedImgSrc
         };
     }
 
@@ -50,14 +53,36 @@ export class Asset {
     hasChangesFromOriginal() {
         if (!this._originalState) return false;
 
+        // Normalize imgSrc values: null, undefined, and empty string are treated as equivalent
+        const currentImgSrc = (this.imgSrc === null || this.imgSrc === undefined || this.imgSrc === '') ? null : this.imgSrc;
+        const originalImgSrc = (this._originalState.imgSrc === null || this._originalState.imgSrc === undefined || this._originalState.imgSrc === '') ? null : this._originalState.imgSrc;
+
+        // Compare values, converting numbers to ensure type consistency
+        const currentWidth = Number(this.width);
+        const originalWidth = Number(this._originalState.width);
+        const currentHeight = Number(this.height);
+        const originalHeight = Number(this._originalState.height);
+        
+        // Normalize color values (case-insensitive comparison)
+        const currentColor = (this.color || '').toUpperCase().trim();
+        const originalColor = (this._originalState.color || '').toUpperCase().trim();
+        
+        // Normalize name, type, category (trim whitespace)
+        const currentName = (this.name || '').trim();
+        const originalName = (this._originalState.name || '').trim();
+        const currentType = (this.type || '').trim();
+        const originalType = (this._originalState.type || '').trim();
+        const currentCategory = (this.category || '').trim();
+        const originalCategory = (this._originalState.category || '').trim();
+
         return (
-            this.name !== this._originalState.name ||
-            this.type !== this._originalState.type ||
-            this.category !== this._originalState.category ||
-            this.width !== this._originalState.width ||
-            this.height !== this._originalState.height ||
-            this.color !== this._originalState.color ||
-            this.imgSrc !== this._originalState.imgSrc
+            currentName !== originalName ||
+            currentType !== originalType ||
+            currentCategory !== originalCategory ||
+            currentWidth !== originalWidth ||
+            currentHeight !== originalHeight ||
+            currentColor !== originalColor ||
+            currentImgSrc !== originalImgSrc
         );
     }
 

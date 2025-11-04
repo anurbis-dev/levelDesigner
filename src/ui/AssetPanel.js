@@ -826,10 +826,22 @@ export class AssetPanel extends BasePanel {
         globalEventRegistry.registerComponentHandlers('asset-panel', windowResizeHandlers, 'window');
 
         // ResizeObserver for asset panel container to handle all internal resizes (folders, other panels, etc.)
-        this.containerResizeObserver = new ResizeObserver(() => {
-            Logger.ui.debug('AssetPanel: Container resize detected');
-            if (this.viewMode === 'grid') {
-                this.updateGridViewSizes();
+        // Track previous size to avoid unnecessary updates and prevent loops
+        this.lastContainerWidth = 0;
+        this.containerResizeObserver = new ResizeObserver((entries) => {
+            const entry = entries[0];
+            if (!entry) return;
+            
+            const { width } = entry.contentRect;
+            // Only update if width actually changed significantly (avoid loops from content changes)
+            if (Math.abs(width - this.lastContainerWidth) > 1) {
+                this.lastContainerWidth = width;
+                // Use requestAnimationFrame to defer DOM changes and prevent ResizeObserver loop
+                requestAnimationFrame(() => {
+                    if (this.viewMode === 'grid') {
+                        this.updateGridViewSizes();
+                    }
+                });
             }
         });
         this.containerResizeObserver.observe(this.previewsContainer);
@@ -1300,6 +1312,7 @@ export class AssetPanel extends BasePanel {
         thumb.style.height = `${this.assetSize}px`;
         thumb.style.borderRadius = '4px';
         thumb.style.overflow = 'hidden';
+        thumb.style.position = 'relative'; // Required for absolute positioning of unsaved indicator
         // No transition for immediate selection feedback
         thumb.dataset.assetId = asset.id;
         thumb.draggable = true;
@@ -1657,10 +1670,10 @@ export class AssetPanel extends BasePanel {
             return;
         }
 
-        // Open Actor Properties Panel
+        // Open Asset Properties Panel
         if (this.levelEditor && this.levelEditor.showActorPropertiesPanel) {
             this.levelEditor.showActorPropertiesPanel(asset);
-            Logger.ui.info(`Double-clicked asset: ${asset.name}, opening Actor Properties Panel`);
+            Logger.ui.info(`Double-clicked asset: ${asset.name}, opening Asset Properties Panel`);
         } else {
             Logger.ui.warn('LevelEditor or showActorPropertiesPanel method not available');
         }
@@ -1965,13 +1978,15 @@ export class AssetPanel extends BasePanel {
      * @returns {boolean} Whether to show the indicator
      */
     shouldShowUnsavedIndicator(asset) {
+        if (!asset) return false;
+        
         // Show for temporary assets
         if (asset.properties && asset.properties.isTemporary) {
             return true;
         }
         
         // Show for assets with unsaved changes
-        if (asset.properties && asset.properties.hasUnsavedChanges) {
+        if (asset.properties && asset.properties.hasUnsavedChanges === true) {
             return true;
         }
         

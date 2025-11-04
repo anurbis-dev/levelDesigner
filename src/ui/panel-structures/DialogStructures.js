@@ -61,11 +61,11 @@ export const SettingsDialogStructure = {
 };
 
 /**
- * Actor properties dialog structure
+ * Asset properties dialog structure
  */
 export const ActorPropertiesDialogStructure = {
     id: 'actor-properties-dialog',
-    title: 'Actor Properties',
+    title: 'Asset Properties',
     showCloseButton: true,
     showFooter: true,
     footerButtons: [
@@ -181,6 +181,7 @@ export function createDialogStructure(customConfig = {}, baseStructure = Standar
 /**
  * Get dialog structure by type
  * @param {string} type - Dialog type ('settings', 'actor-properties', 'universal', 'folder-picker', 'grid-settings')
+ * Note: 'actor-properties' is used for Asset Properties dialog
  * @returns {Object} - Dialog structure
  */
 export function getDialogStructure(type) {

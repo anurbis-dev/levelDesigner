@@ -10,8 +10,8 @@ import {
 import { Logger } from '../utils/Logger.js';
 
 /**
- * Actor Properties Window - extends BaseDialog
- * Provides a modal window for editing actor properties
+ * Asset Properties Window - extends BaseDialog
+ * Provides a modal window for editing asset properties
  */
 export class ActorPropertiesWindow extends BaseDialog {
     constructor(stateManager, levelEditor) {
@@ -56,7 +56,7 @@ export class ActorPropertiesWindow extends BaseDialog {
     }
 
     show(actor = null) {
-        Logger.ui.info('ActorPropertiesWindow: show() called');
+        Logger.ui.info('AssetPropertiesWindow: show() called');
             
             if (actor) {
                 this.currentActor = actor;
@@ -96,7 +96,7 @@ export class ActorPropertiesWindow extends BaseDialog {
 
     onHide() {
         // Called after dialog is hidden
-        Logger.ui.info('ActorPropertiesWindow: Dialog hidden');
+        Logger.ui.info('AssetPropertiesWindow: Dialog hidden');
     }
 
     onConfirm() {
@@ -112,7 +112,7 @@ export class ActorPropertiesWindow extends BaseDialog {
 
     renderActorPropertiesContent() {
         if (!this.currentActor) {
-            return '<div style="color: var(--ui-text-color, #9ca3af);">No actor selected</div>';
+            return '<div style="color: var(--ui-text-color, #9ca3af);">No asset selected</div>';
         }
 
         const actor = this.currentActor;
@@ -317,7 +317,10 @@ export class ActorPropertiesWindow extends BaseDialog {
     }
 
     apply() {
-        if (!this.currentActor) return;
+        if (!this.currentActor) {
+            Logger.ui.warn('ActorPropertiesWindow: apply() - no currentActor');
+            return;
+        }
 
         const name = document.getElementById('actor-name')?.value || '';
         const x = parseFloat(document.getElementById('actor-x')?.value) || 0;
@@ -325,14 +328,31 @@ export class ActorPropertiesWindow extends BaseDialog {
         const width = parseFloat(document.getElementById('actor-width')?.value) || 32;
         const height = parseFloat(document.getElementById('actor-height')?.value) || 32;
         const color = document.getElementById('actor-color')?.value || '#3B82F6';
-        const imgSrc = document.getElementById('actor-imgSrc')?.value || '';
+        const imgSrcValue = document.getElementById('actor-imgSrc')?.value || '';
+        const imgSrc = imgSrcValue === '' ? null : imgSrcValue;
         const category = document.getElementById('actor-category')?.value || '';
 
+        // Check if there are actual changes before updating
+        // Compare with current asset values to avoid unnecessary updates
+        const hasActualChanges = (
+            (name.trim() !== (this.currentActor.name || '').trim()) ||
+            (Number(width) !== Number(this.currentActor.width || 32)) ||
+            (Number(height) !== Number(this.currentActor.height || 32)) ||
+            (color.toUpperCase().trim() !== (this.currentActor.color || '#3B82F6').toUpperCase().trim()) ||
+            (imgSrc !== (this.currentActor.imgSrc || null)) ||
+            (category.trim() !== (this.currentActor.category || '').trim())
+        );
+        
+        if (!hasActualChanges) {
+            this.hide();
+            return;
+        }
+
         // Create updated data object (state 2 - current editor state)
+        // Note: x and y are position properties for objects on level, not asset properties
+        // They should not be included in asset update as they don't affect hasUnsavedChanges
         const updatedData = {
             name: name,
-            x: x,
-            y: y,
             width: width,
             height: height,
             color: color,
@@ -342,15 +362,27 @@ export class ActorPropertiesWindow extends BaseDialog {
 
         // Update in asset manager if it's an asset
         // AssetManager will compare with original state (state 1) and set hasUnsavedChanges flag
-        if (this.levelEditor && this.levelEditor.assetManager) {
-            const success = this.levelEditor.assetManager.updateAsset(this.currentActor.id, updatedData);
+        // Try to get assetManager from levelEditor or directly from assetPanel
+        let assetManager = this.levelEditor?.assetManager;
+        if (!assetManager && this.levelEditor?.assetPanel?.assetManager) {
+            assetManager = this.levelEditor.assetPanel.assetManager;
+        }
+        
+        if (assetManager) {
+            const success = assetManager.updateAsset(this.currentActor.id, updatedData);
             if (!success) {
-                Logger.ui.error('Failed to update asset in AssetManager');
+                Logger.ui.error('ActorPropertiesWindow: Failed to update asset in AssetManager');
                 return;
             }
+            
+            // AssetManager.updateAsset() already calls stateManager.notify('assetsChanged')
+            // which triggers AssetPanel re-render via subscription
         } else {
-            // Fallback: update directly
+            // Fallback: update directly (for non-asset objects)
             Object.assign(this.currentActor, updatedData);
+            // Also update x and y for level objects (not assets)
+            if (x !== undefined) this.currentActor.x = x;
+            if (y !== undefined) this.currentActor.y = y;
         }
 
         // Mark state as dirty for re-render
@@ -361,11 +393,6 @@ export class ActorPropertiesWindow extends BaseDialog {
         // Trigger UI refresh
         if (this.levelEditor && this.levelEditor.render) {
             this.levelEditor.render();
-        }
-
-        // Update asset panel if available
-        if (this.levelEditor && this.levelEditor.assetPanel && this.levelEditor.assetPanel.render) {
-            this.levelEditor.assetPanel.render();
         }
 
         Logger.ui.debug(`Applied changes to actor: ${this.currentActor.name}`);
@@ -381,7 +408,7 @@ export class ActorPropertiesWindow extends BaseDialog {
      * Cleanup and destroy window
      */
     destroy() {
-        Logger.ui.debug('Destroying ActorPropertiesWindow');
+        Logger.ui.debug('Destroying AssetPropertiesWindow');
         
         // Clear references
         this.currentActor = null;
@@ -391,7 +418,7 @@ export class ActorPropertiesWindow extends BaseDialog {
         // Call parent destroy
         super.destroy();
         
-        Logger.ui.debug('ActorPropertiesWindow destroyed');
+        Logger.ui.debug('AssetPropertiesWindow destroyed');
     }
 }
 
