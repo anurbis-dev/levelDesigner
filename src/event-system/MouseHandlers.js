@@ -4,6 +4,7 @@ import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
 import { SnapUtils } from '../utils/SnapUtils.js';
 import { throttle } from '../utils/PerformanceUtils.js';
 import { PERFORMANCE } from '../constants/EditorConstants.js';
+import { SelectionUtils } from '../utils/SelectionUtils.js';
 
 /**
  * Mouse Handlers module for LevelEditor
@@ -309,31 +310,30 @@ export class MouseHandlers extends BaseModule {
                 this.editor.updateAllPanels();
             }
             
-            // Handle simple click (without drag) with modifiers
+            // Handle simple click (without drag) with modifiers using SelectionUtils
             if (mouse.marqueePendingClickInfo && !mouse.isMarqueeSelecting) {
                 const clickInfo = mouse.marqueePendingClickInfo;
                 const selectedObjects = new Set(this.editor.stateManager.get('selectedObjects'));
-                let selectionChanged = false;
                 
                 if (clickInfo.ctrlKey) {
-                    // Ctrl/Cmd+click: toggle selection
-                    if (clickInfo.isSelected) {
-                        selectedObjects.delete(clickInfo.obj.id);
-                    } else {
-                        selectedObjects.add(clickInfo.obj.id);
-                    }
-                    selectionChanged = true;
+                    // Ctrl/Cmd+click: toggle selection (using SelectionUtils)
+                    SelectionUtils.handleCtrlClick(clickInfo.obj, selectedObjects, {
+                        stateManager: this.editor.stateManager,
+                        selectionKey: 'selectedObjects',
+                        anchorKey: 'canvas.shiftAnchor'
+                    });
+                    this.editor.updateAllPanels();
                 } else if (clickInfo.shiftKey) {
-                    // Shift+click: add to selection (not toggle)
+                    // Shift+click: add to selection (not toggle, canvas-specific)
+                    // Note: For canvas, Shift+click adds, not range selection like in panels
                     if (!clickInfo.isSelected) {
                         selectedObjects.add(clickInfo.obj.id);
-                        selectionChanged = true;
+                        this.editor.stateManager.update({
+                            'canvas.shiftAnchor': clickInfo.obj.id
+                        });
+                        this.editor.stateManager.set('selectedObjects', selectedObjects);
+                        this.editor.updateAllPanels();
                     }
-                }
-                
-                if (selectionChanged) {
-                    this.editor.stateManager.set('selectedObjects', selectedObjects);
-                    this.editor.updateAllPanels();
                 }
             }
             
@@ -743,18 +743,20 @@ export class MouseHandlers extends BaseModule {
     handleObjectClick(e, obj, worldPos) {
         const selectedObjects = new Set(this.editor.stateManager.get('selectedObjects'));
         const isSelected = selectedObjects.has(obj.id);
-        let selectionChanged = false;
         
         // Check for Alt+drag duplication - works on any object, selected or not
         if (e.altKey) {
             Logger.mouse.debug('Alt+click on object, starting duplication');
             
-            // If object is not selected, select it first
+            // If object is not selected, select it first (using SelectionUtils)
             if (!isSelected) {
-                selectedObjects.clear();
-                selectedObjects.add(obj.id);
-                this.editor.stateManager.set('selectedObjects', selectedObjects);
-                this.editor.updateAllPanels();
+                SelectionUtils.selectSingleItem(
+                    this.editor.stateManager,
+                    obj.id,
+                    'selectedObjects',
+                    'canvas.shiftAnchor',
+                    () => this.editor.updateAllPanels()
+                );
             }
             
             this.editor.duplicateOperations.startFromSelection();
@@ -796,16 +798,21 @@ export class MouseHandlers extends BaseModule {
             return;
         }
         
-        // Regular click without modifiers: replace selection
+        // Regular click without modifiers: replace selection (using SelectionUtils)
         if (!isSelected) {
-            selectedObjects.clear();
-            selectedObjects.add(obj.id);
-            this.editor.stateManager.set('selectedObjects', selectedObjects);
-            this.editor.updateAllPanels();
+            SelectionUtils.selectSingleItem(
+                this.editor.stateManager,
+                obj.id,
+                'selectedObjects',
+                'canvas.shiftAnchor',
+                () => this.editor.updateAllPanels()
+            );
         }
         
         // Only start dragging if the clicked object is selected and no modifiers
-        if (selectedObjects.has(obj.id)) {
+        // Get fresh selection state after SelectionUtils call
+        const currentSelection = this.editor.stateManager.get('selectedObjects');
+        if (currentSelection && currentSelection.has(obj.id)) {
             // Calculate anchor point (bottom-left corner of object) for snap-to-grid
             const objWorldPos = this.editor.objectOperations.getObjectWorldPosition(obj);
             const objHeight = obj.height || 32;
@@ -1181,77 +1188,85 @@ export class MouseHandlers extends BaseModule {
 
         const marquee = mouse.marqueeRect;
         const marqueeMode = mouse.marqueeMode || 'replace';
-        const selectedObjects = new Set(this.editor.stateManager.get('selectedObjects'));
-        
-        // Collect objects inside marquee
-        const objectsInMarquee = new Set();
 
-        if (this.isInGroupEditMode()) {
-            // In group edit mode, check ALL descendants without viewport filtering
-            const groupEditMode = this.getGroupEditMode();
-            const selectable = this.editor.objectOperations.computeSelectableSet();
+        // Setup options for SelectionUtils with canvas-specific callback
+        const marqueeOptions = {
+            selectionKey: 'selectedObjects',
+            marqueeMode: marqueeMode,
+            getObjectsInMarquee: (marqueeRect) => {
+                // Canvas mode: get objects in marquee using world coordinates
+                const objectsInMarquee = [];
 
-            // Collect all descendants of the edited group
-            const collect = (g) => {
-                const res = [];
-                g.children.forEach(ch => {
-                    if (selectable.has(ch.id)) {
-                        res.push(ch);
-                    }
-                    if (ch.type === 'group') res.push(...collect(ch));
-                });
-                return res;
-            };
-            const candidates = collect(groupEditMode.group);
+                if (this.isInGroupEditMode()) {
+                    // In group edit mode, check ALL descendants without viewport filtering
+                    const groupEditMode = this.getGroupEditMode();
+                    const selectable = this.editor.objectOperations.computeSelectableSet();
 
-            candidates.forEach(obj => {
-                const bounds = this.editor.renderOperations.parallaxRenderer.getObjectWorldBoundsWithParallax(obj, this.editor.renderOperations.getEffectiveLayerId(obj));
-                if (marquee.x < bounds.maxX && marquee.x + marquee.width > bounds.minX &&
-                    marquee.y < bounds.maxY && marquee.y + marquee.height > bounds.minY) {
-                    objectsInMarquee.add(obj.id);
-                }
-            });
-        } else {
-            // Normal mode - use viewport optimization for better performance
-            const selectableInViewport = this.editor.getSelectableObjectsInViewport();
-            selectableInViewport.forEach(objId => {
-                const obj = this.editor.getCachedObject(objId);
-                if (obj) {
-                    const bounds = this.editor.renderOperations.parallaxRenderer.getObjectWorldBoundsWithParallax(obj, this.editor.renderOperations.getEffectiveLayerId(obj));
-                    if (marquee.x < bounds.maxX && marquee.x + marquee.width > bounds.minX &&
-                        marquee.y < bounds.maxY && marquee.y + marquee.height > bounds.minY) {
-                        objectsInMarquee.add(obj.id);
-                    }
-                }
-            });
-        }
+                    // Collect all descendants of the edited group
+                    const collect = (g) => {
+                        const res = [];
+                        g.children.forEach(ch => {
+                            if (selectable.has(ch.id)) {
+                                res.push(ch);
+                            }
+                            if (ch.type === 'group') res.push(...collect(ch));
+                        });
+                        return res;
+                    };
+                    const candidates = collect(groupEditMode.group);
 
-        // Apply marquee mode to selection
-        if (marqueeMode === 'replace') {
-            // Replace selection with objects in marquee
-            selectedObjects.clear();
-            objectsInMarquee.forEach(objId => selectedObjects.add(objId));
-        } else if (marqueeMode === 'add') {
-            // Add objects in marquee to selection
-            objectsInMarquee.forEach(objId => selectedObjects.add(objId));
-        } else if (marqueeMode === 'toggle') {
-            // Toggle selection for objects in marquee
-            objectsInMarquee.forEach(objId => {
-                if (selectedObjects.has(objId)) {
-                    selectedObjects.delete(objId);
+                    candidates.forEach(obj => {
+                        const bounds = this.editor.renderOperations.parallaxRenderer.getObjectWorldBoundsWithParallax(
+                            obj, 
+                            this.editor.renderOperations.getEffectiveLayerId(obj)
+                        );
+                        if (marqueeRect.x < bounds.maxX && marqueeRect.x + marqueeRect.width > bounds.minX &&
+                            marqueeRect.y < bounds.maxY && marqueeRect.y + marqueeRect.height > bounds.minY) {
+                            objectsInMarquee.push(obj.id);
+                        }
+                    });
                 } else {
-                    selectedObjects.add(objId);
+                    // Normal mode - use viewport optimization for better performance
+                    const selectableInViewport = this.editor.getSelectableObjectsInViewport();
+                    selectableInViewport.forEach(objId => {
+                        const obj = this.editor.getCachedObject(objId);
+                        if (obj) {
+                            const bounds = this.editor.renderOperations.parallaxRenderer.getObjectWorldBoundsWithParallax(
+                                obj, 
+                                this.editor.renderOperations.getEffectiveLayerId(obj)
+                            );
+                            if (marqueeRect.x < bounds.maxX && marqueeRect.x + marqueeRect.width > bounds.minX &&
+                                marqueeRect.y < bounds.maxY && marqueeRect.y + marqueeRect.height > bounds.minY) {
+                                objectsInMarquee.push(obj.id);
+                            }
+                        }
+                    });
                 }
-            });
-        }
 
-        this.editor.stateManager.set('selectedObjects', selectedObjects);
+                return objectsInMarquee;
+            },
+            onSelectionChange: (selectedItems) => {
+                // Update panels after selection change
+                this.editor.updateAllPanels();
+            }
+        };
+
+        // Store options in state for SelectionUtils
+        this.editor.stateManager.set('marquee.options', marqueeOptions);
+        this.editor.stateManager.set('marquee.mode', marqueeMode);
+
+        // Use SelectionUtils to finalize marquee selection (canvas mode)
+        SelectionUtils.finalizeMarqueeSelection(null, null, this.editor.stateManager);
+
+        // Cleanup marquee state
         this.editor.stateManager.update({
             'mouse.marqueeRect': null,
             'mouse.marqueeStartX': null,
             'mouse.marqueeStartY': null,
             'mouse.isMarqueeSelecting': false,
-            'mouse.marqueeMode': null
+            'mouse.marqueeMode': null,
+            'marquee.options': null,
+            'marquee.mode': null
         });
         
         // Clear pending marquee state if any
@@ -1265,7 +1280,8 @@ export class MouseHandlers extends BaseModule {
         
         // Check if Alt is still pressed after marquee selection to start duplication
         const currentMouse = this.editor.stateManager.get('mouse');
-        if (currentMouse.altKey && selectedObjects.size > 0) {
+        const selectedObjects = this.editor.stateManager.get('selectedObjects');
+        if (currentMouse.altKey && selectedObjects && selectedObjects.size > 0) {
             Logger.mouse.debug('Alt+drag duplication after marquee selection');
             this.editor.duplicateOperations.startFromSelection();
         }
