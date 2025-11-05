@@ -2,7 +2,7 @@
  * SplashScreenDialog - Splash screen dialog with image, text content, and version footer
  * 
  * @author Alexey Borzykh aka NURB
- * @version 3.54.1
+ * @version 3.54.3
  */
 
 import { BaseDialog } from './BaseDialog.js';

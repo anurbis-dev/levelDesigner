@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>2D Level Editor v3.54.1</title>
+    <title>2D Level Editor</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     <!-- Tailwind CSS (built locally) -->
@@ -71,6 +71,18 @@
     <link rel="stylesheet" href="styles/dialog-positioning.css">
     <link rel="stylesheet" href="styles/console-context-menu.css">
     <link rel="stylesheet" href="styles/user-settings.css">
+    <style>
+        /* Hide body until editor is fully initialized */
+        body:not(.editor-ready) {
+            visibility: hidden;
+            opacity: 0;
+        }
+        body.editor-ready {
+            visibility: visible;
+            opacity: 1;
+            transition: opacity 0.2s ease-in;
+        }
+    </style>
 </head>
 <body class="bg-gray-800 text-white font-sans flex flex-col h-screen">
 
@@ -82,7 +94,7 @@
                 <!-- Menus will be dynamically generated here -->
             </div>
             <div class="text-sm text-gray-400">
-                <span id="header-version-info">v3.54.1</span>
+                <span id="header-version-info"></span>
             </div>
         </nav>
     </header>
@@ -417,6 +429,8 @@
                 Logger.lifecycle.info('Level Editor initialized successfully');
             }).catch(error => {
                 Logger.lifecycle.warn('Failed to initialize level editor:', error);
+                // Show UI even if initialization failed
+                document.body.classList.add('editor-ready');
                 // Don't show alert for async response errors from extensions
                 if (!ExtensionErrorUtils.isExtensionError(error)) {
                     try {
@@ -431,6 +445,8 @@
             });
         } catch (error) {
             Logger.lifecycle.warn('Error calling editor.init():', error);
+            // Show UI even if initialization failed
+            document.body.classList.add('editor-ready');
         }
 
         // User preferences manager is already initialized above
