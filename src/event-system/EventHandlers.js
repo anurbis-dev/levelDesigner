@@ -17,6 +17,20 @@ class TabMoveContextMenu {
     }
 
     /**
+     * Cleanup all handlers for the current menu
+     * @private
+     */
+    _cleanupMenuHandlers(moveItem, contextMenu) {
+        if (moveItem) {
+            eventHandlerManager.unregisterElement(moveItem);
+        }
+        if (contextMenu) {
+            eventHandlerManager.unregisterElement(contextMenu);
+        }
+        globalEventRegistry.unregisterComponentHandlers('tab-move-menu-close', 'document');
+    }
+
+    /**
      * Show context menu for tab movement
      */
     showTabMoveMenu(event, tabName, currentPanel, targetPanel) {
@@ -45,15 +59,23 @@ class TabMoveContextMenu {
         const moveItem = document.createElement('div');
         moveItem.className = 'base-context-menu-item';
         moveItem.innerHTML = `<span>↔️</span><span>Move to ${targetPanelName} Panel</span>`;
-        moveItem.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            e.stopImmediatePropagation();
-            
-            self.editor.panelPositionManager.moveTab(tabName, currentPanel, targetPanel);
-            contextMenu.remove();
-            self.currentMenu = null;
-        });
+        
+        // Register click handler using unified system
+        eventHandlerManager.registerElement(moveItem, {
+            click: (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+                
+                self.editor.panelPositionManager.moveTab(tabName, currentPanel, targetPanel);
+                contextMenu.remove();
+                self.currentMenu = null;
+                
+                // Cleanup handlers
+                self._cleanupMenuHandlers(moveItem, contextMenu);
+            }
+        }, 'tab-move-menu-item');
+        
         contextMenu.appendChild(moveItem);
 
         // Add to document
@@ -71,22 +93,27 @@ class TabMoveContextMenu {
             contextMenu.classList.add('show');
         });
 
-        // Close menu when clicking outside
+        // Register click handler to context menu to prevent closing using unified system
+        eventHandlerManager.registerElement(contextMenu, {
+            click: (e) => {
+                e.stopPropagation();
+            }
+        }, 'tab-move-context-menu');
+        
+        // Close menu when clicking outside - use GlobalEventRegistry
         const closeMenu = (e) => {
             if (!contextMenu.contains(e.target)) {
                 contextMenu.remove();
                 self.currentMenu = null;
-                document.removeEventListener('click', closeMenu);
+                self._cleanupMenuHandlers(moveItem, contextMenu);
             }
         };
         
-        // Add click handler to context menu to prevent closing
-        contextMenu.addEventListener('click', (e) => {
-            e.stopPropagation();
-        });
-        
+        // Register document click handler using GlobalEventRegistry
         setTimeout(() => {
-            document.addEventListener('click', closeMenu);
+            globalEventRegistry.registerComponentHandlers('tab-move-menu-close', {
+                click: closeMenu
+            }, 'document');
         }, 0);
     }
 
@@ -170,6 +197,13 @@ class TabMoveContextMenu {
     destroy() {
         // Remove current menu if exists
         if (this.currentMenu) {
+            // Cleanup handlers before removing menu
+            const menuItems = this.currentMenu.querySelectorAll('.base-context-menu-item');
+            menuItems.forEach(item => {
+                eventHandlerManager.unregisterElement(item);
+            });
+            this._cleanupMenuHandlers(null, this.currentMenu);
+            
             this.currentMenu.remove();
             this.currentMenu = null;
         }
