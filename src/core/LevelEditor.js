@@ -22,6 +22,7 @@ import { duplicateRenderUtils } from '../utils/DuplicateUtils.js';
 import { EventHandlers } from '../event-system/EventHandlers.js';
 import { MouseHandlers } from '../event-system/MouseHandlers.js';
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
+import { globalEventRegistry } from '../event-system/GlobalEventRegistry.js';
 import { ObjectOperations } from './ObjectOperations.js';
 import { GroupOperations } from './GroupOperations.js';
 import { RenderOperations } from './RenderOperations.js';
@@ -797,149 +798,159 @@ export class LevelEditor {
      * Now saves only when page is closed/reloaded, not on every change
      */
     setupAutoSaveOnUnload() {
-        window.addEventListener('beforeunload', () => {
-            try {
-                Logger.ui.info('Saving user settings on page unload...');
+        // Check if already registered to prevent duplicates
+        if (this._autoSaveUnloadRegistered) {
+            return;
+        }
+        
+        // Use GlobalEventRegistry for window events
+        globalEventRegistry.registerComponentHandlers('level-editor-autosave-unload', {
+            beforeunload: () => {
+                try {
+                    Logger.ui.info('Saving user settings on page unload...');
 
-                // Save toolbar state
-                if (this.toolbar) {
-                    this.toolbar.saveState();
-                }
+                    // Save toolbar state
+                    if (this.toolbar) {
+                        this.toolbar.saveState();
+                    }
 
-                // Save current panel tabs
-                const currentRightPanelTab = this.stateManager.get('rightPanelTab');
-                if (currentRightPanelTab) {
-                    this.configManager.set('editor.view.rightPanelTab', currentRightPanelTab);
-                }
+                    // Save current panel tabs
+                    const currentRightPanelTab = this.stateManager.get('rightPanelTab');
+                    if (currentRightPanelTab) {
+                        this.configManager.set('editor.view.rightPanelTab', currentRightPanelTab);
+                    }
                 
-                const currentLeftPanelTab = this.stateManager.get('leftPanelTab');
-                if (currentLeftPanelTab) {
-                    this.configManager.set('editor.view.leftPanelTab', currentLeftPanelTab);
-                }
+                    const currentLeftPanelTab = this.stateManager.get('leftPanelTab');
+                    if (currentLeftPanelTab) {
+                        this.configManager.set('editor.view.leftPanelTab', currentLeftPanelTab);
+                    }
 
-                // Save current active asset tabs
-                const currentActiveAssetTabs = this.stateManager.get('activeAssetTabs');
-                if (currentActiveAssetTabs) {
-                    const tabsArray = Array.from(currentActiveAssetTabs);
-                    this.configManager.set('editor.view.activeAssetTabs', tabsArray);
-                }
+                    // Save current active asset tabs
+                    const currentActiveAssetTabs = this.stateManager.get('activeAssetTabs');
+                    if (currentActiveAssetTabs) {
+                        const tabsArray = Array.from(currentActiveAssetTabs);
+                        this.configManager.set('editor.view.activeAssetTabs', tabsArray);
+                    }
 
-                // Save current asset panel size if it exists
-                if (this.assetPanel?.assetSize) {
-                    this.configManager.set('ui.assetSize', this.assetPanel.assetSize);
-                }
+                    // Save current asset panel size if it exists
+                    if (this.assetPanel?.assetSize) {
+                        this.configManager.set('ui.assetSize', this.assetPanel.assetSize);
+                    }
 
-                // Save current asset panel view mode if it exists
-                if (this.assetPanel?.viewMode) {
-                    this.configManager.set('ui.assetViewMode', this.assetPanel.viewMode);
-                }
+                    // Save current asset panel view mode if it exists
+                    if (this.assetPanel?.viewMode) {
+                        this.configManager.set('ui.assetViewMode', this.assetPanel.viewMode);
+                    }
 
-                // Save current snap to grid state
-                const snapToGrid = this.stateManager.get('canvas.snapToGrid');
-                if (snapToGrid !== undefined) {
-                    this.configManager.set('canvas.snapToGrid', snapToGrid);
-                }
+                    // Save current snap to grid state
+                    const snapToGrid = this.stateManager.get('canvas.snapToGrid');
+                    if (snapToGrid !== undefined) {
+                        this.configManager.set('canvas.snapToGrid', snapToGrid);
+                    }
 
-                // Save current panel sizes
-                const rightPanelWidth = this.stateManager.get('panels.rightPanelWidth');
-                if (rightPanelWidth && rightPanelWidth > 0) {
-                    this.userPrefs.set('rightPanelWidth', rightPanelWidth);
-                }
+                    // Save current panel sizes
+                    const rightPanelWidth = this.stateManager.get('panels.rightPanelWidth');
+                    if (rightPanelWidth && rightPanelWidth > 0) {
+                        this.userPrefs.set('rightPanelWidth', rightPanelWidth);
+                    }
 
-                const leftPanelWidth = this.stateManager.get('panels.leftPanelWidth');
-                if (leftPanelWidth && leftPanelWidth > 0) {
-                    this.userPrefs.set('leftPanelWidth', leftPanelWidth);
-                }
+                    const leftPanelWidth = this.stateManager.get('panels.leftPanelWidth');
+                    if (leftPanelWidth && leftPanelWidth > 0) {
+                        this.userPrefs.set('leftPanelWidth', leftPanelWidth);
+                    }
 
-                const assetsPanelHeight = this.stateManager.get('panels.assetsPanelHeight');
-                if (assetsPanelHeight && assetsPanelHeight > 0) {
-                    this.userPrefs.set('assetsPanelHeight', assetsPanelHeight);
-                }
+                    const assetsPanelHeight = this.stateManager.get('panels.assetsPanelHeight');
+                    if (assetsPanelHeight && assetsPanelHeight > 0) {
+                        this.userPrefs.set('assetsPanelHeight', assetsPanelHeight);
+                    }
 
-                // Save panel tab orders
-                const rightPanelTabOrder = this.stateManager.get('rightPanelTabOrder');
-                if (rightPanelTabOrder && Array.isArray(rightPanelTabOrder)) {
-                    this.userPrefs.set('rightPanelTabOrder', rightPanelTabOrder);
-                }
+                    // Save panel tab orders
+                    const rightPanelTabOrder = this.stateManager.get('rightPanelTabOrder');
+                    if (rightPanelTabOrder && Array.isArray(rightPanelTabOrder)) {
+                        this.userPrefs.set('rightPanelTabOrder', rightPanelTabOrder);
+                    }
 
-                const leftPanelTabOrder = this.stateManager.get('leftPanelTabOrder');
-                if (leftPanelTabOrder && Array.isArray(leftPanelTabOrder)) {
-                    this.userPrefs.set('leftPanelTabOrder', leftPanelTabOrder);
-                }
+                    const leftPanelTabOrder = this.stateManager.get('leftPanelTabOrder');
+                    if (leftPanelTabOrder && Array.isArray(leftPanelTabOrder)) {
+                        this.userPrefs.set('leftPanelTabOrder', leftPanelTabOrder);
+                    }
 
-                const assetTabOrder = this.stateManager.get('assetTabOrder');
-                if (assetTabOrder && Array.isArray(assetTabOrder)) {
-                    this.userPrefs.set('assetTabOrder', assetTabOrder);
-                }
+                    const assetTabOrder = this.stateManager.get('assetTabOrder');
+                    if (assetTabOrder && Array.isArray(assetTabOrder)) {
+                        this.userPrefs.set('assetTabOrder', assetTabOrder);
+                    }
 
-                // Save tab positions (which panel each tab is in)
-                const tabPositions = this.stateManager.get('tabPositions');
-                if (tabPositions) {
-                    Object.entries(tabPositions).forEach(([tabName, position]) => {
-                        this.userPrefs.set(`tabPosition_${tabName}`, position);
-                    });
-                }
+                    // Save tab positions (which panel each tab is in)
+                    const tabPositions = this.stateManager.get('tabPositions');
+                    if (tabPositions) {
+                        Object.entries(tabPositions).forEach(([tabName, position]) => {
+                            this.userPrefs.set(`tabPosition_${tabName}`, position);
+                        });
+                    }
 
-                // Save panel visibility states
-                const rightPanel = document.getElementById('right-panel');
-                if (rightPanel) {
-                    const isRightPanelVisible = rightPanel.style.display !== 'none';
-                    this.userPrefs.set('rightPanelVisible', isRightPanelVisible);
-                }
+                    // Save panel visibility states
+                    const rightPanel = document.getElementById('right-panel');
+                    if (rightPanel) {
+                        const isRightPanelVisible = rightPanel.style.display !== 'none';
+                        this.userPrefs.set('rightPanelVisible', isRightPanelVisible);
+                    }
 
-                const leftPanel = document.getElementById('left-panel');
-                if (leftPanel) {
-                    const isLeftPanelVisible = leftPanel.style.display !== 'none';
-                    this.userPrefs.set('leftPanelVisible', isLeftPanelVisible);
-                }
+                    const leftPanel = document.getElementById('left-panel');
+                    if (leftPanel) {
+                        const isLeftPanelVisible = leftPanel.style.display !== 'none';
+                        this.userPrefs.set('leftPanelVisible', isLeftPanelVisible);
+                    }
 
-                const assetsPanel = document.getElementById('assets-panel');
-                if (assetsPanel) {
-                    const isAssetsPanelVisible = assetsPanel.style.display !== 'none';
-                    this.userPrefs.set('assetsPanelVisible', isAssetsPanelVisible);
-                }
+                    const assetsPanel = document.getElementById('assets-panel');
+                    if (assetsPanel) {
+                        const isAssetsPanelVisible = assetsPanel.style.display !== 'none';
+                        this.userPrefs.set('assetsPanelVisible', isAssetsPanelVisible);
+                    }
 
-                // Save current grid settings from StateManager
-                const gridSize = this.stateManager.get('canvas.gridSize');
-                const gridColor = this.stateManager.get('canvas.gridColor');
-                const gridThickness = this.stateManager.get('canvas.gridThickness');
-                const gridOpacity = this.stateManager.get('canvas.gridOpacity');
-                const gridSubdivisions = this.stateManager.get('canvas.gridSubdivisions');
-                const gridSubdivColor = this.stateManager.get('canvas.gridSubdivColor');
-                const gridSubdivThickness = this.stateManager.get('canvas.gridSubdivThickness');
+                    // Save current grid settings from StateManager
+                    const gridSize = this.stateManager.get('canvas.gridSize');
+                    const gridColor = this.stateManager.get('canvas.gridColor');
+                    const gridThickness = this.stateManager.get('canvas.gridThickness');
+                    const gridOpacity = this.stateManager.get('canvas.gridOpacity');
+                    const gridSubdivisions = this.stateManager.get('canvas.gridSubdivisions');
+                    const gridSubdivColor = this.stateManager.get('canvas.gridSubdivColor');
+                    const gridSubdivThickness = this.stateManager.get('canvas.gridSubdivThickness');
 
-                if (gridSize !== undefined) {
-                    this.configManager.set('grid.size', gridSize);
-                }
-                if (gridColor !== undefined) {
-                    this.configManager.set('grid.color', gridColor);
-                }
-                if (gridThickness !== undefined) {
-                    this.configManager.set('grid.thickness', gridThickness);
-                }
-                if (gridOpacity !== undefined) {
-                    this.configManager.set('grid.opacity', gridOpacity);
-                }
-                if (gridSubdivisions !== undefined) {
-                    this.configManager.set('grid.subdivisions', gridSubdivisions);
-                }
-                if (gridSubdivColor !== undefined) {
-                    this.configManager.set('grid.subdivColor', gridSubdivColor);
-                }
-                if (gridSubdivThickness !== undefined) {
-                    this.configManager.set('grid.subdivThickness', gridSubdivThickness);
-                }
+                    if (gridSize !== undefined) {
+                        this.configManager.set('grid.size', gridSize);
+                    }
+                    if (gridColor !== undefined) {
+                        this.configManager.set('grid.color', gridColor);
+                    }
+                    if (gridThickness !== undefined) {
+                        this.configManager.set('grid.thickness', gridThickness);
+                    }
+                    if (gridOpacity !== undefined) {
+                        this.configManager.set('grid.opacity', gridOpacity);
+                    }
+                    if (gridSubdivisions !== undefined) {
+                        this.configManager.set('grid.subdivisions', gridSubdivisions);
+                    }
+                    if (gridSubdivColor !== undefined) {
+                        this.configManager.set('grid.subdivColor', gridSubdivColor);
+                    }
+                    if (gridSubdivThickness !== undefined) {
+                        this.configManager.set('grid.subdivThickness', gridSubdivThickness);
+                    }
 
-                // Force save all modified settings immediately
-                if (this.configManager) {
-                    this.configManager.forceSaveAllSettings();
-                }
+                    // Force save all modified settings immediately
+                    if (this.configManager) {
+                        this.configManager.forceSaveAllSettings();
+                    }
 
-                Logger.ui.info('User settings saved successfully');
+                    Logger.ui.info('User settings saved successfully');
             } catch (error) {
                 Logger.ui.error('Failed to save user settings:', error);
             }
-        });
+        }
+        }, 'window');
+        
+        this._autoSaveUnloadRegistered = true;
     }
 
     /**
@@ -947,22 +958,32 @@ export class LevelEditor {
      * Saves settings when user switches to another tab or minimizes browser
      */
     setupAutoSaveOnVisibilityChange() {
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                try {
-                    Logger.ui.info('Saving user settings on tab switch...');
-                    
-                    // Force save all modified settings immediately
-                    if (this.configManager) {
-                        this.configManager.forceSaveAllSettings();
+        // Check if already registered to prevent duplicates
+        if (this._autoSaveVisibilityRegistered) {
+            return;
+        }
+        
+        // Use GlobalEventRegistry for document events
+        globalEventRegistry.registerComponentHandlers('level-editor-autosave-visibility', {
+            visibilitychange: () => {
+                if (document.hidden) {
+                    try {
+                        Logger.ui.info('Saving user settings on tab switch...');
+                        
+                        // Force save all modified settings immediately
+                        if (this.configManager) {
+                            this.configManager.forceSaveAllSettings();
+                        }
+                        
+                        Logger.ui.info('User settings saved on tab switch');
+                    } catch (error) {
+                        Logger.ui.error('Failed to save user settings on tab switch:', error);
                     }
-                    
-                    Logger.ui.info('User settings saved on tab switch');
-                } catch (error) {
-                    Logger.ui.error('Failed to save user settings on tab switch:', error);
                 }
             }
-        });
+        }, 'document');
+        
+        this._autoSaveVisibilityRegistered = true;
     }
 
     /**
@@ -1522,19 +1543,25 @@ export class LevelEditor {
         const btn = document.getElementById('set-camera-start-position-btn');
         if (!btn) return;
 
-        // Remove existing listener to avoid duplicates
-        const newBtn = btn.cloneNode(true);
-        btn.parentNode.replaceChild(newBtn, btn);
+        // Unregister existing handlers if any to prevent duplicates
+        try {
+            eventHandlerManager.unregisterElement(btn);
+        } catch (e) {
+            // Element might not be registered yet, ignore
+        }
 
-        newBtn.addEventListener('click', () => {
-            const currentCamera = this.stateManager.get('camera');
-            this.stateManager.set('parallax.startPosition', {
-                x: currentCamera.x,
-                y: currentCamera.y
-            });
+        // Register click handler using unified system
+        eventHandlerManager.registerElement(btn, {
+            click: () => {
+                const currentCamera = this.stateManager.get('camera');
+                this.stateManager.set('parallax.startPosition', {
+                    x: currentCamera.x,
+                    y: currentCamera.y
+                });
 
-            Logger.parallax.info(`Set camera start position: (${currentCamera.x}, ${currentCamera.y})`);
-        });
+                Logger.parallax.info(`Set camera start position: (${currentCamera.x}, ${currentCamera.y})`);
+            }
+        }, 'set-camera-start-position-btn');
     }
 
     /**
