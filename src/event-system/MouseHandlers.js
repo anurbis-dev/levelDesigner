@@ -738,6 +738,24 @@ export class MouseHandlers extends BaseModule {
         }
     }
 
+    /**
+     * Determine marquee mode based on keyboard modifiers
+     * @param {Event} e - Mouse event
+     * @returns {string} Marquee mode: 'replace', 'add', or 'toggle'
+     */
+    _determineMarqueeMode(e) {
+        if (e.ctrlKey || e.metaKey) {
+            if (e.shiftKey) {
+                return 'add'; // Ctrl+Shift+drag = add to selection
+            } else {
+                return 'toggle'; // Ctrl+drag = toggle selection
+            }
+        } else if (e.shiftKey) {
+            return 'add'; // Shift+drag = add to selection
+        } else {
+            return 'replace'; // regular drag = replace selection
+        }
+    }
 
     // Helper methods for mouse interactions
     handleObjectClick(e, obj, worldPos) {
@@ -766,17 +784,8 @@ export class MouseHandlers extends BaseModule {
         // If Ctrl/Cmd or Shift is pressed, prepare for marquee on drag instead of object drag
         // Don't change selection immediately - wait for marquee completion or simple click
         if (e.ctrlKey || e.metaKey || e.shiftKey) {
-            // Save pending marquee mode for potential drag
-            let marqueeMode = 'replace';
-            if (e.ctrlKey || e.metaKey) {
-                if (e.shiftKey) {
-                    marqueeMode = 'add'; // Ctrl+Shift+drag = add to selection
-                } else {
-                    marqueeMode = 'toggle'; // Ctrl+drag = toggle selection
-                }
-            } else if (e.shiftKey) {
-                marqueeMode = 'add'; // Shift+drag = add to selection
-            }
+            // Determine marquee mode for potential drag
+            const marqueeMode = this._determineMarqueeMode(e);
             
             // Store pending marquee info for potential drag activation
             // Also store click info for handling simple click (without drag)
@@ -844,8 +853,6 @@ export class MouseHandlers extends BaseModule {
             return;
         }
 
-        const selectedObjects = this.editor.stateManager.get('selectedObjects');
-
         // If Alt is pressed, don't start marquee selection - let Alt+drag handle it
         if (e.altKey) {
             // Just clear selection if not Shift+click
@@ -856,18 +863,7 @@ export class MouseHandlers extends BaseModule {
         }
 
         // Determine marquee selection mode
-        let marqueeMode = 'replace'; // replace, toggle, add
-        if (e.ctrlKey || e.metaKey) {
-            if (e.shiftKey) {
-                marqueeMode = 'add'; // Ctrl+Shift+drag = add to selection
-            } else {
-                marqueeMode = 'toggle'; // Ctrl+drag = toggle selection
-            }
-        } else if (e.shiftKey) {
-            marqueeMode = 'add'; // Shift+drag = add to selection
-        } else {
-            marqueeMode = 'replace'; // regular drag = replace selection
-        }
+        const marqueeMode = this._determineMarqueeMode(e);
 
         // If editing groups, only close when clicking OUTSIDE the active group's frame
         if (this.isInGroupEditMode()) {
@@ -1186,13 +1182,11 @@ export class MouseHandlers extends BaseModule {
         const mouse = this.editor.stateManager.get('mouse');
         if (!mouse.marqueeRect) return;
 
-        const marquee = mouse.marqueeRect;
         const marqueeMode = mouse.marqueeMode || 'replace';
 
         // Setup options for SelectionUtils with canvas-specific callback
         const marqueeOptions = {
             selectionKey: 'selectedObjects',
-            marqueeMode: marqueeMode,
             getObjectsInMarquee: (marqueeRect) => {
                 // Canvas mode: get objects in marquee using world coordinates
                 const objectsInMarquee = [];
