@@ -787,6 +787,9 @@ export class LevelEditor {
         this.testPanningDetection();
         this.testMenuAutoClose();
         this.testCursorPositioning();
+
+        // Show editor UI after all initialization is complete
+        document.body.classList.add('editor-ready');
     }
 
     /**

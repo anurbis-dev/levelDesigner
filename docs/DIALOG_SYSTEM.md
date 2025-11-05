@@ -28,7 +28,7 @@
 - `FolderPickerDialogStructure` - диалог выбора папки
 - `GridSettingsDialogStructure` - диалог настроек сетки
 
-### SplashScreenDialog (v3.54.1)
+### SplashScreenDialog (v3.54.3)
 **Файл**: `src/ui/SplashScreenDialog.js`
 
 Специальный диалог для отображения splash screen при запуске редактора:
