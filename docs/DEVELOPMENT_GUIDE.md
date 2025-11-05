@@ -93,7 +93,7 @@ eventManager.registerElement(button, 'button', {
 
 ```javascript
 export class LevelEditor {
-    static VERSION = '3.54.3'; // ← ЕДИНСТВЕННЫЙ ИСТОЧНИК ИСТИНЫ
+    static VERSION = '3.54.4'; // ← ЕДИНСТВЕННЫЙ ИСТОЧНИК ИСТИНЫ
 }
 ```
 
