@@ -1,14 +1,15 @@
 /**
  * SelectionUtils - Utilities for element selection
  *
- * Provides common methods for element selection in panels:
+ * Provides common methods for element selection in panels and canvas:
  * - Click handling (regular, Shift+click, Ctrl+click)
  * - Marquee selection (selection by frame)
  * - Selection state management
  * - Visual selection updates
+ * - Canvas mode support (world coordinates, object-based selection)
  *
  * @author Level Designer
- * @version 3.31.0
+ * @version 3.32.0
  */
 
 import { Logger } from './Logger.js';
@@ -457,67 +458,106 @@ export class SelectionUtils {
     }
 
     /**
-     * Финальный селект элементов в marquee при отпускании мыши
-     * @param {HTMLElement} container - Контейнер с элементами
-     * @param {HTMLElement} marqueeDiv - Marquee элемент
-     * @param {StateManager} stateManager - Менеджер состояния
+     * Apply marquee mode to selection (common logic for both DOM and canvas)
+     * @param {Set} selectedItems - Current selection
+     * @param {Array<string>} itemsInMarquee - IDs of items inside marquee
+     * @param {string} marqueeMode - Selection mode: 'replace', 'add', or 'toggle'
+     * @returns {Set} Updated selection
      */
-    static finalizeMarqueeSelection(container, marqueeDiv, stateManager) {
-        const options = stateManager.get('marquee.options');
-        if (!options || !options.getSelectableItems) return;
+    static applyMarqueeMode(selectedItems, itemsInMarquee, marqueeMode) {
+        const result = new Set(selectedItems);
 
-        const marqueeMode = stateManager.get('marquee.mode') || 'replace';
-        const selectableItems = options.getSelectableItems();
-        const marqueeRect = marqueeDiv.getBoundingClientRect();
-        const selectedItems = new Set(stateManager.get(options.selectionKey || 'selectedObjects'));
-
-        // Clear previous highlights
-        selectableItems.forEach(item => {
-            item.classList.remove('marquee-highlighted');
-        });
-
-        // Find elements intersecting with marquee
-        const intersectingItems = [];
-        selectableItems.forEach(item => {
-            const itemRect = item.getBoundingClientRect();
-            const isIntersecting = !(
-                itemRect.right < marqueeRect.left ||
-                itemRect.left > marqueeRect.right ||
-                itemRect.bottom < marqueeRect.top ||
-                itemRect.top > marqueeRect.bottom
-            );
-
-            if (isIntersecting) {
-                intersectingItems.push(item.dataset.selectableId || item.dataset.assetId || item.dataset.objectId);
-            }
-        });
-
-        // Apply marquee mode
         switch (marqueeMode) {
             case 'replace':
                 // Replace selection with new elements
-                selectedItems.clear();
-                intersectingItems.forEach(id => selectedItems.add(id));
+                result.clear();
+                itemsInMarquee.forEach(id => result.add(id));
                 break;
 
             case 'add':
                 // Add elements to existing selection
-                intersectingItems.forEach(id => selectedItems.add(id));
+                itemsInMarquee.forEach(id => result.add(id));
                 break;
 
             case 'toggle':
                 // Toggle elements in selection
-                intersectingItems.forEach(id => {
-                    if (selectedItems.has(id)) {
-                        selectedItems.delete(id);
+                itemsInMarquee.forEach(id => {
+                    if (result.has(id)) {
+                        result.delete(id);
                     } else {
-                        selectedItems.add(id);
+                        result.add(id);
                     }
                 });
                 break;
         }
 
-        stateManager.set(options.selectionKey || 'selectedObjects', selectedItems);
+        return result;
+    }
+
+    /**
+     * Финальный селект элементов в marquee при отпускании мыши
+     * Supports both DOM-based (panels) and canvas-based (world coordinates) selection
+     * @param {HTMLElement} container - Контейнер с элементами (null for canvas mode)
+     * @param {HTMLElement} marqueeDiv - Marquee элемент (null for canvas mode)
+     * @param {StateManager} stateManager - Менеджер состояния
+     */
+    static finalizeMarqueeSelection(container, marqueeDiv, stateManager) {
+        const options = stateManager.get('marquee.options');
+        if (!options) return;
+
+        const marqueeMode = stateManager.get('marquee.mode') || 'replace';
+        const selectionKey = options.selectionKey || 'selectedObjects';
+        const selectedItems = new Set(stateManager.get(selectionKey));
+
+        let itemsInMarquee = [];
+
+        // Canvas mode: use getObjectsInMarquee callback
+        if (options.getObjectsInMarquee) {
+            const marqueeRect = stateManager.get('mouse.marqueeRect');
+            if (marqueeRect) {
+                itemsInMarquee = options.getObjectsInMarquee(marqueeRect);
+            }
+        }
+        // DOM mode: use getSelectableItems (existing logic)
+        else if (options.getSelectableItems && container && marqueeDiv) {
+            const selectableItems = options.getSelectableItems();
+            const marqueeRect = marqueeDiv.getBoundingClientRect();
+
+            // Clear previous highlights
+            selectableItems.forEach(item => {
+                item.classList.remove('marquee-highlighted');
+            });
+
+            // Find elements intersecting with marquee
+            selectableItems.forEach(item => {
+                const itemRect = item.getBoundingClientRect();
+                const isIntersecting = !(
+                    itemRect.right < marqueeRect.left ||
+                    itemRect.left > marqueeRect.right ||
+                    itemRect.bottom < marqueeRect.top ||
+                    itemRect.top > marqueeRect.bottom
+                );
+
+                if (isIntersecting) {
+                    const id = item.dataset.selectableId || item.dataset.assetId || item.dataset.objectId;
+                    if (id) {
+                        itemsInMarquee.push(id);
+                    }
+                }
+            });
+        } else {
+            Logger.ui.warn('SelectionUtils: finalizeMarqueeSelection - no valid options');
+            return;
+        }
+
+        // Apply marquee mode using common logic
+        const updatedSelection = this.applyMarqueeMode(selectedItems, itemsInMarquee, marqueeMode);
+        stateManager.set(selectionKey, updatedSelection);
+
+        // Call callback if provided
+        if (options.onSelectionChange) {
+            options.onSelectionChange(updatedSelection);
+        }
     }
 
     /**
