@@ -119,6 +119,44 @@ export class MouseHandlers extends BaseModule {
             }
         }
 
+        // Check for pending marquee from object click with modifiers
+        const pendingStartPos = mouse.marqueePendingStartPos;
+        if (pendingStartPos && mouse.isLeftDown && !mouse.isMarqueeSelecting && !mouse.isDragging) {
+            const dx = e.clientX - pendingStartPos.x;
+            const dy = e.clientY - pendingStartPos.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            
+            // Activate marquee if moved more than 4px threshold
+            if (dist >= 4) {
+                const pendingWorldPos = mouse.marqueePendingWorldPos;
+                const marqueeMode = mouse.marqueePendingMode;
+                
+                Logger.mouse.debug(`Starting marquee from object click (mode: ${marqueeMode})`);
+                
+                // Clear pending state
+                this.editor.stateManager.update({
+                    'mouse.marqueePendingStartPos': null,
+                    'mouse.marqueePendingWorldPos': null,
+                    'mouse.marqueePendingMode': null,
+                    'mouse.marqueePendingObjectId': null,
+                    'mouse.marqueePendingClickInfo': null
+                });
+                
+                // Start marquee selection
+                if (marqueeMode === 'replace') {
+                    this.editor.stateManager.set('selectedObjects', new Set());
+                }
+                
+                this.editor.stateManager.update({
+                    'mouse.isMarqueeSelecting': true,
+                    'mouse.marqueeRect': { x: pendingWorldPos.x, y: pendingWorldPos.y, width: 0, height: 0 },
+                    'mouse.marqueeStartX': pendingWorldPos.x,
+                    'mouse.marqueeStartY': pendingWorldPos.y,
+                    'mouse.marqueeMode': marqueeMode
+                });
+            }
+        }
+
         if (mouse.isRightDown) {
             // Pan camera
             const dx = e.clientX - mouse.lastX;
@@ -269,6 +307,45 @@ export class MouseHandlers extends BaseModule {
                 
                 // Update panels after drag ends to show final position
                 this.editor.updateAllPanels();
+            }
+            
+            // Handle simple click (without drag) with modifiers
+            if (mouse.marqueePendingClickInfo && !mouse.isMarqueeSelecting) {
+                const clickInfo = mouse.marqueePendingClickInfo;
+                const selectedObjects = new Set(this.editor.stateManager.get('selectedObjects'));
+                let selectionChanged = false;
+                
+                if (clickInfo.ctrlKey) {
+                    // Ctrl/Cmd+click: toggle selection
+                    if (clickInfo.isSelected) {
+                        selectedObjects.delete(clickInfo.obj.id);
+                    } else {
+                        selectedObjects.add(clickInfo.obj.id);
+                    }
+                    selectionChanged = true;
+                } else if (clickInfo.shiftKey) {
+                    // Shift+click: add to selection (not toggle)
+                    if (!clickInfo.isSelected) {
+                        selectedObjects.add(clickInfo.obj.id);
+                        selectionChanged = true;
+                    }
+                }
+                
+                if (selectionChanged) {
+                    this.editor.stateManager.set('selectedObjects', selectedObjects);
+                    this.editor.updateAllPanels();
+                }
+            }
+            
+            // Clear pending marquee state if marquee wasn't activated (click without drag)
+            if (mouse.marqueePendingStartPos && !mouse.isMarqueeSelecting) {
+                this.editor.stateManager.update({
+                    'mouse.marqueePendingStartPos': null,
+                    'mouse.marqueePendingWorldPos': null,
+                    'mouse.marqueePendingMode': null,
+                    'mouse.marqueePendingObjectId': null,
+                    'mouse.marqueePendingClickInfo': null
+                });
             }
             
             this.editor.stateManager.update({
@@ -684,28 +761,50 @@ export class MouseHandlers extends BaseModule {
             return; // Don't process normal selection logic
         }
         
-        if (!e.shiftKey) {
-            if (!isSelected) {
-                selectedObjects.clear();
-                selectedObjects.add(obj.id);
-                selectionChanged = true;
+        // If Ctrl/Cmd or Shift is pressed, prepare for marquee on drag instead of object drag
+        // Don't change selection immediately - wait for marquee completion or simple click
+        if (e.ctrlKey || e.metaKey || e.shiftKey) {
+            // Save pending marquee mode for potential drag
+            let marqueeMode = 'replace';
+            if (e.ctrlKey || e.metaKey) {
+                if (e.shiftKey) {
+                    marqueeMode = 'add'; // Ctrl+Shift+drag = add to selection
+                } else {
+                    marqueeMode = 'toggle'; // Ctrl+drag = toggle selection
+                }
+            } else if (e.shiftKey) {
+                marqueeMode = 'add'; // Shift+drag = add to selection
             }
-        } else {
-            if (isSelected) {
-                selectedObjects.delete(obj.id);
-                selectionChanged = true;
-            } else {
-                selectedObjects.add(obj.id);
-                selectionChanged = true;
-            }
+            
+            // Store pending marquee info for potential drag activation
+            // Also store click info for handling simple click (without drag)
+            this.editor.stateManager.update({
+                'mouse.marqueePendingStartPos': { x: e.clientX, y: e.clientY },
+                'mouse.marqueePendingWorldPos': worldPos,
+                'mouse.marqueePendingMode': marqueeMode,
+                'mouse.marqueePendingObjectId': obj.id,
+                'mouse.marqueePendingClickInfo': {
+                    obj: obj,
+                    isSelected: isSelected,
+                    ctrlKey: e.ctrlKey || e.metaKey,
+                    shiftKey: e.shiftKey
+                }
+            });
+            
+            // Don't change selection immediately - will be handled in handleMouseUp if no drag occurred
+            // Don't start object dragging - marquee will start on mouse move if threshold exceeded
+            return;
         }
         
-        if (selectionChanged) {
+        // Regular click without modifiers: replace selection
+        if (!isSelected) {
+            selectedObjects.clear();
+            selectedObjects.add(obj.id);
             this.editor.stateManager.set('selectedObjects', selectedObjects);
             this.editor.updateAllPanels();
         }
         
-        // Only start dragging if the clicked object is selected
+        // Only start dragging if the clicked object is selected and no modifiers
         if (selectedObjects.has(obj.id)) {
             // Calculate anchor point (bottom-left corner of object) for snap-to-grid
             const objWorldPos = this.editor.objectOperations.getObjectWorldPosition(obj);
@@ -749,6 +848,20 @@ export class MouseHandlers extends BaseModule {
             return;
         }
 
+        // Determine marquee selection mode
+        let marqueeMode = 'replace'; // replace, toggle, add
+        if (e.ctrlKey || e.metaKey) {
+            if (e.shiftKey) {
+                marqueeMode = 'add'; // Ctrl+Shift+drag = add to selection
+            } else {
+                marqueeMode = 'toggle'; // Ctrl+drag = toggle selection
+            }
+        } else if (e.shiftKey) {
+            marqueeMode = 'add'; // Shift+drag = add to selection
+        } else {
+            marqueeMode = 'replace'; // regular drag = replace selection
+        }
+
         // If editing groups, only close when clicking OUTSIDE the active group's frame
         if (this.isInGroupEditMode()) {
             const groupEditMode = this.getGroupEditMode();
@@ -756,14 +869,15 @@ export class MouseHandlers extends BaseModule {
             const inside = worldPos.x >= bounds.minX && worldPos.x <= bounds.maxX && worldPos.y >= bounds.minY && worldPos.y <= bounds.maxY;
             if (inside) {
                 // Start marquee selection instead of closing
-                if (!e.shiftKey) {
+                if (marqueeMode === 'replace') {
                     this.editor.stateManager.set('selectedObjects', new Set());
                 }
                 this.editor.stateManager.update({
                     'mouse.isMarqueeSelecting': true,
                     'mouse.marqueeRect': { x: worldPos.x, y: worldPos.y, width: 0, height: 0 },
                     'mouse.marqueeStartX': worldPos.x,
-                    'mouse.marqueeStartY': worldPos.y
+                    'mouse.marqueeStartY': worldPos.y,
+                    'mouse.marqueeMode': marqueeMode
                 });
                 return;
             }
@@ -773,14 +887,15 @@ export class MouseHandlers extends BaseModule {
         }
 
         // Normal behavior
-        if (!e.shiftKey) {
+        if (marqueeMode === 'replace') {
             this.editor.stateManager.set('selectedObjects', new Set());
         }
         this.editor.stateManager.update({
             'mouse.isMarqueeSelecting': true,
             'mouse.marqueeRect': { x: worldPos.x, y: worldPos.y, width: 0, height: 0 },
             'mouse.marqueeStartX': worldPos.x,
-            'mouse.marqueeStartY': worldPos.y
+            'mouse.marqueeStartY': worldPos.y,
+            'mouse.marqueeMode': marqueeMode
         });
     }
 
@@ -1065,7 +1180,11 @@ export class MouseHandlers extends BaseModule {
         if (!mouse.marqueeRect) return;
 
         const marquee = mouse.marqueeRect;
+        const marqueeMode = mouse.marqueeMode || 'replace';
         const selectedObjects = new Set(this.editor.stateManager.get('selectedObjects'));
+        
+        // Collect objects inside marquee
+        const objectsInMarquee = new Set();
 
         if (this.isInGroupEditMode()) {
             // In group edit mode, check ALL descendants without viewport filtering
@@ -1089,7 +1208,7 @@ export class MouseHandlers extends BaseModule {
                 const bounds = this.editor.renderOperations.parallaxRenderer.getObjectWorldBoundsWithParallax(obj, this.editor.renderOperations.getEffectiveLayerId(obj));
                 if (marquee.x < bounds.maxX && marquee.x + marquee.width > bounds.minX &&
                     marquee.y < bounds.maxY && marquee.y + marquee.height > bounds.minY) {
-                    selectedObjects.add(obj.id);
+                    objectsInMarquee.add(obj.id);
                 }
             });
         } else {
@@ -1101,8 +1220,27 @@ export class MouseHandlers extends BaseModule {
                     const bounds = this.editor.renderOperations.parallaxRenderer.getObjectWorldBoundsWithParallax(obj, this.editor.renderOperations.getEffectiveLayerId(obj));
                     if (marquee.x < bounds.maxX && marquee.x + marquee.width > bounds.minX &&
                         marquee.y < bounds.maxY && marquee.y + marquee.height > bounds.minY) {
-                        selectedObjects.add(obj.id);
+                        objectsInMarquee.add(obj.id);
                     }
+                }
+            });
+        }
+
+        // Apply marquee mode to selection
+        if (marqueeMode === 'replace') {
+            // Replace selection with objects in marquee
+            selectedObjects.clear();
+            objectsInMarquee.forEach(objId => selectedObjects.add(objId));
+        } else if (marqueeMode === 'add') {
+            // Add objects in marquee to selection
+            objectsInMarquee.forEach(objId => selectedObjects.add(objId));
+        } else if (marqueeMode === 'toggle') {
+            // Toggle selection for objects in marquee
+            objectsInMarquee.forEach(objId => {
+                if (selectedObjects.has(objId)) {
+                    selectedObjects.delete(objId);
+                } else {
+                    selectedObjects.add(objId);
                 }
             });
         }
@@ -1112,7 +1250,17 @@ export class MouseHandlers extends BaseModule {
             'mouse.marqueeRect': null,
             'mouse.marqueeStartX': null,
             'mouse.marqueeStartY': null,
-            'mouse.isMarqueeSelecting': false
+            'mouse.isMarqueeSelecting': false,
+            'mouse.marqueeMode': null
+        });
+        
+        // Clear pending marquee state if any
+        this.editor.stateManager.update({
+            'mouse.marqueePendingStartPos': null,
+            'mouse.marqueePendingWorldPos': null,
+            'mouse.marqueePendingMode': null,
+            'mouse.marqueePendingObjectId': null,
+            'mouse.marqueePendingClickInfo': null
         });
         
         // Check if Alt is still pressed after marquee selection to start duplication

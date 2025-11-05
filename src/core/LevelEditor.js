@@ -1561,6 +1561,17 @@ export class LevelEditor {
             });
         }
         
+        // Cancel pending marquee state
+        if (mouse.marqueePendingStartPos) {
+            this.stateManager.update({
+                'mouse.marqueePendingStartPos': null,
+                'mouse.marqueePendingWorldPos': null,
+                'mouse.marqueePendingMode': null,
+                'mouse.marqueePendingObjectId': null,
+                'mouse.marqueePendingClickInfo': null
+            });
+        }
+        
         // Cancel right mouse dragging
         if (mouse.isRightDown) {
             this.stateManager.update({
