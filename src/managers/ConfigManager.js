@@ -10,6 +10,11 @@ export class ConfigManager {
         this.configPath = './config/';
         this.defaultsPath = this.configPath + 'defaults/';
         this.userPath = this.configPath + 'user/';
+
+        // Only these configs are ever shipped as config/user/*.json overrides (see config/user/README.md).
+        // The rest (camera, selection, assets, performance, shortcuts, view, toolbar, grid) are
+        // localStorage-only and must not be fetched as files, or every fresh session 404s for them.
+        this.fileBackedConfigs = ['editor', 'canvas', 'panels'];
         
         this.configs = {
             editor: null,
@@ -341,8 +346,8 @@ export class ConfigManager {
                         leftPanelVisible: true,
                         assetsPanelVisible: true
                     };
-                } else {
-                    // Try to load from file if localStorage is empty
+                } else if (this.fileBackedConfigs.includes(configName)) {
+                    // Try to load from file if localStorage is empty (only for configs that actually ship as files)
                     const fileConfig = await this.loadUserConfigFromFile(configName);
                     if (fileConfig) {
                         configs[configName] = { ...configs[configName], ...fileConfig };

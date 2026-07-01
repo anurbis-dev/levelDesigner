@@ -469,7 +469,7 @@ export class RenderOperations extends BaseModule {
 
         // Периодический лог состояния (каждые 500 рендеров)
         if (this.renderCount % 500 === 0) {
-            const visibleCount = visibleObjects.length;
+            const visibleCount = sortedObjects.length;
             Logger.render.info(`🎨 Render #${this.renderCount}: ${visibleCount} visible objects, ${renderTime.toFixed(2)}ms`);
         }
     }

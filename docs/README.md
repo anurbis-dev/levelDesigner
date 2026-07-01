@@ -1,4 +1,4 @@
-# 2D Level Editor v3.54.4
+# 2D Level Editor v3.54.5
 
 Редактор уровней для 2D игр с модульной архитектурой.
 
@@ -37,9 +37,9 @@
 4. **[COMMON_MISTAKES.md](./COMMON_MISTAKES.md)** - частые ошибки
 
 ### Специализированные
-- **[TOUCH_SUPPORT.md](./TOUCH_SUPPORT.md)** - тач-события, жесты
-- **[EVENT_HANDLER_SYSTEM.md](./EVENT_HANDLER_SYSTEM.md)** - обработчики событий
-- **[MOBILE_INTERFACE_SYSTEM.md](./MOBILE_INTERFACE_SYSTEM.md)** - мобильный интерфейс
+- **[EVENT_HANDLER_SYSTEM.md](./EVENT_HANDLER_SYSTEM.md)** - обработчики событий, тач-жесты
+- **[UI_CONSTRUCTORS_GUIDE.md](./UI_CONSTRUCTORS_GUIDE.md)** - создание UI компонентов
+- **[DIALOG_SYSTEM.md](./DIALOG_SYSTEM.md)** - система диалогов
 
 ### Для пользователей
 - **[USER_MANUAL.md](./USER_MANUAL.md)** - руководство пользователя
@@ -111,4 +111,4 @@ docs/              # Документация
 - Тач-поддержка, мобильная адаптация
 - Контекстные меню, горячие клавиши
 
-**Статус**: Production Ready v3.54.4
+**Статус**: Production Ready v3.54.5

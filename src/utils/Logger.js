@@ -204,6 +204,13 @@ export class Logger {
         error: (message, ...args) => Logger.log('UI', 'error', message, ...args)
     };
 
+    static menu = {
+        info: (message, ...args) => Logger.log('MENU', 'info', message, ...args),
+        debug: (message, ...args) => Logger.log('MENU', 'debug', message, ...args),
+        warn: (message, ...args) => Logger.log('MENU', 'warn', message, ...args),
+        error: (message, ...args) => Logger.log('MENU', 'error', message, ...args)
+    };
+
     /**
      * Performance timing methods
      */

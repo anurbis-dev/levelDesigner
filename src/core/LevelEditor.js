@@ -781,14 +781,6 @@ export class LevelEditor {
         this.setupAutoSaveOnUnload();
         this.setupAutoSaveOnVisibilityChange();
 
-        // Test context menu functionality
-        this.testContextMenu();
-        this.testContextMenuManager();
-        this.testGlobalClickHandler();
-        this.testPanningDetection();
-        this.testMenuAutoClose();
-        this.testCursorPositioning();
-
         // Show editor UI after all initialization is complete
         document.body.classList.add('editor-ready');
 
@@ -1730,7 +1722,7 @@ export class LevelEditor {
     }
 
     duplicateSelectedObjects() {
-        this.duplicateOperations.duplicateSelectedObjects();
+        this.duplicateOperations.startFromSelection();
 
         // Note: Cache invalidation for duplicated objects is handled in DuplicateOperations.confirmPlacement()
         // which calls invalidateObjectCaches for each new object

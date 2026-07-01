@@ -3,7 +3,7 @@
 **📚 Навигация:**
 - [ARCHITECTURE.md](./ARCHITECTURE.md) - архитектура системы
 - [API_GUIDE.md](./API_GUIDE.md) - API методы
-- [TOUCH_SUPPORT.md](./TOUCH_SUPPORT.md) - тач-события
+- [EVENT_HANDLER_SYSTEM.md](./EVENT_HANDLER_SYSTEM.md) - система событий
 - [COMMON_MISTAKES.md](./COMMON_MISTAKES.md) - частые ошибки
 
 ## ⚠️ КРИТИЧЕСКИ ВАЖНО ДЛЯ АГЕНТА
@@ -93,7 +93,7 @@ eventManager.registerElement(button, 'button', {
 
 ```javascript
 export class LevelEditor {
-    static VERSION = '3.54.4'; // ← ЕДИНСТВЕННЫЙ ИСТОЧНИК ИСТИНЫ
+    static VERSION = '3.54.5'; // ← ЕДИНСТВЕННЫЙ ИСТОЧНИК ИСТИНЫ
 }
 ```
 

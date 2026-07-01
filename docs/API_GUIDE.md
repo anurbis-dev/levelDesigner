@@ -2,7 +2,8 @@
 Главный класс редактора уровней.
 
 #### Диалоги и окна:
-- `async showSplashScreen()` - отображение splash screen диалога с информацией о версии
+- `async showSplashScreen()` - отображение splash screen диалога с информацией о версии (вручную)
+- `maybeShowSplashOnFirstVisit()` - показывает splash screen один раз при первом визите; флаг `levelEditor_hasSeenSplash` в localStorage предотвращает повтор
 - `openSettings()` - открытие панели настроек
 - `async importAssets()` - импорт ассетов из внешних папок
 
@@ -13,7 +14,7 @@
 - `async saveLevelAs()` - сохранение уровня с выбором файла
 
 #### Версия:
-- `static VERSION` - текущая версия редактора (строка, например '3.54.4')
+- `static VERSION` - текущая версия редактора (строка, например '3.54.5')
 - `updateVersionInfo()` - обновление отображения версии в UI
 
 ### HorizontalScrollUtils (src/utils/HorizontalScrollUtils.js)

@@ -33,12 +33,29 @@
 #### 🧹 Чистка кода
 
 - **H9/L5. console.log в hot-path и BaseContextMenu** — удалены: `console.log(new Error().stack)` из `LevelEditor.updateAllPanels()`, 5 вызовов из `BaseContextMenu`, 2 из `OutlinerPanel.render()`, 6 дублирующих из `AssetImporter` (рядом уже были Logger-вызовы), 1 из `DetailsPanel`. Заменены на `Logger.*`: `DialogSizeManager` (добавлен импорт), `BaseContextMenu`.
-- **L3. Мёртвый console-fallback** — `MenuManager` и `ParallaxRenderer`: `this.logger = Logger.menu || {console...}` → `this.logger = Logger.menu` (fallback-ветка была мёртвым кодом, категории `MENU` и `PARALLAX` всегда существуют) (`MenuManager.js`, `ParallaxRenderer.js`).
+- **L3. Отсутствующий Logger.menu accessor** — `Logger` содержал запись `MENU` в `CATEGORIES`, но не имел соответствующего `static menu = { info, debug, warn, error }` — вызов `Logger.menu.info(...)` приводил к краш-старту редактора (`TypeError: Cannot read properties of undefined (reading 'info')`). Добавлен `static menu` accessor по аналогии с остальными 28 категориями (`src/utils/Logger.js`).
 - **L4. Документация Logger** — исправлено число категорий: 17→29 в `DEVELOPMENT_GUIDE.md`, 19→29 в `ARCHITECTURE.md`.
 
 #### 📁 Изменённые файлы
 
-`src/event-system/MouseHandlers.js` · `src/event-system/EventHandlers.js` · `src/core/LevelEditor.js` · `src/core/LevelFileOperations.js` · `src/core/RenderOperations.js` · `src/core/ObjectOperations.js (через OutlinerPanel)` · `src/ui/OutlinerPanel.js` · `src/ui/AssetPanel.js` · `src/ui/FoldersPanel.js` · `src/ui/BaseContextMenu.js` · `src/ui/DetailsPanel.js` · `src/ui/LayersPanel.js` · `src/ui/BaseDialog.js` · `src/ui/SettingsPanel.js` · `src/utils/DialogResizer.js` · `src/utils/DialogSizeManager.js` · `src/utils/AssetImporter.js` · `src/utils/ParallaxRenderer.js` · `src/managers/MenuManager.js` · `docs/ARCHITECTURE.md` · `docs/DEVELOPMENT_GUIDE.md`
+`src/event-system/MouseHandlers.js` · `src/event-system/EventHandlers.js` · `src/core/LevelEditor.js` · `src/core/LevelFileOperations.js` · `src/core/RenderOperations.js` · `src/core/ObjectOperations.js (через OutlinerPanel)` · `src/ui/OutlinerPanel.js` · `src/ui/AssetPanel.js` · `src/ui/FoldersPanel.js` · `src/ui/BaseContextMenu.js` · `src/ui/DetailsPanel.js` · `src/ui/LayersPanel.js` · `src/ui/BaseDialog.js` · `src/ui/SettingsPanel.js` · `src/utils/DialogResizer.js` · `src/utils/DialogSizeManager.js` · `src/utils/AssetImporter.js` · `src/utils/ParallaxRenderer.js` · `src/utils/Logger.js` · `src/managers/MenuManager.js` · `docs/ARCHITECTURE.md` · `docs/DEVELOPMENT_GUIDE.md`
+
+### Fixed — Регрессии, обнаруженные при live-тестировании (chrome-devtools MCP)
+
+#### 🐛 Исправленные баги
+
+- **Краш рендер-лупа: `visibleObjects is not defined`** — В `RenderOperations.render()` переменная `sortedObjects` (результат `this.getVisibleObjects(camera)`, строка 374) была переименована в ходе рефакторинга, но периодический лог на строке 472 остался ссылаться на старое имя `visibleObjects`. Исправлено: `visibleObjects.length` → `sortedObjects.length` (`src/core/RenderOperations.js`).
+- **Duplicate не работал: `duplicateSelectedObjects is not a function`** — `LevelEditor.duplicateSelectedObjects()` вызывал `this.duplicateOperations.duplicateSelectedObjects()`, которого не существует. Правильное имя метода — `startFromSelection()`. Исправлено в `src/core/LevelEditor.js`.
+- **ConfigManager: 16 лишних 404 в консоли при каждом старте** — `loadUserConfigsFromStorage()` пыталась подгрузить `config/user/<name>.json` для 8 конфигов (camera, selection, assets, performance, shortcuts, view, toolbar, grid), для которых файлы в `config/user/` не предусмотрены (только editor/canvas/panels задокументированы в `config/user/README.md`). Добавлен `this.fileBackedConfigs = ['editor', 'canvas', 'panels']`, file-fetch ограничен этим списком (`src/managers/ConfigManager.js`).
+- **Делегированные blur/focus не срабатывали → переименование слоя слетало** — `EventHandlerManager.setupContainerEventListeners()` навешивал `blur`/`focus` обработчики в bubble-фазе, но эти события не всплывают (`non-bubbling`). Делегирование от контейнера к дочернему `<input>` не работало: `LayersPanel` blur-хендлер (коммит переименования слоя) никогда не получал событие, и rename слетал при каждом `render()` (например, при выборе другого слоя). Исправлено: для `blur`/`focus` в `setupContainerEventListeners` теперь устанавливается `{ capture: true }` (`src/event-system/EventHandlerManager.js`).
+
+#### ✨ Новые функции
+
+- **Splash screen при первом визите** — `LevelEditor.maybeShowSplashOnFirstVisit()` вызывается в конце `finalizeInitialization()`. Проверяет localStorage-флаг `levelEditor_hasSeenSplash`; показывает сплеш один раз и больше не беспокоит. Ручной вызов через лого-кнопку по-прежнему работает в любой момент (`src/core/LevelEditor.js`).
+
+#### 📁 Изменённые файлы
+
+`src/core/LevelEditor.js` · `src/core/RenderOperations.js` · `src/event-system/EventHandlerManager.js` · `src/managers/ConfigManager.js` · `src/utils/Logger.js` · `docs/API_GUIDE.md` · `docs/ARCHITECTURE.md` · `docs/DEVELOPMENT_GUIDE.md` · `docs/EVENT_HANDLER_SYSTEM.md` · `docs/README.md` · `docs/VERSIONING_GUIDE.md`
 
 ## [3.54.4] - 2025-01-27
 

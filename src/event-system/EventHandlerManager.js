@@ -462,8 +462,13 @@ export class EventHandlerManager {
                 if (eventType === 'wheel') {
                     // Wheel events need preventDefault capability for Ctrl+scroll handling
                     options = { passive: false };
+                } else if (eventType === 'focus' || eventType === 'blur') {
+                    // focus/blur don't bubble, so delegating them from a container only works
+                    // if we listen on the capture phase (otherwise the handler never fires
+                    // for descendant inputs, silently dropping e.g. commit-on-blur logic)
+                    options = { capture: true };
                 }
-                
+
                 container.addEventListener(eventType, handler, options);
                 containerInfo.cleanup.push(() => {
                     container.removeEventListener(eventType, handler, options);

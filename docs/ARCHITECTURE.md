@@ -1,4 +1,4 @@
-# Архитектура Level Editor v3.54.4
+# Архитектура Level Editor v3.54.5
 
 **📚 Навигация:**
 - [Development Guide](./DEVELOPMENT_GUIDE.md) - примеры использования
