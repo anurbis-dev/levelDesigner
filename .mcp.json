@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "mempalace": {
+      "command": "C:/Users/alexey.b/.local/bin/uv.exe",
+      "args": [
+        "tool",
+        "run",
+        "--from",
+        "mempalace",
+        "python",
+        "-m",
+        "mempalace.mcp_server",
+        "--palace",
+        "E:/AI_tools/mempalace-palace"
+      ],
+      "env": {
+        "PYTHONUTF8": "1"
+      }
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest"
+      ]
+    }
+  }
+}
