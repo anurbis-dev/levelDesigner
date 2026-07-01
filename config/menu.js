@@ -15,7 +15,7 @@ export const MENU_CONFIG = {
                     id: 'new-level',
                     label: 'New Level',
                     type: 'action',
-                    shortcut: 'Ctrl+N',
+                    shortcut: 'Ctrl+Alt+N',
                     action: 'newLevel'
                 },
                 {
@@ -185,7 +185,7 @@ export const MENU_CONFIG = {
 
     // Keyboard shortcuts mapping
     shortcuts: {
-        'Ctrl+N': 'new-level',
+        'Ctrl+Alt+N': 'new-level',
         'Ctrl+O': 'open-level',
         'Ctrl+S': 'save-level',
         'Ctrl+Shift+S': 'save-level-as',

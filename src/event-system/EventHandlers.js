@@ -337,6 +337,18 @@ export class EventHandlers extends BaseModule {
         // registration causes the handler to fire multiple times per physical event.
         globalEventRegistry.registerComponentHandlers('window-all', windowHandlers, 'window');
 
+        // Release keyboard lock whenever fullscreen exits — covers the case where the user
+        // presses Escape to exit fullscreen directly (bypassing toggleFullscreen()).
+        globalEventRegistry.registerComponentHandlers('fullscreen-change', {
+            fullscreenchange: () => {
+                if (!document.fullscreenElement) {
+                    this._releaseKeyboardLock();
+                    this.editor.stateManager.set('view.fullscreen', false);
+                    this.updateViewCheckbox('fullscreen', false);
+                }
+            }
+        }, 'document');
+
         // Mark as registered
         this._windowEventsRegistered = true;
     }
@@ -503,6 +515,8 @@ export class EventHandlers extends BaseModule {
                     this.editor.redo();
                 }
             } else if (e.key.toLowerCase() === 'n') {
+                // Ctrl+Alt+N: always interceptable (remapped from Ctrl+N which browsers steal).
+                // Ctrl+N alone also works when keyboard is locked in fullscreen mode.
                 e.preventDefault();
                 if (typeof this.editor.newLevel === 'function') {
                     this.editor.newLevel();
@@ -1092,13 +1106,14 @@ export class EventHandlers extends BaseModule {
     toggleFullscreen(enabled) {
         try {
             if (enabled) {
-                // Enter fullscreen
                 const root = document.documentElement;
                 if (!document.fullscreenElement && root?.requestFullscreen) {
-                    root.requestFullscreen().catch(() => {});
+                    root.requestFullscreen()
+                        .then(() => this._acquireKeyboardLock())
+                        .catch(() => {});
                 }
             } else {
-                // Exit fullscreen
+                this._releaseKeyboardLock();
                 if (document.fullscreenElement && document.exitFullscreen) {
                     document.exitFullscreen().catch(() => {});
                 }
@@ -1106,6 +1121,27 @@ export class EventHandlers extends BaseModule {
         } catch (_) {
             // Ignore fullscreen errors
         }
+    }
+
+    /**
+     * Lock browser-reserved keyboard shortcuts (e.g. Ctrl+N) so they reach the
+     * editor instead of triggering browser actions. Only effective in fullscreen.
+     * Falls back gracefully on browsers that don't support the Keyboard Lock API.
+     */
+    _acquireKeyboardLock() {
+        if (!navigator.keyboard?.lock) return;
+        // Lock keys that the editor uses but browsers intercept:
+        //   KeyN  → Ctrl+N  (New Level — browsers open a new window)
+        // Ctrl+O, Ctrl+S, Ctrl+Z etc. are already interceptable in canvas context
+        // without the lock API, so we don't need to include them here.
+        navigator.keyboard.lock(['KeyN']).catch(() => {});
+        Logger.ui.debug('Keyboard Lock API acquired (KeyN)');
+    }
+
+    _releaseKeyboardLock() {
+        if (!navigator.keyboard?.unlock) return;
+        navigator.keyboard.unlock();
+        Logger.ui.debug('Keyboard Lock API released');
     }
 
 
