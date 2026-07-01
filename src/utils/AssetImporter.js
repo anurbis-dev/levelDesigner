@@ -19,10 +19,6 @@ export class AssetImporter {
      */
     async importFromFolder(folderPath, selectedFiles = null) {
         try {
-            console.log('🚀 IMPORT FROM FOLDER STARTED - DIRECT CONSOLE LOG');
-            console.log(`📂 folderPath: "${folderPath}"`);
-            console.log(`📁 selectedFiles:`, selectedFiles);
-            
             Logger.asset.info('🚀 IMPORT FROM FOLDER STARTED');
             Logger.asset.info(`📂 folderPath: "${folderPath}"`);
             Logger.asset.info(`📁 selectedFiles: ${selectedFiles ? `Array with ${selectedFiles.length} items` : 'NULL/UNDEFINED'}`);
@@ -31,7 +27,6 @@ export class AssetImporter {
             Logger.asset.info(`🔍 CONDITION CHECK: selectedFiles=${!!selectedFiles}, length=${selectedFiles ? selectedFiles.length : 'N/A'}, condition result=${selectedFiles && selectedFiles.length > 0}`);
 
             if (selectedFiles && selectedFiles.length > 0) {
-                console.log(`✅ TAKING REAL FILES PATH: Processing ${selectedFiles.length} real files from folder`);
                 Logger.asset.info(`✅ TAKING REAL FILES PATH: Processing ${selectedFiles.length} real files from folder`);
 
                 // Debug: Check for nested files
@@ -54,9 +49,6 @@ export class AssetImporter {
                 Logger.asset.info('Asset import completed:', importResults);
                 return importResults;
             } else {
-                console.log('🚨 TAKING MOCK/FALLBACK PATH - This should NOT happen with real imports!');
-                console.log(`🚨 selectedFiles is:`, selectedFiles, `(type: ${typeof selectedFiles})`);
-                
                 Logger.asset.error('🚨 TAKING MOCK/FALLBACK PATH - This should NOT happen with real imports!');
                 Logger.asset.error(`🚨 selectedFiles is: ${selectedFiles} (type: ${typeof selectedFiles})`);
                 if (selectedFiles) {
@@ -85,7 +77,6 @@ export class AssetImporter {
             }
 
         } catch (error) {
-            console.log('💥 ASSET IMPORT ERROR - DIRECT CONSOLE LOG:', error);
             Logger.asset.error('Asset import failed:', error);
             throw error;
         }
@@ -458,16 +449,8 @@ export class AssetImporter {
      * @returns {Promise<Asset|null>} Created asset or null if unsupported
      */
     async processFile(file) {
-        console.log('🔎 processFile CALLED with file object:', file);
-        console.log('🔍 File properties:', {
-            name: file?.name,
-            type: file?.type,
-            size: file?.size,
-            webkitRelativePath: file?.webkitRelativePath,
-            isUndefined: file === undefined,
-            keys: file ? Object.keys(file) : 'FILE IS UNDEFINED'
-        });
-        
+        Logger.asset.debug('processFile CALLED with file object:', file);
+
         if (!file) {
             Logger.asset.error('❌ processFile: file is undefined/null');
             return null;

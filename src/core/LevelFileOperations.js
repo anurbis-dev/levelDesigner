@@ -16,7 +16,26 @@ export class LevelFileOperations extends BaseModule {
      * Create a new level
      * @returns {Promise<void>}
      */
+    /**
+     * Returns true if a mouse action (drag, marquee, duplicate) is currently
+     * in progress. File operations must not run while the canvas is mid-action
+     * because stateManager.reset() would replace the mouse-state object and
+     * leave stale closures in mouse-event handlers holding references to the
+     * now-discarded state, potentially causing "ghost edits" on the new level.
+     */
+    _hasActiveMouseOperation() {
+        const mouse = this.editor.stateManager.get('mouse');
+        const duplicate = this.editor.stateManager.get('duplicate');
+        return mouse.isDragging || mouse.isMarqueeSelecting || mouse.isPlacingObjects ||
+            (duplicate && duplicate.isActive);
+    }
+
     async newLevel() {
+        if (this._hasActiveMouseOperation()) {
+            Logger.file.warn('newLevel() blocked: mouse action in progress — finish or cancel it first');
+            return;
+        }
+
         // Check for unsaved changes
         if (this.editor.stateManager.get('isDirty')) {
             const confirmed = await confirm("You have unsaved changes. Are you sure you want to create a new level?");
@@ -29,6 +48,10 @@ export class LevelFileOperations extends BaseModule {
 
         // Save current view states before resetting
         const savedViewStates = this.editor.eventHandlers.saveViewStates();
+
+        // Clear all object/spatial caches before switching levels so they don't
+        // retain stale references to the old level's objects after reset()
+        this.editor.clearCaches();
 
         // Create new level
         this.editor.level = this.editor.fileManager.createNewLevel();
@@ -64,6 +87,11 @@ export class LevelFileOperations extends BaseModule {
      * @returns {Promise<void>}
      */
     async openLevel() {
+        if (this._hasActiveMouseOperation()) {
+            Logger.file.warn('openLevel() blocked: mouse action in progress — finish or cancel it first');
+            return;
+        }
+
         // Check for unsaved changes
         if (this.editor.stateManager.get('isDirty')) {
             const confirmed = await confirm("You have unsaved changes. Are you sure you want to open a new level?");
@@ -80,6 +108,10 @@ export class LevelFileOperations extends BaseModule {
 
             // Load level from file
             this.editor.level = await this.editor.fileManager.loadLevelFromFileInput();
+
+            // Clear stale object/spatial caches from the previous level before reset()
+            this.editor.clearCaches();
+
             this.editor.stateManager.reset();
 
             // Re-initialize group edit mode state after reset

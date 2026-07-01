@@ -23,8 +23,12 @@ export class MouseHandlers extends BaseModule {
             PERFORMANCE.MOUSE_MOVE_THROTTLE_MS
         );
         this._throttledWheel = throttle(
-            (e) => this._handleWheelImpl(e), 
+            (e) => this._handleWheelImpl(e),
             PERFORMANCE.WHEEL_THROTTLE_MS
+        );
+        this._throttledGlobalMouseMove = throttle(
+            (e) => this._handleGlobalMouseMoveImpl(e),
+            PERFORMANCE.MOUSE_MOVE_THROTTLE_MS
         );
     }
 
@@ -472,7 +476,15 @@ export class MouseHandlers extends BaseModule {
         }
     }
 
+    /**
+     * Global mousemove handler (throttled for performance)
+     * Delegates to _handleGlobalMouseMoveImpl
+     */
     handleGlobalMouseMove(e) {
+        this._throttledGlobalMouseMove(e);
+    }
+
+    _handleGlobalMouseMoveImpl(e) {
         const mouse = this.editor.stateManager.get('mouse');
         const canvas = this.editor.canvasRenderer.canvas;
         const rect = canvas.getBoundingClientRect();
@@ -534,7 +546,7 @@ export class MouseHandlers extends BaseModule {
                     'mouse.offsetX': null,
                     'mouse.offsetY': null
                 });
-                this.editor.historyManager.undo();
+                this.editor.historyOperations.undo();
                 this.editor.render();
             }
         }
@@ -548,6 +560,44 @@ export class MouseHandlers extends BaseModule {
             });
             this.editor.canvasRenderer.canvas.style.cursor = 'default';
         }
+    }
+
+    /**
+     * Handle loss of window focus (e.g. Alt-Tab) while a mouse action is in
+     * progress. The OS will not deliver the eventual mouseup to this page,
+     * so any in-progress drag/marquee would otherwise stay "stuck" active
+     * until a later unrelated click. Treat it the same as releasing the
+     * mouse outside the window: finalize marquee, revert drag, clear flags.
+     */
+    handleWindowBlur() {
+        const mouse = this.editor.stateManager.get('mouse');
+
+        if (mouse.isMarqueeSelecting) {
+            this.finishMarqueeSelection();
+        }
+
+        if (mouse.isDragging) {
+            this.editor.stateManager.update({
+                'mouse.isDragging': false,
+                'mouse.constrainedAxis': null,
+                'mouse.axisCenter': null,
+                'mouse.snappedToGrid': false,
+                'mouse.snapTargetX': null,
+                'mouse.snapTargetY': null,
+                'mouse.anchorX': null,
+                'mouse.anchorY': null,
+                'mouse.offsetX': null,
+                'mouse.offsetY': null
+            });
+            this.editor.historyOperations.undo();
+        }
+
+        this.editor.stateManager.update({
+            'mouse.isLeftDown': false,
+            'mouse.isMiddleDown': false
+        });
+
+        this.editor.cancelAllActions();
     }
 
     /**
@@ -1082,7 +1132,17 @@ export class MouseHandlers extends BaseModule {
                     // If dragged into edited group bounds, move under the group with relative coordinates
                     if (!this.isAltKeyPressed() && this.isInGroupEditMode() && this.editor.objectOperations.isPointInGroupBounds(obj.x, obj.y)) {
                         const groupEditMode = this.getGroupEditMode();
-                        
+
+                        // Prevent self-reference cycles: skip if the dragged object IS the
+                        // group being edited, or if the edited group is nested inside the
+                        // dragged object (would make the group its own descendant)
+                        const wouldCreateCycle = obj.id === groupEditMode.group.id ||
+                            (obj.type === 'group' && obj.children &&
+                                this.editor.objectOperations.isObjectInGroupRecursive(groupEditMode.group, obj));
+                        if (wouldCreateCycle) {
+                            return;
+                        }
+
                         // Check if target group's layer is locked
                         if (groupEditMode.group.layerId) {
                             const targetLayer = this.editor.level.getLayerById(groupEditMode.group.layerId);

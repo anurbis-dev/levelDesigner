@@ -383,26 +383,10 @@ export class BaseDialog {
             return;
         }
 
-        // Try to restore saved width from StateManager first
-        let dialogWidth = DialogResizer.getSavedWidth(this.config.id, this.levelEditor);
-        
-        // If no saved width, use default 50% of viewport width
-        if (!dialogWidth) {
-            dialogWidth = window.innerWidth * 0.5;
-        }
-        
-        // Apply the width with !important to override CSS
         if (this.container) {
-            this.container.style.setProperty('width', `${dialogWidth}px`, 'important');
-            this.container.style.setProperty('min-width', `${dialogWidth}px`, 'important');
-            this.container.style.setProperty('max-width', `${dialogWidth}px`, 'important');
-            
-            // Set CSS variable for override rules
-            this.container.style.setProperty('--fixed-dialog-width', `${dialogWidth}px`);
-            
-            // Make dialog visible only after width is calculated
-            this.container.style.visibility = 'visible';
-            
+            DialogResizer.applyCalculatedWidth(this.container, this.config.id, this.levelEditor, {
+                makeVisible: true
+            });
             this.widthCalculated = true;
         }
     }

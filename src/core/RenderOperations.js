@@ -368,17 +368,10 @@ export class RenderOperations extends BaseModule {
         
         // Draw objects with frustum culling
         const groupEditMode = this.editor.stateManager.get('groupEditMode');
-        const visibleObjects = this.getVisibleObjects(camera);
-
-        // Sort objects by zIndex for proper layering (lower zIndex = drawn first = behind)
-        const sortedObjects = visibleObjects.slice().sort((a, b) => {
-            // Ensure zIndex is set for all objects (handle undefined for old objects)
-            const aZIndex = a.obj.zIndex !== undefined ? a.obj.zIndex : 0;
-            const bZIndex = b.obj.zIndex !== undefined ? b.obj.zIndex : 0;
-
-            // Use numeric comparison for proper sorting
-            return aZIndex - bZIndex;
-        });
+        // Already sorted by zIndex (ascending = drawn first = behind); sort result is
+        // cached alongside the visibility cache entry and shares its invalidation,
+        // so it doesn't need to be recomputed on every render() call.
+        const sortedObjects = this.getVisibleObjects(camera);
 
         // Check if parallax mode is enabled
         if (this.parallaxRenderer.isParallaxEnabled()) {
@@ -863,7 +856,16 @@ export class RenderOperations extends BaseModule {
             Logger.render.warn('Spatial index search failed, falling back to regular method', error);
             visibleObjects = this.getVisibleObjectsRegular(camera);
         }
-        
+
+        // Sort objects by zIndex for proper layering (lower zIndex = drawn first = behind).
+        // Computed once per cache entry instead of on every render() call; shares the same
+        // TTL/invalidation as visibility (see clearVisibleObjectsCache - "objects or zIndex change").
+        visibleObjects = visibleObjects.slice().sort((a, b) => {
+            const aZIndex = a.obj.zIndex !== undefined ? a.obj.zIndex : 0;
+            const bZIndex = b.obj.zIndex !== undefined ? b.obj.zIndex : 0;
+            return aZIndex - bZIndex;
+        });
+
         // Cache the result
         this.visibleObjectsCache.set(cameraKey, {
             objects: visibleObjects,

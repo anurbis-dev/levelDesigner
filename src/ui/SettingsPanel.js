@@ -338,20 +338,7 @@ export class SettingsPanel {
         const container = document.getElementById('settings-panel-container');
         if (!container) return;
 
-        // Try to restore saved width from StateManager first
-        let dialogWidth = DialogResizer.getSavedWidth('settings-panel-container', this.levelEditor);
-        
-        // If no saved width, use default 50% of viewport width
-        if (!dialogWidth) {
-            dialogWidth = window.innerWidth * 0.5;
-        }
-
-        // Apply the width with !important to override CSS
-        container.style.setProperty('width', `${dialogWidth}px`, 'important');
-        container.style.setProperty('min-width', `${dialogWidth}px`, 'important');
-        container.style.setProperty('max-width', `${dialogWidth}px`, 'important');
-        container.style.setProperty('--fixed-dialog-width', `${dialogWidth}px`);
-
+        DialogResizer.applyCalculatedWidth(container, 'settings-panel-container', this.levelEditor);
         this.widthCalculated = true;
     }
 

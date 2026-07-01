@@ -1129,9 +1129,6 @@ export class DetailsPanel {
                 x: currentCamera.x,
                 y: currentCamera.y
             });
-
-            // Show feedback (optional)
-            console.log(`Set camera start position: (${currentCamera.x}, ${currentCamera.y})`);
         });
     }
 

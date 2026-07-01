@@ -8,12 +8,7 @@ import { Logger } from './Logger.js';
 export class ParallaxRenderer {
     constructor(editor) {
         this.editor = editor;
-        this.logger = Logger.parallax || {
-            info: console.log,
-            debug: console.debug,
-            warn: console.warn,
-            error: console.error
-        };
+        this.logger = Logger.parallax;
     }
 
     /**

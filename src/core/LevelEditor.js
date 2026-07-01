@@ -55,7 +55,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.54.4';
+    static VERSION = '3.54.5';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -791,6 +791,27 @@ export class LevelEditor {
 
         // Show editor UI after all initialization is complete
         document.body.classList.add('editor-ready');
+
+        // Show welcome splash screen on the user's very first visit only
+        this.maybeShowSplashOnFirstVisit();
+    }
+
+    /**
+     * Show the splash screen once, on the user's first visit to the editor.
+     * Tracked via localStorage so it never shows again on subsequent loads/refreshes.
+     */
+    maybeShowSplashOnFirstVisit() {
+        const key = 'levelEditor_hasSeenSplash';
+        try {
+            if (localStorage.getItem(key)) {
+                return;
+            }
+            localStorage.setItem(key, 'true');
+        } catch (error) {
+            this.log('warn', 'Failed to access localStorage for splash screen first-visit check:', error.message);
+            return;
+        }
+        this.showSplashScreen();
     }
 
     /**
@@ -967,14 +988,20 @@ export class LevelEditor {
         globalEventRegistry.registerComponentHandlers('level-editor-autosave-visibility', {
             visibilitychange: () => {
                 if (document.hidden) {
+                    // Reset any in-progress mouse action (drag/marquee) since the
+                    // page won't receive the eventual mouseup while unfocused
+                    if (this.mouseHandlers) {
+                        this.mouseHandlers.handleWindowBlur();
+                    }
+
                     try {
                         Logger.ui.info('Saving user settings on tab switch...');
-                        
+
                         // Force save all modified settings immediately
                         if (this.configManager) {
                             this.configManager.forceSaveAllSettings();
                         }
-                        
+
                         Logger.ui.info('User settings saved on tab switch');
                     } catch (error) {
                         Logger.ui.error('Failed to save user settings on tab switch:', error);
@@ -984,123 +1011,6 @@ export class LevelEditor {
         }, 'document');
         
         this._autoSaveVisibilityRegistered = true;
-    }
-
-    /**
-     * Test context menu functionality
-     */
-    testContextMenu() {
-        // Test that context menu is initialized
-        if (!this.canvasContextMenu) {
-            return;
-        }
-
-        // Test menu methods
-        const testData = {
-            hasSelection: false,
-            isGroup: false,
-            clickPosition: { x: 100, y: 100 }
-        };
-
-        // Test extractContextData method
-        if (typeof this.canvasContextMenu.extractContextData !== 'function') {
-            return;
-        }
-
-        // Test hasSelectedObjects method
-        if (typeof this.canvasContextMenu.hasSelectedObjects !== 'function') {
-            return;
-        }
-
-        const hasSelection = this.canvasContextMenu.hasSelectedObjects();
-    }
-
-    /**
-     * Test ContextMenuManager functionality
-     */
-    testContextMenuManager() {
-        if (!this.contextMenuManager) {
-            return;
-        }
-
-        const registeredMenus = this.contextMenuManager.getRegisteredMenus();
-        const hasActive = this.contextMenuManager.hasActiveMenu();
-    }
-
-    /**
-     * Test global click handler functionality
-     */
-    testGlobalClickHandler() {
-        if (!this.contextMenuManager) {
-            return;
-        }
-
-        // Test that we can access the manager
-        const registeredMenus = this.contextMenuManager.getRegisteredMenus();
-    }
-
-    /**
-     * Test panning detection functionality
-     */
-    testPanningDetection() {
-        // Test mouse state initialization
-        const mouseState = this.stateManager.get('mouse');
-        if (!mouseState) {
-            return;
-        }
-
-        // Check if panning-related properties exist
-        const hasPanningProps = mouseState.hasOwnProperty('wasPanning') ||
-                              mouseState.hasOwnProperty('rightClickStartX') ||
-                              mouseState.hasOwnProperty('rightClickStartY');
-    }
-
-    /**
-     * Test menu auto-close functionality
-     */
-    testMenuAutoClose() {
-        if (!this.canvasContextMenu) {
-            return;
-        }
-
-        // Test that the menu has the necessary methods
-        if (typeof this.canvasContextMenu.setupMenuClosing !== 'function') {
-            return;
-        }
-
-        // Check if we can access the base functionality
-        const hasBaseMenu = this.canvasContextMenu.constructor.name === 'CanvasContextMenu';
-    }
-
-    /**
-     * Test cursor positioning functionality
-     */
-    testCursorPositioning() {
-        let canvasMenuOk = false;
-        let consoleMenuOk = false;
-
-        if (!this.canvasContextMenu) {
-            return;
-        }
-
-        // Test that the menu has the necessary methods
-        if (typeof this.canvasContextMenu.ensureCursorInsideMenu === 'function') {
-            canvasMenuOk = true;
-        }
-
-        if (typeof this.canvasContextMenu.adjustCursorPosition !== 'function') {
-            return;
-        }
-
-        // Test ConsoleContextMenu if available
-        if (window.consoleContextMenu) {
-            if (typeof window.consoleContextMenu.ensureCursorInsideMenu === 'function') {
-                consoleMenuOk = true;
-            }
-        }
-
-        const bothOk = canvasMenuOk && consoleMenuOk;
-        const canvasOnlyOk = canvasMenuOk && !consoleMenuOk;
     }
 
     /**
@@ -1430,7 +1340,6 @@ export class LevelEditor {
      * Update all panels
      */
     updateAllPanels() {
-        console.log('LevelEditor: updateAllPanels() called - stack trace:', new Error().stack);
         // Update cached level statistics for quick access
         this.updateCachedLevelStats();
 

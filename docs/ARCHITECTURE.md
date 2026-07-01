@@ -96,9 +96,8 @@
 
 ### Logger
 **Файл**: `src/utils/Logger.js`
-- 19 категорий, 4 уровня (DEBUG, INFO, WARN, ERROR)
-- 100% покрытие - все прямые вызовы console.* заменены
-- Fallback механизм
+- 29 категорий, 4 уровня (DEBUG, INFO, WARN, ERROR)
+- Все прямые вызовы console.* заменены на Logger в исполняемом коде
 
 ### ErrorHandler
 **Файл**: `src/utils/ErrorHandler.js`

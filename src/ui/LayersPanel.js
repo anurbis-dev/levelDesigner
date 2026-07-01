@@ -466,36 +466,35 @@ export class LayersPanel extends BasePanel {
         colorInput.focus();
         colorInput.click();
         
-        // Handle color change
+        // cleanup() and escapeHandler are declared below and captured by reference —
+        // JS closures evaluate variable lookups at call time, not at definition time,
+        // so the 'change' handler can safely call cleanup() defined afterward.
+
+        const escapeHandler = (e) => {
+            if (e.key === 'Escape') {
+                cleanup();
+            }
+        };
+        const cleanup = () => {
+            document.removeEventListener('keydown', escapeHandler);
+            if (document.body.contains(colorInput)) {
+                document.body.removeChild(colorInput);
+            }
+        };
+
+        // Handle color change — use shared cleanup() to also deregister escapeHandler
         colorInput.addEventListener('change', (e) => {
             const oldColor = layer.color;
             const newColor = e.target.value;
             layer.color = newColor;
             this.updateLayerElement(layer.id, layer);
             this.stateManager.markDirty();
-
-            // Notify about layer color change
             this.stateManager.notifyLayerChanged(layer.id, 'color', newColor, oldColor);
-            
-            // Clean up
-            if (document.body.contains(colorInput)) {
-                document.body.removeChild(colorInput);
-            }
+            cleanup();
         });
-        
-        // Handle escape key or focus loss
-        const cleanup = () => {
-            if (document.body.contains(colorInput)) {
-                document.body.removeChild(colorInput);
-            }
-        };
-        
+
         colorInput.addEventListener('blur', cleanup);
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                cleanup();
-            }
-        }, { once: true });
+        document.addEventListener('keydown', escapeHandler);
     }
 
 

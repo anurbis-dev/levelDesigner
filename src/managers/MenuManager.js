@@ -12,12 +12,7 @@ export class MenuManager {
         this.editor = eventHandlers.editor;
         this.menuElements = new Map();
         this.hoverModeEnabled = false; // Enable hover-open after first click anywhere in the menu bar
-        this.logger = Logger.menu || {
-            info: console.log,
-            error: console.error,
-            warn: console.warn,
-            debug: console.debug
-        };
+        this.logger = Logger.menu;
 
         this.logger.info('MenuManager initialized');
     }

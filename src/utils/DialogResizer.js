@@ -120,5 +120,35 @@ export class DialogResizer {
         }
         return null;
     }
+
+    /**
+     * Apply the saved (or default 50% viewport) width to a dialog container.
+     * Shared by BaseDialog and SettingsPanel so the sizing rule lives in one place.
+     * @param {HTMLElement} container - Dialog container element
+     * @param {string} dialogId - Dialog ID for StateManager key
+     * @param {Object} levelEditor - LevelEditor instance
+     * @param {Object} options - { makeVisible: boolean }
+     * @returns {number} The applied width in pixels
+     */
+    static applyCalculatedWidth(container, dialogId, levelEditor = window.editor, options = {}) {
+        const { makeVisible = false } = options;
+        if (!container) return null;
+
+        let dialogWidth = DialogResizer.getSavedWidth(dialogId, levelEditor);
+        if (!dialogWidth) {
+            dialogWidth = window.innerWidth * 0.5;
+        }
+
+        container.style.setProperty('width', `${dialogWidth}px`, 'important');
+        container.style.setProperty('min-width', `${dialogWidth}px`, 'important');
+        container.style.setProperty('max-width', `${dialogWidth}px`, 'important');
+        container.style.setProperty('--fixed-dialog-width', `${dialogWidth}px`);
+
+        if (makeVisible) {
+            container.style.visibility = 'visible';
+        }
+
+        return dialogWidth;
+    }
 }
 

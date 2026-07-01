@@ -1,9 +1,11 @@
+import { Logger } from './Logger.js';
+
 /**
  * Dialog Size Manager
- * 
+ *
  * Utility for managing dialog window sizes with fixed height and dynamic width
  * based on the widest content section.
- * 
+ *
  * @author Level Designer
  * @version 3.51.9
  */
@@ -24,7 +26,7 @@ export class DialogSizeManager {
     calculateOptimalWidth(dialogId, sectionRenderers = [], stateManager = null) {
         const dialog = document.getElementById(dialogId);
         if (!dialog) {
-            console.warn(`Dialog with ID "${dialogId}" not found`);
+            Logger.ui.warn(`Dialog with ID "${dialogId}" not found`);
             return 600; // Default width
         }
 

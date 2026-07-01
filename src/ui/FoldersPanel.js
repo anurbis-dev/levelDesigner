@@ -784,20 +784,22 @@ export class FoldersPanel extends BasePanel {
      * Setup event listeners
      */
     setupEventListeners() {
+        if (!this.subscriptions) this.subscriptions = [];
+
         // Listen for asset changes
-        this.stateManager.subscribe('assetsChanged', () => {
+        this.subscriptions.push(this.stateManager.subscribe('assetsChanged', () => {
             this.refresh();
-        });
+        }));
 
         // Listen for tab changes to sync with folder selection
         // Note: Do not call set('selectedFolders') here to avoid recursion
         // syncTabsToFolders only updates visual selection, not state
-        this.stateManager.subscribe('activeAssetTabs', (activeTabs) => {
+        this.subscriptions.push(this.stateManager.subscribe('activeAssetTabs', (activeTabs) => {
             if (activeTabs && activeTabs.size > 0) {
                 // Only update visual selection, don't modify state
                 this.syncTabsToFolders(activeTabs);
             }
-        });
+        }));
 
         // Setup resize observer for dynamic truncation
         this.setupResizeObserver();
@@ -862,6 +864,11 @@ export class FoldersPanel extends BasePanel {
      * Cleanup resources when panel is destroyed
      */
     destroy() {
+        // Unsubscribe from StateManager to avoid memory leaks if panel is recreated
+        if (this.subscriptions) {
+            this.subscriptions.forEach(unsub => unsub());
+            this.subscriptions = [];
+        }
         if (this.resizeObserver) {
             this.resizeObserver.disconnect();
             this.resizeObserver = null;

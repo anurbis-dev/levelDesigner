@@ -330,22 +330,13 @@ export class EventHandlers extends BaseModule {
         };
         
         // Register window events using GlobalEventRegistry (handles duplicates automatically)
+        // Note: mousedown/mousemove/mouseup are registered once here on 'window' only
+        // (matching the pattern used by BasePanel's own marquee handling) - do not add
+        // duplicate document-level registrations for the same handlers, since window
+        // already receives every mouse event the document would, and each duplicate
+        // registration causes the handler to fire multiple times per physical event.
         globalEventRegistry.registerComponentHandlers('window-all', windowHandlers, 'window');
-        
-        // Register global mouse handlers using GlobalEventRegistry
-        const globalMouseHandlers = {
-            mousedown: (e) => this.editor.mouseHandlers.handleGlobalMouseDown(e),
-            mousemove: (e) => this.editor.mouseHandlers.handleGlobalMouseMove(e),
-            mouseup: (e) => this.editor.mouseHandlers.handleGlobalMouseUp(e)
-        };
-        globalEventRegistry.registerComponentHandlers('global-mouse-document', globalMouseHandlers, 'document');
-        
-        // Also register on window for marquee completion (like BasePanel does)
-        const windowMouseHandlers = {
-            mouseup: (e) => this.editor.mouseHandlers.handleGlobalMouseUp(e)
-        };
-        globalEventRegistry.registerComponentHandlers('global-mouse-window', windowMouseHandlers, 'window');
-        
+
         // Mark as registered
         this._windowEventsRegistered = true;
     }
@@ -438,7 +429,8 @@ export class EventHandlers extends BaseModule {
 
             // Check if any active processes are running that shouldn't be interrupted
             const mouse = this.editor.stateManager.get('mouse');
-            const hasActiveProcess = mouse.isPlacingObjects || mouse.isDragging || mouse.isRightDown;
+            const hasActiveProcess = mouse.isPlacingObjects || mouse.isDragging || mouse.isRightDown ||
+                Boolean(mouse.marqueePendingStartPos);
 
             if (hasActiveProcess) {
                 // Don't clear selection during active processes

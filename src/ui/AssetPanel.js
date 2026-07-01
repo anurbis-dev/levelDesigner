@@ -31,6 +31,7 @@ export class AssetPanel extends BasePanel {
         this.tabsManager = null; // AssetTabsManager instance
         
         this._assetPanelHandlersSetup = false; // Flag to track panel handlers setup
+        this.subscriptions = []; // StateManager unsubscribe functions — called in destroy()
 
         // Asset size management
         this.assetSize = 96; // Default size, will be loaded in init()
@@ -227,17 +228,17 @@ export class AssetPanel extends BasePanel {
         this.setupFoldersResizer();
 
         // Listen for asset changes to refresh panels
-        this.stateManager.subscribe('assetsChanged', () => {
+        this.subscriptions.push(this.stateManager.subscribe('assetsChanged', () => {
             if (this.foldersPanel) {
                 this.foldersPanel.refresh();
             }
             // Also refresh the asset panel itself
             this.render();
-        });
-        
+        }));
+
         // Listen for folder selection changes to sync active tab
         // Sync happens BEFORE render to avoid recursion
-        this.stateManager.subscribe('selectedFolders', (selectedFolders) => {
+        this.subscriptions.push(this.stateManager.subscribe('selectedFolders', (selectedFolders) => {
             if (this.foldersPanel && selectedFolders && this.tabsManager) {
                 // Normalize selectedFolders to Set format
                 const foldersSet = Array.isArray(selectedFolders) 
@@ -256,7 +257,7 @@ export class AssetPanel extends BasePanel {
             // Always update previews when folder selection changes (default behavior when no tabs)
             // This ensures content updates even when no tabs exist
             this.renderPreviews();
-        });
+        }));
     }
 
     /**
@@ -794,16 +795,16 @@ export class AssetPanel extends BasePanel {
         });
 
         // Subscribe to state changes
-        this.stateManager.subscribe('activeAssetTabs', () => {
+        this.subscriptions.push(this.stateManager.subscribe('activeAssetTabs', () => {
             Logger.ui.debug('AssetPanel: activeAssetTabs changed - render will be called');
             this.render();
-        });
-        
+        }));
+
         // Subscribe to active tab changes to update content
-        this.stateManager.subscribe('activeAssetTab', () => {
+        this.subscriptions.push(this.stateManager.subscribe('activeAssetTab', () => {
             Logger.ui.debug('AssetPanel: activeAssetTab changed - updating previews');
             this.renderPreviews();
-        });
+        }));
         
         // Event handlers will be setup in render() after elements are created
         
@@ -1174,7 +1175,6 @@ export class AssetPanel extends BasePanel {
     }
 
     renderPreviews() {
-        this.previewsContainer.innerHTML = '';
         // Get folder paths to show:
         // - If there's an active tab, use it (or multiple if multi-select)
         // - If no tabs exist, use selected folders from FoldersPanel (default behavior)
@@ -1187,13 +1187,29 @@ export class AssetPanel extends BasePanel {
             const folderAssets = this.getAssetsFromFolder(folderPath);
             allAssets.push(...folderAssets);
         }
-        
+
         // Remove duplicates by asset ID
         const uniqueAssets = Array.from(new Map(allAssets.map(asset => [asset.id, asset])).values());
         let assetsToShow = uniqueAssets;
 
         // Apply search and type filters
         assetsToShow = this.filterAssets(assetsToShow);
+
+        // Skip the full DOM teardown/rebuild if nothing that affects the rendered
+        // output actually changed since the last call (renderPreviews() is invoked
+        // on every keystroke in search, tab switch, filter toggle, etc.). Safe as
+        // long as asset identity/order, selection, and view settings are the only
+        // inputs to rendering - true today since in-place asset edits (rename, etc.)
+        // aren't implemented yet and always go through an ID/list change when they land.
+        const renderKey = `${this.viewMode}|${this.assetSize}|${this.gapSize}|` +
+            assetsToShow.map(a => a.id).join(',') + '|' +
+            Array.from(selectedAssets || []).sort().join(',');
+        if (this._lastRenderKey === renderKey) {
+            return;
+        }
+        this._lastRenderKey = renderKey;
+
+        this.previewsContainer.innerHTML = '';
 
         switch (this.viewMode) {
             case 'grid':
@@ -2818,6 +2834,12 @@ export class AssetPanel extends BasePanel {
      * Clean up event listeners
      */
     destroy() {
+        // Unsubscribe from StateManager
+        if (this.subscriptions) {
+            this.subscriptions.forEach(unsub => unsub());
+            this.subscriptions = [];
+        }
+
         // Remove event handlers using new system
         eventHandlerManager.unregisterContainer(this.container);
         eventHandlerManager.unregisterContainer(this.previewsContainer);

@@ -2,6 +2,44 @@
 
 ## [Unreleased]
 
+## [3.54.5] - 2026-07-01
+
+### Fixed — Технический аудит v3.54.4: критические баги, производительность, архитектурная гигиена
+
+#### 🐛 Исправленные баги
+
+- **C1. Undo-рассинхрон после drag-cancel вне окна** — `MouseHandlers.handleGlobalMouseUp()` теперь вызывает `historyOperations.undo()` (полное восстановление с rebuild индексов/выборки) вместо низкоуровневого `historyManager.undo()` (`MouseHandlers.js`).
+- **C2. Краш при drag группы в саму себя** — добавлен guard в `dragSelectedObjects()`: запрещает перетаскивание группы в саму себя или в собственного потомка (`wouldCreateCycle` через `isObjectInGroupRecursive`) (`MouseHandlers.js`).
+- **H5. Escape не чистил pending-marquee state** — `marqueePendingStartPos` добавлен в `hasActiveProcess`-проверку в `handleKeyDown()`, теперь Escape корректно маршрутизируется в `cancelAllActions()` (`EventHandlers.js`).
+- **H6. Потеря фокуса (Alt-Tab) во время drag/marquee** — добавлен `MouseHandlers.handleWindowBlur()`, вызывается из существующего `visibilitychange`-обработчика при `document.hidden`: финализирует marquee, откатывает незавершённый drag через `historyOperations.undo()`, сбрасывает флаги кнопок мыши (`MouseHandlers.js`, `LevelEditor.js`).
+- **M3. OutlinerPanel "Duplicate" — пустая заглушка** — подключён существующий `DuplicateOperations` через `levelEditor.duplicateSelectedObjects()` (`OutlinerPanel.js`).
+- **L2. Накопление Escape-listener'ов в color picker слоя** — исправлено: handler хранится по ссылке и явно удаляется через `removeEventListener` во всех путях закрытия (change / blur / Escape) (`LayersPanel.js`).
+
+#### ⚡ Улучшения производительности
+
+- **H2. Кэширование порядка рендера** — сортировка visible objects по zIndex вычисляется и кэшируется вместе с `visibleObjectsCache` (тот же TTL/инвалидация); устранено создание нового отсортированного массива на каждый `render()` вызов (`RenderOperations.js`).
+- **H3. Throttle для global mousemove** — добавлен `_throttledGlobalMouseMove` с тем же `PERFORMANCE.MOUSE_MOVE_THROTTLE_MS`, что и обычный mousemove; устраняет неограниченные вызовы `render()` при marquee за пределами canvas (`MouseHandlers.js`).
+- **H4. Мемоизация renderPreviews() в AssetPanel** — добавлен guard: полный teardown/rebuild DOM-грида пропускается, если набор ассетов, выборка, viewMode и размеры не изменились с прошлого вызова (`AssetPanel.js`).
+- **M1. Очистка кэшей при смене уровня** — `newLevel()`/`openLevel()` теперь вызывают `editor.clearCaches()` перед `stateManager.reset()`, освобождая объекты предыдущего уровня из трёх неограниченных Map-кэшей (`LevelFileOperations.js`).
+
+#### 🏗️ Архитектурные улучшения
+
+- **H7. Устранение дублирования `updateDialogSize()`** — логика расчёта и применения ширины вынесена в `DialogResizer.applyCalculatedWidth()` (статический метод); `BaseDialog` и `SettingsPanel` теперь используют один код вместо двух почти идентичных копий (`DialogResizer.js`, `BaseDialog.js`, `SettingsPanel.js`).
+- **M2. Устранение тройной регистрации global mouseup** — удалены избыточные блоки `global-mouse-document` и `global-mouse-window`; оставлена единственная регистрация на `window` (по образцу `BasePanel`) (`EventHandlers.js`).
+- **M4. Блокировка newLevel/openLevel при активном drag/marquee** — добавлена проверка `_hasActiveMouseOperation()` в начале обоих методов, исключая риск "ghost edits" при race между drag и File menu (`LevelFileOperations.js`).
+- **M5. Удаление мёртвых test\*() методов** — `testContextMenu`, `testContextMenuManager`, `testGlobalClickHandler`, `testPanningDetection`, `testMenuAutoClose`, `testCursorPositioning` удалены из `LevelEditor.js` (115 строк, нет ни одного caller'а, нет ассертов, не производили наблюдаемых эффектов) (`LevelEditor.js`).
+- **L1. Корректная отписка от StateManager в destroy()** — `FoldersPanel` и `AssetPanel` теперь сохраняют unsubscribe-функции в `this.subscriptions[]` и вызывают их в `destroy()` по образцу `LayersPanel` (`FoldersPanel.js`, `AssetPanel.js`).
+
+#### 🧹 Чистка кода
+
+- **H9/L5. console.log в hot-path и BaseContextMenu** — удалены: `console.log(new Error().stack)` из `LevelEditor.updateAllPanels()`, 5 вызовов из `BaseContextMenu`, 2 из `OutlinerPanel.render()`, 6 дублирующих из `AssetImporter` (рядом уже были Logger-вызовы), 1 из `DetailsPanel`. Заменены на `Logger.*`: `DialogSizeManager` (добавлен импорт), `BaseContextMenu`.
+- **L3. Мёртвый console-fallback** — `MenuManager` и `ParallaxRenderer`: `this.logger = Logger.menu || {console...}` → `this.logger = Logger.menu` (fallback-ветка была мёртвым кодом, категории `MENU` и `PARALLAX` всегда существуют) (`MenuManager.js`, `ParallaxRenderer.js`).
+- **L4. Документация Logger** — исправлено число категорий: 17→29 в `DEVELOPMENT_GUIDE.md`, 19→29 в `ARCHITECTURE.md`.
+
+#### 📁 Изменённые файлы
+
+`src/event-system/MouseHandlers.js` · `src/event-system/EventHandlers.js` · `src/core/LevelEditor.js` · `src/core/LevelFileOperations.js` · `src/core/RenderOperations.js` · `src/core/ObjectOperations.js (через OutlinerPanel)` · `src/ui/OutlinerPanel.js` · `src/ui/AssetPanel.js` · `src/ui/FoldersPanel.js` · `src/ui/BaseContextMenu.js` · `src/ui/DetailsPanel.js` · `src/ui/LayersPanel.js` · `src/ui/BaseDialog.js` · `src/ui/SettingsPanel.js` · `src/utils/DialogResizer.js` · `src/utils/DialogSizeManager.js` · `src/utils/AssetImporter.js` · `src/utils/ParallaxRenderer.js` · `src/managers/MenuManager.js` · `docs/ARCHITECTURE.md` · `docs/DEVELOPMENT_GUIDE.md`
+
 ## [3.54.4] - 2025-01-27
 
 ### Enhanced - Улучшенная система селекта объектов на канве и унификация обработчиков событий

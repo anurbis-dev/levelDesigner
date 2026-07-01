@@ -1,4 +1,4 @@
-# Context Map - Level Designer v3.54.3
+# Context Map - Level Designer v3.54.5
 
 ## ⚠️ КРИТИЧЕСКИ ВАЖНО - ЧИТАТЬ ПЕРВЫМ
 
@@ -136,7 +136,7 @@ eventHandlerManager.registerElement(button, { click: onClick }, 'button-id');
 
 ## 🔧 Версионирование
 
-Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '3.54.3'`
+Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '3.54.5'`
 
 Версия отображается динамически после полной инициализации через `updateVersionInfo()` и `updatePageTitle()`. Интерфейс скрыт до завершения загрузки, чтобы избежать отображения устаревшей версии.
 
