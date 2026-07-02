@@ -17,7 +17,8 @@ export class ObjectOperations extends BaseModule {
      * @private
      */
     _sortObjectsByZIndexDescending(objects) {
-        return objects.sort((a, b) => this.editor.level.compareStackOrder(b, a));
+        const index = this.editor.level.buildStackOrderIndex();
+        return objects.sort((a, b) => this.editor.level.compareStackOrderIndexed(b, a, index));
     }
 
     /**
@@ -69,6 +70,30 @@ export class ObjectOperations extends BaseModule {
         const i = arr.indexOf(obj);
         if (i <= 0) return;
         [arr[i], arr[i - 1]] = [arr[i - 1], arr[i]];
+    }
+
+    /**
+     * Apply a stacking-order action (bringToFront/sendToBack/moveForward/moveBackward) to a
+     * set of objects, then save history and redraw. Shared by DetailsPanel's order buttons
+     * and their keyboard shortcuts, so both stay in sync by construction.
+     * @param {Iterable<Object>} objects
+     * @param {'bringToFront'|'sendToBack'|'moveForward'|'moveBackward'} action
+     */
+    applyStackOrderAction(objects, action) {
+        const objectsArray = Array.from(objects);
+        if (objectsArray.length === 0) return;
+
+        objectsArray.forEach(obj => this[action](obj));
+
+        this.editor.historyManager.saveState(
+            this.editor.level.objects,
+            this.editor.stateManager.get('selectedObjects'),
+            false,
+            this.editor.stateManager.get('groupEditMode')
+        );
+
+        this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
+        this.editor.render();
     }
 
     /**

@@ -221,9 +221,11 @@ export class MouseHandlers extends BaseModule {
         } else if (mouse.isLeftDown && mouse.isDragging) {
             // Drag objects
             objectsMovedToGroup = this.dragSelectedObjects(worldPos, e);
+            this.editor.detailsPanel?.refreshTransformFieldsLive();
         } else if (mouse.isLeftDown && mouse.isTransforming) {
             // Rotate/scale selected objects (Ctrl+drag / Ctrl+Alt+drag)
             this.transformSelectedObjects(worldPos);
+            this.editor.detailsPanel?.refreshTransformFieldsLive();
         } else if (mouse.isLeftDown && e.altKey && !(e.ctrlKey || e.metaKey) && !mouse.transformPendingMode && !this.editor.stateManager.get('duplicate.isActive')) {
             // Check if we should start Alt+drag duplication
             const selectedObjects = this.editor.stateManager.get('selectedObjects');
@@ -242,22 +244,29 @@ export class MouseHandlers extends BaseModule {
             this.updateMarquee(worldPos);
         }
 
-        // Freeze group frame while Alt is pressed (for dragging objects out)
+        // Freeze group frame while Alt is pressed (for dragging objects out).
+        // Gated on isDragging so the Ctrl+Alt+drag scale gesture (which also sets
+        // e.altKey but never isDragging) doesn't freeze the frame while the
+        // object's picture keeps live-scaling underneath it.
         if (this.isInGroupEditMode()) {
             const groupEditMode = this.getGroupEditMode();
-            if (e.altKey) {
+            if (e.altKey && mouse.isDragging) {
                 if (!groupEditMode.frameFrozen) {
                     this.editor.stateManager.set('groupEditMode', {
                         ...groupEditMode,
                         frameFrozen: true,
-                        frozenBounds: this.editor.objectOperations.getObjectWorldBounds(groupEditMode.group)
+                        frozenBounds: this.editor.objectOperations.getObjectWorldBounds(groupEditMode.group),
+                        // Snapshot the frame's rotation too, so a rotated group's frozen
+                        // frame still matches its (unchanging, since it's frozen) picture.
+                        frozenFrameGeometry: this.editor.renderOperations.getGroupEditFrameGeometry(groupEditMode.group)
                     });
                 }
             } else if (groupEditMode.frameFrozen) {
                 this.editor.stateManager.set('groupEditMode', {
                     ...groupEditMode,
                     frameFrozen: false,
-                    frozenBounds: null
+                    frozenBounds: null,
+                    frozenFrameGeometry: null
                 });
             }
         }
@@ -1043,7 +1052,7 @@ export class MouseHandlers extends BaseModule {
 
     dragSelectedObjects(worldPos, e) {
         const selectedObjects = this.editor.stateManager.get('selectedObjects');
-        
+
         // Track if any objects are being moved into groups to delay rendering
         let objectsMovedToGroup = false;
         const mouse = this.editor.stateManager.get('mouse');
@@ -1193,16 +1202,6 @@ export class MouseHandlers extends BaseModule {
             });
         }
 
-        // Cache group positions to avoid repeated calculations
-        let groupPos = null;
-        let activeGroupPos = null;
-        
-        if (this.isInGroupEditMode()) {
-            const groupEditMode = this.getGroupEditMode();
-            groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
-            activeGroupPos = this.editor.objectOperations.getObjectWorldPosition(this.getActiveGroup());
-        }
-
         selectedObjects.forEach(id => {
             const obj = this.editor.level.findObjectById(id);
             if (obj) {
@@ -1241,9 +1240,15 @@ export class MouseHandlers extends BaseModule {
                             }
                         }
                         
-                        // Convert world -> relative to group's world position (use cached position)
-                        obj.x -= groupPos.x;
-                        obj.y -= groupPos.y;
+                        // Convert world -> group-local coordinates, accounting for the
+                        // group's own rotation and any rotated ancestors above it (a plain
+                        // translation subtraction would misplace the object under a rotated
+                        // group).
+                        const localInGroup = WorldPositionUtils.worldPointToLocalPointInGroup(
+                            obj.x, obj.y, groupEditMode.group, this.editor.level.objects
+                        );
+                        obj.x = localInGroup.x;
+                        obj.y = localInGroup.y;
 
                         // FORCED INHERITANCE: Always inherit layerId from parent group
                         if (groupEditMode.group.layerId) {
@@ -1280,13 +1285,21 @@ export class MouseHandlers extends BaseModule {
                         const objWorldPosAlt = this.editor.objectOperations.getObjectWorldPosition(obj);
                         const newWorldX = objWorldPosAlt.x + dx;
                         const newWorldY = objWorldPosAlt.y + dy;
-                        // Convert back to active-group-relative coordinates
-                        obj.x = newWorldX - activeGroupPos.x;
-                        obj.y = newWorldY - activeGroupPos.y;
+                        // Convert back to active-group-relative coordinates, accounting for
+                        // the active group's own rotation and any rotated ancestors above it.
+                        const localInActive = WorldPositionUtils.worldPointToLocalPointInGroup(
+                            newWorldX, newWorldY, this.getActiveGroup(), this.editor.level.objects
+                        );
+                        obj.x = localInActive.x;
+                        obj.y = localInActive.y;
                     } else {
-                        // Normal drag: move relative to current parent group
-                        obj.x += dx;
-                        obj.y += dy;
+                        // Normal drag: move relative to current parent group. dx/dy are a
+                        // WORLD-space delta (from cursor movement); convert to obj's LOCAL
+                        // delta via its current ancestor chain — adding the raw world delta
+                        // would move it in the wrong direction under a rotated ancestor.
+                        const localDelta = WorldPositionUtils.worldDeltaToLocalDelta(dx, dy, obj, this.editor.level.objects);
+                        obj.x += localDelta.x;
+                        obj.y += localDelta.y;
 
                         // Check if dragged into the active (innermost) group from a parent group
                         const groupEditMode = this.getGroupEditMode();
@@ -1314,9 +1327,14 @@ export class MouseHandlers extends BaseModule {
                                         parentGroup.children = parentGroup.children.filter(c => c.id !== obj.id);
                                     }
 
-                                    // Convert to active-group-relative coordinates
-                                    obj.x = objWorldPos.x - activeGroupPos.x;
-                                    obj.y = objWorldPos.y - activeGroupPos.y;
+                                    // Convert to active-group-relative coordinates, accounting
+                                    // for the active group's own rotation and any rotated
+                                    // ancestors above it.
+                                    const localInActive = WorldPositionUtils.worldPointToLocalPointInGroup(
+                                        objWorldPos.x, objWorldPos.y, activeGroup, this.editor.level.objects
+                                    );
+                                    obj.x = localInActive.x;
+                                    obj.y = localInActive.y;
 
                                     // Layer inheritance
                                     if (activeGroup.layerId) {
@@ -1443,9 +1461,13 @@ export class MouseHandlers extends BaseModule {
             const currentAngle = Math.atan2(worldPos.y - pivot.y, worldPos.x - pivot.x);
             let deltaDeg = (currentAngle - mouse.transformStartAngle) * 180 / Math.PI;
 
-            // Shift = discrete rotation steps
+            // Shift = snap to the nearest absolute angle step: adjust the shared delta
+            // so the reference (first) object's resulting rotation lands on a multiple
+            // of the step, keeping the selection rigid
             if (this.editor.stateManager.get('keyboard.shiftKey')) {
-                deltaDeg = Math.round(deltaDeg / TRANSFORM.ROTATION_SNAP_DEGREES) * TRANSFORM.ROTATION_SNAP_DEGREES;
+                const step = TRANSFORM.ROTATION_SNAP_DEGREES;
+                const refRotation = snapshot[0].rotation;
+                deltaDeg = Math.round((refRotation + deltaDeg) / step) * step - refRotation;
             }
 
             const rad = deltaDeg * Math.PI / 180;
@@ -1470,6 +1492,12 @@ export class MouseHandlers extends BaseModule {
         } else {
             let factor = Math.hypot(worldPos.x - pivot.x, worldPos.y - pivot.y) / mouse.transformStartDist;
             factor = Math.max(TRANSFORM.MIN_SCALE_FACTOR, Math.min(TRANSFORM.MAX_SCALE_FACTOR, factor));
+
+            // Shift = snap the scale factor to discrete steps (10%)
+            if (this.editor.stateManager.get('keyboard.shiftKey')) {
+                const step = TRANSFORM.SCALE_SNAP_FACTOR;
+                factor = Math.max(step, Math.round(factor / step) * step);
+            }
 
             snapshot.forEach(s => {
                 // Uniform scale around the pivot: world points map as p' = pivot + (p - pivot) * f

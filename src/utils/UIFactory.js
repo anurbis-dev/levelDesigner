@@ -124,13 +124,14 @@ export class UIFactory {
             onClick = null,
             variant = 'primary',
             id = null,
-            disabled = false
+            disabled = false,
+            title = null
         } = options;
 
         const button = document.createElement('button');
         button.textContent = text;
         button.disabled = disabled;
-        
+
         // Set CSS class based on variant
         switch (variant) {
             case 'secondary':
@@ -144,6 +145,7 @@ export class UIFactory {
         }
 
         if (id) button.id = id;
+        if (title) button.title = title;
         if (onClick) button.addEventListener('click', onClick);
 
         return button;

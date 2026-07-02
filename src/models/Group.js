@@ -109,10 +109,15 @@ export class Group extends GameObject {
 
     /**
      * Get world bounds of the group including all children
+     * @param {boolean} skipOwnRotation - Return the bounds BEFORE the group's own rotation is
+     *        applied (still parent-relative, includes this.x/this.y). Used by frame-drawing
+     *        code that needs to rotate an exact (not conservative-AABB) rect as a rigid body.
      */
-    getBounds() {
+    getBounds(skipOwnRotation = false) {
         if (this.children.length === 0) {
-            return super.getBounds();
+            return skipOwnRotation
+                ? { minX: this.x, minY: this.y, maxX: this.x + this.width, maxY: this.y + this.height }
+                : super.getBounds();
         }
 
         const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
@@ -126,6 +131,8 @@ export class Group extends GameObject {
             bounds.maxX = Math.max(bounds.maxX, this.x + childBounds.maxX);
             bounds.maxY = Math.max(bounds.maxY, this.y + childBounds.maxY);
         }
+
+        if (skipOwnRotation) return bounds;
 
         // Apply the group's own rotation as conservative AABB rotation
         return WorldPositionUtils.rotateBoundsAroundCenter(bounds, this.rotation || 0);

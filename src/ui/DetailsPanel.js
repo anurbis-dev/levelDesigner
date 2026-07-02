@@ -1,5 +1,17 @@
 import { GroupTraversalUtils } from '../utils/GroupTraversalUtils.js';
 import { UIFactory } from '../utils/UIFactory.js';
+import { ResetRegistry } from '../utils/ResetRegistry.js';
+import { DEFAULT_OBJECT } from '../constants/EditorConstants.js';
+
+// Default value per Transform field, keyed by the input's data-property (see
+// createTransformsSectionHTML) — used by Backspace-to-reset (ResetRegistry).
+const TRANSFORM_DEFAULTS = {
+    x: DEFAULT_OBJECT.X,
+    y: DEFAULT_OBJECT.Y,
+    width: DEFAULT_OBJECT.WIDTH,
+    height: DEFAULT_OBJECT.HEIGHT,
+    rotation: DEFAULT_OBJECT.ROTATION
+};
 
 /**
  * Details panel UI component
@@ -72,11 +84,16 @@ export class DetailsPanel {
 
     render() {
         this.container.innerHTML = '';
+        // Rebuilt on every render by renderVisualProperties/setupTransformsListeners (and their
+        // multi-select variants) via registerResettable(); committed to ResetRegistry below so
+        // Backspace-to-reset (see ResetRegistry.js) always reflects what's currently on screen.
+        this._resettableFields = [];
 
         const selectedObjects = this.getSelectedObjects();
 
         if (selectedObjects.length === 0) {
             this.renderNoSelection();
+            ResetRegistry.setFields('detailsPanel', this._resettableFields);
             return;
         }
 
@@ -86,25 +103,54 @@ export class DetailsPanel {
             this.renderMultipleObjects(selectedObjects);
         }
 
+        ResetRegistry.setFields('detailsPanel', this._resettableFields);
+
         // Update tab title after rendering content
         this.updateTabTitle();
+    }
+
+    /**
+     * Register an input as resettable-to-default via the Backspace hover gesture.
+     * @param {HTMLElement} element - The actual input/select element
+     * @param {*|Function} defaultValueOrReset - Value to restore when reset, or (if a
+     *   function) a custom reset callback for fields whose default isn't a single static
+     *   value — e.g. width/height, whose "default" is the size of the specific asset the
+     *   object was created from, which can differ per object in a multi-selection.
+     */
+    registerResettable(element, defaultValueOrReset) {
+        if (!element) return;
+        if (typeof defaultValueOrReset === 'function') {
+            this._resettableFields.push({ element, reset: defaultValueOrReset });
+        } else {
+            this._resettableFields.push({ element, defaultValue: defaultValueOrReset });
+        }
+    }
+
+    /**
+     * Default width/height for an object. Falls back to the generic DEFAULT_OBJECT size
+     * unless the object was instantiated from an asset (matched by imgSrc) — each asset can
+     * have its own natural size, which is the real "default" to reset back to.
+     * @param {Object} obj
+     * @returns {{width: number, height: number}}
+     */
+    getObjectDefaultSize(obj) {
+        const assets = this.levelEditor?.assetManager?.getAllAssets?.() || [];
+        const asset = obj.imgSrc ? assets.find(a => a.imgSrc === obj.imgSrc) : null;
+        return {
+            width: asset ? asset.width : DEFAULT_OBJECT.WIDTH,
+            height: asset ? asset.height : DEFAULT_OBJECT.HEIGHT
+        };
     }
 
     renderNoSelection() {
         // Show level content when no object is selected
         if (this.levelEditor && this.levelEditor.cachedLevelStats) {
             this.renderLevelContent();
-
-            // Update tab title to show we're showing level content
-            const detailsTab = document.getElementById('details-tab');
-            if (detailsTab) {
-                detailsTab.textContent = 'Level';
-            }
         } else {
             this.container.innerHTML = '<p style="color: var(--ui-text-color, #9ca3af);">Select an object to see its properties.</p>';
-            // Update tab title for no selection case
-            this.updateTabTitle();
         }
+        // Update tab title (Level / Details)
+        this.updateTabTitle();
     }
 
     renderSingleObject(obj) {
@@ -239,8 +285,9 @@ export class DetailsPanel {
                 this.notifyPropertyChange(obj, 'color', obj.color);
             }
         });
+        this.registerResettable(colorContainer.querySelector('input'), DEFAULT_OBJECT.COLOR);
         section._content.appendChild(colorContainer);
-        
+
         this.container.appendChild(section);
     }
 
@@ -254,9 +301,11 @@ export class DetailsPanel {
     }
 
     /**
-     * Create a row of stacking-order buttons (Bring to Front / Send to Back / Forward / Backward).
-     * Order is just array position within the object's parent container (level.objects or a
-     * group's children) — see Level.compareStackOrder / ObjectOperations.bringToFront etc.
+     * Create a row of stacking-order buttons (Bring to Front / Send to Back / Bring Forward /
+     * Send Backward — standard Illustrator/Figma naming). Order is just array position within
+     * the object's parent container (level.objects or a group's children) — see
+     * Level.compareStackOrder / ObjectOperations.bringToFront etc. Shortcuts are defined in
+     * config/defaults/shortcuts.json and handled in EventHandlers.handleKeyDown.
      * @param {Array} objects - Objects to reorder when a button is clicked
      * @returns {HTMLElement}
      */
@@ -265,41 +314,22 @@ export class DetailsPanel {
         row.className = 'grid grid-cols-2 gap-2';
 
         const actions = [
-            { text: 'На передний план', action: 'bringToFront' },
-            { text: 'На задний план', action: 'sendToBack' },
-            { text: 'Выше', action: 'moveForward' },
-            { text: 'Ниже', action: 'moveBackward' }
+            { text: 'Bring to Front', action: 'bringToFront', title: 'Ctrl + Shift + Up' },
+            { text: 'Send to Back', action: 'sendToBack', title: 'Ctrl + Shift + Down' },
+            { text: 'Bring Forward', action: 'moveForward', title: 'Ctrl + Up' },
+            { text: 'Send Backward', action: 'moveBackward', title: 'Ctrl + Down' }
         ];
 
-        actions.forEach(({ text, action }) => {
+        actions.forEach(({ text, action, title }) => {
             row.appendChild(UIFactory.createButton({
                 text,
+                title,
                 variant: 'secondary',
-                onClick: () => this.applyOrderAction(objects, action)
+                onClick: () => this.levelEditor.objectOperations.applyStackOrderAction(objects, action)
             }));
         });
 
         return row;
-    }
-
-    /**
-     * Apply a stacking-order action (bringToFront/sendToBack/moveForward/moveBackward) to
-     * one or more objects, then save history and redraw.
-     */
-    applyOrderAction(objects, action) {
-        const objectOperations = this.levelEditor.objectOperations;
-        objects.forEach(obj => objectOperations[action](obj));
-
-        this.levelEditor.historyManager.saveState(
-            this.levelEditor.level.objects,
-            this.stateManager.get('selectedObjects'),
-            false,
-            this.stateManager.get('groupEditMode')
-        );
-
-        this.levelEditor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
-        this.levelEditor.render();
-        this.render();
     }
 
     /**
@@ -345,7 +375,7 @@ export class DetailsPanel {
      * @returns {HTMLElement} Section container
      */
     createTransformsSectionHTML(objOrObjects) {
-        const section = this.createSection('Transforms');
+        const section = this.createSection('Transform');
         
         // Create compact grid for position and size
         const gridContainer = document.createElement('div');
@@ -401,10 +431,29 @@ export class DetailsPanel {
             </div>
         `;
         
+        // Rotation row
+        const rotationRow = document.createElement('div');
+        rotationRow.className = 'col-span-2';
+        rotationRow.innerHTML = `
+            <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Rotation</label>
+            <div class="flex gap-2">
+                <div class="flex-1 relative">
+                    <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs pointer-events-none" style="color: var(--ui-text-color, #9ca3af);">°</span>
+                    <input type="number"
+                           id="details-rotation"
+                           step="1"
+                           class="w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm"
+                           placeholder="0"
+                           data-property="rotation">
+                </div>
+            </div>
+        `;
+
         gridContainer.appendChild(positionRow);
         gridContainer.appendChild(sizeRow);
+        gridContainer.appendChild(rotationRow);
         section._content.appendChild(gridContainer);
-        
+
         return section;
     }
 
@@ -415,21 +464,35 @@ export class DetailsPanel {
      */
     setupTransformsListeners(section, obj) {
         const inputs = section.querySelectorAll('input[data-property]');
-        
+        const sizeDefaults = this.getObjectDefaultSize(obj);
+
         inputs.forEach(input => {
+            const property = input.dataset.property;
+            const defaultValue = (property === 'width' || property === 'height')
+                ? sizeDefaults[property]
+                : TRANSFORM_DEFAULTS[property];
+            this.registerResettable(input, defaultValue);
+
             input.addEventListener('input', (e) => {
                 const property = e.target.dataset.property;
                 let value = parseFloat(e.target.value);
                 if (isNaN(value)) value = 0;
-                
+
                 obj[property] = value;
+
+                // Live canvas feedback while typing/using the number spinner.
+                // History + full listener notification (markDirty, tab title, etc.)
+                // still only fire on blur to avoid flooding undo with per-keystroke entries.
+                if (this.levelEditor && this.levelEditor.render) {
+                    this.levelEditor.render();
+                }
             });
-            
+
             input.addEventListener('blur', (e) => {
                 const property = e.target.dataset.property;
                 let value = parseFloat(e.target.value);
                 if (isNaN(value)) value = 0;
-                
+
                 obj[property] = value;
                 this.notifyPropertyChange(obj, property, value);
             });
@@ -577,8 +640,9 @@ export class DetailsPanel {
                 this.notifyPropertyChange(objects[0], 'color', e.target.value);
             }
         });
+        this.registerResettable(colorContainer.querySelector('input'), DEFAULT_OBJECT.COLOR);
         section._content.appendChild(colorContainer);
-        
+
         this.container.appendChild(section);
     }
 
@@ -698,19 +762,42 @@ export class DetailsPanel {
         });
         
         inputs.forEach(input => {
+            const property = input.dataset.property;
+
+            if (property === 'width' || property === 'height') {
+                // Each selected object may come from a different asset with its own natural
+                // size, so a single shared default value doesn't work here — reset every
+                // object individually to ITS OWN default, mirroring the blur handler below.
+                this.registerResettable(input, () => {
+                    objects.forEach(obj => {
+                        const value = this.getObjectDefaultSize(obj)[property];
+                        obj[property] = value;
+                        this.notifyPropertyChange(obj, property, value);
+                    });
+                });
+            } else {
+                this.registerResettable(input, TRANSFORM_DEFAULTS[property]);
+            }
+
             input.addEventListener('input', (e) => {
                 const property = e.target.dataset.property;
                 let value = parseFloat(e.target.value);
                 if (isNaN(value)) value = 0;
-                
+
                 objects.forEach(obj => obj[property] = value);
+
+                // Live canvas feedback while typing/using the number spinner (see
+                // setupTransformsListeners for why history/notify stay on blur).
+                if (this.levelEditor && this.levelEditor.render) {
+                    this.levelEditor.render();
+                }
             });
-            
+
             input.addEventListener('blur', (e) => {
                 const property = e.target.dataset.property;
                 let value = parseFloat(e.target.value);
                 if (isNaN(value)) value = 0;
-                
+
                 objects.forEach(obj => {
                     obj[property] = value;
                     this.notifyPropertyChange(obj, property, value);
@@ -1114,31 +1201,62 @@ export class DetailsPanel {
         });
     }
 
+    /**
+     * Cheaply refresh Transform input values (Position/Size/Rotation) from the live model,
+     * without rebuilding the DOM — safe to call every mousemove during drag/rotate/scale.
+     * Skips inputs the user is actively typing into so it never fights their keystrokes.
+     */
+    refreshTransformFieldsLive() {
+        const inputs = this.container.querySelectorAll('input[data-property]');
+        if (inputs.length === 0) return;
+
+        const selectedObjects = this.getSelectedObjects();
+        if (selectedObjects.length === 0) return;
+
+        inputs.forEach(input => {
+            if (document.activeElement === input) return;
+
+            const property = input.dataset.property;
+            const firstValue = selectedObjects[0][property] || 0;
+            const allSame = selectedObjects.every(obj => (obj[property] || 0) === firstValue);
+
+            if (allSame) {
+                input.value = firstValue.toFixed(1);
+            } else if (selectedObjects.length > 1) {
+                input.value = '';
+                input.placeholder = 'multiple values';
+            }
+        });
+    }
+
     updateTabTitle() {
-        const detailsTab = document.getElementById('details-tab');
-        if (!detailsTab) return;
+        // Tabs are generated dynamically by PanelPositionManager as buttons
+        // with data-tab="details" (the old #details-tab id no longer exists)
+        const detailsTabs = document.querySelectorAll('[data-tab="details"]');
+        if (detailsTabs.length === 0) return;
 
         const selectedObjects = this.getSelectedObjects();
         const count = selectedObjects.length;
 
+        let title;
         if (count === 0) {
             // Check if we're showing level content
-            if (this.levelEditor && this.levelEditor.cachedLevelStats) {
-                detailsTab.textContent = 'Level';
-            } else {
-                detailsTab.textContent = 'Details';
-            }
+            title = (this.levelEditor && this.levelEditor.cachedLevelStats) ? 'Level' : 'Details';
         } else if (count === 1) {
-            detailsTab.textContent = 'Asset';
+            title = 'Asset';
         } else {
-            detailsTab.textContent = 'Assets';
+            title = 'Assets';
         }
+
+        detailsTabs.forEach(tab => { tab.textContent = title; });
     }
     
     /**
      * Cleanup and destroy panel
      */
     destroy() {
+        ResetRegistry.clear('detailsPanel');
+
         // Unsubscribe from all state changes
         this.subscriptions.forEach(unsubscribe => {
             try {

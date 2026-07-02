@@ -84,6 +84,42 @@ export class Level {
     }
 
     /**
+     * Precompute a flat depth-first order index (id -> sequence number) for every object in
+     * the tree. A DFS pre-order visit assigns numbers in exactly the same relative order that
+     * compareStackOrder's per-pair path search would produce, so comparing two precomputed
+     * indices is equivalent to compareStackOrder — but building the index costs one O(N) walk
+     * total, instead of a fresh O(N) tree search (findObjectPath, twice) on EVERY comparison
+     * inside a sort. Build once per sort call via buildStackOrderIndex(), not per comparison.
+     */
+    buildStackOrderIndex() {
+        const index = new Map();
+        let counter = 0;
+        const visit = (objects) => {
+            for (const obj of objects) {
+                index.set(obj.id, counter++);
+                if (obj.type === 'group' && obj.children) visit(obj.children);
+            }
+        };
+        visit(this.objects);
+        return index;
+    }
+
+    /**
+     * Same ordering as compareStackOrder, but takes a precomputed index (see
+     * buildStackOrderIndex) instead of searching the tree — O(1) per comparison. Use this for
+     * sorting batches of objects; use compareStackOrder for one-off pairwise comparisons.
+     */
+    compareStackOrderIndexed(a, b, index) {
+        const layerA = a.layerId ? (this.getLayerById(a.layerId)?.getIndex() ?? 0) : 0;
+        const layerB = b.layerId ? (this.getLayerById(b.layerId)?.getIndex() ?? 0) : 0;
+        if (layerA !== layerB) return layerA - layerB;
+
+        const orderA = index.get(a.id) ?? -1;
+        const orderB = index.get(b.id) ?? -1;
+        return orderA - orderB;
+    }
+
+    /**
      * Update layer indices based on their order
      */
     updateLayerIndices() {

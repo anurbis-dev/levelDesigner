@@ -38,6 +38,7 @@ stateManager.subscribe(key, callback)
 configManager.get(path)
 configManager.set(path, value)
 configManager.loadAllConfigs()
+configManager.getDefault(path) // истинный дефолт (из getDefaultConfigs(), кэш), не текущее значение — для Backspace-to-reset
 
 // EventHandlerManager
 eventHandlerManager.registerElement(element, handlers, elementId)
@@ -52,6 +53,12 @@ levelEditor.objectOperations.bringToFront(obj)
 levelEditor.objectOperations.sendToBack(obj)
 levelEditor.objectOperations.moveForward(obj)
 levelEditor.objectOperations.moveBackward(obj)
+
+// Backspace-to-reset (hover-based, Blender-style) — см. src/utils/ResetRegistry.js
+ResetRegistry.setFields(scopeKey, fields) // fields = [{element, defaultValue}], панель регистрирует на каждый render()
+ResetRegistry.handleBackspace() // точка входа из EventHandlers.handleKeyDown, наведение мышью (:hover), не фокус
+detailsPanel.registerResettable(element, defaultValue) // Transform (x/y/width/height/rotation) и Color
+settingsPanel.rebuildResetRegistry() // сканирует [data-setting], вызывается в конце setupSettingsInputs()
 ```
 
 ## 📁 Основные файлы
@@ -85,6 +92,7 @@ levelEditor.objectOperations.moveBackward(obj)
 - `src/utils/Logger.js` - логирование (19 категорий)
 - `src/utils/UIFactory.js` - создание UI
 - `src/utils/ValidationUtils.js` - валидация
+- `src/utils/ResetRegistry.js` - Backspace-to-reset (hover-based), singleton `ResetRegistry`, вызывается из `EventHandlers.handleKeyDown`
 
 ## 🏗️ Архитектурные принципы
 

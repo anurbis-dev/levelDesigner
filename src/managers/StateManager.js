@@ -8,6 +8,20 @@ export class StateManager {
     constructor() {
         this.state = this.createInitialState();
         this.listeners = new Map();
+        // Flips true on every set()/update() call; the render loop consumes it once per
+        // frame to skip redraws when nothing observable changed since the last frame.
+        // Unrelated to state.isDirty (unsaved-level-changes flag) — this one is per-frame.
+        this._needsRender = true;
+    }
+
+    /**
+     * Consume the render-dirty flag (returns true at most once per actual change).
+     * @returns {boolean} true if state changed since the last call
+     */
+    consumeNeedsRender() {
+        const dirty = this._needsRender;
+        this._needsRender = false;
+        return dirty;
     }
 
     /**
@@ -231,32 +245,42 @@ export class StateManager {
             this.state[key] = value;
             this.notifyListeners(key, value, oldValue);
         }
+        this._needsRender = true;
     }
 
     /**
      * Update multiple state properties at once
      */
     update(updates) {
-        const oldState = { ...this.state };
-        
+        // Per-key oldValue, captured right before that key is overwritten — avoids cloning
+        // the whole state tree (was `{ ...this.state }`, which also only ever produced a
+        // correct oldValue for top-level keys; dotted keys like 'mouse.lastX' always read
+        // back undefined from that shallow clone).
+        const oldValues = {};
+
         Object.entries(updates).forEach(([key, value]) => {
             if (key.includes('.')) {
                 // Handle nested properties like 'mouse.isLeftDown'
                 const parts = key.split('.');
+                const lastPart = parts.pop();
                 let current = this.state;
-                for (let i = 0; i < parts.length - 1; i++) {
-                    if (!current[parts[i]]) current[parts[i]] = {};
-                    current = current[parts[i]];
+                for (const part of parts) {
+                    if (!current[part] || typeof current[part] !== 'object') current[part] = {};
+                    current = current[part];
                 }
-                current[parts[parts.length - 1]] = value;
+                oldValues[key] = current[lastPart];
+                current[lastPart] = value;
             } else {
+                oldValues[key] = this.state[key];
                 this.state[key] = value;
             }
         });
-        
+
         Object.keys(updates).forEach(key => {
-            this.notifyListeners(key, this.get(key), oldState[key]);
+            this.notifyListeners(key, this.get(key), oldValues[key]);
         });
+
+        this._needsRender = true;
     }
 
     /**

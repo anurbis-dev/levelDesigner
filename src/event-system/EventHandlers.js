@@ -5,6 +5,7 @@ import { ScrollUtils } from '../utils/ScrollUtils.js';
 import { MENU_CONFIG, getShortcutTarget } from '../../config/menu.js';
 import { eventHandlerManager } from './EventHandlerManager.js';
 import { globalEventRegistry } from './GlobalEventRegistry.js';
+import { ResetRegistry } from '../utils/ResetRegistry.js';
 
 /**
  * Event Handlers module for LevelEditor
@@ -173,7 +174,13 @@ export class EventHandlers extends BaseModule {
                     lastDuplicateState = currentState;
                 }
 
-                this.editor.render();
+                // Skip the redraw when nothing observable changed since the last frame.
+                // Every interactive path (mousemove, camera pan/zoom/drag, selection,
+                // object edits) already funnels through stateManager.set/update, which
+                // flips this flag — so an idle canvas stops costing a render per frame.
+                if (this.editor.stateManager.consumeNeedsRender()) {
+                    this.editor.render();
+                }
             } catch (e) {
                 if (!this._destroyed) {
                     Logger.event.error('Render loop error:', e);
@@ -220,6 +227,13 @@ export class EventHandlers extends BaseModule {
     }
     
     handleKeyDown(e) {
+        // Backspace-to-reset (hover-based, see ResetRegistry) must run even while some
+        // unrelated input has focus — checked before the focused-input early-return below.
+        if (e.key === 'Backspace' && ResetRegistry.handleBackspace()) {
+            e.preventDefault();
+            return;
+        }
+
         // Allow input fields to work normally
         if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.contentEditable === 'true')) {
             return;
@@ -338,6 +352,20 @@ export class EventHandlers extends BaseModule {
                             await this.editor.saveLevel();
                         })();
                     }
+                }
+            } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                // Stacking order: Ctrl+Up/Down moves one step, Ctrl+Shift+Up/Down goes to front/back
+                e.preventDefault();
+                const selectedIds = this.editor.stateManager.get('selectedObjects');
+                if (selectedIds && selectedIds.size > 0 && this.editor.objectOperations) {
+                    const objects = Array.from(selectedIds)
+                        .map(id => this.editor.level.findObjectById(id))
+                        .filter(Boolean);
+                    const goingUp = e.key === 'ArrowUp';
+                    const action = e.shiftKey
+                        ? (goingUp ? 'bringToFront' : 'sendToBack')
+                        : (goingUp ? 'moveForward' : 'moveBackward');
+                    this.editor.objectOperations.applyStackOrderAction(objects, action);
                 }
             }
         } else if (e.key === 'PageUp') {

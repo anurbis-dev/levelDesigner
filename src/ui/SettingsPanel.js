@@ -1,5 +1,6 @@
 import { GridSettings } from './GridSettings.js';
 import { SettingsSyncManager } from '../utils/SettingsSyncManager.js';
+import { ResetRegistry } from '../utils/ResetRegistry.js';
 import { ColorUtils } from '../utils/ColorUtils.js';
 import { BaseContextMenu } from './BaseContextMenu.js';
 import { Logger } from '../utils/Logger.js';
@@ -599,6 +600,29 @@ export class SettingsPanel {
 
         // Setup hotkey input handlers
         this.setupHotkeyInputs();
+
+        // Rebuild Backspace-to-reset targets for whichever tab is now in the DOM
+        this.rebuildResetRegistry();
+    }
+
+    /**
+     * Collect every currently-rendered setting input (any tab except Hotkeys, which has no
+     * "default" concept) for Backspace-to-reset (see ResetRegistry.js). Relies solely on the
+     * [data-setting] attribute, not the "setting-input" CSS class, since GridSettings.js uses
+     * a differently-named class ("settings-input") for the same purpose.
+     */
+    rebuildResetRegistry() {
+        const settingsRoot = document.getElementById('settings-panel-container') || document;
+        const fields = [];
+
+        settingsRoot.querySelectorAll('[data-setting]').forEach(element => {
+            const path = element.dataset.setting;
+            const defaultValue = this.configManager?.getDefault(path);
+            if (defaultValue === undefined) return;
+            fields.push({ element, defaultValue });
+        });
+
+        ResetRegistry.setFields('settingsPanel', fields);
     }
 
     /**
@@ -1224,7 +1248,9 @@ export class SettingsPanel {
      */
     destroy() {
         Logger.ui.debug('Destroying SettingsPanel');
-        
+
+        ResetRegistry.clear('settingsPanel');
+
         // Remove all event listeners
         this.eventListeners.forEach(({ target, event, handler }) => {
             try {

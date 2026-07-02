@@ -4,6 +4,7 @@ import { ParallaxRenderer } from '../utils/ParallaxRenderer.js';
 import { RenderUtils } from '../utils/RenderUtils.js';
 import { SnapUtils } from '../utils/SnapUtils.js';
 import { PERFORMANCE } from '../constants/EditorConstants.js';
+import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
 import { throttle } from '../utils/PerformanceUtils.js';
 
 /**
@@ -509,7 +510,7 @@ export class RenderOperations extends BaseModule {
                     if (mouse.altKey && mouse.isDragging && this.editor.objectOperations.isObjectInGroup(obj, groupEditMode.group)) {
                         this.drawAltDragSelectionRect(bounds, camera);
                     } else {
-                        this.drawSelectionRect(bounds, obj.type === 'group', camera);
+                        this.drawObjectSelectionRect(obj, bounds, camera);
                     }
                 }
             });
@@ -519,51 +520,92 @@ export class RenderOperations extends BaseModule {
                 if (selectedObjects.has(obj.id)) {
                     const effectiveLayerId = this.getEffectiveLayerId(obj);
                     const bounds = this.parallaxRenderer.getObjectWorldBoundsWithParallax(obj, effectiveLayerId);
-                    this.drawSelectionRect(bounds, obj.type === 'group', camera);
+                    this.drawObjectSelectionRect(obj, bounds, camera);
                 }
             });
         }
     }
 
-    drawSelectionRect(bounds, isGroup, camera) {
-        const selectionColor = isGroup 
+    /**
+     * Draw selection outline for an object, rotated to match its true on-screen orientation
+     * (ancestor rotations + its own — see WorldPositionUtils.getFrameGeometry). `bounds` only
+     * supplies the CENTER (its AABB center is invariant to rotation and already carries any
+     * parallax offset); the actual rect size/rotation come from getFrameGeometry so this
+     * never drifts out of sync with the rendered picture.
+     */
+    drawObjectSelectionRect(obj, bounds, camera) {
+        const geometry = WorldPositionUtils.getFrameGeometry(obj, this.editor.level.objects);
+        const cx = (bounds.minX + bounds.maxX) / 2;
+        const cy = (bounds.minY + bounds.maxY) / 2;
+        const rect = { minX: cx - geometry.halfW, minY: cy - geometry.halfH, maxX: cx + geometry.halfW, maxY: cy + geometry.halfH };
+
+        const isGroup = obj.type === 'group';
+        const color = isGroup
             ? (this.editor.stateManager.get('selection.groupOutlineColor') || '#3B82F6')
             : (this.editor.stateManager.get('selection.outlineColor') || '#3B82F6');
-        const outlineWidth = (isGroup
+        const width = isGroup
             ? (this.editor.stateManager.get('selection.groupOutlineWidth') || 4)
-            : (this.editor.stateManager.get('selection.outlineWidth') || 2)) / camera.zoom;
+            : (this.editor.stateManager.get('selection.outlineWidth') || 2);
 
+        this.strokeFrame(rect, camera, { color, width, dash: isGroup ? [5, 5] : [] }, geometry.rotationDeg);
+    }
 
-        this.editor.canvasRenderer.ctx.save();
-        this.editor.canvasRenderer.ctx.strokeStyle = selectionColor;
-        this.editor.canvasRenderer.ctx.lineWidth = outlineWidth;
-        this.editor.canvasRenderer.ctx.setLineDash(isGroup ? [5, 5] : []);
+    /**
+     * Low-level: stroke a (possibly rotated) rectangle. Shared by object/group selection
+     * outlines, Alt-drag feedback, and the group-edit-mode frame so all of them always draw
+     * consistently and can never visually diverge from each other or from the rendered
+     * picture — previously each had its own hand-rolled rotation (or, for the group-edit
+     * frame, no rotation at all), which is exactly what caused them to drift apart.
+     * @param {Object} bounds - {minX,minY,maxX,maxY} of the UNROTATED rect
+     * @param {Object} camera
+     * @param {Object} style - { color, width, dash }
+     * @param {number} rotationDeg - rotate around the rect's own center before stroking
+     */
+    strokeFrame(bounds, camera, { color, width, dash = [] }, rotationDeg = 0) {
+        const ctx = this.editor.canvasRenderer.ctx;
+        ctx.save();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width / camera.zoom;
+        ctx.setLineDash(dash);
 
-        this.editor.canvasRenderer.ctx.strokeRect(
+        if (rotationDeg) {
+            const cx = (bounds.minX + bounds.maxX) / 2;
+            const cy = (bounds.minY + bounds.maxY) / 2;
+            ctx.translate(cx, cy);
+            ctx.rotate(rotationDeg * Math.PI / 180);
+            ctx.translate(-cx, -cy);
+        }
+
+        ctx.strokeRect(
             bounds.minX,
             bounds.minY,
             bounds.maxX - bounds.minX,
             bounds.maxY - bounds.minY
         );
-        this.editor.canvasRenderer.ctx.restore();
+        ctx.restore();
     }
 
     drawAltDragSelectionRect(bounds, camera) {
-        const altDragColor = '#FF6B6B'; // Red color to indicate Alt+drag
-        const outlineWidth = 3 / camera.zoom;
+        this.strokeFrame(bounds, camera, { color: '#FF6B6B', width: 3, dash: [8, 4] });
+    }
 
-        this.editor.canvasRenderer.ctx.save();
-        this.editor.canvasRenderer.ctx.strokeStyle = altDragColor;
-        this.editor.canvasRenderer.ctx.lineWidth = outlineWidth;
-        this.editor.canvasRenderer.ctx.setLineDash([8, 4]); // Dashed line to indicate special mode
-
-        this.editor.canvasRenderer.ctx.strokeRect(
-            bounds.minX,
-            bounds.minY,
-            bounds.maxX - bounds.minX,
-            bounds.maxY - bounds.minY
-        );
-        this.editor.canvasRenderer.ctx.restore();
+    /**
+     * Compute the (already padded) group-edit frame geometry — bounds rect plus the
+     * rotation needed to match the rendered picture exactly. Shared between the live frame
+     * and the frozen Alt-drag-out-of-group snapshot so both use identical math.
+     */
+    getGroupEditFrameGeometry(group, padding = 10) {
+        const bounds = this.editor.objectOperations.getObjectWorldBounds(group);
+        const frameGeometry = WorldPositionUtils.getFrameGeometry(group, this.editor.level.objects);
+        const cx = (bounds.minX + bounds.maxX) / 2;
+        const cy = (bounds.minY + bounds.maxY) / 2;
+        return {
+            minX: cx - frameGeometry.halfW - padding,
+            minY: cy - frameGeometry.halfH - padding,
+            maxX: cx + frameGeometry.halfW + padding,
+            maxY: cy + frameGeometry.halfH + padding,
+            rotationDeg: frameGeometry.rotationDeg
+        };
     }
 
     /**
@@ -577,28 +619,11 @@ export class RenderOperations extends BaseModule {
         const groupEditMode = this.getGroupEditMode();
 
         // Draw frame around the group being edited; allow freezing during Alt-drag
-        const bounds = (groupEditMode.frameFrozen && groupEditMode.frozenBounds)
-            ? groupEditMode.frozenBounds
-            : this.editor.objectOperations.getObjectWorldBounds(group);
+        const geometry = (groupEditMode.frameFrozen && groupEditMode.frozenFrameGeometry)
+            ? groupEditMode.frozenFrameGeometry
+            : this.getGroupEditFrameGeometry(group);
 
-        // Add padding to show the group boundary clearly
-        const padding = 10;
-        const minX = bounds.minX - padding;
-        const minY = bounds.minY - padding;
-        const maxX = bounds.maxX + padding;
-        const maxY = bounds.maxY + padding;
-
-        this.editor.canvasRenderer.ctx.save();
-        this.editor.canvasRenderer.ctx.strokeStyle = '#FF6B6B';
-        this.editor.canvasRenderer.ctx.lineWidth = 3 / camera.zoom;
-        this.editor.canvasRenderer.ctx.setLineDash([10, 5]);
-        this.editor.canvasRenderer.ctx.strokeRect(
-            minX,
-            minY,
-            maxX - minX,
-            maxY - minY
-        );
-        this.editor.canvasRenderer.ctx.restore();
+        this.strokeFrame(geometry, camera, { color: '#FF6B6B', width: 3, dash: [10, 5] }, geometry.rotationDeg);
     }
 
     drawHierarchyHighlightForGroup(group, depth = 0) {
@@ -869,8 +894,11 @@ export class RenderOperations extends BaseModule {
         // Sort objects by stacking order for proper layering (behind first, front last).
         // Computed once per cache entry instead of on every render() call; shares the same
         // TTL/invalidation as visibility (see clearVisibleObjectsCache - "objects or structure change").
+        // Index built once per sort instead of per-comparison (see Level.buildStackOrderIndex) —
+        // avoids an O(N) tree search inside every one of the O(M log M) comparator calls.
+        const stackOrderIndex = this.editor.level.buildStackOrderIndex();
         visibleObjects = visibleObjects.slice().sort((a, b) =>
-            this.editor.level.compareStackOrder(a.obj, b.obj)
+            this.editor.level.compareStackOrderIndexed(a.obj, b.obj, stackOrderIndex)
         );
 
         // Cache the result
@@ -905,11 +933,33 @@ export class RenderOperations extends BaseModule {
 
         this.editor.canvasRenderer.ctx.restore();
 
-        // Draw selection outlines using direct bounds calculation (duplicates aren't in level tree)
+        // Draw selection outlines using direct bounds calculation (duplicates aren't in level
+        // tree, so WorldPositionUtils.getFrameGeometry — which looks objects up by DFS —
+        // doesn't apply here). getDuplicateObjectBounds is rotation-aware (conservative AABB);
+        // for simple objects we additionally draw the frame TIGHT and actually rotated (their
+        // own rotation is known directly, no ancestor lookup needed) instead of just the
+        // axis-aligned conservative box.
         objects.forEach(obj => {
             const bounds = this.getDuplicateObjectBounds(obj);
             if (bounds) {
-                this.drawSelectionRect(bounds, obj.type === 'group', camera);
+                const isGroup = obj.type === 'group';
+                const color = isGroup
+                    ? (this.editor.stateManager.get('selection.groupOutlineColor') || '#3B82F6')
+                    : (this.editor.stateManager.get('selection.outlineColor') || '#3B82F6');
+                const width = isGroup
+                    ? (this.editor.stateManager.get('selection.groupOutlineWidth') || 4)
+                    : (this.editor.stateManager.get('selection.outlineWidth') || 2);
+
+                if (!isGroup && obj.rotation) {
+                    const cx = (bounds.minX + bounds.maxX) / 2;
+                    const cy = (bounds.minY + bounds.maxY) / 2;
+                    const halfW = (obj.width || 0) / 2;
+                    const halfH = (obj.height || 0) / 2;
+                    const rect = { minX: cx - halfW, minY: cy - halfH, maxX: cx + halfW, maxY: cy + halfH };
+                    this.strokeFrame(rect, camera, { color, width, dash: [] }, obj.rotation);
+                } else {
+                    this.strokeFrame(bounds, camera, { color, width, dash: isGroup ? [5, 5] : [] });
+                }
             }
 
             // Draw hierarchy highlight for groups
@@ -951,59 +1001,47 @@ export class RenderOperations extends BaseModule {
     }
 
     /**
-     * Get bounds for duplicate object (direct calculation without level tree search)
+     * Get bounds for duplicate object (direct calculation without level tree search).
+     * Rotation-aware: duplicate previews are a detached subtree (not in level.objects), so
+     * they can't go through WorldPositionUtils' DFS-from-root lookup — this mirrors the same
+     * "local bounds per group, rotate as a whole, then shift" algorithm by hand instead.
      */
     getDuplicateObjectBounds(obj, parentX = 0, parentY = 0) {
-        const absX = obj.x + parentX;
-        const absY = obj.y + parentY;
-
         if (obj.type !== 'group') {
-            // Simple object - return its direct bounds
-            return {
-                minX: absX,
-                minY: absY,
-                maxX: absX + (obj.width || 0),
-                maxY: absY + (obj.height || 0)
-            };
+            const absX = obj.x + parentX;
+            const absY = obj.y + parentY;
+            return WorldPositionUtils.getRotatedRectAABB(absX, absY, obj.width || 0, obj.height || 0, obj.rotation || 0);
         }
 
-        // Group object - calculate bounds from all children
-        const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+        // Group object - union of children's bounds in THIS group's own local frame
+        // (each child call uses parentX/Y=0, so its result already includes ITS OWN x/y
+        // relative to `obj`), then rotate the union as a rigid body by obj's own rotation.
+        let bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
 
-        const walkChildren = (current, baseX, baseY) => {
-            const currentAbsX = baseX + current.x;
-            const currentAbsY = baseY + current.y;
-
-            if (current.type === 'group' && current.children) {
-                // Recursively walk group children
-                for (const child of current.children) {
-                    walkChildren(child, currentAbsX, currentAbsY);
-                }
-            } else {
-                // Regular object - add to bounds
-                bounds.minX = Math.min(bounds.minX, currentAbsX);
-                bounds.minY = Math.min(bounds.minY, currentAbsY);
-                bounds.maxX = Math.max(bounds.maxX, currentAbsX + (current.width || 0));
-                bounds.maxY = Math.max(bounds.maxY, currentAbsY + (current.height || 0));
-            }
-        };
-
-        // Walk all children
         if (obj.children && obj.children.length > 0) {
             for (const child of obj.children) {
-                walkChildren(child, absX, absY);
+                const childBounds = this.getDuplicateObjectBounds(child, 0, 0);
+                bounds.minX = Math.min(bounds.minX, obj.x + childBounds.minX);
+                bounds.minY = Math.min(bounds.minY, obj.y + childBounds.minY);
+                bounds.maxX = Math.max(bounds.maxX, obj.x + childBounds.maxX);
+                bounds.maxY = Math.max(bounds.maxY, obj.y + childBounds.maxY);
             }
         }
 
         // If no valid bounds found (empty group), use group's position
         if (bounds.minX === Infinity) {
-            bounds.minX = absX;
-            bounds.minY = absY;
-            bounds.maxX = absX;
-            bounds.maxY = absY;
+            bounds = { minX: obj.x, minY: obj.y, maxX: obj.x, maxY: obj.y };
         }
 
-        return bounds;
+        bounds = WorldPositionUtils.rotateBoundsAroundCenter(bounds, obj.rotation || 0);
+
+        // Shift from obj's-parent-relative frame to the caller's requested absolute position
+        return {
+            minX: bounds.minX + parentX,
+            minY: bounds.minY + parentY,
+            maxX: bounds.maxX + parentX,
+            maxY: bounds.maxY + parentY
+        };
     }
 
     /**

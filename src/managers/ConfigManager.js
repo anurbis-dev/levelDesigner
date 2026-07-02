@@ -25,7 +25,11 @@ export class ConfigManager {
             shortcuts: null,
             logger: null
         };
-        
+
+        // Cached deep-clone of default config values, populated once defaults are loaded.
+        // See getDefault(path).
+        this._defaultConfigsCache = null;
+
         // Track which configs have been modified for selective saving
         this.modifiedConfigs = new Set();
         
@@ -61,7 +65,13 @@ export class ConfigManager {
             
             // Load default configurations from embedded data
             const defaultConfigs = await this.getDefaultConfigs();
-            
+
+            // Deep-clone before caching: mergeConfigs()/set() mutate nested objects in place,
+            // and mergeConfigs() only shallow-copies top-level categories, so without cloning,
+            // editing a nested path (e.g. editor.axisConstraint.showAxis) would corrupt this
+            // "true defaults" cache used by getDefault().
+            this._defaultConfigsCache = JSON.parse(JSON.stringify(defaultConfigs));
+
             // Load user configurations from localStorage
             const userConfigs = await this.loadUserConfigsFromStorage();
             
@@ -486,6 +496,29 @@ export class ConfigManager {
     }
 
     /**
+     * Get the DEFAULT value for a config path (from config/defaults/*.json + hardcoded
+     * defaults in getDefaultConfigs()), independent of any user override. Mirrors get(path)
+     * but reads from the cached defaults snapshot instead of the live merged config.
+     * Used by Backspace-to-reset (see ResetRegistry.js / SettingsPanel.rebuildResetRegistry).
+     */
+    getDefault(path) {
+        if (!this._defaultConfigsCache) return undefined;
+
+        const keys = path.split('.');
+        let current = this._defaultConfigsCache;
+
+        for (const key of keys) {
+            if (current && typeof current === 'object' && key in current) {
+                current = current[key];
+            } else {
+                return undefined;
+            }
+        }
+
+        return current;
+    }
+
+    /**
      * Get all configurations
      */
     getAll() {
@@ -759,6 +792,7 @@ export class ConfigManager {
      */
     async reset() {
         this.configs = await this.getDefaultConfigs();
+        this._defaultConfigsCache = JSON.parse(JSON.stringify(this.configs));
         // Synchronize grid and canvas settings after reset
         if (this.configs.grid && this.configs.canvas) {
             this.configs.canvas.showGrid = this.configs.grid.showGrid;

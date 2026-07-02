@@ -162,7 +162,7 @@ export class CanvasRenderer {
     drawObject(obj, parentX = 0, parentY = 0) {
         const absX = obj.x + parentX;
         const absY = obj.y + parentY;
-        
+
         if (obj.type === 'group') {
             this.drawGroup(obj, absX, absY);
         } else {

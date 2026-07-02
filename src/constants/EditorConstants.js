@@ -8,9 +8,12 @@
  * Default object properties
  */
 export const DEFAULT_OBJECT = {
+    X: 0,
+    Y: 0,
     WIDTH: 32,
     HEIGHT: 32,
     COLOR: '#cccccc',
+    ROTATION: 0,
     VISIBLE: true,
     LOCKED: false
 };
@@ -74,7 +77,8 @@ export const SELECTION = {
  * Object transform gestures (Ctrl+drag rotate, Ctrl+Alt+drag scale)
  */
 export const TRANSFORM = {
-    ROTATION_SNAP_DEGREES: 10,  // Shift during rotation snaps to this step (candidate for user setting)
+    ROTATION_SNAP_DEGREES: 10,  // Shift during rotation snaps the resulting angle to this step (candidate for user setting)
+    SCALE_SNAP_FACTOR: 0.1,     // Shift during scaling snaps the scale factor to this step (10%)
     MIN_SCALE_FACTOR: 0.05,
     MAX_SCALE_FACTOR: 20,
     DRAG_THRESHOLD_PX: 4
