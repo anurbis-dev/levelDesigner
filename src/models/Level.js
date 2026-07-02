@@ -60,45 +60,27 @@ export class Level {
     }
 
     /**
-     * Get next available zIndex for new objects
-     * @returns {number} Next zIndex value (layerIndex + objectIndex/1000)
+     * Compare stacking/render order of two objects. Order is derived live from the actual
+     * tree structure — layer index first (cross-layer stacking), then each object's array
+     * position within its containing group's `children` (or top-level `objects`) — so it can
+     * never drift out of sync with what is actually drawn.
+     * @returns {number} Negative if a renders behind b, positive if in front, 0 if equal
      */
-    getNextZIndex() {
-        // Get the highest layer index (top layer has max index)
-        const maxLayerIndex = Math.max(...this.layers.map(layer => layer.getIndex()), 0);
+    compareStackOrder(a, b) {
+        const layerA = a.layerId ? (this.getLayerById(a.layerId)?.getIndex() ?? 0) : 0;
+        const layerB = b.layerId ? (this.getLayerById(b.layerId)?.getIndex() ?? 0) : 0;
+        if (layerA !== layerB) return layerA - layerB;
 
-        // Find max object index within each layer
-        let maxObjectIndex = -1;
+        const pathA = GroupTraversalUtils.findObjectPath(this.objects, a.id) || [];
+        const pathB = GroupTraversalUtils.findObjectPath(this.objects, b.id) || [];
 
-        // Find max zIndex among all objects (including nested in groups)
-        const checkObjects = (objects) => {
-            objects.forEach(obj => {
-                if (obj.zIndex !== undefined && obj.zIndex > 0) {
-                    // Extract object index (thousandths part)
-                    const objectIndex = Math.floor((obj.zIndex % 1) * 1000);
-                    maxObjectIndex = Math.max(maxObjectIndex, objectIndex);
-                }
-
-                // Check children in groups
-                if (obj.type === 'group' && obj.children) {
-                    checkObjects(obj.children);
-                }
-            });
-        };
-
-        checkObjects(this.objects);
-
-        // If maxObjectIndex is 999, start from 0 for next object
-        const nextObjectIndex = maxObjectIndex >= 999 ? 0 : maxObjectIndex + 1;
-
-        const result = maxLayerIndex + (nextObjectIndex / 1000);
-
-        // Log zIndex calculation for new objects
-        if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
-            Logger.level.debug(`Level.getNextZIndex(): maxLayerIndex=${maxLayerIndex}, maxObjectIndex=${maxObjectIndex}, nextObjectIndex=${nextObjectIndex}, returning=${result}`);
+        const maxLength = Math.max(pathA.length, pathB.length);
+        for (let i = 0; i < maxLength; i++) {
+            const va = pathA[i] !== undefined ? pathA[i] : -1;
+            const vb = pathB[i] !== undefined ? pathB[i] : -1;
+            if (va !== vb) return va - vb;
         }
-
-        return result;
+        return 0;
     }
 
     /**
@@ -122,46 +104,6 @@ export class Level {
             const reversedIndex = sortedLayers.length - 1 - index;
             layer.setIndex(reversedIndex);
         });
-
-        // Update all object zIndices to reflect new layer indices
-        this.updateAllObjectZIndices();
-    }
-
-    /**
-     * Update zIndex for all objects based on their layer
-     */
-    updateAllObjectZIndices() {
-        const updateObjects = (objects) => {
-            objects.forEach(obj => {
-                const layer = obj.layerId ? this.getLayerById(obj.layerId) : null;
-                if (layer && obj.zIndex !== undefined) {
-                    // Extract current object index (thousandths part)
-                    const currentObjectIndex = Math.floor((obj.zIndex % 1) * 1000);
-
-                    // Update zIndex with new layer index + object index
-                    obj.zIndex = layer.getIndex() + (currentObjectIndex / 1000);
-                }
-
-                // Update children in groups
-                if (obj.type === 'group' && obj.children) {
-                    updateObjects(obj.children);
-                }
-            });
-        };
-
-        updateObjects(this.objects);
-
-        // Log zIndex updates for all objects
-        if (Logger.currentLevel <= Logger.LEVELS.INFO) {
-            Logger.level.info('Level.updateAllObjectZIndices(): Updated zIndex for all objects after layer reordering');
-            this.objects.forEach(obj => {
-                if (obj.zIndex !== undefined) {
-                    const layerIndex = Math.floor(obj.zIndex);
-                    const objectIndex = Math.floor((obj.zIndex % 1) * 1000);
-                    Logger.level.debug(`Object ${obj.name || obj.id}: zIndex=${obj.zIndex}, layer=${layerIndex}, object=${objectIndex}`);
-                }
-            });
-        }
     }
 
     /**
@@ -196,10 +138,6 @@ export class Level {
 
         // Добавляем объект в индекс (top-level объект)
         this.addObjectToIndex(properObj, null);
-
-        // Assign zIndex only if undefined (for new objects from assets)
-        // Do this AFTER adding to objects array and setting layerId
-        this.assignInitialZIndex(properObj, properObj.layerId);
 
         // Обновляем кеш счетчиков слоев при добавлении объекта
         if (properObj.layerId) {
@@ -602,63 +540,6 @@ export class Level {
     }
 
     /**
-     * Build full hierarchical index for object sorting in groups
-     * @param {Object} obj - Object to build index for
-     * @returns {string} Full index in format "layerIndex.objectIndex" or "layerIndex.groupPath.objectIndex"
-     */
-    buildFullObjectIndex(obj) {
-        if (!obj) return "0.0";
-
-        // For top-level objects use regular zIndex
-        if (!this.isObjectInAnyGroup(obj.id)) {
-            const layerIndex = obj.layerId ? this.getLayerById(obj.layerId)?.getIndex() || 0 : 0;
-            const objectIndex = obj.zIndex ? Math.floor((obj.zIndex % 1) * 1000) : 0;
-            return `${layerIndex}.${objectIndex}`;
-        }
-
-        // For objects in groups build full hierarchical path
-        const path = this.buildObjectPath(obj.id);
-        const layerIndex = obj.layerId ? this.getLayerById(obj.layerId)?.getIndex() || 0 : 0;
-        const objectIndex = obj.zIndex ? Math.floor((obj.zIndex % 1) * 1000) : 0;
-
-        return `${layerIndex}.${path}.${objectIndex}`;
-    }
-
-    /**
-     * Build object path in group hierarchy
-     * @param {string} objId - Object ID
-     * @returns {string} Path in format "groupIndex.childIndex.grandchildIndex"
-     */
-    buildObjectPath(objId) {
-        const entry = this.objectsIndex.get(objId);
-        if (!entry || !entry.topLevelParent) {
-            return "0";
-        }
-
-        const path = [];
-        let current = entry.topLevelParent;
-
-        // Build chain from root group to object
-        while (current) {
-            const currentIndex = current.zIndex ? Math.floor((current.zIndex % 1) * 1000) : 0;
-            path.unshift(currentIndex.toString());
-            current = this.objectsIndex.get(current.id)?.topLevelParent || null;
-        }
-
-        return path.join('.');
-    }
-
-    /**
-     * Check if object is in any group
-     * @param {string} objId - Object ID
-     * @returns {boolean} true if object is in a group
-     */
-    isObjectInAnyGroup(objId) {
-        const entry = this.objectsIndex.get(objId);
-        return entry && entry.topLevelParent !== null;
-    }
-
-    /**
      * Добавить объект в индекс
      * @param {Object} obj - Объект для добавления
      * @param {Object|null} topLevelParent - Top-level родитель
@@ -702,17 +583,6 @@ export class Level {
     }
 
     /**
-     * Assign initial zIndex to a new object
-     */
-    assignInitialZIndex(obj, layerId) {
-        if (obj.zIndex === undefined) {
-            // For new objects, assign zIndex first, then use assignObjectToLayer to ensure correct layer index
-            obj.zIndex = this.getNextZIndex();
-            this.assignObjectToLayer(obj.id, layerId);
-        }
-    }
-
-    /**
      * Assign object to layer
      */
     assignObjectToLayer(objId, layerId) {
@@ -720,26 +590,6 @@ export class Level {
         if (obj) {
             const oldLayerId = obj.layerId;
             obj.layerId = layerId;
-
-            // Update zIndex based on new layer
-            if (obj.zIndex !== undefined) {
-                const newLayer = this.getLayerById(layerId);
-                if (newLayer) {
-                    // Extract current object index (thousandths part)
-                    const currentObjectIndex = Math.floor((obj.zIndex % 1) * 1000);
-                    const oldZIndex = obj.zIndex;
-                    // Update zIndex with new layer index + object index
-                    obj.zIndex = newLayer.getIndex() + (currentObjectIndex / 1000);
-
-                    // Log zIndex change
-                    if (Logger.currentLevel <= Logger.LEVELS.INFO) {
-                        const oldLayer = oldLayerId ? this.getLayerById(oldLayerId) : null;
-                        const oldLayerIndex = oldLayer ? oldLayer.getIndex() : 'none';
-                        const newLayerIndex = newLayer.getIndex();
-                        Logger.layer.info(`Object ${obj.name || obj.id} zIndex updated: ${oldZIndex} (layer ${oldLayerIndex}) → ${obj.zIndex} (layer ${newLayerIndex}), object index: ${currentObjectIndex}`);
-                    }
-                }
-            }
 
             // FORCED INHERITANCE: Propagate layerId to all children if this is a group
             if (obj.type === 'group' && obj.children) {
@@ -883,24 +733,6 @@ export class Level {
 
         // Update layer indices first
         level.updateLayerIndices();
-
-        // Assign proper zIndex to all objects based on their layers
-        // This ensures consistency and proper layering
-        level.objects.forEach(obj => {
-            if (obj.zIndex === undefined || obj.zIndex === 0) {
-                // Assign next available zIndex for objects without proper zIndex
-                obj.zIndex = level.getNextZIndex();
-            } else {
-                // For objects with existing zIndex, ensure they use the correct layer index
-                const layer = obj.layerId ? level.getLayerById(obj.layerId) : null;
-                if (layer) {
-                    // Extract current object index (thousandths part)
-                    const currentObjectIndex = Math.floor((obj.zIndex % 1) * 1000);
-                    // Update zIndex with correct layer index + object index
-                    obj.zIndex = layer.getIndex() + (currentObjectIndex / 1000);
-                }
-            }
-        });
 
         // Restore Main layer ID from saved data or use first layer
         if (data.mainLayerId) {

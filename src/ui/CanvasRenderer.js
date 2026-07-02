@@ -177,38 +177,74 @@ export class CanvasRenderer {
         if (!obj.visible) {
             return;
         }
-        
-        // Draw image if available
+
+        // Apply rotation around object center
+        const rotation = obj.rotation || 0;
+        if (rotation) {
+            const cx = x + obj.width / 2;
+            const cy = y + obj.height / 2;
+            this.ctx.save();
+            this.ctx.translate(cx, cy);
+            this.ctx.rotate(rotation * Math.PI / 180);
+            this.ctx.translate(-cx, -cy);
+        }
+
+        // Draw image if available, fallback to colored rectangle
+        let imageDrawn = false;
         if (obj.imgSrc) {
             const img = this.imageCache.get(obj.imgSrc);
             if (img && img.complete && img.naturalHeight !== 0) {
                 this.ctx.drawImage(img, x, y, obj.width, obj.height);
-                return;
+                imageDrawn = true;
             }
         }
-        
-        // Draw colored rectangle as fallback
-        this.ctx.fillStyle = obj.color || '#cccccc';
-        this.ctx.fillRect(x, y, obj.width, obj.height);
-        
-        // Draw border for locked objects
-        if (obj.locked) {
-            this.ctx.strokeStyle = '#ff6b6b';
-            this.ctx.lineWidth = 2;
-            this.ctx.strokeRect(x, y, obj.width, obj.height);
+
+        if (!imageDrawn) {
+            this.ctx.fillStyle = obj.color || '#cccccc';
+            this.ctx.fillRect(x, y, obj.width, obj.height);
+
+            // Draw border for locked objects
+            if (obj.locked) {
+                this.ctx.strokeStyle = '#ff6b6b';
+                this.ctx.lineWidth = 2;
+                this.ctx.strokeRect(x, y, obj.width, obj.height);
+            }
+        }
+
+        if (rotation) {
+            this.ctx.restore();
         }
     }
 
     /**
-     * Draw group - recursively draw children with proper coordinates
+     * Draw group - recursively draw children with proper coordinates.
+     * Array order IS the stacking order (last child renders on top), so no sort is needed.
      */
     drawGroup(group, x, y) {
         if (!group.visible) return;
-        
-        // Draw children with group as parent coordinates
+
+        // Apply group rotation around its children bounds center.
+        // Nested rotated groups work automatically via ctx transform stacking.
+        const rotation = group.rotation || 0;
+        if (rotation) {
+            // group.getBounds() is in the parent's local frame; shift to absolute.
+            // AABB center is invariant to the conservative rotation applied inside getBounds().
+            const localBounds = group.getBounds();
+            const cx = (x - group.x) + (localBounds.minX + localBounds.maxX) / 2;
+            const cy = (y - group.y) + (localBounds.minY + localBounds.maxY) / 2;
+            this.ctx.save();
+            this.ctx.translate(cx, cy);
+            this.ctx.rotate(rotation * Math.PI / 180);
+            this.ctx.translate(-cx, -cy);
+        }
+
         group.children.forEach(child => {
             this.drawObject(child, x, y);
         });
+
+        if (rotation) {
+            this.ctx.restore();
+        }
     }
 
 

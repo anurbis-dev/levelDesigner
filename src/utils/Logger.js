@@ -54,13 +54,57 @@ export class Logger {
         LIFECYCLE: { color: '#00BCD4', prefix: 'LIFECYCLE' },
         ERROR_HANDLER: { color: '#F44336', prefix: 'ERROR_HANDLER' },
         VIEWPORT: { color: '#00ACC1', prefix: 'VIEWPORT' },
-        MOBILE: { color: '#FF6B35', prefix: 'MOBILE' }
+        MOBILE: { color: '#FF6B35', prefix: 'MOBILE' },
+        STATUS: { color: '#22D3EE', prefix: 'STATUS' }
     };
 
     /**
      * Performance timing storage
      */
     static timings = new Map();
+
+    /**
+     * Callback для маршрутизации сообщений в строку состояния.
+     * Устанавливается из LevelEditor после инициализации StatusBar.
+     * Сигнатура: (message: string, type: 'info'|'warn'|'error'|'success') => void
+     */
+    static _statusCallback = null;
+
+    /**
+     * Зарегистрировать callback строки состояния.
+     * @param {Function|null} fn - обработчик или null для отключения
+     */
+    static setStatusCallback(fn) {
+        Logger._statusCallback = fn;
+    }
+
+    /**
+     * Псевдо-категория статус-бара.
+     * Логирует в консоль (как UI) И показывает в строке состояния.
+     * Используй вместо Logger.ui.warn/Logger.asset.warn когда событие важно для пользователя.
+     *
+     * Пример:
+     *   Logger.status.error('Импорт не удался: нет PNG-файлов в выбранных файлах');
+     *   Logger.status.success('Уровень сохранён');
+     */
+    static status = {
+        info: (message, ...args) => {
+            Logger.log('STATUS', 'info', message, ...args);
+            Logger._statusCallback?.(message, 'info');
+        },
+        warn: (message, ...args) => {
+            Logger.log('STATUS', 'warn', message, ...args);
+            Logger._statusCallback?.(message, 'warn');
+        },
+        error: (message, ...args) => {
+            Logger.log('STATUS', 'error', message, ...args);
+            Logger._statusCallback?.(message, 'error');
+        },
+        success: (message, ...args) => {
+            Logger.log('STATUS', 'info', message, ...args);
+            Logger._statusCallback?.(message, 'success');
+        }
+    };
 
     /**
      * Log message with category

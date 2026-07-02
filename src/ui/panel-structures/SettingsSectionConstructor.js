@@ -196,19 +196,30 @@ export function createSettingsColorInput(colorConfig) {
         label = '',
         dataSetting = '',
         width = '3rem',
-        height = '2rem'
+        height = '1.5rem',
+        inline = false
     } = colorConfig;
 
     const idAttr = id ? ` id="${id}"` : '';
     const nameAttr = name ? ` name="${name}"` : '';
     const valueAttr = value ? ` value="${ColorUtils.toHex(value)}"` : '';
     const dataSettingAttr = dataSetting ? ` data-setting="${dataSetting}"` : '';
-    const sizeStyle = `width: ${width}; height: ${height};`;
+    const inputStyle = `width: ${width}; height: ${height}; padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: calc(0.25rem * max(var(--spacing-scale, 1.0), 0.5)); cursor: pointer; flex-shrink: 0;`;
+
+    if (inline) {
+        const barStyle = `flex: 1; height: ${height}; width: auto; min-width: 0; padding: 0; border: 1px solid #4b5563; border-radius: calc(0.25rem * max(var(--spacing-scale, 1.0), 0.5)); cursor: pointer;`;
+        return `
+            <div style="display: flex; align-items: center; gap: 0.5rem; min-height: 1.5rem;">
+                <label for="${id}" style="color: var(--ui-text-color, #d1d5db); font-size: 0.875rem; font-weight: 500; flex: 0 0 40%; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${label}</label>
+                <input type="color"${idAttr}${nameAttr}${valueAttr}${dataSettingAttr} class="setting-input" style="${barStyle}">
+            </div>
+        `;
+    }
 
     return `
         <div>
             ${createSettingsLabel(label, id)}
-            <input type="color"${idAttr}${nameAttr}${valueAttr}${dataSettingAttr} class="setting-input" style="${sizeStyle} padding: 0; background: #374151; border: 1px solid #4b5563; border-radius: calc(0.25rem * max(var(--spacing-scale, 1.0), 0.5));">
+            <input type="color"${idAttr}${nameAttr}${valueAttr}${dataSettingAttr} class="setting-input" style="${inputStyle}">
         </div>
     `;
 }

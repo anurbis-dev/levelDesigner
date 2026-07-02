@@ -144,16 +144,14 @@ export class SettingsPanel {
                     );
                 }
                 
-                // Setup event handlers and context menu after a short delay to ensure DOM is ready
-                setTimeout(() => {
-                    try {
-                        this.setupNewEventHandlers();
-                        this.setupContextMenu();
-                    } catch (error) {
-                        Logger.ui.warn('Error setting up event handlers:', error);
-                    }
-                }, 100);
-                
+                // Setup event handlers and context menu (DOM is already ready at this point)
+                try {
+                    this.setupNewEventHandlers();
+                    this.setupContextMenu();
+                } catch (error) {
+                    Logger.ui.warn('Error setting up event handlers:', error);
+                }
+
                 // Load last active tab from localStorage
                 const savedTab = localStorage.getItem('levelEditor_lastActiveSettingsTab');
                 const activeTab = savedTab || 'general';
@@ -405,6 +403,28 @@ export class SettingsPanel {
             content += '</div>';
         }
 
+        // Mouse gestures (informational, not rebindable)
+        if (shortcuts.mouse) {
+            content += '<h4>Mouse Gestures</h4>';
+            content += '<div class="hotkeys-list">';
+
+            Object.entries(shortcuts.mouse).forEach(([action, shortcut]) => {
+                const parts = [];
+                if (shortcut.ctrlKey) parts.push('Ctrl');
+                if (shortcut.altKey) parts.push('Alt');
+                if (shortcut.shiftKey) parts.push('Shift');
+                parts.push(shortcut.key || 'Drag');
+                content += `
+                    <div class="hotkey-item">
+                        <div class="hotkey-description">${shortcut.description}</div>
+                        <input type="text" id="hotkey-mouse-${action}" class="hotkey-input" data-static="true" value="${parts.join(' + ')}" readonly>
+                    </div>
+                `;
+            });
+
+            content += '</div>';
+        }
+
         return content;
     }
 
@@ -447,7 +467,8 @@ export class SettingsPanel {
 
 
     setupSettingsInputs() {
-        document.querySelectorAll('.setting-input').forEach(input => {
+        const settingsRoot = document.getElementById('settings-panel-container') || document;
+        settingsRoot.querySelectorAll('.setting-input').forEach(input => {
             // Remove old listeners if exist
             if (input._inputHandler) {
                 input.removeEventListener('input', input._inputHandler);
@@ -632,6 +653,7 @@ export class SettingsPanel {
      */
     setupHotkeyInputs() {
         document.querySelectorAll('.hotkey-input').forEach(input => {
+            if (input.dataset.static) return; // Informational entries (mouse gestures) are not rebindable
             if (input._hasHotkeyListeners) return; // Prevent duplicate listeners
             input._hasHotkeyListeners = true;
             

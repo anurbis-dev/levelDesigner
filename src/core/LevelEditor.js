@@ -39,6 +39,7 @@ import { ColorUtils } from '../utils/ColorUtils.js';
 import { dialogReplacer } from '../utils/DialogReplacer.js';
 import { ActorPropertiesWindow } from '../ui/ActorPropertiesWindow.js';
 import { PanelPositionManager } from '../ui/PanelPositionManager.js';
+import { StatusBar } from '../ui/StatusBar.js';
 
 // Import new utilities
 import { ErrorHandler } from '../utils/ErrorHandler.js';
@@ -92,6 +93,7 @@ export class LevelEditor {
         this.layersPanel = null;
         this.settingsPanel = null;
         this.toolbar = null;
+        this.statusBar = null;
         this.canvasContextMenu = null;
         
         // Current level
@@ -524,6 +526,15 @@ export class LevelEditor {
         // Initialize toolbar after level is created
         this.toolbar = new Toolbar(toolbarContainer, this.stateManager, this);
         this.lifecycle.register('toolbar', this.toolbar, { priority: 4 });
+
+        // Initialize status bar
+        const statusBarEl = document.getElementById('status-bar');
+        if (statusBarEl) {
+            this.statusBar = new StatusBar(statusBarEl);
+            Logger.setStatusCallback((msg, type) => {
+                this.statusBar?.show(msg, type);
+            });
+        }
         
         // Apply configuration to level settings
         this.applyConfigurationToLevel();
@@ -2183,6 +2194,8 @@ export class LevelEditor {
         this.settingsPanel = null;
         this.actorPropertiesWindow = null;
         this.toolbar = null;
+        this.statusBar = null;
+        Logger.setStatusCallback(null);
         this.canvasRenderer = null;
         this.canvasContextMenu = null;
         this.menuManager = null;

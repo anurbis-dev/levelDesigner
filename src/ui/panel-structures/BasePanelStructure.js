@@ -22,6 +22,7 @@ export function createPanelStructure(container, structure) {
             const topSection = document.createElement('div');
             topSection.id = structure.customSections.top.id;
             topSection.className = structure.customSections.top.classes;
+            topSection.dataset.noMiddlePan = 'true';
             container.appendChild(topSection);
             elements.topCustom = topSection;
         }
@@ -35,6 +36,7 @@ export function createPanelStructure(container, structure) {
             const bottomSection = document.createElement('div');
             bottomSection.id = structure.customSections.bottom.id;
             bottomSection.className = structure.customSections.bottom.classes;
+            bottomSection.dataset.noMiddlePan = 'true';
             container.appendChild(bottomSection);
             elements.bottomCustom = bottomSection;
         }

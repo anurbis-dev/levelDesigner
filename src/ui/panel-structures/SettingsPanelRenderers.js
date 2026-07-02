@@ -264,6 +264,13 @@ export function renderColorsSettings(stateManager) {
             color: stateManager.get('canvas.gridColor') || 'rgba(255, 255, 255, 0.1)',
             subdivColor: stateManager.get('canvas.gridSubdivColor') || '#666666'
         },
+        // Status Bar Colors
+        statusBar: {
+            colorInfo:    stateManager.get('ui.statusBarColorInfo')    || '#6b7280',
+            colorSuccess: stateManager.get('ui.statusBarColorSuccess') || '#10b981',
+            colorWarn:    stateManager.get('ui.statusBarColorWarn')    || '#f59e0b',
+            colorError:   stateManager.get('ui.statusBarColorError')   || '#ef4444'
+        },
         // Logger Colors
         logger: stateManager.get('logger.colors') || {
             DUPLICATE: '#4CAF50',
@@ -298,141 +305,178 @@ export function renderColorsSettings(stateManager) {
     };
 
     // Create UI Colors section
-    const uiColorsContent = createSettingsGrid(`
+    const uiColorsContent = createSettingsFormGroup(`
         ${createSettingsColorInput({
             id: 'ui-background-color',
             dataSetting: 'ui.backgroundColor',
             value: colors.ui.backgroundColor,
-            label: 'UI Background'
+            label: 'UI Background',
+            inline: true
         })}
-        
         ${createSettingsColorInput({
             id: 'ui-text-color',
             dataSetting: 'ui.textColor',
             value: colors.ui.textColor,
-            label: 'UI Text Color'
+            label: 'UI Text',
+            inline: true
         })}
-        
         ${createSettingsColorInput({
             id: 'ui-resizer-color',
             dataSetting: 'ui.resizerColor',
             value: colors.ui.resizerColor,
-            label: 'Panel Resizers'
+            label: 'Panel Resizers',
+            inline: true
         })}
-        
         ${createSettingsColorInput({
             id: 'ui-active-color',
             dataSetting: 'ui.activeColor',
             value: colors.ui.activeColor,
-            label: 'Active Elements'
+            label: 'Active Elements',
+            inline: true
         })}
-        
         ${createSettingsColorInput({
             id: 'ui-active-text-color',
             dataSetting: 'ui.activeTextColor',
             value: colors.ui.activeTextColor,
-            label: 'Active Text Color'
+            label: 'Active Text',
+            inline: true
         })}
-        
         ${createSettingsColorInput({
             id: 'ui-active-tab-color',
             dataSetting: 'ui.activeTabColor',
             value: colors.ui.activeTabColor,
-            label: 'Active Tab Color'
+            label: 'Active Tab',
+            inline: true
         })}
-        
         ${createSettingsColorInput({
             id: 'ui-accent-color',
             dataSetting: 'ui.accentColor',
             value: colors.ui.accentColor,
-            label: 'Accent Color'
+            label: 'Accent',
+            inline: true
         })}
-    `, { columns: 2, gap: '1rem' });
+    `, { gap: '0.5rem' });
 
     // Create Canvas Colors section
-    const canvasColorsContent = createSettingsGrid(`
+    const canvasColorsContent = createSettingsFormGroup(`
         ${createSettingsColorInput({
             id: 'canvas-background-color',
             dataSetting: 'canvas.backgroundColor',
             value: colors.canvas.backgroundColor,
-            label: 'Canvas Background'
+            label: 'Canvas Background',
+            inline: true
         })}
-        
         ${createSettingsColorInput({
             id: 'canvas-grid-color',
             dataSetting: 'canvas.gridColor',
             value: ColorUtils.toHex(colors.grid.color),
-            label: 'Grid Color'
+            label: 'Grid',
+            inline: true
         })}
-        
         ${createSettingsColorInput({
             id: 'canvas-grid-subdiv-color',
             dataSetting: 'canvas.gridSubdivColor',
             value: colors.grid.subdivColor,
-            label: 'Grid Subdivision'
+            label: 'Grid Subdivision',
+            inline: true
         })}
-    `, { columns: 2, gap: '1rem' });
+    `, { gap: '0.5rem' });
 
     // Create Selection Colors section
-    const selectionColorsContent = createSettingsGrid(`
+    const selectionColorsContent = createSettingsFormGroup(`
         ${createSettingsColorInput({
             id: 'selection-outline-color',
             dataSetting: 'selection.outlineColor',
             value: colors.selection.outlineColor,
-            label: 'Selection Outline'
+            label: 'Selection Outline',
+            inline: true
         })}
-        
         ${createSettingsColorInput({
             id: 'selection-group-outline-color',
             dataSetting: 'selection.groupOutlineColor',
             value: colors.selection.groupOutlineColor,
-            label: 'Group Outline'
+            label: 'Group Outline',
+            inline: true
         })}
-        
         ${createSettingsColorInput({
             id: 'selection-marquee-color',
             dataSetting: 'selection.marqueeColor',
             value: colors.selection.marqueeColor,
-            label: 'Marquee Color'
+            label: 'Marquee',
+            inline: true
         })}
-        
         ${createSettingsColorInput({
             id: 'selection-hierarchy-highlight-color',
             dataSetting: 'selection.hierarchyHighlightColor',
             value: colors.selection.hierarchyHighlightColor,
-            label: 'Hierarchy Highlight'
+            label: 'Hierarchy Highlight',
+            inline: true
         })}
-        
         ${createSettingsColorInput({
             id: 'selection-active-layer-border-color',
             dataSetting: 'selection.activeLayerBorderColor',
             value: colors.selection.activeLayerBorderColor,
-            label: 'Active Layer Border'
+            label: 'Active Layer Border',
+            inline: true
         })}
-    `, { columns: 2, gap: '1rem' });
+    `, { gap: '0.5rem' });
+
+    // Create Status Bar Colors section
+    const statusBarColorsContent = createSettingsFormGroup(`
+        ${createSettingsColorInput({
+            id: 'status-bar-color-info',
+            dataSetting: 'ui.statusBarColorInfo',
+            value: colors.statusBar.colorInfo,
+            label: 'Info',
+            inline: true
+        })}
+        ${createSettingsColorInput({
+            id: 'status-bar-color-success',
+            dataSetting: 'ui.statusBarColorSuccess',
+            value: colors.statusBar.colorSuccess,
+            label: 'Success',
+            inline: true
+        })}
+        ${createSettingsColorInput({
+            id: 'status-bar-color-warn',
+            dataSetting: 'ui.statusBarColorWarn',
+            value: colors.statusBar.colorWarn,
+            label: 'Warning',
+            inline: true
+        })}
+        ${createSettingsColorInput({
+            id: 'status-bar-color-error',
+            dataSetting: 'ui.statusBarColorError',
+            value: colors.statusBar.colorError,
+            label: 'Error',
+            inline: true
+        })}
+    `, { gap: '0.5rem' });
 
     // Create Logger Colors section
     const loggerColorsContent = createSettingsGrid(`
-        ${Object.entries(colors.logger).map(([category, color]) => 
+        ${Object.entries(colors.logger).map(([category, color]) =>
             createSettingsColorInput({
                 id: `logger-color-${category}`,
                 dataSetting: `logger.colors.${category}`,
                 value: color,
                 label: category,
-                width: '2.5rem',
-                height: '1.5rem'
+                width: '2rem',
+                height: '1.5rem',
+                inline: true
             })
         ).join('')}
-    `, { columns: 4, gap: '0.5rem' });
+    `, { columns: 2, gap: '0.4rem' });
     
     return `
         <h3>Color Settings</h3>
         
         ${createSettingsContainer(`
-            ${createSettingsSection('UI Colors', uiColorsContent)}
-            ${createSettingsSection('Canvas Colors', canvasColorsContent)}
-            ${createSettingsSection('Selection Colors', selectionColorsContent)}
-            ${createSettingsSection('Logger Colors', loggerColorsContent)}
+            ${createSettingsSection('UI', uiColorsContent)}
+            ${createSettingsSection('Canvas', canvasColorsContent)}
+            ${createSettingsSection('Selection', selectionColorsContent)}
+            ${createSettingsSection('Status Bar', statusBarColorsContent)}
+            ${createSettingsSection('Logger', loggerColorsContent)}
         `)}
     `;
 }

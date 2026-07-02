@@ -109,7 +109,7 @@
     background: transparent;
     border: none;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: none;
     margin: 0 !important;
 }
 
@@ -174,13 +174,28 @@
     width: 100%;
 }
 
-/* Input elements - stretch to full width */
+/* Input elements - stretch to full width (color inputs are excluded — they use fixed sizes) */
 .settings-main-content input[type="range"],
 .settings-main-content input[type="number"],
 .settings-main-content input[type="text"],
-.settings-main-content input[type="color"],
 .settings-main-content select {
     width: 100% !important;
+}
+
+/* Color inputs: size and flex controlled via inline style */
+.settings-main-content input[type="color"] {
+    padding: 0;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+/* Remove browser default white padding/wrapper around the color swatch */
+.settings-main-content input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+.settings-main-content input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 2px;
 }
 
 /* Settings footer */

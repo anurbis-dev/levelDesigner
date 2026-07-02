@@ -44,10 +44,9 @@ export class DuplicateOperations extends BaseModule {
         // Clean up temporary properties
         delete cleaned._offsetX;
         delete cleaned._offsetY;
-
-        // Reset zIndex to undefined so Level.addObject() will assign new zIndex
-        // This ensures duplicated objects get a higher zIndex than the original
-        cleaned.zIndex = undefined;
+        delete cleaned._inGroup;
+        delete cleaned._worldX;
+        delete cleaned._worldY;
 
         // Normalize properties using extracted method
         this._normalizeObjectProperties(cleaned);
@@ -98,6 +97,21 @@ export class DuplicateOperations extends BaseModule {
         // Clone and normalize properties
         const clones = selected.map(obj => {
             const cloned = this.editor.deepClone(obj);
+
+            // Compute world position and group membership BEFORE reassigning IDs.
+            // At this point the clone still has the original ID and can be found in the
+            // level tree, so getObjectWorldPosition returns the correct world coords.
+            // After reassignIdsDeep the clone gets a new ID and the tree lookup fails,
+            // returning local coords instead — so we must cache these values now.
+            const wpos = this.editor.objectOperations.getObjectWorldPosition(cloned);
+            cloned._worldX = wpos.x;
+            cloned._worldY = wpos.y;
+
+            if (this.editor.objectOperations.isInGroupEditMode()) {
+                const gem = this.editor.objectOperations.getGroupEditMode();
+                cloned._inGroup = this.editor.objectOperations.isObjectInGroupRecursive(cloned, gem.group);
+            }
+
             // Assign unique ids to the entire subtree
             this.editor.reassignIdsDeep(cloned);
 
@@ -149,11 +163,15 @@ export class DuplicateOperations extends BaseModule {
             'duplicate.originalObjects': selected // Save original objects for group membership check
         });
 
+        // Deselect original so it doesn't show a selection outline during preview
+        this.editor.stateManager.set('selectedObjects', new Set());
+
         // Selective cache invalidation for duplicate preview
         this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
 
         // Immediate render to show preview
         this.editor.render();
+        Logger.status.info(`Duplicating ${selected.length} object${selected.length > 1 ? 's' : ''} — click to place`);
 
     }
 
@@ -249,10 +267,10 @@ export class DuplicateOperations extends BaseModule {
             const worldY = base.y;
 
             if (groupEditMode && groupEditMode.isActive && groupEditMode.group) {
-                // Check if this object was originally inside the group
-                const wasInGroup = duplicate.originalObjects && 
-                    duplicate.originalObjects.some(orig => orig.id === obj.id && 
-                        this.editor.objectOperations.isObjectInGroupRecursive(orig, groupEditMode.group));
+                // _inGroup is set in startFromSelection BEFORE reassignIdsDeep, so it
+                // correctly reflects whether the original selected object was inside the group.
+                // ID-based comparison (orig.id === obj.id) fails because IDs are reassigned.
+                const wasInGroup = obj._inGroup === true;
                 
                 if (wasInGroup) {
                     // Check if target group's layer is locked
@@ -278,28 +296,6 @@ export class DuplicateOperations extends BaseModule {
                     // External object - keep world coordinates for main level placement
                     base.x = worldX;
                     base.y = worldY;
-                }
-
-                // Assign zIndex if not set (for duplicated objects in groups)
-                if (base.zIndex === undefined) {
-                    // For duplicated objects, assign next zIndex in the current layer
-                    const layerIndex = groupEditMode.group.layerId ? this.editor.level.getLayerById(groupEditMode.group.layerId)?.getIndex() || 0 : 0;
-
-                    // Build full hierarchical index for proper sorting in groups
-                    const fullIndex = this.editor.level.buildFullObjectIndex(groupEditMode.group);
-                    const indexParts = fullIndex.split('.').map(Number);
-
-                    // Find the next object index in the current hierarchy level
-                    const hierarchyLevel = indexParts.length;
-                    const maxObjectIndex = this.editor.level.getNextZIndex() % 1;
-                    const nextObjectIndex = maxObjectIndex;
-
-                    base.zIndex = layerIndex + nextObjectIndex;
-
-                    // Log zIndex assignment for duplicated objects
-                    if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
-                        Logger.duplicate.debug(`Duplicated object ${base.name || base.id} placed in group ${groupEditMode.group.name}, assigned zIndex: ${base.zIndex} (layer ${layerIndex}, full hierarchy: ${fullIndex}, object index: ${Math.floor(nextObjectIndex * 1000)})`);
-                    }
                 }
 
                 // FORCED INHERITANCE: Always inherit layerId from parent group
@@ -355,6 +351,7 @@ export class DuplicateOperations extends BaseModule {
 
         this.editor.render();
         this.editor.updateAllPanels();
+        Logger.status.success(`Placed ${newIds.size} duplicate${newIds.size > 1 ? 's' : ''}`);
 
     }
 

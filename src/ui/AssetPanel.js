@@ -2649,7 +2649,7 @@ export class AssetPanel extends BasePanel {
         );
 
         if (pngFiles.length === 0) {
-            Logger.ui.warn('⚠️ No PNG files found in dropped files');
+            Logger.status.warn('No PNG files found in dropped files');
             return;
         }
 
@@ -2676,7 +2676,7 @@ export class AssetPanel extends BasePanel {
             try {
                 await this.createTemporaryAssetFromFile(pngFile, category, activeTabPath);
             } catch (error) {
-                Logger.ui.error(`❌ Failed to create asset from ${pngFile.name}:`, error);
+                Logger.status.error(`Failed to create asset from ${pngFile.name}: ${error.message}`);
             }
         }
 

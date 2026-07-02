@@ -44,6 +44,13 @@ export class PanelPositionManager {
         if (!window.tabDraggingGlobalMouseUp) {
             window.tabDraggingGlobalMouseUp = (e) => {
                 if (window.tabDraggingState && window.tabDraggingState.draggedTab) {
+                    // Let panel-level mouseup handler finalize reorder when release happens
+                    // inside a panel tab strip. Global cleanup is only for outside releases.
+                    const releaseInTabStrip = !!e.target?.closest('.flex.border-b.border-gray-700');
+                    if (releaseInTabStrip) {
+                        return;
+                    }
+
                     // Clean up dragging state
                     window.tabDraggingState.draggedTab.classList.remove('dragging');
                     document.querySelectorAll('.tab-right, .tab-left').forEach(t => t.classList.remove('tab-drag-over'));
@@ -313,7 +320,6 @@ export class PanelPositionManager {
             const tabButton = document.createElement('button');
             tabButton.setAttribute('data-tab', tab.name);
             tabButton.className = `tab-right ${tab.active ? 'active' : ''}`;
-            tabButton.id = `${tab.name}-tab`;
             tabButton.textContent = tab.text;
             tabsContainer.appendChild(tabButton);
         });
@@ -605,23 +611,34 @@ export class PanelPositionManager {
      * @param {string} toPanel - Target panel side
      */
     moveTabElements(tabName, fromContainer, toContainer, toPanel) {
-        // Find tab button
-        const tabButton = document.querySelector(`[data-tab="${tabName}"]`);
-        if (!tabButton) {
-            Logger.ui.warn(`Tab button not found for ${tabName}`);
-            return;
-        }
-
-        // Find the original tab content
-        const tabContent = document.getElementById(`${tabName}-content-panel`);
-        if (!tabContent) {
-            Logger.ui.warn(`Tab content not found for ${tabName}`);
-            return;
-        }
-
-        // Move tab button
+        // Ensure stable tab identity markers for robust visibility routing.
         const fromTabsContainer = fromContainer.querySelector('.flex.border-b.border-gray-700');
         const toTabsContainer = toContainer.querySelector('.flex.border-b.border-gray-700');
+        const fromContentContainer = fromContainer.querySelector('.flex-grow.overflow-y-auto');
+        const toContentContainer = toContainer.querySelector('.flex-grow.overflow-y-auto');
+
+        // Find tab button in the source panel only to avoid cross-panel mixups.
+        const tabButton = fromTabsContainer?.querySelector(`[data-tab="${tabName}"]`) ||
+            fromContainer.querySelector(`[data-tab="${tabName}"]`);
+        if (!tabButton) {
+            Logger.ui.warn(`Tab button not found for ${tabName} in source container`);
+            return;
+        }
+
+        // Find tab content in the source panel only to avoid cross-panel mixups.
+        const tabContent = fromContentContainer?.querySelector(`[data-panel-tab-name="${tabName}"]`) ||
+            fromContentContainer?.querySelector(`#${tabName}-content-panel`) ||
+            document.getElementById(`${tabName}-content-panel`);
+        if (!tabContent) {
+            Logger.ui.warn(`Tab content not found for ${tabName} in source container`);
+            return;
+        }
+
+        tabButton.dataset.panelTab = 'true';
+        tabContent.dataset.panelTabContent = 'true';
+        tabContent.dataset.panelTabName = tabName;
+
+        // Move tab button
         
         if (fromTabsContainer && toTabsContainer) {
             if (fromTabsContainer.contains(tabButton)) {
@@ -657,11 +674,6 @@ export class PanelPositionManager {
         }
 
         // Move tab content to target container
-        const fromContentContainer = fromContainer.querySelector('.flex-grow.overflow-y-auto');
-        const toContentContainer = toContainer.querySelector('.flex-grow.overflow-y-auto');
-        
-        // Content containers found successfully
-        
         if (fromContentContainer && toContentContainer) {
             // Remove from old container and add to new container
             if (fromContentContainer.contains(tabContent)) {
@@ -1070,88 +1082,258 @@ export class PanelPositionManager {
      */
     setupTabDraggingForPanel(panel) {
         const tabContainer = panel.querySelector('.flex.border-b.border-gray-700');
-        if (!tabContainer) return;
-
-        // Check if dragging is already setup for this container
-        if (tabContainer._draggingSetup) return;
+        if (!tabContainer || tabContainer._draggingSetup) return;
 
         const draggingState = window.tabDraggingState;
+        const tabSelector = '.tab-right[data-tab], .tab-left[data-tab], .tab[data-tab]';
 
-        // Make tabs draggable
         tabContainer.addEventListener('mousedown', (e) => {
-            const tab = e.target.closest('.tab-right, .tab-left');
+            if (e.button !== 0) return;
+            const tab = e.target.closest(tabSelector);
             if (!tab) return;
 
+            const idx = Array.from(tabContainer.children).indexOf(tab);
+
+            // Mirror into global state (for legacy global handler compatibility)
             draggingState.draggedTab = tab;
-            draggingState.draggedIndex = Array.from(tabContainer.children).indexOf(tab);
+            draggingState.draggedIndex = idx;
             draggingState.draggedPanel = panel;
-            
-            // Add dragging class
+            draggingState.sourceContainer = tabContainer;
+
+            // Also keep our own copy — the legacy global mouseup handler fires first
+            // and clears draggingState before ours runs, so we need a local reference.
+            this._pendingDrag = { tab, index: idx, sourceContainer: tabContainer };
+
             tab.classList.add('dragging');
-            
-            // Prevent default to avoid text selection
             e.preventDefault();
+
+            this._installGlobalTabDragHandlers();
         });
 
-        // Handle mouse move for drag over effects
-        tabContainer.addEventListener('mousemove', (e) => {
-            if (!draggingState.draggedTab || draggingState.draggedPanel !== panel) return;
-
-            const tab = e.target.closest('.tab-right, .tab-left');
-            if (!tab || tab === draggingState.draggedTab) {
-                // Remove drag-over from all tabs in this container
-                tabContainer.querySelectorAll('.tab-right, .tab-left').forEach(t => t.classList.remove('tab-drag-over'));
-                return;
-            }
-
-            const targetIndex = Array.from(tabContainer.children).indexOf(tab);
-            
-            // Remove drag-over from all tabs in this container
-            tabContainer.querySelectorAll('.tab-right, .tab-left').forEach(t => t.classList.remove('tab-drag-over'));
-            
-            // Add drag-over to target tab
-            tab.classList.add('tab-drag-over');
-        });
-
-        // Handle mouse up to complete drag
-        tabContainer.addEventListener('mouseup', (e) => {
-            if (!draggingState.draggedTab || draggingState.draggedPanel !== panel) return;
-
-            const targetTab = e.target.closest('.tab-right, .tab-left');
-            if (targetTab && targetTab !== draggingState.draggedTab) {
-                const targetIndex = Array.from(tabContainer.children).indexOf(targetTab);
-                const draggedIndex = draggingState.draggedIndex;
-                
-                // Move the tab to new position
-                if (targetIndex > draggedIndex) {
-                    tabContainer.insertBefore(draggingState.draggedTab, targetTab.nextSibling);
-                } else {
-                    tabContainer.insertBefore(draggingState.draggedTab, targetTab);
-                }
-                
-                Logger.ui.debug(`Moved tab ${draggingState.draggedTab.dataset.tab} to position ${targetIndex}`);
-            }
-
-            // Clean up dragging state
-            draggingState.draggedTab.classList.remove('dragging');
-            tabContainer.querySelectorAll('.tab-right, .tab-left').forEach(t => t.classList.remove('tab-drag-over'));
-            
-            draggingState.draggedTab = null;
-            draggingState.draggedIndex = -1;
-            draggingState.draggedPanel = null;
-        });
-
-        // Prevent text selection during drag
         tabContainer.addEventListener('selectstart', (e) => {
-            if (draggingState.draggedTab) {
-                e.preventDefault();
-            }
+            if (this._pendingDrag) e.preventDefault();
         });
 
-        // Mark as setup
         tabContainer._draggingSetup = true;
-
         Logger.ui.debug(`Setup tab dragging for panel ${panel.id}`);
+    }
+
+    _installGlobalTabDragHandlers() {
+        if (this._globalTabDragInstalled) return;
+        this._globalTabDragInstalled = true;
+
+        const tabSelector = '.tab-right[data-tab], .tab-left[data-tab], .tab[data-tab]';
+
+        // ── Ghost element that follows the cursor ──
+        const ghost = document.createElement('div');
+        ghost.className = 'tab-drag-ghost';
+        ghost.textContent = this._pendingDrag?.tab?.textContent || '';
+        document.body.appendChild(ghost);
+        this._dragGhost = ghost;
+
+        // ── "Create new panel" drop zones for sides that have no panel yet ──
+        this._activeDropZones = this._createNewPanelDropZones();
+
+        // Pre-collect ONLY the real tab-bar strips inside left/right panels.
+        // We use a Set so containment checks are O(1) and unambiguous —
+        // avoiding false positives from other '.flex.border-b.border-gray-700' elements.
+        const getValidTabBars = () => new Set(
+            Array.from(document.querySelectorAll(
+                '#left-tabs-panel > .flex.border-b.border-gray-700,' +
+                '#right-tabs-panel > .flex.border-b.border-gray-700'
+            ))
+        );
+
+        const clearAllDragVisuals = () => {
+            // Only touch known valid tab bars — never random UI elements
+            getValidTabBars().forEach(c => {
+                c.querySelectorAll(tabSelector).forEach(t => t.classList.remove('tab-drag-over'));
+                c.classList.remove('tab-drop-zone');
+            });
+            (this._activeDropZones || []).forEach(z => z.el.classList.remove('tab-new-panel-zone--active'));
+        };
+
+        this._clearAllDragVisuals = clearAllDragVisuals;
+
+        this._globalTabMouseMove = (e) => {
+            if (!this._pendingDrag) return;
+
+            ghost.style.left = (e.clientX + 14) + 'px';
+            ghost.style.top  = (e.clientY - 12) + 'px';
+
+            clearAllDragVisuals();
+
+            this._pendingDrag.tab.style.pointerEvents = 'none';
+            const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+            this._pendingDrag.tab.style.pointerEvents = '';
+
+            if (!elUnder) return;
+
+            // New-panel zones (coordinate check — zones are pointer-events:none)
+            let overNewZone = false;
+            (this._activeDropZones || []).forEach(z => {
+                const r = z.el.getBoundingClientRect();
+                if (e.clientX >= r.left && e.clientX <= r.right &&
+                    e.clientY >= r.top  && e.clientY <= r.bottom) {
+                    z.el.classList.add('tab-new-panel-zone--active');
+                    overNewZone = true;
+                }
+            });
+            if (overNewZone) return;
+
+            // Walk up from elUnder to find the nearest valid tab bar
+            const validBars = getValidTabBars();
+            let targetBar = null;
+            let el = elUnder;
+            while (el && el !== document.body) {
+                if (validBars.has(el)) { targetBar = el; break; }
+                el = el.parentElement;
+            }
+
+            if (targetBar && targetBar !== this._pendingDrag.sourceContainer) {
+                // Cursor is over the OTHER panel's tab bar
+                targetBar.classList.add('tab-drop-zone');
+            } else if (targetBar === this._pendingDrag.sourceContainer) {
+                // Same panel — show insertion hint on the sibling tab
+                const targetTab = elUnder.closest(tabSelector);
+                if (targetTab && targetTab !== this._pendingDrag.tab &&
+                    targetBar.contains(targetTab)) {
+                    targetTab.classList.add('tab-drag-over');
+                }
+            }
+        };
+
+        this._globalTabMouseUp = (e) => {
+            // NOTE: window.tabDraggingGlobalMouseUp (registered in constructor) fires BEFORE
+            // this handler and clears draggingState — so we use this._pendingDrag exclusively.
+            const pending = this._pendingDrag;
+            if (!pending) { this._cleanupTabDrag(); return; }
+
+            const { tab: draggedTab, sourceContainer, index: draggedIndex } = pending;
+
+            draggedTab.style.pointerEvents = 'none';
+            const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+            draggedTab.style.pointerEvents = '';
+
+            // ── New-panel drop zones ──
+            let handled = false;
+            (this._activeDropZones || []).forEach(z => {
+                if (handled) return;
+                const r = z.el.getBoundingClientRect();
+                if (e.clientX >= r.left && e.clientX <= r.right &&
+                    e.clientY >= r.top  && e.clientY <= r.bottom) {
+                    const tabName  = draggedTab.dataset.tab;
+                    const srcPanel = sourceContainer.closest('#left-tabs-panel, #right-tabs-panel');
+                    if (tabName && srcPanel) {
+                        const fromPanel = srcPanel.id.includes('left') ? 'left' : 'right';
+                        this.moveTab(tabName, fromPanel, z.side);
+                    }
+                    handled = true;
+                }
+            });
+
+            if (!handled && elUnder) {
+                const validBars = getValidTabBars();
+                let targetBar = null;
+                let el = elUnder;
+                while (el && el !== document.body) {
+                    if (validBars.has(el)) { targetBar = el; break; }
+                    el = el.parentElement;
+                }
+
+                if (targetBar && targetBar !== sourceContainer) {
+                    // ── Cross-panel move to existing panel ──
+                    const tabName  = draggedTab.dataset.tab;
+                    const srcPanel = sourceContainer.closest('#left-tabs-panel, #right-tabs-panel');
+                    const tgtPanel = targetBar.closest('#left-tabs-panel, #right-tabs-panel');
+                    if (tabName && srcPanel && tgtPanel) {
+                        const fromPanel = srcPanel.id.includes('left') ? 'left' : 'right';
+                        const toPanel   = tgtPanel.id.includes('left') ? 'left' : 'right';
+                        this.moveTab(tabName, fromPanel, toPanel);
+                    }
+                } else if (targetBar === sourceContainer) {
+                    // ── Same-panel reorder ──
+                    const targetTab = elUnder.closest(tabSelector);
+                    if (targetTab && targetTab !== draggedTab && sourceContainer.contains(targetTab)) {
+                        const targetIndex = Array.from(sourceContainer.children).indexOf(targetTab);
+                        if (targetIndex > draggedIndex) {
+                            sourceContainer.insertBefore(draggedTab, targetTab.nextSibling);
+                        } else {
+                            sourceContainer.insertBefore(draggedTab, targetTab);
+                        }
+                        Logger.ui.debug(`Reordered tab ${draggedTab.dataset.tab} to position ${targetIndex}`);
+                    }
+                }
+            }
+
+            this._cleanupTabDrag();
+        };
+
+        document.addEventListener('mousemove', this._globalTabMouseMove);
+        document.addEventListener('mouseup',   this._globalTabMouseUp);
+    }
+
+    _cleanupTabDrag() {
+        const pending = this._pendingDrag;
+        if (pending?.tab) {
+            pending.tab.classList.remove('dragging');
+            pending.tab.style.pointerEvents = '';
+        }
+        if (this._clearAllDragVisuals) {
+            this._clearAllDragVisuals();
+            this._clearAllDragVisuals = null;
+        }
+        if (this._dragGhost) {
+            this._dragGhost.remove();
+            this._dragGhost = null;
+        }
+        (this._activeDropZones || []).forEach(z => z.el.remove());
+        this._activeDropZones = null;
+        this._pendingDrag = null;
+        this._removeGlobalTabDragHandlers();
+    }
+
+    _removeGlobalTabDragHandlers() {
+        if (this._globalTabMouseMove) {
+            document.removeEventListener('mousemove', this._globalTabMouseMove);
+            this._globalTabMouseMove = null;
+        }
+        if (this._globalTabMouseUp) {
+            document.removeEventListener('mouseup', this._globalTabMouseUp);
+            this._globalTabMouseUp = null;
+        }
+        this._globalTabDragInstalled = false;
+    }
+
+    /**
+     * Create visual drop zones for panel sides that have no panel yet.
+     * Returns array of { el, side } objects; caller is responsible for removal.
+     * @private
+     */
+    _createNewPanelDropZones() {
+        const zones = [];
+        const mainContainer = document.querySelector('.flex.flex-grow.min-h-0.relative.z-10');
+        if (!mainContainer) return zones;
+
+        const rect = mainContainer.getBoundingClientRect();
+        const zoneW = 56; // px wide
+
+        ['left', 'right'].forEach(side => {
+            if (document.getElementById(`${side}-tabs-panel`)) return; // panel exists — no zone needed
+
+            const el = document.createElement('div');
+            el.className = 'tab-new-panel-zone';
+            el.innerHTML = `<span class="tab-new-panel-zone__label">${side === 'left' ? '◀' : '▶'}</span>`;
+            el.style.top    = rect.top + 'px';
+            el.style.height = rect.height + 'px';
+            el.style.width  = zoneW + 'px';
+            el.style.left   = (side === 'left' ? rect.left : rect.right - zoneW) + 'px';
+
+            document.body.appendChild(el);
+            zones.push({ el, side });
+        });
+
+        return zones;
     }
 
     /**

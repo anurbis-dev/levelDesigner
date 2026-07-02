@@ -274,7 +274,7 @@ export class Toolbar {
             }
         `;
         document.head.appendChild(style);
-        toolbarContent.classList.add('toolbar-scroll');
+        toolbarContent.classList.add('toolbar-scroll', 'horizontal-scroll-container');
         
         // Add button groups
         toolbarContent.appendChild(this.createButtonGroup('File', [

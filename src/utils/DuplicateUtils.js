@@ -41,25 +41,18 @@ export class DuplicateUtils {
             let objWorldX, objWorldY;
 
             if (editor && editor.objectOperations) {
-                // Check if object is inside a group and group edit mode is active
-                if (editor.objectOperations.isInGroupEditMode()) {
-                    const groupEditMode = editor.objectOperations.getGroupEditMode();
-                    const activeGroup = groupEditMode.group;
-
-                    // Check if this object belongs to the active group
-                    const isObjectInActiveGroup = editor.objectOperations.isObjectInGroupRecursive(obj, activeGroup);
-
-                    if (isObjectInActiveGroup) {
-                        // For objects inside the group, we want preview to appear at cursor position
-                        // So offset should be 0 (object appears exactly at cursor)
-                        return { ...obj, _offsetX: 0, _offsetY: 0 };
-                    }
+                // _worldX/_worldY are pre-computed in startFromSelection BEFORE reassignIdsDeep,
+                // so they always contain true world coords (works for both group and top-level objects).
+                // getObjectWorldPosition on the clone itself would fall back to local coords
+                // because the clone has a new ID and is not found in the level tree.
+                if (obj._worldX !== undefined) {
+                    objWorldX = obj._worldX;
+                    objWorldY = obj._worldY;
+                } else {
+                    const objPos = editor.objectOperations.getObjectWorldPosition(obj);
+                    objWorldX = objPos.x;
+                    objWorldY = objPos.y;
                 }
-
-                // For external objects or normal mode, use standard world positioning
-                const objPos = editor.objectOperations.getObjectWorldPosition(obj);
-                objWorldX = objPos.x;
-                objWorldY = objPos.y;
             } else {
                 // Fallback to local coordinates if editor not available
                 objWorldX = obj.x;

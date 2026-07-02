@@ -245,40 +245,61 @@ export class DetailsPanel {
     }
 
     /**
-     * Render advanced properties (zIndex)
+     * Render advanced properties (stacking order)
      */
     renderAdvancedProperties(obj) {
         const section = this.createSection('Advanced');
-        
-        // Z-Index
-        let displayValue;
-        if (obj.zIndex !== undefined && typeof obj.zIndex === 'number') {
-            const objectIndex = Math.floor((obj.zIndex % 1) * 1000);
-            displayValue = objectIndex.toString();
-        } else {
-            displayValue = '0';
-        }
-        
-        const zIndexContainer = UIFactory.createLabeledInput({
-            label: 'Z-Index',
-            type: 'number',
-            value: displayValue,
-            onChange: (e) => {
-                const layerIndex = Math.floor(obj.zIndex || 0);
-                const objectIndex = parseInt(e.target.value) || 0;
-                obj.zIndex = layerIndex + (objectIndex / 1000);
-            },
-            onBlur: (e) => {
-                const layerIndex = Math.floor(obj.zIndex || 0);
-                const objectIndex = parseInt(e.target.value) || 0;
-                const newValue = layerIndex + (objectIndex / 1000);
-                obj.zIndex = newValue;
-                this.notifyPropertyChange(obj, 'zIndex', newValue);
-            }
-        });
-        section._content.appendChild(zIndexContainer);
-        
+        section._content.appendChild(this.createOrderButtonsRow([obj]));
         this.container.appendChild(section);
+    }
+
+    /**
+     * Create a row of stacking-order buttons (Bring to Front / Send to Back / Forward / Backward).
+     * Order is just array position within the object's parent container (level.objects or a
+     * group's children) — see Level.compareStackOrder / ObjectOperations.bringToFront etc.
+     * @param {Array} objects - Objects to reorder when a button is clicked
+     * @returns {HTMLElement}
+     */
+    createOrderButtonsRow(objects) {
+        const row = document.createElement('div');
+        row.className = 'grid grid-cols-2 gap-2';
+
+        const actions = [
+            { text: 'На передний план', action: 'bringToFront' },
+            { text: 'На задний план', action: 'sendToBack' },
+            { text: 'Выше', action: 'moveForward' },
+            { text: 'Ниже', action: 'moveBackward' }
+        ];
+
+        actions.forEach(({ text, action }) => {
+            row.appendChild(UIFactory.createButton({
+                text,
+                variant: 'secondary',
+                onClick: () => this.applyOrderAction(objects, action)
+            }));
+        });
+
+        return row;
+    }
+
+    /**
+     * Apply a stacking-order action (bringToFront/sendToBack/moveForward/moveBackward) to
+     * one or more objects, then save history and redraw.
+     */
+    applyOrderAction(objects, action) {
+        const objectOperations = this.levelEditor.objectOperations;
+        objects.forEach(obj => objectOperations[action](obj));
+
+        this.levelEditor.historyManager.saveState(
+            this.levelEditor.level.objects,
+            this.stateManager.get('selectedObjects'),
+            false,
+            this.stateManager.get('groupEditMode')
+        );
+
+        this.levelEditor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
+        this.levelEditor.render();
+        this.render();
     }
 
     /**
@@ -434,7 +455,7 @@ export class DetailsPanel {
             // Trigger redraw of selected objects
             this.stateManager.notifyListeners('selectedObjects', this.stateManager.get('selectedObjects'), this.stateManager.get('selectedObjects'));
 
-            // Force canvas redraw (important for zIndex changes to re-sort and redraw objects)
+            // Force canvas redraw to reflect the property change
             if (this.levelEditor && this.levelEditor.render) {
                 this.levelEditor.render();
             }
@@ -647,50 +668,11 @@ export class DetailsPanel {
     }
 
     /**
-     * Render advanced properties for multiple objects (zIndex)
+     * Render advanced properties for multiple objects (stacking order)
      */
     renderMultipleAdvancedProperties(objects) {
         const section = this.createSection('Advanced');
-        
-        // Z-Index - check if all objects have the same zIndex
-        const firstZIndex = objects[0].zIndex || 0;
-        const allSameZIndex = objects.every(obj => {
-            const objZIndex = obj.zIndex || 0;
-            const firstObjectIndex = Math.floor((firstZIndex % 1) * 1000);
-            const objObjectIndex = Math.floor((objZIndex % 1) * 1000);
-            return firstObjectIndex === objObjectIndex;
-        });
-        
-        let displayValue = '';
-        if (allSameZIndex && firstZIndex !== undefined && typeof firstZIndex === 'number') {
-            const objectIndex = Math.floor((firstZIndex % 1) * 1000);
-            displayValue = objectIndex.toString();
-        }
-        
-        const zIndexContainer = UIFactory.createLabeledInput({
-            label: 'Z-Index',
-            type: 'number',
-            value: displayValue,
-            placeholder: allSameZIndex ? '' : 'multiple values',
-            onChange: (e) => {
-                const objectIndex = parseInt(e.target.value) || 0;
-                    objects.forEach(obj => {
-                    const layerIndex = Math.floor(obj.zIndex || 0);
-                    obj.zIndex = layerIndex + (objectIndex / 1000);
-                });
-            },
-            onBlur: (e) => {
-                const objectIndex = parseInt(e.target.value) || 0;
-                objects.forEach(obj => {
-                    const layerIndex = Math.floor(obj.zIndex || 0);
-                    const newValue = layerIndex + (objectIndex / 1000);
-                    obj.zIndex = newValue;
-                    this.notifyPropertyChange(obj, 'zIndex', newValue);
-                });
-            }
-        });
-        section._content.appendChild(zIndexContainer);
-        
+        section._content.appendChild(this.createOrderButtonsRow(objects));
         this.container.appendChild(section);
     }
 

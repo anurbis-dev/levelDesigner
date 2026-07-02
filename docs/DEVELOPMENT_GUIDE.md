@@ -683,6 +683,8 @@ class SettingsSyncManager {
 - Изменения сохраняются в `config/user/shortcuts.json`
 - Перезаписывают дефолтные значения
 
+**Категория `mouse`**: описывает мышиные жесты (`rotateObjects`, `scaleObjects` — см. Rotate/Scale жесты объектов выше). `SettingsPanel` рендерит её в отдельной секции "Mouse Gestures" в Settings → Hotkeys как информационную — поля имеют `data-static="true"` и пропускаются `setupHotkeyInputs()`, ребиндинг недоступен.
+
 ### Сохранение настроек
 
 **Отложенное сохранение**:
@@ -1616,6 +1618,34 @@ handleAltDragInGroup(object, group) {
     return !isCompletelyInside; // Перемещаем, если не полностью внутри
 }
 ```
+
+**Важно**: Alt+Drag дублирование срабатывает только без Ctrl (`!(e.ctrlKey || e.metaKey)` в `MouseHandlers.js`) — комбинация Ctrl+Alt+drag зарезервирована под жест масштабирования (см. ниже).
+
+### Rotate/Scale жесты объектов
+
+Мышиные жесты трансформации выделения, работают на любом уровне вложенности (в т.ч. внутри групп):
+
+- **Ctrl+drag** по объекту — вращение выделения вокруг центра общего world bounding box; **Shift** во время вращения — дискретные шаги по `TRANSFORM.ROTATION_SNAP_DEGREES` (10°).
+- **Ctrl+Alt+drag** — равномерное масштабирование выделения относительно центра общего bounding box; фактор клампится `TRANSFORM.MIN_SCALE_FACTOR` (0.05) / `TRANSFORM.MAX_SCALE_FACTOR` (20).
+- Клик по невыделенному объекту при старте жеста — объект становится единственным выделением, как при обычном drag.
+- Жест активируется после Ctrl(+Alt)-клика на объекте при движении мыши ≥ `TRANSFORM.DRAG_THRESHOLD_PX` (4px).
+
+```javascript
+// src/constants/EditorConstants.js
+export const TRANSFORM = {
+    ROTATION_SNAP_DEGREES: 10,
+    MIN_SCALE_FACTOR: 0.05,
+    MAX_SCALE_FACTOR: 20,
+    DRAG_THRESHOLD_PX: 4
+};
+```
+
+Реализация — `MouseHandlers.startObjectTransform()` / `transformSelectedObjects()` (`src/event-system/MouseHandlers.js`): геометрия выделения снимается снапшотом при старте жеста и пересчитывается из снапшота на каждый `mousemove`, чтобы избежать накопления дрейфа. История сохраняется на `mouseup`, как у обычного drag; жест отменяется через `historyOperations.undo()` при отпускании вне canvas и при `window blur`.
+
+**Известные ограничения v1**:
+- Рамка выделения рисует AABB повёрнутого объекта, а не сам повёрнутый контур.
+- Hit-test детей внутри повёрнутой группы не учитывает поворот родителя.
+- Мировые дельты жеста применяются к локальным координатам — корректно, пока родительская группа не повёрнута.
 
 ## 📚 Дополнительная информация
 

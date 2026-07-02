@@ -9,34 +9,66 @@ import { Logger } from '../utils/Logger.js';
 export class ObjectOperations extends BaseModule {
 
     /**
-     * Sort objects by full hierarchical index in descending order (highest index first)
+     * Sort objects by stacking order, descending (front-most first). Uses the same
+     * Level.compareStackOrder() comparator as rendering, so hit-test order always
+     * matches what is actually drawn regardless of nesting depth.
      * @param {Array} objects - Array of objects to sort
      * @returns {Array} Sorted array
      * @private
      */
     _sortObjectsByZIndexDescending(objects) {
-        return objects.sort((a, b) => {
-            // Use full hierarchical index for proper sorting in groups
-            const aFullIndex = this.editor.level.buildFullObjectIndex(a);
-            const bFullIndex = this.editor.level.buildFullObjectIndex(b);
+        return objects.sort((a, b) => this.editor.level.compareStackOrder(b, a));
+    }
 
-            // Convert string indices to comparable numbers
-            const aParts = aFullIndex.split('.').map(Number);
-            const bParts = bFullIndex.split('.').map(Number);
+    /**
+     * Get the array that determines an object's stacking order: its parent group's
+     * `children`, or the level's top-level `objects` array if it has no parent group.
+     */
+    getSiblingArray(obj) {
+        const parentGroup = this.editor.groupOperations._findParentGroup(obj);
+        return parentGroup ? parentGroup.children : this.editor.level.objects;
+    }
 
-            // Compare each part of the hierarchical index
-            const maxLength = Math.max(aParts.length, bParts.length);
-            for (let i = 0; i < maxLength; i++) {
-                const aVal = aParts[i] || 0;
-                const bVal = bParts[i] || 0;
+    /**
+     * Move object to the end of its sibling array (topmost / front-most)
+     */
+    bringToFront(obj) {
+        const arr = this.getSiblingArray(obj);
+        const i = arr.indexOf(obj);
+        if (i === -1 || i === arr.length - 1) return;
+        arr.splice(i, 1);
+        arr.push(obj);
+    }
 
-                if (aVal !== bVal) {
-                    return bVal - aVal; // descending order - highest index first
-                }
-            }
+    /**
+     * Move object to the start of its sibling array (bottommost / back-most)
+     */
+    sendToBack(obj) {
+        const arr = this.getSiblingArray(obj);
+        const i = arr.indexOf(obj);
+        if (i <= 0) return;
+        arr.splice(i, 1);
+        arr.unshift(obj);
+    }
 
-            return 0; // equal indices
-        });
+    /**
+     * Swap object with its next sibling (move one step toward front)
+     */
+    moveForward(obj) {
+        const arr = this.getSiblingArray(obj);
+        const i = arr.indexOf(obj);
+        if (i === -1 || i === arr.length - 1) return;
+        [arr[i], arr[i + 1]] = [arr[i + 1], arr[i]];
+    }
+
+    /**
+     * Swap object with its previous sibling (move one step toward back)
+     */
+    moveBackward(obj) {
+        const arr = this.getSiblingArray(obj);
+        const i = arr.indexOf(obj);
+        if (i <= 0) return;
+        [arr[i], arr[i - 1]] = [arr[i - 1], arr[i]];
     }
 
     /**
@@ -50,8 +82,8 @@ export class ObjectOperations extends BaseModule {
            const openIds = new Set(openGroups.map(g => g.id));
            const selectable = this.computeSelectableSet();
 
-           // Collect ALL selectable objects: external groups, external objects, and descendants
-           // All objects are treated equally based on their zIndex
+           // Collect ALL selectable objects: external groups, external objects, and descendants.
+           // All objects are treated equally based on their stacking order (see compareStackOrder).
            const allSelectableObjects = [];
 
            // 1) External groups (excluding ALL open groups)
@@ -69,7 +101,9 @@ export class ObjectOperations extends BaseModule {
                    const collect = (group) => {
                        const descendants = [];
                        group.children.forEach(ch => {
-                           if (selectable.has(ch.id)) {
+                           // Skip open groups from hit-test list — they are being edited;
+                           // their children are collected via recursion below.
+                           if (selectable.has(ch.id) && !openIds.has(ch.id)) {
                                descendants.push(ch);
                            }
                            if (ch.type === 'group') descendants.push(...collect(ch));
@@ -84,10 +118,10 @@ export class ObjectOperations extends BaseModule {
            const allDescendants = collectAllDescendants(openGroups);
            allSelectableObjects.push(...allDescendants);
 
-           // Sort ALL objects by zIndex descending to select object with highest zIndex (front-most)
+           // Sort ALL objects by stacking order, descending, to select the front-most one
            const sortedAllObjects = this._sortObjectsByZIndexDescending(allSelectableObjects);
 
-           // Hit-test all objects in zIndex order
+           // Hit-test all objects front-to-back
            for (const obj of sortedAllObjects) {
                if (this.isPointInObject(x, y, obj)) return obj;
            }
@@ -98,8 +132,8 @@ export class ObjectOperations extends BaseModule {
         const selectableInViewport = this.editor.getSelectableObjectsInViewport();
 
         // Hit-test ALL top-level objects together - only those in viewport
-        // Sort by zIndex descending to select object with highest zIndex (front-most)
-        // Groups and non-groups are treated equally based on their zIndex
+        // Sort by stacking order, descending, to select the front-most one
+        // Groups and non-groups are treated equally based on their stacking order
         const topLevelObjects = this.editor.level.objects.filter(o => selectableInViewport.has(o.id));
         const sortedObjects = this._sortObjectsByZIndexDescending(topLevelObjects);
         for (const obj of sortedObjects) {
@@ -310,8 +344,10 @@ export class ObjectOperations extends BaseModule {
         );
 
         // Clear selection and update UI AFTER all operations are complete
+        const deletedCount = selectedObjects.size;
         this.editor.stateManager.set('selectedObjects', new Set());
-        
+        Logger.status.info(`Deleted ${deletedCount} object${deletedCount > 1 ? 's' : ''}`);
+
         // Invalidate spatial index to ensure deleted objects are not rendered
         if (this.editor.renderOperations) {
             this.editor.renderOperations.invalidateSpatialIndex();

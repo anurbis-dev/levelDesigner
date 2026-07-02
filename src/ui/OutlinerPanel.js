@@ -464,6 +464,10 @@ export class OutlinerPanel extends BasePanel {
 
 
     render() {
+        // Keep top controls fixed and make only the object list area scrollable.
+        // Use CSS class layout to avoid conflicting with tab visibility toggles.
+        this.container.classList.add('outliner-tab-layout');
+
         // Save search input state before clearing
         const searchInput = document.getElementById('outliner-search');
         const wasSearchFocused = searchInput && document.activeElement === searchInput;
@@ -487,6 +491,13 @@ export class OutlinerPanel extends BasePanel {
         // Render outliner search controls in top custom section
         this.renderOutlinerSearchControls();
 
+        // Create dedicated list container (objects only).
+        // Search/filter controls stay outside to avoid being included in panning.
+        const objectsContainer = document.createElement('div');
+        objectsContainer.id = 'outliner-objects-container';
+        objectsContainer.className = 'outliner-objects-container';
+        this.container.appendChild(objectsContainer);
+
         const level = this.levelEditor.getLevel();
         // Show only top-level objects in outliner
         const topLevelObjects = level.objects;
@@ -508,15 +519,15 @@ export class OutlinerPanel extends BasePanel {
             Logger.outliner.info(`Search "${this.searchTerm}" found ${totalFiltered} objects`);
 
             const resultsInfo = SearchUtils.createSearchResultsInfo(totalFiltered, this.searchTerm, 'objects');
-            this.container.appendChild(resultsInfo);
+            objectsContainer.appendChild(resultsInfo);
         }
 
         // Render objects directly without grouping by type
         filteredObjects.forEach(obj => {
             if (obj.type === 'group') {
-                this.renderGroupNode(obj, 0, this.container);
+                this.renderGroupNode(obj, 0, objectsContainer);
             } else {
-                this.renderObjectNode(obj, 0, this.container);
+                this.renderObjectNode(obj, 0, objectsContainer);
             }
         });
 
@@ -531,16 +542,13 @@ export class OutlinerPanel extends BasePanel {
 
         // Always recreate context menu after DOM is updated to ensure it works with new objects
         this.setupContextMenu();
-        
-        // Setup scrolling using BasePanel - target the actual scrollable container
-        const rightPanel = this.container.closest('#right-panel');
-        const scrollableContainer = rightPanel?.querySelector('.flex-grow.overflow-y-auto');
-        
+
+        // Bind middle-mouse panning only to the object list container.
         this.setupScrolling({
-            horizontal: false,
+            horizontal: true,
             vertical: true,
             sensitivity: 1.0,
-            target: scrollableContainer || rightPanel
+            target: objectsContainer
         });
     }
 

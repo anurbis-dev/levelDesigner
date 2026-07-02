@@ -27,6 +27,7 @@ export class RenderOperations extends BaseModule {
         this.spatialIndex = new Map(); // levelId -> {grid, bounds, lastUpdate}
         this.spatialGridSize = PERFORMANCE.SPATIAL_GRID_SIZE;
         this.isBuildingSpatialIndex = false; // Флаг для предотвращения повторного построения
+        this._spatialIndexDirty = false; // Отложенный rebuild: стройт только в getVisibleObjectsSpatial
 
         // Кеш для разных уровней масштаба камеры
         this.zoomLevelCache = new Map(); // zoom -> cachedObjects
@@ -174,6 +175,14 @@ export class RenderOperations extends BaseModule {
     }
 
     /**
+     * Пометить spatial index устаревшим — перестройка произойдёт лениво в getVisibleObjectsSpatial.
+     * Используется вместо прямого buildSpatialIndex() при batch/операциях вне render-loop.
+     */
+    markSpatialIndexDirty() {
+        this._spatialIndexDirty = true;
+    }
+
+    /**
      * Быстрый поиск объектов в области видимости с помощью пространственного индекса
      * O(k) - где k - количество ячеек сетки в области видимости
      */
@@ -196,6 +205,11 @@ export class RenderOperations extends BaseModule {
 
         if (!camera.zoom || camera.zoom <= 0) {
             return [];
+        }
+
+        if (this._spatialIndexDirty) {
+            this.buildSpatialIndex();
+            this._spatialIndexDirty = false;
         }
 
         const levelId = this.editor.level?.id || 'default';
@@ -368,7 +382,7 @@ export class RenderOperations extends BaseModule {
         
         // Draw objects with frustum culling
         const groupEditMode = this.editor.stateManager.get('groupEditMode');
-        // Already sorted by zIndex (ascending = drawn first = behind); sort result is
+        // Already sorted by stacking order (ascending = drawn first = behind); sort result is
         // cached alongside the visibility cache entry and shares its invalidation,
         // so it doesn't need to be recomputed on every render() call.
         const sortedObjects = this.getVisibleObjects(camera);
@@ -588,33 +602,28 @@ export class RenderOperations extends BaseModule {
     }
 
     drawHierarchyHighlightForGroup(group, depth = 0) {
-        const camera = this.editor.stateManager.get('camera');
         const baseColor = this.editor.stateManager.get('selection.hierarchyHighlightColor') || '#3B82F6';
-        const maxAlpha = 0.25; // base alpha
-        const decay = 0.6; // alpha decay per depth
+        const maxAlpha = 0.25;
+        const decay = 0.6;
         const alpha = Math.max(0, maxAlpha * Math.pow(decay, depth));
 
         if (!group || !group.children) return;
 
-        // Highlight each nested group
+        // One save/restore per depth level — fillStyle is constant within a depth
+        const ctx = this.editor.canvasRenderer.ctx;
+        ctx.save();
+        ctx.fillStyle = RenderUtils.hexToRgba(baseColor, alpha);
+
         group.children.forEach(child => {
             if (child.type === 'group') {
                 const bounds = this.editor.objectOperations.getObjectWorldBounds(child);
-                const rgba = RenderUtils.hexToRgba(baseColor, alpha);
-                this.editor.canvasRenderer.ctx.save();
-                this.editor.canvasRenderer.ctx.fillStyle = rgba;
-                this.editor.canvasRenderer.ctx.fillRect(
-                    bounds.minX,
-                    bounds.minY,
-                    bounds.maxX - bounds.minX,
-                    bounds.maxY - bounds.minY
-                );
-                this.editor.canvasRenderer.ctx.restore();
-
-                // Recurse deeper
+                ctx.fillRect(bounds.minX, bounds.minY, bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
+                // Each recursive call does its own save/restore and restores ctx back to our fillStyle
                 this.drawHierarchyHighlightForGroup(child, depth + 1);
             }
         });
+
+        ctx.restore();
     }
 
 
@@ -679,7 +688,7 @@ export class RenderOperations extends BaseModule {
 
     /**
      * Clear all visible objects cache
-     * Use when object positions or zIndex change
+     * Use when object positions or stacking order change
      */
     clearVisibleObjectsCache() {
         this.visibleObjectsCache.clear();
@@ -857,14 +866,12 @@ export class RenderOperations extends BaseModule {
             visibleObjects = this.getVisibleObjectsRegular(camera);
         }
 
-        // Sort objects by zIndex for proper layering (lower zIndex = drawn first = behind).
+        // Sort objects by stacking order for proper layering (behind first, front last).
         // Computed once per cache entry instead of on every render() call; shares the same
-        // TTL/invalidation as visibility (see clearVisibleObjectsCache - "objects or zIndex change").
-        visibleObjects = visibleObjects.slice().sort((a, b) => {
-            const aZIndex = a.obj.zIndex !== undefined ? a.obj.zIndex : 0;
-            const bZIndex = b.obj.zIndex !== undefined ? b.obj.zIndex : 0;
-            return aZIndex - bZIndex;
-        });
+        // TTL/invalidation as visibility (see clearVisibleObjectsCache - "objects or structure change").
+        visibleObjects = visibleObjects.slice().sort((a, b) =>
+            this.editor.level.compareStackOrder(a.obj, b.obj)
+        );
 
         // Cache the result
         this.visibleObjectsCache.set(cameraKey, {
@@ -916,10 +923,9 @@ export class RenderOperations extends BaseModule {
      * Draw hierarchy highlight for duplicate groups (uses direct bounds calculation)
      */
     drawDuplicateHierarchyHighlight(group, depth = 0, parentX = 0, parentY = 0) {
-        const camera = this.editor.stateManager.get('camera');
         const baseColor = this.editor.stateManager.get('selection.hierarchyHighlightColor') || '#3B82F6';
-        const maxAlpha = 0.25; // base alpha
-        const decay = 0.6; // alpha decay per depth
+        const maxAlpha = 0.25;
+        const decay = 0.6;
         const alpha = Math.max(0, maxAlpha * Math.pow(decay, depth));
 
         if (!group || !group.children) return;
@@ -927,25 +933,21 @@ export class RenderOperations extends BaseModule {
         const groupAbsX = parentX + group.x;
         const groupAbsY = parentY + group.y;
 
-        // Highlight each nested group
+        // One save/restore per depth level — fillStyle is constant within a depth
+        const ctx = this.editor.canvasRenderer.ctx;
+        ctx.save();
+        ctx.fillStyle = RenderUtils.hexToRgba(baseColor, alpha);
+
         group.children.forEach(child => {
             if (child.type === 'group') {
                 const bounds = this.getDuplicateObjectBounds(child, groupAbsX, groupAbsY);
-                const rgba = RenderUtils.hexToRgba(baseColor, alpha);
-                this.editor.canvasRenderer.ctx.save();
-                this.editor.canvasRenderer.ctx.fillStyle = rgba;
-                this.editor.canvasRenderer.ctx.fillRect(
-                    bounds.minX,
-                    bounds.minY,
-                    bounds.maxX - bounds.minX,
-                    bounds.maxY - bounds.minY
-                );
-                this.editor.canvasRenderer.ctx.restore();
-
-                // Recurse deeper with updated parent coordinates
+                ctx.fillRect(bounds.minX, bounds.minY, bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
+                // Each recursive call does its own save/restore and restores ctx back to our fillStyle
                 this.drawDuplicateHierarchyHighlight(child, depth + 1, groupAbsX, groupAbsY);
             }
         });
+
+        ctx.restore();
     }
 
     /**

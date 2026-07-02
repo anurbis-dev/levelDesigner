@@ -57,9 +57,12 @@ export class LayerOperations extends BaseModule {
             // Force level update by creating a deep copy to trigger state manager listeners
             this.editor.stateManager.set('level', JSON.parse(JSON.stringify(this.editor.level)));
 
+            const direction = moveToExtreme ? (moveUp ? 'top' : 'bottom') : (moveUp ? 'up' : 'down');
             Logger.layer.info(`Moved ${movedCount} objects to ${moveToExtreme ? (moveUp ? 'first' : 'last') : (moveUp ? 'upper' : 'lower')} layer`);
+            Logger.status.info(`Moved ${movedCount} object${movedCount > 1 ? 's' : ''} to layer ${direction}`);
         } else {
             Logger.layer.info('No objects were moved (already in target layer or no valid objects found)');
+            Logger.status.warn('Already at target layer');
         }
     }
 
@@ -135,16 +138,14 @@ export class LayerOperations extends BaseModule {
         // Умная инвалидация кешей только для измененных объектов и слоев
         this.editor.invalidateAfterLayerChanges(changedObjectIds, affectedLayers);
 
-        // При массовых изменениях слоев перестраиваем пространственный индекс
+        // При массовых изменениях слоев помечаем spatial index устаревшим
         if (changedObjectIds.size > 10) {
-            setTimeout(() => {
-                if (this.editor.renderOperations) {
-                    this.editor.renderOperations.buildSpatialIndex();
-                }
-            }, 0);
+            if (this.editor.renderOperations) {
+                this.editor.renderOperations.markSpatialIndexDirty();
+            }
         }
 
-        // Mark state as dirty and force immediate re-render to apply zIndex changes
+        // Mark state as dirty and force immediate re-render to apply layer changes
         this.editor.stateManager.markDirty();
         this.editor.render();
 
@@ -300,19 +301,18 @@ export class LayerOperations extends BaseModule {
         // Get the old effective layer ID for notifications (use cache)
         const oldEffectiveLayerId = this.editor.getCachedEffectiveLayerId(topLevelObj);
 
-        // Change layerId of the top-level object using Level.assignObjectToLayer for proper zIndex handling
+        // Change layerId of the top-level object
         const oldLayerId = topLevelObj.layerId;
         this.editor.level.assignObjectToLayer(topLevelObj.id, targetLayerId);
 
-        // Log object layer change with zIndex information
+        // Log object layer change
         if (Logger.currentLevel <= Logger.LEVELS.INFO) {
             const oldLayer = oldLayerId ? this.editor.level.getLayerById(oldLayerId) : null;
             const newLayer = this.editor.level.getLayerById(targetLayerId);
             const oldLayerIndex = oldLayer ? oldLayer.getIndex() : 'none';
             const newLayerIndex = newLayer ? newLayer.getIndex() : 'none';
-            const objectIndex = topLevelObj.zIndex !== undefined ? Math.floor((topLevelObj.zIndex % 1) * 1000) : 'none';
 
-            Logger.layer.info(`Object ${topLevelObj.name || topLevelObj.id} moved from layer "${oldLayer?.name || 'none'}" (index: ${oldLayerIndex}) to layer "${newLayer?.name || 'none'}" (index: ${newLayerIndex}), object index: ${objectIndex}`);
+            Logger.layer.info(`Object ${topLevelObj.name || topLevelObj.id} moved from layer "${oldLayer?.name || 'none'}" (index: ${oldLayerIndex}) to layer "${newLayer?.name || 'none'}" (index: ${newLayerIndex})`);
         }
 
         // FORCED INHERITANCE: Propagate layerId to all children if this is a group

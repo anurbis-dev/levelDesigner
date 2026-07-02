@@ -71,6 +71,7 @@
     <link rel="stylesheet" href="styles/dialog-positioning.css">
     <link rel="stylesheet" href="styles/console-context-menu.css">
     <link rel="stylesheet" href="styles/user-settings.css">
+    <link rel="stylesheet" href="styles/status-bar.css">
     <style>
         /* Hide body until editor is fully initialized */
         body:not(.editor-ready) {
@@ -152,6 +153,11 @@
             <!-- Asset previews container will be generated dynamically -->
         </div>
     </footer>
+
+    <!-- Status Bar — однострочная панель уведомлений -->
+    <div id="status-bar">
+        <div class="status-bar-message"></div>
+    </div>
 
     <!-- Console Panel as Overlay (hidden by default) -->
     <div id="console-panel" class="console-overlay hidden bg-gray-900 flex flex-col">
@@ -315,6 +321,25 @@
                         }
                     } catch (rightError) {
                         Logger.layout.warn('Failed to apply right panel visibility:', rightError);
+                    }
+                }
+
+                // Apply status bar visibility immediately
+                const statusBarVisible = userPrefs.get('statusBarVisible');
+                if (statusBarVisible !== undefined) {
+                    try {
+                        const statusBar = document.getElementById('status-bar');
+                        if (statusBar) {
+                            if (statusBarVisible) {
+                                statusBar.classList.remove('hidden');
+                                statusBar.style.display = 'flex';
+                            } else {
+                                statusBar.classList.add('hidden');
+                                statusBar.style.display = 'none';
+                            }
+                        }
+                    } catch (statusBarError) {
+                        Logger.layout.warn('Failed to apply status bar visibility:', statusBarError);
                     }
                 }
 
@@ -564,10 +589,13 @@
                     if (!tabContainer) return;
 
                     const draggingState = window.tabDraggingState;
+                    const tabSelector = '.tab-right[data-tab], .tab-left[data-tab], .tab[data-tab]';
 
                     // Make tabs draggable
                     tabContainer.addEventListener('mousedown', (e) => {
-                        const tab = e.target.closest('.tab-right, .tab-left');
+                        if (e.button !== 0) return;
+
+                        const tab = e.target.closest(tabSelector);
                         if (!tab) return;
 
                         draggingState.draggedTab = tab;
@@ -585,17 +613,17 @@
                     tabContainer.addEventListener('mousemove', (e) => {
                         if (!draggingState.draggedTab || draggingState.draggedPanel !== tabContainer.closest('[id$="-tabs-panel"]')) return;
 
-                        const tab = e.target.closest('.tab-right, .tab-left');
+                        const tab = e.target.closest(tabSelector);
                         if (!tab || tab === draggingState.draggedTab) {
                             // Remove drag-over from all tabs in this container
-                            tabContainer.querySelectorAll('.tab-right, .tab-left').forEach(t => t.classList.remove('tab-drag-over'));
+                            tabContainer.querySelectorAll(tabSelector).forEach(t => t.classList.remove('tab-drag-over'));
                             return;
                         }
 
                         const targetIndex = Array.from(tabContainer.children).indexOf(tab);
                         
                         // Remove drag-over from all tabs in this container
-                        tabContainer.querySelectorAll('.tab-right, .tab-left').forEach(t => t.classList.remove('tab-drag-over'));
+                        tabContainer.querySelectorAll(tabSelector).forEach(t => t.classList.remove('tab-drag-over'));
                         
                         // Add drag-over to target tab
                         tab.classList.add('tab-drag-over');
@@ -623,7 +651,7 @@
                     if (!draggingState.draggedTab) return;
 
                     const tabContainer = draggingState.draggedTab.parentElement;
-                    const targetTab = e.target.closest('.tab-right, .tab-left');
+                    const targetTab = e.target.closest('.tab-right[data-tab], .tab-left[data-tab], .tab[data-tab]');
                     
                     if (targetTab && targetTab !== draggingState.draggedTab && tabContainer.contains(targetTab)) {
                         const targetIndex = Array.from(tabContainer.children).indexOf(targetTab);
@@ -638,7 +666,7 @@
                     }
 
                     // Clean up
-                    tabContainer.querySelectorAll('.tab-right, .tab-left').forEach(t => {
+                    tabContainer.querySelectorAll('.tab-right[data-tab], .tab-left[data-tab], .tab[data-tab]').forEach(t => {
                         t.classList.remove('dragging', 'tab-drag-over');
                     });
                     
@@ -651,12 +679,7 @@
             }
         }
 
-        // Initialize tab dragging
-        try {
-            setupTabDragging();
-        } catch (error) {
-            Logger.layout.error('Error initializing tab dragging:', error);
-        }
+        // Tab dragging is managed by PanelPositionManager.
 
         // Console functionality
         let isConsoleVisible = false; // Global variable for console visibility state

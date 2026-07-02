@@ -3,7 +3,7 @@
 ## Memory-first workflow
 
 - Treat MemPalace as the primary context source for project architecture, systems, and decisions — not the built-in per-session auto-memory.
-- At the start of a session involving this project, call MemPalace MCP tools first: `mempalace_search` scoped to `wing=level_designer`, then `mempalace_traverse`/`mempalace_get_drawer` for exact context.
+- At the start of a session involving this project, call MemPalace MCP tools first: `mempalace_search` scoped to `wing=level_designer`, then `mempalace_traverse`/`mempalace_get_drawer` for exact context. **Skip for trivial tasks** (typo fix, config-only change, "what does X mean" question — no code change needed).
 - Do not ask to re-read project markdown files when MemPalace already covers the topic.
 - Read repository files only for verification, code edits, or when memory coverage is missing.
 - If memory and code conflict, prefer current code and report the conflict explicitly.
@@ -23,7 +23,9 @@
 
 After completing any code fix or feature implementation, always execute these steps in order before reporting done:
 
-1. **Update docs** — run the `DocCodeSync` subagent (or update manually) to reflect the change in `docs/`, `Context_map.md`, and `docs/CHANGELOG.md`. Even minor fixes warrant a CHANGELOG entry.
+1. **Update docs** — tier by change scope:
+   - **Minor fix** (isolated JS change, no new API or behavior contract): directly append 1-line entry to `docs/CHANGELOG.md` only. Do not spawn DocCodeSync.
+   - **Behavioral / API change** (new feature, changed contract, new module): run `DocCodeSync` subagent to sync `docs/`, `Context_map.md`, and `docs/CHANGELOG.md`.
 2. **Update MemPalace** — persist any stable architectural facts, design decisions, or newly discovered patterns via `mempalace_add_drawer` / `mempalace_update_drawer` and `mempalace_kg_add` if relevant.
 3. **Update local auto-memory** — only for always-on behavioral triggers (e.g., rate-limit handling, response language). Everything else goes to MemPalace, not local files.
 4. **Browser verification** — confirm the fix via `chrome-devtools` MCP (`list_console_messages`, `evaluate_script` for state check). Only then declare the task complete.
@@ -32,19 +34,43 @@ Do not skip these steps even for "small" fixes — consistency is what keeps doc
 
 ## Response style
 
-- Отвечать на русском языке (см. также локальную auto-memory).
-- Keep answers concrete and action-oriented.
+- Отвечать на русском языке.
+- Только суть: без вступлений, вежливости, «отличный вопрос», «как видно из», «стоит отметить».
+- Не пересказывать вопрос и не анонсировать что сейчас будет сделано — сразу результат.
+- Ссылки на код: `ClassName.method` или `file:line` — без описания что делает функция/переменная.
+- Куски кода «было → стало» в чат не отправлять если не просят явно. Изменение описывается одной строкой: `file:line — что и почему (если не очевидно)`.
+- Одно предложение на факт/действие. Без воды.
 - Do not ask the user to save/update memory manually — handle memory updates internally via MemPalace tools when a stable fact is discovered.
 
 ## Browser verification (chrome-devtools MCP)
 
-- The editor server is **always already running** at `http://localhost:8000/index.html` (per `Context_map.md` — never start `python -m http.server`/`npx serve`/`start_Editor.bat` yourself).
-- Use the `chrome-devtools` MCP tools to verify changes instead of asking the user to check manually: `navigate_page` to `http://localhost:8000/index.html`, perform the interaction (`click`/`fill`/`drag`/`press_key`), then `list_console_messages` to check for errors/warnings before declaring a fix done.
-- `take_screenshot`/`take_snapshot` for visual confirmation of UI changes; `list_network_requests`/`get_network_request` when debugging level/asset load issues.
-- `evaluate_script` can call `levelEditor`/`stateManager` APIs directly in the page context for state inspection — prefer this over guessing from code alone.
-- Always re-check `list_console_messages` after the interaction, not just on page load — most bugs here surface during interaction (drag, undo/redo, dialog open/close), not at startup.
+- The editor server runs at **`http://localhost:3000/index.html`** via `npx serve` (never start another server yourself).
+- Global JS variable in the page is **`editor`** (not `levelEditor`) — use `editor.renderOperations`, `editor.stateManager`, etc.
 - If `chrome-devtools` MCP is unavailable this session, say so explicitly and fall back to static code review.
+
+### Правильный workflow подключения к браузеру
+
+1. Сначала `list_pages` — увидеть уже открытые вкладки.
+2. Если редактор открыт → `select_page` по ID, затем `evaluate_script`. **Не вызывай `navigate_page` если страница уже есть.**
+3. Если страницы нет → `navigate_page` к `http://localhost:3000/index.html`.
+4. Если `list_pages` падает с "already running" — зависший Chrome-devtools-mcp процесс. Убить через `Stop-Process -Id <PID> -Force` (найти через `netstat -ano | Select-String ":3000"`).
+
+### Verification tier — choose the lightest tier that covers the change
+
+| Tier | Change type | Steps |
+|------|-------------|-------|
+| **Skip** | Docs / CHANGELOG / config only | No browser check needed |
+| **Lightweight** | Logic / JS fix, no UI change | `evaluate_script` state check → `list_console_messages` (errors only) |
+| **Standard** | Behavior change with interaction | `evaluate_script` → trigger interaction → `list_console_messages` |
+| **Full** | UI layout / visual / render change | Standard + `take_screenshot` |
+
+**Rules:**
+- Start with `evaluate_script` calling `editor`/`editor.stateManager` APIs directly — cheaper than navigating and clicking.
+- Only call `navigate_page` if the page needs a specific state that cannot be set via script.
+- Never call `take_screenshot`/`take_snapshot` for non-visual changes — adds tokens with no diagnostic value.
+- `list_network_requests`/`get_network_request` only when debugging level/asset load issues.
+- Re-check `list_console_messages` *after* the interaction, not only on page load — most bugs surface during interaction (drag, undo/redo, dialog open/close).
 
 ## Specialist subagents
 
-This project also defines five specialist subagents (`.claude/agents/`): **CodeMaster** (review), **BugHunter** (defensive/edge-case analysis), **PerformanceOptimizer** (Canvas/DOM performance), **DocCodeSync** (docs sync), **TestGenerator** (browser-console tests). Prefetch relevant `wing=level_designer` MemPalace context before delegating to any of them, and persist their findings back to MemPalace after the task completes. See `.github/copilot-instructions.md` for the full delegation pipeline — it applies the same way here.
+This project also defines five specialist subagents (`.claude/agents/`): **CodeMaster** (review), **BugHunter** (defensive/edge-case analysis), **PerformanceOptimizer** (Canvas/DOM performance), **DocCodeSync** (docs sync), **TestGenerator** (browser-console tests). Before delegating, reuse MemPalace context already fetched at session start — only run an additional narrowed `mempalace_search` if the subagent scope differs significantly from what was already loaded. Persist subagent findings back to MemPalace after the task completes. See `.github/copilot-instructions.md` for the full delegation pipeline — it applies the same way here.

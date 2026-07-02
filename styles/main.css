@@ -29,6 +29,12 @@
     --selection-marquee-color: #3B82F6; /* blue-500 */
     --selection-marquee-opacity: 0.2;
     --selection-hierarchy-highlight-color: #3B82F6; /* blue-500 */
+
+    /* Status Bar Message Colors */
+    --status-bar-color-info: #6b7280;    /* gray-500 */
+    --status-bar-color-success: #10b981; /* emerald-500 */
+    --status-bar-color-warn: #f59e0b;    /* amber-500 */
+    --status-bar-color-error: #ef4444;   /* red-500 */
 }
 
 /* Apply font scale immediately if localStorage has settings */
@@ -312,6 +318,63 @@ header .text-sm {
     border-right: 2px solid var(--ui-active-color, #3B82F6);
 }
 
+/* Drop zone highlight when dragging a tab over a different panel's tab bar */
+.tab-drop-zone {
+    background: rgba(59, 130, 246, 0.12);
+    outline: 2px dashed var(--ui-active-color, #3B82F6);
+    outline-offset: -2px;
+}
+
+/* Ghost tab that follows the cursor during drag */
+.tab-drag-ghost {
+    position: fixed;
+    pointer-events: none;
+    z-index: 10000;
+    padding: 3px 12px;
+    background: var(--ui-active-color, #3B82F6);
+    color: #fff;
+    border-radius: 4px 4px 0 0;
+    font-size: 12px;
+    opacity: 0.82;
+    white-space: nowrap;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+    transform: rotate(-4deg);
+    transform-origin: left bottom;
+    line-height: 1.6;
+    user-select: none;
+}
+
+/* Vertical strip shown at panel edges when the target panel doesn't exist yet */
+.tab-new-panel-zone {
+    position: fixed;
+    z-index: 9999;
+    pointer-events: none;
+    background: rgba(147, 197, 253, 0.06);
+    border: 2px dashed rgba(147, 197, 253, 0.25);
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 6px;
+    transition: background 0.12s ease, border-color 0.12s ease;
+    box-sizing: border-box;
+}
+
+.tab-new-panel-zone__label {
+    font-size: 11px;
+    color: rgba(147, 197, 253, 0.4);
+    user-select: none;
+    line-height: 1;
+}
+
+.tab-new-panel-zone--active {
+    background: rgba(147, 197, 253, 0.18);
+    border-color: rgba(147, 197, 253, 0.65);
+}
+
+.tab-new-panel-zone--active .tab-new-panel-zone__label {
+    color: rgba(147, 197, 253, 0.9);
+}
+
 /* Styles for asset previews */
 .asset-thumbnail {
     border: 2px solid transparent;
@@ -400,6 +463,21 @@ header .text-sm {
 
 .outliner-item.selected * {
     color: var(--ui-active-text-color, #ffffff) !important;
+}
+
+/* Outliner tab layout: fixed controls + scrollable object list */
+.outliner-tab-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.outliner-objects-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: auto;
 }
 
 /* Styles for asset list and details items */

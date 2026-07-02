@@ -99,6 +99,19 @@
       "description": "Move selected objects to bottom layer"
     }
   },
+  "mouse": {
+    "rotateObjects": {
+      "key": "Drag",
+      "ctrlKey": true,
+      "description": "Rotate selected objects (hold Shift for 10° steps)"
+    },
+    "scaleObjects": {
+      "key": "Drag",
+      "ctrlKey": true,
+      "altKey": true,
+      "description": "Scale selected objects"
+    }
+  },
   "ui": {
     "focusLayersSearch": {
       "key": "L",

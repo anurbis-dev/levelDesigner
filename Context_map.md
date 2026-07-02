@@ -45,6 +45,13 @@ eventHandlerManager.registerTouchElement(element, configType, config, elementId)
 
 // GlobalEventRegistry
 globalEventRegistry.registerComponentHandlers(componentId, handlers, target)
+
+// Z-порядок объектов (array-order stacking, без zIndex)
+levelEditor.level.compareStackOrder(a, b) // компаратор: layerIndex, затем путь в дереве
+levelEditor.objectOperations.bringToFront(obj)
+levelEditor.objectOperations.sendToBack(obj)
+levelEditor.objectOperations.moveForward(obj)
+levelEditor.objectOperations.moveBackward(obj)
 ```
 
 ## 📁 Основные файлы
@@ -54,7 +61,11 @@ globalEventRegistry.registerComponentHandlers(componentId, handlers, target)
 - `src/core/ObjectOperations.js` - операции с объектами
 - `src/core/LayerOperations.js` - операции со слоями
 - `src/core/RenderOperations.js` - рендеринг
-- `src/core/MouseHandlers.js` - обработка мыши
+- `src/event-system/MouseHandlers.js` - обработка мыши, в т.ч. rotate/scale жесты (`startObjectTransform`, `transformSelectedObjects`)
+- `src/constants/EditorConstants.js` - константы, включая `TRANSFORM` (rotate/scale жесты)
+- `src/utils/WorldPositionUtils.js` - мировые координаты, rotation-aware bounds (`getRotatedRectAABB`, `rotateBoundsAroundCenter`)
+- `src/utils/GroupTraversalUtils.js` - обход иерархии групп, включая `findObjectPath()` (путь индексов для z-порядка)
+- `src/models/Level.js` - модель уровня, `compareStackOrder()` — единый компаратор z-порядка (без `zIndex`, объекты не хранят его)
 
 ### Managers
 - `src/managers/StateManager.js` - состояние
@@ -154,7 +165,7 @@ eventHandlerManager.registerElement(button, { click: onClick }, 'button-id');
 
 ### ❌ НИКОГДА не запускай эти команды (они зависают):
 - `python -m http.server 8000` - сервер всегда запущен пользователем
-- `npx serve` / `serve -p 3000` - сервер всегда запущен пользователем
+- `npx serve` / `serve -p 8000` - сервер всегда запущен пользователем
 - `npm run start:node` - запускает сервер, который зависает
 - `npm run watch:css` - watch режим зависает (используй `build:css` вместо этого)
 - `start_Editor.bat` - запускает сервер, который зависает

@@ -1,5 +1,6 @@
 import { GameObject } from './GameObject.js';
 import { Logger } from '../utils/Logger.js';
+import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
 
 /**
  * Group object that can contain other objects
@@ -72,29 +73,9 @@ export class Group extends GameObject {
             const oldLayerId = child.layerId;
             child.layerId = group.layerId;
 
-            // Update zIndex based on new layer
-            if (child.zIndex !== undefined && typeof window !== 'undefined' && window.LevelEditor) {
-                const editor = window.LevelEditor.getInstance();
-                if (editor && editor.level) {
-                    const newLayer = editor.level.getLayerById(group.layerId);
-                    if (newLayer) {
-                        // Extract current object index (thousandths part)
-                        const currentObjectIndex = Math.floor((child.zIndex % 1) * 1000);
-                        const oldZIndex = child.zIndex;
-                        // Update zIndex with new layer index + object index
-                        child.zIndex = newLayer.getIndex() + (currentObjectIndex / 1000);
-
-                        // Log zIndex change for child objects
-                        if (Logger && Logger.currentLevel <= Logger.LEVELS.DEBUG) {
-                            Logger.layer.debug(`Child object ${child.name || child.id} zIndex updated: ${oldZIndex} → ${child.zIndex} (layer ${newLayer.getIndex()}, object index: ${currentObjectIndex})`);
-                        }
-                    }
-                }
-            }
-
             // Log forced inheritance
             if (Logger && Logger.currentLevel <= Logger.LEVELS.INFO) {
-                Logger.layer.info(`Propagated inheritance: ${child.name || child.id} layerId ${oldLayerId || 'none'} → ${group.layerId}, zIndex updated`);
+                Logger.layer.info(`Propagated inheritance: ${child.name || child.id} layerId ${oldLayerId || 'none'} → ${group.layerId}`);
             }
 
             // Clear effective layer cache for this child
@@ -135,19 +116,19 @@ export class Group extends GameObject {
         }
 
         const bounds = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
-        
+
         for (const child of this.children) {
+            // Child bounds are rotation-aware (AABB in the group's local frame)
             const childBounds = child.getBounds();
-            const worldX = this.x + child.x;
-            const worldY = this.y + child.y;
-            
-            bounds.minX = Math.min(bounds.minX, worldX);
-            bounds.minY = Math.min(bounds.minY, worldY);
-            bounds.maxX = Math.max(bounds.maxX, worldX + child.width);
-            bounds.maxY = Math.max(bounds.maxY, worldY + child.height);
+
+            bounds.minX = Math.min(bounds.minX, this.x + childBounds.minX);
+            bounds.minY = Math.min(bounds.minY, this.y + childBounds.minY);
+            bounds.maxX = Math.max(bounds.maxX, this.x + childBounds.maxX);
+            bounds.maxY = Math.max(bounds.maxY, this.y + childBounds.maxY);
         }
-        
-        return bounds;
+
+        // Apply the group's own rotation as conservative AABB rotation
+        return WorldPositionUtils.rotateBoundsAroundCenter(bounds, this.rotation || 0);
     }
 
     /**

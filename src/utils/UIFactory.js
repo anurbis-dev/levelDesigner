@@ -162,27 +162,10 @@ export class UIFactory {
         properties.forEach(prop => {
             let value = obj[prop];
 
-            // Handle undefined values for numeric properties
-            if (value === undefined) {
-                if (prop === 'zIndex') {
-                    value = 0;
-                    // Don't set obj[prop] = 0 here - let the system handle zIndex properly
-                }
-            }
-
-            // For zIndex, display only the object index (thousandths part)
-            let displayValue;
-            if (prop === 'zIndex' && typeof value === 'number') {
-                // Extract object index from zIndex (thousandths part)
-                const objectIndex = Math.floor((value % 1) * 1000);
-                displayValue = objectIndex.toString();
-            } else {
-                displayValue = typeof value === 'number' ? value.toFixed(1) : value;
-            }
+            const displayValue = typeof value === 'number' ? value.toFixed(1) : value;
 
             // Format property name for display
             const formatLabel = (propName) => {
-                if (propName === 'zIndex') return 'Z-Index';
                 if (propName === 'imgSrc') return 'Image Source';
                 return propName.charAt(0).toUpperCase() + propName.slice(1);
             };
@@ -195,12 +178,7 @@ export class UIFactory {
                     // Update object property immediately for visual feedback
                     let newValue = e.target.value;
 
-                    if (prop === 'zIndex') {
-                        // For zIndex, we need to update both the layer part and object part
-                        const layerIndex = Math.floor(obj.zIndex || 0);
-                        const objectIndex = parseInt(newValue) || 0;
-                        newValue = layerIndex + (objectIndex / 1000);
-                    } else if (typeof value === 'number') {
+                    if (typeof value === 'number') {
                         newValue = parseFloat(newValue);
                         if (isNaN(newValue)) {
                             newValue = 0;
@@ -214,12 +192,7 @@ export class UIFactory {
                     // Notify only on blur to avoid real-time updates during typing
                     let newValue = e.target.value;
 
-                    if (prop === 'zIndex') {
-                        // For zIndex, we need to update both the layer part and object part
-                        const layerIndex = Math.floor(obj.zIndex || 0);
-                        const objectIndex = parseInt(newValue) || 0;
-                        newValue = layerIndex + (objectIndex / 1000);
-                    } else if (typeof value === 'number') {
+                    if (typeof value === 'number') {
                         newValue = parseFloat(newValue);
                         if (isNaN(newValue)) {
                             newValue = 0;

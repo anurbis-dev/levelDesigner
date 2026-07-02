@@ -116,6 +116,14 @@ export const MENU_CONFIG = {
                     action: 'togglePanel',
                     actionParam: 'console'
                 },
+                {
+                    id: 'toggle-status-bar',
+                    label: 'Status Bar',
+                    type: 'toggle',
+                    stateKey: 'view.statusBar',
+                    action: 'togglePanel',
+                    actionParam: 'statusBar'
+                },
                 { type: 'separator' },
                 {
                     id: 'canvas-section',

@@ -2,7 +2,7 @@
 
 ## Memory-first workflow
 - Treat MemPalace as the primary context source for project architecture, systems, and decisions.
-- At the start of each new chat, call MemPalace MCP tools first: `mempalace_search` scoped to `wing=level_designer`, then `mempalace_traverse`/`mempalace_get_drawer` for exact context.
+- At the start of each new chat, call MemPalace MCP tools first: `mempalace_search` scoped to `wing=level_designer`, then `mempalace_traverse`/`mempalace_get_drawer` for exact context. **Skip for trivial tasks** (typo fix, config-only change, "what does X mean" question — no code change needed).
 - Do not ask to re-read project markdown files when MemPalace already covers the topic.
 - Read repository files only for verification, code edits, or when memory coverage is missing.
 - If memory and code conflict, prefer current code and report the conflict explicitly.
@@ -23,20 +23,36 @@
 - Keep only reusable, stable rules; avoid storing transient one-off requests.
 
 ## Response style
-- Keep answers concrete and action-oriented.
-- Provide minimal clarification questions; ask one focused question when required.
-- Do not ask the user to save/update memory manually.
-- Handle memory updates internally via MemPalace tools when a stable fact is discovered.
+- Отвечать на русском языке.
+- Только суть: без вступлений, вежливости, «отличный вопрос», «как видно из», «стоит отметить».
+- Не пересказывать вопрос и не анонсировать что сейчас будет сделано — сразу результат.
+- Ссылки на код: `ClassName.method` или `file:line` — без описания что делает функция/переменная.
+- Куски кода «было → стало» в чат не отправлять если не просят явно. Изменение описывается одной строкой: `file:line — что и почему (если не очевидно)`.
+- Одно предложение на факт/действие. Без воды.
+- Уточняющие вопросы: максимум один, только если без него задача неразрешима.
+- Do not ask the user to save/update memory manually — handle memory updates internally via MemPalace tools when a stable fact is discovered.
 
 ## Browser verification (chrome-devtools MCP)
 
 - The editor server is **always already running** at `http://localhost:8000/index.html` (per `Context_map.md` — never start `python -m http.server`/`npx serve`/`start_Editor.bat` yourself).
-- Use the `chrome-devtools` MCP tools to verify changes instead of asking the user to check manually: `navigate_page` to `http://localhost:8000/index.html`, perform the interaction (`click`/`fill`/`drag`/`press_key`), then `list_console_messages` to check for errors/warnings before declaring a fix done.
-- `take_screenshot`/`take_snapshot` for visual confirmation of UI changes; `list_network_requests`/`get_network_request` when debugging level/asset load issues.
-- `evaluate_script` can call `levelEditor`/`stateManager` APIs directly in the page context for state inspection — prefer this over guessing from code alone.
-- Always re-check `list_console_messages` after the interaction, not just on page load — most bugs here surface during interaction (drag, undo/redo, dialog open/close), not at startup.
 - If `chrome-devtools` MCP is unavailable this session, say so explicitly and fall back to static code review.
 - BugHunter's "Suggested Manual Test" and TestGenerator's manual QA checklists can be executed directly this way instead of staying purely theoretical — run them through `chrome-devtools` and report actual results.
+
+### Verification tier — choose the lightest tier that covers the change
+
+| Tier | Change type | Steps |
+|------|-------------|-------|
+| **Skip** | Docs / CHANGELOG / config only | No browser check needed |
+| **Lightweight** | Logic / JS fix, no UI change | `evaluate_script` state check → `list_console_messages` (errors only) |
+| **Standard** | Behavior change with interaction | `evaluate_script` → trigger interaction → `list_console_messages` |
+| **Full** | UI layout / visual / render change | Standard + `take_screenshot` |
+
+**Rules:**
+- Start with `evaluate_script` calling `levelEditor`/`stateManager` APIs directly — cheaper than navigating and clicking.
+- Only call `navigate_page` if the page needs a specific state that cannot be set via script.
+- Never call `take_screenshot`/`take_snapshot` for non-visual changes — adds tokens with no diagnostic value.
+- `list_network_requests`/`get_network_request` only when debugging level/asset load issues.
+- Re-check `list_console_messages` *after* the interaction, not only on page load — most bugs surface during interaction (drag, undo/redo, dialog open/close).
 
 ## JavaScript development guidelines (Level Designer)
 - Route all DOM events through `EventHandlerManager`/`GlobalEventRegistry`; never raw `addEventListener` outside that layer.
@@ -51,20 +67,22 @@
 - Full detail lives in `docs/ARCHITECTURE.md`, `docs/COMMON_MISTAKES.md`, `docs/DEVELOPMENT_GUIDE.md`, `Context_map.md`.
 
 ### JS code checklist for agent output
-- Clear module/class purpose and small API surface, one operation per file.
-- All event wiring through `EventHandlerManager`/`GlobalEventRegistry`, with explicit cleanup tied to component lifecycle.
-- No per-frame allocations or uncached DOM queries in render/drag hot paths.
-- `Logger` used for all diagnostic output, with the correct category.
-- New UI built through `UIFactory`; new dialogs extend `BaseDialog`.
-- Ownership and cleanup explicit for caches (`CacheManager`), subscriptions (`stateManager.subscribe`), and async level/asset loads.
-- Comments only for non-obvious logic, especially timing-sensitive or lifecycle-related code.
+Before finalizing JS output, verify against the guidelines above: correct event routing, no `console.*`, `UIFactory`/`BaseDialog`, passive listeners, no per-frame allocs, explicit cleanup for caches/subscriptions.
 
 ## Subagent delegation workflow
 
-All delegations are **context-preserving**: parent agent prefetches relevant MemPalace/repo context, infers scope, and includes explicit scope in subagent prompt.
+All delegations are **context-preserving**: parent agent passes already-fetched MemPalace/repo context to each subagent. Only run an additional narrowed `mempalace_search` when the subagent scope differs significantly from what was loaded at session start — do not re-fetch the same context twice.
 
-### Orchestrator-first mode (default for every new chat)
-- Treat each new chat as an **orchestrator session**.
+### Simple task fast path (bypass orchestrator)
+Skip orchestrator mode, specialist consultation, and approval gate when **all** of the following are true:
+- Scope is isolated (≤ 2 files, ≤ 1 module, no architectural change)
+- Low risk (no new event wiring, no API change, no new contract)
+- Request is unambiguous with no open design decisions
+
+**Fast-path steps:** fetch minimal context → implement → lightweight browser verification (Lightweight tier) → 1-line CHANGELOG entry. Done.
+
+### Orchestrator-first mode (for complex / multi-module tasks)
+- Use when the task touches multiple modules, involves a new feature, or has design trade-offs that need explicit decisions.
 - The orchestrator must: clarify requirements, produce a concrete plan, consult relevant subagents, and confirm the proposed approach with the user before implementation.
 - Implementation starts only after user approval of the plan/approach.
 
@@ -126,15 +144,14 @@ Each subagent prompt must include:
 - For parallel reviews, merge by severity first (correctness > safety > performance > style).
 
 ### Observability and run ledger
-- Maintain a lightweight run ledger in responses:
-	- active plan step,
-	- delegated agents and outcomes,
-	- approval checkpoints,
-	- unresolved blockers.
-- Ensure every final implementation report includes changed files, validation performed, and known limitations.
+- Maintain a run ledger **only for orchestrator-mode tasks** (2+ subagent delegations). Omit entirely for fast-path implementations.
+- Run ledger fields when used: active plan step, delegated agents and outcomes, approval checkpoints, unresolved blockers.
+- Every final implementation report (orchestrator mode) includes: changed files, validation performed, known limitations.
 
 ### Definition of done (task-level)
-A task is complete only when all are true:
+**Fast-path tasks**: done when implementation is complete + Lightweight browser verification passes + 1-line CHANGELOG entry added.
+
+**Orchestrator-mode tasks** — complete only when all are true:
 1. Approved plan implemented with no unauthorized scope expansion.
 2. Correctness risks reviewed by BugHunter (or explicitly marked not applicable).
 3. Performance impact reviewed by PerformanceOptimizer for perf-relevant tasks.
@@ -149,8 +166,8 @@ A task is complete only when all are true:
 
 **Pre-delegation:**
 - Fetch relevant code files (target scope or recent work)
-- Prefetch CodeMaster's `wing=level_designer` MemPalace context (architecture patterns, prior review findings)
 - Prepare: file path(s) + specific concern (or general code review)
+- Pass already-loaded session MemPalace context — no extra prefetch needed
 
 **Expect return:**
 - Code violations grouped by category (Architecture / Performance / Lifecycle / Pattern / Duplication)
@@ -167,7 +184,7 @@ A task is complete only when all are true:
 **Pre-delegation:**
 - Attach a DevTools Performance/Memory screenshot or trace excerpt, or describe the bottleneck
 - Specify the interaction affected (pan/zoom/drag/select/load) and approximate level size (object count)
-- Prefetch PerformanceOptimizer's `wing=level_designer` MemPalace context (known hotspots, prior optimization decisions)
+- Pass already-loaded session MemPalace context — no extra prefetch needed
 
 **Expect return:**
 - Bottleneck analysis (main-thread time / allocation rate / listener count / memory delta, sorted by impact)
@@ -185,7 +202,7 @@ A task is complete only when all are true:
 - Attach error log/stack trace or describe the reproduction scenario
 - Specify context: which module, lifecycle phase (load / interaction / teardown), async involvement
 - Provide the edge case or stress scenario description
-- Prefetch BugHunter's `wing=level_designer` MemPalace context (lifecycle checklist, known race patterns)
+- Pass already-loaded session MemPalace context — no extra prefetch needed
 
 **Expect return:**
 - Bug reproduction path (when/why it happens, not always obvious)
@@ -229,7 +246,7 @@ A task is complete only when all are true:
 
 ## Delegation rules (all subagents)
 1. **Preserve context**: Include inferred scope + recent work context in delegation prompt
-2. **No re-discovering**: Prefetch MemPalace + repository context before delegating; don't make subagent re-read
+2. **No re-discovering**: Pass already-fetched session context to subagents; only narrow-prefetch if subagent scope differs; never re-fetch the same data twice
 3. **Explicit output contract**: Subagent returns structured analysis/recommendations, NOT code edits (except DocCodeSync, which edits docs only, and TestGenerator, which writes test files)
 4. **Fallback on MemPalace unavailability**: If MCP offline, delegate with repository-only context
 5. **Update memory on completion**: After successful delegation, store new learnings in MemPalace via `mempalace_add_drawer` or `mempalace_kg_add`

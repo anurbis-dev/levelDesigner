@@ -21,8 +21,11 @@ export class HistoryOperations extends BaseModule {
      */
     undo() {
         const previousState = this.editor.historyManager.undo();
-        if (!previousState) return false;
-        
+        if (!previousState) {
+            Logger.status.info('Nothing to undo');
+            return false;
+        }
+
         this.restoreObjectsFromHistory(previousState.objects);
         this.rebuildAllIndices();
         this.restoreGroupEditMode(previousState.groupEditMode);
@@ -30,7 +33,7 @@ export class HistoryOperations extends BaseModule {
         this.invalidateCachesAfterRestore();
         this.restoreSelection(previousState.selection);
         this.finalizeHistoryRestore();
-        
+        Logger.status.info('Undo');
         return true;
     }
 
@@ -40,8 +43,11 @@ export class HistoryOperations extends BaseModule {
      */
     redo() {
         const nextState = this.editor.historyManager.redo();
-        if (!nextState) return false;
-        
+        if (!nextState) {
+            Logger.status.info('Nothing to redo');
+            return false;
+        }
+
         this.restoreObjectsFromHistory(nextState.objects);
         this.rebuildAllIndices();
         this.restoreGroupEditMode(nextState.groupEditMode);
@@ -49,7 +55,7 @@ export class HistoryOperations extends BaseModule {
         this.invalidateCachesAfterRestore();
         this.restoreSelection(nextState.selection);
         this.finalizeHistoryRestore();
-        
+        Logger.status.info('Redo');
         return true;
     }
 
@@ -75,7 +81,7 @@ export class HistoryOperations extends BaseModule {
         this.editor.level.rebuildLayerCountsCache();
         
         if (this.editor.renderOperations) {
-            this.editor.renderOperations.buildSpatialIndex();
+            this.editor.renderOperations.markSpatialIndexDirty();
         }
     }
 

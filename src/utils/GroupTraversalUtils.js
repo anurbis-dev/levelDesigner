@@ -146,6 +146,32 @@ export class GroupTraversalUtils {
     }
 
     /**
+     * Find the path of array indices from the top-level objects array down to a target object.
+     * The path is the single source of truth for stacking/render order: index 0 is the object's
+     * position among top-level objects, each following index is its position within the
+     * containing group's `children` array. Used to compare render/click order of any two
+     * objects regardless of nesting depth.
+     * @param {Array} topLevelObjects - Array of top-level objects (Level.objects)
+     * @param {string} targetId - ID of the object to locate
+     * @returns {Array<number>|null} Path of indices, or null if not found
+     */
+    static findObjectPath(topLevelObjects, targetId) {
+        for (let i = 0; i < topLevelObjects.length; i++) {
+            const obj = topLevelObjects[i];
+            if (obj.id === targetId) {
+                return [i];
+            }
+            if (obj.type === 'group' && obj.children) {
+                const childPath = this.findObjectPath(obj.children, targetId);
+                if (childPath) {
+                    return [i, ...childPath];
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
      * Count objects in group hierarchy
      * @param {Object} group - Group to count in
      * @param {Function} filter - Optional filter function

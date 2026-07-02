@@ -26,18 +26,18 @@ if %errorlevel% == 0 (
         echo Node.js found. Installing serve package...
         npm install -g serve
         echo.
-        echo Starting HTTP server on port 3000...
+        echo Starting HTTP server on port 8000...
         echo.
-        echo Server will be available at: http://localhost:3000
-        echo Level Editor will open at: http://localhost:3000/index.html
+        echo Server will be available at: http://localhost:8000
+        echo Level Editor will open at: http://localhost:8000/index.html
         echo.
         echo Press Ctrl+C to stop the server
         echo.
-        
+
         REM Start server in background and open browser
         timeout /t 2 /nobreak >nul
-        start http://localhost:3000/index.html
-        serve -p 3000
+        start http://localhost:8000/index.html
+        serve -p 8000
     ) else (
         echo Neither Python nor Node.js found!
         echo.

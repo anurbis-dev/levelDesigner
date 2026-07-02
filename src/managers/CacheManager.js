@@ -14,6 +14,7 @@ export class CacheManager {
         this.objectCache = new Map(); // Cache for object lookups: objId -> object
         this.topLevelObjectCache = new Map(); // Cache for top-level object lookups: objId -> topLevelObject
         this.effectiveLayerCache = new Map(); // Cache for effective layer IDs: objId -> effectiveLayerId
+        this._layerToObjectIds = new Map(); // Reverse index: effectiveLayerId -> Set<objId> (for per-layer invalidation)
         this.selectableObjectsCache = new Map(); // Cache for selectable objects in viewport: cameraKey -> Set<objectIds>
         this.selectableObjectsCacheTimestamp = 0;
         this.cacheInvalidationTimeout = null;
@@ -82,6 +83,10 @@ export class CacheManager {
             : obj.layerId;
         
         this.effectiveLayerCache.set(obj.id, effectiveLayerId);
+        // Reverse index: layerId → Set<objId> (used by smartCacheInvalidation for per-layer eviction)
+        let layerSet = this._layerToObjectIds.get(effectiveLayerId);
+        if (!layerSet) { layerSet = new Set(); this._layerToObjectIds.set(effectiveLayerId, layerSet); }
+        layerSet.add(obj.id);
         return effectiveLayerId;
     }
 
@@ -92,6 +97,7 @@ export class CacheManager {
         this.objectCache.clear();
         this.topLevelObjectCache.clear();
         this.effectiveLayerCache.clear();
+        this._layerToObjectIds.clear();
         this.clearSelectableObjectsCache();
     }
 
@@ -119,7 +125,7 @@ export class CacheManager {
      */
     getSelectableObjectsInViewport() {
         const camera = this.editor.stateManager.get('camera');
-        const cameraKey = `${camera.x}_${camera.y}_${camera.scale}`;
+        const cameraKey = `${camera.x}_${camera.y}_${camera.zoom}`;
         const currentTime = performance.now();
 
         // Check cache first
@@ -128,42 +134,39 @@ export class CacheManager {
             return this.selectableObjectsCache.get(cameraKey);
         }
 
-        // Calculate visible objects in viewport
+        const selectableObjects = this.editor.objectOperations.computeSelectableSet();
         const selectableInViewport = new Set();
 
-        // Get all selectable objects (not locked, visible, etc.)
-        const selectableObjects = this.editor.objectOperations.computeSelectableSet();
+        const renderOps = this.editor.renderOperations;
+        if (renderOps && renderOps.spatialIndex.size > 0) {
+            // Fast path: spatial index already knows which objects are in viewport (O(k), k ≪ N)
+            const viewportObjects = renderOps.getVisibleObjectsSpatial(camera);
+            viewportObjects.forEach(item => {
+                if (selectableObjects.has(item.obj.id)) selectableInViewport.add(item.obj.id);
+            });
+        } else {
+            // Fallback: AABB check against viewport for every selectable object
+            const canvas = this.editor.canvasRenderer.canvas;
+            const zoom = camera.zoom || 1;
+            const viewportLeft = camera.x;
+            const viewportTop = camera.y;
+            const viewportRight = camera.x + canvas.width / zoom;
+            const viewportBottom = camera.y + canvas.height / zoom;
 
-        // Filter by viewport bounds
-        const canvas = this.editor.canvasRenderer.canvas;
-        const viewportBounds = {
-            left: camera.x - (canvas.width / 2) / camera.scale,
-            right: camera.x + (canvas.width / 2) / camera.scale,
-            top: camera.y - (canvas.height / 2) / camera.scale,
-            bottom: camera.y + (canvas.height / 2) / camera.scale
-        };
-
-        // Check each selectable object if it's in viewport
-        selectableObjects.forEach(objId => {
-            const obj = this.getCachedObject(objId);
-            if (!obj) return;
-
-            // Get object world bounds
-            const bounds = this.editor.objectOperations.getObjectWorldBounds(obj);
-            if (!bounds) return;
-
-            // Check if object intersects viewport
-            const intersects = !(
-                bounds.right < viewportBounds.left ||
-                bounds.left > viewportBounds.right ||
-                bounds.bottom < viewportBounds.top ||
-                bounds.top > viewportBounds.bottom
-            );
-
-            if (intersects) {
-                selectableInViewport.add(objId);
-            }
-        });
+            selectableObjects.forEach(objId => {
+                const obj = this.getCachedObject(objId);
+                if (!obj) return;
+                const bounds = this.editor.objectOperations.getObjectWorldBounds(obj);
+                if (!bounds) return;
+                const intersects = !(
+                    bounds.maxX < viewportLeft ||
+                    bounds.minX > viewportRight ||
+                    bounds.maxY < viewportTop ||
+                    bounds.minY > viewportBottom
+                );
+                if (intersects) selectableInViewport.add(objId);
+            });
+        }
 
         // Cache the result
         this.selectableObjectsCache.set(cameraKey, selectableInViewport);
@@ -212,20 +215,29 @@ export class CacheManager {
             this.clearSelectableObjectsCache();
         }
 
-        // Clear visible objects cache when objects or layers change (zIndex affects rendering order)
+        // Clear visible objects cache when objects or layers change (affects stacking/rendering order)
         if (objectIds.size > 0 || layerIds.size > 0) {
             if (this.editor && this.editor.renderOperations && typeof this.editor.renderOperations.clearVisibleObjectsCache === 'function') {
                 this.editor.renderOperations.clearVisibleObjectsCache();
             }
         }
 
-        // If layer IDs are affected, we might need to invalidate effectiveLayerCache for related objects
+        // If layer IDs are affected, evict only objects that belong to those layers
         if (layerIds.size > 0) {
-            // Clear effective layer cache for all objects (since inheritance might have changed)
-            this.effectiveLayerCache.clear();
+            layerIds.forEach(layerId => {
+                const objIds = this._layerToObjectIds.get(layerId);
+                if (objIds) {
+                    objIds.forEach(objId => this.effectiveLayerCache.delete(objId));
+                    this._layerToObjectIds.delete(layerId);
+                } else {
+                    // Reverse index not warmed for this layer — full clear as safe fallback
+                    this.effectiveLayerCache.clear();
+                    this._layerToObjectIds.clear();
+                }
+            });
 
             if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
-                Logger.cache.debug(`Cleared effectiveLayerCache due to ${layerIds.size} layer changes (${reason})`);
+                Logger.cache.debug(`Per-layer effectiveLayerCache eviction: ${layerIds.size} layers (${reason})`);
             }
         }
     }
@@ -281,13 +293,9 @@ export class CacheManager {
             this.editor.level.clearLayerCountsCache();
             this.editor.level.clearObjectsIndex();
 
-            // Rebuild spatial index for rendering optimization
+            // Mark spatial index dirty — lazy rebuild on next render
             if (this.editor.renderOperations) {
-                try {
-                    this.editor.renderOperations.buildSpatialIndex();
-                } catch (error) {
-                    Logger.cache.error('Failed to rebuild spatial index:', error);
-                }
+                this.editor.renderOperations.markSpatialIndexDirty();
             }
 
             if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {

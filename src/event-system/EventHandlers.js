@@ -1,214 +1,10 @@
 ﻿import { BaseModule } from '../core/BaseModule.js';
 import { Logger } from '../utils/Logger.js';
 import { SearchSectionUtils } from '../utils/SearchSectionUtils.js';
+import { ScrollUtils } from '../utils/ScrollUtils.js';
 import { MENU_CONFIG, getShortcutTarget } from '../../config/menu.js';
 import { eventHandlerManager } from './EventHandlerManager.js';
 import { globalEventRegistry } from './GlobalEventRegistry.js';
-
-/**
- * Context menu for tab movement - simple implementation without BaseContextMenu
- */
-class TabMoveContextMenu {
-    constructor(editor) {
-        this.editor = editor;
-        this.currentMenu = null;
-        this.isVisible = false;
-        this.lastContextData = null;
-    }
-
-    /**
-     * Cleanup all handlers for the current menu
-     * @private
-     */
-    _cleanupMenuHandlers(moveItem, contextMenu) {
-        if (moveItem) {
-            eventHandlerManager.unregisterElement(moveItem);
-        }
-        if (contextMenu) {
-            eventHandlerManager.unregisterElement(contextMenu);
-        }
-        globalEventRegistry.unregisterComponentHandlers('tab-move-menu-close', 'document');
-    }
-
-    /**
-     * Show context menu for tab movement
-     */
-    showTabMoveMenu(event, tabName, currentPanel, targetPanel) {
-        // Remove existing menu
-        if (this.currentMenu) {
-            this.currentMenu.remove();
-            this.currentMenu = null;
-        }
-
-        // Store context data
-        this.lastContextData = { tabName, currentPanel, targetPanel };
-        
-        // Create context menu element
-        const contextMenu = document.createElement('div');
-        contextMenu.className = 'tab-move-context-menu base-context-menu';
-        contextMenu.style.pointerEvents = 'auto';
-        contextMenu.style.userSelect = 'none';
-
-        // Determine target panel name
-        const targetPanelName = targetPanel === 'left' ? 'Left' : 'Right';
-
-        // Store reference to this for use in event handler
-        const self = this;
-
-        // Add Move menu item
-        const moveItem = document.createElement('div');
-        moveItem.className = 'base-context-menu-item';
-        moveItem.innerHTML = `<span>↔️</span><span>Move to ${targetPanelName} Panel</span>`;
-        
-        // Register click handler using unified system
-        eventHandlerManager.registerElement(moveItem, {
-            click: (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                e.stopImmediatePropagation();
-                
-                self.editor.panelPositionManager.moveTab(tabName, currentPanel, targetPanel);
-                contextMenu.remove();
-                self.currentMenu = null;
-                
-                // Cleanup handlers
-                self._cleanupMenuHandlers(moveItem, contextMenu);
-            }
-        }, 'tab-move-menu-item');
-        
-        contextMenu.appendChild(moveItem);
-
-        // Add to document
-        document.body.appendChild(contextMenu);
-
-        // Position menu using BaseContextMenu logic
-        this.positionContextMenu(event, contextMenu);
-
-        // Store current menu reference
-        this.currentMenu = contextMenu;
-        this.isVisible = true;
-
-        // Show menu with animation
-        requestAnimationFrame(() => {
-            contextMenu.classList.add('show');
-        });
-
-        // Register click handler to context menu to prevent closing using unified system
-        eventHandlerManager.registerElement(contextMenu, {
-            click: (e) => {
-                e.stopPropagation();
-            }
-        }, 'tab-move-context-menu');
-        
-        // Close menu when clicking outside - use GlobalEventRegistry
-        const closeMenu = (e) => {
-            if (!contextMenu.contains(e.target)) {
-                contextMenu.remove();
-                self.currentMenu = null;
-                self._cleanupMenuHandlers(moveItem, contextMenu);
-            }
-        };
-        
-        // Register document click handler using GlobalEventRegistry
-        setTimeout(() => {
-            globalEventRegistry.registerComponentHandlers('tab-move-menu-close', {
-                click: closeMenu
-            }, 'document');
-        }, 0);
-    }
-
-    /**
-     * Position context menu using BaseContextMenu logic
-     * @param {Event} event - The context menu event
-     * @param {HTMLElement} menu - The context menu element
-     */
-    positionContextMenu(event, menu) {
-        const viewport = {
-            width: window.innerWidth,
-            height: window.innerHeight
-        };
-        
-        // Get actual menu dimensions
-        const menuSize = this.getMenuDimensions(menu);
-        
-        const margin = 20; // BaseContextMenu.MENU_VIEWPORT_MARGIN
-        
-        let x = event.pageX;
-        let y = event.pageY;
-        
-        // Determine optimal horizontal position
-        const spaceRight = viewport.width - event.pageX;
-        const spaceLeft = event.pageX;
-        
-        if (spaceRight >= menuSize.width + margin) {
-            x = event.pageX;
-        } else if (spaceLeft >= menuSize.width + margin) {
-            x = event.pageX - menuSize.width;
-        } else {
-            x = Math.max(margin,
-                       Math.min(event.pageX - menuSize.width / 2,
-                               viewport.width - menuSize.width - margin));
-        }
-        
-        // Determine optimal vertical position
-        const spaceBelow = viewport.height - event.pageY;
-        const spaceAbove = event.pageY;
-        
-        if (spaceBelow >= menuSize.height + margin) {
-            y = event.pageY;
-        } else if (spaceAbove >= menuSize.height + margin) {
-            y = event.pageY - menuSize.height;
-        } else {
-            y = Math.max(margin,
-                        Math.min(event.pageY - menuSize.height / 2,
-                                viewport.height - menuSize.height - margin));
-        }
-        
-        menu.style.left = x + 'px';
-        menu.style.top = y + 'px';
-    }
-
-    /**
-     * Get menu dimensions
-     * @param {HTMLElement} menu - The context menu element
-     * @returns {Object} - Object with width and height
-     */
-    getMenuDimensions(menu) {
-        // Force layout calculation
-        menu.style.visibility = 'hidden';
-        menu.style.display = 'block';
-        
-        const rect = menu.getBoundingClientRect();
-        const dimensions = {
-            width: rect.width || 200, // fallback width
-            height: rect.height || 50 // fallback height
-        };
-        
-        // Reset styles
-        menu.style.visibility = '';
-        menu.style.display = '';
-        
-        return dimensions;
-    }
-
-    /**
-     * Clean up event handlers
-     */
-    destroy() {
-        // Remove current menu if exists
-        if (this.currentMenu) {
-            // Cleanup handlers before removing menu
-            const menuItems = this.currentMenu.querySelectorAll('.base-context-menu-item');
-            menuItems.forEach(item => {
-                eventHandlerManager.unregisterElement(item);
-            });
-            this._cleanupMenuHandlers(null, this.currentMenu);
-            
-            this.currentMenu.remove();
-            this.currentMenu = null;
-        }
-    }
-}
 
 /**
  * Event Handlers module for LevelEditor
@@ -226,9 +22,6 @@ export class EventHandlers extends BaseModule {
         // Track MutationObservers for cleanup
         this.mutationObservers = [];
         
-        // Initialize tab move context menu
-        this.tabMoveContextMenu = new TabMoveContextMenu(this.editor);
-        
         Logger.event.info('EventHandlers initialized');
     }
 
@@ -236,6 +29,9 @@ export class EventHandlers extends BaseModule {
      * Setup all event listeners
      */
     setupEventListeners() {
+        // Enable universal middle-mouse panning for any scrollable editor container.
+        ScrollUtils.setupGlobalHandlers();
+
         // Window events - combine all window handlers
         this.setupWindowEvents();
         
@@ -619,7 +415,7 @@ export class EventHandlers extends BaseModule {
         this.updateViewCheckbox('snapToGrid', snapToGridEnabled);
         
         // Initialize panel states from user preferences
-        const panelStates = ['toolbar', 'assetsPanel', 'console'];
+        const panelStates = ['toolbar', 'assetsPanel', 'console', 'statusBar'];
         panelStates.forEach(panel => {
             // Get visibility from user preferences, fallback to configManager, then to true
             const prefKey = panel + 'Visible'; // toolbarVisible, assetsPanelVisible, consoleVisible
@@ -711,6 +507,9 @@ export class EventHandlers extends BaseModule {
                 case 'console':
                     itemId = 'toggle-console';
                     break;
+                case 'statusBar':
+                    itemId = 'toggle-status-bar';
+                    break;
                 default:
                     itemId = `toggle-${option.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
             }
@@ -733,6 +532,9 @@ export class EventHandlers extends BaseModule {
                     break;
                 case 'console':
                     checkId = 'toggle-console-check';
+                    break;
+                case 'statusBar':
+                    checkId = 'toggle-status-bar-check';
                     break;
                 default:
                     checkId = `toggle-${option.replace(/([A-Z])/g, '-$1').toLowerCase()}-check`;
@@ -903,6 +705,11 @@ export class EventHandlers extends BaseModule {
                     { id: 'console-panel', display: 'flex' },
                     { id: 'resizer-console', display: 'block' }
                 ]
+            },
+            'statusBar': {
+                type: 'component',
+                component: () => this.editor.statusBar,
+                method: 'setVisible'
             }
         };
 
@@ -1345,7 +1152,7 @@ export class EventHandlers extends BaseModule {
                             this.editor.configManager.set('editor.view.leftPanelTab', clickedTabName);
                         }
                     },
-                    contextmenu: (e) => this.handleTabContextMenu(e)
+                    contextmenu: (e) => e.preventDefault()
                 };
                 
                 eventHandlerManager.registerElement(tab, tabHandlers, tabId);
@@ -1357,41 +1164,6 @@ export class EventHandlers extends BaseModule {
     }
 
 
-
-    /**
-     * Handle context menu on tab
-     * @param {Event} event - Context menu event
-     */
-    handleTabContextMenu(event) {
-        event.preventDefault();
-        
-        const tab = event.target.closest('.tab-right, .tab-left, .tab');
-        if (!tab) return;
-        
-        const tabName = tab.dataset.tab || tab.dataset.category;
-        if (!tabName) return;
-        
-        // Determine current panel by finding which panel contains this tab
-        const leftPanel = document.getElementById('left-tabs-panel');
-        const rightPanel = document.getElementById('right-tabs-panel');
-        const assetsPanel = document.getElementById('assets-panel');
-        
-        let currentPanel = 'right'; // default
-        if (leftPanel && leftPanel.contains(tab)) {
-            currentPanel = 'left';
-        } else if (rightPanel && rightPanel.contains(tab)) {
-            currentPanel = 'right';
-        } else if (assetsPanel && assetsPanel.contains(tab)) {
-            // Asset tabs are handled by AssetTabContextMenu through delegation
-            // Don't create duplicate menu here
-            return;
-        }
-        
-        const targetPanel = currentPanel === 'right' ? 'left' : 'right';
-        
-        // Create context menu using TabMoveContextMenu
-        this.tabMoveContextMenu.showTabMoveMenu(event, tabName, currentPanel, targetPanel);
-    }
 
 
 
@@ -1449,6 +1221,8 @@ export class EventHandlers extends BaseModule {
      * @param {string} panelSide - 'left' or 'right' panel
      */
     setActivePanelTab(tabName, panelSide = 'right') {
+        this.ensurePanelTabMarkers();
+
         // Find the tab in the specified panel
         const panelId = `${panelSide}-tabs-panel`;
         const panel = document.getElementById(panelId);
@@ -1482,9 +1256,11 @@ export class EventHandlers extends BaseModule {
         const rightPanelActiveTab = this.editor.stateManager.get('rightPanelTab');
         const leftPanelActiveTab = this.editor.stateManager.get('leftPanelTab');
         
-        // Hide all content panels first
-        document.querySelectorAll('.tab-content-right, .tab-content-left').forEach(content => {
+        // Hide all tab content panels first (markers + legacy classes as safety net).
+        // Force inline display:none so component-level inline display styles cannot leak visibility.
+        document.querySelectorAll('[data-panel-tab-content="true"], .tab-content-right, .tab-content-left').forEach(content => {
             content.classList.add('hidden');
+            content.style.display = 'none';
         });
         
         // Show content for active tabs in both panels
@@ -1493,21 +1269,54 @@ export class EventHandlers extends BaseModule {
         const leftPanel = document.getElementById('left-tabs-panel');
         
         if (rightPanelActiveTab && rightPanel) {
-            const rightContentPanel = rightPanel.querySelector(`#${rightPanelActiveTab}-content-panel`);
+            const rightContentPanel = rightPanel.querySelector(`[data-panel-tab-name="${rightPanelActiveTab}"]`) ||
+                rightPanel.querySelector(`#${rightPanelActiveTab}-content-panel`);
             if (rightContentPanel) {
+                rightContentPanel.style.display = '';
                 rightContentPanel.classList.remove('hidden');
             }
         }
         
         if (leftPanelActiveTab && leftPanel) {
-            const leftContentPanel = leftPanel.querySelector(`#${leftPanelActiveTab}-content-panel`);
+            const leftContentPanel = leftPanel.querySelector(`[data-panel-tab-name="${leftPanelActiveTab}"]`) ||
+                leftPanel.querySelector(`#${leftPanelActiveTab}-content-panel`);
             if (leftContentPanel) {
+                leftContentPanel.style.display = '';
                 leftContentPanel.classList.remove('hidden');
             }
         }
 
         // Show search section for layers and outliner tabs
         SearchSectionUtils.showSearchSectionForTab(tabName, this.editor);
+    }
+
+    /**
+     * Ensure stable markers for panel tabs and their content containers.
+     * This prevents cross-tab content confusion after tab moves.
+     */
+    ensurePanelTabMarkers() {
+        // Canonical set of core panel tabs.
+        const coreTabs = ['details', 'layers', 'outliner'];
+        coreTabs.forEach((tabName) => {
+            const content = document.getElementById(`${tabName}-content-panel`);
+            if (content) {
+                content.dataset.panelTabContent = 'true';
+                content.dataset.panelTabName = tabName;
+            }
+        });
+
+        document.querySelectorAll('[data-tab]').forEach((tab) => {
+            const tabName = tab.dataset.tab;
+            if (!tabName) return;
+
+            tab.dataset.panelTab = 'true';
+
+            const content = document.getElementById(`${tabName}-content-panel`);
+            if (content) {
+                content.dataset.panelTabContent = 'true';
+                content.dataset.panelTabName = tabName;
+            }
+        });
     }
 
 

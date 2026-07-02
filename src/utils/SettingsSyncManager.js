@@ -115,6 +115,10 @@ export class SettingsSyncManager {
             'ui.activeTabColor': 'ui.activeTabColor',
             'ui.resizerColor': 'ui.resizerColor',
             'ui.accentColor': 'ui.accentColor',
+            'ui.statusBarColorInfo': 'ui.statusBarColorInfo',
+            'ui.statusBarColorSuccess': 'ui.statusBarColorSuccess',
+            'ui.statusBarColorWarn': 'ui.statusBarColorWarn',
+            'ui.statusBarColorError': 'ui.statusBarColorError',
             
             // Editor UI settings (from editor.json)
             'editor.ui.backgroundColor': 'ui.backgroundColor',
@@ -140,7 +144,7 @@ export class SettingsSyncManager {
             // 'panels.assetsPanelHeight': 'panels.assetsPanelHeight',
             // 'panels.consoleHeight': 'panels.consoleHeight',
             
-            // Selection settings
+            // Selection settings (via panels.selection.* prefix — used by Selection tab)
             'panels.selection.outlineColor': 'selection.outlineColor',
             'panels.selection.outlineWidth': 'selection.outlineWidth',
             'panels.selection.groupOutlineColor': 'selection.groupOutlineColor',
@@ -149,6 +153,12 @@ export class SettingsSyncManager {
             'panels.selection.marqueeOpacity': 'selection.marqueeOpacity',
             'panels.selection.hierarchyHighlightColor': 'selection.hierarchyHighlightColor',
             'panels.selection.activeLayerBorderColor': 'selection.activeLayerBorderColor',
+            // Selection settings (direct keys — used by Colors tab inputs)
+            'selection.outlineColor': 'selection.outlineColor',
+            'selection.groupOutlineColor': 'selection.groupOutlineColor',
+            'selection.marqueeColor': 'selection.marqueeColor',
+            'selection.hierarchyHighlightColor': 'selection.hierarchyHighlightColor',
+            'selection.activeLayerBorderColor': 'selection.activeLayerBorderColor',
             
             // Touch settings
             'touch.panThreshold': 'touch.panThreshold',
@@ -262,6 +272,17 @@ export class SettingsSyncManager {
                 }
             }
             
+            // Status bar colors — apply immediately for live preview
+            const sbColorMap = {
+                'ui.statusBarColorInfo':    '--status-bar-color-info',
+                'ui.statusBarColorSuccess': '--status-bar-color-success',
+                'ui.statusBarColorWarn':    '--status-bar-color-warn',
+                'ui.statusBarColorError':   '--status-bar-color-error'
+            };
+            if (sbColorMap[path]) {
+                document.documentElement.style.setProperty(sbColorMap[path], value);
+            }
+
             // Call custom callback if exists
             if (this.settingCallbacks[path]) {
                 this.settingCallbacks[path](value);
@@ -484,6 +505,10 @@ export class SettingsSyncManager {
         if (resizerColor) {
             document.documentElement.style.setProperty('--ui-resizer-color', resizerColor);
         }
+        const accentColorSpecial = this.levelEditor.stateManager.get('ui.accentColor');
+        if (accentColorSpecial) {
+            document.documentElement.style.setProperty('--accent-color', accentColorSpecial);
+        }
         if (canvasBackgroundColor) {
             document.documentElement.style.setProperty('--canvas-background-color', canvasBackgroundColor);
             // Force canvas re-render to apply new background color immediately
@@ -522,6 +547,20 @@ export class SettingsSyncManager {
         if (hierarchyHighlightColor) {
             document.documentElement.style.setProperty('--selection-hierarchy-highlight-color', hierarchyHighlightColor);
         }
+        const activeLayerBorderColor = this.levelEditor.stateManager.get('selection.activeLayerBorderColor');
+        if (activeLayerBorderColor) {
+            document.documentElement.style.setProperty('--selection-active-layer-border-color', activeLayerBorderColor);
+        }
+
+        // Apply status bar message colors
+        const sbInfo    = this.levelEditor.stateManager.get('ui.statusBarColorInfo');
+        const sbSuccess = this.levelEditor.stateManager.get('ui.statusBarColorSuccess');
+        const sbWarn    = this.levelEditor.stateManager.get('ui.statusBarColorWarn');
+        const sbError   = this.levelEditor.stateManager.get('ui.statusBarColorError');
+        if (sbInfo)    document.documentElement.style.setProperty('--status-bar-color-info',    sbInfo);
+        if (sbSuccess) document.documentElement.style.setProperty('--status-bar-color-success', sbSuccess);
+        if (sbWarn)    document.documentElement.style.setProperty('--status-bar-color-warn',    sbWarn);
+        if (sbError)   document.documentElement.style.setProperty('--status-bar-color-error',   sbError);
     }
 
     /**
@@ -597,6 +636,16 @@ export class SettingsSyncManager {
         if (hierarchyHighlightColor) {
             document.documentElement.style.setProperty('--selection-hierarchy-highlight-color', hierarchyHighlightColor);
         }
+
+        // Apply status bar message colors
+        const sbInfo    = this.levelEditor.stateManager.get('ui.statusBarColorInfo');
+        const sbSuccess = this.levelEditor.stateManager.get('ui.statusBarColorSuccess');
+        const sbWarn    = this.levelEditor.stateManager.get('ui.statusBarColorWarn');
+        const sbError   = this.levelEditor.stateManager.get('ui.statusBarColorError');
+        if (sbInfo)    document.documentElement.style.setProperty('--status-bar-color-info',    sbInfo);
+        if (sbSuccess) document.documentElement.style.setProperty('--status-bar-color-success', sbSuccess);
+        if (sbWarn)    document.documentElement.style.setProperty('--status-bar-color-warn',    sbWarn);
+        if (sbError)   document.documentElement.style.setProperty('--status-bar-color-error',   sbError);
     }
 
     /**

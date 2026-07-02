@@ -276,7 +276,7 @@
 - `removeEmptyGroups()` - удаление всех пустых групп
 - `extractObjectFromGroup(group, childObject)` - извлечение объекта из группы
 
-### MouseHandlers (src/core/MouseHandlers.js)
+### MouseHandlers (src/event-system/MouseHandlers.js)
 Обработчики мыши.
 
 #### Основные обработчики:
@@ -286,6 +286,12 @@
 - `handleGlobalMouseMove(e)` - глобальное движение мыши
 - `handleGlobalMouseUp(e)` - глобальное отпускание мыши
 - `handleWheel(e)` - обработка колесика мыши
+
+#### Rotate/Scale жесты (Ctrl+drag / Ctrl+Alt+drag):
+- `startObjectTransform(mode, clickInfo, startWorldPos)` - старт жеста, снапшот геометрии выделения
+- `transformSelectedObjects(worldPos)` - пересчёт rotate/scale из снапшота на каждый mousemove
+- `_snapshotChildrenForScale(group)` - рекурсивный снапшот геометрии детей группы
+- `_applyChildScale(children, factor)` - применение масштаба к детям группы из снапшота
 
 ### ObjectOperations (src/core/ObjectOperations.js)
 Операции с объектами.
@@ -331,10 +337,13 @@
 #### Основные методы:
 - `constructor(data)` - создание объекта
 - `generateId()` - генерация ID
-- `getBounds()` - получение границ объекта
-- `containsPoint(x, y)` - проверка точки в объекте
+- `getBounds()` - получение границ объекта (rotation-aware AABB через `WorldPositionUtils.getRotatedRectAABB`)
+- `containsPoint(x, y)` - проверка точки в объекте (inverse-rotate hit-test при `rotation !== 0`)
 - `clone()` - клонирование объекта
 - `toJSON()` - сериализация в JSON
+
+#### Свойства:
+- `rotation` - угол поворота в градусах, по часовой стрелке, вокруг центра объекта (default `0`)
 
 ### Group (src/models/Group.js)
 Модель группы объектов.
@@ -344,7 +353,7 @@
 - `addChild(child)` - добавление дочернего объекта
 - `removeChild(childId)` - удаление дочернего объекта
 - `getAllChildren()` - получение всех дочерних объектов
-- `getBounds()` - получение границ группы
+- `getBounds()` - получение границ группы (объединение rotation-aware bounds детей + консервативный AABB собственного `rotation` группы)
 - `clone()` - клонирование группы
 
 ### Layer (src/models/Layer.js)

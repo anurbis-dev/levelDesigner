@@ -30,6 +30,7 @@ export class UserPreferencesManager {
             'consoleVisible': 'ui.consoleVisible',
             'consoleMaxLines': 'ui.consoleMaxLines',
             'toolbarVisible': 'ui.toolbarVisible',
+            'statusBarVisible': 'ui.statusBarVisible',
             'toolbarScrollLeft': 'ui.toolbarScrollLeft',
             'assetTabsScrollLeft': 'ui.assetTabsScrollLeft',
             'toolbarButtonStates': 'toolbar.buttonStates',

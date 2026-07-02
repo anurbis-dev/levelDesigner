@@ -111,7 +111,6 @@ export class Asset {
             height: this.height,
             color: this.color,
             imgSrc: this.imgSrc,
-            // Don't set zIndex here - it will be assigned by Level.addObject()
             visible: true,
             locked: false,
             layerId: layerId, // Will be set by level.addObject() if not provided

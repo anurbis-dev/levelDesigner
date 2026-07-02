@@ -12,6 +12,7 @@ class AssetTabContextMenu {
         this.currentMenu = null;
         this.isVisible = false;
         this.lastContextData = null;
+        this._closeMenuHandler = null;
     }
 
     /**
@@ -72,16 +73,20 @@ class AssetTabContextMenu {
         });
 
         // Close menu when clicking outside
-        const closeMenu = (e) => {
+        if (this._closeMenuHandler) {
+            document.removeEventListener('click', this._closeMenuHandler);
+        }
+        this._closeMenuHandler = (e) => {
             if (!contextMenu.contains(e.target)) {
                 contextMenu.remove();
                 this.currentMenu = null;
-                document.removeEventListener('click', closeMenu);
+                document.removeEventListener('click', this._closeMenuHandler);
+                this._closeMenuHandler = null;
             }
         };
-        
+
         setTimeout(() => {
-            document.addEventListener('click', closeMenu);
+            document.addEventListener('click', this._closeMenuHandler);
         }, 0);
     }
 
@@ -163,7 +168,10 @@ class AssetTabContextMenu {
      * Clean up event handlers
      */
     destroy() {
-        // Remove current menu if exists
+        if (this._closeMenuHandler) {
+            document.removeEventListener('click', this._closeMenuHandler);
+            this._closeMenuHandler = null;
+        }
         if (this.currentMenu) {
             this.currentMenu.remove();
             this.currentMenu = null;
@@ -352,14 +360,14 @@ export class AssetTabsManager {
             Logger.ui.warn('AssetTabsManager: Cannot add tab without folder path');
             return;
         }
-        
-        const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
+
+        const activeTabs = new Set(this.stateManager.get('activeAssetTabs') || []);
         if (activeTabs.has(folderPath)) {
             // Just activate it
             this.stateManager.set('activeAssetTab', folderPath);
             return;
         }
-        
+
         activeTabs.add(folderPath);
         this.stateManager.set('activeAssetTabs', activeTabs);
         
@@ -384,22 +392,24 @@ export class AssetTabsManager {
      * @param {string} folderPath - Folder path
      */
     removeFolderTab(folderPath) {
-        const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
+        const activeTabs = new Set(this.stateManager.get('activeAssetTabs') || []);
         if (!activeTabs.has(folderPath)) {
             return;
         }
-        
+
         activeTabs.delete(folderPath);
         this.stateManager.set('activeAssetTabs', activeTabs);
-        
+
         // Clear active tab if it was the removed tab
         const currentActiveTab = this.stateManager.get('activeAssetTab');
+        let newActiveTab = currentActiveTab;
         if (currentActiveTab === folderPath) {
+            newActiveTab = null;
             this.stateManager.set('activeAssetTab', null);
         }
-        
-        // Save to config
-        this._saveTabStateToConfig();
+
+        // Save to config — pass newActiveTab explicitly so null is persisted
+        this._saveTabStateToConfig(newActiveTab);
         
         // DO NOT call render() here - subscription to activeAssetTabs will handle it
     }
@@ -730,34 +740,33 @@ export class AssetTabsManager {
             Logger.ui.warn('AssetTabsManager: FoldersPanel not available for drag setup');
             return;
         }
-        
-        // Use tabs container itself as drop target (only left section)
-        this.tabsContainer.addEventListener('dragover', (e) => {
+
+        this._folderDragOver = (e) => {
             e.preventDefault();
             if (e.dataTransfer.types.includes('application/x-folder-path')) {
                 this.tabsContainer.classList.add('drop-target');
             }
-        });
-        
-        this.tabsContainer.addEventListener('dragleave', (e) => {
+        };
+        this._folderDragLeave = (e) => {
             if (!this.tabsContainer.contains(e.relatedTarget)) {
                 this.tabsContainer.classList.remove('drop-target');
             }
-        });
-        
-        this.tabsContainer.addEventListener('drop', (e) => {
+        };
+        this._folderDrop = (e) => {
             e.preventDefault();
             this.tabsContainer.classList.remove('drop-target');
-            
             const folderPath = e.dataTransfer.getData('application/x-folder-path');
             if (folderPath) {
                 this.addFolderTab(folderPath);
-                // Sync folder selection to show content
                 if (this.foldersPanel) {
                     this.foldersPanel.selectFolder(folderPath, null);
                 }
             }
-        });
+        };
+
+        this.tabsContainer.addEventListener('dragover', this._folderDragOver);
+        this.tabsContainer.addEventListener('dragleave', this._folderDragLeave);
+        this.tabsContainer.addEventListener('drop', this._folderDrop);
     }
     
     /**
@@ -799,21 +808,30 @@ export class AssetTabsManager {
     destroy() {
         // Remove horizontal scrolling
         HorizontalScrollUtils.removeScrolling(this.tabsContainer);
-        
+
         if (this.contextMenu) {
             this.contextMenu.destroy();
         }
-        
+
         // Unregister event handlers
         eventHandlerManager.unregisterContainer(this.tabsContainer);
         eventHandlerManager.unregisterElement(this.tabsContainer);
-        
+
         // Cleanup tab dragging handlers
         if (this.tabDraggingMousedownHandler) {
             this.tabsContainer.removeEventListener('mousedown', this.tabDraggingMousedownHandler, { capture: true });
             this.tabDraggingMousedownHandler = null;
         }
-        
+
+        // Cleanup folder DnD handlers
+        if (this._folderDragOver) {
+            this.tabsContainer.removeEventListener('dragover', this._folderDragOver);
+            this.tabsContainer.removeEventListener('dragleave', this._folderDragLeave);
+            this.tabsContainer.removeEventListener('drop', this._folderDrop);
+            this._folderDragOver = null;
+            this._folderDragLeave = null;
+            this._folderDrop = null;
+        }
     }
 }
 

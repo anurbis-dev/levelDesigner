@@ -312,15 +312,15 @@ export class LayersPanel extends BasePanel {
 
         this.container.appendChild(layersList);
 
-        // Setup scrolling using BasePanel - target the actual scrollable container
-        const rightPanel = this.container.closest('#right-panel');
-        const scrollableContainer = rightPanel?.querySelector('.flex-grow.overflow-y-auto');
+        // Setup scrolling using BasePanel - detect nearest tab content scroll container
+        // so it works regardless of panel side (left/right) and dynamic tab moves.
+        const scrollableContainer = this.container.closest('.flex-grow.overflow-y-auto');
 
         this.setupScrolling({
-            horizontal: false,
+            horizontal: true,
             vertical: true,
             sensitivity: 1.0,
-            target: scrollableContainer || rightPanel
+            target: scrollableContainer || this.container
         });
 
         // Update layer styles to show current layer highlight

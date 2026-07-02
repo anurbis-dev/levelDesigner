@@ -1,0 +1,111 @@
+/* Status Bar — однострочная панель уведомлений внизу редактора */
+
+#status-bar {
+    height: 22px;
+    background-color: #111827; /* gray-900 */
+    border-top: 1px solid #374151; /* gray-700 */
+    display: flex;
+    align-items: center;
+    padding: 0 8px;
+    flex-shrink: 0;
+    z-index: 5;
+    overflow: hidden;
+}
+
+#status-bar.hidden {
+    display: none !important;
+}
+
+.status-bar-message {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    line-height: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    color: #4b5563; /* gray-600 — нейтральный */
+    flex: 1;
+}
+
+.status-bar-message.status-info    { color: var(--status-bar-color-info,    #6b7280); }
+.status-bar-message.status-success { color: var(--status-bar-color-success, #10b981); }
+.status-bar-message.status-warn    { color: var(--status-bar-color-warn,    #f59e0b); }
+.status-bar-message.status-error   { color: var(--status-bar-color-error,   #ef4444); }
+
+/* History popup — открывается вверх от строки состояния */
+
+.status-bar-history {
+    position: fixed;
+    bottom: 22px;
+    left: 0;
+    right: 0;
+    max-height: 300px;
+    background-color: #111827;
+    border-top: 1px solid #374151;
+    display: flex;
+    flex-direction: column;
+    z-index: 50;
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.status-bar-history.hidden {
+    display: none;
+}
+
+.status-bar-history-header {
+    padding: 3px 8px;
+    font-size: 10px;
+    font-family: 'Courier New', Courier, monospace;
+    color: #4b5563;
+    border-bottom: 1px solid #1f2937;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.status-bar-history-list {
+    overflow-y: auto;
+    flex: 1;
+}
+
+.status-bar-history-list::-webkit-scrollbar {
+    width: 4px;
+}
+
+.status-bar-history-list::-webkit-scrollbar-track {
+    background: #1f2937;
+}
+
+.status-bar-history-list::-webkit-scrollbar-thumb {
+    background: #374151;
+}
+
+.status-bar-history-item {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    padding: 2px 8px;
+    color: #6b7280;
+    border-bottom: 1px solid #1a2332;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.status-bar-history-item.status-error   { color: var(--status-bar-color-error,   #ef4444); }
+.status-bar-history-item.status-warn    { color: var(--status-bar-color-warn,    #f59e0b); }
+.status-bar-history-item.status-success { color: var(--status-bar-color-success, #10b981); }
+.status-bar-history-item.status-info    { color: var(--status-bar-color-info,    #6b7280); }
+
+.status-bar-history-time {
+    color: #374151;
+    margin-right: 4px;
+}
+
+.status-bar-history-empty {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    color: #374151;
+    padding: 10px 8px;
+    text-align: center;
+    font-style: italic;
+}

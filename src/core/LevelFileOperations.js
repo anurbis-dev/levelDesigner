@@ -80,6 +80,7 @@ export class LevelFileOperations extends BaseModule {
         this.editor.updateAllPanels();
 
         Logger.file.info('✅ New level created');
+        Logger.status.success('New level created');
     }
 
     /**
@@ -138,8 +139,10 @@ export class LevelFileOperations extends BaseModule {
             this.editor.updateAllPanels();
 
             Logger.file.info(`✅ Level loaded: ${this.editor.level.objects.length} objects`);
+            Logger.status.success(`Level loaded: ${this.editor.level.objects.length} objects`);
         } catch (error) {
             Logger.file.error(`❌ Failed to load level: ${error.message}`);
+            Logger.status.error(`Failed to load level: ${error.message}`);
             await alert("Error loading level: " + error.message);
         }
     }
@@ -157,6 +160,7 @@ export class LevelFileOperations extends BaseModule {
         this.editor.fileManager.saveLevel(this.editor.level);
         this.editor.stateManager.markClean();
         Logger.file.info('💾 Level saved successfully');
+        Logger.status.success('Level saved');
     }
 
     /**
@@ -179,6 +183,7 @@ export class LevelFileOperations extends BaseModule {
         this.editor.fileManager.saveLevel(this.editor.level, fileName);
         this.editor.stateManager.markClean();
         Logger.file.info(`💾 Level saved as: ${fileName}`);
+        Logger.status.success(`Saved as: ${fileName}`);
     }
 
     /**
@@ -232,8 +237,10 @@ export class LevelFileOperations extends BaseModule {
             }
 
             Logger.file.info(`✅ Imported ${result.totalImported} assets from ${result.categories.length} categories`);
+            Logger.status.success(`Imported ${result.totalImported} assets (${result.categories.length} categories)`);
         } catch (error) {
             Logger.file.error(`❌ Asset import failed: ${error.message}`);
+            Logger.status.error(`Asset import failed: ${error.message}`);
             await alert(`Asset import failed: ${error.message}`);
         }
     }

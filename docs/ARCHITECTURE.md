@@ -34,8 +34,12 @@
 
 ### PanelPositionManager
 **Файл**: `src/ui/PanelPositionManager.js`
-- Универсальное управление позицией панелей
+- Универсальное управление позицией панелей (`#left-tabs-panel`, `#right-tabs-panel`)
 - Централизованное сохранение в StateManager
+- `moveTab(tabName, fromPanel, toPanel)` — перемещение вкладки между панелями; при необходимости создаёт целевую панель через `ensurePanelExists()`
+- **Tab drag**: `setupTabDraggingForPanel(panel)` стартует drag; глобальные обработчики в `_installGlobalTabDragHandlers()` покрывают сортировку внутри панели, cross-panel перенос и создание новой панели. Состояние хранится в `this._pendingDrag` (не в `window.tabDraggingState`) — легаси хендлер очищает глобальное состояние до выполнения нашего `mouseup`.
+- Визуалы drag: ghost `.tab-drag-ghost`, drop-zone `.tab-drop-zone`, зона создания панели `.tab-new-panel-zone`; скоупинг — только прямые дети `#left-tabs-panel` / `#right-tabs-panel`
+- ~~`TabMoveContextMenu`~~ — удалён (контекстное меню «Move to» заменено drag-and-drop)
 
 ### ResizerManager
 **Файл**: `src/managers/ResizerManager.js`
@@ -65,11 +69,15 @@
 **Файл**: `src/utils/WorldPositionUtils.js`
 - Расчет мировых координат в иерархии групп
 - Устранено дублирование
+- `getRotatedRectAABB(x, y, w, h, deg)` — AABB прямоугольника после поворота вокруг его центра
+- `rotateBoundsAroundCenter(bounds, deg)` — консервативный AABB для уже вычисленных bounds, повёрнутых вокруг их центра
+- `getWorldBounds()` / `isPointInWorldBounds()` учитывают `rotation`: точный inverse-rotate hit-test для одиночных объектов, консервативный AABB для групп
 
 ### GroupTraversalUtils
 **Файл**: `src/utils/GroupTraversalUtils.js`
 - Система обхода иерархии групп
 - 12 методов работы с группами
+- `findObjectPath(topLevelObjects, targetId)` — DFS-поиск пути индексов от корня (`Level.objects`) до объекта через вложенные `group.children`; единый источник истины для порядка рендера/hit-test, используется в `Level.compareStackOrder()`
 
 ### AssetPanel System
 **Файлы**: `src/ui/AssetPanel.js`, `src/ui/AssetTabsManager.js`, `src/ui/FoldersPanel.js`
@@ -187,6 +195,66 @@
 **Файл**: `src/core/GroupOperations.js`
 - Операции с группами
 - Иерархическая структура
+
+---
+
+## 🔄 Rotate/Scale жесты объектов
+
+Мышиные жесты поворота и масштабирования выделения, работают на любом уровне вложенности (в т.ч. внутри групп).
+
+- **Ctrl+drag** по объекту — вращение выделения вокруг центра общего world bounding box; **Shift** во время вращения — дискретные шаги (константа `TRANSFORM.ROTATION_SNAP_DEGREES`, 10°).
+- **Ctrl+Alt+drag** — равномерное масштабирование выделения относительно центра общего bounding box, клампится `TRANSFORM.MIN_SCALE_FACTOR` (0.05) / `TRANSFORM.MAX_SCALE_FACTOR` (20).
+- Если кликнутый объект не был выделен — становится единственным выделением (как при обычном drag).
+- Ctrl+click без drag — по-прежнему toggle selection; Ctrl+drag по пустому месту — marquee toggle (не изменилось).
+- **Alt+drag дублирование** теперь срабатывает только без Ctrl (Ctrl+Alt зарезервирован под scale) — см. `MouseHandlers.js`.
+- Жест активируется при движении мыши ≥ `TRANSFORM.DRAG_THRESHOLD_PX` (4px) после Ctrl(+Alt)-клика на объекте (`mouse.transformPendingMode`).
+- Константы: `TRANSFORM` в `src/constants/EditorConstants.js`.
+
+**Модель данных**:
+- `GameObject.rotation` — градусы, по часовой стрелке, вокруг центра объекта, default 0; сериализуется в `toJSON()`; `getBounds()`/`containsPoint()` rotation-aware.
+- `Group.getBounds()` — учитывает rotation детей (через их rotation-aware `getBounds()`) и собственный rotation группы (консервативный AABB через `WorldPositionUtils.rotateBoundsAroundCenter`).
+
+**Рендер** (`src/ui/CanvasRenderer.js`):
+- `drawSingleObject` вращает вокруг центра объекта через `ctx.translate`/`ctx.rotate`.
+- `drawGroup` вращает вокруг центра AABB детей; вложенные повёрнутые группы работают через стек ctx-трансформаций без дополнительного кода.
+
+**Обработка жеста** (`src/event-system/MouseHandlers.js`):
+- `startObjectTransform(mode, clickInfo, startWorldPos)` — снимает снапшот геометрии выделения (позиции, размеры, rotation, world-центр) в момент старта жеста, чтобы избежать накопления дрейфа при пересчёте на каждый `mousemove`.
+- `transformSelectedObjects(worldPos)` — пересчитывает трансформацию из снапшота на каждое движение.
+- `_snapshotChildrenForScale` / `_applyChildScale` — рекурсивный снапшот и масштабирование геометрии детей группы (позиции и размеры).
+- История (undo/redo) сохраняется на `mouseup`, как у обычного drag; жест отменяется через `historyOperations.undo()` при отпускании кнопки вне canvas и при `window blur`.
+
+**Известные ограничения v1**:
+- Рамка выделения (`RenderOperations`/`CanvasRenderer` selection frame) рисует AABB повёрнутого объекта, а не сам повёрнутый контур.
+- Hit-test детей внутри повёрнутой группы не учитывает поворот родителя — родительские фреймы в цепочке трактуются как translation-only.
+- Жест применяет мировые дельты к локальным координатам объекта — корректно только пока родительская группа не повёрнута.
+
+---
+
+## 📚 Z-порядок объектов (стек рендер/hit-test)
+
+Объекты **не хранят** `zIndex`. Порядок отрисовки и клика определяется исключительно позицией объекта в массиве-контейнере — `Level.objects` для объектов верхнего уровня, `group.children` для объектов внутри группы (как слои в Photoshop/Figma: чем позже элемент в массиве, тем он выше/ближе к переднему плану). `Layer.index` не затронут и остаётся первичным ключом сортировки (объекты одного слоя всегда рисуются вместе, порядок слоёв как раньше).
+
+**Модель данных**:
+- `GameObject`/`Group` не сериализуют `zIndex` в `toJSON()` — поле полностью удалено из модели.
+
+**Сравнение порядка** (`src/models/Level.js`):
+- `compareStackOrder(a, b)` — единый компаратор: сначала сравнивает `layerIndex` (через `getLayerById().getIndex()`), при равенстве — путь в дереве объектов (`GroupTraversalUtils.findObjectPath`), поэлементно от корня. Используется и рендером, и hit-test'ом, поэтому клик всегда попадает в объект, который реально нарисован сверху, независимо от глубины вложенности групп.
+
+**Рендер** (`src/core/RenderOperations.js`, `src/ui/CanvasRenderer.js`):
+- `RenderOperations.getVisibleObjects()` сортирует видимые объекты через `compareStackOrder` один раз на закешированную выборку (та же TTL/инвалидация, что у видимости).
+- `CanvasRenderer.drawGroup()` рисует детей группы в порядке массива `children` без дополнительной сортировки — порядок массива уже есть порядок отрисовки.
+
+**Hit-test** (`src/core/ObjectOperations.js`):
+- `_sortObjectsByZIndexDescending(objects)` сортирует кандидатов по `compareStackOrder` в обратном порядке (передний план первым) — тот же компаратор, что у рендера.
+
+**Ручное управление порядком** (`src/core/ObjectOperations.js`):
+- `getSiblingArray(obj)` — возвращает контейнер объекта (`parentGroup.children` или `level.objects`).
+- `bringToFront(obj)` / `sendToBack(obj)` — перемещает объект в конец/начало контейнера.
+- `moveForward(obj)` / `moveBackward(obj)` — меняет объект местами с соседним элементом контейнера.
+
+**UI** (`src/ui/DetailsPanel.js`):
+- Секция Advanced: числовое поле «Z-Index» заменено 4 кнопками — «На передний план» / «На задний план» / «Выше» / «Ниже» (`createOrderButtonsRow()` → `applyOrderAction()`), работает для одиночного и множественного выбора.
 
 ---
 

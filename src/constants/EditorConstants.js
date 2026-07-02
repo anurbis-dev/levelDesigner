@@ -71,6 +71,16 @@ export const SELECTION = {
 };
 
 /**
+ * Object transform gestures (Ctrl+drag rotate, Ctrl+Alt+drag scale)
+ */
+export const TRANSFORM = {
+    ROTATION_SNAP_DEGREES: 10,  // Shift during rotation snaps to this step (candidate for user setting)
+    MIN_SCALE_FACTOR: 0.05,
+    MAX_SCALE_FACTOR: 20,
+    DRAG_THRESHOLD_PX: 4
+};
+
+/**
  * Parallax settings
  */
 export const PARALLAX = {

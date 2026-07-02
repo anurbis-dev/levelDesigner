@@ -32,6 +32,10 @@
   "activeTabColor": "#374151",
   "accentColor": "#3B82F6",
   "resizerColor": "#1f2937",
+  "statusBarColorInfo": "#6b7280",
+  "statusBarColorSuccess": "#10b981",
+  "statusBarColorWarn": "#f59e0b",
+  "statusBarColorError": "#ef4444",
   "settingsWindow": {
     "x": null,
     "y": null,

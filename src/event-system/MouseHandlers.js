@@ -3,7 +3,7 @@ import { Logger } from '../utils/Logger.js';
 import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
 import { SnapUtils } from '../utils/SnapUtils.js';
 import { throttle } from '../utils/PerformanceUtils.js';
-import { PERFORMANCE } from '../constants/EditorConstants.js';
+import { PERFORMANCE, TRANSFORM } from '../constants/EditorConstants.js';
 import { SelectionUtils } from '../utils/SelectionUtils.js';
 
 /**
@@ -16,6 +16,9 @@ export class MouseHandlers extends BaseModule {
         
         // Performance optimization for zoom
         this.zoomAnimationFrame = null;
+
+        // Snapshot of selection geometry at rotate/scale gesture start
+        this._transformSnapshot = null;
         
         // Create throttled versions of frequent event handlers
         this._throttledMouseMove = throttle(
@@ -83,10 +86,17 @@ export class MouseHandlers extends BaseModule {
                 'mouse.isLeftDown': true,
                 'mouse.altKey': e.altKey
             });
-            
+
+            // During duplicate placement the click confirms placement (handled in mouseup).
+            // Skip selection/drag logic so the original object is not re-selected and
+            // isDragging is not set (which would cause a spurious history save).
+            if (mouse.isPlacingObjects) {
+                return;
+            }
+
             // Check if clicking on object
             const clickedObject = this.editor.objectOperations.findObjectAtPoint(worldPos.x, worldPos.y);
-            
+
             if (clickedObject) {
                 this.handleObjectClick(e, clickedObject, worldPos);
             } else {
@@ -131,34 +141,43 @@ export class MouseHandlers extends BaseModule {
             const dy = e.clientY - pendingStartPos.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
             
-            // Activate marquee if moved more than 4px threshold
-            if (dist >= 4) {
+            // Activate marquee/transform if moved more than threshold
+            if (dist >= TRANSFORM.DRAG_THRESHOLD_PX) {
                 const pendingWorldPos = mouse.marqueePendingWorldPos;
                 const marqueeMode = mouse.marqueePendingMode;
-                
-                Logger.mouse.debug(`Starting marquee from object click (mode: ${marqueeMode})`);
-                
+                const transformMode = mouse.transformPendingMode;
+                const pendingClickInfo = mouse.marqueePendingClickInfo;
+
                 // Clear pending state
                 this.editor.stateManager.update({
                     'mouse.marqueePendingStartPos': null,
                     'mouse.marqueePendingWorldPos': null,
                     'mouse.marqueePendingMode': null,
                     'mouse.marqueePendingObjectId': null,
-                    'mouse.marqueePendingClickInfo': null
+                    'mouse.marqueePendingClickInfo': null,
+                    'mouse.transformPendingMode': null
                 });
-                
-                // Start marquee selection
-                if (marqueeMode === 'replace') {
-                    this.editor.stateManager.set('selectedObjects', new Set());
+
+                if (transformMode) {
+                    // Ctrl+drag on object = rotate, Ctrl+Alt+drag = scale
+                    Logger.mouse.debug(`Starting object transform from object click (mode: ${transformMode})`);
+                    this.startObjectTransform(transformMode, pendingClickInfo, pendingWorldPos);
+                } else {
+                    Logger.mouse.debug(`Starting marquee from object click (mode: ${marqueeMode})`);
+
+                    // Start marquee selection
+                    if (marqueeMode === 'replace') {
+                        this.editor.stateManager.set('selectedObjects', new Set());
+                    }
+
+                    this.editor.stateManager.update({
+                        'mouse.isMarqueeSelecting': true,
+                        'mouse.marqueeRect': { x: pendingWorldPos.x, y: pendingWorldPos.y, width: 0, height: 0 },
+                        'mouse.marqueeStartX': pendingWorldPos.x,
+                        'mouse.marqueeStartY': pendingWorldPos.y,
+                        'mouse.marqueeMode': marqueeMode
+                    });
                 }
-                
-                this.editor.stateManager.update({
-                    'mouse.isMarqueeSelecting': true,
-                    'mouse.marqueeRect': { x: pendingWorldPos.x, y: pendingWorldPos.y, width: 0, height: 0 },
-                    'mouse.marqueeStartX': pendingWorldPos.x,
-                    'mouse.marqueeStartY': pendingWorldPos.y,
-                    'mouse.marqueeMode': marqueeMode
-                });
             }
         }
 
@@ -202,7 +221,10 @@ export class MouseHandlers extends BaseModule {
         } else if (mouse.isLeftDown && mouse.isDragging) {
             // Drag objects
             objectsMovedToGroup = this.dragSelectedObjects(worldPos, e);
-        } else if (mouse.isLeftDown && e.altKey && !this.editor.stateManager.get('duplicate.isActive')) {
+        } else if (mouse.isLeftDown && mouse.isTransforming) {
+            // Rotate/scale selected objects (Ctrl+drag / Ctrl+Alt+drag)
+            this.transformSelectedObjects(worldPos);
+        } else if (mouse.isLeftDown && e.altKey && !(e.ctrlKey || e.metaKey) && !mouse.transformPendingMode && !this.editor.stateManager.get('duplicate.isActive')) {
             // Check if we should start Alt+drag duplication
             const selectedObjects = this.editor.stateManager.get('selectedObjects');
             if (selectedObjects && selectedObjects.size > 0) {
@@ -242,7 +264,7 @@ export class MouseHandlers extends BaseModule {
 
         // Only render if something actually changed
         // Skip rendering if objects are being moved into groups to prevent flicker
-        if (!objectsMovedToGroup && (mouse.isPlacingObjects || mouse.isRightDown || mouse.isMiddleDown || (mouse.isLeftDown && mouse.isDragging) || mouse.isMarqueeSelecting || this.editor.stateManager.get('duplicate.isActive'))) {
+        if (!objectsMovedToGroup && (mouse.isPlacingObjects || mouse.isRightDown || mouse.isMiddleDown || (mouse.isLeftDown && mouse.isDragging) || (mouse.isLeftDown && mouse.isTransforming) || mouse.isMarqueeSelecting || this.editor.stateManager.get('duplicate.isActive'))) {
             this.editor.render();
         }
         
@@ -303,14 +325,32 @@ export class MouseHandlers extends BaseModule {
             
             if (mouse.isDragging) {
                 this.editor.historyManager.saveState(
-                    this.editor.level.objects, 
-                    this.editor.stateManager.get('selectedObjects'), 
-                    false, 
+                    this.editor.level.objects,
+                    this.editor.stateManager.get('selectedObjects'),
+                    false,
                     this.editor.stateManager.get('groupEditMode')
                 );
                 this.editor.stateManager.markDirty();
-                
+
                 // Update panels after drag ends to show final position
+                this.editor.updateAllPanels();
+            }
+
+            // Finalize rotate/scale transform gesture
+            if (mouse.isTransforming) {
+                this._transformSnapshot = null;
+
+                const transformedSelection = this.editor.stateManager.get('selectedObjects');
+                transformedSelection.forEach(id => this.editor.invalidateObjectCaches(id));
+                this.editor.renderOperations.invalidateSpatialIndex();
+
+                this.editor.historyManager.saveState(
+                    this.editor.level.objects,
+                    transformedSelection,
+                    false,
+                    this.editor.stateManager.get('groupEditMode')
+                );
+                this.editor.stateManager.markDirty();
                 this.editor.updateAllPanels();
             }
             
@@ -355,6 +395,11 @@ export class MouseHandlers extends BaseModule {
             this.editor.stateManager.update({
                 'mouse.isLeftDown': false,
                 'mouse.isDragging': false,
+                'mouse.isTransforming': null,
+                'mouse.transformPivot': null,
+                'mouse.transformStartAngle': null,
+                'mouse.transformStartDist': null,
+                'mouse.transformPendingMode': null,
                 'mouse.altKey': e.altKey,
                 'mouse.constrainedAxis': null,
                 'mouse.axisCenter': null,
@@ -366,7 +411,7 @@ export class MouseHandlers extends BaseModule {
                 'mouse.offsetX': null,
                 'mouse.offsetY': null
             });
-            
+
             // Handle marquee completion for canvas events
             // Global handler will also handle it, but we need this for immediate response
             if (mouse.isMarqueeSelecting) {
@@ -549,6 +594,22 @@ export class MouseHandlers extends BaseModule {
                 this.editor.historyOperations.undo();
                 this.editor.render();
             }
+
+            // Cancel rotate/scale transform if released outside canvas
+            if (mouse.isTransforming && shouldCancel) {
+                Logger.mouse.info('Mouse released outside canvas - canceling transform');
+                this._transformSnapshot = null;
+                this.editor.stateManager.update({
+                    'mouse.isLeftDown': false,
+                    'mouse.isTransforming': null,
+                    'mouse.transformPivot': null,
+                    'mouse.transformStartAngle': null,
+                    'mouse.transformStartDist': null,
+                    'mouse.transformPendingMode': null
+                });
+                this.editor.historyOperations.undo();
+                this.editor.render();
+            }
         }
         
         if (e.button === 2) {
@@ -588,6 +649,18 @@ export class MouseHandlers extends BaseModule {
                 'mouse.anchorY': null,
                 'mouse.offsetX': null,
                 'mouse.offsetY': null
+            });
+            this.editor.historyOperations.undo();
+        }
+
+        if (mouse.isTransforming) {
+            this._transformSnapshot = null;
+            this.editor.stateManager.update({
+                'mouse.isTransforming': null,
+                'mouse.transformPivot': null,
+                'mouse.transformStartAngle': null,
+                'mouse.transformStartDist': null,
+                'mouse.transformPendingMode': null
             });
             this.editor.historyOperations.undo();
         }
@@ -726,19 +799,10 @@ export class MouseHandlers extends BaseModule {
                     newObject.x -= groupPos.x;
                     newObject.y -= groupPos.y;
 
-                    // Set layerId to match the group's layer for proper zIndex assignment
+                    // Set layerId to match the group's layer
                     newObject.layerId = groupEditMode.group.layerId;
 
-                    // Assign zIndex for objects dropped into groups
-                    this.editor.level.assignInitialZIndex(newObject, newObject.layerId);
-
-                    // Log zIndex assignment for dropped objects
-                    if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
-                        const layerIndex = Math.floor(newObject.zIndex);
-                        const objectIndex = Math.floor((newObject.zIndex % 1) * 1000);
-                        Logger.mouse.debug(`Object ${newObject.name || newObject.id} dropped into group ${groupEditMode.group.name}, assigned zIndex: ${newObject.zIndex} (layer ${layerIndex}, object index: ${objectIndex})`);
-                    }
-
+                    // Pushing to the end of children already makes it the topmost sibling
                     groupEditMode.group.children.push(newObject);
                 } else {
                     // Add to main level with current layer (or null if no current layer)
@@ -813,7 +877,8 @@ export class MouseHandlers extends BaseModule {
         const isSelected = selectedObjects.has(obj.id);
         
         // Check for Alt+drag duplication - works on any object, selected or not
-        if (e.altKey) {
+        // (Ctrl+Alt is reserved for the scale gesture)
+        if (e.altKey && !e.ctrlKey && !e.metaKey) {
             Logger.mouse.debug('Alt+click on object, starting duplication');
             
             // If object is not selected, select it first (using SelectionUtils)
@@ -844,6 +909,8 @@ export class MouseHandlers extends BaseModule {
                 'mouse.marqueePendingWorldPos': worldPos,
                 'mouse.marqueePendingMode': marqueeMode,
                 'mouse.marqueePendingObjectId': obj.id,
+                // Ctrl+drag on object = rotate, Ctrl+Alt+drag = scale (drag starts on move threshold)
+                'mouse.transformPendingMode': (e.ctrlKey || e.metaKey) ? (e.altKey ? 'scale' : 'rotate') : null,
                 'mouse.marqueePendingClickInfo': {
                     obj: obj,
                     isSelected: isSelected,
@@ -915,13 +982,14 @@ export class MouseHandlers extends BaseModule {
         // Determine marquee selection mode
         const marqueeMode = this._determineMarqueeMode(e);
 
-        // If editing groups, only close when clicking OUTSIDE the active group's frame
+        // If editing groups, only close when clicking OUTSIDE all open groups
         if (this.isInGroupEditMode()) {
             const groupEditMode = this.getGroupEditMode();
-            const bounds = this.editor.objectOperations.getObjectWorldBounds(groupEditMode.group);
-            const inside = worldPos.x >= bounds.minX && worldPos.x <= bounds.maxX && worldPos.y >= bounds.minY && worldPos.y <= bounds.maxY;
-            if (inside) {
-                // Start marquee selection instead of closing
+            const activeBounds = this.editor.objectOperations.getObjectWorldBounds(groupEditMode.group);
+            const insideActive = worldPos.x >= activeBounds.minX && worldPos.x <= activeBounds.maxX &&
+                worldPos.y >= activeBounds.minY && worldPos.y <= activeBounds.maxY;
+            if (insideActive) {
+                // Inside the active (innermost) group — start marquee
                 if (marqueeMode === 'replace') {
                     this.editor.stateManager.set('selectedObjects', new Set());
                 }
@@ -934,8 +1002,29 @@ export class MouseHandlers extends BaseModule {
                 });
                 return;
             }
-            // Outside: close group edit mode
+
+            // Outside active group — step back one level
             this.editor.groupOperations.closeGroupEditMode();
+
+            // If still inside a parent open group after step-back, start marquee there
+            if (this.isInGroupEditMode()) {
+                const parentGroupEditMode = this.getGroupEditMode();
+                const parentBounds = this.editor.objectOperations.getObjectWorldBounds(parentGroupEditMode.group);
+                const insideParent = worldPos.x >= parentBounds.minX && worldPos.x <= parentBounds.maxX &&
+                    worldPos.y >= parentBounds.minY && worldPos.y <= parentBounds.maxY;
+                if (insideParent) {
+                    if (marqueeMode === 'replace') {
+                        this.editor.stateManager.set('selectedObjects', new Set());
+                    }
+                    this.editor.stateManager.update({
+                        'mouse.isMarqueeSelecting': true,
+                        'mouse.marqueeRect': { x: worldPos.x, y: worldPos.y, width: 0, height: 0 },
+                        'mouse.marqueeStartX': worldPos.x,
+                        'mouse.marqueeStartY': worldPos.y,
+                        'mouse.marqueeMode': marqueeMode
+                    });
+                }
+            }
             return;
         }
 
@@ -1178,7 +1267,7 @@ export class MouseHandlers extends BaseModule {
                         
                         // Set flag to delay rendering until all operations are complete
                         objectsMovedToGroup = true;
-                        
+
                         // Move object into group FIRST, then remove from main level
                         // This prevents the object from appearing in both places simultaneously
                         groupEditMode.group.children.push(obj);
@@ -1187,21 +1276,67 @@ export class MouseHandlers extends BaseModule {
                 } else if (isInAnyOpenGroup) {
                     // Object is inside any of the open groups
                     if (this.isAltKeyPressed()) {
-                        // Alt+drag: move in world coordinates by converting to world position first
-                        const worldX = groupPos.x + obj.x;
-                        const worldY = groupPos.y + obj.y;
-                        
-                        // Move in world coordinates
-                        const newWorldX = worldX + dx;
-                        const newWorldY = worldY + dy;
-                        
-                        // Convert back to relative coordinates (use cached position)
+                        // Alt+drag: move in world coordinates
+                        const objWorldPosAlt = this.editor.objectOperations.getObjectWorldPosition(obj);
+                        const newWorldX = objWorldPosAlt.x + dx;
+                        const newWorldY = objWorldPosAlt.y + dy;
+                        // Convert back to active-group-relative coordinates
                         obj.x = newWorldX - activeGroupPos.x;
                         obj.y = newWorldY - activeGroupPos.y;
                     } else {
-                        // Normal drag: move relative to group
+                        // Normal drag: move relative to current parent group
                         obj.x += dx;
                         obj.y += dy;
+
+                        // Check if dragged into the active (innermost) group from a parent group
+                        const groupEditMode = this.getGroupEditMode();
+                        const activeGroup = groupEditMode.group;
+                        const isAlreadyInActiveGroup = this.editor.objectOperations.isObjectInGroupRecursive(obj, activeGroup);
+
+                        if (!isAlreadyInActiveGroup) {
+                            const objWorldPos = this.editor.objectOperations.getObjectWorldPosition(obj);
+
+                            if (this.editor.objectOperations.isPointInGroupBounds(objWorldPos.x, objWorldPos.y)) {
+                                // Prevent cycles
+                                const wouldCreateCycle = obj.id === activeGroup.id ||
+                                    (obj.type === 'group' && obj.children &&
+                                        this.editor.objectOperations.isObjectInGroupRecursive(activeGroup, obj));
+                                if (!wouldCreateCycle) {
+                                    // Check target layer lock
+                                    if (activeGroup.layerId) {
+                                        const targetLayer = this.editor.level.getLayerById(activeGroup.layerId);
+                                        if (targetLayer && targetLayer.locked) return;
+                                    }
+
+                                    // Remove from current parent group
+                                    const parentGroup = this.editor.groupOperations._findParentGroup(obj);
+                                    if (parentGroup) {
+                                        parentGroup.children = parentGroup.children.filter(c => c.id !== obj.id);
+                                    }
+
+                                    // Convert to active-group-relative coordinates
+                                    obj.x = objWorldPos.x - activeGroupPos.x;
+                                    obj.y = objWorldPos.y - activeGroupPos.y;
+
+                                    // Layer inheritance
+                                    if (activeGroup.layerId) {
+                                        const oldLayerId = obj.layerId;
+                                        obj.layerId = activeGroup.layerId;
+                                        Logger.layer.info(`Drag inheritance: ${obj.name || obj.id} layerId ${oldLayerId || 'none'} → ${activeGroup.layerId}`);
+                                        this.editor.renderOperations.clearEffectiveLayerCacheForObject(obj.id);
+                                        if (obj.type === 'group' && obj.children) {
+                                            activeGroup.propagateLayerIdToChildren(obj);
+                                        }
+                                    }
+
+                                    this.editor.renderOperations.invalidateSpatialIndex();
+                                    objectsMovedToGroup = true;
+
+                                    // Pushing to the end of children already makes it the topmost sibling
+                                    activeGroup.children.push(obj);
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -1222,6 +1357,168 @@ export class MouseHandlers extends BaseModule {
         // Panels will be updated when drag ends in handleMouseUp
         
         return objectsMovedToGroup;
+    }
+
+    /**
+     * Start rotate/scale gesture (Ctrl+drag / Ctrl+Alt+drag on an object).
+     * Transforms the whole selection; if the clicked object is not selected,
+     * it becomes the sole selection first (same as regular drag).
+     * Works at any nesting level: parent frames are translation-only,
+     * so world-space deltas apply directly to local coordinates.
+     */
+    startObjectTransform(mode, clickInfo, startWorldPos) {
+        const obj = clickInfo?.obj;
+        if (!obj) return;
+
+        let selectedIds = this.editor.stateManager.get('selectedObjects');
+        if (!selectedIds || !selectedIds.has(obj.id)) {
+            SelectionUtils.selectSingleItem(
+                this.editor.stateManager,
+                obj.id,
+                'selectedObjects',
+                'canvas.shiftAnchor',
+                () => this.editor.updateAllPanels()
+            );
+            selectedIds = this.editor.stateManager.get('selectedObjects');
+        }
+
+        // Pivot = center of the combined world bounds of the selection
+        const union = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
+        const snapshot = [];
+        selectedIds.forEach(id => {
+            const o = this.editor.level.findObjectById(id);
+            if (!o || o.locked) return;
+
+            const b = this.editor.objectOperations.getObjectWorldBounds(o);
+            union.minX = Math.min(union.minX, b.minX);
+            union.minY = Math.min(union.minY, b.minY);
+            union.maxX = Math.max(union.maxX, b.maxX);
+            union.maxY = Math.max(union.maxY, b.maxY);
+
+            const wp = this.editor.objectOperations.getObjectWorldPosition(o);
+            snapshot.push({
+                obj: o,
+                x: o.x,
+                y: o.y,
+                width: o.width,
+                height: o.height,
+                rotation: o.rotation || 0,
+                worldX: wp.x,
+                worldY: wp.y,
+                // AABB center is invariant to rotation, safe as the object's center
+                worldCenterX: (b.minX + b.maxX) / 2,
+                worldCenterY: (b.minY + b.maxY) / 2,
+                children: o.type === 'group' ? this._snapshotChildrenForScale(o) : null
+            });
+        });
+
+        if (snapshot.length === 0 || union.minX === Infinity) return;
+
+        this._transformSnapshot = snapshot;
+
+        const pivot = { x: (union.minX + union.maxX) / 2, y: (union.minY + union.maxY) / 2 };
+        const startDist = Math.hypot(startWorldPos.x - pivot.x, startWorldPos.y - pivot.y);
+
+        Logger.mouse.debug(`Starting object transform: ${mode}, objects: ${snapshot.length}`);
+
+        this.editor.stateManager.update({
+            'mouse.isTransforming': mode,
+            'mouse.transformPivot': pivot,
+            'mouse.transformStartAngle': Math.atan2(startWorldPos.y - pivot.y, startWorldPos.x - pivot.x),
+            'mouse.transformStartDist': Math.max(startDist, 0.001)
+        });
+    }
+
+    /**
+     * Apply rotate/scale to the selection from the gesture-start snapshot
+     * (recomputing from the snapshot each move avoids incremental drift)
+     */
+    transformSelectedObjects(worldPos) {
+        const mouse = this.editor.stateManager.get('mouse');
+        const pivot = mouse.transformPivot;
+        const snapshot = this._transformSnapshot;
+        if (!pivot || !snapshot) return;
+
+        if (mouse.isTransforming === 'rotate') {
+            const currentAngle = Math.atan2(worldPos.y - pivot.y, worldPos.x - pivot.x);
+            let deltaDeg = (currentAngle - mouse.transformStartAngle) * 180 / Math.PI;
+
+            // Shift = discrete rotation steps
+            if (this.editor.stateManager.get('keyboard.shiftKey')) {
+                deltaDeg = Math.round(deltaDeg / TRANSFORM.ROTATION_SNAP_DEGREES) * TRANSFORM.ROTATION_SNAP_DEGREES;
+            }
+
+            const rad = deltaDeg * Math.PI / 180;
+            const cos = Math.cos(rad);
+            const sin = Math.sin(rad);
+
+            snapshot.forEach(s => {
+                // Normalize to (-180, 180]
+                let rot = (s.rotation + deltaDeg) % 360;
+                if (rot > 180) rot -= 360;
+                if (rot <= -180) rot += 360;
+                s.obj.rotation = rot;
+
+                // Orbit object center around the pivot
+                const dx = s.worldCenterX - pivot.x;
+                const dy = s.worldCenterY - pivot.y;
+                const newCenterX = pivot.x + dx * cos - dy * sin;
+                const newCenterY = pivot.y + dx * sin + dy * cos;
+                s.obj.x = s.x + (newCenterX - s.worldCenterX);
+                s.obj.y = s.y + (newCenterY - s.worldCenterY);
+            });
+        } else {
+            let factor = Math.hypot(worldPos.x - pivot.x, worldPos.y - pivot.y) / mouse.transformStartDist;
+            factor = Math.max(TRANSFORM.MIN_SCALE_FACTOR, Math.min(TRANSFORM.MAX_SCALE_FACTOR, factor));
+
+            snapshot.forEach(s => {
+                // Uniform scale around the pivot: world points map as p' = pivot + (p - pivot) * f
+                const newWorldX = pivot.x + (s.worldX - pivot.x) * factor;
+                const newWorldY = pivot.y + (s.worldY - pivot.y) * factor;
+                s.obj.x = s.x + (newWorldX - s.worldX);
+                s.obj.y = s.y + (newWorldY - s.worldY);
+
+                if (s.children) {
+                    // Groups: scale children geometry (relative coords scale directly)
+                    this._applyChildScale(s.children, factor);
+                } else {
+                    s.obj.width = s.width * factor;
+                    s.obj.height = s.height * factor;
+                }
+            });
+        }
+    }
+
+    /**
+     * Snapshot children geometry recursively for the scale gesture
+     * @private
+     */
+    _snapshotChildrenForScale(group) {
+        return group.children.map(child => ({
+            obj: child,
+            x: child.x,
+            y: child.y,
+            width: child.width,
+            height: child.height,
+            children: child.type === 'group' ? this._snapshotChildrenForScale(child) : null
+        }));
+    }
+
+    /**
+     * Scale children geometry (relative coords) from the snapshot
+     * @private
+     */
+    _applyChildScale(children, factor) {
+        children.forEach(s => {
+            s.obj.x = s.x * factor;
+            s.obj.y = s.y * factor;
+            if (s.children) {
+                this._applyChildScale(s.children, factor);
+            } else {
+                s.obj.width = s.width * factor;
+                s.obj.height = s.height * factor;
+            }
+        });
     }
 
     updateMarquee(worldPos) {

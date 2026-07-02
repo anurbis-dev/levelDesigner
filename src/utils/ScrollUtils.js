@@ -11,11 +11,18 @@
 import { Logger } from './Logger.js';
 
 export class ScrollUtils {
-    // Static variables to track global state
+    // Optional per-container overrides. If a container is not registered,
+    // default config is used and panning still works.
+    static activeContainers = new Map(); // container -> config
+
+    // Global auto-panning handlers/state
+    static globalMouseDownHandler = null;
     static globalMouseMoveHandler = null;
     static globalMouseUpHandler = null;
-    static activeContainers = new Map(); // container -> config
+    static globalBlurHandler = null;
     static isGlobalHandlersSetup = false;
+
+    static currentSession = null; // { container, config, startX, startY, startScrollLeft, startScrollTop }
 
     /**
      * Setup global mouse handlers if not already setup
@@ -23,35 +30,67 @@ export class ScrollUtils {
     static setupGlobalHandlers() {
         if (this.isGlobalHandlersSetup) return;
 
-        // Global mouse move handler
+        // Start panning on middle mouse down for ANY scrollable editor container.
+        this.globalMouseDownHandler = (e) => {
+            if (e.button !== 1) return;
+
+            // Keep canvas middle button behavior (zoom) untouched.
+            if (e.target && e.target.closest('canvas')) {
+                return;
+            }
+
+            const container = this.findScrollableContainer(e.target);
+            if (!container) {
+                return;
+            }
+
+            const config = this.getContainerConfig(container);
+            if (!config.horizontal && !config.vertical) {
+                return;
+            }
+
+            e.preventDefault();
+            e.stopPropagation();
+
+            this.startScrolling(container, config, e);
+        };
+
+        // Update active session on mouse move.
         this.globalMouseMoveHandler = (e) => {
-            // Find active scrolling container
-            for (const [container, config] of this.activeContainers) {
-                if (config.isScrolling) {
-                    e.preventDefault();
-                    this.updateScrolling(container, config, e);
-                    break; // Only one container can scroll at a time
-                }
+            if (!this.currentSession) {
+                return;
             }
+
+            e.preventDefault();
+            this.updateScrolling(this.currentSession.container, this.currentSession, e);
         };
 
-        // Global mouse up handler
+        // Stop active session.
         this.globalMouseUpHandler = (e) => {
-            // Find and stop any active scrolling
-            for (const [container, config] of this.activeContainers) {
-                if (config.isScrolling && e.button === 1) {
-                    e.preventDefault();
-                    this.stopScrolling(container, config);
-                    break;
-                }
+            if (!this.currentSession) {
+                return;
+            }
+
+            if (e.button === 1) {
+                e.preventDefault();
+                this.stopScrolling(this.currentSession.container, this.currentSession);
             }
         };
 
-        document.addEventListener('mousemove', this.globalMouseMoveHandler);
-        document.addEventListener('mouseup', this.globalMouseUpHandler);
+        // Defensive cleanup when window loses focus during panning.
+        this.globalBlurHandler = () => {
+            if (this.currentSession) {
+                this.stopScrolling(this.currentSession.container, this.currentSession);
+            }
+        };
+
+        document.addEventListener('mousedown', this.globalMouseDownHandler, { passive: false, capture: true });
+        document.addEventListener('mousemove', this.globalMouseMoveHandler, { passive: false });
+        document.addEventListener('mouseup', this.globalMouseUpHandler, { passive: false });
+        window.addEventListener('blur', this.globalBlurHandler);
 
         this.isGlobalHandlersSetup = true;
-        Logger.ui.debug('ScrollUtils: Global handlers setup');
+        Logger.ui.debug('ScrollUtils: Universal middle-mouse panning enabled');
     }
 
     /**
@@ -71,61 +110,109 @@ export class ScrollUtils {
         // Setup global handlers if needed
         this.setupGlobalHandlers();
 
+        // Register or update per-container config override.
+        const existingConfig = this.activeContainers.get(container);
+        if (existingConfig) {
+            existingConfig.horizontal = options.horizontal !== false;
+            existingConfig.vertical = options.vertical !== false;
+            existingConfig.sensitivity = options.sensitivity || 1.0;
+            return;
+        }
+
         const config = {
             horizontal: options.horizontal !== false,
             vertical: options.vertical !== false,
-            sensitivity: options.sensitivity || 1.0,
-            isScrolling: false,
-            scrollStartX: 0,
-            scrollStartY: 0,
-            scrollStartScrollLeft: 0,
-            scrollStartScrollTop: 0
+            sensitivity: options.sensitivity || 1.0
         };
 
         // Store container config
         this.activeContainers.set(container, config);
 
-        // Middle mouse button down - start scrolling
-        container.addEventListener('mousedown', (e) => {
-            if (e.button === 1) { // Middle mouse button
-                e.preventDefault();
-                e.stopPropagation();
-                this.startScrolling(container, config, e);
-            }
-        }, { passive: false });
-
-        // Mouse wheel scrolling - only handle if not using standard scroll
-        container.addEventListener('wheel', (e) => {
-            // Allow standard wheel scrolling to work normally
-            // Only prevent default if we need custom behavior
-            const scrollAmount = e.deltaY * config.sensitivity * 0.5;
-
-            if (config.horizontal) {
-                container.scrollLeft += scrollAmount;
-            }
-            if (config.vertical) {
-                container.scrollTop += scrollAmount;
-            }
-            
-            // Don't prevent default - let browser handle normal scrolling
-        }, { passive: true });
-
-        // Prevent context menu on middle click
-        container.addEventListener('contextmenu', (e) => {
-            if (e.button === 1) {
-                e.preventDefault();
-            }
-        }, { passive: false });
-
         Logger.ui.debug(`ScrollUtils: Scrolling setup for ${container.tagName}#${container.id || container.className}`);
     }
 
+    /**
+     * Get effective config for container (registered override or defaults).
+     * @param {HTMLElement} container
+     * @returns {{horizontal:boolean, vertical:boolean, sensitivity:number}}
+     */
+    static getContainerConfig(container) {
+        const config = this.activeContainers.get(container);
+        if (config) {
+            return config;
+        }
+
+        return {
+            horizontal: true,
+            vertical: true,
+            sensitivity: 1.0
+        };
+    }
+
+    /**
+     * Find nearest scrollable container. Prefers explicitly registered containers,
+     * then falls back to any element with real overflow.
+     * @param {EventTarget} target
+     * @returns {HTMLElement|null}
+     */
+    static findScrollableContainer(target) {
+        let element = target instanceof HTMLElement ? target : null;
+
+        // Do not start panning from interactive form/text controls.
+        // This prevents horizontal scrolling of search inputs and editors.
+        if (element && element.closest('input, textarea, select, [contenteditable="true"]')) {
+            return null;
+        }
+
+        while (element && element !== document.body) {
+            if (element.dataset?.noMiddlePan === 'true') {
+                return null;
+            }
+
+            // Registered containers are preferred, but only when they can actually scroll.
+            if (this.activeContainers.has(element) && this.isElementScrollable(element)) {
+                return element;
+            }
+
+            if (this.isElementScrollable(element)) {
+                return element;
+            }
+
+            element = element.parentElement;
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if element can actually scroll.
+     * @param {HTMLElement} element
+     * @returns {boolean}
+     */
+    static isElementScrollable(element) {
+        if (!element) return false;
+
+        const style = window.getComputedStyle(element);
+        const overflowYScrollable = /(auto|scroll|overlay)/.test(style.overflowY);
+        const overflowXScrollable = /(auto|scroll|overlay)/.test(style.overflowX);
+
+        const canScrollY = overflowYScrollable && element.scrollHeight > element.clientHeight + 1;
+        const canScrollX = overflowXScrollable && element.scrollWidth > element.clientWidth + 1;
+
+        return canScrollX || canScrollY;
+    }
+
     static startScrolling(container, config, e) {
-        config.isScrolling = true;
-        config.scrollStartX = e.clientX;
-        config.scrollStartY = e.clientY;
-        config.scrollStartScrollLeft = container.scrollLeft;
-        config.scrollStartScrollTop = container.scrollTop;
+        this.currentSession = {
+            container,
+            horizontal: config.horizontal,
+            vertical: config.vertical,
+            sensitivity: config.sensitivity || 1.0,
+            startX: e.clientX,
+            startY: e.clientY,
+            startScrollLeft: container.scrollLeft,
+            startScrollTop: container.scrollTop
+        };
 
         // Change cursor to panning cursor
         container.style.cursor = 'grabbing';
@@ -139,14 +226,14 @@ export class ScrollUtils {
     }
 
     static updateScrolling(container, config, e) {
-        if (!config.isScrolling) return;
+        if (!config) return;
 
-        const deltaX = e.clientX - config.scrollStartX;
-        const deltaY = e.clientY - config.scrollStartY;
+        const deltaX = (e.clientX - config.startX) * config.sensitivity;
+        const deltaY = (e.clientY - config.startY) * config.sensitivity;
 
         // Apply scrolling with bounds
         if (config.horizontal) {
-            const newScrollLeft = config.scrollStartScrollLeft - deltaX;
+            const newScrollLeft = config.startScrollLeft - deltaX;
             container.scrollLeft = Math.max(0, Math.min(
                 newScrollLeft,
                 container.scrollWidth - container.clientWidth
@@ -154,7 +241,7 @@ export class ScrollUtils {
         }
 
         if (config.vertical) {
-            const newScrollTop = config.scrollStartScrollTop - deltaY;
+            const newScrollTop = config.startScrollTop - deltaY;
             container.scrollTop = Math.max(0, Math.min(
                 newScrollTop,
                 container.scrollHeight - container.clientHeight
@@ -163,7 +250,7 @@ export class ScrollUtils {
     }
 
     static stopScrolling(container, config) {
-        config.isScrolling = false;
+        if (!container) return;
 
         // Restore cursor
         container.style.cursor = '';
@@ -172,6 +259,8 @@ export class ScrollUtils {
 
         // Remove panning class from body
         document.body.classList.remove('panning-mode');
+
+        this.currentSession = null;
 
         Logger.ui.debug('ScrollUtils: Scrolling stopped');
     }
@@ -245,5 +334,47 @@ export class ScrollUtils {
         }
 
         container.classList.add('minimal-scrollbar');
+    }
+
+    /**
+     * Remove scrolling handlers from one container
+     * @param {HTMLElement} container - Container to cleanup
+     */
+    static removeScrolling(container) {
+        this.activeContainers.delete(container);
+
+        if (this.currentSession && this.currentSession.container === container) {
+            this.stopScrolling(container, this.currentSession);
+        }
+    }
+
+    /**
+     * Cleanup all ScrollUtils handlers
+     */
+    static cleanup() {
+        this.activeContainers.clear();
+        this.currentSession = null;
+
+        if (this.globalMouseDownHandler) {
+            document.removeEventListener('mousedown', this.globalMouseDownHandler, { capture: true });
+            this.globalMouseDownHandler = null;
+        }
+
+        if (this.globalMouseMoveHandler) {
+            document.removeEventListener('mousemove', this.globalMouseMoveHandler);
+            this.globalMouseMoveHandler = null;
+        }
+
+        if (this.globalMouseUpHandler) {
+            document.removeEventListener('mouseup', this.globalMouseUpHandler);
+            this.globalMouseUpHandler = null;
+        }
+
+        if (this.globalBlurHandler) {
+            window.removeEventListener('blur', this.globalBlurHandler);
+            this.globalBlurHandler = null;
+        }
+
+        this.isGlobalHandlersSetup = false;
     }
 }

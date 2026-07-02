@@ -1,5 +1,6 @@
 import { BaseModule } from './BaseModule.js';
 import { Group } from '../models/Group.js';
+import { Logger } from '../utils/Logger.js';
 
 /**
  * Group Operations module for LevelEditor
@@ -130,16 +131,16 @@ export class GroupOperations extends BaseModule {
             // Clear visible objects cache only for current camera position
             this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
 
-            // Invalidate spatial index since structure changed
+            // Invalidate spatial index since structure changed; lazy rebuild on next render
             this.editor.renderOperations.invalidateSpatialIndex();
-            // CRITICAL FIX: Force rebuild spatial index to ensure consistency
-            this.editor.renderOperations.buildSpatialIndex();
+            this.editor.renderOperations.markSpatialIndexDirty();
 
             
             
             // Refresh all UI panels and redraw the canvas
             this.editor.render();
             this.editor.updateAllPanels();
+            Logger.status.success(`Grouped ${selectedTopLevelObjects.length} objects`);
         }
     }
 
@@ -169,6 +170,7 @@ export class GroupOperations extends BaseModule {
         this.editor.stateManager.set('selectedObjects', new Set());
         this.editor.render();
         this.editor.updateAllPanels();
+        Logger.status.info(`Editing group "${group.name || 'Group'}"`);
     }
 
     /**
@@ -216,6 +218,7 @@ export class GroupOperations extends BaseModule {
         this.editor.stateManager.set('selectedObjects', new Set());
         this.editor.render();
         this.editor.updateAllPanels();
+        Logger.status.info('Exited group edit mode');
     }
 
     /**
@@ -286,6 +289,7 @@ export class GroupOperations extends BaseModule {
         this.editor.stateManager.set('selectedObjects', new Set());
         this.editor.render();
         this.editor.updateAllPanels();
+        Logger.status.success(`Ungrouped ${groupsToUngroup.length} group${groupsToUngroup.length > 1 ? 's' : ''}`);
     }
 
     // Group edit helpers
@@ -317,30 +321,62 @@ export class GroupOperations extends BaseModule {
 
         // Save state for history
         this.editor.historyManager.saveState(
-            this.editor.level.objects, 
-            this.editor.stateManager.get('selectedObjects'), 
-            false, 
+            this.editor.level.objects,
+            this.editor.stateManager.get('selectedObjects'),
+            false,
             this.editor.stateManager.get('groupEditMode')
         );
 
-        // Convert child coordinates back to world coordinates (same logic as MouseHandlers)
-        const worldX = childObject.x + group.x;
-        const worldY = childObject.y + group.y;
-        
-        // Remove object from group (same logic as MouseHandlers)
+        // Convert child coordinates to world coordinates using full world position of the group
+        // (group.x/group.y are LOCAL to the group's parent, not world coordinates)
+        const groupWorldPos = this.editor.objectOperations.getObjectWorldPosition(group);
+        const worldX = childObject.x + groupWorldPos.x;
+        const worldY = childObject.y + groupWorldPos.y;
+
+        // Remove object from group
         group.children = group.children.filter(c => c.id !== childObject.id);
-        
-        // Update object world position
-        childObject.x = worldX;
-        childObject.y = worldY;
 
-        // Add object to top level (same logic as MouseHandlers)
-        this.editor.level.addObject(childObject);
+        // Find parent container: if group is nested, move child to parent group (not top level)
+        const parentGroup = this._findParentGroup(group);
+        if (parentGroup) {
+            // Add child to parent group at correct relative coordinates
+            const parentWorldPos = this.editor.objectOperations.getObjectWorldPosition(parentGroup);
+            childObject.x = worldX - parentWorldPos.x;
+            childObject.y = worldY - parentWorldPos.y;
+            parentGroup.children.push(childObject);
+        } else {
+            // Group is top-level: move child to level root at world coordinates
+            childObject.x = worldX;
+            childObject.y = worldY;
+            this.editor.level.addObject(childObject);
+        }
 
-        // Clear caches for extracted object (same logic as MouseHandlers)
+        // Clear caches for extracted object
         this.editor.invalidateObjectCaches(childObject.id);
 
         return true;
+    }
+
+    /**
+     * Find the direct parent group of a given object within the level hierarchy.
+     * Returns null if the object is at the top level (level.objects).
+     * @param {Object} target - Object whose parent group to find
+     * @returns {Object|null} Parent group, or null if top-level
+     */
+    _findParentGroup(target) {
+        const search = (objects) => {
+            for (const obj of objects) {
+                if (obj.type === 'group' && obj.children) {
+                    if (obj.children.some(c => c.id === target.id)) {
+                        return obj;
+                    }
+                    const found = search(obj.children);
+                    if (found) return found;
+                }
+            }
+            return null;
+        };
+        return search(this.editor.level.objects);
     }
 
     /**
