@@ -297,16 +297,26 @@
 Операции с объектами.
 
 #### Поиск и проверки:
-- `findObjectAtPoint(x, y)` - поиск объекта в точке
+- `findObjectAtPoint(x, y, skipCycle = false)` - поиск объекта в точке; по умолчанию циклически перебирает перекрывающиеся совпадения при повторных кликах в (примерно) той же точке (Blender-style, см. ARCHITECTURE.md → «Цикл выбора перекрывающихся объектов по кликам»); `skipCycle = true` (используется двойным кликом) форсирует старое поведение — всегда передний объект
+- `_pickFrontMost(x, y, sortedCandidates)` - нецикличный front-to-back hit-test (внутренний, используется при `skipCycle = true`)
+- `_pickWithClickCycle(x, y, sortedCandidates)` - цикличный pick по повторным кликам (внутренний, используется по умолчанию)
 - `isPointInObject(x, y, obj)` - проверка точки в объекте
 - `isObjectInGroup(obj, group)` - проверка объекта в группе
 - `isObjectInGroupRecursive(obj, group)` - рекурсивная проверка объекта в группе
+- `getSelectableCandidateObjects()` - список объектов-кандидатов на выбор для текущего режима (group edit mode / isolate / solo / обычный); общий источник для `computeSelectableSet()`, `findObjectAtPoint()` и marquee-выделения
+- `findTopLevelAncestor(obj)` - поднимается через `groupOperations._findParentGroup()` до верхнеуровневого предка (или возвращает сам `obj`, если он уже top-level); общий хелпер для `toggleIsolateSelection()` и `toggleObjectSolo()`
 
 #### Операции с объектами:
 - `deleteSelectedObjects()` - удаление выделенных объектов
 - `duplicateSelectedObjects()` - дублирование выделенных объектов
 - `focusOnSelection()` - фокус на выделении
 - `focusOnAll()` - фокус на всех объектах
+- `toggleObjectVisibility(obj)` - переключение `obj.visible`; каскадом применяется ко всем потомкам, если `obj.type === 'group'`
+- `toggleVisibilityForSelection()` - хоткей `H`, переключает видимость всех выделенных объектов
+- `unhideAllObjects()` - хоткей `Alt+H`, показывает все скрытые объекты на любом уровне вложенности
+- `afterVisibilityChange()` - общий хвост (история, инвалидация кэшей, render, обновление панелей) для операций видимости выше
+- `toggleIsolateSelection()` - хоткей `/`, тоггл Isolate для текущего выделения (top-level-гранулярность, non-destructive, состояние в `stateManager.get('view.isolatedTopLevelIds')`)
+- `toggleObjectSolo(obj)` - Ctrl+click на иконку глаза объекта в Outliner; аналог Layer Solo, но full-hide вместо dim (top-level-гранулярность, non-destructive, эксклюзивный, состояние в `stateManager.get('view.soloedTopLevelObjectId')`)
 
 ### RenderOperations (src/core/RenderOperations.js)
 Операции отрисовки.
@@ -366,6 +376,15 @@
 - `setName(name)` - установка имени
 - `setOrder(order)` - установка порядка
 - `toJSON()` - сериализация в JSON
+
+#### Свойства:
+- `soloed` - transient UI-флаг (не сериализуется в `toJSON()`); `true`, если слой заsoloен через Ctrl+click иконки глаза в `LayersPanel.toggleLayerSolo(layerId)` — см. ARCHITECTURE.md → «Isolate и Layer Solo»
+
+### ShortcutFormatter (src/utils/ShortcutFormatter.js)
+Форматирование хоткея в отображаемую строку. Единый источник форматирования для `SettingsPanel` (Hotkeys tab) и `MenuManager` (подписи в главном меню).
+
+#### Основные методы:
+- `static format(shortcut)` - форматирует `{key, ctrlKey, altKey, shiftKey, metaKey}` в строку вида `"Ctrl+Alt+N"`
 
 ---
 

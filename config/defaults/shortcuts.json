@@ -62,7 +62,8 @@
     "newLevel": {
       "key": "N",
       "ctrlKey": true,
-      "description": "Create new level"
+      "altKey": true,
+      "description": "Create new level (Ctrl+N alone is intercepted by the browser as \"new window\", so Alt is required)"
     },
     "openLevel": {
       "key": "O",
@@ -119,6 +120,23 @@
       "ctrlKey": true,
       "shiftKey": true,
       "description": "Send selected objects to back of stacking order"
+    },
+    "renameObject": {
+      "key": "F2",
+      "description": "Rename the selected object"
+    },
+    "isolateSelection": {
+      "key": "/",
+      "description": "Toggle Isolate for the selected object(s) — dims everything outside their top-level branch"
+    },
+    "hideSelected": {
+      "key": "H",
+      "description": "Toggle visibility of selected object(s) (hiding a group cascades to all its children)"
+    },
+    "unhideAll": {
+      "key": "H",
+      "altKey": true,
+      "description": "Show every hidden object at every level"
     }
   },
   "mouse": {
@@ -132,12 +150,28 @@
       "ctrlKey": true,
       "altKey": true,
       "description": "Scale selected objects (hold Shift for 10% steps)"
+    },
+    "soloLayer": {
+      "key": "Click",
+      "ctrlKey": true,
+      "description": "Solo this layer — Ctrl+click its eye icon in the Layers panel (Ctrl+click again to un-solo)"
+    },
+    "soloObject": {
+      "key": "Click",
+      "ctrlKey": true,
+      "description": "Solo this object — Ctrl+click its eye icon in the Outliner; hides every other top-level object (a soloed group's own children stay visible). Ctrl+click again to un-solo"
+    },
+    "multiSelectFilterType": {
+      "key": "Click",
+      "ctrlKey": true,
+      "description": "Toggle multiple type checkboxes in the Outliner filter menu without applying/closing; the accumulated filter is applied when Ctrl is released"
     }
   },
   "ui": {
     "focusLayersSearch": {
       "key": "L",
       "ctrlKey": true,
+      "altKey": true,
       "description": "Focus layers search"
     },
     "addNewLayer": {
@@ -145,6 +179,26 @@
       "ctrlKey": true,
       "shiftKey": true,
       "description": "Add new layer"
+    },
+    "toggleLeftPanel": {
+      "key": "1",
+      "altKey": true,
+      "description": "Toggle left panel"
+    },
+    "toggleRightPanel": {
+      "key": "2",
+      "altKey": true,
+      "description": "Toggle right panel"
+    },
+    "toggleToolbar": {
+      "key": "3",
+      "altKey": true,
+      "description": "Toggle toolbar"
+    },
+    "toggleAssetsPanel": {
+      "key": "4",
+      "altKey": true,
+      "description": "Toggle assets panel"
     },
     "resetToDefault": {
       "key": "Backspace",

@@ -19,6 +19,15 @@ export class OutlinerPanel extends BasePanel {
         // Context menu reference
         this.contextMenu = null;
 
+        // Persistent object-list DOM state for incremental render() (see render()/reconcileFlatList).
+        // Keyed by object id so unchanged nodes are reused across renders instead of torn down —
+        // a full teardown+rebuild costs ~200-400ms at ~2000 objects (all DOM node creation),
+        // dominating everything else combined (measured via chrome-devtools during a duplicate-
+        // placement profile). null objectsContainer means "not bootstrapped yet".
+        this._objectsContainer = null;
+        this._itemNodeCache = new Map(); // objId -> item element
+        this._searchResultsInfoNode = null;
+
         // Initialize panel structure
         this.panelElements = createOutlinerPanelStructure(this.container);
 
@@ -193,7 +202,23 @@ export class OutlinerPanel extends BasePanel {
     }
 
     /**
-     * Show filter menu with object types
+     * Show filter menu with object types.
+     *
+     * Closing is intentionally cursor-leave-based (mouseleave), same as the identical filter
+     * menu in AssetPanel.showAssetFilterMenu and MenuPositioningUtils' default
+     * setupMenuClosing(): the menu is always positioned so the cursor (which is on the
+     * trigger button at the moment of the click) starts INSIDE the menu's bounds, so ANY
+     * movement away from it reliably closes it — not a click-outside listener. The bug this
+     * once looked like ("menu doesn't disappear") was actually a POSITIONING bug: the default
+     * `offset` left a gap between the button and the menu, so the cursor could start OUTSIDE
+     * the menu and mouseleave would never have anything to fire from. Fixed below by
+     * overlapping the menu with the button's own bounding box instead of leaving a gap.
+     *
+     * Ctrl+click: hold Ctrl to toggle multiple type checkboxes without applying the filter or
+     * closing the menu (each option's handler stops the click from bubbling to the menu's
+     * default close-on-click while Ctrl is held); the accumulated filter is applied AND the
+     * menu closes together, once, on Ctrl release. A plain click keeps applying immediately
+     * and closing right away, as it always did.
      */
     showFilterMenu(button) {
         // Get all available object types from current level
@@ -203,14 +228,51 @@ export class OutlinerPanel extends BasePanel {
 
         // Create menu using utility
         const menu = MenuPositioningUtils.createMenuElement({ className: 'p-2' });
-        
-        // Position menu using utility
+
+        // Position menu using utility — overlap the button's own bounding box (top of menu =
+        // top of button) instead of leaving MenuPositioningUtils' default gap below it, so the
+        // cursor is guaranteed to be inside the menu's bounds no matter where within the
+        // button it was when clicked (see doc comment above).
+        const buttonRect = button.getBoundingClientRect();
         MenuPositioningUtils.showMenu(menu, button, {
             alignment: 'right',
             direction: 'below',
+            offset: -buttonRect.height,
             menuWidth: 192,
             menuHeight: 200
         });
+
+        // Applying (and closing) on Ctrl release commits whatever was accumulated while Ctrl
+        // was held. Only 'Control' — metaKey clicks are treated the same as Ctrl for the
+        // multi-select gesture itself, but Cmd has no equivalent reliable "just released" key.
+        const ctrlReleaseHandler = (e) => {
+            if (e.key === 'Control') {
+                this.stateManager.update({ 'outliner.activeTypeFilters': this.activeTypeFilters });
+                this.render();
+                if (menu._closeMenuHandler) menu._closeMenuHandler();
+            }
+        };
+        document.addEventListener('keyup', ctrlReleaseHandler);
+        // Clean up regardless of which of the menu's own (default) close paths fires first.
+        menu.addEventListener('mouseleave', () => document.removeEventListener('keyup', ctrlReleaseHandler));
+        menu.addEventListener('click', () => document.removeEventListener('keyup', ctrlReleaseHandler));
+
+        /**
+         * Apply the (already-mutated) this.activeTypeFilters. Ctrl-held: only refresh the
+         * checkboxes and stop the click from bubbling to the menu's default close-on-click, so
+         * the user can keep selecting more types (applied later by ctrlReleaseHandler above).
+         * Otherwise: apply immediately and let the click bubble on to close the menu, as before.
+         */
+        const applyOrDefer = (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                e.stopPropagation();
+                this.updateFilterMenu(menu, button);
+            } else {
+                this.stateManager.update({ 'outliner.activeTypeFilters': this.activeTypeFilters });
+                this.render();
+                this.updateFilterMenu(menu, button);
+            }
+        };
 
         // Add "Toggle All" option using utility
         const allTypesActive = this.activeTypeFilters.size === 0;
@@ -220,10 +282,10 @@ export class OutlinerPanel extends BasePanel {
         });
         allOption.querySelector('input').id = 'filter-all';
 
-        allOption.addEventListener('click', () => {
+        allOption.addEventListener('click', (e) => {
             // Check current state at the time of click
             const currentlyAllActive = this.activeTypeFilters.size === 0;
-            
+
             if (currentlyAllActive) {
                 // Currently all types are active, deactivate all
                 this.activeTypeFilters = new Set(['DISABLE_ALL']);
@@ -231,13 +293,7 @@ export class OutlinerPanel extends BasePanel {
                 // Currently some types are filtered or disabled, activate all
                 this.activeTypeFilters.clear();
             }
-            // Save state
-            this.stateManager.update({
-                'outliner.activeTypeFilters': this.activeTypeFilters
-            });
-            this.render();
-            // Update menu instead of closing it
-            this.updateFilterMenu(menu, button);
+            applyOrDefer(e);
         });
 
         menu.appendChild(allOption);
@@ -259,7 +315,7 @@ export class OutlinerPanel extends BasePanel {
             });
             option.querySelector('input').id = `filter-${type}`;
 
-            option.addEventListener('click', () => {
+            option.addEventListener('click', (e) => {
                 if (this.activeTypeFilters.has('DISABLE_ALL')) {
                     // If in DISABLE_ALL mode, start with this type only
                     this.activeTypeFilters = new Set([type]);
@@ -281,13 +337,7 @@ export class OutlinerPanel extends BasePanel {
                     // Add this type
                     this.activeTypeFilters.add(type);
                 }
-                // Save state
-                this.stateManager.update({
-                    'outliner.activeTypeFilters': this.activeTypeFilters
-                });
-                this.render();
-                // Update menu instead of closing it
-                this.updateFilterMenu(menu, button);
+                applyOrDefer(e);
             });
 
             menu.appendChild(option);
@@ -471,40 +521,51 @@ export class OutlinerPanel extends BasePanel {
         // Save search input state before clearing
         const searchInput = document.getElementById('outliner-search');
         const wasSearchFocused = searchInput && document.activeElement === searchInput;
-        const searchValue = this.searchTerm;
 
-        // Clear container but preserve custom sections
-        // Remove all children except custom sections
-        const children = Array.from(this.container.children);
-        children.forEach(child => {
-            if (!child.classList.contains('panel-top-custom') &&
-                !child.classList.contains('panel-bottom-custom')) {
-                this.container.removeChild(child);
-            }
-        });
-
-        // Ensure custom sections exist (recreate if needed)
+        // Bootstrap structural (top/bottom custom) sections once; only tear everything down
+        // (including the item-node cache) if the panel structure itself is missing/corrupted —
+        // NOT on every render. The object list itself is reconciled in place (see below),
+        // never torn down: a full teardown+rebuild was ~200-400ms at ~2000 objects (all DOM
+        // node creation), dwarfing every other render/perf fix in this pass combined.
         if (!this.panelElements?.topCustom || !this.container.contains(this.panelElements.topCustom)) {
+            Array.from(this.container.children).forEach(child => this.container.removeChild(child));
             this.panelElements = createOutlinerPanelStructure(this.container);
+            this._objectsContainer = null;
+            this._itemNodeCache.clear();
+            this._searchResultsInfoNode = null;
         }
 
         // Render outliner search controls in top custom section
         this.renderOutlinerSearchControls();
 
-        // Create dedicated list container (objects only).
-        // Search/filter controls stay outside to avoid being included in panning.
-        const objectsContainer = document.createElement('div');
-        objectsContainer.id = 'outliner-objects-container';
-        objectsContainer.className = 'outliner-objects-container';
-        this.container.appendChild(objectsContainer);
+        // Create the object list container once and reuse it — search/filter controls stay
+        // outside of it so they're excluded from its middle-mouse panning.
+        if (!this._objectsContainer || !this.container.contains(this._objectsContainer)) {
+            this._objectsContainer = document.createElement('div');
+            this._objectsContainer.id = 'outliner-objects-container';
+            this._objectsContainer.className = 'outliner-objects-container';
+            this._itemNodeCache.clear();
+            this._searchResultsInfoNode = null;
+            // Bind panning once per element instance — ScrollUtils dedupes by container
+            // internally, but a fresh element still needs its first registration.
+            this.setupScrolling({
+                horizontal: true,
+                vertical: true,
+                sensitivity: 1.0,
+                target: this._objectsContainer
+            });
+        }
+        // Always (re)place at the end, after the (possibly just re-rendered) top controls.
+        this.container.appendChild(this._objectsContainer);
+        const objectsContainer = this._objectsContainer;
 
         const level = this.levelEditor.getLevel();
         // Show only top-level objects in outliner
         const topLevelObjects = level.objects;
-        
+
         // First apply search filter if active
         let filteredObjects = this.searchTerm ? this.getAllFilteredObjects(topLevelObjects) : topLevelObjects;
-        
+
         // Then apply type filter - filter objects by their types recursively
         if (this.activeTypeFilters.size > 0 && !this.activeTypeFilters.has('DISABLE_ALL')) {
             filteredObjects = this.filterObjectsByTypeRecursive(filteredObjects);
@@ -513,23 +574,30 @@ export class OutlinerPanel extends BasePanel {
             filteredObjects = [];
         }
 
-        // Show search results info
+        // Show search results info (single lightweight banner node, not part of the keyed diff)
         if (this.searchTerm) {
             const totalFiltered = this.countAllObjectsRecursive(filteredObjects);
             Logger.outliner.info(`Search "${this.searchTerm}" found ${totalFiltered} objects`);
 
-            const resultsInfo = SearchUtils.createSearchResultsInfo(totalFiltered, this.searchTerm, 'objects');
-            objectsContainer.appendChild(resultsInfo);
+            if (!this._searchResultsInfoNode) {
+                this._searchResultsInfoNode = SearchUtils.createSearchResultsInfo(totalFiltered, this.searchTerm, 'objects');
+                objectsContainer.insertBefore(this._searchResultsInfoNode, objectsContainer.firstChild);
+            } else {
+                this._searchResultsInfoNode.textContent = `Found ${totalFiltered} objects matching "${this.searchTerm}"`;
+                if (objectsContainer.firstChild !== this._searchResultsInfoNode) {
+                    objectsContainer.insertBefore(this._searchResultsInfoNode, objectsContainer.firstChild);
+                }
+            }
+        } else if (this._searchResultsInfoNode) {
+            this._searchResultsInfoNode.remove();
+            this._searchResultsInfoNode = null;
         }
 
-        // Render objects directly without grouping by type
-        filteredObjects.forEach(obj => {
-            if (obj.type === 'group') {
-                this.renderGroupNode(obj, 0, objectsContainer);
-            } else {
-                this.renderObjectNode(obj, 0, objectsContainer);
-            }
-        });
+        // Flatten the filtered tree (DFS, respecting collapsed groups) into an ordered list,
+        // then reconcile it against the existing DOM instead of rebuilding from scratch —
+        // unchanged items are reused in place (O(1) per item when order didn't change).
+        const flatList = this.buildFlatRenderList(filteredObjects);
+        this.reconcileFlatList(objectsContainer, flatList);
 
         // Restore search input state after render
         if (wasSearchFocused) {
@@ -542,255 +610,402 @@ export class OutlinerPanel extends BasePanel {
 
         // Always recreate context menu after DOM is updated to ensure it works with new objects
         this.setupContextMenu();
+    }
 
-        // Bind middle-mouse panning only to the object list container.
-        this.setupScrolling({
-            horizontal: true,
-            vertical: true,
-            sensitivity: 1.0,
-            target: objectsContainer
+    /**
+     * Flatten the filtered object tree into a depth-first, display-order list of
+     * { obj, depth } — mirrors the recursion that renderGroupNode/renderObjectNode used to do
+     * directly against the DOM. Kept separate from getFlatObjectList() (used by shift-click
+     * range selection) since that one doesn't track depth and is relied on elsewhere.
+     */
+    buildFlatRenderList(filteredObjects) {
+        const flat = [];
+        const walk = (objects, depth) => {
+            objects.forEach(obj => {
+                flat.push({ obj, depth });
+                if (obj.type === 'group' && obj.children) {
+                    let isCollapsed = this.stateManager.get('outliner').collapsedGroups.has(obj.id);
+                    if (this.searchTerm) {
+                        const hasMatchingChildren = this.hasMatchingChildrenRecursive(obj.children, this.searchTerm);
+                        if (hasMatchingChildren) isCollapsed = false;
+                    }
+                    if (!isCollapsed) {
+                        const childrenToWalk = this.searchTerm
+                            ? SearchUtils.filterObjectsRecursive(obj.children, this.searchTerm, 'name', 'children')
+                            : obj.children;
+                        walk(childrenToWalk, depth + 1);
+                    }
+                }
+            });
+        };
+        walk(filteredObjects, 0);
+        return flat;
+    }
+
+    /**
+     * Keyed reconciliation: create/update/reposition/remove item DOM nodes so the container's
+     * children end up matching flatList exactly, reusing this._itemNodeCache entries (by
+     * object id) wherever possible instead of recreating them. insertBefore() on a node
+     * that's already in the document MOVES it rather than cloning, so already-correctly-
+     * positioned nodes cost a single reference check (no DOM op) and only actually
+     * new/reordered/removed nodes touch the DOM.
+     */
+    reconcileFlatList(container, flatList) {
+        const seen = new Set();
+        let anchor = this._searchResultsInfoNode || null;
+
+        flatList.forEach(({ obj, depth }) => {
+            seen.add(obj.id);
+            let node = this._itemNodeCache.get(obj.id);
+
+            node = obj.type === 'group'
+                ? this.renderGroupNode(obj, depth, node)
+                : this.renderObjectNode(obj, depth, node);
+
+            this._itemNodeCache.set(obj.id, node);
+
+            const expectedNext = anchor ? anchor.nextSibling : container.firstChild;
+            if (expectedNext !== node) {
+                container.insertBefore(node, expectedNext);
+            }
+            anchor = node;
+        });
+
+        this._itemNodeCache.forEach((node, id) => {
+            if (!seen.has(id)) {
+                node.remove();
+                this._itemNodeCache.delete(id);
+            }
         });
     }
 
+    // Same open/closed eye SVG paths LayersPanel uses, for visual consistency.
+    static VISIBILITY_ICON_OPEN = '<path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>';
+    static VISIBILITY_ICON_CLOSED = '<path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd"/><path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z"/>';
 
-    renderGroupNode(group, depth, container) {
-        const item = document.createElement('div');
-        item.className = 'outliner-item outliner-group-item';
-        item.style.paddingLeft = `calc(${5 + depth * 15}px * max(var(--spacing-scale, 1.0), 0))`;
-        item.style.display = 'flex';
-        item.style.alignItems = 'center';
+    /**
+     * Create a clickable "eye" visibility icon button (mirrors LayersPanel's eye icon).
+     * Toggles obj.visible via ObjectOperations.toggleObjectVisibility — the same method
+     * the H hotkey uses, so both stay in sync by construction. Looks up the current object
+     * by id at click time (like the click/dblclick handlers below), not by closing over the
+     * object reference, so a reused node stays correct after undo/redo.
+     * @param {HTMLElement} item - The row element (dataset.id is read at click time)
+     * @returns {HTMLElement}
+     */
+    createVisibilityButton(item) {
+        const btn = document.createElement('span');
+        btn.className = 'outliner-visibility-btn';
+        btn.style.flexShrink = '0';
+        btn.style.cursor = 'pointer';
+        btn.style.display = 'flex';
+        btn.style.alignItems = 'center';
+        btn.style.padding = '0 4px';
+        btn.innerHTML = '<svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"></svg>';
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const current = this.levelEditor.level.findObjectById(item.dataset.id);
+            if (!current) return;
+            if (e.ctrlKey || e.metaKey) {
+                // Solo (like Ctrl+click a layer's eye icon): hide every other top-level
+                // object; a soloed group's own children are unaffected (see
+                // ObjectOperations.toggleObjectSolo).
+                this.levelEditor.objectOperations.toggleObjectSolo(current);
+            } else {
+                this.levelEditor.objectOperations.toggleObjectVisibility(current);
+                this.levelEditor.objectOperations.afterVisibilityChange();
+            }
+        });
+        return btn;
+    }
+
+    /**
+     * Refresh a visibility button's icon/title and the row's name-display color, based on
+     * the object's actual current EFFECTIVE visibility (own/ancestor `visible` flags, layer
+     * visibility, Object Solo, Isolate — see ObjectOperations.isObjectEffectivelyVisible) and
+     * Object Solo state. Deliberately NOT based on `obj.visible` alone: a click on a
+     * DIFFERENT object's eye icon (soloing it) makes THIS object stop rendering too, without
+     * ever touching its own `visible` flag — the icon must reflect that. Shared by
+     * renderGroupNode/renderObjectNode.
+     */
+    updateVisibilityButton(visibilityBtn, nameSpan, obj) {
+        const objectOperations = this.levelEditor.objectOperations;
+        const soloedId = this.stateManager.get('view.soloedTopLevelObjectId');
+        const isSoloed = soloedId && objectOperations.findTopLevelAncestor(obj).id === soloedId;
+        const effectivelyVisible = objectOperations.isObjectEffectivelyVisible(obj);
+
+        visibilityBtn.title = isSoloed
+            ? 'Soloed — Ctrl+click to un-solo'
+            : (obj.visible ? 'Hide object (H, Ctrl+click to solo)' : 'Show object (H, Ctrl+click to solo)');
+        const svg = visibilityBtn.querySelector('svg');
+        if (svg) {
+            // `.outliner-item.selected *` forces `color !important` (see styles/main.css) —
+            // a plain `svg.style.color = ...` gets silently overridden while the row is
+            // selected, so the icon LOOKS unchanged until selection is cleared (e.g. by
+            // clicking the canvas). Match that !important with our own so solo/hidden
+            // color always wins regardless of selection state.
+            if (isSoloed) {
+                svg.style.setProperty('color', '#fbbf24', 'important');
+            } else if (!effectivelyVisible) {
+                svg.style.setProperty('color', '#6b7280', 'important');
+            } else {
+                svg.style.removeProperty('color');
+            }
+            svg.innerHTML = effectivelyVisible ? OutlinerPanel.VISIBILITY_ICON_OPEN : OutlinerPanel.VISIBILITY_ICON_CLOSED;
+        }
+        if (effectivelyVisible) {
+            nameSpan.style.removeProperty('color');
+        } else {
+            nameSpan.style.setProperty('color', '#6b7280', 'important');
+        }
+    }
+
+    /**
+     * Create (existingNode absent) or refresh (existingNode present) the DOM node for a group
+     * item. Click/dblclick handlers look up the current object by id at call time
+     * (level.findObjectById) rather than closing over `group` directly, so a reused node
+     * stays correct even after undo/redo replaces the underlying object reference.
+     */
+    renderGroupNode(group, depth, existingNode) {
+        let item, indicator, nameContainer, icon, nameSpan, nameInput, visibilityBtn;
+
+        if (!existingNode) {
+            item = document.createElement('div');
+            item.className = 'outliner-item outliner-group-item';
+            item.style.display = 'flex';
+            item.style.alignItems = 'center';
+
+            indicator = document.createElement('span');
+            indicator.className = 'outliner-collapse-indicator';
+            indicator.style.cursor = 'pointer';
+            indicator.style.userSelect = 'none';
+            indicator.style.color = '#666';
+            indicator.style.marginRight = 'calc(4px * max(var(--spacing-scale, 1.0), 0))';
+            indicator.style.pointerEvents = 'auto';
+            indicator.style.display = 'inline-block';
+            indicator.style.width = '12px';
+            indicator.style.textAlign = 'center';
+            indicator.style.flexShrink = '0';
+            indicator.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                this.toggleGroupCollapse(item.dataset.id);
+            });
+
+            nameContainer = document.createElement('div');
+            nameContainer.className = 'outliner-item-name-container';
+            nameContainer.style.flex = '1';
+            nameContainer.style.minWidth = '0';
+            nameContainer.style.display = 'flex';
+            nameContainer.style.alignItems = 'center';
+
+            icon = document.createElement('span');
+            icon.className = 'outliner-item-icon';
+            icon.textContent = this.getObjectIcon('group');
+            icon.style.marginRight = 'calc(4px * max(var(--spacing-scale, 1.0), 0))';
+            icon.style.flexShrink = '0';
+
+            nameSpan = document.createElement('span');
+            nameSpan.className = 'outliner-item-name-display';
+            nameSpan.style.flex = '1';
+            nameSpan.style.padding = 'calc(1px * max(var(--spacing-scale, 1.0), 0))';
+            nameSpan.style.borderRadius = '3px';
+            nameSpan.style.minWidth = '0';
+            nameSpan.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                const current = this.levelEditor.level.findObjectById(item.dataset.id);
+                if (current) this.startInlineRename(current);
+            });
+
+            nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.className = 'outliner-item-name-input';
+            nameInput.style.flex = '1';
+            nameInput.style.background = 'transparent';
+            nameInput.style.border = 'none';
+            nameInput.style.color = 'var(--ui-text-color, #d1d5db)';
+            nameInput.style.outline = 'none';
+            nameInput.style.padding = 'calc(1px * max(var(--spacing-scale, 1.0), 0))';
+            nameInput.style.borderRadius = '3px';
+            nameInput.style.minWidth = '0';
+            nameInput.style.display = 'none';
+
+            nameContainer.appendChild(icon);
+            nameContainer.appendChild(nameSpan);
+            nameContainer.appendChild(nameInput);
+            item.appendChild(indicator);
+            item.appendChild(nameContainer);
+
+            visibilityBtn = this.createVisibilityButton(item);
+            item.appendChild(visibilityBtn);
+
+            item.addEventListener('click', (e) => {
+                // Don't handle selection if right-click (context menu)
+                if (e.button === 2) return;
+                // Don't handle selection if clicked on collapse indicator
+                if (e.target.classList.contains('outliner-collapse-indicator')) return;
+                const current = this.levelEditor.level.findObjectById(item.dataset.id);
+                if (current) this.handleItemClick(e, current);
+            });
+        } else {
+            item = existingNode;
+            indicator = item.querySelector(':scope > .outliner-collapse-indicator');
+            nameContainer = item.querySelector(':scope > .outliner-item-name-container');
+            icon = nameContainer.querySelector('.outliner-item-icon');
+            nameSpan = nameContainer.querySelector('.outliner-item-name-display');
+            nameInput = nameContainer.querySelector('.outliner-item-name-input');
+            visibilityBtn = item.querySelector(':scope > .outliner-visibility-btn');
+        }
+
+        // --- Parts refreshed on every render, whether the node is new or reused ---
         item.dataset.id = group.id;
+        item.style.paddingLeft = `calc(${5 + depth * 15}px * max(var(--spacing-scale, 1.0), 0))`;
 
-        // Check if group is collapsed
         let isCollapsed = this.stateManager.get('outliner').collapsedGroups.has(group.id);
-        
-        // If searching and group has matching children, force it to be expanded
         if (this.searchTerm && group.children) {
             const hasMatchingChildren = this.hasMatchingChildrenRecursive(group.children, this.searchTerm);
-            if (hasMatchingChildren) {
-                isCollapsed = false;
-            }
+            if (hasMatchingChildren) isCollapsed = false;
         }
-
-        // Create collapse/expand indicator (first element)
-        const indicator = document.createElement('span');
-        indicator.className = 'outliner-collapse-indicator';
         indicator.textContent = isCollapsed ? '▶' : '▼';
-        indicator.style.cursor = 'pointer';
-        indicator.style.userSelect = 'none';
-        indicator.style.color = '#666';
-        indicator.style.marginRight = 'calc(4px * max(var(--spacing-scale, 1.0), 0))';
-        indicator.style.pointerEvents = 'auto';
-        indicator.style.display = 'inline-block';
-        indicator.style.width = '12px';
-        indicator.style.textAlign = 'center';
-        indicator.style.flexShrink = '0';
 
-        // Add click handler for collapse/expand (single click)
-        indicator.addEventListener('click', (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            this.toggleGroupCollapse(group.id);
-        });
-
-        // Create name container with display and input
-        const nameContainer = document.createElement('div');
-        nameContainer.className = 'outliner-item-name-container';
-        nameContainer.style.flex = '1';
-        nameContainer.style.minWidth = '0';
-        nameContainer.style.display = 'flex';
-        nameContainer.style.alignItems = 'center';
-
-        // Create icon
-        const icon = document.createElement('span');
-        icon.className = 'outliner-item-icon';
-        icon.textContent = this.getObjectIcon('group');
-        icon.style.marginRight = 'calc(4px * max(var(--spacing-scale, 1.0), 0))';
-        icon.style.flexShrink = '0';
-
-        // Create display span with count
         const childCount = group.children ? group.children.length : 0;
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'outliner-item-name-display';
-        nameSpan.textContent = `${group.name || `[${group.type}]`}`;
-        if (childCount > 0) {
-            nameSpan.textContent += ` (${childCount})`;
+        let nameText = `${group.name || `[${group.type}]`}`;
+        if (childCount > 0) nameText += ` (${childCount})`;
+        nameSpan.textContent = nameText;
+        // Don't clobber the input while the user is actively editing it inline.
+        if (document.activeElement !== nameInput) {
+            nameInput.value = group.name || '';
         }
-        nameSpan.style.flex = '1';
-        nameSpan.style.padding = 'calc(1px * max(var(--spacing-scale, 1.0), 0))';
-        nameSpan.style.borderRadius = '3px';
-        nameSpan.style.minWidth = '0';
-
-        // Create input element
-        const nameInput = document.createElement('input');
-        nameInput.type = 'text';
         nameInput.id = `group-name-input-${group.id}`;
-        nameInput.name = `group-name-input-${group.id}`;
-        nameInput.value = group.name || '';
-        nameInput.className = 'outliner-item-name-input';
-        nameInput.style.flex = '1';
-        nameInput.style.background = 'transparent';
-        nameInput.style.border = 'none';
-        nameInput.style.color = 'var(--ui-text-color, #d1d5db)';
-        nameInput.style.outline = 'none';
-        nameInput.style.padding = 'calc(1px * max(var(--spacing-scale, 1.0), 0))';
-        nameInput.style.borderRadius = '3px';
-        nameInput.style.minWidth = '0';
-        nameInput.style.display = 'none';
+        nameInput.name = nameInput.id;
 
-        // Add double-click handler for inline rename
-        nameSpan.addEventListener('dblclick', (e) => {
-            e.stopPropagation();
-            this.startInlineRename(group);
-        });
+        this.updateVisibilityButton(visibilityBtn, nameSpan, group);
 
-        nameContainer.appendChild(icon);
-        nameContainer.appendChild(nameSpan);
-        nameContainer.appendChild(nameInput);
-
-        item.appendChild(indicator);
-        item.appendChild(nameContainer);
-        
-        // Check if object is in a locked layer
         const effectiveLayerId = this.levelEditor.renderOperations ?
             this.levelEditor.renderOperations.getEffectiveLayerId(group) :
             (group.layerId || this.levelEditor.level.getMainLayerId());
         const layer = this.levelEditor.level.getLayerById(effectiveLayerId);
-        
         if (layer && layer.locked) {
             item.classList.add('locked');
             item.style.opacity = '0.5';
             item.style.cursor = 'not-allowed';
             item.title = 'Object is in locked layer';
+        } else {
+            item.classList.remove('locked');
+            item.style.opacity = '';
+            item.style.cursor = '';
+            item.title = '';
         }
-        
-        if (this.stateManager.get('selectedObjects').has(group.id)) {
-            item.classList.add('selected');
-        }
-        
-        item.addEventListener('click', (e) => {
-            // Don't handle selection if right-click (context menu)
-            if (e.button === 2) return;
-            
-            // Don't handle selection if clicked on collapse indicator
-            if (e.target.classList.contains('outliner-collapse-indicator')) {
-                return;
-            }
-            this.handleItemClick(e, group);
-        });
-        
-        container.appendChild(item);
 
-        // Render children only if group is not collapsed
-        if (!isCollapsed && group.children) {
-            if (this.searchTerm) {
-                // When searching, use recursive filtering to find matching children at any depth
-                const matchingChildren = SearchUtils.filterObjectsRecursive(group.children, this.searchTerm, 'name', 'children');
-                matchingChildren.forEach(child => {
-                    if (child.type === 'group') {
-                        this.renderGroupNode(child, depth + 1, container);
-                    } else {
-                        this.renderObjectNode(child, depth + 1, container);
-                    }
-                });
-            } else {
-                // When not searching, show all children
-                group.children.forEach(child => {
-                    if (child.type === 'group') {
-                        this.renderGroupNode(child, depth + 1, container);
-                    } else {
-                        this.renderObjectNode(child, depth + 1, container);
-                    }
-                });
-            }
-        }
+        item.classList.toggle('selected', this.stateManager.get('selectedObjects').has(group.id));
+
+        return item;
     }
 
-    renderObjectNode(obj, depth, container) {
-        const item = document.createElement('div');
-        item.className = 'outliner-item';
-        item.style.paddingLeft = `calc(${5 + depth * 15}px * max(var(--spacing-scale, 1.0), 0))`;
-        item.style.display = 'flex';
-        item.style.alignItems = 'center';
+    /**
+     * Create (existingNode absent) or refresh (existingNode present) the DOM node for a
+     * non-group object item. See renderGroupNode for the id-lookup-at-click-time rationale.
+     */
+    renderObjectNode(obj, depth, existingNode) {
+        let item, nameContainer, icon, nameSpan, nameInput, visibilityBtn;
 
-        // Create name container with display and input
-        const nameContainer = document.createElement('div');
-        nameContainer.className = 'outliner-item-name-container';
-        nameContainer.style.flex = '1';
-        nameContainer.style.minWidth = '0';
-        nameContainer.style.display = 'flex';
-        nameContainer.style.alignItems = 'center';
+        if (!existingNode) {
+            item = document.createElement('div');
+            item.className = 'outliner-item';
+            item.style.display = 'flex';
+            item.style.alignItems = 'center';
+            item.dataset.id = obj.id;
 
-        // Create icon
-        const icon = document.createElement('span');
-        icon.className = 'outliner-item-icon';
-        icon.textContent = this.getObjectIcon(obj.type);
-        icon.style.marginRight = 'calc(4px * max(var(--spacing-scale, 1.0), 0))';
-        icon.style.flexShrink = '0';
+            nameContainer = document.createElement('div');
+            nameContainer.className = 'outliner-item-name-container';
+            nameContainer.style.flex = '1';
+            nameContainer.style.minWidth = '0';
+            nameContainer.style.display = 'flex';
+            nameContainer.style.alignItems = 'center';
 
-        // Create display span
-        const nameSpan = document.createElement('span');
-        nameSpan.className = 'outliner-item-name-display';
-        nameSpan.textContent = obj.name || `[${obj.type}]`;
-        nameSpan.style.flex = '1';
-        nameSpan.style.padding = 'calc(1px * max(var(--spacing-scale, 1.0), 0))';
-        nameSpan.style.borderRadius = '3px';
-        nameSpan.style.minWidth = '0';
+            icon = document.createElement('span');
+            icon.className = 'outliner-item-icon';
+            icon.style.marginRight = 'calc(4px * max(var(--spacing-scale, 1.0), 0))';
+            icon.style.flexShrink = '0';
 
-        // Create input element
-        const nameInput = document.createElement('input');
-        nameInput.type = 'text';
-        nameInput.id = `object-name-input-${obj.id}`;
-        nameInput.name = `object-name-input-${obj.id}`;
-        nameInput.value = obj.name || '';
-        nameInput.className = 'outliner-item-name-input';
-        nameInput.style.flex = '1';
-        nameInput.style.background = 'transparent';
-        nameInput.style.border = 'none';
-        nameInput.style.color = 'var(--ui-text-color, #d1d5db)';
-        nameInput.style.outline = 'none';
-        nameInput.style.padding = 'calc(1px * max(var(--spacing-scale, 1.0), 0))';
-        nameInput.style.borderRadius = '3px';
-        nameInput.style.minWidth = '0';
-        nameInput.style.display = 'none';
+            nameSpan = document.createElement('span');
+            nameSpan.className = 'outliner-item-name-display';
+            nameSpan.style.flex = '1';
+            nameSpan.style.padding = 'calc(1px * max(var(--spacing-scale, 1.0), 0))';
+            nameSpan.style.borderRadius = '3px';
+            nameSpan.style.minWidth = '0';
+            nameSpan.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                const current = this.levelEditor.level.findObjectById(item.dataset.id);
+                if (current) this.startInlineRename(current);
+            });
 
-        // Add double-click handler for inline rename
-        nameSpan.addEventListener('dblclick', (e) => {
-            e.stopPropagation();
-            this.startInlineRename(obj);
-        });
+            nameInput = document.createElement('input');
+            nameInput.type = 'text';
+            nameInput.className = 'outliner-item-name-input';
+            nameInput.style.flex = '1';
+            nameInput.style.background = 'transparent';
+            nameInput.style.border = 'none';
+            nameInput.style.color = 'var(--ui-text-color, #d1d5db)';
+            nameInput.style.outline = 'none';
+            nameInput.style.padding = 'calc(1px * max(var(--spacing-scale, 1.0), 0))';
+            nameInput.style.borderRadius = '3px';
+            nameInput.style.minWidth = '0';
+            nameInput.style.display = 'none';
 
-        nameContainer.appendChild(icon);
-        nameContainer.appendChild(nameSpan);
-        nameContainer.appendChild(nameInput);
+            nameContainer.appendChild(icon);
+            nameContainer.appendChild(nameSpan);
+            nameContainer.appendChild(nameInput);
+            item.appendChild(nameContainer);
 
-        item.appendChild(nameContainer);
+            visibilityBtn = this.createVisibilityButton(item);
+            item.appendChild(visibilityBtn);
+
+            item.addEventListener('click', (e) => {
+                if (e.button === 2) return;
+                const current = this.levelEditor.level.findObjectById(item.dataset.id);
+                if (current) this.handleItemClick(e, current);
+            });
+        } else {
+            item = existingNode;
+            nameContainer = item.querySelector(':scope > .outliner-item-name-container');
+            icon = nameContainer.querySelector('.outliner-item-icon');
+            nameSpan = nameContainer.querySelector('.outliner-item-name-display');
+            nameInput = nameContainer.querySelector('.outliner-item-name-input');
+            visibilityBtn = item.querySelector(':scope > .outliner-visibility-btn');
+        }
+
+        // --- Parts refreshed on every render, whether the node is new or reused ---
         item.dataset.id = obj.id;
-        
-        // Check if object is in a locked layer
+        item.style.paddingLeft = `calc(${5 + depth * 15}px * max(var(--spacing-scale, 1.0), 0))`;
+        icon.textContent = this.getObjectIcon(obj.type);
+        nameSpan.textContent = obj.name || `[${obj.type}]`;
+        if (document.activeElement !== nameInput) {
+            nameInput.value = obj.name || '';
+        }
+        nameInput.id = `object-name-input-${obj.id}`;
+        nameInput.name = nameInput.id;
+
+        this.updateVisibilityButton(visibilityBtn, nameSpan, obj);
+
         const effectiveLayerId = this.levelEditor.renderOperations ?
             this.levelEditor.renderOperations.getEffectiveLayerId(obj) :
             (obj.layerId || this.levelEditor.level.getMainLayerId());
         const layer = this.levelEditor.level.getLayerById(effectiveLayerId);
-        
         if (layer && layer.locked) {
             item.classList.add('locked');
             item.style.opacity = '0.5';
             item.style.cursor = 'not-allowed';
             item.title = 'Object is in locked layer';
+        } else {
+            item.classList.remove('locked');
+            item.style.opacity = '';
+            item.style.cursor = '';
+            item.title = '';
         }
-        
-        if (this.stateManager.get('selectedObjects').has(obj.id)) {
-            item.classList.add('selected');
-        }
-        
-        item.addEventListener('click', (e) => {
-            // Don't handle selection if right-click (context menu)
-            if (e.button === 2) return;
-            this.handleItemClick(e, obj);
-        });
-        
-        container.appendChild(item);
+
+        item.classList.toggle('selected', this.stateManager.get('selectedObjects').has(obj.id));
+
+        return item;
     }
 
     // Note: handleObjectClick, handleShiftClick, handleCtrlClick methods removed

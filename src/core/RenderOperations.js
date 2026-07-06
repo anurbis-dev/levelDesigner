@@ -383,19 +383,53 @@ export class RenderOperations extends BaseModule {
         
         // Draw objects with frustum culling
         const groupEditMode = this.editor.stateManager.get('groupEditMode');
-        // Already sorted by stacking order (ascending = drawn first = behind); sort result is
-        // cached alongside the visibility cache entry and shares its invalidation,
-        // so it doesn't need to be recomputed on every render() call.
         const sortedObjects = this.getVisibleObjects(camera);
+
+        // In group edit mode, compute selectable + excluded sets once for grayscale pass.
+        // Dimming rule (applied per top-level object, which renders its whole subtree):
+        //   - NOT dimmed: objects in selectableSet (direct children of active group, external selectable)
+        //   - NOT dimmed: excluded (active group itself + its ancestors) — they contain the
+        //                 active group's content which must render normally
+        //   - DIMMED:     everything else (non-selectable external objects, non-selectable layers)
+        let selectableSet = null;
+        let excludedSet = null;
+        if (groupEditMode && groupEditMode.isActive) {
+            selectableSet = this.editor.objectOperations.computeSelectableSet();
+            excludedSet   = this.editor.objectOperations._buildGroupEditExclusionSet();
+        }
+
+        // Isolate mode (`/`, see ObjectOperations.toggleIsolateSelection): dim every
+        // top-level object/group that isn't part of the isolated branch. Reuses the same
+        // dim treatment as group-edit-mode above rather than a separate hide mechanism.
+        const isolatedTopLevelIds = this.editor.stateManager.get('view.isolatedTopLevelIds');
+
+        // Object Solo (Ctrl+click an eye icon in the Outliner, see ObjectOperations.
+        // toggleObjectSolo): unlike Isolate, this is a real hide (not a dim) of every other
+        // top-level object, matching the eye-icon affordance. Filtering only at the top level
+        // means a soloed group's own children render exactly as normal — no special-casing
+        // needed for "the group's children stay visible".
+        const soloedTopLevelObjectId = this.editor.stateManager.get('view.soloedTopLevelObjectId');
+
+        const ctx = this.editor.canvasRenderer.ctx;
 
         // Check if parallax mode is enabled
         if (this.parallaxRenderer.isParallaxEnabled()) {
             // For parallax, we need to convert back to simple objects for compatibility
-            const simpleObjects = sortedObjects.map(item => item.obj);
+            const soloFiltered = soloedTopLevelObjectId
+                ? sortedObjects.filter(item => item.obj.id === soloedTopLevelObjectId)
+                : sortedObjects;
+            const simpleObjects = soloFiltered.map(item => item.obj);
             this.parallaxRenderer.renderParallaxObjects(simpleObjects, camera);
         } else {
             sortedObjects.forEach(item => {
+                const id = item.obj.id;
+                if (soloedTopLevelObjectId && id !== soloedTopLevelObjectId) return;
+                const dimmedByGroupEdit = selectableSet && !selectableSet.has(id) && !excludedSet.has(id);
+                const dimmedByIsolate = isolatedTopLevelIds && !isolatedTopLevelIds.has(id);
+                const dimmed = dimmedByGroupEdit || dimmedByIsolate;
+                if (dimmed) ctx.filter = 'grayscale(1) opacity(0.4)';
                 this.editor.canvasRenderer.drawObject(item.obj, item.parentX, item.parentY);
+                if (dimmed) ctx.filter = 'none';
             });
         }
         
@@ -508,7 +542,7 @@ export class RenderOperations extends BaseModule {
 
                     // Special visual feedback for Alt+drag in group edit mode
                     if (mouse.altKey && mouse.isDragging && this.editor.objectOperations.isObjectInGroup(obj, groupEditMode.group)) {
-                        this.drawAltDragSelectionRect(bounds, camera);
+                        this.drawAltDragSelectionRect(obj, bounds, camera);
                     } else {
                         this.drawObjectSelectionRect(obj, bounds, camera);
                     }
@@ -585,8 +619,12 @@ export class RenderOperations extends BaseModule {
         ctx.restore();
     }
 
-    drawAltDragSelectionRect(bounds, camera) {
-        this.strokeFrame(bounds, camera, { color: '#FF6B6B', width: 3, dash: [8, 4] });
+    drawAltDragSelectionRect(obj, bounds, camera) {
+        const geometry = WorldPositionUtils.getFrameGeometry(obj, this.editor.level.objects);
+        const cx = (bounds.minX + bounds.maxX) / 2;
+        const cy = (bounds.minY + bounds.maxY) / 2;
+        const rect = { minX: cx - geometry.halfW, minY: cy - geometry.halfH, maxX: cx + geometry.halfW, maxY: cy + geometry.halfH };
+        this.strokeFrame(rect, camera, { color: '#FF6B6B', width: 3, dash: [8, 4] }, geometry.rotationDeg);
     }
 
     /**
@@ -641,8 +679,21 @@ export class RenderOperations extends BaseModule {
 
         group.children.forEach(child => {
             if (child.type === 'group') {
+                // Fill the child's true (rotated) footprint, not its axis-aligned AABB:
+                // same center-plus-frame-geometry approach as drawObjectSelectionRect
                 const bounds = this.editor.objectOperations.getObjectWorldBounds(child);
-                ctx.fillRect(bounds.minX, bounds.minY, bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
+                const geometry = WorldPositionUtils.getFrameGeometry(child, this.editor.level.objects);
+                const cx = (bounds.minX + bounds.maxX) / 2;
+                const cy = (bounds.minY + bounds.maxY) / 2;
+                if (geometry.rotationDeg) {
+                    ctx.save();
+                    ctx.translate(cx, cy);
+                    ctx.rotate(geometry.rotationDeg * Math.PI / 180);
+                    ctx.fillRect(-geometry.halfW, -geometry.halfH, geometry.halfW * 2, geometry.halfH * 2);
+                    ctx.restore();
+                } else {
+                    ctx.fillRect(cx - geometry.halfW, cy - geometry.halfH, geometry.halfW * 2, geometry.halfH * 2);
+                }
                 // Each recursive call does its own save/restore and restores ctx back to our fillStyle
                 this.drawHierarchyHighlightForGroup(child, depth + 1);
             }
@@ -672,8 +723,14 @@ export class RenderOperations extends BaseModule {
         const visibleLayers = new Set();
         const layers = this.editor.level.getLayersSorted();
 
-        layers.forEach(layer => {
-            if (layer.visible) {
+        // Solo (Ctrl+click a layer's eye icon in LayersPanel): if any layer is soloed,
+        // only soloed layer(s) render, regardless of their own `visible` flag — non-
+        // destructive, `layer.soloed` is a transient UI aid, never touches `layer.visible`.
+        const soloedLayers = layers.filter(layer => layer.soloed);
+        const layersToCheck = soloedLayers.length > 0 ? soloedLayers : layers;
+
+        layersToCheck.forEach(layer => {
+            if (soloedLayers.length > 0 || layer.visible) {
                 visibleLayers.add(layer.id);
             }
         });
@@ -940,24 +997,28 @@ export class RenderOperations extends BaseModule {
         // own rotation is known directly, no ancestor lookup needed) instead of just the
         // axis-aligned conservative box.
         objects.forEach(obj => {
-            const bounds = this.getDuplicateObjectBounds(obj);
-            if (bounds) {
-                const isGroup = obj.type === 'group';
-                const color = isGroup
-                    ? (this.editor.stateManager.get('selection.groupOutlineColor') || '#3B82F6')
-                    : (this.editor.stateManager.get('selection.outlineColor') || '#3B82F6');
-                const width = isGroup
-                    ? (this.editor.stateManager.get('selection.groupOutlineWidth') || 4)
-                    : (this.editor.stateManager.get('selection.outlineWidth') || 2);
+            const isGroup = obj.type === 'group';
+            const color = isGroup
+                ? (this.editor.stateManager.get('selection.groupOutlineColor') || '#3B82F6')
+                : (this.editor.stateManager.get('selection.outlineColor') || '#3B82F6');
+            const width = isGroup
+                ? (this.editor.stateManager.get('selection.groupOutlineWidth') || 4)
+                : (this.editor.stateManager.get('selection.outlineWidth') || 2);
 
-                if (!isGroup && obj.rotation) {
-                    const cx = (bounds.minX + bounds.maxX) / 2;
-                    const cy = (bounds.minY + bounds.maxY) / 2;
-                    const halfW = (obj.width || 0) / 2;
-                    const halfH = (obj.height || 0) / 2;
+            if (obj.rotation) {
+                // For rotated objects, get unrotated bounds and rotate the frame
+                const rawBounds = this.getDuplicateObjectBounds(obj, 0, 0, true);
+                if (rawBounds) {
+                    const cx = (rawBounds.minX + rawBounds.maxX) / 2;
+                    const cy = (rawBounds.minY + rawBounds.maxY) / 2;
+                    const halfW = isGroup ? ((rawBounds.maxX - rawBounds.minX) / 2) : ((obj.width || 0) / 2);
+                    const halfH = isGroup ? ((rawBounds.maxY - rawBounds.minY) / 2) : ((obj.height || 0) / 2);
                     const rect = { minX: cx - halfW, minY: cy - halfH, maxX: cx + halfW, maxY: cy + halfH };
-                    this.strokeFrame(rect, camera, { color, width, dash: [] }, obj.rotation);
-                } else {
+                    this.strokeFrame(rect, camera, { color, width, dash: isGroup ? [5, 5] : [] }, obj.rotation);
+                }
+            } else {
+                const bounds = this.getDuplicateObjectBounds(obj);
+                if (bounds) {
                     this.strokeFrame(bounds, camera, { color, width, dash: isGroup ? [5, 5] : [] });
                 }
             }
@@ -970,28 +1031,58 @@ export class RenderOperations extends BaseModule {
     }
 
     /**
-     * Draw hierarchy highlight for duplicate groups (uses direct bounds calculation)
+     * Draw hierarchy highlight for duplicate groups (uses direct bounds calculation).
+     * Mirrors drawDuplicateObject's ctx-rotation nesting so the highlight fills land
+     * exactly on the (possibly rotated) rendered children; each nested group's own
+     * footprint is filled as its EXACT unrotated rect rotated as a rigid body, not a
+     * conservative axis-aligned AABB.
      */
     drawDuplicateHierarchyHighlight(group, depth = 0, parentX = 0, parentY = 0) {
+        if (!group || !group.children) return;
+
         const baseColor = this.editor.stateManager.get('selection.hierarchyHighlightColor') || '#3B82F6';
         const maxAlpha = 0.25;
         const decay = 0.6;
         const alpha = Math.max(0, maxAlpha * Math.pow(decay, depth));
 
-        if (!group || !group.children) return;
-
         const groupAbsX = parentX + group.x;
         const groupAbsY = parentY + group.y;
 
-        // One save/restore per depth level — fillStyle is constant within a depth
         const ctx = this.editor.canvasRenderer.ctx;
         ctx.save();
+
+        // Enter this group's rotated frame (same pivot as drawDuplicateObject) so all
+        // plain child coordinates below land where the preview actually rendered them
+        const groupRotation = group.rotation || 0;
+        if (groupRotation) {
+            const b = this.getDuplicateObjectBounds(group, parentX, parentY);
+            const cx = (b.minX + b.maxX) / 2;
+            const cy = (b.minY + b.maxY) / 2;
+            ctx.translate(cx, cy);
+            ctx.rotate(groupRotation * Math.PI / 180);
+            ctx.translate(-cx, -cy);
+        }
+
         ctx.fillStyle = RenderUtils.hexToRgba(baseColor, alpha);
 
         group.children.forEach(child => {
             if (child.type === 'group') {
-                const bounds = this.getDuplicateObjectBounds(child, groupAbsX, groupAbsY);
-                ctx.fillRect(bounds.minX, bounds.minY, bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
+                // Exact footprint: unrotated rect rotated by the child's own rotation
+                // (deeper descendants' rotations are handled by the recursion below)
+                const raw = this.getDuplicateObjectBounds(child, groupAbsX, groupAbsY, true);
+                const childRotation = child.rotation || 0;
+                if (childRotation) {
+                    const cx = (raw.minX + raw.maxX) / 2;
+                    const cy = (raw.minY + raw.maxY) / 2;
+                    ctx.save();
+                    ctx.translate(cx, cy);
+                    ctx.rotate(childRotation * Math.PI / 180);
+                    ctx.translate(-cx, -cy);
+                    ctx.fillRect(raw.minX, raw.minY, raw.maxX - raw.minX, raw.maxY - raw.minY);
+                    ctx.restore();
+                } else {
+                    ctx.fillRect(raw.minX, raw.minY, raw.maxX - raw.minX, raw.maxY - raw.minY);
+                }
                 // Each recursive call does its own save/restore and restores ctx back to our fillStyle
                 this.drawDuplicateHierarchyHighlight(child, depth + 1, groupAbsX, groupAbsY);
             }
@@ -1005,12 +1096,15 @@ export class RenderOperations extends BaseModule {
      * Rotation-aware: duplicate previews are a detached subtree (not in level.objects), so
      * they can't go through WorldPositionUtils' DFS-from-root lookup — this mirrors the same
      * "local bounds per group, rotate as a whole, then shift" algorithm by hand instead.
+     * @param {boolean} skipOwnRotation - Return the rect BEFORE obj's own rotation is applied
+     *        (used to draw exact rotated fills/frames instead of the conservative AABB;
+     *        the rect's center is the same either way).
      */
-    getDuplicateObjectBounds(obj, parentX = 0, parentY = 0) {
+    getDuplicateObjectBounds(obj, parentX = 0, parentY = 0, skipOwnRotation = false) {
         if (obj.type !== 'group') {
             const absX = obj.x + parentX;
             const absY = obj.y + parentY;
-            return WorldPositionUtils.getRotatedRectAABB(absX, absY, obj.width || 0, obj.height || 0, obj.rotation || 0);
+            return WorldPositionUtils.getRotatedRectAABB(absX, absY, obj.width || 0, obj.height || 0, skipOwnRotation ? 0 : (obj.rotation || 0));
         }
 
         // Group object - union of children's bounds in THIS group's own local frame
@@ -1033,7 +1127,9 @@ export class RenderOperations extends BaseModule {
             bounds = { minX: obj.x, minY: obj.y, maxX: obj.x, maxY: obj.y };
         }
 
-        bounds = WorldPositionUtils.rotateBoundsAroundCenter(bounds, obj.rotation || 0);
+        if (!skipOwnRotation) {
+            bounds = WorldPositionUtils.rotateBoundsAroundCenter(bounds, obj.rotation || 0);
+        }
 
         // Shift from obj's-parent-relative frame to the caller's requested absolute position
         return {
@@ -1045,18 +1141,39 @@ export class RenderOperations extends BaseModule {
     }
 
     /**
-     * Draw single duplicate object recursively
+     * Draw single duplicate object recursively.
+     * Group rotation is applied via ctx transforms around the group's children-bounds
+     * center — the same pivot convention as CanvasRenderer.drawGroup, so a duplicated
+     * rotated group previews exactly like its original. (CanvasRenderer.drawGroup itself
+     * can't be reused here: duplicates are plain deep-cloned objects without Group's
+     * getBounds() method.)
      */
     drawDuplicateObject(obj, parentX = 0, parentY = 0) {
         const absX = obj.x + parentX;
         const absY = obj.y + parentY;
 
         if (obj.type === 'group') {
+            const rotation = obj.rotation || 0;
+            const ctx = this.editor.canvasRenderer.ctx;
+            if (rotation) {
+                const b = this.getDuplicateObjectBounds(obj, parentX, parentY);
+                const cx = (b.minX + b.maxX) / 2;
+                const cy = (b.minY + b.maxY) / 2;
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.rotate(rotation * Math.PI / 180);
+                ctx.translate(-cx, -cy);
+            }
+
             // Draw group children
             if (obj.children && obj.children.length > 0) {
                 obj.children.forEach(child => {
                     this.drawDuplicateObject(child, absX, absY);
                 });
+            }
+
+            if (rotation) {
+                ctx.restore();
             }
         } else {
             // Use standard object drawing method
@@ -1112,11 +1229,6 @@ export class RenderOperations extends BaseModule {
         // Get visible layer IDs for filtering
         const visibleLayerIds = this.getVisibleLayerIds();
 
-        this.editor.canvasRenderer.ctx.save();
-        this.editor.canvasRenderer.ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
-        this.editor.canvasRenderer.ctx.lineWidth = 1;
-        this.editor.canvasRenderer.ctx.setLineDash([2, 2]);
-
         // Only draw boundaries for visible top-level objects
         this.editor.level.objects.forEach(obj => {
             // Check if object is visible and in visible layer
@@ -1128,51 +1240,55 @@ export class RenderOperations extends BaseModule {
                 }
             }
         });
-
-        this.editor.canvasRenderer.ctx.restore();
     }
 
     /**
-     * Draw boundaries for a single object
+     * Draw the boundary for a single object, rotated to match its true on-screen
+     * orientation. Shares strokeFrame()/getFrameGeometry() with the selection outline
+     * (see drawObjectSelectionRect) so this debug overlay can never drift out of sync
+     * with what's actually rendered/selectable, unlike the old plain strokeRect(worldPos)
+     * which ignored rotation entirely.
      */
     drawSingleObjectBoundary(obj) {
-        const worldPos = this.editor.objectOperations.getObjectWorldPosition(obj);
-        const width = obj.width || 32;
-        const height = obj.height || 32;
-        
-        this.editor.canvasRenderer.ctx.strokeRect(
-            worldPos.x, 
-            worldPos.y, 
-            width, 
-            height
-        );
+        const bounds = this.editor.objectOperations.getObjectWorldBounds(obj);
+        const camera = this.editor.stateManager.get('camera');
+        const geometry = WorldPositionUtils.getFrameGeometry(obj, this.editor.level.objects);
+        const cx = (bounds.minX + bounds.maxX) / 2;
+        const cy = (bounds.minY + bounds.maxY) / 2;
+        const rect = { minX: cx - geometry.halfW, minY: cy - geometry.halfH, maxX: cx + geometry.halfW, maxY: cy + geometry.halfH };
+
+        this.strokeFrame(rect, camera, { color: 'rgba(0, 255, 0, 0.5)', width: 1, dash: [2, 2] }, geometry.rotationDeg);
+        this.drawHitTestArea(obj);
+    }
+
+    /**
+     * Debug overlay: the EXACT rectangle isPointInWorldBounds tests against (expanded by
+     * the current click tolerance), computed via the same WorldPositionUtils.getHitTestGeometry
+     * the real hit-test calls — so if this ever visually diverges from the green boundary
+     * above, that's a genuine bug in one of the two geometry computations, not a fluke of
+     * drawing them independently. Drawn as a plain expanded box (square corners); the real
+     * tolerance test is circular around the click point (see WorldPositionUtils._pointNearRect),
+     * so actual clicks near a corner are forgiven slightly less than this box implies.
+     */
+    drawHitTestArea(obj) {
+        const camera = this.editor.stateManager.get('camera');
+        const tolerance = this.editor.objectOperations.getHitTestTolerance();
+        const geom = WorldPositionUtils.getHitTestGeometry(obj, this.editor.level.objects);
+        const rect = {
+            minX: geom.cx - geom.halfW - tolerance,
+            minY: geom.cy - geom.halfH - tolerance,
+            maxX: geom.cx + geom.halfW + tolerance,
+            maxY: geom.cy + geom.halfH + tolerance
+        };
+
+        this.strokeFrame(rect, camera, { color: 'rgba(255, 165, 0, 0.9)', width: 1, dash: [1, 3] }, geom.rotationDeg);
     }
 
     /**
      * Draw boundaries for a group and its children
      */
     drawGroupBoundaries(group) {
-        // Get bounds same way as selection does
-        const bounds = this.editor.objectOperations.getObjectWorldBounds(group);
-        const camera = this.editor.stateManager.get('camera');
-
-        // Draw group boundary using exact same logic as drawSelectionRect
-        this.editor.canvasRenderer.ctx.save();
-
-        // Use object boundaries style instead of selection style
-        this.editor.canvasRenderer.ctx.strokeStyle = 'rgba(0, 255, 0, 0.5)';
-        this.editor.canvasRenderer.ctx.lineWidth = 1;
-        this.editor.canvasRenderer.ctx.setLineDash([2, 2]);
-
-        // Use exact same coordinates as selection (bounds.minX, bounds.minY, etc.)
-        this.editor.canvasRenderer.ctx.strokeRect(
-            bounds.minX,
-            bounds.minY,
-            bounds.maxX - bounds.minX,
-            bounds.maxY - bounds.minY
-        );
-
-        this.editor.canvasRenderer.ctx.restore();
+        this.drawSingleObjectBoundary(group);
 
         // Draw children boundaries
         if (group.children) {
@@ -1193,11 +1309,6 @@ export class RenderOperations extends BaseModule {
         // Get visible layer IDs for filtering
         const visibleLayerIds = this.getVisibleLayerIds();
 
-        this.editor.canvasRenderer.ctx.save();
-        this.editor.canvasRenderer.ctx.strokeStyle = 'rgba(255, 0, 0, 0.7)';
-        this.editor.canvasRenderer.ctx.lineWidth = 2;
-        this.editor.canvasRenderer.ctx.setLineDash([]);
-
         // Only draw collisions for visible top-level objects
         this.editor.level.objects.forEach(obj => {
             // Check if object is visible and in visible layer
@@ -1209,34 +1320,30 @@ export class RenderOperations extends BaseModule {
                 }
             }
         });
-
-        this.editor.canvasRenderer.ctx.restore();
     }
 
     /**
-     * Draw collision box for a single object
+     * Draw collision box for a single object, rotated to match its true on-screen
+     * orientation. Shares strokeFrame()/getFrameGeometry() with the selection outline
+     * and drawSingleObjectBoundary — see drawObjectSelectionRect.
      */
     drawSingleObjectCollision(obj) {
-        const worldPos = this.editor.objectOperations.getObjectWorldPosition(obj);
-        const width = obj.width || 32;
-        const height = obj.height || 32;
-        
-        // Draw collision box (same as boundary for now, but could be different)
-        this.editor.canvasRenderer.ctx.strokeRect(
-            worldPos.x, 
-            worldPos.y, 
-            width, 
-            height
-        );
-        
-        // Draw collision center point
-        this.editor.canvasRenderer.ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
-        this.editor.canvasRenderer.ctx.fillRect(
-            worldPos.x + width/2 - 2, 
-            worldPos.y + height/2 - 2, 
-            4, 
-            4
-        );
+        const bounds = this.editor.objectOperations.getObjectWorldBounds(obj);
+        const camera = this.editor.stateManager.get('camera');
+        const geometry = WorldPositionUtils.getFrameGeometry(obj, this.editor.level.objects);
+        const cx = (bounds.minX + bounds.maxX) / 2;
+        const cy = (bounds.minY + bounds.maxY) / 2;
+        const rect = { minX: cx - geometry.halfW, minY: cy - geometry.halfH, maxX: cx + geometry.halfW, maxY: cy + geometry.halfH };
+
+        this.strokeFrame(rect, camera, { color: 'rgba(255, 0, 0, 0.7)', width: 2, dash: [] }, geometry.rotationDeg);
+
+        // Center point (rotation-invariant, so no transform needed)
+        const ctx = this.editor.canvasRenderer.ctx;
+        ctx.save();
+        ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
+        const dotSize = 4 / camera.zoom;
+        ctx.fillRect(cx - dotSize / 2, cy - dotSize / 2, dotSize, dotSize);
+        ctx.restore();
     }
 
     /**

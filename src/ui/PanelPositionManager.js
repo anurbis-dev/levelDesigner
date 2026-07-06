@@ -245,7 +245,12 @@ export class PanelPositionManager {
                 // This will create panels if they don't exist
                 this.moveTab(tabName, 'temp', position);
             });
-            
+
+            // Restore intra-panel tab order (which was lost above, since moveTab always
+            // appends in tabPositions' fixed key order regardless of any previous drag reorder)
+            this.applyPanelTabOrder('left');
+            this.applyPanelTabOrder('right');
+
             // Remove temporary container
             this.removeTemporaryTabContainer();
             
@@ -407,11 +412,59 @@ export class PanelPositionManager {
         
         // Update event listeners for moved tabs
         this.updateTabEventListeners();
-        
+
         // Remove empty panel if needed
         this.removeEmptyPanel(fromPanel);
 
+        // Persist the resulting tab order for both panels (membership changed for both)
+        this.savePanelTabOrder(fromPanel);
+        this.savePanelTabOrder(toPanel);
+
         Logger.ui.info(`Tab ${tabName} moved from ${fromPanel} to ${toPanel}`);
+    }
+
+    /**
+     * Persist the current DOM tab order for a panel to stateManager/userPrefs
+     * @param {string} panelSide - 'left' or 'right' (anything else, e.g. 'temp', is ignored)
+     */
+    savePanelTabOrder(panelSide) {
+        if (this._initializing) return;
+        if (panelSide !== 'left' && panelSide !== 'right') return;
+
+        const panel = document.getElementById(`${panelSide}-tabs-panel`);
+        const tabsContainer = panel?.querySelector('.flex.border-b.border-gray-700');
+        if (!tabsContainer) return;
+
+        const order = Array.from(tabsContainer.children)
+            .map(tab => tab.dataset.tab)
+            .filter(Boolean);
+
+        const stateKey = panelSide === 'left' ? 'leftPanelTabOrder' : 'rightPanelTabOrder';
+        this.stateManager.set(stateKey, order);
+        if (this.userPrefs) {
+            this.userPrefs.set(stateKey, order);
+        }
+    }
+
+    /**
+     * Apply a previously saved tab order to a panel's DOM (called during initialization)
+     * @param {string} panelSide - 'left' or 'right'
+     */
+    applyPanelTabOrder(panelSide) {
+        const stateKey = panelSide === 'left' ? 'leftPanelTabOrder' : 'rightPanelTabOrder';
+        const savedOrder = this.userPrefs?.get(stateKey);
+        if (!Array.isArray(savedOrder) || savedOrder.length === 0) return;
+
+        const panel = document.getElementById(`${panelSide}-tabs-panel`);
+        const tabsContainer = panel?.querySelector('.flex.border-b.border-gray-700');
+        if (!tabsContainer) return;
+
+        savedOrder.forEach(tabName => {
+            const tab = tabsContainer.querySelector(`[data-tab="${tabName}"]`);
+            if (tab) tabsContainer.appendChild(tab);
+        });
+
+        this.stateManager.set(stateKey, savedOrder);
     }
 
     /**
@@ -827,39 +880,26 @@ export class PanelPositionManager {
     setupPanelResizer(resizer, panel, panelSide) {
         Logger.ui.info(`Setting up panel resizer for ${panelSide} panel...`);
         
-        // Get saved width from StateManager
+        // Use saved width only if it is a real positive value — treat 0 as "no width"
+        // so a newly-created panel always appears at a usable size even if the previous
+        // instance was collapsed (which leaves panels.${side}PanelWidth = 0 in state).
+        const defaultWidth = 300;
         const savedWidth = this.stateManager?.get(`panels.${panelSide}PanelWidth`) ?? null;
-        
-        if (savedWidth !== null && savedWidth !== undefined) {
-            if (savedWidth > 0) {
-                // Panel is expanded, use saved width as current
-                panel.style.width = savedWidth + 'px';
-            } else {
-                // Panel is collapsed
-                panel.style.width = '0px';
-            }
-            // Update resizer position
-            this.updateResizerPosition(panelSide, savedWidth);
-            panel.style.flexShrink = '0';
-            panel.style.flexGrow = '0';
-        } else {
-            // Set default width if no saved width
-            panel.style.width = previousWidth + 'px';
-            // Update resizer position
-            this.updateResizerPosition(panelSide, previousWidth);
-            if (panelSide === 'left') {
-                panel.style.flexShrink = '';
-                panel.style.flexGrow = '';
-            } else {
-                panel.style.flexShrink = '0';
-                panel.style.flexGrow = '0';
-            }
-            
-            // Save initial state to StateManager
-            if (this.stateManager) {
-                this.stateManager.set(`panels.${panelSide}PanelWidth`, previousWidth);
-                this.stateManager.set(`panels.${panelSide}PanelPreviousWidth`, previousWidth);
-            }
+        const useWidth = (savedWidth !== null && savedWidth !== undefined && savedWidth > 0)
+            ? savedWidth
+            : defaultWidth;
+
+        panel.style.width = useWidth + 'px';
+        panel.style.flexShrink = '0';
+        panel.style.flexGrow = '0';
+        this.updateResizerPosition(panelSide, useWidth);
+
+        if (this.stateManager) {
+            this.stateManager.set(`panels.${panelSide}PanelWidth`, useWidth);
+            this.stateManager.set(`panels.${panelSide}PanelPreviousWidth`, useWidth);
+        }
+        if (this.userPrefs) {
+            this.userPrefs.set(`${panelSide}PanelWidth`, useWidth);
         }
 
         // Unregister old handlers if they exist to prevent duplicates
@@ -880,6 +920,7 @@ export class PanelPositionManager {
         
         // Register with unified ResizerManager
         this.levelEditor.resizerManager.registerResizer(resizer, panel, panelSide, 'horizontal', onDoubleClick);
+        this.levelEditor.resizerManager.setCollapsed(resizer, useWidth <= 5);
 
         Logger.ui.debug(`Setup ${panelSide} panel resizer with unified ResizerManager`);
     }
@@ -929,6 +970,9 @@ export class PanelPositionManager {
         const panel = document.getElementById(`${panelSide}-tabs-panel`);
         if (!panel) return;
 
+        const resizer = document.getElementById(`resizer-${panelSide}-tabs-panel`);
+        this.levelEditor.resizerManager.setCollapsed(resizer, collapse);
+
         const stateKey = `panels.${panelSide}PanelWidth`;
         const prefKey = `${panelSide}PanelWidth`;
         const previousStateKey = `panels.${panelSide}PanelPreviousWidth`;
@@ -974,6 +1018,9 @@ export class PanelPositionManager {
     toggleAssetsPanelCollapse(collapse) {
         const panel = document.getElementById('assets-panel');
         if (!panel) return;
+
+        const resizer = document.getElementById('resizer-assets');
+        this.levelEditor.resizerManager.setCollapsed(resizer, collapse);
 
         const stateKey = 'panels.assetsPanelHeight';
         const prefKey = 'assetsPanelHeight';
@@ -1107,7 +1154,7 @@ export class PanelPositionManager {
             tab.classList.add('dragging');
             e.preventDefault();
 
-            this._installGlobalTabDragHandlers();
+            this._installGlobalTabDragHandlers(e.clientX, e.clientY);
         });
 
         tabContainer.addEventListener('selectstart', (e) => {
@@ -1118,39 +1165,47 @@ export class PanelPositionManager {
         Logger.ui.debug(`Setup tab dragging for panel ${panel.id}`);
     }
 
-    _installGlobalTabDragHandlers() {
+    _installGlobalTabDragHandlers(startClientX, startClientY) {
         if (this._globalTabDragInstalled) return;
         this._globalTabDragInstalled = true;
 
         const tabSelector = '.tab-right[data-tab], .tab-left[data-tab], .tab[data-tab]';
 
-        // ── Ghost element that follows the cursor ──
-        const ghost = document.createElement('div');
-        ghost.className = 'tab-drag-ghost';
-        ghost.textContent = this._pendingDrag?.tab?.textContent || '';
+        // ── Ghost element — clone of the real tab so it looks identical ──
+        const ghost = this._pendingDrag.tab.cloneNode(true);
+        ghost.classList.remove('active', 'dragging', 'tab-drag-over');
+        ghost.classList.add('tab-drag-ghost');
+        ghost.style.cssText = ''; // strip any inline overrides from the original
         document.body.appendChild(ghost);
         this._dragGhost = ghost;
 
-        // ── "Create new panel" drop zones for sides that have no panel yet ──
-        this._activeDropZones = this._createNewPanelDropZones();
+        // Position it under the cursor immediately (same offset the mousemove handler below
+        // uses) — otherwise, since .style.left/top are only ever set from a mousemove event,
+        // the ghost would sit at its unpositioned default (effectively the viewport's
+        // top-left corner) for as long as the user holds the mouse down without moving it.
+        ghost.style.left = (startClientX + 14) + 'px';
+        ghost.style.top  = (startClientY - 12) + 'px';
 
-        // Pre-collect ONLY the real tab-bar strips inside left/right panels.
-        // We use a Set so containment checks are O(1) and unambiguous —
-        // avoiding false positives from other '.flex.border-b.border-gray-700' elements.
-        const getValidTabBars = () => new Set(
-            Array.from(document.querySelectorAll(
-                '#left-tabs-panel > .flex.border-b.border-gray-700,' +
-                '#right-tabs-panel > .flex.border-b.border-gray-700'
-            ))
-        );
+        // ── Opposite panel is shown lazily, only once the cursor actually leaves ──
+        // the source panel's bounds (see _globalTabMouseMove below). A drag that
+        // never leaves the source panel is just a same-panel tab reorder, so it
+        // shouldn't auto-create/activate the other panel.
+        const srcPanel = this._pendingDrag.sourceContainer.closest('#left-tabs-panel, #right-tabs-panel');
+        const srcSide  = srcPanel?.id.includes('left') ? 'left' : 'right';
+        this._dragOtherSide = srcSide === 'left' ? 'right' : 'left';
+        this._dragCreatedPanel = null;
 
+        // Panel ids are unique, so matching via closest('#left-tabs-panel, #right-tabs-panel')
+        // is unambiguous on its own — no need to pre-scope by tab-bar CSS classes.
+        // Importantly, this treats the WHOLE panel (not just its header strip) as the drop
+        // target: a freshly-created empty panel has a zero-height tab bar (no children yet),
+        // so requiring the cursor to be exactly over that sliver made cross-panel drops
+        // to a new panel practically unhittable.
         const clearAllDragVisuals = () => {
-            // Only touch known valid tab bars — never random UI elements
-            getValidTabBars().forEach(c => {
-                c.querySelectorAll(tabSelector).forEach(t => t.classList.remove('tab-drag-over'));
-                c.classList.remove('tab-drop-zone');
-            });
-            (this._activeDropZones || []).forEach(z => z.el.classList.remove('tab-new-panel-zone--active'));
+            document.querySelectorAll(tabSelector).forEach(t => t.classList.remove('tab-drag-over'));
+            document.querySelectorAll('#left-tabs-panel, #right-tabs-panel').forEach(p =>
+                p.classList.remove('tab-panel--drag-over')
+            );
         };
 
         this._clearAllDragVisuals = clearAllDragVisuals;
@@ -1163,41 +1218,44 @@ export class PanelPositionManager {
 
             clearAllDragVisuals();
 
+            const sourceContainer = this._pendingDrag.sourceContainer;
+            const sourcePanel = sourceContainer.closest('#left-tabs-panel, #right-tabs-panel');
+
+            // Lazily show the opposite panel only once the cursor actually leaves the
+            // source panel's bounds — a same-panel reorder shouldn't activate it. If the
+            // ghost tab comes back home, undo the auto-created panel right away instead
+            // of waiting for mouseup.
+            if (sourcePanel) {
+                const rect = sourcePanel.getBoundingClientRect();
+                const insideSource = e.clientX >= rect.left && e.clientX <= rect.right &&
+                                      e.clientY >= rect.top && e.clientY <= rect.bottom;
+                if (!insideSource && !this._dragCreatedPanel &&
+                    !document.getElementById(`${this._dragOtherSide}-tabs-panel`)) {
+                    this.levelEditor.eventHandlers?.togglePanel(`${this._dragOtherSide}Panel`);
+                    this._dragCreatedPanel = this._dragOtherSide;
+                } else if (insideSource && this._dragCreatedPanel) {
+                    this.removeEmptyPanel(this._dragCreatedPanel);
+                    this._dragCreatedPanel = null;
+                }
+            }
+
             this._pendingDrag.tab.style.pointerEvents = 'none';
             const elUnder = document.elementFromPoint(e.clientX, e.clientY);
             this._pendingDrag.tab.style.pointerEvents = '';
 
             if (!elUnder) return;
 
-            // New-panel zones (coordinate check — zones are pointer-events:none)
-            let overNewZone = false;
-            (this._activeDropZones || []).forEach(z => {
-                const r = z.el.getBoundingClientRect();
-                if (e.clientX >= r.left && e.clientX <= r.right &&
-                    e.clientY >= r.top  && e.clientY <= r.bottom) {
-                    z.el.classList.add('tab-new-panel-zone--active');
-                    overNewZone = true;
-                }
-            });
-            if (overNewZone) return;
+            const targetPanel = elUnder.closest('#left-tabs-panel, #right-tabs-panel');
+            if (!targetPanel) return;
 
-            // Walk up from elUnder to find the nearest valid tab bar
-            const validBars = getValidTabBars();
-            let targetBar = null;
-            let el = elUnder;
-            while (el && el !== document.body) {
-                if (validBars.has(el)) { targetBar = el; break; }
-                el = el.parentElement;
-            }
-
-            if (targetBar && targetBar !== this._pendingDrag.sourceContainer) {
-                // Cursor is over the OTHER panel's tab bar
-                targetBar.classList.add('tab-drop-zone');
-            } else if (targetBar === this._pendingDrag.sourceContainer) {
+            if (targetPanel !== sourcePanel) {
+                // Cursor is anywhere over the OTHER panel — highlight it as the drop target
+                targetPanel.classList.add('tab-panel--drag-over');
+            } else {
                 // Same panel — show insertion hint on the sibling tab
                 const targetTab = elUnder.closest(tabSelector);
                 if (targetTab && targetTab !== this._pendingDrag.tab &&
-                    targetBar.contains(targetTab)) {
+                    sourceContainer.contains(targetTab)) {
                     targetTab.classList.add('tab-drag-over');
                 }
             }
@@ -1215,43 +1273,19 @@ export class PanelPositionManager {
             const elUnder = document.elementFromPoint(e.clientX, e.clientY);
             draggedTab.style.pointerEvents = '';
 
-            // ── New-panel drop zones ──
-            let handled = false;
-            (this._activeDropZones || []).forEach(z => {
-                if (handled) return;
-                const r = z.el.getBoundingClientRect();
-                if (e.clientX >= r.left && e.clientX <= r.right &&
-                    e.clientY >= r.top  && e.clientY <= r.bottom) {
-                    const tabName  = draggedTab.dataset.tab;
-                    const srcPanel = sourceContainer.closest('#left-tabs-panel, #right-tabs-panel');
+            if (elUnder) {
+                const srcPanel = sourceContainer.closest('#left-tabs-panel, #right-tabs-panel');
+                const tgtPanel = elUnder.closest('#left-tabs-panel, #right-tabs-panel');
+
+                if (tgtPanel && tgtPanel !== srcPanel) {
+                    // ── Cross-panel move — dropped anywhere over the other panel ──
+                    const tabName = draggedTab.dataset.tab;
                     if (tabName && srcPanel) {
-                        const fromPanel = srcPanel.id.includes('left') ? 'left' : 'right';
-                        this.moveTab(tabName, fromPanel, z.side);
-                    }
-                    handled = true;
-                }
-            });
-
-            if (!handled && elUnder) {
-                const validBars = getValidTabBars();
-                let targetBar = null;
-                let el = elUnder;
-                while (el && el !== document.body) {
-                    if (validBars.has(el)) { targetBar = el; break; }
-                    el = el.parentElement;
-                }
-
-                if (targetBar && targetBar !== sourceContainer) {
-                    // ── Cross-panel move to existing panel ──
-                    const tabName  = draggedTab.dataset.tab;
-                    const srcPanel = sourceContainer.closest('#left-tabs-panel, #right-tabs-panel');
-                    const tgtPanel = targetBar.closest('#left-tabs-panel, #right-tabs-panel');
-                    if (tabName && srcPanel && tgtPanel) {
                         const fromPanel = srcPanel.id.includes('left') ? 'left' : 'right';
                         const toPanel   = tgtPanel.id.includes('left') ? 'left' : 'right';
                         this.moveTab(tabName, fromPanel, toPanel);
                     }
-                } else if (targetBar === sourceContainer) {
+                } else if (tgtPanel && tgtPanel === srcPanel) {
                     // ── Same-panel reorder ──
                     const targetTab = elUnder.closest(tabSelector);
                     if (targetTab && targetTab !== draggedTab && sourceContainer.contains(targetTab)) {
@@ -1262,6 +1296,9 @@ export class PanelPositionManager {
                             sourceContainer.insertBefore(draggedTab, targetTab);
                         }
                         Logger.ui.debug(`Reordered tab ${draggedTab.dataset.tab} to position ${targetIndex}`);
+
+                        const srcSide = srcPanel.id.includes('left') ? 'left' : 'right';
+                        this.savePanelTabOrder(srcSide);
                     }
                 }
             }
@@ -1287,8 +1324,12 @@ export class PanelPositionManager {
             this._dragGhost.remove();
             this._dragGhost = null;
         }
-        (this._activeDropZones || []).forEach(z => z.el.remove());
-        this._activeDropZones = null;
+        // If we auto-showed the opposite panel for this drag and the tab never landed there,
+        // remove it again so we don't leave an empty panel behind.
+        if (this._dragCreatedPanel) {
+            this.removeEmptyPanel(this._dragCreatedPanel);
+            this._dragCreatedPanel = null;
+        }
         this._pendingDrag = null;
         this._removeGlobalTabDragHandlers();
     }
@@ -1303,37 +1344,6 @@ export class PanelPositionManager {
             this._globalTabMouseUp = null;
         }
         this._globalTabDragInstalled = false;
-    }
-
-    /**
-     * Create visual drop zones for panel sides that have no panel yet.
-     * Returns array of { el, side } objects; caller is responsible for removal.
-     * @private
-     */
-    _createNewPanelDropZones() {
-        const zones = [];
-        const mainContainer = document.querySelector('.flex.flex-grow.min-h-0.relative.z-10');
-        if (!mainContainer) return zones;
-
-        const rect = mainContainer.getBoundingClientRect();
-        const zoneW = 56; // px wide
-
-        ['left', 'right'].forEach(side => {
-            if (document.getElementById(`${side}-tabs-panel`)) return; // panel exists — no zone needed
-
-            const el = document.createElement('div');
-            el.className = 'tab-new-panel-zone';
-            el.innerHTML = `<span class="tab-new-panel-zone__label">${side === 'left' ? '◀' : '▶'}</span>`;
-            el.style.top    = rect.top + 'px';
-            el.style.height = rect.height + 'px';
-            el.style.width  = zoneW + 'px';
-            el.style.left   = (side === 'left' ? rect.left : rect.right - zoneW) + 'px';
-
-            document.body.appendChild(el);
-            zones.push({ el, side });
-        });
-
-        return zones;
     }
 
     /**
@@ -1519,12 +1529,14 @@ export class PanelPositionManager {
         
         // Register with unified ResizerManager
         this.levelEditor.resizerManager.registerResizer(
-            resizer, 
-            panel, 
-            'assets', 
+            resizer,
+            panel,
+            'assets',
             'vertical',
             onDoubleClick
         );
+        const savedSize = this.stateManager?.get('panels.assetsPanelHeight') ?? 256;
+        this.levelEditor.resizerManager.setCollapsed(resizer, savedSize <= 5);
 
         Logger.ui.debug('Setup assets panel resizer with unified ResizerManager');
     }

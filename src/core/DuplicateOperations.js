@@ -98,14 +98,27 @@ export class DuplicateOperations extends BaseModule {
         const clones = selected.map(obj => {
             const cloned = this.editor.deepClone(obj);
 
-            // Compute world position and group membership BEFORE reassigning IDs.
+            // Compute world placement and group membership BEFORE reassigning IDs.
             // At this point the clone still has the original ID and can be found in the
-            // level tree, so getObjectWorldPosition returns the correct world coords.
-            // After reassignIdsDeep the clone gets a new ID and the tree lookup fails,
-            // returning local coords instead — so we must cache these values now.
-            const wpos = this.editor.objectOperations.getObjectWorldPosition(cloned);
-            cloned._worldX = wpos.x;
-            cloned._worldY = wpos.y;
+            // level tree, so world-bounds/rotation lookups return the correct values.
+            // After reassignIdsDeep the clone gets a new ID and tree lookups fail —
+            // so we must cache these values now.
+            //
+            // The preview clone is DETACHED (rendered without its ancestor groups), so:
+            // 1) the rotation those ancestors would apply is baked into the clone itself,
+            //    making the preview look exactly like the original on screen;
+            // 2) the clone is anchored by its visual CENTER (the AABB center is invariant
+            //    to rotation): _worldX/_worldY = the detached position at which the
+            //    clone's center lands exactly on the original's rendered center.
+            const worldBounds = this.editor.objectOperations.getObjectWorldBounds(cloned);
+            const ancestorRotation = WorldPositionUtils.getAncestorRotation(cloned, this.editor.level.objects);
+            if (ancestorRotation) {
+                cloned.rotation = (cloned.rotation || 0) + ancestorRotation;
+            }
+
+            const detachedBounds = this.editor.renderOperations.getDuplicateObjectBounds(cloned, 0, 0);
+            cloned._worldX = cloned.x + ((worldBounds.minX + worldBounds.maxX) / 2 - (detachedBounds.minX + detachedBounds.maxX) / 2);
+            cloned._worldY = cloned.y + ((worldBounds.minY + worldBounds.maxY) / 2 - (detachedBounds.minY + detachedBounds.maxY) / 2);
 
             if (this.editor.objectOperations.isInGroupEditMode()) {
                 const gem = this.editor.objectOperations.getGroupEditMode();
@@ -286,16 +299,39 @@ export class DuplicateOperations extends BaseModule {
                             return;
                         }
                     }
-                    
-                    // Convert world coordinates to relative coordinates within the group
-                    // This matches the Alt+drag logic in MouseHandlers.dragSelectedObjects
-                    const groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
-                    base.x = worldX - groupPos.x;
-                    base.y = worldY - groupPos.y;
+
+                    // Convert the DETACHED preview position into group-local coordinates so
+                    // the placed child renders exactly where the preview was. Matched by the
+                    // clone's visual CENTER (the AABB center is invariant to rotation), and
+                    // the rotation the group chain will re-apply to its new child is undone
+                    // here — the preview carried it baked-in (see startFromSelection).
+                    const detachedBounds = this.editor.renderOperations.getDuplicateObjectBounds(base, 0, 0);
+                    const centerOffsetX = (detachedBounds.minX + detachedBounds.maxX) / 2 - base.x;
+                    const centerOffsetY = (detachedBounds.minY + detachedBounds.maxY) / 2 - base.y;
+
+                    const chainRotation = WorldPositionUtils.getAncestorRotation(groupEditMode.group, this.editor.level.objects)
+                        + (groupEditMode.group.rotation || 0);
+                    if (chainRotation) {
+                        let rot = ((base.rotation || 0) - chainRotation) % 360;
+                        if (rot > 180) rot -= 360;
+                        if (rot <= -180) rot += 360;
+                        base.rotation = rot;
+                    }
+
+                    const localCenter = WorldPositionUtils.worldPointToLocalPointInGroup(
+                        worldX + centerOffsetX, worldY + centerOffsetY,
+                        groupEditMode.group, this.editor.level.objects
+                    );
+                    base.x = localCenter.x - centerOffsetX;
+                    base.y = localCenter.y - centerOffsetY;
                 } else {
-                    // External object - keep world coordinates for main level placement
+                    // External object - place on main level, do not attach to the open group
                     base.x = worldX;
                     base.y = worldY;
+                    this.editor.level.addObject(base);
+                    newIds.add(base.id);
+                    this.editor.invalidateObjectCaches(base.id);
+                    return;
                 }
 
                 // FORCED INHERITANCE: Always inherit layerId from parent group
@@ -335,6 +371,14 @@ export class DuplicateOperations extends BaseModule {
         // Schedule full cache invalidation since multiple objects were added
         this.editor.scheduleCacheInvalidation();
 
+        // scheduleCacheInvalidation is debounced (~100ms) — without a synchronous
+        // invalidation the render() below hits the still-valid visibleObjectsCache entry
+        // and a spatial index that doesn't contain the just-placed objects, so they are
+        // not drawn for several frames right after the preview ghost disappears (visible
+        // blink at the drop position).
+        this.editor.renderOperations.clearVisibleObjectsCache();
+        this.editor.renderOperations.markSpatialIndexDirty();
+
         // Save state AFTER placing objects but BEFORE changing selection
         this.editor.historyManager.saveState(
             this.editor.level.objects, 
@@ -346,10 +390,11 @@ export class DuplicateOperations extends BaseModule {
         // Use the same reset method as cancel for consistency
         this.cancel();
 
-        // Set selection after state is saved
+        // Set selection after state is saved. Caches were already invalidated above (line
+        // 379-380), so the synchronous render this triggers (EventHandlers 'selectedObjects'
+        // subscriber) already sees fresh state — no separate render() call needed here.
         this.editor.stateManager.set('selectedObjects', newIds);
 
-        this.editor.render();
         this.editor.updateAllPanels();
         Logger.status.success(`Placed ${newIds.size} duplicate${newIds.size > 1 ? 's' : ''}`);
 

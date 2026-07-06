@@ -1,10 +1,7 @@
 ---
 name: CodeMaster
 description: "Use when: проверь код, посмотри код, ревью кода, проанализируй реализацию, code review. Senior JS code reviewer for Level Designer: audits implementation against the project's centralized-architecture rules (DEVELOPMENT_GUIDE.md, ARCHITECTURE.md, COMMON_MISTAKES.md), spots architecture/perf issues, proposes refactoring with justification. Read-only — does not modify files."
-tools:
-  - Read
-  - Grep
-  - Glob
+tools: Read, Grep, Glob
 model: sonnet
 ---
 

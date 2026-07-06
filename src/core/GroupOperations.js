@@ -1,6 +1,7 @@
 import { BaseModule } from './BaseModule.js';
 import { Group } from '../models/Group.js';
 import { Logger } from '../utils/Logger.js';
+import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
 
 /**
  * Group Operations module for LevelEditor
@@ -114,9 +115,6 @@ export class GroupOperations extends BaseModule {
                 this.editor.stateManager.get('groupEditMode')
             );
 
-            // Clear the old selection and select only the new group
-            this.editor.stateManager.set('selectedObjects', new Set([newGroup.id]));
-
             // Selective cache invalidation to prevent coordinate glitches
             // Clear effective layer cache for all affected objects
             selectedTopLevelObjects.forEach(obj => {
@@ -127,7 +125,7 @@ export class GroupOperations extends BaseModule {
 
             // CRITICAL FIX: Clear all caches to prevent phantom object references
             this.editor.clearCaches();
-            
+
             // Clear visible objects cache only for current camera position
             this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
 
@@ -135,11 +133,11 @@ export class GroupOperations extends BaseModule {
             this.editor.renderOperations.invalidateSpatialIndex();
             this.editor.renderOperations.markSpatialIndexDirty();
 
-            
-            
-            // Refresh all UI panels and redraw the canvas
-            this.editor.render();
-            this.editor.updateAllPanels();
+            // Clear the old selection and select only the new group. set() synchronously
+            // fires the 'selectedObjects' subscriber (EventHandlers.setupStateListeners),
+            // which already calls render()+updateAllPanels() — calling them again here
+            // was a duplicate full render/panel pass on every group.
+            this.editor.stateManager.set('selectedObjects', new Set([newGroup.id]));
             Logger.status.success(`Grouped ${selectedTopLevelObjects.length} objects`);
         }
     }
@@ -167,9 +165,9 @@ export class GroupOperations extends BaseModule {
         this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
         this.editor.renderOperations.invalidateSpatialIndex();
 
+        // set() synchronously triggers the 'selectedObjects' subscriber, which already
+        // calls render()+updateAllPanels() — no separate call needed here.
         this.editor.stateManager.set('selectedObjects', new Set());
-        this.editor.render();
-        this.editor.updateAllPanels();
         Logger.status.info(`Editing group "${group.name || 'Group'}"`);
     }
 
@@ -215,9 +213,9 @@ export class GroupOperations extends BaseModule {
         this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
         this.editor.renderOperations.invalidateSpatialIndex();
 
+        // set() synchronously triggers the 'selectedObjects' subscriber, which already
+        // calls render()+updateAllPanels() — no separate call needed here.
         this.editor.stateManager.set('selectedObjects', new Set());
-        this.editor.render();
-        this.editor.updateAllPanels();
         Logger.status.info('Exited group edit mode');
     }
 
@@ -250,28 +248,23 @@ export class GroupOperations extends BaseModule {
         groupsToUngroup.forEach(group => {
             // CRITICAL FIX: Remove group from index BEFORE processing children
             this.editor.level.removeObjectFromIndex(group.id);
-            
-            // Convert children back to world coordinates and prepare them for "move"
-            group.children.forEach(child => {
-                child.x += group.x;
-                child.y += group.y;
-                newTopLevelObjects.push(child); // Collect children in separate array
-            });
 
-            // ✨ KEY STEP: Empty the group. 
-            // Now render, even if triggered, won't draw these children as child objects.
-            group.children = []; 
+            // Extract each child via extractObjectFromGroup so its exact visual transform
+            // (world position + rotation) is preserved even when the group itself is rotated.
+            // This also adds each child to the level as a top-level object.
+            const children = [...group.children];
+            children.forEach(child => {
+                // isTopLevelGroup: groupsToUngroup is already filtered to level-root groups
+                // above, so this skips the redundant O(level size) ancestor searches per child.
+                this.extractObjectFromGroup(group, child, { saveState: false, isTopLevelGroup: true });
+                newTopLevelObjects.push(child);
+            });
         });
 
         // Remove old (now empty) groups from main list
         this.editor.level.objects = this.editor.level.objects.filter(obj => {
             // Check if object is not one of our groups
             return !groupsToUngroup.some(group => group.id === obj.id);
-        });
-
-        // Add "freed" child objects to top level using addObject method
-        newTopLevelObjects.forEach(obj => {
-            this.editor.level.addObject(obj);
         });
 
         // Selective cache invalidation for ungrouping
@@ -286,9 +279,9 @@ export class GroupOperations extends BaseModule {
         // Invalidate spatial index since structure changed
         this.editor.renderOperations.invalidateSpatialIndex();
 
+        // set() synchronously triggers the 'selectedObjects' subscriber, which already
+        // calls render()+updateAllPanels() — no separate call needed here.
         this.editor.stateManager.set('selectedObjects', new Set());
-        this.editor.render();
-        this.editor.updateAllPanels();
         Logger.status.success(`Ungrouped ${groupsToUngroup.length} group${groupsToUngroup.length > 1 ? 's' : ''}`);
     }
 
@@ -304,56 +297,233 @@ export class GroupOperations extends BaseModule {
     }
 
     /**
-     * Extract single object from group and move it to parent level
-     * @param {Object} group - Group containing the object
-     * @param {Object} childObject - Object to extract from group
-     * @returns {boolean} - True if object was successfully extracted
+     * Capture the G-local pivot of `group` and every ROTATED ancestor above it, up to
+     * the root. MUST be called before any structural change (child add/remove) anywhere
+     * in that ancestor chain.
+     *
+     * Why the whole chain and not just `group`: applyGroupPivotCompensation(group, pOld)
+     * cancels drift for GROUP's OWN children by adjusting group.x/y — but that x/y
+     * adjustment is itself a "child moved" event from GROUP's PARENT's point of view
+     * (parent's own pivot = center of ITS children's bounds, one of which is `group`).
+     * Left uncompensated, a rotated grandparent (or higher) would visibly nudge its
+     * OTHER children whenever a nested group's structure changes below it.
+     *
+     * @param {Object} group - Starting group (included in the result if it has rotation)
+     * @param {Object} [options]
+     * @param {boolean} [options.isTopLevelGroup=false] - Skip the ancestor climb (each step
+     *   is an O(level size) tree search via _findParentGroup) when the caller already knows
+     *   `group` sits at the level root and therefore has no ancestors to capture.
+     * @returns {Array<{group, pOld, depth}>} innermost (group itself) → outermost
      */
-    extractObjectFromGroup(group, childObject) {
-        if (!group || !childObject || group.type !== 'group' || !group.children) {
-            return false;
+    _captureAncestorPivots(group, { isTopLevelGroup = false } = {}) {
+        const result = [];
+        if (group.rotation) {
+            result.push({ group, pOld: WorldPositionUtils.getGroupLocalPivot(group), depth: 0 });
+        }
+        if (isTopLevelGroup) return result;
+
+        let cur = this._findParentGroup(group);
+        let depth = 1;
+        while (cur) {
+            if (cur.rotation) {
+                result.push({ group: cur, pOld: WorldPositionUtils.getGroupLocalPivot(cur), depth });
+            }
+            cur = this._findParentGroup(cur);
+            depth++;
+        }
+        return result;
+    }
+
+    /**
+     * Merge multiple _captureAncestorPivots() results (e.g. a source group's chain and a
+     * target group's chain that share an ancestor), deduplicating by group id and
+     * ordering deepest-first — so a shared ancestor is compensated exactly once, after
+     * BOTH branches below it have already settled.
+     * @param {...Array<{group, pOld, depth}>} lists
+     */
+    _mergeAncestorPivots(...lists) {
+        const byId = new Map();
+        lists.flat().forEach(entry => {
+            if (!byId.has(entry.group.id)) byId.set(entry.group.id, entry);
+        });
+        return [...byId.values()].sort((a, b) => b.depth - a.depth);
+    }
+
+    /**
+     * Apply pivot compensation to each captured entry, in the given order (must be
+     * innermost/deepest → outermost — see _captureAncestorPivots).
+     */
+    _applyAncestorPivotCompensations(captured) {
+        captured.forEach(({ group, pOld }) => WorldPositionUtils.applyGroupPivotCompensation(group, pOld));
+    }
+
+    /**
+     * Extract single object from group, preserving its exact visual transform.
+     *
+     * Algorithm (worldPositionStays):
+     *  1. Capture child's world center + accumulated rotation BEFORE any tree change.
+     *  2. Capture G's and all its rotated ancestors' G-local pivots (for step 5).
+     *  3. Compute child's new local coords in destination (BEFORE removing — hierarchy intact).
+     *  4. Remove child from G.children.
+     *  5. Cascade pivot compensation up through G and its rotated ancestors, innermost
+     *     first, so nothing above G visibly drifts either.
+     *  6. Place child at computed destination coords.
+     *
+     * Pivot compensation formula (cancel (I−R)·Δ drift), applied per rotated ancestor:
+     *   G.x −= (1−cosθ)·Δx + sinθ·Δy
+     *   G.y −= −sinθ·Δx  + (1−cosθ)·Δy
+     * where Δ = P_new − P_old in G-local space.
+     *
+     * @param {Object}  group       - Direct parent group of childObject
+     * @param {Object}  childObject - Child to extract
+     * @param {Object}  [options]   - { saveState: boolean = true, isTopLevelGroup: boolean = false }
+     * @param {boolean} [options.isTopLevelGroup] - Set when the caller already knows `group`
+     *   sits at the level root (e.g. ungroupSelectedObjects, which only ever targets top-level
+     *   groups). Skips the ancestor-chain searches (_findParentGroup, full-tree position scan),
+     *   each an O(level size) walk, since a top-level group provably has no ancestors — avoids
+     *   O(children × level size) blowup when ungrouping a large group in a large level.
+     */
+    extractObjectFromGroup(group, childObject, { saveState = true, isTopLevelGroup = false } = {}) {
+        if (!group?.children?.some(c => c.id === childObject.id)) return false;
+
+        if (saveState) {
+            this.editor.historyManager.saveState(
+                this.editor.level.objects,
+                this.editor.stateManager.get('selectedObjects'),
+                false,
+                this.editor.stateManager.get('groupEditMode')
+            );
         }
 
-        // Check if object is actually in this group
-        if (!group.children.some(child => child.id === childObject.id)) {
-            return false;
+        // ── PHASE 1: read-only, tree intact ──────────────────────────────────────
+
+        // 1a. World center (rotation-invariant anchor) + total accumulated rotation.
+        // Scoping the search to `group`'s own subtree when it's known top-level is exactly
+        // equivalent to searching the whole level (group has no ancestors either way) but
+        // skips scanning unrelated sibling subtrees.
+        const positionSearchScope = isTopLevelGroup ? [group] : this.editor.level.objects;
+        const wt = WorldPositionUtils.getWorldCenterAndRotation(childObject, positionSearchScope);
+        const worldCX = wt.x;
+        const worldCY = wt.y;
+        const accRot  = wt.accumulatedRotation;
+
+        // 1b. Offset from child.x/y to its center (stable, doesn't depend on ancestry).
+        const lc = WorldPositionUtils.getLocalCenter(childObject);
+
+        // 1c. G's and all its rotated ancestors' pivots, before removal (for step 5).
+        const ancestorPivots = this._captureAncestorPivots(group, { isTopLevelGroup });
+
+        // 1d. Destination: parentGroup (if G is nested) or level root.
+        const parentGroup = isTopLevelGroup ? null : this._findParentGroup(group);
+        let newX, newY, newRotation;
+        if (parentGroup) {
+            // Convert world center → local center in parentGroup using its CURRENT pivot.
+            const lcp = WorldPositionUtils.worldPointToLocalPointInGroup(
+                worldCX, worldCY, parentGroup, this.editor.level.objects
+            );
+            newX = lcp.x - lc.offX;
+            newY = lcp.y - lc.offY;
+            const parentAccRot = WorldPositionUtils.getAncestorRotation(parentGroup, this.editor.level.objects)
+                                + (parentGroup.rotation || 0);
+            newRotation = accRot - parentAccRot;
+        } else {
+            newX        = worldCX - lc.offX;
+            newY        = worldCY - lc.offY;
+            newRotation = accRot;
         }
 
-        // Save state for history
-        this.editor.historyManager.saveState(
-            this.editor.level.objects,
-            this.editor.stateManager.get('selectedObjects'),
-            false,
-            this.editor.stateManager.get('groupEditMode')
-        );
+        // ── PHASE 2: mutate ───────────────────────────────────────────────────────
 
-        // Convert child coordinates to world coordinates using full world position of the group
-        // (group.x/group.y are LOCAL to the group's parent, not world coordinates)
-        const groupWorldPos = this.editor.objectOperations.getObjectWorldPosition(group);
-        const worldX = childObject.x + groupWorldPos.x;
-        const worldY = childObject.y + groupWorldPos.y;
-
-        // Remove object from group
         group.children = group.children.filter(c => c.id !== childObject.id);
 
-        // Find parent container: if group is nested, move child to parent group (not top level)
-        const parentGroup = this._findParentGroup(group);
+        // ── PHASE 3: compensate G itself for its own internal drift (child removed).
+        // G's own bounds are already final at this point (childObject won't return
+        // to it), so this can be applied immediately.
+        if (ancestorPivots.length > 0 && ancestorPivots[0].group === group) {
+            WorldPositionUtils.applyGroupPivotCompensation(group, ancestorPivots[0].pOld);
+        }
+
+        // ── PHASE 4: place child at destination ──────────────────────────────────
+
+        childObject.x        = newX;
+        childObject.y        = newY;
+        childObject.rotation = newRotation;
+
         if (parentGroup) {
-            // Add child to parent group at correct relative coordinates
-            const parentWorldPos = this.editor.objectOperations.getObjectWorldPosition(parentGroup);
-            childObject.x = worldX - parentWorldPos.x;
-            childObject.y = worldY - parentWorldPos.y;
             parentGroup.children.push(childObject);
         } else {
-            // Group is top-level: move child to level root at world coordinates
-            childObject.x = worldX;
-            childObject.y = worldY;
             this.editor.level.addObject(childObject);
         }
 
-        // Clear caches for extracted object
-        this.editor.invalidateObjectCaches(childObject.id);
+        // ── PHASE 5: cascade pivot compensation through G's remaining rotated
+        // ancestors (parentGroup and above). Their bounds only become final after
+        // BOTH G's own compensation (which shifts G.x/G.y, a perturbation visible
+        // to parentGroup) AND the insertion above have happened, so this must run
+        // last — a single compensation per ancestor then cancels their combined
+        // effect exactly.
+        this._applyAncestorPivotCompensations(ancestorPivots.slice(1));
 
+        this.editor.invalidateObjectCaches(childObject.id);
+        return true;
+    }
+
+    /**
+     * Add `obj` to `targetGroup`, preserving obj's current visual transform
+     * (worldPositionStays = true).
+     *
+     * Algorithm:
+     *  1. Capture obj's world center + accumulated rotation (tree intact, before removal).
+     *  2. Capture targetGroup's (and its rotated ancestors') G-local pivots.
+     *  3. Compute obj's new local coords + rotation in targetGroup (using current pivot).
+     *  4. Remove obj from its current parent (level root or source group), capturing that
+     *     source group's (and its rotated ancestors') pivots first too.
+     *  5. Set obj.x/y/rotation to computed values, add to targetGroup.children.
+     *  6. Cascade pivot compensation through the MERGED target+source ancestor chains
+     *     (deduplicated, deepest-first) so nothing above either group visibly drifts.
+     */
+    addObjectToGroup(obj, targetGroup) {
+        if (!obj || !targetGroup || targetGroup.type !== 'group') return false;
+
+        // ── PHASE 1: read-only, tree intact ──────────────────────────────────────
+
+        const wt   = WorldPositionUtils.getWorldCenterAndRotation(obj, this.editor.level.objects);
+        const lc   = WorldPositionUtils.getLocalCenter(obj);
+        const targetPivots = this._captureAncestorPivots(targetGroup);
+
+        // Destination local coords — use current (pre-mutation) pivot for the conversion.
+        const lcp = WorldPositionUtils.worldPointToLocalPointInGroup(
+            wt.x, wt.y, targetGroup, this.editor.level.objects
+        );
+        const newX        = lcp.x - lc.offX;
+        const newY        = lcp.y - lc.offY;
+        const targetAccRot = WorldPositionUtils.getAncestorRotation(targetGroup, this.editor.level.objects)
+                           + (targetGroup.rotation || 0);
+        const newRotation = wt.accumulatedRotation - targetAccRot;
+
+        // ── PHASE 2: remove obj from source ──────────────────────────────────────
+
+        const sourceGroup = this._findParentGroup(obj);
+        const sourcePivots = sourceGroup ? this._captureAncestorPivots(sourceGroup) : [];
+        if (sourceGroup) {
+            sourceGroup.children = sourceGroup.children.filter(c => c.id !== obj.id);
+        } else {
+            this.editor.level.removeObject(obj.id);
+        }
+
+        // ── PHASE 3: apply, add, compensate ──────────────────────────────────────
+
+        obj.x        = newX;
+        obj.y        = newY;
+        obj.rotation = newRotation;
+
+        targetGroup.children.push(obj);
+
+        // Cascade compensation through target's and source's rotated ancestor chains,
+        // merged/deduplicated so a shared ancestor is only compensated once.
+        const merged = this._mergeAncestorPivots(targetPivots, sourcePivots);
+        this._applyAncestorPivotCompensations(merged);
+
+        this.editor.invalidateObjectCaches(obj.id);
         return true;
     }
 

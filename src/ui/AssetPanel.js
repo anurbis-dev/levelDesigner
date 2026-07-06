@@ -688,6 +688,10 @@ export class AssetPanel extends BasePanel {
         } else {
             this.foldersContainer.style.display = 'flex';
         }
+
+        if (this.foldersResizer) {
+            this.levelEditor.resizerManager.setCollapsed(this.foldersResizer, foldersWidth <= 0);
+        }
     }
 
     /**

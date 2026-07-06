@@ -159,7 +159,8 @@ export class SettingsSyncManager {
             'selection.marqueeColor': 'selection.marqueeColor',
             'selection.hierarchyHighlightColor': 'selection.hierarchyHighlightColor',
             'selection.activeLayerBorderColor': 'selection.activeLayerBorderColor',
-            
+            'selection.hitTestTolerance': 'selection.hitTestTolerance',
+
             // Touch settings
             'touch.panThreshold': 'touch.panThreshold',
             'touch.zoomThreshold': 'touch.zoomThreshold',

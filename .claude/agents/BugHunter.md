@@ -1,11 +1,7 @@
 ---
 name: BugHunter
 description: "Use when: баг, ошибка, крах, null reference, race condition, утечка памяти, edge case, lifecycle issue, потекла память, найди баг. Defensive code analyst for Level Designer (vanilla JS ES6, Canvas-based 2D editor): spots event-listener leaks, stale state, null refs, render-loop edge cases; suggests defensive fixes and registers found bugs as todos."
-tools:
-  - Read
-  - Grep
-  - Glob
-  - TodoWrite
+tools: Read, Grep, Glob, TodoWrite
 model: sonnet
 ---
 

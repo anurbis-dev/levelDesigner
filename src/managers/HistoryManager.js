@@ -54,6 +54,27 @@ export class HistoryManager {
     }
 
     /**
+     * Get the current top-of-stack snapshot WITHOUT popping it.
+     * Use to revert an in-progress, uncommitted change (e.g. a drag/transform
+     * gesture cancelled mid-flight, before its saveState() ever ran) back to
+     * the last saved state. Unlike undo(), this doesn't assume the live state
+     * was already pushed as a new entry - calling undo() in that situation
+     * pops the entry that actually represents "before this gesture" and
+     * returns the one before THAT, over-shooting by one step.
+     * @returns {Object|null} State object with objects, selection, and groupEditMode
+     */
+    peekCurrentState() {
+        if (this.undoStack.length === 0) return null;
+
+        const parsedState = JSON.parse(this.undoStack[this.undoStack.length - 1]);
+        return {
+            objects: parsedState.objects,
+            selection: new Set(parsedState.selection || []),
+            groupEditMode: parsedState.groupEditMode || null
+        };
+    }
+
+    /**
      * Undo last action
      * @returns {Object|null} State object with objects, selection, and groupEditMode
      */

@@ -26,13 +26,7 @@ export class HistoryOperations extends BaseModule {
             return false;
         }
 
-        this.restoreObjectsFromHistory(previousState.objects);
-        this.rebuildAllIndices();
-        this.restoreGroupEditMode(previousState.groupEditMode);
-        this.recalculateGroupBounds();
-        this.invalidateCachesAfterRestore();
-        this.restoreSelection(previousState.selection);
-        this.finalizeHistoryRestore();
+        this._applyRestoredState(previousState);
         Logger.status.info('Undo');
         return true;
     }
@@ -48,15 +42,40 @@ export class HistoryOperations extends BaseModule {
             return false;
         }
 
-        this.restoreObjectsFromHistory(nextState.objects);
-        this.rebuildAllIndices();
-        this.restoreGroupEditMode(nextState.groupEditMode);
-        this.recalculateGroupBounds();
-        this.invalidateCachesAfterRestore();
-        this.restoreSelection(nextState.selection);
-        this.finalizeHistoryRestore();
+        this._applyRestoredState(nextState);
         Logger.status.info('Redo');
         return true;
+    }
+
+    /**
+     * Revert an in-progress, uncommitted gesture (drag/transform cancelled by
+     * releasing the mouse outside the canvas, or by window blur) back to the
+     * last saved history snapshot. Unlike undo(), this does NOT pop the
+     * undo/redo stacks - the gesture never pushed a new entry for its live
+     * (dragged) state in the first place, so undo() would over-shoot and
+     * restore the state before the PREVIOUS action instead of this one.
+     * @returns {boolean} True if a snapshot existed to restore
+     */
+    cancelToLastSavedState() {
+        const state = this.editor.historyManager.peekCurrentState();
+        if (!state) return false;
+
+        this._applyRestoredState(state);
+        return true;
+    }
+
+    /**
+     * Shared restore pipeline used by undo(), redo() and cancelToLastSavedState()
+     * @private
+     */
+    _applyRestoredState(state) {
+        this.restoreObjectsFromHistory(state.objects);
+        this.rebuildAllIndices();
+        this.restoreGroupEditMode(state.groupEditMode);
+        this.recalculateGroupBounds();
+        this.invalidateCachesAfterRestore();
+        this.restoreSelection(state.selection);
+        this.finalizeHistoryRestore();
     }
 
     /**

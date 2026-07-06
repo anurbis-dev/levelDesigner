@@ -40,6 +40,15 @@
 - **Tab drag**: `setupTabDraggingForPanel(panel)` стартует drag; глобальные обработчики в `_installGlobalTabDragHandlers()` покрывают сортировку внутри панели, cross-panel перенос и создание новой панели. Состояние хранится в `this._pendingDrag` (не в `window.tabDraggingState`) — легаси хендлер очищает глобальное состояние до выполнения нашего `mouseup`.
 - Визуалы drag: ghost `.tab-drag-ghost`, drop-zone `.tab-drop-zone`, зона создания панели `.tab-new-panel-zone`; скоупинг — только прямые дети `#left-tabs-panel` / `#right-tabs-panel`
 - ~~`TabMoveContextMenu`~~ — удалён (контекстное меню «Move to» заменено drag-and-drop)
+- **Alt+1/2/3/4** — глобальный тоггл видимости панелей (левая / правая / toolbar / панель ассетов), обрабатывается в `EventHandlers.handleKeyDown` через уже существующий `EventHandlers.togglePanel('leftPanel'|'rightPanel'|'toolbar'|'assetsPanel')` (не метод `PanelPositionManager`, но общий с пунктами меню View код пути)
+
+### MenuManager / ShortcutFormatter — единый источник хоткеев в главном меню
+**Файлы**: `src/managers/MenuManager.js`, `src/utils/ShortcutFormatter.js`
+- Пункты `config/menu.js` больше не хранят хардкод-строку хоткея (`shortcut: 'Ctrl+S'`), а ссылаются на дот-путь в `config/defaults/shortcuts.json` через `shortcutKey: 'editor.saveLevel'` — единый источник истины, не дублирующий значение.
+- `ShortcutFormatter.format(shortcut)` — форматирует объект хоткея (`{key, ctrlKey, altKey, shiftKey, metaKey}`) в строку вида `"Ctrl+Alt+N"`; общий примитив, используется и `MenuManager`, и `SettingsPanel.formatShortcut()` (теперь тонкая обёртка над ним) — рассинхронизация формата исключена по построению.
+- `MenuManager.resolveShortcutLabel(shortcutKey)` — резолвит `shortcutKey` через `configManager.getShortcuts()` в отображаемую строку; `MenuManager.createMenuItem()` рендерит её в `<span data-shortcut-key="...">`.
+- `MenuManager.refreshShortcutLabels()` — перечитывает все `[data-shortcut-key]`-спаны в уже отрисованном DOM меню и обновляет их текст. Вызывается один раз из `MenuManager.initialize()` (защитно, на случай если `ConfigManager` ещё грузился при первом рендере меню) и из `SettingsPanel.saveHotkey()` сразу после того как ребинд уже персистирован через `configManager.set('shortcuts.category.action', ...)` — так подпись в меню сразу отражает новый хоткей без перезагрузки страницы.
+- **Известное ограничение**: ребинд в Settings → Hotkeys обновляет только отображаемую подпись в меню. `EventHandlers.handleKeyDown` — хардкод-цепочка `if/else`, не читающая `shortcuts.json` в рантайме; фактическая обработка нажатия клавиш не зависит от ребинда.
 
 ### ResizerManager
 **Файл**: `src/managers/ResizerManager.js`
@@ -123,6 +132,27 @@
 **Файл**: `src/utils/SearchUtils.js`
 - Унифицированная система поиска
 - Рекурсивный поиск по иерархическим структурам
+- Используется в Outliner/Layers/Assets, а также в SettingsPanel (единый поиск в шапке окна, см. ниже)
+
+### SettingsPanel — поиск параметров по всему окну
+**Файлы**: `src/ui/SettingsPanel.js`, `src/ui/panel-structures/SettingsSectionConstructor.js`
+- Один инпут `#settings-search-input` в шапке окна Settings (`.settings-header-controls`, рядом с кнопкой `⋮`), создаётся в `createSettingsPanel()` через `SearchUtils.createSearchInput(...).outerHTML`. Выравнивание по правому краю — за счёт `justify-content: space-between` у `.settings-header` (`styles/settings-panel.css`).
+- `setupNewEventHandlers()` вешает `SearchUtils.setupSearchListeners` на этот инпут один раз (guard через `dataset.searchWired`, т.к. `show()`/`hide()` не пересоздают DOM панели). Отдельный keydown-listener на том же инпуте, зарегистрированный раньше слушателя SearchUtils, вызывает `e.stopPropagation()` при Escape с непустым значением — первое нажатие Escape только очищает текст, второе (когда поле уже пусто) всплывает к глобальному Escape-обработчику и закрывает панель.
+- `filterSettingsContent(term)` фильтрует всё содержимое `#settings-content` (текущей открытой вкладки): для каждого `<label>` скрывает/показывает `label.parentElement`; `.hotkey-item`/`.hotkey-description` вкладки Hotkeys (там нет `<label>`) обрабатываются отдельно тем же термином; `.settings-section` скрывается целиком, если после фильтра не осталось видимых строк. Вызывается из `setupSettingsInputs()` при каждом рендере/переключении вкладки — уже введённый термин переприменяется к новому содержимому.
+- Видимость строк переключается через локальную функцию `setRowVisible(el, visible)`: перед скрытием (`display:none`) исходное значение `style.display` кэшируется в `el.dataset.searchOrigDisplay` и восстанавливается из кэша при показе (а не сбрасывается в пустую строку) — это сохраняет инлайн `display:flex` у обёртки цветового инпута (`SettingsSectionConstructor.createSettingsColorInput`, inline-режим) и других строк с нестандартным инлайн-display.
+- Работает одинаково на всех вкладках (включая Grid & Snapping, где лейблы — `.settings-label`), а не только на тех, что используют `createSettingsSection`.
+- `createSettingsSection(title, content, options)` поиск больше не добавляет (простой `<h4>{title}</h4>`); единственный оставшийся эффект `options` — секция всегда получает CSS-класс `settings-section` (маркер для `filterSettingsContent`, ранее класс был опциональным).
+
+### SettingsPanel — range-слайдер и единая раскладка параметров (createSettingsRow)
+**Файлы**: `src/ui/panel-structures/SettingsSectionConstructor.js`, `src/ui/panel-structures/SettingsPanelRenderers.js`, `src/ui/GridSettings.js`, `src/ui/SettingsPanel.js`, `styles/settings-panel.css`
+- **`createSettingsRow(label, forId, controlHtml, options)`** — новый переиспользуемый базовый блок для однострочной раскладки: рендерит label слева (`flex 0 0 40%, text-align: right`) + control справа (заполняет остаток строки). Базовый строительный блок для единообразного применения ко всем типам settings-контролов.
+- **`createSettingsRange(rangeConfig)`** теперь **всегда** использует `createSettingsRow` — label слайдера рендерится в одной строке со слайдером, а не над ним (раньше выглядело как `<div>{label}</div><div class="settings-range-wrapper">...</div>`). Сама разметка `.settings-range-wrapper` содержит три элемента: `<input type="range" class="setting-input settings-range-input" data-unit="...">`, `<span class="settings-range-value">` (текущее значение поверх слайдера) и скрытый `<input type="number" class="settings-range-edit" tabindex="-1">` для ручного ввода. Используется во всех вкладках, рендерящихся через `SettingsPanelRenderers.js` (General/Camera/Selection/Touch/Performance и т.д.).
+- **Баг: 21 место в `SettingsPanelRenderers.js` (Selection/Touch/Camera/Assets/Performance вкладки)** было ДУБЛИРОВАТЬ label: отдельный вызов `createSettingsLabel(...)` ДО `createSettingsRange({label: ...})`, а сам `createSettingsRange` ВСЕГДА рендерил свой label внутри — то есть label выводился дважды на экране. Эти избыточные отдельные вызовы `createSettingsLabel` **удалены** — label теперь рендерится один раз, внутри `createSettingsRange`/`createSettingsRow`.
+- `GridSettings.js` (слайдер `#grid-opacity`) использует свою разметку (класс `settings-input`, а не `setting-input`) и вручную оборачивается в ту же структуру `.settings-range-wrapper` + `.settings-range-value` + `.settings-range-edit` (не вызывает `createSettingsRange`).
+- **`createSettingsColorInput()` с опцией `inline: true`** теперь тоже использует `createSettingsRow` вместо дублирующего инлайн-кода (поведение не изменилось, просто переиспользует общий блок).
+- `SettingsPanel.setupRangeSliders()` (вызывается в конце `setupSettingsInputs()`) один раз оживляет все `input[type="range"]` внутри `#settings-panel-container`, находя их по типу элемента (а не по CSS-классу — специально, чтобы одинаково работать и для `createSettingsRange`-слайдеров, и для слайдера `GridSettings.js` с другим именем класса): живое обновление `.settings-range-value` на `input` (юнит берётся из `data-unit`), двойной клик по `.settings-range-wrapper` открывает `.settings-range-edit` (класс `.editing` на wrapper), `Enter` кламппит значение по `min`/`max` и диспатчит `input`+`change`, `Escape` отменяет без применения, `blur` — применяет.
+- `styles/settings-panel.css`: `.settings-range-wrapper` получил `flex: 1 1 auto; min-width: 0;` — растягивается на всю доступную ширину строки рядом с label (работает только когда wrapper — flex-item внутри `createSettingsRow`). Трек слайдера толще (`height:9px`), `::-webkit-slider-thumb`/`::-moz-range-thumb` скрыты через `opacity:0`, `.settings-range-value` спозиционирован абсолютно по центру с `pointer-events:none`, `.settings-range-wrapper.editing` переключает видимость слайдер/числовой инпут.
+- **Progress fill** (цветная заливка трека до текущего значения): CSS custom property `--range-fill` (проценты) управляет градиентом `.settings-range-input::-webkit-slider-runnable-track` (`linear-gradient(to right, var(--accent-color) 0%, ...)`). Firefox использует нативный `::-moz-range-progress`. `setupRangeSliders()` держит `--range-fill` в синхроне через `updateFill()` на каждое событие `input`.
 
 ---
 
@@ -274,6 +304,60 @@
 
 ---
 
+## 🖱️ Цикл выбора перекрывающихся объектов по кликам (Blender-style)
+
+`ObjectOperations.findObjectAtPoint(x, y, skipCycle = false)` (`src/core/ObjectOperations.js`) хит-тестит все candidate-объекты в точке (в group edit mode — через `computeSelectableSet()`/`getSelectableCandidateObjects()`, вне его — через `getSelectableObjectsInViewport()`), сортирует их по стек-порядку (`_sortObjectsByZIndexDescending`, тот же компаратор, что у Z-порядка выше) и выбирает результат одним из двух способов:
+
+- **`_pickFrontMost(x, y, sortedCandidates)`** — обычный front-to-back hit-test, возвращает первый попавший объект. Используется, когда `skipCycle === true`.
+- **`_pickWithClickCycle(x, y, sortedCandidates)`** (по умолчанию) — собирает ВСЕ совпадения в точке; при повторном клике в (примерно) той же точке (`tolerance = 4 / camera.zoom`, то есть ~4 экранных px независимо от зума) с тем же набором кандидатов (`candidateKey` — join их id) переходит к следующему совпадению в списке, зацикливаясь через модуль; клик в другое место или изменившийся набор кандидатов сбрасывает цикл на верхний объект. Состояние цикла — `this._clickCycle` (`{x, y, candidateKey, index}`), не персистентное между сессиями.
+
+**Двойной клик** (`MouseHandlers.handleDoubleClick`) физически состоит из двух одиночных кликов — если бы он использовал циклический pick, второй клик двойного клика уже продвинул бы цикл мимо передней группы к моменту, когда dblclick-хендлер решает открыть group edit mode. Поэтому `handleDoubleClick` вызывает `findObjectAtPoint(x, y, true)` — параметр `skipCycle`, форсирующий `_pickFrontMost` (старое, нецикличное поведение).
+
+---
+
+## 👁️ Isolate, Layer Solo и Object Solo (Blender Local View / Solo)
+
+Три независимых, но концептуально похожих механизма временного сужения видимой сцены — все non-destructive (не трогают персистентные `obj.visible`/`layer.visible`).
+
+### Isolate выделения (хоткей `/`)
+- `ObjectOperations.toggleIsolateSelection()` — при включении собирает верхнеуровневых предков (через `groupOperations._findParentGroup()`, поднимаясь до корня) для каждого выделенного объекта и сохраняет их id в `stateManager` как `view.isolatedTopLevelIds` (`Set` или `null`, если isolate выключен). Гранулярность — только top-level: изолируется весь верхнеуровневый объект/группа целиком, а не конкретный вложенный потомок.
+- Повторный вызов при активном isolate снимает его (`view.isolatedTopLevelIds` → `null`).
+- **Рендер**: `RenderOperations.render()` переиспользует существующий паттерн затемнения группового edit-режима (`ctx.filter = 'grayscale(1) opacity(0.4)'`) — теперь применяется и к объектам, не входящим в `isolatedTopLevelIds`, когда isolate активен.
+- **Выбор**: `ObjectOperations.getSelectableCandidateObjects()` при активном isolate и вне group edit mode фильтрует `level.objects` до `isolatedTopLevelIds` — затемнённые объекты не кликаются, что синхронизировано с dimming в рендере по построению (один и тот же источник состояния).
+
+### Layer Solo (Ctrl+click на иконку глаза слоя в LayersPanel)
+- `Layer.js` — новое transient-поле `soloed` (не сериализуется в `toJSON()`, чисто UI-состояние).
+- `LayersPanel.toggleLayerSolo(layerId)` — эксклюзивный solo: сбрасывает `soloed` у ВСЕХ слоёв, затем включает его для целевого (повторный Ctrl+click на уже заsoloенном слое снимает solo). Обработчик клика по `.layer-visibility-btn` разветвляется на solo вместо обычного toggle видимости, если зажат `e.ctrlKey || e.metaKey`.
+- `RenderOperations.getVisibleLayerIds()` — solo-aware: если хотя бы один слой заsoloен, видимый набор — только заsoloенные слои (`layers.filter(l => l.soloed)`), независимо от их собственного `layer.visible`; без соло-слоёв поведение как раньше (`layer.visible`).
+- Заsoloенный слой в UI подсвечивается жёлтым цветом иконки глаза (`LayersPanel.updateLayerElement`). Видимость/скрытость слоя показывается только формой иконки (открытый/закрытый глаз) — без дополнительного изменения цвета; жёлтая подсветка солированного слоя — отдельный, не связанный с видимостью индикатор.
+- Задокументировано как информационная запись в `config/defaults/shortcuts.json` → `mouse.soloLayer` (категория `mouse`, ребиндинг недоступен — см. раздел о хоткеях мыши в API_GUIDE.md/DEVELOPMENT_GUIDE.md).
+
+### Object Solo (Ctrl+click на иконку глаза объекта в OutlinerPanel)
+- `ObjectOperations.toggleObjectSolo(obj)` — аналог Layer Solo, но для объектов верхнего уровня и с другой семантикой рендера (полное скрытие, не диммирование). Non-destructive (не трогает `obj.visible`). Эксклюзивный: соло другого объекта заменяет предыдущее; повторный Ctrl+click на уже-соло объекте снимает solo. Состояние — `stateManager` ключ `view.soloedTopLevelObjectId` (id верхнеуровневого объекта или `null`).
+- `ObjectOperations.findTopLevelAncestor(obj)` — новый общий хелпер: поднимается через `groupOperations._findParentGroup()` до объекта без родителя. Используется и `toggleIsolateSelection()`, и `toggleObjectSolo()`.
+- **Рендер**: `RenderOperations.render()` — при активном `soloedTopLevelObjectId` объекты с `id !== soloedTopLevelObjectId` не рендерятся вообще (`return` до отрисовки), в отличие от диммирования при Isolate. Это соответствует семантике иконки глаза («скрыто» = не нарисовано, а не «приглушено»).
+- **Гранулярность**: только top-level — если соло стоит на группе, её дети рендерятся как обычно. Это не отдельный спецкейс, а следствие того, что фильтрация по `soloedTopLevelObjectId` применяется только на верхнем уровне обхода, глубже код не спускается.
+- **Выбор**: `ObjectOperations.getSelectableCandidateObjects()` также учитывает `soloedTopLevelObjectId` — скрытые через solo объекты не кликаются, аналогично isolate-фильтрации.
+- UI: `OutlinerPanel.updateVisibilityButton()` подсвечивает соло-объект жёлтым цветом иконки глаза (`#fbbf24`), как и Layer Solo; title кнопки — `"Soloed — Ctrl+click to un-solo"`.
+- Задокументировано как информационная запись в `config/defaults/shortcuts.json` → `mouse.soloObject` (категория `mouse`, ребиндинг недоступен).
+
+### Фикс: закрытие меню фильтра типов в Outliner + Ctrl+click мульти-select
+- **Баг**: `MenuPositioningUtils.showMenu()`/`setupMenuClosing()` вешает на само меню только `mouseleave` и close-on-click-bubbling-from-inside; отдельного обработчика «клик СНАРУЖИ меню» не было. Кнопка фильтра вызывает `e.stopPropagation()`, поэтому клик по канвасу/другой панели меню не закрывал вовсе, а баблинг-закрытие срабатывало на любом клике ВНУТРИ меню (по чекбоксу), мешая отмечать несколько типов подряд.
+- **Фикс** (`OutlinerPanel.showFilterMenu()`): после `MenuPositioningUtils.showMenu()` дефолтные `menu._closeMenuHandler`/`menu._closeOnClickHandler` снимаются и заменяются на `document.addEventListener('mousedown', outsideClickHandler, true)`, закрывающий меню только при `!menu.contains(e.target)` — включая повторный клик по самой кнопке фильтра (закрывает текущее меню на `mousedown`, до того как `click` этой же кнопки успеет открыть новое). Изменение локально для Outliner — `MenuPositioningUtils` не тронута, идентичное меню в `AssetPanel.js` не затронуто.
+- **Мульти-select**: Ctrl (или Cmd)+click по чекбоксу типа теперь только обновляет визуал (`updateFilterMenu`), не применяя фильтр и не закрывая меню; накопленный фильтр применяется одним `stateManager.update({'outliner.activeTypeFilters': ...})` + `render()` при отпускании Ctrl (`document.addEventListener('keyup', ...)`, `e.key === 'Control'`). Обычный клик продолжает применять фильтр немедленно, как раньше.
+
+---
+
+## 👁️‍🗨️ Видимость объектов (H / Alt+H / Outliner eye icon)
+
+- `ObjectOperations.toggleObjectVisibility(obj)` — единая точка переключения `obj.visible`; для `type === 'group'` каскадом применяет то же значение ко всем потомкам через `GroupTraversalUtils.getAllChildren(obj, true)`. Каскад обязателен не только косметически: `computeSelectableSet()`/`isObjectSelectable()` проверяет лишь собственный флаг `.visible` объекта, без обхода предков — без каскада скрытые потомки группы оставались бы выбираемыми (например через Outliner), хотя и не отрисовывались (рендер уже сам пропускает их через `CanvasRenderer.drawGroup`'s `if (!group.visible) return`).
+- `ObjectOperations.toggleVisibilityForSelection()` (хоткей `H`) — применяет `toggleObjectVisibility` ко всем текущим выделенным объектам.
+- `ObjectOperations.unhideAllObjects()` (хоткей `Alt+H`) — показывает вообще все скрытые объекты на любом уровне вложенности через `GroupTraversalUtils.getAllObjects(level.objects, true)`.
+- `ObjectOperations.afterVisibilityChange()` — общий хвост (сохранение состояния истории, инвалидация spatial index и visible-objects кэша, `render()`, обновление всех панелей), используемый всеми тремя операциями выше.
+- **OutlinerPanel** — `createVisibilityButton(item)` создаёт кликабельную SVG-иконку глаза рядом с именем объекта (та же разметка, что в LayersPanel); `updateVisibilityButton(visibilityBtn, nameSpan, obj)` обновляет иконку и красит `nameSpan.style.color` в `#6b7280`, если объект скрыт. Кнопка встроена в keyed-reconciliation рендер (`renderGroupNode`/`renderObjectNode`) — создаётся один раз при отсутствии переиспользуемого узла, обновляется на каждый рендер; клик вызывает `ObjectOperations.toggleObjectVisibility()` напрямую.
+
+---
+
 ## ⌫ Backspace-to-reset (Blender-style hover reset)
 
 Глобальный хоткей `Backspace`: наведение курсора мыши (не фокус клавиатуры) на конкретное resettable-поле в DetailsPanel/SettingsPanel сбрасывает его к дефолту; наведение на заголовок/контейнер секции (любой уровень вложенности) сбрасывает все зарегистрированные поля внутри неё.
@@ -282,7 +366,7 @@
 - `scopes: Map<scopeKey, {element, defaultValue}[]>` — панели перерегистрируют свой набор resettable-полей на каждый рендер через `setFields(scopeKey, fields)` (не аккумулируется — полная замена), чтобы реестр всегда отражал текущий DOM.
 - `getHoveredElement()` — берёт `document.querySelectorAll(':hover')`, последний элемент в списке — самый глубоко вложенный, то есть реально то, что под курсором.
 - `findTargets(hoveredEl)` — идёт вверх по `parentElement`: сначала ищет точное совпадение с зарегистрированным полем (сброс одного поля), иначе — ближайшего предка, который `.contains()` одно или несколько полей (секция работает «сама», без явной разметки — просто за счёт DOM-вложенности, на любой глубине).
-- `handleBackspace()` — точка входа. Не мешает обычному редактированию текста: если под курсором ровно одно поле и оно же сейчас в фокусе как `INPUT`(не checkbox/radio/range/color)/`TEXTAREA`, возвращает `false` — `Backspace` работает как обычное удаление символа.
+- `handleBackspace()` — точка входа. Не мешает обычному редактированию текста: возвращает `false` (обычное удаление символа) в двух случаях — (1) если элемент под курсором одновременно в фокусе как текстовый `INPUT`(не checkbox/radio/range/color)/`TEXTAREA` и НЕ зарегистрирован как resettable-поле (например, поиск в шапке Settings-панели, который лежит внутри `#settings-panel-container` и потому технически "содержит" все resettable-поля текущей вкладки); (2) если под курсором ровно одно поле и оно же сейчас в фокусе.
 - `applyDefault(field)` — проставляет `element.value`/`element.checked` и диспатчит `input`/`change`/`blur` DOM-события. Реестр **не содержит commit-логики** (не пишет в state/history/config напрямую) — эти события «проигрывают» ровно то, что уже слушают существующие обработчики каждой панели (история/`notifyPropertyChange` в DetailsPanel; `ConfigManager`/`StateManager` sync в SettingsPanel), поэтому логика персистентности не дублируется.
 
 **Точка входа**: `EventHandlers.handleKeyDown(e)` — `if (e.key === 'Backspace' && ResetRegistry.handleBackspace())` проверяется ДО ветки «фокус в INPUT/TEXTAREA → return», иначе фича не работала бы, когда любой инпут просто в фокусе.
@@ -364,18 +448,24 @@
 - Умное позиционирование
 - Правильная очистка обработчиков
 - Поддержка disabled состояний
+- `CanvasContextMenu` (`src/ui/CanvasContextMenu.js`) и `AssetPanelContextMenu` (`src/ui/AssetPanelContextMenu.js`) — пункт «Swap Panels» удалён из обоих (были независимые пункты, без общего родителя)
 
 ### OutlinerPanel
 **Файл**: `src/ui/OutlinerPanel.js`
 - Унифицированный поиск
 - Умное выделение (Shift+клик, Ctrl+клик)
 - Фильтрованное выделение
+- **F2 — inline-переименование**: `EventHandlers.renameSelectedObject()` переключает вкладку на Outliner (если она не видна на текущей активной панели) и вызывает `OutlinerPanel.startInlineRename(obj)`
+- **Иконки-глаза видимости**: `createVisibilityButton(item)`/`updateVisibilityButton()` — см. раздел «Видимость объектов» выше
+- **Object Solo** (Ctrl+click на иконку глаза объекта): `ObjectOperations.toggleObjectSolo(obj)` — см. раздел «Isolate и Layer Solo» выше
+- **Фильтр типов**: `showFilterMenu(button)` — click-outside-to-close (`mousedown`-листенер на `document`) и Ctrl+click мульти-select с применением фильтра на `keyup` — см. раздел «Isolate и Layer Solo» выше
 
 ### LayersPanel
 **Файл**: `src/ui/LayersPanel.js`
 - Двойная система состояний (активные/текущий слой)
 - Умное позиционирование меню
 - Оптимизированная инициализация
+- **Layer Solo** (Ctrl+click на иконку глаза слоя): `toggleLayerSolo(layerId)` — см. раздел «Isolate и Layer Solo» выше
 
 ---
 

@@ -15,14 +15,14 @@ export const MENU_CONFIG = {
                     id: 'new-level',
                     label: 'New Level',
                     type: 'action',
-                    shortcut: 'Ctrl+Alt+N',
+                    shortcutKey: 'editor.newLevel',
                     action: 'newLevel'
                 },
                 {
                     id: 'open-level',
                     label: 'Open Level...',
                     type: 'action',
-                    shortcut: 'Ctrl+O',
+                    shortcutKey: 'editor.openLevel',
                     action: 'openLevel'
                 },
                 { type: 'separator' },
@@ -30,14 +30,14 @@ export const MENU_CONFIG = {
                     id: 'save-level',
                     label: 'Save Level',
                     type: 'action',
-                    shortcut: 'Ctrl+S',
+                    shortcutKey: 'editor.saveLevel',
                     action: 'saveLevel'
                 },
                 {
                     id: 'save-level-as',
                     label: 'Save Level As...',
                     type: 'action',
-                    shortcut: 'Ctrl+Shift+S',
+                    shortcutKey: 'editor.saveLevelAs',
                     action: 'saveLevelAs'
                 }
             ]
@@ -68,7 +68,8 @@ export const MENU_CONFIG = {
                     type: 'toggle',
                     stateKey: 'view.parallax',
                     action: 'toggleViewOption',
-                    actionParam: 'parallax'
+                    actionParam: 'parallax',
+                    shortcutKey: 'editor.toggleParallax'
                 },
                 { type: 'separator' },
                 {
@@ -82,7 +83,8 @@ export const MENU_CONFIG = {
                     type: 'toggle',
                     stateKey: 'view.toolbar',
                     action: 'togglePanel',
-                    actionParam: 'toolbar'
+                    actionParam: 'toolbar',
+                    shortcutKey: 'ui.toggleToolbar'
                 },
                 {
                     id: 'toggle-assets-panel',
@@ -90,7 +92,8 @@ export const MENU_CONFIG = {
                     type: 'toggle',
                     stateKey: 'view.assetsPanel',
                     action: 'togglePanel',
-                    actionParam: 'assetsPanel'
+                    actionParam: 'assetsPanel',
+                    shortcutKey: 'ui.toggleAssetsPanel'
                 },
                 {
                     id: 'toggle-right-panel',
@@ -98,7 +101,8 @@ export const MENU_CONFIG = {
                     type: 'toggle',
                     stateKey: 'view.rightPanel',
                     action: 'togglePanel',
-                    actionParam: 'rightPanel'
+                    actionParam: 'rightPanel',
+                    shortcutKey: 'ui.toggleRightPanel'
                 },
                 {
                     id: 'toggle-left-panel',
@@ -106,7 +110,8 @@ export const MENU_CONFIG = {
                     type: 'toggle',
                     stateKey: 'view.leftPanel',
                     action: 'togglePanel',
-                    actionParam: 'leftPanel'
+                    actionParam: 'leftPanel',
+                    shortcutKey: 'ui.toggleLeftPanel'
                 },
                 {
                     id: 'toggle-console',
@@ -132,11 +137,12 @@ export const MENU_CONFIG = {
                 },
                 {
                     id: 'toggle-grid',
-                    label: 'Grid (G)',
+                    label: 'Grid',
                     type: 'toggle',
                     stateKey: 'canvas.showGrid',
                     action: 'toggleViewOption',
-                    actionParam: 'grid'
+                    actionParam: 'grid',
+                    shortcutKey: 'editor.toggleGrid'
                 },
                 {
                     id: 'toggle-snap-to-grid',

@@ -19,6 +19,13 @@ export class MouseHandlers extends BaseModule {
 
         // Snapshot of selection geometry at rotate/scale gesture start
         this._transformSnapshot = null;
+
+        // Baseline (position + children-bounds center) of every ROTATED ancestor group of
+        // the dragged/transformed selection, captured at gesture start. Used to compensate
+        // each ancestor's x/y during the gesture so its rotation pivot (children-bounds
+        // center, recomputed each frame) doesn't make untouched siblings drift on screen.
+        // See _applyPivotCompensation for the math.
+        this._pivotCompensationBaseline = null;
         
         // Create throttled versions of frequent event handlers
         this._throttledMouseMove = throttle(
@@ -331,7 +338,12 @@ export class MouseHandlers extends BaseModule {
         if (e.button === 0) {
             const currentAlt = e.altKey || mouse.altKey;
             const wasDragging = mouse.isDragging; // Save dragging state before resetting
-            
+
+            // Gesture over — next drag/transform captures a fresh pivot baseline.
+            // Dropping it here is seamless: compensation keeps the natural pivot
+            // consistent with current positions, so nothing shifts on release.
+            this._pivotCompensationBaseline = null;
+
             if (mouse.isDragging) {
                 this.editor.historyManager.saveState(
                     this.editor.level.objects,
@@ -427,6 +439,52 @@ export class MouseHandlers extends BaseModule {
                 this.finishMarqueeSelection();
             }
 
+            // Deferred group close: set on mousedown when click was outside the active group.
+            // Execute only if no drag and no object was selected — otherwise the user was
+            // interacting with an external object (selecting/dragging it into the group).
+            if (mouse.pendingGroupClose && !wasDragging && !mouse.isMarqueeSelecting) {
+                this.editor.stateManager.update({ 'mouse.pendingGroupClose': false });
+                if (this.isInGroupEditMode()) {
+                    const worldPos = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, this.editor.stateManager.get('camera'));
+                    const clickedExternal = this.editor.objectOperations.findObjectAtPoint(worldPos.x, worldPos.y);
+                    if (clickedExternal) {
+                        // External object clicked — select it, keep group open
+                        const selectedObjects = new Set(this.editor.stateManager.get('selectedObjects'));
+                        if (!selectedObjects.has(clickedExternal.id)) {
+                            SelectionUtils.selectSingleItem(
+                                this.editor.stateManager,
+                                clickedExternal.id,
+                                'selectedObjects',
+                                'canvas.shiftAnchor',
+                                () => this.editor.updateAllPanels()
+                            );
+                        }
+                    } else {
+                        // Truly empty space — step back one level
+                        this.editor.groupOperations.closeGroupEditMode();
+
+                        if (this.isInGroupEditMode()) {
+                            const parentGroupEditMode = this.getGroupEditMode();
+                            const parentBounds = this.editor.objectOperations.getObjectWorldBounds(parentGroupEditMode.group);
+                            const insideParent = worldPos.x >= parentBounds.minX && worldPos.x <= parentBounds.maxX &&
+                                worldPos.y >= parentBounds.minY && worldPos.y <= parentBounds.maxY;
+                            if (insideParent) {
+                                this.editor.stateManager.set('selectedObjects', new Set());
+                                this.editor.stateManager.update({
+                                    'mouse.isMarqueeSelecting': true,
+                                    'mouse.marqueeRect': { x: worldPos.x, y: worldPos.y, width: 0, height: 0 },
+                                    'mouse.marqueeStartX': worldPos.x,
+                                    'mouse.marqueeStartY': worldPos.y,
+                                    'mouse.marqueeMode': 'replace'
+                                });
+                            }
+                        }
+                    }
+                }
+            } else if (mouse.pendingGroupClose) {
+                this.editor.stateManager.update({ 'mouse.pendingGroupClose': false });
+            }
+
             // If we are in group edit mode and released after dragging with Alt
             if (this.isInGroupEditMode() && currentAlt && wasDragging) {
                 const groupEditMode = this.getGroupEditMode();
@@ -440,46 +498,42 @@ export class MouseHandlers extends BaseModule {
                     .map(id => this.editor.level.findObjectById(id))
                     .filter(Boolean);
 
+                // Save history once before extracting (extractObjectFromGroup is called
+                // with saveState:false so it doesn't create an entry per object).
+                if (selected.some(obj => this.editor.objectOperations.isObjectInGroup(obj, groupEditMode.group))) {
+                    this.editor.historyManager.saveState(
+                        this.editor.level.objects,
+                        this.editor.stateManager.get('selectedObjects'),
+                        false,
+                        this.editor.stateManager.get('groupEditMode')
+                    );
+                }
+
                 // Process each selected object for potential move out of group
                 let movedObjectsCount = 0;
                 selected.forEach(obj => {
                     // Only consider direct children of the edited group
                     const isChild = this.editor.objectOperations.isObjectInGroup(obj, groupEditMode.group);
                     if (isChild) {
-                        // Get current world position and bounds of the object
-                        const groupPos = this.editor.objectOperations.getObjectWorldPosition(groupEditMode.group);
-                        const worldX = groupPos.x + obj.x;
-                        const worldY = groupPos.y + obj.y;
-                        const objWidth = obj.width || 32;
-                        const objHeight = obj.height || 32;
-
-                        // Object bounds in world coordinates
-                        const objBounds = {
-                            minX: worldX,
-                            minY: worldY,
-                            maxX: worldX + objWidth,
-                            maxY: worldY + objHeight
-                        };
+                        // Use world bounds of the object (rotation-aware) to check intersection
+                        const objWorldBounds = this.editor.objectOperations.getObjectWorldBounds(obj);
 
                         // Check if object bounds intersect with group bounds
-                        const hasIntersection = objBounds.minX < bounds.maxX &&
-                                              objBounds.maxX > bounds.minX &&
-                                              objBounds.minY < bounds.maxY &&
-                                              objBounds.maxY > bounds.minY;
+                        const hasIntersection = objWorldBounds.minX < bounds.maxX &&
+                                              objWorldBounds.maxX > bounds.minX &&
+                                              objWorldBounds.minY < bounds.maxY &&
+                                              objWorldBounds.maxY > bounds.minY;
 
                         if (!hasIntersection) {
                             // CRITICAL FIX: Invalidate spatial index BEFORE moving objects
                             this.editor.renderOperations.invalidateSpatialIndex();
 
-                            // Move object out of group
-                            groupEditMode.group.children = groupEditMode.group.children.filter(c => c.id !== obj.id);
-                            obj.x = worldX;
-                            obj.y = worldY;
-                            
-                            // CRITICAL FIX: Clear cache for moved objects to prevent phantom references
-                            this.editor.invalidateObjectCaches(obj.id);
-                            this.editor.level.addObject(obj);
-                            movedObjectsCount++;
+                            // Route through extractObjectFromGroup for correct rotation-aware
+                            // world position + remaining-children pivot compensation.
+                            const extracted = this.editor.groupOperations.extractObjectFromGroup(
+                                groupEditMode.group, obj, { saveState: false }
+                            );
+                            if (extracted) movedObjectsCount++;
                         }
                     }
                 });
@@ -577,6 +631,8 @@ export class MouseHandlers extends BaseModule {
         Logger.mouse.debug(`Global mouseup at (${e.clientX}, ${e.clientY}), canvas rect:`, rect, 'isOutside:', isOutsideCanvas);
         
         if (e.button === 0) {
+            this._pivotCompensationBaseline = null;
+
             // Handle marquee selection completion (both inside and outside canvas)
             // Only finish marquee if it's still active (not already finished by canvas handler)
             if (mouse.isMarqueeSelecting) {
@@ -600,7 +656,7 @@ export class MouseHandlers extends BaseModule {
                     'mouse.offsetX': null,
                     'mouse.offsetY': null
                 });
-                this.editor.historyOperations.undo();
+                this.editor.historyOperations.cancelToLastSavedState();
                 this.editor.render();
             }
 
@@ -616,7 +672,7 @@ export class MouseHandlers extends BaseModule {
                     'mouse.transformStartDist': null,
                     'mouse.transformPendingMode': null
                 });
-                this.editor.historyOperations.undo();
+                this.editor.historyOperations.cancelToLastSavedState();
                 this.editor.render();
             }
         }
@@ -642,6 +698,8 @@ export class MouseHandlers extends BaseModule {
     handleWindowBlur() {
         const mouse = this.editor.stateManager.get('mouse');
 
+        this._pivotCompensationBaseline = null;
+
         if (mouse.isMarqueeSelecting) {
             this.finishMarqueeSelection();
         }
@@ -659,7 +717,7 @@ export class MouseHandlers extends BaseModule {
                 'mouse.offsetX': null,
                 'mouse.offsetY': null
             });
-            this.editor.historyOperations.undo();
+            this.editor.historyOperations.cancelToLastSavedState();
         }
 
         if (mouse.isTransforming) {
@@ -671,7 +729,7 @@ export class MouseHandlers extends BaseModule {
                 'mouse.transformStartDist': null,
                 'mouse.transformPendingMode': null
             });
-            this.editor.historyOperations.undo();
+            this.editor.historyOperations.cancelToLastSavedState();
         }
 
         this.editor.stateManager.update({
@@ -854,7 +912,9 @@ export class MouseHandlers extends BaseModule {
 
     handleDoubleClick(e) {
         const worldPos = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, this.editor.stateManager.get('camera'));
-        const clickedObject = this.editor.objectOperations.findObjectAtPoint(worldPos.x, worldPos.y);
+        // skipCycle: a dblclick is physically two single clicks, which would already have
+        // advanced the click-cycle past the front-most object (see ObjectOperations.findObjectAtPoint)
+        const clickedObject = this.editor.objectOperations.findObjectAtPoint(worldPos.x, worldPos.y, true);
         
         if (clickedObject && clickedObject.type === 'group') {
             this.editor.groupOperations.openGroupEditMode(clickedObject);
@@ -960,6 +1020,7 @@ export class MouseHandlers extends BaseModule {
             
             this.editor.stateManager.update({
                 'mouse.isDragging': true,
+                'mouse.pendingGroupClose': false,
                 'mouse.dragStartX': worldPos.x,
                 'mouse.dragStartY': worldPos.y,
                 'mouse.anchorX': anchorX,
@@ -1012,28 +1073,15 @@ export class MouseHandlers extends BaseModule {
                 return;
             }
 
-            // Outside active group — step back one level
-            this.editor.groupOperations.closeGroupEditMode();
-
-            // If still inside a parent open group after step-back, start marquee there
-            if (this.isInGroupEditMode()) {
-                const parentGroupEditMode = this.getGroupEditMode();
-                const parentBounds = this.editor.objectOperations.getObjectWorldBounds(parentGroupEditMode.group);
-                const insideParent = worldPos.x >= parentBounds.minX && worldPos.x <= parentBounds.maxX &&
-                    worldPos.y >= parentBounds.minY && worldPos.y <= parentBounds.maxY;
-                if (insideParent) {
-                    if (marqueeMode === 'replace') {
-                        this.editor.stateManager.set('selectedObjects', new Set());
-                    }
-                    this.editor.stateManager.update({
-                        'mouse.isMarqueeSelecting': true,
-                        'mouse.marqueeRect': { x: worldPos.x, y: worldPos.y, width: 0, height: 0 },
-                        'mouse.marqueeStartX': worldPos.x,
-                        'mouse.marqueeStartY': worldPos.y,
-                        'mouse.marqueeMode': marqueeMode
-                    });
-                }
-            }
+            // Outside active group — defer the close to mouseup so that:
+            //   a) a drag can still start (external object dragged into group), and
+            //   b) a click on an external object selects it without closing the group.
+            // We record the intent here; handleMouseUp will execute it if no drag occurred
+            // and no selectable object was found under the cursor.
+            this.editor.stateManager.update({
+                'mouse.pendingGroupClose': true,
+                'mouse.isMarqueeSelecting': false
+            });
             return;
         }
 
@@ -1050,8 +1098,104 @@ export class MouseHandlers extends BaseModule {
         });
     }
 
+    /**
+     * Collect the ROTATED ancestor groups of the given object ids, innermost-first.
+     * Unrotated ancestors don't need pivot compensation (their frame is pure translation).
+     * @param {Set<string>} targetIds
+     * @returns {Array<Group>} innermost (deepest) ancestors first
+     * @private
+     */
+    _collectRotatedAncestorsOf(targetIds) {
+        const found = new Map(); // groupId -> { group, depth }
+
+        const dfs = (obj, ancestors) => {
+            if (targetIds.has(obj.id) && ancestors.length > 0) {
+                ancestors.forEach((g, depth) => {
+                    if (g.rotation && !found.has(g.id)) {
+                        found.set(g.id, { group: g, depth });
+                    }
+                });
+            }
+            if (obj.type === 'group' && obj.children) {
+                ancestors.push(obj);
+                obj.children.forEach(ch => dfs(ch, ancestors));
+                ancestors.pop();
+            }
+        };
+
+        this.editor.level.objects.forEach(o => dfs(o, []));
+        return [...found.values()].sort((a, b) => b.depth - a.depth).map(e => e.group);
+    }
+
+    /**
+     * Capture the pivot-compensation baseline for the current gesture: each rotated
+     * ancestor's position and its children-bounds center RELATIVE to that position.
+     * @private
+     */
+    _capturePivotBaseline(selectedIds) {
+        const groups = this._collectRotatedAncestorsOf(selectedIds);
+        if (groups.length === 0) return null;
+        return groups.map(group => {
+            const b = group.getBounds();
+            return {
+                group,
+                x: group.x,
+                y: group.y,
+                cRelX: (b.minX + b.maxX) / 2 - group.x,
+                cRelY: (b.minY + b.maxY) / 2 - group.y
+            };
+        });
+    }
+
+    /**
+     * Keep every rotated ancestor's on-screen content fixed while a descendant moves.
+     *
+     * A group's rotation pivot is the center of its children's bounds, recomputed each
+     * render. Moving one child shifts that center, which re-pivots the WHOLE group and
+     * makes untouched siblings visibly drift. Changing the pivot from P1 to P2 shifts
+     * every rendered point by the constant (I − R)(P1 − P2) (R is the group's rotation
+     * matrix; the shift is point-independent because R is linear). So translating the
+     * group by exactly that constant cancels the drift for all children at once, while
+     * the pivot itself stays "natural" — no freeze state, no jump at gesture start/end.
+     *
+     * Applied innermost-first: compensating a deep group also perturbs its own parent's
+     * children-bounds center, which the next (outer) iteration then measures and cancels.
+     * Uses SET (baseline + correction), not +=, so repeated per-frame application can't
+     * accumulate drift.
+     * @private
+     */
+    _applyPivotCompensation() {
+        const baseline = this._pivotCompensationBaseline;
+        if (!baseline) return;
+
+        baseline.forEach(s => {
+            const g = s.group;
+            const b = g.getBounds();
+            const cRelX = (b.minX + b.maxX) / 2 - g.x;
+            const cRelY = (b.minY + b.maxY) / 2 - g.y;
+            const dx = s.cRelX - cRelX;
+            const dy = s.cRelY - cRelY;
+            if (dx === 0 && dy === 0) {
+                g.x = s.x;
+                g.y = s.y;
+                return;
+            }
+            const rad = (g.rotation || 0) * Math.PI / 180;
+            const cos = Math.cos(rad);
+            const sin = Math.sin(rad);
+            g.x = s.x + dx - (cos * dx - sin * dy);
+            g.y = s.y + dy - (sin * dx + cos * dy);
+        });
+    }
+
     dragSelectedObjects(worldPos, e) {
         const selectedObjects = this.editor.stateManager.get('selectedObjects');
+
+        // Pivot-stability baseline: captured lazily on the first move of this drag
+        // (cleared on mouseup/blur/cancel and when objects get reparented mid-drag)
+        if (!this._pivotCompensationBaseline) {
+            this._pivotCompensationBaseline = this._capturePivotBaseline(selectedObjects);
+        }
 
         // Track if any objects are being moved into groups to delay rendering
         let objectsMovedToGroup = false;
@@ -1240,15 +1384,15 @@ export class MouseHandlers extends BaseModule {
                             }
                         }
                         
-                        // Convert world -> group-local coordinates, accounting for the
-                        // group's own rotation and any rotated ancestors above it (a plain
-                        // translation subtraction would misplace the object under a rotated
-                        // group).
-                        const localInGroup = WorldPositionUtils.worldPointToLocalPointInGroup(
-                            obj.x, obj.y, groupEditMode.group, this.editor.level.objects
-                        );
-                        obj.x = localInGroup.x;
-                        obj.y = localInGroup.y;
+                        // Route through addObjectToGroup for correct rotation-aware
+                        // transform (world center preserved, rotation adjusted, pivot
+                        // compensation applied to both source and target groups).
+                        // addObjectToGroup handles removal from level.objects internally.
+                        // obj.x/y already include this frame's dx/dy (applied above at
+                        // main-level-move time) — do NOT add it again here, or the object's
+                        // world position used for the in-group coordinate conversion below
+                        // overshoots by one extra delta, causing a visible jump/blink.
+                        this.editor.groupOperations.addObjectToGroup(obj, groupEditMode.group);
 
                         // FORCED INHERITANCE: Always inherit layerId from parent group
                         if (groupEditMode.group.layerId) {
@@ -1269,14 +1413,17 @@ export class MouseHandlers extends BaseModule {
 
                         // CRITICAL FIX: Invalidate spatial index BEFORE moving objects
                         this.editor.renderOperations.invalidateSpatialIndex();
-                        
+
+                        // CRITICAL FIX: getVisibleObjects() caches {obj, parentX, parentY}
+                        // per camera position for up to CACHE_TIMEOUT_MS. obj was cached as a
+                        // top-level entry (parentX=0, parentY=0); now that its x/y are
+                        // group-local, drawObject() would keep reading that stale parentX/Y
+                        // and render it at the wrong spot until the cache naturally expires —
+                        // the reported "blink in another place". Must drop it immediately.
+                        this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
+
                         // Set flag to delay rendering until all operations are complete
                         objectsMovedToGroup = true;
-
-                        // Move object into group FIRST, then remove from main level
-                        // This prevents the object from appearing in both places simultaneously
-                        groupEditMode.group.children.push(obj);
-                        this.editor.level.removeObject(obj.id);
                     }
                 } else if (isInAnyOpenGroup) {
                     // Object is inside any of the open groups
@@ -1321,20 +1468,10 @@ export class MouseHandlers extends BaseModule {
                                         if (targetLayer && targetLayer.locked) return;
                                     }
 
-                                    // Remove from current parent group
-                                    const parentGroup = this.editor.groupOperations._findParentGroup(obj);
-                                    if (parentGroup) {
-                                        parentGroup.children = parentGroup.children.filter(c => c.id !== obj.id);
-                                    }
-
-                                    // Convert to active-group-relative coordinates, accounting
-                                    // for the active group's own rotation and any rotated
-                                    // ancestors above it.
-                                    const localInActive = WorldPositionUtils.worldPointToLocalPointInGroup(
-                                        objWorldPos.x, objWorldPos.y, activeGroup, this.editor.level.objects
-                                    );
-                                    obj.x = localInActive.x;
-                                    obj.y = localInActive.y;
+                                    // Route through addObjectToGroup: removes from source group,
+                                    // computes rotation-aware local coords, applies pivot
+                                    // compensation to both source and target groups.
+                                    this.editor.groupOperations.addObjectToGroup(obj, activeGroup);
 
                                     // Layer inheritance
                                     if (activeGroup.layerId) {
@@ -1349,9 +1486,6 @@ export class MouseHandlers extends BaseModule {
 
                                     this.editor.renderOperations.invalidateSpatialIndex();
                                     objectsMovedToGroup = true;
-
-                                    // Pushing to the end of children already makes it the topmost sibling
-                                    activeGroup.children.push(obj);
                                 }
                             }
                         }
@@ -1363,6 +1497,15 @@ export class MouseHandlers extends BaseModule {
             }
         });
 
+        // Keep rotated ancestors' pivots from dragging their untouched children around.
+        // On reparenting the ancestor chain changed — drop the baseline so it re-captures
+        // against the new hierarchy on the next move.
+        if (objectsMovedToGroup) {
+            this._pivotCompensationBaseline = null;
+        } else {
+            this._applyPivotCompensation();
+        }
+
         // Update drag start position only when not snapped to grid
         if (!mouse.snappedToGrid) {
             this.editor.stateManager.update({
@@ -1373,7 +1516,7 @@ export class MouseHandlers extends BaseModule {
 
         // Don't update panels during drag to avoid real-time position updates
         // Panels will be updated when drag ends in handleMouseUp
-        
+
         return objectsMovedToGroup;
     }
 
@@ -1433,6 +1576,10 @@ export class MouseHandlers extends BaseModule {
         if (snapshot.length === 0 || union.minX === Infinity) return;
 
         this._transformSnapshot = snapshot;
+        // Same pivot-stability treatment as regular drag: rotating/scaling children of a
+        // rotated ancestor changes that ancestor's children-bounds — without compensation
+        // its untouched children would drift (see _applyPivotCompensation).
+        this._pivotCompensationBaseline = this._capturePivotBaseline(selectedIds);
 
         const pivot = { x: (union.minX + union.maxX) / 2, y: (union.minY + union.maxY) / 2 };
         const startDist = Math.hypot(startWorldPos.x - pivot.x, startWorldPos.y - pivot.y);
@@ -1515,6 +1662,9 @@ export class MouseHandlers extends BaseModule {
                 }
             });
         }
+
+        // Keep rotated ancestors' pivots from dragging their untouched children around
+        this._applyPivotCompensation();
     }
 
     /**
@@ -1576,49 +1726,55 @@ export class MouseHandlers extends BaseModule {
                 // Canvas mode: get objects in marquee using world coordinates
                 const objectsInMarquee = [];
 
-                if (this.isInGroupEditMode()) {
-                    // In group edit mode, check ALL descendants without viewport filtering
-                    const groupEditMode = this.getGroupEditMode();
-                    const selectable = this.editor.objectOperations.computeSelectableSet();
+                // A plain click (mousedown+mouseup with no movement) still goes through
+                // handleEmptyClick → a zero-size "marquee" at the click point, finalized
+                // here — it must behave like a real click: precise, rotation-aware
+                // point-in-shape testing via isPointInObject (the same test findObjectAtPoint
+                // already used to correctly reject/accept this point in handleMouseDown).
+                //
+                // A genuine drag uses the exact same rotated-rect geometry (getHitTestGeometry)
+                // the click test uses, checked against the marquee rect via SAT
+                // (rectIntersectsGeometry) — not a plain AABB-vs-rect overlap, which is larger
+                // than the true shape for any rotated object/group and would select things the
+                // drag rectangle never actually touches (or, for objects merely near a corner
+                // of the drag rect, wrongly include them).
+                const isPlainClick = marqueeRect.width === 0 && marqueeRect.height === 0;
+                const hitTest = isPlainClick
+                    ? (obj) => this.editor.objectOperations.isPointInObject(marqueeRect.x, marqueeRect.y, obj)
+                    : (obj) => {
+                        const effectiveLayerId = this.editor.renderOperations.getEffectiveLayerId(obj);
+                        const parallaxOffset = this.editor.renderOperations.parallaxRenderer.isParallaxEnabled()
+                            && this.editor.renderOperations.parallaxRenderer.isLayerParallaxEnabled(this.editor.level.getLayerById(effectiveLayerId))
+                            ? this.editor.renderOperations.parallaxRenderer.getParallaxOffset(this.editor.level.getLayerById(effectiveLayerId))
+                            : { x: 0, y: 0 };
 
-                    // Collect all descendants of the edited group
-                    const collect = (g) => {
-                        const res = [];
-                        g.children.forEach(ch => {
-                            if (selectable.has(ch.id)) {
-                                res.push(ch);
-                            }
-                            if (ch.type === 'group') res.push(...collect(ch));
-                        });
-                        return res;
+                        const geom = WorldPositionUtils.getHitTestGeometry(obj, this.editor.level.objects);
+                        geom.cx -= parallaxOffset.x;
+                        geom.cy -= parallaxOffset.y;
+
+                        return WorldPositionUtils.rectIntersectsGeometry(
+                            marqueeRect.x, marqueeRect.y,
+                            marqueeRect.x + marqueeRect.width, marqueeRect.y + marqueeRect.height,
+                            geom
+                        );
                     };
-                    const candidates = collect(groupEditMode.group);
+
+                if (this.isInGroupEditMode()) {
+                    // In group edit mode: same candidate set as findObjectAtPoint (active
+                    // group's children + siblings at every level of the open-group chain).
+                    const selectable = this.editor.objectOperations.computeSelectableSet();
+                    const candidates = this.editor.objectOperations.getSelectableCandidateObjects()
+                        .filter(o => selectable.has(o.id));
 
                     candidates.forEach(obj => {
-                        const bounds = this.editor.renderOperations.parallaxRenderer.getObjectWorldBoundsWithParallax(
-                            obj, 
-                            this.editor.renderOperations.getEffectiveLayerId(obj)
-                        );
-                        if (marqueeRect.x < bounds.maxX && marqueeRect.x + marqueeRect.width > bounds.minX &&
-                            marqueeRect.y < bounds.maxY && marqueeRect.y + marqueeRect.height > bounds.minY) {
-                            objectsInMarquee.push(obj.id);
-                        }
+                        if (hitTest(obj)) objectsInMarquee.push(obj.id);
                     });
                 } else {
                     // Normal mode - use viewport optimization for better performance
                     const selectableInViewport = this.editor.getSelectableObjectsInViewport();
                     selectableInViewport.forEach(objId => {
                         const obj = this.editor.getCachedObject(objId);
-                        if (obj) {
-                            const bounds = this.editor.renderOperations.parallaxRenderer.getObjectWorldBoundsWithParallax(
-                                obj, 
-                                this.editor.renderOperations.getEffectiveLayerId(obj)
-                            );
-                            if (marqueeRect.x < bounds.maxX && marqueeRect.x + marqueeRect.width > bounds.minX &&
-                                marqueeRect.y < bounds.maxY && marqueeRect.y + marqueeRect.height > bounds.minY) {
-                                objectsInMarquee.push(obj.id);
-                            }
-                        }
+                        if (obj && hitTest(obj)) objectsInMarquee.push(objId);
                     });
                 }
 

@@ -226,10 +226,27 @@ export class EventHandlers extends BaseModule {
         // This method is kept for compatibility but does nothing
     }
     
+    /**
+     * Returns true when the keyboard event matches the shortcut defined at
+     * shortcuts.<category>.<action> in ConfigManager.
+     * ctrlKey and metaKey are treated as the same modifier (platform-agnostic Ctrl/Cmd).
+     * shiftKey and altKey must match exactly; undefined config flags are treated as false.
+     */
+    _matchesShortcut(e, category, action) {
+        const def = this.editor.configManager?.getShortcuts()?.[category]?.[action];
+        if (!def?.key) return false;
+        const eCtrl = !!(e.ctrlKey || e.metaKey);
+        const defCtrl = !!(def.ctrlKey || def.metaKey);
+        return e.key.toLowerCase() === def.key.toLowerCase()
+            && eCtrl            === defCtrl
+            && !!e.shiftKey     === !!def.shiftKey
+            && !!e.altKey       === !!def.altKey;
+    }
+
     handleKeyDown(e) {
         // Backspace-to-reset (hover-based, see ResetRegistry) must run even while some
         // unrelated input has focus — checked before the focused-input early-return below.
-        if (e.key === 'Backspace' && ResetRegistry.handleBackspace()) {
+        if (this._matchesShortcut(e, 'ui', 'resetToDefault') && ResetRegistry.handleBackspace()) {
             e.preventDefault();
             return;
         }
@@ -239,8 +256,8 @@ export class EventHandlers extends BaseModule {
             return;
         }
 
-        // Handle escape key to cancel all current actions
-        if (e.key === 'Escape') {
+        // Escape: complex multi-branch logic, matched via config
+        if (this._matchesShortcut(e, 'editor', 'escape')) {
             e.preventDefault();
 
             // Close group edit mode if active (same as clicking outside group bounds)
@@ -270,118 +287,122 @@ export class EventHandlers extends BaseModule {
             this.editor.cancelAllActions();
             return;
         }
-        
-        if (e.key === 'Delete' || e.key.toLowerCase() === 'x') {
+
+        if (this._matchesShortcut(e, 'editor', 'delete') || this._matchesShortcut(e, 'editor', 'deleteAlt')) {
             e.preventDefault();
-            if (this.editor.objectOperations && typeof this.editor.objectOperations.deleteSelectedObjects === 'function') {
-                this.editor.objectOperations.deleteSelectedObjects();
-            }
-        } else if (e.shiftKey && e.key.toLowerCase() === 'd') {
+            this.editor.objectOperations?.deleteSelectedObjects();
+        } else if (this._matchesShortcut(e, 'editor', 'duplicate')) {
             e.preventDefault();
-            if (this.editor.objectOperations && typeof this.editor.objectOperations.duplicateSelectedObjects === 'function') {
-                this.editor.objectOperations.duplicateSelectedObjects();
-            }
-        } else if (e.key.toLowerCase() === 'f') {
+            this.editor.objectOperations?.duplicateSelectedObjects();
+        } else if (this._matchesShortcut(e, 'editor', 'focusSelection')) {
             e.preventDefault();
-            if (typeof this.editor.focusOnSelection === 'function') {
-                this.editor.focusOnSelection();
-            }
-        } else if (e.key.toLowerCase() === 'a') {
+            if (typeof this.editor.focusOnSelection === 'function') this.editor.focusOnSelection();
+        } else if (this._matchesShortcut(e, 'editor', 'focusAll')) {
             e.preventDefault();
-            if (typeof this.editor.focusOnAll === 'function') {
-                this.editor.focusOnAll();
-            }
-        } else if (e.key.toLowerCase() === 'g' && !e.shiftKey && !e.altKey && !e.ctrlKey) {
+            if (typeof this.editor.focusOnAll === 'function') this.editor.focusOnAll();
+        } else if (this._matchesShortcut(e, 'editor', 'toggleGrid')) {
             e.preventDefault();
             this.toggleGrid();
-        } else if (e.shiftKey && e.key.toLowerCase() === 'g') {
+        } else if (this._matchesShortcut(e, 'editor', 'groupObjects')) {
             e.preventDefault();
-            if (this.editor.groupOperations && typeof this.editor.groupOperations.groupSelectedObjects === 'function') {
-                this.editor.groupOperations.groupSelectedObjects();
-            }
-        } else if (e.altKey && e.key.toLowerCase() === 'g') {
+            this.editor.groupOperations?.groupSelectedObjects();
+        } else if (this._matchesShortcut(e, 'editor', 'ungroupObjects')) {
             e.preventDefault();
-            if (this.editor.groupOperations && typeof this.editor.groupOperations.ungroupSelectedObjects === 'function') {
-                this.editor.groupOperations.ungroupSelectedObjects();
-            }
-        } else if (e.key.toLowerCase() === 'p') {
+            this.editor.groupOperations?.ungroupSelectedObjects();
+        } else if (this._matchesShortcut(e, 'editor', 'toggleParallax')) {
             e.preventDefault();
             this.toggleViewOption('parallax');
-        } else if (e.ctrlKey || e.metaKey) {
-            if (e.key.toLowerCase() === 'z') {
-                e.preventDefault();
-                if (e.shiftKey) {
-                    if (typeof this.editor.redo === 'function') {
-                        this.editor.redo();
-                    }
-                } else {
-                    if (typeof this.editor.undo === 'function') {
-                        this.editor.undo();
-                    }
-                }
-            } else if (e.key.toLowerCase() === 'y') {
-                e.preventDefault();
-                if (typeof this.editor.redo === 'function') {
-                    this.editor.redo();
-                }
-            } else if (e.key.toLowerCase() === 'n') {
-                // Ctrl+Alt+N: always interceptable (remapped from Ctrl+N which browsers steal).
-                // Ctrl+N alone also works when keyboard is locked in fullscreen mode.
-                e.preventDefault();
-                if (typeof this.editor.newLevel === 'function') {
-                    this.editor.newLevel();
-                }
-            } else if (e.key.toLowerCase() === 'o') {
-                e.preventDefault();
-                if (typeof this.editor.openLevel === 'function') {
-                    this.editor.openLevel();
-                }
-            } else if (e.key.toLowerCase() === 's') {
-                e.preventDefault();
-                if (e.shiftKey) {
-                    if (typeof this.editor.saveLevelAs === 'function') {
-                        // Handle async action
-                        (async () => {
-                            await this.editor.saveLevelAs();
-                        })();
-                    }
-                } else {
-                    if (typeof this.editor.saveLevel === 'function') {
-                        // Handle async action
-                        (async () => {
-                            await this.editor.saveLevel();
-                        })();
-                    }
-                }
-            } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-                // Stacking order: Ctrl+Up/Down moves one step, Ctrl+Shift+Up/Down goes to front/back
-                e.preventDefault();
-                const selectedIds = this.editor.stateManager.get('selectedObjects');
-                if (selectedIds && selectedIds.size > 0 && this.editor.objectOperations) {
-                    const objects = Array.from(selectedIds)
-                        .map(id => this.editor.level.findObjectById(id))
-                        .filter(Boolean);
-                    const goingUp = e.key === 'ArrowUp';
-                    const action = e.shiftKey
-                        ? (goingUp ? 'bringToFront' : 'sendToBack')
-                        : (goingUp ? 'moveForward' : 'moveBackward');
-                    this.editor.objectOperations.applyStackOrderAction(objects, action);
-                }
+        } else if (this._matchesShortcut(e, 'editor', 'undo')) {
+            e.preventDefault();
+            if (typeof this.editor.undo === 'function') this.editor.undo();
+        } else if (this._matchesShortcut(e, 'editor', 'redo') || this._matchesShortcut(e, 'editor', 'redoAlt')) {
+            e.preventDefault();
+            if (typeof this.editor.redo === 'function') this.editor.redo();
+        } else if (this._matchesShortcut(e, 'editor', 'newLevel') ||
+                   // Plain Ctrl+N also works when KeyN is locked via Keyboard Lock API in fullscreen;
+                   // outside fullscreen browsers steal it, so the default binding is Ctrl+Alt+N.
+                   ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'n')) {
+            e.preventDefault();
+            if (typeof this.editor.newLevel === 'function') this.editor.newLevel();
+        } else if (this._matchesShortcut(e, 'editor', 'openLevel')) {
+            e.preventDefault();
+            if (typeof this.editor.openLevel === 'function') this.editor.openLevel();
+        } else if (this._matchesShortcut(e, 'editor', 'saveLevelAs')) {
+            e.preventDefault();
+            if (typeof this.editor.saveLevelAs === 'function') (async () => { await this.editor.saveLevelAs(); })();
+        } else if (this._matchesShortcut(e, 'editor', 'saveLevel')) {
+            e.preventDefault();
+            if (typeof this.editor.saveLevel === 'function') (async () => { await this.editor.saveLevel(); })();
+        } else if (this._matchesShortcut(e, 'editor', 'bringToFront') || this._matchesShortcut(e, 'editor', 'sendToBack') ||
+                   this._matchesShortcut(e, 'editor', 'bringForward') || this._matchesShortcut(e, 'editor', 'sendBackward')) {
+            e.preventDefault();
+            const selectedIds = this.editor.stateManager.get('selectedObjects');
+            if (selectedIds && selectedIds.size > 0 && this.editor.objectOperations) {
+                const objects = Array.from(selectedIds)
+                    .map(id => this.editor.level.findObjectById(id))
+                    .filter(Boolean);
+                let stackAction;
+                if (this._matchesShortcut(e, 'editor', 'bringToFront'))      stackAction = 'bringToFront';
+                else if (this._matchesShortcut(e, 'editor', 'sendToBack'))   stackAction = 'sendToBack';
+                else if (this._matchesShortcut(e, 'editor', 'bringForward')) stackAction = 'moveForward';
+                else                                                           stackAction = 'moveBackward';
+                this.editor.objectOperations.applyStackOrderAction(objects, stackAction);
             }
-        } else if (e.key === 'PageUp') {
+        } else if (this._matchesShortcut(e, 'editor', 'moveLayerUp') || this._matchesShortcut(e, 'editor', 'moveLayerUpExtreme')) {
             e.preventDefault();
             if (typeof this.editor.moveSelectedObjectsToLayer === 'function') {
-                const moveToExtreme = e.shiftKey;
-                this.editor.moveSelectedObjectsToLayer(true, moveToExtreme);
+                this.editor.moveSelectedObjectsToLayer(true, this._matchesShortcut(e, 'editor', 'moveLayerUpExtreme'));
             }
-        } else if (e.key === 'PageDown') {
+        } else if (this._matchesShortcut(e, 'editor', 'moveLayerDown') || this._matchesShortcut(e, 'editor', 'moveLayerDownExtreme')) {
             e.preventDefault();
             if (typeof this.editor.moveSelectedObjectsToLayer === 'function') {
-                const moveToExtreme = e.shiftKey;
-                this.editor.moveSelectedObjectsToLayer(false, moveToExtreme);
+                this.editor.moveSelectedObjectsToLayer(false, this._matchesShortcut(e, 'editor', 'moveLayerDownExtreme'));
             }
-        } else {
-            // Unknown key combination
+        } else if (this._matchesShortcut(e, 'ui', 'toggleLeftPanel')) {
+            e.preventDefault();
+            this.togglePanel('leftPanel');
+        } else if (this._matchesShortcut(e, 'ui', 'toggleRightPanel')) {
+            e.preventDefault();
+            this.togglePanel('rightPanel');
+        } else if (this._matchesShortcut(e, 'ui', 'toggleToolbar')) {
+            e.preventDefault();
+            this.togglePanel('toolbar');
+        } else if (this._matchesShortcut(e, 'ui', 'toggleAssetsPanel')) {
+            e.preventDefault();
+            this.togglePanel('assetsPanel');
+        } else if (this._matchesShortcut(e, 'editor', 'renameObject')) {
+            e.preventDefault();
+            this.renameSelectedObject();
+        } else if (this._matchesShortcut(e, 'editor', 'isolateSelection')) {
+            e.preventDefault();
+            this.editor.objectOperations?.toggleIsolateSelection();
+        } else if (this._matchesShortcut(e, 'editor', 'unhideAll')) {
+            e.preventDefault();
+            this.editor.objectOperations?.unhideAllObjects();
+        } else if (this._matchesShortcut(e, 'editor', 'hideSelected')) {
+            e.preventDefault();
+            this.editor.objectOperations?.toggleVisibilityForSelection();
+        }
+    }
+
+    /**
+     * F2: rename the single selected object inline via the Outliner (see
+     * OutlinerPanel.startInlineRename). Switches to whichever panel side currently hosts the
+     * Outliner tab first, since that method needs the object's row to already be in the DOM
+     * and visible for the user to actually see/use the rename input.
+     */
+    renameSelectedObject() {
+        const selectedIds = this.editor.stateManager.get('selectedObjects');
+        if (!selectedIds || selectedIds.size !== 1) return;
+
+        const obj = this.editor.level.findObjectById(Array.from(selectedIds)[0]);
+        if (!obj) return;
+
+        const leftHasOutliner = document.getElementById('left-tabs-panel')?.querySelector('[data-tab="outliner"]');
+        this.setActivePanelTab('outliner', leftHasOutliner ? 'left' : 'right');
+
+        if (this.editor.outlinerPanel && typeof this.editor.outlinerPanel.startInlineRename === 'function') {
+            this.editor.outlinerPanel.startInlineRename(obj);
         }
     }
 
@@ -781,21 +802,34 @@ export class EventHandlers extends BaseModule {
                 if (visible) {
                     // Create panel if it doesn't exist
                     this.editor.panelPositionManager.ensurePanelExists(config.side);
-                }
-                
-                // Show/hide panel elements
-                config.elements.forEach(element => {
-                    const el = document.getElementById(element.id);
-                    if (el) {
-                        if (visible) {
+
+                    // Show/hide panel elements
+                    config.elements.forEach(element => {
+                        const el = document.getElementById(element.id);
+                        if (el) {
                             el.classList.remove('hidden');
                             el.style.display = element.display;
-                        } else {
+                        }
+                    });
+                } else {
+                    // Hiding: if the panel is EMPTY, remove it from the DOM entirely instead of
+                    // just display:none-ing it. Tab-drag's "does the other panel exist yet?"
+                    // check (PanelPositionManager._installGlobalTabDragHandlers) only looks for
+                    // DOM presence — a hidden-but-still-present empty panel would satisfy that
+                    // check and be treated as "already exists", so the drag would never
+                    // auto-show it again (and it can't be a drop target while display:none).
+                    // removeEmptyPanel() is a no-op if the panel still has tabs, so this is
+                    // safe to call unconditionally.
+                    this.editor.panelPositionManager.removeEmptyPanel(config.side);
+
+                    config.elements.forEach(element => {
+                        const el = document.getElementById(element.id);
+                        if (el) {
                             el.classList.add('hidden');
                             el.style.display = 'none';
                         }
-                    }
-                });
+                    });
+                }
                 break;
         }
         
@@ -844,6 +878,8 @@ export class EventHandlers extends BaseModule {
             // Check if it's a panel option
             const panelOptions = ['toolbar', 'assetsPanel', 'rightPanel', 'leftPanel', 'console'];
             if (panelOptions.includes(option)) {
+                // Sync state so subsequent saveViewStates() reads correct value
+                this.editor.stateManager.set(`view.${option}`, enabled);
                 // Apply panel visibility
                 this.applyPanelVisibility(option, enabled);
                 // Update menu checkbox state

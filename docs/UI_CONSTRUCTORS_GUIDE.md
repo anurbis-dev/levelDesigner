@@ -365,56 +365,68 @@ const actorDialog = new BaseDialog({
 
 ### Создание секции настроек
 
+`SettingsSectionConstructor.js` — не класс, а модуль с именованными функциями. Каждая
+возвращает готовую HTML-строку; ни одна из них не принимает `onChange` — обработчики
+событий не встраиваются в разметку, а централизованно навешиваются один раз в
+`SettingsPanel.setupSettingsInputs()` по атрибуту `data-setting` (см. ARCHITECTURE.md).
+
 ```javascript
-import { SettingsSectionConstructor } from '../ui/panel-structures/SettingsSectionConstructor.js';
+import {
+    createSettingsSection,
+    createSettingsFormGroup,
+    createSettingsLabel,
+    createSettingsInput,
+    createSettingsCheckbox,
+    createSettingsRange,
+    createSettingsColorInput,
+    createSettingsRow
+} from '../ui/panel-structures/SettingsSectionConstructor.js';
 
-const constructor = new SettingsSectionConstructor();
-
-// Создание секции с заголовком
-const section = constructor.createSettingsSection({
-    title: 'General Settings',
-    content: '<p>Section content</p>'
-});
-
-// Создание группы элементов формы
-const formGroup = constructor.createSettingsFormGroup([
-    constructor.createSettingsInput({
-        label: 'Canvas Width',
-        type: 'number',
-        value: 800,
-        onChange: (e) => console.log('Width:', e.target.value)
-    }),
-    constructor.createSettingsInput({
-        label: 'Canvas Height',
-        type: 'number',
-        value: 600,
-        onChange: (e) => console.log('Height:', e.target.value)
-    })
-]);
+// Создание группы элементов формы (content — готовая HTML-строка, не массив)
+const formGroup = createSettingsFormGroup(`
+    ${createSettingsLabel('Canvas Width', 'canvas-width')}
+    ${createSettingsInput({ id: 'canvas-width', type: 'number', value: 800, dataSetting: 'canvas.width' })}
+    ${createSettingsLabel('Canvas Height', 'canvas-height')}
+    ${createSettingsInput({ id: 'canvas-height', type: 'number', value: 600, dataSetting: 'canvas.height' })}
+`);
 
 // Создание чекбокса
-const checkbox = constructor.createSettingsCheckbox({
+const checkbox = createSettingsCheckbox({
+    id: 'enable-grid',
     label: 'Enable Grid',
     checked: true,
-    onChange: (e) => console.log('Grid enabled:', e.target.checked)
+    dataSetting: 'canvas.showGrid'
 });
 
-// Создание слайдера
-const slider = constructor.createSettingsRange({
+// Создание слайдера (значение отображается поверх трека; клик+драг и дабл-клик
+// для ручного ввода обслуживает SettingsPanel.setupRangeSliders())
+// Слайдер теперь рендерится в компактной однострочной раскладке через createSettingsRow
+const slider = createSettingsRange({
+    id: 'zoom-level',
     label: 'Zoom Level',
     min: 0.1,
     max: 3.0,
     step: 0.1,
     value: 1.0,
-    onChange: (e) => console.log('Zoom:', e.target.value)
+    dataSetting: 'camera.zoomLevel'
 });
 
 // Создание цветового селектора
-const colorInput = constructor.createSettingsColorInput({
+const colorInput = createSettingsColorInput({
+    id: 'background-color',
     label: 'Background Color',
     value: '#000000',
-    onChange: (e) => console.log('Color:', e.target.value)
+    dataSetting: 'canvas.backgroundColor',
+    inline: true  // использует createSettingsRow для компактной раскладки
 });
+
+// Создание секции с заголовком (title, content — позиционные аргументы, не объект)
+const section = createSettingsSection('General Settings', formGroup);
+
+// createSettingsRow — базовый блок для однострочной раскладки "label слева + control справа"
+// (используется внутри createSettingsRange и createSettingsColorInput при inline=true)
+// Обычно вызывается через конструкторы выше, но можно и напрямую:
+const customRow = createSettingsRow('My Label', 'my-control', '<input type="text">', { /* options */ });
 ```
 
 ## 🤖 Практические примеры для агента

@@ -687,9 +687,15 @@ class SettingsSyncManager {
 - Изменения сохраняются в `config/user/shortcuts.json`
 - Перезаписывают дефолтные значения
 
-**Категория `mouse`**: описывает мышиные жесты (`rotateObjects`, `scaleObjects` — см. Rotate/Scale жесты объектов выше). `SettingsPanel` рендерит её в отдельной секции "Mouse Gestures" в Settings → Hotkeys как информационную — поля имеют `data-static="true"` и пропускаются `setupHotkeyInputs()`, ребиндинг недоступен.
+**Категория `mouse`**: описывает мышиные жесты (`rotateObjects`, `scaleObjects` — см. Rotate/Scale жесты объектов выше; `soloLayer` — Ctrl+click иконки глаза слоя в LayersPanel, см. ARCHITECTURE.md → «Isolate и Layer Solo»). `SettingsPanel` рендерит её в отдельной секции "Mouse Gestures" в Settings → Hotkeys как информационную — поля имеют `data-static="true"` и пропускаются `setupHotkeyInputs()`, ребиндинг недоступен.
 
 **`ui.resetToDefault`** (`key: "Backspace"`): документирует Backspace-to-reset (см. раздел «Backspace-to-reset» в ARCHITECTURE.md) — как и остальные записи в `shortcuts.json`, это чисто документационная запись, видна в Settings → Hotkeys; сам хоткей функционально обрабатывается напрямую в `EventHandlers.handleKeyDown` через `ResetRegistry.handleBackspace()`, не читается из конфига.
+
+**`ui.toggleLeftPanel`/`toggleRightPanel`/`toggleToolbar`/`toggleAssetsPanel`** (`Alt+1`/`Alt+2`/`Alt+3`/`Alt+4`): тоггл видимости панелей, обрабатывается в `EventHandlers.handleKeyDown`.
+
+**`editor.renameObject`** (`F2`), **`editor.isolateSelection`** (`/`), **`editor.hideSelected`** (`H`), **`editor.unhideAll`** (`Alt+H`): см. ARCHITECTURE.md → «Цикл выбора перекрывающихся объектов по кликам», «Isolate и Layer Solo», «Видимость объектов».
+
+**Единый источник хоткеев в главном меню** (`config/menu.js` + `MenuManager` + `ShortcutFormatter`, см. ARCHITECTURE.md → «MenuManager / ShortcutFormatter»): пункты меню больше не хранят хардкод-строку хоткея, а ссылаются на дот-путь в `shortcuts.json` через `shortcutKey: 'editor.saveLevel'`. Ребинд в Settings → Hotkeys живо обновляет подпись в меню (`MenuManager.refreshShortcutLabels()`), но не сам обработчик нажатия — `EventHandlers.handleKeyDown` не читает `shortcuts.json` в рантайме (известное архитектурное ограничение).
 
 ### Сохранение настроек
 

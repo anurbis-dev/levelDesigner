@@ -237,15 +237,6 @@ export class CanvasContextMenu extends BaseContextMenu {
             }
         });
         this.addMenuItem('Reset View', '🔄', () => this.callbacks.onResetView());
-
-        this.addSeparator();
-
-        // Panel operations
-        this.addMenuItem('Swap Panels', '⇄', () => {
-            if (this.levelEditor && this.levelEditor.panelPositionManager) {
-                this.levelEditor.panelPositionManager.togglePanelPosition('rightPanel');
-            }
-        });
     }
 
     /**

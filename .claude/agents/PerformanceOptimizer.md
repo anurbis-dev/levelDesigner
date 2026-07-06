@@ -1,11 +1,7 @@
 ---
 name: PerformanceOptimizer
 description: "Use when: оптимизируй код, профилирование, производительность, тормозит, фризы, просадки FPS, лагает canvas, утечка памяти при большом уровне. Performance specialist for Level Designer: analyzes browser DevTools profiling data, recommends Canvas 2D render and DOM-event optimizations for large levels."
-tools:
-  - Read
-  - Grep
-  - Glob
-  - TodoWrite
+tools: Read, Grep, Glob, TodoWrite
 model: sonnet
 ---
 

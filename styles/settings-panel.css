@@ -198,13 +198,122 @@
     border-radius: 2px;
 }
 
+/* Custom range slider: thumb-less thick track, current value shown as an overlay
+   (not a separate element below), click+drag on the track works natively since the
+   whole <input> stays the hit-test target — only its thumb is made invisible. */
+.settings-range-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-height: 1.5rem;
+    /* Fills the remaining row width next to the label (see createSettingsRow) — no-op
+       when the wrapper isn't inside a flex parent. */
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.settings-main-content input[type="range"].settings-range-input {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 9px !important;
+    padding: 0 !important;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    margin: 0;
+}
+
+.settings-range-input {
+    --range-fill: 0%;
+}
+
+/* Filled portion up to the current value — Chrome/Edge/Safari have no native "progress"
+   pseudo-element for range tracks, so the fill is faked with a hard-stop gradient driven by
+   --range-fill (kept in sync with input.value by SettingsPanel.setupRangeSliders). Firefox
+   gets the same effect natively via ::-moz-range-progress instead. */
+.settings-range-input::-webkit-slider-runnable-track {
+    height: 9px;
+    border-radius: 4.5px;
+    background: linear-gradient(to right,
+        var(--accent-color, #3b82f6) 0%,
+        var(--accent-color, #3b82f6) var(--range-fill),
+        #374151 var(--range-fill),
+        #374151 100%);
+}
+.settings-range-input::-moz-range-track {
+    height: 9px;
+    border-radius: 4.5px;
+    background: #374151;
+}
+.settings-range-input::-moz-range-progress {
+    height: 9px;
+    border-radius: 4.5px 0 0 4.5px;
+    background: var(--accent-color, #3b82f6);
+}
+
+.settings-range-input::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    height: 9px;
+    width: 9px;
+    border-radius: 50%;
+    background: var(--accent-color, #3b82f6);
+    opacity: 0;
+    margin-top: 0;
+}
+.settings-range-input::-moz-range-thumb {
+    height: 9px;
+    width: 9px;
+    border: none;
+    border-radius: 50%;
+    background: var(--accent-color, #3b82f6);
+    opacity: 0;
+}
+
+.settings-range-value {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 0.7rem;
+    color: var(--ui-active-text-color, #ffffff);
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.9), 0 0 3px rgba(0, 0, 0, 0.9);
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+}
+
+/* Hidden by default; swapped in on double-click of the slider for direct numeric entry */
+.settings-range-edit {
+    display: none;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    background: #1f2937;
+    border: 1px solid #3b82f6;
+    border-radius: 4.5px;
+    color: white;
+    font-size: 0.75rem;
+    padding: 0;
+}
+
+.settings-range-wrapper.editing .settings-range-input,
+.settings-range-wrapper.editing .settings-range-value {
+    visibility: hidden;
+}
+.settings-range-wrapper.editing .settings-range-edit {
+    display: block;
+}
+
 /* Settings footer */
 .settings-footer {
     padding: calc(1rem * max(var(--spacing-scale, 1.0), 0.5)) calc(1.5rem * max(var(--spacing-scale, 1.0), 0.5));
     border-top: 1px solid #374151;
     background-color: var(--ui-background-color, #111827);
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
     align-items: center;
     gap: calc(0.75rem * max(var(--spacing-scale, 1.0), 0.5));
     flex-shrink: 0;
@@ -214,6 +323,17 @@
     display: flex;
     gap: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.5));
     flex-wrap: wrap;
+    align-items: center;
+}
+
+.settings-auto-apply-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--ui-text-color, #d1d5db);
+    cursor: pointer;
+    white-space: nowrap;
 }
 
 .settings-footer-right {
@@ -307,10 +427,6 @@
     outline: none;
     border-color: #3b82f6;
     box-shadow: 0 0 0 1px #3b82f6;
-}
-
-.settings-input[type="range"] {
-    width: 100%;
 }
 
 .settings-input[type="color"] {

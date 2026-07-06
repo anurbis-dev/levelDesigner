@@ -84,15 +84,27 @@ export class DialogResizer {
                     if (stateManager) {
                         stateManager.set(`dialogs.${dialogId}.width`, finalWidth);
                     }
-                    
+
                     isResizing = false;
                     document.body.style.cursor = '';
                     document.body.style.userSelect = '';
                     resizer.classList.remove('resizing');
                     resizer.style.backgroundColor = 'transparent';
-                    
+
                     document.removeEventListener('mousemove', handleMouseMove);
                     document.removeEventListener('mouseup', handleMouseUp);
+
+                    // If mouseup lands outside the resizer (dragged fast past the dialog
+                    // edge onto the overlay backdrop), mousedown/mouseup targets differ and
+                    // the browser synthesizes a 'click' on their common ancestor - the overlay.
+                    // BaseDialog treats that as "click outside = dismiss" and closes the dialog
+                    // mid-resize. Swallow that one synthetic click before it reaches the overlay.
+                    const suppressClick = (e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                    };
+                    document.addEventListener('click', suppressClick, { capture: true, once: true });
+                    setTimeout(() => document.removeEventListener('click', suppressClick, { capture: true }), 0);
                 }
             };
             

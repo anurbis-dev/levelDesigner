@@ -355,6 +355,106 @@ export class WorldPositionUtils {
     }
 
     /**
+     * Return the "reference center" of `obj` in its PARENT's local coordinate frame,
+     * plus the offset (offX, offY) from obj.x/obj.y to that center.
+     *
+     *  - Simple objects : center = (obj.x + w/2, obj.y + h/2)
+     *  - Groups         : center = center of getBounds(true)
+     *                     (unrotated children bounds, already in parent-local frame)
+     *
+     * This center is ROTATION-INVARIANT — it doesn't move when obj.rotation changes —
+     * so it can safely be used as the stable "world anchor" during reparenting.
+     */
+    static getLocalCenter(obj) {
+        if (obj.type === 'group') {
+            const b = obj.getBounds(true); // parent-local, includes obj.x/y
+            if (b.minX === Infinity) {
+                return { x: obj.x, y: obj.y, offX: 0, offY: 0 };
+            }
+            const cx = (b.minX + b.maxX) / 2;
+            const cy = (b.minY + b.maxY) / 2;
+            return { x: cx, y: cy, offX: cx - obj.x, offY: cy - obj.y };
+        }
+        const offX = (obj.width  || 0) / 2;
+        const offY = (obj.height || 0) / 2;
+        return { x: obj.x + offX, y: obj.y + offY, offX, offY };
+    }
+
+    /**
+     * Return the world-space center of `obj` (rotation-invariant anchor) and the
+     * total accumulated rotation (all ancestor rotations + obj's own rotation).
+     *
+     * Math:  center_plain  = plainX - obj.x + lc.x  (works for simple objects and groups)
+     *        worldCenter   = _applyRotationChain(center_plain)
+     *        accumulatedRotation = sum(chain) + obj.rotation
+     *
+     * @returns {{ x:number, y:number, accumulatedRotation:number }}
+     */
+    static getWorldCenterAndRotation(obj, levelObjects) {
+        const found = this._findPlainPositionAndChain(obj, levelObjects);
+        const chain  = found ? found.rotationChain : [];
+        const plainX = found ? found.plainX : (obj.x || 0);
+        const plainY = found ? found.plainY : (obj.y || 0);
+        const lc = this.getLocalCenter(obj);
+        // Unified formula valid for both simple objects and groups:
+        //   simple : lc.x = obj.x + w/2  →  plainX - obj.x + lc.x = plainX + w/2
+        //   group  : lc.x = bounds_center (parent-local, includes obj.x)
+        //                                 →  plainX - obj.x + lc.x = accumulated_parent + bounds_center
+        const cx_plain = plainX - obj.x + lc.x;
+        const cy_plain = plainY - obj.y + lc.y;
+        const wc = this._applyRotationChain(cx_plain, cy_plain, chain);
+        return {
+            x: wc.x,
+            y: wc.y,
+            accumulatedRotation: this._sumChainRotations(chain) + (obj.rotation || 0)
+        };
+    }
+
+    /**
+     * After group.children has changed (child added or removed), adjust group.x/y
+     * so that ALL remaining children stay visually where they were.
+     *
+     * When a group's children change, the "pivot" (center of children bounds) shifts
+     * by Δ = P_new − P_old (both in G-local space).  Every rendered child drifts by
+     * (I − R)·Δ in parent space.  Translating the group by −(I − R)·Δ cancels that
+     * drift for ALL children simultaneously (the correction is point-independent).
+     *
+     *   G.x −= (1 − cosθ)·Δx + sinθ·Δy
+     *   G.y −= −sinθ·Δx  + (1 − cosθ)·Δy
+     *
+     * No-op when group has no rotation (no drift possible).
+     *
+     * @param {Object}        group       - The group whose children just changed.
+     * @param {{ x, y }}      pOldGLocal  - G-local pivot BEFORE the structural change.
+     *                                      Capture as getGroupLocalPivot(group) before touching children.
+     */
+    static applyGroupPivotCompensation(group, pOldGLocal) {
+        if (!group.rotation) return;
+        const b = group.getBounds();
+        if (b.minX === Infinity) return;
+        const Δx = (b.minX + b.maxX) / 2 - group.x - pOldGLocal.x;
+        const Δy = (b.minY + b.maxY) / 2 - group.y - pOldGLocal.y;
+        if (Δx === 0 && Δy === 0) return;
+        const cos = Math.cos(group.rotation * Math.PI / 180);
+        const sin = Math.sin(group.rotation * Math.PI / 180);
+        group.x -= (1 - cos) * Δx + sin * Δy;
+        group.y -= -sin * Δx + (1 - cos) * Δy;
+    }
+
+    /**
+     * Return the G-local pivot of group G (center of its current children's bounding
+     * box minus G.x/G.y).  Must be called BEFORE modifying G.children.
+     */
+    static getGroupLocalPivot(group) {
+        const b = group.getBounds();
+        if (b.minX === Infinity) return { x: 0, y: 0 };
+        return {
+            x: (b.minX + b.maxX) / 2 - group.x,
+            y: (b.minY + b.maxY) / 2 - group.y
+        };
+    }
+
+    /**
      * Get center point of an object in world coordinates
      * @param {Object} obj - Object to get center for
      * @param {Array} levelObjects - Top-level objects array
@@ -376,34 +476,144 @@ export class WorldPositionUtils {
      * @param {Array} levelObjects - Top-level objects array
      * @returns {boolean} True if point is inside object
      */
-    static isPointInWorldBounds(x, y, obj, levelObjects) {
-        // Precise test for rotated simple objects: inverse-rotate the point (by the
-        // TOTAL rotation — rotated ancestors plus the object's own) around its true
-        // world center, then test against the unrotated rect.
-        if (obj.type !== 'group') {
-            const found = this._findPlainPositionAndChain(obj, levelObjects);
-            const chain = found ? found.rotationChain : [];
-            const totalRotation = this._sumChainRotations(chain) + (obj.rotation || 0);
+    /**
+     * True if (px,py) is inside the rect, OR within `tolerance` world units of its
+     * nearest edge/corner — i.e. the click POINT is expanded into a disk of radius
+     * `tolerance` and tested against the rect (Euclidean distance), not the rect
+     * expanded into a bigger box (which would over-forgive corners: a square/per-axis
+     * expansion lets clicks up to tolerance·√2 away from a corner still hit, whereas
+     * a genuine "point within N px of the shape" check keeps corners circular).
+     */
+    static _pointNearRect(px, py, minX, minY, maxX, maxY, tolerance) {
+        const clampedX = Math.min(Math.max(px, minX), maxX);
+        const clampedY = Math.min(Math.max(py, minY), maxY);
+        const dx = px - clampedX;
+        const dy = py - clampedY;
+        return dx * dx + dy * dy <= tolerance * tolerance;
+    }
 
-            if (totalRotation) {
-                const plainX = found ? found.plainX : (obj.x || 0);
-                const plainY = found ? found.plainY : (obj.y || 0);
-                const w = obj.width || 0;
-                const h = obj.height || 0;
-                const center = this._applyRotationChain(plainX + w / 2, plainY + h / 2, chain);
-                const rad = -totalRotation * Math.PI / 180;
-                const dx = x - center.x;
-                const dy = y - center.y;
-                const lx = center.x + dx * Math.cos(rad) - dy * Math.sin(rad);
-                const ly = center.y + dx * Math.sin(rad) + dy * Math.cos(rad);
-                return lx >= center.x - w / 2 && lx <= center.x + w / 2 &&
-                       ly >= center.y - h / 2 && ly <= center.y + h / 2;
+    /**
+     * True if the axis-aligned rect [minX,minY,maxX,maxY] intersects the (possibly
+     * rotated) rectangle described by `geom` (as returned by getHitTestGeometry) — exact
+     * polygon-vs-polygon test via the Separating Axis Theorem, not a bounding-box
+     * approximation. Used by marquee-drag selection so dragging a selection box near a
+     * rotated object's AABB corner (but outside its true rotated shape) correctly excludes
+     * it, matching what clicking that same point would do.
+     */
+    static rectIntersectsGeometry(minX, minY, maxX, maxY, geom) {
+        const rectCorners = [
+            { x: minX, y: minY }, { x: maxX, y: minY },
+            { x: maxX, y: maxY }, { x: minX, y: maxY }
+        ];
+
+        const rad = geom.rotationDeg * Math.PI / 180;
+        const cos = Math.cos(rad), sin = Math.sin(rad);
+        const local = [
+            { x: -geom.halfW, y: -geom.halfH }, { x: geom.halfW, y: -geom.halfH },
+            { x: geom.halfW, y: geom.halfH }, { x: -geom.halfW, y: geom.halfH }
+        ];
+        const rotCorners = local.map(p => ({
+            x: geom.cx + p.x * cos - p.y * sin,
+            y: geom.cy + p.x * sin + p.y * cos
+        }));
+
+        const axes = geom.rotationDeg
+            ? [{ x: 1, y: 0 }, { x: 0, y: 1 }, { x: cos, y: sin }, { x: -sin, y: cos }]
+            : [{ x: 1, y: 0 }, { x: 0, y: 1 }];
+
+        const project = (corners, ax, ay) => {
+            let min = Infinity, max = -Infinity;
+            for (const c of corners) {
+                const p = c.x * ax + c.y * ay;
+                if (p < min) min = p;
+                if (p > max) max = p;
             }
+            return { min, max };
+        };
+
+        for (const axis of axes) {
+            const a = project(rectCorners, axis.x, axis.y);
+            const b = project(rotCorners, axis.x, axis.y);
+            if (a.max < b.min || b.max < a.min) return false; // separating axis found
+        }
+        return true;
+    }
+
+    /**
+     * Single source of truth for the exact rectangle isPointInWorldBounds tests against
+     * (center + half-extents + rotation, all in world space) — also used by the
+     * "Object Boundaries" debug overlay (RenderOperations.drawSingleObjectBoundary) so the
+     * two can NEVER visually diverge from what's actually clickable, by construction.
+     * @returns {{cx:number, cy:number, halfW:number, halfH:number, rotationDeg:number}}
+     */
+    static getHitTestGeometry(obj, levelObjects) {
+        const found = this._findPlainPositionAndChain(obj, levelObjects);
+        const chain = found ? found.rotationChain : [];
+        const ancestorRotation = this._sumChainRotations(chain);
+        const ownRotation = obj.rotation || 0;
+        const totalRotation = ancestorRotation + ownRotation;
+
+        if (!totalRotation) {
+            const bounds = this.getWorldBounds(obj, levelObjects);
+            return {
+                cx: (bounds.minX + bounds.maxX) / 2,
+                cy: (bounds.minY + bounds.maxY) / 2,
+                halfW: (bounds.maxX - bounds.minX) / 2,
+                halfH: (bounds.maxY - bounds.minY) / 2,
+                rotationDeg: 0
+            };
         }
 
-        const bounds = this.getWorldBounds(obj, levelObjects);
-        return x >= bounds.minX && x <= bounds.maxX &&
-               y >= bounds.minY && y <= bounds.maxY;
+        let w, h, center;
+        if (obj.type !== 'group') {
+            // Simple object with known width/height
+            const plainX = found ? found.plainX : (obj.x || 0);
+            const plainY = found ? found.plainY : (obj.y || 0);
+            w = obj.width || 0;
+            h = obj.height || 0;
+            center = this._applyRotationChain(plainX + w / 2, plainY + h / 2, chain);
+        } else {
+            // Group with rotation: getWorldBounds(..., skipOwnRotation=true) is NOT the
+            // right box here — once obj has a rotated ancestor, that path re-bounds the
+            // box's 4 corners through the ancestor chain (for accurate frame-drawing),
+            // producing an AABB-of-a-rotated-rect that's inflated relative to the true
+            // rect whenever ancestorRotation isn't a multiple of 90°. Inverse-rotating the
+            // click point by the FULL totalRotation and testing against that inflated box
+            // double-counts the ancestor rotation. Instead, mirror the simple-object branch
+            // above: use the tight box with NO rotation baked in at all (own OR ancestor)
+            // via getLocalCenter()/getBounds(true), and inverse-rotate by totalRotation.
+            const lc = this.getLocalCenter(obj);
+            const b = obj.getBounds(true);
+            w = b.maxX - b.minX;
+            h = b.maxY - b.minY;
+            const plainX = found ? found.plainX : (obj.x || 0);
+            const plainY = found ? found.plainY : (obj.y || 0);
+            center = this._applyRotationChain(plainX - obj.x + lc.x, plainY - obj.y + lc.y, chain);
+        }
+
+        return { cx: center.x, cy: center.y, halfW: w / 2, halfH: h / 2, rotationDeg: totalRotation };
+    }
+
+    static isPointInWorldBounds(x, y, obj, levelObjects, tolerance = 0) {
+        // Precise test for rotated objects: inverse-rotate the point (by the TOTAL
+        // rotation — rotated ancestors plus the object's own) around its true world
+        // center, then test against the unrotated rect — the click point itself is what
+        // `tolerance` expands (see _pointNearRect), matching how a mouse click is
+        // forgiven in screen space regardless of the object's shape/rotation.
+        const geom = this.getHitTestGeometry(obj, levelObjects);
+
+        const rad = -geom.rotationDeg * Math.PI / 180;
+        const dx = x - geom.cx;
+        const dy = y - geom.cy;
+        const lx = geom.cx + dx * Math.cos(rad) - dy * Math.sin(rad);
+        const ly = geom.cy + dx * Math.sin(rad) + dy * Math.cos(rad);
+
+        return this._pointNearRect(
+            lx, ly,
+            geom.cx - geom.halfW, geom.cy - geom.halfH,
+            geom.cx + geom.halfW, geom.cy + geom.halfH,
+            tolerance
+        );
     }
 
     /**

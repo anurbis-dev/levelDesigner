@@ -1,6 +1,7 @@
 import { GridSettings } from './GridSettings.js';
 import { SettingsSyncManager } from '../utils/SettingsSyncManager.js';
 import { ResetRegistry } from '../utils/ResetRegistry.js';
+import { ShortcutFormatter } from '../utils/ShortcutFormatter.js';
 import { ColorUtils } from '../utils/ColorUtils.js';
 import { BaseContextMenu } from './BaseContextMenu.js';
 import { Logger } from '../utils/Logger.js';
@@ -9,6 +10,7 @@ import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
 import { dialogSizeManager } from '../utils/DialogSizeManager.js';
 import { DialogResizer } from '../utils/DialogResizer.js';
+import { SearchUtils } from '../utils/SearchUtils.js';
 import {
     renderGeneralSettings,
     renderColorsSettings,
@@ -34,6 +36,9 @@ export class SettingsPanel {
 
         // Store original values for cancel functionality
         this.originalValues = {};
+
+        // Whether input changes apply live to the editor, or only when Apply is pressed
+        this.autoApply = localStorage.getItem('levelEditor_settingsAutoApply') !== '0';
 
         // Initialize grid settings module
         this.gridSettings = configManager ? new GridSettings(configManager) : null;
@@ -73,6 +78,11 @@ export class SettingsPanel {
                 <div class="settings-header" id="settings-header">
                     <h2>Settings</h2>
                     <div class="settings-header-controls">
+                        ${SearchUtils.createSearchInput(
+                            'Search parameters...',
+                            'settings-search-input',
+                            'settings-header-search-input px-2 py-1 text-sm border border-gray-600 rounded bg-gray-700 text-white focus:border-blue-500 focus:outline-none w-48'
+                        ).outerHTML}
                         <button id="settings-menu-btn" class="settings-menu-btn">⋮</button>
                     </div>
                 </div>
@@ -99,6 +109,12 @@ export class SettingsPanel {
                 </div>
                 
                 <div class="settings-footer">
+                    <div class="settings-footer-left">
+                        <label class="settings-auto-apply-label">
+                            <input type="checkbox" id="settings-auto-apply" checked>
+                            Apply changes automatically
+                        </label>
+                    </div>
                     <div class="settings-footer-right">
                         <button id="cancel-settings" class="settings-btn settings-btn-cancel">Cancel</button>
                         <button id="save-settings" class="settings-btn settings-btn-save">Apply Changes</button>
@@ -126,6 +142,13 @@ export class SettingsPanel {
                 // Use CSS class instead of direct style manipulation
                 overlay.classList.add('dialog-visible');
                 overlay.style.display = 'flex';
+
+                // Reflect the auto-apply preference in the checkbox and Cancel/Apply buttons
+                const autoApplyCheckbox = document.getElementById('settings-auto-apply');
+                if (autoApplyCheckbox) {
+                    autoApplyCheckbox.checked = this.autoApply;
+                }
+                this.updateAutoApplyUI();
 
                 // Window positioning is now handled by CSS only
                 
@@ -435,36 +458,9 @@ export class SettingsPanel {
      * @returns {string} Formatted shortcut string
      */
     formatShortcut(shortcut) {
-        const parts = [];
-
-        if (shortcut.ctrlKey) parts.push('Ctrl');
-        if (shortcut.altKey) parts.push('Alt');
-        if (shortcut.shiftKey) parts.push('Shift');
-        if (shortcut.metaKey) parts.push('Cmd');
-
-        // Use the key property, ignore altKey/shiftKey if they are set as key values
-        if (shortcut.key) {
-            parts.push(shortcut.key.toUpperCase());
-        }
-
-        return parts.join(' + ');
+        return ShortcutFormatter.format(shortcut);
     }
 
-    /**
-     * Update slider display value in real-time
-     */
-    updateSliderDisplay(slider, value) {
-        const container = slider.closest('div');
-        if (!container) return;
-
-        const displayElement = container.querySelector('div[style*="text-align: center"]');
-        if (displayElement) {
-            const numValue = ValidationUtils.validateNumeric(value, 'slider value');
-            if (numValue !== null) {
-                displayElement.textContent = `${numValue.toFixed(1)}x`;
-            }
-        }
-    }
 
 
     setupSettingsInputs() {
@@ -495,18 +491,16 @@ export class SettingsPanel {
 
                 ValidationUtils.logValidation('SettingsPanel', 'Input change detected', { path, value });
 
-                // For range sliders - update display only during drag (font scale applies on release only)
+                // Manual mode: defer application until the user presses Apply Changes
+                if (!this.autoApply) return;
+
+                // Font scale / spacing sliders apply immediately, except font scale itself
+                // (which only applies on mouse release — see the 'change' listener below).
+                // The live value overlay for all range sliders is handled by setupRangeSliders().
                 if (input.type === 'range' && (path === 'ui.fontScale' || path === 'ui.spacingH' || path === 'ui.spacingV' || path === 'ui.elementSize' || path === 'ui.menuGapBase')) {
-                    this.updateSliderDisplay(input, value);
-                    // Only apply immediately for non-font-scale sliders (font scale applies on mouse release)
                     if (path !== 'ui.fontScale' && this.syncManager) {
                         this.syncManager.syncSettingToState(path, value);
                     }
-                }
-
-                // Update real-time display values for other sliders (excluding font scale)
-                if (input.type === 'range' && path !== 'ui.fontScale') {
-                    this.updateSliderDisplay(input, value);
                 }
 
                 // Handle nested logger color settings
@@ -555,9 +549,11 @@ export class SettingsPanel {
             // Add change listener for scaling sliders (ensure final value applied)
             if (input.type === 'range' && (input.dataset.setting === 'ui.fontScale' || input.dataset.setting === 'ui.spacingH' || input.dataset.setting === 'ui.spacingV' || input.dataset.setting === 'ui.elementSize' || input.dataset.setting === 'ui.menuGapBase')) {
                 input._changeHandler = (e) => {
+                    if (!this.autoApply) return;
+
                     const path = e.target.dataset.setting;
                     const value = e.target.value;
-                    
+
                     // Apply the setting change when user releases the slider
                     if (this.syncManager) {
                         this.syncManager.syncSettingToState(path, value);
@@ -566,34 +562,11 @@ export class SettingsPanel {
                 input.addEventListener('change', input._changeHandler);
             }
             
-            // Handle range slider value display updates (font scale updates display only, not the actual value)
-            if (input.type === 'range') {
-                const valueDisplay = input.parentElement.querySelector('div[style*="text-align: center"]');
-                if (valueDisplay) {
-                    const updateRangeValue = () => {
-                        let displayValue = input.value;
-                        const setting = input.getAttribute('data-setting');
-                        
-                        // Format display value based on setting type
-                        if (setting && setting.includes('.')) {
-                            const [category, key] = setting.split('.');
-                            if (category === 'performance') {
-                                displayValue = input.value + 'ms';
-                            } else if (category === 'camera') {
-                                displayValue = input.value + 'x';
-                            }
-                        }
-                        
-                        valueDisplay.textContent = displayValue;
-                    };
-                    
-                    // For font scale, update display on input but don't apply changes (they apply on change/mouse release)
-                    // For other sliders, update display normally
-                    input.addEventListener('input', updateRangeValue);
-                    updateRangeValue(); // Set initial value
-                }
-            }
         });
+
+        // Wire the custom slider widget (value overlay + double-click numeric edit) for
+        // every range input currently in the DOM, regardless of which tab rendered it.
+        this.setupRangeSliders();
 
         // Setup real-time sync from StateManager to UI (for toolbar/menu changes)
         this.setupStateManagerSubscriptions();
@@ -603,6 +576,189 @@ export class SettingsPanel {
 
         // Rebuild Backspace-to-reset targets for whichever tab is now in the DOM
         this.rebuildResetRegistry();
+
+        // Re-apply the header search term (if any) to the freshly rendered tab content
+        const headerSearchInput = document.getElementById('settings-search-input');
+        this.filterSettingsContent(headerSearchInput ? headerSearchInput.value : '');
+    }
+
+    /**
+     * Wire the thumb-less custom slider widget: live value overlay text while dragging, and
+     * double-click to swap in a plain number input for direct entry. Queried by element type
+     * (input[type="range"]), not by CSS class, so it covers both the shared .setting-input
+     * sliders (SettingsSectionConstructor.createSettingsRange) and GridSettings.js's
+     * differently-classed .settings-input slider (grid-opacity) with one implementation.
+     */
+    setupRangeSliders() {
+        const settingsRoot = document.getElementById('settings-panel-container') || document;
+        settingsRoot.querySelectorAll('input[type="range"]').forEach(input => {
+            if (input._rangeSliderWired) return;
+            input._rangeSliderWired = true;
+
+            const wrapper = input.closest('.settings-range-wrapper');
+            if (!wrapper) return;
+            const valueEl = wrapper.querySelector('.settings-range-value');
+            const editInput = wrapper.querySelector('.settings-range-edit');
+            const unit = input.dataset.unit || '';
+
+            const formatValue = () => {
+                const num = parseFloat(input.value);
+                return Number.isFinite(num) ? `${num.toFixed(1)}${unit}` : input.value;
+            };
+
+            // Shift+drag: fine adjustment. Native range dragging sets .value straight from the
+            // pointer's absolute track position on every 'input' tick, which can't be cancelled
+            // via preventDefault (the browser keeps following the cursor 1:1 regardless). Instead,
+            // this listener — registered first, so it runs before updateValueText/updateFill below —
+            // re-derives each tick's raw cursor-driven delta and, while Shift is held, overwrites
+            // input.value with only a fraction of that delta. Reassigning .value here does not
+            // re-dispatch 'input', so this can't recurse.
+            const SOFT_DRAG_FACTOR = 0.2;
+            let dragShiftActive = false;
+            let dragValue = parseFloat(input.value);
+            let lastRawValue = dragValue;
+
+            input.addEventListener('pointerdown', (e) => {
+                dragShiftActive = e.shiftKey;
+                dragValue = parseFloat(input.value);
+                lastRawValue = dragValue;
+            });
+            input.addEventListener('pointerup', () => { dragShiftActive = false; });
+
+            input.addEventListener('input', () => {
+                const rawValue = parseFloat(input.value);
+                if (!dragShiftActive) {
+                    dragValue = rawValue;
+                    lastRawValue = rawValue;
+                    return;
+                }
+
+                const delta = rawValue - lastRawValue;
+                lastRawValue = rawValue;
+
+                const min = parseFloat(input.min) || 0;
+                const max = parseFloat(input.max);
+                const step = parseFloat(input.step) || 0;
+
+                dragValue += delta * SOFT_DRAG_FACTOR;
+                dragValue = Math.max(min, Number.isFinite(max) ? Math.min(max, dragValue) : dragValue);
+                if (step > 0) dragValue = Math.round(dragValue / step) * step;
+
+                input.value = dragValue;
+            });
+
+            if (valueEl) {
+                const updateValueText = () => { valueEl.textContent = formatValue(); };
+                input.addEventListener('input', updateValueText);
+                updateValueText();
+            }
+
+            // Drive the filled portion of the track (see --range-fill in settings-panel.css)
+            const updateFill = () => {
+                const min = parseFloat(input.min) || 0;
+                const max = parseFloat(input.max);
+                const val = parseFloat(input.value);
+                const pct = Number.isFinite(max) && max > min && Number.isFinite(val)
+                    ? ((val - min) / (max - min)) * 100
+                    : 0;
+                input.style.setProperty('--range-fill', `${pct}%`);
+            };
+            input.addEventListener('input', updateFill);
+            updateFill();
+
+            if (editInput) {
+                const enterEditMode = () => {
+                    editInput.value = input.value;
+                    wrapper.classList.add('editing');
+                    editInput.focus();
+                    editInput.select();
+                };
+
+                const exitEditMode = (commit) => {
+                    wrapper.classList.remove('editing');
+                    if (!commit) return;
+
+                    const num = parseFloat(editInput.value);
+                    if (!Number.isFinite(num)) return;
+
+                    const min = parseFloat(input.min);
+                    const max = parseFloat(input.max);
+                    let clamped = num;
+                    if (Number.isFinite(min)) clamped = Math.max(min, clamped);
+                    if (Number.isFinite(max)) clamped = Math.min(max, clamped);
+
+                    input.value = clamped;
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                };
+
+                wrapper.addEventListener('dblclick', enterEditMode);
+                editInput.addEventListener('blur', () => exitEditMode(true));
+                editInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        exitEditMode(true);
+                    } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        exitEditMode(false);
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * Show/hide parameter rows across the currently rendered tab based on their label text,
+     * driven by the single search input in the settings window header. A "row" is a label's
+     * parent element, which in every settings constructor (checkbox, range, color, plain
+     * input, and Grid tab's .settings-form-item) wraps exactly one label + its field. The
+     * Hotkeys tab has no <label> elements, so its .hotkey-item rows are matched separately
+     * against their .hotkey-description text.
+     */
+    filterSettingsContent(term) {
+        const root = document.getElementById('settings-content');
+        if (!root) return;
+
+        const lower = (term || '').toLowerCase().trim();
+
+        // Toggle display to/from 'none' while preserving whatever inline display value the
+        // row had before hiding (e.g. the inline color-input wrapper's `display: flex`).
+        // Blanking style.display on restore is NOT safe: once 'none' overwrites the CSSOM
+        // display value there is no "previous value" to fall back to, so clearing it just
+        // drops to the block default — cache the original value on hide and restore that.
+        const setRowVisible = (el, visible) => {
+            if (visible) {
+                if (el.style.display === 'none') {
+                    el.style.display = el.dataset.searchOrigDisplay || '';
+                }
+            } else if (el.style.display !== 'none') {
+                el.dataset.searchOrigDisplay = el.style.display;
+                el.style.display = 'none';
+            }
+        };
+
+        root.querySelectorAll('label').forEach(label => {
+            const row = label.parentElement;
+            if (!row) return;
+            setRowVisible(row, !lower || label.textContent.toLowerCase().includes(lower));
+        });
+
+        root.querySelectorAll('.hotkey-item').forEach(item => {
+            const description = item.querySelector('.hotkey-description');
+            const text = description ? description.textContent.toLowerCase() : '';
+            setRowVisible(item, !lower || text.includes(lower));
+        });
+
+        // Hide sections left with zero matching rows so search doesn't leave empty title boxes
+        root.querySelectorAll('.settings-section').forEach(section => {
+            if (!lower) {
+                setRowVisible(section, true);
+                return;
+            }
+            const hasVisibleRow = Array.from(section.querySelectorAll('label'))
+                .some(label => label.parentElement && label.parentElement.style.display !== 'none');
+            setRowVisible(section, hasVisibleRow);
+        });
     }
 
     /**
@@ -749,6 +905,11 @@ export class SettingsPanel {
             if (this.configManager) {
                 this.configManager.set(`shortcuts.${category}.${action}`, shortcuts[category][action]);
             }
+
+            // Reflect the rebind in the main menu immediately, if that item's shortcut is
+            // sourced from this same config path (see MenuManager.createMenuItem's
+            // shortcutKey resolution).
+            this.levelEditor?.menuManager?.refreshShortcutLabels();
         }
     }
 
@@ -853,6 +1014,36 @@ export class SettingsPanel {
             Logger.ui.warn('SettingsPanel: container registration issue:', e);
         }
 
+        // Setup header search input (wired once; show()/hide() don't recreate this DOM node)
+        const headerSearchInput = document.getElementById('settings-search-input');
+        if (headerSearchInput && !headerSearchInput.dataset.searchWired) {
+            headerSearchInput.dataset.searchWired = 'true';
+
+            // First Escape with text should only clear the search box; only a second Escape
+            // (already empty) should bubble up to the dialog's global Escape handler and
+            // close the panel. stopPropagation here (registered before SearchUtils' own
+            // Escape-clear listener on the same input) blocks that bubbling without
+            // preventing SearchUtils' listener on this same element from also firing.
+            headerSearchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && e.target.value) {
+                    e.stopPropagation();
+                }
+            });
+
+            SearchUtils.setupSearchListeners(headerSearchInput, (term) => this.filterSettingsContent(term));
+        }
+
+        // Setup auto-apply checkbox (wired once; show()/hide() don't recreate this DOM node)
+        const autoApplyCheckbox = document.getElementById('settings-auto-apply');
+        if (autoApplyCheckbox && !autoApplyCheckbox.dataset.autoApplyWired) {
+            autoApplyCheckbox.dataset.autoApplyWired = 'true';
+            autoApplyCheckbox.addEventListener('change', (e) => {
+                this.autoApply = e.target.checked;
+                localStorage.setItem('levelEditor_settingsAutoApply', this.autoApply ? '1' : '0');
+                this.updateAutoApplyUI();
+            });
+        }
+
         // Setup file import handler
         const importFile = document.getElementById('import-file');
         if (importFile) {
@@ -877,6 +1068,17 @@ export class SettingsPanel {
         }
 
         Logger.ui.debug('SettingsPanel: New event handlers setup complete');
+    }
+
+    /**
+     * Disable Cancel/Apply when auto-apply is on (there's nothing to commit or revert since
+     * every change is already live), enable them when auto-apply is off (manual apply/cancel).
+     */
+    updateAutoApplyUI() {
+        const cancelBtn = document.getElementById('cancel-settings');
+        const saveBtn = document.getElementById('save-settings');
+        if (cancelBtn) cancelBtn.disabled = this.autoApply;
+        if (saveBtn) saveBtn.disabled = this.autoApply;
     }
 
 
@@ -1175,33 +1377,16 @@ export class SettingsPanel {
     storeOriginalValues() {
         if (!this.levelEditor?.stateManager) return;
 
-        // Store all relevant settings that can be modified in the settings panel
-        const settingsToStore = [
-            // UI colors
-            'ui.backgroundColor',
-            'ui.textColor',
-            'ui.activeColor',
-            'ui.activeTextColor',
-            'ui.activeTabColor',
-            'ui.resizerColor',
-            'ui.accentColor',
-            // Canvas colors
-            'canvas.backgroundColor',
-            'canvas.gridColor',
-            'canvas.gridSubdivColor',
-            // Selection colors
-            'selection.outlineColor',
-            'selection.groupOutlineColor',
-            'selection.marqueeColor',
-            'selection.hierarchyHighlightColor',
-            'panels.selection.activeLayerBorderColor',
-            // Logger colors
-            'logger.colors'
-        ];
+        // Store every StateManager key the settings panel can modify (all tabs, not just
+        // colors), so a manual-apply Cancel/close can fully revert. 'logger.colors' isn't
+        // part of SettingsSyncManager's mapping since it's applied via a nested-path branch
+        // in setupSettingsInputs(), so it's added explicitly.
+        const stateKeys = new Set(Object.values(this.syncManager?.getAllMappings() || {}));
+        stateKeys.add('logger.colors');
 
         this.originalValues = {};
-        settingsToStore.forEach(path => {
-            this.originalValues[path] = this.levelEditor.stateManager.get(path);
+        stateKeys.forEach(stateKey => {
+            this.originalValues[stateKey] = this.levelEditor.stateManager.get(stateKey);
         });
 
         Logger.ui.debug('Stored original settings values for cancel functionality');
@@ -1220,12 +1405,14 @@ export class SettingsPanel {
             }
         });
 
-        // Apply color settings immediately after restoration
+        // Re-apply CSS-driven settings (colors, font scale, spacing, etc.) and view/toolbar/menu
+        // toggle states now that StateManager reflects the reverted values
         if (this.syncManager) {
-            this.syncManager.applyInitialColorSettings();
+            this.syncManager.applySpecialUISettings();
+            this.syncManager.forceUpdateAllViewOptions();
         }
 
-        // Trigger re-render to apply restored grid colors
+        // Trigger re-render to apply restored grid/canvas settings
         if (window.editor?.canvasRenderer?.clearGridCaches) {
             window.editor.canvasRenderer.clearGridCaches();
         }
@@ -1237,8 +1424,11 @@ export class SettingsPanel {
     }
 
     cancelSettings() {
-        // Restore original values from StateManager
-        this.restoreOriginalValues();
+        // In auto-apply mode every change is already live and there's nothing to revert;
+        // reverting here would surprise the user by undoing changes they saw take effect.
+        if (!this.autoApply) {
+            this.restoreOriginalValues();
+        }
 
         this.hide();
     }

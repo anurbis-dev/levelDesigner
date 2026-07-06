@@ -682,6 +682,12 @@ th, td {
     padding: calc(1px * max(var(--spacing-scale, 1.0), 0));
 }
 
+.outliner-item-name-display {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* Asset panel specific spacing */
 .asset-grid {
     gap: calc(8px * max(var(--spacing-scale, 1.0), 0));

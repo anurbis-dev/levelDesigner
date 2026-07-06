@@ -1336,6 +1336,12 @@ export class LevelEditor {
      * Render the canvas - delegate to render operations
      */
     render() {
+        // Consume the dirty flag here too (not just in the rAF loop): set() re-arms it
+        // unconditionally on every call, even when a subscriber (e.g. 'selectedObjects',
+        // 'camera') already renders synchronously in reaction to that same set(). Without
+        // this, the rAF loop still sees the flag armed and fires one more, visually
+        // redundant render on the very next frame — the actual source of the flicker.
+        this.stateManager.consumeNeedsRender();
         this.renderOperations.render();
     }
 

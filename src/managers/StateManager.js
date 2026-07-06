@@ -91,9 +91,15 @@ export class StateManager {
                 isAltDragMode: false
             },
             
-            // Outliner state
+            // Outliner state. Shape must match OutlinerPanel's own defensive init
+            // (src/ui/OutlinerPanel.js) — reset() previously produced only
+            // { collapsedTypes }, so post-reset access to outliner.collapsedGroups.has(...)
+            // (OutlinerPanel.countObjectsInGroup) threw on any level with groups.
             outliner: {
-                collapsedTypes: new Set()
+                collapsedTypes: new Set(),
+                collapsedGroups: new Set(),
+                activeTypeFilters: new Set(),
+                shiftAnchor: null
             },
             
             // View state
@@ -174,7 +180,8 @@ export class StateManager {
                 groupOutlineWidth: 4,
                 marqueeColor: '#3B82F6',
                 marqueeOpacity: 0.2,
-                hierarchyHighlightColor: '#3B82F6'
+                hierarchyHighlightColor: '#3B82F6',
+                hitTestTolerance: 4
             },
             
             // Touch state
@@ -223,6 +230,13 @@ export class StateManager {
         if (key === 'selectedObjects') {
         }
 
+        // Must be armed BEFORE notifyListeners: several listeners (e.g. 'selectedObjects',
+        // 'camera' in EventHandlers.setupStateListeners) call editor.render() synchronously,
+        // which consumes this flag. Arming it after notifyListeners would re-set it right
+        // back to true post-consumption, forcing the rAF render loop to redraw one more,
+        // visually redundant frame right after — the double-render behind the flicker.
+        this._needsRender = true;
+
         if (key.includes('.')) {
             // Handle nested properties like 'view.grid'
             const parts = key.split('.');
@@ -245,13 +259,16 @@ export class StateManager {
             this.state[key] = value;
             this.notifyListeners(key, value, oldValue);
         }
-        this._needsRender = true;
     }
 
     /**
      * Update multiple state properties at once
      */
     update(updates) {
+        // Armed before notifyListeners — see set() for why (a synchronous render inside a
+        // listener must be able to consume this flag instead of having it re-armed after).
+        this._needsRender = true;
+
         // Per-key oldValue, captured right before that key is overwritten — avoids cloning
         // the whole state tree (was `{ ...this.state }`, which also only ever produced a
         // correct oldValue for top-level keys; dotted keys like 'mouse.lastX' always read
@@ -279,8 +296,6 @@ export class StateManager {
         Object.keys(updates).forEach(key => {
             this.notifyListeners(key, this.get(key), oldValues[key]);
         });
-
-        this._needsRender = true;
     }
 
     /**
@@ -419,17 +434,21 @@ export class StateManager {
     reset() {
         // Use the same structure as constructor
         this.state = this.createInitialState();
-        
-        // Notify all listeners
+
+        // Notify all listeners. Uses get(key) (not raw this.state[key]) so dotted keys
+        // like 'canvas.showGrid' resolve to the actual nested value instead of undefined
+        // (this.state['canvas.showGrid'] doesn't exist as a literal property).
         this.listeners.forEach((callbacks, key) => {
             callbacks.forEach(callback => {
                 try {
-                    callback(this.state[key], undefined);
+                    callback(this.get(key), undefined);
                 } catch (error) {
                     Logger.state.error('State reset listener error:', error);
                 }
             });
         });
+
+        this._needsRender = true;
     }
 
     /**

@@ -1,4 +1,5 @@
 import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
+import { GroupTraversalUtils } from '../utils/GroupTraversalUtils.js';
 import { BaseModule } from './BaseModule.js';
 import { Logger } from '../utils/Logger.js';
 
@@ -97,61 +98,119 @@ export class ObjectOperations extends BaseModule {
     }
 
     /**
+     * Return the set of group IDs that must be excluded from selection while in
+     * group edit mode: all openGroups + ALL their ancestors (handles groups opened
+     * directly via the outliner, bypassing parent-first navigation).
+     * @returns {Set<string>}
+     */
+    _buildGroupEditExclusionSet() {
+        const groupEditMode = this.getGroupEditMode();
+        if (!groupEditMode) return new Set();
+        const openGroups = Array.isArray(groupEditMode.openGroups)
+            ? groupEditMode.openGroups
+            : (groupEditMode.group ? [groupEditMode.group] : []);
+        const excluded = new Set(openGroups.map(g => g.id));
+        // Walk up from every open group to also exclude all their ancestors.
+        openGroups.forEach(g => {
+            let cur = g;
+            while (true) {
+                const parent = this.editor.groupOperations._findParentGroup(cur);
+                if (!parent) break;
+                excluded.add(parent.id);
+                cur = parent;
+            }
+        });
+        return excluded;
+    }
+
+    /**
+     * Collect the actual selectable candidate OBJECTS for the current mode. Shared by
+     * computeSelectableSet, findObjectAtPoint, and marquee selection so all three agree
+     * on exactly the same set (previously each duplicated this logic separately and only
+     * covered the active group's direct children + the LEVEL ROOT's top-level objects —
+     * missing siblings at INTERMEDIATE levels of a multi-level-nested group edit mode,
+     * e.g. group A open with child-group B open inside it: A's other children, besides
+     * B, were never selectable even though they're visible and draggable-into B).
+     *
+     * Rule while in group edit mode:
+     *   1) Direct children of the ACTIVE (innermost open) group.
+     *   2) At EVERY level of the open-group chain (root → innermost), the siblings of
+     *      that level's open child — i.e. walk root.objects, then each open group's own
+     *      children — so an object can be selected/dragged in from anywhere along the
+     *      ancestor chain, not just the absolute root.
+     *   3) Objects inside a CLOSED child-group are never included (only reachable once
+     *      that child-group itself is opened) — the child-group is selectable as a whole.
+     * Outside group edit mode: all top-level level.objects.
+     */
+    getSelectableCandidateObjects() {
+        const excluded = this._buildGroupEditExclusionSet();
+
+        if (!this.isInGroupEditMode()) {
+            let topLevel = this.editor.level.objects;
+            // Isolate mode (see toggleIsolateSelection) is top-level-only: while active,
+            // only the isolated top-level branch(es) are selectable, matching the dimming
+            // applied in RenderOperations.render().
+            const isolatedIds = this.editor.stateManager.get('view.isolatedTopLevelIds');
+            if (isolatedIds) topLevel = topLevel.filter(o => isolatedIds.has(o.id));
+            // Object Solo (Ctrl+click an eye icon, see toggleObjectSolo) is also top-level-only.
+            const soloedId = this.editor.stateManager.get('view.soloedTopLevelObjectId');
+            if (soloedId) topLevel = topLevel.filter(o => o.id === soloedId);
+            return topLevel;
+        }
+
+        const groupEditMode = this.getGroupEditMode();
+        const activeGroup = groupEditMode.group;
+        const openGroups = Array.isArray(groupEditMode.openGroups)
+            ? groupEditMode.openGroups
+            : (activeGroup ? [activeGroup] : []);
+
+        const candidates = [];
+        const seen = new Set();
+        const addAll = (arr) => {
+            (arr || []).forEach(o => {
+                if (!excluded.has(o.id) && !seen.has(o.id)) {
+                    seen.add(o.id);
+                    candidates.push(o);
+                }
+            });
+        };
+
+        addAll(activeGroup?.children);
+
+        let containerChildren = this.editor.level.objects;
+        openGroups.forEach(g => {
+            addAll(containerChildren);
+            containerChildren = g.children || [];
+        });
+
+        return candidates;
+    }
+
+    /**
      * Object manipulation methods
      */
-    findObjectAtPoint(x, y) {
-        // In group edit mode, search through all objects including nested ones (no viewport filtering)
+    /**
+     * @param {number} x - World X
+     * @param {number} y - World Y
+     * @param {boolean} skipCycle - If true, always return the front-most match instead of
+     *   cycling (see _pickWithClickCycle). Used by double-click: a dblclick gesture is
+     *   physically two single clicks, which would otherwise already have advanced the cycle
+     *   past the front-most object (e.g. a group) by the time the dblclick handler runs.
+     */
+    findObjectAtPoint(x, y, skipCycle = false) {
+        // In group edit mode:
+        //   - direct children of the active group are selectable
+        //   - siblings at any level of the open-group chain are selectable (so they can
+        //     be dragged in)
+        //   - objects INSIDE nested (closed) child-groups are NOT selectable (child-group
+        //     as a whole is)
         if (this.isInGroupEditMode()) {
-            const groupEditMode = this.getGroupEditMode();
-           const openGroups = Array.isArray(groupEditMode.openGroups) ? groupEditMode.openGroups : (groupEditMode.group ? [groupEditMode.group] : []);
-           const openIds = new Set(openGroups.map(g => g.id));
-           const selectable = this.computeSelectableSet();
+            const selectable = this.computeSelectableSet();
+            const candidates = this.getSelectableCandidateObjects().filter(o => selectable.has(o.id));
 
-           // Collect ALL selectable objects: external groups, external objects, and descendants.
-           // All objects are treated equally based on their stacking order (see compareStackOrder).
-           const allSelectableObjects = [];
-
-           // 1) External groups (excluding ALL open groups)
-           const externalGroups = this.editor.level.getAllObjects().filter(o => o.type === 'group' && !openIds.has(o.id) && selectable.has(o.id));
-           allSelectableObjects.push(...externalGroups);
-
-           // 2) External objects (not in any open group)
-           const externalObjects = this.editor.level.objects.filter(o => o.type !== 'group' && selectable.has(o.id));
-           allSelectableObjects.push(...externalObjects);
-
-           // 3) Descendants of ALL open groups (check ALL descendants from all open groups)
-           const collectAllDescendants = (groups) => {
-               const res = [];
-               groups.forEach(g => {
-                   const collect = (group) => {
-                       const descendants = [];
-                       group.children.forEach(ch => {
-                           // Skip open groups from hit-test list — they are being edited;
-                           // their children are collected via recursion below.
-                           if (selectable.has(ch.id) && !openIds.has(ch.id)) {
-                               descendants.push(ch);
-                           }
-                           if (ch.type === 'group') descendants.push(...collect(ch));
-                       });
-                       return descendants;
-                   };
-                   res.push(...collect(g));
-               });
-               return res;
-           };
-
-           const allDescendants = collectAllDescendants(openGroups);
-           allSelectableObjects.push(...allDescendants);
-
-           // Sort ALL objects by stacking order, descending, to select the front-most one
-           const sortedAllObjects = this._sortObjectsByZIndexDescending(allSelectableObjects);
-
-           // Hit-test all objects front-to-back
-           for (const obj of sortedAllObjects) {
-               if (this.isPointInObject(x, y, obj)) return obj;
-           }
-           return null;
-       }
+            const sorted = this._sortObjectsByZIndexDescending(candidates);
+            return skipCycle ? this._pickFrontMost(x, y, sorted) : this._pickWithClickCycle(x, y, sorted);
+        }
 
         // Normal mode - use viewport optimization
         const selectableInViewport = this.editor.getSelectableObjectsInViewport();
@@ -161,16 +220,63 @@ export class ObjectOperations extends BaseModule {
         // Groups and non-groups are treated equally based on their stacking order
         const topLevelObjects = this.editor.level.objects.filter(o => selectableInViewport.has(o.id));
         const sortedObjects = this._sortObjectsByZIndexDescending(topLevelObjects);
-        for (const obj of sortedObjects) {
-            if (this.isPointInObject(x, y, obj)) {
-                return obj;
-            }
-        }
+        return skipCycle ? this._pickFrontMost(x, y, sortedObjects) : this._pickWithClickCycle(x, y, sortedObjects);
+    }
 
+    /**
+     * Plain front-to-back hit test, no cycling — the pre-click-cycling behavior.
+     */
+    _pickFrontMost(x, y, sortedCandidates) {
+        for (const obj of sortedCandidates) {
+            if (this.isPointInObject(x, y, obj)) return obj;
+        }
         return null;
     }
 
+    /**
+     * Pick a hit-test result from a front-to-back sorted candidate list, cycling through
+     * ALL matches at the same point on repeated clicks (Blender-style): clicking once
+     * selects the front-most match; clicking again at (roughly) the same point with the
+     * same candidate set advances to the next match underneath, wrapping around. Clicking
+     * somewhere else, or a change in what's actually there, resets the cycle.
+     * @returns {Object|null}
+     */
+    _pickWithClickCycle(x, y, sortedCandidates) {
+        const matches = sortedCandidates.filter(obj => this.isPointInObject(x, y, obj));
+        if (matches.length === 0) {
+            this._clickCycle = null;
+            return null;
+        }
+
+        const candidateKey = matches.map(o => o.id).join(',');
+        const zoom = this.editor.stateManager.get('camera')?.zoom || 1;
+        const tolerance = 4 / zoom; // ~4 screen px, independent of zoom level
+        const prev = this._clickCycle;
+        const samePoint = prev &&
+            Math.abs(prev.x - x) < tolerance &&
+            Math.abs(prev.y - y) < tolerance &&
+            prev.candidateKey === candidateKey;
+
+        const index = samePoint ? (prev.index + 1) % matches.length : 0;
+        this._clickCycle = { x, y, candidateKey, index };
+        return matches[index];
+    }
+
+    /**
+     * Hit-test tolerance in WORLD units: expands the clickable area by a fixed
+     * screen-pixel margin (selection.hitTestTolerance, default 4px) around the
+     * object's boundary, independent of zoom — same convention as the click-cycle
+     * tolerance in _pickWithClickCycle.
+     */
+    getHitTestTolerance() {
+        const px = this.editor.stateManager.get('selection.hitTestTolerance') ?? 4;
+        const zoom = this.editor.stateManager.get('camera')?.zoom || 1;
+        return px / zoom;
+    }
+
     isPointInObject(worldX, worldY, obj) {
+        const tolerance = this.getHitTestTolerance();
+
         // Check if parallax is enabled and object participates in it
         if (this.editor.renderOperations.parallaxRenderer.isParallaxEnabled()) {
             const effectiveLayerId = this.editor.renderOperations.getEffectiveLayerId(obj);
@@ -195,13 +301,13 @@ export class ObjectOperations extends BaseModule {
                 };
 
                 // Check if point is within transformed bounds
-                return worldX >= transformedBounds.minX && worldX <= transformedBounds.maxX &&
-                       worldY >= transformedBounds.minY && worldY <= transformedBounds.maxY;
+                return worldX >= transformedBounds.minX - tolerance && worldX <= transformedBounds.maxX + tolerance &&
+                       worldY >= transformedBounds.minY - tolerance && worldY <= transformedBounds.maxY + tolerance;
             }
         }
 
         // Normal case without parallax
-        return WorldPositionUtils.isPointInWorldBounds(worldX, worldY, obj, this.editor.level.objects);
+        return WorldPositionUtils.isPointInWorldBounds(worldX, worldY, obj, this.editor.level.objects, tolerance);
     }
 
     isPointInGroupBounds(worldX, worldY, groupEditMode = null) {
@@ -368,22 +474,228 @@ export class ObjectOperations extends BaseModule {
             this.editor.stateManager.get('groupEditMode')
         );
 
+        // Invalidate caches BEFORE changing selection: set('selectedObjects', ...) below
+        // synchronously triggers a render (EventHandlers 'selectedObjects' subscriber). If
+        // that happens before these are cleared, it reads the still-warm visibleObjectsCache
+        // entry for the current camera (100ms TTL) and paints the just-deleted objects for
+        // one more frame — an intermittent flash depending on whether that cache entry was
+        // still alive at delete time.
+        if (this.editor.renderOperations) {
+            this.editor.renderOperations.invalidateSpatialIndex();
+            this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
+        }
+
         // Clear selection and update UI AFTER all operations are complete
         const deletedCount = selectedObjects.size;
         this.editor.stateManager.set('selectedObjects', new Set());
         Logger.status.info(`Deleted ${deletedCount} object${deletedCount > 1 ? 's' : ''}`);
-
-        // Invalidate spatial index to ensure deleted objects are not rendered
-        if (this.editor.renderOperations) {
-            this.editor.renderOperations.invalidateSpatialIndex();
-        }
-        
-        this.editor.render();
         this.editor.updateAllPanels();
     }
 
     duplicateSelectedObjects() {
         this.editor.duplicateOperations.startFromSelection();
+    }
+
+    /**
+     * Toggle obj.visible. If obj is a group, cascades the SAME new value onto every
+     * descendant (GroupTraversalUtils.getAllChildren). This isn't just cosmetic: rendering
+     * already skips a hidden group's children via CanvasRenderer.drawGroup's own
+     * `if (!group.visible) return`, but computeSelectableSet()/isObjectSelectable() only
+     * checks an object's OWN .visible flag with no ancestor-chain walk — so without this
+     * cascade, a hidden group's descendants would remain individually selectable (e.g. via
+     * Outliner) even though they're not drawn. Shared by the H hotkey and the Outliner eye
+     * icon so both stay in sync by construction.
+     * @param {Object} obj
+     */
+    toggleObjectVisibility(obj) {
+        const newValue = !obj.visible;
+        obj.visible = newValue;
+        if (obj.type === 'group') {
+            GroupTraversalUtils.getAllChildren(obj, true).forEach(child => {
+                child.visible = newValue;
+            });
+        }
+    }
+
+    /**
+     * H: toggle visibility for every currently selected object.
+     * Objects that end up hidden are dropped from the selection afterwards - a hidden
+     * object can't be manipulated on canvas (no gizmo/handles to show), and this also
+     * covers descendants hidden only via a toggled-off ancestor group's cascade
+     * (toggleObjectVisibility), not just objects toggled directly by this loop.
+     */
+    toggleVisibilityForSelection() {
+        const selectedIds = this.editor.stateManager.get('selectedObjects');
+        if (!selectedIds || selectedIds.size === 0) return;
+
+        Array.from(selectedIds)
+            .map(id => this.editor.level.findObjectById(id))
+            .filter(Boolean)
+            .forEach(obj => this.toggleObjectVisibility(obj));
+
+        const remainingSelection = new Set(
+            Array.from(selectedIds).filter(id => {
+                const obj = this.editor.level.findObjectById(id);
+                return obj && obj.visible;
+            })
+        );
+
+        // Invalidate caches BEFORE the set() below: it synchronously triggers a render via
+        // the 'selectedObjects' subscriber, and afterVisibilityChange() (which does the
+        // invalidation) only runs after — without this, that first render paints from the
+        // stale visibleObjectsCache/spatial index, briefly showing the pre-toggle visibility.
+        this.editor.renderOperations.invalidateSpatialIndex();
+        this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
+
+        this.editor.stateManager.set('selectedObjects', remainingSelection);
+
+        this.afterVisibilityChange();
+    }
+
+    /**
+     * Alt+H: show every hidden object/group at every level of the whole level, REGARDLESS
+     * of which command/hotkey/flag made it invisible — H/eye-icon (`obj.visible`), a hidden
+     * or soloed layer (`layer.visible`/`layer.soloed`), Object Solo
+     * (`view.soloedTopLevelObjectId`), and Isolate (`view.isolatedTopLevelIds`) are four
+     * independent mechanisms that all feed into isObjectEffectivelyVisible() — Alt+H has to
+     * reset every one of them so the resulting effective-visibility flag ends up identical
+     * (true) for every object no matter which mechanism previously hid it. Resetting only
+     * `obj.visible` would leave objects hidden by layer/solo/isolate stuck invisible after
+     * "Show All", contradicting what Alt+H promises.
+     */
+    unhideAllObjects() {
+        GroupTraversalUtils.getAllObjects(this.editor.level.objects, true).forEach(obj => {
+            if (!obj.visible) obj.visible = true;
+        });
+
+        this.editor.level.layers.forEach(layer => {
+            layer.visible = true;
+            layer.soloed = false;
+        });
+        this.editor.stateManager.set('view.soloedTopLevelObjectId', null);
+        this.editor.stateManager.set('view.isolatedTopLevelIds', null);
+        this.editor.renderOperations.invalidateLayerVisibilityCache();
+
+        this.afterVisibilityChange();
+    }
+
+    /**
+     * Shared history/redraw/panel-refresh tail for visibility-changing operations.
+     * @private
+     */
+    afterVisibilityChange() {
+        this.editor.historyManager.saveState(
+            this.editor.level.objects,
+            this.editor.stateManager.get('selectedObjects'),
+            false,
+            this.editor.stateManager.get('groupEditMode')
+        );
+
+        this.editor.renderOperations.invalidateSpatialIndex();
+        this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
+        this.editor.render();
+        this.editor.updateAllPanels();
+    }
+
+    /**
+     * `/`: toggle Isolate (Blender Local View equivalent) for the current selection.
+     * Non-destructive — never touches obj.visible. Top-level granularity only: isolating a
+     * deeply nested object shows its whole top-level ancestor branch, not just that one
+     * object (avoids needing per-level filtering inside CanvasRenderer.drawGroup). Reuses
+     * the app's existing "dim what's outside the active context" visual language (see the
+     * group-edit-mode dimming in RenderOperations.render()) instead of a separate hide
+     * mechanism — RenderOperations.render() and getSelectableCandidateObjects() both read
+     * `view.isolatedTopLevelIds` from stateManager.
+     */
+    toggleIsolateSelection() {
+        const current = this.editor.stateManager.get('view.isolatedTopLevelIds');
+        if (current) {
+            this.editor.stateManager.set('view.isolatedTopLevelIds', null);
+        } else {
+            const selectedIds = this.editor.stateManager.get('selectedObjects');
+            if (!selectedIds || selectedIds.size === 0) return;
+
+            const topLevelIds = new Set();
+            Array.from(selectedIds).forEach(id => {
+                const obj = this.editor.level.findObjectById(id);
+                if (obj) topLevelIds.add(this.findTopLevelAncestor(obj).id);
+            });
+
+            if (topLevelIds.size === 0) return;
+            this.editor.stateManager.set('view.isolatedTopLevelIds', topLevelIds);
+        }
+
+        this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
+        this.editor.render();
+    }
+
+    /**
+     * Walk up via GroupOperations._findParentGroup to find obj's top-level ancestor (or obj
+     * itself if it's already top-level). Shared by toggleIsolateSelection and toggleObjectSolo.
+     */
+    findTopLevelAncestor(obj) {
+        let topLevel = obj;
+        let parent = this.editor.groupOperations._findParentGroup(topLevel);
+        while (parent) {
+            topLevel = parent;
+            parent = this.editor.groupOperations._findParentGroup(topLevel);
+        }
+        return topLevel;
+    }
+
+    /**
+     * Whether obj is ACTUALLY rendered right now, considering every independent thing that
+     * can hide it: its own and every ancestor group's `visible` flag, its effective layer's
+     * visibility, Object Solo, and Isolate. This is the single source of truth the Outliner
+     * eye icon must be driven from — display state has to be computed from the object's
+     * current state, never from "which button/command was last used", or a completely
+     * unrelated action (soloing a DIFFERENT object) leaves every other object's icon showing
+     * stale info even though they're no longer actually visible.
+     * @param {Object} obj
+     * @returns {boolean}
+     */
+    isObjectEffectivelyVisible(obj) {
+        // Walk up: obj and every ancestor group must be visible — don't rely solely on
+        // toggleObjectVisibility's cascade always having already propagated this to obj.
+        let current = obj;
+        while (current) {
+            if (!current.visible) return false;
+            current = this.editor.groupOperations._findParentGroup(current);
+        }
+
+        const effectiveLayerId = this.editor.renderOperations.getEffectiveLayerId(obj);
+        if (!this.editor.renderOperations.getVisibleLayerIds().has(effectiveLayerId)) return false;
+
+        const topLevel = this.findTopLevelAncestor(obj);
+
+        const soloedId = this.editor.stateManager.get('view.soloedTopLevelObjectId');
+        if (soloedId && topLevel.id !== soloedId) return false;
+
+        const isolatedIds = this.editor.stateManager.get('view.isolatedTopLevelIds');
+        if (isolatedIds && !isolatedIds.has(topLevel.id)) return false;
+
+        return true;
+    }
+
+    /**
+     * Ctrl+click an object's eye icon in the Outliner (analogous to Layer Solo, see
+     * LayersPanel.toggleLayerSolo): exclusively shows only this object's top-level branch,
+     * fully hiding every other top-level object — a real hide (matching the eye icon
+     * affordance), not a dim like Isolate (`/`). Exclusive: soloing a different object
+     * replaces the previous solo; Ctrl+clicking the already-soloed object's eye un-solos.
+     * Non-destructive — never touches obj.visible. Only ever filters at the TOP level, so a
+     * soloed group's own children render exactly as normal — no special-casing needed for
+     * "the group's children stay visible", it falls out of not touching anything below the
+     * top level (see RenderOperations.render() / getSelectableCandidateObjects()).
+     */
+    toggleObjectSolo(obj) {
+        const topLevel = this.findTopLevelAncestor(obj);
+        const current = this.editor.stateManager.get('view.soloedTopLevelObjectId');
+        this.editor.stateManager.set('view.soloedTopLevelObjectId', current === topLevel.id ? null : topLevel.id);
+
+        this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
+        this.editor.render();
+        this.editor.updateAllPanels();
     }
 
     // Compute a set of selectable IDs depending on current edit state
@@ -418,56 +730,9 @@ export class ObjectOperations extends BaseModule {
             return true;
         };
 
-        if (this.isInGroupEditMode()) {
-            const groupEditMode = this.getGroupEditMode();
-            // Descendants of all open groups are selectable; this allows editing nested groups
-            const openGroups = Array.isArray(groupEditMode.openGroups) ? groupEditMode.openGroups : (groupEditMode.group ? [groupEditMode.group] : []);
-
-            // Collect all descendants from all open groups
-            const collectAllDescendants = (groups) => {
-                const res = [];
-                groups.forEach(g => {
-                    if (isObjectSelectable(g)) {
-                        const collect = (group) => {
-                            const descendants = [];
-                            group.children.forEach(ch => {
-                                if (isObjectSelectable(ch)) {
-                                    descendants.push(ch);
-                                }
-                                if (ch.type === 'group') descendants.push(...collect(ch));
-                            });
-                            return descendants;
-                        };
-                        res.push(...collect(g));
-                    }
-                });
-                return res;
-            };
-
-            collectAllDescendants(openGroups).forEach(o => selectable.add(o.id));
-
-            // All non-open groups on any level are still selectable (priority for groups), exclude open ones
-            const openIds = new Set(openGroups.map(g => g.id));
-            this.editor.level.getAllObjects().forEach(o => {
-                if (o.type === 'group' && !openIds.has(o.id) && isObjectSelectable(o)) {
-                    selectable.add(o.id);
-                }
-            });
-            // Also allow selection of external objects (not in any open group)
-            this.editor.level.objects.forEach(o => {
-                if (o.type !== 'group' && isObjectSelectable(o)) {
-                    selectable.add(o.id);
-                }
-            });
-        } else {
-            // Normal mode: only top-level objects selectable
-            this.editor.level.objects.forEach(o => {
-                if (isObjectSelectable(o)) {
-                    selectable.add(o.id);
-                } else {
-                }
-            });
-        }
+        this.getSelectableCandidateObjects().forEach(o => {
+            if (isObjectSelectable(o)) selectable.add(o.id);
+        });
         return selectable;
     }
 

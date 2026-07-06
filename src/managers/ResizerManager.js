@@ -49,11 +49,59 @@ export class ResizerManager {
         };
         
         this.activeResizers.set(resizer, resizerData);
-        
+
         // Setup mouse events (always enabled)
         this.setupMouseEvents(resizer, panel, panelSide, direction);
-        
+
+        // Setup the small "tab" shown on a collapsed resizer to expand the panel back
+        this.setupCollapseTab(resizer);
+
         Logger.ui.debug(`ResizerManager: Registered ${direction} resizer for ${panelSide} panel`);
+    }
+
+    /**
+     * Create (once) the collapse/expand tab child element for a resizer.
+     * The tab itself stays hidden via CSS until the resizer gets the
+     * 'collapsed' class (see setCollapsed()). Its shape (narrow-tall vs
+     * wide-short) is driven purely by CSS off the resizer's own class
+     * (.resizer/.resizer-x vs .resizer-y), so orientation always matches
+     * how that resizer is actually drawn.
+     * @param {HTMLElement} resizer - Resizer element
+     */
+    setupCollapseTab(resizer) {
+        let tab = resizer.querySelector(':scope > .panel-resizer-tab');
+        if (!tab) {
+            tab = document.createElement('div');
+            tab.className = 'panel-resizer-tab';
+            tab.title = 'Expand panel';
+            resizer.appendChild(tab);
+        }
+
+        if (!tab._collapseHandlersAdded) {
+            // Prevent the tab click from also starting a resize-drag on the parent resizer
+            tab.addEventListener('mousedown', (e) => e.stopPropagation());
+            tab.addEventListener('dblclick', (e) => e.stopPropagation());
+            tab.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const resizerData = this.activeResizers.get(resizer);
+                if (resizerData?.onDoubleClick) {
+                    resizerData.onDoubleClick(e, resizer, resizerData.panel, resizerData.panelSide);
+                }
+            });
+            tab._collapseHandlersAdded = true;
+        }
+    }
+
+    /**
+     * Mark a resizer as collapsed/expanded so its expand-tab shows/hides via CSS
+     * @param {HTMLElement} resizer - Resizer element
+     * @param {boolean} isCollapsed - true when the associated panel is collapsed
+     */
+    setCollapsed(resizer, isCollapsed) {
+        if (!resizer) return;
+        resizer.classList.toggle('collapsed', !!isCollapsed);
     }
 
     /**

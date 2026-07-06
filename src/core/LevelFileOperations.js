@@ -30,18 +30,26 @@ export class LevelFileOperations extends BaseModule {
             (duplicate && duplicate.isActive);
     }
 
+    /**
+     * If the level has unsaved changes, ask the user to confirm discarding them.
+     * @param {string} actionLabel - describes the action in the confirm message (e.g. "create a new level")
+     * @returns {Promise<boolean>} true if it's safe to proceed (no unsaved changes, or user confirmed)
+     */
+    async _confirmDiscardUnsavedChanges(actionLabel) {
+        if (!this.editor.stateManager.get('isDirty')) {
+            return true;
+        }
+        return confirm(`You have unsaved changes. Are you sure you want to ${actionLabel}?`);
+    }
+
     async newLevel() {
         if (this._hasActiveMouseOperation()) {
             Logger.file.warn('newLevel() blocked: mouse action in progress — finish or cancel it first');
             return;
         }
 
-        // Check for unsaved changes
-        if (this.editor.stateManager.get('isDirty')) {
-            const confirmed = await confirm("You have unsaved changes. Are you sure you want to create a new level?");
-            if (!confirmed) {
-                return;
-            }
+        if (!(await this._confirmDiscardUnsavedChanges('create a new level'))) {
+            return;
         }
 
         Logger.file.info('Creating new level...');
@@ -93,22 +101,27 @@ export class LevelFileOperations extends BaseModule {
             return;
         }
 
-        // Check for unsaved changes
-        if (this.editor.stateManager.get('isDirty')) {
-            const confirmed = await confirm("You have unsaved changes. Are you sure you want to open a new level?");
-            if (!confirmed) {
-                return;
-            }
+        if (!(await this._confirmDiscardUnsavedChanges('open a new level'))) {
+            return;
         }
 
         try {
             Logger.file.info('📂 Opening level...');
 
+            // Load level from file. Returns null both when the user cancelled the file
+            // picker and when loading failed (FileManager already showed its own alert
+            // for real errors) - either way, keep the current level and stop here instead
+            // of proceeding to reset() with a null level.
+            const loadedLevel = await this.editor.fileManager.loadLevelFromFileInput();
+            if (!loadedLevel) {
+                Logger.file.info('Open level cancelled or failed - keeping current level');
+                return;
+            }
+
             // Save current view states before resetting
             const savedViewStates = this.editor.eventHandlers.saveViewStates();
 
-            // Load level from file
-            this.editor.level = await this.editor.fileManager.loadLevelFromFileInput();
+            this.editor.level = loadedLevel;
 
             // Clear stale object/spatial caches from the previous level before reset()
             this.editor.clearCaches();

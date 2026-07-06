@@ -350,11 +350,16 @@ export class LayersPanel extends BasePanel {
         const objectsCount = level.getCachedLayerObjectsCount(layer.id, cachedStats);
         const isMainLayer = layer.id === level.getMainLayerId();
         const isCurrent = this.currentLayerId === layer.id;
-        
+        // Effective visibility (not raw layer.visible): another layer being soloed makes
+        // THIS layer stop rendering without ever touching its own `visible` flag — see
+        // RenderOperations.getVisibleLayerIds(), the single source of truth for this.
+        const effectivelyVisible = this.levelEditor.renderOperations.getVisibleLayerIds().has(layer.id);
+
         const layerDiv = document.createElement('div');
         layerDiv.className = `layer-item flex items-center justify-between p-2 rounded border border-gray-600 cursor-pointer transition-colors ${
             isCurrent ? 'bg-blue-600' : 'bg-gray-700'
         }`;
+        layerDiv.style.opacity = effectivelyVisible ? '' : '0.45';
         layerDiv.draggable = true;
         layerDiv.dataset.layerId = layer.id;
         
@@ -378,11 +383,11 @@ export class LayersPanel extends BasePanel {
             <div class="flex items-center space-x-1 flex-shrink-0">
                 <span class="layer-objects-count text-sm px-2 py-1 rounded bg-gray-600 min-w-0" style="color: var(--ui-text-color, #9ca3af);"
                       data-layer-id="${layer.id}">${objectsCount > 0 ? objectsCount : ''}</span>
-                <button class="layer-visibility-btn p-1 rounded w-8 h-8 flex items-center justify-center" 
-                        data-layer-id="${layer.id}" 
-                        title="${layer.visible ? 'Hide layer' : 'Show layer'}">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style="color: ${layer.visible ? 'var(--ui-text-color, #d1d5db)' : 'var(--ui-text-color, #6b7280)'};">
-                        ${layer.visible ? 
+                <button class="layer-visibility-btn p-1 rounded w-8 h-8 flex items-center justify-center"
+                        data-layer-id="${layer.id}"
+                        title="${layer.soloed ? 'Soloed — Ctrl+click to un-solo' : (layer.visible ? 'Hide layer (Ctrl+click to solo)' : 'Show layer (Ctrl+click to solo)')}">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style="color: ${layer.soloed ? '#fbbf24' : 'var(--ui-text-color, #d1d5db)'};">
+                        ${effectivelyVisible ?
                             '<path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>' :
                             '<path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd"/><path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z"/>'
                         }
@@ -505,6 +510,11 @@ export class LayersPanel extends BasePanel {
         const layerElement = this.container.querySelector(`[data-layer-id="${layerId}"]`);
         if (!layerElement) return;
 
+        // Effective visibility (not raw layer.visible) — see createLayerElement's comment
+        // and RenderOperations.getVisibleLayerIds(), the single source of truth for this.
+        const effectivelyVisible = this.levelEditor.renderOperations.getVisibleLayerIds().has(layerId);
+        layerElement.style.opacity = effectivelyVisible ? '' : '0.45';
+
         // Update color indicator
         const colorIndicator = layerElement.querySelector('.layer-color');
         if (colorIndicator) {
@@ -548,12 +558,21 @@ export class LayersPanel extends BasePanel {
         // Update visibility button icon and title
         const visibilityBtn = layerElement.querySelector('.layer-visibility-btn');
         if (visibilityBtn) {
-            visibilityBtn.title = layer.visible ? 'Hide layer' : 'Show layer';
+            visibilityBtn.title = layer.soloed
+                ? 'Soloed — Ctrl+click to un-solo'
+                : (layer.visible ? 'Hide layer (Ctrl+click to solo)' : 'Show layer (Ctrl+click to solo)');
             const svg = visibilityBtn.querySelector('svg');
             if (svg) {
                 svg.setAttribute('class', 'w-4 h-4');
-                svg.style.color = layer.visible ? 'var(--ui-text-color, #d1d5db)' : 'var(--ui-text-color, #6b7280)';
-                svg.innerHTML = layer.visible ? 
+                // Icon SHAPE reflects EFFECTIVE visibility (own `visible` AND not shadowed
+                // by another layer's solo), not raw `layer.visible` alone — a soloed
+                // sibling layer must visibly close this layer's eye too. Color stays
+                // default regardless (visible/hidden is shape-only, matching the rest of
+                // this panel's icons); the whole-row opacity dim (see above) is what shows
+                // "hidden" at a glance. Soloed still gets its own amber color — a distinct
+                // state, not visible/hidden.
+                svg.style.color = layer.soloed ? '#fbbf24' : 'var(--ui-text-color, #d1d5db)';
+                svg.innerHTML = effectivelyVisible ?
                     '<path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>' :
                     '<path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd"/><path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z"/>';
             }
@@ -1017,6 +1036,12 @@ export class LayersPanel extends BasePanel {
             const wasVisible = layer.visible;
             layer.toggleVisibility();
 
+            // Invalidate BEFORE updateLayerElement: it reads the cache-backed
+            // getVisibleLayerIds(), which must reflect the flag just flipped above.
+            if (this.levelEditor.renderOperations) {
+                this.levelEditor.renderOperations.invalidateLayerVisibilityCache();
+            }
+
             // Force update the layer element immediately
             this.updateLayerElement(layerId, layer);
             this.stateManager.markDirty();
@@ -1033,14 +1058,61 @@ export class LayersPanel extends BasePanel {
                 this.handleLayerVisibilityChanged(layerId, true);
             }
 
-            // Invalidate layer visibility cache for performance
             if (this.levelEditor.renderOperations) {
-                this.levelEditor.renderOperations.invalidateLayerVisibilityCache();
                 this.levelEditor.render();
             }
 
             // Update layer styles after visibility change
             this.updateLayerStyles();
+
+            // Outliner icons/row color depend on effective layer visibility
+            // (ObjectOperations.isObjectEffectivelyVisible) — without this it only
+            // refreshes on the next unrelated action that happens to re-render it
+            // (e.g. a canvas click changing selection).
+            if (this.levelEditor.outlinerPanel) {
+                this.levelEditor.outlinerPanel.render();
+            }
+        }
+    }
+
+    /**
+     * Ctrl+click a layer's eye icon: exclusive "solo" — only this layer renders,
+     * regardless of any layer's own `visible` flag (see RenderOperations.getVisibleLayerIds).
+     * Ctrl+click an already-soloed layer to un-solo (back to normal per-layer visibility).
+     * Non-destructive: never touches `layer.visible`, `layer.soloed` is a transient UI flag.
+     * @param {string} layerId - Layer ID
+     */
+    toggleLayerSolo(layerId) {
+        const level = this.levelEditor.getLevel();
+        const layer = level.getLayerById(layerId);
+        if (!layer) return;
+
+        const wasSoloed = layer.soloed;
+        level.layers.forEach(l => { l.soloed = false; });
+        layer.soloed = !wasSoloed;
+
+        // Invalidate BEFORE re-rendering the rows below: updateLayerElement reads
+        // getVisibleLayerIds(), which is cache-backed — a stale cache would make the
+        // icons/dimming lag behind the solo state that was just flipped.
+        if (this.levelEditor.renderOperations) {
+            this.levelEditor.renderOperations.invalidateLayerVisibilityCache();
+        }
+
+        level.layers.forEach(l => this.updateLayerElement(l.id, l));
+        this.stateManager.markDirty();
+
+        if (this.levelEditor.renderOperations) {
+            this.levelEditor.render();
+        }
+
+        this.updateLayerStyles();
+
+        // Outliner icons/row color depend on effective layer visibility
+        // (ObjectOperations.isObjectEffectivelyVisible) — without this it only
+        // refreshes on the next unrelated action that happens to re-render it
+        // (e.g. a canvas click changing selection).
+        if (this.levelEditor.outlinerPanel) {
+            this.levelEditor.outlinerPanel.render();
         }
     }
 
@@ -1498,7 +1570,11 @@ export class LayersPanel extends BasePanel {
                         if (button.classList.contains('layer-visibility-btn')) {
                             const layerId = button.closest('[data-layer-id]')?.dataset.layerId;
                             if (layerId) {
-                                this.toggleLayerVisibility(layerId);
+                                if (e.ctrlKey || e.metaKey) {
+                                    this.toggleLayerSolo(layerId);
+                                } else {
+                                    this.toggleLayerVisibility(layerId);
+                                }
                             }
                             return;
                         }
@@ -1820,7 +1896,7 @@ export class LayersPanel extends BasePanel {
 
     setupKeyboardShortcuts() {
         document.addEventListener('keydown', (e) => {
-            // Only handle shortcuts when layers panel is focused or no other input is focused
+            // Only handle shortcuts when no input is focused
             const activeElement = document.activeElement;
             const isInputFocused = activeElement && (
                 activeElement.tagName === 'INPUT' || 
@@ -1830,14 +1906,23 @@ export class LayersPanel extends BasePanel {
 
             if (isInputFocused) return;
 
-            // Ctrl/Cmd + L: Focus layers search
-            if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
+            const shortcuts = this.levelEditor.configManager?.getShortcuts()?.ui || {};
+
+            const matches = (actionName) => {
+                const def = shortcuts[actionName];
+                if (!def?.key) return false;
+                const eCtrl = !!(e.ctrlKey || e.metaKey);
+                const defCtrl = !!(def.ctrlKey || def.metaKey);
+                return e.key.toLowerCase() === def.key.toLowerCase()
+                    && eCtrl        === defCtrl
+                    && !!e.shiftKey === !!def.shiftKey
+                    && !!e.altKey   === !!def.altKey;
+            };
+
+            if (matches('focusLayersSearch')) {
                 e.preventDefault();
                 SearchUtils.focusSearch('layers-search');
-            }
-
-            // Ctrl/Cmd + Shift + L: Add new layer
-            if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'L') {
+            } else if (matches('addNewLayer')) {
                 e.preventDefault();
                 const level = this.levelEditor.getLevel();
                 const newLayer = level.addLayer();
@@ -1845,7 +1930,6 @@ export class LayersPanel extends BasePanel {
                 this.stateManager.markDirty();
                 Logger.layer.info(`Added new layer: ${newLayer.name}`);
             }
-
         });
     }
 

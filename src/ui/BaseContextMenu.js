@@ -166,14 +166,10 @@ export class BaseContextMenu {
             }
         }
 
-        // Fallback: clear canvas selection
+        // Fallback: clear canvas selection. The set() below already synchronously triggers
+        // a render via the 'selectedObjects' subscriber — no separate render() call needed.
         stateManager.set('selectedObjects', new Set());
         window.editor?.updateAllPanels?.();
-
-        // Force re-render
-        if (window.editor?.render) {
-            window.editor.render();
-        }
     }
 
     /**
@@ -252,12 +248,35 @@ export class BaseContextMenu {
     setupWindowResizeHandler() {
         this.resizeHandler = () => {
             if (this.currentMenu) {
-                this.hideMenu();
+                this.repositionMenuWithinViewport(this.currentMenu);
             }
             // No need to re-initialize context menu handlers - DOM elements are not recreated on resize
         };
 
         window.addEventListener('resize', this.resizeHandler, { passive: true });
+    }
+
+    /**
+     * Clamp an already-open menu back into the viewport after a window resize,
+     * instead of closing it (menu uses position: fixed, so rect is viewport-relative)
+     * @param {HTMLElement} menu - The context menu element
+     */
+    repositionMenuWithinViewport(menu) {
+        const margin = BaseContextMenu.MENU_VIEWPORT_MARGIN;
+        const rect = menu.getBoundingClientRect();
+
+        let left = rect.left;
+        let top = rect.top;
+
+        if (left + rect.width > window.innerWidth - margin) {
+            left = Math.max(margin, window.innerWidth - rect.width - margin);
+        }
+        if (top + rect.height > window.innerHeight - margin) {
+            top = Math.max(margin, window.innerHeight - rect.height - margin);
+        }
+
+        menu.style.left = left + 'px';
+        menu.style.top = top + 'px';
     }
 
     /**

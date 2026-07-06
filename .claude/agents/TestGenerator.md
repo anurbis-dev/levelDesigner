@@ -1,12 +1,7 @@
 ---
 name: TestGenerator
 description: "Use when: написать тесты, тестирование, покрытие, напиши тест для, проверить вручную. Manual/browser-console test generation specialist for Level Designer: since there's no automated test runner, writes runnable browser-console test scripts (module pattern from src/event-system tests) and structured manual QA checklists."
-tools:
-  - Read
-  - Grep
-  - Glob
-  - Write
-  - Edit
+tools: Read, Grep, Glob, Write, Edit
 model: sonnet
 ---
 

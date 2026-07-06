@@ -29,7 +29,9 @@ export function createSettingsSection(title, content, options = {}) {
     const borderStyle = border ? 'border: 1px solid #374151;' : '';
     const paddingStyle = padding ? 'padding: calc(1rem * max(var(--spacing-scale, 1.0), 0.5));' : '';
     const borderRadiusStyle = borderRadius ? 'border-radius: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.5));' : '';
-    const classAttr = className ? ` class="${className}"` : '';
+    // Always tagged as 'settings-section' so the header search (SettingsPanel.filterSettingsContent)
+    // can find and hide/show whole sections that end up with zero matching rows.
+    const classAttr = ` class="${['settings-section', className].filter(Boolean).join(' ')}"`;
     const idAttr = id ? ` id="${id}"` : '';
 
     return `
@@ -208,12 +210,8 @@ export function createSettingsColorInput(colorConfig) {
 
     if (inline) {
         const barStyle = `flex: 1; height: ${height}; width: auto; min-width: 0; padding: 0; border: 1px solid #4b5563; border-radius: calc(0.25rem * max(var(--spacing-scale, 1.0), 0.5)); cursor: pointer;`;
-        return `
-            <div style="display: flex; align-items: center; gap: 0.5rem; min-height: 1.5rem;">
-                <label for="${id}" style="color: var(--ui-text-color, #d1d5db); font-size: 0.875rem; font-weight: 500; flex: 0 0 40%; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${label}</label>
-                <input type="color"${idAttr}${nameAttr}${valueAttr}${dataSettingAttr} class="setting-input" style="${barStyle}">
-            </div>
-        `;
+        const controlHtml = `<input type="color"${idAttr}${nameAttr}${valueAttr}${dataSettingAttr} class="setting-input" style="${barStyle}">`;
+        return createSettingsRow(label, id, controlHtml);
     }
 
     return `
@@ -225,7 +223,31 @@ export function createSettingsColorInput(colorConfig) {
 }
 
 /**
- * Create a range slider with label and value display
+ * Base block for a compact "label left, control right" settings row — label and control share
+ * one line instead of label-above-control, so params take half the vertical space. Reused by
+ * any settings control that wants this layout (see createSettingsColorInput's inline mode and
+ * createSettingsRange below) — apply identically to future control types the same way.
+ * @param {string} label - Label text
+ * @param {string} forId - ID of the associated input (for the <label for>)
+ * @param {string} controlHtml - HTML of the control, sized to fill remaining row width
+ * @param {Object} options - Additional options
+ * @returns {string} - HTML string for the row
+ */
+export function createSettingsRow(label, forId, controlHtml, options = {}) {
+    const { labelWidth = '40%' } = options;
+    const forAttr = forId ? ` for="${forId}"` : '';
+
+    return `
+        <div class="settings-row" style="display: flex; align-items: center; gap: 0.5rem; min-height: 1.5rem;">
+            <label${forAttr} class="settings-row-label" style="color: var(--ui-text-color, #d1d5db); font-size: 0.875rem; font-weight: 500; flex: 0 0 ${labelWidth}; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${label}</label>
+            ${controlHtml}
+        </div>
+    `;
+}
+
+/**
+ * Create a range slider with label and value display, label kept in the same row as the
+ * slider (see createSettingsRow) for UI compactness.
  * @param {Object} rangeConfig - Range slider configuration
  * @returns {string} - HTML string for the range slider
  */
@@ -244,21 +266,23 @@ export function createSettingsRange(rangeConfig) {
 
     const idAttr = id ? ` id="${id}"` : '';
     const nameAttr = name ? ` name="${name}"` : '';
-    const valueAttr = value ? ` value="${value}"` : '';
-    const minAttr = min ? ` min="${min}"` : '';
-    const maxAttr = max ? ` max="${max}"` : '';
+    const valueAttr = value !== '' && value !== undefined && value !== null ? ` value="${value}"` : '';
+    const minAttr = min !== '' && min !== undefined && min !== null ? ` min="${min}"` : '';
+    const maxAttr = max !== '' && max !== undefined && max !== null ? ` max="${max}"` : '';
     const stepAttr = step ? ` step="${step}"` : '';
     const dataSettingAttr = dataSetting ? ` data-setting="${dataSetting}"` : '';
+    const numValue = parseFloat(value);
+    const displayValue = Number.isFinite(numValue) ? numValue.toFixed(1) : value;
 
-    return `
-        <div>
-            ${createSettingsLabel(label, id)}
-            <input type="range"${idAttr}${nameAttr}${valueAttr}${minAttr}${maxAttr}${stepAttr}${dataSettingAttr} class="setting-input" style="width: 100%; padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.5)); background: #374151; border: 1px solid #4b5563; border-radius: calc(0.25rem * max(var(--spacing-scale, 1.0), 0.5));">
-            <div style="text-align: center; color: var(--ui-text-color, #9ca3af); font-size: 0.75rem; margin-top: calc(0.25rem * max(var(--spacing-scale, 1.0), 0.5));">
-                ${value.toFixed(1)}${unit}
-            </div>
+    const controlHtml = `
+        <div class="settings-range-wrapper">
+            <input type="range"${idAttr}${nameAttr}${valueAttr}${minAttr}${maxAttr}${stepAttr}${dataSettingAttr} class="setting-input settings-range-input" data-unit="${unit}">
+            <span class="settings-range-value">${displayValue}${unit}</span>
+            <input type="number"${minAttr}${maxAttr}${stepAttr} class="settings-range-edit" tabindex="-1">
         </div>
     `;
+
+    return createSettingsRow(label, id, controlHtml);
 }
 
 /**

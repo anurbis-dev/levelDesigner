@@ -181,6 +181,46 @@ input, textarea {
     height: 3px;
 }
 
+/* Expand tab shown on a collapsed panel resizer - hidden unless resizer.collapsed */
+.panel-resizer-tab {
+    display: none;
+}
+
+.resizer.collapsed .panel-resizer-tab,
+.resizer-y.collapsed .panel-resizer-tab,
+.resizer-x.collapsed .panel-resizer-tab {
+    display: block;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: var(--ui-resizer-color, #374151);
+    border-radius: 3px;
+    cursor: pointer;
+    pointer-events: auto;
+    z-index: 1;
+    transition: background-color 0.15s;
+}
+
+.panel-resizer-tab:hover {
+    background-color: #6b7280;
+}
+
+/* Horizontal-drag resizers (left/right panels, folders) are drawn as a vertical
+   line, so their tab must run lengthwise along it: narrow and tall. */
+.resizer.collapsed .panel-resizer-tab,
+.resizer-x.collapsed .panel-resizer-tab {
+    width: 16px;
+    height: 44px;
+}
+
+/* The assets panel resizer is drawn as a horizontal line, so its tab must run
+   lengthwise along it too: wide and short. */
+.resizer-y.collapsed .panel-resizer-tab {
+    width: 44px;
+    height: 16px;
+}
+
 /* Prevent global scrollbars from affecting layout width - already defined above */
 
 /* Console context menu styles - moved to ConsoleContextMenu.css */
@@ -318,61 +358,30 @@ header .text-sm {
     border-right: 2px solid var(--ui-active-color, #3B82F6);
 }
 
-/* Drop zone highlight when dragging a tab over a different panel's tab bar */
-.tab-drop-zone {
-    background: rgba(59, 130, 246, 0.12);
-    outline: 2px dashed var(--ui-active-color, #3B82F6);
+/* Panel highlight when a tab is dragged over it */
+.tab-panel--drag-over {
+    outline: 2px solid var(--ui-active-color, #3B82F6);
     outline-offset: -2px;
 }
 
-/* Ghost tab that follows the cursor during drag */
+/* Ghost tab — clone of the real tab. Font/padding come from the original
+   .tab/.tab-right/.tab-left classes; fill/text color are set explicitly below (see comment). */
 .tab-drag-ghost {
     position: fixed;
     pointer-events: none;
     z-index: 10000;
-    padding: 3px 12px;
-    background: var(--ui-active-color, #3B82F6);
-    color: #fff;
-    border-radius: 4px 4px 0 0;
-    font-size: 12px;
-    opacity: 0.82;
-    white-space: nowrap;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+    opacity: 0.78;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
     transform: rotate(-4deg);
     transform-origin: left bottom;
-    line-height: 1.6;
     user-select: none;
-}
-
-/* Vertical strip shown at panel edges when the target panel doesn't exist yet */
-.tab-new-panel-zone {
-    position: fixed;
-    z-index: 9999;
-    pointer-events: none;
-    background: rgba(147, 197, 253, 0.06);
-    border: 2px dashed rgba(147, 197, 253, 0.25);
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding-top: 6px;
-    transition: background 0.12s ease, border-color 0.12s ease;
-    box-sizing: border-box;
-}
-
-.tab-new-panel-zone__label {
-    font-size: 11px;
-    color: rgba(147, 197, 253, 0.4);
-    user-select: none;
-    line-height: 1;
-}
-
-.tab-new-panel-zone--active {
-    background: rgba(147, 197, 253, 0.18);
-    border-color: rgba(147, 197, 253, 0.65);
-}
-
-.tab-new-panel-zone--active .tab-new-panel-zone__label {
-    color: rgba(147, 197, 253, 0.9);
+    white-space: nowrap;
+    /* .tab/.tab-right/.tab-left default to background:transparent — only .active fills them
+       in, which the ghost explicitly strips (classList.remove('active', ...)) so it doesn't
+       look "selected". Without its own fill here, dragging a non-active tab produced a ghost
+       with no background at all (just text + shadow). Always show it filled, like a real tab. */
+    background-color: var(--ui-active-tab-color, #374151);
+    color: var(--ui-active-text-color, #ffffff);
 }
 
 /* Styles for asset previews */

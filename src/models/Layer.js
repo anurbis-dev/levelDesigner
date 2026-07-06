@@ -14,6 +14,10 @@ export class Layer {
         this.parallaxOffset = data.parallaxOffset !== undefined ? data.parallaxOffset : 0;
         // Layer index for z-index calculation (calculated based on order)
         this.index = data.index !== undefined ? data.index : 0;
+
+        // Transient UI-only flag (Ctrl+click eye icon in LayersPanel) — never persisted,
+        // never present in saved level JSON. See RenderOperations.getVisibleLayerIds().
+        this.soloed = false;
     }
 
     /**

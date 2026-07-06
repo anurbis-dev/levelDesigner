@@ -501,7 +501,8 @@ export function renderSelectionSettings(stateManager) {
             groupOutlineWidth: stateManager.get('selection.groupOutlineWidth') || 4,
             marqueeColor: stateManager.get('selection.marqueeColor') || '#3B82F6',
             marqueeOpacity: stateManager.get('selection.marqueeOpacity') || 0.2,
-            hierarchyHighlightColor: stateManager.get('selection.hierarchyHighlightColor') || '#3B82F6'
+            hierarchyHighlightColor: stateManager.get('selection.hierarchyHighlightColor') || '#3B82F6',
+            hitTestTolerance: stateManager.get('selection.hitTestTolerance') ?? 4
         }
     };
 
@@ -520,12 +521,23 @@ export function renderSelectionSettings(stateManager) {
                 ]
             })}
         </div>
+
+        <div>
+            ${createSettingsRange({
+                id: 'selection-hit-test-tolerance',
+                dataSetting: 'selection.hitTestTolerance',
+                value: settings.selection.hitTestTolerance,
+                min: 0,
+                max: 20,
+                step: 1,
+                label: 'Click Tolerance (px)'
+            })}
+        </div>
     `);
 
     // Create Selection Visual section
     const selectionVisualContent = createSettingsFormGroup(`
         <div>
-            ${createSettingsLabel('Outline Width', 'selection-outline-width')}
             ${createSettingsRange({
                 id: 'selection-outline-width',
                 dataSetting: 'selection.outlineWidth',
@@ -538,7 +550,6 @@ export function renderSelectionSettings(stateManager) {
         </div>
         
         <div>
-            ${createSettingsLabel('Group Outline Width', 'selection-group-outline-width')}
             ${createSettingsRange({
                 id: 'selection-group-outline-width',
                 dataSetting: 'selection.groupOutlineWidth',
@@ -551,7 +562,6 @@ export function renderSelectionSettings(stateManager) {
         </div>
         
         <div>
-            ${createSettingsLabel('Marquee Opacity', 'selection-marquee-opacity')}
             ${createSettingsRange({
                 id: 'selection-marquee-opacity',
                 dataSetting: 'selection.marqueeOpacity',
@@ -651,7 +661,6 @@ export function renderTouchSettings(stateManager) {
     // Create Touch Sensitivity section
     const touchSensitivityContent = createSettingsFormGroup(`
         <div>
-            ${createSettingsLabel('Touch Sensitivity', 'touch-sensitivity')}
             ${createSettingsRange({
                 id: 'touch-sensitivity',
                 dataSetting: 'touch.sensitivity',
@@ -664,7 +673,6 @@ export function renderTouchSettings(stateManager) {
         </div>
         
         <div>
-            ${createSettingsLabel('Long Press Delay (ms)', 'touch-long-press-delay')}
             ${createSettingsRange({
                 id: 'touch-long-press-delay',
                 dataSetting: 'touch.longPressDelay',
@@ -677,7 +685,6 @@ export function renderTouchSettings(stateManager) {
         </div>
         
         <div>
-            ${createSettingsLabel('Double Tap Delay (ms)', 'touch-double-tap-delay')}
             ${createSettingsRange({
                 id: 'touch-double-tap-delay',
                 dataSetting: 'touch.doubleTapDelay',
@@ -693,7 +700,6 @@ export function renderTouchSettings(stateManager) {
     // Create Touch Thresholds section
     const touchThresholdsContent = createSettingsFormGroup(`
         <div>
-            ${createSettingsLabel('Pinch Threshold', 'touch-pinch-threshold')}
             ${createSettingsRange({
                 id: 'touch-pinch-threshold',
                 dataSetting: 'touch.pinchThreshold',
@@ -706,7 +712,6 @@ export function renderTouchSettings(stateManager) {
         </div>
         
         <div>
-            ${createSettingsLabel('Swipe Threshold (px)', 'touch-swipe-threshold')}
             ${createSettingsRange({
                 id: 'touch-swipe-threshold',
                 dataSetting: 'touch.swipeThreshold',
@@ -785,7 +790,6 @@ export function renderCameraSettings(stateManager) {
     // Create Camera Speed section
     const cameraSpeedContent = createSettingsFormGroup(`
         <div>
-            ${createSettingsLabel('Zoom Speed', 'camera-zoom-speed')}
             ${createSettingsRange({
                 id: 'camera-zoom-speed',
                 dataSetting: 'camera.zoomSpeed',
@@ -798,7 +802,6 @@ export function renderCameraSettings(stateManager) {
         </div>
         
         <div>
-            ${createSettingsLabel('Pan Speed', 'camera-pan-speed')}
             ${createSettingsRange({
                 id: 'camera-pan-speed',
                 dataSetting: 'camera.panSpeed',
@@ -811,7 +814,6 @@ export function renderCameraSettings(stateManager) {
         </div>
         
         <div>
-            ${createSettingsLabel('Inertia Deceleration', 'camera-inertia-deceleration')}
             ${createSettingsRange({
                 id: 'camera-inertia-deceleration',
                 dataSetting: 'camera.inertiaDeceleration',
@@ -827,7 +829,6 @@ export function renderCameraSettings(stateManager) {
     // Create Camera Limits section
     const cameraLimitsContent = createSettingsFormGroup(`
         <div>
-            ${createSettingsLabel('Minimum Zoom', 'camera-min-zoom')}
             ${createSettingsRange({
                 id: 'camera-min-zoom',
                 dataSetting: 'camera.minZoom',
@@ -840,7 +841,6 @@ export function renderCameraSettings(stateManager) {
         </div>
         
         <div>
-            ${createSettingsLabel('Maximum Zoom', 'camera-max-zoom')}
             ${createSettingsRange({
                 id: 'camera-max-zoom',
                 dataSetting: 'camera.maxZoom',
@@ -917,7 +917,6 @@ export function renderAssetsSettings(stateManager) {
     // Create Asset Performance section
     const assetPerformanceContent = createSettingsFormGroup(`
         <div>
-            ${createSettingsLabel('Max Cache Size (MB)', 'assets-max-cache-size')}
             ${createSettingsRange({
                 id: 'assets-max-cache-size',
                 dataSetting: 'assets.maxCacheSize',
@@ -930,7 +929,6 @@ export function renderAssetsSettings(stateManager) {
         </div>
         
         <div>
-            ${createSettingsLabel('Compression Quality', 'assets-compression-quality')}
             ${createSettingsRange({
                 id: 'assets-compression-quality',
                 dataSetting: 'assets.compressionQuality',
@@ -943,7 +941,6 @@ export function renderAssetsSettings(stateManager) {
         </div>
         
         <div>
-            ${createSettingsLabel('Thumbnail Size (px)', 'assets-thumbnail-size')}
             ${createSettingsRange({
                 id: 'assets-thumbnail-size',
                 dataSetting: 'assets.thumbnailSize',
@@ -990,7 +987,6 @@ export function renderPerformanceSettings(stateManager) {
     // Create Performance Targets section
     const performanceTargetsContent = createSettingsFormGroup(`
         <div>
-            ${createSettingsLabel('Target FPS', 'performance-target-fps')}
             ${createSettingsRange({
                 id: 'performance-target-fps',
                 dataSetting: 'performance.targetFPS',
@@ -1003,7 +999,6 @@ export function renderPerformanceSettings(stateManager) {
         </div>
         
         <div>
-            ${createSettingsLabel('Max Objects', 'performance-max-objects')}
             ${createSettingsRange({
                 id: 'performance-max-objects',
                 dataSetting: 'performance.maxObjects',
@@ -1016,7 +1011,6 @@ export function renderPerformanceSettings(stateManager) {
         </div>
         
         <div>
-            ${createSettingsLabel('Render Distance', 'performance-render-distance')}
             ${createSettingsRange({
                 id: 'performance-render-distance',
                 dataSetting: 'performance.renderDistance',
@@ -1062,7 +1056,6 @@ export function renderPerformanceSettings(stateManager) {
     // Create LOD Settings section
     const lodSettingsContent = createSettingsFormGroup(`
         <div>
-            ${createSettingsLabel('LOD Levels', 'performance-lod-levels')}
             ${createSettingsRange({
                 id: 'performance-lod-levels',
                 dataSetting: 'performance.lodLevels',

@@ -99,7 +99,11 @@ export class GridSettings {
                 <div class="settings-form-group">
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Opacity</label>
-                        <input type="range" id="grid-opacity" min="0" max="1" step="0.05" class="settings-input" name="setting-input" data-setting="grid.opacity" value="${gridOpacity}"/>
+                        <div class="settings-range-wrapper">
+                            <input type="range" id="grid-opacity" min="0" max="1" step="0.05" class="settings-input settings-range-input" name="setting-input" data-setting="grid.opacity" data-unit="" value="${gridOpacity}"/>
+                            <span class="settings-range-value">${parseFloat(gridOpacity).toFixed(1)}</span>
+                            <input type="number" min="0" max="1" step="0.05" class="settings-range-edit" tabindex="-1">
+                        </div>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Subdivisions</label>

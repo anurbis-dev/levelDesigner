@@ -1,5 +1,6 @@
 import { MENU_CONFIG, getMenuItemById } from '../../config/menu.js';
 import { Logger } from '../utils/Logger.js';
+import { ShortcutFormatter } from '../utils/ShortcutFormatter.js';
 
 /**
  * Menu Manager
@@ -25,7 +26,41 @@ export class MenuManager {
         this.renderMenus();
         this.setupMenuEvents();
         this.setupMenuContainerHoverReset();
+        // Defensive: resolve shortcutKey labels against the live shortcuts config in case
+        // ConfigManager was still loading when the menu DOM was first built.
+        this.refreshShortcutLabels();
         this.logger.info('Menus initialized successfully');
+    }
+
+    /**
+     * Resolve a `shortcutKey` (dot-path into config/defaults/shortcuts.json, e.g.
+     * 'editor.toggleGrid') to a display string via ConfigManager.getShortcuts() — the single
+     * source of truth, instead of a hardcoded label duplicated in config/menu.js.
+     * @param {string} shortcutKey
+     * @returns {string} Formatted shortcut string, or '' if not found
+     */
+    resolveShortcutLabel(shortcutKey) {
+        const configManager = this.editor?.configManager;
+        if (!configManager || !shortcutKey) return '';
+
+        const [category, action] = shortcutKey.split('.');
+        const shortcuts = configManager.getShortcuts?.() || {};
+        const shortcut = shortcuts[category]?.[action];
+        return shortcut ? ShortcutFormatter.format(shortcut) : '';
+    }
+
+    /**
+     * Re-resolve and update every rendered menu item's shortcut label from the current
+     * shortcuts config. Menu item DOM is built once at init (not rebuilt per open), so this
+     * must be called explicitly whenever the underlying shortcuts config might have changed
+     * (e.g. after SettingsPanel.saveHotkey() persists a rebind).
+     */
+    refreshShortcutLabels() {
+        if (!this.container) return;
+        this.container.querySelectorAll('[data-shortcut-key]').forEach(span => {
+            const label = this.resolveShortcutLabel(span.dataset.shortcutKey);
+            if (label) span.textContent = label;
+        });
     }
 
     /**
@@ -187,8 +222,14 @@ export class MenuManager {
             contentHtml = itemConfig.label;
         }
 
-        // Add keyboard shortcut if available
-        if (itemConfig.shortcut) {
+        // Add keyboard shortcut if available. Prefer shortcutKey (dot-path into
+        // config/defaults/shortcuts.json, resolved live via ConfigManager) over a legacy
+        // hardcoded `shortcut` string, so the label can never drift from the real binding.
+        const resolvedShortcut = itemConfig.shortcutKey
+            ? this.resolveShortcutLabel(itemConfig.shortcutKey)
+            : itemConfig.shortcut;
+
+        if (resolvedShortcut) {
             // Make the element a flex container for proper alignment
             element.className += ' flex items-center justify-between';
             element.innerHTML = contentHtml;
@@ -196,7 +237,8 @@ export class MenuManager {
             const shortcutSpan = document.createElement('span');
             shortcutSpan.className = 'text-xs ml-4';
             shortcutSpan.style.color = 'var(--ui-text-color, #9ca3af)';
-            shortcutSpan.textContent = itemConfig.shortcut;
+            shortcutSpan.textContent = resolvedShortcut;
+            if (itemConfig.shortcutKey) shortcutSpan.dataset.shortcutKey = itemConfig.shortcutKey;
             element.appendChild(shortcutSpan);
         } else {
             // No shortcut, just set content normally

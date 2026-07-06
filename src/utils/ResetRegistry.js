@@ -92,16 +92,28 @@ class ResetRegistryImpl {
         const hovered = this.getHoveredElement();
         if (!hovered) return false;
 
-        const targets = this.findTargets(hovered);
-        if (targets.length === 0) return false;
-
-        // Don't hijack active text editing: if exactly one field matched and the user is
-        // currently typing inside that exact element, let native Backspace delete a character.
         const activeEl = document.activeElement;
         const isTextLikeInput = activeEl && (
             activeEl.tagName === 'TEXTAREA' ||
             (activeEl.tagName === 'INPUT' && !['checkbox', 'radio', 'range', 'color'].includes(activeEl.type))
         );
+
+        const fields = this.getAllFields();
+
+        // Typing inside a plain text field that isn't itself a registered resettable
+        // parameter (e.g. the settings-panel search box) must always just delete a
+        // character, no matter what resettable fields happen to live in an ancestor
+        // container that's being hovered (e.g. the search input sits inside the settings
+        // panel, which "contains" every field on the active tab).
+        if (isTextLikeInput && hovered === activeEl && !fields.some(f => f.element === activeEl)) {
+            return false;
+        }
+
+        const targets = this.findTargets(hovered);
+        if (targets.length === 0) return false;
+
+        // Don't hijack active text editing: if exactly one field matched and the user is
+        // currently typing inside that exact element, let native Backspace delete a character.
         if (isTextLikeInput && targets.length === 1 && targets[0].element === activeEl) {
             return false;
         }

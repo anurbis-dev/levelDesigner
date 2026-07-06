@@ -84,6 +84,9 @@ export class ConfigManager {
             // Sync grid settings to canvas settings after loading
             this.syncAllGridToCanvas();
 
+            // Migrate browser-reserved shortcuts to a safe fallback combo.
+            this.migrateShortcuts();
+
             this.log('info', 'Configuration loaded successfully');
             this.log('debug', 'Loaded configs:', this.configs);
             
@@ -157,7 +160,8 @@ export class ConfigManager {
             marqueeColor: '#3B82F6',
             marqueeOpacity: 0.2,
             hierarchyHighlightColor: '#3B82F6',
-            activeLayerBorderColor: '#3B82F6'
+            activeLayerBorderColor: '#3B82F6',
+            hitTestTolerance: 4
         };
 
         configs.assets = {
@@ -268,7 +272,8 @@ export class ConfigManager {
             marqueeColor: '#3B82F6',
             marqueeOpacity: 0.2,
             hierarchyHighlightColor: '#3B82F6',
-            activeLayerBorderColor: '#3B82F6'
+            activeLayerBorderColor: '#3B82F6',
+            hitTestTolerance: 4
         };
 
         configs.assets = {
@@ -443,6 +448,28 @@ export class ConfigManager {
         }
         
         return merged;
+    }
+
+    /**
+     * Migrate shortcut bindings that are reserved by the browser and never reach the page.
+     */
+    migrateShortcuts() {
+        const shortcuts = this.configs.shortcuts;
+        const layersSearch = shortcuts?.ui?.focusLayersSearch;
+        if (!layersSearch) return;
+
+        const usesReservedCtrlL = layersSearch.key?.toLowerCase() === 'l' &&
+            !!layersSearch.ctrlKey &&
+            !layersSearch.altKey &&
+            !layersSearch.shiftKey &&
+            !layersSearch.metaKey;
+
+        if (usesReservedCtrlL) {
+            this.set('shortcuts.ui.focusLayersSearch', {
+                ...layersSearch,
+                altKey: true
+            });
+        }
     }
 
     /**

@@ -169,13 +169,6 @@ export class AssetPanelContextMenu extends BaseContextMenu {
 
         this.addSeparator();
 
-        // Swap panels command
-        this.addMenuItem('Swap Panels', '⇄', () => {
-            this.assetPanel.toggleFoldersPosition();
-        });
-
-        this.addSeparator();
-
         // Selection operations
         this.addMenuItem('Select All Assets', '☑️', () => {
             this.callbacks.onSelectAll();

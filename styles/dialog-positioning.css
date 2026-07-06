@@ -148,6 +148,13 @@
     background-color: #4b5563;
 }
 
+.settings-btn:disabled,
+.dialog-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
 .settings-btn-cancel,
 .dialog-btn-cancel {
     background-color: #6b7280;
