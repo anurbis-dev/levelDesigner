@@ -63,6 +63,9 @@ export class LevelFileOperations extends BaseModule {
 
         // Create new level
         this.editor.level = this.editor.fileManager.createNewLevel();
+        // Re-attach layer-count/structure-change callbacks: they live on the Level
+        // INSTANCE, so replacing this.editor.level wholesale drops them otherwise.
+        this.editor.setupLayerObjectsCountTracking();
         this.editor.stateManager.reset();
 
         // Re-initialize group edit mode state after reset
@@ -122,6 +125,10 @@ export class LevelFileOperations extends BaseModule {
             const savedViewStates = this.editor.eventHandlers.saveViewStates();
 
             this.editor.level = loadedLevel;
+
+            // Re-attach layer-count/structure-change callbacks: they live on the Level
+            // INSTANCE, so replacing this.editor.level wholesale drops them otherwise.
+            this.editor.setupLayerObjectsCountTracking();
 
             // Clear stale object/spatial caches from the previous level before reset()
             this.editor.clearCaches();

@@ -456,7 +456,7 @@ export class ObjectOperations extends BaseModule {
 
         // Remove all collected objects from main level
         const originalCount = this.editor.level.objects.length;
-        this.editor.level.objects = this.editor.level.objects.filter(obj => !idsToDelete.has(obj.id));
+        this.editor.level.removeObjects(idsToDelete);
         const removedCount = originalCount - this.editor.level.objects.length;
 
 
@@ -485,11 +485,13 @@ export class ObjectOperations extends BaseModule {
             this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
         }
 
-        // Clear selection and update UI AFTER all operations are complete
+        // Clear selection and update UI AFTER all operations are complete. The set() below
+        // already synchronously triggers a full panel refresh via the 'selectedObjects'
+        // subscriber, and level.removeObjects() above notifies panels reactively too — no
+        // separate updateAllPanels() call needed here.
         const deletedCount = selectedObjects.size;
         this.editor.stateManager.set('selectedObjects', new Set());
         Logger.status.info(`Deleted ${deletedCount} object${deletedCount > 1 ? 's' : ''}`);
-        this.editor.updateAllPanels();
     }
 
     duplicateSelectedObjects() {
@@ -627,6 +629,7 @@ export class ObjectOperations extends BaseModule {
 
         this.editor.renderOperations.clearVisibleObjectsCacheForCurrentCamera();
         this.editor.render();
+        this.editor.updateAllPanels();
     }
 
     /**

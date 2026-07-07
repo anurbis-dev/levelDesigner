@@ -50,12 +50,11 @@ export class LayerOperations extends BaseModule {
             this.editor.stateManager.markDirty();
             this.editor.level.updateModified();
 
-            // Update all panels to reflect changes
+            // Update all panels to reflect changes. (Previously this also fired a
+            // stateManager.set('level', JSON.parse(JSON.stringify(level))) deep-clone just to
+            // trigger the 'level' subscribers — updateAllPanels() already re-renders the same
+            // panels directly, so that clone was a redundant, expensive extra render pass.)
             this.editor.updateAllPanels();
-
-            // Notify subscribers about level changes
-            // Force level update by creating a deep copy to trigger state manager listeners
-            this.editor.stateManager.set('level', JSON.parse(JSON.stringify(this.editor.level)));
 
             const direction = moveToExtreme ? (moveUp ? 'top' : 'bottom') : (moveUp ? 'up' : 'down');
             Logger.layer.info(`Moved ${movedCount} objects to ${moveToExtreme ? (moveUp ? 'first' : 'last') : (moveUp ? 'upper' : 'lower')} layer`);

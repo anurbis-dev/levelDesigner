@@ -32,6 +32,18 @@ After completing any code fix or feature implementation, always execute these st
 
 Do not skip these steps even for "small" fixes — consistency is what keeps docs and memory trustworthy over time.
 
+## Iteration loop mode
+
+Triggered only by explicit user phrases: "сделай в лупе", "используй луп", "луп эту ошибку", "loop this". Not the default workflow — regular tasks use a single pass.
+
+- Use only when the task has an **objectively checkable** success criterion (reproducible bug, failing test, clear acceptance criteria). If the ask is exploratory/ambiguous, say so instead of looping.
+- Cap at **6 iterations**. If criteria aren't met by then, stop, report remaining gaps, and ask how to proceed — do not loop indefinitely burning tokens on an unclear target.
+- Each iteration: PLAN (next single step) → EXECUTE → CHECK → DECISION.
+- **CHECK must be objective, never self-graded prose scores.** Use whichever applies: actual test run, `chrome-devtools` verification tier (see below) with real console/state output, or an independent subagent (CodeMaster/BugHunter) reviewing the diff. A pass/fail per criterion, not a 1-10 vibe rating.
+- DECISION: all criteria pass → stop and report `FINAL`. Otherwise `ITERATING`, fix the single worst-failing criterion next, continue.
+- Run **Post-fix mandatory steps** once after the loop ends (`FINAL`), not on every iteration — avoids doc/memory update spam.
+- No mid-loop clarifying questions unless genuinely blocked (missing input, destructive action, decision only the user can make) — same bar as Auto Mode generally.
+
 ## Response style
 
 - Отвечать на русском языке.
@@ -62,14 +74,21 @@ Do not skip these steps even for "small" fixes — consistency is what keeps doc
 | **Skip** | Docs / CHANGELOG / config only | No browser check needed |
 | **Lightweight** | Logic / JS fix, no UI change | `evaluate_script` state check → `list_console_messages` (errors only) |
 | **Standard** | Behavior change with interaction | `evaluate_script` → trigger interaction → `list_console_messages` |
-| **Full** | UI layout / visual / render change | Standard + `take_screenshot` |
+| **Full** | UI layout / visual / render change | `evaluate_script`/`list_console_messages` only — **do not** `take_screenshot`, visual check is the user's job |
 
 **Rules:**
 - Start with `evaluate_script` calling `editor`/`editor.stateManager` APIs directly — cheaper than navigating and clicking.
 - Only call `navigate_page` if the page needs a specific state that cannot be set via script.
-- Never call `take_screenshot`/`take_snapshot` for non-visual changes — adds tokens with no diagnostic value.
+- Never call `take_screenshot`/`take_snapshot`, even for UI/layout/visual/render changes — the agent never judges "does it look right" visually; that's always the user's job. Verify only via console/state, then stop.
 - `list_network_requests`/`get_network_request` only when debugging level/asset load issues.
 - Re-check `list_console_messages` *after* the interaction, not only on page load — most bugs surface during interaction (drag, undo/redo, dialog open/close).
+- После тестов не нужно возвращать страницу в чистое состояние — следующий агент сам перезагрузит страницу перед своей проверкой.
+
+## Session & token hygiene
+
+- Long sessions get expensive even with caching: `/compact` mid-task once debug output/tool results are no longer needed; `/clear` when switching to a new, unrelated task instead of reusing the session.
+- `chrome-devtools` MCP results stay in context for the rest of the session and are the main cost driver — if a session doesn't touch UI/browser behavior, keep the server disabled/unused for that session.
+- `list_console_messages`/`list_network_requests` return accumulated history, not a diff — call them right after the relevant interaction, not repeatedly across a long-lived page session.
 
 ## Specialist subagents
 

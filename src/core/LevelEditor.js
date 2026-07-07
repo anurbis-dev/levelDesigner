@@ -1611,19 +1611,49 @@ export class LevelEditor {
     }
 
     /**
-     * Set up layer objects count change tracking
+     * Set up layer objects count change tracking, plus the generalized level-structure-change
+     * tracking (object add/remove, layer add/remove/reorder) that replaces per-operation
+     * this.updateAllPanels() calls with automatic panel reactivity — see
+     * tmp/REACTIVE_LEVEL_UPDATES_PLAN.md. Both callbacks live on the Level INSTANCE, so this
+     * must be re-called any time this.level is replaced wholesale (openLevel/newLevel in
+     * LevelFileOperations.js), or the new level silently loses both callbacks.
      */
     setupLayerObjectsCountTracking() {
-        if (this.level) {
-            this.level.setLayerObjectsCountChangeCallback((layerId, newCount, oldCount) => {
-                
-                // Notify StateManager about layer objects count change
-                this.stateManager.notifyLayerObjectsCountChanged(layerId, newCount, oldCount);
-                
-                // Update cached stats
-                this.updateCachedLevelStats();
-            });
-        }
+        if (!this.level) return;
+
+        this.level.setLayerObjectsCountChangeCallback((layerId, newCount, oldCount) => {
+
+            // Notify StateManager about layer objects count change
+            this.stateManager.notifyLayerObjectsCountChanged(layerId, newCount, oldCount);
+
+            // Update cached stats
+            this.updateCachedLevelStats();
+        });
+
+        // Batch multiple structure changes within the same synchronous operation (e.g. 50
+        // addObject() calls from a bulk duplicate) into a single panel-refresh pass, deferred
+        // to a microtask so it runs after the whole synchronous call stack that triggered it
+        // finishes (and before the next paint/rAF render). Panels subscribe to
+        // 'levelStructureChanged' themselves (OutlinerPanel, LayersPanel, DetailsPanel).
+        let pendingChanges = [];
+        let flushScheduled = false;
+        const flushStructureChanges = () => {
+            flushScheduled = false;
+            const changes = pendingChanges;
+            pendingChanges = [];
+            // Must run BEFORE notify(): DetailsPanel/LayersPanel.render() read
+            // this.cachedLevelStats synchronously, so it has to already be fresh by the
+            // time the panels' 'levelStructureChanged' subscribers fire.
+            this.updateCachedLevelStats();
+            this.stateManager.notify('levelStructureChanged', changes);
+        };
+        this.level.setStructureChangeCallback((changeType, payload) => {
+            pendingChanges.push({ changeType, payload });
+            if (!flushScheduled) {
+                flushScheduled = true;
+                queueMicrotask(flushStructureChanges);
+            }
+        });
     }
 
 

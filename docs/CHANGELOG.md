@@ -2,6 +2,36 @@
 
 ## [Unreleased]
 
+### Feature — реактивные обновления панелей при структурных изменениях уровня (v3.55.0)
+
+Раньше каждая операция, добавляющая/удаляющая объекты или слои, должна была явно вызвать `editor.updateAllPanels()` — забытый вызов был реальным багом (например, Isolate не обновлял Outliner). Теперь панели подписываются на событие `'levelStructureChanged'` и обновляются автоматически.
+
+**Механизм**:
+- `Level.setStructureChangeCallback()` / `notifyStructureChange()` — генерализованный callback-хук на структурные изменения (добавление/удаление объектов и слоёв).
+- `Level.removeObjects(ids)` — батчевое удаление (одно уведомление вместо одного на объект).
+- `LevelEditor.setupLayerObjectsCountTracking()` собирает уведомления в массив, схлопывает их через `queueMicrotask()` (батчинг на event loop) и выбрасывает `stateManager.notify('levelStructureChanged', changes)`.
+- `OutlinerPanel`, `LayersPanel`, `DetailsPanel` подписываются на `'levelStructureChanged'` и рендерятся автоматически.
+
+**Следствие**: операции (`GroupOperations`, `ObjectOperations`) теперь используют `level.removeObjects()` вместо `level.objects = level.objects.filter(...)`, явные вызовы `updateAllPanels()` в конце операций удаляются. Код операций проще, а багов с неполным обновлением интерфейса становится меньше.
+
+**Исправленные баги**: 
+- Isolate (`/`) не обновлял Outliner без дополнительного клика в канву — теперь Outliner подписан на событие и обновляется сразу.
+- Любые структурные изменения через разные точки входа (групповые операции, удаление, дублирование) гарантированно обновляют все панели.
+
+### Fix — Undo после Group→Ungroup проскакивал на шаг дальше ожидаемого
+
+- `GroupOperations.ungroupSelectedObjects()` вызывал `historyManager.saveState()` ДО мутации (в отличие от `groupSelectedObjects()`, которая сохраняет ПОСЛЕ) — снапшот совпадал с уже лежащим на вершине стека состоянием, `HistoryManager.saveState()`'s дедупликация (`stateSnapshot === lastState`) отбрасывала его, и чекпоинт разгруппировки никогда не попадал в undo-стек. При связке Group→Ungroup→Undo это пропускало саму разгруппировку и откатывало на шаг раньше. `saveState()` перенесён после всех мутаций (`level.removeObjects` старых групп), как в `groupSelectedObjects()`.
+
+### Fix — меню фильтра типов (Outliner/AssetPanel) со смещением от кнопки и не закрывалось при уводе курсора
+
+- `OutlinerPanel.showFilterMenu()` (регрессия из предыдущего коммита) позиционировало меню, полностью перекрывая кнопку (`offset: -buttonRect.height`), чтобы курсор в момент клика гарантированно оказывался внутри меню — иначе `MenuPositioningUtils.setupMenuClosing()`'s `mouseleave` никогда не срабатывал (курсор не «входил» в меню, если оно появлялось не под ним). Побочный эффект — визуальное смещение: меню перекрывало кнопку вместо появления под ней. Тот же корневой баг (просто без оверлап-костыля) был и в `AssetPanel.showAssetFilterMenu()`.
+- `MenuPositioningUtils.setupMenuClosing()` переписан на отслеживание реальных координат курсора через `document.addEventListener('mousemove', ...)` относительно объединённой области кнопка+меню, вместо нативного `mouseleave`. Больше не важно, что курсор в момент открытия находится над кнопкой, а не над меню. При закрытии диспатчится `menuclose` на элементе меню (используется `OutlinerPanel` для очистки `keyup`-слушателя Ctrl-гейта).
+- `OutlinerPanel.showFilterMenu()`: убран оверлап-хак (`offset`), позиционирование меню теперь как в `AssetPanel` — по умолчанию под кнопкой с небольшим зазором.
+
+### Fix — Isolate (`/`) не обновлял Outliner без дополнительного клика в канву
+
+- `ObjectOperations.toggleIsolateSelection()` вызывал `render()`, но не `updateAllPanels()` — в отличие от `toggleObjectSolo()`. Аутлайнер красит эффективную видимость строк через `isObjectEffectivelyVisible()`, которая учитывает `view.isolatedTopLevelIds`, но без `updateAllPanels()` DOM не перерисовывался до следующего события (например, клика по канве). Добавлен вызов `this.editor.updateAllPanels()`.
+
 ### Fix — длинные имена объектов в Outliner обрезаются многоточием, не наезжая на кнопку видимости
 
 - `.outliner-item-name-display` (styles/spacing-mode.css): добавлены `white-space: nowrap; overflow: hidden; text-overflow: ellipsis`. Контейнер имени и сам span уже имели `flex: 1; min-width: 0`, а кнопка видимости — `flex-shrink: 0`, но обрезка текста не была задана, поэтому длинные имена растягивали строку/наезжали на иконку глаза.

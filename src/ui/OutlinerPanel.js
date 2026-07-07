@@ -145,7 +145,13 @@ export class OutlinerPanel extends BasePanel {
         // Subscribe to level changes
         const unsubscribeLevel = this.stateManager.subscribe('level', () => this.render());
         this.subscriptions.push(unsubscribeLevel);
-        
+
+        // Subscribe to level structure changes (object/layer add/remove/reorder) — see
+        // Level.setStructureChangeCallback / tmp/REACTIVE_LEVEL_UPDATES_PLAN.md. Replaces
+        // the need for every mutating operation to remember calling editor.updateAllPanels().
+        const unsubscribeStructure = this.stateManager.subscribe('levelStructureChanged', () => this.render());
+        this.subscriptions.push(unsubscribeStructure);
+
         // Subscribe to outliner state changes (including filters)
         const unsubscribeOutliner = this.stateManager.subscribe('outliner', () => {
             // Update activeTypeFilters from state
@@ -204,15 +210,11 @@ export class OutlinerPanel extends BasePanel {
     /**
      * Show filter menu with object types.
      *
-     * Closing is intentionally cursor-leave-based (mouseleave), same as the identical filter
-     * menu in AssetPanel.showAssetFilterMenu and MenuPositioningUtils' default
-     * setupMenuClosing(): the menu is always positioned so the cursor (which is on the
-     * trigger button at the moment of the click) starts INSIDE the menu's bounds, so ANY
-     * movement away from it reliably closes it — not a click-outside listener. The bug this
-     * once looked like ("menu doesn't disappear") was actually a POSITIONING bug: the default
-     * `offset` left a gap between the button and the menu, so the cursor could start OUTSIDE
-     * the menu and mouseleave would never have anything to fire from. Fixed below by
-     * overlapping the menu with the button's own bounding box instead of leaving a gap.
+     * Positioned flush below the button (MenuPositioningUtils default), same as the identical
+     * filter menu in AssetPanel.showAssetFilterMenu. Closing relies on MenuPositioningUtils'
+     * setupMenuClosing(), which tracks real cursor coordinates against the button+menu rects
+     * rather than native mouseleave — so it doesn't matter that the cursor is over the BUTTON,
+     * not the menu, at the moment the menu opens.
      *
      * Ctrl+click: hold Ctrl to toggle multiple type checkboxes without applying the filter or
      * closing the menu (each option's handler stops the click from bubbling to the menu's
@@ -229,15 +231,10 @@ export class OutlinerPanel extends BasePanel {
         // Create menu using utility
         const menu = MenuPositioningUtils.createMenuElement({ className: 'p-2' });
 
-        // Position menu using utility — overlap the button's own bounding box (top of menu =
-        // top of button) instead of leaving MenuPositioningUtils' default gap below it, so the
-        // cursor is guaranteed to be inside the menu's bounds no matter where within the
-        // button it was when clicked (see doc comment above).
-        const buttonRect = button.getBoundingClientRect();
+        // Position menu using utility
         MenuPositioningUtils.showMenu(menu, button, {
             alignment: 'right',
             direction: 'below',
-            offset: -buttonRect.height,
             menuWidth: 192,
             menuHeight: 200
         });
@@ -253,9 +250,8 @@ export class OutlinerPanel extends BasePanel {
             }
         };
         document.addEventListener('keyup', ctrlReleaseHandler);
-        // Clean up regardless of which of the menu's own (default) close paths fires first.
-        menu.addEventListener('mouseleave', () => document.removeEventListener('keyup', ctrlReleaseHandler));
-        menu.addEventListener('click', () => document.removeEventListener('keyup', ctrlReleaseHandler));
+        // Fires once the menu actually closes, whichever path (cursor-leave or click) triggered it.
+        menu.addEventListener('menuclose', () => document.removeEventListener('keyup', ctrlReleaseHandler));
 
         /**
          * Apply the (already-mutated) this.activeTypeFilters. Ctrl-held: only refresh the

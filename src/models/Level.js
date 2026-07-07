@@ -186,6 +186,7 @@ export class Level {
         this.fixLayerReferences();
 
         this.updateModified();
+        this.notifyStructureChange('objectAdded', { object: properObj });
     }
 
     /**
@@ -209,6 +210,41 @@ export class Level {
         }
 
         this.updateModified();
+        this.notifyStructureChange('objectRemoved', { objectId: objId });
+    }
+
+    /**
+     * Remove multiple objects from the level's top-level array in one batched operation.
+     * Same per-id semantics as calling removeObject() in a loop (layer-count decrement is
+     * looked up per id regardless of whether that id was actually a top-level entry — same
+     * quirk removeObject() already has), but layer-count-cache updates are grouped per
+     * affected layer and only ONE structure-change notification fires for the whole batch,
+     * instead of one per object (avoids re-rendering panels N times for an N-object delete).
+     * @param {Iterable<string>} ids
+     */
+    removeObjects(ids) {
+        const idsSet = ids instanceof Set ? ids : new Set(ids);
+        if (idsSet.size === 0) return;
+
+        const layerDeltas = new Map();
+        idsSet.forEach(id => {
+            const obj = this.findObjectById(id);
+            if (obj?.layerId) {
+                layerDeltas.set(obj.layerId, (layerDeltas.get(obj.layerId) || 0) + 1);
+            }
+        });
+
+        this.objects = this.objects.filter(obj => !idsSet.has(obj.id));
+        idsSet.forEach(id => this.removeObjectFromIndex(id));
+
+        layerDeltas.forEach((count, layerId) => {
+            this.updateLayerCountCache(layerId, -count);
+            const newCount = this.getLayerObjectsCount(layerId);
+            this.notifyLayerObjectsCountChange(layerId, newCount, newCount + count);
+        });
+
+        this.updateModified();
+        this.notifyStructureChange('objectsRemoved', { ids: Array.from(idsSet) });
     }
 
     /**
@@ -310,6 +346,7 @@ export class Level {
         this.layers.push(newLayer);
         this.updateLayerIndices(); // Update layer indices after adding new layer
         this.updateModified();
+        this.notifyStructureChange('layerChanged', { action: 'add', layer: newLayer });
         return newLayer;
     }
 
@@ -325,6 +362,7 @@ export class Level {
         this.layers = this.layers.filter(l => l.id !== layerId);
         this.updateLayerIndices(); // Update layer indices after removing layer
         this.updateModified();
+        this.notifyStructureChange('layerChanged', { action: 'remove', layerId });
         return true;
     }
 
@@ -394,6 +432,7 @@ export class Level {
         this.layers = reorderedLayers;
         this.updateLayerIndices(); // Update layer indices and object zIndices
         this.updateModified();
+        this.notifyStructureChange('layerChanged', { action: 'reorder', layerIds });
     }
 
     /**
@@ -720,6 +759,27 @@ export class Level {
     notifyLayerObjectsCountChange(layerId, newCount, oldCount) {
         if (this.onLayerObjectsCountChanged) {
             this.onLayerObjectsCountChanged(layerId, newCount, oldCount);
+        }
+    }
+
+    /**
+     * Set callback for level structure changes (object add/remove, layer add/remove/reorder).
+     * Generalizes the same pattern as setLayerObjectsCountChangeCallback so callers of
+     * addObject/removeObject/removeObjects/addLayer/removeLayer/reorderLayers never need to
+     * remember to tell panels about it themselves — see tmp/REACTIVE_LEVEL_UPDATES_PLAN.md.
+     */
+    setStructureChangeCallback(callback) {
+        this.onLevelStructureChanged = callback;
+    }
+
+    /**
+     * Notify about a level structure change
+     * @param {string} changeType - 'objectAdded'|'objectRemoved'|'objectsRemoved'|'layerChanged'
+     * @param {Object} payload
+     */
+    notifyStructureChange(changeType, payload) {
+        if (this.onLevelStructureChanged) {
+            this.onLevelStructureChanged(changeType, payload);
         }
     }
 

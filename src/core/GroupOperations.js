@@ -200,13 +200,12 @@ export class GroupOperations extends BaseModule {
         });
 
         // NOW check if the group that was just closed became empty and remove it
-        // (after it's no longer in the protected openGroups list)
+        // (after it's no longer in the protected openGroups list). removeEmptyGroup() now
+        // goes through level.removeObjects(), which notifies panels reactively — plus the
+        // set('selectedObjects', ...) a few lines below already triggers a full panel
+        // refresh regardless — so no separate updateAllPanels() call is needed here.
         if (currentGroup) {
-            const groupWasRemoved = this.removeEmptyGroup(currentGroup);
-            if (groupWasRemoved) {
-                this.editor.updateAllPanels();
-            } else {
-            }
+            this.removeEmptyGroup(currentGroup);
         }
 
         // Selective cache invalidation for closing group edit mode
@@ -236,13 +235,6 @@ export class GroupOperations extends BaseModule {
 
         if (groupsToUngroup.length === 0) return;
 
-        this.editor.historyManager.saveState(
-            this.editor.level.objects, 
-            selectedObjects, 
-            false, 
-            this.editor.stateManager.get('groupEditMode')
-        );
-
         const newTopLevelObjects = [];
 
         groupsToUngroup.forEach(group => {
@@ -262,10 +254,19 @@ export class GroupOperations extends BaseModule {
         });
 
         // Remove old (now empty) groups from main list
-        this.editor.level.objects = this.editor.level.objects.filter(obj => {
-            // Check if object is not one of our groups
-            return !groupsToUngroup.some(group => group.id === obj.id);
-        });
+        this.editor.level.removeObjects(groupsToUngroup.map(group => group.id));
+
+        // Save state AFTER all changes are complete (mirrors groupSelectedObjects) so the
+        // undo stack top reflects the actual post-ungroup objects array. Saving before the
+        // mutation (as this used to) pushed a snapshot equal to the already-current top of
+        // stack, got deduped by the "state hasn't changed" check below, and silently ate the
+        // checkpoint — a subsequent Group→Ungroup→Undo then skipped straight past the ungroup.
+        this.editor.historyManager.saveState(
+            this.editor.level.objects,
+            new Set(),
+            false,
+            this.editor.stateManager.get('groupEditMode')
+        );
 
         // Selective cache invalidation for ungrouping
         // Clear effective layer cache for freed objects
@@ -589,8 +590,8 @@ export class GroupOperations extends BaseModule {
 
         // Remove from main level
         const initialCount = this.editor.level.objects.length;
-        this.editor.level.objects = this.editor.level.objects.filter(obj => obj.id !== targetGroup.id);
-        
+        this.editor.level.removeObjects([targetGroup.id]);
+
         if (this.editor.level.objects.length < initialCount) {
             return true; // Group was removed from main level
         }
@@ -641,25 +642,32 @@ export class GroupOperations extends BaseModule {
         // Track if any groups were removed
         let groupsRemoved = false;
 
-        // Remove empty groups or groups with one child from main level
+        // Remove empty groups or groups with one child from main level. Iterate a snapshot
+        // (not the live array) so a child extracted below — which re-adds it to
+        // this.editor.level.objects via addObject() — is never itself visited by this pass,
+        // matching the fixed-length semantics the old .filter() had here.
         const beforeCount = this.editor.level.objects.length;
-        this.editor.level.objects = this.editor.level.objects.filter(obj => {
-            if (obj.type === 'group' && 
-                obj.children && 
-                obj.children.length <= 1 && 
+        const idsToRemove = [];
+        [...this.editor.level.objects].forEach(obj => {
+            if (obj.type === 'group' &&
+                obj.children &&
+                obj.children.length <= 1 &&
                 !protectedGroupIds.has(obj.id)) {
-                
+
                 // If group has exactly one child, extract it first
                 if (obj.children.length === 1) {
                     const childObject = obj.children[0];
                     this.extractObjectFromGroup(obj, childObject);
                 }
-                
-                return false; // Remove group (now empty after extraction)
+
+                idsToRemove.push(obj.id); // Remove group (now empty after extraction)
             }
-            return true; // Keep groups with more than one child and other objects
         });
-        
+
+        if (idsToRemove.length > 0) {
+            this.editor.level.removeObjects(idsToRemove);
+        }
+
         if (this.editor.level.objects.length < beforeCount) {
             groupsRemoved = true;
         }

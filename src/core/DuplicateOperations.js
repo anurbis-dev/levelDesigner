@@ -392,10 +392,10 @@ export class DuplicateOperations extends BaseModule {
 
         // Set selection after state is saved. Caches were already invalidated above (line
         // 379-380), so the synchronous render this triggers (EventHandlers 'selectedObjects'
-        // subscriber) already sees fresh state — no separate render() call needed here.
+        // subscriber, which also calls updateAllPanels()) already sees fresh state — no
+        // separate render()/updateAllPanels() call needed here.
         this.editor.stateManager.set('selectedObjects', newIds);
 
-        this.editor.updateAllPanels();
         Logger.status.success(`Placed ${newIds.size} duplicate${newIds.size > 1 ? 's' : ''}`);
 
     }

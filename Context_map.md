@@ -47,6 +47,11 @@ eventHandlerManager.registerTouchElement(element, configType, config, elementId)
 // GlobalEventRegistry
 globalEventRegistry.registerComponentHandlers(componentId, handlers, target)
 
+// Реактивные обновления панелей на структурные изменения уровня (v3.55.0)
+stateManager.subscribe('levelStructureChanged', (changes) => {...}) // событие при add/remove объектов/слоёв
+levelEditor.level.setStructureChangeCallback(callback) // регистрация callback для структурных изменений
+levelEditor.level.removeObjects(ids) // батчевое удаление объектов (одно уведомление вместо многих)
+
 // Z-порядок объектов (array-order stacking, без zIndex)
 levelEditor.level.compareStackOrder(a, b) // компаратор: layerIndex, затем путь в дереве
 levelEditor.objectOperations.bringToFront(obj)

@@ -144,20 +144,41 @@ export class MenuPositioningUtils {
     }
     
     /**
-     * Setup menu closing behavior using BaseContextMenu logic
+     * Setup menu closing behavior.
+     *
+     * The menu is positioned right below the trigger button (see calculateMenuPosition),
+     * so the cursor is on the BUTTON — not the menu — at the moment the menu opens. Native
+     * mouseleave can't detect that: it only fires once the browser has first seen the cursor
+     * enter the element, so a menu the cursor never actually hovers into never gets a leave
+     * event either, and stays open forever until an unrelated click. Tracking real cursor
+     * coordinates on document 'mousemove' against the button+menu rects sidesteps that: it
+     * doesn't care where the cursor started, only whether it's currently over either rect.
      * @param {HTMLElement} menu - Menu element
      * @param {HTMLElement} triggerElement - Element that triggered the menu
      * @returns {Function} - Cleanup function to remove event listeners
      */
     static setupMenuClosing(menu, triggerElement) {
+        const buttonRect = triggerElement.getBoundingClientRect();
+        const isInside = (x, y, rect) =>
+            x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+
         const closeMenu = () => {
+            document.removeEventListener('mousemove', onMouseMove);
             if (menu.parentNode) {
                 menu.parentNode.removeChild(menu);
             }
+            // Lets callers (e.g. OutlinerPanel's Ctrl-hold filter gesture) hook cleanup to the
+            // menu actually closing, regardless of which path (leave vs. click) triggered it.
+            menu.dispatchEvent(new CustomEvent('menuclose'));
         };
 
-        // Close menu when mouse leaves the menu area (BaseContextMenu logic)
-        menu.addEventListener('mouseleave', closeMenu);
+        const onMouseMove = (e) => {
+            const menuRect = menu.getBoundingClientRect();
+            if (!isInside(e.clientX, e.clientY, buttonRect) && !isInside(e.clientX, e.clientY, menuRect)) {
+                closeMenu();
+            }
+        };
+        document.addEventListener('mousemove', onMouseMove);
 
         // Also close on click for better UX (BaseContextMenu logic)
         const closeOnClick = () => {
@@ -168,12 +189,10 @@ export class MenuPositioningUtils {
         // Store references for cleanup (BaseContextMenu pattern)
         menu._closeMenuHandler = closeMenu;
         menu._closeOnClickHandler = closeOnClick;
-        
+
         // Return cleanup function
         return () => {
-            if (menu._closeMenuHandler) {
-                menu.removeEventListener('mouseleave', menu._closeMenuHandler);
-            }
+            document.removeEventListener('mousemove', onMouseMove);
             if (menu._closeOnClickHandler) {
                 menu.removeEventListener('click', menu._closeOnClickHandler);
             }

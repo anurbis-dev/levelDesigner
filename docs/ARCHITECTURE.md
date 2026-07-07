@@ -425,6 +425,71 @@
 
 ---
 
+## 🔄 Реактивные обновления панелей при структурных изменениях (v3.55.0)
+
+Раньше КАЖДАЯ операция, добавляющая/удаляющая объекты или слои, должна была явно вызвать `editor.updateAllPanels()` — забытый вызов приводил к видимым багам типа «Isolate не обновляет Outliner» (требовался дополнительный клик по канве, чтобы панели перерисовались).
+
+### Новый механизм на Level-модели
+
+**`src/models/Level.js`**:
+- `setStructureChangeCallback(callback)` — регистрирует callback для уведомлений о структурных изменениях.
+- `notifyStructureChange(changeType, payload)` — внутренний вызов callback'а при добавлении/удалении объектов и слоёв:
+  - `changeType: 'objectAdded'` — вызывается из `addObject()` с `{object}`
+  - `changeType: 'objectRemoved'` — вызывается из `removeObject()` с `{objectId}`
+  - `changeType: 'objectsRemoved'` — вызывается из нового метода `removeObjects(ids)` с `{ids}` (батчевое удаление)
+  - `changeType: 'layerChanged'` — вызывается из `addLayer()`, `removeLayer()`, `reorderLayers()` с `{action: 'add'|'remove'|'reorder', ...}` и дополнительным payload в зависимости от action
+- `removeObjects(ids)` — новый метод: батчевое удаление нескольких объектов за один проход (одно обновление слойных счётчиков вместо одного на объект, одно уведомление вместо многих). Заменяет антипаттерн `level.objects = level.objects.filter(...)`
+
+### Интеграция с StateManager и батчингом в LevelEditor
+
+**`src/core/LevelEditor.js`** → `setupLayerObjectsCountTracking()`:
+- Вызывается один раз при инициализации уровня.
+- Подключает callback через `level.setStructureChangeCallback(...)`, который:
+  - Накапливает все структурные изменения в массив за текущий event loop (`this._pendingStructureChanges`).
+  - Схлопывает их в ОДНО обновление через `queueMicrotask()` (батчинг: если одна операция вызвала `addObject()` 50 раз, панели рендерятся один раз, не 50).
+  - Затем вызывает `updateCachedLevelStats()` и `stateManager.notify('levelStructureChanged', changes)`.
+- **Важно**: callback привязан к конкретному экземпляру Level, поэтому `setupLayerObjectsCountTracking()` вызывается ПОВТОРНО из `LevelFileOperations` (методы `newLevel()` и `openLevel()`) сразу после `this.editor.level = ...` — иначе оба callback'а (layer count + structure change) отваливаются при смене уровня.
+
+### Подписка панелей на события
+
+Панели теперь подписываются на событие `'levelStructureChanged'` и обновляются автоматически, независимо от того, через какой код произошло изменение:
+
+**`src/ui/OutlinerPanel.js`**:
+```javascript
+stateManager.subscribe('levelStructureChanged', () => this.render());
+```
+
+**`src/ui/LayersPanel.js`**:
+```javascript
+stateManager.subscribe('levelStructureChanged', () => this.render());
+```
+
+**`src/ui/DetailsPanel.js`** (для уровня level-stats вида без выделения):
+```javascript
+stateManager.subscribe('levelStructureChanged', () => {
+    if (this._mode === 'renderNoSelection') {
+        this.render();
+    }
+});
+```
+
+### Следствие: упрощение кода операций
+
+Операции, которые мутируют структуру уровня (добавление, удаление объектов, переразгруппировка), теперь используют модельные методы `Level` вместо прямых мутаций массивов:
+
+- `src/core/GroupOperations.js` — `ungroupSelectedObjects()`, `removeEmptyGroup()`, `removeEmptyGroups()` используют `level.removeObjects(ids)` вместо `level.objects = level.objects.filter(...)`.
+- `src/core/ObjectOperations.js` — `deleteSelectedObjects()` использует `level.removeObjects(ids)`.
+
+Явные вызовы `editor.updateAllPanels()` в конце этих операций **больше не нужны** — панели обновятся сами через подписку на `'levelStructureChanged'`.
+
+### Баги, которые это исправляет
+
+**Isolate (`/`) не обновлял Outliner без клика в канву**:
+- `ObjectOperations.toggleIsolateSelection()` вызывал `render()`, но не `updateAllPanels()`, из-за чего Outliner не перерисовывался до следующего независимого события.
+- Теперь Outliner подписывается на `'levelStructureChanged'` (как и остальные панели) и реагирует автоматически.
+
+---
+
 ## 🎨 UI компоненты
 
 ### BaseDialog
