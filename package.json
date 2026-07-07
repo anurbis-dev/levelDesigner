@@ -10,7 +10,10 @@
     "dev": "python -m http.server 8000",
     "build:css": "tailwindcss -i styles/tailwind.css -o styles/tailwind.build.css --minify",
     "watch:css": "tailwindcss -i styles/tailwind.css -o styles/tailwind.build.css --watch",
-    "validate:version": "node scripts/validate-version.js"
+    "validate:version": "node scripts/validate-version.js",
+    "bump:patch": "node scripts/bump-version.mjs patch",
+    "bump:minor": "node scripts/bump-version.mjs minor",
+    "bump:major": "node scripts/bump-version.mjs major"
   },
   "keywords": [
     "level-editor",
