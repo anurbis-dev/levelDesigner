@@ -14,8 +14,19 @@
 - `async saveLevelAs()` - сохранение уровня с выбором файла
 
 #### Версия:
-- `static VERSION` - текущая версия редактора (строка, например '3.54.5')
+- `static VERSION` - текущая версия редактора (строка, например '3.54.6')
 - `updateVersionInfo()` - обновление отображения версии в UI
+
+#### Copy/Paste/Duplicate (Ctrl+C/X/V, Shift+D):
+- `copySelectedObjects()` - Ctrl+C, сохраняет deep-clone выделённых объектов в `levelEditor.clipboard`
+- `cutSelectedObjects()` - Ctrl+X, копирует и удаляет выделённые объекты
+- `pasteObjects()` - Ctrl+V, вставляет объекты из clipboard с использованием интерактивного flow размещения; no-op если курсор не над канвой (`mouse.isOverCanvas === false`); вызывает `duplicateOperations.startFromObjects()`
+- `duplicateSelectedObjects()` - Shift+D, вызывает `duplicateOperations.startFromSelection()`
+
+#### Операции с выделением:
+- `selectObject(id)` - выделение объекта по ID
+- `clearSelection()` - очистка выделения
+- `deleteSelectedObjects()` - удаление выделённых объектов
 
 ### HorizontalScrollUtils (src/utils/HorizontalScrollUtils.js)
 Утилита для настройки горизонтального скролла с поддержкой колеса мыши и средней кнопки.
@@ -256,10 +267,11 @@
 ---
 
 ### DuplicateOperations (src/core/DuplicateOperations.js)
-Операции дублирования объектов.
+Операции дублирования объектов. Общий flow используется Duplicate (Shift+D) и Paste (Ctrl+V): интерактивное размещение с ghost-превью, следующим за мышью до клика подтверждения.
 
 #### Основные методы:
-- `startFromSelection()` - начало дублирования из выделения
+- `startFromSelection()` - начало дублирования из выделения (Shift+D)
+- `startFromObjects(selected)` - начало интерактивного размещения произвольного набора объектов; используется `pasteObjects()` (Ctrl+V) и `startFromSelection()`. Объекты размещаются под текущей позицией курсора, если `mouse.isOverCanvas === true`; иначе fallback на центр канвы. Несколько объектов центрируются по union bounding-box (`anchorCenter` = центр объединённых мировых bounds) так, чтобы вся группа оказалась под курсором.
 - `updatePreview(worldPos)` - обновление превью дублирования
 - `confirmPlacement(worldPos)` - подтверждение размещения
 - `cancel()` - отмена дублирования
@@ -340,6 +352,15 @@
 - `findObjectById(id)` - поиск объекта по ID
 - `getAllObjects()` - получение всех объектов
 - `getStats()` - получение статистики уровня
+- `compareStackOrder(a, b)` - сравнение Z-порядка объектов (сначала по слою, затем по позиции в иерархии)
+
+#### Свойства settings:
+- `gridSize` (number) - размер сетки (по умолчанию 32)
+- `snapToGrid` (boolean) - привязка к сетке (по умолчанию true)
+- `showGrid` (boolean) - отображение сетки (по умолчанию true)
+- `backgroundColor` (string) - цвет фона уровня в hex (по умолчанию '#4B5563')
+- `parallaxHorizontal` (number) - множитель параллакса по горизонтали (по умолчанию 1, масштабирует смещение камеры, применяется поверх per-layer parallaxOffset)
+- `parallaxVertical` (number) - множитель параллакса по вертикали (по умолчанию 1, применяется независимо по оси Y)
 
 ### GameObject (src/models/GameObject.js)
 Базовый класс игрового объекта.

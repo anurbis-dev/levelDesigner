@@ -17,6 +17,21 @@
       "shiftKey": true,
       "description": "Duplicate selected objects"
     },
+    "copy": {
+      "key": "C",
+      "ctrlKey": true,
+      "description": "Copy selected objects to clipboard"
+    },
+    "cut": {
+      "key": "X",
+      "ctrlKey": true,
+      "description": "Cut selected objects to clipboard"
+    },
+    "paste": {
+      "key": "V",
+      "ctrlKey": true,
+      "description": "Paste objects from clipboard"
+    },
     "focusSelection": {
       "key": "F",
       "description": "Focus on selected objects"

@@ -25,7 +25,9 @@ export class Level {
             gridSize: data.settings?.gridSize || 32,
             snapToGrid: data.settings?.snapToGrid || true,
             showGrid: data.settings?.showGrid || true,
-            backgroundColor: data.settings?.backgroundColor || '#4B5563'
+            backgroundColor: data.settings?.backgroundColor || '#4B5563',
+            parallaxHorizontal: data.settings?.parallaxHorizontal ?? 1,
+            parallaxVertical: data.settings?.parallaxVertical ?? 1
         };
         
         this.camera = {

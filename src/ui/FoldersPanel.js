@@ -84,112 +84,6 @@ export class FoldersPanel extends BasePanel {
     }
 
     /**
-     * Update layout without recreating elements - only updates truncation
-     * Used during window resize when element count doesn't change
-     */
-    updateLayout() {
-        if (!this.folderTree || !this.folderStructure) {
-            return;
-        }
-
-        // Update truncation for all folder items without recreating them
-        const folderItems = this.folderTree.querySelectorAll('.folder-item');
-        folderItems.forEach(item => {
-            const folderNameElement = item.querySelector('.folder-name');
-            if (folderNameElement) {
-                const path = item.dataset.path;
-                if (path) {
-                    // Find folder in structure to get original name
-                    let folder = null;
-                    if (path === 'root') {
-                        folder = this.folderStructure.root;
-                    } else {
-                        const pathParts = path.replace(/^root\//, '').split('/');
-                        folder = this.folderStructure.root;
-                        for (const part of pathParts) {
-                            if (folder && folder.children && folder.children[part]) {
-                                folder = folder.children[part];
-                            } else {
-                                folder = null;
-                                break;
-                            }
-                        }
-                    }
-                    
-                    if (folder) {
-                        const displayName = path === 'root' ? 'Content' : folder.name;
-                        const truncatedName = this.truncateName(displayName, this.container?.offsetWidth || 200);
-                        folderNameElement.textContent = truncatedName;
-                    }
-                }
-            }
-        });
-    }
-
-
-    /**
-     * Truncate name to fit available space
-     * @param {string} name - Name to truncate
-     * @param {number} maxWidth - Maximum width in pixels
-     * @returns {string} - Truncated name
-     */
-    truncateName(name, maxWidth) {
-        if (name.length <= 8) return name;
-        
-        // Get actual container width
-        const containerWidth = this.container ? this.container.offsetWidth : 200;
-        
-        // Calculate available width more precisely
-        // Account for: expand icon (16px) + folder icon (20px) + count (40px) + padding (6px) = 82px
-        const reservedSpace = 82;
-        const availableWidth = Math.max(containerWidth - reservedSpace, 50);
-        
-        // Use canvas for accurate text measurement
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        ctx.font = '12px system-ui, -apple-system, sans-serif';
-        
-        const fullTextWidth = ctx.measureText(name).width;
-        if (fullTextWidth <= availableWidth) return name;
-        
-        // Truncation with ellipsis in the middle
-        const ellipsis = '...';
-        const ellipsisWidth = ctx.measureText(ellipsis).width;
-        const availableForText = availableWidth - ellipsisWidth;
-        
-        // Binary search for optimal character count
-        let left = 1;
-        let right = name.length;
-        let bestLength = 0;
-        
-        while (left <= right) {
-            const mid = Math.floor((left + right) / 2);
-            const startChars = Math.floor(mid / 2);
-            const endChars = Math.ceil(mid / 2);
-            
-            if (startChars <= 0 || endChars <= 0) break;
-            
-            const testText = name.substring(0, startChars) + ellipsis + name.substring(name.length - endChars);
-            const testWidth = ctx.measureText(testText).width;
-            
-            if (testWidth <= availableWidth) {
-                bestLength = mid;
-                left = mid + 1;
-            } else {
-                right = mid - 1;
-            }
-        }
-        
-        if (bestLength <= 0) return name.substring(0, 3) + ellipsis;
-        
-        const startChars = Math.floor(bestLength / 2);
-        const endChars = Math.ceil(bestLength / 2);
-        
-        return name.substring(0, startChars) + ellipsis + name.substring(name.length - endChars);
-    }
-
-
-    /**
      * Build folder structure from manifest structure
      * @param {Object} parentFolder - Parent folder object
      * @param {Object} structure - Manifest structure object
@@ -418,11 +312,11 @@ export class FoldersPanel extends BasePanel {
                 <div class="folder-item ${isSelected ? 'selected' : ''} cursor-pointer p-1 rounded mb-1"
                      data-path="${folder.path}"
                      draggable="true"
-                     style="padding-left: ${depth * 16 + 4}px; pointer-events: auto; z-index: 1; display: block; width: 100%; overflow: hidden; line-height: 1.2; height: 24px; word-break: keep-all; hyphens: none;"
+                     style="padding-left: ${depth * 16 + 4}px; pointer-events: auto; z-index: 1; display: block; width: 100%; overflow: hidden; line-height: 1.2; height: 24px; word-break: keep-all; hyphens: none;">
                     <div class="flex items-center" style="min-width: 0; width: 100%; position: relative; line-height: 1.2; align-items: center; flex-wrap: nowrap;">
                         ${expandIcon ? `<span class="expand-icon text-xs ${textColor}" style="min-width: 16px; flex-shrink: 0; margin-right: 4px; cursor: pointer;">${expandIcon}</span>` : '<span style="min-width: 16px; flex-shrink: 0; margin-right: 4px;"></span>'}
                         <span class="folder-icon" style="min-width: 20px; flex-shrink: 0; margin-right: 8px;">${toggleIcon}</span>
-                        <span class="folder-name truncate" style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: calc(100% - 82px); position: relative; z-index: 1; line-height: 1.2; color: ${textColor};">${this.truncateName(folder.name)}</span>
+                        <span class="folder-name truncate" style="flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: calc(100% - 82px); position: relative; z-index: 1; line-height: 1.2; color: ${textColor};">${folder.name}</span>
                         <span class="folder-count text-xs" style="white-space: nowrap; min-width: 40px; flex-shrink: 0; text-align: right; margin-left: 4px; color: var(--ui-text-color, #9ca3af);">
                             ${totalAssetsInFolder > 0 ? `(${totalAssetsInFolder})` : ''}
                         </span>
@@ -801,63 +695,6 @@ export class FoldersPanel extends BasePanel {
             }
         }));
 
-        // Setup resize observer for dynamic truncation
-        this.setupResizeObserver();
-    }
-
-    /**
-     * Setup resize observer to update truncation when panel size changes
-     */
-    setupResizeObserver() {
-        if (!this.container) return;
-
-        // Track previous size to avoid unnecessary updates
-        this.lastContainerWidth = this.container.offsetWidth;
-        this.lastContainerHeight = this.container.offsetHeight;
-
-        // Use ResizeObserver if available
-        if (window.ResizeObserver) {
-            this.resizeObserver = new ResizeObserver((entries) => {
-                // Check if size actually changed significantly
-                const entry = entries[0];
-                if (entry) {
-                    const { width, height } = entry.contentRect;
-                    const widthChanged = Math.abs(width - this.lastContainerWidth) > 5;
-                    const heightChanged = Math.abs(height - this.lastContainerHeight) > 5;
-                    
-                    if (widthChanged || heightChanged) {
-                        this.lastContainerWidth = width;
-                        this.lastContainerHeight = height;
-                        
-                        // Use updateLayout() instead of renderFolderContent() to avoid recreating elements
-                        clearTimeout(this.resizeTimeout);
-                        this.resizeTimeout = setTimeout(() => {
-                            this.updateLayout();
-                        }, 150);
-                    }
-                }
-            });
-            this.resizeObserver.observe(this.container);
-        } else {
-            // Fallback to window resize event
-            this.resizeHandler = () => {
-                const currentWidth = this.container.offsetWidth;
-                const currentHeight = this.container.offsetHeight;
-                const widthChanged = Math.abs(currentWidth - this.lastContainerWidth) > 5;
-                const heightChanged = Math.abs(currentHeight - this.lastContainerHeight) > 5;
-                
-                if (widthChanged || heightChanged) {
-                    this.lastContainerWidth = currentWidth;
-                    this.lastContainerHeight = currentHeight;
-                    
-                    clearTimeout(this.resizeTimeout);
-                    this.resizeTimeout = setTimeout(() => {
-                        this.updateLayout();
-                    }, 150);
-                }
-            };
-            window.addEventListener('resize', this.resizeHandler);
-        }
     }
 
     /**
@@ -868,18 +705,6 @@ export class FoldersPanel extends BasePanel {
         if (this.subscriptions) {
             this.subscriptions.forEach(unsub => unsub());
             this.subscriptions = [];
-        }
-        if (this.resizeObserver) {
-            this.resizeObserver.disconnect();
-            this.resizeObserver = null;
-        }
-        if (this.resizeHandler) {
-            window.removeEventListener('resize', this.resizeHandler);
-            this.resizeHandler = null;
-        }
-        if (this.resizeTimeout) {
-            clearTimeout(this.resizeTimeout);
-            this.resizeTimeout = null;
         }
     }
 

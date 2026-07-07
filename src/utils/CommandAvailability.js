@@ -49,7 +49,7 @@ export class CommandAvailability {
                 return context.hasSelection;
 
             case 'paste':
-                return this.canPaste();
+                return this.canPaste(levelEditor);
 
             // Group operations
             case 'groupSelected':
@@ -153,11 +153,13 @@ export class CommandAvailability {
     }
 
     /**
-     * Check if paste operation is available
+     * Check if paste operation is available (internal clipboard has objects, not the
+     * system clipboard - LevelEditor copies structured level objects, not text)
+     * @param {Object} levelEditor - Level editor instance
      * @returns {boolean} - Whether paste is available
      */
-    static canPaste() {
-        return navigator.clipboard && window.isSecureContext;
+    static canPaste(levelEditor) {
+        return Array.isArray(levelEditor?.clipboard) && levelEditor.clipboard.length > 0;
     }
 
     /**

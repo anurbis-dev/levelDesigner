@@ -238,7 +238,7 @@ export class MouseHandlers extends BaseModule {
             const selectedObjects = this.editor.stateManager.get('selectedObjects');
             if (selectedObjects && selectedObjects.size > 0) {
                 Logger.mouse.debug('Starting Alt+drag duplication from selected objects');
-                this.editor.duplicateOperations.startFromSelection();
+                this.editor.duplicateOperations.startFromSelection(worldPos);
             }
         } else if (this.editor.stateManager.get('duplicate.isActive')) {
             // Update duplicate objects position via DuplicateOperations
@@ -435,14 +435,22 @@ export class MouseHandlers extends BaseModule {
 
             // Handle marquee completion for canvas events
             // Global handler will also handle it, but we need this for immediate response
-            if (mouse.isMarqueeSelecting) {
+            // Captured before finishMarqueeSelection() runs: `mouse` is a live reference to
+            // stateManager's nested state object (see StateManager.set/update), so calling
+            // finishMarqueeSelection() (which sets 'mouse.isMarqueeSelecting' back to false)
+            // mutates the same object the deferred-close check below reads — without this
+            // snapshot, a completed marquee-drag outside an open group (dragging in external
+            // objects) would immediately fall through to the close/select-external branch
+            // and undo/override the just-finished selection.
+            const wasMarqueeSelecting = mouse.isMarqueeSelecting;
+            if (wasMarqueeSelecting) {
                 this.finishMarqueeSelection();
             }
 
             // Deferred group close: set on mousedown when click was outside the active group.
             // Execute only if no drag and no object was selected — otherwise the user was
             // interacting with an external object (selecting/dragging it into the group).
-            if (mouse.pendingGroupClose && !wasDragging && !mouse.isMarqueeSelecting) {
+            if (mouse.pendingGroupClose && !wasDragging && !wasMarqueeSelecting) {
                 this.editor.stateManager.update({ 'mouse.pendingGroupClose': false });
                 if (this.isInGroupEditMode()) {
                     const worldPos = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, this.editor.stateManager.get('camera'));
@@ -465,9 +473,7 @@ export class MouseHandlers extends BaseModule {
 
                         if (this.isInGroupEditMode()) {
                             const parentGroupEditMode = this.getGroupEditMode();
-                            const parentBounds = this.editor.objectOperations.getObjectWorldBounds(parentGroupEditMode.group);
-                            const insideParent = worldPos.x >= parentBounds.minX && worldPos.x <= parentBounds.maxX &&
-                                worldPos.y >= parentBounds.minY && worldPos.y <= parentBounds.maxY;
+                            const insideParent = this.editor.objectOperations.isPointInObject(worldPos.x, worldPos.y, parentGroupEditMode.group);
                             if (insideParent) {
                                 this.editor.stateManager.set('selectedObjects', new Set());
                                 this.editor.stateManager.update({
@@ -600,6 +606,13 @@ export class MouseHandlers extends BaseModule {
         // Check if mouse is inside canvas bounds
         const isInsideCanvas = e.clientX >= rect.left && e.clientX <= rect.right &&
                               e.clientY >= rect.top && e.clientY <= rect.bottom;
+
+        // Track live cursor-over-canvas state so actions triggered from anywhere (e.g. the
+        // paste hotkey) know whether the last known mouse.worldX/worldY is still valid, or
+        // stale from before the cursor left the canvas (over a panel, dialog, etc.)
+        if (mouse.isOverCanvas !== isInsideCanvas) {
+            this.editor.stateManager.set('mouse.isOverCanvas', isInsideCanvas);
+        }
 
         if (mouse.isMarqueeSelecting && !isInsideCanvas) {
             // Constrain marquee to canvas bounds
@@ -961,7 +974,7 @@ export class MouseHandlers extends BaseModule {
                 );
             }
             
-            this.editor.duplicateOperations.startFromSelection();
+            this.editor.duplicateOperations.startFromSelection(worldPos);
             return; // Don't process normal selection logic
         }
         
@@ -1055,9 +1068,7 @@ export class MouseHandlers extends BaseModule {
         // If editing groups, only close when clicking OUTSIDE all open groups
         if (this.isInGroupEditMode()) {
             const groupEditMode = this.getGroupEditMode();
-            const activeBounds = this.editor.objectOperations.getObjectWorldBounds(groupEditMode.group);
-            const insideActive = worldPos.x >= activeBounds.minX && worldPos.x <= activeBounds.maxX &&
-                worldPos.y >= activeBounds.minY && worldPos.y <= activeBounds.maxY;
+            const insideActive = this.editor.objectOperations.isPointInObject(worldPos.x, worldPos.y, groupEditMode.group);
             if (insideActive) {
                 // Inside the active (innermost) group — start marquee
                 if (marqueeMode === 'replace') {
@@ -1073,14 +1084,19 @@ export class MouseHandlers extends BaseModule {
                 return;
             }
 
-            // Outside active group — defer the close to mouseup so that:
-            //   a) a drag can still start (external object dragged into group), and
-            //   b) a click on an external object selects it without closing the group.
-            // We record the intent here; handleMouseUp will execute it if no drag occurred
-            // and no selectable object was found under the cursor.
+            // Outside active group — defer the close to mouseup so that a plain click
+            // (no movement) closes the group / selects a single external object, while a
+            // real drag instead promotes to a marquee (same threshold-based promotion as
+            // marqueePendingStartPos for object clicks, see _handleMouseMoveImpl) to select
+            // external objects and drag them into the group. Once the marquee actually
+            // starts, isMarqueeSelecting becomes true, which makes handleMouseUp's deferred
+            // close check (`!mouse.isMarqueeSelecting`) skip the close/select branch.
             this.editor.stateManager.update({
                 'mouse.pendingGroupClose': true,
-                'mouse.isMarqueeSelecting': false
+                'mouse.isMarqueeSelecting': false,
+                'mouse.marqueePendingStartPos': { x: e.clientX, y: e.clientY },
+                'mouse.marqueePendingWorldPos': worldPos,
+                'mouse.marqueePendingMode': marqueeMode
             });
             return;
         }

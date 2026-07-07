@@ -62,10 +62,13 @@ dialog.show();
 
 ### Создание UI элементов:
 ```javascript
+// createLabeledInput создает контейнер с flex-лейаутом (label 40% справа + input flex 1)
 const input = UIFactory.createLabeledInput({
     label: 'Name',
+    type: 'text',
     onChange: (e) => console.log(e.target.value)
 });
+// Используется в DetailsPanel (Basic Properties, Visual) и других панелях
 ```
 
 
@@ -1159,88 +1162,56 @@ test('should create new objects in current layer', () => {
 
 ### 4. Добавление новых горячих клавиш
 
+Хоткеи регистрируются в `config/defaults/shortcuts.json` (единый источник истины) и обрабатываются в `EventHandlers.handleKeyDown()`:
+
 ```javascript
-// src/core/LevelEditor.js
-setupKeyboardEvents() {
-    window.addEventListener('keydown', (e) => {
-        if (document.activeElement.tagName === 'INPUT') return;
-        
-        // ... существующие горячие клавиши
-        
-        if (e.key.toLowerCase() === 'c' && e.ctrlKey) {
-            e.preventDefault();
-            this.copySelectedObjects();
-        } else if (e.key.toLowerCase() === 'v' && e.ctrlKey) {
-            e.preventDefault();
-            this.pasteObjects();
-        } else if (e.key === 'Escape') {
-            e.preventDefault();
-            this.cancelAllActions(); // Отмена всех текущих действий
-        }
-    });
+// config/defaults/shortcuts.json
+{
+  "editor": {
+    "copy": { "key": "c", "ctrlKey": true },
+    "cut": { "key": "x", "ctrlKey": true },
+    "paste": { "key": "v", "ctrlKey": true }
+  }
 }
 
+// src/event-system/EventHandlers.js — в handleKeyDown()
+if (this._matchesShortcut(e, 'editor.copy')) {
+    e.preventDefault();
+    this.editor.copySelectedObjects();
+} else if (this._matchesShortcut(e, 'editor.cut')) {
+    e.preventDefault();
+    this.editor.cutSelectedObjects();
+} else if (this._matchesShortcut(e, 'editor.paste')) {
+    e.preventDefault();
+    this.editor.pasteObjects();
+}
+
+// src/core/LevelEditor.js — методы API
 copySelectedObjects() {
-    const selectedObjects = this.stateManager.get('selectedObjects');
-    const objects = Array.from(selectedObjects)
+    const selectedIds = this.stateManager.get('selectedObjects');
+    if (!selectedIds || selectedIds.size === 0) return;
+    // Сохранить в буфер обмена (deep-clone, отвязанные от живого дерева)
+    const objects = Array.from(selectedIds)
         .map(id => this.level.findObjectById(id))
         .filter(Boolean);
-    
-    // Сохранить в буфер обмена
     this.clipboard = objects.map(obj => this.deepClone(obj));
 }
 
-pasteObjects() {
-    if (!this.clipboard) return;
-    
-    this.historyManager.saveState(this.level.objects);
-    
-    const newIds = new Set();
-    this.clipboard.forEach(obj => {
-        obj.id = this.level.nextObjectId++;
-        obj.x += 20; // Смещение для видимости
-        obj.y += 20;
-        this.level.objects.push(obj);
-        newIds.add(obj.id);
-    });
-    
-    this.stateManager.set('selectedObjects', newIds);
-    this.updateAllPanels();
-    this.render();
+cutSelectedObjects() {
+    this.copySelectedObjects();
+    this.deleteSelectedObjects();
 }
 
-// Новые методы для работы с дублированием
-cancelAllActions() {
-    const mouse = this.stateManager.get('mouse');
-    if (mouse.isPlacingObjects) {
-        this.stateManager.update({
-            'mouse.isPlacingObjects': false,
-            'mouse.placingObjects': []
-        });
+pasteObjects() {
+    if (!this.clipboard || this.clipboard.length === 0) return;
+    // Вставка только если курсор над канвой (mouse.isOverCanvas === true); иначе no-op с warning
+    if (!this.stateManager.get('mouse')?.isOverCanvas) {
+        Logger.status.warn('Paste ignored — move the cursor over the canvas first');
+        return;
     }
-    if (mouse.isMarqueeSelecting) {
-        this.stateManager.update({
-            'mouse.isMarqueeSelecting': false,
-            'mouse.marqueeRect': null
-        });
-    }
-    if (mouse.isDragging) {
-        this.stateManager.update({
-            'mouse.isDragging': false
-        });
-    }
-    if (mouse.isRightDown) {
-        this.stateManager.update({
-            'mouse.isRightDown': false
-        });
-    }
-    // Отмена дублирования
-    this.stateManager.update({
-        'duplicate.isActive': false,
-        'duplicate.objects': [],
-        'duplicate.basePosition': { x: 0, y: 0 }
-    });
-    this.render();
+    // Переиспользуем интерактивный flow размещения (ghost следует за мышью, клик подтверждает)
+    // Несколько объектов центрируются по union bounding-box (anchorCenter)
+    this.duplicateOperations.startFromObjects(this.clipboard);
 }
 ```
 

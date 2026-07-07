@@ -275,6 +275,9 @@ nav {
 
 .layer-name-display {
     /* No font-size - controlled by Font Scale */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .layer-name-input {

@@ -244,6 +244,13 @@ export class EventHandlers extends BaseModule {
     }
 
     handleKeyDown(e) {
+        // Ignore OS auto-repeat keydowns — none of the actions below are designed to
+        // re-fire while a key is held (no arrow-key nudge/pan lives in this handler),
+        // so repeats caused duplicate structural ops (e.g. ungroup firing 2-3x on one
+        // Alt+G press, causing visible flicker that single-shot toolbar/context-menu
+        // clicks never triggered).
+        if (e.repeat) return;
+
         // Backspace-to-reset (hover-based, see ResetRegistry) must run even while some
         // unrelated input has focus — checked before the focused-input early-return below.
         if (this._matchesShortcut(e, 'ui', 'resetToDefault') && ResetRegistry.handleBackspace()) {
@@ -294,6 +301,15 @@ export class EventHandlers extends BaseModule {
         } else if (this._matchesShortcut(e, 'editor', 'duplicate')) {
             e.preventDefault();
             this.editor.objectOperations?.duplicateSelectedObjects();
+        } else if (this._matchesShortcut(e, 'editor', 'copy')) {
+            e.preventDefault();
+            this.editor.copySelectedObjects();
+        } else if (this._matchesShortcut(e, 'editor', 'cut')) {
+            e.preventDefault();
+            this.editor.cutSelectedObjects();
+        } else if (this._matchesShortcut(e, 'editor', 'paste')) {
+            e.preventDefault();
+            this.editor.pasteObjects();
         } else if (this._matchesShortcut(e, 'editor', 'focusSelection')) {
             e.preventDefault();
             if (typeof this.editor.focusOnSelection === 'function') this.editor.focusOnSelection();
@@ -305,10 +321,10 @@ export class EventHandlers extends BaseModule {
             this.toggleGrid();
         } else if (this._matchesShortcut(e, 'editor', 'groupObjects')) {
             e.preventDefault();
-            this.editor.groupOperations?.groupSelectedObjects();
+            this.editor.groupSelectedObjects?.();
         } else if (this._matchesShortcut(e, 'editor', 'ungroupObjects')) {
             e.preventDefault();
-            this.editor.groupOperations?.ungroupSelectedObjects();
+            this.editor.ungroupSelectedObjects?.();
         } else if (this._matchesShortcut(e, 'editor', 'toggleParallax')) {
             e.preventDefault();
             this.toggleViewOption('parallax');

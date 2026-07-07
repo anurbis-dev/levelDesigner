@@ -380,89 +380,69 @@ export class DetailsPanel {
     }
 
     /**
+     * Create a single-line "label + N number fields" row (label left, fields sharing the rest
+     * of the row) — shared by Transform's Position/Size/Rotation rows and the Level panel's
+     * Parallax multiplier row, so a label never sits on its own line above its control(s).
+     * @param {string} label - Row label
+     * @param {Array<{prefix: string, property: string, id?: string, step?: string}>} fields
+     * @returns {HTMLElement}
+     */
+    createDualFieldRow(label, fields) {
+        const row = document.createElement('div');
+        row.className = 'flex items-center gap-2';
+
+        const labelEl = document.createElement('label');
+        labelEl.textContent = label;
+        labelEl.style.cssText = 'flex: 0 0 40%; text-align: right; font-size: 0.875rem; font-weight: 500; color: var(--ui-text-color, #d1d5db); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
+        row.appendChild(labelEl);
+
+        const fieldsWrap = document.createElement('div');
+        fieldsWrap.className = 'flex gap-2 flex-1';
+        fields.forEach(f => {
+            const fieldDiv = document.createElement('div');
+            fieldDiv.className = 'flex-1 relative';
+            fieldDiv.innerHTML = `
+                <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs pointer-events-none" style="color: var(--ui-text-color, #9ca3af);">${f.prefix}</span>
+                <input type="number"
+                       ${f.id ? `id="${f.id}"` : ''}
+                       ${f.step ? `step="${f.step}"` : ''}
+                       class="w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm"
+                       placeholder="0"
+                       data-property="${f.property}">
+            `;
+            fieldsWrap.appendChild(fieldDiv);
+        });
+        row.appendChild(fieldsWrap);
+
+        return row;
+    }
+
+    /**
      * Create transforms section HTML
      * @param {Object|Array} objOrObjects - Single object or array of objects
      * @returns {HTMLElement} Section container
      */
     createTransformsSectionHTML(objOrObjects) {
         const section = this.createSection('Transform');
-        
-        // Create compact grid for position and size
-        const gridContainer = document.createElement('div');
-        gridContainer.className = 'grid grid-cols-2 gap-3';
-        
-        // Position row
-        const positionRow = document.createElement('div');
-        positionRow.className = 'col-span-2';
-        positionRow.innerHTML = `
-            <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Position</label>
-            <div class="flex gap-2">
-                <div class="flex-1 relative">
-                    <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs pointer-events-none" style="color: var(--ui-text-color, #9ca3af);">X</span>
-                    <input type="number" 
-                           id="details-position-x" 
-                           class="w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm" 
-                           placeholder="0" 
-                           data-property="x">
-                </div>
-                <div class="flex-1 relative">
-                    <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs pointer-events-none" style="color: var(--ui-text-color, #9ca3af);">Y</span>
-                    <input type="number" 
-                           id="details-position-y" 
-                           class="w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm" 
-                           placeholder="0" 
-                           data-property="y">
-                </div>
-            </div>
-        `;
-        
-        // Size row
-        const sizeRow = document.createElement('div');
-        sizeRow.className = 'col-span-2';
-        sizeRow.innerHTML = `
-            <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Size</label>
-            <div class="flex gap-2">
-                <div class="flex-1 relative">
-                    <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs pointer-events-none" style="color: var(--ui-text-color, #9ca3af);">W</span>
-                    <input type="number" 
-                           id="details-size-width" 
-                           class="w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm" 
-                           placeholder="0" 
-                           data-property="width">
-                </div>
-                <div class="flex-1 relative">
-                    <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs pointer-events-none" style="color: var(--ui-text-color, #9ca3af);">H</span>
-                    <input type="number" 
-                           id="details-size-height" 
-                           class="w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm" 
-                           placeholder="0" 
-                           data-property="height">
-                </div>
-            </div>
-        `;
-        
-        // Rotation row
-        const rotationRow = document.createElement('div');
-        rotationRow.className = 'col-span-2';
-        rotationRow.innerHTML = `
-            <label class="block text-sm font-medium mb-1" style="color: var(--ui-text-color, #d1d5db);">Rotation</label>
-            <div class="flex gap-2">
-                <div class="flex-1 relative">
-                    <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs pointer-events-none" style="color: var(--ui-text-color, #9ca3af);">°</span>
-                    <input type="number"
-                           id="details-rotation"
-                           step="1"
-                           class="w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm"
-                           placeholder="0"
-                           data-property="rotation">
-                </div>
-            </div>
-        `;
 
-        gridContainer.appendChild(positionRow);
-        gridContainer.appendChild(sizeRow);
-        gridContainer.appendChild(rotationRow);
-        section._content.appendChild(gridContainer);
+        const rows = document.createElement('div');
+        rows.className = 'space-y-2';
+
+        rows.appendChild(this.createDualFieldRow('Position', [
+            { prefix: 'X', property: 'x', id: 'details-position-x' },
+            { prefix: 'Y', property: 'y', id: 'details-position-y' }
+        ]));
+
+        rows.appendChild(this.createDualFieldRow('Size', [
+            { prefix: 'W', property: 'width', id: 'details-size-width' },
+            { prefix: 'H', property: 'height', id: 'details-size-height' }
+        ]));
+
+        rows.appendChild(this.createDualFieldRow('Rotation', [
+            { prefix: '°', property: 'rotation', id: 'details-rotation', step: '1' }
+        ]));
+
+        section._content.appendChild(rows);
 
         return section;
     }
@@ -1119,7 +1099,7 @@ export class DetailsPanel {
      * Render level statistics section
      */
     renderLevelStatistics(stats) {
-        const section = this.createSection('Level Statistics');
+        const section = this.createSection('Stats');
         
         const playerStartCount = stats?.byType?.player_start || 0;
 
@@ -1173,8 +1153,9 @@ export class DetailsPanel {
      * Render level actions section
      */
     renderLevelActions() {
-        const section = this.createSection('Actions');
-        
+        const section = this.createSection('Camera');
+        const level = this.levelEditor.getLevel();
+
         const buttonContainer = document.createElement('div');
         buttonContainer.innerHTML = `
                 <button id="set-camera-start-position-btn"
@@ -1186,12 +1167,49 @@ export class DetailsPanel {
                     Sets current camera position as parallax reference point
             </div>
         `;
-        
         section._content.appendChild(buttonContainer);
+
+        // Parallax multiplier row — horizontal and vertical share one line (see createDualFieldRow)
+        const parallaxRow = this.createDualFieldRow('Parallax', [
+            { prefix: 'H', property: 'parallaxHorizontal', id: 'level-parallax-horizontal', step: '0.1' },
+            { prefix: 'V', property: 'parallaxVertical', id: 'level-parallax-vertical', step: '0.1' }
+        ]);
+        parallaxRow.classList.add('mt-3');
+        section._content.appendChild(parallaxRow);
+
         this.container.appendChild(section);
 
-        // Setup button event listener
+        // Setup event listeners
         this.setupCameraStartPositionButton();
+        this.setupParallaxMultiplierInputs(level);
+    }
+
+    /**
+     * Wire the level-wide Parallax H/V multiplier inputs (see renderLevelActions). These scale
+     * the camera-offset used by ParallaxRenderer.getCameraOffset() independently per axis, on
+     * top of each layer's own parallaxOffset — stored in level.settings so they persist with
+     * the level file (mirrors gridSize/backgroundColor, not the transient parallax.startPosition
+     * runtime state).
+     * @param {Level} level
+     */
+    setupParallaxMultiplierInputs(level) {
+        const inputs = this.container.querySelectorAll('#level-parallax-horizontal, #level-parallax-vertical');
+        inputs.forEach(input => {
+            const property = input.dataset.property;
+            input.value = (level.settings[property] ?? 1).toFixed(1);
+
+            input.addEventListener('blur', (e) => {
+                let value = parseFloat(e.target.value);
+                if (isNaN(value)) value = 1;
+                level.settings[property] = value;
+                e.target.value = value.toFixed(1);
+
+                this.stateManager.markDirty();
+                if (this.levelEditor && this.levelEditor.render) {
+                    this.levelEditor.render();
+                }
+            });
+        });
     }
 
     setupCameraStartPositionButton() {

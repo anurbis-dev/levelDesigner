@@ -17,7 +17,6 @@ export class RenderOperations extends BaseModule {
         
         // Performance optimization caches
         this.visibleObjectsCache = new Map();
-        this.lastCameraState = null;
         this.cacheTimeout = PERFORMANCE.CACHE_TIMEOUT_MS;
 
         // Layer visibility cache for performance
@@ -759,13 +758,10 @@ export class RenderOperations extends BaseModule {
      * More selective than clearing entire cache
      */
     clearVisibleObjectsCacheForCurrentCamera() {
-        if (!this.lastCameraState) return;
-
         const camera = this.editor.stateManager.get('camera');
         if (!camera) return;
 
-        const cameraKey = `${camera.x.toFixed(1)},${camera.y.toFixed(1)},${camera.zoom.toFixed(2)}`;
-        this.visibleObjectsCache.delete(cameraKey);
+        this.visibleObjectsCache.delete(this._buildVisibleObjectsCacheKey(camera));
     }
 
     /**
@@ -783,8 +779,7 @@ export class RenderOperations extends BaseModule {
     clearVisibleObjectsCacheForCamera(camera) {
         if (!camera) return;
 
-        const cameraKey = `${camera.x.toFixed(1)},${camera.y.toFixed(1)},${camera.zoom.toFixed(2)}`;
-        this.visibleObjectsCache.delete(cameraKey);
+        this.visibleObjectsCache.delete(this._buildVisibleObjectsCacheKey(camera));
     }
 
     /**
@@ -904,6 +899,21 @@ export class RenderOperations extends BaseModule {
         return visibleObjectsWithPosition;
     }
 
+    /**
+     * Cache key for visibleObjectsCache. MUST stay identical between the read path
+     * (getVisibleObjects) and every invalidation path (clearVisibleObjectsCacheFor*) —
+     * a mismatched key makes the "clear" calls silent no-ops, leaving stale
+     * {obj, parentX, parentY} entries served up to CACHE_TIMEOUT_MS later (the ungroup/
+     * delete/duplicate flicker bug: parallaxKey was appended here but omitted from the
+     * two clear-by-camera methods, so those deletes never matched a real entry).
+     */
+    _buildVisibleObjectsCacheKey(camera) {
+        const parallaxEnabled = this.parallaxRenderer.isParallaxEnabled();
+        const parallaxState = parallaxEnabled ? this.parallaxRenderer.getParallaxState() : null;
+        const parallaxKey = parallaxState?.startPosition ? `_${parallaxState.startPosition.x.toFixed(1)},${parallaxState.startPosition.y.toFixed(1)}` : '_off';
+        return `${camera.x.toFixed(1)},${camera.y.toFixed(1)},${camera.zoom.toFixed(2)}${parallaxKey}`;
+    }
+
     getVisibleObjects(camera) {
         // Проверки на существование необходимых объектов
         if (!this.editor || !this.editor.level || !this.editor.level.objects) {
@@ -926,10 +936,7 @@ export class RenderOperations extends BaseModule {
         }
 
         const currentTime = performance.now();
-        const parallaxEnabled = this.parallaxRenderer.isParallaxEnabled();
-        const parallaxState = parallaxEnabled ? this.parallaxRenderer.getParallaxState() : null;
-        const parallaxKey = parallaxState?.startPosition ? `_${parallaxState.startPosition.x.toFixed(1)},${parallaxState.startPosition.y.toFixed(1)}` : '_off';
-        const cameraKey = `${camera.x.toFixed(1)},${camera.y.toFixed(1)},${camera.zoom.toFixed(2)}${parallaxKey}`;
+        const cameraKey = this._buildVisibleObjectsCacheKey(camera);
 
         // Check cache first
         if (this.visibleObjectsCache.has(cameraKey)) {
@@ -1409,8 +1416,8 @@ export class RenderOperations extends BaseModule {
      * Clear the effective layer ID cache
      */
     clearEffectiveLayerCache() {
-        if (this.editor && this.editor.effectiveLayerCache) {
-            this.editor.effectiveLayerCache.clear();
+        if (this.editor && this.editor.cacheManager) {
+            this.editor.cacheManager.effectiveLayerCache.clear();
         }
     }
 
@@ -1419,8 +1426,8 @@ export class RenderOperations extends BaseModule {
      * @param {string} objId - Object ID to clear from cache
      */
     clearEffectiveLayerCacheForObject(objId) {
-        if (this.editor && this.editor.effectiveLayerCache) {
-            this.editor.effectiveLayerCache.delete(objId);
+        if (this.editor && this.editor.cacheManager) {
+            this.editor.cacheManager.effectiveLayerCache.delete(objId);
         }
     }
 

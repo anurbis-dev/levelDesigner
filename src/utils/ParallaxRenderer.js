@@ -31,10 +31,13 @@ export class ParallaxRenderer {
     getCameraOffset(camera) {
         const parallaxState = this.getParallaxState();
         const startPosition = parallaxState.startPosition || { x: 0, y: 0 };
+        const levelSettings = this.editor.level?.settings || {};
+        const multiplierX = levelSettings.parallaxHorizontal ?? 1;
+        const multiplierY = levelSettings.parallaxVertical ?? 1;
 
         return {
-            x: camera.x - startPosition.x,
-            y: camera.y - startPosition.y
+            x: (camera.x - startPosition.x) * multiplierX,
+            y: (camera.y - startPosition.y) * multiplierY
         };
     }
 

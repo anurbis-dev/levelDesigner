@@ -56,7 +56,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.54.6';
+    static VERSION = '3.54.7';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -98,6 +98,9 @@ export class LevelEditor {
         
         // Current level
         this.level = null;
+
+        // Internal clipboard for copy/cut/paste (array of deep-cloned objects, or null)
+        this.clipboard = null;
 
         // Cached level statistics for quick access
         this.cachedLevelStats = null;
@@ -358,7 +361,7 @@ export class LevelEditor {
         try {
             this.log('info', `🚀 Level Editor v${LevelEditor.VERSION} - Utility Architecture`);
             this.log('info', 'Initializing editor components...');
-        
+
             await this.initializeConfiguration();
             const domElements = this.initializeDOMElements();
 
@@ -390,7 +393,7 @@ export class LevelEditor {
             this.initializeMenuAndEvents();
             await this.initializeLevelAndData();
             await this.finalizeInitialization();
-            
+
         } catch (error) {
             this.log('error', 'Failed to initialize editor:', error.message);
             throw error;
@@ -794,6 +797,7 @@ export class LevelEditor {
 
         // Show editor UI after all initialization is complete
         document.body.classList.add('editor-ready');
+        window.notifySplashReady?.();
 
         // Show welcome splash screen on the user's very first visit only
         this.maybeShowSplashOnFirstVisit();
@@ -1796,35 +1800,55 @@ export class LevelEditor {
         const selectedObjects = this.stateManager.get('selectedObjects');
         const objectsToUngroup = Array.from(selectedObjects).map(id => this.findObjectById(id)).filter(Boolean);
 
+        // Snapshot children ids BEFORE ungrouping — groupOperations.ungroupSelectedObjects()
+        // empties group.children in place (extractObjectFromGroup filters it per child), so
+        // reading obj.children after that call always sees an empty array.
+        const childIdsToInvalidate = [];
+        objectsToUngroup.forEach(obj => {
+            if (obj.type === 'group' && obj.children) {
+                obj.children.forEach(child => childIdsToInvalidate.push(child.id));
+            }
+        });
+
         this.groupOperations.ungroupSelectedObjects();
 
         // Invalidate caches for ungrouped objects and their children
-        objectsToUngroup.forEach(obj => {
-            this.invalidateObjectCaches(obj.id);
-            // Also invalidate caches for children if it's a group
-            if (obj.type === 'group' && obj.children) {
-                obj.children.forEach(child => {
-                    this.invalidateObjectCaches(child.id);
-                });
-            }
-        });
+        objectsToUngroup.forEach(obj => this.invalidateObjectCaches(obj.id));
+        childIdsToInvalidate.forEach(id => this.invalidateObjectCaches(id));
 
         // Schedule full cache invalidation since hierarchy changed
         this.scheduleCacheInvalidation();
     }
 
     /**
-     * Copy selected objects to clipboard
+     * Copy selected objects to the internal clipboard (deep-cloned, decoupled from the
+     * live level tree so later edits/deletes of the originals don't affect a later paste)
      */
     copySelectedObjects() {
-        // TODO: Implement copy functionality
+        const selectedIds = this.stateManager.get('selectedObjects');
+        if (!selectedIds || selectedIds.size === 0) return;
+
+        const selected = Array.from(selectedIds)
+            .map(id => this.level.findObjectById(id))
+            .filter(Boolean);
+        if (selected.length === 0) return;
+
+        this.clipboard = selected.map(obj => this.deepClone(obj));
+        Logger.status.info(`Copied ${this.clipboard.length} object${this.clipboard.length > 1 ? 's' : ''}`);
     }
 
     /**
-     * Paste objects from clipboard
+     * Paste objects from the internal clipboard using the same interactive
+     * mouse-follow placement flow as Duplicate (click to place). No-op if the
+     * cursor isn't over the canvas — there's no sensible drop point otherwise.
      */
     pasteObjects() {
-        // TODO: Implement paste functionality
+        if (!this.clipboard || this.clipboard.length === 0) return;
+        if (!this.stateManager.get('mouse')?.isOverCanvas) {
+            Logger.status.warn('Paste ignored — move the cursor over the canvas first');
+            return;
+        }
+        this.duplicateOperations.startFromObjects(this.clipboard);
     }
 
     /**

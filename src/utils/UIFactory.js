@@ -44,10 +44,12 @@ export class UIFactory {
 
         const container = document.createElement('div');
         container.className = this.CSS.container;
+        container.style.cssText = 'display: flex; align-items: center; gap: 0.5rem; min-height: 1.5rem;';
 
         if (label) {
             const labelElement = document.createElement('label');
             labelElement.className = this.CSS.inputLabel;
+            labelElement.style.cssText = 'flex: 0 0 40%; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;';
             labelElement.textContent = label;
             if (id) labelElement.setAttribute('for', id);
             container.appendChild(labelElement);
@@ -58,6 +60,7 @@ export class UIFactory {
         input.value = value;
         input.placeholder = placeholder;
         input.className = this.CSS.input;
+        input.style.cssText = 'flex: 1 1 auto; min-width: 0; margin-top: 0;';
         input.disabled = disabled;
         
         if (id) {

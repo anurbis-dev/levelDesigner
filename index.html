@@ -57,6 +57,17 @@
         })();
     </script>
     
+    <!-- Ping the native splash window (start_Editor.bat -> scripts/splash_screen.ps1) once the editor
+         is done loading so it can close itself. Silently ignored if nothing is listening (e.g. the
+         page wasn't launched via start_Editor.bat) - the port must match SPLASH_READY_PORT there. -->
+    <script>
+        window.notifySplashReady = function() {
+            try {
+                fetch('http://127.0.0.1:47990/', { mode: 'no-cors', cache: 'no-store', keepalive: true }).catch(function() {});
+            } catch (_) {}
+        };
+    </script>
+
     <!-- Main styles -->
     <link rel="stylesheet" href="styles/main.css">
     <link rel="stylesheet" href="styles/spacing-mode.css">
@@ -456,6 +467,7 @@
                 Logger.lifecycle.warn('Failed to initialize level editor:', error);
                 // Show UI even if initialization failed
                 document.body.classList.add('editor-ready');
+                window.notifySplashReady?.();
                 // Don't show alert for async response errors from extensions
                 if (!ExtensionErrorUtils.isExtensionError(error)) {
                     try {
@@ -472,6 +484,7 @@
             Logger.lifecycle.warn('Error calling editor.init():', error);
             // Show UI even if initialization failed
             document.body.classList.add('editor-ready');
+            window.notifySplashReady?.();
         }
 
         // User preferences manager is already initialized above

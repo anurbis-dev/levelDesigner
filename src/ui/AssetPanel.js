@@ -1399,7 +1399,7 @@ export class AssetPanel extends BasePanel {
         const displayName = asset.properties && asset.properties.isTemporary 
             ? `⏳ ${asset.name}`
             : asset.name;
-        nameLabel.textContent = this.truncateAssetName(displayName, this.assetSize * 0.8);
+        nameLabel.textContent = displayName;
         nameLabel.title = asset.properties && asset.properties.isTemporary 
             ? `${asset.name} - TEMPORARY`
             : asset.name;
@@ -1469,7 +1469,7 @@ export class AssetPanel extends BasePanel {
         const displayName = asset.properties && asset.properties.isTemporary 
             ? `⏳ ${asset.name}`
             : asset.name;
-        nameDiv.textContent = this.truncateAssetName(displayName, this.assetSize * 0.8);
+        nameDiv.textContent = displayName;
         nameDiv.title = asset.properties && asset.properties.isTemporary 
             ? `${asset.name} - TEMPORARY`
             : asset.name; // Full name on hover
@@ -1652,27 +1652,6 @@ export class AssetPanel extends BasePanel {
         colorDiv.textContent = text;
         return colorDiv;
     }
-
-    /**
-     * Truncate asset name to fit available space
-     * @param {string} name - Asset name
-     * @param {number} maxWidth - Maximum width in pixels
-     * @returns {string} - Truncated name
-     */
-    truncateAssetName(name, maxWidth) {
-        if (name.length <= 10) return name;
-        
-        // Rough estimation: 8px per character
-        const maxChars = Math.floor(maxWidth / 8);
-        if (name.length <= maxChars) return name;
-        
-        const startChars = Math.floor((maxChars - 3) / 2);
-        const endChars = Math.ceil((maxChars - 3) / 2);
-        
-        return name.substring(0, startChars) + '...' + name.substring(name.length - endChars);
-    }
-
-
 
     // Now using BasePanel.handleItemClick with SelectionUtils
 

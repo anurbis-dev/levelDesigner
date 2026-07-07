@@ -218,7 +218,16 @@ export class SettingsSyncManager {
             }
 
             this.levelEditor.stateManager.set(stateKey, value);
-            
+
+            // Persist to ConfigManager too (write-through), otherwise auto-apply changes
+            // only live in StateManager and are lost on reload since the Apply button
+            // (which used to call saveAllUISettingsToConfig()) is disabled while auto-apply
+            // is on. ConfigManager.set() is cheap — it caches in memory and flushes lazily
+            // on beforeunload/visibilitychange, so calling it per-keystroke is fine.
+            if (this.levelEditor.configManager) {
+                this.levelEditor.configManager.set(path, value);
+            }
+
             // Special handling
             if (path === 'ui.menuGapBase') {
                 const num = parseFloat(value);

@@ -72,6 +72,7 @@ export class StateManager {
                 placingObjects: [], placingOffsets: [],
                 draggingGroupId: null,
                 altKey: false,
+                isOverCanvas: false, // Tracks whether the cursor is currently over the canvas (vs panels/outside window)
                 constrainedAxis: null, // 'x' or 'y' when Shift is pressed
                 axisCenter: null // {x, y} center of selected objects for axis constraint
             },

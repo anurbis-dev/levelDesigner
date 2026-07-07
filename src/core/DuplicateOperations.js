@@ -64,18 +64,24 @@ export class DuplicateOperations extends BaseModule {
     /**
      * Start duplication from current selection
      */
-    startFromSelection() {
+    startFromSelection(worldPosOverride) {
+        this.startFromObjects(this.getSelectedObjects(), worldPosOverride);
+    }
 
-        const selectedIds = this.editor.stateManager.get('selectedObjects');
-
-        if (!selectedIds || selectedIds.size === 0) {
-            return;
-        }
-
-        // Collect selected objects
-        const selected = this.getSelectedObjects();
-
-        if (selected.length === 0) {
+    /**
+     * Start the interactive placement flow (mouse-follow ghost, click to place) for an
+     * arbitrary set of objects. Shared by startFromSelection() (duplicate hotkey) and
+     * LevelEditor.pasteObjects() (paste hotkey), so both place objects the exact same way.
+     * @param {Array} selected - Objects to place; NOT required to still be selected/in the tree
+     * @param {{x:number,y:number}} [worldPosOverride] - Exact world position of the triggering
+     *   mouse event (e.g. Alt+click), when the caller already computed it fresh. Bypasses
+     *   mouse.worldX/worldY, which is only updated by the throttled mousemove handler and can
+     *   lag a tick behind the actual click — otherwise the preview anchors to that stale spot
+     *   while confirmPlacement's mouseup position is always fresh, making the placed copy jump
+     *   away from where the preview was shown.
+     */
+    startFromObjects(selected, worldPosOverride) {
+        if (!selected || selected.length === 0) {
             return;
         }
 
@@ -83,9 +89,14 @@ export class DuplicateOperations extends BaseModule {
         const mouse = this.editor.stateManager.get('mouse');
         const camera = this.editor.stateManager.get('camera');
 
-        // Use mouse world coordinates if available, otherwise fallback to canvas center
+        // Use mouse world coordinates only while the cursor is actually over the canvas —
+        // mouse.worldX/worldY otherwise hold a stale position from before the cursor left
+        // the canvas (over a panel, dialog, etc.), which would place objects somewhere the
+        // user isn't pointing at. Fallback to canvas center in that case.
         let worldPos;
-        if (mouse?.worldX !== undefined && mouse?.worldY !== undefined) {
+        if (worldPosOverride) {
+            worldPos = { x: worldPosOverride.x, y: worldPosOverride.y };
+        } else if (mouse?.isOverCanvas && mouse?.worldX !== undefined && mouse?.worldY !== undefined) {
             worldPos = { x: mouse.worldX, y: mouse.worldY };
         } else {
             // Fallback: convert canvas center to world coordinates
@@ -93,6 +104,11 @@ export class DuplicateOperations extends BaseModule {
             const centerY = this.editor.canvasRenderer.canvas.height / 2;
             worldPos = this.editor.canvasRenderer.screenToWorld(centerX, centerY, camera);
         }
+
+        // Union of all selected objects' true world bounds — its center is the point that
+        // gets placed under the cursor, so a multi-object paste/duplicate is centered as a
+        // whole group instead of each object keeping its own offset from the cursor.
+        const boundsUnion = { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity };
 
         // Clone and normalize properties
         const clones = selected.map(obj => {
@@ -111,6 +127,11 @@ export class DuplicateOperations extends BaseModule {
             //    to rotation): _worldX/_worldY = the detached position at which the
             //    clone's center lands exactly on the original's rendered center.
             const worldBounds = this.editor.objectOperations.getObjectWorldBounds(cloned);
+            boundsUnion.minX = Math.min(boundsUnion.minX, worldBounds.minX);
+            boundsUnion.minY = Math.min(boundsUnion.minY, worldBounds.minY);
+            boundsUnion.maxX = Math.max(boundsUnion.maxX, worldBounds.maxX);
+            boundsUnion.maxY = Math.max(boundsUnion.maxY, worldBounds.maxY);
+
             const ancestorRotation = WorldPositionUtils.getAncestorRotation(cloned, this.editor.level.objects);
             if (ancestorRotation) {
                 cloned.rotation = (cloned.rotation || 0) + ancestorRotation;
@@ -155,15 +176,22 @@ export class DuplicateOperations extends BaseModule {
             }
         }
 
-        // Initialize offsets relative to the cursor BEFORE setting positions
-        // This ensures we calculate offsets based on original object positions
-        const initialized = this.editor.duplicateRenderUtils.initializePositions(clones, worldPos, this.editor);
+        // Check if this is Alt+drag mode
+        const isAltDragMode = mouse?.altKey || false;
+
+        // Alt+drag continues an existing grab: the cursor is already sitting at whatever
+        // point the user grabbed, so anchoring offsets to the cursor position itself keeps
+        // objects exactly where they were grabbed (like a normal drag, no jump). Paste/Ctrl+D
+        // have no such grab point, so they anchor to the selection's bounding-box center
+        // instead, centering the whole group under the cursor.
+        const anchorCenter = isAltDragMode ? worldPos : {
+            x: (boundsUnion.minX + boundsUnion.maxX) / 2,
+            y: (boundsUnion.minY + boundsUnion.maxY) / 2
+        };
+        const initialized = this.editor.duplicateRenderUtils.initializePositions(clones, anchorCenter, this.editor);
 
         // Apply initial positions so preview is visible immediately (even without mouse move)
         const positioned = this.editor.duplicateRenderUtils.updatePositions(initialized, worldPos, this.editor);
-
-        // Check if this is Alt+drag mode
-        const isAltDragMode = mouse?.altKey || false;
 
         // Set duplicate state and start placing mode
         this.editor.stateManager.update({
