@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/check-version-bump-hook.mjs",
+            "if": "Bash(git commit*)",
+            "statusMessage": "Checking editor version bump..."
+          }
+        ]
+      }
+    ]
+  }
+}

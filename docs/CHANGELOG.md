@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Tooling — Claude Code PreToolUse-хук блокирует `git commit` без бампа версии редактора (`.claude/settings.json`, `scripts/check-version-bump-hook.mjs`, `npm run bump:patch|minor|major`)
+
+### Fix — клик/marquee вне рамки повёрнутой открытой группы не закрывал группу
+
+- `MouseHandlers.handleEmptyClick`/`handleMouseUp` (deferred group close) сравнивали точку клика с осевым AABB группы (`getObjectWorldBounds`) вместо повёрнутого прямоугольника — для повёрнутой группы AABB шире визуальной рамки, поэтому клик в "уголке" AABB (вне рамки) ошибочно считался попаданием внутрь. Заменено на `ObjectOperations.isPointInObject()` (уже используется в `findObjectAtPoint`), который учитывает rotation-chain.
+
 ### Feature — реактивные обновления панелей при структурных изменениях уровня (v3.55.0)
 
 Раньше каждая операция, добавляющая/удаляющая объекты или слои, должна была явно вызвать `editor.updateAllPanels()` — забытый вызов был реальным багом (например, Isolate не обновлял Outliner). Теперь панели подписываются на событие `'levelStructureChanged'` и обновляются автоматически.

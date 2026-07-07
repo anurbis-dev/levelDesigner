@@ -1,2 +1,0 @@
-#!/bin/sh
-node "$(git rev-parse --show-toplevel)/scripts/pre-push-version-check.mjs"
