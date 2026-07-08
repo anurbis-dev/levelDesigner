@@ -4,6 +4,8 @@ import { RenderUtils } from '../utils/RenderUtils.js';
 import { RectangularGridRenderer } from '../utils/gridRenderers/RectangularGridRenderer.js';
 import { DiamondGridRenderer } from '../utils/gridRenderers/DiamondGridRenderer.js';
 import { HexagonalGridRenderer } from '../utils/gridRenderers/HexagonalGridRenderer.js';
+import { getAssetTypeById } from '../constants/AssetTypes.js';
+import { buildTypeIconSvg } from '../constants/AssetTypeIcons.js';
 
 /**
  * Canvas rendering system
@@ -13,6 +15,7 @@ export class CanvasRenderer {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
         this.imageCache = new Map();
+        this.typeIconCache = new Map();
 
         // Initialize grid renderers
         this.gridRenderers = new Map();
@@ -203,6 +206,14 @@ export class CanvasRenderer {
             this.ctx.fillStyle = obj.color || '#cccccc';
             this.ctx.fillRect(x, y, obj.width, obj.height);
 
+            // No overriding image — show the catalog type glyph (see AssetTypes.js) so
+            // placeholder placements stay recognizable on the canvas, not just in the panel.
+            const typeIcon = this.getTypeIconImage(obj.type);
+            if (typeIcon && typeIcon.complete && typeIcon.naturalHeight !== 0) {
+                const size = Math.min(obj.width, obj.height) * 0.5;
+                this.ctx.drawImage(typeIcon, x + (obj.width - size) / 2, y + (obj.height - size) / 2, size, size);
+            }
+
             // Draw border for locked objects
             if (obj.locked) {
                 this.ctx.strokeStyle = '#ff6b6b';
@@ -389,6 +400,28 @@ export class CanvasRenderer {
     }
 
     /**
+     * Get (or lazily rasterize) the catalog type glyph for an object's type, tinted to
+     * match the panel's active-text color. Returns null for non-catalog types.
+     */
+    getTypeIconImage(typeId) {
+        const typeDef = getAssetTypeById(typeId);
+        if (!typeDef) return null;
+
+        const color = getComputedStyle(document.documentElement)
+            .getPropertyValue('--ui-active-text-color').trim() || '#ffffff';
+        const cacheKey = `${typeDef.id}|${color}`;
+
+        let img = this.typeIconCache.get(cacheKey);
+        if (img) return img;
+
+        img = new Image();
+        img.onload = () => window.editor?.render?.();
+        img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(buildTypeIconSvg(typeDef.id, color, 64))}`;
+        this.typeIconCache.set(cacheKey, img);
+        return img;
+    }
+
+    /**
      * Screen to world coordinates
      */
     screenToWorld(screenX, screenY, camera) {
@@ -442,6 +475,7 @@ export class CanvasRenderer {
         
         // Clear image cache
         this.imageCache.clear();
+        this.typeIconCache.clear();
         
         // Clear grid renderers
         this.gridRenderers.clear();

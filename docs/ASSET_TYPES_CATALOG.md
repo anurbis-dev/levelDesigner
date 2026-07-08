@@ -15,7 +15,9 @@
 
 - `getAssetCategoriesWithTypes()` группирует `ASSET_TYPES` по категории — используется и в top-level "Add" меню навигации (`config/menu.js` → `buildAssetsMenu()`), и в контекстном меню панели ассетов (`AssetPanelContextMenu.js`).
 - `AssetManager.createPlaceholderAsset(typeId, customName?, folderPath?)` создаёт ассет-заглушку: без `imgSrc`, с цветом категории, путь по умолчанию — `<Категория>/<Имя>.json`, либо в выбранной папке.
-- `buildTypeIconSvg(typeId, color, size)` (`AssetTypeIcons.js`) — минималистичная SVG-иконка по типу; в гриде/списке ассетов подставляется вместо color-swatch + первой буквы, если `asset.type` совпадает с ID из каталога.
+- `buildTypeIconSvg(typeId, color, size)` (`AssetTypeIcons.js`) — минималистичная SVG-иконка по типу; используется в двух местах:
+  - В гриде/списке ассетов (AssetPanel): подставляется вместо color-swatch + первой буквы, если `asset.type` совпадает с ID из каталога.
+  - На canvas (CanvasRenderer): при размещении GameObject без загруженного изображения, иконка рисуется поверх fallback-прямоугольника (50% от меньшего измерения объекта, центрирована). Обеспечивает визуальное узнавание placeholder-объектов на canvas, не только в панели.
 - `createComponentStub(typeId)` создаёт стаб компонента (`{id, type, enabled, properties:{}}`), добавляется в `actor.components[]` через UI `ActorPropertiesWindow.renderComponentsSection()` и сохраняется в `toJSON()`.
 - **Важно**: и asset-типы, и component-типы на данном этапе — только каталог метаданных + UI создания/иконка. Реальная логика (автотайлинг Tileset, воспроизведение Dialogue Graph, физика Collider и т.п.) не реализована — это зона ответственности игрового рантайма, потребляющего экспортированный уровень.
 

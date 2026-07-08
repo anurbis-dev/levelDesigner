@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+- Feature: CanvasRenderer — type-иконки как fallback-визуал. При размещении GameObject без загруженного изображения (`obj.imgSrc` не задан/не загружен) рисуется SVG-иконка типа ассета (из `buildTypeIconSvg`, `AssetTypeIcons.js`) поверх цветного прямоугольника (50% от меньшего измерения, центрирована). Иконка отображается только для типов из каталога `AssetTypes.js` (вызов `getAssetTypeById(obj.type)`); пользовательские типы остаются с пустым прямоугольником. Новые методы: `CanvasRenderer.getTypeIconImage(typeId)` (ленивая растеризация + кэш по `${typeId}|${color}`), очистка кэша в `destroy()` вместе с `imageCache`. Обеспечивает узнаваемость placeholder-объектов на canvas.
+
+- Fix: `AssetTypeIcons.buildTypeIconSvg` — canvas type-иконки (см. выше) не отрисовывались: сгенерированный `<svg>` не содержал `xmlns="http://www.w3.org/2000/svg"`, из-за чего data-URI `Image` растеризовался в 0×0 (naturalWidth/Height=0) при формально успешной загрузке (`complete=true`), и guard в `CanvasRenderer.drawSingleObject` тихо пропускал отрисовку. В AssetPanel (innerHTML) баг не проявлялся — там namespace подставляет HTML-парсер.
+
+- Fix: `AssetPanel.showAssetFilterMenu` — Ctrl+click мульти-выбор чекбоксов не работал (клик всегда закрывал меню, т.к. не было `applyOrDefer`/`ctrlReleaseHandler`, в отличие от `OutlinerPanel.showFilterMenu`); логика синхронизирована 1:1 с OutlinerPanel.
+
 - Docs: перенесён и переформатирован `tmp/game-editor-asset-types.md` в `docs/ASSET_TYPES_CATALOG.md` — сверено с итоговой реализацией (`AssetTypes.js`: 28 типов, `ComponentTypes.js`: 19 типов).
 
 - Fix: `ui.cursorMenuMargin` (дефолт 6px, диапазон 0-60) теперь одинаково работает во всех трёх системах меню: ПКМ-контекстные меню (BaseContextMenu — было и раньше), меню фильтров (OutlinerPanel/AssetPanel), главное меню nav-bar (MenuManager). `MenuPositioningUtils.setupMenuClosing()` теперь persistent `document.addEventListener('mousemove', ...)` на ВСЮ жизнь меню (вместо только opening-анимации), проверяет margin-aware попадание курсора; `MenuPositioningUtils.repositionMenu(menu, triggerElement, options)` пересчитывает позицию меню по реальным размерам после добавления пунктов (раньше меню вычислялось по guess'у и оказывалось смещено от кнопки, вызывая мгновенное закрытие на первый mousemove). `MenuManager.setupDropdownCursorMarginWatcher()` — новый persistent watcher для top-level dropdown, закрывает по margin вместо нативного mouseleave.

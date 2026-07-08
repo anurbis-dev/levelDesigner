@@ -78,5 +78,5 @@ const DEFAULT_ICON = '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v6M12 16.5v
  */
 export function buildTypeIconSvg(typeId, color = '#9ca3af', size = 20) {
     const inner = TYPE_ICON_PATHS[typeId] || DEFAULT_ICON;
-    return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
 }

@@ -8,6 +8,83 @@
 - Новая секция **Levels**, структурно скопированная с `LayersPanel` (search, add button, список айтемов с цветом/rename/context menu/drag-reorder), размещённая **над** существующей секцией Layers внутри `#layers-content-panel`.
 - Каждый открытый Level имеет независимый **toggle видимости** (глаз) — canvas композитит объекты всех видимых Level одновременно.
 - Ровно один Level является **текущим** (current) в любой момент — Outliner и Layers панель (список слоёв) показывают только структуру текущего Level; все правки/undo/selection применяются только к нему. Видимость не зависит от того, текущий ли уровень.
+- Новое понятие **Project** — контейнер набора открытых Level (см. Раздел 0), с собственным файлом и Project Settings.
+- Меню `Level` переименовывается в **`File`**: команды Level и команды Project разделены сепаратором внутри одного меню (не два отдельных меню). `Import Assets...` переносится из `Settings` в конец меню `File`. В `Settings` добавляется `Project Settings...`.
+
+---
+
+## 0. Project — новая сущность
+
+### 0.1 Зачем
+
+Раньше (Разделы 6, Открытый вопрос №1) план сознательно откладывал понятие "файл проекта" как отдельную фичу вне скоупа. Теперь она входит в скоуп: `Project` — контейнер, который держит вместе несколько уже открытых `LevelSession` (Раздел 1) плюс project-scope настройки, и умеет сохраняться/загружаться одним файлом.
+
+Редактор браузерный: `FileManager.loadLevelFromFileInput()`/сохранение уровня работают через `<input type="file">`/скачивание blob (FileManager.js:87, 47-72) — **нет** persistent file handle (`showOpenFilePicker`/`FileSystemFileHandle` не используются). Значит файл проекта не может хранить просто список путей на диске (они не стабильны между сессиями/браузерами) — он должен быть **самодостаточным**: одним JSON, эмбеддящим сериализованные данные всех открытых уровней.
+
+### 0.2 Новый класс `Project`
+
+Новый файл `src/models/Project.js`:
+
+```js
+export class Project {
+    constructor(opts = {}) {
+        this.name = opts.name ?? 'Untitled Project';
+        this.fileName = opts.fileName ?? null;   // имя project-файла (аналог LevelSession.fileName)
+        this.isDirty = opts.isDirty ?? false;
+        this.settings = opts.settings ?? Project.defaultSettings();
+    }
+
+    static defaultSettings() {
+        // содержимое — открытый вопрос, см. Раздел 12 п.9
+        return {};
+    }
+
+    toJSON(levelSessions, levelOrder, currentLevelId) {
+        return {
+            version: 1,
+            name: this.name,
+            settings: this.settings,
+            currentLevelId,
+            levels: levelOrder.map(id => ({
+                order: levelOrder.indexOf(id),
+                visible: levelSessions.get(id).visible,
+                data: levelSessions.get(id).level.toJSON()
+            }))
+        };
+    }
+
+    static fromJSON(json) {
+        const project = new Project({ name: json.name, settings: json.settings });
+        // levels восстанавливаются через levelsManager.addLevel(Level.fromJSON(entry.data), {visible: entry.visible})
+        return project;
+    }
+}
+```
+
+`Project` не хранит сами `Level`/`LevelSession` — это делает `levelSessions`/`levelOrder` на `LevelEditor` (Раздел 1.2), как единственный источник правды; `Project` — метаданные + сериализация, зеркалит отношение `LevelSession` к `Level`.
+
+### 0.3 Новый модуль `ProjectFileOperations`
+
+Новый файл `src/core/ProjectFileOperations.js` (BaseModule, регистрируется рядом с `levelFileOperations`):
+
+- `newProject()` — очищает `levelSessions`/`levelOrder` (закрывает все текущие вкладки, с confirm если есть dirty), создаёт новый `Project`, создаёт один пустой уровень через `levelsManager.addLevel()` (аналог сегодняшнего `newLevel()` при старте).
+- `openProject()` — читает project-файл через file input, `Project.fromJSON()`, затем для каждого `entry` в `levels` — `Level.fromJSON(entry.data)` + `levelsManager.addLevel(level, {visible: entry.visible, makeCurrent: entry order === currentLevelId})`, восстанавливает `levelOrder`.
+- `saveProject()`/`saveProjectAs()` — `project.toJSON(editor.levelSessions, editor.levelOrder, editor.currentLevelId)`, скачивание blob (зеркалит `FileManager.saveLevel()`), `project.fileName` = имя файла, `project.isDirty = false`.
+- `closeProject()` — не входит в первую итерацию (открытый вопрос, см. 12 п.10): при однооконном браузерном редакторе "закрыть проект" эквивалентно `newProject()`.
+
+### 0.4 Project vs Level: разделение ответственности
+
+| Уровень сущности | Что сохраняет | Где живёт |
+|---|---|---|
+| `Level.toJSON()` | Один уровень (слои/объекты/settings уровня) | Как сегодня, без изменений |
+| `LevelSession` | Editor-only состояние одного уровня (visible/viewState/history/fileName) | В памяти, не сериализуется отдельно |
+| `Project` | Метаданные набора уровней + project settings + порядок + currentLevelId | Новый project-файл (эмбеддит `Level.toJSON()` каждого открытого уровня) |
+
+Открытие одиночного `.json`-файла уровня (`Open Level...`) остаётся рабочим и не требует project-файла — Project не обязателен для работы с уровнями, это опциональная надстройка (аналогично тому, как отдельный уровень не требует projet, но project требует ≥1 уровня, см. 0.5).
+
+### 0.5 Project Settings
+
+`Project Settings...` (новый пункт меню `Settings`, см. Раздел 8) открывает диалог project-scope настроек — по аналогии с существующим `Editor Settings...` (`action: 'openSettings'`), но для настроек, которые логически принадлежат проекту, а не персональному editor-конфигу. Точный состав полей — открытый вопрос (Раздел 12 п.9); кандидаты: default asset import path, default grid/snap настройки для новых уровней проекта, project-wide naming convention.
 
 ---
 
@@ -296,9 +373,9 @@ importState(snapshot) {
 
 ## 6. LevelFileOperations — семантика New/Open/Save
 
-### 6.1 Решение: один файл на уровень, без единого "project-файла"
+### 6.1 Один файл на уровень остаётся базовым форматом; project-файл — опциональная надстройка
 
-`Level.toJSON()`/`fromJSON()` (Level.js:799-848) — уже сложившийся формат одного уровня без понятия "несколько уровней в одном файле"; в кодовой базе нет понятия "проект" (`FileManager.js` не содержит project-level концепций). Единый project-формат — отдельная, более крупная фича вне текущего скоупа (см. Открытые вопросы п.1). Каждый `LevelSession.fileName` независимо трекает своё имя файла, заменяя единый глобальный `FileManager.currentFileName`.
+`Level.toJSON()`/`fromJSON()` (Level.js:799-848) остаётся форматом одного уровня без изменений. Понятие "несколько уровней в одном файле" теперь покрыто отдельной сущностью `Project` (Раздел 0), а не встраивается в `Level`/`FileManager`. Каждый `LevelSession.fileName` независимо трекает своё имя файла, заменяя единый глобальный `FileManager.currentFileName`.
 
 ### 6.2 `newLevel()` (LevelFileOperations.js:45-95)
 
@@ -379,11 +456,52 @@ async closeLevel(levelId) {
 
 ## 8. Меню / MenuManager
 
-`config/menu.js` Level menu (~41-73): `new-level`/`open-level`/`save-level`/`save-level-as` диспатчатся через `MenuManager.handleMenuAction()` (~448-455: `this.editor[item.action](item.actionParam)`) напрямую в методы `LevelEditor`. **Правок MenuManager не требуется** — диспатч по имени действия не зависит от внутреннего поведения `newLevel()`.
+### 8.1 Переименование `Level` → `File`, добавление блока Project
 
-Новый пункт меню: `close-level` (вызывает `editor.closeLevel()` → `levelsManager.closeLevel(currentLevelId)`), после `save-level-as` с разделителем. Добавить `LevelEditor.closeLevel()` passthrough рядом с `saveLevel()`/`saveLevelAs()` (~line 1664-1670).
+`config/menu.js` меню `level` (~50-84) переименовывается в `file` (`id: 'file'`, `label: 'File'`). Существующие пункты `new-level`/`open-level`/`save-level`/`save-level-as` (диспатч не меняется — `MenuManager.handleMenuAction()` ~448-455 вызывает `this.editor[item.action](item.actionParam)` по имени, поведение диспатча не зависит от переименования меню) остаются как есть, но дополняются:
 
-"Save All" — явно отложено на потом (см. Открытые вопросы п.6), не входит в первую итерацию.
+- Новый пункт `close-level` (`action: 'closeLevel'`) — после `save-level-as`, перед сепаратором к Project-блоку. Вызывает `editor.closeLevel()` → `levelsManager.closeLevel(currentLevelId)`. Добавить `LevelEditor.closeLevel()` passthrough рядом с `saveLevel()`/`saveLevelAs()` (~line 1664-1670).
+- `{ type: 'separator' }` — отделяет блок Level-команд от блока Project-команд (одно меню `File`, а не два отдельных меню, см. Scope Recap).
+- Блок Project-команд (действия — `ProjectFileOperations`, Раздел 0.3): `new-project` (`action: 'newProject'`), `open-project` (`action: 'openProject'`), `save-project` (`action: 'saveProject'`), `save-project-as` (`action: 'saveProjectAs'`).
+- `{ type: 'separator' }` — перед перенесённым `import-assets`.
+- `import-assets` (`action: 'importAssets'`) — **переносится из меню `Settings`** в конец меню `File`, как последний пункт.
+
+Итоговая структура меню `File`:
+
+```
+File
+├─ New Level          (new-level)
+├─ Open Level...       (open-level)
+├─ ───────────
+├─ Save Level          (save-level)
+├─ Save Level As...    (save-level-as)
+├─ Close Level         (close-level)          [новый]
+├─ ───────────                                 [новый разделитель]
+├─ New Project         (new-project)          [новый]
+├─ Open Project...     (open-project)         [новый]
+├─ Save Project        (save-project)         [новый]
+├─ Save Project As...  (save-project-as)      [новый]
+├─ ───────────                                 [новый разделитель]
+└─ Import Assets...    (import-assets)        [перенесено из Settings]
+```
+
+Каждому новому `action` (`closeLevel`/`newProject`/`openProject`/`saveProject`/`saveProjectAs`) нужен passthrough-метод на `LevelEditor` рядом с существующими `newLevel()`/`openLevel()`/`saveLevel()`, делегирующий в `levelsManager`/`projectFileOperations` — тот же паттерн, что и у текущих Level-команд.
+
+### 8.2 Меню `Settings`
+
+Новый пункт `project-settings` (`label: 'Project Settings...'`, `action: 'openProjectSettings'`) — добавляется **перед** существующим `editor-settings`, т.к. `import-assets` из этого меню уходит (см. 8.1). Итоговая структура меню `Settings`:
+
+```
+Settings
+├─ Project Settings... (project-settings)   [новый]
+└─ Editor Settings...  (editor-settings)
+```
+
+`openProjectSettings` — новый passthrough на `LevelEditor`, открывающий диалог Project Settings (Раздел 0.5); паттерн диалога зеркалит существующий `openSettings()` (Editor Settings).
+
+### 8.3 Прочее
+
+"Save All" (для уровней) — явно отложено на потом (см. Открытые вопросы п.6), не входит в первую итерацию.
 
 ---
 
@@ -398,6 +516,9 @@ async closeLevel(levelId) {
 7. **Переименование в пустую строку** — зеркалить guard из `LayersPanel.renameLayer()`.
 8. **Повторное открытие уже открытого файла** — сравнение по `fileName` (best-effort, т.к. `Level.toJSON()` не сериализует `this.id` — Level.js:799-814 — id генерируется заново при каждом `fromJSON()`, т.е. два открытия одного файла никогда не определяются как "тот же уровень" по id). Отмечено как nice-to-have на будущее: `toJSON()` стоило бы сохранять `id` для стабильной идентичности между save/reload.
 9. **Изоляция `layerCountsCache`/`objectsIndex`/spatial index** — подтверждено: эти три уже корректно per-instance (Level.js:43/46) и `RenderOperations.spatialIndex` уже `Map<levelId,...>` — реальный разрыв изоляции уже, чем казалось: только `CacheManager` и `visibleObjectsCache`/`visibleLayersCache` нужно намспейсить (2.3-2.4).
+10. **`New Project` при наличии несохранённых уровней** — должен собрать dirty-сессии со всех открытых `LevelSession` (не только текущей) и показать один общий confirm перед закрытием всех вкладок, а не N отдельных диалогов подряд.
+11. **`Open Project` при уже открытых уровнях** — решить: заменяет весь текущий набор вкладок (закрыть всё + открыть уровни проекта) или добавляет уровни проекта к уже открытым? План по умолчанию предполагает замену (зеркалит семантику `newProject()`), см. Открытые вопросы п.11.
+12. **`Project.isDirty` vs per-level `isDirty`** — открытие/закрытие уровня, rename, reorder меняют `Project.isDirty`, даже если ни один `Level.toJSON()` не поменялся (сам список/порядок уровней — тоже часть project-файла). Отдельно от `session.isDirty` (Раздел 7.1).
 
 ---
 
@@ -448,6 +569,15 @@ async closeLevel(levelId) {
 - Soft-cap предупреждение по производительности (Edge Case 5)
 - Горячие клавиши next/previous level tab (опционально)
 
+### Фаза 7 — Project (Medium)
+Цель: набор открытых уровней сохраняется/восстанавливается одним файлом; меню `File` и `Settings` приведены к целевой структуре.
+- `src/models/Project.js` (новый) — Раздел 0.2
+- `src/core/ProjectFileOperations.js` (новый) — `newProject`/`openProject`/`saveProject`/`saveProjectAs` — Раздел 0.3
+- `config/menu.js` — переименование `level` → `file`, Project-блок с сепаратором, перенос `import-assets` в конец `File`, `project-settings` в `Settings` — Раздел 8
+- `src/core/LevelEditor.js` — passthrough-методы `closeLevel()`/`newProject()`/`openProject()`/`saveProject()`/`saveProjectAs()`/`openProjectSettings()`, регистрация `projectFileOperations` как BaseModule
+- Диалог Project Settings (новый UI, зеркалит существующий Editor Settings dialog) — точный состав полей зависит от решения Открытого вопроса №9
+- Проверка: `Save Project` → `Open Project` в свежей сессии восстанавливает набор уровней (видимость/порядок/currentLevelId), `Import Assets...` виден в конце `File`, `Project Settings...` открывается из `Settings`.
+
 ---
 
 ## 11. Файлы по фазам (сводная таблица)
@@ -471,12 +601,15 @@ async closeLevel(levelId) {
 | `src/ui/LayersPanel.js` | 4.2 (точечно) | Small |
 | `src/ui/OutlinerPanel.js` | не ожидается | — |
 | `src/ui/DetailsPanel.js` | аудит | — |
+| `src/models/Project.js` (новый) | 7 | Small |
+| `src/core/ProjectFileOperations.js` (новый) | 7 | Medium |
+| Project Settings dialog (новый UI, файл TBD) | 7 | Small-Medium |
 
 ---
 
 ## 12. Открытые вопросы (нужно решить до/во время реализации)
 
-1. **Один файл на уровень vs. project-файл** — план предполагает первое (текущий формат `.json` без изменений). Если нужен единый project-файл со списком уровней (чтобы при перезапуске восстанавливались открытые вкладки) — это отдельная, более крупная фича (новая схема + версионирование), не покрытая здесь.
+1. **Один файл на уровень vs. project-файл** — **решено**: оба формата сосуществуют. `Level.toJSON()` остаётся форматом одного уровня без изменений; сверху вводится `Project` (Раздел 0) — самодостаточный JSON, эмбеддящий сериализованные данные всех открытых уровней (не список путей — браузерный редактор не имеет persistent file handle, см. 0.1).
 2. **Порядок табов уровней определяет z-order рендера или это чисто UI-порядок?** План сейчас предполагает tab order == порядок рисования back-to-front. Альтернатива — "текущий уровень всегда поверх" или отдельный explicit z-order control.
 3. **Per-level `HistoryManager` инстансы vs. один инстанс с export/import** (план выбирает export/import ради меньшего риска) — подтвердить, или предпочесть N независимых инстансов (проще ментально, но больше правок в lifecycle/module-регистрации).
 4. **Фикс коллизии object id**: namespacing кешей по levelId (рекомендовано) vs. глобально уникальные id (отклонено — риск для формата сохранения) — подтвердить вариант A и перепроверить, нет ли другого кода вне CacheManager/RenderOperations, полагающегося на глобальную уникальность object id.
@@ -484,6 +617,9 @@ async closeLevel(levelId) {
 6. **"Save All" в меню** — включать в Фазу 5 или оставить "Save всегда только текущий" насовсем?
 7. **Цвет/иконка уровня в списке** (по аналогии с color-swatch слоя) — слои имеют реальное семантическое использование цвета (гизмо/рамка на canvas). У уровней такого пока нет — декоративный auto-palette swatch или вообще без него?
 8. **"Main Level" концепция** — Edge Case 3 рекомендует НЕ вводить структурно-особый Main Level (в отличие от Main Layer) — подтвердить эту трактовку требования.
+9. **Состав `Project Settings`** — какие настройки логически project-scope (а не editor-scope/level-scope)? Кандидаты в Разделе 0.5 (default asset import path, default grid/snap для новых уровней проекта, naming convention) — нужен явный список полей до реализации диалога (Фаза 7).
+10. **`Close Project`** — нужен ли отдельный пункт меню, или "закрыть проект" всегда равно `New Project` (закрыть всё + создать новый пустой проект/уровень), т.к. однооконный браузерный редактор не может остаться "без открытого проекта"?
+11. **`Open Project` — замена или добавление уже открытых вкладок** — план по умолчанию (Edge Case 11) предполагает замену; подтвердить, не нужен ли merge-режим (открыть уровни проекта, оставив уже открытые уровни как есть).
 
 ---
 

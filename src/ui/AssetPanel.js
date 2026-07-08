@@ -1021,6 +1021,32 @@ export class AssetPanel extends BasePanel {
             menuHeight: 200
         });
 
+        // Ctrl+click: hold Ctrl to toggle multiple type checkboxes without applying the filter or
+        // closing the menu (each option's handler stops the click from bubbling to the menu's
+        // default close-on-click while Ctrl is held); the accumulated filter is applied AND the
+        // menu closes together, once, on Ctrl release. A plain click keeps applying immediately
+        // and closing right away, as it always did. Mirrors OutlinerPanel.showFilterMenu.
+        const ctrlReleaseHandler = (e) => {
+            if (e.key === 'Control') {
+                this.stateManager.set('assetTypeFilters', this.activeTypeFilters);
+                this.renderPreviews();
+                if (menu._closeMenuHandler) menu._closeMenuHandler();
+            }
+        };
+        document.addEventListener('keyup', ctrlReleaseHandler);
+        menu.addEventListener('menuclose', () => document.removeEventListener('keyup', ctrlReleaseHandler));
+
+        const applyOrDefer = (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                e.stopPropagation();
+                this.updateAssetFilterMenu(menu, button);
+            } else {
+                this.stateManager.set('assetTypeFilters', this.activeTypeFilters);
+                this.renderPreviews();
+                this.updateAssetFilterMenu(menu, button);
+            }
+        };
+
         // Add "Toggle All" option using utility
         const allTypesActive = this.activeTypeFilters.size === 0;
         const allOption = MenuPositioningUtils.createMenuItem({
@@ -1029,10 +1055,10 @@ export class AssetPanel extends BasePanel {
         });
         allOption.querySelector('input').id = 'filter-all';
 
-        allOption.addEventListener('click', () => {
+        allOption.addEventListener('click', (e) => {
             // Check current state at the time of click
             const currentlyAllActive = this.activeTypeFilters.size === 0;
-            
+
             if (currentlyAllActive) {
                 // Currently all types are active, deactivate all
                 this.activeTypeFilters = new Set(['DISABLE_ALL']);
@@ -1040,11 +1066,7 @@ export class AssetPanel extends BasePanel {
                 // Currently some types are filtered or disabled, activate all
                 this.activeTypeFilters.clear();
             }
-            // Save state (like OutlinerPanel does)
-            this.stateManager.set('assetTypeFilters', this.activeTypeFilters);
-            this.renderPreviews();
-            // Update menu instead of closing it
-            this.updateAssetFilterMenu(menu, button);
+            applyOrDefer(e);
         });
 
         menu.appendChild(allOption);
@@ -1066,7 +1088,7 @@ export class AssetPanel extends BasePanel {
             });
             option.querySelector('input').id = `filter-${type}`;
 
-            option.addEventListener('click', () => {
+            option.addEventListener('click', (e) => {
                 if (this.activeTypeFilters.has('DISABLE_ALL')) {
                     // If in DISABLE_ALL mode, start with this type only
                     this.activeTypeFilters = new Set([type]);
@@ -1084,11 +1106,7 @@ export class AssetPanel extends BasePanel {
                     // Add this type
                     this.activeTypeFilters.add(type);
                 }
-                // Save state (like OutlinerPanel does)
-                this.stateManager.set('assetTypeFilters', this.activeTypeFilters);
-                this.renderPreviews();
-                // Update menu instead of closing it
-                this.updateAssetFilterMenu(menu, button);
+                applyOrDefer(e);
             });
 
             menu.appendChild(option);

@@ -51,12 +51,17 @@ levelEditor.createAssetOfType(typeId) // создание placeholder-ассет
 // Применяется: BaseContextMenu (было и раньше), OutlinerPanel/AssetPanel (меню фильтров), MenuManager (top-level dropdown через новый setupDropdownCursorMarginWatcher)
 
 // AssetTypes / ComponentTypes (каталоги типов)
-import { getAssetTypeById, getAssetTypesByCategory, ASSET_CATEGORIES } from 'src/constants/AssetTypes.js' // 29 типов ассетов: Camera, Actor, Image, Tilemap, Sound, Dialogue, Quest, Prefab и т.д.
+import { getAssetTypeById, getAssetTypesByCategory, ASSET_CATEGORIES } from 'src/constants/AssetTypes.js' // 28 типов ассетов: Camera, Actor, Image, Tilemap, Sound, Dialogue, Quest, Prefab и т.д.
 import { getComponentTypeById, createComponentStub } from 'src/constants/ComponentTypes.js' // 19 типов компонентов: Collider, Trigger, Interactable, PathFollower, Spawner и т.д.
-import { buildTypeIconSvg } from 'src/constants/AssetTypeIcons.js' // type-specific SVG icons (24x24 stroke glyphs, inline)
-assetManager.createPlaceholderAsset(typeId, customName?) // создать заполнитель ассета (без imgSrc, категория-базированный цвет, отображается с type-иконкой)
+import { buildTypeIconSvg } from 'src/constants/AssetTypeIcons.js' // type-specific SVG icons (24×24 stroke glyphs, inline, растеризуются как data-URI Image в CanvasRenderer для canvas-рендера и AssetPanel для preview)
+assetManager.createPlaceholderAsset(typeId, customName?) // создать заполнитель ассета (без imgSrc, категория-базированный цвет, отображается с type-иконкой в AssetPanel и на canvas)
 asset.components // массив component stubs [{id, type, enabled, properties}], наследуется при размещении GameObject
 gameObject.components // массив component stubs, сохраняется в toJSON(), редактируется в ActorPropertiesWindow (диалог изменения Asset)
+
+// CanvasRenderer — рендеринг объектов на canvas (src/ui/CanvasRenderer.js)
+canvasRenderer.drawSingleObject(obj, x, y) // рендер single объекта с rotation-поддержкой; если нет изображения (obj.imgSrc не загружен), рисует цветной fallback-прямоугольник + type-иконку (если type из каталога)
+canvasRenderer.getTypeIconImage(typeId) // растеризует buildTypeIconSvg() в data-URI Image, кэширует по ${typeId}|${цвет}, триггерит render() при онлоаде иконки
+canvasRenderer.typeIconCache // Map кэш type-иконок, чистится в destroy() вместе с imageCache
 
 // StateManager
 stateManager.get(key)
