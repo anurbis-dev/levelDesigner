@@ -65,3 +65,17 @@ export function getAssetTypeById(id) {
 export function getAssetTypesByCategory(categoryId) {
     return ASSET_TYPES.filter(t => t.category === categoryId);
 }
+
+/**
+ * Group ASSET_TYPES by category for menu construction (nav "Add" menu,
+ * Assets-panel "Add" context menu entry — both build a category->types tree).
+ * @returns {Array<{categoryId: string, category: Object, types: Array}>}
+ */
+export function getAssetCategoriesWithTypes() {
+    const categoryIds = [...new Set(ASSET_TYPES.map(t => t.category))];
+    return categoryIds.map(categoryId => ({
+        categoryId,
+        category: ASSET_CATEGORIES[categoryId] || { label: categoryId, color: '#9ca3af' },
+        types: getAssetTypesByCategory(categoryId)
+    }));
+}

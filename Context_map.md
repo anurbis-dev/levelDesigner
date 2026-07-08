@@ -1,4 +1,4 @@
-# Context Map - Level Designer v3.54.6
+# Context Map - Level Designer v3.55.0
 
 ## ⚠️ КРИТИЧЕСКИ ВАЖНО - ЧИТАТЬ ПЕРВЫМ
 
@@ -29,6 +29,26 @@ levelEditor.saveLevel()
 levelEditor.getCachedObject(id)
 levelEditor.showSplashScreen() // v3.54.1
 levelEditor.createAssetOfType(typeId) // создание placeholder-ассета по типу в текущей выбранной папке (Add меню → category → Type)
+
+// MenuManager disabled states и margin-aware dropdown (v3.55.0+)
+// Любой пункт меню (itemConfig в config/menu.js) может иметь `disabled: boolean | (editor) => boolean`
+// MenuManager.refreshDisabledStates() пересчитывает состояние, вызывается при init, refresh(), и реактивно на stateManager
+// Отвечает за визуальное отключение (CSS-классы opacity-50/pointer-events-none) и блокировку клика
+// setupDropdownCursorMarginWatcher() — новый persistent mousemove-листенер для top-level dropdown (раньше mouseleave без margin), закрывает dropdown при выходе курсора за пределы margin (ui.cursorMenuMargin), включая открытые flyout-submenu
+
+// BaseContextMenu (v3.55.0): единая разметка иконок, disabled-схема, flyout-submenu
+// Все 6 наследников (AssetContextMenu, AssetPanelContextMenu, CanvasContextMenu, ConsoleContextMenu, LayersContextMenu, OutlinerContextMenu) получили единый визуальный шаблон:
+// - createMenuItem()/createSubmenuItem() используют MenuItemTemplateUtils.renderMenuItemIconHtml() (как MenuManager) для одиночного источника правды иконок
+// - item rows: 'base-context-menu-item px-4 py-2 text-sm hover:bg-gray-700' (идентично MenuManager); separators: 'border-t border-gray-600 my-1'; submenu-триггеры с явным ▸-гліфом
+// - применяют полный disabled-scheme (opacity-50/pointer-events-none/cursor-not-allowed, как MenuManager)
+// - contextMenu.addSubmenuItem(text, icon, items, options) — flyout подменю (раскрывается hover), в т.ч. вложенные уровни
+// - фикс клиппинга: .submenu-flyout--scrollable применяется ТОЛЬКО к самому глубокому подменю в цепочке
+
+// MenuPositioningUtils (v3.55.0+): унифицированный cursor margin для всех меню (v3.55.0)
+// getCursorMenuMargin() — читает ui.cursorMenuMargin из StateManager (дефолт 2px, диапазон 0-60)
+// setupMenuClosing(menu, triggerElement) — persistent document mousemove-листенер на ВСЮ жизнь меню (раньше только opening-анимация)
+// repositionMenu(menu, triggerElement, options) — пересчитывает позицию по реальным размерам после добавления пунктов (синхронно, без видимого прыжка)
+// Применяется: BaseContextMenu (было и раньше), OutlinerPanel/AssetPanel (меню фильтров), MenuManager (top-level dropdown через новый setupDropdownCursorMarginWatcher)
 
 // AssetTypes / ComponentTypes (каталоги типов)
 import { getAssetTypeById, getAssetTypesByCategory, ASSET_CATEGORIES } from 'src/constants/AssetTypes.js' // 29 типов ассетов: Camera, Actor, Image, Tilemap, Sound, Dialogue, Quest, Prefab и т.д.
@@ -135,7 +155,7 @@ level.settings.parallaxVertical // множитель вертикального
 - `src/ui/SplashScreenDialog.js` - splash screen диалог
 - `src/ui/AssetPanel.js` - панель ассетов
 - `src/ui/LayersPanel.js` - панель слоев, включая Layer Solo (`toggleLayerSolo`)
-- `src/ui/OutlinerPanel.js` - иерархия объектов, включая eye-icon видимости (`createVisibilityButton`), Object Solo (Ctrl+click на глаз), Ctrl+click мульти-select и click-outside-to-close в фильтре типов (`showFilterMenu`), и F2 inline-rename (`startInlineRename`)
+- `src/ui/OutlinerPanel.js` - иерархия объектов, включая eye-icon видимости (`createVisibilityButton`), Object Solo (Ctrl+click на глаз), Ctrl+click мульти-select в фильтре типов (`showFilterMenu` → `MenuPositioningUtils.repositionMenu()` после добавления пунктов для совпадения с кнопкой), и F2 inline-rename (`startInlineRename`)
 - `src/ui/DetailsPanel.js` - свойства выделенных объектов (Transform, Visual, Advanced, Custom Properties), уровень-широкие параметры когда ничего не выбрано (Stats, Camera с множителями Parallax H/V); новый `createDualFieldRow(label, fields)` для однострочных пар контролов; методы `renderLevelStatistics()`, `renderLevelActions()`, `setupParallaxMultiplierInputs(level)`
 - `src/ui/SettingsPanel.js` - настройки редактора; единый поиск параметров в шапке окна (`#settings-search-input`, `filterSettingsContent()`, скрытие/показ строк через `setRowVisible()` с кэшем исходного `style.display` в `dataset.searchOrigDisplay`), секции строятся через `createSettingsSection` (`src/ui/panel-structures/SettingsSectionConstructor.js`, поиска в шапке секции больше нет); range-слайдеры (без видимого thumb, значение поверх трека, цветная заливка трека до текущего значения через `--range-fill`, dblclick → ручной ввод) рендерятся через `createSettingsRange` → `createSettingsRow` (компактная однострочная раскладка), оживляются через `setupRangeSliders()` с обновлением заливки на каждый `input` (метод `updateSliderDisplay()` удалён); чекбокс `#settings-auto-apply` в футере (`SettingsPanel.autoApply`, persisted `localStorage['levelEditor_settingsAutoApply']`, дефолт `true`) — вкл: live-apply на каждый инпут, кнопки Cancel/Apply Changes задизейблены (`updateAutoApplyUI()`); выкл: live-apply отключён, `cancelSettings()` откатывает через `restoreOriginalValues()` (снимок всех ключей из `syncManager.getAllMappings()` + `logger.colors`, см. `storeOriginalValues()`)
 
@@ -207,7 +227,7 @@ eventHandlerManager.registerElement(button, { click: onClick }, 'button-id');
 
 ## 🔧 Версионирование
 
-Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '3.54.6'`
+Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '3.55.0'`
 
 Версия отображается динамически после полной инициализации через `updateVersionInfo()` и `updatePageTitle()`. Интерфейс скрыт до завершения загрузки, чтобы избежать отображения устаревшей версии.
 

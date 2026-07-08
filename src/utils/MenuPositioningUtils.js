@@ -11,7 +11,24 @@
 import { Logger } from './Logger.js';
 
 export class MenuPositioningUtils {
-    
+
+    // Fallback cursor-to-menu forgiveness margin (px), mirrors BaseContextMenu.CURSOR_MENU_MARGIN.
+    // Kept as a separate copy rather than a cross-import since BaseContextMenu's getter is an
+    // instance method tied to its own class hierarchy — see getCursorMenuMargin() below.
+    static CURSOR_MENU_MARGIN = 2;
+
+    /**
+     * Current cursor-to-menu forgiveness margin (px), read live from StateManager (user setting
+     * 'ui.cursorMenuMargin') so it can change while a menu is open. Number() rather than a strict
+     * typeof check since range-input-synced values can arrive as strings.
+     * @returns {number}
+     */
+    static getCursorMenuMargin() {
+        const stateManager = window.editor?.stateManager;
+        const num = Number(stateManager?.get('ui.cursorMenuMargin'));
+        return Number.isFinite(num) ? num : this.CURSOR_MENU_MARGIN;
+    }
+
     /**
      * Standard CSS classes for popup menus
      */
@@ -159,8 +176,9 @@ export class MenuPositioningUtils {
      */
     static setupMenuClosing(menu, triggerElement) {
         const buttonRect = triggerElement.getBoundingClientRect();
-        const isInside = (x, y, rect) =>
-            x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+        const isInside = (x, y, rect, margin) =>
+            x >= rect.left - margin && x <= rect.right + margin &&
+            y >= rect.top - margin && y <= rect.bottom + margin;
 
         const closeMenu = () => {
             document.removeEventListener('mousemove', onMouseMove);
@@ -173,8 +191,9 @@ export class MenuPositioningUtils {
         };
 
         const onMouseMove = (e) => {
+            const margin = this.getCursorMenuMargin();
             const menuRect = menu.getBoundingClientRect();
-            if (!isInside(e.clientX, e.clientY, buttonRect) && !isInside(e.clientX, e.clientY, menuRect)) {
+            if (!isInside(e.clientX, e.clientY, buttonRect, margin) && !isInside(e.clientX, e.clientY, menuRect, margin)) {
                 closeMenu();
             }
         };
@@ -225,10 +244,40 @@ export class MenuPositioningUtils {
         menu.style.top = `${position.y}px`;
         
         document.body.appendChild(menu);
-        
+
         // Setup menu closing using BaseContextMenu logic
         this.setupMenuClosing(menu, triggerElement);
-        
+
         Logger.ui.debug('Menu positioned and shown:', position);
+    }
+
+    /**
+     * Re-run positioning after the menu's real content has been appended.
+     *
+     * showMenu() must position and append the menu BEFORE callers fill it with items (so
+     * setupMenuClosing() can start tracking the cursor right away), which means
+     * calculateMenuPosition() only had GUESSED width/height (options.menuWidth/menuHeight) to
+     * work with — the menu was still empty. Actual size can differ once items are in,
+     * especially height (item count varies per filter/menu instance). A wrong guess throws off
+     * both the horizontal anchor (alignment: 'right' subtracts the guessed width) and the
+     * below/above flip decision, landing the menu somewhere other than flush under the trigger
+     * — since the cursor stays near the trigger, the very next mousemove then sees it outside
+     * both rects and setupMenuClosing() closes the menu instantly.
+     *
+     * Call once after all items have been appended, with the same options passed to showMenu().
+     * Runs synchronously before the browser paints, so there's no visible jump.
+     * @param {HTMLElement} menu - Menu element (already appended to the DOM by showMenu())
+     * @param {HTMLElement} triggerElement - Element that triggered the menu
+     * @param {Object} options - Same positioning options passed to showMenu()
+     */
+    static repositionMenu(menu, triggerElement, options = {}) {
+        const rect = menu.getBoundingClientRect();
+        const position = this.calculateMenuPosition(triggerElement, {
+            ...options,
+            menuWidth: rect.width || options.menuWidth,
+            menuHeight: rect.height || options.menuHeight
+        });
+        menu.style.left = `${position.x}px`;
+        menu.style.top = `${position.y}px`;
     }
 }

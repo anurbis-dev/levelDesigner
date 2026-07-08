@@ -1,6 +1,8 @@
 import { MENU_CONFIG, getMenuItemById, flattenMenuItems } from '../../config/menu.js';
 import { Logger } from '../utils/Logger.js';
 import { ShortcutFormatter } from '../utils/ShortcutFormatter.js';
+import { renderMenuItemIconHtml } from '../utils/MenuItemTemplateUtils.js';
+import { MenuPositioningUtils } from '../utils/MenuPositioningUtils.js';
 
 /**
  * Menu Manager
@@ -14,6 +16,10 @@ export class MenuManager {
         this.menuElements = new Map();
         this.hoverModeEnabled = false; // Enable hover-open after first click anywhere in the menu bar
         this.logger = Logger.menu;
+        // itemId -> disabled predicate (function(editor) => boolean, or boolean literal), populated
+        // by createMenuItem() for any itemConfig with a `disabled` field, evaluated by refreshDisabledStates()
+        this.itemDisabledCheckers = new Map();
+        this.subscriptions = [];
 
         this.logger.info('MenuManager initialized');
     }
@@ -25,11 +31,45 @@ export class MenuManager {
         this.logger.info('Initializing menus...');
         this.renderMenus();
         this.setupMenuEvents();
-        this.setupMenuContainerHoverReset();
         // Defensive: resolve shortcutKey labels against the live shortcuts config in case
         // ConfigManager was still loading when the menu DOM was first built.
         this.refreshShortcutLabels();
+        // Initial evaluation of any context-sensitive `disabled` predicates (e.g. Add menu
+        // vs. selected folder), then keep them fresh as the relevant state changes.
+        this.refreshDisabledStates();
+        this.setupDisabledStateSubscriptions();
         this.logger.info('Menus initialized successfully');
+    }
+
+    /**
+     * Subscribe to state changes that can affect any menu item's `disabled` predicate.
+     * Item DOM is built once at init (not rebuilt per open), so disabled state must be
+     * refreshed explicitly whenever the underlying condition changes.
+     */
+    setupDisabledStateSubscriptions() {
+        const stateManager = this.editor?.stateManager;
+        if (!stateManager) return;
+
+        this.subscriptions.push(stateManager.subscribe('selectedFolders', () => this.refreshDisabledStates()));
+        this.subscriptions.push(stateManager.subscribe('activeAssetTabs', () => this.refreshDisabledStates()));
+    }
+
+    /**
+     * Re-evaluate every menu item's `disabled` predicate (if any) and toggle its
+     * visual/interactive disabled state. Generic — works for any item in any menu,
+     * not just the Assets "Add" menu.
+     */
+    refreshDisabledStates() {
+        this.itemDisabledCheckers.forEach((disabled, itemId) => {
+            const element = document.getElementById(itemId);
+            if (!element) return;
+
+            const isDisabled = typeof disabled === 'function' ? !!disabled(this.editor) : !!disabled;
+            element.classList.toggle('opacity-50', isDisabled);
+            element.classList.toggle('pointer-events-none', isDisabled);
+            element.classList.toggle('cursor-not-allowed', isDisabled);
+            element.dataset.menuDisabled = isDisabled ? 'true' : 'false';
+        });
     }
 
     /**
@@ -218,13 +258,18 @@ export class MenuManager {
             element.style.cssText = template.style;
         }
 
+        // Icon markup (SVG or emoji string) — generic across all menu item types/menus, not
+        // just the Assets "Add" menu, so any future config/menu.js entry can set `icon`.
+        // Shared with BaseContextMenu.js via MenuItemTemplateUtils so both menu systems
+        // render icons identically.
+        const iconHtml = renderMenuItemIconHtml(itemConfig.icon);
+
         // Set up content based on item type
-        let contentHtml = '';
+        let contentHtml = iconHtml;
         if (itemConfig.type === 'toggle' && template.checkboxHtml) {
-            contentHtml = template.checkboxHtml.replace('{id}', itemConfig.id) + itemConfig.label;
-        } else {
-            contentHtml = itemConfig.label;
+            contentHtml += template.checkboxHtml.replace('{id}', itemConfig.id);
         }
+        contentHtml += itemConfig.label;
 
         // Add keyboard shortcut if available. Prefer shortcutKey (dot-path into
         // config/defaults/shortcuts.json, resolved live via ConfigManager) over a legacy
@@ -244,13 +289,19 @@ export class MenuManager {
             shortcutSpan.textContent = resolvedShortcut;
             if (itemConfig.shortcutKey) shortcutSpan.dataset.shortcutKey = itemConfig.shortcutKey;
             element.appendChild(shortcutSpan);
+        } else if (iconHtml || (itemConfig.type === 'toggle' && template.checkboxHtml)) {
+            element.className += ' flex items-center';
+            element.innerHTML = contentHtml;
         } else {
-            // No shortcut, just set content normally
-            if (itemConfig.type === 'toggle' && template.checkboxHtml) {
-                element.innerHTML = contentHtml;
-            } else {
-                element.textContent = itemConfig.label;
-            }
+            // No icon/shortcut/checkbox, just set content normally
+            element.textContent = itemConfig.label;
+        }
+
+        // Register a context-sensitive disabled predicate (function or boolean literal),
+        // if configured. Evaluated on demand by refreshDisabledStates() since this DOM is
+        // built once at init and never rebuilt per menu open.
+        if (itemConfig.disabled !== undefined) {
+            this.itemDisabledCheckers.set(itemConfig.id, itemConfig.disabled);
         }
 
         return element;
@@ -348,20 +399,15 @@ export class MenuManager {
                     this.hoverModeEnabled = true;
                 });
 
-                // Add hover events for automatic submenu opening (only after first click)
+                // Add hover events for automatic submenu opening (only after first click).
+                // Closing is handled by the margin-aware document mousemove watcher started
+                // below (checkDropdownCursorMargin()) instead of native mouseleave, which fires
+                // the instant the cursor crosses the DOM edge with zero tolerance — that starved
+                // ui.cursorMenuMargin of any effect here (same root cause already fixed for
+                // BaseContextMenu's context menus).
                 menuElement.addEventListener('mouseenter', () => {
                     if (this.hoverModeEnabled) {
                         this.openDropdown(dropdown);
-                    }
-                });
-
-                menuElement.addEventListener('mouseleave', (e) => {
-                    if (this.hoverModeEnabled) {
-                        // Only close if mouse is not moving to the dropdown
-                        const relatedTarget = e.relatedTarget;
-                        if (!relatedTarget || !dropdown.contains(relatedTarget)) {
-                            this.closeDropdown(dropdown);
-                        }
                     }
                 });
 
@@ -371,18 +417,10 @@ export class MenuManager {
                         this.openDropdown(dropdown);
                     }
                 });
-
-                dropdown.addEventListener('mouseleave', (e) => {
-                    if (this.hoverModeEnabled) {
-                        // Only close if mouse is not moving back to the button
-                        const relatedTarget = e.relatedTarget;
-                        if (!relatedTarget || !menuElement.contains(relatedTarget)) {
-                            this.closeDropdown(dropdown);
-                        }
-                    }
-                });
             }
         });
+
+        this.setupDropdownCursorMarginWatcher();
 
         // Setup item click events
         this.setupMenuItemEvents();
@@ -394,10 +432,113 @@ export class MenuManager {
             }
         });
 
-        // Setup hover mode reset when mouse leaves menu container
-        this.setupMenuContainerHoverReset();
-
         this.logger.info('Menu events setup completed');
+    }
+
+    /**
+     * Persistent, margin-aware close-on-leave for the top-level nav dropdown, mirroring
+     * BaseContextMenu.setupMenuClosing()/isCursorInsideMenu(): tracks real cursor coordinates
+     * on document 'mousemove' rather than relying on native mouseleave, so the configurable
+     * ui.cursorMenuMargin forgiveness zone (see MenuPositioningUtils.getCursorMenuMargin())
+     * actually has an effect. Only acts while hoverModeEnabled. A no-op otherwise.
+     * Started once in setupMenuEvents() and left running for the menu bar's lifetime.
+     *
+     * Also absorbs what used to be setupMenuContainerHoverReset()'s native `#menu-container`
+     * mouseleave listener (removed): that fired at the container's exact rendered edge with
+     * zero tolerance, and since the open dropdown renders BELOW the container's own layout box
+     * (position:absolute; mt-0 — the container's box is just the button row), moving the cursor
+     * straight down off a button into its dropdown routinely crossed that edge and closed
+     * everything before the margin-aware check below ever ran — a second, competing close path
+     * at 0px margin regardless of ui.cursorMenuMargin. isCursorNearMenuBar() replaces it with
+     * the same margin-aware approach, checked every move alongside the per-dropdown check.
+     */
+    setupDropdownCursorMarginWatcher() {
+        this.lastCursorX = 0;
+        this.lastCursorY = 0;
+
+        document.addEventListener('mousemove', (e) => {
+            this.lastCursorX = e.clientX;
+            this.lastCursorY = e.clientY;
+
+            if (!this.hoverModeEnabled) return;
+
+            const openEntry = this.getOpenDropdownEntry();
+            if (openEntry) {
+                // Cursor is still within margin of the open dropdown (which routinely renders
+                // BELOW #menu-container's own layout box, e.g. a tall dropdown) — nothing to do.
+                // Deliberately NOT checking isCursorNearMenuBar() here too: that rect only covers
+                // the button row, so a false positive there would wrongly close a dropdown the
+                // cursor is still legitimately hovering deep inside of.
+                if (this.isCursorInsideDropdown(openEntry.menuElement, openEntry.dropdown)) return;
+
+                // Left the dropdown's margin — close it. hoverModeEnabled stays on so hovering a
+                // sibling top-level button still reopens instantly without a fresh click, UNLESS
+                // the cursor also left the whole menu bar (checked below), matching the old
+                // "hover mode after first click" behavior.
+                this.closeAllDropdowns();
+            }
+
+            // Fully exit hover mode once the cursor leaves the whole menu bar, with the same margin.
+            if (!this.isCursorNearMenuBar()) {
+                this.hoverModeEnabled = false;
+                this.closeAllDropdowns();
+            }
+        });
+    }
+
+    /**
+     * Check if the last known cursor position is within margin of the whole menu bar container
+     * (not just the currently open dropdown) — used to decide when to fully exit hover mode.
+     * @returns {boolean}
+     */
+    isCursorNearMenuBar() {
+        const menuContainer = this.container.querySelector('#menu-container');
+        if (!menuContainer) return false;
+
+        const margin = MenuPositioningUtils.getCursorMenuMargin();
+        const rect = menuContainer.getBoundingClientRect();
+        return this.lastCursorX >= rect.left - margin && this.lastCursorX <= rect.right + margin &&
+               this.lastCursorY >= rect.top - margin && this.lastCursorY <= rect.bottom + margin;
+    }
+
+    /**
+     * Find the currently open top-level dropdown, if any.
+     * @returns {{menuElement: HTMLElement, dropdown: HTMLElement}|null}
+     */
+    getOpenDropdownEntry() {
+        for (const menuConfig of MENU_CONFIG.menus) {
+            const dropdown = document.querySelector(`#menu-${menuConfig.id} > div`);
+            if (dropdown && !dropdown.classList.contains('hidden')) {
+                const menuElement = this.menuElements.get(menuConfig.id);
+                if (menuElement) return { menuElement, dropdown };
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Check if the last known cursor position is inside the button, the dropdown, or any
+     * currently open flyout submenu within it (within the configurable margin) — flyouts
+     * (.absolute.left-full, see createSubmenuItem()) render outside the dropdown's own box
+     * but must still count as "inside" while hovered.
+     * @param {HTMLElement} menuElement - Top-level nav menu button wrapper
+     * @param {HTMLElement} dropdown - The open dropdown element
+     * @returns {boolean}
+     */
+    isCursorInsideDropdown(menuElement, dropdown) {
+        const margin = MenuPositioningUtils.getCursorMenuMargin();
+        const isInsideRect = (rect) =>
+            this.lastCursorX >= rect.left - margin && this.lastCursorX <= rect.right + margin &&
+            this.lastCursorY >= rect.top - margin && this.lastCursorY <= rect.bottom + margin;
+
+        if (isInsideRect(menuElement.getBoundingClientRect())) return true;
+        if (isInsideRect(dropdown.getBoundingClientRect())) return true;
+
+        const openFlyouts = dropdown.querySelectorAll('.absolute.left-full:not(.hidden)');
+        for (const flyout of openFlyouts) {
+            if (isInsideRect(flyout.getBoundingClientRect())) return true;
+        }
+        return false;
     }
 
     /**
@@ -418,6 +559,7 @@ export class MenuManager {
 
             element.addEventListener('click', (e) => {
                 e.preventDefault();
+                if (element.dataset.menuDisabled === 'true') return;
                 this.handleMenuAction(item);
             });
         });
@@ -532,23 +674,6 @@ export class MenuManager {
     }
 
     /**
-     * Setup hover mode reset when mouse leaves menu container
-     */
-    setupMenuContainerHoverReset() {
-        const menuContainer = this.container.querySelector('#menu-container');
-        if (!menuContainer) return;
-
-        menuContainer.addEventListener('mouseleave', (e) => {
-            // Only reset if mouse is not moving to any dropdown
-            const relatedTarget = e.relatedTarget;
-            if (!relatedTarget || !relatedTarget.closest('.relative.group')) {
-                this.hoverModeEnabled = false;
-                this.closeAllDropdowns();
-            }
-        });
-    }
-
-    /**
      * Update toggle checkbox state
      * @param {string} itemId - Menu item ID
      * @param {boolean} enabled - Whether item is enabled
@@ -578,8 +703,10 @@ export class MenuManager {
      */
     refresh() {
         this.logger.info('Refreshing menu...');
+        this.itemDisabledCheckers.clear();
         this.renderMenus();
         this.setupMenuEvents();
+        this.refreshDisabledStates();
     }
     
     /**
@@ -587,13 +714,18 @@ export class MenuManager {
      */
     destroy() {
         Logger.ui.debug('Destroying MenuManager');
-        
+
         // Close all dropdowns
         this.closeAllDropdowns();
-        
+
+        // Unsubscribe from state changes
+        this.subscriptions.forEach(unsub => unsub());
+        this.subscriptions = [];
+
         // Clear menu elements
         this.menuElements.clear();
-        
+        this.itemDisabledCheckers.clear();
+
         // Clear references
         this.container = null;
         this.eventHandlers = null;

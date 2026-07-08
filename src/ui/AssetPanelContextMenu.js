@@ -23,6 +23,8 @@
 
 import { BaseContextMenu } from './BaseContextMenu.js';
 import { Logger } from '../utils/Logger.js';
+import { getAssetCategoriesWithTypes } from '../constants/AssetTypes.js';
+import { buildTypeIconSvg } from '../constants/AssetTypeIcons.js';
 
 export class AssetPanelContextMenu extends BaseContextMenu {
     constructor(assetPanel, callbacks = {}) {
@@ -145,9 +147,45 @@ export class AssetPanelContextMenu extends BaseContextMenu {
     }
 
     /**
+     * Whether the currently selected Assets-panel folder is a valid asset-creation
+     * target. The Content root itself is not — mirrors the check used by the nav
+     * "Add" menu (config/menu.js buildAssetsMenu()).
+     * @returns {boolean}
+     */
+    isRootFolderSelected() {
+        const folderPath = this.assetPanel?.getActiveTabPath?.() || 'root';
+        return folderPath === 'root';
+    }
+
+    /**
+     * Build the nested category -> type item tree for the "Add" submenu, from the
+     * same AssetTypes.js catalog used by the nav "Add" menu.
+     * @returns {Array<Object>}
+     */
+    buildAddMenuItems() {
+        return getAssetCategoriesWithTypes().map(({ categoryId, category, types }) => ({
+            type: 'submenu',
+            id: `asset-panel-add-cat-${categoryId}`,
+            text: category.label,
+            items: types.map(typeDef => ({
+                id: `asset-panel-add-${typeDef.id}`,
+                text: typeDef.label,
+                icon: buildTypeIconSvg(typeDef.id, category.color, 16),
+                disabled: () => this.isRootFolderSelected(),
+                action: () => this.assetPanel?.levelEditor?.createAssetOfType?.(typeDef.id)
+            }))
+        }));
+    }
+
+    /**
      * Setup menu items for panel operations
      */
     setupMenuItems() {
+        // Asset creation
+        this.addSubmenuItem('Add', '➕', this.buildAddMenuItems(), { id: 'asset-panel-add' });
+
+        this.addSeparator();
+
         // View options
         this.addMenuItem('Reset Asset Size', '🔄', () => {
             this.callbacks.onResetSize();

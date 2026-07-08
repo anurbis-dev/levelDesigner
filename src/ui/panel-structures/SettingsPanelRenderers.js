@@ -37,6 +37,7 @@ export function renderGeneralSettings(stateManager) {
             spacing: stateManager.get('ui.spacing'),
             elementSize: stateManager.get('ui.elementSize') ?? 1.0,
             menuGapBase: stateManager.get('ui.menuGapBase') ?? 0.5,
+            cursorMenuMargin: stateManager.get('ui.cursorMenuMargin') ?? 6,
             backgroundColor: stateManager.get('ui.backgroundColor') || '#1f2937',
             textColor: stateManager.get('ui.textColor') || '#d1d5db',
             activeColor: stateManager.get('ui.activeColor') || '#3b82f6',
@@ -129,6 +130,20 @@ export function renderGeneralSettings(stateManager) {
                     max: 4,
                     step: 0.05,
                     label: 'Main Menu Spacing'
+                })}
+            </div>
+        `, { columns: 2, gap: '1rem' })}
+
+        ${createSettingsGrid(`
+            <div>
+                ${createSettingsRange({
+                    id: 'ui-cursor-menu-margin',
+                    dataSetting: 'ui.cursorMenuMargin',
+                    value: settings.ui?.cursorMenuMargin ?? 6,
+                    min: 0,
+                    max: 60,
+                    step: 1,
+                    label: 'Context Menu Cursor Margin (px)'
                 })}
             </div>
         `, { columns: 2, gap: '1rem' })}

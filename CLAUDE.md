@@ -4,6 +4,7 @@
 
 - Treat MemPalace as the primary context source for project architecture, systems, and decisions — not the built-in per-session auto-memory.
 - At the start of a session involving this project, call MemPalace MCP tools first: `mempalace_search` scoped to `wing=level_designer`, then `mempalace_traverse`/`mempalace_get_drawer` for exact context. **Skip for trivial tasks** (typo fix, config-only change, "what does X mean" question — no code change needed).
+- `mempalace_search` returns verbatim full drawer content, not summaries — always bound calls to control token cost: `limit=3` (raise only if the first pass misses), `max_distance≈0.8` (tighter than the 1.5 default, drops weak matches), add `room` filter alongside `wing` whenever the room is known, and keep `query` to bare keywords (no restated task text). Prefer a narrow `search` first, then `mempalace_get_drawer` by ID for specific follow-up instead of widening `limit`.
 - Do not ask to re-read project markdown files when MemPalace already covers the topic.
 - Read repository files only for verification, code edits, or when memory coverage is missing.
 - If memory and code conflict, prefer current code and report the conflict explicitly.

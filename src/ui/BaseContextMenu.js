@@ -1,6 +1,7 @@
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
 import { Logger } from '../utils/Logger.js';
+import { renderMenuItemIconHtml } from '../utils/MenuItemTemplateUtils.js';
 
 /**
  * BaseContextMenu - Base class for context menus
@@ -40,7 +41,6 @@ export class BaseContextMenu {
     static CURSOR_MENU_MARGIN = 2;        // pixels from cursor to menu edge
     static MENU_VIEWPORT_MARGIN = 20;     // pixels from viewport edge
     static ANIMATION_DURATION = 150;      // ms for hide animation
-    static MONITORING_TIMEOUT = 200;      // ms max for cursor monitoring
 
     constructor(panel, callbacks = {}) {
         this.panel = panel;
@@ -63,10 +63,9 @@ export class BaseContextMenu {
         // Store context data for menu item handlers
         this.lastContextData = null;
 
-        // Animation monitoring
-        this.monitoringAnimationFrame = null;
-        this.isMonitoringCursor = false;
-        this.animationStartTime = 0;
+        // Persistent close-on-leave watcher (document mousemove), set up per-menu by
+        // setupMenuClosing() and torn down by removeMenuCloseWatcher()
+        this._menuCloseWatcher = null;
 
         Logger.ui.debug('BaseContextMenu: Constructor called for panel', panel);
         this.setupContextMenu();
@@ -116,6 +115,19 @@ export class BaseContextMenu {
         }
 
         return false;
+    }
+
+    /**
+     * Current cursor-to-menu forgiveness margin (px), read live from StateManager (user setting
+     * 'ui.cursorMenuMargin') so it can change while a menu is open. Falls back to the static
+     * default when StateManager/the setting is unavailable (e.g. early boot). Number() rather
+     * than a strict typeof check since range-input-synced values can arrive as strings.
+     * @returns {number}
+     */
+    getCursorMenuMargin() {
+        const stateManager = window.editor?.stateManager;
+        const num = Number(stateManager?.get('ui.cursorMenuMargin'));
+        return Number.isFinite(num) ? num : BaseContextMenu.CURSOR_MENU_MARGIN;
     }
 
     /**
@@ -324,8 +336,8 @@ export class BaseContextMenu {
     showContextMenu(event, contextData) {
         // Hide existing menu with proper cleanup (without animation for responsiveness)
         if (this.currentMenu) {
-            // Stop cursor monitoring if active
-            this.stopCursorMonitoring();
+            // Stop the previous menu's close watcher
+            this.removeMenuCloseWatcher();
 
             // Remove event handlers using new system
             eventHandlerManager.unregisterContainer(this.currentMenu);
@@ -372,22 +384,13 @@ export class BaseContextMenu {
         // Setup new event handlers
         this.setupNewEventHandlers();
 
-        // Trigger animation and start cursor monitoring
+        // Trigger show animation
         requestAnimationFrame(() => {
             contextMenu.classList.add('show');
-
-            // For canvas context menu, skip cursor monitoring as it's not needed
-            if (this.constructor.name !== 'CanvasContextMenu') {
-                // Start continuous cursor monitoring during animation
-                this.startCursorMonitoring(contextMenu);
-            }
         });
 
-        // Setup menu closing on mouse leave
+        // Setup persistent, margin-aware close-on-leave for the whole lifetime of the menu
         this.setupMenuClosing(contextMenu);
-
-        // Setup animation end handler to check cursor position
-        this.setupAnimationEndHandler(contextMenu);
 
         // Notify callback
         this.callbacks.onMenuShow(contextData);
@@ -402,7 +405,7 @@ export class BaseContextMenu {
     createContextMenu(event, contextData) {
         const contextMenu = document.createElement('div');
         contextMenu.className = 'base-context-menu';
-        
+
         // Add menu items
         this.menuItems.forEach(item => {
             if (this.shouldShowMenuItem(item, contextData)) {
@@ -412,6 +415,23 @@ export class BaseContextMenu {
         });
 
         return contextMenu;
+    }
+
+    /**
+     * Find a menu item config by id, searching recursively inside submenu items too
+     * @param {string} id - Menu item id
+     * @param {Array} items - Items to search (defaults to top-level this.menuItems)
+     * @returns {Object|null}
+     */
+    findMenuItemById(id, items = this.menuItems) {
+        for (const item of items) {
+            if (item.id === id) return item;
+            if (item.type === 'submenu' && Array.isArray(item.items)) {
+                const found = this.findMenuItemById(id, item.items);
+                if (found) return found;
+            }
+        }
+        return null;
     }
 
     /**
@@ -435,26 +455,39 @@ export class BaseContextMenu {
      * @returns {HTMLElement} - The menu item element
      */
     createMenuItem(item, contextData) {
-        // Handle separator
+        // Handle separator — same markup as MenuManager.createSeparator() (nav dropdowns),
+        // so a separator looks identical whichever menu system renders it.
         if (item.type === 'separator') {
             const separator = document.createElement('div');
-            separator.className = 'base-context-menu-item separator';
+            separator.className = 'border-t border-gray-600 my-1';
             if (item.className) {
                 separator.classList.add(item.className);
             }
             return separator;
         }
-        
+
+        // Handle flyout submenu
+        if (item.type === 'submenu') {
+            return this.createSubmenuItem(item, contextData);
+        }
+
         const menuItem = document.createElement('div');
-        menuItem.className = 'base-context-menu-item';
-        
+        // px-4 py-2 text-sm hover:bg-gray-700 mirror MenuManager's 'action' item template
+        // (config/menu.js) exactly, so padding/font-size/hover feedback can't drift between
+        // the nav dropdowns and context menus again — see styles/base-context-menu.css for
+        // what `.base-context-menu-item` still owns on top (color var, cursor, transitions).
+        menuItem.className = 'base-context-menu-item px-4 py-2 text-sm hover:bg-gray-700';
+
         // Add data attribute for menu item identification
         menuItem.dataset.menuItemId = item.id;
-        
+
         // Handle dynamic text (function) or static text (string)
         const displayText = typeof item.text === 'function' ? item.text(contextData) : item.text;
-        menuItem.innerHTML = `${item.icon ? item.icon + ' ' : ''}${displayText}`;
-        
+        // Shared with MenuManager.js via MenuItemTemplateUtils so icon markup/spacing is
+        // identical in both menu systems.
+        const iconHtml = renderMenuItemIconHtml(item.icon);
+        menuItem.innerHTML = `${iconHtml}${displayText}`;
+
         // Check if item should be disabled
         let isDisabled = false;
         if (typeof item.disabled === 'function') {
@@ -462,14 +495,103 @@ export class BaseContextMenu {
         } else if (item.disabled === true) {
             isDisabled = true;
         }
-        
+
+        // Matches MenuManager's disabled-state scheme (src/managers/MenuManager.js
+        // createMenuItem()/refreshDisabledStates()); `.disabled` is kept too for its muted
+        // text color, which the bare Tailwind utility classes don't provide on their own.
         if (isDisabled) {
-            menuItem.classList.add('disabled');
+            menuItem.classList.add('disabled', 'opacity-50', 'pointer-events-none', 'cursor-not-allowed');
         }
-        
+        menuItem.dataset.menuDisabled = isDisabled ? 'true' : 'false';
+
         // Event handlers are now managed by EventHandlerManager
-        
+
         return menuItem;
+    }
+
+    /**
+     * Create a flyout submenu entry: a hoverable row that expands a nested menu
+     * to the side, containing its own items (built recursively via createMenuItem).
+     * Reusable by any BaseContextMenu subclass via addSubmenuItem().
+     * @param {Object} item - Submenu item config ({ id, text, icon, items, disabled })
+     * @param {Object} contextData - Context data
+     * @returns {HTMLElement} - Submenu wrapper element
+     */
+    createSubmenuItem(item, contextData) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'base-context-menu-submenu-wrapper';
+
+        let isDisabled = false;
+        if (typeof item.disabled === 'function') {
+            isDisabled = item.disabled(contextData);
+        } else if (item.disabled === true) {
+            isDisabled = true;
+        }
+
+        const trigger = document.createElement('div');
+        // Same utility classes as createMenuItem() plus MenuManager.createSubmenuItem()'s
+        // own trigger template ('flex items-center justify-between ... cursor-pointer') so
+        // the row and its arrow indicator match the nav menu's flyout trigger exactly.
+        trigger.className = 'base-context-menu-item has-submenu px-4 py-2 text-sm hover:bg-gray-700 flex items-center justify-between';
+        trigger.dataset.menuItemId = item.id;
+        const displayText = typeof item.text === 'function' ? item.text(contextData) : item.text;
+        // Icon shares MenuItemTemplateUtils with createMenuItem() above. Icon is intentionally
+        // kept here even though MenuManager's own createSubmenuItem() has no icon slot at all
+        // on its trigger — that's an absent capability there, not one that was stripped for
+        // convergence, so existing submenu icons (e.g. Add's ➕) must stay. The label+icon are
+        // wrapped in their own span so `justify-between` can push the arrow to the right, same
+        // structure as MenuManager.createSubmenuItem()'s trigger.
+        const iconHtml = renderMenuItemIconHtml(item.icon);
+        trigger.innerHTML = `<span style="display:inline-flex;align-items:center;">${iconHtml}${displayText}</span><span class="text-xs ml-4">▸</span>`;
+        if (isDisabled) {
+            trigger.classList.add('disabled', 'opacity-50', 'pointer-events-none', 'cursor-not-allowed');
+        }
+        trigger.dataset.menuDisabled = isDisabled ? 'true' : 'false';
+        wrapper.appendChild(trigger);
+
+        const submenu = document.createElement('div');
+        // Only the deepest flyout in a chain (no nested submenu inside it) gets the scrollable
+        // max-height treatment (CSS: styles/base-context-menu.css). A flyout that itself
+        // contains a nested submenu must stay overflow:visible, otherwise its child flyout
+        // gets clipped to this box regardless of which element is its own positioning
+        // ancestor — this is what previously broke the Assets-panel Add -> category -> type
+        // third level. Works at any nesting depth since it's recomputed per invocation.
+        const hasNestedSubmenu = (item.items || []).some(subItem => subItem.type === 'submenu');
+        submenu.className = 'base-context-menu submenu-flyout' + (hasNestedSubmenu ? '' : ' submenu-flyout--scrollable');
+        (item.items || []).forEach(subItem => {
+            if (this.shouldShowMenuItem(subItem, contextData)) {
+                submenu.appendChild(this.createMenuItem(subItem, contextData));
+            }
+        });
+        wrapper.appendChild(submenu);
+
+        if (!isDisabled) {
+            wrapper.addEventListener('mouseenter', () => submenu.classList.add('show'));
+            wrapper.addEventListener('mouseleave', (e) => {
+                if (!wrapper.contains(e.relatedTarget)) submenu.classList.remove('show');
+            });
+        }
+
+        return wrapper;
+    }
+
+    /**
+     * Add a flyout submenu entry (category header expanding into nested items)
+     * @param {string} text - Trigger text
+     * @param {string} icon - Trigger icon (optional)
+     * @param {Array<Object>} items - Nested item configs (same shape as addMenuItem entries)
+     * @param {Object} options - { id, visible, disabled }
+     */
+    addSubmenuItem(text, icon, items, options = {}) {
+        this.menuItems.push({
+            type: 'submenu',
+            text,
+            icon,
+            items,
+            visible: options.visible,
+            disabled: options.disabled,
+            id: options.id || (typeof text === 'string' ? text.toLowerCase().replace(/\s+/g, '-') : 'dynamic-submenu')
+        });
     }
 
     /**
@@ -484,11 +606,17 @@ export class BaseContextMenu {
 
         Logger.ui.debug('BaseContextMenu: handleMenuItemClick called', { item, contextData });
 
-        // Handle DOM element case - find corresponding menu item object
+        // Handle DOM element case - find corresponding menu item object (searches nested submenus too)
         if (item && item.nodeType === Node.ELEMENT_NODE) {
             const menuItemId = item.dataset.menuItemId;
-            menuItem = this.menuItems.find(mi => mi.id === menuItemId);
+            menuItem = this.findMenuItemById(menuItemId);
             Logger.ui.debug('BaseContextMenu: Found menu item', { menuItemId, menuItem });
+        }
+
+        // Submenu triggers only open on hover; a direct click has no action and must not close the menu
+        if (menuItem && menuItem.type === 'submenu') {
+            this.callbacks.onItemClick(menuItem, contextData);
+            return false;
         }
 
         // Execute action if available
@@ -505,125 +633,32 @@ export class BaseContextMenu {
     }
 
     /**
-     * Check if cursor is inside menu bounds
+     * Check if cursor is inside menu bounds (within the configurable forgiveness margin,
+     * see getCursorMenuMargin()) — including any currently-open flyout submenu at any
+     * nesting depth, since those render outside the parent menu's own visual box
+     * (CSS: .submenu-flyout, position:absolute; left:100%) but must still count as "inside"
+     * while the user is hovering them.
      * @param {HTMLElement} menu - The context menu element
-     * @returns {boolean} - True if cursor is inside menu bounds
+     * @returns {boolean} - True if cursor is inside menu (or an open submenu) bounds
      */
     isCursorInsideMenu(menu) {
-        const rect = menu.getBoundingClientRect();
         const cursorX = this.lastCursorX || 0;
         const cursorY = this.lastCursorY || 0;
+        const margin = this.getCursorMenuMargin();
 
-        const margin = BaseContextMenu.CURSOR_MENU_MARGIN;
-        return cursorX >= rect.left - margin &&
-               cursorX <= rect.right + margin &&
-               cursorY >= rect.top - margin &&
-               cursorY <= rect.bottom + margin;
-    }
+        const isInsideRect = (rect) =>
+            cursorX >= rect.left - margin &&
+            cursorX <= rect.right + margin &&
+            cursorY >= rect.top - margin &&
+            cursorY <= rect.bottom + margin;
 
-    /**
-     * Handle animation end event - check cursor position and close menu if needed
-     * @param {Event} event - The transitionend event
-     */
-    handleAnimationEnd(event) {
-        // Only handle transitionend for our menu element
-        if (event.target !== this.currentMenu) return;
+        if (isInsideRect(menu.getBoundingClientRect())) return true;
 
-        // Stop cursor monitoring since animation is complete
-        this.stopCursorMonitoring();
-
-
-        // Update cursor position from event if available, otherwise use stored position
-        if (event.clientX !== undefined && event.clientY !== undefined) {
-            this.lastCursorX = event.clientX;
-            this.lastCursorY = event.clientY;
+        const openFlyouts = menu.querySelectorAll('.submenu-flyout.show');
+        for (const flyout of openFlyouts) {
+            if (isInsideRect(flyout.getBoundingClientRect())) return true;
         }
-
-        // Check if cursor is still inside menu after animation
-        if (!this.isCursorInsideMenu(this.currentMenu)) {
-            this.hideMenu();
-            return;
-        }
-
-    }
-
-    /**
-     * Start continuous cursor position monitoring during animation
-     * @param {HTMLElement} menu - The context menu element
-     */
-    startCursorMonitoring(menu) {
-        if (this.isMonitoringCursor) {
-            this.stopCursorMonitoring();
-        }
-
-        this.isMonitoringCursor = true;
-        this.animationStartTime = Date.now();
-
-        // Start monitoring loop
-        this.monitorCursorPosition(menu);
-    }
-
-    /**
-     * Stop cursor position monitoring
-     */
-    stopCursorMonitoring() {
-        if (this.monitoringAnimationFrame) {
-            cancelAnimationFrame(this.monitoringAnimationFrame);
-            this.monitoringAnimationFrame = null;
-        }
-        this.isMonitoringCursor = false;
-    }
-
-    /**
-     * Monitor cursor position during animation and close menu if cursor leaves bounds
-     * @param {HTMLElement} menu - The context menu element
-     */
-    monitorCursorPosition(menu) {
-        if (!this.isMonitoringCursor || !menu || !menu.parentNode) {
-            return;
-        }
-
-        // Check if animation duration exceeded (fallback timeout)
-        const elapsed = Date.now() - this.animationStartTime;
-        if (elapsed > BaseContextMenu.MONITORING_TIMEOUT) { // Timeout for cursor monitoring
-            this.stopCursorMonitoring();
-            return;
-        }
-
-        // Get current cursor position
-        const cursorX = this.lastCursorX;
-        const cursorY = this.lastCursorY;
-
-        // Check if cursor is inside menu bounds
-        const isInside = this.isCursorInsideMenu(menu);
-
-        if (!isInside) {
-            this.stopCursorMonitoring();
-            this.hideMenu();
-            return;
-        }
-
-        // Continue monitoring
-        this.monitoringAnimationFrame = requestAnimationFrame(() => {
-            this.monitorCursorPosition(menu);
-        });
-    }
-
-    /**
-     * Setup animation end handler to check cursor position after animation completes
-     * @param {HTMLElement} menu - The context menu element
-     */
-    setupAnimationEndHandler(menu) {
-        // Remove existing handler if any
-        if (this.animationEndHandler) {
-            menu.removeEventListener('transitionend', this.animationEndHandler);
-        }
-
-        // Create new handler
-        this.animationEndHandler = this.handleAnimationEnd.bind(this);
-
-        // Add handler for animation completion
-        menu.addEventListener('transitionend', this.animationEndHandler, { once: true });
+        return false;
     }
 
     /**
@@ -767,34 +802,49 @@ export class BaseContextMenu {
     }
 
     /**
-     * Setup menu closing behavior on mouse leave
+     * Setup persistent, margin-aware close-on-leave for the whole lifetime of the menu.
+     *
+     * Previously this attached a native `mouseleave` listener (gated behind a
+     * `window.eventHandlerManager.initialized` check that was always false, since the
+     * real singleton is only exported as a module import, never attached to `window` —
+     * so the fallback always ran anyway). Native mouseleave fires the instant the cursor
+     * crosses the element's exact DOM edge with zero tolerance, so getCursorMenuMargin()/
+     * ui.cursorMenuMargin had no real effect once the opening animation finished. This
+     * mirrors MenuPositioningUtils.setupMenuClosing()'s approach (tracks real cursor
+     * coordinates, not DOM enter/leave events) but adds the configurable margin via
+     * isCursorInsideMenu(), which also accounts for open flyout submenus.
      * @param {HTMLElement} menu - The context menu element
      */
     setupMenuClosing(menu) {
-        const closeMenu = () => {
-            // Close menu when mouse leaves its area
-            this.hideMenu();
+        this.removeMenuCloseWatcher();
+
+        const onMouseMove = () => {
+            if (!this.isCursorInsideMenu(menu)) {
+                this.hideMenu();
+            }
         };
+        document.addEventListener('mousemove', onMouseMove);
+        this._menuCloseWatcher = onMouseMove;
 
-            const closeOnClick = (e) => {
-                // Close menu when clicking outside or on menu items
-                if (e.target === menu || e.target.closest('.base-context-menu-item')) {
-                    this.hideMenu();
-                }
-            };
+        const closeOnClick = (e) => {
+            // Close menu when clicking outside or on menu items
+            if (e.target === menu || e.target.closest('.base-context-menu-item')) {
+                this.hideMenu();
+            }
+        };
+        menu.addEventListener('click', closeOnClick);
+    }
 
-        // Store handler references for cleanup
-        menu._closeMenuHandler = closeMenu;
-        menu._closeOnClickHandler = closeOnClick;
-
-        // Check if using new event system
-        if (window.eventHandlerManager && window.eventHandlerManager.initialized) {
-            // New system handles mouse events
-            Logger.ui.debug('BaseContextMenu: Using new event system mouse leave handling');
-        } else {
-            // Manual registration for fallback mode
-            menu.addEventListener('mouseleave', closeMenu);
-            menu.addEventListener('click', closeOnClick);
+    /**
+     * Tear down the persistent close watcher started by setupMenuClosing(). Must run
+     * before the menu element is discarded/replaced — it's a `document`-level listener,
+     * so it isn't garbage-collected along with the menu element the way element-scoped
+     * listeners are.
+     */
+    removeMenuCloseWatcher() {
+        if (this._menuCloseWatcher) {
+            document.removeEventListener('mousemove', this._menuCloseWatcher);
+            this._menuCloseWatcher = null;
         }
     }
 
@@ -815,7 +865,7 @@ export class BaseContextMenu {
         let offsetX = 0;
         let offsetY = 0;
 
-        const margin = BaseContextMenu.CURSOR_MENU_MARGIN;
+        const margin = this.getCursorMenuMargin();
 
         // Adjust horizontal position if cursor is outside menu bounds
         if (cursorX < rect.left) {
@@ -883,8 +933,9 @@ export class BaseContextMenu {
      * Hide context menu
      */
     hideMenu() {
-        // Stop cursor monitoring if active
-        this.stopCursorMonitoring();
+        // Stop the persistent close watcher first so further mousemove events (e.g. during
+        // the fade-out below) can't re-trigger hideMenu() on the same menu
+        this.removeMenuCloseWatcher();
 
         if (this.currentMenu) {
             // Remove event handlers using new system
@@ -893,12 +944,6 @@ export class BaseContextMenu {
             // Check if menu is still in DOM
             if (this.currentMenu.parentNode) {
                 this.currentMenu.classList.remove('show');
-
-                // Legacy event listeners are cleaned up above in the main cleanup section
-                if (this.animationEndHandler) {
-                    this.currentMenu.removeEventListener('transitionend', this.animationEndHandler);
-                    this.animationEndHandler = null;
-                }
 
                 // Wait for animation to complete before removing
                 setTimeout(() => {

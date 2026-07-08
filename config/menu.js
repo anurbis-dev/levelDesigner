@@ -4,32 +4,42 @@
  * Each menu item has a unique ID that allows changing name and position without losing functionality
  */
 
-import { ASSET_TYPES, ASSET_CATEGORIES, getAssetTypesByCategory } from '../src/constants/AssetTypes.js';
+import { getAssetCategoriesWithTypes } from '../src/constants/AssetTypes.js';
+import { buildTypeIconSvg } from '../src/constants/AssetTypeIcons.js';
+
+/**
+ * An asset can only be created into a specific, non-root folder — the Content root
+ * itself is not a valid creation target (mirrors the same check used by the
+ * Assets-panel "Add" context menu entry).
+ * @param {Object} editor - LevelEditor instance
+ * @returns {boolean}
+ */
+function isRootFolderSelected(editor) {
+    const folderPath = editor?.assetPanel?.getActiveTabPath?.() || 'root';
+    return folderPath === 'root';
+}
 
 /**
  * Build the "Add" top-level menu from the AssetTypes.js catalog: one submenu per
  * category, each containing a "<Type>" action that calls editor.createAssetOfType(typeId).
+ * Type actions are greyed out (disabled) when the Content root folder is selected,
+ * since assets can't be created at that level.
  */
 function buildAssetsMenu() {
-    const categoryIds = [...new Set(ASSET_TYPES.map(t => t.category))];
-
-    const items = categoryIds.map(categoryId => {
-        const category = ASSET_CATEGORIES[categoryId] || { label: categoryId };
-        const typeItems = getAssetTypesByCategory(categoryId).map(typeDef => ({
+    const items = getAssetCategoriesWithTypes().map(({ categoryId, category, types }) => ({
+        id: `assets-cat-${categoryId}`,
+        label: category.label,
+        type: 'submenu',
+        items: types.map(typeDef => ({
             id: `create-asset-${typeDef.id}`,
             label: typeDef.label,
             type: 'action',
             action: 'createAssetOfType',
-            actionParam: typeDef.id
-        }));
-
-        return {
-            id: `assets-cat-${categoryId}`,
-            label: category.label,
-            type: 'submenu',
-            items: typeItems
-        };
-    });
+            actionParam: typeDef.id,
+            icon: buildTypeIconSvg(typeDef.id, category.color, 16),
+            disabled: isRootFolderSelected
+        }))
+    }));
 
     return { id: 'assets', label: 'Add', items };
 }

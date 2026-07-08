@@ -6,6 +6,7 @@
   "spacingV": 0.4,
   "elementSize": 1.0,
   "menuGapBase": 0.5,
+  "cursorMenuMargin": 6,
   "consoleHeight": null,
   "leftPanelWidth": 300,
   "assetsPanelHeight": 256,

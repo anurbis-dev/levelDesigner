@@ -1,4 +1,4 @@
-# Архитектура Level Editor v3.54.5
+# Архитектура Level Editor v3.55.0
 
 **📚 Навигация:**
 - [Development Guide](./DEVELOPMENT_GUIDE.md) - примеры использования
@@ -49,6 +49,16 @@
 - `MenuManager.resolveShortcutLabel(shortcutKey)` — резолвит `shortcutKey` через `configManager.getShortcuts()` в отображаемую строку; `MenuManager.createMenuItem()` рендерит её в `<span data-shortcut-key="...">`.
 - `MenuManager.refreshShortcutLabels()` — перечитывает все `[data-shortcut-key]`-спаны в уже отрисованном DOM меню и обновляет их текст. Вызывается один раз из `MenuManager.initialize()` (защитно, на случай если `ConfigManager` ещё грузился при первом рендере меню) и из `SettingsPanel.saveHotkey()` сразу после того как ребинд уже персистирован через `configManager.set('shortcuts.category.action', ...)` — так подпись в меню сразу отражает новый хоткей без перезагрузки страницы.
 - **Известное ограничение**: ребинд в Settings → Hotkeys обновляет только отображаемую подпись в меню. `EventHandlers.handleKeyDown` — хардкод-цепочка `if/else`, не читающая `shortcuts.json` в рантайме; фактическая обработка нажатия клавиш не зависит от ребинда.
+
+### MenuManager — generic disabled-состояние и иконки пунктов; единая разметка иконок (v3.55.0)
+**Файлы**: `src/managers/MenuManager.js`, `src/utils/MenuItemTemplateUtils.js`, `config/menu.js`
+- Любой `itemConfig` в `config/menu.js` может иметь поле `disabled: boolean | (editor) => boolean` — дизейбль-предикат (функция или літерал).
+- `MenuManager.itemDisabledCheckers` — Map(itemId → checker), заполняется при создании пункта в `createMenuItem()`.
+- `MenuManager.refreshDisabledStates()` пересчитывает состояние каждого пункта (toggle CSS-классы `opacity-50 pointer-events-none cursor-not-allowed` + `dataset.menuDisabled`), вызывается при init, при `refresh()`, и реактивно через `setupDisabledStateSubscriptions()` на подписках к `stateManager` ключам `selectedFolders`/`activeAssetTabs`.
+- Клик по disabled-пункту блокируется в `setupMenuItemEvents()`.
+- **Единая разметка иконок**: `MenuManager.createMenuItem()` и `BaseContextMenu.createMenuItem()/createSubmenuItem()` теперь оба используют `MenuItemTemplateUtils.renderMenuItemIconHtml(icon)` для одиночного источника правды рендера иконки (`<span class="menu-item-icon" style="width:18px;height:18px;margin-right:8px">...</span>`, 18×18 flex box с margin). Устраняет дрейф визуалов между dropdown-меню (nav bar) и floating context-меню.
+- `MenuManager.createMenuItem()` также рендерит иконку, если в `itemConfig.icon` (HTML/SVG-строка или эмодзи) — отрисовывается в `<span class="menu-item-icon">` перед лейблом, работает для любого меню.
+- **buildAssetsMenu()** (config/menu.js, top-level "Add" в навигации) генерирует иерархию категория → тип для каждого creatable asset-типа из `AssetTypes.js`, каждый пункт получает иконку через `buildTypeIconSvg(typeId, category.color, 16)` и `disabled: isRootFolderSelected` (дизейблит создание, если выбран корневой каталог 'root' — там ничего создавать нельзя). Использует новый helper `getAssetCategoriesWithTypes()` из `src/constants/AssetTypes.js` (группирует ASSET_TYPES по категориям).
 
 ### ResizerManager
 **Файл**: `src/managers/ResizerManager.js`
@@ -188,7 +198,7 @@
   - **createPlaceholderAsset(typeId, customName?, folderPath = 'root')**: создание заполнителя-ассета без реального контента (категория-базированный цвет, type-иконка в превью вместо color-swatch+букв, поле `properties.placeholder = true`); `path` строится от `folderPath` (текущая выбранная папка в Asset panel), а не от категории — иначе ассет попадал бы в отдельную category-папку вместо текущей
   - **Asset.components** и **GameObject.components**: новые поля (массив component stubs, дефолт `[]`), сохраняются в `toJSON()`, копируются в экземпляры при размещении GameObjects через `createInstance()`; `components` также участвует в `Asset.hasChangesFromOriginal()`/`saveOriginalState()` (dirty-check)
 - **FileManager**: сохранение/загрузка уровней
-- **Menu Integration** (`config/menu.js`): новое меню "Add" (id остаётся `assets`, вставлено между View и Settings) — иерархия категория→тип→действие (label = имя типа, без префикса "New"); `buildAssetsMenu()` динамически генерирует меню из каталога; каждый пункт вызывает `LevelEditor.createAssetOfType(typeId)`, который берёт текущую папку через `assetPanel.getActiveTabPath()`, передаёт её в `createPlaceholderAsset()` и шлёт `Logger.status.success/error` в строку состояния; `MenuManager.createSubmenuItem()` — поддержка вложенных submenu-ов (flyout dropdown)
+- **Menu Integration** (`config/menu.js`): новое меню "Add" (id остаётся `assets`, вставлено между View и Settings) — иерархия категория→тип→действие (label = имя типа, без префикса "New"); `buildAssetsMenu()` динамически генерирует меню из каталога; каждый пункт вызывает `LevelEditor.createAssetOfType(typeId)`, который берёт текущую папку через `assetPanel.getActiveTabPath()`, передаёт её в `createPlaceholderAsset()` и шлёт `Logger.status.success/error` в строку состояния; `MenuManager.createSubmenuItem()` — поддержка вложенных submenu-ов (flyout dropdown); каждый пункт типа получает иконку из `buildTypeIconSvg()` и `disabled: isRootFolderSelected` (дизейбл при выборе корневой папки); `getAssetCategoriesWithTypes()` gruppирует типы по категориям для обоих меню (nav "Add" и AssetPanelContextMenu "Add")
 - **ActorPropertiesWindow** (`src/ui/ActorPropertiesWindow.js`): диалог редактирования Asset-свойств (несмотря на название, работает с Asset-экземплярами через `assetManager.updateAsset()`); новая секция "Components" — список текущих component-стабов (icon + label + delete-кнопка) и "+ Add" control (dropdown типов + submit), работает с рабочей копией компонентов в памяти (`this._workingComponents`) до Apply, отмена откатывает компоненты вместе с другими полями
 
 ---
@@ -350,10 +360,25 @@
 - UI: `OutlinerPanel.updateVisibilityButton()` подсвечивает соло-объект жёлтым цветом иконки глаза (`#fbbf24`), как и Layer Solo; title кнопки — `"Soloed — Ctrl+click to un-solo"`.
 - Задокументировано как информационная запись в `config/defaults/shortcuts.json` → `mouse.soloObject` (категория `mouse`, ребиндинг недоступен).
 
-### Фикс: закрытие меню фильтра типов в Outliner + Ctrl+click мульти-select
-- **Баг**: `MenuPositioningUtils.showMenu()`/`setupMenuClosing()` вешает на само меню только `mouseleave` и close-on-click-bubbling-from-inside; отдельного обработчика «клик СНАРУЖИ меню» не было. Кнопка фильтра вызывает `e.stopPropagation()`, поэтому клик по канвасу/другой панели меню не закрывал вовсе, а баблинг-закрытие срабатывало на любом клике ВНУТРИ меню (по чекбоксу), мешая отмечать несколько типов подряд.
-- **Фикс** (`OutlinerPanel.showFilterMenu()`): после `MenuPositioningUtils.showMenu()` дефолтные `menu._closeMenuHandler`/`menu._closeOnClickHandler` снимаются и заменяются на `document.addEventListener('mousedown', outsideClickHandler, true)`, закрывающий меню только при `!menu.contains(e.target)` — включая повторный клик по самой кнопке фильтра (закрывает текущее меню на `mousedown`, до того как `click` этой же кнопки успеет открыть новое). Изменение локально для Outliner — `MenuPositioningUtils` не тронута, идентичное меню в `AssetPanel.js` не затронуто.
-- **Мульти-select**: Ctrl (или Cmd)+click по чекбоксу типа теперь только обновляет визуал (`updateFilterMenu`), не применяя фильтр и не закрывая меню; накопленный фильтр применяется одним `stateManager.update({'outliner.activeTypeFilters': ...})` + `render()` при отпускании Ctrl (`document.addEventListener('keyup', ...)`, `e.key === 'Control'`). Обычный клик продолжает применять фильтр немедленно, как раньше.
+### MenuPositioningUtils — унифицированное позиционирование меню фильтров (v3.55.0+)
+
+**Файл**: `src/utils/MenuPositioningUtils.js`
+
+Три системы меню (ПКМ-контекстные, меню фильтров Outliner/AssetPanel, главное меню nav-bar) теперь одинаково работают с `ui.cursorMenuMargin` благодаря унифицированной логике в `MenuPositioningUtils`.
+
+- **`static getCursorMenuMargin()`** — читает `ui.cursorMenuMargin` из `stateManager` (дефолт 2px из `CURSOR_MENU_MARGIN`, диапазон 0-60, ранее жёстко закодировано в `BaseContextMenu.CURSOR_MENU_MARGIN = 2`). Отдельная копия вместо cross-import, т.к. `BaseContextMenu.getCursorMenuMargin()` — instance-метод, привязанный к иерархии класса.
+- **`static setupMenuClosing(menu, triggerElement)`** — persistent `document.addEventListener('mousemove', ...)` на ВСЮ жизнь меню (раньше только ~150мс opening animation, потом срабатывал `mouseleave` и меню закрывалось при малейшем движении). Проверяет через `isInside(x, y, rect, margin)` попадание курсора в пределы `getCursorMenuMargin()` px от кнопки/меню (отдельные rect'ы, union'ируются), `margin` читается живьём на каждый вызов.
+- **`static repositionMenu(menu, triggerElement, options)`** — новый метод: пересчитывает позицию меню по **РЕАЛЬНЫМ размерам** (`menu.getBoundingClientRect()`) вместо угадываемых `menuWidth/menuHeight`, переданных в `showMenu()`. Запускается ПОСЛЕ добавления всех пунктов меню в DOM, синхронно до отрисовки браузером — видимого "прыжка" нет. Причина: `showMenu()` вызывается ДО наполнения меню пунктами (нужно для раннего старта `setupMenuClosing()`), поэтому позиция вычисляется по guess'у, но реальная высота (количество фильтров/типов) может отличаться → меню оказывается смещено от кнопки или flip-logic (above/below) срабатывает неверно → на первый же `mousemove` меню закрывается.
+
+**Фикс меню фильтров (Outliner/AssetPanel)**:
+- `OutlinerPanel.showFilterMenu()` и `AssetPanel.showAssetFilterMenu()` вызывают `MenuPositioningUtils.repositionMenu(menu, button, {alignment, direction, menuWidth, menuHeight})` после цикла добавления пунктов-фильтров.
+- Меню теперь всегда совпадает с кнопкой (правый край с точностью до сотых px) и открывается строго под ней, если нет clip-а у края экрана.
+- Ctrl+click мульти-select: Ctrl+клик по чекбоксу только обновляет визуал, фильтр применяется на `keyup` Ctrl (накопленный стейт → `stateManager.update` → `render()`). Обычный клик применяет фильтр немедленно.
+
+**Фикс главного меню (nav bar dropdown)**:
+- `MenuManager.setupDropdownCursorMarginWatcher()` — новый persistent `document.addEventListener('mousemove', ...)` для top-level dropdown. Трекает `this.lastCursorX/Y`, при активном `hoverModeEnabled` и открытом dropdown проверяет через `isCursorInsideDropdown(menuElement, dropdown)` попадание курсора в пределах margin, включая открытые вложенные flyout-submenu (`.absolute.left-full:not(.hidden)` — тот же селектор, что в `createSubmenuItem()`), закрывает через `closeAllDropdowns()` если курсор вне всех rect'ов.
+- Вызывается один раз в `setupMenuEvents()`.
+- Раньше dropdown закрывался нативным `mouseleave` (нулевой margin, `ui.cursorMenuMargin` не действовал вообще) — теперь margin-aware.
 
 ---
 
@@ -517,12 +542,20 @@ stateManager.subscribe('levelStructureChanged', () => {
 - Единая система обработчиков через EventHandlerManager
 - Динамическое получение версии
 
-### BaseContextMenu
-**Файл**: `src/ui/BaseContextMenu.js`
-- Умное позиционирование
-- Правильная очистка обработчиков
-- Поддержка disabled состояний
-- `CanvasContextMenu` (`src/ui/CanvasContextMenu.js`) и `AssetPanelContextMenu` (`src/ui/AssetPanelContextMenu.js`) — пункт «Swap Panels» удалён из обоих (были независимые пункты, без общего родителя)
+### BaseContextMenu — DOM-иконки, disabled-схема, submenu-рендер, фикс margin (v3.55.0)
+**Файлы**: `src/ui/BaseContextMenu.js`, `src/utils/MenuItemTemplateUtils.js`, `styles/base-context-menu.css`
+- **Единая визуальная схема**: `createMenuItem()`/`createSubmenuItem()` теперь оба используют `MenuItemTemplateUtils.renderMenuItemIconHtml(icon)` (как `MenuManager.createMenuItem()`) и применяют полный disabled-scheme (`opacity-50 pointer-events-none cursor-not-allowed` + `dataset.menuDisabled`) — идентично `MenuManager` (основное меню). Все 6 наследников BaseContextMenu (AssetContextMenu, AssetPanelContextMenu, CanvasContextMenu, ConsoleContextMenu, LayersContextMenu, OutlinerContextMenu) автоматически получают единый шаблон. Визуальная сходимость: item rows теперь `className = 'base-context-menu-item px-4 py-2 text-sm hover:bg-gray-700'` (идентично MenuManager's 'action' шаблону), разделители (separators) — `'border-t border-gray-600 my-1'`, submenu-триггеры — `'px-4 py-2 text-sm hover:bg-gray-700 flex items-center justify-between'` с явным `<span class="text-xs ml-4">▸</span>`-гліфом (заменяет CSS `::after { content: '▶' }` pseudo-element). CSS-правила в `base-context-menu.css` упрощены: удалены дублирующие padding/font-size/hover-bg (теперь через utility-классы), сохранены только color-var, cursor, flex/align-items, transitions, disabled/active-states, first/last-child radius.
+- **Flyout-submenu**: `addSubmenuItem(text, icon, items, options)`/`createSubmenuItem()` — hover-раскрывающееся подменю сбоку, аналогично `MenuManager.createSubmenuItem()`. `handleMenuItemClick()` рекурсивно ищет пункт по id через `findMenuItemById()` (включая вложенные submenu-items); клик по заголовку подменю не закрывает и не выполняет действие (открытие только через hover).
+- **Фикс клиппинга вложенных подменю**: `.submenu-flyout` больше не ставит `overflow-y:auto; max-height:320px` безусловно; новый модификатор-класс `.submenu-flyout--scrollable`, применяется ТОЛЬКО к самому глубокому флайауту в цепочке (у которого нет вложенных submenu-детей). Позволяет раскрыть третий уровень вложенности: Add → категория → тип ассета (раньше третий уровень обрезался родительским флайаутом).
+- **Фикс cursor margin за пределами меню** (v3.55.0): `BaseContextMenu.setupMenuClosing()` давала видимую зону-иммунитета вокруг открытого меню только в течение ~150–200мс opening animation через `requestAnimationFrame` polling (`startCursorMonitoring`/`stopCursorMonitoring`); после окончания animation цикл завершался и меню тут же закрывалось при любом движении мыши вне его границ, независимо от `ui.cursorMenuMargin` (механизм стал мертвым кодом после удаления `requestAnimationFrame`-loop'а в одном из предыдущих проходов). Исправлено: `setupMenuClosing()` теперь устанавливает один persistent `document` `mousemove`-листенер на ВСЮ жизнь меню (не только animation), который вызывает submenu-aware `isCursorInsideMenu(menu)` — true если курсор в пределах `getCursorMenuMargin()` px от самого меню OR любого открытого `.submenu-flyout.show` потомка на любой глубине вложенности (так hover flyout, рендерящийся вне границ родительского меню через `position:absolute; left:100%`, не закрывает всю иерархию). Listencr удаляется методом `removeMenuCloseWatcher()` (вызов из `hideMenu()` и из пути early-replace в `showContextMenu()`), избегая утечек `document`-level листенеров.
+- **Динамический margin вокруг курсора**: настройка `ui.cursorMenuMargin` (дефолт 6px, диапазон 0-60) управляет пикселями immunity-зоны. Метод `getCursorMenuMargin()` читает динамически из ConfigManager.
+- `CanvasContextMenu` (`src/ui/CanvasContextMenu.js`) и `AssetPanelContextMenu` (`src/ui/AssetPanelContextMenu.js`) — пункт «Swap Panels» удалён из обоих (были независимые пункты, без общего родителя).
+
+### AssetPanelContextMenu — "Add" submenu (v3.55.0)
+**Файл**: `src/ui/AssetPanelContextMenu.js`
+- ПКМ по пустому месту в Asset panel теперь содержит первым пунктом "Add" (➕) — flyout-подменю с категориями и типами ассетов.
+- Реализовано через `buildAddMenuItems()`, переиспользующий `getAssetCategoriesWithTypes()` из `AssetTypes.js` (тот же каталог и SVG-иконки, что в nav "Add" меню).
+- Каждый пункт типа имеет `disabled: isRootFolderSelected()` — дизейблен если выбранная папка — корень 'root'.
 
 ### OutlinerPanel
 **Файл**: `src/ui/OutlinerPanel.js`

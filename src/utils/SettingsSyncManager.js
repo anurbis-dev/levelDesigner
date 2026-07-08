@@ -108,6 +108,7 @@ export class SettingsSyncManager {
             'ui.spacingV': 'ui.spacingV',
             'ui.elementSize': 'ui.elementSize',
             'ui.menuGapBase': 'ui.menuGapBase',
+            'ui.cursorMenuMargin': 'ui.cursorMenuMargin',
             'ui.backgroundColor': 'ui.backgroundColor',
             'ui.textColor': 'ui.textColor',
             'ui.activeColor': 'ui.activeColor',
@@ -210,7 +211,7 @@ export class SettingsSyncManager {
         const stateKey = this.stateMapping[path];
         if (stateKey) {
             // Coerce numeric UI values from range inputs
-            if (path === 'ui.fontScale' || path === 'ui.spacingH' || path === 'ui.spacingV' || path === 'ui.elementSize' || path === 'ui.menuGapBase' || path === 'editor.autoSaveInterval' || path === 'editor.axisConstraint.axisWidth') {
+            if (path === 'ui.fontScale' || path === 'ui.spacingH' || path === 'ui.spacingV' || path === 'ui.elementSize' || path === 'ui.menuGapBase' || path === 'ui.cursorMenuMargin' || path === 'editor.autoSaveInterval' || path === 'editor.axisConstraint.axisWidth') {
                 const parsed = ValidationUtils.validateNumeric(value, path);
                 if (parsed !== null) {
                     value = parsed;

@@ -1093,6 +1093,16 @@ export class AssetPanel extends BasePanel {
 
             menu.appendChild(option);
         });
+
+        // Real item count (and therefore real menu height) is only known now that all options
+        // are in — see MenuPositioningUtils.repositionMenu() for why the initial showMenu()
+        // position can be off.
+        MenuPositioningUtils.repositionMenu(menu, button, {
+            alignment: 'right',
+            direction: 'below',
+            menuWidth: 192,
+            menuHeight: 200
+        });
     }
 
     /**

@@ -40,6 +40,7 @@
 - **[EVENT_HANDLER_SYSTEM.md](./EVENT_HANDLER_SYSTEM.md)** - обработчики событий, тач-жесты
 - **[UI_CONSTRUCTORS_GUIDE.md](./UI_CONSTRUCTORS_GUIDE.md)** - создание UI компонентов
 - **[DIALOG_SYSTEM.md](./DIALOG_SYSTEM.md)** - система диалогов
+- **[ASSET_TYPES_CATALOG.md](./ASSET_TYPES_CATALOG.md)** - каталог типов ассетов и компонентов
 
 ### Для пользователей
 - **[USER_MANUAL.md](./USER_MANUAL.md)** - руководство пользователя

@@ -45,15 +45,15 @@
     pointer-events: auto;
 }
 
-/* Элементы контекстного меню */
+/* Элементы контекстного меню. Padding/font-size/hover приходят из тех же Tailwind-классов,
+   что и у пунктов главного меню (px-4 py-2 text-sm hover:bg-gray-700 — см.
+   BaseContextMenu.createMenuItem()/createSubmenuItem() и MenuManager.js), чтобы визуально
+   не расходиться снова. Здесь остаётся только то, что не покрывается этими утилитами. */
 .base-context-menu-item {
-    padding: 0.625rem 1rem; /* 10px 16px в rem */
     color: var(--ui-text-color, #d1d5db);
     cursor: pointer;
-    font-size: 0.875rem; /* 14px в rem */
     display: flex;
     align-items: center;
-    gap: 0.625rem; /* 10px в rem */
     transition: background-color 0.15s ease;
     user-select: none;
     white-space: nowrap;
@@ -61,12 +61,7 @@
     text-overflow: ellipsis;
 }
 
-/* Состояние наведения для элементов меню */
-.base-context-menu-item:hover:not(.disabled) {
-    background: #374151; /* gray-700 */
-}
-
-/* Активное состояние для элементов меню */
+/* Активное состояние для элементов меню (доп. UX-эффект, аналога в главном меню нет) */
 .base-context-menu-item:active:not(.disabled) {
     background: #4B5563; /* gray-600 */
 }
@@ -88,12 +83,6 @@
 .base-context-menu-item:last-child {
     border-bottom-left-radius: 6px;
     border-bottom-right-radius: 6px;
-}
-
-/* Разделитель - базовые стили (переопределяются унифицированными стилями ниже) */
-.base-context-menu-item.separator {
-    padding: 0;
-    cursor: default;
 }
 
 /* Иконки элементов меню - добавляются через innerHTML */
@@ -182,12 +171,29 @@
     padding-bottom: 0;
 }
 
-/* Стили для подменю (если понадобятся в будущем) */
-.base-context-menu-item.has-submenu::after {
-    content: '▶';
-    margin-left: auto;
-    font-size: 0.75rem; /* 12px в rem */
-    color: #9CA3AF;
+/* Стрелка-индикатор подменю рендерится как явный <span class="text-xs ml-4">▸</span>
+   в BaseContextMenu.createSubmenuItem() (тот же глиф и разметка, что и у
+   MenuManager.createSubmenuItem() в главном меню), а не через ::after — иначе
+   расходится глиф/цвет/позиционирование между двумя системами меню. */
+
+.base-context-menu-submenu-wrapper {
+    position: relative;
+}
+
+/* Nested flyout menu, positioned to the right of its trigger row */
+.base-context-menu.submenu-flyout {
+    position: absolute;
+    top: -6px;
+    left: 100%;
+    margin-left: 2px;
+}
+
+/* Only the deepest flyout in a nesting chain (leaf items only, no further nested submenu)
+   scrolls. A flyout with a nested submenu must stay overflow:visible so its child flyout
+   isn't clipped to this box — see BaseContextMenu.createSubmenuItem(). */
+.base-context-menu.submenu-flyout.submenu-flyout--scrollable {
+    max-height: 320px;
+    overflow-y: auto;
 }
 
 /* Стили для горячих клавиш */
@@ -208,13 +214,8 @@
     background: #1D4ED8; /* blue-700 */
 }
 
-/* Унифицированные стили для сепараторов во всех контекстных меню */
-.base-context-menu-item.separator {
-    height: 2px;
-    background: linear-gradient(to right, transparent, #6B7280, transparent);
-    margin: 6px 0;
-    border: none;
-}
+/* Разделитель рендерится как 'border-t border-gray-600 my-1' (BaseContextMenu.createMenuItem()),
+   идентично MenuManager.createSeparator() в главном меню — своего CSS-класса не требует. */
 
 /* Стили для чекбоксов в контекстных меню */
 .base-context-menu input[type="checkbox"] {
