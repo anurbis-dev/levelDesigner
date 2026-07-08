@@ -56,7 +56,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.54.7';
+    static VERSION = '3.55.0';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -1671,6 +1671,23 @@ export class LevelEditor {
 
     async importAssets() {
         return this.levelFileOperations.importAssets();
+    }
+
+    /**
+     * Create a placeholder Asset for a catalog type (Add menu -> category -> <Type>).
+     * Places it into the currently selected Asset panel folder, so it shows up where the user is looking.
+     * @param {string} typeId - id from src/constants/AssetTypes.js
+     */
+    createAssetOfType(typeId) {
+        const folderPath = this.assetPanel?.getActiveTabPath?.() || 'root';
+        const asset = this.assetManager?.createPlaceholderAsset(typeId, null, folderPath);
+        if (!asset) {
+            Logger.ui.warn(`LevelEditor: createAssetOfType() failed for type "${typeId}"`);
+            Logger.status.error(`Failed to create asset of type "${typeId}"`);
+        } else {
+            Logger.status.success(`Created "${asset.name}"`);
+        }
+        return asset;
     }
 
     openSettings() {

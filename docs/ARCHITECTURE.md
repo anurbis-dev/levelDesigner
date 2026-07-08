@@ -98,6 +98,7 @@
 - **Контекстные меню**: правый клик для дополнительных действий
 - **Синхронизация состояния**: автоматическая синхронизация между фолдерами и табами
 - **Оптимизация производительности**: `FoldersPanel.updateLayout()` обновляет только обрезку имен при ресайзе без пересоздания DOM, `AssetPanel.updateGridViewSizes()` обновляет только стили grid
+- **Type-specific иконки**: когда asset.type соответствует ID из AssetTypes каталога, grid-превью и list-row fallback рендерят minimalist SVG-иконку (через `AssetTypeIcons.buildTypeIconSvg()`) вместо color-swatch + первой буквы имени; ассеты без каталога-типа (регулярный импортированный контент) сохраняют старое поведение (color + буква)
 
 ### UIFactory
 **Файл**: `src/utils/UIFactory.js`
@@ -179,8 +180,16 @@
 - Управление конфигурацией (editor.json, ui.json, canvas.json и др.)
 
 ### AssetManager & FileManager
-- AssetManager: управление библиотекой ассетов
-- FileManager: сохранение/загрузка уровней
+**Файл**: `src/managers/AssetManager.js`, `src/core/LevelFileOperations.js`
+- **AssetManager**: управление библиотекой ассетов, сканирование папки `content/`, кэширование изображений
+  - **AssetTypes каталог** (`src/constants/AssetTypes.js`): 29 предопределённых типов ассетов (Camera, Actor, Image, ImageAtlas, Volume, SpriteAnimationClip, Tileset, Tilemap, NineSliceSprite, FontTextStyle, ParticleEffect, MaterialShaderPreset, Light, ParallaxLayer, SoundEffect, MusicTrack, AudioZone, DialogueGraph, QuestObjective, ItemDefinition, InventorySchema, LocalizationTable, SaveSchema, InputMap, PathSpline, NavMesh, AIBehaviorPreset, Prefab, SequenceCutscene), разбитые на категории (Core, Visual/Render, Audio, Data/System, Navigation/AI, Other) с цветовыми кодами и описаниями; вспомогательные функции `getAssetTypeById(id)`, `getAssetTypesByCategory(categoryId)`
+  - **ComponentTypes каталог** (`src/constants/ComponentTypes.js`): 19 типов компонентов (Collider, Trigger, TransformAnimation, SpriteUiAnimation, Interactable, Pickup, DialogueTrigger, DamageHealth, MovablePushable, MountableVehicleSeat, PathFollower, Spawner, StateMachineBehavior, PlayerStart, CheckpointSavePoint, ClimbableLadder, ConveyorZiplineJumpPadPortal, DestructibleContainer, VariableModifier) — editor-side metadata-стабы ({id, type, enabled, properties}), которые прикрепляются к Asset/GameObject; runtime-поведение реализуется в game engine, который импортирует JSON; вспомогательные функции `getComponentTypeById(id)`, `createComponentStub(typeId)`
+  - **AssetTypeIcons** (`src/constants/AssetTypeIcons.js`): минималистичная гліфическая библиотека (stroke SVG, 24×24px) для каждого типа ассета/компонента; функция `buildTypeIconSvg(typeId, color, size)` возвращает inline `<svg>` строку
+  - **createPlaceholderAsset(typeId, customName?, folderPath = 'root')**: создание заполнителя-ассета без реального контента (категория-базированный цвет, type-иконка в превью вместо color-swatch+букв, поле `properties.placeholder = true`); `path` строится от `folderPath` (текущая выбранная папка в Asset panel), а не от категории — иначе ассет попадал бы в отдельную category-папку вместо текущей
+  - **Asset.components** и **GameObject.components**: новые поля (массив component stubs, дефолт `[]`), сохраняются в `toJSON()`, копируются в экземпляры при размещении GameObjects через `createInstance()`; `components` также участвует в `Asset.hasChangesFromOriginal()`/`saveOriginalState()` (dirty-check)
+- **FileManager**: сохранение/загрузка уровней
+- **Menu Integration** (`config/menu.js`): новое меню "Add" (id остаётся `assets`, вставлено между View и Settings) — иерархия категория→тип→действие (label = имя типа, без префикса "New"); `buildAssetsMenu()` динамически генерирует меню из каталога; каждый пункт вызывает `LevelEditor.createAssetOfType(typeId)`, который берёт текущую папку через `assetPanel.getActiveTabPath()`, передаёт её в `createPlaceholderAsset()` и шлёт `Logger.status.success/error` в строку состояния; `MenuManager.createSubmenuItem()` — поддержка вложенных submenu-ов (flyout dropdown)
+- **ActorPropertiesWindow** (`src/ui/ActorPropertiesWindow.js`): диалог редактирования Asset-свойств (несмотря на название, работает с Asset-экземплярами через `assetManager.updateAsset()`); новая секция "Components" — список текущих component-стабов (icon + label + delete-кнопка) и "+ Add" control (dropdown типов + submit), работает с рабочей копией компонентов в памяти (`this._workingComponents`) до Apply, отмена откатывает компоненты вместе с другими полями
 
 ---
 

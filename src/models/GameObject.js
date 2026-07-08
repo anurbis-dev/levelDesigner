@@ -19,6 +19,7 @@ export class GameObject {
         this.locked = data.locked || false;
         this.layerId = data.layerId || null;
         this.properties = data.properties || {};
+        this.components = data.components || []; // Component stubs (see ComponentTypes.js)
     }
 
     generateId() {
@@ -80,7 +81,8 @@ export class GameObject {
             visible: this.visible,
             locked: this.locked,
             layerId: this.layerId,
-            properties: this.properties
+            properties: this.properties,
+            components: this.components
         };
     }
 

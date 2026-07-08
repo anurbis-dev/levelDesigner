@@ -1,4 +1,4 @@
-import { MENU_CONFIG, getMenuItemById } from '../../config/menu.js';
+import { MENU_CONFIG, getMenuItemById, flattenMenuItems } from '../../config/menu.js';
 import { Logger } from '../utils/Logger.js';
 import { ShortcutFormatter } from '../utils/ShortcutFormatter.js';
 
@@ -198,6 +198,10 @@ export class MenuManager {
             return this.createSection(itemConfig);
         }
 
+        if (itemConfig.type === 'submenu') {
+            return this.createSubmenuItem(itemConfig);
+        }
+
         const template = MENU_CONFIG.templates[itemConfig.type];
         if (!template) {
             this.logger.error(`Unknown menu item type: ${itemConfig.type}`);
@@ -250,6 +254,53 @@ export class MenuManager {
         }
 
         return element;
+    }
+
+    /**
+     * Create a flyout submenu item: a hoverable row that expands a nested dropdown
+     * to the right, containing its own items (built recursively via createMenuItem).
+     * @param {Object} itemConfig - Submenu configuration ({ id, label, items })
+     * @returns {HTMLElement} Submenu wrapper element
+     */
+    createSubmenuItem(itemConfig) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'relative';
+        wrapper.id = itemConfig.id;
+
+        const trigger = document.createElement('div');
+        trigger.className = 'flex items-center justify-between px-4 py-2 text-sm hover:bg-gray-700 cursor-pointer';
+        trigger.style.color = 'var(--ui-text-color, #d1d5db);';
+        trigger.innerHTML = `<span>${itemConfig.label}</span><span class="text-xs ml-4">▸</span>`;
+        wrapper.appendChild(trigger);
+
+        const submenu = document.createElement('div');
+        submenu.className = 'absolute top-0 left-full w-56 rounded-md shadow-lg py-1 z-30 hidden max-h-96 overflow-y-auto';
+        submenu.style.backgroundColor = 'var(--ui-background-color, #1f2937)';
+
+        (itemConfig.items || []).forEach(subItemConfig => {
+            const subElement = this.createMenuItem(subItemConfig);
+            if (subElement) submenu.appendChild(subElement);
+        });
+
+        wrapper.appendChild(submenu);
+
+        wrapper.addEventListener('mouseenter', () => {
+            // Close sibling submenus at the same level before opening this one
+            Array.from(wrapper.parentElement.children).forEach(sibling => {
+                if (sibling !== wrapper) {
+                    sibling.querySelector?.(':scope > .absolute.left-full')?.classList.add('hidden');
+                }
+            });
+            submenu.classList.remove('hidden');
+        });
+        wrapper.addEventListener('mouseleave', (e) => {
+            const related = e.relatedTarget;
+            if (!related || !wrapper.contains(related)) {
+                submenu.classList.add('hidden');
+            }
+        });
+
+        return wrapper;
     }
 
     /**
@@ -355,7 +406,7 @@ export class MenuManager {
     setupMenuItemEvents() {
         // Action items
         const actionItems = MENU_CONFIG.menus.flatMap(menu =>
-            menu.items.filter(item => item.type === 'action')
+            flattenMenuItems(menu.items).filter(item => item.type === 'action')
         );
 
         actionItems.forEach(item => {
@@ -373,7 +424,7 @@ export class MenuManager {
 
         // Toggle items
         const toggleItems = MENU_CONFIG.menus.flatMap(menu =>
-            menu.items.filter(item => item.type === 'toggle')
+            flattenMenuItems(menu.items).filter(item => item.type === 'toggle')
         );
 
         toggleItems.forEach(item => {
@@ -401,7 +452,7 @@ export class MenuManager {
 
         try {
             if (typeof this.editor[item.action] === 'function') {
-                this.editor[item.action]();
+                this.editor[item.action](item.actionParam);
             } else {
                 this.logger.error(`Action method not found: ${item.action}`);
             }
@@ -472,8 +523,12 @@ export class MenuManager {
      * Close all dropdowns
      */
     closeAllDropdowns() {
-        document.querySelectorAll('#menu-level > div, #menu-view > div, #menu-settings > div')
-            .forEach(dropdown => dropdown.classList.add('hidden'));
+        const topLevelSelectors = MENU_CONFIG.menus.map(menu => `#menu-${menu.id} > div`).join(', ');
+        if (topLevelSelectors) {
+            document.querySelectorAll(topLevelSelectors).forEach(dropdown => dropdown.classList.add('hidden'));
+        }
+        // Also close any open flyout submenus (Assets menu category submenus, etc.)
+        document.querySelectorAll('.absolute.left-full').forEach(submenu => submenu.classList.add('hidden'));
     }
 
     /**

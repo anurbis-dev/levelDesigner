@@ -286,6 +286,9 @@ export class BaseDialog {
         // Update display to none while preserving other styles
         this.overlay.classList.remove('dialog-visible');
         this.overlay.style.display = 'none';
+        // Force content re-render on next show() — content may depend on per-call data
+        // (e.g. ActorPropertiesWindow.show(actor) for a different actor) that changed while hidden.
+        this.contentRendered = false;
         this.config.onHide();
 
         Logger.ui.info(`${this.constructor.name}: Dialog hidden`);

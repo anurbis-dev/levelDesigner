@@ -4,6 +4,36 @@
  * Each menu item has a unique ID that allows changing name and position without losing functionality
  */
 
+import { ASSET_TYPES, ASSET_CATEGORIES, getAssetTypesByCategory } from '../src/constants/AssetTypes.js';
+
+/**
+ * Build the "Add" top-level menu from the AssetTypes.js catalog: one submenu per
+ * category, each containing a "<Type>" action that calls editor.createAssetOfType(typeId).
+ */
+function buildAssetsMenu() {
+    const categoryIds = [...new Set(ASSET_TYPES.map(t => t.category))];
+
+    const items = categoryIds.map(categoryId => {
+        const category = ASSET_CATEGORIES[categoryId] || { label: categoryId };
+        const typeItems = getAssetTypesByCategory(categoryId).map(typeDef => ({
+            id: `create-asset-${typeDef.id}`,
+            label: typeDef.label,
+            type: 'action',
+            action: 'createAssetOfType',
+            actionParam: typeDef.id
+        }));
+
+        return {
+            id: `assets-cat-${categoryId}`,
+            label: category.label,
+            type: 'submenu',
+            items: typeItems
+        };
+    });
+
+    return { id: 'assets', label: 'Add', items };
+}
+
 export const MENU_CONFIG = {
     // Main menu structure
     menus: [
@@ -177,6 +207,7 @@ export const MENU_CONFIG = {
                 { type: 'separator' }
             ]
         },
+        buildAssetsMenu(),
         {
             id: 'settings',
             label: 'Settings',
@@ -248,13 +279,30 @@ export const MENU_CONFIG = {
 };
 
 /**
- * Get menu item by ID
+ * Recursively flatten menu items, expanding 'submenu' items into their children.
+ * @param {Array} items
+ * @returns {Array}
+ */
+export function flattenMenuItems(items) {
+    let result = [];
+    for (const item of items) {
+        if (item.type === 'submenu' && Array.isArray(item.items)) {
+            result = result.concat(flattenMenuItems(item.items));
+        } else {
+            result.push(item);
+        }
+    }
+    return result;
+}
+
+/**
+ * Get menu item by ID (searches inside submenus too)
  * @param {string} id - Menu item ID
  * @returns {Object|null} Menu item configuration or null if not found
  */
 export function getMenuItemById(id) {
     for (const menu of MENU_CONFIG.menus) {
-        const item = menu.items.find(item => item.id === id);
+        const item = flattenMenuItems(menu.items).find(item => item.id === id);
         if (item) return item;
     }
     return null;
@@ -286,7 +334,7 @@ export function getShortcutTarget(key) {
 export function getMenuItemsByType(type) {
     const items = [];
     for (const menu of MENU_CONFIG.menus) {
-        items.push(...menu.items.filter(item => item.type === type));
+        items.push(...flattenMenuItems(menu.items).filter(item => item.type === type));
     }
     return items;
 }

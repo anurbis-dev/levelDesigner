@@ -94,7 +94,7 @@ Skip orchestrator mode, specialist consultation, and approval gate when **all** 
 	- TestGenerator for test strategy and concrete test cases.
 	- DocCodeSync for documentation impact.
 3. **User approval gate**: present synthesized plan and proceed only after approval.
-4. **Coding agent implementation**: execute code changes strictly according to approved plan.
+4. **Coding agent implementation**: execute code changes strictly according to approved plan. Delegate to **Coder** (haiku) when the plan is detailed enough (see Coder section below); otherwise the main session implements directly.
 5. **Verification pass**:
 	- BugHunter checks regressions/defensive gaps.
 	- PerformanceOptimizer checks perf side effects when relevant.
@@ -103,7 +103,7 @@ Skip orchestrator mode, specialist consultation, and approval gate when **all** 
 
 ### Role responsibilities
 - **Orchestrator**: planning, decomposition, delegation, decision log, approval checkpoint.
-- **Coding agent**: code implementation only (no silent scope expansion).
+- **Coding agent**: code implementation only (no silent scope expansion). Prefer delegating to **Coder** (haiku, `.claude/agents/Coder.md`) once the plan is detailed enough — see Coder section below for the gate. Only implement directly in the main session when the plan is still ambiguous or Coder has escalated.
 - **BugHunter**: bug/race/null/lifecycle analysis before and after implementation.
 - **PerformanceOptimizer**: DevTools-profiler-oriented perf validation for affected systems.
 - **TestGenerator**: required tests for the exact task scope.
@@ -157,6 +157,28 @@ Each subagent prompt must include:
 3. Performance impact reviewed by PerformanceOptimizer for perf-relevant tasks.
 4. Tests added/updated by TestGenerator for behavior changes.
 5. Docs/memory synchronized by DocCodeSync when contracts or behavior changed.
+
+### Coder (Cheap-Model Implementation Specialist)
+**When to delegate:**
+- The orchestrator (main session) has a plan with exact file(s)/line ranges, exact expected behavior per change, and an existing pattern to follow — i.e. no open design decisions left.
+- Mechanical/boilerplate edits, or edits matching an existing pattern 1:1 (e.g. "add a panel like DetailsPanel but for X, per this exact spec").
+
+**When NOT to delegate (keep in main session instead):**
+- Any open architecture/design question, ambiguous scope, or first-of-its-kind feature.
+- More than ~2-3 files without explicit per-file instructions.
+- Run on haiku — it is not trusted to make design calls, only to type out an already-decided plan. Under-specifying the plan and delegating anyway is a misuse of this agent, not a shortcut.
+
+**Pre-delegation:**
+- Provide the exact file/line targets, the exact behavior contract for each change, and which existing pattern/base class to reuse.
+- Pass already-loaded session MemPalace + repo context — no extra prefetch needed.
+
+**Expect return:**
+- Files changed with one-line summary each.
+- Deviations from plan (should be none/rare).
+- Escalated items: anything it stopped on because the plan didn't cover it — treat as a signal to add detail, not to force a guess.
+- Self-reported JS checklist confirmation (event routing, Logger, UIFactory, BaseDialog, passive listeners, no per-frame allocs).
+
+**Always followed by the normal verification pass** (BugHunter/CodeMaster/PerformanceOptimizer as applicable) — a Coder implementation is verified exactly like a main-session implementation, no shortcuts.
 
 ### CodeMaster (Code Review Specialist)
 **When to delegate:**
@@ -266,4 +288,5 @@ Each subagent prompt must include:
 - For code review requests, if CodeMaster cannot read files, perform review directly from repository files with the same severity-first format.
 - For test-writing requests, if TestGenerator cannot modify/read files, main agent must implement tests directly.
 - For bug/perf reviews, if BugHunter/PerformanceOptimizer are unavailable, main agent performs the same checks directly and records assumptions.
+- For implementation, if Coder is unavailable, escalates on an underspecified plan, or produces output that fails the verification pass twice, main agent implements directly instead of retrying a third time.
 - Do not require user approval to switch into fallback mode when the only blocker is subagent tool access.

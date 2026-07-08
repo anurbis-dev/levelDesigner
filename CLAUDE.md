@@ -93,4 +93,13 @@ Triggered only by explicit user phrases: "сделай в лупе", "испол
 
 ## Specialist subagents
 
-This project also defines five specialist subagents (`.claude/agents/`): **CodeMaster** (review), **BugHunter** (defensive/edge-case analysis), **PerformanceOptimizer** (Canvas/DOM performance), **DocCodeSync** (docs sync), **TestGenerator** (browser-console tests). Before delegating, reuse MemPalace context already fetched at session start — only run an additional narrowed `mempalace_search` if the subagent scope differs significantly from what was already loaded. Persist subagent findings back to MemPalace after the task completes. See `.github/copilot-instructions.md` for the full delegation pipeline — it applies the same way here.
+This project also defines six specialist subagents (`.claude/agents/`): **CodeMaster** (review), **BugHunter** (defensive/edge-case analysis), **PerformanceOptimizer** (Canvas/DOM performance), **DocCodeSync** (docs sync), **TestGenerator** (browser-console tests), **Coder** (haiku, implementation-only). Before delegating, reuse MemPalace context already fetched at session start — only run an additional narrowed `mempalace_search` if the subagent scope differs significantly from what was already loaded. Persist subagent findings back to MemPalace after the task completes. See `.github/copilot-instructions.md` for the full delegation pipeline — it applies the same way here.
+
+### Coder (cheap-model implementer) — orchestrator responsibilities
+
+- The main session agent is orchestrator/planner first — prefer delegating actual code writing to **Coder** (haiku) once a plan exists, instead of writing code directly in the main session.
+- **Never delegate to Coder without a detailed, file/line-level plan.** Coder runs on a cheap model and does not make architecture/design decisions — it types out what's already been decided. If the task has open design questions, ambiguous scope, or requires inventing a new pattern, keep it in the main session (or route through CodeMaster/BugHunter first to pin down the plan) rather than delegating.
+- Good candidates for Coder: mechanical/boilerplate changes, changes matching an existing pattern 1:1, edits where CodeMaster/BugHunter already specified exact file+fix.
+- Bad candidates: new architecture, ambiguous requirements, anything touching more than ~2-3 files without per-file instructions, first-of-its-kind features.
+- Coder's output is a fast-path or step-4 (post-approval) implementer — CodeMaster/BugHunter verification still runs after it per the existing pipeline; treat a Coder implementation exactly like a main-session implementation for the purposes of the verification pass.
+- If Coder reports it stopped/escalated because the plan was underspecified, treat that as a signal to add detail, not to override and force it to guess.

@@ -14,6 +14,8 @@ import { searchManager } from '../utils/SearchManager.js';
 import { SearchUtils } from '../utils/SearchUtils.js';
 import { MenuPositioningUtils } from '../utils/MenuPositioningUtils.js';
 import { PanelSizeCalculator } from '../utils/PanelSizeCalculator.js';
+import { getAssetTypeById } from '../constants/AssetTypes.js';
+import { buildTypeIconSvg } from '../constants/AssetTypeIcons.js';
 
 /**
  * Asset panel UI component
@@ -1458,8 +1460,15 @@ export class AssetPanel extends BasePanel {
         } else {
             // Create colored rectangle as fallback (same as default assets)
             previewDiv.style.backgroundColor = asset.color;
+            const typeIconMarkup = this.getTypeIconMarkup(asset);
+            if (typeIconMarkup) {
+                previewDiv.style.display = 'flex';
+                previewDiv.style.alignItems = 'center';
+                previewDiv.style.justifyContent = 'center';
+                previewDiv.innerHTML = typeIconMarkup.replace(/width="\d+" height="\d+"/, 'width="12" height="12"');
+            }
         }
-        
+
         item.appendChild(previewDiv);
         
         // Create name with truncation
@@ -1631,7 +1640,7 @@ export class AssetPanel extends BasePanel {
 
         const colorDiv = document.createElement('div');
         colorDiv.className = className;
-        
+
         // Apply default styles
         Object.assign(colorDiv.style, {
             width: '100%',
@@ -1645,12 +1654,32 @@ export class AssetPanel extends BasePanel {
             textAlign: 'center',
             borderRadius: '4px'
         });
-        
+
         // Apply custom styles
         Object.assign(colorDiv.style, style);
-        
-        colorDiv.textContent = text;
+
+        // For catalog placeholder types (see constants/AssetTypes.js) show a minimalist
+        // type icon instead of the initial-letter text — makes the type recognizable at a glance.
+        const typeIconMarkup = this.getTypeIconMarkup(asset);
+        if (typeIconMarkup) {
+            colorDiv.innerHTML = typeIconMarkup;
+        } else {
+            colorDiv.textContent = text;
+        }
         return colorDiv;
+    }
+
+    /**
+     * Get inline SVG markup for an asset's catalog type icon, tinted to contrast
+     * against the asset's background color. Returns null for non-catalog asset types
+     * (regular imported content), which keep the existing initial-letter fallback.
+     * @param {Object} asset
+     * @returns {string|null}
+     */
+    getTypeIconMarkup(asset) {
+        const typeDef = getAssetTypeById(asset.type);
+        if (!typeDef) return null;
+        return buildTypeIconSvg(typeDef.id, 'var(--ui-active-text-color, #ffffff)', Math.round(this.assetSize * 0.4) || 20);
     }
 
     // Now using BasePanel.handleItemClick with SelectionUtils

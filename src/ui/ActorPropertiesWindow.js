@@ -8,6 +8,8 @@ import {
     createSettingsLabel 
 } from './panel-structures/SettingsSectionConstructor.js';
 import { Logger } from '../utils/Logger.js';
+import { COMPONENT_TYPES, COMPONENT_CATEGORY, getComponentTypeById, createComponentStub } from '../constants/ComponentTypes.js';
+import { buildTypeIconSvg } from '../constants/AssetTypeIcons.js';
 
 /**
  * Asset Properties Window - extends BaseDialog
@@ -60,6 +62,9 @@ export class ActorPropertiesWindow extends BaseDialog {
             
             if (actor) {
                 this.currentActor = actor;
+                // Working copy of components, edited in-place while the dialog is open and
+                // only committed to the asset on Apply — Cancel/close simply discards it.
+                this._workingComponents = (actor.components || []).map(c => ({ ...c, properties: { ...c.properties } }));
                 if (this.stateManager && this.stateManager.set) {
                     this.stateManager.set('selectedActor', actor);
                 }
@@ -80,6 +85,7 @@ export class ActorPropertiesWindow extends BaseDialog {
         this.currentActor = null;
         this.initialState = null;
         this.hasChanges = false;
+        this._workingComponents = null;
     }
 
     onShow() {
@@ -90,6 +96,7 @@ export class ActorPropertiesWindow extends BaseDialog {
             this.hasChanges = false;
             this.updateApplyButton();
             this.setupChangeListeners();
+            this.setupComponentsListeners();
             // Event handlers will be set up automatically by EventHandlerManager via BaseDialog
         }, 0);
     }
@@ -244,7 +251,90 @@ export class ActorPropertiesWindow extends BaseDialog {
                     })}
                 `)}
             `))}
+
+            ${createSettingsSection('Components', this.renderComponentsSection())}
         `, { gap: '1.5rem' });
+    }
+
+    /**
+     * Build the "Components" editor: current component stub list + add-new row.
+     * Component runtime behavior is implemented by the game consuming the exported
+     * level JSON — the editor only stores { type, enabled, properties } metadata.
+     * See src/constants/ComponentTypes.js.
+     */
+    renderComponentsSection() {
+        const options = COMPONENT_TYPES
+            .map(c => `<option value="${c.id}">${c.label}</option>`)
+            .join('');
+
+        return `
+            <div id="actor-components-list" style="display:flex; flex-direction:column; gap:4px; margin-bottom:8px;">
+                ${this.renderComponentRows()}
+            </div>
+            <div style="display:flex; gap:8px; align-items:center;">
+                <select id="actor-add-component-select" style="flex:1; background: var(--ui-input-background, #111827); color: var(--ui-text-color, #d1d5db); border: 1px solid var(--ui-border-color, #374151); border-radius: 4px; padding: 4px 6px;">
+                    ${options}
+                </select>
+                <button id="actor-add-component-btn" type="button" style="padding: 4px 10px; background: var(--ui-accent-color, #2563eb); color: #fff; border-radius: 4px; border: none; cursor: pointer;">+ Add</button>
+            </div>
+        `;
+    }
+
+    /**
+     * Render just the component row list (used both for initial render and refresh-in-place
+     * after add/remove, so the rest of the form's unsaved edits are left untouched).
+     */
+    renderComponentRows() {
+        const components = this._workingComponents || [];
+        if (components.length === 0) {
+            return `<div style="font-size:11px; color: var(--ui-text-color, #9ca3af);">No components attached</div>`;
+        }
+
+        return components.map(comp => {
+            const def = getComponentTypeById(comp.type);
+            const label = def ? def.label : comp.type;
+            const icon = buildTypeIconSvg(comp.type, COMPONENT_CATEGORY.color, 16);
+            return `
+                <div class="actor-component-row" data-component-id="${comp.id}" style="display:flex; align-items:center; gap:6px; padding:4px 6px; background: var(--ui-input-background, #111827); border-radius:4px;">
+                    <span style="display:flex; flex-shrink:0;">${icon}</span>
+                    <span style="flex:1; font-size:12px;">${label}</span>
+                    <button type="button" data-remove-component="${comp.id}" title="Remove component" style="background:none; border:none; color: var(--ui-text-color, #9ca3af); cursor:pointer; font-size:14px; line-height:1;">×</button>
+                </div>
+            `;
+        }).join('');
+    }
+
+    /**
+     * Wire the Add/Remove component controls. Uses event delegation on the list
+     * container for removal so newly-added rows don't need re-binding.
+     */
+    setupComponentsListeners() {
+        const addBtn = document.getElementById('actor-add-component-btn');
+        const select = document.getElementById('actor-add-component-select');
+        const list = document.getElementById('actor-components-list');
+        if (!addBtn || !select || !list) return;
+
+        if (addBtn._clickHandler) addBtn.removeEventListener('click', addBtn._clickHandler);
+        addBtn._clickHandler = () => {
+            const stub = createComponentStub(select.value);
+            if (!stub) return;
+            this._workingComponents = this._workingComponents || [];
+            this._workingComponents.push(stub);
+            list.innerHTML = this.renderComponentRows();
+            this.updateApplyButton();
+        };
+        addBtn.addEventListener('click', addBtn._clickHandler);
+
+        if (list._clickHandler) list.removeEventListener('click', list._clickHandler);
+        list._clickHandler = (e) => {
+            const removeBtn = e.target.closest('[data-remove-component]');
+            if (!removeBtn) return;
+            const componentId = removeBtn.dataset.removeComponent;
+            this._workingComponents = (this._workingComponents || []).filter(c => c.id !== componentId);
+            list.innerHTML = this.renderComponentRows();
+            this.updateApplyButton();
+        };
+        list.addEventListener('click', list._clickHandler);
     }
 
     /**
@@ -268,9 +358,10 @@ export class ActorPropertiesWindow extends BaseDialog {
             height: this._getNumericValue('actor-height', 32),
             color: document.getElementById('actor-color')?.value || '#3B82F6',
             imgSrc: document.getElementById('actor-imgSrc')?.value || '',
-            category: document.getElementById('actor-category')?.value || ''
+            category: document.getElementById('actor-category')?.value || '',
+            componentsSignature: JSON.stringify(this._workingComponents || [])
         };
-        
+
         Logger.ui.debug('Initial state saved:', this.initialState);
     }
 
@@ -302,7 +393,8 @@ export class ActorPropertiesWindow extends BaseDialog {
             height !== initialHeight ||
             color !== normalizeColor(this.initialState.color || '#3B82F6') ||
             imgSrc !== normalizeImgSrc(this.initialState.imgSrc) ||
-            category !== normalizeString(this.initialState.category || '')
+            category !== normalizeString(this.initialState.category || '') ||
+            JSON.stringify(this._workingComponents || []) !== (this.initialState.componentsSignature || '[]')
         );
     }
 
@@ -382,7 +474,8 @@ export class ActorPropertiesWindow extends BaseDialog {
             height: height,
             color: color,
             imgSrc: imgSrc,
-            category: category
+            category: category,
+            components: this._workingComponents || []
         };
 
         // Update in asset manager
@@ -421,7 +514,8 @@ export class ActorPropertiesWindow extends BaseDialog {
         this.currentActor = null;
         this.stateManager = null;
         this.levelEditor = null;
-        
+        this._workingComponents = null;
+
         // Call parent destroy
         super.destroy();
         

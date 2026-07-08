@@ -1,5 +1,6 @@
 import { Asset } from '../models/Asset.js';
 import { Logger } from '../utils/Logger.js';
+import { getAssetTypeById, ASSET_CATEGORIES } from '../constants/AssetTypes.js';
 
 /**
  * Asset library management
@@ -234,6 +235,49 @@ export class AssetManager {
         this.assets.set(asset.id, asset);
         this.categories.add(asset.category);
         return asset;
+    }
+
+    /**
+     * Create a placeholder Asset for a catalog type (see constants/AssetTypes.js) and
+     * register it in the library, so it shows up in the Assets panel in the given folder.
+     * The asset has no real content yet (no imgSrc/behavior) — just a type-tinted icon stub.
+     * @param {string} typeId - id from ASSET_TYPES
+     * @param {string} [customName] - override the auto-generated name
+     * @param {string} [folderPath] - Asset panel folder path to place it in (e.g. 'root' or
+     *   'root/assets/characters'); defaults to a category-named top-level folder when at root,
+     *   mirroring AssetPanel.createTemporaryAssetFromFile()'s convention.
+     * @returns {Asset|null}
+     */
+    createPlaceholderAsset(typeId, customName = null, folderPath = 'root') {
+        const typeDef = getAssetTypeById(typeId);
+        if (!typeDef) {
+            Logger.asset.warn(`AssetManager: Unknown asset type "${typeId}"`);
+            return null;
+        }
+
+        const categoryLabel = ASSET_CATEGORIES[typeDef.category]?.label || typeDef.category;
+        const existingCount = this.getAllAssets().filter(a => a.type === typeId).length;
+        const name = customName || `${typeDef.label} ${existingCount + 1}`;
+        const categoryColor = ASSET_CATEGORIES[typeDef.category]?.color || '#cccccc';
+        // typeDef.label / customName may contain '/' (e.g. "Font / Text Style") — must not
+        // leak into the path as extra folder segments, so sanitize the filename part only.
+        const safeName = name.replace(/\//g, '-');
+        const assetPath = (folderPath && folderPath !== 'root')
+            ? `${folderPath}/${safeName}.json`
+            : `${categoryLabel}/${safeName}.json`;
+
+        return this.addExternalAsset({
+            name,
+            type: typeId,
+            category: categoryLabel,
+            path: assetPath,
+            width: 48,
+            height: 48,
+            color: categoryColor,
+            imgSrc: null,
+            properties: { placeholder: true, assetTypeLabel: typeDef.label, description: typeDef.description },
+            tags: [typeDef.category]
+        });
     }
 
     /**

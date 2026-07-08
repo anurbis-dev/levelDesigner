@@ -16,7 +16,8 @@ export class Asset {
         this.imgSrc = data.imgSrc || null;
         this.properties = data.properties || {};
         this.tags = data.tags || [];
-        
+        this.components = data.components || []; // Component stubs (see ComponentTypes.js), copied into instances on placement
+
         // Store original state for comparison (state 1 - from JSON file)
         this._originalState = null;
         if (!data._isClone) {
@@ -42,7 +43,8 @@ export class Asset {
             width: this.width,
             height: this.height,
             color: this.color,
-            imgSrc: normalizedImgSrc
+            imgSrc: normalizedImgSrc,
+            componentsSignature: JSON.stringify(this.components || [])
         };
     }
 
@@ -82,7 +84,8 @@ export class Asset {
             currentWidth !== originalWidth ||
             currentHeight !== originalHeight ||
             currentColor !== originalColor ||
-            currentImgSrc !== originalImgSrc
+            currentImgSrc !== originalImgSrc ||
+            JSON.stringify(this.components || []) !== (this._originalState.componentsSignature || '[]')
         );
     }
 
@@ -114,7 +117,8 @@ export class Asset {
             visible: true,
             locked: false,
             layerId: layerId, // Will be set by level.addObject() if not provided
-            properties: { ...this.properties }
+            properties: { ...this.properties },
+            components: (this.components || []).map(c => ({ ...c, properties: { ...c.properties } }))
         };
 
         // Create proper GameObject instance instead of plain object
@@ -136,7 +140,8 @@ export class Asset {
             color: this.color,
             imgSrc: this.imgSrc,
             properties: this.properties,
-            tags: this.tags
+            tags: this.tags,
+            components: this.components
         };
     }
 

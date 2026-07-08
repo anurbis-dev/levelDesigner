@@ -28,6 +28,15 @@ levelEditor.selectObject(id)
 levelEditor.saveLevel()
 levelEditor.getCachedObject(id)
 levelEditor.showSplashScreen() // v3.54.1
+levelEditor.createAssetOfType(typeId) // создание placeholder-ассета по типу в текущей выбранной папке (Add меню → category → Type)
+
+// AssetTypes / ComponentTypes (каталоги типов)
+import { getAssetTypeById, getAssetTypesByCategory, ASSET_CATEGORIES } from 'src/constants/AssetTypes.js' // 29 типов ассетов: Camera, Actor, Image, Tilemap, Sound, Dialogue, Quest, Prefab и т.д.
+import { getComponentTypeById, createComponentStub } from 'src/constants/ComponentTypes.js' // 19 типов компонентов: Collider, Trigger, Interactable, PathFollower, Spawner и т.д.
+import { buildTypeIconSvg } from 'src/constants/AssetTypeIcons.js' // type-specific SVG icons (24x24 stroke glyphs, inline)
+assetManager.createPlaceholderAsset(typeId, customName?) // создать заполнитель ассета (без imgSrc, категория-базированный цвет, отображается с type-иконкой)
+asset.components // массив component stubs [{id, type, enabled, properties}], наследуется при размещении GameObject
+gameObject.components // массив component stubs, сохраняется в toJSON(), редактируется в ActorPropertiesWindow (диалог изменения Asset)
 
 // StateManager
 stateManager.get(key)
