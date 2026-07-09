@@ -27,6 +27,7 @@ After completing any code fix or feature implementation, always execute these st
 1. **Update docs** — tier by change scope:
    - **Minor fix** (isolated JS change, no new API or behavior contract): directly append 1-line entry to `docs/CHANGELOG.md` only. Do not spawn DocCodeSync.
    - **Behavioral / API change** (new feature, changed contract, new module): run `DocCodeSync` subagent to sync `docs/`, `Context_map.md`, and `docs/CHANGELOG.md`.
+   - **`docs/CHANGELOG.md` stays unreleased-only**: it must contain only entries not yet in a git commit. At the moment of `git commit` touching `docs/CHANGELOG.md`, before committing, move everything already committed (i.e. the pre-commit `HEAD` content of the file) into `docs/CHANGELOG_ARCHIVE.md` (prepend, keep newest-first) and leave `CHANGELOG.md` holding only the new entries from this commit. Never let `CHANGELOG.md` re-accumulate multiple releases' worth of history — full history lives in `CHANGELOG_ARCHIVE.md` / `git log`.
 2. **Update MemPalace** — persist any stable architectural facts, design decisions, or newly discovered patterns via `mempalace_add_drawer` / `mempalace_update_drawer` and `mempalace_kg_add` if relevant.
 3. **Update local auto-memory** — only for always-on behavioral triggers (e.g., rate-limit handling, response language). Everything else goes to MemPalace, not local files.
 4. **Browser verification** — confirm the fix via `chrome-devtools` MCP (`list_console_messages`, `evaluate_script` for state check). Only then declare the task complete.
@@ -67,7 +68,7 @@ Triggered only by explicit user phrases: "сделай в лупе", "испол
 1. Сначала `list_pages` — увидеть уже открытые вкладки.
 2. Если редактор открыт → `select_page` по ID, затем `evaluate_script`. **Не вызывай `navigate_page` если страница уже есть.**
 3. Если страницы нет → `navigate_page` к `http://localhost:3000/index.html`.
-4. Если `list_pages` падает с "already running" — зависший Chrome-devtools-mcp процесс. Убить через `Stop-Process -Id <PID> -Force` (найти через `netstat -ano | Select-String ":3000"`).
+4. `chrome-devtools` MCP запускается с `--isolated` (`.mcp.json`) — временный профиль на каждый запуск, конфликтов "already running" между сессиями быть не должно. Если всё же возникнет — зависший процесс, убить через `Stop-Process -Id <PID> -Force` (PID искать через `netstat -ano | Select-String ":3000"`).
 
 ### Verification tier — choose the lightest tier that covers the change
 
