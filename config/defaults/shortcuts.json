@@ -96,6 +96,16 @@
       "shiftKey": true,
       "description": "Save level as"
     },
+    "nextLevel": {
+      "key": "PageDown",
+      "ctrlKey": true,
+      "description": "Switch to next level tab"
+    },
+    "previousLevel": {
+      "key": "PageUp",
+      "ctrlKey": true,
+      "description": "Switch to previous level tab"
+    },
     "moveLayerUp": {
       "key": "PageUp",
       "description": "Move selected objects to upper layer"
@@ -152,6 +162,34 @@
       "key": "H",
       "altKey": true,
       "description": "Show every hidden object at every level"
+    },
+    "toggleFullscreen": {
+      "key": "",
+      "description": "Toggle fullscreen mode (optional — browsers already bind F11 to this)"
+    },
+    "toggleGameMode": {
+      "key": "",
+      "description": "Toggle Immersive Mode"
+    },
+    "toggleSnapToGrid": {
+      "key": "",
+      "description": "Toggle snap to grid"
+    },
+    "toggleObjectBoundaries": {
+      "key": "",
+      "description": "Toggle object boundaries display"
+    },
+    "toggleObjectCollisions": {
+      "key": "",
+      "description": "Toggle object collisions display"
+    },
+    "openProjectSettings": {
+      "key": "",
+      "description": "Open project settings"
+    },
+    "openSettings": {
+      "key": "",
+      "description": "Open editor settings"
     }
   },
   "mouse": {
@@ -218,6 +256,14 @@
     "resetToDefault": {
       "key": "Backspace",
       "description": "Reset the parameter or section under the mouse cursor to its default value (Details panel and Settings panel)"
+    },
+    "toggleConsole": {
+      "key": "",
+      "description": "Toggle console panel"
+    },
+    "toggleStatusBar": {
+      "key": "",
+      "description": "Toggle status bar"
     }
   }
 }

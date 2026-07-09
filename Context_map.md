@@ -1,4 +1,4 @@
-# Context Map - Level Designer v3.55.0
+# Context Map - Level Designer v3.57.0 (Фаза 7 Project завершена)
 
 ## ⚠️ КРИТИЧЕСКИ ВАЖНО - ЧИТАТЬ ПЕРВЫМ
 
@@ -14,18 +14,41 @@
 
 ## 🎯 Быстрый старт для агента
 
-### Основные компоненты
-- **LevelEditor** - главный класс, координатор всех систем
-- **11 менеджеров** - StateManager, ConfigManager, HistoryManager, EventHandlerManager, GlobalEventRegistry
-- **13 core операций** - ObjectOperations, LayerOperations, HistoryOperations, DuplicateOperations, GroupOperations, RenderOperations, ViewportOperations, LevelFileOperations
-- **UI компоненты** - панели (AssetPanel, DetailsPanel, LayersPanel, OutlinerPanel, SettingsPanel), диалоги (BaseDialog, SplashScreenDialog)
+### Основные компоненты (v3.57.0 Phase 7: Project — контейнер набора открытых уровней)
+- **LevelEditor** (v3.57.0 Phase 1-7) - главный класс, координатор всех систем; поддерживает несколько одновременно открытых LevelSession в `levelSessions: Map`; `this.level` = getter/setter через `currentLevelId` для обратной совместимости; новое поле `levelMRU: string[]` для отслеживания порядка недавних уровней (используется в closeLevel при выборе следующего уровня); Phase 7: новые поля `project` (текущий Project экземпляр, инициализируется при New/Open/Save Project) и `projectSettingsDialog`
+- **14 менеджеров** - StateManager, ConfigManager, HistoryManager, EventHandlerManager, GlobalEventRegistry, LevelsManager (Phase 1: управление вкладками/сессиями; Phase 5: closeLevel и per-session dirty sync; Phase 6: levelMRU, cycleLevel, getVisibleSessionsForRender, reorderLevels, soft-cap warning видимости), MenuManager (меню переименовано с 'Level' на 'File', Phase 7)
+- **14 core операций** - ObjectOperations, LayerOperations, HistoryOperations, DuplicateOperations, GroupOperations, RenderOperations (Phase 3: multi-level compositing; Phase 5: видимые уровни рисуются одновременно), ViewportOperations, LevelFileOperations (Phase 5: addLevel/openLevel с dedup, per-session save), ProjectFileOperations (Phase 7: newProject/openProject/saveProject/saveProjectAs)
+- **UI компоненты** - панели (AssetPanel, DetailsPanel, LayersPanel, LevelsPanel (Phase 2: UI; Phase 5: Close/Save/dirty-индикатор; Phase 6: drag-reorder, дизамбигуация имён при коллизии), OutlinerPanel, SettingsPanel), диалоги (BaseDialog, SplashScreenDialog, ProjectSettingsDialog — Phase 7, пока стаб для редактирования project.name)
 
-### Ключевые API
+### Ключевые API (Phase 7 Project: контейнер многоуровневого проекта)
 ```javascript
-// LevelEditor
+// LevelEditor файловые операции (v3.57.0 Phase 5 multi-level)
+// Все методы работают с LevelSession (вкладка уровня), а не с единым глобальным уровнем
+// Несколько уровней открыты одновременно, переключаются через LevelsPanel или меню
+levelEditor.newLevel() // добавляет вкладку, переключает на новую (не заменяет текущую)
+levelEditor.openLevel() // добавляет вкладку из файла, dedup по fileName (не дублирует уже открытые)
+levelEditor.saveLevel() // сохраняет текущий уровень, использует per-session fileName
+levelEditor.saveLevelAs() // сохраняет с выбором имени, обновляет per-session fileName для текущей сессии
+levelEditor.closeLevel(levelId) // закрывает вкладку (нельзя закрыть последний открытый уровень, спрашивает подтверждение при dirty)
+levelEditor.levelsManager.setCurrentLevel(levelId) // переключение между открытыми уровнями (вкладками), сохраняет/восстанавливает view state, history; отслеживает levelMRU для fallback
+levelEditor.nextLevel() / levelEditor.previousLevel() // новые хоткеи (Ctrl+PageDown/PageUp Phase 6) для циклического переключения между открытыми уровнями через levelsManager.cycleLevel(±1)
+levelEditor.levelsManager.cycleLevel(direction) // циклическое переключение: direction=+1 (следующий), -1 (предыдущий), обрывается если открыт единственный уровень
+levelEditor.levelsManager.getVisibleSessionsForRender() // сессии видимых уровней в порядке рендера (текущий уровень ВСЕГДА в конце, рисуется поверх остальных, независимо от позиции таба) — Phase 6 решение, видимо с Phase 3
+levelEditor.levelsManager.reorderLevels(newOrder) // переупорядочивание открытых уровней (табы), newOrder — полная перестановка id; Phase 6 drag-reorder в LevelsPanel
+
+// LevelEditor Project-операции (v3.57.0 Phase 7)
+// Проект = контейнер набора открытых уровней (LevelSession), самодостаточный JSON с embedded Level.toJSON() каждого уровня + видимость/порядок/currentLevelIndex
+levelEditor.newProject() // создание нового проекта: очищает все открытые уровни, создаёт один пустой с seeded history baseline; единый confirm при несохранённых правках вместо N диалогов
+levelEditor.openProject() // открытие проекта из файла: парсит все уровни из project-JSON, заменяет весь набор открытых вкладок (Edge Case 11); unit confirm при dirty
+levelEditor.saveProject() // сохранение текущего проекта (если был открыт/создан ранее); эмбеддит Level.toJSON() каждого открытого уровня + метаданные (visible, fileName, порядок, currentLevelIndex)
+levelEditor.saveProjectAs() // сохранение проекта с выбором файла
+levelEditor.openProjectSettings() // открытие ProjectSettingsDialog; пока стаб (редактируется только project.name)
+levelEditor.project // текущий Project экземпляр (инициализируется при New/Open/Save Project); null до первого вызова
+levelEditor.projectFileOperations // BaseModule для файловых операций проекта (newProject/openProject/saveProject/saveProjectAs)
+
+// LevelEditor основное
 levelEditor.createObject(type, x, y, properties)
 levelEditor.selectObject(id)
-levelEditor.saveLevel()
 levelEditor.getCachedObject(id)
 levelEditor.showSplashScreen() // v3.54.1
 levelEditor.createAssetOfType(typeId) // создание placeholder-ассета по типу в текущей выбранной папке (Add меню → category → Type)
@@ -36,13 +59,14 @@ levelEditor.createAssetOfType(typeId) // создание placeholder-ассет
 // Отвечает за визуальное отключение (CSS-классы opacity-50/pointer-events-none) и блокировку клика
 // setupDropdownCursorMarginWatcher() — новый persistent mousemove-листенер для top-level dropdown (раньше mouseleave без margin), закрывает dropdown при выходе курсора за пределы margin (ui.cursorMenuMargin), включая открытые flyout-submenu
 
-// BaseContextMenu (v3.55.0): единая разметка иконок, disabled-схема, flyout-submenu
+// BaseContextMenu (v3.55.0+): единая разметка пунктов, disabled-схема, flyout-submenu
 // Все 6 наследников (AssetContextMenu, AssetPanelContextMenu, CanvasContextMenu, ConsoleContextMenu, LayersContextMenu, OutlinerContextMenu) получили единый визуальный шаблон:
-// - createMenuItem()/createSubmenuItem() используют MenuItemTemplateUtils.renderMenuItemIconHtml() (как MenuManager) для одиночного источника правды иконок
+// - createMenuItem()/createSubmenuItem() используют MenuItemTemplateUtils (три экспорта: renderMenuItemLeadingHtml, renderMenuItemBodyHtml, renderMenuItemTrailingHtml) для одиночного источника правды разметки пункта [leading | body | trailing]
 // - item rows: 'base-context-menu-item px-4 py-2 text-sm hover:bg-gray-700' (идентично MenuManager); separators: 'border-t border-gray-600 my-1'; submenu-триггеры с явным ▸-гліфом
 // - применяют полный disabled-scheme (opacity-50/pointer-events-none/cursor-not-allowed, как MenuManager)
 // - contextMenu.addSubmenuItem(text, icon, items, options) — flyout подменю (раскрывается hover), в т.ч. вложенные уровни
 // - фикс клиппинга: .submenu-flyout--scrollable применяется ТОЛЬКО к самому глубокому подменю в цепочке
+// - опционально поддерживают item.shortcut в trailing-слоте (пока не используется в коде)
 
 // MenuPositioningUtils (v3.55.0+): унифицированный cursor margin для всех меню (v3.55.0)
 // getCursorMenuMargin() — читает ui.cursorMenuMargin из StateManager (дефолт 2px, диапазон 0-60)
@@ -132,13 +156,18 @@ level.settings.parallaxVertical // множитель вертикального
 // ParallaxRenderer.getCameraOffset() применяет множители к смещению камеры, масштабируя offset * multiplier независимо для X и Y; комбинируется с per-layer parallaxOffset в getParallaxOffset()
 ```
 
-## 📁 Основные файлы
+## 📁 Основные файлы (Phase 7 Project завершена)
 
 ### Core
-- `src/core/LevelEditor.js` - главный класс
+- `src/core/LevelEditor.js` - главный класс, `this.level` = computed getter/setter через `levelSessions` + `currentLevelId` (v3.57.0 Phase 1+)
+- `src/core/LevelsManager.js` - управление множеством открытых LevelSession: addLevel, setCurrentLevel, closeLevel (Phase 1, 3, 5); cycleLevel, getVisibleSessionsForRender, reorderLevels, levelMRU fallback, soft-cap warning (Phase 6)
+- `src/models/LevelSession.js` - editor-only обёртка над Level (visible, fileName, isDirty, viewState, history per-session) — Phase 1
+- `src/core/LevelFileOperations.js` - файловые операции уровня (Phase 5: newLevel/openLevel добавляют вкладки, saveLevel/saveLevelAs работают per-session, closeLevel закрывает вкладку)
+- `src/models/Project.js` - модель проекта (Phase 7): `toJSON(levelSessions, levelOrder, currentLevelId)` эмбеддит Level.toJSON() каждого уровня + видимость/порядок/currentLevelIndex; статический `fromJSON(json)` парсит проект-файл
+- `src/core/ProjectFileOperations.js` - файловые операции проекта (Phase 7, BaseModule): `newProject()`/`openProject()`/`saveProject()`/`saveProjectAs()`, replace-not-merge семантика (New/Open заменяют весь набор открытых уровней, единый confirm при dirty)
 - `src/core/ObjectOperations.js` - операции с объектами
 - `src/core/LayerOperations.js` - операции со слоями
-- `src/core/RenderOperations.js` - рендеринг
+- `src/core/RenderOperations.js` - рендеринг (Phase 3: multi-level compositing, объекты всех видимых уровней в одном кадре; Phase 5: все видимые уровни рисуются одновременно)
 - `src/event-system/MouseHandlers.js` - обработка мыши, в т.ч. rotate/scale жесты (`startObjectTransform`, `transformSelectedObjects`)
 - `src/constants/EditorConstants.js` - константы, включая `TRANSFORM` (rotate/scale жесты)
 - `src/utils/WorldPositionUtils.js` - мировые координаты, rotation-aware bounds (`getRotatedRectAABB`, `rotateBoundsAroundCenter`)
@@ -150,14 +179,19 @@ level.settings.parallaxVertical // множитель вертикального
 ### Managers
 - `src/managers/StateManager.js` - состояние
 - `src/managers/ConfigManager.js` - конфигурация
-- `src/managers/HistoryManager.js` - undo/redo
+- `src/managers/HistoryManager.js` - undo/redo, `exportState()`/`importState()` для per-level history
 - `src/managers/EventHandlerManager.js` - события
 - `src/event-system/GlobalEventRegistry.js` - глобальные события
 - `src/managers/MenuManager.js` - главное меню, единый источник хоткей-подписей через `shortcutKey` (`resolveShortcutLabel`, `refreshShortcutLabels`)
+- `src/core/LevelsManager.js` - управление открытыми уровнями (LevelSession)
 
 ### UI
 - `src/ui/BaseDialog.js` - базовый диалог
 - `src/ui/SplashScreenDialog.js` - splash screen диалог
+- `src/ui/ProjectSettingsDialog.js` - диалог настроек проекта (Phase 7, extends BaseDialog, пока стаб: редактируется только `project.name`)
+- `src/ui/LevelsPanel.js` - панель списка открытых уровней (Phase 2 multi-level: визуализация вкладок; Phase 5: полный workflow с Close/Save в контекстном меню, per-session dirty-индикатор; Phase 6: drag-reorder, дизамбигуация имён при коллизии)
+- `src/ui/LevelsContextMenu.js` - контекстное меню для уровней (Make Current, Rename)
+- `src/ui/panel-structures/LevelsPanelStructure.js` - DOM-структура и рендер LevelsPanel
 - `src/ui/AssetPanel.js` - панель ассетов
 - `src/ui/LayersPanel.js` - панель слоев, включая Layer Solo (`toggleLayerSolo`)
 - `src/ui/OutlinerPanel.js` - иерархия объектов, включая eye-icon видимости (`createVisibilityButton`), Object Solo (Ctrl+click на глаз), Ctrl+click мульти-select в фильтре типов (`showFilterMenu` → `MenuPositioningUtils.repositionMenu()` после добавления пунктов для совпадения с кнопкой), и F2 inline-rename (`startInlineRename`)
@@ -178,7 +212,7 @@ level.settings.parallaxVertical // множитель вертикального
 2. **ConfigManager** - конфигурация
 3. **EventHandlerManager** - все события UI
 4. **GlobalEventRegistry** - глобальные события
-5. **CacheManager** - кэширование
+5. **CacheManager** - кэширование (v3.57.0 Phase 3: namespacing object-кешей по levelId через `${levelId}:${objId}` для защиты от коллизий id между одновременно открытыми уровнями)
 
 ### Модульная архитектура
 - Каждая операция в отдельном файле (ObjectOperations, LayerOperations, etc.)
@@ -232,9 +266,9 @@ eventHandlerManager.registerElement(button, { click: onClick }, 'button-id');
 
 ## 🔧 Версионирование
 
-Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '3.55.0'`
+Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '3.57.0'` (Фаза 6 multi-level завершена 2026-07-09)
 
-Версия отображается динамически после полной инициализации через `updateVersionInfo()` и `updatePageTitle()`. Интерфейс скрыт до завершения загрузки, чтобы избежать отображения устаревшей версии.
+Версия отображается динамически после полной инициализации через `updateVersionInfo()` и `updatePageTitle()`. Интерфейс скрыт до завершения загрузки, чтобы избежать отображения устаревшей версии. Pre-push hook блокирует коммит без бампа версии (`.claude/settings.json`).
 
 ## 🚀 Команды
 

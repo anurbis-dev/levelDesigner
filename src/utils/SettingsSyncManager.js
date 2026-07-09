@@ -64,11 +64,7 @@ export class SettingsSyncManager {
             // Editor view settings
             'editor.view.grid': 'canvas.showGrid',
             'editor.view.snapToGrid': 'canvas.snapToGrid',
-            'editor.view.gameMode': 'view.gameMode',
-            'editor.view.objectBoundaries': 'view.objectBoundaries',
-            'editor.view.objectCollisions': 'view.objectCollisions',
-            'editor.view.parallax': 'view.parallax',
-            
+
             // Editor settings
             'editor.autoSave': 'editor.autoSave',
             'editor.autoSaveInterval': 'editor.autoSaveInterval',

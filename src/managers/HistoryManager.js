@@ -192,4 +192,27 @@ export class HistoryManager {
             this.operationFlagTimeout = null;
         }
     }
+
+    /**
+     * Snapshot the live undo/redo stacks for storing on a LevelSession while
+     * switching away from it (multi-level support).
+     * @returns {{undoStack: string[], redoStack: string[]}}
+     */
+    exportState() {
+        return { undoStack: [...this.undoStack], redoStack: [...this.redoStack] };
+    }
+
+    /**
+     * Restore undo/redo stacks previously captured by exportState(), when
+     * switching to a level (multi-level support).
+     * @param {{undoStack: string[], redoStack: string[]}|null} snapshot
+     */
+    importState(snapshot) {
+        this.undoStack = snapshot ? [...snapshot.undoStack] : [];
+        this.redoStack = snapshot ? [...snapshot.redoStack] : [];
+        this.isRecording = true;
+        this.isUndoing = false;
+        this.isRedoing = false;
+        this.clearOperationFlagTimeout();
+    }
 }

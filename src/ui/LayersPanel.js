@@ -1026,6 +1026,13 @@ export class LayersPanel extends BasePanel {
                 level.addLayer();
             }
 
+            // New layers default to visible: true, but the cached visibleLayerIds
+            // set (RenderOperations.getVisibleLayerIds) doesn't know about them yet,
+            // so they'd render as hidden until something else invalidates the cache.
+            if (this.levelEditor.renderOperations) {
+                this.levelEditor.renderOperations.invalidateLayerVisibilityCache();
+            }
+
             const layersAfter = level.layers.length;
             this.render();
             this.stateManager.markDirty();
@@ -1934,6 +1941,9 @@ export class LayersPanel extends BasePanel {
                 e.preventDefault();
                 const level = this.levelEditor.getLevel();
                 const newLayer = level.addLayer();
+                if (this.levelEditor.renderOperations) {
+                    this.levelEditor.renderOperations.invalidateLayerVisibilityCache();
+                }
                 this.render();
                 this.stateManager.markDirty();
                 Logger.layer.info(`Added new layer: ${newLayer.name}`);

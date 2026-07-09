@@ -91,8 +91,14 @@ export class ParallaxRenderer {
 
     /**
      * Render objects with parallax effect applied
+     * @param {Array} visibleObjects
+     * @param {Object} camera
+     * @param {Level} level - level these objects belong to (defaults to current level;
+     *   pass explicitly when called from RenderOperations.render()'s composited loop for
+     *   a non-current visible session, so effective-layer/layer lookups resolve against
+     *   the right level's own layer tree instead of the current level's)
      */
-    renderParallaxObjects(visibleObjects, camera) {
+    renderParallaxObjects(visibleObjects, camera, level = this.editor.level) {
         if (!this.isParallaxEnabled()) {
             // Fallback to normal rendering
             visibleObjects.forEach(obj => {
@@ -105,8 +111,8 @@ export class ParallaxRenderer {
 
         visibleObjects.forEach(obj => {
             // Get object's effective layer
-            const effectiveLayerId = this.editor.renderOperations.getEffectiveLayerId(obj);
-            const layer = this.editor.level.getLayerById(effectiveLayerId);
+            const effectiveLayerId = this.editor.renderOperations.getEffectiveLayerId(obj, level);
+            const layer = level.getLayerById(effectiveLayerId);
 
             if (!layer || !this.isLayerParallaxEnabled(layer)) {
                 // Layer not found or doesn't participate in parallax, render normally

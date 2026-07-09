@@ -13,15 +13,14 @@ export class LevelFileOperations extends BaseModule {
     }
 
     /**
-     * Create a new level
-     * @returns {Promise<void>}
-     */
-    /**
-     * Returns true if a mouse action (drag, marquee, duplicate) is currently
-     * in progress. File operations must not run while the canvas is mid-action
-     * because stateManager.reset() would replace the mouse-state object and
-     * leave stale closures in mouse-event handlers holding references to the
-     * now-discarded state, potentially causing "ghost edits" on the new level.
+     * Returns true if a mouse action (drag, marquee, duplicate) is currently in
+     * progress. New/Open must not run while the canvas is mid-action: even though
+     * they no longer call stateManager.reset() (Phase 5 — they add a tab instead of
+     * replacing the level), addLevel()/setCurrentLevel() still fully swaps
+     * selectedObjects/camera/etc. via stateManager.set() — mid-drag, that pulls the
+     * rug out from under the in-progress mouse-event closures (they keep holding
+     * object references from whatever session was active when the drag started),
+     * risking a "ghost edit" landing in the wrong session once mouseup finally fires.
      */
     _hasActiveMouseOperation() {
         const mouse = this.editor.stateManager.get('mouse');
@@ -31,71 +30,41 @@ export class LevelFileOperations extends BaseModule {
     }
 
     /**
-     * If the level has unsaved changes, ask the user to confirm discarding them.
-     * @param {string} actionLabel - describes the action in the confirm message (e.g. "create a new level")
-     * @returns {Promise<boolean>} true if it's safe to proceed (no unsaved changes, or user confirmed)
+     * Create a brand-new level and add it as a new tab (does NOT replace/discard the
+     * currently open level or any other open tab — see plan section 6.2). No unsaved-
+     * changes confirm needed since nothing is being discarded anymore.
      */
-    async _confirmDiscardUnsavedChanges(actionLabel) {
-        if (!this.editor.stateManager.get('isDirty')) {
-            return true;
-        }
-        return confirm(`You have unsaved changes. Are you sure you want to ${actionLabel}?`);
-    }
-
     async newLevel() {
         if (this._hasActiveMouseOperation()) {
             Logger.file.warn('newLevel() blocked: mouse action in progress — finish or cancel it first');
             return;
         }
 
-        if (!(await this._confirmDiscardUnsavedChanges('create a new level'))) {
-            return;
-        }
-
         Logger.file.info('Creating new level...');
 
-        // Save current view states before resetting
-        const savedViewStates = this.editor.eventHandlers.saveViewStates();
+        const level = this.editor.fileManager.createNewLevel();
+        this.editor.levelsManager.addLevel(level, { makeCurrent: true, visible: true });
 
-        // Clear all object/spatial caches before switching levels so they don't
-        // retain stale references to the old level's objects after reset()
-        this.editor.clearCaches();
+        // addLevel() -> setCurrentLevel() already rendered/updated panels and imported
+        // this brand-new session's empty history stack — seed it so Ctrl+Z has a
+        // baseline state to fall back to (mirrors LevelsPanel.onAddLevel(), Phase 2).
+        this.editor.historyManager.saveState(level.objects, new Set(), true, null);
 
-        // Create new level
-        this.editor.level = this.editor.fileManager.createNewLevel();
-        // Re-attach layer-count/structure-change callbacks: they live on the Level
-        // INSTANCE, so replacing this.editor.level wholesale drops them otherwise.
-        this.editor.setupLayerObjectsCountTracking();
-        this.editor.stateManager.reset();
-
-        // Re-initialize group edit mode state after reset
-        this._initializeGroupEditMode();
-
-        // Apply saved view states after reset
-        this.editor.eventHandlers.applySavedViewStates(savedViewStates);
-
-        // Auto-set parallax start position to current camera position
+        // Auto-set parallax start position to the new session's camera. Global state,
+        // not per-session (see plan Phase 1 known gaps) — matches legacy single-level
+        // behavior for a freshly created level.
         this._updateParallaxStartPosition();
-
-        // Update cached level statistics
-        this.editor.updateCachedLevelStats();
-
-        // Initialize current layer to Main layer
-        this.editor.setCurrentLayer(this.editor.level.getMainLayerId());
-
-        // Initialize history
-        this._initializeHistory();
-
-        // Render and update UI
-        this.editor.render();
-        this.editor.updateAllPanels();
 
         Logger.file.info('✅ New level created');
         Logger.status.success('New level created');
     }
 
     /**
-     * Open an existing level from file
+     * Open an existing level from file and add it as a new tab (does NOT replace/discard
+     * the currently open level — see plan section 6.3). If a level with the same file
+     * name is already open, switches to that tab instead of opening a duplicate
+     * (best-effort: Level.toJSON() doesn't persist `id`, so this can't be exact — see
+     * plan Edge Case 8).
      * @returns {Promise<void>}
      */
     async openLevel() {
@@ -104,62 +73,41 @@ export class LevelFileOperations extends BaseModule {
             return;
         }
 
-        if (!(await this._confirmDiscardUnsavedChanges('open a new level'))) {
-            return;
-        }
-
         try {
             Logger.file.info('📂 Opening level...');
 
             // Load level from file. Returns null both when the user cancelled the file
             // picker and when loading failed (FileManager already showed its own alert
-            // for real errors) - either way, keep the current level and stop here instead
-            // of proceeding to reset() with a null level.
+            // for real errors) - either way, keep the current level and stop here.
             const loadedLevel = await this.editor.fileManager.loadLevelFromFileInput();
             if (!loadedLevel) {
                 Logger.file.info('Open level cancelled or failed - keeping current level');
                 return;
             }
+            // loadLevelFromFileInput() -> loadLevel() sets this as a side effect; read it
+            // back immediately (nothing else runs in between) rather than changing that
+            // method's return signature.
+            const fileName = this.editor.fileManager.getCurrentFileName();
 
-            // Save current view states before resetting
-            const savedViewStates = this.editor.eventHandlers.saveViewStates();
+            const alreadyOpenSession = this.editor.levelsManager.getOrderedSessions()
+                .find(session => session.fileName && session.fileName === fileName);
+            if (alreadyOpenSession) {
+                this.editor.levelsManager.setCurrentLevel(alreadyOpenSession.id);
+                Logger.file.info(`"${fileName}" is already open — switched to its tab`);
+                Logger.status.info(`"${fileName}" is already open`);
+                return;
+            }
 
-            this.editor.level = loadedLevel;
+            this.editor.levelsManager.addLevel(loadedLevel, { makeCurrent: true, visible: true, fileName });
 
-            // Re-attach layer-count/structure-change callbacks: they live on the Level
-            // INSTANCE, so replacing this.editor.level wholesale drops them otherwise.
-            this.editor.setupLayerObjectsCountTracking();
+            // addLevel() -> setCurrentLevel() already rendered/updated panels and imported
+            // this session's empty history stack — seed it so Ctrl+Z has a baseline.
+            this.editor.historyManager.saveState(loadedLevel.objects, new Set(), true, null);
 
-            // Clear stale object/spatial caches from the previous level before reset()
-            this.editor.clearCaches();
-
-            this.editor.stateManager.reset();
-
-            // Re-initialize group edit mode state after reset
-            this._initializeGroupEditMode();
-
-            // Apply saved view states after reset
-            this.editor.eventHandlers.applySavedViewStates(savedViewStates);
-
-            // Auto-set parallax start position to current camera position
             this._updateParallaxStartPosition();
 
-            // Update cached level statistics
-            this.editor.updateCachedLevelStats();
-
-            // Initialize current layer to Main layer
-            this.editor.setCurrentLayer(this.editor.level.getMainLayerId());
-
-            // Clear selection and initialize history
-            this.editor.stateManager.set('selectedObjects', new Set());
-            this._initializeHistory();
-
-            // Render and update UI
-            this.editor.render();
-            this.editor.updateAllPanels();
-
-            Logger.file.info(`✅ Level loaded: ${this.editor.level.objects.length} objects`);
-            Logger.status.success(`Level loaded: ${this.editor.level.objects.length} objects`);
+            Logger.file.info(`✅ Level loaded: ${loadedLevel.objects.length} objects`);
+            Logger.status.success(`Level loaded: ${loadedLevel.objects.length} objects`);
         } catch (error) {
             Logger.file.error(`❌ Failed to load level: ${error.message}`);
             Logger.status.error(`Failed to load level: ${error.message}`);
@@ -177,7 +125,14 @@ export class LevelFileOperations extends BaseModule {
             return;
         }
 
-        this.editor.fileManager.saveLevel(this.editor.level);
+        // Per-session fileName, not FileManager.currentFileName (global) — saving level B
+        // after saving A once must never silently overwrite A's file. Always pass an
+        // explicit non-null fileName so FileManager's own `|| this.currentFileName`
+        // fallback (global, stale) never triggers.
+        const session = this.editor.levelsManager.getCurrentSession();
+        const fileName = session.fileName || 'level.json';
+        session.fileName = this.editor.fileManager.saveLevel(this.editor.level, fileName);
+        session.isDirty = false;
         this.editor.stateManager.markClean();
         Logger.file.info('💾 Level saved successfully');
         Logger.status.success('Level saved');
@@ -193,14 +148,16 @@ export class LevelFileOperations extends BaseModule {
             return;
         }
 
-        const currentFileName = this.editor.fileManager.getCurrentFileName() || "level.json";
+        const session = this.editor.levelsManager.getCurrentSession();
+        const currentFileName = session.fileName || "level.json";
         const fileName = await prompt("Enter file name:", currentFileName);
-        
+
         if (!fileName) {
             return;
         }
 
-        this.editor.fileManager.saveLevel(this.editor.level, fileName);
+        session.fileName = this.editor.fileManager.saveLevel(this.editor.level, fileName);
+        session.isDirty = false;
         this.editor.stateManager.markClean();
         Logger.file.info(`💾 Level saved as: ${fileName}`);
         Logger.status.success(`Saved as: ${fileName}`);
@@ -266,19 +223,6 @@ export class LevelFileOperations extends BaseModule {
     }
 
     /**
-     * Initialize group edit mode state
-     * @private
-     */
-    _initializeGroupEditMode() {
-        this.editor.stateManager.set('groupEditMode', {
-            isActive: false,
-            groupId: null,
-            group: null,
-            openGroups: []
-        });
-    }
-
-    /**
      * Update parallax start position to current camera position
      * @private
      */
@@ -288,20 +232,6 @@ export class LevelFileOperations extends BaseModule {
             x: currentCamera.x,
             y: currentCamera.y
         });
-    }
-
-    /**
-     * Initialize history with current state
-     * @private
-     */
-    _initializeHistory() {
-        this.editor.historyManager.clear();
-        this.editor.historyManager.saveState(
-            this.editor.level.objects,
-            this.editor.stateManager.get('selectedObjects'),
-            true,
-            this.editor.stateManager.get('groupEditMode')
-        );
     }
 
     /**

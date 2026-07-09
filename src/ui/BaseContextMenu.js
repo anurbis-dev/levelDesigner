@@ -1,7 +1,7 @@
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
 import { Logger } from '../utils/Logger.js';
-import { renderMenuItemIconHtml } from '../utils/MenuItemTemplateUtils.js';
+import { renderMenuItemLeadingHtml, renderMenuItemBodyHtml, renderMenuItemTrailingHtml } from '../utils/MenuItemTemplateUtils.js';
 
 /**
  * BaseContextMenu - Base class for context menus
@@ -481,12 +481,18 @@ export class BaseContextMenu {
         // Add data attribute for menu item identification
         menuItem.dataset.menuItemId = item.id;
 
-        // Handle dynamic text (function) or static text (string)
+        // Handle dynamic text/shortcut (function, re-resolved on every menu open — the DOM is
+        // rebuilt fresh each time via createContextMenu()) or static value (string).
         const displayText = typeof item.text === 'function' ? item.text(contextData) : item.text;
-        // Shared with MenuManager.js via MenuItemTemplateUtils so icon markup/spacing is
-        // identical in both menu systems.
-        const iconHtml = renderMenuItemIconHtml(item.icon);
-        menuItem.innerHTML = `${iconHtml}${displayText}`;
+        const shortcutText = typeof item.shortcut === 'function' ? item.shortcut(contextData) : item.shortcut;
+        // Same [leading | label | trailing] row layout as MenuManager.createMenuItem(), shared
+        // via MenuItemTemplateUtils so icon/checkbox/shortcut markup can't drift between the
+        // nav dropdowns and context menus.
+        const leadingHtml = renderMenuItemLeadingHtml({ icon: item.icon });
+        const bodyHtml = renderMenuItemBodyHtml({ leadingHtml, label: displayText });
+        const trailingHtml = renderMenuItemTrailingHtml(shortcutText);
+        if (trailingHtml) menuItem.classList.add('flex', 'items-center', 'justify-between');
+        menuItem.innerHTML = bodyHtml + trailingHtml;
 
         // Check if item should be disabled
         let isDisabled = false;
@@ -535,14 +541,12 @@ export class BaseContextMenu {
         trigger.className = 'base-context-menu-item has-submenu px-4 py-2 text-sm hover:bg-gray-700 flex items-center justify-between';
         trigger.dataset.menuItemId = item.id;
         const displayText = typeof item.text === 'function' ? item.text(contextData) : item.text;
-        // Icon shares MenuItemTemplateUtils with createMenuItem() above. Icon is intentionally
-        // kept here even though MenuManager's own createSubmenuItem() has no icon slot at all
-        // on its trigger — that's an absent capability there, not one that was stripped for
-        // convergence, so existing submenu icons (e.g. Add's ➕) must stay. The label+icon are
-        // wrapped in their own span so `justify-between` can push the arrow to the right, same
-        // structure as MenuManager.createSubmenuItem()'s trigger.
-        const iconHtml = renderMenuItemIconHtml(item.icon);
-        trigger.innerHTML = `<span style="display:inline-flex;align-items:center;">${iconHtml}${displayText}</span><span class="text-xs ml-4">▸</span>`;
+        // Same [leading | label | trailing] row layout as createMenuItem() above and
+        // MenuManager.createSubmenuItem(), via MenuItemTemplateUtils — the arrow occupies the
+        // trailing slot exactly like a shortcut label would.
+        const leadingHtml = renderMenuItemLeadingHtml({ icon: item.icon });
+        const bodyHtml = renderMenuItemBodyHtml({ leadingHtml, label: displayText });
+        trigger.innerHTML = bodyHtml + renderMenuItemTrailingHtml('▸');
         if (isDisabled) {
             trigger.classList.add('disabled', 'opacity-50', 'pointer-events-none', 'cursor-not-allowed');
         }
@@ -667,6 +671,8 @@ export class BaseContextMenu {
      * @param {string} icon - Item icon (optional)
      * @param {Function} action - Click action
      * @param {Object} options - Additional options
+     * @param {string} [options.shortcut] - Resolved keyboard shortcut label (e.g. "Ctrl+C"),
+     *   rendered in the same trailing slot as nav-menu shortcuts (see createMenuItem())
      */
     addMenuItem(text, icon, action, options = {}) {
         this.menuItems.push({
@@ -675,6 +681,7 @@ export class BaseContextMenu {
             action,
             visible: options.visible,
             disabled: options.disabled,
+            shortcut: options.shortcut,
             id: options.id || (typeof text === 'string' ? text.toLowerCase().replace(/\s+/g, '-') : 'dynamic-item')
         });
     }

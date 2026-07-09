@@ -187,57 +187,12 @@ export function renderGeneralSettings(stateManager) {
         </div>
     `);
     
-    // Create View Settings section
-    const viewSettingsContent = createSettingsFormGroup(`
-        <div>
-            ${createSettingsCheckbox({
-                id: 'editor-game-mode',
-                dataSetting: 'editor.view.gameMode',
-                checked: settings.editor.view?.gameMode,
-                label: 'Immersive Mode'
-            })}
-        </div>
-        
-        <div>
-            ${createSettingsCheckbox({
-                id: 'editor-object-boundaries',
-                dataSetting: 'editor.view.objectBoundaries',
-                checked: settings.editor.view?.objectBoundaries,
-                label: 'Object Boundaries'
-            })}
-        </div>
-        
-        <div>
-            ${createSettingsCheckbox({
-                id: 'editor-object-collisions',
-                dataSetting: 'editor.view.objectCollisions',
-                checked: settings.editor.view?.objectCollisions,
-                label: 'Object Collisions'
-            })}
-        </div>
-        
-        <div>
-            ${createSettingsCheckbox({
-                id: 'editor-parallax',
-                dataSetting: 'editor.view.parallax',
-                checked: settings.editor.view?.parallax,
-                label: 'Parallax'
-            })}
-        </div>
-    `);
-    
     return `
         <h3>General Settings</h3>
-        
+
         ${createSettingsContainer(`
             ${createSettingsSection('UI Settings', uiSettingsContent)}
             ${createSettingsSection('Editor Settings', editorSettingsContent)}
-            ${createSettingsSection('View Settings', viewSettingsContent, { 
-                border: false, 
-                padding: false, 
-                borderRadius: false,
-                className: 'settings-divider'
-            })}
         `)}
     `;
 }

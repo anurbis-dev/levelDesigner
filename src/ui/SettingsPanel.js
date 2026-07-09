@@ -906,10 +906,13 @@ export class SettingsPanel {
                 this.configManager.set(`shortcuts.${category}.${action}`, shortcuts[category][action]);
             }
 
-            // Reflect the rebind in the main menu immediately, if that item's shortcut is
-            // sourced from this same config path (see MenuManager.createMenuItem's
-            // shortcutKey resolution).
-            this.levelEditor?.menuManager?.refreshShortcutLabels();
+            // Reflect the rebind in the main menu immediately. Full refresh() (not just
+            // refreshShortcutLabels()) because an item that started with no shortcut renders
+            // with no trailing `[data-shortcut-key]` span at all (see
+            // MenuItemTemplateUtils.renderMenuItemTrailingHtml — empty text renders nothing) —
+            // refreshShortcutLabels() can only update a span that already exists, so a rebind
+            // from empty to a real key needs the item's DOM rebuilt, not just its label text.
+            this.levelEditor?.menuManager?.refresh();
         }
     }
 

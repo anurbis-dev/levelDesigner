@@ -399,8 +399,8 @@ export class ObjectOperations extends BaseModule {
         return false;
     }
 
-    getObjectWorldBounds(obj, excludeIds = []) {
-        return WorldPositionUtils.getWorldBounds(obj, this.editor.level.objects, excludeIds);
+    getObjectWorldBounds(obj, excludeIds = [], level = this.editor.level) {
+        return WorldPositionUtils.getWorldBounds(obj, level.objects, excludeIds);
     }
 
     /**

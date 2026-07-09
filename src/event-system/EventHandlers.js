@@ -2,7 +2,6 @@
 import { Logger } from '../utils/Logger.js';
 import { SearchSectionUtils } from '../utils/SearchSectionUtils.js';
 import { ScrollUtils } from '../utils/ScrollUtils.js';
-import { MENU_CONFIG, getShortcutTarget } from '../../config/menu.js';
 import { eventHandlerManager } from './EventHandlerManager.js';
 import { globalEventRegistry } from './GlobalEventRegistry.js';
 import { ResetRegistry } from '../utils/ResetRegistry.js';
@@ -349,6 +348,12 @@ export class EventHandlers extends BaseModule {
         } else if (this._matchesShortcut(e, 'editor', 'saveLevel')) {
             e.preventDefault();
             if (typeof this.editor.saveLevel === 'function') (async () => { await this.editor.saveLevel(); })();
+        } else if (this._matchesShortcut(e, 'editor', 'nextLevel')) {
+            e.preventDefault();
+            this.editor.levelsManager?.cycleLevel(1);
+        } else if (this._matchesShortcut(e, 'editor', 'previousLevel')) {
+            e.preventDefault();
+            this.editor.levelsManager?.cycleLevel(-1);
         } else if (this._matchesShortcut(e, 'editor', 'bringToFront') || this._matchesShortcut(e, 'editor', 'sendToBack') ||
                    this._matchesShortcut(e, 'editor', 'bringForward') || this._matchesShortcut(e, 'editor', 'sendBackward')) {
             e.preventDefault();
@@ -386,6 +391,33 @@ export class EventHandlers extends BaseModule {
         } else if (this._matchesShortcut(e, 'ui', 'toggleAssetsPanel')) {
             e.preventDefault();
             this.togglePanel('assetsPanel');
+        } else if (this._matchesShortcut(e, 'ui', 'toggleConsole')) {
+            e.preventDefault();
+            this.togglePanel('console');
+        } else if (this._matchesShortcut(e, 'ui', 'toggleStatusBar')) {
+            e.preventDefault();
+            this.togglePanel('statusBar');
+        } else if (this._matchesShortcut(e, 'editor', 'toggleFullscreen')) {
+            e.preventDefault();
+            this.toggleViewOption('fullscreen');
+        } else if (this._matchesShortcut(e, 'editor', 'toggleGameMode')) {
+            e.preventDefault();
+            this.toggleViewOption('gameMode');
+        } else if (this._matchesShortcut(e, 'editor', 'toggleSnapToGrid')) {
+            e.preventDefault();
+            this.toggleViewOption('snapToGrid');
+        } else if (this._matchesShortcut(e, 'editor', 'toggleObjectBoundaries')) {
+            e.preventDefault();
+            this.toggleViewOption('objectBoundaries');
+        } else if (this._matchesShortcut(e, 'editor', 'toggleObjectCollisions')) {
+            e.preventDefault();
+            this.toggleViewOption('objectCollisions');
+        } else if (this._matchesShortcut(e, 'editor', 'openProjectSettings')) {
+            e.preventDefault();
+            if (typeof this.editor.openProjectSettings === 'function') this.editor.openProjectSettings();
+        } else if (this._matchesShortcut(e, 'editor', 'openSettings')) {
+            e.preventDefault();
+            if (typeof this.editor.openSettings === 'function') this.editor.openSettings();
         } else if (this._matchesShortcut(e, 'editor', 'renameObject')) {
             e.preventDefault();
             this.renameSelectedObject();
@@ -651,7 +683,7 @@ export class EventHandlers extends BaseModule {
         this.applyViewOption(option, newState);
         
         // Close the menu
-        document.querySelectorAll('#menu-level > div, #menu-view > div, #menu-settings > div').forEach(d => d.classList.add('hidden'));
+        document.querySelectorAll('#menu-file > div, #menu-view > div, #menu-settings > div').forEach(d => d.classList.add('hidden'));
     }
 
     /**
@@ -688,7 +720,7 @@ export class EventHandlers extends BaseModule {
         this.applyPanelVisibility(panel, newState);
 
         // Close the menu
-        document.querySelectorAll('#menu-level > div, #menu-view > div, #menu-settings > div').forEach(d => d.classList.add('hidden'));
+        document.querySelectorAll('#menu-file > div, #menu-view > div, #menu-settings > div').forEach(d => d.classList.add('hidden'));
     }
 
     applyViewOption(option, enabled) {

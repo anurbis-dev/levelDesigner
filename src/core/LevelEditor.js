@@ -11,6 +11,7 @@ import { AssetPanel } from '../ui/AssetPanel.js';
 import { DetailsPanel } from '../ui/DetailsPanel.js';
 import { OutlinerPanel } from '../ui/OutlinerPanel.js';
 import { LayersPanel } from '../ui/LayersPanel.js';
+import { LevelsPanel } from '../ui/LevelsPanel.js';
 import { SettingsPanel } from '../ui/SettingsPanel.js';
 import { Toolbar } from '../ui/Toolbar.js';
 import { Level } from '../models/Level.js';
@@ -31,6 +32,8 @@ import { HistoryOperations } from './HistoryOperations.js';
 import { LayerOperations } from './LayerOperations.js';
 import { ViewportOperations } from './ViewportOperations.js';
 import { LevelFileOperations } from './LevelFileOperations.js';
+import { LevelsManager } from './LevelsManager.js';
+import { ProjectFileOperations } from './ProjectFileOperations.js';
 import { MenuManager } from '../managers/MenuManager.js';
 import { ContextMenuManager } from '../managers/ContextMenuManager.js';
 import { CanvasContextMenu } from '../ui/CanvasContextMenu.js';
@@ -56,7 +59,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.57.0';
+    static VERSION = '3.58.0';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -91,13 +94,25 @@ export class LevelEditor {
         this.detailsPanel = null;
         this.outlinerPanel = null;
         this.layersPanel = null;
+        this.levelsPanel = null;
         this.settingsPanel = null;
         this.toolbar = null;
         this.statusBar = null;
         this.canvasContextMenu = null;
         
-        // Current level
-        this.level = null;
+        // Multi-level session state (LevelSession per open level, keyed by level id).
+        // `this.level` below is a computed getter/setter resolving into the current
+        // session — see LevelsManager.js and the get/set level() accessors.
+        this.levelSessions = new Map();   // levelId -> LevelSession
+        this.currentLevelId = null;
+        this.levelOrder = [];              // open-tab order
+        this.levelMRU = [];                // most-recently-current order (last = current), fallback pick on closeLevel (Edge Case 2)
+
+        // Project (Phase 7): metadata + serialization for the current set of open
+        // levels — see src/models/Project.js. null until New/Open/Save Project runs
+        // or Project Settings is opened for the first time.
+        this.project = null;
+        this.projectSettingsDialog = null;
 
         // Internal clipboard for copy/cut/paste (array of deep-cloned objects, or null)
         this.clipboard = null;
@@ -120,6 +135,7 @@ export class LevelEditor {
         this.lifecycle.register('cacheManager', this.cacheManager, { priority: 5 });
 
         // Initialize operation modules
+        this.levelsManager = new LevelsManager(this);
         this.eventHandlers = new EventHandlers(this);
         this.mouseHandlers = new MouseHandlers(this);
         this.objectOperations = new ObjectOperations(this);
@@ -130,13 +146,16 @@ export class LevelEditor {
         this.layerOperations = new LayerOperations(this);
         this.viewportOperations = new ViewportOperations(this);
         this.levelFileOperations = new LevelFileOperations(this);
-        
+        this.projectFileOperations = new ProjectFileOperations(this);
+
         // Register core handlers in lifecycle (highest priority - destroyed first)
         this.lifecycle.register('eventHandlers', this.eventHandlers, { priority: 10 });
         this.lifecycle.register('historyOperations', this.historyOperations, { priority: 9 });
         this.lifecycle.register('layerOperations', this.layerOperations, { priority: 8 });
         this.lifecycle.register('viewportOperations', this.viewportOperations, { priority: 7 });
         this.lifecycle.register('levelFileOperations', this.levelFileOperations, { priority: 6 });
+        this.lifecycle.register('projectFileOperations', this.projectFileOperations, { priority: 6 });
+        this.lifecycle.register('levelsManager', this.levelsManager, { priority: 6 });
         
         // Store reference to duplicate render utils
         this.duplicateRenderUtils = duplicateRenderUtils;
@@ -435,20 +454,22 @@ export class LevelEditor {
         const assetsPanel = document.getElementById('assets-panel');
         const detailsPanel = document.getElementById('details-content-panel');
         const outlinerPanel = document.getElementById('outliner-content-panel');
-        const layersPanel = document.getElementById('layers-content-panel');
+        const layersPanel = document.getElementById('layers-only-content-panel');
+        const levelsPanel = document.getElementById('levels-content-panel');
         const toolbarContainer = document.getElementById('toolbar-container');
         const actorPropsPanelContainer = document.getElementById('actor-properties-panel');
 
-        if (!canvas || !assetsPanel || !detailsPanel || !outlinerPanel || !layersPanel || !toolbarContainer) {
+        if (!canvas || !assetsPanel || !detailsPanel || !outlinerPanel || !layersPanel || !levelsPanel || !toolbarContainer) {
             throw new Error('Required DOM elements not found');
         }
-        
+
         return {
             canvas,
             assetsPanel,
             detailsPanel,
             outlinerPanel,
             layersPanel,
+            levelsPanel,
             toolbarContainer,
             actorPropsPanelContainer
         };
@@ -498,22 +519,24 @@ export class LevelEditor {
      * @param {Object} domElements - DOM elements
      */
     initializeUIComponents(domElements) {
-        const { assetsPanel, detailsPanel, outlinerPanel, layersPanel, toolbarContainer } = domElements;
+        const { assetsPanel, detailsPanel, outlinerPanel, layersPanel, levelsPanel, toolbarContainer } = domElements;
 
         // Initialize UI panels
         this.assetPanel = new AssetPanel(assetsPanel, this.assetManager, this.stateManager, this);
         this.detailsPanel = new DetailsPanel(detailsPanel, this.stateManager, this);
         this.outlinerPanel = new OutlinerPanel(outlinerPanel, this.stateManager, this);
+        this.levelsPanel = new LevelsPanel(levelsPanel, this.stateManager, this);
         this.layersPanel = new LayersPanel(layersPanel, this.stateManager, this);
         this.settingsPanel = new SettingsPanel(document.body, this.configManager, this);
-        
+
         // Initialize Asset Properties Window
         this.actorPropertiesWindow = new ActorPropertiesWindow(this.stateManager, this);
-        
+
         // Register all UI components in lifecycle manager
         this.lifecycle.register('assetPanel', this.assetPanel, { priority: 3 });
         this.lifecycle.register('detailsPanel', this.detailsPanel, { priority: 3 });
         this.lifecycle.register('outlinerPanel', this.outlinerPanel, { priority: 3 });
+        this.lifecycle.register('levelsPanel', this.levelsPanel, { priority: 3 });
         this.lifecycle.register('layersPanel', this.layersPanel, { priority: 3 });
         this.lifecycle.register('settingsPanel', this.settingsPanel, { priority: 2 });
         this.lifecycle.register('actorPropertiesWindow', this.actorPropertiesWindow, { priority: 2 });
@@ -1358,6 +1381,7 @@ export class LevelEditor {
 
         this.detailsPanel.render();
         this.outlinerPanel.render();
+        this.levelsPanel.render();
         this.layersPanel.render();
         
         // Update level stats panel (includes Player Start restoration logic)
@@ -1669,8 +1693,39 @@ export class LevelEditor {
         return this.levelFileOperations.saveLevelAs();
     }
 
+    async closeLevel() {
+        return this.levelsManager.closeLevel(this.currentLevelId);
+    }
+
     async importAssets() {
         return this.levelFileOperations.importAssets();
+    }
+
+    /**
+     * Project operations (delegated to ProjectFileOperations) — Phase 7 of multi-level support.
+     */
+    async newProject() {
+        return this.projectFileOperations.newProject();
+    }
+
+    async openProject() {
+        return this.projectFileOperations.openProject();
+    }
+
+    async saveProject() {
+        return this.projectFileOperations.saveProject();
+    }
+
+    async saveProjectAs() {
+        return this.projectFileOperations.saveProjectAs();
+    }
+
+    async openProjectSettings() {
+        if (!this.projectSettingsDialog) {
+            const { ProjectSettingsDialog } = await import('../ui/ProjectSettingsDialog.js');
+            this.projectSettingsDialog = new ProjectSettingsDialog(this);
+        }
+        this.projectSettingsDialog.show();
     }
 
     /**
@@ -1759,6 +1814,41 @@ export class LevelEditor {
      */
     getLevel() {
         return this.level;
+    }
+
+    /**
+     * Documented alias of getLevel()/this.level for new multi-level-aware code
+     * (LevelsManager, LevelsPanel, RenderOperations). Existing call sites keep
+     * using getLevel()/this.level unchanged.
+     */
+    getCurrentLevel() {
+        return this.level;
+    }
+
+    /**
+     * Computed getter: resolves to the current LevelSession's Level instance.
+     * Kept as `this.level` (not migrated to `getLevel()` everywhere) for
+     * backward compatibility with ~300 existing call sites.
+     */
+    get level() {
+        const session = this.levelSessions.get(this.currentLevelId);
+        return session ? session.level : null;
+    }
+
+    /**
+     * Back-compat setter for `editor.level = someLevel` call sites
+     * (LevelFileOperations.newLevel()/openLevel(), destroy()). Replaces the
+     * entire set of open sessions with a single new one (or none, for `null`) —
+     * mirrors pre-multi-level "open one level, replacing whatever was open" semantics.
+     */
+    set level(newLevel) {
+        this.levelSessions.clear();
+        this.levelOrder = [];
+        this.levelMRU = [];
+        this.currentLevelId = null;
+        if (newLevel) {
+            this.levelsManager.addLevel(newLevel, { makeCurrent: true, visible: true });
+        }
     }
 
     // Delegate methods to appropriate modules
@@ -2249,12 +2339,9 @@ export class LevelEditor {
         this.clearCaches();
         this.clearSelectableObjectsCache();
 
-        // Clear managers
-        if (this.level) {
-            this.level.clearLayerCountsCache();
-            this.level.clearObjectsIndex();
-            this.level = null;
-        }
+        // Level session cleanup (cache clearing per open session, currentLevelId reset)
+        // already happened in LevelsManager.destroy(), run above as part of
+        // lifecycle.destroyAll() — by this point `this.level` already resolves to null.
 
         this.stateManager = null;
         this.fileManager = null;
@@ -2268,8 +2355,20 @@ export class LevelEditor {
         this.detailsPanel = null;
         this.outlinerPanel = null;
         this.layersPanel = null;
+        this.levelsPanel = null;
         this.settingsPanel = null;
         this.actorPropertiesWindow = null;
+        // Lazily created (openProjectSettings()), not lifecycle-registered — destroy it
+        // directly rather than relying on lifecycle.destroyAll() above.
+        if (this.projectSettingsDialog) {
+            try {
+                this.projectSettingsDialog.destroy();
+            } catch (error) {
+                Logger.lifecycle.warn('Error destroying projectSettingsDialog:', error);
+            }
+        }
+        this.projectSettingsDialog = null;
+        this.project = null;
         this.toolbar = null;
         this.statusBar = null;
         Logger.setStatusCallback(null);
@@ -2284,7 +2383,9 @@ export class LevelEditor {
         this.groupOperations = null;
         this.renderOperations = null;
         this.duplicateOperations = null;
-        
+        this.levelsManager = null;
+        this.projectFileOperations = null;
+
         // Clear lifecycle
         this.lifecycle = null;
         

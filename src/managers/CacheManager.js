@@ -26,26 +26,41 @@ export class CacheManager {
     }
 
     /**
+     * Namespace a bare objId/layerId by the current level, so that two open levels
+     * whose independent id counters both produced e.g. "1" can never collide in these
+     * caches. All of objectCache/topLevelObjectCache/effectiveLayerCache/_layerToObjectIds
+     * are current-level-scoped by design (Outliner/DetailsPanel/ObjectOperations etc. only
+     * ever read/write the current level) — keying by editor.currentLevelId at lookup time
+     * makes that scoping explicit without needing to change any of their many call sites.
+     * @param {string} id - bare object or layer id
+     * @returns {string} namespaced cache key
+     */
+    _namespacedKey(id) {
+        return `${this.editor.currentLevelId}:${id}`;
+    }
+
+    /**
      * Get object from cache or find it in level
      * @param {string} objId - Object ID to find
      * @returns {Object|null} Found object or null
      */
     getCachedObject(objId) {
-        if (this.objectCache.has(objId)) {
-            return this.objectCache.get(objId);
+        const key = this._namespacedKey(objId);
+        if (this.objectCache.has(key)) {
+            return this.objectCache.get(key);
         }
 
         // Try to find using fast index lookup first
         const obj = this.editor.level.findObjectById(objId);
         if (obj) {
-            this.objectCache.set(objId, obj);
+            this.objectCache.set(key, obj);
             return obj;
         }
 
         // Fallback: try to find in top-level objects (shouldn't reach here normally)
         const fallbackObj = this.editor.level.objects.find(o => o.id === objId);
         if (fallbackObj) {
-            this.objectCache.set(objId, fallbackObj);
+            this.objectCache.set(key, fallbackObj);
         }
         return fallbackObj || null;
     }
@@ -56,13 +71,14 @@ export class CacheManager {
      * @returns {Object|null} Top-level object or null
      */
     getCachedTopLevelObject(objId) {
-        if (this.topLevelObjectCache.has(objId)) {
-            return this.topLevelObjectCache.get(objId);
+        const key = this._namespacedKey(objId);
+        if (this.topLevelObjectCache.has(key)) {
+            return this.topLevelObjectCache.get(key);
         }
 
         const topLevelObj = this.editor.findTopLevelObject(objId);
         if (topLevelObj) {
-            this.topLevelObjectCache.set(objId, topLevelObj);
+            this.topLevelObjectCache.set(key, topLevelObj);
         }
         return topLevelObj;
     }
@@ -73,19 +89,23 @@ export class CacheManager {
      * @returns {string} Effective layer ID
      */
     getCachedEffectiveLayerId(obj) {
-        if (this.effectiveLayerCache.has(obj.id)) {
-            return this.effectiveLayerCache.get(obj.id);
+        const key = this._namespacedKey(obj.id);
+        if (this.effectiveLayerCache.has(key)) {
+            return this.effectiveLayerCache.get(key);
         }
 
         // Calculate effective layer ID (with inheritance)
-        const effectiveLayerId = this.editor.renderOperations 
-            ? this.editor.renderOperations.getEffectiveLayerId(obj) 
+        const effectiveLayerId = this.editor.renderOperations
+            ? this.editor.renderOperations.getEffectiveLayerId(obj)
             : obj.layerId;
-        
-        this.effectiveLayerCache.set(obj.id, effectiveLayerId);
-        // Reverse index: layerId → Set<objId> (used by smartCacheInvalidation for per-layer eviction)
-        let layerSet = this._layerToObjectIds.get(effectiveLayerId);
-        if (!layerSet) { layerSet = new Set(); this._layerToObjectIds.set(effectiveLayerId, layerSet); }
+
+        this.effectiveLayerCache.set(key, effectiveLayerId);
+        // Reverse index: namespaced layerId → Set<objId> (used by smartCacheInvalidation
+        // for per-layer eviction) — objId stored bare since it's only ever deleted back
+        // out of effectiveLayerCache via the same _namespacedKey() below.
+        const layerKey = this._namespacedKey(effectiveLayerId);
+        let layerSet = this._layerToObjectIds.get(layerKey);
+        if (!layerSet) { layerSet = new Set(); this._layerToObjectIds.set(layerKey, layerSet); }
         layerSet.add(obj.id);
         return effectiveLayerId;
     }
@@ -106,9 +126,10 @@ export class CacheManager {
      * @param {string} objId - Object ID to invalidate
      */
     invalidateObjectCaches(objId) {
-        this.objectCache.delete(objId);
-        this.topLevelObjectCache.delete(objId);
-        this.effectiveLayerCache.delete(objId);
+        const key = this._namespacedKey(objId);
+        this.objectCache.delete(key);
+        this.topLevelObjectCache.delete(key);
+        this.effectiveLayerCache.delete(key);
     }
 
     /**
@@ -138,7 +159,10 @@ export class CacheManager {
         const selectableInViewport = new Set();
 
         const renderOps = this.editor.renderOperations;
-        if (renderOps && renderOps.spatialIndex.size > 0) {
+        // Check the CURRENT level's own entry specifically — spatialIndex is now
+        // Map<levelId,...> (multi-level), so a non-empty Map no longer implies the
+        // current level's index exists (another open level's might be the only one built).
+        if (renderOps && renderOps.spatialIndex.has(this.editor.level?.id)) {
             // Fast path: spatial index already knows which objects are in viewport (O(k), k ≪ N)
             const viewportObjects = renderOps.getVisibleObjectsSpatial(camera);
             viewportObjects.forEach(item => {
@@ -225,10 +249,11 @@ export class CacheManager {
         // If layer IDs are affected, evict only objects that belong to those layers
         if (layerIds.size > 0) {
             layerIds.forEach(layerId => {
-                const objIds = this._layerToObjectIds.get(layerId);
+                const layerKey = this._namespacedKey(layerId);
+                const objIds = this._layerToObjectIds.get(layerKey);
                 if (objIds) {
-                    objIds.forEach(objId => this.effectiveLayerCache.delete(objId));
-                    this._layerToObjectIds.delete(layerId);
+                    objIds.forEach(objId => this.effectiveLayerCache.delete(this._namespacedKey(objId)));
+                    this._layerToObjectIds.delete(layerKey);
                 } else {
                     // Reverse index not warmed for this layer — full clear as safe fallback
                     this.effectiveLayerCache.clear();

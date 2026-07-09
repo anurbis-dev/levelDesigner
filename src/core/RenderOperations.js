@@ -19,9 +19,10 @@ export class RenderOperations extends BaseModule {
         this.visibleObjectsCache = new Map();
         this.cacheTimeout = PERFORMANCE.CACHE_TIMEOUT_MS;
 
-        // Layer visibility cache for performance
-        this.visibleLayersCache = null;
-        this.layerVisibilityCacheTimestamp = 0;
+        // Layer visibility cache for performance — Map<levelId, {layerIds: Set, timestamp}>,
+        // namespaced per level so a layer-visibility change in one open level never leaks
+        // into (or gets clobbered by) another's cached result — see getVisibleLayerIds().
+        this.visibleLayersCache = new Map();
 
         // Пространственный индекс для быстрого поиска объектов в области видимости
         this.spatialIndex = new Map(); // levelId -> {grid, bounds, lastUpdate}
@@ -50,9 +51,9 @@ export class RenderOperations extends BaseModule {
      * Построение пространственного индекса для быстрого поиска объектов
      * O(N) - вызывается при изменении уровня или добавлении/удалении объектов
      */
-    buildSpatialIndex() {
+    buildSpatialIndex(level = this.editor.level) {
         // Проверки на существование необходимых объектов
-        if (!this.editor || !this.editor.level || !this.editor.level.objects) {
+        if (!this.editor || !level || !level.objects) {
             Logger.render.warn('Cannot build spatial index: missing required objects');
             return;
         }
@@ -63,11 +64,11 @@ export class RenderOperations extends BaseModule {
         }
 
         // Get level ID
-        const levelId = this.editor.level?.id || 'default';
+        const levelId = level?.id || 'default';
 
         this.isBuildingSpatialIndex = true;
 
-        const objects = this.editor.level?.objects || [];
+        const objects = level?.objects || [];
 
         // Создаем сетку для индексации
         const grid = new Map(); // 'x,y' -> Set of objects
@@ -80,8 +81,9 @@ export class RenderOperations extends BaseModule {
                 return; // Тихо пропускаем невидимые объекты
             }
 
-            // Получаем мировые границы объекта
-            const bounds = this.editor.objectOperations.getObjectWorldBounds(obj);
+            // Получаем мировые границы объекта (в дереве ПЕРЕДАННОГО level, не обязательно
+            // текущего — critical для composited spatial index не-текущих видимых уровней)
+            const bounds = this.editor.objectOperations.getObjectWorldBounds(obj, [], level);
 
             if (!bounds) {
                 return;
@@ -162,15 +164,19 @@ export class RenderOperations extends BaseModule {
     }
 
     /**
-     * Invalidate spatial index for a specific level or all levels
-     * @param {string} levelId - Level ID to invalidate, or null to invalidate all
+     * Invalidate spatial index for a level (defaults to the current level — this is
+     * what every existing call site actually wants: an edit that just happened on
+     * editor.level). Pass an explicit levelId to invalidate a different/closed level
+     * (e.g. LevelsManager.closeLevel(), Phase 5).
+     *
+     * NOTE: this used to be two separate method definitions with the same name (a
+     * duplicate silently shadowed the other) — merged into one during Phase 3's
+     * multi-level render work since it directly overlaps with spatial-index-per-level.
+     * @param {string|null} levelId - Level ID to invalidate; defaults to editor.level's id
      */
     invalidateSpatialIndex(levelId = null) {
-        if (levelId) {
-            this.spatialIndex.delete(levelId);
-        } else {
-            this.spatialIndex.clear();
-        }
+        const targetId = levelId || this.editor?.level?.id || 'default';
+        this.spatialIndex.delete(targetId);
         this.isBuildingSpatialIndex = false; // Reset flag in case build was interrupted
     }
 
@@ -186,9 +192,9 @@ export class RenderOperations extends BaseModule {
      * Быстрый поиск объектов в области видимости с помощью пространственного индекса
      * O(k) - где k - количество ячеек сетки в области видимости
      */
-    getVisibleObjectsSpatial(camera) {
+    getVisibleObjectsSpatial(camera, level = this.editor.level) {
         // Проверки на существование необходимых объектов
-        if (!this.editor || !this.editor.level || !this.editor.level.objects) {
+        if (!this.editor || !level || !level.objects) {
             return [];
         }
 
@@ -207,24 +213,26 @@ export class RenderOperations extends BaseModule {
             return [];
         }
 
-        if (this._spatialIndexDirty) {
-            this.buildSpatialIndex();
+        // _spatialIndexDirty only ever tracks the current level's index going stale
+        // (see markSpatialIndexDirty callers) — only rebuild eagerly for that case.
+        if (this._spatialIndexDirty && level === this.editor.level) {
+            this.buildSpatialIndex(level);
             this._spatialIndexDirty = false;
         }
 
-        const levelId = this.editor.level?.id || 'default';
+        const levelId = level?.id || 'default';
         let spatialData = this.spatialIndex.get(levelId);
 
         if (!spatialData) {
             // Попытка автоматически построить индекс, если он не найден
             try {
-                this.buildSpatialIndex();
+                this.buildSpatialIndex(level);
                 spatialData = this.spatialIndex.get(levelId);
                 if (!spatialData) {
-                    return this.getVisibleObjectsRegular(camera);
+                    return this.getVisibleObjectsRegular(camera, level);
                 }
             } catch (error) {
-                return this.getVisibleObjectsRegular(camera);
+                return this.getVisibleObjectsRegular(camera, level);
             }
         }
 
@@ -269,12 +277,12 @@ export class RenderOperations extends BaseModule {
         }
 
         // Фильтруем кандидаты по точным критериям видимости
-        const visibleLayerIds = this.getVisibleLayerIds();
+        const visibleLayerIds = this.getVisibleLayerIds(level);
 
         // Use common method to collect visible objects recursively
         // First filter candidates by layer visibility and basic viewport check
         const filteredCandidates = Array.from(candidates).filter(obj => {
-            const effectiveLayerId = this.getEffectiveLayerId(obj);
+            const effectiveLayerId = this.getEffectiveLayerId(obj, level);
             return visibleLayerIds.has(effectiveLayerId) && obj.visible;
         });
 
@@ -282,7 +290,8 @@ export class RenderOperations extends BaseModule {
         return this.collectVisibleObjectsRecursive(
             filteredCandidates,
             visibleLayerIds,
-            extendedLeft, extendedTop, extendedRight, extendedBottom
+            extendedLeft, extendedTop, extendedRight, extendedBottom,
+            0, 0, level
         );
     }
 
@@ -380,9 +389,12 @@ export class RenderOperations extends BaseModule {
             this.editor.canvasRenderer.ctx.fillRect(0, 0, this.editor.canvasRenderer.canvas.width, this.editor.canvasRenderer.canvas.height);
         }
         
-        // Draw objects with frustum culling
+        // Draw objects with frustum culling — composited across every visible level (see
+        // LevelsManager.getVisibleSessions()), not just the current one. Dimming modes
+        // below (group-edit/isolate/solo) are UI state scoped to the current level only —
+        // they never dim or hide another visible level's objects (plan section 2.2).
         const groupEditMode = this.editor.stateManager.get('groupEditMode');
-        const sortedObjects = this.getVisibleObjects(camera);
+        const currentLevel = this.editor.level;
 
         // In group edit mode, compute selectable + excluded sets once for grayscale pass.
         // Dimming rule (applied per top-level object, which renders its whole subtree):
@@ -406,76 +418,99 @@ export class RenderOperations extends BaseModule {
         // toggleObjectSolo): unlike Isolate, this is a real hide (not a dim) of every other
         // top-level object, matching the eye-icon affordance. Filtering only at the top level
         // means a soloed group's own children render exactly as normal — no special-casing
-        // needed for "the group's children stay visible".
+        // needed for "the group's children stay visible". NOTE: this is global StateManager
+        // state, not per-session (LevelSession.viewState doesn't track it, see Phase 1) — it
+        // only ever filters the current level's own objects (guarded by isCurrent below), so a
+        // stale value from a previous current level can't hide another level's objects, only
+        // fail to filter the (now) current one until re-toggled.
         const soloedTopLevelObjectId = this.editor.stateManager.get('view.soloedTopLevelObjectId');
 
         const ctx = this.editor.canvasRenderer.ctx;
+        const visibleSessions = this.editor.levelsManager.getVisibleSessions();
+        // Compositing order: current level always drawn last / on top, regardless of its
+        // tab position (plan decision, section 12 item 2) — see getVisibleSessionsForRender().
+        const sessionsForRender = this.editor.levelsManager.getVisibleSessionsForRender(visibleSessions);
+        let totalVisibleCount = 0;
 
-        // Check if parallax mode is enabled
-        if (this.parallaxRenderer.isParallaxEnabled()) {
-            // For parallax, we need to convert back to simple objects for compatibility
-            const soloFiltered = soloedTopLevelObjectId
-                ? sortedObjects.filter(item => item.obj.id === soloedTopLevelObjectId)
-                : sortedObjects;
-            const simpleObjects = soloFiltered.map(item => item.obj);
-            this.parallaxRenderer.renderParallaxObjects(simpleObjects, camera);
-        } else {
-            sortedObjects.forEach(item => {
-                const id = item.obj.id;
-                if (soloedTopLevelObjectId && id !== soloedTopLevelObjectId) return;
-                const dimmedByGroupEdit = selectableSet && !selectableSet.has(id) && !excludedSet.has(id);
-                const dimmedByIsolate = isolatedTopLevelIds && !isolatedTopLevelIds.has(id);
-                const dimmed = dimmedByGroupEdit || dimmedByIsolate;
-                if (dimmed) ctx.filter = 'grayscale(1) opacity(0.4)';
-                this.editor.canvasRenderer.drawObject(item.obj, item.parentX, item.parentY);
-                if (dimmed) ctx.filter = 'none';
-            });
-        }
-        
+        sessionsForRender.forEach(session => {
+            const isCurrent = session.level === currentLevel;
+            const levelSortedObjects = this.getVisibleObjects(camera, session.level);
+            totalVisibleCount += levelSortedObjects.length;
+
+            // Check if parallax mode is enabled
+            if (this.parallaxRenderer.isParallaxEnabled()) {
+                // For parallax, we need to convert back to simple objects for compatibility
+                const soloFiltered = (isCurrent && soloedTopLevelObjectId)
+                    ? levelSortedObjects.filter(item => item.obj.id === soloedTopLevelObjectId)
+                    : levelSortedObjects;
+                const simpleObjects = soloFiltered.map(item => item.obj);
+                this.parallaxRenderer.renderParallaxObjects(simpleObjects, camera, session.level);
+            } else {
+                levelSortedObjects.forEach(item => {
+                    const id = item.obj.id;
+                    if (isCurrent && soloedTopLevelObjectId && id !== soloedTopLevelObjectId) return;
+                    const dimmedByGroupEdit = isCurrent && selectableSet && !selectableSet.has(id) && !excludedSet.has(id);
+                    const dimmedByIsolate = isCurrent && isolatedTopLevelIds && !isolatedTopLevelIds.has(id);
+                    const dimmed = dimmedByGroupEdit || dimmedByIsolate;
+                    if (dimmed) ctx.filter = 'grayscale(1) opacity(0.4)';
+                    this.editor.canvasRenderer.drawObject(item.obj, item.parentX, item.parentY);
+                    if (dimmed) ctx.filter = 'none';
+                });
+            }
+        });
+
+        // All current-level-only overlays below (boundaries/collisions/selection/hierarchy
+        // highlight/group-edit-frame/duplicate-ghosts) only make sense if the current level
+        // itself is actually being drawn — otherwise they'd float over objects that were
+        // never rendered this frame (current level hidden via its own eye icon).
+        const currentSessionVisible = visibleSessions.some(session => session.level === currentLevel);
+
         // Draw object boundaries if enabled
         const showObjectBoundaries = this.editor.stateManager.get('view.objectBoundaries');
-        if (showObjectBoundaries) {
+        if (showObjectBoundaries && currentSessionVisible) {
             this.drawObjectBoundaries();
         }
-        
+
         // Draw object collisions if enabled
         const showObjectCollisions = this.editor.stateManager.get('view.objectCollisions');
-        if (showObjectCollisions) {
+        if (showObjectCollisions && currentSessionVisible) {
             this.drawObjectCollisions();
         }
-        
-        // Draw selection
-        this.drawSelection();
 
-        // If a single group is selected, highlight its nested groups with fading
-        const selected = this.editor.stateManager.get('selectedObjects');
-        if (selected && selected.size === 1) {
-            const selId = Array.from(selected)[0];
-            const selObj = this.editor.level.findObjectById(selId);
-            if (selObj && selObj.type === 'group') {
-                this.drawHierarchyHighlightForGroup(selObj, 0);
+        if (currentSessionVisible) {
+            // Draw selection
+            this.drawSelection();
+
+            // If a single group is selected, highlight its nested groups with fading
+            const selected = this.editor.stateManager.get('selectedObjects');
+            if (selected && selected.size === 1) {
+                const selId = Array.from(selected)[0];
+                const selObj = this.editor.level.findObjectById(selId);
+                if (selObj && selObj.type === 'group') {
+                    this.drawHierarchyHighlightForGroup(selObj, 0);
+                }
+            }
+
+            // Draw group edit mode frame
+            this.drawGroupEditFrame();
+
+            // Draw placing objects (duplicates) BEFORE restoreCamera() (world space)
+            const duplicate = this.editor.stateManager.get('duplicate');
+            if (duplicate && duplicate.isActive && Array.isArray(duplicate.objects) && duplicate.objects.length > 0) {
+                // Log only once per duplicate session (optimized to reduce console spam)
+                if (!this._lastRenderState || this._lastRenderState !== 'drawing') {
+                    this._lastRenderState = 'drawing';
+                }
+                this.drawDuplicateObjects(duplicate.objects, camera);
+            } else if (duplicate) {
+                // Log state change only when it changes (optimized to reduce console spam)
+                const currentState = `${duplicate.isActive}_${duplicate.objects?.length || 0}`;
+                if (!this._lastRenderState || this._lastRenderState !== currentState) {
+                    this._lastRenderState = currentState;
+                }
             }
         }
 
-        // Draw group edit mode frame
-        this.drawGroupEditFrame();
-        
-        // Draw placing objects (duplicates) BEFORE restoreCamera() (world space)
-        const duplicate = this.editor.stateManager.get('duplicate');
-        if (duplicate && duplicate.isActive && Array.isArray(duplicate.objects) && duplicate.objects.length > 0) {
-            // Log only once per duplicate session (optimized to reduce console spam)
-            if (!this._lastRenderState || this._lastRenderState !== 'drawing') {
-                this._lastRenderState = 'drawing';
-            }
-            this.drawDuplicateObjects(duplicate.objects, camera);
-        } else if (duplicate) {
-            // Log state change only when it changes (optimized to reduce console spam)
-            const currentState = `${duplicate.isActive}_${duplicate.objects?.length || 0}`;
-            if (!this._lastRenderState || this._lastRenderState !== currentState) {
-                this._lastRenderState = currentState;
-            }
-        }
-        
         // Draw marquee
         if (mouse.marqueeRect) {
             this.editor.canvasRenderer.drawMarquee(mouse.marqueeRect, camera);
@@ -517,7 +552,7 @@ export class RenderOperations extends BaseModule {
 
         // Периодический лог состояния (каждые 500 рендеров)
         if (this.renderCount % 500 === 0) {
-            const visibleCount = sortedObjects.length;
+            const visibleCount = totalVisibleCount;
             Logger.render.info(`🎨 Render #${this.renderCount}: ${visibleCount} visible objects, ${renderTime.toFixed(2)}ms`);
         }
     }
@@ -706,21 +741,22 @@ export class RenderOperations extends BaseModule {
      * Get visible layer IDs for performance optimization
      * @returns {Set<string>} Set of visible layer IDs
      */
-    getVisibleLayerIds() {
+    getVisibleLayerIds(level = this.editor.level) {
         // Проверки на существование необходимых объектов
-        if (!this.editor || !this.editor.level) {
+        if (!this.editor || !level) {
             Logger.render.warn('Cannot get visible layer IDs: level not available');
             return new Set();
         }
 
-        if (this.visibleLayersCache &&
-            performance.now() - this.layerVisibilityCacheTimestamp < this.cacheTimeout) {
-            return this.visibleLayersCache;
+        const levelId = level.id || 'default';
+        const cached = this.visibleLayersCache.get(levelId);
+        if (cached && performance.now() - cached.timestamp < this.cacheTimeout) {
+            return cached.layerIds;
         }
 
         // Get all layers and filter visible ones
         const visibleLayers = new Set();
-        const layers = this.editor.level.getLayersSorted();
+        const layers = level.getLayersSorted();
 
         // Solo (Ctrl+click a layer's eye icon in LayersPanel): if any layer is soloed,
         // only soloed layer(s) render, regardless of their own `visible` flag — non-
@@ -734,20 +770,27 @@ export class RenderOperations extends BaseModule {
             }
         });
 
-        // Cache the result
-        this.visibleLayersCache = visibleLayers;
-        this.layerVisibilityCacheTimestamp = performance.now();
+        // Cache the result, keyed by levelId — a layer-visibility change in one level
+        // must never serve stale (or worse, wrong-level) results for another.
+        this.visibleLayersCache.set(levelId, { layerIds: visibleLayers, timestamp: performance.now() });
 
         return visibleLayers;
     }
 
     /**
-     * Invalidate layer visibility cache (call when layer visibility changes)
+     * Invalidate layer visibility cache (call when layer visibility changes).
+     * @param {string|null} levelId - Level whose cache to drop; defaults to the current
+     *   level (layer visibility edits only ever happen on editor.level). Pass null
+     *   explicitly to drop every level's entry.
      */
-    invalidateLayerVisibilityCache() {
-        this.visibleLayersCache = null;
-        this.layerVisibilityCacheTimestamp = 0;
+    invalidateLayerVisibilityCache(levelId = this.editor.level?.id) {
+        if (levelId) {
+            this.visibleLayersCache.delete(levelId);
+        } else {
+            this.visibleLayersCache.clear();
+        }
         // Also invalidate visible objects cache since layer visibility affects it
+        // (full clear, not per-level: cheap to recompute, and keeps this call simple/safe)
         this.visibleObjectsCache.clear();
         // Invalidate selectable objects cache as well
         this.editor.clearSelectableObjectsCache();
@@ -783,28 +826,17 @@ export class RenderOperations extends BaseModule {
     }
 
     /**
-     * Invalidate spatial index for current level
-     * Call when object positions or structure changes
-     */
-    invalidateSpatialIndex() {
-        const levelId = this.editor?.level?.id || 'default';
-        this.spatialIndex.delete(levelId);
-        // Force rebuild on next access
-        this.isBuildingSpatialIndex = false;
-    }
-
-    /**
      * Get objects visible in the current viewport (frustum culling) with caching
      */
     /**
      * Common method to recursively collect visible objects with their parent positions
      */
-    collectVisibleObjectsRecursive(objects, visibleLayerIds, left, top, right, bottom, parentX = 0, parentY = 0) {
+    collectVisibleObjectsRecursive(objects, visibleLayerIds, left, top, right, bottom, parentX = 0, parentY = 0, level = this.editor.level) {
         const result = [];
 
         objects.forEach(obj => {
             // Check if object's effective layer is visible (considering inheritance from parent groups)
-            const effectiveLayerId = this.getEffectiveLayerId(obj);
+            const effectiveLayerId = this.getEffectiveLayerId(obj, level);
             if (!visibleLayerIds.has(effectiveLayerId)) {
                 return;
             }
@@ -846,9 +878,9 @@ export class RenderOperations extends BaseModule {
     /**
      * Обычный метод поиска видимых объектов (fallback)
      */
-    getVisibleObjectsRegular(camera) {
+    getVisibleObjectsRegular(camera, level = this.editor.level) {
         // Проверки на существование необходимых объектов
-        if (!this.editor || !this.editor.level || !this.editor.level.objects) {
+        if (!this.editor || !level || !level.objects) {
             return [];
         }
 
@@ -887,13 +919,14 @@ export class RenderOperations extends BaseModule {
         const extendedBottom = viewportBottom + padding;
         
         // Get visible layer IDs for performance
-        const visibleLayerIds = this.getVisibleLayerIds();
+        const visibleLayerIds = this.getVisibleLayerIds(level);
 
         // Use common method to collect all visible objects recursively
         const visibleObjectsWithPosition = this.collectVisibleObjectsRecursive(
-            this.editor.level.objects,
+            level.objects,
             visibleLayerIds,
-            extendedLeft, extendedTop, extendedRight, extendedBottom
+            extendedLeft, extendedTop, extendedRight, extendedBottom,
+            0, 0, level
         );
 
         return visibleObjectsWithPosition;
@@ -907,16 +940,17 @@ export class RenderOperations extends BaseModule {
      * delete/duplicate flicker bug: parallaxKey was appended here but omitted from the
      * two clear-by-camera methods, so those deletes never matched a real entry).
      */
-    _buildVisibleObjectsCacheKey(camera) {
+    _buildVisibleObjectsCacheKey(camera, level = this.editor.level) {
         const parallaxEnabled = this.parallaxRenderer.isParallaxEnabled();
         const parallaxState = parallaxEnabled ? this.parallaxRenderer.getParallaxState() : null;
         const parallaxKey = parallaxState?.startPosition ? `_${parallaxState.startPosition.x.toFixed(1)},${parallaxState.startPosition.y.toFixed(1)}` : '_off';
-        return `${camera.x.toFixed(1)},${camera.y.toFixed(1)},${camera.zoom.toFixed(2)}${parallaxKey}`;
+        const levelId = level?.id || 'default';
+        return `${levelId}_${camera.x.toFixed(1)},${camera.y.toFixed(1)},${camera.zoom.toFixed(2)}${parallaxKey}`;
     }
 
-    getVisibleObjects(camera) {
+    getVisibleObjects(camera, level = this.editor.level) {
         // Проверки на существование необходимых объектов
-        if (!this.editor || !this.editor.level || !this.editor.level.objects) {
+        if (!this.editor || !level || !level.objects) {
             return [];
         }
 
@@ -936,7 +970,7 @@ export class RenderOperations extends BaseModule {
         }
 
         const currentTime = performance.now();
-        const cameraKey = this._buildVisibleObjectsCacheKey(camera);
+        const cameraKey = this._buildVisibleObjectsCacheKey(camera, level);
 
         // Check cache first
         if (this.visibleObjectsCache.has(cameraKey)) {
@@ -949,10 +983,10 @@ export class RenderOperations extends BaseModule {
         // Пытаемся использовать пространственный индекс для быстрого поиска
         let visibleObjects;
         try {
-            visibleObjects = this.getVisibleObjectsSpatial(camera);
+            visibleObjects = this.getVisibleObjectsSpatial(camera, level);
         } catch (error) {
             Logger.render.warn('Spatial index search failed, falling back to regular method', error);
-            visibleObjects = this.getVisibleObjectsRegular(camera);
+            visibleObjects = this.getVisibleObjectsRegular(camera, level);
         }
 
         // Sort objects by stacking order for proper layering (behind first, front last).
@@ -960,9 +994,9 @@ export class RenderOperations extends BaseModule {
         // TTL/invalidation as visibility (see clearVisibleObjectsCache - "objects or structure change").
         // Index built once per sort instead of per-comparison (see Level.buildStackOrderIndex) —
         // avoids an O(N) tree search inside every one of the O(M log M) comparator calls.
-        const stackOrderIndex = this.editor.level.buildStackOrderIndex();
+        const stackOrderIndex = level.buildStackOrderIndex();
         visibleObjects = visibleObjects.slice().sort((a, b) =>
-            this.editor.level.compareStackOrderIndexed(a.obj, b.obj, stackOrderIndex)
+            level.compareStackOrderIndexed(a.obj, b.obj, stackOrderIndex)
         );
 
         // Cache the result
@@ -1377,7 +1411,7 @@ export class RenderOperations extends BaseModule {
      * @param {GameObject} obj - Object to get layer ID for
      * @returns {string} Effective layer ID
      */
-    getEffectiveLayerId(obj) {
+    getEffectiveLayerId(obj, level = this.editor.level) {
         // Проверки на существование необходимых объектов
         if (!obj || !obj.id) {
             Logger.render.warn('Cannot get effective layer ID: object or object.id not available');
@@ -1389,36 +1423,13 @@ export class RenderOperations extends BaseModule {
             return null;
         }
 
-        // Use cached result if available
-        if (this.editor.effectiveLayerCache && this.editor.effectiveLayerCache.has(obj.id)) {
-            return this.editor.effectiveLayerCache.get(obj.id);
-        }
-
-        let effectiveLayerId;
-
         // If object has its own layerId, use it
         if (obj.layerId) {
-            effectiveLayerId = obj.layerId;
-        } else {
-            // Try to find the object in the hierarchy and get parent's layerId
-            effectiveLayerId = this.findParentLayerId(obj);
+            return obj.layerId;
         }
 
-        // Cache the result
-        if (this.editor.effectiveLayerCache) {
-            this.editor.effectiveLayerCache.set(obj.id, effectiveLayerId);
-        }
-
-        return effectiveLayerId;
-    }
-
-    /**
-     * Clear the effective layer ID cache
-     */
-    clearEffectiveLayerCache() {
-        if (this.editor && this.editor.cacheManager) {
-            this.editor.cacheManager.effectiveLayerCache.clear();
-        }
+        // Try to find the object in the hierarchy and get parent's layerId
+        return this.findParentLayerId(obj, level);
     }
 
     /**
@@ -1427,7 +1438,7 @@ export class RenderOperations extends BaseModule {
      */
     clearEffectiveLayerCacheForObject(objId) {
         if (this.editor && this.editor.cacheManager) {
-            this.editor.cacheManager.effectiveLayerCache.delete(objId);
+            this.editor.cacheManager.effectiveLayerCache.delete(this.editor.cacheManager._namespacedKey(objId));
         }
     }
 
@@ -1436,18 +1447,18 @@ export class RenderOperations extends BaseModule {
      * @param {Object} obj - Object to find parent layer for
      * @returns {string} Parent layer ID or main layer ID
      */
-    findParentLayerId(obj) {
+    findParentLayerId(obj, level = this.editor.level) {
         // First check if object is at top level
-        const topLevelObject = this.editor.level.objects.find(topObj => topObj.id === obj.id);
+        const topLevelObject = level.objects.find(topObj => topObj.id === obj.id);
         if (topLevelObject) {
             // Object is at top level, use its own layerId or main layer
-            return topLevelObject.layerId || this.editor.level.getMainLayerId();
+            return topLevelObject.layerId || level.getMainLayerId();
         }
 
         // Search recursively in all groups
-        for (const topLevelObj of this.editor.level.objects) {
+        for (const topLevelObj of level.objects) {
             if (topLevelObj.type === 'group') {
-                const result = this.searchInGroupForLayerId(topLevelObj, obj);
+                const result = this.searchInGroupForLayerId(topLevelObj, obj, undefined, level);
                 if (result) {
                     return result;
                 }
@@ -1455,7 +1466,7 @@ export class RenderOperations extends BaseModule {
         }
 
         // If not found in any group, use main layer
-        return this.editor.level.getMainLayerId();
+        return level.getMainLayerId();
     }
 
     /**
@@ -1464,7 +1475,7 @@ export class RenderOperations extends BaseModule {
      * @param {GameObject} targetObj - Object to find
      * @returns {string|null} Parent's layerId or null if not found
      */
-    searchInGroupForLayerId(group, targetObj, visitedGroups = new Set()) {
+    searchInGroupForLayerId(group, targetObj, visitedGroups = new Set(), level = this.editor.level) {
         if (!group.children) return null;
 
         // Prevent infinite recursion
@@ -1481,13 +1492,13 @@ export class RenderOperations extends BaseModule {
                     return group.layerId;
                 } else {
                     // If group doesn't have layerId, find its parent's layerId
-                    return this.findParentLayerId(group);
+                    return this.findParentLayerId(group, level);
                 }
             }
 
             // Search recursively in child groups
             if (child.type === 'group') {
-                const result = this.searchInGroupForLayerId(child, targetObj, visitedGroups);
+                const result = this.searchInGroupForLayerId(child, targetObj, visitedGroups, level);
                 if (result) return result;
             }
         }

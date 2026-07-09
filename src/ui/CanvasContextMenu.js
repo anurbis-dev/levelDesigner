@@ -26,6 +26,7 @@
 import { BaseContextMenu } from './BaseContextMenu.js';
 import { Logger } from '../utils/Logger.js';
 import { CommandAvailability } from '../utils/CommandAvailability.js';
+import { ShortcutFormatter } from '../utils/ShortcutFormatter.js';
 
 export class CanvasContextMenu extends BaseContextMenu {
     constructor(canvasElement, levelEditor, callbacks = {}) {
@@ -175,6 +176,20 @@ export class CanvasContextMenu extends BaseContextMenu {
     }
 
     /**
+     * Resolve a shortcuts.json binding (shortcuts.<category>.<action>) to its display label
+     * (e.g. "Ctrl+C"), the same source ShortcutFormatter/MenuManager use for nav-menu items —
+     * so a rebind via Settings > Hotkeys is reflected here too, since this runs fresh on every
+     * menu open (see createMenuItem()'s function-valued `shortcut` handling).
+     * @param {string} category
+     * @param {string} action
+     * @returns {string}
+     */
+    resolveShortcut(category, action) {
+        const shortcut = this.levelEditor?.configManager?.getShortcuts?.()?.[category]?.[action];
+        return ShortcutFormatter.format(shortcut);
+    }
+
+    /**
      * Setup menu items based on context
      * Structure:
      * - Object operations (Copy, Cut, Paste, Duplicate, Delete, Group, Ungroup)
@@ -184,32 +199,39 @@ export class CanvasContextMenu extends BaseContextMenu {
     setupMenuItems() {
         // Object operations (work with selected objects)
         this.addMenuItem('Copy', '📋', () => this.callbacks.onCopy(), {
-            disabled: (context) => !CommandAvailability.check('copy', this.levelEditor)
+            disabled: (context) => !CommandAvailability.check('copy', this.levelEditor),
+            shortcut: () => this.resolveShortcut('editor', 'copy')
         });
 
         this.addMenuItem('Cut', '✂️', () => this.callbacks.onCut(), {
-            disabled: (context) => !CommandAvailability.check('cut', this.levelEditor)
+            disabled: (context) => !CommandAvailability.check('cut', this.levelEditor),
+            shortcut: () => this.resolveShortcut('editor', 'cut')
         });
 
         this.addMenuItem('Paste', '📌', () => this.callbacks.onPaste(), {
-            disabled: (context) => !CommandAvailability.check('paste', this.levelEditor)
+            disabled: (context) => !CommandAvailability.check('paste', this.levelEditor),
+            shortcut: () => this.resolveShortcut('editor', 'paste')
         });
 
         this.addMenuItem('Duplicate', '🔄', () => this.callbacks.onDuplicate(), {
-            disabled: (context) => !CommandAvailability.check('duplicate', this.levelEditor)
+            disabled: (context) => !CommandAvailability.check('duplicate', this.levelEditor),
+            shortcut: () => this.resolveShortcut('editor', 'duplicate')
         });
 
         this.addMenuItem('Delete', '🗑️', () => this.callbacks.onDelete(), {
-            disabled: (context) => !CommandAvailability.check('delete', this.levelEditor)
+            disabled: (context) => !CommandAvailability.check('delete', this.levelEditor),
+            shortcut: () => this.resolveShortcut('editor', 'delete')
         });
 
         // Group operations
         this.addMenuItem('Group', '📦', () => this.callbacks.onGroup(), {
-            disabled: (context) => !CommandAvailability.check('groupSelected', this.levelEditor)
+            disabled: (context) => !CommandAvailability.check('groupSelected', this.levelEditor),
+            shortcut: () => this.resolveShortcut('editor', 'groupObjects')
         });
 
         this.addMenuItem('Ungroup', '📭', () => this.callbacks.onUngroup(), {
-            disabled: (context) => !CommandAvailability.check('ungroupSelected', this.levelEditor)
+            disabled: (context) => !CommandAvailability.check('ungroupSelected', this.levelEditor),
+            shortcut: () => this.resolveShortcut('editor', 'ungroupObjects')
         });
 
         this.addSeparatorWithClass('object-view-separator');

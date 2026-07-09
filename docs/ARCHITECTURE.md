@@ -1,4 +1,4 @@
-# Архитектура Level Editor v3.55.0
+# Архитектура Level Editor v3.57.0 (Phase 7 Project завершена)
 
 **📚 Навигация:**
 - [Development Guide](./DEVELOPMENT_GUIDE.md) - примеры использования
@@ -50,14 +50,19 @@
 - `MenuManager.refreshShortcutLabels()` — перечитывает все `[data-shortcut-key]`-спаны в уже отрисованном DOM меню и обновляет их текст. Вызывается один раз из `MenuManager.initialize()` (защитно, на случай если `ConfigManager` ещё грузился при первом рендере меню) и из `SettingsPanel.saveHotkey()` сразу после того как ребинд уже персистирован через `configManager.set('shortcuts.category.action', ...)` — так подпись в меню сразу отражает новый хоткей без перезагрузки страницы.
 - **Известное ограничение**: ребинд в Settings → Hotkeys обновляет только отображаемую подпись в меню. `EventHandlers.handleKeyDown` — хардкод-цепочка `if/else`, не читающая `shortcuts.json` в рантайме; фактическая обработка нажатия клавиш не зависит от ребинда.
 
-### MenuManager — generic disabled-состояние и иконки пунктов; единая разметка иконок (v3.55.0)
+### MenuManager — generic disabled-состояние и иконки пунктов; единая разметка пунктов (v3.55.0+)
 **Файлы**: `src/managers/MenuManager.js`, `src/utils/MenuItemTemplateUtils.js`, `config/menu.js`
 - Любой `itemConfig` в `config/menu.js` может иметь поле `disabled: boolean | (editor) => boolean` — дизейбль-предикат (функция или літерал).
 - `MenuManager.itemDisabledCheckers` — Map(itemId → checker), заполняется при создании пункта в `createMenuItem()`.
 - `MenuManager.refreshDisabledStates()` пересчитывает состояние каждого пункта (toggle CSS-классы `opacity-50 pointer-events-none cursor-not-allowed` + `dataset.menuDisabled`), вызывается при init, при `refresh()`, и реактивно через `setupDisabledStateSubscriptions()` на подписках к `stateManager` ключам `selectedFolders`/`activeAssetTabs`.
 - Клик по disabled-пункту блокируется в `setupMenuItemEvents()`.
-- **Единая разметка иконок**: `MenuManager.createMenuItem()` и `BaseContextMenu.createMenuItem()/createSubmenuItem()` теперь оба используют `MenuItemTemplateUtils.renderMenuItemIconHtml(icon)` для одиночного источника правды рендера иконки (`<span class="menu-item-icon" style="width:18px;height:18px;margin-right:8px">...</span>`, 18×18 flex box с margin). Устраняет дрейф визуалов между dropdown-меню (nav bar) и floating context-меню.
-- `MenuManager.createMenuItem()` также рендерит иконку, если в `itemConfig.icon` (HTML/SVG-строка или эмодзи) — отрисовывается в `<span class="menu-item-icon">` перед лейблом, работает для любого меню.
+- **Единая разметка пункта меню** — `MenuItemTemplateUtils` экспортирует три функции для атомной разметки:
+  - `renderMenuItemLeadingHtml({ icon, checkboxId, checked })` — единый 18×18px блок слева (иконка или toggle-чекбокс пункта); раньше рендерились с разными размерами/margin, теперь одинаковый блок
+  - `renderMenuItemBodyHtml({ leadingHtml, label })` — оборачивает leading+текст в `<span class="flex items-center">` (единый flex-item слева, нужно чтобы trailing при `justify-content:space-between` не «растягивал» центр)
+  - `renderMenuItemTrailingHtml(text, { shortcutKey })` — единый trailing-блок справа (хоткей вроде "Alt+3" или стрелка флаут-подменю ▸)
+- Используется `MenuManager.createMenuItem()` и `BaseContextMenu.createMenuItem()/createSubmenuItem()` для одиночного источника правды разметки; устраняет дрейф визуалов между dropdown-меню (nav bar) и floating context-меню.
+- `MenuManager.createMenuItem()` рендерит иконку, если в `itemConfig.icon` (HTML/SVG-строка или эмодзи) — отрисовывается в leading-блоке перед лейблом, работает для любого меню.
+- **Побочный эффект**: nav submenu-триггеры (`createSubmenuItem`) теперь поддерживают иконку (itemConfig.icon); контекстные меню опционально поддерживают `item.shortcut` в trailing-слоте (пока не используется в коде, но слот готов).
 - **buildAssetsMenu()** (config/menu.js, top-level "Add" в навигации) генерирует иерархию категория → тип для каждого creatable asset-типа из `AssetTypes.js`, каждый пункт получает иконку через `buildTypeIconSvg(typeId, category.color, 16)` и `disabled: isRootFolderSelected` (дизейблит создание, если выбран корневой каталог 'root' — там ничего создавать нельзя). Использует новый helper `getAssetCategoriesWithTypes()` из `src/constants/AssetTypes.js` (группирует ASSET_TYPES по категориям).
 
 ### ResizerManager
@@ -97,6 +102,49 @@
 - Система обхода иерархии групп
 - 12 методов работы с группами
 - `findObjectPath(topLevelObjects, targetId)` — DFS-поиск пути индексов от корня (`Level.objects`) до объекта через вложенные `group.children`; единый источник истины для порядка рендера/hit-test, используется в `Level.compareStackOrder()`
+
+### File Menu Structure (v3.57.0 Phase 7)
+**Файл**: `config/menu.js`, id `file` (переименовано с `level` в Phase 7)
+- **Меню-структура** (новая в Phase 7):
+  - Level-операции: New Level, Open Level..., [separator], Save Level, Save Level As..., Close Level
+  - Project-операции (новый блок): [separator], New Project, Open Project..., Save Project, Save Project As...
+  - Assets: [separator], Import Assets... (перенесено из Settings в Phase 7)
+- **Import Assets...** — раньше был в Settings меню, перемещён в File для логической группировки файловых операций (Phase 7)
+- **Project Settings...** — новый пункт в Settings меню (раньше в File, переместился в Phase 7 для разделения проекта и редактора)
+
+### LevelsPanel (v3.57.0 Phase 6 Complete)
+**Файлы**: `src/ui/LevelsPanel.js`, `src/ui/LevelsContextMenu.js`, `src/ui/panel-structures/LevelsPanelStructure.js`
+- **Назначение**: список открытых уровней (LevelSession), размещён в правой вкладке Layers НАД LayersPanel (в одном контейнере `#layers-content-panel`)
+- **Функциональность**:
+  - Кнопка "+Add" добавляет новый уровень как отдельную сессию через `LevelsManager.addLevel()`
+  - Клик по элементу списка переключает текущий уровень через `setCurrentLevel()`
+  - Eye-icon переключает per-level visibility (Phase 3: видимые уровни рисуются одновременно через `getVisibleSessions()` в `RenderOperations.render()`)
+  - Double-click / контекстное меню "Rename" переименовывает уровень
+  - Контекстное меню: "Make Current", "Rename", "Save", "Save As", "Close", "Duplicate" (Phase 5)
+  - **Drag-reorder** (Phase 6): перестановка табов в списке через `LevelsManager.reorderLevels(newOrder)`; заблокировано при активном поиске (DOM-источник неполный)
+  - **Дизамбигуация имён** (Phase 6): при коллизии имён уровней, визуальный суффикс `"Untitled Level (2)"` только в отображении, реальное `level.meta.name` не меняется
+  - **Per-session dirty-индикатор** (Phase 5): точка/звёздочка если есть несохранённые изменения
+- **Z-order рендера** (Phase 6): Текущий уровень ВСЕГДА рисуется поверх остальных видимых уровней, независимо от позиции таба (через `LevelsManager.getVisibleSessionsForRender()` в `RenderOperations.render()`)
+
+### Project Model and ProjectFileOperations (v3.57.0 Phase 7)
+**Файлы**: `src/models/Project.js`, `src/core/ProjectFileOperations.js`, `src/ui/ProjectSettingsDialog.js`
+
+**Project** — контейнер набора открытых уровней (LevelSession):
+- `toJSON(levelSessions, levelOrder, currentLevelId)` — экспортирует self-contained JSON: эмбеддит `Level.toJSON()` каждого открытого уровня + метаданные (per-level `visible` и `fileName`), порядок табов (`levelOrder`), и `currentLevelIndex` (позиция в массиве уровней, т.к. `Level.toJSON()` не сериализует `id`). Браузер не имеет persistent file handle, поэтому project-файл — полная копия, не ссылки.
+- `fromJSON(json)` (static) — парсит project-JSON обратно в LevelSession набор (per-level history восстанавливается из exported state в JSON).
+- **Назначение**: полная сохранённость multi-level сессии в одном файле (в отличие от single-level `Level.toJSON()`)
+
+**ProjectFileOperations** (BaseModule):
+- `newProject()` — создание нового проекта: очищает все открытые уровни, создаёт один пустой с `seeded history baseline` (один undo-шаг для начального состояния). Единый confirm-диалог при несохранённых правках, вместо N диалогов по одному на каждый уровень (Edge Case 10/11).
+- `openProject()` — открытие проекта из файла (парсит all уровни ДО очистки текущих, чтобы невалидная запись не оставила редактор без единого открытого уровня; Edge Case 3). Replace-not-merge семантика: новые уровни заменяют весь набор открытых табов.
+- `saveProject()`/`saveProjectAs()` — сохранение текущего проекта (скачивание в браузер). `saveProject()` требует предварительного `newProject()` или `openProject()` (иначе no-op). `saveProjectAs()` запрашивает имя файла.
+- **Per-session history bootstrap**: каждой фоновой (non-current) сессии при загрузке вручную seeded `.history` через `HistoryManager.saveState()` (т.к. `addLevel({makeCurrent:false})` не пропускает живой HistoryManager).
+- **Cache cleanup**: `newProject()`/`openProject()` вызывают приватный `_cleanupAllOpenSessions()` для очистки orphaned entries в `renderOperations.spatialIndex`, `visibleLayersCache`, и прочих per-levelId кешах (иначе повторные New/Open Project копили zombie-данные по старым levelId).
+
+**ProjectSettingsDialog** (extends BaseDialog):
+- Диалог редактирования параметров проекта (Phase 7, пока стаб).
+- **Текущие поля**: только `project.name` (редактируется через `<input type="text">`).
+- **Отложенные поля** (Open Questions #9): default asset import path, default grid/snap для новых уровней проекта, naming convention — явно задокументированы в UI, но реализация отложена.
 
 ### AssetPanel System
 **Файлы**: `src/ui/AssetPanel.js`, `src/ui/AssetTabsManager.js`, `src/ui/FoldersPanel.js`
@@ -178,12 +226,30 @@
 **Файл**: `src/managers/HistoryManager.js`
 - Полная поддержка Undo/Redo
 - Оптимизированное хранение изменений
+- `exportState()`/`importState()` — снятие/восстановление undo/redo стека (используется при переключении уровней)
 
-### CacheManager (v3.42.0)
+### LevelsManager (v3.57.0 Phase 1-6)
+**Файл**: `src/core/LevelsManager.js`
+- Управление множеством открытых LevelSession (инфраструктура для multi-level)
+- **Основные методы** (Фаза 1-5):
+  - `addLevel(level, opts)` — регистрация новой сессии уровня; отслеживает `levelMRU` для fallback
+  - `setCurrentLevel(levelId)` — переключение уровня (сохраняет/восстанавливает camera, selectedObjects, groupEditMode, currentLayerId, history без полного `stateManager.reset()`); обновляет `levelMRU`
+  - `closeLevel(levelId)` (Фаза 5) — закрытие вкладки уровня; использует MRU fallback при закрытии текущего
+  - `getCurrentSession()`, `getOrderedSessions()`, `getVisibleSessions()` — запросы к сессиям
+  - `toggleLevelVisibility(levelId)` — управление видимостью уровня в UI; soft-cap warning при >5 видимых
+- **Методы Фазы 6** (edge cases и полировка):
+  - `getVisibleSessionsForRender(sessions?)` — видимые уровни в порядке рендера (текущий ВСЕГДА в конце)
+  - `reorderLevels(newOrder)` — drag-reorder табов уровней; валидирует полную перестановку
+  - `cycleLevel(direction)` — циклическое переключение (+1 следующий, -1 предыдущий); используется для Ctrl+PageDown/PageUp
+  - `hasAnyUnsavedChanges()` — проверка несохранённых изменений во всех открытых уровнях
+- **Жизненный цикл**: **Фаза 1** — внутренняя инфраструктура (LevelSession, history switching). **Фаза 2** — LevelsPanel UI-компонент (список, видимость, переименование). **Фаза 3** — composition-рендеринг нескольких видимых уровней (параметризация `getVisibleSessions()`). **Фаза 5** — closeLevel, per-session save/dirty. **Фаза 6** — levelMRU fallback, cycleLevel, getVisibleSessionsForRender (z-order fix), reorderLevels (drag-reorder UI), soft-cap warning.
+
+### CacheManager (v3.57.0: multi-level namespacing)
 **Файл**: `src/managers/CacheManager.js`
 - Централизованный менеджер кэшей
 - O(1) операции, smart invalidation
 - TTL Cache, LRU Strategy
+- **Multi-level namespacing** (Фаза 3): `objectCache`, `topLevelObjectCache`, `effectiveLayerCache`, `_layerToObjectIds` используют ключ `${levelId}:${objId}` вместо голого `${objId}` — защита от коллизий object id между одновременно открытыми уровнями (каждый уровень обычно имеет объекты 1, 2, 3..., которые не пересекаются id, но могут конфликтовать в общем кэше при вычислении effective-layer или при bulk-lookups). Внутренний метод `_namespacedKey(id)` возвращает `${editor.currentLevelId}:${id}` — осознанное решение не передавать `level` параметром (не менять ~15 external call sites), вместо этого неявно используется текущий уровень как scope кэша.
 
 ### ConfigManager
 **Файл**: `src/managers/ConfigManager.js`
@@ -220,15 +286,28 @@
 - Управление viewport и камерой
 - Zoom, pan, focus операции
 
-### LevelFileOperations (v3.44.0)
+### LevelFileOperations (v3.57.0 Phase 5 multi-level)
 **Файл**: `src/core/LevelFileOperations.js`
-- Файловые операции уровней
-- Создание, открытие, сохранение
+- **Файловые операции уровней с поддержкой multi-level сессий** (Фаза 5):
+  - `newLevel()` — создание нового уровня ДОБАВЛЯЕТ его как новую вкладку/LevelSession через `levelsManager.addLevel()`, а не заменяет текущий открытый уровень. Больше НЕ вызывает `stateManager.reset()` — reset сбрасывал бы глобальное UI-состояние (view/panels/ui), что неверно для добавления вкладки.
+  - `openLevel()` — открытие уровня из файла ДОБАВЛЯЕТ его как новую сессию; дополнительно проверяет "уже ли открыт" по `fileName` (best-effort dedup) — если файл уже открыт, переключается на существующую вкладку вместо дубликата. Аналогично `newLevel()`, НЕ вызывает `stateManager.reset()`.
+  - `saveLevel()` / `saveLevelAs()` — сохраняют per-session имя файла (`session.fileName`), а не глобальное `FileManager.currentFileName`. Гарантирует что сохранение уровня B никогда не перезапишет файл уровня A. После сохранения: `session.isDirty = false`.
+  - `closeLevel(levelId)` (новый, Фаза 5) — закрытие вкладки уровня; на `LevelsManager`. Нельзя закрыть последний открытый уровень. Проверяет `session.isDirty` и спрашивает подтверждение при наличии несохранённых изменений. При закрытии текущего уровня переключается на первый из оставшихся уровней в `levelOrder`.
+  - Per-level `isDirty` (Фаза 5) — каждая LevelSession трекит свой `isDirty` флаг независимо. `LevelsManager.setCurrentLevel()` снапшотит/восстанавливает глобальный `stateManager.isDirty` при переключении между вкладками, позволяя существующему коду работать без изменений (через единый глобальный флаг).
+  - Per-level visible индикатор в LevelsPanel — точка в панели теперь точна для всех вкладок, не только текущей (может быть прочитана из `session.isDirty` каждой открытой сессии).
 
-### RenderOperations
+### RenderOperations (v3.57.0 Phase 3-6 multi-level)
 **Файл**: `src/core/RenderOperations.js`
-- Операции рендеринга
-- Пространственный индекс для O(k) поиска
+- Операции рендеринга с композитингом нескольких видимых уровней
+- **Multi-level композитинг** (Фаза 3): `render()` итерирует по `editor.levelsManager.getVisibleSessions()` и рисует объекты всех видимых уровней в одном кадре. Видимость = `session.visible` (per-level eye-icon в LevelsPanel), не зависит от "текущий" статуса уровня.
+- **Z-order рендера** (Фаза 6): Текущий уровень ВСЕГДА рисуется поверх остальных видимых уровней, независимо от позиции таба, через `editor.levelsManager.getVisibleSessionsForRender()` — переносит текущую сессию в конец массива компоузинга (она обрабатывается последней, рисуется поверх). Решение плана раздел 12 пункт 2, не реализованное полностью в Фазе 3 (раньше `render()` просто итерировал по `getVisibleSessions()` в tab-порядке), исправлено в Фазе 6.
+- **Non-composited элементы** (привязаны к текущему уровню только): grid/фон/selection-рамки/hierarchy-highlight/group-edit-frame/duplicate-ghost/debug-overlays (boundaries/collisions) — НЕ рисуются для non-current видимых уровней. Дополнительно гейтятся `currentSessionVisible` (не рендерятся, если сам текущий уровень скрыт через eye-icon).
+- **Dimming режимы** (isolate/solo/group-edit-mode) применяются ТОЛЬКО к текущему уровню; non-current видимые уровни всегда рендерятся нормально, независимо от этих режимов текущего.
+- **Namespacing кешей**: `visibleObjectsCache` ключируется как `${levelId}_${cameraKey}` (защита от коллизии при совпадении camera-ключей между уровнями); `visibleLayersCache` стал `Map<levelId, {layerIds, timestamp}>`; `CacheManager` использует `${levelId}:${objId}` для всех object-кешей (effectiveLayerCache/objectCache/topLevelObjectCache) — защита от коллизий id объектов между одновременно открытыми уровнями.
+- **Параметризация методов**: `getVisibleObjects()`, `getVisibleObjectsSpatial()`, `getVisibleLayerIds()`, `buildSpatialIndex()`, `getEffectiveLayerId()`, `collectVisibleObjectsRecursive()` и прочие получили опциональный параметр `level` (дефолт `this.editor.level`), сохраняя 100% обратную совместимость всех существующих вызовов.
+- **Parallax при multi-level**: `renderParallaxObjects()` получила параметр `level`; `ObjectOperations.getObjectWorldBounds()` получила параметр `level` — правильный рендер parallax-объектов на non-current видимых уровнях.
+- **Пространственный индекс**: `spatialIndex` был уже `Map<levelId, ...>` с Фазы 1, дополнительных правок не потребовалось.
+- **Побочные фиксы**: объединены два дублирующихся метода `invalidateSpatialIndex()` в один `invalidateSpatialIndex(levelId = null)`; удалён мёртвый код (`this.editor.effectiveLayerCache` на несуществующем поле, неиспользуемый `clearEffectiveLayerCache()`).
 
 ### ObjectOperations
 **Файл**: `src/core/ObjectOperations.js`
@@ -543,9 +622,9 @@ stateManager.subscribe('levelStructureChanged', () => {
 - Единая система обработчиков через EventHandlerManager
 - Динамическое получение версии
 
-### BaseContextMenu — DOM-иконки, disabled-схема, submenu-рендер, фикс margin (v3.55.0)
+### BaseContextMenu — единая разметка пунктов, disabled-схема, submenu-рендер, фикс margin (v3.55.0+)
 **Файлы**: `src/ui/BaseContextMenu.js`, `src/utils/MenuItemTemplateUtils.js`, `styles/base-context-menu.css`
-- **Единая визуальная схема**: `createMenuItem()`/`createSubmenuItem()` теперь оба используют `MenuItemTemplateUtils.renderMenuItemIconHtml(icon)` (как `MenuManager.createMenuItem()`) и применяют полный disabled-scheme (`opacity-50 pointer-events-none cursor-not-allowed` + `dataset.menuDisabled`) — идентично `MenuManager` (основное меню). Все 6 наследников BaseContextMenu (AssetContextMenu, AssetPanelContextMenu, CanvasContextMenu, ConsoleContextMenu, LayersContextMenu, OutlinerContextMenu) автоматически получают единый шаблон. Визуальная сходимость: item rows теперь `className = 'base-context-menu-item px-4 py-2 text-sm hover:bg-gray-700'` (идентично MenuManager's 'action' шаблону), разделители (separators) — `'border-t border-gray-600 my-1'`, submenu-триггеры — `'px-4 py-2 text-sm hover:bg-gray-700 flex items-center justify-between'` с явным `<span class="text-xs ml-4">▸</span>`-гліфом (заменяет CSS `::after { content: '▶' }` pseudo-element). CSS-правила в `base-context-menu.css` упрощены: удалены дублирующие padding/font-size/hover-bg (теперь через utility-классы), сохранены только color-var, cursor, flex/align-items, transitions, disabled/active-states, first/last-child radius.
+- **Единая визуальная схема**: `createMenuItem()`/`createSubmenuItem()` теперь оба используют `MenuItemTemplateUtils.renderMenuItemLeadingHtml()`, `renderMenuItemBodyHtml()`, `renderMenuItemTrailingHtml()` (как `MenuManager.createMenuItem()`) — третой экспорт утилиты одновременно поддерживает опциональный `item.shortcut` в trailing-слоте контекстных меню (пока не используется, но готово). Все 6 наследников BaseContextMenu (AssetContextMenu, AssetPanelContextMenu, CanvasContextMenu, ConsoleContextMenu, LayersContextMenu, OutlinerContextMenu) автоматически получают единый шаблон и полный disabled-scheme (`opacity-50 pointer-events-none cursor-not-allowed` + `dataset.menuDisabled`) — идентично `MenuManager`. Визуальная сходимость: item rows теперь `className = 'base-context-menu-item px-4 py-2 text-sm hover:bg-gray-700'` (идентично MenuManager's шаблону), разделители (separators) — `'border-t border-gray-600 my-1'`, submenu-триггеры — `'px-4 py-2 text-sm hover:bg-gray-700 flex items-center justify-between'` с явным `<span class="text-xs ml-4">▸</span>`-гліфом (заменяет CSS `::after { content: '▶' }` pseudo-element). CSS-правила в `base-context-menu.css` упрощены: удалены дублирующие padding/font-size/hover-bg (теперь через utility-классы), сохранены только color-var, cursor, flex/align-items, transitions, disabled/active-states, first/last-child radius.
 - **Flyout-submenu**: `addSubmenuItem(text, icon, items, options)`/`createSubmenuItem()` — hover-раскрывающееся подменю сбоку, аналогично `MenuManager.createSubmenuItem()`. `handleMenuItemClick()` рекурсивно ищет пункт по id через `findMenuItemById()` (включая вложенные submenu-items); клик по заголовку подменю не закрывает и не выполняет действие (открытие только через hover).
 - **Фикс клиппинга вложенных подменю**: `.submenu-flyout` больше не ставит `overflow-y:auto; max-height:320px` безусловно; новый модификатор-класс `.submenu-flyout--scrollable`, применяется ТОЛЬКО к самому глубокому флайауту в цепочке (у которого нет вложенных submenu-детей). Позволяет раскрыть третий уровень вложенности: Add → категория → тип ассета (раньше третий уровень обрезался родительским флайаутом).
 - **Фикс cursor margin за пределами меню** (v3.55.0): `BaseContextMenu.setupMenuClosing()` давала видимую зону-иммунитета вокруг открытого меню только в течение ~150–200мс opening animation через `requestAnimationFrame` polling (`startCursorMonitoring`/`stopCursorMonitoring`); после окончания animation цикл завершался и меню тут же закрывалось при любом движении мыши вне его границ, независимо от `ui.cursorMenuMargin` (механизм стал мертвым кодом после удаления `requestAnimationFrame`-loop'а в одном из предыдущих проходов). Исправлено: `setupMenuClosing()` теперь устанавливает один persistent `document` `mousemove`-листенер на ВСЮ жизнь меню (не только animation), который вызывает submenu-aware `isCursorInsideMenu(menu)` — true если курсор в пределах `getCursorMenuMargin()` px от самого меню OR любого открытого `.submenu-flyout.show` потомка на любой глубине вложенности (так hover flyout, рендерящийся вне границ родительского меню через `position:absolute; left:100%`, не закрывает всю иерархию). Listencr удаляется методом `removeMenuCloseWatcher()` (вызов из `hideMenu()` и из пути early-replace в `showContextMenu()`), избегая утечек `document`-level листенеров.

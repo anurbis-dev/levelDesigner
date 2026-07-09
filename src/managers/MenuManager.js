@@ -1,7 +1,7 @@
 import { MENU_CONFIG, getMenuItemById, flattenMenuItems } from '../../config/menu.js';
 import { Logger } from '../utils/Logger.js';
 import { ShortcutFormatter } from '../utils/ShortcutFormatter.js';
-import { renderMenuItemIconHtml } from '../utils/MenuItemTemplateUtils.js';
+import { renderMenuItemLeadingHtml, renderMenuItemBodyHtml, renderMenuItemTrailingHtml } from '../utils/MenuItemTemplateUtils.js';
 import { MenuPositioningUtils } from '../utils/MenuPositioningUtils.js';
 
 /**
@@ -258,18 +258,14 @@ export class MenuManager {
             element.style.cssText = template.style;
         }
 
-        // Icon markup (SVG or emoji string) — generic across all menu item types/menus, not
-        // just the Assets "Add" menu, so any future config/menu.js entry can set `icon`.
-        // Shared with BaseContextMenu.js via MenuItemTemplateUtils so both menu systems
-        // render icons identically.
-        const iconHtml = renderMenuItemIconHtml(itemConfig.icon);
-
-        // Set up content based on item type
-        let contentHtml = iconHtml;
-        if (itemConfig.type === 'toggle' && template.checkboxHtml) {
-            contentHtml += template.checkboxHtml.replace('{id}', itemConfig.id);
-        }
-        contentHtml += itemConfig.label;
+        // Every row (icon-action, toggle-checkbox, or plain label) shares the same
+        // [leading block | label | trailing block] layout — see MenuItemTemplateUtils.js —
+        // so icon rows and checkbox rows always line up identically across menus/submenus.
+        const leadingHtml = renderMenuItemLeadingHtml({
+            icon: itemConfig.icon,
+            checkboxId: itemConfig.type === 'toggle' ? `${itemConfig.id}-check` : undefined
+        });
+        const bodyHtml = renderMenuItemBodyHtml({ leadingHtml, label: itemConfig.label });
 
         // Add keyboard shortcut if available. Prefer shortcutKey (dot-path into
         // config/defaults/shortcuts.json, resolved live via ConfigManager) over a legacy
@@ -277,25 +273,13 @@ export class MenuManager {
         const resolvedShortcut = itemConfig.shortcutKey
             ? this.resolveShortcutLabel(itemConfig.shortcutKey)
             : itemConfig.shortcut;
+        const trailingHtml = renderMenuItemTrailingHtml(resolvedShortcut, { shortcutKey: itemConfig.shortcutKey });
 
-        if (resolvedShortcut) {
-            // Make the element a flex container for proper alignment
-            element.className += ' flex items-center justify-between';
-            element.innerHTML = contentHtml;
-
-            const shortcutSpan = document.createElement('span');
-            shortcutSpan.className = 'text-xs ml-4';
-            shortcutSpan.style.color = 'var(--ui-text-color, #9ca3af)';
-            shortcutSpan.textContent = resolvedShortcut;
-            if (itemConfig.shortcutKey) shortcutSpan.dataset.shortcutKey = itemConfig.shortcutKey;
-            element.appendChild(shortcutSpan);
-        } else if (iconHtml || (itemConfig.type === 'toggle' && template.checkboxHtml)) {
-            element.className += ' flex items-center';
-            element.innerHTML = contentHtml;
-        } else {
-            // No icon/shortcut/checkbox, just set content normally
-            element.textContent = itemConfig.label;
-        }
+        // Body must be a single flex item — otherwise the leading block and the label text
+        // node would count as separate flex children alongside the trailing block, and
+        // justify-between would center the label instead of pinning content left / trailing right.
+        element.className += ' flex items-center' + (trailingHtml ? ' justify-between' : '');
+        element.innerHTML = bodyHtml + trailingHtml;
 
         // Register a context-sensitive disabled predicate (function or boolean literal),
         // if configured. Evaluated on demand by refreshDisabledStates() since this DOM is
@@ -321,7 +305,12 @@ export class MenuManager {
         const trigger = document.createElement('div');
         trigger.className = 'flex items-center justify-between px-4 py-2 text-sm hover:bg-gray-700 cursor-pointer';
         trigger.style.color = 'var(--ui-text-color, #d1d5db);';
-        trigger.innerHTML = `<span>${itemConfig.label}</span><span class="text-xs ml-4">▸</span>`;
+        // Same [leading | label | trailing] row layout as createMenuItem(), with the flyout
+        // arrow occupying the trailing slot — so a submenu trigger with an icon aligns
+        // identically to a regular command row.
+        const leadingHtml = renderMenuItemLeadingHtml({ icon: itemConfig.icon });
+        const bodyHtml = renderMenuItemBodyHtml({ leadingHtml, label: itemConfig.label });
+        trigger.innerHTML = bodyHtml + renderMenuItemTrailingHtml('▸');
         wrapper.appendChild(trigger);
 
         const submenu = document.createElement('div');

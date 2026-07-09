@@ -48,8 +48,8 @@ export const MENU_CONFIG = {
     // Main menu structure
     menus: [
         {
-            id: 'level',
-            label: 'Level',
+            id: 'file',
+            label: 'File',
             items: [
                 {
                     id: 'new-level',
@@ -79,6 +79,44 @@ export const MENU_CONFIG = {
                     type: 'action',
                     shortcutKey: 'editor.saveLevelAs',
                     action: 'saveLevelAs'
+                },
+                {
+                    id: 'close-level',
+                    label: 'Close Level',
+                    type: 'action',
+                    action: 'closeLevel'
+                },
+                { type: 'separator' },
+                {
+                    id: 'new-project',
+                    label: 'New Project',
+                    type: 'action',
+                    action: 'newProject'
+                },
+                {
+                    id: 'open-project',
+                    label: 'Open Project...',
+                    type: 'action',
+                    action: 'openProject'
+                },
+                {
+                    id: 'save-project',
+                    label: 'Save Project',
+                    type: 'action',
+                    action: 'saveProject'
+                },
+                {
+                    id: 'save-project-as',
+                    label: 'Save Project As...',
+                    type: 'action',
+                    action: 'saveProjectAs'
+                },
+                { type: 'separator' },
+                {
+                    id: 'import-assets',
+                    label: 'Import Assets...',
+                    type: 'action',
+                    action: 'importAssets'
                 }
             ]
         },
@@ -92,7 +130,8 @@ export const MENU_CONFIG = {
                     type: 'toggle',
                     stateKey: 'view.fullscreen',
                     action: 'toggleViewOption',
-                    actionParam: 'fullscreen'
+                    actionParam: 'fullscreen',
+                    shortcutKey: 'editor.toggleFullscreen'
                 },
                 {
                     id: 'toggle-game-mode',
@@ -100,7 +139,8 @@ export const MENU_CONFIG = {
                     type: 'toggle',
                     stateKey: 'view.gameMode',
                     action: 'toggleViewOption',
-                    actionParam: 'gameMode'
+                    actionParam: 'gameMode',
+                    shortcutKey: 'editor.toggleGameMode'
                 },
                 {
                     id: 'toggle-parallax',
@@ -159,7 +199,8 @@ export const MENU_CONFIG = {
                     type: 'toggle',
                     stateKey: 'console.visible',
                     action: 'togglePanel',
-                    actionParam: 'console'
+                    actionParam: 'console',
+                    shortcutKey: 'ui.toggleConsole'
                 },
                 {
                     id: 'toggle-status-bar',
@@ -167,7 +208,8 @@ export const MENU_CONFIG = {
                     type: 'toggle',
                     stateKey: 'view.statusBar',
                     action: 'togglePanel',
-                    actionParam: 'statusBar'
+                    actionParam: 'statusBar',
+                    shortcutKey: 'ui.toggleStatusBar'
                 },
                 { type: 'separator' },
                 {
@@ -190,7 +232,8 @@ export const MENU_CONFIG = {
                     type: 'toggle',
                     stateKey: 'canvas.snapToGrid',
                     action: 'toggleViewOption',
-                    actionParam: 'snapToGrid'
+                    actionParam: 'snapToGrid',
+                    shortcutKey: 'editor.toggleSnapToGrid'
                 },
                 { type: 'separator' },
                 {
@@ -204,7 +247,8 @@ export const MENU_CONFIG = {
                     type: 'toggle',
                     stateKey: 'view.objectBoundaries',
                     action: 'toggleViewOption',
-                    actionParam: 'objectBoundaries'
+                    actionParam: 'objectBoundaries',
+                    shortcutKey: 'editor.toggleObjectBoundaries'
                 },
                 {
                     id: 'toggle-object-collisions',
@@ -212,7 +256,8 @@ export const MENU_CONFIG = {
                     type: 'toggle',
                     stateKey: 'view.objectCollisions',
                     action: 'toggleViewOption',
-                    actionParam: 'objectCollisions'
+                    actionParam: 'objectCollisions',
+                    shortcutKey: 'editor.toggleObjectCollisions'
                 },
                 { type: 'separator' }
             ]
@@ -223,39 +268,22 @@ export const MENU_CONFIG = {
             label: 'Settings',
             items: [
                 {
-                    id: 'import-assets',
-                    label: 'Import Assets...',
+                    id: 'project-settings',
+                    label: 'Project Settings...',
                     type: 'action',
-                    action: 'importAssets'
+                    action: 'openProjectSettings',
+                    shortcutKey: 'editor.openProjectSettings'
                 },
                 {
                     id: 'editor-settings',
                     label: 'Editor Settings...',
                     type: 'action',
-                    action: 'openSettings'
+                    action: 'openSettings',
+                    shortcutKey: 'editor.openSettings'
                 }
             ]
         }
     ],
-
-    // Keyboard shortcuts mapping
-    shortcuts: {
-        'Ctrl+Alt+N': 'new-level',
-        'Ctrl+O': 'open-level',
-        'Ctrl+S': 'save-level',
-        'Ctrl+Shift+S': 'save-level-as',
-        'Ctrl+Z': 'undo',
-        'Ctrl+Y': 'redo',
-        'Ctrl+D': 'duplicate',
-        'Delete': 'delete-selected',
-        'Backspace': 'delete-selected',
-        'Ctrl+G': 'group-selected',
-        'Ctrl+Shift+G': 'ungroup-selected',
-        'F': 'focus-selection',
-        'A': 'focus-all',
-        'P': 'toggle-parallax',
-        'Escape': 'cancel-action'
-    },
 
     // Menu item templates
     templates: {
@@ -269,12 +297,7 @@ export const MENU_CONFIG = {
             tagName: 'a',
             classes: 'block px-4 py-2 text-sm hover:bg-gray-700 flex items-center',
             href: '#',
-            style: 'color: var(--ui-text-color, #d1d5db);',
-            checkboxHtml: `
-                <span class="w-4 h-4 border border-gray-500 mr-2 flex items-center justify-center">
-                    <span class="w-2 h-2 bg-gray-500 hidden" id="{id}-check"></span>
-                </span>
-            `
+            style: 'color: var(--ui-text-color, #d1d5db);'
         },
         separator: {
             tagName: 'div',
@@ -325,15 +348,6 @@ export function getMenuItemById(id) {
  */
 export function getMenuById(id) {
     return MENU_CONFIG.menus.find(menu => menu.id === id) || null;
-}
-
-/**
- * Get shortcut by key combination
- * @param {string} key - Key combination (e.g., 'Ctrl+N')
- * @returns {string|null} Menu item ID or null if not found
- */
-export function getShortcutTarget(key) {
-    return MENU_CONFIG.shortcuts[key] || null;
 }
 
 /**
