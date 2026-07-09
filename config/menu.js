@@ -52,6 +52,32 @@ export const MENU_CONFIG = {
             label: 'File',
             items: [
                 {
+                    id: 'new-project',
+                    label: 'New Project',
+                    type: 'action',
+                    action: 'newProject'
+                },
+                {
+                    id: 'open-project',
+                    label: 'Open Project...',
+                    type: 'action',
+                    action: 'openProject'
+                },
+                { type: 'separator' },
+                {
+                    id: 'save-project',
+                    label: 'Save Project',
+                    type: 'action',
+                    action: 'saveProject'
+                },
+                {
+                    id: 'save-project-as',
+                    label: 'Save Project As...',
+                    type: 'action',
+                    action: 'saveProjectAs'
+                },
+                { type: 'separator' },
+                {
                     id: 'new-level',
                     label: 'New Level',
                     type: 'action',
@@ -79,37 +105,6 @@ export const MENU_CONFIG = {
                     type: 'action',
                     shortcutKey: 'editor.saveLevelAs',
                     action: 'saveLevelAs'
-                },
-                {
-                    id: 'close-level',
-                    label: 'Close Level',
-                    type: 'action',
-                    action: 'closeLevel'
-                },
-                { type: 'separator' },
-                {
-                    id: 'new-project',
-                    label: 'New Project',
-                    type: 'action',
-                    action: 'newProject'
-                },
-                {
-                    id: 'open-project',
-                    label: 'Open Project...',
-                    type: 'action',
-                    action: 'openProject'
-                },
-                {
-                    id: 'save-project',
-                    label: 'Save Project',
-                    type: 'action',
-                    action: 'saveProject'
-                },
-                {
-                    id: 'save-project-as',
-                    label: 'Save Project As...',
-                    type: 'action',
-                    action: 'saveProjectAs'
                 },
                 { type: 'separator' },
                 {

@@ -315,6 +315,9 @@ export class EventHandlers extends BaseModule {
         } else if (this._matchesShortcut(e, 'editor', 'focusAll')) {
             e.preventDefault();
             if (typeof this.editor.focusOnAll === 'function') this.editor.focusOnAll();
+        } else if (this._matchesShortcut(e, 'editor', 'jumpToCamera')) {
+            e.preventDefault();
+            if (typeof this.editor.jumpToCamera === 'function') this.editor.jumpToCamera();
         } else if (this._matchesShortcut(e, 'editor', 'toggleGrid')) {
             e.preventDefault();
             this.toggleGrid();
@@ -1408,7 +1411,7 @@ export class EventHandlers extends BaseModule {
      */
     ensurePanelTabMarkers() {
         // Canonical set of core panel tabs.
-        const coreTabs = ['details', 'layers', 'outliner'];
+        const coreTabs = ['details', 'levels', 'layers', 'outliner'];
         coreTabs.forEach((tabName) => {
             const content = document.getElementById(`${tabName}-content-panel`);
             if (content) {

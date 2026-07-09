@@ -119,49 +119,54 @@ export class UniversalDialog {
             flex-direction: column;
         `;
 
-        // Create header
-        const header = document.createElement('div');
-        header.className = 'dialog-header';
-        header.style.cssText = `
-            background-color: #111827;
-            border-bottom: 1px solid #374151;
-            padding: 1rem 1.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        `;
+        // Create header. Prompt dialogs skip it: their generic "Input" title added
+        // nothing over the message text already shown below, and ESC/overlay-click/
+        // Cancel still close the dialog without a header close button.
+        let header = null;
+        if (type !== 'prompt') {
+            header = document.createElement('div');
+            header.className = 'dialog-header';
+            header.style.cssText = `
+                background-color: #111827;
+                border-bottom: 1px solid #374151;
+                padding: 1rem 1.5rem;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            `;
 
-        const title = document.createElement('h2');
-        title.className = 'dialog-title';
-        title.textContent = this.getTitle(type);
-        title.style.cssText = `
-            color: #f9fafb;
-            font-size: 1.25rem;
-            font-weight: 600;
-            margin: 0;
-        `;
+            const title = document.createElement('h2');
+            title.className = 'dialog-title';
+            title.textContent = this.getTitle(type);
+            title.style.cssText = `
+                color: #f9fafb;
+                font-size: 1.25rem;
+                font-weight: 600;
+                margin: 0;
+            `;
 
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'dialog-close-btn';
-        closeBtn.innerHTML = '×';
-        closeBtn.style.cssText = `
-            background: none;
-            border: none;
-            color: var(--ui-text-color, #9ca3af);
-            font-size: 1.5rem;
-            cursor: pointer;
-            padding: 0;
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 4px;
-        `;
-        // Event handlers will be set up by EventHandlerManager
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'dialog-close-btn';
+            closeBtn.innerHTML = '×';
+            closeBtn.style.cssText = `
+                background: none;
+                border: none;
+                color: var(--ui-text-color, #9ca3af);
+                font-size: 1.5rem;
+                cursor: pointer;
+                padding: 0;
+                width: 24px;
+                height: 24px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 4px;
+            `;
+            // Event handlers will be set up by EventHandlerManager
 
-        header.appendChild(title);
-        header.appendChild(closeBtn);
+            header.appendChild(title);
+            header.appendChild(closeBtn);
+        }
 
         // Create content
         const content = document.createElement('div');
@@ -228,7 +233,9 @@ export class UniversalDialog {
         }
 
         // Assemble dialog
-        this.dialog.appendChild(header);
+        if (header) {
+            this.dialog.appendChild(header);
+        }
         this.dialog.appendChild(content);
         this.dialog.appendChild(footer);
 

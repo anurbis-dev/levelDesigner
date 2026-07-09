@@ -21,6 +21,7 @@
   "foldersPosition": "left",
   "foldersWidth": 200,
   "tabPosition_details": "right",
+  "tabPosition_levels": "right",
   "tabPosition_layers": "right",
   "tabPosition_outliner": "right",
   "showTooltips": true,

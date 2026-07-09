@@ -10,15 +10,15 @@
 #### Файловые операции — уровни (v3.57.0 Phase 5-6: multi-level tabs):
 - `async newLevel()` - создание нового уровня ДОБАВЛЯЕТ вкладку (LevelSession), а не заменяет текущий открытый уровень; переключает на новый уровень через `levelsManager.addLevel()`
 - `async openLevel()` - открытие уровня из файла ДОБАВЛЯЕТ вкладку; делает best-effort деdup по fileName — если файл уже открыт, переключается на существующую вкладку вместо дубликата
-- `saveLevel()` - сохранение текущего уровня; использует per-session fileName из текущей LevelSession, гарантируя что сохранение одного уровня не влияет на другие открытые уровни
-- `async saveLevelAs()` - сохранение текущего уровня с выбором файла; обновляет per-session `session.fileName` для текущей сессии
+- `saveLevel()` - сохранение текущего уровня; использует per-session fileName из текущей LevelSession; при отсутствии имени файла показывает prompt "Enter file name:" с дефолтом "level.json" (не сохраняет под дефолтным без подтверждения)
+- `async saveLevelAs()` - сохранение текущего уровня с выбором файла (показывает prompt); обновляет per-session `session.fileName` для текущей сессии
 - `async closeLevel(levelId)` (новый, v3.57.0) - закрытие вкладки уровня; нельзя закрыть последний открытый уровень; спрашивает подтверждение если уровень содержит несохранённые изменения
 
 #### Файловые операции — проект (v3.57.0 Phase 7: Project):
 - `async newProject()` - создание нового проекта: очищает все открытые уровни, создаёт один пустой уровень с baseline history. Единый confirm-диалог при несохранённых правках вместо N диалогов. **Replace-not-merge**: заменяет весь набор открытых вкладок.
 - `async openProject()` - открытие проекта из файла: парсит все уровни из project-JSON, восстанавливает видимость/порядок/currentLevelIndex. **Replace-not-merge**: новые уровни заменяют весь набор открытых табов. Единый confirm при dirty (Edge Case 11).
-- `async saveProject()` - сохранение текущего проекта; требует предварительного `newProject()` или `openProject()` (иначе no-op)
-- `async saveProjectAs()` - сохранение проекта с выбором имени файла
+- `async saveProject()` - сохранение текущего проекта; при отсутствии `project.fileName` имя берётся из `project.name` (не спрашивает имя файла); требует предварительного `newProject()` или `openProject()` (иначе no-op)
+- `async saveProjectAs()` - сохранение проекта с выбором имени файла (показывает prompt)
 - `async openProjectSettings()` - открытие диалога ProjectSettingsDialog (пока стаб: редактируется только `project.name`)
 
 #### Версия:
@@ -90,8 +90,9 @@
 - `setCurrentLevel(levelId)` - переключение текущего уровня (сохраняет/восстанавливает camera, selectedObjects, groupEditMode, currentLayerId, history); обновляет `levelMRU`
 - `getCurrentSession()` - получение текущей LevelSession
 - `getOrderedSessions()` - получение всех сессий в порядке добавления (табы)
-- `getVisibleSessions()` - получение видимых уровней (eye-icon вкл)
+- `getVisibleSessions()` - получение видимых уровней (eye-icon вкл); если есть soloed-сессии, возвращает только их, иначе фильтр по `visible` флагу
 - `toggleLevelVisibility(levelId)` - переключение видимости уровня; soft-cap warning при >5 видимых уровней
+- `toggleLevelSolo(levelId)` - Ctrl+click на eye-icon уровня (эксклюзивный solo, как LayersPanel.toggleLayerSolo); сбрасывает solo у остальных уровней, повторный клик снимает solo
 - `cycleLevel(direction)` - циклическое переключение между открытыми уровнями (direction: +1 следующий, -1 предыдущий); используется для Ctrl+PageDown/PageUp
 - `getVisibleSessionsForRender(sessions?)` - видимые уровни в порядке рендера (текущий ВСЕГДА в конце, рисуется поверх остальных, независимо от позиции таба) — Phase 6
 - `reorderLevels(newOrder)` - переупорядочивание открытых уровней; newOrder должна быть полная перестановка `levelOrder`, иначе no-op; используется для drag-reorder в LevelsPanel — Phase 6
@@ -131,7 +132,7 @@
 - **Контекстные меню**: правый клик для дополнительных действий
 
 ### AssetManager (src/managers/AssetManager.js)
-Управление ассетами с поддержкой динамической загрузки из манифеста.
+Управление ассетами с поддержкой динамической загрузки из манифеста и placeholder-созданием по каталогу типов.
 
 #### Основные методы:
 - `loadDefaultAssets()` - загрузка стандартных ассетов
@@ -146,6 +147,7 @@
 - `getAssetsByCategory(category)` - получение ассетов по категории
 - `getCategories()` - получение всех категорий
 - `searchAssets(query)` - поиск ассетов
+- `createPlaceholderAsset(typeId, customName?, folderPath?)` - создание placeholder-ассета по типу из каталога (Assets → Add → Category → Type); использует `typeDef.width`/`height`/`color` если заданы, иначе дефолты (48×48 + цвет категории); автоматически прикрепляет default-компоненты из `DEFAULT_ASSET_COMPONENTS[typeId]`
 
 #### Особенности:
 - **Манифест-система**: автоматическая загрузка структуры из `content/manifest.json`
@@ -153,6 +155,7 @@
 - **Кеширование изображений**: оптимизация загрузки превью
 - **Структурированная организация**: поддержка иерархии папок
 - **Обработка ошибок**: graceful handling ошибок загрузки файлов
+- **Catalog-driven placeholder creation**: 29 встроенных типов ассетов (категория Core, Visual/Render, Audio, Data/System, Navigation/AI, Other); каждый тип может быть создан как placeholder с опциональными custom размерами/цветом и auto-attached компонентами
 
 ### AssetTabsManager (src/ui/AssetTabsManager.js)
 Управление табами панели ассетов с поддержкой горизонтального скролла и drag-and-drop.
@@ -214,13 +217,13 @@
 - **ResizeObserver**: автоматическое обновление при изменении размера панели
 - **Оптимизация ресайза**: при изменении размеров окна обновляется только текст обрезки без пересоздания элементов DOM (метод `updateLayout()`)
 
-### LevelsPanel (v3.57.0 Phase 2) (src/ui/LevelsPanel.js)
+### LevelsPanel (v3.57.0 Phase 2, v3.58.0: отдельная вкладка) (src/ui/LevelsPanel.js)
 Панель списка открытых уровней для управления множеством LevelSession.
 
 #### Основные методы:
 - `render()` - отрисовка списка открытых уровней
 - `renderLevelsSection()` - обновление содержимого списка с фильтрацией по поиску
-- `renderLevelsSearchControls()` - отрисовка поля поиска (вызывается из SearchSectionUtils при активации вкладки 'layers')
+- `renderLevelsSearchControls()` - отрисовка поля поиска (вызывается из SearchSectionUtils при активации вкладки 'levels')
 - `setCurrentLevelAndNotify(levelId)` - переключение текущего уровня с обновлением UI
 - `renameLevel(levelId)` - переименование уровня с диалогом подтверждения
 - `toggleLevelVisibility(levelId)` - переключение видимости уровня
@@ -230,15 +233,12 @@
 - "Rename" - переименование уровня
 
 #### Особенности:
-- **Размещение**: правая вкладка Layers, над LayersPanel (в контейнере `#layers-content-panel`)
+- **Размещение** (v3.58.0): самостоятельная вкладка в правой панели (раньше был вложен в вкладку Layers). DOM-элемент: `#levels-content-panel` (`index.html:148`), прямой потомок tab-content container, как `#layers-content-panel`, `#outliner-content-panel`, `#details-content-panel`
 - **Функциональность**: кнопка "+Add" для добавления новых уровней через `LevelsManager.addLevel()`
-- **Eye-icon**: переключение per-level visibility (пока без видимого эффекта на рендер)
-- **Поиск**: интегрирован с SearchSectionUtils для фильтрации уровней
-- **Текущие ограничения** (отложено):
-  - Нет Close/Save/Duplicate в контекстном меню (требует per-session save, Фаза 5)
-  - Нет drag-reorder списка уровней (Фаза 6)
-  - Нет per-session dirty-индикатора (текущий костыль показывает глобальный isDirty)
-  - Нет composition-рендеринга нескольких видимых уровней (Фаза 3)
+- **Eye-icon**: переключение per-level visibility; Ctrl+click = solo-режим (эксклюзивная видимость); paint-drag (v3.58.0): mousedown + drag по другим eye-иконкам применяет взятое значение ко всем пройденным
+- **Поиск**: интегрирован с SearchSectionUtils для фильтрации уровней (guard на видимость собственного `#levels-content-panel`)
+- **Paint drag** (v3.58.0): временное отключение `draggable` на строке уровня при drag-операции, чтобы не перехватить HTML5 drag-reorder жест
+- **Drag-reorder**, **per-session dirty-индикатор**, **Close/Save/Duplicate** — реализованы в Phase 5-6, см. ARCHITECTURE.md LevelsPanel
 
 ### FileManager (src/managers/FileManager.js)
 Управление файлами.
@@ -317,14 +317,16 @@
 #### Основные методы:
 - `async newProject()` - создание нового проекта: очищает все открытые уровни, создаёт один пустой с baseline history. Единый confirm-диалог при несохранённых правках вместо N диалогов.
 - `async openProject()` - открытие проекта из файла: парсит все уровни ДО очистки текущих (невалидная запись не оставит редактор без открытого уровня). Replace-not-merge: новые уровни заменяют весь набор табов. Единый confirm при dirty.
-- `async saveProject()` - сохранение текущего проекта (требует предварительного `newProject()` или `openProject()`)
-- `async saveProjectAs()` - сохранение проекта с выбором имени файла
+- `async saveProject()` - сохранение текущего проекта; при отсутствии `project.fileName` имя берётся из `project.name` через `_deriveFileNameFromProjectName()` (заменяет `/` и `\` на `-`, добавляет `.json`); не спрашивает имя файла
+- `async saveProjectAs()` - сохранение проекта с выбором имени файла (показывает prompt)
 - `_activateBootstrappedSession(level)` - приватный helper: переключение на новую сессию с перезагруженным history
 - `_cleanupAllOpenSessions()` - приватный helper: очистка orphaned entries в per-levelId кешах (renderOperations.spatialIndex, visibleLayersCache и т.д.)
+- `_deriveFileNameFromProjectName()` - приватный helper: преобразует `project.name` в имя файла (заменяет `/` и `\` на `-`, добавляет `.json`)
 
 #### Семантика:
 - **Replace-not-merge**: `newProject()` и `openProject()` заменяют весь набор открытых уровней (не добавляют к существующим)
 - **Per-session history**: каждая фоновая сессия при загрузке получает seeded history (иначе `addLevel({makeCurrent:false})` не пропускает живой HistoryManager)
+- **saveProject() без диалога**: в отличие от `saveLevelAs()` и `saveProjectAs()`, `saveProject()` не спрашивает имя файла — берёт из `project.name` или переиспользует `project.fileName` if already saved
 
 ### ProjectSettingsDialog (src/ui/ProjectSettingsDialog.js)
 Диалог редактирования параметров проекта (extends BaseDialog, Phase 7).
@@ -426,8 +428,9 @@
 #### Операции с объектами:
 - `deleteSelectedObjects()` - удаление выделенных объектов
 - `duplicateSelectedObjects()` - дублирование выделенных объектов
-- `focusOnSelection()` - фокус на выделении
-- `focusOnAll()` - фокус на всех объектах
+- `focusOnSelection()` - фокус на выделении (хоткей `F`)
+- `focusOnAll()` - фокус на всех объектах (хоткей `A`)
+- `jumpToCamera()` - прыжок вьюпорта на выбранный/последний объект типа камера (хоткей `.`); если выделенный объект имеет `type === 'camera'`, восстанавливает его сохранённые координаты и zoom (`x + width/2`, `y + height/2`, `properties.zoom ?? 1`) вместо fit-to-bounds, сохраняет его id в `lastCameraObjectId`; если ничего не выбрано, использует запомненный `lastCameraObjectId`; если оба варианта не сработали, показывает warning в статус-баре. Реализация: `ViewportOperations.applyCameraObjectToViewport(cameraObj)` читает zoom из `cameraObj.properties.zoom`
 - `toggleObjectVisibility(obj)` - переключение `obj.visible`; каскадом применяется ко всем потомкам, если `obj.type === 'group'`
 - `toggleVisibilityForSelection()` - хоткей `H`, переключает видимость всех выделенных объектов
 - `unhideAllObjects()` - хоткей `Alt+H`, показывает все скрытые объекты на любом уровне вложенности

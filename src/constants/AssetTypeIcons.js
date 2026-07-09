@@ -11,6 +11,7 @@ export const TYPE_ICON_PATHS = {
     image: '<rect x="3" y="4" width="18" height="16" rx="1"/><circle cx="8.5" cy="9.5" r="1.4"/><path d="M21 16l-5-5-4 4-2-2-6 6"/>',
     imageAtlas: '<rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/>',
     volume: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>',
+    player_start: '<path d="M6 3v18"/><path d="M6 4h12l-3 3.5L18 11H6z"/>',
 
     // --- Visual / render (section 2) ---
     spriteAnimationClip: '<rect x="2" y="6" width="5.5" height="12" rx="1"/><rect x="9.2" y="6" width="5.5" height="12" rx="1"/><rect x="16.4" y="6" width="5.5" height="12" rx="1"/>',

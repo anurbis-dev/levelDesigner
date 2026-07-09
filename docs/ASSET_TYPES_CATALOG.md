@@ -14,14 +14,15 @@
 ## Как это работает в редакторе
 
 - `getAssetCategoriesWithTypes()` группирует `ASSET_TYPES` по категории — используется и в top-level "Add" меню навигации (`config/menu.js` → `buildAssetsMenu()`), и в контекстном меню панели ассетов (`AssetPanelContextMenu.js`).
-- `AssetManager.createPlaceholderAsset(typeId, customName?, folderPath?)` создаёт ассет-заглушку: без `imgSrc`, с цветом категории, путь по умолчанию — `<Категория>/<Имя>.json`, либо в выбранной папке.
+- `AssetManager.createPlaceholderAsset(typeId, customName?, folderPath?)` создаёт ассет-заглушку: без `imgSrc`, с цветом из `typeDef.color` (если задан) или категории, путь по умолчанию — `<Категория>/<Имя>.json`, либо в выбранной папке. Размеры используют `typeDef.width`/`typeDef.height` (если заданы) или дефолтные 48×48. Если для типа определены default-компоненты в `DEFAULT_ASSET_COMPONENTS[typeId]`, они автоматически создаются и прикрепляются к ассету (см. примечание ниже).
+- `DEFAULT_ASSET_COMPONENTS` — карта `typeId -> [componentTypeId, ...]`, сейчас только `{ player_start: ['playerStart'] }` для наследования компонента Player Start при размещении ассета. Позволяет автоматически снабжать создаваемые placeholder-ассеты нужными компонентами без ручного добавления.
 - `buildTypeIconSvg(typeId, color, size)` (`AssetTypeIcons.js`) — минималистичная SVG-иконка по типу; используется в двух местах:
   - В гриде/списке ассетов (AssetPanel): подставляется вместо color-swatch + первой буквы, если `asset.type` совпадает с ID из каталога.
   - На canvas (CanvasRenderer): при размещении GameObject без загруженного изображения, иконка рисуется поверх fallback-прямоугольника (50% от меньшего измерения объекта, центрирована). Обеспечивает визуальное узнавание placeholder-объектов на canvas, не только в панели.
 - `createComponentStub(typeId)` создаёт стаб компонента (`{id, type, enabled, properties:{}}`), добавляется в `actor.components[]` через UI `ActorPropertiesWindow.renderComponentsSection()` и сохраняется в `toJSON()`.
 - **Важно**: и asset-типы, и component-типы на данном этапе — только каталог метаданных + UI создания/иконка. Реальная логика (автотайлинг Tileset, воспроизведение Dialogue Graph, физика Collider и т.п.) не реализована — это зона ответственности игрового рантайма, потребляющего экспортированный уровень.
 
-## 1. Core (5)
+## 1. Core (6)
 
 | ID | Label | Комментарий |
 |---|---|---|
@@ -30,6 +31,7 @@
 | `image` | Image | сырой растровый ресурс |
 | `imageAtlas` | Image Atlas | авто-упаковка картинок / источник sprite sheet |
 | `volume` | Volume | зона-триггер произвольной формы + визуальные эффекты |
+| `player_start` | Player Start | маркер спавна игрока (auto-managed: ровно один на уровень, auto-create при отсутствии, создаётся через Assets → Add → Core → Player Start) |
 
 ## 2. Visual / Render (8)
 
@@ -51,7 +53,7 @@
 
 `prefab` (Actor Template), `sequenceCutscene` (Cutscene Timeline).
 
-**Итого: 28 asset-типов** в 6 категориях (`ASSET_CATEGORIES`: core, visual, audio, data, navigation, other).
+**Итого: 29 asset-типов** в 6 категориях (`ASSET_CATEGORIES`: core, visual, audio, data, navigation, other).
 
 ## 7. Component-типы (19)
 

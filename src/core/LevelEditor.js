@@ -454,7 +454,7 @@ export class LevelEditor {
         const assetsPanel = document.getElementById('assets-panel');
         const detailsPanel = document.getElementById('details-content-panel');
         const outlinerPanel = document.getElementById('outliner-content-panel');
-        const layersPanel = document.getElementById('layers-only-content-panel');
+        const layersPanel = document.getElementById('layers-content-panel');
         const levelsPanel = document.getElementById('levels-content-panel');
         const toolbarContainer = document.getElementById('toolbar-container');
         const actorPropsPanelContainer = document.getElementById('actor-properties-panel');
@@ -1858,6 +1858,10 @@ export class LevelEditor {
 
     focusOnAll() {
         this.viewportOperations.focusOnAll();
+    }
+
+    jumpToCamera() {
+        this.viewportOperations.jumpToCamera();
     }
 
     deleteSelectedObjects() {

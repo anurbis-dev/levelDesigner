@@ -830,6 +830,12 @@ export class MouseHandlers extends BaseModule {
         const mouse = this.editor.stateManager.get('mouse');
         if (!mouse.isDraggingAsset) return;
 
+        // Check if current level is locked
+        if (this.editor.levelsManager?.getCurrentSession()?.locked) {
+            Logger.mouse.warn('Cannot add objects: current level is locked');
+            return;
+        }
+
         // Check if current layer is locked
         const currentLayer = this.editor.getCurrentLayer();
         if (currentLayer && currentLayer.locked) {

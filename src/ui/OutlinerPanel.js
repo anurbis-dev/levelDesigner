@@ -28,6 +28,14 @@ export class OutlinerPanel extends BasePanel {
         this._itemNodeCache = new Map(); // objId -> item element
         this._searchResultsInfoNode = null;
 
+        // Icon "paint drag" (mirrors LayersPanel/LevelsPanel) — mousedown on an object's eye
+        // icon + drag over other eye icons applies the same visibility before mouseup. No
+        // native draggable rows exist in this panel, so unlike the other two panels there's
+        // nothing to suspend/restore here.
+        this._iconPaintDrag = null; // { value: boolean }
+        this._endIconPaintDragBound = () => this._endIconPaintDrag();
+        document.addEventListener('mouseup', this._endIconPaintDragBound);
+
         // Initialize panel structure
         this.panelElements = createOutlinerPanelStructure(this.container);
 
@@ -136,7 +144,8 @@ export class OutlinerPanel extends BasePanel {
                     this.levelEditor.renderOperations.getEffectiveLayerId(obj) :
                     (obj.layerId || level.getMainLayerId());
                 const layer = level.getLayerById(effectiveLayerId);
-                return !(layer && layer.locked);
+                if (layer && layer.locked) return false;
+                return !this.levelEditor.levelsManager?.getCurrentSession()?.locked;
             },
             itemSelector: '[data-object-id]',
             selectedClass: 'selected'
@@ -706,21 +715,82 @@ export class OutlinerPanel extends BasePanel {
         btn.style.alignItems = 'center';
         btn.style.padding = '0 4px';
         btn.innerHTML = '<svg class="w-4 h-4" viewBox="0 0 20 20" fill="currentColor"></svg>';
-        btn.addEventListener('click', (e) => {
+        // mousedown (not click) so a plain press and a paint-drag (mousedown + drag over more
+        // eye icons, see handleVisibilityIconMouseOver/_paintObjectVisibility) share one path.
+        btn.addEventListener('mousedown', (e) => {
             e.stopPropagation();
             const current = this.levelEditor.level.findObjectById(item.dataset.id);
             if (!current) return;
             if (e.ctrlKey || e.metaKey) {
                 // Solo (like Ctrl+click a layer's eye icon): hide every other top-level
                 // object; a soloed group's own children are unaffected (see
-                // ObjectOperations.toggleObjectSolo).
+                // ObjectOperations.toggleObjectSolo). Single-shot, not paintable.
                 this.levelEditor.objectOperations.toggleObjectSolo(current);
-            } else {
-                this.levelEditor.objectOperations.toggleObjectVisibility(current);
-                this.levelEditor.objectOperations.afterVisibilityChange();
+                return;
             }
+            e.preventDefault();
+            this._iconPaintDrag = { value: !current.visible };
+            this._paintObjectVisibility(current, btn, item);
+        });
+        btn.addEventListener('mouseover', () => {
+            if (!this._iconPaintDrag) return;
+            const current = this.levelEditor.level.findObjectById(item.dataset.id);
+            if (!current) return;
+            this._paintObjectVisibility(current, btn, item);
         });
         return btn;
+    }
+
+    /**
+     * Apply visibility=targetValue to one object during a paint drag (mousedown on an eye
+     * icon + drag over more eye icons before mouseup, mirrors LayersPanel/LevelsPanel).
+     * Mutates the model + gives immediate feedback on this row's own icon; the shared
+     * history/cache/full-panel-refresh tail (ObjectOperations.afterVisibilityChange) is
+     * batched once in _endIconPaintDrag rather than paid per icon crossed while dragging —
+     * otherwise a fast drag over many objects would push one undo entry per object.
+     * @param {Object} obj
+     * @param {HTMLElement} visibilityBtn
+     * @param {HTMLElement} item - row element, for the name-display color update
+     */
+    _paintObjectVisibility(obj, visibilityBtn, item) {
+        if (!this._iconPaintDrag || obj.visible === this._iconPaintDrag.value) return;
+        this.levelEditor.objectOperations.toggleObjectVisibility(obj);
+        const nameSpan = item.querySelector('.outliner-item-name-display');
+        if (nameSpan) {
+            this.updateVisibilityButton(visibilityBtn, nameSpan, obj);
+        }
+    }
+
+    /**
+     * Row opacity: hidden (effective visibility, see isObjectEffectivelyVisible) takes
+     * priority over locked-layer dimming — a hidden-and-locked object should still read as
+     * "hidden" first. Shared by the full-render path (renderObjectNode/renderGroupNode) and
+     * the live per-icon update (updateVisibilityButton, incl. during paint-drag) so both
+     * compute the identical value.
+     * @param {Object} obj
+     * @param {boolean} [effectivelyVisible] - pass through if already computed, to avoid a
+     *   redundant isObjectEffectivelyVisible call
+     * @returns {string} CSS opacity value
+     */
+    _computeRowOpacity(obj, effectivelyVisible = this.levelEditor.objectOperations.isObjectEffectivelyVisible(obj)) {
+        if (!effectivelyVisible) return '0.45';
+        const effectiveLayerId = this.levelEditor.renderOperations ?
+            this.levelEditor.renderOperations.getEffectiveLayerId(obj) :
+            (obj.layerId || this.levelEditor.level.getMainLayerId());
+        const layer = this.levelEditor.level.getLayerById(effectiveLayerId);
+        if (layer && layer.locked) return '0.5';
+        return this.levelEditor.levelsManager?.getCurrentSession()?.locked ? '0.5' : '';
+    }
+
+    /**
+     * mouseup (global, document-level since a drag can end outside this panel): close out the
+     * paint drag and run the batched history/render/panel-refresh tail once for the whole
+     * gesture.
+     */
+    _endIconPaintDrag() {
+        if (!this._iconPaintDrag) return;
+        this._iconPaintDrag = null;
+        this.levelEditor.objectOperations.afterVisibilityChange();
     }
 
     /**
@@ -737,6 +807,15 @@ export class OutlinerPanel extends BasePanel {
         const soloedId = this.stateManager.get('view.soloedTopLevelObjectId');
         const isSoloed = soloedId && objectOperations.findTopLevelAncestor(obj).id === soloedId;
         const effectivelyVisible = objectOperations.isObjectEffectivelyVisible(obj);
+
+        // Whole-row dim (mirrors LayersPanel/LevelsPanel's row-opacity hidden state) — without
+        // this, hidden objects only showed a slightly darker icon/name color, easy to miss
+        // next to the other two panels' much more visible row fade. visibilityBtn is always a
+        // direct child of the row (see renderObjectNode/renderGroupNode).
+        const item = visibilityBtn.closest('.outliner-item');
+        if (item) {
+            item.style.opacity = this._computeRowOpacity(obj, effectivelyVisible);
+        }
 
         visibilityBtn.title = isSoloed
             ? 'Soloed — Ctrl+click to un-solo'
@@ -889,17 +968,18 @@ export class OutlinerPanel extends BasePanel {
             this.levelEditor.renderOperations.getEffectiveLayerId(group) :
             (group.layerId || this.levelEditor.level.getMainLayerId());
         const layer = this.levelEditor.level.getLayerById(effectiveLayerId);
-        if (layer && layer.locked) {
+        const levelLocked = !!this.levelEditor.levelsManager?.getCurrentSession()?.locked;
+        if ((layer && layer.locked) || levelLocked) {
             item.classList.add('locked');
-            item.style.opacity = '0.5';
             item.style.cursor = 'not-allowed';
-            item.title = 'Object is in locked layer';
+            item.title = levelLocked ? 'Current level is locked' : 'Object is in locked layer';
         } else {
             item.classList.remove('locked');
-            item.style.opacity = '';
             item.style.cursor = '';
             item.title = '';
         }
+        // updateVisibilityButton (above) already set item.style.opacity from
+        // _computeRowOpacity, which factors in this same locked check.
 
         item.classList.toggle('selected', this.stateManager.get('selectedObjects').has(group.id));
 
@@ -996,17 +1076,18 @@ export class OutlinerPanel extends BasePanel {
             this.levelEditor.renderOperations.getEffectiveLayerId(obj) :
             (obj.layerId || this.levelEditor.level.getMainLayerId());
         const layer = this.levelEditor.level.getLayerById(effectiveLayerId);
-        if (layer && layer.locked) {
+        const levelLocked = !!this.levelEditor.levelsManager?.getCurrentSession()?.locked;
+        if ((layer && layer.locked) || levelLocked) {
             item.classList.add('locked');
-            item.style.opacity = '0.5';
             item.style.cursor = 'not-allowed';
-            item.title = 'Object is in locked layer';
+            item.title = levelLocked ? 'Current level is locked' : 'Object is in locked layer';
         } else {
             item.classList.remove('locked');
-            item.style.opacity = '';
             item.style.cursor = '';
             item.title = '';
         }
+        // updateVisibilityButton (above) already set item.style.opacity from
+        // _computeRowOpacity, which factors in this same locked check.
 
         item.classList.toggle('selected', this.stateManager.get('selectedObjects').has(obj.id));
 
@@ -1273,7 +1354,10 @@ export class OutlinerPanel extends BasePanel {
      */
     destroy() {
         Logger.ui.debug('Destroying OutlinerPanel');
-        
+
+        document.removeEventListener('mouseup', this._endIconPaintDragBound);
+        this._iconPaintDrag = null;
+
         // Unsubscribe from all state changes
         this.subscriptions.forEach(unsubscribe => {
             try {

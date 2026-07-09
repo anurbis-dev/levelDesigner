@@ -221,7 +221,12 @@ export class DetailsPanel {
         
         // Transforms Section (Position & Size)
         this.renderTransformsSection(obj);
-        
+
+        // Camera Section (zoom, matching the editor's working camera shape) — camera-type only
+        if (obj.type === 'camera') {
+            this.renderCameraObjectProperties(obj);
+        }
+
         // Visual Properties Section
         this.renderVisualProperties(obj);
         
@@ -277,6 +282,35 @@ export class DetailsPanel {
         this.setupTransformsListeners(section, obj);
         
         this.container.appendChild(section);
+    }
+
+    /**
+     * Render camera-object properties (zoom) — mirrors the editor's working viewport
+     * camera shape {x, y, zoom}: x/y already come from the Transform/Position row,
+     * this adds the missing zoom so ViewportOperations.jumpToCamera() has a real
+     * value to apply to the viewport instead of always assuming 1.
+     */
+    renderCameraObjectProperties(obj) {
+        const section = this.createSection('Camera');
+
+        const zoomRow = this.createDualFieldRow('Zoom', [
+            { prefix: 'Z', property: 'zoom', id: 'details-camera-zoom', step: '0.05' }
+        ]);
+        section._content.appendChild(zoomRow);
+        this.container.appendChild(section);
+
+        const input = zoomRow.querySelector('#details-camera-zoom');
+        if (!input) return;
+
+        input.value = (obj.properties?.zoom ?? 1).toFixed(2);
+        input.addEventListener('blur', (e) => {
+            let value = parseFloat(e.target.value);
+            if (isNaN(value) || value <= 0) value = 1;
+            obj.properties = obj.properties || {};
+            obj.properties.zoom = value;
+            e.target.value = value.toFixed(2);
+            this.notifyPropertyChange(obj, 'properties.zoom', value);
+        });
     }
 
     /**

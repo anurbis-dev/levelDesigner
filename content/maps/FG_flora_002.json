@@ -1,6 +1,6 @@
 {
   "name": "FG_flora_001",
-  "type": "object",
+  "type": "image",
   "category": "TEST",
   "imgSrc": [
     "FG_flora_001.png"

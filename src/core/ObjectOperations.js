@@ -705,6 +705,14 @@ export class ObjectOperations extends BaseModule {
     computeSelectableSet() {
         const selectable = new Set();
 
+        // A locked current level blocks selection of everything in it — mirrors per-layer
+        // lock below, but at level granularity. No cross-level interaction exists elsewhere
+        // in this class (always operates on editor.getLevel()), so this single early-return
+        // is sufficient — no per-object level-membership check needed.
+        if (this.editor.levelsManager?.getCurrentSession()?.locked) {
+            return selectable;
+        }
+
         // Helper function to check if object is selectable (visible and in visible unlocked layer)
         const isObjectSelectable = (obj) => {
             // Check object visibility

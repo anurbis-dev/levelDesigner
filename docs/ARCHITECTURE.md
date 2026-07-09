@@ -71,11 +71,12 @@
 - Автоматическое определение устройства и маршрутизация событий
 - Поддержка горизонтальных и вертикальных разделителей
 
-### EventHandlerManager (v3.52.5)
+### EventHandlerManager (v3.52.5+v3.58.0)
 **Файл**: `src/event-system/EventHandlerManager.js`
 - Унифицированный менеджер событий UI
-- Event delegation для эффективности
+- Event delegation для эффективности (click, contextmenu, dragstart, mousedown, mouseup, mouseover — v3.58.0)
 - Предотвращение дублирования обработчиков
+- **Paint drag паттерн** (v3.58.0): mousedown на иконке → `_startIconPaintDrag()`, mouseover на других иконках того же типа → `_paint*()`, глобальный mouseup → `_endIconPaintDrag()` с батчевым ре-рендером. Используется в LayersPanel (eye/lock), LevelsPanel (eye), OutlinerPanel (eye) для быстрого тогла множества иконок без клика по каждой отдельно
 
 ### GlobalEventRegistry (v3.52.5)
 **Файл**: `src/event-system/GlobalEventRegistry.js`
@@ -106,19 +107,21 @@
 ### File Menu Structure (v3.57.0 Phase 7)
 **Файл**: `config/menu.js`, id `file` (переименовано с `level` в Phase 7)
 - **Меню-структура** (новая в Phase 7):
-  - Level-операции: New Level, Open Level..., [separator], Save Level, Save Level As..., Close Level
-  - Project-операции (новый блок): [separator], New Project, Open Project..., Save Project, Save Project As...
+  - Project-операции: New Project, Open Project..., [separator], Save Project, Save Project As...
+  - Level-операции: [separator], New Level, Open Level..., [separator], Save Level, Save Level As...
   - Assets: [separator], Import Assets... (перенесено из Settings в Phase 7)
+- **Close Level** — удалён из меню (остаётся доступен через крестик на вкладке уровня в LevelsPanel и контекстное меню); сам метод `closeLevel()` не удалён — остаётся в API
 - **Import Assets...** — раньше был в Settings меню, перемещён в File для логической группировки файловых операций (Phase 7)
 - **Project Settings...** — новый пункт в Settings меню (раньше в File, переместился в Phase 7 для разделения проекта и редактора)
 
-### LevelsPanel (v3.57.0 Phase 6 Complete)
+### LevelsPanel (v3.57.0 Phase 6 Complete, v3.58.0: отдельная вкладка)
 **Файлы**: `src/ui/LevelsPanel.js`, `src/ui/LevelsContextMenu.js`, `src/ui/panel-structures/LevelsPanelStructure.js`
-- **Назначение**: список открытых уровней (LevelSession), размещён в правой вкладке Layers НАД LayersPanel (в одном контейнере `#layers-content-panel`)
+- **Назначение**: список открытых уровней (LevelSession), теперь отдельная вкладка в правой панели (ранее был вложен в вкладку Layers). DOM-структура: `#levels-content-panel` (независимый tab-content-right div, `index.html:148`)
 - **Функциональность**:
   - Кнопка "+Add" добавляет новый уровень как отдельную сессию через `LevelsManager.addLevel()`
   - Клик по элементу списка переключает текущий уровень через `setCurrentLevel()`
   - Eye-icon переключает per-level visibility (Phase 3: видимые уровни рисуются одновременно через `getVisibleSessions()` в `RenderOperations.render()`)
+  - **Solo (Ctrl+click eye-icon)**: эксклюзивная видимость одного уровня, зеркалит `LayersPanel.toggleLayerSolo` 1:1; сбрасывает solo у остальных уровней
   - Double-click / контекстное меню "Rename" переименовывает уровень
   - Контекстное меню: "Make Current", "Rename", "Save", "Save As", "Close", "Duplicate" (Phase 5)
   - **Drag-reorder** (Phase 6): перестановка табов в списке через `LevelsManager.reorderLevels(newOrder)`; заблокировано при активном поиске (DOM-источник неполный)
@@ -137,7 +140,8 @@
 **ProjectFileOperations** (BaseModule):
 - `newProject()` — создание нового проекта: очищает все открытые уровни, создаёт один пустой с `seeded history baseline` (один undo-шаг для начального состояния). Единый confirm-диалог при несохранённых правках, вместо N диалогов по одному на каждый уровень (Edge Case 10/11).
 - `openProject()` — открытие проекта из файла (парсит all уровни ДО очистки текущих, чтобы невалидная запись не оставила редактор без единого открытого уровня; Edge Case 3). Replace-not-merge семантика: новые уровни заменяют весь набор открытых табов.
-- `saveProject()`/`saveProjectAs()` — сохранение текущего проекта (скачивание в браузер). `saveProject()` требует предварительного `newProject()` или `openProject()` (иначе no-op). `saveProjectAs()` запрашивает имя файла.
+- `saveProject()` — сохранение текущего проекта (скачивание в браузер). При отсутствии `project.fileName` имя берётся из `project.name` через приватный метод `_deriveFileNameFromProjectName()` (заменяет `/` и `\` на `-`, добавляет `.json`). Требует предварительного `newProject()` или `openProject()` (иначе no-op).
+- `saveProjectAs()` — сохранение проекта с выбором имени файла (показывает prompt).
 - **Per-session history bootstrap**: каждой фоновой (non-current) сессии при загрузке вручную seeded `.history` через `HistoryManager.saveState()` (т.к. `addLevel({makeCurrent:false})` не пропускает живой HistoryManager).
 - **Cache cleanup**: `newProject()`/`openProject()` вызывают приватный `_cleanupAllOpenSessions()` для очистки orphaned entries в `renderOperations.spatialIndex`, `visibleLayersCache`, и прочих per-levelId кешах (иначе повторные New/Open Project копили zombie-данные по старым levelId).
 
@@ -258,10 +262,10 @@
 ### AssetManager & FileManager
 **Файл**: `src/managers/AssetManager.js`, `src/core/LevelFileOperations.js`
 - **AssetManager**: управление библиотекой ассетов, сканирование папки `content/`, кэширование изображений
-  - **AssetTypes каталог** (`src/constants/AssetTypes.js`): 29 предопределённых типов ассетов (Camera, Actor, Image, ImageAtlas, Volume, SpriteAnimationClip, Tileset, Tilemap, NineSliceSprite, FontTextStyle, ParticleEffect, MaterialShaderPreset, Light, ParallaxLayer, SoundEffect, MusicTrack, AudioZone, DialogueGraph, QuestObjective, ItemDefinition, InventorySchema, LocalizationTable, SaveSchema, InputMap, PathSpline, NavMesh, AIBehaviorPreset, Prefab, SequenceCutscene), разбитые на категории (Core, Visual/Render, Audio, Data/System, Navigation/AI, Other) с цветовыми кодами и описаниями; вспомогательные функции `getAssetTypeById(id)`, `getAssetTypesByCategory(categoryId)`
+  - **AssetTypes каталог** (`src/constants/AssetTypes.js`): 29 предопределённых типов ассетов в 6 категориях (Core: Camera, Actor, Image, ImageAtlas, Volume, Player Start; Visual/Render: SpriteAnimationClip, Tileset, Tilemap, NineSliceSprite, FontTextStyle, ParticleEffect, MaterialShaderPreset, Light; Audio: SoundEffect, MusicTrack, AudioZone; Data/System: DialogueGraph, QuestObjective, ItemDefinition, InventorySchema, LocalizationTable, SaveSchema, InputMap; Navigation/AI: PathSpline, NavMesh, AIBehaviorPreset; Other: Prefab, SequenceCutscene). `Player Start` — это не только тип ассета, но и auto-managed GameObject marker (ровно один на уровень, auto-создание при отсутствии, валидация в DetailsPanel/LevelFileOperations статистике) — через меню Assets → Add → Core → Player Start теперь можно вручную создать placeholder-ассет, который при размещении на уровне создаёт GameObject с `type='player_start'`, распознаваемый существующей системой. Вспомогательные функции `getAssetTypeById(id)`, `getAssetTypesByCategory(categoryId)`, `getAssetCategoriesWithTypes()`
   - **ComponentTypes каталог** (`src/constants/ComponentTypes.js`): 19 типов компонентов (Collider, Trigger, TransformAnimation, SpriteUiAnimation, Interactable, Pickup, DialogueTrigger, DamageHealth, MovablePushable, MountableVehicleSeat, PathFollower, Spawner, StateMachineBehavior, PlayerStart, CheckpointSavePoint, ClimbableLadder, ConveyorZiplineJumpPadPortal, DestructibleContainer, VariableModifier) — editor-side metadata-стабы ({id, type, enabled, properties}), которые прикрепляются к Asset/GameObject; runtime-поведение реализуется в game engine, который импортирует JSON; вспомогательные функции `getComponentTypeById(id)`, `createComponentStub(typeId)`
   - **AssetTypeIcons** (`src/constants/AssetTypeIcons.js`): минималистичная гліфическая библиотека (stroke SVG, 24×24px) для каждого типа ассета/компонента; функция `buildTypeIconSvg(typeId, color, size)` возвращает inline `<svg>` строку
-  - **createPlaceholderAsset(typeId, customName?, folderPath = 'root')**: создание заполнителя-ассета без реального контента (категория-базированный цвет, type-иконка в превью вместо color-swatch+букв, поле `properties.placeholder = true`); `path` строится от `folderPath` (текущая выбранная папка в Asset panel), а не от категории — иначе ассет попадал бы в отдельную category-папку вместо текущей
+  - **createPlaceholderAsset(typeId, customName?, folderPath = 'root')**: создание заполнителя-ассета без реального контента (цвет и размеры используют опциональные `typeDef.color`/`width`/`height` если заданы, иначе дефолты категории/48×48, type-иконка в превью вместо color-swatch+букв, поле `properties.placeholder = true`); `path` строится от `folderPath` (текущая выбранная папка в Asset panel), а не от категории — иначе ассет попадал бы в отдельную category-папку вместо текущей. Если в `DEFAULT_ASSET_COMPONENTS[typeId]` определены default-компоненты, они автоматически создаются через `createComponentStub()` и прикрепляются к `components[]` ассета
   - **Asset.components** и **GameObject.components**: новые поля (массив component stubs, дефолт `[]`), сохраняются в `toJSON()`, копируются в экземпляры при размещении GameObjects через `createInstance()`; `components` также участвует в `Asset.hasChangesFromOriginal()`/`saveOriginalState()` (dirty-check)
 - **FileManager**: сохранение/загрузка уровней
 - **Menu Integration** (`config/menu.js`): новое меню "Add" (id остаётся `assets`, вставлено между View и Settings) — иерархия категория→тип→действие (label = имя типа, без префикса "New"); `buildAssetsMenu()` динамически генерирует меню из каталога; каждый пункт вызывает `LevelEditor.createAssetOfType(typeId)`, который берёт текущую папку через `assetPanel.getActiveTabPath()`, передаёт её в `createPlaceholderAsset()` и шлёт `Logger.status.success/error` в строку состояния; `MenuManager.createSubmenuItem()` — поддержка вложенных submenu-ов (flyout dropdown); каждый пункт типа получает иконку из `buildTypeIconSvg()` и `disabled: isRootFolderSelected` (дизейбл при выборе корневой папки); `getAssetCategoriesWithTypes()` gruppирует типы по категориям для обоих меню (nav "Add" и AssetPanelContextMenu "Add")

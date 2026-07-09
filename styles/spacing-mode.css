@@ -336,6 +336,10 @@ nav {
     padding: 0; /* No padding for main interface elements */
 }
 
+#levels-content-panel {
+    padding: 0; /* No padding for main interface elements */
+}
+
 #layers-content-panel {
     padding: 0; /* No padding for main interface elements */
 }

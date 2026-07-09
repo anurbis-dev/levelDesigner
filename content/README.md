@@ -38,7 +38,7 @@ Create a JSON file with the following structure:
 ```json
 {
   "name": "My Asset",
-  "type": "object",
+  "type": "image",
   "imgSrc": "my_asset.png",
   "color": "#CCCCCC",
   "width": 32,

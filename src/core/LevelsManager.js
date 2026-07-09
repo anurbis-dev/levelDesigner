@@ -78,7 +78,13 @@ export class LevelsManager extends BaseModule {
      * @returns {LevelSession[]} sessions currently marked visible (eye icon on)
      */
     getVisibleSessions() {
-        return this.getOrderedSessions().filter(session => session.visible);
+        const sessions = this.getOrderedSessions();
+        // Solo (Ctrl+click a level's eye icon in LevelsPanel): if any level is soloed,
+        // only soloed level(s) render, regardless of their own `visible` flag — mirrors
+        // LayersPanel/RenderOperations.getVisibleLayerIds() solo behavior for layers.
+        const soloedSessions = sessions.filter(session => session.soloed);
+        if (soloedSessions.length > 0) return soloedSessions;
+        return sessions.filter(session => session.visible);
     }
 
     /**
@@ -160,6 +166,49 @@ export class LevelsManager extends BaseModule {
             }
         }
 
+        this.editor.render();
+    }
+
+    /**
+     * Ctrl+click a level's eye icon: exclusive "solo" — only this level renders,
+     * regardless of any level's own `visible` flag (see getVisibleSessions() above).
+     * Ctrl+click an already-soloed level to un-solo (back to normal per-level visibility).
+     * Non-destructive: never touches `session.visible`, `session.soloed` is a transient UI flag.
+     * @param {string} levelId
+     */
+    toggleLevelSolo(levelId) {
+        const session = this.editor.levelSessions.get(levelId);
+        if (!session) return;
+
+        const wasSoloed = session.soloed;
+        this.getOrderedSessions().forEach(s => { s.soloed = false; });
+        session.soloed = !wasSoloed;
+
+        this.editor.stateManager.notify('levelVisibilityChanged', { levelId, visible: session.visible });
+        this.editor.render();
+    }
+
+    /**
+     * Toggle a level's lock state. Mirrors LayersPanel.toggleLayerLock's effect but scoped
+     * to the whole level: when the CURRENT level becomes locked, clear its selection (the
+     * canvas/Outliner selectability gates — ObjectOperations.computeSelectableSet(),
+     * OutlinerPanel's canSelect — already block re-selecting anything in a locked current
+     * level, so this just clears what was selected before the lock). Locking a background
+     * (non-current) level has no selection to clear — its objects aren't reachable via
+     * canvas/Outliner selection today regardless (see plan: no cross-level interaction).
+     * @param {string} levelId
+     */
+    toggleLevelLock(levelId) {
+        const session = this.editor.levelSessions.get(levelId);
+        if (!session) return;
+
+        session.locked = !session.locked;
+
+        if (session.locked && levelId === this.editor.currentLevelId) {
+            this.editor.stateManager.set('selectedObjects', new Set());
+        }
+
+        this.editor.stateManager.notify('levelLockChanged', { levelId, locked: session.locked });
         this.editor.render();
     }
 

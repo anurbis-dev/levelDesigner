@@ -8,10 +8,14 @@ export class LevelSession {
         this.level = level;
         this.id = level.id;
         this.visible = opts.visible ?? true;
+        this.soloed = opts.soloed ?? false;
+        this.locked = opts.locked ?? false;
+        this.color = opts.color ?? '#3B82F6';
         this.fileName = opts.fileName ?? null;
         this.isDirty = opts.isDirty ?? false;
         this.viewState = opts.viewState ?? {
             camera: { x: 0, y: 0, zoom: 1 },
+            lastCameraObjectId: null,
             selectedObjects: new Set(),
             groupEditMode: { isActive: false, groupId: null, group: null, openGroups: [] },
             currentLayerId: level.getMainLayerId(),

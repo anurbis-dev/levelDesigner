@@ -303,7 +303,7 @@ this.layersPanel = new LayersPanel(layersPanelContainer, this.stateManager, this
 - `.level-color` — swatch (см. Открытые вопросы п.7 — нужен ли вообще).
 - `.level-name-display` / `.level-name-input` — inline rename (`level.meta.name`).
 - `.level-objects-count` — `level.getStats().totalObjects`.
-- `.level-visibility-btn` (глаз) — toggles `session.visible`, инвалидирует кеш видимости уровней, `editor.render()`. Solo-концепция не нужна.
+- `.level-visibility-btn` (глаз) — toggles `session.visible`, инвалидирует кеш видимости уровней, `editor.render()`. **Solo (Ctrl+click)**: эксклюзивная видимость одного уровня, зеркалит `LayersPanel.toggleLayerSolo` 1:1; `session.soloed` флаг, `getVisibleSessions()` при наличии soloed-уровней возвращает только их.
 - `.level-dirty-indicator` — точка/звёздочка если `session.isDirty`.
 - Без lock/parallax на уровне (не запрошено).
 - Клик по строке (не по глазу) = `setCurrentLevel(level.id)`; текущий уровень — `bg-blue-600`, как `isCurrent` в `createLayerElement`.

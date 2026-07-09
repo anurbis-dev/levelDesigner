@@ -1,6 +1,6 @@
 {
   "name": "FG_flora_02",
-  "type": "object",
+  "type": "image",
   "category": "Enemies",
   "imgSrc": [
     "FG_flora_02.png"

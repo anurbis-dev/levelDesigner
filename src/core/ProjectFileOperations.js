@@ -169,11 +169,13 @@ export class ProjectFileOperations extends BaseModule {
 
     /**
      * Save the current project (embedding every open level's data) to its existing
-     * file name, or prompt for one if this project has never been saved.
+     * file name. A project always has a name (Project.js defaults it to
+     * "Untitled Project", editable via Project Settings), so a never-saved project
+     * derives its file name from that instead of prompting — mirrors Save Level's
+     * "reuse the known name, no dialog" behavior rather than Save Level As.
      */
     async saveProject() {
-        const fileName = this.editor.project?.fileName || await prompt('Enter project file name:', 'project.json');
-        if (!fileName) return;
+        const fileName = this.editor.project?.fileName || this._deriveFileNameFromProjectName();
         this._doSaveProject(fileName);
     }
 
@@ -185,6 +187,20 @@ export class ProjectFileOperations extends BaseModule {
         const fileName = await prompt('Enter project file name:', currentFileName);
         if (!fileName) return;
         this._doSaveProject(fileName);
+    }
+
+    /**
+     * Derive a download file name from the project's configured name (Project
+     * Settings), e.g. "My Game" -> "My Game.json". Mirrors AssetManager's
+     * filename sanitization: only "/" and "\" are stripped since browsers accept
+     * spaces/other punctuation in a download name.
+     * @private
+     * @returns {string}
+     */
+    _deriveFileNameFromProjectName() {
+        const name = this.editor.project?.name || 'Untitled Project';
+        const safeName = name.replace(/[/\\]/g, '-');
+        return `${safeName}.json`;
     }
 
     /**

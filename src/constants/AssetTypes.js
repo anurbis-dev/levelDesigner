@@ -21,6 +21,11 @@ export const ASSET_TYPES = [
     { id: 'image', label: 'Image', category: 'core', description: 'Raw bitmap resource.' },
     { id: 'imageAtlas', label: 'Image Atlas', category: 'core', description: 'Auto-packed image atlas / sprite sheet source.' },
     { id: 'volume', label: 'Volume', category: 'core', description: 'Arbitrary-shape trigger zone with visual effects (blur/color/shadow).' },
+    // id must stay 'player_start' (not camelCase) — matches the GameObject.type string that
+    // LevelEditor.ensurePlayerStartExists()/getPlayerStartCount() and FileManager.createNewLevel()
+    // already use for the auto-managed, exactly-one-per-level spawn marker (see LevelEditor.js,
+    // FileManager.js). width/height/color mirror that existing marker's look.
+    { id: 'player_start', label: 'Player Start', category: 'core', description: 'Marks where the player spawns when the level loads.', width: 32, height: 32, color: 'lightblue' },
 
     // Visual / render (section 2)
     { id: 'spriteAnimationClip', label: 'Sprite Animation Clip', category: 'visual', description: 'Frame sequence from an Atlas + timings + loop mode.' },
@@ -55,6 +60,13 @@ export const ASSET_TYPES = [
     { id: 'prefab', label: 'Prefab / Actor Template', category: 'other', description: 'Saved Actor with preconfigured components/parameters.' },
     { id: 'sequenceCutscene', label: 'Sequence / Cutscene Timeline', category: 'other', description: 'Timeline driving multiple Actors/camera/UI together.' }
 ];
+
+// Component type ids (see ComponentTypes.js) auto-attached when a placeholder of this asset
+// type is created — so e.g. a placed "Player Start" already carries its behavior stub instead
+// of requiring the user to remember to add the matching component manually.
+export const DEFAULT_ASSET_COMPONENTS = {
+    player_start: ['playerStart']
+};
 
 const ASSET_TYPE_MAP = new Map(ASSET_TYPES.map(t => [t.id, t]));
 

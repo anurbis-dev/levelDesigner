@@ -1,6 +1,7 @@
 import { Asset } from '../models/Asset.js';
 import { Logger } from '../utils/Logger.js';
-import { getAssetTypeById, ASSET_CATEGORIES } from '../constants/AssetTypes.js';
+import { getAssetTypeById, ASSET_CATEGORIES, DEFAULT_ASSET_COMPONENTS } from '../constants/AssetTypes.js';
+import { createComponentStub } from '../constants/ComponentTypes.js';
 
 /**
  * Asset library management
@@ -212,7 +213,7 @@ export class AssetManager {
         const asset = this.addAsset({
             id: assetId,
             name: assetData.name,
-            type: assetData.type || 'object',
+            type: assetData.type || 'image',
             category: category,
             path: filePath,
             width: assetData.width || 32,
@@ -266,17 +267,22 @@ export class AssetManager {
             ? `${folderPath}/${safeName}.json`
             : `${categoryLabel}/${safeName}.json`;
 
+        const defaultComponents = (DEFAULT_ASSET_COMPONENTS[typeId] || [])
+            .map(componentTypeId => createComponentStub(componentTypeId))
+            .filter(Boolean);
+
         return this.addExternalAsset({
             name,
             type: typeId,
             category: categoryLabel,
             path: assetPath,
-            width: 48,
-            height: 48,
-            color: categoryColor,
+            width: typeDef.width || 48,
+            height: typeDef.height || 48,
+            color: typeDef.color || categoryColor,
             imgSrc: null,
             properties: { placeholder: true, assetTypeLabel: typeDef.label, description: typeDef.description },
-            tags: [typeDef.category]
+            tags: [typeDef.category],
+            components: defaultComponents
         });
     }
 

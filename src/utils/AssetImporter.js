@@ -732,7 +732,7 @@ export class AssetImporter {
             'ui': 'ui',
             'tiles': 'tile'
         };
-        return typeMap[category] || 'object';
+        return typeMap[category] || 'image';
     }
 
     /**

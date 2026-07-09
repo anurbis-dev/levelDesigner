@@ -40,6 +40,10 @@
       "key": "A",
       "description": "Focus on all objects"
     },
+    "jumpToCamera": {
+      "key": ".",
+      "description": "Jump viewport to selected/last camera object"
+    },
     "toggleGrid": {
       "key": "G",
       "description": "Toggle grid visibility"

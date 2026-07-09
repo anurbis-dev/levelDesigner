@@ -2815,9 +2815,9 @@ export class AssetPanel extends BasePanel {
             'collectibles': 'collectible',
             'enemies': 'enemy',
             'environment': 'environment',
-            'objects': 'object'
+            'objects': 'image'
         };
-        return typeMap[category] || 'object';
+        return typeMap[category] || 'image';
     }
 
     /**

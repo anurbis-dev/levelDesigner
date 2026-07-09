@@ -126,11 +126,15 @@ export class LevelFileOperations extends BaseModule {
         }
 
         // Per-session fileName, not FileManager.currentFileName (global) — saving level B
-        // after saving A once must never silently overwrite A's file. Always pass an
-        // explicit non-null fileName so FileManager's own `|| this.currentFileName`
-        // fallback (global, stale) never triggers.
+        // after saving A once must never silently overwrite A's file. A level that has
+        // never been saved has no name to reuse — fall through to the same prompt as
+        // Save Level As... rather than silently defaulting to "level.json".
         const session = this.editor.levelsManager.getCurrentSession();
-        const fileName = session.fileName || 'level.json';
+        let fileName = session.fileName;
+        if (!fileName) {
+            fileName = await prompt('Enter file name:', 'level.json');
+            if (!fileName) return;
+        }
         session.fileName = this.editor.fileManager.saveLevel(this.editor.level, fileName);
         session.isDirty = false;
         this.editor.stateManager.markClean();

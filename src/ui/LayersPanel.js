@@ -5,6 +5,7 @@ import { LayersContextMenu } from './LayersContextMenu.js';
 import { HoverEffects } from '../utils/HoverEffects.js';
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 import { createLayersPanelStructure, renderLayersControls } from './panel-structures/LayersPanelStructure.js';
+import { createListItemRow, updateListItemVisuals } from './panel-structures/ListItemRowStructure.js';
 import { searchManager } from '../utils/SearchManager.js';
 
 /**
@@ -17,6 +18,12 @@ export class LayersPanel extends BasePanel {
         this.searchFilter = ''; // Search filter for layers
         this.contextMenu = null; // Context menu instance
         this._draggedElement = null; // Track dragged element for drag and drop
+
+        // Icon "paint drag": mousedown on an eye/lock icon + drag over others applies the
+        // same state to every icon of that type under the cursor before mouseup. See
+        // handleLayerIconMouseDown/handleLayerIconMouseOver/_endIconPaintDrag.
+        this._iconPaintDrag = null; // { type: 'visibility'|'lock', value: boolean }
+        this._draggableSuspendedRow = null; // .layer-item temporarily set draggable=false during a paint drag
 
         // Track subscriptions for cleanup
         this.subscriptions = [];
@@ -363,66 +370,22 @@ export class LayersPanel extends BasePanel {
         // RenderOperations.getVisibleLayerIds(), the single source of truth for this.
         const effectivelyVisible = this.levelEditor.renderOperations.getVisibleLayerIds().has(layer.id);
 
-        const layerDiv = document.createElement('div');
-        layerDiv.className = `layer-item flex items-center justify-between p-2 rounded border border-gray-600 cursor-pointer transition-colors ${
-            isCurrent ? 'bg-blue-600' : 'bg-gray-700'
-        }`;
-        layerDiv.style.opacity = effectivelyVisible ? '' : '0.45';
-        layerDiv.draggable = true;
-        layerDiv.dataset.layerId = layer.id;
-        
-        layerDiv.innerHTML = `
-            <div class="flex items-center space-x-2 flex-1 min-w-0">
-                <div class="layer-color w-4 h-4 rounded-full cursor-pointer border-2 border-gray-500"
-                     data-layer-id="${layer.id}"
-                     data-color="${layer.color}"
-                     title="Click to change color"></div>
-                <div class="flex items-center space-x-1 flex-1 min-w-0">
-                    <span class="layer-name-display flex-1 px-1 py-1 rounded min-w-0" style="color: var(--ui-text-color, #d1d5db);"
-                          data-layer-id="${layer.id}">${layer.name}</span>
-                    <input type="text"
-                           id="layer-name-${layer.id}"
-                           name="layer-name-${layer.id}"
-                           value="${layer.name}"
-                           class="layer-name-input bg-transparent border-none flex-1 focus:outline-none focus:bg-gray-600 px-1 rounded min-w-0 hidden" style="color: var(--ui-text-color, #d1d5db);"
-                           data-layer-id="${layer.id}">
-                </div>
-            </div>
-            <div class="flex items-center space-x-1 flex-shrink-0">
-                <span class="layer-objects-count text-sm px-2 py-1 rounded bg-gray-600 min-w-0" style="color: var(--ui-text-color, #9ca3af);"
-                      data-layer-id="${layer.id}">${objectsCount > 0 ? objectsCount : ''}</span>
-                <button class="layer-visibility-btn p-1 rounded w-8 h-8 flex items-center justify-center"
-                        data-layer-id="${layer.id}"
-                        title="${layer.soloed ? 'Soloed — Ctrl+click to un-solo' : (layer.visible ? 'Hide layer (Ctrl+click to solo)' : 'Show layer (Ctrl+click to solo)')}">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style="color: ${layer.soloed ? '#fbbf24' : 'var(--ui-text-color, #d1d5db)'};">
-                        ${effectivelyVisible ?
-                            '<path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>' :
-                            '<path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd"/><path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z"/>'
-                        }
-                    </svg>
-                </button>
-                <button class="layer-lock-btn p-1 rounded w-8 h-8 flex items-center justify-center" 
-                        data-layer-id="${layer.id}" 
-                        title="${layer.locked ? 'Unlock layer' : 'Lock layer'}">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" style="color: ${layer.locked ? 'var(--ui-text-color, #d1d5db)' : 'var(--ui-text-color, #6b7280)'};">
-                        ${layer.locked ? 
-                            '<path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>' :
-                            '<path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 015.905-.75 1 1 0 001.937-.5A5.002 5.002 0 0010 2z"/>'
-                        }
-                    </svg>
-                </button>
-                <input type="number"
-                       id="layer-parallax-${layer.id}"
-                       class="layer-parallax-input bg-gray-600 border border-gray-500 text-xs rounded px-1 py-1 w-12 h-8 text-center focus:outline-none focus:border-blue-500" style="color: var(--ui-text-color, #d1d5db);"
-                       data-layer-id="${layer.id}"
-                       value="${layer.parallaxOffset}"
-                       step="0.1"
-                       min="-10"
-                       max="10"
-                       title="Parallax offset (0 = no parallax, negative = slower, positive = faster)">
-            </div>
-        `;
-        
+        const layerDiv = createListItemRow('layer', {
+            id: layer.id,
+            isCurrent,
+            effectivelyVisible,
+            draggable: true,
+            name: { display: layer.name, value: layer.name },
+            objectsCount,
+            visibility: {
+                soloed: layer.soloed,
+                title: layer.soloed ? 'Soloed — Ctrl+click to un-solo' : (layer.visible ? 'Hide layer (Ctrl+click to solo)' : 'Show layer (Ctrl+click to solo)')
+            },
+            color: { value: layer.color, title: 'Click to change color' },
+            lock: { locked: layer.locked, title: layer.locked ? 'Unlock layer' : 'Lock layer' },
+            parallax: { value: layer.parallaxOffset, title: 'Parallax offset (0 = no parallax, negative = slower, positive = faster)' }
+        });
+
         // Setup hover effects and set color using CSS variable
         const colorElement = layerDiv.querySelector('.layer-color');
         if (colorElement) {
@@ -521,7 +484,6 @@ export class LayersPanel extends BasePanel {
         // Effective visibility (not raw layer.visible) — see createLayerElement's comment
         // and RenderOperations.getVisibleLayerIds(), the single source of truth for this.
         const effectivelyVisible = this.levelEditor.renderOperations.getVisibleLayerIds().has(layerId);
-        layerElement.style.opacity = effectivelyVisible ? '' : '0.45';
 
         // Update color indicator
         const colorIndicator = layerElement.querySelector('.layer-color');
@@ -552,53 +514,17 @@ export class LayersPanel extends BasePanel {
             countElement.textContent = objectsCount > 0 ? objectsCount : '';
         }
 
-        // Update background color based on current state
         const isCurrent = this.currentLayerId === layerId;
-        
-        if (isCurrent) {
-            layerElement.classList.remove('bg-gray-700');
-            layerElement.classList.add('bg-blue-600');
-        } else {
-            layerElement.classList.remove('bg-blue-600');
-            layerElement.classList.add('bg-gray-700');
-        }
 
-        // Update visibility button icon and title
-        const visibilityBtn = layerElement.querySelector('.layer-visibility-btn');
-        if (visibilityBtn) {
-            visibilityBtn.title = layer.soloed
-                ? 'Soloed — Ctrl+click to un-solo'
-                : (layer.visible ? 'Hide layer (Ctrl+click to solo)' : 'Show layer (Ctrl+click to solo)');
-            const svg = visibilityBtn.querySelector('svg');
-            if (svg) {
-                svg.setAttribute('class', 'w-4 h-4');
-                // Icon SHAPE reflects EFFECTIVE visibility (own `visible` AND not shadowed
-                // by another layer's solo), not raw `layer.visible` alone — a soloed
-                // sibling layer must visibly close this layer's eye too. Color stays
-                // default regardless (visible/hidden is shape-only, matching the rest of
-                // this panel's icons); the whole-row opacity dim (see above) is what shows
-                // "hidden" at a glance. Soloed still gets its own amber color — a distinct
-                // state, not visible/hidden.
-                svg.style.color = layer.soloed ? '#fbbf24' : 'var(--ui-text-color, #d1d5db)';
-                svg.innerHTML = effectivelyVisible ?
-                    '<path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/><path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>' :
-                    '<path fill-rule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clip-rule="evenodd"/><path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.065 7 9.542 7 .847 0 1.669-.105 2.454-.303z"/>';
-            }
-        }
-
-        // Update lock button icon and title
-        const lockBtn = layerElement.querySelector('.layer-lock-btn');
-        if (lockBtn) {
-            lockBtn.title = layer.locked ? 'Unlock layer' : 'Lock layer';
-            const svg = lockBtn.querySelector('svg');
-            if (svg) {
-                svg.setAttribute('class', 'w-4 h-4');
-                svg.style.color = layer.locked ? 'var(--ui-text-color, #d1d5db)' : 'var(--ui-text-color, #6b7280)';
-                svg.innerHTML = layer.locked ? 
-                    '<path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/>' :
-                    '<path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 0 002 2h10a2 2 0 002-2v-5a2 2 0 00-2-2H7V7a3 3 0 015.905-.75 1 1 0 001.937-.5A5.002 5.002 0 0010 2z"/>';
-            }
-        }
+        updateListItemVisuals(layerElement, 'layer', {
+            effectivelyVisible,
+            isCurrent,
+            visibility: {
+                soloed: layer.soloed,
+                title: layer.soloed ? 'Soloed — Ctrl+click to un-solo' : (layer.visible ? 'Hide layer (Ctrl+click to solo)' : 'Show layer (Ctrl+click to solo)')
+            },
+            lock: { locked: layer.locked, title: layer.locked ? 'Unlock layer' : 'Lock layer' }
+        });
     }
 
 
@@ -1582,26 +1508,13 @@ export class LayersPanel extends BasePanel {
                     // Handle button clicks
                     const button = target.closest('button');
                     if (button) {
-                        if (button.classList.contains('layer-visibility-btn')) {
-                            const layerId = button.closest('[data-layer-id]')?.dataset.layerId;
-                            if (layerId) {
-                                if (e.ctrlKey || e.metaKey) {
-                                    this.toggleLayerSolo(layerId);
-                                } else {
-                                    this.toggleLayerVisibility(layerId);
-                                }
-                            }
+                        // layer-visibility-btn / layer-lock-btn are handled on mousedown
+                        // (see handleLayerIconMouseDown) so a plain click and a paint-drag
+                        // both go through one code path — nothing to do here.
+                        if (button.classList.contains('layer-visibility-btn') || button.classList.contains('layer-lock-btn')) {
                             return;
                         }
-                        
-                        if (button.classList.contains('layer-lock-btn')) {
-                            const layerId = button.closest('[data-layer-id]')?.dataset.layerId;
-                            if (layerId) {
-                                this.toggleLayerLock(layerId);
-                            }
-                            return;
-                        }
-                        
+
                         if (button.classList.contains('add-layer-btn')) {
                             this.onAddLayer(e);
                             return;
@@ -1846,16 +1759,177 @@ export class LayersPanel extends BasePanel {
                     this.render();
                     this.stateManager.markDirty();
                 }
+            },
+            mousedown: {
+                selector: '.layer-visibility-btn, .layer-lock-btn',
+                handler: (e) => this.handleLayerIconMouseDown(e)
+            },
+            mouseover: {
+                selector: '.layer-visibility-btn, .layer-lock-btn',
+                handler: (e) => this.handleLayerIconMouseOver(e)
             }
         };
 
         // Register container with new event manager
         eventHandlerManager.registerContainer(this.container, layersHandlers);
 
+        // mouseup can land anywhere on the page once dragging off the panel, so end the
+        // paint drag globally rather than only within this container.
+        eventHandlerManager.registerGlobalHandlers({
+            mouseup: () => this._endIconPaintDrag()
+        }, 'layersPanel-iconPaintDrag');
+
         Logger.ui.debug('LayersPanel: New event handlers setup complete');
-        
+
         // Mark as registered to avoid duplicate registration
         this._eventHandlersRegistered = true;
+    }
+
+    /**
+     * mousedown on a layer's eye/lock icon: apply the toggled state immediately (so a plain
+     * click still works) and, unless Ctrl/Cmd was held (solo — a single-shot action, not a
+     * paintable state), arm paint-drag mode so dragging over more icons of the same type
+     * paints them to the same value before mouseup.
+     * @param {MouseEvent} e
+     */
+    handleLayerIconMouseDown(e) {
+        const button = e.target.closest('.layer-visibility-btn, .layer-lock-btn');
+        if (!button) return;
+        const layerId = button.dataset.layerId;
+        if (!layerId) return;
+        // NOT button.closest('[data-layer-id]') — every child in the row (name, count,
+        // both buttons, parallax input) carries its own data-layer-id, so closest() on the
+        // button matches the button itself, not the row. That silently no-oped the
+        // draggable-suspend below (row draggable stayed true), which real mouse drags then
+        // hijacked into native row-reorder instead of paint-drag — .layer-item is unambiguous.
+        const layerElement = button.closest('.layer-item');
+        if (!layerElement) return;
+        const level = this.levelEditor.getLevel();
+        const layer = level.getLayerById(layerId);
+        if (!layer) return;
+
+        if (button.classList.contains('layer-visibility-btn')) {
+            if (e.ctrlKey || e.metaKey) {
+                this.toggleLayerSolo(layerId);
+                return;
+            }
+            e.preventDefault();
+            this._startIconPaintDrag('visibility', !layer.visible, layerElement);
+            this._paintLayerVisibility(layerId, this._iconPaintDrag.value);
+        } else if (button.classList.contains('layer-lock-btn')) {
+            e.preventDefault();
+            this._startIconPaintDrag('lock', !layer.locked, layerElement);
+            this._paintLayerLock(layerId, this._iconPaintDrag.value);
+        }
+    }
+
+    /**
+     * mouseover during an active paint drag: apply the armed target value to the icon of the
+     * same type under the cursor (icons already at that value are left alone — a paint, not
+     * a re-toggle, so passing back over an already-painted icon doesn't flip it again).
+     * @param {MouseEvent} e
+     */
+    handleLayerIconMouseOver(e) {
+        if (!this._iconPaintDrag) return;
+        const button = e.target.closest('.layer-visibility-btn, .layer-lock-btn');
+        if (!button) return;
+        const layerId = button.dataset.layerId;
+        if (!layerId) return;
+
+        if (this._iconPaintDrag.type === 'visibility' && button.classList.contains('layer-visibility-btn')) {
+            this._paintLayerVisibility(layerId, this._iconPaintDrag.value);
+        } else if (this._iconPaintDrag.type === 'lock' && button.classList.contains('layer-lock-btn')) {
+            this._paintLayerLock(layerId, this._iconPaintDrag.value);
+        }
+    }
+
+    /**
+     * @param {'visibility'|'lock'} type
+     * @param {boolean} value - state to paint onto every icon of this type until mouseup
+     * @param {HTMLElement} layerElement - the .layer-item the drag started on
+     */
+    _startIconPaintDrag(type, value, layerElement) {
+        this._iconPaintDrag = { type, value };
+        // A nested mousedown+move inside a draggable="true" .layer-item would otherwise be
+        // hijacked into an HTML5 row-reorder drag (see dragstart above) instead of painting —
+        // suspend it for just this row, mirroring the rename-input precedent further down.
+        if (layerElement && layerElement.draggable) {
+            this._draggableSuspendedRow = layerElement;
+            layerElement.draggable = false;
+        }
+    }
+
+    /**
+     * mouseup (global): close out the paint drag, restore suspended dragging, and run the
+     * cache-invalidate/render/outliner-refresh tail exactly once for the whole gesture —
+     * mirrors showAllLayers/hideAllLayers, which batch the same tail after their loop
+     * instead of paying it per layer.
+     */
+    _endIconPaintDrag() {
+        if (!this._iconPaintDrag) return;
+        const { type } = this._iconPaintDrag;
+        this._iconPaintDrag = null;
+        if (this._draggableSuspendedRow) {
+            this._draggableSuspendedRow.draggable = true;
+            this._draggableSuspendedRow = null;
+        }
+
+        if (type === 'visibility') {
+            if (this.levelEditor.renderOperations) {
+                this.levelEditor.renderOperations.invalidateLayerVisibilityCache();
+            }
+            this.stateManager.markDirty();
+            this.render();
+            if (this.levelEditor.renderOperations) {
+                this.levelEditor.render();
+            }
+            this.updateLayerStyles();
+            if (this.levelEditor.outlinerPanel) {
+                this.levelEditor.outlinerPanel.render();
+            }
+        } else if (type === 'lock') {
+            this.stateManager.markDirty();
+            this.render();
+        }
+    }
+
+    /**
+     * Apply visibility=targetValue to one layer during a paint drag: mutate the model + this
+     * row's DOM. The expensive canvas/outliner-refresh tail is batched once in
+     * _endIconPaintDrag rather than paid per icon crossed while dragging — but the layer-
+     * visibility-IDs cache IS invalidated here (cheap: a couple of Set/Map ops, see
+     * RenderOperations.invalidateLayerVisibilityCache), because updateLayerElement's icon
+     * shape/row-opacity read straight from that cache. Leaving it stale until mouseup made
+     * every icon crossed during the drag show the PRE-drag state until release.
+     * @param {string} layerId
+     * @param {boolean} targetValue
+     */
+    _paintLayerVisibility(layerId, targetValue) {
+        const level = this.levelEditor.getLevel();
+        const layer = level.getLayerById(layerId);
+        if (!layer || layer.visible === targetValue) return;
+
+        layer.toggleVisibility();
+        if (this.levelEditor.renderOperations) {
+            this.levelEditor.renderOperations.invalidateLayerVisibilityCache();
+        }
+        this.updateLayerElement(layerId, layer);
+        this.handleLayerVisibilityChanged(layerId, layer.visible);
+    }
+
+    /**
+     * Apply locked=targetValue to one layer during a paint drag. See _paintLayerVisibility.
+     * @param {string} layerId
+     * @param {boolean} targetValue
+     */
+    _paintLayerLock(layerId, targetValue) {
+        const level = this.levelEditor.getLevel();
+        const layer = level.getLayerById(layerId);
+        if (!layer || layer.locked === targetValue) return;
+
+        layer.toggleLock();
+        this.updateLayerElement(layerId, layer);
+        this.handleLayerLockChanged(layerId, layer.locked);
     }
 
     /**
@@ -1972,14 +2046,17 @@ export class LayersPanel extends BasePanel {
     destroy() {
         // Remove event handlers using new system
         eventHandlerManager.unregisterContainer(this.container);
-        
+        eventHandlerManager.unregisterGlobalHandlers('layersPanel-iconPaintDrag');
+
         // Also unregister top section
         const topSection = this.panelElements?.topCustom;
         if (topSection) {
             eventHandlerManager.unregisterContainer(topSection);
         }
-        
+
         this._eventHandlersRegistered = false;
+        this._iconPaintDrag = null;
+        this._draggableSuspendedRow = null;
         this._topSectionHandlersRegistered = false;
         
         // Unsubscribe from all state changes

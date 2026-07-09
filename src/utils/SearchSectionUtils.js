@@ -23,25 +23,22 @@ export class SearchSectionUtils {
      */
     static showSearchSectionForTab(tabName, editor) {
         Logger.ui.debug('SearchSectionUtils: showSearchSectionForTab called for', tabName);
-        const showSearch = tabName === 'layers' || tabName === 'outliner';
+        const showSearch = tabName === 'levels' || tabName === 'layers' || tabName === 'outliner';
         if (!showSearch) {
             Logger.ui.debug(`No search controls needed for ${tabName} tab`);
             return false;
         }
 
         // Render appropriate search controls (now part of panel structure)
-        if (tabName === 'layers' && editor.layersPanel) {
+        if (tabName === 'levels' && editor.levelsPanel) {
+            Logger.ui.debug('SearchSectionUtils: Calling renderLevelsSearchControls');
+            editor.levelsPanel.renderLevelsSearchControls();
+            Logger.ui.debug(`Levels search controls rendered for ${tabName} tab`);
+            return true;
+        } else if (tabName === 'layers' && editor.layersPanel) {
             Logger.ui.debug('SearchSectionUtils: Calling renderLayersSearchControls');
             editor.layersPanel.renderLayersSearchControls();
             Logger.ui.debug(`Layers search controls rendered for ${tabName} tab`);
-
-            // The Levels section lives inside the same 'layers' tab content
-            // (above LayersPanel, see index.html #levels-content-panel) — its own
-            // top-custom search/add-button section needs the same activation hook,
-            // otherwise it's never built when this tab starts hidden at boot.
-            if (editor.levelsPanel) {
-                editor.levelsPanel.renderLevelsSearchControls();
-            }
             return true;
         } else if (tabName === 'outliner' && editor.outlinerPanel) {
             Logger.ui.debug('SearchSectionUtils: Calling renderOutlinerSearchControls');

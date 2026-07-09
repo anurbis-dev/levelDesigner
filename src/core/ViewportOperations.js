@@ -140,6 +140,64 @@ export class ViewportOperations extends BaseModule {
     }
 
     /**
+     * Move the working viewport to a camera object's position and apply its own
+     * zoom (obj.properties.zoom, default 1) — unlike focusOnSelection/focusOnAll,
+     * this does NOT fit-to-bounds; it restores the camera object's own settings,
+     * same shape as the viewport camera itself {x, y, zoom}.
+     * @param {Object} cameraObj
+     */
+    applyCameraObjectToViewport(cameraObj) {
+        const canvas = this.editor.canvasRenderer?.canvas;
+        if (!canvas) {
+            Logger.viewport.warn('Canvas not available');
+            return;
+        }
+
+        const zoom = cameraObj.properties?.zoom ?? 1;
+        const centerX = cameraObj.x + cameraObj.width / 2;
+        const centerY = cameraObj.y + cameraObj.height / 2;
+
+        this.editor.stateManager.update({
+            'camera.zoom': zoom,
+            'camera.x': centerX - canvas.width / (2 * zoom),
+            'camera.y': centerY - canvas.height / (2 * zoom)
+        });
+        this.editor.render();
+    }
+
+    /**
+     * Jump viewport to the selected camera-type object, or the last camera jumped to
+     * if nothing is selected. Warns via the status bar when neither is available.
+     */
+    jumpToCamera() {
+        const selectedObjects = this.editor.stateManager.get('selectedObjects');
+        const selectedCamera = selectedObjects && selectedObjects.size > 0
+            ? Array.from(selectedObjects)
+                .map(id => this.editor.getCachedObject(id))
+                .find(obj => obj && obj.type === 'camera')
+            : null;
+
+        const session = this.editor.levelsManager?.getCurrentSession();
+
+        if (selectedCamera) {
+            this.applyCameraObjectToViewport(selectedCamera);
+            if (session) session.viewState.lastCameraObjectId = selectedCamera.id;
+            Logger.viewport.info(`Jumped to camera ${selectedCamera.id}`);
+            return;
+        }
+
+        const lastCameraId = session?.viewState.lastCameraObjectId;
+        const lastCamera = lastCameraId ? this.editor.getCachedObject(lastCameraId) : null;
+        if (lastCamera && lastCamera.type === 'camera') {
+            this.applyCameraObjectToViewport(lastCamera);
+            Logger.viewport.info(`Jumped to remembered camera ${lastCamera.id}`);
+            return;
+        }
+
+        Logger.status.warn('No camera selected — select or place a camera object to jump to it.');
+    }
+
+    /**
      * Focus camera on all objects in the level
      */
     focusOnAll() {

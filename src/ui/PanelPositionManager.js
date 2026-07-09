@@ -230,6 +230,7 @@ export class PanelPositionManager {
         try {
             const tabPositions = {
                 details: this.userPrefs?.get('tabPosition_details') ?? 'right',
+                levels: this.userPrefs?.get('tabPosition_levels') ?? 'right',
                 layers: this.userPrefs?.get('tabPosition_layers') ?? 'right',
                 outliner: this.userPrefs?.get('tabPosition_outliner') ?? 'right'
             };
@@ -317,6 +318,7 @@ export class PanelPositionManager {
         // Create default tabs
         const defaultTabs = [
             { name: 'details', text: 'Asset', active: true },
+            { name: 'levels', text: 'Levels', active: false },
             { name: 'layers', text: 'Layers', active: false },
             { name: 'outliner', text: 'Outliner', active: false }
         ];
@@ -332,7 +334,8 @@ export class PanelPositionManager {
         // Move existing content panels to temporary container
         const contentPanels = [
             'details-content-panel',
-            'layers-content-panel', 
+            'levels-content-panel',
+            'layers-content-panel',
             'outliner-content-panel'
         ];
         
@@ -388,7 +391,8 @@ export class PanelPositionManager {
         // Get current tab positions
         const tabPositions = this.stateManager.get('tabPositions') || {
             details: 'right',
-            layers: 'right', 
+            levels: 'right',
+            layers: 'right',
             outliner: 'right'
         };
 

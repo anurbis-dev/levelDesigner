@@ -432,10 +432,58 @@ export class EventHandlerManager {
             handlers.drop = (e) => {
                 const target = e.target;
                 const selector = config.drop.selector || '*';
-                
+
                 const element = target.closest(selector);
                 if (element) {
                     const handler = config.drop.handler;
+                    if (typeof handler === 'function') {
+                        handler.call(element, e, target);
+                    }
+                }
+            };
+        }
+
+        // Mouse press/release/over delegation (all bubble natively, unlike mouseenter/
+        // mouseleave above) — used for icon "paint drag" (click+drag over identical toggle
+        // icons, e.g. layer eye/lock, to set them all in one gesture).
+        if (config.mousedown) {
+            handlers.mousedown = (e) => {
+                const target = e.target;
+                const selector = config.mousedown.selector || '*';
+
+                const element = target.closest(selector);
+                if (element) {
+                    const handler = config.mousedown.handler;
+                    if (typeof handler === 'function') {
+                        handler.call(element, e, target);
+                    }
+                }
+            };
+        }
+
+        if (config.mouseup) {
+            handlers.mouseup = (e) => {
+                const target = e.target;
+                const selector = config.mouseup.selector || '*';
+
+                const element = target.closest(selector);
+                if (element) {
+                    const handler = config.mouseup.handler;
+                    if (typeof handler === 'function') {
+                        handler.call(element, e, target);
+                    }
+                }
+            };
+        }
+
+        if (config.mouseover) {
+            handlers.mouseover = (e) => {
+                const target = e.target;
+                const selector = config.mouseover.selector || '*';
+
+                const element = target.closest(selector);
+                if (element) {
+                    const handler = config.mouseover.handler;
                     if (typeof handler === 'function') {
                         handler.call(element, e, target);
                     }

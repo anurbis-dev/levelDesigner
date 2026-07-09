@@ -50,6 +50,7 @@ export class UserPreferencesManager {
             'foldersWidth': 'ui.foldersWidth',
             'rightPanelPosition': 'ui.rightPanelPosition',
             'tabPosition_details': 'ui.tabPosition_details',
+            'tabPosition_levels': 'ui.tabPosition_levels',
             'tabPosition_layers': 'ui.tabPosition_layers',
             'tabPosition_outliner': 'ui.tabPosition_outliner',
 
