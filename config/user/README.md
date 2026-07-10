@@ -138,6 +138,7 @@ editor.configManager.saveUserConfig('canvas', {
 - `rightPanelTabOrder` - порядок вкладок правой панели
 - `leftPanelTabOrder` - порядок вкладок левой панели
 - `assetTabOrder` - порядок вкладок ассетов
+- `rightPanelSplits` / `leftPanelSplits` - вложенные split-композиты вкладок (merge через drag)
 - `selection.*` - настройки выделения объектов
 
 ## 🔄 **Приоритет загрузки настроек**

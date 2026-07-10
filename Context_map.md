@@ -1,4 +1,4 @@
-# Context Map - Level Designer v3.58.0 (Levels — отдельная вкладка в правой панели)
+# Context Map - Level Designer v3.59.0 (nested tab splits, camera zoom, Player Start asset-type)
 
 ## ⚠️ КРИТИЧЕСКИ ВАЖНО - ЧИТАТЬ ПЕРВЫМ
 
@@ -75,6 +75,29 @@ levelEditor.createAssetOfType(typeId) // создание placeholder-ассет
 // setupMenuClosing(menu, triggerElement) — persistent document mousemove-листенер на ВСЮ жизнь меню (раньше только opening-анимация)
 // repositionMenu(menu, triggerElement, options) — пересчитывает позицию по реальным размерам после добавления пунктов (синхронно, без видимого прыжка)
 // Применяется: BaseContextMenu (было и раньше), OutlinerPanel/AssetPanel (меню фильтров), MenuManager (top-level dropdown через новый setupDropdownCursorMarginWatcher)
+
+// Nested Tab Split Sections (v3.59.0+): вложенная структура вкладок
+// panelPositionManager.mergeTabIntoSplit(draggedTabName, targetTabName, panelSide, position)
+//   — создаёт вложенную split-секцию: перетаскивание вкладки на контент другой вкладки
+//   — обе вкладки видны одновременно в верхней/нижней половине с resizer между ними
+//   — заголовок split переименовывается в "Parent/Child" формат
+// panelPositionManager.replacePaneInSplit(draggedTabName, evictedTabName, panelSide)
+//   — замена содержимого одной половины УЖЕ существующего composite
+//   — перетаскивание вкладки на одну из двух половин (`.tab-split-pane`) заменяет занимающую эту половину вкладку
+//   — ЕСЛИ перетаскиваемая вкладка — plain standalone-вкладка: вытесненная становится standalone-вкладкой в панели-ИСТОЧНИКЕ перетаскиваемой вкладки (не в split-панели), заполняя освободившийся слот; при cross-panel drag это двусторонний swap между панелями
+//   — ЕСЛИ перетаскиваемая вкладка сама вложена в ДРУГОЙ composite: выполняется true pane-for-pane swap через _swapNestedPanes, вытесненная занимает место перетаскиваемой в исходном composite, оба composite остаются composites
+//   — "identity anchor": если заменяемая половина — якорь идентичности composite, якорь переносится на нетронутую половину (в обоих случаях; в nested-case происходит в обоих composite)
+// _extractDraggedTab(draggedTabName), _collapseSplitPane(tabName) — унификация двух drag-протоколов
+//   — обе методы абстрагируют логику "откуда забрать перетаскиваемый таб" (standalone-кнопка или вложенная в composite)
+//   — mergeTabIntoSplit/replacePaneInSplit/detachFromSplit используют эти методы, работая одинаково для обоих протоколов
+// _startSplitPaneDetachDrag(header, pane, ...) — расширен в v3.59.0+
+//   — теперь поддерживает merge/replace-зоны (раньше только detach для целой панели)
+//   — проверяет _findSplitDropTarget на mousemove, показывает точные линии раздела при merge/replace
+// panelPositionManager.detachFromSplit(tabName, targetPanelSide)
+//   — отсоединение вложенной панели в standalone-вкладку в левую/правую панель
+// Особенности: только 1 уровень вложенности; только вертикальный split;
+// членство в composite персистится между перезагрузками (leftPanelSplits/rightPanelSplits);
+// размер половин (ratio) персистится между перезагрузками; detach только в существующие панели
 
 // AssetTypes / ComponentTypes (каталоги типов)
 import { getAssetTypeById, getAssetTypesByCategory, ASSET_CATEGORIES, DEFAULT_ASSET_COMPONENTS } from 'src/constants/AssetTypes.js' // 29 типов ассетов: Camera, Actor, Image, Player Start (auto-managed spawn marker, со своим компонентом), Tilemap, Sound, Dialogue, Quest, Prefab и т.д.; DEFAULT_ASSET_COMPONENTS = {player_start: ['playerStart']} автоматически прикрепляет компонент при создании placeholder
@@ -167,6 +190,7 @@ level.settings.parallaxVertical // множитель вертикального
 ### Core
 - `src/core/LevelEditor.js` - главный класс, `this.level` = computed getter/setter через `levelSessions` + `currentLevelId` (v3.57.0 Phase 1+)
 - `src/core/LevelsManager.js` - управление множеством открытых LevelSession: addLevel, setCurrentLevel, closeLevel (Phase 1, 3, 5); cycleLevel, getVisibleSessionsForRender, reorderLevels, levelMRU fallback, soft-cap warning (Phase 6)
+- `src/ui/PanelPositionManager.js` - управление позицией панелей (moveTab, drag-reorder табов); nested tab split sections (v3.59.0+): mergeTabIntoSplit, detachFromSplit, вложенные split-панели с resizer между ними
 - `src/models/LevelSession.js` - editor-only обёртка над Level (visible, fileName, isDirty, viewState, history per-session) — Phase 1
 - `src/core/LevelFileOperations.js` - файловые операции уровня (Phase 5: newLevel/openLevel добавляют вкладки, saveLevel/saveLevelAs работают per-session, closeLevel закрывает вкладку)
 - `src/models/Project.js` - модель проекта (Phase 7): `toJSON(levelSessions, levelOrder, currentLevelId)` эмбеддит Level.toJSON() каждого уровня + видимость/порядок/currentLevelIndex; статический `fromJSON(json)` парсит проект-файл
@@ -278,7 +302,7 @@ eventHandlerManager.registerElement(button, { click: onClick }, 'button-id');
 
 ## 🔧 Версионирование
 
-Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '3.58.0'` (Paint drag для toggle-иконок + Player Start asset-type + optional component attachment из DEFAULT_ASSET_COMPONENTS)
+Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '3.59.0'` (nested tab split sections + viewport "jump to camera" hotkey + Levels panel lock-иконка, Player Start asset-type, camera zoom)
 
 Версия отображается динамически после полной инициализации через `updateVersionInfo()` и `updatePageTitle()`. Интерфейс скрыт до завершения загрузки, чтобы избежать отображения устаревшей версии. Pre-push hook блокирует коммит без бампа версии (`.claude/settings.json`).
 

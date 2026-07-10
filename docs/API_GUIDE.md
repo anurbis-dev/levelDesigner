@@ -298,6 +298,23 @@
 - `savePanelSize(panelSide, direction, size)` - сохранение размера панели
 - `destroy()` - уничтожение менеджера и очистка всех разделителей
 
+### PanelPositionManager (src/ui/PanelPositionManager.js)
+Универсальное управление позицией и структурой панелей с поддержкой drag-and-drop и nested splits.
+
+#### Основные методы:
+- `setupTabDraggingForPanel(panel)` - настройка drag-and-drop для табов панели
+- `moveTab(tabName, fromPanel, toPanel)` - перемещение вкладки между панелями; создаёт целевую панель при необходимости
+- `mergeTabIntoSplit(draggedTabName, targetTabName, panelSide, position, ratio = null)` - создание вложенной split-секции (v3.59.0+); перетаскивание вкладки на контент другой вкладки; обе вкладки видны одновременно в верхней/нижней половине с resizer между ними; опциональный `ratio` применяет сохранённую высоту верхней половины (в % flex-basis)
+- `detachFromSplit(tabName, targetPanelSide)` - отсоединение вложенной панели в standalone-вкладку (v3.59.0+)
+- `ensurePanelExists(panelSide)` - создание панели при необходимости
+
+#### Особенности nested splits (v3.59.0+):
+- **Создание**: перетаскивание вкладки на область контента другой вкладки подсвечивает верхнюю/нижнюю половину; отпускание создаёт split с обеими вкладками
+- **Разделитель**: `.tab-split-resizer` позволяет изменять высоту верхней/нижней части; дублклик выравнивает половины
+- **Отсоединение**: перетаскивание заголовка вложенной панели (`.tab-split-pane-header`) отсоединяет её в левую/правую панель
+- **DOM структура**: `.tab-split-container` содержит две `.tab-split-pane` с `.tab-split-pane-header` и `.tab-content`; `.tab-split-resizer` между ними
+- **Ограничения**: только 1 уровень вложенности; только вертикальный split; членство в composite и размер половин (ratio) персистятся между перезагрузками (leftPanelSplits/rightPanelSplits); detach только в существующие панели
+
 ---
 
 ### Project (src/models/Project.js)

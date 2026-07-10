@@ -23,6 +23,8 @@ export class UserPreferencesManager {
             'rightPanelTabOrder': 'panels.rightPanelTabOrder',
             'leftPanelTabOrder': 'panels.leftPanelTabOrder',
             'assetTabOrder': 'panels.assetTabOrder',
+            'rightPanelSplits': 'panels.rightPanelSplits',
+            'leftPanelSplits': 'panels.leftPanelSplits',
             // Panel visibility states
             'rightPanelVisible': 'ui.rightPanelVisible',
             'leftPanelVisible': 'ui.leftPanelVisible',

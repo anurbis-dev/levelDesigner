@@ -1389,15 +1389,26 @@ export class EventHandlers extends BaseModule {
             if (rightContentPanel) {
                 rightContentPanel.style.display = '';
                 rightContentPanel.classList.remove('hidden');
+                // A split (composite) tab wraps two nested content panels, both marked
+                // data-panel-tab-content="true" — the "hide all" pass above hid them too,
+                // so they need to be explicitly revealed along with their wrapper.
+                rightContentPanel.querySelectorAll('[data-panel-tab-content="true"]').forEach(nested => {
+                    nested.classList.remove('hidden');
+                    nested.style.display = '';
+                });
             }
         }
-        
+
         if (leftPanelActiveTab && leftPanel) {
             const leftContentPanel = leftPanel.querySelector(`[data-panel-tab-name="${leftPanelActiveTab}"]`) ||
                 leftPanel.querySelector(`#${leftPanelActiveTab}-content-panel`);
             if (leftContentPanel) {
                 leftContentPanel.style.display = '';
                 leftContentPanel.classList.remove('hidden');
+                leftContentPanel.querySelectorAll('[data-panel-tab-content="true"]').forEach(nested => {
+                    nested.classList.remove('hidden');
+                    nested.style.display = '';
+                });
             }
         }
 

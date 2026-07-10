@@ -2,6 +2,8 @@
   "rightPanelTabOrder": ["details", "levels", "layers", "outliner"],
   "leftPanelTabOrder": ["details", "levels", "layers", "outliner"],
   "assetTabOrder": [],
+  "rightPanelSplits": [],
+  "leftPanelSplits": [],
   "selection": {
     "outlineColor": "#3B82F6",
     "outlineWidth": 2,

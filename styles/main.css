@@ -384,6 +384,63 @@ header .text-sm {
     color: var(--ui-active-text-color, #ffffff);
 }
 
+/* Nested split sections — dropping a tab onto another tab's content area */
+.tab-split-drop-hint {
+    position: fixed;
+    display: none;
+    pointer-events: none;
+    z-index: 9999;
+    background-color: rgba(59, 130, 246, 0.25);
+    border: 2px solid var(--ui-active-color, #3B82F6);
+    box-sizing: border-box;
+}
+
+.tab-split-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+}
+
+.tab-split-pane {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 0;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.tab-split-pane-header {
+    flex-shrink: 0;
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--ui-text-color, #9ca3af);
+    background-color: #1f2937; /* gray-800 */
+    border-bottom: 1px solid #374151;
+    cursor: grab;
+    user-select: none;
+}
+
+.tab-split-pane-header:active {
+    cursor: grabbing;
+}
+
+.tab-split-resizer {
+    flex-shrink: 0;
+    height: 4px;
+    background-color: #374151;
+    cursor: row-resize;
+}
+
+.tab-split-resizer:hover,
+.tab-split-resizer.resizing {
+    background-color: var(--ui-active-color, #3B82F6);
+}
+
 /* Styles for asset previews */
 .asset-thumbnail {
     border: 2px solid transparent;

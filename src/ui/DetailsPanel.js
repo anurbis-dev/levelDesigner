@@ -1292,25 +1292,7 @@ export class DetailsPanel {
     }
 
     updateTabTitle() {
-        // Tabs are generated dynamically by PanelPositionManager as buttons
-        // with data-tab="details" (the old #details-tab id no longer exists)
-        const detailsTabs = document.querySelectorAll('[data-tab="details"]');
-        if (detailsTabs.length === 0) return;
-
-        const selectedObjects = this.getSelectedObjects();
-        const count = selectedObjects.length;
-
-        let title;
-        if (count === 0) {
-            // Check if we're showing level content
-            title = (this.levelEditor && this.levelEditor.cachedLevelStats) ? 'Level' : 'Details';
-        } else if (count === 1) {
-            title = 'Asset';
-        } else {
-            title = 'Assets';
-        }
-
-        detailsTabs.forEach(tab => { tab.textContent = title; });
+        // Tab title is static ("Details") — only panel content changes with selection.
     }
     
     /**
