@@ -251,16 +251,31 @@ export class OutlinerPanel extends BasePanel {
         // Applying (and closing) on Ctrl release commits whatever was accumulated while Ctrl
         // was held. Only 'Control' — metaKey clicks are treated the same as Ctrl for the
         // multi-select gesture itself, but Cmd has no equivalent reliable "just released" key.
+        //
+        // If the cursor leaves the menu's hit area before Ctrl is released, MenuPositioningUtils
+        // closes the menu on its own (see setupMenuClosing) without going through
+        // ctrlReleaseHandler — so the accumulated-but-unapplied edits would otherwise be silently
+        // dropped while this.activeTypeFilters (mutated live by each checkbox click) stays out of
+        // sync with what's actually applied. Snapshot the pre-session filters and roll back to
+        // them on any close that didn't go through the apply paths below.
+        const filtersSnapshot = new Set(this.activeTypeFilters);
+        let filtersApplied = false;
         const ctrlReleaseHandler = (e) => {
             if (e.key === 'Control') {
                 this.stateManager.update({ 'outliner.activeTypeFilters': this.activeTypeFilters });
                 this.render();
+                filtersApplied = true;
                 if (menu._closeMenuHandler) menu._closeMenuHandler();
             }
         };
         document.addEventListener('keyup', ctrlReleaseHandler);
         // Fires once the menu actually closes, whichever path (cursor-leave or click) triggered it.
-        menu.addEventListener('menuclose', () => document.removeEventListener('keyup', ctrlReleaseHandler));
+        menu.addEventListener('menuclose', () => {
+            document.removeEventListener('keyup', ctrlReleaseHandler);
+            if (!filtersApplied) {
+                this.activeTypeFilters = filtersSnapshot;
+            }
+        });
 
         /**
          * Apply the (already-mutated) this.activeTypeFilters. Ctrl-held: only refresh the
@@ -275,6 +290,7 @@ export class OutlinerPanel extends BasePanel {
             } else {
                 this.stateManager.update({ 'outliner.activeTypeFilters': this.activeTypeFilters });
                 this.render();
+                filtersApplied = true;
                 this.updateFilterMenu(menu, button);
             }
         };

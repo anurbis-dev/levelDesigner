@@ -1026,15 +1026,30 @@ export class AssetPanel extends BasePanel {
         // default close-on-click while Ctrl is held); the accumulated filter is applied AND the
         // menu closes together, once, on Ctrl release. A plain click keeps applying immediately
         // and closing right away, as it always did. Mirrors OutlinerPanel.showFilterMenu.
+        //
+        // If the cursor leaves the menu's hit area before Ctrl is released, MenuPositioningUtils
+        // closes the menu on its own (see setupMenuClosing) without going through
+        // ctrlReleaseHandler — so the accumulated-but-unapplied edits would otherwise be silently
+        // dropped while this.activeTypeFilters (mutated live by each checkbox click) stays out of
+        // sync with what's actually applied. Snapshot the pre-session filters and roll back to
+        // them on any close that didn't go through the apply paths below.
+        const filtersSnapshot = new Set(this.activeTypeFilters);
+        let filtersApplied = false;
         const ctrlReleaseHandler = (e) => {
             if (e.key === 'Control') {
                 this.stateManager.set('assetTypeFilters', this.activeTypeFilters);
                 this.renderPreviews();
+                filtersApplied = true;
                 if (menu._closeMenuHandler) menu._closeMenuHandler();
             }
         };
         document.addEventListener('keyup', ctrlReleaseHandler);
-        menu.addEventListener('menuclose', () => document.removeEventListener('keyup', ctrlReleaseHandler));
+        menu.addEventListener('menuclose', () => {
+            document.removeEventListener('keyup', ctrlReleaseHandler);
+            if (!filtersApplied) {
+                this.activeTypeFilters = filtersSnapshot;
+            }
+        });
 
         const applyOrDefer = (e) => {
             if (e.ctrlKey || e.metaKey) {
@@ -1043,6 +1058,7 @@ export class AssetPanel extends BasePanel {
             } else {
                 this.stateManager.set('assetTypeFilters', this.activeTypeFilters);
                 this.renderPreviews();
+                filtersApplied = true;
                 this.updateAssetFilterMenu(menu, button);
             }
         };
