@@ -347,8 +347,8 @@
 
 Мышиные жесты поворота и масштабирования выделения, работают на любом уровне вложенности (в т.ч. внутри групп).
 
-- **Ctrl+drag** по объекту — вращение выделения вокруг центра общего world bounding box; **Shift** во время вращения — снап к ближайшему **абсолютному** углу с шагом `TRANSFORM.ROTATION_SNAP_DEGREES` (10°): общий delta корректируется так, чтобы итоговый rotation первого объекта снапшота лёг на кратный шагу угол (выделение остаётся жёстким).
-- **Ctrl+Alt+drag** — равномерное масштабирование выделения относительно центра общего bounding box, клампится `TRANSFORM.MIN_SCALE_FACTOR` (0.05) / `TRANSFORM.MAX_SCALE_FACTOR` (20); **Shift** — снап фактора к шагу `TRANSFORM.SCALE_SNAP_FACTOR` (10%).
+- **Ctrl+drag** по объекту — вращение выделения вокруг центра общего world bounding box; **Shift** во время вращения — снап к ближайшему **абсолютному** углу с шагом, задаваемым в Settings → Selection ("Rotation Snap (Shift+drag, °)"), по умолчанию 15° (читается из `stateManager.get('selection.rotationSnapDegrees')` с fallback на `TRANSFORM.ROTATION_SNAP_DEGREES` если не задано).
+- **Ctrl+Alt+drag** — равномерное масштабирование выделения относительно центра общего bounding box, клампится `TRANSFORM.MIN_SCALE_FACTOR` (0.05) / `TRANSFORM.MAX_SCALE_FACTOR` (20); **Shift** — снап фактора к шагу, задаваемому в Settings → Selection ("Scale Snap (Shift+drag, factor)"), по умолчанию 0.1 (10%, читается из `stateManager.get('selection.scaleSnapFactor')` с fallback на `TRANSFORM.SCALE_SNAP_FACTOR` если не задано).
 - Если кликнутый объект не был выделен — становится единственным выделением (как при обычном drag).
 - Ctrl+click без drag — по-прежнему toggle selection; Ctrl+drag по пустому месту — marquee toggle (не изменилось).
 - **Alt+drag дублирование** теперь срабатывает только без Ctrl (Ctrl+Alt зарезервирован под scale) — см. `MouseHandlers.js`.

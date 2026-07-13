@@ -157,6 +157,8 @@ export class SettingsSyncManager {
             'selection.hierarchyHighlightColor': 'selection.hierarchyHighlightColor',
             'selection.activeLayerBorderColor': 'selection.activeLayerBorderColor',
             'selection.hitTestTolerance': 'selection.hitTestTolerance',
+            'selection.rotationSnapDegrees': 'selection.rotationSnapDegrees',
+            'selection.scaleSnapFactor': 'selection.scaleSnapFactor',
 
             // Touch settings
             'touch.panThreshold': 'touch.panThreshold',

@@ -200,13 +200,13 @@
     "rotateObjects": {
       "key": "Drag",
       "ctrlKey": true,
-      "description": "Rotate selected objects (hold Shift for 10° steps)"
+      "description": "Rotate selected objects (hold Shift to snap, step in Settings → Selection)"
     },
     "scaleObjects": {
       "key": "Drag",
       "ctrlKey": true,
       "altKey": true,
-      "description": "Scale selected objects (hold Shift for 10% steps)"
+      "description": "Scale selected objects (hold Shift to snap, step in Settings → Selection)"
     },
     "soloLayer": {
       "key": "Click",

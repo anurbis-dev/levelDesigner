@@ -472,7 +472,9 @@ export function renderSelectionSettings(stateManager) {
             marqueeColor: stateManager.get('selection.marqueeColor') || '#3B82F6',
             marqueeOpacity: stateManager.get('selection.marqueeOpacity') || 0.2,
             hierarchyHighlightColor: stateManager.get('selection.hierarchyHighlightColor') || '#3B82F6',
-            hitTestTolerance: stateManager.get('selection.hitTestTolerance') ?? 4
+            hitTestTolerance: stateManager.get('selection.hitTestTolerance') ?? 4,
+            rotationSnapDegrees: stateManager.get('selection.rotationSnapDegrees') ?? 15,
+            scaleSnapFactor: stateManager.get('selection.scaleSnapFactor') ?? 0.1
         }
     };
 
@@ -501,6 +503,30 @@ export function renderSelectionSettings(stateManager) {
                 max: 20,
                 step: 1,
                 label: 'Click Tolerance (px)'
+            })}
+        </div>
+
+        <div>
+            ${createSettingsRange({
+                id: 'selection-rotation-snap-degrees',
+                dataSetting: 'selection.rotationSnapDegrees',
+                value: settings.selection.rotationSnapDegrees,
+                min: 1,
+                max: 90,
+                step: 1,
+                label: 'Rotation Snap (Shift+drag, °)'
+            })}
+        </div>
+
+        <div>
+            ${createSettingsRange({
+                id: 'selection-scale-snap-factor',
+                dataSetting: 'selection.scaleSnapFactor',
+                value: settings.selection.scaleSnapFactor,
+                min: 0.01,
+                max: 1,
+                step: 0.01,
+                label: 'Scale Snap (Shift+drag, factor)'
             })}
         </div>
     `);

@@ -182,7 +182,9 @@ export class StateManager {
                 marqueeColor: '#3B82F6',
                 marqueeOpacity: 0.2,
                 hierarchyHighlightColor: '#3B82F6',
-                hitTestTolerance: 4
+                hitTestTolerance: 4,
+                rotationSnapDegrees: 15,
+                scaleSnapFactor: 0.1
             },
             
             // Touch state

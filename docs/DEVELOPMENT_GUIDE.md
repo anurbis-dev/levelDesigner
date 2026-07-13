@@ -1611,16 +1611,16 @@ handleAltDragInGroup(object, group) {
 
 Мышиные жесты трансформации выделения, работают на любом уровне вложенности (в т.ч. внутри групп):
 
-- **Ctrl+drag** по объекту — вращение выделения вокруг центра общего world bounding box; **Shift** — снап к ближайшему абсолютному углу с шагом `TRANSFORM.ROTATION_SNAP_DEGREES` (10°), т.е. объект «встаёт» на 0°/10°/20°..., а не поворачивается на кратный шаг от текущего угла.
-- **Ctrl+Alt+drag** — равномерное масштабирование выделения относительно центра общего bounding box; фактор клампится `TRANSFORM.MIN_SCALE_FACTOR` (0.05) / `TRANSFORM.MAX_SCALE_FACTOR` (20); **Shift** — снап фактора к шагу `TRANSFORM.SCALE_SNAP_FACTOR` (10%).
+- **Ctrl+drag** по объекту — вращение выделения вокруг центра общего world bounding box; **Shift** — снап к ближайшему абсолютному углу с шагом, задаваемым в Settings → Selection ("Rotation Snap (Shift+drag, °)"), по умолчанию 15° (читается из `stateManager.get('selection.rotationSnapDegrees')` с fallback на `TRANSFORM.ROTATION_SNAP_DEGREES` если не задано).
+- **Ctrl+Alt+drag** — равномерное масштабирование выделения относительно центра общего bounding box; фактор клампится `TRANSFORM.MIN_SCALE_FACTOR` (0.05) / `TRANSFORM.MAX_SCALE_FACTOR` (20); **Shift** — снап фактора к шагу, задаваемому в Settings → Selection ("Scale Snap (Shift+drag, factor)"), по умолчанию 0.1 (10%, читается из `stateManager.get('selection.scaleSnapFactor')` с fallback на `TRANSFORM.SCALE_SNAP_FACTOR` если не задано).
 - Клик по невыделенному объекту при старте жеста — объект становится единственным выделением, как при обычном drag.
 - Жест активируется после Ctrl(+Alt)-клика на объекте при движении мыши ≥ `TRANSFORM.DRAG_THRESHOLD_PX` (4px).
 
 ```javascript
 // src/constants/EditorConstants.js
 export const TRANSFORM = {
-    ROTATION_SNAP_DEGREES: 10,
-    SCALE_SNAP_FACTOR: 0.1,
+    ROTATION_SNAP_DEGREES: 15,  // Fallback если selection.rotationSnapDegrees не задано; user-configurable в Settings → Selection
+    SCALE_SNAP_FACTOR: 0.1,     // Fallback если selection.scaleSnapFactor не задано; user-configurable в Settings → Selection
     MIN_SCALE_FACTOR: 0.05,
     MAX_SCALE_FACTOR: 20,
     DRAG_THRESHOLD_PX: 4

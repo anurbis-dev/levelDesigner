@@ -1634,7 +1634,7 @@ export class MouseHandlers extends BaseModule {
             // so the reference (first) object's resulting rotation lands on a multiple
             // of the step, keeping the selection rigid
             if (this.editor.stateManager.get('keyboard.shiftKey')) {
-                const step = TRANSFORM.ROTATION_SNAP_DEGREES;
+                const step = this.editor.stateManager.get('selection.rotationSnapDegrees') ?? TRANSFORM.ROTATION_SNAP_DEGREES;
                 const refRotation = snapshot[0].rotation;
                 deltaDeg = Math.round((refRotation + deltaDeg) / step) * step - refRotation;
             }
@@ -1664,7 +1664,7 @@ export class MouseHandlers extends BaseModule {
 
             // Shift = snap the scale factor to discrete steps (10%)
             if (this.editor.stateManager.get('keyboard.shiftKey')) {
-                const step = TRANSFORM.SCALE_SNAP_FACTOR;
+                const step = this.editor.stateManager.get('selection.scaleSnapFactor') ?? TRANSFORM.SCALE_SNAP_FACTOR;
                 factor = Math.max(step, Math.round(factor / step) * step);
             }
 

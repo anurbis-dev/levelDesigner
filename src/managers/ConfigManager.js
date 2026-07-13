@@ -161,7 +161,9 @@ export class ConfigManager {
             marqueeOpacity: 0.2,
             hierarchyHighlightColor: '#3B82F6',
             activeLayerBorderColor: '#3B82F6',
-            hitTestTolerance: 4
+            hitTestTolerance: 4,
+            rotationSnapDegrees: 15,
+            scaleSnapFactor: 0.1
         };
 
         configs.assets = {
@@ -273,7 +275,9 @@ export class ConfigManager {
             marqueeOpacity: 0.2,
             hierarchyHighlightColor: '#3B82F6',
             activeLayerBorderColor: '#3B82F6',
-            hitTestTolerance: 4
+            hitTestTolerance: 4,
+            rotationSnapDegrees: 15,
+            scaleSnapFactor: 0.1
         };
 
         configs.assets = {
