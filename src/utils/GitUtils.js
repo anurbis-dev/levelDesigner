@@ -6,128 +6,77 @@ import { Logger } from './Logger.js';
 
 class GitUtils {
     /**
+     * Run a git command via spawn, without pager hanging.
+     * @param {string[]} args - Git CLI arguments
+     * @param {Object} [options]
+     * @param {Object} [options.env] - Extra env vars merged over process.env
+     * @returns {Promise<string>} Trimmed stdout
+     */
+    static async runGitCommand(args, { env } = {}) {
+        return new Promise((resolve, reject) => {
+            // Check if we're in a browser environment
+            if (typeof require === 'undefined') {
+                reject(new Error('GitUtils requires Node.js environment'));
+                return;
+            }
+
+            const { spawn } = require('child_process');
+
+            const spawnOptions = { stdio: ['ignore', 'pipe', 'pipe'] };
+            if (env) {
+                spawnOptions.env = { ...process.env, ...env };
+            }
+
+            const gitProcess = spawn('git', args, spawnOptions);
+
+            let output = '';
+            let error = '';
+
+            gitProcess.stdout.on('data', (data) => {
+                output += data.toString();
+            });
+
+            gitProcess.stderr.on('data', (data) => {
+                error += data.toString();
+            });
+
+            gitProcess.on('close', (code) => {
+                if (code === 0) {
+                    resolve(output.trim());
+                } else {
+                    reject(new Error(`Git command failed: ${error}`));
+                }
+            });
+        });
+    }
+
+    /**
      * Get git logs safely without pager hanging
      * @param {number} commits - Number of commits to retrieve (default: 10)
      * @param {string} format - Git log format (default: 'oneline')
      * @returns {Promise<string>} Git log output
      */
     static async getLogs(commits = 10, format = 'oneline') {
-        return new Promise((resolve, reject) => {
-            // Check if we're in a browser environment
-            if (typeof require === 'undefined') {
-                reject(new Error('GitUtils requires Node.js environment'));
-                return;
-            }
-            
-            const { spawn } = require('child_process');
-            
-            // Set environment to disable pager
-            const env = { ...process.env, GIT_PAGER: 'cat' };
-            
-            const gitProcess = spawn('git', ['log', `--${format}`, `-n`, commits.toString()], {
-                env: env,
-                stdio: ['ignore', 'pipe', 'pipe']
-            });
-            
-            let output = '';
-            let error = '';
-            
-            gitProcess.stdout.on('data', (data) => {
-                output += data.toString();
-            });
-            
-            gitProcess.stderr.on('data', (data) => {
-                error += data.toString();
-            });
-            
-            gitProcess.on('close', (code) => {
-                if (code === 0) {
-                    resolve(output.trim());
-                } else {
-                    reject(new Error(`Git command failed: ${error}`));
-                }
-            });
-        });
+        // Set environment to disable pager
+        return this.runGitCommand(['log', `--${format}`, '-n', commits.toString()], { env: { GIT_PAGER: 'cat' } });
     }
-    
+
     /**
      * Get current branch name
      * @returns {Promise<string>} Current branch name
      */
     static async getCurrentBranch() {
-        return new Promise((resolve, reject) => {
-            // Check if we're in a browser environment
-            if (typeof require === 'undefined') {
-                reject(new Error('GitUtils requires Node.js environment'));
-                return;
-            }
-            
-            const { spawn } = require('child_process');
-            
-            const gitProcess = spawn('git', ['branch', '--show-current'], {
-                stdio: ['ignore', 'pipe', 'pipe']
-            });
-            
-            let output = '';
-            let error = '';
-            
-            gitProcess.stdout.on('data', (data) => {
-                output += data.toString();
-            });
-            
-            gitProcess.stderr.on('data', (data) => {
-                error += data.toString();
-            });
-            
-            gitProcess.on('close', (code) => {
-                if (code === 0) {
-                    resolve(output.trim());
-                } else {
-                    reject(new Error(`Git command failed: ${error}`));
-                }
-            });
-        });
+        return this.runGitCommand(['branch', '--show-current']);
     }
-    
+
     /**
      * Get git status
      * @returns {Promise<string>} Git status output
      */
     static async getStatus() {
-        return new Promise((resolve, reject) => {
-            // Check if we're in a browser environment
-            if (typeof require === 'undefined') {
-                reject(new Error('GitUtils requires Node.js environment'));
-                return;
-            }
-            
-            const { spawn } = require('child_process');
-            
-            const gitProcess = spawn('git', ['status', '--porcelain'], {
-                stdio: ['ignore', 'pipe', 'pipe']
-            });
-            
-            let output = '';
-            let error = '';
-            
-            gitProcess.stdout.on('data', (data) => {
-                output += data.toString();
-            });
-            
-            gitProcess.stderr.on('data', (data) => {
-                error += data.toString();
-            });
-            
-            gitProcess.on('close', (code) => {
-                if (code === 0) {
-                    resolve(output.trim());
-                } else {
-                    reject(new Error(`Git command failed: ${error}`));
-                }
-            });
-        });
+        return this.runGitCommand(['status', '--porcelain']);
     }
-    
+
     /**
      * Save git logs to file
      * @param {number} commits - Number of commits

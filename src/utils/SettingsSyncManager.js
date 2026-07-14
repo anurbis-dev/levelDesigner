@@ -488,88 +488,21 @@ export class SettingsSyncManager {
         }
 
         // Apply color settings globally
-        const backgroundColor = this.levelEditor.stateManager.get('ui.backgroundColor');
-        const textColor = this.levelEditor.stateManager.get('ui.textColor');
-        const activeColor = this.levelEditor.stateManager.get('ui.activeColor');
-        const activeTextColor = this.levelEditor.stateManager.get('ui.activeTextColor');
-        const activeTabColor = this.levelEditor.stateManager.get('ui.activeTabColor');
-        const resizerColor = this.levelEditor.stateManager.get('ui.resizerColor');
-        const canvasBackgroundColor = this.levelEditor.stateManager.get('canvas.backgroundColor');
-        
-        if (backgroundColor) {
-            document.documentElement.style.setProperty('--ui-background-color', backgroundColor);
-        }
-        if (textColor) {
-            document.documentElement.style.setProperty('--ui-text-color', textColor);
-        }
-        if (activeColor) {
-            document.documentElement.style.setProperty('--ui-active-color', activeColor);
-        }
-        if (activeTextColor) {
-            document.documentElement.style.setProperty('--ui-active-text-color', activeTextColor);
-        }
-        if (activeTabColor) {
-            document.documentElement.style.setProperty('--ui-active-tab-color', activeTabColor);
-        }
-        if (resizerColor) {
-            document.documentElement.style.setProperty('--ui-resizer-color', resizerColor);
-        }
-        const accentColorSpecial = this.levelEditor.stateManager.get('ui.accentColor');
-        if (accentColorSpecial) {
-            document.documentElement.style.setProperty('--accent-color', accentColorSpecial);
-        }
-        if (canvasBackgroundColor) {
-            document.documentElement.style.setProperty('--canvas-background-color', canvasBackgroundColor);
+        const { canvasBackgroundColor } = this.applyColorSettings();
+        if (canvasBackgroundColor && this.levelEditor && typeof this.levelEditor.render === 'function') {
             // Force canvas re-render to apply new background color immediately
-            if (this.levelEditor && typeof this.levelEditor.render === 'function') {
-                this.levelEditor.render();
-            }
+            this.levelEditor.render();
         }
 
         // Apply selection settings globally
-        const outlineColor = this.levelEditor.stateManager.get('selection.outlineColor');
-        const outlineWidth = this.levelEditor.stateManager.get('selection.outlineWidth');
-        const groupOutlineColor = this.levelEditor.stateManager.get('selection.groupOutlineColor');
-        const groupOutlineWidth = this.levelEditor.stateManager.get('selection.groupOutlineWidth');
-        const marqueeColor = this.levelEditor.stateManager.get('selection.marqueeColor');
-        const marqueeOpacity = this.levelEditor.stateManager.get('selection.marqueeOpacity');
-        const hierarchyHighlightColor = this.levelEditor.stateManager.get('selection.hierarchyHighlightColor');
-        
-        if (outlineColor) {
-            document.documentElement.style.setProperty('--selection-outline-color', outlineColor);
-        }
-        if (outlineWidth) {
-            document.documentElement.style.setProperty('--selection-outline-width', `${outlineWidth}px`);
-        }
-        if (groupOutlineColor) {
-            document.documentElement.style.setProperty('--selection-group-outline-color', groupOutlineColor);
-        }
-        if (groupOutlineWidth) {
-            document.documentElement.style.setProperty('--selection-group-outline-width', `${groupOutlineWidth}px`);
-        }
-        if (marqueeColor) {
-            document.documentElement.style.setProperty('--selection-marquee-color', marqueeColor);
-        }
-        if (marqueeOpacity !== undefined) {
-            document.documentElement.style.setProperty('--selection-marquee-opacity', marqueeOpacity);
-        }
-        if (hierarchyHighlightColor) {
-            document.documentElement.style.setProperty('--selection-hierarchy-highlight-color', hierarchyHighlightColor);
-        }
+        this.applySelectionSettings();
         const activeLayerBorderColor = this.levelEditor.stateManager.get('selection.activeLayerBorderColor');
         if (activeLayerBorderColor) {
             document.documentElement.style.setProperty('--selection-active-layer-border-color', activeLayerBorderColor);
         }
 
         // Apply status bar message colors
-        const sbInfo    = this.levelEditor.stateManager.get('ui.statusBarColorInfo');
-        const sbSuccess = this.levelEditor.stateManager.get('ui.statusBarColorSuccess');
-        const sbWarn    = this.levelEditor.stateManager.get('ui.statusBarColorWarn');
-        const sbError   = this.levelEditor.stateManager.get('ui.statusBarColorError');
-        if (sbInfo)    document.documentElement.style.setProperty('--status-bar-color-info',    sbInfo);
-        if (sbSuccess) document.documentElement.style.setProperty('--status-bar-color-success', sbSuccess);
-        if (sbWarn)    document.documentElement.style.setProperty('--status-bar-color-warn',    sbWarn);
-        if (sbError)   document.documentElement.style.setProperty('--status-bar-color-error',   sbError);
+        this.applyStatusBarColors();
     }
 
     /**
@@ -581,6 +514,20 @@ export class SettingsSyncManager {
         if (!this.levelEditor) return;
 
         // Apply color settings from StateManager (which should have defaults or loaded values)
+        this.applyColorSettings();
+
+        // Apply selection settings globally
+        this.applySelectionSettings();
+
+        // Apply status bar message colors
+        this.applyStatusBarColors();
+    }
+
+    /**
+     * Apply background/text/accent/canvas color CSS variables from StateManager
+     * @returns {{canvasBackgroundColor: (string|undefined)}}
+     */
+    applyColorSettings() {
         const backgroundColor = this.levelEditor.stateManager.get('ui.backgroundColor');
         const textColor = this.levelEditor.stateManager.get('ui.textColor');
         const activeColor = this.levelEditor.stateManager.get('ui.activeColor');
@@ -615,7 +562,13 @@ export class SettingsSyncManager {
             document.documentElement.style.setProperty('--canvas-background-color', canvasBackgroundColor);
         }
 
-        // Apply selection settings globally
+        return { canvasBackgroundColor };
+    }
+
+    /**
+     * Apply selection outline/marquee/highlight CSS variables from StateManager
+     */
+    applySelectionSettings() {
         const outlineColor = this.levelEditor.stateManager.get('selection.outlineColor');
         const outlineWidth = this.levelEditor.stateManager.get('selection.outlineWidth');
         const groupOutlineColor = this.levelEditor.stateManager.get('selection.groupOutlineColor');
@@ -623,7 +576,7 @@ export class SettingsSyncManager {
         const marqueeColor = this.levelEditor.stateManager.get('selection.marqueeColor');
         const marqueeOpacity = this.levelEditor.stateManager.get('selection.marqueeOpacity');
         const hierarchyHighlightColor = this.levelEditor.stateManager.get('selection.hierarchyHighlightColor');
-        
+
         if (outlineColor) {
             document.documentElement.style.setProperty('--selection-outline-color', outlineColor);
         }
@@ -645,8 +598,12 @@ export class SettingsSyncManager {
         if (hierarchyHighlightColor) {
             document.documentElement.style.setProperty('--selection-hierarchy-highlight-color', hierarchyHighlightColor);
         }
+    }
 
-        // Apply status bar message colors
+    /**
+     * Apply status bar message CSS variables from StateManager
+     */
+    applyStatusBarColors() {
         const sbInfo    = this.levelEditor.stateManager.get('ui.statusBarColorInfo');
         const sbSuccess = this.levelEditor.stateManager.get('ui.statusBarColorSuccess');
         const sbWarn    = this.levelEditor.stateManager.get('ui.statusBarColorWarn');

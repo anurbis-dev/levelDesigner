@@ -1,6 +1,7 @@
 import { Asset } from '../models/Asset.js';
 import { Logger } from './Logger.js';
 import { FolderPickerDialog } from '../ui/FolderPickerDialog.js';
+import { ImageUtils } from './ImageUtils.js';
 
 /**
  * Asset Importer
@@ -703,17 +704,7 @@ export class AssetImporter {
      * @returns {Promise<{width: number, height: number}>} Image dimensions
      */
     getImageDimensions(dataUrl) {
-        return new Promise((resolve, reject) => {
-            const img = new Image();
-            img.onload = () => {
-                resolve({
-                    width: img.naturalWidth,
-                    height: img.naturalHeight
-                });
-            };
-            img.onerror = () => reject(new Error('Failed to load image'));
-            img.src = dataUrl;
-        });
+        return ImageUtils.getImageDimensions(dataUrl);
     }
 
     /**

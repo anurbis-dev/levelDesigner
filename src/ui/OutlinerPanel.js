@@ -860,6 +860,79 @@ export class OutlinerPanel extends BasePanel {
     }
 
     /**
+     * Build the icon+name-display+name-input cluster shared by group and object outliner rows.
+     * `getCurrentObject` is called lazily on dblclick (not closed over directly) so a reused
+     * node stays correct even after undo/redo replaces the underlying object reference.
+     */
+    createOutlinerNameContainer(getCurrentObject) {
+        const nameContainer = document.createElement('div');
+        nameContainer.className = 'outliner-item-name-container';
+        nameContainer.style.flex = '1';
+        nameContainer.style.minWidth = '0';
+        nameContainer.style.display = 'flex';
+        nameContainer.style.alignItems = 'center';
+
+        const icon = document.createElement('span');
+        icon.className = 'outliner-item-icon';
+        icon.style.marginRight = 'calc(4px * max(var(--spacing-scale, 1.0), 0))';
+        icon.style.flexShrink = '0';
+
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'outliner-item-name-display';
+        nameSpan.style.flex = '1';
+        nameSpan.style.padding = 'calc(1px * max(var(--spacing-scale, 1.0), 0))';
+        nameSpan.style.borderRadius = '3px';
+        nameSpan.style.minWidth = '0';
+        nameSpan.addEventListener('dblclick', (e) => {
+            e.stopPropagation();
+            const current = getCurrentObject();
+            if (current) this.startInlineRename(current);
+        });
+
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.className = 'outliner-item-name-input';
+        nameInput.style.flex = '1';
+        nameInput.style.background = 'transparent';
+        nameInput.style.border = 'none';
+        nameInput.style.color = 'var(--ui-text-color, #d1d5db)';
+        nameInput.style.outline = 'none';
+        nameInput.style.padding = 'calc(1px * max(var(--spacing-scale, 1.0), 0))';
+        nameInput.style.borderRadius = '3px';
+        nameInput.style.minWidth = '0';
+        nameInput.style.display = 'none';
+
+        nameContainer.appendChild(icon);
+        nameContainer.appendChild(nameSpan);
+        nameContainer.appendChild(nameInput);
+
+        return { nameContainer, icon, nameSpan, nameInput };
+    }
+
+    /**
+     * Apply/clear the locked-layer/locked-level visual state (border class, cursor, tooltip)
+     * shared by group and object outliner rows.
+     */
+    applyLockedRowState(item, obj) {
+        const effectiveLayerId = this.levelEditor.renderOperations ?
+            this.levelEditor.renderOperations.getEffectiveLayerId(obj) :
+            (obj.layerId || this.levelEditor.level.getMainLayerId());
+        const layer = this.levelEditor.level.getLayerById(effectiveLayerId);
+        const levelLocked = !!this.levelEditor.levelsManager?.getCurrentSession()?.locked;
+        if ((layer && layer.locked) || levelLocked) {
+            item.classList.add('locked');
+            item.style.cursor = 'not-allowed';
+            item.title = levelLocked ? 'Current level is locked' : 'Object is in locked layer';
+        } else {
+            item.classList.remove('locked');
+            item.style.cursor = '';
+            item.title = '';
+        }
+        // updateVisibilityButton (called by callers before this) already set item.style.opacity
+        // from _computeRowOpacity, which factors in this same locked check.
+    }
+
+    /**
      * Create (existingNode absent) or refresh (existingNode present) the DOM node for a group
      * item. Click/dblclick handlers look up the current object by id at call time
      * (level.findObjectById) rather than closing over `group` directly, so a reused node
@@ -891,47 +964,11 @@ export class OutlinerPanel extends BasePanel {
                 this.toggleGroupCollapse(item.dataset.id);
             });
 
-            nameContainer = document.createElement('div');
-            nameContainer.className = 'outliner-item-name-container';
-            nameContainer.style.flex = '1';
-            nameContainer.style.minWidth = '0';
-            nameContainer.style.display = 'flex';
-            nameContainer.style.alignItems = 'center';
-
-            icon = document.createElement('span');
-            icon.className = 'outliner-item-icon';
+            ({ nameContainer, icon, nameSpan, nameInput } = this.createOutlinerNameContainer(
+                () => this.levelEditor.level.findObjectById(item.dataset.id)
+            ));
             icon.textContent = this.getObjectIcon('group');
-            icon.style.marginRight = 'calc(4px * max(var(--spacing-scale, 1.0), 0))';
-            icon.style.flexShrink = '0';
 
-            nameSpan = document.createElement('span');
-            nameSpan.className = 'outliner-item-name-display';
-            nameSpan.style.flex = '1';
-            nameSpan.style.padding = 'calc(1px * max(var(--spacing-scale, 1.0), 0))';
-            nameSpan.style.borderRadius = '3px';
-            nameSpan.style.minWidth = '0';
-            nameSpan.addEventListener('dblclick', (e) => {
-                e.stopPropagation();
-                const current = this.levelEditor.level.findObjectById(item.dataset.id);
-                if (current) this.startInlineRename(current);
-            });
-
-            nameInput = document.createElement('input');
-            nameInput.type = 'text';
-            nameInput.className = 'outliner-item-name-input';
-            nameInput.style.flex = '1';
-            nameInput.style.background = 'transparent';
-            nameInput.style.border = 'none';
-            nameInput.style.color = 'var(--ui-text-color, #d1d5db)';
-            nameInput.style.outline = 'none';
-            nameInput.style.padding = 'calc(1px * max(var(--spacing-scale, 1.0), 0))';
-            nameInput.style.borderRadius = '3px';
-            nameInput.style.minWidth = '0';
-            nameInput.style.display = 'none';
-
-            nameContainer.appendChild(icon);
-            nameContainer.appendChild(nameSpan);
-            nameContainer.appendChild(nameInput);
             item.appendChild(indicator);
             item.appendChild(nameContainer);
 
@@ -979,23 +1016,7 @@ export class OutlinerPanel extends BasePanel {
         nameInput.name = nameInput.id;
 
         this.updateVisibilityButton(visibilityBtn, nameSpan, group);
-
-        const effectiveLayerId = this.levelEditor.renderOperations ?
-            this.levelEditor.renderOperations.getEffectiveLayerId(group) :
-            (group.layerId || this.levelEditor.level.getMainLayerId());
-        const layer = this.levelEditor.level.getLayerById(effectiveLayerId);
-        const levelLocked = !!this.levelEditor.levelsManager?.getCurrentSession()?.locked;
-        if ((layer && layer.locked) || levelLocked) {
-            item.classList.add('locked');
-            item.style.cursor = 'not-allowed';
-            item.title = levelLocked ? 'Current level is locked' : 'Object is in locked layer';
-        } else {
-            item.classList.remove('locked');
-            item.style.cursor = '';
-            item.title = '';
-        }
-        // updateVisibilityButton (above) already set item.style.opacity from
-        // _computeRowOpacity, which factors in this same locked check.
+        this.applyLockedRowState(item, group);
 
         item.classList.toggle('selected', this.stateManager.get('selectedObjects').has(group.id));
 
@@ -1016,46 +1037,9 @@ export class OutlinerPanel extends BasePanel {
             item.style.alignItems = 'center';
             item.dataset.id = obj.id;
 
-            nameContainer = document.createElement('div');
-            nameContainer.className = 'outliner-item-name-container';
-            nameContainer.style.flex = '1';
-            nameContainer.style.minWidth = '0';
-            nameContainer.style.display = 'flex';
-            nameContainer.style.alignItems = 'center';
-
-            icon = document.createElement('span');
-            icon.className = 'outliner-item-icon';
-            icon.style.marginRight = 'calc(4px * max(var(--spacing-scale, 1.0), 0))';
-            icon.style.flexShrink = '0';
-
-            nameSpan = document.createElement('span');
-            nameSpan.className = 'outliner-item-name-display';
-            nameSpan.style.flex = '1';
-            nameSpan.style.padding = 'calc(1px * max(var(--spacing-scale, 1.0), 0))';
-            nameSpan.style.borderRadius = '3px';
-            nameSpan.style.minWidth = '0';
-            nameSpan.addEventListener('dblclick', (e) => {
-                e.stopPropagation();
-                const current = this.levelEditor.level.findObjectById(item.dataset.id);
-                if (current) this.startInlineRename(current);
-            });
-
-            nameInput = document.createElement('input');
-            nameInput.type = 'text';
-            nameInput.className = 'outliner-item-name-input';
-            nameInput.style.flex = '1';
-            nameInput.style.background = 'transparent';
-            nameInput.style.border = 'none';
-            nameInput.style.color = 'var(--ui-text-color, #d1d5db)';
-            nameInput.style.outline = 'none';
-            nameInput.style.padding = 'calc(1px * max(var(--spacing-scale, 1.0), 0))';
-            nameInput.style.borderRadius = '3px';
-            nameInput.style.minWidth = '0';
-            nameInput.style.display = 'none';
-
-            nameContainer.appendChild(icon);
-            nameContainer.appendChild(nameSpan);
-            nameContainer.appendChild(nameInput);
+            ({ nameContainer, icon, nameSpan, nameInput } = this.createOutlinerNameContainer(
+                () => this.levelEditor.level.findObjectById(item.dataset.id)
+            ));
             item.appendChild(nameContainer);
 
             visibilityBtn = this.createVisibilityButton(item);
@@ -1087,23 +1071,7 @@ export class OutlinerPanel extends BasePanel {
         nameInput.name = nameInput.id;
 
         this.updateVisibilityButton(visibilityBtn, nameSpan, obj);
-
-        const effectiveLayerId = this.levelEditor.renderOperations ?
-            this.levelEditor.renderOperations.getEffectiveLayerId(obj) :
-            (obj.layerId || this.levelEditor.level.getMainLayerId());
-        const layer = this.levelEditor.level.getLayerById(effectiveLayerId);
-        const levelLocked = !!this.levelEditor.levelsManager?.getCurrentSession()?.locked;
-        if ((layer && layer.locked) || levelLocked) {
-            item.classList.add('locked');
-            item.style.cursor = 'not-allowed';
-            item.title = levelLocked ? 'Current level is locked' : 'Object is in locked layer';
-        } else {
-            item.classList.remove('locked');
-            item.style.cursor = '';
-            item.title = '';
-        }
-        // updateVisibilityButton (above) already set item.style.opacity from
-        // _computeRowOpacity, which factors in this same locked check.
+        this.applyLockedRowState(item, obj);
 
         item.classList.toggle('selected', this.stateManager.get('selectedObjects').has(obj.id));
 

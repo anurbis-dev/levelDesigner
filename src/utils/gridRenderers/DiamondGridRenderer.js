@@ -63,129 +63,68 @@ export class DiamondGridRenderer extends BaseGridRenderer {
             return;
         }
 
-        // Draw lines at 60° (going up-right)
-        // These lines have constant x + slope60 * y
+        // Draw lines at 60° (going up-right) and 120° (going up-left) —
+        // same intersection math, mirrored slope
+        this.drawDiagonalLines(ctx, slope60, diamondSpacing, left, top, right, bottom);
+        this.drawDiagonalLines(ctx, slope120, diamondSpacing, left, top, right, bottom);
+    }
+
+    /**
+     * Draw a family of parallel diagonal lines (constant = x + slope * y) clipped to viewport bounds
+     */
+    drawDiagonalLines(ctx, slope, spacing, left, top, right, bottom) {
         // Calculate all corner constants to ensure full coverage
-        const constants60 = [
-            left + slope60 * top,      // top-left
-            right + slope60 * top,     // top-right
-            left + slope60 * bottom,   // bottom-left
-            right + slope60 * bottom   // bottom-right
+        const constants = [
+            left + slope * top,      // top-left
+            right + slope * top,     // top-right
+            left + slope * bottom,   // bottom-left
+            right + slope * bottom   // bottom-right
         ];
-        const minConstant60 = Math.min(...constants60);
-        const maxConstant60 = Math.max(...constants60);
-        const startLine60 = Math.floor(minConstant60 / diamondSpacing) - 1;
-        const endLine60 = Math.ceil(maxConstant60 / diamondSpacing) + 1;
+        const minConstant = Math.min(...constants);
+        const maxConstant = Math.max(...constants);
+        const startLine = Math.floor(minConstant / spacing) - 1;
+        const endLine = Math.ceil(maxConstant / spacing) + 1;
 
-
-        let drawnLines60 = 0;
-        for (let i = startLine60; i <= endLine60; i++) {
-            // Line equation: x + slope60 * y = constant
-            const constant = i * diamondSpacing;
-
-            // Find intersection points with viewport bounds
-            // Intersect with left/right/top/bottom edges
-            const intersections = [];
-
-            // Intersect with left edge (x = left)
-            const yLeft = (constant - left) / slope60;
-            if (isFinite(yLeft) && yLeft >= top && yLeft <= bottom) {
-                intersections.push({ x: left, y: yLeft });
-            }
-
-            // Intersect with right edge (x = right)
-            const yRight = (constant - right) / slope60;
-            if (isFinite(yRight) && yRight >= top && yRight <= bottom) {
-                intersections.push({ x: right, y: yRight });
-            }
-
-            // Intersect with top edge (y = top)
-            const xTop = constant - slope60 * top;
-            if (isFinite(xTop) && xTop >= left && xTop <= right) {
-                intersections.push({ x: xTop, y: top });
-            }
-
-            // Intersect with bottom edge (y = bottom)
-            const xBottom = constant - slope60 * bottom;
-            if (isFinite(xBottom) && xBottom >= left && xBottom <= right) {
-                intersections.push({ x: xBottom, y: bottom });
-            }
-
-            // Draw line if we have at least 2 intersection points
-            if (intersections.length >= 2) {
-                ctx.beginPath();
-                ctx.moveTo(intersections[0].x, intersections[0].y);
-                ctx.lineTo(intersections[1].x, intersections[1].y);
-                ctx.stroke();
-                drawnLines60++;
-            } else if (intersections.length === 1) {
-                // Special case: line passes through exactly one corner
-                // This can happen when the line goes through the exact corner of viewport
-                // We'll skip this line as it's just a point
-            }
-        }
-
-
-        // Draw lines at 120° (going up-left)
-        // These lines have constant x + slope120 * y
-        // Calculate all corner constants to ensure full coverage
-        const constants120 = [
-            left + slope120 * top,      // top-left
-            right + slope120 * top,     // top-right
-            left + slope120 * bottom,   // bottom-left
-            right + slope120 * bottom   // bottom-right
-        ];
-        const minConstant120 = Math.min(...constants120);
-        const maxConstant120 = Math.max(...constants120);
-        const startLine120 = Math.floor(minConstant120 / diamondSpacing) - 1;
-        const endLine120 = Math.ceil(maxConstant120 / diamondSpacing) + 1;
-
-        let drawnLines120 = 0;
-        for (let i = startLine120; i <= endLine120; i++) {
-            // Line equation: x + slope120 * y = constant
-            const constant = i * diamondSpacing;
+        for (let i = startLine; i <= endLine; i++) {
+            // Line equation: x + slope * y = constant
+            const constant = i * spacing;
 
             // Find intersection points with viewport bounds
             const intersections = [];
 
             // Intersect with left edge (x = left)
-            const yLeft = (constant - left) / slope120;
+            const yLeft = (constant - left) / slope;
             if (isFinite(yLeft) && yLeft >= top && yLeft <= bottom) {
                 intersections.push({ x: left, y: yLeft });
             }
 
             // Intersect with right edge (x = right)
-            const yRight = (constant - right) / slope120;
+            const yRight = (constant - right) / slope;
             if (isFinite(yRight) && yRight >= top && yRight <= bottom) {
                 intersections.push({ x: right, y: yRight });
             }
 
             // Intersect with top edge (y = top)
-            const xTop = constant - slope120 * top;
+            const xTop = constant - slope * top;
             if (isFinite(xTop) && xTop >= left && xTop <= right) {
                 intersections.push({ x: xTop, y: top });
             }
 
             // Intersect with bottom edge (y = bottom)
-            const xBottom = constant - slope120 * bottom;
+            const xBottom = constant - slope * bottom;
             if (isFinite(xBottom) && xBottom >= left && xBottom <= right) {
                 intersections.push({ x: xBottom, y: bottom });
             }
 
             // Draw line if we have at least 2 intersection points
+            // (a single intersection means the line only touches a corner — skip, it's just a point)
             if (intersections.length >= 2) {
                 ctx.beginPath();
                 ctx.moveTo(intersections[0].x, intersections[0].y);
                 ctx.lineTo(intersections[1].x, intersections[1].y);
                 ctx.stroke();
-                drawnLines120++;
-            } else if (intersections.length === 1) {
-                // Special case: line passes through exactly one corner
-                // This can happen when the line goes through the exact corner of viewport
-                // We'll skip this line as it's just a point
             }
         }
-
     }
 
 }

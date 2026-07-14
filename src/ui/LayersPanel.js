@@ -1625,24 +1625,7 @@ export class LayersPanel extends BasePanel {
                 selector: '.layer-name-display',
                 handler: (e) => {
                     e.stopPropagation();
-                    const layerId = e.target.dataset.layerId;
-                    const level = this.levelEditor.getLevel();
-                    const layer = level.getLayerById(layerId);
-                    if (layer) {
-                        const input = this.container.querySelector(`#layer-name-${layerId}`);
-                        const display = this.container.querySelector(`[data-layer-id="${layerId}"].layer-name-display`);
-                        const layerElement = this.container.querySelector(`[data-layer-id="${layerId}"]`);
-                        
-                        if (input && display && layerElement) {
-                            // Disable dragging for this layer during rename
-                            layerElement.draggable = false;
-                            
-                            display.classList.add('hidden');
-                            input.classList.remove('hidden');
-                            input.focus();
-                            input.select();
-                        }
-                    }
+                    this.renameLayer(e.target.dataset.layerId);
                 }
             },
             keypress: {
