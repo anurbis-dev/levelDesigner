@@ -3,9 +3,11 @@
  */
 
 import { Logger } from '../utils/Logger.js';
+import { BaseManager } from './BaseManager.js';
 
-export class StateManager {
+export class StateManager extends BaseManager {
     constructor() {
+        super();
         this.state = this.createInitialState();
         this.listeners = new Map();
         // Flips true on every set()/update() call; the render loop consumes it once per

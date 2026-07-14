@@ -8,9 +8,11 @@
  */
 
 import { Logger } from '../utils/Logger.js';
+import { BaseManager } from './BaseManager.js';
 
-export class ResizerManager {
+export class ResizerManager extends BaseManager {
     constructor(levelEditor) {
+        super();
         this.levelEditor = levelEditor;
         this.stateManager = levelEditor?.stateManager;
         this.userPrefs = levelEditor?.userPrefs;

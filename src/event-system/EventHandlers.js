@@ -561,7 +561,7 @@ export class EventHandlers extends BaseModule {
 
         // Initialize panel positions using PanelPositionManager FIRST
         if (this.editor.panelPositionManager) {
-            this.editor.panelPositionManager.initializePanelPositions();
+            this.editor.panelPositionManager.tabLayoutController.initializePanelPositions();
             
             // Update panels after tab positions are initialized
             if (this.editor.updateAllPanels) {
@@ -852,7 +852,7 @@ export class EventHandlers extends BaseModule {
                 // Handle tabs-based panels (left/right panels)
                 if (visible) {
                     // Create panel if it doesn't exist
-                    this.editor.panelPositionManager.ensurePanelExists(config.side);
+                    this.editor.panelPositionManager.tabLayoutController.ensurePanelExists(config.side);
 
                     // Show/hide panel elements
                     config.elements.forEach(element => {
@@ -865,13 +865,13 @@ export class EventHandlers extends BaseModule {
                 } else {
                     // Hiding: if the panel is EMPTY, remove it from the DOM entirely instead of
                     // just display:none-ing it. Tab-drag's "does the other panel exist yet?"
-                    // check (PanelPositionManager._installGlobalTabDragHandlers) only looks for
+                    // check (TabDragController._installGlobalTabDragHandlers) only looks for
                     // DOM presence — a hidden-but-still-present empty panel would satisfy that
                     // check and be treated as "already exists", so the drag would never
                     // auto-show it again (and it can't be a drop target while display:none).
                     // removeEmptyPanel() is a no-op if the panel still has tabs, so this is
                     // safe to call unconditionally.
-                    this.editor.panelPositionManager.removeEmptyPanel(config.side);
+                    this.editor.panelPositionManager.splitPaneController.removeEmptyPanel(config.side);
 
                     config.elements.forEach(element => {
                         const el = document.getElementById(element.id);

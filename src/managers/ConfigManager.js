@@ -4,9 +4,11 @@
  */
 
 import { Logger } from '../utils/Logger.js';
+import { BaseManager } from './BaseManager.js';
 
-export class ConfigManager {
+export class ConfigManager extends BaseManager {
     constructor() {
+        super();
         this.configPath = './config/';
         this.defaultsPath = this.configPath + 'defaults/';
         this.userPath = this.configPath + 'user/';

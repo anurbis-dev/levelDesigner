@@ -1,6 +1,6 @@
 {
   "name": "level-editor-2d",
-  "version": "3.60.2",
+  "version": "3.60.3",
   "description": "Профессиональный 2D редактор уровней с утилитарной архитектурой мирового класса",
   "main": "index.html",
   "type": "module",
@@ -13,7 +13,12 @@
     "validate:version": "node scripts/validate-version.js",
     "bump:patch": "node scripts/bump-version.mjs patch",
     "bump:minor": "node scripts/bump-version.mjs minor",
-    "bump:major": "node scripts/bump-version.mjs major"
+    "bump:major": "node scripts/bump-version.mjs major",
+    "test": "vitest run",
+    "lint": "eslint src",
+    "check:size": "node scripts/check-file-size.js",
+    "check": "npm run lint && npm run check:size && npm test && npx madge --circular src",
+    "check:unused": "knip"
   },
   "keywords": [
     "level-editor",
@@ -48,7 +53,12 @@
   ],
   "devDependencies": {
     "autoprefixer": "^10.4.21",
+    "eslint": "^9.39.5",
+    "eslint-plugin-import": "^2.32.0",
+    "knip": "^6.26.0",
+    "madge": "^8.0.0",
     "postcss": "^8.5.6",
-    "tailwindcss": "^3.4.13"
+    "tailwindcss": "^3.4.13",
+    "vitest": "^4.1.10"
   }
 }

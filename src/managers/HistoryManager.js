@@ -1,8 +1,11 @@
+import { BaseManager } from './BaseManager.js';
+
 /**
  * Undo/Redo history management
  */
-export class HistoryManager {
+export class HistoryManager extends BaseManager {
     constructor(maxSize = 50) {
+        super();
         this.undoStack = [];
         this.redoStack = [];
         this.maxSize = maxSize;
@@ -191,6 +194,14 @@ export class HistoryManager {
             clearTimeout(this.operationFlagTimeout);
             this.operationFlagTimeout = null;
         }
+    }
+
+    /**
+     * Cleanup method
+     */
+    destroy() {
+        this.clearOperationFlagTimeout();
+        this.clear();
     }
 
     /**

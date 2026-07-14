@@ -5,9 +5,11 @@
 
 import { Logger } from '../utils/Logger.js';
 import { ConfigManager } from './ConfigManager.js';
+import { BaseManager } from './BaseManager.js';
 
-export class UserPreferencesManager {
+export class UserPreferencesManager extends BaseManager {
     constructor() {
+        super();
         this.configManager = new ConfigManager();
 
 

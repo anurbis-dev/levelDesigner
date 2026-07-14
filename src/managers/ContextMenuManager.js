@@ -26,8 +26,11 @@
  * @version dynamic
  */
 
-export class ContextMenuManager {
+import { BaseManager } from './BaseManager.js';
+
+export class ContextMenuManager extends BaseManager {
     constructor() {
+        super();
         this.activeMenus = new Map(); // name -> menu instance
         this.currentActiveMenu = null;
 

@@ -3,13 +3,15 @@ import { Logger } from '../utils/Logger.js';
 import { ShortcutFormatter } from '../utils/ShortcutFormatter.js';
 import { renderMenuItemLeadingHtml, renderMenuItemBodyHtml, renderMenuItemTrailingHtml } from '../utils/MenuItemTemplateUtils.js';
 import { MenuPositioningUtils } from '../utils/MenuPositioningUtils.js';
+import { BaseManager } from './BaseManager.js';
 
 /**
  * Menu Manager
  * Handles menu creation, rendering, and event management
  */
-export class MenuManager {
+export class MenuManager extends BaseManager {
     constructor(container, eventHandlers) {
+        super();
         this.container = container;
         this.eventHandlers = eventHandlers;
         this.editor = eventHandlers.editor;

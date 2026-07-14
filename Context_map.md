@@ -1,4 +1,4 @@
-# Context Map - Level Designer v3.59.0 (nested tab splits, camera zoom, Player Start asset-type)
+# Context Map - Level Designer v3.60.2 (Phase 4.5: PanelPositionManager dekompozycja, nested tab splits, camera zoom, Player Start asset-type, Phase 3 refactor)
 
 ## ⚠️ КРИТИЧЕСКИ ВАЖНО - ЧИТАТЬ ПЕРВЫМ
 
@@ -14,8 +14,12 @@
 
 ## 🎯 Быстрый старт для агента
 
-### Основные компоненты (v3.57.0 Phase 7: Project — контейнер набора открытых уровней)
-- **LevelEditor** (v3.57.0 Phase 1-7) - главный класс, координатор всех систем; поддерживает несколько одновременно открытых LevelSession в `levelSessions: Map`; `this.level` = getter/setter через `currentLevelId` для обратной совместимости; новое поле `levelMRU: string[]` для отслеживания порядка недавних уровней (используется в closeLevel при выборе следующего уровня); Phase 7: новые поля `project` (текущий Project экземпляр, инициализируется при New/Open/Save Project) и `projectSettingsDialog`
+### Основные компоненты (v3.57.0 Phase 7 + v3.60.0 Phase 3 + v3.60.2 Phase 4.5: Project, декомпозиция LevelEditor, декомпозиция PanelPositionManager)
+- **LevelEditor** (v3.57.0 Phase 1-7; v3.60.0 Phase 3: декомпозиция на EditorConfigController/EditorLifecycleController/EditorPreferencesController) - главный класс, координатор всех систем; поддерживает несколько одновременно открытых LevelSession в `levelSessions: Map`; `this.level` = getter/setter через `currentLevelId` для обратной совместимости; новое поле `levelMRU: string[]` для отслеживания порядка недавних уровней (используется в closeLevel при выборе следующего уровня); Phase 7: новые поля `project` (текущий Project экземпляр, инициализируется при New/Open/Save Project) и `projectSettingsDialog`; Phase 3 (v3.60.0): инициализация разделена на три составных controller-модуля через BaseModule-композицию — конфигурация, lifecycle/bootstrap, пользовательские настройки
+- **Контроллеры инициализации** (v3.60.0 Phase 3, все extends BaseModule, wiring через `this.editor`):
+  - **EditorConfigController** — применение конфигурации (grid, цвета, дефолт-настройки)
+  - **EditorLifecycleController** — инициализация DOM, рендерера, UI, event-системы
+  - **EditorPreferencesController** — применение сохранённых пользовательских настроек (размеры панелей, автосохранение)
 - **14 менеджеров** - StateManager, ConfigManager, HistoryManager, EventHandlerManager, GlobalEventRegistry, LevelsManager (Phase 1: управление вкладками/сессиями; Phase 5: closeLevel и per-session dirty sync; Phase 6: levelMRU, cycleLevel, getVisibleSessionsForRender, reorderLevels, soft-cap warning видимости), MenuManager (меню переименовано с 'Level' на 'File', Phase 7)
 - **14 core операций** - ObjectOperations, LayerOperations, HistoryOperations, DuplicateOperations, GroupOperations, RenderOperations (Phase 3: multi-level compositing; Phase 5: видимые уровни рисуются одновременно), ViewportOperations, LevelFileOperations (Phase 5: addLevel/openLevel с dedup, per-session save), ProjectFileOperations (Phase 7: newProject/openProject/saveProject/saveProjectAs)
 - **UI компоненты** - панели (AssetPanel, DetailsPanel, LayersPanel, LevelsPanel (Phase 2: UI; Phase 5: Close/Save/dirty-индикатор; Phase 6: drag-reorder, дизамбигуация имён при коллизии), OutlinerPanel, SettingsPanel), диалоги (BaseDialog, SplashScreenDialog, ProjectSettingsDialog — Phase 7, пока стаб для редактирования project.name)
@@ -76,24 +80,18 @@ levelEditor.createAssetOfType(typeId) // создание placeholder-ассет
 // repositionMenu(menu, triggerElement, options) — пересчитывает позицию по реальным размерам после добавления пунктов (синхронно, без видимого прыжка)
 // Применяется: BaseContextMenu (было и раньше), OutlinerPanel/AssetPanel (меню фильтров), MenuManager (top-level dropdown через новый setupDropdownCursorMarginWatcher)
 
-// Nested Tab Split Sections (v3.59.0+): вложенная структура вкладок
-// panelPositionManager.mergeTabIntoSplit(draggedTabName, targetTabName, panelSide, position)
+// Nested Tab Split Sections (v3.59.0+): вложенная структура вкладок (SplitPaneController)
+// levelEditor.panelPositionManager.splitPaneController.mergeTabIntoSplit(draggedTabName, targetTabName, panelSide, position)
 //   — создаёт вложенную split-секцию: перетаскивание вкладки на контент другой вкладки
 //   — обе вкладки видны одновременно в верхней/нижней половине с resizer между ними
 //   — заголовок split переименовывается в "Parent/Child" формат
-// panelPositionManager.replacePaneInSplit(draggedTabName, evictedTabName, panelSide)
+// levelEditor.panelPositionManager.splitPaneController.replacePaneInSplit(draggedTabName, evictedTabName, panelSide)
 //   — замена содержимого одной половины УЖЕ существующего composite
 //   — перетаскивание вкладки на одну из двух половин (`.tab-split-pane`) заменяет занимающую эту половину вкладку
 //   — ЕСЛИ перетаскиваемая вкладка — plain standalone-вкладка: вытесненная становится standalone-вкладкой в панели-ИСТОЧНИКЕ перетаскиваемой вкладки (не в split-панели), заполняя освободившийся слот; при cross-panel drag это двусторонний swap между панелями
-//   — ЕСЛИ перетаскиваемая вкладка сама вложена в ДРУГОЙ composite: выполняется true pane-for-pane swap через _swapNestedPanes, вытесненная занимает место перетаскиваемой в исходном composite, оба composite остаются composites
+//   — ЕСЛИ перетаскиваемая вкладка сама вложена в ДРУГОЙ composite: выполняется true pane-for-pane swap, вытесненная занимает место перетаскиваемой в исходном composite, оба composite остаются composites
 //   — "identity anchor": если заменяемая половина — якорь идентичности composite, якорь переносится на нетронутую половину (в обоих случаях; в nested-case происходит в обоих composite)
-// _extractDraggedTab(draggedTabName), _collapseSplitPane(tabName) — унификация двух drag-протоколов
-//   — обе методы абстрагируют логику "откуда забрать перетаскиваемый таб" (standalone-кнопка или вложенная в composite)
-//   — mergeTabIntoSplit/replacePaneInSplit/detachFromSplit используют эти методы, работая одинаково для обоих протоколов
-// _startSplitPaneDetachDrag(header, pane, ...) — расширен в v3.59.0+
-//   — теперь поддерживает merge/replace-зоны (раньше только detach для целой панели)
-//   — проверяет _findSplitDropTarget на mousemove, показывает точные линии раздела при merge/replace
-// panelPositionManager.detachFromSplit(tabName, targetPanelSide)
+// levelEditor.panelPositionManager.splitPaneController.detachFromSplit(tabName, targetPanelSide)
 //   — отсоединение вложенной панели в standalone-вкладку в левую/правую панель
 // Особенности: только 1 уровень вложенности; только вертикальный split;
 // членство в composite персистится между перезагрузками (leftPanelSplits/rightPanelSplits);
@@ -190,7 +188,12 @@ level.settings.parallaxVertical // множитель вертикального
 ### Core
 - `src/core/LevelEditor.js` - главный класс, `this.level` = computed getter/setter через `levelSessions` + `currentLevelId` (v3.57.0 Phase 1+)
 - `src/core/LevelsManager.js` - управление множеством открытых LevelSession: addLevel, setCurrentLevel, closeLevel (Phase 1, 3, 5); cycleLevel, getVisibleSessionsForRender, reorderLevels, levelMRU fallback, soft-cap warning (Phase 6)
-- `src/ui/PanelPositionManager.js` - управление позицией панелей (moveTab, drag-reorder табов); nested tab split sections (v3.59.0+): mergeTabIntoSplit, detachFromSplit, вложенные split-панели с resizer между ними
+- `src/ui/PanelPositionManager.js` - thin facade (74 строк) над 4 контроллерами (Фаза 4.5): `tabLayoutController`, `tabOrderController`, `tabDragController`, `splitPaneController`
+  - `src/ui/panels/TabLayoutController.js` - базовая раскладка панелей, collapse/expand, resize
+  - `src/ui/panels/TabOrderController.js` - программное перемещение/переупорядочивание вкладок
+  - `src/ui/panels/TabDragController.js` - drag-n-drop вкладок по tab-бару
+  - `src/ui/panels/SplitPaneController.js` - Blender-style split-pane/detach, nested tab split sections (v3.59.0+)
+  - `src/ui/panels/PanelSubController.js` - базовый класс для 4 контроллеров
 - `src/models/LevelSession.js` - editor-only обёртка над Level (visible, fileName, isDirty, viewState, history per-session) — Phase 1
 - `src/core/LevelFileOperations.js` - файловые операции уровня (Phase 5: newLevel/openLevel добавляют вкладки, saveLevel/saveLevelAs работают per-session, closeLevel закрывает вкладку)
 - `src/models/Project.js` - модель проекта (Phase 7): `toJSON(levelSessions, levelOrder, currentLevelId)` эмбеддит Level.toJSON() каждого уровня + видимость/порядок/currentLevelIndex; статический `fromJSON(json)` парсит проект-файл
@@ -228,7 +231,14 @@ level.settings.parallaxVertical // множитель вертикального
 - `src/ui/LevelsPanel.js` - панель списка открытых уровней (Phase 2 multi-level: визуализация вкладок; Phase 5: полный workflow с Close/Save в контекстном меню, per-session dirty-индикатор; Phase 6: drag-reorder, дизамбигуация имён при коллизии; v3.58.0: paint drag на eye-icon — mousedown + drag по иконкам применяет взятое значение ко всем пройденным, temp-отключение draggable для строки на время драга)
 - `src/ui/LevelsContextMenu.js` - контекстное меню для уровней (Make Current, Rename)
 - `src/ui/panel-structures/LevelsPanelStructure.js` - DOM-структура и рендер LevelsPanel
-- `src/ui/AssetPanel.js` - панель ассетов
+- `src/ui/AssetPanel.js` - панель ассетов (Фаза 4 завершена: 3099→1154 строк; orchestration-слой, 7 контроллеров извлечены); держит viewRenderer, folderController, filterController, selectionController, dragDropController, itemActionsController, toolbarController; методы init, destroy, setupEventListeners, handleAssetWheel, handleDrop, handleAssetSave, showSaveSuccessMessage, autoResizePanelHeight
+- `src/ui/AssetViewRenderer.js` - рендеринг grid/list/details превью ассетов (614 строк, Фаза 4.2); методы `render()`, `renderTabs()`, `renderPreviews()`, `renderGridView()`, `renderListView()`, `renderDetailsView()`, `createAssetThumbnail()`, `createAssetListItem()`, `createAssetDetailsRow()`, `isValidImageSrc()`, `createColorFallback()`, `getTypeIconMarkup()`, `updateGridViewSizes()`, `getImageDimensions()`, `getAssetTypeFromCategory()`, `getDefaultColor()`
+- `src/ui/AssetFoldersController.js` - навигация по папкам (Фаза 4.1); управление табами папок, переключение активной папки, синхронизация с FoldersPanel
+- `src/ui/AssetFilterController.js` - фильтрация и поиск (Фаза 4.3); поиск ассетов по имени, фильтр по типу, управление видимостью строк фильтра
+- `src/ui/AssetSelectionController.js` - выделение ассетов (Фаза 4.4); multi-select через Shift+Ctrl+клик, select-all/deselect-all, обновление визуалов выделения
+- `src/ui/AssetDragDropController.js` - перетаскивание и импорт (Фаза 4.5); drag-out ассетов на canvas, external PNG file drop overlay, создание ассетов из файлов
+- `src/ui/AssetItemActionsController.js` - действия с ассетами (Фаза 4.6); контекстные меню (AssetContextMenu, AssetPanelContextMenu), клики по ассетам, open/show-in-explorer, rename
+- `src/ui/AssetToolbarController.js` - управление тулбаром (Фаза 4.7); размер превью (zoom), режимы просмотра (grid/list/details), персистентность настроек, refresh ассетов
 - `src/ui/LayersPanel.js` - панель слоев, включая Layer Solo (`toggleLayerSolo`), paint drag на eye/lock-иконках (v3.58.0: mousedown + drag по иконкам того же типа применяет взятое значение, батчевый tail в `_endIconPaintDrag()` инвалидирует кэши и ре-рендерит)
 - `src/ui/OutlinerPanel.js` - иерархия объектов, включая eye-icon видимости (`createVisibilityButton`), Object Solo (Ctrl+click на глаз), paint drag на eye-icon (v3.58.0: mousedown + drag по глазам других объектов применяет взятое значение, per-node listeners без EventHandlerManager-делегирования), Ctrl+click мульти-select в фильтре типов (`showFilterMenu` → `MenuPositioningUtils.repositionMenu()` после добавления пунктов для совпадения с кнопкой), и F2 inline-rename (`startInlineRename`)
 - `src/ui/DetailsPanel.js` - свойства выделенных объектов (Transform, Visual, Advanced, Custom Properties), плюс Camera-секция для объектов типа `'camera'` с полем Zoom (`renderCameraObjectProperties()`); уровень-широкие параметры когда ничего не выбрано (Stats, Camera с множителями Parallax H/V); новый `createDualFieldRow(label, fields)` для однострочных пар контролов; методы `renderLevelStatistics()`, `renderLevelActions()`, `setupParallaxMultiplierInputs(level)`
@@ -302,7 +312,7 @@ eventHandlerManager.registerElement(button, { click: onClick }, 'button-id');
 
 ## 🔧 Версионирование
 
-Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '3.59.0'` (nested tab split sections + viewport "jump to camera" hotkey + Levels panel lock-иконка, Player Start asset-type, camera zoom)
+Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '3.60.2'` (Phase 3 декомпозиция LevelEditor.js завершена; EditorConfigController/EditorLifecycleController/EditorPreferencesController извлечены; 2399→1583 строк LevelEditor; nested tab split sections + viewport "jump to camera" hotkey + Levels panel lock-иконка, Player Start asset-type, camera zoom)
 
 Версия отображается динамически после полной инициализации через `updateVersionInfo()` и `updatePageTitle()`. Интерфейс скрыт до завершения загрузки, чтобы избежать отображения устаревшей версии. Pre-push hook блокирует коммит без бампа версии (`.claude/settings.json`).
 

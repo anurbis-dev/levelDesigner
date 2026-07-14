@@ -202,7 +202,8 @@ class PanelPositionManager {
 
 ```javascript
 // ✅ ДЕЛАЙТЕ ТАК
-class PanelPositionManager {
+// В TabLayoutController (часть PanelPositionManager) или других контроллерах/панелях
+class TabLayoutController {
     setupPanelResizer(resizer, panel, panelSide) {
         // Единая система управления
         if (this.levelEditor?.resizerManager) {

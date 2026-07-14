@@ -1,12 +1,14 @@
 import { Level } from '../models/Level.js';
 import { FileUtils } from '../utils/FileUtils.js';
 import { ErrorHandler } from '../utils/ErrorHandler.js';
+import { BaseManager } from './BaseManager.js';
 
 /**
  * File operations for level editor
  */
-export class FileManager {
+export class FileManager extends BaseManager {
     constructor() {
+        super();
         this.supportedFormats = ['.json'];
         this.currentFileName = null;
     }

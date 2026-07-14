@@ -1,4 +1,4 @@
-# Архитектура Level Editor v3.57.0 (Phase 7 Project завершена)
+# Архитектура Level Editor v3.60.2 (Phase 7 Project + Phase 3 Refactor: LevelEditor декомпозиция)
 
 **📚 Навигация:**
 - [Development Guide](./DEVELOPMENT_GUIDE.md) - примеры использования
@@ -32,14 +32,28 @@
 
 ## 🛠️ Утилиты
 
-### PanelPositionManager
-**Файл**: `src/ui/PanelPositionManager.js`
-- Универсальное управление позицией панелей (`#left-tabs-panel`, `#right-tabs-panel`)
-- Централизованное сохранение в StateManager
-- `moveTab(tabName, fromPanel, toPanel)` — перемещение вкладки между панелями; при необходимости создаёт целевую панель через `ensurePanelExists()`
-- **Tab drag**: `setupTabDraggingForPanel(panel)` стартует drag; глобальные обработчики в `_installGlobalTabDragHandlers()` покрывают сортировку внутри панели, cross-panel перенос и создание новой панели. Состояние хранится в `this._pendingDrag` (не в `window.tabDraggingState`) — легаси хендлер очищает глобальное состояние до выполнения нашего `mouseup`.
-- Визуалы drag: ghost `.tab-drag-ghost`, drop-zone `.tab-drop-zone`, зона создания панели `.tab-new-panel-zone`; скоупинг — только прямые дети `#left-tabs-panel` / `#right-tabs-panel`
-- ~~`TabMoveContextMenu`~~ — удалён (контекстное меню «Move to» заменено drag-and-drop)
+### PanelPositionManager (v3.60.2 Фаза 4.5: декомпозиция на 4 контроллера)
+**Файл**: `src/ui/PanelPositionManager.js` (74 строки, thin facade)
+- Тонкая обёртка-фасад над 4 контроллерами: конструктор создаёт `this.tabLayoutController`, `this.tabOrderController`, `this.tabDragController`, `this.splitPaneController`; хранит `this.levelEditor`, `this.stateManager`, `this.userPrefs`, `this._initializing` (flag для циклов при инициализации); методы `_updateUI()` и `destroy()` остались на фасаде
+- **TabLayoutController** (719 строк, `src/ui/panels/TabLayoutController.js`)
+  - Базовая раскладка панелей: position left/right, ширины
+  - Методы: `initializePanelPositions()`, `initializePanelWidths()`, `initializeTabPositions()`, `initializePanelStates()`, `ensurePanelExists()`, `createTabsPanel()`, `collapse/expand()` (togglePanelCollapse, toggleTabPanelCollapse, toggleAssetsPanelCollapse, toggleFoldersPanelCollapse), `handlePanelResize()`, `initializeAssetsPanel()`
+- **TabOrderController** (379 строк, `src/ui/panels/TabOrderController.js`)
+  - Программное перемещение/переупорядочивание вкладок без drag-жеста
+  - Методы: `moveTab()`, `savePanelTabOrder()`, `applyPanelTabOrder()`, `moveTabDOM()`, `moveTabElements()`, `updateActiveTabAfterMove()`, `getTabClosestToSeparator()`
+- **TabDragController** (428 строк, `src/ui/panels/TabDragController.js`)
+  - Обычный drag-n-drop вкладок по tab-бару
+  - Инкапсулирует состояние drag'а в `_tabDraggingState` (было `window.tabDraggingState` до Фазы 2); регистрирует listener через `globalEventRegistry` вместо window-флага
+  - Методы: `setupTabDraggingForPanel()`, `createTemporaryTabContainer()`, `removeTemporaryTabContainer()`, `_initGlobalTabDraggingHandler()`, `destroy()`
+- **SplitPaneController** (1016 строк, `src/ui/panels/SplitPaneController.js`)
+  - Blender-style split-pane/detach window manager: методы `mergeTabIntoSplit()`, `replacePaneInSplit()`, `detachFromSplit()`, `_swapNestedPanes()`, `savePanelSplits()`, `applyPanelSplits()`, `removeEmptyPanel()`, `updatePanelStateAfterRemoval()`, `updatePanelStateAfterCreation()`, `updatePanelStateAfterTabAddition()`
+- **PanelSubController** (базовый класс, `src/ui/panels/PanelSubController.js`)
+  - Общая база для 4 контроллеров: геттеры/сеттеры `levelEditor`, `stateManager`, `userPrefs`, `_initializing`, проксирующие к manager
+- **Внешние вызовы обновлены** (Фаза 4.5):
+  - `src/core/LevelEditor.js` — `togglePanelPosition` → `tabLayoutController.togglePanelPosition`
+  - `src/event-system/EventHandlers.js` — `initializePanelPositions`/`ensurePanelExists` → `tabLayoutController.*`; `removeEmptyPanel` → `splitPaneController.removeEmptyPanel`
+  - `src/ui/AssetPanel.js` — `togglePanelPosition('folders')` → `tabLayoutController.togglePanelPosition('folders')`
+  - `_initializing` и `_updateUI()` остались на фасаде — внешние читатели: `EditorLifecycleController.js`, `ResizerManager.js`
 - **Alt+1/2/3/4** — глобальный тоггл видимости панелей (левая / правая / toolbar / панель ассетов), обрабатывается в `EventHandlers.handleKeyDown` через уже существующий `EventHandlers.togglePanel('leftPanel'|'rightPanel'|'toolbar'|'assetsPanel')` (не метод `PanelPositionManager`, но общий с пунктами меню View код пути)
 
 #### Nested Tab Split Sections (v3.59.0+)
@@ -163,16 +177,28 @@
 - **Текущие поля**: только `project.name` (редактируется через `<input type="text">`).
 - **Отложенные поля** (Open Questions #9): default asset import path, default grid/snap для новых уровней проекта, naming convention — явно задокументированы в UI, но реализация отложена.
 
-### AssetPanel System
-**Файлы**: `src/ui/AssetPanel.js`, `src/ui/AssetTabsManager.js`, `src/ui/FoldersPanel.js`
-- **Двухпанельная архитектура**: левая панель фолдеров, правая панель превью ассетов
-- **Система табов**: создание табов перетаскиванием папок на контейнер табов
-- **Multi-select поддержка**: множественный выбор через Shift+клик и Ctrl+клик
+### AssetPanel System (v3.60.2 Фаза 4 завершена: декомпозиция на 7 компонентов)
+**Основные файлы**: `src/ui/AssetPanel.js` (1154 строк, orchestration-слой), `src/ui/AssetViewRenderer.js` (614 строк, Фаза 4.2 extraction), `src/ui/AssetTabsManager.js`, `src/ui/FoldersPanel.js`
+
+**7 контроллеров** (все new AssetPanelController(assetPanel), паттерн владения — plain-класс, не BaseModule):
+- **AssetFoldersController** (Фаза 4.1) — навигация по папкам, управление табами папок, переключение активной папки
+- **AssetViewRenderer** (Фаза 4.2) — рендеринг превью (grid/list/details), `render()` — one-line delegate из AssetPanel.render()
+- **AssetFilterController** (Фаза 4.3) — поиск и фильтрация по типу ассета, скрытие строк фильтра, управление focus
+- **AssetSelectionController** (Фаза 4.4) — выделение ассетов (multi-select через Shift+Ctrl), select-all/deselect-all, обновление визуалов
+- **AssetDragDropController** (Фаза 4.5) — drag-out ассетов на канвас, external PNG file drop overlay, создание ассетов из файлов
+- **AssetItemActionsController** (Фаза 4.6) — контекстные меню (AssetContextMenu, AssetPanelContextMenu), клики по ассетам, open/show-in-explorer
+- **AssetToolbarController** (Фаза 4.7) — тулбар (размер превью, режимы просмотра), персистентность настроек, refresh ассетов
+
+**Декомпозиция завершена** (Фаза 4): AssetPanel.js остаётся orchestration-слоем (constructor, init, destroy, setupEventListeners, setupAssetPanelHandlers, setupAssetEvents, updateContentVisibility, handleAssetWheel, handleDrop/createTemporaryAssetFromFile, handleAssetSave/handleAssetSaveChanges/handleAssetShowInExplorer, autoResizePanelHeight, showSaveSuccessMessage/showSaveErrorMessage/showErrorMessage, shouldShowUnsavedIndicator, плюс delegate-методы для контроллеров). Архитектура: 3099→1154 строк (62% сокращение).
+
+**Двухпанельная архитектура**: левая панель фолдеров (FoldersPanel), правая панель превью ассетов (AssetPanel с табами)
+- **Система табов**: создание табов перетаскиванием папок на контейнер табов (AssetFoldersController)
+- **Multi-select поддержка**: множественный выбор через Shift+клик и Ctrl+клик (AssetSelectionController)
 - **Горизонтальный скролл**: навигация по табам колесом мыши и средней кнопкой
-- **Drag-and-drop**: перетаскивание папок на табы и ассетов на канвас
-- **Контекстные меню**: правый клик для дополнительных действий
-- **Синхронизация состояния**: автоматическая синхронизация между фолдерами и табами
-- **Оптимизация производительности**: `FoldersPanel.updateLayout()` обновляет только обрезку имен при ресайзе без пересоздания DOM, `AssetPanel.updateGridViewSizes()` обновляет только стили grid
+- **Drag-and-drop**: перетаскивание ассетов на канвас (AssetDragDropController), импорт PNG из системы
+- **Контекстные меню**: правый клик для дополнительных действий (AssetItemActionsController)
+- **Фильтрация**: поиск и фильтр по типу ассета (AssetFilterController)
+- **Оптимизация производительности**: `FoldersPanel.updateLayout()` обновляет только обрезку имен при ресайзе без пересоздания DOM
 - **Type-specific иконки**: когда asset.type соответствует ID из AssetTypes каталога, grid-превью и list-row fallback рендерят minimalist SVG-иконку (через `AssetTypeIcons.buildTypeIconSvg()`) вместо color-swatch + первой буквы имени; ассеты без каталога-типа (регулярный импортированный контент) сохраняют старое поведение (color + буква)
 
 ### UIFactory
@@ -287,6 +313,13 @@
 ---
 
 ## 📦 Core модули
+
+### LevelEditor Controllers (v3.60.0 Phase 3: Фаза 3 декомпозиции)
+**Файлы**: `src/core/EditorConfigController.js`, `src/core/EditorLifecycleController.js`, `src/core/EditorPreferencesController.js` (все extends BaseModule)
+- **EditorConfigController** — инициализация конфигурации и применение настроек к редактору; основные методы: `applyConfiguration()`, `_applyColorConfiguration()`, `_applyGridConfiguration()`, `_syncGridSettingsToUI()`, `applyConfigurationToLevel()`, `_saveDefaultConfiguration()`. Обрабатывает загрузку конфига, применение grid-параметров, синхронизацию с UI.
+- **EditorLifecycleController** — инициализация DOM, рендерера, UI-компонентов и event-системы; основные методы: `initializeDOMElements()`, `initializeRenderer()`, `initializeUIComponents()`, `initializeEventHandlerManager()`, `initializeMenuAndEvents()`, `setupPanelSizeListeners()`, `maybeShowSplashOnFirstVisit()`. Отвечает за bootstrap-этап редактора до полной готовности.
+- **EditorPreferencesController** — применение сохранённых пользовательских настроек (размеры панелей, язык, автосохранение); основные методы: `applySavedPanelSizes()`, `applyTabOrderSettings()`, `setupAutoSaveOnUnload()`, `setupAutoSaveOnVisibilityChange()`. Управляет персистентностью пользовательского UI-состояния.
+- Извлечение завершено в Фазе 3 декомпозиции LevelEditor.js (было 2399 строк → 1583 строка); LevelEditor.js остаётся в allowlist with comment "Фаза 3 done (2399→1583); остаток — backlog".
 
 ### HistoryOperations (v3.40.0)
 **Файл**: `src/core/HistoryOperations.js`

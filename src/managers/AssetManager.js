@@ -2,12 +2,14 @@ import { Asset } from '../models/Asset.js';
 import { Logger } from '../utils/Logger.js';
 import { getAssetTypeById, ASSET_CATEGORIES, DEFAULT_ASSET_COMPONENTS } from '../constants/AssetTypes.js';
 import { createComponentStub } from '../constants/ComponentTypes.js';
+import { BaseManager } from './BaseManager.js';
 
 /**
  * Asset library management
  */
-export class AssetManager {
+export class AssetManager extends BaseManager {
     constructor(stateManager = null) {
+        super();
         this.assets = new Map();
         this.categories = new Set();
         this.imageCache = new Map();

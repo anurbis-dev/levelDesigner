@@ -6,14 +6,6 @@ import { ConfigManager } from '../managers/ConfigManager.js';
 import { CacheManager } from '../managers/CacheManager.js';
 import { ResizerManager } from '../managers/ResizerManager.js';
 import { SearchSectionUtils } from '../utils/SearchSectionUtils.js';
-import { CanvasRenderer } from '../ui/CanvasRenderer.js';
-import { AssetPanel } from '../ui/AssetPanel.js';
-import { DetailsPanel } from '../ui/DetailsPanel.js';
-import { OutlinerPanel } from '../ui/OutlinerPanel.js';
-import { LayersPanel } from '../ui/LayersPanel.js';
-import { LevelsPanel } from '../ui/LevelsPanel.js';
-import { SettingsPanel } from '../ui/SettingsPanel.js';
-import { Toolbar } from '../ui/Toolbar.js';
 import { Level } from '../models/Level.js';
 import { GameObject } from '../models/GameObject.js';
 import { Group } from '../models/Group.js';
@@ -23,7 +15,6 @@ import { duplicateRenderUtils } from '../utils/DuplicateUtils.js';
 import { EventHandlers } from '../event-system/EventHandlers.js';
 import { MouseHandlers } from '../event-system/MouseHandlers.js';
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
-import { globalEventRegistry } from '../event-system/GlobalEventRegistry.js';
 import { ObjectOperations } from './ObjectOperations.js';
 import { GroupOperations } from './GroupOperations.js';
 import { RenderOperations } from './RenderOperations.js';
@@ -32,22 +23,19 @@ import { HistoryOperations } from './HistoryOperations.js';
 import { LayerOperations } from './LayerOperations.js';
 import { ViewportOperations } from './ViewportOperations.js';
 import { LevelFileOperations } from './LevelFileOperations.js';
+import { EditorConfigController } from './EditorConfigController.js';
+import { EditorLifecycleController } from './EditorLifecycleController.js';
+import { EditorPreferencesController } from './EditorPreferencesController.js';
 import { LevelsManager } from './LevelsManager.js';
 import { ProjectFileOperations } from './ProjectFileOperations.js';
-import { MenuManager } from '../managers/MenuManager.js';
 import { ContextMenuManager } from '../managers/ContextMenuManager.js';
-import { CanvasContextMenu } from '../ui/CanvasContextMenu.js';
 import { Logger } from '../utils/Logger.js';
-import { ColorUtils } from '../utils/ColorUtils.js';
 import { dialogReplacer } from '../utils/DialogReplacer.js';
-import { ActorPropertiesWindow } from '../ui/ActorPropertiesWindow.js';
 import { PanelPositionManager } from '../ui/PanelPositionManager.js';
-import { StatusBar } from '../ui/StatusBar.js';
 
 // Import new utilities
 import { ErrorHandler } from '../utils/ErrorHandler.js';
 import { ComponentLifecycle } from './ComponentLifecycle.js';
-import { searchManager } from '../utils/SearchManager.js';
 
 /**
  * Main Level Editor class - Unified version with modular architecture
@@ -59,7 +47,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '3.60.2';
+    static VERSION = '3.60.3';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -147,6 +135,9 @@ export class LevelEditor {
         this.viewportOperations = new ViewportOperations(this);
         this.levelFileOperations = new LevelFileOperations(this);
         this.projectFileOperations = new ProjectFileOperations(this);
+        this.configController = new EditorConfigController(this);
+        this.lifecycleController = new EditorLifecycleController(this);
+        this.preferencesController = new EditorPreferencesController(this);
 
         // Register core handlers in lifecycle (highest priority - destroyed first)
         this.lifecycle.register('eventHandlers', this.eventHandlers, { priority: 10 });
@@ -382,7 +373,7 @@ export class LevelEditor {
             this.log('info', 'Initializing editor components...');
 
             await this.initializeConfiguration();
-            const domElements = this.initializeDOMElements();
+            const domElements = this.lifecycleController.initializeDOMElements();
 
             // Load assets before UI to avoid empty FoldersPanel on first render
             try {
@@ -396,7 +387,7 @@ export class LevelEditor {
                 this.log('warn', 'Failed to preload some assets:', error.message);
             }
 
-            this.initializeRenderer(domElements.canvas);
+            this.lifecycleController.initializeRenderer(domElements.canvas);
             // Sync any preloaded images into CanvasRenderer cache now that renderer exists
             try {
                 if (this.assetManager && this.assetManager.imageCache && this.assetManager.imageCache.size > 0) {
@@ -407,9 +398,9 @@ export class LevelEditor {
             } catch (error) {
                 this.log('warn', 'Failed to sync preloaded images to CanvasRenderer:', error.message);
             }
-            this.initializeUIComponents(domElements);
-            this.initializeEventHandlerManager();
-            this.initializeMenuAndEvents();
+            this.lifecycleController.initializeUIComponents(domElements);
+            this.lifecycleController.initializeEventHandlerManager();
+            this.lifecycleController.initializeMenuAndEvents();
             await this.initializeLevelAndData();
             await this.finalizeInitialization();
 
@@ -438,284 +429,10 @@ export class LevelEditor {
         }
         
         // Apply configuration settings after loading
-        this.applyConfiguration();
+        this.configController.applyConfiguration();
 
         // View states will be initialized later in initializeLevelAndData
         // after all components are ready
-    }
-
-    /**
-     * Get and validate required DOM elements
-     * @private
-     * @returns {Object} DOM elements
-     */
-    initializeDOMElements() {
-        const canvas = document.getElementById('main-canvas');
-        const assetsPanel = document.getElementById('assets-panel');
-        const detailsPanel = document.getElementById('details-content-panel');
-        const outlinerPanel = document.getElementById('outliner-content-panel');
-        const layersPanel = document.getElementById('layers-content-panel');
-        const levelsPanel = document.getElementById('levels-content-panel');
-        const toolbarContainer = document.getElementById('toolbar-container');
-        const actorPropsPanelContainer = document.getElementById('actor-properties-panel');
-
-        if (!canvas || !assetsPanel || !detailsPanel || !outlinerPanel || !layersPanel || !levelsPanel || !toolbarContainer) {
-            throw new Error('Required DOM elements not found');
-        }
-
-        return {
-            canvas,
-            assetsPanel,
-            detailsPanel,
-            outlinerPanel,
-            layersPanel,
-            levelsPanel,
-            toolbarContainer,
-            actorPropsPanelContainer
-        };
-    }
-
-    /**
-     * Initialize canvas renderer and context menu
-     * @private
-     * @param {HTMLCanvasElement} canvas - Canvas element
-     */
-    initializeRenderer(canvas) {
-        // Initialize renderer
-        this.canvasRenderer = new CanvasRenderer(canvas);
-        this.canvasRenderer.stateManager = this.stateManager; // Store reference for state updates
-        this.canvasRenderer.resizeCanvas();
-        this.lifecycle.register('canvasRenderer', this.canvasRenderer, { priority: 1 });
-        
-        // Register CanvasRenderer in StateManager for AssetManager sync
-        this.stateManager.set('canvasRenderer', this.canvasRenderer);
-
-        // Initialize canvas context menu
-        this.canvasContextMenu = new CanvasContextMenu(canvas, this, {
-            onDuplicate: (objects) => this.duplicateSelectedObjects(),
-            onDelete: (objects) => this.deleteSelectedObjects(),
-            onCopy: () => this.copySelectedObjects(),
-            onPaste: () => this.pasteObjects(),
-            onCut: () => this.cutSelectedObjects(),
-            onGroup: () => this.groupSelectedObjects(),
-            onUngroup: () => this.ungroupSelectedObjects(),
-            onZoomIn: () => this.zoomIn(),
-            onZoomOut: () => this.zoomOut(),
-            onZoomFit: () => this.zoomToFit(),
-            onResetView: () => this.resetView()
-        });
-
-        // Register canvas context menu with the manager
-        this.contextMenuManager.registerMenu('canvas', this.canvasContextMenu);
-    }
-
-
-
-
-
-    /**
-     * Initialize UI components (panels, toolbar, etc.)
-     * @private
-     * @param {Object} domElements - DOM elements
-     */
-    initializeUIComponents(domElements) {
-        const { assetsPanel, detailsPanel, outlinerPanel, layersPanel, levelsPanel, toolbarContainer } = domElements;
-
-        // Initialize UI panels
-        this.assetPanel = new AssetPanel(assetsPanel, this.assetManager, this.stateManager, this);
-        this.detailsPanel = new DetailsPanel(detailsPanel, this.stateManager, this);
-        this.outlinerPanel = new OutlinerPanel(outlinerPanel, this.stateManager, this);
-        this.levelsPanel = new LevelsPanel(levelsPanel, this.stateManager, this);
-        this.layersPanel = new LayersPanel(layersPanel, this.stateManager, this);
-        this.settingsPanel = new SettingsPanel(document.body, this.configManager, this);
-
-        // Initialize Asset Properties Window
-        this.actorPropertiesWindow = new ActorPropertiesWindow(this.stateManager, this);
-
-        // Register all UI components in lifecycle manager
-        this.lifecycle.register('assetPanel', this.assetPanel, { priority: 3 });
-        this.lifecycle.register('detailsPanel', this.detailsPanel, { priority: 3 });
-        this.lifecycle.register('outlinerPanel', this.outlinerPanel, { priority: 3 });
-        this.lifecycle.register('levelsPanel', this.levelsPanel, { priority: 3 });
-        this.lifecycle.register('layersPanel', this.layersPanel, { priority: 3 });
-        this.lifecycle.register('settingsPanel', this.settingsPanel, { priority: 2 });
-        this.lifecycle.register('actorPropertiesWindow', this.actorPropertiesWindow, { priority: 2 });
-        
-        // Initial render of asset panel
-        this.assetPanel.render();
-        
-        // Context menus for asset panel tabs will be setup by EventHandlers after panels are created
-        
-        // Create new level
-        this.level = this.fileManager.createNewLevel();
-        
-        // Initialize toolbar after level is created
-        this.toolbar = new Toolbar(toolbarContainer, this.stateManager, this);
-        this.lifecycle.register('toolbar', this.toolbar, { priority: 4 });
-
-        // Initialize status bar
-        const statusBarEl = document.getElementById('status-bar');
-        if (statusBarEl) {
-            this.statusBar = new StatusBar(statusBarEl);
-            Logger.setStatusCallback((msg, type) => {
-                this.statusBar?.show(msg, type);
-            });
-        }
-        
-        // Apply configuration to level settings
-        this.applyConfigurationToLevel();
-    }
-
-    /**
-     * Initialize EventHandlerManager
-     */
-    initializeEventHandlerManager() {
-        try {
-            eventHandlerManager.init();
-            this.log('info', 'EventHandlerManager initialized');
-        } catch (error) {
-            this.log('error', 'Failed to initialize EventHandlerManager:', error.message);
-            throw error;
-        }
-    }
-
-    /**
-     * Initialize menu manager and event listeners
-     * @private
-     */
-    initializeMenuAndEvents() {
-        // Initialize MenuManager
-        const menuContainer = document.getElementById('menu-container');
-        const navElement = menuContainer?.closest('nav');
-        if (navElement) {
-            this.menuManager = new MenuManager(navElement, this.eventHandlers);
-            this.menuManager.initialize();
-            this.lifecycle.register('menuManager', this.menuManager, { priority: 5 });
-
-            // Update EventHandlers with MenuManager reference
-            this.eventHandlers.menuManager = this.menuManager;
-        } else {
-            Logger.ui.warn('Navigation element not found, menu functionality will be limited');
-        }
-
-        // Setup event listeners
-        this.eventHandlers.setupEventListeners();
-
-        // Setup panel size listeners for StateManager changes
-        this.setupPanelSizeListeners();
-    }
-
-    /**
-     * Setup listeners for panel size changes from StateManager
-     * @private
-     */
-    setupPanelSizeListeners() {
-        // Listen for right panel width changes
-        const rightPanelUnsubscribe = this.stateManager.subscribe('panels.rightPanelWidth', (width) => {
-            const rightPanel = document.getElementById('right-panel');
-            if (rightPanel && width !== undefined) {
-                if (width === 0) {
-                    // Hide panel completely when collapsed
-                    rightPanel.style.display = 'none';
-                } else {
-                    // Apply width and show panel
-                    rightPanel.style.width = width + 'px';
-                    rightPanel.style.flex = '0 0 auto';
-                    rightPanel.style.display = 'flex';
-                }
-
-                // Update canvas and render
-                this.updateCanvas();
-            }
-        });
-        this.subscriptions.push(rightPanelUnsubscribe);
-
-        // Listen for assets panel height changes
-        const assetsPanelUnsubscribe = this.stateManager.subscribe('panels.assetsPanelHeight', (height) => {
-            const assetsPanel = document.getElementById('assets-panel');
-            if (assetsPanel && height !== undefined) {
-                if (height === 0) {
-                    // Hide panel completely when collapsed
-                    assetsPanel.style.display = 'none';
-                } else {
-                    // Apply height and show panel
-                    assetsPanel.style.height = height + 'px';
-                    assetsPanel.style.flexShrink = '0';
-                    assetsPanel.style.display = 'flex';
-                }
-
-                // Update canvas and render
-                this.updateCanvas();
-            }
-        });
-        this.subscriptions.push(assetsPanelUnsubscribe);
-
-        // Listen for tab position changes
-        const tabPositionsUnsubscribe = this.stateManager.subscribe('tabPositions', (tabPositions) => {
-            if (tabPositions && this.panelPositionManager && !this.panelPositionManager._initializing) {
-                Logger.ui.debug('Tab positions changed:', tabPositions);
-
-                // Refresh search listeners when tabs move between panels
-                searchManager.refreshAllSearches();
-
-                // Update search controls for active tabs
-                this.initializeSearchControls();
-
-                // Force search listener refresh after a short delay to ensure DOM is updated
-                setTimeout(() => {
-                    Logger.ui.debug('LevelEditor: Delayed search refresh after tab move');
-                    searchManager.refreshAllSearches();
-                }, 50);
-
-                // Update canvas layout
-                this.updateCanvas();
-            }
-        });
-        this.subscriptions.push(tabPositionsUnsubscribe);
-
-        // Listen for active tab changes and save to ConfigManager
-        const rightPanelTabUnsubscribe = this.stateManager.subscribe('rightPanelTab', (tabName) => {
-            if (tabName && this.configManager) {
-                this.configManager.set('editor.view.rightPanelTab', tabName);
-            }
-        });
-        this.subscriptions.push(rightPanelTabUnsubscribe);
-
-        // Setup ResizeObserver for canvas-viewport to update canvas interactively
-        const setupViewportObserver = (retryCount = 0) => {
-            const viewport = document.getElementById('canvas-viewport');
-            if (viewport && window.ResizeObserver) {
-                this.viewportResizeObserver = new ResizeObserver(() => {
-                    this.updateCanvas();
-                });
-                this.viewportResizeObserver.observe(viewport);
-            } else if (!viewport && retryCount < 10) {
-                requestAnimationFrame(() => setupViewportObserver(retryCount + 1));
-            }
-        };
-        setupViewportObserver();
-
-        const leftPanelTabUnsubscribe = this.stateManager.subscribe('leftPanelTab', (tabName) => {
-            if (tabName && this.configManager) {
-                this.configManager.set('editor.view.leftPanelTab', tabName);
-            }
-        });
-        this.subscriptions.push(leftPanelTabUnsubscribe);
-
-        // Listen for panel visibility changes to update menu checkboxes
-        const rightPanelVisibilityUnsubscribe = this.stateManager.subscribe('view.rightPanel', (visible) => {
-            if (this.eventHandlers && this.eventHandlers.updateViewCheckbox) {
-                this.eventHandlers.updateViewCheckbox('rightPanel', visible);
-            }
-        });
-        this.subscriptions.push(rightPanelVisibilityUnsubscribe);
-
-        const leftPanelVisibilityUnsubscribe = this.stateManager.subscribe('view.leftPanel', (visible) => {
-            if (this.eventHandlers && this.eventHandlers.updateViewCheckbox) {
-                this.eventHandlers.updateViewCheckbox('leftPanel', visible);
-            }
-        });
-        this.subscriptions.push(leftPanelVisibilityUnsubscribe);
     }
 
     /**
@@ -734,7 +451,7 @@ export class LevelEditor {
      * Toggle right panel position (left/right)
      */
     toggleRightPanelPosition() {
-        this.panelPositionManager.togglePanelPosition('rightPanel');
+        this.panelPositionManager.tabLayoutController.togglePanelPosition('rightPanel');
     }
 
     /**
@@ -776,7 +493,7 @@ export class LevelEditor {
         this.eventHandlers.initializeViewStates();
 
         // Apply saved panel sizes AFTER initializing view states
-        this.applySavedPanelSizes();
+        this.preferencesController.applySavedPanelSizes();
     }
 
     /**
@@ -815,549 +532,16 @@ export class LevelEditor {
         );
 
         // Setup auto-save handlers
-        this.setupAutoSaveOnUnload();
-        this.setupAutoSaveOnVisibilityChange();
+        this.preferencesController.setupAutoSaveOnUnload();
+        this.preferencesController.setupAutoSaveOnVisibilityChange();
 
         // Show editor UI after all initialization is complete
         document.body.classList.add('editor-ready');
         window.notifySplashReady?.();
 
         // Show welcome splash screen on the user's very first visit only
-        this.maybeShowSplashOnFirstVisit();
+        this.lifecycleController.maybeShowSplashOnFirstVisit();
     }
-
-    /**
-     * Show the splash screen once, on the user's first visit to the editor.
-     * Tracked via localStorage so it never shows again on subsequent loads/refreshes.
-     */
-    maybeShowSplashOnFirstVisit() {
-        const key = 'levelEditor_hasSeenSplash';
-        try {
-            if (localStorage.getItem(key)) {
-                return;
-            }
-            localStorage.setItem(key, 'true');
-        } catch (error) {
-            this.log('warn', 'Failed to access localStorage for splash screen first-visit check:', error.message);
-            return;
-        }
-        this.showSplashScreen();
-    }
-
-    /**
-     * Setup auto-save on page unload
-     * Now saves only when page is closed/reloaded, not on every change
-     */
-    setupAutoSaveOnUnload() {
-        // Check if already registered to prevent duplicates
-        if (this._autoSaveUnloadRegistered) {
-            return;
-        }
-        
-        // Use GlobalEventRegistry for window events
-        globalEventRegistry.registerComponentHandlers('level-editor-autosave-unload', {
-            beforeunload: () => {
-                try {
-                    Logger.ui.info('Saving user settings on page unload...');
-
-                    // Save toolbar state
-                    if (this.toolbar) {
-                        this.toolbar.saveState();
-                    }
-
-                    // Save current panel tabs
-                    const currentRightPanelTab = this.stateManager.get('rightPanelTab');
-                    if (currentRightPanelTab) {
-                        this.configManager.set('editor.view.rightPanelTab', currentRightPanelTab);
-                    }
-                
-                    const currentLeftPanelTab = this.stateManager.get('leftPanelTab');
-                    if (currentLeftPanelTab) {
-                        this.configManager.set('editor.view.leftPanelTab', currentLeftPanelTab);
-                    }
-
-                    // Save current active asset tabs
-                    const currentActiveAssetTabs = this.stateManager.get('activeAssetTabs');
-                    if (currentActiveAssetTabs) {
-                        const tabsArray = Array.from(currentActiveAssetTabs);
-                        this.configManager.set('editor.view.activeAssetTabs', tabsArray);
-                    }
-
-                    // Save current asset panel size if it exists
-                    if (this.assetPanel?.assetSize) {
-                        this.configManager.set('ui.assetSize', this.assetPanel.assetSize);
-                    }
-
-                    // Save current asset panel view mode if it exists
-                    if (this.assetPanel?.viewMode) {
-                        this.configManager.set('ui.assetViewMode', this.assetPanel.viewMode);
-                    }
-
-                    // Save current snap to grid state
-                    const snapToGrid = this.stateManager.get('canvas.snapToGrid');
-                    if (snapToGrid !== undefined) {
-                        this.configManager.set('canvas.snapToGrid', snapToGrid);
-                    }
-
-                    // Save current panel sizes
-                    const rightPanelWidth = this.stateManager.get('panels.rightPanelWidth');
-                    if (rightPanelWidth && rightPanelWidth > 0) {
-                        this.userPrefs.set('rightPanelWidth', rightPanelWidth);
-                    }
-
-                    const leftPanelWidth = this.stateManager.get('panels.leftPanelWidth');
-                    if (leftPanelWidth && leftPanelWidth > 0) {
-                        this.userPrefs.set('leftPanelWidth', leftPanelWidth);
-                    }
-
-                    const assetsPanelHeight = this.stateManager.get('panels.assetsPanelHeight');
-                    if (assetsPanelHeight && assetsPanelHeight > 0) {
-                        this.userPrefs.set('assetsPanelHeight', assetsPanelHeight);
-                    }
-
-                    // Save panel tab orders
-                    const rightPanelTabOrder = this.stateManager.get('rightPanelTabOrder');
-                    if (rightPanelTabOrder && Array.isArray(rightPanelTabOrder)) {
-                        this.userPrefs.set('rightPanelTabOrder', rightPanelTabOrder);
-                    }
-
-                    const leftPanelTabOrder = this.stateManager.get('leftPanelTabOrder');
-                    if (leftPanelTabOrder && Array.isArray(leftPanelTabOrder)) {
-                        this.userPrefs.set('leftPanelTabOrder', leftPanelTabOrder);
-                    }
-
-                    const assetTabOrder = this.stateManager.get('assetTabOrder');
-                    if (assetTabOrder && Array.isArray(assetTabOrder)) {
-                        this.userPrefs.set('assetTabOrder', assetTabOrder);
-                    }
-
-                    // Save tab positions (which panel each tab is in)
-                    const tabPositions = this.stateManager.get('tabPositions');
-                    if (tabPositions) {
-                        Object.entries(tabPositions).forEach(([tabName, position]) => {
-                            this.userPrefs.set(`tabPosition_${tabName}`, position);
-                        });
-                    }
-
-                    // Save panel visibility states
-                    const rightPanel = document.getElementById('right-panel');
-                    if (rightPanel) {
-                        const isRightPanelVisible = rightPanel.style.display !== 'none';
-                        this.userPrefs.set('rightPanelVisible', isRightPanelVisible);
-                    }
-
-                    const leftPanel = document.getElementById('left-panel');
-                    if (leftPanel) {
-                        const isLeftPanelVisible = leftPanel.style.display !== 'none';
-                        this.userPrefs.set('leftPanelVisible', isLeftPanelVisible);
-                    }
-
-                    const assetsPanel = document.getElementById('assets-panel');
-                    if (assetsPanel) {
-                        const isAssetsPanelVisible = assetsPanel.style.display !== 'none';
-                        this.userPrefs.set('assetsPanelVisible', isAssetsPanelVisible);
-                    }
-
-                    // Save current grid settings from StateManager
-                    const gridSize = this.stateManager.get('canvas.gridSize');
-                    const gridColor = this.stateManager.get('canvas.gridColor');
-                    const gridThickness = this.stateManager.get('canvas.gridThickness');
-                    const gridOpacity = this.stateManager.get('canvas.gridOpacity');
-                    const gridSubdivisions = this.stateManager.get('canvas.gridSubdivisions');
-                    const gridSubdivColor = this.stateManager.get('canvas.gridSubdivColor');
-                    const gridSubdivThickness = this.stateManager.get('canvas.gridSubdivThickness');
-
-                    if (gridSize !== undefined) {
-                        this.configManager.set('grid.size', gridSize);
-                    }
-                    if (gridColor !== undefined) {
-                        this.configManager.set('grid.color', gridColor);
-                    }
-                    if (gridThickness !== undefined) {
-                        this.configManager.set('grid.thickness', gridThickness);
-                    }
-                    if (gridOpacity !== undefined) {
-                        this.configManager.set('grid.opacity', gridOpacity);
-                    }
-                    if (gridSubdivisions !== undefined) {
-                        this.configManager.set('grid.subdivisions', gridSubdivisions);
-                    }
-                    if (gridSubdivColor !== undefined) {
-                        this.configManager.set('grid.subdivColor', gridSubdivColor);
-                    }
-                    if (gridSubdivThickness !== undefined) {
-                        this.configManager.set('grid.subdivThickness', gridSubdivThickness);
-                    }
-
-                    // Force save all modified settings immediately
-                    if (this.configManager) {
-                        this.configManager.forceSaveAllSettings();
-                    }
-
-                    Logger.ui.info('User settings saved successfully');
-            } catch (error) {
-                Logger.ui.error('Failed to save user settings:', error);
-            }
-        }
-        }, 'window');
-        
-        this._autoSaveUnloadRegistered = true;
-    }
-
-    /**
-     * Setup auto-save on page visibility change (tab switch)
-     * Saves settings when user switches to another tab or minimizes browser
-     */
-    setupAutoSaveOnVisibilityChange() {
-        // Check if already registered to prevent duplicates
-        if (this._autoSaveVisibilityRegistered) {
-            return;
-        }
-        
-        // Use GlobalEventRegistry for document events
-        globalEventRegistry.registerComponentHandlers('level-editor-autosave-visibility', {
-            visibilitychange: () => {
-                if (document.hidden) {
-                    // Reset any in-progress mouse action (drag/marquee) since the
-                    // page won't receive the eventual mouseup while unfocused
-                    if (this.mouseHandlers) {
-                        this.mouseHandlers.handleWindowBlur();
-                    }
-
-                    try {
-                        Logger.ui.info('Saving user settings on tab switch...');
-
-                        // Force save all modified settings immediately
-                        if (this.configManager) {
-                            this.configManager.forceSaveAllSettings();
-                        }
-
-                        Logger.ui.info('User settings saved on tab switch');
-                    } catch (error) {
-                        Logger.ui.error('Failed to save user settings on tab switch:', error);
-                    }
-                }
-            }
-        }, 'document');
-        
-        this._autoSaveVisibilityRegistered = true;
-    }
-
-    /**
-     * Apply configuration settings to editor
-     * @description Main entry point for applying configuration. Note: Font scale 
-     * and theme are applied immediately in index.html to prevent UI flicker.
-     */
-    applyConfiguration() {
-        if (!this.configManager) {
-            Logger.settings.warn('ConfigManager not initialized, skipping configuration');
-            return;
-        }
-        
-        // Apply different configuration sections
-        this._applyGridConfiguration();
-        this._applyColorConfiguration();
-        this._syncGridSettingsToUI();
-        this._saveDefaultConfiguration();
-    }
-
-    /**
-     * Apply color configuration settings to StateManager
-     * @private
-     */
-    _applyColorConfiguration() {
-        // Apply UI colors
-        const uiColors = this.configManager.get('ui');
-        if (uiColors) {
-            this.stateManager.set('ui.backgroundColor', uiColors.backgroundColor);
-            this.stateManager.set('ui.textColor', uiColors.textColor);
-            this.stateManager.set('ui.activeColor', uiColors.activeColor);
-            this.stateManager.set('ui.activeTextColor', uiColors.activeTextColor);
-            this.stateManager.set('ui.activeTabColor', uiColors.activeTabColor);
-            this.stateManager.set('ui.accentColor', uiColors.accentColor);
-            this.stateManager.set('ui.resizerColor', uiColors.resizerColor);
-        }
-
-        // Apply canvas colors
-        const canvasColors = this.configManager.get('canvas');
-        if (canvasColors) {
-            this.stateManager.set('canvas.backgroundColor', canvasColors.backgroundColor);
-        }
-
-        // Apply selection colors
-        const selectionColors = this.configManager.get('selection');
-        if (selectionColors) {
-            this.stateManager.set('selection.outlineColor', selectionColors.outlineColor);
-            this.stateManager.set('selection.outlineWidth', selectionColors.outlineWidth);
-            this.stateManager.set('selection.groupOutlineColor', selectionColors.groupOutlineColor);
-            this.stateManager.set('selection.groupOutlineWidth', selectionColors.groupOutlineWidth);
-            this.stateManager.set('selection.marqueeColor', selectionColors.marqueeColor);
-            this.stateManager.set('selection.marqueeOpacity', selectionColors.marqueeOpacity);
-            this.stateManager.set('selection.hierarchyHighlightColor', selectionColors.hierarchyHighlightColor);
-            this.stateManager.set('selection.activeLayerBorderColor', selectionColors.activeLayerBorderColor);
-        }
-
-        // Apply logger colors
-        const loggerColors = this.configManager.get('logger.colors');
-        if (loggerColors) {
-            this.stateManager.set('logger.colors', loggerColors);
-        }
-    }
-
-    /**
-     * Apply grid configuration settings to StateManager
-     * @private
-     */
-    _applyGridConfiguration() {
-        // Get all grid settings from config
-        const gridSettings = this._getGridSettingsFromConfig();
-        
-        // Apply basic grid settings
-        this._applyBasicGridSettings(gridSettings);
-        
-        // Apply grid subdivision settings
-        this._applyGridSubdivisionSettings(gridSettings);
-        
-        // Apply grid type settings
-        this._applyGridTypeSettings(gridSettings);
-    }
-
-    /**
-     * Get grid settings from configuration manager
-     * @private
-     * @returns {Object} Grid settings object
-     */
-    _getGridSettingsFromConfig() {
-        return {
-            size: this.configManager.get('grid.size'),
-            color: this.configManager.get('grid.color'),
-            thickness: this.configManager.get('grid.thickness'),
-            opacity: this.configManager.get('grid.opacity'),
-            subdivisions: this.configManager.get('grid.subdivisions'),
-            subdivColor: this.configManager.get('grid.subdivColor'),
-            subdivThickness: this.configManager.get('grid.subdivThickness'),
-            type: this.configManager.get('canvas.gridType'),
-            hexOrientation: this.configManager.get('canvas.hexOrientation')
-        };
-    }
-
-    /**
-     * Apply basic grid settings (size, color, thickness, opacity)
-     * @private
-     * @param {Object} settings - Grid settings object
-     */
-    _applyBasicGridSettings(settings) {
-        if (settings.size !== undefined) {
-            this.stateManager.set('canvas.gridSize', settings.size);
-        }
-        
-        if (settings.color !== undefined) {
-            const opacity = settings.opacity !== undefined ? settings.opacity : 0.1;
-            const colorValue = ColorUtils.toRgba(settings.color, opacity);
-            this.stateManager.set('canvas.gridColor', colorValue);
-        }
-        
-        if (settings.thickness !== undefined) {
-            this.stateManager.set('canvas.gridThickness', settings.thickness);
-        }
-        
-        if (settings.opacity !== undefined) {
-            this.stateManager.set('canvas.gridOpacity', settings.opacity);
-        }
-    }
-
-    /**
-     * Apply grid subdivision settings
-     * @private
-     * @param {Object} settings - Grid settings object
-     */
-    _applyGridSubdivisionSettings(settings) {
-        if (settings.subdivisions !== undefined) {
-            this.stateManager.set('canvas.gridSubdivisions', settings.subdivisions);
-        }
-        
-        if (settings.subdivColor !== undefined) {
-            const opacity = settings.opacity !== undefined ? settings.opacity : 0.1;
-            const subdivColorValue = ColorUtils.toRgba(settings.subdivColor, opacity);
-            this.stateManager.set('canvas.gridSubdivColor', subdivColorValue);
-        }
-        
-        if (settings.subdivThickness !== undefined) {
-            this.stateManager.set('canvas.gridSubdivThickness', settings.subdivThickness);
-        }
-    }
-
-    /**
-     * Apply grid type settings (rectangular, hexagonal, etc.)
-     * @private
-     * @param {Object} settings - Grid settings object
-     */
-    _applyGridTypeSettings(settings) {
-        if (settings.type !== undefined) {
-            this.stateManager.set('canvas.gridType', settings.type);
-        }
-        
-        if (settings.hexOrientation !== undefined) {
-            this.stateManager.set('canvas.hexOrientation', settings.hexOrientation);
-        }
-    }
-
-    /**
-     * Sync grid settings to UI components
-     * @private
-     */
-    _syncGridSettingsToUI() {
-        if (this.settingsPanel && this.settingsPanel.gridSettings) {
-            this.settingsPanel.gridSettings.syncAllGridSettingsToState();
-        }
-    }
-
-    /**
-     * Save default configuration settings
-     * @private
-     */
-    _saveDefaultConfiguration() {
-        if (this.configManager) {
-            this.configManager.saveSettings();
-        }
-    }
-
-
-    /**
-     * Apply saved panel sizes to prevent UI flicker
-     */
-    applySavedPanelSizes() {
-        if (!this.userPrefs) return;
-
-        try {
-            // Apply panel sizes from user preferences
-            this.applyPanelSizesFromPreferences();
-
-            // Apply tab order settings to prevent UI flicker
-            this.applyTabOrderSettings();
-
-            // Update canvas after applying saved sizes
-            if (this.canvasRenderer) {
-                this.canvasRenderer.resizeCanvas();
-                this.render();
-            }
-
-        } catch (error) {
-            Logger.layout.warn('Failed to apply saved panel settings:', error);
-        }
-    }
-
-    /**
-     * Apply panel sizes from user preferences
-     */
-    applyPanelSizesFromPreferences() {
-        if (!this.userPrefs) return;
-
-        try {
-            // Right/Left panel widths - handled by PanelPositionManager resizers
-            // Skip to avoid double application of styles
-
-            // Assets panel height - handled by PanelPositionManager.initializeAssetsPanel()
-            // Skip to avoid double application of styles
-
-            // Console height
-            const consoleHeight = this.userPrefs.get('consoleHeight');
-            if (consoleHeight) {
-                const consolePanel = document.getElementById('console-panel');
-                if (consolePanel) {
-                    const height = Math.max(200, Math.min(window.innerHeight * 0.9, consoleHeight));
-                    consolePanel.style.setProperty('height', height + 'px', 'important');
-                    consolePanel.style.setProperty('bottom', 'auto', 'important');
-                }
-            }
-
-            // Apply panel visibility states
-            const rightPanelVisible = this.userPrefs.get('rightPanelVisible');
-            if (rightPanelVisible !== undefined) {
-                const rightPanel = document.getElementById('right-panel');
-                if (rightPanel) {
-                    rightPanel.style.display = rightPanelVisible ? 'flex' : 'none';
-                }
-            }
-
-            const leftPanelVisible = this.userPrefs.get('leftPanelVisible');
-            if (leftPanelVisible !== undefined) {
-                const leftPanel = document.getElementById('left-panel');
-                if (leftPanel) {
-                    leftPanel.style.display = leftPanelVisible ? 'flex' : 'none';
-                }
-            }
-
-            const assetsPanelVisible = this.userPrefs.get('assetsPanelVisible');
-            if (assetsPanelVisible !== undefined) {
-                const assetsPanel = document.getElementById('assets-panel');
-                if (assetsPanel) {
-                    assetsPanel.style.display = assetsPanelVisible ? 'flex' : 'none';
-                }
-            }
-        } catch (error) {
-            Logger.layout.warn('Failed to apply panel sizes from preferences:', error);
-        }
-    }
-
-    /**
-     * Apply tab order settings to prevent UI flicker
-     */
-    applyTabOrderSettings() {
-        if (!this.userPrefs) return;
-        
-        try {
-            // Apply asset tab order
-            const assetTabOrder = this.userPrefs.get('assetTabOrder');
-            if (assetTabOrder && Array.isArray(assetTabOrder)) {
-                this.stateManager.set('assetTabOrder', assetTabOrder);
-            }
-            
-            // Apply panel tab orders
-            const rightPanelTabOrder = this.userPrefs.get('rightPanelTabOrder');
-            if (rightPanelTabOrder && Array.isArray(rightPanelTabOrder)) {
-                this.stateManager.set('rightPanelTabOrder', rightPanelTabOrder);
-            }
-            
-            const leftPanelTabOrder = this.userPrefs.get('leftPanelTabOrder');
-            if (leftPanelTabOrder && Array.isArray(leftPanelTabOrder)) {
-                this.stateManager.set('leftPanelTabOrder', leftPanelTabOrder);
-            }
-            
-            // Re-render panels to apply tab order
-            if (this.assetPanel) {
-                this.assetPanel.render();
-            }
-            
-        } catch (error) {
-            Logger.ui.warn('Failed to apply tab order settings:', error);
-        }
-    }
-
-    /**
-     * Apply configuration to level settings
-     */
-    applyConfigurationToLevel() {
-        if (!this.level || !this.configManager) return;
-        
-        
-        // Apply canvas settings to level
-        const canvasConfig = this.configManager.getCanvas();
-        
-        if (canvasConfig.backgroundColor) {
-            this.level.settings.backgroundColor = canvasConfig.backgroundColor;
-        }
-        
-        if (canvasConfig.gridSize) {
-            this.level.settings.gridSize = canvasConfig.gridSize;
-        }
-        
-        if (canvasConfig.showGrid !== undefined) {
-            this.level.settings.showGrid = canvasConfig.showGrid;
-        }
-        
-    }
-
 
     /**
      * Render the canvas - delegate to render operations

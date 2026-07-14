@@ -106,30 +106,36 @@
 - Фаза 5 (v3.57.0): per-session save, closeLevel, dirty-tracking
 - Фаза 6 (v3.57.0): levelMRU fallback, cycleLevel, getVisibleSessionsForRender (текущий поверх), reorderLevels, drag-reorder UI, дизамбигуация имён
 
-### AssetPanel (src/ui/AssetPanel.js)
-Главная панель ассетов с поддержкой табов, фолдеров и превью.
+### AssetPanel (src/ui/AssetPanel.js) — v3.60.2 Фаза 4 завершена
+Главная панель ассетов с поддержкой табов, фолдеров и превью (1154 строк orchestration-слой).
 
-#### Основные методы:
-- `render()` - отрисовка панели ассетов
-- `renderPreviews()` - отрисовка превью ассетов
-- `createFoldersContainer()` - создание контейнера фолдеров
-- `initializeTabsManager()` - инициализация менеджера табов
+#### Архитектура (7 контроллеров):
+- **AssetFoldersController** — навигация по папкам, управление табами папок
+- **AssetViewRenderer** — рендеринг превью (grid/list/details)
+- **AssetFilterController** — поиск и фильтр по типу ассета
+- **AssetSelectionController** — выделение ассетов (multi-select, select-all)
+- **AssetDragDropController** — drag-out ассетов на canvas, import PNG files
+- **AssetItemActionsController** — контекстные меню, действия на ассеты
+- **AssetToolbarController** — тулбар (zoom size, view mode), персистентность
+
+#### Основные методы AssetPanel:
+- `render()` - отрисовка панели ассетов (delegate → `this.viewRenderer.render()`)
 - `getActiveTabPath()` - получение пути активного таба
 - `selectAsset(assetId)` - выбор ассета
-- `decreaseAssetSize()` - уменьшение размера ассетов
-- `increaseAssetSize()` - увеличение размера ассетов
-- `toggleViewMode()` - переключение режима отображения
-- `setupContextMenus()` - настройка контекстных меню
+- `handleAssetWheel()` - mouse wheel навигация по табам
+- `handleDrop()` - создание ассетов из dropped файлов
+- `handleAssetSave()` - сохранение ассета после редакции
+- `autoResizePanelHeight()` - автоподгонка высоты панели
 - `destroy()` - очистка ресурсов
 
 #### Особенности:
 - **Двухпанельная структура**: левая панель с фолдерами, правая с превью ассетов
-- **Система табов**: создание табов перетаскиванием папок
-- **Multi-select**: поддержка множественного выбора ассетов
-- **Гибкие размеры**: настраиваемый размер превью ассетов
-- **Поиск и фильтрация**: интегрированный поиск и фильтры по типам
-- **Drag-and-drop**: перетаскивание ассетов на канвас
-- **Контекстные меню**: правый клик для дополнительных действий
+- **Система табов**: создание табов перетаскиванием папок (AssetFoldersController)
+- **Multi-select**: поддержка множественного выбора ассетов (AssetSelectionController)
+- **Гибкие размеры**: настраиваемый размер превью ассетов (AssetToolbarController)
+- **Поиск и фильтрация**: поиск и фильтры по типам (AssetFilterController)
+- **Drag-and-drop**: перетаскивание ассетов на canvas, импорт PNG (AssetDragDropController)
+- **Контекстные меню**: правый клик для дополнительных действий (AssetItemActionsController)
 
 ### AssetManager (src/managers/AssetManager.js)
 Управление ассетами с поддержкой динамической загрузки из манифеста и placeholder-созданием по каталогу типов.

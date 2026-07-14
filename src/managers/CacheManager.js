@@ -1,13 +1,15 @@
 import { Logger } from '../utils/Logger.js';
 import { PERFORMANCE } from '../constants/EditorConstants.js';
+import { BaseManager } from './BaseManager.js';
 
 /**
  * CacheManager - centralized cache management
  * Handles all caching logic for performance optimization
  * @version 3.42.0
  */
-export class CacheManager {
+export class CacheManager extends BaseManager {
     constructor(editor) {
+        super();
         this.editor = editor;
         
         // Performance optimization caches

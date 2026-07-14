@@ -409,7 +409,7 @@ class ActorPropertiesWindow {
 
 #### Регистрация разделителя:
 ```javascript
-// В PanelPositionManager или AssetPanel
+// В TabLayoutController (часть PanelPositionManager), AssetPanel или других панелях
 if (this.levelEditor?.resizerManager) {
     this.levelEditor.resizerManager.registerResizer(
         resizerElement,    // DOM элемент разделителя
