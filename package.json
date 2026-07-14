@@ -1,6 +1,6 @@
 {
   "name": "level-editor-2d",
-  "version": "3.60.5",
+  "version": "3.60.6",
   "description": "Профессиональный 2D редактор уровней с утилитарной архитектурой мирового класса",
   "main": "index.html",
   "type": "module",
@@ -18,7 +18,8 @@
     "lint": "eslint src",
     "check:size": "node scripts/check-file-size.js",
     "check": "npm run lint && npm run check:size && npm test && npx madge --circular src",
-    "check:unused": "knip"
+    "check:unused": "knip",
+    "check:dedup": "npx jscpd src --min-lines 15"
   },
   "keywords": [
     "level-editor",
