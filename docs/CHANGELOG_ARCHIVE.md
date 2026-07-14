@@ -2,6 +2,11 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## [Unreleased] (до commit ac7a8b3, 2026-07-14)
+
+- Refactor: Фаза 6 (точечный дедуп) — `GitUtils.js` (общий `runGitCommand()` вместо трёх копий spawn-обвязки), `DiamondGridRenderer.js` (общий `drawDiagonalLines()` вместо двух копий 60°/120°), `SettingsSyncManager.js` (`applyColorSettings`/`applySelectionSettings`/`applyStatusBarColors` вынесены из `applySpecialUISettings`/`applyInitialColorSettings`), новый `src/utils/ImageUtils.js` (`getImageDimensions`, использует `AssetImporter`/`AssetViewRenderer`; `getDefaultColor`/`getAssetTypeFromCategory` оставлены раздельными — разные наборы категорий, слияние изменило бы поведение), `LayersPanel.js` (dblclick-обработчик переиспользует `renameLayer()`), `OutlinerPanel.js` (`createOutlinerNameContainer()`/`applyLockedRowState()` общие для `renderGroupNode`/`renderObjectNode`).
+- Фаза 7 (долгосрочные guardrails) — новый `CONTRIBUTING.md` (правило: перед новым файлом искать подходящий Controller/Operations-класс), `npm run check:dedup` (`npx jscpd --min-lines 15`), overrides в `scripts/check-file-size.js` сверены с фактическим размером файлов (41 актуальных, stale нет). Рефакторинг из `tmp/2D_Editor_REFACTOR_PLAN.md` завершён (Фазы 0–7).
+
 ## [Unreleased] (до commit bec4958, 2026-07-14)
 
 - Refactor: Фаза 4 (декомпозиция AssetPanel) завершена — извлечены 7 контроллеров: AssetFoldersController (Фаза 4.1), AssetViewRenderer (614 строк, Фаза 4.2), AssetFilterController (Фаза 4.3), AssetSelectionController (Фаза 4.4), AssetDragDropController (Фаза 4.5), AssetItemActionsController (Фаза 4.6), AssetToolbarController (Фаза 4.7); AssetPanel.js 3099→1154 строк (62% сокращение); все контроллеры используют паттерн `constructor(assetPanel)` (владение вместо BaseModule); orchestration-слой AssetPanel содержит init, destroy, setupEventListeners, handleAssetWheel, handleDrop, handleAssetSave, autoResizePanelHeight и delegate-методы.
