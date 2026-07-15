@@ -179,7 +179,11 @@ export class BasePanel {
             canSelect = null,
             itemSelector = '[data-selectable]',
             selectedClass = 'selected',
-            enableMarquee = false
+            enableMarquee = false,
+            // Must be preserved: AssetPanel uses isAssetMarqueeSelecting so panel marquee
+            // does not collide with canvas mouse.isMarqueeSelecting / viewport-gesture-mode.
+            mouseStateKey = 'mouse.isMarqueeSelecting',
+            marqueeId = 'marquee-selection'
         } = options;
 
         this.selectionOptions = {
@@ -191,7 +195,9 @@ export class BasePanel {
             canSelect,
             itemSelector,
             selectedClass,
-            enableMarquee
+            enableMarquee,
+            mouseStateKey,
+            marqueeId
         };
 
         // Subscribe to selection changes

@@ -259,13 +259,34 @@ export class AssetViewRenderer {
 
         thumb.appendChild(nameLabel);
 
-        // Event listeners
-        thumb.addEventListener('click', (e) => this.assetPanel.handleItemClick(e, asset));
-        thumb.addEventListener('dblclick', (e) => this.assetPanel.handleItemDoubleClick(e, asset));
+        // Select on mousedown (not only click): HTML5 draggable often swallows click
+        // after micro-movement, so first press only "armed" drag and selection needed a 2nd try.
+        this._bindAssetSelectEvents(thumb, asset);
         thumb.addEventListener('dragstart', (e) => this.assetPanel.handleThumbnailDragStart(e, asset));
         thumb.addEventListener('dragend', (e) => this.assetPanel.handleThumbnailDragEnd(e, asset));
 
         return thumb;
+    }
+
+    /**
+     * Item select: plain LMB on mousedown; Ctrl/Shift keep click path (marquee pending).
+     * @param {HTMLElement} el
+     * @param {object} asset
+     */
+    _bindAssetSelectEvents(el, asset) {
+        el.addEventListener('mousedown', (e) => {
+            if (e.button !== 0) return;
+            if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+            this.assetPanel.handleItemClick(e, asset);
+        });
+        el.addEventListener('click', (e) => {
+            // Modifiers: marquee may consume mousedown; click completes toggle/range.
+            // Plain click: no-op if mousedown already selected (same selection).
+            if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                this.assetPanel.handleItemClick(e, asset);
+            }
+        });
+        el.addEventListener('dblclick', (e) => this.assetPanel.handleItemDoubleClick(e, asset));
     }
 
     /**
@@ -337,8 +358,7 @@ export class AssetViewRenderer {
         item.appendChild(nameDiv);
 
         // Event listeners
-        item.addEventListener('click', (e) => this.assetPanel.handleItemClick(e, asset));
-        item.addEventListener('dblclick', (e) => this.assetPanel.handleItemDoubleClick(e, asset));
+        this._bindAssetSelectEvents(item, asset);
         item.addEventListener('dragstart', (e) => this.assetPanel.handleThumbnailDragStart(e, asset));
         item.addEventListener('dragend', (e) => this.assetPanel.handleThumbnailDragEnd(e, asset));
 
@@ -447,8 +467,7 @@ export class AssetViewRenderer {
         row.appendChild(properties);
 
         // Event listeners
-        row.addEventListener('click', (e) => this.assetPanel.handleItemClick(e, asset));
-        row.addEventListener('dblclick', (e) => this.assetPanel.handleItemDoubleClick(e, asset));
+        this._bindAssetSelectEvents(row, asset);
         row.addEventListener('dragstart', (e) => this.assetPanel.handleThumbnailDragStart(e, asset));
         row.addEventListener('dragend', (e) => this.assetPanel.handleThumbnailDragEnd(e, asset));
 

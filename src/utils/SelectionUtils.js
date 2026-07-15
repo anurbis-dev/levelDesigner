@@ -369,6 +369,13 @@ export class SelectionUtils {
      * @param {StateManager} stateManager - Менеджер состояния
      */
     static handleMarqueeMouseUp(e, stateManager, options = {}) {
+        // Resolve active key BEFORE clearing pending (pendingMouseKey is set on mousedown).
+        const storedOptions = stateManager.get('marquee.options');
+        const mouseStateKey = stateManager.get('marquee.pendingMouseKey')
+            || storedOptions?.mouseStateKey
+            || options?.mouseStateKey
+            || 'mouse.isMarqueeSelecting';
+
         // Reset pending if marquee wasn't activated (click with micro-movement)
         stateManager.set('marquee.pendingStartPos', null);
         stateManager.set('marquee.pendingMode', null);
@@ -378,7 +385,6 @@ export class SelectionUtils {
         stateManager.set('marquee.pendingMouseKey', null);
 
         // Check if marquee is active using the correct state key
-        const mouseStateKey = stateManager.get('marquee.pendingMouseKey') || options?.mouseStateKey || 'mouse.isMarqueeSelecting';
         if (!stateManager.get(mouseStateKey)) return;
 
         const marqueeDiv = stateManager.get('marquee.element');

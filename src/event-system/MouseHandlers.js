@@ -137,6 +137,7 @@ export class MouseHandlers extends BaseModule {
         const viewportButton =
             !!this._interactionViewLeafId
             && (mouse.isRightDown || mouse.isMiddleDown);
+        // Canvas marquee only — panel marquees use isAssetMarqueeSelecting etc.
         return !!(
             mouse.isDragging
             || mouse.isTransforming
