@@ -137,12 +137,18 @@ export class MouseHandlers extends BaseModule {
         const viewportButton =
             !!this._interactionViewLeafId
             && (mouse.isRightDown || mouse.isMiddleDown);
+        // Pending canvas marquee/transform (modifier+drag from object) before threshold.
+        const pendingCanvasGesture = !!(
+            mouse.isLeftDown
+            && (mouse.marqueePendingStartPos || mouse.transformPendingMode)
+        );
         // Canvas marquee only — panel marquees use isAssetMarqueeSelecting etc.
         return !!(
             mouse.isDragging
             || mouse.isTransforming
             || mouse.isMarqueeSelecting
             || mouse.isPlacingObjects
+            || pendingCanvasGesture
             || viewportButton
             || this.editor.stateManager.get('duplicate.isAltDragMode')
             || this.editor.stateManager.get('duplicate.isActive')
@@ -343,6 +349,8 @@ export class MouseHandlers extends BaseModule {
                         'mouse.marqueeMode': marqueeMode
                     });
                 }
+                // Arm outside-leaf lock once gesture actually starts (not on bare LMB).
+                this._syncViewportGestureUiLock(e.clientX, e.clientY);
             }
         }
 
@@ -786,25 +794,18 @@ export class MouseHandlers extends BaseModule {
             this.editor.stateManager.set('mouse.isOverCanvas', isInsideCanvas);
         }
 
-        // Continue gestures outside the interaction leaf (multi-view: not primary rect)
+        // Continue gestures outside the interaction leaf (multi-view: not primary rect).
+        // Include pending modifier-marquee/transform so threshold promotion still runs off-canvas.
+        const pendingCanvas = !!(mouse.isLeftDown
+            && (mouse.marqueePendingStartPos || mouse.transformPendingMode));
         if (mouse.isRightDown || mouse.isMiddleDown
+            || pendingCanvas
             || (mouse.isLeftDown && (mouse.isDragging || mouse.isTransforming || mouse.isMarqueeSelecting
                 || mouse.isPlacingObjects || this.editor.stateManager.get('duplicate.isAltDragMode')
-                || this.editor.stateManager.get('duplicate.isActive')))) {
+                || this.editor.stateManager.get('duplicate.isActive')))
+            || mouse.isMarqueeSelecting) {
             this._handleMouseMoveImpl(e);
             return;
-        }
-
-        if (mouse.isMarqueeSelecting && !isInsideCanvas) {
-            // Constrain marquee to interaction canvas bounds
-            const constrainedX = Math.max(rect.left, Math.min(rect.right, e.clientX));
-            const constrainedY = Math.max(rect.top, Math.min(rect.bottom, e.clientY));
-            const camera = this.getInteractionCamera();
-            const cr = this.editor.canvasRenderer;
-            if (view?.canvas) cr.setTarget(view.canvas);
-            const worldPos = cr.screenToWorld(constrainedX, constrainedY, camera);
-            this.updateMarquee(worldPos);
-            this.editor.render();
         }
     }
 
