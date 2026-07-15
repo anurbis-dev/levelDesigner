@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- B6 docs: ARCHITECTURE / Context_map / API_GUIDE / CONTRIBUTING / COMMON_MISTAKES / DEVELOPMENT_GUIDE — PanelPositionManager → DockManager; View menu contentTypes; persist `panels.dock.*`. Phase B (B0–B6) closed.
+- Assets multi-instance: dock copies UI-independent (`AssetPanel.uiStateKey` → `panelUI.<instanceKey>.*`) — own selection/tabs/filters/view; catalog + canvas drop shared; prefs primary only.
