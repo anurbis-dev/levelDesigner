@@ -212,7 +212,7 @@ export class MouseHandlers extends BaseModule {
         if (e.button === 1) { // Middle mouse button
             const target = e.target;
             // Check if click is on right panel or toolbar (let respective handlers handle this)
-            if (target.closest('#right-panel') || target.closest('#toolbar-container')) {
+            if (target.closest('.leaf-body') || target.closest('#toolbar-container')) {
                 return; // Let ScrollUtils or Toolbar handle this
             }
         }
@@ -300,7 +300,7 @@ export class MouseHandlers extends BaseModule {
         // Skip processing if middle mouse button and event is from panels
         if (mouse.isMiddleDown) {
             const target = e.target;
-            if (target.closest('#right-panel')) {
+            if (target.closest('.leaf-body')) {
                 return; // Let ScrollUtils handle this
             }
         }
@@ -462,7 +462,7 @@ export class MouseHandlers extends BaseModule {
         // Skip processing middle mouse button if event is from panels
         if (e.button === 1) { // Middle mouse button
             const target = e.target;
-            if (target.closest('#right-panel') || target.closest('#toolbar-container')) {
+            if (target.closest('.leaf-body') || target.closest('#toolbar-container')) {
                 return; // Let ScrollUtils or Toolbar handle this
             }
         }

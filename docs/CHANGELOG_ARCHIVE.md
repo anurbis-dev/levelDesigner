@@ -1,1670 +1,1682 @@
-# Changelog Archive
+﻿# Changelog Archive
 
-Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
+Р—Р°РїРёСЃРё, РїРµСЂРµРЅРµСЃС‘РЅРЅС‹Рµ РёР· `CHANGELOG.md` РїСЂРё РєРѕРјРјРёС‚Р°С… (СЃРј. `git log` РґР»СЏ С‚РѕС‡РЅС‹С… РґРёС„С„РѕРІ). РђРєС‚СѓР°Р»СЊРЅС‹Р№ РЅРµРѕРїСѓР±Р»РёРєРѕРІР°РЅРЅС‹Р№ СЂР°Р·СЂРµР· вЂ” РІ `docs/CHANGELOG.md`.
 
-## [Unreleased] (до commit Shift dock customize)
+## Archived from CHANGELOG.md (pre B5 commit)
 
-- Docs: ARCHITECTURE / Context_map / EVENT_HANDLER_SYSTEM — Phase B dock B3–B4.2 multi-viewport, gestures, TypeFilterMenu, English chrome UI.
+- Fix: Assets multi-select **click-drag drop on canvas** — mousedown keeps multi if item already selected; `dragstart` ships full `selectedAssets`; post-drag click does not sole-select.
+- Fix: empty-canvas click clears full multi-selection (0×0 replace marquee no longer re-hits a nearby object as sole select).
+- Fix: **Assets panel** marquee — after modifier threshold, keep `pendingMouseKey` so move tracks `isAssetMarqueeSelecting` (rect + Shift/Ctrl modes); panel mouseup no longer wipes canvas marquee keys.
+- Fix: canvas gesture lock — global move continues pending modifier-marquee; lock arms when marquee/transform actually starts (viewport OK).
+- Fix: **Assets** first-click miss — keep `mouseStateKey`/`marqueeId` in `BasePanel.setupSelection` (asset marquee no longer sets canvas `isMarqueeSelecting`); select assets on mousedown (HTML5 `draggable` was swallowing click).
+- Fix: panel clicks requiring a second try — `viewport-gesture-mode` no longer arms on bare `isLeftDown`/`isRightDown` (only real drag/marquee/pan/zoom), so `pointer-events:none` does not swallow the first UI click.
+- Dock floating: keep **relative** position on workspace resize; optional **edge snap** to workspace (`panels.dock.floatEdgeSnap`, margin `panels.dock.floatEdgeMargin`) — Settings → General → Floating Windows.
+- Dock: floating window **resize** free of Shift; resize grip only when pointer is in bottom band of the window.
+- Dock UI customize: hold **Shift** for layout ops (move/split/copy/detach/snap) and drop/snap highlights; release mid-drag clears highlight and cancels layout commit (`isDockCustomizeKey`).
+
+## [Unreleased] (РґРѕ commit Shift dock customize)
+
+- Docs: ARCHITECTURE / Context_map / EVENT_HANDLER_SYSTEM вЂ” Phase B dock B3вЂ“B4.2 multi-viewport, gestures, TypeFilterMenu, English chrome UI.
 - Viewport camera source menu + chrome tooltips: English only (Work camera / Game camera / empty state).
 - Fix multi-view pan cursor leak: RMB/MMB no longer stamp `grabbing`/`zoom-in` on primary while secondary pans; end/blur resets cursors on all viewport canvases.
 - Viewport leaf chrome (cam / filter): after first open, hover over sibling icon switches menus (main-menu style); leave chrome+menu exits hover mode.
 - Viewport gestures (object drag / marquee / transform / pan / zoom) continue outside the leaf: left-button `setPointerCapture`; release outside completes (does not cancel) via same path as canvas mouseup; `viewport-gesture-mode` blocks hover on other dock/UI during the gesture.
-- Fix multi-viewport object flicker while dragging: `visibleObjectsCache` key includes canvas size (shared camera ≠ shared frustum); during drag/transform/marquee sticky cache + full cull scan instead of stale spatial index TTL rebuilds; refresh spatial/visible cache on drag end.
-- Fix pick/marquee under cursor (multi-view + dock CSS): `screenToWorld`/`worldToScreen` map client→buffer when canvas CSS is `100%` but buffer is floor(measure); `getSelectableObjectsInViewport` uses interaction camera/canvas (not primary-only); hit-test/click-cycle tolerance uses interaction zoom — restores rotated-object math vs wrong frustum/zoom.
-- Viewport close (×): all viewports closeable when ≥2 exist (not only copies); promote former copy to primary shell if primary closed.
+- Fix multi-viewport object flicker while dragging: `visibleObjectsCache` key includes canvas size (shared camera в‰  shared frustum); during drag/transform/marquee sticky cache + full cull scan instead of stale spatial index TTL rebuilds; refresh spatial/visible cache on drag end.
+- Fix pick/marquee under cursor (multi-view + dock CSS): `screenToWorld`/`worldToScreen` map clientв†’buffer when canvas CSS is `100%` but buffer is floor(measure); `getSelectableObjectsInViewport` uses interaction camera/canvas (not primary-only); hit-test/click-cycle tolerance uses interaction zoom вЂ” restores rotated-object math vs wrong frustum/zoom.
+- Viewport close (Г—): all viewports closeable when в‰Ґ2 exist (not only copies); promote former copy to primary shell if primary closed.
 - Camera/type menus: `alignment:right` + `repositionMenu` after fill (flush under icon, not far left from guessed width).
 - Leaf header: title/caret `cursor:pointer` + type menu only; grab/drag only on empty gap between title and right icons.
 - Fix multi-viewport pick/drag: world coords use interaction leaf canvas (not primary after render restore); global mouseup/move bounds + left-drag continue on secondary; wheel no longer sticky-pins wrong leaf; marquee overlay only on interaction view.
-- Fix viewport copy close (×): append after mount via `isLeafCloseable`.
-- Fix: `AssetPanel.getActiveTabPath()` restored — Add menu / `createAssetOfType` no longer always see Content root.
-- Type filters (Outliner / Assets / Viewport): shared `TypeFilterMenu` — toggle applies immediately, menu stays open, no Ctrl multi-session.
+- Fix viewport copy close (Г—): append after mount via `isLeafCloseable`.
+- Fix: `AssetPanel.getActiveTabPath()` restored вЂ” Add menu / `createAssetOfType` no longer always see Content root.
+- Type filters (Outliner / Assets / Viewport): shared `TypeFilterMenu` вЂ” toggle applies immediately, menu stays open, no Ctrl multi-session.
 - Fix viewport chrome: camera icon default + re-sync after mount (self-drop clone no longer blank cam btn).
-- Dock leaf header: grab/drag only on title strip (`.drag-handle`); type-menu only on title text; viewport camera btn — gray minimal SVG for work cam, stroke tinted with game camera object `color`.
-- **B4.2 multi-viewport:** `ViewportViewManager` — work camera (`stateManager.camera` on primary) vs game cameras (level objects `type===camera`); N viewport leaves with independent canvas/pose/type-filters; leaf header camera source + filter; secondary uses same `MouseHandlers` as primary (RMB pan, MMB zoom, wheel); pointer-capture + global move so pan/zoom continues outside leaf; canvas bg fills leaf; self-drop viewport clone; primary non-closeable when sole, copies closeable.
-- **B4 (Phase B dock):** multi-instance panel copies — `singleton:false` for outliner/details/layers/levels/assets; roots/instances keyed by leaf `node.id`; `DockPanelFactory` creates secondary panel instances; close copy → destroy, close primary → park; type-menu allows second multi leaf (`+`) / singleton still swaps (`⇄`); panel `instanceKey` for search/context-menu ids.
+- Dock leaf header: grab/drag only on title strip (`.drag-handle`); type-menu only on title text; viewport camera btn вЂ” gray minimal SVG for work cam, stroke tinted with game camera object `color`.
+- **B4.2 multi-viewport:** `ViewportViewManager` вЂ” work camera (`stateManager.camera` on primary) vs game cameras (level objects `type===camera`); N viewport leaves with independent canvas/pose/type-filters; leaf header camera source + filter; secondary uses same `MouseHandlers` as primary (RMB pan, MMB zoom, wheel); pointer-capture + global move so pan/zoom continues outside leaf; canvas bg fills leaf; self-drop viewport clone; primary non-closeable when sole, copies closeable.
+- **B4 (Phase B dock):** multi-instance panel copies вЂ” `singleton:false` for outliner/details/layers/levels/assets; roots/instances keyed by leaf `node.id`; `DockPanelFactory` creates secondary panel instances; close copy в†’ destroy, close primary в†’ park; type-menu allows second multi leaf (`+`) / singleton still swaps (`в‡„`); panel `instanceKey` for search/context-menu ids.
 - Layers/Levels list reorder: empty insertion slot under cursor during drag (`ListReorderPlaceholder`); drop order from slot index.
 - Fix list reorder: do not collapse row in `dragstart` (aborts HTML5 DnD); collapse on first `dragover`; `dataTransfer.setData` + `closest` row.
-- Fix: middle-click drag scroll on Levels/Details — list/root got real `overflow:auto` (dock roots were `overflow:hidden` with no inner scroller); both axes; Levels/Layers reuse list node for stable pan target.
-- Panel scrollbars: setting `ui.scrollbarSize` (1–24px, default 2) in UI Settings; runtime `#ui-scrollbar-runtime-styles` with !important; removed `scrollbar-color`/`scrollbar-width:thin` on Chromium (they forced system-thick bars); no 6px floor; console/BasePanel hard-coded 8/6px overrides removed.
+- Fix: middle-click drag scroll on Levels/Details вЂ” list/root got real `overflow:auto` (dock roots were `overflow:hidden` with no inner scroller); both axes; Levels/Layers reuse list node for stable pan target.
+- Panel scrollbars: setting `ui.scrollbarSize` (1вЂ“24px, default 2) in UI Settings; runtime `#ui-scrollbar-runtime-styles` with !important; removed `scrollbar-color`/`scrollbar-width:thin` on Chromium (they forced system-thick bars); no 6px floor; console/BasePanel hard-coded 8/6px overrides removed.
 - Middle-pan `panning-mode` kills hover on other UI.
 - Default layer color: `#F5E6A3` (pale yellow) instead of blue.
 - List color swatch: `color.shape` (`circle`|`square`) in `createListItemRow`; shared `.list-color-swatch--*`; layers circle / levels square; fill stays panel-specific.
-- **B3.1 (Phase B dock):** View → Panels lists dock contentTypes (Viewport/Outliner/Details/Layers/Assets/Levels) instead of Left/Right/Assets Panel; `DockManager.hideContentType`/`toggleContentType` + menu sync on structure change; Alt+1/2/4 → Outliner/Details/Assets; Immersive Mode uses dock layout snapshot (viewport-only), not legacy L/R flags.
+- **B3.1 (Phase B dock):** View в†’ Panels lists dock contentTypes (Viewport/Outliner/Details/Layers/Assets/Levels) instead of Left/Right/Assets Panel; `DockManager.hideContentType`/`toggleContentType` + menu sync on structure change; Alt+1/2/4 в†’ Outliner/Details/Assets; Immersive Mode uses dock layout snapshot (viewport-only), not legacy L/R flags.
 - **B3 (Phase B dock):** primary panels (Outliner/Details/Layers/Levels/Assets) reparent into dock leaves via `DockContentRegistry._mountPrimaryPanel`; assets no longer fixed footer (`#resizer-assets` hidden; auto-height / prefs / View visibility skipped when dock active); leaf fill CSS for panel roots.
-- Fix dock: restored leaf content-type menu (tap title/caret; singleton swap `⇄`); `DockTypeMenu.js`.
-- Fix dock: restored self-drop duplicate (drop on own leaf → clone + split), as in prototype.
+- Fix dock: restored leaf content-type menu (tap title/caret; singleton swap `в‡„`); `DockTypeMenu.js`.
+- Fix dock: restored self-drop duplicate (drop on own leaf в†’ clone + split), as in prototype.
 
-## [Unreleased] (до commit Phase B B3–B4.2, 2026-07-15)
+## [Unreleased] (РґРѕ commit Phase B B3вЂ“B4.2, 2026-07-15)
 
 - **B2 (Phase B dock):** viewport leaf hosts real toolbar + canvas (`DockContentRegistry._mountViewport`); canvas reparented into `#canvas-viewport` (leaf measure, not full-screen absolute); ResizeObserver always on measure host; `resizeCanvas` dock-hosted fill path.
-- Fix dock: horizontal (`resizer-row`) splitters hit-target — reset global `.resizer { width: 6px }` via `width: auto; align-self: stretch`.
+- Fix dock: horizontal (`resizer-row`) splitters hit-target вЂ” reset global `.resizer { width: 6px }` via `width: auto; align-self: stretch`.
 - Fix dock: removed debug `#dock-chips` strip (blocked main menu dropdowns; reopen via `dockManager.showContentType` / View later).
 - **B1 (Phase B dock):** `DockContentRegistry` (6 singleton types, placeholder mount); `DockPersistence` (`panels.dock.mainTree` / `panels.dock.floatingWindows`); chips only for missing types; viewport non-closeable + chip reopen; no type-menu/duplicate-on-drag; default tree includes assets as bottom strip; `DockFloatOps` extracted for size limit.
 
-## [Unreleased] (до commit f07084b, 2026-07-15)
-
-- **B0 (Phase B dock):** split-tree engine port in `src/ui/dock/` (`DockTreeModel`, `DockRenderer` with leaf reparent by `node.id`, `DockDragController`, `DockDropOverlay`, `DockManager`); `styles/dock.css`; `index.html` shell `#dock-workspace` + chips; legacy panel DOM in `#dock-legacy-offtree`; `editor.dockManager` wired with placeholders (real panels B2–B3).
-- Fix B0 boot: skip legacy `PanelPositionManager.initializePanelPositions` when `dockManager` is active (removed flex shell → null `appendChild`); suppress 0×0 `resizeCanvas` warn while viewport is in `#dock-legacy-offtree`.
-- Refactor: Фаза A плана `tmp/2D_Editor_REFACTOR_PLAN_v2.md` (не-UI структурные находки аудита) завершена.
-- **A0**: CONTRIBUTING.md — добавлен раздел "Какой базовый класс/паттерн выбрать" с критериями выбора BaseManager/BaseModule/голый constructor/PanelSubController
-- **A1**: LevelEditor.js — удалены `findObjectInGroup`/`findObjectInGroupRecursive` (дублирующие обход дерева групп); интеграция с `GroupTraversalUtils.findInObjects`/`findInGroup`; файл сокращён ~1583→1500 строк; добавлен тест tests/LevelEditor.findObject.test.js (характеризационные тесты для A1)
-- **A2**: `ensurePlayerStartExists()` логика автосоздания Player Start перенесена из LevelEditor.js в ObjectOperations.js; делегат остался в LevelEditor.js
-- **A3**: AssetManager.js — добавлен метод `getAssetById(id)` (null-safe алиас), устраняет краш в AssetItemActionsController
-- **A4**: ConfigManager.js — удалён неиспользуемый мёртвый метод `loadDefaultConfigs()` (~106 строк)
-- **A5.1**: BaseModule.js — добавлен общий метод `hasActiveMouseOperation()` (заменил дублирующиеся приватные копии в LevelFileOperations/ProjectFileOperations)
-- **A5.2**: RenderOperations.js — добавлены приватные хелперы `_getValidCanvasOrNull()` и `_computeExtendedViewportBounds()` (устранено тройное дублирование preamble-проверок)
-- **A5.3**: SnapUtils.js — добавлены статические методы `findNearestSnapGridPoint()` и `computeBottomLeftSnapDelta()` (устранено дублирование inline-логики snap-to-grid)
-- **A6.1**: BaseGridRenderer.js — Template Method паттерн: `render()` стал конкретным, `drawGrid()` абстрактный; наследники реализуют только `drawGrid()`
-- **A6.2**: PerformanceUtils.js — `memoizeWithInvalidation()` переведена на композицию с `memoize()` (устранено дублирование cache-логики)
-- **A8**: Документация синхронизирована с кодом: Context_map.md, ARCHITECTURE.md, CHANGELOG.md обновлены на v4.0.0
-- Fix: `AssetManager.loadImage()` теперь вызывает `window.editor?.render?.()` после успешного кэширования изображения — устраняет баг, когда объект, отрисованный до завершения асинхронной загрузки картинки, оставался плейсхолдером до случайного следующего render()
-
-## [Unreleased] (до commit ac7a8b3, 2026-07-14)
-
-- Refactor: Фаза 6 (точечный дедуп) — `GitUtils.js` (общий `runGitCommand()` вместо трёх копий spawn-обвязки), `DiamondGridRenderer.js` (общий `drawDiagonalLines()` вместо двух копий 60°/120°), `SettingsSyncManager.js` (`applyColorSettings`/`applySelectionSettings`/`applyStatusBarColors` вынесены из `applySpecialUISettings`/`applyInitialColorSettings`), новый `src/utils/ImageUtils.js` (`getImageDimensions`, использует `AssetImporter`/`AssetViewRenderer`; `getDefaultColor`/`getAssetTypeFromCategory` оставлены раздельными — разные наборы категорий, слияние изменило бы поведение), `LayersPanel.js` (dblclick-обработчик переиспользует `renameLayer()`), `OutlinerPanel.js` (`createOutlinerNameContainer()`/`applyLockedRowState()` общие для `renderGroupNode`/`renderObjectNode`).
-- Фаза 7 (долгосрочные guardrails) — новый `CONTRIBUTING.md` (правило: перед новым файлом искать подходящий Controller/Operations-класс), `npm run check:dedup` (`npx jscpd --min-lines 15`), overrides в `scripts/check-file-size.js` сверены с фактическим размером файлов (41 актуальных, stale нет). Рефакторинг из `tmp/2D_Editor_REFACTOR_PLAN.md` завершён (Фазы 0–7).
-
-## [Unreleased] (до commit bec4958, 2026-07-14)
-
-- Refactor: Фаза 4 (декомпозиция AssetPanel) завершена — извлечены 7 контроллеров: AssetFoldersController (Фаза 4.1), AssetViewRenderer (614 строк, Фаза 4.2), AssetFilterController (Фаза 4.3), AssetSelectionController (Фаза 4.4), AssetDragDropController (Фаза 4.5), AssetItemActionsController (Фаза 4.6), AssetToolbarController (Фаза 4.7); AssetPanel.js 3099→1154 строк (62% сокращение); все контроллеры используют паттерн `constructor(assetPanel)` (владение вместо BaseModule); orchestration-слой AssetPanel содержит init, destroy, setupEventListeners, handleAssetWheel, handleDrop, handleAssetSave, autoResizePanelHeight и delegate-методы.
-- Refactor: Фаза 4.5 (декомпозиция PanelPositionManager) — извлечены 4 контроллера в `src/ui/panels/`: TabLayoutController (719 строк, раскладка/collapse/resize), TabOrderController (379 строк, программное перемещение), TabDragController (428 строк, drag-n-drop), SplitPaneController (1016 строк, split-pane/detach); PanelPositionManager.js 2552→74 строк (thin facade); PanelSubController — общая база для контроллеров; внешние вызовы обновлены (togglePanelPosition/initializePanelPositions/ensurePanelExists → tabLayoutController.*, removeEmptyPanel → splitPaneController.*); `scripts/check-file-size.js` обновлен (удален PanelPositionManager из overrides, добавлены три контроллера).
-- Chore: рефакторинг Фаза 3 (декомпозиция LevelEditor.js) — извлечены EditorConfigController, EditorLifecycleController, EditorPreferencesController (все extends BaseModule); LevelEditor.js 2399→1583 строк; все импорты 46→34; характеризационные тесты (EditorConfigController.test.js).
-- Feature: rotation/scale snap-степ (Shift во время Ctrl-drag transform) вынесен в настройки — Settings → Selection ("Rotation Snap (Shift+drag, °)" и "Scale Snap (Shift+drag, factor)"), дефолт вращения изменён с 10° на 15° (backed by `selection.rotationSnapDegrees`/`selection.scaleSnapFactor` в StateManager/ConfigManager, `EditorConstants.TRANSFORM.*` теперь только fallback).
-- Chore: рефакторинг Фаза 0 (страховочная сетка) — подключён `vitest` (`npm test`), характеризационные тесты для `StateManager`/`ObjectOperations`/`GroupOperations`/`AssetPanel` filter-логики (`tests/`), `eslint.config.js` с `import/max-dependencies: 20` (override для `LevelEditor.js` до Фазы 3), `npm run check` (lint+test+madge --circular).
-- Chore: рефакторинг Фаза 1 (CI-guardrails) — `scripts/check-file-size.js` (лимит 400 строк для новых файлов, allowlist из 37 существующих God Object'ов с TODO по фазам плана), `npm run check:size` добавлен в `npm run check`; `knip.json` (`entry: index.html`, `project: src/**/*.js`) + `npm run check:unused` для точечного поиска неиспользуемого экспорта (не в гейте — отчёт на ручное триаж).
-- Refactor: Фаза 4.2 (extract AssetViewRenderer) — новый модуль `src/ui/AssetViewRenderer.js` (614 строк) владеет всеми методами рендеринга grid/list/details превью; `AssetPanel.js` 3099→2499 строк; `render()` делегирует `this.viewRenderer.render()` (одна строка, единственный external caller EditorPreferencesController:117); остальные call sites внутри AssetPanel.js переведены на `this.viewRenderer.methodName()`; паттерн идентичен `AssetTabsManager`; добавлено в allowlist `scripts/check-file-size.js`; Фаза 4 in progress (6 контроллеров остаются: AssetFoldersController, AssetFilterController, AssetSelectionController, AssetDragDropController, AssetItemActionsController, AssetToolbarController).
-- Fix: рефакторинг Фаза 2 (`src/ui/PanelPositionManager.js`) — `window.tabDraggingState`/`window.tabDraggingGlobalMouseUp`/`window._tabDraggingRegistered` заменены на приватные поля экземпляра (`this._tabDraggingState`, bound-метод `_onGlobalTabMouseUp`, регистрация через уже существующий `globalEventRegistry` без отдельного window-флага); `window.panelInitializationCompleted` (не имел читателей) удалён; `destroy()` теперь отписывает `panel-tab-dragging` от `globalEventRegistry`. `DialogReplacer.js` — единственный осознанно оставленный `window.*` (задокументировано в коде).
-
-## [Unreleased] (до commit c811927, 2026-07-10)
-
-- Fix: в меню фильтра типов (Asset panel, Outliner) уход мыши за пределы меню до отпускания Ctrl закрывал меню без применения накликанных чекбоксов, но внутреннее состояние `activeTypeFilters` оставалось изменённым — при следующем открытии меню чекбоксы показывали неприменённые значения. Теперь на такое закрытие состояние откатывается к снапшоту, снятому перед началом Ctrl-сессии (`AssetPanel.showAssetFilterMenu`, `OutlinerPanel.showFilterMenu`).
-- Fix: заголовок вкладки "Details" в правой/левой панели больше не переключается на "Level"/"Asset"/"Assets" в зависимости от выделения — всегда статичный текст "Details" (`PanelPositionManager.js` дефолт таба, `DetailsPanel.updateTabTitle()` теперь no-op).
-- Feature: вложенные split-секции вкладок — drag вкладки (напр. Layers) на область КОНТЕНТА другой вкладки (напр. Outliner, не на её таб-бар) подсвечивает верхнюю/нижнюю половину под курсором; на drop создаётся вложенная split-секция (обе вкладки видны одновременно, стек сверху/снизу с resizer), основная кнопка переименовывается в "Outliner/Layers". Drag заголовка вложенной панели (`.tab-split-pane-header`) обратно отсоединяет её в обычную standalone-вкладку в любой существующей панели. Alternatively, drag вкладки на одну из двух половин (`.tab-split-pane`) УЖЕ существующего composite ЗАМЕНЯЕТ занимающую эту половину вкладку вместо блокировки: **если перетаскиваемая вкладка — plain standalone-вкладка**, вытесненная вкладка становится обычной standalone-вкладкой в ПАНЕЛИ-ИСТОЧНИКЕ перетаскиваемой вкладки (не в панели, содержащей composite), занимая ровно слот, который освободила перетащенная; при cross-panel drag это двусторонний swap между панелями. **Если перетаскиваемая вкладка сама вложена в другой composite**, выполняется true pane-for-pane swap (метод `_swapNestedPanes`): вытесненная вкладка занимает место перетаскиваемой в исходном composite, оба composite остаются composites (ни один не разрушается), только один член в каждом меняется. Вытесненная вкладка остаётся в неактивном состоянии, если только не была активной перетащенная вкладка в своей исходной панели (тогда через `_reactivateAfterTabRemoval` активируется вытесненная). Ключевой нюанс "identity anchor": если заменяемая половина — якорь идентичности composite (изначально целевая вкладка первого merge), якорь ПЕРЕНОСИТСЯ на нетронутую половину, чтобы избежать конфликта идентичности (в обоих standalone и nested cases). `PanelPositionManager.js`: `mergeTabIntoSplit()`/`replacePaneInSplit()`/`detachFromSplit()` + drag-detection (`_findSplitDropTarget`) интегрирован в существующий `_globalTabMouseMove`/`_globalTabMouseUp`, `_findSplitDropTarget` теперь возвращает `{mode:'merge'|'replace', ...}`. `EventHandlers.setActivePanelTab()` дополнен un-hide вложенных панелей при показе composite-вкладки. v1-ограничения (осознанно): один уровень вложенности, только вертикальный split, **членство в composite и размер resizer-разделённых половин (ratio) персистятся между перезагрузками** (leftPanelSplits/rightPanelSplits в config/user/panels.json, методы savePanelSplits/applyPanelSplits в PanelPositionManager), detach — только в уже существующие панели.
-  - Refactor: унификация двух независимых drag-протоколов (обычный tab-bar drag и split-pane-header detach drag) — оба теперь поддерживают merge/replace-зоны через общий `_findSplitDropTarget`. Новые приватные методы `_extractDraggedTab()` и `_collapseSplitPane()` абстрагируют логику "откуда и как забрать перетаскиваемый таб" — работает одинаково независимо от того, тащимся ли standalone-кнопка или таб, уже вложенный в чужой composite. `_startSplitPaneDetachDrag()` расширен: теперь не только подсвечивает целую панель при отсоединении, но и проверяет merge/replace-зоны, показывая точные линии раздела, как при обычном drag вкладки. Вложенный таб, перенесённый на контент другой панели, теперь не просто отсоединяется, но и мерджится/заменяет пане там же как обычная standalone-кнопка.
-  - Fix: подсветка split-хинта корректно охватывала всю панель только для Outliner (`.outliner-tab-layout` — `height:100%`), у Details/Layers/Levels `{tab}-content-panel` не растянут на всю высоту (сайзится по контенту), поэтому хинт подсвечивал только частичную/вложенную область. `_findSplitDropTarget` теперь берёт rect не у `activeContent`, а у `contentContainer` (внешний `.flex-grow.overflow-y-auto` враппер, всегда равен полной высоте тела панели) — единообразно для всех вкладок.
-  - Fix: merge вкладки в split ронял `insertBefore` (`NotFoundError`) и намертво подвешивал drag (ghost-вкладка залипала под курсором, `_pendingDrag`/`_globalTabDragInstalled` не сбрасывались — все последующие перетаскивания ломались), если dragged-вкладка оказывалась непосредственным DOM-соседом target-вкладки (напр. обе в одной панели) — `referenceNode = targetContent.nextSibling` совпадал с `draggedContent`, а тот к моменту `insertBefore` уже был реотцовлён в `_createSplitPane`. `mergeTabIntoSplit()` теперь якорит точку вставки временным comment-плейсхолдером вместо `nextSibling`. Дополнительно `_globalTabMouseUp` обёрнут в `try/finally` — `_cleanupTabDrag()` теперь гарантированно выполняется даже если commit-ветка бросит исключение.
-  - Fix: когда обе панели — composite (по 2 вкладки), перетаскивание half'а composite молча не срабатывало (~половина комбинаций drag'ов), если имя перетаскиваемой вкладки совпадало с `data-tab` её же composite-кнопки (анкор). Причина: `_extractDraggedTab()` искал перетаскиваемую вкладку глобальным `document.querySelector('[data-tab=...]')` ДО проверки вложенности — совпадение находило саму composite-кнопку (не стандэлон), `dataset.tabGroup`-guard срабатывал и функция молча возвращала `null`, вместо перехода к ветке "вкладка вложена в чужой composite". Порядок проверок в `_extractDraggedTab()` инвертирован: сначала проверяется вложенность через `content.closest('.tab-split-pane')`, только затем — поиск standalone-кнопки.
-  - Fix: `mergeTabIntoSplit()`/`replacePaneInSplit()`/`detachFromSplit()` при межпанельном (left↔right) перемещении вкладки не обновляли `tabPositions`/`tabPosition_{tab}` в userPrefs (это делал только `moveTab()`) — DOM сразу после операции был корректен, но после перезагрузки страницы `initializeTabPositions()` восстанавливал вкладки по устаревшим позициям, конфликтуя с уже корректно сохранённым `leftPanelSplits`/`rightPanelSplits`, и раскладка "разъезжалась". Добавлен `_syncTabPosition(tabName, panelSide)`, вызывается из всех трёх операций везде, где вкладка меняет панель.
-
-## [Unreleased] (до commit 5269f3e, 2026-07-09)
-
-- Feature: Viewport "jump to camera" hotkey (`.` key) — restores the selected camera object's saved position and zoom to the viewport (`x + width/2`, `y + height/2`, `properties.zoom ?? 1`), or falls back to the last remembered camera; if neither exists, shows amber warning "No camera selected — select or place a camera object to jump to it." in the status bar. **Key difference from focusOnSelection/focusOnAll**: does NOT fit-to-bounds, but instead applies the camera object's OWN zoom. Implemented via `ViewportOperations.jumpToCamera()` → `applyCameraObjectToViewport()`, reads zoom from `obj.properties.zoom`. Per-level `lastCameraObjectId` stored in `LevelSession.viewState` (not serialized). **Camera objects now have an editable Zoom field** in the Details panel's new "Camera" section (numeric input, default 1, stored in `obj.properties.zoom`) — this is what `jumpToCamera()` applies. Config: `editor.jumpToCamera` shortcut (key `"."`, description `"Jump viewport to selected/last camera object"`).
-- UI Refactor: Levels — отдельная вкладка в правой панели (v3.58.0). Раньше `#levels-content-panel` был вложен в `#layers-content-panel` (одна вкладка "Layers" содержала оба списка, разделённые `#outliner-layers-divider`); теперь два независимых плоских дива: `#levels-content-panel` и `#layers-content-panel`, оба — tab-content-right элементы (`index.html:148-149`). Внесены изменения в табл-систему: `PanelPositionManager` (добавлены `levels` в `initializeTabPositions()`, `moveTab()`, `createTemporaryTabContainer()`), `EventHandlers.ensurePanelTabMarkers()` (добавлен `'levels'` в `coreTabs`), `SearchSectionUtils.showSearchSectionForTab()` (два независимых branch для `'levels'` и `'layers'` вместо одного общего), `UserPreferencesManager` (добавлен `'tabPosition_levels'`), `config/defaults/ui.json` (добавлен `"tabPosition_levels": "right"`), `styles/spacing-mode.css` (добавлено правило для `#levels-content-panel`). Функциональность Levels (видимость, переключение, drag-reorder, paint-drag на eye-icon, контекстное меню) остаётся неизменной; изменена только визуальная структура и табирование.
-- Refactor/Feature: единый шаблон строки списка для LayersPanel/LevelsPanel — новый `src/ui/panel-structures/ListItemRowStructure.js` (`createListItemRow`/`updateListItemVisuals`, общие SVG-константы eye/lock), обе панели переиспользуют его вместо двух независимых `innerHTML`-блоков. Попутно у Levels появились lock и color с реальной функцией (не только вёрстка), как у Layers, кроме parallax: `LevelSession.locked`/`.color` (editor-only, не сериализуются), `LevelsManager.toggleLevelLock()`. Lock блокирует выбор объектов текущего уровня через единый гейт `ObjectOperations.computeSelectableSet()` (пустой Set при залоченном текущем уровне — cross-level взаимодействия в редакторе нет, поэтому per-object проверка не нужна), плюс guard в `MouseHandlers.handleDrop()` (asset drag-drop) и `OutlinerPanel.canSelect`/визуальная индикация (`.locked` класс, opacity) в Outliner. `LevelsPanel`: `showLevelColorPicker()` — простой click.
-- Fix: lock-иконка в LevelsPanel не поддерживала paint-drag жест (только click), в отличие от eye-иконки в той же панели и обеих иконок в LayersPanel. `handleLevelIconMouseDown/Over` обобщены на `.level-visibility-btn, .level-lock-btn` с `_iconPaintDrag.type`, добавлен `_paintLevelLock()` (мирроит `_paintLevelVisibility`), общий `_startIconPaintDrag()` вынесен из инлайна.
-- Fix: залоченная lock-иконка (LayersPanel/LevelsPanel) была того же серого цвета, что и разлоченная (`var(--ui-text-color)`) — плохо заметна. Цвет locked-состояния сменён на `#ef4444` в `ListItemRowStructure.js` (`createListItemRow`/`updateListItemVisuals`).
-- Fix: дефолтный тип для импортируемых спрайт-ассетов (drag&drop PNG, загрузка из `content/*.json`) сменён с `'object'` (не входит в каталог `ASSET_TYPES`, недоступен в меню Add) на `'image'` — `AssetPanel.getAssetTypeFromCategory()`, `AssetImporter.getAssetTypeFromCategory()`, `AssetManager.loadAssetFromFile()`. Мигрированы 7 существующих `content/**/*.json` с `type:"object"` → `"image"`, обновлён `content/README.md`.
-- Feature: Paint drag для toggle-иконок (v3.58.0) — mousedown на eye/lock-иконке (LayersPanel, LevelsPanel, OutlinerPanel) + drag по остальным иконкам того же типа применяет взятое с первой иконки состояние ко всем пройденным иконкам до отпускания кнопки. Паттерн: `handleLayerIconMouseDown/_startIconPaintDrag()` → `_iconPaintDrag` флаг, `mouseover` → `_paintLayerVisibility/_paintLayerLock/_paintObjectVisibility()`, глобальный `mouseup` → `_endIconPaintDrag()` с батчевым кэш-инвалидированием и ре-рендером (вместо клика по каждой отдельно). На время драга временно отключается `draggable` у строки (LayersPanel/LevelsPanel), чтобы не перехватить жест HTML5 drag-reorder. EventHandlerManager получил три новых generic-блока делегирования: `config.mousedown / config.mouseup / config.mouseover` (паттерн идентичен `config.click/dragstart`), раньше эти события молча игнорировались.
-  - Fix: eye-иконки в LayersPanel во время drag визуально не переключались до mouseup — `updateLayerElement` читает `effectivelyVisible` из тайм-кэша `RenderOperations.getVisibleLayerIds()`, который батчево инвалидировался только в конце жеста. Инвалидация сама по себе дешёвая (в отличие от `editor.render()`/`outlinerPanel.render()`, которые остались батчевыми) — перенесена в `_paintLayerVisibility()`, вызывается на каждой покрашенной иконке.
-  - Fix: в OutlinerPanel скрытие объекта не затемняло всю строку (`.outliner-item`), в отличие от LayersPanel/LevelsPanel — затемнялись только цвет иконки-глаза и текста. Добавлен `OutlinerPanel._computeRowOpacity(obj)` (hidden=0.45 приоритетнее locked=0.5, локальный `''` иначе), вызывается из `updateVisibilityButton()` (живое обновление при paint-drag и обычном клике) и переиспользован в `renderObjectNode`/`renderGroupNode` вместо дублированного inline-блока на opacity, который раньше учитывал только locked-состояние слоя.
-  - Fix: paint-drag за eye/lock-иконку в LayersPanel и LevelsPanel при реальном перетаскивании мышью перехватывался нативным HTML5 drag-reorder строки — `handleLayerIconMouseDown`/`handleLevelIconMouseDown` искали строку через `button.closest('[data-layer-id]')`/`[data-level-id]`, а этот атрибут стоит у КАЖДОГО дочернего элемента строки (включая саму кнопку), поэтому `closest()` матчился на саму кнопку и не находил `.layer-item`/`.level-item` — временное отключение `draggable` тихо не срабатывало (`if (layerElement.draggable)` было false для кнопки). Синтетические `dispatchEvent`-тесты бага не ловили (не триггерят нативную инициацию drag), баг проявлялся только на реальном перетаскивании. Исправлено на `button.closest('.layer-item')`/`'.level-item')` — id самой иконки при этом берётся напрямую из `button.dataset.layerId/levelId` (кнопка тоже несёт этот атрибут), без ambiguous `.closest()`.
-- Feature: Player Start в каталоге типов ассетов — добавлен тип `player_start` (snake_case, совпадает с GameObject.type строкой, которую уже использует `LevelEditor.ensurePlayerStartExists()`/`getPlayerStartCount()` для авто-управляемого единственного на уровень маркера спавна). Через меню Assets → Add → Core → "Player Start" теперь можно вручную создать placeholder-ассет, который при размещении на уровне создаёт GameObject с корректно распознаваемым `type='player_start'`. В `src/constants/AssetTypes.js`: добавлены опциональные поля `width`/`height`/`color` в определение типа (переопределяют дефолтные 48×48 + цвет категории при создании), новый экспорт `DEFAULT_ASSET_COMPONENTS = { player_start: ['playerStart'] }` для автоматического прикрепления компонента playerStart при создании placeholder-ассета. В `src/managers/AssetManager.js`: `createPlaceholderAsset()` читает `typeDef.width || 48`, `typeDef.height || 48`, `typeDef.color || categoryColor` и `DEFAULT_ASSET_COMPONENTS[typeId]` для создания компонент-стабов через `createComponentStub()`. В `src/constants/AssetTypeIcons.js`: добавлен ключ `player_start` для визуализации на canvas (тот же SVG-глиф флажка, что у компонента playerStart). **Важно**: `player_start` вступает в пересечение двух систем — это одновременно и asset-type (создаётся как placeholder), и auto-managed GameObject marker (валидируется в LevelFileOperations/DetailsPanel). Существующая валидация (ровно один на уровень, auto-create при отсутствии) остаётся неизменной и независима от этого типа ассета; тип просто обеспечивает удобный путь создания через UI вместо ручного добавления GameObject с type='player_start' в файл.
-- Feature: Level Solo — Ctrl+click на eye-icon уровня в LevelsPanel теперь делает "solo" (эксклюзивная видимость одного уровня), зеркалит существующий `LayersPanel.toggleLayerSolo` 1:1. `LevelsManager.toggleLevelSolo(levelId)` переключает, при включении сбрасывает solo у остальных уровней. `getVisibleSessions()` если есть soloed-сессии, возвращает только их, иначе как раньше filter по `visible`. `LevelSession.soloed` хранит флаг (не сериализуется в JSON).
-- Feature: меню File переугруппировано: блок Project (New Project, Open Project..., separator, Save Project, Save Project As...), затем блок Level (New Level, Open Level..., separator, Save Level, Save Level As...), затем Import Assets... (перенесено из Settings). Пункт Close Level удалён из меню (остаётся доступен через крестик на вкладке уровня в LevelsPanel и контекстное меню уровня); сам метод `closeLevel()` не удалён — остаётся в API.
-- Feature: `saveProject()` (ProjectFileOperations) больше не спрашивает имя файла при отсутствии `project.fileName` — имя берётся из `project.name` через приватный метод `_deriveFileNameFromProjectName()` (заменяет `/` и `\` на `-`, добавляет `.json`). `saveProjectAs()` спрашивает имя как и прежде.
-- Feature: `saveLevel()` (LevelFileOperations) при отсутствии `session.fileName` показывает prompt "Enter file name:" с дефолтом "level.json", вместо тихого сохранения под "level.json" без подтверждения.
-- Feature: `createDialog('prompt')` в UniversalDialog теперь рендерится БЕЗ header (заголовок "Input" + крестик закрытия); alert/confirm header не изменился. Cancel/ESC/клик по оверлею закрывают диалог как и прежде.
-- Feature: LevelFileOperations multi-level file ops (v3.57.0, Фаза 5 multi-level) — `newLevel()` и `openLevel()` теперь ДОБАВЛЯЮТ новую вкладку/LevelSession вместо замены текущего уровня; `openLevel()` дополнительно делает best-effort dedup по fileName — если файл уже открыт, переключается на вкладку вместо дубликата. `saveLevel()`/`saveLevelAs()` работают с per-session fileName, гарантируя что сохранение B не перезапишет файл A. Новый `closeLevel(levelId)` закрывает вкладку (нельзя закрыть последний уровень, спрашивает подтверждение при dirty). Per-session `isDirty` (каждая LevelSession независима), глобальный `stateManager.isDirty` синхронизируется на границе переключения вкладок.
-
-## [Unreleased] (до commit f9d64c4, 2026-07-09)
-
-- Feature: пустые (assignable) хоткей-слоты для 9 команд, у которых раньше не было бинда вообще — `editor.toggleFullscreen`, `editor.toggleGameMode`, `editor.toggleSnapToGrid`, `editor.toggleObjectBoundaries`, `editor.toggleObjectCollisions`, `ui.toggleConsole`, `ui.toggleStatusBar`, `editor.openProjectSettings`, `editor.openSettings` — добавлены в `config/defaults/shortcuts.json` с `key: ""`, привязаны через `shortcutKey` к соответствующим пунктам View/Settings-меню в `config/menu.js`, проведены через `EventHandlers.handleKeyDown` (`_matchesShortcut`), сразу отображаются/назначаются в Settings > Hotkeys. Попутный фикс: `SettingsPanel.saveHotkey()` вызывал `menuManager.refreshShortcutLabels()`, который обновляет только уже существующий `[data-shortcut-key]` span — для пункта, изначально отрендеренного с пустым хоткеем (span не создавался), рибайнд не отражался в меню без перезагрузки страницы; заменено на полный `menuManager.refresh()`.
-- Fix: удалена секция "View Settings" из General Settings (`SettingsPanelRenderers.js::renderGeneralSettings`) — дублировала опции меню View (Immersive Mode, Boundaries, Collisions, Parallax), которые уже сохраняются через `configManager`. Заодно удалены мёртвые записи `editor.view.gameMode/objectBoundaries/objectCollisions/parallax` из `SettingsSyncManager.stateMapping` (были нужны только для этих input'ов).
-- Refactor: удалён мёртвый хардкод хоткеев — `MENU_CONFIG.shortcuts` (карта `'Ctrl+D': 'duplicate'` и т.п., разошедшаяся с реальными биндами в `config/defaults/shortcuts.json`) и `getShortcutTarget()` в `config/menu.js` нигде не вызывались (только импортировались в `EventHandlers.js`), удалены вместе с неиспользуемым импортом.
-- Feature: `CanvasContextMenu` теперь показывает реальные хоткеи (Copy=Ctrl+C, Cut=Ctrl+X, Paste=Ctrl+V, Duplicate=Shift+D, Delete=Delete, Group=Shift+G, Ungroup=Alt+G) в том же trailing-слоте, что и nav-меню — через новый `CanvasContextMenu.resolveShortcut(category, action)` (использует `ShortcutFormatter` + `configManager.getShortcuts()`). `BaseContextMenu.addMenuItem()` получил опцию `shortcut` (строка или функция — функция резолвится заново при каждом открытии меню, отражая live-ребайнд через Settings > Hotkeys, т.к. DOM контекстного меню пересобирается на каждый показ).
-- Feature: LevelsManager Phase 6 edge cases (v3.57.0, Фаза 6 multi-level) — `levelMRU: string[]` отслеживает порядок недавних текущих уровней, используется как fallback при `closeLevel()` для выбора следующего уровня вместо всегда первого по табу. Новый `getVisibleSessionsForRender(sessions?)` переносит текущий уровень в конец массива компоузинга — текущий уровень ВСЕГДА рисуется поверх остальных видимых, независимо от позиции таба (решение раздела 12 пункт 2 плана, реализовано в Фазе 3 неполностью, исправлено в Фазе 6). Новый `cycleLevel(direction)` циклически переключает между открытыми уровнями (+1 следующий, -1 предыдущий), используется для Ctrl+PageDown/PageUp. Новый `reorderLevels(newOrder)` меняет порядок табов (полная перестановка `levelOrder`), используется для drag-reorder в LevelsPanel; невалидная перестановка → no-op + `Logger.status.warn`. `toggleLevelVisibility()` добавлена soft-cap проверка: warning в статус-баре при пересечении порога `VISIBLE_LEVELS_SOFT_CAP=5` (только на самом переходе, не на каждом клике выше порога).
-- Feature: LevelsPanel Phase 6 edge cases (v3.57.0, Фаза 6 multi-level) — drag-reorder вкладок уровней (зеркалит `LayersPanel.js`), заблокировано при активном поиске (DOM-источник неполный). Дизамбигуация имён при коллизии: визуальный суффикс `"Untitled Level (2)"` в `.level-name-display` только для отображения, реальное `level.meta.name` не меняется; пересчитывается на каждом рендере на полном списке сессий (без фильтра поиска), включая после rename.
-- Feature: Хоткеи Phase 6 (v3.57.0) — новые горячие клавиши `editor.nextLevel` (Ctrl+PageDown) и `editor.previousLevel` (Ctrl+PageUp) для циклического переключения между открытыми вкладками уровней через `levelsManager.cycleLevel()`. Регистрируются в `config/defaults/shortcuts.json` и обрабатываются в `src/event-system/EventHandlers.js::handleKeyDown`.
-- Feature: Project — Фаза 7 multi-level (сущность-контейнер набора открытых уровней). Новый `src/models/Project.js` (`toJSON()`/`fromJSON()` — самодостаточный JSON, эмбеддит `Level.toJSON()` каждого открытого уровня + `visible`/`fileName`/порядок/`currentLevelIndex`, т.к. `Level.toJSON()` не сериализует `id`). Новый `src/core/ProjectFileOperations.js` (BaseModule): `newProject()`/`openProject()` заменяют весь набор открытых вкладок (единый confirm при несохранённых правках вместо N диалогов), `saveProject()`/`saveProjectAs()` скачивают project-файл. Меню `Level` переименовано в `File` (`config/menu.js`, id `level`→`file`): добавлен блок Project-команд (New/Open/Save/Save As Project) через сепаратор от Level-команд, `Import Assets...` перенесён в конец `File` из `Settings`; `Settings` получил `Project Settings...` (новый `src/ui/ProjectSettingsDialog.js`, extends `BaseDialog`, пока стаб — редактируется только `project.name`). `LevelEditor.js`: passthrough-методы, `projectFileOperations` зарегистрирован как BaseModule, поля `project`/`projectSettingsDialog` + cleanup в `destroy()`. `#menu-level` DOM-селекторы в `EventHandlers.js` (2 места) обновлены на `#menu-file`.
-
-- Refactor: MenuItemTemplateUtils переписан с единого `renderMenuItemIconHtml(icon)` на три экспорта для унифицированной разметки пункта меню. Новая схема `[leading | body | trailing]`: `renderMenuItemLeadingHtml({ icon, checkboxId, checked })` — единый 18×18px блок для иконки или toggle-чекбокса пункта (раньше рендерились с разными размерами/margin); `renderMenuItemBodyHtml({ leadingHtml, label })` — оборачивает leading+текст в `<span class="flex items-center">` (единый flex-item слева, чтобы trailing при `justify-content:space-between` не центрировал текст); `renderMenuItemTrailingHtml(text, { shortcutKey })` — единый trailing-блок для хоткея или стрелки флаут-подменю ▸. Побочный эффект: nav submenu-триггеры (`createSubmenuItem`) теперь поддерживают иконку (itemConfig.icon); контекстные меню опционально поддерживают `item.shortcut` в trailing-слоте (пока не используется, но слот готов). `config/menu.js`: удалено мёртвое поле `checkboxHtml` из `templates.toggle`.
-- Feature: LevelFileOperations multi-level file ops (v3.57.0, Фаза 5 multi-level) — `newLevel()` и `openLevel()` теперь ДОБАВЛЯЮТ новую вкладку/LevelSession вместо замены текущего уровня; `openLevel()` дополнительно делает best-effort dedup по fileName — если файл уже открыт, переключается на вкладку вместо дубликата. `saveLevel()`/`saveLevelAs()` работают с per-session fileName, гарантируя что сохранение B не перезапишет файл A. Новый `closeLevel(levelId)` закрывает вкладку (нельзя закрыть последний уровень, спрашивает подтверждение при dirty). Per-session `isDirty` (каждая LevelSession независима), глобальный `stateManager.isDirty` синхронизируется на границе переключения вкладок. Меню "Level" пополнено пунктом "Close Level".
-
-- Fix: `MenuManager.createMenuItem()` — пункты меню со шорткатом (Parallax Mode, Toolbar, Assets Panel, Right Panel, Left Panel, Grid и т.д.) визуально выглядели центрированными: чекбокс+лейбл и `shortcutSpan` были тремя отдельными flex-элементами при `justify-between`, из-за чего средний (лейбл) получал равные отступы с обеих сторон. Контент (иконка+чекбокс+лейбл) обёрнут в один `<span class="flex items-center">`, теперь `justify-between` работает между двумя блоками — контент слева, шорткат справа.
-- Fix: `LayersPanel.onAddLayer()`/`setupKeyboardShortcuts()` — новые слои (в т.ч. 3 сразу по Shift/Ctrl+клику) отображались скрытыми (полупрозрачная иконка глаза, opacity 0.45) как в панели, так и на канвасе, пока пользователь не кликал по панели; причина — `RenderOperations.visibleLayersCache` не инвалидировался после `level.addLayer()`. Добавлен вызов `invalidateLayerVisibilityCache()` сразу после добавления слоя(ёв) в обоих местах.
-
-- Feature: RenderOperations multi-level compositing (v3.57.0, Фаза 3 multi-level) — `render()` теперь композитит объекты ВСЕХ видимых уровней в одном кадре (видимость через `session.visible`, per-level eye-icon в LevelsPanel), текущий уровень всегда поверх. Grid/selection/debug-overlays остаются current-level-only и не композитятся. Dimming-режимы (isolate/solo/group-edit-mode) применяются только к текущему уровню. **Namespacing кешей**: `visibleObjectsCache` ключируется как `${levelId}_${cameraKey}`; `visibleLayersCache` стал `Map<levelId,...>`; `CacheManager` использует `${levelId}:${objId}` для всех object-кешей (защита от коллизий id между уровнями). **Параметризация методов**: `getVisibleObjects()`, `getVisibleLayerIds()`, `buildSpatialIndex()` и прочие получили опциональный параметр `level` (дефолт текущий) для обратной совместимости. **Параллакс fix**: `renderParallaxObjects()` и `getObjectWorldBounds()` теперь принимают `level` для корректного рендера на non-current уровнях. **Побочные фиксы**: объединены дублирующиеся `invalidateSpatialIndex()` методы; удалён мёртвый код (`effectiveLayerCache` на несуществующем поле). Верификация: рантайм-тесты в браузере с принудительной коллизией id и вложенными группами на non-current уровнях; регрессионная проверка одиночного уровня.
-- Feature: LevelsPanel UI (v3.57.0, Фаза 2 multi-level) — новая панель в правой вкладке Layers (над LayersPanel) для списка открытых уровней (LevelSession). Функциональность: кнопка "+Add" для добавления новых уровней, клик по элементу переключает текущий уровень через `setCurrentLevel()`, eye-icon для per-level visibility (теперь с эффектом на рендер в Фазе 3), double-click/контекстное меню "Rename" для переименования, контекстное меню "Make Current". Текущие ограничения (отложено на позднейшие фазы): нет Close/Save/Duplicate (требуют per-session save, Фаза 5), нет drag-reorder (Фаза 6), нет per-session dirty-индикатора в UI. **Файлы**: `src/ui/LevelsPanel.js`, `src/ui/LevelsContextMenu.js`, `src/ui/panel-structures/LevelsPanelStructure.js`.
-- Fix: `SearchSectionUtils.showSearchSectionForTab()` — при активации вкладки 'layers' теперь также вызывает `editor.levelsPanel.renderLevelsSearchControls()` для отображения поля поиска в LevelsPanel.
-
-- Feature: LevelsManager (v3.57.0, Фаза 1 multi-level) — новый BaseModule для управления множеством открытых `LevelSession`; `addLevel()` регистрирует уровень в `editor.levelSessions: Map` + `editor.levelOrder: Array`, `setCurrentLevel(levelId)` переключает текущий уровень с сохранением/восстановлением camera view, selectedObjects, groupEditMode, outliner state, currentLayerId и history (через `HistoryManager.exportState()`/`importState()`), БЕЗ полного `stateManager.reset()`. **Важно**: это внутренняя инфраструктура без UI; пользователь по-прежнему видит и работает с одним уровнем. Multi-level функциональность появится в позднейших фазах.
-- Feature: LevelSession (v3.57.0, Фаза 1) — новый класс в `src/models/LevelSession.js`, editor-only обёртка над `Level` (управляет visible-флагом уровня, fileName, isDirty, viewState, history). НЕ сериализуется в `Level.toJSON()`. По одной сессии на открытый уровень.
-- Feature: HistoryManager.exportState() / importState() (v3.57.0) — снятие и восстановление undo/redo стека (используется при переключении между уровнями для сохранения undo-истории каждого).
-- Feature: LevelEditor.level — теперь computed getter/setter: резолвится через `this.levelSessions.get(this.currentLevelId)`, назад-совместимо для ~300 существующих call sites. Документированный алиас `getCurrentLevel()` (= `getLevel()`) для нового кода.
-- Feature: CanvasRenderer — type-иконки как fallback-визуал. При размещении GameObject без загруженного изображения (`obj.imgSrc` не задан/не загружен) рисуется SVG-иконка типа ассета (из `buildTypeIconSvg`, `AssetTypeIcons.js`) поверх цветного прямоугольника (50% от меньшего измерения, центрирована). Иконка отображается только для типов из каталога `AssetTypes.js` (вызов `getAssetTypeById(obj.type)`); пользовательские типы остаются с пустым прямоугольником. Новые методы: `CanvasRenderer.getTypeIconImage(typeId)` (ленивая растеризация + кэш по `${typeId}|${color}`), очистка кэша в `destroy()` вместе с `imageCache`. Обеспечивает узнаваемость placeholder-объектов на canvas.
-
-- Fix: `AssetTypeIcons.buildTypeIconSvg` — canvas type-иконки (см. выше) не отрисовывались: сгенерированный `<svg>` не содержал `xmlns="http://www.w3.org/2000/svg"`, из-за чего data-URI `Image` растеризовался в 0×0 (naturalWidth/Height=0) при формально успешной загрузке (`complete=true`), и guard в `CanvasRenderer.drawSingleObject` тихо пропускал отрисовку. В AssetPanel (innerHTML) баг не проявлялся — там namespace подставляет HTML-парсер.
-
-- Fix: `AssetPanel.showAssetFilterMenu` — Ctrl+click мульти-выбор чекбоксов не работал (клик всегда закрывал меню, т.к. не было `applyOrDefer`/`ctrlReleaseHandler`, в отличие от `OutlinerPanel.showFilterMenu`); логика синхронизирована 1:1 с OutlinerPanel.
-
-- Docs: перенесён и переформатирован `tmp/game-editor-asset-types.md` в `docs/ASSET_TYPES_CATALOG.md` — сверено с итоговой реализацией (`AssetTypes.js`: 28 типов, `ComponentTypes.js`: 19 типов).
-
-- Fix: `ui.cursorMenuMargin` (дефолт 6px, диапазон 0-60) теперь одинаково работает во всех трёх системах меню: ПКМ-контекстные меню (BaseContextMenu — было и раньше), меню фильтров (OutlinerPanel/AssetPanel), главное меню nav-bar (MenuManager). `MenuPositioningUtils.setupMenuClosing()` теперь persistent `document.addEventListener('mousemove', ...)` на ВСЮ жизнь меню (вместо только opening-анимации), проверяет margin-aware попадание курсора; `MenuPositioningUtils.repositionMenu(menu, triggerElement, options)` пересчитывает позицию меню по реальным размерам после добавления пунктов (раньше меню вычислялось по guess'у и оказывалось смещено от кнопки, вызывая мгновенное закрытие на первый mousemove). `MenuManager.setupDropdownCursorMarginWatcher()` — новый persistent watcher для top-level dropdown, закрывает по margin вместо нативного mouseleave.
-- Fix (продолжение): margin для главного меню всё ещё не действовал — обнаружен второй, независимый обработчик закрытия, `MenuManager.setupMenuContainerHoverReset()` (нативный `mouseleave` на `#menu-container`, нулевой допуск), причём вызывавшийся ДВАЖДЫ (из `initialize()` и повторно из `setupMenuEvents()`). Так как открытый dropdown рендерится ниже layout-бокса контейнера (`position:absolute`, `mt-0`), движение курсора вниз в меню обычно пересекало границу контейнера раньше, чем успевал сработать margin-aware watcher — меню гасло мгновенно независимо от `ui.cursorMenuMargin`. Метод удалён, оба вызова убраны; его роль (сброс `hoverModeEnabled` при уходе с панели меню целиком) слита в `setupDropdownCursorMarginWatcher()` через новый `isCursorNearMenuBar()` (margin-aware проверка по rect `#menu-container`), с осторожностью не гасить открытый dropdown, если курсор всё ещё внутри его собственного margin (актуально для высоких dropdown, выходящих за пределы rect контейнера).
-
-- Feature: MenuManager — generic disabled-состояние пунктов меню (itemConfig.disabled: boolean | (editor) => boolean); `refreshDisabledStates()` вычисляет state, применяет CSS-классы opacity-50/pointer-events-none, реактивно обновляется на selectedFolders/activeAssetTabs (для дизейбла "Add" при корневой папке).
-- Feature: MenuManager.createMenuItem() теперь рендерит иконку (itemConfig.icon: HTML/SVG/эмодзи) в `<span class="menu-item-icon">`, работает для любого меню.
-- Feature: BaseContextMenu получила generic flyout-submenu (addSubmenuItem, createSubmenuItem, findMenuItemById рекурсивный поиск); AssetPanelContextMenu добавила "Add" ➕ flyout с категориями/типами ассетов (из AssetTypes каталога, иконки, дизейбл при корневой папке).
-- Fix: пункт меню "Assets" переименован в "Add" (id остался `assets`), из лейблов команд убран префикс "New" (`New Camera` → `Camera`).
-- Fix: `LevelEditor.createAssetOfType()`/`AssetManager.createPlaceholderAsset()` создавали ассет в отдельной category-папке (`Core/`, `Visual / Render/` и т.д.) вместо текущей выбранной папки в Asset panel, и не показывали сообщение в строке состояния. Теперь `createAssetOfType()` берёт `assetPanel.getActiveTabPath()` и передаёт как `folderPath` в `createPlaceholderAsset(typeId, customName, folderPath)`; добавлены `Logger.status.success/error`.
+## [Unreleased] (РґРѕ commit f07084b, 2026-07-15)
+
+- **B0 (Phase B dock):** split-tree engine port in `src/ui/dock/` (`DockTreeModel`, `DockRenderer` with leaf reparent by `node.id`, `DockDragController`, `DockDropOverlay`, `DockManager`); `styles/dock.css`; `index.html` shell `#dock-workspace` + chips; legacy panel DOM in `#dock-legacy-offtree`; `editor.dockManager` wired with placeholders (real panels B2вЂ“B3).
+- Fix B0 boot: skip legacy `PanelPositionManager.initializePanelPositions` when `dockManager` is active (removed flex shell в†’ null `appendChild`); suppress 0Г—0 `resizeCanvas` warn while viewport is in `#dock-legacy-offtree`.
+- Refactor: Р¤Р°Р·Р° A РїР»Р°РЅР° `tmp/2D_Editor_REFACTOR_PLAN_v2.md` (РЅРµ-UI СЃС‚СЂСѓРєС‚СѓСЂРЅС‹Рµ РЅР°С…РѕРґРєРё Р°СѓРґРёС‚Р°) Р·Р°РІРµСЂС€РµРЅР°.
+- **A0**: CONTRIBUTING.md вЂ” РґРѕР±Р°РІР»РµРЅ СЂР°Р·РґРµР» "РљР°РєРѕР№ Р±Р°Р·РѕРІС‹Р№ РєР»Р°СЃСЃ/РїР°С‚С‚РµСЂРЅ РІС‹Р±СЂР°С‚СЊ" СЃ РєСЂРёС‚РµСЂРёСЏРјРё РІС‹Р±РѕСЂР° BaseManager/BaseModule/РіРѕР»С‹Р№ constructor/PanelSubController
+- **A1**: LevelEditor.js вЂ” СѓРґР°Р»РµРЅС‹ `findObjectInGroup`/`findObjectInGroupRecursive` (РґСѓР±Р»РёСЂСѓСЋС‰РёРµ РѕР±С…РѕРґ РґРµСЂРµРІР° РіСЂСѓРїРї); РёРЅС‚РµРіСЂР°С†РёСЏ СЃ `GroupTraversalUtils.findInObjects`/`findInGroup`; С„Р°Р№Р» СЃРѕРєСЂР°С‰С‘РЅ ~1583в†’1500 СЃС‚СЂРѕРє; РґРѕР±Р°РІР»РµРЅ С‚РµСЃС‚ tests/LevelEditor.findObject.test.js (С…Р°СЂР°РєС‚РµСЂРёР·Р°С†РёРѕРЅРЅС‹Рµ С‚РµСЃС‚С‹ РґР»СЏ A1)
+- **A2**: `ensurePlayerStartExists()` Р»РѕРіРёРєР° Р°РІС‚РѕСЃРѕР·РґР°РЅРёСЏ Player Start РїРµСЂРµРЅРµСЃРµРЅР° РёР· LevelEditor.js РІ ObjectOperations.js; РґРµР»РµРіР°С‚ РѕСЃС‚Р°Р»СЃСЏ РІ LevelEditor.js
+- **A3**: AssetManager.js вЂ” РґРѕР±Р°РІР»РµРЅ РјРµС‚РѕРґ `getAssetById(id)` (null-safe Р°Р»РёР°СЃ), СѓСЃС‚СЂР°РЅСЏРµС‚ РєСЂР°С€ РІ AssetItemActionsController
+- **A4**: ConfigManager.js вЂ” СѓРґР°Р»С‘РЅ РЅРµРёСЃРїРѕР»СЊР·СѓРµРјС‹Р№ РјС‘СЂС‚РІС‹Р№ РјРµС‚РѕРґ `loadDefaultConfigs()` (~106 СЃС‚СЂРѕРє)
+- **A5.1**: BaseModule.js вЂ” РґРѕР±Р°РІР»РµРЅ РѕР±С‰РёР№ РјРµС‚РѕРґ `hasActiveMouseOperation()` (Р·Р°РјРµРЅРёР» РґСѓР±Р»РёСЂСѓСЋС‰РёРµСЃСЏ РїСЂРёРІР°С‚РЅС‹Рµ РєРѕРїРёРё РІ LevelFileOperations/ProjectFileOperations)
+- **A5.2**: RenderOperations.js вЂ” РґРѕР±Р°РІР»РµРЅС‹ РїСЂРёРІР°С‚РЅС‹Рµ С…РµР»РїРµСЂС‹ `_getValidCanvasOrNull()` Рё `_computeExtendedViewportBounds()` (СѓСЃС‚СЂР°РЅРµРЅРѕ С‚СЂРѕР№РЅРѕРµ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ preamble-РїСЂРѕРІРµСЂРѕРє)
+- **A5.3**: SnapUtils.js вЂ” РґРѕР±Р°РІР»РµРЅС‹ СЃС‚Р°С‚РёС‡РµСЃРєРёРµ РјРµС‚РѕРґС‹ `findNearestSnapGridPoint()` Рё `computeBottomLeftSnapDelta()` (СѓСЃС‚СЂР°РЅРµРЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ inline-Р»РѕРіРёРєРё snap-to-grid)
+- **A6.1**: BaseGridRenderer.js вЂ” Template Method РїР°С‚С‚РµСЂРЅ: `render()` СЃС‚Р°Р» РєРѕРЅРєСЂРµС‚РЅС‹Рј, `drawGrid()` Р°Р±СЃС‚СЂР°РєС‚РЅС‹Р№; РЅР°СЃР»РµРґРЅРёРєРё СЂРµР°Р»РёР·СѓСЋС‚ С‚РѕР»СЊРєРѕ `drawGrid()`
+- **A6.2**: PerformanceUtils.js вЂ” `memoizeWithInvalidation()` РїРµСЂРµРІРµРґРµРЅР° РЅР° РєРѕРјРїРѕР·РёС†РёСЋ СЃ `memoize()` (СѓСЃС‚СЂР°РЅРµРЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ cache-Р»РѕРіРёРєРё)
+- **A8**: Р”РѕРєСѓРјРµРЅС‚Р°С†РёСЏ СЃРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°РЅР° СЃ РєРѕРґРѕРј: Context_map.md, ARCHITECTURE.md, CHANGELOG.md РѕР±РЅРѕРІР»РµРЅС‹ РЅР° v4.0.0
+- Fix: `AssetManager.loadImage()` С‚РµРїРµСЂСЊ РІС‹Р·С‹РІР°РµС‚ `window.editor?.render?.()` РїРѕСЃР»Рµ СѓСЃРїРµС€РЅРѕРіРѕ РєСЌС€РёСЂРѕРІР°РЅРёСЏ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ вЂ” СѓСЃС‚СЂР°РЅСЏРµС‚ Р±Р°Рі, РєРѕРіРґР° РѕР±СЉРµРєС‚, РѕС‚СЂРёСЃРѕРІР°РЅРЅС‹Р№ РґРѕ Р·Р°РІРµСЂС€РµРЅРёСЏ Р°СЃРёРЅС…СЂРѕРЅРЅРѕР№ Р·Р°РіСЂСѓР·РєРё РєР°СЂС‚РёРЅРєРё, РѕСЃС‚Р°РІР°Р»СЃСЏ РїР»РµР№СЃС…РѕР»РґРµСЂРѕРј РґРѕ СЃР»СѓС‡Р°Р№РЅРѕРіРѕ СЃР»РµРґСѓСЋС‰РµРіРѕ render()
+
+## [Unreleased] (РґРѕ commit ac7a8b3, 2026-07-14)
+
+- Refactor: Р¤Р°Р·Р° 6 (С‚РѕС‡РµС‡РЅС‹Р№ РґРµРґСѓРї) вЂ” `GitUtils.js` (РѕР±С‰РёР№ `runGitCommand()` РІРјРµСЃС‚Рѕ С‚СЂС‘С… РєРѕРїРёР№ spawn-РѕР±РІСЏР·РєРё), `DiamondGridRenderer.js` (РѕР±С‰РёР№ `drawDiagonalLines()` РІРјРµСЃС‚Рѕ РґРІСѓС… РєРѕРїРёР№ 60В°/120В°), `SettingsSyncManager.js` (`applyColorSettings`/`applySelectionSettings`/`applyStatusBarColors` РІС‹РЅРµСЃРµРЅС‹ РёР· `applySpecialUISettings`/`applyInitialColorSettings`), РЅРѕРІС‹Р№ `src/utils/ImageUtils.js` (`getImageDimensions`, РёСЃРїРѕР»СЊР·СѓРµС‚ `AssetImporter`/`AssetViewRenderer`; `getDefaultColor`/`getAssetTypeFromCategory` РѕСЃС‚Р°РІР»РµРЅС‹ СЂР°Р·РґРµР»СЊРЅС‹РјРё вЂ” СЂР°Р·РЅС‹Рµ РЅР°Р±РѕСЂС‹ РєР°С‚РµРіРѕСЂРёР№, СЃР»РёСЏРЅРёРµ РёР·РјРµРЅРёР»Рѕ Р±С‹ РїРѕРІРµРґРµРЅРёРµ), `LayersPanel.js` (dblclick-РѕР±СЂР°Р±РѕС‚С‡РёРє РїРµСЂРµРёСЃРїРѕР»СЊР·СѓРµС‚ `renameLayer()`), `OutlinerPanel.js` (`createOutlinerNameContainer()`/`applyLockedRowState()` РѕР±С‰РёРµ РґР»СЏ `renderGroupNode`/`renderObjectNode`).
+- Р¤Р°Р·Р° 7 (РґРѕР»РіРѕСЃСЂРѕС‡РЅС‹Рµ guardrails) вЂ” РЅРѕРІС‹Р№ `CONTRIBUTING.md` (РїСЂР°РІРёР»Рѕ: РїРµСЂРµРґ РЅРѕРІС‹Рј С„Р°Р№Р»РѕРј РёСЃРєР°С‚СЊ РїРѕРґС…РѕРґСЏС‰РёР№ Controller/Operations-РєР»Р°СЃСЃ), `npm run check:dedup` (`npx jscpd --min-lines 15`), overrides РІ `scripts/check-file-size.js` СЃРІРµСЂРµРЅС‹ СЃ С„Р°РєС‚РёС‡РµСЃРєРёРј СЂР°Р·РјРµСЂРѕРј С„Р°Р№Р»РѕРІ (41 Р°РєС‚СѓР°Р»СЊРЅС‹С…, stale РЅРµС‚). Р РµС„Р°РєС‚РѕСЂРёРЅРі РёР· `tmp/2D_Editor_REFACTOR_PLAN.md` Р·Р°РІРµСЂС€С‘РЅ (Р¤Р°Р·С‹ 0вЂ“7).
+
+## [Unreleased] (РґРѕ commit bec4958, 2026-07-14)
+
+- Refactor: Р¤Р°Р·Р° 4 (РґРµРєРѕРјРїРѕР·РёС†РёСЏ AssetPanel) Р·Р°РІРµСЂС€РµРЅР° вЂ” РёР·РІР»РµС‡РµРЅС‹ 7 РєРѕРЅС‚СЂРѕР»Р»РµСЂРѕРІ: AssetFoldersController (Р¤Р°Р·Р° 4.1), AssetViewRenderer (614 СЃС‚СЂРѕРє, Р¤Р°Р·Р° 4.2), AssetFilterController (Р¤Р°Р·Р° 4.3), AssetSelectionController (Р¤Р°Р·Р° 4.4), AssetDragDropController (Р¤Р°Р·Р° 4.5), AssetItemActionsController (Р¤Р°Р·Р° 4.6), AssetToolbarController (Р¤Р°Р·Р° 4.7); AssetPanel.js 3099в†’1154 СЃС‚СЂРѕРє (62% СЃРѕРєСЂР°С‰РµРЅРёРµ); РІСЃРµ РєРѕРЅС‚СЂРѕР»Р»РµСЂС‹ РёСЃРїРѕР»СЊР·СѓСЋС‚ РїР°С‚С‚РµСЂРЅ `constructor(assetPanel)` (РІР»Р°РґРµРЅРёРµ РІРјРµСЃС‚Рѕ BaseModule); orchestration-СЃР»РѕР№ AssetPanel СЃРѕРґРµСЂР¶РёС‚ init, destroy, setupEventListeners, handleAssetWheel, handleDrop, handleAssetSave, autoResizePanelHeight Рё delegate-РјРµС‚РѕРґС‹.
+- Refactor: Р¤Р°Р·Р° 4.5 (РґРµРєРѕРјРїРѕР·РёС†РёСЏ PanelPositionManager) вЂ” РёР·РІР»РµС‡РµРЅС‹ 4 РєРѕРЅС‚СЂРѕР»Р»РµСЂР° РІ `src/ui/panels/`: TabLayoutController (719 СЃС‚СЂРѕРє, СЂР°СЃРєР»Р°РґРєР°/collapse/resize), TabOrderController (379 СЃС‚СЂРѕРє, РїСЂРѕРіСЂР°РјРјРЅРѕРµ РїРµСЂРµРјРµС‰РµРЅРёРµ), TabDragController (428 СЃС‚СЂРѕРє, drag-n-drop), SplitPaneController (1016 СЃС‚СЂРѕРє, split-pane/detach); PanelPositionManager.js 2552в†’74 СЃС‚СЂРѕРє (thin facade); PanelSubController вЂ” РѕР±С‰Р°СЏ Р±Р°Р·Р° РґР»СЏ РєРѕРЅС‚СЂРѕР»Р»РµСЂРѕРІ; РІРЅРµС€РЅРёРµ РІС‹Р·РѕРІС‹ РѕР±РЅРѕРІР»РµРЅС‹ (togglePanelPosition/initializePanelPositions/ensurePanelExists в†’ tabLayoutController.*, removeEmptyPanel в†’ splitPaneController.*); `scripts/check-file-size.js` РѕР±РЅРѕРІР»РµРЅ (СѓРґР°Р»РµРЅ PanelPositionManager РёР· overrides, РґРѕР±Р°РІР»РµРЅС‹ С‚СЂРё РєРѕРЅС‚СЂРѕР»Р»РµСЂР°).
+- Chore: СЂРµС„Р°РєС‚РѕСЂРёРЅРі Р¤Р°Р·Р° 3 (РґРµРєРѕРјРїРѕР·РёС†РёСЏ LevelEditor.js) вЂ” РёР·РІР»РµС‡РµРЅС‹ EditorConfigController, EditorLifecycleController, EditorPreferencesController (РІСЃРµ extends BaseModule); LevelEditor.js 2399в†’1583 СЃС‚СЂРѕРє; РІСЃРµ РёРјРїРѕСЂС‚С‹ 46в†’34; С…Р°СЂР°РєС‚РµСЂРёР·Р°С†РёРѕРЅРЅС‹Рµ С‚РµСЃС‚С‹ (EditorConfigController.test.js).
+- Feature: rotation/scale snap-СЃС‚РµРї (Shift РІРѕ РІСЂРµРјСЏ Ctrl-drag transform) РІС‹РЅРµСЃРµРЅ РІ РЅР°СЃС‚СЂРѕР№РєРё вЂ” Settings в†’ Selection ("Rotation Snap (Shift+drag, В°)" Рё "Scale Snap (Shift+drag, factor)"), РґРµС„РѕР»С‚ РІСЂР°С‰РµРЅРёСЏ РёР·РјРµРЅС‘РЅ СЃ 10В° РЅР° 15В° (backed by `selection.rotationSnapDegrees`/`selection.scaleSnapFactor` РІ StateManager/ConfigManager, `EditorConstants.TRANSFORM.*` С‚РµРїРµСЂСЊ С‚РѕР»СЊРєРѕ fallback).
+- Chore: СЂРµС„Р°РєС‚РѕСЂРёРЅРі Р¤Р°Р·Р° 0 (СЃС‚СЂР°С…РѕРІРѕС‡РЅР°СЏ СЃРµС‚РєР°) вЂ” РїРѕРґРєР»СЋС‡С‘РЅ `vitest` (`npm test`), С…Р°СЂР°РєС‚РµСЂРёР·Р°С†РёРѕРЅРЅС‹Рµ С‚РµСЃС‚С‹ РґР»СЏ `StateManager`/`ObjectOperations`/`GroupOperations`/`AssetPanel` filter-Р»РѕРіРёРєРё (`tests/`), `eslint.config.js` СЃ `import/max-dependencies: 20` (override РґР»СЏ `LevelEditor.js` РґРѕ Р¤Р°Р·С‹ 3), `npm run check` (lint+test+madge --circular).
+- Chore: СЂРµС„Р°РєС‚РѕСЂРёРЅРі Р¤Р°Р·Р° 1 (CI-guardrails) вЂ” `scripts/check-file-size.js` (Р»РёРјРёС‚ 400 СЃС‚СЂРѕРє РґР»СЏ РЅРѕРІС‹С… С„Р°Р№Р»РѕРІ, allowlist РёР· 37 СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёС… God Object'РѕРІ СЃ TODO РїРѕ С„Р°Р·Р°Рј РїР»Р°РЅР°), `npm run check:size` РґРѕР±Р°РІР»РµРЅ РІ `npm run check`; `knip.json` (`entry: index.html`, `project: src/**/*.js`) + `npm run check:unused` РґР»СЏ С‚РѕС‡РµС‡РЅРѕРіРѕ РїРѕРёСЃРєР° РЅРµРёСЃРїРѕР»СЊР·СѓРµРјРѕРіРѕ СЌРєСЃРїРѕСЂС‚Р° (РЅРµ РІ РіРµР№С‚Рµ вЂ” РѕС‚С‡С‘С‚ РЅР° СЂСѓС‡РЅРѕРµ С‚СЂРёР°Р¶).
+- Refactor: Р¤Р°Р·Р° 4.2 (extract AssetViewRenderer) вЂ” РЅРѕРІС‹Р№ РјРѕРґСѓР»СЊ `src/ui/AssetViewRenderer.js` (614 СЃС‚СЂРѕРє) РІР»Р°РґРµРµС‚ РІСЃРµРјРё РјРµС‚РѕРґР°РјРё СЂРµРЅРґРµСЂРёРЅРіР° grid/list/details РїСЂРµРІСЊСЋ; `AssetPanel.js` 3099в†’2499 СЃС‚СЂРѕРє; `render()` РґРµР»РµРіРёСЂСѓРµС‚ `this.viewRenderer.render()` (РѕРґРЅР° СЃС‚СЂРѕРєР°, РµРґРёРЅСЃС‚РІРµРЅРЅС‹Р№ external caller EditorPreferencesController:117); РѕСЃС‚Р°Р»СЊРЅС‹Рµ call sites РІРЅСѓС‚СЂРё AssetPanel.js РїРµСЂРµРІРµРґРµРЅС‹ РЅР° `this.viewRenderer.methodName()`; РїР°С‚С‚РµСЂРЅ РёРґРµРЅС‚РёС‡РµРЅ `AssetTabsManager`; РґРѕР±Р°РІР»РµРЅРѕ РІ allowlist `scripts/check-file-size.js`; Р¤Р°Р·Р° 4 in progress (6 РєРѕРЅС‚СЂРѕР»Р»РµСЂРѕРІ РѕСЃС‚Р°СЋС‚СЃСЏ: AssetFoldersController, AssetFilterController, AssetSelectionController, AssetDragDropController, AssetItemActionsController, AssetToolbarController).
+- Fix: СЂРµС„Р°РєС‚РѕСЂРёРЅРі Р¤Р°Р·Р° 2 (`src/ui/PanelPositionManager.js`) вЂ” `window.tabDraggingState`/`window.tabDraggingGlobalMouseUp`/`window._tabDraggingRegistered` Р·Р°РјРµРЅРµРЅС‹ РЅР° РїСЂРёРІР°С‚РЅС‹Рµ РїРѕР»СЏ СЌРєР·РµРјРїР»СЏСЂР° (`this._tabDraggingState`, bound-РјРµС‚РѕРґ `_onGlobalTabMouseUp`, СЂРµРіРёСЃС‚СЂР°С†РёСЏ С‡РµСЂРµР· СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№ `globalEventRegistry` Р±РµР· РѕС‚РґРµР»СЊРЅРѕРіРѕ window-С„Р»Р°РіР°); `window.panelInitializationCompleted` (РЅРµ РёРјРµР» С‡РёС‚Р°С‚РµР»РµР№) СѓРґР°Р»С‘РЅ; `destroy()` С‚РµРїРµСЂСЊ РѕС‚РїРёСЃС‹РІР°РµС‚ `panel-tab-dragging` РѕС‚ `globalEventRegistry`. `DialogReplacer.js` вЂ” РµРґРёРЅСЃС‚РІРµРЅРЅС‹Р№ РѕСЃРѕР·РЅР°РЅРЅРѕ РѕСЃС‚Р°РІР»РµРЅРЅС‹Р№ `window.*` (Р·Р°РґРѕРєСѓРјРµРЅС‚РёСЂРѕРІР°РЅРѕ РІ РєРѕРґРµ).
+
+## [Unreleased] (РґРѕ commit c811927, 2026-07-10)
+
+- Fix: РІ РјРµРЅСЋ С„РёР»СЊС‚СЂР° С‚РёРїРѕРІ (Asset panel, Outliner) СѓС…РѕРґ РјС‹С€Рё Р·Р° РїСЂРµРґРµР»С‹ РјРµРЅСЋ РґРѕ РѕС‚РїСѓСЃРєР°РЅРёСЏ Ctrl Р·Р°РєСЂС‹РІР°Р» РјРµРЅСЋ Р±РµР· РїСЂРёРјРµРЅРµРЅРёСЏ РЅР°РєР»РёРєР°РЅРЅС‹С… С‡РµРєР±РѕРєСЃРѕРІ, РЅРѕ РІРЅСѓС‚СЂРµРЅРЅРµРµ СЃРѕСЃС‚РѕСЏРЅРёРµ `activeTypeFilters` РѕСЃС‚Р°РІР°Р»РѕСЃСЊ РёР·РјРµРЅС‘РЅРЅС‹Рј вЂ” РїСЂРё СЃР»РµРґСѓСЋС‰РµРј РѕС‚РєСЂС‹С‚РёРё РјРµРЅСЋ С‡РµРєР±РѕРєСЃС‹ РїРѕРєР°Р·С‹РІР°Р»Рё РЅРµРїСЂРёРјРµРЅС‘РЅРЅС‹Рµ Р·РЅР°С‡РµРЅРёСЏ. РўРµРїРµСЂСЊ РЅР° С‚Р°РєРѕРµ Р·Р°РєСЂС‹С‚РёРµ СЃРѕСЃС‚РѕСЏРЅРёРµ РѕС‚РєР°С‚С‹РІР°РµС‚СЃСЏ Рє СЃРЅР°РїС€РѕС‚Сѓ, СЃРЅСЏС‚РѕРјСѓ РїРµСЂРµРґ РЅР°С‡Р°Р»РѕРј Ctrl-СЃРµСЃСЃРёРё (`AssetPanel.showAssetFilterMenu`, `OutlinerPanel.showFilterMenu`).
+- Fix: Р·Р°РіРѕР»РѕРІРѕРє РІРєР»Р°РґРєРё "Details" РІ РїСЂР°РІРѕР№/Р»РµРІРѕР№ РїР°РЅРµР»Рё Р±РѕР»СЊС€Рµ РЅРµ РїРµСЂРµРєР»СЋС‡Р°РµС‚СЃСЏ РЅР° "Level"/"Asset"/"Assets" РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ РІС‹РґРµР»РµРЅРёСЏ вЂ” РІСЃРµРіРґР° СЃС‚Р°С‚РёС‡РЅС‹Р№ С‚РµРєСЃС‚ "Details" (`PanelPositionManager.js` РґРµС„РѕР»С‚ С‚Р°Р±Р°, `DetailsPanel.updateTabTitle()` С‚РµРїРµСЂСЊ no-op).
+- Feature: РІР»РѕР¶РµРЅРЅС‹Рµ split-СЃРµРєС†РёРё РІРєР»Р°РґРѕРє вЂ” drag РІРєР»Р°РґРєРё (РЅР°РїСЂ. Layers) РЅР° РѕР±Р»Р°СЃС‚СЊ РљРћРќРўР•РќРўРђ РґСЂСѓРіРѕР№ РІРєР»Р°РґРєРё (РЅР°РїСЂ. Outliner, РЅРµ РЅР° РµС‘ С‚Р°Р±-Р±Р°СЂ) РїРѕРґСЃРІРµС‡РёРІР°РµС‚ РІРµСЂС…РЅСЋСЋ/РЅРёР¶РЅСЋСЋ РїРѕР»РѕРІРёРЅСѓ РїРѕРґ РєСѓСЂСЃРѕСЂРѕРј; РЅР° drop СЃРѕР·РґР°С‘С‚СЃСЏ РІР»РѕР¶РµРЅРЅР°СЏ split-СЃРµРєС†РёСЏ (РѕР±Рµ РІРєР»Р°РґРєРё РІРёРґРЅС‹ РѕРґРЅРѕРІСЂРµРјРµРЅРЅРѕ, СЃС‚РµРє СЃРІРµСЂС…Сѓ/СЃРЅРёР·Сѓ СЃ resizer), РѕСЃРЅРѕРІРЅР°СЏ РєРЅРѕРїРєР° РїРµСЂРµРёРјРµРЅРѕРІС‹РІР°РµС‚СЃСЏ РІ "Outliner/Layers". Drag Р·Р°РіРѕР»РѕРІРєР° РІР»РѕР¶РµРЅРЅРѕР№ РїР°РЅРµР»Рё (`.tab-split-pane-header`) РѕР±СЂР°С‚РЅРѕ РѕС‚СЃРѕРµРґРёРЅСЏРµС‚ РµС‘ РІ РѕР±С‹С‡РЅСѓСЋ standalone-РІРєР»Р°РґРєСѓ РІ Р»СЋР±РѕР№ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РµР№ РїР°РЅРµР»Рё. Alternatively, drag РІРєР»Р°РґРєРё РЅР° РѕРґРЅСѓ РёР· РґРІСѓС… РїРѕР»РѕРІРёРЅ (`.tab-split-pane`) РЈР–Р• СЃСѓС‰РµСЃС‚РІСѓСЋС‰РµРіРѕ composite Р—РђРњР•РќРЇР•Рў Р·Р°РЅРёРјР°СЋС‰СѓСЋ СЌС‚Сѓ РїРѕР»РѕРІРёРЅСѓ РІРєР»Р°РґРєСѓ РІРјРµСЃС‚Рѕ Р±Р»РѕРєРёСЂРѕРІРєРё: **РµСЃР»Рё РїРµСЂРµС‚Р°СЃРєРёРІР°РµРјР°СЏ РІРєР»Р°РґРєР° вЂ” plain standalone-РІРєР»Р°РґРєР°**, РІС‹С‚РµСЃРЅРµРЅРЅР°СЏ РІРєР»Р°РґРєР° СЃС‚Р°РЅРѕРІРёС‚СЃСЏ РѕР±С‹С‡РЅРѕР№ standalone-РІРєР»Р°РґРєРѕР№ РІ РџРђРќР•Р›Р-РРЎРўРћР§РќРРљР• РїРµСЂРµС‚Р°СЃРєРёРІР°РµРјРѕР№ РІРєР»Р°РґРєРё (РЅРµ РІ РїР°РЅРµР»Рё, СЃРѕРґРµСЂР¶Р°С‰РµР№ composite), Р·Р°РЅРёРјР°СЏ СЂРѕРІРЅРѕ СЃР»РѕС‚, РєРѕС‚РѕСЂС‹Р№ РѕСЃРІРѕР±РѕРґРёР»Р° РїРµСЂРµС‚Р°С‰РµРЅРЅР°СЏ; РїСЂРё cross-panel drag СЌС‚Рѕ РґРІСѓСЃС‚РѕСЂРѕРЅРЅРёР№ swap РјРµР¶РґСѓ РїР°РЅРµР»СЏРјРё. **Р•СЃР»Рё РїРµСЂРµС‚Р°СЃРєРёРІР°РµРјР°СЏ РІРєР»Р°РґРєР° СЃР°РјР° РІР»РѕР¶РµРЅР° РІ РґСЂСѓРіРѕР№ composite**, РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ true pane-for-pane swap (РјРµС‚РѕРґ `_swapNestedPanes`): РІС‹С‚РµСЃРЅРµРЅРЅР°СЏ РІРєР»Р°РґРєР° Р·Р°РЅРёРјР°РµС‚ РјРµСЃС‚Рѕ РїРµСЂРµС‚Р°СЃРєРёРІР°РµРјРѕР№ РІ РёСЃС…РѕРґРЅРѕРј composite, РѕР±Р° composite РѕСЃС‚Р°СЋС‚СЃСЏ composites (РЅРё РѕРґРёРЅ РЅРµ СЂР°Р·СЂСѓС€Р°РµС‚СЃСЏ), С‚РѕР»СЊРєРѕ РѕРґРёРЅ С‡Р»РµРЅ РІ РєР°Р¶РґРѕРј РјРµРЅСЏРµС‚СЃСЏ. Р’С‹С‚РµСЃРЅРµРЅРЅР°СЏ РІРєР»Р°РґРєР° РѕСЃС‚Р°С‘С‚СЃСЏ РІ РЅРµР°РєС‚РёРІРЅРѕРј СЃРѕСЃС‚РѕСЏРЅРёРё, РµСЃР»Рё С‚РѕР»СЊРєРѕ РЅРµ Р±С‹Р»Р° Р°РєС‚РёРІРЅРѕР№ РїРµСЂРµС‚Р°С‰РµРЅРЅР°СЏ РІРєР»Р°РґРєР° РІ СЃРІРѕРµР№ РёСЃС…РѕРґРЅРѕР№ РїР°РЅРµР»Рё (С‚РѕРіРґР° С‡РµСЂРµР· `_reactivateAfterTabRemoval` Р°РєС‚РёРІРёСЂСѓРµС‚СЃСЏ РІС‹С‚РµСЃРЅРµРЅРЅР°СЏ). РљР»СЋС‡РµРІРѕР№ РЅСЋР°РЅСЃ "identity anchor": РµСЃР»Рё Р·Р°РјРµРЅСЏРµРјР°СЏ РїРѕР»РѕРІРёРЅР° вЂ” СЏРєРѕСЂСЊ РёРґРµРЅС‚РёС‡РЅРѕСЃС‚Рё composite (РёР·РЅР°С‡Р°Р»СЊРЅРѕ С†РµР»РµРІР°СЏ РІРєР»Р°РґРєР° РїРµСЂРІРѕРіРѕ merge), СЏРєРѕСЂСЊ РџР•Р Р•РќРћРЎРРўРЎРЇ РЅР° РЅРµС‚СЂРѕРЅСѓС‚СѓСЋ РїРѕР»РѕРІРёРЅСѓ, С‡С‚РѕР±С‹ РёР·Р±РµР¶Р°С‚СЊ РєРѕРЅС„Р»РёРєС‚Р° РёРґРµРЅС‚РёС‡РЅРѕСЃС‚Рё (РІ РѕР±РѕРёС… standalone Рё nested cases). `PanelPositionManager.js`: `mergeTabIntoSplit()`/`replacePaneInSplit()`/`detachFromSplit()` + drag-detection (`_findSplitDropTarget`) РёРЅС‚РµРіСЂРёСЂРѕРІР°РЅ РІ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№ `_globalTabMouseMove`/`_globalTabMouseUp`, `_findSplitDropTarget` С‚РµРїРµСЂСЊ РІРѕР·РІСЂР°С‰Р°РµС‚ `{mode:'merge'|'replace', ...}`. `EventHandlers.setActivePanelTab()` РґРѕРїРѕР»РЅРµРЅ un-hide РІР»РѕР¶РµРЅРЅС‹С… РїР°РЅРµР»РµР№ РїСЂРё РїРѕРєР°Р·Рµ composite-РІРєР»Р°РґРєРё. v1-РѕРіСЂР°РЅРёС‡РµРЅРёСЏ (РѕСЃРѕР·РЅР°РЅРЅРѕ): РѕРґРёРЅ СѓСЂРѕРІРµРЅСЊ РІР»РѕР¶РµРЅРЅРѕСЃС‚Рё, С‚РѕР»СЊРєРѕ РІРµСЂС‚РёРєР°Р»СЊРЅС‹Р№ split, **С‡Р»РµРЅСЃС‚РІРѕ РІ composite Рё СЂР°Р·РјРµСЂ resizer-СЂР°Р·РґРµР»С‘РЅРЅС‹С… РїРѕР»РѕРІРёРЅ (ratio) РїРµСЂСЃРёСЃС‚СЏС‚СЃСЏ РјРµР¶РґСѓ РїРµСЂРµР·Р°РіСЂСѓР·РєР°РјРё** (leftPanelSplits/rightPanelSplits РІ config/user/panels.json, РјРµС‚РѕРґС‹ savePanelSplits/applyPanelSplits РІ PanelPositionManager), detach вЂ” С‚РѕР»СЊРєРѕ РІ СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёРµ РїР°РЅРµР»Рё.
+  - Refactor: СѓРЅРёС„РёРєР°С†РёСЏ РґРІСѓС… РЅРµР·Р°РІРёСЃРёРјС‹С… drag-РїСЂРѕС‚РѕРєРѕР»РѕРІ (РѕР±С‹С‡РЅС‹Р№ tab-bar drag Рё split-pane-header detach drag) вЂ” РѕР±Р° С‚РµРїРµСЂСЊ РїРѕРґРґРµСЂР¶РёРІР°СЋС‚ merge/replace-Р·РѕРЅС‹ С‡РµСЂРµР· РѕР±С‰РёР№ `_findSplitDropTarget`. РќРѕРІС‹Рµ РїСЂРёРІР°С‚РЅС‹Рµ РјРµС‚РѕРґС‹ `_extractDraggedTab()` Рё `_collapseSplitPane()` Р°Р±СЃС‚СЂР°РіРёСЂСѓСЋС‚ Р»РѕРіРёРєСѓ "РѕС‚РєСѓРґР° Рё РєР°Рє Р·Р°Р±СЂР°С‚СЊ РїРµСЂРµС‚Р°СЃРєРёРІР°РµРјС‹Р№ С‚Р°Р±" вЂ” СЂР°Р±РѕС‚Р°РµС‚ РѕРґРёРЅР°РєРѕРІРѕ РЅРµР·Р°РІРёСЃРёРјРѕ РѕС‚ С‚РѕРіРѕ, С‚Р°С‰РёРјСЃСЏ Р»Рё standalone-РєРЅРѕРїРєР° РёР»Рё С‚Р°Р±, СѓР¶Рµ РІР»РѕР¶РµРЅРЅС‹Р№ РІ С‡СѓР¶РѕР№ composite. `_startSplitPaneDetachDrag()` СЂР°СЃС€РёСЂРµРЅ: С‚РµРїРµСЂСЊ РЅРµ С‚РѕР»СЊРєРѕ РїРѕРґСЃРІРµС‡РёРІР°РµС‚ С†РµР»СѓСЋ РїР°РЅРµР»СЊ РїСЂРё РѕС‚СЃРѕРµРґРёРЅРµРЅРёРё, РЅРѕ Рё РїСЂРѕРІРµСЂСЏРµС‚ merge/replace-Р·РѕРЅС‹, РїРѕРєР°Р·С‹РІР°СЏ С‚РѕС‡РЅС‹Рµ Р»РёРЅРёРё СЂР°Р·РґРµР»Р°, РєР°Рє РїСЂРё РѕР±С‹С‡РЅРѕРј drag РІРєР»Р°РґРєРё. Р’Р»РѕР¶РµРЅРЅС‹Р№ С‚Р°Р±, РїРµСЂРµРЅРµСЃС‘РЅРЅС‹Р№ РЅР° РєРѕРЅС‚РµРЅС‚ РґСЂСѓРіРѕР№ РїР°РЅРµР»Рё, С‚РµРїРµСЂСЊ РЅРµ РїСЂРѕСЃС‚Рѕ РѕС‚СЃРѕРµРґРёРЅСЏРµС‚СЃСЏ, РЅРѕ Рё РјРµСЂРґР¶РёС‚СЃСЏ/Р·Р°РјРµРЅСЏРµС‚ РїР°РЅРµ С‚Р°Рј Р¶Рµ РєР°Рє РѕР±С‹С‡РЅР°СЏ standalone-РєРЅРѕРїРєР°.
+  - Fix: РїРѕРґСЃРІРµС‚РєР° split-С…РёРЅС‚Р° РєРѕСЂСЂРµРєС‚РЅРѕ РѕС…РІР°С‚С‹РІР°Р»Р° РІСЃСЋ РїР°РЅРµР»СЊ С‚РѕР»СЊРєРѕ РґР»СЏ Outliner (`.outliner-tab-layout` вЂ” `height:100%`), Сѓ Details/Layers/Levels `{tab}-content-panel` РЅРµ СЂР°СЃС‚СЏРЅСѓС‚ РЅР° РІСЃСЋ РІС‹СЃРѕС‚Сѓ (СЃР°Р№Р·РёС‚СЃСЏ РїРѕ РєРѕРЅС‚РµРЅС‚Сѓ), РїРѕСЌС‚РѕРјСѓ С…РёРЅС‚ РїРѕРґСЃРІРµС‡РёРІР°Р» С‚РѕР»СЊРєРѕ С‡Р°СЃС‚РёС‡РЅСѓСЋ/РІР»РѕР¶РµРЅРЅСѓСЋ РѕР±Р»Р°СЃС‚СЊ. `_findSplitDropTarget` С‚РµРїРµСЂСЊ Р±РµСЂС‘С‚ rect РЅРµ Сѓ `activeContent`, Р° Сѓ `contentContainer` (РІРЅРµС€РЅРёР№ `.flex-grow.overflow-y-auto` РІСЂР°РїРїРµСЂ, РІСЃРµРіРґР° СЂР°РІРµРЅ РїРѕР»РЅРѕР№ РІС‹СЃРѕС‚Рµ С‚РµР»Р° РїР°РЅРµР»Рё) вЂ” РµРґРёРЅРѕРѕР±СЂР°Р·РЅРѕ РґР»СЏ РІСЃРµС… РІРєР»Р°РґРѕРє.
+  - Fix: merge РІРєР»Р°РґРєРё РІ split СЂРѕРЅСЏР» `insertBefore` (`NotFoundError`) Рё РЅР°РјРµСЂС‚РІРѕ РїРѕРґРІРµС€РёРІР°Р» drag (ghost-РІРєР»Р°РґРєР° Р·Р°Р»РёРїР°Р»Р° РїРѕРґ РєСѓСЂСЃРѕСЂРѕРј, `_pendingDrag`/`_globalTabDragInstalled` РЅРµ СЃР±СЂР°СЃС‹РІР°Р»РёСЃСЊ вЂ” РІСЃРµ РїРѕСЃР»РµРґСѓСЋС‰РёРµ РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёСЏ Р»РѕРјР°Р»РёСЃСЊ), РµСЃР»Рё dragged-РІРєР»Р°РґРєР° РѕРєР°Р·С‹РІР°Р»Р°СЃСЊ РЅРµРїРѕСЃСЂРµРґСЃС‚РІРµРЅРЅС‹Рј DOM-СЃРѕСЃРµРґРѕРј target-РІРєР»Р°РґРєРё (РЅР°РїСЂ. РѕР±Рµ РІ РѕРґРЅРѕР№ РїР°РЅРµР»Рё) вЂ” `referenceNode = targetContent.nextSibling` СЃРѕРІРїР°РґР°Р» СЃ `draggedContent`, Р° С‚РѕС‚ Рє РјРѕРјРµРЅС‚Сѓ `insertBefore` СѓР¶Рµ Р±С‹Р» СЂРµРѕС‚С†РѕРІР»С‘РЅ РІ `_createSplitPane`. `mergeTabIntoSplit()` С‚РµРїРµСЂСЊ СЏРєРѕСЂРёС‚ С‚РѕС‡РєСѓ РІСЃС‚Р°РІРєРё РІСЂРµРјРµРЅРЅС‹Рј comment-РїР»РµР№СЃС…РѕР»РґРµСЂРѕРј РІРјРµСЃС‚Рѕ `nextSibling`. Р”РѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕ `_globalTabMouseUp` РѕР±С‘СЂРЅСѓС‚ РІ `try/finally` вЂ” `_cleanupTabDrag()` С‚РµРїРµСЂСЊ РіР°СЂР°РЅС‚РёСЂРѕРІР°РЅРЅРѕ РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ РґР°Р¶Рµ РµСЃР»Рё commit-РІРµС‚РєР° Р±СЂРѕСЃРёС‚ РёСЃРєР»СЋС‡РµРЅРёРµ.
+  - Fix: РєРѕРіРґР° РѕР±Рµ РїР°РЅРµР»Рё вЂ” composite (РїРѕ 2 РІРєР»Р°РґРєРё), РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµ half'Р° composite РјРѕР»С‡Р° РЅРµ СЃСЂР°Р±Р°С‚С‹РІР°Р»Рѕ (~РїРѕР»РѕРІРёРЅР° РєРѕРјР±РёРЅР°С†РёР№ drag'РѕРІ), РµСЃР»Рё РёРјСЏ РїРµСЂРµС‚Р°СЃРєРёРІР°РµРјРѕР№ РІРєР»Р°РґРєРё СЃРѕРІРїР°РґР°Р»Рѕ СЃ `data-tab` РµС‘ Р¶Рµ composite-РєРЅРѕРїРєРё (Р°РЅРєРѕСЂ). РџСЂРёС‡РёРЅР°: `_extractDraggedTab()` РёСЃРєР°Р» РїРµСЂРµС‚Р°СЃРєРёРІР°РµРјСѓСЋ РІРєР»Р°РґРєСѓ РіР»РѕР±Р°Р»СЊРЅС‹Рј `document.querySelector('[data-tab=...]')` Р”Рћ РїСЂРѕРІРµСЂРєРё РІР»РѕР¶РµРЅРЅРѕСЃС‚Рё вЂ” СЃРѕРІРїР°РґРµРЅРёРµ РЅР°С…РѕРґРёР»Рѕ СЃР°РјСѓ composite-РєРЅРѕРїРєСѓ (РЅРµ СЃС‚Р°РЅРґСЌР»РѕРЅ), `dataset.tabGroup`-guard СЃСЂР°Р±Р°С‚С‹РІР°Р» Рё С„СѓРЅРєС†РёСЏ РјРѕР»С‡Р° РІРѕР·РІСЂР°С‰Р°Р»Р° `null`, РІРјРµСЃС‚Рѕ РїРµСЂРµС…РѕРґР° Рє РІРµС‚РєРµ "РІРєР»Р°РґРєР° РІР»РѕР¶РµРЅР° РІ С‡СѓР¶РѕР№ composite". РџРѕСЂСЏРґРѕРє РїСЂРѕРІРµСЂРѕРє РІ `_extractDraggedTab()` РёРЅРІРµСЂС‚РёСЂРѕРІР°РЅ: СЃРЅР°С‡Р°Р»Р° РїСЂРѕРІРµСЂСЏРµС‚СЃСЏ РІР»РѕР¶РµРЅРЅРѕСЃС‚СЊ С‡РµСЂРµР· `content.closest('.tab-split-pane')`, С‚РѕР»СЊРєРѕ Р·Р°С‚РµРј вЂ” РїРѕРёСЃРє standalone-РєРЅРѕРїРєРё.
+  - Fix: `mergeTabIntoSplit()`/`replacePaneInSplit()`/`detachFromSplit()` РїСЂРё РјРµР¶РїР°РЅРµР»СЊРЅРѕРј (leftв†”right) РїРµСЂРµРјРµС‰РµРЅРёРё РІРєР»Р°РґРєРё РЅРµ РѕР±РЅРѕРІР»СЏР»Рё `tabPositions`/`tabPosition_{tab}` РІ userPrefs (СЌС‚Рѕ РґРµР»Р°Р» С‚РѕР»СЊРєРѕ `moveTab()`) вЂ” DOM СЃСЂР°Р·Сѓ РїРѕСЃР»Рµ РѕРїРµСЂР°С†РёРё Р±С‹Р» РєРѕСЂСЂРµРєС‚РµРЅ, РЅРѕ РїРѕСЃР»Рµ РїРµСЂРµР·Р°РіСЂСѓР·РєРё СЃС‚СЂР°РЅРёС†С‹ `initializeTabPositions()` РІРѕСЃСЃС‚Р°РЅР°РІР»РёРІР°Р» РІРєР»Р°РґРєРё РїРѕ СѓСЃС‚Р°СЂРµРІС€РёРј РїРѕР·РёС†РёСЏРј, РєРѕРЅС„Р»РёРєС‚СѓСЏ СЃ СѓР¶Рµ РєРѕСЂСЂРµРєС‚РЅРѕ СЃРѕС…СЂР°РЅС‘РЅРЅС‹Рј `leftPanelSplits`/`rightPanelSplits`, Рё СЂР°СЃРєР»Р°РґРєР° "СЂР°Р·СЉРµР·Р¶Р°Р»Р°СЃСЊ". Р”РѕР±Р°РІР»РµРЅ `_syncTabPosition(tabName, panelSide)`, РІС‹Р·С‹РІР°РµС‚СЃСЏ РёР· РІСЃРµС… С‚СЂС‘С… РѕРїРµСЂР°С†РёР№ РІРµР·РґРµ, РіРґРµ РІРєР»Р°РґРєР° РјРµРЅСЏРµС‚ РїР°РЅРµР»СЊ.
+
+## [Unreleased] (РґРѕ commit 5269f3e, 2026-07-09)
+
+- Feature: Viewport "jump to camera" hotkey (`.` key) вЂ” restores the selected camera object's saved position and zoom to the viewport (`x + width/2`, `y + height/2`, `properties.zoom ?? 1`), or falls back to the last remembered camera; if neither exists, shows amber warning "No camera selected вЂ” select or place a camera object to jump to it." in the status bar. **Key difference from focusOnSelection/focusOnAll**: does NOT fit-to-bounds, but instead applies the camera object's OWN zoom. Implemented via `ViewportOperations.jumpToCamera()` в†’ `applyCameraObjectToViewport()`, reads zoom from `obj.properties.zoom`. Per-level `lastCameraObjectId` stored in `LevelSession.viewState` (not serialized). **Camera objects now have an editable Zoom field** in the Details panel's new "Camera" section (numeric input, default 1, stored in `obj.properties.zoom`) вЂ” this is what `jumpToCamera()` applies. Config: `editor.jumpToCamera` shortcut (key `"."`, description `"Jump viewport to selected/last camera object"`).
+- UI Refactor: Levels вЂ” РѕС‚РґРµР»СЊРЅР°СЏ РІРєР»Р°РґРєР° РІ РїСЂР°РІРѕР№ РїР°РЅРµР»Рё (v3.58.0). Р Р°РЅСЊС€Рµ `#levels-content-panel` Р±С‹Р» РІР»РѕР¶РµРЅ РІ `#layers-content-panel` (РѕРґРЅР° РІРєР»Р°РґРєР° "Layers" СЃРѕРґРµСЂР¶Р°Р»Р° РѕР±Р° СЃРїРёСЃРєР°, СЂР°Р·РґРµР»С‘РЅРЅС‹Рµ `#outliner-layers-divider`); С‚РµРїРµСЂСЊ РґРІР° РЅРµР·Р°РІРёСЃРёРјС‹С… РїР»РѕСЃРєРёС… РґРёРІР°: `#levels-content-panel` Рё `#layers-content-panel`, РѕР±Р° вЂ” tab-content-right СЌР»РµРјРµРЅС‚С‹ (`index.html:148-149`). Р’РЅРµСЃРµРЅС‹ РёР·РјРµРЅРµРЅРёСЏ РІ С‚Р°Р±Р»-СЃРёСЃС‚РµРјСѓ: `PanelPositionManager` (РґРѕР±Р°РІР»РµРЅС‹ `levels` РІ `initializeTabPositions()`, `moveTab()`, `createTemporaryTabContainer()`), `EventHandlers.ensurePanelTabMarkers()` (РґРѕР±Р°РІР»РµРЅ `'levels'` РІ `coreTabs`), `SearchSectionUtils.showSearchSectionForTab()` (РґРІР° РЅРµР·Р°РІРёСЃРёРјС‹С… branch РґР»СЏ `'levels'` Рё `'layers'` РІРјРµСЃС‚Рѕ РѕРґРЅРѕРіРѕ РѕР±С‰РµРіРѕ), `UserPreferencesManager` (РґРѕР±Р°РІР»РµРЅ `'tabPosition_levels'`), `config/defaults/ui.json` (РґРѕР±Р°РІР»РµРЅ `"tabPosition_levels": "right"`), `styles/spacing-mode.css` (РґРѕР±Р°РІР»РµРЅРѕ РїСЂР°РІРёР»Рѕ РґР»СЏ `#levels-content-panel`). Р¤СѓРЅРєС†РёРѕРЅР°Р»СЊРЅРѕСЃС‚СЊ Levels (РІРёРґРёРјРѕСЃС‚СЊ, РїРµСЂРµРєР»СЋС‡РµРЅРёРµ, drag-reorder, paint-drag РЅР° eye-icon, РєРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ) РѕСЃС‚Р°С‘С‚СЃСЏ РЅРµРёР·РјРµРЅРЅРѕР№; РёР·РјРµРЅРµРЅР° С‚РѕР»СЊРєРѕ РІРёР·СѓР°Р»СЊРЅР°СЏ СЃС‚СЂСѓРєС‚СѓСЂР° Рё С‚Р°Р±РёСЂРѕРІР°РЅРёРµ.
+- Refactor/Feature: РµРґРёРЅС‹Р№ С€Р°Р±Р»РѕРЅ СЃС‚СЂРѕРєРё СЃРїРёСЃРєР° РґР»СЏ LayersPanel/LevelsPanel вЂ” РЅРѕРІС‹Р№ `src/ui/panel-structures/ListItemRowStructure.js` (`createListItemRow`/`updateListItemVisuals`, РѕР±С‰РёРµ SVG-РєРѕРЅСЃС‚Р°РЅС‚С‹ eye/lock), РѕР±Рµ РїР°РЅРµР»Рё РїРµСЂРµРёСЃРїРѕР»СЊР·СѓСЋС‚ РµРіРѕ РІРјРµСЃС‚Рѕ РґРІСѓС… РЅРµР·Р°РІРёСЃРёРјС‹С… `innerHTML`-Р±Р»РѕРєРѕРІ. РџРѕРїСѓС‚РЅРѕ Сѓ Levels РїРѕСЏРІРёР»РёСЃСЊ lock Рё color СЃ СЂРµР°Р»СЊРЅРѕР№ С„СѓРЅРєС†РёРµР№ (РЅРµ С‚РѕР»СЊРєРѕ РІС‘СЂСЃС‚РєР°), РєР°Рє Сѓ Layers, РєСЂРѕРјРµ parallax: `LevelSession.locked`/`.color` (editor-only, РЅРµ СЃРµСЂРёР°Р»РёР·СѓСЋС‚СЃСЏ), `LevelsManager.toggleLevelLock()`. Lock Р±Р»РѕРєРёСЂСѓРµС‚ РІС‹Р±РѕСЂ РѕР±СЉРµРєС‚РѕРІ С‚РµРєСѓС‰РµРіРѕ СѓСЂРѕРІРЅСЏ С‡РµСЂРµР· РµРґРёРЅС‹Р№ РіРµР№С‚ `ObjectOperations.computeSelectableSet()` (РїСѓСЃС‚РѕР№ Set РїСЂРё Р·Р°Р»РѕС‡РµРЅРЅРѕРј С‚РµРєСѓС‰РµРј СѓСЂРѕРІРЅРµ вЂ” cross-level РІР·Р°РёРјРѕРґРµР№СЃС‚РІРёСЏ РІ СЂРµРґР°РєС‚РѕСЂРµ РЅРµС‚, РїРѕСЌС‚РѕРјСѓ per-object РїСЂРѕРІРµСЂРєР° РЅРµ РЅСѓР¶РЅР°), РїР»СЋСЃ guard РІ `MouseHandlers.handleDrop()` (asset drag-drop) Рё `OutlinerPanel.canSelect`/РІРёР·СѓР°Р»СЊРЅР°СЏ РёРЅРґРёРєР°С†РёСЏ (`.locked` РєР»Р°СЃСЃ, opacity) РІ Outliner. `LevelsPanel`: `showLevelColorPicker()` вЂ” РїСЂРѕСЃС‚РѕР№ click.
+- Fix: lock-РёРєРѕРЅРєР° РІ LevelsPanel РЅРµ РїРѕРґРґРµСЂР¶РёРІР°Р»Р° paint-drag Р¶РµСЃС‚ (С‚РѕР»СЊРєРѕ click), РІ РѕС‚Р»РёС‡РёРµ РѕС‚ eye-РёРєРѕРЅРєРё РІ С‚РѕР№ Р¶Рµ РїР°РЅРµР»Рё Рё РѕР±РµРёС… РёРєРѕРЅРѕРє РІ LayersPanel. `handleLevelIconMouseDown/Over` РѕР±РѕР±С‰РµРЅС‹ РЅР° `.level-visibility-btn, .level-lock-btn` СЃ `_iconPaintDrag.type`, РґРѕР±Р°РІР»РµРЅ `_paintLevelLock()` (РјРёСЂСЂРѕРёС‚ `_paintLevelVisibility`), РѕР±С‰РёР№ `_startIconPaintDrag()` РІС‹РЅРµСЃРµРЅ РёР· РёРЅР»Р°Р№РЅР°.
+- Fix: Р·Р°Р»РѕС‡РµРЅРЅР°СЏ lock-РёРєРѕРЅРєР° (LayersPanel/LevelsPanel) Р±С‹Р»Р° С‚РѕРіРѕ Р¶Рµ СЃРµСЂРѕРіРѕ С†РІРµС‚Р°, С‡С‚Рѕ Рё СЂР°Р·Р»РѕС‡РµРЅРЅР°СЏ (`var(--ui-text-color)`) вЂ” РїР»РѕС…Рѕ Р·Р°РјРµС‚РЅР°. Р¦РІРµС‚ locked-СЃРѕСЃС‚РѕСЏРЅРёСЏ СЃРјРµРЅС‘РЅ РЅР° `#ef4444` РІ `ListItemRowStructure.js` (`createListItemRow`/`updateListItemVisuals`).
+- Fix: РґРµС„РѕР»С‚РЅС‹Р№ С‚РёРї РґР»СЏ РёРјРїРѕСЂС‚РёСЂСѓРµРјС‹С… СЃРїСЂР°Р№С‚-Р°СЃСЃРµС‚РѕРІ (drag&drop PNG, Р·Р°РіСЂСѓР·РєР° РёР· `content/*.json`) СЃРјРµРЅС‘РЅ СЃ `'object'` (РЅРµ РІС…РѕРґРёС‚ РІ РєР°С‚Р°Р»РѕРі `ASSET_TYPES`, РЅРµРґРѕСЃС‚СѓРїРµРЅ РІ РјРµРЅСЋ Add) РЅР° `'image'` вЂ” `AssetPanel.getAssetTypeFromCategory()`, `AssetImporter.getAssetTypeFromCategory()`, `AssetManager.loadAssetFromFile()`. РњРёРіСЂРёСЂРѕРІР°РЅС‹ 7 СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёС… `content/**/*.json` СЃ `type:"object"` в†’ `"image"`, РѕР±РЅРѕРІР»С‘РЅ `content/README.md`.
+- Feature: Paint drag РґР»СЏ toggle-РёРєРѕРЅРѕРє (v3.58.0) вЂ” mousedown РЅР° eye/lock-РёРєРѕРЅРєРµ (LayersPanel, LevelsPanel, OutlinerPanel) + drag РїРѕ РѕСЃС‚Р°Р»СЊРЅС‹Рј РёРєРѕРЅРєР°Рј С‚РѕРіРѕ Р¶Рµ С‚РёРїР° РїСЂРёРјРµРЅСЏРµС‚ РІР·СЏС‚РѕРµ СЃ РїРµСЂРІРѕР№ РёРєРѕРЅРєРё СЃРѕСЃС‚РѕСЏРЅРёРµ РєРѕ РІСЃРµРј РїСЂРѕР№РґРµРЅРЅС‹Рј РёРєРѕРЅРєР°Рј РґРѕ РѕС‚РїСѓСЃРєР°РЅРёСЏ РєРЅРѕРїРєРё. РџР°С‚С‚РµСЂРЅ: `handleLayerIconMouseDown/_startIconPaintDrag()` в†’ `_iconPaintDrag` С„Р»Р°Рі, `mouseover` в†’ `_paintLayerVisibility/_paintLayerLock/_paintObjectVisibility()`, РіР»РѕР±Р°Р»СЊРЅС‹Р№ `mouseup` в†’ `_endIconPaintDrag()` СЃ Р±Р°С‚С‡РµРІС‹Рј РєСЌС€-РёРЅРІР°Р»РёРґРёСЂРѕРІР°РЅРёРµРј Рё СЂРµ-СЂРµРЅРґРµСЂРѕРј (РІРјРµСЃС‚Рѕ РєР»РёРєР° РїРѕ РєР°Р¶РґРѕР№ РѕС‚РґРµР»СЊРЅРѕ). РќР° РІСЂРµРјСЏ РґСЂР°РіР° РІСЂРµРјРµРЅРЅРѕ РѕС‚РєР»СЋС‡Р°РµС‚СЃСЏ `draggable` Сѓ СЃС‚СЂРѕРєРё (LayersPanel/LevelsPanel), С‡С‚РѕР±С‹ РЅРµ РїРµСЂРµС…РІР°С‚РёС‚СЊ Р¶РµСЃС‚ HTML5 drag-reorder. EventHandlerManager РїРѕР»СѓС‡РёР» С‚СЂРё РЅРѕРІС‹С… generic-Р±Р»РѕРєР° РґРµР»РµРіРёСЂРѕРІР°РЅРёСЏ: `config.mousedown / config.mouseup / config.mouseover` (РїР°С‚С‚РµСЂРЅ РёРґРµРЅС‚РёС‡РµРЅ `config.click/dragstart`), СЂР°РЅСЊС€Рµ СЌС‚Рё СЃРѕР±С‹С‚РёСЏ РјРѕР»С‡Р° РёРіРЅРѕСЂРёСЂРѕРІР°Р»РёСЃСЊ.
+  - Fix: eye-РёРєРѕРЅРєРё РІ LayersPanel РІРѕ РІСЂРµРјСЏ drag РІРёР·СѓР°Р»СЊРЅРѕ РЅРµ РїРµСЂРµРєР»СЋС‡Р°Р»РёСЃСЊ РґРѕ mouseup вЂ” `updateLayerElement` С‡РёС‚Р°РµС‚ `effectivelyVisible` РёР· С‚Р°Р№Рј-РєСЌС€Р° `RenderOperations.getVisibleLayerIds()`, РєРѕС‚РѕСЂС‹Р№ Р±Р°С‚С‡РµРІРѕ РёРЅРІР°Р»РёРґРёСЂРѕРІР°Р»СЃСЏ С‚РѕР»СЊРєРѕ РІ РєРѕРЅС†Рµ Р¶РµСЃС‚Р°. РРЅРІР°Р»РёРґР°С†РёСЏ СЃР°РјР° РїРѕ СЃРµР±Рµ РґРµС€С‘РІР°СЏ (РІ РѕС‚Р»РёС‡РёРµ РѕС‚ `editor.render()`/`outlinerPanel.render()`, РєРѕС‚РѕСЂС‹Рµ РѕСЃС‚Р°Р»РёСЃСЊ Р±Р°С‚С‡РµРІС‹РјРё) вЂ” РїРµСЂРµРЅРµСЃРµРЅР° РІ `_paintLayerVisibility()`, РІС‹Р·С‹РІР°РµС‚СЃСЏ РЅР° РєР°Р¶РґРѕР№ РїРѕРєСЂР°С€РµРЅРЅРѕР№ РёРєРѕРЅРєРµ.
+  - Fix: РІ OutlinerPanel СЃРєСЂС‹С‚РёРµ РѕР±СЉРµРєС‚Р° РЅРµ Р·Р°С‚РµРјРЅСЏР»Рѕ РІСЃСЋ СЃС‚СЂРѕРєСѓ (`.outliner-item`), РІ РѕС‚Р»РёС‡РёРµ РѕС‚ LayersPanel/LevelsPanel вЂ” Р·Р°С‚РµРјРЅСЏР»РёСЃСЊ С‚РѕР»СЊРєРѕ С†РІРµС‚ РёРєРѕРЅРєРё-РіР»Р°Р·Р° Рё С‚РµРєСЃС‚Р°. Р”РѕР±Р°РІР»РµРЅ `OutlinerPanel._computeRowOpacity(obj)` (hidden=0.45 РїСЂРёРѕСЂРёС‚РµС‚РЅРµРµ locked=0.5, Р»РѕРєР°Р»СЊРЅС‹Р№ `''` РёРЅР°С‡Рµ), РІС‹Р·С‹РІР°РµС‚СЃСЏ РёР· `updateVisibilityButton()` (Р¶РёРІРѕРµ РѕР±РЅРѕРІР»РµРЅРёРµ РїСЂРё paint-drag Рё РѕР±С‹С‡РЅРѕРј РєР»РёРєРµ) Рё РїРµСЂРµРёСЃРїРѕР»СЊР·РѕРІР°РЅ РІ `renderObjectNode`/`renderGroupNode` РІРјРµСЃС‚Рѕ РґСѓР±Р»РёСЂРѕРІР°РЅРЅРѕРіРѕ inline-Р±Р»РѕРєР° РЅР° opacity, РєРѕС‚РѕСЂС‹Р№ СЂР°РЅСЊС€Рµ СѓС‡РёС‚С‹РІР°Р» С‚РѕР»СЊРєРѕ locked-СЃРѕСЃС‚РѕСЏРЅРёРµ СЃР»РѕСЏ.
+  - Fix: paint-drag Р·Р° eye/lock-РёРєРѕРЅРєСѓ РІ LayersPanel Рё LevelsPanel РїСЂРё СЂРµР°Р»СЊРЅРѕРј РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРё РјС‹С€СЊСЋ РїРµСЂРµС…РІР°С‚С‹РІР°Р»СЃСЏ РЅР°С‚РёРІРЅС‹Рј HTML5 drag-reorder СЃС‚СЂРѕРєРё вЂ” `handleLayerIconMouseDown`/`handleLevelIconMouseDown` РёСЃРєР°Р»Рё СЃС‚СЂРѕРєСѓ С‡РµСЂРµР· `button.closest('[data-layer-id]')`/`[data-level-id]`, Р° СЌС‚РѕС‚ Р°С‚СЂРёР±СѓС‚ СЃС‚РѕРёС‚ Сѓ РљРђР–Р”РћР“Рћ РґРѕС‡РµСЂРЅРµРіРѕ СЌР»РµРјРµРЅС‚Р° СЃС‚СЂРѕРєРё (РІРєР»СЋС‡Р°СЏ СЃР°РјСѓ РєРЅРѕРїРєСѓ), РїРѕСЌС‚РѕРјСѓ `closest()` РјР°С‚С‡РёР»СЃСЏ РЅР° СЃР°РјСѓ РєРЅРѕРїРєСѓ Рё РЅРµ РЅР°С…РѕРґРёР» `.layer-item`/`.level-item` вЂ” РІСЂРµРјРµРЅРЅРѕРµ РѕС‚РєР»СЋС‡РµРЅРёРµ `draggable` С‚РёС…Рѕ РЅРµ СЃСЂР°Р±Р°С‚С‹РІР°Р»Рѕ (`if (layerElement.draggable)` Р±С‹Р»Рѕ false РґР»СЏ РєРЅРѕРїРєРё). РЎРёРЅС‚РµС‚РёС‡РµСЃРєРёРµ `dispatchEvent`-С‚РµСЃС‚С‹ Р±Р°РіР° РЅРµ Р»РѕРІРёР»Рё (РЅРµ С‚СЂРёРіРіРµСЂСЏС‚ РЅР°С‚РёРІРЅСѓСЋ РёРЅРёС†РёР°С†РёСЋ drag), Р±Р°Рі РїСЂРѕСЏРІР»СЏР»СЃСЏ С‚РѕР»СЊРєРѕ РЅР° СЂРµР°Р»СЊРЅРѕРј РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРё. РСЃРїСЂР°РІР»РµРЅРѕ РЅР° `button.closest('.layer-item')`/`'.level-item')` вЂ” id СЃР°РјРѕР№ РёРєРѕРЅРєРё РїСЂРё СЌС‚РѕРј Р±РµСЂС‘С‚СЃСЏ РЅР°РїСЂСЏРјСѓСЋ РёР· `button.dataset.layerId/levelId` (РєРЅРѕРїРєР° С‚РѕР¶Рµ РЅРµСЃС‘С‚ СЌС‚РѕС‚ Р°С‚СЂРёР±СѓС‚), Р±РµР· ambiguous `.closest()`.
+- Feature: Player Start РІ РєР°С‚Р°Р»РѕРіРµ С‚РёРїРѕРІ Р°СЃСЃРµС‚РѕРІ вЂ” РґРѕР±Р°РІР»РµРЅ С‚РёРї `player_start` (snake_case, СЃРѕРІРїР°РґР°РµС‚ СЃ GameObject.type СЃС‚СЂРѕРєРѕР№, РєРѕС‚РѕСЂСѓСЋ СѓР¶Рµ РёСЃРїРѕР»СЊР·СѓРµС‚ `LevelEditor.ensurePlayerStartExists()`/`getPlayerStartCount()` РґР»СЏ Р°РІС‚Рѕ-СѓРїСЂР°РІР»СЏРµРјРѕРіРѕ РµРґРёРЅСЃС‚РІРµРЅРЅРѕРіРѕ РЅР° СѓСЂРѕРІРµРЅСЊ РјР°СЂРєРµСЂР° СЃРїР°РІРЅР°). Р§РµСЂРµР· РјРµРЅСЋ Assets в†’ Add в†’ Core в†’ "Player Start" С‚РµРїРµСЂСЊ РјРѕР¶РЅРѕ РІСЂСѓС‡РЅСѓСЋ СЃРѕР·РґР°С‚СЊ placeholder-Р°СЃСЃРµС‚, РєРѕС‚РѕСЂС‹Р№ РїСЂРё СЂР°Р·РјРµС‰РµРЅРёРё РЅР° СѓСЂРѕРІРЅРµ СЃРѕР·РґР°С‘С‚ GameObject СЃ РєРѕСЂСЂРµРєС‚РЅРѕ СЂР°СЃРїРѕР·РЅР°РІР°РµРјС‹Рј `type='player_start'`. Р’ `src/constants/AssetTypes.js`: РґРѕР±Р°РІР»РµРЅС‹ РѕРїС†РёРѕРЅР°Р»СЊРЅС‹Рµ РїРѕР»СЏ `width`/`height`/`color` РІ РѕРїСЂРµРґРµР»РµРЅРёРµ С‚РёРїР° (РїРµСЂРµРѕРїСЂРµРґРµР»СЏСЋС‚ РґРµС„РѕР»С‚РЅС‹Рµ 48Г—48 + С†РІРµС‚ РєР°С‚РµРіРѕСЂРёРё РїСЂРё СЃРѕР·РґР°РЅРёРё), РЅРѕРІС‹Р№ СЌРєСЃРїРѕСЂС‚ `DEFAULT_ASSET_COMPONENTS = { player_start: ['playerStart'] }` РґР»СЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРіРѕ РїСЂРёРєСЂРµРїР»РµРЅРёСЏ РєРѕРјРїРѕРЅРµРЅС‚Р° playerStart РїСЂРё СЃРѕР·РґР°РЅРёРё placeholder-Р°СЃСЃРµС‚Р°. Р’ `src/managers/AssetManager.js`: `createPlaceholderAsset()` С‡РёС‚Р°РµС‚ `typeDef.width || 48`, `typeDef.height || 48`, `typeDef.color || categoryColor` Рё `DEFAULT_ASSET_COMPONENTS[typeId]` РґР»СЏ СЃРѕР·РґР°РЅРёСЏ РєРѕРјРїРѕРЅРµРЅС‚-СЃС‚Р°Р±РѕРІ С‡РµСЂРµР· `createComponentStub()`. Р’ `src/constants/AssetTypeIcons.js`: РґРѕР±Р°РІР»РµРЅ РєР»СЋС‡ `player_start` РґР»СЏ РІРёР·СѓР°Р»РёР·Р°С†РёРё РЅР° canvas (С‚РѕС‚ Р¶Рµ SVG-РіР»РёС„ С„Р»Р°Р¶РєР°, С‡С‚Рѕ Сѓ РєРѕРјРїРѕРЅРµРЅС‚Р° playerStart). **Р’Р°Р¶РЅРѕ**: `player_start` РІСЃС‚СѓРїР°РµС‚ РІ РїРµСЂРµСЃРµС‡РµРЅРёРµ РґРІСѓС… СЃРёСЃС‚РµРј вЂ” СЌС‚Рѕ РѕРґРЅРѕРІСЂРµРјРµРЅРЅРѕ Рё asset-type (СЃРѕР·РґР°С‘С‚СЃСЏ РєР°Рє placeholder), Рё auto-managed GameObject marker (РІР°Р»РёРґРёСЂСѓРµС‚СЃСЏ РІ LevelFileOperations/DetailsPanel). РЎСѓС‰РµСЃС‚РІСѓСЋС‰Р°СЏ РІР°Р»РёРґР°С†РёСЏ (СЂРѕРІРЅРѕ РѕРґРёРЅ РЅР° СѓСЂРѕРІРµРЅСЊ, auto-create РїСЂРё РѕС‚СЃСѓС‚СЃС‚РІРёРё) РѕСЃС‚Р°С‘С‚СЃСЏ РЅРµРёР·РјРµРЅРЅРѕР№ Рё РЅРµР·Р°РІРёСЃРёРјР° РѕС‚ СЌС‚РѕРіРѕ С‚РёРїР° Р°СЃСЃРµС‚Р°; С‚РёРї РїСЂРѕСЃС‚Рѕ РѕР±РµСЃРїРµС‡РёРІР°РµС‚ СѓРґРѕР±РЅС‹Р№ РїСѓС‚СЊ СЃРѕР·РґР°РЅРёСЏ С‡РµСЂРµР· UI РІРјРµСЃС‚Рѕ СЂСѓС‡РЅРѕРіРѕ РґРѕР±Р°РІР»РµРЅРёСЏ GameObject СЃ type='player_start' РІ С„Р°Р№Р».
+- Feature: Level Solo вЂ” Ctrl+click РЅР° eye-icon СѓСЂРѕРІРЅСЏ РІ LevelsPanel С‚РµРїРµСЂСЊ РґРµР»Р°РµС‚ "solo" (СЌРєСЃРєР»СЋР·РёРІРЅР°СЏ РІРёРґРёРјРѕСЃС‚СЊ РѕРґРЅРѕРіРѕ СѓСЂРѕРІРЅСЏ), Р·РµСЂРєР°Р»РёС‚ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№ `LayersPanel.toggleLayerSolo` 1:1. `LevelsManager.toggleLevelSolo(levelId)` РїРµСЂРµРєР»СЋС‡Р°РµС‚, РїСЂРё РІРєР»СЋС‡РµРЅРёРё СЃР±СЂР°СЃС‹РІР°РµС‚ solo Сѓ РѕСЃС‚Р°Р»СЊРЅС‹С… СѓСЂРѕРІРЅРµР№. `getVisibleSessions()` РµСЃР»Рё РµСЃС‚СЊ soloed-СЃРµСЃСЃРёРё, РІРѕР·РІСЂР°С‰Р°РµС‚ С‚РѕР»СЊРєРѕ РёС…, РёРЅР°С‡Рµ РєР°Рє СЂР°РЅСЊС€Рµ filter РїРѕ `visible`. `LevelSession.soloed` С…СЂР°РЅРёС‚ С„Р»Р°Рі (РЅРµ СЃРµСЂРёР°Р»РёР·СѓРµС‚СЃСЏ РІ JSON).
+- Feature: РјРµРЅСЋ File РїРµСЂРµСѓРіСЂСѓРїРїРёСЂРѕРІР°РЅРѕ: Р±Р»РѕРє Project (New Project, Open Project..., separator, Save Project, Save Project As...), Р·Р°С‚РµРј Р±Р»РѕРє Level (New Level, Open Level..., separator, Save Level, Save Level As...), Р·Р°С‚РµРј Import Assets... (РїРµСЂРµРЅРµСЃРµРЅРѕ РёР· Settings). РџСѓРЅРєС‚ Close Level СѓРґР°Р»С‘РЅ РёР· РјРµРЅСЋ (РѕСЃС‚Р°С‘С‚СЃСЏ РґРѕСЃС‚СѓРїРµРЅ С‡РµСЂРµР· РєСЂРµСЃС‚РёРє РЅР° РІРєР»Р°РґРєРµ СѓСЂРѕРІРЅСЏ РІ LevelsPanel Рё РєРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ СѓСЂРѕРІРЅСЏ); СЃР°Рј РјРµС‚РѕРґ `closeLevel()` РЅРµ СѓРґР°Р»С‘РЅ вЂ” РѕСЃС‚Р°С‘С‚СЃСЏ РІ API.
+- Feature: `saveProject()` (ProjectFileOperations) Р±РѕР»СЊС€Рµ РЅРµ СЃРїСЂР°С€РёРІР°РµС‚ РёРјСЏ С„Р°Р№Р»Р° РїСЂРё РѕС‚СЃСѓС‚СЃС‚РІРёРё `project.fileName` вЂ” РёРјСЏ Р±РµСЂС‘С‚СЃСЏ РёР· `project.name` С‡РµСЂРµР· РїСЂРёРІР°С‚РЅС‹Р№ РјРµС‚РѕРґ `_deriveFileNameFromProjectName()` (Р·Р°РјРµРЅСЏРµС‚ `/` Рё `\` РЅР° `-`, РґРѕР±Р°РІР»СЏРµС‚ `.json`). `saveProjectAs()` СЃРїСЂР°С€РёРІР°РµС‚ РёРјСЏ РєР°Рє Рё РїСЂРµР¶РґРµ.
+- Feature: `saveLevel()` (LevelFileOperations) РїСЂРё РѕС‚СЃСѓС‚СЃС‚РІРёРё `session.fileName` РїРѕРєР°Р·С‹РІР°РµС‚ prompt "Enter file name:" СЃ РґРµС„РѕР»С‚РѕРј "level.json", РІРјРµСЃС‚Рѕ С‚РёС…РѕРіРѕ СЃРѕС…СЂР°РЅРµРЅРёСЏ РїРѕРґ "level.json" Р±РµР· РїРѕРґС‚РІРµСЂР¶РґРµРЅРёСЏ.
+- Feature: `createDialog('prompt')` РІ UniversalDialog С‚РµРїРµСЂСЊ СЂРµРЅРґРµСЂРёС‚СЃСЏ Р‘Р•Р— header (Р·Р°РіРѕР»РѕРІРѕРє "Input" + РєСЂРµСЃС‚РёРє Р·Р°РєСЂС‹С‚РёСЏ); alert/confirm header РЅРµ РёР·РјРµРЅРёР»СЃСЏ. Cancel/ESC/РєР»РёРє РїРѕ РѕРІРµСЂР»РµСЋ Р·Р°РєСЂС‹РІР°СЋС‚ РґРёР°Р»РѕРі РєР°Рє Рё РїСЂРµР¶РґРµ.
+- Feature: LevelFileOperations multi-level file ops (v3.57.0, Р¤Р°Р·Р° 5 multi-level) вЂ” `newLevel()` Рё `openLevel()` С‚РµРїРµСЂСЊ Р”РћР‘РђР’Р›РЇР®Рў РЅРѕРІСѓСЋ РІРєР»Р°РґРєСѓ/LevelSession РІРјРµСЃС‚Рѕ Р·Р°РјРµРЅС‹ С‚РµРєСѓС‰РµРіРѕ СѓСЂРѕРІРЅСЏ; `openLevel()` РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕ РґРµР»Р°РµС‚ best-effort dedup РїРѕ fileName вЂ” РµСЃР»Рё С„Р°Р№Р» СѓР¶Рµ РѕС‚РєСЂС‹С‚, РїРµСЂРµРєР»СЋС‡Р°РµС‚СЃСЏ РЅР° РІРєР»Р°РґРєСѓ РІРјРµСЃС‚Рѕ РґСѓР±Р»РёРєР°С‚Р°. `saveLevel()`/`saveLevelAs()` СЂР°Р±РѕС‚Р°СЋС‚ СЃ per-session fileName, РіР°СЂР°РЅС‚РёСЂСѓСЏ С‡С‚Рѕ СЃРѕС…СЂР°РЅРµРЅРёРµ B РЅРµ РїРµСЂРµР·Р°РїРёС€РµС‚ С„Р°Р№Р» A. РќРѕРІС‹Р№ `closeLevel(levelId)` Р·Р°РєСЂС‹РІР°РµС‚ РІРєР»Р°РґРєСѓ (РЅРµР»СЊР·СЏ Р·Р°РєСЂС‹С‚СЊ РїРѕСЃР»РµРґРЅРёР№ СѓСЂРѕРІРµРЅСЊ, СЃРїСЂР°С€РёРІР°РµС‚ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ РїСЂРё dirty). Per-session `isDirty` (РєР°Р¶РґР°СЏ LevelSession РЅРµР·Р°РІРёСЃРёРјР°), РіР»РѕР±Р°Р»СЊРЅС‹Р№ `stateManager.isDirty` СЃРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµС‚СЃСЏ РЅР° РіСЂР°РЅРёС†Рµ РїРµСЂРµРєР»СЋС‡РµРЅРёСЏ РІРєР»Р°РґРѕРє.
+
+## [Unreleased] (РґРѕ commit f9d64c4, 2026-07-09)
+
+- Feature: РїСѓСЃС‚С‹Рµ (assignable) С…РѕС‚РєРµР№-СЃР»РѕС‚С‹ РґР»СЏ 9 РєРѕРјР°РЅРґ, Сѓ РєРѕС‚РѕСЂС‹С… СЂР°РЅСЊС€Рµ РЅРµ Р±С‹Р»Рѕ Р±РёРЅРґР° РІРѕРѕР±С‰Рµ вЂ” `editor.toggleFullscreen`, `editor.toggleGameMode`, `editor.toggleSnapToGrid`, `editor.toggleObjectBoundaries`, `editor.toggleObjectCollisions`, `ui.toggleConsole`, `ui.toggleStatusBar`, `editor.openProjectSettings`, `editor.openSettings` вЂ” РґРѕР±Р°РІР»РµРЅС‹ РІ `config/defaults/shortcuts.json` СЃ `key: ""`, РїСЂРёРІСЏР·Р°РЅС‹ С‡РµСЂРµР· `shortcutKey` Рє СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РёРј РїСѓРЅРєС‚Р°Рј View/Settings-РјРµРЅСЋ РІ `config/menu.js`, РїСЂРѕРІРµРґРµРЅС‹ С‡РµСЂРµР· `EventHandlers.handleKeyDown` (`_matchesShortcut`), СЃСЂР°Р·Сѓ РѕС‚РѕР±СЂР°Р¶Р°СЋС‚СЃСЏ/РЅР°Р·РЅР°С‡Р°СЋС‚СЃСЏ РІ Settings > Hotkeys. РџРѕРїСѓС‚РЅС‹Р№ С„РёРєСЃ: `SettingsPanel.saveHotkey()` РІС‹Р·С‹РІР°Р» `menuManager.refreshShortcutLabels()`, РєРѕС‚РѕСЂС‹Р№ РѕР±РЅРѕРІР»СЏРµС‚ С‚РѕР»СЊРєРѕ СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№ `[data-shortcut-key]` span вЂ” РґР»СЏ РїСѓРЅРєС‚Р°, РёР·РЅР°С‡Р°Р»СЊРЅРѕ РѕС‚СЂРµРЅРґРµСЂРµРЅРЅРѕРіРѕ СЃ РїСѓСЃС‚С‹Рј С…РѕС‚РєРµРµРј (span РЅРµ СЃРѕР·РґР°РІР°Р»СЃСЏ), СЂРёР±Р°Р№РЅРґ РЅРµ РѕС‚СЂР°Р¶Р°Р»СЃСЏ РІ РјРµРЅСЋ Р±РµР· РїРµСЂРµР·Р°РіСЂСѓР·РєРё СЃС‚СЂР°РЅРёС†С‹; Р·Р°РјРµРЅРµРЅРѕ РЅР° РїРѕР»РЅС‹Р№ `menuManager.refresh()`.
+- Fix: СѓРґР°Р»РµРЅР° СЃРµРєС†РёСЏ "View Settings" РёР· General Settings (`SettingsPanelRenderers.js::renderGeneralSettings`) вЂ” РґСѓР±Р»РёСЂРѕРІР°Р»Р° РѕРїС†РёРё РјРµРЅСЋ View (Immersive Mode, Boundaries, Collisions, Parallax), РєРѕС‚РѕСЂС‹Рµ СѓР¶Рµ СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ С‡РµСЂРµР· `configManager`. Р—Р°РѕРґРЅРѕ СѓРґР°Р»РµРЅС‹ РјС‘СЂС‚РІС‹Рµ Р·Р°РїРёСЃРё `editor.view.gameMode/objectBoundaries/objectCollisions/parallax` РёР· `SettingsSyncManager.stateMapping` (Р±С‹Р»Рё РЅСѓР¶РЅС‹ С‚РѕР»СЊРєРѕ РґР»СЏ СЌС‚РёС… input'РѕРІ).
+- Refactor: СѓРґР°Р»С‘РЅ РјС‘СЂС‚РІС‹Р№ С…Р°СЂРґРєРѕРґ С…РѕС‚РєРµРµРІ вЂ” `MENU_CONFIG.shortcuts` (РєР°СЂС‚Р° `'Ctrl+D': 'duplicate'` Рё С‚.Рї., СЂР°Р·РѕС€РµРґС€Р°СЏСЃСЏ СЃ СЂРµР°Р»СЊРЅС‹РјРё Р±РёРЅРґР°РјРё РІ `config/defaults/shortcuts.json`) Рё `getShortcutTarget()` РІ `config/menu.js` РЅРёРіРґРµ РЅРµ РІС‹Р·С‹РІР°Р»РёСЃСЊ (С‚РѕР»СЊРєРѕ РёРјРїРѕСЂС‚РёСЂРѕРІР°Р»РёСЃСЊ РІ `EventHandlers.js`), СѓРґР°Р»РµРЅС‹ РІРјРµСЃС‚Рµ СЃ РЅРµРёСЃРїРѕР»СЊР·СѓРµРјС‹Рј РёРјРїРѕСЂС‚РѕРј.
+- Feature: `CanvasContextMenu` С‚РµРїРµСЂСЊ РїРѕРєР°Р·С‹РІР°РµС‚ СЂРµР°Р»СЊРЅС‹Рµ С…РѕС‚РєРµРё (Copy=Ctrl+C, Cut=Ctrl+X, Paste=Ctrl+V, Duplicate=Shift+D, Delete=Delete, Group=Shift+G, Ungroup=Alt+G) РІ С‚РѕРј Р¶Рµ trailing-СЃР»РѕС‚Рµ, С‡С‚Рѕ Рё nav-РјРµРЅСЋ вЂ” С‡РµСЂРµР· РЅРѕРІС‹Р№ `CanvasContextMenu.resolveShortcut(category, action)` (РёСЃРїРѕР»СЊР·СѓРµС‚ `ShortcutFormatter` + `configManager.getShortcuts()`). `BaseContextMenu.addMenuItem()` РїРѕР»СѓС‡РёР» РѕРїС†РёСЋ `shortcut` (СЃС‚СЂРѕРєР° РёР»Рё С„СѓРЅРєС†РёСЏ вЂ” С„СѓРЅРєС†РёСЏ СЂРµР·РѕР»РІРёС‚СЃСЏ Р·Р°РЅРѕРІРѕ РїСЂРё РєР°Р¶РґРѕРј РѕС‚РєСЂС‹С‚РёРё РјРµРЅСЋ, РѕС‚СЂР°Р¶Р°СЏ live-СЂРµР±Р°Р№РЅРґ С‡РµСЂРµР· Settings > Hotkeys, С‚.Рє. DOM РєРѕРЅС‚РµРєСЃС‚РЅРѕРіРѕ РјРµРЅСЋ РїРµСЂРµСЃРѕР±РёСЂР°РµС‚СЃСЏ РЅР° РєР°Р¶РґС‹Р№ РїРѕРєР°Р·).
+- Feature: LevelsManager Phase 6 edge cases (v3.57.0, Р¤Р°Р·Р° 6 multi-level) вЂ” `levelMRU: string[]` РѕС‚СЃР»РµР¶РёРІР°РµС‚ РїРѕСЂСЏРґРѕРє РЅРµРґР°РІРЅРёС… С‚РµРєСѓС‰РёС… СѓСЂРѕРІРЅРµР№, РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РєР°Рє fallback РїСЂРё `closeLevel()` РґР»СЏ РІС‹Р±РѕСЂР° СЃР»РµРґСѓСЋС‰РµРіРѕ СѓСЂРѕРІРЅСЏ РІРјРµСЃС‚Рѕ РІСЃРµРіРґР° РїРµСЂРІРѕРіРѕ РїРѕ С‚Р°Р±Сѓ. РќРѕРІС‹Р№ `getVisibleSessionsForRender(sessions?)` РїРµСЂРµРЅРѕСЃРёС‚ С‚РµРєСѓС‰РёР№ СѓСЂРѕРІРµРЅСЊ РІ РєРѕРЅРµС† РјР°СЃСЃРёРІР° РєРѕРјРїРѕСѓР·РёРЅРіР° вЂ” С‚РµРєСѓС‰РёР№ СѓСЂРѕРІРµРЅСЊ Р’РЎР•Р“Р”Рђ СЂРёСЃСѓРµС‚СЃСЏ РїРѕРІРµСЂС… РѕСЃС‚Р°Р»СЊРЅС‹С… РІРёРґРёРјС‹С…, РЅРµР·Р°РІРёСЃРёРјРѕ РѕС‚ РїРѕР·РёС†РёРё С‚Р°Р±Р° (СЂРµС€РµРЅРёРµ СЂР°Р·РґРµР»Р° 12 РїСѓРЅРєС‚ 2 РїР»Р°РЅР°, СЂРµР°Р»РёР·РѕРІР°РЅРѕ РІ Р¤Р°Р·Рµ 3 РЅРµРїРѕР»РЅРѕСЃС‚СЊСЋ, РёСЃРїСЂР°РІР»РµРЅРѕ РІ Р¤Р°Р·Рµ 6). РќРѕРІС‹Р№ `cycleLevel(direction)` С†РёРєР»РёС‡РµСЃРєРё РїРµСЂРµРєР»СЋС‡Р°РµС‚ РјРµР¶РґСѓ РѕС‚РєСЂС‹С‚С‹РјРё СѓСЂРѕРІРЅСЏРјРё (+1 СЃР»РµРґСѓСЋС‰РёР№, -1 РїСЂРµРґС‹РґСѓС‰РёР№), РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РґР»СЏ Ctrl+PageDown/PageUp. РќРѕРІС‹Р№ `reorderLevels(newOrder)` РјРµРЅСЏРµС‚ РїРѕСЂСЏРґРѕРє С‚Р°Р±РѕРІ (РїРѕР»РЅР°СЏ РїРµСЂРµСЃС‚Р°РЅРѕРІРєР° `levelOrder`), РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РґР»СЏ drag-reorder РІ LevelsPanel; РЅРµРІР°Р»РёРґРЅР°СЏ РїРµСЂРµСЃС‚Р°РЅРѕРІРєР° в†’ no-op + `Logger.status.warn`. `toggleLevelVisibility()` РґРѕР±Р°РІР»РµРЅР° soft-cap РїСЂРѕРІРµСЂРєР°: warning РІ СЃС‚Р°С‚СѓСЃ-Р±Р°СЂРµ РїСЂРё РїРµСЂРµСЃРµС‡РµРЅРёРё РїРѕСЂРѕРіР° `VISIBLE_LEVELS_SOFT_CAP=5` (С‚РѕР»СЊРєРѕ РЅР° СЃР°РјРѕРј РїРµСЂРµС…РѕРґРµ, РЅРµ РЅР° РєР°Р¶РґРѕРј РєР»РёРєРµ РІС‹С€Рµ РїРѕСЂРѕРіР°).
+- Feature: LevelsPanel Phase 6 edge cases (v3.57.0, Р¤Р°Р·Р° 6 multi-level) вЂ” drag-reorder РІРєР»Р°РґРѕРє СѓСЂРѕРІРЅРµР№ (Р·РµСЂРєР°Р»РёС‚ `LayersPanel.js`), Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅРѕ РїСЂРё Р°РєС‚РёРІРЅРѕРј РїРѕРёСЃРєРµ (DOM-РёСЃС‚РѕС‡РЅРёРє РЅРµРїРѕР»РЅС‹Р№). Р”РёР·Р°РјР±РёРіСѓР°С†РёСЏ РёРјС‘РЅ РїСЂРё РєРѕР»Р»РёР·РёРё: РІРёР·СѓР°Р»СЊРЅС‹Р№ СЃСѓС„С„РёРєСЃ `"Untitled Level (2)"` РІ `.level-name-display` С‚РѕР»СЊРєРѕ РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ, СЂРµР°Р»СЊРЅРѕРµ `level.meta.name` РЅРµ РјРµРЅСЏРµС‚СЃСЏ; РїРµСЂРµСЃС‡РёС‚С‹РІР°РµС‚СЃСЏ РЅР° РєР°Р¶РґРѕРј СЂРµРЅРґРµСЂРµ РЅР° РїРѕР»РЅРѕРј СЃРїРёСЃРєРµ СЃРµСЃСЃРёР№ (Р±РµР· С„РёР»СЊС‚СЂР° РїРѕРёСЃРєР°), РІРєР»СЋС‡Р°СЏ РїРѕСЃР»Рµ rename.
+- Feature: РҐРѕС‚РєРµРё Phase 6 (v3.57.0) вЂ” РЅРѕРІС‹Рµ РіРѕСЂСЏС‡РёРµ РєР»Р°РІРёС€Рё `editor.nextLevel` (Ctrl+PageDown) Рё `editor.previousLevel` (Ctrl+PageUp) РґР»СЏ С†РёРєР»РёС‡РµСЃРєРѕРіРѕ РїРµСЂРµРєР»СЋС‡РµРЅРёСЏ РјРµР¶РґСѓ РѕС‚РєСЂС‹С‚С‹РјРё РІРєР»Р°РґРєР°РјРё СѓСЂРѕРІРЅРµР№ С‡РµСЂРµР· `levelsManager.cycleLevel()`. Р РµРіРёСЃС‚СЂРёСЂСѓСЋС‚СЃСЏ РІ `config/defaults/shortcuts.json` Рё РѕР±СЂР°Р±Р°С‚С‹РІР°СЋС‚СЃСЏ РІ `src/event-system/EventHandlers.js::handleKeyDown`.
+- Feature: Project вЂ” Р¤Р°Р·Р° 7 multi-level (СЃСѓС‰РЅРѕСЃС‚СЊ-РєРѕРЅС‚РµР№РЅРµСЂ РЅР°Р±РѕСЂР° РѕС‚РєСЂС‹С‚С‹С… СѓСЂРѕРІРЅРµР№). РќРѕРІС‹Р№ `src/models/Project.js` (`toJSON()`/`fromJSON()` вЂ” СЃР°РјРѕРґРѕСЃС‚Р°С‚РѕС‡РЅС‹Р№ JSON, СЌРјР±РµРґРґРёС‚ `Level.toJSON()` РєР°Р¶РґРѕРіРѕ РѕС‚РєСЂС‹С‚РѕРіРѕ СѓСЂРѕРІРЅСЏ + `visible`/`fileName`/РїРѕСЂСЏРґРѕРє/`currentLevelIndex`, С‚.Рє. `Level.toJSON()` РЅРµ СЃРµСЂРёР°Р»РёР·СѓРµС‚ `id`). РќРѕРІС‹Р№ `src/core/ProjectFileOperations.js` (BaseModule): `newProject()`/`openProject()` Р·Р°РјРµРЅСЏСЋС‚ РІРµСЃСЊ РЅР°Р±РѕСЂ РѕС‚РєСЂС‹С‚С‹С… РІРєР»Р°РґРѕРє (РµРґРёРЅС‹Р№ confirm РїСЂРё РЅРµСЃРѕС…СЂР°РЅС‘РЅРЅС‹С… РїСЂР°РІРєР°С… РІРјРµСЃС‚Рѕ N РґРёР°Р»РѕРіРѕРІ), `saveProject()`/`saveProjectAs()` СЃРєР°С‡РёРІР°СЋС‚ project-С„Р°Р№Р». РњРµРЅСЋ `Level` РїРµСЂРµРёРјРµРЅРѕРІР°РЅРѕ РІ `File` (`config/menu.js`, id `level`в†’`file`): РґРѕР±Р°РІР»РµРЅ Р±Р»РѕРє Project-РєРѕРјР°РЅРґ (New/Open/Save/Save As Project) С‡РµСЂРµР· СЃРµРїР°СЂР°С‚РѕСЂ РѕС‚ Level-РєРѕРјР°РЅРґ, `Import Assets...` РїРµСЂРµРЅРµСЃС‘РЅ РІ РєРѕРЅРµС† `File` РёР· `Settings`; `Settings` РїРѕР»СѓС‡РёР» `Project Settings...` (РЅРѕРІС‹Р№ `src/ui/ProjectSettingsDialog.js`, extends `BaseDialog`, РїРѕРєР° СЃС‚Р°Р± вЂ” СЂРµРґР°РєС‚РёСЂСѓРµС‚СЃСЏ С‚РѕР»СЊРєРѕ `project.name`). `LevelEditor.js`: passthrough-РјРµС‚РѕРґС‹, `projectFileOperations` Р·Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°РЅ РєР°Рє BaseModule, РїРѕР»СЏ `project`/`projectSettingsDialog` + cleanup РІ `destroy()`. `#menu-level` DOM-СЃРµР»РµРєС‚РѕСЂС‹ РІ `EventHandlers.js` (2 РјРµСЃС‚Р°) РѕР±РЅРѕРІР»РµРЅС‹ РЅР° `#menu-file`.
+
+- Refactor: MenuItemTemplateUtils РїРµСЂРµРїРёСЃР°РЅ СЃ РµРґРёРЅРѕРіРѕ `renderMenuItemIconHtml(icon)` РЅР° С‚СЂРё СЌРєСЃРїРѕСЂС‚Р° РґР»СЏ СѓРЅРёС„РёС†РёСЂРѕРІР°РЅРЅРѕР№ СЂР°Р·РјРµС‚РєРё РїСѓРЅРєС‚Р° РјРµРЅСЋ. РќРѕРІР°СЏ СЃС…РµРјР° `[leading | body | trailing]`: `renderMenuItemLeadingHtml({ icon, checkboxId, checked })` вЂ” РµРґРёРЅС‹Р№ 18Г—18px Р±Р»РѕРє РґР»СЏ РёРєРѕРЅРєРё РёР»Рё toggle-С‡РµРєР±РѕРєСЃР° РїСѓРЅРєС‚Р° (СЂР°РЅСЊС€Рµ СЂРµРЅРґРµСЂРёР»РёСЃСЊ СЃ СЂР°Р·РЅС‹РјРё СЂР°Р·РјРµСЂР°РјРё/margin); `renderMenuItemBodyHtml({ leadingHtml, label })` вЂ” РѕР±РѕСЂР°С‡РёРІР°РµС‚ leading+С‚РµРєСЃС‚ РІ `<span class="flex items-center">` (РµРґРёРЅС‹Р№ flex-item СЃР»РµРІР°, С‡С‚РѕР±С‹ trailing РїСЂРё `justify-content:space-between` РЅРµ С†РµРЅС‚СЂРёСЂРѕРІР°Р» С‚РµРєСЃС‚); `renderMenuItemTrailingHtml(text, { shortcutKey })` вЂ” РµРґРёРЅС‹Р№ trailing-Р±Р»РѕРє РґР»СЏ С…РѕС‚РєРµСЏ РёР»Рё СЃС‚СЂРµР»РєРё С„Р»Р°СѓС‚-РїРѕРґРјРµРЅСЋ в–ё. РџРѕР±РѕС‡РЅС‹Р№ СЌС„С„РµРєС‚: nav submenu-С‚СЂРёРіРіРµСЂС‹ (`createSubmenuItem`) С‚РµРїРµСЂСЊ РїРѕРґРґРµСЂР¶РёРІР°СЋС‚ РёРєРѕРЅРєСѓ (itemConfig.icon); РєРѕРЅС‚РµРєСЃС‚РЅС‹Рµ РјРµРЅСЋ РѕРїС†РёРѕРЅР°Р»СЊРЅРѕ РїРѕРґРґРµСЂР¶РёРІР°СЋС‚ `item.shortcut` РІ trailing-СЃР»РѕС‚Рµ (РїРѕРєР° РЅРµ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ, РЅРѕ СЃР»РѕС‚ РіРѕС‚РѕРІ). `config/menu.js`: СѓРґР°Р»РµРЅРѕ РјС‘СЂС‚РІРѕРµ РїРѕР»Рµ `checkboxHtml` РёР· `templates.toggle`.
+- Feature: LevelFileOperations multi-level file ops (v3.57.0, Р¤Р°Р·Р° 5 multi-level) вЂ” `newLevel()` Рё `openLevel()` С‚РµРїРµСЂСЊ Р”РћР‘РђР’Р›РЇР®Рў РЅРѕРІСѓСЋ РІРєР»Р°РґРєСѓ/LevelSession РІРјРµСЃС‚Рѕ Р·Р°РјРµРЅС‹ С‚РµРєСѓС‰РµРіРѕ СѓСЂРѕРІРЅСЏ; `openLevel()` РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕ РґРµР»Р°РµС‚ best-effort dedup РїРѕ fileName вЂ” РµСЃР»Рё С„Р°Р№Р» СѓР¶Рµ РѕС‚РєСЂС‹С‚, РїРµСЂРµРєР»СЋС‡Р°РµС‚СЃСЏ РЅР° РІРєР»Р°РґРєСѓ РІРјРµСЃС‚Рѕ РґСѓР±Р»РёРєР°С‚Р°. `saveLevel()`/`saveLevelAs()` СЂР°Р±РѕС‚Р°СЋС‚ СЃ per-session fileName, РіР°СЂР°РЅС‚РёСЂСѓСЏ С‡С‚Рѕ СЃРѕС…СЂР°РЅРµРЅРёРµ B РЅРµ РїРµСЂРµР·Р°РїРёС€РµС‚ С„Р°Р№Р» A. РќРѕРІС‹Р№ `closeLevel(levelId)` Р·Р°РєСЂС‹РІР°РµС‚ РІРєР»Р°РґРєСѓ (РЅРµР»СЊР·СЏ Р·Р°РєСЂС‹С‚СЊ РїРѕСЃР»РµРґРЅРёР№ СѓСЂРѕРІРµРЅСЊ, СЃРїСЂР°С€РёРІР°РµС‚ РїРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ РїСЂРё dirty). Per-session `isDirty` (РєР°Р¶РґР°СЏ LevelSession РЅРµР·Р°РІРёСЃРёРјР°), РіР»РѕР±Р°Р»СЊРЅС‹Р№ `stateManager.isDirty` СЃРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµС‚СЃСЏ РЅР° РіСЂР°РЅРёС†Рµ РїРµСЂРµРєР»СЋС‡РµРЅРёСЏ РІРєР»Р°РґРѕРє. РњРµРЅСЋ "Level" РїРѕРїРѕР»РЅРµРЅРѕ РїСѓРЅРєС‚РѕРј "Close Level".
+
+- Fix: `MenuManager.createMenuItem()` вЂ” РїСѓРЅРєС‚С‹ РјРµРЅСЋ СЃРѕ С€РѕСЂС‚РєР°С‚РѕРј (Parallax Mode, Toolbar, Assets Panel, Right Panel, Left Panel, Grid Рё С‚.Рґ.) РІРёР·СѓР°Р»СЊРЅРѕ РІС‹РіР»СЏРґРµР»Рё С†РµРЅС‚СЂРёСЂРѕРІР°РЅРЅС‹РјРё: С‡РµРєР±РѕРєСЃ+Р»РµР№Р±Р» Рё `shortcutSpan` Р±С‹Р»Рё С‚СЂРµРјСЏ РѕС‚РґРµР»СЊРЅС‹РјРё flex-СЌР»РµРјРµРЅС‚Р°РјРё РїСЂРё `justify-between`, РёР·-Р·Р° С‡РµРіРѕ СЃСЂРµРґРЅРёР№ (Р»РµР№Р±Р») РїРѕР»СѓС‡Р°Р» СЂР°РІРЅС‹Рµ РѕС‚СЃС‚СѓРїС‹ СЃ РѕР±РµРёС… СЃС‚РѕСЂРѕРЅ. РљРѕРЅС‚РµРЅС‚ (РёРєРѕРЅРєР°+С‡РµРєР±РѕРєСЃ+Р»РµР№Р±Р») РѕР±С‘СЂРЅСѓС‚ РІ РѕРґРёРЅ `<span class="flex items-center">`, С‚РµРїРµСЂСЊ `justify-between` СЂР°Р±РѕС‚Р°РµС‚ РјРµР¶РґСѓ РґРІСѓРјСЏ Р±Р»РѕРєР°РјРё вЂ” РєРѕРЅС‚РµРЅС‚ СЃР»РµРІР°, С€РѕСЂС‚РєР°С‚ СЃРїСЂР°РІР°.
+- Fix: `LayersPanel.onAddLayer()`/`setupKeyboardShortcuts()` вЂ” РЅРѕРІС‹Рµ СЃР»РѕРё (РІ С‚.С‡. 3 СЃСЂР°Р·Сѓ РїРѕ Shift/Ctrl+РєР»РёРєСѓ) РѕС‚РѕР±СЂР°Р¶Р°Р»РёСЃСЊ СЃРєСЂС‹С‚С‹РјРё (РїРѕР»СѓРїСЂРѕР·СЂР°С‡РЅР°СЏ РёРєРѕРЅРєР° РіР»Р°Р·Р°, opacity 0.45) РєР°Рє РІ РїР°РЅРµР»Рё, С‚Р°Рє Рё РЅР° РєР°РЅРІР°СЃРµ, РїРѕРєР° РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРµ РєР»РёРєР°Р» РїРѕ РїР°РЅРµР»Рё; РїСЂРёС‡РёРЅР° вЂ” `RenderOperations.visibleLayersCache` РЅРµ РёРЅРІР°Р»РёРґРёСЂРѕРІР°Р»СЃСЏ РїРѕСЃР»Рµ `level.addLayer()`. Р”РѕР±Р°РІР»РµРЅ РІС‹Р·РѕРІ `invalidateLayerVisibilityCache()` СЃСЂР°Р·Сѓ РїРѕСЃР»Рµ РґРѕР±Р°РІР»РµРЅРёСЏ СЃР»РѕСЏ(С‘РІ) РІ РѕР±РѕРёС… РјРµСЃС‚Р°С….
+
+- Feature: RenderOperations multi-level compositing (v3.57.0, Р¤Р°Р·Р° 3 multi-level) вЂ” `render()` С‚РµРїРµСЂСЊ РєРѕРјРїРѕР·РёС‚РёС‚ РѕР±СЉРµРєС‚С‹ Р’РЎР•РҐ РІРёРґРёРјС‹С… СѓСЂРѕРІРЅРµР№ РІ РѕРґРЅРѕРј РєР°РґСЂРµ (РІРёРґРёРјРѕСЃС‚СЊ С‡РµСЂРµР· `session.visible`, per-level eye-icon РІ LevelsPanel), С‚РµРєСѓС‰РёР№ СѓСЂРѕРІРµРЅСЊ РІСЃРµРіРґР° РїРѕРІРµСЂС…. Grid/selection/debug-overlays РѕСЃС‚Р°СЋС‚СЃСЏ current-level-only Рё РЅРµ РєРѕРјРїРѕР·РёС‚СЏС‚СЃСЏ. Dimming-СЂРµР¶РёРјС‹ (isolate/solo/group-edit-mode) РїСЂРёРјРµРЅСЏСЋС‚СЃСЏ С‚РѕР»СЊРєРѕ Рє С‚РµРєСѓС‰РµРјСѓ СѓСЂРѕРІРЅСЋ. **Namespacing РєРµС€РµР№**: `visibleObjectsCache` РєР»СЋС‡РёСЂСѓРµС‚СЃСЏ РєР°Рє `${levelId}_${cameraKey}`; `visibleLayersCache` СЃС‚Р°Р» `Map<levelId,...>`; `CacheManager` РёСЃРїРѕР»СЊР·СѓРµС‚ `${levelId}:${objId}` РґР»СЏ РІСЃРµС… object-РєРµС€РµР№ (Р·Р°С‰РёС‚Р° РѕС‚ РєРѕР»Р»РёР·РёР№ id РјРµР¶РґСѓ СѓСЂРѕРІРЅСЏРјРё). **РџР°СЂР°РјРµС‚СЂРёР·Р°С†РёСЏ РјРµС‚РѕРґРѕРІ**: `getVisibleObjects()`, `getVisibleLayerIds()`, `buildSpatialIndex()` Рё РїСЂРѕС‡РёРµ РїРѕР»СѓС‡РёР»Рё РѕРїС†РёРѕРЅР°Р»СЊРЅС‹Р№ РїР°СЂР°РјРµС‚СЂ `level` (РґРµС„РѕР»С‚ С‚РµРєСѓС‰РёР№) РґР»СЏ РѕР±СЂР°С‚РЅРѕР№ СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚Рё. **РџР°СЂР°Р»Р»Р°РєСЃ fix**: `renderParallaxObjects()` Рё `getObjectWorldBounds()` С‚РµРїРµСЂСЊ РїСЂРёРЅРёРјР°СЋС‚ `level` РґР»СЏ РєРѕСЂСЂРµРєС‚РЅРѕРіРѕ СЂРµРЅРґРµСЂР° РЅР° non-current СѓСЂРѕРІРЅСЏС…. **РџРѕР±РѕС‡РЅС‹Рµ С„РёРєСЃС‹**: РѕР±СЉРµРґРёРЅРµРЅС‹ РґСѓР±Р»РёСЂСѓСЋС‰РёРµСЃСЏ `invalidateSpatialIndex()` РјРµС‚РѕРґС‹; СѓРґР°Р»С‘РЅ РјС‘СЂС‚РІС‹Р№ РєРѕРґ (`effectiveLayerCache` РЅР° РЅРµСЃСѓС‰РµСЃС‚РІСѓСЋС‰РµРј РїРѕР»Рµ). Р’РµСЂРёС„РёРєР°С†РёСЏ: СЂР°РЅС‚Р°Р№Рј-С‚РµСЃС‚С‹ РІ Р±СЂР°СѓР·РµСЂРµ СЃ РїСЂРёРЅСѓРґРёС‚РµР»СЊРЅРѕР№ РєРѕР»Р»РёР·РёРµР№ id Рё РІР»РѕР¶РµРЅРЅС‹РјРё РіСЂСѓРїРїР°РјРё РЅР° non-current СѓСЂРѕРІРЅСЏС…; СЂРµРіСЂРµСЃСЃРёРѕРЅРЅР°СЏ РїСЂРѕРІРµСЂРєР° РѕРґРёРЅРѕС‡РЅРѕРіРѕ СѓСЂРѕРІРЅСЏ.
+- Feature: LevelsPanel UI (v3.57.0, Р¤Р°Р·Р° 2 multi-level) вЂ” РЅРѕРІР°СЏ РїР°РЅРµР»СЊ РІ РїСЂР°РІРѕР№ РІРєР»Р°РґРєРµ Layers (РЅР°Рґ LayersPanel) РґР»СЏ СЃРїРёСЃРєР° РѕС‚РєСЂС‹С‚С‹С… СѓСЂРѕРІРЅРµР№ (LevelSession). Р¤СѓРЅРєС†РёРѕРЅР°Р»СЊРЅРѕСЃС‚СЊ: РєРЅРѕРїРєР° "+Add" РґР»СЏ РґРѕР±Р°РІР»РµРЅРёСЏ РЅРѕРІС‹С… СѓСЂРѕРІРЅРµР№, РєР»РёРє РїРѕ СЌР»РµРјРµРЅС‚Сѓ РїРµСЂРµРєР»СЋС‡Р°РµС‚ С‚РµРєСѓС‰РёР№ СѓСЂРѕРІРµРЅСЊ С‡РµСЂРµР· `setCurrentLevel()`, eye-icon РґР»СЏ per-level visibility (С‚РµРїРµСЂСЊ СЃ СЌС„С„РµРєС‚РѕРј РЅР° СЂРµРЅРґРµСЂ РІ Р¤Р°Р·Рµ 3), double-click/РєРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ "Rename" РґР»СЏ РїРµСЂРµРёРјРµРЅРѕРІР°РЅРёСЏ, РєРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ "Make Current". РўРµРєСѓС‰РёРµ РѕРіСЂР°РЅРёС‡РµРЅРёСЏ (РѕС‚Р»РѕР¶РµРЅРѕ РЅР° РїРѕР·РґРЅРµР№С€РёРµ С„Р°Р·С‹): РЅРµС‚ Close/Save/Duplicate (С‚СЂРµР±СѓСЋС‚ per-session save, Р¤Р°Р·Р° 5), РЅРµС‚ drag-reorder (Р¤Р°Р·Р° 6), РЅРµС‚ per-session dirty-РёРЅРґРёРєР°С‚РѕСЂР° РІ UI. **Р¤Р°Р№Р»С‹**: `src/ui/LevelsPanel.js`, `src/ui/LevelsContextMenu.js`, `src/ui/panel-structures/LevelsPanelStructure.js`.
+- Fix: `SearchSectionUtils.showSearchSectionForTab()` вЂ” РїСЂРё Р°РєС‚РёРІР°С†РёРё РІРєР»Р°РґРєРё 'layers' С‚РµРїРµСЂСЊ С‚Р°РєР¶Рµ РІС‹Р·С‹РІР°РµС‚ `editor.levelsPanel.renderLevelsSearchControls()` РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ РїРѕР»СЏ РїРѕРёСЃРєР° РІ LevelsPanel.
+
+- Feature: LevelsManager (v3.57.0, Р¤Р°Р·Р° 1 multi-level) вЂ” РЅРѕРІС‹Р№ BaseModule РґР»СЏ СѓРїСЂР°РІР»РµРЅРёСЏ РјРЅРѕР¶РµСЃС‚РІРѕРј РѕС‚РєСЂС‹С‚С‹С… `LevelSession`; `addLevel()` СЂРµРіРёСЃС‚СЂРёСЂСѓРµС‚ СѓСЂРѕРІРµРЅСЊ РІ `editor.levelSessions: Map` + `editor.levelOrder: Array`, `setCurrentLevel(levelId)` РїРµСЂРµРєР»СЋС‡Р°РµС‚ С‚РµРєСѓС‰РёР№ СѓСЂРѕРІРµРЅСЊ СЃ СЃРѕС…СЂР°РЅРµРЅРёРµРј/РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµРј camera view, selectedObjects, groupEditMode, outliner state, currentLayerId Рё history (С‡РµСЂРµР· `HistoryManager.exportState()`/`importState()`), Р‘Р•Р— РїРѕР»РЅРѕРіРѕ `stateManager.reset()`. **Р’Р°Р¶РЅРѕ**: СЌС‚Рѕ РІРЅСѓС‚СЂРµРЅРЅСЏСЏ РёРЅС„СЂР°СЃС‚СЂСѓРєС‚СѓСЂР° Р±РµР· UI; РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РїРѕ-РїСЂРµР¶РЅРµРјСѓ РІРёРґРёС‚ Рё СЂР°Р±РѕС‚Р°РµС‚ СЃ РѕРґРЅРёРј СѓСЂРѕРІРЅРµРј. Multi-level С„СѓРЅРєС†РёРѕРЅР°Р»СЊРЅРѕСЃС‚СЊ РїРѕСЏРІРёС‚СЃСЏ РІ РїРѕР·РґРЅРµР№С€РёС… С„Р°Р·Р°С….
+- Feature: LevelSession (v3.57.0, Р¤Р°Р·Р° 1) вЂ” РЅРѕРІС‹Р№ РєР»Р°СЃСЃ РІ `src/models/LevelSession.js`, editor-only РѕР±С‘СЂС‚РєР° РЅР°Рґ `Level` (СѓРїСЂР°РІР»СЏРµС‚ visible-С„Р»Р°РіРѕРј СѓСЂРѕРІРЅСЏ, fileName, isDirty, viewState, history). РќР• СЃРµСЂРёР°Р»РёР·СѓРµС‚СЃСЏ РІ `Level.toJSON()`. РџРѕ РѕРґРЅРѕР№ СЃРµСЃСЃРёРё РЅР° РѕС‚РєСЂС‹С‚С‹Р№ СѓСЂРѕРІРµРЅСЊ.
+- Feature: HistoryManager.exportState() / importState() (v3.57.0) вЂ” СЃРЅСЏС‚РёРµ Рё РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ undo/redo СЃС‚РµРєР° (РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РїСЂРё РїРµСЂРµРєР»СЋС‡РµРЅРёРё РјРµР¶РґСѓ СѓСЂРѕРІРЅСЏРјРё РґР»СЏ СЃРѕС…СЂР°РЅРµРЅРёСЏ undo-РёСЃС‚РѕСЂРёРё РєР°Р¶РґРѕРіРѕ).
+- Feature: LevelEditor.level вЂ” С‚РµРїРµСЂСЊ computed getter/setter: СЂРµР·РѕР»РІРёС‚СЃСЏ С‡РµСЂРµР· `this.levelSessions.get(this.currentLevelId)`, РЅР°Р·Р°Рґ-СЃРѕРІРјРµСЃС‚РёРјРѕ РґР»СЏ ~300 СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёС… call sites. Р”РѕРєСѓРјРµРЅС‚РёСЂРѕРІР°РЅРЅС‹Р№ Р°Р»РёР°СЃ `getCurrentLevel()` (= `getLevel()`) РґР»СЏ РЅРѕРІРѕРіРѕ РєРѕРґР°.
+- Feature: CanvasRenderer вЂ” type-РёРєРѕРЅРєРё РєР°Рє fallback-РІРёР·СѓР°Р». РџСЂРё СЂР°Р·РјРµС‰РµРЅРёРё GameObject Р±РµР· Р·Р°РіСЂСѓР¶РµРЅРЅРѕРіРѕ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ (`obj.imgSrc` РЅРµ Р·Р°РґР°РЅ/РЅРµ Р·Р°РіСЂСѓР¶РµРЅ) СЂРёСЃСѓРµС‚СЃСЏ SVG-РёРєРѕРЅРєР° С‚РёРїР° Р°СЃСЃРµС‚Р° (РёР· `buildTypeIconSvg`, `AssetTypeIcons.js`) РїРѕРІРµСЂС… С†РІРµС‚РЅРѕРіРѕ РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРєР° (50% РѕС‚ РјРµРЅСЊС€РµРіРѕ РёР·РјРµСЂРµРЅРёСЏ, С†РµРЅС‚СЂРёСЂРѕРІР°РЅР°). РРєРѕРЅРєР° РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ С‚РѕР»СЊРєРѕ РґР»СЏ С‚РёРїРѕРІ РёР· РєР°С‚Р°Р»РѕРіР° `AssetTypes.js` (РІС‹Р·РѕРІ `getAssetTypeById(obj.type)`); РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёРµ С‚РёРїС‹ РѕСЃС‚Р°СЋС‚СЃСЏ СЃ РїСѓСЃС‚С‹Рј РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРєРѕРј. РќРѕРІС‹Рµ РјРµС‚РѕРґС‹: `CanvasRenderer.getTypeIconImage(typeId)` (Р»РµРЅРёРІР°СЏ СЂР°СЃС‚РµСЂРёР·Р°С†РёСЏ + РєСЌС€ РїРѕ `${typeId}|${color}`), РѕС‡РёСЃС‚РєР° РєСЌС€Р° РІ `destroy()` РІРјРµСЃС‚Рµ СЃ `imageCache`. РћР±РµСЃРїРµС‡РёРІР°РµС‚ СѓР·РЅР°РІР°РµРјРѕСЃС‚СЊ placeholder-РѕР±СЉРµРєС‚РѕРІ РЅР° canvas.
+
+- Fix: `AssetTypeIcons.buildTypeIconSvg` вЂ” canvas type-РёРєРѕРЅРєРё (СЃРј. РІС‹С€Рµ) РЅРµ РѕС‚СЂРёСЃРѕРІС‹РІР°Р»РёСЃСЊ: СЃРіРµРЅРµСЂРёСЂРѕРІР°РЅРЅС‹Р№ `<svg>` РЅРµ СЃРѕРґРµСЂР¶Р°Р» `xmlns="http://www.w3.org/2000/svg"`, РёР·-Р·Р° С‡РµРіРѕ data-URI `Image` СЂР°СЃС‚РµСЂРёР·РѕРІР°Р»СЃСЏ РІ 0Г—0 (naturalWidth/Height=0) РїСЂРё С„РѕСЂРјР°Р»СЊРЅРѕ СѓСЃРїРµС€РЅРѕР№ Р·Р°РіСЂСѓР·РєРµ (`complete=true`), Рё guard РІ `CanvasRenderer.drawSingleObject` С‚РёС…Рѕ РїСЂРѕРїСѓСЃРєР°Р» РѕС‚СЂРёСЃРѕРІРєСѓ. Р’ AssetPanel (innerHTML) Р±Р°Рі РЅРµ РїСЂРѕСЏРІР»СЏР»СЃСЏ вЂ” С‚Р°Рј namespace РїРѕРґСЃС‚Р°РІР»СЏРµС‚ HTML-РїР°СЂСЃРµСЂ.
+
+- Fix: `AssetPanel.showAssetFilterMenu` вЂ” Ctrl+click РјСѓР»СЊС‚Рё-РІС‹Р±РѕСЂ С‡РµРєР±РѕРєСЃРѕРІ РЅРµ СЂР°Р±РѕС‚Р°Р» (РєР»РёРє РІСЃРµРіРґР° Р·Р°РєСЂС‹РІР°Р» РјРµРЅСЋ, С‚.Рє. РЅРµ Р±С‹Р»Рѕ `applyOrDefer`/`ctrlReleaseHandler`, РІ РѕС‚Р»РёС‡РёРµ РѕС‚ `OutlinerPanel.showFilterMenu`); Р»РѕРіРёРєР° СЃРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°РЅР° 1:1 СЃ OutlinerPanel.
+
+- Docs: РїРµСЂРµРЅРµСЃС‘РЅ Рё РїРµСЂРµС„РѕСЂРјР°С‚РёСЂРѕРІР°РЅ `tmp/game-editor-asset-types.md` РІ `docs/ASSET_TYPES_CATALOG.md` вЂ” СЃРІРµСЂРµРЅРѕ СЃ РёС‚РѕРіРѕРІРѕР№ СЂРµР°Р»РёР·Р°С†РёРµР№ (`AssetTypes.js`: 28 С‚РёРїРѕРІ, `ComponentTypes.js`: 19 С‚РёРїРѕРІ).
+
+- Fix: `ui.cursorMenuMargin` (РґРµС„РѕР»С‚ 6px, РґРёР°РїР°Р·РѕРЅ 0-60) С‚РµРїРµСЂСЊ РѕРґРёРЅР°РєРѕРІРѕ СЂР°Р±РѕС‚Р°РµС‚ РІРѕ РІСЃРµС… С‚СЂС‘С… СЃРёСЃС‚РµРјР°С… РјРµРЅСЋ: РџРљРњ-РєРѕРЅС‚РµРєСЃС‚РЅС‹Рµ РјРµРЅСЋ (BaseContextMenu вЂ” Р±С‹Р»Рѕ Рё СЂР°РЅСЊС€Рµ), РјРµРЅСЋ С„РёР»СЊС‚СЂРѕРІ (OutlinerPanel/AssetPanel), РіР»Р°РІРЅРѕРµ РјРµРЅСЋ nav-bar (MenuManager). `MenuPositioningUtils.setupMenuClosing()` С‚РµРїРµСЂСЊ persistent `document.addEventListener('mousemove', ...)` РЅР° Р’РЎР® Р¶РёР·РЅСЊ РјРµРЅСЋ (РІРјРµСЃС‚Рѕ С‚РѕР»СЊРєРѕ opening-Р°РЅРёРјР°С†РёРё), РїСЂРѕРІРµСЂСЏРµС‚ margin-aware РїРѕРїР°РґР°РЅРёРµ РєСѓСЂСЃРѕСЂР°; `MenuPositioningUtils.repositionMenu(menu, triggerElement, options)` РїРµСЂРµСЃС‡РёС‚С‹РІР°РµС‚ РїРѕР·РёС†РёСЋ РјРµРЅСЋ РїРѕ СЂРµР°Р»СЊРЅС‹Рј СЂР°Р·РјРµСЂР°Рј РїРѕСЃР»Рµ РґРѕР±Р°РІР»РµРЅРёСЏ РїСѓРЅРєС‚РѕРІ (СЂР°РЅСЊС€Рµ РјРµРЅСЋ РІС‹С‡РёСЃР»СЏР»РѕСЃСЊ РїРѕ guess'Сѓ Рё РѕРєР°Р·С‹РІР°Р»РѕСЃСЊ СЃРјРµС‰РµРЅРѕ РѕС‚ РєРЅРѕРїРєРё, РІС‹Р·С‹РІР°СЏ РјРіРЅРѕРІРµРЅРЅРѕРµ Р·Р°РєСЂС‹С‚РёРµ РЅР° РїРµСЂРІС‹Р№ mousemove). `MenuManager.setupDropdownCursorMarginWatcher()` вЂ” РЅРѕРІС‹Р№ persistent watcher РґР»СЏ top-level dropdown, Р·Р°РєСЂС‹РІР°РµС‚ РїРѕ margin РІРјРµСЃС‚Рѕ РЅР°С‚РёРІРЅРѕРіРѕ mouseleave.
+- Fix (РїСЂРѕРґРѕР»Р¶РµРЅРёРµ): margin РґР»СЏ РіР»Р°РІРЅРѕРіРѕ РјРµРЅСЋ РІСЃС‘ РµС‰С‘ РЅРµ РґРµР№СЃС‚РІРѕРІР°Р» вЂ” РѕР±РЅР°СЂСѓР¶РµРЅ РІС‚РѕСЂРѕР№, РЅРµР·Р°РІРёСЃРёРјС‹Р№ РѕР±СЂР°Р±РѕС‚С‡РёРє Р·Р°РєСЂС‹С‚РёСЏ, `MenuManager.setupMenuContainerHoverReset()` (РЅР°С‚РёРІРЅС‹Р№ `mouseleave` РЅР° `#menu-container`, РЅСѓР»РµРІРѕР№ РґРѕРїСѓСЃРє), РїСЂРёС‡С‘Рј РІС‹Р·С‹РІР°РІС€РёР№СЃСЏ Р”Р’РђР–Р”Р« (РёР· `initialize()` Рё РїРѕРІС‚РѕСЂРЅРѕ РёР· `setupMenuEvents()`). РўР°Рє РєР°Рє РѕС‚РєСЂС‹С‚С‹Р№ dropdown СЂРµРЅРґРµСЂРёС‚СЃСЏ РЅРёР¶Рµ layout-Р±РѕРєСЃР° РєРѕРЅС‚РµР№РЅРµСЂР° (`position:absolute`, `mt-0`), РґРІРёР¶РµРЅРёРµ РєСѓСЂСЃРѕСЂР° РІРЅРёР· РІ РјРµРЅСЋ РѕР±С‹С‡РЅРѕ РїРµСЂРµСЃРµРєР°Р»Рѕ РіСЂР°РЅРёС†Сѓ РєРѕРЅС‚РµР№РЅРµСЂР° СЂР°РЅСЊС€Рµ, С‡РµРј СѓСЃРїРµРІР°Р» СЃСЂР°Р±РѕС‚Р°С‚СЊ margin-aware watcher вЂ” РјРµРЅСЋ РіР°СЃР»Рѕ РјРіРЅРѕРІРµРЅРЅРѕ РЅРµР·Р°РІРёСЃРёРјРѕ РѕС‚ `ui.cursorMenuMargin`. РњРµС‚РѕРґ СѓРґР°Р»С‘РЅ, РѕР±Р° РІС‹Р·РѕРІР° СѓР±СЂР°РЅС‹; РµРіРѕ СЂРѕР»СЊ (СЃР±СЂРѕСЃ `hoverModeEnabled` РїСЂРё СѓС…РѕРґРµ СЃ РїР°РЅРµР»Рё РјРµРЅСЋ С†РµР»РёРєРѕРј) СЃР»РёС‚Р° РІ `setupDropdownCursorMarginWatcher()` С‡РµСЂРµР· РЅРѕРІС‹Р№ `isCursorNearMenuBar()` (margin-aware РїСЂРѕРІРµСЂРєР° РїРѕ rect `#menu-container`), СЃ РѕСЃС‚РѕСЂРѕР¶РЅРѕСЃС‚СЊСЋ РЅРµ РіР°СЃРёС‚СЊ РѕС‚РєСЂС‹С‚С‹Р№ dropdown, РµСЃР»Рё РєСѓСЂСЃРѕСЂ РІСЃС‘ РµС‰С‘ РІРЅСѓС‚СЂРё РµРіРѕ СЃРѕР±СЃС‚РІРµРЅРЅРѕРіРѕ margin (Р°РєС‚СѓР°Р»СЊРЅРѕ РґР»СЏ РІС‹СЃРѕРєРёС… dropdown, РІС‹С…РѕРґСЏС‰РёС… Р·Р° РїСЂРµРґРµР»С‹ rect РєРѕРЅС‚РµР№РЅРµСЂР°).
+
+- Feature: MenuManager вЂ” generic disabled-СЃРѕСЃС‚РѕСЏРЅРёРµ РїСѓРЅРєС‚РѕРІ РјРµРЅСЋ (itemConfig.disabled: boolean | (editor) => boolean); `refreshDisabledStates()` РІС‹С‡РёСЃР»СЏРµС‚ state, РїСЂРёРјРµРЅСЏРµС‚ CSS-РєР»Р°СЃСЃС‹ opacity-50/pointer-events-none, СЂРµР°РєС‚РёРІРЅРѕ РѕР±РЅРѕРІР»СЏРµС‚СЃСЏ РЅР° selectedFolders/activeAssetTabs (РґР»СЏ РґРёР·РµР№Р±Р»Р° "Add" РїСЂРё РєРѕСЂРЅРµРІРѕР№ РїР°РїРєРµ).
+- Feature: MenuManager.createMenuItem() С‚РµРїРµСЂСЊ СЂРµРЅРґРµСЂРёС‚ РёРєРѕРЅРєСѓ (itemConfig.icon: HTML/SVG/СЌРјРѕРґР·Рё) РІ `<span class="menu-item-icon">`, СЂР°Р±РѕС‚Р°РµС‚ РґР»СЏ Р»СЋР±РѕРіРѕ РјРµРЅСЋ.
+- Feature: BaseContextMenu РїРѕР»СѓС‡РёР»Р° generic flyout-submenu (addSubmenuItem, createSubmenuItem, findMenuItemById СЂРµРєСѓСЂСЃРёРІРЅС‹Р№ РїРѕРёСЃРє); AssetPanelContextMenu РґРѕР±Р°РІРёР»Р° "Add" вћ• flyout СЃ РєР°С‚РµРіРѕСЂРёСЏРјРё/С‚РёРїР°РјРё Р°СЃСЃРµС‚РѕРІ (РёР· AssetTypes РєР°С‚Р°Р»РѕРіР°, РёРєРѕРЅРєРё, РґРёР·РµР№Р±Р» РїСЂРё РєРѕСЂРЅРµРІРѕР№ РїР°РїРєРµ).
+- Fix: РїСѓРЅРєС‚ РјРµРЅСЋ "Assets" РїРµСЂРµРёРјРµРЅРѕРІР°РЅ РІ "Add" (id РѕСЃС‚Р°Р»СЃСЏ `assets`), РёР· Р»РµР№Р±Р»РѕРІ РєРѕРјР°РЅРґ СѓР±СЂР°РЅ РїСЂРµС„РёРєСЃ "New" (`New Camera` в†’ `Camera`).
+- Fix: `LevelEditor.createAssetOfType()`/`AssetManager.createPlaceholderAsset()` СЃРѕР·РґР°РІР°Р»Рё Р°СЃСЃРµС‚ РІ РѕС‚РґРµР»СЊРЅРѕР№ category-РїР°РїРєРµ (`Core/`, `Visual / Render/` Рё С‚.Рґ.) РІРјРµСЃС‚Рѕ С‚РµРєСѓС‰РµР№ РІС‹Р±СЂР°РЅРЅРѕР№ РїР°РїРєРё РІ Asset panel, Рё РЅРµ РїРѕРєР°Р·С‹РІР°Р»Рё СЃРѕРѕР±С‰РµРЅРёРµ РІ СЃС‚СЂРѕРєРµ СЃРѕСЃС‚РѕСЏРЅРёСЏ. РўРµРїРµСЂСЊ `createAssetOfType()` Р±РµСЂС‘С‚ `assetPanel.getActiveTabPath()` Рё РїРµСЂРµРґР°С‘С‚ РєР°Рє `folderPath` РІ `createPlaceholderAsset(typeId, customName, folderPath)`; РґРѕР±Р°РІР»РµРЅС‹ `Logger.status.success/error`.
 
-- Fix: submenu Assets-меню (категория→тип) рендерился поверх родительского dropdown вместо раскрытия сбоку — новые Tailwind-классы (`top-0`, `left-full`, `w-56`, `z-30`, `max-h-96`), добавленные в `MenuManager.createSubmenuItem()`, отсутствовали в статическом `styles/tailwind.build.css` (файл не пересобирался после правки). Пересобран через `npm run build:css`.
-- Fix: `BaseDialog.hide()` не сбрасывал `contentRendered` — при повторном `show()` для другой сущности (напр. `ActorPropertiesWindow.show(otherAsset)`) DOM-контент не перерисовывался, поля формы оставались от предыдущего актора, Apply мог перезаписать данные не того ассета. Добавлен сброс `this.contentRendered = false` в `hide()`.
-- Fix: `Asset.hasChangesFromOriginal()`/`saveOriginalState()` не учитывали поле `components` — редактирование компонентов в `ActorPropertiesWindow` не выставляло dirty-флаг ассета. Добавлено сравнение `componentsSignature`.
-- Refactor: устранено дублирование `flattenMenuItems` (была независимая копия-closure в `MenuManager.setupMenuItemEvents()`) — теперь импортируется из `config/menu.js` (функция экспортирована).
-- Feature: каталоги типов ассетов и компонентов (`AssetTypes.js`, `ComponentTypes.js`) с 29 предопределёнными типами ассетов (Camera, Actor, Image, Tilemap, и др., разбитыми на категории Core/Visual/Audio/Data/Navigation/Other) и 19 типами компонентов (Collider, Trigger, Interactable, и др.), которые прикрепляются к GameObject как editor-side metadata-стабы. `Asset.components` и `GameObject.components` — новые поля, сериализуются в `toJSON()`, копируются в экземпляры при размещении. `AssetManager.createPlaceholderAsset(typeId)` — создание заполнителя ассета (без реального контента, категория-базированный цвет, type-иконка в превью). Новое меню "Assets" в главной панели (между View и Settings) с иерархией категория→тип, каждый пункт вызывает `LevelEditor.createAssetOfType(typeId)`. `ActorPropertiesWindow` (диалог редактирования ассета) добавлена секция "Components" — список прикреплённых компонентов с удалением + кнопка "+ Add" (dropdown типов + submit), рабочая копия компонентов в памяти до Apply. `MenuManager` и `AssetPanel` интегрированы для рендера type-иконок (SVG, `AssetTypeIcons.js`) вместо цветных свотчей+букв у каталога-типов ассетов.
+- Fix: submenu Assets-РјРµРЅСЋ (РєР°С‚РµРіРѕСЂРёСЏв†’С‚РёРї) СЂРµРЅРґРµСЂРёР»СЃСЏ РїРѕРІРµСЂС… СЂРѕРґРёС‚РµР»СЊСЃРєРѕРіРѕ dropdown РІРјРµСЃС‚Рѕ СЂР°СЃРєСЂС‹С‚РёСЏ СЃР±РѕРєСѓ вЂ” РЅРѕРІС‹Рµ Tailwind-РєР»Р°СЃСЃС‹ (`top-0`, `left-full`, `w-56`, `z-30`, `max-h-96`), РґРѕР±Р°РІР»РµРЅРЅС‹Рµ РІ `MenuManager.createSubmenuItem()`, РѕС‚СЃСѓС‚СЃС‚РІРѕРІР°Р»Рё РІ СЃС‚Р°С‚РёС‡РµСЃРєРѕРј `styles/tailwind.build.css` (С„Р°Р№Р» РЅРµ РїРµСЂРµСЃРѕР±РёСЂР°Р»СЃСЏ РїРѕСЃР»Рµ РїСЂР°РІРєРё). РџРµСЂРµСЃРѕР±СЂР°РЅ С‡РµСЂРµР· `npm run build:css`.
+- Fix: `BaseDialog.hide()` РЅРµ СЃР±СЂР°СЃС‹РІР°Р» `contentRendered` вЂ” РїСЂРё РїРѕРІС‚РѕСЂРЅРѕРј `show()` РґР»СЏ РґСЂСѓРіРѕР№ СЃСѓС‰РЅРѕСЃС‚Рё (РЅР°РїСЂ. `ActorPropertiesWindow.show(otherAsset)`) DOM-РєРѕРЅС‚РµРЅС‚ РЅРµ РїРµСЂРµСЂРёСЃРѕРІС‹РІР°Р»СЃСЏ, РїРѕР»СЏ С„РѕСЂРјС‹ РѕСЃС‚Р°РІР°Р»РёСЃСЊ РѕС‚ РїСЂРµРґС‹РґСѓС‰РµРіРѕ Р°РєС‚РѕСЂР°, Apply РјРѕРі РїРµСЂРµР·Р°РїРёСЃР°С‚СЊ РґР°РЅРЅС‹Рµ РЅРµ С‚РѕРіРѕ Р°СЃСЃРµС‚Р°. Р”РѕР±Р°РІР»РµРЅ СЃР±СЂРѕСЃ `this.contentRendered = false` РІ `hide()`.
+- Fix: `Asset.hasChangesFromOriginal()`/`saveOriginalState()` РЅРµ СѓС‡РёС‚С‹РІР°Р»Рё РїРѕР»Рµ `components` вЂ” СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ РєРѕРјРїРѕРЅРµРЅС‚РѕРІ РІ `ActorPropertiesWindow` РЅРµ РІС‹СЃС‚Р°РІР»СЏР»Рѕ dirty-С„Р»Р°Рі Р°СЃСЃРµС‚Р°. Р”РѕР±Р°РІР»РµРЅРѕ СЃСЂР°РІРЅРµРЅРёРµ `componentsSignature`.
+- Refactor: СѓСЃС‚СЂР°РЅРµРЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ `flattenMenuItems` (Р±С‹Р»Р° РЅРµР·Р°РІРёСЃРёРјР°СЏ РєРѕРїРёСЏ-closure РІ `MenuManager.setupMenuItemEvents()`) вЂ” С‚РµРїРµСЂСЊ РёРјРїРѕСЂС‚РёСЂСѓРµС‚СЃСЏ РёР· `config/menu.js` (С„СѓРЅРєС†РёСЏ СЌРєСЃРїРѕСЂС‚РёСЂРѕРІР°РЅР°).
+- Feature: РєР°С‚Р°Р»РѕРіРё С‚РёРїРѕРІ Р°СЃСЃРµС‚РѕРІ Рё РєРѕРјРїРѕРЅРµРЅС‚РѕРІ (`AssetTypes.js`, `ComponentTypes.js`) СЃ 29 РїСЂРµРґРѕРїСЂРµРґРµР»С‘РЅРЅС‹РјРё С‚РёРїР°РјРё Р°СЃСЃРµС‚РѕРІ (Camera, Actor, Image, Tilemap, Рё РґСЂ., СЂР°Р·Р±РёС‚С‹РјРё РЅР° РєР°С‚РµРіРѕСЂРёРё Core/Visual/Audio/Data/Navigation/Other) Рё 19 С‚РёРїР°РјРё РєРѕРјРїРѕРЅРµРЅС‚РѕРІ (Collider, Trigger, Interactable, Рё РґСЂ.), РєРѕС‚РѕСЂС‹Рµ РїСЂРёРєСЂРµРїР»СЏСЋС‚СЃСЏ Рє GameObject РєР°Рє editor-side metadata-СЃС‚Р°Р±С‹. `Asset.components` Рё `GameObject.components` вЂ” РЅРѕРІС‹Рµ РїРѕР»СЏ, СЃРµСЂРёР°Р»РёР·СѓСЋС‚СЃСЏ РІ `toJSON()`, РєРѕРїРёСЂСѓСЋС‚СЃСЏ РІ СЌРєР·РµРјРїР»СЏСЂС‹ РїСЂРё СЂР°Р·РјРµС‰РµРЅРёРё. `AssetManager.createPlaceholderAsset(typeId)` вЂ” СЃРѕР·РґР°РЅРёРµ Р·Р°РїРѕР»РЅРёС‚РµР»СЏ Р°СЃСЃРµС‚Р° (Р±РµР· СЂРµР°Р»СЊРЅРѕРіРѕ РєРѕРЅС‚РµРЅС‚Р°, РєР°С‚РµРіРѕСЂРёСЏ-Р±Р°Р·РёСЂРѕРІР°РЅРЅС‹Р№ С†РІРµС‚, type-РёРєРѕРЅРєР° РІ РїСЂРµРІСЊСЋ). РќРѕРІРѕРµ РјРµРЅСЋ "Assets" РІ РіР»Р°РІРЅРѕР№ РїР°РЅРµР»Рё (РјРµР¶РґСѓ View Рё Settings) СЃ РёРµСЂР°СЂС…РёРµР№ РєР°С‚РµРіРѕСЂРёСЏв†’С‚РёРї, РєР°Р¶РґС‹Р№ РїСѓРЅРєС‚ РІС‹Р·С‹РІР°РµС‚ `LevelEditor.createAssetOfType(typeId)`. `ActorPropertiesWindow` (РґРёР°Р»РѕРі СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ Р°СЃСЃРµС‚Р°) РґРѕР±Р°РІР»РµРЅР° СЃРµРєС†РёСЏ "Components" вЂ” СЃРїРёСЃРѕРє РїСЂРёРєСЂРµРїР»С‘РЅРЅС‹С… РєРѕРјРїРѕРЅРµРЅС‚РѕРІ СЃ СѓРґР°Р»РµРЅРёРµРј + РєРЅРѕРїРєР° "+ Add" (dropdown С‚РёРїРѕРІ + submit), СЂР°Р±РѕС‡Р°СЏ РєРѕРїРёСЏ РєРѕРјРїРѕРЅРµРЅС‚РѕРІ РІ РїР°РјСЏС‚Рё РґРѕ Apply. `MenuManager` Рё `AssetPanel` РёРЅС‚РµРіСЂРёСЂРѕРІР°РЅС‹ РґР»СЏ СЂРµРЅРґРµСЂР° type-РёРєРѕРЅРѕРє (SVG, `AssetTypeIcons.js`) РІРјРµСЃС‚Рѕ С†РІРµС‚РЅС‹С… СЃРІРѕС‚С‡РµР№+Р±СѓРєРІ Сѓ РєР°С‚Р°Р»РѕРіР°-С‚РёРїРѕРІ Р°СЃСЃРµС‚РѕРІ.
 
-- Feature: BaseContextMenu — единая визуальная схема для всех контекстных меню. `createMenuItem()`/`createSubmenuItem()` теперь рендерят иконку как DOM-child `<span class="menu-item-icon">` (не конкатенация в innerHTML) и применяют полный disabled-scheme (opacity-50/pointer-events-none/cursor-not-allowed + dataset.menuDisabled) — идентично MenuManager (основное меню). Все 6 наследников (AssetContextMenu, AssetPanelContextMenu, CanvasContextMenu, ConsoleContextMenu, LayersContextMenu, OutlinerContextMenu) получили единый шаблон.
-- Fix: контекстные меню — клиппинг вложенных flyout-подменю. `.submenu-flyout` больше не ставит `overflow-y:auto; max-height:320px` безусловно; новый модификатор-класс `.submenu-flyout--scrollable`, применяется ТОЛЬКО к самому глубокому флайауту в цепочке (у которого нет вложенных submenu-детей). Позволило раскрыть третий уровень вложенности в ПКМ-меню Assets panel: Add → категория → тип ассета.
+- Feature: BaseContextMenu вЂ” РµРґРёРЅР°СЏ РІРёР·СѓР°Р»СЊРЅР°СЏ СЃС…РµРјР° РґР»СЏ РІСЃРµС… РєРѕРЅС‚РµРєСЃС‚РЅС‹С… РјРµРЅСЋ. `createMenuItem()`/`createSubmenuItem()` С‚РµРїРµСЂСЊ СЂРµРЅРґРµСЂСЏС‚ РёРєРѕРЅРєСѓ РєР°Рє DOM-child `<span class="menu-item-icon">` (РЅРµ РєРѕРЅРєР°С‚РµРЅР°С†РёСЏ РІ innerHTML) Рё РїСЂРёРјРµРЅСЏСЋС‚ РїРѕР»РЅС‹Р№ disabled-scheme (opacity-50/pointer-events-none/cursor-not-allowed + dataset.menuDisabled) вЂ” РёРґРµРЅС‚РёС‡РЅРѕ MenuManager (РѕСЃРЅРѕРІРЅРѕРµ РјРµРЅСЋ). Р’СЃРµ 6 РЅР°СЃР»РµРґРЅРёРєРѕРІ (AssetContextMenu, AssetPanelContextMenu, CanvasContextMenu, ConsoleContextMenu, LayersContextMenu, OutlinerContextMenu) РїРѕР»СѓС‡РёР»Рё РµРґРёРЅС‹Р№ С€Р°Р±Р»РѕРЅ.
+- Fix: РєРѕРЅС‚РµРєСЃС‚РЅС‹Рµ РјРµРЅСЋ вЂ” РєР»РёРїРїРёРЅРі РІР»РѕР¶РµРЅРЅС‹С… flyout-РїРѕРґРјРµРЅСЋ. `.submenu-flyout` Р±РѕР»СЊС€Рµ РЅРµ СЃС‚Р°РІРёС‚ `overflow-y:auto; max-height:320px` Р±РµР·СѓСЃР»РѕРІРЅРѕ; РЅРѕРІС‹Р№ РјРѕРґРёС„РёРєР°С‚РѕСЂ-РєР»Р°СЃСЃ `.submenu-flyout--scrollable`, РїСЂРёРјРµРЅСЏРµС‚СЃСЏ РўРћР›Р¬РљРћ Рє СЃР°РјРѕРјСѓ РіР»СѓР±РѕРєРѕРјСѓ С„Р»Р°Р№Р°СѓС‚Сѓ РІ С†РµРїРѕС‡РєРµ (Сѓ РєРѕС‚РѕСЂРѕРіРѕ РЅРµС‚ РІР»РѕР¶РµРЅРЅС‹С… submenu-РґРµС‚РµР№). РџРѕР·РІРѕР»РёР»Рѕ СЂР°СЃРєСЂС‹С‚СЊ С‚СЂРµС‚РёР№ СѓСЂРѕРІРµРЅСЊ РІР»РѕР¶РµРЅРЅРѕСЃС‚Рё РІ РџРљРњ-РјРµРЅСЋ Assets panel: Add в†’ РєР°С‚РµРіРѕСЂРёСЏ в†’ С‚РёРї Р°СЃСЃРµС‚Р°.
 
-- Refactor: новая утилита `src/utils/MenuItemTemplateUtils.js` экспортирует `renderMenuItemIconHtml(icon)` — одиночный источник правды разметки иконки меню-пункта (`<span class="menu-item-icon" style="width:18px;height:18px;margin-right:8px">...</span>`, 18×18 flex box). Используется `MenuManager.createMenuItem()` и `BaseContextMenu.createMenuItem()/createSubmenuItem()` для устранения трёх дублирующихся inline-шаблонов и предотвращения визуального дрейфа между dropdown-меню nav-bar'а и floating контекстными меню (CanvasContextMenu, AssetPanelContextMenu и др.).
-- Fix: BaseContextMenu теперь применяет точный же Tailwind-класс шаблон, что MenuManager: item-rows `'base-context-menu-item px-4 py-2 text-sm hover:bg-gray-700'` (вместо ручного padding/font-size/hover-цвета), separators `'border-t border-gray-600 my-1'` (вместо gradient-line CSS), submenu-триггеры `'px-4 py-2 text-sm hover:bg-gray-700 flex items-center justify-between'` с явным `<span class="text-xs ml-4">▸</span>`-гліфом (заменяет CSS `::after` pseudo-element). `styles/base-context-menu.css` упрощен: удалены дублирующие padding/font-size/gap/hover-background (теперь через utilities), сохранены только color-var, cursor, flex/align-items, transitions, disabled/active-states, first/last-child radius.
-- Fix: `BaseContextMenu.setupMenuClosing()` — фикс margin'а вокруг курсора. Раньше меню получало immunity-зону вокруг курсора ТОЛЬКО в течение ~150–200мс opening animation (через `requestAnimationFrame` polling), после чего срабатывал `mouseleave` и меню закрывалось при малейшем движении, независимо от `ui.cursorMenuMargin`. Теперь `setupMenuClosing()` устанавливает persistent `document` `mousemove`-листенер на ВСЮ жизнь меню, вызывая submenu-aware `isCursorInsideMenu(menu)` (true если курсор в пределах `getCursorMenuMargin()` px от самого меню OR любого открытого `.submenu-flyout.show` потомка на любой глубине вложенности). Листенер удаляется методом `removeMenuCloseWatcher()` (вызов из `hideMenu()` и из early-replace-пути в `showContextMenu()`), избегая утечек `document`-level обработчиков.
-- Feature: динамическая настройка `ui.cursorMenuMargin` (дефолт 6px, диапазон 0-60) — управляет "невидимой зоной" вокруг открытого контекстного меню, в которой курсор не триггерит закрытие. Заменяет захардкоженную константу `BaseContextMenu.CURSOR_MENU_MARGIN` (та остаётся как fallback-значение). Доступна в Settings → General → UI Settings, слайдер "Context Menu Cursor Margin (px)". Хранится в `config/defaults/ui.json`, синхронизируется через `SettingsSyncManager`, читается динамически методом `BaseContextMenu.getCursorMenuMargin()`.
+- Refactor: РЅРѕРІР°СЏ СѓС‚РёР»РёС‚Р° `src/utils/MenuItemTemplateUtils.js` СЌРєСЃРїРѕСЂС‚РёСЂСѓРµС‚ `renderMenuItemIconHtml(icon)` вЂ” РѕРґРёРЅРѕС‡РЅС‹Р№ РёСЃС‚РѕС‡РЅРёРє РїСЂР°РІРґС‹ СЂР°Р·РјРµС‚РєРё РёРєРѕРЅРєРё РјРµРЅСЋ-РїСѓРЅРєС‚Р° (`<span class="menu-item-icon" style="width:18px;height:18px;margin-right:8px">...</span>`, 18Г—18 flex box). РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ `MenuManager.createMenuItem()` Рё `BaseContextMenu.createMenuItem()/createSubmenuItem()` РґР»СЏ СѓСЃС‚СЂР°РЅРµРЅРёСЏ С‚СЂС‘С… РґСѓР±Р»РёСЂСѓСЋС‰РёС…СЃСЏ inline-С€Р°Р±Р»РѕРЅРѕРІ Рё РїСЂРµРґРѕС‚РІСЂР°С‰РµРЅРёСЏ РІРёР·СѓР°Р»СЊРЅРѕРіРѕ РґСЂРµР№С„Р° РјРµР¶РґСѓ dropdown-РјРµРЅСЋ nav-bar'Р° Рё floating РєРѕРЅС‚РµРєСЃС‚РЅС‹РјРё РјРµРЅСЋ (CanvasContextMenu, AssetPanelContextMenu Рё РґСЂ.).
+- Fix: BaseContextMenu С‚РµРїРµСЂСЊ РїСЂРёРјРµРЅСЏРµС‚ С‚РѕС‡РЅС‹Р№ Р¶Рµ Tailwind-РєР»Р°СЃСЃ С€Р°Р±Р»РѕРЅ, С‡С‚Рѕ MenuManager: item-rows `'base-context-menu-item px-4 py-2 text-sm hover:bg-gray-700'` (РІРјРµСЃС‚Рѕ СЂСѓС‡РЅРѕРіРѕ padding/font-size/hover-С†РІРµС‚Р°), separators `'border-t border-gray-600 my-1'` (РІРјРµСЃС‚Рѕ gradient-line CSS), submenu-С‚СЂРёРіРіРµСЂС‹ `'px-4 py-2 text-sm hover:bg-gray-700 flex items-center justify-between'` СЃ СЏРІРЅС‹Рј `<span class="text-xs ml-4">в–ё</span>`-РіР»С–С„РѕРј (Р·Р°РјРµРЅСЏРµС‚ CSS `::after` pseudo-element). `styles/base-context-menu.css` СѓРїСЂРѕС‰РµРЅ: СѓРґР°Р»РµРЅС‹ РґСѓР±Р»РёСЂСѓСЋС‰РёРµ padding/font-size/gap/hover-background (С‚РµРїРµСЂСЊ С‡РµСЂРµР· utilities), СЃРѕС…СЂР°РЅРµРЅС‹ С‚РѕР»СЊРєРѕ color-var, cursor, flex/align-items, transitions, disabled/active-states, first/last-child radius.
+- Fix: `BaseContextMenu.setupMenuClosing()` вЂ” С„РёРєСЃ margin'Р° РІРѕРєСЂСѓРі РєСѓСЂСЃРѕСЂР°. Р Р°РЅСЊС€Рµ РјРµРЅСЋ РїРѕР»СѓС‡Р°Р»Рѕ immunity-Р·РѕРЅСѓ РІРѕРєСЂСѓРі РєСѓСЂСЃРѕСЂР° РўРћР›Р¬РљРћ РІ С‚РµС‡РµРЅРёРµ ~150вЂ“200РјСЃ opening animation (С‡РµСЂРµР· `requestAnimationFrame` polling), РїРѕСЃР»Рµ С‡РµРіРѕ СЃСЂР°Р±Р°С‚С‹РІР°Р» `mouseleave` Рё РјРµРЅСЋ Р·Р°РєСЂС‹РІР°Р»РѕСЃСЊ РїСЂРё РјР°Р»РµР№С€РµРј РґРІРёР¶РµРЅРёРё, РЅРµР·Р°РІРёСЃРёРјРѕ РѕС‚ `ui.cursorMenuMargin`. РўРµРїРµСЂСЊ `setupMenuClosing()` СѓСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ persistent `document` `mousemove`-Р»РёСЃС‚РµРЅРµСЂ РЅР° Р’РЎР® Р¶РёР·РЅСЊ РјРµРЅСЋ, РІС‹Р·С‹РІР°СЏ submenu-aware `isCursorInsideMenu(menu)` (true РµСЃР»Рё РєСѓСЂСЃРѕСЂ РІ РїСЂРµРґРµР»Р°С… `getCursorMenuMargin()` px РѕС‚ СЃР°РјРѕРіРѕ РјРµРЅСЋ OR Р»СЋР±РѕРіРѕ РѕС‚РєСЂС‹С‚РѕРіРѕ `.submenu-flyout.show` РїРѕС‚РѕРјРєР° РЅР° Р»СЋР±РѕР№ РіР»СѓР±РёРЅРµ РІР»РѕР¶РµРЅРЅРѕСЃС‚Рё). Р›РёСЃС‚РµРЅРµСЂ СѓРґР°Р»СЏРµС‚СЃСЏ РјРµС‚РѕРґРѕРј `removeMenuCloseWatcher()` (РІС‹Р·РѕРІ РёР· `hideMenu()` Рё РёР· early-replace-РїСѓС‚Рё РІ `showContextMenu()`), РёР·Р±РµРіР°СЏ СѓС‚РµС‡РµРє `document`-level РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ.
+- Feature: РґРёРЅР°РјРёС‡РµСЃРєР°СЏ РЅР°СЃС‚СЂРѕР№РєР° `ui.cursorMenuMargin` (РґРµС„РѕР»С‚ 6px, РґРёР°РїР°Р·РѕРЅ 0-60) вЂ” СѓРїСЂР°РІР»СЏРµС‚ "РЅРµРІРёРґРёРјРѕР№ Р·РѕРЅРѕР№" РІРѕРєСЂСѓРі РѕС‚РєСЂС‹С‚РѕРіРѕ РєРѕРЅС‚РµРєСЃС‚РЅРѕРіРѕ РјРµРЅСЋ, РІ РєРѕС‚РѕСЂРѕР№ РєСѓСЂСЃРѕСЂ РЅРµ С‚СЂРёРіРіРµСЂРёС‚ Р·Р°РєСЂС‹С‚РёРµ. Р—Р°РјРµРЅСЏРµС‚ Р·Р°С…Р°СЂРґРєРѕР¶РµРЅРЅСѓСЋ РєРѕРЅСЃС‚Р°РЅС‚Сѓ `BaseContextMenu.CURSOR_MENU_MARGIN` (С‚Р° РѕСЃС‚Р°С‘С‚СЃСЏ РєР°Рє fallback-Р·РЅР°С‡РµРЅРёРµ). Р”РѕСЃС‚СѓРїРЅР° РІ Settings в†’ General в†’ UI Settings, СЃР»Р°Р№РґРµСЂ "Context Menu Cursor Margin (px)". РҐСЂР°РЅРёС‚СЃСЏ РІ `config/defaults/ui.json`, СЃРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµС‚СЃСЏ С‡РµСЂРµР· `SettingsSyncManager`, С‡РёС‚Р°РµС‚СЃСЏ РґРёРЅР°РјРёС‡РµСЃРєРё РјРµС‚РѕРґРѕРј `BaseContextMenu.getCursorMenuMargin()`.
 
-- Fix: моргание объектов на Alt+G (и вообще везде, где вызывался `RenderOperations.clearVisibleObjectsCacheForCurrentCamera()` — delete/group/ungroup/duplicate/visibility-toggle) пережило предыдущий фикс из-за двух независимых багов в самом методе. (1) `clearVisibleObjectsCacheForCurrentCamera()`/`clearVisibleObjectsCacheForCamera()` строили ключ кэша как `x,y,zoom`, а `getVisibleObjects()` при заполнении всегда добавляет суффикс parallax (`_off` или `_x,y`) — ключи никогда не совпадали, `.delete()` был постоянным no-op, точечная инвалидация не работала вообще (только полный `clearVisibleObjectsCache()` или TTL `CACHE_TIMEOUT_MS`=100мс). (2) `clearVisibleObjectsCacheForCurrentCamera()` начинался с `if (!this.lastCameraState) return;`, а `lastCameraState` нигде в коде не устанавливался (только `null` в конструкторе) — guard всегда обрывал метод раньше, чем доходило до самого delete. Фикс: вынесен общий `RenderOperations._buildVisibleObjectsCacheKey(camera)`, используется и при записи, и при обоих clear-методах; мёртвый guard и поле `lastCameraState` удалены.
-- Fix: настройки, изменённые при включённом "Apply changes automatically" (дефолт), терялись при переоткрытии окна — `SettingsSyncManager.syncSettingToState()` писал значение только в `StateManager`, а `configManager.set()` не вызывался (кнопка "Apply Changes", которая раньше это делала, в auto-apply режиме намеренно задизейблена). Добавлен write-through: `syncSettingToState()` теперь сразу пишет и в `ConfigManager`.
-- Fix: моргание детей группы при ungroup по хоткею Alt+G (в отличие от toolbar/ПКМ). Найдено 4 независимых источника. (1) `EventHandlers.js` хоткеи group/ungroup вызывали `groupOperations.groupSelectedObjects()/ungroupSelectedObjects()` напрямую, минуя обёртку `LevelEditor.groupSelectedObjects()/ungroupSelectedObjects()` — теперь оба хоткея вызывают методы `LevelEditor`, как toolbar и context-menu. (2) `EventHandlers.handleKeyDown()` не проверял `e.repeat` — при удержании Alt+G ОС генерирует повторные `keydown`, каждый вызывал `ungroupSelectedObjects()` заново; добавлен ранний `if (e.repeat) return;`. (3) **Ключевая находка**: `RenderOperations.clearEffectiveLayerCache()`/`clearEffectiveLayerCacheForObject()` обращались к несуществующему `this.editor.effectiveLayerCache` (реальный кэш лежит в `this.editor.cacheManager.effectiveLayerCache`) — оба метода были постоянным no-op во всех вызовах по кодовой базе (GroupOperations, MouseHandlers, DuplicateOperations, Group.js); исправлено на `this.editor.cacheManager.effectiveLayerCache`. (4) `LevelEditor.ungroupSelectedObjects()` читал `obj.children` **после** вызова `groupOperations.ungroupSelectedObjects()`, а тот уже вычищает `group.children` по одному через `extractObjectFromGroup`'s filter — цикл инвалидации детского кэша всегда проходил по пустому массиву; теперь id детей снимаются снимком до вызова. Вместе (3)+(4) означали, что `effectiveLayerCache`/`topLevelObjectCache` для только что разгруппированных детей оставался протухшим до отложенного `scheduleCacheInvalidation()` (100мс) при любом способе ungroup — но именно нажатие Alt (модификатор хоткея) само по себе триггерит лишний рендер-тик через `stateManager.update('keyboard.altKey', ...)`, который чаще попадает в это окно протухания, чем единственный синхронный рендер от клика по toolbar/ПКМ.
-- Feature: параллакс-множители уровня (Parallax H/V) — `Level.settings` инициализирует `parallaxHorizontal` и `parallaxVertical` (оба дефолт 1, сохраняются с уровнем в JSON); DetailsPanel-секция "Camera" (была "Actions") добавляет однострочный инпут-ряд "Parallax H/V" для настройки; `ParallaxRenderer.getCameraOffset()` применяет множители к смещению камеры независимо по осям (помимо существующей per-layer логики в `getParallaxOffset`). **UI компактность**: DetailsPanel преобразована на однострочный flex-лейаут (label 40% справа + контролы в остатке), новый хелпер `DetailsPanel.createDualFieldRow(label, fields)` для рядов с несколькими инпутами; `UIFactory.createLabeledInput()` переведён с label-above на flex-row (label flex 0 0 40% + input flex 1), применяется к Basic Properties (Name/Type) и Visual (Color).
-- Fix: обрезание длинных имён папок в Content-браузере переносило текст на вторую строку вместо ellipsis — причина в незакрытом тег `<div class="folder-item">` (`FoldersPanel.js` `renderFolder`), из-за чего браузер съедал вложенный flex-wrapper как битые атрибуты и рендерил spans блочно без flex. Заодно убран дублирующий JS-алгоритм обрезания текста (`truncateName` с canvas measureText + ResizeObserver) — использован тот же CSS-паттерн (`white-space: nowrap; overflow: hidden; text-overflow: ellipsis`), что и в OutlinerPanel; аналогичный редундантный `AssetPanel.truncateAssetName` тоже удалён (CSS `truncate`/inline-ellipsis уже покрывали обрезание). `.layer-name-display` (LayersPanel) получил тот же CSS-паттерн проактивно — тот же класс бага мог проявиться там же.
-- Fix: paste/duplicate placement (`DuplicateOperations.startFromObjects`) теперь использует позицию курсора только когда он реально над канвой (`mouse.isOverCanvas`, обновляется в `MouseHandlers._handleGlobalMouseMoveImpl` через `canvas.getBoundingClientRect()`), иначе fallback на центр канвы. Раньше использовалась устаревшая `mouse.worldX/worldY` даже если курсор ушёл на панель/диалог, из-за чего объекты вставлялись вне видимости.
-- Feature: при вставке/дублировании нескольких объектов они теперь размещаются под курсором как единая группа, центрированная по union bounding-box всех объектов (`anchorCenter` = центр объединённых мировых bounds через `getObjectWorldBounds`), вместо того чтобы остаться на месте оригинала. `LevelEditor.pasteObjects()` теперь проверяет `mouse.isOverCanvas` и не запускает вставку вне канвы (no-op с warning в лог).
-- Fix: регрессия от bbox-центрирования выше — Alt+drag дублирование (`DuplicateOperations.startFromObjects`) тоже центрировалось по bounding box, из-за чего превью прыгало под курсор вместо того чтобы остаться в точке захвата. Теперь при `isAltDragMode` анкор офсетов — сама позиция курсора (как при обычном drag), bbox-центрирование осталось только для paste/Ctrl+D.
-- Fix: при Alt+click копировании итоговая позиция копии смещалась относительно превью — `startFromObjects` анкорил превью на `mouse.worldX/worldY` из state, которая обновляется только throttled-обработчиком mousemove и на момент клика могла отставать от реальной точки, тогда как `confirmPlacement` на mouseup всегда берёт свежий `screenToWorld` от события. `startFromSelection`/`startFromObjects` теперь принимают опциональный `worldPosOverride`; `MouseHandlers.handleObjectClick`/`_handleMouseMoveImpl` передают туда уже вычисленный на этот же ивент `worldPos` вместо чтения из state.
-- Fix: ассеты типов с `/` в лейбле (Font/Text Style, Material/Shader Preset, Quest/Objective, Save Schema, Path/Spline, NavMesh, Prefab, Sequence/Cutscene) через "Add" не появлялись в Asset panel — `AssetManager.createPlaceholderAsset()` строил `name` из `typeDef.label` без санитайзинга, `/` в имени создавал лишний уровень вложенности папок при разборе `asset.path` в `FoldersPanel.addAssetsToStructure()`. Добавлен `safeName = name.replace(/\//g, '-')` для пути, `name`/label для отображения не тронуты.
-- Удалён тип ассета "Parallax Layer / Background" (`parallaxLayer`) из каталога — из `AssetTypes.js`/`AssetTypeIcons.js`.
+- Fix: РјРѕСЂРіР°РЅРёРµ РѕР±СЉРµРєС‚РѕРІ РЅР° Alt+G (Рё РІРѕРѕР±С‰Рµ РІРµР·РґРµ, РіРґРµ РІС‹Р·С‹РІР°Р»СЃСЏ `RenderOperations.clearVisibleObjectsCacheForCurrentCamera()` вЂ” delete/group/ungroup/duplicate/visibility-toggle) РїРµСЂРµР¶РёР»Рѕ РїСЂРµРґС‹РґСѓС‰РёР№ С„РёРєСЃ РёР·-Р·Р° РґРІСѓС… РЅРµР·Р°РІРёСЃРёРјС‹С… Р±Р°РіРѕРІ РІ СЃР°РјРѕРј РјРµС‚РѕРґРµ. (1) `clearVisibleObjectsCacheForCurrentCamera()`/`clearVisibleObjectsCacheForCamera()` СЃС‚СЂРѕРёР»Рё РєР»СЋС‡ РєСЌС€Р° РєР°Рє `x,y,zoom`, Р° `getVisibleObjects()` РїСЂРё Р·Р°РїРѕР»РЅРµРЅРёРё РІСЃРµРіРґР° РґРѕР±Р°РІР»СЏРµС‚ СЃСѓС„С„РёРєСЃ parallax (`_off` РёР»Рё `_x,y`) вЂ” РєР»СЋС‡Рё РЅРёРєРѕРіРґР° РЅРµ СЃРѕРІРїР°РґР°Р»Рё, `.delete()` Р±С‹Р» РїРѕСЃС‚РѕСЏРЅРЅС‹Рј no-op, С‚РѕС‡РµС‡РЅР°СЏ РёРЅРІР°Р»РёРґР°С†РёСЏ РЅРµ СЂР°Р±РѕС‚Р°Р»Р° РІРѕРѕР±С‰Рµ (С‚РѕР»СЊРєРѕ РїРѕР»РЅС‹Р№ `clearVisibleObjectsCache()` РёР»Рё TTL `CACHE_TIMEOUT_MS`=100РјСЃ). (2) `clearVisibleObjectsCacheForCurrentCamera()` РЅР°С‡РёРЅР°Р»СЃСЏ СЃ `if (!this.lastCameraState) return;`, Р° `lastCameraState` РЅРёРіРґРµ РІ РєРѕРґРµ РЅРµ СѓСЃС‚Р°РЅР°РІР»РёРІР°Р»СЃСЏ (С‚РѕР»СЊРєРѕ `null` РІ РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂРµ) вЂ” guard РІСЃРµРіРґР° РѕР±СЂС‹РІР°Р» РјРµС‚РѕРґ СЂР°РЅСЊС€Рµ, С‡РµРј РґРѕС…РѕРґРёР»Рѕ РґРѕ СЃР°РјРѕРіРѕ delete. Р¤РёРєСЃ: РІС‹РЅРµСЃРµРЅ РѕР±С‰РёР№ `RenderOperations._buildVisibleObjectsCacheKey(camera)`, РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ Рё РїСЂРё Р·Р°РїРёСЃРё, Рё РїСЂРё РѕР±РѕРёС… clear-РјРµС‚РѕРґР°С…; РјС‘СЂС‚РІС‹Р№ guard Рё РїРѕР»Рµ `lastCameraState` СѓРґР°Р»РµРЅС‹.
+- Fix: РЅР°СЃС‚СЂРѕР№РєРё, РёР·РјРµРЅС‘РЅРЅС‹Рµ РїСЂРё РІРєР»СЋС‡С‘РЅРЅРѕРј "Apply changes automatically" (РґРµС„РѕР»С‚), С‚РµСЂСЏР»РёСЃСЊ РїСЂРё РїРµСЂРµРѕС‚РєСЂС‹С‚РёРё РѕРєРЅР° вЂ” `SettingsSyncManager.syncSettingToState()` РїРёСЃР°Р» Р·РЅР°С‡РµРЅРёРµ С‚РѕР»СЊРєРѕ РІ `StateManager`, Р° `configManager.set()` РЅРµ РІС‹Р·С‹РІР°Р»СЃСЏ (РєРЅРѕРїРєР° "Apply Changes", РєРѕС‚РѕСЂР°СЏ СЂР°РЅСЊС€Рµ СЌС‚Рѕ РґРµР»Р°Р»Р°, РІ auto-apply СЂРµР¶РёРјРµ РЅР°РјРµСЂРµРЅРЅРѕ Р·Р°РґРёР·РµР№Р±Р»РµРЅР°). Р”РѕР±Р°РІР»РµРЅ write-through: `syncSettingToState()` С‚РµРїРµСЂСЊ СЃСЂР°Р·Сѓ РїРёС€РµС‚ Рё РІ `ConfigManager`.
+- Fix: РјРѕСЂРіР°РЅРёРµ РґРµС‚РµР№ РіСЂСѓРїРїС‹ РїСЂРё ungroup РїРѕ С…РѕС‚РєРµСЋ Alt+G (РІ РѕС‚Р»РёС‡РёРµ РѕС‚ toolbar/РџРљРњ). РќР°Р№РґРµРЅРѕ 4 РЅРµР·Р°РІРёСЃРёРјС‹С… РёСЃС‚РѕС‡РЅРёРєР°. (1) `EventHandlers.js` С…РѕС‚РєРµРё group/ungroup РІС‹Р·С‹РІР°Р»Рё `groupOperations.groupSelectedObjects()/ungroupSelectedObjects()` РЅР°РїСЂСЏРјСѓСЋ, РјРёРЅСѓСЏ РѕР±С‘СЂС‚РєСѓ `LevelEditor.groupSelectedObjects()/ungroupSelectedObjects()` вЂ” С‚РµРїРµСЂСЊ РѕР±Р° С…РѕС‚РєРµСЏ РІС‹Р·С‹РІР°СЋС‚ РјРµС‚РѕРґС‹ `LevelEditor`, РєР°Рє toolbar Рё context-menu. (2) `EventHandlers.handleKeyDown()` РЅРµ РїСЂРѕРІРµСЂСЏР» `e.repeat` вЂ” РїСЂРё СѓРґРµСЂР¶Р°РЅРёРё Alt+G РћРЎ РіРµРЅРµСЂРёСЂСѓРµС‚ РїРѕРІС‚РѕСЂРЅС‹Рµ `keydown`, РєР°Р¶РґС‹Р№ РІС‹Р·С‹РІР°Р» `ungroupSelectedObjects()` Р·Р°РЅРѕРІРѕ; РґРѕР±Р°РІР»РµРЅ СЂР°РЅРЅРёР№ `if (e.repeat) return;`. (3) **РљР»СЋС‡РµРІР°СЏ РЅР°С…РѕРґРєР°**: `RenderOperations.clearEffectiveLayerCache()`/`clearEffectiveLayerCacheForObject()` РѕР±СЂР°С‰Р°Р»РёСЃСЊ Рє РЅРµСЃСѓС‰РµСЃС‚РІСѓСЋС‰РµРјСѓ `this.editor.effectiveLayerCache` (СЂРµР°Р»СЊРЅС‹Р№ РєСЌС€ Р»РµР¶РёС‚ РІ `this.editor.cacheManager.effectiveLayerCache`) вЂ” РѕР±Р° РјРµС‚РѕРґР° Р±С‹Р»Рё РїРѕСЃС‚РѕСЏРЅРЅС‹Рј no-op РІРѕ РІСЃРµС… РІС‹Р·РѕРІР°С… РїРѕ РєРѕРґРѕРІРѕР№ Р±Р°Р·Рµ (GroupOperations, MouseHandlers, DuplicateOperations, Group.js); РёСЃРїСЂР°РІР»РµРЅРѕ РЅР° `this.editor.cacheManager.effectiveLayerCache`. (4) `LevelEditor.ungroupSelectedObjects()` С‡РёС‚Р°Р» `obj.children` **РїРѕСЃР»Рµ** РІС‹Р·РѕРІР° `groupOperations.ungroupSelectedObjects()`, Р° С‚РѕС‚ СѓР¶Рµ РІС‹С‡РёС‰Р°РµС‚ `group.children` РїРѕ РѕРґРЅРѕРјСѓ С‡РµСЂРµР· `extractObjectFromGroup`'s filter вЂ” С†РёРєР» РёРЅРІР°Р»РёРґР°С†РёРё РґРµС‚СЃРєРѕРіРѕ РєСЌС€Р° РІСЃРµРіРґР° РїСЂРѕС…РѕРґРёР» РїРѕ РїСѓСЃС‚РѕРјСѓ РјР°СЃСЃРёРІСѓ; С‚РµРїРµСЂСЊ id РґРµС‚РµР№ СЃРЅРёРјР°СЋС‚СЃСЏ СЃРЅРёРјРєРѕРј РґРѕ РІС‹Р·РѕРІР°. Р’РјРµСЃС‚Рµ (3)+(4) РѕР·РЅР°С‡Р°Р»Рё, С‡С‚Рѕ `effectiveLayerCache`/`topLevelObjectCache` РґР»СЏ С‚РѕР»СЊРєРѕ С‡С‚Рѕ СЂР°Р·РіСЂСѓРїРїРёСЂРѕРІР°РЅРЅС‹С… РґРµС‚РµР№ РѕСЃС‚Р°РІР°Р»СЃСЏ РїСЂРѕС‚СѓС…С€РёРј РґРѕ РѕС‚Р»РѕР¶РµРЅРЅРѕРіРѕ `scheduleCacheInvalidation()` (100РјСЃ) РїСЂРё Р»СЋР±РѕРј СЃРїРѕСЃРѕР±Рµ ungroup вЂ” РЅРѕ РёРјРµРЅРЅРѕ РЅР°Р¶Р°С‚РёРµ Alt (РјРѕРґРёС„РёРєР°С‚РѕСЂ С…РѕС‚РєРµСЏ) СЃР°РјРѕ РїРѕ СЃРµР±Рµ С‚СЂРёРіРіРµСЂРёС‚ Р»РёС€РЅРёР№ СЂРµРЅРґРµСЂ-С‚РёРє С‡РµСЂРµР· `stateManager.update('keyboard.altKey', ...)`, РєРѕС‚РѕСЂС‹Р№ С‡Р°С‰Рµ РїРѕРїР°РґР°РµС‚ РІ СЌС‚Рѕ РѕРєРЅРѕ РїСЂРѕС‚СѓС…Р°РЅРёСЏ, С‡РµРј РµРґРёРЅСЃС‚РІРµРЅРЅС‹Р№ СЃРёРЅС…СЂРѕРЅРЅС‹Р№ СЂРµРЅРґРµСЂ РѕС‚ РєР»РёРєР° РїРѕ toolbar/РџРљРњ.
+- Feature: РїР°СЂР°Р»Р»Р°РєСЃ-РјРЅРѕР¶РёС‚РµР»Рё СѓСЂРѕРІРЅСЏ (Parallax H/V) вЂ” `Level.settings` РёРЅРёС†РёР°Р»РёР·РёСЂСѓРµС‚ `parallaxHorizontal` Рё `parallaxVertical` (РѕР±Р° РґРµС„РѕР»С‚ 1, СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ СЃ СѓСЂРѕРІРЅРµРј РІ JSON); DetailsPanel-СЃРµРєС†РёСЏ "Camera" (Р±С‹Р»Р° "Actions") РґРѕР±Р°РІР»СЏРµС‚ РѕРґРЅРѕСЃС‚СЂРѕС‡РЅС‹Р№ РёРЅРїСѓС‚-СЂСЏРґ "Parallax H/V" РґР»СЏ РЅР°СЃС‚СЂРѕР№РєРё; `ParallaxRenderer.getCameraOffset()` РїСЂРёРјРµРЅСЏРµС‚ РјРЅРѕР¶РёС‚РµР»Рё Рє СЃРјРµС‰РµРЅРёСЋ РєР°РјРµСЂС‹ РЅРµР·Р°РІРёСЃРёРјРѕ РїРѕ РѕСЃСЏРј (РїРѕРјРёРјРѕ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РµР№ per-layer Р»РѕРіРёРєРё РІ `getParallaxOffset`). **UI РєРѕРјРїР°РєС‚РЅРѕСЃС‚СЊ**: DetailsPanel РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅР° РЅР° РѕРґРЅРѕСЃС‚СЂРѕС‡РЅС‹Р№ flex-Р»РµР№Р°СѓС‚ (label 40% СЃРїСЂР°РІР° + РєРѕРЅС‚СЂРѕР»С‹ РІ РѕСЃС‚Р°С‚РєРµ), РЅРѕРІС‹Р№ С…РµР»РїРµСЂ `DetailsPanel.createDualFieldRow(label, fields)` РґР»СЏ СЂСЏРґРѕРІ СЃ РЅРµСЃРєРѕР»СЊРєРёРјРё РёРЅРїСѓС‚Р°РјРё; `UIFactory.createLabeledInput()` РїРµСЂРµРІРµРґС‘РЅ СЃ label-above РЅР° flex-row (label flex 0 0 40% + input flex 1), РїСЂРёРјРµРЅСЏРµС‚СЃСЏ Рє Basic Properties (Name/Type) Рё Visual (Color).
+- Fix: РѕР±СЂРµР·Р°РЅРёРµ РґР»РёРЅРЅС‹С… РёРјС‘РЅ РїР°РїРѕРє РІ Content-Р±СЂР°СѓР·РµСЂРµ РїРµСЂРµРЅРѕСЃРёР»Рѕ С‚РµРєСЃС‚ РЅР° РІС‚РѕСЂСѓСЋ СЃС‚СЂРѕРєСѓ РІРјРµСЃС‚Рѕ ellipsis вЂ” РїСЂРёС‡РёРЅР° РІ РЅРµР·Р°РєСЂС‹С‚РѕРј С‚РµРі `<div class="folder-item">` (`FoldersPanel.js` `renderFolder`), РёР·-Р·Р° С‡РµРіРѕ Р±СЂР°СѓР·РµСЂ СЃСЉРµРґР°Р» РІР»РѕР¶РµРЅРЅС‹Р№ flex-wrapper РєР°Рє Р±РёС‚С‹Рµ Р°С‚СЂРёР±СѓС‚С‹ Рё СЂРµРЅРґРµСЂРёР» spans Р±Р»РѕС‡РЅРѕ Р±РµР· flex. Р—Р°РѕРґРЅРѕ СѓР±СЂР°РЅ РґСѓР±Р»РёСЂСѓСЋС‰РёР№ JS-Р°Р»РіРѕСЂРёС‚Рј РѕР±СЂРµР·Р°РЅРёСЏ С‚РµРєСЃС‚Р° (`truncateName` СЃ canvas measureText + ResizeObserver) вЂ” РёСЃРїРѕР»СЊР·РѕРІР°РЅ С‚РѕС‚ Р¶Рµ CSS-РїР°С‚С‚РµСЂРЅ (`white-space: nowrap; overflow: hidden; text-overflow: ellipsis`), С‡С‚Рѕ Рё РІ OutlinerPanel; Р°РЅР°Р»РѕРіРёС‡РЅС‹Р№ СЂРµРґСѓРЅРґР°РЅС‚РЅС‹Р№ `AssetPanel.truncateAssetName` С‚РѕР¶Рµ СѓРґР°Р»С‘РЅ (CSS `truncate`/inline-ellipsis СѓР¶Рµ РїРѕРєСЂС‹РІР°Р»Рё РѕР±СЂРµР·Р°РЅРёРµ). `.layer-name-display` (LayersPanel) РїРѕР»СѓС‡РёР» С‚РѕС‚ Р¶Рµ CSS-РїР°С‚С‚РµСЂРЅ РїСЂРѕР°РєС‚РёРІРЅРѕ вЂ” С‚РѕС‚ Р¶Рµ РєР»Р°СЃСЃ Р±Р°РіР° РјРѕРі РїСЂРѕСЏРІРёС‚СЊСЃСЏ С‚Р°Рј Р¶Рµ.
+- Fix: paste/duplicate placement (`DuplicateOperations.startFromObjects`) С‚РµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓРµС‚ РїРѕР·РёС†РёСЋ РєСѓСЂСЃРѕСЂР° С‚РѕР»СЊРєРѕ РєРѕРіРґР° РѕРЅ СЂРµР°Р»СЊРЅРѕ РЅР°Рґ РєР°РЅРІРѕР№ (`mouse.isOverCanvas`, РѕР±РЅРѕРІР»СЏРµС‚СЃСЏ РІ `MouseHandlers._handleGlobalMouseMoveImpl` С‡РµСЂРµР· `canvas.getBoundingClientRect()`), РёРЅР°С‡Рµ fallback РЅР° С†РµРЅС‚СЂ РєР°РЅРІС‹. Р Р°РЅСЊС€Рµ РёСЃРїРѕР»СЊР·РѕРІР°Р»Р°СЃСЊ СѓСЃС‚Р°СЂРµРІС€Р°СЏ `mouse.worldX/worldY` РґР°Р¶Рµ РµСЃР»Рё РєСѓСЂСЃРѕСЂ СѓС€С‘Р» РЅР° РїР°РЅРµР»СЊ/РґРёР°Р»РѕРі, РёР·-Р·Р° С‡РµРіРѕ РѕР±СЉРµРєС‚С‹ РІСЃС‚Р°РІР»СЏР»РёСЃСЊ РІРЅРµ РІРёРґРёРјРѕСЃС‚Рё.
+- Feature: РїСЂРё РІСЃС‚Р°РІРєРµ/РґСѓР±Р»РёСЂРѕРІР°РЅРёРё РЅРµСЃРєРѕР»СЊРєРёС… РѕР±СЉРµРєС‚РѕРІ РѕРЅРё С‚РµРїРµСЂСЊ СЂР°Р·РјРµС‰Р°СЋС‚СЃСЏ РїРѕРґ РєСѓСЂСЃРѕСЂРѕРј РєР°Рє РµРґРёРЅР°СЏ РіСЂСѓРїРїР°, С†РµРЅС‚СЂРёСЂРѕРІР°РЅРЅР°СЏ РїРѕ union bounding-box РІСЃРµС… РѕР±СЉРµРєС‚РѕРІ (`anchorCenter` = С†РµРЅС‚СЂ РѕР±СЉРµРґРёРЅС‘РЅРЅС‹С… РјРёСЂРѕРІС‹С… bounds С‡РµСЂРµР· `getObjectWorldBounds`), РІРјРµСЃС‚Рѕ С‚РѕРіРѕ С‡С‚РѕР±С‹ РѕСЃС‚Р°С‚СЊСЃСЏ РЅР° РјРµСЃС‚Рµ РѕСЂРёРіРёРЅР°Р»Р°. `LevelEditor.pasteObjects()` С‚РµРїРµСЂСЊ РїСЂРѕРІРµСЂСЏРµС‚ `mouse.isOverCanvas` Рё РЅРµ Р·Р°РїСѓСЃРєР°РµС‚ РІСЃС‚Р°РІРєСѓ РІРЅРµ РєР°РЅРІС‹ (no-op СЃ warning РІ Р»РѕРі).
+- Fix: СЂРµРіСЂРµСЃСЃРёСЏ РѕС‚ bbox-С†РµРЅС‚СЂРёСЂРѕРІР°РЅРёСЏ РІС‹С€Рµ вЂ” Alt+drag РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ (`DuplicateOperations.startFromObjects`) С‚РѕР¶Рµ С†РµРЅС‚СЂРёСЂРѕРІР°Р»РѕСЃСЊ РїРѕ bounding box, РёР·-Р·Р° С‡РµРіРѕ РїСЂРµРІСЊСЋ РїСЂС‹РіР°Р»Рѕ РїРѕРґ РєСѓСЂСЃРѕСЂ РІРјРµСЃС‚Рѕ С‚РѕРіРѕ С‡С‚РѕР±С‹ РѕСЃС‚Р°С‚СЊСЃСЏ РІ С‚РѕС‡РєРµ Р·Р°С…РІР°С‚Р°. РўРµРїРµСЂСЊ РїСЂРё `isAltDragMode` Р°РЅРєРѕСЂ РѕС„СЃРµС‚РѕРІ вЂ” СЃР°РјР° РїРѕР·РёС†РёСЏ РєСѓСЂСЃРѕСЂР° (РєР°Рє РїСЂРё РѕР±С‹С‡РЅРѕРј drag), bbox-С†РµРЅС‚СЂРёСЂРѕРІР°РЅРёРµ РѕСЃС‚Р°Р»РѕСЃСЊ С‚РѕР»СЊРєРѕ РґР»СЏ paste/Ctrl+D.
+- Fix: РїСЂРё Alt+click РєРѕРїРёСЂРѕРІР°РЅРёРё РёС‚РѕРіРѕРІР°СЏ РїРѕР·РёС†РёСЏ РєРѕРїРёРё СЃРјРµС‰Р°Р»Р°СЃСЊ РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕ РїСЂРµРІСЊСЋ вЂ” `startFromObjects` Р°РЅРєРѕСЂРёР» РїСЂРµРІСЊСЋ РЅР° `mouse.worldX/worldY` РёР· state, РєРѕС‚РѕСЂР°СЏ РѕР±РЅРѕРІР»СЏРµС‚СЃСЏ С‚РѕР»СЊРєРѕ throttled-РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРј mousemove Рё РЅР° РјРѕРјРµРЅС‚ РєР»РёРєР° РјРѕРіР»Р° РѕС‚СЃС‚Р°РІР°С‚СЊ РѕС‚ СЂРµР°Р»СЊРЅРѕР№ С‚РѕС‡РєРё, С‚РѕРіРґР° РєР°Рє `confirmPlacement` РЅР° mouseup РІСЃРµРіРґР° Р±РµСЂС‘С‚ СЃРІРµР¶РёР№ `screenToWorld` РѕС‚ СЃРѕР±С‹С‚РёСЏ. `startFromSelection`/`startFromObjects` С‚РµРїРµСЂСЊ РїСЂРёРЅРёРјР°СЋС‚ РѕРїС†РёРѕРЅР°Р»СЊРЅС‹Р№ `worldPosOverride`; `MouseHandlers.handleObjectClick`/`_handleMouseMoveImpl` РїРµСЂРµРґР°СЋС‚ С‚СѓРґР° СѓР¶Рµ РІС‹С‡РёСЃР»РµРЅРЅС‹Р№ РЅР° СЌС‚РѕС‚ Р¶Рµ РёРІРµРЅС‚ `worldPos` РІРјРµСЃС‚Рѕ С‡С‚РµРЅРёСЏ РёР· state.
+- Fix: Р°СЃСЃРµС‚С‹ С‚РёРїРѕРІ СЃ `/` РІ Р»РµР№Р±Р»Рµ (Font/Text Style, Material/Shader Preset, Quest/Objective, Save Schema, Path/Spline, NavMesh, Prefab, Sequence/Cutscene) С‡РµСЂРµР· "Add" РЅРµ РїРѕСЏРІР»СЏР»РёСЃСЊ РІ Asset panel вЂ” `AssetManager.createPlaceholderAsset()` СЃС‚СЂРѕРёР» `name` РёР· `typeDef.label` Р±РµР· СЃР°РЅРёС‚Р°Р№Р·РёРЅРіР°, `/` РІ РёРјРµРЅРё СЃРѕР·РґР°РІР°Р» Р»РёС€РЅРёР№ СѓСЂРѕРІРµРЅСЊ РІР»РѕР¶РµРЅРЅРѕСЃС‚Рё РїР°РїРѕРє РїСЂРё СЂР°Р·Р±РѕСЂРµ `asset.path` РІ `FoldersPanel.addAssetsToStructure()`. Р”РѕР±Р°РІР»РµРЅ `safeName = name.replace(/\//g, '-')` РґР»СЏ РїСѓС‚Рё, `name`/label РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ РЅРµ С‚СЂРѕРЅСѓС‚С‹.
+- РЈРґР°Р»С‘РЅ С‚РёРї Р°СЃСЃРµС‚Р° "Parallax Layer / Background" (`parallaxLayer`) РёР· РєР°С‚Р°Р»РѕРіР° вЂ” РёР· `AssetTypes.js`/`AssetTypeIcons.js`.
 
-### Feature — нативное splash-окно при старте (`start_Editor.bat` + `scripts/splash_screen.ps1`)
+### Feature вЂ” РЅР°С‚РёРІРЅРѕРµ splash-РѕРєРЅРѕ РїСЂРё СЃС‚Р°СЂС‚Рµ (`start_Editor.bat` + `scripts/splash_screen.ps1`)
 
-- Чтобы закрыть разрыв между двойным кликом и появлением окна браузера (запуск сервера/поиск порта), `start_Editor.bat` в начале `:main` запускает `scripts/splash_screen.ps1` — PowerShell/WinForms borderless `TopMost`-окно (отдельное системное окно, не HTML/не встроено в браузерную страницу). Дизайн окна (картинка `HAPLO_editor_SplashScreen_v3-54.png`, заголовок "HAPLO EDITOR 2D is now loading...", строка статуса на всю ширину внизу) правится прямо в `scripts/splash_screen.ps1` — файл больше не генерируется на лету построчным `echo` в `.bat`.
-- Живой статус процесса запуска: `start_Editor.bat` пишет короткие сообщения о текущем шаге (проверка порта, запуск Python/Node сервера, ожидание готовности, определение браузера, открытие браузера) через подпрограмму `:splashstatus` в файл `%TEMP%\haplo_splash_status_*.txt`; `splash_screen.ps1` опрашивает этот файл таймером (200мс) и обновляет нижнюю строку окна.
-- PID процесса splash пишется в `%TEMP%\haplo_splash_*.pid`; подпрограмма `:closesplash` (`taskkill /F /PID`) используется только в реальных ошибках запуска (нет Python/Node, нет ни одного известного браузера) — там ждать нечего.
-- Splash не закрывается при простом открытии окна браузера — он должен висеть (`TopMost`) поверх загружающейся страницы, пока `LevelEditor` реально не доинициализируется. Механизм: `scripts/splash_screen.ps1` поднимает локальный `TcpListener` на loopback-порту (`-ReadyPort`, по умолчанию 47990; обычный `TcpListener`, а не `HttpListener`, чтобы не требовать admin/URL-ACL даже на localhost); `index.html`/`LevelEditor.finalizeInitialization()` вызывают `window.notifySplashReady()` (fetch `no-cors` на этот порт), как только редактор реально готов (или упал с ошибкой в `init()` — тоже закрывает splash, чтобы не зависал). Получив соединение, `splash_screen.ps1` отвечает минимальным `200 OK` и закрывает форму сам. Если пинг так и не пришёл (краш страницы до `finalizeInitialization`), встроенный таймаут (`-MaxWaitSeconds`, по умолчанию 90с) закрывает splash принудительно.
-- Safety-net при закрытии редактора (после остановки сервера, на случай что ни ping, ни внутренний таймаут не сработали): `:closesplash` + поиск зависшего процесса по командной строке (`Get-CimInstance Win32_Process` с фильтром `-like *<путь_к_pid-файла>*`, исключая PID самого проверяющего процесса через `-ne $PID`) и принудительный `Stop-Process -Force`.
-- Fix: раньше `:closesplash` вызывался прямо перед запуском браузера, поэтому splash пропадал ещё до появления окна редактора (не после полной загрузки, как требовалось) — сам вызов убран из этой точки, закрытие теперь только через ping/таймаут/error-ветки выше.
-- Fix (найден при том же дебаге): `:closesplash` читал `%SPLASH_PID%` вместо `!SPLASH_PID!` внутри блока `if exist (...)` при активном `setlocal enabledelayedexpansion`; `%`-переменные внутри скобочного блока разворачиваются один раз при разборе блока (ещё до `set /p`), поэтому `taskkill` получал пустой/устаревший PID и молча не срабатывал (ошибка подавлена `>nul 2>&1`). Исправлено на `!SPLASH_PID!`.
-- В `index.html`/`LevelEditor.js` пробовался HTML-оверлей `#loading-screen` (виден только после открытия окна браузера) — убран как избыточный: нативное splash-окно уже полностью закрывает разрыв на старте.
+- Р§С‚РѕР±С‹ Р·Р°РєСЂС‹С‚СЊ СЂР°Р·СЂС‹РІ РјРµР¶РґСѓ РґРІРѕР№РЅС‹Рј РєР»РёРєРѕРј Рё РїРѕСЏРІР»РµРЅРёРµРј РѕРєРЅР° Р±СЂР°СѓР·РµСЂР° (Р·Р°РїСѓСЃРє СЃРµСЂРІРµСЂР°/РїРѕРёСЃРє РїРѕСЂС‚Р°), `start_Editor.bat` РІ РЅР°С‡Р°Р»Рµ `:main` Р·Р°РїСѓСЃРєР°РµС‚ `scripts/splash_screen.ps1` вЂ” PowerShell/WinForms borderless `TopMost`-РѕРєРЅРѕ (РѕС‚РґРµР»СЊРЅРѕРµ СЃРёСЃС‚РµРјРЅРѕРµ РѕРєРЅРѕ, РЅРµ HTML/РЅРµ РІСЃС‚СЂРѕРµРЅРѕ РІ Р±СЂР°СѓР·РµСЂРЅСѓСЋ СЃС‚СЂР°РЅРёС†Сѓ). Р”РёР·Р°Р№РЅ РѕРєРЅР° (РєР°СЂС‚РёРЅРєР° `HAPLO_editor_SplashScreen_v3-54.png`, Р·Р°РіРѕР»РѕРІРѕРє "HAPLO EDITOR 2D is now loading...", СЃС‚СЂРѕРєР° СЃС‚Р°С‚СѓСЃР° РЅР° РІСЃСЋ С€РёСЂРёРЅСѓ РІРЅРёР·Сѓ) РїСЂР°РІРёС‚СЃСЏ РїСЂСЏРјРѕ РІ `scripts/splash_screen.ps1` вЂ” С„Р°Р№Р» Р±РѕР»СЊС€Рµ РЅРµ РіРµРЅРµСЂРёСЂСѓРµС‚СЃСЏ РЅР° Р»РµС‚Сѓ РїРѕСЃС‚СЂРѕС‡РЅС‹Рј `echo` РІ `.bat`.
+- Р–РёРІРѕР№ СЃС‚Р°С‚СѓСЃ РїСЂРѕС†РµСЃСЃР° Р·Р°РїСѓСЃРєР°: `start_Editor.bat` РїРёС€РµС‚ РєРѕСЂРѕС‚РєРёРµ СЃРѕРѕР±С‰РµРЅРёСЏ Рѕ С‚РµРєСѓС‰РµРј С€Р°РіРµ (РїСЂРѕРІРµСЂРєР° РїРѕСЂС‚Р°, Р·Р°РїСѓСЃРє Python/Node СЃРµСЂРІРµСЂР°, РѕР¶РёРґР°РЅРёРµ РіРѕС‚РѕРІРЅРѕСЃС‚Рё, РѕРїСЂРµРґРµР»РµРЅРёРµ Р±СЂР°СѓР·РµСЂР°, РѕС‚РєСЂС‹С‚РёРµ Р±СЂР°СѓР·РµСЂР°) С‡РµСЂРµР· РїРѕРґРїСЂРѕРіСЂР°РјРјСѓ `:splashstatus` РІ С„Р°Р№Р» `%TEMP%\haplo_splash_status_*.txt`; `splash_screen.ps1` РѕРїСЂР°С€РёРІР°РµС‚ СЌС‚РѕС‚ С„Р°Р№Р» С‚Р°Р№РјРµСЂРѕРј (200РјСЃ) Рё РѕР±РЅРѕРІР»СЏРµС‚ РЅРёР¶РЅСЋСЋ СЃС‚СЂРѕРєСѓ РѕРєРЅР°.
+- PID РїСЂРѕС†РµСЃСЃР° splash РїРёС€РµС‚СЃСЏ РІ `%TEMP%\haplo_splash_*.pid`; РїРѕРґРїСЂРѕРіСЂР°РјРјР° `:closesplash` (`taskkill /F /PID`) РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ С‚РѕР»СЊРєРѕ РІ СЂРµР°Р»СЊРЅС‹С… РѕС€РёР±РєР°С… Р·Р°РїСѓСЃРєР° (РЅРµС‚ Python/Node, РЅРµС‚ РЅРё РѕРґРЅРѕРіРѕ РёР·РІРµСЃС‚РЅРѕРіРѕ Р±СЂР°СѓР·РµСЂР°) вЂ” С‚Р°Рј Р¶РґР°С‚СЊ РЅРµС‡РµРіРѕ.
+- Splash РЅРµ Р·Р°РєСЂС‹РІР°РµС‚СЃСЏ РїСЂРё РїСЂРѕСЃС‚РѕРј РѕС‚РєСЂС‹С‚РёРё РѕРєРЅР° Р±СЂР°СѓР·РµСЂР° вЂ” РѕРЅ РґРѕР»Р¶РµРЅ РІРёСЃРµС‚СЊ (`TopMost`) РїРѕРІРµСЂС… Р·Р°РіСЂСѓР¶Р°СЋС‰РµР№СЃСЏ СЃС‚СЂР°РЅРёС†С‹, РїРѕРєР° `LevelEditor` СЂРµР°Р»СЊРЅРѕ РЅРµ РґРѕРёРЅРёС†РёР°Р»РёР·РёСЂСѓРµС‚СЃСЏ. РњРµС…Р°РЅРёР·Рј: `scripts/splash_screen.ps1` РїРѕРґРЅРёРјР°РµС‚ Р»РѕРєР°Р»СЊРЅС‹Р№ `TcpListener` РЅР° loopback-РїРѕСЂС‚Сѓ (`-ReadyPort`, РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ 47990; РѕР±С‹С‡РЅС‹Р№ `TcpListener`, Р° РЅРµ `HttpListener`, С‡С‚РѕР±С‹ РЅРµ С‚СЂРµР±РѕРІР°С‚СЊ admin/URL-ACL РґР°Р¶Рµ РЅР° localhost); `index.html`/`LevelEditor.finalizeInitialization()` РІС‹Р·С‹РІР°СЋС‚ `window.notifySplashReady()` (fetch `no-cors` РЅР° СЌС‚РѕС‚ РїРѕСЂС‚), РєР°Рє С‚РѕР»СЊРєРѕ СЂРµРґР°РєС‚РѕСЂ СЂРµР°Р»СЊРЅРѕ РіРѕС‚РѕРІ (РёР»Рё СѓРїР°Р» СЃ РѕС€РёР±РєРѕР№ РІ `init()` вЂ” С‚РѕР¶Рµ Р·Р°РєСЂС‹РІР°РµС‚ splash, С‡С‚РѕР±С‹ РЅРµ Р·Р°РІРёСЃР°Р»). РџРѕР»СѓС‡РёРІ СЃРѕРµРґРёРЅРµРЅРёРµ, `splash_screen.ps1` РѕС‚РІРµС‡Р°РµС‚ РјРёРЅРёРјР°Р»СЊРЅС‹Рј `200 OK` Рё Р·Р°РєСЂС‹РІР°РµС‚ С„РѕСЂРјСѓ СЃР°Рј. Р•СЃР»Рё РїРёРЅРі С‚Р°Рє Рё РЅРµ РїСЂРёС€С‘Р» (РєСЂР°С€ СЃС‚СЂР°РЅРёС†С‹ РґРѕ `finalizeInitialization`), РІСЃС‚СЂРѕРµРЅРЅС‹Р№ С‚Р°Р№РјР°СѓС‚ (`-MaxWaitSeconds`, РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ 90СЃ) Р·Р°РєСЂС‹РІР°РµС‚ splash РїСЂРёРЅСѓРґРёС‚РµР»СЊРЅРѕ.
+- Safety-net РїСЂРё Р·Р°РєСЂС‹С‚РёРё СЂРµРґР°РєС‚РѕСЂР° (РїРѕСЃР»Рµ РѕСЃС‚Р°РЅРѕРІРєРё СЃРµСЂРІРµСЂР°, РЅР° СЃР»СѓС‡Р°Р№ С‡С‚Рѕ РЅРё ping, РЅРё РІРЅСѓС‚СЂРµРЅРЅРёР№ С‚Р°Р№РјР°СѓС‚ РЅРµ СЃСЂР°Р±РѕС‚Р°Р»Рё): `:closesplash` + РїРѕРёСЃРє Р·Р°РІРёСЃС€РµРіРѕ РїСЂРѕС†РµСЃСЃР° РїРѕ РєРѕРјР°РЅРґРЅРѕР№ СЃС‚СЂРѕРєРµ (`Get-CimInstance Win32_Process` СЃ С„РёР»СЊС‚СЂРѕРј `-like *<РїСѓС‚СЊ_Рє_pid-С„Р°Р№Р»Р°>*`, РёСЃРєР»СЋС‡Р°СЏ PID СЃР°РјРѕРіРѕ РїСЂРѕРІРµСЂСЏСЋС‰РµРіРѕ РїСЂРѕС†РµСЃСЃР° С‡РµСЂРµР· `-ne $PID`) Рё РїСЂРёРЅСѓРґРёС‚РµР»СЊРЅС‹Р№ `Stop-Process -Force`.
+- Fix: СЂР°РЅСЊС€Рµ `:closesplash` РІС‹Р·С‹РІР°Р»СЃСЏ РїСЂСЏРјРѕ РїРµСЂРµРґ Р·Р°РїСѓСЃРєРѕРј Р±СЂР°СѓР·РµСЂР°, РїРѕСЌС‚РѕРјСѓ splash РїСЂРѕРїР°РґР°Р» РµС‰С‘ РґРѕ РїРѕСЏРІР»РµРЅРёСЏ РѕРєРЅР° СЂРµРґР°РєС‚РѕСЂР° (РЅРµ РїРѕСЃР»Рµ РїРѕР»РЅРѕР№ Р·Р°РіСЂСѓР·РєРё, РєР°Рє С‚СЂРµР±РѕРІР°Р»РѕСЃСЊ) вЂ” СЃР°Рј РІС‹Р·РѕРІ СѓР±СЂР°РЅ РёР· СЌС‚РѕР№ С‚РѕС‡РєРё, Р·Р°РєСЂС‹С‚РёРµ С‚РµРїРµСЂСЊ С‚РѕР»СЊРєРѕ С‡РµСЂРµР· ping/С‚Р°Р№РјР°СѓС‚/error-РІРµС‚РєРё РІС‹С€Рµ.
+- Fix (РЅР°Р№РґРµРЅ РїСЂРё С‚РѕРј Р¶Рµ РґРµР±Р°РіРµ): `:closesplash` С‡РёС‚Р°Р» `%SPLASH_PID%` РІРјРµСЃС‚Рѕ `!SPLASH_PID!` РІРЅСѓС‚СЂРё Р±Р»РѕРєР° `if exist (...)` РїСЂРё Р°РєС‚РёРІРЅРѕРј `setlocal enabledelayedexpansion`; `%`-РїРµСЂРµРјРµРЅРЅС‹Рµ РІРЅСѓС‚СЂРё СЃРєРѕР±РѕС‡РЅРѕРіРѕ Р±Р»РѕРєР° СЂР°Р·РІРѕСЂР°С‡РёРІР°СЋС‚СЃСЏ РѕРґРёРЅ СЂР°Р· РїСЂРё СЂР°Р·Р±РѕСЂРµ Р±Р»РѕРєР° (РµС‰С‘ РґРѕ `set /p`), РїРѕСЌС‚РѕРјСѓ `taskkill` РїРѕР»СѓС‡Р°Р» РїСѓСЃС‚РѕР№/СѓСЃС‚Р°СЂРµРІС€РёР№ PID Рё РјРѕР»С‡Р° РЅРµ СЃСЂР°Р±Р°С‚С‹РІР°Р» (РѕС€РёР±РєР° РїРѕРґР°РІР»РµРЅР° `>nul 2>&1`). РСЃРїСЂР°РІР»РµРЅРѕ РЅР° `!SPLASH_PID!`.
+- Р’ `index.html`/`LevelEditor.js` РїСЂРѕР±РѕРІР°Р»СЃСЏ HTML-РѕРІРµСЂР»РµР№ `#loading-screen` (РІРёРґРµРЅ С‚РѕР»СЊРєРѕ РїРѕСЃР»Рµ РѕС‚РєСЂС‹С‚РёСЏ РѕРєРЅР° Р±СЂР°СѓР·РµСЂР°) вЂ” СѓР±СЂР°РЅ РєР°Рє РёР·Р±С‹С‚РѕС‡РЅС‹Р№: РЅР°С‚РёРІРЅРѕРµ splash-РѕРєРЅРѕ СѓР¶Рµ РїРѕР»РЅРѕСЃС‚СЊСЋ Р·Р°РєСЂС‹РІР°РµС‚ СЂР°Р·СЂС‹РІ РЅР° СЃС‚Р°СЂС‚Рµ.
 
-### Feature — новый лаунчер `start_Editor.vbs` и улучшения `start_Editor.bat`
+### Feature вЂ” РЅРѕРІС‹Р№ Р»Р°СѓРЅС‡РµСЂ `start_Editor.vbs` Рё СѓР»СѓС‡С€РµРЅРёСЏ `start_Editor.bat`
 
-- Добавлен `start_Editor.vbs` (VBScript лаунчер) — истинно бесфликерный запуск редактора (консоль полностью скрыта, без мелькания). Рекомендуемая точка входа для пользователя (вместо прямого двойного клика по `.bat`).
-- `start_Editor.bat` теперь вычисляет размер окна браузера: ширина = 50% ширины монитора под курсором, высота = ширина * 9/16 (формат 16:9), окно центрируется на этом мониторе. Размер передаётся браузеру через `--window-size` / `--window-position` (Chromium и Firefox).
-- `package.json` → `files[]` включает `start_Editor.vbs` рядом с `start_Editor.bat`.
+- Р”РѕР±Р°РІР»РµРЅ `start_Editor.vbs` (VBScript Р»Р°СѓРЅС‡РµСЂ) вЂ” РёСЃС‚РёРЅРЅРѕ Р±РµСЃС„Р»РёРєРµСЂРЅС‹Р№ Р·Р°РїСѓСЃРє СЂРµРґР°РєС‚РѕСЂР° (РєРѕРЅСЃРѕР»СЊ РїРѕР»РЅРѕСЃС‚СЊСЋ СЃРєСЂС‹С‚Р°, Р±РµР· РјРµР»СЊРєР°РЅРёСЏ). Р РµРєРѕРјРµРЅРґСѓРµРјР°СЏ С‚РѕС‡РєР° РІС…РѕРґР° РґР»СЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ (РІРјРµСЃС‚Рѕ РїСЂСЏРјРѕРіРѕ РґРІРѕР№РЅРѕРіРѕ РєР»РёРєР° РїРѕ `.bat`).
+- `start_Editor.bat` С‚РµРїРµСЂСЊ РІС‹С‡РёСЃР»СЏРµС‚ СЂР°Р·РјРµСЂ РѕРєРЅР° Р±СЂР°СѓР·РµСЂР°: С€РёСЂРёРЅР° = 50% С€РёСЂРёРЅС‹ РјРѕРЅРёС‚РѕСЂР° РїРѕРґ РєСѓСЂСЃРѕСЂРѕРј, РІС‹СЃРѕС‚Р° = С€РёСЂРёРЅР° * 9/16 (С„РѕСЂРјР°С‚ 16:9), РѕРєРЅРѕ С†РµРЅС‚СЂРёСЂСѓРµС‚СЃСЏ РЅР° СЌС‚РѕРј РјРѕРЅРёС‚РѕСЂРµ. Р Р°Р·РјРµСЂ РїРµСЂРµРґР°С‘С‚СЃСЏ Р±СЂР°СѓР·РµСЂСѓ С‡РµСЂРµР· `--window-size` / `--window-position` (Chromium Рё Firefox).
+- `package.json` в†’ `files[]` РІРєР»СЋС‡Р°РµС‚ `start_Editor.vbs` СЂСЏРґРѕРј СЃ `start_Editor.bat`.
 
-### Fix — `start_Editor.bat`: убрано мелькание окна консоли при запуске, добавлена поддержка других браузеров
+### Fix вЂ” `start_Editor.bat`: СѓР±СЂР°РЅРѕ РјРµР»СЊРєР°РЅРёРµ РѕРєРЅР° РєРѕРЅСЃРѕР»Рё РїСЂРё Р·Р°РїСѓСЃРєРµ, РґРѕР±Р°РІР»РµРЅР° РїРѕРґРґРµСЂР¶РєР° РґСЂСѓРіРёС… Р±СЂР°СѓР·РµСЂРѕРІ
 
-- Self-relaunch переведён с `powershell -WindowStyle Hidden` на VBScript (`WshShell.Run 0, False`): PowerShell создаёт консольное окно ещё до применения hidden-стиля (race, видно как мелькание/сворачивание), ShellExecute с `SW_HIDE` создаёт окно уже скрытым.
-- Поиск браузера расширен: Chrome → Edge → Brave → Vivaldi → Opera (все поддерживают `--app`, открываются как отдельное frameless-окно с изолированным профилем) → Firefox (нет app-режима, открывается обычным окном через `-no-remote -new-instance` для отдельного процесса под `/wait`).
-- Если ни один известный браузер не найден по пути, но в системе зарегистрирован обработчик `http` по умолчанию (`HKCR\http\shell\open\command`) — открывается через него (`start "" %URL%`, без автостопа сервера по закрытию окна).
-- Если браузера нет вообще (ни известных путей, ни дефолтного обработчика) — показывается диалог с ошибкой (как для отсутствующего Python/Node), сервер останавливается.
+- Self-relaunch РїРµСЂРµРІРµРґС‘РЅ СЃ `powershell -WindowStyle Hidden` РЅР° VBScript (`WshShell.Run 0, False`): PowerShell СЃРѕР·РґР°С‘С‚ РєРѕРЅСЃРѕР»СЊРЅРѕРµ РѕРєРЅРѕ РµС‰С‘ РґРѕ РїСЂРёРјРµРЅРµРЅРёСЏ hidden-СЃС‚РёР»СЏ (race, РІРёРґРЅРѕ РєР°Рє РјРµР»СЊРєР°РЅРёРµ/СЃРІРѕСЂР°С‡РёРІР°РЅРёРµ), ShellExecute СЃ `SW_HIDE` СЃРѕР·РґР°С‘С‚ РѕРєРЅРѕ СѓР¶Рµ СЃРєСЂС‹С‚С‹Рј.
+- РџРѕРёСЃРє Р±СЂР°СѓР·РµСЂР° СЂР°СЃС€РёСЂРµРЅ: Chrome в†’ Edge в†’ Brave в†’ Vivaldi в†’ Opera (РІСЃРµ РїРѕРґРґРµСЂР¶РёРІР°СЋС‚ `--app`, РѕС‚РєСЂС‹РІР°СЋС‚СЃСЏ РєР°Рє РѕС‚РґРµР»СЊРЅРѕРµ frameless-РѕРєРЅРѕ СЃ РёР·РѕР»РёСЂРѕРІР°РЅРЅС‹Рј РїСЂРѕС„РёР»РµРј) в†’ Firefox (РЅРµС‚ app-СЂРµР¶РёРјР°, РѕС‚РєСЂС‹РІР°РµС‚СЃСЏ РѕР±С‹С‡РЅС‹Рј РѕРєРЅРѕРј С‡РµСЂРµР· `-no-remote -new-instance` РґР»СЏ РѕС‚РґРµР»СЊРЅРѕРіРѕ РїСЂРѕС†РµСЃСЃР° РїРѕРґ `/wait`).
+- Р•СЃР»Рё РЅРё РѕРґРёРЅ РёР·РІРµСЃС‚РЅС‹Р№ Р±СЂР°СѓР·РµСЂ РЅРµ РЅР°Р№РґРµРЅ РїРѕ РїСѓС‚Рё, РЅРѕ РІ СЃРёСЃС‚РµРјРµ Р·Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°РЅ РѕР±СЂР°Р±РѕС‚С‡РёРє `http` РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ (`HKCR\http\shell\open\command`) вЂ” РѕС‚РєСЂС‹РІР°РµС‚СЃСЏ С‡РµСЂРµР· РЅРµРіРѕ (`start "" %URL%`, Р±РµР· Р°РІС‚РѕСЃС‚РѕРїР° СЃРµСЂРІРµСЂР° РїРѕ Р·Р°РєСЂС‹С‚РёСЋ РѕРєРЅР°).
+- Р•СЃР»Рё Р±СЂР°СѓР·РµСЂР° РЅРµС‚ РІРѕРѕР±С‰Рµ (РЅРё РёР·РІРµСЃС‚РЅС‹С… РїСѓС‚РµР№, РЅРё РґРµС„РѕР»С‚РЅРѕРіРѕ РѕР±СЂР°Р±РѕС‚С‡РёРєР°) вЂ” РїРѕРєР°Р·С‹РІР°РµС‚СЃСЏ РґРёР°Р»РѕРі СЃ РѕС€РёР±РєРѕР№ (РєР°Рє РґР»СЏ РѕС‚СЃСѓС‚СЃС‚РІСѓСЋС‰РµРіРѕ Python/Node), СЃРµСЂРІРµСЂ РѕСЃС‚Р°РЅР°РІР»РёРІР°РµС‚СЃСЏ.
 
-### Fix — `start_Editor.bat`: полностью скрытый запуск (self-relaunch через `powershell -WindowStyle Hidden`, окно консоли больше не мелькает) и автостоп сервера при закрытии окна редактора (изолированный Chrome-профиль + `start /wait` → `taskkill` по PID сервера)
+### Fix вЂ” `start_Editor.bat`: РїРѕР»РЅРѕСЃС‚СЊСЋ СЃРєСЂС‹С‚С‹Р№ Р·Р°РїСѓСЃРє (self-relaunch С‡РµСЂРµР· `powershell -WindowStyle Hidden`, РѕРєРЅРѕ РєРѕРЅСЃРѕР»Рё Р±РѕР»СЊС€Рµ РЅРµ РјРµР»СЊРєР°РµС‚) Рё Р°РІС‚РѕСЃС‚РѕРї СЃРµСЂРІРµСЂР° РїСЂРё Р·Р°РєСЂС‹С‚РёРё РѕРєРЅР° СЂРµРґР°РєС‚РѕСЂР° (РёР·РѕР»РёСЂРѕРІР°РЅРЅС‹Р№ Chrome-РїСЂРѕС„РёР»СЊ + `start /wait` в†’ `taskkill` РїРѕ PID СЃРµСЂРІРµСЂР°)
 
-### Fix — `start_Editor.bat`: убитие уже запущенного сервера, фоновый запуск без окна, открытие в отдельном Chrome app-окне
+### Fix вЂ” `start_Editor.bat`: СѓР±РёС‚РёРµ СѓР¶Рµ Р·Р°РїСѓС‰РµРЅРЅРѕРіРѕ СЃРµСЂРІРµСЂР°, С„РѕРЅРѕРІС‹Р№ Р·Р°РїСѓСЃРє Р±РµР· РѕРєРЅР°, РѕС‚РєСЂС‹С‚РёРµ РІ РѕС‚РґРµР»СЊРЅРѕРј Chrome app-РѕРєРЅРµ
 
-- Перед стартом ищет процесс, слушающий порт 8000 (`netstat` + `taskkill /F`), и убивает его.
-- Сервер (Python `http.server` или `npx serve`) запускается через `powershell Start-Process -WindowStyle Hidden` — без видимого окна консоли на рабочем столе.
-- Node-ветка переведена с `npm install -g serve` + `serve` (ломался, если PATH не подхватывал глобальный бинарник) на `npx serve` (устраняет "'serve' is not recognized").
-- Открытие теперь через `chrome.exe --app=<url>` (окно без вкладок/адресной строки, как Chrome "Install Page As App"), с фолбэком на браузер по умолчанию, если Chrome не найден.
-- Литеральные `(...)` внутри `echo`-текста (`(recommended)`, `(PID %%p)`) ломали парсинг вложенных `if/else` и `for` блоков — cmd считает любую непарную скобку в тексте границей блока даже вне кавычек, из-за чего скрипт при найденном Node.js всё равно проваливался в ветку "Neither Python nor Node.js found". Скобки убраны из текста echo.
-- `timeout /t 2 /nobreak` падал с "Input redirection is not supported", если stdin не является реальной консолью — заменён на `ping -n 3 127.0.0.1 >nul`.
+- РџРµСЂРµРґ СЃС‚Р°СЂС‚РѕРј РёС‰РµС‚ РїСЂРѕС†РµСЃСЃ, СЃР»СѓС€Р°СЋС‰РёР№ РїРѕСЂС‚ 8000 (`netstat` + `taskkill /F`), Рё СѓР±РёРІР°РµС‚ РµРіРѕ.
+- РЎРµСЂРІРµСЂ (Python `http.server` РёР»Рё `npx serve`) Р·Р°РїСѓСЃРєР°РµС‚СЃСЏ С‡РµСЂРµР· `powershell Start-Process -WindowStyle Hidden` вЂ” Р±РµР· РІРёРґРёРјРѕРіРѕ РѕРєРЅР° РєРѕРЅСЃРѕР»Рё РЅР° СЂР°Р±РѕС‡РµРј СЃС‚РѕР»Рµ.
+- Node-РІРµС‚РєР° РїРµСЂРµРІРµРґРµРЅР° СЃ `npm install -g serve` + `serve` (Р»РѕРјР°Р»СЃСЏ, РµСЃР»Рё PATH РЅРµ РїРѕРґС…РІР°С‚С‹РІР°Р» РіР»РѕР±Р°Р»СЊРЅС‹Р№ Р±РёРЅР°СЂРЅРёРє) РЅР° `npx serve` (СѓСЃС‚СЂР°РЅСЏРµС‚ "'serve' is not recognized").
+- РћС‚РєСЂС‹С‚РёРµ С‚РµРїРµСЂСЊ С‡РµСЂРµР· `chrome.exe --app=<url>` (РѕРєРЅРѕ Р±РµР· РІРєР»Р°РґРѕРє/Р°РґСЂРµСЃРЅРѕР№ СЃС‚СЂРѕРєРё, РєР°Рє Chrome "Install Page As App"), СЃ С„РѕР»Р±СЌРєРѕРј РЅР° Р±СЂР°СѓР·РµСЂ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ, РµСЃР»Рё Chrome РЅРµ РЅР°Р№РґРµРЅ.
+- Р›РёС‚РµСЂР°Р»СЊРЅС‹Рµ `(...)` РІРЅСѓС‚СЂРё `echo`-С‚РµРєСЃС‚Р° (`(recommended)`, `(PID %%p)`) Р»РѕРјР°Р»Рё РїР°СЂСЃРёРЅРі РІР»РѕР¶РµРЅРЅС‹С… `if/else` Рё `for` Р±Р»РѕРєРѕРІ вЂ” cmd СЃС‡РёС‚Р°РµС‚ Р»СЋР±СѓСЋ РЅРµРїР°СЂРЅСѓСЋ СЃРєРѕР±РєСѓ РІ С‚РµРєСЃС‚Рµ РіСЂР°РЅРёС†РµР№ Р±Р»РѕРєР° РґР°Р¶Рµ РІРЅРµ РєР°РІС‹С‡РµРє, РёР·-Р·Р° С‡РµРіРѕ СЃРєСЂРёРїС‚ РїСЂРё РЅР°Р№РґРµРЅРЅРѕРј Node.js РІСЃС‘ СЂР°РІРЅРѕ РїСЂРѕРІР°Р»РёРІР°Р»СЃСЏ РІ РІРµС‚РєСѓ "Neither Python nor Node.js found". РЎРєРѕР±РєРё СѓР±СЂР°РЅС‹ РёР· С‚РµРєСЃС‚Р° echo.
+- `timeout /t 2 /nobreak` РїР°РґР°Р» СЃ "Input redirection is not supported", РµСЃР»Рё stdin РЅРµ СЏРІР»СЏРµС‚СЃСЏ СЂРµР°Р»СЊРЅРѕР№ РєРѕРЅСЃРѕР»СЊСЋ вЂ” Р·Р°РјРµРЅС‘РЅ РЅР° `ping -n 3 127.0.0.1 >nul`.
 
-### Fix — `start_Editor.bat` ложно репортил "Neither Python nor Node.js found"
+### Fix вЂ” `start_Editor.bat` Р»РѕР¶РЅРѕ СЂРµРїРѕСЂС‚РёР» "Neither Python nor Node.js found"
 
-- `%errorlevel%` разворачивался при парсинге скобочного `if/else`-блока, а не при выполнении — проверка Node.js читала устаревшее значение от проверки Python. Добавлены `setlocal enabledelayedexpansion` и `!errorlevel!`.
+- `%errorlevel%` СЂР°Р·РІРѕСЂР°С‡РёРІР°Р»СЃСЏ РїСЂРё РїР°СЂСЃРёРЅРіРµ СЃРєРѕР±РѕС‡РЅРѕРіРѕ `if/else`-Р±Р»РѕРєР°, Р° РЅРµ РїСЂРё РІС‹РїРѕР»РЅРµРЅРёРё вЂ” РїСЂРѕРІРµСЂРєР° Node.js С‡РёС‚Р°Р»Р° СѓСЃС‚Р°СЂРµРІС€РµРµ Р·РЅР°С‡РµРЅРёРµ РѕС‚ РїСЂРѕРІРµСЂРєРё Python. Р”РѕР±Р°РІР»РµРЅС‹ `setlocal enabledelayedexpansion` Рё `!errorlevel!`.
 
-### Tooling — Claude Code PreToolUse-хук блокирует `git commit` без бампа версии редактора (`.claude/settings.json`, `scripts/check-version-bump-hook.mjs`, `npm run bump:patch|minor|major`)
+### Tooling вЂ” Claude Code PreToolUse-С…СѓРє Р±Р»РѕРєРёСЂСѓРµС‚ `git commit` Р±РµР· Р±Р°РјРїР° РІРµСЂСЃРёРё СЂРµРґР°РєС‚РѕСЂР° (`.claude/settings.json`, `scripts/check-version-bump-hook.mjs`, `npm run bump:patch|minor|major`)
 
-### Fix — клик/marquee вне рамки повёрнутой открытой группы не закрывал группу
+### Fix вЂ” РєР»РёРє/marquee РІРЅРµ СЂР°РјРєРё РїРѕРІС‘СЂРЅСѓС‚РѕР№ РѕС‚РєСЂС‹С‚РѕР№ РіСЂСѓРїРїС‹ РЅРµ Р·Р°РєСЂС‹РІР°Р» РіСЂСѓРїРїСѓ
 
-- `MouseHandlers.handleEmptyClick`/`handleMouseUp` (deferred group close) сравнивали точку клика с осевым AABB группы (`getObjectWorldBounds`) вместо повёрнутого прямоугольника — для повёрнутой группы AABB шире визуальной рамки, поэтому клик в "уголке" AABB (вне рамки) ошибочно считался попаданием внутрь. Заменено на `ObjectOperations.isPointInObject()` (уже используется в `findObjectAtPoint`), который учитывает rotation-chain.
-- Побочный регресс после этого фикса: клик снаружи группы больше не давал промотировать drag в marquee-выделение внешних объектов (чтобы затянуть их внутрь) — `handleEmptyClick`'s "outside" ветка только откладывала закрытие группы до mouseup, но не запускала marquee при реальном движении мыши. Добавлено: outside-клик теперь тоже пишет `mouse.marqueePendingStartPos/...` (тот же порог-механизм, что и у клика по объекту), который в `_handleMouseMoveImpl` промотирует в живой marquee при превышении порога.
-- Сопутствующий баг: `handleMouseUp` читал `mouse.isMarqueeSelecting` из объекта состояния, который `finishMarqueeSelection()` тут же мутирует в `false` — из-за чего после успешного marquee-выделения снаружи группы код всё равно проваливался в close/select-ветку и стирал результат. Исправлено захватом `wasMarqueeSelecting` до вызова `finishMarqueeSelection()`.
+- `MouseHandlers.handleEmptyClick`/`handleMouseUp` (deferred group close) СЃСЂР°РІРЅРёРІР°Р»Рё С‚РѕС‡РєСѓ РєР»РёРєР° СЃ РѕСЃРµРІС‹Рј AABB РіСЂСѓРїРїС‹ (`getObjectWorldBounds`) РІРјРµСЃС‚Рѕ РїРѕРІС‘СЂРЅСѓС‚РѕРіРѕ РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРєР° вЂ” РґР»СЏ РїРѕРІС‘СЂРЅСѓС‚РѕР№ РіСЂСѓРїРїС‹ AABB С€РёСЂРµ РІРёР·СѓР°Р»СЊРЅРѕР№ СЂР°РјРєРё, РїРѕСЌС‚РѕРјСѓ РєР»РёРє РІ "СѓРіРѕР»РєРµ" AABB (РІРЅРµ СЂР°РјРєРё) РѕС€РёР±РѕС‡РЅРѕ СЃС‡РёС‚Р°Р»СЃСЏ РїРѕРїР°РґР°РЅРёРµРј РІРЅСѓС‚СЂСЊ. Р—Р°РјРµРЅРµРЅРѕ РЅР° `ObjectOperations.isPointInObject()` (СѓР¶Рµ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РІ `findObjectAtPoint`), РєРѕС‚РѕСЂС‹Р№ СѓС‡РёС‚С‹РІР°РµС‚ rotation-chain.
+- РџРѕР±РѕС‡РЅС‹Р№ СЂРµРіСЂРµСЃСЃ РїРѕСЃР»Рµ СЌС‚РѕРіРѕ С„РёРєСЃР°: РєР»РёРє СЃРЅР°СЂСѓР¶Рё РіСЂСѓРїРїС‹ Р±РѕР»СЊС€Рµ РЅРµ РґР°РІР°Р» РїСЂРѕРјРѕС‚РёСЂРѕРІР°С‚СЊ drag РІ marquee-РІС‹РґРµР»РµРЅРёРµ РІРЅРµС€РЅРёС… РѕР±СЉРµРєС‚РѕРІ (С‡С‚РѕР±С‹ Р·Р°С‚СЏРЅСѓС‚СЊ РёС… РІРЅСѓС‚СЂСЊ) вЂ” `handleEmptyClick`'s "outside" РІРµС‚РєР° С‚РѕР»СЊРєРѕ РѕС‚РєР»Р°РґС‹РІР°Р»Р° Р·Р°РєСЂС‹С‚РёРµ РіСЂСѓРїРїС‹ РґРѕ mouseup, РЅРѕ РЅРµ Р·Р°РїСѓСЃРєР°Р»Р° marquee РїСЂРё СЂРµР°Р»СЊРЅРѕРј РґРІРёР¶РµРЅРёРё РјС‹С€Рё. Р”РѕР±Р°РІР»РµРЅРѕ: outside-РєР»РёРє С‚РµРїРµСЂСЊ С‚РѕР¶Рµ РїРёС€РµС‚ `mouse.marqueePendingStartPos/...` (С‚РѕС‚ Р¶Рµ РїРѕСЂРѕРі-РјРµС…Р°РЅРёР·Рј, С‡С‚Рѕ Рё Сѓ РєР»РёРєР° РїРѕ РѕР±СЉРµРєС‚Сѓ), РєРѕС‚РѕСЂС‹Р№ РІ `_handleMouseMoveImpl` РїСЂРѕРјРѕС‚РёСЂСѓРµС‚ РІ Р¶РёРІРѕР№ marquee РїСЂРё РїСЂРµРІС‹С€РµРЅРёРё РїРѕСЂРѕРіР°.
+- РЎРѕРїСѓС‚СЃС‚РІСѓСЋС‰РёР№ Р±Р°Рі: `handleMouseUp` С‡РёС‚Р°Р» `mouse.isMarqueeSelecting` РёР· РѕР±СЉРµРєС‚Р° СЃРѕСЃС‚РѕСЏРЅРёСЏ, РєРѕС‚РѕСЂС‹Р№ `finishMarqueeSelection()` С‚СѓС‚ Р¶Рµ РјСѓС‚РёСЂСѓРµС‚ РІ `false` вЂ” РёР·-Р·Р° С‡РµРіРѕ РїРѕСЃР»Рµ СѓСЃРїРµС€РЅРѕРіРѕ marquee-РІС‹РґРµР»РµРЅРёСЏ СЃРЅР°СЂСѓР¶Рё РіСЂСѓРїРїС‹ РєРѕРґ РІСЃС‘ СЂР°РІРЅРѕ РїСЂРѕРІР°Р»РёРІР°Р»СЃСЏ РІ close/select-РІРµС‚РєСѓ Рё СЃС‚РёСЂР°Р» СЂРµР·СѓР»СЊС‚Р°С‚. РСЃРїСЂР°РІР»РµРЅРѕ Р·Р°С…РІР°С‚РѕРј `wasMarqueeSelecting` РґРѕ РІС‹Р·РѕРІР° `finishMarqueeSelection()`.
 
-### Feature — copy/cut/paste объектов (Ctrl+C/X/V) с переиспользованием интерактивного flow размещения
+### Feature вЂ” copy/cut/paste РѕР±СЉРµРєС‚РѕРІ (Ctrl+C/X/V) СЃ РїРµСЂРµРёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµРј РёРЅС‚РµСЂР°РєС‚РёРІРЅРѕРіРѕ flow СЂР°Р·РјРµС‰РµРЅРёСЏ
 
-- `LevelEditor.copySelectedObjects()` / `cutSelectedObjects()` / `pasteObjects()` — функции больше не заглушки; copy сохраняет deep-clone выбранных объектов в `this.clipboard`, paste вызывает `DuplicateOperations.startFromObjects(this.clipboard)` (интерактивный ghost-режим, тот же, что Shift+D).
-- `DuplicateOperations.startFromSelection()` разбит на публичный `startFromObjects(selected)` — принимает произвольный массив объектов, а не только текущее выделение/дерево уровня.
-- `CommandAvailability.canPaste()` теперь проверяет реальное состояние `levelEditor.clipboard` (непустой массив), а не только системный Clipboard API.
-- Хоткеи добавлены в `config/defaults/shortcuts.json` → `editor`: `copy` (Ctrl+C), `cut` (Ctrl+X), `paste` (Ctrl+V); обработка в `EventHandlers.handleKeyDown()`.
+- `LevelEditor.copySelectedObjects()` / `cutSelectedObjects()` / `pasteObjects()` вЂ” С„СѓРЅРєС†РёРё Р±РѕР»СЊС€Рµ РЅРµ Р·Р°РіР»СѓС€РєРё; copy СЃРѕС…СЂР°РЅСЏРµС‚ deep-clone РІС‹Р±СЂР°РЅРЅС‹С… РѕР±СЉРµРєС‚РѕРІ РІ `this.clipboard`, paste РІС‹Р·С‹РІР°РµС‚ `DuplicateOperations.startFromObjects(this.clipboard)` (РёРЅС‚РµСЂР°РєС‚РёРІРЅС‹Р№ ghost-СЂРµР¶РёРј, С‚РѕС‚ Р¶Рµ, С‡С‚Рѕ Shift+D).
+- `DuplicateOperations.startFromSelection()` СЂР°Р·Р±РёС‚ РЅР° РїСѓР±Р»РёС‡РЅС‹Р№ `startFromObjects(selected)` вЂ” РїСЂРёРЅРёРјР°РµС‚ РїСЂРѕРёР·РІРѕР»СЊРЅС‹Р№ РјР°СЃСЃРёРІ РѕР±СЉРµРєС‚РѕРІ, Р° РЅРµ С‚РѕР»СЊРєРѕ С‚РµРєСѓС‰РµРµ РІС‹РґРµР»РµРЅРёРµ/РґРµСЂРµРІРѕ СѓСЂРѕРІРЅСЏ.
+- `CommandAvailability.canPaste()` С‚РµРїРµСЂСЊ РїСЂРѕРІРµСЂСЏРµС‚ СЂРµР°Р»СЊРЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ `levelEditor.clipboard` (РЅРµРїСѓСЃС‚РѕР№ РјР°СЃСЃРёРІ), Р° РЅРµ С‚РѕР»СЊРєРѕ СЃРёСЃС‚РµРјРЅС‹Р№ Clipboard API.
+- РҐРѕС‚РєРµРё РґРѕР±Р°РІР»РµРЅС‹ РІ `config/defaults/shortcuts.json` в†’ `editor`: `copy` (Ctrl+C), `cut` (Ctrl+X), `paste` (Ctrl+V); РѕР±СЂР°Р±РѕС‚РєР° РІ `EventHandlers.handleKeyDown()`.
 
-### Feature — реактивные обновления панелей при структурных изменениях уровня (v3.55.0)
+### Feature вЂ” СЂРµР°РєС‚РёРІРЅС‹Рµ РѕР±РЅРѕРІР»РµРЅРёСЏ РїР°РЅРµР»РµР№ РїСЂРё СЃС‚СЂСѓРєС‚СѓСЂРЅС‹С… РёР·РјРµРЅРµРЅРёСЏС… СѓСЂРѕРІРЅСЏ (v3.55.0)
 
-Раньше каждая операция, добавляющая/удаляющая объекты или слои, должна была явно вызвать `editor.updateAllPanels()` — забытый вызов был реальным багом (например, Isolate не обновлял Outliner). Теперь панели подписываются на событие `'levelStructureChanged'` и обновляются автоматически.
+Р Р°РЅСЊС€Рµ РєР°Р¶РґР°СЏ РѕРїРµСЂР°С†РёСЏ, РґРѕР±Р°РІР»СЏСЋС‰Р°СЏ/СѓРґР°Р»СЏСЋС‰Р°СЏ РѕР±СЉРµРєС‚С‹ РёР»Рё СЃР»РѕРё, РґРѕР»Р¶РЅР° Р±С‹Р»Р° СЏРІРЅРѕ РІС‹Р·РІР°С‚СЊ `editor.updateAllPanels()` вЂ” Р·Р°Р±С‹С‚С‹Р№ РІС‹Р·РѕРІ Р±С‹Р» СЂРµР°Р»СЊРЅС‹Рј Р±Р°РіРѕРј (РЅР°РїСЂРёРјРµСЂ, Isolate РЅРµ РѕР±РЅРѕРІР»СЏР» Outliner). РўРµРїРµСЂСЊ РїР°РЅРµР»Рё РїРѕРґРїРёСЃС‹РІР°СЋС‚СЃСЏ РЅР° СЃРѕР±С‹С‚РёРµ `'levelStructureChanged'` Рё РѕР±РЅРѕРІР»СЏСЋС‚СЃСЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё.
 
-**Механизм**:
-- `Level.setStructureChangeCallback()` / `notifyStructureChange()` — генерализованный callback-хук на структурные изменения (добавление/удаление объектов и слоёв).
-- `Level.removeObjects(ids)` — батчевое удаление (одно уведомление вместо одного на объект).
-- `LevelEditor.setupLayerObjectsCountTracking()` собирает уведомления в массив, схлопывает их через `queueMicrotask()` (батчинг на event loop) и выбрасывает `stateManager.notify('levelStructureChanged', changes)`.
-- `OutlinerPanel`, `LayersPanel`, `DetailsPanel` подписываются на `'levelStructureChanged'` и рендерятся автоматически.
+**РњРµС…Р°РЅРёР·Рј**:
+- `Level.setStructureChangeCallback()` / `notifyStructureChange()` вЂ” РіРµРЅРµСЂР°Р»РёР·РѕРІР°РЅРЅС‹Р№ callback-С…СѓРє РЅР° СЃС‚СЂСѓРєС‚СѓСЂРЅС‹Рµ РёР·РјРµРЅРµРЅРёСЏ (РґРѕР±Р°РІР»РµРЅРёРµ/СѓРґР°Р»РµРЅРёРµ РѕР±СЉРµРєС‚РѕРІ Рё СЃР»РѕС‘РІ).
+- `Level.removeObjects(ids)` вЂ” Р±Р°С‚С‡РµРІРѕРµ СѓРґР°Р»РµРЅРёРµ (РѕРґРЅРѕ СѓРІРµРґРѕРјР»РµРЅРёРµ РІРјРµСЃС‚Рѕ РѕРґРЅРѕРіРѕ РЅР° РѕР±СЉРµРєС‚).
+- `LevelEditor.setupLayerObjectsCountTracking()` СЃРѕР±РёСЂР°РµС‚ СѓРІРµРґРѕРјР»РµРЅРёСЏ РІ РјР°СЃСЃРёРІ, СЃС…Р»РѕРїС‹РІР°РµС‚ РёС… С‡РµСЂРµР· `queueMicrotask()` (Р±Р°С‚С‡РёРЅРі РЅР° event loop) Рё РІС‹Р±СЂР°СЃС‹РІР°РµС‚ `stateManager.notify('levelStructureChanged', changes)`.
+- `OutlinerPanel`, `LayersPanel`, `DetailsPanel` РїРѕРґРїРёСЃС‹РІР°СЋС‚СЃСЏ РЅР° `'levelStructureChanged'` Рё СЂРµРЅРґРµСЂСЏС‚СЃСЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё.
 
-**Следствие**: операции (`GroupOperations`, `ObjectOperations`) теперь используют `level.removeObjects()` вместо `level.objects = level.objects.filter(...)`, явные вызовы `updateAllPanels()` в конце операций удаляются. Код операций проще, а багов с неполным обновлением интерфейса становится меньше.
+**РЎР»РµРґСЃС‚РІРёРµ**: РѕРїРµСЂР°С†РёРё (`GroupOperations`, `ObjectOperations`) С‚РµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓСЋС‚ `level.removeObjects()` РІРјРµСЃС‚Рѕ `level.objects = level.objects.filter(...)`, СЏРІРЅС‹Рµ РІС‹Р·РѕРІС‹ `updateAllPanels()` РІ РєРѕРЅС†Рµ РѕРїРµСЂР°С†РёР№ СѓРґР°Р»СЏСЋС‚СЃСЏ. РљРѕРґ РѕРїРµСЂР°С†РёР№ РїСЂРѕС‰Рµ, Р° Р±Р°РіРѕРІ СЃ РЅРµРїРѕР»РЅС‹Рј РѕР±РЅРѕРІР»РµРЅРёРµРј РёРЅС‚РµСЂС„РµР№СЃР° СЃС‚Р°РЅРѕРІРёС‚СЃСЏ РјРµРЅСЊС€Рµ.
 
-**Исправленные баги**: 
-- Isolate (`/`) не обновлял Outliner без дополнительного клика в канву — теперь Outliner подписан на событие и обновляется сразу.
-- Любые структурные изменения через разные точки входа (групповые операции, удаление, дублирование) гарантированно обновляют все панели.
+**РСЃРїСЂР°РІР»РµРЅРЅС‹Рµ Р±Р°РіРё**: 
+- Isolate (`/`) РЅРµ РѕР±РЅРѕРІР»СЏР» Outliner Р±РµР· РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕРіРѕ РєР»РёРєР° РІ РєР°РЅРІСѓ вЂ” С‚РµРїРµСЂСЊ Outliner РїРѕРґРїРёСЃР°РЅ РЅР° СЃРѕР±С‹С‚РёРµ Рё РѕР±РЅРѕРІР»СЏРµС‚СЃСЏ СЃСЂР°Р·Сѓ.
+- Р›СЋР±С‹Рµ СЃС‚СЂСѓРєС‚СѓСЂРЅС‹Рµ РёР·РјРµРЅРµРЅРёСЏ С‡РµСЂРµР· СЂР°Р·РЅС‹Рµ С‚РѕС‡РєРё РІС…РѕРґР° (РіСЂСѓРїРїРѕРІС‹Рµ РѕРїРµСЂР°С†РёРё, СѓРґР°Р»РµРЅРёРµ, РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ) РіР°СЂР°РЅС‚РёСЂРѕРІР°РЅРЅРѕ РѕР±РЅРѕРІР»СЏСЋС‚ РІСЃРµ РїР°РЅРµР»Рё.
 
-### Fix — Undo после Group→Ungroup проскакивал на шаг дальше ожидаемого
+### Fix вЂ” Undo РїРѕСЃР»Рµ Groupв†’Ungroup РїСЂРѕСЃРєР°РєРёРІР°Р» РЅР° С€Р°Рі РґР°Р»СЊС€Рµ РѕР¶РёРґР°РµРјРѕРіРѕ
 
-- `GroupOperations.ungroupSelectedObjects()` вызывал `historyManager.saveState()` ДО мутации (в отличие от `groupSelectedObjects()`, которая сохраняет ПОСЛЕ) — снапшот совпадал с уже лежащим на вершине стека состоянием, `HistoryManager.saveState()`'s дедупликация (`stateSnapshot === lastState`) отбрасывала его, и чекпоинт разгруппировки никогда не попадал в undo-стек. При связке Group→Ungroup→Undo это пропускало саму разгруппировку и откатывало на шаг раньше. `saveState()` перенесён после всех мутаций (`level.removeObjects` старых групп), как в `groupSelectedObjects()`.
+- `GroupOperations.ungroupSelectedObjects()` РІС‹Р·С‹РІР°Р» `historyManager.saveState()` Р”Рћ РјСѓС‚Р°С†РёРё (РІ РѕС‚Р»РёС‡РёРµ РѕС‚ `groupSelectedObjects()`, РєРѕС‚РѕСЂР°СЏ СЃРѕС…СЂР°РЅСЏРµС‚ РџРћРЎР›Р•) вЂ” СЃРЅР°РїС€РѕС‚ СЃРѕРІРїР°РґР°Р» СЃ СѓР¶Рµ Р»РµР¶Р°С‰РёРј РЅР° РІРµСЂС€РёРЅРµ СЃС‚РµРєР° СЃРѕСЃС‚РѕСЏРЅРёРµРј, `HistoryManager.saveState()`'s РґРµРґСѓРїР»РёРєР°С†РёСЏ (`stateSnapshot === lastState`) РѕС‚Р±СЂР°СЃС‹РІР°Р»Р° РµРіРѕ, Рё С‡РµРєРїРѕРёРЅС‚ СЂР°Р·РіСЂСѓРїРїРёСЂРѕРІРєРё РЅРёРєРѕРіРґР° РЅРµ РїРѕРїР°РґР°Р» РІ undo-СЃС‚РµРє. РџСЂРё СЃРІСЏР·РєРµ Groupв†’Ungroupв†’Undo СЌС‚Рѕ РїСЂРѕРїСѓСЃРєР°Р»Рѕ СЃР°РјСѓ СЂР°Р·РіСЂСѓРїРїРёСЂРѕРІРєСѓ Рё РѕС‚РєР°С‚С‹РІР°Р»Рѕ РЅР° С€Р°Рі СЂР°РЅСЊС€Рµ. `saveState()` РїРµСЂРµРЅРµСЃС‘РЅ РїРѕСЃР»Рµ РІСЃРµС… РјСѓС‚Р°С†РёР№ (`level.removeObjects` СЃС‚Р°СЂС‹С… РіСЂСѓРїРї), РєР°Рє РІ `groupSelectedObjects()`.
 
-### Fix — меню фильтра типов (Outliner/AssetPanel) со смещением от кнопки и не закрывалось при уводе курсора
+### Fix вЂ” РјРµРЅСЋ С„РёР»СЊС‚СЂР° С‚РёРїРѕРІ (Outliner/AssetPanel) СЃРѕ СЃРјРµС‰РµРЅРёРµРј РѕС‚ РєРЅРѕРїРєРё Рё РЅРµ Р·Р°РєСЂС‹РІР°Р»РѕСЃСЊ РїСЂРё СѓРІРѕРґРµ РєСѓСЂСЃРѕСЂР°
 
-- `OutlinerPanel.showFilterMenu()` (регрессия из предыдущего коммита) позиционировало меню, полностью перекрывая кнопку (`offset: -buttonRect.height`), чтобы курсор в момент клика гарантированно оказывался внутри меню — иначе `MenuPositioningUtils.setupMenuClosing()`'s `mouseleave` никогда не срабатывал (курсор не «входил» в меню, если оно появлялось не под ним). Побочный эффект — визуальное смещение: меню перекрывало кнопку вместо появления под ней. Тот же корневой баг (просто без оверлап-костыля) был и в `AssetPanel.showAssetFilterMenu()`.
-- `MenuPositioningUtils.setupMenuClosing()` переписан на отслеживание реальных координат курсора через `document.addEventListener('mousemove', ...)` относительно объединённой области кнопка+меню, вместо нативного `mouseleave`. Больше не важно, что курсор в момент открытия находится над кнопкой, а не над меню. При закрытии диспатчится `menuclose` на элементе меню (используется `OutlinerPanel` для очистки `keyup`-слушателя Ctrl-гейта).
-- `OutlinerPanel.showFilterMenu()`: убран оверлап-хак (`offset`), позиционирование меню теперь как в `AssetPanel` — по умолчанию под кнопкой с небольшим зазором.
+- `OutlinerPanel.showFilterMenu()` (СЂРµРіСЂРµСЃСЃРёСЏ РёР· РїСЂРµРґС‹РґСѓС‰РµРіРѕ РєРѕРјРјРёС‚Р°) РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°Р»Рѕ РјРµРЅСЋ, РїРѕР»РЅРѕСЃС‚СЊСЋ РїРµСЂРµРєСЂС‹РІР°СЏ РєРЅРѕРїРєСѓ (`offset: -buttonRect.height`), С‡С‚РѕР±С‹ РєСѓСЂСЃРѕСЂ РІ РјРѕРјРµРЅС‚ РєР»РёРєР° РіР°СЂР°РЅС‚РёСЂРѕРІР°РЅРЅРѕ РѕРєР°Р·С‹РІР°Р»СЃСЏ РІРЅСѓС‚СЂРё РјРµРЅСЋ вЂ” РёРЅР°С‡Рµ `MenuPositioningUtils.setupMenuClosing()`'s `mouseleave` РЅРёРєРѕРіРґР° РЅРµ СЃСЂР°Р±Р°С‚С‹РІР°Р» (РєСѓСЂСЃРѕСЂ РЅРµ В«РІС…РѕРґРёР»В» РІ РјРµРЅСЋ, РµСЃР»Рё РѕРЅРѕ РїРѕСЏРІР»СЏР»РѕСЃСЊ РЅРµ РїРѕРґ РЅРёРј). РџРѕР±РѕС‡РЅС‹Р№ СЌС„С„РµРєС‚ вЂ” РІРёР·СѓР°Р»СЊРЅРѕРµ СЃРјРµС‰РµРЅРёРµ: РјРµРЅСЋ РїРµСЂРµРєСЂС‹РІР°Р»Рѕ РєРЅРѕРїРєСѓ РІРјРµСЃС‚Рѕ РїРѕСЏРІР»РµРЅРёСЏ РїРѕРґ РЅРµР№. РўРѕС‚ Р¶Рµ РєРѕСЂРЅРµРІРѕР№ Р±Р°Рі (РїСЂРѕСЃС‚Рѕ Р±РµР· РѕРІРµСЂР»Р°Рї-РєРѕСЃС‚С‹Р»СЏ) Р±С‹Р» Рё РІ `AssetPanel.showAssetFilterMenu()`.
+- `MenuPositioningUtils.setupMenuClosing()` РїРµСЂРµРїРёСЃР°РЅ РЅР° РѕС‚СЃР»РµР¶РёРІР°РЅРёРµ СЂРµР°Р»СЊРЅС‹С… РєРѕРѕСЂРґРёРЅР°С‚ РєСѓСЂСЃРѕСЂР° С‡РµСЂРµР· `document.addEventListener('mousemove', ...)` РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕ РѕР±СЉРµРґРёРЅС‘РЅРЅРѕР№ РѕР±Р»Р°СЃС‚Рё РєРЅРѕРїРєР°+РјРµРЅСЋ, РІРјРµСЃС‚Рѕ РЅР°С‚РёРІРЅРѕРіРѕ `mouseleave`. Р‘РѕР»СЊС€Рµ РЅРµ РІР°Р¶РЅРѕ, С‡С‚Рѕ РєСѓСЂСЃРѕСЂ РІ РјРѕРјРµРЅС‚ РѕС‚РєСЂС‹С‚РёСЏ РЅР°С…РѕРґРёС‚СЃСЏ РЅР°Рґ РєРЅРѕРїРєРѕР№, Р° РЅРµ РЅР°Рґ РјРµРЅСЋ. РџСЂРё Р·Р°РєСЂС‹С‚РёРё РґРёСЃРїР°С‚С‡РёС‚СЃСЏ `menuclose` РЅР° СЌР»РµРјРµРЅС‚Рµ РјРµРЅСЋ (РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ `OutlinerPanel` РґР»СЏ РѕС‡РёСЃС‚РєРё `keyup`-СЃР»СѓС€Р°С‚РµР»СЏ Ctrl-РіРµР№С‚Р°).
+- `OutlinerPanel.showFilterMenu()`: СѓР±СЂР°РЅ РѕРІРµСЂР»Р°Рї-С…Р°Рє (`offset`), РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ РјРµРЅСЋ С‚РµРїРµСЂСЊ РєР°Рє РІ `AssetPanel` вЂ” РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ РїРѕРґ РєРЅРѕРїРєРѕР№ СЃ РЅРµР±РѕР»СЊС€РёРј Р·Р°Р·РѕСЂРѕРј.
 
-### Fix — Isolate (`/`) не обновлял Outliner без дополнительного клика в канву
+### Fix вЂ” Isolate (`/`) РЅРµ РѕР±РЅРѕРІР»СЏР» Outliner Р±РµР· РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕРіРѕ РєР»РёРєР° РІ РєР°РЅРІСѓ
 
-- `ObjectOperations.toggleIsolateSelection()` вызывал `render()`, но не `updateAllPanels()` — в отличие от `toggleObjectSolo()`. Аутлайнер красит эффективную видимость строк через `isObjectEffectivelyVisible()`, которая учитывает `view.isolatedTopLevelIds`, но без `updateAllPanels()` DOM не перерисовывался до следующего события (например, клика по канве). Добавлен вызов `this.editor.updateAllPanels()`.
+- `ObjectOperations.toggleIsolateSelection()` РІС‹Р·С‹РІР°Р» `render()`, РЅРѕ РЅРµ `updateAllPanels()` вЂ” РІ РѕС‚Р»РёС‡РёРµ РѕС‚ `toggleObjectSolo()`. РђСѓС‚Р»Р°Р№РЅРµСЂ РєСЂР°СЃРёС‚ СЌС„С„РµРєС‚РёРІРЅСѓСЋ РІРёРґРёРјРѕСЃС‚СЊ СЃС‚СЂРѕРє С‡РµСЂРµР· `isObjectEffectivelyVisible()`, РєРѕС‚РѕСЂР°СЏ СѓС‡РёС‚С‹РІР°РµС‚ `view.isolatedTopLevelIds`, РЅРѕ Р±РµР· `updateAllPanels()` DOM РЅРµ РїРµСЂРµСЂРёСЃРѕРІС‹РІР°Р»СЃСЏ РґРѕ СЃР»РµРґСѓСЋС‰РµРіРѕ СЃРѕР±С‹С‚РёСЏ (РЅР°РїСЂРёРјРµСЂ, РєР»РёРєР° РїРѕ РєР°РЅРІРµ). Р”РѕР±Р°РІР»РµРЅ РІС‹Р·РѕРІ `this.editor.updateAllPanels()`.
 
-### Fix — длинные имена объектов в Outliner обрезаются многоточием, не наезжая на кнопку видимости
+### Fix вЂ” РґР»РёРЅРЅС‹Рµ РёРјРµРЅР° РѕР±СЉРµРєС‚РѕРІ РІ Outliner РѕР±СЂРµР·Р°СЋС‚СЃСЏ РјРЅРѕРіРѕС‚РѕС‡РёРµРј, РЅРµ РЅР°РµР·Р¶Р°СЏ РЅР° РєРЅРѕРїРєСѓ РІРёРґРёРјРѕСЃС‚Рё
 
-- `.outliner-item-name-display` (styles/spacing-mode.css): добавлены `white-space: nowrap; overflow: hidden; text-overflow: ellipsis`. Контейнер имени и сам span уже имели `flex: 1; min-width: 0`, а кнопка видимости — `flex-shrink: 0`, но обрезка текста не была задана, поэтому длинные имена растягивали строку/наезжали на иконку глаза.
+- `.outliner-item-name-display` (styles/spacing-mode.css): РґРѕР±Р°РІР»РµРЅС‹ `white-space: nowrap; overflow: hidden; text-overflow: ellipsis`. РљРѕРЅС‚РµР№РЅРµСЂ РёРјРµРЅРё Рё СЃР°Рј span СѓР¶Рµ РёРјРµР»Рё `flex: 1; min-width: 0`, Р° РєРЅРѕРїРєР° РІРёРґРёРјРѕСЃС‚Рё вЂ” `flex-shrink: 0`, РЅРѕ РѕР±СЂРµР·РєР° С‚РµРєСЃС‚Р° РЅРµ Р±С‹Р»Р° Р·Р°РґР°РЅР°, РїРѕСЌС‚РѕРјСѓ РґР»РёРЅРЅС‹Рµ РёРјРµРЅР° СЂР°СЃС‚СЏРіРёРІР°Р»Рё СЃС‚СЂРѕРєСѓ/РЅР°РµР·Р¶Р°Р»Рё РЅР° РёРєРѕРЅРєСѓ РіР»Р°Р·Р°.
 
-### Fix — устаревший visibleObjectsCache/spatial index на кадр показывал удалённые/скрытые объекты
+### Fix вЂ” СѓСЃС‚Р°СЂРµРІС€РёР№ visibleObjectsCache/spatial index РЅР° РєР°РґСЂ РїРѕРєР°Р·С‹РІР°Р» СѓРґР°Р»С‘РЅРЅС‹Рµ/СЃРєСЂС‹С‚С‹Рµ РѕР±СЉРµРєС‚С‹
 
-- `ObjectOperations.deleteSelectedObjects()` и `toggleVisibilityForSelection()` вызывали `stateManager.set('selectedObjects', ...)` (синхронно триггерит рендер через подписчика) ДО инвалидации `visibleObjectsCache`/spatial index — рендер успевал схватить ещё тёплый кэш (`CACHE_TIMEOUT_MS = 100`) для текущей позиции камеры и на кадр отрисовать уже удалённые/скрытые объекты. Инвалидация кэшей перенесена перед `set('selectedObjects', ...)` в обоих местах. Тот же паттерн убран в `DuplicateOperations.confirmPlacement()` (лишний явный `render()` сразу после `set('selectedObjects', ...)`, кэши там уже инвалидировались раньше) и `BaseContextMenu` (fallback-сброс выделения).
+- `ObjectOperations.deleteSelectedObjects()` Рё `toggleVisibilityForSelection()` РІС‹Р·С‹РІР°Р»Рё `stateManager.set('selectedObjects', ...)` (СЃРёРЅС…СЂРѕРЅРЅРѕ С‚СЂРёРіРіРµСЂРёС‚ СЂРµРЅРґРµСЂ С‡РµСЂРµР· РїРѕРґРїРёСЃС‡РёРєР°) Р”Рћ РёРЅРІР°Р»РёРґР°С†РёРё `visibleObjectsCache`/spatial index вЂ” СЂРµРЅРґРµСЂ СѓСЃРїРµРІР°Р» СЃС…РІР°С‚РёС‚СЊ РµС‰С‘ С‚С‘РїР»С‹Р№ РєСЌС€ (`CACHE_TIMEOUT_MS = 100`) РґР»СЏ С‚РµРєСѓС‰РµР№ РїРѕР·РёС†РёРё РєР°РјРµСЂС‹ Рё РЅР° РєР°РґСЂ РѕС‚СЂРёСЃРѕРІР°С‚СЊ СѓР¶Рµ СѓРґР°Р»С‘РЅРЅС‹Рµ/СЃРєСЂС‹С‚С‹Рµ РѕР±СЉРµРєС‚С‹. РРЅРІР°Р»РёРґР°С†РёСЏ РєСЌС€РµР№ РїРµСЂРµРЅРµСЃРµРЅР° РїРµСЂРµРґ `set('selectedObjects', ...)` РІ РѕР±РѕРёС… РјРµСЃС‚Р°С…. РўРѕС‚ Р¶Рµ РїР°С‚С‚РµСЂРЅ СѓР±СЂР°РЅ РІ `DuplicateOperations.confirmPlacement()` (Р»РёС€РЅРёР№ СЏРІРЅС‹Р№ `render()` СЃСЂР°Р·Сѓ РїРѕСЃР»Рµ `set('selectedObjects', ...)`, РєСЌС€Рё С‚Р°Рј СѓР¶Рµ РёРЅРІР°Р»РёРґРёСЂРѕРІР°Р»РёСЃСЊ СЂР°РЅСЊС€Рµ) Рё `BaseContextMenu` (fallback-СЃР±СЂРѕСЃ РІС‹РґРµР»РµРЅРёСЏ).
 
-### Fix — двойной render() на каждое изменение selectedObjects/camera (корень моргания канвы)
+### Fix вЂ” РґРІРѕР№РЅРѕР№ render() РЅР° РєР°Р¶РґРѕРµ РёР·РјРµРЅРµРЅРёРµ selectedObjects/camera (РєРѕСЂРµРЅСЊ РјРѕСЂРіР°РЅРёСЏ РєР°РЅРІС‹)
 
-- `StateManager.set()`/`update()` выставляли `_needsRender = true` ПОСЛЕ `notifyListeners(...)`. Подписчики на `selectedObjects`/`camera` в `EventHandlers.setupStateListeners` уже вызывают `editor.render()` синхронно внутри `notifyListeners` — но следующая строка тут же взводила флаг заново, и постоянный `requestAnimationFrame`-луп рендерил ещё раз на следующем кадре. Двойной рендер происходил на КАЖДОЕ изменение выделения/камеры в редакторе, включая группировку/разгруппировку — это и есть источник моргания, которое не устранялось предыдущим фиксом (уборкой явных вызовов `render()` в `GroupOperations`). Флаг перенесён на выставление до `notifyListeners`; `LevelEditor.render()` дополнительно вызывает `consumeNeedsRender()`, чтобы синхронный рендер гасил накопленный флаг. Проверено: до фикса — 2 вызова `render()` на одну операцию (группировка/разгруппировка), после — ровно 1.
+- `StateManager.set()`/`update()` РІС‹СЃС‚Р°РІР»СЏР»Рё `_needsRender = true` РџРћРЎР›Р• `notifyListeners(...)`. РџРѕРґРїРёСЃС‡РёРєРё РЅР° `selectedObjects`/`camera` РІ `EventHandlers.setupStateListeners` СѓР¶Рµ РІС‹Р·С‹РІР°СЋС‚ `editor.render()` СЃРёРЅС…СЂРѕРЅРЅРѕ РІРЅСѓС‚СЂРё `notifyListeners` вЂ” РЅРѕ СЃР»РµРґСѓСЋС‰Р°СЏ СЃС‚СЂРѕРєР° С‚СѓС‚ Р¶Рµ РІР·РІРѕРґРёР»Р° С„Р»Р°Рі Р·Р°РЅРѕРІРѕ, Рё РїРѕСЃС‚РѕСЏРЅРЅС‹Р№ `requestAnimationFrame`-Р»СѓРї СЂРµРЅРґРµСЂРёР» РµС‰С‘ СЂР°Р· РЅР° СЃР»РµРґСѓСЋС‰РµРј РєР°РґСЂРµ. Р”РІРѕР№РЅРѕР№ СЂРµРЅРґРµСЂ РїСЂРѕРёСЃС…РѕРґРёР» РЅР° РљРђР–Р”РћР• РёР·РјРµРЅРµРЅРёРµ РІС‹РґРµР»РµРЅРёСЏ/РєР°РјРµСЂС‹ РІ СЂРµРґР°РєС‚РѕСЂРµ, РІРєР»СЋС‡Р°СЏ РіСЂСѓРїРїРёСЂРѕРІРєСѓ/СЂР°Р·РіСЂСѓРїРїРёСЂРѕРІРєСѓ вЂ” СЌС‚Рѕ Рё РµСЃС‚СЊ РёСЃС‚РѕС‡РЅРёРє РјРѕСЂРіР°РЅРёСЏ, РєРѕС‚РѕСЂРѕРµ РЅРµ СѓСЃС‚СЂР°РЅСЏР»РѕСЃСЊ РїСЂРµРґС‹РґСѓС‰РёРј С„РёРєСЃРѕРј (СѓР±РѕСЂРєРѕР№ СЏРІРЅС‹С… РІС‹Р·РѕРІРѕРІ `render()` РІ `GroupOperations`). Р¤Р»Р°Рі РїРµСЂРµРЅРµСЃС‘РЅ РЅР° РІС‹СЃС‚Р°РІР»РµРЅРёРµ РґРѕ `notifyListeners`; `LevelEditor.render()` РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕ РІС‹Р·С‹РІР°РµС‚ `consumeNeedsRender()`, С‡С‚РѕР±С‹ СЃРёРЅС…СЂРѕРЅРЅС‹Р№ СЂРµРЅРґРµСЂ РіР°СЃРёР» РЅР°РєРѕРїР»РµРЅРЅС‹Р№ С„Р»Р°Рі. РџСЂРѕРІРµСЂРµРЅРѕ: РґРѕ С„РёРєСЃР° вЂ” 2 РІС‹Р·РѕРІР° `render()` РЅР° РѕРґРЅСѓ РѕРїРµСЂР°С†РёСЋ (РіСЂСѓРїРїРёСЂРѕРІРєР°/СЂР°Р·РіСЂСѓРїРїРёСЂРѕРІРєР°), РїРѕСЃР»Рµ вЂ” СЂРѕРІРЅРѕ 1.
 
-### Fix — Shift+драг range-слайдера в Settings теперь смягчён
+### Fix вЂ” Shift+РґСЂР°Рі range-СЃР»Р°Р№РґРµСЂР° РІ Settings С‚РµРїРµСЂСЊ СЃРјСЏРіС‡С‘РЅ
 
-- `SettingsPanel.setupRangeSliders()`: первая версия через `pointerdown.preventDefault()` + `setPointerCapture` не работала — нативный драг range-инпута не отменяется через preventDefault, значение всё равно следовало за курсором 1:1, плюс паразитный focus-highlight от setPointerCapture. Переписано на перехват дельты сырого значения на каждом нативном `input`-тике: слушатель регистрируется первым (до updateValueText/updateFill), при зажатом Shift применяет только `SOFT_DRAG_FACTOR = 0.2` от дельты и перезаписывает `input.value` (без препятствования нативному драгу и без setPointerCapture).
+- `SettingsPanel.setupRangeSliders()`: РїРµСЂРІР°СЏ РІРµСЂСЃРёСЏ С‡РµСЂРµР· `pointerdown.preventDefault()` + `setPointerCapture` РЅРµ СЂР°Р±РѕС‚Р°Р»Р° вЂ” РЅР°С‚РёРІРЅС‹Р№ РґСЂР°Рі range-РёРЅРїСѓС‚Р° РЅРµ РѕС‚РјРµРЅСЏРµС‚СЃСЏ С‡РµСЂРµР· preventDefault, Р·РЅР°С‡РµРЅРёРµ РІСЃС‘ СЂР°РІРЅРѕ СЃР»РµРґРѕРІР°Р»Рѕ Р·Р° РєСѓСЂСЃРѕСЂРѕРј 1:1, РїР»СЋСЃ РїР°СЂР°Р·РёС‚РЅС‹Р№ focus-highlight РѕС‚ setPointerCapture. РџРµСЂРµРїРёСЃР°РЅРѕ РЅР° РїРµСЂРµС…РІР°С‚ РґРµР»СЊС‚С‹ СЃС‹СЂРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ РЅР° РєР°Р¶РґРѕРј РЅР°С‚РёРІРЅРѕРј `input`-С‚РёРєРµ: СЃР»СѓС€Р°С‚РµР»СЊ СЂРµРіРёСЃС‚СЂРёСЂСѓРµС‚СЃСЏ РїРµСЂРІС‹Рј (РґРѕ updateValueText/updateFill), РїСЂРё Р·Р°Р¶Р°С‚РѕРј Shift РїСЂРёРјРµРЅСЏРµС‚ С‚РѕР»СЊРєРѕ `SOFT_DRAG_FACTOR = 0.2` РѕС‚ РґРµР»СЊС‚С‹ Рё РїРµСЂРµР·Р°РїРёСЃС‹РІР°РµС‚ `input.value` (Р±РµР· РїСЂРµРїСЏС‚СЃС‚РІРѕРІР°РЅРёСЏ РЅР°С‚РёРІРЅРѕРјСѓ РґСЂР°РіСѓ Рё Р±РµР· setPointerCapture).
 
-### Refactor — единая переиспользуемая раскладка параметров Settings (createSettingsRow) и компактность range-слайдеров
+### Refactor вЂ” РµРґРёРЅР°СЏ РїРµСЂРµРёСЃРїРѕР»СЊР·СѓРµРјР°СЏ СЂР°СЃРєР»Р°РґРєР° РїР°СЂР°РјРµС‚СЂРѕРІ Settings (createSettingsRow) Рё РєРѕРјРїР°РєС‚РЅРѕСЃС‚СЊ range-СЃР»Р°Р№РґРµСЂРѕРІ
 
-- Добавлен новый базовый блок `createSettingsRow(label, forId, controlHtml, options)` в `SettingsSectionConstructor.js` — рендерит компактную однострочную раскладку: label слева (`flex 0 0 40%, text-align: right`) + control справа (заполняет остаток). Единообразный UI для всех типов settings-контролов.
-- `createSettingsRange()` теперь **всегда** использует `createSettingsRow` — label слайдера рендерится в одной строке со слайдером, а не над ним (было: label и слайдер в разных `<div>`). Раньше 21 место в `SettingsPanelRenderers.js` (Selection/Touch/Camera/Assets/Performance вкладки) **дублировал label** отдельным вызовом `createSettingsLabel(...)` до `createSettingsRange({label: ...})`, а сам `createSettingsRange` рендерил свой label внутри — итог: label выводился дважды на экране. **Эти избыточные вызовы удалены** — label теперь рендерится один раз.
-- `createSettingsColorInput()` с опцией `inline: true` теперь тоже использует `createSettingsRow` (поведение не изменилось, просто переиспользует общий блок вместо дублирующего кода).
-- `styles/settings-panel.css`: `.settings-range-wrapper` получил `flex: 1 1 auto; min-width: 0;` — растягивается на доступную ширину рядом с label (работает только внутри flex-контейнера `createSettingsRow`).
+- Р”РѕР±Р°РІР»РµРЅ РЅРѕРІС‹Р№ Р±Р°Р·РѕРІС‹Р№ Р±Р»РѕРє `createSettingsRow(label, forId, controlHtml, options)` РІ `SettingsSectionConstructor.js` вЂ” СЂРµРЅРґРµСЂРёС‚ РєРѕРјРїР°РєС‚РЅСѓСЋ РѕРґРЅРѕСЃС‚СЂРѕС‡РЅСѓСЋ СЂР°СЃРєР»Р°РґРєСѓ: label СЃР»РµРІР° (`flex 0 0 40%, text-align: right`) + control СЃРїСЂР°РІР° (Р·Р°РїРѕР»РЅСЏРµС‚ РѕСЃС‚Р°С‚РѕРє). Р•РґРёРЅРѕРѕР±СЂР°Р·РЅС‹Р№ UI РґР»СЏ РІСЃРµС… С‚РёРїРѕРІ settings-РєРѕРЅС‚СЂРѕР»РѕРІ.
+- `createSettingsRange()` С‚РµРїРµСЂСЊ **РІСЃРµРіРґР°** РёСЃРїРѕР»СЊР·СѓРµС‚ `createSettingsRow` вЂ” label СЃР»Р°Р№РґРµСЂР° СЂРµРЅРґРµСЂРёС‚СЃСЏ РІ РѕРґРЅРѕР№ СЃС‚СЂРѕРєРµ СЃРѕ СЃР»Р°Р№РґРµСЂРѕРј, Р° РЅРµ РЅР°Рґ РЅРёРј (Р±С‹Р»Рѕ: label Рё СЃР»Р°Р№РґРµСЂ РІ СЂР°Р·РЅС‹С… `<div>`). Р Р°РЅСЊС€Рµ 21 РјРµСЃС‚Рѕ РІ `SettingsPanelRenderers.js` (Selection/Touch/Camera/Assets/Performance РІРєР»Р°РґРєРё) **РґСѓР±Р»РёСЂРѕРІР°Р» label** РѕС‚РґРµР»СЊРЅС‹Рј РІС‹Р·РѕРІРѕРј `createSettingsLabel(...)` РґРѕ `createSettingsRange({label: ...})`, Р° СЃР°Рј `createSettingsRange` СЂРµРЅРґРµСЂРёР» СЃРІРѕР№ label РІРЅСѓС‚СЂРё вЂ” РёС‚РѕРі: label РІС‹РІРѕРґРёР»СЃСЏ РґРІР°Р¶РґС‹ РЅР° СЌРєСЂР°РЅРµ. **Р­С‚Рё РёР·Р±С‹С‚РѕС‡РЅС‹Рµ РІС‹Р·РѕРІС‹ СѓРґР°Р»РµРЅС‹** вЂ” label С‚РµРїРµСЂСЊ СЂРµРЅРґРµСЂРёС‚СЃСЏ РѕРґРёРЅ СЂР°Р·.
+- `createSettingsColorInput()` СЃ РѕРїС†РёРµР№ `inline: true` С‚РµРїРµСЂСЊ С‚РѕР¶Рµ РёСЃРїРѕР»СЊР·СѓРµС‚ `createSettingsRow` (РїРѕРІРµРґРµРЅРёРµ РЅРµ РёР·РјРµРЅРёР»РѕСЃСЊ, РїСЂРѕСЃС‚Рѕ РїРµСЂРµРёСЃРїРѕР»СЊР·СѓРµС‚ РѕР±С‰РёР№ Р±Р»РѕРє РІРјРµСЃС‚Рѕ РґСѓР±Р»РёСЂСѓСЋС‰РµРіРѕ РєРѕРґР°).
+- `styles/settings-panel.css`: `.settings-range-wrapper` РїРѕР»СѓС‡РёР» `flex: 1 1 auto; min-width: 0;` вЂ” СЂР°СЃС‚СЏРіРёРІР°РµС‚СЃСЏ РЅР° РґРѕСЃС‚СѓРїРЅСѓСЋ С€РёСЂРёРЅСѓ СЂСЏРґРѕРј СЃ label (СЂР°Р±РѕС‚Р°РµС‚ С‚РѕР»СЊРєРѕ РІРЅСѓС‚СЂРё flex-РєРѕРЅС‚РµР№РЅРµСЂР° `createSettingsRow`).
 
-### Fix — двойной render()/updateAllPanels() при группировке/разгруппировке вызывал моргание канвы
+### Fix вЂ” РґРІРѕР№РЅРѕР№ render()/updateAllPanels() РїСЂРё РіСЂСѓРїРїРёСЂРѕРІРєРµ/СЂР°Р·РіСЂСѓРїРїРёСЂРѕРІРєРµ РІС‹Р·С‹РІР°Р» РјРѕСЂРіР°РЅРёРµ РєР°РЅРІС‹
 
-- `GroupOperations`: `groupSelectedObjects()`, `ungroupSelectedObjects()`, `openGroupEditMode()`, `closeGroupEditMode()` вызывали `render()`+`updateAllPanels()` явно сразу после `stateManager.set('selectedObjects', ...)` — а `set()` уже синхронно триггерит подписку в `EventHandlers.setupStateListeners`, которая сама делает `render()`+`updateAllPanels()`. Итог — два полных прохода рендера/панелей на одну операцию, заметные как моргание канвы (особенно при разгруппировке нескольких групп сразу). Явные вызовы убраны, `set('selectedObjects', ...)` в `groupSelectedObjects()` перенесён в конец (после инвалидации кэшей), чтобы единственный оставшийся рендер видел уже актуальное состояние.
+- `GroupOperations`: `groupSelectedObjects()`, `ungroupSelectedObjects()`, `openGroupEditMode()`, `closeGroupEditMode()` РІС‹Р·С‹РІР°Р»Рё `render()`+`updateAllPanels()` СЏРІРЅРѕ СЃСЂР°Р·Сѓ РїРѕСЃР»Рµ `stateManager.set('selectedObjects', ...)` вЂ” Р° `set()` СѓР¶Рµ СЃРёРЅС…СЂРѕРЅРЅРѕ С‚СЂРёРіРіРµСЂРёС‚ РїРѕРґРїРёСЃРєСѓ РІ `EventHandlers.setupStateListeners`, РєРѕС‚РѕСЂР°СЏ СЃР°РјР° РґРµР»Р°РµС‚ `render()`+`updateAllPanels()`. РС‚РѕРі вЂ” РґРІР° РїРѕР»РЅС‹С… РїСЂРѕС…РѕРґР° СЂРµРЅРґРµСЂР°/РїР°РЅРµР»РµР№ РЅР° РѕРґРЅСѓ РѕРїРµСЂР°С†РёСЋ, Р·Р°РјРµС‚РЅС‹Рµ РєР°Рє РјРѕСЂРіР°РЅРёРµ РєР°РЅРІС‹ (РѕСЃРѕР±РµРЅРЅРѕ РїСЂРё СЂР°Р·РіСЂСѓРїРїРёСЂРѕРІРєРµ РЅРµСЃРєРѕР»СЊРєРёС… РіСЂСѓРїРї СЃСЂР°Р·Сѓ). РЇРІРЅС‹Рµ РІС‹Р·РѕРІС‹ СѓР±СЂР°РЅС‹, `set('selectedObjects', ...)` РІ `groupSelectedObjects()` РїРµСЂРµРЅРµСЃС‘РЅ РІ РєРѕРЅРµС† (РїРѕСЃР»Рµ РёРЅРІР°Р»РёРґР°С†РёРё РєСЌС€РµР№), С‡С‚РѕР±С‹ РµРґРёРЅСЃС‚РІРµРЅРЅС‹Р№ РѕСЃС‚Р°РІС€РёР№СЃСЏ СЂРµРЅРґРµСЂ РІРёРґРµР» СѓР¶Рµ Р°РєС‚СѓР°Р»СЊРЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ.
 
-### Fix — разгруппировка вызывала тяжёлую перерисовку на больших уровнях
+### Fix вЂ” СЂР°Р·РіСЂСѓРїРїРёСЂРѕРІРєР° РІС‹Р·С‹РІР°Р»Р° С‚СЏР¶С‘Р»СѓСЋ РїРµСЂРµСЂРёСЃРѕРІРєСѓ РЅР° Р±РѕР»СЊС€РёС… СѓСЂРѕРІРЅСЏС…
 
-- `GroupOperations.extractObjectFromGroup()` на каждого извлекаемого ребёнка заново делал полный обход дерева уровня через `_findParentGroup(group)` (дважды — напрямую и внутри `_captureAncestorPivots`), хотя `ungroupSelectedObjects()` обрабатывает только top-level группы, для которых результат всегда `null`. Добавлена опция `isTopLevelGroup`, пропускающая эти обходы и сужающая поиск мировой позиции ребёнка до `[group]` вместо всех объектов уровня — убирает O(children × размер уровня) фриз перед рендером при разгруппировке.
+- `GroupOperations.extractObjectFromGroup()` РЅР° РєР°Р¶РґРѕРіРѕ РёР·РІР»РµРєР°РµРјРѕРіРѕ СЂРµР±С‘РЅРєР° Р·Р°РЅРѕРІРѕ РґРµР»Р°Р» РїРѕР»РЅС‹Р№ РѕР±С…РѕРґ РґРµСЂРµРІР° СѓСЂРѕРІРЅСЏ С‡РµСЂРµР· `_findParentGroup(group)` (РґРІР°Р¶РґС‹ вЂ” РЅР°РїСЂСЏРјСѓСЋ Рё РІРЅСѓС‚СЂРё `_captureAncestorPivots`), С…РѕС‚СЏ `ungroupSelectedObjects()` РѕР±СЂР°Р±Р°С‚С‹РІР°РµС‚ С‚РѕР»СЊРєРѕ top-level РіСЂСѓРїРїС‹, РґР»СЏ РєРѕС‚РѕСЂС‹С… СЂРµР·СѓР»СЊС‚Р°С‚ РІСЃРµРіРґР° `null`. Р”РѕР±Р°РІР»РµРЅР° РѕРїС†РёСЏ `isTopLevelGroup`, РїСЂРѕРїСѓСЃРєР°СЋС‰Р°СЏ СЌС‚Рё РѕР±С…РѕРґС‹ Рё СЃСѓР¶Р°СЋС‰Р°СЏ РїРѕРёСЃРє РјРёСЂРѕРІРѕР№ РїРѕР·РёС†РёРё СЂРµР±С‘РЅРєР° РґРѕ `[group]` РІРјРµСЃС‚Рѕ РІСЃРµС… РѕР±СЉРµРєС‚РѕРІ СѓСЂРѕРІРЅСЏ вЂ” СѓР±РёСЂР°РµС‚ O(children Г— СЂР°Р·РјРµСЂ СѓСЂРѕРІРЅСЏ) С„СЂРёР· РїРµСЂРµРґ СЂРµРЅРґРµСЂРѕРј РїСЂРё СЂР°Р·РіСЂСѓРїРїРёСЂРѕРІРєРµ.
 
-### Fix — дублирование объекта вне группы при открытой группе добавляло его в группу
+### Fix вЂ” РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ РѕР±СЉРµРєС‚Р° РІРЅРµ РіСЂСѓРїРїС‹ РїСЂРё РѕС‚РєСЂС‹С‚РѕР№ РіСЂСѓРїРїРµ РґРѕР±Р°РІР»СЏР»Рѕ РµРіРѕ РІ РіСЂСѓРїРїСѓ
 
-- `DuplicateOperations.confirmPlacement()`: ветка `else` (дублируемый объект не был ребёнком редактируемой группы) выставляла мировые координаты, но не завершала обработку — код проваливался ниже и всё равно пушил объект в `groupEditMode.group.children`. Добавлен ранний `return` с `level.addObject()`, как в соседней ветке для заблокированного слоя.
+- `DuplicateOperations.confirmPlacement()`: РІРµС‚РєР° `else` (РґСѓР±Р»РёСЂСѓРµРјС‹Р№ РѕР±СЉРµРєС‚ РЅРµ Р±С‹Р» СЂРµР±С‘РЅРєРѕРј СЂРµРґР°РєС‚РёСЂСѓРµРјРѕР№ РіСЂСѓРїРїС‹) РІС‹СЃС‚Р°РІР»СЏР»Р° РјРёСЂРѕРІС‹Рµ РєРѕРѕСЂРґРёРЅР°С‚С‹, РЅРѕ РЅРµ Р·Р°РІРµСЂС€Р°Р»Р° РѕР±СЂР°Р±РѕС‚РєСѓ вЂ” РєРѕРґ РїСЂРѕРІР°Р»РёРІР°Р»СЃСЏ РЅРёР¶Рµ Рё РІСЃС‘ СЂР°РІРЅРѕ РїСѓС€РёР» РѕР±СЉРµРєС‚ РІ `groupEditMode.group.children`. Р”РѕР±Р°РІР»РµРЅ СЂР°РЅРЅРёР№ `return` СЃ `level.addObject()`, РєР°Рє РІ СЃРѕСЃРµРґРЅРµР№ РІРµС‚РєРµ РґР»СЏ Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅРЅРѕРіРѕ СЃР»РѕСЏ.
 
-### Fix — объект "моргал" в другом месте канвы при перетаскивании в группу
+### Fix вЂ” РѕР±СЉРµРєС‚ "РјРѕСЂРіР°Р»" РІ РґСЂСѓРіРѕРј РјРµСЃС‚Рµ РєР°РЅРІС‹ РїСЂРё РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРё РІ РіСЂСѓРїРїСѓ
 
-- `MouseHandlers.dragSelectedObjects()`: при drag-n-drop объекта с главного уровня в редактируемую группу `dx`/`dy` этого кадра прибавлялись к `obj.x/y` дважды — один раз безусловно (обычное перемещение), второй раз прямо перед `addObjectToGroup()`. `addObjectToGroup()` считает мировой центр объекта по его текущим координатам, поэтому из-за лишнего сдвига объект на кадр реального ре-родителя проскакивал в неверную (переприложенную дельтой) точку, что визуально выглядело как "моргание" в другом месте. Убрано повторное применение `dx`/`dy` — `addObjectToGroup()` использует позицию, уже обновлённую основным перемещением.
-- Вторая причина: `RenderOperations.getVisibleObjects()` кеширует список `{obj, parentX, parentY}` на камеру до 100мс (`CACHE_TIMEOUT_MS`), `CanvasRenderer.drawObject()` доверяет закешированным `parentX/parentY` без проверки. После ре-родителя объект получал group-local координаты, но устаревшая запись кеша ещё до 100мс считала его top-level (`parentX=0,parentY=0`) — рендерился по сырым локальным координатам как по мировым. `GroupOperations.groupSelectedObjects()/ungroupSelectedObjects()` уже звали `clearVisibleObjectsCacheForCurrentCamera()` рядом с `invalidateSpatialIndex()`, а вызов `addObjectToGroup()` в `MouseHandlers.js` — нет. Добавлен недостающий вызов.
+- `MouseHandlers.dragSelectedObjects()`: РїСЂРё drag-n-drop РѕР±СЉРµРєС‚Р° СЃ РіР»Р°РІРЅРѕРіРѕ СѓСЂРѕРІРЅСЏ РІ СЂРµРґР°РєС‚РёСЂСѓРµРјСѓСЋ РіСЂСѓРїРїСѓ `dx`/`dy` СЌС‚РѕРіРѕ РєР°РґСЂР° РїСЂРёР±Р°РІР»СЏР»РёСЃСЊ Рє `obj.x/y` РґРІР°Р¶РґС‹ вЂ” РѕРґРёРЅ СЂР°Р· Р±РµР·СѓСЃР»РѕРІРЅРѕ (РѕР±С‹С‡РЅРѕРµ РїРµСЂРµРјРµС‰РµРЅРёРµ), РІС‚РѕСЂРѕР№ СЂР°Р· РїСЂСЏРјРѕ РїРµСЂРµРґ `addObjectToGroup()`. `addObjectToGroup()` СЃС‡РёС‚Р°РµС‚ РјРёСЂРѕРІРѕР№ С†РµРЅС‚СЂ РѕР±СЉРµРєС‚Р° РїРѕ РµРіРѕ С‚РµРєСѓС‰РёРј РєРѕРѕСЂРґРёРЅР°С‚Р°Рј, РїРѕСЌС‚РѕРјСѓ РёР·-Р·Р° Р»РёС€РЅРµРіРѕ СЃРґРІРёРіР° РѕР±СЉРµРєС‚ РЅР° РєР°РґСЂ СЂРµР°Р»СЊРЅРѕРіРѕ СЂРµ-СЂРѕРґРёС‚РµР»СЏ РїСЂРѕСЃРєР°РєРёРІР°Р» РІ РЅРµРІРµСЂРЅСѓСЋ (РїРµСЂРµРїСЂРёР»РѕР¶РµРЅРЅСѓСЋ РґРµР»СЊС‚РѕР№) С‚РѕС‡РєСѓ, С‡С‚Рѕ РІРёР·СѓР°Р»СЊРЅРѕ РІС‹РіР»СЏРґРµР»Рѕ РєР°Рє "РјРѕСЂРіР°РЅРёРµ" РІ РґСЂСѓРіРѕРј РјРµСЃС‚Рµ. РЈР±СЂР°РЅРѕ РїРѕРІС‚РѕСЂРЅРѕРµ РїСЂРёРјРµРЅРµРЅРёРµ `dx`/`dy` вЂ” `addObjectToGroup()` РёСЃРїРѕР»СЊР·СѓРµС‚ РїРѕР·РёС†РёСЋ, СѓР¶Рµ РѕР±РЅРѕРІР»С‘РЅРЅСѓСЋ РѕСЃРЅРѕРІРЅС‹Рј РїРµСЂРµРјРµС‰РµРЅРёРµРј.
+- Р’С‚РѕСЂР°СЏ РїСЂРёС‡РёРЅР°: `RenderOperations.getVisibleObjects()` РєРµС€РёСЂСѓРµС‚ СЃРїРёСЃРѕРє `{obj, parentX, parentY}` РЅР° РєР°РјРµСЂСѓ РґРѕ 100РјСЃ (`CACHE_TIMEOUT_MS`), `CanvasRenderer.drawObject()` РґРѕРІРµСЂСЏРµС‚ Р·Р°РєРµС€РёСЂРѕРІР°РЅРЅС‹Рј `parentX/parentY` Р±РµР· РїСЂРѕРІРµСЂРєРё. РџРѕСЃР»Рµ СЂРµ-СЂРѕРґРёС‚РµР»СЏ РѕР±СЉРµРєС‚ РїРѕР»СѓС‡Р°Р» group-local РєРѕРѕСЂРґРёРЅР°С‚С‹, РЅРѕ СѓСЃС‚Р°СЂРµРІС€Р°СЏ Р·Р°РїРёСЃСЊ РєРµС€Р° РµС‰С‘ РґРѕ 100РјСЃ СЃС‡РёС‚Р°Р»Р° РµРіРѕ top-level (`parentX=0,parentY=0`) вЂ” СЂРµРЅРґРµСЂРёР»СЃСЏ РїРѕ СЃС‹СЂС‹Рј Р»РѕРєР°Р»СЊРЅС‹Рј РєРѕРѕСЂРґРёРЅР°С‚Р°Рј РєР°Рє РїРѕ РјРёСЂРѕРІС‹Рј. `GroupOperations.groupSelectedObjects()/ungroupSelectedObjects()` СѓР¶Рµ Р·РІР°Р»Рё `clearVisibleObjectsCacheForCurrentCamera()` СЂСЏРґРѕРј СЃ `invalidateSpatialIndex()`, Р° РІС‹Р·РѕРІ `addObjectToGroup()` РІ `MouseHandlers.js` вЂ” РЅРµС‚. Р”РѕР±Р°РІР»РµРЅ РЅРµРґРѕСЃС‚Р°СЋС‰РёР№ РІС‹Р·РѕРІ.
 
-### Fix — Ungroup ломал трансформы детей повёрнутой группы
+### Fix вЂ” Ungroup Р»РѕРјР°Р» С‚СЂР°РЅСЃС„РѕСЂРјС‹ РґРµС‚РµР№ РїРѕРІС‘СЂРЅСѓС‚РѕР№ РіСЂСѓРїРїС‹
 
-- `GroupOperations.ungroupSelectedObjects()` переводил детей в мировые координаты наивным `child.x += group.x; child.y += group.y`, полностью игнорируя `group.rotation` — при разгруппировке повёрнутой группы дети получали неверные позицию и rotation. Теперь используется `extractObjectFromGroup()` (тот же алгоритм worldPositionStays, что и при вытаскивании одного объекта из группы), сохраняющий точный визуальный трансформ каждого ребёнка.
+- `GroupOperations.ungroupSelectedObjects()` РїРµСЂРµРІРѕРґРёР» РґРµС‚РµР№ РІ РјРёСЂРѕРІС‹Рµ РєРѕРѕСЂРґРёРЅР°С‚С‹ РЅР°РёРІРЅС‹Рј `child.x += group.x; child.y += group.y`, РїРѕР»РЅРѕСЃС‚СЊСЋ РёРіРЅРѕСЂРёСЂСѓСЏ `group.rotation` вЂ” РїСЂРё СЂР°Р·РіСЂСѓРїРїРёСЂРѕРІРєРµ РїРѕРІС‘СЂРЅСѓС‚РѕР№ РіСЂСѓРїРїС‹ РґРµС‚Рё РїРѕР»СѓС‡Р°Р»Рё РЅРµРІРµСЂРЅС‹Рµ РїРѕР·РёС†РёСЋ Рё rotation. РўРµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ `extractObjectFromGroup()` (С‚РѕС‚ Р¶Рµ Р°Р»РіРѕСЂРёС‚Рј worldPositionStays, С‡С‚Рѕ Рё РїСЂРё РІС‹С‚Р°СЃРєРёРІР°РЅРёРё РѕРґРЅРѕРіРѕ РѕР±СЉРµРєС‚Р° РёР· РіСЂСѓРїРїС‹), СЃРѕС…СЂР°РЅСЏСЋС‰РёР№ С‚РѕС‡РЅС‹Р№ РІРёР·СѓР°Р»СЊРЅС‹Р№ С‚СЂР°РЅСЃС„РѕСЂРј РєР°Р¶РґРѕРіРѕ СЂРµР±С‘РЅРєР°.
 
-### Fix — дедуп проверки несохранённых изменений в `LevelFileOperations`
+### Fix вЂ” РґРµРґСѓРї РїСЂРѕРІРµСЂРєРё РЅРµСЃРѕС…СЂР°РЅС‘РЅРЅС‹С… РёР·РјРµРЅРµРЅРёР№ РІ `LevelFileOperations`
 
-- `newLevel()` и `openLevel()` держали два идентичных, но раздельных блока проверки `isDirty` + `confirm(...)` — риск рассинхрона при будущих правках одного без другого. Вынесено в общий `_confirmDiscardUnsavedChanges(actionLabel)`.
+- `newLevel()` Рё `openLevel()` РґРµСЂР¶Р°Р»Рё РґРІР° РёРґРµРЅС‚РёС‡РЅС‹С…, РЅРѕ СЂР°Р·РґРµР»СЊРЅС‹С… Р±Р»РѕРєР° РїСЂРѕРІРµСЂРєРё `isDirty` + `confirm(...)` вЂ” СЂРёСЃРє СЂР°СЃСЃРёРЅС…СЂРѕРЅР° РїСЂРё Р±СѓРґСѓС‰РёС… РїСЂР°РІРєР°С… РѕРґРЅРѕРіРѕ Р±РµР· РґСЂСѓРіРѕРіРѕ. Р’С‹РЅРµСЃРµРЅРѕ РІ РѕР±С‰РёР№ `_confirmDiscardUnsavedChanges(actionLabel)`.
 
-### Fix — StateManager.reset() ломал обновление панелей/canvas при загрузке левела
+### Fix вЂ” StateManager.reset() Р»РѕРјР°Р» РѕР±РЅРѕРІР»РµРЅРёРµ РїР°РЅРµР»РµР№/canvas РїСЂРё Р·Р°РіСЂСѓР·РєРµ Р»РµРІРµР»Р°
 
-- `reset()` уведомлял слушателей через `this.state[key]` вместо `this.get(key)` — для dotted-ключей (`canvas.showGrid`, `canvas.snapToGrid` и др.) это всегда давало `undefined`, из-за чего Toolbar/SettingsPanel визуально показывали Grid/Snap выключенными сразу после New/Open Level, хотя реальное состояние было корректным. Также `outliner` в `createInitialState()` не содержал `collapsedGroups`/`activeTypeFilters`/`shiftAnchor` (только `collapsedTypes`), из-за чего `OutlinerPanel.countObjectsInGroup()` кидал `TypeError` на любом левеле с группами сразу после загрузки. Плюс `reset()` не взводил `_needsRender` явно (полагался на случайный побочный эффект слушателя).
-- `src/managers/StateManager.js`: `reset()` теперь уведомляет через `get(key)` и явно ставит `_needsRender = true`; `outliner` в `createInitialState()` дополнен до полной формы, ожидаемой `OutlinerPanel`.
+- `reset()` СѓРІРµРґРѕРјР»СЏР» СЃР»СѓС€Р°С‚РµР»РµР№ С‡РµСЂРµР· `this.state[key]` РІРјРµСЃС‚Рѕ `this.get(key)` вЂ” РґР»СЏ dotted-РєР»СЋС‡РµР№ (`canvas.showGrid`, `canvas.snapToGrid` Рё РґСЂ.) СЌС‚Рѕ РІСЃРµРіРґР° РґР°РІР°Р»Рѕ `undefined`, РёР·-Р·Р° С‡РµРіРѕ Toolbar/SettingsPanel РІРёР·СѓР°Р»СЊРЅРѕ РїРѕРєР°Р·С‹РІР°Р»Рё Grid/Snap РІС‹РєР»СЋС‡РµРЅРЅС‹РјРё СЃСЂР°Р·Сѓ РїРѕСЃР»Рµ New/Open Level, С…РѕС‚СЏ СЂРµР°Р»СЊРЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ Р±С‹Р»Рѕ РєРѕСЂСЂРµРєС‚РЅС‹Рј. РўР°РєР¶Рµ `outliner` РІ `createInitialState()` РЅРµ СЃРѕРґРµСЂР¶Р°Р» `collapsedGroups`/`activeTypeFilters`/`shiftAnchor` (С‚РѕР»СЊРєРѕ `collapsedTypes`), РёР·-Р·Р° С‡РµРіРѕ `OutlinerPanel.countObjectsInGroup()` РєРёРґР°Р» `TypeError` РЅР° Р»СЋР±РѕРј Р»РµРІРµР»Рµ СЃ РіСЂСѓРїРїР°РјРё СЃСЂР°Р·Сѓ РїРѕСЃР»Рµ Р·Р°РіСЂСѓР·РєРё. РџР»СЋСЃ `reset()` РЅРµ РІР·РІРѕРґРёР» `_needsRender` СЏРІРЅРѕ (РїРѕР»Р°РіР°Р»СЃСЏ РЅР° СЃР»СѓС‡Р°Р№РЅС‹Р№ РїРѕР±РѕС‡РЅС‹Р№ СЌС„С„РµРєС‚ СЃР»СѓС€Р°С‚РµР»СЏ).
+- `src/managers/StateManager.js`: `reset()` С‚РµРїРµСЂСЊ СѓРІРµРґРѕРјР»СЏРµС‚ С‡РµСЂРµР· `get(key)` Рё СЏРІРЅРѕ СЃС‚Р°РІРёС‚ `_needsRender = true`; `outliner` РІ `createInitialState()` РґРѕРїРѕР»РЅРµРЅ РґРѕ РїРѕР»РЅРѕР№ С„РѕСЂРјС‹, РѕР¶РёРґР°РµРјРѕР№ `OutlinerPanel`.
 
-### Feature — чекбокс "Apply changes automatically" в футере Settings-панели
+### Feature вЂ” С‡РµРєР±РѕРєСЃ "Apply changes automatically" РІ С„СѓС‚РµСЂРµ Settings-РїР°РЅРµР»Рё
 
-- Новый чекбокс `#settings-auto-apply` в `.settings-footer-left` (`SettingsPanel.createSettingsPanel()`), состояние — `SettingsPanel.autoApply` (persisted в `localStorage['levelEditor_settingsAutoApply']`, `'1'`/`'0'`, дефолт `true` — поведение как раньше). При включении (по умолчанию) каждое изменение `.setting-input` применяется к редактору сразу (`SettingsSyncManager.syncSettingToState`/`applyGridColorSetting`/`applyLoggerColors`/`applyCompactMode`), а кнопки Cancel/Apply Changes задизейблены (`SettingsPanel.updateAutoApplyUI()`, `styles/dialog-positioning.css` → `.settings-btn:disabled`) — фиксировать/откатывать нечего. При выключении live-применение отключается (ранний `return` в `_inputHandler`/`_changeHandler` из `setupSettingsInputs()`), кнопки становятся активны: "Apply Changes" вызывает существующий `saveSettings()`, Cancel/Escape/клик по оверлею — `cancelSettings()`, который теперь откатывает значения через `restoreOriginalValues()`.
-- `SettingsPanel.storeOriginalValues()` расширен: раньше снимал ~15 хардкод-путей только для цветов, теперь снимает все ключи StateManager из `syncManager.getAllMappings()` плюс `logger.colors` — Cancel/close откатывает любую вкладку, не только Colors. `restoreOriginalValues()` дополнительно вызывает `syncManager.applySpecialUISettings()` и `syncManager.forceUpdateAllViewOptions()` (раньше — только `applyInitialColorSettings()`), чтобы после отката корректно восстанавливались CSS-переменные и состояния view/toolbar/menu тумблеров.
-- Известное ограничение (не багфикс, а фиксация текущего поведения): вкладка Grid & Snapping (`GridSettings.js`) использует класс `settings-input` (не `setting-input`, который слушает `setupSettingsInputs()`), поэтому её поля никогда не применялись live по нажатию клавиши — ни до этого изменения, ни после; применяются только по "Apply Changes". Вкладка Hotkeys сохраняет ребинды напрямую в `ConfigManager` по blur (`SettingsPanel.saveHotkey()`), не завязана на Apply/Cancel и не затронута новым чекбоксом.
-- Стили: `.settings-auto-apply-label`, `.settings-footer-left` (`styles/settings-panel.css`), `.settings-btn:disabled` (`styles/dialog-positioning.css`).
+- РќРѕРІС‹Р№ С‡РµРєР±РѕРєСЃ `#settings-auto-apply` РІ `.settings-footer-left` (`SettingsPanel.createSettingsPanel()`), СЃРѕСЃС‚РѕСЏРЅРёРµ вЂ” `SettingsPanel.autoApply` (persisted РІ `localStorage['levelEditor_settingsAutoApply']`, `'1'`/`'0'`, РґРµС„РѕР»С‚ `true` вЂ” РїРѕРІРµРґРµРЅРёРµ РєР°Рє СЂР°РЅСЊС€Рµ). РџСЂРё РІРєР»СЋС‡РµРЅРёРё (РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ) РєР°Р¶РґРѕРµ РёР·РјРµРЅРµРЅРёРµ `.setting-input` РїСЂРёРјРµРЅСЏРµС‚СЃСЏ Рє СЂРµРґР°РєС‚РѕСЂСѓ СЃСЂР°Р·Сѓ (`SettingsSyncManager.syncSettingToState`/`applyGridColorSetting`/`applyLoggerColors`/`applyCompactMode`), Р° РєРЅРѕРїРєРё Cancel/Apply Changes Р·Р°РґРёР·РµР№Р±Р»РµРЅС‹ (`SettingsPanel.updateAutoApplyUI()`, `styles/dialog-positioning.css` в†’ `.settings-btn:disabled`) вЂ” С„РёРєСЃРёСЂРѕРІР°С‚СЊ/РѕС‚РєР°С‚С‹РІР°С‚СЊ РЅРµС‡РµРіРѕ. РџСЂРё РІС‹РєР»СЋС‡РµРЅРёРё live-РїСЂРёРјРµРЅРµРЅРёРµ РѕС‚РєР»СЋС‡Р°РµС‚СЃСЏ (СЂР°РЅРЅРёР№ `return` РІ `_inputHandler`/`_changeHandler` РёР· `setupSettingsInputs()`), РєРЅРѕРїРєРё СЃС‚Р°РЅРѕРІСЏС‚СЃСЏ Р°РєС‚РёРІРЅС‹: "Apply Changes" РІС‹Р·С‹РІР°РµС‚ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№ `saveSettings()`, Cancel/Escape/РєР»РёРє РїРѕ РѕРІРµСЂР»РµСЋ вЂ” `cancelSettings()`, РєРѕС‚РѕСЂС‹Р№ С‚РµРїРµСЂСЊ РѕС‚РєР°С‚С‹РІР°РµС‚ Р·РЅР°С‡РµРЅРёСЏ С‡РµСЂРµР· `restoreOriginalValues()`.
+- `SettingsPanel.storeOriginalValues()` СЂР°СЃС€РёСЂРµРЅ: СЂР°РЅСЊС€Рµ СЃРЅРёРјР°Р» ~15 С…Р°СЂРґРєРѕРґ-РїСѓС‚РµР№ С‚РѕР»СЊРєРѕ РґР»СЏ С†РІРµС‚РѕРІ, С‚РµРїРµСЂСЊ СЃРЅРёРјР°РµС‚ РІСЃРµ РєР»СЋС‡Рё StateManager РёР· `syncManager.getAllMappings()` РїР»СЋСЃ `logger.colors` вЂ” Cancel/close РѕС‚РєР°С‚С‹РІР°РµС‚ Р»СЋР±СѓСЋ РІРєР»Р°РґРєСѓ, РЅРµ С‚РѕР»СЊРєРѕ Colors. `restoreOriginalValues()` РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕ РІС‹Р·С‹РІР°РµС‚ `syncManager.applySpecialUISettings()` Рё `syncManager.forceUpdateAllViewOptions()` (СЂР°РЅСЊС€Рµ вЂ” С‚РѕР»СЊРєРѕ `applyInitialColorSettings()`), С‡С‚РѕР±С‹ РїРѕСЃР»Рµ РѕС‚РєР°С‚Р° РєРѕСЂСЂРµРєС‚РЅРѕ РІРѕСЃСЃС‚Р°РЅР°РІР»РёРІР°Р»РёСЃСЊ CSS-РїРµСЂРµРјРµРЅРЅС‹Рµ Рё СЃРѕСЃС‚РѕСЏРЅРёСЏ view/toolbar/menu С‚СѓРјР±Р»РµСЂРѕРІ.
+- РР·РІРµСЃС‚РЅРѕРµ РѕРіСЂР°РЅРёС‡РµРЅРёРµ (РЅРµ Р±Р°РіС„РёРєСЃ, Р° С„РёРєСЃР°С†РёСЏ С‚РµРєСѓС‰РµРіРѕ РїРѕРІРµРґРµРЅРёСЏ): РІРєР»Р°РґРєР° Grid & Snapping (`GridSettings.js`) РёСЃРїРѕР»СЊР·СѓРµС‚ РєР»Р°СЃСЃ `settings-input` (РЅРµ `setting-input`, РєРѕС‚РѕСЂС‹Р№ СЃР»СѓС€Р°РµС‚ `setupSettingsInputs()`), РїРѕСЌС‚РѕРјСѓ РµС‘ РїРѕР»СЏ РЅРёРєРѕРіРґР° РЅРµ РїСЂРёРјРµРЅСЏР»РёСЃСЊ live РїРѕ РЅР°Р¶Р°С‚РёСЋ РєР»Р°РІРёС€Рё вЂ” РЅРё РґРѕ СЌС‚РѕРіРѕ РёР·РјРµРЅРµРЅРёСЏ, РЅРё РїРѕСЃР»Рµ; РїСЂРёРјРµРЅСЏСЋС‚СЃСЏ С‚РѕР»СЊРєРѕ РїРѕ "Apply Changes". Р’РєР»Р°РґРєР° Hotkeys СЃРѕС…СЂР°РЅСЏРµС‚ СЂРµР±РёРЅРґС‹ РЅР°РїСЂСЏРјСѓСЋ РІ `ConfigManager` РїРѕ blur (`SettingsPanel.saveHotkey()`), РЅРµ Р·Р°РІСЏР·Р°РЅР° РЅР° Apply/Cancel Рё РЅРµ Р·Р°С‚СЂРѕРЅСѓС‚Р° РЅРѕРІС‹Рј С‡РµРєР±РѕРєСЃРѕРј.
+- РЎС‚РёР»Рё: `.settings-auto-apply-label`, `.settings-footer-left` (`styles/settings-panel.css`), `.settings-btn:disabled` (`styles/dialog-positioning.css`).
 
-### UI — виджет range-слайдера в Settings переработан (без thumb, значение поверх трека, ручной ввод по dblclick)
+### UI вЂ” РІРёРґР¶РµС‚ range-СЃР»Р°Р№РґРµСЂР° РІ Settings РїРµСЂРµСЂР°Р±РѕС‚Р°РЅ (Р±РµР· thumb, Р·РЅР°С‡РµРЅРёРµ РїРѕРІРµСЂС… С‚СЂРµРєР°, СЂСѓС‡РЅРѕР№ РІРІРѕРґ РїРѕ dblclick)
 
-- `SettingsSectionConstructor.createSettingsRange()` больше не рендерит `<input type="range">` с отдельным `<div style="text-align:center">` под ним — теперь `<div class="settings-range-wrapper">` с тремя детьми: `input.settings-range-input[data-unit]`, `span.settings-range-value` (значение поверх слайдера) и скрытый `input.settings-range-edit` (числовой инпут для ручного ввода). Разметка используется во всех вкладках, рендерящихся через `src/ui/panel-structures/SettingsPanelRenderers.js` (General/Camera/Selection/Touch/Performance и т.д.) — вызовы конструктора не менялись.
-- `GridSettings.js` (слайдер `#grid-opacity`, использует класс `settings-input` вместо `setting-input` и не вызывает `createSettingsRange`) вручную обёрнут в ту же структуру `.settings-range-wrapper`/`.settings-range-value`/`.settings-range-edit`.
-- `SettingsPanel.updateSliderDisplay()` удалён вместе со старым механизмом (поиск `div[style*="text-align: center"]`, хардкод юнитов `"ms"`/`"x"` по префиксу `data-setting` категорий `performance`/`camera`). Добавлен `setupRangeSliders()` (вызывается в конце `setupSettingsInputs()`), который находит все `input[type="range"]` в `#settings-panel-container` по типу элемента (не по CSS-классу — одинаково работает для `createSettingsRange` и для `GridSettings.js`) и вешает: live-обновление `.settings-range-value` на `input` (юнит из `data-unit`); двойной клик по `.settings-range-wrapper` открывает `.settings-range-edit` (класс `.editing` на wrapper), `Enter` кламппит значение по `min`/`max` и диспатчит `input`+`change`, `Escape` отменяет, `blur` применяет.
-- `styles/settings-panel.css`: трек слайдера толще прежнего (`height:9px`, `appearance:none`), `::-webkit-slider-thumb`/`::-moz-range-thumb` скрыты (`opacity:0`) — клик и драг по треку работают нативно без видимого бегунка; `.settings-range-value` — абсолютное позиционирование по центру, `pointer-events:none`.
-- Добавлена цветная заливка трека до текущего значения (progress fill): `--range-fill` (CSS custom property, проценты) на `.settings-range-input`, для Chrome/Edge/Safari — градиент с хардстопом на `::-webkit-slider-runnable-track`, для Firefox — нативный `::-moz-range-progress`. `SettingsPanel.setupRangeSliders()` синхронизирует `--range-fill` со значением через `updateFill()` на каждое событие `input` (в т.ч. live-драг и коммит через dblclick/ручной ввод). Удалено мёртвое правило `.settings-input[type="range"] { width: 100%; }`, полностью перекрытое более специфичным селектором.
+- `SettingsSectionConstructor.createSettingsRange()` Р±РѕР»СЊС€Рµ РЅРµ СЂРµРЅРґРµСЂРёС‚ `<input type="range">` СЃ РѕС‚РґРµР»СЊРЅС‹Рј `<div style="text-align:center">` РїРѕРґ РЅРёРј вЂ” С‚РµРїРµСЂСЊ `<div class="settings-range-wrapper">` СЃ С‚СЂРµРјСЏ РґРµС‚СЊРјРё: `input.settings-range-input[data-unit]`, `span.settings-range-value` (Р·РЅР°С‡РµРЅРёРµ РїРѕРІРµСЂС… СЃР»Р°Р№РґРµСЂР°) Рё СЃРєСЂС‹С‚С‹Р№ `input.settings-range-edit` (С‡РёСЃР»РѕРІРѕР№ РёРЅРїСѓС‚ РґР»СЏ СЂСѓС‡РЅРѕРіРѕ РІРІРѕРґР°). Р Р°Р·РјРµС‚РєР° РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РІРѕ РІСЃРµС… РІРєР»Р°РґРєР°С…, СЂРµРЅРґРµСЂСЏС‰РёС…СЃСЏ С‡РµСЂРµР· `src/ui/panel-structures/SettingsPanelRenderers.js` (General/Camera/Selection/Touch/Performance Рё С‚.Рґ.) вЂ” РІС‹Р·РѕРІС‹ РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂР° РЅРµ РјРµРЅСЏР»РёСЃСЊ.
+- `GridSettings.js` (СЃР»Р°Р№РґРµСЂ `#grid-opacity`, РёСЃРїРѕР»СЊР·СѓРµС‚ РєР»Р°СЃСЃ `settings-input` РІРјРµСЃС‚Рѕ `setting-input` Рё РЅРµ РІС‹Р·С‹РІР°РµС‚ `createSettingsRange`) РІСЂСѓС‡РЅСѓСЋ РѕР±С‘СЂРЅСѓС‚ РІ С‚Сѓ Р¶Рµ СЃС‚СЂСѓРєС‚СѓСЂСѓ `.settings-range-wrapper`/`.settings-range-value`/`.settings-range-edit`.
+- `SettingsPanel.updateSliderDisplay()` СѓРґР°Р»С‘РЅ РІРјРµСЃС‚Рµ СЃРѕ СЃС‚Р°СЂС‹Рј РјРµС…Р°РЅРёР·РјРѕРј (РїРѕРёСЃРє `div[style*="text-align: center"]`, С…Р°СЂРґРєРѕРґ СЋРЅРёС‚РѕРІ `"ms"`/`"x"` РїРѕ РїСЂРµС„РёРєСЃСѓ `data-setting` РєР°С‚РµРіРѕСЂРёР№ `performance`/`camera`). Р”РѕР±Р°РІР»РµРЅ `setupRangeSliders()` (РІС‹Р·С‹РІР°РµС‚СЃСЏ РІ РєРѕРЅС†Рµ `setupSettingsInputs()`), РєРѕС‚РѕСЂС‹Р№ РЅР°С…РѕРґРёС‚ РІСЃРµ `input[type="range"]` РІ `#settings-panel-container` РїРѕ С‚РёРїСѓ СЌР»РµРјРµРЅС‚Р° (РЅРµ РїРѕ CSS-РєР»Р°СЃСЃСѓ вЂ” РѕРґРёРЅР°РєРѕРІРѕ СЂР°Р±РѕС‚Р°РµС‚ РґР»СЏ `createSettingsRange` Рё РґР»СЏ `GridSettings.js`) Рё РІРµС€Р°РµС‚: live-РѕР±РЅРѕРІР»РµРЅРёРµ `.settings-range-value` РЅР° `input` (СЋРЅРёС‚ РёР· `data-unit`); РґРІРѕР№РЅРѕР№ РєР»РёРє РїРѕ `.settings-range-wrapper` РѕС‚РєСЂС‹РІР°РµС‚ `.settings-range-edit` (РєР»Р°СЃСЃ `.editing` РЅР° wrapper), `Enter` РєР»Р°РјРїРїРёС‚ Р·РЅР°С‡РµРЅРёРµ РїРѕ `min`/`max` Рё РґРёСЃРїР°С‚С‡РёС‚ `input`+`change`, `Escape` РѕС‚РјРµРЅСЏРµС‚, `blur` РїСЂРёРјРµРЅСЏРµС‚.
+- `styles/settings-panel.css`: С‚СЂРµРє СЃР»Р°Р№РґРµСЂР° С‚РѕР»С‰Рµ РїСЂРµР¶РЅРµРіРѕ (`height:9px`, `appearance:none`), `::-webkit-slider-thumb`/`::-moz-range-thumb` СЃРєСЂС‹С‚С‹ (`opacity:0`) вЂ” РєР»РёРє Рё РґСЂР°Рі РїРѕ С‚СЂРµРєСѓ СЂР°Р±РѕС‚Р°СЋС‚ РЅР°С‚РёРІРЅРѕ Р±РµР· РІРёРґРёРјРѕРіРѕ Р±РµРіСѓРЅРєР°; `.settings-range-value` вЂ” Р°Р±СЃРѕР»СЋС‚РЅРѕРµ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ РїРѕ С†РµРЅС‚СЂСѓ, `pointer-events:none`.
+- Р”РѕР±Р°РІР»РµРЅР° С†РІРµС‚РЅР°СЏ Р·Р°Р»РёРІРєР° С‚СЂРµРєР° РґРѕ С‚РµРєСѓС‰РµРіРѕ Р·РЅР°С‡РµРЅРёСЏ (progress fill): `--range-fill` (CSS custom property, РїСЂРѕС†РµРЅС‚С‹) РЅР° `.settings-range-input`, РґР»СЏ Chrome/Edge/Safari вЂ” РіСЂР°РґРёРµРЅС‚ СЃ С…Р°СЂРґСЃС‚РѕРїРѕРј РЅР° `::-webkit-slider-runnable-track`, РґР»СЏ Firefox вЂ” РЅР°С‚РёРІРЅС‹Р№ `::-moz-range-progress`. `SettingsPanel.setupRangeSliders()` СЃРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµС‚ `--range-fill` СЃРѕ Р·РЅР°С‡РµРЅРёРµРј С‡РµСЂРµР· `updateFill()` РЅР° РєР°Р¶РґРѕРµ СЃРѕР±С‹С‚РёРµ `input` (РІ С‚.С‡. live-РґСЂР°Рі Рё РєРѕРјРјРёС‚ С‡РµСЂРµР· dblclick/СЂСѓС‡РЅРѕР№ РІРІРѕРґ). РЈРґР°Р»РµРЅРѕ РјС‘СЂС‚РІРѕРµ РїСЂР°РІРёР»Рѕ `.settings-input[type="range"] { width: 100%; }`, РїРѕР»РЅРѕСЃС‚СЊСЋ РїРµСЂРµРєСЂС‹С‚РѕРµ Р±РѕР»РµРµ СЃРїРµС†РёС„РёС‡РЅС‹Рј СЃРµР»РµРєС‚РѕСЂРѕРј.
 
-### Fix — регрессия в Settings → Colors: цветовые свотчи схлопывались до 1px
+### Fix вЂ” СЂРµРіСЂРµСЃСЃРёСЏ РІ Settings в†’ Colors: С†РІРµС‚РѕРІС‹Рµ СЃРІРѕС‚С‡Рё СЃС…Р»РѕРїС‹РІР°Р»РёСЃСЊ РґРѕ 1px
 
-- **`SettingsPanel.filterSettingsContent()` на каждый рендер таба сбрасывал `row.style.display = ''` для строк-обёрток параметров** — это стирало инлайн `display:flex` у обёртки цветового инпута (`SettingsSectionConstructor.createSettingsColorInput`, inline-режим), из-за чего свотчи схлопывались до 1px и вертикальная раскладка колонки Colors ломалась. Исправлено: добавлена локальная функция `setRowVisible(el, visible)`, которая перед скрытием кэширует исходное значение `style.display` в `el.dataset.searchOrigDisplay` и восстанавливает именно его (а не пустую строку) при показе; применяется к строкам-label, `.hotkey-item` и `.settings-section` (`src/ui/SettingsPanel.js`).
+- **`SettingsPanel.filterSettingsContent()` РЅР° РєР°Р¶РґС‹Р№ СЂРµРЅРґРµСЂ С‚Р°Р±Р° СЃР±СЂР°СЃС‹РІР°Р» `row.style.display = ''` РґР»СЏ СЃС‚СЂРѕРє-РѕР±С‘СЂС‚РѕРє РїР°СЂР°РјРµС‚СЂРѕРІ** вЂ” СЌС‚Рѕ СЃС‚РёСЂР°Р»Рѕ РёРЅР»Р°Р№РЅ `display:flex` Сѓ РѕР±С‘СЂС‚РєРё С†РІРµС‚РѕРІРѕРіРѕ РёРЅРїСѓС‚Р° (`SettingsSectionConstructor.createSettingsColorInput`, inline-СЂРµР¶РёРј), РёР·-Р·Р° С‡РµРіРѕ СЃРІРѕС‚С‡Рё СЃС…Р»РѕРїС‹РІР°Р»РёСЃСЊ РґРѕ 1px Рё РІРµСЂС‚РёРєР°Р»СЊРЅР°СЏ СЂР°СЃРєР»Р°РґРєР° РєРѕР»РѕРЅРєРё Colors Р»РѕРјР°Р»Р°СЃСЊ. РСЃРїСЂР°РІР»РµРЅРѕ: РґРѕР±Р°РІР»РµРЅР° Р»РѕРєР°Р»СЊРЅР°СЏ С„СѓРЅРєС†РёСЏ `setRowVisible(el, visible)`, РєРѕС‚РѕСЂР°СЏ РїРµСЂРµРґ СЃРєСЂС‹С‚РёРµРј РєСЌС€РёСЂСѓРµС‚ РёСЃС…РѕРґРЅРѕРµ Р·РЅР°С‡РµРЅРёРµ `style.display` РІ `el.dataset.searchOrigDisplay` Рё РІРѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ РёРјРµРЅРЅРѕ РµРіРѕ (Р° РЅРµ РїСѓСЃС‚СѓСЋ СЃС‚СЂРѕРєСѓ) РїСЂРё РїРѕРєР°Р·Рµ; РїСЂРёРјРµРЅСЏРµС‚СЃСЏ Рє СЃС‚СЂРѕРєР°Рј-label, `.hotkey-item` Рё `.settings-section` (`src/ui/SettingsPanel.js`).
 
-### Fix — реордер закладок панели (drag-n-drop) не сохранялся и сбрасывался после перезагрузки
+### Fix вЂ” СЂРµРѕСЂРґРµСЂ Р·Р°РєР»Р°РґРѕРє РїР°РЅРµР»Рё (drag-n-drop) РЅРµ СЃРѕС…СЂР°РЅСЏР»СЃСЏ Рё СЃР±СЂР°СЃС‹РІР°Р»СЃСЏ РїРѕСЃР»Рµ РїРµСЂРµР·Р°РіСЂСѓР·РєРё
 
-- **`PanelPositionManager` никогда не писал `rightPanelTabOrder`/`leftPanelTabOrder` в `stateManager`/`userPrefs`** — ключи и синхронизация с конфигом (`LevelEditor.js`: сохранение на `beforeunload`, восстановление в `applyTabOrderSettings()`) существовали, но ничего не вызывало запись при реордере, а восстановленный из конфига порядок никогда не применялся к DOM табов при инициализации — `initializeTabPositions()` всегда собирал табы в фиксированном порядке `details, layers, outliner`. Исправлено: добавлены `savePanelTabOrder()` (пишет текущий DOM-порядок табов панели в state/userPrefs, вызывается из `moveTab()` и из same-panel реордера в `_globalTabMouseUp()`) и `applyPanelTabOrder()` (переставляет DOM-табы по сохранённому порядку, вызывается в конце `initializeTabPositions()`) (`src/ui/PanelPositionManager.js`). Заодно поправлен рассинхрон дефолтного значения `"level"` → `"layers"` в `config/defaults/panels.json` и `config/user/panels.json` (не совпадало с реальным именем таба, из-за чего дефолтный порядок никогда не матчился).
+- **`PanelPositionManager` РЅРёРєРѕРіРґР° РЅРµ РїРёСЃР°Р» `rightPanelTabOrder`/`leftPanelTabOrder` РІ `stateManager`/`userPrefs`** вЂ” РєР»СЋС‡Рё Рё СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ СЃ РєРѕРЅС„РёРіРѕРј (`LevelEditor.js`: СЃРѕС…СЂР°РЅРµРЅРёРµ РЅР° `beforeunload`, РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ РІ `applyTabOrderSettings()`) СЃСѓС‰РµСЃС‚РІРѕРІР°Р»Рё, РЅРѕ РЅРёС‡РµРіРѕ РЅРµ РІС‹Р·С‹РІР°Р»Рѕ Р·Р°РїРёСЃСЊ РїСЂРё СЂРµРѕСЂРґРµСЂРµ, Р° РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРЅС‹Р№ РёР· РєРѕРЅС„РёРіР° РїРѕСЂСЏРґРѕРє РЅРёРєРѕРіРґР° РЅРµ РїСЂРёРјРµРЅСЏР»СЃСЏ Рє DOM С‚Р°Р±РѕРІ РїСЂРё РёРЅРёС†РёР°Р»РёР·Р°С†РёРё вЂ” `initializeTabPositions()` РІСЃРµРіРґР° СЃРѕР±РёСЂР°Р» С‚Р°Р±С‹ РІ С„РёРєСЃРёСЂРѕРІР°РЅРЅРѕРј РїРѕСЂСЏРґРєРµ `details, layers, outliner`. РСЃРїСЂР°РІР»РµРЅРѕ: РґРѕР±Р°РІР»РµРЅС‹ `savePanelTabOrder()` (РїРёС€РµС‚ С‚РµРєСѓС‰РёР№ DOM-РїРѕСЂСЏРґРѕРє С‚Р°Р±РѕРІ РїР°РЅРµР»Рё РІ state/userPrefs, РІС‹Р·С‹РІР°РµС‚СЃСЏ РёР· `moveTab()` Рё РёР· same-panel СЂРµРѕСЂРґРµСЂР° РІ `_globalTabMouseUp()`) Рё `applyPanelTabOrder()` (РїРµСЂРµСЃС‚Р°РІР»СЏРµС‚ DOM-С‚Р°Р±С‹ РїРѕ СЃРѕС…СЂР°РЅС‘РЅРЅРѕРјСѓ РїРѕСЂСЏРґРєСѓ, РІС‹Р·С‹РІР°РµС‚СЃСЏ РІ РєРѕРЅС†Рµ `initializeTabPositions()`) (`src/ui/PanelPositionManager.js`). Р—Р°РѕРґРЅРѕ РїРѕРїСЂР°РІР»РµРЅ СЂР°СЃСЃРёРЅС…СЂРѕРЅ РґРµС„РѕР»С‚РЅРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ `"level"` в†’ `"layers"` РІ `config/defaults/panels.json` Рё `config/user/panels.json` (РЅРµ СЃРѕРІРїР°РґР°Р»Рѕ СЃ СЂРµР°Р»СЊРЅС‹Рј РёРјРµРЅРµРј С‚Р°Р±Р°, РёР·-Р·Р° С‡РµРіРѕ РґРµС„РѕР»С‚РЅС‹Р№ РїРѕСЂСЏРґРѕРє РЅРёРєРѕРіРґР° РЅРµ РјР°С‚С‡РёР»СЃСЏ).
 
-### Fix — Layer Solo/Visibility не обновляли Outliner без клика в канвас
+### Fix вЂ” Layer Solo/Visibility РЅРµ РѕР±РЅРѕРІР»СЏР»Рё Outliner Р±РµР· РєР»РёРєР° РІ РєР°РЅРІР°СЃ
 
-- **`LayersPanel.toggleLayerSolo()`/`toggleLayerVisibility()` не вызывали `outlinerPanel.render()`** — иконки/цвет строк Outliner зависят от эффективной видимости слоя (`ObjectOperations.isObjectEffectivelyVisible`), но обновлялись только на следующем не связанном действии, которое случайно перерисовывало Outliner (клик по канвасу → смена selection → `updateAllPanels()`). `toggleLayerLock()` уже делал такой вызов — solo/visibility были без него. Исправлено: оба метода теперь вызывают `this.levelEditor.outlinerPanel.render()` синхронно (`src/ui/LayersPanel.js`).
+- **`LayersPanel.toggleLayerSolo()`/`toggleLayerVisibility()` РЅРµ РІС‹Р·С‹РІР°Р»Рё `outlinerPanel.render()`** вЂ” РёРєРѕРЅРєРё/С†РІРµС‚ СЃС‚СЂРѕРє Outliner Р·Р°РІРёСЃСЏС‚ РѕС‚ СЌС„С„РµРєС‚РёРІРЅРѕР№ РІРёРґРёРјРѕСЃС‚Рё СЃР»РѕСЏ (`ObjectOperations.isObjectEffectivelyVisible`), РЅРѕ РѕР±РЅРѕРІР»СЏР»РёСЃСЊ С‚РѕР»СЊРєРѕ РЅР° СЃР»РµРґСѓСЋС‰РµРј РЅРµ СЃРІСЏР·Р°РЅРЅРѕРј РґРµР№СЃС‚РІРёРё, РєРѕС‚РѕСЂРѕРµ СЃР»СѓС‡Р°Р№РЅРѕ РїРµСЂРµСЂРёСЃРѕРІС‹РІР°Р»Рѕ Outliner (РєР»РёРє РїРѕ РєР°РЅРІР°СЃСѓ в†’ СЃРјРµРЅР° selection в†’ `updateAllPanels()`). `toggleLayerLock()` СѓР¶Рµ РґРµР»Р°Р» С‚Р°РєРѕР№ РІС‹Р·РѕРІ вЂ” solo/visibility Р±С‹Р»Рё Р±РµР· РЅРµРіРѕ. РСЃРїСЂР°РІР»РµРЅРѕ: РѕР±Р° РјРµС‚РѕРґР° С‚РµРїРµСЂСЊ РІС‹Р·С‹РІР°СЋС‚ `this.levelEditor.outlinerPanel.render()` СЃРёРЅС…СЂРѕРЅРЅРѕ (`src/ui/LayersPanel.js`).
 
-### Feature — поиск параметра по имени в шапке окна Settings-панели
+### Feature вЂ” РїРѕРёСЃРє РїР°СЂР°РјРµС‚СЂР° РїРѕ РёРјРµРЅРё РІ С€Р°РїРєРµ РѕРєРЅР° Settings-РїР°РЅРµР»Рё
 
-- Один инпут `#settings-search-input` в шапке окна Settings (`.settings-header-controls`, рядом с кнопкой `⋮`), создаётся в `SettingsPanel.createSettingsPanel()` через `SearchUtils.createSearchInput(...).outerHTML` (`src/ui/SettingsPanel.js`).
-- `SettingsPanel.filterSettingsContent(term)` фильтрует всё содержимое `#settings-content` текущей открытой вкладки целиком (а не одну секцию): скрывает/показывает `label.parentElement` для каждого `<label>`, отдельно обрабатывает `.hotkey-item`/`.hotkey-description` вкладки Hotkeys, скрывает `.settings-section` целиком при 0 видимых строк. Вызывается из `setupSettingsInputs()` при каждом рендере/смене вкладки. Работает на всех вкладках, включая Grid & Snapping.
-- Escape двухступенчатый: первое нажатие с непустым текстом только очищает поле (`stopPropagation` в отдельном keydown-listener, вешается раньше `SearchUtils.setupSearchListeners`), второе (уже пустое поле) закрывает панель как раньше.
-- `createSettingsSection(title, content, options)` поиск в шапку секции больше не добавляет (простой `<h4>{title}</h4>`); секция всегда получает класс `settings-section` (маркер для `filterSettingsContent`, ранее класс был опциональным) (`src/ui/panel-structures/SettingsSectionConstructor.js`).
-- `ResetRegistry.handleBackspace()` (`src/utils/ResetRegistry.js`): добавлен байпас — Backspace над сфокусированным нерегистрированным текстовым `input`/`textarea` (например, поиском в шапке Settings) всегда просто удаляет символ, не сбрасывая resettable-поля текущей вкладки, которые технически лежат внутри того же контейнера.
+- РћРґРёРЅ РёРЅРїСѓС‚ `#settings-search-input` РІ С€Р°РїРєРµ РѕРєРЅР° Settings (`.settings-header-controls`, СЂСЏРґРѕРј СЃ РєРЅРѕРїРєРѕР№ `в‹®`), СЃРѕР·РґР°С‘С‚СЃСЏ РІ `SettingsPanel.createSettingsPanel()` С‡РµСЂРµР· `SearchUtils.createSearchInput(...).outerHTML` (`src/ui/SettingsPanel.js`).
+- `SettingsPanel.filterSettingsContent(term)` С„РёР»СЊС‚СЂСѓРµС‚ РІСЃС‘ СЃРѕРґРµСЂР¶РёРјРѕРµ `#settings-content` С‚РµРєСѓС‰РµР№ РѕС‚РєСЂС‹С‚РѕР№ РІРєР»Р°РґРєРё С†РµР»РёРєРѕРј (Р° РЅРµ РѕРґРЅСѓ СЃРµРєС†РёСЋ): СЃРєСЂС‹РІР°РµС‚/РїРѕРєР°Р·С‹РІР°РµС‚ `label.parentElement` РґР»СЏ РєР°Р¶РґРѕРіРѕ `<label>`, РѕС‚РґРµР»СЊРЅРѕ РѕР±СЂР°Р±Р°С‚С‹РІР°РµС‚ `.hotkey-item`/`.hotkey-description` РІРєР»Р°РґРєРё Hotkeys, СЃРєСЂС‹РІР°РµС‚ `.settings-section` С†РµР»РёРєРѕРј РїСЂРё 0 РІРёРґРёРјС‹С… СЃС‚СЂРѕРє. Р’С‹Р·С‹РІР°РµС‚СЃСЏ РёР· `setupSettingsInputs()` РїСЂРё РєР°Р¶РґРѕРј СЂРµРЅРґРµСЂРµ/СЃРјРµРЅРµ РІРєР»Р°РґРєРё. Р Р°Р±РѕС‚Р°РµС‚ РЅР° РІСЃРµС… РІРєР»Р°РґРєР°С…, РІРєР»СЋС‡Р°СЏ Grid & Snapping.
+- Escape РґРІСѓС…СЃС‚СѓРїРµРЅС‡Р°С‚С‹Р№: РїРµСЂРІРѕРµ РЅР°Р¶Р°С‚РёРµ СЃ РЅРµРїСѓСЃС‚С‹Рј С‚РµРєСЃС‚РѕРј С‚РѕР»СЊРєРѕ РѕС‡РёС‰Р°РµС‚ РїРѕР»Рµ (`stopPropagation` РІ РѕС‚РґРµР»СЊРЅРѕРј keydown-listener, РІРµС€Р°РµС‚СЃСЏ СЂР°РЅСЊС€Рµ `SearchUtils.setupSearchListeners`), РІС‚РѕСЂРѕРµ (СѓР¶Рµ РїСѓСЃС‚РѕРµ РїРѕР»Рµ) Р·Р°РєСЂС‹РІР°РµС‚ РїР°РЅРµР»СЊ РєР°Рє СЂР°РЅСЊС€Рµ.
+- `createSettingsSection(title, content, options)` РїРѕРёСЃРє РІ С€Р°РїРєСѓ СЃРµРєС†РёРё Р±РѕР»СЊС€Рµ РЅРµ РґРѕР±Р°РІР»СЏРµС‚ (РїСЂРѕСЃС‚РѕР№ `<h4>{title}</h4>`); СЃРµРєС†РёСЏ РІСЃРµРіРґР° РїРѕР»СѓС‡Р°РµС‚ РєР»Р°СЃСЃ `settings-section` (РјР°СЂРєРµСЂ РґР»СЏ `filterSettingsContent`, СЂР°РЅРµРµ РєР»Р°СЃСЃ Р±С‹Р» РѕРїС†РёРѕРЅР°Р»СЊРЅС‹Рј) (`src/ui/panel-structures/SettingsSectionConstructor.js`).
+- `ResetRegistry.handleBackspace()` (`src/utils/ResetRegistry.js`): РґРѕР±Р°РІР»РµРЅ Р±Р°Р№РїР°СЃ вЂ” Backspace РЅР°Рґ СЃС„РѕРєСѓСЃРёСЂРѕРІР°РЅРЅС‹Рј РЅРµСЂРµРіРёСЃС‚СЂРёСЂРѕРІР°РЅРЅС‹Рј С‚РµРєСЃС‚РѕРІС‹Рј `input`/`textarea` (РЅР°РїСЂРёРјРµСЂ, РїРѕРёСЃРєРѕРј РІ С€Р°РїРєРµ Settings) РІСЃРµРіРґР° РїСЂРѕСЃС‚Рѕ СѓРґР°Р»СЏРµС‚ СЃРёРјРІРѕР», РЅРµ СЃР±СЂР°СЃС‹РІР°СЏ resettable-РїРѕР»СЏ С‚РµРєСѓС‰РµР№ РІРєР»Р°РґРєРё, РєРѕС‚РѕСЂС‹Рµ С‚РµС…РЅРёС‡РµСЃРєРё Р»РµР¶Р°С‚ РІРЅСѓС‚СЂРё С‚РѕРіРѕ Р¶Рµ РєРѕРЅС‚РµР№РЅРµСЂР°.
 
-### Fix — перетаскивание закладки внутри панели активировало соседнюю панель без надобности
+### Fix вЂ” РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµ Р·Р°РєР»Р°РґРєРё РІРЅСѓС‚СЂРё РїР°РЅРµР»Рё Р°РєС‚РёРІРёСЂРѕРІР°Р»Рѕ СЃРѕСЃРµРґРЅСЋСЋ РїР°РЅРµР»СЊ Р±РµР· РЅР°РґРѕР±РЅРѕСЃС‚Рё
 
-- **`PanelPositionManager._installGlobalTabDragHandlers()` вызывал `togglePanel(otherSide)` сразу на mousedown**, ещё до того как стало известно, реордер это внутри текущей панели или перенос в другую — соседняя (скрытая) панель создавалась и появлялась при любом перетаскивании закладки, даже при простой смене мест закладок внутри своей панели. Исправлено: создание/показ соседней панели перенесено в `_globalTabMouseMove` и происходит только когда курсор выходит за `getBoundingClientRect()` родительской панели; если курсор с гост-табом возвращается обратно в родную панель, автоматически созданная соседняя панель немедленно удаляется через `removeEmptyPanel()`, не дожидаясь `mouseup` (`src/ui/PanelPositionManager.js`).
+- **`PanelPositionManager._installGlobalTabDragHandlers()` РІС‹Р·С‹РІР°Р» `togglePanel(otherSide)` СЃСЂР°Р·Сѓ РЅР° mousedown**, РµС‰С‘ РґРѕ С‚РѕРіРѕ РєР°Рє СЃС‚Р°Р»Рѕ РёР·РІРµСЃС‚РЅРѕ, СЂРµРѕСЂРґРµСЂ СЌС‚Рѕ РІРЅСѓС‚СЂРё С‚РµРєСѓС‰РµР№ РїР°РЅРµР»Рё РёР»Рё РїРµСЂРµРЅРѕСЃ РІ РґСЂСѓРіСѓСЋ вЂ” СЃРѕСЃРµРґРЅСЏСЏ (СЃРєСЂС‹С‚Р°СЏ) РїР°РЅРµР»СЊ СЃРѕР·РґР°РІР°Р»Р°СЃСЊ Рё РїРѕСЏРІР»СЏР»Р°СЃСЊ РїСЂРё Р»СЋР±РѕРј РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРё Р·Р°РєР»Р°РґРєРё, РґР°Р¶Рµ РїСЂРё РїСЂРѕСЃС‚РѕР№ СЃРјРµРЅРµ РјРµСЃС‚ Р·Р°РєР»Р°РґРѕРє РІРЅСѓС‚СЂРё СЃРІРѕРµР№ РїР°РЅРµР»Рё. РСЃРїСЂР°РІР»РµРЅРѕ: СЃРѕР·РґР°РЅРёРµ/РїРѕРєР°Р· СЃРѕСЃРµРґРЅРµР№ РїР°РЅРµР»Рё РїРµСЂРµРЅРµСЃРµРЅРѕ РІ `_globalTabMouseMove` Рё РїСЂРѕРёСЃС…РѕРґРёС‚ С‚РѕР»СЊРєРѕ РєРѕРіРґР° РєСѓСЂСЃРѕСЂ РІС‹С…РѕРґРёС‚ Р·Р° `getBoundingClientRect()` СЂРѕРґРёС‚РµР»СЊСЃРєРѕР№ РїР°РЅРµР»Рё; РµСЃР»Рё РєСѓСЂСЃРѕСЂ СЃ РіРѕСЃС‚-С‚Р°Р±РѕРј РІРѕР·РІСЂР°С‰Р°РµС‚СЃСЏ РѕР±СЂР°С‚РЅРѕ РІ СЂРѕРґРЅСѓСЋ РїР°РЅРµР»СЊ, Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё СЃРѕР·РґР°РЅРЅР°СЏ СЃРѕСЃРµРґРЅСЏСЏ РїР°РЅРµР»СЊ РЅРµРјРµРґР»РµРЅРЅРѕ СѓРґР°Р»СЏРµС‚СЃСЏ С‡РµСЂРµР· `removeEmptyPanel()`, РЅРµ РґРѕР¶РёРґР°СЏСЃСЊ `mouseup` (`src/ui/PanelPositionManager.js`).
 
-### Fix — иконка/цвет глаза объекта в Outliner не обновлялись, пока строка выделена
+### Fix вЂ” РёРєРѕРЅРєР°/С†РІРµС‚ РіР»Р°Р·Р° РѕР±СЉРµРєС‚Р° РІ Outliner РЅРµ РѕР±РЅРѕРІР»СЏР»РёСЃСЊ, РїРѕРєР° СЃС‚СЂРѕРєР° РІС‹РґРµР»РµРЅР°
 
-- **`.outliner-item.selected * { color: ... !important; }` (styles/main.css) перебивал инлайн-цвет**, который `OutlinerPanel.updateVisibilityButton()` выставлял через `svg.style.color`/`nameSpan.style.color` для Object Solo (оранжевый) и скрытых объектов (серый) — пока строка оставалась выделенной, CSS `!important` полностью маскировал уже корректно вычисленный цвет; клик по канвасу (обычно снимающий выделение) убирал маску, и цвет "внезапно" появлялся — отсюда впечатление "стили обновляются только после клика в рабочую область", хотя логика вычисления самого цвета была верна с самого начала. Исправлено: для отклоняющихся от дефолта состояний (soloed/скрыт) `updateVisibilityButton()` теперь использует `style.setProperty('color', value, 'important')` — свой `!important` побеждает над `!important` из `.selected *` (инлайн-стиль имеет приоритет при равном уровне важности); для обычного видимого состояния — `style.removeProperty('color')`, отдавая цвет обратно под управление CSS-каскада (выделение по-прежнему красит текст в белый как раньше) (`src/ui/OutlinerPanel.js`).
+- **`.outliner-item.selected * { color: ... !important; }` (styles/main.css) РїРµСЂРµР±РёРІР°Р» РёРЅР»Р°Р№РЅ-С†РІРµС‚**, РєРѕС‚РѕСЂС‹Р№ `OutlinerPanel.updateVisibilityButton()` РІС‹СЃС‚Р°РІР»СЏР» С‡РµСЂРµР· `svg.style.color`/`nameSpan.style.color` РґР»СЏ Object Solo (РѕСЂР°РЅР¶РµРІС‹Р№) Рё СЃРєСЂС‹С‚С‹С… РѕР±СЉРµРєС‚РѕРІ (СЃРµСЂС‹Р№) вЂ” РїРѕРєР° СЃС‚СЂРѕРєР° РѕСЃС‚Р°РІР°Р»Р°СЃСЊ РІС‹РґРµР»РµРЅРЅРѕР№, CSS `!important` РїРѕР»РЅРѕСЃС‚СЊСЋ РјР°СЃРєРёСЂРѕРІР°Р» СѓР¶Рµ РєРѕСЂСЂРµРєС‚РЅРѕ РІС‹С‡РёСЃР»РµРЅРЅС‹Р№ С†РІРµС‚; РєР»РёРє РїРѕ РєР°РЅРІР°СЃСѓ (РѕР±С‹С‡РЅРѕ СЃРЅРёРјР°СЋС‰РёР№ РІС‹РґРµР»РµРЅРёРµ) СѓР±РёСЂР°Р» РјР°СЃРєСѓ, Рё С†РІРµС‚ "РІРЅРµР·Р°РїРЅРѕ" РїРѕСЏРІР»СЏР»СЃСЏ вЂ” РѕС‚СЃСЋРґР° РІРїРµС‡Р°С‚Р»РµРЅРёРµ "СЃС‚РёР»Рё РѕР±РЅРѕРІР»СЏСЋС‚СЃСЏ С‚РѕР»СЊРєРѕ РїРѕСЃР»Рµ РєР»РёРєР° РІ СЂР°Р±РѕС‡СѓСЋ РѕР±Р»Р°СЃС‚СЊ", С…РѕС‚СЏ Р»РѕРіРёРєР° РІС‹С‡РёСЃР»РµРЅРёСЏ СЃР°РјРѕРіРѕ С†РІРµС‚Р° Р±С‹Р»Р° РІРµСЂРЅР° СЃ СЃР°РјРѕРіРѕ РЅР°С‡Р°Р»Р°. РСЃРїСЂР°РІР»РµРЅРѕ: РґР»СЏ РѕС‚РєР»РѕРЅСЏСЋС‰РёС…СЃСЏ РѕС‚ РґРµС„РѕР»С‚Р° СЃРѕСЃС‚РѕСЏРЅРёР№ (soloed/СЃРєСЂС‹С‚) `updateVisibilityButton()` С‚РµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓРµС‚ `style.setProperty('color', value, 'important')` вЂ” СЃРІРѕР№ `!important` РїРѕР±РµР¶РґР°РµС‚ РЅР°Рґ `!important` РёР· `.selected *` (РёРЅР»Р°Р№РЅ-СЃС‚РёР»СЊ РёРјРµРµС‚ РїСЂРёРѕСЂРёС‚РµС‚ РїСЂРё СЂР°РІРЅРѕРј СѓСЂРѕРІРЅРµ РІР°Р¶РЅРѕСЃС‚Рё); РґР»СЏ РѕР±С‹С‡РЅРѕРіРѕ РІРёРґРёРјРѕРіРѕ СЃРѕСЃС‚РѕСЏРЅРёСЏ вЂ” `style.removeProperty('color')`, РѕС‚РґР°РІР°СЏ С†РІРµС‚ РѕР±СЂР°С‚РЅРѕ РїРѕРґ СѓРїСЂР°РІР»РµРЅРёРµ CSS-РєР°СЃРєР°РґР° (РІС‹РґРµР»РµРЅРёРµ РїРѕ-РїСЂРµР¶РЅРµРјСѓ РєСЂР°СЃРёС‚ С‚РµРєСЃС‚ РІ Р±РµР»С‹Р№ РєР°Рє СЂР°РЅСЊС€Рµ) (`src/ui/OutlinerPanel.js`).
 
-### Fix — Focus layers search не срабатывал из-за браузерного Ctrl+L
+### Fix вЂ” Focus layers search РЅРµ СЃСЂР°Р±Р°С‚С‹РІР°Р» РёР·-Р·Р° Р±СЂР°СѓР·РµСЂРЅРѕРіРѕ Ctrl+L
 
-- **`ui.focusLayersSearch` был привязан к `Ctrl/Cmd+L`** — браузер забирает эту комбинацию себе, поэтому событие не доходило до редактора. Перевёл дефолт на `Ctrl+Alt+L` и добавил миграцию старых сохранённых настроек в `ConfigManager.migrateShortcuts()` (`config/defaults/shortcuts.json`, `src/managers/ConfigManager.js`).
+- **`ui.focusLayersSearch` Р±С‹Р» РїСЂРёРІСЏР·Р°РЅ Рє `Ctrl/Cmd+L`** вЂ” Р±СЂР°СѓР·РµСЂ Р·Р°Р±РёСЂР°РµС‚ СЌС‚Сѓ РєРѕРјР±РёРЅР°С†РёСЋ СЃРµР±Рµ, РїРѕСЌС‚РѕРјСѓ СЃРѕР±С‹С‚РёРµ РЅРµ РґРѕС…РѕРґРёР»Рѕ РґРѕ СЂРµРґР°РєС‚РѕСЂР°. РџРµСЂРµРІС‘Р» РґРµС„РѕР»С‚ РЅР° `Ctrl+Alt+L` Рё РґРѕР±Р°РІРёР» РјРёРіСЂР°С†РёСЋ СЃС‚Р°СЂС‹С… СЃРѕС…СЂР°РЅС‘РЅРЅС‹С… РЅР°СЃС‚СЂРѕРµРє РІ `ConfigManager.migrateShortcuts()` (`config/defaults/shortcuts.json`, `src/managers/ConfigManager.js`).
 
-### Fix — _matchesShortcut игнорировал metaKey (Mac Cmd+key сломан) и Ctrl+N fallback
+### Fix вЂ” _matchesShortcut РёРіРЅРѕСЂРёСЂРѕРІР°Р» metaKey (Mac Cmd+key СЃР»РѕРјР°РЅ) Рё Ctrl+N fallback
 
-- **`_matchesShortcut` сравнивал `e.ctrlKey` и `e.metaKey` независимо** — на Mac все `Cmd+Z/S/N/O` переставали работать, потому что shortcuts.json использует `ctrlKey:true`, а Mac отправляет `metaKey=true, ctrlKey=false`. Исправлено: `(e.ctrlKey || e.metaKey)` сравнивается с `(def.ctrlKey || def.metaKey)`. Убрана отдельная проверка `metaKey` — она не нужна.
-- **`Ctrl+N` (без Alt) перестал открывать новый уровень** — при keyboard lock в fullscreen браузер пропускает `Ctrl+N` в приложение, но после рефактора требовался точный матч `Ctrl+Alt+N` из конфига. Добавлен явный fallback `(e.ctrlKey||e.metaKey) && !e.altKey && !e.shiftKey && key==='n'` (`src/event-system/EventHandlers.js`, `src/ui/LayersPanel.js`).
+- **`_matchesShortcut` СЃСЂР°РІРЅРёРІР°Р» `e.ctrlKey` Рё `e.metaKey` РЅРµР·Р°РІРёСЃРёРјРѕ** вЂ” РЅР° Mac РІСЃРµ `Cmd+Z/S/N/O` РїРµСЂРµСЃС‚Р°РІР°Р»Рё СЂР°Р±РѕС‚Р°С‚СЊ, РїРѕС‚РѕРјСѓ С‡С‚Рѕ shortcuts.json РёСЃРїРѕР»СЊР·СѓРµС‚ `ctrlKey:true`, Р° Mac РѕС‚РїСЂР°РІР»СЏРµС‚ `metaKey=true, ctrlKey=false`. РСЃРїСЂР°РІР»РµРЅРѕ: `(e.ctrlKey || e.metaKey)` СЃСЂР°РІРЅРёРІР°РµС‚СЃСЏ СЃ `(def.ctrlKey || def.metaKey)`. РЈР±СЂР°РЅР° РѕС‚РґРµР»СЊРЅР°СЏ РїСЂРѕРІРµСЂРєР° `metaKey` вЂ” РѕРЅР° РЅРµ РЅСѓР¶РЅР°.
+- **`Ctrl+N` (Р±РµР· Alt) РїРµСЂРµСЃС‚Р°Р» РѕС‚РєСЂС‹РІР°С‚СЊ РЅРѕРІС‹Р№ СѓСЂРѕРІРµРЅСЊ** вЂ” РїСЂРё keyboard lock РІ fullscreen Р±СЂР°СѓР·РµСЂ РїСЂРѕРїСѓСЃРєР°РµС‚ `Ctrl+N` РІ РїСЂРёР»РѕР¶РµРЅРёРµ, РЅРѕ РїРѕСЃР»Рµ СЂРµС„Р°РєС‚РѕСЂР° С‚СЂРµР±РѕРІР°Р»СЃСЏ С‚РѕС‡РЅС‹Р№ РјР°С‚С‡ `Ctrl+Alt+N` РёР· РєРѕРЅС„РёРіР°. Р”РѕР±Р°РІР»РµРЅ СЏРІРЅС‹Р№ fallback `(e.ctrlKey||e.metaKey) && !e.altKey && !e.shiftKey && key==='n'` (`src/event-system/EventHandlers.js`, `src/ui/LayersPanel.js`).
 
 
 
-- **`applySavedViewStates()` обновляла DOM через `applyPanelVisibility`, но не синхронизировала `stateManager`** — после `stateManager.reset()` в `newLevel()` состояние `view.console` сбрасывалось в дефолт `true`; при следующем `saveViewStates()` читался `true` из стейта (а не `false` как в DOM), и консоль открывалась при `applySavedViewStates` на втором вызове. Фикс: добавлен `stateManager.set('view.${option}', enabled)` перед `applyPanelVisibility` (`src/event-system/EventHandlers.js`).
+- **`applySavedViewStates()` РѕР±РЅРѕРІР»СЏР»Р° DOM С‡РµСЂРµР· `applyPanelVisibility`, РЅРѕ РЅРµ СЃРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°Р»Р° `stateManager`** вЂ” РїРѕСЃР»Рµ `stateManager.reset()` РІ `newLevel()` СЃРѕСЃС‚РѕСЏРЅРёРµ `view.console` СЃР±СЂР°СЃС‹РІР°Р»РѕСЃСЊ РІ РґРµС„РѕР»С‚ `true`; РїСЂРё СЃР»РµРґСѓСЋС‰РµРј `saveViewStates()` С‡РёС‚Р°Р»СЃСЏ `true` РёР· СЃС‚РµР№С‚Р° (Р° РЅРµ `false` РєР°Рє РІ DOM), Рё РєРѕРЅСЃРѕР»СЊ РѕС‚РєСЂС‹РІР°Р»Р°СЃСЊ РїСЂРё `applySavedViewStates` РЅР° РІС‚РѕСЂРѕРј РІС‹Р·РѕРІРµ. Р¤РёРєСЃ: РґРѕР±Р°РІР»РµРЅ `stateManager.set('view.${option}', enabled)` РїРµСЂРµРґ `applyPanelVisibility` (`src/event-system/EventHandlers.js`).
 
-### Refactor — убраны хардкодные хоткеи из handleKeyDown и LayersPanel
+### Refactor вЂ” СѓР±СЂР°РЅС‹ С…Р°СЂРґРєРѕРґРЅС‹Рµ С…РѕС‚РєРµРё РёР· handleKeyDown Рё LayersPanel
 
-- **Все хоткеи в `EventHandlers.handleKeyDown` и `LayersPanel.setupKeyboardShortcuts` были захардкожены** — ребинд через Settings → Hotkeys не давал эффекта. Добавлен `EventHandlers._matchesShortcut(e, category, action)`, читающий биндинг из `configManager.getShortcuts()`; `handleKeyDown` полностью переведён на data-driven проверки; `LayersPanel.setupKeyboardShortcuts` аналогично читает `configManager.getShortcuts().ui` (`src/event-system/EventHandlers.js`, `src/ui/LayersPanel.js`).
+- **Р’СЃРµ С…РѕС‚РєРµРё РІ `EventHandlers.handleKeyDown` Рё `LayersPanel.setupKeyboardShortcuts` Р±С‹Р»Рё Р·Р°С…Р°СЂРґРєРѕР¶РµРЅС‹** вЂ” СЂРµР±РёРЅРґ С‡РµСЂРµР· Settings в†’ Hotkeys РЅРµ РґР°РІР°Р» СЌС„С„РµРєС‚Р°. Р”РѕР±Р°РІР»РµРЅ `EventHandlers._matchesShortcut(e, category, action)`, С‡РёС‚Р°СЋС‰РёР№ Р±РёРЅРґРёРЅРі РёР· `configManager.getShortcuts()`; `handleKeyDown` РїРѕР»РЅРѕСЃС‚СЊСЋ РїРµСЂРµРІРµРґС‘РЅ РЅР° data-driven РїСЂРѕРІРµСЂРєРё; `LayersPanel.setupKeyboardShortcuts` Р°РЅР°Р»РѕРіРёС‡РЅРѕ С‡РёС‚Р°РµС‚ `configManager.getShortcuts().ui` (`src/event-system/EventHandlers.js`, `src/ui/LayersPanel.js`).
 
-### Fix — скрытые через H объекты оставались в selection
+### Fix вЂ” СЃРєСЂС‹С‚С‹Рµ С‡РµСЂРµР· H РѕР±СЉРµРєС‚С‹ РѕСЃС‚Р°РІР°Р»РёСЃСЊ РІ selection
 
-- **`ObjectOperations.toggleVisibilityForSelection()` (H) не снимала выделение с объектов, которые в результате toggle стали скрытыми** — невидимый объект не должен оставаться selected (не с чем взаимодействовать на канве, gizmo/handles рисовать не над чем). Фикс: после toggle селект пересобирается фильтром по актуальному `obj.visible` каждого ранее выбранного id — это заодно корректно обрабатывает потомков, скрытых только каскадом от родительской группы (`toggleObjectVisibility`), и смешанный выбор (часть объектов становится видимой, часть скрытой) без дополнительной логики (`src/core/ObjectOperations.js`). Проверено в браузере: выбранный объект после H остаётся `visible:false` и пропадает из `selectedObjects`.
+- **`ObjectOperations.toggleVisibilityForSelection()` (H) РЅРµ СЃРЅРёРјР°Р»Р° РІС‹РґРµР»РµРЅРёРµ СЃ РѕР±СЉРµРєС‚РѕРІ, РєРѕС‚РѕСЂС‹Рµ РІ СЂРµР·СѓР»СЊС‚Р°С‚Рµ toggle СЃС‚Р°Р»Рё СЃРєСЂС‹С‚С‹РјРё** вЂ” РЅРµРІРёРґРёРјС‹Р№ РѕР±СЉРµРєС‚ РЅРµ РґРѕР»Р¶РµРЅ РѕСЃС‚Р°РІР°С‚СЊСЃСЏ selected (РЅРµ СЃ С‡РµРј РІР·Р°РёРјРѕРґРµР№СЃС‚РІРѕРІР°С‚СЊ РЅР° РєР°РЅРІРµ, gizmo/handles СЂРёСЃРѕРІР°С‚СЊ РЅРµ РЅР°Рґ С‡РµРј). Р¤РёРєСЃ: РїРѕСЃР»Рµ toggle СЃРµР»РµРєС‚ РїРµСЂРµСЃРѕР±РёСЂР°РµС‚СЃСЏ С„РёР»СЊС‚СЂРѕРј РїРѕ Р°РєС‚СѓР°Р»СЊРЅРѕРјСѓ `obj.visible` РєР°Р¶РґРѕРіРѕ СЂР°РЅРµРµ РІС‹Р±СЂР°РЅРЅРѕРіРѕ id вЂ” СЌС‚Рѕ Р·Р°РѕРґРЅРѕ РєРѕСЂСЂРµРєС‚РЅРѕ РѕР±СЂР°Р±Р°С‚С‹РІР°РµС‚ РїРѕС‚РѕРјРєРѕРІ, СЃРєСЂС‹С‚С‹С… С‚РѕР»СЊРєРѕ РєР°СЃРєР°РґРѕРј РѕС‚ СЂРѕРґРёС‚РµР»СЊСЃРєРѕР№ РіСЂСѓРїРїС‹ (`toggleObjectVisibility`), Рё СЃРјРµС€Р°РЅРЅС‹Р№ РІС‹Р±РѕСЂ (С‡Р°СЃС‚СЊ РѕР±СЉРµРєС‚РѕРІ СЃС‚Р°РЅРѕРІРёС‚СЃСЏ РІРёРґРёРјРѕР№, С‡Р°СЃС‚СЊ СЃРєСЂС‹С‚РѕР№) Р±РµР· РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕР№ Р»РѕРіРёРєРё (`src/core/ObjectOperations.js`). РџСЂРѕРІРµСЂРµРЅРѕ РІ Р±СЂР°СѓР·РµСЂРµ: РІС‹Р±СЂР°РЅРЅС‹Р№ РѕР±СЉРµРєС‚ РїРѕСЃР»Рµ H РѕСЃС‚Р°С‘С‚СЃСЏ `visible:false` Рё РїСЂРѕРїР°РґР°РµС‚ РёР· `selectedObjects`.
 
-### Fix — marquee-drag выделение повёрнутых объектов/групп проверялось по AABB вместо истинной повёрнутой формы
+### Fix вЂ” marquee-drag РІС‹РґРµР»РµРЅРёРµ РїРѕРІС‘СЂРЅСѓС‚С‹С… РѕР±СЉРµРєС‚РѕРІ/РіСЂСѓРїРї РїСЂРѕРІРµСЂСЏР»РѕСЃСЊ РїРѕ AABB РІРјРµСЃС‚Рѕ РёСЃС‚РёРЅРЅРѕР№ РїРѕРІС‘СЂРЅСѓС‚РѕР№ С„РѕСЂРјС‹
 
-- **`MouseHandlers.getObjectsInMarquee()`: для настоящего drag (не для плоского клика, см. фикс ниже) пересечение marquee-прямоугольника с объектом проверялось через plain AABB-overlap** — для повёрнутого объекта/группы AABB больше истинной формы, поэтому перетаскивание рамки выделения через "пустой" угол AABB (мимо реальной картинки) ошибочно включало объект в выделение. Добавлен `WorldPositionUtils.rectIntersectsGeometry(minX, minY, maxX, maxY, geom)` — точный тест пересечения осевого прямоугольника с повёрнутым через Separating Axis Theorem (4 оси: 2 от AABB, 2 от повёрнутого прямоугольника при `rotationDeg !== 0`), использует ту же геометрию `getHitTestGeometry`, что и клик — гарантирует идентичную область между кликом и drag-выделением. Parallax-смещение применяется к `geom.cx/cy` перед проверкой (та же поправка, что раньше делала `getObjectWorldBoundsWithParallax` для bounds). Настоящий drag с полным охватом объекта продолжает работать как раньше. Проверено в браузере через реальные `mousedown`+`mousemove`×2+`mouseup` DOM-события (не прямые вызовы): систематический свежеп 837 боксов вокруг повёрнутого спрайта (45°) против точной эталонной геометрии (сэмплинг точек + рёбер) — 0 несовпадений; вложенная повёрнутая группа (A 30°→B 45°) — рамка в пустом углу AABB корректно не выделяет, рамка через центр — выделяет (`src/utils/WorldPositionUtils.js`, `src/event-system/MouseHandlers.js`).
+- **`MouseHandlers.getObjectsInMarquee()`: РґР»СЏ РЅР°СЃС‚РѕСЏС‰РµРіРѕ drag (РЅРµ РґР»СЏ РїР»РѕСЃРєРѕРіРѕ РєР»РёРєР°, СЃРј. С„РёРєСЃ РЅРёР¶Рµ) РїРµСЂРµСЃРµС‡РµРЅРёРµ marquee-РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРєР° СЃ РѕР±СЉРµРєС‚РѕРј РїСЂРѕРІРµСЂСЏР»РѕСЃСЊ С‡РµСЂРµР· plain AABB-overlap** вЂ” РґР»СЏ РїРѕРІС‘СЂРЅСѓС‚РѕРіРѕ РѕР±СЉРµРєС‚Р°/РіСЂСѓРїРїС‹ AABB Р±РѕР»СЊС€Рµ РёСЃС‚РёРЅРЅРѕР№ С„РѕСЂРјС‹, РїРѕСЌС‚РѕРјСѓ РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµ СЂР°РјРєРё РІС‹РґРµР»РµРЅРёСЏ С‡РµСЂРµР· "РїСѓСЃС‚РѕР№" СѓРіРѕР» AABB (РјРёРјРѕ СЂРµР°Р»СЊРЅРѕР№ РєР°СЂС‚РёРЅРєРё) РѕС€РёР±РѕС‡РЅРѕ РІРєР»СЋС‡Р°Р»Рѕ РѕР±СЉРµРєС‚ РІ РІС‹РґРµР»РµРЅРёРµ. Р”РѕР±Р°РІР»РµРЅ `WorldPositionUtils.rectIntersectsGeometry(minX, minY, maxX, maxY, geom)` вЂ” С‚РѕС‡РЅС‹Р№ С‚РµСЃС‚ РїРµСЂРµСЃРµС‡РµРЅРёСЏ РѕСЃРµРІРѕРіРѕ РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРєР° СЃ РїРѕРІС‘СЂРЅСѓС‚С‹Рј С‡РµСЂРµР· Separating Axis Theorem (4 РѕСЃРё: 2 РѕС‚ AABB, 2 РѕС‚ РїРѕРІС‘СЂРЅСѓС‚РѕРіРѕ РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРєР° РїСЂРё `rotationDeg !== 0`), РёСЃРїРѕР»СЊР·СѓРµС‚ С‚Сѓ Р¶Рµ РіРµРѕРјРµС‚СЂРёСЋ `getHitTestGeometry`, С‡С‚Рѕ Рё РєР»РёРє вЂ” РіР°СЂР°РЅС‚РёСЂСѓРµС‚ РёРґРµРЅС‚РёС‡РЅСѓСЋ РѕР±Р»Р°СЃС‚СЊ РјРµР¶РґСѓ РєР»РёРєРѕРј Рё drag-РІС‹РґРµР»РµРЅРёРµРј. Parallax-СЃРјРµС‰РµРЅРёРµ РїСЂРёРјРµРЅСЏРµС‚СЃСЏ Рє `geom.cx/cy` РїРµСЂРµРґ РїСЂРѕРІРµСЂРєРѕР№ (С‚Р° Р¶Рµ РїРѕРїСЂР°РІРєР°, С‡С‚Рѕ СЂР°РЅСЊС€Рµ РґРµР»Р°Р»Р° `getObjectWorldBoundsWithParallax` РґР»СЏ bounds). РќР°СЃС‚РѕСЏС‰РёР№ drag СЃ РїРѕР»РЅС‹Рј РѕС…РІР°С‚РѕРј РѕР±СЉРµРєС‚Р° РїСЂРѕРґРѕР»Р¶Р°РµС‚ СЂР°Р±РѕС‚Р°С‚СЊ РєР°Рє СЂР°РЅСЊС€Рµ. РџСЂРѕРІРµСЂРµРЅРѕ РІ Р±СЂР°СѓР·РµСЂРµ С‡РµСЂРµР· СЂРµР°Р»СЊРЅС‹Рµ `mousedown`+`mousemove`Г—2+`mouseup` DOM-СЃРѕР±С‹С‚РёСЏ (РЅРµ РїСЂСЏРјС‹Рµ РІС‹Р·РѕРІС‹): СЃРёСЃС‚РµРјР°С‚РёС‡РµСЃРєРёР№ СЃРІРµР¶РµРї 837 Р±РѕРєСЃРѕРІ РІРѕРєСЂСѓРі РїРѕРІС‘СЂРЅСѓС‚РѕРіРѕ СЃРїСЂР°Р№С‚Р° (45В°) РїСЂРѕС‚РёРІ С‚РѕС‡РЅРѕР№ СЌС‚Р°Р»РѕРЅРЅРѕР№ РіРµРѕРјРµС‚СЂРёРё (СЃСЌРјРїР»РёРЅРі С‚РѕС‡РµРє + СЂС‘Р±РµСЂ) вЂ” 0 РЅРµСЃРѕРІРїР°РґРµРЅРёР№; РІР»РѕР¶РµРЅРЅР°СЏ РїРѕРІС‘СЂРЅСѓС‚Р°СЏ РіСЂСѓРїРїР° (A 30В°в†’B 45В°) вЂ” СЂР°РјРєР° РІ РїСѓСЃС‚РѕРј СѓРіР»Сѓ AABB РєРѕСЂСЂРµРєС‚РЅРѕ РЅРµ РІС‹РґРµР»СЏРµС‚, СЂР°РјРєР° С‡РµСЂРµР· С†РµРЅС‚СЂ вЂ” РІС‹РґРµР»СЏРµС‚ (`src/utils/WorldPositionUtils.js`, `src/event-system/MouseHandlers.js`).
 
-### Fix — клик по повёрнутому объекту/группе всё ещё проверялся по осевому (не повёрнутому) bounding box
+### Fix вЂ” РєР»РёРє РїРѕ РїРѕРІС‘СЂРЅСѓС‚РѕРјСѓ РѕР±СЉРµРєС‚Сѓ/РіСЂСѓРїРїРµ РІСЃС‘ РµС‰С‘ РїСЂРѕРІРµСЂСЏР»СЃСЏ РїРѕ РѕСЃРµРІРѕРјСѓ (РЅРµ РїРѕРІС‘СЂРЅСѓС‚РѕРјСѓ) bounding box
 
-- **Реальный корень бага, из-за которого зона клика "оставалась квадратной" на повёрнутых объектах, несмотря на уже исправленный `isPointInWorldBounds`** — обычный клик (mousedown+mouseup без движения) идёт НЕ только через `findObjectAtPoint` (он корректно находил объект или корректно возвращал `null`), а при промахе — через `MouseHandlers.handleEmptyClick()`, который безусловно открывает marquee-выделение нулевого размера в точке клика; на mouseup `finishMarqueeSelection()` эту точку проверял через **AABB**-пересечение (`getObjectWorldBoundsWithParallax` + rect-overlap), а не через повёрнутый хит-тест. Для повёрнутого объекта/группы AABB всегда больше истинной формы — клик в "пустом" углу AABB (мимо реальной картинки) всё равно попадал в rect-overlap и выделял объект, переопределяя корректное решение, уже принятое `findObjectAtPoint` на mousedown. Исправлено: `getObjectsInMarquee()` теперь при вырожденном (0×0) marquee-rect использует точный `ObjectOperations.isPointInObject()` на кандидат вместо AABB-overlap; при настоящем drag (rect с ненулевым размером) поведение не изменилось — AABB-overlap для прямоугольного мульти-выделения оставлен как есть (обычная практика для marquee, точную полигон-в-повёрнутый-rect проверку делать избыточно). Проверено в браузере реальными DOM mousedown/mouseup событиями (не прямым вызовом `isPointInObject`, чтобы не пропустить именно этот баг): клик в углу AABB повёрнутого спрайта (45°) и повёрнутой вложенной группы (A 30°→B 45°) — выделение не срабатывает; клик по центру — срабатывает; полноценный marquee-drag (с промежуточными `mousemove`) по-прежнему выделяет объекты внутри прямоугольника (`src/event-system/MouseHandlers.js`, `finishMarqueeSelection`/`getObjectsInMarquee`).
+- **Р РµР°Р»СЊРЅС‹Р№ РєРѕСЂРµРЅСЊ Р±Р°РіР°, РёР·-Р·Р° РєРѕС‚РѕСЂРѕРіРѕ Р·РѕРЅР° РєР»РёРєР° "РѕСЃС‚Р°РІР°Р»Р°СЃСЊ РєРІР°РґСЂР°С‚РЅРѕР№" РЅР° РїРѕРІС‘СЂРЅСѓС‚С‹С… РѕР±СЉРµРєС‚Р°С…, РЅРµСЃРјРѕС‚СЂСЏ РЅР° СѓР¶Рµ РёСЃРїСЂР°РІР»РµРЅРЅС‹Р№ `isPointInWorldBounds`** вЂ” РѕР±С‹С‡РЅС‹Р№ РєР»РёРє (mousedown+mouseup Р±РµР· РґРІРёР¶РµРЅРёСЏ) РёРґС‘С‚ РќР• С‚РѕР»СЊРєРѕ С‡РµСЂРµР· `findObjectAtPoint` (РѕРЅ РєРѕСЂСЂРµРєС‚РЅРѕ РЅР°С…РѕРґРёР» РѕР±СЉРµРєС‚ РёР»Рё РєРѕСЂСЂРµРєС‚РЅРѕ РІРѕР·РІСЂР°С‰Р°Р» `null`), Р° РїСЂРё РїСЂРѕРјР°С…Рµ вЂ” С‡РµСЂРµР· `MouseHandlers.handleEmptyClick()`, РєРѕС‚РѕСЂС‹Р№ Р±РµР·СѓСЃР»РѕРІРЅРѕ РѕС‚РєСЂС‹РІР°РµС‚ marquee-РІС‹РґРµР»РµРЅРёРµ РЅСѓР»РµРІРѕРіРѕ СЂР°Р·РјРµСЂР° РІ С‚РѕС‡РєРµ РєР»РёРєР°; РЅР° mouseup `finishMarqueeSelection()` СЌС‚Сѓ С‚РѕС‡РєСѓ РїСЂРѕРІРµСЂСЏР» С‡РµСЂРµР· **AABB**-РїРµСЂРµСЃРµС‡РµРЅРёРµ (`getObjectWorldBoundsWithParallax` + rect-overlap), Р° РЅРµ С‡РµСЂРµР· РїРѕРІС‘СЂРЅСѓС‚С‹Р№ С…РёС‚-С‚РµСЃС‚. Р”Р»СЏ РїРѕРІС‘СЂРЅСѓС‚РѕРіРѕ РѕР±СЉРµРєС‚Р°/РіСЂСѓРїРїС‹ AABB РІСЃРµРіРґР° Р±РѕР»СЊС€Рµ РёСЃС‚РёРЅРЅРѕР№ С„РѕСЂРјС‹ вЂ” РєР»РёРє РІ "РїСѓСЃС‚РѕРј" СѓРіР»Сѓ AABB (РјРёРјРѕ СЂРµР°Р»СЊРЅРѕР№ РєР°СЂС‚РёРЅРєРё) РІСЃС‘ СЂР°РІРЅРѕ РїРѕРїР°РґР°Р» РІ rect-overlap Рё РІС‹РґРµР»СЏР» РѕР±СЉРµРєС‚, РїРµСЂРµРѕРїСЂРµРґРµР»СЏСЏ РєРѕСЂСЂРµРєС‚РЅРѕРµ СЂРµС€РµРЅРёРµ, СѓР¶Рµ РїСЂРёРЅСЏС‚РѕРµ `findObjectAtPoint` РЅР° mousedown. РСЃРїСЂР°РІР»РµРЅРѕ: `getObjectsInMarquee()` С‚РµРїРµСЂСЊ РїСЂРё РІС‹СЂРѕР¶РґРµРЅРЅРѕРј (0Г—0) marquee-rect РёСЃРїРѕР»СЊР·СѓРµС‚ С‚РѕС‡РЅС‹Р№ `ObjectOperations.isPointInObject()` РЅР° РєР°РЅРґРёРґР°С‚ РІРјРµСЃС‚Рѕ AABB-overlap; РїСЂРё РЅР°СЃС‚РѕСЏС‰РµРј drag (rect СЃ РЅРµРЅСѓР»РµРІС‹Рј СЂР°Р·РјРµСЂРѕРј) РїРѕРІРµРґРµРЅРёРµ РЅРµ РёР·РјРµРЅРёР»РѕСЃСЊ вЂ” AABB-overlap РґР»СЏ РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРѕРіРѕ РјСѓР»СЊС‚Рё-РІС‹РґРµР»РµРЅРёСЏ РѕСЃС‚Р°РІР»РµРЅ РєР°Рє РµСЃС‚СЊ (РѕР±С‹С‡РЅР°СЏ РїСЂР°РєС‚РёРєР° РґР»СЏ marquee, С‚РѕС‡РЅСѓСЋ РїРѕР»РёРіРѕРЅ-РІ-РїРѕРІС‘СЂРЅСѓС‚С‹Р№-rect РїСЂРѕРІРµСЂРєСѓ РґРµР»Р°С‚СЊ РёР·Р±С‹С‚РѕС‡РЅРѕ). РџСЂРѕРІРµСЂРµРЅРѕ РІ Р±СЂР°СѓР·РµСЂРµ СЂРµР°Р»СЊРЅС‹РјРё DOM mousedown/mouseup СЃРѕР±С‹С‚РёСЏРјРё (РЅРµ РїСЂСЏРјС‹Рј РІС‹Р·РѕРІРѕРј `isPointInObject`, С‡С‚РѕР±С‹ РЅРµ РїСЂРѕРїСѓСЃС‚РёС‚СЊ РёРјРµРЅРЅРѕ СЌС‚РѕС‚ Р±Р°Рі): РєР»РёРє РІ СѓРіР»Сѓ AABB РїРѕРІС‘СЂРЅСѓС‚РѕРіРѕ СЃРїСЂР°Р№С‚Р° (45В°) Рё РїРѕРІС‘СЂРЅСѓС‚РѕР№ РІР»РѕР¶РµРЅРЅРѕР№ РіСЂСѓРїРїС‹ (A 30В°в†’B 45В°) вЂ” РІС‹РґРµР»РµРЅРёРµ РЅРµ СЃСЂР°Р±Р°С‚С‹РІР°РµС‚; РєР»РёРє РїРѕ С†РµРЅС‚СЂСѓ вЂ” СЃСЂР°Р±Р°С‚С‹РІР°РµС‚; РїРѕР»РЅРѕС†РµРЅРЅС‹Р№ marquee-drag (СЃ РїСЂРѕРјРµР¶СѓС‚РѕС‡РЅС‹РјРё `mousemove`) РїРѕ-РїСЂРµР¶РЅРµРјСѓ РІС‹РґРµР»СЏРµС‚ РѕР±СЉРµРєС‚С‹ РІРЅСѓС‚СЂРё РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРєР° (`src/event-system/MouseHandlers.js`, `finishMarqueeSelection`/`getObjectsInMarquee`).
 
-### Fix — контекстные меню закрывались при resize окна
+### Fix вЂ” РєРѕРЅС‚РµРєСЃС‚РЅС‹Рµ РјРµРЅСЋ Р·Р°РєСЂС‹РІР°Р»РёСЃСЊ РїСЂРё resize РѕРєРЅР°
 
-- **`BaseContextMenu.setupWindowResizeHandler()` вызывал `hideMenu()` на каждый `window.resize`**, из-за чего любое открытое контекстное меню (canvas, layers, outliner, assets, console — все наследники `BaseContextMenu`) пропадало при малейшем изменении размера окна. Заменено на `repositionMenuWithinViewport()` — клампит `left`/`top` открытого меню в границы нового viewport (меню `position: fixed`), не закрывая его (`src/ui/BaseContextMenu.js`).
+- **`BaseContextMenu.setupWindowResizeHandler()` РІС‹Р·С‹РІР°Р» `hideMenu()` РЅР° РєР°Р¶РґС‹Р№ `window.resize`**, РёР·-Р·Р° С‡РµРіРѕ Р»СЋР±РѕРµ РѕС‚РєСЂС‹С‚РѕРµ РєРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ (canvas, layers, outliner, assets, console вЂ” РІСЃРµ РЅР°СЃР»РµРґРЅРёРєРё `BaseContextMenu`) РїСЂРѕРїР°РґР°Р»Рѕ РїСЂРё РјР°Р»РµР№С€РµРј РёР·РјРµРЅРµРЅРёРё СЂР°Р·РјРµСЂР° РѕРєРЅР°. Р—Р°РјРµРЅРµРЅРѕ РЅР° `repositionMenuWithinViewport()` вЂ” РєР»Р°РјРїРёС‚ `left`/`top` РѕС‚РєСЂС‹С‚РѕРіРѕ РјРµРЅСЋ РІ РіСЂР°РЅРёС†С‹ РЅРѕРІРѕРіРѕ viewport (РјРµРЅСЋ `position: fixed`), РЅРµ Р·Р°РєСЂС‹РІР°СЏ РµРіРѕ (`src/ui/BaseContextMenu.js`).
 
-### Fix — диалоговые окна (Settings, Actor Properties) закрывались при перетаскивании ручки resize
+### Fix вЂ” РґРёР°Р»РѕРіРѕРІС‹Рµ РѕРєРЅР° (Settings, Actor Properties) Р·Р°РєСЂС‹РІР°Р»РёСЃСЊ РїСЂРё РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРё СЂСѓС‡РєРё resize
 
-- **Drag за resize-handle диалога (`DialogResizer`) мог закрыть весь диалог**, если пользователь быстро тянул мышь и отпускал её за пределами диалога — над фоном оверлея. Причина: `mousedown` происходил на resizer, а `mouseup` — вне диалога; когда target'ы `mousedown` и `mouseup` различаются, браузер синтезирует `click` на их ближайшем общем предке — в данном случае на `.dialog-overlay`. `BaseDialog` трактует клик по overlay как «клик вне диалога» и вызывает `hide()`. Фикс: в `DialogResizer.setupResizer()` при завершении resize (`handleMouseUp`, если `isResizing`) вешается одноразовый capturing-перехватчик `click` на `document` (`{ once: true }` + подстраховка `setTimeout(...,0)` на случай, если `mouseup` произошёл вне документа и синтетический click вообще не долетел), который глушит именно этот один паразитный клик (`src/utils/DialogResizer.js`). Проверено в браузере: dispatch mousedown(resizer)→mousemove→mouseup(вне диалога)→click(overlay) — диалог остаётся открытым; обычный клик по overlay без предшествующего resize по-прежнему закрывает диалог (штатное поведение не сломано).
+- **Drag Р·Р° resize-handle РґРёР°Р»РѕРіР° (`DialogResizer`) РјРѕРі Р·Р°РєСЂС‹С‚СЊ РІРµСЃСЊ РґРёР°Р»РѕРі**, РµСЃР»Рё РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ Р±С‹СЃС‚СЂРѕ С‚СЏРЅСѓР» РјС‹С€СЊ Рё РѕС‚РїСѓСЃРєР°Р» РµС‘ Р·Р° РїСЂРµРґРµР»Р°РјРё РґРёР°Р»РѕРіР° вЂ” РЅР°Рґ С„РѕРЅРѕРј РѕРІРµСЂР»РµСЏ. РџСЂРёС‡РёРЅР°: `mousedown` РїСЂРѕРёСЃС…РѕРґРёР» РЅР° resizer, Р° `mouseup` вЂ” РІРЅРµ РґРёР°Р»РѕРіР°; РєРѕРіРґР° target'С‹ `mousedown` Рё `mouseup` СЂР°Р·Р»РёС‡Р°СЋС‚СЃСЏ, Р±СЂР°СѓР·РµСЂ СЃРёРЅС‚РµР·РёСЂСѓРµС‚ `click` РЅР° РёС… Р±Р»РёР¶Р°Р№С€РµРј РѕР±С‰РµРј РїСЂРµРґРєРµ вЂ” РІ РґР°РЅРЅРѕРј СЃР»СѓС‡Р°Рµ РЅР° `.dialog-overlay`. `BaseDialog` С‚СЂР°РєС‚СѓРµС‚ РєР»РёРє РїРѕ overlay РєР°Рє В«РєР»РёРє РІРЅРµ РґРёР°Р»РѕРіР°В» Рё РІС‹Р·С‹РІР°РµС‚ `hide()`. Р¤РёРєСЃ: РІ `DialogResizer.setupResizer()` РїСЂРё Р·Р°РІРµСЂС€РµРЅРёРё resize (`handleMouseUp`, РµСЃР»Рё `isResizing`) РІРµС€Р°РµС‚СЃСЏ РѕРґРЅРѕСЂР°Р·РѕРІС‹Р№ capturing-РїРµСЂРµС…РІР°С‚С‡РёРє `click` РЅР° `document` (`{ once: true }` + РїРѕРґСЃС‚СЂР°С…РѕРІРєР° `setTimeout(...,0)` РЅР° СЃР»СѓС‡Р°Р№, РµСЃР»Рё `mouseup` РїСЂРѕРёР·РѕС€С‘Р» РІРЅРµ РґРѕРєСѓРјРµРЅС‚Р° Рё СЃРёРЅС‚РµС‚РёС‡РµСЃРєРёР№ click РІРѕРѕР±С‰Рµ РЅРµ РґРѕР»РµС‚РµР»), РєРѕС‚РѕСЂС‹Р№ РіР»СѓС€РёС‚ РёРјРµРЅРЅРѕ СЌС‚РѕС‚ РѕРґРёРЅ РїР°СЂР°Р·РёС‚РЅС‹Р№ РєР»РёРє (`src/utils/DialogResizer.js`). РџСЂРѕРІРµСЂРµРЅРѕ РІ Р±СЂР°СѓР·РµСЂРµ: dispatch mousedown(resizer)в†’mousemoveв†’mouseup(РІРЅРµ РґРёР°Р»РѕРіР°)в†’click(overlay) вЂ” РґРёР°Р»РѕРі РѕСЃС‚Р°С‘С‚СЃСЏ РѕС‚РєСЂС‹С‚С‹Рј; РѕР±С‹С‡РЅС‹Р№ РєР»РёРє РїРѕ overlay Р±РµР· РїСЂРµРґС€РµСЃС‚РІСѓСЋС‰РµРіРѕ resize РїРѕ-РїСЂРµР¶РЅРµРјСѓ Р·Р°РєСЂС‹РІР°РµС‚ РґРёР°Р»РѕРі (С€С‚Р°С‚РЅРѕРµ РїРѕРІРµРґРµРЅРёРµ РЅРµ СЃР»РѕРјР°РЅРѕ).
 
-### Fix — перетаскивание объекта с отпусканием курсора за пределами канвы некорректно восстанавливало трансформы
+### Fix вЂ” РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµ РѕР±СЉРµРєС‚Р° СЃ РѕС‚РїСѓСЃРєР°РЅРёРµРј РєСѓСЂСЃРѕСЂР° Р·Р° РїСЂРµРґРµР»Р°РјРё РєР°РЅРІС‹ РЅРµРєРѕСЂСЂРµРєС‚РЅРѕ РІРѕСЃСЃС‚Р°РЅР°РІР»РёРІР°Р»Рѕ С‚СЂР°РЅСЃС„РѕСЂРјС‹
 
-- **`MouseHandlers.handleGlobalMouseUp()`/`handleWindowBlur()` отменяли drag/transform, отпущенный за пределами канвы (или при потере фокуса окна), вызовом `historyOperations.undo()`** — но во время drag'а `historyManager.saveState()` ещё не вызывался (он вызывается только при штатном завершении в `handleMouseUp`), поэтому верх undo-стека — это состояние ДО начала текущего жеста, а не "текущее" (задрагованное) состояние, которое `undo()` предполагает найти и вытолкнуть. В результате `undo()` выталкивал состояние "до жеста" в redo-стек и возвращал состояние ещё на шаг раньше — на один шаг истории дальше, чем нужно, оставляя объект в неверной позиции (не в исходной, а в состоянии до ПРЕДЫДУЩЕГО действия). Фикс: новый `HistoryManager.peekCurrentState()` читает верх undo-стека БЕЗ его модификации; `HistoryOperations.cancelToLastSavedState()` (использует тот же restore-пайплайн, что `undo()`/`redo()`, вынесенный в `_applyRestoredState()`) применяет это состояние, не трогая undo/redo-стеки. Все 4 места отмены жеста вне канвы (`handleGlobalMouseUp` — drag и transform, `handleWindowBlur` — drag и transform) переведены с `undo()` на `cancelToLastSavedState()` (`src/managers/HistoryManager.js`, `src/core/HistoryOperations.js`, `src/event-system/MouseHandlers.js`). Проверено в браузере: два подтверждённых move (`saveState`) + один незакоммиченный "drag" поверх → `cancelToLastSavedState()` восстанавливает именно позицию после второго move (не первого и не исходную), стек истории не теряет и не задваивает записи.
+- **`MouseHandlers.handleGlobalMouseUp()`/`handleWindowBlur()` РѕС‚РјРµРЅСЏР»Рё drag/transform, РѕС‚РїСѓС‰РµРЅРЅС‹Р№ Р·Р° РїСЂРµРґРµР»Р°РјРё РєР°РЅРІС‹ (РёР»Рё РїСЂРё РїРѕС‚РµСЂРµ С„РѕРєСѓСЃР° РѕРєРЅР°), РІС‹Р·РѕРІРѕРј `historyOperations.undo()`** вЂ” РЅРѕ РІРѕ РІСЂРµРјСЏ drag'Р° `historyManager.saveState()` РµС‰С‘ РЅРµ РІС‹Р·С‹РІР°Р»СЃСЏ (РѕРЅ РІС‹Р·С‹РІР°РµС‚СЃСЏ С‚РѕР»СЊРєРѕ РїСЂРё С€С‚Р°С‚РЅРѕРј Р·Р°РІРµСЂС€РµРЅРёРё РІ `handleMouseUp`), РїРѕСЌС‚РѕРјСѓ РІРµСЂС… undo-СЃС‚РµРєР° вЂ” СЌС‚Рѕ СЃРѕСЃС‚РѕСЏРЅРёРµ Р”Рћ РЅР°С‡Р°Р»Р° С‚РµРєСѓС‰РµРіРѕ Р¶РµСЃС‚Р°, Р° РЅРµ "С‚РµРєСѓС‰РµРµ" (Р·Р°РґСЂР°РіРѕРІР°РЅРЅРѕРµ) СЃРѕСЃС‚РѕСЏРЅРёРµ, РєРѕС‚РѕСЂРѕРµ `undo()` РїСЂРµРґРїРѕР»Р°РіР°РµС‚ РЅР°Р№С‚Рё Рё РІС‹С‚РѕР»РєРЅСѓС‚СЊ. Р’ СЂРµР·СѓР»СЊС‚Р°С‚Рµ `undo()` РІС‹С‚Р°Р»РєРёРІР°Р» СЃРѕСЃС‚РѕСЏРЅРёРµ "РґРѕ Р¶РµСЃС‚Р°" РІ redo-СЃС‚РµРє Рё РІРѕР·РІСЂР°С‰Р°Р» СЃРѕСЃС‚РѕСЏРЅРёРµ РµС‰С‘ РЅР° С€Р°Рі СЂР°РЅСЊС€Рµ вЂ” РЅР° РѕРґРёРЅ С€Р°Рі РёСЃС‚РѕСЂРёРё РґР°Р»СЊС€Рµ, С‡РµРј РЅСѓР¶РЅРѕ, РѕСЃС‚Р°РІР»СЏСЏ РѕР±СЉРµРєС‚ РІ РЅРµРІРµСЂРЅРѕР№ РїРѕР·РёС†РёРё (РЅРµ РІ РёСЃС…РѕРґРЅРѕР№, Р° РІ СЃРѕСЃС‚РѕСЏРЅРёРё РґРѕ РџР Р•Р”Р«Р”РЈР©Р•Р“Рћ РґРµР№СЃС‚РІРёСЏ). Р¤РёРєСЃ: РЅРѕРІС‹Р№ `HistoryManager.peekCurrentState()` С‡РёС‚Р°РµС‚ РІРµСЂС… undo-СЃС‚РµРєР° Р‘Р•Р— РµРіРѕ РјРѕРґРёС„РёРєР°С†РёРё; `HistoryOperations.cancelToLastSavedState()` (РёСЃРїРѕР»СЊР·СѓРµС‚ С‚РѕС‚ Р¶Рµ restore-РїР°Р№РїР»Р°Р№РЅ, С‡С‚Рѕ `undo()`/`redo()`, РІС‹РЅРµСЃРµРЅРЅС‹Р№ РІ `_applyRestoredState()`) РїСЂРёРјРµРЅСЏРµС‚ СЌС‚Рѕ СЃРѕСЃС‚РѕСЏРЅРёРµ, РЅРµ С‚СЂРѕРіР°СЏ undo/redo-СЃС‚РµРєРё. Р’СЃРµ 4 РјРµСЃС‚Р° РѕС‚РјРµРЅС‹ Р¶РµСЃС‚Р° РІРЅРµ РєР°РЅРІС‹ (`handleGlobalMouseUp` вЂ” drag Рё transform, `handleWindowBlur` вЂ” drag Рё transform) РїРµСЂРµРІРµРґРµРЅС‹ СЃ `undo()` РЅР° `cancelToLastSavedState()` (`src/managers/HistoryManager.js`, `src/core/HistoryOperations.js`, `src/event-system/MouseHandlers.js`). РџСЂРѕРІРµСЂРµРЅРѕ РІ Р±СЂР°СѓР·РµСЂРµ: РґРІР° РїРѕРґС‚РІРµСЂР¶РґС‘РЅРЅС‹С… move (`saveState`) + РѕРґРёРЅ РЅРµР·Р°РєРѕРјРјРёС‡РµРЅРЅС‹Р№ "drag" РїРѕРІРµСЂС… в†’ `cancelToLastSavedState()` РІРѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ РёРјРµРЅРЅРѕ РїРѕР·РёС†РёСЋ РїРѕСЃР»Рµ РІС‚РѕСЂРѕРіРѕ move (РЅРµ РїРµСЂРІРѕРіРѕ Рё РЅРµ РёСЃС…РѕРґРЅСѓСЋ), СЃС‚РµРє РёСЃС‚РѕСЂРёРё РЅРµ С‚РµСЂСЏРµС‚ Рё РЅРµ Р·Р°РґРІР°РёРІР°РµС‚ Р·Р°РїРёСЃРё.
 
-### Fix — отмена диалога открытия уровня приводила к краху и алерту "Cannot read properties of null"
+### Fix вЂ” РѕС‚РјРµРЅР° РґРёР°Р»РѕРіР° РѕС‚РєСЂС‹С‚РёСЏ СѓСЂРѕРІРЅСЏ РїСЂРёРІРѕРґРёР»Р° Рє РєСЂР°С…Сѓ Рё Р°Р»РµСЂС‚Сѓ "Cannot read properties of null"
 
-- **`LevelFileOperations.openLevel()` присваивал `this.editor.level` результату `fileManager.loadLevelFromFileInput()` без проверки на `null`.** `loadLevelFromFileInput()` возвращает `null` и при отмене нативного файлового диалога, и при ошибке чтения файла (оба случая проходят через `ErrorHandler.tryAsync` с фолбэком `null`). Код продолжал выполняться с `this.editor.level = null` и падал на `this.editor.level.getMainLayerId()`, а catch-блок показывал юзеру confusing алерт "Error loading level: Cannot read properties of null...", хотя пользователь просто закрыл диалог выбора файла. Фикс: результат `loadLevelFromFileInput()` сохраняется во временную переменную и проверяется на `null` ДО присвоения `this.editor.level` и до `stateManager.reset()` — при отмене/ошибке метод тихо возвращается, текущий уровень остаётся нетронутым, алерт не показывается (`src/core/LevelFileOperations.js`). Проверено в браузере: `loadLevelFromFileInput` замокан на `async () => null` (эмуляция отмены), `editor.level` не изменился и остался валиден, ошибок в консоли нет.
+- **`LevelFileOperations.openLevel()` РїСЂРёСЃРІР°РёРІР°Р» `this.editor.level` СЂРµР·СѓР»СЊС‚Р°С‚Сѓ `fileManager.loadLevelFromFileInput()` Р±РµР· РїСЂРѕРІРµСЂРєРё РЅР° `null`.** `loadLevelFromFileInput()` РІРѕР·РІСЂР°С‰Р°РµС‚ `null` Рё РїСЂРё РѕС‚РјРµРЅРµ РЅР°С‚РёРІРЅРѕРіРѕ С„Р°Р№Р»РѕРІРѕРіРѕ РґРёР°Р»РѕРіР°, Рё РїСЂРё РѕС€РёР±РєРµ С‡С‚РµРЅРёСЏ С„Р°Р№Р»Р° (РѕР±Р° СЃР»СѓС‡Р°СЏ РїСЂРѕС…РѕРґСЏС‚ С‡РµСЂРµР· `ErrorHandler.tryAsync` СЃ С„РѕР»Р±СЌРєРѕРј `null`). РљРѕРґ РїСЂРѕРґРѕР»Р¶Р°Р» РІС‹РїРѕР»РЅСЏС‚СЊСЃСЏ СЃ `this.editor.level = null` Рё РїР°РґР°Р» РЅР° `this.editor.level.getMainLayerId()`, Р° catch-Р±Р»РѕРє РїРѕРєР°Р·С‹РІР°Р» СЋР·РµСЂСѓ confusing Р°Р»РµСЂС‚ "Error loading level: Cannot read properties of null...", С…РѕС‚СЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РїСЂРѕСЃС‚Рѕ Р·Р°РєСЂС‹Р» РґРёР°Р»РѕРі РІС‹Р±РѕСЂР° С„Р°Р№Р»Р°. Р¤РёРєСЃ: СЂРµР·СѓР»СЊС‚Р°С‚ `loadLevelFromFileInput()` СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ РІРѕ РІСЂРµРјРµРЅРЅСѓСЋ РїРµСЂРµРјРµРЅРЅСѓСЋ Рё РїСЂРѕРІРµСЂСЏРµС‚СЃСЏ РЅР° `null` Р”Рћ РїСЂРёСЃРІРѕРµРЅРёСЏ `this.editor.level` Рё РґРѕ `stateManager.reset()` вЂ” РїСЂРё РѕС‚РјРµРЅРµ/РѕС€РёР±РєРµ РјРµС‚РѕРґ С‚РёС…Рѕ РІРѕР·РІСЂР°С‰Р°РµС‚СЃСЏ, С‚РµРєСѓС‰РёР№ СѓСЂРѕРІРµРЅСЊ РѕСЃС‚Р°С‘С‚СЃСЏ РЅРµС‚СЂРѕРЅСѓС‚С‹Рј, Р°Р»РµСЂС‚ РЅРµ РїРѕРєР°Р·С‹РІР°РµС‚СЃСЏ (`src/core/LevelFileOperations.js`). РџСЂРѕРІРµСЂРµРЅРѕ РІ Р±СЂР°СѓР·РµСЂРµ: `loadLevelFromFileInput` Р·Р°РјРѕРєР°РЅ РЅР° `async () => null` (СЌРјСѓР»СЏС†РёСЏ РѕС‚РјРµРЅС‹), `editor.level` РЅРµ РёР·РјРµРЅРёР»СЃСЏ Рё РѕСЃС‚Р°Р»СЃСЏ РІР°Р»РёРґРµРЅ, РѕС€РёР±РѕРє РІ РєРѕРЅСЃРѕР»Рё РЅРµС‚.
 
-### Feature — настраиваемый допуск клика (hit-test tolerance), расширяющий точку клика, а не рамку объекта
+### Feature вЂ” РЅР°СЃС‚СЂР°РёРІР°РµРјС‹Р№ РґРѕРїСѓСЃРє РєР»РёРєР° (hit-test tolerance), СЂР°СЃС€РёСЂСЏСЋС‰РёР№ С‚РѕС‡РєСѓ РєР»РёРєР°, Р° РЅРµ СЂР°РјРєСѓ РѕР±СЉРµРєС‚Р°
 
-- **Область попадания клика = визуальная рамка (boundaries) + допуск вокруг ТОЧКИ клика, а не вокруг рамки объекта** — раньше `isPointInObject`/`isPointInWorldBounds` требовали попадания ровно в границу без запаса. Первая версия допуска расширяла саму рамку по осям независимо (по сути Chebyshev/квадратный дилейт) — это некорректно у углов: клик по диагонали до `tolerance·√2` от угла всё ещё засчитывался как попадание, хотя реальное расстояние до объекта уже больше заданного допуска. Переписано на `WorldPositionUtils._pointNearRect()` — общий хелпер (убрал 3-кратное дублирование условия в `isPointInWorldBounds`), клэмпит точку клика к прямоугольнику и сравнивает евклидово расстояние с `tolerance`: получается допуск именно вокруг точки клика (скруглённые углы), а не раздутая рамка. `ObjectOperations.getHitTestTolerance()` переводит настройку `selection.hitTestTolerance` (экранные px, дефолт 4) в мировые единицы через деление на `camera.zoom`. Настройка зарегистрирована только там, где реально используется (`ConfigManager`/`StateManager` — hardcoded selection-defaults, `SettingsSyncManager` — один прямой маппинг `selection.hitTestTolerance`→`selection.hitTestTolerance`, UI-слайдер "Click Tolerance (px)" в Settings → Selection); не стал дублировать в `config/defaults/panels.json`/`panels.selection.*`-маппинг — та ветка файлового конфига для этого сеттинга ничем не читается (проверено grep'ом), добавление туда было бы мёртвым кодом. Проверено в браузере: перпендикулярно к грани — 2px за границей попадание, 6px — промах (как и раньше); по диагонали от угла — 2px попадание, 5px промах (раньше давало ложное попадание из-за квадратного дилейта); UI-слайдер и `configManager.getDefault()` для reset подтверждены рабочими (`src/utils/WorldPositionUtils.js`, `src/core/ObjectOperations.js`, `src/managers/ConfigManager.js`, `src/managers/StateManager.js`, `src/utils/SettingsSyncManager.js`, `src/ui/panel-structures/SettingsPanelRenderers.js`).
+- **РћР±Р»Р°СЃС‚СЊ РїРѕРїР°РґР°РЅРёСЏ РєР»РёРєР° = РІРёР·СѓР°Р»СЊРЅР°СЏ СЂР°РјРєР° (boundaries) + РґРѕРїСѓСЃРє РІРѕРєСЂСѓРі РўРћР§РљР РєР»РёРєР°, Р° РЅРµ РІРѕРєСЂСѓРі СЂР°РјРєРё РѕР±СЉРµРєС‚Р°** вЂ” СЂР°РЅСЊС€Рµ `isPointInObject`/`isPointInWorldBounds` С‚СЂРµР±РѕРІР°Р»Рё РїРѕРїР°РґР°РЅРёСЏ СЂРѕРІРЅРѕ РІ РіСЂР°РЅРёС†Сѓ Р±РµР· Р·Р°РїР°СЃР°. РџРµСЂРІР°СЏ РІРµСЂСЃРёСЏ РґРѕРїСѓСЃРєР° СЂР°СЃС€РёСЂСЏР»Р° СЃР°РјСѓ СЂР°РјРєСѓ РїРѕ РѕСЃСЏРј РЅРµР·Р°РІРёСЃРёРјРѕ (РїРѕ СЃСѓС‚Рё Chebyshev/РєРІР°РґСЂР°С‚РЅС‹Р№ РґРёР»РµР№С‚) вЂ” СЌС‚Рѕ РЅРµРєРѕСЂСЂРµРєС‚РЅРѕ Сѓ СѓРіР»РѕРІ: РєР»РёРє РїРѕ РґРёР°РіРѕРЅР°Р»Рё РґРѕ `toleranceВ·в€љ2` РѕС‚ СѓРіР»Р° РІСЃС‘ РµС‰С‘ Р·Р°СЃС‡РёС‚С‹РІР°Р»СЃСЏ РєР°Рє РїРѕРїР°РґР°РЅРёРµ, С…РѕС‚СЏ СЂРµР°Р»СЊРЅРѕРµ СЂР°СЃСЃС‚РѕСЏРЅРёРµ РґРѕ РѕР±СЉРµРєС‚Р° СѓР¶Рµ Р±РѕР»СЊС€Рµ Р·Р°РґР°РЅРЅРѕРіРѕ РґРѕРїСѓСЃРєР°. РџРµСЂРµРїРёСЃР°РЅРѕ РЅР° `WorldPositionUtils._pointNearRect()` вЂ” РѕР±С‰РёР№ С…РµР»РїРµСЂ (СѓР±СЂР°Р» 3-РєСЂР°С‚РЅРѕРµ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ СѓСЃР»РѕРІРёСЏ РІ `isPointInWorldBounds`), РєР»СЌРјРїРёС‚ С‚РѕС‡РєСѓ РєР»РёРєР° Рє РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРєСѓ Рё СЃСЂР°РІРЅРёРІР°РµС‚ РµРІРєР»РёРґРѕРІРѕ СЂР°СЃСЃС‚РѕСЏРЅРёРµ СЃ `tolerance`: РїРѕР»СѓС‡Р°РµС‚СЃСЏ РґРѕРїСѓСЃРє РёРјРµРЅРЅРѕ РІРѕРєСЂСѓРі С‚РѕС‡РєРё РєР»РёРєР° (СЃРєСЂСѓРіР»С‘РЅРЅС‹Рµ СѓРіР»С‹), Р° РЅРµ СЂР°Р·РґСѓС‚Р°СЏ СЂР°РјРєР°. `ObjectOperations.getHitTestTolerance()` РїРµСЂРµРІРѕРґРёС‚ РЅР°СЃС‚СЂРѕР№РєСѓ `selection.hitTestTolerance` (СЌРєСЂР°РЅРЅС‹Рµ px, РґРµС„РѕР»С‚ 4) РІ РјРёСЂРѕРІС‹Рµ РµРґРёРЅРёС†С‹ С‡РµСЂРµР· РґРµР»РµРЅРёРµ РЅР° `camera.zoom`. РќР°СЃС‚СЂРѕР№РєР° Р·Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°РЅР° С‚РѕР»СЊРєРѕ С‚Р°Рј, РіРґРµ СЂРµР°Р»СЊРЅРѕ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ (`ConfigManager`/`StateManager` вЂ” hardcoded selection-defaults, `SettingsSyncManager` вЂ” РѕРґРёРЅ РїСЂСЏРјРѕР№ РјР°РїРїРёРЅРі `selection.hitTestTolerance`в†’`selection.hitTestTolerance`, UI-СЃР»Р°Р№РґРµСЂ "Click Tolerance (px)" РІ Settings в†’ Selection); РЅРµ СЃС‚Р°Р» РґСѓР±Р»РёСЂРѕРІР°С‚СЊ РІ `config/defaults/panels.json`/`panels.selection.*`-РјР°РїРїРёРЅРі вЂ” С‚Р° РІРµС‚РєР° С„Р°Р№Р»РѕРІРѕРіРѕ РєРѕРЅС„РёРіР° РґР»СЏ СЌС‚РѕРіРѕ СЃРµС‚С‚РёРЅРіР° РЅРёС‡РµРј РЅРµ С‡РёС‚Р°РµС‚СЃСЏ (РїСЂРѕРІРµСЂРµРЅРѕ grep'РѕРј), РґРѕР±Р°РІР»РµРЅРёРµ С‚СѓРґР° Р±С‹Р»Рѕ Р±С‹ РјС‘СЂС‚РІС‹Рј РєРѕРґРѕРј. РџСЂРѕРІРµСЂРµРЅРѕ РІ Р±СЂР°СѓР·РµСЂРµ: РїРµСЂРїРµРЅРґРёРєСѓР»СЏСЂРЅРѕ Рє РіСЂР°РЅРё вЂ” 2px Р·Р° РіСЂР°РЅРёС†РµР№ РїРѕРїР°РґР°РЅРёРµ, 6px вЂ” РїСЂРѕРјР°С… (РєР°Рє Рё СЂР°РЅСЊС€Рµ); РїРѕ РґРёР°РіРѕРЅР°Р»Рё РѕС‚ СѓРіР»Р° вЂ” 2px РїРѕРїР°РґР°РЅРёРµ, 5px РїСЂРѕРјР°С… (СЂР°РЅСЊС€Рµ РґР°РІР°Р»Рѕ Р»РѕР¶РЅРѕРµ РїРѕРїР°РґР°РЅРёРµ РёР·-Р·Р° РєРІР°РґСЂР°С‚РЅРѕРіРѕ РґРёР»РµР№С‚Р°); UI-СЃР»Р°Р№РґРµСЂ Рё `configManager.getDefault()` РґР»СЏ reset РїРѕРґС‚РІРµСЂР¶РґРµРЅС‹ СЂР°Р±РѕС‡РёРјРё (`src/utils/WorldPositionUtils.js`, `src/core/ObjectOperations.js`, `src/managers/ConfigManager.js`, `src/managers/StateManager.js`, `src/utils/SettingsSyncManager.js`, `src/ui/panel-structures/SettingsPanelRenderers.js`).
 
-### Feature — Object Solo (Outliner) + мульти-select в фильтре типов + фикс закрытия меню фильтра
+### Feature вЂ” Object Solo (Outliner) + РјСѓР»СЊС‚Рё-select РІ С„РёР»СЊС‚СЂРµ С‚РёРїРѕРІ + С„РёРєСЃ Р·Р°РєСЂС‹С‚РёСЏ РјРµРЅСЋ С„РёР»СЊС‚СЂР°
 
-- **Object Solo — Ctrl+click на иконку глаза объекта в Outliner** (аналог уже существующего Layer Solo). Новый `ObjectOperations.toggleObjectSolo(obj)`: не разрушающий (не трогает `obj.visible`), состояние — `stateManager` ключ `view.soloedTopLevelObjectId` (id верхнеуровневого объекта или `null`), эксклюзивный (соло другого объекта заменяет предыдущее, повторный Ctrl+click на уже-соло — снимает). В отличие от Isolate (`/`, диммирование через `ctx.filter`), Object Solo — это ПОЛНОЕ скрытие: `RenderOperations.render()` пропускает отрисовку целиком, а не диммирует — соответствует семантике иконки глаза. Работает только на верхнем уровне (дети soloed-группы рендерятся как обычно — следствие фильтрации только на верхнем уровне, не спецкейс). Новый общий хелпер `ObjectOperations.findTopLevelAncestor(obj)` используется и `toggleIsolateSelection()`, и `toggleObjectSolo()` (`src/core/ObjectOperations.js`, `src/core/RenderOperations.js`, `src/ui/OutlinerPanel.js`).
+- **Object Solo вЂ” Ctrl+click РЅР° РёРєРѕРЅРєСѓ РіР»Р°Р·Р° РѕР±СЉРµРєС‚Р° РІ Outliner** (Р°РЅР°Р»РѕРі СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РµРіРѕ Layer Solo). РќРѕРІС‹Р№ `ObjectOperations.toggleObjectSolo(obj)`: РЅРµ СЂР°Р·СЂСѓС€Р°СЋС‰РёР№ (РЅРµ С‚СЂРѕРіР°РµС‚ `obj.visible`), СЃРѕСЃС‚РѕСЏРЅРёРµ вЂ” `stateManager` РєР»СЋС‡ `view.soloedTopLevelObjectId` (id РІРµСЂС…РЅРµСѓСЂРѕРІРЅРµРІРѕРіРѕ РѕР±СЉРµРєС‚Р° РёР»Рё `null`), СЌРєСЃРєР»СЋР·РёРІРЅС‹Р№ (СЃРѕР»Рѕ РґСЂСѓРіРѕРіРѕ РѕР±СЉРµРєС‚Р° Р·Р°РјРµРЅСЏРµС‚ РїСЂРµРґС‹РґСѓС‰РµРµ, РїРѕРІС‚РѕСЂРЅС‹Р№ Ctrl+click РЅР° СѓР¶Рµ-СЃРѕР»Рѕ вЂ” СЃРЅРёРјР°РµС‚). Р’ РѕС‚Р»РёС‡РёРµ РѕС‚ Isolate (`/`, РґРёРјРјРёСЂРѕРІР°РЅРёРµ С‡РµСЂРµР· `ctx.filter`), Object Solo вЂ” СЌС‚Рѕ РџРћР›РќРћР• СЃРєСЂС‹С‚РёРµ: `RenderOperations.render()` РїСЂРѕРїСѓСЃРєР°РµС‚ РѕС‚СЂРёСЃРѕРІРєСѓ С†РµР»РёРєРѕРј, Р° РЅРµ РґРёРјРјРёСЂСѓРµС‚ вЂ” СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓРµС‚ СЃРµРјР°РЅС‚РёРєРµ РёРєРѕРЅРєРё РіР»Р°Р·Р°. Р Р°Р±РѕС‚Р°РµС‚ С‚РѕР»СЊРєРѕ РЅР° РІРµСЂС…РЅРµРј СѓСЂРѕРІРЅРµ (РґРµС‚Рё soloed-РіСЂСѓРїРїС‹ СЂРµРЅРґРµСЂСЏС‚СЃСЏ РєР°Рє РѕР±С‹С‡РЅРѕ вЂ” СЃР»РµРґСЃС‚РІРёРµ С„РёР»СЊС‚СЂР°С†РёРё С‚РѕР»СЊРєРѕ РЅР° РІРµСЂС…РЅРµРј СѓСЂРѕРІРЅРµ, РЅРµ СЃРїРµС†РєРµР№СЃ). РќРѕРІС‹Р№ РѕР±С‰РёР№ С…РµР»РїРµСЂ `ObjectOperations.findTopLevelAncestor(obj)` РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ Рё `toggleIsolateSelection()`, Рё `toggleObjectSolo()` (`src/core/ObjectOperations.js`, `src/core/RenderOperations.js`, `src/ui/OutlinerPanel.js`).
 
-- **Фикс: отображение иконки глаза объекта было привязано к КОМАНДЕ, а не к состоянию.** После Ctrl+click (solo) на одном объекте остальные объекты в Outliner не переключались на закрытый глаз/серый цвет — `updateVisibilityButton()` вычислял иконку из `obj.visible` напрямую, а Object Solo намеренно не трогает `obj.visible` (не разрушающий). Новый `ObjectOperations.isObjectEffectivelyVisible(obj)` — единый источник истины для «реально ли объект сейчас рисуется», учитывающий разом: собственный и все родительские `visible`-флаги (не полагаясь только на каскад `toggleObjectVisibility` для групп), видимость эффективного слоя, Object Solo, Isolate. `OutlinerPanel.updateVisibilityButton()` теперь строит форму/цвет иконки и серый цвет имени из этой функции, а не из `obj.visible` — правильно реагирует на изменения состояния, вызванные ЛЮБЫМ действием, не только явным кликом по этому конкретному объекту (`src/core/ObjectOperations.js`, `src/ui/OutlinerPanel.js`).
+- **Р¤РёРєСЃ: РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ РёРєРѕРЅРєРё РіР»Р°Р·Р° РѕР±СЉРµРєС‚Р° Р±С‹Р»Рѕ РїСЂРёРІСЏР·Р°РЅРѕ Рє РљРћРњРђРќР”Р•, Р° РЅРµ Рє СЃРѕСЃС‚РѕСЏРЅРёСЋ.** РџРѕСЃР»Рµ Ctrl+click (solo) РЅР° РѕРґРЅРѕРј РѕР±СЉРµРєС‚Рµ РѕСЃС‚Р°Р»СЊРЅС‹Рµ РѕР±СЉРµРєС‚С‹ РІ Outliner РЅРµ РїРµСЂРµРєР»СЋС‡Р°Р»РёСЃСЊ РЅР° Р·Р°РєСЂС‹С‚С‹Р№ РіР»Р°Р·/СЃРµСЂС‹Р№ С†РІРµС‚ вЂ” `updateVisibilityButton()` РІС‹С‡РёСЃР»СЏР» РёРєРѕРЅРєСѓ РёР· `obj.visible` РЅР°РїСЂСЏРјСѓСЋ, Р° Object Solo РЅР°РјРµСЂРµРЅРЅРѕ РЅРµ С‚СЂРѕРіР°РµС‚ `obj.visible` (РЅРµ СЂР°Р·СЂСѓС€Р°СЋС‰РёР№). РќРѕРІС‹Р№ `ObjectOperations.isObjectEffectivelyVisible(obj)` вЂ” РµРґРёРЅС‹Р№ РёСЃС‚РѕС‡РЅРёРє РёСЃС‚РёРЅС‹ РґР»СЏ В«СЂРµР°Р»СЊРЅРѕ Р»Рё РѕР±СЉРµРєС‚ СЃРµР№С‡Р°СЃ СЂРёСЃСѓРµС‚СЃСЏВ», СѓС‡РёС‚С‹РІР°СЋС‰РёР№ СЂР°Р·РѕРј: СЃРѕР±СЃС‚РІРµРЅРЅС‹Р№ Рё РІСЃРµ СЂРѕРґРёС‚РµР»СЊСЃРєРёРµ `visible`-С„Р»Р°РіРё (РЅРµ РїРѕР»Р°РіР°СЏСЃСЊ С‚РѕР»СЊРєРѕ РЅР° РєР°СЃРєР°Рґ `toggleObjectVisibility` РґР»СЏ РіСЂСѓРїРї), РІРёРґРёРјРѕСЃС‚СЊ СЌС„С„РµРєС‚РёРІРЅРѕРіРѕ СЃР»РѕСЏ, Object Solo, Isolate. `OutlinerPanel.updateVisibilityButton()` С‚РµРїРµСЂСЊ СЃС‚СЂРѕРёС‚ С„РѕСЂРјСѓ/С†РІРµС‚ РёРєРѕРЅРєРё Рё СЃРµСЂС‹Р№ С†РІРµС‚ РёРјРµРЅРё РёР· СЌС‚РѕР№ С„СѓРЅРєС†РёРё, Р° РЅРµ РёР· `obj.visible` вЂ” РїСЂР°РІРёР»СЊРЅРѕ СЂРµР°РіРёСЂСѓРµС‚ РЅР° РёР·РјРµРЅРµРЅРёСЏ СЃРѕСЃС‚РѕСЏРЅРёСЏ, РІС‹Р·РІР°РЅРЅС‹Рµ Р›Р®Р‘Р«Рњ РґРµР№СЃС‚РІРёРµРј, РЅРµ С‚РѕР»СЊРєРѕ СЏРІРЅС‹Рј РєР»РёРєРѕРј РїРѕ СЌС‚РѕРјСѓ РєРѕРЅРєСЂРµС‚РЅРѕРјСѓ РѕР±СЉРµРєС‚Сѓ (`src/core/ObjectOperations.js`, `src/ui/OutlinerPanel.js`).
 
-- **Ctrl+click в меню фильтра типов Outliner для мульти-select, с закрытием по отпусканию Ctrl** — обычный клик по чекбоксу типа применяет фильтр сразу и закрывает меню, как и раньше (баблинг клика к дефолтному `close-on-click` меню). Клик с зажатым Ctrl (или Cmd) останавливает всплытие (`e.stopPropagation()`) — обновляет чекбоксы визуально (`updateFilterMenu`), не применяя фильтр и не закрывая меню, позволяя отметить несколько типов подряд. Накопленный фильтр применяется И закрывает меню одним разом при отпускании Ctrl (`document.addEventListener('keyup', ...)`, `e.key === 'Control'`) (`src/ui/OutlinerPanel.js`).
+- **Ctrl+click РІ РјРµРЅСЋ С„РёР»СЊС‚СЂР° С‚РёРїРѕРІ Outliner РґР»СЏ РјСѓР»СЊС‚Рё-select, СЃ Р·Р°РєСЂС‹С‚РёРµРј РїРѕ РѕС‚РїСѓСЃРєР°РЅРёСЋ Ctrl** вЂ” РѕР±С‹С‡РЅС‹Р№ РєР»РёРє РїРѕ С‡РµРєР±РѕРєСЃСѓ С‚РёРїР° РїСЂРёРјРµРЅСЏРµС‚ С„РёР»СЊС‚СЂ СЃСЂР°Р·Сѓ Рё Р·Р°РєСЂС‹РІР°РµС‚ РјРµРЅСЋ, РєР°Рє Рё СЂР°РЅСЊС€Рµ (Р±Р°Р±Р»РёРЅРі РєР»РёРєР° Рє РґРµС„РѕР»С‚РЅРѕРјСѓ `close-on-click` РјРµРЅСЋ). РљР»РёРє СЃ Р·Р°Р¶Р°С‚С‹Рј Ctrl (РёР»Рё Cmd) РѕСЃС‚Р°РЅР°РІР»РёРІР°РµС‚ РІСЃРїР»С‹С‚РёРµ (`e.stopPropagation()`) вЂ” РѕР±РЅРѕРІР»СЏРµС‚ С‡РµРєР±РѕРєСЃС‹ РІРёР·СѓР°Р»СЊРЅРѕ (`updateFilterMenu`), РЅРµ РїСЂРёРјРµРЅСЏСЏ С„РёР»СЊС‚СЂ Рё РЅРµ Р·Р°РєСЂС‹РІР°СЏ РјРµРЅСЋ, РїРѕР·РІРѕР»СЏСЏ РѕС‚РјРµС‚РёС‚СЊ РЅРµСЃРєРѕР»СЊРєРѕ С‚РёРїРѕРІ РїРѕРґСЂСЏРґ. РќР°РєРѕРїР»РµРЅРЅС‹Р№ С„РёР»СЊС‚СЂ РїСЂРёРјРµРЅСЏРµС‚СЃСЏ Р Р·Р°РєСЂС‹РІР°РµС‚ РјРµРЅСЋ РѕРґРЅРёРј СЂР°Р·РѕРј РїСЂРё РѕС‚РїСѓСЃРєР°РЅРёРё Ctrl (`document.addEventListener('keyup', ...)`, `e.key === 'Control'`) (`src/ui/OutlinerPanel.js`).
 
-- **Фикс/уточнение: закрытие меню фильтра типов — по уводу курсора, намеренно, как и в аналогичном меню `AssetPanel.showAssetFilterMenu`.** Первая версия фикса ошибочно заменяла это на явный «клик снаружи» — правильная причина «не пропадания» оказалась в ПОЗИЦИОНИРОВАНИИ: `MenuPositioningUtils`-дефолт оставлял зазор между кнопкой и меню (`offset: 4`), из-за чего курсор (стоящий на кнопке в момент клика) не гарантированно оказывался внутри рамки меню — `mouseleave` было нечему сработать при уводе курсора, если пользователь ни разу не заходил внутрь меню. Исправлено позиционированием: `OutlinerPanel.showFilterMenu()` теперь считает `offset: -buttonRect.height`, поднимая меню так, что оно накрывает всю кнопку целиком — курсор гарантированно стартует внутри меню независимо от того, где именно на кнопке был клик. Штатный `mouseleave`/`click`-бабблинг закрытия (`MenuPositioningUtils.setupMenuClosing()`) не тронут (`src/ui/OutlinerPanel.js`).
+- **Р¤РёРєСЃ/СѓС‚РѕС‡РЅРµРЅРёРµ: Р·Р°РєСЂС‹С‚РёРµ РјРµРЅСЋ С„РёР»СЊС‚СЂР° С‚РёРїРѕРІ вЂ” РїРѕ СѓРІРѕРґСѓ РєСѓСЂСЃРѕСЂР°, РЅР°РјРµСЂРµРЅРЅРѕ, РєР°Рє Рё РІ Р°РЅР°Р»РѕРіРёС‡РЅРѕРј РјРµРЅСЋ `AssetPanel.showAssetFilterMenu`.** РџРµСЂРІР°СЏ РІРµСЂСЃРёСЏ С„РёРєСЃР° РѕС€РёР±РѕС‡РЅРѕ Р·Р°РјРµРЅСЏР»Р° СЌС‚Рѕ РЅР° СЏРІРЅС‹Р№ В«РєР»РёРє СЃРЅР°СЂСѓР¶РёВ» вЂ” РїСЂР°РІРёР»СЊРЅР°СЏ РїСЂРёС‡РёРЅР° В«РЅРµ РїСЂРѕРїР°РґР°РЅРёСЏВ» РѕРєР°Р·Р°Р»Р°СЃСЊ РІ РџРћР—РР¦РРћРќРР РћР’РђРќРР: `MenuPositioningUtils`-РґРµС„РѕР»С‚ РѕСЃС‚Р°РІР»СЏР» Р·Р°Р·РѕСЂ РјРµР¶РґСѓ РєРЅРѕРїРєРѕР№ Рё РјРµРЅСЋ (`offset: 4`), РёР·-Р·Р° С‡РµРіРѕ РєСѓСЂСЃРѕСЂ (СЃС‚РѕСЏС‰РёР№ РЅР° РєРЅРѕРїРєРµ РІ РјРѕРјРµРЅС‚ РєР»РёРєР°) РЅРµ РіР°СЂР°РЅС‚РёСЂРѕРІР°РЅРЅРѕ РѕРєР°Р·С‹РІР°Р»СЃСЏ РІРЅСѓС‚СЂРё СЂР°РјРєРё РјРµРЅСЋ вЂ” `mouseleave` Р±С‹Р»Рѕ РЅРµС‡РµРјСѓ СЃСЂР°Р±РѕС‚Р°С‚СЊ РїСЂРё СѓРІРѕРґРµ РєСѓСЂСЃРѕСЂР°, РµСЃР»Рё РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РЅРё СЂР°Р·Сѓ РЅРµ Р·Р°С…РѕРґРёР» РІРЅСѓС‚СЂСЊ РјРµРЅСЋ. РСЃРїСЂР°РІР»РµРЅРѕ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµРј: `OutlinerPanel.showFilterMenu()` С‚РµРїРµСЂСЊ СЃС‡РёС‚Р°РµС‚ `offset: -buttonRect.height`, РїРѕРґРЅРёРјР°СЏ РјРµРЅСЋ С‚Р°Рє, С‡С‚Рѕ РѕРЅРѕ РЅР°РєСЂС‹РІР°РµС‚ РІСЃСЋ РєРЅРѕРїРєСѓ С†РµР»РёРєРѕРј вЂ” РєСѓСЂСЃРѕСЂ РіР°СЂР°РЅС‚РёСЂРѕРІР°РЅРЅРѕ СЃС‚Р°СЂС‚СѓРµС‚ РІРЅСѓС‚СЂРё РјРµРЅСЋ РЅРµР·Р°РІРёСЃРёРјРѕ РѕС‚ С‚РѕРіРѕ, РіРґРµ РёРјРµРЅРЅРѕ РЅР° РєРЅРѕРїРєРµ Р±С‹Р» РєР»РёРє. РЁС‚Р°С‚РЅС‹Р№ `mouseleave`/`click`-Р±Р°Р±Р±Р»РёРЅРі Р·Р°РєСЂС‹С‚РёСЏ (`MenuPositioningUtils.setupMenuClosing()`) РЅРµ С‚СЂРѕРЅСѓС‚ (`src/ui/OutlinerPanel.js`).
 
-- **Фикс: Layer Solo не менял отображение НЕ-заsoloенных слоёв.** `updateLayerElement()`/`createLayerElement()` рисовали форму иконки глаза из сырого `layer.visible`, а `toggleLayerSolo()` намеренно не трогает `layer.visible` (не разрушающий) — соло одного слоя не переключало иконки ОСТАЛЬНЫХ слоёв на закрытый глаз, хотя они фактически перестали рендериться (та же ошибка «стиль привязан к команде, а не к состоянию», что и в Object Solo, см. выше). Обе точки рендера теперь берут `effectivelyVisible = renderOperations.getVisibleLayerIds().has(layer.id)` — единственный источник истины, уже используемый реальным рендером — и по нему решают ТОЛЬКО форму иконки (открытый/закрытый глаз), плюс затемняют (`opacity: 0.45`) весь блок строки слоя целиком; цвет иконки остаётся дефолтным независимо от видимости (соло по-прежнему подсвечивается жёлтым — отдельное состояние, не visible/hidden) — первая версия этого фикса ошибочно вернула цветовое отличие видимый/скрытый, которое ранее уже было намеренно убрано («видимость показывается только формой»); второй проход убрал цвет обратно, оставив дифференциацию только на форме иконки и димминге строки. Попутно исправлен порядок вызовов в `toggleLayerSolo()`/`toggleLayerVisibility()`: `invalidateLayerVisibilityCache()` теперь вызывается ДО `updateLayerElement()`, а не после — иначе `getVisibleLayerIds()` (кэш-бэкенный) возвращал ещё не инвалидированное значение и иконка отставала на один кадр (`src/ui/LayersPanel.js`).
+- **Р¤РёРєСЃ: Layer Solo РЅРµ РјРµРЅСЏР» РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ РќР•-Р·Р°soloРµРЅРЅС‹С… СЃР»РѕС‘РІ.** `updateLayerElement()`/`createLayerElement()` СЂРёСЃРѕРІР°Р»Рё С„РѕСЂРјСѓ РёРєРѕРЅРєРё РіР»Р°Р·Р° РёР· СЃС‹СЂРѕРіРѕ `layer.visible`, Р° `toggleLayerSolo()` РЅР°РјРµСЂРµРЅРЅРѕ РЅРµ С‚СЂРѕРіР°РµС‚ `layer.visible` (РЅРµ СЂР°Р·СЂСѓС€Р°СЋС‰РёР№) вЂ” СЃРѕР»Рѕ РѕРґРЅРѕРіРѕ СЃР»РѕСЏ РЅРµ РїРµСЂРµРєР»СЋС‡Р°Р»Рѕ РёРєРѕРЅРєРё РћРЎРўРђР›Р¬РќР«РҐ СЃР»РѕС‘РІ РЅР° Р·Р°РєСЂС‹С‚С‹Р№ РіР»Р°Р·, С…РѕС‚СЏ РѕРЅРё С„Р°РєС‚РёС‡РµСЃРєРё РїРµСЂРµСЃС‚Р°Р»Рё СЂРµРЅРґРµСЂРёС‚СЊСЃСЏ (С‚Р° Р¶Рµ РѕС€РёР±РєР° В«СЃС‚РёР»СЊ РїСЂРёРІСЏР·Р°РЅ Рє РєРѕРјР°РЅРґРµ, Р° РЅРµ Рє СЃРѕСЃС‚РѕСЏРЅРёСЋВ», С‡С‚Рѕ Рё РІ Object Solo, СЃРј. РІС‹С€Рµ). РћР±Рµ С‚РѕС‡РєРё СЂРµРЅРґРµСЂР° С‚РµРїРµСЂСЊ Р±РµСЂСѓС‚ `effectivelyVisible = renderOperations.getVisibleLayerIds().has(layer.id)` вЂ” РµРґРёРЅСЃС‚РІРµРЅРЅС‹Р№ РёСЃС‚РѕС‡РЅРёРє РёСЃС‚РёРЅС‹, СѓР¶Рµ РёСЃРїРѕР»СЊР·СѓРµРјС‹Р№ СЂРµР°Р»СЊРЅС‹Рј СЂРµРЅРґРµСЂРѕРј вЂ” Рё РїРѕ РЅРµРјСѓ СЂРµС€Р°СЋС‚ РўРћР›Р¬РљРћ С„РѕСЂРјСѓ РёРєРѕРЅРєРё (РѕС‚РєСЂС‹С‚С‹Р№/Р·Р°РєСЂС‹С‚С‹Р№ РіР»Р°Р·), РїР»СЋСЃ Р·Р°С‚РµРјРЅСЏСЋС‚ (`opacity: 0.45`) РІРµСЃСЊ Р±Р»РѕРє СЃС‚СЂРѕРєРё СЃР»РѕСЏ С†РµР»РёРєРѕРј; С†РІРµС‚ РёРєРѕРЅРєРё РѕСЃС‚Р°С‘С‚СЃСЏ РґРµС„РѕР»С‚РЅС‹Рј РЅРµР·Р°РІРёСЃРёРјРѕ РѕС‚ РІРёРґРёРјРѕСЃС‚Рё (СЃРѕР»Рѕ РїРѕ-РїСЂРµР¶РЅРµРјСѓ РїРѕРґСЃРІРµС‡РёРІР°РµС‚СЃСЏ Р¶С‘Р»С‚С‹Рј вЂ” РѕС‚РґРµР»СЊРЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ, РЅРµ visible/hidden) вЂ” РїРµСЂРІР°СЏ РІРµСЂСЃРёСЏ СЌС‚РѕРіРѕ С„РёРєСЃР° РѕС€РёР±РѕС‡РЅРѕ РІРµСЂРЅСѓР»Р° С†РІРµС‚РѕРІРѕРµ РѕС‚Р»РёС‡РёРµ РІРёРґРёРјС‹Р№/СЃРєСЂС‹С‚С‹Р№, РєРѕС‚РѕСЂРѕРµ СЂР°РЅРµРµ СѓР¶Рµ Р±С‹Р»Рѕ РЅР°РјРµСЂРµРЅРЅРѕ СѓР±СЂР°РЅРѕ (В«РІРёРґРёРјРѕСЃС‚СЊ РїРѕРєР°Р·С‹РІР°РµС‚СЃСЏ С‚РѕР»СЊРєРѕ С„РѕСЂРјРѕР№В»); РІС‚РѕСЂРѕР№ РїСЂРѕС…РѕРґ СѓР±СЂР°Р» С†РІРµС‚ РѕР±СЂР°С‚РЅРѕ, РѕСЃС‚Р°РІРёРІ РґРёС„С„РµСЂРµРЅС†РёР°С†РёСЋ С‚РѕР»СЊРєРѕ РЅР° С„РѕСЂРјРµ РёРєРѕРЅРєРё Рё РґРёРјРјРёРЅРіРµ СЃС‚СЂРѕРєРё. РџРѕРїСѓС‚РЅРѕ РёСЃРїСЂР°РІР»РµРЅ РїРѕСЂСЏРґРѕРє РІС‹Р·РѕРІРѕРІ РІ `toggleLayerSolo()`/`toggleLayerVisibility()`: `invalidateLayerVisibilityCache()` С‚РµРїРµСЂСЊ РІС‹Р·С‹РІР°РµС‚СЃСЏ Р”Рћ `updateLayerElement()`, Р° РЅРµ РїРѕСЃР»Рµ вЂ” РёРЅР°С‡Рµ `getVisibleLayerIds()` (РєСЌС€-Р±СЌРєРµРЅРЅС‹Р№) РІРѕР·РІСЂР°С‰Р°Р» РµС‰С‘ РЅРµ РёРЅРІР°Р»РёРґРёСЂРѕРІР°РЅРЅРѕРµ Р·РЅР°С‡РµРЅРёРµ Рё РёРєРѕРЅРєР° РѕС‚СЃС‚Р°РІР°Р»Р° РЅР° РѕРґРёРЅ РєР°РґСЂ (`src/ui/LayersPanel.js`).
 
-- **Фикс: Alt+H (Show All) снимал видимость только через `obj.visible`, игнорируя остальные независимые механизмы скрытия.** Layer Solo/скрытый слой, Object Solo (`view.soloedTopLevelObjectId`) и Isolate (`view.isolatedTopLevelIds`) — три отдельных non-destructive состояния, каждое само по себе способно сделать объект невидимым, не трогая его `obj.visible`; `unhideAllObjects()` сбрасывал только `obj.visible`, поэтому объект, скрытый ЛЮБЫМ из этих трёх путей, оставался невидимым после Alt+H. Теперь `unhideAllObjects()` дополнительно сбрасывает: все слои — `layer.visible = true`, `layer.soloed = false`; `view.soloedTopLevelObjectId = null`; `view.isolatedTopLevelIds = null` — после Alt+H `isObjectEffectivelyVisible()` возвращает `true` для абсолютно любого объекта, независимо от того, какой командой он был скрыт (`src/core/ObjectOperations.js`).
+- **Р¤РёРєСЃ: Alt+H (Show All) СЃРЅРёРјР°Р» РІРёРґРёРјРѕСЃС‚СЊ С‚РѕР»СЊРєРѕ С‡РµСЂРµР· `obj.visible`, РёРіРЅРѕСЂРёСЂСѓСЏ РѕСЃС‚Р°Р»СЊРЅС‹Рµ РЅРµР·Р°РІРёСЃРёРјС‹Рµ РјРµС…Р°РЅРёР·РјС‹ СЃРєСЂС‹С‚РёСЏ.** Layer Solo/СЃРєСЂС‹С‚С‹Р№ СЃР»РѕР№, Object Solo (`view.soloedTopLevelObjectId`) Рё Isolate (`view.isolatedTopLevelIds`) вЂ” С‚СЂРё РѕС‚РґРµР»СЊРЅС‹С… non-destructive СЃРѕСЃС‚РѕСЏРЅРёСЏ, РєР°Р¶РґРѕРµ СЃР°РјРѕ РїРѕ СЃРµР±Рµ СЃРїРѕСЃРѕР±РЅРѕ СЃРґРµР»Р°С‚СЊ РѕР±СЉРµРєС‚ РЅРµРІРёРґРёРјС‹Рј, РЅРµ С‚СЂРѕРіР°СЏ РµРіРѕ `obj.visible`; `unhideAllObjects()` СЃР±СЂР°СЃС‹РІР°Р» С‚РѕР»СЊРєРѕ `obj.visible`, РїРѕСЌС‚РѕРјСѓ РѕР±СЉРµРєС‚, СЃРєСЂС‹С‚С‹Р№ Р›Р®Р‘Р«Рњ РёР· СЌС‚РёС… С‚СЂС‘С… РїСѓС‚РµР№, РѕСЃС‚Р°РІР°Р»СЃСЏ РЅРµРІРёРґРёРјС‹Рј РїРѕСЃР»Рµ Alt+H. РўРµРїРµСЂСЊ `unhideAllObjects()` РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕ СЃР±СЂР°СЃС‹РІР°РµС‚: РІСЃРµ СЃР»РѕРё вЂ” `layer.visible = true`, `layer.soloed = false`; `view.soloedTopLevelObjectId = null`; `view.isolatedTopLevelIds = null` вЂ” РїРѕСЃР»Рµ Alt+H `isObjectEffectivelyVisible()` РІРѕР·РІСЂР°С‰Р°РµС‚ `true` РґР»СЏ Р°Р±СЃРѕР»СЋС‚РЅРѕ Р»СЋР±РѕРіРѕ РѕР±СЉРµРєС‚Р°, РЅРµР·Р°РІРёСЃРёРјРѕ РѕС‚ С‚РѕРіРѕ, РєР°РєРѕР№ РєРѕРјР°РЅРґРѕР№ РѕРЅ Р±С‹Р» СЃРєСЂС‹С‚ (`src/core/ObjectOperations.js`).
 
-- **Фикс: иконка закрытого глаза в Outliner не темнела вместе с текстом имени.** `updateVisibilityButton()` оборачивал ОБА состояния (видимый/скрытый) в `var(--ui-text-color, fallback)` — поскольку CSS-переменная `--ui-text-color` реально определена глобально, она перекрывала fallback в обеих ветках одинаково, и разные fallback-цвета (`#d1d5db` / `#6b7280`) никогда не применялись — иконка визуально не отличалась от видимого состояния. Исправлено на тот же паттерн, что уже используется для `nameSpan.style.color` рядом: пустая строка (наследование дефолта) для видимого, литеральный `#6b7280` (без `var()`) для скрытого (`src/ui/OutlinerPanel.js`).
+- **Р¤РёРєСЃ: РёРєРѕРЅРєР° Р·Р°РєСЂС‹С‚РѕРіРѕ РіР»Р°Р·Р° РІ Outliner РЅРµ С‚РµРјРЅРµР»Р° РІРјРµСЃС‚Рµ СЃ С‚РµРєСЃС‚РѕРј РёРјРµРЅРё.** `updateVisibilityButton()` РѕР±РѕСЂР°С‡РёРІР°Р» РћР‘Рђ СЃРѕСЃС‚РѕСЏРЅРёСЏ (РІРёРґРёРјС‹Р№/СЃРєСЂС‹С‚С‹Р№) РІ `var(--ui-text-color, fallback)` вЂ” РїРѕСЃРєРѕР»СЊРєСѓ CSS-РїРµСЂРµРјРµРЅРЅР°СЏ `--ui-text-color` СЂРµР°Р»СЊРЅРѕ РѕРїСЂРµРґРµР»РµРЅР° РіР»РѕР±Р°Р»СЊРЅРѕ, РѕРЅР° РїРµСЂРµРєСЂС‹РІР°Р»Р° fallback РІ РѕР±РµРёС… РІРµС‚РєР°С… РѕРґРёРЅР°РєРѕРІРѕ, Рё СЂР°Р·РЅС‹Рµ fallback-С†РІРµС‚Р° (`#d1d5db` / `#6b7280`) РЅРёРєРѕРіРґР° РЅРµ РїСЂРёРјРµРЅСЏР»РёСЃСЊ вЂ” РёРєРѕРЅРєР° РІРёР·СѓР°Р»СЊРЅРѕ РЅРµ РѕС‚Р»РёС‡Р°Р»Р°СЃСЊ РѕС‚ РІРёРґРёРјРѕРіРѕ СЃРѕСЃС‚РѕСЏРЅРёСЏ. РСЃРїСЂР°РІР»РµРЅРѕ РЅР° С‚РѕС‚ Р¶Рµ РїР°С‚С‚РµСЂРЅ, С‡С‚Рѕ СѓР¶Рµ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РґР»СЏ `nameSpan.style.color` СЂСЏРґРѕРј: РїСѓСЃС‚Р°СЏ СЃС‚СЂРѕРєР° (РЅР°СЃР»РµРґРѕРІР°РЅРёРµ РґРµС„РѕР»С‚Р°) РґР»СЏ РІРёРґРёРјРѕРіРѕ, Р»РёС‚РµСЂР°Р»СЊРЅС‹Р№ `#6b7280` (Р±РµР· `var()`) РґР»СЏ СЃРєСЂС‹С‚РѕРіРѕ (`src/ui/OutlinerPanel.js`).
 
-- Новые информационные (без функциональной привязки, ребиндинг недоступен) записи в `config/defaults/shortcuts.json` → `mouse`: `soloObject`, `multiSelectFilterType`.
+- РќРѕРІС‹Рµ РёРЅС„РѕСЂРјР°С†РёРѕРЅРЅС‹Рµ (Р±РµР· С„СѓРЅРєС†РёРѕРЅР°Р»СЊРЅРѕР№ РїСЂРёРІСЏР·РєРё, СЂРµР±РёРЅРґРёРЅРі РЅРµРґРѕСЃС‚СѓРїРµРЅ) Р·Р°РїРёСЃРё РІ `config/defaults/shortcuts.json` в†’ `mouse`: `soloObject`, `multiSelectFilterType`.
 
-### Fix — drag-n-drop вкладок панелей: пустая панель и ghost-таб
+### Fix вЂ” drag-n-drop РІРєР»Р°РґРѕРє РїР°РЅРµР»РµР№: РїСѓСЃС‚Р°СЏ РїР°РЅРµР»СЊ Рё ghost-С‚Р°Р±
 
-- **Фикс: после ручного тоггла пустой панели (меню/Alt+1..4) drag-перенос вкладки переставал создавать эту панель заново.** `EventHandlers.applyPanelVisibility()` при скрытии tabs-панели только ставил `display:none` на существующий DOM-узел, не удаляя его — в отличие от `PanelPositionManager.removeEmptyPanel()`, которым обычный drag-cleanup убирает пустую панель из DOM полностью. После такого ручного тоггла пустая панель оставалась в DOM (просто скрытая), поэтому проверка `_installGlobalTabDragHandlers()` «панель ещё не существует → авто-показать через `togglePanel()`» видела DOM-узел и считала, что панель «уже есть» — авто-создание переставало срабатывать, а скрытая (display:none) панель не могла быть целью drop. Исправлено: при скрытии tabs-панели теперь дополнительно вызывается `removeEmptyPanel(side)` (no-op, если в панели остались вкладки) — скрытие пустой панели через меню/хоткей и через drag-cleanup единообразно удаляют её из DOM (`src/event-system/EventHandlers.js`).
+- **Р¤РёРєСЃ: РїРѕСЃР»Рµ СЂСѓС‡РЅРѕРіРѕ С‚РѕРіРіР»Р° РїСѓСЃС‚РѕР№ РїР°РЅРµР»Рё (РјРµРЅСЋ/Alt+1..4) drag-РїРµСЂРµРЅРѕСЃ РІРєР»Р°РґРєРё РїРµСЂРµСЃС‚Р°РІР°Р» СЃРѕР·РґР°РІР°С‚СЊ СЌС‚Сѓ РїР°РЅРµР»СЊ Р·Р°РЅРѕРІРѕ.** `EventHandlers.applyPanelVisibility()` РїСЂРё СЃРєСЂС‹С‚РёРё tabs-РїР°РЅРµР»Рё С‚РѕР»СЊРєРѕ СЃС‚Р°РІРёР» `display:none` РЅР° СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№ DOM-СѓР·РµР», РЅРµ СѓРґР°Р»СЏСЏ РµРіРѕ вЂ” РІ РѕС‚Р»РёС‡РёРµ РѕС‚ `PanelPositionManager.removeEmptyPanel()`, РєРѕС‚РѕСЂС‹Рј РѕР±С‹С‡РЅС‹Р№ drag-cleanup СѓР±РёСЂР°РµС‚ РїСѓСЃС‚СѓСЋ РїР°РЅРµР»СЊ РёР· DOM РїРѕР»РЅРѕСЃС‚СЊСЋ. РџРѕСЃР»Рµ С‚Р°РєРѕРіРѕ СЂСѓС‡РЅРѕРіРѕ С‚РѕРіРіР»Р° РїСѓСЃС‚Р°СЏ РїР°РЅРµР»СЊ РѕСЃС‚Р°РІР°Р»Р°СЃСЊ РІ DOM (РїСЂРѕСЃС‚Рѕ СЃРєСЂС‹С‚Р°СЏ), РїРѕСЌС‚РѕРјСѓ РїСЂРѕРІРµСЂРєР° `_installGlobalTabDragHandlers()` В«РїР°РЅРµР»СЊ РµС‰С‘ РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚ в†’ Р°РІС‚Рѕ-РїРѕРєР°Р·Р°С‚СЊ С‡РµСЂРµР· `togglePanel()`В» РІРёРґРµР»Р° DOM-СѓР·РµР» Рё СЃС‡РёС‚Р°Р»Р°, С‡С‚Рѕ РїР°РЅРµР»СЊ В«СѓР¶Рµ РµСЃС‚СЊВ» вЂ” Р°РІС‚Рѕ-СЃРѕР·РґР°РЅРёРµ РїРµСЂРµСЃС‚Р°РІР°Р»Рѕ СЃСЂР°Р±Р°С‚С‹РІР°С‚СЊ, Р° СЃРєСЂС‹С‚Р°СЏ (display:none) РїР°РЅРµР»СЊ РЅРµ РјРѕРіР»Р° Р±С‹С‚СЊ С†РµР»СЊСЋ drop. РСЃРїСЂР°РІР»РµРЅРѕ: РїСЂРё СЃРєСЂС‹С‚РёРё tabs-РїР°РЅРµР»Рё С‚РµРїРµСЂСЊ РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕ РІС‹Р·С‹РІР°РµС‚СЃСЏ `removeEmptyPanel(side)` (no-op, РµСЃР»Рё РІ РїР°РЅРµР»Рё РѕСЃС‚Р°Р»РёСЃСЊ РІРєР»Р°РґРєРё) вЂ” СЃРєСЂС‹С‚РёРµ РїСѓСЃС‚РѕР№ РїР°РЅРµР»Рё С‡РµСЂРµР· РјРµРЅСЋ/С…РѕС‚РєРµР№ Рё С‡РµСЂРµР· drag-cleanup РµРґРёРЅРѕРѕР±СЂР°Р·РЅРѕ СѓРґР°Р»СЏСЋС‚ РµС‘ РёР· DOM (`src/event-system/EventHandlers.js`).
 
-- **Фикс: ghost-таб при перетаскивании появлялся в левом верхнем углу окна и без заливки.** Позиция ghost-элемента (`PanelPositionManager._installGlobalTabDragHandlers`) выставлялась только в обработчике `mousemove` — пока пользователь просто зажимал клик на вкладке без движения мыши, `style.left/top` не были заданы вообще, и элемент (несмотря на `position:fixed` в CSS) отображался в дефолтной позиции (угол окна). Исправлено: позиция ghost'а теперь выставляется сразу при создании, используя координаты самого `mousedown` (тем же смещением `+14/-12`, что и `mousemove`). Отдельно: заливка тоже отсутствовала — `.tab`/`.tab-right`/`.tab-left` по умолчанию `background: transparent`, заливку даёт только класс `.active`, который у ghost'а намеренно снимается (`classList.remove('active', ...)`), поэтому перетаскивание НЕ активной вкладки давало полностью прозрачный ghost (только текст и тень). Добавлена собственная заливка в CSS-правило `.tab-drag-ghost` (`background-color`/`color`, тот же цвет, что у `.active`), не зависящая от исходного состояния перетаскиваемой вкладки (`src/ui/PanelPositionManager.js`, `styles/main.css`).
+- **Р¤РёРєСЃ: ghost-С‚Р°Р± РїСЂРё РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРё РїРѕСЏРІР»СЏР»СЃСЏ РІ Р»РµРІРѕРј РІРµСЂС…РЅРµРј СѓРіР»Сѓ РѕРєРЅР° Рё Р±РµР· Р·Р°Р»РёРІРєРё.** РџРѕР·РёС†РёСЏ ghost-СЌР»РµРјРµРЅС‚Р° (`PanelPositionManager._installGlobalTabDragHandlers`) РІС‹СЃС‚Р°РІР»СЏР»Р°СЃСЊ С‚РѕР»СЊРєРѕ РІ РѕР±СЂР°Р±РѕС‚С‡РёРєРµ `mousemove` вЂ” РїРѕРєР° РїРѕР»СЊР·РѕРІР°С‚РµР»СЊ РїСЂРѕСЃС‚Рѕ Р·Р°Р¶РёРјР°Р» РєР»РёРє РЅР° РІРєР»Р°РґРєРµ Р±РµР· РґРІРёР¶РµРЅРёСЏ РјС‹С€Рё, `style.left/top` РЅРµ Р±С‹Р»Рё Р·Р°РґР°РЅС‹ РІРѕРѕР±С‰Рµ, Рё СЌР»РµРјРµРЅС‚ (РЅРµСЃРјРѕС‚СЂСЏ РЅР° `position:fixed` РІ CSS) РѕС‚РѕР±СЂР°Р¶Р°Р»СЃСЏ РІ РґРµС„РѕР»С‚РЅРѕР№ РїРѕР·РёС†РёРё (СѓРіРѕР» РѕРєРЅР°). РСЃРїСЂР°РІР»РµРЅРѕ: РїРѕР·РёС†РёСЏ ghost'Р° С‚РµРїРµСЂСЊ РІС‹СЃС‚Р°РІР»СЏРµС‚СЃСЏ СЃСЂР°Р·Сѓ РїСЂРё СЃРѕР·РґР°РЅРёРё, РёСЃРїРѕР»СЊР·СѓСЏ РєРѕРѕСЂРґРёРЅР°С‚С‹ СЃР°РјРѕРіРѕ `mousedown` (С‚РµРј Р¶Рµ СЃРјРµС‰РµРЅРёРµРј `+14/-12`, С‡С‚Рѕ Рё `mousemove`). РћС‚РґРµР»СЊРЅРѕ: Р·Р°Р»РёРІРєР° С‚РѕР¶Рµ РѕС‚СЃСѓС‚СЃС‚РІРѕРІР°Р»Р° вЂ” `.tab`/`.tab-right`/`.tab-left` РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ `background: transparent`, Р·Р°Р»РёРІРєСѓ РґР°С‘С‚ С‚РѕР»СЊРєРѕ РєР»Р°СЃСЃ `.active`, РєРѕС‚РѕСЂС‹Р№ Сѓ ghost'Р° РЅР°РјРµСЂРµРЅРЅРѕ СЃРЅРёРјР°РµС‚СЃСЏ (`classList.remove('active', ...)`), РїРѕСЌС‚РѕРјСѓ РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµ РќР• Р°РєС‚РёРІРЅРѕР№ РІРєР»Р°РґРєРё РґР°РІР°Р»Рѕ РїРѕР»РЅРѕСЃС‚СЊСЋ РїСЂРѕР·СЂР°С‡РЅС‹Р№ ghost (С‚РѕР»СЊРєРѕ С‚РµРєСЃС‚ Рё С‚РµРЅСЊ). Р”РѕР±Р°РІР»РµРЅР° СЃРѕР±СЃС‚РІРµРЅРЅР°СЏ Р·Р°Р»РёРІРєР° РІ CSS-РїСЂР°РІРёР»Рѕ `.tab-drag-ghost` (`background-color`/`color`, С‚РѕС‚ Р¶Рµ С†РІРµС‚, С‡С‚Рѕ Сѓ `.active`), РЅРµ Р·Р°РІРёСЃСЏС‰Р°СЏ РѕС‚ РёСЃС…РѕРґРЅРѕРіРѕ СЃРѕСЃС‚РѕСЏРЅРёСЏ РїРµСЂРµС‚Р°СЃРєРёРІР°РµРјРѕР№ РІРєР»Р°РґРєРё (`src/ui/PanelPositionManager.js`, `styles/main.css`).
 
-#### 📁 Изменённые файлы
+#### рџ“Ѓ РР·РјРµРЅС‘РЅРЅС‹Рµ С„Р°Р№Р»С‹
 
-`src/ui/OutlinerPanel.js` · `src/core/ObjectOperations.js` · `src/core/RenderOperations.js` · `src/ui/LayersPanel.js` · `config/defaults/shortcuts.json`
+`src/ui/OutlinerPanel.js` В· `src/core/ObjectOperations.js` В· `src/core/RenderOperations.js` В· `src/ui/LayersPanel.js` В· `config/defaults/shortcuts.json`
 
 ---
 
-### Feature — 11 Blender-вдохновлённых UX-улучшений (панели, выбор, видимость, хоткеи меню)
+### Feature вЂ” 11 Blender-РІРґРѕС…РЅРѕРІР»С‘РЅРЅС‹С… UX-СѓР»СѓС‡С€РµРЅРёР№ (РїР°РЅРµР»Рё, РІС‹Р±РѕСЂ, РІРёРґРёРјРѕСЃС‚СЊ, С…РѕС‚РєРµРё РјРµРЅСЋ)
 
-- **Alt+1/2/3/4 — тоггл панелей** — `EventHandlers.handleKeyDown` получил ветку `e.altKey && ['1','2','3','4'].includes(e.key)`, вызывающую уже существующий `this.togglePanel('leftPanel'|'rightPanel'|'toolbar'|'assetsPanel')` (`src/event-system/EventHandlers.js`).
+- **Alt+1/2/3/4 вЂ” С‚РѕРіРіР» РїР°РЅРµР»РµР№** вЂ” `EventHandlers.handleKeyDown` РїРѕР»СѓС‡РёР» РІРµС‚РєСѓ `e.altKey && ['1','2','3','4'].includes(e.key)`, РІС‹Р·С‹РІР°СЋС‰СѓСЋ СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№ `this.togglePanel('leftPanel'|'rightPanel'|'toolbar'|'assetsPanel')` (`src/event-system/EventHandlers.js`).
 
-- **Отображение хоткеев в главном меню + live-обновление после ребинда** — `config/menu.js` раньше хранил хардкод-строки (`shortcut: 'Ctrl+S'`), дублируя `config/defaults/shortcuts.json`. Пункты меню теперь ссылаются на хоткей через `shortcutKey: 'editor.saveLevel'` (дот-путь в shortcuts.json) — единый источник истины. Новый общий `src/utils/ShortcutFormatter.js` (`ShortcutFormatter.format(shortcut)` → строка вида `"Ctrl+Alt+N"`) используется и в `SettingsPanel.formatShortcut()` (теперь тонкая обёртка над ним), и в новых `MenuManager.resolveShortcutLabel(shortcutKey)` / `MenuManager.createMenuItem()`. Новый `MenuManager.refreshShortcutLabels()` перечитывает все `[data-shortcut-key]`-спаны в DOM меню и обновляет их текст — вызывается один раз из `MenuManager.initialize()` и повторно из `SettingsPanel.saveHotkey()` после того как ребинд уже персистирован через `configManager.set('shortcuts.category.action', ...)`. Мигрированы на `shortcutKey`: `new-level`/`open-level`/`save-level`/`save-level-as`, `toggle-grid`, `toggle-parallax`, 4 пункта тоггла панелей (`config/menu.js`). Попутно исправлена неточность в `shortcuts.json`: `editor.newLevel` не имел `altKey: true`, хотя реально работающая комбинация — Ctrl+Alt+N (Ctrl+N браузер перехватывает как «новое окно»). **Известное ограничение (не расширено этим пакетом):** ребинд в Settings → Hotkeys меняет только отображаемую подпись в меню — `EventHandlers.handleKeyDown` остаётся хардкод-цепочкой if/else и не читает `shortcuts.json` в рантайме (`src/utils/ShortcutFormatter.js`, `src/managers/MenuManager.js`, `src/ui/SettingsPanel.js`, `config/menu.js`, `config/defaults/shortcuts.json`).
+- **РћС‚РѕР±СЂР°Р¶РµРЅРёРµ С…РѕС‚РєРµРµРІ РІ РіР»Р°РІРЅРѕРј РјРµРЅСЋ + live-РѕР±РЅРѕРІР»РµРЅРёРµ РїРѕСЃР»Рµ СЂРµР±РёРЅРґР°** вЂ” `config/menu.js` СЂР°РЅСЊС€Рµ С…СЂР°РЅРёР» С…Р°СЂРґРєРѕРґ-СЃС‚СЂРѕРєРё (`shortcut: 'Ctrl+S'`), РґСѓР±Р»РёСЂСѓСЏ `config/defaults/shortcuts.json`. РџСѓРЅРєС‚С‹ РјРµРЅСЋ С‚РµРїРµСЂСЊ СЃСЃС‹Р»Р°СЋС‚СЃСЏ РЅР° С…РѕС‚РєРµР№ С‡РµСЂРµР· `shortcutKey: 'editor.saveLevel'` (РґРѕС‚-РїСѓС‚СЊ РІ shortcuts.json) вЂ” РµРґРёРЅС‹Р№ РёСЃС‚РѕС‡РЅРёРє РёСЃС‚РёРЅС‹. РќРѕРІС‹Р№ РѕР±С‰РёР№ `src/utils/ShortcutFormatter.js` (`ShortcutFormatter.format(shortcut)` в†’ СЃС‚СЂРѕРєР° РІРёРґР° `"Ctrl+Alt+N"`) РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ Рё РІ `SettingsPanel.formatShortcut()` (С‚РµРїРµСЂСЊ С‚РѕРЅРєР°СЏ РѕР±С‘СЂС‚РєР° РЅР°Рґ РЅРёРј), Рё РІ РЅРѕРІС‹С… `MenuManager.resolveShortcutLabel(shortcutKey)` / `MenuManager.createMenuItem()`. РќРѕРІС‹Р№ `MenuManager.refreshShortcutLabels()` РїРµСЂРµС‡РёС‚С‹РІР°РµС‚ РІСЃРµ `[data-shortcut-key]`-СЃРїР°РЅС‹ РІ DOM РјРµРЅСЋ Рё РѕР±РЅРѕРІР»СЏРµС‚ РёС… С‚РµРєСЃС‚ вЂ” РІС‹Р·С‹РІР°РµС‚СЃСЏ РѕРґРёРЅ СЂР°Р· РёР· `MenuManager.initialize()` Рё РїРѕРІС‚РѕСЂРЅРѕ РёР· `SettingsPanel.saveHotkey()` РїРѕСЃР»Рµ С‚РѕРіРѕ РєР°Рє СЂРµР±РёРЅРґ СѓР¶Рµ РїРµСЂСЃРёСЃС‚РёСЂРѕРІР°РЅ С‡РµСЂРµР· `configManager.set('shortcuts.category.action', ...)`. РњРёРіСЂРёСЂРѕРІР°РЅС‹ РЅР° `shortcutKey`: `new-level`/`open-level`/`save-level`/`save-level-as`, `toggle-grid`, `toggle-parallax`, 4 РїСѓРЅРєС‚Р° С‚РѕРіРіР»Р° РїР°РЅРµР»РµР№ (`config/menu.js`). РџРѕРїСѓС‚РЅРѕ РёСЃРїСЂР°РІР»РµРЅР° РЅРµС‚РѕС‡РЅРѕСЃС‚СЊ РІ `shortcuts.json`: `editor.newLevel` РЅРµ РёРјРµР» `altKey: true`, С…РѕС‚СЏ СЂРµР°Р»СЊРЅРѕ СЂР°Р±РѕС‚Р°СЋС‰Р°СЏ РєРѕРјР±РёРЅР°С†РёСЏ вЂ” Ctrl+Alt+N (Ctrl+N Р±СЂР°СѓР·РµСЂ РїРµСЂРµС…РІР°С‚С‹РІР°РµС‚ РєР°Рє В«РЅРѕРІРѕРµ РѕРєРЅРѕВ»). **РР·РІРµСЃС‚РЅРѕРµ РѕРіСЂР°РЅРёС‡РµРЅРёРµ (РЅРµ СЂР°СЃС€РёСЂРµРЅРѕ СЌС‚РёРј РїР°РєРµС‚РѕРј):** СЂРµР±РёРЅРґ РІ Settings в†’ Hotkeys РјРµРЅСЏРµС‚ С‚РѕР»СЊРєРѕ РѕС‚РѕР±СЂР°Р¶Р°РµРјСѓСЋ РїРѕРґРїРёСЃСЊ РІ РјРµРЅСЋ вЂ” `EventHandlers.handleKeyDown` РѕСЃС‚Р°С‘С‚СЃСЏ С…Р°СЂРґРєРѕРґ-С†РµРїРѕС‡РєРѕР№ if/else Рё РЅРµ С‡РёС‚Р°РµС‚ `shortcuts.json` РІ СЂР°РЅС‚Р°Р№РјРµ (`src/utils/ShortcutFormatter.js`, `src/managers/MenuManager.js`, `src/ui/SettingsPanel.js`, `config/menu.js`, `config/defaults/shortcuts.json`).
 
-- **Удалены пункты «Swap Panels»** из `src/ui/CanvasContextMenu.js` и `src/ui/AssetPanelContextMenu.js` (были независимые пункты контекстных меню, без общего родителя/переиспользуемого компонента).
+- **РЈРґР°Р»РµРЅС‹ РїСѓРЅРєС‚С‹ В«Swap PanelsВ»** РёР· `src/ui/CanvasContextMenu.js` Рё `src/ui/AssetPanelContextMenu.js` (Р±С‹Р»Рё РЅРµР·Р°РІРёСЃРёРјС‹Рµ РїСѓРЅРєС‚С‹ РєРѕРЅС‚РµРєСЃС‚РЅС‹С… РјРµРЅСЋ, Р±РµР· РѕР±С‰РµРіРѕ СЂРѕРґРёС‚РµР»СЏ/РїРµСЂРµРёСЃРїРѕР»СЊР·СѓРµРјРѕРіРѕ РєРѕРјРїРѕРЅРµРЅС‚Р°).
 
-- **Цикл выбора перекрывающихся объектов по повторным кликам (Blender-style)** — `ObjectOperations.findObjectAtPoint(x, y, skipCycle = false)` теперь собирает ВСЕ совпадения в точке (а не только первое) и через новый `_pickWithClickCycle(x, y, sortedCandidates)` циклически перебирает их при повторных кликах в (примерно) той же точке — допуск `~4 экранных px` (`4 / camera.zoom`, независимо от уровня зума) при том же наборе кандидатов (`candidateKey`); клик в другое место или изменившийся набор кандидатов сбрасывает цикл на верхний объект. Двойной клик (`MouseHandlers.handleDoubleClick`) физически состоит из двух одиночных кликов — чтобы это не ломало открытие группы двойным кликом, когда она перекрыта другим объектом, он вызывает `findObjectAtPoint(x, y, true)` (новый параметр `skipCycle`), который использует новый `_pickFrontMost(x, y, sortedCandidates)` (старое, нецикличное поведение) (`src/core/ObjectOperations.js`, `src/event-system/MouseHandlers.js`).
+- **Р¦РёРєР» РІС‹Р±РѕСЂР° РїРµСЂРµРєСЂС‹РІР°СЋС‰РёС…СЃСЏ РѕР±СЉРµРєС‚РѕРІ РїРѕ РїРѕРІС‚РѕСЂРЅС‹Рј РєР»РёРєР°Рј (Blender-style)** вЂ” `ObjectOperations.findObjectAtPoint(x, y, skipCycle = false)` С‚РµРїРµСЂСЊ СЃРѕР±РёСЂР°РµС‚ Р’РЎР• СЃРѕРІРїР°РґРµРЅРёСЏ РІ С‚РѕС‡РєРµ (Р° РЅРµ С‚РѕР»СЊРєРѕ РїРµСЂРІРѕРµ) Рё С‡РµСЂРµР· РЅРѕРІС‹Р№ `_pickWithClickCycle(x, y, sortedCandidates)` С†РёРєР»РёС‡РµСЃРєРё РїРµСЂРµР±РёСЂР°РµС‚ РёС… РїСЂРё РїРѕРІС‚РѕСЂРЅС‹С… РєР»РёРєР°С… РІ (РїСЂРёРјРµСЂРЅРѕ) С‚РѕР№ Р¶Рµ С‚РѕС‡РєРµ вЂ” РґРѕРїСѓСЃРє `~4 СЌРєСЂР°РЅРЅС‹С… px` (`4 / camera.zoom`, РЅРµР·Р°РІРёСЃРёРјРѕ РѕС‚ СѓСЂРѕРІРЅСЏ Р·СѓРјР°) РїСЂРё С‚РѕРј Р¶Рµ РЅР°Р±РѕСЂРµ РєР°РЅРґРёРґР°С‚РѕРІ (`candidateKey`); РєР»РёРє РІ РґСЂСѓРіРѕРµ РјРµСЃС‚Рѕ РёР»Рё РёР·РјРµРЅРёРІС€РёР№СЃСЏ РЅР°Р±РѕСЂ РєР°РЅРґРёРґР°С‚РѕРІ СЃР±СЂР°СЃС‹РІР°РµС‚ С†РёРєР» РЅР° РІРµСЂС…РЅРёР№ РѕР±СЉРµРєС‚. Р”РІРѕР№РЅРѕР№ РєР»РёРє (`MouseHandlers.handleDoubleClick`) С„РёР·РёС‡РµСЃРєРё СЃРѕСЃС‚РѕРёС‚ РёР· РґРІСѓС… РѕРґРёРЅРѕС‡РЅС‹С… РєР»РёРєРѕРІ вЂ” С‡С‚РѕР±С‹ СЌС‚Рѕ РЅРµ Р»РѕРјР°Р»Рѕ РѕС‚РєСЂС‹С‚РёРµ РіСЂСѓРїРїС‹ РґРІРѕР№РЅС‹Рј РєР»РёРєРѕРј, РєРѕРіРґР° РѕРЅР° РїРµСЂРµРєСЂС‹С‚Р° РґСЂСѓРіРёРј РѕР±СЉРµРєС‚РѕРј, РѕРЅ РІС‹Р·С‹РІР°РµС‚ `findObjectAtPoint(x, y, true)` (РЅРѕРІС‹Р№ РїР°СЂР°РјРµС‚СЂ `skipCycle`), РєРѕС‚РѕСЂС‹Р№ РёСЃРїРѕР»СЊР·СѓРµС‚ РЅРѕРІС‹Р№ `_pickFrontMost(x, y, sortedCandidates)` (СЃС‚Р°СЂРѕРµ, РЅРµС†РёРєР»РёС‡РЅРѕРµ РїРѕРІРµРґРµРЅРёРµ) (`src/core/ObjectOperations.js`, `src/event-system/MouseHandlers.js`).
 
-- **F2 — глобальное переименование выделенного объекта** — новый `EventHandlers.renameSelectedObject()`: срабатывает, если выделен ровно один объект; переключает вкладку левой/правой панели на Outliner (какая бы панель её сейчас ни хостила — вкладки перетаскиваемы между панелями, см. `PanelPositionManager`), затем вызывает уже существующий `OutlinerPanel.startInlineRename(obj)` (`src/event-system/EventHandlers.js`).
+- **F2 вЂ” РіР»РѕР±Р°Р»СЊРЅРѕРµ РїРµСЂРµРёРјРµРЅРѕРІР°РЅРёРµ РІС‹РґРµР»РµРЅРЅРѕРіРѕ РѕР±СЉРµРєС‚Р°** вЂ” РЅРѕРІС‹Р№ `EventHandlers.renameSelectedObject()`: СЃСЂР°Р±Р°С‚С‹РІР°РµС‚, РµСЃР»Рё РІС‹РґРµР»РµРЅ СЂРѕРІРЅРѕ РѕРґРёРЅ РѕР±СЉРµРєС‚; РїРµСЂРµРєР»СЋС‡Р°РµС‚ РІРєР»Р°РґРєСѓ Р»РµРІРѕР№/РїСЂР°РІРѕР№ РїР°РЅРµР»Рё РЅР° Outliner (РєР°РєР°СЏ Р±С‹ РїР°РЅРµР»СЊ РµС‘ СЃРµР№С‡Р°СЃ РЅРё С…РѕСЃС‚РёР»Р° вЂ” РІРєР»Р°РґРєРё РїРµСЂРµС‚Р°СЃРєРёРІР°РµРјС‹ РјРµР¶РґСѓ РїР°РЅРµР»СЏРјРё, СЃРј. `PanelPositionManager`), Р·Р°С‚РµРј РІС‹Р·С‹РІР°РµС‚ СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№ `OutlinerPanel.startInlineRename(obj)` (`src/event-system/EventHandlers.js`).
 
-- **Layer Solo (Ctrl+click на иконку глаза слоя в LayersPanel)** — `Layer.js` получил новое transient-поле `soloed` (не сериализуется). Новый `LayersPanel.toggleLayerSolo(layerId)` — эксклюзивный solo: сбрасывает `soloed` у всех остальных слоёв, повторный Ctrl+click на уже заsoloенном слое снимает solo. Клик-обработчик `.layer-visibility-btn` проверяет `e.ctrlKey || e.metaKey` и вызывает solo вместо обычного toggle видимости. `RenderOperations.getVisibleLayerIds()` теперь solo-aware: если есть хотя бы один заsoloенный слой, видимый набор — только заsoloенные слои, независимо от их собственного `layer.visible`. Соло-слой подсвечивается жёлтым цветом иконки глаза (`updateLayerElement`) (`src/models/Layer.js`, `src/ui/LayersPanel.js`, `src/core/RenderOperations.js`).
+- **Layer Solo (Ctrl+click РЅР° РёРєРѕРЅРєСѓ РіР»Р°Р·Р° СЃР»РѕСЏ РІ LayersPanel)** вЂ” `Layer.js` РїРѕР»СѓС‡РёР» РЅРѕРІРѕРµ transient-РїРѕР»Рµ `soloed` (РЅРµ СЃРµСЂРёР°Р»РёР·СѓРµС‚СЃСЏ). РќРѕРІС‹Р№ `LayersPanel.toggleLayerSolo(layerId)` вЂ” СЌРєСЃРєР»СЋР·РёРІРЅС‹Р№ solo: СЃР±СЂР°СЃС‹РІР°РµС‚ `soloed` Сѓ РІСЃРµС… РѕСЃС‚Р°Р»СЊРЅС‹С… СЃР»РѕС‘РІ, РїРѕРІС‚РѕСЂРЅС‹Р№ Ctrl+click РЅР° СѓР¶Рµ Р·Р°soloРµРЅРЅРѕРј СЃР»РѕРµ СЃРЅРёРјР°РµС‚ solo. РљР»РёРє-РѕР±СЂР°Р±РѕС‚С‡РёРє `.layer-visibility-btn` РїСЂРѕРІРµСЂСЏРµС‚ `e.ctrlKey || e.metaKey` Рё РІС‹Р·С‹РІР°РµС‚ solo РІРјРµСЃС‚Рѕ РѕР±С‹С‡РЅРѕРіРѕ toggle РІРёРґРёРјРѕСЃС‚Рё. `RenderOperations.getVisibleLayerIds()` С‚РµРїРµСЂСЊ solo-aware: РµСЃР»Рё РµСЃС‚СЊ С…РѕС‚СЏ Р±С‹ РѕРґРёРЅ Р·Р°soloРµРЅРЅС‹Р№ СЃР»РѕР№, РІРёРґРёРјС‹Р№ РЅР°Р±РѕСЂ вЂ” С‚РѕР»СЊРєРѕ Р·Р°soloРµРЅРЅС‹Рµ СЃР»РѕРё, РЅРµР·Р°РІРёСЃРёРјРѕ РѕС‚ РёС… СЃРѕР±СЃС‚РІРµРЅРЅРѕРіРѕ `layer.visible`. РЎРѕР»Рѕ-СЃР»РѕР№ РїРѕРґСЃРІРµС‡РёРІР°РµС‚СЃСЏ Р¶С‘Р»С‚С‹Рј С†РІРµС‚РѕРј РёРєРѕРЅРєРё РіР»Р°Р·Р° (`updateLayerElement`) (`src/models/Layer.js`, `src/ui/LayersPanel.js`, `src/core/RenderOperations.js`).
 
-- **Isolate выделения (хоткей `/`)** — новый `ObjectOperations.toggleIsolateSelection()`: non-destructive (не трогает `obj.visible`), top-level-гранулярность (изолируется весь верхнеуровневый объект/группа выделения целиком, а не конкретный вложенный потомок). Состояние хранится в `stateManager` как `view.isolatedTopLevelIds` (`Set` идентификаторов верхнеуровневых объектов, либо `null`). Переиспользует уже существующий в `RenderOperations.render()` паттерн затемнения (`ctx.filter = 'grayscale(1) opacity(0.4)'`, раньше применялся только для group-edit-mode) — расширен условием по `isolatedTopLevelIds`. `ObjectOperations.getSelectableCandidateObjects()` тоже учитывает isolate — затемнённое вне isolate не кликается (`src/core/ObjectOperations.js`, `src/core/RenderOperations.js`).
+- **Isolate РІС‹РґРµР»РµРЅРёСЏ (С…РѕС‚РєРµР№ `/`)** вЂ” РЅРѕРІС‹Р№ `ObjectOperations.toggleIsolateSelection()`: non-destructive (РЅРµ С‚СЂРѕРіР°РµС‚ `obj.visible`), top-level-РіСЂР°РЅСѓР»СЏСЂРЅРѕСЃС‚СЊ (РёР·РѕР»РёСЂСѓРµС‚СЃСЏ РІРµСЃСЊ РІРµСЂС…РЅРµСѓСЂРѕРІРЅРµРІС‹Р№ РѕР±СЉРµРєС‚/РіСЂСѓРїРїР° РІС‹РґРµР»РµРЅРёСЏ С†РµР»РёРєРѕРј, Р° РЅРµ РєРѕРЅРєСЂРµС‚РЅС‹Р№ РІР»РѕР¶РµРЅРЅС‹Р№ РїРѕС‚РѕРјРѕРє). РЎРѕСЃС‚РѕСЏРЅРёРµ С…СЂР°РЅРёС‚СЃСЏ РІ `stateManager` РєР°Рє `view.isolatedTopLevelIds` (`Set` РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂРѕРІ РІРµСЂС…РЅРµСѓСЂРѕРІРЅРµРІС‹С… РѕР±СЉРµРєС‚РѕРІ, Р»РёР±Рѕ `null`). РџРµСЂРµРёСЃРїРѕР»СЊР·СѓРµС‚ СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№ РІ `RenderOperations.render()` РїР°С‚С‚РµСЂРЅ Р·Р°С‚РµРјРЅРµРЅРёСЏ (`ctx.filter = 'grayscale(1) opacity(0.4)'`, СЂР°РЅСЊС€Рµ РїСЂРёРјРµРЅСЏР»СЃСЏ С‚РѕР»СЊРєРѕ РґР»СЏ group-edit-mode) вЂ” СЂР°СЃС€РёСЂРµРЅ СѓСЃР»РѕРІРёРµРј РїРѕ `isolatedTopLevelIds`. `ObjectOperations.getSelectableCandidateObjects()` С‚РѕР¶Рµ СѓС‡РёС‚С‹РІР°РµС‚ isolate вЂ” Р·Р°С‚РµРјРЅС‘РЅРЅРѕРµ РІРЅРµ isolate РЅРµ РєР»РёРєР°РµС‚СЃСЏ (`src/core/ObjectOperations.js`, `src/core/RenderOperations.js`).
 
-- **Outliner: иконки-глаза + серый цвет имени скрытых объектов** — новый `OutlinerPanel.createVisibilityButton(item)` (кликабельная SVG-иконка глаза справа от имени объекта, та же разметка, что в LayersPanel) и `updateVisibilityButton(visibilityBtn, nameSpan, obj)` (обновляет иконку и красит `nameSpan.style.color` в `#6b7280`, если `!obj.visible`). Подключено в `renderGroupNode`/`renderObjectNode` (файл использует keyed-reconciliation — кнопка создаётся один раз при `!existingNode`, обновляется на каждый рендер). Клик по иконке вызывает `ObjectOperations.toggleObjectVisibility()` (`src/ui/OutlinerPanel.js`).
+- **Outliner: РёРєРѕРЅРєРё-РіР»Р°Р·Р° + СЃРµСЂС‹Р№ С†РІРµС‚ РёРјРµРЅРё СЃРєСЂС‹С‚С‹С… РѕР±СЉРµРєС‚РѕРІ** вЂ” РЅРѕРІС‹Р№ `OutlinerPanel.createVisibilityButton(item)` (РєР»РёРєР°Р±РµР»СЊРЅР°СЏ SVG-РёРєРѕРЅРєР° РіР»Р°Р·Р° СЃРїСЂР°РІР° РѕС‚ РёРјРµРЅРё РѕР±СЉРµРєС‚Р°, С‚Р° Р¶Рµ СЂР°Р·РјРµС‚РєР°, С‡С‚Рѕ РІ LayersPanel) Рё `updateVisibilityButton(visibilityBtn, nameSpan, obj)` (РѕР±РЅРѕРІР»СЏРµС‚ РёРєРѕРЅРєСѓ Рё РєСЂР°СЃРёС‚ `nameSpan.style.color` РІ `#6b7280`, РµСЃР»Рё `!obj.visible`). РџРѕРґРєР»СЋС‡РµРЅРѕ РІ `renderGroupNode`/`renderObjectNode` (С„Р°Р№Р» РёСЃРїРѕР»СЊР·СѓРµС‚ keyed-reconciliation вЂ” РєРЅРѕРїРєР° СЃРѕР·РґР°С‘С‚СЃСЏ РѕРґРёРЅ СЂР°Р· РїСЂРё `!existingNode`, РѕР±РЅРѕРІР»СЏРµС‚СЃСЏ РЅР° РєР°Р¶РґС‹Р№ СЂРµРЅРґРµСЂ). РљР»РёРє РїРѕ РёРєРѕРЅРєРµ РІС‹Р·С‹РІР°РµС‚ `ObjectOperations.toggleObjectVisibility()` (`src/ui/OutlinerPanel.js`).
 
-- **H / Alt+H — видимость объектов** — новый `ObjectOperations.toggleObjectVisibility(obj)` (общий для хоткея H и Outliner-иконки): переключает `obj.visible`; если `obj.type === 'group'`, каскадом применяет то же значение ко всем потомкам через `GroupTraversalUtils.getAllChildren(obj, true)` — необходимо, т.к. `computeSelectableSet()`/`isObjectSelectable()` проверяет только собственный флаг `.visible` объекта без обхода предков, поэтому без каскада скрытые вложенные объекты группы оставались бы выбираемыми (хотя и не отрисовывались — рендер уже сам «прячет» через `CanvasRenderer.drawGroup`'s `if (!group.visible) return`). Новый `ObjectOperations.toggleVisibilityForSelection()` (хоткей `H`, применяет ко всем выделенным) и `unhideAllObjects()` (хоткей `Alt+H`, показывает вообще все скрытые объекты на любом уровне через `GroupTraversalUtils.getAllObjects(level.objects, true)`). Общий хвост (сохранение истории, инвалидация кэшей, redraw, обновление панелей) вынесен в `ObjectOperations.afterVisibilityChange()` (`src/core/ObjectOperations.js`).
+- **H / Alt+H вЂ” РІРёРґРёРјРѕСЃС‚СЊ РѕР±СЉРµРєС‚РѕРІ** вЂ” РЅРѕРІС‹Р№ `ObjectOperations.toggleObjectVisibility(obj)` (РѕР±С‰РёР№ РґР»СЏ С…РѕС‚РєРµСЏ H Рё Outliner-РёРєРѕРЅРєРё): РїРµСЂРµРєР»СЋС‡Р°РµС‚ `obj.visible`; РµСЃР»Рё `obj.type === 'group'`, РєР°СЃРєР°РґРѕРј РїСЂРёРјРµРЅСЏРµС‚ С‚Рѕ Р¶Рµ Р·РЅР°С‡РµРЅРёРµ РєРѕ РІСЃРµРј РїРѕС‚РѕРјРєР°Рј С‡РµСЂРµР· `GroupTraversalUtils.getAllChildren(obj, true)` вЂ” РЅРµРѕР±С…РѕРґРёРјРѕ, С‚.Рє. `computeSelectableSet()`/`isObjectSelectable()` РїСЂРѕРІРµСЂСЏРµС‚ С‚РѕР»СЊРєРѕ СЃРѕР±СЃС‚РІРµРЅРЅС‹Р№ С„Р»Р°Рі `.visible` РѕР±СЉРµРєС‚Р° Р±РµР· РѕР±С…РѕРґР° РїСЂРµРґРєРѕРІ, РїРѕСЌС‚РѕРјСѓ Р±РµР· РєР°СЃРєР°РґР° СЃРєСЂС‹С‚С‹Рµ РІР»РѕР¶РµРЅРЅС‹Рµ РѕР±СЉРµРєС‚С‹ РіСЂСѓРїРїС‹ РѕСЃС‚Р°РІР°Р»РёСЃСЊ Р±С‹ РІС‹Р±РёСЂР°РµРјС‹РјРё (С…РѕС‚СЏ Рё РЅРµ РѕС‚СЂРёСЃРѕРІС‹РІР°Р»РёСЃСЊ вЂ” СЂРµРЅРґРµСЂ СѓР¶Рµ СЃР°Рј В«РїСЂСЏС‡РµС‚В» С‡РµСЂРµР· `CanvasRenderer.drawGroup`'s `if (!group.visible) return`). РќРѕРІС‹Р№ `ObjectOperations.toggleVisibilityForSelection()` (С…РѕС‚РєРµР№ `H`, РїСЂРёРјРµРЅСЏРµС‚ РєРѕ РІСЃРµРј РІС‹РґРµР»РµРЅРЅС‹Рј) Рё `unhideAllObjects()` (С…РѕС‚РєРµР№ `Alt+H`, РїРѕРєР°Р·С‹РІР°РµС‚ РІРѕРѕР±С‰Рµ РІСЃРµ СЃРєСЂС‹С‚С‹Рµ РѕР±СЉРµРєС‚С‹ РЅР° Р»СЋР±РѕРј СѓСЂРѕРІРЅРµ С‡РµСЂРµР· `GroupTraversalUtils.getAllObjects(level.objects, true)`). РћР±С‰РёР№ С…РІРѕСЃС‚ (СЃРѕС…СЂР°РЅРµРЅРёРµ РёСЃС‚РѕСЂРёРё, РёРЅРІР°Р»РёРґР°С†РёСЏ РєСЌС€РµР№, redraw, РѕР±РЅРѕРІР»РµРЅРёРµ РїР°РЅРµР»РµР№) РІС‹РЅРµСЃРµРЅ РІ `ObjectOperations.afterVisibilityChange()` (`src/core/ObjectOperations.js`).
 
-- Все новые хоткеи задокументированы в `config/defaults/shortcuts.json`: `editor.renameObject` (F2), `editor.isolateSelection` (`/`), `editor.hideSelected` (H), `editor.unhideAll` (Alt+H), `mouse.soloLayer` (Ctrl+click, информационная запись — как и другие записи категории `mouse`, ребиндинг недоступен), `ui.toggleLeftPanel`/`toggleRightPanel`/`toggleToolbar`/`toggleAssetsPanel` (Alt+1..4).
+- Р’СЃРµ РЅРѕРІС‹Рµ С…РѕС‚РєРµРё Р·Р°РґРѕРєСѓРјРµРЅС‚РёСЂРѕРІР°РЅС‹ РІ `config/defaults/shortcuts.json`: `editor.renameObject` (F2), `editor.isolateSelection` (`/`), `editor.hideSelected` (H), `editor.unhideAll` (Alt+H), `mouse.soloLayer` (Ctrl+click, РёРЅС„РѕСЂРјР°С†РёРѕРЅРЅР°СЏ Р·Р°РїРёСЃСЊ вЂ” РєР°Рє Рё РґСЂСѓРіРёРµ Р·Р°РїРёСЃРё РєР°С‚РµРіРѕСЂРёРё `mouse`, СЂРµР±РёРЅРґРёРЅРі РЅРµРґРѕСЃС‚СѓРїРµРЅ), `ui.toggleLeftPanel`/`toggleRightPanel`/`toggleToolbar`/`toggleAssetsPanel` (Alt+1..4).
 
-#### 📁 Изменённые файлы
+#### рџ“Ѓ РР·РјРµРЅС‘РЅРЅС‹Рµ С„Р°Р№Р»С‹
 
-`src/event-system/EventHandlers.js` · `src/event-system/MouseHandlers.js` · `src/core/ObjectOperations.js` · `src/core/RenderOperations.js` · `src/models/Layer.js` · `src/ui/LayersPanel.js` · `src/ui/OutlinerPanel.js` · `src/ui/CanvasContextMenu.js` · `src/ui/AssetPanelContextMenu.js` · `src/utils/ShortcutFormatter.js` (новый) · `src/ui/SettingsPanel.js` · `src/managers/MenuManager.js` · `config/menu.js` · `config/defaults/shortcuts.json`
-
----
-
-### Fix — debug-рамки Object Boundaries/Object Collisions игнорировали поворот (RenderOperations)
-
-- **`drawSingleObjectBoundary`/`drawGroupBoundaries`/`drawSingleObjectCollision`/`drawGroupCollisions` рисовали чистый axis-aligned `ctx.strokeRect` без поворота** — независимо от вращения объекта/группы или её предков (наглядно видно на скриншоте: синяя рамка выделения повёрнутой группы — ромб, зелёные debug-боксы boundaries под ней — прямые прямоугольники). Это отдельный баг, не пересекающийся с фиксом hit-testing выше — тот про то, ЧТО считается «внутри» при клике, этот про то, ЧТО рисуется на экране для отладки. Оба `drawSingleObjectBoundary` и `drawSingleObjectCollision` переписаны на переиспользование уже существующего rotation-aware примитива `strokeFrame()`/`WorldPositionUtils.getFrameGeometry()` — того же, которым рисуется корректно повёрнутая рамка выделения (`drawObjectSelectionRect`). `drawGroupBoundaries`/`drawGroupCollisions` больше не дублируют box-логику для группы отдельно от одиночного объекта — вызывают `drawSingleObjectBoundary`/`drawSingleObjectCollision`(group) напрямую, т.к. `getFrameGeometry`/`getObjectWorldBounds` уже одинаково корректно работают для обоих типов. Проверено в браузере: вложенная структура c1/c2 в B(45°) в A(30°) — зелёные/красные debug-рамки теперь совпадают с формой синей рамки выделения (Screenshot до/после), 0 console errors (`src/core/RenderOperations.js`).
-
-### Fix — область хит-теста повёрнутой вложенной группы не совпадала с реальной повёрнутой рамкой (WorldPositionUtils)
-
-- **`isPointInWorldBounds()`: для групп с повёрнутым предком область клика была раздута/смещена относительно реально отрисованной повёрнутой рамки** — использовался `getWorldBounds(obj, ..., skipOwnRotation=true)`, который для рендера рамки специально «запекает» поворот предков в результат (перестраивает AABB по 4 повёрнутым углам — корректно для отрисовки, т.к. даёт консервативный охватывающий прямоугольник). `isPointInWorldBounds` затем ЕЩЁ РАЗ обратно поворачивал точку клика на полный угол (предки+свой) и сверял с этим уже повёрнутым и раздутым боксом — угол предков учитывался дважды и несогласованно. Заменено на подход как для простых объектов: берётся полностью неповёрнутый (ни своим, ни родительским углом) прямоугольник через `getLocalCenter()`/`obj.getBounds(true)`, вычисляется истинный мировой центр (инвариантен к повороту) и точка клика обратно поворачивается на `totalRotation` вокруг него. Проверено в браузере: структура c1/c2 в B(rotation=45°) внутри A(rotation=30°) — 2116 точек сетки сравнены с эталонной (математически точной) геометрией, было 312 несовпадений (14.7%), стало 0; регрессия отсутствует для простой повёрнутой группы без предка и для группы без поворота (`src/utils/WorldPositionUtils.js`).
-
-### Fix — незначительный дрейф соседей при извлечении объекта из вложенной группы (GroupOperations)
-
-- **`extractObjectFromGroup()`: компенсация родительских pivot'ов запускалась ДО вставки извлечённого объекта в parentGroup** — при вложенных повёрнутых группах (`B` внутри `A`, обе с `rotation`) каскадная компенсация (`_applyAncestorPivotCompensations`) применялась одним блоком сразу после удаления ребёнка из `B`, т.е. ДО того как этот ребёнок добавлялся в `A.children`. Компенсация `A` считалась только по эффекту «`B` потеряла ребёнка», вторая пертурбация («`A` получила ребёнка») оставалась некомпенсированной → `aSibling`/`c2` внутри `A`/`B` визуально смещались. Разбито на две фазы: (1) `group` (B) компенсируется сразу после удаления — её bounds уже финальны; (2) компенсация остальных предков (`ancestorPivots.slice(1)`, включая `parentGroup`) отложена до ПОСЛЕ вставки в `parentGroup` — их bounds финальны только после обоих изменений. Проверено в браузере (3-уровневая структура c1/c2 в B(60°) в A(30°) + aSibling): `aSiblingDrift`/`c2Drift`/`c1Drift` = `{dx:0, dy:0, dRot:0}` (`src/core/GroupOperations.js`).
-
-### Fix — моргание/пропадание дубликата в момент размещения (DuplicateOperations)
-
-- **`confirmPlacement()`: убрана debounce-задержка инвалидации кэшей рендера для только что размещённых объектов** — вызывался только `editor.scheduleCacheInvalidation()`, реальный сброс `visibleObjectsCache`/spatial index исполняется в `setTimeout` (~100мс, `PERFORMANCE.CACHE_TIMEOUT_MS`). Первые несколько кадров после размещения `render()` брал уже закэшированный (без нового объекта) список видимых объектов и spatial index, ещё не знающий о новом объекте — копия визуально пропадала/моргала сразу после исчезновения preview-призрака и появлялась только после срабатывания таймера. Добавлены синхронные `renderOperations.clearVisibleObjectsCache()` + `markSpatialIndexDirty()` сразу после `scheduleCacheInvalidation()` — следующий же `render()` видит актуальное состояние. Не связано с перф-фиксами render-loop/StateManager/compareStackOrder/OutlinerPanel — отдельный баг именно в кэшировании сцены. Проверено в браузере: `getVisibleObjects`/`spatialIndex` сразу после `confirmPlacement()` содержат новый объект (было: только после debounce) (`src/core/DuplicateOperations.js`).
-
-- **Фикс: в group edit mode можно было выбрать объекты внутри вложенных child-групп** — `computeSelectableSet`, `findObjectAtPoint` и marquee рекурсивно обходили всех потомков активной группы. Правило теперь: (1) **прямые дети** активной группы — выбираемы; (2) **внешние top-level объекты** (не в открытых группах) — выбираемы, чтобы их можно было затянуть внутрь; (3) объекты **внутри child-групп** — не выбираемы (только сама child-группа как целое). (`src/core/ObjectOperations.js`, `src/event-system/MouseHandlers.js`)
-
-- **Фикс: reparenting объектов/групп в иерархии с сохранением визуального трансформа** — полная переработка на основе паттерна `worldPositionStays=true` (Unity/Godot). Три корневые ошибки: (1) **pivot mismatch**: `worldPointToLocalPointInGroup` вызывался ПОСЛЕ удаления → `getBounds()` уже другой, pivot сдвинут → объект попадал не туда; (2) **смещение оставшихся детей**: удаление/добавление ребёнка сдвигает pivot группы, что визуально смещает всех остальных; (3) **insertion без поправки rotation**: при переносе в повёрнутую группу `obj.rotation` не корректировался → объект менял визуальный угол. Решение: `WorldPositionUtils.applyGroupPivotCompensation(group, pOld)` — вместо пересчёта координат всех детей корректирует `group.x/y` по формуле `G.x -= (1-cosθ)·Δx + sinθ·Δy` (отменяет дрейф `(I−R)·Δ`). Новый `GroupOperations.addObjectToGroup` для insertion. Все 4 пути reparenting унифицированы: extract (Alt+drag), insert-to-group (drag-in, оба уровня). (`src/utils/WorldPositionUtils.js`, `src/core/GroupOperations.js`, `src/event-system/MouseHandlers.js`)
-
-- **Фикс: рамка повёрнутой группы при перемещении/Alt-drag не учитывала rotation** — `RenderOperations.drawDuplicateObjects` для групп с `rotation` получает unrotated bounds через `getDuplicateObjectBounds(..., skipOwnRotation=true)`. `drawAltDragSelectionRect` принимает объект, вызывает `getFrameGeometry()`, передаёт `rotationDeg` в `strokeFrame`. (`src/core/RenderOperations.js`)
-
-- **Tab drag visual polish** — ghost-таб теперь создаётся через `cloneNode(true)` с классами оригинала (`.tab`/`.tab-right`/`.tab-left`): выглядит идентично реальной вкладке, только с наклоном. `.tab-drag-ghost` CSS сведён к чисто позиционным свойствам (`position:fixed`, `opacity`, `transform`, `box-shadow`). Подсветка целевой панели: `.tab-drop-zone` на tab-bar заменена на `.tab-panel--drag-over` на самом `aside`-элементе панели (`src/ui/PanelPositionManager.js`, `styles/main.css`).
-- **Tab drag: отсутствующая панель показывается через существующую View-команду вместо кастомной drop-зоны** — при старте драга вкладки, если противоположной панели нет в DOM, вызывается `EventHandlers.togglePanel('leftPanel'/'rightPanel')` (та же команда, что и пункт меню View) — состояние/prefs/чекбокс меню остаются синхронными. Если драг отменяется без дропа в новую панель — она удаляется обратно через `removeEmptyPanel()`. Убраны `_createNewPanelDropZones()`, `.tab-new-panel-zone*` CSS и вся логика голубых зон-подсказок по краям экрана (`src/ui/PanelPositionManager.js`, `styles/main.css`).
-- **Фикс: подсветка/дроп на новую (пустую) панель не срабатывали** — полоса вкладок панели без вкладок схлопывается по высоте до ~1px (flex без children), а детекция цели требовала попадания курсора именно на неё — недостижимо при обычном движении мыши. Детекция переписана на `elUnder.closest('#left-tabs-panel, #right-tabs-panel')`: подсветка `.tab-panel--drag-over` и дроп теперь работают при наведении на любую часть панели, не только на её шапку. Заодно убран промежуточный `getValidTabBars()`/`Set` — id панелей уникальны, доп. scoping избыточен (`src/ui/PanelPositionManager.js`).
-
-- **Фикс: hit-testing повёрнутых групп игнорировал rotation** — клик в пустое место выбирал повёрнутую группу, если попадал в её axis-aligned bounding box (AABB), даже вне реальной визуальной геометрии. `WorldPositionUtils.isPointInWorldBounds()` для групп с `totalRotation` теперь получает unrotated bounds (через `skipOwnRotation: true`), вычисляет центр, применяет inverse rotation к точке клика (аналогично уже существующей логике для простых объектов) и делает AABB-тест в локальной системе координат. Для простых объектов rotation-aware hit-testing уже был (`src/utils/WorldPositionUtils.js`).
-
-### Perf — render loop dirty-flag, StateManager.update() без full-clone, O(1) stacking-order compare
-
-#### ⚡ Производительность
-
-- **Render loop: пропуск кадра, если ничего не изменилось** — `EventHandlers.startRenderLoop()` вызывал `editor.render()` безусловно на каждый `requestAnimationFrame` (постоянные 60 рендеров/сек даже на полностью статичном канвасе). Добавлен `StateManager._needsRender` — флаг, выставляемый в `true` внутри `set()`/`update()` (это покрывает все интерактивные пути: mousemove уже безусловно шлёт `mouse.x/y` через `updateMouseState` на каждое событие, camera/selection/drag/marquee/duplicate — всё идёт через `stateManager`). Render loop теперь вызывает `editor.render()` только если `stateManager.consumeNeedsRender()` вернул `true`. Не пересекается с 120 существующими явными вызовами `editor.render()` по кодовой базе — они продолжают работать напрямую, минуя loop. Не найдено ни одной чисто time-based canvas-анимации (marching ants, `lineDashOffset` и т.п.), независимой от state — проверено `grep`. Проверено в браузере: 0 рендеров за 1 сек простоя (было ~60), единичное изменение состояния даёт 1-2 рендера и возврат к простою (`EventHandlers.js`, `StateManager.js`).
-- **StateManager.update(): убран full-clone состояния** — `update()` делал `{ ...this.state }` на каждый вызов (мутирует на каждый mousemove/wheel/drag tick) для получения `oldValue` в `notifyListeners`. Для dotted-ключей (`'mouse.lastX'` и т.п., подавляющее большинство вызовов) `oldState[key]` всегда была `undefined` — клонирование было чистой тратой без пользы для этих ключей. Переписано по аналогии с `set()`: `oldValue` читается точечно по каждому ключу непосредственно перед его перезаписью, без клонирования дерева целиком. Побочный эффект — теперь `oldValue` в подписках корректен и для nested-ключей (раньше был всегда `undefined`). Проверено в браузере: `subscribe` на `'mouse.lastX'` получает верный `oldVal` после `update()` (`StateManager.js`).
-- **`Level.compareStackOrder`: O(1) сравнение вместо O(N×D) двойного tree-search за сравнение** — компаратор вызывал `GroupTraversalUtils.findObjectPath()` дважды на каждую пару сравниваемых объектов (полный DFS от корня), используется в `Array.sort` (`RenderOperations.getVisibleObjects` — каждый кадр при движении камеры; `ObjectOperations._sortObjectsByZIndexDescending` — на каждый hit-test), т.е. O(N×D) поиск умножался на O(M log M) сравнений сортировки. Добавлены `Level.buildStackOrderIndex()` (один O(N) DFS-проход, назначающий каждому объекту порядковый номер — pre-order DFS эквивалентен лексикографическому сравнению путей) и `Level.compareStackOrderIndexed(a, b, index)` (O(1) сравнение по предвычисленному индексу). Индекс строится один раз перед `.sort()`, не персистентный (без инвалидации, всегда свежий на пересчёт) — исключает риск рассинхронизации с новым `ObjectOperations.applyStackOrderAction` (Bring to Front и т.д.), который не проходит через существующие `markSpatialIndexDirty()`-точки. Старый `compareStackOrder` (path-search) оставлен нетронутым для остальных одиночных вызовов. Проверено эквивалентностью на синтетическом дереве (64 пары сравнений, 0 расхождений) (`Level.js`, `RenderOperations.js`, `ObjectOperations.js`).
-
-#### 📁 Изменённые файлы
-
-`src/event-system/EventHandlers.js` · `src/managers/StateManager.js` · `src/models/Level.js` · `src/core/RenderOperations.js` · `src/core/ObjectOperations.js`
+`src/event-system/EventHandlers.js` В· `src/event-system/MouseHandlers.js` В· `src/core/ObjectOperations.js` В· `src/core/RenderOperations.js` В· `src/models/Layer.js` В· `src/ui/LayersPanel.js` В· `src/ui/OutlinerPanel.js` В· `src/ui/CanvasContextMenu.js` В· `src/ui/AssetPanelContextMenu.js` В· `src/utils/ShortcutFormatter.js` (РЅРѕРІС‹Р№) В· `src/ui/SettingsPanel.js` В· `src/managers/MenuManager.js` В· `config/menu.js` В· `config/defaults/shortcuts.json`
 
 ---
 
-### Perf — OutlinerPanel: incremental keyed DOM diff вместо full teardown/rebuild
+### Fix вЂ” debug-СЂР°РјРєРё Object Boundaries/Object Collisions РёРіРЅРѕСЂРёСЂРѕРІР°Р»Рё РїРѕРІРѕСЂРѕС‚ (RenderOperations)
 
-#### ⚡ Производительность
+- **`drawSingleObjectBoundary`/`drawGroupBoundaries`/`drawSingleObjectCollision`/`drawGroupCollisions` СЂРёСЃРѕРІР°Р»Рё С‡РёСЃС‚С‹Р№ axis-aligned `ctx.strokeRect` Р±РµР· РїРѕРІРѕСЂРѕС‚Р°** вЂ” РЅРµР·Р°РІРёСЃРёРјРѕ РѕС‚ РІСЂР°С‰РµРЅРёСЏ РѕР±СЉРµРєС‚Р°/РіСЂСѓРїРїС‹ РёР»Рё РµС‘ РїСЂРµРґРєРѕРІ (РЅР°РіР»СЏРґРЅРѕ РІРёРґРЅРѕ РЅР° СЃРєСЂРёРЅС€РѕС‚Рµ: СЃРёРЅСЏСЏ СЂР°РјРєР° РІС‹РґРµР»РµРЅРёСЏ РїРѕРІС‘СЂРЅСѓС‚РѕР№ РіСЂСѓРїРїС‹ вЂ” СЂРѕРјР±, Р·РµР»С‘РЅС‹Рµ debug-Р±РѕРєСЃС‹ boundaries РїРѕРґ РЅРµР№ вЂ” РїСЂСЏРјС‹Рµ РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРєРё). Р­С‚Рѕ РѕС‚РґРµР»СЊРЅС‹Р№ Р±Р°Рі, РЅРµ РїРµСЂРµСЃРµРєР°СЋС‰РёР№СЃСЏ СЃ С„РёРєСЃРѕРј hit-testing РІС‹С€Рµ вЂ” С‚РѕС‚ РїСЂРѕ С‚Рѕ, Р§РўРћ СЃС‡РёС‚Р°РµС‚СЃСЏ В«РІРЅСѓС‚СЂРёВ» РїСЂРё РєР»РёРєРµ, СЌС‚РѕС‚ РїСЂРѕ С‚Рѕ, Р§РўРћ СЂРёСЃСѓРµС‚СЃСЏ РЅР° СЌРєСЂР°РЅРµ РґР»СЏ РѕС‚Р»Р°РґРєРё. РћР±Р° `drawSingleObjectBoundary` Рё `drawSingleObjectCollision` РїРµСЂРµРїРёСЃР°РЅС‹ РЅР° РїРµСЂРµРёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РµРіРѕ rotation-aware РїСЂРёРјРёС‚РёРІР° `strokeFrame()`/`WorldPositionUtils.getFrameGeometry()` вЂ” С‚РѕРіРѕ Р¶Рµ, РєРѕС‚РѕСЂС‹Рј СЂРёСЃСѓРµС‚СЃСЏ РєРѕСЂСЂРµРєС‚РЅРѕ РїРѕРІС‘СЂРЅСѓС‚Р°СЏ СЂР°РјРєР° РІС‹РґРµР»РµРЅРёСЏ (`drawObjectSelectionRect`). `drawGroupBoundaries`/`drawGroupCollisions` Р±РѕР»СЊС€Рµ РЅРµ РґСѓР±Р»РёСЂСѓСЋС‚ box-Р»РѕРіРёРєСѓ РґР»СЏ РіСЂСѓРїРїС‹ РѕС‚РґРµР»СЊРЅРѕ РѕС‚ РѕРґРёРЅРѕС‡РЅРѕРіРѕ РѕР±СЉРµРєС‚Р° вЂ” РІС‹Р·С‹РІР°СЋС‚ `drawSingleObjectBoundary`/`drawSingleObjectCollision`(group) РЅР°РїСЂСЏРјСѓСЋ, С‚.Рє. `getFrameGeometry`/`getObjectWorldBounds` СѓР¶Рµ РѕРґРёРЅР°РєРѕРІРѕ РєРѕСЂСЂРµРєС‚РЅРѕ СЂР°Р±РѕС‚Р°СЋС‚ РґР»СЏ РѕР±РѕРёС… С‚РёРїРѕРІ. РџСЂРѕРІРµСЂРµРЅРѕ РІ Р±СЂР°СѓР·РµСЂРµ: РІР»РѕР¶РµРЅРЅР°СЏ СЃС‚СЂСѓРєС‚СѓСЂР° c1/c2 РІ B(45В°) РІ A(30В°) вЂ” Р·РµР»С‘РЅС‹Рµ/РєСЂР°СЃРЅС‹Рµ debug-СЂР°РјРєРё С‚РµРїРµСЂСЊ СЃРѕРІРїР°РґР°СЋС‚ СЃ С„РѕСЂРјРѕР№ СЃРёРЅРµР№ СЂР°РјРєРё РІС‹РґРµР»РµРЅРёСЏ (Screenshot РґРѕ/РїРѕСЃР»Рµ), 0 console errors (`src/core/RenderOperations.js`).
 
-- **OutlinerPanel.render(): keyed reconciliation вместо полной пересборки DOM** — `render()` на каждый вызов сносил и пересоздавал все DOM-узлы списка объектов (при ~2000 объектов — 200-400мс за вызов; замерено через chrome-devtools при профилировании «лага при размещении дубликата»: `updateAllPanels()` → `outlinerPanel.render()` доминировал над всем остальным вместе взятым — сам `confirmPlacement` без него ~5мс). Теперь: (1) контейнер `#outliner-objects-container` создаётся один раз и переиспользуется (middle-mouse panning биндится однократно; `ScrollUtils.setupMiddleMouseScrolling` дедупит по контейнеру); (2) новый `buildFlatRenderList()` — DFS-развёртка отфильтрованного дерева в плоский список `{obj, depth}` с учётом collapsed-групп и поиска (та же логика, что была в рекурсии `renderGroupNode`); (3) новый `reconcileFlatList()` — keyed diff по `Map<objId, node>` (`_itemNodeCache`): неизменённые узлы переиспользуются на месте (O(1) проверка позиции, ноль DOM-операций), новые создаются, переставленные двигаются через `insertBefore` (move, не clone), исчезнувшие удаляются; (4) `renderGroupNode`/`renderObjectNode` переведены на create-or-refresh сигнатуру `(obj, depth, existingNode)` — при reuse обновляются только изменяемые части (paddingLeft/имя/счётчик детей/collapse-глиф/locked/selected), listeners не перевешиваются; (5) click/dblclick-хендлеры ищут объект по `item.dataset.id` через `level.findObjectById()` в момент клика, а не замыкают ссылку на объект — reused-узел остаётся корректным после undo/redo, заменяющего объекты; (6) inline-rename input не перезаписывается, пока в фокусе. Баннер результатов поиска — одиночный узел вне diff. Замер после (те же 2000 объектов): cold render (все узлы создаются) ~77мс, warm render (ничего не изменилось) ~30мс, `confirmPlacement` дубликата 174мс → 57мс. Браузерная верификация: click-selection, collapse/expand группы (индикатор+скрытие детей), удаление объекта, вложенность с depth-отступами, порядок строк — всё корректно, 0 console errors (`src/ui/OutlinerPanel.js`).
+### Fix вЂ” РѕР±Р»Р°СЃС‚СЊ С…РёС‚-С‚РµСЃС‚Р° РїРѕРІС‘СЂРЅСѓС‚РѕР№ РІР»РѕР¶РµРЅРЅРѕР№ РіСЂСѓРїРїС‹ РЅРµ СЃРѕРІРїР°РґР°Р»Р° СЃ СЂРµР°Р»СЊРЅРѕР№ РїРѕРІС‘СЂРЅСѓС‚РѕР№ СЂР°РјРєРѕР№ (WorldPositionUtils)
 
-#### 📁 Изменённые файлы
+- **`isPointInWorldBounds()`: РґР»СЏ РіСЂСѓРїРї СЃ РїРѕРІС‘СЂРЅСѓС‚С‹Рј РїСЂРµРґРєРѕРј РѕР±Р»Р°СЃС‚СЊ РєР»РёРєР° Р±С‹Р»Р° СЂР°Р·РґСѓС‚Р°/СЃРјРµС‰РµРЅР° РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕ СЂРµР°Р»СЊРЅРѕ РѕС‚СЂРёСЃРѕРІР°РЅРЅРѕР№ РїРѕРІС‘СЂРЅСѓС‚РѕР№ СЂР°РјРєРё** вЂ” РёСЃРїРѕР»СЊР·РѕРІР°Р»СЃСЏ `getWorldBounds(obj, ..., skipOwnRotation=true)`, РєРѕС‚РѕСЂС‹Р№ РґР»СЏ СЂРµРЅРґРµСЂР° СЂР°РјРєРё СЃРїРµС†РёР°Р»СЊРЅРѕ В«Р·Р°РїРµРєР°РµС‚В» РїРѕРІРѕСЂРѕС‚ РїСЂРµРґРєРѕРІ РІ СЂРµР·СѓР»СЊС‚Р°С‚ (РїРµСЂРµСЃС‚СЂР°РёРІР°РµС‚ AABB РїРѕ 4 РїРѕРІС‘СЂРЅСѓС‚С‹Рј СѓРіР»Р°Рј вЂ” РєРѕСЂСЂРµРєС‚РЅРѕ РґР»СЏ РѕС‚СЂРёСЃРѕРІРєРё, С‚.Рє. РґР°С‘С‚ РєРѕРЅСЃРµСЂРІР°С‚РёРІРЅС‹Р№ РѕС…РІР°С‚С‹РІР°СЋС‰РёР№ РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРє). `isPointInWorldBounds` Р·Р°С‚РµРј Р•Р©РЃ Р РђР— РѕР±СЂР°С‚РЅРѕ РїРѕРІРѕСЂР°С‡РёРІР°Р» С‚РѕС‡РєСѓ РєР»РёРєР° РЅР° РїРѕР»РЅС‹Р№ СѓРіРѕР» (РїСЂРµРґРєРё+СЃРІРѕР№) Рё СЃРІРµСЂСЏР» СЃ СЌС‚РёРј СѓР¶Рµ РїРѕРІС‘СЂРЅСѓС‚С‹Рј Рё СЂР°Р·РґСѓС‚С‹Рј Р±РѕРєСЃРѕРј вЂ” СѓРіРѕР» РїСЂРµРґРєРѕРІ СѓС‡РёС‚С‹РІР°Р»СЃСЏ РґРІР°Р¶РґС‹ Рё РЅРµСЃРѕРіР»Р°СЃРѕРІР°РЅРЅРѕ. Р—Р°РјРµРЅРµРЅРѕ РЅР° РїРѕРґС…РѕРґ РєР°Рє РґР»СЏ РїСЂРѕСЃС‚С‹С… РѕР±СЉРµРєС‚РѕРІ: Р±РµСЂС‘С‚СЃСЏ РїРѕР»РЅРѕСЃС‚СЊСЋ РЅРµРїРѕРІС‘СЂРЅСѓС‚С‹Р№ (РЅРё СЃРІРѕРёРј, РЅРё СЂРѕРґРёС‚РµР»СЊСЃРєРёРј СѓРіР»РѕРј) РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРє С‡РµСЂРµР· `getLocalCenter()`/`obj.getBounds(true)`, РІС‹С‡РёСЃР»СЏРµС‚СЃСЏ РёСЃС‚РёРЅРЅС‹Р№ РјРёСЂРѕРІРѕР№ С†РµРЅС‚СЂ (РёРЅРІР°СЂРёР°РЅС‚РµРЅ Рє РїРѕРІРѕСЂРѕС‚Сѓ) Рё С‚РѕС‡РєР° РєР»РёРєР° РѕР±СЂР°С‚РЅРѕ РїРѕРІРѕСЂР°С‡РёРІР°РµС‚СЃСЏ РЅР° `totalRotation` РІРѕРєСЂСѓРі РЅРµРіРѕ. РџСЂРѕРІРµСЂРµРЅРѕ РІ Р±СЂР°СѓР·РµСЂРµ: СЃС‚СЂСѓРєС‚СѓСЂР° c1/c2 РІ B(rotation=45В°) РІРЅСѓС‚СЂРё A(rotation=30В°) вЂ” 2116 С‚РѕС‡РµРє СЃРµС‚РєРё СЃСЂР°РІРЅРµРЅС‹ СЃ СЌС‚Р°Р»РѕРЅРЅРѕР№ (РјР°С‚РµРјР°С‚РёС‡РµСЃРєРё С‚РѕС‡РЅРѕР№) РіРµРѕРјРµС‚СЂРёРµР№, Р±С‹Р»Рѕ 312 РЅРµСЃРѕРІРїР°РґРµРЅРёР№ (14.7%), СЃС‚Р°Р»Рѕ 0; СЂРµРіСЂРµСЃСЃРёСЏ РѕС‚СЃСѓС‚СЃС‚РІСѓРµС‚ РґР»СЏ РїСЂРѕСЃС‚РѕР№ РїРѕРІС‘СЂРЅСѓС‚РѕР№ РіСЂСѓРїРїС‹ Р±РµР· РїСЂРµРґРєР° Рё РґР»СЏ РіСЂСѓРїРїС‹ Р±РµР· РїРѕРІРѕСЂРѕС‚Р° (`src/utils/WorldPositionUtils.js`).
+
+### Fix вЂ” РЅРµР·РЅР°С‡РёС‚РµР»СЊРЅС‹Р№ РґСЂРµР№С„ СЃРѕСЃРµРґРµР№ РїСЂРё РёР·РІР»РµС‡РµРЅРёРё РѕР±СЉРµРєС‚Р° РёР· РІР»РѕР¶РµРЅРЅРѕР№ РіСЂСѓРїРїС‹ (GroupOperations)
+
+- **`extractObjectFromGroup()`: РєРѕРјРїРµРЅСЃР°С†РёСЏ СЂРѕРґРёС‚РµР»СЊСЃРєРёС… pivot'РѕРІ Р·Р°РїСѓСЃРєР°Р»Р°СЃСЊ Р”Рћ РІСЃС‚Р°РІРєРё РёР·РІР»РµС‡С‘РЅРЅРѕРіРѕ РѕР±СЉРµРєС‚Р° РІ parentGroup** вЂ” РїСЂРё РІР»РѕР¶РµРЅРЅС‹С… РїРѕРІС‘СЂРЅСѓС‚С‹С… РіСЂСѓРїРїР°С… (`B` РІРЅСѓС‚СЂРё `A`, РѕР±Рµ СЃ `rotation`) РєР°СЃРєР°РґРЅР°СЏ РєРѕРјРїРµРЅСЃР°С†РёСЏ (`_applyAncestorPivotCompensations`) РїСЂРёРјРµРЅСЏР»Р°СЃСЊ РѕРґРЅРёРј Р±Р»РѕРєРѕРј СЃСЂР°Р·Сѓ РїРѕСЃР»Рµ СѓРґР°Р»РµРЅРёСЏ СЂРµР±С‘РЅРєР° РёР· `B`, С‚.Рµ. Р”Рћ С‚РѕРіРѕ РєР°Рє СЌС‚РѕС‚ СЂРµР±С‘РЅРѕРє РґРѕР±Р°РІР»СЏР»СЃСЏ РІ `A.children`. РљРѕРјРїРµРЅСЃР°С†РёСЏ `A` СЃС‡РёС‚Р°Р»Р°СЃСЊ С‚РѕР»СЊРєРѕ РїРѕ СЌС„С„РµРєС‚Сѓ В«`B` РїРѕС‚РµСЂСЏР»Р° СЂРµР±С‘РЅРєР°В», РІС‚РѕСЂР°СЏ РїРµСЂС‚СѓСЂР±Р°С†РёСЏ (В«`A` РїРѕР»СѓС‡РёР»Р° СЂРµР±С‘РЅРєР°В») РѕСЃС‚Р°РІР°Р»Р°СЃСЊ РЅРµРєРѕРјРїРµРЅСЃРёСЂРѕРІР°РЅРЅРѕР№ в†’ `aSibling`/`c2` РІРЅСѓС‚СЂРё `A`/`B` РІРёР·СѓР°Р»СЊРЅРѕ СЃРјРµС‰Р°Р»РёСЃСЊ. Р Р°Р·Р±РёС‚Рѕ РЅР° РґРІРµ С„Р°Р·С‹: (1) `group` (B) РєРѕРјРїРµРЅСЃРёСЂСѓРµС‚СЃСЏ СЃСЂР°Р·Сѓ РїРѕСЃР»Рµ СѓРґР°Р»РµРЅРёСЏ вЂ” РµС‘ bounds СѓР¶Рµ С„РёРЅР°Р»СЊРЅС‹; (2) РєРѕРјРїРµРЅСЃР°С†РёСЏ РѕСЃС‚Р°Р»СЊРЅС‹С… РїСЂРµРґРєРѕРІ (`ancestorPivots.slice(1)`, РІРєР»СЋС‡Р°СЏ `parentGroup`) РѕС‚Р»РѕР¶РµРЅР° РґРѕ РџРћРЎР›Р• РІСЃС‚Р°РІРєРё РІ `parentGroup` вЂ” РёС… bounds С„РёРЅР°Р»СЊРЅС‹ С‚РѕР»СЊРєРѕ РїРѕСЃР»Рµ РѕР±РѕРёС… РёР·РјРµРЅРµРЅРёР№. РџСЂРѕРІРµСЂРµРЅРѕ РІ Р±СЂР°СѓР·РµСЂРµ (3-СѓСЂРѕРІРЅРµРІР°СЏ СЃС‚СЂСѓРєС‚СѓСЂР° c1/c2 РІ B(60В°) РІ A(30В°) + aSibling): `aSiblingDrift`/`c2Drift`/`c1Drift` = `{dx:0, dy:0, dRot:0}` (`src/core/GroupOperations.js`).
+
+### Fix вЂ” РјРѕСЂРіР°РЅРёРµ/РїСЂРѕРїР°РґР°РЅРёРµ РґСѓР±Р»РёРєР°С‚Р° РІ РјРѕРјРµРЅС‚ СЂР°Р·РјРµС‰РµРЅРёСЏ (DuplicateOperations)
+
+- **`confirmPlacement()`: СѓР±СЂР°РЅР° debounce-Р·Р°РґРµСЂР¶РєР° РёРЅРІР°Р»РёРґР°С†РёРё РєСЌС€РµР№ СЂРµРЅРґРµСЂР° РґР»СЏ С‚РѕР»СЊРєРѕ С‡С‚Рѕ СЂР°Р·РјРµС‰С‘РЅРЅС‹С… РѕР±СЉРµРєС‚РѕРІ** вЂ” РІС‹Р·С‹РІР°Р»СЃСЏ С‚РѕР»СЊРєРѕ `editor.scheduleCacheInvalidation()`, СЂРµР°Р»СЊРЅС‹Р№ СЃР±СЂРѕСЃ `visibleObjectsCache`/spatial index РёСЃРїРѕР»РЅСЏРµС‚СЃСЏ РІ `setTimeout` (~100РјСЃ, `PERFORMANCE.CACHE_TIMEOUT_MS`). РџРµСЂРІС‹Рµ РЅРµСЃРєРѕР»СЊРєРѕ РєР°РґСЂРѕРІ РїРѕСЃР»Рµ СЂР°Р·РјРµС‰РµРЅРёСЏ `render()` Р±СЂР°Р» СѓР¶Рµ Р·Р°РєСЌС€РёСЂРѕРІР°РЅРЅС‹Р№ (Р±РµР· РЅРѕРІРѕРіРѕ РѕР±СЉРµРєС‚Р°) СЃРїРёСЃРѕРє РІРёРґРёРјС‹С… РѕР±СЉРµРєС‚РѕРІ Рё spatial index, РµС‰С‘ РЅРµ Р·РЅР°СЋС‰РёР№ Рѕ РЅРѕРІРѕРј РѕР±СЉРµРєС‚Рµ вЂ” РєРѕРїРёСЏ РІРёР·СѓР°Р»СЊРЅРѕ РїСЂРѕРїР°РґР°Р»Р°/РјРѕСЂРіР°Р»Р° СЃСЂР°Р·Сѓ РїРѕСЃР»Рµ РёСЃС‡РµР·РЅРѕРІРµРЅРёСЏ preview-РїСЂРёР·СЂР°РєР° Рё РїРѕСЏРІР»СЏР»Р°СЃСЊ С‚РѕР»СЊРєРѕ РїРѕСЃР»Рµ СЃСЂР°Р±Р°С‚С‹РІР°РЅРёСЏ С‚Р°Р№РјРµСЂР°. Р”РѕР±Р°РІР»РµРЅС‹ СЃРёРЅС…СЂРѕРЅРЅС‹Рµ `renderOperations.clearVisibleObjectsCache()` + `markSpatialIndexDirty()` СЃСЂР°Р·Сѓ РїРѕСЃР»Рµ `scheduleCacheInvalidation()` вЂ” СЃР»РµРґСѓСЋС‰РёР№ Р¶Рµ `render()` РІРёРґРёС‚ Р°РєС‚СѓР°Р»СЊРЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ. РќРµ СЃРІСЏР·Р°РЅРѕ СЃ РїРµСЂС„-С„РёРєСЃР°РјРё render-loop/StateManager/compareStackOrder/OutlinerPanel вЂ” РѕС‚РґРµР»СЊРЅС‹Р№ Р±Р°Рі РёРјРµРЅРЅРѕ РІ РєСЌС€РёСЂРѕРІР°РЅРёРё СЃС†РµРЅС‹. РџСЂРѕРІРµСЂРµРЅРѕ РІ Р±СЂР°СѓР·РµСЂРµ: `getVisibleObjects`/`spatialIndex` СЃСЂР°Р·Сѓ РїРѕСЃР»Рµ `confirmPlacement()` СЃРѕРґРµСЂР¶Р°С‚ РЅРѕРІС‹Р№ РѕР±СЉРµРєС‚ (Р±С‹Р»Рѕ: С‚РѕР»СЊРєРѕ РїРѕСЃР»Рµ debounce) (`src/core/DuplicateOperations.js`).
+
+- **Р¤РёРєСЃ: РІ group edit mode РјРѕР¶РЅРѕ Р±С‹Р»Рѕ РІС‹Р±СЂР°С‚СЊ РѕР±СЉРµРєС‚С‹ РІРЅСѓС‚СЂРё РІР»РѕР¶РµРЅРЅС‹С… child-РіСЂСѓРїРї** вЂ” `computeSelectableSet`, `findObjectAtPoint` Рё marquee СЂРµРєСѓСЂСЃРёРІРЅРѕ РѕР±С…РѕРґРёР»Рё РІСЃРµС… РїРѕС‚РѕРјРєРѕРІ Р°РєС‚РёРІРЅРѕР№ РіСЂСѓРїРїС‹. РџСЂР°РІРёР»Рѕ С‚РµРїРµСЂСЊ: (1) **РїСЂСЏРјС‹Рµ РґРµС‚Рё** Р°РєС‚РёРІРЅРѕР№ РіСЂСѓРїРїС‹ вЂ” РІС‹Р±РёСЂР°РµРјС‹; (2) **РІРЅРµС€РЅРёРµ top-level РѕР±СЉРµРєС‚С‹** (РЅРµ РІ РѕС‚РєСЂС‹С‚С‹С… РіСЂСѓРїРїР°С…) вЂ” РІС‹Р±РёСЂР°РµРјС‹, С‡С‚РѕР±С‹ РёС… РјРѕР¶РЅРѕ Р±С‹Р»Рѕ Р·Р°С‚СЏРЅСѓС‚СЊ РІРЅСѓС‚СЂСЊ; (3) РѕР±СЉРµРєС‚С‹ **РІРЅСѓС‚СЂРё child-РіСЂСѓРїРї** вЂ” РЅРµ РІС‹Р±РёСЂР°РµРјС‹ (С‚РѕР»СЊРєРѕ СЃР°РјР° child-РіСЂСѓРїРїР° РєР°Рє С†РµР»РѕРµ). (`src/core/ObjectOperations.js`, `src/event-system/MouseHandlers.js`)
+
+- **Р¤РёРєСЃ: reparenting РѕР±СЉРµРєС‚РѕРІ/РіСЂСѓРїРї РІ РёРµСЂР°СЂС…РёРё СЃ СЃРѕС…СЂР°РЅРµРЅРёРµРј РІРёР·СѓР°Р»СЊРЅРѕРіРѕ С‚СЂР°РЅСЃС„РѕСЂРјР°** вЂ” РїРѕР»РЅР°СЏ РїРµСЂРµСЂР°Р±РѕС‚РєР° РЅР° РѕСЃРЅРѕРІРµ РїР°С‚С‚РµСЂРЅР° `worldPositionStays=true` (Unity/Godot). РўСЂРё РєРѕСЂРЅРµРІС‹Рµ РѕС€РёР±РєРё: (1) **pivot mismatch**: `worldPointToLocalPointInGroup` РІС‹Р·С‹РІР°Р»СЃСЏ РџРћРЎР›Р• СѓРґР°Р»РµРЅРёСЏ в†’ `getBounds()` СѓР¶Рµ РґСЂСѓРіРѕР№, pivot СЃРґРІРёРЅСѓС‚ в†’ РѕР±СЉРµРєС‚ РїРѕРїР°РґР°Р» РЅРµ С‚СѓРґР°; (2) **СЃРјРµС‰РµРЅРёРµ РѕСЃС‚Р°РІС€РёС…СЃСЏ РґРµС‚РµР№**: СѓРґР°Р»РµРЅРёРµ/РґРѕР±Р°РІР»РµРЅРёРµ СЂРµР±С‘РЅРєР° СЃРґРІРёРіР°РµС‚ pivot РіСЂСѓРїРїС‹, С‡С‚Рѕ РІРёР·СѓР°Р»СЊРЅРѕ СЃРјРµС‰Р°РµС‚ РІСЃРµС… РѕСЃС‚Р°Р»СЊРЅС‹С…; (3) **insertion Р±РµР· РїРѕРїСЂР°РІРєРё rotation**: РїСЂРё РїРµСЂРµРЅРѕСЃРµ РІ РїРѕРІС‘СЂРЅСѓС‚СѓСЋ РіСЂСѓРїРїСѓ `obj.rotation` РЅРµ РєРѕСЂСЂРµРєС‚РёСЂРѕРІР°Р»СЃСЏ в†’ РѕР±СЉРµРєС‚ РјРµРЅСЏР» РІРёР·СѓР°Р»СЊРЅС‹Р№ СѓРіРѕР». Р РµС€РµРЅРёРµ: `WorldPositionUtils.applyGroupPivotCompensation(group, pOld)` вЂ” РІРјРµСЃС‚Рѕ РїРµСЂРµСЃС‡С‘С‚Р° РєРѕРѕСЂРґРёРЅР°С‚ РІСЃРµС… РґРµС‚РµР№ РєРѕСЂСЂРµРєС‚РёСЂСѓРµС‚ `group.x/y` РїРѕ С„РѕСЂРјСѓР»Рµ `G.x -= (1-cosОё)В·О”x + sinОёВ·О”y` (РѕС‚РјРµРЅСЏРµС‚ РґСЂРµР№С„ `(Iв€’R)В·О”`). РќРѕРІС‹Р№ `GroupOperations.addObjectToGroup` РґР»СЏ insertion. Р’СЃРµ 4 РїСѓС‚Рё reparenting СѓРЅРёС„РёС†РёСЂРѕРІР°РЅС‹: extract (Alt+drag), insert-to-group (drag-in, РѕР±Р° СѓСЂРѕРІРЅСЏ). (`src/utils/WorldPositionUtils.js`, `src/core/GroupOperations.js`, `src/event-system/MouseHandlers.js`)
+
+- **Р¤РёРєСЃ: СЂР°РјРєР° РїРѕРІС‘СЂРЅСѓС‚РѕР№ РіСЂСѓРїРїС‹ РїСЂРё РїРµСЂРµРјРµС‰РµРЅРёРё/Alt-drag РЅРµ СѓС‡РёС‚С‹РІР°Р»Р° rotation** вЂ” `RenderOperations.drawDuplicateObjects` РґР»СЏ РіСЂСѓРїРї СЃ `rotation` РїРѕР»СѓС‡Р°РµС‚ unrotated bounds С‡РµСЂРµР· `getDuplicateObjectBounds(..., skipOwnRotation=true)`. `drawAltDragSelectionRect` РїСЂРёРЅРёРјР°РµС‚ РѕР±СЉРµРєС‚, РІС‹Р·С‹РІР°РµС‚ `getFrameGeometry()`, РїРµСЂРµРґР°С‘С‚ `rotationDeg` РІ `strokeFrame`. (`src/core/RenderOperations.js`)
+
+- **Tab drag visual polish** вЂ” ghost-С‚Р°Р± С‚РµРїРµСЂСЊ СЃРѕР·РґР°С‘С‚СЃСЏ С‡РµСЂРµР· `cloneNode(true)` СЃ РєР»Р°СЃСЃР°РјРё РѕСЂРёРіРёРЅР°Р»Р° (`.tab`/`.tab-right`/`.tab-left`): РІС‹РіР»СЏРґРёС‚ РёРґРµРЅС‚РёС‡РЅРѕ СЂРµР°Р»СЊРЅРѕР№ РІРєР»Р°РґРєРµ, С‚РѕР»СЊРєРѕ СЃ РЅР°РєР»РѕРЅРѕРј. `.tab-drag-ghost` CSS СЃРІРµРґС‘РЅ Рє С‡РёСЃС‚Рѕ РїРѕР·РёС†РёРѕРЅРЅС‹Рј СЃРІРѕР№СЃС‚РІР°Рј (`position:fixed`, `opacity`, `transform`, `box-shadow`). РџРѕРґСЃРІРµС‚РєР° С†РµР»РµРІРѕР№ РїР°РЅРµР»Рё: `.tab-drop-zone` РЅР° tab-bar Р·Р°РјРµРЅРµРЅР° РЅР° `.tab-panel--drag-over` РЅР° СЃР°РјРѕРј `aside`-СЌР»РµРјРµРЅС‚Рµ РїР°РЅРµР»Рё (`src/ui/PanelPositionManager.js`, `styles/main.css`).
+- **Tab drag: РѕС‚СЃСѓС‚СЃС‚РІСѓСЋС‰Р°СЏ РїР°РЅРµР»СЊ РїРѕРєР°Р·С‹РІР°РµС‚СЃСЏ С‡РµСЂРµР· СЃСѓС‰РµСЃС‚РІСѓСЋС‰СѓСЋ View-РєРѕРјР°РЅРґСѓ РІРјРµСЃС‚Рѕ РєР°СЃС‚РѕРјРЅРѕР№ drop-Р·РѕРЅС‹** вЂ” РїСЂРё СЃС‚Р°СЂС‚Рµ РґСЂР°РіР° РІРєР»Р°РґРєРё, РµСЃР»Рё РїСЂРѕС‚РёРІРѕРїРѕР»РѕР¶РЅРѕР№ РїР°РЅРµР»Рё РЅРµС‚ РІ DOM, РІС‹Р·С‹РІР°РµС‚СЃСЏ `EventHandlers.togglePanel('leftPanel'/'rightPanel')` (С‚Р° Р¶Рµ РєРѕРјР°РЅРґР°, С‡С‚Рѕ Рё РїСѓРЅРєС‚ РјРµРЅСЋ View) вЂ” СЃРѕСЃС‚РѕСЏРЅРёРµ/prefs/С‡РµРєР±РѕРєСЃ РјРµРЅСЋ РѕСЃС‚Р°СЋС‚СЃСЏ СЃРёРЅС…СЂРѕРЅРЅС‹РјРё. Р•СЃР»Рё РґСЂР°Рі РѕС‚РјРµРЅСЏРµС‚СЃСЏ Р±РµР· РґСЂРѕРїР° РІ РЅРѕРІСѓСЋ РїР°РЅРµР»СЊ вЂ” РѕРЅР° СѓРґР°Р»СЏРµС‚СЃСЏ РѕР±СЂР°С‚РЅРѕ С‡РµСЂРµР· `removeEmptyPanel()`. РЈР±СЂР°РЅС‹ `_createNewPanelDropZones()`, `.tab-new-panel-zone*` CSS Рё РІСЃСЏ Р»РѕРіРёРєР° РіРѕР»СѓР±С‹С… Р·РѕРЅ-РїРѕРґСЃРєР°Р·РѕРє РїРѕ РєСЂР°СЏРј СЌРєСЂР°РЅР° (`src/ui/PanelPositionManager.js`, `styles/main.css`).
+- **Р¤РёРєСЃ: РїРѕРґСЃРІРµС‚РєР°/РґСЂРѕРї РЅР° РЅРѕРІСѓСЋ (РїСѓСЃС‚СѓСЋ) РїР°РЅРµР»СЊ РЅРµ СЃСЂР°Р±Р°С‚С‹РІР°Р»Рё** вЂ” РїРѕР»РѕСЃР° РІРєР»Р°РґРѕРє РїР°РЅРµР»Рё Р±РµР· РІРєР»Р°РґРѕРє СЃС…Р»РѕРїС‹РІР°РµС‚СЃСЏ РїРѕ РІС‹СЃРѕС‚Рµ РґРѕ ~1px (flex Р±РµР· children), Р° РґРµС‚РµРєС†РёСЏ С†РµР»Рё С‚СЂРµР±РѕРІР°Р»Р° РїРѕРїР°РґР°РЅРёСЏ РєСѓСЂСЃРѕСЂР° РёРјРµРЅРЅРѕ РЅР° РЅРµС‘ вЂ” РЅРµРґРѕСЃС‚РёР¶РёРјРѕ РїСЂРё РѕР±С‹С‡РЅРѕРј РґРІРёР¶РµРЅРёРё РјС‹С€Рё. Р”РµС‚РµРєС†РёСЏ РїРµСЂРµРїРёСЃР°РЅР° РЅР° `elUnder.closest('#left-tabs-panel, #right-tabs-panel')`: РїРѕРґСЃРІРµС‚РєР° `.tab-panel--drag-over` Рё РґСЂРѕРї С‚РµРїРµСЂСЊ СЂР°Р±РѕС‚Р°СЋС‚ РїСЂРё РЅР°РІРµРґРµРЅРёРё РЅР° Р»СЋР±СѓСЋ С‡Р°СЃС‚СЊ РїР°РЅРµР»Рё, РЅРµ С‚РѕР»СЊРєРѕ РЅР° РµС‘ С€Р°РїРєСѓ. Р—Р°РѕРґРЅРѕ СѓР±СЂР°РЅ РїСЂРѕРјРµР¶СѓС‚РѕС‡РЅС‹Р№ `getValidTabBars()`/`Set` вЂ” id РїР°РЅРµР»РµР№ СѓРЅРёРєР°Р»СЊРЅС‹, РґРѕРї. scoping РёР·Р±С‹С‚РѕС‡РµРЅ (`src/ui/PanelPositionManager.js`).
+
+- **Р¤РёРєСЃ: hit-testing РїРѕРІС‘СЂРЅСѓС‚С‹С… РіСЂСѓРїРї РёРіРЅРѕСЂРёСЂРѕРІР°Р» rotation** вЂ” РєР»РёРє РІ РїСѓСЃС‚РѕРµ РјРµСЃС‚Рѕ РІС‹Р±РёСЂР°Р» РїРѕРІС‘СЂРЅСѓС‚СѓСЋ РіСЂСѓРїРїСѓ, РµСЃР»Рё РїРѕРїР°РґР°Р» РІ РµС‘ axis-aligned bounding box (AABB), РґР°Р¶Рµ РІРЅРµ СЂРµР°Р»СЊРЅРѕР№ РІРёР·СѓР°Р»СЊРЅРѕР№ РіРµРѕРјРµС‚СЂРёРё. `WorldPositionUtils.isPointInWorldBounds()` РґР»СЏ РіСЂСѓРїРї СЃ `totalRotation` С‚РµРїРµСЂСЊ РїРѕР»СѓС‡Р°РµС‚ unrotated bounds (С‡РµСЂРµР· `skipOwnRotation: true`), РІС‹С‡РёСЃР»СЏРµС‚ С†РµРЅС‚СЂ, РїСЂРёРјРµРЅСЏРµС‚ inverse rotation Рє С‚РѕС‡РєРµ РєР»РёРєР° (Р°РЅР°Р»РѕРіРёС‡РЅРѕ СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РµР№ Р»РѕРіРёРєРµ РґР»СЏ РїСЂРѕСЃС‚С‹С… РѕР±СЉРµРєС‚РѕРІ) Рё РґРµР»Р°РµС‚ AABB-С‚РµСЃС‚ РІ Р»РѕРєР°Р»СЊРЅРѕР№ СЃРёСЃС‚РµРјРµ РєРѕРѕСЂРґРёРЅР°С‚. Р”Р»СЏ РїСЂРѕСЃС‚С‹С… РѕР±СЉРµРєС‚РѕРІ rotation-aware hit-testing СѓР¶Рµ Р±С‹Р» (`src/utils/WorldPositionUtils.js`).
+
+### Perf вЂ” render loop dirty-flag, StateManager.update() Р±РµР· full-clone, O(1) stacking-order compare
+
+#### вљЎ РџСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ
+
+- **Render loop: РїСЂРѕРїСѓСЃРє РєР°РґСЂР°, РµСЃР»Рё РЅРёС‡РµРіРѕ РЅРµ РёР·РјРµРЅРёР»РѕСЃСЊ** вЂ” `EventHandlers.startRenderLoop()` РІС‹Р·С‹РІР°Р» `editor.render()` Р±РµР·СѓСЃР»РѕРІРЅРѕ РЅР° РєР°Р¶РґС‹Р№ `requestAnimationFrame` (РїРѕСЃС‚РѕСЏРЅРЅС‹Рµ 60 СЂРµРЅРґРµСЂРѕРІ/СЃРµРє РґР°Р¶Рµ РЅР° РїРѕР»РЅРѕСЃС‚СЊСЋ СЃС‚Р°С‚РёС‡РЅРѕРј РєР°РЅРІР°СЃРµ). Р”РѕР±Р°РІР»РµРЅ `StateManager._needsRender` вЂ” С„Р»Р°Рі, РІС‹СЃС‚Р°РІР»СЏРµРјС‹Р№ РІ `true` РІРЅСѓС‚СЂРё `set()`/`update()` (СЌС‚Рѕ РїРѕРєСЂС‹РІР°РµС‚ РІСЃРµ РёРЅС‚РµСЂР°РєС‚РёРІРЅС‹Рµ РїСѓС‚Рё: mousemove СѓР¶Рµ Р±РµР·СѓСЃР»РѕРІРЅРѕ С€Р»С‘С‚ `mouse.x/y` С‡РµСЂРµР· `updateMouseState` РЅР° РєР°Р¶РґРѕРµ СЃРѕР±С‹С‚РёРµ, camera/selection/drag/marquee/duplicate вЂ” РІСЃС‘ РёРґС‘С‚ С‡РµСЂРµР· `stateManager`). Render loop С‚РµРїРµСЂСЊ РІС‹Р·С‹РІР°РµС‚ `editor.render()` С‚РѕР»СЊРєРѕ РµСЃР»Рё `stateManager.consumeNeedsRender()` РІРµСЂРЅСѓР» `true`. РќРµ РїРµСЂРµСЃРµРєР°РµС‚СЃСЏ СЃ 120 СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёРјРё СЏРІРЅС‹РјРё РІС‹Р·РѕРІР°РјРё `editor.render()` РїРѕ РєРѕРґРѕРІРѕР№ Р±Р°Р·Рµ вЂ” РѕРЅРё РїСЂРѕРґРѕР»Р¶Р°СЋС‚ СЂР°Р±РѕС‚Р°С‚СЊ РЅР°РїСЂСЏРјСѓСЋ, РјРёРЅСѓСЏ loop. РќРµ РЅР°Р№РґРµРЅРѕ РЅРё РѕРґРЅРѕР№ С‡РёСЃС‚Рѕ time-based canvas-Р°РЅРёРјР°С†РёРё (marching ants, `lineDashOffset` Рё С‚.Рї.), РЅРµР·Р°РІРёСЃРёРјРѕР№ РѕС‚ state вЂ” РїСЂРѕРІРµСЂРµРЅРѕ `grep`. РџСЂРѕРІРµСЂРµРЅРѕ РІ Р±СЂР°СѓР·РµСЂРµ: 0 СЂРµРЅРґРµСЂРѕРІ Р·Р° 1 СЃРµРє РїСЂРѕСЃС‚РѕСЏ (Р±С‹Р»Рѕ ~60), РµРґРёРЅРёС‡РЅРѕРµ РёР·РјРµРЅРµРЅРёРµ СЃРѕСЃС‚РѕСЏРЅРёСЏ РґР°С‘С‚ 1-2 СЂРµРЅРґРµСЂР° Рё РІРѕР·РІСЂР°С‚ Рє РїСЂРѕСЃС‚РѕСЋ (`EventHandlers.js`, `StateManager.js`).
+- **StateManager.update(): СѓР±СЂР°РЅ full-clone СЃРѕСЃС‚РѕСЏРЅРёСЏ** вЂ” `update()` РґРµР»Р°Р» `{ ...this.state }` РЅР° РєР°Р¶РґС‹Р№ РІС‹Р·РѕРІ (РјСѓС‚РёСЂСѓРµС‚ РЅР° РєР°Р¶РґС‹Р№ mousemove/wheel/drag tick) РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ `oldValue` РІ `notifyListeners`. Р”Р»СЏ dotted-РєР»СЋС‡РµР№ (`'mouse.lastX'` Рё С‚.Рї., РїРѕРґР°РІР»СЏСЋС‰РµРµ Р±РѕР»СЊС€РёРЅСЃС‚РІРѕ РІС‹Р·РѕРІРѕРІ) `oldState[key]` РІСЃРµРіРґР° Р±С‹Р»Р° `undefined` вЂ” РєР»РѕРЅРёСЂРѕРІР°РЅРёРµ Р±С‹Р»Рѕ С‡РёСЃС‚РѕР№ С‚СЂР°С‚РѕР№ Р±РµР· РїРѕР»СЊР·С‹ РґР»СЏ СЌС‚РёС… РєР»СЋС‡РµР№. РџРµСЂРµРїРёСЃР°РЅРѕ РїРѕ Р°РЅР°Р»РѕРіРёРё СЃ `set()`: `oldValue` С‡РёС‚Р°РµС‚СЃСЏ С‚РѕС‡РµС‡РЅРѕ РїРѕ РєР°Р¶РґРѕРјСѓ РєР»СЋС‡Сѓ РЅРµРїРѕСЃСЂРµРґСЃС‚РІРµРЅРЅРѕ РїРµСЂРµРґ РµРіРѕ РїРµСЂРµР·Р°РїРёСЃСЊСЋ, Р±РµР· РєР»РѕРЅРёСЂРѕРІР°РЅРёСЏ РґРµСЂРµРІР° С†РµР»РёРєРѕРј. РџРѕР±РѕС‡РЅС‹Р№ СЌС„С„РµРєС‚ вЂ” С‚РµРїРµСЂСЊ `oldValue` РІ РїРѕРґРїРёСЃРєР°С… РєРѕСЂСЂРµРєС‚РµРЅ Рё РґР»СЏ nested-РєР»СЋС‡РµР№ (СЂР°РЅСЊС€Рµ Р±С‹Р» РІСЃРµРіРґР° `undefined`). РџСЂРѕРІРµСЂРµРЅРѕ РІ Р±СЂР°СѓР·РµСЂРµ: `subscribe` РЅР° `'mouse.lastX'` РїРѕР»СѓС‡Р°РµС‚ РІРµСЂРЅС‹Р№ `oldVal` РїРѕСЃР»Рµ `update()` (`StateManager.js`).
+- **`Level.compareStackOrder`: O(1) СЃСЂР°РІРЅРµРЅРёРµ РІРјРµСЃС‚Рѕ O(NГ—D) РґРІРѕР№РЅРѕРіРѕ tree-search Р·Р° СЃСЂР°РІРЅРµРЅРёРµ** вЂ” РєРѕРјРїР°СЂР°С‚РѕСЂ РІС‹Р·С‹РІР°Р» `GroupTraversalUtils.findObjectPath()` РґРІР°Р¶РґС‹ РЅР° РєР°Р¶РґСѓСЋ РїР°СЂСѓ СЃСЂР°РІРЅРёРІР°РµРјС‹С… РѕР±СЉРµРєС‚РѕРІ (РїРѕР»РЅС‹Р№ DFS РѕС‚ РєРѕСЂРЅСЏ), РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РІ `Array.sort` (`RenderOperations.getVisibleObjects` вЂ” РєР°Р¶РґС‹Р№ РєР°РґСЂ РїСЂРё РґРІРёР¶РµРЅРёРё РєР°РјРµСЂС‹; `ObjectOperations._sortObjectsByZIndexDescending` вЂ” РЅР° РєР°Р¶РґС‹Р№ hit-test), С‚.Рµ. O(NГ—D) РїРѕРёСЃРє СѓРјРЅРѕР¶Р°Р»СЃСЏ РЅР° O(M log M) СЃСЂР°РІРЅРµРЅРёР№ СЃРѕСЂС‚РёСЂРѕРІРєРё. Р”РѕР±Р°РІР»РµРЅС‹ `Level.buildStackOrderIndex()` (РѕРґРёРЅ O(N) DFS-РїСЂРѕС…РѕРґ, РЅР°Р·РЅР°С‡Р°СЋС‰РёР№ РєР°Р¶РґРѕРјСѓ РѕР±СЉРµРєС‚Сѓ РїРѕСЂСЏРґРєРѕРІС‹Р№ РЅРѕРјРµСЂ вЂ” pre-order DFS СЌРєРІРёРІР°Р»РµРЅС‚РµРЅ Р»РµРєСЃРёРєРѕРіСЂР°С„РёС‡РµСЃРєРѕРјСѓ СЃСЂР°РІРЅРµРЅРёСЋ РїСѓС‚РµР№) Рё `Level.compareStackOrderIndexed(a, b, index)` (O(1) СЃСЂР°РІРЅРµРЅРёРµ РїРѕ РїСЂРµРґРІС‹С‡РёСЃР»РµРЅРЅРѕРјСѓ РёРЅРґРµРєСЃСѓ). РРЅРґРµРєСЃ СЃС‚СЂРѕРёС‚СЃСЏ РѕРґРёРЅ СЂР°Р· РїРµСЂРµРґ `.sort()`, РЅРµ РїРµСЂСЃРёСЃС‚РµРЅС‚РЅС‹Р№ (Р±РµР· РёРЅРІР°Р»РёРґР°С†РёРё, РІСЃРµРіРґР° СЃРІРµР¶РёР№ РЅР° РїРµСЂРµСЃС‡С‘С‚) вЂ” РёСЃРєР»СЋС‡Р°РµС‚ СЂРёСЃРє СЂР°СЃСЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё СЃ РЅРѕРІС‹Рј `ObjectOperations.applyStackOrderAction` (Bring to Front Рё С‚.Рґ.), РєРѕС‚РѕСЂС‹Р№ РЅРµ РїСЂРѕС…РѕРґРёС‚ С‡РµСЂРµР· СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёРµ `markSpatialIndexDirty()`-С‚РѕС‡РєРё. РЎС‚Р°СЂС‹Р№ `compareStackOrder` (path-search) РѕСЃС‚Р°РІР»РµРЅ РЅРµС‚СЂРѕРЅСѓС‚С‹Рј РґР»СЏ РѕСЃС‚Р°Р»СЊРЅС‹С… РѕРґРёРЅРѕС‡РЅС‹С… РІС‹Р·РѕРІРѕРІ. РџСЂРѕРІРµСЂРµРЅРѕ СЌРєРІРёРІР°Р»РµРЅС‚РЅРѕСЃС‚СЊСЋ РЅР° СЃРёРЅС‚РµС‚РёС‡РµСЃРєРѕРј РґРµСЂРµРІРµ (64 РїР°СЂС‹ СЃСЂР°РІРЅРµРЅРёР№, 0 СЂР°СЃС…РѕР¶РґРµРЅРёР№) (`Level.js`, `RenderOperations.js`, `ObjectOperations.js`).
+
+#### рџ“Ѓ РР·РјРµРЅС‘РЅРЅС‹Рµ С„Р°Р№Р»С‹
+
+`src/event-system/EventHandlers.js` В· `src/managers/StateManager.js` В· `src/models/Level.js` В· `src/core/RenderOperations.js` В· `src/core/ObjectOperations.js`
+
+---
+
+### Perf вЂ” OutlinerPanel: incremental keyed DOM diff РІРјРµСЃС‚Рѕ full teardown/rebuild
+
+#### вљЎ РџСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ
+
+- **OutlinerPanel.render(): keyed reconciliation РІРјРµСЃС‚Рѕ РїРѕР»РЅРѕР№ РїРµСЂРµСЃР±РѕСЂРєРё DOM** вЂ” `render()` РЅР° РєР°Р¶РґС‹Р№ РІС‹Р·РѕРІ СЃРЅРѕСЃРёР» Рё РїРµСЂРµСЃРѕР·РґР°РІР°Р» РІСЃРµ DOM-СѓР·Р»С‹ СЃРїРёСЃРєР° РѕР±СЉРµРєС‚РѕРІ (РїСЂРё ~2000 РѕР±СЉРµРєС‚РѕРІ вЂ” 200-400РјСЃ Р·Р° РІС‹Р·РѕРІ; Р·Р°РјРµСЂРµРЅРѕ С‡РµСЂРµР· chrome-devtools РїСЂРё РїСЂРѕС„РёР»РёСЂРѕРІР°РЅРёРё В«Р»Р°РіР° РїСЂРё СЂР°Р·РјРµС‰РµРЅРёРё РґСѓР±Р»РёРєР°С‚Р°В»: `updateAllPanels()` в†’ `outlinerPanel.render()` РґРѕРјРёРЅРёСЂРѕРІР°Р» РЅР°Рґ РІСЃРµРј РѕСЃС‚Р°Р»СЊРЅС‹Рј РІРјРµСЃС‚Рµ РІР·СЏС‚С‹Рј вЂ” СЃР°Рј `confirmPlacement` Р±РµР· РЅРµРіРѕ ~5РјСЃ). РўРµРїРµСЂСЊ: (1) РєРѕРЅС‚РµР№РЅРµСЂ `#outliner-objects-container` СЃРѕР·РґР°С‘С‚СЃСЏ РѕРґРёРЅ СЂР°Р· Рё РїРµСЂРµРёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ (middle-mouse panning Р±РёРЅРґРёС‚СЃСЏ РѕРґРЅРѕРєСЂР°С‚РЅРѕ; `ScrollUtils.setupMiddleMouseScrolling` РґРµРґСѓРїРёС‚ РїРѕ РєРѕРЅС‚РµР№РЅРµСЂСѓ); (2) РЅРѕРІС‹Р№ `buildFlatRenderList()` вЂ” DFS-СЂР°Р·РІС‘СЂС‚РєР° РѕС‚С„РёР»СЊС‚СЂРѕРІР°РЅРЅРѕРіРѕ РґРµСЂРµРІР° РІ РїР»РѕСЃРєРёР№ СЃРїРёСЃРѕРє `{obj, depth}` СЃ СѓС‡С‘С‚РѕРј collapsed-РіСЂСѓРїРї Рё РїРѕРёСЃРєР° (С‚Р° Р¶Рµ Р»РѕРіРёРєР°, С‡С‚Рѕ Р±С‹Р»Р° РІ СЂРµРєСѓСЂСЃРёРё `renderGroupNode`); (3) РЅРѕРІС‹Р№ `reconcileFlatList()` вЂ” keyed diff РїРѕ `Map<objId, node>` (`_itemNodeCache`): РЅРµРёР·РјРµРЅС‘РЅРЅС‹Рµ СѓР·Р»С‹ РїРµСЂРµРёСЃРїРѕР»СЊР·СѓСЋС‚СЃСЏ РЅР° РјРµСЃС‚Рµ (O(1) РїСЂРѕРІРµСЂРєР° РїРѕР·РёС†РёРё, РЅРѕР»СЊ DOM-РѕРїРµСЂР°С†РёР№), РЅРѕРІС‹Рµ СЃРѕР·РґР°СЋС‚СЃСЏ, РїРµСЂРµСЃС‚Р°РІР»РµРЅРЅС‹Рµ РґРІРёРіР°СЋС‚СЃСЏ С‡РµСЂРµР· `insertBefore` (move, РЅРµ clone), РёСЃС‡РµР·РЅСѓРІС€РёРµ СѓРґР°Р»СЏСЋС‚СЃСЏ; (4) `renderGroupNode`/`renderObjectNode` РїРµСЂРµРІРµРґРµРЅС‹ РЅР° create-or-refresh СЃРёРіРЅР°С‚СѓСЂСѓ `(obj, depth, existingNode)` вЂ” РїСЂРё reuse РѕР±РЅРѕРІР»СЏСЋС‚СЃСЏ С‚РѕР»СЊРєРѕ РёР·РјРµРЅСЏРµРјС‹Рµ С‡Р°СЃС‚Рё (paddingLeft/РёРјСЏ/СЃС‡С‘С‚С‡РёРє РґРµС‚РµР№/collapse-РіР»РёС„/locked/selected), listeners РЅРµ РїРµСЂРµРІРµС€РёРІР°СЋС‚СЃСЏ; (5) click/dblclick-С…РµРЅРґР»РµСЂС‹ РёС‰СѓС‚ РѕР±СЉРµРєС‚ РїРѕ `item.dataset.id` С‡РµСЂРµР· `level.findObjectById()` РІ РјРѕРјРµРЅС‚ РєР»РёРєР°, Р° РЅРµ Р·Р°РјС‹РєР°СЋС‚ СЃСЃС‹Р»РєСѓ РЅР° РѕР±СЉРµРєС‚ вЂ” reused-СѓР·РµР» РѕСЃС‚Р°С‘С‚СЃСЏ РєРѕСЂСЂРµРєС‚РЅС‹Рј РїРѕСЃР»Рµ undo/redo, Р·Р°РјРµРЅСЏСЋС‰РµРіРѕ РѕР±СЉРµРєС‚С‹; (6) inline-rename input РЅРµ РїРµСЂРµР·Р°РїРёСЃС‹РІР°РµС‚СЃСЏ, РїРѕРєР° РІ С„РѕРєСѓСЃРµ. Р‘Р°РЅРЅРµСЂ СЂРµР·СѓР»СЊС‚Р°С‚РѕРІ РїРѕРёСЃРєР° вЂ” РѕРґРёРЅРѕС‡РЅС‹Р№ СѓР·РµР» РІРЅРµ diff. Р—Р°РјРµСЂ РїРѕСЃР»Рµ (С‚Рµ Р¶Рµ 2000 РѕР±СЉРµРєС‚РѕРІ): cold render (РІСЃРµ СѓР·Р»С‹ СЃРѕР·РґР°СЋС‚СЃСЏ) ~77РјСЃ, warm render (РЅРёС‡РµРіРѕ РЅРµ РёР·РјРµРЅРёР»РѕСЃСЊ) ~30РјСЃ, `confirmPlacement` РґСѓР±Р»РёРєР°С‚Р° 174РјСЃ в†’ 57РјСЃ. Р‘СЂР°СѓР·РµСЂРЅР°СЏ РІРµСЂРёС„РёРєР°С†РёСЏ: click-selection, collapse/expand РіСЂСѓРїРїС‹ (РёРЅРґРёРєР°С‚РѕСЂ+СЃРєСЂС‹С‚РёРµ РґРµС‚РµР№), СѓРґР°Р»РµРЅРёРµ РѕР±СЉРµРєС‚Р°, РІР»РѕР¶РµРЅРЅРѕСЃС‚СЊ СЃ depth-РѕС‚СЃС‚СѓРїР°РјРё, РїРѕСЂСЏРґРѕРє СЃС‚СЂРѕРє вЂ” РІСЃС‘ РєРѕСЂСЂРµРєС‚РЅРѕ, 0 console errors (`src/ui/OutlinerPanel.js`).
+
+#### рџ“Ѓ РР·РјРµРЅС‘РЅРЅС‹Рµ С„Р°Р№Р»С‹
 
 `src/ui/OutlinerPanel.js`
 
 ---
 
-- **Backspace-to-reset (Blender-style hover reset)** — глобальный хоткей `Backspace`: если курсор мыши наведён на конкретное resettable-поле в DetailsPanel/SettingsPanel — оно сбрасывается к дефолтному значению; если наведён на заголовок/контейнер секции (любой уровень вложенности, включая вложенные подсекции) — сбрасываются все зарегистрированные поля внутри неё. Определяется через `:hover` (`document.querySelectorAll(':hover')`, последний элемент — реально то, что под курсором), а не через фокус клавиатуры — то есть «что под курсором в момент нажатия», а не «что сейчас редактируется». Не мешает обычному редактированию текста: если под курсором ровно одно поле и оно же в фокусе с текстовым вводом — `Backspace` работает как обычное удаление символа. Новый модуль-синглтон `ResetRegistry` (`src/utils/ResetRegistry.js`) хранит `Map<scopeKey, {element, defaultValue}[]>`; панели регистрируют свои resettable-поля на каждый рендер (`ResetRegistry.setFields(scopeKey, fields)`), точка входа — `ResetRegistry.handleBackspace()`, вызывается из `EventHandlers.handleKeyDown` до проверки фокуса на INPUT/TEXTAREA. Архитектурно сброс не содержит собственной commit-логики: `applyDefault()` проставляет `element.value`/`element.checked` и диспатчит те же `input`/`change`/`blur` DOM-события, которые уже слушают существующие обработчики каждой панели (история/`notifyPropertyChange` в DetailsPanel; `ConfigManager`/`StateManager` sync в SettingsPanel) — ноль дублирования логики персистентности. `DetailsPanel.registerResettable(element, defaultValue)` подключён для полей Transform (x, y, width, height, rotation — дефолты через новую константу `TRANSFORM_DEFAULTS`, использующую расширенный `DEFAULT_OBJECT` с добавленными `X: 0, Y: 0, ROTATION: 0` в `EditorConstants.js`) и для поля Color в Visual (одиночный и multi-select); сознательно не подключены Name/Type (нет осмысленного дефолта) и Custom Properties (нет схемы дефолтов). `SettingsPanel.rebuildResetRegistry()` сканирует все `[data-setting]`-элементы (не CSS-класс — обычные вкладки используют `setting-input`, `GridSettings.js` — `settings-input`, единственный общий маркер — атрибут `data-setting`), вызывается в конце `setupSettingsInputs()`; вкладка Hotkeys не участвует (там `.hotkey-input`/`data-shortcut`, read-only декларация без концепции дефолта). Новый метод `ConfigManager.getDefault(path)` (зеркало `get(path)`) читает из закешированного глубокого клона `getDefaultConfigs()` (`this._defaultConfigsCache`, JSON-клонирование обязательно — `mergeConfigs()` копирует только топ-level категории, иначе вложенные пути делили бы объект с живым `this.configs`). Хоткей задокументирован в `config/defaults/shortcuts.json` → `ui.resetToDefault` (`key: "Backspace"`), виден в Settings → Hotkeys (`src/utils/ResetRegistry.js`, `src/event-system/EventHandlers.js`, `src/constants/EditorConstants.js`, `src/ui/DetailsPanel.js`, `src/managers/ConfigManager.js`, `src/ui/SettingsPanel.js`, `config/defaults/shortcuts.json`).
-  **Фикс (тот же день):** (1) `findTargets()` эскалировался до `document.body`/`documentElement`, которые структурно содержат вообще все зарегистрированные поля — из-за этого `Backspace` срабатывал откуда угодно в интерфейсе, а не только над панелью; теперь walk останавливается до body/html. (2) Width/Height сбрасывались в жёсткие `32×32` вместо реального размера ассета — добавлен `DetailsPanel.getObjectDefaultSize(obj)` (ищет ассет по `obj.imgSrc` через `assetManager.getAllAssets()`, берёт его `width`/`height`; без совпадения — фоллбэк на `DEFAULT_OBJECT`). Для multi-select, где у объектов могут быть разные ассеты, `ResetRegistry`-поле теперь опционально поддерживает `{element, reset: fn}` (кастомная функция сброса вместо одного статичного значения) — width/height в `setupMultipleTransformsListeners` сбрасывают каждый объект к его собственному дефолту.
+- **Backspace-to-reset (Blender-style hover reset)** вЂ” РіР»РѕР±Р°Р»СЊРЅС‹Р№ С…РѕС‚РєРµР№ `Backspace`: РµСЃР»Рё РєСѓСЂСЃРѕСЂ РјС‹С€Рё РЅР°РІРµРґС‘РЅ РЅР° РєРѕРЅРєСЂРµС‚РЅРѕРµ resettable-РїРѕР»Рµ РІ DetailsPanel/SettingsPanel вЂ” РѕРЅРѕ СЃР±СЂР°СЃС‹РІР°РµС‚СЃСЏ Рє РґРµС„РѕР»С‚РЅРѕРјСѓ Р·РЅР°С‡РµРЅРёСЋ; РµСЃР»Рё РЅР°РІРµРґС‘РЅ РЅР° Р·Р°РіРѕР»РѕРІРѕРє/РєРѕРЅС‚РµР№РЅРµСЂ СЃРµРєС†РёРё (Р»СЋР±РѕР№ СѓСЂРѕРІРµРЅСЊ РІР»РѕР¶РµРЅРЅРѕСЃС‚Рё, РІРєР»СЋС‡Р°СЏ РІР»РѕР¶РµРЅРЅС‹Рµ РїРѕРґСЃРµРєС†РёРё) вЂ” СЃР±СЂР°СЃС‹РІР°СЋС‚СЃСЏ РІСЃРµ Р·Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°РЅРЅС‹Рµ РїРѕР»СЏ РІРЅСѓС‚СЂРё РЅРµС‘. РћРїСЂРµРґРµР»СЏРµС‚СЃСЏ С‡РµСЂРµР· `:hover` (`document.querySelectorAll(':hover')`, РїРѕСЃР»РµРґРЅРёР№ СЌР»РµРјРµРЅС‚ вЂ” СЂРµР°Р»СЊРЅРѕ С‚Рѕ, С‡С‚Рѕ РїРѕРґ РєСѓСЂСЃРѕСЂРѕРј), Р° РЅРµ С‡РµСЂРµР· С„РѕРєСѓСЃ РєР»Р°РІРёР°С‚СѓСЂС‹ вЂ” С‚Рѕ РµСЃС‚СЊ В«С‡С‚Рѕ РїРѕРґ РєСѓСЂСЃРѕСЂРѕРј РІ РјРѕРјРµРЅС‚ РЅР°Р¶Р°С‚РёСЏВ», Р° РЅРµ В«С‡С‚Рѕ СЃРµР№С‡Р°СЃ СЂРµРґР°РєС‚РёСЂСѓРµС‚СЃСЏВ». РќРµ РјРµС€Р°РµС‚ РѕР±С‹С‡РЅРѕРјСѓ СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЋ С‚РµРєСЃС‚Р°: РµСЃР»Рё РїРѕРґ РєСѓСЂСЃРѕСЂРѕРј СЂРѕРІРЅРѕ РѕРґРЅРѕ РїРѕР»Рµ Рё РѕРЅРѕ Р¶Рµ РІ С„РѕРєСѓСЃРµ СЃ С‚РµРєСЃС‚РѕРІС‹Рј РІРІРѕРґРѕРј вЂ” `Backspace` СЂР°Р±РѕС‚Р°РµС‚ РєР°Рє РѕР±С‹С‡РЅРѕРµ СѓРґР°Р»РµРЅРёРµ СЃРёРјРІРѕР»Р°. РќРѕРІС‹Р№ РјРѕРґСѓР»СЊ-СЃРёРЅРіР»С‚РѕРЅ `ResetRegistry` (`src/utils/ResetRegistry.js`) С…СЂР°РЅРёС‚ `Map<scopeKey, {element, defaultValue}[]>`; РїР°РЅРµР»Рё СЂРµРіРёСЃС‚СЂРёСЂСѓСЋС‚ СЃРІРѕРё resettable-РїРѕР»СЏ РЅР° РєР°Р¶РґС‹Р№ СЂРµРЅРґРµСЂ (`ResetRegistry.setFields(scopeKey, fields)`), С‚РѕС‡РєР° РІС…РѕРґР° вЂ” `ResetRegistry.handleBackspace()`, РІС‹Р·С‹РІР°РµС‚СЃСЏ РёР· `EventHandlers.handleKeyDown` РґРѕ РїСЂРѕРІРµСЂРєРё С„РѕРєСѓСЃР° РЅР° INPUT/TEXTAREA. РђСЂС…РёС‚РµРєС‚СѓСЂРЅРѕ СЃР±СЂРѕСЃ РЅРµ СЃРѕРґРµСЂР¶РёС‚ СЃРѕР±СЃС‚РІРµРЅРЅРѕР№ commit-Р»РѕРіРёРєРё: `applyDefault()` РїСЂРѕСЃС‚Р°РІР»СЏРµС‚ `element.value`/`element.checked` Рё РґРёСЃРїР°С‚С‡РёС‚ С‚Рµ Р¶Рµ `input`/`change`/`blur` DOM-СЃРѕР±С‹С‚РёСЏ, РєРѕС‚РѕСЂС‹Рµ СѓР¶Рµ СЃР»СѓС€Р°СЋС‚ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёРµ РѕР±СЂР°Р±РѕС‚С‡РёРєРё РєР°Р¶РґРѕР№ РїР°РЅРµР»Рё (РёСЃС‚РѕСЂРёСЏ/`notifyPropertyChange` РІ DetailsPanel; `ConfigManager`/`StateManager` sync РІ SettingsPanel) вЂ” РЅРѕР»СЊ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ Р»РѕРіРёРєРё РїРµСЂСЃРёСЃС‚РµРЅС‚РЅРѕСЃС‚Рё. `DetailsPanel.registerResettable(element, defaultValue)` РїРѕРґРєР»СЋС‡С‘РЅ РґР»СЏ РїРѕР»РµР№ Transform (x, y, width, height, rotation вЂ” РґРµС„РѕР»С‚С‹ С‡РµСЂРµР· РЅРѕРІСѓСЋ РєРѕРЅСЃС‚Р°РЅС‚Сѓ `TRANSFORM_DEFAULTS`, РёСЃРїРѕР»СЊР·СѓСЋС‰СѓСЋ СЂР°СЃС€РёСЂРµРЅРЅС‹Р№ `DEFAULT_OBJECT` СЃ РґРѕР±Р°РІР»РµРЅРЅС‹РјРё `X: 0, Y: 0, ROTATION: 0` РІ `EditorConstants.js`) Рё РґР»СЏ РїРѕР»СЏ Color РІ Visual (РѕРґРёРЅРѕС‡РЅС‹Р№ Рё multi-select); СЃРѕР·РЅР°С‚РµР»СЊРЅРѕ РЅРµ РїРѕРґРєР»СЋС‡РµРЅС‹ Name/Type (РЅРµС‚ РѕСЃРјС‹СЃР»РµРЅРЅРѕРіРѕ РґРµС„РѕР»С‚Р°) Рё Custom Properties (РЅРµС‚ СЃС…РµРјС‹ РґРµС„РѕР»С‚РѕРІ). `SettingsPanel.rebuildResetRegistry()` СЃРєР°РЅРёСЂСѓРµС‚ РІСЃРµ `[data-setting]`-СЌР»РµРјРµРЅС‚С‹ (РЅРµ CSS-РєР»Р°СЃСЃ вЂ” РѕР±С‹С‡РЅС‹Рµ РІРєР»Р°РґРєРё РёСЃРїРѕР»СЊР·СѓСЋС‚ `setting-input`, `GridSettings.js` вЂ” `settings-input`, РµРґРёРЅСЃС‚РІРµРЅРЅС‹Р№ РѕР±С‰РёР№ РјР°СЂРєРµСЂ вЂ” Р°С‚СЂРёР±СѓС‚ `data-setting`), РІС‹Р·С‹РІР°РµС‚СЃСЏ РІ РєРѕРЅС†Рµ `setupSettingsInputs()`; РІРєР»Р°РґРєР° Hotkeys РЅРµ СѓС‡Р°СЃС‚РІСѓРµС‚ (С‚Р°Рј `.hotkey-input`/`data-shortcut`, read-only РґРµРєР»Р°СЂР°С†РёСЏ Р±РµР· РєРѕРЅС†РµРїС†РёРё РґРµС„РѕР»С‚Р°). РќРѕРІС‹Р№ РјРµС‚РѕРґ `ConfigManager.getDefault(path)` (Р·РµСЂРєР°Р»Рѕ `get(path)`) С‡РёС‚Р°РµС‚ РёР· Р·Р°РєРµС€РёСЂРѕРІР°РЅРЅРѕРіРѕ РіР»СѓР±РѕРєРѕРіРѕ РєР»РѕРЅР° `getDefaultConfigs()` (`this._defaultConfigsCache`, JSON-РєР»РѕРЅРёСЂРѕРІР°РЅРёРµ РѕР±СЏР·Р°С‚РµР»СЊРЅРѕ вЂ” `mergeConfigs()` РєРѕРїРёСЂСѓРµС‚ С‚РѕР»СЊРєРѕ С‚РѕРї-level РєР°С‚РµРіРѕСЂРёРё, РёРЅР°С‡Рµ РІР»РѕР¶РµРЅРЅС‹Рµ РїСѓС‚Рё РґРµР»РёР»Рё Р±С‹ РѕР±СЉРµРєС‚ СЃ Р¶РёРІС‹Рј `this.configs`). РҐРѕС‚РєРµР№ Р·Р°РґРѕРєСѓРјРµРЅС‚РёСЂРѕРІР°РЅ РІ `config/defaults/shortcuts.json` в†’ `ui.resetToDefault` (`key: "Backspace"`), РІРёРґРµРЅ РІ Settings в†’ Hotkeys (`src/utils/ResetRegistry.js`, `src/event-system/EventHandlers.js`, `src/constants/EditorConstants.js`, `src/ui/DetailsPanel.js`, `src/managers/ConfigManager.js`, `src/ui/SettingsPanel.js`, `config/defaults/shortcuts.json`).
+  **Р¤РёРєСЃ (С‚РѕС‚ Р¶Рµ РґРµРЅСЊ):** (1) `findTargets()` СЌСЃРєР°Р»РёСЂРѕРІР°Р»СЃСЏ РґРѕ `document.body`/`documentElement`, РєРѕС‚РѕСЂС‹Рµ СЃС‚СЂСѓРєС‚СѓСЂРЅРѕ СЃРѕРґРµСЂР¶Р°С‚ РІРѕРѕР±С‰Рµ РІСЃРµ Р·Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°РЅРЅС‹Рµ РїРѕР»СЏ вЂ” РёР·-Р·Р° СЌС‚РѕРіРѕ `Backspace` СЃСЂР°Р±Р°С‚С‹РІР°Р» РѕС‚РєСѓРґР° СѓРіРѕРґРЅРѕ РІ РёРЅС‚РµСЂС„РµР№СЃРµ, Р° РЅРµ С‚РѕР»СЊРєРѕ РЅР°Рґ РїР°РЅРµР»СЊСЋ; С‚РµРїРµСЂСЊ walk РѕСЃС‚Р°РЅР°РІР»РёРІР°РµС‚СЃСЏ РґРѕ body/html. (2) Width/Height СЃР±СЂР°СЃС‹РІР°Р»РёСЃСЊ РІ Р¶С‘СЃС‚РєРёРµ `32Г—32` РІРјРµСЃС‚Рѕ СЂРµР°Р»СЊРЅРѕРіРѕ СЂР°Р·РјРµСЂР° Р°СЃСЃРµС‚Р° вЂ” РґРѕР±Р°РІР»РµРЅ `DetailsPanel.getObjectDefaultSize(obj)` (РёС‰РµС‚ Р°СЃСЃРµС‚ РїРѕ `obj.imgSrc` С‡РµСЂРµР· `assetManager.getAllAssets()`, Р±РµСЂС‘С‚ РµРіРѕ `width`/`height`; Р±РµР· СЃРѕРІРїР°РґРµРЅРёСЏ вЂ” С„РѕР»Р»Р±СЌРє РЅР° `DEFAULT_OBJECT`). Р”Р»СЏ multi-select, РіРґРµ Сѓ РѕР±СЉРµРєС‚РѕРІ РјРѕРіСѓС‚ Р±С‹С‚СЊ СЂР°Р·РЅС‹Рµ Р°СЃСЃРµС‚С‹, `ResetRegistry`-РїРѕР»Рµ С‚РµРїРµСЂСЊ РѕРїС†РёРѕРЅР°Р»СЊРЅРѕ РїРѕРґРґРµСЂР¶РёРІР°РµС‚ `{element, reset: fn}` (РєР°СЃС‚РѕРјРЅР°СЏ С„СѓРЅРєС†РёСЏ СЃР±СЂРѕСЃР° РІРјРµСЃС‚Рѕ РѕРґРЅРѕРіРѕ СЃС‚Р°С‚РёС‡РЅРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ) вЂ” width/height РІ `setupMultipleTransformsListeners` СЃР±СЂР°СЃС‹РІР°СЋС‚ РєР°Р¶РґС‹Р№ РѕР±СЉРµРєС‚ Рє РµРіРѕ СЃРѕР±СЃС‚РІРµРЅРЅРѕРјСѓ РґРµС„РѕР»С‚Сѓ.
 
-- **Z-порядок объектов: убран `zIndex`, заменён на порядок в массиве (array-order stacking)** — заменяет (не дополняет) две предыдущие записи «zIndex» ниже: точечные патчи `getNextZIndex`/`fixZIndex` не устранили баг (клик по перекрывающимся объектам внутри групп выбирал не тот объект, что рисовался сверху), причина была структурной — `Level.buildFullObjectIndex`/`buildObjectPath` не учитывали промежуточные вложенные группы. Схема убрана целиком: `GameObject`/`Group` больше не хранят и не сериализуют `zIndex` в `toJSON()`; z-порядок теперь — это просто позиция объекта в контейнере (`level.objects` на верхнем уровне, `group.children` внутри группы), как в слоях Photoshop/Figma. `Layer.index` (слои) не тронут, остаётся первичным ключом сортировки. Новое: `GroupTraversalUtils.findObjectPath(topLevelObjects, targetId)` — DFS-путь индексов от корня до объекта; `Level.compareStackOrder(a, b)` — единый компаратор (сначала layerIndex, затем путь в дереве), используется и рендером (`RenderOperations.getVisibleObjects`), и hit-test'ом (`ObjectOperations._sortObjectsByZIndexDescending`), гарантируя совпадение клика с отрисовкой; `ObjectOperations.bringToFront/sendToBack/moveForward/moveBackward(obj)` + `getSiblingArray(obj)` — ручное управление порядком (splice/push/unshift/swap над массивом-контейнером). UI: в DetailsPanel (Advanced) числовое поле «Z-Index» заменено 4 кнопками на английском (стандартная Illustrator/Figma терминология) — «Bring to Front» / «Send to Back» / «Bring Forward» / «Send Backward» (`createOrderButtonsRow`, работает для одиночного и множественного выбора), с хоткеями `Ctrl+Shift+↑`/`Ctrl+Shift+↓`/`Ctrl+↑`/`Ctrl+↓` соответственно (обработка в `EventHandlers.handleKeyDown`, привязка задокументирована в `config/defaults/shortcuts.json` → видна в Settings → Hotkeys). Кнопки и хоткеи используют общий `ObjectOperations.applyStackOrderAction()`, чтобы не разъезжаться. Удалено из `Level.js`: `getNextZIndex`, `updateAllObjectZIndices`, `assignInitialZIndex`, `buildFullObjectIndex`, `buildObjectPath`, `isObjectInAnyGroup`, миграционный блок `fixZIndex` в `fromJSON` (`src/models/Level.js`, `src/models/Group.js`, `src/models/GameObject.js`, `src/models/Asset.js`, `src/utils/GroupTraversalUtils.js`, `src/utils/UIFactory.js`, `src/core/RenderOperations.js`, `src/ui/CanvasRenderer.js`, `src/core/ObjectOperations.js`, `src/event-system/EventHandlers.js`, `src/event-system/MouseHandlers.js`, `src/core/DuplicateOperations.js`, `src/ui/DetailsPanel.js`, `src/core/LayerOperations.js`, `src/managers/CacheManager.js`, `config/defaults/shortcuts.json`).
+- **Z-РїРѕСЂСЏРґРѕРє РѕР±СЉРµРєС‚РѕРІ: СѓР±СЂР°РЅ `zIndex`, Р·Р°РјРµРЅС‘РЅ РЅР° РїРѕСЂСЏРґРѕРє РІ РјР°СЃСЃРёРІРµ (array-order stacking)** вЂ” Р·Р°РјРµРЅСЏРµС‚ (РЅРµ РґРѕРїРѕР»РЅСЏРµС‚) РґРІРµ РїСЂРµРґС‹РґСѓС‰РёРµ Р·Р°РїРёСЃРё В«zIndexВ» РЅРёР¶Рµ: С‚РѕС‡РµС‡РЅС‹Рµ РїР°С‚С‡Рё `getNextZIndex`/`fixZIndex` РЅРµ СѓСЃС‚СЂР°РЅРёР»Рё Р±Р°Рі (РєР»РёРє РїРѕ РїРµСЂРµРєСЂС‹РІР°СЋС‰РёРјСЃСЏ РѕР±СЉРµРєС‚Р°Рј РІРЅСѓС‚СЂРё РіСЂСѓРїРї РІС‹Р±РёСЂР°Р» РЅРµ С‚РѕС‚ РѕР±СЉРµРєС‚, С‡С‚Рѕ СЂРёСЃРѕРІР°Р»СЃСЏ СЃРІРµСЂС…Сѓ), РїСЂРёС‡РёРЅР° Р±С‹Р»Р° СЃС‚СЂСѓРєС‚СѓСЂРЅРѕР№ вЂ” `Level.buildFullObjectIndex`/`buildObjectPath` РЅРµ СѓС‡РёС‚С‹РІР°Р»Рё РїСЂРѕРјРµР¶СѓС‚РѕС‡РЅС‹Рµ РІР»РѕР¶РµРЅРЅС‹Рµ РіСЂСѓРїРїС‹. РЎС…РµРјР° СѓР±СЂР°РЅР° С†РµР»РёРєРѕРј: `GameObject`/`Group` Р±РѕР»СЊС€Рµ РЅРµ С…СЂР°РЅСЏС‚ Рё РЅРµ СЃРµСЂРёР°Р»РёР·СѓСЋС‚ `zIndex` РІ `toJSON()`; z-РїРѕСЂСЏРґРѕРє С‚РµРїРµСЂСЊ вЂ” СЌС‚Рѕ РїСЂРѕСЃС‚Рѕ РїРѕР·РёС†РёСЏ РѕР±СЉРµРєС‚Р° РІ РєРѕРЅС‚РµР№РЅРµСЂРµ (`level.objects` РЅР° РІРµСЂС…РЅРµРј СѓСЂРѕРІРЅРµ, `group.children` РІРЅСѓС‚СЂРё РіСЂСѓРїРїС‹), РєР°Рє РІ СЃР»РѕСЏС… Photoshop/Figma. `Layer.index` (СЃР»РѕРё) РЅРµ С‚СЂРѕРЅСѓС‚, РѕСЃС‚Р°С‘С‚СЃСЏ РїРµСЂРІРёС‡РЅС‹Рј РєР»СЋС‡РѕРј СЃРѕСЂС‚РёСЂРѕРІРєРё. РќРѕРІРѕРµ: `GroupTraversalUtils.findObjectPath(topLevelObjects, targetId)` вЂ” DFS-РїСѓС‚СЊ РёРЅРґРµРєСЃРѕРІ РѕС‚ РєРѕСЂРЅСЏ РґРѕ РѕР±СЉРµРєС‚Р°; `Level.compareStackOrder(a, b)` вЂ” РµРґРёРЅС‹Р№ РєРѕРјРїР°СЂР°С‚РѕСЂ (СЃРЅР°С‡Р°Р»Р° layerIndex, Р·Р°С‚РµРј РїСѓС‚СЊ РІ РґРµСЂРµРІРµ), РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ Рё СЂРµРЅРґРµСЂРѕРј (`RenderOperations.getVisibleObjects`), Рё hit-test'РѕРј (`ObjectOperations._sortObjectsByZIndexDescending`), РіР°СЂР°РЅС‚РёСЂСѓСЏ СЃРѕРІРїР°РґРµРЅРёРµ РєР»РёРєР° СЃ РѕС‚СЂРёСЃРѕРІРєРѕР№; `ObjectOperations.bringToFront/sendToBack/moveForward/moveBackward(obj)` + `getSiblingArray(obj)` вЂ” СЂСѓС‡РЅРѕРµ СѓРїСЂР°РІР»РµРЅРёРµ РїРѕСЂСЏРґРєРѕРј (splice/push/unshift/swap РЅР°Рґ РјР°СЃСЃРёРІРѕРј-РєРѕРЅС‚РµР№РЅРµСЂРѕРј). UI: РІ DetailsPanel (Advanced) С‡РёСЃР»РѕРІРѕРµ РїРѕР»Рµ В«Z-IndexВ» Р·Р°РјРµРЅРµРЅРѕ 4 РєРЅРѕРїРєР°РјРё РЅР° Р°РЅРіР»РёР№СЃРєРѕРј (СЃС‚Р°РЅРґР°СЂС‚РЅР°СЏ Illustrator/Figma С‚РµСЂРјРёРЅРѕР»РѕРіРёСЏ) вЂ” В«Bring to FrontВ» / В«Send to BackВ» / В«Bring ForwardВ» / В«Send BackwardВ» (`createOrderButtonsRow`, СЂР°Р±РѕС‚Р°РµС‚ РґР»СЏ РѕРґРёРЅРѕС‡РЅРѕРіРѕ Рё РјРЅРѕР¶РµСЃС‚РІРµРЅРЅРѕРіРѕ РІС‹Р±РѕСЂР°), СЃ С…РѕС‚РєРµСЏРјРё `Ctrl+Shift+в†‘`/`Ctrl+Shift+в†“`/`Ctrl+в†‘`/`Ctrl+в†“` СЃРѕРѕС‚РІРµС‚СЃС‚РІРµРЅРЅРѕ (РѕР±СЂР°Р±РѕС‚РєР° РІ `EventHandlers.handleKeyDown`, РїСЂРёРІСЏР·РєР° Р·Р°РґРѕРєСѓРјРµРЅС‚РёСЂРѕРІР°РЅР° РІ `config/defaults/shortcuts.json` в†’ РІРёРґРЅР° РІ Settings в†’ Hotkeys). РљРЅРѕРїРєРё Рё С…РѕС‚РєРµРё РёСЃРїРѕР»СЊР·СѓСЋС‚ РѕР±С‰РёР№ `ObjectOperations.applyStackOrderAction()`, С‡С‚РѕР±С‹ РЅРµ СЂР°Р·СЉРµР·Р¶Р°С‚СЊСЃСЏ. РЈРґР°Р»РµРЅРѕ РёР· `Level.js`: `getNextZIndex`, `updateAllObjectZIndices`, `assignInitialZIndex`, `buildFullObjectIndex`, `buildObjectPath`, `isObjectInAnyGroup`, РјРёРіСЂР°С†РёРѕРЅРЅС‹Р№ Р±Р»РѕРє `fixZIndex` РІ `fromJSON` (`src/models/Level.js`, `src/models/Group.js`, `src/models/GameObject.js`, `src/models/Asset.js`, `src/utils/GroupTraversalUtils.js`, `src/utils/UIFactory.js`, `src/core/RenderOperations.js`, `src/ui/CanvasRenderer.js`, `src/core/ObjectOperations.js`, `src/event-system/EventHandlers.js`, `src/event-system/MouseHandlers.js`, `src/core/DuplicateOperations.js`, `src/ui/DetailsPanel.js`, `src/core/LayerOperations.js`, `src/managers/CacheManager.js`, `config/defaults/shortcuts.json`).
 
-- **Rotate/Scale жесты объектов** — Ctrl+click-drag на объекте вращает выделение вокруг центра общего world bounding box; Ctrl+Alt+click-drag равномерно масштабирует выделение относительно того же центра (клампится `TRANSFORM.MIN_SCALE_FACTOR=0.05`/`MAX_SCALE_FACTOR=20`). Работает на любом уровне вложенности групп. Клик по невыделенному объекту делает его единственным выделением, как при обычном drag; Ctrl+click без drag и Ctrl+drag по пустому месту (marquee toggle) не изменились. Alt+drag дублирование теперь срабатывает только без Ctrl (Ctrl+Alt зарезервирован под scale). `GameObject.rotation` (градусы, по часовой, вокруг центра; default 0) сериализуется в `toJSON()`, `getBounds()`/`containsPoint()` rotation-aware; `Group.getBounds()` учитывает rotation детей и свой rotation (консервативный AABB). `CanvasRenderer` рисует повёрнутые объекты и группы через `ctx.translate`/`ctx.rotate`. Рамка выделения повёрнутых объектов теперь тоже повёрнута (`RenderOperations.drawObjectSelectionRect`, неповёрнутый rect через `getWorldBounds(..., skipOwnRotation=true)` перецентрован на инвариантный к rotation центр AABB). Панель Details: секция «Position» переименована в «Transform», добавлено поле «Rotation» (градусы). Известные ограничения v1: hit-test детей внутри повёрнутой группы не учитывает поворот родителя; жест применяет мировые дельты к локальным координатам (корректно, пока родительская группа не повёрнута) (`src/models/GameObject.js`, `src/models/Group.js`, `src/utils/WorldPositionUtils.js`, `src/ui/CanvasRenderer.js`, `src/core/RenderOperations.js`, `src/event-system/MouseHandlers.js`, `src/constants/EditorConstants.js`, `config/defaults/shortcuts.json`, `src/ui/SettingsPanel.js`, `src/ui/DetailsPanel.js`).
+- **Rotate/Scale Р¶РµСЃС‚С‹ РѕР±СЉРµРєС‚РѕРІ** вЂ” Ctrl+click-drag РЅР° РѕР±СЉРµРєС‚Рµ РІСЂР°С‰Р°РµС‚ РІС‹РґРµР»РµРЅРёРµ РІРѕРєСЂСѓРі С†РµРЅС‚СЂР° РѕР±С‰РµРіРѕ world bounding box; Ctrl+Alt+click-drag СЂР°РІРЅРѕРјРµСЂРЅРѕ РјР°СЃС€С‚Р°Р±РёСЂСѓРµС‚ РІС‹РґРµР»РµРЅРёРµ РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕ С‚РѕРіРѕ Р¶Рµ С†РµРЅС‚СЂР° (РєР»Р°РјРїРёС‚СЃСЏ `TRANSFORM.MIN_SCALE_FACTOR=0.05`/`MAX_SCALE_FACTOR=20`). Р Р°Р±РѕС‚Р°РµС‚ РЅР° Р»СЋР±РѕРј СѓСЂРѕРІРЅРµ РІР»РѕР¶РµРЅРЅРѕСЃС‚Рё РіСЂСѓРїРї. РљР»РёРє РїРѕ РЅРµРІС‹РґРµР»РµРЅРЅРѕРјСѓ РѕР±СЉРµРєС‚Сѓ РґРµР»Р°РµС‚ РµРіРѕ РµРґРёРЅСЃС‚РІРµРЅРЅС‹Рј РІС‹РґРµР»РµРЅРёРµРј, РєР°Рє РїСЂРё РѕР±С‹С‡РЅРѕРј drag; Ctrl+click Р±РµР· drag Рё Ctrl+drag РїРѕ РїСѓСЃС‚РѕРјСѓ РјРµСЃС‚Сѓ (marquee toggle) РЅРµ РёР·РјРµРЅРёР»РёСЃСЊ. Alt+drag РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ С‚РµРїРµСЂСЊ СЃСЂР°Р±Р°С‚С‹РІР°РµС‚ С‚РѕР»СЊРєРѕ Р±РµР· Ctrl (Ctrl+Alt Р·Р°СЂРµР·РµСЂРІРёСЂРѕРІР°РЅ РїРѕРґ scale). `GameObject.rotation` (РіСЂР°РґСѓСЃС‹, РїРѕ С‡Р°СЃРѕРІРѕР№, РІРѕРєСЂСѓРі С†РµРЅС‚СЂР°; default 0) СЃРµСЂРёР°Р»РёР·СѓРµС‚СЃСЏ РІ `toJSON()`, `getBounds()`/`containsPoint()` rotation-aware; `Group.getBounds()` СѓС‡РёС‚С‹РІР°РµС‚ rotation РґРµС‚РµР№ Рё СЃРІРѕР№ rotation (РєРѕРЅСЃРµСЂРІР°С‚РёРІРЅС‹Р№ AABB). `CanvasRenderer` СЂРёСЃСѓРµС‚ РїРѕРІС‘СЂРЅСѓС‚С‹Рµ РѕР±СЉРµРєС‚С‹ Рё РіСЂСѓРїРїС‹ С‡РµСЂРµР· `ctx.translate`/`ctx.rotate`. Р Р°РјРєР° РІС‹РґРµР»РµРЅРёСЏ РїРѕРІС‘СЂРЅСѓС‚С‹С… РѕР±СЉРµРєС‚РѕРІ С‚РµРїРµСЂСЊ С‚РѕР¶Рµ РїРѕРІС‘СЂРЅСѓС‚Р° (`RenderOperations.drawObjectSelectionRect`, РЅРµРїРѕРІС‘СЂРЅСѓС‚С‹Р№ rect С‡РµСЂРµР· `getWorldBounds(..., skipOwnRotation=true)` РїРµСЂРµС†РµРЅС‚СЂРѕРІР°РЅ РЅР° РёРЅРІР°СЂРёР°РЅС‚РЅС‹Р№ Рє rotation С†РµРЅС‚СЂ AABB). РџР°РЅРµР»СЊ Details: СЃРµРєС†РёСЏ В«PositionВ» РїРµСЂРµРёРјРµРЅРѕРІР°РЅР° РІ В«TransformВ», РґРѕР±Р°РІР»РµРЅРѕ РїРѕР»Рµ В«RotationВ» (РіСЂР°РґСѓСЃС‹). РР·РІРµСЃС‚РЅС‹Рµ РѕРіСЂР°РЅРёС‡РµРЅРёСЏ v1: hit-test РґРµС‚РµР№ РІРЅСѓС‚СЂРё РїРѕРІС‘СЂРЅСѓС‚РѕР№ РіСЂСѓРїРїС‹ РЅРµ СѓС‡РёС‚С‹РІР°РµС‚ РїРѕРІРѕСЂРѕС‚ СЂРѕРґРёС‚РµР»СЏ; Р¶РµСЃС‚ РїСЂРёРјРµРЅСЏРµС‚ РјРёСЂРѕРІС‹Рµ РґРµР»СЊС‚С‹ Рє Р»РѕРєР°Р»СЊРЅС‹Рј РєРѕРѕСЂРґРёРЅР°С‚Р°Рј (РєРѕСЂСЂРµРєС‚РЅРѕ, РїРѕРєР° СЂРѕРґРёС‚РµР»СЊСЃРєР°СЏ РіСЂСѓРїРїР° РЅРµ РїРѕРІС‘СЂРЅСѓС‚Р°) (`src/models/GameObject.js`, `src/models/Group.js`, `src/utils/WorldPositionUtils.js`, `src/ui/CanvasRenderer.js`, `src/core/RenderOperations.js`, `src/event-system/MouseHandlers.js`, `src/constants/EditorConstants.js`, `config/defaults/shortcuts.json`, `src/ui/SettingsPanel.js`, `src/ui/DetailsPanel.js`).
 
-- **Shift во время rotate/scale — снап к абсолютным значениям, не относительным** — раньше `deltaDeg`/`factor` округлялись сами по себе, из-за чего итоговый угол/масштаб объекта зависел от его исходного значения (не «встаёт» на круглое число). Исправлено: при вращении `deltaDeg` пересчитывается так, чтобы результирующий rotation первого объекта снапшота лёг на ближайший кратный `TRANSFORM.ROTATION_SNAP_DEGREES` (10°) угол; при масштабировании добавлен `TRANSFORM.SCALE_SNAP_FACTOR` (10%) — фактор округляется до ближайшего кратного шага (`src/event-system/MouseHandlers.js`, `src/constants/EditorConstants.js`).
+- **Shift РІРѕ РІСЂРµРјСЏ rotate/scale вЂ” СЃРЅР°Рї Рє Р°Р±СЃРѕР»СЋС‚РЅС‹Рј Р·РЅР°С‡РµРЅРёСЏРј, РЅРµ РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅС‹Рј** вЂ” СЂР°РЅСЊС€Рµ `deltaDeg`/`factor` РѕРєСЂСѓРіР»СЏР»РёСЃСЊ СЃР°РјРё РїРѕ СЃРµР±Рµ, РёР·-Р·Р° С‡РµРіРѕ РёС‚РѕРіРѕРІС‹Р№ СѓРіРѕР»/РјР°СЃС€С‚Р°Р± РѕР±СЉРµРєС‚Р° Р·Р°РІРёСЃРµР» РѕС‚ РµРіРѕ РёСЃС…РѕРґРЅРѕРіРѕ Р·РЅР°С‡РµРЅРёСЏ (РЅРµ В«РІСЃС‚Р°С‘С‚В» РЅР° РєСЂСѓРіР»РѕРµ С‡РёСЃР»Рѕ). РСЃРїСЂР°РІР»РµРЅРѕ: РїСЂРё РІСЂР°С‰РµРЅРёРё `deltaDeg` РїРµСЂРµСЃС‡РёС‚С‹РІР°РµС‚СЃСЏ С‚Р°Рє, С‡С‚РѕР±С‹ СЂРµР·СѓР»СЊС‚РёСЂСѓСЋС‰РёР№ rotation РїРµСЂРІРѕРіРѕ РѕР±СЉРµРєС‚Р° СЃРЅР°РїС€РѕС‚Р° Р»С‘Рі РЅР° Р±Р»РёР¶Р°Р№С€РёР№ РєСЂР°С‚РЅС‹Р№ `TRANSFORM.ROTATION_SNAP_DEGREES` (10В°) СѓРіРѕР»; РїСЂРё РјР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёРё РґРѕР±Р°РІР»РµРЅ `TRANSFORM.SCALE_SNAP_FACTOR` (10%) вЂ” С„Р°РєС‚РѕСЂ РѕРєСЂСѓРіР»СЏРµС‚СЃСЏ РґРѕ Р±Р»РёР¶Р°Р№С€РµРіРѕ РєСЂР°С‚РЅРѕРіРѕ С€Р°РіР° (`src/event-system/MouseHandlers.js`, `src/constants/EditorConstants.js`).
 
-- **DetailsPanel: поля Transform (Position/Size/Rotation) стали интерактивными** — раньше `obj[property]` менялось на `input`, но `render()` вызывался только в `notifyPropertyChange` на `blur`, из-за чего холст не обновлялся, пока не потерян фокус поля. Теперь `input`-листенер (одиночный и множественный выбор) сразу вызывает `this.levelEditor.render()` для живой обратной связи; `notifyPropertyChange` (markDirty, history-related side effects, обновление заголовка вкладки) по-прежнему срабатывает только на `blur`, чтобы не плодить лишние уведомления на каждое нажатие клавиши (`src/ui/DetailsPanel.js`).
+- **DetailsPanel: РїРѕР»СЏ Transform (Position/Size/Rotation) СЃС‚Р°Р»Рё РёРЅС‚РµСЂР°РєС‚РёРІРЅС‹РјРё** вЂ” СЂР°РЅСЊС€Рµ `obj[property]` РјРµРЅСЏР»РѕСЃСЊ РЅР° `input`, РЅРѕ `render()` РІС‹Р·С‹РІР°Р»СЃСЏ С‚РѕР»СЊРєРѕ РІ `notifyPropertyChange` РЅР° `blur`, РёР·-Р·Р° С‡РµРіРѕ С…РѕР»СЃС‚ РЅРµ РѕР±РЅРѕРІР»СЏР»СЃСЏ, РїРѕРєР° РЅРµ РїРѕС‚РµСЂСЏРЅ С„РѕРєСѓСЃ РїРѕР»СЏ. РўРµРїРµСЂСЊ `input`-Р»РёСЃС‚РµРЅРµСЂ (РѕРґРёРЅРѕС‡РЅС‹Р№ Рё РјРЅРѕР¶РµСЃС‚РІРµРЅРЅС‹Р№ РІС‹Р±РѕСЂ) СЃСЂР°Р·Сѓ РІС‹Р·С‹РІР°РµС‚ `this.levelEditor.render()` РґР»СЏ Р¶РёРІРѕР№ РѕР±СЂР°С‚РЅРѕР№ СЃРІСЏР·Рё; `notifyPropertyChange` (markDirty, history-related side effects, РѕР±РЅРѕРІР»РµРЅРёРµ Р·Р°РіРѕР»РѕРІРєР° РІРєР»Р°РґРєРё) РїРѕ-РїСЂРµР¶РЅРµРјСѓ СЃСЂР°Р±Р°С‚С‹РІР°РµС‚ С‚РѕР»СЊРєРѕ РЅР° `blur`, С‡С‚РѕР±С‹ РЅРµ РїР»РѕРґРёС‚СЊ Р»РёС€РЅРёРµ СѓРІРµРґРѕРјР»РµРЅРёСЏ РЅР° РєР°Р¶РґРѕРµ РЅР°Р¶Р°С‚РёРµ РєР»Р°РІРёС€Рё (`src/ui/DetailsPanel.js`).
 
-- **Фикс: рамка группы (group edit mode) замораживалась во время Ctrl+Alt+drag (scale), расходясь с живой картинкой объекта** — `drawGroupEditFrame` использует `groupEditMode.frozenBounds`, если `frameFrozen` (задумано для «вынести объект из группы» через Alt+drag — рамка не должна мигать, пока `dragSelectedObjects` определяет пересечение с границами группы). Условие заморозки проверяло только `e.altKey`, а Ctrl+Alt+drag (наш scale-жест) тоже держит Alt — из-за этого group edit frame замораживался в момент начала scale и не обновлялся до конца жеста, пока сам объект продолжал live-масштабироваться под ней. Исправлено: условие заморозки теперь `e.altKey && mouse.isDragging` — `isDragging` истинно только при обычном drag объектов, никогда при `isTransforming` (rotate/scale идёт по отдельной ветке `handleObjectClick`, минуя код, который выставляет `isDragging`) (`src/event-system/MouseHandlers.js`).
+- **Р¤РёРєСЃ: СЂР°РјРєР° РіСЂСѓРїРїС‹ (group edit mode) Р·Р°РјРѕСЂР°Р¶РёРІР°Р»Р°СЃСЊ РІРѕ РІСЂРµРјСЏ Ctrl+Alt+drag (scale), СЂР°СЃС…РѕРґСЏСЃСЊ СЃ Р¶РёРІРѕР№ РєР°СЂС‚РёРЅРєРѕР№ РѕР±СЉРµРєС‚Р°** вЂ” `drawGroupEditFrame` РёСЃРїРѕР»СЊР·СѓРµС‚ `groupEditMode.frozenBounds`, РµСЃР»Рё `frameFrozen` (Р·Р°РґСѓРјР°РЅРѕ РґР»СЏ В«РІС‹РЅРµСЃС‚Рё РѕР±СЉРµРєС‚ РёР· РіСЂСѓРїРїС‹В» С‡РµСЂРµР· Alt+drag вЂ” СЂР°РјРєР° РЅРµ РґРѕР»Р¶РЅР° РјРёРіР°С‚СЊ, РїРѕРєР° `dragSelectedObjects` РѕРїСЂРµРґРµР»СЏРµС‚ РїРµСЂРµСЃРµС‡РµРЅРёРµ СЃ РіСЂР°РЅРёС†Р°РјРё РіСЂСѓРїРїС‹). РЈСЃР»РѕРІРёРµ Р·Р°РјРѕСЂРѕР·РєРё РїСЂРѕРІРµСЂСЏР»Рѕ С‚РѕР»СЊРєРѕ `e.altKey`, Р° Ctrl+Alt+drag (РЅР°С€ scale-Р¶РµСЃС‚) С‚РѕР¶Рµ РґРµСЂР¶РёС‚ Alt вЂ” РёР·-Р·Р° СЌС‚РѕРіРѕ group edit frame Р·Р°РјРѕСЂР°Р¶РёРІР°Р»СЃСЏ РІ РјРѕРјРµРЅС‚ РЅР°С‡Р°Р»Р° scale Рё РЅРµ РѕР±РЅРѕРІР»СЏР»СЃСЏ РґРѕ РєРѕРЅС†Р° Р¶РµСЃС‚Р°, РїРѕРєР° СЃР°Рј РѕР±СЉРµРєС‚ РїСЂРѕРґРѕР»Р¶Р°Р» live-РјР°СЃС€С‚Р°Р±РёСЂРѕРІР°С‚СЊСЃСЏ РїРѕРґ РЅРµР№. РСЃРїСЂР°РІР»РµРЅРѕ: СѓСЃР»РѕРІРёРµ Р·Р°РјРѕСЂРѕР·РєРё С‚РµРїРµСЂСЊ `e.altKey && mouse.isDragging` вЂ” `isDragging` РёСЃС‚РёРЅРЅРѕ С‚РѕР»СЊРєРѕ РїСЂРё РѕР±С‹С‡РЅРѕРј drag РѕР±СЉРµРєС‚РѕРІ, РЅРёРєРѕРіРґР° РїСЂРё `isTransforming` (rotate/scale РёРґС‘С‚ РїРѕ РѕС‚РґРµР»СЊРЅРѕР№ РІРµС‚РєРµ `handleObjectClick`, РјРёРЅСѓСЏ РєРѕРґ, РєРѕС‚РѕСЂС‹Р№ РІС‹СЃС‚Р°РІР»СЏРµС‚ `isDragging`) (`src/event-system/MouseHandlers.js`).
 
-- **DetailsPanel: поля Transform обновляются live во время drag/rotate/scale мышью, не только при вводе с клавиатуры** — предыдущий фикс (`input`-листенер → `render()`) покрывал только редактирование полей вручную; при перетаскивании/вращении/масштабировании объекта МЫШЬЮ числовые поля Position/Size/Rotation оставались статичными до `mouseup` (`objectPropertyChanged`/`level`-подписки в `DetailsPanel` намеренно игнорируют live position-изменения — perf-оптимизация, установленная ранее для обычного drag). Добавлен `DetailsPanel.refreshTransformFieldsLive()` — точечно обновляет `.value` существующих input'ов из текущей модели (без перестройки DOM, без потери фокуса активного поля), вызывается из `MouseHandlers._handleMouseMoveImpl` сразу после `dragSelectedObjects()`/`transformSelectedObjects()` (`src/ui/DetailsPanel.js`, `src/event-system/MouseHandlers.js`).
+- **DetailsPanel: РїРѕР»СЏ Transform РѕР±РЅРѕРІР»СЏСЋС‚СЃСЏ live РІРѕ РІСЂРµРјСЏ drag/rotate/scale РјС‹С€СЊСЋ, РЅРµ С‚РѕР»СЊРєРѕ РїСЂРё РІРІРѕРґРµ СЃ РєР»Р°РІРёР°С‚СѓСЂС‹** вЂ” РїСЂРµРґС‹РґСѓС‰РёР№ С„РёРєСЃ (`input`-Р»РёСЃС‚РµРЅРµСЂ в†’ `render()`) РїРѕРєСЂС‹РІР°Р» С‚РѕР»СЊРєРѕ СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ РїРѕР»РµР№ РІСЂСѓС‡РЅСѓСЋ; РїСЂРё РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРё/РІСЂР°С‰РµРЅРёРё/РјР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёРё РѕР±СЉРµРєС‚Р° РњР«РЁР¬Р® С‡РёСЃР»РѕРІС‹Рµ РїРѕР»СЏ Position/Size/Rotation РѕСЃС‚Р°РІР°Р»РёСЃСЊ СЃС‚Р°С‚РёС‡РЅС‹РјРё РґРѕ `mouseup` (`objectPropertyChanged`/`level`-РїРѕРґРїРёСЃРєРё РІ `DetailsPanel` РЅР°РјРµСЂРµРЅРЅРѕ РёРіРЅРѕСЂРёСЂСѓСЋС‚ live position-РёР·РјРµРЅРµРЅРёСЏ вЂ” perf-РѕРїС‚РёРјРёР·Р°С†РёСЏ, СѓСЃС‚Р°РЅРѕРІР»РµРЅРЅР°СЏ СЂР°РЅРµРµ РґР»СЏ РѕР±С‹С‡РЅРѕРіРѕ drag). Р”РѕР±Р°РІР»РµРЅ `DetailsPanel.refreshTransformFieldsLive()` вЂ” С‚РѕС‡РµС‡РЅРѕ РѕР±РЅРѕРІР»СЏРµС‚ `.value` СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёС… input'РѕРІ РёР· С‚РµРєСѓС‰РµР№ РјРѕРґРµР»Рё (Р±РµР· РїРµСЂРµСЃС‚СЂРѕР№РєРё DOM, Р±РµР· РїРѕС‚РµСЂРё С„РѕРєСѓСЃР° Р°РєС‚РёРІРЅРѕРіРѕ РїРѕР»СЏ), РІС‹Р·С‹РІР°РµС‚СЃСЏ РёР· `MouseHandlers._handleMouseMoveImpl` СЃСЂР°Р·Сѓ РїРѕСЃР»Рµ `dragSelectedObjects()`/`transformSelectedObjects()` (`src/ui/DetailsPanel.js`, `src/event-system/MouseHandlers.js`).
 
-- **Открытие повёрнутой группы: рамка не учитывала rotation, дети «разъезжались» с картинкой, drag внутри вёл себя некорректно** — три отдельных бага, обнаруженных при работе с group edit mode для повёрнутой группы (`Ctrl+drag` на группе, затем двойной клик внутрь):
-  1. **`drawGroupEditFrame` игнорировала rotation полностью** — рисовала axis-aligned прямоугольник вокруг уже повёрнутого содержимого. Объединена с `drawObjectSelectionRect` через общий примитив `RenderOperations.strokeFrame()` + `WorldPositionUtils.getFrameGeometry()` (см. запись про rotate/scale жесты выше) — теперь рамка группы поворачивается вместе с картинкой, замороженный снапшот (`groupEditMode.frozenFrameGeometry`) тоже несёт rotation.
-  2. **Перетаскивание объекта внутри повёрнутой группы двигало его в неверном направлении** — мировая дельта курсора (`dx,dy`) добавлялась напрямую к локальным координатам, что верно только для неповёрнутых предков. `WorldPositionUtils.worldDeltaToLocalDelta()` (инвертирует сумму ancestor-поворотов — композиция чистых вращений аддитивна, пивоты не важны для дельты) и `worldPointToLocalPointInGroup()` (конвертирует мировую точку в локальную для конкретной группы, учитывая её собственный rotation как ближайшее звено цепочки) — используются в `MouseHandlers.dragSelectedObjects` вместо прежних `obj.x += dx`/`obj.x -= groupPos.x`.
-  3. **Перетаскивание ОДНОГО ребёнка сдвигало отрисованную позицию его невыделенных соседей** — rotation-pivot группы вычисляется как центр bounds её текущих детей (`Group.getBounds()`), который пересчитывается каждый кадр рендера и включает текущую (двигающуюся) позицию перетаскиваемого объекта. Подтверждено в браузере: drag `c1` внутри группы, повёрнутой на 90°, двигал рендерную мировую позицию невыделенного `c2` при неизменных `c2.x/y`. **Попытка фикса через `excludeIds` (исключение перетаскиваемого id из pivot-суммы, threaded через `Group.getBounds`/`WorldPositionUtils`/`CanvasRenderer`/`RenderOperations`/`MouseHandlers`) откачена в тот же день** — см. следующую запись; ограничение остаётся неисправленным.
+- **РћС‚РєСЂС‹С‚РёРµ РїРѕРІС‘СЂРЅСѓС‚РѕР№ РіСЂСѓРїРїС‹: СЂР°РјРєР° РЅРµ СѓС‡РёС‚С‹РІР°Р»Р° rotation, РґРµС‚Рё В«СЂР°Р·СЉРµР·Р¶Р°Р»РёСЃСЊВ» СЃ РєР°СЂС‚РёРЅРєРѕР№, drag РІРЅСѓС‚СЂРё РІС‘Р» СЃРµР±СЏ РЅРµРєРѕСЂСЂРµРєС‚РЅРѕ** вЂ” С‚СЂРё РѕС‚РґРµР»СЊРЅС‹С… Р±Р°РіР°, РѕР±РЅР°СЂСѓР¶РµРЅРЅС‹С… РїСЂРё СЂР°Р±РѕС‚Рµ СЃ group edit mode РґР»СЏ РїРѕРІС‘СЂРЅСѓС‚РѕР№ РіСЂСѓРїРїС‹ (`Ctrl+drag` РЅР° РіСЂСѓРїРїРµ, Р·Р°С‚РµРј РґРІРѕР№РЅРѕР№ РєР»РёРє РІРЅСѓС‚СЂСЊ):
+  1. **`drawGroupEditFrame` РёРіРЅРѕСЂРёСЂРѕРІР°Р»Р° rotation РїРѕР»РЅРѕСЃС‚СЊСЋ** вЂ” СЂРёСЃРѕРІР°Р»Р° axis-aligned РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРёРє РІРѕРєСЂСѓРі СѓР¶Рµ РїРѕРІС‘СЂРЅСѓС‚РѕРіРѕ СЃРѕРґРµСЂР¶РёРјРѕРіРѕ. РћР±СЉРµРґРёРЅРµРЅР° СЃ `drawObjectSelectionRect` С‡РµСЂРµР· РѕР±С‰РёР№ РїСЂРёРјРёС‚РёРІ `RenderOperations.strokeFrame()` + `WorldPositionUtils.getFrameGeometry()` (СЃРј. Р·Р°РїРёСЃСЊ РїСЂРѕ rotate/scale Р¶РµСЃС‚С‹ РІС‹С€Рµ) вЂ” С‚РµРїРµСЂСЊ СЂР°РјРєР° РіСЂСѓРїРїС‹ РїРѕРІРѕСЂР°С‡РёРІР°РµС‚СЃСЏ РІРјРµСЃС‚Рµ СЃ РєР°СЂС‚РёРЅРєРѕР№, Р·Р°РјРѕСЂРѕР¶РµРЅРЅС‹Р№ СЃРЅР°РїС€РѕС‚ (`groupEditMode.frozenFrameGeometry`) С‚РѕР¶Рµ РЅРµСЃС‘С‚ rotation.
+  2. **РџРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµ РѕР±СЉРµРєС‚Р° РІРЅСѓС‚СЂРё РїРѕРІС‘СЂРЅСѓС‚РѕР№ РіСЂСѓРїРїС‹ РґРІРёРіР°Р»Рѕ РµРіРѕ РІ РЅРµРІРµСЂРЅРѕРј РЅР°РїСЂР°РІР»РµРЅРёРё** вЂ” РјРёСЂРѕРІР°СЏ РґРµР»СЊС‚Р° РєСѓСЂСЃРѕСЂР° (`dx,dy`) РґРѕР±Р°РІР»СЏР»Р°СЃСЊ РЅР°РїСЂСЏРјСѓСЋ Рє Р»РѕРєР°Р»СЊРЅС‹Рј РєРѕРѕСЂРґРёРЅР°С‚Р°Рј, С‡С‚Рѕ РІРµСЂРЅРѕ С‚РѕР»СЊРєРѕ РґР»СЏ РЅРµРїРѕРІС‘СЂРЅСѓС‚С‹С… РїСЂРµРґРєРѕРІ. `WorldPositionUtils.worldDeltaToLocalDelta()` (РёРЅРІРµСЂС‚РёСЂСѓРµС‚ СЃСѓРјРјСѓ ancestor-РїРѕРІРѕСЂРѕС‚РѕРІ вЂ” РєРѕРјРїРѕР·РёС†РёСЏ С‡РёСЃС‚С‹С… РІСЂР°С‰РµРЅРёР№ Р°РґРґРёС‚РёРІРЅР°, РїРёРІРѕС‚С‹ РЅРµ РІР°Р¶РЅС‹ РґР»СЏ РґРµР»СЊС‚С‹) Рё `worldPointToLocalPointInGroup()` (РєРѕРЅРІРµСЂС‚РёСЂСѓРµС‚ РјРёСЂРѕРІСѓСЋ С‚РѕС‡РєСѓ РІ Р»РѕРєР°Р»СЊРЅСѓСЋ РґР»СЏ РєРѕРЅРєСЂРµС‚РЅРѕР№ РіСЂСѓРїРїС‹, СѓС‡РёС‚С‹РІР°СЏ РµС‘ СЃРѕР±СЃС‚РІРµРЅРЅС‹Р№ rotation РєР°Рє Р±Р»РёР¶Р°Р№С€РµРµ Р·РІРµРЅРѕ С†РµРїРѕС‡РєРё) вЂ” РёСЃРїРѕР»СЊР·СѓСЋС‚СЃСЏ РІ `MouseHandlers.dragSelectedObjects` РІРјРµСЃС‚Рѕ РїСЂРµР¶РЅРёС… `obj.x += dx`/`obj.x -= groupPos.x`.
+  3. **РџРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµ РћР”РќРћР“Рћ СЂРµР±С‘РЅРєР° СЃРґРІРёРіР°Р»Рѕ РѕС‚СЂРёСЃРѕРІР°РЅРЅСѓСЋ РїРѕР·РёС†РёСЋ РµРіРѕ РЅРµРІС‹РґРµР»РµРЅРЅС‹С… СЃРѕСЃРµРґРµР№** вЂ” rotation-pivot РіСЂСѓРїРїС‹ РІС‹С‡РёСЃР»СЏРµС‚СЃСЏ РєР°Рє С†РµРЅС‚СЂ bounds РµС‘ С‚РµРєСѓС‰РёС… РґРµС‚РµР№ (`Group.getBounds()`), РєРѕС‚РѕСЂС‹Р№ РїРµСЂРµСЃС‡РёС‚С‹РІР°РµС‚СЃСЏ РєР°Р¶РґС‹Р№ РєР°РґСЂ СЂРµРЅРґРµСЂР° Рё РІРєР»СЋС‡Р°РµС‚ С‚РµРєСѓС‰СѓСЋ (РґРІРёРіР°СЋС‰СѓСЋСЃСЏ) РїРѕР·РёС†РёСЋ РїРµСЂРµС‚Р°СЃРєРёРІР°РµРјРѕРіРѕ РѕР±СЉРµРєС‚Р°. РџРѕРґС‚РІРµСЂР¶РґРµРЅРѕ РІ Р±СЂР°СѓР·РµСЂРµ: drag `c1` РІРЅСѓС‚СЂРё РіСЂСѓРїРїС‹, РїРѕРІС‘СЂРЅСѓС‚РѕР№ РЅР° 90В°, РґРІРёРіР°Р» СЂРµРЅРґРµСЂРЅСѓСЋ РјРёСЂРѕРІСѓСЋ РїРѕР·РёС†РёСЋ РЅРµРІС‹РґРµР»РµРЅРЅРѕРіРѕ `c2` РїСЂРё РЅРµРёР·РјРµРЅРЅС‹С… `c2.x/y`. **РџРѕРїС‹С‚РєР° С„РёРєСЃР° С‡РµСЂРµР· `excludeIds` (РёСЃРєР»СЋС‡РµРЅРёРµ РїРµСЂРµС‚Р°СЃРєРёРІР°РµРјРѕРіРѕ id РёР· pivot-СЃСѓРјРјС‹, threaded С‡РµСЂРµР· `Group.getBounds`/`WorldPositionUtils`/`CanvasRenderer`/`RenderOperations`/`MouseHandlers`) РѕС‚РєР°С‡РµРЅР° РІ С‚РѕС‚ Р¶Рµ РґРµРЅСЊ** вЂ” СЃРј. СЃР»РµРґСѓСЋС‰СѓСЋ Р·Р°РїРёСЃСЊ; РѕРіСЂР°РЅРёС‡РµРЅРёРµ РѕСЃС‚Р°С‘С‚СЃСЏ РЅРµРёСЃРїСЂР°РІР»РµРЅРЅС‹Рј.
 
-- **Ревёрт: `excludeIds`-фикс rotation-pivot вызвал 5 регрессий** — попытка стабилизировать pivot (пункт 3 выше) исключала id выделения из суммы bounds ancestor-группы, пока `mouse.isDragging || mouse.isTransforming`. Проблема: `isDragging` становится `true` сразу на mousedown (до движения курсора), поэтому исключение срабатывало уже при простом КЛИКЕ/выделении ребёнка, а не только во время реального drag — это вызвало: (1) скачок рамки/позиции группы в момент выделения без движения мыши; (2) рамка открытой группы рисовалась «вокруг остальных детей без учёта выбранного» сразу при выборе; (3) рамка переставала реагировать на движение перетаскиваемого объекта (переставала быть «интерактивной»); (4) подсветка alt-drag-out (`drawAltDragSelectionRect`) ломалась для самого перетаскиваемого объекта — тот же `excludeIds` передавался в `getObjectWorldBoundsWithParallax(obj, ..., excludeIds)`, где `obj.id` оказывался ОДНОВРЕМЕННО целью запроса И в списке исключений — срабатывал pre-existing вырожденный early-return `if (excludeIds.includes(obj.id)) return degenerate` в `WorldPositionUtils.getWorldBounds`, задуманный для другой цели («bounds группы без части детей»), а не «не учитывать объект в pivot предка». Всё это — конфликт ДВУХ разных семантик под одним именем параметра. Откачено полностью: `Group.getBounds` вернула сигнатуру без `excludeIds`; `WorldPositionUtils` (`_findPlainPositionAndChain`/`getWorldPosition`/`getWorldTransform`/`getAncestorRotation`/`worldDeltaToLocalDelta`/`getFrameGeometry`/`worldPointToLocalPointInGroup`) — без доп. параметра; `RenderOperations.getActiveDragExcludeIds()` удалён вместе со всеми вызовами; `CanvasRenderer.drawObject/drawGroup`, `ParallaxRenderer.renderParallaxObjects/getObjectWorldBoundsWithParallax`, `ObjectOperations.getObjectWorldPosition` — без доп. параметра. Направление drag (`worldDeltaToLocalDelta`/`worldPointToLocalPointInGroup` как таковые, без excludeIds) и рамка-с-rotation остались — это независимые, верно работающие фиксы. Проблема с pivot остаётся открытой (см. «Известные ограничения» в ARCHITECTURE.md/DEVELOPMENT_GUIDE.md) — корректный фикс потребовал бы freeze-снимка pivot'а НА СТАРТЕ жеста, а не exclude-переключателя синхронного с `isDragging` (`src/models/Group.js`, `src/utils/WorldPositionUtils.js`, `src/core/RenderOperations.js`, `src/core/ObjectOperations.js`, `src/ui/CanvasRenderer.js`, `src/utils/ParallaxRenderer.js`, `src/event-system/MouseHandlers.js`).
+- **Р РµРІС‘СЂС‚: `excludeIds`-С„РёРєСЃ rotation-pivot РІС‹Р·РІР°Р» 5 СЂРµРіСЂРµСЃСЃРёР№** вЂ” РїРѕРїС‹С‚РєР° СЃС‚Р°Р±РёР»РёР·РёСЂРѕРІР°С‚СЊ pivot (РїСѓРЅРєС‚ 3 РІС‹С€Рµ) РёСЃРєР»СЋС‡Р°Р»Р° id РІС‹РґРµР»РµРЅРёСЏ РёР· СЃСѓРјРјС‹ bounds ancestor-РіСЂСѓРїРїС‹, РїРѕРєР° `mouse.isDragging || mouse.isTransforming`. РџСЂРѕР±Р»РµРјР°: `isDragging` СЃС‚Р°РЅРѕРІРёС‚СЃСЏ `true` СЃСЂР°Р·Сѓ РЅР° mousedown (РґРѕ РґРІРёР¶РµРЅРёСЏ РєСѓСЂСЃРѕСЂР°), РїРѕСЌС‚РѕРјСѓ РёСЃРєР»СЋС‡РµРЅРёРµ СЃСЂР°Р±Р°С‚С‹РІР°Р»Рѕ СѓР¶Рµ РїСЂРё РїСЂРѕСЃС‚РѕРј РљР›РРљР•/РІС‹РґРµР»РµРЅРёРё СЂРµР±С‘РЅРєР°, Р° РЅРµ С‚РѕР»СЊРєРѕ РІРѕ РІСЂРµРјСЏ СЂРµР°Р»СЊРЅРѕРіРѕ drag вЂ” СЌС‚Рѕ РІС‹Р·РІР°Р»Рѕ: (1) СЃРєР°С‡РѕРє СЂР°РјРєРё/РїРѕР·РёС†РёРё РіСЂСѓРїРїС‹ РІ РјРѕРјРµРЅС‚ РІС‹РґРµР»РµРЅРёСЏ Р±РµР· РґРІРёР¶РµРЅРёСЏ РјС‹С€Рё; (2) СЂР°РјРєР° РѕС‚РєСЂС‹С‚РѕР№ РіСЂСѓРїРїС‹ СЂРёСЃРѕРІР°Р»Р°СЃСЊ В«РІРѕРєСЂСѓРі РѕСЃС‚Р°Р»СЊРЅС‹С… РґРµС‚РµР№ Р±РµР· СѓС‡С‘С‚Р° РІС‹Р±СЂР°РЅРЅРѕРіРѕВ» СЃСЂР°Р·Сѓ РїСЂРё РІС‹Р±РѕСЂРµ; (3) СЂР°РјРєР° РїРµСЂРµСЃС‚Р°РІР°Р»Р° СЂРµР°РіРёСЂРѕРІР°С‚СЊ РЅР° РґРІРёР¶РµРЅРёРµ РїРµСЂРµС‚Р°СЃРєРёРІР°РµРјРѕРіРѕ РѕР±СЉРµРєС‚Р° (РїРµСЂРµСЃС‚Р°РІР°Р»Р° Р±С‹С‚СЊ В«РёРЅС‚РµСЂР°РєС‚РёРІРЅРѕР№В»); (4) РїРѕРґСЃРІРµС‚РєР° alt-drag-out (`drawAltDragSelectionRect`) Р»РѕРјР°Р»Р°СЃСЊ РґР»СЏ СЃР°РјРѕРіРѕ РїРµСЂРµС‚Р°СЃРєРёРІР°РµРјРѕРіРѕ РѕР±СЉРµРєС‚Р° вЂ” С‚РѕС‚ Р¶Рµ `excludeIds` РїРµСЂРµРґР°РІР°Р»СЃСЏ РІ `getObjectWorldBoundsWithParallax(obj, ..., excludeIds)`, РіРґРµ `obj.id` РѕРєР°Р·С‹РІР°Р»СЃСЏ РћР”РќРћР’Р Р•РњР•РќРќРћ С†РµР»СЊСЋ Р·Р°РїСЂРѕСЃР° Р РІ СЃРїРёСЃРєРµ РёСЃРєР»СЋС‡РµРЅРёР№ вЂ” СЃСЂР°Р±Р°С‚С‹РІР°Р» pre-existing РІС‹СЂРѕР¶РґРµРЅРЅС‹Р№ early-return `if (excludeIds.includes(obj.id)) return degenerate` РІ `WorldPositionUtils.getWorldBounds`, Р·Р°РґСѓРјР°РЅРЅС‹Р№ РґР»СЏ РґСЂСѓРіРѕР№ С†РµР»Рё (В«bounds РіСЂСѓРїРїС‹ Р±РµР· С‡Р°СЃС‚Рё РґРµС‚РµР№В»), Р° РЅРµ В«РЅРµ СѓС‡РёС‚С‹РІР°С‚СЊ РѕР±СЉРµРєС‚ РІ pivot РїСЂРµРґРєР°В». Р’СЃС‘ СЌС‚Рѕ вЂ” РєРѕРЅС„Р»РёРєС‚ Р”Р’РЈРҐ СЂР°Р·РЅС‹С… СЃРµРјР°РЅС‚РёРє РїРѕРґ РѕРґРЅРёРј РёРјРµРЅРµРј РїР°СЂР°РјРµС‚СЂР°. РћС‚РєР°С‡РµРЅРѕ РїРѕР»РЅРѕСЃС‚СЊСЋ: `Group.getBounds` РІРµСЂРЅСѓР»Р° СЃРёРіРЅР°С‚СѓСЂСѓ Р±РµР· `excludeIds`; `WorldPositionUtils` (`_findPlainPositionAndChain`/`getWorldPosition`/`getWorldTransform`/`getAncestorRotation`/`worldDeltaToLocalDelta`/`getFrameGeometry`/`worldPointToLocalPointInGroup`) вЂ” Р±РµР· РґРѕРї. РїР°СЂР°РјРµС‚СЂР°; `RenderOperations.getActiveDragExcludeIds()` СѓРґР°Р»С‘РЅ РІРјРµСЃС‚Рµ СЃРѕ РІСЃРµРјРё РІС‹Р·РѕРІР°РјРё; `CanvasRenderer.drawObject/drawGroup`, `ParallaxRenderer.renderParallaxObjects/getObjectWorldBoundsWithParallax`, `ObjectOperations.getObjectWorldPosition` вЂ” Р±РµР· РґРѕРї. РїР°СЂР°РјРµС‚СЂР°. РќР°РїСЂР°РІР»РµРЅРёРµ drag (`worldDeltaToLocalDelta`/`worldPointToLocalPointInGroup` РєР°Рє С‚Р°РєРѕРІС‹Рµ, Р±РµР· excludeIds) Рё СЂР°РјРєР°-СЃ-rotation РѕСЃС‚Р°Р»РёСЃСЊ вЂ” СЌС‚Рѕ РЅРµР·Р°РІРёСЃРёРјС‹Рµ, РІРµСЂРЅРѕ СЂР°Р±РѕС‚Р°СЋС‰РёРµ С„РёРєСЃС‹. РџСЂРѕР±Р»РµРјР° СЃ pivot РѕСЃС‚Р°С‘С‚СЃСЏ РѕС‚РєСЂС‹С‚РѕР№ (СЃРј. В«РР·РІРµСЃС‚РЅС‹Рµ РѕРіСЂР°РЅРёС‡РµРЅРёСЏВ» РІ ARCHITECTURE.md/DEVELOPMENT_GUIDE.md) вЂ” РєРѕСЂСЂРµРєС‚РЅС‹Р№ С„РёРєСЃ РїРѕС‚СЂРµР±РѕРІР°Р» Р±С‹ freeze-СЃРЅРёРјРєР° pivot'Р° РќРђ РЎРўРђР РўР• Р¶РµСЃС‚Р°, Р° РЅРµ exclude-РїРµСЂРµРєР»СЋС‡Р°С‚РµР»СЏ СЃРёРЅС…СЂРѕРЅРЅРѕРіРѕ СЃ `isDragging` (`src/models/Group.js`, `src/utils/WorldPositionUtils.js`, `src/core/RenderOperations.js`, `src/core/ObjectOperations.js`, `src/ui/CanvasRenderer.js`, `src/utils/ParallaxRenderer.js`, `src/event-system/MouseHandlers.js`).
 
-- **Дубликаты повёрнутых объектов: рамка превью не учитывала rotation оригинала** — `getDuplicateObjectBounds` (bounds для preview-объектов дублирования, которые не лежат в `level.objects` и поэтому не проходят через `WorldPositionUtils`) полностью игнорировала `rotation`, хотя сама картинка дубликата УЖЕ рисовалась повёрнутой (`CanvasRenderer.drawSingleObject` получает rotation через spread-копию объекта). Исправлено: `getDuplicateObjectBounds` теперь строит bounds через тот же алгоритм, что `WorldPositionUtils.getWorldBounds` для обычных групп («union bounds детей в локальной системе → повернуть как единое целое → сдвинуть»), но вручную (без DFS-от-корня, т.к. дубликаты — отсоединённое поддерево). Для простых (не групповых) объектов рамка дополнительно рисуется ТОЧНО повёрнутой (не консервативным AABB) — `drawDuplicateObjects` строит rect из `obj.width/height` и поворачивает через `strokeFrame(..., obj.rotation)` (`src/core/RenderOperations.js`).
+- **Р”СѓР±Р»РёРєР°С‚С‹ РїРѕРІС‘СЂРЅСѓС‚С‹С… РѕР±СЉРµРєС‚РѕРІ: СЂР°РјРєР° РїСЂРµРІСЊСЋ РЅРµ СѓС‡РёС‚С‹РІР°Р»Р° rotation РѕСЂРёРіРёРЅР°Р»Р°** вЂ” `getDuplicateObjectBounds` (bounds РґР»СЏ preview-РѕР±СЉРµРєС‚РѕРІ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ, РєРѕС‚РѕСЂС‹Рµ РЅРµ Р»РµР¶Р°С‚ РІ `level.objects` Рё РїРѕСЌС‚РѕРјСѓ РЅРµ РїСЂРѕС…РѕРґСЏС‚ С‡РµСЂРµР· `WorldPositionUtils`) РїРѕР»РЅРѕСЃС‚СЊСЋ РёРіРЅРѕСЂРёСЂРѕРІР°Р»Р° `rotation`, С…РѕС‚СЏ СЃР°РјР° РєР°СЂС‚РёРЅРєР° РґСѓР±Р»РёРєР°С‚Р° РЈР–Р• СЂРёСЃРѕРІР°Р»Р°СЃСЊ РїРѕРІС‘СЂРЅСѓС‚РѕР№ (`CanvasRenderer.drawSingleObject` РїРѕР»СѓС‡Р°РµС‚ rotation С‡РµСЂРµР· spread-РєРѕРїРёСЋ РѕР±СЉРµРєС‚Р°). РСЃРїСЂР°РІР»РµРЅРѕ: `getDuplicateObjectBounds` С‚РµРїРµСЂСЊ СЃС‚СЂРѕРёС‚ bounds С‡РµСЂРµР· С‚РѕС‚ Р¶Рµ Р°Р»РіРѕСЂРёС‚Рј, С‡С‚Рѕ `WorldPositionUtils.getWorldBounds` РґР»СЏ РѕР±С‹С‡РЅС‹С… РіСЂСѓРїРї (В«union bounds РґРµС‚РµР№ РІ Р»РѕРєР°Р»СЊРЅРѕР№ СЃРёСЃС‚РµРјРµ в†’ РїРѕРІРµСЂРЅСѓС‚СЊ РєР°Рє РµРґРёРЅРѕРµ С†РµР»РѕРµ в†’ СЃРґРІРёРЅСѓС‚СЊВ»), РЅРѕ РІСЂСѓС‡РЅСѓСЋ (Р±РµР· DFS-РѕС‚-РєРѕСЂРЅСЏ, С‚.Рє. РґСѓР±Р»РёРєР°С‚С‹ вЂ” РѕС‚СЃРѕРµРґРёРЅС‘РЅРЅРѕРµ РїРѕРґРґРµСЂРµРІРѕ). Р”Р»СЏ РїСЂРѕСЃС‚С‹С… (РЅРµ РіСЂСѓРїРїРѕРІС‹С…) РѕР±СЉРµРєС‚РѕРІ СЂР°РјРєР° РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕ СЂРёСЃСѓРµС‚СЃСЏ РўРћР§РќРћ РїРѕРІС‘СЂРЅСѓС‚РѕР№ (РЅРµ РєРѕРЅСЃРµСЂРІР°С‚РёРІРЅС‹Рј AABB) вЂ” `drawDuplicateObjects` СЃС‚СЂРѕРёС‚ rect РёР· `obj.width/height` Рё РїРѕРІРѕСЂР°С‡РёРІР°РµС‚ С‡РµСЂРµР· `strokeFrame(..., obj.rotation)` (`src/core/RenderOperations.js`).
 
-- **Фикс: рамки/hit-test внутри ПОВЁРНУТОЙ группы расходились с картинкой** — `WorldPositionUtils.getWorldPosition/getWorldBounds/isPointInWorldBounds` считали предков translation-only, игнорируя `rotation` родительских групп; при повороте группы рендер (`CanvasRenderer`, корректно каскадирует `ctx.rotate` через вложенность) и геометрия (рамка выделения, hit-test) расходились. Добавлены `_findPlainPositionAndChain`/`_applyRotationChain` — DFS собирает цепочку повёрнутых предков-групп (pivot = центр `ancestor.getBounds()`, тот же pivot, что использует рендер) и применяет её к точке от самого внутреннего предка к самому внешнему, зеркаля порядок вложенных `ctx.rotate`; итоговый угол объекта на экране = сумма поворотов предков + собственный (композиция чистых 2D-вращений аддитивна). Формулы перепроверены аналитически и сверены с независимой JS-репликацией ctx-трансформа в браузере — совпадают до бита. Поведение для неповёрнутых предков не изменилось (регрессионные тесты пройдены). Известное ограничение осталось только для ЖЕСТА (перетаскивание применяет мировые дельты к локальным координатам — некорректно внутри повёрнутого предка), геометрия для чтения (bounds/hit-test/рамка) теперь верна (`src/utils/WorldPositionUtils.js`).
+- **Р¤РёРєСЃ: СЂР°РјРєРё/hit-test РІРЅСѓС‚СЂРё РџРћР’РЃР РќРЈРўРћР™ РіСЂСѓРїРїС‹ СЂР°СЃС…РѕРґРёР»РёСЃСЊ СЃ РєР°СЂС‚РёРЅРєРѕР№** вЂ” `WorldPositionUtils.getWorldPosition/getWorldBounds/isPointInWorldBounds` СЃС‡РёС‚Р°Р»Рё РїСЂРµРґРєРѕРІ translation-only, РёРіРЅРѕСЂРёСЂСѓСЏ `rotation` СЂРѕРґРёС‚РµР»СЊСЃРєРёС… РіСЂСѓРїРї; РїСЂРё РїРѕРІРѕСЂРѕС‚Рµ РіСЂСѓРїРїС‹ СЂРµРЅРґРµСЂ (`CanvasRenderer`, РєРѕСЂСЂРµРєС‚РЅРѕ РєР°СЃРєР°РґРёСЂСѓРµС‚ `ctx.rotate` С‡РµСЂРµР· РІР»РѕР¶РµРЅРЅРѕСЃС‚СЊ) Рё РіРµРѕРјРµС‚СЂРёСЏ (СЂР°РјРєР° РІС‹РґРµР»РµРЅРёСЏ, hit-test) СЂР°СЃС…РѕРґРёР»РёСЃСЊ. Р”РѕР±Р°РІР»РµРЅС‹ `_findPlainPositionAndChain`/`_applyRotationChain` вЂ” DFS СЃРѕР±РёСЂР°РµС‚ С†РµРїРѕС‡РєСѓ РїРѕРІС‘СЂРЅСѓС‚С‹С… РїСЂРµРґРєРѕРІ-РіСЂСѓРїРї (pivot = С†РµРЅС‚СЂ `ancestor.getBounds()`, С‚РѕС‚ Р¶Рµ pivot, С‡С‚Рѕ РёСЃРїРѕР»СЊР·СѓРµС‚ СЂРµРЅРґРµСЂ) Рё РїСЂРёРјРµРЅСЏРµС‚ РµС‘ Рє С‚РѕС‡РєРµ РѕС‚ СЃР°РјРѕРіРѕ РІРЅСѓС‚СЂРµРЅРЅРµРіРѕ РїСЂРµРґРєР° Рє СЃР°РјРѕРјСѓ РІРЅРµС€РЅРµРјСѓ, Р·РµСЂРєР°Р»СЏ РїРѕСЂСЏРґРѕРє РІР»РѕР¶РµРЅРЅС‹С… `ctx.rotate`; РёС‚РѕРіРѕРІС‹Р№ СѓРіРѕР» РѕР±СЉРµРєС‚Р° РЅР° СЌРєСЂР°РЅРµ = СЃСѓРјРјР° РїРѕРІРѕСЂРѕС‚РѕРІ РїСЂРµРґРєРѕРІ + СЃРѕР±СЃС‚РІРµРЅРЅС‹Р№ (РєРѕРјРїРѕР·РёС†РёСЏ С‡РёСЃС‚С‹С… 2D-РІСЂР°С‰РµРЅРёР№ Р°РґРґРёС‚РёРІРЅР°). Р¤РѕСЂРјСѓР»С‹ РїРµСЂРµРїСЂРѕРІРµСЂРµРЅС‹ Р°РЅР°Р»РёС‚РёС‡РµСЃРєРё Рё СЃРІРµСЂРµРЅС‹ СЃ РЅРµР·Р°РІРёСЃРёРјРѕР№ JS-СЂРµРїР»РёРєР°С†РёРµР№ ctx-С‚СЂР°РЅСЃС„РѕСЂРјР° РІ Р±СЂР°СѓР·РµСЂРµ вЂ” СЃРѕРІРїР°РґР°СЋС‚ РґРѕ Р±РёС‚Р°. РџРѕРІРµРґРµРЅРёРµ РґР»СЏ РЅРµРїРѕРІС‘СЂРЅСѓС‚С‹С… РїСЂРµРґРєРѕРІ РЅРµ РёР·РјРµРЅРёР»РѕСЃСЊ (СЂРµРіСЂРµСЃСЃРёРѕРЅРЅС‹Рµ С‚РµСЃС‚С‹ РїСЂРѕР№РґРµРЅС‹). РР·РІРµСЃС‚РЅРѕРµ РѕРіСЂР°РЅРёС‡РµРЅРёРµ РѕСЃС‚Р°Р»РѕСЃСЊ С‚РѕР»СЊРєРѕ РґР»СЏ Р–Р•РЎРўРђ (РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµ РїСЂРёРјРµРЅСЏРµС‚ РјРёСЂРѕРІС‹Рµ РґРµР»СЊС‚С‹ Рє Р»РѕРєР°Р»СЊРЅС‹Рј РєРѕРѕСЂРґРёРЅР°С‚Р°Рј вЂ” РЅРµРєРѕСЂСЂРµРєС‚РЅРѕ РІРЅСѓС‚СЂРё РїРѕРІС‘СЂРЅСѓС‚РѕРіРѕ РїСЂРµРґРєР°), РіРµРѕРјРµС‚СЂРёСЏ РґР»СЏ С‡С‚РµРЅРёСЏ (bounds/hit-test/СЂР°РјРєР°) С‚РµРїРµСЂСЊ РІРµСЂРЅР° (`src/utils/WorldPositionUtils.js`).
 
-- **DetailsPanel: заголовок вкладки (Asset/Assets/Level) не обновлялся** — `updateTabTitle()` искал `#details-tab`, элемента с таким id больше нет: вкладки генерируются динамически `PanelPositionManager` как `<button data-tab="details">`. Исправлено на `document.querySelectorAll('[data-tab="details"]')` (обновляет все вкладки-дубликаты, включая перенесённые в другую панель) (`src/ui/DetailsPanel.js`).
+- **DetailsPanel: Р·Р°РіРѕР»РѕРІРѕРє РІРєР»Р°РґРєРё (Asset/Assets/Level) РЅРµ РѕР±РЅРѕРІР»СЏР»СЃСЏ** вЂ” `updateTabTitle()` РёСЃРєР°Р» `#details-tab`, СЌР»РµРјРµРЅС‚Р° СЃ С‚Р°РєРёРј id Р±РѕР»СЊС€Рµ РЅРµС‚: РІРєР»Р°РґРєРё РіРµРЅРµСЂРёСЂСѓСЋС‚СЃСЏ РґРёРЅР°РјРёС‡РµСЃРєРё `PanelPositionManager` РєР°Рє `<button data-tab="details">`. РСЃРїСЂР°РІР»РµРЅРѕ РЅР° `document.querySelectorAll('[data-tab="details"]')` (РѕР±РЅРѕРІР»СЏРµС‚ РІСЃРµ РІРєР»Р°РґРєРё-РґСѓР±Р»РёРєР°С‚С‹, РІРєР»СЋС‡Р°СЏ РїРµСЂРµРЅРµСЃС‘РЅРЅС‹Рµ РІ РґСЂСѓРіСѓСЋ РїР°РЅРµР»СЊ) (`src/ui/DetailsPanel.js`).
 
-- **Cross-panel tab drag (replaces "Move to" context menu)** — контекстное меню «Move to Left/Right Panel» удалено (`TabMoveContextMenu`, `handleTabContextMenu` из `EventHandlers.js`). Вкладки перемещаются прямым drag:
-  - **Ghost-таб** (`.tab-drag-ghost`): полупрозрачный повёрнутый дубликат тянется под курсором во время drag.
-  - **Подсветка drop-зоны**: при наведении на tab-bar другой панели — синяя пунктирная рамка (`.tab-drop-zone`); при сбросе вызывается `PanelPositionManager.moveTab()`.
-  - **Создание панели**: если целевой панели не существует, на краях `#main-workspace` появляются светло-синие полосы (`.tab-new-panel-zone`); при сбросе на них панель создаётся автоматически через `ensurePanelExists()`.
-  - **Скоупинг визуалов**: подсвечиваются только `#left-tabs-panel > .flex.border-b.border-gray-700` и `#right-tabs-panel > .flex.border-b.border-gray-700` — строгий прямой-дочерний селектор и Set-based проверка вместо `closest()`, чтобы другие UI-элементы (поиск, шапки секций) не реагировали.
-  - **`this._pendingDrag`**: состояние drag хранится отдельно от `window.tabDraggingState`, т.к. легаси `tabDraggingGlobalMouseUp` (зарегистрирован в конструкторе) очищает его до выполнения нашего `mouseup`.
+- **Cross-panel tab drag (replaces "Move to" context menu)** вЂ” РєРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ В«Move to Left/Right PanelВ» СѓРґР°Р»РµРЅРѕ (`TabMoveContextMenu`, `handleTabContextMenu` РёР· `EventHandlers.js`). Р’РєР»Р°РґРєРё РїРµСЂРµРјРµС‰Р°СЋС‚СЃСЏ РїСЂСЏРјС‹Рј drag:
+  - **Ghost-С‚Р°Р±** (`.tab-drag-ghost`): РїРѕР»СѓРїСЂРѕР·СЂР°С‡РЅС‹Р№ РїРѕРІС‘СЂРЅСѓС‚С‹Р№ РґСѓР±Р»РёРєР°С‚ С‚СЏРЅРµС‚СЃСЏ РїРѕРґ РєСѓСЂСЃРѕСЂРѕРј РІРѕ РІСЂРµРјСЏ drag.
+  - **РџРѕРґСЃРІРµС‚РєР° drop-Р·РѕРЅС‹**: РїСЂРё РЅР°РІРµРґРµРЅРёРё РЅР° tab-bar РґСЂСѓРіРѕР№ РїР°РЅРµР»Рё вЂ” СЃРёРЅСЏСЏ РїСѓРЅРєС‚РёСЂРЅР°СЏ СЂР°РјРєР° (`.tab-drop-zone`); РїСЂРё СЃР±СЂРѕСЃРµ РІС‹Р·С‹РІР°РµС‚СЃСЏ `PanelPositionManager.moveTab()`.
+  - **РЎРѕР·РґР°РЅРёРµ РїР°РЅРµР»Рё**: РµСЃР»Рё С†РµР»РµРІРѕР№ РїР°РЅРµР»Рё РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚, РЅР° РєСЂР°СЏС… `#main-workspace` РїРѕСЏРІР»СЏСЋС‚СЃСЏ СЃРІРµС‚Р»Рѕ-СЃРёРЅРёРµ РїРѕР»РѕСЃС‹ (`.tab-new-panel-zone`); РїСЂРё СЃР±СЂРѕСЃРµ РЅР° РЅРёС… РїР°РЅРµР»СЊ СЃРѕР·РґР°С‘С‚СЃСЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё С‡РµСЂРµР· `ensurePanelExists()`.
+  - **РЎРєРѕСѓРїРёРЅРі РІРёР·СѓР°Р»РѕРІ**: РїРѕРґСЃРІРµС‡РёРІР°СЋС‚СЃСЏ С‚РѕР»СЊРєРѕ `#left-tabs-panel > .flex.border-b.border-gray-700` Рё `#right-tabs-panel > .flex.border-b.border-gray-700` вЂ” СЃС‚СЂРѕРіРёР№ РїСЂСЏРјРѕР№-РґРѕС‡РµСЂРЅРёР№ СЃРµР»РµРєС‚РѕСЂ Рё Set-based РїСЂРѕРІРµСЂРєР° РІРјРµСЃС‚Рѕ `closest()`, С‡С‚РѕР±С‹ РґСЂСѓРіРёРµ UI-СЌР»РµРјРµРЅС‚С‹ (РїРѕРёСЃРє, С€Р°РїРєРё СЃРµРєС†РёР№) РЅРµ СЂРµР°РіРёСЂРѕРІР°Р»Рё.
+  - **`this._pendingDrag`**: СЃРѕСЃС‚РѕСЏРЅРёРµ drag С…СЂР°РЅРёС‚СЃСЏ РѕС‚РґРµР»СЊРЅРѕ РѕС‚ `window.tabDraggingState`, С‚.Рє. Р»РµРіР°СЃРё `tabDraggingGlobalMouseUp` (Р·Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°РЅ РІ РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂРµ) РѕС‡РёС‰Р°РµС‚ РµРіРѕ РґРѕ РІС‹РїРѕР»РЅРµРЅРёСЏ РЅР°С€РµРіРѕ `mouseup`.
   - (`src/event-system/EventHandlers.js`, `src/ui/PanelPositionManager.js`, `styles/main.css`)
 
-- **[SUPERSEDED — см. запись «Z-порядок объектов» выше]** **zIndex в группах: рендеринг, назначение, миграция** — (1) `assignInitialZIndex` вызывал `assignObjectToLayer(obj.id)` → `findObjectById` → `null` для детей групп (не в `level.objects`) → слой не корректировался → zIndex оставался с `maxLayerIndex` вместо реального. Исправлено: layer index вычисляется напрямую из `layerId`-параметра. (2) `fromData` итерировал только `level.objects`, не рекурсируя в детей групп → дети с `zIndex=0` (сохранённые с багом) не мигрировались. Исправлено: `fixZIndex` рекурсивно обходит все вложенные группы с учётом наследования `layerId`. (3) `drawGroup` рисовал детей в порядке массива без сортировки → порядок не совпадал с hit-test. Исправлено: `slice().sort(by zIndex asc)` перед `forEach`. (4) При drag top-level→group zIndex не переназначался. Исправлено: `getNextZIndex()` + коррекция слоя перед `push` (`src/models/Level.js`, `src/ui/CanvasRenderer.js`, `src/event-system/MouseHandlers.js`).
+- **[SUPERSEDED вЂ” СЃРј. Р·Р°РїРёСЃСЊ В«Z-РїРѕСЂСЏРґРѕРє РѕР±СЉРµРєС‚РѕРІВ» РІС‹С€Рµ]** **zIndex РІ РіСЂСѓРїРїР°С…: СЂРµРЅРґРµСЂРёРЅРі, РЅР°Р·РЅР°С‡РµРЅРёРµ, РјРёРіСЂР°С†РёСЏ** вЂ” (1) `assignInitialZIndex` РІС‹Р·С‹РІР°Р» `assignObjectToLayer(obj.id)` в†’ `findObjectById` в†’ `null` РґР»СЏ РґРµС‚РµР№ РіСЂСѓРїРї (РЅРµ РІ `level.objects`) в†’ СЃР»РѕР№ РЅРµ РєРѕСЂСЂРµРєС‚РёСЂРѕРІР°Р»СЃСЏ в†’ zIndex РѕСЃС‚Р°РІР°Р»СЃСЏ СЃ `maxLayerIndex` РІРјРµСЃС‚Рѕ СЂРµР°Р»СЊРЅРѕРіРѕ. РСЃРїСЂР°РІР»РµРЅРѕ: layer index РІС‹С‡РёСЃР»СЏРµС‚СЃСЏ РЅР°РїСЂСЏРјСѓСЋ РёР· `layerId`-РїР°СЂР°РјРµС‚СЂР°. (2) `fromData` РёС‚РµСЂРёСЂРѕРІР°Р» С‚РѕР»СЊРєРѕ `level.objects`, РЅРµ СЂРµРєСѓСЂСЃРёСЂСѓСЏ РІ РґРµС‚РµР№ РіСЂСѓРїРї в†’ РґРµС‚Рё СЃ `zIndex=0` (СЃРѕС…СЂР°РЅС‘РЅРЅС‹Рµ СЃ Р±Р°РіРѕРј) РЅРµ РјРёРіСЂРёСЂРѕРІР°Р»РёСЃСЊ. РСЃРїСЂР°РІР»РµРЅРѕ: `fixZIndex` СЂРµРєСѓСЂСЃРёРІРЅРѕ РѕР±С…РѕРґРёС‚ РІСЃРµ РІР»РѕР¶РµРЅРЅС‹Рµ РіСЂСѓРїРїС‹ СЃ СѓС‡С‘С‚РѕРј РЅР°СЃР»РµРґРѕРІР°РЅРёСЏ `layerId`. (3) `drawGroup` СЂРёСЃРѕРІР°Р» РґРµС‚РµР№ РІ РїРѕСЂСЏРґРєРµ РјР°СЃСЃРёРІР° Р±РµР· СЃРѕСЂС‚РёСЂРѕРІРєРё в†’ РїРѕСЂСЏРґРѕРє РЅРµ СЃРѕРІРїР°РґР°Р» СЃ hit-test. РСЃРїСЂР°РІР»РµРЅРѕ: `slice().sort(by zIndex asc)` РїРµСЂРµРґ `forEach`. (4) РџСЂРё drag top-levelв†’group zIndex РЅРµ РїРµСЂРµРЅР°Р·РЅР°С‡Р°Р»СЃСЏ. РСЃРїСЂР°РІР»РµРЅРѕ: `getNextZIndex()` + РєРѕСЂСЂРµРєС†РёСЏ СЃР»РѕСЏ РїРµСЂРµРґ `push` (`src/models/Level.js`, `src/ui/CanvasRenderer.js`, `src/event-system/MouseHandlers.js`).
 
 
-- **[SUPERSEDED — см. запись «Z-порядок объектов» выше]** **zIndex: два бага нарушали порядок рендеринга и hit-test** — (1) `getNextZIndex`: условие `obj.zIndex > 0` исключало из сканирования объекты с `zIndex = 0.000` (слой с index=0) → `nextObjectIndex` всегда равен 0 → все объекты получали одинаковый `zIndex = 0.000` → Details показывал 0 для всех, кликался нижний объект вместо верхнего. Исправлено: `> 0` → `!== undefined`. (2) Floating point: `Math.floor((1.001 % 1) * 1000) = 0` вместо `1` (т.к. `1.001 % 1 ≈ 0.0009999...`) → неверный objectIndex при переносе между слоями с index≥1. Исправлено: `Math.floor → Math.round` в 11 местах. Существующие уровни с `zIndex = 0` авто-фиксируются при загрузке (`src/models/Level.js`, `src/models/Group.js`, `src/ui/DetailsPanel.js`, `src/core/LayerOperations.js`, `src/event-system/MouseHandlers.js`).
+- **[SUPERSEDED вЂ” СЃРј. Р·Р°РїРёСЃСЊ В«Z-РїРѕСЂСЏРґРѕРє РѕР±СЉРµРєС‚РѕРІВ» РІС‹С€Рµ]** **zIndex: РґРІР° Р±Р°РіР° РЅР°СЂСѓС€Р°Р»Рё РїРѕСЂСЏРґРѕРє СЂРµРЅРґРµСЂРёРЅРіР° Рё hit-test** вЂ” (1) `getNextZIndex`: СѓСЃР»РѕРІРёРµ `obj.zIndex > 0` РёСЃРєР»СЋС‡Р°Р»Рѕ РёР· СЃРєР°РЅРёСЂРѕРІР°РЅРёСЏ РѕР±СЉРµРєС‚С‹ СЃ `zIndex = 0.000` (СЃР»РѕР№ СЃ index=0) в†’ `nextObjectIndex` РІСЃРµРіРґР° СЂР°РІРµРЅ 0 в†’ РІСЃРµ РѕР±СЉРµРєС‚С‹ РїРѕР»СѓС‡Р°Р»Рё РѕРґРёРЅР°РєРѕРІС‹Р№ `zIndex = 0.000` в†’ Details РїРѕРєР°Р·С‹РІР°Р» 0 РґР»СЏ РІСЃРµС…, РєР»РёРєР°Р»СЃСЏ РЅРёР¶РЅРёР№ РѕР±СЉРµРєС‚ РІРјРµСЃС‚Рѕ РІРµСЂС…РЅРµРіРѕ. РСЃРїСЂР°РІР»РµРЅРѕ: `> 0` в†’ `!== undefined`. (2) Floating point: `Math.floor((1.001 % 1) * 1000) = 0` РІРјРµСЃС‚Рѕ `1` (С‚.Рє. `1.001 % 1 в‰€ 0.0009999...`) в†’ РЅРµРІРµСЂРЅС‹Р№ objectIndex РїСЂРё РїРµСЂРµРЅРѕСЃРµ РјРµР¶РґСѓ СЃР»РѕСЏРјРё СЃ indexв‰Ґ1. РСЃРїСЂР°РІР»РµРЅРѕ: `Math.floor в†’ Math.round` РІ 11 РјРµСЃС‚Р°С…. РЎСѓС‰РµСЃС‚РІСѓСЋС‰РёРµ СѓСЂРѕРІРЅРё СЃ `zIndex = 0` Р°РІС‚Рѕ-С„РёРєСЃРёСЂСѓСЋС‚СЃСЏ РїСЂРё Р·Р°РіСЂСѓР·РєРµ (`src/models/Level.js`, `src/models/Group.js`, `src/ui/DetailsPanel.js`, `src/core/LayerOperations.js`, `src/event-system/MouseHandlers.js`).
 
-- **Asset tabs bug fixes** — исправлены 4 бага в `AssetTabsManager`: (1) `addFolderTab`/`removeFolderTab` теперь создают новый `Set` вместо мутации объекта из StateManager, чтобы гарантировать уведомление подписчиков; (2) `removeFolderTab` явно передаёт `null` в `_saveTabStateToConfig()` — устранён рассинхрон `activeAssetTab` между state и config при перезагрузке; (3) `AssetTabContextMenu.destroy()` теперь удаляет `document.click` listener через сохранённую ссылку, предотвращая ghost-хендлеры; (4) DnD-слушатели из `setupFolderDragToTabs()` сохраняются как свойства и удаляются в `destroy()` (`src/ui/AssetTabsManager.js`).
+- **Asset tabs bug fixes** вЂ” РёСЃРїСЂР°РІР»РµРЅС‹ 4 Р±Р°РіР° РІ `AssetTabsManager`: (1) `addFolderTab`/`removeFolderTab` С‚РµРїРµСЂСЊ СЃРѕР·РґР°СЋС‚ РЅРѕРІС‹Р№ `Set` РІРјРµСЃС‚Рѕ РјСѓС‚Р°С†РёРё РѕР±СЉРµРєС‚Р° РёР· StateManager, С‡С‚РѕР±С‹ РіР°СЂР°РЅС‚РёСЂРѕРІР°С‚СЊ СѓРІРµРґРѕРјР»РµРЅРёРµ РїРѕРґРїРёСЃС‡РёРєРѕРІ; (2) `removeFolderTab` СЏРІРЅРѕ РїРµСЂРµРґР°С‘С‚ `null` РІ `_saveTabStateToConfig()` вЂ” СѓСЃС‚СЂР°РЅС‘РЅ СЂР°СЃСЃРёРЅС…СЂРѕРЅ `activeAssetTab` РјРµР¶РґСѓ state Рё config РїСЂРё РїРµСЂРµР·Р°РіСЂСѓР·РєРµ; (3) `AssetTabContextMenu.destroy()` С‚РµРїРµСЂСЊ СѓРґР°Р»СЏРµС‚ `document.click` listener С‡РµСЂРµР· СЃРѕС…СЂР°РЅС‘РЅРЅСѓСЋ СЃСЃС‹Р»РєСѓ, РїСЂРµРґРѕС‚РІСЂР°С‰Р°СЏ ghost-С…РµРЅРґР»РµСЂС‹; (4) DnD-СЃР»СѓС€Р°С‚РµР»Рё РёР· `setupFolderDragToTabs()` СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ РєР°Рє СЃРІРѕР№СЃС‚РІР° Рё СѓРґР°Р»СЏСЋС‚СЃСЏ РІ `destroy()` (`src/ui/AssetTabsManager.js`).
 
-- **SettingsPanel tab fixes** — (1) устранена гонка 100 мс: `setupNewEventHandlers()` и `setupContextMenu()` вызываются синхронно (DOM готов в момент `show()`); (2) `setupSettingsInputs()` ограничена `settings-panel-container`, вместо глобального `document.querySelectorAll` (`src/ui/SettingsPanel.js`).
+- **SettingsPanel tab fixes** вЂ” (1) СѓСЃС‚СЂР°РЅРµРЅР° РіРѕРЅРєР° 100 РјСЃ: `setupNewEventHandlers()` Рё `setupContextMenu()` РІС‹Р·С‹РІР°СЋС‚СЃСЏ СЃРёРЅС…СЂРѕРЅРЅРѕ (DOM РіРѕС‚РѕРІ РІ РјРѕРјРµРЅС‚ `show()`); (2) `setupSettingsInputs()` РѕРіСЂР°РЅРёС‡РµРЅР° `settings-panel-container`, РІРјРµСЃС‚Рѕ РіР»РѕР±Р°Р»СЊРЅРѕРіРѕ `document.querySelectorAll` (`src/ui/SettingsPanel.js`).
 
-- **Status Bar color settings** — в Settings → Colors добавлена секция «Status Bar Colors» с 4 пикерами (Info / Success / Warning / Error); цвета хранятся в `ui.statusBarColor*`, применяются через CSS-переменные `--status-bar-color-*` с live preview при изменении (`styles/main.css`, `styles/status-bar.css`, `config/defaults/ui.json`, `src/utils/SettingsSyncManager.js`, `src/ui/panel-structures/SettingsPanelRenderers.js`).
+- **Status Bar color settings** вЂ” РІ Settings в†’ Colors РґРѕР±Р°РІР»РµРЅР° СЃРµРєС†РёСЏ В«Status Bar ColorsВ» СЃ 4 РїРёРєРµСЂР°РјРё (Info / Success / Warning / Error); С†РІРµС‚Р° С…СЂР°РЅСЏС‚СЃСЏ РІ `ui.statusBarColor*`, РїСЂРёРјРµРЅСЏСЋС‚СЃСЏ С‡РµСЂРµР· CSS-РїРµСЂРµРјРµРЅРЅС‹Рµ `--status-bar-color-*` СЃ live preview РїСЂРё РёР·РјРµРЅРµРЅРёРё (`styles/main.css`, `styles/status-bar.css`, `config/defaults/ui.json`, `src/utils/SettingsSyncManager.js`, `src/ui/panel-structures/SettingsPanelRenderers.js`).
 
-- **Status Bar coverage** — расширено покрытие операций редактора: группировка/разгруппировка, вход/выход из group-edit-mode, удаление объектов, дублирование (старт + подтверждение размещения), undo/redo (в т.ч. «Nothing to undo/redo»), перемещение объектов между слоями, new/open/save/save-as уровня, импорт ассетов (`src/core/GroupOperations.js`, `ObjectOperations.js`, `DuplicateOperations.js`, `HistoryOperations.js`, `LayerOperations.js`, `LevelFileOperations.js`).
+- **Status Bar coverage** вЂ” СЂР°СЃС€РёСЂРµРЅРѕ РїРѕРєСЂС‹С‚РёРµ РѕРїРµСЂР°С†РёР№ СЂРµРґР°РєС‚РѕСЂР°: РіСЂСѓРїРїРёСЂРѕРІРєР°/СЂР°Р·РіСЂСѓРїРїРёСЂРѕРІРєР°, РІС…РѕРґ/РІС‹С…РѕРґ РёР· group-edit-mode, СѓРґР°Р»РµРЅРёРµ РѕР±СЉРµРєС‚РѕРІ, РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ (СЃС‚Р°СЂС‚ + РїРѕРґС‚РІРµСЂР¶РґРµРЅРёРµ СЂР°Р·РјРµС‰РµРЅРёСЏ), undo/redo (РІ С‚.С‡. В«Nothing to undo/redoВ»), РїРµСЂРµРјРµС‰РµРЅРёРµ РѕР±СЉРµРєС‚РѕРІ РјРµР¶РґСѓ СЃР»РѕСЏРјРё, new/open/save/save-as СѓСЂРѕРІРЅСЏ, РёРјРїРѕСЂС‚ Р°СЃСЃРµС‚РѕРІ (`src/core/GroupOperations.js`, `ObjectOperations.js`, `DuplicateOperations.js`, `HistoryOperations.js`, `LayerOperations.js`, `LevelFileOperations.js`).
 
-- **Status Bar history popup** — `Logger.status.*` сообщения теперь держатся до следующего (без авто-очистки); клик по строке открывает popup с историей (newest first, до 100 записей), закрывается по Esc / повторному клику / клику вне; `AssetPanel` — ошибки импорта PNG роутятся через `Logger.status` и появляются в строке состояния (`src/ui/StatusBar.js`, `styles/status-bar.css`, `src/ui/AssetPanel.js`, `src/core/LevelEditor.js`).
+- **Status Bar history popup** вЂ” `Logger.status.*` СЃРѕРѕР±С‰РµРЅРёСЏ С‚РµРїРµСЂСЊ РґРµСЂР¶Р°С‚СЃСЏ РґРѕ СЃР»РµРґСѓСЋС‰РµРіРѕ (Р±РµР· Р°РІС‚Рѕ-РѕС‡РёСЃС‚РєРё); РєР»РёРє РїРѕ СЃС‚СЂРѕРєРµ РѕС‚РєСЂС‹РІР°РµС‚ popup СЃ РёСЃС‚РѕСЂРёРµР№ (newest first, РґРѕ 100 Р·Р°РїРёСЃРµР№), Р·Р°РєСЂС‹РІР°РµС‚СЃСЏ РїРѕ Esc / РїРѕРІС‚РѕСЂРЅРѕРјСѓ РєР»РёРєСѓ / РєР»РёРєСѓ РІРЅРµ; `AssetPanel` вЂ” РѕС€РёР±РєРё РёРјРїРѕСЂС‚Р° PNG СЂРѕСѓС‚СЏС‚СЃСЏ С‡РµСЂРµР· `Logger.status` Рё РїРѕСЏРІР»СЏСЋС‚СЃСЏ РІ СЃС‚СЂРѕРєРµ СЃРѕСЃС‚РѕСЏРЅРёСЏ (`src/ui/StatusBar.js`, `styles/status-bar.css`, `src/ui/AssetPanel.js`, `src/core/LevelEditor.js`).
 
-- **Panel tabs drag fixed (capture conflict)** — устранена причина, из-за которой вкладки «не перемещались»: global `mouseup` в `PanelPositionManager` (capture-phase) очищал drag-state до локального reorder-хендлера. Теперь global cleanup выполняется только при отпускании вне tab-strip; внутри tab-strip завершение делает panel-level handler. Также отключён legacy bootstrap `setupTabDragging()` в `index.html`, чтобы не было конкурирующих drag-цепочек (`src/ui/PanelPositionManager.js`, `index.html`).
+- **Panel tabs drag fixed (capture conflict)** вЂ” СѓСЃС‚СЂР°РЅРµРЅР° РїСЂРёС‡РёРЅР°, РёР·-Р·Р° РєРѕС‚РѕСЂРѕР№ РІРєР»Р°РґРєРё В«РЅРµ РїРµСЂРµРјРµС‰Р°Р»РёСЃСЊВ»: global `mouseup` РІ `PanelPositionManager` (capture-phase) РѕС‡РёС‰Р°Р» drag-state РґРѕ Р»РѕРєР°Р»СЊРЅРѕРіРѕ reorder-С…РµРЅРґР»РµСЂР°. РўРµРїРµСЂСЊ global cleanup РІС‹РїРѕР»РЅСЏРµС‚СЃСЏ С‚РѕР»СЊРєРѕ РїСЂРё РѕС‚РїСѓСЃРєР°РЅРёРё РІРЅРµ tab-strip; РІРЅСѓС‚СЂРё tab-strip Р·Р°РІРµСЂС€РµРЅРёРµ РґРµР»Р°РµС‚ panel-level handler. РўР°РєР¶Рµ РѕС‚РєР»СЋС‡С‘РЅ legacy bootstrap `setupTabDragging()` РІ `index.html`, С‡С‚РѕР±С‹ РЅРµ Р±С‹Р»Рѕ РєРѕРЅРєСѓСЂРёСЂСѓСЋС‰РёС… drag-С†РµРїРѕС‡РµРє (`src/ui/PanelPositionManager.js`, `index.html`).
 
-- **Panel tabs drag-reorder restored** — исправлен drag внутри одной панели: селекторы расширены до unified `.tab[data-tab]` (не только `.tab-right/.tab-left`), старт drag ограничен левой кнопкой мыши. Применено в `PanelPositionManager.setupTabDraggingForPanel()` и legacy bootstrap в `index.html`, без изменения логики переноса между панелями (`src/ui/PanelPositionManager.js`, `index.html`).
+- **Panel tabs drag-reorder restored** вЂ” РёСЃРїСЂР°РІР»РµРЅ drag РІРЅСѓС‚СЂРё РѕРґРЅРѕР№ РїР°РЅРµР»Рё: СЃРµР»РµРєС‚РѕСЂС‹ СЂР°СЃС€РёСЂРµРЅС‹ РґРѕ unified `.tab[data-tab]` (РЅРµ С‚РѕР»СЊРєРѕ `.tab-right/.tab-left`), СЃС‚Р°СЂС‚ drag РѕРіСЂР°РЅРёС‡РµРЅ Р»РµРІРѕР№ РєРЅРѕРїРєРѕР№ РјС‹С€Рё. РџСЂРёРјРµРЅРµРЅРѕ РІ `PanelPositionManager.setupTabDraggingForPanel()` Рё legacy bootstrap РІ `index.html`, Р±РµР· РёР·РјРµРЅРµРЅРёСЏ Р»РѕРіРёРєРё РїРµСЂРµРЅРѕСЃР° РјРµР¶РґСѓ РїР°РЅРµР»СЏРјРё (`src/ui/PanelPositionManager.js`, `index.html`).
 
-- **Middle-mouse horizontal panning restored** — в `OutlinerPanel` и `LayersPanel` для `setupScrolling()` включён `horizontal: true` (вместо `false`), поэтому middle-drag теперь двигает контент по X и Y, если контейнер переполнен; ранее по X работал только `Shift+wheel` браузера (`src/ui/OutlinerPanel.js`, `src/ui/LayersPanel.js`).
+- **Middle-mouse horizontal panning restored** вЂ” РІ `OutlinerPanel` Рё `LayersPanel` РґР»СЏ `setupScrolling()` РІРєР»СЋС‡С‘РЅ `horizontal: true` (РІРјРµСЃС‚Рѕ `false`), РїРѕСЌС‚РѕРјСѓ middle-drag С‚РµРїРµСЂСЊ РґРІРёРіР°РµС‚ РєРѕРЅС‚РµРЅС‚ РїРѕ X Рё Y, РµСЃР»Рё РєРѕРЅС‚РµР№РЅРµСЂ РїРµСЂРµРїРѕР»РЅРµРЅ; СЂР°РЅРµРµ РїРѕ X СЂР°Р±РѕС‚Р°Р» С‚РѕР»СЊРєРѕ `Shift+wheel` Р±СЂР°СѓР·РµСЂР° (`src/ui/OutlinerPanel.js`, `src/ui/LayersPanel.js`).
 
-- **Outliner list scroll restored** — после устранения tab-leak восстановлена корректная прокрутка Outliner: layout переведён на CSS-класс (`outliner-tab-layout`) и отдельный scroll-контейнер списка (`outliner-objects-container`), без inline `display:flex` конфликтов с hidden/show (`src/ui/OutlinerPanel.js`, `styles/main.css`).
+- **Outliner list scroll restored** вЂ” РїРѕСЃР»Рµ СѓСЃС‚СЂР°РЅРµРЅРёСЏ tab-leak РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅР° РєРѕСЂСЂРµРєС‚РЅР°СЏ РїСЂРѕРєСЂСѓС‚РєР° Outliner: layout РїРµСЂРµРІРµРґС‘РЅ РЅР° CSS-РєР»Р°СЃСЃ (`outliner-tab-layout`) Рё РѕС‚РґРµР»СЊРЅС‹Р№ scroll-РєРѕРЅС‚РµР№РЅРµСЂ СЃРїРёСЃРєР° (`outliner-objects-container`), Р±РµР· inline `display:flex` РєРѕРЅС„Р»РёРєС‚РѕРІ СЃ hidden/show (`src/ui/OutlinerPanel.js`, `styles/main.css`).
 
-- **Layers + Outliner same-panel bleed (final visibility fix)** — `setActivePanelTab()` теперь управляет не только классом `hidden`, но и `style.display` (`none` для всех, `''` для активных), чтобы inline-стили компонентов не могли удерживать неактивную вкладку видимой. В `Outliner.render()` удалено принудительное `display:flex`, которое перебивало скрытие вкладки (`src/event-system/EventHandlers.js`, `src/ui/OutlinerPanel.js`).
+- **Layers + Outliner same-panel bleed (final visibility fix)** вЂ” `setActivePanelTab()` С‚РµРїРµСЂСЊ СѓРїСЂР°РІР»СЏРµС‚ РЅРµ С‚РѕР»СЊРєРѕ РєР»Р°СЃСЃРѕРј `hidden`, РЅРѕ Рё `style.display` (`none` РґР»СЏ РІСЃРµС…, `''` РґР»СЏ Р°РєС‚РёРІРЅС‹С…), С‡С‚РѕР±С‹ inline-СЃС‚РёР»Рё РєРѕРјРїРѕРЅРµРЅС‚РѕРІ РЅРµ РјРѕРіР»Рё СѓРґРµСЂР¶РёРІР°С‚СЊ РЅРµР°РєС‚РёРІРЅСѓСЋ РІРєР»Р°РґРєСѓ РІРёРґРёРјРѕР№. Р’ `Outliner.render()` СѓРґР°Р»РµРЅРѕ РїСЂРёРЅСѓРґРёС‚РµР»СЊРЅРѕРµ `display:flex`, РєРѕС‚РѕСЂРѕРµ РїРµСЂРµР±РёРІР°Р»Рѕ СЃРєСЂС‹С‚РёРµ РІРєР»Р°РґРєРё (`src/event-system/EventHandlers.js`, `src/ui/OutlinerPanel.js`).
 
-- **Layers/Outliner content leakage** — исправлено: `setActivePanelTab()` теперь всегда скрывает весь tab-content (маркеры + legacy `.tab-content-right/.tab-content-left`), а `ensurePanelTabMarkers()` выставляет канонические маркеры для `details/layers/outliner` независимо от текущего набора tab buttons. Это предотвращает «протекание» содержимого Outliner в Layers при сложных вариантах сборки/переноса (`src/event-system/EventHandlers.js`).
+- **Layers/Outliner content leakage** вЂ” РёСЃРїСЂР°РІР»РµРЅРѕ: `setActivePanelTab()` С‚РµРїРµСЂСЊ РІСЃРµРіРґР° СЃРєСЂС‹РІР°РµС‚ РІРµСЃСЊ tab-content (РјР°СЂРєРµСЂС‹ + legacy `.tab-content-right/.tab-content-left`), Р° `ensurePanelTabMarkers()` РІС‹СЃС‚Р°РІР»СЏРµС‚ РєР°РЅРѕРЅРёС‡РµСЃРєРёРµ РјР°СЂРєРµСЂС‹ РґР»СЏ `details/layers/outliner` РЅРµР·Р°РІРёСЃРёРјРѕ РѕС‚ С‚РµРєСѓС‰РµРіРѕ РЅР°Р±РѕСЂР° tab buttons. Р­С‚Рѕ РїСЂРµРґРѕС‚РІСЂР°С‰Р°РµС‚ В«РїСЂРѕС‚РµРєР°РЅРёРµВ» СЃРѕРґРµСЂР¶РёРјРѕРіРѕ Outliner РІ Layers РїСЂРё СЃР»РѕР¶РЅС‹С… РІР°СЂРёР°РЅС‚Р°С… СЃР±РѕСЂРєРё/РїРµСЂРµРЅРѕСЃР° (`src/event-system/EventHandlers.js`).
 
-- **Tab assembly stability across panel variations** — исправлено смешивание содержимого вкладок: `PanelPositionManager.moveTabElements()` теперь ищет tab button и tab content строго в source-container (вместо глобального `document.querySelector/getElementById`), что убирает кросс-попадания при сложных вариантах сборки/переноса. Также убраны временные дублирующие `id` у tab-кнопок в `temp-tabs-panel` (`src/ui/PanelPositionManager.js`).
+- **Tab assembly stability across panel variations** вЂ” РёСЃРїСЂР°РІР»РµРЅРѕ СЃРјРµС€РёРІР°РЅРёРµ СЃРѕРґРµСЂР¶РёРјРѕРіРѕ РІРєР»Р°РґРѕРє: `PanelPositionManager.moveTabElements()` С‚РµРїРµСЂСЊ РёС‰РµС‚ tab button Рё tab content СЃС‚СЂРѕРіРѕ РІ source-container (РІРјРµСЃС‚Рѕ РіР»РѕР±Р°Р»СЊРЅРѕРіРѕ `document.querySelector/getElementById`), С‡С‚Рѕ СѓР±РёСЂР°РµС‚ РєСЂРѕСЃСЃ-РїРѕРїР°РґР°РЅРёСЏ РїСЂРё СЃР»РѕР¶РЅС‹С… РІР°СЂРёР°РЅС‚Р°С… СЃР±РѕСЂРєРё/РїРµСЂРµРЅРѕСЃР°. РўР°РєР¶Рµ СѓР±СЂР°РЅС‹ РІСЂРµРјРµРЅРЅС‹Рµ РґСѓР±Р»РёСЂСѓСЋС‰РёРµ `id` Сѓ tab-РєРЅРѕРїРѕРє РІ `temp-tabs-panel` (`src/ui/PanelPositionManager.js`).
 
-- **Outliner scroll target precision** — `OutlinerPanel` теперь создаёт отдельный `#outliner-objects-container` (только список объектов, `overflow-y-auto/overflow-x-auto`) и middle-pan привязывается к нему. Блок поиска/фильтра остаётся фиксированным и не попадает в scroll target (`src/ui/OutlinerPanel.js`).
+- **Outliner scroll target precision** вЂ” `OutlinerPanel` С‚РµРїРµСЂСЊ СЃРѕР·РґР°С‘С‚ РѕС‚РґРµР»СЊРЅС‹Р№ `#outliner-objects-container` (С‚РѕР»СЊРєРѕ СЃРїРёСЃРѕРє РѕР±СЉРµРєС‚РѕРІ, `overflow-y-auto/overflow-x-auto`) Рё middle-pan РїСЂРёРІСЏР·С‹РІР°РµС‚СЃСЏ Рє РЅРµРјСѓ. Р‘Р»РѕРє РїРѕРёСЃРєР°/С„РёР»СЊС‚СЂР° РѕСЃС‚Р°С‘С‚СЃСЏ С„РёРєСЃРёСЂРѕРІР°РЅРЅС‹Рј Рё РЅРµ РїРѕРїР°РґР°РµС‚ РІ scroll target (`src/ui/OutlinerPanel.js`).
 
-- **Tab content routing + middle-pan target** — доработана архитектура: middle-pan теперь выбирает только реально scrollable overflow-контейнер (не верхний panel-wrapper), а для вкладок введена стабильная маркировка `data-panel-tab-content=true` + `data-panel-tab-name`. `setActivePanelTab()` скрывает/показывает контент по этой маркировке, что предотвращает путаницу содержимого после переносов между панелями (`src/utils/ScrollUtils.js`, `src/event-system/EventHandlers.js`, `src/ui/PanelPositionManager.js`).
+- **Tab content routing + middle-pan target** вЂ” РґРѕСЂР°Р±РѕС‚Р°РЅР° Р°СЂС…РёС‚РµРєС‚СѓСЂР°: middle-pan С‚РµРїРµСЂСЊ РІС‹Р±РёСЂР°РµС‚ С‚РѕР»СЊРєРѕ СЂРµР°Р»СЊРЅРѕ scrollable overflow-РєРѕРЅС‚РµР№РЅРµСЂ (РЅРµ РІРµСЂС…РЅРёР№ panel-wrapper), Р° РґР»СЏ РІРєР»Р°РґРѕРє РІРІРµРґРµРЅР° СЃС‚Р°Р±РёР»СЊРЅР°СЏ РјР°СЂРєРёСЂРѕРІРєР° `data-panel-tab-content=true` + `data-panel-tab-name`. `setActivePanelTab()` СЃРєСЂС‹РІР°РµС‚/РїРѕРєР°Р·С‹РІР°РµС‚ РєРѕРЅС‚РµРЅС‚ РїРѕ СЌС‚РѕР№ РјР°СЂРєРёСЂРѕРІРєРµ, С‡С‚Рѕ РїСЂРµРґРѕС‚РІСЂР°С‰Р°РµС‚ РїСѓС‚Р°РЅРёС†Сѓ СЃРѕРґРµСЂР¶РёРјРѕРіРѕ РїРѕСЃР»Рµ РїРµСЂРµРЅРѕСЃРѕРІ РјРµР¶РґСѓ РїР°РЅРµР»СЏРјРё (`src/utils/ScrollUtils.js`, `src/event-system/EventHandlers.js`, `src/ui/PanelPositionManager.js`).
 
-- **Outliner search block and middle-pan** — исправлено архитектурно: middle-pan больше не стартует с интерактивных контролов (`input/textarea/select/contenteditable`) и с panel custom sections (`panel-top-custom`/`panel-bottom-custom` помечены `data-no-middle-pan=true`). Это убирает горизонтальный скролл поля поиска в Outliner и выравнивает поведение с Layers (`src/utils/ScrollUtils.js`, `src/ui/panel-structures/BasePanelStructure.js`).
+- **Outliner search block and middle-pan** вЂ” РёСЃРїСЂР°РІР»РµРЅРѕ Р°СЂС…РёС‚РµРєС‚СѓСЂРЅРѕ: middle-pan Р±РѕР»СЊС€Рµ РЅРµ СЃС‚Р°СЂС‚СѓРµС‚ СЃ РёРЅС‚РµСЂР°РєС‚РёРІРЅС‹С… РєРѕРЅС‚СЂРѕР»РѕРІ (`input/textarea/select/contenteditable`) Рё СЃ panel custom sections (`panel-top-custom`/`panel-bottom-custom` РїРѕРјРµС‡РµРЅС‹ `data-no-middle-pan=true`). Р­С‚Рѕ СѓР±РёСЂР°РµС‚ РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅС‹Р№ СЃРєСЂРѕР»Р» РїРѕР»СЏ РїРѕРёСЃРєР° РІ Outliner Рё РІС‹СЂР°РІРЅРёРІР°РµС‚ РїРѕРІРµРґРµРЅРёРµ СЃ Layers (`src/utils/ScrollUtils.js`, `src/ui/panel-structures/BasePanelStructure.js`).
 
-- **Universal middle-mouse scrolling architecture** — внедрён единый глобальный механизм в `ScrollUtils`: один `document`-level capture handler определяет ближайший scrollable контейнер и запускает pan без привязки к конкретной панели. Работает для любых существующих и новых overflow-контейнеров редактора, независимо от стороны (left/right) и количества панелей. `BasePanel.setupScrolling()` теперь служит как опциональный override-конфиг контейнера, а не как обязательная точка инициализации (`src/utils/ScrollUtils.js`, `src/event-system/EventHandlers.js`).
+- **Universal middle-mouse scrolling architecture** вЂ” РІРЅРµРґСЂС‘РЅ РµРґРёРЅС‹Р№ РіР»РѕР±Р°Р»СЊРЅС‹Р№ РјРµС…Р°РЅРёР·Рј РІ `ScrollUtils`: РѕРґРёРЅ `document`-level capture handler РѕРїСЂРµРґРµР»СЏРµС‚ Р±Р»РёР¶Р°Р№С€РёР№ scrollable РєРѕРЅС‚РµР№РЅРµСЂ Рё Р·Р°РїСѓСЃРєР°РµС‚ pan Р±РµР· РїСЂРёРІСЏР·РєРё Рє РєРѕРЅРєСЂРµС‚РЅРѕР№ РїР°РЅРµР»Рё. Р Р°Р±РѕС‚Р°РµС‚ РґР»СЏ Р»СЋР±С‹С… СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёС… Рё РЅРѕРІС‹С… overflow-РєРѕРЅС‚РµР№РЅРµСЂРѕРІ СЂРµРґР°РєС‚РѕСЂР°, РЅРµР·Р°РІРёСЃРёРјРѕ РѕС‚ СЃС‚РѕСЂРѕРЅС‹ (left/right) Рё РєРѕР»РёС‡РµСЃС‚РІР° РїР°РЅРµР»РµР№. `BasePanel.setupScrolling()` С‚РµРїРµСЂСЊ СЃР»СѓР¶РёС‚ РєР°Рє РѕРїС†РёРѕРЅР°Р»СЊРЅС‹Р№ override-РєРѕРЅС„РёРі РєРѕРЅС‚РµР№РЅРµСЂР°, Р° РЅРµ РєР°Рє РѕР±СЏР·Р°С‚РµР»СЊРЅР°СЏ С‚РѕС‡РєР° РёРЅРёС†РёР°Р»РёР·Р°С†РёРё (`src/utils/ScrollUtils.js`, `src/event-system/EventHandlers.js`).
 
-- **Outliner/Layers middle-mouse panning** — исправлено: целевой scroll-контейнер для `setupScrolling()` больше не привязан к `#right-panel`; теперь берётся ближайший `.flex-grow.overflow-y-auto`, поэтому панорамирование работает после перемещения вкладок между левым/правым панелями (`src/ui/OutlinerPanel.js`, `src/ui/LayersPanel.js`).
+- **Outliner/Layers middle-mouse panning** вЂ” РёСЃРїСЂР°РІР»РµРЅРѕ: С†РµР»РµРІРѕР№ scroll-РєРѕРЅС‚РµР№РЅРµСЂ РґР»СЏ `setupScrolling()` Р±РѕР»СЊС€Рµ РЅРµ РїСЂРёРІСЏР·Р°РЅ Рє `#right-panel`; С‚РµРїРµСЂСЊ Р±РµСЂС‘С‚СЃСЏ Р±Р»РёР¶Р°Р№С€РёР№ `.flex-grow.overflow-y-auto`, РїРѕСЌС‚РѕРјСѓ РїР°РЅРѕСЂР°РјРёСЂРѕРІР°РЅРёРµ СЂР°Р±РѕС‚Р°РµС‚ РїРѕСЃР»Рµ РїРµСЂРµРјРµС‰РµРЅРёСЏ РІРєР»Р°РґРѕРє РјРµР¶РґСѓ Р»РµРІС‹Рј/РїСЂР°РІС‹Рј РїР°РЅРµР»СЏРјРё (`src/ui/OutlinerPanel.js`, `src/ui/LayersPanel.js`).
 
-- **Panel middle-mouse panning (Outliner/Assets)** — исправлено: `ScrollUtils.setupMiddleMouseScrolling()` больше не дублирует слушатели при повторной инициализации (обновляет существующий config), а `mousedown` для средней кнопки обрабатывается в capture-фазе. Это возвращает стабильное панорамирование в панелях аутлайнера и ассетов (`src/utils/ScrollUtils.js`).
+- **Panel middle-mouse panning (Outliner/Assets)** вЂ” РёСЃРїСЂР°РІР»РµРЅРѕ: `ScrollUtils.setupMiddleMouseScrolling()` Р±РѕР»СЊС€Рµ РЅРµ РґСѓР±Р»РёСЂСѓРµС‚ СЃР»СѓС€Р°С‚РµР»Рё РїСЂРё РїРѕРІС‚РѕСЂРЅРѕР№ РёРЅРёС†РёР°Р»РёР·Р°С†РёРё (РѕР±РЅРѕРІР»СЏРµС‚ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№ config), Р° `mousedown` РґР»СЏ СЃСЂРµРґРЅРµР№ РєРЅРѕРїРєРё РѕР±СЂР°Р±Р°С‚С‹РІР°РµС‚СЃСЏ РІ capture-С„Р°Р·Рµ. Р­С‚Рѕ РІРѕР·РІСЂР°С‰Р°РµС‚ СЃС‚Р°Р±РёР»СЊРЅРѕРµ РїР°РЅРѕСЂР°РјРёСЂРѕРІР°РЅРёРµ РІ РїР°РЅРµР»СЏС… Р°СѓС‚Р»Р°Р№РЅРµСЂР° Рё Р°СЃСЃРµС‚РѕРІ (`src/utils/ScrollUtils.js`).
 
-- **Toolbar panning cursor** — исправлено: при middle-mouse панорамировании тулбара теперь применяется курсор зажатой руки (`grabbing`), так как `toolbar-scroll` получил класс `horizontal-scroll-container` и использует общее CSS-правило `.horizontal-scroll-container.scrolling` (`src/ui/Toolbar.js`, `styles/panels.css`).
+- **Toolbar panning cursor** вЂ” РёСЃРїСЂР°РІР»РµРЅРѕ: РїСЂРё middle-mouse РїР°РЅРѕСЂР°РјРёСЂРѕРІР°РЅРёРё С‚СѓР»Р±Р°СЂР° С‚РµРїРµСЂСЊ РїСЂРёРјРµРЅСЏРµС‚СЃСЏ РєСѓСЂСЃРѕСЂ Р·Р°Р¶Р°С‚РѕР№ СЂСѓРєРё (`grabbing`), С‚Р°Рє РєР°Рє `toolbar-scroll` РїРѕР»СѓС‡РёР» РєР»Р°СЃСЃ `horizontal-scroll-container` Рё РёСЃРїРѕР»СЊР·СѓРµС‚ РѕР±С‰РµРµ CSS-РїСЂР°РІРёР»Рѕ `.horizontal-scroll-container.scrolling` (`src/ui/Toolbar.js`, `styles/panels.css`).
 
-- **Status Bar** — однострочная панель уведомлений внизу редактора (`src/ui/StatusBar.js`). Показывает важные события с цветовым кодированием: `error` (красный), `warn` (жёлтый), `success` (зелёный), `info` (серый). Видимость запоминается в StateManager/UserPreferences, переключается через View → Panels → Status Bar. Прямой API: `editor.statusBar.show(message, type, duration)`. Logger-интеграция: `Logger.status.warn/error/success/info(msg)` — одновременно логирует в консоль (с префиксом `STATUS:`) и показывает в строке состояния. Callback регистрируется через `Logger.setStatusCallback(fn)`. Длительность по типу: error 10s, warn 7s, success/info 4-5s.
+- **Status Bar** вЂ” РѕРґРЅРѕСЃС‚СЂРѕС‡РЅР°СЏ РїР°РЅРµР»СЊ СѓРІРµРґРѕРјР»РµРЅРёР№ РІРЅРёР·Сѓ СЂРµРґР°РєС‚РѕСЂР° (`src/ui/StatusBar.js`). РџРѕРєР°Р·С‹РІР°РµС‚ РІР°Р¶РЅС‹Рµ СЃРѕР±С‹С‚РёСЏ СЃ С†РІРµС‚РѕРІС‹Рј РєРѕРґРёСЂРѕРІР°РЅРёРµРј: `error` (РєСЂР°СЃРЅС‹Р№), `warn` (Р¶С‘Р»С‚С‹Р№), `success` (Р·РµР»С‘РЅС‹Р№), `info` (СЃРµСЂС‹Р№). Р’РёРґРёРјРѕСЃС‚СЊ Р·Р°РїРѕРјРёРЅР°РµС‚СЃСЏ РІ StateManager/UserPreferences, РїРµСЂРµРєР»СЋС‡Р°РµС‚СЃСЏ С‡РµСЂРµР· View в†’ Panels в†’ Status Bar. РџСЂСЏРјРѕР№ API: `editor.statusBar.show(message, type, duration)`. Logger-РёРЅС‚РµРіСЂР°С†РёСЏ: `Logger.status.warn/error/success/info(msg)` вЂ” РѕРґРЅРѕРІСЂРµРјРµРЅРЅРѕ Р»РѕРіРёСЂСѓРµС‚ РІ РєРѕРЅСЃРѕР»СЊ (СЃ РїСЂРµС„РёРєСЃРѕРј `STATUS:`) Рё РїРѕРєР°Р·С‹РІР°РµС‚ РІ СЃС‚СЂРѕРєРµ СЃРѕСЃС‚РѕСЏРЅРёСЏ. Callback СЂРµРіРёСЃС‚СЂРёСЂСѓРµС‚СЃСЏ С‡РµСЂРµР· `Logger.setStatusCallback(fn)`. Р”Р»РёС‚РµР»СЊРЅРѕСЃС‚СЊ РїРѕ С‚РёРїСѓ: error 10s, warn 7s, success/info 4-5s.
 
-- **Settings → Colors: лейаут** — Blender-стиль: label выровнен вправо (flex 40%), широкая цветовая полоса заполняет оставшиеся 60%. Logger Colors — 2-колоночный грид с теми же строками. Убран `width: 100% !important` для `input[type="color"]` из `settings-panel.css`.
-- **Settings → Colors: Apply Changes** — исправлено: selection colors (`selection.outlineColor`, `groupOutlineColor`, `marqueeColor`, `hierarchyHighlightColor`, `activeLayerBorderColor`) теперь в stateMapping → применяются корректно. Добавлена CSS-переменная `--accent-color` и `--selection-active-layer-border-color` в `applySpecialUISettings`.
+- **Settings в†’ Colors: Р»РµР№Р°СѓС‚** вЂ” Blender-СЃС‚РёР»СЊ: label РІС‹СЂРѕРІРЅРµРЅ РІРїСЂР°РІРѕ (flex 40%), С€РёСЂРѕРєР°СЏ С†РІРµС‚РѕРІР°СЏ РїРѕР»РѕСЃР° Р·Р°РїРѕР»РЅСЏРµС‚ РѕСЃС‚Р°РІС€РёРµСЃСЏ 60%. Logger Colors вЂ” 2-РєРѕР»РѕРЅРѕС‡РЅС‹Р№ РіСЂРёРґ СЃ С‚РµРјРё Р¶Рµ СЃС‚СЂРѕРєР°РјРё. РЈР±СЂР°РЅ `width: 100% !important` РґР»СЏ `input[type="color"]` РёР· `settings-panel.css`.
+- **Settings в†’ Colors: Apply Changes** вЂ” РёСЃРїСЂР°РІР»РµРЅРѕ: selection colors (`selection.outlineColor`, `groupOutlineColor`, `marqueeColor`, `hierarchyHighlightColor`, `activeLayerBorderColor`) С‚РµРїРµСЂСЊ РІ stateMapping в†’ РїСЂРёРјРµРЅСЏСЋС‚СЃСЏ РєРѕСЂСЂРµРєС‚РЅРѕ. Р”РѕР±Р°РІР»РµРЅР° CSS-РїРµСЂРµРјРµРЅРЅР°СЏ `--accent-color` Рё `--selection-active-layer-border-color` РІ `applySpecialUISettings`.
 
-### Fixed — Группы: перетаскивание объектов из родительской в дочернюю группу; выбор объектов при открытой вложенной группе
+### Fixed вЂ” Р“СЂСѓРїРїС‹: РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµ РѕР±СЉРµРєС‚РѕРІ РёР· СЂРѕРґРёС‚РµР»СЊСЃРєРѕР№ РІ РґРѕС‡РµСЂРЅСЋСЋ РіСЂСѓРїРїСѓ; РІС‹Р±РѕСЂ РѕР±СЉРµРєС‚РѕРІ РїСЂРё РѕС‚РєСЂС‹С‚РѕР№ РІР»РѕР¶РµРЅРЅРѕР№ РіСЂСѓРїРїРµ
 
-#### 🐛 Исправлено
+#### рџђ› РСЃРїСЂР°РІР»РµРЅРѕ
 
-- **Drag из G1 в G2** — при открытой вложенной группе (G2 активна, G1 родительская) перетаскивание объекта из G1 в область G2 теперь реально переносит объект из `G1.children` в `G2.children` с правильным пересчётом координат и наследованием layerId. Ранее `dragSelectedObjects` для `isInAnyOpenGroup`-объектов просто делал `obj.x += dx` без проверки входа в активную группу (`MouseHandlers.js`).
-- **Marquee при missed-click** — клик на пустое место внутри родительской открытой группы (G1) но снаружи активной дочерней (G2) теперь делает stepback к G1 И начинает marquee-выделение в G1. Ранее такой клик только закрывал G2 без возможности выделить что-либо (`MouseHandlers.js`).
-- **findObjectAtPoint: выбирается родительская группа вместо объекта** — при вложенности 2+ уровней клик на одиночный объект внутри открытой группы выбирал саму группу-контейнер (т.к. её bounds охватывают потомков). В `collectAllDescendants` открытые группы (из `openIds`) теперь пропускаются как кандидаты для hit-test, но рекурсия в них сохраняется — так одиночные объекты внутри правильно попадают в список (`ObjectOperations.js`).
-- **Alt+drag исправлен** — вычисление world-позиции при Alt+drag для `isInAnyOpenGroup`-объектов теперь использует `getObjectWorldPosition(obj)` вместо ошибочного `groupPos.x + obj.x` (который давал неверные координаты для объектов в родительской группе).
-- **Порт сервера** — `start_Editor.bat`, `.vscode/launch.json`, `Context_map.md`, `docs/QUICK_START.md` унифицированы на порт **8000** (ранее Node.js serve использовал порт 3000).
+- **Drag РёР· G1 РІ G2** вЂ” РїСЂРё РѕС‚РєСЂС‹С‚РѕР№ РІР»РѕР¶РµРЅРЅРѕР№ РіСЂСѓРїРїРµ (G2 Р°РєС‚РёРІРЅР°, G1 СЂРѕРґРёС‚РµР»СЊСЃРєР°СЏ) РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµ РѕР±СЉРµРєС‚Р° РёР· G1 РІ РѕР±Р»Р°СЃС‚СЊ G2 С‚РµРїРµСЂСЊ СЂРµР°Р»СЊРЅРѕ РїРµСЂРµРЅРѕСЃРёС‚ РѕР±СЉРµРєС‚ РёР· `G1.children` РІ `G2.children` СЃ РїСЂР°РІРёР»СЊРЅС‹Рј РїРµСЂРµСЃС‡С‘С‚РѕРј РєРѕРѕСЂРґРёРЅР°С‚ Рё РЅР°СЃР»РµРґРѕРІР°РЅРёРµРј layerId. Р Р°РЅРµРµ `dragSelectedObjects` РґР»СЏ `isInAnyOpenGroup`-РѕР±СЉРµРєС‚РѕРІ РїСЂРѕСЃС‚Рѕ РґРµР»Р°Р» `obj.x += dx` Р±РµР· РїСЂРѕРІРµСЂРєРё РІС…РѕРґР° РІ Р°РєС‚РёРІРЅСѓСЋ РіСЂСѓРїРїСѓ (`MouseHandlers.js`).
+- **Marquee РїСЂРё missed-click** вЂ” РєР»РёРє РЅР° РїСѓСЃС‚РѕРµ РјРµСЃС‚Рѕ РІРЅСѓС‚СЂРё СЂРѕРґРёС‚РµР»СЊСЃРєРѕР№ РѕС‚РєСЂС‹С‚РѕР№ РіСЂСѓРїРїС‹ (G1) РЅРѕ СЃРЅР°СЂСѓР¶Рё Р°РєС‚РёРІРЅРѕР№ РґРѕС‡РµСЂРЅРµР№ (G2) С‚РµРїРµСЂСЊ РґРµР»Р°РµС‚ stepback Рє G1 Р РЅР°С‡РёРЅР°РµС‚ marquee-РІС‹РґРµР»РµРЅРёРµ РІ G1. Р Р°РЅРµРµ С‚Р°РєРѕР№ РєР»РёРє С‚РѕР»СЊРєРѕ Р·Р°РєСЂС‹РІР°Р» G2 Р±РµР· РІРѕР·РјРѕР¶РЅРѕСЃС‚Рё РІС‹РґРµР»РёС‚СЊ С‡С‚Рѕ-Р»РёР±Рѕ (`MouseHandlers.js`).
+- **findObjectAtPoint: РІС‹Р±РёСЂР°РµС‚СЃСЏ СЂРѕРґРёС‚РµР»СЊСЃРєР°СЏ РіСЂСѓРїРїР° РІРјРµСЃС‚Рѕ РѕР±СЉРµРєС‚Р°** вЂ” РїСЂРё РІР»РѕР¶РµРЅРЅРѕСЃС‚Рё 2+ СѓСЂРѕРІРЅРµР№ РєР»РёРє РЅР° РѕРґРёРЅРѕС‡РЅС‹Р№ РѕР±СЉРµРєС‚ РІРЅСѓС‚СЂРё РѕС‚РєСЂС‹С‚РѕР№ РіСЂСѓРїРїС‹ РІС‹Р±РёСЂР°Р» СЃР°РјСѓ РіСЂСѓРїРїСѓ-РєРѕРЅС‚РµР№РЅРµСЂ (С‚.Рє. РµС‘ bounds РѕС…РІР°С‚С‹РІР°СЋС‚ РїРѕС‚РѕРјРєРѕРІ). Р’ `collectAllDescendants` РѕС‚РєСЂС‹С‚С‹Рµ РіСЂСѓРїРїС‹ (РёР· `openIds`) С‚РµРїРµСЂСЊ РїСЂРѕРїСѓСЃРєР°СЋС‚СЃСЏ РєР°Рє РєР°РЅРґРёРґР°С‚С‹ РґР»СЏ hit-test, РЅРѕ СЂРµРєСѓСЂСЃРёСЏ РІ РЅРёС… СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ вЂ” С‚Р°Рє РѕРґРёРЅРѕС‡РЅС‹Рµ РѕР±СЉРµРєС‚С‹ РІРЅСѓС‚СЂРё РїСЂР°РІРёР»СЊРЅРѕ РїРѕРїР°РґР°СЋС‚ РІ СЃРїРёСЃРѕРє (`ObjectOperations.js`).
+- **Alt+drag РёСЃРїСЂР°РІР»РµРЅ** вЂ” РІС‹С‡РёСЃР»РµРЅРёРµ world-РїРѕР·РёС†РёРё РїСЂРё Alt+drag РґР»СЏ `isInAnyOpenGroup`-РѕР±СЉРµРєС‚РѕРІ С‚РµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓРµС‚ `getObjectWorldPosition(obj)` РІРјРµСЃС‚Рѕ РѕС€РёР±РѕС‡РЅРѕРіРѕ `groupPos.x + obj.x` (РєРѕС‚РѕСЂС‹Р№ РґР°РІР°Р» РЅРµРІРµСЂРЅС‹Рµ РєРѕРѕСЂРґРёРЅР°С‚С‹ РґР»СЏ РѕР±СЉРµРєС‚РѕРІ РІ СЂРѕРґРёС‚РµР»СЊСЃРєРѕР№ РіСЂСѓРїРїРµ).
+- **РџРѕСЂС‚ СЃРµСЂРІРµСЂР°** вЂ” `start_Editor.bat`, `.vscode/launch.json`, `Context_map.md`, `docs/QUICK_START.md` СѓРЅРёС„РёС†РёСЂРѕРІР°РЅС‹ РЅР° РїРѕСЂС‚ **8000** (СЂР°РЅРµРµ Node.js serve РёСЃРїРѕР»СЊР·РѕРІР°Р» РїРѕСЂС‚ 3000).
 
-- **CacheManager: spatial index fast path** — `getSelectableObjectsInViewport()` в fast path итерировала `viewportObjects` как `obj.id`, но `getVisibleObjectsSpatial` возвращает `{obj, parentX, parentY}` — нужно `item.obj.id`. Следствие: после первого рендера `selectableInViewport` всегда пуста → `findObjectAtPoint` возвращает null для всех объектов → клик+драг на верхнем уровне не работает (`CacheManager.js`).
+- **CacheManager: spatial index fast path** вЂ” `getSelectableObjectsInViewport()` РІ fast path РёС‚РµСЂРёСЂРѕРІР°Р»Р° `viewportObjects` РєР°Рє `obj.id`, РЅРѕ `getVisibleObjectsSpatial` РІРѕР·РІСЂР°С‰Р°РµС‚ `{obj, parentX, parentY}` вЂ” РЅСѓР¶РЅРѕ `item.obj.id`. РЎР»РµРґСЃС‚РІРёРµ: РїРѕСЃР»Рµ РїРµСЂРІРѕРіРѕ СЂРµРЅРґРµСЂР° `selectableInViewport` РІСЃРµРіРґР° РїСѓСЃС‚Р° в†’ `findObjectAtPoint` РІРѕР·РІСЂР°С‰Р°РµС‚ null РґР»СЏ РІСЃРµС… РѕР±СЉРµРєС‚РѕРІ в†’ РєР»РёРє+РґСЂР°Рі РЅР° РІРµСЂС…РЅРµРј СѓСЂРѕРІРЅРµ РЅРµ СЂР°Р±РѕС‚Р°РµС‚ (`CacheManager.js`).
 
-- **Дублирование внутри открытой группы: превью, offset, selection, highlight** — четыре связанных бага: (1) превью не появлялось — `initializePositions` использовала `isObjectInGroupRecursive(clone)` и `getObjectWorldPosition(clone)`, но после `reassignIdsDeep` клон недоступен в дереве → всегда local coords → превью рисовалось за viewport. Фикс: `_worldX/_worldY` и `_inGroup` вычисляются до `reassignIdsDeep` в `startFromSelection`. (2) превью со сдвигом — специальный case `_inGroup → offsetX:0` ставил preview точно в курсор; удалён — теперь используется тот же offset-calculation что и для top-level объектов, привязывая к точке клика. (3) после размещения был выбран оригинал — `handleMouseDown` при клике для размещения вызывал `handleObjectClick` на оригинале, меняя selection и ставя `isDragging=true`; добавлена ранняя проверка `if (mouse.isPlacingObjects) return`. (4) подсветка оригинала во время превью — `selectedObjects` содержала ID оригинала между Shift+D и mouseup; теперь `startFromSelection` сбрасывает `selectedObjects = new Set()` перед render, так что оригинал не подсвечивается в preview-фазе (`DuplicateOperations.js`, `DuplicateUtils.js`, `MouseHandlers.js`).
+- **Р”СѓР±Р»РёСЂРѕРІР°РЅРёРµ РІРЅСѓС‚СЂРё РѕС‚РєСЂС‹С‚РѕР№ РіСЂСѓРїРїС‹: РїСЂРµРІСЊСЋ, offset, selection, highlight** вЂ” С‡РµС‚С‹СЂРµ СЃРІСЏР·Р°РЅРЅС‹С… Р±Р°РіР°: (1) РїСЂРµРІСЊСЋ РЅРµ РїРѕСЏРІР»СЏР»РѕСЃСЊ вЂ” `initializePositions` РёСЃРїРѕР»СЊР·РѕРІР°Р»Р° `isObjectInGroupRecursive(clone)` Рё `getObjectWorldPosition(clone)`, РЅРѕ РїРѕСЃР»Рµ `reassignIdsDeep` РєР»РѕРЅ РЅРµРґРѕСЃС‚СѓРїРµРЅ РІ РґРµСЂРµРІРµ в†’ РІСЃРµРіРґР° local coords в†’ РїСЂРµРІСЊСЋ СЂРёСЃРѕРІР°Р»РѕСЃСЊ Р·Р° viewport. Р¤РёРєСЃ: `_worldX/_worldY` Рё `_inGroup` РІС‹С‡РёСЃР»СЏСЋС‚СЃСЏ РґРѕ `reassignIdsDeep` РІ `startFromSelection`. (2) РїСЂРµРІСЊСЋ СЃРѕ СЃРґРІРёРіРѕРј вЂ” СЃРїРµС†РёР°Р»СЊРЅС‹Р№ case `_inGroup в†’ offsetX:0` СЃС‚Р°РІРёР» preview С‚РѕС‡РЅРѕ РІ РєСѓСЂСЃРѕСЂ; СѓРґР°Р»С‘РЅ вЂ” С‚РµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ С‚РѕС‚ Р¶Рµ offset-calculation С‡С‚Рѕ Рё РґР»СЏ top-level РѕР±СЉРµРєС‚РѕРІ, РїСЂРёРІСЏР·С‹РІР°СЏ Рє С‚РѕС‡РєРµ РєР»РёРєР°. (3) РїРѕСЃР»Рµ СЂР°Р·РјРµС‰РµРЅРёСЏ Р±С‹Р» РІС‹Р±СЂР°РЅ РѕСЂРёРіРёРЅР°Р» вЂ” `handleMouseDown` РїСЂРё РєР»РёРєРµ РґР»СЏ СЂР°Р·РјРµС‰РµРЅРёСЏ РІС‹Р·С‹РІР°Р» `handleObjectClick` РЅР° РѕСЂРёРіРёРЅР°Р»Рµ, РјРµРЅСЏСЏ selection Рё СЃС‚Р°РІСЏ `isDragging=true`; РґРѕР±Р°РІР»РµРЅР° СЂР°РЅРЅСЏСЏ РїСЂРѕРІРµСЂРєР° `if (mouse.isPlacingObjects) return`. (4) РїРѕРґСЃРІРµС‚РєР° РѕСЂРёРіРёРЅР°Р»Р° РІРѕ РІСЂРµРјСЏ РїСЂРµРІСЊСЋ вЂ” `selectedObjects` СЃРѕРґРµСЂР¶Р°Р»Р° ID РѕСЂРёРіРёРЅР°Р»Р° РјРµР¶РґСѓ Shift+D Рё mouseup; С‚РµРїРµСЂСЊ `startFromSelection` СЃР±СЂР°СЃС‹РІР°РµС‚ `selectedObjects = new Set()` РїРµСЂРµРґ render, С‚Р°Рє С‡С‚Рѕ РѕСЂРёРіРёРЅР°Р» РЅРµ РїРѕРґСЃРІРµС‡РёРІР°РµС‚СЃСЏ РІ preview-С„Р°Р·Рµ (`DuplicateOperations.js`, `DuplicateUtils.js`, `MouseHandlers.js`).
 
-#### 📁 Изменённые файлы
+#### рџ“Ѓ РР·РјРµРЅС‘РЅРЅС‹Рµ С„Р°Р№Р»С‹
 
-`src/event-system/MouseHandlers.js` · `src/managers/CacheManager.js` · `start_Editor.bat` · `.vscode/launch.json` · `Context_map.md` · `docs/QUICK_START.md`
-
----
-
-### Perf — M9, M7, M8, M6: lazy spatial index, spatial-aware selectable filter, per-layer cache, ctx.save hoisting
-
-#### ⚡ Производительность
-
-- **M9. buildSpatialIndex: lazy dirty-flag** — добавлен метод `markSpatialIndexDirty()` в `RenderOperations`. Все внешние вызовы `buildSpatialIndex()` (GroupOperations, LayerOperations, HistoryOperations, CacheManager) заменены на `markSpatialIndexDirty()`. Перестройка O(N) откладывается до начала следующего `getVisibleObjectsSpatial()` в render-loop. Init LevelEditor оставлен прямым вызовом (`RenderOperations.js`, `GroupOperations.js`, `LayerOperations.js`, `HistoryOperations.js`, `CacheManager.js`).
-- **M7. getSelectableObjectsInViewport: spatial index как кандидаты** — при наличии spatial index `getSelectableObjectsInViewport()` теперь использует `getVisibleObjectsSpatial()` (O(k), k ≪ N) вместо итерации всех selectable объектов. Заодно исправлен баг: `camera.scale` (undefined, давало NaN-bounds и пропускало все объекты) заменён на `camera.zoom` как в остальном коде (`CacheManager.js`).
-- **M8. effectiveLayerCache: per-layer invalidation** — добавлен обратный индекс `_layerToObjectIds: Map<layerId, Set<objId>>`, заполняемый лениво в `getCachedEffectiveLayerId()`. При layer-изменении `smartCacheInvalidation()` теперь удаляет только записи объектов затронутого слоя вместо `effectiveLayerCache.clear()`. Fallback на полную очистку если индекс не прогрет (`CacheManager.js`).
-- **M6. ctx.save/restore: hoisting за пределы forEach** — в `drawHierarchyHighlightForGroup()` и `drawDuplicateHierarchyHighlight()` `ctx.save()/restore()` вынесены за пределы forEach-цикла: один раз на depth вместо 2× на каждый дочерний объект. `fillStyle` устанавливается один раз перед циклом (не меняется в рамках одного depth). Рекурсивные вызовы делают собственный save/restore и возвращают ctx в исходное состояние (`RenderOperations.js`).
-
-#### 📁 Изменённые файлы
-
-`src/core/RenderOperations.js` · `src/core/GroupOperations.js` · `src/core/LayerOperations.js` · `src/core/HistoryOperations.js` · `src/managers/CacheManager.js`
+`src/event-system/MouseHandlers.js` В· `src/managers/CacheManager.js` В· `start_Editor.bat` В· `.vscode/launch.json` В· `Context_map.md` В· `docs/QUICK_START.md`
 
 ---
 
-### Fixed — Группы: корректная работа при глубокой вложенности (3+ уровней)
+### Perf вЂ” M9, M7, M8, M6: lazy spatial index, spatial-aware selectable filter, per-layer cache, ctx.save hoisting
 
-- **`GroupOperations.extractObjectFromGroup`**: исправлен расчёт координат при извлечении объекта из вложенной группы. Ранее использовались `group.x`/`group.y` (локальные координаты относительно родителя), что давало неверную позицию при глубине ≥ 2. Теперь используется `getObjectWorldPosition(group)` — полный мировой DFS-обход (`GroupOperations.js`).
-- **`GroupOperations.extractObjectFromGroup`**: при вложенных группах дочерний объект теперь перемещается в **родительскую группу** с правильными относительными координатами, а не на верхний уровень (`level.objects`). Это сохраняет иерархию: закрытие G3 (G1→G2→G3) с 1 дочерним объектом корректно переносит его в G2, не ломая структуру (`GroupOperations.js`).
-- **`GroupOperations._findParentGroup`**: добавлен вспомогательный метод — рекурсивный поиск родительской группы по всему дереву объектов уровня (`GroupOperations.js`).
+#### вљЎ РџСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ
+
+- **M9. buildSpatialIndex: lazy dirty-flag** вЂ” РґРѕР±Р°РІР»РµРЅ РјРµС‚РѕРґ `markSpatialIndexDirty()` РІ `RenderOperations`. Р’СЃРµ РІРЅРµС€РЅРёРµ РІС‹Р·РѕРІС‹ `buildSpatialIndex()` (GroupOperations, LayerOperations, HistoryOperations, CacheManager) Р·Р°РјРµРЅРµРЅС‹ РЅР° `markSpatialIndexDirty()`. РџРµСЂРµСЃС‚СЂРѕР№РєР° O(N) РѕС‚РєР»Р°РґС‹РІР°РµС‚СЃСЏ РґРѕ РЅР°С‡Р°Р»Р° СЃР»РµРґСѓСЋС‰РµРіРѕ `getVisibleObjectsSpatial()` РІ render-loop. Init LevelEditor РѕСЃС‚Р°РІР»РµРЅ РїСЂСЏРјС‹Рј РІС‹Р·РѕРІРѕРј (`RenderOperations.js`, `GroupOperations.js`, `LayerOperations.js`, `HistoryOperations.js`, `CacheManager.js`).
+- **M7. getSelectableObjectsInViewport: spatial index РєР°Рє РєР°РЅРґРёРґР°С‚С‹** вЂ” РїСЂРё РЅР°Р»РёС‡РёРё spatial index `getSelectableObjectsInViewport()` С‚РµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓРµС‚ `getVisibleObjectsSpatial()` (O(k), k в‰Є N) РІРјРµСЃС‚Рѕ РёС‚РµСЂР°С†РёРё РІСЃРµС… selectable РѕР±СЉРµРєС‚РѕРІ. Р—Р°РѕРґРЅРѕ РёСЃРїСЂР°РІР»РµРЅ Р±Р°Рі: `camera.scale` (undefined, РґР°РІР°Р»Рѕ NaN-bounds Рё РїСЂРѕРїСѓСЃРєР°Р»Рѕ РІСЃРµ РѕР±СЉРµРєС‚С‹) Р·Р°РјРµРЅС‘РЅ РЅР° `camera.zoom` РєР°Рє РІ РѕСЃС‚Р°Р»СЊРЅРѕРј РєРѕРґРµ (`CacheManager.js`).
+- **M8. effectiveLayerCache: per-layer invalidation** вЂ” РґРѕР±Р°РІР»РµРЅ РѕР±СЂР°С‚РЅС‹Р№ РёРЅРґРµРєСЃ `_layerToObjectIds: Map<layerId, Set<objId>>`, Р·Р°РїРѕР»РЅСЏРµРјС‹Р№ Р»РµРЅРёРІРѕ РІ `getCachedEffectiveLayerId()`. РџСЂРё layer-РёР·РјРµРЅРµРЅРёРё `smartCacheInvalidation()` С‚РµРїРµСЂСЊ СѓРґР°Р»СЏРµС‚ С‚РѕР»СЊРєРѕ Р·Р°РїРёСЃРё РѕР±СЉРµРєС‚РѕРІ Р·Р°С‚СЂРѕРЅСѓС‚РѕРіРѕ СЃР»РѕСЏ РІРјРµСЃС‚Рѕ `effectiveLayerCache.clear()`. Fallback РЅР° РїРѕР»РЅСѓСЋ РѕС‡РёСЃС‚РєСѓ РµСЃР»Рё РёРЅРґРµРєСЃ РЅРµ РїСЂРѕРіСЂРµС‚ (`CacheManager.js`).
+- **M6. ctx.save/restore: hoisting Р·Р° РїСЂРµРґРµР»С‹ forEach** вЂ” РІ `drawHierarchyHighlightForGroup()` Рё `drawDuplicateHierarchyHighlight()` `ctx.save()/restore()` РІС‹РЅРµСЃРµРЅС‹ Р·Р° РїСЂРµРґРµР»С‹ forEach-С†РёРєР»Р°: РѕРґРёРЅ СЂР°Р· РЅР° depth РІРјРµСЃС‚Рѕ 2Г— РЅР° РєР°Р¶РґС‹Р№ РґРѕС‡РµСЂРЅРёР№ РѕР±СЉРµРєС‚. `fillStyle` СѓСЃС‚Р°РЅР°РІР»РёРІР°РµС‚СЃСЏ РѕРґРёРЅ СЂР°Р· РїРµСЂРµРґ С†РёРєР»РѕРј (РЅРµ РјРµРЅСЏРµС‚СЃСЏ РІ СЂР°РјРєР°С… РѕРґРЅРѕРіРѕ depth). Р РµРєСѓСЂСЃРёРІРЅС‹Рµ РІС‹Р·РѕРІС‹ РґРµР»Р°СЋС‚ СЃРѕР±СЃС‚РІРµРЅРЅС‹Р№ save/restore Рё РІРѕР·РІСЂР°С‰Р°СЋС‚ ctx РІ РёСЃС…РѕРґРЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ (`RenderOperations.js`).
+
+#### рџ“Ѓ РР·РјРµРЅС‘РЅРЅС‹Рµ С„Р°Р№Р»С‹
+
+`src/core/RenderOperations.js` В· `src/core/GroupOperations.js` В· `src/core/LayerOperations.js` В· `src/core/HistoryOperations.js` В· `src/managers/CacheManager.js`
+
+---
+
+### Fixed вЂ” Р“СЂСѓРїРїС‹: РєРѕСЂСЂРµРєС‚РЅР°СЏ СЂР°Р±РѕС‚Р° РїСЂРё РіР»СѓР±РѕРєРѕР№ РІР»РѕР¶РµРЅРЅРѕСЃС‚Рё (3+ СѓСЂРѕРІРЅРµР№)
+
+- **`GroupOperations.extractObjectFromGroup`**: РёСЃРїСЂР°РІР»РµРЅ СЂР°СЃС‡С‘С‚ РєРѕРѕСЂРґРёРЅР°С‚ РїСЂРё РёР·РІР»РµС‡РµРЅРёРё РѕР±СЉРµРєС‚Р° РёР· РІР»РѕР¶РµРЅРЅРѕР№ РіСЂСѓРїРїС‹. Р Р°РЅРµРµ РёСЃРїРѕР»СЊР·РѕРІР°Р»РёСЃСЊ `group.x`/`group.y` (Р»РѕРєР°Р»СЊРЅС‹Рµ РєРѕРѕСЂРґРёРЅР°С‚С‹ РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕ СЂРѕРґРёС‚РµР»СЏ), С‡С‚Рѕ РґР°РІР°Р»Рѕ РЅРµРІРµСЂРЅСѓСЋ РїРѕР·РёС†РёСЋ РїСЂРё РіР»СѓР±РёРЅРµ в‰Ґ 2. РўРµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ `getObjectWorldPosition(group)` вЂ” РїРѕР»РЅС‹Р№ РјРёСЂРѕРІРѕР№ DFS-РѕР±С…РѕРґ (`GroupOperations.js`).
+- **`GroupOperations.extractObjectFromGroup`**: РїСЂРё РІР»РѕР¶РµРЅРЅС‹С… РіСЂСѓРїРїР°С… РґРѕС‡РµСЂРЅРёР№ РѕР±СЉРµРєС‚ С‚РµРїРµСЂСЊ РїРµСЂРµРјРµС‰Р°РµС‚СЃСЏ РІ **СЂРѕРґРёС‚РµР»СЊСЃРєСѓСЋ РіСЂСѓРїРїСѓ** СЃ РїСЂР°РІРёР»СЊРЅС‹РјРё РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅС‹РјРё РєРѕРѕСЂРґРёРЅР°С‚Р°РјРё, Р° РЅРµ РЅР° РІРµСЂС…РЅРёР№ СѓСЂРѕРІРµРЅСЊ (`level.objects`). Р­С‚Рѕ СЃРѕС…СЂР°РЅСЏРµС‚ РёРµСЂР°СЂС…РёСЋ: Р·Р°РєСЂС‹С‚РёРµ G3 (G1в†’G2в†’G3) СЃ 1 РґРѕС‡РµСЂРЅРёРј РѕР±СЉРµРєС‚РѕРј РєРѕСЂСЂРµРєС‚РЅРѕ РїРµСЂРµРЅРѕСЃРёС‚ РµРіРѕ РІ G2, РЅРµ Р»РѕРјР°СЏ СЃС‚СЂСѓРєС‚СѓСЂСѓ (`GroupOperations.js`).
+- **`GroupOperations._findParentGroup`**: РґРѕР±Р°РІР»РµРЅ РІСЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Р№ РјРµС‚РѕРґ вЂ” СЂРµРєСѓСЂСЃРёРІРЅС‹Р№ РїРѕРёСЃРє СЂРѕРґРёС‚РµР»СЊСЃРєРѕР№ РіСЂСѓРїРїС‹ РїРѕ РІСЃРµРјСѓ РґРµСЂРµРІСѓ РѕР±СЉРµРєС‚РѕРІ СѓСЂРѕРІРЅСЏ (`GroupOperations.js`).
 
 ## [3.54.5] - 2026-07-01
 
-### Fixed — Технический аудит v3.54.4: критические баги, производительность, архитектурная гигиена
+### Fixed вЂ” РўРµС…РЅРёС‡РµСЃРєРёР№ Р°СѓРґРёС‚ v3.54.4: РєСЂРёС‚РёС‡РµСЃРєРёРµ Р±Р°РіРё, РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ, Р°СЂС…РёС‚РµРєС‚СѓСЂРЅР°СЏ РіРёРіРёРµРЅР°
 
-#### 🐛 Исправленные баги
+#### рџђ› РСЃРїСЂР°РІР»РµРЅРЅС‹Рµ Р±Р°РіРё
 
-- **C1. Undo-рассинхрон после drag-cancel вне окна** — `MouseHandlers.handleGlobalMouseUp()` теперь вызывает `historyOperations.undo()` (полное восстановление с rebuild индексов/выборки) вместо низкоуровневого `historyManager.undo()` (`MouseHandlers.js`).
-- **C2. Краш при drag группы в саму себя** — добавлен guard в `dragSelectedObjects()`: запрещает перетаскивание группы в саму себя или в собственного потомка (`wouldCreateCycle` через `isObjectInGroupRecursive`) (`MouseHandlers.js`).
-- **H5. Escape не чистил pending-marquee state** — `marqueePendingStartPos` добавлен в `hasActiveProcess`-проверку в `handleKeyDown()`, теперь Escape корректно маршрутизируется в `cancelAllActions()` (`EventHandlers.js`).
-- **H6. Потеря фокуса (Alt-Tab) во время drag/marquee** — добавлен `MouseHandlers.handleWindowBlur()`, вызывается из существующего `visibilitychange`-обработчика при `document.hidden`: финализирует marquee, откатывает незавершённый drag через `historyOperations.undo()`, сбрасывает флаги кнопок мыши (`MouseHandlers.js`, `LevelEditor.js`).
-- **M3. OutlinerPanel "Duplicate" — пустая заглушка** — подключён существующий `DuplicateOperations` через `levelEditor.duplicateSelectedObjects()` (`OutlinerPanel.js`).
-- **L2. Накопление Escape-listener'ов в color picker слоя** — исправлено: handler хранится по ссылке и явно удаляется через `removeEventListener` во всех путях закрытия (change / blur / Escape) (`LayersPanel.js`).
+- **C1. Undo-СЂР°СЃСЃРёРЅС…СЂРѕРЅ РїРѕСЃР»Рµ drag-cancel РІРЅРµ РѕРєРЅР°** вЂ” `MouseHandlers.handleGlobalMouseUp()` С‚РµРїРµСЂСЊ РІС‹Р·С‹РІР°РµС‚ `historyOperations.undo()` (РїРѕР»РЅРѕРµ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ СЃ rebuild РёРЅРґРµРєСЃРѕРІ/РІС‹Р±РѕСЂРєРё) РІРјРµСЃС‚Рѕ РЅРёР·РєРѕСѓСЂРѕРІРЅРµРІРѕРіРѕ `historyManager.undo()` (`MouseHandlers.js`).
+- **C2. РљСЂР°С€ РїСЂРё drag РіСЂСѓРїРїС‹ РІ СЃР°РјСѓ СЃРµР±СЏ** вЂ” РґРѕР±Р°РІР»РµРЅ guard РІ `dragSelectedObjects()`: Р·Р°РїСЂРµС‰Р°РµС‚ РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµ РіСЂСѓРїРїС‹ РІ СЃР°РјСѓ СЃРµР±СЏ РёР»Рё РІ СЃРѕР±СЃС‚РІРµРЅРЅРѕРіРѕ РїРѕС‚РѕРјРєР° (`wouldCreateCycle` С‡РµСЂРµР· `isObjectInGroupRecursive`) (`MouseHandlers.js`).
+- **H5. Escape РЅРµ С‡РёСЃС‚РёР» pending-marquee state** вЂ” `marqueePendingStartPos` РґРѕР±Р°РІР»РµРЅ РІ `hasActiveProcess`-РїСЂРѕРІРµСЂРєСѓ РІ `handleKeyDown()`, С‚РµРїРµСЂСЊ Escape РєРѕСЂСЂРµРєС‚РЅРѕ РјР°СЂС€СЂСѓС‚РёР·РёСЂСѓРµС‚СЃСЏ РІ `cancelAllActions()` (`EventHandlers.js`).
+- **H6. РџРѕС‚РµСЂСЏ С„РѕРєСѓСЃР° (Alt-Tab) РІРѕ РІСЂРµРјСЏ drag/marquee** вЂ” РґРѕР±Р°РІР»РµРЅ `MouseHandlers.handleWindowBlur()`, РІС‹Р·С‹РІР°РµС‚СЃСЏ РёР· СЃСѓС‰РµСЃС‚РІСѓСЋС‰РµРіРѕ `visibilitychange`-РѕР±СЂР°Р±РѕС‚С‡РёРєР° РїСЂРё `document.hidden`: С„РёРЅР°Р»РёР·РёСЂСѓРµС‚ marquee, РѕС‚РєР°С‚С‹РІР°РµС‚ РЅРµР·Р°РІРµСЂС€С‘РЅРЅС‹Р№ drag С‡РµСЂРµР· `historyOperations.undo()`, СЃР±СЂР°СЃС‹РІР°РµС‚ С„Р»Р°РіРё РєРЅРѕРїРѕРє РјС‹С€Рё (`MouseHandlers.js`, `LevelEditor.js`).
+- **M3. OutlinerPanel "Duplicate" вЂ” РїСѓСЃС‚Р°СЏ Р·Р°РіР»СѓС€РєР°** вЂ” РїРѕРґРєР»СЋС‡С‘РЅ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№ `DuplicateOperations` С‡РµСЂРµР· `levelEditor.duplicateSelectedObjects()` (`OutlinerPanel.js`).
+- **L2. РќР°РєРѕРїР»РµРЅРёРµ Escape-listener'РѕРІ РІ color picker СЃР»РѕСЏ** вЂ” РёСЃРїСЂР°РІР»РµРЅРѕ: handler С…СЂР°РЅРёС‚СЃСЏ РїРѕ СЃСЃС‹Р»РєРµ Рё СЏРІРЅРѕ СѓРґР°Р»СЏРµС‚СЃСЏ С‡РµСЂРµР· `removeEventListener` РІРѕ РІСЃРµС… РїСѓС‚СЏС… Р·Р°РєСЂС‹С‚РёСЏ (change / blur / Escape) (`LayersPanel.js`).
 
-#### ⚡ Улучшения производительности
+#### вљЎ РЈР»СѓС‡С€РµРЅРёСЏ РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚Рё
 
-- **H2. Кэширование порядка рендера** — сортировка visible objects по zIndex вычисляется и кэшируется вместе с `visibleObjectsCache` (тот же TTL/инвалидация); устранено создание нового отсортированного массива на каждый `render()` вызов (`RenderOperations.js`).
-- **H3. Throttle для global mousemove** — добавлен `_throttledGlobalMouseMove` с тем же `PERFORMANCE.MOUSE_MOVE_THROTTLE_MS`, что и обычный mousemove; устраняет неограниченные вызовы `render()` при marquee за пределами canvas (`MouseHandlers.js`).
-- **H4. Мемоизация renderPreviews() в AssetPanel** — добавлен guard: полный teardown/rebuild DOM-грида пропускается, если набор ассетов, выборка, viewMode и размеры не изменились с прошлого вызова (`AssetPanel.js`).
-- **M1. Очистка кэшей при смене уровня** — `newLevel()`/`openLevel()` теперь вызывают `editor.clearCaches()` перед `stateManager.reset()`, освобождая объекты предыдущего уровня из трёх неограниченных Map-кэшей (`LevelFileOperations.js`).
+- **H2. РљСЌС€РёСЂРѕРІР°РЅРёРµ РїРѕСЂСЏРґРєР° СЂРµРЅРґРµСЂР°** вЂ” СЃРѕСЂС‚РёСЂРѕРІРєР° visible objects РїРѕ zIndex РІС‹С‡РёСЃР»СЏРµС‚СЃСЏ Рё РєСЌС€РёСЂСѓРµС‚СЃСЏ РІРјРµСЃС‚Рµ СЃ `visibleObjectsCache` (С‚РѕС‚ Р¶Рµ TTL/РёРЅРІР°Р»РёРґР°С†РёСЏ); СѓСЃС‚СЂР°РЅРµРЅРѕ СЃРѕР·РґР°РЅРёРµ РЅРѕРІРѕРіРѕ РѕС‚СЃРѕСЂС‚РёСЂРѕРІР°РЅРЅРѕРіРѕ РјР°СЃСЃРёРІР° РЅР° РєР°Р¶РґС‹Р№ `render()` РІС‹Р·РѕРІ (`RenderOperations.js`).
+- **H3. Throttle РґР»СЏ global mousemove** вЂ” РґРѕР±Р°РІР»РµРЅ `_throttledGlobalMouseMove` СЃ С‚РµРј Р¶Рµ `PERFORMANCE.MOUSE_MOVE_THROTTLE_MS`, С‡С‚Рѕ Рё РѕР±С‹С‡РЅС‹Р№ mousemove; СѓСЃС‚СЂР°РЅСЏРµС‚ РЅРµРѕРіСЂР°РЅРёС‡РµРЅРЅС‹Рµ РІС‹Р·РѕРІС‹ `render()` РїСЂРё marquee Р·Р° РїСЂРµРґРµР»Р°РјРё canvas (`MouseHandlers.js`).
+- **H4. РњРµРјРѕРёР·Р°С†РёСЏ renderPreviews() РІ AssetPanel** вЂ” РґРѕР±Р°РІР»РµРЅ guard: РїРѕР»РЅС‹Р№ teardown/rebuild DOM-РіСЂРёРґР° РїСЂРѕРїСѓСЃРєР°РµС‚СЃСЏ, РµСЃР»Рё РЅР°Р±РѕСЂ Р°СЃСЃРµС‚РѕРІ, РІС‹Р±РѕСЂРєР°, viewMode Рё СЂР°Р·РјРµСЂС‹ РЅРµ РёР·РјРµРЅРёР»РёСЃСЊ СЃ РїСЂРѕС€Р»РѕРіРѕ РІС‹Р·РѕРІР° (`AssetPanel.js`).
+- **M1. РћС‡РёСЃС‚РєР° РєСЌС€РµР№ РїСЂРё СЃРјРµРЅРµ СѓСЂРѕРІРЅСЏ** вЂ” `newLevel()`/`openLevel()` С‚РµРїРµСЂСЊ РІС‹Р·С‹РІР°СЋС‚ `editor.clearCaches()` РїРµСЂРµРґ `stateManager.reset()`, РѕСЃРІРѕР±РѕР¶РґР°СЏ РѕР±СЉРµРєС‚С‹ РїСЂРµРґС‹РґСѓС‰РµРіРѕ СѓСЂРѕРІРЅСЏ РёР· С‚СЂС‘С… РЅРµРѕРіСЂР°РЅРёС‡РµРЅРЅС‹С… Map-РєСЌС€РµР№ (`LevelFileOperations.js`).
 
-#### 🏗️ Архитектурные улучшения
+#### рџЏ—пёЏ РђСЂС…РёС‚РµРєС‚СѓСЂРЅС‹Рµ СѓР»СѓС‡С€РµРЅРёСЏ
 
-- **H7. Устранение дублирования `updateDialogSize()`** — логика расчёта и применения ширины вынесена в `DialogResizer.applyCalculatedWidth()` (статический метод); `BaseDialog` и `SettingsPanel` теперь используют один код вместо двух почти идентичных копий (`DialogResizer.js`, `BaseDialog.js`, `SettingsPanel.js`).
-- **M2. Устранение тройной регистрации global mouseup** — удалены избыточные блоки `global-mouse-document` и `global-mouse-window`; оставлена единственная регистрация на `window` (по образцу `BasePanel`) (`EventHandlers.js`).
-- **M4. Блокировка newLevel/openLevel при активном drag/marquee** — добавлена проверка `_hasActiveMouseOperation()` в начале обоих методов, исключая риск "ghost edits" при race между drag и File menu (`LevelFileOperations.js`).
-- **M5. Удаление мёртвых test\*() методов** — `testContextMenu`, `testContextMenuManager`, `testGlobalClickHandler`, `testPanningDetection`, `testMenuAutoClose`, `testCursorPositioning` удалены из `LevelEditor.js` (115 строк, нет ни одного caller'а, нет ассертов, не производили наблюдаемых эффектов) (`LevelEditor.js`).
-- **L1. Корректная отписка от StateManager в destroy()** — `FoldersPanel` и `AssetPanel` теперь сохраняют unsubscribe-функции в `this.subscriptions[]` и вызывают их в `destroy()` по образцу `LayersPanel` (`FoldersPanel.js`, `AssetPanel.js`).
+- **H7. РЈСЃС‚СЂР°РЅРµРЅРёРµ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ `updateDialogSize()`** вЂ” Р»РѕРіРёРєР° СЂР°СЃС‡С‘С‚Р° Рё РїСЂРёРјРµРЅРµРЅРёСЏ С€РёСЂРёРЅС‹ РІС‹РЅРµСЃРµРЅР° РІ `DialogResizer.applyCalculatedWidth()` (СЃС‚Р°С‚РёС‡РµСЃРєРёР№ РјРµС‚РѕРґ); `BaseDialog` Рё `SettingsPanel` С‚РµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓСЋС‚ РѕРґРёРЅ РєРѕРґ РІРјРµСЃС‚Рѕ РґРІСѓС… РїРѕС‡С‚Рё РёРґРµРЅС‚РёС‡РЅС‹С… РєРѕРїРёР№ (`DialogResizer.js`, `BaseDialog.js`, `SettingsPanel.js`).
+- **M2. РЈСЃС‚СЂР°РЅРµРЅРёРµ С‚СЂРѕР№РЅРѕР№ СЂРµРіРёСЃС‚СЂР°С†РёРё global mouseup** вЂ” СѓРґР°Р»РµРЅС‹ РёР·Р±С‹С‚РѕС‡РЅС‹Рµ Р±Р»РѕРєРё `global-mouse-document` Рё `global-mouse-window`; РѕСЃС‚Р°РІР»РµРЅР° РµРґРёРЅСЃС‚РІРµРЅРЅР°СЏ СЂРµРіРёСЃС‚СЂР°С†РёСЏ РЅР° `window` (РїРѕ РѕР±СЂР°Р·С†Сѓ `BasePanel`) (`EventHandlers.js`).
+- **M4. Р‘Р»РѕРєРёСЂРѕРІРєР° newLevel/openLevel РїСЂРё Р°РєС‚РёРІРЅРѕРј drag/marquee** вЂ” РґРѕР±Р°РІР»РµРЅР° РїСЂРѕРІРµСЂРєР° `_hasActiveMouseOperation()` РІ РЅР°С‡Р°Р»Рµ РѕР±РѕРёС… РјРµС‚РѕРґРѕРІ, РёСЃРєР»СЋС‡Р°СЏ СЂРёСЃРє "ghost edits" РїСЂРё race РјРµР¶РґСѓ drag Рё File menu (`LevelFileOperations.js`).
+- **M5. РЈРґР°Р»РµРЅРёРµ РјС‘СЂС‚РІС‹С… test\*() РјРµС‚РѕРґРѕРІ** вЂ” `testContextMenu`, `testContextMenuManager`, `testGlobalClickHandler`, `testPanningDetection`, `testMenuAutoClose`, `testCursorPositioning` СѓРґР°Р»РµРЅС‹ РёР· `LevelEditor.js` (115 СЃС‚СЂРѕРє, РЅРµС‚ РЅРё РѕРґРЅРѕРіРѕ caller'Р°, РЅРµС‚ Р°СЃСЃРµСЂС‚РѕРІ, РЅРµ РїСЂРѕРёР·РІРѕРґРёР»Рё РЅР°Р±Р»СЋРґР°РµРјС‹С… СЌС„С„РµРєС‚РѕРІ) (`LevelEditor.js`).
+- **L1. РљРѕСЂСЂРµРєС‚РЅР°СЏ РѕС‚РїРёСЃРєР° РѕС‚ StateManager РІ destroy()** вЂ” `FoldersPanel` Рё `AssetPanel` С‚РµРїРµСЂСЊ СЃРѕС…СЂР°РЅСЏСЋС‚ unsubscribe-С„СѓРЅРєС†РёРё РІ `this.subscriptions[]` Рё РІС‹Р·С‹РІР°СЋС‚ РёС… РІ `destroy()` РїРѕ РѕР±СЂР°Р·С†Сѓ `LayersPanel` (`FoldersPanel.js`, `AssetPanel.js`).
 
-#### 🧹 Чистка кода
+#### рџ§№ Р§РёСЃС‚РєР° РєРѕРґР°
 
-- **H9/L5. console.log в hot-path и BaseContextMenu** — удалены: `console.log(new Error().stack)` из `LevelEditor.updateAllPanels()`, 5 вызовов из `BaseContextMenu`, 2 из `OutlinerPanel.render()`, 6 дублирующих из `AssetImporter` (рядом уже были Logger-вызовы), 1 из `DetailsPanel`. Заменены на `Logger.*`: `DialogSizeManager` (добавлен импорт), `BaseContextMenu`.
-- **L3. Отсутствующий Logger.menu accessor** — `Logger` содержал запись `MENU` в `CATEGORIES`, но не имел соответствующего `static menu = { info, debug, warn, error }` — вызов `Logger.menu.info(...)` приводил к краш-старту редактора (`TypeError: Cannot read properties of undefined (reading 'info')`). Добавлен `static menu` accessor по аналогии с остальными 28 категориями (`src/utils/Logger.js`).
-- **L4. Документация Logger** — исправлено число категорий: 17→29 в `DEVELOPMENT_GUIDE.md`, 19→29 в `ARCHITECTURE.md`.
+- **H9/L5. console.log РІ hot-path Рё BaseContextMenu** вЂ” СѓРґР°Р»РµРЅС‹: `console.log(new Error().stack)` РёР· `LevelEditor.updateAllPanels()`, 5 РІС‹Р·РѕРІРѕРІ РёР· `BaseContextMenu`, 2 РёР· `OutlinerPanel.render()`, 6 РґСѓР±Р»РёСЂСѓСЋС‰РёС… РёР· `AssetImporter` (СЂСЏРґРѕРј СѓР¶Рµ Р±С‹Р»Рё Logger-РІС‹Р·РѕРІС‹), 1 РёР· `DetailsPanel`. Р—Р°РјРµРЅРµРЅС‹ РЅР° `Logger.*`: `DialogSizeManager` (РґРѕР±Р°РІР»РµРЅ РёРјРїРѕСЂС‚), `BaseContextMenu`.
+- **L3. РћС‚СЃСѓС‚СЃС‚РІСѓСЋС‰РёР№ Logger.menu accessor** вЂ” `Logger` СЃРѕРґРµСЂР¶Р°Р» Р·Р°РїРёСЃСЊ `MENU` РІ `CATEGORIES`, РЅРѕ РЅРµ РёРјРµР» СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РµРіРѕ `static menu = { info, debug, warn, error }` вЂ” РІС‹Р·РѕРІ `Logger.menu.info(...)` РїСЂРёРІРѕРґРёР» Рє РєСЂР°С€-СЃС‚Р°СЂС‚Сѓ СЂРµРґР°РєС‚РѕСЂР° (`TypeError: Cannot read properties of undefined (reading 'info')`). Р”РѕР±Р°РІР»РµРЅ `static menu` accessor РїРѕ Р°РЅР°Р»РѕРіРёРё СЃ РѕСЃС‚Р°Р»СЊРЅС‹РјРё 28 РєР°С‚РµРіРѕСЂРёСЏРјРё (`src/utils/Logger.js`).
+- **L4. Р”РѕРєСѓРјРµРЅС‚Р°С†РёСЏ Logger** вЂ” РёСЃРїСЂР°РІР»РµРЅРѕ С‡РёСЃР»Рѕ РєР°С‚РµРіРѕСЂРёР№: 17в†’29 РІ `DEVELOPMENT_GUIDE.md`, 19в†’29 РІ `ARCHITECTURE.md`.
 
-#### 📁 Изменённые файлы
+#### рџ“Ѓ РР·РјРµРЅС‘РЅРЅС‹Рµ С„Р°Р№Р»С‹
 
-`src/event-system/MouseHandlers.js` · `src/event-system/EventHandlers.js` · `src/core/LevelEditor.js` · `src/core/LevelFileOperations.js` · `src/core/RenderOperations.js` · `src/core/ObjectOperations.js (через OutlinerPanel)` · `src/ui/OutlinerPanel.js` · `src/ui/AssetPanel.js` · `src/ui/FoldersPanel.js` · `src/ui/BaseContextMenu.js` · `src/ui/DetailsPanel.js` · `src/ui/LayersPanel.js` · `src/ui/BaseDialog.js` · `src/ui/SettingsPanel.js` · `src/utils/DialogResizer.js` · `src/utils/DialogSizeManager.js` · `src/utils/AssetImporter.js` · `src/utils/ParallaxRenderer.js` · `src/utils/Logger.js` · `src/managers/MenuManager.js` · `docs/ARCHITECTURE.md` · `docs/DEVELOPMENT_GUIDE.md`
+`src/event-system/MouseHandlers.js` В· `src/event-system/EventHandlers.js` В· `src/core/LevelEditor.js` В· `src/core/LevelFileOperations.js` В· `src/core/RenderOperations.js` В· `src/core/ObjectOperations.js (С‡РµСЂРµР· OutlinerPanel)` В· `src/ui/OutlinerPanel.js` В· `src/ui/AssetPanel.js` В· `src/ui/FoldersPanel.js` В· `src/ui/BaseContextMenu.js` В· `src/ui/DetailsPanel.js` В· `src/ui/LayersPanel.js` В· `src/ui/BaseDialog.js` В· `src/ui/SettingsPanel.js` В· `src/utils/DialogResizer.js` В· `src/utils/DialogSizeManager.js` В· `src/utils/AssetImporter.js` В· `src/utils/ParallaxRenderer.js` В· `src/utils/Logger.js` В· `src/managers/MenuManager.js` В· `docs/ARCHITECTURE.md` В· `docs/DEVELOPMENT_GUIDE.md`
 
-### Fixed — Регрессии, обнаруженные при live-тестировании (chrome-devtools MCP)
+### Fixed вЂ” Р РµРіСЂРµСЃСЃРёРё, РѕР±РЅР°СЂСѓР¶РµРЅРЅС‹Рµ РїСЂРё live-С‚РµСЃС‚РёСЂРѕРІР°РЅРёРё (chrome-devtools MCP)
 
-#### 🐛 Исправленные баги
+#### рџђ› РСЃРїСЂР°РІР»РµРЅРЅС‹Рµ Р±Р°РіРё
 
-- **Краш рендер-лупа: `visibleObjects is not defined`** — В `RenderOperations.render()` переменная `sortedObjects` (результат `this.getVisibleObjects(camera)`, строка 374) была переименована в ходе рефакторинга, но периодический лог на строке 472 остался ссылаться на старое имя `visibleObjects`. Исправлено: `visibleObjects.length` → `sortedObjects.length` (`src/core/RenderOperations.js`).
-- **Duplicate не работал: `duplicateSelectedObjects is not a function`** — `LevelEditor.duplicateSelectedObjects()` вызывал `this.duplicateOperations.duplicateSelectedObjects()`, которого не существует. Правильное имя метода — `startFromSelection()`. Исправлено в `src/core/LevelEditor.js`.
-- **ConfigManager: 16 лишних 404 в консоли при каждом старте** — `loadUserConfigsFromStorage()` пыталась подгрузить `config/user/<name>.json` для 8 конфигов (camera, selection, assets, performance, shortcuts, view, toolbar, grid), для которых файлы в `config/user/` не предусмотрены (только editor/canvas/panels задокументированы в `config/user/README.md`). Добавлен `this.fileBackedConfigs = ['editor', 'canvas', 'panels']`, file-fetch ограничен этим списком (`src/managers/ConfigManager.js`).
-- **Делегированные blur/focus не срабатывали → переименование слоя слетало** — `EventHandlerManager.setupContainerEventListeners()` навешивал `blur`/`focus` обработчики в bubble-фазе, но эти события не всплывают (`non-bubbling`). Делегирование от контейнера к дочернему `<input>` не работало: `LayersPanel` blur-хендлер (коммит переименования слоя) никогда не получал событие, и rename слетал при каждом `render()` (например, при выборе другого слоя). Исправлено: для `blur`/`focus` в `setupContainerEventListeners` теперь устанавливается `{ capture: true }` (`src/event-system/EventHandlerManager.js`).
+- **РљСЂР°С€ СЂРµРЅРґРµСЂ-Р»СѓРїР°: `visibleObjects is not defined`** вЂ” Р’ `RenderOperations.render()` РїРµСЂРµРјРµРЅРЅР°СЏ `sortedObjects` (СЂРµР·СѓР»СЊС‚Р°С‚ `this.getVisibleObjects(camera)`, СЃС‚СЂРѕРєР° 374) Р±С‹Р»Р° РїРµСЂРµРёРјРµРЅРѕРІР°РЅР° РІ С…РѕРґРµ СЂРµС„Р°РєС‚РѕСЂРёРЅРіР°, РЅРѕ РїРµСЂРёРѕРґРёС‡РµСЃРєРёР№ Р»РѕРі РЅР° СЃС‚СЂРѕРєРµ 472 РѕСЃС‚Р°Р»СЃСЏ СЃСЃС‹Р»Р°С‚СЊСЃСЏ РЅР° СЃС‚Р°СЂРѕРµ РёРјСЏ `visibleObjects`. РСЃРїСЂР°РІР»РµРЅРѕ: `visibleObjects.length` в†’ `sortedObjects.length` (`src/core/RenderOperations.js`).
+- **Duplicate РЅРµ СЂР°Р±РѕС‚Р°Р»: `duplicateSelectedObjects is not a function`** вЂ” `LevelEditor.duplicateSelectedObjects()` РІС‹Р·С‹РІР°Р» `this.duplicateOperations.duplicateSelectedObjects()`, РєРѕС‚РѕСЂРѕРіРѕ РЅРµ СЃСѓС‰РµСЃС‚РІСѓРµС‚. РџСЂР°РІРёР»СЊРЅРѕРµ РёРјСЏ РјРµС‚РѕРґР° вЂ” `startFromSelection()`. РСЃРїСЂР°РІР»РµРЅРѕ РІ `src/core/LevelEditor.js`.
+- **ConfigManager: 16 Р»РёС€РЅРёС… 404 РІ РєРѕРЅСЃРѕР»Рё РїСЂРё РєР°Р¶РґРѕРј СЃС‚Р°СЂС‚Рµ** вЂ” `loadUserConfigsFromStorage()` РїС‹С‚Р°Р»Р°СЃСЊ РїРѕРґРіСЂСѓР·РёС‚СЊ `config/user/<name>.json` РґР»СЏ 8 РєРѕРЅС„РёРіРѕРІ (camera, selection, assets, performance, shortcuts, view, toolbar, grid), РґР»СЏ РєРѕС‚РѕСЂС‹С… С„Р°Р№Р»С‹ РІ `config/user/` РЅРµ РїСЂРµРґСѓСЃРјРѕС‚СЂРµРЅС‹ (С‚РѕР»СЊРєРѕ editor/canvas/panels Р·Р°РґРѕРєСѓРјРµРЅС‚РёСЂРѕРІР°РЅС‹ РІ `config/user/README.md`). Р”РѕР±Р°РІР»РµРЅ `this.fileBackedConfigs = ['editor', 'canvas', 'panels']`, file-fetch РѕРіСЂР°РЅРёС‡РµРЅ СЌС‚РёРј СЃРїРёСЃРєРѕРј (`src/managers/ConfigManager.js`).
+- **Р”РµР»РµРіРёСЂРѕРІР°РЅРЅС‹Рµ blur/focus РЅРµ СЃСЂР°Р±Р°С‚С‹РІР°Р»Рё в†’ РїРµСЂРµРёРјРµРЅРѕРІР°РЅРёРµ СЃР»РѕСЏ СЃР»РµС‚Р°Р»Рѕ** вЂ” `EventHandlerManager.setupContainerEventListeners()` РЅР°РІРµС€РёРІР°Р» `blur`/`focus` РѕР±СЂР°Р±РѕС‚С‡РёРєРё РІ bubble-С„Р°Р·Рµ, РЅРѕ СЌС‚Рё СЃРѕР±С‹С‚РёСЏ РЅРµ РІСЃРїР»С‹РІР°СЋС‚ (`non-bubbling`). Р”РµР»РµРіРёСЂРѕРІР°РЅРёРµ РѕС‚ РєРѕРЅС‚РµР№РЅРµСЂР° Рє РґРѕС‡РµСЂРЅРµРјСѓ `<input>` РЅРµ СЂР°Р±РѕС‚Р°Р»Рѕ: `LayersPanel` blur-С…РµРЅРґР»РµСЂ (РєРѕРјРјРёС‚ РїРµСЂРµРёРјРµРЅРѕРІР°РЅРёСЏ СЃР»РѕСЏ) РЅРёРєРѕРіРґР° РЅРµ РїРѕР»СѓС‡Р°Р» СЃРѕР±С‹С‚РёРµ, Рё rename СЃР»РµС‚Р°Р» РїСЂРё РєР°Р¶РґРѕРј `render()` (РЅР°РїСЂРёРјРµСЂ, РїСЂРё РІС‹Р±РѕСЂРµ РґСЂСѓРіРѕРіРѕ СЃР»РѕСЏ). РСЃРїСЂР°РІР»РµРЅРѕ: РґР»СЏ `blur`/`focus` РІ `setupContainerEventListeners` С‚РµРїРµСЂСЊ СѓСЃС‚Р°РЅР°РІР»РёРІР°РµС‚СЃСЏ `{ capture: true }` (`src/event-system/EventHandlerManager.js`).
 
-#### ✨ Новые функции
+#### вњЁ РќРѕРІС‹Рµ С„СѓРЅРєС†РёРё
 
-- **Splash screen при первом визите** — `LevelEditor.maybeShowSplashOnFirstVisit()` вызывается в конце `finalizeInitialization()`. Проверяет localStorage-флаг `levelEditor_hasSeenSplash`; показывает сплеш один раз и больше не беспокоит. Ручной вызов через лого-кнопку по-прежнему работает в любой момент (`src/core/LevelEditor.js`).
+- **Splash screen РїСЂРё РїРµСЂРІРѕРј РІРёР·РёС‚Рµ** вЂ” `LevelEditor.maybeShowSplashOnFirstVisit()` РІС‹Р·С‹РІР°РµС‚СЃСЏ РІ РєРѕРЅС†Рµ `finalizeInitialization()`. РџСЂРѕРІРµСЂСЏРµС‚ localStorage-С„Р»Р°Рі `levelEditor_hasSeenSplash`; РїРѕРєР°Р·С‹РІР°РµС‚ СЃРїР»РµС€ РѕРґРёРЅ СЂР°Р· Рё Р±РѕР»СЊС€Рµ РЅРµ Р±РµСЃРїРѕРєРѕРёС‚. Р СѓС‡РЅРѕР№ РІС‹Р·РѕРІ С‡РµСЂРµР· Р»РѕРіРѕ-РєРЅРѕРїРєСѓ РїРѕ-РїСЂРµР¶РЅРµРјСѓ СЂР°Р±РѕС‚Р°РµС‚ РІ Р»СЋР±РѕР№ РјРѕРјРµРЅС‚ (`src/core/LevelEditor.js`).
 
-#### 📁 Изменённые файлы
+#### рџ“Ѓ РР·РјРµРЅС‘РЅРЅС‹Рµ С„Р°Р№Р»С‹
 
-`src/core/LevelEditor.js` · `src/core/RenderOperations.js` · `src/event-system/EventHandlerManager.js` · `src/managers/ConfigManager.js` · `src/utils/Logger.js` · `docs/API_GUIDE.md` · `docs/ARCHITECTURE.md` · `docs/DEVELOPMENT_GUIDE.md` · `docs/EVENT_HANDLER_SYSTEM.md` · `docs/README.md` · `docs/VERSIONING_GUIDE.md`
+`src/core/LevelEditor.js` В· `src/core/RenderOperations.js` В· `src/event-system/EventHandlerManager.js` В· `src/managers/ConfigManager.js` В· `src/utils/Logger.js` В· `docs/API_GUIDE.md` В· `docs/ARCHITECTURE.md` В· `docs/DEVELOPMENT_GUIDE.md` В· `docs/EVENT_HANDLER_SYSTEM.md` В· `docs/README.md` В· `docs/VERSIONING_GUIDE.md`
 
 ## [3.54.4] - 2025-01-27
 
-### Enhanced - Улучшенная система селекта объектов на канве и унификация обработчиков событий
+### Enhanced - РЈР»СѓС‡С€РµРЅРЅР°СЏ СЃРёСЃС‚РµРјР° СЃРµР»РµРєС‚Р° РѕР±СЉРµРєС‚РѕРІ РЅР° РєР°РЅРІРµ Рё СѓРЅРёС„РёРєР°С†РёСЏ РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ СЃРѕР±С‹С‚РёР№
 
-#### ✨ **Новые функции:**
-- **Ctrl+click на объекте** - переключение выбора объекта (toggle selection)
-- **Shift+click на объекте** - добавление объекта к выбору (add to selection, не toggle)
-- **Ctrl+drag** - рамка для переключения выбора (toggle marquee selection)
-- **Shift+drag** - рамка для добавления к выбору (add marquee selection)
-- **Ctrl+Shift+drag** - комбинированный режим добавления к выбору
+#### вњЁ **РќРѕРІС‹Рµ С„СѓРЅРєС†РёРё:**
+- **Ctrl+click РЅР° РѕР±СЉРµРєС‚Рµ** - РїРµСЂРµРєР»СЋС‡РµРЅРёРµ РІС‹Р±РѕСЂР° РѕР±СЉРµРєС‚Р° (toggle selection)
+- **Shift+click РЅР° РѕР±СЉРµРєС‚Рµ** - РґРѕР±Р°РІР»РµРЅРёРµ РѕР±СЉРµРєС‚Р° Рє РІС‹Р±РѕСЂСѓ (add to selection, РЅРµ toggle)
+- **Ctrl+drag** - СЂР°РјРєР° РґР»СЏ РїРµСЂРµРєР»СЋС‡РµРЅРёСЏ РІС‹Р±РѕСЂР° (toggle marquee selection)
+- **Shift+drag** - СЂР°РјРєР° РґР»СЏ РґРѕР±Р°РІР»РµРЅРёСЏ Рє РІС‹Р±РѕСЂСѓ (add marquee selection)
+- **Ctrl+Shift+drag** - РєРѕРјР±РёРЅРёСЂРѕРІР°РЅРЅС‹Р№ СЂРµР¶РёРј РґРѕР±Р°РІР»РµРЅРёСЏ Рє РІС‹Р±РѕСЂСѓ
 
-#### 🔧 **Технические улучшения:**
-- **Унификация системы селекта** - канва теперь использует `SelectionUtils` для унификации логики с панелями
-- **Единая система обработчиков** - все inline event listeners перенесены в `EventHandlerManager` и `GlobalEventRegistry`
-- **Автоматическая очистка** - все обработчики автоматически очищаются при уничтожении компонентов
-- **Устранение дублирования** - вынесен метод `_determineMarqueeMode()` для устранения дублирования логики определения режима marquee
-- **Pending marquee state** - добавлена система отсроченного изменения селекта при клике с модификаторами (изменение происходит только при отпускании мыши или завершении marquee)
-- **Улучшенная обработка click+drag** - при клике с модификаторами на объекте селект не изменяется сразу, а только при завершении действия (простом клике или marquee)
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **РЈРЅРёС„РёРєР°С†РёСЏ СЃРёСЃС‚РµРјС‹ СЃРµР»РµРєС‚Р°** - РєР°РЅРІР° С‚РµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓРµС‚ `SelectionUtils` РґР»СЏ СѓРЅРёС„РёРєР°С†РёРё Р»РѕРіРёРєРё СЃ РїР°РЅРµР»СЏРјРё
+- **Р•РґРёРЅР°СЏ СЃРёСЃС‚РµРјР° РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ** - РІСЃРµ inline event listeners РїРµСЂРµРЅРµСЃРµРЅС‹ РІ `EventHandlerManager` Рё `GlobalEventRegistry`
+- **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ РѕС‡РёСЃС‚РєР°** - РІСЃРµ РѕР±СЂР°Р±РѕС‚С‡РёРєРё Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РѕС‡РёС‰Р°СЋС‚СЃСЏ РїСЂРё СѓРЅРёС‡С‚РѕР¶РµРЅРёРё РєРѕРјРїРѕРЅРµРЅС‚РѕРІ
+- **РЈСЃС‚СЂР°РЅРµРЅРёРµ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ** - РІС‹РЅРµСЃРµРЅ РјРµС‚РѕРґ `_determineMarqueeMode()` РґР»СЏ СѓСЃС‚СЂР°РЅРµРЅРёСЏ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ Р»РѕРіРёРєРё РѕРїСЂРµРґРµР»РµРЅРёСЏ СЂРµР¶РёРјР° marquee
+- **Pending marquee state** - РґРѕР±Р°РІР»РµРЅР° СЃРёСЃС‚РµРјР° РѕС‚СЃСЂРѕС‡РµРЅРЅРѕРіРѕ РёР·РјРµРЅРµРЅРёСЏ СЃРµР»РµРєС‚Р° РїСЂРё РєР»РёРєРµ СЃ РјРѕРґРёС„РёРєР°С‚РѕСЂР°РјРё (РёР·РјРµРЅРµРЅРёРµ РїСЂРѕРёСЃС…РѕРґРёС‚ С‚РѕР»СЊРєРѕ РїСЂРё РѕС‚РїСѓСЃРєР°РЅРёРё РјС‹С€Рё РёР»Рё Р·Р°РІРµСЂС€РµРЅРёРё marquee)
+- **РЈР»СѓС‡С€РµРЅРЅР°СЏ РѕР±СЂР°Р±РѕС‚РєР° click+drag** - РїСЂРё РєР»РёРєРµ СЃ РјРѕРґРёС„РёРєР°С‚РѕСЂР°РјРё РЅР° РѕР±СЉРµРєС‚Рµ СЃРµР»РµРєС‚ РЅРµ РёР·РјРµРЅСЏРµС‚СЃСЏ СЃСЂР°Р·Сѓ, Р° С‚РѕР»СЊРєРѕ РїСЂРё Р·Р°РІРµСЂС€РµРЅРёРё РґРµР№СЃС‚РІРёСЏ (РїСЂРѕСЃС‚РѕРј РєР»РёРєРµ РёР»Рё marquee)
 
-#### 🐛 **Исправленные проблемы:**
-- **Селект при клике+драге** - исправлено преждевременное изменение селекта при клике с модификаторами на объекте, теперь селект изменяется только при отпускании мыши
-- **Дублирование кода** - устранено дублирование логики определения режима marquee в `handleObjectClick` и `handleEmptyClick`
-- **Неиспользуемые переменные** - удалены неиспользуемые переменные (`marquee`, `selectedObjects` в некоторых местах)
-- **Избыточные поля** - удалено избыточное поле `marqueeMode` из `marqueeOptions` (используется из stateManager)
+#### рџђ› **РСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїСЂРѕР±Р»РµРјС‹:**
+- **РЎРµР»РµРєС‚ РїСЂРё РєР»РёРєРµ+РґСЂР°РіРµ** - РёСЃРїСЂР°РІР»РµРЅРѕ РїСЂРµР¶РґРµРІСЂРµРјРµРЅРЅРѕРµ РёР·РјРµРЅРµРЅРёРµ СЃРµР»РµРєС‚Р° РїСЂРё РєР»РёРєРµ СЃ РјРѕРґРёС„РёРєР°С‚РѕСЂР°РјРё РЅР° РѕР±СЉРµРєС‚Рµ, С‚РµРїРµСЂСЊ СЃРµР»РµРєС‚ РёР·РјРµРЅСЏРµС‚СЃСЏ С‚РѕР»СЊРєРѕ РїСЂРё РѕС‚РїСѓСЃРєР°РЅРёРё РјС‹С€Рё
+- **Р”СѓР±Р»РёСЂРѕРІР°РЅРёРµ РєРѕРґР°** - СѓСЃС‚СЂР°РЅРµРЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ Р»РѕРіРёРєРё РѕРїСЂРµРґРµР»РµРЅРёСЏ СЂРµР¶РёРјР° marquee РІ `handleObjectClick` Рё `handleEmptyClick`
+- **РќРµРёСЃРїРѕР»СЊР·СѓРµРјС‹Рµ РїРµСЂРµРјРµРЅРЅС‹Рµ** - СѓРґР°Р»РµРЅС‹ РЅРµРёСЃРїРѕР»СЊР·СѓРµРјС‹Рµ РїРµСЂРµРјРµРЅРЅС‹Рµ (`marquee`, `selectedObjects` РІ РЅРµРєРѕС‚РѕСЂС‹С… РјРµСЃС‚Р°С…)
+- **РР·Р±С‹С‚РѕС‡РЅС‹Рµ РїРѕР»СЏ** - СѓРґР°Р»РµРЅРѕ РёР·Р±С‹С‚РѕС‡РЅРѕРµ РїРѕР»Рµ `marqueeMode` РёР· `marqueeOptions` (РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РёР· stateManager)
 
-#### 📁 **Измененные файлы:**
-- `src/event-system/MouseHandlers.js` - улучшена система селекта объектов, добавлен метод `_determineMarqueeMode()`, интеграция с `SelectionUtils`, перенос обработчиков в единую систему
-- `src/core/LevelEditor.js` - перенос обработчиков `beforeunload`, `visibilitychange` и кнопки "Set Camera Start Position" в `GlobalEventRegistry` и `EventHandlerManager`
-- `src/event-system/EventHandlers.js` - перенос обработчиков `TabMoveContextMenu` в единую систему, добавлен метод `_cleanupMenuHandlers()`
-- `src/utils/SelectionUtils.js` - расширена поддержка canvas mode для marquee selection
+#### рџ“Ѓ **РР·РјРµРЅРµРЅРЅС‹Рµ С„Р°Р№Р»С‹:**
+- `src/event-system/MouseHandlers.js` - СѓР»СѓС‡С€РµРЅР° СЃРёСЃС‚РµРјР° СЃРµР»РµРєС‚Р° РѕР±СЉРµРєС‚РѕРІ, РґРѕР±Р°РІР»РµРЅ РјРµС‚РѕРґ `_determineMarqueeMode()`, РёРЅС‚РµРіСЂР°С†РёСЏ СЃ `SelectionUtils`, РїРµСЂРµРЅРѕСЃ РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ РІ РµРґРёРЅСѓСЋ СЃРёСЃС‚РµРјСѓ
+- `src/core/LevelEditor.js` - РїРµСЂРµРЅРѕСЃ РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ `beforeunload`, `visibilitychange` Рё РєРЅРѕРїРєРё "Set Camera Start Position" РІ `GlobalEventRegistry` Рё `EventHandlerManager`
+- `src/event-system/EventHandlers.js` - РїРµСЂРµРЅРѕСЃ РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ `TabMoveContextMenu` РІ РµРґРёРЅСѓСЋ СЃРёСЃС‚РµРјСѓ, РґРѕР±Р°РІР»РµРЅ РјРµС‚РѕРґ `_cleanupMenuHandlers()`
+- `src/utils/SelectionUtils.js` - СЂР°СЃС€РёСЂРµРЅР° РїРѕРґРґРµСЂР¶РєР° canvas mode РґР»СЏ marquee selection
 
-#### 💡 **Преимущества:**
-- **Единообразие поведения** - селект на канве работает так же, как в панелях (с учетом специфики канвы)
-- **Упрощение поддержки** - единая логика селекта в `SelectionUtils`, легче поддерживать и расширять
-- **Централизованная система событий** - все обработчики управляются через единую систему, автоматическая очистка
-- **Лучший UX** - корректное поведение при клике+драге с модификаторами, селект не изменяется преждевременно
-- **Чистый код** - устранено дублирование, удалены неиспользуемые переменные
+#### рџ’Ў **РџСЂРµРёРјСѓС‰РµСЃС‚РІР°:**
+- **Р•РґРёРЅРѕРѕР±СЂР°Р·РёРµ РїРѕРІРµРґРµРЅРёСЏ** - СЃРµР»РµРєС‚ РЅР° РєР°РЅРІРµ СЂР°Р±РѕС‚Р°РµС‚ С‚Р°Рє Р¶Рµ, РєР°Рє РІ РїР°РЅРµР»СЏС… (СЃ СѓС‡РµС‚РѕРј СЃРїРµС†РёС„РёРєРё РєР°РЅРІС‹)
+- **РЈРїСЂРѕС‰РµРЅРёРµ РїРѕРґРґРµСЂР¶РєРё** - РµРґРёРЅР°СЏ Р»РѕРіРёРєР° СЃРµР»РµРєС‚Р° РІ `SelectionUtils`, Р»РµРіС‡Рµ РїРѕРґРґРµСЂР¶РёРІР°С‚СЊ Рё СЂР°СЃС€РёСЂСЏС‚СЊ
+- **Р¦РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅР°СЏ СЃРёСЃС‚РµРјР° СЃРѕР±С‹С‚РёР№** - РІСЃРµ РѕР±СЂР°Р±РѕС‚С‡РёРєРё СѓРїСЂР°РІР»СЏСЋС‚СЃСЏ С‡РµСЂРµР· РµРґРёРЅСѓСЋ СЃРёСЃС‚РµРјСѓ, Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ РѕС‡РёСЃС‚РєР°
+- **Р›СѓС‡С€РёР№ UX** - РєРѕСЂСЂРµРєС‚РЅРѕРµ РїРѕРІРµРґРµРЅРёРµ РїСЂРё РєР»РёРєРµ+РґСЂР°РіРµ СЃ РјРѕРґРёС„РёРєР°С‚РѕСЂР°РјРё, СЃРµР»РµРєС‚ РЅРµ РёР·РјРµРЅСЏРµС‚СЃСЏ РїСЂРµР¶РґРµРІСЂРµРјРµРЅРЅРѕ
+- **Р§РёСЃС‚С‹Р№ РєРѕРґ** - СѓСЃС‚СЂР°РЅРµРЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ, СѓРґР°Р»РµРЅС‹ РЅРµРёСЃРїРѕР»СЊР·СѓРµРјС‹Рµ РїРµСЂРµРјРµРЅРЅС‹Рµ
 
-#### 🎯 **Детали реализации:**
-- **Pending marquee state** - при клике с модификаторами на объекте сохраняется `marqueePendingClickInfo` и `marqueePendingStartPos`, селект изменяется только в `handleMouseUp` (для простого клика) или `finishMarqueeSelection` (для драга)
-- **Интеграция с SelectionUtils** - канва использует `SelectionUtils.selectSingleItem()`, `SelectionUtils.handleCtrlClick()` и `SelectionUtils.finalizeMarqueeSelection()` для унификации логики
-- **Метод `_determineMarqueeMode()`** - централизованное определение режима marquee на основе модификаторов (Ctrl, Shift)
-- **Автоматическая очистка pending state** - все pending состояния очищаются в `cancelAllActions()` и при завершении marquee
+#### рџЋЇ **Р”РµС‚Р°Р»Рё СЂРµР°Р»РёР·Р°С†РёРё:**
+- **Pending marquee state** - РїСЂРё РєР»РёРєРµ СЃ РјРѕРґРёС„РёРєР°С‚РѕСЂР°РјРё РЅР° РѕР±СЉРµРєС‚Рµ СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ `marqueePendingClickInfo` Рё `marqueePendingStartPos`, СЃРµР»РµРєС‚ РёР·РјРµРЅСЏРµС‚СЃСЏ С‚РѕР»СЊРєРѕ РІ `handleMouseUp` (РґР»СЏ РїСЂРѕСЃС‚РѕРіРѕ РєР»РёРєР°) РёР»Рё `finishMarqueeSelection` (РґР»СЏ РґСЂР°РіР°)
+- **РРЅС‚РµРіСЂР°С†РёСЏ СЃ SelectionUtils** - РєР°РЅРІР° РёСЃРїРѕР»СЊР·СѓРµС‚ `SelectionUtils.selectSingleItem()`, `SelectionUtils.handleCtrlClick()` Рё `SelectionUtils.finalizeMarqueeSelection()` РґР»СЏ СѓРЅРёС„РёРєР°С†РёРё Р»РѕРіРёРєРё
+- **РњРµС‚РѕРґ `_determineMarqueeMode()`** - С†РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅРѕРµ РѕРїСЂРµРґРµР»РµРЅРёРµ СЂРµР¶РёРјР° marquee РЅР° РѕСЃРЅРѕРІРµ РјРѕРґРёС„РёРєР°С‚РѕСЂРѕРІ (Ctrl, Shift)
+- **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ РѕС‡РёСЃС‚РєР° pending state** - РІСЃРµ pending СЃРѕСЃС‚РѕСЏРЅРёСЏ РѕС‡РёС‰Р°СЋС‚СЃСЏ РІ `cancelAllActions()` Рё РїСЂРё Р·Р°РІРµСЂС€РµРЅРёРё marquee
 
 ## [3.54.3] - 2025-01-27
 
-### Fixed - Исправления обработчиков событий для слоев
+### Fixed - РСЃРїСЂР°РІР»РµРЅРёСЏ РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ СЃРѕР±С‹С‚РёР№ РґР»СЏ СЃР»РѕРµРІ
 
-#### 🐛 **Исправленные проблемы:**
-- **Подсветка слоев с задержкой** - исправлено отставание подсветки от курсора, оптимизировано обновление через `updateLayerStyles()` вместо полного `render()`
-- **Дублирование обработчиков** - устранены дублирующиеся обработчики EventHandlerManager при пересоздании DOM
-- **Клик на цветовой индикатор** - исправлено открытие виджета изменения цвета при клике на `.layer-color`
-- **Клик на тексте и счетчике объектов** - информативные элементы (`.layer-name-display`, `.layer-objects-count`) теперь прозрачны для кликов, позволяя выбирать слой
-- **Ctrl+click для выбора всех объектов** - восстановлен функционал выбора всех объектов слоя при Ctrl+click
+#### рџђ› **РСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїСЂРѕР±Р»РµРјС‹:**
+- **РџРѕРґСЃРІРµС‚РєР° СЃР»РѕРµРІ СЃ Р·Р°РґРµСЂР¶РєРѕР№** - РёСЃРїСЂР°РІР»РµРЅРѕ РѕС‚СЃС‚Р°РІР°РЅРёРµ РїРѕРґСЃРІРµС‚РєРё РѕС‚ РєСѓСЂСЃРѕСЂР°, РѕРїС‚РёРјРёР·РёСЂРѕРІР°РЅРѕ РѕР±РЅРѕРІР»РµРЅРёРµ С‡РµСЂРµР· `updateLayerStyles()` РІРјРµСЃС‚Рѕ РїРѕР»РЅРѕРіРѕ `render()`
+- **Р”СѓР±Р»РёСЂРѕРІР°РЅРёРµ РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ** - СѓСЃС‚СЂР°РЅРµРЅС‹ РґСѓР±Р»РёСЂСѓСЋС‰РёРµСЃСЏ РѕР±СЂР°Р±РѕС‚С‡РёРєРё EventHandlerManager РїСЂРё РїРµСЂРµСЃРѕР·РґР°РЅРёРё DOM
+- **РљР»РёРє РЅР° С†РІРµС‚РѕРІРѕР№ РёРЅРґРёРєР°С‚РѕСЂ** - РёСЃРїСЂР°РІР»РµРЅРѕ РѕС‚РєСЂС‹С‚РёРµ РІРёРґР¶РµС‚Р° РёР·РјРµРЅРµРЅРёСЏ С†РІРµС‚Р° РїСЂРё РєР»РёРєРµ РЅР° `.layer-color`
+- **РљР»РёРє РЅР° С‚РµРєСЃС‚Рµ Рё СЃС‡РµС‚С‡РёРєРµ РѕР±СЉРµРєС‚РѕРІ** - РёРЅС„РѕСЂРјР°С‚РёРІРЅС‹Рµ СЌР»РµРјРµРЅС‚С‹ (`.layer-name-display`, `.layer-objects-count`) С‚РµРїРµСЂСЊ РїСЂРѕР·СЂР°С‡РЅС‹ РґР»СЏ РєР»РёРєРѕРІ, РїРѕР·РІРѕР»СЏСЏ РІС‹Р±РёСЂР°С‚СЊ СЃР»РѕР№
+- **Ctrl+click РґР»СЏ РІС‹Р±РѕСЂР° РІСЃРµС… РѕР±СЉРµРєС‚РѕРІ** - РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅ С„СѓРЅРєС†РёРѕРЅР°Р» РІС‹Р±РѕСЂР° РІСЃРµС… РѕР±СЉРµРєС‚РѕРІ СЃР»РѕСЏ РїСЂРё Ctrl+click
 
-#### ✨ **Новые функции:**
-- **Shift+Ctrl+click** - добавлен функционал добавления всех объектов слоя к текущему селекту (Shift+Ctrl+click на слой)
+#### вњЁ **РќРѕРІС‹Рµ С„СѓРЅРєС†РёРё:**
+- **Shift+Ctrl+click** - РґРѕР±Р°РІР»РµРЅ С„СѓРЅРєС†РёРѕРЅР°Р» РґРѕР±Р°РІР»РµРЅРёСЏ РІСЃРµС… РѕР±СЉРµРєС‚РѕРІ СЃР»РѕСЏ Рє С‚РµРєСѓС‰РµРјСѓ СЃРµР»РµРєС‚Сѓ (Shift+Ctrl+click РЅР° СЃР»РѕР№)
 
-#### 🔧 **Технические улучшения:**
-- **Единая система обработчиков** - все обработчики слоев перенесены в EventHandlerManager (click, dblclick, contextmenu, drag/drop, input, blur, keypress, keydown)
-- **Автоматическая очистка** - все обработчики автоматически очищаются через EventHandlerManager при пересоздании DOM
-- **Оптимизация обновления** - добавлена подписка на `selectedObjects` для обновления только стилей слоев вместо полного `render()`
-- **Устранение дублирования кода** - вынесена общая логика получения объектов слоя в метод `_getObjectsInLayer()`
-- **Удален неиспользуемый код** - удален импорт `EventHandlerUtils`, убраны `console.log` отладочные сообщения
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **Р•РґРёРЅР°СЏ СЃРёСЃС‚РµРјР° РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ** - РІСЃРµ РѕР±СЂР°Р±РѕС‚С‡РёРєРё СЃР»РѕРµРІ РїРµСЂРµРЅРµСЃРµРЅС‹ РІ EventHandlerManager (click, dblclick, contextmenu, drag/drop, input, blur, keypress, keydown)
+- **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ РѕС‡РёСЃС‚РєР°** - РІСЃРµ РѕР±СЂР°Р±РѕС‚С‡РёРєРё Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РѕС‡РёС‰Р°СЋС‚СЃСЏ С‡РµСЂРµР· EventHandlerManager РїСЂРё РїРµСЂРµСЃРѕР·РґР°РЅРёРё DOM
+- **РћРїС‚РёРјРёР·Р°С†РёСЏ РѕР±РЅРѕРІР»РµРЅРёСЏ** - РґРѕР±Р°РІР»РµРЅР° РїРѕРґРїРёСЃРєР° РЅР° `selectedObjects` РґР»СЏ РѕР±РЅРѕРІР»РµРЅРёСЏ С‚РѕР»СЊРєРѕ СЃС‚РёР»РµР№ СЃР»РѕРµРІ РІРјРµСЃС‚Рѕ РїРѕР»РЅРѕРіРѕ `render()`
+- **РЈСЃС‚СЂР°РЅРµРЅРёРµ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ РєРѕРґР°** - РІС‹РЅРµСЃРµРЅР° РѕР±С‰Р°СЏ Р»РѕРіРёРєР° РїРѕР»СѓС‡РµРЅРёСЏ РѕР±СЉРµРєС‚РѕРІ СЃР»РѕСЏ РІ РјРµС‚РѕРґ `_getObjectsInLayer()`
+- **РЈРґР°Р»РµРЅ РЅРµРёСЃРїРѕР»СЊР·СѓРµРјС‹Р№ РєРѕРґ** - СѓРґР°Р»РµРЅ РёРјРїРѕСЂС‚ `EventHandlerUtils`, СѓР±СЂР°РЅС‹ `console.log` РѕС‚Р»Р°РґРѕС‡РЅС‹Рµ СЃРѕРѕР±С‰РµРЅРёСЏ
 
-#### 📁 **Измененные файлы:**
-- `src/ui/LayersPanel.js` - рефакторинг обработчиков событий, перенос в EventHandlerManager, оптимизация обновлений
-- `src/event-system/EventHandlerManager.js` - добавлена поддержка `dblclick`, `keypress`, `dragstart`, `dragend`, `dragover`, `drop` для контейнеров
+#### рџ“Ѓ **РР·РјРµРЅРµРЅРЅС‹Рµ С„Р°Р№Р»С‹:**
+- `src/ui/LayersPanel.js` - СЂРµС„Р°РєС‚РѕСЂРёРЅРі РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ СЃРѕР±С‹С‚РёР№, РїРµСЂРµРЅРѕСЃ РІ EventHandlerManager, РѕРїС‚РёРјРёР·Р°С†РёСЏ РѕР±РЅРѕРІР»РµРЅРёР№
+- `src/event-system/EventHandlerManager.js` - РґРѕР±Р°РІР»РµРЅР° РїРѕРґРґРµСЂР¶РєР° `dblclick`, `keypress`, `dragstart`, `dragend`, `dragover`, `drop` РґР»СЏ РєРѕРЅС‚РµР№РЅРµСЂРѕРІ
 
-### Enhanced - Интерактивное позиционирование и ресайз канвы по viewport элементу
+### Enhanced - РРЅС‚РµСЂР°РєС‚РёРІРЅРѕРµ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ Рё СЂРµСЃР°Р№Р· РєР°РЅРІС‹ РїРѕ viewport СЌР»РµРјРµРЅС‚Сѓ
 
-#### 🎯 **Новые функции:**
-- **Canvas viewport** - добавлен ID `canvas-viewport` для элемента viewport
-- **Интерактивное обновление** - канва автоматически обновляет позицию и размер при изменении размеров viewport
-- **ResizeObserver** - добавлен автоматический отслеживатель изменений размеров viewport элемента
-- **StateManager синхронизация** - позиция и размер канвы передаются в stateManager (`canvas.position`, `canvas.size`)
+#### рџЋЇ **РќРѕРІС‹Рµ С„СѓРЅРєС†РёРё:**
+- **Canvas viewport** - РґРѕР±Р°РІР»РµРЅ ID `canvas-viewport` РґР»СЏ СЌР»РµРјРµРЅС‚Р° viewport
+- **РРЅС‚РµСЂР°РєС‚РёРІРЅРѕРµ РѕР±РЅРѕРІР»РµРЅРёРµ** - РєР°РЅРІР° Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РѕР±РЅРѕРІР»СЏРµС‚ РїРѕР·РёС†РёСЋ Рё СЂР°Р·РјРµСЂ РїСЂРё РёР·РјРµРЅРµРЅРёРё СЂР°Р·РјРµСЂРѕРІ viewport
+- **ResizeObserver** - РґРѕР±Р°РІР»РµРЅ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРёР№ РѕС‚СЃР»РµР¶РёРІР°С‚РµР»СЊ РёР·РјРµРЅРµРЅРёР№ СЂР°Р·РјРµСЂРѕРІ viewport СЌР»РµРјРµРЅС‚Р°
+- **StateManager СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ** - РїРѕР·РёС†РёСЏ Рё СЂР°Р·РјРµСЂ РєР°РЅРІС‹ РїРµСЂРµРґР°СЋС‚СЃСЏ РІ stateManager (`canvas.position`, `canvas.size`)
 
-#### 🔧 **Технические улучшения:**
-- **CanvasRenderer.resizeCanvas()** - теперь использует `canvas-viewport` вместо `parentElement` для получения размеров
-- **Позиционирование canvas-container** - автоматически синхронизируется с позицией viewport элемента
-- **Отложенная инициализация** - ResizeObserver инициализируется с повторными попытками (до 10 раз) если элемент еще не готов
-- **Очистка ресурсов** - ResizeObserver корректно отключается в методе `destroy()`
-- **Упрощение доступа к stateManager** - убрано использование `window.editor`, stateManager передается через свойство при инициализации
-- **Helper-метод updateCanvas()** - добавлен для устранения дублирования кода обновления канвы (заменено 4 места)
-- **Упрощение ResizeObserver** - используется параметр функции вместо внешней переменной для retryCount
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **CanvasRenderer.resizeCanvas()** - С‚РµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓРµС‚ `canvas-viewport` РІРјРµСЃС‚Рѕ `parentElement` РґР»СЏ РїРѕР»СѓС‡РµРЅРёСЏ СЂР°Р·РјРµСЂРѕРІ
+- **РџРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ canvas-container** - Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё СЃРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµС‚СЃСЏ СЃ РїРѕР·РёС†РёРµР№ viewport СЌР»РµРјРµРЅС‚Р°
+- **РћС‚Р»РѕР¶РµРЅРЅР°СЏ РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ** - ResizeObserver РёРЅРёС†РёР°Р»РёР·РёСЂСѓРµС‚СЃСЏ СЃ РїРѕРІС‚РѕСЂРЅС‹РјРё РїРѕРїС‹С‚РєР°РјРё (РґРѕ 10 СЂР°Р·) РµСЃР»Рё СЌР»РµРјРµРЅС‚ РµС‰Рµ РЅРµ РіРѕС‚РѕРІ
+- **РћС‡РёСЃС‚РєР° СЂРµСЃСѓСЂСЃРѕРІ** - ResizeObserver РєРѕСЂСЂРµРєС‚РЅРѕ РѕС‚РєР»СЋС‡Р°РµС‚СЃСЏ РІ РјРµС‚РѕРґРµ `destroy()`
+- **РЈРїСЂРѕС‰РµРЅРёРµ РґРѕСЃС‚СѓРїР° Рє stateManager** - СѓР±СЂР°РЅРѕ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ `window.editor`, stateManager РїРµСЂРµРґР°РµС‚СЃСЏ С‡РµСЂРµР· СЃРІРѕР№СЃС‚РІРѕ РїСЂРё РёРЅРёС†РёР°Р»РёР·Р°С†РёРё
+- **Helper-РјРµС‚РѕРґ updateCanvas()** - РґРѕР±Р°РІР»РµРЅ РґР»СЏ СѓСЃС‚СЂР°РЅРµРЅРёСЏ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ РєРѕРґР° РѕР±РЅРѕРІР»РµРЅРёСЏ РєР°РЅРІС‹ (Р·Р°РјРµРЅРµРЅРѕ 4 РјРµСЃС‚Р°)
+- **РЈРїСЂРѕС‰РµРЅРёРµ ResizeObserver** - РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РїР°СЂР°РјРµС‚СЂ С„СѓРЅРєС†РёРё РІРјРµСЃС‚Рѕ РІРЅРµС€РЅРµР№ РїРµСЂРµРјРµРЅРЅРѕР№ РґР»СЏ retryCount
 
-#### 📁 **Измененные файлы:**
-- `index.html` - добавлен ID `canvas-viewport` для элемента viewport
-- `src/ui/CanvasRenderer.js` - обновлен метод `resizeCanvas()` для использования `canvas-viewport`, добавлено обновление позиции `canvas-container` и передача данных в stateManager, убрано использование `window.editor`
-- `src/core/LevelEditor.js` - добавлен ResizeObserver для `canvas-viewport` в `setupPanelSizeListeners()`, добавлена очистка в `destroy()`, добавлен helper-метод `updateCanvas()`, упрощена инициализация ResizeObserver, передача stateManager в CanvasRenderer при инициализации
+#### рџ“Ѓ **РР·РјРµРЅРµРЅРЅС‹Рµ С„Р°Р№Р»С‹:**
+- `index.html` - РґРѕР±Р°РІР»РµРЅ ID `canvas-viewport` РґР»СЏ СЌР»РµРјРµРЅС‚Р° viewport
+- `src/ui/CanvasRenderer.js` - РѕР±РЅРѕРІР»РµРЅ РјРµС‚РѕРґ `resizeCanvas()` РґР»СЏ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ `canvas-viewport`, РґРѕР±Р°РІР»РµРЅРѕ РѕР±РЅРѕРІР»РµРЅРёРµ РїРѕР·РёС†РёРё `canvas-container` Рё РїРµСЂРµРґР°С‡Р° РґР°РЅРЅС‹С… РІ stateManager, СѓР±СЂР°РЅРѕ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ `window.editor`
+- `src/core/LevelEditor.js` - РґРѕР±Р°РІР»РµРЅ ResizeObserver РґР»СЏ `canvas-viewport` РІ `setupPanelSizeListeners()`, РґРѕР±Р°РІР»РµРЅР° РѕС‡РёСЃС‚РєР° РІ `destroy()`, РґРѕР±Р°РІР»РµРЅ helper-РјРµС‚РѕРґ `updateCanvas()`, СѓРїСЂРѕС‰РµРЅР° РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ ResizeObserver, РїРµСЂРµРґР°С‡Р° stateManager РІ CanvasRenderer РїСЂРё РёРЅРёС†РёР°Р»РёР·Р°С†РёРё
 
-#### 💡 **Преимущества:**
-- **Интерактивный отклик** - канва мгновенно реагирует на изменения размеров панелей, разделителей и видимости элементов
-- **Точное позиционирование** - канва всегда соответствует размеру и позиции viewport элемента
-- **Автоматическая синхронизация** - все изменения размеров обрабатываются автоматически без ручных вызовов
-- **Централизованное управление** - позиция и размер канвы доступны через stateManager для других компонентов
+#### рџ’Ў **РџСЂРµРёРјСѓС‰РµСЃС‚РІР°:**
+- **РРЅС‚РµСЂР°РєС‚РёРІРЅС‹Р№ РѕС‚РєР»РёРє** - РєР°РЅРІР° РјРіРЅРѕРІРµРЅРЅРѕ СЂРµР°РіРёСЂСѓРµС‚ РЅР° РёР·РјРµРЅРµРЅРёСЏ СЂР°Р·РјРµСЂРѕРІ РїР°РЅРµР»РµР№, СЂР°Р·РґРµР»РёС‚РµР»РµР№ Рё РІРёРґРёРјРѕСЃС‚Рё СЌР»РµРјРµРЅС‚РѕРІ
+- **РўРѕС‡РЅРѕРµ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ** - РєР°РЅРІР° РІСЃРµРіРґР° СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓРµС‚ СЂР°Р·РјРµСЂСѓ Рё РїРѕР·РёС†РёРё viewport СЌР»РµРјРµРЅС‚Р°
+- **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ** - РІСЃРµ РёР·РјРµРЅРµРЅРёСЏ СЂР°Р·РјРµСЂРѕРІ РѕР±СЂР°Р±Р°С‚С‹РІР°СЋС‚СЃСЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё Р±РµР· СЂСѓС‡РЅС‹С… РІС‹Р·РѕРІРѕРІ
+- **Р¦РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅРѕРµ СѓРїСЂР°РІР»РµРЅРёРµ** - РїРѕР·РёС†РёСЏ Рё СЂР°Р·РјРµСЂ РєР°РЅРІС‹ РґРѕСЃС‚СѓРїРЅС‹ С‡РµСЂРµР· stateManager РґР»СЏ РґСЂСѓРіРёС… РєРѕРјРїРѕРЅРµРЅС‚РѕРІ
 
-### Fixed - Исправления ResizeObserver и индикатора несохраненных изменений ассетов
+### Fixed - РСЃРїСЂР°РІР»РµРЅРёСЏ ResizeObserver Рё РёРЅРґРёРєР°С‚РѕСЂР° РЅРµСЃРѕС…СЂР°РЅРµРЅРЅС‹С… РёР·РјРµРЅРµРЅРёР№ Р°СЃСЃРµС‚РѕРІ
 
-#### 🐛 **Исправленные проблемы:**
-- **ResizeObserver loop** - исправлена ошибка "ResizeObserver loop completed with undelivered notifications" при Ctrl+Scroll в окне ассетов
-- **Индикатор несохраненных изменений** - исправлено отображение синей точки на ассетах после изменения параметров в Asset Properties
-- **Применение изменений** - исправлена проверка изменений: теперь сравнивается с initialState, а не с текущим ассетом
-- **Кнопка Cancel** - исправлено восстановление значений формы к состоянию на момент открытия окна
+#### рџђ› **РСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїСЂРѕР±Р»РµРјС‹:**
+- **ResizeObserver loop** - РёСЃРїСЂР°РІР»РµРЅР° РѕС€РёР±РєР° "ResizeObserver loop completed with undelivered notifications" РїСЂРё Ctrl+Scroll РІ РѕРєРЅРµ Р°СЃСЃРµС‚РѕРІ
+- **РРЅРґРёРєР°С‚РѕСЂ РЅРµСЃРѕС…СЂР°РЅРµРЅРЅС‹С… РёР·РјРµРЅРµРЅРёР№** - РёСЃРїСЂР°РІР»РµРЅРѕ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ СЃРёРЅРµР№ С‚РѕС‡РєРё РЅР° Р°СЃСЃРµС‚Р°С… РїРѕСЃР»Рµ РёР·РјРµРЅРµРЅРёСЏ РїР°СЂР°РјРµС‚СЂРѕРІ РІ Asset Properties
+- **РџСЂРёРјРµРЅРµРЅРёРµ РёР·РјРµРЅРµРЅРёР№** - РёСЃРїСЂР°РІР»РµРЅР° РїСЂРѕРІРµСЂРєР° РёР·РјРµРЅРµРЅРёР№: С‚РµРїРµСЂСЊ СЃСЂР°РІРЅРёРІР°РµС‚СЃСЏ СЃ initialState, Р° РЅРµ СЃ С‚РµРєСѓС‰РёРј Р°СЃСЃРµС‚РѕРј
+- **РљРЅРѕРїРєР° Cancel** - РёСЃРїСЂР°РІР»РµРЅРѕ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ Р·РЅР°С‡РµРЅРёР№ С„РѕСЂРјС‹ Рє СЃРѕСЃС‚РѕСЏРЅРёСЋ РЅР° РјРѕРјРµРЅС‚ РѕС‚РєСЂС‹С‚РёСЏ РѕРєРЅР°
 
-#### 🔧 **Технические улучшения:**
-- **AssetPanel ResizeObserver** - добавлен `requestAnimationFrame` для отложенного выполнения изменений DOM, предотвращающий цикл
-- **AssetPanel ResizeObserver** - добавлена проверка изменения размера (только при изменении >1px) для предотвращения лишних обновлений
-- **ActorPropertiesWindow** - исправлен порядок параметров конструктора (убрано `document.body` из первого параметра)
-- **ActorPropertiesWindow** - добавлена проверка изменений относительно `initialState` вместо текущего ассета
-- **ActorPropertiesWindow** - добавлен метод `restoreInitialState()` для восстановления значений при Cancel
-- **BaseDialog** - исправлена обработка кнопки `apply` (не закрывает окно автоматически, позволяет `apply()` закрыть)
-- **AssetManager** - исправлена проверка наличия `_originalState` перед обновлением
-- **Asset.hasChangesFromOriginal()** - добавлена нормализация значений (цвет без учета регистра, trim строк, числа как числа)
-- **Устранено дублирование** - убран дублирующий код проверки изменений в `apply()`, используется `checkForChanges()`
-- **Устранено дублирование** - вынесен `_getNumericValue()` как приватный метод
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **AssetPanel ResizeObserver** - РґРѕР±Р°РІР»РµРЅ `requestAnimationFrame` РґР»СЏ РѕС‚Р»РѕР¶РµРЅРЅРѕРіРѕ РІС‹РїРѕР»РЅРµРЅРёСЏ РёР·РјРµРЅРµРЅРёР№ DOM, РїСЂРµРґРѕС‚РІСЂР°С‰Р°СЋС‰РёР№ С†РёРєР»
+- **AssetPanel ResizeObserver** - РґРѕР±Р°РІР»РµРЅР° РїСЂРѕРІРµСЂРєР° РёР·РјРµРЅРµРЅРёСЏ СЂР°Р·РјРµСЂР° (С‚РѕР»СЊРєРѕ РїСЂРё РёР·РјРµРЅРµРЅРёРё >1px) РґР»СЏ РїСЂРµРґРѕС‚РІСЂР°С‰РµРЅРёСЏ Р»РёС€РЅРёС… РѕР±РЅРѕРІР»РµРЅРёР№
+- **ActorPropertiesWindow** - РёСЃРїСЂР°РІР»РµРЅ РїРѕСЂСЏРґРѕРє РїР°СЂР°РјРµС‚СЂРѕРІ РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂР° (СѓР±СЂР°РЅРѕ `document.body` РёР· РїРµСЂРІРѕРіРѕ РїР°СЂР°РјРµС‚СЂР°)
+- **ActorPropertiesWindow** - РґРѕР±Р°РІР»РµРЅР° РїСЂРѕРІРµСЂРєР° РёР·РјРµРЅРµРЅРёР№ РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕ `initialState` РІРјРµСЃС‚Рѕ С‚РµРєСѓС‰РµРіРѕ Р°СЃСЃРµС‚Р°
+- **ActorPropertiesWindow** - РґРѕР±Р°РІР»РµРЅ РјРµС‚РѕРґ `restoreInitialState()` РґР»СЏ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ Р·РЅР°С‡РµРЅРёР№ РїСЂРё Cancel
+- **BaseDialog** - РёСЃРїСЂР°РІР»РµРЅР° РѕР±СЂР°Р±РѕС‚РєР° РєРЅРѕРїРєРё `apply` (РЅРµ Р·Р°РєСЂС‹РІР°РµС‚ РѕРєРЅРѕ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё, РїРѕР·РІРѕР»СЏРµС‚ `apply()` Р·Р°РєСЂС‹С‚СЊ)
+- **AssetManager** - РёСЃРїСЂР°РІР»РµРЅР° РїСЂРѕРІРµСЂРєР° РЅР°Р»РёС‡РёСЏ `_originalState` РїРµСЂРµРґ РѕР±РЅРѕРІР»РµРЅРёРµРј
+- **Asset.hasChangesFromOriginal()** - РґРѕР±Р°РІР»РµРЅР° РЅРѕСЂРјР°Р»РёР·Р°С†РёСЏ Р·РЅР°С‡РµРЅРёР№ (С†РІРµС‚ Р±РµР· СѓС‡РµС‚Р° СЂРµРіРёСЃС‚СЂР°, trim СЃС‚СЂРѕРє, С‡РёСЃР»Р° РєР°Рє С‡РёСЃР»Р°)
+- **РЈСЃС‚СЂР°РЅРµРЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ** - СѓР±СЂР°РЅ РґСѓР±Р»РёСЂСѓСЋС‰РёР№ РєРѕРґ РїСЂРѕРІРµСЂРєРё РёР·РјРµРЅРµРЅРёР№ РІ `apply()`, РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ `checkForChanges()`
+- **РЈСЃС‚СЂР°РЅРµРЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ** - РІС‹РЅРµСЃРµРЅ `_getNumericValue()` РєР°Рє РїСЂРёРІР°С‚РЅС‹Р№ РјРµС‚РѕРґ
 
-#### 📁 **Измененные файлы:**
-- `src/ui/AssetPanel.js` - исправлен ResizeObserver, улучшена логика отображения индикатора несохраненных изменений
-- `src/ui/ActorPropertiesWindow.js` - исправлена логика применения изменений, добавлено восстановление значений при Cancel
-- `src/ui/BaseDialog.js` - исправлена обработка кнопки apply
-- `src/core/LevelEditor.js` - исправлен вызов конструктора ActorPropertiesWindow
-- `src/managers/AssetManager.js` - исправлена проверка `_originalState`, исправлен вызов `getAsset()` вместо `getAssetById()`
-- `src/models/Asset.js` - улучшена нормализация значений в `hasChangesFromOriginal()`
+#### рџ“Ѓ **РР·РјРµРЅРµРЅРЅС‹Рµ С„Р°Р№Р»С‹:**
+- `src/ui/AssetPanel.js` - РёСЃРїСЂР°РІР»РµРЅ ResizeObserver, СѓР»СѓС‡С€РµРЅР° Р»РѕРіРёРєР° РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ РёРЅРґРёРєР°С‚РѕСЂР° РЅРµСЃРѕС…СЂР°РЅРµРЅРЅС‹С… РёР·РјРµРЅРµРЅРёР№
+- `src/ui/ActorPropertiesWindow.js` - РёСЃРїСЂР°РІР»РµРЅР° Р»РѕРіРёРєР° РїСЂРёРјРµРЅРµРЅРёСЏ РёР·РјРµРЅРµРЅРёР№, РґРѕР±Р°РІР»РµРЅРѕ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ Р·РЅР°С‡РµРЅРёР№ РїСЂРё Cancel
+- `src/ui/BaseDialog.js` - РёСЃРїСЂР°РІР»РµРЅР° РѕР±СЂР°Р±РѕС‚РєР° РєРЅРѕРїРєРё apply
+- `src/core/LevelEditor.js` - РёСЃРїСЂР°РІР»РµРЅ РІС‹Р·РѕРІ РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂР° ActorPropertiesWindow
+- `src/managers/AssetManager.js` - РёСЃРїСЂР°РІР»РµРЅР° РїСЂРѕРІРµСЂРєР° `_originalState`, РёСЃРїСЂР°РІР»РµРЅ РІС‹Р·РѕРІ `getAsset()` РІРјРµСЃС‚Рѕ `getAssetById()`
+- `src/models/Asset.js` - СѓР»СѓС‡С€РµРЅР° РЅРѕСЂРјР°Р»РёР·Р°С†РёСЏ Р·РЅР°С‡РµРЅРёР№ РІ `hasChangesFromOriginal()`
 
-#### 💡 **Преимущества:**
-- **Корректная работа индикатора** - синяя точка появляется только при реальных изменениях
-- **Правильная отмена** - Cancel возвращает значения к исходному состоянию
-- **Нет ложных срабатываний** - индикатор не появляется при возврате к исходным значениям
-- **Стабильность** - устранена ошибка ResizeObserver loop
+#### рџ’Ў **РџСЂРµРёРјСѓС‰РµСЃС‚РІР°:**
+- **РљРѕСЂСЂРµРєС‚РЅР°СЏ СЂР°Р±РѕС‚Р° РёРЅРґРёРєР°С‚РѕСЂР°** - СЃРёРЅСЏСЏ С‚РѕС‡РєР° РїРѕСЏРІР»СЏРµС‚СЃСЏ С‚РѕР»СЊРєРѕ РїСЂРё СЂРµР°Р»СЊРЅС‹С… РёР·РјРµРЅРµРЅРёСЏС…
+- **РџСЂР°РІРёР»СЊРЅР°СЏ РѕС‚РјРµРЅР°** - Cancel РІРѕР·РІСЂР°С‰Р°РµС‚ Р·РЅР°С‡РµРЅРёСЏ Рє РёСЃС…РѕРґРЅРѕРјСѓ СЃРѕСЃС‚РѕСЏРЅРёСЋ
+- **РќРµС‚ Р»РѕР¶РЅС‹С… СЃСЂР°Р±Р°С‚С‹РІР°РЅРёР№** - РёРЅРґРёРєР°С‚РѕСЂ РЅРµ РїРѕСЏРІР»СЏРµС‚СЃСЏ РїСЂРё РІРѕР·РІСЂР°С‚Рµ Рє РёСЃС…РѕРґРЅС‹Рј Р·РЅР°С‡РµРЅРёСЏРј
+- **РЎС‚Р°Р±РёР»СЊРЅРѕСЃС‚СЊ** - СѓСЃС‚СЂР°РЅРµРЅР° РѕС€РёР±РєР° ResizeObserver loop
 
-### Performance - Оптимизация лейаута при ресайзе окна
+### Performance - РћРїС‚РёРјРёР·Р°С†РёСЏ Р»РµР№Р°СѓС‚Р° РїСЂРё СЂРµСЃР°Р№Р·Рµ РѕРєРЅР°
 
-#### 🚀 **Оптимизации производительности:**
-- **FoldersPanel** - оптимизирован рендеринг при изменении размеров окна
-- **Устранено пересоздание элементов** - при ресайзе обновляется только текст обрезки имен без полного пересоздания DOM
-- **Новый метод updateLayout()** - легковесное обновление только необходимых элементов
-- **Улучшенная производительность** - значительное снижение нагрузки при изменении размеров окна
+#### рџљЂ **РћРїС‚РёРјРёР·Р°С†РёРё РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚Рё:**
+- **FoldersPanel** - РѕРїС‚РёРјРёР·РёСЂРѕРІР°РЅ СЂРµРЅРґРµСЂРёРЅРі РїСЂРё РёР·РјРµРЅРµРЅРёРё СЂР°Р·РјРµСЂРѕРІ РѕРєРЅР°
+- **РЈСЃС‚СЂР°РЅРµРЅРѕ РїРµСЂРµСЃРѕР·РґР°РЅРёРµ СЌР»РµРјРµРЅС‚РѕРІ** - РїСЂРё СЂРµСЃР°Р№Р·Рµ РѕР±РЅРѕРІР»СЏРµС‚СЃСЏ С‚РѕР»СЊРєРѕ С‚РµРєСЃС‚ РѕР±СЂРµР·РєРё РёРјРµРЅ Р±РµР· РїРѕР»РЅРѕРіРѕ РїРµСЂРµСЃРѕР·РґР°РЅРёСЏ DOM
+- **РќРѕРІС‹Р№ РјРµС‚РѕРґ updateLayout()** - Р»РµРіРєРѕРІРµСЃРЅРѕРµ РѕР±РЅРѕРІР»РµРЅРёРµ С‚РѕР»СЊРєРѕ РЅРµРѕР±С…РѕРґРёРјС‹С… СЌР»РµРјРµРЅС‚РѕРІ
+- **РЈР»СѓС‡С€РµРЅРЅР°СЏ РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ** - Р·РЅР°С‡РёС‚РµР»СЊРЅРѕРµ СЃРЅРёР¶РµРЅРёРµ РЅР°РіСЂСѓР·РєРё РїСЂРё РёР·РјРµРЅРµРЅРёРё СЂР°Р·РјРµСЂРѕРІ РѕРєРЅР°
 
-#### 🔧 **Технические улучшения:**
-- **FoldersPanel.updateLayout()** - новый метод для обновления только обрезки имен папок
-- **ResizeObserver оптимизация** - использует `updateLayout()` вместо полного `renderFolderContent()` при ресайзе
-- **AssetPanel.updateGridViewSizes()** - уже был оптимизирован (обновляет только стили grid без пересоздания элементов)
-- **Чистый код** - все вызовы `renderFolderContent()` оставлены только для случаев изменения структуры/состояния
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **FoldersPanel.updateLayout()** - РЅРѕРІС‹Р№ РјРµС‚РѕРґ РґР»СЏ РѕР±РЅРѕРІР»РµРЅРёСЏ С‚РѕР»СЊРєРѕ РѕР±СЂРµР·РєРё РёРјРµРЅ РїР°РїРѕРє
+- **ResizeObserver РѕРїС‚РёРјРёР·Р°С†РёСЏ** - РёСЃРїРѕР»СЊР·СѓРµС‚ `updateLayout()` РІРјРµСЃС‚Рѕ РїРѕР»РЅРѕРіРѕ `renderFolderContent()` РїСЂРё СЂРµСЃР°Р№Р·Рµ
+- **AssetPanel.updateGridViewSizes()** - СѓР¶Рµ Р±С‹Р» РѕРїС‚РёРјРёР·РёСЂРѕРІР°РЅ (РѕР±РЅРѕРІР»СЏРµС‚ С‚РѕР»СЊРєРѕ СЃС‚РёР»Рё grid Р±РµР· РїРµСЂРµСЃРѕР·РґР°РЅРёСЏ СЌР»РµРјРµРЅС‚РѕРІ)
+- **Р§РёСЃС‚С‹Р№ РєРѕРґ** - РІСЃРµ РІС‹Р·РѕРІС‹ `renderFolderContent()` РѕСЃС‚Р°РІР»РµРЅС‹ С‚РѕР»СЊРєРѕ РґР»СЏ СЃР»СѓС‡Р°РµРІ РёР·РјРµРЅРµРЅРёСЏ СЃС‚СЂСѓРєС‚СѓСЂС‹/СЃРѕСЃС‚РѕСЏРЅРёСЏ
 
-#### 📁 **Измененные файлы:**
-- `src/ui/FoldersPanel.js` - добавлен метод `updateLayout()`, обновлены обработчики ресайза
-- `docs/CHANGELOG.md` - добавлена документация об оптимизации
-- `docs/API_GUIDE.md` - обновлена документация методов FoldersPanel
-- `docs/ARCHITECTURE.md` - добавлена информация об оптимизации производительности
+#### рџ“Ѓ **РР·РјРµРЅРµРЅРЅС‹Рµ С„Р°Р№Р»С‹:**
+- `src/ui/FoldersPanel.js` - РґРѕР±Р°РІР»РµРЅ РјРµС‚РѕРґ `updateLayout()`, РѕР±РЅРѕРІР»РµРЅС‹ РѕР±СЂР°Р±РѕС‚С‡РёРєРё СЂРµСЃР°Р№Р·Р°
+- `docs/CHANGELOG.md` - РґРѕР±Р°РІР»РµРЅР° РґРѕРєСѓРјРµРЅС‚Р°С†РёСЏ РѕР± РѕРїС‚РёРјРёР·Р°С†РёРё
+- `docs/API_GUIDE.md` - РѕР±РЅРѕРІР»РµРЅР° РґРѕРєСѓРјРµРЅС‚Р°С†РёСЏ РјРµС‚РѕРґРѕРІ FoldersPanel
+- `docs/ARCHITECTURE.md` - РґРѕР±Р°РІР»РµРЅР° РёРЅС„РѕСЂРјР°С†РёСЏ РѕР± РѕРїС‚РёРјРёР·Р°С†РёРё РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚Рё
 
-#### 💡 **Преимущества:**
-- **Быстрый отклик** - плавное изменение размеров без лагов
-- **Меньше нагрузки** - отсутствие пересоздания элементов при ресайзе
-- **Лучший UX** - отсутствие мерцания и задержек при изменении размеров окна
-- **Масштабируемость** - паттерн может быть применен к другим панелям при необходимости
+#### рџ’Ў **РџСЂРµРёРјСѓС‰РµСЃС‚РІР°:**
+- **Р‘С‹СЃС‚СЂС‹Р№ РѕС‚РєР»РёРє** - РїР»Р°РІРЅРѕРµ РёР·РјРµРЅРµРЅРёРµ СЂР°Р·РјРµСЂРѕРІ Р±РµР· Р»Р°РіРѕРІ
+- **РњРµРЅСЊС€Рµ РЅР°РіСЂСѓР·РєРё** - РѕС‚СЃСѓС‚СЃС‚РІРёРµ РїРµСЂРµСЃРѕР·РґР°РЅРёСЏ СЌР»РµРјРµРЅС‚РѕРІ РїСЂРё СЂРµСЃР°Р№Р·Рµ
+- **Р›СѓС‡С€РёР№ UX** - РѕС‚СЃСѓС‚СЃС‚РІРёРµ РјРµСЂС†Р°РЅРёСЏ Рё Р·Р°РґРµСЂР¶РµРє РїСЂРё РёР·РјРµРЅРµРЅРёРё СЂР°Р·РјРµСЂРѕРІ РѕРєРЅР°
+- **РњР°СЃС€С‚Р°Р±РёСЂСѓРµРјРѕСЃС‚СЊ** - РїР°С‚С‚РµСЂРЅ РјРѕР¶РµС‚ Р±С‹С‚СЊ РїСЂРёРјРµРЅРµРЅ Рє РґСЂСѓРіРёРј РїР°РЅРµР»СЏРј РїСЂРё РЅРµРѕР±С…РѕРґРёРјРѕСЃС‚Рё
 
 ## [3.54.1] - 2025-01-28
 
-### Enhanced - Унифицированный ресайзер для всплывающих окон
+### Enhanced - РЈРЅРёС„РёС†РёСЂРѕРІР°РЅРЅС‹Р№ СЂРµСЃР°Р№Р·РµСЂ РґР»СЏ РІСЃРїР»С‹РІР°СЋС‰РёС… РѕРєРѕРЅ
 
-#### 🎯 **Новые функции:**
-- **DialogResizer** - создана унифицированная утилита для ресайза диалогов
-- **Ресайзер для всех диалогов** - добавлена возможность изменения ширины всех всплывающих окон
-- **Автоматическое сохранение ширины** - ширина диалогов сохраняется в StateManager и восстанавливается при следующем открытии
-- **Умолчания размеров** - диалоги по умолчанию занимают 50% ширины окна браузера
+#### рџЋЇ **РќРѕРІС‹Рµ С„СѓРЅРєС†РёРё:**
+- **DialogResizer** - СЃРѕР·РґР°РЅР° СѓРЅРёС„РёС†РёСЂРѕРІР°РЅРЅР°СЏ СѓС‚РёР»РёС‚Р° РґР»СЏ СЂРµСЃР°Р№Р·Р° РґРёР°Р»РѕРіРѕРІ
+- **Р РµСЃР°Р№Р·РµСЂ РґР»СЏ РІСЃРµС… РґРёР°Р»РѕРіРѕРІ** - РґРѕР±Р°РІР»РµРЅР° РІРѕР·РјРѕР¶РЅРѕСЃС‚СЊ РёР·РјРµРЅРµРЅРёСЏ С€РёСЂРёРЅС‹ РІСЃРµС… РІСЃРїР»С‹РІР°СЋС‰РёС… РѕРєРѕРЅ
+- **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ СЃРѕС…СЂР°РЅРµРЅРёРµ С€РёСЂРёРЅС‹** - С€РёСЂРёРЅР° РґРёР°Р»РѕРіРѕРІ СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ РІ StateManager Рё РІРѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµС‚СЃСЏ РїСЂРё СЃР»РµРґСѓСЋС‰РµРј РѕС‚РєСЂС‹С‚РёРё
+- **РЈРјРѕР»С‡Р°РЅРёСЏ СЂР°Р·РјРµСЂРѕРІ** - РґРёР°Р»РѕРіРё РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ Р·Р°РЅРёРјР°СЋС‚ 50% С€РёСЂРёРЅС‹ РѕРєРЅР° Р±СЂР°СѓР·РµСЂР°
 
-#### 🔧 **Технические улучшения:**
-- **BaseDialog** - добавлена поддержка ресайзера через `DialogResizer.setupResizer()`
-- **SettingsPanel** - добавлен ресайзер для окна настроек
-- **Упрощение кода** - удалены дублирующие методы `createDialogResizer()` и `setupSettingsPanelResizer()`
-- **Единая логика** - все диалоги используют `DialogResizer.setupResizer()` одинаковым образом
-- **Оптимизация CSS** - убрана фиксированная ширина, контролируется через JavaScript
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **BaseDialog** - РґРѕР±Р°РІР»РµРЅР° РїРѕРґРґРµСЂР¶РєР° СЂРµСЃР°Р№Р·РµСЂР° С‡РµСЂРµР· `DialogResizer.setupResizer()`
+- **SettingsPanel** - РґРѕР±Р°РІР»РµРЅ СЂРµСЃР°Р№Р·РµСЂ РґР»СЏ РѕРєРЅР° РЅР°СЃС‚СЂРѕРµРє
+- **РЈРїСЂРѕС‰РµРЅРёРµ РєРѕРґР°** - СѓРґР°Р»РµРЅС‹ РґСѓР±Р»РёСЂСѓСЋС‰РёРµ РјРµС‚РѕРґС‹ `createDialogResizer()` Рё `setupSettingsPanelResizer()`
+- **Р•РґРёРЅР°СЏ Р»РѕРіРёРєР°** - РІСЃРµ РґРёР°Р»РѕРіРё РёСЃРїРѕР»СЊР·СѓСЋС‚ `DialogResizer.setupResizer()` РѕРґРёРЅР°РєРѕРІС‹Рј РѕР±СЂР°Р·РѕРј
+- **РћРїС‚РёРјРёР·Р°С†РёСЏ CSS** - СѓР±СЂР°РЅР° С„РёРєСЃРёСЂРѕРІР°РЅРЅР°СЏ С€РёСЂРёРЅР°, РєРѕРЅС‚СЂРѕР»РёСЂСѓРµС‚СЃСЏ С‡РµСЂРµР· JavaScript
 
-#### 📁 **Измененные файлы:**
-- `src/utils/DialogResizer.js` - новая утилита для управления ресайзом диалогов
-- `src/ui/BaseDialog.js` - упрощена логика создания ресайзера, использование `DialogResizer`
-- `src/ui/SettingsPanel.js` - добавлен ресайзер для окна настроек
-- `styles/dialog-positioning.css` - обновлены комментарии, убрана фиксированная ширина
+#### рџ“Ѓ **РР·РјРµРЅРµРЅРЅС‹Рµ С„Р°Р№Р»С‹:**
+- `src/utils/DialogResizer.js` - РЅРѕРІР°СЏ СѓС‚РёР»РёС‚Р° РґР»СЏ СѓРїСЂР°РІР»РµРЅРёСЏ СЂРµСЃР°Р№Р·РѕРј РґРёР°Р»РѕРіРѕРІ
+- `src/ui/BaseDialog.js` - СѓРїСЂРѕС‰РµРЅР° Р»РѕРіРёРєР° СЃРѕР·РґР°РЅРёСЏ СЂРµСЃР°Р№Р·РµСЂР°, РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ `DialogResizer`
+- `src/ui/SettingsPanel.js` - РґРѕР±Р°РІР»РµРЅ СЂРµСЃР°Р№Р·РµСЂ РґР»СЏ РѕРєРЅР° РЅР°СЃС‚СЂРѕРµРє
+- `styles/dialog-positioning.css` - РѕР±РЅРѕРІР»РµРЅС‹ РєРѕРјРјРµРЅС‚Р°СЂРёРё, СѓР±СЂР°РЅР° С„РёРєСЃРёСЂРѕРІР°РЅРЅР°СЏ С€РёСЂРёРЅР°
 
-#### 💡 **Преимущества:**
-- **Удобство использования** - пользователи могут настраивать ширину диалогов под свои нужды
-- **Единообразие** - все диалоги ведут себя одинаково
-- **Упрощение кода** - удалено ~40 строк дублирующего кода
-- **Масштабируемость** - легко добавить ресайзер любому новому диалогу
+#### рџ’Ў **РџСЂРµРёРјСѓС‰РµСЃС‚РІР°:**
+- **РЈРґРѕР±СЃС‚РІРѕ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ** - РїРѕР»СЊР·РѕРІР°С‚РµР»Рё РјРѕРіСѓС‚ РЅР°СЃС‚СЂР°РёРІР°С‚СЊ С€РёСЂРёРЅСѓ РґРёР°Р»РѕРіРѕРІ РїРѕРґ СЃРІРѕРё РЅСѓР¶РґС‹
+- **Р•РґРёРЅРѕРѕР±СЂР°Р·РёРµ** - РІСЃРµ РґРёР°Р»РѕРіРё РІРµРґСѓС‚ СЃРµР±СЏ РѕРґРёРЅР°РєРѕРІРѕ
+- **РЈРїСЂРѕС‰РµРЅРёРµ РєРѕРґР°** - СѓРґР°Р»РµРЅРѕ ~40 СЃС‚СЂРѕРє РґСѓР±Р»РёСЂСѓСЋС‰РµРіРѕ РєРѕРґР°
+- **РњР°СЃС€С‚Р°Р±РёСЂСѓРµРјРѕСЃС‚СЊ** - Р»РµРіРєРѕ РґРѕР±Р°РІРёС‚СЊ СЂРµСЃР°Р№Р·РµСЂ Р»СЋР±РѕРјСѓ РЅРѕРІРѕРјСѓ РґРёР°Р»РѕРіСѓ
 
-### Fixed - Исправление обработчиков закрытия диалогов
+### Fixed - РСЃРїСЂР°РІР»РµРЅРёРµ РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ Р·Р°РєСЂС‹С‚РёСЏ РґРёР°Р»РѕРіРѕРІ
 
-#### 🐛 **Исправленные проблемы:**
-- **Закрытие по клику вне окна** - восстановлена работа обработчика закрытия диалогов при клике на overlay
-- **Закрытие сплеш-окна по клику на нём** - добавлена возможность закрывать сплеш-окно кликом на само окно (не только на overlay)
-- **Единая система обработчиков** - все обработчики теперь используют `EventHandlerManager`, устранены inline `addEventListener`
+#### рџђ› **РСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїСЂРѕР±Р»РµРјС‹:**
+- **Р—Р°РєСЂС‹С‚РёРµ РїРѕ РєР»РёРєСѓ РІРЅРµ РѕРєРЅР°** - РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅР° СЂР°Р±РѕС‚Р° РѕР±СЂР°Р±РѕС‚С‡РёРєР° Р·Р°РєСЂС‹С‚РёСЏ РґРёР°Р»РѕРіРѕРІ РїСЂРё РєР»РёРєРµ РЅР° overlay
+- **Р—Р°РєСЂС‹С‚РёРµ СЃРїР»РµС€-РѕРєРЅР° РїРѕ РєР»РёРєСѓ РЅР° РЅС‘Рј** - РґРѕР±Р°РІР»РµРЅР° РІРѕР·РјРѕР¶РЅРѕСЃС‚СЊ Р·Р°РєСЂС‹РІР°С‚СЊ СЃРїР»РµС€-РѕРєРЅРѕ РєР»РёРєРѕРј РЅР° СЃР°РјРѕ РѕРєРЅРѕ (РЅРµ С‚РѕР»СЊРєРѕ РЅР° overlay)
+- **Р•РґРёРЅР°СЏ СЃРёСЃС‚РµРјР° РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ** - РІСЃРµ РѕР±СЂР°Р±РѕС‚С‡РёРєРё С‚РµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓСЋС‚ `EventHandlerManager`, СѓСЃС‚СЂР°РЅРµРЅС‹ inline `addEventListener`
 
-#### 🔧 **Технические улучшения:**
-- **EventHandlerManager** - добавлена поддержка `overlayClick` в `createDelegatedHandlers()`
-- **BaseDialog** - упрощена логика проверки клика на overlay
-- **SplashScreenDialog** - переопределен `setupEventHandlers()` для добавления обработчика клика на container
-- **Устранено дублирование** - удален отдельный метод `setupOverlayClickHandler()`, логика интегрирована в `setupEventHandlers()`
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **EventHandlerManager** - РґРѕР±Р°РІР»РµРЅР° РїРѕРґРґРµСЂР¶РєР° `overlayClick` РІ `createDelegatedHandlers()`
+- **BaseDialog** - СѓРїСЂРѕС‰РµРЅР° Р»РѕРіРёРєР° РїСЂРѕРІРµСЂРєРё РєР»РёРєР° РЅР° overlay
+- **SplashScreenDialog** - РїРµСЂРµРѕРїСЂРµРґРµР»РµРЅ `setupEventHandlers()` РґР»СЏ РґРѕР±Р°РІР»РµРЅРёСЏ РѕР±СЂР°Р±РѕС‚С‡РёРєР° РєР»РёРєР° РЅР° container
+- **РЈСЃС‚СЂР°РЅРµРЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ** - СѓРґР°Р»РµРЅ РѕС‚РґРµР»СЊРЅС‹Р№ РјРµС‚РѕРґ `setupOverlayClickHandler()`, Р»РѕРіРёРєР° РёРЅС‚РµРіСЂРёСЂРѕРІР°РЅР° РІ `setupEventHandlers()`
 
-#### 📁 **Измененные файлы:**
-- `src/event-system/EventHandlerManager.js` - добавлена обработка `overlayClick` в делегированных обработчиках
-- `src/ui/BaseDialog.js` - упрощена проверка клика на overlay
-- `src/ui/SplashScreenDialog.js` - переопределен `setupEventHandlers()` для закрытия по клику на container
+#### рџ“Ѓ **РР·РјРµРЅРµРЅРЅС‹Рµ С„Р°Р№Р»С‹:**
+- `src/event-system/EventHandlerManager.js` - РґРѕР±Р°РІР»РµРЅР° РѕР±СЂР°Р±РѕС‚РєР° `overlayClick` РІ РґРµР»РµРіРёСЂРѕРІР°РЅРЅС‹С… РѕР±СЂР°Р±РѕС‚С‡РёРєР°С…
+- `src/ui/BaseDialog.js` - СѓРїСЂРѕС‰РµРЅР° РїСЂРѕРІРµСЂРєР° РєР»РёРєР° РЅР° overlay
+- `src/ui/SplashScreenDialog.js` - РїРµСЂРµРѕРїСЂРµРґРµР»РµРЅ `setupEventHandlers()` РґР»СЏ Р·Р°РєСЂС‹С‚РёСЏ РїРѕ РєР»РёРєСѓ РЅР° container
 
-#### 💡 **Преимущества:**
-- **Консистентность** - все диалоги используют единую систему обработчиков
-- **Надежность** - правильная очистка обработчиков при уничтожении диалогов
-- **Удобство** - сплеш-окно закрывается кликом как вне, так и внутри окна
-- **Поддерживаемость** - единый подход к регистрации обработчиков через `EventHandlerManager`
+#### рџ’Ў **РџСЂРµРёРјСѓС‰РµСЃС‚РІР°:**
+- **РљРѕРЅСЃРёСЃС‚РµРЅС‚РЅРѕСЃС‚СЊ** - РІСЃРµ РґРёР°Р»РѕРіРё РёСЃРїРѕР»СЊР·СѓСЋС‚ РµРґРёРЅСѓСЋ СЃРёСЃС‚РµРјСѓ РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ
+- **РќР°РґРµР¶РЅРѕСЃС‚СЊ** - РїСЂР°РІРёР»СЊРЅР°СЏ РѕС‡РёСЃС‚РєР° РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ РїСЂРё СѓРЅРёС‡С‚РѕР¶РµРЅРёРё РґРёР°Р»РѕРіРѕРІ
+- **РЈРґРѕР±СЃС‚РІРѕ** - СЃРїР»РµС€-РѕРєРЅРѕ Р·Р°РєСЂС‹РІР°РµС‚СЃСЏ РєР»РёРєРѕРј РєР°Рє РІРЅРµ, С‚Р°Рє Рё РІРЅСѓС‚СЂРё РѕРєРЅР°
+- **РџРѕРґРґРµСЂР¶РёРІР°РµРјРѕСЃС‚СЊ** - РµРґРёРЅС‹Р№ РїРѕРґС…РѕРґ Рє СЂРµРіРёСЃС‚СЂР°С†РёРё РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ С‡РµСЂРµР· `EventHandlerManager`
 
 ## [3.54.0] - 2025-01-28
 
-### Enhanced - Улучшения системы курсоров и горизонтального скролла для табов ассетов
+### Enhanced - РЈР»СѓС‡С€РµРЅРёСЏ СЃРёСЃС‚РµРјС‹ РєСѓСЂСЃРѕСЂРѕРІ Рё РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅРѕРіРѕ СЃРєСЂРѕР»Р»Р° РґР»СЏ С‚Р°Р±РѕРІ Р°СЃСЃРµС‚РѕРІ
 
-#### 🎯 **Новые функции:**
-- **Горизонтальный скролл табов** - добавлен скролл колесом мыши и средней кнопкой для навигации по табам
-- **Универсальная утилита скролла** - создан `HorizontalScrollUtils` для переиспользования в toolbar и табах
-- **Улучшенные курсоры** - правильное отображение курсоров для всех состояний (палец, лапка, схватывание)
-- **Скрытие скроллбара** - визуально скрыт скроллбар при сохранении функциональности
-- **Сохранение позиции скролла** - позиция скролла табов сохраняется в пользовательских настройках
+#### рџЋЇ **РќРѕРІС‹Рµ С„СѓРЅРєС†РёРё:**
+- **Р“РѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅС‹Р№ СЃРєСЂРѕР»Р» С‚Р°Р±РѕРІ** - РґРѕР±Р°РІР»РµРЅ СЃРєСЂРѕР»Р» РєРѕР»РµСЃРѕРј РјС‹С€Рё Рё СЃСЂРµРґРЅРµР№ РєРЅРѕРїРєРѕР№ РґР»СЏ РЅР°РІРёРіР°С†РёРё РїРѕ С‚Р°Р±Р°Рј
+- **РЈРЅРёРІРµСЂСЃР°Р»СЊРЅР°СЏ СѓС‚РёР»РёС‚Р° СЃРєСЂРѕР»Р»Р°** - СЃРѕР·РґР°РЅ `HorizontalScrollUtils` РґР»СЏ РїРµСЂРµРёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ РІ toolbar Рё С‚Р°Р±Р°С…
+- **РЈР»СѓС‡С€РµРЅРЅС‹Рµ РєСѓСЂСЃРѕСЂС‹** - РїСЂР°РІРёР»СЊРЅРѕРµ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ РєСѓСЂСЃРѕСЂРѕРІ РґР»СЏ РІСЃРµС… СЃРѕСЃС‚РѕСЏРЅРёР№ (РїР°Р»РµС†, Р»Р°РїРєР°, СЃС…РІР°С‚С‹РІР°РЅРёРµ)
+- **РЎРєСЂС‹С‚РёРµ СЃРєСЂРѕР»Р»Р±Р°СЂР°** - РІРёР·СѓР°Р»СЊРЅРѕ СЃРєСЂС‹С‚ СЃРєСЂРѕР»Р»Р±Р°СЂ РїСЂРё СЃРѕС…СЂР°РЅРµРЅРёРё С„СѓРЅРєС†РёРѕРЅР°Р»СЊРЅРѕСЃС‚Рё
+- **РЎРѕС…СЂР°РЅРµРЅРёРµ РїРѕР·РёС†РёРё СЃРєСЂРѕР»Р»Р°** - РїРѕР·РёС†РёСЏ СЃРєСЂРѕР»Р»Р° С‚Р°Р±РѕРІ СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ РІ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёС… РЅР°СЃС‚СЂРѕР№РєР°С…
 
-#### 🔧 **Технические улучшения:**
-- **AssetTabsManager** - добавлены методы `setupHorizontalScrolling()` и `loadScrollPosition()`
-- **CSS оптимизация** - упрощены стили курсоров, убрано дублирование правил
-- **Event handling** - улучшена обработка событий drag-and-drop и скролла
-- **Memory management** - добавлена правильная очистка обработчиков событий
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **AssetTabsManager** - РґРѕР±Р°РІР»РµРЅС‹ РјРµС‚РѕРґС‹ `setupHorizontalScrolling()` Рё `loadScrollPosition()`
+- **CSS РѕРїС‚РёРјРёР·Р°С†РёСЏ** - СѓРїСЂРѕС‰РµРЅС‹ СЃС‚РёР»Рё РєСѓСЂСЃРѕСЂРѕРІ, СѓР±СЂР°РЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ РїСЂР°РІРёР»
+- **Event handling** - СѓР»СѓС‡С€РµРЅР° РѕР±СЂР°Р±РѕС‚РєР° СЃРѕР±С‹С‚РёР№ drag-and-drop Рё СЃРєСЂРѕР»Р»Р°
+- **Memory management** - РґРѕР±Р°РІР»РµРЅР° РїСЂР°РІРёР»СЊРЅР°СЏ РѕС‡РёСЃС‚РєР° РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ СЃРѕР±С‹С‚РёР№
 
-#### 🐛 **Исправления:**
-- **Курсор при перетаскивании** - убрана стрелка, показывается только зажатая лапка
-- **Курсор при скролле** - корректное отображение зажатой лапки при скролле средней кнопкой
-- **Курсор при наведении** - стабильное отображение пальца при наведении на табы
-- **Конфликт drag/scroll** - исправлен конфликт между перетаскиванием табов и скроллом
+#### рџђ› **РСЃРїСЂР°РІР»РµРЅРёСЏ:**
+- **РљСѓСЂСЃРѕСЂ РїСЂРё РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРё** - СѓР±СЂР°РЅР° СЃС‚СЂРµР»РєР°, РїРѕРєР°Р·С‹РІР°РµС‚СЃСЏ С‚РѕР»СЊРєРѕ Р·Р°Р¶Р°С‚Р°СЏ Р»Р°РїРєР°
+- **РљСѓСЂСЃРѕСЂ РїСЂРё СЃРєСЂРѕР»Р»Рµ** - РєРѕСЂСЂРµРєС‚РЅРѕРµ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ Р·Р°Р¶Р°С‚РѕР№ Р»Р°РїРєРё РїСЂРё СЃРєСЂРѕР»Р»Рµ СЃСЂРµРґРЅРµР№ РєРЅРѕРїРєРѕР№
+- **РљСѓСЂСЃРѕСЂ РїСЂРё РЅР°РІРµРґРµРЅРёРё** - СЃС‚Р°Р±РёР»СЊРЅРѕРµ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ РїР°Р»СЊС†Р° РїСЂРё РЅР°РІРµРґРµРЅРёРё РЅР° С‚Р°Р±С‹
+- **РљРѕРЅС„Р»РёРєС‚ drag/scroll** - РёСЃРїСЂР°РІР»РµРЅ РєРѕРЅС„Р»РёРєС‚ РјРµР¶РґСѓ РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµРј С‚Р°Р±РѕРІ Рё СЃРєСЂРѕР»Р»РѕРј
 
-#### 📁 **Измененные файлы:**
-- `src/ui/AssetTabsManager.js` - добавлен горизонтальный скролл и улучшены курсоры
-- `src/utils/HorizontalScrollUtils.js` - новая утилита для горизонтального скролла
-- `src/ui/Toolbar.js` - рефакторинг для использования HorizontalScrollUtils
-- `styles/panels.css` - упрощены стили курсоров, добавлены стили скролла
-- `src/managers/UserPreferencesManager.js` - добавлена поддержка `assetTabsScrollLeft`
-- `config/defaults/ui.json` - добавлено значение по умолчанию для скролла табов
+#### рџ“Ѓ **РР·РјРµРЅРµРЅРЅС‹Рµ С„Р°Р№Р»С‹:**
+- `src/ui/AssetTabsManager.js` - РґРѕР±Р°РІР»РµРЅ РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅС‹Р№ СЃРєСЂРѕР»Р» Рё СѓР»СѓС‡С€РµРЅС‹ РєСѓСЂСЃРѕСЂС‹
+- `src/utils/HorizontalScrollUtils.js` - РЅРѕРІР°СЏ СѓС‚РёР»РёС‚Р° РґР»СЏ РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅРѕРіРѕ СЃРєСЂРѕР»Р»Р°
+- `src/ui/Toolbar.js` - СЂРµС„Р°РєС‚РѕСЂРёРЅРі РґР»СЏ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ HorizontalScrollUtils
+- `styles/panels.css` - СѓРїСЂРѕС‰РµРЅС‹ СЃС‚РёР»Рё РєСѓСЂСЃРѕСЂРѕРІ, РґРѕР±Р°РІР»РµРЅС‹ СЃС‚РёР»Рё СЃРєСЂРѕР»Р»Р°
+- `src/managers/UserPreferencesManager.js` - РґРѕР±Р°РІР»РµРЅР° РїРѕРґРґРµСЂР¶РєР° `assetTabsScrollLeft`
+- `config/defaults/ui.json` - РґРѕР±Р°РІР»РµРЅРѕ Р·РЅР°С‡РµРЅРёРµ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ РґР»СЏ СЃРєСЂРѕР»Р»Р° С‚Р°Р±РѕРІ
 
-#### 💡 **Преимущества:**
-- **Консистентность** - одинаковое поведение скролла в toolbar и табах
-- **UX улучшения** - интуитивные курсоры и плавная навигация
-- **Производительность** - оптимизированная обработка событий
-- **Поддерживаемость** - переиспользуемый код для скролла
+#### рџ’Ў **РџСЂРµРёРјСѓС‰РµСЃС‚РІР°:**
+- **РљРѕРЅСЃРёСЃС‚РµРЅС‚РЅРѕСЃС‚СЊ** - РѕРґРёРЅР°РєРѕРІРѕРµ РїРѕРІРµРґРµРЅРёРµ СЃРєСЂРѕР»Р»Р° РІ toolbar Рё С‚Р°Р±Р°С…
+- **UX СѓР»СѓС‡С€РµРЅРёСЏ** - РёРЅС‚СѓРёС‚РёРІРЅС‹Рµ РєСѓСЂСЃРѕСЂС‹ Рё РїР»Р°РІРЅР°СЏ РЅР°РІРёРіР°С†РёСЏ
+- **РџСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ** - РѕРїС‚РёРјРёР·РёСЂРѕРІР°РЅРЅР°СЏ РѕР±СЂР°Р±РѕС‚РєР° СЃРѕР±С‹С‚РёР№
+- **РџРѕРґРґРµСЂР¶РёРІР°РµРјРѕСЃС‚СЊ** - РїРµСЂРµРёСЃРїРѕР»СЊР·СѓРµРјС‹Р№ РєРѕРґ РґР»СЏ СЃРєСЂРѕР»Р»Р°
 
 ---
 
 ## [3.53.0] - 2025-01-28
 
-### Refactored - Рефакторинг системы табов панели ассетов и исправление multi-select
+### Refactored - Р РµС„Р°РєС‚РѕСЂРёРЅРі СЃРёСЃС‚РµРјС‹ С‚Р°Р±РѕРІ РїР°РЅРµР»Рё Р°СЃСЃРµС‚РѕРІ Рё РёСЃРїСЂР°РІР»РµРЅРёРµ multi-select
 
-#### 🔄 **Архитектурные улучшения:**
-- **AssetTabsManager** - выделен отдельный класс для управления табами панели ассетов
-- **Модульность** - вся логика табов вынесена из AssetPanel в отдельный компонент
-- **Устранение дублирования** - созданы helper-методы для проверки координат и типов drag-событий
-- **Улучшенная архитектура** - AssetPanel теперь фокусируется только на отображении ассетов
-- **Упрощение логики** - убрано дублирование кода, неиспользуемые методы удалены
+#### рџ”„ **РђСЂС…РёС‚РµРєС‚СѓСЂРЅС‹Рµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **AssetTabsManager** - РІС‹РґРµР»РµРЅ РѕС‚РґРµР»СЊРЅС‹Р№ РєР»Р°СЃСЃ РґР»СЏ СѓРїСЂР°РІР»РµРЅРёСЏ С‚Р°Р±Р°РјРё РїР°РЅРµР»Рё Р°СЃСЃРµС‚РѕРІ
+- **РњРѕРґСѓР»СЊРЅРѕСЃС‚СЊ** - РІСЃСЏ Р»РѕРіРёРєР° С‚Р°Р±РѕРІ РІС‹РЅРµСЃРµРЅР° РёР· AssetPanel РІ РѕС‚РґРµР»СЊРЅС‹Р№ РєРѕРјРїРѕРЅРµРЅС‚
+- **РЈСЃС‚СЂР°РЅРµРЅРёРµ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ** - СЃРѕР·РґР°РЅС‹ helper-РјРµС‚РѕРґС‹ РґР»СЏ РїСЂРѕРІРµСЂРєРё РєРѕРѕСЂРґРёРЅР°С‚ Рё С‚РёРїРѕРІ drag-СЃРѕР±С‹С‚РёР№
+- **РЈР»СѓС‡С€РµРЅРЅР°СЏ Р°СЂС…РёС‚РµРєС‚СѓСЂР°** - AssetPanel С‚РµРїРµСЂСЊ С„РѕРєСѓСЃРёСЂСѓРµС‚СЃСЏ С‚РѕР»СЊРєРѕ РЅР° РѕС‚РѕР±СЂР°Р¶РµРЅРёРё Р°СЃСЃРµС‚РѕРІ
+- **РЈРїСЂРѕС‰РµРЅРёРµ Р»РѕРіРёРєРё** - СѓР±СЂР°РЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ РєРѕРґР°, РЅРµРёСЃРїРѕР»СЊР·СѓРµРјС‹Рµ РјРµС‚РѕРґС‹ СѓРґР°Р»РµРЅС‹
 
-#### 🐛 **Исправленные ошибки:**
-- **Бесконечная рекурсия** - исправлена проблема с циклическими обновлениями состояния и рендеринга
-- **Позиционирование табов** - исправлено отображение табов слева от элементов поиска
-- **Drop overlay при старте** - исправлено случайное отображение overlay при запуске редактора
-- **Размер drop overlay** - исправлен размер подсветки для соответствия только области превью ассетов
-- **Multi-select фолдеров** - исправлена логика Shift+клика для выбора множества фолдеров
-- **Multi-select табов** - исправлена логика Shift+клика на табах (добавление/удаление из selection)
-- **Ограничение выбора** - исправлена проблема с невозможностью выбрать больше двух фолдеров
-- **Авто-создание табов** - убрано автоматическое создание табов при выборе фолдеров (только при дропе)
-- **Range selection** - исправлена логика range selection при Shift+клике (не очищает текущий выбор)
+#### рџђ› **РСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РѕС€РёР±РєРё:**
+- **Р‘РµСЃРєРѕРЅРµС‡РЅР°СЏ СЂРµРєСѓСЂСЃРёСЏ** - РёСЃРїСЂР°РІР»РµРЅР° РїСЂРѕР±Р»РµРјР° СЃ С†РёРєР»РёС‡РµСЃРєРёРјРё РѕР±РЅРѕРІР»РµРЅРёСЏРјРё СЃРѕСЃС‚РѕСЏРЅРёСЏ Рё СЂРµРЅРґРµСЂРёРЅРіР°
+- **РџРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ С‚Р°Р±РѕРІ** - РёСЃРїСЂР°РІР»РµРЅРѕ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ С‚Р°Р±РѕРІ СЃР»РµРІР° РѕС‚ СЌР»РµРјРµРЅС‚РѕРІ РїРѕРёСЃРєР°
+- **Drop overlay РїСЂРё СЃС‚Р°СЂС‚Рµ** - РёСЃРїСЂР°РІР»РµРЅРѕ СЃР»СѓС‡Р°Р№РЅРѕРµ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ overlay РїСЂРё Р·Р°РїСѓСЃРєРµ СЂРµРґР°РєС‚РѕСЂР°
+- **Р Р°Р·РјРµСЂ drop overlay** - РёСЃРїСЂР°РІР»РµРЅ СЂР°Р·РјРµСЂ РїРѕРґСЃРІРµС‚РєРё РґР»СЏ СЃРѕРѕС‚РІРµС‚СЃС‚РІРёСЏ С‚РѕР»СЊРєРѕ РѕР±Р»Р°СЃС‚Рё РїСЂРµРІСЊСЋ Р°СЃСЃРµС‚РѕРІ
+- **Multi-select С„РѕР»РґРµСЂРѕРІ** - РёСЃРїСЂР°РІР»РµРЅР° Р»РѕРіРёРєР° Shift+РєР»РёРєР° РґР»СЏ РІС‹Р±РѕСЂР° РјРЅРѕР¶РµСЃС‚РІР° С„РѕР»РґРµСЂРѕРІ
+- **Multi-select С‚Р°Р±РѕРІ** - РёСЃРїСЂР°РІР»РµРЅР° Р»РѕРіРёРєР° Shift+РєР»РёРєР° РЅР° С‚Р°Р±Р°С… (РґРѕР±Р°РІР»РµРЅРёРµ/СѓРґР°Р»РµРЅРёРµ РёР· selection)
+- **РћРіСЂР°РЅРёС‡РµРЅРёРµ РІС‹Р±РѕСЂР°** - РёСЃРїСЂР°РІР»РµРЅР° РїСЂРѕР±Р»РµРјР° СЃ РЅРµРІРѕР·РјРѕР¶РЅРѕСЃС‚СЊСЋ РІС‹Р±СЂР°С‚СЊ Р±РѕР»СЊС€Рµ РґРІСѓС… С„РѕР»РґРµСЂРѕРІ
+- **РђРІС‚Рѕ-СЃРѕР·РґР°РЅРёРµ С‚Р°Р±РѕРІ** - СѓР±СЂР°РЅРѕ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ СЃРѕР·РґР°РЅРёРµ С‚Р°Р±РѕРІ РїСЂРё РІС‹Р±РѕСЂРµ С„РѕР»РґРµСЂРѕРІ (С‚РѕР»СЊРєРѕ РїСЂРё РґСЂРѕРїРµ)
+- **Range selection** - РёСЃРїСЂР°РІР»РµРЅР° Р»РѕРіРёРєР° range selection РїСЂРё Shift+РєР»РёРєРµ (РЅРµ РѕС‡РёС‰Р°РµС‚ С‚РµРєСѓС‰РёР№ РІС‹Р±РѕСЂ)
 
-#### ✨ **Новые функции:**
-- **Визуальная индикация запрета дропа** - красная подсветка с текстом "Can not create assets in this location" при попытке дропа в корневую папку
-- **Улучшенная обработка drag-and-drop** - точное определение координат через helper-методы
-- **CSS классы для drop overlay** - вынесены стили в `styles/panels.css` для переиспользования
-- **Multi-select табов и фолдеров** - полноценная поддержка множественного выбора через Shift+клик
+#### вњЁ **РќРѕРІС‹Рµ С„СѓРЅРєС†РёРё:**
+- **Р’РёР·СѓР°Р»СЊРЅР°СЏ РёРЅРґРёРєР°С†РёСЏ Р·Р°РїСЂРµС‚Р° РґСЂРѕРїР°** - РєСЂР°СЃРЅР°СЏ РїРѕРґСЃРІРµС‚РєР° СЃ С‚РµРєСЃС‚РѕРј "Can not create assets in this location" РїСЂРё РїРѕРїС‹С‚РєРµ РґСЂРѕРїР° РІ РєРѕСЂРЅРµРІСѓСЋ РїР°РїРєСѓ
+- **РЈР»СѓС‡С€РµРЅРЅР°СЏ РѕР±СЂР°Р±РѕС‚РєР° drag-and-drop** - С‚РѕС‡РЅРѕРµ РѕРїСЂРµРґРµР»РµРЅРёРµ РєРѕРѕСЂРґРёРЅР°С‚ С‡РµСЂРµР· helper-РјРµС‚РѕРґС‹
+- **CSS РєР»Р°СЃСЃС‹ РґР»СЏ drop overlay** - РІС‹РЅРµСЃРµРЅС‹ СЃС‚РёР»Рё РІ `styles/panels.css` РґР»СЏ РїРµСЂРµРёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ
+- **Multi-select С‚Р°Р±РѕРІ Рё С„РѕР»РґРµСЂРѕРІ** - РїРѕР»РЅРѕС†РµРЅРЅР°СЏ РїРѕРґРґРµСЂР¶РєР° РјРЅРѕР¶РµСЃС‚РІРµРЅРЅРѕРіРѕ РІС‹Р±РѕСЂР° С‡РµСЂРµР· Shift+РєР»РёРє
 
-#### 🔧 **Технические улучшения:**
-- **AssetTabsManager.js** - новый класс с методами `render()`, `syncTabToFolder()`, `addFolderTab()`, `removeFolderTab()`, `handleTabClick()`
-- **Helper-методы** - `isExternalFilesDrag()`, `isOverTabsContainer()`, `isOverPreviewsContainer()` для устранения дублирования
-- **CSS классы** - `.drop-overlay`, `.drop-overlay-visible`, `.drop-overlay-allowed`, `.drop-overlay-disallowed` в `styles/panels.css`
-- **Упрощение кода** - удалены избыточные debug-логи, оставлены только критичные сообщения
-- **Устранение инлайн-стилей** - все стили overlay перенесены в CSS файлы
-- **Убрано дублирование** - удален неиспользуемый метод `_getSelectedFolderPath()`, упрощены подписки на события
-- **Логика табов** - табы создаются только при дропе фолдеров, не автоматически при выборе
-- **Упрощение подписок** - подписка на `selectedFolders` в AssetTabsManager только для визуального обновления
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **AssetTabsManager.js** - РЅРѕРІС‹Р№ РєР»Р°СЃСЃ СЃ РјРµС‚РѕРґР°РјРё `render()`, `syncTabToFolder()`, `addFolderTab()`, `removeFolderTab()`, `handleTabClick()`
+- **Helper-РјРµС‚РѕРґС‹** - `isExternalFilesDrag()`, `isOverTabsContainer()`, `isOverPreviewsContainer()` РґР»СЏ СѓСЃС‚СЂР°РЅРµРЅРёСЏ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ
+- **CSS РєР»Р°СЃСЃС‹** - `.drop-overlay`, `.drop-overlay-visible`, `.drop-overlay-allowed`, `.drop-overlay-disallowed` РІ `styles/panels.css`
+- **РЈРїСЂРѕС‰РµРЅРёРµ РєРѕРґР°** - СѓРґР°Р»РµРЅС‹ РёР·Р±С‹С‚РѕС‡РЅС‹Рµ debug-Р»РѕРіРё, РѕСЃС‚Р°РІР»РµРЅС‹ С‚РѕР»СЊРєРѕ РєСЂРёС‚РёС‡РЅС‹Рµ СЃРѕРѕР±С‰РµРЅРёСЏ
+- **РЈСЃС‚СЂР°РЅРµРЅРёРµ РёРЅР»Р°Р№РЅ-СЃС‚РёР»РµР№** - РІСЃРµ СЃС‚РёР»Рё overlay РїРµСЂРµРЅРµСЃРµРЅС‹ РІ CSS С„Р°Р№Р»С‹
+- **РЈР±СЂР°РЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ** - СѓРґР°Р»РµРЅ РЅРµРёСЃРїРѕР»СЊР·СѓРµРјС‹Р№ РјРµС‚РѕРґ `_getSelectedFolderPath()`, СѓРїСЂРѕС‰РµРЅС‹ РїРѕРґРїРёСЃРєРё РЅР° СЃРѕР±С‹С‚РёСЏ
+- **Р›РѕРіРёРєР° С‚Р°Р±РѕРІ** - С‚Р°Р±С‹ СЃРѕР·РґР°СЋС‚СЃСЏ С‚РѕР»СЊРєРѕ РїСЂРё РґСЂРѕРїРµ С„РѕР»РґРµСЂРѕРІ, РЅРµ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РїСЂРё РІС‹Р±РѕСЂРµ
+- **РЈРїСЂРѕС‰РµРЅРёРµ РїРѕРґРїРёСЃРѕРє** - РїРѕРґРїРёСЃРєР° РЅР° `selectedFolders` РІ AssetTabsManager С‚РѕР»СЊРєРѕ РґР»СЏ РІРёР·СѓР°Р»СЊРЅРѕРіРѕ РѕР±РЅРѕРІР»РµРЅРёСЏ
 
-#### 📋 **Измененные файлы:**
-- **`src/ui/AssetPanel.js`** - рефакторинг, делегирование логики табов в AssetTabsManager, убрано дублирование кода управления табами
-- **`src/ui/AssetTabsManager.js`** - новый класс для управления табами (включая AssetTabContextMenu), исправлена логика multi-select
-- **`src/ui/FoldersPanel.js`** - улучшена обработка динамически добавленных ассетов, исправлена логика Shift+клика для multi-select
-- **`styles/panels.css`** - добавлены CSS классы для drop overlay
-- **`src/managers/AssetManager.js`** - удалено автоматическое создание табов при сканировании
-- **`src/core/LevelEditor.js`** - обновлена версия до 3.53.0
+#### рџ“‹ **РР·РјРµРЅРµРЅРЅС‹Рµ С„Р°Р№Р»С‹:**
+- **`src/ui/AssetPanel.js`** - СЂРµС„Р°РєС‚РѕСЂРёРЅРі, РґРµР»РµРіРёСЂРѕРІР°РЅРёРµ Р»РѕРіРёРєРё С‚Р°Р±РѕРІ РІ AssetTabsManager, СѓР±СЂР°РЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ РєРѕРґР° СѓРїСЂР°РІР»РµРЅРёСЏ С‚Р°Р±Р°РјРё
+- **`src/ui/AssetTabsManager.js`** - РЅРѕРІС‹Р№ РєР»Р°СЃСЃ РґР»СЏ СѓРїСЂР°РІР»РµРЅРёСЏ С‚Р°Р±Р°РјРё (РІРєР»СЋС‡Р°СЏ AssetTabContextMenu), РёСЃРїСЂР°РІР»РµРЅР° Р»РѕРіРёРєР° multi-select
+- **`src/ui/FoldersPanel.js`** - СѓР»СѓС‡С€РµРЅР° РѕР±СЂР°Р±РѕС‚РєР° РґРёРЅР°РјРёС‡РµСЃРєРё РґРѕР±Р°РІР»РµРЅРЅС‹С… Р°СЃСЃРµС‚РѕРІ, РёСЃРїСЂР°РІР»РµРЅР° Р»РѕРіРёРєР° Shift+РєР»РёРєР° РґР»СЏ multi-select
+- **`styles/panels.css`** - РґРѕР±Р°РІР»РµРЅС‹ CSS РєР»Р°СЃСЃС‹ РґР»СЏ drop overlay
+- **`src/managers/AssetManager.js`** - СѓРґР°Р»РµРЅРѕ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ СЃРѕР·РґР°РЅРёРµ С‚Р°Р±РѕРІ РїСЂРё СЃРєР°РЅРёСЂРѕРІР°РЅРёРё
+- **`src/core/LevelEditor.js`** - РѕР±РЅРѕРІР»РµРЅР° РІРµСЂСЃРёСЏ РґРѕ 3.53.0
 
-#### 🚀 **Преимущества:**
-- **Модульность** - код табов изолирован и может быть переиспользован
-- **Поддерживаемость** - изменения в логике табов не влияют на отображение ассетов
-- **Производительность** - устранена бесконечная рекурсия, оптимизированы логи
-- **Чистота кода** - убраны дубликаты, избыточные логи и инлайн-стили
-- **Гибкость multi-select** - полноценная поддержка множественного выбора фолдеров и табов
-- **Контроль создания табов** - табы создаются только пользователем через дроп, не автоматически
+#### рџљЂ **РџСЂРµРёРјСѓС‰РµСЃС‚РІР°:**
+- **РњРѕРґСѓР»СЊРЅРѕСЃС‚СЊ** - РєРѕРґ С‚Р°Р±РѕРІ РёР·РѕР»РёСЂРѕРІР°РЅ Рё РјРѕР¶РµС‚ Р±С‹С‚СЊ РїРµСЂРµРёСЃРїРѕР»СЊР·РѕРІР°РЅ
+- **РџРѕРґРґРµСЂР¶РёРІР°РµРјРѕСЃС‚СЊ** - РёР·РјРµРЅРµРЅРёСЏ РІ Р»РѕРіРёРєРµ С‚Р°Р±РѕРІ РЅРµ РІР»РёСЏСЋС‚ РЅР° РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ Р°СЃСЃРµС‚РѕРІ
+- **РџСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ** - СѓСЃС‚СЂР°РЅРµРЅР° Р±РµСЃРєРѕРЅРµС‡РЅР°СЏ СЂРµРєСѓСЂСЃРёСЏ, РѕРїС‚РёРјРёР·РёСЂРѕРІР°РЅС‹ Р»РѕРіРё
+- **Р§РёСЃС‚РѕС‚Р° РєРѕРґР°** - СѓР±СЂР°РЅС‹ РґСѓР±Р»РёРєР°С‚С‹, РёР·Р±С‹С‚РѕС‡РЅС‹Рµ Р»РѕРіРё Рё РёРЅР»Р°Р№РЅ-СЃС‚РёР»Рё
+- **Р“РёР±РєРѕСЃС‚СЊ multi-select** - РїРѕР»РЅРѕС†РµРЅРЅР°СЏ РїРѕРґРґРµСЂР¶РєР° РјРЅРѕР¶РµСЃС‚РІРµРЅРЅРѕРіРѕ РІС‹Р±РѕСЂР° С„РѕР»РґРµСЂРѕРІ Рё С‚Р°Р±РѕРІ
+- **РљРѕРЅС‚СЂРѕР»СЊ СЃРѕР·РґР°РЅРёСЏ С‚Р°Р±РѕРІ** - С‚Р°Р±С‹ СЃРѕР·РґР°СЋС‚СЃСЏ С‚РѕР»СЊРєРѕ РїРѕР»СЊР·РѕРІР°С‚РµР»РµРј С‡РµСЂРµР· РґСЂРѕРї, РЅРµ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё
 
 ## [3.52.8] - 2025-01-28
 
-### Fixed - Исправление контекстного меню табов панели ассетов
+### Fixed - РСЃРїСЂР°РІР»РµРЅРёРµ РєРѕРЅС‚РµРєСЃС‚РЅРѕРіРѕ РјРµРЅСЋ С‚Р°Р±РѕРІ РїР°РЅРµР»Рё Р°СЃСЃРµС‚РѕРІ
 
-#### 🐛 **Исправленные ошибки:**
-- **Контекстное меню не отображалось** - исправлена проблема с отображением контекстного меню при правом клике на табы панели ассетов
-- **Неправильная регистрация обработчиков** - обработчики событий регистрировались на неправильный контейнер
-- **CSS стили не применялись** - отсутствовал класс `.show` для отображения меню
+#### рџђ› **РСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РѕС€РёР±РєРё:**
+- **РљРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ РЅРµ РѕС‚РѕР±СЂР°Р¶Р°Р»РѕСЃСЊ** - РёСЃРїСЂР°РІР»РµРЅР° РїСЂРѕР±Р»РµРјР° СЃ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµРј РєРѕРЅС‚РµРєСЃС‚РЅРѕРіРѕ РјРµРЅСЋ РїСЂРё РїСЂР°РІРѕРј РєР»РёРєРµ РЅР° С‚Р°Р±С‹ РїР°РЅРµР»Рё Р°СЃСЃРµС‚РѕРІ
+- **РќРµРїСЂР°РІРёР»СЊРЅР°СЏ СЂРµРіРёСЃС‚СЂР°С†РёСЏ РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ** - РѕР±СЂР°Р±РѕС‚С‡РёРєРё СЃРѕР±С‹С‚РёР№ СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°Р»РёСЃСЊ РЅР° РЅРµРїСЂР°РІРёР»СЊРЅС‹Р№ РєРѕРЅС‚РµР№РЅРµСЂ
+- **CSS СЃС‚РёР»Рё РЅРµ РїСЂРёРјРµРЅСЏР»РёСЃСЊ** - РѕС‚СЃСѓС‚СЃС‚РІРѕРІР°Р» РєР»Р°СЃСЃ `.show` РґР»СЏ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ РјРµРЅСЋ
 
-#### 🔧 **Технические улучшения:**
-- **Правильная последовательность инициализации** - обработчики теперь регистрируются после создания элементов (по образцу LayersPanel)
-- **Делегирование событий** - обработчики регистрируются на `tabsContainer` вместо `container`
-- **CSS классы** - используется правильный класс `.base-context-menu-item` для элементов меню
-- **Убрана отладочная информация** - очищен код от временных console.log
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **РџСЂР°РІРёР»СЊРЅР°СЏ РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚СЊ РёРЅРёС†РёР°Р»РёР·Р°С†РёРё** - РѕР±СЂР°Р±РѕС‚С‡РёРєРё С‚РµРїРµСЂСЊ СЂРµРіРёСЃС‚СЂРёСЂСѓСЋС‚СЃСЏ РїРѕСЃР»Рµ СЃРѕР·РґР°РЅРёСЏ СЌР»РµРјРµРЅС‚РѕРІ (РїРѕ РѕР±СЂР°Р·С†Сѓ LayersPanel)
+- **Р”РµР»РµРіРёСЂРѕРІР°РЅРёРµ СЃРѕР±С‹С‚РёР№** - РѕР±СЂР°Р±РѕС‚С‡РёРєРё СЂРµРіРёСЃС‚СЂРёСЂСѓСЋС‚СЃСЏ РЅР° `tabsContainer` РІРјРµСЃС‚Рѕ `container`
+- **CSS РєР»Р°СЃСЃС‹** - РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ РїСЂР°РІРёР»СЊРЅС‹Р№ РєР»Р°СЃСЃ `.base-context-menu-item` РґР»СЏ СЌР»РµРјРµРЅС‚РѕРІ РјРµРЅСЋ
+- **РЈР±СЂР°РЅР° РѕС‚Р»Р°РґРѕС‡РЅР°СЏ РёРЅС„РѕСЂРјР°С†РёСЏ** - РѕС‡РёС‰РµРЅ РєРѕРґ РѕС‚ РІСЂРµРјРµРЅРЅС‹С… console.log
 
 ## [3.52.7] - 2025-01-28
 
-### Fixed - Исправление рамки селекта при отпускании клика за пределами канвы
+### Fixed - РСЃРїСЂР°РІР»РµРЅРёРµ СЂР°РјРєРё СЃРµР»РµРєС‚Р° РїСЂРё РѕС‚РїСѓСЃРєР°РЅРёРё РєР»РёРєР° Р·Р° РїСЂРµРґРµР»Р°РјРё РєР°РЅРІС‹
 
-#### 🐛 **Исправленные ошибки:**
-- **Рамка селекта не завершалась** - исправлена проблема, когда рамка селекта (marquee selection) не завершалась при отпускании кнопки мыши за пределами канвы
-- **Mouseup события не доходили** - mouseup события не захватывались глобальными обработчиками при отпускании клика вне области канвы
+#### рџђ› **РСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РѕС€РёР±РєРё:**
+- **Р Р°РјРєР° СЃРµР»РµРєС‚Р° РЅРµ Р·Р°РІРµСЂС€Р°Р»Р°СЃСЊ** - РёСЃРїСЂР°РІР»РµРЅР° РїСЂРѕР±Р»РµРјР°, РєРѕРіРґР° СЂР°РјРєР° СЃРµР»РµРєС‚Р° (marquee selection) РЅРµ Р·Р°РІРµСЂС€Р°Р»Р°СЃСЊ РїСЂРё РѕС‚РїСѓСЃРєР°РЅРёРё РєРЅРѕРїРєРё РјС‹С€Рё Р·Р° РїСЂРµРґРµР»Р°РјРё РєР°РЅРІС‹
+- **Mouseup СЃРѕР±С‹С‚РёСЏ РЅРµ РґРѕС…РѕРґРёР»Рё** - mouseup СЃРѕР±С‹С‚РёСЏ РЅРµ Р·Р°С…РІР°С‚С‹РІР°Р»РёСЃСЊ РіР»РѕР±Р°Р»СЊРЅС‹РјРё РѕР±СЂР°Р±РѕС‚С‡РёРєР°РјРё РїСЂРё РѕС‚РїСѓСЃРєР°РЅРёРё РєР»РёРєР° РІРЅРµ РѕР±Р»Р°СЃС‚Рё РєР°РЅРІС‹
 
-#### 🔧 **Технические улучшения:**
-- **EventHandlerManager** - добавлена поддержка опций `addEventListener` (capture, passive) в метод `registerElement()`
-- **GlobalEventRegistry** - автоматическое применение `capture: true` для обработчиков mouseup событий
-- **Глобальные обработчики** - mouseup события теперь захватываются в фазе захвата для надежной работы вне канвы
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **EventHandlerManager** - РґРѕР±Р°РІР»РµРЅР° РїРѕРґРґРµСЂР¶РєР° РѕРїС†РёР№ `addEventListener` (capture, passive) РІ РјРµС‚РѕРґ `registerElement()`
+- **GlobalEventRegistry** - Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ РїСЂРёРјРµРЅРµРЅРёРµ `capture: true` РґР»СЏ РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ mouseup СЃРѕР±С‹С‚РёР№
+- **Р“Р»РѕР±Р°Р»СЊРЅС‹Рµ РѕР±СЂР°Р±РѕС‚С‡РёРєРё** - mouseup СЃРѕР±С‹С‚РёСЏ С‚РµРїРµСЂСЊ Р·Р°С…РІР°С‚С‹РІР°СЋС‚СЃСЏ РІ С„Р°Р·Рµ Р·Р°С…РІР°С‚Р° РґР»СЏ РЅР°РґРµР¶РЅРѕР№ СЂР°Р±РѕС‚С‹ РІРЅРµ РєР°РЅРІС‹
 
 ## [3.52.6] - 2025-01-28
 
-### Added - Контекстные меню для табов и исправления двойного клика
+### Added - РљРѕРЅС‚РµРєСЃС‚РЅС‹Рµ РјРµРЅСЋ РґР»СЏ С‚Р°Р±РѕРІ Рё РёСЃРїСЂР°РІР»РµРЅРёСЏ РґРІРѕР№РЅРѕРіРѕ РєР»РёРєР°
 
-#### ✨ **Новые функции:**
-- **Контекстные меню для табов панелей** - правый клик на табах показывает меню с опцией перемещения между панелями
-- **Контекстные меню для assets табов** - правый клик на табах assets панели показывает меню с опцией "Close"
-- **Поддержка двойного клика на разделителях** - добавлен параметр `onDoubleClick` в ResizerManager
-- **Умное позиционирование меню** - контекстные меню автоматически позиционируются относительно viewport
+#### вњЁ **РќРѕРІС‹Рµ С„СѓРЅРєС†РёРё:**
+- **РљРѕРЅС‚РµРєСЃС‚РЅС‹Рµ РјРµРЅСЋ РґР»СЏ С‚Р°Р±РѕРІ РїР°РЅРµР»РµР№** - РїСЂР°РІС‹Р№ РєР»РёРє РЅР° С‚Р°Р±Р°С… РїРѕРєР°Р·С‹РІР°РµС‚ РјРµРЅСЋ СЃ РѕРїС†РёРµР№ РїРµСЂРµРјРµС‰РµРЅРёСЏ РјРµР¶РґСѓ РїР°РЅРµР»СЏРјРё
+- **РљРѕРЅС‚РµРєСЃС‚РЅС‹Рµ РјРµРЅСЋ РґР»СЏ assets С‚Р°Р±РѕРІ** - РїСЂР°РІС‹Р№ РєР»РёРє РЅР° С‚Р°Р±Р°С… assets РїР°РЅРµР»Рё РїРѕРєР°Р·С‹РІР°РµС‚ РјРµРЅСЋ СЃ РѕРїС†РёРµР№ "Close"
+- **РџРѕРґРґРµСЂР¶РєР° РґРІРѕР№РЅРѕРіРѕ РєР»РёРєР° РЅР° СЂР°Р·РґРµР»РёС‚РµР»СЏС…** - РґРѕР±Р°РІР»РµРЅ РїР°СЂР°РјРµС‚СЂ `onDoubleClick` РІ ResizerManager
+- **РЈРјРЅРѕРµ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ РјРµРЅСЋ** - РєРѕРЅС‚РµРєСЃС‚РЅС‹Рµ РјРµРЅСЋ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РїРѕР·РёС†РёРѕРЅРёСЂСѓСЋС‚СЃСЏ РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕ viewport
 
-#### 🔧 **Технические улучшения:**
-- **EventHandlers** - добавлены методы `updateTabContextMenus()`, `handleTabContextMenu()`, `showAssetTabContextMenu()`, `closeAssetTab()`
-- **ResizerManager** - расширен метод `registerResizer()` с поддержкой обработчика двойного клика
-- **MutationObserver** - расширено отслеживание изменений для всех типов табов (`.tab-right`, `.tab-left`, `.tab`)
-- **Предотвращение дублирования** - система автоматически предотвращает повторную регистрацию обработчиков
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **EventHandlers** - РґРѕР±Р°РІР»РµРЅС‹ РјРµС‚РѕРґС‹ `updateTabContextMenus()`, `handleTabContextMenu()`, `showAssetTabContextMenu()`, `closeAssetTab()`
+- **ResizerManager** - СЂР°СЃС€РёСЂРµРЅ РјРµС‚РѕРґ `registerResizer()` СЃ РїРѕРґРґРµСЂР¶РєРѕР№ РѕР±СЂР°Р±РѕС‚С‡РёРєР° РґРІРѕР№РЅРѕРіРѕ РєР»РёРєР°
+- **MutationObserver** - СЂР°СЃС€РёСЂРµРЅРѕ РѕС‚СЃР»РµР¶РёРІР°РЅРёРµ РёР·РјРµРЅРµРЅРёР№ РґР»СЏ РІСЃРµС… С‚РёРїРѕРІ С‚Р°Р±РѕРІ (`.tab-right`, `.tab-left`, `.tab`)
+- **РџСЂРµРґРѕС‚РІСЂР°С‰РµРЅРёРµ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ** - СЃРёСЃС‚РµРјР° Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РїСЂРµРґРѕС‚РІСЂР°С‰Р°РµС‚ РїРѕРІС‚РѕСЂРЅСѓСЋ СЂРµРіРёСЃС‚СЂР°С†РёСЋ РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ
 
-#### 🐛 **Исправленные ошибки:**
-- **Двойной клик на разделителях** - устранены конфликты между обработчиками мыши и двойного клика
-- **Порядок инициализации** - исправлен порядок вызовов для корректной работы контекстных меню
-- **Защита от закрытия последнего таба** - система предотвращает закрытие последнего активного таба assets панели
+#### рџђ› **РСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РѕС€РёР±РєРё:**
+- **Р”РІРѕР№РЅРѕР№ РєР»РёРє РЅР° СЂР°Р·РґРµР»РёС‚РµР»СЏС…** - СѓСЃС‚СЂР°РЅРµРЅС‹ РєРѕРЅС„Р»РёРєС‚С‹ РјРµР¶РґСѓ РѕР±СЂР°Р±РѕС‚С‡РёРєР°РјРё РјС‹С€Рё Рё РґРІРѕР№РЅРѕРіРѕ РєР»РёРєР°
+- **РџРѕСЂСЏРґРѕРє РёРЅРёС†РёР°Р»РёР·Р°С†РёРё** - РёСЃРїСЂР°РІР»РµРЅ РїРѕСЂСЏРґРѕРє РІС‹Р·РѕРІРѕРІ РґР»СЏ РєРѕСЂСЂРµРєС‚РЅРѕР№ СЂР°Р±РѕС‚С‹ РєРѕРЅС‚РµРєСЃС‚РЅС‹С… РјРµРЅСЋ
+- **Р—Р°С‰РёС‚Р° РѕС‚ Р·Р°РєСЂС‹С‚РёСЏ РїРѕСЃР»РµРґРЅРµРіРѕ С‚Р°Р±Р°** - СЃРёСЃС‚РµРјР° РїСЂРµРґРѕС‚РІСЂР°С‰Р°РµС‚ Р·Р°РєСЂС‹С‚РёРµ РїРѕСЃР»РµРґРЅРµРіРѕ Р°РєС‚РёРІРЅРѕРіРѕ С‚Р°Р±Р° assets РїР°РЅРµР»Рё
 
 ## [3.52.5] - 2025-01-28
 
-### Added - Параметр цвета разделителей
+### Added - РџР°СЂР°РјРµС‚СЂ С†РІРµС‚Р° СЂР°Р·РґРµР»РёС‚РµР»РµР№
 
-#### ✨ **Новые функции:**
-- **resizerColor** - добавлен параметр цвета разделителей панелей в default settings
-- **Интеграция с системой настроек** - цвет разделителей управляется через UI настройки
-- **CSS переменная** - `--ui-resizer-color` для централизованного управления цветом
-- **Обновлена документация** - добавлены примеры и описание нового параметра
+#### вњЁ **РќРѕРІС‹Рµ С„СѓРЅРєС†РёРё:**
+- **resizerColor** - РґРѕР±Р°РІР»РµРЅ РїР°СЂР°РјРµС‚СЂ С†РІРµС‚Р° СЂР°Р·РґРµР»РёС‚РµР»РµР№ РїР°РЅРµР»РµР№ РІ default settings
+- **РРЅС‚РµРіСЂР°С†РёСЏ СЃ СЃРёСЃС‚РµРјРѕР№ РЅР°СЃС‚СЂРѕРµРє** - С†РІРµС‚ СЂР°Р·РґРµР»РёС‚РµР»РµР№ СѓРїСЂР°РІР»СЏРµС‚СЃСЏ С‡РµСЂРµР· UI РЅР°СЃС‚СЂРѕР№РєРё
+- **CSS РїРµСЂРµРјРµРЅРЅР°СЏ** - `--ui-resizer-color` РґР»СЏ С†РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅРѕРіРѕ СѓРїСЂР°РІР»РµРЅРёСЏ С†РІРµС‚РѕРј
+- **РћР±РЅРѕРІР»РµРЅР° РґРѕРєСѓРјРµРЅС‚Р°С†РёСЏ** - РґРѕР±Р°РІР»РµРЅС‹ РїСЂРёРјРµСЂС‹ Рё РѕРїРёСЃР°РЅРёРµ РЅРѕРІРѕРіРѕ РїР°СЂР°РјРµС‚СЂР°
 
-#### 🔧 **Технические улучшения:**
-- **ConfigManager** - загрузка resizerColor из JSON конфигурации
-- **StateManager** - хранение состояния цвета разделителей
-- **LevelEditor** - применение настроек через `_applyColorConfiguration()`
-- **SettingsPanel** - интерфейс для изменения цвета через color picker
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **ConfigManager** - Р·Р°РіСЂСѓР·РєР° resizerColor РёР· JSON РєРѕРЅС„РёРіСѓСЂР°С†РёРё
+- **StateManager** - С…СЂР°РЅРµРЅРёРµ СЃРѕСЃС‚РѕСЏРЅРёСЏ С†РІРµС‚Р° СЂР°Р·РґРµР»РёС‚РµР»РµР№
+- **LevelEditor** - РїСЂРёРјРµРЅРµРЅРёРµ РЅР°СЃС‚СЂРѕРµРє С‡РµСЂРµР· `_applyColorConfiguration()`
+- **SettingsPanel** - РёРЅС‚РµСЂС„РµР№СЃ РґР»СЏ РёР·РјРµРЅРµРЅРёСЏ С†РІРµС‚Р° С‡РµСЂРµР· color picker
 
 ## [3.52.4] - 2025-01-27
 
-### Fixed - Исправления контекстных меню
+### Fixed - РСЃРїСЂР°РІР»РµРЅРёСЏ РєРѕРЅС‚РµРєСЃС‚РЅС‹С… РјРµРЅСЋ
 
-#### 🐛 **Исправленные ошибки:**
-- **"No context menu instance found for BaseContextMenu"** - исправлена логика обнаружения экземпляров контекстных меню
-- **Неправильный класс для поиска** - изменен с `context-menu` на `base-context-menu` для корректного обнаружения
-- **Обработка null экземпляров** - добавлена graceful обработка случаев без экземпляров
+#### рџђ› **РСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РѕС€РёР±РєРё:**
+- **"No context menu instance found for BaseContextMenu"** - РёСЃРїСЂР°РІР»РµРЅР° Р»РѕРіРёРєР° РѕР±РЅР°СЂСѓР¶РµРЅРёСЏ СЌРєР·РµРјРїР»СЏСЂРѕРІ РєРѕРЅС‚РµРєСЃС‚РЅС‹С… РјРµРЅСЋ
+- **РќРµРїСЂР°РІРёР»СЊРЅС‹Р№ РєР»Р°СЃСЃ РґР»СЏ РїРѕРёСЃРєР°** - РёР·РјРµРЅРµРЅ СЃ `context-menu` РЅР° `base-context-menu` РґР»СЏ РєРѕСЂСЂРµРєС‚РЅРѕРіРѕ РѕР±РЅР°СЂСѓР¶РµРЅРёСЏ
+- **РћР±СЂР°Р±РѕС‚РєР° null СЌРєР·РµРјРїР»СЏСЂРѕРІ** - РґРѕР±Р°РІР»РµРЅР° graceful РѕР±СЂР°Р±РѕС‚РєР° СЃР»СѓС‡Р°РµРІ Р±РµР· СЌРєР·РµРјРїР»СЏСЂРѕРІ
 
-#### 🔧 **Технические улучшения:**
-- **Унифицированная логика** - создан вспомогательный метод `checkAndRegisterContextMenu`
-- **Убрано дублирование кода** - единый метод для проверки и регистрации контекстных меню
-- **Оптимизированы логи** - убраны избыточные debug сообщения для лучшей производительности
-- **Улучшена читаемость** - код стал более лаконичным и понятным
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **РЈРЅРёС„РёС†РёСЂРѕРІР°РЅРЅР°СЏ Р»РѕРіРёРєР°** - СЃРѕР·РґР°РЅ РІСЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹Р№ РјРµС‚РѕРґ `checkAndRegisterContextMenu`
+- **РЈР±СЂР°РЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ РєРѕРґР°** - РµРґРёРЅС‹Р№ РјРµС‚РѕРґ РґР»СЏ РїСЂРѕРІРµСЂРєРё Рё СЂРµРіРёСЃС‚СЂР°С†РёРё РєРѕРЅС‚РµРєСЃС‚РЅС‹С… РјРµРЅСЋ
+- **РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅС‹ Р»РѕРіРё** - СѓР±СЂР°РЅС‹ РёР·Р±С‹С‚РѕС‡РЅС‹Рµ debug СЃРѕРѕР±С‰РµРЅРёСЏ РґР»СЏ Р»СѓС‡С€РµР№ РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚Рё
+- **РЈР»СѓС‡С€РµРЅР° С‡РёС‚Р°РµРјРѕСЃС‚СЊ** - РєРѕРґ СЃС‚Р°Р» Р±РѕР»РµРµ Р»Р°РєРѕРЅРёС‡РЅС‹Рј Рё РїРѕРЅСЏС‚РЅС‹Рј
 
-#### 📋 **Поддерживаемые типы контекстных меню:**
-- **`base-context-menu`** - основной класс для базовых контекстных меню
-- **`canvas-context-menu`** - контекстные меню канваса
-- **`asset-context-menu`** - контекстные меню ассетов
-- **`asset-panel-context-menu`** - контекстные меню панели ассетов
-- **`console-context-menu`** - контекстные меню консоли
-- **`layers-context-menu`** - контекстные меню слоев
-- **`outliner-context-menu`** - контекстные меню аутлайнера
+#### рџ“‹ **РџРѕРґРґРµСЂР¶РёРІР°РµРјС‹Рµ С‚РёРїС‹ РєРѕРЅС‚РµРєСЃС‚РЅС‹С… РјРµРЅСЋ:**
+- **`base-context-menu`** - РѕСЃРЅРѕРІРЅРѕР№ РєР»Р°СЃСЃ РґР»СЏ Р±Р°Р·РѕРІС‹С… РєРѕРЅС‚РµРєСЃС‚РЅС‹С… РјРµРЅСЋ
+- **`canvas-context-menu`** - РєРѕРЅС‚РµРєСЃС‚РЅС‹Рµ РјРµРЅСЋ РєР°РЅРІР°СЃР°
+- **`asset-context-menu`** - РєРѕРЅС‚РµРєСЃС‚РЅС‹Рµ РјРµРЅСЋ Р°СЃСЃРµС‚РѕРІ
+- **`asset-panel-context-menu`** - РєРѕРЅС‚РµРєСЃС‚РЅС‹Рµ РјРµРЅСЋ РїР°РЅРµР»Рё Р°СЃСЃРµС‚РѕРІ
+- **`console-context-menu`** - РєРѕРЅС‚РµРєСЃС‚РЅС‹Рµ РјРµРЅСЋ РєРѕРЅСЃРѕР»Рё
+- **`layers-context-menu`** - РєРѕРЅС‚РµРєСЃС‚РЅС‹Рµ РјРµРЅСЋ СЃР»РѕРµРІ
+- **`outliner-context-menu`** - РєРѕРЅС‚РµРєСЃС‚РЅС‹Рµ РјРµРЅСЋ Р°СѓС‚Р»Р°Р№РЅРµСЂР°
 
-#### 🚀 **Преимущества:**
-- **Стабильная работа** - контекстные меню работают без ошибок
-- **Автоматическое обнаружение** - система корректно находит и регистрирует обработчики
-- **Graceful handling** - система работает даже при отсутствии экземпляров
-- **Лучшая производительность** - убраны избыточные операции логирования
+#### рџљЂ **РџСЂРµРёРјСѓС‰РµСЃС‚РІР°:**
+- **РЎС‚Р°Р±РёР»СЊРЅР°СЏ СЂР°Р±РѕС‚Р°** - РєРѕРЅС‚РµРєСЃС‚РЅС‹Рµ РјРµРЅСЋ СЂР°Р±РѕС‚Р°СЋС‚ Р±РµР· РѕС€РёР±РѕРє
+- **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ РѕР±РЅР°СЂСѓР¶РµРЅРёРµ** - СЃРёСЃС‚РµРјР° РєРѕСЂСЂРµРєС‚РЅРѕ РЅР°С…РѕРґРёС‚ Рё СЂРµРіРёСЃС‚СЂРёСЂСѓРµС‚ РѕР±СЂР°Р±РѕС‚С‡РёРєРё
+- **Graceful handling** - СЃРёСЃС‚РµРјР° СЂР°Р±РѕС‚Р°РµС‚ РґР°Р¶Рµ РїСЂРё РѕС‚СЃСѓС‚СЃС‚РІРёРё СЌРєР·РµРјРїР»СЏСЂРѕРІ
+- **Р›СѓС‡С€Р°СЏ РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ** - СѓР±СЂР°РЅС‹ РёР·Р±С‹С‚РѕС‡РЅС‹Рµ РѕРїРµСЂР°С†РёРё Р»РѕРіРёСЂРѕРІР°РЅРёСЏ
 
 ## [3.52.2] - 2025-01-27
 
-### Refactored - Унификация логики resize для mouse
+### Refactored - РЈРЅРёС„РёРєР°С†РёСЏ Р»РѕРіРёРєРё resize РґР»СЏ mouse
 
-#### 🔄 **Устранение дублирования кода:**
-- **Единая система расчета** - mouse использует унифицированные методы расчета размеров панелей
-- **Унифицированные методы** - `calculatePanelSize()`, `calculateHorizontalPanelSize()`, `calculateVerticalPanelSize()`
-- **Консистентное поведение** - идентичная логика для всех типов ввода
-- **Легкость поддержки** - изменения в одном месте вместо дублирования
+#### рџ”„ **РЈСЃС‚СЂР°РЅРµРЅРёРµ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ РєРѕРґР°:**
+- **Р•РґРёРЅР°СЏ СЃРёСЃС‚РµРјР° СЂР°СЃС‡РµС‚Р°** - mouse РёСЃРїРѕР»СЊР·СѓРµС‚ СѓРЅРёС„РёС†РёСЂРѕРІР°РЅРЅС‹Рµ РјРµС‚РѕРґС‹ СЂР°СЃС‡РµС‚Р° СЂР°Р·РјРµСЂРѕРІ РїР°РЅРµР»РµР№
+- **РЈРЅРёС„РёС†РёСЂРѕРІР°РЅРЅС‹Рµ РјРµС‚РѕРґС‹** - `calculatePanelSize()`, `calculateHorizontalPanelSize()`, `calculateVerticalPanelSize()`
+- **РљРѕРЅСЃРёСЃС‚РµРЅС‚РЅРѕРµ РїРѕРІРµРґРµРЅРёРµ** - РёРґРµРЅС‚РёС‡РЅР°СЏ Р»РѕРіРёРєР° РґР»СЏ РІСЃРµС… С‚РёРїРѕРІ РІРІРѕРґР°
+- **Р›РµРіРєРѕСЃС‚СЊ РїРѕРґРґРµСЂР¶РєРё** - РёР·РјРµРЅРµРЅРёСЏ РІ РѕРґРЅРѕРј РјРµСЃС‚Рµ РІРјРµСЃС‚Рѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ
 
-#### 🎯 **Технические улучшения:**
-- **PanelPositionManager** - mouse handlers используют унифицированные методы
-- **AssetPanel** - folders resizer использует унифицированную логику
-- **API для внешнего использования** - `getUnifiedResizeMethods()` для других частей кода
+#### рџЋЇ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **PanelPositionManager** - mouse handlers РёСЃРїРѕР»СЊР·СѓСЋС‚ СѓРЅРёС„РёС†РёСЂРѕРІР°РЅРЅС‹Рµ РјРµС‚РѕРґС‹
+- **AssetPanel** - folders resizer РёСЃРїРѕР»СЊР·СѓРµС‚ СѓРЅРёС„РёС†РёСЂРѕРІР°РЅРЅСѓСЋ Р»РѕРіРёРєСѓ
+- **API РґР»СЏ РІРЅРµС€РЅРµРіРѕ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ** - `getUnifiedResizeMethods()` РґР»СЏ РґСЂСѓРіРёС… С‡Р°СЃС‚РµР№ РєРѕРґР°
 
-#### 📋 **Поддерживаемые разделители:**
-- **Горизонтальные:** left panel, right panel, folders resizer
-- **Вертикальные:** console resizer, assets resizer
-- **Автоматическое определение** - логика выбирается на основе типа разделителя
+#### рџ“‹ **РџРѕРґРґРµСЂР¶РёРІР°РµРјС‹Рµ СЂР°Р·РґРµР»РёС‚РµР»Рё:**
+- **Р“РѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅС‹Рµ:** left panel, right panel, folders resizer
+- **Р’РµСЂС‚РёРєР°Р»СЊРЅС‹Рµ:** console resizer, assets resizer
+- **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ РѕРїСЂРµРґРµР»РµРЅРёРµ** - Р»РѕРіРёРєР° РІС‹Р±РёСЂР°РµС‚СЃСЏ РЅР° РѕСЃРЅРѕРІРµ С‚РёРїР° СЂР°Р·РґРµР»РёС‚РµР»СЏ
 
-#### 🚀 **Преимущества:**
-- **Меньше багов** - нет расхождений между разными типами ввода
-- **Проще поддержка** - единая точка изменений
-- **Переиспользование** - методы доступны для других компонентов
-- **Консистентность** - одинаковое поведение для всех типов ввода
+#### рџљЂ **РџСЂРµРёРјСѓС‰РµСЃС‚РІР°:**
+- **РњРµРЅСЊС€Рµ Р±Р°РіРѕРІ** - РЅРµС‚ СЂР°СЃС…РѕР¶РґРµРЅРёР№ РјРµР¶РґСѓ СЂР°Р·РЅС‹РјРё С‚РёРїР°РјРё РІРІРѕРґР°
+- **РџСЂРѕС‰Рµ РїРѕРґРґРµСЂР¶РєР°** - РµРґРёРЅР°СЏ С‚РѕС‡РєР° РёР·РјРµРЅРµРЅРёР№
+- **РџРµСЂРµРёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ** - РјРµС‚РѕРґС‹ РґРѕСЃС‚СѓРїРЅС‹ РґР»СЏ РґСЂСѓРіРёС… РєРѕРјРїРѕРЅРµРЅС‚РѕРІ
+- **РљРѕРЅСЃРёСЃС‚РµРЅС‚РЅРѕСЃС‚СЊ** - РѕРґРёРЅР°РєРѕРІРѕРµ РїРѕРІРµРґРµРЅРёРµ РґР»СЏ РІСЃРµС… С‚РёРїРѕРІ РІРІРѕРґР°
 
 ## [3.52.1] - 2025-01-27
 
-### Added - Настройка цвета разделителей панелей
+### Added - РќР°СЃС‚СЂРѕР№РєР° С†РІРµС‚Р° СЂР°Р·РґРµР»РёС‚РµР»РµР№ РїР°РЅРµР»РµР№
 
-#### 🎨 **Новая настройка цвета разделителей:**
-- **CSS переменная** `--ui-resizer-color` - централизованное управление цветом всех разделителей
-- **Настройка в UI** - поле "Panel Resizers" в Settings → Colors
-- **Применение при Apply** - цвет применяется только при нажатии "Apply Changes"
-- **Поддержка всех разделителей** - горизонтальных и вертикальных разделителей панелей
+#### рџЋЁ **РќРѕРІР°СЏ РЅР°СЃС‚СЂРѕР№РєР° С†РІРµС‚Р° СЂР°Р·РґРµР»РёС‚РµР»РµР№:**
+- **CSS РїРµСЂРµРјРµРЅРЅР°СЏ** `--ui-resizer-color` - С†РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅРѕРµ СѓРїСЂР°РІР»РµРЅРёРµ С†РІРµС‚РѕРј РІСЃРµС… СЂР°Р·РґРµР»РёС‚РµР»РµР№
+- **РќР°СЃС‚СЂРѕР№РєР° РІ UI** - РїРѕР»Рµ "Panel Resizers" РІ Settings в†’ Colors
+- **РџСЂРёРјРµРЅРµРЅРёРµ РїСЂРё Apply** - С†РІРµС‚ РїСЂРёРјРµРЅСЏРµС‚СЃСЏ С‚РѕР»СЊРєРѕ РїСЂРё РЅР°Р¶Р°С‚РёРё "Apply Changes"
+- **РџРѕРґРґРµСЂР¶РєР° РІСЃРµС… СЂР°Р·РґРµР»РёС‚РµР»РµР№** - РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅС‹С… Рё РІРµСЂС‚РёРєР°Р»СЊРЅС‹С… СЂР°Р·РґРµР»РёС‚РµР»РµР№ РїР°РЅРµР»РµР№
 
-#### 🔧 **Технические улучшения:**
-- **Маппинг в SettingsSyncManager** - `ui.resizerColor` правильно маппится на StateManager
-- **Обработка в applySpecialUISettings()** - цвет применяется через стандартный механизм настроек
-- **Сохранение в пользовательских настройках** - изменения сохраняются в localStorage
-- **Унифицированные стили** - все разделители используют одну CSS переменную
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **РњР°РїРїРёРЅРі РІ SettingsSyncManager** - `ui.resizerColor` РїСЂР°РІРёР»СЊРЅРѕ РјР°РїРїРёС‚СЃСЏ РЅР° StateManager
+- **РћР±СЂР°Р±РѕС‚РєР° РІ applySpecialUISettings()** - С†РІРµС‚ РїСЂРёРјРµРЅСЏРµС‚СЃСЏ С‡РµСЂРµР· СЃС‚Р°РЅРґР°СЂС‚РЅС‹Р№ РјРµС…Р°РЅРёР·Рј РЅР°СЃС‚СЂРѕРµРє
+- **РЎРѕС…СЂР°РЅРµРЅРёРµ РІ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёС… РЅР°СЃС‚СЂРѕР№РєР°С…** - РёР·РјРµРЅРµРЅРёСЏ СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ РІ localStorage
+- **РЈРЅРёС„РёС†РёСЂРѕРІР°РЅРЅС‹Рµ СЃС‚РёР»Рё** - РІСЃРµ СЂР°Р·РґРµР»РёС‚РµР»Рё РёСЃРїРѕР»СЊР·СѓСЋС‚ РѕРґРЅСѓ CSS РїРµСЂРµРјРµРЅРЅСѓСЋ
 
-#### 📋 **Файлы изменены:**
-- **`styles/main.css`** - добавлена CSS переменная `--ui-resizer-color`
-- **`src/ui/SettingsPanel.js`** - добавлено поле настройки цвета разделителей
-- **`src/utils/SettingsSyncManager.js`** - добавлен маппинг и обработка цвета разделителей
-- **Стили разделителей** - обновлены для использования CSS переменной
+#### рџ“‹ **Р¤Р°Р№Р»С‹ РёР·РјРµРЅРµРЅС‹:**
+- **`styles/main.css`** - РґРѕР±Р°РІР»РµРЅР° CSS РїРµСЂРµРјРµРЅРЅР°СЏ `--ui-resizer-color`
+- **`src/ui/SettingsPanel.js`** - РґРѕР±Р°РІР»РµРЅРѕ РїРѕР»Рµ РЅР°СЃС‚СЂРѕР№РєРё С†РІРµС‚Р° СЂР°Р·РґРµР»РёС‚РµР»РµР№
+- **`src/utils/SettingsSyncManager.js`** - РґРѕР±Р°РІР»РµРЅ РјР°РїРїРёРЅРі Рё РѕР±СЂР°Р±РѕС‚РєР° С†РІРµС‚Р° СЂР°Р·РґРµР»РёС‚РµР»РµР№
+- **РЎС‚РёР»Рё СЂР°Р·РґРµР»РёС‚РµР»РµР№** - РѕР±РЅРѕРІР»РµРЅС‹ РґР»СЏ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ CSS РїРµСЂРµРјРµРЅРЅРѕР№
 
-### Fixed - Исправления системы настроек
+### Fixed - РСЃРїСЂР°РІР»РµРЅРёСЏ СЃРёСЃС‚РµРјС‹ РЅР°СЃС‚СЂРѕРµРє
 
-#### 🐛 **Исправленные проблемы:**
-- **Отсутствующий маппинг** - `ui.resizerColor` теперь правильно маппится в SettingsSyncManager
-- **Применение цвета** - цвет разделителей теперь применяется при нажатии "Apply Changes"
-- **Сохранение настроек** - изменения цвета разделителей сохраняются в пользовательских настройках
-- **CSS переменные** - все разделители используют единую переменную для цвета
+#### рџђ› **РСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїСЂРѕР±Р»РµРјС‹:**
+- **РћС‚СЃСѓС‚СЃС‚РІСѓСЋС‰РёР№ РјР°РїРїРёРЅРі** - `ui.resizerColor` С‚РµРїРµСЂСЊ РїСЂР°РІРёР»СЊРЅРѕ РјР°РїРїРёС‚СЃСЏ РІ SettingsSyncManager
+- **РџСЂРёРјРµРЅРµРЅРёРµ С†РІРµС‚Р°** - С†РІРµС‚ СЂР°Р·РґРµР»РёС‚РµР»РµР№ С‚РµРїРµСЂСЊ РїСЂРёРјРµРЅСЏРµС‚СЃСЏ РїСЂРё РЅР°Р¶Р°С‚РёРё "Apply Changes"
+- **РЎРѕС…СЂР°РЅРµРЅРёРµ РЅР°СЃС‚СЂРѕРµРє** - РёР·РјРµРЅРµРЅРёСЏ С†РІРµС‚Р° СЂР°Р·РґРµР»РёС‚РµР»РµР№ СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ РІ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёС… РЅР°СЃС‚СЂРѕР№РєР°С…
+- **CSS РїРµСЂРµРјРµРЅРЅС‹Рµ** - РІСЃРµ СЂР°Р·РґРµР»РёС‚РµР»Рё РёСЃРїРѕР»СЊР·СѓСЋС‚ РµРґРёРЅСѓСЋ РїРµСЂРµРјРµРЅРЅСѓСЋ РґР»СЏ С†РІРµС‚Р°
 
 ## [3.52.0] - 2025-01-27
 
-### Added - Новая архитектура с разделением слоёв
+### Added - РќРѕРІР°СЏ Р°СЂС…РёС‚РµРєС‚СѓСЂР° СЃ СЂР°Р·РґРµР»РµРЅРёРµРј СЃР»РѕС‘РІ
 
-#### 🎨 **Переработанная структура интерфейса:**
-- **Разделение слоёв** - канва на нижнем слое, интерфейс на верхнем
-- **Контейнер канвы** - отдельный абсолютно позиционированный контейнер для канвы
-- **Прозрачность событий** - события проходят через flex контейнеры к канве
-- **Оптимизация CSS** - устранено дублирование стилей панелей и разделителей
+#### рџЋЁ **РџРµСЂРµСЂР°Р±РѕС‚Р°РЅРЅР°СЏ СЃС‚СЂСѓРєС‚СѓСЂР° РёРЅС‚РµСЂС„РµР№СЃР°:**
+- **Р Р°Р·РґРµР»РµРЅРёРµ СЃР»РѕС‘РІ** - РєР°РЅРІР° РЅР° РЅРёР¶РЅРµРј СЃР»РѕРµ, РёРЅС‚РµСЂС„РµР№СЃ РЅР° РІРµСЂС…РЅРµРј
+- **РљРѕРЅС‚РµР№РЅРµСЂ РєР°РЅРІС‹** - РѕС‚РґРµР»СЊРЅС‹Р№ Р°Р±СЃРѕР»СЋС‚РЅРѕ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРЅС‹Р№ РєРѕРЅС‚РµР№РЅРµСЂ РґР»СЏ РєР°РЅРІС‹
+- **РџСЂРѕР·СЂР°С‡РЅРѕСЃС‚СЊ СЃРѕР±С‹С‚РёР№** - СЃРѕР±С‹С‚РёСЏ РїСЂРѕС…РѕРґСЏС‚ С‡РµСЂРµР· flex РєРѕРЅС‚РµР№РЅРµСЂС‹ Рє РєР°РЅРІРµ
+- **РћРїС‚РёРјРёР·Р°С†РёСЏ CSS** - СѓСЃС‚СЂР°РЅРµРЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ СЃС‚РёР»РµР№ РїР°РЅРµР»РµР№ Рё СЂР°Р·РґРµР»РёС‚РµР»РµР№
 
-#### 🔧 **Технические улучшения:**
-- **Canvas container** - `#canvas-container` с `z-index: 0` на нижнем слое
-- **Flex контейнеры** - `pointer-events: none` для прозрачности событий
-- **Панели** - `pointer-events: auto` для интерактивности
-- **Общие классы** - `.tab-panel` и `.panel-resizer` для устранения дублирования
-- **AutoEventHandlerManager** - поддержка canvas элементов
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **Canvas container** - `#canvas-container` СЃ `z-index: 0` РЅР° РЅРёР¶РЅРµРј СЃР»РѕРµ
+- **Flex РєРѕРЅС‚РµР№РЅРµСЂС‹** - `pointer-events: none` РґР»СЏ РїСЂРѕР·СЂР°С‡РЅРѕСЃС‚Рё СЃРѕР±С‹С‚РёР№
+- **РџР°РЅРµР»Рё** - `pointer-events: auto` РґР»СЏ РёРЅС‚РµСЂР°РєС‚РёРІРЅРѕСЃС‚Рё
+- **РћР±С‰РёРµ РєР»Р°СЃСЃС‹** - `.tab-panel` Рё `.panel-resizer` РґР»СЏ СѓСЃС‚СЂР°РЅРµРЅРёСЏ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ
+- **AutoEventHandlerManager** - РїРѕРґРґРµСЂР¶РєР° canvas СЌР»РµРјРµРЅС‚РѕРІ
 
-#### 📋 **Файлы изменены:**
-- **`index.html`** - новая структура с canvas контейнером
-- **`styles/main.css`** - прозрачность событий, позиционирование канвы
-- **`styles/panels.css`** - оптимизированные стили панелей
-- **`src/ui/PanelPositionManager.js`** - обновленные классы
-- **`src/event-system/AutoEventHandlerManager.js`** - поддержка канвы
+#### рџ“‹ **Р¤Р°Р№Р»С‹ РёР·РјРµРЅРµРЅС‹:**
+- **`index.html`** - РЅРѕРІР°СЏ СЃС‚СЂСѓРєС‚СѓСЂР° СЃ canvas РєРѕРЅС‚РµР№РЅРµСЂРѕРј
+- **`styles/main.css`** - РїСЂРѕР·СЂР°С‡РЅРѕСЃС‚СЊ СЃРѕР±С‹С‚РёР№, РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ РєР°РЅРІС‹
+- **`styles/panels.css`** - РѕРїС‚РёРјРёР·РёСЂРѕРІР°РЅРЅС‹Рµ СЃС‚РёР»Рё РїР°РЅРµР»РµР№
+- **`src/ui/PanelPositionManager.js`** - РѕР±РЅРѕРІР»РµРЅРЅС‹Рµ РєР»Р°СЃСЃС‹
+- **`src/event-system/AutoEventHandlerManager.js`** - РїРѕРґРґРµСЂР¶РєР° РєР°РЅРІС‹
 
-### Fixed - Исправления интерфейса
+### Fixed - РСЃРїСЂР°РІР»РµРЅРёСЏ РёРЅС‚РµСЂС„РµР№СЃР°
 
-#### 🐛 **Исправленные проблемы:**
-- **Header перекрытие** - канва больше не перекрывает верхнее меню
-- **События мыши** - канва корректно реагирует на клики в центре экрана
-- **Позиционирование** - canvas контейнер начинается ниже header (top: 40px)
-- **Z-index слои** - правильная иерархия слоёв (header: 20, панели: 10, канва: 0)
+#### рџђ› **РСЃРїСЂР°РІР»РµРЅРЅС‹Рµ РїСЂРѕР±Р»РµРјС‹:**
+- **Header РїРµСЂРµРєСЂС‹С‚РёРµ** - РєР°РЅРІР° Р±РѕР»СЊС€Рµ РЅРµ РїРµСЂРµРєСЂС‹РІР°РµС‚ РІРµСЂС…РЅРµРµ РјРµРЅСЋ
+- **РЎРѕР±С‹С‚РёСЏ РјС‹С€Рё** - РєР°РЅРІР° РєРѕСЂСЂРµРєС‚РЅРѕ СЂРµР°РіРёСЂСѓРµС‚ РЅР° РєР»РёРєРё РІ С†РµРЅС‚СЂРµ СЌРєСЂР°РЅР°
+- **РџРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ** - canvas РєРѕРЅС‚РµР№РЅРµСЂ РЅР°С‡РёРЅР°РµС‚СЃСЏ РЅРёР¶Рµ header (top: 40px)
+- **Z-index СЃР»РѕРё** - РїСЂР°РІРёР»СЊРЅР°СЏ РёРµСЂР°СЂС…РёСЏ СЃР»РѕС‘РІ (header: 20, РїР°РЅРµР»Рё: 10, РєР°РЅРІР°: 0)
 
 ## [3.51.12] - 2025-01-27
 
-### Added - Унифицированная система управления панелями
+### Added - РЈРЅРёС„РёС†РёСЂРѕРІР°РЅРЅР°СЏ СЃРёСЃС‚РµРјР° СѓРїСЂР°РІР»РµРЅРёСЏ РїР°РЅРµР»СЏРјРё
 
-#### 🎯 **Универсальная система сворачивания/разворачивания:**
-- **Централизованное управление** - все операции с панелями в PanelPositionManager
-- **Универсальный метод** `togglePanelCollapse()` - единая точка для всех типов панелей
-- **Привязка к методу сворачивания** - позиционирование привязано к логике сворачивания, а не к событиям
-- **Поддержка всех разделителей** - левая/правая панели, панель ассетов, панель папок
+#### рџЋЇ **РЈРЅРёРІРµСЂСЃР°Р»СЊРЅР°СЏ СЃРёСЃС‚РµРјР° СЃРІРѕСЂР°С‡РёРІР°РЅРёСЏ/СЂР°Р·РІРѕСЂР°С‡РёРІР°РЅРёСЏ:**
+- **Р¦РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅРѕРµ СѓРїСЂР°РІР»РµРЅРёРµ** - РІСЃРµ РѕРїРµСЂР°С†РёРё СЃ РїР°РЅРµР»СЏРјРё РІ PanelPositionManager
+- **РЈРЅРёРІРµСЂСЃР°Р»СЊРЅС‹Р№ РјРµС‚РѕРґ** `togglePanelCollapse()` - РµРґРёРЅР°СЏ С‚РѕС‡РєР° РґР»СЏ РІСЃРµС… С‚РёРїРѕРІ РїР°РЅРµР»РµР№
+- **РџСЂРёРІСЏР·РєР° Рє РјРµС‚РѕРґСѓ СЃРІРѕСЂР°С‡РёРІР°РЅРёСЏ** - РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ РїСЂРёРІСЏР·Р°РЅРѕ Рє Р»РѕРіРёРєРµ СЃРІРѕСЂР°С‡РёРІР°РЅРёСЏ, Р° РЅРµ Рє СЃРѕР±С‹С‚РёСЏРј
+- **РџРѕРґРґРµСЂР¶РєР° РІСЃРµС… СЂР°Р·РґРµР»РёС‚РµР»РµР№** - Р»РµРІР°СЏ/РїСЂР°РІР°СЏ РїР°РЅРµР»Рё, РїР°РЅРµР»СЊ Р°СЃСЃРµС‚РѕРІ, РїР°РЅРµР»СЊ РїР°РїРѕРє
 
-#### 🔧 **Технические улучшения:**
-- **Универсальный метод** `updateResizerPosition()` - централизованное позиционирование разделителей
-- **Специализированные методы** - `toggleTabPanelCollapse()`, `toggleAssetsPanelCollapse()`, `toggleFoldersPanelCollapse()`
-- **Упрощенная архитектура** - удалены промежуточные слои, прямые вызовы методов
-#### 📋 **Файлы изменены:**
-- **`src/ui/PanelPositionManager.js`** - универсальная система управления панелями
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **РЈРЅРёРІРµСЂСЃР°Р»СЊРЅС‹Р№ РјРµС‚РѕРґ** `updateResizerPosition()` - С†РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅРѕРµ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ СЂР°Р·РґРµР»РёС‚РµР»РµР№
+- **РЎРїРµС†РёР°Р»РёР·РёСЂРѕРІР°РЅРЅС‹Рµ РјРµС‚РѕРґС‹** - `toggleTabPanelCollapse()`, `toggleAssetsPanelCollapse()`, `toggleFoldersPanelCollapse()`
+- **РЈРїСЂРѕС‰РµРЅРЅР°СЏ Р°СЂС…РёС‚РµРєС‚СѓСЂР°** - СѓРґР°Р»РµРЅС‹ РїСЂРѕРјРµР¶СѓС‚РѕС‡РЅС‹Рµ СЃР»РѕРё, РїСЂСЏРјС‹Рµ РІС‹Р·РѕРІС‹ РјРµС‚РѕРґРѕРІ
+#### рџ“‹ **Р¤Р°Р№Р»С‹ РёР·РјРµРЅРµРЅС‹:**
+- **`src/ui/PanelPositionManager.js`** - СѓРЅРёРІРµСЂСЃР°Р»СЊРЅР°СЏ СЃРёСЃС‚РµРјР° СѓРїСЂР°РІР»РµРЅРёСЏ РїР°РЅРµР»СЏРјРё
 
-### Fixed - Исправления и очистка кода
+### Fixed - РСЃРїСЂР°РІР»РµРЅРёСЏ Рё РѕС‡РёСЃС‚РєР° РєРѕРґР°
 
-#### 🐛 **Исправления:**
-- **Ошибка `Cannot read properties of undefined`** - исправлена ссылка на panelPositionManager
-- **Удален лишний код** - console.log и неиспользуемые методы
-- **Очистка дублирования** - устранено дублирование кода между компонентами
+#### рџђ› **РСЃРїСЂР°РІР»РµРЅРёСЏ:**
+- **РћС€РёР±РєР° `Cannot read properties of undefined`** - РёСЃРїСЂР°РІР»РµРЅР° СЃСЃС‹Р»РєР° РЅР° panelPositionManager
+- **РЈРґР°Р»РµРЅ Р»РёС€РЅРёР№ РєРѕРґ** - console.log Рё РЅРµРёСЃРїРѕР»СЊР·СѓРµРјС‹Рµ РјРµС‚РѕРґС‹
+- **РћС‡РёСЃС‚РєР° РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ** - СѓСЃС‚СЂР°РЅРµРЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ РєРѕРґР° РјРµР¶РґСѓ РєРѕРјРїРѕРЅРµРЅС‚Р°РјРё
 
-#### 📋 **Файлы изменены:**
-- **`src/ui/PanelPositionManager.js`** - удален console.log
+#### рџ“‹ **Р¤Р°Р№Р»С‹ РёР·РјРµРЅРµРЅС‹:**
+- **`src/ui/PanelPositionManager.js`** - СѓРґР°Р»РµРЅ console.log
 
 ## [3.51.11] - 2025-01-27
 
-### Added - Поддержка панелей интерфейса в системе обработчиков событий
+### Added - РџРѕРґРґРµСЂР¶РєР° РїР°РЅРµР»РµР№ РёРЅС‚РµСЂС„РµР№СЃР° РІ СЃРёСЃС‚РµРјРµ РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ СЃРѕР±С‹С‚РёР№
 
-#### 🎯 **Новая функциональность панелей:**
-- **Автоматическое обнаружение панелей** - система теперь распознает панели интерфейса
-- **Регистрация элементов панелей** - автоматическая регистрация обработчиков для дочерних элементов
-- **Поддержка типов панелей** - добавлены типы `asset-panel` и `layers-panel`
-- **Обработчики элементов интерфейса** - специализированные обработчики для кнопок, полей ввода и элементов списка
+#### рџЋЇ **РќРѕРІР°СЏ С„СѓРЅРєС†РёРѕРЅР°Р»СЊРЅРѕСЃС‚СЊ РїР°РЅРµР»РµР№:**
+- **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ РѕР±РЅР°СЂСѓР¶РµРЅРёРµ РїР°РЅРµР»РµР№** - СЃРёСЃС‚РµРјР° С‚РµРїРµСЂСЊ СЂР°СЃРїРѕР·РЅР°РµС‚ РїР°РЅРµР»Рё РёРЅС‚РµСЂС„РµР№СЃР°
+- **Р РµРіРёСЃС‚СЂР°С†РёСЏ СЌР»РµРјРµРЅС‚РѕРІ РїР°РЅРµР»РµР№** - Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ СЂРµРіРёСЃС‚СЂР°С†РёСЏ РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ РґР»СЏ РґРѕС‡РµСЂРЅРёС… СЌР»РµРјРµРЅС‚РѕРІ
+- **РџРѕРґРґРµСЂР¶РєР° С‚РёРїРѕРІ РїР°РЅРµР»РµР№** - РґРѕР±Р°РІР»РµРЅС‹ С‚РёРїС‹ `asset-panel` Рё `layers-panel`
+- **РћР±СЂР°Р±РѕС‚С‡РёРєРё СЌР»РµРјРµРЅС‚РѕРІ РёРЅС‚РµСЂС„РµР№СЃР°** - СЃРїРµС†РёР°Р»РёР·РёСЂРѕРІР°РЅРЅС‹Рµ РѕР±СЂР°Р±РѕС‚С‡РёРєРё РґР»СЏ РєРЅРѕРїРѕРє, РїРѕР»РµР№ РІРІРѕРґР° Рё СЌР»РµРјРµРЅС‚РѕРІ СЃРїРёСЃРєР°
 
-#### 🔧 **Элементы панелей с поддержкой:**
-- **Элементы слоев** - `.layer-item`, `.layer-visibility-btn`, `.layer-lock-btn`, `.layer-color`
-- **Поля ввода** - `#layers-search`, `[id^="layer-name-"]`, `.layer-parallax-input`
-- **Кнопки действий** - `#add-layer-btn` (Shift+Click для добавления 3 слоев)
-- **Автоматическая регистрация** - все элементы регистрируются без дополнительного кода
+#### рџ”§ **Р­Р»РµРјРµРЅС‚С‹ РїР°РЅРµР»РµР№ СЃ РїРѕРґРґРµСЂР¶РєРѕР№:**
+- **Р­Р»РµРјРµРЅС‚С‹ СЃР»РѕРµРІ** - `.layer-item`, `.layer-visibility-btn`, `.layer-lock-btn`, `.layer-color`
+- **РџРѕР»СЏ РІРІРѕРґР°** - `#layers-search`, `[id^="layer-name-"]`, `.layer-parallax-input`
+- **РљРЅРѕРїРєРё РґРµР№СЃС‚РІРёР№** - `#add-layer-btn` (Shift+Click РґР»СЏ РґРѕР±Р°РІР»РµРЅРёСЏ 3 СЃР»РѕРµРІ)
+- **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ СЂРµРіРёСЃС‚СЂР°С†РёСЏ** - РІСЃРµ СЌР»РµРјРµРЅС‚С‹ СЂРµРіРёСЃС‚СЂРёСЂСѓСЋС‚СЃСЏ Р±РµР· РґРѕРїРѕР»РЅРёС‚РµР»СЊРЅРѕРіРѕ РєРѕРґР°
 
-#### 📋 **Файлы изменены:**
-- **`src/event-system/AutoEventHandlerManager.js`** - добавлена поддержка панелей и элементов интерфейса
-- **`src/event-system/EventHandlerManager.js`** - добавлен тип элемента `custom` и `panel`
-- **`docs/EVENT_HANDLER_SYSTEM.md`** - обновлена документация с информацией о панелях
+#### рџ“‹ **Р¤Р°Р№Р»С‹ РёР·РјРµРЅРµРЅС‹:**
+- **`src/event-system/AutoEventHandlerManager.js`** - РґРѕР±Р°РІР»РµРЅР° РїРѕРґРґРµСЂР¶РєР° РїР°РЅРµР»РµР№ Рё СЌР»РµРјРµРЅС‚РѕРІ РёРЅС‚РµСЂС„РµР№СЃР°
+- **`src/event-system/EventHandlerManager.js`** - РґРѕР±Р°РІР»РµРЅ С‚РёРї СЌР»РµРјРµРЅС‚Р° `custom` Рё `panel`
+- **`docs/EVENT_HANDLER_SYSTEM.md`** - РѕР±РЅРѕРІР»РµРЅР° РґРѕРєСѓРјРµРЅС‚Р°С†РёСЏ СЃ РёРЅС„РѕСЂРјР°С†РёРµР№ Рѕ РїР°РЅРµР»СЏС…
 
-### Fixed - Исправления ошибок в системе обработчиков событий
+### Fixed - РСЃРїСЂР°РІР»РµРЅРёСЏ РѕС€РёР±РѕРє РІ СЃРёСЃС‚РµРјРµ РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ СЃРѕР±С‹С‚РёР№
 
-#### 🐛 **Критические исправления:**
-- **Ошибка `className.includes is not a function`** - безопасная проверка типа className
-- **Оптимизация производительности** - строгие проверки элементов для предотвращения лишней обработки
-- **Предотвращение дублирования** - проверки для избежания повторной обработки элементов
+#### рџђ› **РљСЂРёС‚РёС‡РµСЃРєРёРµ РёСЃРїСЂР°РІР»РµРЅРёСЏ:**
+- **РћС€РёР±РєР° `className.includes is not a function`** - Р±РµР·РѕРїР°СЃРЅР°СЏ РїСЂРѕРІРµСЂРєР° С‚РёРїР° className
+- **РћРїС‚РёРјРёР·Р°С†РёСЏ РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚Рё** - СЃС‚СЂРѕРіРёРµ РїСЂРѕРІРµСЂРєРё СЌР»РµРјРµРЅС‚РѕРІ РґР»СЏ РїСЂРµРґРѕС‚РІСЂР°С‰РµРЅРёСЏ Р»РёС€РЅРµР№ РѕР±СЂР°Р±РѕС‚РєРё
+- **РџСЂРµРґРѕС‚РІСЂР°С‰РµРЅРёРµ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ** - РїСЂРѕРІРµСЂРєРё РґР»СЏ РёР·Р±РµР¶Р°РЅРёСЏ РїРѕРІС‚РѕСЂРЅРѕР№ РѕР±СЂР°Р±РѕС‚РєРё СЌР»РµРјРµРЅС‚РѕРІ
 
-#### 📋 **Файлы изменены:**
-- **`src/managers/AutoEventHandlerManager.js`** - исправления ошибок и оптимизации
+#### рџ“‹ **Р¤Р°Р№Р»С‹ РёР·РјРµРЅРµРЅС‹:**
+- **`src/managers/AutoEventHandlerManager.js`** - РёСЃРїСЂР°РІР»РµРЅРёСЏ РѕС€РёР±РѕРє Рё РѕРїС‚РёРјРёР·Р°С†РёРё
 
 ## [3.51.9] - 2025-01-27
 
-### Fixed - Инвертированная система z-индексов слоёв
+### Fixed - РРЅРІРµСЂС‚РёСЂРѕРІР°РЅРЅР°СЏ СЃРёСЃС‚РµРјР° z-РёРЅРґРµРєСЃРѕРІ СЃР»РѕС‘РІ
 
-#### 🎯 **Изменение логики z-индексов:**
-- **Инвертированный порядок** - верхний слой теперь имеет максимальный z-индекс
-- **Логичная иерархия** - нижний слой имеет минимальный z-индекс
-- **Совместимость** - все существующие объекты автоматически обновляются
+#### рџЋЇ **РР·РјРµРЅРµРЅРёРµ Р»РѕРіРёРєРё z-РёРЅРґРµРєСЃРѕРІ:**
+- **РРЅРІРµСЂС‚РёСЂРѕРІР°РЅРЅС‹Р№ РїРѕСЂСЏРґРѕРє** - РІРµСЂС…РЅРёР№ СЃР»РѕР№ С‚РµРїРµСЂСЊ РёРјРµРµС‚ РјР°РєСЃРёРјР°Р»СЊРЅС‹Р№ z-РёРЅРґРµРєСЃ
+- **Р›РѕРіРёС‡РЅР°СЏ РёРµСЂР°СЂС…РёСЏ** - РЅРёР¶РЅРёР№ СЃР»РѕР№ РёРјРµРµС‚ РјРёРЅРёРјР°Р»СЊРЅС‹Р№ z-РёРЅРґРµРєСЃ
+- **РЎРѕРІРјРµСЃС‚РёРјРѕСЃС‚СЊ** - РІСЃРµ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёРµ РѕР±СЉРµРєС‚С‹ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РѕР±РЅРѕРІР»СЏСЋС‚СЃСЏ
 
-#### 🔧 **Технические изменения:**
-- **`Level.updateLayerIndices()`** - изменена логика расчёта индексов слоёв
-- **`Layer.setOrder()`** - убрана перезапись индекса, управление через Level
-- **Обновлены комментарии** - исправлены устаревшие упоминания 0-based индексов
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ РёР·РјРµРЅРµРЅРёСЏ:**
+- **`Level.updateLayerIndices()`** - РёР·РјРµРЅРµРЅР° Р»РѕРіРёРєР° СЂР°СЃС‡С‘С‚Р° РёРЅРґРµРєСЃРѕРІ СЃР»РѕС‘РІ
+- **`Layer.setOrder()`** - СѓР±СЂР°РЅР° РїРµСЂРµР·Р°РїРёСЃСЊ РёРЅРґРµРєСЃР°, СѓРїСЂР°РІР»РµРЅРёРµ С‡РµСЂРµР· Level
+- **РћР±РЅРѕРІР»РµРЅС‹ РєРѕРјРјРµРЅС‚Р°СЂРёРё** - РёСЃРїСЂР°РІР»РµРЅС‹ СѓСЃС‚Р°СЂРµРІС€РёРµ СѓРїРѕРјРёРЅР°РЅРёСЏ 0-based РёРЅРґРµРєСЃРѕРІ
 
-#### 📋 **Файлы изменены:**
-- **`src/models/Level.js`** - инвертированная логика в updateLayerIndices()
-- **`src/models/Layer.js`** - убрана перезапись индекса в setOrder()
+#### рџ“‹ **Р¤Р°Р№Р»С‹ РёР·РјРµРЅРµРЅС‹:**
+- **`src/models/Level.js`** - РёРЅРІРµСЂС‚РёСЂРѕРІР°РЅРЅР°СЏ Р»РѕРіРёРєР° РІ updateLayerIndices()
+- **`src/models/Layer.js`** - СѓР±СЂР°РЅР° РїРµСЂРµР·Р°РїРёСЃСЊ РёРЅРґРµРєСЃР° РІ setOrder()
 
 ## [3.51.8] - 2025-01-27
 
-### Added - Централизованная система обработчиков событий
+### Added - Р¦РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅР°СЏ СЃРёСЃС‚РµРјР° РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ СЃРѕР±С‹С‚РёР№
 
-#### 🎯 **EventHandlerManager - новая архитектура:**
-- **Централизованное управление** - единая система для всех обработчиков событий
-- **Автоматическая очистка** - предотвращение утечек памяти при удалении элементов
-- **Глобальные обработчики** - автоматическая обработка ESC и overlay кликов
-- **Типизированные элементы** - поддержка dialog, button, input, form, contextMenu
-- **Безопасная работа с DOM** - проверки существования элементов и обработка ошибок
+#### рџЋЇ **EventHandlerManager - РЅРѕРІР°СЏ Р°СЂС…РёС‚РµРєС‚СѓСЂР°:**
+- **Р¦РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅРѕРµ СѓРїСЂР°РІР»РµРЅРёРµ** - РµРґРёРЅР°СЏ СЃРёСЃС‚РµРјР° РґР»СЏ РІСЃРµС… РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ СЃРѕР±С‹С‚РёР№
+- **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ РѕС‡РёСЃС‚РєР°** - РїСЂРµРґРѕС‚РІСЂР°С‰РµРЅРёРµ СѓС‚РµС‡РµРє РїР°РјСЏС‚Рё РїСЂРё СѓРґР°Р»РµРЅРёРё СЌР»РµРјРµРЅС‚РѕРІ
+- **Р“Р»РѕР±Р°Р»СЊРЅС‹Рµ РѕР±СЂР°Р±РѕС‚С‡РёРєРё** - Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ РѕР±СЂР°Р±РѕС‚РєР° ESC Рё overlay РєР»РёРєРѕРІ
+- **РўРёРїРёР·РёСЂРѕРІР°РЅРЅС‹Рµ СЌР»РµРјРµРЅС‚С‹** - РїРѕРґРґРµСЂР¶РєР° dialog, button, input, form, contextMenu
+- **Р‘РµР·РѕРїР°СЃРЅР°СЏ СЂР°Р±РѕС‚Р° СЃ DOM** - РїСЂРѕРІРµСЂРєРё СЃСѓС‰РµСЃС‚РІРѕРІР°РЅРёСЏ СЌР»РµРјРµРЅС‚РѕРІ Рё РѕР±СЂР°Р±РѕС‚РєР° РѕС€РёР±РѕРє
 
-#### 🛠️ **EventHandlerUtils - упрощение работы:**
-- **Готовые шаблоны** - createDialogHandlers, createButtonHandlers, createInputHandlers
-- **Упрощенный API** - addDialogEventHandling, addButtonEventHandling, addInputEventHandling
-- **Автоматическая привязка контекста** - правильный `this` для всех обработчиков
-- **Стандартные обработчики** - типовые сценарии для диалогов, кнопок, полей ввода
+#### рџ› пёЏ **EventHandlerUtils - СѓРїСЂРѕС‰РµРЅРёРµ СЂР°Р±РѕС‚С‹:**
+- **Р“РѕС‚РѕРІС‹Рµ С€Р°Р±Р»РѕРЅС‹** - createDialogHandlers, createButtonHandlers, createInputHandlers
+- **РЈРїСЂРѕС‰РµРЅРЅС‹Р№ API** - addDialogEventHandling, addButtonEventHandling, addInputEventHandling
+- **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ РїСЂРёРІСЏР·РєР° РєРѕРЅС‚РµРєСЃС‚Р°** - РїСЂР°РІРёР»СЊРЅС‹Р№ `this` РґР»СЏ РІСЃРµС… РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ
+- **РЎС‚Р°РЅРґР°СЂС‚РЅС‹Рµ РѕР±СЂР°Р±РѕС‚С‡РёРєРё** - С‚РёРїРѕРІС‹Рµ СЃС†РµРЅР°СЂРёРё РґР»СЏ РґРёР°Р»РѕРіРѕРІ, РєРЅРѕРїРѕРє, РїРѕР»РµР№ РІРІРѕРґР°
 
-#### 🔄 **Интеграция с существующими компонентами:**
-- **SettingsPanel** - полная миграция на новую систему
-- **ActorPropertiesWindow** - полная миграция на новую систему
-- **UniversalDialog** - полная миграция на новую систему
-- **BaseContextMenu** - полная миграция на новую систему
-- **AssetPanel** - миграция с централизованными обработчиками и делегированием
-- **Toolbar** - полная миграция на новую систему
+#### рџ”„ **РРЅС‚РµРіСЂР°С†РёСЏ СЃ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёРјРё РєРѕРјРїРѕРЅРµРЅС‚Р°РјРё:**
+- **SettingsPanel** - РїРѕР»РЅР°СЏ РјРёРіСЂР°С†РёСЏ РЅР° РЅРѕРІСѓСЋ СЃРёСЃС‚РµРјСѓ
+- **ActorPropertiesWindow** - РїРѕР»РЅР°СЏ РјРёРіСЂР°С†РёСЏ РЅР° РЅРѕРІСѓСЋ СЃРёСЃС‚РµРјСѓ
+- **UniversalDialog** - РїРѕР»РЅР°СЏ РјРёРіСЂР°С†РёСЏ РЅР° РЅРѕРІСѓСЋ СЃРёСЃС‚РµРјСѓ
+- **BaseContextMenu** - РїРѕР»РЅР°СЏ РјРёРіСЂР°С†РёСЏ РЅР° РЅРѕРІСѓСЋ СЃРёСЃС‚РµРјСѓ
+- **AssetPanel** - РјРёРіСЂР°С†РёСЏ СЃ С†РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅС‹РјРё РѕР±СЂР°Р±РѕС‚С‡РёРєР°РјРё Рё РґРµР»РµРіРёСЂРѕРІР°РЅРёРµРј
+- **Toolbar** - РїРѕР»РЅР°СЏ РјРёРіСЂР°С†РёСЏ РЅР° РЅРѕРІСѓСЋ СЃРёСЃС‚РµРјСѓ
 
-#### 🚀 **Оптимизация системы обработчиков:**
-- **Делегирование событий** - один обработчик на контейнер вместо множества на элементы
-- **Централизованные обработчики** - отдельные классы для каждого типа компонента
-- **Изоляция логики** - обработчики вынесены из компонентов в отдельные классы
-- **Переиспользование** - обработчики можно использовать в разных компонентах
-- **Автоматическая очистка** - система сама удаляет обработчики при уничтожении элементов
+#### рџљЂ **РћРїС‚РёРјРёР·Р°С†РёСЏ СЃРёСЃС‚РµРјС‹ РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ:**
+- **Р”РµР»РµРіРёСЂРѕРІР°РЅРёРµ СЃРѕР±С‹С‚РёР№** - РѕРґРёРЅ РѕР±СЂР°Р±РѕС‚С‡РёРє РЅР° РєРѕРЅС‚РµР№РЅРµСЂ РІРјРµСЃС‚Рѕ РјРЅРѕР¶РµСЃС‚РІР° РЅР° СЌР»РµРјРµРЅС‚С‹
+- **Р¦РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅС‹Рµ РѕР±СЂР°Р±РѕС‚С‡РёРєРё** - РѕС‚РґРµР»СЊРЅС‹Рµ РєР»Р°СЃСЃС‹ РґР»СЏ РєР°Р¶РґРѕРіРѕ С‚РёРїР° РєРѕРјРїРѕРЅРµРЅС‚Р°
+- **РР·РѕР»СЏС†РёСЏ Р»РѕРіРёРєРё** - РѕР±СЂР°Р±РѕС‚С‡РёРєРё РІС‹РЅРµСЃРµРЅС‹ РёР· РєРѕРјРїРѕРЅРµРЅС‚РѕРІ РІ РѕС‚РґРµР»СЊРЅС‹Рµ РєР»Р°СЃСЃС‹
+- **РџРµСЂРµРёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ** - РѕР±СЂР°Р±РѕС‚С‡РёРєРё РјРѕР¶РЅРѕ РёСЃРїРѕР»СЊР·РѕРІР°С‚СЊ РІ СЂР°Р·РЅС‹С… РєРѕРјРїРѕРЅРµРЅС‚Р°С…
+- **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ РѕС‡РёСЃС‚РєР°** - СЃРёСЃС‚РµРјР° СЃР°РјР° СѓРґР°Р»СЏРµС‚ РѕР±СЂР°Р±РѕС‚С‡РёРєРё РїСЂРё СѓРЅРёС‡С‚РѕР¶РµРЅРёРё СЌР»РµРјРµРЅС‚РѕРІ
 
-#### 🤖 **Автоматическая система обработчиков (NEW):**
-- **AutoEventHandlerManager** - автоматическое обнаружение и регистрация обработчиков для всех окон
-- **UniversalWindowHandlers** - универсальные обработчики для всех типов окон
-- **MutationObserver** - отслеживание новых окон в DOM
-- **Нулевая настройка** - новые окна автоматически получают обработчики
-- **Отказоустойчивость** - система работает даже если методы не найдены
+#### рџ¤– **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ СЃРёСЃС‚РµРјР° РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ (NEW):**
+- **AutoEventHandlerManager** - Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ РѕР±РЅР°СЂСѓР¶РµРЅРёРµ Рё СЂРµРіРёСЃС‚СЂР°С†РёСЏ РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ РґР»СЏ РІСЃРµС… РѕРєРѕРЅ
+- **UniversalWindowHandlers** - СѓРЅРёРІРµСЂСЃР°Р»СЊРЅС‹Рµ РѕР±СЂР°Р±РѕС‚С‡РёРєРё РґР»СЏ РІСЃРµС… С‚РёРїРѕРІ РѕРєРѕРЅ
+- **MutationObserver** - РѕС‚СЃР»РµР¶РёРІР°РЅРёРµ РЅРѕРІС‹С… РѕРєРѕРЅ РІ DOM
+- **РќСѓР»РµРІР°СЏ РЅР°СЃС‚СЂРѕР№РєР°** - РЅРѕРІС‹Рµ РѕРєРЅР° Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РїРѕР»СѓС‡Р°СЋС‚ РѕР±СЂР°Р±РѕС‚С‡РёРєРё
+- **РћС‚РєР°Р·РѕСѓСЃС‚РѕР№С‡РёРІРѕСЃС‚СЊ** - СЃРёСЃС‚РµРјР° СЂР°Р±РѕС‚Р°РµС‚ РґР°Р¶Рµ РµСЃР»Рё РјРµС‚РѕРґС‹ РЅРµ РЅР°Р№РґРµРЅС‹
 
-#### 🗑️ **Упрощение архитектуры (NEW):**
-- **Удален `src/handlers/AssetPanelHandlers.js`** - избыточный файл
-- **Упрощена AssetPanel** - больше не нужна ручная регистрация обработчиков
-- **Универсальная система** - один `UniversalWindowHandlers.js` для всех компонентов
-- **Автоматическая работа** - новые компоненты работают без кода
+#### рџ—‘пёЏ **РЈРїСЂРѕС‰РµРЅРёРµ Р°СЂС…РёС‚РµРєС‚СѓСЂС‹ (NEW):**
+- **РЈРґР°Р»РµРЅ `src/handlers/AssetPanelHandlers.js`** - РёР·Р±С‹С‚РѕС‡РЅС‹Р№ С„Р°Р№Р»
+- **РЈРїСЂРѕС‰РµРЅР° AssetPanel** - Р±РѕР»СЊС€Рµ РЅРµ РЅСѓР¶РЅР° СЂСѓС‡РЅР°СЏ СЂРµРіРёСЃС‚СЂР°С†РёСЏ РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ
+- **РЈРЅРёРІРµСЂСЃР°Р»СЊРЅР°СЏ СЃРёСЃС‚РµРјР°** - РѕРґРёРЅ `UniversalWindowHandlers.js` РґР»СЏ РІСЃРµС… РєРѕРјРїРѕРЅРµРЅС‚РѕРІ
+- **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ СЂР°Р±РѕС‚Р°** - РЅРѕРІС‹Рµ РєРѕРјРїРѕРЅРµРЅС‚С‹ СЂР°Р±РѕС‚Р°СЋС‚ Р±РµР· РєРѕРґР°
 
-#### 📋 **Новые файлы:**
-- **`src/managers/EventHandlerManager.js`** - центральный менеджер обработчиков событий
-- **`src/utils/EventHandlerUtils.js`** - утилиты для упрощения работы
-- **`src/managers/AutoEventHandlerManager.js`** - автоматическая система регистрации обработчиков
-- **`src/handlers/UniversalWindowHandlers.js`** - универсальные обработчики для всех окон
-- **`docs/EVENT_HANDLER_SYSTEM.md`** - подробное руководство по использованию
+#### рџ“‹ **РќРѕРІС‹Рµ С„Р°Р№Р»С‹:**
+- **`src/managers/EventHandlerManager.js`** - С†РµРЅС‚СЂР°Р»СЊРЅС‹Р№ РјРµРЅРµРґР¶РµСЂ РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ СЃРѕР±С‹С‚РёР№
+- **`src/utils/EventHandlerUtils.js`** - СѓС‚РёР»РёС‚С‹ РґР»СЏ СѓРїСЂРѕС‰РµРЅРёСЏ СЂР°Р±РѕС‚С‹
+- **`src/managers/AutoEventHandlerManager.js`** - Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ СЃРёСЃС‚РµРјР° СЂРµРіРёСЃС‚СЂР°С†РёРё РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ
+- **`src/handlers/UniversalWindowHandlers.js`** - СѓРЅРёРІРµСЂСЃР°Р»СЊРЅС‹Рµ РѕР±СЂР°Р±РѕС‚С‡РёРєРё РґР»СЏ РІСЃРµС… РѕРєРѕРЅ
+- **`docs/EVENT_HANDLER_SYSTEM.md`** - РїРѕРґСЂРѕР±РЅРѕРµ СЂСѓРєРѕРІРѕРґСЃС‚РІРѕ РїРѕ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЋ
 
-#### 🚀 **Улучшения архитектуры:**
-- **Устранение дублирования** - единый подход к обработке событий
-- **Автоматическое управление** - не нужно помнить об очистке обработчиков
-- **Централизованная отладка** - логирование всех событий в одном месте
-- **Расширяемость** - легко добавлять новые типы элементов
+#### рџљЂ **РЈР»СѓС‡С€РµРЅРёСЏ Р°СЂС…РёС‚РµРєС‚СѓСЂС‹:**
+- **РЈСЃС‚СЂР°РЅРµРЅРёРµ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ** - РµРґРёРЅС‹Р№ РїРѕРґС…РѕРґ Рє РѕР±СЂР°Р±РѕС‚РєРµ СЃРѕР±С‹С‚РёР№
+- **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ СѓРїСЂР°РІР»РµРЅРёРµ** - РЅРµ РЅСѓР¶РЅРѕ РїРѕРјРЅРёС‚СЊ РѕР± РѕС‡РёСЃС‚РєРµ РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ
+- **Р¦РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅР°СЏ РѕС‚Р»Р°РґРєР°** - Р»РѕРіРёСЂРѕРІР°РЅРёРµ РІСЃРµС… СЃРѕР±С‹С‚РёР№ РІ РѕРґРЅРѕРј РјРµСЃС‚Рµ
+- **Р Р°СЃС€РёСЂСЏРµРјРѕСЃС‚СЊ** - Р»РµРіРєРѕ РґРѕР±Р°РІР»СЏС‚СЊ РЅРѕРІС‹Рµ С‚РёРїС‹ СЌР»РµРјРµРЅС‚РѕРІ
 
 ## [3.51.7] - 2025-01-27
 
-### Fixed - Критические исправления жестов
+### Fixed - РљСЂРёС‚РёС‡РµСЃРєРёРµ РёСЃРїСЂР°РІР»РµРЅРёСЏ Р¶РµСЃС‚РѕРІ
 
-#### 🎯 **Исправления pan/zoom жестов:**
-- **Полное восстановление функциональности** - pan и zoom жесты снова работают на канве
-- **Исправлена блокировка жестов** - устранены конфликты между системами блокировки
-- **Правильная инициализация** - исправлен порядок инициализации поддержки жестов
-- **Объединение конфигураций** - поддержка множественных типов жестов на одном элементе
+#### рџЋЇ **РСЃРїСЂР°РІР»РµРЅРёСЏ pan/zoom Р¶РµСЃС‚РѕРІ:**
+- **РџРѕР»РЅРѕРµ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ С„СѓРЅРєС†РёРѕРЅР°Р»СЊРЅРѕСЃС‚Рё** - pan Рё zoom Р¶РµСЃС‚С‹ СЃРЅРѕРІР° СЂР°Р±РѕС‚Р°СЋС‚ РЅР° РєР°РЅРІРµ
+- **РСЃРїСЂР°РІР»РµРЅР° Р±Р»РѕРєРёСЂРѕРІРєР° Р¶РµСЃС‚РѕРІ** - СѓСЃС‚СЂР°РЅРµРЅС‹ РєРѕРЅС„Р»РёРєС‚С‹ РјРµР¶РґСѓ СЃРёСЃС‚РµРјР°РјРё Р±Р»РѕРєРёСЂРѕРІРєРё
+- **РџСЂР°РІРёР»СЊРЅР°СЏ РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ** - РёСЃРїСЂР°РІР»РµРЅ РїРѕСЂСЏРґРѕРє РёРЅРёС†РёР°Р»РёР·Р°С†РёРё РїРѕРґРґРµСЂР¶РєРё Р¶РµСЃС‚РѕРІ
+- **РћР±СЉРµРґРёРЅРµРЅРёРµ РєРѕРЅС„РёРіСѓСЂР°С†РёР№** - РїРѕРґРґРµСЂР¶РєР° РјРЅРѕР¶РµСЃС‚РІРµРЅРЅС‹С… С‚РёРїРѕРІ Р¶РµСЃС‚РѕРІ РЅР° РѕРґРЅРѕРј СЌР»РµРјРµРЅС‚Рµ
 
-#### 🔧 **Технические исправления:**
-- **Исправлен passive event listeners** - move события теперь non-passive для pan/zoom
-- **Добавлен preventDefault** - правильная блокировка браузерных жестов
-- **Исправлено замыкание** - обработчики событий получают актуальную конфигурацию
-- **Приоритет при объединении** - существующие обработчики сохраняются при добавлении новых
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ РёСЃРїСЂР°РІР»РµРЅРёСЏ:**
+- **РСЃРїСЂР°РІР»РµРЅ passive event listeners** - move СЃРѕР±С‹С‚РёСЏ С‚РµРїРµСЂСЊ non-passive РґР»СЏ pan/zoom
+- **Р”РѕР±Р°РІР»РµРЅ preventDefault** - РїСЂР°РІРёР»СЊРЅР°СЏ Р±Р»РѕРєРёСЂРѕРІРєР° Р±СЂР°СѓР·РµСЂРЅС‹С… Р¶РµСЃС‚РѕРІ
+- **РСЃРїСЂР°РІР»РµРЅРѕ Р·Р°РјС‹РєР°РЅРёРµ** - РѕР±СЂР°Р±РѕС‚С‡РёРєРё СЃРѕР±С‹С‚РёР№ РїРѕР»СѓС‡Р°СЋС‚ Р°РєС‚СѓР°Р»СЊРЅСѓСЋ РєРѕРЅС„РёРіСѓСЂР°С†РёСЋ
+- **РџСЂРёРѕСЂРёС‚РµС‚ РїСЂРё РѕР±СЉРµРґРёРЅРµРЅРёРё** - СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёРµ РѕР±СЂР°Р±РѕС‚С‡РёРєРё СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ РїСЂРё РґРѕР±Р°РІР»РµРЅРёРё РЅРѕРІС‹С…
 
-#### 🚀 **Улучшения системы:**
-- **Загрузка настроек пользователя** - pan/zoom настройки загружаются из конфигурации
-- **Удалены отладочные логи** - очищен код от временных логов отладки
-- **Оптимизированная производительность** - обработчики событий настраиваются только один раз
-- **Улучшенная стабильность** - все типы жестов работают одновременно без конфликтов
+#### рџљЂ **РЈР»СѓС‡С€РµРЅРёСЏ СЃРёСЃС‚РµРјС‹:**
+- **Р—Р°РіСЂСѓР·РєР° РЅР°СЃС‚СЂРѕРµРє РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ** - pan/zoom РЅР°СЃС‚СЂРѕР№РєРё Р·Р°РіСЂСѓР¶Р°СЋС‚СЃСЏ РёР· РєРѕРЅС„РёРіСѓСЂР°С†РёРё
+- **РЈРґР°Р»РµРЅС‹ РѕС‚Р»Р°РґРѕС‡РЅС‹Рµ Р»РѕРіРё** - РѕС‡РёС‰РµРЅ РєРѕРґ РѕС‚ РІСЂРµРјРµРЅРЅС‹С… Р»РѕРіРѕРІ РѕС‚Р»Р°РґРєРё
+- **РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅРЅР°СЏ РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ** - РѕР±СЂР°Р±РѕС‚С‡РёРєРё СЃРѕР±С‹С‚РёР№ РЅР°СЃС‚СЂР°РёРІР°СЋС‚СЃСЏ С‚РѕР»СЊРєРѕ РѕРґРёРЅ СЂР°Р·
+- **РЈР»СѓС‡С€РµРЅРЅР°СЏ СЃС‚Р°Р±РёР»СЊРЅРѕСЃС‚СЊ** - РІСЃРµ С‚РёРїС‹ Р¶РµСЃС‚РѕРІ СЂР°Р±РѕС‚Р°СЋС‚ РѕРґРЅРѕРІСЂРµРјРµРЅРЅРѕ Р±РµР· РєРѕРЅС„Р»РёРєС‚РѕРІ
 
-#### 📋 **Поддерживаемые жесты:**
-- **Marquee selection** - выделение рамкой (однопальцевый)
-- **Two-finger pan** - панорамирование двумя пальцами
-- **Two-finger zoom** - масштабирование двумя пальцами
-- **Two-finger context** - контекстное меню двумя пальцами
-- **Combined pan/zoom** - одновременное pan и zoom
+#### рџ“‹ **РџРѕРґРґРµСЂР¶РёРІР°РµРјС‹Рµ Р¶РµСЃС‚С‹:**
+- **Marquee selection** - РІС‹РґРµР»РµРЅРёРµ СЂР°РјРєРѕР№ (РѕРґРЅРѕРїР°Р»СЊС†РµРІС‹Р№)
+- **Two-finger pan** - РїР°РЅРѕСЂР°РјРёСЂРѕРІР°РЅРёРµ РґРІСѓРјСЏ РїР°Р»СЊС†Р°РјРё
+- **Two-finger zoom** - РјР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёРµ РґРІСѓРјСЏ РїР°Р»СЊС†Р°РјРё
+- **Two-finger context** - РєРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ РґРІСѓРјСЏ РїР°Р»СЊС†Р°РјРё
+- **Combined pan/zoom** - РѕРґРЅРѕРІСЂРµРјРµРЅРЅРѕРµ pan Рё zoom
 
 ## [3.51.6] - 2025-01-27
 
-### Improved - Улучшения интерфейса консоли
+### Improved - РЈР»СѓС‡С€РµРЅРёСЏ РёРЅС‚РµСЂС„РµР№СЃР° РєРѕРЅСЃРѕР»Рё
 
-#### 🎯 **Улучшения консоли:**
-- **Кликабельная шапка консоли** - вся шапка консоли теперь активна для закрытия одним кликом
-- **Увеличенная кнопка закрытия** - кнопка X стала больше с отступами `px-3 py-2` и размером `text-lg`
-- **Унифицированная система** - консоль использует `EventHandlers.togglePanel('console')` вместо старых функций
-- **Адаптивные ограничения размера** - консоль ограничена 70% экрана для доступности сепаратора
-- **Drag для сепаратора** - добавлена поддержка изменения размера консоли
-- **Двойной клик на сепараторе** - двойной клик на сепараторе закрывает консоль
+#### рџЋЇ **РЈР»СѓС‡С€РµРЅРёСЏ РєРѕРЅСЃРѕР»Рё:**
+- **РљР»РёРєР°Р±РµР»СЊРЅР°СЏ С€Р°РїРєР° РєРѕРЅСЃРѕР»Рё** - РІСЃСЏ С€Р°РїРєР° РєРѕРЅСЃРѕР»Рё С‚РµРїРµСЂСЊ Р°РєС‚РёРІРЅР° РґР»СЏ Р·Р°РєСЂС‹С‚РёСЏ РѕРґРЅРёРј РєР»РёРєРѕРј
+- **РЈРІРµР»РёС‡РµРЅРЅР°СЏ РєРЅРѕРїРєР° Р·Р°РєСЂС‹С‚РёСЏ** - РєРЅРѕРїРєР° X СЃС‚Р°Р»Р° Р±РѕР»СЊС€Рµ СЃ РѕС‚СЃС‚СѓРїР°РјРё `px-3 py-2` Рё СЂР°Р·РјРµСЂРѕРј `text-lg`
+- **РЈРЅРёС„РёС†РёСЂРѕРІР°РЅРЅР°СЏ СЃРёСЃС‚РµРјР°** - РєРѕРЅСЃРѕР»СЊ РёСЃРїРѕР»СЊР·СѓРµС‚ `EventHandlers.togglePanel('console')` РІРјРµСЃС‚Рѕ СЃС‚Р°СЂС‹С… С„СѓРЅРєС†РёР№
+- **РђРґР°РїС‚РёРІРЅС‹Рµ РѕРіСЂР°РЅРёС‡РµРЅРёСЏ СЂР°Р·РјРµСЂР°** - РєРѕРЅСЃРѕР»СЊ РѕРіСЂР°РЅРёС‡РµРЅР° 70% СЌРєСЂР°РЅР° РґР»СЏ РґРѕСЃС‚СѓРїРЅРѕСЃС‚Рё СЃРµРїР°СЂР°С‚РѕСЂР°
+- **Drag РґР»СЏ СЃРµРїР°СЂР°С‚РѕСЂР°** - РґРѕР±Р°РІР»РµРЅР° РїРѕРґРґРµСЂР¶РєР° РёР·РјРµРЅРµРЅРёСЏ СЂР°Р·РјРµСЂР° РєРѕРЅСЃРѕР»Рё
+- **Р”РІРѕР№РЅРѕР№ РєР»РёРє РЅР° СЃРµРїР°СЂР°С‚РѕСЂРµ** - РґРІРѕР№РЅРѕР№ РєР»РёРє РЅР° СЃРµРїР°СЂР°С‚РѕСЂРµ Р·Р°РєСЂС‹РІР°РµС‚ РєРѕРЅСЃРѕР»СЊ
 
-#### 🔧 **Технические улучшения:**
-- **Оптимизированный код** - создана единая функция `closeConsole()` вместо дублирования логики
-- **DRY принцип** - устранено 32+ строки дублированного кода
-- **Улучшенная архитектура** - консоль интегрирована в унифицированную систему управления панелями
-- **Fallback поддержка** - сохранена совместимость со старыми функциями при недоступности редактора
-- **Детекция устройств** - автоматическое определение маленьких окон
-- **Контекстное меню** - контекстное меню консоли автоматически скрывается при закрытии консоли
-- **Исправлены конфликты сепараторов** - устранены конфликты между обработчиками
-- **Унифицированная архитектура** - все обработчики используют единую систему
-- **Правильная регистрация** - поддержка регистрируется в LevelEditor
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅРЅС‹Р№ РєРѕРґ** - СЃРѕР·РґР°РЅР° РµРґРёРЅР°СЏ С„СѓРЅРєС†РёСЏ `closeConsole()` РІРјРµСЃС‚Рѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ Р»РѕРіРёРєРё
+- **DRY РїСЂРёРЅС†РёРї** - СѓСЃС‚СЂР°РЅРµРЅРѕ 32+ СЃС‚СЂРѕРєРё РґСѓР±Р»РёСЂРѕРІР°РЅРЅРѕРіРѕ РєРѕРґР°
+- **РЈР»СѓС‡С€РµРЅРЅР°СЏ Р°СЂС…РёС‚РµРєС‚СѓСЂР°** - РєРѕРЅСЃРѕР»СЊ РёРЅС‚РµРіСЂРёСЂРѕРІР°РЅР° РІ СѓРЅРёС„РёС†РёСЂРѕРІР°РЅРЅСѓСЋ СЃРёСЃС‚РµРјСѓ СѓРїСЂР°РІР»РµРЅРёСЏ РїР°РЅРµР»СЏРјРё
+- **Fallback РїРѕРґРґРµСЂР¶РєР°** - СЃРѕС…СЂР°РЅРµРЅР° СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚СЊ СЃРѕ СЃС‚Р°СЂС‹РјРё С„СѓРЅРєС†РёСЏРјРё РїСЂРё РЅРµРґРѕСЃС‚СѓРїРЅРѕСЃС‚Рё СЂРµРґР°РєС‚РѕСЂР°
+- **Р”РµС‚РµРєС†РёСЏ СѓСЃС‚СЂРѕР№СЃС‚РІ** - Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ РѕРїСЂРµРґРµР»РµРЅРёРµ РјР°Р»РµРЅСЊРєРёС… РѕРєРѕРЅ
+- **РљРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ** - РєРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ РєРѕРЅСЃРѕР»Рё Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё СЃРєСЂС‹РІР°РµС‚СЃСЏ РїСЂРё Р·Р°РєСЂС‹С‚РёРё РєРѕРЅСЃРѕР»Рё
+- **РСЃРїСЂР°РІР»РµРЅС‹ РєРѕРЅС„Р»РёРєС‚С‹ СЃРµРїР°СЂР°С‚РѕСЂРѕРІ** - СѓСЃС‚СЂР°РЅРµРЅС‹ РєРѕРЅС„Р»РёРєС‚С‹ РјРµР¶РґСѓ РѕР±СЂР°Р±РѕС‚С‡РёРєР°РјРё
+- **РЈРЅРёС„РёС†РёСЂРѕРІР°РЅРЅР°СЏ Р°СЂС…РёС‚РµРєС‚СѓСЂР°** - РІСЃРµ РѕР±СЂР°Р±РѕС‚С‡РёРєРё РёСЃРїРѕР»СЊР·СѓСЋС‚ РµРґРёРЅСѓСЋ СЃРёСЃС‚РµРјСѓ
+- **РџСЂР°РІРёР»СЊРЅР°СЏ СЂРµРіРёСЃС‚СЂР°С†РёСЏ** - РїРѕРґРґРµСЂР¶РєР° СЂРµРіРёСЃС‚СЂРёСЂСѓРµС‚СЃСЏ РІ LevelEditor
 
-#### 🎨 **UI улучшения:**
-- **Визуальная обратная связь** - добавлен `hover:bg-gray-800` для шапки консоли
-- **Улучшенная доступность** - увеличенная область клика для закрытия консоли
-- **Консистентный дизайн** - шапка консоли соответствует общему стилю интерфейса
-- **Мобильная адаптация** - консоль адаптируется под размер экрана и тип устройства
+#### рџЋЁ **UI СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **Р’РёР·СѓР°Р»СЊРЅР°СЏ РѕР±СЂР°С‚РЅР°СЏ СЃРІСЏР·СЊ** - РґРѕР±Р°РІР»РµРЅ `hover:bg-gray-800` РґР»СЏ С€Р°РїРєРё РєРѕРЅСЃРѕР»Рё
+- **РЈР»СѓС‡С€РµРЅРЅР°СЏ РґРѕСЃС‚СѓРїРЅРѕСЃС‚СЊ** - СѓРІРµР»РёС‡РµРЅРЅР°СЏ РѕР±Р»Р°СЃС‚СЊ РєР»РёРєР° РґР»СЏ Р·Р°РєСЂС‹С‚РёСЏ РєРѕРЅСЃРѕР»Рё
+- **РљРѕРЅСЃРёСЃС‚РµРЅС‚РЅС‹Р№ РґРёР·Р°Р№РЅ** - С€Р°РїРєР° РєРѕРЅСЃРѕР»Рё СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓРµС‚ РѕР±С‰РµРјСѓ СЃС‚РёР»СЋ РёРЅС‚РµСЂС„РµР№СЃР°
+- **РњРѕР±РёР»СЊРЅР°СЏ Р°РґР°РїС‚Р°С†РёСЏ** - РєРѕРЅСЃРѕР»СЊ Р°РґР°РїС‚РёСЂСѓРµС‚СЃСЏ РїРѕРґ СЂР°Р·РјРµСЂ СЌРєСЂР°РЅР° Рё С‚РёРї СѓСЃС‚СЂРѕР№СЃС‚РІР°
 
 ## [3.51.5] - 2025-01-27
 
-### Fixed - Исправления сохранения позиций разделителей панелей
+### Fixed - РСЃРїСЂР°РІР»РµРЅРёСЏ СЃРѕС…СЂР°РЅРµРЅРёСЏ РїРѕР·РёС†РёР№ СЂР°Р·РґРµР»РёС‚РµР»РµР№ РїР°РЅРµР»РµР№
 
-#### 🎯 **Исправления сохранения позиций:**
-- **Сохранение позиций боковых панелей** - позиции разделителей левой и правой панелей теперь сохраняются через stateManager
-- **Восстановление позиций при рестарте** - позиции разделителей корректно восстанавливаются из userPrefs
-- **Синхронизация с userPrefs** - все изменения позиций сохраняются в пользовательских настройках
-- **Инициализация позиций** - начальные позиции панелей устанавливаются из сохраненных настроек
+#### рџЋЇ **РСЃРїСЂР°РІР»РµРЅРёСЏ СЃРѕС…СЂР°РЅРµРЅРёСЏ РїРѕР·РёС†РёР№:**
+- **РЎРѕС…СЂР°РЅРµРЅРёРµ РїРѕР·РёС†РёР№ Р±РѕРєРѕРІС‹С… РїР°РЅРµР»РµР№** - РїРѕР·РёС†РёРё СЂР°Р·РґРµР»РёС‚РµР»РµР№ Р»РµРІРѕР№ Рё РїСЂР°РІРѕР№ РїР°РЅРµР»РµР№ С‚РµРїРµСЂСЊ СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ С‡РµСЂРµР· stateManager
+- **Р’РѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ РїРѕР·РёС†РёР№ РїСЂРё СЂРµСЃС‚Р°СЂС‚Рµ** - РїРѕР·РёС†РёРё СЂР°Р·РґРµР»РёС‚РµР»РµР№ РєРѕСЂСЂРµРєС‚РЅРѕ РІРѕСЃСЃС‚Р°РЅР°РІР»РёРІР°СЋС‚СЃСЏ РёР· userPrefs
+- **РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ СЃ userPrefs** - РІСЃРµ РёР·РјРµРЅРµРЅРёСЏ РїРѕР·РёС†РёР№ СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ РІ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёС… РЅР°СЃС‚СЂРѕР№РєР°С…
+- **РРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РїРѕР·РёС†РёР№** - РЅР°С‡Р°Р»СЊРЅС‹Рµ РїРѕР·РёС†РёРё РїР°РЅРµР»РµР№ СѓСЃС‚Р°РЅР°РІР»РёРІР°СЋС‚СЃСЏ РёР· СЃРѕС…СЂР°РЅРµРЅРЅС‹С… РЅР°СЃС‚СЂРѕРµРє
 
-#### 🔧 **Технические улучшения:**
-- **PanelPositionManager** - добавлен метод `initializePanelWidths()` для установки начальных позиций
-- **Сохранение при завершении** - позиции сохраняются в `handleMouseUp` при завершении изменения размера
-- **Интеграция с stateManager** - позиции синхронизируются между stateManager и userPrefs
-- **Унифицированная система** - единый подход к сохранению позиций для всех панелей
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **PanelPositionManager** - РґРѕР±Р°РІР»РµРЅ РјРµС‚РѕРґ `initializePanelWidths()` РґР»СЏ СѓСЃС‚Р°РЅРѕРІРєРё РЅР°С‡Р°Р»СЊРЅС‹С… РїРѕР·РёС†РёР№
+- **РЎРѕС…СЂР°РЅРµРЅРёРµ РїСЂРё Р·Р°РІРµСЂС€РµРЅРёРё** - РїРѕР·РёС†РёРё СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ РІ `handleMouseUp` РїСЂРё Р·Р°РІРµСЂС€РµРЅРёРё РёР·РјРµРЅРµРЅРёСЏ СЂР°Р·РјРµСЂР°
+- **РРЅС‚РµРіСЂР°С†РёСЏ СЃ stateManager** - РїРѕР·РёС†РёРё СЃРёРЅС…СЂРѕРЅРёР·РёСЂСѓСЋС‚СЃСЏ РјРµР¶РґСѓ stateManager Рё userPrefs
+- **РЈРЅРёС„РёС†РёСЂРѕРІР°РЅРЅР°СЏ СЃРёСЃС‚РµРјР°** - РµРґРёРЅС‹Р№ РїРѕРґС…РѕРґ Рє СЃРѕС…СЂР°РЅРµРЅРёСЋ РїРѕР·РёС†РёР№ РґР»СЏ РІСЃРµС… РїР°РЅРµР»РµР№
 
 ## [3.51.4] - 2025-01-27
 
-### Fixed - Исправлены поля форм без id атрибутов и синхронные XMLHttpRequest
+### Fixed - РСЃРїСЂР°РІР»РµРЅС‹ РїРѕР»СЏ С„РѕСЂРј Р±РµР· id Р°С‚СЂРёР±СѓС‚РѕРІ Рё СЃРёРЅС…СЂРѕРЅРЅС‹Рµ XMLHttpRequest
 
-#### 🎯 **Исправления доступности:**
-- **Добавлены уникальные id атрибуты ко всем полям ввода** - решена проблема с автозаполнением форм в браузере
-- **Исправлены поля в SettingsPanel.js** - чекбоксы, слайдеры, числовые и цветовые поля
-- **Исправлены поля в GridSettings.js** - настройки сетки, осей и привязки
-- **Исправлены поля в DetailsPanel.js** - поля позиции и размера объектов
-- **Исправлены поля в LayersPanel.js** - поля имен слоев, цветов и параллакса
-- **Исправлены поля в OutlinerPanel.js** - поля редактирования имен групп и объектов
-- **Исправлены поля в FolderPickerDialog.js** - поле выбора папки
-- **Исправлены поля в MenuPositioningUtils.js** - чекбоксы в контекстных меню
+#### рџЋЇ **РСЃРїСЂР°РІР»РµРЅРёСЏ РґРѕСЃС‚СѓРїРЅРѕСЃС‚Рё:**
+- **Р”РѕР±Р°РІР»РµРЅС‹ СѓРЅРёРєР°Р»СЊРЅС‹Рµ id Р°С‚СЂРёР±СѓС‚С‹ РєРѕ РІСЃРµРј РїРѕР»СЏРј РІРІРѕРґР°** - СЂРµС€РµРЅР° РїСЂРѕР±Р»РµРјР° СЃ Р°РІС‚РѕР·Р°РїРѕР»РЅРµРЅРёРµРј С„РѕСЂРј РІ Р±СЂР°СѓР·РµСЂРµ
+- **РСЃРїСЂР°РІР»РµРЅС‹ РїРѕР»СЏ РІ SettingsPanel.js** - С‡РµРєР±РѕРєСЃС‹, СЃР»Р°Р№РґРµСЂС‹, С‡РёСЃР»РѕРІС‹Рµ Рё С†РІРµС‚РѕРІС‹Рµ РїРѕР»СЏ
+- **РСЃРїСЂР°РІР»РµРЅС‹ РїРѕР»СЏ РІ GridSettings.js** - РЅР°СЃС‚СЂРѕР№РєРё СЃРµС‚РєРё, РѕСЃРµР№ Рё РїСЂРёРІСЏР·РєРё
+- **РСЃРїСЂР°РІР»РµРЅС‹ РїРѕР»СЏ РІ DetailsPanel.js** - РїРѕР»СЏ РїРѕР·РёС†РёРё Рё СЂР°Р·РјРµСЂР° РѕР±СЉРµРєС‚РѕРІ
+- **РСЃРїСЂР°РІР»РµРЅС‹ РїРѕР»СЏ РІ LayersPanel.js** - РїРѕР»СЏ РёРјРµРЅ СЃР»РѕРµРІ, С†РІРµС‚РѕРІ Рё РїР°СЂР°Р»Р»Р°РєСЃР°
+- **РСЃРїСЂР°РІР»РµРЅС‹ РїРѕР»СЏ РІ OutlinerPanel.js** - РїРѕР»СЏ СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ РёРјРµРЅ РіСЂСѓРїРї Рё РѕР±СЉРµРєС‚РѕРІ
+- **РСЃРїСЂР°РІР»РµРЅС‹ РїРѕР»СЏ РІ FolderPickerDialog.js** - РїРѕР»Рµ РІС‹Р±РѕСЂР° РїР°РїРєРё
+- **РСЃРїСЂР°РІР»РµРЅС‹ РїРѕР»СЏ РІ MenuPositioningUtils.js** - С‡РµРєР±РѕРєСЃС‹ РІ РєРѕРЅС‚РµРєСЃС‚РЅС‹С… РјРµРЅСЋ
 
-#### 🎯 **Исправления производительности:**
-- **Заменены синхронные XMLHttpRequest на асинхронные fetch** - устранено предупреждение браузера о блокировке главного потока
-- **Обновлен ConfigManager.js** - все методы загрузки конфигураций теперь асинхронные
-- **Улучшена загрузка конфигураций** - используется Promise.all для параллельной загрузки файлов
-- **Обновлены все вызовы методов** - SettingsPanel.js и UserPreferencesManager.js адаптированы под async/await
+#### рџЋЇ **РСЃРїСЂР°РІР»РµРЅРёСЏ РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚Рё:**
+- **Р—Р°РјРµРЅРµРЅС‹ СЃРёРЅС…СЂРѕРЅРЅС‹Рµ XMLHttpRequest РЅР° Р°СЃРёРЅС…СЂРѕРЅРЅС‹Рµ fetch** - СѓСЃС‚СЂР°РЅРµРЅРѕ РїСЂРµРґСѓРїСЂРµР¶РґРµРЅРёРµ Р±СЂР°СѓР·РµСЂР° Рѕ Р±Р»РѕРєРёСЂРѕРІРєРµ РіР»Р°РІРЅРѕРіРѕ РїРѕС‚РѕРєР°
+- **РћР±РЅРѕРІР»РµРЅ ConfigManager.js** - РІСЃРµ РјРµС‚РѕРґС‹ Р·Р°РіСЂСѓР·РєРё РєРѕРЅС„РёРіСѓСЂР°С†РёР№ С‚РµРїРµСЂСЊ Р°СЃРёРЅС…СЂРѕРЅРЅС‹Рµ
+- **РЈР»СѓС‡С€РµРЅР° Р·Р°РіСЂСѓР·РєР° РєРѕРЅС„РёРіСѓСЂР°С†РёР№** - РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ Promise.all РґР»СЏ РїР°СЂР°Р»Р»РµР»СЊРЅРѕР№ Р·Р°РіСЂСѓР·РєРё С„Р°Р№Р»РѕРІ
+- **РћР±РЅРѕРІР»РµРЅС‹ РІСЃРµ РІС‹Р·РѕРІС‹ РјРµС‚РѕРґРѕРІ** - SettingsPanel.js Рё UserPreferencesManager.js Р°РґР°РїС‚РёСЂРѕРІР°РЅС‹ РїРѕРґ async/await
 
-#### 🎯 **Технические улучшения:**
-- **Все поля теперь имеют уникальные идентификаторы** - улучшена совместимость с браузерными функциями
-- **Сохранена функциональность** - все изменения обратно совместимы
-- **Улучшена доступность** - поля корректно работают с автозаполнением и скрин-ридерами
-- **Улучшена производительность** - устранена блокировка UI при загрузке конфигураций
+#### рџЋЇ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **Р’СЃРµ РїРѕР»СЏ С‚РµРїРµСЂСЊ РёРјРµСЋС‚ СѓРЅРёРєР°Р»СЊРЅС‹Рµ РёРґРµРЅС‚РёС„РёРєР°С‚РѕСЂС‹** - СѓР»СѓС‡С€РµРЅР° СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚СЊ СЃ Р±СЂР°СѓР·РµСЂРЅС‹РјРё С„СѓРЅРєС†РёСЏРјРё
+- **РЎРѕС…СЂР°РЅРµРЅР° С„СѓРЅРєС†РёРѕРЅР°Р»СЊРЅРѕСЃС‚СЊ** - РІСЃРµ РёР·РјРµРЅРµРЅРёСЏ РѕР±СЂР°С‚РЅРѕ СЃРѕРІРјРµСЃС‚РёРјС‹
+- **РЈР»СѓС‡С€РµРЅР° РґРѕСЃС‚СѓРїРЅРѕСЃС‚СЊ** - РїРѕР»СЏ РєРѕСЂСЂРµРєС‚РЅРѕ СЂР°Р±РѕС‚Р°СЋС‚ СЃ Р°РІС‚РѕР·Р°РїРѕР»РЅРµРЅРёРµРј Рё СЃРєСЂРёРЅ-СЂРёРґРµСЂР°РјРё
+- **РЈР»СѓС‡С€РµРЅР° РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ** - СѓСЃС‚СЂР°РЅРµРЅР° Р±Р»РѕРєРёСЂРѕРІРєР° UI РїСЂРё Р·Р°РіСЂСѓР·РєРµ РєРѕРЅС„РёРіСѓСЂР°С†РёР№
 
 ## [3.51.3] - 2025-01-27
 
-### Added - Добавлена команда тоггла консоли в меню View
+### Added - Р”РѕР±Р°РІР»РµРЅР° РєРѕРјР°РЅРґР° С‚РѕРіРіР»Р° РєРѕРЅСЃРѕР»Рё РІ РјРµРЅСЋ View
 
-#### 🎯 **Новая функциональность:**
-- **Добавлена команда "Console" в секцию Panels меню View** - позволяет переключать видимость консоли
-- **Интегрирована консоль в универсальную систему управления панелями** - использует `applyPanelVisibility()`
-- **Добавлена поддержка консоли в Immersive Mode** - консоль скрывается/восстанавливается корректно
-- **Синхронизация состояния консоли с чекбоксом меню** - корректное отображение состояния
+#### рџЋЇ **РќРѕРІР°СЏ С„СѓРЅРєС†РёРѕРЅР°Р»СЊРЅРѕСЃС‚СЊ:**
+- **Р”РѕР±Р°РІР»РµРЅР° РєРѕРјР°РЅРґР° "Console" РІ СЃРµРєС†РёСЋ Panels РјРµРЅСЋ View** - РїРѕР·РІРѕР»СЏРµС‚ РїРµСЂРµРєР»СЋС‡Р°С‚СЊ РІРёРґРёРјРѕСЃС‚СЊ РєРѕРЅСЃРѕР»Рё
+- **РРЅС‚РµРіСЂРёСЂРѕРІР°РЅР° РєРѕРЅСЃРѕР»СЊ РІ СѓРЅРёРІРµСЂСЃР°Р»СЊРЅСѓСЋ СЃРёСЃС‚РµРјСѓ СѓРїСЂР°РІР»РµРЅРёСЏ РїР°РЅРµР»СЏРјРё** - РёСЃРїРѕР»СЊР·СѓРµС‚ `applyPanelVisibility()`
+- **Р”РѕР±Р°РІР»РµРЅР° РїРѕРґРґРµСЂР¶РєР° РєРѕРЅСЃРѕР»Рё РІ Immersive Mode** - РєРѕРЅСЃРѕР»СЊ СЃРєСЂС‹РІР°РµС‚СЃСЏ/РІРѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµС‚СЃСЏ РєРѕСЂСЂРµРєС‚РЅРѕ
+- **РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ СЃРѕСЃС‚РѕСЏРЅРёСЏ РєРѕРЅСЃРѕР»Рё СЃ С‡РµРєР±РѕРєСЃРѕРј РјРµРЅСЋ** - РєРѕСЂСЂРµРєС‚РЅРѕРµ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ СЃРѕСЃС‚РѕСЏРЅРёСЏ
 
-#### 🎯 **Технические улучшения:**
-- **Расширен `panelConfig` для поддержки консоли** - добавлен тип 'dom' с элементами console-panel и resizer-console
-- **Обновлены все массивы панелей** - console добавлена в panelStates, panelOptions, panelToggles
-- **Добавлена обработка console в `updateViewCheckbox()`** - корректное маппирование на toggle-console
-- **Интегрирована консоль в систему сохранения/восстановления состояний** - работает с StateManager
+#### рџЋЇ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **Р Р°СЃС€РёСЂРµРЅ `panelConfig` РґР»СЏ РїРѕРґРґРµСЂР¶РєРё РєРѕРЅСЃРѕР»Рё** - РґРѕР±Р°РІР»РµРЅ С‚РёРї 'dom' СЃ СЌР»РµРјРµРЅС‚Р°РјРё console-panel Рё resizer-console
+- **РћР±РЅРѕРІР»РµРЅС‹ РІСЃРµ РјР°СЃСЃРёРІС‹ РїР°РЅРµР»РµР№** - console РґРѕР±Р°РІР»РµРЅР° РІ panelStates, panelOptions, panelToggles
+- **Р”РѕР±Р°РІР»РµРЅР° РѕР±СЂР°Р±РѕС‚РєР° console РІ `updateViewCheckbox()`** - РєРѕСЂСЂРµРєС‚РЅРѕРµ РјР°РїРїРёСЂРѕРІР°РЅРёРµ РЅР° toggle-console
+- **РРЅС‚РµРіСЂРёСЂРѕРІР°РЅР° РєРѕРЅСЃРѕР»СЊ РІ СЃРёСЃС‚РµРјСѓ СЃРѕС…СЂР°РЅРµРЅРёСЏ/РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ СЃРѕСЃС‚РѕСЏРЅРёР№** - СЂР°Р±РѕС‚Р°РµС‚ СЃ StateManager
 
-#### 🎯 **Исправления синхронизации:**
-- **Исправлен конфликт клавиатурного шортката** - клавиша ` теперь использует `EventHandlers.togglePanel('console')`
-- **Унифицированы все способы управления консолью** - клавиша, меню, кнопка закрытия используют StateManager
-- **Исправлена инициализация консоли** - использует `stateManager.get('console.visible')` вместо `userPrefs.get('consoleVisible')`
-- **Обновлены функции showConsole/hideConsole** - сохраняют состояние через `stateManager.set('console.visible')`
-- **Добавлена синхронизация после инициализации** - обновляет StateManager с актуальным состоянием консоли
+#### рџЋЇ **РСЃРїСЂР°РІР»РµРЅРёСЏ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё:**
+- **РСЃРїСЂР°РІР»РµРЅ РєРѕРЅС„Р»РёРєС‚ РєР»Р°РІРёР°С‚СѓСЂРЅРѕРіРѕ С€РѕСЂС‚РєР°С‚Р°** - РєР»Р°РІРёС€Р° ` С‚РµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓРµС‚ `EventHandlers.togglePanel('console')`
+- **РЈРЅРёС„РёС†РёСЂРѕРІР°РЅС‹ РІСЃРµ СЃРїРѕСЃРѕР±С‹ СѓРїСЂР°РІР»РµРЅРёСЏ РєРѕРЅСЃРѕР»СЊСЋ** - РєР»Р°РІРёС€Р°, РјРµРЅСЋ, РєРЅРѕРїРєР° Р·Р°РєСЂС‹С‚РёСЏ РёСЃРїРѕР»СЊР·СѓСЋС‚ StateManager
+- **РСЃРїСЂР°РІР»РµРЅР° РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РєРѕРЅСЃРѕР»Рё** - РёСЃРїРѕР»СЊР·СѓРµС‚ `stateManager.get('console.visible')` РІРјРµСЃС‚Рѕ `userPrefs.get('consoleVisible')`
+- **РћР±РЅРѕРІР»РµРЅС‹ С„СѓРЅРєС†РёРё showConsole/hideConsole** - СЃРѕС…СЂР°РЅСЏСЋС‚ СЃРѕСЃС‚РѕСЏРЅРёРµ С‡РµСЂРµР· `stateManager.set('console.visible')`
+- **Р”РѕР±Р°РІР»РµРЅР° СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ РїРѕСЃР»Рµ РёРЅРёС†РёР°Р»РёР·Р°С†РёРё** - РѕР±РЅРѕРІР»СЏРµС‚ StateManager СЃ Р°РєС‚СѓР°Р»СЊРЅС‹Рј СЃРѕСЃС‚РѕСЏРЅРёРµРј РєРѕРЅСЃРѕР»Рё
 
-#### 🎯 **Исправления клавиатуры:**
-- **Исправлена проблема с "зажиманием" Alt клавиши** - добавлена обработка Alt в `EventHandlers.setupKeyboardEvents()`
-- **Добавлено состояние `keyboard.altKey` в StateManager** - отслеживание состояния Alt клавиши
-- **Обновлен метод `isAltKeyPressed()`** - проверяет как `mouse.altKey`, так и `keyboard.altKey`
-- **Устранена рассинхронизация** - теперь Alt состояние корректно отслеживается и сбрасывается
+#### рџЋЇ **РСЃРїСЂР°РІР»РµРЅРёСЏ РєР»Р°РІРёР°С‚СѓСЂС‹:**
+- **РСЃРїСЂР°РІР»РµРЅР° РїСЂРѕР±Р»РµРјР° СЃ "Р·Р°Р¶РёРјР°РЅРёРµРј" Alt РєР»Р°РІРёС€Рё** - РґРѕР±Р°РІР»РµРЅР° РѕР±СЂР°Р±РѕС‚РєР° Alt РІ `EventHandlers.setupKeyboardEvents()`
+- **Р”РѕР±Р°РІР»РµРЅРѕ СЃРѕСЃС‚РѕСЏРЅРёРµ `keyboard.altKey` РІ StateManager** - РѕС‚СЃР»РµР¶РёРІР°РЅРёРµ СЃРѕСЃС‚РѕСЏРЅРёСЏ Alt РєР»Р°РІРёС€Рё
+- **РћР±РЅРѕРІР»РµРЅ РјРµС‚РѕРґ `isAltKeyPressed()`** - РїСЂРѕРІРµСЂСЏРµС‚ РєР°Рє `mouse.altKey`, С‚Р°Рє Рё `keyboard.altKey`
+- **РЈСЃС‚СЂР°РЅРµРЅР° СЂР°СЃСЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ** - С‚РµРїРµСЂСЊ Alt СЃРѕСЃС‚РѕСЏРЅРёРµ РєРѕСЂСЂРµРєС‚РЅРѕ РѕС‚СЃР»РµР¶РёРІР°РµС‚СЃСЏ Рё СЃР±СЂР°СЃС‹РІР°РµС‚СЃСЏ
 
 ## [3.51.2] - 2025-01-27
 
-### Fixed - Исправления позиционирования меню и активации табов
+### Fixed - РСЃРїСЂР°РІР»РµРЅРёСЏ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёСЏ РјРµРЅСЋ Рё Р°РєС‚РёРІР°С†РёРё С‚Р°Р±РѕРІ
 
-#### 🎯 **Исправления позиционирования меню:**
-- **Исправлено позиционирование меню фильтра outliner** - корректно позиционируется при переносе в правую панель
-- **Создана утилита MenuPositioningUtils** - стандартизированное позиционирование для всех меню
-- **Унифицированы CSS классы меню** - консистентный внешний вид всех popup меню
-- **Исправлена логика скрытия меню** - используется логика из BaseContextMenu (mouseleave + click)
-- **Оптимизирован код OutlinerPanel** - убрано дублирование, сокращен код с ~50 до ~15 строк
+#### рџЋЇ **РСЃРїСЂР°РІР»РµРЅРёСЏ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёСЏ РјРµРЅСЋ:**
+- **РСЃРїСЂР°РІР»РµРЅРѕ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ РјРµРЅСЋ С„РёР»СЊС‚СЂР° outliner** - РєРѕСЂСЂРµРєС‚РЅРѕ РїРѕР·РёС†РёРѕРЅРёСЂСѓРµС‚СЃСЏ РїСЂРё РїРµСЂРµРЅРѕСЃРµ РІ РїСЂР°РІСѓСЋ РїР°РЅРµР»СЊ
+- **РЎРѕР·РґР°РЅР° СѓС‚РёР»РёС‚Р° MenuPositioningUtils** - СЃС‚Р°РЅРґР°СЂС‚РёР·РёСЂРѕРІР°РЅРЅРѕРµ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ РґР»СЏ РІСЃРµС… РјРµРЅСЋ
+- **РЈРЅРёС„РёС†РёСЂРѕРІР°РЅС‹ CSS РєР»Р°СЃСЃС‹ РјРµРЅСЋ** - РєРѕРЅСЃРёСЃС‚РµРЅС‚РЅС‹Р№ РІРЅРµС€РЅРёР№ РІРёРґ РІСЃРµС… popup РјРµРЅСЋ
+- **РСЃРїСЂР°РІР»РµРЅР° Р»РѕРіРёРєР° СЃРєСЂС‹С‚РёСЏ РјРµРЅСЋ** - РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ Р»РѕРіРёРєР° РёР· BaseContextMenu (mouseleave + click)
+- **РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅ РєРѕРґ OutlinerPanel** - СѓР±СЂР°РЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ, СЃРѕРєСЂР°С‰РµРЅ РєРѕРґ СЃ ~50 РґРѕ ~15 СЃС‚СЂРѕРє
 
-#### 🎯 **Исправления активации табов:**
-- **Исправлена логика активации при переносе табов** - перенесенный таб активируется, остальные деактивируются
-- **Добавлена активация таба, ближайшего к сепаратору** - при переносе активируется крайний к main-panel таб
-- **Исправлено восстановление активных табов при рестарте** - корректно восстанавливаются сохраненные табы
-- **Устранена проблема авто-селекта при инициализации** - не перезаписывает сохраненное состояние
-- **Исправлен порядок инициализации** - сначала позиции, затем активация табов
+#### рџЋЇ **РСЃРїСЂР°РІР»РµРЅРёСЏ Р°РєС‚РёРІР°С†РёРё С‚Р°Р±РѕРІ:**
+- **РСЃРїСЂР°РІР»РµРЅР° Р»РѕРіРёРєР° Р°РєС‚РёРІР°С†РёРё РїСЂРё РїРµСЂРµРЅРѕСЃРµ С‚Р°Р±РѕРІ** - РїРµСЂРµРЅРµСЃРµРЅРЅС‹Р№ С‚Р°Р± Р°РєС‚РёРІРёСЂСѓРµС‚СЃСЏ, РѕСЃС‚Р°Р»СЊРЅС‹Рµ РґРµР°РєС‚РёРІРёСЂСѓСЋС‚СЃСЏ
+- **Р”РѕР±Р°РІР»РµРЅР° Р°РєС‚РёРІР°С†РёСЏ С‚Р°Р±Р°, Р±Р»РёР¶Р°Р№С€РµРіРѕ Рє СЃРµРїР°СЂР°С‚РѕСЂСѓ** - РїСЂРё РїРµСЂРµРЅРѕСЃРµ Р°РєС‚РёРІРёСЂСѓРµС‚СЃСЏ РєСЂР°Р№РЅРёР№ Рє main-panel С‚Р°Р±
+- **РСЃРїСЂР°РІР»РµРЅРѕ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ Р°РєС‚РёРІРЅС‹С… С‚Р°Р±РѕРІ РїСЂРё СЂРµСЃС‚Р°СЂС‚Рµ** - РєРѕСЂСЂРµРєС‚РЅРѕ РІРѕСЃСЃС‚Р°РЅР°РІР»РёРІР°СЋС‚СЃСЏ СЃРѕС…СЂР°РЅРµРЅРЅС‹Рµ С‚Р°Р±С‹
+- **РЈСЃС‚СЂР°РЅРµРЅР° РїСЂРѕР±Р»РµРјР° Р°РІС‚Рѕ-СЃРµР»РµРєС‚Р° РїСЂРё РёРЅРёС†РёР°Р»РёР·Р°С†РёРё** - РЅРµ РїРµСЂРµР·Р°РїРёСЃС‹РІР°РµС‚ СЃРѕС…СЂР°РЅРµРЅРЅРѕРµ СЃРѕСЃС‚РѕСЏРЅРёРµ
+- **РСЃРїСЂР°РІР»РµРЅ РїРѕСЂСЏРґРѕРє РёРЅРёС†РёР°Р»РёР·Р°С†РёРё** - СЃРЅР°С‡Р°Р»Р° РїРѕР·РёС†РёРё, Р·Р°С‚РµРј Р°РєС‚РёРІР°С†РёСЏ С‚Р°Р±РѕРІ
 
-#### ✅ **Улучшения архитектуры:**
-- **Создан MenuPositioningUtils** - переиспользуемая утилита для позиционирования меню
-- **Унифицирована логика получения типов объектов** - метод `getObjectTypes()` в утилите
-- **Исправлен поток данных StateManager → ConfigManager** - через подписки без дублирования
-- **Оптимизирована логика активации табов** - убрано дублирование кода
+#### вњ… **РЈР»СѓС‡С€РµРЅРёСЏ Р°СЂС…РёС‚РµРєС‚СѓСЂС‹:**
+- **РЎРѕР·РґР°РЅ MenuPositioningUtils** - РїРµСЂРµРёСЃРїРѕР»СЊР·СѓРµРјР°СЏ СѓС‚РёР»РёС‚Р° РґР»СЏ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёСЏ РјРµРЅСЋ
+- **РЈРЅРёС„РёС†РёСЂРѕРІР°РЅР° Р»РѕРіРёРєР° РїРѕР»СѓС‡РµРЅРёСЏ С‚РёРїРѕРІ РѕР±СЉРµРєС‚РѕРІ** - РјРµС‚РѕРґ `getObjectTypes()` РІ СѓС‚РёР»РёС‚Рµ
+- **РСЃРїСЂР°РІР»РµРЅ РїРѕС‚РѕРє РґР°РЅРЅС‹С… StateManager в†’ ConfigManager** - С‡РµСЂРµР· РїРѕРґРїРёСЃРєРё Р±РµР· РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ
+- **РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅР° Р»РѕРіРёРєР° Р°РєС‚РёРІР°С†РёРё С‚Р°Р±РѕРІ** - СѓР±СЂР°РЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ РєРѕРґР°
 
-#### 📁 **Измененные файлы:**
-- **Новый:** `src/utils/MenuPositioningUtils.js` - утилита для позиционирования меню
-- **Обновлен:** `src/ui/OutlinerPanel.js` - оптимизирован код меню фильтра
-- **Обновлен:** `src/ui/PanelPositionManager.js` - исправлена логика активации табов
-- **Обновлен:** `src/core/EventHandlers.js` - добавлены методы активации табов
+#### рџ“Ѓ **РР·РјРµРЅРµРЅРЅС‹Рµ С„Р°Р№Р»С‹:**
+- **РќРѕРІС‹Р№:** `src/utils/MenuPositioningUtils.js` - СѓС‚РёР»РёС‚Р° РґР»СЏ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёСЏ РјРµРЅСЋ
+- **РћР±РЅРѕРІР»РµРЅ:** `src/ui/OutlinerPanel.js` - РѕРїС‚РёРјРёР·РёСЂРѕРІР°РЅ РєРѕРґ РјРµРЅСЋ С„РёР»СЊС‚СЂР°
+- **РћР±РЅРѕРІР»РµРЅ:** `src/ui/PanelPositionManager.js` - РёСЃРїСЂР°РІР»РµРЅР° Р»РѕРіРёРєР° Р°РєС‚РёРІР°С†РёРё С‚Р°Р±РѕРІ
+- **РћР±РЅРѕРІР»РµРЅ:** `src/core/EventHandlers.js` - РґРѕР±Р°РІР»РµРЅС‹ РјРµС‚РѕРґС‹ Р°РєС‚РёРІР°С†РёРё С‚Р°Р±РѕРІ
 
 ## [3.51.1] - 2025-01-27
 
-### Fixed - Исправления панелей, табов и настроек
+### Fixed - РСЃРїСЂР°РІР»РµРЅРёСЏ РїР°РЅРµР»РµР№, С‚Р°Р±РѕРІ Рё РЅР°СЃС‚СЂРѕРµРє
 
-#### 🎯 **Исправления панелей:**
-- **Исправлена логика создания левой панели** - не создается когда все табы в правой панели
-- **Исправлено восстановление правой панели** - корректно восстанавливается при переносе табов
-- **Унифицирована логика удаления панелей** - все пустые панели удаляются полностью
-- **Исправлена бесконечная рекурсия** - устранена ошибка "Maximum call stack size exceeded"
-- **Исправлено обрезание табов** - табы левой панели правильно обрезаются при уменьшении
+#### рџЋЇ **РСЃРїСЂР°РІР»РµРЅРёСЏ РїР°РЅРµР»РµР№:**
+- **РСЃРїСЂР°РІР»РµРЅР° Р»РѕРіРёРєР° СЃРѕР·РґР°РЅРёСЏ Р»РµРІРѕР№ РїР°РЅРµР»Рё** - РЅРµ СЃРѕР·РґР°РµС‚СЃСЏ РєРѕРіРґР° РІСЃРµ С‚Р°Р±С‹ РІ РїСЂР°РІРѕР№ РїР°РЅРµР»Рё
+- **РСЃРїСЂР°РІР»РµРЅРѕ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ РїСЂР°РІРѕР№ РїР°РЅРµР»Рё** - РєРѕСЂСЂРµРєС‚РЅРѕ РІРѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµС‚СЃСЏ РїСЂРё РїРµСЂРµРЅРѕСЃРµ С‚Р°Р±РѕРІ
+- **РЈРЅРёС„РёС†РёСЂРѕРІР°РЅР° Р»РѕРіРёРєР° СѓРґР°Р»РµРЅРёСЏ РїР°РЅРµР»РµР№** - РІСЃРµ РїСѓСЃС‚С‹Рµ РїР°РЅРµР»Рё СѓРґР°Р»СЏСЋС‚СЃСЏ РїРѕР»РЅРѕСЃС‚СЊСЋ
+- **РСЃРїСЂР°РІР»РµРЅР° Р±РµСЃРєРѕРЅРµС‡РЅР°СЏ СЂРµРєСѓСЂСЃРёСЏ** - СѓСЃС‚СЂР°РЅРµРЅР° РѕС€РёР±РєР° "Maximum call stack size exceeded"
+- **РСЃРїСЂР°РІР»РµРЅРѕ РѕР±СЂРµР·Р°РЅРёРµ С‚Р°Р±РѕРІ** - С‚Р°Р±С‹ Р»РµРІРѕР№ РїР°РЅРµР»Рё РїСЂР°РІРёР»СЊРЅРѕ РѕР±СЂРµР·Р°СЋС‚СЃСЏ РїСЂРё СѓРјРµРЅСЊС€РµРЅРёРё
 
-#### 🎯 **Исправления табов:**
-- **Исправлена инициализация позиций табов** - правильный порядок операций при запуске
-- **Исправлена валидация активных табов** - табы активируются только в существующих панелях
-- **Исправлено сохранение позиций табов** - корректно сохраняются при закрытии редактора
+#### рџЋЇ **РСЃРїСЂР°РІР»РµРЅРёСЏ С‚Р°Р±РѕРІ:**
+- **РСЃРїСЂР°РІР»РµРЅР° РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ РїРѕР·РёС†РёР№ С‚Р°Р±РѕРІ** - РїСЂР°РІРёР»СЊРЅС‹Р№ РїРѕСЂСЏРґРѕРє РѕРїРµСЂР°С†РёР№ РїСЂРё Р·Р°РїСѓСЃРєРµ
+- **РСЃРїСЂР°РІР»РµРЅР° РІР°Р»РёРґР°С†РёСЏ Р°РєС‚РёРІРЅС‹С… С‚Р°Р±РѕРІ** - С‚Р°Р±С‹ Р°РєС‚РёРІРёСЂСѓСЋС‚СЃСЏ С‚РѕР»СЊРєРѕ РІ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёС… РїР°РЅРµР»СЏС…
+- **РСЃРїСЂР°РІР»РµРЅРѕ СЃРѕС…СЂР°РЅРµРЅРёРµ РїРѕР·РёС†РёР№ С‚Р°Р±РѕРІ** - РєРѕСЂСЂРµРєС‚РЅРѕ СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ РїСЂРё Р·Р°РєСЂС‹С‚РёРё СЂРµРґР°РєС‚РѕСЂР°
 
-#### 🎯 **Исправления настроек:**
-- **Исправлен диапазон zoom threshold** - минимальное значение 0.01, максимальное 0.5
-- **Исправлены значения по умолчанию** - соответствуют диапазону слайдера
-- **Исправлена консистентность настроек** - одинаковые значения во всех файлах
+#### рџЋЇ **РСЃРїСЂР°РІР»РµРЅРёСЏ РЅР°СЃС‚СЂРѕРµРє:**
+- **РСЃРїСЂР°РІР»РµРЅ РґРёР°РїР°Р·РѕРЅ zoom threshold** - РјРёРЅРёРјР°Р»СЊРЅРѕРµ Р·РЅР°С‡РµРЅРёРµ 0.01, РјР°РєСЃРёРјР°Р»СЊРЅРѕРµ 0.5
+- **РСЃРїСЂР°РІР»РµРЅС‹ Р·РЅР°С‡РµРЅРёСЏ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ** - СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‚ РґРёР°РїР°Р·РѕРЅСѓ СЃР»Р°Р№РґРµСЂР°
+- **РСЃРїСЂР°РІР»РµРЅР° РєРѕРЅСЃРёСЃС‚РµРЅС‚РЅРѕСЃС‚СЊ РЅР°СЃС‚СЂРѕРµРє** - РѕРґРёРЅР°РєРѕРІС‹Рµ Р·РЅР°С‡РµРЅРёСЏ РІРѕ РІСЃРµС… С„Р°Р№Р»Р°С…
 
-#### ✅ **Улучшения кода:**
-- **Убрано дублирование кода** - унифицированы вызовы обновления UI
-- **Упрощена логика активации табов** - создан унифицированный метод `_activatePanelTab()`
-- **Удален устаревший метод** - `setActiveRightPanelTab()` заменен на `setActivePanelTab()`
-- **Добавлены CSS стили для табов** - правильное обрезание и сжатие при переполнении
-
-## [3.51.0] - 2025-01-27
-
-### Added - Отдельные состояния табов для левой и правой панелей
-
-#### 🎯 **Новые функции:**
-- **Отдельные состояния `leftPanelTab` и `rightPanelTab`** - независимое управление табами
-- **Независимый селект табов** - переключение в одной панели не сбрасывает селект в другой
-- **Корректное отображение контента** - контент показывается только для активного таба в соответствующей панели
-
-#### ✅ **Улучшения:**
-- **Убрано дублирование кода в StateManager** - создан метод `createInitialState()`
-- **Обновлена конфигурация** - добавлен `leftPanelTabOrder` в настройки панелей
-- **Исправлена логика показа контента** - поиск контент-панелей в правильных контейнерах
+#### вњ… **РЈР»СѓС‡С€РµРЅРёСЏ РєРѕРґР°:**
+- **РЈР±СЂР°РЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ РєРѕРґР°** - СѓРЅРёС„РёС†РёСЂРѕРІР°РЅС‹ РІС‹Р·РѕРІС‹ РѕР±РЅРѕРІР»РµРЅРёСЏ UI
+- **РЈРїСЂРѕС‰РµРЅР° Р»РѕРіРёРєР° Р°РєС‚РёРІР°С†РёРё С‚Р°Р±РѕРІ** - СЃРѕР·РґР°РЅ СѓРЅРёС„РёС†РёСЂРѕРІР°РЅРЅС‹Р№ РјРµС‚РѕРґ `_activatePanelTab()`
+- **РЈРґР°Р»РµРЅ СѓСЃС‚Р°СЂРµРІС€РёР№ РјРµС‚РѕРґ** - `setActiveRightPanelTab()` Р·Р°РјРµРЅРµРЅ РЅР° `setActivePanelTab()`
+- **Р”РѕР±Р°РІР»РµРЅС‹ CSS СЃС‚РёР»Рё РґР»СЏ С‚Р°Р±РѕРІ** - РїСЂР°РІРёР»СЊРЅРѕРµ РѕР±СЂРµР·Р°РЅРёРµ Рё СЃР¶Р°С‚РёРµ РїСЂРё РїРµСЂРµРїРѕР»РЅРµРЅРёРё
 
 ## [3.51.0] - 2025-01-27
 
-### Fixed - Унифицированная логика сепараторов и тач-поддержка
+### Added - РћС‚РґРµР»СЊРЅС‹Рµ СЃРѕСЃС‚РѕСЏРЅРёСЏ С‚Р°Р±РѕРІ РґР»СЏ Р»РµРІРѕР№ Рё РїСЂР°РІРѕР№ РїР°РЅРµР»РµР№
 
-#### 🎯 **Исправления:**
-- **Унифицирована логика дабл-клика сепараторов** - единая система для всех панелей
-- **Упрощено управление состояниями** - только через StateManager, без дублирования
-- **Исправлена ошибка `newSize is not defined`** - убрано избыточное логирование
-- **Добавлен `leftPanelWidth` в UserPreferencesManager** - устранено предупреждение
-- **Исправлено зеркальное движение разделителей** - корректная работа для правой панели и ассетной панели
-- **Убрано дублирование логики** - единая система для всех типов событий
+#### рџЋЇ **РќРѕРІС‹Рµ С„СѓРЅРєС†РёРё:**
+- **РћС‚РґРµР»СЊРЅС‹Рµ СЃРѕСЃС‚РѕСЏРЅРёСЏ `leftPanelTab` Рё `rightPanelTab`** - РЅРµР·Р°РІРёСЃРёРјРѕРµ СѓРїСЂР°РІР»РµРЅРёРµ С‚Р°Р±Р°РјРё
+- **РќРµР·Р°РІРёСЃРёРјС‹Р№ СЃРµР»РµРєС‚ С‚Р°Р±РѕРІ** - РїРµСЂРµРєР»СЋС‡РµРЅРёРµ РІ РѕРґРЅРѕР№ РїР°РЅРµР»Рё РЅРµ СЃР±СЂР°СЃС‹РІР°РµС‚ СЃРµР»РµРєС‚ РІ РґСЂСѓРіРѕР№
+- **РљРѕСЂСЂРµРєС‚РЅРѕРµ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ РєРѕРЅС‚РµРЅС‚Р°** - РєРѕРЅС‚РµРЅС‚ РїРѕРєР°Р·С‹РІР°РµС‚СЃСЏ С‚РѕР»СЊРєРѕ РґР»СЏ Р°РєС‚РёРІРЅРѕРіРѕ С‚Р°Р±Р° РІ СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‰РµР№ РїР°РЅРµР»Рё
 
-#### ✅ **Улучшения:**
-- **Убраны локальные переменные `previousSizeRef`** - все состояния в StateManager
-- **Исправлена логика сворачивания/разворачивания** - корректное сохранение позиций
-- **Упрощена логика управления** - читает позиции только из StateManager
-- **Убрано избыточное сохранение состояний** - позиция уже сохраняется при изменении
-- **Создан унифицированный метод `handlePanelResize`** - единая логика применения размеров
-- **Убрана дублирующая логика** между разными типами событий
+#### вњ… **РЈР»СѓС‡С€РµРЅРёСЏ:**
+- **РЈР±СЂР°РЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ РєРѕРґР° РІ StateManager** - СЃРѕР·РґР°РЅ РјРµС‚РѕРґ `createInitialState()`
+- **РћР±РЅРѕРІР»РµРЅР° РєРѕРЅС„РёРіСѓСЂР°С†РёСЏ** - РґРѕР±Р°РІР»РµРЅ `leftPanelTabOrder` РІ РЅР°СЃС‚СЂРѕР№РєРё РїР°РЅРµР»РµР№
+- **РСЃРїСЂР°РІР»РµРЅР° Р»РѕРіРёРєР° РїРѕРєР°Р·Р° РєРѕРЅС‚РµРЅС‚Р°** - РїРѕРёСЃРє РєРѕРЅС‚РµРЅС‚-РїР°РЅРµР»РµР№ РІ РїСЂР°РІРёР»СЊРЅС‹С… РєРѕРЅС‚РµР№РЅРµСЂР°С…
 
-#### 🔧 **Технические детали:**
-- **Обновлен:** `src/ui/PanelPositionManager.js` - убраны локальные переменные previousSizeRef, добавлен handlePanelResize
-- **Обновлен:** `src/managers/UserPreferencesManager.js` - добавлен leftPanelWidth
-- **Обновлен:** `src/managers/StateManager.js` - добавлен assetsPanelPreviousHeight
+## [3.51.0] - 2025-01-27
+
+### Fixed - РЈРЅРёС„РёС†РёСЂРѕРІР°РЅРЅР°СЏ Р»РѕРіРёРєР° СЃРµРїР°СЂР°С‚РѕСЂРѕРІ Рё С‚Р°С‡-РїРѕРґРґРµСЂР¶РєР°
+
+#### рџЋЇ **РСЃРїСЂР°РІР»РµРЅРёСЏ:**
+- **РЈРЅРёС„РёС†РёСЂРѕРІР°РЅР° Р»РѕРіРёРєР° РґР°Р±Р»-РєР»РёРєР° СЃРµРїР°СЂР°С‚РѕСЂРѕРІ** - РµРґРёРЅР°СЏ СЃРёСЃС‚РµРјР° РґР»СЏ РІСЃРµС… РїР°РЅРµР»РµР№
+- **РЈРїСЂРѕС‰РµРЅРѕ СѓРїСЂР°РІР»РµРЅРёРµ СЃРѕСЃС‚РѕСЏРЅРёСЏРјРё** - С‚РѕР»СЊРєРѕ С‡РµСЂРµР· StateManager, Р±РµР· РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ
+- **РСЃРїСЂР°РІР»РµРЅР° РѕС€РёР±РєР° `newSize is not defined`** - СѓР±СЂР°РЅРѕ РёР·Р±С‹С‚РѕС‡РЅРѕРµ Р»РѕРіРёСЂРѕРІР°РЅРёРµ
+- **Р”РѕР±Р°РІР»РµРЅ `leftPanelWidth` РІ UserPreferencesManager** - СѓСЃС‚СЂР°РЅРµРЅРѕ РїСЂРµРґСѓРїСЂРµР¶РґРµРЅРёРµ
+- **РСЃРїСЂР°РІР»РµРЅРѕ Р·РµСЂРєР°Р»СЊРЅРѕРµ РґРІРёР¶РµРЅРёРµ СЂР°Р·РґРµР»РёС‚РµР»РµР№** - РєРѕСЂСЂРµРєС‚РЅР°СЏ СЂР°Р±РѕС‚Р° РґР»СЏ РїСЂР°РІРѕР№ РїР°РЅРµР»Рё Рё Р°СЃСЃРµС‚РЅРѕР№ РїР°РЅРµР»Рё
+- **РЈР±СЂР°РЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ Р»РѕРіРёРєРё** - РµРґРёРЅР°СЏ СЃРёСЃС‚РµРјР° РґР»СЏ РІСЃРµС… С‚РёРїРѕРІ СЃРѕР±С‹С‚РёР№
+
+#### вњ… **РЈР»СѓС‡С€РµРЅРёСЏ:**
+- **РЈР±СЂР°РЅС‹ Р»РѕРєР°Р»СЊРЅС‹Рµ РїРµСЂРµРјРµРЅРЅС‹Рµ `previousSizeRef`** - РІСЃРµ СЃРѕСЃС‚РѕСЏРЅРёСЏ РІ StateManager
+- **РСЃРїСЂР°РІР»РµРЅР° Р»РѕРіРёРєР° СЃРІРѕСЂР°С‡РёРІР°РЅРёСЏ/СЂР°Р·РІРѕСЂР°С‡РёРІР°РЅРёСЏ** - РєРѕСЂСЂРµРєС‚РЅРѕРµ СЃРѕС…СЂР°РЅРµРЅРёРµ РїРѕР·РёС†РёР№
+- **РЈРїСЂРѕС‰РµРЅР° Р»РѕРіРёРєР° СѓРїСЂР°РІР»РµРЅРёСЏ** - С‡РёС‚Р°РµС‚ РїРѕР·РёС†РёРё С‚РѕР»СЊРєРѕ РёР· StateManager
+- **РЈР±СЂР°РЅРѕ РёР·Р±С‹С‚РѕС‡РЅРѕРµ СЃРѕС…СЂР°РЅРµРЅРёРµ СЃРѕСЃС‚РѕСЏРЅРёР№** - РїРѕР·РёС†РёСЏ СѓР¶Рµ СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ РїСЂРё РёР·РјРµРЅРµРЅРёРё
+- **РЎРѕР·РґР°РЅ СѓРЅРёС„РёС†РёСЂРѕРІР°РЅРЅС‹Р№ РјРµС‚РѕРґ `handlePanelResize`** - РµРґРёРЅР°СЏ Р»РѕРіРёРєР° РїСЂРёРјРµРЅРµРЅРёСЏ СЂР°Р·РјРµСЂРѕРІ
+- **РЈР±СЂР°РЅР° РґСѓР±Р»РёСЂСѓСЋС‰Р°СЏ Р»РѕРіРёРєР°** РјРµР¶РґСѓ СЂР°Р·РЅС‹РјРё С‚РёРїР°РјРё СЃРѕР±С‹С‚РёР№
+
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ РґРµС‚Р°Р»Рё:**
+- **РћР±РЅРѕРІР»РµРЅ:** `src/ui/PanelPositionManager.js` - СѓР±СЂР°РЅС‹ Р»РѕРєР°Р»СЊРЅС‹Рµ РїРµСЂРµРјРµРЅРЅС‹Рµ previousSizeRef, РґРѕР±Р°РІР»РµРЅ handlePanelResize
+- **РћР±РЅРѕРІР»РµРЅ:** `src/managers/UserPreferencesManager.js` - РґРѕР±Р°РІР»РµРЅ leftPanelWidth
+- **РћР±РЅРѕРІР»РµРЅ:** `src/managers/StateManager.js` - РґРѕР±Р°РІР»РµРЅ assetsPanelPreviousHeight
 
 ## [3.50.8] - 2025-01-27
 
-### Added - Универсальная система управления позицией панелей
+### Added - РЈРЅРёРІРµСЂСЃР°Р»СЊРЅР°СЏ СЃРёСЃС‚РµРјР° СѓРїСЂР°РІР»РµРЅРёСЏ РїРѕР·РёС†РёРµР№ РїР°РЅРµР»РµР№
 
-#### 🎯 **Новая функциональность:**
-- **Добавлена опция переноса правой панели на левую сторону** - кнопка ⇄ в заголовке панели
-- **Создан универсальный PanelPositionManager** для управления позицией всех панелей
-- **Унифицирован подход** к переключению позиции панелей (folders и right panel)
+#### рџЋЇ **РќРѕРІР°СЏ С„СѓРЅРєС†РёРѕРЅР°Р»СЊРЅРѕСЃС‚СЊ:**
+- **Р”РѕР±Р°РІР»РµРЅР° РѕРїС†РёСЏ РїРµСЂРµРЅРѕСЃР° РїСЂР°РІРѕР№ РїР°РЅРµР»Рё РЅР° Р»РµРІСѓСЋ СЃС‚РѕСЂРѕРЅСѓ** - РєРЅРѕРїРєР° в‡„ РІ Р·Р°РіРѕР»РѕРІРєРµ РїР°РЅРµР»Рё
+- **РЎРѕР·РґР°РЅ СѓРЅРёРІРµСЂСЃР°Р»СЊРЅС‹Р№ PanelPositionManager** РґР»СЏ СѓРїСЂР°РІР»РµРЅРёСЏ РїРѕР·РёС†РёРµР№ РІСЃРµС… РїР°РЅРµР»РµР№
+- **РЈРЅРёС„РёС†РёСЂРѕРІР°РЅ РїРѕРґС…РѕРґ** Рє РїРµСЂРµРєР»СЋС‡РµРЅРёСЋ РїРѕР·РёС†РёРё РїР°РЅРµР»РµР№ (folders Рё right panel)
 
-#### ✅ **Улучшения:**
-- **Исправлено направление движения разделителя** при переносе панели на левую сторону
-- **Оптимизированы вызовы canvas** - создана универсальная функция updateCanvas()
-- **Устранены дублирующиеся слушатели событий** - удален лишний window resize слушатель
-- **Исправлены утечки памяти** - все слушатели теперь правильно отключаются
+#### вњ… **РЈР»СѓС‡С€РµРЅРёСЏ:**
+- **РСЃРїСЂР°РІР»РµРЅРѕ РЅР°РїСЂР°РІР»РµРЅРёРµ РґРІРёР¶РµРЅРёСЏ СЂР°Р·РґРµР»РёС‚РµР»СЏ** РїСЂРё РїРµСЂРµРЅРѕСЃРµ РїР°РЅРµР»Рё РЅР° Р»РµРІСѓСЋ СЃС‚РѕСЂРѕРЅСѓ
+- **РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅС‹ РІС‹Р·РѕРІС‹ canvas** - СЃРѕР·РґР°РЅР° СѓРЅРёРІРµСЂСЃР°Р»СЊРЅР°СЏ С„СѓРЅРєС†РёСЏ updateCanvas()
+- **РЈСЃС‚СЂР°РЅРµРЅС‹ РґСѓР±Р»РёСЂСѓСЋС‰РёРµСЃСЏ СЃР»СѓС€Р°С‚РµР»Рё СЃРѕР±С‹С‚РёР№** - СѓРґР°Р»РµРЅ Р»РёС€РЅРёР№ window resize СЃР»СѓС€Р°С‚РµР»СЊ
+- **РСЃРїСЂР°РІР»РµРЅС‹ СѓС‚РµС‡РєРё РїР°РјСЏС‚Рё** - РІСЃРµ СЃР»СѓС€Р°С‚РµР»Рё С‚РµРїРµСЂСЊ РїСЂР°РІРёР»СЊРЅРѕ РѕС‚РєР»СЋС‡Р°СЋС‚СЃСЏ
 
-#### 🔧 **Технические детали:**
-- **Новый компонент:** `src/ui/PanelPositionManager.js` - универсальный менеджер позиций панелей
-- **Обновлены:** `LevelEditor.js`, `EventHandlers.js`, `AssetPanel.js` - интеграция с PanelPositionManager
-- **Исправлены:** `index.html`, `FoldersPanel.js` - устранение дублирующихся слушателей
-- **Оптимизирован код:** убрано 8+ дублирующихся вызовов canvas, улучшена производительность
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ РґРµС‚Р°Р»Рё:**
+- **РќРѕРІС‹Р№ РєРѕРјРїРѕРЅРµРЅС‚:** `src/ui/PanelPositionManager.js` - СѓРЅРёРІРµСЂСЃР°Р»СЊРЅС‹Р№ РјРµРЅРµРґР¶РµСЂ РїРѕР·РёС†РёР№ РїР°РЅРµР»РµР№
+- **РћР±РЅРѕРІР»РµРЅС‹:** `LevelEditor.js`, `EventHandlers.js`, `AssetPanel.js` - РёРЅС‚РµРіСЂР°С†РёСЏ СЃ PanelPositionManager
+- **РСЃРїСЂР°РІР»РµРЅС‹:** `index.html`, `FoldersPanel.js` - СѓСЃС‚СЂР°РЅРµРЅРёРµ РґСѓР±Р»РёСЂСѓСЋС‰РёС…СЃСЏ СЃР»СѓС€Р°С‚РµР»РµР№
+- **РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅ РєРѕРґ:** СѓР±СЂР°РЅРѕ 8+ РґСѓР±Р»РёСЂСѓСЋС‰РёС…СЃСЏ РІС‹Р·РѕРІРѕРІ canvas, СѓР»СѓС‡С€РµРЅР° РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ
 
-#### 📊 **Результат:**
-- Единый подход к управлению позицией панелей
-- Правильная работа разделителя в обеих позициях
-- Оптимизированная производительность
-- Устранены утечки памяти
+#### рџ“Љ **Р РµР·СѓР»СЊС‚Р°С‚:**
+- Р•РґРёРЅС‹Р№ РїРѕРґС…РѕРґ Рє СѓРїСЂР°РІР»РµРЅРёСЋ РїРѕР·РёС†РёРµР№ РїР°РЅРµР»РµР№
+- РџСЂР°РІРёР»СЊРЅР°СЏ СЂР°Р±РѕС‚Р° СЂР°Р·РґРµР»РёС‚РµР»СЏ РІ РѕР±РµРёС… РїРѕР·РёС†РёСЏС…
+- РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅРЅР°СЏ РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ
+- РЈСЃС‚СЂР°РЅРµРЅС‹ СѓС‚РµС‡РєРё РїР°РјСЏС‚Рё
 
 ## [3.50.7] - 2025-01-27
 
-### Fixed - Доработка цветов интерфейса и оптимизация кода
+### Fixed - Р”РѕСЂР°Р±РѕС‚РєР° С†РІРµС‚РѕРІ РёРЅС‚РµСЂС„РµР№СЃР° Рё РѕРїС‚РёРјРёР·Р°С†РёСЏ РєРѕРґР°
 
-#### 🎯 **Проблема:**
-- Выпадающие меню основного меню без UI Background переменной
-- Неправильные цвета в панели Layers (Active вместо UI Text Color)
-- Дублирование CSS стилей и лишний код
+#### рџЋЇ **РџСЂРѕР±Р»РµРјР°:**
+- Р’С‹РїР°РґР°СЋС‰РёРµ РјРµРЅСЋ РѕСЃРЅРѕРІРЅРѕРіРѕ РјРµРЅСЋ Р±РµР· UI Background РїРµСЂРµРјРµРЅРЅРѕР№
+- РќРµРїСЂР°РІРёР»СЊРЅС‹Рµ С†РІРµС‚Р° РІ РїР°РЅРµР»Рё Layers (Active РІРјРµСЃС‚Рѕ UI Text Color)
+- Р”СѓР±Р»РёСЂРѕРІР°РЅРёРµ CSS СЃС‚РёР»РµР№ Рё Р»РёС€РЅРёР№ РєРѕРґ
 
-#### ✅ **Решение:**
-- **Добавлена UI Background переменная** для выпадающих меню основного меню
-- **Исправлены цвета панели Layers** - заменен Active Text Color на UI Text Color
-- **Оптимизирован код** - убрано дублирование CSS правил и упрощены комментарии
+#### вњ… **Р РµС€РµРЅРёРµ:**
+- **Р”РѕР±Р°РІР»РµРЅР° UI Background РїРµСЂРµРјРµРЅРЅР°СЏ** РґР»СЏ РІС‹РїР°РґР°СЋС‰РёС… РјРµРЅСЋ РѕСЃРЅРѕРІРЅРѕРіРѕ РјРµРЅСЋ
+- **РСЃРїСЂР°РІР»РµРЅС‹ С†РІРµС‚Р° РїР°РЅРµР»Рё Layers** - Р·Р°РјРµРЅРµРЅ Active Text Color РЅР° UI Text Color
+- **РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅ РєРѕРґ** - СѓР±СЂР°РЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ CSS РїСЂР°РІРёР» Рё СѓРїСЂРѕС‰РµРЅС‹ РєРѕРјРјРµРЅС‚Р°СЂРёРё
 
-#### 🔧 **Технические детали:**
-- Обновлены `MenuManager.js`, `config/menu.js` - добавлены CSS переменные для меню
-- Исправлены `LayersPanel.js`, `layers-panel.css` - заменены цвета на UI Text Color
-- Оптимизированы `main.css`, `AssetPanel.js` - убрано дублирование и лишний код
-- 209 использований CSS переменных в 18 файлах
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ РґРµС‚Р°Р»Рё:**
+- РћР±РЅРѕРІР»РµРЅС‹ `MenuManager.js`, `config/menu.js` - РґРѕР±Р°РІР»РµРЅС‹ CSS РїРµСЂРµРјРµРЅРЅС‹Рµ РґР»СЏ РјРµРЅСЋ
+- РСЃРїСЂР°РІР»РµРЅС‹ `LayersPanel.js`, `layers-panel.css` - Р·Р°РјРµРЅРµРЅС‹ С†РІРµС‚Р° РЅР° UI Text Color
+- РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅС‹ `main.css`, `AssetPanel.js` - СѓР±СЂР°РЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ Рё Р»РёС€РЅРёР№ РєРѕРґ
+- 209 РёСЃРїРѕР»СЊР·РѕРІР°РЅРёР№ CSS РїРµСЂРµРјРµРЅРЅС‹С… РІ 18 С„Р°Р№Р»Р°С…
 
 ## [3.50.6] - 2025-01-27
 
-### Fixed - Унификация цветов текста в интерфейсе
+### Fixed - РЈРЅРёС„РёРєР°С†РёСЏ С†РІРµС‚РѕРІ С‚РµРєСЃС‚Р° РІ РёРЅС‚РµСЂС„РµР№СЃРµ
 
-#### 🎯 **Проблема:**
-- Настройка UI Text Color применялась не ко всем элементам интерфейса
-- Жестко заданные цвета в коде и CSS перекрывали переменные
-- Неправильные цвета в режимах отображения Assets панели
+#### рџЋЇ **РџСЂРѕР±Р»РµРјР°:**
+- РќР°СЃС‚СЂРѕР№РєР° UI Text Color РїСЂРёРјРµРЅСЏР»Р°СЃСЊ РЅРµ РєРѕ РІСЃРµРј СЌР»РµРјРµРЅС‚Р°Рј РёРЅС‚РµСЂС„РµР№СЃР°
+- Р–РµСЃС‚РєРѕ Р·Р°РґР°РЅРЅС‹Рµ С†РІРµС‚Р° РІ РєРѕРґРµ Рё CSS РїРµСЂРµРєСЂС‹РІР°Р»Рё РїРµСЂРµРјРµРЅРЅС‹Рµ
+- РќРµРїСЂР°РІРёР»СЊРЅС‹Рµ С†РІРµС‚Р° РІ СЂРµР¶РёРјР°С… РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ Assets РїР°РЅРµР»Рё
 
-#### ✅ **Решение:**
-- **Заменены все жестко заданные цвета** на CSS переменные `--ui-text-color` и `--ui-active-text-color`
-- **Исправлены стили тулбара и меню** - добавлены CSS правила с `!important`
-- **Унифицированы цвета Assets панели** для всех режимов (Grid, List, Details)
-- **Правильное применение переменных** для выбранных/неактивных элементов
+#### вњ… **Р РµС€РµРЅРёРµ:**
+- **Р—Р°РјРµРЅРµРЅС‹ РІСЃРµ Р¶РµСЃС‚РєРѕ Р·Р°РґР°РЅРЅС‹Рµ С†РІРµС‚Р°** РЅР° CSS РїРµСЂРµРјРµРЅРЅС‹Рµ `--ui-text-color` Рё `--ui-active-text-color`
+- **РСЃРїСЂР°РІР»РµРЅС‹ СЃС‚РёР»Рё С‚СѓР»Р±Р°СЂР° Рё РјРµРЅСЋ** - РґРѕР±Р°РІР»РµРЅС‹ CSS РїСЂР°РІРёР»Р° СЃ `!important`
+- **РЈРЅРёС„РёС†РёСЂРѕРІР°РЅС‹ С†РІРµС‚Р° Assets РїР°РЅРµР»Рё** РґР»СЏ РІСЃРµС… СЂРµР¶РёРјРѕРІ (Grid, List, Details)
+- **РџСЂР°РІРёР»СЊРЅРѕРµ РїСЂРёРјРµРЅРµРЅРёРµ РїРµСЂРµРјРµРЅРЅС‹С…** РґР»СЏ РІС‹Р±СЂР°РЅРЅС‹С…/РЅРµР°РєС‚РёРІРЅС‹С… СЌР»РµРјРµРЅС‚РѕРІ
 
-#### 🔧 **Технические детали:**
-- 185 использований CSS переменных в 17 файлах
-- Исправлены стили в `styles/main.css`, `styles/spacing-mode.css`
-- Обновлены компоненты: Toolbar, MenuManager, AssetPanel, LayersPanel, DetailsPanel
-- CSS селекторы `.selected` и `.selected *` для корректного переопределения цветов
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ РґРµС‚Р°Р»Рё:**
+- 185 РёСЃРїРѕР»СЊР·РѕРІР°РЅРёР№ CSS РїРµСЂРµРјРµРЅРЅС‹С… РІ 17 С„Р°Р№Р»Р°С…
+- РСЃРїСЂР°РІР»РµРЅС‹ СЃС‚РёР»Рё РІ `styles/main.css`, `styles/spacing-mode.css`
+- РћР±РЅРѕРІР»РµРЅС‹ РєРѕРјРїРѕРЅРµРЅС‚С‹: Toolbar, MenuManager, AssetPanel, LayersPanel, DetailsPanel
+- CSS СЃРµР»РµРєС‚РѕСЂС‹ `.selected` Рё `.selected *` РґР»СЏ РєРѕСЂСЂРµРєС‚РЅРѕРіРѕ РїРµСЂРµРѕРїСЂРµРґРµР»РµРЅРёСЏ С†РІРµС‚РѕРІ
 
 ## [3.50.5] - 2025-01-27
 
-### Fixed - Восстановление Player Start объектов
+### Fixed - Р’РѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ Player Start РѕР±СЉРµРєС‚РѕРІ
 
-#### 🎯 **Проблема:**
-- **Отсутствующий вызов**: `updateLevelStatsPanel()` не вызывался, поэтому логика восстановления не работала
-- **Несуществующий элемент**: Метод искал элемент `level-stats-content`, который отсутствует в HTML
-- **Дублированный код**: Метод `countPlayerStartObjects()` не использовался
+#### рџЋЇ **РџСЂРѕР±Р»РµРјР°:**
+- **РћС‚СЃСѓС‚СЃС‚РІСѓСЋС‰РёР№ РІС‹Р·РѕРІ**: `updateLevelStatsPanel()` РЅРµ РІС‹Р·С‹РІР°Р»СЃСЏ, РїРѕСЌС‚РѕРјСѓ Р»РѕРіРёРєР° РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ РЅРµ СЂР°Р±РѕС‚Р°Р»Р°
+- **РќРµСЃСѓС‰РµСЃС‚РІСѓСЋС‰РёР№ СЌР»РµРјРµРЅС‚**: РњРµС‚РѕРґ РёСЃРєР°Р» СЌР»РµРјРµРЅС‚ `level-stats-content`, РєРѕС‚РѕСЂС‹Р№ РѕС‚СЃСѓС‚СЃС‚РІСѓРµС‚ РІ HTML
+- **Р”СѓР±Р»РёСЂРѕРІР°РЅРЅС‹Р№ РєРѕРґ**: РњРµС‚РѕРґ `countPlayerStartObjects()` РЅРµ РёСЃРїРѕР»СЊР·РѕРІР°Р»СЃСЏ
 
-#### ✅ **Решение:**
-- **Новый метод `ensurePlayerStartExists()`**: Проверяет и автоматически создает Player Start
-- **Интеграция в `updateAllPanels()`**: Добавлен вызов проверки при каждом обновлении
-- **Автоматическая проверка**: В `updateCachedLevelStats()` и после удаления объектов
-- **Защита от рекурсии**: Исключение undo/redo операций и предотвращение бесконечных циклов
+#### вњ… **Р РµС€РµРЅРёРµ:**
+- **РќРѕРІС‹Р№ РјРµС‚РѕРґ `ensurePlayerStartExists()`**: РџСЂРѕРІРµСЂСЏРµС‚ Рё Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё СЃРѕР·РґР°РµС‚ Player Start
+- **РРЅС‚РµРіСЂР°С†РёСЏ РІ `updateAllPanels()`**: Р”РѕР±Р°РІР»РµРЅ РІС‹Р·РѕРІ РїСЂРѕРІРµСЂРєРё РїСЂРё РєР°Р¶РґРѕРј РѕР±РЅРѕРІР»РµРЅРёРё
+- **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ РїСЂРѕРІРµСЂРєР°**: Р’ `updateCachedLevelStats()` Рё РїРѕСЃР»Рµ СѓРґР°Р»РµРЅРёСЏ РѕР±СЉРµРєС‚РѕРІ
+- **Р—Р°С‰РёС‚Р° РѕС‚ СЂРµРєСѓСЂСЃРёРё**: РСЃРєР»СЋС‡РµРЅРёРµ undo/redo РѕРїРµСЂР°С†РёР№ Рё РїСЂРµРґРѕС‚РІСЂР°С‰РµРЅРёРµ Р±РµСЃРєРѕРЅРµС‡РЅС‹С… С†РёРєР»РѕРІ
 
-#### 🔧 **Технические детали:**
-- Использует кэшированную статистику через `GroupTraversalUtils.getAllObjects()`
-- Создает Player Start в координатах (0,0) с стандартными параметрами
-- Логирование создания через `Logger.lifecycle.info()`
-- Обновление истории и кэшей после создания
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ РґРµС‚Р°Р»Рё:**
+- РСЃРїРѕР»СЊР·СѓРµС‚ РєСЌС€РёСЂРѕРІР°РЅРЅСѓСЋ СЃС‚Р°С‚РёСЃС‚РёРєСѓ С‡РµСЂРµР· `GroupTraversalUtils.getAllObjects()`
+- РЎРѕР·РґР°РµС‚ Player Start РІ РєРѕРѕСЂРґРёРЅР°С‚Р°С… (0,0) СЃ СЃС‚Р°РЅРґР°СЂС‚РЅС‹РјРё РїР°СЂР°РјРµС‚СЂР°РјРё
+- Р›РѕРіРёСЂРѕРІР°РЅРёРµ СЃРѕР·РґР°РЅРёСЏ С‡РµСЂРµР· `Logger.lifecycle.info()`
+- РћР±РЅРѕРІР»РµРЅРёРµ РёСЃС‚РѕСЂРёРё Рё РєСЌС€РµР№ РїРѕСЃР»Рµ СЃРѕР·РґР°РЅРёСЏ
 
 ## [3.50.4] - 2025-01-27
 
-### Fixed - Исправление ошибок "message channel closed" от браузерных расширений
+### Fixed - РСЃРїСЂР°РІР»РµРЅРёРµ РѕС€РёР±РѕРє "message channel closed" РѕС‚ Р±СЂР°СѓР·РµСЂРЅС‹С… СЂР°СЃС€РёСЂРµРЅРёР№
 
-#### 🎯 **Корень проблемы:**
-- **File System Access API конфликты**: Браузерные расширения (блокировщики рекламы, средства безопасности) прерывают сообщения между веб-страницей и браузером
-- **Отсутствие таймаутов**: File System Access API операции могли зависать при конфликтах с расширениями
-- **Дублирование кода**: Функция `isExtensionError` дублировалась в 4 файлах
+#### рџЋЇ **РљРѕСЂРµРЅСЊ РїСЂРѕР±Р»РµРјС‹:**
+- **File System Access API РєРѕРЅС„Р»РёРєС‚С‹**: Р‘СЂР°СѓР·РµСЂРЅС‹Рµ СЂР°СЃС€РёСЂРµРЅРёСЏ (Р±Р»РѕРєРёСЂРѕРІС‰РёРєРё СЂРµРєР»Р°РјС‹, СЃСЂРµРґСЃС‚РІР° Р±РµР·РѕРїР°СЃРЅРѕСЃС‚Рё) РїСЂРµСЂС‹РІР°СЋС‚ СЃРѕРѕР±С‰РµРЅРёСЏ РјРµР¶РґСѓ РІРµР±-СЃС‚СЂР°РЅРёС†РµР№ Рё Р±СЂР°СѓР·РµСЂРѕРј
+- **РћС‚СЃСѓС‚СЃС‚РІРёРµ С‚Р°Р№РјР°СѓС‚РѕРІ**: File System Access API РѕРїРµСЂР°С†РёРё РјРѕРіР»Рё Р·Р°РІРёСЃР°С‚СЊ РїСЂРё РєРѕРЅС„Р»РёРєС‚Р°С… СЃ СЂР°СЃС€РёСЂРµРЅРёСЏРјРё
+- **Р”СѓР±Р»РёСЂРѕРІР°РЅРёРµ РєРѕРґР°**: Р¤СѓРЅРєС†РёСЏ `isExtensionError` РґСѓР±Р»РёСЂРѕРІР°Р»Р°СЃСЊ РІ 4 С„Р°Р№Р»Р°С…
 
-#### 🔧 **Технические исправления:**
-- **Централизованная обработка**: Создан `ExtensionErrorUtils.js` для единого управления ошибками расширений
-- **Таймауты для API**: Добавлены таймауты для всех File System Access API операций (5-15 секунд)
-- **Автоматические fallback**: Graceful degradation при конфликтах с расширениями
-- **Глобальная фильтрация**: Обработчики `window.addEventListener('error')` и `window.addEventListener('unhandledrejection')`
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ РёСЃРїСЂР°РІР»РµРЅРёСЏ:**
+- **Р¦РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅР°СЏ РѕР±СЂР°Р±РѕС‚РєР°**: РЎРѕР·РґР°РЅ `ExtensionErrorUtils.js` РґР»СЏ РµРґРёРЅРѕРіРѕ СѓРїСЂР°РІР»РµРЅРёСЏ РѕС€РёР±РєР°РјРё СЂР°СЃС€РёСЂРµРЅРёР№
+- **РўР°Р№РјР°СѓС‚С‹ РґР»СЏ API**: Р”РѕР±Р°РІР»РµРЅС‹ С‚Р°Р№РјР°СѓС‚С‹ РґР»СЏ РІСЃРµС… File System Access API РѕРїРµСЂР°С†РёР№ (5-15 СЃРµРєСѓРЅРґ)
+- **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРёРµ fallback**: Graceful degradation РїСЂРё РєРѕРЅС„Р»РёРєС‚Р°С… СЃ СЂР°СЃС€РёСЂРµРЅРёСЏРјРё
+- **Р“Р»РѕР±Р°Р»СЊРЅР°СЏ С„РёР»СЊС‚СЂР°С†РёСЏ**: РћР±СЂР°Р±РѕС‚С‡РёРєРё `window.addEventListener('error')` Рё `window.addEventListener('unhandledrejection')`
 
-#### 📋 **Функциональность:**
-- ✅ **FolderPickerDialog**: Автоматический fallback на input dialog при конфликтах
-- ✅ **AssetPanel**: Понятные сообщения об ошибках с предложением отключить расширения
-- ✅ **FileUtils**: Fallback на download метод при проблемах с File System Access API
-- ✅ **Глобальная защита**: Фильтрация ошибок расширений на уровне приложения
+#### рџ“‹ **Р¤СѓРЅРєС†РёРѕРЅР°Р»СЊРЅРѕСЃС‚СЊ:**
+- вњ… **FolderPickerDialog**: РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРёР№ fallback РЅР° input dialog РїСЂРё РєРѕРЅС„Р»РёРєС‚Р°С…
+- вњ… **AssetPanel**: РџРѕРЅСЏС‚РЅС‹Рµ СЃРѕРѕР±С‰РµРЅРёСЏ РѕР± РѕС€РёР±РєР°С… СЃ РїСЂРµРґР»РѕР¶РµРЅРёРµРј РѕС‚РєР»СЋС‡РёС‚СЊ СЂР°СЃС€РёСЂРµРЅРёСЏ
+- вњ… **FileUtils**: Fallback РЅР° download РјРµС‚РѕРґ РїСЂРё РїСЂРѕР±Р»РµРјР°С… СЃ File System Access API
+- вњ… **Р“Р»РѕР±Р°Р»СЊРЅР°СЏ Р·Р°С‰РёС‚Р°**: Р¤РёР»СЊС‚СЂР°С†РёСЏ РѕС€РёР±РѕРє СЂР°СЃС€РёСЂРµРЅРёР№ РЅР° СѓСЂРѕРІРЅРµ РїСЂРёР»РѕР¶РµРЅРёСЏ
 
-#### 🎨 **Архитектурные улучшения:**
-- **DRY принцип**: Устранено дублирование ~100 строк кода
-- **Централизованная логика**: Все паттерны ошибок расширений в одном месте
-- **Консистентный API**: Стандартизированные методы обработки ошибок
-- **Улучшенная поддерживаемость**: Единая точка для обновления паттернов ошибок
+#### рџЋЁ **РђСЂС…РёС‚РµРєС‚СѓСЂРЅС‹Рµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **DRY РїСЂРёРЅС†РёРї**: РЈСЃС‚СЂР°РЅРµРЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ ~100 СЃС‚СЂРѕРє РєРѕРґР°
+- **Р¦РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅР°СЏ Р»РѕРіРёРєР°**: Р’СЃРµ РїР°С‚С‚РµСЂРЅС‹ РѕС€РёР±РѕРє СЂР°СЃС€РёСЂРµРЅРёР№ РІ РѕРґРЅРѕРј РјРµСЃС‚Рµ
+- **РљРѕРЅСЃРёСЃС‚РµРЅС‚РЅС‹Р№ API**: РЎС‚Р°РЅРґР°СЂС‚РёР·РёСЂРѕРІР°РЅРЅС‹Рµ РјРµС‚РѕРґС‹ РѕР±СЂР°Р±РѕС‚РєРё РѕС€РёР±РѕРє
+- **РЈР»СѓС‡С€РµРЅРЅР°СЏ РїРѕРґРґРµСЂР¶РёРІР°РµРјРѕСЃС‚СЊ**: Р•РґРёРЅР°СЏ С‚РѕС‡РєР° РґР»СЏ РѕР±РЅРѕРІР»РµРЅРёСЏ РїР°С‚С‚РµСЂРЅРѕРІ РѕС€РёР±РѕРє
 
-#### 📊 **Код изменений:**
+#### рџ“Љ **РљРѕРґ РёР·РјРµРЅРµРЅРёР№:**
 ```javascript
-// ExtensionErrorUtils.js - Централизованная обработка
+// ExtensionErrorUtils.js - Р¦РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅР°СЏ РѕР±СЂР°Р±РѕС‚РєР°
 export class ExtensionErrorUtils {
     static EXTENSION_ERROR_PATTERNS = [
         'message channel closed',
         'extension context invalidated',
         'receiving end does not exist',
-        // ... другие паттерны
+        // ... РґСЂСѓРіРёРµ РїР°С‚С‚РµСЂРЅС‹
     ];
     
     static withTimeout(operationPromise, timeoutMs, operation) {
@@ -1672,11 +1684,11 @@ export class ExtensionErrorUtils {
     }
     
     static async handleFileSystemError(error, fallbackFunction, context) {
-        // Автоматическая обработка ошибок с fallback
+        // РђРІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ РѕР±СЂР°Р±РѕС‚РєР° РѕС€РёР±РѕРє СЃ fallback
     }
 }
 
-// Использование в компонентах
+// РСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ РІ РєРѕРјРїРѕРЅРµРЅС‚Р°С…
 const directoryHandle = await ExtensionErrorUtils.withTimeout(
     window.showDirectoryPicker({ mode: 'read' }),
     10000,
@@ -1684,1541 +1696,1541 @@ const directoryHandle = await ExtensionErrorUtils.withTimeout(
 );
 ```
 
-### Performance - Устойчивость к конфликтам расширений
-- **Предотвращение зависаний**: Таймауты защищают от бесконечного ожидания
-- **Автоматические fallback**: Graceful degradation при проблемах с API
-- **Улучшенный UX**: Понятные сообщения об ошибках для пользователей
-- **Отказоустойчивость**: Приложение продолжает работать несмотря на конфликты
+### Performance - РЈСЃС‚РѕР№С‡РёРІРѕСЃС‚СЊ Рє РєРѕРЅС„Р»РёРєС‚Р°Рј СЂР°СЃС€РёСЂРµРЅРёР№
+- **РџСЂРµРґРѕС‚РІСЂР°С‰РµРЅРёРµ Р·Р°РІРёСЃР°РЅРёР№**: РўР°Р№РјР°СѓС‚С‹ Р·Р°С‰РёС‰Р°СЋС‚ РѕС‚ Р±РµСЃРєРѕРЅРµС‡РЅРѕРіРѕ РѕР¶РёРґР°РЅРёСЏ
+- **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРёРµ fallback**: Graceful degradation РїСЂРё РїСЂРѕР±Р»РµРјР°С… СЃ API
+- **РЈР»СѓС‡С€РµРЅРЅС‹Р№ UX**: РџРѕРЅСЏС‚РЅС‹Рµ СЃРѕРѕР±С‰РµРЅРёСЏ РѕР± РѕС€РёР±РєР°С… РґР»СЏ РїРѕР»СЊР·РѕРІР°С‚РµР»РµР№
+- **РћС‚РєР°Р·РѕСѓСЃС‚РѕР№С‡РёРІРѕСЃС‚СЊ**: РџСЂРёР»РѕР¶РµРЅРёРµ РїСЂРѕРґРѕР»Р¶Р°РµС‚ СЂР°Р±РѕС‚Р°С‚СЊ РЅРµСЃРјРѕС‚СЂСЏ РЅР° РєРѕРЅС„Р»РёРєС‚С‹
 
 ## [3.50.3] - 2025-01-27
 
-### Fixed - Полное исправление дабл-клика разделителей панелей
+### Fixed - РџРѕР»РЅРѕРµ РёСЃРїСЂР°РІР»РµРЅРёРµ РґР°Р±Р»-РєР»РёРєР° СЂР°Р·РґРµР»РёС‚РµР»РµР№ РїР°РЅРµР»РµР№
 
-#### 🎯 **Корень проблемы:**
-- **Блокировка событий**: `pointerEvents = 'none'` в mousedown блокировал генерацию click/dblclick событий
-- **Порядок инициализации**: Обработчики настраивались до создания window.editor
-- **Утечки памяти**: Слушатели StateManager не отменялись при уничтожении
+#### рџЋЇ **РљРѕСЂРµРЅСЊ РїСЂРѕР±Р»РµРјС‹:**
+- **Р‘Р»РѕРєРёСЂРѕРІРєР° СЃРѕР±С‹С‚РёР№**: `pointerEvents = 'none'` РІ mousedown Р±Р»РѕРєРёСЂРѕРІР°Р» РіРµРЅРµСЂР°С†РёСЋ click/dblclick СЃРѕР±С‹С‚РёР№
+- **РџРѕСЂСЏРґРѕРє РёРЅРёС†РёР°Р»РёР·Р°С†РёРё**: РћР±СЂР°Р±РѕС‚С‡РёРєРё РЅР°СЃС‚СЂР°РёРІР°Р»РёСЃСЊ РґРѕ СЃРѕР·РґР°РЅРёСЏ window.editor
+- **РЈС‚РµС‡РєРё РїР°РјСЏС‚Рё**: РЎР»СѓС€Р°С‚РµР»Рё StateManager РЅРµ РѕС‚РјРµРЅСЏР»РёСЃСЊ РїСЂРё СѓРЅРёС‡С‚РѕР¶РµРЅРёРё
 
-#### 🔧 **Технические исправления:**
-- **Убрана блокировка**: Удалено `pointerEvents = 'none'` из mousedown обработчиков
-- **Правильный порядок**: setupPanelResizing() вызывается после создания window.editor
-- **Управление подписками**: Добавлено сохранение и отмена подписок StateManager в destroy()
-- **Очистка кода**: Убраны все отладочные console.log, оставлены только Logger вызовы
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ РёСЃРїСЂР°РІР»РµРЅРёСЏ:**
+- **РЈР±СЂР°РЅР° Р±Р»РѕРєРёСЂРѕРІРєР°**: РЈРґР°Р»РµРЅРѕ `pointerEvents = 'none'` РёР· mousedown РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ
+- **РџСЂР°РІРёР»СЊРЅС‹Р№ РїРѕСЂСЏРґРѕРє**: setupPanelResizing() РІС‹Р·С‹РІР°РµС‚СЃСЏ РїРѕСЃР»Рµ СЃРѕР·РґР°РЅРёСЏ window.editor
+- **РЈРїСЂР°РІР»РµРЅРёРµ РїРѕРґРїРёСЃРєР°РјРё**: Р”РѕР±Р°РІР»РµРЅРѕ СЃРѕС…СЂР°РЅРµРЅРёРµ Рё РѕС‚РјРµРЅР° РїРѕРґРїРёСЃРѕРє StateManager РІ destroy()
+- **РћС‡РёСЃС‚РєР° РєРѕРґР°**: РЈР±СЂР°РЅС‹ РІСЃРµ РѕС‚Р»Р°РґРѕС‡РЅС‹Рµ console.log, РѕСЃС‚Р°РІР»РµРЅС‹ С‚РѕР»СЊРєРѕ Logger РІС‹Р·РѕРІС‹
 
-#### 📋 **Функциональность:**
-- ✅ **Правый разделитель**: Дабл-клик сворачивает/разворачивает правую панель
-- ✅ **Панель ассетов**: Дабл-клик сворачивает/разворачивает нижнюю панель
-- ✅ **Синхронизация**: StateManager ↔ DOM ↔ user preferences
-- ✅ **Перетаскивание**: Работает без `pointerEvents = 'none'`
-- ✅ **Логирование**: Logger.layout.info при двойном клике
+#### рџ“‹ **Р¤СѓРЅРєС†РёРѕРЅР°Р»СЊРЅРѕСЃС‚СЊ:**
+- вњ… **РџСЂР°РІС‹Р№ СЂР°Р·РґРµР»РёС‚РµР»СЊ**: Р”Р°Р±Р»-РєР»РёРє СЃРІРѕСЂР°С‡РёРІР°РµС‚/СЂР°Р·РІРѕСЂР°С‡РёРІР°РµС‚ РїСЂР°РІСѓСЋ РїР°РЅРµР»СЊ
+- вњ… **РџР°РЅРµР»СЊ Р°СЃСЃРµС‚РѕРІ**: Р”Р°Р±Р»-РєР»РёРє СЃРІРѕСЂР°С‡РёРІР°РµС‚/СЂР°Р·РІРѕСЂР°С‡РёРІР°РµС‚ РЅРёР¶РЅСЋСЋ РїР°РЅРµР»СЊ
+- вњ… **РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ**: StateManager в†” DOM в†” user preferences
+- вњ… **РџРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµ**: Р Р°Р±РѕС‚Р°РµС‚ Р±РµР· `pointerEvents = 'none'`
+- вњ… **Р›РѕРіРёСЂРѕРІР°РЅРёРµ**: Logger.layout.info РїСЂРё РґРІРѕР№РЅРѕРј РєР»РёРєРµ
 
-#### 🎨 **Архитектурные улучшения:**
-- **Управление памятью**: Подписки StateManager правильно отменяются в destroy()
-- **Разделение ответственности**: Обработчики событий ↔ слушатели StateManager ↔ DOM
-- **Consistency**: Единый подход к управлению подписками во всех компонентах
-- **Производительность**: Нет утечек памяти при пересоздании LevelEditor
+#### рџЋЁ **РђСЂС…РёС‚РµРєС‚СѓСЂРЅС‹Рµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **РЈРїСЂР°РІР»РµРЅРёРµ РїР°РјСЏС‚СЊСЋ**: РџРѕРґРїРёСЃРєРё StateManager РїСЂР°РІРёР»СЊРЅРѕ РѕС‚РјРµРЅСЏСЋС‚СЃСЏ РІ destroy()
+- **Р Р°Р·РґРµР»РµРЅРёРµ РѕС‚РІРµС‚СЃС‚РІРµРЅРЅРѕСЃС‚Рё**: РћР±СЂР°Р±РѕС‚С‡РёРєРё СЃРѕР±С‹С‚РёР№ в†” СЃР»СѓС€Р°С‚РµР»Рё StateManager в†” DOM
+- **Consistency**: Р•РґРёРЅС‹Р№ РїРѕРґС…РѕРґ Рє СѓРїСЂР°РІР»РµРЅРёСЋ РїРѕРґРїРёСЃРєР°РјРё РІРѕ РІСЃРµС… РєРѕРјРїРѕРЅРµРЅС‚Р°С…
+- **РџСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ**: РќРµС‚ СѓС‚РµС‡РµРє РїР°РјСЏС‚Рё РїСЂРё РїРµСЂРµСЃРѕР·РґР°РЅРёРё LevelEditor
 
-#### 📊 **Код изменений:**
+#### рџ“Љ **РљРѕРґ РёР·РјРµРЅРµРЅРёР№:**
 ```javascript
-// LevelEditor.js - Управление подписками
-this.subscriptions = []; // В конструкторе
+// LevelEditor.js - РЈРїСЂР°РІР»РµРЅРёРµ РїРѕРґРїРёСЃРєР°РјРё
+this.subscriptions = []; // Р’ РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂРµ
 
-// Сохранение ссылок на отписку
+// РЎРѕС…СЂР°РЅРµРЅРёРµ СЃСЃС‹Р»РѕРє РЅР° РѕС‚РїРёСЃРєСѓ
 const unsubscribe = this.stateManager.subscribe('panels.rightPanelWidth', callback);
 this.subscriptions.push(unsubscribe);
 
-// Отмена в destroy()
+// РћС‚РјРµРЅР° РІ destroy()
 this.subscriptions.forEach(unsubscribe => unsubscribe());
 this.subscriptions = [];
 ```
 
-### Performance - Оптимизация управления памятью
-- **Утечки памяти**: Исправлены утечки подписок StateManager
-- **Правильное уничтожение**: Все подписки отменяются при destroy()
-- **Масштабируемость**: Безопасное пересоздание LevelEditor без накопления слушателей
+### Performance - РћРїС‚РёРјРёР·Р°С†РёСЏ СѓРїСЂР°РІР»РµРЅРёСЏ РїР°РјСЏС‚СЊСЋ
+- **РЈС‚РµС‡РєРё РїР°РјСЏС‚Рё**: РСЃРїСЂР°РІР»РµРЅС‹ СѓС‚РµС‡РєРё РїРѕРґРїРёСЃРѕРє StateManager
+- **РџСЂР°РІРёР»СЊРЅРѕРµ СѓРЅРёС‡С‚РѕР¶РµРЅРёРµ**: Р’СЃРµ РїРѕРґРїРёСЃРєРё РѕС‚РјРµРЅСЏСЋС‚СЃСЏ РїСЂРё destroy()
+- **РњР°СЃС€С‚Р°Р±РёСЂСѓРµРјРѕСЃС‚СЊ**: Р‘РµР·РѕРїР°СЃРЅРѕРµ РїРµСЂРµСЃРѕР·РґР°РЅРёРµ LevelEditor Р±РµР· РЅР°РєРѕРїР»РµРЅРёСЏ СЃР»СѓС€Р°С‚РµР»РµР№
 
 ## [3.50.2] - 2025-01-27
 
-### Fixed - Исправления стилей разделителей
+### Fixed - РСЃРїСЂР°РІР»РµРЅРёСЏ СЃС‚РёР»РµР№ СЂР°Р·РґРµР»РёС‚РµР»РµР№
 
-#### 🎨 **Исправления разделителей:**
-- **Ориентация hover индикатора**: Исправлена ориентация для горизонтального разделителя (resizer-assets)
-- **Пропавший hover элемент**: Исправлен отсутствующий hover элемент для вертикального разделителя между Content и Assets
-- **Оптимизация CSS**: Устранено дублирование кода в стилях разделителей
+#### рџЋЁ **РСЃРїСЂР°РІР»РµРЅРёСЏ СЂР°Р·РґРµР»РёС‚РµР»РµР№:**
+- **РћСЂРёРµРЅС‚Р°С†РёСЏ hover РёРЅРґРёРєР°С‚РѕСЂР°**: РСЃРїСЂР°РІР»РµРЅР° РѕСЂРёРµРЅС‚Р°С†РёСЏ РґР»СЏ РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅРѕРіРѕ СЂР°Р·РґРµР»РёС‚РµР»СЏ (resizer-assets)
+- **РџСЂРѕРїР°РІС€РёР№ hover СЌР»РµРјРµРЅС‚**: РСЃРїСЂР°РІР»РµРЅ РѕС‚СЃСѓС‚СЃС‚РІСѓСЋС‰РёР№ hover СЌР»РµРјРµРЅС‚ РґР»СЏ РІРµСЂС‚РёРєР°Р»СЊРЅРѕРіРѕ СЂР°Р·РґРµР»РёС‚РµР»СЏ РјРµР¶РґСѓ Content Рё Assets
+- **РћРїС‚РёРјРёР·Р°С†РёСЏ CSS**: РЈСЃС‚СЂР°РЅРµРЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ РєРѕРґР° РІ СЃС‚РёР»СЏС… СЂР°Р·РґРµР»РёС‚РµР»РµР№
 
-#### 🔧 **Технические детали:**
-- Исправлены размеры `.resizer-y::after` с вертикальных (2px × 20px) на горизонтальные (20px × 2px)
-- Добавлены отсутствующие стили для класса `.resizer-x` в AssetPanel
-- Обновлен JavaScript AssetPanel для использования класса `.resizing` вместо inline стилей
-- Объединены общие CSS свойства для уменьшения дублирования кода
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ РґРµС‚Р°Р»Рё:**
+- РСЃРїСЂР°РІР»РµРЅС‹ СЂР°Р·РјРµСЂС‹ `.resizer-y::after` СЃ РІРµСЂС‚РёРєР°Р»СЊРЅС‹С… (2px Г— 20px) РЅР° РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅС‹Рµ (20px Г— 2px)
+- Р”РѕР±Р°РІР»РµРЅС‹ РѕС‚СЃСѓС‚СЃС‚РІСѓСЋС‰РёРµ СЃС‚РёР»Рё РґР»СЏ РєР»Р°СЃСЃР° `.resizer-x` РІ AssetPanel
+- РћР±РЅРѕРІР»РµРЅ JavaScript AssetPanel РґР»СЏ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ РєР»Р°СЃСЃР° `.resizing` РІРјРµСЃС‚Рѕ inline СЃС‚РёР»РµР№
+- РћР±СЉРµРґРёРЅРµРЅС‹ РѕР±С‰РёРµ CSS СЃРІРѕР№СЃС‚РІР° РґР»СЏ СѓРјРµРЅСЊС€РµРЅРёСЏ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ РєРѕРґР°
 
 ## [3.50.1] - 2025-01-27
 
-### Fixed - Автоматический скролл консоли с умным управлением
+### Fixed - РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРёР№ СЃРєСЂРѕР»Р» РєРѕРЅСЃРѕР»Рё СЃ СѓРјРЅС‹Рј СѓРїСЂР°РІР»РµРЅРёРµРј
 
-#### 📜 **Автоматический скролл консоли:**
-- **Авто-скролл по умолчанию**: Консоль автоматически скроллит к последней записи
-- **Умное поведение**: Автоматически отключается при ручном скролле вверх
-- **Автоматическое включение**: Включается при скролле к низу консоли
-- **Оптимизированный скролл**: Использует `requestAnimationFrame` для плавности
+#### рџ“њ **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРёР№ СЃРєСЂРѕР»Р» РєРѕРЅСЃРѕР»Рё:**
+- **РђРІС‚Рѕ-СЃРєСЂРѕР»Р» РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ**: РљРѕРЅСЃРѕР»СЊ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё СЃРєСЂРѕР»Р»РёС‚ Рє РїРѕСЃР»РµРґРЅРµР№ Р·Р°РїРёСЃРё
+- **РЈРјРЅРѕРµ РїРѕРІРµРґРµРЅРёРµ**: РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРё РѕС‚РєР»СЋС‡Р°РµС‚СЃСЏ РїСЂРё СЂСѓС‡РЅРѕРј СЃРєСЂРѕР»Р»Рµ РІРІРµСЂС…
+- **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ РІРєР»СЋС‡РµРЅРёРµ**: Р’РєР»СЋС‡Р°РµС‚СЃСЏ РїСЂРё СЃРєСЂРѕР»Р»Рµ Рє РЅРёР·Сѓ РєРѕРЅСЃРѕР»Рё
+- **РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅРЅС‹Р№ СЃРєСЂРѕР»Р»**: РСЃРїРѕР»СЊР·СѓРµС‚ `requestAnimationFrame` РґР»СЏ РїР»Р°РІРЅРѕСЃС‚Рё
 
-#### 🎛️ **Управление авто-скроллом:**
-- **Контекстное меню**: Пункт "Toggle Auto Scroll" с иконкой 📜
-- **Консольная команда**: `autoscroll` для переключения режима
-- **Визуальная обратная связь**: Статус отображается в логах консоли
-- **Мгновенный скролл**: При включении сразу скроллит к последней записи
+#### рџЋ›пёЏ **РЈРїСЂР°РІР»РµРЅРёРµ Р°РІС‚Рѕ-СЃРєСЂРѕР»Р»РѕРј:**
+- **РљРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ**: РџСѓРЅРєС‚ "Toggle Auto Scroll" СЃ РёРєРѕРЅРєРѕР№ рџ“њ
+- **РљРѕРЅСЃРѕР»СЊРЅР°СЏ РєРѕРјР°РЅРґР°**: `autoscroll` РґР»СЏ РїРµСЂРµРєР»СЋС‡РµРЅРёСЏ СЂРµР¶РёРјР°
+- **Р’РёР·СѓР°Р»СЊРЅР°СЏ РѕР±СЂР°С‚РЅР°СЏ СЃРІСЏР·СЊ**: РЎС‚Р°С‚СѓСЃ РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ РІ Р»РѕРіР°С… РєРѕРЅСЃРѕР»Рё
+- **РњРіРЅРѕРІРµРЅРЅС‹Р№ СЃРєСЂРѕР»Р»**: РџСЂРё РІРєР»СЋС‡РµРЅРёРё СЃСЂР°Р·Сѓ СЃРєСЂРѕР»Р»РёС‚ Рє РїРѕСЃР»РµРґРЅРµР№ Р·Р°РїРёСЃРё
 
-#### 🔧 **Технические улучшения:**
-- **Правильный элемент скролла**: Исправлен скролл контейнера с `overflow-y-auto`
-- **Безопасная обработка**: Защита от ошибок скролла и рекурсии
-- **Детекция скролла**: Отслеживание ручного скролла с задержкой 150мс
-- **Точность детекции**: Проверка нахождения внизу с погрешностью 5px
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **РџСЂР°РІРёР»СЊРЅС‹Р№ СЌР»РµРјРµРЅС‚ СЃРєСЂРѕР»Р»Р°**: РСЃРїСЂР°РІР»РµРЅ СЃРєСЂРѕР»Р» РєРѕРЅС‚РµР№РЅРµСЂР° СЃ `overflow-y-auto`
+- **Р‘РµР·РѕРїР°СЃРЅР°СЏ РѕР±СЂР°Р±РѕС‚РєР°**: Р—Р°С‰РёС‚Р° РѕС‚ РѕС€РёР±РѕРє СЃРєСЂРѕР»Р»Р° Рё СЂРµРєСѓСЂСЃРёРё
+- **Р”РµС‚РµРєС†РёСЏ СЃРєСЂРѕР»Р»Р°**: РћС‚СЃР»РµР¶РёРІР°РЅРёРµ СЂСѓС‡РЅРѕРіРѕ СЃРєСЂРѕР»Р»Р° СЃ Р·Р°РґРµСЂР¶РєРѕР№ 150РјСЃ
+- **РўРѕС‡РЅРѕСЃС‚СЊ РґРµС‚РµРєС†РёРё**: РџСЂРѕРІРµСЂРєР° РЅР°С…РѕР¶РґРµРЅРёСЏ РІРЅРёР·Сѓ СЃ РїРѕРіСЂРµС€РЅРѕСЃС‚СЊСЋ 5px
 
-#### 📋 **Функциональность:**
-- **При открытии консоли**: Автоматически скроллит к последней записи
-- **При новых логах**: Автоматически скроллит если режим включен
-- **При включении авто-скролла**: Мгновенно скроллит к низу
-- **При инициализации**: Скроллит если консоль уже видима
+#### рџ“‹ **Р¤СѓРЅРєС†РёРѕРЅР°Р»СЊРЅРѕСЃС‚СЊ:**
+- **РџСЂРё РѕС‚РєСЂС‹С‚РёРё РєРѕРЅСЃРѕР»Рё**: РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРё СЃРєСЂРѕР»Р»РёС‚ Рє РїРѕСЃР»РµРґРЅРµР№ Р·Р°РїРёСЃРё
+- **РџСЂРё РЅРѕРІС‹С… Р»РѕРіР°С…**: РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРё СЃРєСЂРѕР»Р»РёС‚ РµСЃР»Рё СЂРµР¶РёРј РІРєР»СЋС‡РµРЅ
+- **РџСЂРё РІРєР»СЋС‡РµРЅРёРё Р°РІС‚Рѕ-СЃРєСЂРѕР»Р»Р°**: РњРіРЅРѕРІРµРЅРЅРѕ СЃРєСЂРѕР»Р»РёС‚ Рє РЅРёР·Сѓ
+- **РџСЂРё РёРЅРёС†РёР°Р»РёР·Р°С†РёРё**: РЎРєСЂРѕР»Р»РёС‚ РµСЃР»Рё РєРѕРЅСЃРѕР»СЊ СѓР¶Рµ РІРёРґРёРјР°
 
 ## [3.50.0] - 2025-01-27
 
-### Added - Компактный лейаут для панели Details с унифицированными секциями
+### Added - РљРѕРјРїР°РєС‚РЅС‹Р№ Р»РµР№Р°СѓС‚ РґР»СЏ РїР°РЅРµР»Рё Details СЃ СѓРЅРёС„РёС†РёСЂРѕРІР°РЅРЅС‹РјРё СЃРµРєС†РёСЏРјРё
 
-#### 🎨 **Новый компактный дизайн панели Details:**
-- **Структурированные секции**: Basic Properties, Transforms, Visual, Advanced, Custom Properties, Layer Information
-- **Единый стиль**: Все секции используют одинаковый дизайн с серым фоном и рамками
-- **Компактные Transforms**: Позиции X,Y и размеры W,H в одной строке с подписями слева
-- **Консистентный интерфейс**: Одинаковый порядок секций во всех режимах
+#### рџЋЁ **РќРѕРІС‹Р№ РєРѕРјРїР°РєС‚РЅС‹Р№ РґРёР·Р°Р№РЅ РїР°РЅРµР»Рё Details:**
+- **РЎС‚СЂСѓРєС‚СѓСЂРёСЂРѕРІР°РЅРЅС‹Рµ СЃРµРєС†РёРё**: Basic Properties, Transforms, Visual, Advanced, Custom Properties, Layer Information
+- **Р•РґРёРЅС‹Р№ СЃС‚РёР»СЊ**: Р’СЃРµ СЃРµРєС†РёРё РёСЃРїРѕР»СЊР·СѓСЋС‚ РѕРґРёРЅР°РєРѕРІС‹Р№ РґРёР·Р°Р№РЅ СЃ СЃРµСЂС‹Рј С„РѕРЅРѕРј Рё СЂР°РјРєР°РјРё
+- **РљРѕРјРїР°РєС‚РЅС‹Рµ Transforms**: РџРѕР·РёС†РёРё X,Y Рё СЂР°Р·РјРµСЂС‹ W,H РІ РѕРґРЅРѕР№ СЃС‚СЂРѕРєРµ СЃ РїРѕРґРїРёСЃСЏРјРё СЃР»РµРІР°
+- **РљРѕРЅСЃРёСЃС‚РµРЅС‚РЅС‹Р№ РёРЅС‚РµСЂС„РµР№СЃ**: РћРґРёРЅР°РєРѕРІС‹Р№ РїРѕСЂСЏРґРѕРє СЃРµРєС†РёР№ РІРѕ РІСЃРµС… СЂРµР¶РёРјР°С…
 
-#### 📐 **Улучшенная секция Transforms:**
-- **Компактные поля**: X, Y, Width, Height в двух строках
-- **Визуальные подписи**: Буквы X, Y, W, H слева от полей ввода
-- **Единообразный стиль**: Одинаковый дизайн для одиночных и множественных объектов
-- **Умная обработка**: Автоматическое обновление значений при изменении
+#### рџ“ђ **РЈР»СѓС‡С€РµРЅРЅР°СЏ СЃРµРєС†РёСЏ Transforms:**
+- **РљРѕРјРїР°РєС‚РЅС‹Рµ РїРѕР»СЏ**: X, Y, Width, Height РІ РґРІСѓС… СЃС‚СЂРѕРєР°С…
+- **Р’РёР·СѓР°Р»СЊРЅС‹Рµ РїРѕРґРїРёСЃРё**: Р‘СѓРєРІС‹ X, Y, W, H СЃР»РµРІР° РѕС‚ РїРѕР»РµР№ РІРІРѕРґР°
+- **Р•РґРёРЅРѕРѕР±СЂР°Р·РЅС‹Р№ СЃС‚РёР»СЊ**: РћРґРёРЅР°РєРѕРІС‹Р№ РґРёР·Р°Р№РЅ РґР»СЏ РѕРґРёРЅРѕС‡РЅС‹С… Рё РјРЅРѕР¶РµСЃС‚РІРµРЅРЅС‹С… РѕР±СЉРµРєС‚РѕРІ
+- **РЈРјРЅР°СЏ РѕР±СЂР°Р±РѕС‚РєР°**: РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ РѕР±РЅРѕРІР»РµРЅРёРµ Р·РЅР°С‡РµРЅРёР№ РїСЂРё РёР·РјРµРЅРµРЅРёРё
 
-#### 🔧 **Унифицированные секции:**
-- **Basic Properties**: Name и Type объектов
-- **Visual Properties**: Color picker с предпросмотром
-- **Advanced Properties**: Z-Index с правильной обработкой слоев
-- **Custom Properties**: Динамическое добавление свойств с кнопкой "Add Property"
-- **Layer Information**: Информация о слоях с цветовыми индикаторами
+#### рџ”§ **РЈРЅРёС„РёС†РёСЂРѕРІР°РЅРЅС‹Рµ СЃРµРєС†РёРё:**
+- **Basic Properties**: Name Рё Type РѕР±СЉРµРєС‚РѕРІ
+- **Visual Properties**: Color picker СЃ РїСЂРµРґРїСЂРѕСЃРјРѕС‚СЂРѕРј
+- **Advanced Properties**: Z-Index СЃ РїСЂР°РІРёР»СЊРЅРѕР№ РѕР±СЂР°Р±РѕС‚РєРѕР№ СЃР»РѕРµРІ
+- **Custom Properties**: Р”РёРЅР°РјРёС‡РµСЃРєРѕРµ РґРѕР±Р°РІР»РµРЅРёРµ СЃРІРѕР№СЃС‚РІ СЃ РєРЅРѕРїРєРѕР№ "Add Property"
+- **Layer Information**: РРЅС„РѕСЂРјР°С†РёСЏ Рѕ СЃР»РѕСЏС… СЃ С†РІРµС‚РѕРІС‹РјРё РёРЅРґРёРєР°С‚РѕСЂР°РјРё
 
-#### 🎯 **Поддержка всех режимов:**
-- **Одиночные объекты**: Полный набор секций с редактированием
-- **Множественный выбор**: Умная обработка разных значений ("multiple values")
-- **Группы**: Статистика содержимого + все свойства группы
-- **Уровень**: Статистика уровня + действия (Set Camera Start Position)
+#### рџЋЇ **РџРѕРґРґРµСЂР¶РєР° РІСЃРµС… СЂРµР¶РёРјРѕРІ:**
+- **РћРґРёРЅРѕС‡РЅС‹Рµ РѕР±СЉРµРєС‚С‹**: РџРѕР»РЅС‹Р№ РЅР°Р±РѕСЂ СЃРµРєС†РёР№ СЃ СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёРµРј
+- **РњРЅРѕР¶РµСЃС‚РІРµРЅРЅС‹Р№ РІС‹Р±РѕСЂ**: РЈРјРЅР°СЏ РѕР±СЂР°Р±РѕС‚РєР° СЂР°Р·РЅС‹С… Р·РЅР°С‡РµРЅРёР№ ("multiple values")
+- **Р“СЂСѓРїРїС‹**: РЎС‚Р°С‚РёСЃС‚РёРєР° СЃРѕРґРµСЂР¶РёРјРѕРіРѕ + РІСЃРµ СЃРІРѕР№СЃС‚РІР° РіСЂСѓРїРїС‹
+- **РЈСЂРѕРІРµРЅСЊ**: РЎС‚Р°С‚РёСЃС‚РёРєР° СѓСЂРѕРІРЅСЏ + РґРµР№СЃС‚РІРёСЏ (Set Camera Start Position)
 
-#### ⚡ **Оптимизация кода:**
-- **Устранение дублирования**: Создан общий метод `createTransformsSectionHTML()`
-- **Сокращение кода**: Удалено ~60 строк дублированного HTML
-- **Улучшенная поддерживаемость**: Изменения в одном месте применяются везде
-- **Консистентная архитектура**: Единообразные методы для всех типов объектов
+#### вљЎ **РћРїС‚РёРјРёР·Р°С†РёСЏ РєРѕРґР°:**
+- **РЈСЃС‚СЂР°РЅРµРЅРёРµ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ**: РЎРѕР·РґР°РЅ РѕР±С‰РёР№ РјРµС‚РѕРґ `createTransformsSectionHTML()`
+- **РЎРѕРєСЂР°С‰РµРЅРёРµ РєРѕРґР°**: РЈРґР°Р»РµРЅРѕ ~60 СЃС‚СЂРѕРє РґСѓР±Р»РёСЂРѕРІР°РЅРЅРѕРіРѕ HTML
+- **РЈР»СѓС‡С€РµРЅРЅР°СЏ РїРѕРґРґРµСЂР¶РёРІР°РµРјРѕСЃС‚СЊ**: РР·РјРµРЅРµРЅРёСЏ РІ РѕРґРЅРѕРј РјРµСЃС‚Рµ РїСЂРёРјРµРЅСЏСЋС‚СЃСЏ РІРµР·РґРµ
+- **РљРѕРЅСЃРёСЃС‚РµРЅС‚РЅР°СЏ Р°СЂС…РёС‚РµРєС‚СѓСЂР°**: Р•РґРёРЅРѕРѕР±СЂР°Р·РЅС‹Рµ РјРµС‚РѕРґС‹ РґР»СЏ РІСЃРµС… С‚РёРїРѕРІ РѕР±СЉРµРєС‚РѕРІ
 
-#### 🎨 **Улучшения UX:**
-- **Предсказуемый интерфейс**: Секции всегда в одном порядке
-- **Визуальная иерархия**: Четкое разделение на логические группы
-- **Цветовое кодирование**: Статистика с цветными индикаторами
-- **Интуитивная навигация**: Легко найти нужные свойства
+#### рџЋЁ **РЈР»СѓС‡С€РµРЅРёСЏ UX:**
+- **РџСЂРµРґСЃРєР°Р·СѓРµРјС‹Р№ РёРЅС‚РµСЂС„РµР№СЃ**: РЎРµРєС†РёРё РІСЃРµРіРґР° РІ РѕРґРЅРѕРј РїРѕСЂСЏРґРєРµ
+- **Р’РёР·СѓР°Р»СЊРЅР°СЏ РёРµСЂР°СЂС…РёСЏ**: Р§РµС‚РєРѕРµ СЂР°Р·РґРµР»РµРЅРёРµ РЅР° Р»РѕРіРёС‡РµСЃРєРёРµ РіСЂСѓРїРїС‹
+- **Р¦РІРµС‚РѕРІРѕРµ РєРѕРґРёСЂРѕРІР°РЅРёРµ**: РЎС‚Р°С‚РёСЃС‚РёРєР° СЃ С†РІРµС‚РЅС‹РјРё РёРЅРґРёРєР°С‚РѕСЂР°РјРё
+- **РРЅС‚СѓРёС‚РёРІРЅР°СЏ РЅР°РІРёРіР°С†РёСЏ**: Р›РµРіРєРѕ РЅР°Р№С‚Рё РЅСѓР¶РЅС‹Рµ СЃРІРѕР№СЃС‚РІР°
 
-#### 📁 **Измененные файлы:**
-- `src/ui/DetailsPanel.js` - Полная реструктуризация с компактным лейаутом
-- `src/core/LevelEditor.js` - Обновлена версия до 3.50.0
+#### рџ“Ѓ **РР·РјРµРЅРµРЅРЅС‹Рµ С„Р°Р№Р»С‹:**
+- `src/ui/DetailsPanel.js` - РџРѕР»РЅР°СЏ СЂРµСЃС‚СЂСѓРєС‚СѓСЂРёР·Р°С†РёСЏ СЃ РєРѕРјРїР°РєС‚РЅС‹Рј Р»РµР№Р°СѓС‚РѕРј
+- `src/core/LevelEditor.js` - РћР±РЅРѕРІР»РµРЅР° РІРµСЂСЃРёСЏ РґРѕ 3.50.0
 
-#### 🔄 **Обратная совместимость:**
-- ✅ Все существующие функции сохранены
-- ✅ Обработчики событий работают как раньше
-- ✅ Кастомные свойства поддерживаются полностью
-- ✅ Layer Information отображается корректно
+#### рџ”„ **РћР±СЂР°С‚РЅР°СЏ СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚СЊ:**
+- вњ… Р’СЃРµ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёРµ С„СѓРЅРєС†РёРё СЃРѕС…СЂР°РЅРµРЅС‹
+- вњ… РћР±СЂР°Р±РѕС‚С‡РёРєРё СЃРѕР±С‹С‚РёР№ СЂР°Р±РѕС‚Р°СЋС‚ РєР°Рє СЂР°РЅСЊС€Рµ
+- вњ… РљР°СЃС‚РѕРјРЅС‹Рµ СЃРІРѕР№СЃС‚РІР° РїРѕРґРґРµСЂР¶РёРІР°СЋС‚СЃСЏ РїРѕР»РЅРѕСЃС‚СЊСЋ
+- вњ… Layer Information РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ РєРѕСЂСЂРµРєС‚РЅРѕ
 
 ---
 
 ## [3.49.6] - 2025-01-27
 
-### Fixed - Исправления drag-n-drop и tab dragging в AssetPanel
+### Fixed - РСЃРїСЂР°РІР»РµРЅРёСЏ drag-n-drop Рё tab dragging РІ AssetPanel
 
-#### 🎯 **Исправление конфликта drag-n-drop при перетаскивании табов:**
-- **Проблема**: При перетаскивании табов срабатывала подсветка drop для файлов
-- **Причина**: Класс `drag-over` использовался как для табов, так и для drop подсветки файлов
-- **Решение**: Разделены классы на `tab-drag-over` для табов и `drag-over` для файлов
+#### рџЋЇ **РСЃРїСЂР°РІР»РµРЅРёРµ РєРѕРЅС„Р»РёРєС‚Р° drag-n-drop РїСЂРё РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРё С‚Р°Р±РѕРІ:**
+- **РџСЂРѕР±Р»РµРјР°**: РџСЂРё РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРё С‚Р°Р±РѕРІ СЃСЂР°Р±Р°С‚С‹РІР°Р»Р° РїРѕРґСЃРІРµС‚РєР° drop РґР»СЏ С„Р°Р№Р»РѕРІ
+- **РџСЂРёС‡РёРЅР°**: РљР»Р°СЃСЃ `drag-over` РёСЃРїРѕР»СЊР·РѕРІР°Р»СЃСЏ РєР°Рє РґР»СЏ С‚Р°Р±РѕРІ, С‚Р°Рє Рё РґР»СЏ drop РїРѕРґСЃРІРµС‚РєРё С„Р°Р№Р»РѕРІ
+- **Р РµС€РµРЅРёРµ**: Р Р°Р·РґРµР»РµРЅС‹ РєР»Р°СЃСЃС‹ РЅР° `tab-drag-over` РґР»СЏ С‚Р°Р±РѕРІ Рё `drag-over` РґР»СЏ С„Р°Р№Р»РѕРІ
 
-#### 🔧 **Исправление множественных обработчиков событий:**
-- **Проблема**: Обработчики событий добавлялись многократно при каждом рендере табов
-- **Причина**: `setupTabDragging()` вызывался при каждом `renderTabs()`
-- **Решение**: Добавлен флаг `tabDraggingSetup` для однократной настройки
+#### рџ”§ **РСЃРїСЂР°РІР»РµРЅРёРµ РјРЅРѕР¶РµСЃС‚РІРµРЅРЅС‹С… РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ СЃРѕР±С‹С‚РёР№:**
+- **РџСЂРѕР±Р»РµРјР°**: РћР±СЂР°Р±РѕС‚С‡РёРєРё СЃРѕР±С‹С‚РёР№ РґРѕР±Р°РІР»СЏР»РёСЃСЊ РјРЅРѕРіРѕРєСЂР°С‚РЅРѕ РїСЂРё РєР°Р¶РґРѕРј СЂРµРЅРґРµСЂРµ С‚Р°Р±РѕРІ
+- **РџСЂРёС‡РёРЅР°**: `setupTabDragging()` РІС‹Р·С‹РІР°Р»СЃСЏ РїСЂРё РєР°Р¶РґРѕРј `renderTabs()`
+- **Р РµС€РµРЅРёРµ**: Р”РѕР±Р°РІР»РµРЅ С„Р»Р°Рі `tabDraggingSetup` РґР»СЏ РѕРґРЅРѕРєСЂР°С‚РЅРѕР№ РЅР°СЃС‚СЂРѕР№РєРё
 
-#### ⚙️ **Улучшенное управление событиями:**
-- **Tab dragging**: Сохранение ссылок на обработчики для корректного cleanup
-- **Folders resizer**: Исправлена утечка памяти при множественных обработчиках
-- **Drag-n-drop**: Добавлены проверки на перетаскивание табов во всех drag обработчиках
+#### вљ™пёЏ **РЈР»СѓС‡С€РµРЅРЅРѕРµ СѓРїСЂР°РІР»РµРЅРёРµ СЃРѕР±С‹С‚РёСЏРјРё:**
+- **Tab dragging**: РЎРѕС…СЂР°РЅРµРЅРёРµ СЃСЃС‹Р»РѕРє РЅР° РѕР±СЂР°Р±РѕС‚С‡РёРєРё РґР»СЏ РєРѕСЂСЂРµРєС‚РЅРѕРіРѕ cleanup
+- **Folders resizer**: РСЃРїСЂР°РІР»РµРЅР° СѓС‚РµС‡РєР° РїР°РјСЏС‚Рё РїСЂРё РјРЅРѕР¶РµСЃС‚РІРµРЅРЅС‹С… РѕР±СЂР°Р±РѕС‚С‡РёРєР°С…
+- **Drag-n-drop**: Р”РѕР±Р°РІР»РµРЅС‹ РїСЂРѕРІРµСЂРєРё РЅР° РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµ С‚Р°Р±РѕРІ РІРѕ РІСЃРµС… drag РѕР±СЂР°Р±РѕС‚С‡РёРєР°С…
 
-#### 🗂️ **Технические улучшения:**
-- **EventHandlers**: Добавлены проверки `isDraggingTab` в MouseHandlers
-- **AssetPanel**: Разделены CSS классы для разных типов drag операций
-- **Cleanup**: Корректное удаление всех обработчиков в методе `destroy()`
+#### рџ—‚пёЏ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
+- **EventHandlers**: Р”РѕР±Р°РІР»РµРЅС‹ РїСЂРѕРІРµСЂРєРё `isDraggingTab` РІ MouseHandlers
+- **AssetPanel**: Р Р°Р·РґРµР»РµРЅС‹ CSS РєР»Р°СЃСЃС‹ РґР»СЏ СЂР°Р·РЅС‹С… С‚РёРїРѕРІ drag РѕРїРµСЂР°С†РёР№
+- **Cleanup**: РљРѕСЂСЂРµРєС‚РЅРѕРµ СѓРґР°Р»РµРЅРёРµ РІСЃРµС… РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ РІ РјРµС‚РѕРґРµ `destroy()`
 
-#### 📁 **Измененные файлы:**
-- `src/ui/AssetPanel.js` - Исправлены drag-n-drop конфликты и множественные обработчики
-- `src/core/MouseHandlers.js` - Добавлены проверки на tab dragging
-- `styles/main.css` - Разделены CSS классы для tab и file drag
-- `index.html` - Обновлены классы drag-over для правой панели
-- `docs/CHANGELOG.md` - Документированы исправления
+#### рџ“Ѓ **РР·РјРµРЅРµРЅРЅС‹Рµ С„Р°Р№Р»С‹:**
+- `src/ui/AssetPanel.js` - РСЃРїСЂР°РІР»РµРЅС‹ drag-n-drop РєРѕРЅС„Р»РёРєС‚С‹ Рё РјРЅРѕР¶РµСЃС‚РІРµРЅРЅС‹Рµ РѕР±СЂР°Р±РѕС‚С‡РёРєРё
+- `src/core/MouseHandlers.js` - Р”РѕР±Р°РІР»РµРЅС‹ РїСЂРѕРІРµСЂРєРё РЅР° tab dragging
+- `styles/main.css` - Р Р°Р·РґРµР»РµРЅС‹ CSS РєР»Р°СЃСЃС‹ РґР»СЏ tab Рё file drag
+- `index.html` - РћР±РЅРѕРІР»РµРЅС‹ РєР»Р°СЃСЃС‹ drag-over РґР»СЏ РїСЂР°РІРѕР№ РїР°РЅРµР»Рё
+- `docs/CHANGELOG.md` - Р”РѕРєСѓРјРµРЅС‚РёСЂРѕРІР°РЅС‹ РёСЃРїСЂР°РІР»РµРЅРёСЏ
 
 ## [3.49.5] - 2025-01-27
 
-### Added - Поддержка вложенных групп и улучшенная сортировка
+### Added - РџРѕРґРґРµСЂР¶РєР° РІР»РѕР¶РµРЅРЅС‹С… РіСЂСѓРїРї Рё СѓР»СѓС‡С€РµРЅРЅР°СЏ СЃРѕСЂС‚РёСЂРѕРІРєР°
 
-#### 🎯 **Полная поддержка вложенных групп:**
-- **Вложенность любого уровня**: Группы могут содержать другие группы без ограничений
-- **Корректное редактирование**: При открытии группы все её потомки (включая вложенные) становятся выбираемыми
-- **Правильное перемещение**: Объекты в группах любого уровня вложенности корректно перемещаются
+#### рџЋЇ **РџРѕР»РЅР°СЏ РїРѕРґРґРµСЂР¶РєР° РІР»РѕР¶РµРЅРЅС‹С… РіСЂСѓРїРї:**
+- **Р’Р»РѕР¶РµРЅРЅРѕСЃС‚СЊ Р»СЋР±РѕРіРѕ СѓСЂРѕРІРЅСЏ**: Р“СЂСѓРїРїС‹ РјРѕРіСѓС‚ СЃРѕРґРµСЂР¶Р°С‚СЊ РґСЂСѓРіРёРµ РіСЂСѓРїРїС‹ Р±РµР· РѕРіСЂР°РЅРёС‡РµРЅРёР№
+- **РљРѕСЂСЂРµРєС‚РЅРѕРµ СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ**: РџСЂРё РѕС‚РєСЂС‹С‚РёРё РіСЂСѓРїРїС‹ РІСЃРµ РµС‘ РїРѕС‚РѕРјРєРё (РІРєР»СЋС‡Р°СЏ РІР»РѕР¶РµРЅРЅС‹Рµ) СЃС‚Р°РЅРѕРІСЏС‚СЃСЏ РІС‹Р±РёСЂР°РµРјС‹РјРё
+- **РџСЂР°РІРёР»СЊРЅРѕРµ РїРµСЂРµРјРµС‰РµРЅРёРµ**: РћР±СЉРµРєС‚С‹ РІ РіСЂСѓРїРїР°С… Р»СЋР±РѕРіРѕ СѓСЂРѕРІРЅСЏ РІР»РѕР¶РµРЅРЅРѕСЃС‚Рё РєРѕСЂСЂРµРєС‚РЅРѕ РїРµСЂРµРјРµС‰Р°СЋС‚СЃСЏ
 
-#### 🔧 **Улучшенная сортировка по глубине:**
-- **Иерархические индексы**: Объекты сортируются по полным путям в иерархии групп (layer.groupPath.objectIndex)
-- **Правильный z-order**: Объекты отображаются в правильном порядке даже в глубоко вложенных структурах
-- **Селект по клику**: При клике выбирается объект с наивысшим z-index в видимой области
+#### рџ”§ **РЈР»СѓС‡С€РµРЅРЅР°СЏ СЃРѕСЂС‚РёСЂРѕРІРєР° РїРѕ РіР»СѓР±РёРЅРµ:**
+- **РРµСЂР°СЂС…РёС‡РµСЃРєРёРµ РёРЅРґРµРєСЃС‹**: РћР±СЉРµРєС‚С‹ СЃРѕСЂС‚РёСЂСѓСЋС‚СЃСЏ РїРѕ РїРѕР»РЅС‹Рј РїСѓС‚СЏРј РІ РёРµСЂР°СЂС…РёРё РіСЂСѓРїРї (layer.groupPath.objectIndex)
+- **РџСЂР°РІРёР»СЊРЅС‹Р№ z-order**: РћР±СЉРµРєС‚С‹ РѕС‚РѕР±СЂР°Р¶Р°СЋС‚СЃСЏ РІ РїСЂР°РІРёР»СЊРЅРѕРј РїРѕСЂСЏРґРєРµ РґР°Р¶Рµ РІ РіР»СѓР±РѕРєРѕ РІР»РѕР¶РµРЅРЅС‹С… СЃС‚СЂСѓРєС‚СѓСЂР°С…
+- **РЎРµР»РµРєС‚ РїРѕ РєР»РёРєСѓ**: РџСЂРё РєР»РёРєРµ РІС‹Р±РёСЂР°РµС‚СЃСЏ РѕР±СЉРµРєС‚ СЃ РЅР°РёРІС‹СЃС€РёРј z-index РІ РІРёРґРёРјРѕР№ РѕР±Р»Р°СЃС‚Рё
 
-#### ⚙️ **Улучшенное управление группами:**
-- **Escape клавиша**: `Esc` теперь сбрасывает выделение объектов (если нет активных процессов), отменяет текущие действия и закрывает режим редактирования группы
-- **Документация**: Обновлена документация с информацией о поддержке вложенных групп
+#### вљ™пёЏ **РЈР»СѓС‡С€РµРЅРЅРѕРµ СѓРїСЂР°РІР»РµРЅРёРµ РіСЂСѓРїРїР°РјРё:**
+- **Escape РєР»Р°РІРёС€Р°**: `Esc` С‚РµРїРµСЂСЊ СЃР±СЂР°СЃС‹РІР°РµС‚ РІС‹РґРµР»РµРЅРёРµ РѕР±СЉРµРєС‚РѕРІ (РµСЃР»Рё РЅРµС‚ Р°РєС‚РёРІРЅС‹С… РїСЂРѕС†РµСЃСЃРѕРІ), РѕС‚РјРµРЅСЏРµС‚ С‚РµРєСѓС‰РёРµ РґРµР№СЃС‚РІРёСЏ Рё Р·Р°РєСЂС‹РІР°РµС‚ СЂРµР¶РёРј СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ РіСЂСѓРїРїС‹
+- **Р”РѕРєСѓРјРµРЅС‚Р°С†РёСЏ**: РћР±РЅРѕРІР»РµРЅР° РґРѕРєСѓРјРµРЅС‚Р°С†РёСЏ СЃ РёРЅС„РѕСЂРјР°С†РёРµР№ Рѕ РїРѕРґРґРµСЂР¶РєРµ РІР»РѕР¶РµРЅРЅС‹С… РіСЂСѓРїРї
 
-#### 🗂️ **Оптимизация интерфейса:**
-- **Удалена закладка Level**: Статистика уровня теперь показывается в панели Details когда ничего не выбрано
-- **Интегрированный интерфейс**: Панель Details объединяет свойства объектов и статистику уровня
+#### рџ—‚пёЏ **РћРїС‚РёРјРёР·Р°С†РёСЏ РёРЅС‚РµСЂС„РµР№СЃР°:**
+- **РЈРґР°Р»РµРЅР° Р·Р°РєР»Р°РґРєР° Level**: РЎС‚Р°С‚РёСЃС‚РёРєР° СѓСЂРѕРІРЅСЏ С‚РµРїРµСЂСЊ РїРѕРєР°Р·С‹РІР°РµС‚СЃСЏ РІ РїР°РЅРµР»Рё Details РєРѕРіРґР° РЅРёС‡РµРіРѕ РЅРµ РІС‹Р±СЂР°РЅРѕ
+- **РРЅС‚РµРіСЂРёСЂРѕРІР°РЅРЅС‹Р№ РёРЅС‚РµСЂС„РµР№СЃ**: РџР°РЅРµР»СЊ Details РѕР±СЉРµРґРёРЅСЏРµС‚ СЃРІРѕР№СЃС‚РІР° РѕР±СЉРµРєС‚РѕРІ Рё СЃС‚Р°С‚РёСЃС‚РёРєСѓ СѓСЂРѕРІРЅСЏ
 
-#### 📁 **Измененные файлы:**
-- `src/models/Level.js` - Добавлены функции `buildFullObjectIndex()`, `buildObjectPath()`, `isObjectInAnyGroup()`
-- `src/core/ObjectOperations.js` - Обновлена логика сортировки и селекта объектов в группах
-- `src/core/MouseHandlers.js` - Исправлена логика перемещения объектов в группах любого уровня
-- `src/core/EventHandlers.js` - Добавлена поддержка Escape для закрытия групп
-- `src/core/LevelEditor.js` - Удален вызов updateLevelStatsPanel()
-- `src/ui/DetailsPanel.js` - Добавлена статистика уровня в режиме "ничего не выбрано"
-- `index.html` - Удалена закладка Level из интерфейса
-- `docs/QUICK_START.md` - Обновлена информация о горячих клавишах
-- `docs/USER_MANUAL.md` - Обновлено описание панели Details
+#### рџ“Ѓ **РР·РјРµРЅРµРЅРЅС‹Рµ С„Р°Р№Р»С‹:**
+- `src/models/Level.js` - Р”РѕР±Р°РІР»РµРЅС‹ С„СѓРЅРєС†РёРё `buildFullObjectIndex()`, `buildObjectPath()`, `isObjectInAnyGroup()`
+- `src/core/ObjectOperations.js` - РћР±РЅРѕРІР»РµРЅР° Р»РѕРіРёРєР° СЃРѕСЂС‚РёСЂРѕРІРєРё Рё СЃРµР»РµРєС‚Р° РѕР±СЉРµРєС‚РѕРІ РІ РіСЂСѓРїРїР°С…
+- `src/core/MouseHandlers.js` - РСЃРїСЂР°РІР»РµРЅР° Р»РѕРіРёРєР° РїРµСЂРµРјРµС‰РµРЅРёСЏ РѕР±СЉРµРєС‚РѕРІ РІ РіСЂСѓРїРїР°С… Р»СЋР±РѕРіРѕ СѓСЂРѕРІРЅСЏ
+- `src/core/EventHandlers.js` - Р”РѕР±Р°РІР»РµРЅР° РїРѕРґРґРµСЂР¶РєР° Escape РґР»СЏ Р·Р°РєСЂС‹С‚РёСЏ РіСЂСѓРїРї
+- `src/core/LevelEditor.js` - РЈРґР°Р»РµРЅ РІС‹Р·РѕРІ updateLevelStatsPanel()
+- `src/ui/DetailsPanel.js` - Р”РѕР±Р°РІР»РµРЅР° СЃС‚Р°С‚РёСЃС‚РёРєР° СѓСЂРѕРІРЅСЏ РІ СЂРµР¶РёРјРµ "РЅРёС‡РµРіРѕ РЅРµ РІС‹Р±СЂР°РЅРѕ"
+- `index.html` - РЈРґР°Р»РµРЅР° Р·Р°РєР»Р°РґРєР° Level РёР· РёРЅС‚РµСЂС„РµР№СЃР°
+- `docs/QUICK_START.md` - РћР±РЅРѕРІР»РµРЅР° РёРЅС„РѕСЂРјР°С†РёСЏ Рѕ РіРѕСЂСЏС‡РёС… РєР»Р°РІРёС€Р°С…
+- `docs/USER_MANUAL.md` - РћР±РЅРѕРІР»РµРЅРѕ РѕРїРёСЃР°РЅРёРµ РїР°РЅРµР»Рё Details
 
 ## [3.49.4] - 2025-01-27
 
-### Fixed - Исправление логики позиционирования дубликатов
+### Fixed - РСЃРїСЂР°РІР»РµРЅРёРµ Р»РѕРіРёРєРё РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёСЏ РґСѓР±Р»РёРєР°С‚РѕРІ
 
-#### 🎯 **Исправление расчета offset для объектов внутри групп:**
-- **Проблема**: Дубликаты позиционировались не под курсором из-за неправильного расчета offset
-- **Корневая причина**: `DuplicateUtils.initializePositions()` использовал `getObjectWorldPosition()` вместо ручного расчета координат
-- **Решение**: Применена та же логика, что и в `MouseHandlers.dragSelectedObjects` для Alt+drag
+#### рџЋЇ **РСЃРїСЂР°РІР»РµРЅРёРµ СЂР°СЃС‡РµС‚Р° offset РґР»СЏ РѕР±СЉРµРєС‚РѕРІ РІРЅСѓС‚СЂРё РіСЂСѓРїРї:**
+- **РџСЂРѕР±Р»РµРјР°**: Р”СѓР±Р»РёРєР°С‚С‹ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°Р»РёСЃСЊ РЅРµ РїРѕРґ РєСѓСЂСЃРѕСЂРѕРј РёР·-Р·Р° РЅРµРїСЂР°РІРёР»СЊРЅРѕРіРѕ СЂР°СЃС‡РµС‚Р° offset
+- **РљРѕСЂРЅРµРІР°СЏ РїСЂРёС‡РёРЅР°**: `DuplicateUtils.initializePositions()` РёСЃРїРѕР»СЊР·РѕРІР°Р» `getObjectWorldPosition()` РІРјРµСЃС‚Рѕ СЂСѓС‡РЅРѕРіРѕ СЂР°СЃС‡РµС‚Р° РєРѕРѕСЂРґРёРЅР°С‚
+- **Р РµС€РµРЅРёРµ**: РџСЂРёРјРµРЅРµРЅР° С‚Р° Р¶Рµ Р»РѕРіРёРєР°, С‡С‚Рѕ Рё РІ `MouseHandlers.dragSelectedObjects` РґР»СЏ Alt+drag
 
-#### 🔧 **Технические детали:**
-- **DuplicateUtils.initializePositions**: Теперь использует `groupWorldPos.x + obj.x` для объектов внутри групп
-- **DuplicateOperations.confirmPlacement**: Добавлена проверка `wasInGroup` для правильной конвертации координат
-- **Отслеживание оригинальных объектов**: Добавлено `duplicate.originalObjects` для определения принадлежности к группе
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ РґРµС‚Р°Р»Рё:**
+- **DuplicateUtils.initializePositions**: РўРµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓРµС‚ `groupWorldPos.x + obj.x` РґР»СЏ РѕР±СЉРµРєС‚РѕРІ РІРЅСѓС‚СЂРё РіСЂСѓРїРї
+- **DuplicateOperations.confirmPlacement**: Р”РѕР±Р°РІР»РµРЅР° РїСЂРѕРІРµСЂРєР° `wasInGroup` РґР»СЏ РїСЂР°РІРёР»СЊРЅРѕР№ РєРѕРЅРІРµСЂС‚Р°С†РёРё РєРѕРѕСЂРґРёРЅР°С‚
+- **РћС‚СЃР»РµР¶РёРІР°РЅРёРµ РѕСЂРёРіРёРЅР°Р»СЊРЅС‹С… РѕР±СЉРµРєС‚РѕРІ**: Р”РѕР±Р°РІР»РµРЅРѕ `duplicate.originalObjects` РґР»СЏ РѕРїСЂРµРґРµР»РµРЅРёСЏ РїСЂРёРЅР°РґР»РµР¶РЅРѕСЃС‚Рё Рє РіСЂСѓРїРїРµ
 
-#### 📁 **Измененные файлы:**
-- `src/utils/DuplicateUtils.js` - Исправлена логика расчета offset
-- `src/core/DuplicateOperations.js` - Добавлено отслеживание originalObjects
-- `src/core/LevelEditor.js` - Версия 3.49.4
+#### рџ“Ѓ **РР·РјРµРЅРµРЅРЅС‹Рµ С„Р°Р№Р»С‹:**
+- `src/utils/DuplicateUtils.js` - РСЃРїСЂР°РІР»РµРЅР° Р»РѕРіРёРєР° СЂР°СЃС‡РµС‚Р° offset
+- `src/core/DuplicateOperations.js` - Р”РѕР±Р°РІР»РµРЅРѕ РѕС‚СЃР»РµР¶РёРІР°РЅРёРµ originalObjects
+- `src/core/LevelEditor.js` - Р’РµСЂСЃРёСЏ 3.49.4
 
 ## [3.49.3] - 2025-01-27
 
-### Fixed - Исправление позиционирования дубликатов в режиме редактирования групп
+### Fixed - РСЃРїСЂР°РІР»РµРЅРёРµ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёСЏ РґСѓР±Р»РёРєР°С‚РѕРІ РІ СЂРµР¶РёРјРµ СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ РіСЂСѓРїРї
 
-#### 🎯 **Исправление дублирования внешних объектов в группах:**
-- **Проблема**: При Alt+click+drag внешних объектов в открытой группе дубликаты получали неправильную позицию
-- **Корневая причина**: `DuplicateUtils.initializePositions()` всегда применял группо-относительное позиционирование в режиме редактирования групп
-- **Решение**: Добавлена проверка принадлежности объекта к активной группе
-- **Результат**: Внешние объекты корректно дублируются под курсором, объекты внутри группы сохраняют группо-относительное позиционирование
+#### рџЋЇ **РСЃРїСЂР°РІР»РµРЅРёРµ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ РІРЅРµС€РЅРёС… РѕР±СЉРµРєС‚РѕРІ РІ РіСЂСѓРїРїР°С…:**
+- **РџСЂРѕР±Р»РµРјР°**: РџСЂРё Alt+click+drag РІРЅРµС€РЅРёС… РѕР±СЉРµРєС‚РѕРІ РІ РѕС‚РєСЂС‹С‚РѕР№ РіСЂСѓРїРїРµ РґСѓР±Р»РёРєР°С‚С‹ РїРѕР»СѓС‡Р°Р»Рё РЅРµРїСЂР°РІРёР»СЊРЅСѓСЋ РїРѕР·РёС†РёСЋ
+- **РљРѕСЂРЅРµРІР°СЏ РїСЂРёС‡РёРЅР°**: `DuplicateUtils.initializePositions()` РІСЃРµРіРґР° РїСЂРёРјРµРЅСЏР» РіСЂСѓРїРїРѕ-РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕРµ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ РІ СЂРµР¶РёРјРµ СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ РіСЂСѓРїРї
+- **Р РµС€РµРЅРёРµ**: Р”РѕР±Р°РІР»РµРЅР° РїСЂРѕРІРµСЂРєР° РїСЂРёРЅР°РґР»РµР¶РЅРѕСЃС‚Рё РѕР±СЉРµРєС‚Р° Рє Р°РєС‚РёРІРЅРѕР№ РіСЂСѓРїРїРµ
+- **Р РµР·СѓР»СЊС‚Р°С‚**: Р’РЅРµС€РЅРёРµ РѕР±СЉРµРєС‚С‹ РєРѕСЂСЂРµРєС‚РЅРѕ РґСѓР±Р»РёСЂСѓСЋС‚СЃСЏ РїРѕРґ РєСѓСЂСЃРѕСЂРѕРј, РѕР±СЉРµРєС‚С‹ РІРЅСѓС‚СЂРё РіСЂСѓРїРїС‹ СЃРѕС…СЂР°РЅСЏСЋС‚ РіСЂСѓРїРїРѕ-РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕРµ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ
 
-#### 🔧 **Технические исправления:**
-- **DuplicateUtils.js**: Добавлена проверка `isObjectInGroupRecursive(obj, activeGroup)` в `initializePositions()`
-- **Логика позиционирования**: Разделена на два случая - внутренние и внешние объекты группы
-- **Обратная совместимость**: Все существующие сценарии продолжают работать
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ РёСЃРїСЂР°РІР»РµРЅРёСЏ:**
+- **DuplicateUtils.js**: Р”РѕР±Р°РІР»РµРЅР° РїСЂРѕРІРµСЂРєР° `isObjectInGroupRecursive(obj, activeGroup)` РІ `initializePositions()`
+- **Р›РѕРіРёРєР° РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёСЏ**: Р Р°Р·РґРµР»РµРЅР° РЅР° РґРІР° СЃР»СѓС‡Р°СЏ - РІРЅСѓС‚СЂРµРЅРЅРёРµ Рё РІРЅРµС€РЅРёРµ РѕР±СЉРµРєС‚С‹ РіСЂСѓРїРїС‹
+- **РћР±СЂР°С‚РЅР°СЏ СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚СЊ**: Р’СЃРµ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёРµ СЃС†РµРЅР°СЂРёРё РїСЂРѕРґРѕР»Р¶Р°СЋС‚ СЂР°Р±РѕС‚Р°С‚СЊ
 
-#### 📋 **Затронутые файлы:**
-- **DuplicateUtils.js**: Исправлена логика инициализации позиций дубликатов
+#### рџ“‹ **Р—Р°С‚СЂРѕРЅСѓС‚С‹Рµ С„Р°Р№Р»С‹:**
+- **DuplicateUtils.js**: РСЃРїСЂР°РІР»РµРЅР° Р»РѕРіРёРєР° РёРЅРёС†РёР°Р»РёР·Р°С†РёРё РїРѕР·РёС†РёР№ РґСѓР±Р»РёРєР°С‚РѕРІ
 
-#### 🔍 **Технические детали:**
-- **Проверка принадлежности**: Используется `editor.objectOperations.isObjectInGroupRecursive(obj, activeGroup)`
-- **Позиционирование внутренних объектов**: `groupWorldPos.x + obj.x, groupWorldPos.y + obj.y`
-- **Позиционирование внешних объектов**: `editor.objectOperations.getObjectWorldPosition(obj)`
-- **Совместимость**: Сохранена поддержка parallax и всех существующих режимов
+#### рџ”Ќ **РўРµС…РЅРёС‡РµСЃРєРёРµ РґРµС‚Р°Р»Рё:**
+- **РџСЂРѕРІРµСЂРєР° РїСЂРёРЅР°РґР»РµР¶РЅРѕСЃС‚Рё**: РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ `editor.objectOperations.isObjectInGroupRecursive(obj, activeGroup)`
+- **РџРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ РІРЅСѓС‚СЂРµРЅРЅРёС… РѕР±СЉРµРєС‚РѕРІ**: `groupWorldPos.x + obj.x, groupWorldPos.y + obj.y`
+- **РџРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ РІРЅРµС€РЅРёС… РѕР±СЉРµРєС‚РѕРІ**: `editor.objectOperations.getObjectWorldPosition(obj)`
+- **РЎРѕРІРјРµСЃС‚РёРјРѕСЃС‚СЊ**: РЎРѕС…СЂР°РЅРµРЅР° РїРѕРґРґРµСЂР¶РєР° parallax Рё РІСЃРµС… СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёС… СЂРµР¶РёРјРѕРІ
 
 ## [3.49.2] - 2025-01-27
 
-### Fixed - Исправления селекции объектов и перетаскивания в группы
+### Fixed - РСЃРїСЂР°РІР»РµРЅРёСЏ СЃРµР»РµРєС†РёРё РѕР±СЉРµРєС‚РѕРІ Рё РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёСЏ РІ РіСЂСѓРїРїС‹
 
-#### 🎯 **Исправление приоритета селекции групп:**
-- **Проблема**: Группы имели искусственный приоритет над обычными объектами при селекции, независимо от zIndex
-- **Решение**: Все объекты (группы и обычные) теперь обрабатываются по zIndex при селекции
-- **Результат**: Выбирается объект с максимальным zIndex (передний план) независимо от типа
+#### рџЋЇ **РСЃРїСЂР°РІР»РµРЅРёРµ РїСЂРёРѕСЂРёС‚РµС‚Р° СЃРµР»РµРєС†РёРё РіСЂСѓРїРї:**
+- **РџСЂРѕР±Р»РµРјР°**: Р“СЂСѓРїРїС‹ РёРјРµР»Рё РёСЃРєСѓСЃСЃС‚РІРµРЅРЅС‹Р№ РїСЂРёРѕСЂРёС‚РµС‚ РЅР°Рґ РѕР±С‹С‡РЅС‹РјРё РѕР±СЉРµРєС‚Р°РјРё РїСЂРё СЃРµР»РµРєС†РёРё, РЅРµР·Р°РІРёСЃРёРјРѕ РѕС‚ zIndex
+- **Р РµС€РµРЅРёРµ**: Р’СЃРµ РѕР±СЉРµРєС‚С‹ (РіСЂСѓРїРїС‹ Рё РѕР±С‹С‡РЅС‹Рµ) С‚РµРїРµСЂСЊ РѕР±СЂР°Р±Р°С‚С‹РІР°СЋС‚СЃСЏ РїРѕ zIndex РїСЂРё СЃРµР»РµРєС†РёРё
+- **Р РµР·СѓР»СЊС‚Р°С‚**: Р’С‹Р±РёСЂР°РµС‚СЃСЏ РѕР±СЉРµРєС‚ СЃ РјР°РєСЃРёРјР°Р»СЊРЅС‹Рј zIndex (РїРµСЂРµРґРЅРёР№ РїР»Р°РЅ) РЅРµР·Р°РІРёСЃРёРјРѕ РѕС‚ С‚РёРїР°
 
-#### 🔧 **Исправление фантомных объектов при перетаскивании в группы:**
-- **Проблема**: При перетаскивании объектов в открытые группы появлялись кратковременные фантомы
-- **Корневая причина**: Неправильный порядок операций и отсутствие инвалидации кешей
-- **Решение**: 
-  - Инвалидация пространственного индекса ДО перемещения объектов
-  - Очистка кешей эффективного слоя для предотвращения фантомных ссылок
-  - Отложенный рендеринг до завершения всех операций перемещения
+#### рџ”§ **РСЃРїСЂР°РІР»РµРЅРёРµ С„Р°РЅС‚РѕРјРЅС‹С… РѕР±СЉРµРєС‚РѕРІ РїСЂРё РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРё РІ РіСЂСѓРїРїС‹:**
+- **РџСЂРѕР±Р»РµРјР°**: РџСЂРё РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРё РѕР±СЉРµРєС‚РѕРІ РІ РѕС‚РєСЂС‹С‚С‹Рµ РіСЂСѓРїРїС‹ РїРѕСЏРІР»СЏР»РёСЃСЊ РєСЂР°С‚РєРѕРІСЂРµРјРµРЅРЅС‹Рµ С„Р°РЅС‚РѕРјС‹
+- **РљРѕСЂРЅРµРІР°СЏ РїСЂРёС‡РёРЅР°**: РќРµРїСЂР°РІРёР»СЊРЅС‹Р№ РїРѕСЂСЏРґРѕРє РѕРїРµСЂР°С†РёР№ Рё РѕС‚СЃСѓС‚СЃС‚РІРёРµ РёРЅРІР°Р»РёРґР°С†РёРё РєРµС€РµР№
+- **Р РµС€РµРЅРёРµ**: 
+  - РРЅРІР°Р»РёРґР°С†РёСЏ РїСЂРѕСЃС‚СЂР°РЅСЃС‚РІРµРЅРЅРѕРіРѕ РёРЅРґРµРєСЃР° Р”Рћ РїРµСЂРµРјРµС‰РµРЅРёСЏ РѕР±СЉРµРєС‚РѕРІ
+  - РћС‡РёСЃС‚РєР° РєРµС€РµР№ СЌС„С„РµРєС‚РёРІРЅРѕРіРѕ СЃР»РѕСЏ РґР»СЏ РїСЂРµРґРѕС‚РІСЂР°С‰РµРЅРёСЏ С„Р°РЅС‚РѕРјРЅС‹С… СЃСЃС‹Р»РѕРє
+  - РћС‚Р»РѕР¶РµРЅРЅС‹Р№ СЂРµРЅРґРµСЂРёРЅРі РґРѕ Р·Р°РІРµСЂС€РµРЅРёСЏ РІСЃРµС… РѕРїРµСЂР°С†РёР№ РїРµСЂРµРјРµС‰РµРЅРёСЏ
 
-#### 🚀 **Улучшения архитектуры:**
-- **DRY принцип**: Устранено дублирование кода сортировки по zIndex
-- **Оптимизация**: Создана вспомогательная функция `_sortObjectsByZIndexDescending()`
-- **Производительность**: Убраны избыточные операции очистки кешей
+#### рџљЂ **РЈР»СѓС‡С€РµРЅРёСЏ Р°СЂС…РёС‚РµРєС‚СѓСЂС‹:**
+- **DRY РїСЂРёРЅС†РёРї**: РЈСЃС‚СЂР°РЅРµРЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ РєРѕРґР° СЃРѕСЂС‚РёСЂРѕРІРєРё РїРѕ zIndex
+- **РћРїС‚РёРјРёР·Р°С†РёСЏ**: РЎРѕР·РґР°РЅР° РІСЃРїРѕРјРѕРіР°С‚РµР»СЊРЅР°СЏ С„СѓРЅРєС†РёСЏ `_sortObjectsByZIndexDescending()`
+- **РџСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ**: РЈР±СЂР°РЅС‹ РёР·Р±С‹С‚РѕС‡РЅС‹Рµ РѕРїРµСЂР°С†РёРё РѕС‡РёСЃС‚РєРё РєРµС€РµР№
 
-#### 📋 **Затронутые файлы:**
-- **ObjectOperations.js**: Исправлена логика селекции, убран приоритет групп
-- **MouseHandlers.js**: Исправлен порядок операций при перетаскивании в группы
-- **DuplicateOperations.js**: Добавлен импорт Logger для корректной работы
+#### рџ“‹ **Р—Р°С‚СЂРѕРЅСѓС‚С‹Рµ С„Р°Р№Р»С‹:**
+- **ObjectOperations.js**: РСЃРїСЂР°РІР»РµРЅР° Р»РѕРіРёРєР° СЃРµР»РµРєС†РёРё, СѓР±СЂР°РЅ РїСЂРёРѕСЂРёС‚РµС‚ РіСЂСѓРїРї
+- **MouseHandlers.js**: РСЃРїСЂР°РІР»РµРЅ РїРѕСЂСЏРґРѕРє РѕРїРµСЂР°С†РёР№ РїСЂРё РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРё РІ РіСЂСѓРїРїС‹
+- **DuplicateOperations.js**: Р”РѕР±Р°РІР»РµРЅ РёРјРїРѕСЂС‚ Logger РґР»СЏ РєРѕСЂСЂРµРєС‚РЅРѕР№ СЂР°Р±РѕС‚С‹
 
-#### 🔍 **Технические детали:**
-- **Селекция**: Все объекты обрабатываются вместе по zIndex в порядке убывания
-- **Перетаскивание**: Объект сначала добавляется в группу, потом удаляется из основного уровня
-- **Кеширование**: Используется `clearEffectiveLayerCacheForObject()` вместо общей очистки кешей
-- **Рендеринг**: Добавлен флаг `objectsMovedToGroup` для отложенного рендеринга
+#### рџ”Ќ **РўРµС…РЅРёС‡РµСЃРєРёРµ РґРµС‚Р°Р»Рё:**
+- **РЎРµР»РµРєС†РёСЏ**: Р’СЃРµ РѕР±СЉРµРєС‚С‹ РѕР±СЂР°Р±Р°С‚С‹РІР°СЋС‚СЃСЏ РІРјРµСЃС‚Рµ РїРѕ zIndex РІ РїРѕСЂСЏРґРєРµ СѓР±С‹РІР°РЅРёСЏ
+- **РџРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµ**: РћР±СЉРµРєС‚ СЃРЅР°С‡Р°Р»Р° РґРѕР±Р°РІР»СЏРµС‚СЃСЏ РІ РіСЂСѓРїРїСѓ, РїРѕС‚РѕРј СѓРґР°Р»СЏРµС‚СЃСЏ РёР· РѕСЃРЅРѕРІРЅРѕРіРѕ СѓСЂРѕРІРЅСЏ
+- **РљРµС€РёСЂРѕРІР°РЅРёРµ**: РСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ `clearEffectiveLayerCacheForObject()` РІРјРµСЃС‚Рѕ РѕР±С‰РµР№ РѕС‡РёСЃС‚РєРё РєРµС€РµР№
+- **Р РµРЅРґРµСЂРёРЅРі**: Р”РѕР±Р°РІР»РµРЅ С„Р»Р°Рі `objectsMovedToGroup` РґР»СЏ РѕС‚Р»РѕР¶РµРЅРЅРѕРіРѕ СЂРµРЅРґРµСЂРёРЅРіР°
 
 ## [3.49.1] - 2025-01-27
 
-### Fixed - Критическое исправление фантомных объектов при группировке
+### Fixed - РљСЂРёС‚РёС‡РµСЃРєРѕРµ РёСЃРїСЂР°РІР»РµРЅРёРµ С„Р°РЅС‚РѕРјРЅС‹С… РѕР±СЉРµРєС‚РѕРІ РїСЂРё РіСЂСѓРїРїРёСЂРѕРІРєРµ
 
-#### 🔧 **Исправление проблемы фантомных копий ассетов:**
-- **Корневая причина**: `collectVisibleObjectsRecursive()` рекурсивно добавляла детей групп как отдельные объекты для рендеринга
-- **Результат**: фантомные копии отображались на канве после группировки - дети групп рендерились дважды
-- **Решение**: устранение рекурсивного обхода детей групп в `collectVisibleObjectsRecursive()`
+#### рџ”§ **РСЃРїСЂР°РІР»РµРЅРёРµ РїСЂРѕР±Р»РµРјС‹ С„Р°РЅС‚РѕРјРЅС‹С… РєРѕРїРёР№ Р°СЃСЃРµС‚РѕРІ:**
+- **РљРѕСЂРЅРµРІР°СЏ РїСЂРёС‡РёРЅР°**: `collectVisibleObjectsRecursive()` СЂРµРєСѓСЂСЃРёРІРЅРѕ РґРѕР±Р°РІР»СЏР»Р° РґРµС‚РµР№ РіСЂСѓРїРї РєР°Рє РѕС‚РґРµР»СЊРЅС‹Рµ РѕР±СЉРµРєС‚С‹ РґР»СЏ СЂРµРЅРґРµСЂРёРЅРіР°
+- **Р РµР·СѓР»СЊС‚Р°С‚**: С„Р°РЅС‚РѕРјРЅС‹Рµ РєРѕРїРёРё РѕС‚РѕР±СЂР°Р¶Р°Р»РёСЃСЊ РЅР° РєР°РЅРІРµ РїРѕСЃР»Рµ РіСЂСѓРїРїРёСЂРѕРІРєРё - РґРµС‚Рё РіСЂСѓРїРї СЂРµРЅРґРµСЂРёР»РёСЃСЊ РґРІР°Р¶РґС‹
+- **Р РµС€РµРЅРёРµ**: СѓСЃС‚СЂР°РЅРµРЅРёРµ СЂРµРєСѓСЂСЃРёРІРЅРѕРіРѕ РѕР±С…РѕРґР° РґРµС‚РµР№ РіСЂСѓРїРї РІ `collectVisibleObjectsRecursive()`
 
-#### 🎯 **Технические исправления:**
-- **RenderOperations.js**: устранен рекурсивный обход детей групп в `collectVisibleObjectsRecursive()`
-- **GroupOperations.js**: добавлена полная очистка кешей и инвалидация пространственного индекса
-- **Пространственный индекс**: улучшена инвалидация индекса до и после группировки
-- **Кеширование**: добавлен вызов `clearCaches()` и `invalidateObjectCaches()` для предотвращения фантомных ссылок
+#### рџЋЇ **РўРµС…РЅРёС‡РµСЃРєРёРµ РёСЃРїСЂР°РІР»РµРЅРёСЏ:**
+- **RenderOperations.js**: СѓСЃС‚СЂР°РЅРµРЅ СЂРµРєСѓСЂСЃРёРІРЅС‹Р№ РѕР±С…РѕРґ РґРµС‚РµР№ РіСЂСѓРїРї РІ `collectVisibleObjectsRecursive()`
+- **GroupOperations.js**: РґРѕР±Р°РІР»РµРЅР° РїРѕР»РЅР°СЏ РѕС‡РёСЃС‚РєР° РєРµС€РµР№ Рё РёРЅРІР°Р»РёРґР°С†РёСЏ РїСЂРѕСЃС‚СЂР°РЅСЃС‚РІРµРЅРЅРѕРіРѕ РёРЅРґРµРєСЃР°
+- **РџСЂРѕСЃС‚СЂР°РЅСЃС‚РІРµРЅРЅС‹Р№ РёРЅРґРµРєСЃ**: СѓР»СѓС‡С€РµРЅР° РёРЅРІР°Р»РёРґР°С†РёСЏ РёРЅРґРµРєСЃР° РґРѕ Рё РїРѕСЃР»Рµ РіСЂСѓРїРїРёСЂРѕРІРєРё
+- **РљРµС€РёСЂРѕРІР°РЅРёРµ**: РґРѕР±Р°РІР»РµРЅ РІС‹Р·РѕРІ `clearCaches()` Рё `invalidateObjectCaches()` РґР»СЏ РїСЂРµРґРѕС‚РІСЂР°С‰РµРЅРёСЏ С„Р°РЅС‚РѕРјРЅС‹С… СЃСЃС‹Р»РѕРє
 
-#### 🚀 **Улучшения производительности:**
-- **Умная инвалидация**: перестройка только пространственного индекса вместо полной очистки всех кешей
-- **Оптимизация**: `buildSpatialIndex()` вызывается только при необходимости
-- **Надежность**: fallback на обычный метод поиска при проблемах с индексом
+#### рџљЂ **РЈР»СѓС‡С€РµРЅРёСЏ РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚Рё:**
+- **РЈРјРЅР°СЏ РёРЅРІР°Р»РёРґР°С†РёСЏ**: РїРµСЂРµСЃС‚СЂРѕР№РєР° С‚РѕР»СЊРєРѕ РїСЂРѕСЃС‚СЂР°РЅСЃС‚РІРµРЅРЅРѕРіРѕ РёРЅРґРµРєСЃР° РІРјРµСЃС‚Рѕ РїРѕР»РЅРѕР№ РѕС‡РёСЃС‚РєРё РІСЃРµС… РєРµС€РµР№
+- **РћРїС‚РёРјРёР·Р°С†РёСЏ**: `buildSpatialIndex()` РІС‹Р·С‹РІР°РµС‚СЃСЏ С‚РѕР»СЊРєРѕ РїСЂРё РЅРµРѕР±С…РѕРґРёРјРѕСЃС‚Рё
+- **РќР°РґРµР¶РЅРѕСЃС‚СЊ**: fallback РЅР° РѕР±С‹С‡РЅС‹Р№ РјРµС‚РѕРґ РїРѕРёСЃРєР° РїСЂРё РїСЂРѕР±Р»РµРјР°С… СЃ РёРЅРґРµРєСЃРѕРј
 
-#### 📋 **Затронутые методы:**
-- `RenderOperations.collectVisibleObjectsRecursive()` - устранен рекурсивный обход детей групп
-- `GroupOperations.groupSelectedObjects()` - добавлена очистка кешей и инвалидация индексов
-- `RenderOperations.invalidateSpatialIndex()` - инвалидация пространственного индекса до группировки
-- `RenderOperations.buildSpatialIndex()` - перестройка пространственного индекса после группировки
+#### рџ“‹ **Р—Р°С‚СЂРѕРЅСѓС‚С‹Рµ РјРµС‚РѕРґС‹:**
+- `RenderOperations.collectVisibleObjectsRecursive()` - СѓСЃС‚СЂР°РЅРµРЅ СЂРµРєСѓСЂСЃРёРІРЅС‹Р№ РѕР±С…РѕРґ РґРµС‚РµР№ РіСЂСѓРїРї
+- `GroupOperations.groupSelectedObjects()` - РґРѕР±Р°РІР»РµРЅР° РѕС‡РёСЃС‚РєР° РєРµС€РµР№ Рё РёРЅРІР°Р»РёРґР°С†РёСЏ РёРЅРґРµРєСЃРѕРІ
+- `RenderOperations.invalidateSpatialIndex()` - РёРЅРІР°Р»РёРґР°С†РёСЏ РїСЂРѕСЃС‚СЂР°РЅСЃС‚РІРµРЅРЅРѕРіРѕ РёРЅРґРµРєСЃР° РґРѕ РіСЂСѓРїРїРёСЂРѕРІРєРё
+- `RenderOperations.buildSpatialIndex()` - РїРµСЂРµСЃС‚СЂРѕР№РєР° РїСЂРѕСЃС‚СЂР°РЅСЃС‚РІРµРЅРЅРѕРіРѕ РёРЅРґРµРєСЃР° РїРѕСЃР»Рµ РіСЂСѓРїРїРёСЂРѕРІРєРё
 
 ## [3.49.0] - 2025-10-14
 
-### Fixed - Исправления в системе индексов глубины и рендеринга
+### Fixed - РСЃРїСЂР°РІР»РµРЅРёСЏ РІ СЃРёСЃС‚РµРјРµ РёРЅРґРµРєСЃРѕРІ РіР»СѓР±РёРЅС‹ Рё СЂРµРЅРґРµСЂРёРЅРіР°
 
-#### 🔧 **Исправление присваивания zIndex объектам:**
-- **Устранена ошибка**: объекты не получали корректный zIndex при добавлении в уровень
-- **Метод `assignInitialZIndex()`**: новый унифицированный метод для присваивания zIndex новым объектам
-- **Правильная последовательность**: сначала `getNextZIndex()`, потом `assignObjectToLayer()` для коррекции layer index
-- **Объекты в группах**: исправлено присваивание zIndex для объектов, добавляемых в группы
+#### рџ”§ **РСЃРїСЂР°РІР»РµРЅРёРµ РїСЂРёСЃРІР°РёРІР°РЅРёСЏ zIndex РѕР±СЉРµРєС‚Р°Рј:**
+- **РЈСЃС‚СЂР°РЅРµРЅР° РѕС€РёР±РєР°**: РѕР±СЉРµРєС‚С‹ РЅРµ РїРѕР»СѓС‡Р°Р»Рё РєРѕСЂСЂРµРєС‚РЅС‹Р№ zIndex РїСЂРё РґРѕР±Р°РІР»РµРЅРёРё РІ СѓСЂРѕРІРµРЅСЊ
+- **РњРµС‚РѕРґ `assignInitialZIndex()`**: РЅРѕРІС‹Р№ СѓРЅРёС„РёС†РёСЂРѕРІР°РЅРЅС‹Р№ РјРµС‚РѕРґ РґР»СЏ РїСЂРёСЃРІР°РёРІР°РЅРёСЏ zIndex РЅРѕРІС‹Рј РѕР±СЉРµРєС‚Р°Рј
+- **РџСЂР°РІРёР»СЊРЅР°СЏ РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚СЊ**: СЃРЅР°С‡Р°Р»Р° `getNextZIndex()`, РїРѕС‚РѕРј `assignObjectToLayer()` РґР»СЏ РєРѕСЂСЂРµРєС†РёРё layer index
+- **РћР±СЉРµРєС‚С‹ РІ РіСЂСѓРїРїР°С…**: РёСЃРїСЂР°РІР»РµРЅРѕ РїСЂРёСЃРІР°РёРІР°РЅРёРµ zIndex РґР»СЏ РѕР±СЉРµРєС‚РѕРІ, РґРѕР±Р°РІР»СЏРµРјС‹С… РІ РіСЂСѓРїРїС‹
 
-#### 🎨 **Улучшение рендеринга и сортировки объектов:**
-- **Рекурсивный сбор объектов**: новый метод `collectVisibleObjectsRecursive()` для сбора всех видимых объектов включая вложенные в группы
-- **Устранение дублирования**: унифицирована логика сбора объектов в `getVisibleObjectsRegular()` и `getVisibleObjectsSpatial()`
-- **Правильная сортировка**: объекты внутри групп теперь правильно сортируются по zIndex
-- **Консистентность**: единая логика для пространственного индекса и обычного метода
+#### рџЋЁ **РЈР»СѓС‡С€РµРЅРёРµ СЂРµРЅРґРµСЂРёРЅРіР° Рё СЃРѕСЂС‚РёСЂРѕРІРєРё РѕР±СЉРµРєС‚РѕРІ:**
+- **Р РµРєСѓСЂСЃРёРІРЅС‹Р№ СЃР±РѕСЂ РѕР±СЉРµРєС‚РѕРІ**: РЅРѕРІС‹Р№ РјРµС‚РѕРґ `collectVisibleObjectsRecursive()` РґР»СЏ СЃР±РѕСЂР° РІСЃРµС… РІРёРґРёРјС‹С… РѕР±СЉРµРєС‚РѕРІ РІРєР»СЋС‡Р°СЏ РІР»РѕР¶РµРЅРЅС‹Рµ РІ РіСЂСѓРїРїС‹
+- **РЈСЃС‚СЂР°РЅРµРЅРёРµ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ**: СѓРЅРёС„РёС†РёСЂРѕРІР°РЅР° Р»РѕРіРёРєР° СЃР±РѕСЂР° РѕР±СЉРµРєС‚РѕРІ РІ `getVisibleObjectsRegular()` Рё `getVisibleObjectsSpatial()`
+- **РџСЂР°РІРёР»СЊРЅР°СЏ СЃРѕСЂС‚РёСЂРѕРІРєР°**: РѕР±СЉРµРєС‚С‹ РІРЅСѓС‚СЂРё РіСЂСѓРїРї С‚РµРїРµСЂСЊ РїСЂР°РІРёР»СЊРЅРѕ СЃРѕСЂС‚РёСЂСѓСЋС‚СЃСЏ РїРѕ zIndex
+- **РљРѕРЅСЃРёСЃС‚РµРЅС‚РЅРѕСЃС‚СЊ**: РµРґРёРЅР°СЏ Р»РѕРіРёРєР° РґР»СЏ РїСЂРѕСЃС‚СЂР°РЅСЃС‚РІРµРЅРЅРѕРіРѕ РёРЅРґРµРєСЃР° Рё РѕР±С‹С‡РЅРѕРіРѕ РјРµС‚РѕРґР°
 
-#### 🧹 **Рефакторинг кода:**
-- **Устранение дублирования**: удалена повторяющаяся логика присваивания zIndex
-- **Улучшенная поддерживаемость**: изменения в логике zIndex теперь в одном месте
-- **Чище архитектура**: разделение ответственности между методами
+#### рџ§№ **Р РµС„Р°РєС‚РѕСЂРёРЅРі РєРѕРґР°:**
+- **РЈСЃС‚СЂР°РЅРµРЅРёРµ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ**: СѓРґР°Р»РµРЅР° РїРѕРІС‚РѕСЂСЏСЋС‰Р°СЏСЃСЏ Р»РѕРіРёРєР° РїСЂРёСЃРІР°РёРІР°РЅРёСЏ zIndex
+- **РЈР»СѓС‡С€РµРЅРЅР°СЏ РїРѕРґРґРµСЂР¶РёРІР°РµРјРѕСЃС‚СЊ**: РёР·РјРµРЅРµРЅРёСЏ РІ Р»РѕРіРёРєРµ zIndex С‚РµРїРµСЂСЊ РІ РѕРґРЅРѕРј РјРµСЃС‚Рµ
+- **Р§РёС‰Рµ Р°СЂС…РёС‚РµРєС‚СѓСЂР°**: СЂР°Р·РґРµР»РµРЅРёРµ РѕС‚РІРµС‚СЃС‚РІРµРЅРЅРѕСЃС‚Рё РјРµР¶РґСѓ РјРµС‚РѕРґР°РјРё
 
-#### 🎯 **Технические детали:**
-- **Level.js**: добавлен `assignInitialZIndex()` для унификации присваивания zIndex
-- **RenderOperations.js**: добавлен `collectVisibleObjectsRecursive()` для рекурсивного сбора объектов
-- **MouseHandlers.js**: упрощена логика дропа объектов в группы
-- **Исправлены edge cases**: правильная обработка объектов в группах и обычных объектов
+#### рџЋЇ **РўРµС…РЅРёС‡РµСЃРєРёРµ РґРµС‚Р°Р»Рё:**
+- **Level.js**: РґРѕР±Р°РІР»РµРЅ `assignInitialZIndex()` РґР»СЏ СѓРЅРёС„РёРєР°С†РёРё РїСЂРёСЃРІР°РёРІР°РЅРёСЏ zIndex
+- **RenderOperations.js**: РґРѕР±Р°РІР»РµРЅ `collectVisibleObjectsRecursive()` РґР»СЏ СЂРµРєСѓСЂСЃРёРІРЅРѕРіРѕ СЃР±РѕСЂР° РѕР±СЉРµРєС‚РѕРІ
+- **MouseHandlers.js**: СѓРїСЂРѕС‰РµРЅР° Р»РѕРіРёРєР° РґСЂРѕРїР° РѕР±СЉРµРєС‚РѕРІ РІ РіСЂСѓРїРїС‹
+- **РСЃРїСЂР°РІР»РµРЅС‹ edge cases**: РїСЂР°РІРёР»СЊРЅР°СЏ РѕР±СЂР°Р±РѕС‚РєР° РѕР±СЉРµРєС‚РѕРІ РІ РіСЂСѓРїРїР°С… Рё РѕР±С‹С‡РЅС‹С… РѕР±СЉРµРєС‚РѕРІ
 
-### Added - Незначительные улучшения
+### Added - РќРµР·РЅР°С‡РёС‚РµР»СЊРЅС‹Рµ СѓР»СѓС‡С€РµРЅРёСЏ
 
-#### 📚 **Обновление документации:**
-- Синхронизированы версии во всех файлах документации
-- Обновлено описание API методов в `API_REFERENCE.md`
+#### рџ“љ **РћР±РЅРѕРІР»РµРЅРёРµ РґРѕРєСѓРјРµРЅС‚Р°С†РёРё:**
+- РЎРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°РЅС‹ РІРµСЂСЃРёРё РІРѕ РІСЃРµС… С„Р°Р№Р»Р°С… РґРѕРєСѓРјРµРЅС‚Р°С†РёРё
+- РћР±РЅРѕРІР»РµРЅРѕ РѕРїРёСЃР°РЅРёРµ API РјРµС‚РѕРґРѕРІ РІ `API_REFERENCE.md`
 
 ## [3.48.0] - 2025-10-14
 
-### Added - Расширенная система цветовых настроек интерфейса
+### Added - Р Р°СЃС€РёСЂРµРЅРЅР°СЏ СЃРёСЃС‚РµРјР° С†РІРµС‚РѕРІС‹С… РЅР°СЃС‚СЂРѕРµРє РёРЅС‚РµСЂС„РµР№СЃР°
 
-#### 🎨 **Новый раздел Colors в настройках**
+#### рџЋЁ **РќРѕРІС‹Р№ СЂР°Р·РґРµР» Colors РІ РЅР°СЃС‚СЂРѕР№РєР°С…**
 
-**UI Colors - Цвета пользовательского интерфейса:**
-- **UI Background** - цвет фона интерфейса (`ui.backgroundColor`)
-- **UI Text Color** - цвет текста в интерфейсе (`ui.textColor`)
-- **Active Elements** - цвет активных элементов (`ui.activeColor`)
-- **Active Text Color** - цвет текста активных элементов (`ui.activeTextColor`)
-- **Active Tab Color** - цвет активных вкладок (`ui.activeTabColor`)
-- **Accent Color** - цвет акцентов (`ui.accentColor`)
+**UI Colors - Р¦РІРµС‚Р° РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРѕРіРѕ РёРЅС‚РµСЂС„РµР№СЃР°:**
+- **UI Background** - С†РІРµС‚ С„РѕРЅР° РёРЅС‚РµСЂС„РµР№СЃР° (`ui.backgroundColor`)
+- **UI Text Color** - С†РІРµС‚ С‚РµРєСЃС‚Р° РІ РёРЅС‚РµСЂС„РµР№СЃРµ (`ui.textColor`)
+- **Active Elements** - С†РІРµС‚ Р°РєС‚РёРІРЅС‹С… СЌР»РµРјРµРЅС‚РѕРІ (`ui.activeColor`)
+- **Active Text Color** - С†РІРµС‚ С‚РµРєСЃС‚Р° Р°РєС‚РёРІРЅС‹С… СЌР»РµРјРµРЅС‚РѕРІ (`ui.activeTextColor`)
+- **Active Tab Color** - С†РІРµС‚ Р°РєС‚РёРІРЅС‹С… РІРєР»Р°РґРѕРє (`ui.activeTabColor`)
+- **Accent Color** - С†РІРµС‚ Р°РєС†РµРЅС‚РѕРІ (`ui.accentColor`)
 
-**Canvas Colors - Цвета рабочей области:**
-- **Canvas Background** - цвет фона канвы (`canvas.backgroundColor`)
-- **Grid Color** - цвет линий сетки (`canvas.gridColor`)
-- **Grid Subdivision** - цвет вспомогательных линий сетки (`canvas.gridSubdivColor`)
+**Canvas Colors - Р¦РІРµС‚Р° СЂР°Р±РѕС‡РµР№ РѕР±Р»Р°СЃС‚Рё:**
+- **Canvas Background** - С†РІРµС‚ С„РѕРЅР° РєР°РЅРІС‹ (`canvas.backgroundColor`)
+- **Grid Color** - С†РІРµС‚ Р»РёРЅРёР№ СЃРµС‚РєРё (`canvas.gridColor`)
+- **Grid Subdivision** - С†РІРµС‚ РІСЃРїРѕРјРѕРіР°С‚РµР»СЊРЅС‹С… Р»РёРЅРёР№ СЃРµС‚РєРё (`canvas.gridSubdivColor`)
 
-**Selection Colors - Цвета выделения объектов:**
-- **Selection Outline** - цвет рамки выделенных объектов (`selection.outlineColor`)
-- **Group Outline** - цвет рамки выделенных групп (`selection.groupOutlineColor`)
-- **Marquee Selection** - цвет рамки выделения мышью (`selection.marqueeColor`)
-- **Hierarchy Highlight** - цвет подсветки иерархии (`selection.hierarchyHighlightColor`)
-- **Active Layer Border** - цвет границы слоев с выбранными объектами (`selection.activeLayerBorderColor`)
+**Selection Colors - Р¦РІРµС‚Р° РІС‹РґРµР»РµРЅРёСЏ РѕР±СЉРµРєС‚РѕРІ:**
+- **Selection Outline** - С†РІРµС‚ СЂР°РјРєРё РІС‹РґРµР»РµРЅРЅС‹С… РѕР±СЉРµРєС‚РѕРІ (`selection.outlineColor`)
+- **Group Outline** - С†РІРµС‚ СЂР°РјРєРё РІС‹РґРµР»РµРЅРЅС‹С… РіСЂСѓРїРї (`selection.groupOutlineColor`)
+- **Marquee Selection** - С†РІРµС‚ СЂР°РјРєРё РІС‹РґРµР»РµРЅРёСЏ РјС‹С€СЊСЋ (`selection.marqueeColor`)
+- **Hierarchy Highlight** - С†РІРµС‚ РїРѕРґСЃРІРµС‚РєРё РёРµСЂР°СЂС…РёРё (`selection.hierarchyHighlightColor`)
+- **Active Layer Border** - С†РІРµС‚ РіСЂР°РЅРёС†С‹ СЃР»РѕРµРІ СЃ РІС‹Р±СЂР°РЅРЅС‹РјРё РѕР±СЉРµРєС‚Р°РјРё (`selection.activeLayerBorderColor`)
 
-**Logger Colors - Цвета категорий логирования:**
-- Настраиваемые цвета для всех 21 категории логирования
-- Включает: RENDER, UI, FILE, ERROR, CANVAS, MOUSE, EVENT, GROUP, etc.
+**Logger Colors - Р¦РІРµС‚Р° РєР°С‚РµРіРѕСЂРёР№ Р»РѕРіРёСЂРѕРІР°РЅРёСЏ:**
+- РќР°СЃС‚СЂР°РёРІР°РµРјС‹Рµ С†РІРµС‚Р° РґР»СЏ РІСЃРµС… 21 РєР°С‚РµРіРѕСЂРёРё Р»РѕРіРёСЂРѕРІР°РЅРёСЏ
+- Р’РєР»СЋС‡Р°РµС‚: RENDER, UI, FILE, ERROR, CANVAS, MOUSE, EVENT, GROUP, etc.
 
-#### 🔧 **Технические улучшения:**
+#### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ СѓР»СѓС‡С€РµРЅРёСЏ:**
 
-**Реальное время применения:**
-- Все цветовые изменения применяются мгновенно без перезагрузки
-- StateManager имеет приоритет над ConfigManager для мгновенных обновлений
-- Подписки на изменения StateManager для автоматических обновлений UI
+**Р РµР°Р»СЊРЅРѕРµ РІСЂРµРјСЏ РїСЂРёРјРµРЅРµРЅРёСЏ:**
+- Р’СЃРµ С†РІРµС‚РѕРІС‹Рµ РёР·РјРµРЅРµРЅРёСЏ РїСЂРёРјРµРЅСЏСЋС‚СЃСЏ РјРіРЅРѕРІРµРЅРЅРѕ Р±РµР· РїРµСЂРµР·Р°РіСЂСѓР·РєРё
+- StateManager РёРјРµРµС‚ РїСЂРёРѕСЂРёС‚РµС‚ РЅР°Рґ ConfigManager РґР»СЏ РјРіРЅРѕРІРµРЅРЅС‹С… РѕР±РЅРѕРІР»РµРЅРёР№
+- РџРѕРґРїРёСЃРєРё РЅР° РёР·РјРµРЅРµРЅРёСЏ StateManager РґР»СЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРёС… РѕР±РЅРѕРІР»РµРЅРёР№ UI
 
-**Сохранение и восстановление:**
-- Цвета сохраняются в user настройки (`localStorage`)
-- Правильная отмена изменений при нажатии Cancel
-- Восстановление исходных значений из StateManager
+**РЎРѕС…СЂР°РЅРµРЅРёРµ Рё РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ:**
+- Р¦РІРµС‚Р° СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ РІ user РЅР°СЃС‚СЂРѕР№РєРё (`localStorage`)
+- РџСЂР°РІРёР»СЊРЅР°СЏ РѕС‚РјРµРЅР° РёР·РјРµРЅРµРЅРёР№ РїСЂРё РЅР°Р¶Р°С‚РёРё Cancel
+- Р’РѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ РёСЃС…РѕРґРЅС‹С… Р·РЅР°С‡РµРЅРёР№ РёР· StateManager
 
-**Интеграция с существующими компонентами:**
-- **LayersPanel**: реальное время обновления подсветки активных слоев
-- **SettingsPanel**: унифицированная система цветовых настроек
-- **SettingsSyncManager**: автоматическая синхронизация между UI и StateManager
+**РРЅС‚РµРіСЂР°С†РёСЏ СЃ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РёРјРё РєРѕРјРїРѕРЅРµРЅС‚Р°РјРё:**
+- **LayersPanel**: СЂРµР°Р»СЊРЅРѕРµ РІСЂРµРјСЏ РѕР±РЅРѕРІР»РµРЅРёСЏ РїРѕРґСЃРІРµС‚РєРё Р°РєС‚РёРІРЅС‹С… СЃР»РѕРµРІ
+- **SettingsPanel**: СѓРЅРёС„РёС†РёСЂРѕРІР°РЅРЅР°СЏ СЃРёСЃС‚РµРјР° С†РІРµС‚РѕРІС‹С… РЅР°СЃС‚СЂРѕРµРє
+- **SettingsSyncManager**: Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ РјРµР¶РґСѓ UI Рё StateManager
 
-#### 🎯 **Пользовательские преимущества:**
-- Полный контроль над цветовой схемой интерфейса
-- Мгновенное превью изменений цветов
-- Настраиваемая подсветка активных слоев
-- Персонализация цветовой схемы логирования
+#### рџЋЇ **РџРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёРµ РїСЂРµРёРјСѓС‰РµСЃС‚РІР°:**
+- РџРѕР»РЅС‹Р№ РєРѕРЅС‚СЂРѕР»СЊ РЅР°Рґ С†РІРµС‚РѕРІРѕР№ СЃС…РµРјРѕР№ РёРЅС‚РµСЂС„РµР№СЃР°
+- РњРіРЅРѕРІРµРЅРЅРѕРµ РїСЂРµРІСЊСЋ РёР·РјРµРЅРµРЅРёР№ С†РІРµС‚РѕРІ
+- РќР°СЃС‚СЂР°РёРІР°РµРјР°СЏ РїРѕРґСЃРІРµС‚РєР° Р°РєС‚РёРІРЅС‹С… СЃР»РѕРµРІ
+- РџРµСЂСЃРѕРЅР°Р»РёР·Р°С†РёСЏ С†РІРµС‚РѕРІРѕР№ СЃС…РµРјС‹ Р»РѕРіРёСЂРѕРІР°РЅРёСЏ
 
 ## [3.47.0] - 2025-10-12
 
-### Added - Система индексов глубины (Z-Index) для объектов
+### Added - РЎРёСЃС‚РµРјР° РёРЅРґРµРєСЃРѕРІ РіР»СѓР±РёРЅС‹ (Z-Index) РґР»СЏ РѕР±СЉРµРєС‚РѕРІ
 
-#### 🎯 **Новая система слоев и индексов глубины**
-- **Слои имеют номера**: каждый слой получает индекс (0, 1, 2, ...) на основе порядка в списке
-- **Индекс глубины объектов**: `zIndex = layerIndex + (objectIndex / 1000)`
-- **Тысячные доли**: показывают позицию объекта внутри слоя (личный индекс)
-- **Целая часть**: показывает номер слоя (группировка по слоям)
+#### рџЋЇ **РќРѕРІР°СЏ СЃРёСЃС‚РµРјР° СЃР»РѕРµРІ Рё РёРЅРґРµРєСЃРѕРІ РіР»СѓР±РёРЅС‹**
+- **РЎР»РѕРё РёРјРµСЋС‚ РЅРѕРјРµСЂР°**: РєР°Р¶РґС‹Р№ СЃР»РѕР№ РїРѕР»СѓС‡Р°РµС‚ РёРЅРґРµРєСЃ (0, 1, 2, ...) РЅР° РѕСЃРЅРѕРІРµ РїРѕСЂСЏРґРєР° РІ СЃРїРёСЃРєРµ
+- **РРЅРґРµРєСЃ РіР»СѓР±РёРЅС‹ РѕР±СЉРµРєС‚РѕРІ**: `zIndex = layerIndex + (objectIndex / 1000)`
+- **РўС‹СЃСЏС‡РЅС‹Рµ РґРѕР»Рё**: РїРѕРєР°Р·С‹РІР°СЋС‚ РїРѕР·РёС†РёСЋ РѕР±СЉРµРєС‚Р° РІРЅСѓС‚СЂРё СЃР»РѕСЏ (Р»РёС‡РЅС‹Р№ РёРЅРґРµРєСЃ)
+- **Р¦РµР»Р°СЏ С‡Р°СЃС‚СЊ**: РїРѕРєР°Р·С‹РІР°РµС‚ РЅРѕРјРµСЂ СЃР»РѕСЏ (РіСЂСѓРїРїРёСЂРѕРІРєР° РїРѕ СЃР»РѕСЏРј)
 
-#### 📊 **Структура zIndex:**
+#### рџ“Љ **РЎС‚СЂСѓРєС‚СѓСЂР° zIndex:**
 ```
-Примеры:
-- Объект на слое 0 с индексом 5: zIndex = 0.005
-- Объект на слое 1 с индексом 5: zIndex = 1.005
-- Объект на слое 2 с индексом 0: zIndex = 2.000
+РџСЂРёРјРµСЂС‹:
+- РћР±СЉРµРєС‚ РЅР° СЃР»РѕРµ 0 СЃ РёРЅРґРµРєСЃРѕРј 5: zIndex = 0.005
+- РћР±СЉРµРєС‚ РЅР° СЃР»РѕРµ 1 СЃ РёРЅРґРµРєСЃРѕРј 5: zIndex = 1.005
+- РћР±СЉРµРєС‚ РЅР° СЃР»РѕРµ 2 СЃ РёРЅРґРµРєСЃРѕРј 0: zIndex = 2.000
 ```
 
-#### 🔧 **Автоматическое управление индексами:**
-- **При добавлении объектов**: автоматически присваивается следующий доступный индекс
-- **При дублировании**: дублированные объекты получают более высокий индекс
-- **При перемещении между слоями**: индекс пересчитывается с учетом нового слоя
-- **При изменении порядка слоев**: все индексы объектов автоматически пересчитываются
+#### рџ”§ **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ СѓРїСЂР°РІР»РµРЅРёРµ РёРЅРґРµРєСЃР°РјРё:**
+- **РџСЂРё РґРѕР±Р°РІР»РµРЅРёРё РѕР±СЉРµРєС‚РѕРІ**: Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РїСЂРёСЃРІР°РёРІР°РµС‚СЃСЏ СЃР»РµРґСѓСЋС‰РёР№ РґРѕСЃС‚СѓРїРЅС‹Р№ РёРЅРґРµРєСЃ
+- **РџСЂРё РґСѓР±Р»РёСЂРѕРІР°РЅРёРё**: РґСѓР±Р»РёСЂРѕРІР°РЅРЅС‹Рµ РѕР±СЉРµРєС‚С‹ РїРѕР»СѓС‡Р°СЋС‚ Р±РѕР»РµРµ РІС‹СЃРѕРєРёР№ РёРЅРґРµРєСЃ
+- **РџСЂРё РїРµСЂРµРјРµС‰РµРЅРёРё РјРµР¶РґСѓ СЃР»РѕСЏРјРё**: РёРЅРґРµРєСЃ РїРµСЂРµСЃС‡РёС‚С‹РІР°РµС‚СЃСЏ СЃ СѓС‡РµС‚РѕРј РЅРѕРІРѕРіРѕ СЃР»РѕСЏ
+- **РџСЂРё РёР·РјРµРЅРµРЅРёРё РїРѕСЂСЏРґРєР° СЃР»РѕРµРІ**: РІСЃРµ РёРЅРґРµРєСЃС‹ РѕР±СЉРµРєС‚РѕРІ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РїРµСЂРµСЃС‡РёС‚С‹РІР°СЋС‚СЃСЏ
 
-#### 🎨 **Отображение в интерфейсе:**
-- **Панель Details**: показывает только тысячные доли (личный индекс объекта)
-- **Пример**: объект с zIndex = 1.005 отображается как "5" в интерфейсе
-- **Автообновление**: при изменении индекса канва сразу перерисовывается
+#### рџЋЁ **РћС‚РѕР±СЂР°Р¶РµРЅРёРµ РІ РёРЅС‚РµСЂС„РµР№СЃРµ:**
+- **РџР°РЅРµР»СЊ Details**: РїРѕРєР°Р·С‹РІР°РµС‚ С‚РѕР»СЊРєРѕ С‚С‹СЃСЏС‡РЅС‹Рµ РґРѕР»Рё (Р»РёС‡РЅС‹Р№ РёРЅРґРµРєСЃ РѕР±СЉРµРєС‚Р°)
+- **РџСЂРёРјРµСЂ**: РѕР±СЉРµРєС‚ СЃ zIndex = 1.005 РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ РєР°Рє "5" РІ РёРЅС‚РµСЂС„РµР№СЃРµ
+- **РђРІС‚РѕРѕР±РЅРѕРІР»РµРЅРёРµ**: РїСЂРё РёР·РјРµРЅРµРЅРёРё РёРЅРґРµРєСЃР° РєР°РЅРІР° СЃСЂР°Р·Сѓ РїРµСЂРµСЂРёСЃРѕРІС‹РІР°РµС‚СЃСЏ
 
-#### 📝 **Подробное логирование:**
-- **Перемещение между слоями**: детальная информация об изменении индексов
-- **Создание объектов**: логирование присвоенных индексов
-- **Дублирование**: отслеживание новых индексов дублированных объектов
-- **Пересчет индексов**: логирование массовых изменений при реордеринге слоев
+#### рџ“ќ **РџРѕРґСЂРѕР±РЅРѕРµ Р»РѕРіРёСЂРѕРІР°РЅРёРµ:**
+- **РџРµСЂРµРјРµС‰РµРЅРёРµ РјРµР¶РґСѓ СЃР»РѕСЏРјРё**: РґРµС‚Р°Р»СЊРЅР°СЏ РёРЅС„РѕСЂРјР°С†РёСЏ РѕР± РёР·РјРµРЅРµРЅРёРё РёРЅРґРµРєСЃРѕРІ
+- **РЎРѕР·РґР°РЅРёРµ РѕР±СЉРµРєС‚РѕРІ**: Р»РѕРіРёСЂРѕРІР°РЅРёРµ РїСЂРёСЃРІРѕРµРЅРЅС‹С… РёРЅРґРµРєСЃРѕРІ
+- **Р”СѓР±Р»РёСЂРѕРІР°РЅРёРµ**: РѕС‚СЃР»РµР¶РёРІР°РЅРёРµ РЅРѕРІС‹С… РёРЅРґРµРєСЃРѕРІ РґСѓР±Р»РёСЂРѕРІР°РЅРЅС‹С… РѕР±СЉРµРєС‚РѕРІ
+- **РџРµСЂРµСЃС‡РµС‚ РёРЅРґРµРєСЃРѕРІ**: Р»РѕРіРёСЂРѕРІР°РЅРёРµ РјР°СЃСЃРѕРІС‹С… РёР·РјРµРЅРµРЅРёР№ РїСЂРё СЂРµРѕСЂРґРµСЂРёРЅРіРµ СЃР»РѕРµРІ
 
-### 🔧 **Технические изменения:**
+### рџ”§ **РўРµС…РЅРёС‡РµСЃРєРёРµ РёР·РјРµРЅРµРЅРёСЏ:**
 
-#### **Модели данных:**
-- **`Layer.js`**: добавлен `index` для хранения номера слоя в системе
-- **`Level.js`**: добавлены методы `getNextZIndex()`, `updateLayerIndices()`, `updateAllObjectZIndices()`
-- **`GameObject.js`**: добавлено свойство `zIndex` для управления порядком отрисовки
-- **`Group.js`**: обновлено наследование zIndex для дочерних объектов
+#### **РњРѕРґРµР»Рё РґР°РЅРЅС‹С…:**
+- **`Layer.js`**: РґРѕР±Р°РІР»РµРЅ `index` РґР»СЏ С…СЂР°РЅРµРЅРёСЏ РЅРѕРјРµСЂР° СЃР»РѕСЏ РІ СЃРёСЃС‚РµРјРµ
+- **`Level.js`**: РґРѕР±Р°РІР»РµРЅС‹ РјРµС‚РѕРґС‹ `getNextZIndex()`, `updateLayerIndices()`, `updateAllObjectZIndices()`
+- **`GameObject.js`**: РґРѕР±Р°РІР»РµРЅРѕ СЃРІРѕР№СЃС‚РІРѕ `zIndex` РґР»СЏ СѓРїСЂР°РІР»РµРЅРёСЏ РїРѕСЂСЏРґРєРѕРј РѕС‚СЂРёСЃРѕРІРєРё
+- **`Group.js`**: РѕР±РЅРѕРІР»РµРЅРѕ РЅР°СЃР»РµРґРѕРІР°РЅРёРµ zIndex РґР»СЏ РґРѕС‡РµСЂРЅРёС… РѕР±СЉРµРєС‚РѕРІ
 
-#### **UI компоненты:**
-- **`DetailsPanel.js`**: отображение тысячных долей zIndex, множественный выбор
-- **`UIFactory.js`**: специальное форматирование для zIndex в формах редактирования
-- **`ActorPropertiesWindow.js`**: добавлено поле Z-Index для объектов на канве
+#### **UI РєРѕРјРїРѕРЅРµРЅС‚С‹:**
+- **`DetailsPanel.js`**: РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ С‚С‹СЃСЏС‡РЅС‹С… РґРѕР»РµР№ zIndex, РјРЅРѕР¶РµСЃС‚РІРµРЅРЅС‹Р№ РІС‹Р±РѕСЂ
+- **`UIFactory.js`**: СЃРїРµС†РёР°Р»СЊРЅРѕРµ С„РѕСЂРјР°С‚РёСЂРѕРІР°РЅРёРµ РґР»СЏ zIndex РІ С„РѕСЂРјР°С… СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ
+- **`ActorPropertiesWindow.js`**: РґРѕР±Р°РІР»РµРЅРѕ РїРѕР»Рµ Z-Index РґР»СЏ РѕР±СЉРµРєС‚РѕРІ РЅР° РєР°РЅРІРµ
 
-#### **Операции:**
-- **`LayerOperations.js`**: правильное перемещение объектов между слоями с пересчетом индексов
-- **`MouseHandlers.js`**: присвоение правильных индексов при drag & drop в группы
-- **`DuplicateOperations.js`**: правильные индексы для дублированных объектов
+#### **РћРїРµСЂР°С†РёРё:**
+- **`LayerOperations.js`**: РїСЂР°РІРёР»СЊРЅРѕРµ РїРµСЂРµРјРµС‰РµРЅРёРµ РѕР±СЉРµРєС‚РѕРІ РјРµР¶РґСѓ СЃР»РѕСЏРјРё СЃ РїРµСЂРµСЃС‡РµС‚РѕРј РёРЅРґРµРєСЃРѕРІ
+- **`MouseHandlers.js`**: РїСЂРёСЃРІРѕРµРЅРёРµ РїСЂР°РІРёР»СЊРЅС‹С… РёРЅРґРµРєСЃРѕРІ РїСЂРё drag & drop РІ РіСЂСѓРїРїС‹
+- **`DuplicateOperations.js`**: РїСЂР°РІРёР»СЊРЅС‹Рµ РёРЅРґРµРєСЃС‹ РґР»СЏ РґСѓР±Р»РёСЂРѕРІР°РЅРЅС‹С… РѕР±СЉРµРєС‚РѕРІ
 
-#### **Рендеринг:**
-- **`RenderOperations.js`**: сортировка объектов по zIndex перед отрисовкой
-- **`CacheManager.js`**: инвалидация кешей при изменении zIndex объектов
+#### **Р РµРЅРґРµСЂРёРЅРі:**
+- **`RenderOperations.js`**: СЃРѕСЂС‚РёСЂРѕРІРєР° РѕР±СЉРµРєС‚РѕРІ РїРѕ zIndex РїРµСЂРµРґ РѕС‚СЂРёСЃРѕРІРєРѕР№
+- **`CacheManager.js`**: РёРЅРІР°Р»РёРґР°С†РёСЏ РєРµС€РµР№ РїСЂРё РёР·РјРµРЅРµРЅРёРё zIndex РѕР±СЉРµРєС‚РѕРІ
 
-#### **Логирование:**
-- **Добавлена категория `LEVEL`** в Logger для операций с уровнями
-- **Подробное логирование** всех операций с индексами глубины
-- **Отслеживание** перемещения объектов между слоями
+#### **Р›РѕРіРёСЂРѕРІР°РЅРёРµ:**
+- **Р”РѕР±Р°РІР»РµРЅР° РєР°С‚РµРіРѕСЂРёСЏ `LEVEL`** РІ Logger РґР»СЏ РѕРїРµСЂР°С†РёР№ СЃ СѓСЂРѕРІРЅСЏРјРё
+- **РџРѕРґСЂРѕР±РЅРѕРµ Р»РѕРіРёСЂРѕРІР°РЅРёРµ** РІСЃРµС… РѕРїРµСЂР°С†РёР№ СЃ РёРЅРґРµРєСЃР°РјРё РіР»СѓР±РёРЅС‹
+- **РћС‚СЃР»РµР¶РёРІР°РЅРёРµ** РїРµСЂРµРјРµС‰РµРЅРёСЏ РѕР±СЉРµРєС‚РѕРІ РјРµР¶РґСѓ СЃР»РѕСЏРјРё
 
-### 🎯 **Результат:**
-✅ **Правильная сортировка объектов по глубине**  
-✅ **Автоматическое управление индексами при всех операциях**  
-✅ **Интуитивный интерфейс редактирования индексов**  
-✅ **Полная отслеживаемость всех изменений индексов**  
-✅ **Оптимизированная производительность с кешированием**
+### рџЋЇ **Р РµР·СѓР»СЊС‚Р°С‚:**
+вњ… **РџСЂР°РІРёР»СЊРЅР°СЏ СЃРѕСЂС‚РёСЂРѕРІРєР° РѕР±СЉРµРєС‚РѕРІ РїРѕ РіР»СѓР±РёРЅРµ**  
+вњ… **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ СѓРїСЂР°РІР»РµРЅРёРµ РёРЅРґРµРєСЃР°РјРё РїСЂРё РІСЃРµС… РѕРїРµСЂР°С†РёСЏС…**  
+вњ… **РРЅС‚СѓРёС‚РёРІРЅС‹Р№ РёРЅС‚РµСЂС„РµР№СЃ СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ РёРЅРґРµРєСЃРѕРІ**  
+вњ… **РџРѕР»РЅР°СЏ РѕС‚СЃР»РµР¶РёРІР°РµРјРѕСЃС‚СЊ РІСЃРµС… РёР·РјРµРЅРµРЅРёР№ РёРЅРґРµРєСЃРѕРІ**  
+вњ… **РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅРЅР°СЏ РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ СЃ РєРµС€РёСЂРѕРІР°РЅРёРµРј**
 
 ---
 
 ## [3.46.0] - 2025-10-10
 
-### Added - Глобальная система отмены рамки выделения
-- **Глобальный обработчик отмены рамки**: добавлен единый обработчик для отмены рамки выделения в любом месте экрана при нажатии любой кнопки мыши кроме левой (канва, панели, вне интерфейса)
-- **Универсальная поддержка**: работает с обеими системами рамок (старой для канвы и новой для панелей)
-- **Многоуровневая защита**: три уровня обработчиков для гарантированной работы (contextmenu, mousedown, window-level)
-- **Автоматическая очистка**: очищает все состояния, DOM элементы и выделение при отмене рамки
+### Added - Р“Р»РѕР±Р°Р»СЊРЅР°СЏ СЃРёСЃС‚РµРјР° РѕС‚РјРµРЅС‹ СЂР°РјРєРё РІС‹РґРµР»РµРЅРёСЏ
+- **Р“Р»РѕР±Р°Р»СЊРЅС‹Р№ РѕР±СЂР°Р±РѕС‚С‡РёРє РѕС‚РјРµРЅС‹ СЂР°РјРєРё**: РґРѕР±Р°РІР»РµРЅ РµРґРёРЅС‹Р№ РѕР±СЂР°Р±РѕС‚С‡РёРє РґР»СЏ РѕС‚РјРµРЅС‹ СЂР°РјРєРё РІС‹РґРµР»РµРЅРёСЏ РІ Р»СЋР±РѕРј РјРµСЃС‚Рµ СЌРєСЂР°РЅР° РїСЂРё РЅР°Р¶Р°С‚РёРё Р»СЋР±РѕР№ РєРЅРѕРїРєРё РјС‹С€Рё РєСЂРѕРјРµ Р»РµРІРѕР№ (РєР°РЅРІР°, РїР°РЅРµР»Рё, РІРЅРµ РёРЅС‚РµСЂС„РµР№СЃР°)
+- **РЈРЅРёРІРµСЂСЃР°Р»СЊРЅР°СЏ РїРѕРґРґРµСЂР¶РєР°**: СЂР°Р±РѕС‚Р°РµС‚ СЃ РѕР±РµРёРјРё СЃРёСЃС‚РµРјР°РјРё СЂР°РјРѕРє (СЃС‚Р°СЂРѕР№ РґР»СЏ РєР°РЅРІС‹ Рё РЅРѕРІРѕР№ РґР»СЏ РїР°РЅРµР»РµР№)
+- **РњРЅРѕРіРѕСѓСЂРѕРІРЅРµРІР°СЏ Р·Р°С‰РёС‚Р°**: С‚СЂРё СѓСЂРѕРІРЅСЏ РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ РґР»СЏ РіР°СЂР°РЅС‚РёСЂРѕРІР°РЅРЅРѕР№ СЂР°Р±РѕС‚С‹ (contextmenu, mousedown, window-level)
+- **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ РѕС‡РёСЃС‚РєР°**: РѕС‡РёС‰Р°РµС‚ РІСЃРµ СЃРѕСЃС‚РѕСЏРЅРёСЏ, DOM СЌР»РµРјРµРЅС‚С‹ Рё РІС‹РґРµР»РµРЅРёРµ РїСЂРё РѕС‚РјРµРЅРµ СЂР°РјРєРё
 
-### Changed - Очистка дублирующего кода
-- **BaseContextMenu.js**: удалены лишние отладочные логи, оставлены только важные информационные сообщения
-- **SelectionUtils.js**: удалены отладочные логи для проверки активных marquee selections
-- **MouseHandlers.js**: удален дублирующий код отмены рамки (теперь обрабатывается глобально)
-- **LevelEditor.js**: упрощен метод `cancelAllActions()` - отмена marquee теперь глобальная
+### Changed - РћС‡РёСЃС‚РєР° РґСѓР±Р»РёСЂСѓСЋС‰РµРіРѕ РєРѕРґР°
+- **BaseContextMenu.js**: СѓРґР°Р»РµРЅС‹ Р»РёС€РЅРёРµ РѕС‚Р»Р°РґРѕС‡РЅС‹Рµ Р»РѕРіРё, РѕСЃС‚Р°РІР»РµРЅС‹ С‚РѕР»СЊРєРѕ РІР°Р¶РЅС‹Рµ РёРЅС„РѕСЂРјР°С†РёРѕРЅРЅС‹Рµ СЃРѕРѕР±С‰РµРЅРёСЏ
+- **SelectionUtils.js**: СѓРґР°Р»РµРЅС‹ РѕС‚Р»Р°РґРѕС‡РЅС‹Рµ Р»РѕРіРё РґР»СЏ РїСЂРѕРІРµСЂРєРё Р°РєС‚РёРІРЅС‹С… marquee selections
+- **MouseHandlers.js**: СѓРґР°Р»РµРЅ РґСѓР±Р»РёСЂСѓСЋС‰РёР№ РєРѕРґ РѕС‚РјРµРЅС‹ СЂР°РјРєРё (С‚РµРїРµСЂСЊ РѕР±СЂР°Р±Р°С‚С‹РІР°РµС‚СЃСЏ РіР»РѕР±Р°Р»СЊРЅРѕ)
+- **LevelEditor.js**: СѓРїСЂРѕС‰РµРЅ РјРµС‚РѕРґ `cancelAllActions()` - РѕС‚РјРµРЅР° marquee С‚РµРїРµСЂСЊ РіР»РѕР±Р°Р»СЊРЅР°СЏ
 
-### Fixed - Улучшенная стабильность отмены рамки
-- **Отмена в панели ассетов**: исправлено - рамка теперь корректно отменяется с очисткой выделения
-- **Отмена на канве**: исправлено - рамка канвы теперь отменяется в любом месте экрана
-- **Предотвращение конфликтов**: устранены конфликты между локальными и глобальными обработчиками отмены
+### Fixed - РЈР»СѓС‡С€РµРЅРЅР°СЏ СЃС‚Р°Р±РёР»СЊРЅРѕСЃС‚СЊ РѕС‚РјРµРЅС‹ СЂР°РјРєРё
+- **РћС‚РјРµРЅР° РІ РїР°РЅРµР»Рё Р°СЃСЃРµС‚РѕРІ**: РёСЃРїСЂР°РІР»РµРЅРѕ - СЂР°РјРєР° С‚РµРїРµСЂСЊ РєРѕСЂСЂРµРєС‚РЅРѕ РѕС‚РјРµРЅСЏРµС‚СЃСЏ СЃ РѕС‡РёСЃС‚РєРѕР№ РІС‹РґРµР»РµРЅРёСЏ
+- **РћС‚РјРµРЅР° РЅР° РєР°РЅРІРµ**: РёСЃРїСЂР°РІР»РµРЅРѕ - СЂР°РјРєР° РєР°РЅРІС‹ С‚РµРїРµСЂСЊ РѕС‚РјРµРЅСЏРµС‚СЃСЏ РІ Р»СЋР±РѕРј РјРµСЃС‚Рµ СЌРєСЂР°РЅР°
+- **РџСЂРµРґРѕС‚РІСЂР°С‰РµРЅРёРµ РєРѕРЅС„Р»РёРєС‚РѕРІ**: СѓСЃС‚СЂР°РЅРµРЅС‹ РєРѕРЅС„Р»РёРєС‚С‹ РјРµР¶РґСѓ Р»РѕРєР°Р»СЊРЅС‹РјРё Рё РіР»РѕР±Р°Р»СЊРЅС‹РјРё РѕР±СЂР°Р±РѕС‚С‡РёРєР°РјРё РѕС‚РјРµРЅС‹
 
 ---
 
 ## [3.45.1] - 2025-10-10
 
-### Fixed - Исправления UI и selection
-- **SelectionUtils.js**: исправлена ошибка дублирующего объявления переменной `mouseStateKey` (строка 339)
-- **SelectionUtils.js**: исправлена ошибка дублирующего объявления переменной `options` (строка 359) - переименована в `marqueeOptions`
-- **BasePanel.js**: исправлена ошибка необъявленной переменной `options` в `handleMouseUp` (строка 231) - заменено на `this.selectionOptions`
-- **SettingsPanel.js**: исправлена проблема с неработающими слайдерами Font Scale и Spacing при переключении табов - добавлен вызов `setupSettingsInputs()` после рендеринга контента
+### Fixed - РСЃРїСЂР°РІР»РµРЅРёСЏ UI Рё selection
+- **SelectionUtils.js**: РёСЃРїСЂР°РІР»РµРЅР° РѕС€РёР±РєР° РґСѓР±Р»РёСЂСѓСЋС‰РµРіРѕ РѕР±СЉСЏРІР»РµРЅРёСЏ РїРµСЂРµРјРµРЅРЅРѕР№ `mouseStateKey` (СЃС‚СЂРѕРєР° 339)
+- **SelectionUtils.js**: РёСЃРїСЂР°РІР»РµРЅР° РѕС€РёР±РєР° РґСѓР±Р»РёСЂСѓСЋС‰РµРіРѕ РѕР±СЉСЏРІР»РµРЅРёСЏ РїРµСЂРµРјРµРЅРЅРѕР№ `options` (СЃС‚СЂРѕРєР° 359) - РїРµСЂРµРёРјРµРЅРѕРІР°РЅР° РІ `marqueeOptions`
+- **BasePanel.js**: РёСЃРїСЂР°РІР»РµРЅР° РѕС€РёР±РєР° РЅРµРѕР±СЉСЏРІР»РµРЅРЅРѕР№ РїРµСЂРµРјРµРЅРЅРѕР№ `options` РІ `handleMouseUp` (СЃС‚СЂРѕРєР° 231) - Р·Р°РјРµРЅРµРЅРѕ РЅР° `this.selectionOptions`
+- **SettingsPanel.js**: РёСЃРїСЂР°РІР»РµРЅР° РїСЂРѕР±Р»РµРјР° СЃ РЅРµСЂР°Р±РѕС‚Р°СЋС‰РёРјРё СЃР»Р°Р№РґРµСЂР°РјРё Font Scale Рё Spacing РїСЂРё РїРµСЂРµРєР»СЋС‡РµРЅРёРё С‚Р°Р±РѕРІ - РґРѕР±Р°РІР»РµРЅ РІС‹Р·РѕРІ `setupSettingsInputs()` РїРѕСЃР»Рµ СЂРµРЅРґРµСЂРёРЅРіР° РєРѕРЅС‚РµРЅС‚Р°
 
 ### Improved
-- **Интерактивность настроек**: слайдеры Font Scale и Spacing теперь всегда работают при открытии окна настроек
-- **Стабильность selection**: устранены синтаксические ошибки в системе marquee selection
-- **Надежность**: устранены ошибки обращения к несуществующим переменным
+- **РРЅС‚РµСЂР°РєС‚РёРІРЅРѕСЃС‚СЊ РЅР°СЃС‚СЂРѕРµРє**: СЃР»Р°Р№РґРµСЂС‹ Font Scale Рё Spacing С‚РµРїРµСЂСЊ РІСЃРµРіРґР° СЂР°Р±РѕС‚Р°СЋС‚ РїСЂРё РѕС‚РєСЂС‹С‚РёРё РѕРєРЅР° РЅР°СЃС‚СЂРѕРµРє
+- **РЎС‚Р°Р±РёР»СЊРЅРѕСЃС‚СЊ selection**: СѓСЃС‚СЂР°РЅРµРЅС‹ СЃРёРЅС‚Р°РєСЃРёС‡РµСЃРєРёРµ РѕС€РёР±РєРё РІ СЃРёСЃС‚РµРјРµ marquee selection
+- **РќР°РґРµР¶РЅРѕСЃС‚СЊ**: СѓСЃС‚СЂР°РЅРµРЅС‹ РѕС€РёР±РєРё РѕР±СЂР°С‰РµРЅРёСЏ Рє РЅРµСЃСѓС‰РµСЃС‚РІСѓСЋС‰РёРј РїРµСЂРµРјРµРЅРЅС‹Рј
 
 ---
 
 ## [3.45.0] - 2025-10-08
 
-### Changed - Система ассетов переработана
-- **Удалены заглушки**: Grass, Dirt, Stone, Slime, Goblin, Coin, Health Potion
-- **Удалены дефолтные табы**: Tiles, Enemies, Items, Prefabs
-- **Удалён Enemy Spawn** из начальных объектов уровня
-- **Переименована панель**: Folders → Content
+### Changed - РЎРёСЃС‚РµРјР° Р°СЃСЃРµС‚РѕРІ РїРµСЂРµСЂР°Р±РѕС‚Р°РЅР°
+- **РЈРґР°Р»РµРЅС‹ Р·Р°РіР»СѓС€РєРё**: Grass, Dirt, Stone, Slime, Goblin, Coin, Health Potion
+- **РЈРґР°Р»РµРЅС‹ РґРµС„РѕР»С‚РЅС‹Рµ С‚Р°Р±С‹**: Tiles, Enemies, Items, Prefabs
+- **РЈРґР°Р»С‘РЅ Enemy Spawn** РёР· РЅР°С‡Р°Р»СЊРЅС‹С… РѕР±СЉРµРєС‚РѕРІ СѓСЂРѕРІРЅСЏ
+- **РџРµСЂРµРёРјРµРЅРѕРІР°РЅР° РїР°РЅРµР»СЊ**: Folders в†’ Content
 
-### Added - Автоматическая загрузка ассетов
-- **AssetManager.scanContentFolder()**: сканирование ./content при старте
-- **content/manifest.json**: манифест со структурой папок и списком файлов
-- **update_manifest.bat/py/js**: скрипты для обновления манифеста
-- **AssetManager.loadAssetFromFile()**: загрузка ассетов из JSON
-- **AssetManager.getCategoriesWithAssets()**: только категории с ассетами
-- **Автогенерация ID**: уникальные ID из полного пути файла
-- **Cache busting**: для манифеста и JSON файлов
+### Added - РђРІС‚РѕРјР°С‚РёС‡РµСЃРєР°СЏ Р·Р°РіСЂСѓР·РєР° Р°СЃСЃРµС‚РѕРІ
+- **AssetManager.scanContentFolder()**: СЃРєР°РЅРёСЂРѕРІР°РЅРёРµ ./content РїСЂРё СЃС‚Р°СЂС‚Рµ
+- **content/manifest.json**: РјР°РЅРёС„РµСЃС‚ СЃРѕ СЃС‚СЂСѓРєС‚СѓСЂРѕР№ РїР°РїРѕРє Рё СЃРїРёСЃРєРѕРј С„Р°Р№Р»РѕРІ
+- **update_manifest.bat/py/js**: СЃРєСЂРёРїС‚С‹ РґР»СЏ РѕР±РЅРѕРІР»РµРЅРёСЏ РјР°РЅРёС„РµСЃС‚Р°
+- **AssetManager.loadAssetFromFile()**: Р·Р°РіСЂСѓР·РєР° Р°СЃСЃРµС‚РѕРІ РёР· JSON
+- **AssetManager.getCategoriesWithAssets()**: С‚РѕР»СЊРєРѕ РєР°С‚РµРіРѕСЂРёРё СЃ Р°СЃСЃРµС‚Р°РјРё
+- **РђРІС‚РѕРіРµРЅРµСЂР°С†РёСЏ ID**: СѓРЅРёРєР°Р»СЊРЅС‹Рµ ID РёР· РїРѕР»РЅРѕРіРѕ РїСѓС‚Рё С„Р°Р№Р»Р°
+- **Cache busting**: РґР»СЏ РјР°РЅРёС„РµСЃС‚Р° Рё JSON С„Р°Р№Р»РѕРІ
 
 ### Changed - FoldersPanel
-- **Структура из манифеста**: buildFromManifestStructure()
-- **Только папки**: ассеты не отображаются в дереве
-- **Рекурсивный счётчик**: countAssetsRecursive()
-- **Раскрытие по стрелке**: клик по папке только выделяет
-- **Серый цвет**: для пустых папок
-- **Подсветка**: работает на всех уровнях
-- **Синхронизация табов**: getCategoriesInFolder() рекурсивно
+- **РЎС‚СЂСѓРєС‚СѓСЂР° РёР· РјР°РЅРёС„РµСЃС‚Р°**: buildFromManifestStructure()
+- **РўРѕР»СЊРєРѕ РїР°РїРєРё**: Р°СЃСЃРµС‚С‹ РЅРµ РѕС‚РѕР±СЂР°Р¶Р°СЋС‚СЃСЏ РІ РґРµСЂРµРІРµ
+- **Р РµРєСѓСЂСЃРёРІРЅС‹Р№ СЃС‡С‘С‚С‡РёРє**: countAssetsRecursive()
+- **Р Р°СЃРєСЂС‹С‚РёРµ РїРѕ СЃС‚СЂРµР»РєРµ**: РєР»РёРє РїРѕ РїР°РїРєРµ С‚РѕР»СЊРєРѕ РІС‹РґРµР»СЏРµС‚
+- **РЎРµСЂС‹Р№ С†РІРµС‚**: РґР»СЏ РїСѓСЃС‚С‹С… РїР°РїРѕРє
+- **РџРѕРґСЃРІРµС‚РєР°**: СЂР°Р±РѕС‚Р°РµС‚ РЅР° РІСЃРµС… СѓСЂРѕРІРЅСЏС…
+- **РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ С‚Р°Р±РѕРІ**: getCategoriesInFolder() СЂРµРєСѓСЂСЃРёРІРЅРѕ
 
-### Changed - Обработка изображений
-- **Только одна картинка**: массив imgSrc → первый элемент
-- **Поддержка image field**: альтернативное поле
-- **Полные пути**: ./content/path/to/image.png
-- **Синхронизация кешей**: preloadImages() синхронизирует с CanvasRenderer
+### Changed - РћР±СЂР°Р±РѕС‚РєР° РёР·РѕР±СЂР°Р¶РµРЅРёР№
+- **РўРѕР»СЊРєРѕ РѕРґРЅР° РєР°СЂС‚РёРЅРєР°**: РјР°СЃСЃРёРІ imgSrc в†’ РїРµСЂРІС‹Р№ СЌР»РµРјРµРЅС‚
+- **РџРѕРґРґРµСЂР¶РєР° image field**: Р°Р»СЊС‚РµСЂРЅР°С‚РёРІРЅРѕРµ РїРѕР»Рµ
+- **РџРѕР»РЅС‹Рµ РїСѓС‚Рё**: ./content/path/to/image.png
+- **РЎРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ РєРµС€РµР№**: preloadImages() СЃРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµС‚ СЃ CanvasRenderer
 
 ### Fixed
-- **FoldersPanel.folderStructure**: всегда инициализируется
-- **Уникальность ID**: одинаковые файлы в разных папках
-- **Категории**: из имени родительской папки
-- **Табы**: только для категорий с ассетами
-- **Пустые папки**: очищают табы
+- **FoldersPanel.folderStructure**: РІСЃРµРіРґР° РёРЅРёС†РёР°Р»РёР·РёСЂСѓРµС‚СЃСЏ
+- **РЈРЅРёРєР°Р»СЊРЅРѕСЃС‚СЊ ID**: РѕРґРёРЅР°РєРѕРІС‹Рµ С„Р°Р№Р»С‹ РІ СЂР°Р·РЅС‹С… РїР°РїРєР°С…
+- **РљР°С‚РµРіРѕСЂРёРё**: РёР· РёРјРµРЅРё СЂРѕРґРёС‚РµР»СЊСЃРєРѕР№ РїР°РїРєРё
+- **РўР°Р±С‹**: С‚РѕР»СЊРєРѕ РґР»СЏ РєР°С‚РµРіРѕСЂРёР№ СЃ Р°СЃСЃРµС‚Р°РјРё
+- **РџСѓСЃС‚С‹Рµ РїР°РїРєРё**: РѕС‡РёС‰Р°СЋС‚ С‚Р°Р±С‹
 
 ---
 
 ## [3.44.0] - 2025-10-05
 
-### Added - Фаза 5: Модуляризация ViewportOperations и LevelFileOperations
-- **ViewportOperations**: новый модуль для управления viewport и камерой (200+ строк)
+### Added - Р¤Р°Р·Р° 5: РњРѕРґСѓР»СЏСЂРёР·Р°С†РёСЏ ViewportOperations Рё LevelFileOperations
+- **ViewportOperations**: РЅРѕРІС‹Р№ РјРѕРґСѓР»СЊ РґР»СЏ СѓРїСЂР°РІР»РµРЅРёСЏ viewport Рё РєР°РјРµСЂРѕР№ (200+ СЃС‚СЂРѕРє)
   - `zoomIn()`, `zoomOut()`, `zoomToFit()`, `resetView()`
   - `focusOnSelection()`, `focusOnAll()`, `focusOnBounds()`
-- **LevelFileOperations**: новый модуль для файловых операций (250+ строк)
+- **LevelFileOperations**: РЅРѕРІС‹Р№ РјРѕРґСѓР»СЊ РґР»СЏ С„Р°Р№Р»РѕРІС‹С… РѕРїРµСЂР°С†РёР№ (250+ СЃС‚СЂРѕРє)
   - `newLevel()`, `openLevel()`, `saveLevel()`, `saveLevelAs()`
-  - `importAssets()` с полной интеграцией AssetImporter
-  - `_validatePlayerStart()` - централизованная валидация
+  - `importAssets()` СЃ РїРѕР»РЅРѕР№ РёРЅС‚РµРіСЂР°С†РёРµР№ AssetImporter
+  - `_validatePlayerStart()` - С†РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅР°СЏ РІР°Р»РёРґР°С†РёСЏ
 
 ### Changed
-- **LevelEditor**: методы viewport и файловых операций делегируют к новым модулям
-- **ObjectOperations**: удалены `focusOnSelection()` и `focusOnAll()` (перенесены в ViewportOperations)
-- **Размер LevelEditor.js**: 2089→1770 строк (-319 строк, -15.3%)
-- **Logger**: добавлена категория VIEWPORT для логирования операций камеры
+- **LevelEditor**: РјРµС‚РѕРґС‹ viewport Рё С„Р°Р№Р»РѕРІС‹С… РѕРїРµСЂР°С†РёР№ РґРµР»РµРіРёСЂСѓСЋС‚ Рє РЅРѕРІС‹Рј РјРѕРґСѓР»СЏРј
+- **ObjectOperations**: СѓРґР°Р»РµРЅС‹ `focusOnSelection()` Рё `focusOnAll()` (РїРµСЂРµРЅРµСЃРµРЅС‹ РІ ViewportOperations)
+- **Р Р°Р·РјРµСЂ LevelEditor.js**: 2089в†’1770 СЃС‚СЂРѕРє (-319 СЃС‚СЂРѕРє, -15.3%)
+- **Logger**: РґРѕР±Р°РІР»РµРЅР° РєР°С‚РµРіРѕСЂРёСЏ VIEWPORT РґР»СЏ Р»РѕРіРёСЂРѕРІР°РЅРёСЏ РѕРїРµСЂР°С†РёР№ РєР°РјРµСЂС‹
 
 ### Improved
-- **Separation of Concerns**: viewport и файловые операции в отдельных модулях
-- **Модульность**: +25% (viewport и файлы могут переиспользоваться)
-- **Maintainability**: изменения локализованы в специализированных модулях
-- **Параметризация**: методы принимают параметры (factor, padding, defaults)
-- **Улучшенное логирование**: детальная информация о всех операциях
+- **Separation of Concerns**: viewport Рё С„Р°Р№Р»РѕРІС‹Рµ РѕРїРµСЂР°С†РёРё РІ РѕС‚РґРµР»СЊРЅС‹С… РјРѕРґСѓР»СЏС…
+- **РњРѕРґСѓР»СЊРЅРѕСЃС‚СЊ**: +25% (viewport Рё С„Р°Р№Р»С‹ РјРѕРіСѓС‚ РїРµСЂРµРёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ)
+- **Maintainability**: РёР·РјРµРЅРµРЅРёСЏ Р»РѕРєР°Р»РёР·РѕРІР°РЅС‹ РІ СЃРїРµС†РёР°Р»РёР·РёСЂРѕРІР°РЅРЅС‹С… РјРѕРґСѓР»СЏС…
+- **РџР°СЂР°РјРµС‚СЂРёР·Р°С†РёСЏ**: РјРµС‚РѕРґС‹ РїСЂРёРЅРёРјР°СЋС‚ РїР°СЂР°РјРµС‚СЂС‹ (factor, padding, defaults)
+- **РЈР»СѓС‡С€РµРЅРЅРѕРµ Р»РѕРіРёСЂРѕРІР°РЅРёРµ**: РґРµС‚Р°Р»СЊРЅР°СЏ РёРЅС„РѕСЂРјР°С†РёСЏ Рѕ РІСЃРµС… РѕРїРµСЂР°С†РёСЏС…
 
-### Метрики после Фазы 5
-- **LevelEditor.js**: 2488→1770 строк (-28.8% от начала Фазы 4)
-- **Новые модули**: ViewportOperations (200 строк), LevelFileOperations (250 строк)
-- **Общая модульность**: +70% относительно начала рефакторинга
-- **Cognitive Complexity**: снижена на ~65%
+### РњРµС‚СЂРёРєРё РїРѕСЃР»Рµ Р¤Р°Р·С‹ 5
+- **LevelEditor.js**: 2488в†’1770 СЃС‚СЂРѕРє (-28.8% РѕС‚ РЅР°С‡Р°Р»Р° Р¤Р°Р·С‹ 4)
+- **РќРѕРІС‹Рµ РјРѕРґСѓР»Рё**: ViewportOperations (200 СЃС‚СЂРѕРє), LevelFileOperations (250 СЃС‚СЂРѕРє)
+- **РћР±С‰Р°СЏ РјРѕРґСѓР»СЊРЅРѕСЃС‚СЊ**: +70% РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕ РЅР°С‡Р°Р»Р° СЂРµС„Р°РєС‚РѕСЂРёРЅРіР°
+- **Cognitive Complexity**: СЃРЅРёР¶РµРЅР° РЅР° ~65%
 
 ---
 
 ## [3.43.0] - 2025-10-05
 
-### Changed - Фаза 4.5: Разбивка applyConfiguration()
-- **LevelEditor.applyConfiguration()**: разбит на 7 специализированных методов
-  - `_applyGridConfiguration()` - координирует применение настроек грида
-  - `_getGridSettingsFromConfig()` - получение настроек из конфига
-  - `_applyBasicGridSettings()` - базовые настройки (size, color, thickness, opacity)
-  - `_applyGridSubdivisionSettings()` - настройки подразделений грида
-  - `_applyGridTypeSettings()` - тип грида (rectangular, hexagonal, etc.)
-  - `_syncGridSettingsToUI()` - синхронизация с UI компонентами
-  - `_saveDefaultConfiguration()` - сохранение дефолтных настроек
+### Changed - Р¤Р°Р·Р° 4.5: Р Р°Р·Р±РёРІРєР° applyConfiguration()
+- **LevelEditor.applyConfiguration()**: СЂР°Р·Р±РёС‚ РЅР° 7 СЃРїРµС†РёР°Р»РёР·РёСЂРѕРІР°РЅРЅС‹С… РјРµС‚РѕРґРѕРІ
+  - `_applyGridConfiguration()` - РєРѕРѕСЂРґРёРЅРёСЂСѓРµС‚ РїСЂРёРјРµРЅРµРЅРёРµ РЅР°СЃС‚СЂРѕРµРє РіСЂРёРґР°
+  - `_getGridSettingsFromConfig()` - РїРѕР»СѓС‡РµРЅРёРµ РЅР°СЃС‚СЂРѕРµРє РёР· РєРѕРЅС„РёРіР°
+  - `_applyBasicGridSettings()` - Р±Р°Р·РѕРІС‹Рµ РЅР°СЃС‚СЂРѕР№РєРё (size, color, thickness, opacity)
+  - `_applyGridSubdivisionSettings()` - РЅР°СЃС‚СЂРѕР№РєРё РїРѕРґСЂР°Р·РґРµР»РµРЅРёР№ РіСЂРёРґР°
+  - `_applyGridTypeSettings()` - С‚РёРї РіСЂРёРґР° (rectangular, hexagonal, etc.)
+  - `_syncGridSettingsToUI()` - СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ СЃ UI РєРѕРјРїРѕРЅРµРЅС‚Р°РјРё
+  - `_saveDefaultConfiguration()` - СЃРѕС…СЂР°РЅРµРЅРёРµ РґРµС„РѕР»С‚РЅС‹С… РЅР°СЃС‚СЂРѕРµРє
 
 ### Improved
-- **Читаемость**: 65→10 строк в основном методе (-85%)
-- **Separation of Concerns**: каждый метод отвечает за свою задачу
-- **Maintainability**: легче расширять и тестировать отдельные части
-- **JSDoc**: полная документация для всех методов
+- **Р§РёС‚Р°РµРјРѕСЃС‚СЊ**: 65в†’10 СЃС‚СЂРѕРє РІ РѕСЃРЅРѕРІРЅРѕРј РјРµС‚РѕРґРµ (-85%)
+- **Separation of Concerns**: РєР°Р¶РґС‹Р№ РјРµС‚РѕРґ РѕС‚РІРµС‡Р°РµС‚ Р·Р° СЃРІРѕСЋ Р·Р°РґР°С‡Сѓ
+- **Maintainability**: Р»РµРіС‡Рµ СЂР°СЃС€РёСЂСЏС‚СЊ Рё С‚РµСЃС‚РёСЂРѕРІР°С‚СЊ РѕС‚РґРµР»СЊРЅС‹Рµ С‡Р°СЃС‚Рё
+- **JSDoc**: РїРѕР»РЅР°СЏ РґРѕРєСѓРјРµРЅС‚Р°С†РёСЏ РґР»СЏ РІСЃРµС… РјРµС‚РѕРґРѕРІ
 
 ---
 
 ## [3.42.0] - 2025-10-05
 
-### Added - Фаза 4.4: CacheManager
-- **CacheManager**: новый менеджер для централизации логики кэширования (269 строк)
+### Added - Р¤Р°Р·Р° 4.4: CacheManager
+- **CacheManager**: РЅРѕРІС‹Р№ РјРµРЅРµРґР¶РµСЂ РґР»СЏ С†РµРЅС‚СЂР°Р»РёР·Р°С†РёРё Р»РѕРіРёРєРё РєСЌС€РёСЂРѕРІР°РЅРёСЏ (269 СЃС‚СЂРѕРє)
   - getCachedObject(), getCachedTopLevelObject(), getCachedEffectiveLayerId()
   - getSelectableObjectsInViewport(), smartCacheInvalidation()
   - invalidateAfterLayerChanges/GroupOperations/DuplicateOperations()
-  - scheduleCacheInvalidation() с debouncing
+  - scheduleCacheInvalidation() СЃ debouncing
 
 ### Changed
-- **LevelEditor**: методы кэширования делегируют к CacheManager
-- **Размер LevelEditor.js**: 2057→1811 строк (-246 строк, -12%)
-- **Logger**: добавлена категория CACHE для логирования кэширования
+- **LevelEditor**: РјРµС‚РѕРґС‹ РєСЌС€РёСЂРѕРІР°РЅРёСЏ РґРµР»РµРіРёСЂСѓСЋС‚ Рє CacheManager
+- **Р Р°Р·РјРµСЂ LevelEditor.js**: 2057в†’1811 СЃС‚СЂРѕРє (-246 СЃС‚СЂРѕРє, -12%)
+- **Logger**: РґРѕР±Р°РІР»РµРЅР° РєР°С‚РµРіРѕСЂРёСЏ CACHE РґР»СЏ Р»РѕРіРёСЂРѕРІР°РЅРёСЏ РєСЌС€РёСЂРѕРІР°РЅРёСЏ
 
 ### Improved
-- **Separation of Concerns**: кэширование в отдельном менеджере
-- **Модульность**: +15% (кэширование может переиспользоваться)
-- **Maintainability**: изменения локализованы в одном месте
-- **Сохранены оптимизации**: smart invalidation, debouncing, TTL cache
+- **Separation of Concerns**: РєСЌС€РёСЂРѕРІР°РЅРёРµ РІ РѕС‚РґРµР»СЊРЅРѕРј РјРµРЅРµРґР¶РµСЂРµ
+- **РњРѕРґСѓР»СЊРЅРѕСЃС‚СЊ**: +15% (РєСЌС€РёСЂРѕРІР°РЅРёРµ РјРѕР¶РµС‚ РїРµСЂРµРёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ)
+- **Maintainability**: РёР·РјРµРЅРµРЅРёСЏ Р»РѕРєР°Р»РёР·РѕРІР°РЅС‹ РІ РѕРґРЅРѕРј РјРµСЃС‚Рµ
+- **РЎРѕС…СЂР°РЅРµРЅС‹ РѕРїС‚РёРјРёР·Р°С†РёРё**: smart invalidation, debouncing, TTL cache
 
 ---
 
 ## [3.41.0] - 2025-10-05
 
-### Added - Фаза 4.3: Модуль LayerOperations
-- **LayerOperations**: новый модуль для управления слоями (404 строки)
+### Added - Р¤Р°Р·Р° 4.3: РњРѕРґСѓР»СЊ LayerOperations
+- **LayerOperations**: РЅРѕРІС‹Р№ РјРѕРґСѓР»СЊ РґР»СЏ СѓРїСЂР°РІР»РµРЅРёСЏ СЃР»РѕСЏРјРё (404 СЃС‚СЂРѕРєРё)
   - moveSelectedObjectsToLayer(), assignSelectedObjectsToLayer()
   - batchProcessLayerAssignment(), findNextUnlockedLayer()
   - processObjectForLayerAssignment(), batched notifications
   - canMoveObjectsToLayer()
 
 ### Changed
-- **LevelEditor**: методы управления слоями делегируют к LayerOperations
-- **Размер LevelEditor.js**: 2415→2057 строк (-358 строк, -14.8%)
+- **LevelEditor**: РјРµС‚РѕРґС‹ СѓРїСЂР°РІР»РµРЅРёСЏ СЃР»РѕСЏРјРё РґРµР»РµРіРёСЂСѓСЋС‚ Рє LayerOperations
+- **Р Р°Р·РјРµСЂ LevelEditor.js**: 2415в†’2057 СЃС‚СЂРѕРє (-358 СЃС‚СЂРѕРє, -14.8%)
 
 ### Improved
-- **Separation of Concerns**: управление слоями в отдельном модуле
-- **Модульность**: +20% (слои могут переиспользоваться)
-- **Maintainability**: изменения локализованы в одном месте
-- **Сохранены оптимизации**: batch processing, smart caching, spatial index
+- **Separation of Concerns**: СѓРїСЂР°РІР»РµРЅРёРµ СЃР»РѕСЏРјРё РІ РѕС‚РґРµР»СЊРЅРѕРј РјРѕРґСѓР»Рµ
+- **РњРѕРґСѓР»СЊРЅРѕСЃС‚СЊ**: +20% (СЃР»РѕРё РјРѕРіСѓС‚ РїРµСЂРµРёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ)
+- **Maintainability**: РёР·РјРµРЅРµРЅРёСЏ Р»РѕРєР°Р»РёР·РѕРІР°РЅС‹ РІ РѕРґРЅРѕРј РјРµСЃС‚Рµ
+- **РЎРѕС…СЂР°РЅРµРЅС‹ РѕРїС‚РёРјРёР·Р°С†РёРё**: batch processing, smart caching, spatial index
 
 ---
 
 ## [3.40.0] - 2025-10-05
 
-### Added - Фаза 4.2: Модуль HistoryOperations
-- **HistoryOperations**: новый модуль для централизации логики undo/redo (144 строки)
+### Added - Р¤Р°Р·Р° 4.2: РњРѕРґСѓР»СЊ HistoryOperations
+- **HistoryOperations**: РЅРѕРІС‹Р№ РјРѕРґСѓР»СЊ РґР»СЏ С†РµРЅС‚СЂР°Р»РёР·Р°С†РёРё Р»РѕРіРёРєРё undo/redo (144 СЃС‚СЂРѕРєРё)
   - undo(), redo(), restoreObjectsFromHistory(), rebuildAllIndices()
   - restoreGroupEditMode(), recalculateGroupBounds(), invalidateCachesAfterRestore()
   - restoreSelection(), finalizeHistoryRestore()
 
 ### Changed
-- **LevelEditor**: методы undo/redo делегируют работу к HistoryOperations
-- **Размер LevelEditor.js**: 2693→2415 строк (-278 строк, -10.3%)
+- **LevelEditor**: РјРµС‚РѕРґС‹ undo/redo РґРµР»РµРіРёСЂСѓСЋС‚ СЂР°Р±РѕС‚Сѓ Рє HistoryOperations
+- **Р Р°Р·РјРµСЂ LevelEditor.js**: 2693в†’2415 СЃС‚СЂРѕРє (-278 СЃС‚СЂРѕРє, -10.3%)
 
 ### Improved
-- **Separation of Concerns**: история в отдельном модуле
-- **Модульность**: +20% (история может переиспользоваться)
-- **Maintainability**: изменения локализованы в одном месте
-- **Тестируемость**: легко тестировать историю отдельно
+- **Separation of Concerns**: РёСЃС‚РѕСЂРёСЏ РІ РѕС‚РґРµР»СЊРЅРѕРј РјРѕРґСѓР»Рµ
+- **РњРѕРґСѓР»СЊРЅРѕСЃС‚СЊ**: +20% (РёСЃС‚РѕСЂРёСЏ РјРѕР¶РµС‚ РїРµСЂРµРёСЃРїРѕР»СЊР·РѕРІР°С‚СЊСЃСЏ)
+- **Maintainability**: РёР·РјРµРЅРµРЅРёСЏ Р»РѕРєР°Р»РёР·РѕРІР°РЅС‹ РІ РѕРґРЅРѕРј РјРµСЃС‚Рµ
+- **РўРµСЃС‚РёСЂСѓРµРјРѕСЃС‚СЊ**: Р»РµРіРєРѕ С‚РµСЃС‚РёСЂРѕРІР°С‚СЊ РёСЃС‚РѕСЂРёСЋ РѕС‚РґРµР»СЊРЅРѕ
 
 ---
 
 ## [3.39.0] - 2025-10-05
 
-### Changed - Фаза 4.1: Разбивка больших методов
-- **LevelEditor.init()**: разбит на 7 специализированных методов (180→15 строк, -92%)
+### Changed - Р¤Р°Р·Р° 4.1: Р Р°Р·Р±РёРІРєР° Р±РѕР»СЊС€РёС… РјРµС‚РѕРґРѕРІ
+- **LevelEditor.init()**: СЂР°Р·Р±РёС‚ РЅР° 7 СЃРїРµС†РёР°Р»РёР·РёСЂРѕРІР°РЅРЅС‹С… РјРµС‚РѕРґРѕРІ (180в†’15 СЃС‚СЂРѕРє, -92%)
   - initializeConfiguration(), initializeDOMElements(), initializeRenderer()
   - initializeUIComponents(), initializeMenuAndEvents(), initializeLevelAndData()
   - finalizeInitialization()
-- **LevelEditor.undo()**: разбит на 7 приватных методов (160→10 строк, -94%)
-- **LevelEditor.redo()**: упрощен, переиспользует методы undo (85→10 строк, -88%)
+- **LevelEditor.undo()**: СЂР°Р·Р±РёС‚ РЅР° 7 РїСЂРёРІР°С‚РЅС‹С… РјРµС‚РѕРґРѕРІ (160в†’10 СЃС‚СЂРѕРє, -94%)
+- **LevelEditor.redo()**: СѓРїСЂРѕС‰РµРЅ, РїРµСЂРµРёСЃРїРѕР»СЊР·СѓРµС‚ РјРµС‚РѕРґС‹ undo (85в†’10 СЃС‚СЂРѕРє, -88%)
 
 ### Improved
-- **Читаемость**: +85-90% (методы читаются как последовательность шагов)
-- **DRY**: устранено ~150 строк дублирования между undo/redo (-95%)
-- **Когнитивная сложность**: -80% (с 25 до 5)
-- **Размер файла**: 2914→2693 строк (-7.6%)
-- **Maintainability**: каждый метод делает одну вещь (SRP)
+- **Р§РёС‚Р°РµРјРѕСЃС‚СЊ**: +85-90% (РјРµС‚РѕРґС‹ С‡РёС‚Р°СЋС‚СЃСЏ РєР°Рє РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅРѕСЃС‚СЊ С€Р°РіРѕРІ)
+- **DRY**: СѓСЃС‚СЂР°РЅРµРЅРѕ ~150 СЃС‚СЂРѕРє РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ РјРµР¶РґСѓ undo/redo (-95%)
+- **РљРѕРіРЅРёС‚РёРІРЅР°СЏ СЃР»РѕР¶РЅРѕСЃС‚СЊ**: -80% (СЃ 25 РґРѕ 5)
+- **Р Р°Р·РјРµСЂ С„Р°Р№Р»Р°**: 2914в†’2693 СЃС‚СЂРѕРє (-7.6%)
+- **Maintainability**: РєР°Р¶РґС‹Р№ РјРµС‚РѕРґ РґРµР»Р°РµС‚ РѕРґРЅСѓ РІРµС‰СЊ (SRP)
 
 ### Technical
-- 13 новых приватных методов с @private JSDoc
-- Устранена вложенность кода (4→1 уровень)
-- Улучшена тестируемость (изолированные шаги)
+- 13 РЅРѕРІС‹С… РїСЂРёРІР°С‚РЅС‹С… РјРµС‚РѕРґРѕРІ СЃ @private JSDoc
+- РЈСЃС‚СЂР°РЅРµРЅР° РІР»РѕР¶РµРЅРЅРѕСЃС‚СЊ РєРѕРґР° (4в†’1 СѓСЂРѕРІРµРЅСЊ)
+- РЈР»СѓС‡С€РµРЅР° С‚РµСЃС‚РёСЂСѓРµРјРѕСЃС‚СЊ (РёР·РѕР»РёСЂРѕРІР°РЅРЅС‹Рµ С€Р°РіРё)
 
 ---
 
 ## [3.38.1] - 2025-10-05
 
-### Fixed - Улучшена логика для вложенных групп
-- Добавлена проверка консистентности activeGroupId и openGroupIds
-- Валидация иерархии вложенных групп (parent→child)
-- Восстановлены обязательные поля groupId и originalChildren
-- Безопасный выход из режима при сломанной иерархии
+### Fixed - РЈР»СѓС‡С€РµРЅР° Р»РѕРіРёРєР° РґР»СЏ РІР»РѕР¶РµРЅРЅС‹С… РіСЂСѓРїРї
+- Р”РѕР±Р°РІР»РµРЅР° РїСЂРѕРІРµСЂРєР° РєРѕРЅСЃРёСЃС‚РµРЅС‚РЅРѕСЃС‚Рё activeGroupId Рё openGroupIds
+- Р’Р°Р»РёРґР°С†РёСЏ РёРµСЂР°СЂС…РёРё РІР»РѕР¶РµРЅРЅС‹С… РіСЂСѓРїРї (parentв†’child)
+- Р’РѕСЃСЃС‚Р°РЅРѕРІР»РµРЅС‹ РѕР±СЏР·Р°С‚РµР»СЊРЅС‹Рµ РїРѕР»СЏ groupId Рё originalChildren
+- Р‘РµР·РѕРїР°СЃРЅС‹Р№ РІС‹С…РѕРґ РёР· СЂРµР¶РёРјР° РїСЂРё СЃР»РѕРјР°РЅРЅРѕР№ РёРµСЂР°СЂС…РёРё
 
 ---
 
 ## [3.38.0] - 2025-10-05
 
-### Added - Фикс Undo/Redo
-- Сохранение groupEditMode в историю (isActive, groupId, openGroupIds)
-- Убрано принудительное изменение visibility после undo/redo
-- Убран некорректный markDirty() после undo/redo
+### Added - Р¤РёРєСЃ Undo/Redo
+- РЎРѕС…СЂР°РЅРµРЅРёРµ groupEditMode РІ РёСЃС‚РѕСЂРёСЋ (isActive, groupId, openGroupIds)
+- РЈР±СЂР°РЅРѕ РїСЂРёРЅСѓРґРёС‚РµР»СЊРЅРѕРµ РёР·РјРµРЅРµРЅРёРµ visibility РїРѕСЃР»Рµ undo/redo
+- РЈР±СЂР°РЅ РЅРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ markDirty() РїРѕСЃР»Рµ undo/redo
 
 ---
 
 ## [3.37.0] - 2025-10-05
 
 ### Added
-- **PerformanceUtils**: модуль оптимизации производительности
+- **PerformanceUtils**: РјРѕРґСѓР»СЊ РѕРїС‚РёРјРёР·Р°С†РёРё РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚Рё
   - throttle(), debounce(), memoize(), batchRAF()
-  - LRUCache class для эффективного кэширования
-- **Throttled mouse events**: 8ms для mousemove, 16ms для wheel
+  - LRUCache class РґР»СЏ СЌС„С„РµРєС‚РёРІРЅРѕРіРѕ РєСЌС€РёСЂРѕРІР°РЅРёСЏ
+- **Throttled mouse events**: 8ms РґР»СЏ mousemove, 16ms РґР»СЏ wheel
 - **EditorConstants**: MOUSE_MOVE_THROTTLE_MS, WHEEL_THROTTLE_MS, RESIZE_DEBOUNCE_MS, INPUT_DEBOUNCE_MS
 
 ### Changed
-- **MouseHandlers**: применен throttle к handleMouseMove и handleWheel (-20-30% CPU)
-- **Плавность взаимодействия**: улучшена отзывчивость при перетаскивании и zoom
+- **MouseHandlers**: РїСЂРёРјРµРЅРµРЅ throttle Рє handleMouseMove Рё handleWheel (-20-30% CPU)
+- **РџР»Р°РІРЅРѕСЃС‚СЊ РІР·Р°РёРјРѕРґРµР№СЃС‚РІРёСЏ**: СѓР»СѓС‡С€РµРЅР° РѕС‚Р·С‹РІС‡РёРІРѕСЃС‚СЊ РїСЂРё РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРё Рё zoom
 
 ### Performance
-- Снижение CPU нагрузки на 20-30% при интенсивном взаимодействии
-- Плавное перетаскивание и zoom без лагов
-- Готовая инфраструктура для memoization
+- РЎРЅРёР¶РµРЅРёРµ CPU РЅР°РіСЂСѓР·РєРё РЅР° 20-30% РїСЂРё РёРЅС‚РµРЅСЃРёРІРЅРѕРј РІР·Р°РёРјРѕРґРµР№СЃС‚РІРёРё
+- РџР»Р°РІРЅРѕРµ РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµ Рё zoom Р±РµР· Р»Р°РіРѕРІ
+- Р“РѕС‚РѕРІР°СЏ РёРЅС„СЂР°СЃС‚СЂСѓРєС‚СѓСЂР° РґР»СЏ memoization
 
 ---
 
 ## [3.36.0] - 2025-10-05
 
 ### Added
-- **EditorConstants**: централизованные константы редактора
+- **EditorConstants**: С†РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅС‹Рµ РєРѕРЅСЃС‚Р°РЅС‚С‹ СЂРµРґР°РєС‚РѕСЂР°
   - DEFAULT_OBJECT (width, height, color, visibility)
   - PERFORMANCE (cache timeout, spatial grid, history size)
-  - GRID, CAMERA, UI, SELECTION, PARALLAX настройки
+  - GRID, CAMERA, UI, SELECTION, PARALLAX РЅР°СЃС‚СЂРѕР№РєРё
 
 ### Changed
-- **DuplicateOperations**: устранено дублирование кода (~20 строк)
-  - Создан метод _normalizeObjectProperties()
-  - Использование констант DEFAULT_OBJECT
-- **RenderOperations**: применены константы PERFORMANCE
-- **ErrorHandler**: применены константы PERFORMANCE.MAX_HISTORY_SIZE
+- **DuplicateOperations**: СѓСЃС‚СЂР°РЅРµРЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ РєРѕРґР° (~20 СЃС‚СЂРѕРє)
+  - РЎРѕР·РґР°РЅ РјРµС‚РѕРґ _normalizeObjectProperties()
+  - РСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ РєРѕРЅСЃС‚Р°РЅС‚ DEFAULT_OBJECT
+- **RenderOperations**: РїСЂРёРјРµРЅРµРЅС‹ РєРѕРЅСЃС‚Р°РЅС‚С‹ PERFORMANCE
+- **ErrorHandler**: РїСЂРёРјРµРЅРµРЅС‹ РєРѕРЅСЃС‚Р°РЅС‚С‹ PERFORMANCE.MAX_HISTORY_SIZE
 
 ### Improved
-- DRY принцип: +30% (единая точка изменения для свойств по умолчанию)
-- Maintainability: +40% (константы вместо magic numbers)
-- Consistency: улучшена согласованность кода
+- DRY РїСЂРёРЅС†РёРї: +30% (РµРґРёРЅР°СЏ С‚РѕС‡РєР° РёР·РјРµРЅРµРЅРёСЏ РґР»СЏ СЃРІРѕР№СЃС‚РІ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ)
+- Maintainability: +40% (РєРѕРЅСЃС‚Р°РЅС‚С‹ РІРјРµСЃС‚Рѕ magic numbers)
+- Consistency: СѓР»СѓС‡С€РµРЅР° СЃРѕРіР»Р°СЃРѕРІР°РЅРЅРѕСЃС‚СЊ РєРѕРґР°
 
 ---
 
 ## [3.35.0] - 2025-10-05
 
 ### Added
-- **JSDoc типизация**: полная документация ErrorHandler и Custom Error классов
-  - 17 методов с детальной типизацией
-  - 4 Custom Error класса (NetworkError, ValidationError, PermissionError, FileNotFoundError)
-  - 10+ примеров использования
-  - IDE автодополнение и IntelliSense поддержка
+- **JSDoc С‚РёРїРёР·Р°С†РёСЏ**: РїРѕР»РЅР°СЏ РґРѕРєСѓРјРµРЅС‚Р°С†РёСЏ ErrorHandler Рё Custom Error РєР»Р°СЃСЃРѕРІ
+  - 17 РјРµС‚РѕРґРѕРІ СЃ РґРµС‚Р°Р»СЊРЅРѕР№ С‚РёРїРёР·Р°С†РёРµР№
+  - 4 Custom Error РєР»Р°СЃСЃР° (NetworkError, ValidationError, PermissionError, FileNotFoundError)
+  - 10+ РїСЂРёРјРµСЂРѕРІ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ
+  - IDE Р°РІС‚РѕРґРѕРїРѕР»РЅРµРЅРёРµ Рё IntelliSense РїРѕРґРґРµСЂР¶РєР°
 
 ### Technical
-- ~200 строк JSDoc документации
-- @param, @returns, @example для всех публичных методов
-- @private маркеры для внутренних методов
-- @extends для Custom Error классов
+- ~200 СЃС‚СЂРѕРє JSDoc РґРѕРєСѓРјРµРЅС‚Р°С†РёРё
+- @param, @returns, @example РґР»СЏ РІСЃРµС… РїСѓР±Р»РёС‡РЅС‹С… РјРµС‚РѕРґРѕРІ
+- @private РјР°СЂРєРµСЂС‹ РґР»СЏ РІРЅСѓС‚СЂРµРЅРЅРёС… РјРµС‚РѕРґРѕРІ
+- @extends РґР»СЏ Custom Error РєР»Р°СЃСЃРѕРІ
 
 ---
 
 ## [3.34.0] - 2025-10-05
 
 ### Changed
-- **Logger migration**: 100% замена console.* на Logger.* (23 файла, 40+ вызовов)
-  - CanvasRenderer → Logger.canvas
-  - FileUtils → Logger.file
-  - AssetManager → Logger.asset
-  - SettingsPanel, DetailsPanel → Logger.settings, Logger.ui
-  - FolderPickerDialog → Logger.file
-  - ConsoleContextMenu → Logger.console
-- **ErrorHandler integration**: критичные файловые операции (FileManager: loadLevel, loadLevelFromFileInput, importLevelData, loadAssetLibrary)
+- **Logger migration**: 100% Р·Р°РјРµРЅР° console.* РЅР° Logger.* (23 С„Р°Р№Р»Р°, 40+ РІС‹Р·РѕРІРѕРІ)
+  - CanvasRenderer в†’ Logger.canvas
+  - FileUtils в†’ Logger.file
+  - AssetManager в†’ Logger.asset
+  - SettingsPanel, DetailsPanel в†’ Logger.settings, Logger.ui
+  - FolderPickerDialog в†’ Logger.file
+  - ConsoleContextMenu в†’ Logger.console
+- **ErrorHandler integration**: РєСЂРёС‚РёС‡РЅС‹Рµ С„Р°Р№Р»РѕРІС‹Рµ РѕРїРµСЂР°С†РёРё (FileManager: loadLevel, loadLevelFromFileInput, importLevelData, loadAssetLibrary)
 
 ### Fixed
-- Единый стиль логирования во всем проекте
-- Улучшенная обработка ошибок в файловых операциях
+- Р•РґРёРЅС‹Р№ СЃС‚РёР»СЊ Р»РѕРіРёСЂРѕРІР°РЅРёСЏ РІРѕ РІСЃРµРј РїСЂРѕРµРєС‚Рµ
+- РЈР»СѓС‡С€РµРЅРЅР°СЏ РѕР±СЂР°Р±РѕС‚РєР° РѕС€РёР±РѕРє РІ С„Р°Р№Р»РѕРІС‹С… РѕРїРµСЂР°С†РёСЏС…
 
 ### Technical
-- Fallback console.* оставлен в Logger.js и ConfigManager (правильно)
-- Пользовательские сообщения об ошибках на русском языке
-- ErrorHandler.try/tryAsync обертки для критичных операций
+- Fallback console.* РѕСЃС‚Р°РІР»РµРЅ РІ Logger.js Рё ConfigManager (РїСЂР°РІРёР»СЊРЅРѕ)
+- РџРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёРµ СЃРѕРѕР±С‰РµРЅРёСЏ РѕР± РѕС€РёР±РєР°С… РЅР° СЂСѓСЃСЃРєРѕРј СЏР·С‹РєРµ
+- ErrorHandler.try/tryAsync РѕР±РµСЂС‚РєРё РґР»СЏ РєСЂРёС‚РёС‡РЅС‹С… РѕРїРµСЂР°С†РёР№
 
 ---
 
 ## [3.33.0] - 2025-10-05
 
 ### Added
-- **ErrorHandler**: централизованная обработка ошибок, глобальные перехватчики, стратегии восстановления, история ошибок
-- **ComponentLifecycle**: менеджер жизненного цикла компонентов, приоритеты уничтожения, предотвращение утечек памяти
-- **destroy() методы**: добавлены во все UI компоненты (AssetPanel, DetailsPanel, OutlinerPanel, LayersPanel, SettingsPanel, ActorPropertiesWindow, Toolbar, MenuManager, CanvasRenderer, EventHandlers)
-- **Logger категории**: LIFECYCLE, ERROR_HANDLER для новых систем
-- **LevelEditor.destroy()**: полная очистка редактора с правильным порядком уничтожения компонентов
+- **ErrorHandler**: С†РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅР°СЏ РѕР±СЂР°Р±РѕС‚РєР° РѕС€РёР±РѕРє, РіР»РѕР±Р°Р»СЊРЅС‹Рµ РїРµСЂРµС…РІР°С‚С‡РёРєРё, СЃС‚СЂР°С‚РµРіРёРё РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёСЏ, РёСЃС‚РѕСЂРёСЏ РѕС€РёР±РѕРє
+- **ComponentLifecycle**: РјРµРЅРµРґР¶РµСЂ Р¶РёР·РЅРµРЅРЅРѕРіРѕ С†РёРєР»Р° РєРѕРјРїРѕРЅРµРЅС‚РѕРІ, РїСЂРёРѕСЂРёС‚РµС‚С‹ СѓРЅРёС‡С‚РѕР¶РµРЅРёСЏ, РїСЂРµРґРѕС‚РІСЂР°С‰РµРЅРёРµ СѓС‚РµС‡РµРє РїР°РјСЏС‚Рё
+- **destroy() РјРµС‚РѕРґС‹**: РґРѕР±Р°РІР»РµРЅС‹ РІРѕ РІСЃРµ UI РєРѕРјРїРѕРЅРµРЅС‚С‹ (AssetPanel, DetailsPanel, OutlinerPanel, LayersPanel, SettingsPanel, ActorPropertiesWindow, Toolbar, MenuManager, CanvasRenderer, EventHandlers)
+- **Logger РєР°С‚РµРіРѕСЂРёРё**: LIFECYCLE, ERROR_HANDLER РґР»СЏ РЅРѕРІС‹С… СЃРёСЃС‚РµРј
+- **LevelEditor.destroy()**: РїРѕР»РЅР°СЏ РѕС‡РёСЃС‚РєР° СЂРµРґР°РєС‚РѕСЂР° СЃ РїСЂР°РІРёР»СЊРЅС‹Рј РїРѕСЂСЏРґРєРѕРј СѓРЅРёС‡С‚РѕР¶РµРЅРёСЏ РєРѕРјРїРѕРЅРµРЅС‚РѕРІ
 
 ### Changed
-- **EventHandlers**: трекинг event listeners и RAF для корректной очистки
-- **Logger**: методы-алиасы для новых категорий (Logger.lifecycle, Logger.errorHandler)
+- **EventHandlers**: С‚СЂРµРєРёРЅРі event listeners Рё RAF РґР»СЏ РєРѕСЂСЂРµРєС‚РЅРѕР№ РѕС‡РёСЃС‚РєРё
+- **Logger**: РјРµС‚РѕРґС‹-Р°Р»РёР°СЃС‹ РґР»СЏ РЅРѕРІС‹С… РєР°С‚РµРіРѕСЂРёР№ (Logger.lifecycle, Logger.errorHandler)
 
 ### Fixed
-- **Memory leaks**: устранены утечки памяти в event listeners, subscriptions, render loops
-- **Component cleanup**: все зарегистрированные компоненты корректно очищаются при destroy
+- **Memory leaks**: СѓСЃС‚СЂР°РЅРµРЅС‹ СѓС‚РµС‡РєРё РїР°РјСЏС‚Рё РІ event listeners, subscriptions, render loops
+- **Component cleanup**: РІСЃРµ Р·Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°РЅРЅС‹Рµ РєРѕРјРїРѕРЅРµРЅС‚С‹ РєРѕСЂСЂРµРєС‚РЅРѕ РѕС‡РёС‰Р°СЋС‚СЃСЏ РїСЂРё destroy
 
 ### Technical
 - **ErrorHandler API**: init(), handle(), logError(), getErrorHistory(), getStatistics(), try(), tryAsync()
-- **ComponentLifecycle API**: register(), destroy(), destroyAll(), приоритеты 1-10
+- **ComponentLifecycle API**: register(), destroy(), destroyAll(), РїСЂРёРѕСЂРёС‚РµС‚С‹ 1-10
 - **Custom Error types**: NetworkError, ValidationError, PermissionError, FileNotFoundError
-- **Recovery strategies**: автоматическое восстановление для типовых ошибок
+- **Recovery strategies**: Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ РґР»СЏ С‚РёРїРѕРІС‹С… РѕС€РёР±РѕРє
 
 ---
 
 ## [3.32.0] - 2025-10-02
 
 ### Added
-- **SelectionUtils**: режимы marquee replace/add/toggle, единая логика для всех панелей
+- **SelectionUtils**: СЂРµР¶РёРјС‹ marquee replace/add/toggle, РµРґРёРЅР°СЏ Р»РѕРіРёРєР° РґР»СЏ РІСЃРµС… РїР°РЅРµР»РµР№
 
 ### Changed
 - **AssetPanel**: 
-  - Ctrl+click+drag запускает рамку в режиме toggle; Ctrl+Shift+drag — add; обычный drag по фону — replace
-  - Ctrl+click без drag — мгновенный toggle без рамки (порог для рамки 4px)
-  - Отключено перетаскивание ассетов по Ctrl+drag во избежание конфликта с рамкой
-  - В режиме Details клик по промежуткам колонок считается кликом по строке
-  - Унифицированный `itemSelector` для всех режимов (Grid/List/Details)
+  - Ctrl+click+drag Р·Р°РїСѓСЃРєР°РµС‚ СЂР°РјРєСѓ РІ СЂРµР¶РёРјРµ toggle; Ctrl+Shift+drag вЂ” add; РѕР±С‹С‡РЅС‹Р№ drag РїРѕ С„РѕРЅСѓ вЂ” replace
+  - Ctrl+click Р±РµР· drag вЂ” РјРіРЅРѕРІРµРЅРЅС‹Р№ toggle Р±РµР· СЂР°РјРєРё (РїРѕСЂРѕРі РґР»СЏ СЂР°РјРєРё 4px)
+  - РћС‚РєР»СЋС‡РµРЅРѕ РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРµ Р°СЃСЃРµС‚РѕРІ РїРѕ Ctrl+drag РІРѕ РёР·Р±РµР¶Р°РЅРёРµ РєРѕРЅС„Р»РёРєС‚Р° СЃ СЂР°РјРєРѕР№
+  - Р’ СЂРµР¶РёРјРµ Details РєР»РёРє РїРѕ РїСЂРѕРјРµР¶СѓС‚РєР°Рј РєРѕР»РѕРЅРѕРє СЃС‡РёС‚Р°РµС‚СЃСЏ РєР»РёРєРѕРј РїРѕ СЃС‚СЂРѕРєРµ
+  - РЈРЅРёС„РёС†РёСЂРѕРІР°РЅРЅС‹Р№ `itemSelector` РґР»СЏ РІСЃРµС… СЂРµР¶РёРјРѕРІ (Grid/List/Details)
 
 ### Fixed
-- **Ctrl+click toggle**: починен переключатель выделения в панели ассетов
-- **Marquee false positive**: обычный drag по элементу больше не запускает рамку
-- **Details gaps**: клики между колонками считаются кликами по элементу
+- **Ctrl+click toggle**: РїРѕС‡РёРЅРµРЅ РїРµСЂРµРєР»СЋС‡Р°С‚РµР»СЊ РІС‹РґРµР»РµРЅРёСЏ РІ РїР°РЅРµР»Рё Р°СЃСЃРµС‚РѕРІ
+- **Marquee false positive**: РѕР±С‹С‡РЅС‹Р№ drag РїРѕ СЌР»РµРјРµРЅС‚Сѓ Р±РѕР»СЊС€Рµ РЅРµ Р·Р°РїСѓСЃРєР°РµС‚ СЂР°РјРєСѓ
+- **Details gaps**: РєР»РёРєРё РјРµР¶РґСѓ РєРѕР»РѕРЅРєР°РјРё СЃС‡РёС‚Р°СЋС‚СЃСЏ РєР»РёРєР°РјРё РїРѕ СЌР»РµРјРµРЅС‚Сѓ
 
 ### Technical
-- **SelectionUtils**: отложенный старт рамки для Ctrl с порогом 4px, pending-состояние; финализация по режимам
-- **BasePanel/AssetPanel**: корректная передача `itemSelector` и контейнера селекции
+- **SelectionUtils**: РѕС‚Р»РѕР¶РµРЅРЅС‹Р№ СЃС‚Р°СЂС‚ СЂР°РјРєРё РґР»СЏ Ctrl СЃ РїРѕСЂРѕРіРѕРј 4px, pending-СЃРѕСЃС‚РѕСЏРЅРёРµ; С„РёРЅР°Р»РёР·Р°С†РёСЏ РїРѕ СЂРµР¶РёРјР°Рј
+- **BasePanel/AssetPanel**: РєРѕСЂСЂРµРєС‚РЅР°СЏ РїРµСЂРµРґР°С‡Р° `itemSelector` Рё РєРѕРЅС‚РµР№РЅРµСЂР° СЃРµР»РµРєС†РёРё
 
 ---
 
 ## [3.31.0] - 2025-01-29
 
 ### Added
-- **Custom Dialog System** - полная замена браузерных диалогов на стилистически идентичные редактору
-- **FolderPickerDialog** - кастомный диалог выбора папки с поддержкой File System Access API и Drag & Drop
-- **UniversalDialog** - универсальный диалог для замены alert, confirm, prompt
-- **DialogReplacer** - утилита для автоматической замены браузерных диалогов
-- **File System Access API** - современный API для выбора папок в Chrome/Edge
-- **Drag & Drop Support** - поддержка перетаскивания папок и файлов для всех браузеров
-- **Asset Import Summary** - детальная статистика импортируемых ассетов по категориям
-- **Real-time Path Display** - отображение выбранной папки в реальном времени
+- **Custom Dialog System** - РїРѕР»РЅР°СЏ Р·Р°РјРµРЅР° Р±СЂР°СѓР·РµСЂРЅС‹С… РґРёР°Р»РѕРіРѕРІ РЅР° СЃС‚РёР»РёСЃС‚РёС‡РµСЃРєРё РёРґРµРЅС‚РёС‡РЅС‹Рµ СЂРµРґР°РєС‚РѕСЂСѓ
+- **FolderPickerDialog** - РєР°СЃС‚РѕРјРЅС‹Р№ РґРёР°Р»РѕРі РІС‹Р±РѕСЂР° РїР°РїРєРё СЃ РїРѕРґРґРµСЂР¶РєРѕР№ File System Access API Рё Drag & Drop
+- **UniversalDialog** - СѓРЅРёРІРµСЂСЃР°Р»СЊРЅС‹Р№ РґРёР°Р»РѕРі РґР»СЏ Р·Р°РјРµРЅС‹ alert, confirm, prompt
+- **DialogReplacer** - СѓС‚РёР»РёС‚Р° РґР»СЏ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕР№ Р·Р°РјРµРЅС‹ Р±СЂР°СѓР·РµСЂРЅС‹С… РґРёР°Р»РѕРіРѕРІ
+- **File System Access API** - СЃРѕРІСЂРµРјРµРЅРЅС‹Р№ API РґР»СЏ РІС‹Р±РѕСЂР° РїР°РїРѕРє РІ Chrome/Edge
+- **Drag & Drop Support** - РїРѕРґРґРµСЂР¶РєР° РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёСЏ РїР°РїРѕРє Рё С„Р°Р№Р»РѕРІ РґР»СЏ РІСЃРµС… Р±СЂР°СѓР·РµСЂРѕРІ
+- **Asset Import Summary** - РґРµС‚Р°Р»СЊРЅР°СЏ СЃС‚Р°С‚РёСЃС‚РёРєР° РёРјРїРѕСЂС‚РёСЂСѓРµРјС‹С… Р°СЃСЃРµС‚РѕРІ РїРѕ РєР°С‚РµРіРѕСЂРёСЏРј
+- **Real-time Path Display** - РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ РІС‹Р±СЂР°РЅРЅРѕР№ РїР°РїРєРё РІ СЂРµР°Р»СЊРЅРѕРј РІСЂРµРјРµРЅРё
 
 ### Changed
-- **Asset Import Process** - упрощен процесс импорта ассетов до одного действия
-- **Dialog Consistency** - все диалоги теперь имеют единый стиль редактора
-- **Path Display** - улучшено отображение выбранной папки (только имя папки)
-- **Summary Display** - количество файлов вынесено в отдельную область summary
-- **Error Handling** - улучшена обработка ошибок при выборе папок
-- **User Experience** - значительно улучшен UX процесса импорта ассетов
+- **Asset Import Process** - СѓРїСЂРѕС‰РµРЅ РїСЂРѕС†РµСЃСЃ РёРјРїРѕСЂС‚Р° Р°СЃСЃРµС‚РѕРІ РґРѕ РѕРґРЅРѕРіРѕ РґРµР№СЃС‚РІРёСЏ
+- **Dialog Consistency** - РІСЃРµ РґРёР°Р»РѕРіРё С‚РµРїРµСЂСЊ РёРјРµСЋС‚ РµРґРёРЅС‹Р№ СЃС‚РёР»СЊ СЂРµРґР°РєС‚РѕСЂР°
+- **Path Display** - СѓР»СѓС‡С€РµРЅРѕ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ РІС‹Р±СЂР°РЅРЅРѕР№ РїР°РїРєРё (С‚РѕР»СЊРєРѕ РёРјСЏ РїР°РїРєРё)
+- **Summary Display** - РєРѕР»РёС‡РµСЃС‚РІРѕ С„Р°Р№Р»РѕРІ РІС‹РЅРµСЃРµРЅРѕ РІ РѕС‚РґРµР»СЊРЅСѓСЋ РѕР±Р»Р°СЃС‚СЊ summary
+- **Error Handling** - СѓР»СѓС‡С€РµРЅР° РѕР±СЂР°Р±РѕС‚РєР° РѕС€РёР±РѕРє РїСЂРё РІС‹Р±РѕСЂРµ РїР°РїРѕРє
+- **User Experience** - Р·РЅР°С‡РёС‚РµР»СЊРЅРѕ СѓР»СѓС‡С€РµРЅ UX РїСЂРѕС†РµСЃСЃР° РёРјРїРѕСЂС‚Р° Р°СЃСЃРµС‚РѕРІ
 
 ### Fixed
-- **Syntax Errors** - исправлены все синтаксические ошибки с async/await
-- **File Object Handling** - исправлена работа с File объектами и webkitRelativePath
-- **Dialog Compatibility** - обеспечена совместимость с различными браузерами
-- **Asset Display** - исправлено отображение ассетов без изображений
-- **Path Truncation** - убрано обрезание путей, показывается полное имя папки
+- **Syntax Errors** - РёСЃРїСЂР°РІР»РµРЅС‹ РІСЃРµ СЃРёРЅС‚Р°РєСЃРёС‡РµСЃРєРёРµ РѕС€РёР±РєРё СЃ async/await
+- **File Object Handling** - РёСЃРїСЂР°РІР»РµРЅР° СЂР°Р±РѕС‚Р° СЃ File РѕР±СЉРµРєС‚Р°РјРё Рё webkitRelativePath
+- **Dialog Compatibility** - РѕР±РµСЃРїРµС‡РµРЅР° СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚СЊ СЃ СЂР°Р·Р»РёС‡РЅС‹РјРё Р±СЂР°СѓР·РµСЂР°РјРё
+- **Asset Display** - РёСЃРїСЂР°РІР»РµРЅРѕ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ Р°СЃСЃРµС‚РѕРІ Р±РµР· РёР·РѕР±СЂР°Р¶РµРЅРёР№
+- **Path Truncation** - СѓР±СЂР°РЅРѕ РѕР±СЂРµР·Р°РЅРёРµ РїСѓС‚РµР№, РїРѕРєР°Р·С‹РІР°РµС‚СЃСЏ РїРѕР»РЅРѕРµ РёРјСЏ РїР°РїРєРё
 
 ### Technical
-- **FolderPickerDialog.js** - новый класс для выбора папок с современными API
-- **UniversalDialog.js** - базовый класс для всех кастомных диалогов
-- **DialogReplacer.js** - утилита для замены браузерных диалогов
-- **AssetImporter.js** - обновлен для работы с новым диалогом выбора папки
-- **LevelEditor.js** - интегрирована система кастомных диалогов
-- **EventHandlers.js** - обновлены обработчики событий для async методов
-- **Toolbar.js** - обновлен для работы с async методами
-- **SettingsPanel.js** - обновлен для работы с кастомными диалогами
-- **OutlinerPanel.js** - обновлен для работы с кастомными диалогами
-- **LayersPanel.js** - обновлен для работы с кастомными диалогами
+- **FolderPickerDialog.js** - РЅРѕРІС‹Р№ РєР»Р°СЃСЃ РґР»СЏ РІС‹Р±РѕСЂР° РїР°РїРѕРє СЃ СЃРѕРІСЂРµРјРµРЅРЅС‹РјРё API
+- **UniversalDialog.js** - Р±Р°Р·РѕРІС‹Р№ РєР»Р°СЃСЃ РґР»СЏ РІСЃРµС… РєР°СЃС‚РѕРјРЅС‹С… РґРёР°Р»РѕРіРѕРІ
+- **DialogReplacer.js** - СѓС‚РёР»РёС‚Р° РґР»СЏ Р·Р°РјРµРЅС‹ Р±СЂР°СѓР·РµСЂРЅС‹С… РґРёР°Р»РѕРіРѕРІ
+- **AssetImporter.js** - РѕР±РЅРѕРІР»РµРЅ РґР»СЏ СЂР°Р±РѕС‚С‹ СЃ РЅРѕРІС‹Рј РґРёР°Р»РѕРіРѕРј РІС‹Р±РѕСЂР° РїР°РїРєРё
+- **LevelEditor.js** - РёРЅС‚РµРіСЂРёСЂРѕРІР°РЅР° СЃРёСЃС‚РµРјР° РєР°СЃС‚РѕРјРЅС‹С… РґРёР°Р»РѕРіРѕРІ
+- **EventHandlers.js** - РѕР±РЅРѕРІР»РµРЅС‹ РѕР±СЂР°Р±РѕС‚С‡РёРєРё СЃРѕР±С‹С‚РёР№ РґР»СЏ async РјРµС‚РѕРґРѕРІ
+- **Toolbar.js** - РѕР±РЅРѕРІР»РµРЅ РґР»СЏ СЂР°Р±РѕС‚С‹ СЃ async РјРµС‚РѕРґР°РјРё
+- **SettingsPanel.js** - РѕР±РЅРѕРІР»РµРЅ РґР»СЏ СЂР°Р±РѕС‚С‹ СЃ РєР°СЃС‚РѕРјРЅС‹РјРё РґРёР°Р»РѕРіР°РјРё
+- **OutlinerPanel.js** - РѕР±РЅРѕРІР»РµРЅ РґР»СЏ СЂР°Р±РѕС‚С‹ СЃ РєР°СЃС‚РѕРјРЅС‹РјРё РґРёР°Р»РѕРіР°РјРё
+- **LayersPanel.js** - РѕР±РЅРѕРІР»РµРЅ РґР»СЏ СЂР°Р±РѕС‚С‹ СЃ РєР°СЃС‚РѕРјРЅС‹РјРё РґРёР°Р»РѕРіР°РјРё
 
 ### Removed
-- **Browser Native Dialogs** - полностью убраны браузерные alert, confirm, prompt
-- **WebkitDirectory Fallback** - убран fallback на webkitdirectory (вызывал двойные диалоги)
-- **File Preview Dialog** - убран промежуточный диалог предварительного просмотра
-- **Path Truncation Logic** - убрана логика обрезания путей
+- **Browser Native Dialogs** - РїРѕР»РЅРѕСЃС‚СЊСЋ СѓР±СЂР°РЅС‹ Р±СЂР°СѓР·РµСЂРЅС‹Рµ alert, confirm, prompt
+- **WebkitDirectory Fallback** - СѓР±СЂР°РЅ fallback РЅР° webkitdirectory (РІС‹Р·С‹РІР°Р» РґРІРѕР№РЅС‹Рµ РґРёР°Р»РѕРіРё)
+- **File Preview Dialog** - СѓР±СЂР°РЅ РїСЂРѕРјРµР¶СѓС‚РѕС‡РЅС‹Р№ РґРёР°Р»РѕРі РїСЂРµРґРІР°СЂРёС‚РµР»СЊРЅРѕРіРѕ РїСЂРѕСЃРјРѕС‚СЂР°
+- **Path Truncation Logic** - СѓР±СЂР°РЅР° Р»РѕРіРёРєР° РѕР±СЂРµР·Р°РЅРёСЏ РїСѓС‚РµР№
 
 ## [3.30.2] - 2025-01-29
 
 ### Added
-- **Asset Import System** - новая система импорта внешних ассетов в редактор
-- **External Asset Support** - поддержка импорта ассетов из внешних папок
-- **Dynamic Asset Categories** - динамическое создание категорий ассетов на основе структуры папок
-- **AssetImporter Utility** - новая утилита для импорта и управления внешними ассетами
-- **Folder Structure Analysis** - автоматический анализ структуры папок для определения категорий
+- **Asset Import System** - РЅРѕРІР°СЏ СЃРёСЃС‚РµРјР° РёРјРїРѕСЂС‚Р° РІРЅРµС€РЅРёС… Р°СЃСЃРµС‚РѕРІ РІ СЂРµРґР°РєС‚РѕСЂ
+- **External Asset Support** - РїРѕРґРґРµСЂР¶РєР° РёРјРїРѕСЂС‚Р° Р°СЃСЃРµС‚РѕРІ РёР· РІРЅРµС€РЅРёС… РїР°РїРѕРє
+- **Dynamic Asset Categories** - РґРёРЅР°РјРёС‡РµСЃРєРѕРµ СЃРѕР·РґР°РЅРёРµ РєР°С‚РµРіРѕСЂРёР№ Р°СЃСЃРµС‚РѕРІ РЅР° РѕСЃРЅРѕРІРµ СЃС‚СЂСѓРєС‚СѓСЂС‹ РїР°РїРѕРє
+- **AssetImporter Utility** - РЅРѕРІР°СЏ СѓС‚РёР»РёС‚Р° РґР»СЏ РёРјРїРѕСЂС‚Р° Рё СѓРїСЂР°РІР»РµРЅРёСЏ РІРЅРµС€РЅРёРјРё Р°СЃСЃРµС‚Р°РјРё
+- **Folder Structure Analysis** - Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРёР№ Р°РЅР°Р»РёР· СЃС‚СЂСѓРєС‚СѓСЂС‹ РїР°РїРѕРє РґР»СЏ РѕРїСЂРµРґРµР»РµРЅРёСЏ РєР°С‚РµРіРѕСЂРёР№
 
 ### Changed
-- **Menu Command** - заменена команда "Settings - Assets Path..." на "Import Assets..."
-- **Asset Panel Tabs** - табы создаются динамически на основе импортированных категорий
-- **AssetManager Integration** - интеграция с StateManager для синхронизации категорий
-- **Asset Categories** - категории ассетов теперь обновляются в реальном времени
+- **Menu Command** - Р·Р°РјРµРЅРµРЅР° РєРѕРјР°РЅРґР° "Settings - Assets Path..." РЅР° "Import Assets..."
+- **Asset Panel Tabs** - С‚Р°Р±С‹ СЃРѕР·РґР°СЋС‚СЃСЏ РґРёРЅР°РјРёС‡РµСЃРєРё РЅР° РѕСЃРЅРѕРІРµ РёРјРїРѕСЂС‚РёСЂРѕРІР°РЅРЅС‹С… РєР°С‚РµРіРѕСЂРёР№
+- **AssetManager Integration** - РёРЅС‚РµРіСЂР°С†РёСЏ СЃ StateManager РґР»СЏ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё РєР°С‚РµРіРѕСЂРёР№
+- **Asset Categories** - РєР°С‚РµРіРѕСЂРёРё Р°СЃСЃРµС‚РѕРІ С‚РµРїРµСЂСЊ РѕР±РЅРѕРІР»СЏСЋС‚СЃСЏ РІ СЂРµР°Р»СЊРЅРѕРј РІСЂРµРјРµРЅРё
 
 ### Technical
-- **AssetImporter.js** - новая утилита с методами импорта, сканирования и управления ассетами
-- **AssetManager.js** - добавлены методы `addExternalAsset()`, `updateStateManagerCategories()`, `clearExternalAssets()`
-- **LevelEditor.js** - добавлен метод `importAssets()` для интеграции с AssetImporter
-- **MenuManager.js** - обновлена команда меню для вызова импорта ассетов
-- **StateManager.js** - добавлено состояние `assetTabOrder` для управления порядком табов
+- **AssetImporter.js** - РЅРѕРІР°СЏ СѓС‚РёР»РёС‚Р° СЃ РјРµС‚РѕРґР°РјРё РёРјРїРѕСЂС‚Р°, СЃРєР°РЅРёСЂРѕРІР°РЅРёСЏ Рё СѓРїСЂР°РІР»РµРЅРёСЏ Р°СЃСЃРµС‚Р°РјРё
+- **AssetManager.js** - РґРѕР±Р°РІР»РµРЅС‹ РјРµС‚РѕРґС‹ `addExternalAsset()`, `updateStateManagerCategories()`, `clearExternalAssets()`
+- **LevelEditor.js** - РґРѕР±Р°РІР»РµРЅ РјРµС‚РѕРґ `importAssets()` РґР»СЏ РёРЅС‚РµРіСЂР°С†РёРё СЃ AssetImporter
+- **MenuManager.js** - РѕР±РЅРѕРІР»РµРЅР° РєРѕРјР°РЅРґР° РјРµРЅСЋ РґР»СЏ РІС‹Р·РѕРІР° РёРјРїРѕСЂС‚Р° Р°СЃСЃРµС‚РѕРІ
+- **StateManager.js** - РґРѕР±Р°РІР»РµРЅРѕ СЃРѕСЃС‚РѕСЏРЅРёРµ `assetTabOrder` РґР»СЏ СѓРїСЂР°РІР»РµРЅРёСЏ РїРѕСЂСЏРґРєРѕРј С‚Р°Р±РѕРІ
 
 ### Improved
-- **Asset Organization** - улучшена организация ассетов с поддержкой внешних источников
-- **User Experience** - упрощен процесс добавления новых ассетов в редактор
-- **Flexibility** - поддержка различных структур папок и категорий ассетов
-- **Integration** - полная интеграция с существующей системой управления ассетами
+- **Asset Organization** - СѓР»СѓС‡С€РµРЅР° РѕСЂРіР°РЅРёР·Р°С†РёСЏ Р°СЃСЃРµС‚РѕРІ СЃ РїРѕРґРґРµСЂР¶РєРѕР№ РІРЅРµС€РЅРёС… РёСЃС‚РѕС‡РЅРёРєРѕРІ
+- **User Experience** - СѓРїСЂРѕС‰РµРЅ РїСЂРѕС†РµСЃСЃ РґРѕР±Р°РІР»РµРЅРёСЏ РЅРѕРІС‹С… Р°СЃСЃРµС‚РѕРІ РІ СЂРµРґР°РєС‚РѕСЂ
+- **Flexibility** - РїРѕРґРґРµСЂР¶РєР° СЂР°Р·Р»РёС‡РЅС‹С… СЃС‚СЂСѓРєС‚СѓСЂ РїР°РїРѕРє Рё РєР°С‚РµРіРѕСЂРёР№ Р°СЃСЃРµС‚РѕРІ
+- **Integration** - РїРѕР»РЅР°СЏ РёРЅС‚РµРіСЂР°С†РёСЏ СЃ СЃСѓС‰РµСЃС‚РІСѓСЋС‰РµР№ СЃРёСЃС‚РµРјРѕР№ СѓРїСЂР°РІР»РµРЅРёСЏ Р°СЃСЃРµС‚Р°РјРё
 
 ## [3.30.1] - 2025-01-29
 
 ### Improved
-- **MenuManager Hover Experience** - улучшена обработка курсора в главном меню
-- **Gap Elimination** - убран промежуток между кнопкой и выпадающим меню
-- **Expanded Hover Area** - расширена область выпадающего меню для перекрытия зазора
-- **Immediate Response** - убрана система задержек, меню реагирует мгновенно
+- **MenuManager Hover Experience** - СѓР»СѓС‡С€РµРЅР° РѕР±СЂР°Р±РѕС‚РєР° РєСѓСЂСЃРѕСЂР° РІ РіР»Р°РІРЅРѕРј РјРµРЅСЋ
+- **Gap Elimination** - СѓР±СЂР°РЅ РїСЂРѕРјРµР¶СѓС‚РѕРє РјРµР¶РґСѓ РєРЅРѕРїРєРѕР№ Рё РІС‹РїР°РґР°СЋС‰РёРј РјРµРЅСЋ
+- **Expanded Hover Area** - СЂР°СЃС€РёСЂРµРЅР° РѕР±Р»Р°СЃС‚СЊ РІС‹РїР°РґР°СЋС‰РµРіРѕ РјРµРЅСЋ РґР»СЏ РїРµСЂРµРєСЂС‹С‚РёСЏ Р·Р°Р·РѕСЂР°
+- **Immediate Response** - СѓР±СЂР°РЅР° СЃРёСЃС‚РµРјР° Р·Р°РґРµСЂР¶РµРє, РјРµРЅСЋ СЂРµР°РіРёСЂСѓРµС‚ РјРіРЅРѕРІРµРЅРЅРѕ
 
 ### Technical
-- **MenuManager.js** - убрана система `closeTimeouts`, упрощена логика событий
-- **CSS Improvements** - изменен `mt-0.5` на `mt-0` и добавлен `paddingTop: '8px'`
-- **Event Handling** - упрощена обработка `mouseenter`/`mouseleave` событий
-- **Performance** - убраны таймеры и сложная логика задержек
+- **MenuManager.js** - СѓР±СЂР°РЅР° СЃРёСЃС‚РµРјР° `closeTimeouts`, СѓРїСЂРѕС‰РµРЅР° Р»РѕРіРёРєР° СЃРѕР±С‹С‚РёР№
+- **CSS Improvements** - РёР·РјРµРЅРµРЅ `mt-0.5` РЅР° `mt-0` Рё РґРѕР±Р°РІР»РµРЅ `paddingTop: '8px'`
+- **Event Handling** - СѓРїСЂРѕС‰РµРЅР° РѕР±СЂР°Р±РѕС‚РєР° `mouseenter`/`mouseleave` СЃРѕР±С‹С‚РёР№
+- **Performance** - СѓР±СЂР°РЅС‹ С‚Р°Р№РјРµСЂС‹ Рё СЃР»РѕР¶РЅР°СЏ Р»РѕРіРёРєР° Р·Р°РґРµСЂР¶РµРє
 
 ## [3.30.0] - 2025-01-29
 
 ### Added
-- **ValidationUtils v2.0** - StateManager-based система валидации с кэшированием
-- **Component Readiness Tracking** - централизованное отслеживание готовности компонентов
-- **Validation Caching** - кэширование результатов валидации с TTL
-- **Enhanced StateManager** - добавлены методы для управления состоянием валидации
+- **ValidationUtils v2.0** - StateManager-based СЃРёСЃС‚РµРјР° РІР°Р»РёРґР°С†РёРё СЃ РєСЌС€РёСЂРѕРІР°РЅРёРµРј
+- **Component Readiness Tracking** - С†РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅРѕРµ РѕС‚СЃР»РµР¶РёРІР°РЅРёРµ РіРѕС‚РѕРІРЅРѕСЃС‚Рё РєРѕРјРїРѕРЅРµРЅС‚РѕРІ
+- **Validation Caching** - РєСЌС€РёСЂРѕРІР°РЅРёРµ СЂРµР·СѓР»СЊС‚Р°С‚РѕРІ РІР°Р»РёРґР°С†РёРё СЃ TTL
+- **Enhanced StateManager** - РґРѕР±Р°РІР»РµРЅС‹ РјРµС‚РѕРґС‹ РґР»СЏ СѓРїСЂР°РІР»РµРЅРёСЏ СЃРѕСЃС‚РѕСЏРЅРёРµРј РІР°Р»РёРґР°С†РёРё
 
 ### Technical
-- **StateManager.js** - добавлено состояние `validation` с отслеживанием компонентов и кэшем
-- **ValidationUtils.js v2.0** - полная переработка с использованием StateManager
-- **SettingsSyncManager.js** - обновлен для использования новой системы валидации
-- **Logger Integration** - исправлены все вызовы Logger для корректной работы
+- **StateManager.js** - РґРѕР±Р°РІР»РµРЅРѕ СЃРѕСЃС‚РѕСЏРЅРёРµ `validation` СЃ РѕС‚СЃР»РµР¶РёРІР°РЅРёРµРј РєРѕРјРїРѕРЅРµРЅС‚РѕРІ Рё РєСЌС€РµРј
+- **ValidationUtils.js v2.0** - РїРѕР»РЅР°СЏ РїРµСЂРµСЂР°Р±РѕС‚РєР° СЃ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµРј StateManager
+- **SettingsSyncManager.js** - РѕР±РЅРѕРІР»РµРЅ РґР»СЏ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ РЅРѕРІРѕР№ СЃРёСЃС‚РµРјС‹ РІР°Р»РёРґР°С†РёРё
+- **Logger Integration** - РёСЃРїСЂР°РІР»РµРЅС‹ РІСЃРµ РІС‹Р·РѕРІС‹ Logger РґР»СЏ РєРѕСЂСЂРµРєС‚РЅРѕР№ СЂР°Р±РѕС‚С‹
 
 ### Improved
-- **Performance** - кэширование результатов валидации повышает производительность
-- **Reliability** - централизованное отслеживание состояния компонентов
-- **Consistency** - единый подход к fallback логике через StateManager
-- **Debugging** - улучшенное логирование через Logger API
+- **Performance** - РєСЌС€РёСЂРѕРІР°РЅРёРµ СЂРµР·СѓР»СЊС‚Р°С‚РѕРІ РІР°Р»РёРґР°С†РёРё РїРѕРІС‹С€Р°РµС‚ РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ
+- **Reliability** - С†РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅРѕРµ РѕС‚СЃР»РµР¶РёРІР°РЅРёРµ СЃРѕСЃС‚РѕСЏРЅРёСЏ РєРѕРјРїРѕРЅРµРЅС‚РѕРІ
+- **Consistency** - РµРґРёРЅС‹Р№ РїРѕРґС…РѕРґ Рє fallback Р»РѕРіРёРєРµ С‡РµСЂРµР· StateManager
+- **Debugging** - СѓР»СѓС‡С€РµРЅРЅРѕРµ Р»РѕРіРёСЂРѕРІР°РЅРёРµ С‡РµСЂРµР· Logger API
 
 ## [3.29.0] - 2025-01-29
 
 ### Added
-- **ValidationUtils** - новая утилита для централизованной валидации и проверок
-- **Code Refactoring** - устранение дублированного кода через ValidationUtils
-- **Enhanced Error Handling** - улучшенная обработка ошибок с консистентным логированием
-- **Fallback Mechanisms** - автоматический fallback на window.editor при недоступности levelEditor
+- **ValidationUtils** - РЅРѕРІР°СЏ СѓС‚РёР»РёС‚Р° РґР»СЏ С†РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅРѕР№ РІР°Р»РёРґР°С†РёРё Рё РїСЂРѕРІРµСЂРѕРє
+- **Code Refactoring** - СѓСЃС‚СЂР°РЅРµРЅРёРµ РґСѓР±Р»РёСЂРѕРІР°РЅРЅРѕРіРѕ РєРѕРґР° С‡РµСЂРµР· ValidationUtils
+- **Enhanced Error Handling** - СѓР»СѓС‡С€РµРЅРЅР°СЏ РѕР±СЂР°Р±РѕС‚РєР° РѕС€РёР±РѕРє СЃ РєРѕРЅСЃРёСЃС‚РµРЅС‚РЅС‹Рј Р»РѕРіРёСЂРѕРІР°РЅРёРµРј
+- **Fallback Mechanisms** - Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРёР№ fallback РЅР° window.editor РїСЂРё РЅРµРґРѕСЃС‚СѓРїРЅРѕСЃС‚Рё levelEditor
 
 ### Technical
-- **ValidationUtils.js** - новая утилита с методами валидации, проверки компонентов и fallback логикой
-- **SettingsSyncManager.js** - рефакторинг всех методов для использования ValidationUtils
-- **SettingsPanel.js** - рефакторинг методов валидации через ValidationUtils
-- **Code Deduplication** - устранение 200+ строк дублированного кода проверок
+- **ValidationUtils.js** - РЅРѕРІР°СЏ СѓС‚РёР»РёС‚Р° СЃ РјРµС‚РѕРґР°РјРё РІР°Р»РёРґР°С†РёРё, РїСЂРѕРІРµСЂРєРё РєРѕРјРїРѕРЅРµРЅС‚РѕРІ Рё fallback Р»РѕРіРёРєРѕР№
+- **SettingsSyncManager.js** - СЂРµС„Р°РєС‚РѕСЂРёРЅРі РІСЃРµС… РјРµС‚РѕРґРѕРІ РґР»СЏ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёСЏ ValidationUtils
+- **SettingsPanel.js** - СЂРµС„Р°РєС‚РѕСЂРёРЅРі РјРµС‚РѕРґРѕРІ РІР°Р»РёРґР°С†РёРё С‡РµСЂРµР· ValidationUtils
+- **Code Deduplication** - СѓСЃС‚СЂР°РЅРµРЅРёРµ 200+ СЃС‚СЂРѕРє РґСѓР±Р»РёСЂРѕРІР°РЅРЅРѕРіРѕ РєРѕРґР° РїСЂРѕРІРµСЂРѕРє
 
 ## [3.28.0] - 2025-01-29
 
 ### Added
-- **Menu Hover Mode** - добавлен режим автоматического открытия меню при наведении курсора после первого клика
-- **Smart Hover Reset** - автоматическое отключение hover-режима при выходе курсора за пределы контейнера меню
-- **Interactive Font Scaling** - интерактивное изменение размера шрифта при движении слайдера Font Size
-- **Spacing Control Enhancement** - улучшенное управление отступами с минимальными значениями для всех UI элементов
+- **Menu Hover Mode** - РґРѕР±Р°РІР»РµРЅ СЂРµР¶РёРј Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРіРѕ РѕС‚РєСЂС‹С‚РёСЏ РјРµРЅСЋ РїСЂРё РЅР°РІРµРґРµРЅРёРё РєСѓСЂСЃРѕСЂР° РїРѕСЃР»Рµ РїРµСЂРІРѕРіРѕ РєР»РёРєР°
+- **Smart Hover Reset** - Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ РѕС‚РєР»СЋС‡РµРЅРёРµ hover-СЂРµР¶РёРјР° РїСЂРё РІС‹С…РѕРґРµ РєСѓСЂСЃРѕСЂР° Р·Р° РїСЂРµРґРµР»С‹ РєРѕРЅС‚РµР№РЅРµСЂР° РјРµРЅСЋ
+- **Interactive Font Scaling** - РёРЅС‚РµСЂР°РєС‚РёРІРЅРѕРµ РёР·РјРµРЅРµРЅРёРµ СЂР°Р·РјРµСЂР° С€СЂРёС„С‚Р° РїСЂРё РґРІРёР¶РµРЅРёРё СЃР»Р°Р№РґРµСЂР° Font Size
+- **Spacing Control Enhancement** - СѓР»СѓС‡С€РµРЅРЅРѕРµ СѓРїСЂР°РІР»РµРЅРёРµ РѕС‚СЃС‚СѓРїР°РјРё СЃ РјРёРЅРёРјР°Р»СЊРЅС‹РјРё Р·РЅР°С‡РµРЅРёСЏРјРё РґР»СЏ РІСЃРµС… UI СЌР»РµРјРµРЅС‚РѕРІ
 
 ### Fixed
-- **Settings Reset Flow** - исправлен поток сброса настроек: ConfigManager → StateManager → UI → сохранение
-- **Grid Settings Integration** - перенесен параметр "Show Grid" в секцию "Grid & Snapping" для лучшей организации
-- **State Synchronization** - устранены конфликты между `view.grid` и `canvas.showGrid`, установлен единый источник истины
-- **AutoSave Configuration** - исправлены настройки автосохранения: отключено по умолчанию, интервал в минутах
-- **Asset Panel Spacing** - добавлены горизонтальные отступы для табов панели ассетов, унифицированы с правой панелью
-- **Ctrl+Scroll Prevention** - отключен скролл контента при Ctrl+scroll в панели ассетов (только изменение размера элементов)
+- **Settings Reset Flow** - РёСЃРїСЂР°РІР»РµРЅ РїРѕС‚РѕРє СЃР±СЂРѕСЃР° РЅР°СЃС‚СЂРѕРµРє: ConfigManager в†’ StateManager в†’ UI в†’ СЃРѕС…СЂР°РЅРµРЅРёРµ
+- **Grid Settings Integration** - РїРµСЂРµРЅРµСЃРµРЅ РїР°СЂР°РјРµС‚СЂ "Show Grid" РІ СЃРµРєС†РёСЋ "Grid & Snapping" РґР»СЏ Р»СѓС‡С€РµР№ РѕСЂРіР°РЅРёР·Р°С†РёРё
+- **State Synchronization** - СѓСЃС‚СЂР°РЅРµРЅС‹ РєРѕРЅС„Р»РёРєС‚С‹ РјРµР¶РґСѓ `view.grid` Рё `canvas.showGrid`, СѓСЃС‚Р°РЅРѕРІР»РµРЅ РµРґРёРЅС‹Р№ РёСЃС‚РѕС‡РЅРёРє РёСЃС‚РёРЅС‹
+- **AutoSave Configuration** - РёСЃРїСЂР°РІР»РµРЅС‹ РЅР°СЃС‚СЂРѕР№РєРё Р°РІС‚РѕСЃРѕС…СЂР°РЅРµРЅРёСЏ: РѕС‚РєР»СЋС‡РµРЅРѕ РїРѕ СѓРјРѕР»С‡Р°РЅРёСЋ, РёРЅС‚РµСЂРІР°Р» РІ РјРёРЅСѓС‚Р°С…
+- **Asset Panel Spacing** - РґРѕР±Р°РІР»РµРЅС‹ РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅС‹Рµ РѕС‚СЃС‚СѓРїС‹ РґР»СЏ С‚Р°Р±РѕРІ РїР°РЅРµР»Рё Р°СЃСЃРµС‚РѕРІ, СѓРЅРёС„РёС†РёСЂРѕРІР°РЅС‹ СЃ РїСЂР°РІРѕР№ РїР°РЅРµР»СЊСЋ
+- **Ctrl+Scroll Prevention** - РѕС‚РєР»СЋС‡РµРЅ СЃРєСЂРѕР»Р» РєРѕРЅС‚РµРЅС‚Р° РїСЂРё Ctrl+scroll РІ РїР°РЅРµР»Рё Р°СЃСЃРµС‚РѕРІ (С‚РѕР»СЊРєРѕ РёР·РјРµРЅРµРЅРёРµ СЂР°Р·РјРµСЂР° СЌР»РµРјРµРЅС‚РѕРІ)
 
 ### Technical
-- **MenuManager.js** - добавлен `hoverModeEnabled` флаг и `setupMenuContainerHoverReset()` для управления hover-режимом
-- **SettingsSyncManager.js** - улучшена синхронизация между UI, ConfigManager и StateManager с защитой от бесконечных циклов
-- **SettingsPanel.js** - исправлен порядок операций в `resetToDefaults()` для корректного сброса настроек
-- **GridSettings.js** - перенесен "Show Grid" из общих настроек в секцию грида
-- **CSS Custom Properties** - добавлены `--font-scale` и `--spacing-scale` для динамического масштабирования UI
-- **State Management** - централизовано управление состоянием через StateManager как единый источник истины
+- **MenuManager.js** - РґРѕР±Р°РІР»РµРЅ `hoverModeEnabled` С„Р»Р°Рі Рё `setupMenuContainerHoverReset()` РґР»СЏ СѓРїСЂР°РІР»РµРЅРёСЏ hover-СЂРµР¶РёРјРѕРј
+- **SettingsSyncManager.js** - СѓР»СѓС‡С€РµРЅР° СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ РјРµР¶РґСѓ UI, ConfigManager Рё StateManager СЃ Р·Р°С‰РёС‚РѕР№ РѕС‚ Р±РµСЃРєРѕРЅРµС‡РЅС‹С… С†РёРєР»РѕРІ
+- **SettingsPanel.js** - РёСЃРїСЂР°РІР»РµРЅ РїРѕСЂСЏРґРѕРє РѕРїРµСЂР°С†РёР№ РІ `resetToDefaults()` РґР»СЏ РєРѕСЂСЂРµРєС‚РЅРѕРіРѕ СЃР±СЂРѕСЃР° РЅР°СЃС‚СЂРѕРµРє
+- **GridSettings.js** - РїРµСЂРµРЅРµСЃРµРЅ "Show Grid" РёР· РѕР±С‰РёС… РЅР°СЃС‚СЂРѕРµРє РІ СЃРµРєС†РёСЋ РіСЂРёРґР°
+- **CSS Custom Properties** - РґРѕР±Р°РІР»РµРЅС‹ `--font-scale` Рё `--spacing-scale` РґР»СЏ РґРёРЅР°РјРёС‡РµСЃРєРѕРіРѕ РјР°СЃС€С‚Р°Р±РёСЂРѕРІР°РЅРёСЏ UI
+- **State Management** - С†РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРѕ СѓРїСЂР°РІР»РµРЅРёРµ СЃРѕСЃС‚РѕСЏРЅРёРµРј С‡РµСЂРµР· StateManager РєР°Рє РµРґРёРЅС‹Р№ РёСЃС‚РѕС‡РЅРёРє РёСЃС‚РёРЅС‹
 
 ## [3.27.1] - 2025-01-29
 
 ### Fixed
-- **Settings Initialization** - исправлена проблема с отображением autoSaveInterval при загрузке окна настроек (показывало 300000 вместо 5 минут)
-- **State Synchronization** - добавлен вызов syncFromConfigToState() в конструктор SettingsPanel для корректной инициализации
-- **Configuration Flow** - исправлен поток инициализации, теперь StateManager правильно синхронизируется с ConfigManager при запуске
+- **Settings Initialization** - РёСЃРїСЂР°РІР»РµРЅР° РїСЂРѕР±Р»РµРјР° СЃ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµРј autoSaveInterval РїСЂРё Р·Р°РіСЂСѓР·РєРµ РѕРєРЅР° РЅР°СЃС‚СЂРѕРµРє (РїРѕРєР°Р·С‹РІР°Р»Рѕ 300000 РІРјРµСЃС‚Рѕ 5 РјРёРЅСѓС‚)
+- **State Synchronization** - РґРѕР±Р°РІР»РµРЅ РІС‹Р·РѕРІ syncFromConfigToState() РІ РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ SettingsPanel РґР»СЏ РєРѕСЂСЂРµРєС‚РЅРѕР№ РёРЅРёС†РёР°Р»РёР·Р°С†РёРё
+- **Configuration Flow** - РёСЃРїСЂР°РІР»РµРЅ РїРѕС‚РѕРє РёРЅРёС†РёР°Р»РёР·Р°С†РёРё, С‚РµРїРµСЂСЊ StateManager РїСЂР°РІРёР»СЊРЅРѕ СЃРёРЅС…СЂРѕРЅРёР·РёСЂСѓРµС‚СЃСЏ СЃ ConfigManager РїСЂРё Р·Р°РїСѓСЃРєРµ
 
 ### Technical
-- **SettingsPanel.js** - добавлен вызов syncFromConfigToState() в конструктор для правильной инициализации
-- **State Management** - обеспечена корректная синхронизация StateManager с ConfigManager при создании SettingsPanel
-- **Configuration Consistency** - устранено расхождение между загрузкой окна (300000) и сбросом (5) значений
+- **SettingsPanel.js** - РґРѕР±Р°РІР»РµРЅ РІС‹Р·РѕРІ syncFromConfigToState() РІ РєРѕРЅСЃС‚СЂСѓРєС‚РѕСЂ РґР»СЏ РїСЂР°РІРёР»СЊРЅРѕР№ РёРЅРёС†РёР°Р»РёР·Р°С†РёРё
+- **State Management** - РѕР±РµСЃРїРµС‡РµРЅР° РєРѕСЂСЂРµРєС‚РЅР°СЏ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ StateManager СЃ ConfigManager РїСЂРё СЃРѕР·РґР°РЅРёРё SettingsPanel
+- **Configuration Consistency** - СѓСЃС‚СЂР°РЅРµРЅРѕ СЂР°СЃС…РѕР¶РґРµРЅРёРµ РјРµР¶РґСѓ Р·Р°РіСЂСѓР·РєРѕР№ РѕРєРЅР° (300000) Рё СЃР±СЂРѕСЃРѕРј (5) Р·РЅР°С‡РµРЅРёР№
 
 ## [3.27.0] - 2025-01-29
 
 ### Fixed
-- **Asset Panel Selection** - исправлена подсветка выбранных элементов в панели ассетов во всех режимах (Grid, List, Details)
-- **CSS Architecture Compliance** - устранены все inline-стили в AssetPanel, теперь используются только CSS-классы
-- **Selection Visual Consistency** - унифицированы стили селекции для всех режимов отображения ассетов
-- **Hover Effects Integration** - исправлена работа HoverEffects с CSS-классами, сохранение селекции при уводе курсора
-- **Empty Space Click** - корректный сброс селекции при клике в пустое место во всех режимах
+- **Asset Panel Selection** - РёСЃРїСЂР°РІР»РµРЅР° РїРѕРґСЃРІРµС‚РєР° РІС‹Р±СЂР°РЅРЅС‹С… СЌР»РµРјРµРЅС‚РѕРІ РІ РїР°РЅРµР»Рё Р°СЃСЃРµС‚РѕРІ РІРѕ РІСЃРµС… СЂРµР¶РёРјР°С… (Grid, List, Details)
+- **CSS Architecture Compliance** - СѓСЃС‚СЂР°РЅРµРЅС‹ РІСЃРµ inline-СЃС‚РёР»Рё РІ AssetPanel, С‚РµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓСЋС‚СЃСЏ С‚РѕР»СЊРєРѕ CSS-РєР»Р°СЃСЃС‹
+- **Selection Visual Consistency** - СѓРЅРёС„РёС†РёСЂРѕРІР°РЅС‹ СЃС‚РёР»Рё СЃРµР»РµРєС†РёРё РґР»СЏ РІСЃРµС… СЂРµР¶РёРјРѕРІ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ Р°СЃСЃРµС‚РѕРІ
+- **Hover Effects Integration** - РёСЃРїСЂР°РІР»РµРЅР° СЂР°Р±РѕС‚Р° HoverEffects СЃ CSS-РєР»Р°СЃСЃР°РјРё, СЃРѕС…СЂР°РЅРµРЅРёРµ СЃРµР»РµРєС†РёРё РїСЂРё СѓРІРѕРґРµ РєСѓСЂСЃРѕСЂР°
+- **Empty Space Click** - РєРѕСЂСЂРµРєС‚РЅС‹Р№ СЃР±СЂРѕСЃ СЃРµР»РµРєС†РёРё РїСЂРё РєР»РёРєРµ РІ РїСѓСЃС‚РѕРµ РјРµСЃС‚Рѕ РІРѕ РІСЃРµС… СЂРµР¶РёРјР°С…
 
 ### Technical
-- **CSS Classes Unification** - добавлены унифицированные CSS-классы `.asset-list-item.selected` и `.asset-details-row.selected`
-- **Inline Styles Removal** - удалены все inline-стили из `updateSelectionVisuals()` и методов создания элементов
-- **HoverEffects Preservation** - исправлен `removeHoverEffect()` для сохранения классов селекции при восстановлении стилей
-- **Selection State Management** - улучшена логика сброса селекции при клике в пустое место
+- **CSS Classes Unification** - РґРѕР±Р°РІР»РµРЅС‹ СѓРЅРёС„РёС†РёСЂРѕРІР°РЅРЅС‹Рµ CSS-РєР»Р°СЃСЃС‹ `.asset-list-item.selected` Рё `.asset-details-row.selected`
+- **Inline Styles Removal** - СѓРґР°Р»РµРЅС‹ РІСЃРµ inline-СЃС‚РёР»Рё РёР· `updateSelectionVisuals()` Рё РјРµС‚РѕРґРѕРІ СЃРѕР·РґР°РЅРёСЏ СЌР»РµРјРµРЅС‚РѕРІ
+- **HoverEffects Preservation** - РёСЃРїСЂР°РІР»РµРЅ `removeHoverEffect()` РґР»СЏ СЃРѕС…СЂР°РЅРµРЅРёСЏ РєР»Р°СЃСЃРѕРІ СЃРµР»РµРєС†РёРё РїСЂРё РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРё СЃС‚РёР»РµР№
+- **Selection State Management** - СѓР»СѓС‡С€РµРЅР° Р»РѕРіРёРєР° СЃР±СЂРѕСЃР° СЃРµР»РµРєС†РёРё РїСЂРё РєР»РёРєРµ РІ РїСѓСЃС‚РѕРµ РјРµСЃС‚Рѕ
 
 ## [3.26.1] - 2025-01-29
 
 ### Fixed
-- **Color Conversion Refactoring** - устранен inline код конвертации цветов, теперь используется централизованная утилита ColorUtils
-- **BaseGridRenderer** - заменен дублированный метод hexToRgba на использование ColorUtils.toRgba
-- **GridSettings** - упрощена логика применения opacity к цветам грида через ColorUtils
-- **LevelEditor** - заменены inline конвертации hex→rgba на использование ColorUtils
+- **Color Conversion Refactoring** - СѓСЃС‚СЂР°РЅРµРЅ inline РєРѕРґ РєРѕРЅРІРµСЂС‚Р°С†РёРё С†РІРµС‚РѕРІ, С‚РµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ С†РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅР°СЏ СѓС‚РёР»РёС‚Р° ColorUtils
+- **BaseGridRenderer** - Р·Р°РјРµРЅРµРЅ РґСѓР±Р»РёСЂРѕРІР°РЅРЅС‹Р№ РјРµС‚РѕРґ hexToRgba РЅР° РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ ColorUtils.toRgba
+- **GridSettings** - СѓРїСЂРѕС‰РµРЅР° Р»РѕРіРёРєР° РїСЂРёРјРµРЅРµРЅРёСЏ opacity Рє С†РІРµС‚Р°Рј РіСЂРёРґР° С‡РµСЂРµР· ColorUtils
+- **LevelEditor** - Р·Р°РјРµРЅРµРЅС‹ inline РєРѕРЅРІРµСЂС‚Р°С†РёРё hexв†’rgba РЅР° РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ ColorUtils
 
 ### Technical
-- **ColorUtils Integration** - все компоненты теперь используют единую утилиту ColorUtils для конвертации цветов
-- **Code Deduplication** - удалены дублированные методы конвертации цветов в разных модулях
+- **ColorUtils Integration** - РІСЃРµ РєРѕРјРїРѕРЅРµРЅС‚С‹ С‚РµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓСЋС‚ РµРґРёРЅСѓСЋ СѓС‚РёР»РёС‚Сѓ ColorUtils РґР»СЏ РєРѕРЅРІРµСЂС‚Р°С†РёРё С†РІРµС‚РѕРІ
+- **Code Deduplication** - СѓРґР°Р»РµРЅС‹ РґСѓР±Р»РёСЂРѕРІР°РЅРЅС‹Рµ РјРµС‚РѕРґС‹ РєРѕРЅРІРµСЂС‚Р°С†РёРё С†РІРµС‚РѕРІ РІ СЂР°Р·РЅС‹С… РјРѕРґСѓР»СЏС…
 
 ## [3.26.0] - 2025-01-29
 
 ### Added
-- **Hotkeys Settings Section** - добавлена новая секция "Hotkeys" в окне настроек с полным списком всех горячих клавиш
-- **Hotkey Customization** - возможность переназначения горячих клавиш через интерфейс настроек
-- **Shortcuts Configuration** - вынесены все горячие клавиши в отдельный файл `config/defaults/shortcuts.json`
-- **Toolbar Configuration** - добавлен файл `config/defaults/toolbar.json` для настроек тулбара
-- **Asset Panel Persistence** - сохранение размера элементов и режима отображения (Grid/List/Details) панели assets
-- **Escape Key Support** - добавлена отмена изменений в окне настроек клавишей Esc
+- **Hotkeys Settings Section** - РґРѕР±Р°РІР»РµРЅР° РЅРѕРІР°СЏ СЃРµРєС†РёСЏ "Hotkeys" РІ РѕРєРЅРµ РЅР°СЃС‚СЂРѕРµРє СЃ РїРѕР»РЅС‹Рј СЃРїРёСЃРєРѕРј РІСЃРµС… РіРѕСЂСЏС‡РёС… РєР»Р°РІРёС€
+- **Hotkey Customization** - РІРѕР·РјРѕР¶РЅРѕСЃС‚СЊ РїРµСЂРµРЅР°Р·РЅР°С‡РµРЅРёСЏ РіРѕСЂСЏС‡РёС… РєР»Р°РІРёС€ С‡РµСЂРµР· РёРЅС‚РµСЂС„РµР№СЃ РЅР°СЃС‚СЂРѕРµРє
+- **Shortcuts Configuration** - РІС‹РЅРµСЃРµРЅС‹ РІСЃРµ РіРѕСЂСЏС‡РёРµ РєР»Р°РІРёС€Рё РІ РѕС‚РґРµР»СЊРЅС‹Р№ С„Р°Р№Р» `config/defaults/shortcuts.json`
+- **Toolbar Configuration** - РґРѕР±Р°РІР»РµРЅ С„Р°Р№Р» `config/defaults/toolbar.json` РґР»СЏ РЅР°СЃС‚СЂРѕРµРє С‚СѓР»Р±Р°СЂР°
+- **Asset Panel Persistence** - СЃРѕС…СЂР°РЅРµРЅРёРµ СЂР°Р·РјРµСЂР° СЌР»РµРјРµРЅС‚РѕРІ Рё СЂРµР¶РёРјР° РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ (Grid/List/Details) РїР°РЅРµР»Рё assets
+- **Escape Key Support** - РґРѕР±Р°РІР»РµРЅР° РѕС‚РјРµРЅР° РёР·РјРµРЅРµРЅРёР№ РІ РѕРєРЅРµ РЅР°СЃС‚СЂРѕРµРє РєР»Р°РІРёС€РµР№ Esc
 
 ### Fixed
-- **Settings Synchronization** - исправлена синхронизация настроек между окном settings, тулбаром и основным меню
-- **Snap to Grid Conflicts** - устранены конфликты в системе snap to grid между различными источниками
-- **Settings Save Performance** - изменена система сохранения настроек - теперь сохраняются только при закрытии/перезагрузке страницы, а не при каждом изменении
-- **Asset Panel State** - исправлено сохранение и восстановление состояния панели assets при рестарте
-- **Configuration Architecture** - улучшена архитектура конфигурации с поддержкой новых типов настроек
+- **Settings Synchronization** - РёСЃРїСЂР°РІР»РµРЅР° СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ РЅР°СЃС‚СЂРѕРµРє РјРµР¶РґСѓ РѕРєРЅРѕРј settings, С‚СѓР»Р±Р°СЂРѕРј Рё РѕСЃРЅРѕРІРЅС‹Рј РјРµРЅСЋ
+- **Snap to Grid Conflicts** - СѓСЃС‚СЂР°РЅРµРЅС‹ РєРѕРЅС„Р»РёРєС‚С‹ РІ СЃРёСЃС‚РµРјРµ snap to grid РјРµР¶РґСѓ СЂР°Р·Р»РёС‡РЅС‹РјРё РёСЃС‚РѕС‡РЅРёРєР°РјРё
+- **Settings Save Performance** - РёР·РјРµРЅРµРЅР° СЃРёСЃС‚РµРјР° СЃРѕС…СЂР°РЅРµРЅРёСЏ РЅР°СЃС‚СЂРѕРµРє - С‚РµРїРµСЂСЊ СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ С‚РѕР»СЊРєРѕ РїСЂРё Р·Р°РєСЂС‹С‚РёРё/РїРµСЂРµР·Р°РіСЂСѓР·РєРµ СЃС‚СЂР°РЅРёС†С‹, Р° РЅРµ РїСЂРё РєР°Р¶РґРѕРј РёР·РјРµРЅРµРЅРёРё
+- **Asset Panel State** - РёСЃРїСЂР°РІР»РµРЅРѕ СЃРѕС…СЂР°РЅРµРЅРёРµ Рё РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ СЃРѕСЃС‚РѕСЏРЅРёСЏ РїР°РЅРµР»Рё assets РїСЂРё СЂРµСЃС‚Р°СЂС‚Рµ
+- **Configuration Architecture** - СѓР»СѓС‡С€РµРЅР° Р°СЂС…РёС‚РµРєС‚СѓСЂР° РєРѕРЅС„РёРіСѓСЂР°С†РёРё СЃ РїРѕРґРґРµСЂР¶РєРѕР№ РЅРѕРІС‹С… С‚РёРїРѕРІ РЅР°СЃС‚СЂРѕРµРє
 
 ### Improved
-- **Settings Panel UX** - улучшен пользовательский интерфейс панели настроек
-- **Real-time Sync** - добавлена двусторонняя синхронизация настроек между UI и StateManager
-- **Compact Settings Style** - упрощен и оптимизирован стиль отображения настроек
-- **Configuration Files** - структурированы конфигурационные файлы по назначению
-- **Performance Optimization** - оптимизирована производительность за счет уменьшения операций с localStorage
+- **Settings Panel UX** - СѓР»СѓС‡С€РµРЅ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёР№ РёРЅС‚РµСЂС„РµР№СЃ РїР°РЅРµР»Рё РЅР°СЃС‚СЂРѕРµРє
+- **Real-time Sync** - РґРѕР±Р°РІР»РµРЅР° РґРІСѓСЃС‚РѕСЂРѕРЅРЅСЏСЏ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ РЅР°СЃС‚СЂРѕРµРє РјРµР¶РґСѓ UI Рё StateManager
+- **Compact Settings Style** - СѓРїСЂРѕС‰РµРЅ Рё РѕРїС‚РёРјРёР·РёСЂРѕРІР°РЅ СЃС‚РёР»СЊ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ РЅР°СЃС‚СЂРѕРµРє
+- **Configuration Files** - СЃС‚СЂСѓРєС‚СѓСЂРёСЂРѕРІР°РЅС‹ РєРѕРЅС„РёРіСѓСЂР°С†РёРѕРЅРЅС‹Рµ С„Р°Р№Р»С‹ РїРѕ РЅР°Р·РЅР°С‡РµРЅРёСЋ
+- **Performance Optimization** - РѕРїС‚РёРјРёР·РёСЂРѕРІР°РЅР° РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ Р·Р° СЃС‡РµС‚ СѓРјРµРЅСЊС€РµРЅРёСЏ РѕРїРµСЂР°С†РёР№ СЃ localStorage
 
 ### Technical
-- **SettingsSyncManager** - создан универсальный менеджер синхронизации настроек
-- **ConfigManager Extensions** - расширена функциональность ConfigManager для поддержки toolbar и shortcuts
-- **UserPreferencesManager** - добавлена поддержка новых типов пользовательских настроек
-- **Settings Panel Architecture** - реорганизована архитектура панели настроек с поддержкой новых секций
-- **Debounced Saving** - реализована отложенная система сохранения настроек
-- **StateManager Integration** - улучшена интеграция с StateManager для мгновенной синхронизации
+- **SettingsSyncManager** - СЃРѕР·РґР°РЅ СѓРЅРёРІРµСЂСЃР°Р»СЊРЅС‹Р№ РјРµРЅРµРґР¶РµСЂ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё РЅР°СЃС‚СЂРѕРµРє
+- **ConfigManager Extensions** - СЂР°СЃС€РёСЂРµРЅР° С„СѓРЅРєС†РёРѕРЅР°Р»СЊРЅРѕСЃС‚СЊ ConfigManager РґР»СЏ РїРѕРґРґРµСЂР¶РєРё toolbar Рё shortcuts
+- **UserPreferencesManager** - РґРѕР±Р°РІР»РµРЅР° РїРѕРґРґРµСЂР¶РєР° РЅРѕРІС‹С… С‚РёРїРѕРІ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёС… РЅР°СЃС‚СЂРѕРµРє
+- **Settings Panel Architecture** - СЂРµРѕСЂРіР°РЅРёР·РѕРІР°РЅР° Р°СЂС…РёС‚РµРєС‚СѓСЂР° РїР°РЅРµР»Рё РЅР°СЃС‚СЂРѕРµРє СЃ РїРѕРґРґРµСЂР¶РєРѕР№ РЅРѕРІС‹С… СЃРµРєС†РёР№
+- **Debounced Saving** - СЂРµР°Р»РёР·РѕРІР°РЅР° РѕС‚Р»РѕР¶РµРЅРЅР°СЏ СЃРёСЃС‚РµРјР° СЃРѕС…СЂР°РЅРµРЅРёСЏ РЅР°СЃС‚СЂРѕРµРє
+- **StateManager Integration** - СѓР»СѓС‡С€РµРЅР° РёРЅС‚РµРіСЂР°С†РёСЏ СЃ StateManager РґР»СЏ РјРіРЅРѕРІРµРЅРЅРѕР№ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёРё
 
 ## [3.25.0] - 2025-01-27
 
 ### Fixed
-- **Console Context Menu Positioning** - исправлено позиционирование контекстного меню консоли после переноса в оверлей
-- **Console Menu Inheritance** - переписан ConsoleContextMenu для наследования от BaseContextMenu
-- **Console State Synchronization** - исправлен рассинхрон состояния консоли при рестарте приложения
-- **Console Height Persistence** - исправлено сохранение размера консоли в пользовательских настройках
-- **Console Resize Functionality** - восстановлена возможность изменения размера консоли
-- **Console Content Display** - исправлена пропажа содержимого консоли после рефакторинга
+- **Console Context Menu Positioning** - РёСЃРїСЂР°РІР»РµРЅРѕ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ РєРѕРЅС‚РµРєСЃС‚РЅРѕРіРѕ РјРµРЅСЋ РєРѕРЅСЃРѕР»Рё РїРѕСЃР»Рµ РїРµСЂРµРЅРѕСЃР° РІ РѕРІРµСЂР»РµР№
+- **Console Menu Inheritance** - РїРµСЂРµРїРёСЃР°РЅ ConsoleContextMenu РґР»СЏ РЅР°СЃР»РµРґРѕРІР°РЅРёСЏ РѕС‚ BaseContextMenu
+- **Console State Synchronization** - РёСЃРїСЂР°РІР»РµРЅ СЂР°СЃСЃРёРЅС…СЂРѕРЅ СЃРѕСЃС‚РѕСЏРЅРёСЏ РєРѕРЅСЃРѕР»Рё РїСЂРё СЂРµСЃС‚Р°СЂС‚Рµ РїСЂРёР»РѕР¶РµРЅРёСЏ
+- **Console Height Persistence** - РёСЃРїСЂР°РІР»РµРЅРѕ СЃРѕС…СЂР°РЅРµРЅРёРµ СЂР°Р·РјРµСЂР° РєРѕРЅСЃРѕР»Рё РІ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёС… РЅР°СЃС‚СЂРѕР№РєР°С…
+- **Console Resize Functionality** - РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅР° РІРѕР·РјРѕР¶РЅРѕСЃС‚СЊ РёР·РјРµРЅРµРЅРёСЏ СЂР°Р·РјРµСЂР° РєРѕРЅСЃРѕР»Рё
+- **Console Content Display** - РёСЃРїСЂР°РІР»РµРЅР° РїСЂРѕРїР°Р¶Р° СЃРѕРґРµСЂР¶РёРјРѕРіРѕ РєРѕРЅСЃРѕР»Рё РїРѕСЃР»Рµ СЂРµС„Р°РєС‚РѕСЂРёРЅРіР°
 
 ### Improved
-- **Console Overlay Integration** - консоль полностью интегрирована как оверлей с правильным позиционированием
-- **Context Menu Architecture** - унифицирована архитектура контекстных меню через наследование от BaseContextMenu
-- **Console Menu Management** - добавлено принудительное удаление контекстного меню при закрытии консоли
-- **Console Positioning** - контекстное меню теперь появляется под курсором и поверх всех элементов
-- **Console Visibility Detection** - улучшена логика определения видимости консоли для показа контекстного меню
+- **Console Overlay Integration** - РєРѕРЅСЃРѕР»СЊ РїРѕР»РЅРѕСЃС‚СЊСЋ РёРЅС‚РµРіСЂРёСЂРѕРІР°РЅР° РєР°Рє РѕРІРµСЂР»РµР№ СЃ РїСЂР°РІРёР»СЊРЅС‹Рј РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµРј
+- **Context Menu Architecture** - СѓРЅРёС„РёС†РёСЂРѕРІР°РЅР° Р°СЂС…РёС‚РµРєС‚СѓСЂР° РєРѕРЅС‚РµРєСЃС‚РЅС‹С… РјРµРЅСЋ С‡РµСЂРµР· РЅР°СЃР»РµРґРѕРІР°РЅРёРµ РѕС‚ BaseContextMenu
+- **Console Menu Management** - РґРѕР±Р°РІР»РµРЅРѕ РїСЂРёРЅСѓРґРёС‚РµР»СЊРЅРѕРµ СѓРґР°Р»РµРЅРёРµ РєРѕРЅС‚РµРєСЃС‚РЅРѕРіРѕ РјРµРЅСЋ РїСЂРё Р·Р°РєСЂС‹С‚РёРё РєРѕРЅСЃРѕР»Рё
+- **Console Positioning** - РєРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ С‚РµРїРµСЂСЊ РїРѕСЏРІР»СЏРµС‚СЃСЏ РїРѕРґ РєСѓСЂСЃРѕСЂРѕРј Рё РїРѕРІРµСЂС… РІСЃРµС… СЌР»РµРјРµРЅС‚РѕРІ
+- **Console Visibility Detection** - СѓР»СѓС‡С€РµРЅР° Р»РѕРіРёРєР° РѕРїСЂРµРґРµР»РµРЅРёСЏ РІРёРґРёРјРѕСЃС‚Рё РєРѕРЅСЃРѕР»Рё РґР»СЏ РїРѕРєР°Р·Р° РєРѕРЅС‚РµРєСЃС‚РЅРѕРіРѕ РјРµРЅСЋ
 
 ### Technical
-- **BaseContextMenu Integration** - ConsoleContextMenu теперь наследуется от BaseContextMenu
-- **Fixed Positioning** - изменено позиционирование контекстных меню с absolute на fixed для оверлеев
-- **Event Handling** - улучшена обработка событий мыши для консоли с исключениями для resize handle
-- **State Management** - синхронизировано состояние логирования между ConsoleContextMenu и основным кодом
+- **BaseContextMenu Integration** - ConsoleContextMenu С‚РµРїРµСЂСЊ РЅР°СЃР»РµРґСѓРµС‚СЃСЏ РѕС‚ BaseContextMenu
+- **Fixed Positioning** - РёР·РјРµРЅРµРЅРѕ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ РєРѕРЅС‚РµРєСЃС‚РЅС‹С… РјРµРЅСЋ СЃ absolute РЅР° fixed РґР»СЏ РѕРІРµСЂР»РµРµРІ
+- **Event Handling** - СѓР»СѓС‡С€РµРЅР° РѕР±СЂР°Р±РѕС‚РєР° СЃРѕР±С‹С‚РёР№ РјС‹С€Рё РґР»СЏ РєРѕРЅСЃРѕР»Рё СЃ РёСЃРєР»СЋС‡РµРЅРёСЏРјРё РґР»СЏ resize handle
+- **State Management** - СЃРёРЅС…СЂРѕРЅРёР·РёСЂРѕРІР°РЅРѕ СЃРѕСЃС‚РѕСЏРЅРёРµ Р»РѕРіРёСЂРѕРІР°РЅРёСЏ РјРµР¶РґСѓ ConsoleContextMenu Рё РѕСЃРЅРѕРІРЅС‹Рј РєРѕРґРѕРј
 
 ## [3.24.0] - 2025-01-27
 
 ### Fixed
-- **CSS Architecture** - полностью реорганизована CSS архитектура с модульной структурой
-- **Inline Styles Cleanup** - убраны все inline стили из HTML и JavaScript файлов
-- **Duplicate Styles** - устранены дублирующиеся CSS стили между файлами
-- **Checkbox Colors** - исправлен цвет чекбоксов в меню фильтров (зеленый → синий)
-- **Grid Settings Styling** - исправлено отображение настроек грида после рефакторинга CSS
-- **Tab Styles Unification** - унифицированы стили табов между AssetPanel и правой панелью
+- **CSS Architecture** - РїРѕР»РЅРѕСЃС‚СЊСЋ СЂРµРѕСЂРіР°РЅРёР·РѕРІР°РЅР° CSS Р°СЂС…РёС‚РµРєС‚СѓСЂР° СЃ РјРѕРґСѓР»СЊРЅРѕР№ СЃС‚СЂСѓРєС‚СѓСЂРѕР№
+- **Inline Styles Cleanup** - СѓР±СЂР°РЅС‹ РІСЃРµ inline СЃС‚РёР»Рё РёР· HTML Рё JavaScript С„Р°Р№Р»РѕРІ
+- **Duplicate Styles** - СѓСЃС‚СЂР°РЅРµРЅС‹ РґСѓР±Р»РёСЂСѓСЋС‰РёРµСЃСЏ CSS СЃС‚РёР»Рё РјРµР¶РґСѓ С„Р°Р№Р»Р°РјРё
+- **Checkbox Colors** - РёСЃРїСЂР°РІР»РµРЅ С†РІРµС‚ С‡РµРєР±РѕРєСЃРѕРІ РІ РјРµРЅСЋ С„РёР»СЊС‚СЂРѕРІ (Р·РµР»РµРЅС‹Р№ в†’ СЃРёРЅРёР№)
+- **Grid Settings Styling** - РёСЃРїСЂР°РІР»РµРЅРѕ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ РЅР°СЃС‚СЂРѕРµРє РіСЂРёРґР° РїРѕСЃР»Рµ СЂРµС„Р°РєС‚РѕСЂРёРЅРіР° CSS
+- **Tab Styles Unification** - СѓРЅРёС„РёС†РёСЂРѕРІР°РЅС‹ СЃС‚РёР»Рё С‚Р°Р±РѕРІ РјРµР¶РґСѓ AssetPanel Рё РїСЂР°РІРѕР№ РїР°РЅРµР»СЊСЋ
 
 ### Improved
-- **Modular CSS** - создана модульная структура CSS файлов в папке `styles/`
-- **Unified Classes** - унифицированы CSS классы для форм и настроек
-- **Hover Effects** - централизована система hover эффектов через HoverEffects utility
-- **Compact Mode** - улучшена поддержка компактного режима для всех компонентов
-- **Performance** - CSS файлы теперь кэшируются браузером
-- **Tab Consistency** - единообразный внешний вид всех табов в приложении
+- **Modular CSS** - СЃРѕР·РґР°РЅР° РјРѕРґСѓР»СЊРЅР°СЏ СЃС‚СЂСѓРєС‚СѓСЂР° CSS С„Р°Р№Р»РѕРІ РІ РїР°РїРєРµ `styles/`
+- **Unified Classes** - СѓРЅРёС„РёС†РёСЂРѕРІР°РЅС‹ CSS РєР»Р°СЃСЃС‹ РґР»СЏ С„РѕСЂРј Рё РЅР°СЃС‚СЂРѕРµРє
+- **Hover Effects** - С†РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅР° СЃРёСЃС‚РµРјР° hover СЌС„С„РµРєС‚РѕРІ С‡РµСЂРµР· HoverEffects utility
+- **Compact Mode** - СѓР»СѓС‡С€РµРЅР° РїРѕРґРґРµСЂР¶РєР° РєРѕРјРїР°РєС‚РЅРѕРіРѕ СЂРµР¶РёРјР° РґР»СЏ РІСЃРµС… РєРѕРјРїРѕРЅРµРЅС‚РѕРІ
+- **Performance** - CSS С„Р°Р№Р»С‹ С‚РµРїРµСЂСЊ РєСЌС€РёСЂСѓСЋС‚СЃСЏ Р±СЂР°СѓР·РµСЂРѕРј
+- **Tab Consistency** - РµРґРёРЅРѕРѕР±СЂР°Р·РЅС‹Р№ РІРЅРµС€РЅРёР№ РІРёРґ РІСЃРµС… С‚Р°Р±РѕРІ РІ РїСЂРёР»РѕР¶РµРЅРёРё
 
 ### Technical
-- **CSS Files Created** - созданы специализированные CSS файлы:
-  - `styles/panels.css` - основные стили панелей
-  - `styles/layers-panel.css` - стили панели слоев
-  - `styles/settings-panel.css` - стили панели настроек
-  - `styles/grid-settings.css` - стили настроек грида
-  - `styles/details-panel.css` - стили панели деталей
-  - `styles/color-chooser.css` - стили выбора цвета
-- **HoverEffects Utility** - создан централизованный класс для hover эффектов
-- **CSS Variables** - добавлены CSS переменные для accent-color и font-scale
-- **Global Styles** - добавлены глобальные стили для чекбоксов, радио кнопок и слайдеров
-- **Unified Tab System** - создана единая система стилей для всех табов (.tab, .tab-right)
+- **CSS Files Created** - СЃРѕР·РґР°РЅС‹ СЃРїРµС†РёР°Р»РёР·РёСЂРѕРІР°РЅРЅС‹Рµ CSS С„Р°Р№Р»С‹:
+  - `styles/panels.css` - РѕСЃРЅРѕРІРЅС‹Рµ СЃС‚РёР»Рё РїР°РЅРµР»РµР№
+  - `styles/layers-panel.css` - СЃС‚РёР»Рё РїР°РЅРµР»Рё СЃР»РѕРµРІ
+  - `styles/settings-panel.css` - СЃС‚РёР»Рё РїР°РЅРµР»Рё РЅР°СЃС‚СЂРѕРµРє
+  - `styles/grid-settings.css` - СЃС‚РёР»Рё РЅР°СЃС‚СЂРѕРµРє РіСЂРёРґР°
+  - `styles/details-panel.css` - СЃС‚РёР»Рё РїР°РЅРµР»Рё РґРµС‚Р°Р»РµР№
+  - `styles/color-chooser.css` - СЃС‚РёР»Рё РІС‹Р±РѕСЂР° С†РІРµС‚Р°
+- **HoverEffects Utility** - СЃРѕР·РґР°РЅ С†РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅС‹Р№ РєР»Р°СЃСЃ РґР»СЏ hover СЌС„С„РµРєС‚РѕРІ
+- **CSS Variables** - РґРѕР±Р°РІР»РµРЅС‹ CSS РїРµСЂРµРјРµРЅРЅС‹Рµ РґР»СЏ accent-color Рё font-scale
+- **Global Styles** - РґРѕР±Р°РІР»РµРЅС‹ РіР»РѕР±Р°Р»СЊРЅС‹Рµ СЃС‚РёР»Рё РґР»СЏ С‡РµРєР±РѕРєСЃРѕРІ, СЂР°РґРёРѕ РєРЅРѕРїРѕРє Рё СЃР»Р°Р№РґРµСЂРѕРІ
+- **Unified Tab System** - СЃРѕР·РґР°РЅР° РµРґРёРЅР°СЏ СЃРёСЃС‚РµРјР° СЃС‚РёР»РµР№ РґР»СЏ РІСЃРµС… С‚Р°Р±РѕРІ (.tab, .tab-right)
 
 ## [3.23.0] - 2025-01-27
 
 ### Fixed
-- **Context Menu Positioning** - исправлено позиционирование контекстных меню в LayersPanel и OutlinerPanel
-- **Panel Boundary Detection** - контекстные меню теперь позиционируются относительно панели, а не внутреннего контейнера
-- **Menu Stability** - позиция меню больше не зависит от количества элементов в панели
+- **Context Menu Positioning** - РёСЃРїСЂР°РІР»РµРЅРѕ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ РєРѕРЅС‚РµРєСЃС‚РЅС‹С… РјРµРЅСЋ РІ LayersPanel Рё OutlinerPanel
+- **Panel Boundary Detection** - РєРѕРЅС‚РµРєСЃС‚РЅС‹Рµ РјРµРЅСЋ С‚РµРїРµСЂСЊ РїРѕР·РёС†РёРѕРЅРёСЂСѓСЋС‚СЃСЏ РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅРѕ РїР°РЅРµР»Рё, Р° РЅРµ РІРЅСѓС‚СЂРµРЅРЅРµРіРѕ РєРѕРЅС‚РµР№РЅРµСЂР°
+- **Menu Stability** - РїРѕР·РёС†РёСЏ РјРµРЅСЋ Р±РѕР»СЊС€Рµ РЅРµ Р·Р°РІРёСЃРёС‚ РѕС‚ РєРѕР»РёС‡РµСЃС‚РІР° СЌР»РµРјРµРЅС‚РѕРІ РІ РїР°РЅРµР»Рё
 
 ### Improved
-- **Unified Separators** - унифицированы стили сепараторов во всех контекстных меню
-- **Disabled States** - недоступные команды теперь отображаются как неактивные вместо скрытия
-- **Menu Positioning Logic** - улучшена логика позиционирования с учетом границ панели
-- **Ultra-Compact Mode** - значительно усилен компактный режим с размером шрифта 12px и минимальными отступами
+- **Unified Separators** - СѓРЅРёС„РёС†РёСЂРѕРІР°РЅС‹ СЃС‚РёР»Рё СЃРµРїР°СЂР°С‚РѕСЂРѕРІ РІРѕ РІСЃРµС… РєРѕРЅС‚РµРєСЃС‚РЅС‹С… РјРµРЅСЋ
+- **Disabled States** - РЅРµРґРѕСЃС‚СѓРїРЅС‹Рµ РєРѕРјР°РЅРґС‹ С‚РµРїРµСЂСЊ РѕС‚РѕР±СЂР°Р¶Р°СЋС‚СЃСЏ РєР°Рє РЅРµР°РєС‚РёРІРЅС‹Рµ РІРјРµСЃС‚Рѕ СЃРєСЂС‹С‚РёСЏ
+- **Menu Positioning Logic** - СѓР»СѓС‡С€РµРЅР° Р»РѕРіРёРєР° РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёСЏ СЃ СѓС‡РµС‚РѕРј РіСЂР°РЅРёС† РїР°РЅРµР»Рё
+- **Ultra-Compact Mode** - Р·РЅР°С‡РёС‚РµР»СЊРЅРѕ СѓСЃРёР»РµРЅ РєРѕРјРїР°РєС‚РЅС‹Р№ СЂРµР¶РёРј СЃ СЂР°Р·РјРµСЂРѕРј С€СЂРёС„С‚Р° 12px Рё РјРёРЅРёРјР°Р»СЊРЅС‹РјРё РѕС‚СЃС‚СѓРїР°РјРё
 
 ### Technical
-- **LayersContextMenu** - создан специализированный класс для контекстного меню слоев
-- **BaseContextMenu** - улучшена поддержка disabled состояний и унифицированных сепараторов
-- **Panel Integration** - исправлена интеграция контекстных меню с панелями через parentElement
-- **CSS Organization** - реорганизованы стили в модульную структуру в папке `styles/`
-- **Compact Mode** - реализован полнофункциональный компактный режим интерфейса
+- **LayersContextMenu** - СЃРѕР·РґР°РЅ СЃРїРµС†РёР°Р»РёР·РёСЂРѕРІР°РЅРЅС‹Р№ РєР»Р°СЃСЃ РґР»СЏ РєРѕРЅС‚РµРєСЃС‚РЅРѕРіРѕ РјРµРЅСЋ СЃР»РѕРµРІ
+- **BaseContextMenu** - СѓР»СѓС‡С€РµРЅР° РїРѕРґРґРµСЂР¶РєР° disabled СЃРѕСЃС‚РѕСЏРЅРёР№ Рё СѓРЅРёС„РёС†РёСЂРѕРІР°РЅРЅС‹С… СЃРµРїР°СЂР°С‚РѕСЂРѕРІ
+- **Panel Integration** - РёСЃРїСЂР°РІР»РµРЅР° РёРЅС‚РµРіСЂР°С†РёСЏ РєРѕРЅС‚РµРєСЃС‚РЅС‹С… РјРµРЅСЋ СЃ РїР°РЅРµР»СЏРјРё С‡РµСЂРµР· parentElement
+- **CSS Organization** - СЂРµРѕСЂРіР°РЅРёР·РѕРІР°РЅС‹ СЃС‚РёР»Рё РІ РјРѕРґСѓР»СЊРЅСѓСЋ СЃС‚СЂСѓРєС‚СѓСЂСѓ РІ РїР°РїРєРµ `styles/`
+- **Compact Mode** - СЂРµР°Р»РёР·РѕРІР°РЅ РїРѕР»РЅРѕС„СѓРЅРєС†РёРѕРЅР°Р»СЊРЅС‹Р№ РєРѕРјРїР°РєС‚РЅС‹Р№ СЂРµР¶РёРј РёРЅС‚РµСЂС„РµР№СЃР°
 
 ## [3.22.0] - 2025-01-27
 
 ### Improved
-- **AssetPanel Grid View** - улучшен hover эффект: убрано увеличение, добавлено высветление элементов
-- **Marquee Selection** - добавлена подсветка элементов при селекте рамкой во всех режимах просмотра
-- **Selection Visual Feedback** - единообразная подсветка при hover и селекте рамкой
-- **AssetPanel Context Menu** - убрана команда "Deselect All Assets" из контекстного меню панели
-- **Scroll Position** - исправлен сброс позиции скролла при клике в пустое место панели ассетов
+- **AssetPanel Grid View** - СѓР»СѓС‡С€РµРЅ hover СЌС„С„РµРєС‚: СѓР±СЂР°РЅРѕ СѓРІРµР»РёС‡РµРЅРёРµ, РґРѕР±Р°РІР»РµРЅРѕ РІС‹СЃРІРµС‚Р»РµРЅРёРµ СЌР»РµРјРµРЅС‚РѕРІ
+- **Marquee Selection** - РґРѕР±Р°РІР»РµРЅР° РїРѕРґСЃРІРµС‚РєР° СЌР»РµРјРµРЅС‚РѕРІ РїСЂРё СЃРµР»РµРєС‚Рµ СЂР°РјРєРѕР№ РІРѕ РІСЃРµС… СЂРµР¶РёРјР°С… РїСЂРѕСЃРјРѕС‚СЂР°
+- **Selection Visual Feedback** - РµРґРёРЅРѕРѕР±СЂР°Р·РЅР°СЏ РїРѕРґСЃРІРµС‚РєР° РїСЂРё hover Рё СЃРµР»РµРєС‚Рµ СЂР°РјРєРѕР№
+- **AssetPanel Context Menu** - СѓР±СЂР°РЅР° РєРѕРјР°РЅРґР° "Deselect All Assets" РёР· РєРѕРЅС‚РµРєСЃС‚РЅРѕРіРѕ РјРµРЅСЋ РїР°РЅРµР»Рё
+- **Scroll Position** - РёСЃРїСЂР°РІР»РµРЅ СЃР±СЂРѕСЃ РїРѕР·РёС†РёРё СЃРєСЂРѕР»Р»Р° РїСЂРё РєР»РёРєРµ РІ РїСѓСЃС‚РѕРµ РјРµСЃС‚Рѕ РїР°РЅРµР»Рё Р°СЃСЃРµС‚РѕРІ
 
 ### Technical
-- **AssetPanel Performance** - оптимизировано обновление выделения без пересоздания контента
-- **Marquee Highlighting** - реализована система подсветки элементов при селекте рамкой
-- **Hover Effects** - унифицированы hover эффекты для всех режимов просмотра
-- **Event Handling** - улучшена обработка событий мыши для селекта рамкой
+- **AssetPanel Performance** - РѕРїС‚РёРјРёР·РёСЂРѕРІР°РЅРѕ РѕР±РЅРѕРІР»РµРЅРёРµ РІС‹РґРµР»РµРЅРёСЏ Р±РµР· РїРµСЂРµСЃРѕР·РґР°РЅРёСЏ РєРѕРЅС‚РµРЅС‚Р°
+- **Marquee Highlighting** - СЂРµР°Р»РёР·РѕРІР°РЅР° СЃРёСЃС‚РµРјР° РїРѕРґСЃРІРµС‚РєРё СЌР»РµРјРµРЅС‚РѕРІ РїСЂРё СЃРµР»РµРєС‚Рµ СЂР°РјРєРѕР№
+- **Hover Effects** - СѓРЅРёС„РёС†РёСЂРѕРІР°РЅС‹ hover СЌС„С„РµРєС‚С‹ РґР»СЏ РІСЃРµС… СЂРµР¶РёРјРѕРІ РїСЂРѕСЃРјРѕС‚СЂР°
+- **Event Handling** - СѓР»СѓС‡С€РµРЅР° РѕР±СЂР°Р±РѕС‚РєР° СЃРѕР±С‹С‚РёР№ РјС‹С€Рё РґР»СЏ СЃРµР»РµРєС‚Р° СЂР°РјРєРѕР№
 
 ## [3.21.0] - 2025-01-27
 
 ### Improved
-- **AssetPanel Details View** - исправлено позиционирование шапки с колонками атрибутов
-- **Sticky Header Behavior** - шапка теперь правильно выравнивается встык с табами и следует за горизонтальным скроллом
-- **Hexagonal Grid Performance** - кардинально оптимизирована производительность гексагонального грида
-- **Grid Size Limits** - увеличен максимальный размер грида с 128px до 512px
-- **Grid Overlap Optimization** - минимизирован перехлест гексагонов за пределами экрана
-- **Input Validation** - добавлена валидация ввода для размера грида (8-512px)
+- **AssetPanel Details View** - РёСЃРїСЂР°РІР»РµРЅРѕ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ С€Р°РїРєРё СЃ РєРѕР»РѕРЅРєР°РјРё Р°С‚СЂРёР±СѓС‚РѕРІ
+- **Sticky Header Behavior** - С€Р°РїРєР° С‚РµРїРµСЂСЊ РїСЂР°РІРёР»СЊРЅРѕ РІС‹СЂР°РІРЅРёРІР°РµС‚СЃСЏ РІСЃС‚С‹Рє СЃ С‚Р°Р±Р°РјРё Рё СЃР»РµРґСѓРµС‚ Р·Р° РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅС‹Рј СЃРєСЂРѕР»Р»РѕРј
+- **Hexagonal Grid Performance** - РєР°СЂРґРёРЅР°Р»СЊРЅРѕ РѕРїС‚РёРјРёР·РёСЂРѕРІР°РЅР° РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ РіРµРєСЃР°РіРѕРЅР°Р»СЊРЅРѕРіРѕ РіСЂРёРґР°
+- **Grid Size Limits** - СѓРІРµР»РёС‡РµРЅ РјР°РєСЃРёРјР°Р»СЊРЅС‹Р№ СЂР°Р·РјРµСЂ РіСЂРёРґР° СЃ 128px РґРѕ 512px
+- **Grid Overlap Optimization** - РјРёРЅРёРјРёР·РёСЂРѕРІР°РЅ РїРµСЂРµС…Р»РµСЃС‚ РіРµРєСЃР°РіРѕРЅРѕРІ Р·Р° РїСЂРµРґРµР»Р°РјРё СЌРєСЂР°РЅР°
+- **Input Validation** - РґРѕР±Р°РІР»РµРЅР° РІР°Р»РёРґР°С†РёСЏ РІРІРѕРґР° РґР»СЏ СЂР°Р·РјРµСЂР° РіСЂРёРґР° (8-512px)
 
 ### Technical
-- **AssetPanel Structure** - упрощена структура контейнеров для надежного sticky позиционирования
-- **Padding Management** - динамическое управление padding для разных режимов просмотра
-- **HexagonalGridRenderer** - упрощен рендеринг, убрана сложная LOD система
-- **ConfigManager** - обновлена валидация gridSize до 512px
-- **GridSettings** - добавлена HTML валидация с oninput
-- **RenderOperations** - увеличен порог медленных кадров до 20ms
+- **AssetPanel Structure** - СѓРїСЂРѕС‰РµРЅР° СЃС‚СЂСѓРєС‚СѓСЂР° РєРѕРЅС‚РµР№РЅРµСЂРѕРІ РґР»СЏ РЅР°РґРµР¶РЅРѕРіРѕ sticky РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёСЏ
+- **Padding Management** - РґРёРЅР°РјРёС‡РµСЃРєРѕРµ СѓРїСЂР°РІР»РµРЅРёРµ padding РґР»СЏ СЂР°Р·РЅС‹С… СЂРµР¶РёРјРѕРІ РїСЂРѕСЃРјРѕС‚СЂР°
+- **HexagonalGridRenderer** - СѓРїСЂРѕС‰РµРЅ СЂРµРЅРґРµСЂРёРЅРі, СѓР±СЂР°РЅР° СЃР»РѕР¶РЅР°СЏ LOD СЃРёСЃС‚РµРјР°
+- **ConfigManager** - РѕР±РЅРѕРІР»РµРЅР° РІР°Р»РёРґР°С†РёСЏ gridSize РґРѕ 512px
+- **GridSettings** - РґРѕР±Р°РІР»РµРЅР° HTML РІР°Р»РёРґР°С†РёСЏ СЃ oninput
+- **RenderOperations** - СѓРІРµР»РёС‡РµРЅ РїРѕСЂРѕРі РјРµРґР»РµРЅРЅС‹С… РєР°РґСЂРѕРІ РґРѕ 20ms
 
 ### Performance
-- **Smart Grid Disable** - грид отключается при >4500 гексагонов для производительности
-- **Minimal Overlap** - перехлест рассчитывается на основе радиуса гексагона
-- **Clean Console** - убраны отладочные логи для чистой консоли
+- **Smart Grid Disable** - РіСЂРёРґ РѕС‚РєР»СЋС‡Р°РµС‚СЃСЏ РїСЂРё >4500 РіРµРєСЃР°РіРѕРЅРѕРІ РґР»СЏ РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚Рё
+- **Minimal Overlap** - РїРµСЂРµС…Р»РµСЃС‚ СЂР°СЃСЃС‡РёС‚С‹РІР°РµС‚СЃСЏ РЅР° РѕСЃРЅРѕРІРµ СЂР°РґРёСѓСЃР° РіРµРєСЃР°РіРѕРЅР°
+- **Clean Console** - СѓР±СЂР°РЅС‹ РѕС‚Р»Р°РґРѕС‡РЅС‹Рµ Р»РѕРіРё РґР»СЏ С‡РёСЃС‚РѕР№ РєРѕРЅСЃРѕР»Рё
 
 ## [3.20.0] - 2025-01-27
 
 ### Added
-- **Hexagonal Grid Orientation** - добавлена поддержка ориентации хексагонального грида (Pointy Top / Flat Top)
-- **Hex Orientation UI Control** - добавлен селект для выбора ориентации в настройках грида
-- **Enhanced Hexagonal Grid Renderer** - полностью переписан рендерер с оптимизированным алгоритмом отрисовки
-- **Grid Size Integration** - размер хексагона теперь привязан к общему параметру Grid Size
+- **Hexagonal Grid Orientation** - РґРѕР±Р°РІР»РµРЅР° РїРѕРґРґРµСЂР¶РєР° РѕСЂРёРµРЅС‚Р°С†РёРё С…РµРєСЃР°РіРѕРЅР°Р»СЊРЅРѕРіРѕ РіСЂРёРґР° (Pointy Top / Flat Top)
+- **Hex Orientation UI Control** - РґРѕР±Р°РІР»РµРЅ СЃРµР»РµРєС‚ РґР»СЏ РІС‹Р±РѕСЂР° РѕСЂРёРµРЅС‚Р°С†РёРё РІ РЅР°СЃС‚СЂРѕР№РєР°С… РіСЂРёРґР°
+- **Enhanced Hexagonal Grid Renderer** - РїРѕР»РЅРѕСЃС‚СЊСЋ РїРµСЂРµРїРёСЃР°РЅ СЂРµРЅРґРµСЂРµСЂ СЃ РѕРїС‚РёРјРёР·РёСЂРѕРІР°РЅРЅС‹Рј Р°Р»РіРѕСЂРёС‚РјРѕРј РѕС‚СЂРёСЃРѕРІРєРё
+- **Grid Size Integration** - СЂР°Р·РјРµСЂ С…РµРєСЃР°РіРѕРЅР° С‚РµРїРµСЂСЊ РїСЂРёРІСЏР·Р°РЅ Рє РѕР±С‰РµРјСѓ РїР°СЂР°РјРµС‚СЂСѓ Grid Size
 
 ### Improved
-- **Hex Grid Performance** - оптимизирована отрисовка хексагонального грида с использованием Set для избежания дублирования линий
-- **Grid Settings UI** - улучшен интерфейс настроек грида с динамическим показом/скрытием опций ориентации
-- **Configuration Management** - расширена система конфигурации для поддержки hexOrientation параметра
+- **Hex Grid Performance** - РѕРїС‚РёРјРёР·РёСЂРѕРІР°РЅР° РѕС‚СЂРёСЃРѕРІРєР° С…РµРєСЃР°РіРѕРЅР°Р»СЊРЅРѕРіРѕ РіСЂРёРґР° СЃ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµРј Set РґР»СЏ РёР·Р±РµР¶Р°РЅРёСЏ РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ Р»РёРЅРёР№
+- **Grid Settings UI** - СѓР»СѓС‡С€РµРЅ РёРЅС‚РµСЂС„РµР№СЃ РЅР°СЃС‚СЂРѕРµРє РіСЂРёРґР° СЃ РґРёРЅР°РјРёС‡РµСЃРєРёРј РїРѕРєР°Р·РѕРј/СЃРєСЂС‹С‚РёРµРј РѕРїС†РёР№ РѕСЂРёРµРЅС‚Р°С†РёРё
+- **Configuration Management** - СЂР°СЃС€РёСЂРµРЅР° СЃРёСЃС‚РµРјР° РєРѕРЅС„РёРіСѓСЂР°С†РёРё РґР»СЏ РїРѕРґРґРµСЂР¶РєРё hexOrientation РїР°СЂР°РјРµС‚СЂР°
 
 ### Technical
-- **ConfigManager** - добавлена поддержка hexOrientation в настройках грида
-- **StateManager** - интегрирован hexOrientation в систему состояний
-- **UserPreferencesManager** - добавлена поддержка hexOrientation в пользовательских настройках
-- **SettingsPanel** - обновлен для сохранения и загрузки hexOrientation
+- **ConfigManager** - РґРѕР±Р°РІР»РµРЅР° РїРѕРґРґРµСЂР¶РєР° hexOrientation РІ РЅР°СЃС‚СЂРѕР№РєР°С… РіСЂРёРґР°
+- **StateManager** - РёРЅС‚РµРіСЂРёСЂРѕРІР°РЅ hexOrientation РІ СЃРёСЃС‚РµРјСѓ СЃРѕСЃС‚РѕСЏРЅРёР№
+- **UserPreferencesManager** - РґРѕР±Р°РІР»РµРЅР° РїРѕРґРґРµСЂР¶РєР° hexOrientation РІ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёС… РЅР°СЃС‚СЂРѕР№РєР°С…
+- **SettingsPanel** - РѕР±РЅРѕРІР»РµРЅ РґР»СЏ СЃРѕС…СЂР°РЅРµРЅРёСЏ Рё Р·Р°РіСЂСѓР·РєРё hexOrientation
 
 ## [3.19.8] - 2025-01-27
 
 ### Fixed
-- **View Menu Checkboxes** - исправлено обновление чекбоксов панелей в меню View при скрытии тулбара через контекстное меню
-- **Game Mode Checkboxes** - исправлено обновление чекбокса Game Mode при деактивации режима
-- **Game Mode Menu** - добавлено автоматическое закрытие меню View при отключении Game Mode
-- **Panel State Restoration** - исправлен порядок вызовов при выходе из Game Mode для корректного обновления чекбоксов
-- **Null Reference Error** - исправлена ошибка "Cannot read properties of null (reading 'style')" в restorePanelStates()
+- **View Menu Checkboxes** - РёСЃРїСЂР°РІР»РµРЅРѕ РѕР±РЅРѕРІР»РµРЅРёРµ С‡РµРєР±РѕРєСЃРѕРІ РїР°РЅРµР»РµР№ РІ РјРµРЅСЋ View РїСЂРё СЃРєСЂС‹С‚РёРё С‚СѓР»Р±Р°СЂР° С‡РµСЂРµР· РєРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ
+- **Game Mode Checkboxes** - РёСЃРїСЂР°РІР»РµРЅРѕ РѕР±РЅРѕРІР»РµРЅРёРµ С‡РµРєР±РѕРєСЃР° Game Mode РїСЂРё РґРµР°РєС‚РёРІР°С†РёРё СЂРµР¶РёРјР°
+- **Game Mode Menu** - РґРѕР±Р°РІР»РµРЅРѕ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ Р·Р°РєСЂС‹С‚РёРµ РјРµРЅСЋ View РїСЂРё РѕС‚РєР»СЋС‡РµРЅРёРё Game Mode
+- **Panel State Restoration** - РёСЃРїСЂР°РІР»РµРЅ РїРѕСЂСЏРґРѕРє РІС‹Р·РѕРІРѕРІ РїСЂРё РІС‹С…РѕРґРµ РёР· Game Mode РґР»СЏ РєРѕСЂСЂРµРєС‚РЅРѕРіРѕ РѕР±РЅРѕРІР»РµРЅРёСЏ С‡РµРєР±РѕРєСЃРѕРІ
+- **Null Reference Error** - РёСЃРїСЂР°РІР»РµРЅР° РѕС€РёР±РєР° "Cannot read properties of null (reading 'style')" РІ restorePanelStates()
 
 ### Improved
-- **Checkbox Synchronization** - улучшена синхронизация состояний чекбоксов между различными UI элементами
-- **Game Mode UX** - улучшен пользовательский опыт при переключении Game Mode
+- **Checkbox Synchronization** - СѓР»СѓС‡С€РµРЅР° СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ СЃРѕСЃС‚РѕСЏРЅРёР№ С‡РµРєР±РѕРєСЃРѕРІ РјРµР¶РґСѓ СЂР°Р·Р»РёС‡РЅС‹РјРё UI СЌР»РµРјРµРЅС‚Р°РјРё
+- **Game Mode UX** - СѓР»СѓС‡С€РµРЅ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёР№ РѕРїС‹С‚ РїСЂРё РїРµСЂРµРєР»СЋС‡РµРЅРёРё Game Mode
 
 ## [3.19.7] - 2025-09-26
 
 ### Fixed
-- **Конфигурации пользователя** - добавлены недостающие файлы editor.json и panels.json в config/user/
-- **Структура настроек** - теперь пользовательские настройки полностью соответствуют дефолтным
+- **РљРѕРЅС„РёРіСѓСЂР°С†РёРё РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ** - РґРѕР±Р°РІР»РµРЅС‹ РЅРµРґРѕСЃС‚Р°СЋС‰РёРµ С„Р°Р№Р»С‹ editor.json Рё panels.json РІ config/user/
+- **РЎС‚СЂСѓРєС‚СѓСЂР° РЅР°СЃС‚СЂРѕРµРє** - С‚РµРїРµСЂСЊ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёРµ РЅР°СЃС‚СЂРѕР№РєРё РїРѕР»РЅРѕСЃС‚СЊСЋ СЃРѕРѕС‚РІРµС‚СЃС‚РІСѓСЋС‚ РґРµС„РѕР»С‚РЅС‹Рј
 
 ### Improved
-- **Очистка кода** - удалены неиспользуемые конфигурационные файлы (assets, camera, performance, selection, toolbar, view)
-- **Очистка кода** - удален неиспользуемый IsometricGridRenderer
-- **Очистка кода** - удалены example файлы из config/user/
-- **Документация** - обновлена структура папок в README
+- **РћС‡РёСЃС‚РєР° РєРѕРґР°** - СѓРґР°Р»РµРЅС‹ РЅРµРёСЃРїРѕР»СЊР·СѓРµРјС‹Рµ РєРѕРЅС„РёРіСѓСЂР°С†РёРѕРЅРЅС‹Рµ С„Р°Р№Р»С‹ (assets, camera, performance, selection, toolbar, view)
+- **РћС‡РёСЃС‚РєР° РєРѕРґР°** - СѓРґР°Р»РµРЅ РЅРµРёСЃРїРѕР»СЊР·СѓРµРјС‹Р№ IsometricGridRenderer
+- **РћС‡РёСЃС‚РєР° РєРѕРґР°** - СѓРґР°Р»РµРЅС‹ example С„Р°Р№Р»С‹ РёР· config/user/
+- **Р”РѕРєСѓРјРµРЅС‚Р°С†РёСЏ** - РѕР±РЅРѕРІР»РµРЅР° СЃС‚СЂСѓРєС‚СѓСЂР° РїР°РїРѕРє РІ README
 
 ## [3.19.6] - 2025-09-26
 
 ### Fixed
-- **Удаление слоев** - исправлена ошибка "moveObjectsToMainLayer is not a function" при удалении слоев
-- **Контекстное меню слоев** - исправлена проблема с определением слоя под курсором при клике на вложенные элементы
-- **API методов** - исправлено использование правильного метода getLayerObjects() вместо несуществующего getObjectsForLayer()
+- **РЈРґР°Р»РµРЅРёРµ СЃР»РѕРµРІ** - РёСЃРїСЂР°РІР»РµРЅР° РѕС€РёР±РєР° "moveObjectsToMainLayer is not a function" РїСЂРё СѓРґР°Р»РµРЅРёРё СЃР»РѕРµРІ
+- **РљРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ СЃР»РѕРµРІ** - РёСЃРїСЂР°РІР»РµРЅР° РїСЂРѕР±Р»РµРјР° СЃ РѕРїСЂРµРґРµР»РµРЅРёРµРј СЃР»РѕСЏ РїРѕРґ РєСѓСЂСЃРѕСЂРѕРј РїСЂРё РєР»РёРєРµ РЅР° РІР»РѕР¶РµРЅРЅС‹Рµ СЌР»РµРјРµРЅС‚С‹
+- **API РјРµС‚РѕРґРѕРІ** - РёСЃРїСЂР°РІР»РµРЅРѕ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµ РїСЂР°РІРёР»СЊРЅРѕРіРѕ РјРµС‚РѕРґР° getLayerObjects() РІРјРµСЃС‚Рѕ РЅРµСЃСѓС‰РµСЃС‚РІСѓСЋС‰РµРіРѕ getObjectsForLayer()
 
 ### Improved
-- **Надежность удаления** - добавлен метод moveObjectsToMainLayer() для корректного перемещения объектов при удалении слоя
-- **Обработка событий** - улучшена обработка событий контекстного меню с использованием closest() для поиска элемента слоя
-- **Код** - удалены все отладочные логи из MouseHandlers.js и LayersPanel.js
+- **РќР°РґРµР¶РЅРѕСЃС‚СЊ СѓРґР°Р»РµРЅРёСЏ** - РґРѕР±Р°РІР»РµРЅ РјРµС‚РѕРґ moveObjectsToMainLayer() РґР»СЏ РєРѕСЂСЂРµРєС‚РЅРѕРіРѕ РїРµСЂРµРјРµС‰РµРЅРёСЏ РѕР±СЉРµРєС‚РѕРІ РїСЂРё СѓРґР°Р»РµРЅРёРё СЃР»РѕСЏ
+- **РћР±СЂР°Р±РѕС‚РєР° СЃРѕР±С‹С‚РёР№** - СѓР»СѓС‡С€РµРЅР° РѕР±СЂР°Р±РѕС‚РєР° СЃРѕР±С‹С‚РёР№ РєРѕРЅС‚РµРєСЃС‚РЅРѕРіРѕ РјРµРЅСЋ СЃ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµРј closest() РґР»СЏ РїРѕРёСЃРєР° СЌР»РµРјРµРЅС‚Р° СЃР»РѕСЏ
+- **РљРѕРґ** - СѓРґР°Р»РµРЅС‹ РІСЃРµ РѕС‚Р»Р°РґРѕС‡РЅС‹Рµ Р»РѕРіРё РёР· MouseHandlers.js Рё LayersPanel.js
 
 ## [3.19.5] - 2025-09-26
 
 ### Fixed
-- **Diamond Grid при зуме** - исправлена некорректная отрисовка при зуме камеры
-- **Центральные линии при рестарте** - исправлена проблема с отсутствием центральных линий при камере в позиции (0,0)
-- **Расчет spacing** - убрана двойная корректировка spacing (трансформация камеры уже применяется в CanvasRenderer)
-- **Точность вычислений** - добавлены проверки isFinite() для предотвращения NaN в расчетах пересечений
+- **Diamond Grid РїСЂРё Р·СѓРјРµ** - РёСЃРїСЂР°РІР»РµРЅР° РЅРµРєРѕСЂСЂРµРєС‚РЅР°СЏ РѕС‚СЂРёСЃРѕРІРєР° РїСЂРё Р·СѓРјРµ РєР°РјРµСЂС‹
+- **Р¦РµРЅС‚СЂР°Р»СЊРЅС‹Рµ Р»РёРЅРёРё РїСЂРё СЂРµСЃС‚Р°СЂС‚Рµ** - РёСЃРїСЂР°РІР»РµРЅР° РїСЂРѕР±Р»РµРјР° СЃ РѕС‚СЃСѓС‚СЃС‚РІРёРµРј С†РµРЅС‚СЂР°Р»СЊРЅС‹С… Р»РёРЅРёР№ РїСЂРё РєР°РјРµСЂРµ РІ РїРѕР·РёС†РёРё (0,0)
+- **Р Р°СЃС‡РµС‚ spacing** - СѓР±СЂР°РЅР° РґРІРѕР№РЅР°СЏ РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєР° spacing (С‚СЂР°РЅСЃС„РѕСЂРјР°С†РёСЏ РєР°РјРµСЂС‹ СѓР¶Рµ РїСЂРёРјРµРЅСЏРµС‚СЃСЏ РІ CanvasRenderer)
+- **РўРѕС‡РЅРѕСЃС‚СЊ РІС‹С‡РёСЃР»РµРЅРёР№** - РґРѕР±Р°РІР»РµРЅС‹ РїСЂРѕРІРµСЂРєРё isFinite() РґР»СЏ РїСЂРµРґРѕС‚РІСЂР°С‰РµРЅРёСЏ NaN РІ СЂР°СЃС‡РµС‚Р°С… РїРµСЂРµСЃРµС‡РµРЅРёР№
 
 ### Improved
-- **Стабильность отрисовки** - diamond grid теперь стабильно работает при всех уровнях зума
-- **Обработка граничных случаев** - улучшена обработка линий, проходящих через углы viewport
-- **Производительность** - убраны отладочные логи, засоряющие консоль
+- **РЎС‚Р°Р±РёР»СЊРЅРѕСЃС‚СЊ РѕС‚СЂРёСЃРѕРІРєРё** - diamond grid С‚РµРїРµСЂСЊ СЃС‚Р°Р±РёР»СЊРЅРѕ СЂР°Р±РѕС‚Р°РµС‚ РїСЂРё РІСЃРµС… СѓСЂРѕРІРЅСЏС… Р·СѓРјР°
+- **РћР±СЂР°Р±РѕС‚РєР° РіСЂР°РЅРёС‡РЅС‹С… СЃР»СѓС‡Р°РµРІ** - СѓР»СѓС‡С€РµРЅР° РѕР±СЂР°Р±РѕС‚РєР° Р»РёРЅРёР№, РїСЂРѕС…РѕРґСЏС‰РёС… С‡РµСЂРµР· СѓРіР»С‹ viewport
+- **РџСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ** - СѓР±СЂР°РЅС‹ РѕС‚Р»Р°РґРѕС‡РЅС‹Рµ Р»РѕРіРё, Р·Р°СЃРѕСЂСЏСЋС‰РёРµ РєРѕРЅСЃРѕР»СЊ
 
 ## [3.19.4] - 2025-09-26
 
 ### Fixed
-- **Diamond Grid отрисовка** - исправлена проблема с неполным покрытием viewport линиями
-- **Зависимость от зума камеры** - добавлена корректировка spacing линий при разных уровнях зума
-- **Расчет диапазона линий** - улучшен алгоритм расчета с учетом всех углов viewport
+- **Diamond Grid РѕС‚СЂРёСЃРѕРІРєР°** - РёСЃРїСЂР°РІР»РµРЅР° РїСЂРѕР±Р»РµРјР° СЃ РЅРµРїРѕР»РЅС‹Рј РїРѕРєСЂС‹С‚РёРµРј viewport Р»РёРЅРёСЏРјРё
+- **Р—Р°РІРёСЃРёРјРѕСЃС‚СЊ РѕС‚ Р·СѓРјР° РєР°РјРµСЂС‹** - РґРѕР±Р°РІР»РµРЅР° РєРѕСЂСЂРµРєС‚РёСЂРѕРІРєР° spacing Р»РёРЅРёР№ РїСЂРё СЂР°Р·РЅС‹С… СѓСЂРѕРІРЅСЏС… Р·СѓРјР°
+- **Р Р°СЃС‡РµС‚ РґРёР°РїР°Р·РѕРЅР° Р»РёРЅРёР№** - СѓР»СѓС‡С€РµРЅ Р°Р»РіРѕСЂРёС‚Рј СЂР°СЃС‡РµС‚Р° СЃ СѓС‡РµС‚РѕРј РІСЃРµС… СѓРіР»РѕРІ viewport
 
 ### Improved
-- **Полное покрытие viewport** - diamond grid теперь правильно рисует все линии по всему окну
-- **Адаптивная плотность** - spacing линий корректируется в зависимости от зума для оптимальной видимости
-- **Точность пересечений** - оптимизирован расчет точек пересечения линий с границами видимости
+- **РџРѕР»РЅРѕРµ РїРѕРєСЂС‹С‚РёРµ viewport** - diamond grid С‚РµРїРµСЂСЊ РїСЂР°РІРёР»СЊРЅРѕ СЂРёСЃСѓРµС‚ РІСЃРµ Р»РёРЅРёРё РїРѕ РІСЃРµРјСѓ РѕРєРЅСѓ
+- **РђРґР°РїС‚РёРІРЅР°СЏ РїР»РѕС‚РЅРѕСЃС‚СЊ** - spacing Р»РёРЅРёР№ РєРѕСЂСЂРµРєС‚РёСЂСѓРµС‚СЃСЏ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ Р·СѓРјР° РґР»СЏ РѕРїС‚РёРјР°Р»СЊРЅРѕР№ РІРёРґРёРјРѕСЃС‚Рё
+- **РўРѕС‡РЅРѕСЃС‚СЊ РїРµСЂРµСЃРµС‡РµРЅРёР№** - РѕРїС‚РёРјРёР·РёСЂРѕРІР°РЅ СЂР°СЃС‡РµС‚ С‚РѕС‡РµРє РїРµСЂРµСЃРµС‡РµРЅРёСЏ Р»РёРЅРёР№ СЃ РіСЂР°РЅРёС†Р°РјРё РІРёРґРёРјРѕСЃС‚Рё
 
 ## [3.19.3] - 2025-01-27
 
 ### Fixed
-- **Контекстное меню тулбара** - исправлено отображение сепаратора и пунктов меню
-- **Порядок элементов меню** - Settings всегда остается внизу списка
-- **Подсветка текущего типа** - выбранный тип грида подсвечивается синим вместо дизейбла
-- **Стабильность меню** - элементы не "прыгают" при обновлении типов гридов
+- **РљРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ С‚СѓР»Р±Р°СЂР°** - РёСЃРїСЂР°РІР»РµРЅРѕ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ СЃРµРїР°СЂР°С‚РѕСЂР° Рё РїСѓРЅРєС‚РѕРІ РјРµРЅСЋ
+- **РџРѕСЂСЏРґРѕРє СЌР»РµРјРµРЅС‚РѕРІ РјРµРЅСЋ** - Settings РІСЃРµРіРґР° РѕСЃС‚Р°РµС‚СЃСЏ РІРЅРёР·Сѓ СЃРїРёСЃРєР°
+- **РџРѕРґСЃРІРµС‚РєР° С‚РµРєСѓС‰РµРіРѕ С‚РёРїР°** - РІС‹Р±СЂР°РЅРЅС‹Р№ С‚РёРї РіСЂРёРґР° РїРѕРґСЃРІРµС‡РёРІР°РµС‚СЃСЏ СЃРёРЅРёРј РІРјРµСЃС‚Рѕ РґРёР·РµР№Р±Р»Р°
+- **РЎС‚Р°Р±РёР»СЊРЅРѕСЃС‚СЊ РјРµРЅСЋ** - СЌР»РµРјРµРЅС‚С‹ РЅРµ "РїСЂС‹РіР°СЋС‚" РїСЂРё РѕР±РЅРѕРІР»РµРЅРёРё С‚РёРїРѕРІ РіСЂРёРґРѕРІ
 
 ### Improved
-- **Обработка сепараторов** - добавлена поддержка `type: 'separator'` в BaseContextMenu
-- **Динамическое обновление** - контекстное меню корректно обновляется при смене типа грида
-- **Правильная очистка** - `clearGridTypeMenuItems()` удаляет только элементы гридов
+- **РћР±СЂР°Р±РѕС‚РєР° СЃРµРїР°СЂР°С‚РѕСЂРѕРІ** - РґРѕР±Р°РІР»РµРЅР° РїРѕРґРґРµСЂР¶РєР° `type: 'separator'` РІ BaseContextMenu
+- **Р”РёРЅР°РјРёС‡РµСЃРєРѕРµ РѕР±РЅРѕРІР»РµРЅРёРµ** - РєРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ РєРѕСЂСЂРµРєС‚РЅРѕ РѕР±РЅРѕРІР»СЏРµС‚СЃСЏ РїСЂРё СЃРјРµРЅРµ С‚РёРїР° РіСЂРёРґР°
+- **РџСЂР°РІРёР»СЊРЅР°СЏ РѕС‡РёСЃС‚РєР°** - `clearGridTypeMenuItems()` СѓРґР°Р»СЏРµС‚ С‚РѕР»СЊРєРѕ СЌР»РµРјРµРЅС‚С‹ РіСЂРёРґРѕРІ
 
 ## [3.19.2] - 2025-01-27
 
 ### Added
-- **Карусельное переключение типов гридов** - Ctrl+Click на кнопке Grid для переключения между типами
-- **Динамические иконки гридов** - иконка кнопки Grid меняется в зависимости от выбранного типа
-- **Автоматическое определение типов гридов** - система автоматически подхватывает доступные рендереры
-- **Конфигурируемые иконки** - легко настраиваемые иконки для каждого типа грида
-- **Сохранение выбранного типа** - выбранный тип грида сохраняется в пользовательских настройках
+- **РљР°СЂСѓСЃРµР»СЊРЅРѕРµ РїРµСЂРµРєР»СЋС‡РµРЅРёРµ С‚РёРїРѕРІ РіСЂРёРґРѕРІ** - Ctrl+Click РЅР° РєРЅРѕРїРєРµ Grid РґР»СЏ РїРµСЂРµРєР»СЋС‡РµРЅРёСЏ РјРµР¶РґСѓ С‚РёРїР°РјРё
+- **Р”РёРЅР°РјРёС‡РµСЃРєРёРµ РёРєРѕРЅРєРё РіСЂРёРґРѕРІ** - РёРєРѕРЅРєР° РєРЅРѕРїРєРё Grid РјРµРЅСЏРµС‚СЃСЏ РІ Р·Р°РІРёСЃРёРјРѕСЃС‚Рё РѕС‚ РІС‹Р±СЂР°РЅРЅРѕРіРѕ С‚РёРїР°
+- **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ РѕРїСЂРµРґРµР»РµРЅРёРµ С‚РёРїРѕРІ РіСЂРёРґРѕРІ** - СЃРёСЃС‚РµРјР° Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё РїРѕРґС…РІР°С‚С‹РІР°РµС‚ РґРѕСЃС‚СѓРїРЅС‹Рµ СЂРµРЅРґРµСЂРµСЂС‹
+- **РљРѕРЅС„РёРіСѓСЂРёСЂСѓРµРјС‹Рµ РёРєРѕРЅРєРё** - Р»РµРіРєРѕ РЅР°СЃС‚СЂР°РёРІР°РµРјС‹Рµ РёРєРѕРЅРєРё РґР»СЏ РєР°Р¶РґРѕРіРѕ С‚РёРїР° РіСЂРёРґР°
+- **РЎРѕС…СЂР°РЅРµРЅРёРµ РІС‹Р±СЂР°РЅРЅРѕРіРѕ С‚РёРїР°** - РІС‹Р±СЂР°РЅРЅС‹Р№ С‚РёРї РіСЂРёРґР° СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ РІ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёС… РЅР°СЃС‚СЂРѕР№РєР°С…
 
 ### Improved
-- **Гибкая архитектура** - код автоматически адаптируется к изменениям в списке рендереров
-- **Fallback система** - graceful обработка отсутствующих рендереров
-- **Единый стиль иконок** - все иконки гридов в едином геометрическом стиле
+- **Р“РёР±РєР°СЏ Р°СЂС…РёС‚РµРєС‚СѓСЂР°** - РєРѕРґ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё Р°РґР°РїС‚РёСЂСѓРµС‚СЃСЏ Рє РёР·РјРµРЅРµРЅРёСЏРј РІ СЃРїРёСЃРєРµ СЂРµРЅРґРµСЂРµСЂРѕРІ
+- **Fallback СЃРёСЃС‚РµРјР°** - graceful РѕР±СЂР°Р±РѕС‚РєР° РѕС‚СЃСѓС‚СЃС‚РІСѓСЋС‰РёС… СЂРµРЅРґРµСЂРµСЂРѕРІ
+- **Р•РґРёРЅС‹Р№ СЃС‚РёР»СЊ РёРєРѕРЅРѕРє** - РІСЃРµ РёРєРѕРЅРєРё РіСЂРёРґРѕРІ РІ РµРґРёРЅРѕРј РіРµРѕРјРµС‚СЂРёС‡РµСЃРєРѕРј СЃС‚РёР»Рµ
 
 ### Technical
-- **Динамическая инициализация** - `initializeGridTypes()` получает типы из CanvasRenderer
-- **Автоматическое обновление** - `refreshGridTypes()` для обновления при изменении рендереров
-- **Конфигурационная система** - `gridTypeConfig` Map для хранения настроек типов
+- **Р”РёРЅР°РјРёС‡РµСЃРєР°СЏ РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ** - `initializeGridTypes()` РїРѕР»СѓС‡Р°РµС‚ С‚РёРїС‹ РёР· CanvasRenderer
+- **РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ РѕР±РЅРѕРІР»РµРЅРёРµ** - `refreshGridTypes()` РґР»СЏ РѕР±РЅРѕРІР»РµРЅРёСЏ РїСЂРё РёР·РјРµРЅРµРЅРёРё СЂРµРЅРґРµСЂРµСЂРѕРІ
+- **РљРѕРЅС„РёРіСѓСЂР°С†РёРѕРЅРЅР°СЏ СЃРёСЃС‚РµРјР°** - `gridTypeConfig` Map РґР»СЏ С…СЂР°РЅРµРЅРёСЏ РЅР°СЃС‚СЂРѕРµРє С‚РёРїРѕРІ
 
 ## [3.19.1] - 2025-01-27
 
 ### Added
-- **Модульная архитектура рендеринга сетки** - разделение рендереров по типам сетки
-- **BaseGridRenderer** - базовый класс с общей логикой для всех типов сетки
-- **RectangularGridRenderer** - специализированный рендерер прямоугольной сетки
-- **DiamondGridRenderer** - специализированный рендерер diamond сетки (60°/120°)
-- **HexagonalGridRenderer** - специализированный рендерер шестиугольной сетки
-- **Унифицированное API** - единый интерфейс для всех типов сетки
-- **Общая логика стилизации** - централизованная обработка цветов и толщины линий
+- **РњРѕРґСѓР»СЊРЅР°СЏ Р°СЂС…РёС‚РµРєС‚СѓСЂР° СЂРµРЅРґРµСЂРёРЅРіР° СЃРµС‚РєРё** - СЂР°Р·РґРµР»РµРЅРёРµ СЂРµРЅРґРµСЂРµСЂРѕРІ РїРѕ С‚РёРїР°Рј СЃРµС‚РєРё
+- **BaseGridRenderer** - Р±Р°Р·РѕРІС‹Р№ РєР»Р°СЃСЃ СЃ РѕР±С‰РµР№ Р»РѕРіРёРєРѕР№ РґР»СЏ РІСЃРµС… С‚РёРїРѕРІ СЃРµС‚РєРё
+- **RectangularGridRenderer** - СЃРїРµС†РёР°Р»РёР·РёСЂРѕРІР°РЅРЅС‹Р№ СЂРµРЅРґРµСЂРµСЂ РїСЂСЏРјРѕСѓРіРѕР»СЊРЅРѕР№ СЃРµС‚РєРё
+- **DiamondGridRenderer** - СЃРїРµС†РёР°Р»РёР·РёСЂРѕРІР°РЅРЅС‹Р№ СЂРµРЅРґРµСЂРµСЂ diamond СЃРµС‚РєРё (60В°/120В°)
+- **HexagonalGridRenderer** - СЃРїРµС†РёР°Р»РёР·РёСЂРѕРІР°РЅРЅС‹Р№ СЂРµРЅРґРµСЂРµСЂ С€РµСЃС‚РёСѓРіРѕР»СЊРЅРѕР№ СЃРµС‚РєРё
+- **РЈРЅРёС„РёС†РёСЂРѕРІР°РЅРЅРѕРµ API** - РµРґРёРЅС‹Р№ РёРЅС‚РµСЂС„РµР№СЃ РґР»СЏ РІСЃРµС… С‚РёРїРѕРІ СЃРµС‚РєРё
+- **РћР±С‰Р°СЏ Р»РѕРіРёРєР° СЃС‚РёР»РёР·Р°С†РёРё** - С†РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅР°СЏ РѕР±СЂР°Р±РѕС‚РєР° С†РІРµС‚РѕРІ Рё С‚РѕР»С‰РёРЅС‹ Р»РёРЅРёР№
 
 ### Refactored
-- **Убрано дублирование кода** - общая логика вынесена в BaseGridRenderer
-- **Упрощена архитектура** - удален промежуточный слой GridRenderer.js
-- **Встроена логика выбора рендерера** - интегрирована в CanvasRenderer.drawGrid()
-- **Оптимизирована производительность** - устранены лишние вызовы и дублирование
+- **РЈР±СЂР°РЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ РєРѕРґР°** - РѕР±С‰Р°СЏ Р»РѕРіРёРєР° РІС‹РЅРµСЃРµРЅР° РІ BaseGridRenderer
+- **РЈРїСЂРѕС‰РµРЅР° Р°СЂС…РёС‚РµРєС‚СѓСЂР°** - СѓРґР°Р»РµРЅ РїСЂРѕРјРµР¶СѓС‚РѕС‡РЅС‹Р№ СЃР»РѕР№ GridRenderer.js
+- **Р’СЃС‚СЂРѕРµРЅР° Р»РѕРіРёРєР° РІС‹Р±РѕСЂР° СЂРµРЅРґРµСЂРµСЂР°** - РёРЅС‚РµРіСЂРёСЂРѕРІР°РЅР° РІ CanvasRenderer.drawGrid()
+- **РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅР° РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ** - СѓСЃС‚СЂР°РЅРµРЅС‹ Р»РёС€РЅРёРµ РІС‹Р·РѕРІС‹ Рё РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ
 
 ### Fixed
-- **Исправлено позиционирование сетки** - устранено двойное применение камеры
-- **Исправлена логика изометрической сетки** - правильные углы 60° и 120°
-- **Устранены конфликты импортов** - чистая система зависимостей
+- **РСЃРїСЂР°РІР»РµРЅРѕ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ СЃРµС‚РєРё** - СѓСЃС‚СЂР°РЅРµРЅРѕ РґРІРѕР№РЅРѕРµ РїСЂРёРјРµРЅРµРЅРёРµ РєР°РјРµСЂС‹
+- **РСЃРїСЂР°РІР»РµРЅР° Р»РѕРіРёРєР° РёР·РѕРјРµС‚СЂРёС‡РµСЃРєРѕР№ СЃРµС‚РєРё** - РїСЂР°РІРёР»СЊРЅС‹Рµ СѓРіР»С‹ 60В° Рё 120В°
+- **РЈСЃС‚СЂР°РЅРµРЅС‹ РєРѕРЅС„Р»РёРєС‚С‹ РёРјРїРѕСЂС‚РѕРІ** - С‡РёСЃС‚Р°СЏ СЃРёСЃС‚РµРјР° Р·Р°РІРёСЃРёРјРѕСЃС‚РµР№
 
 ## [3.19.0] - 2025-01-27
 
 ### Added
-- **Сохранение позиции скролла тулбара** - автоматическое запоминание позиции прокрутки
-- **Восстановление позиции скролла** - позиция восстанавливается при перезагрузке редактора
-- **Сохранение при скролле колесом** - позиция сохраняется при прокрутке колесом мыши
-- **Сохранение при завершении перетаскивания** - позиция сохраняется при отпускании мыши
+- **РЎРѕС…СЂР°РЅРµРЅРёРµ РїРѕР·РёС†РёРё СЃРєСЂРѕР»Р»Р° С‚СѓР»Р±Р°СЂР°** - Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ Р·Р°РїРѕРјРёРЅР°РЅРёРµ РїРѕР·РёС†РёРё РїСЂРѕРєСЂСѓС‚РєРё
+- **Р’РѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ РїРѕР·РёС†РёРё СЃРєСЂРѕР»Р»Р°** - РїРѕР·РёС†РёСЏ РІРѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµС‚СЃСЏ РїСЂРё РїРµСЂРµР·Р°РіСЂСѓР·РєРµ СЂРµРґР°РєС‚РѕСЂР°
+- **РЎРѕС…СЂР°РЅРµРЅРёРµ РїСЂРё СЃРєСЂРѕР»Р»Рµ РєРѕР»РµСЃРѕРј** - РїРѕР·РёС†РёСЏ СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ РїСЂРё РїСЂРѕРєСЂСѓС‚РєРµ РєРѕР»РµСЃРѕРј РјС‹С€Рё
+- **РЎРѕС…СЂР°РЅРµРЅРёРµ РїСЂРё Р·Р°РІРµСЂС€РµРЅРёРё РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёСЏ** - РїРѕР·РёС†РёСЏ СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ РїСЂРё РѕС‚РїСѓСЃРєР°РЅРёРё РјС‹С€Рё
 
 ### Fixed
-- **Исправлена видимость удаленных объектов** - объекты корректно исчезают с canvas после удаления
-- **Исправлено сохранение размера консоли** - размер сохраняется только при отпускании мыши, а не при каждом движении
-- **Исправлено восстановление позиции тулбара** - позиция скролла корректно восстанавливается при инициализации
+- **РСЃРїСЂР°РІР»РµРЅР° РІРёРґРёРјРѕСЃС‚СЊ СѓРґР°Р»РµРЅРЅС‹С… РѕР±СЉРµРєС‚РѕРІ** - РѕР±СЉРµРєС‚С‹ РєРѕСЂСЂРµРєС‚РЅРѕ РёСЃС‡РµР·Р°СЋС‚ СЃ canvas РїРѕСЃР»Рµ СѓРґР°Р»РµРЅРёСЏ
+- **РСЃРїСЂР°РІР»РµРЅРѕ СЃРѕС…СЂР°РЅРµРЅРёРµ СЂР°Р·РјРµСЂР° РєРѕРЅСЃРѕР»Рё** - СЂР°Р·РјРµСЂ СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ С‚РѕР»СЊРєРѕ РїСЂРё РѕС‚РїСѓСЃРєР°РЅРёРё РјС‹С€Рё, Р° РЅРµ РїСЂРё РєР°Р¶РґРѕРј РґРІРёР¶РµРЅРёРё
+- **РСЃРїСЂР°РІР»РµРЅРѕ РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ РїРѕР·РёС†РёРё С‚СѓР»Р±Р°СЂР°** - РїРѕР·РёС†РёСЏ СЃРєСЂРѕР»Р»Р° РєРѕСЂСЂРµРєС‚РЅРѕ РІРѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµС‚СЃСЏ РїСЂРё РёРЅРёС†РёР°Р»РёР·Р°С†РёРё
 
 ### Improved
-- **Оптимизировано сохранение настроек** - снижена частота сохранения при изменении размера консоли
-- **Улучшена система инвалидации кешей** - добавлена инвалидация пространственного индекса при удалении объектов
+- **РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅРѕ СЃРѕС…СЂР°РЅРµРЅРёРµ РЅР°СЃС‚СЂРѕРµРє** - СЃРЅРёР¶РµРЅР° С‡Р°СЃС‚РѕС‚Р° СЃРѕС…СЂР°РЅРµРЅРёСЏ РїСЂРё РёР·РјРµРЅРµРЅРёРё СЂР°Р·РјРµСЂР° РєРѕРЅСЃРѕР»Рё
+- **РЈР»СѓС‡С€РµРЅР° СЃРёСЃС‚РµРјР° РёРЅРІР°Р»РёРґР°С†РёРё РєРµС€РµР№** - РґРѕР±Р°РІР»РµРЅР° РёРЅРІР°Р»РёРґР°С†РёСЏ РїСЂРѕСЃС‚СЂР°РЅСЃС‚РІРµРЅРЅРѕРіРѕ РёРЅРґРµРєСЃР° РїСЂРё СѓРґР°Р»РµРЅРёРё РѕР±СЉРµРєС‚РѕРІ
 
 ## [3.18.0] - 2025-01-27
 
 ### Added
-- **Настраиваемый snap tolerance** - адаптивная зона притяжения к сетке (5-100%)
-- **Сохранение snap tolerance** - настройка сохраняется в пользовательских предпочтениях
-- **Единая логика снэпа** - консистентное поведение для перетаскивания, дублирования и drop объектов
-- **Централизованный SnapUtils** - единая точка управления логикой снэпа
+- **РќР°СЃС‚СЂР°РёРІР°РµРјС‹Р№ snap tolerance** - Р°РґР°РїС‚РёРІРЅР°СЏ Р·РѕРЅР° РїСЂРёС‚СЏР¶РµРЅРёСЏ Рє СЃРµС‚РєРµ (5-100%)
+- **РЎРѕС…СЂР°РЅРµРЅРёРµ snap tolerance** - РЅР°СЃС‚СЂРѕР№РєР° СЃРѕС…СЂР°РЅСЏРµС‚СЃСЏ РІ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёС… РїСЂРµРґРїРѕС‡С‚РµРЅРёСЏС…
+- **Р•РґРёРЅР°СЏ Р»РѕРіРёРєР° СЃРЅСЌРїР°** - РєРѕРЅСЃРёСЃС‚РµРЅС‚РЅРѕРµ РїРѕРІРµРґРµРЅРёРµ РґР»СЏ РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёСЏ, РґСѓР±Р»РёСЂРѕРІР°РЅРёСЏ Рё drop РѕР±СЉРµРєС‚РѕРІ
+- **Р¦РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅС‹Р№ SnapUtils** - РµРґРёРЅР°СЏ С‚РѕС‡РєР° СѓРїСЂР°РІР»РµРЅРёСЏ Р»РѕРіРёРєРѕР№ СЃРЅСЌРїР°
 
 ### Fixed
-- **Исправлен снэп дубликатов** - левый нижний угол первого объекта попадает в точку грида
-- **Исправлена логика позиционирования** - дубликаты используют правильную точку привязки
-- **Устранен дублирующий код** - централизован метод findNearestGridPoint
+- **РСЃРїСЂР°РІР»РµРЅ СЃРЅСЌРї РґСѓР±Р»РёРєР°С‚РѕРІ** - Р»РµРІС‹Р№ РЅРёР¶РЅРёР№ СѓРіРѕР» РїРµСЂРІРѕРіРѕ РѕР±СЉРµРєС‚Р° РїРѕРїР°РґР°РµС‚ РІ С‚РѕС‡РєСѓ РіСЂРёРґР°
+- **РСЃРїСЂР°РІР»РµРЅР° Р»РѕРіРёРєР° РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёСЏ** - РґСѓР±Р»РёРєР°С‚С‹ РёСЃРїРѕР»СЊР·СѓСЋС‚ РїСЂР°РІРёР»СЊРЅСѓСЋ С‚РѕС‡РєСѓ РїСЂРёРІСЏР·РєРё
+- **РЈСЃС‚СЂР°РЅРµРЅ РґСѓР±Р»РёСЂСѓСЋС‰РёР№ РєРѕРґ** - С†РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅ РјРµС‚РѕРґ findNearestGridPoint
 
 ### Improved
-- **Оптимизирована производительность** - кеширование мировых позиций объектов
-- **Улучшена консистентность** - все операции снэпа используют одинаковую логику
-- **Упрощен код** - удален дублирующий код, улучшена читаемость
+- **РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅР° РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ** - РєРµС€РёСЂРѕРІР°РЅРёРµ РјРёСЂРѕРІС‹С… РїРѕР·РёС†РёР№ РѕР±СЉРµРєС‚РѕРІ
+- **РЈР»СѓС‡С€РµРЅР° РєРѕРЅСЃРёСЃС‚РµРЅС‚РЅРѕСЃС‚СЊ** - РІСЃРµ РѕРїРµСЂР°С†РёРё СЃРЅСЌРїР° РёСЃРїРѕР»СЊР·СѓСЋС‚ РѕРґРёРЅР°РєРѕРІСѓСЋ Р»РѕРіРёРєСѓ
+- **РЈРїСЂРѕС‰РµРЅ РєРѕРґ** - СѓРґР°Р»РµРЅ РґСѓР±Р»РёСЂСѓСЋС‰РёР№ РєРѕРґ, СѓР»СѓС‡С€РµРЅР° С‡РёС‚Р°РµРјРѕСЃС‚СЊ
 
 ### Changed
-- **Обновлена архитектура снэпа** - используется существующая логика из dragSelectedObjects
-- **Изменена точка привязки** - дубликаты привязываются к позиции курсора, снэп к левому нижнему углу
-- **Обновлены пользовательские настройки** - добавлен snapTolerance в UserPreferencesManager
+- **РћР±РЅРѕРІР»РµРЅР° Р°СЂС…РёС‚РµРєС‚СѓСЂР° СЃРЅСЌРїР°** - РёСЃРїРѕР»СЊР·СѓРµС‚СЃСЏ СЃСѓС‰РµСЃС‚РІСѓСЋС‰Р°СЏ Р»РѕРіРёРєР° РёР· dragSelectedObjects
+- **РР·РјРµРЅРµРЅР° С‚РѕС‡РєР° РїСЂРёРІСЏР·РєРё** - РґСѓР±Р»РёРєР°С‚С‹ РїСЂРёРІСЏР·С‹РІР°СЋС‚СЃСЏ Рє РїРѕР·РёС†РёРё РєСѓСЂСЃРѕСЂР°, СЃРЅСЌРї Рє Р»РµРІРѕРјСѓ РЅРёР¶РЅРµРјСѓ СѓРіР»Сѓ
+- **РћР±РЅРѕРІР»РµРЅС‹ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёРµ РЅР°СЃС‚СЂРѕР№РєРё** - РґРѕР±Р°РІР»РµРЅ snapTolerance РІ UserPreferencesManager
 
 ## [3.17.0] - 2025-01-27
 
 ### Added
-- Добавлен функционал выделения строк в консоли левым клик-драгом
-- Добавлено контекстное меню для копирования выделенного текста в консоли
-- Добавлены CSS стили для визуального выделения текста в консоли
-- Добавлена поддержка двойного клика для выделения всей строки в консоли
-- Добавлены клавиатурные сочетания (Ctrl+A, Escape) для работы с выделением
+- Р”РѕР±Р°РІР»РµРЅ С„СѓРЅРєС†РёРѕРЅР°Р» РІС‹РґРµР»РµРЅРёСЏ СЃС‚СЂРѕРє РІ РєРѕРЅСЃРѕР»Рё Р»РµРІС‹Рј РєР»РёРє-РґСЂР°РіРѕРј
+- Р”РѕР±Р°РІР»РµРЅРѕ РєРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ РґР»СЏ РєРѕРїРёСЂРѕРІР°РЅРёСЏ РІС‹РґРµР»РµРЅРЅРѕРіРѕ С‚РµРєСЃС‚Р° РІ РєРѕРЅСЃРѕР»Рё
+- Р”РѕР±Р°РІР»РµРЅС‹ CSS СЃС‚РёР»Рё РґР»СЏ РІРёР·СѓР°Р»СЊРЅРѕРіРѕ РІС‹РґРµР»РµРЅРёСЏ С‚РµРєСЃС‚Р° РІ РєРѕРЅСЃРѕР»Рё
+- Р”РѕР±Р°РІР»РµРЅР° РїРѕРґРґРµСЂР¶РєР° РґРІРѕР№РЅРѕРіРѕ РєР»РёРєР° РґР»СЏ РІС‹РґРµР»РµРЅРёСЏ РІСЃРµР№ СЃС‚СЂРѕРєРё РІ РєРѕРЅСЃРѕР»Рё
+- Р”РѕР±Р°РІР»РµРЅС‹ РєР»Р°РІРёР°С‚СѓСЂРЅС‹Рµ СЃРѕС‡РµС‚Р°РЅРёСЏ (Ctrl+A, Escape) РґР»СЏ СЂР°Р±РѕС‚С‹ СЃ РІС‹РґРµР»РµРЅРёРµРј
 
 ### Fixed
-- Исправлена ошибка `ReferenceError: levelId is not defined` в RenderOperations.js
-- Исправлено автоматическое сбрасывание выделения текста в консоли
-- Исправлены фризы редактора при выделении текста в консоли
-- Исправлена работа командной строки консоли при активном выделении
-- Исправлена синхронизация пользовательских настроек между сессиями
+- РСЃРїСЂР°РІР»РµРЅР° РѕС€РёР±РєР° `ReferenceError: levelId is not defined` РІ RenderOperations.js
+- РСЃРїСЂР°РІР»РµРЅРѕ Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ СЃР±СЂР°СЃС‹РІР°РЅРёРµ РІС‹РґРµР»РµРЅРёСЏ С‚РµРєСЃС‚Р° РІ РєРѕРЅСЃРѕР»Рё
+- РСЃРїСЂР°РІР»РµРЅС‹ С„СЂРёР·С‹ СЂРµРґР°РєС‚РѕСЂР° РїСЂРё РІС‹РґРµР»РµРЅРёРё С‚РµРєСЃС‚Р° РІ РєРѕРЅСЃРѕР»Рё
+- РСЃРїСЂР°РІР»РµРЅР° СЂР°Р±РѕС‚Р° РєРѕРјР°РЅРґРЅРѕР№ СЃС‚СЂРѕРєРё РєРѕРЅСЃРѕР»Рё РїСЂРё Р°РєС‚РёРІРЅРѕРј РІС‹РґРµР»РµРЅРёРё
+- РСЃРїСЂР°РІР»РµРЅР° СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёС… РЅР°СЃС‚СЂРѕРµРє РјРµР¶РґСѓ СЃРµСЃСЃРёСЏРјРё
 
 ### Improved
-- Оптимизирована производительность выделения текста в консоли
-- Улучшена логика определения выделенных строк с использованием throttling
-- Упрощена система обработки событий выделения для лучшей производительности
-- Удалены лишние debug логи для улучшения производительности
-- Улучшена визуальная обратная связь при выделении текста
+- РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅР° РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ РІС‹РґРµР»РµРЅРёСЏ С‚РµРєСЃС‚Р° РІ РєРѕРЅСЃРѕР»Рё
+- РЈР»СѓС‡С€РµРЅР° Р»РѕРіРёРєР° РѕРїСЂРµРґРµР»РµРЅРёСЏ РІС‹РґРµР»РµРЅРЅС‹С… СЃС‚СЂРѕРє СЃ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµРј throttling
+- РЈРїСЂРѕС‰РµРЅР° СЃРёСЃС‚РµРјР° РѕР±СЂР°Р±РѕС‚РєРё СЃРѕР±С‹С‚РёР№ РІС‹РґРµР»РµРЅРёСЏ РґР»СЏ Р»СѓС‡С€РµР№ РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚Рё
+- РЈРґР°Р»РµРЅС‹ Р»РёС€РЅРёРµ debug Р»РѕРіРё РґР»СЏ СѓР»СѓС‡С€РµРЅРёСЏ РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚Рё
+- РЈР»СѓС‡С€РµРЅР° РІРёР·СѓР°Р»СЊРЅР°СЏ РѕР±СЂР°С‚РЅР°СЏ СЃРІСЏР·СЊ РїСЂРё РІС‹РґРµР»РµРЅРёРё С‚РµРєСЃС‚Р°
 
 ### Changed
-- Обновлена система выделения текста - теперь использует глобальный обработчик вместо множественных локальных
-- Улучшена система кэширования состояния выделения для предотвращения лишних обновлений DOM
-- Оптимизирована работа с контекстным меню консоли
+- РћР±РЅРѕРІР»РµРЅР° СЃРёСЃС‚РµРјР° РІС‹РґРµР»РµРЅРёСЏ С‚РµРєСЃС‚Р° - С‚РµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓРµС‚ РіР»РѕР±Р°Р»СЊРЅС‹Р№ РѕР±СЂР°Р±РѕС‚С‡РёРє РІРјРµСЃС‚Рѕ РјРЅРѕР¶РµСЃС‚РІРµРЅРЅС‹С… Р»РѕРєР°Р»СЊРЅС‹С…
+- РЈР»СѓС‡С€РµРЅР° СЃРёСЃС‚РµРјР° РєСЌС€РёСЂРѕРІР°РЅРёСЏ СЃРѕСЃС‚РѕСЏРЅРёСЏ РІС‹РґРµР»РµРЅРёСЏ РґР»СЏ РїСЂРµРґРѕС‚РІСЂР°С‰РµРЅРёСЏ Р»РёС€РЅРёС… РѕР±РЅРѕРІР»РµРЅРёР№ DOM
+- РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅР° СЂР°Р±РѕС‚Р° СЃ РєРѕРЅС‚РµРєСЃС‚РЅС‹Рј РјРµРЅСЋ РєРѕРЅСЃРѕР»Рё
 
 ## [3.16.1] - 2025-01-27
 
 ### Fixed
-- Исправлено сохранение и восстановление настроек грида при перезапуске редактора
-- Исправлено отображение цветов грида в настройках - теперь корректно конвертируются между hex и rgba форматами
-- Исправлен сброс настроек грида на дефолтные - теперь применяется синхронизация с GridSettings
-- Устранено дублирование функций конвертации цветов - централизованы в RenderUtils
-- Удалены лишние логи работы грида для улучшения производительности
+- РСЃРїСЂР°РІР»РµРЅРѕ СЃРѕС…СЂР°РЅРµРЅРёРµ Рё РІРѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ РЅР°СЃС‚СЂРѕРµРє РіСЂРёРґР° РїСЂРё РїРµСЂРµР·Р°РїСѓСЃРєРµ СЂРµРґР°РєС‚РѕСЂР°
+- РСЃРїСЂР°РІР»РµРЅРѕ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ С†РІРµС‚РѕРІ РіСЂРёРґР° РІ РЅР°СЃС‚СЂРѕР№РєР°С… - С‚РµРїРµСЂСЊ РєРѕСЂСЂРµРєС‚РЅРѕ РєРѕРЅРІРµСЂС‚РёСЂСѓСЋС‚СЃСЏ РјРµР¶РґСѓ hex Рё rgba С„РѕСЂРјР°С‚Р°РјРё
+- РСЃРїСЂР°РІР»РµРЅ СЃР±СЂРѕСЃ РЅР°СЃС‚СЂРѕРµРє РіСЂРёРґР° РЅР° РґРµС„РѕР»С‚РЅС‹Рµ - С‚РµРїРµСЂСЊ РїСЂРёРјРµРЅСЏРµС‚СЃСЏ СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ СЃ GridSettings
+- РЈСЃС‚СЂР°РЅРµРЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ С„СѓРЅРєС†РёР№ РєРѕРЅРІРµСЂС‚Р°С†РёРё С†РІРµС‚РѕРІ - С†РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅС‹ РІ RenderUtils
+- РЈРґР°Р»РµРЅС‹ Р»РёС€РЅРёРµ Р»РѕРіРё СЂР°Р±РѕС‚С‹ РіСЂРёРґР° РґР»СЏ СѓР»СѓС‡С€РµРЅРёСЏ РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚Рё
 
 ### Changed
-- Улучшена система загрузки настроек грида - добавлена секция 'grid' в список загружаемых конфигураций
-- Оптимизирована конвертация цветов - все функции перенесены в централизованные утилиты
+- РЈР»СѓС‡С€РµРЅР° СЃРёСЃС‚РµРјР° Р·Р°РіСЂСѓР·РєРё РЅР°СЃС‚СЂРѕРµРє РіСЂРёРґР° - РґРѕР±Р°РІР»РµРЅР° СЃРµРєС†РёСЏ 'grid' РІ СЃРїРёСЃРѕРє Р·Р°РіСЂСѓР¶Р°РµРјС‹С… РєРѕРЅС„РёРіСѓСЂР°С†РёР№
+- РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅР° РєРѕРЅРІРµСЂС‚Р°С†РёСЏ С†РІРµС‚РѕРІ - РІСЃРµ С„СѓРЅРєС†РёРё РїРµСЂРµРЅРµСЃРµРЅС‹ РІ С†РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅС‹Рµ СѓС‚РёР»РёС‚С‹
 
 ## [3.16.0] - 2025-09-24
 
 ### Fixed
-- Исправлено панорамирование тулбара средней кнопкой мыши - теперь работает на всем тулбаре включая активные и неактивные кнопки
-- Убрано "прилипание" курсора при панорамировании - теперь обычное панорамирование в противоположном направлении движению курсора
+- РСЃРїСЂР°РІР»РµРЅРѕ РїР°РЅРѕСЂР°РјРёСЂРѕРІР°РЅРёРµ С‚СѓР»Р±Р°СЂР° СЃСЂРµРґРЅРµР№ РєРЅРѕРїРєРѕР№ РјС‹С€Рё - С‚РµРїРµСЂСЊ СЂР°Р±РѕС‚Р°РµС‚ РЅР° РІСЃРµРј С‚СѓР»Р±Р°СЂРµ РІРєР»СЋС‡Р°СЏ Р°РєС‚РёРІРЅС‹Рµ Рё РЅРµР°РєС‚РёРІРЅС‹Рµ РєРЅРѕРїРєРё
+- РЈР±СЂР°РЅРѕ "РїСЂРёР»РёРїР°РЅРёРµ" РєСѓСЂСЃРѕСЂР° РїСЂРё РїР°РЅРѕСЂР°РјРёСЂРѕРІР°РЅРёРё - С‚РµРїРµСЂСЊ РѕР±С‹С‡РЅРѕРµ РїР°РЅРѕСЂР°РјРёСЂРѕРІР°РЅРёРµ РІ РїСЂРѕС‚РёРІРѕРїРѕР»РѕР¶РЅРѕРј РЅР°РїСЂР°РІР»РµРЅРёРё РґРІРёР¶РµРЅРёСЋ РєСѓСЂСЃРѕСЂР°
 
 ### Changed
-- Улучшена обработка событий на disabled кнопках тулбара - pointer-events: none позволяет событиям проходить сквозь неактивные элементы
+- РЈР»СѓС‡С€РµРЅР° РѕР±СЂР°Р±РѕС‚РєР° СЃРѕР±С‹С‚РёР№ РЅР° disabled РєРЅРѕРїРєР°С… С‚СѓР»Р±Р°СЂР° - pointer-events: none РїРѕР·РІРѕР»СЏРµС‚ СЃРѕР±С‹С‚РёСЏРј РїСЂРѕС…РѕРґРёС‚СЊ СЃРєРІРѕР·СЊ РЅРµР°РєС‚РёРІРЅС‹Рµ СЌР»РµРјРµРЅС‚С‹
 
 ## [3.15.0] - 2025-09-24
 
 ### Fixed
-- Исправлено отображение canvas при изменении видимости toolbar - теперь canvas автоматически адаптируется под новое доступное пространство
-- Исправлено закрытие контекстного меню toolbar при активации команды "Hide" - меню теперь закрывается сразу после выполнения действия
-- Убрано лишнее логирование в системе toolbar для оптимизации производительности
+- РСЃРїСЂР°РІР»РµРЅРѕ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ canvas РїСЂРё РёР·РјРµРЅРµРЅРёРё РІРёРґРёРјРѕСЃС‚Рё toolbar - С‚РµРїРµСЂСЊ canvas Р°РІС‚РѕРјР°С‚РёС‡РµСЃРєРё Р°РґР°РїС‚РёСЂСѓРµС‚СЃСЏ РїРѕРґ РЅРѕРІРѕРµ РґРѕСЃС‚СѓРїРЅРѕРµ РїСЂРѕСЃС‚СЂР°РЅСЃС‚РІРѕ
+- РСЃРїСЂР°РІР»РµРЅРѕ Р·Р°РєСЂС‹С‚РёРµ РєРѕРЅС‚РµРєСЃС‚РЅРѕРіРѕ РјРµРЅСЋ toolbar РїСЂРё Р°РєС‚РёРІР°С†РёРё РєРѕРјР°РЅРґС‹ "Hide" - РјРµРЅСЋ С‚РµРїРµСЂСЊ Р·Р°РєСЂС‹РІР°РµС‚СЃСЏ СЃСЂР°Р·Сѓ РїРѕСЃР»Рµ РІС‹РїРѕР»РЅРµРЅРёСЏ РґРµР№СЃС‚РІРёСЏ
+- РЈР±СЂР°РЅРѕ Р»РёС€РЅРµРµ Р»РѕРіРёСЂРѕРІР°РЅРёРµ РІ СЃРёСЃС‚РµРјРµ toolbar РґР»СЏ РѕРїС‚РёРјРёР·Р°С†РёРё РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚Рё
 
 ### Changed
-- Улучшена синхронизация между UI элементами toolbar и системой управления панелями
-- Оптимизирована инициализация состояния toolbar с canvas renderer
+- РЈР»СѓС‡С€РµРЅР° СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ РјРµР¶РґСѓ UI СЌР»РµРјРµРЅС‚Р°РјРё toolbar Рё СЃРёСЃС‚РµРјРѕР№ СѓРїСЂР°РІР»РµРЅРёСЏ РїР°РЅРµР»СЏРјРё
+- РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅР° РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ СЃРѕСЃС‚РѕСЏРЅРёСЏ toolbar СЃ canvas renderer
 
 ## [3.14.0] - 2024-12-19
 
 ### Added
-- Полная система сохранения пользовательских настроек тулбара
-- Запоминание состояния кнопок тулбара (Grid, Snap, Parallax, Boundaries, Collisions)
-- Запоминание свернутых секций тулбара (File, Edit, View, Group)
-- Запоминание настроек отображения (иконки и текст кнопок)
-- Запоминание видимости тулбара
-- Автоматическое сохранение настроек в localStorage
-- Восстановление всех настроек при перезагрузке редактора
+- РџРѕР»РЅР°СЏ СЃРёСЃС‚РµРјР° СЃРѕС…СЂР°РЅРµРЅРёСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёС… РЅР°СЃС‚СЂРѕРµРє С‚СѓР»Р±Р°СЂР°
+- Р—Р°РїРѕРјРёРЅР°РЅРёРµ СЃРѕСЃС‚РѕСЏРЅРёСЏ РєРЅРѕРїРѕРє С‚СѓР»Р±Р°СЂР° (Grid, Snap, Parallax, Boundaries, Collisions)
+- Р—Р°РїРѕРјРёРЅР°РЅРёРµ СЃРІРµСЂРЅСѓС‚С‹С… СЃРµРєС†РёР№ С‚СѓР»Р±Р°СЂР° (File, Edit, View, Group)
+- Р—Р°РїРѕРјРёРЅР°РЅРёРµ РЅР°СЃС‚СЂРѕРµРє РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ (РёРєРѕРЅРєРё Рё С‚РµРєСЃС‚ РєРЅРѕРїРѕРє)
+- Р—Р°РїРѕРјРёРЅР°РЅРёРµ РІРёРґРёРјРѕСЃС‚Рё С‚СѓР»Р±Р°СЂР°
+- РђРІС‚РѕРјР°С‚РёС‡РµСЃРєРѕРµ СЃРѕС…СЂР°РЅРµРЅРёРµ РЅР°СЃС‚СЂРѕРµРє РІ localStorage
+- Р’РѕСЃСЃС‚Р°РЅРѕРІР»РµРЅРёРµ РІСЃРµС… РЅР°СЃС‚СЂРѕРµРє РїСЂРё РїРµСЂРµР·Р°РіСЂСѓР·РєРµ СЂРµРґР°РєС‚РѕСЂР°
 
 ### Changed
-- Улучшена инициализация тулбара - отрисовывается сразу в правильном состоянии
-- Устранено визуальное "переключение" тулбара при загрузке настроек
-- Оптимизирована система загрузки состояния тулбара
-- Улучшена синхронизация состояния кнопок с StateManager
+- РЈР»СѓС‡С€РµРЅР° РёРЅРёС†РёР°Р»РёР·Р°С†РёСЏ С‚СѓР»Р±Р°СЂР° - РѕС‚СЂРёСЃРѕРІС‹РІР°РµС‚СЃСЏ СЃСЂР°Р·Сѓ РІ РїСЂР°РІРёР»СЊРЅРѕРј СЃРѕСЃС‚РѕСЏРЅРёРё
+- РЈСЃС‚СЂР°РЅРµРЅРѕ РІРёР·СѓР°Р»СЊРЅРѕРµ "РїРµСЂРµРєР»СЋС‡РµРЅРёРµ" С‚СѓР»Р±Р°СЂР° РїСЂРё Р·Р°РіСЂСѓР·РєРµ РЅР°СЃС‚СЂРѕРµРє
+- РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅР° СЃРёСЃС‚РµРјР° Р·Р°РіСЂСѓР·РєРё СЃРѕСЃС‚РѕСЏРЅРёСЏ С‚СѓР»Р±Р°СЂР°
+- РЈР»СѓС‡С€РµРЅР° СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ СЃРѕСЃС‚РѕСЏРЅРёСЏ РєРЅРѕРїРѕРє СЃ StateManager
 
 ### Fixed
-- Исправлена проблема с инверсным отображением кнопки Boundaries
-- Устранена задержка при переключении состояния кнопок тулбара
-- Исправлена синхронизация визуального состояния с реальным состоянием функций
+- РСЃРїСЂР°РІР»РµРЅР° РїСЂРѕР±Р»РµРјР° СЃ РёРЅРІРµСЂСЃРЅС‹Рј РѕС‚РѕР±СЂР°Р¶РµРЅРёРµРј РєРЅРѕРїРєРё Boundaries
+- РЈСЃС‚СЂР°РЅРµРЅР° Р·Р°РґРµСЂР¶РєР° РїСЂРё РїРµСЂРµРєР»СЋС‡РµРЅРёРё СЃРѕСЃС‚РѕСЏРЅРёСЏ РєРЅРѕРїРѕРє С‚СѓР»Р±Р°СЂР°
+- РСЃРїСЂР°РІР»РµРЅР° СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ РІРёР·СѓР°Р»СЊРЅРѕРіРѕ СЃРѕСЃС‚РѕСЏРЅРёСЏ СЃ СЂРµР°Р»СЊРЅС‹Рј СЃРѕСЃС‚РѕСЏРЅРёРµРј С„СѓРЅРєС†РёР№
 
 ## [3.13.0] - 2024-12-19
 
 ### Added
-- Горизонтальное разделение рабочей области с тулбаром в верхней части
-- Полнофункциональный тулбар с кнопками управления (File, Edit, View, Tools, Group)
-- Сворачиваемые секции тулбара по клику на заголовок
-- Контекстное меню тулбара с командами Hide, Icons, Text
-- Горизонтальный скроллинг тулбара (колесо мыши + средний клик)
-- Управление видимостью иконок и текста кнопок тулбара
-- Интеграция тулбара в систему управления панелями
+- Р“РѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅРѕРµ СЂР°Р·РґРµР»РµРЅРёРµ СЂР°Р±РѕС‡РµР№ РѕР±Р»Р°СЃС‚Рё СЃ С‚СѓР»Р±Р°СЂРѕРј РІ РІРµСЂС…РЅРµР№ С‡Р°СЃС‚Рё
+- РџРѕР»РЅРѕС„СѓРЅРєС†РёРѕРЅР°Р»СЊРЅС‹Р№ С‚СѓР»Р±Р°СЂ СЃ РєРЅРѕРїРєР°РјРё СѓРїСЂР°РІР»РµРЅРёСЏ (File, Edit, View, Tools, Group)
+- РЎРІРѕСЂР°С‡РёРІР°РµРјС‹Рµ СЃРµРєС†РёРё С‚СѓР»Р±Р°СЂР° РїРѕ РєР»РёРєСѓ РЅР° Р·Р°РіРѕР»РѕРІРѕРє
+- РљРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ С‚СѓР»Р±Р°СЂР° СЃ РєРѕРјР°РЅРґР°РјРё Hide, Icons, Text
+- Р“РѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅС‹Р№ СЃРєСЂРѕР»Р»РёРЅРі С‚СѓР»Р±Р°СЂР° (РєРѕР»РµСЃРѕ РјС‹С€Рё + СЃСЂРµРґРЅРёР№ РєР»РёРє)
+- РЈРїСЂР°РІР»РµРЅРёРµ РІРёРґРёРјРѕСЃС‚СЊСЋ РёРєРѕРЅРѕРє Рё С‚РµРєСЃС‚Р° РєРЅРѕРїРѕРє С‚СѓР»Р±Р°СЂР°
+- РРЅС‚РµРіСЂР°С†РёСЏ С‚СѓР»Р±Р°СЂР° РІ СЃРёСЃС‚РµРјСѓ СѓРїСЂР°РІР»РµРЅРёСЏ РїР°РЅРµР»СЏРјРё
 
 ### Changed
-- Переработана структура HTML layout для горизонтального разделения
-- Тулбар перемещен в верхнюю часть рабочей области
-- Обновлена система управления видимостью панелей для тулбара
-- Улучшена интеграция тулбара с Game Mode
+- РџРµСЂРµСЂР°Р±РѕС‚Р°РЅР° СЃС‚СЂСѓРєС‚СѓСЂР° HTML layout РґР»СЏ РіРѕСЂРёР·РѕРЅС‚Р°Р»СЊРЅРѕРіРѕ СЂР°Р·РґРµР»РµРЅРёСЏ
+- РўСѓР»Р±Р°СЂ РїРµСЂРµРјРµС‰РµРЅ РІ РІРµСЂС…РЅСЋСЋ С‡Р°СЃС‚СЊ СЂР°Р±РѕС‡РµР№ РѕР±Р»Р°СЃС‚Рё
+- РћР±РЅРѕРІР»РµРЅР° СЃРёСЃС‚РµРјР° СѓРїСЂР°РІР»РµРЅРёСЏ РІРёРґРёРјРѕСЃС‚СЊСЋ РїР°РЅРµР»РµР№ РґР»СЏ С‚СѓР»Р±Р°СЂР°
+- РЈР»СѓС‡С€РµРЅР° РёРЅС‚РµРіСЂР°С†РёСЏ С‚СѓР»Р±Р°СЂР° СЃ Game Mode
 
 ### Fixed
-- Исправлено позиционирование контекстного меню тулбара (открывается вниз)
-- Улучшена синхронизация состояний тулбара с меню View
-- Оптимизированы стили тулбара для новой позиции
+- РСЃРїСЂР°РІР»РµРЅРѕ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ РєРѕРЅС‚РµРєСЃС‚РЅРѕРіРѕ РјРµРЅСЋ С‚СѓР»Р±Р°СЂР° (РѕС‚РєСЂС‹РІР°РµС‚СЃСЏ РІРЅРёР·)
+- РЈР»СѓС‡С€РµРЅР° СЃРёРЅС…СЂРѕРЅРёР·Р°С†РёСЏ СЃРѕСЃС‚РѕСЏРЅРёР№ С‚СѓР»Р±Р°СЂР° СЃ РјРµРЅСЋ View
+- РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅС‹ СЃС‚РёР»Рё С‚СѓР»Р±Р°СЂР° РґР»СЏ РЅРѕРІРѕР№ РїРѕР·РёС†РёРё
 
 ## [3.11.0] - 2024-12-19
 
 ### Added
-- Улучшенная система контекстных меню с централизованным управлением
-- Оптимизированные стили для всех контекстных меню (BaseContextMenu, ConsoleContextMenu)
-- Улучшенная функциональность OutlinerContextMenu с исправленными багами
+- РЈР»СѓС‡С€РµРЅРЅР°СЏ СЃРёСЃС‚РµРјР° РєРѕРЅС‚РµРєСЃС‚РЅС‹С… РјРµРЅСЋ СЃ С†РµРЅС‚СЂР°Р»РёР·РѕРІР°РЅРЅС‹Рј СѓРїСЂР°РІР»РµРЅРёРµРј
+- РћРїС‚РёРјРёР·РёСЂРѕРІР°РЅРЅС‹Рµ СЃС‚РёР»Рё РґР»СЏ РІСЃРµС… РєРѕРЅС‚РµРєСЃС‚РЅС‹С… РјРµРЅСЋ (BaseContextMenu, ConsoleContextMenu)
+- РЈР»СѓС‡С€РµРЅРЅР°СЏ С„СѓРЅРєС†РёРѕРЅР°Р»СЊРЅРѕСЃС‚СЊ OutlinerContextMenu СЃ РёСЃРїСЂР°РІР»РµРЅРЅС‹РјРё Р±Р°РіР°РјРё
 
 ### Changed
-- Обновлена система стилей контекстных меню для лучшей совместимости
-- Улучшена производительность отображения контекстных меню
+- РћР±РЅРѕРІР»РµРЅР° СЃРёСЃС‚РµРјР° СЃС‚РёР»РµР№ РєРѕРЅС‚РµРєСЃС‚РЅС‹С… РјРµРЅСЋ РґР»СЏ Р»СѓС‡С€РµР№ СЃРѕРІРјРµСЃС‚РёРјРѕСЃС‚Рё
+- РЈР»СѓС‡С€РµРЅР° РїСЂРѕРёР·РІРѕРґРёС‚РµР»СЊРЅРѕСЃС‚СЊ РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ РєРѕРЅС‚РµРєСЃС‚РЅС‹С… РјРµРЅСЋ
 
 ### Fixed
-- Исправлены проблемы с отображением контекстных меню
-- Устранены баги в OutlinerContextMenu
-- Улучшена стабильность работы с контекстными меню
+- РСЃРїСЂР°РІР»РµРЅС‹ РїСЂРѕР±Р»РµРјС‹ СЃ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµРј РєРѕРЅС‚РµРєСЃС‚РЅС‹С… РјРµРЅСЋ
+- РЈСЃС‚СЂР°РЅРµРЅС‹ Р±Р°РіРё РІ OutlinerContextMenu
+- РЈР»СѓС‡С€РµРЅР° СЃС‚Р°Р±РёР»СЊРЅРѕСЃС‚СЊ СЂР°Р±РѕС‚С‹ СЃ РєРѕРЅС‚РµРєСЃС‚РЅС‹РјРё РјРµРЅСЋ
 
 ## [3.10.0] - 2024-12-19
 
 ### Added
-- Система констрейна оси при перетаскивании объектов с зажатым Shift
-- Визуальное отображение оси констрейна с настраиваемыми параметрами
-- Настройки оси констрейна в панели настроек (цвет, толщина, включение/отключение)
-- Сохранение всех настроек View в пользовательских настройках
-- Корректное вычисление центра групп для оси констрейна
-- Поддержка фиксации оси к текущей позиции объекта при зажатии Shift
+- РЎРёСЃС‚РµРјР° РєРѕРЅСЃС‚СЂРµР№РЅР° РѕСЃРё РїСЂРё РїРµСЂРµС‚Р°СЃРєРёРІР°РЅРёРё РѕР±СЉРµРєС‚РѕРІ СЃ Р·Р°Р¶Р°С‚С‹Рј Shift
+- Р’РёР·СѓР°Р»СЊРЅРѕРµ РѕС‚РѕР±СЂР°Р¶РµРЅРёРµ РѕСЃРё РєРѕРЅСЃС‚СЂРµР№РЅР° СЃ РЅР°СЃС‚СЂР°РёРІР°РµРјС‹РјРё РїР°СЂР°РјРµС‚СЂР°РјРё
+- РќР°СЃС‚СЂРѕР№РєРё РѕСЃРё РєРѕРЅСЃС‚СЂРµР№РЅР° РІ РїР°РЅРµР»Рё РЅР°СЃС‚СЂРѕРµРє (С†РІРµС‚, С‚РѕР»С‰РёРЅР°, РІРєР»СЋС‡РµРЅРёРµ/РѕС‚РєР»СЋС‡РµРЅРёРµ)
+- РЎРѕС…СЂР°РЅРµРЅРёРµ РІСЃРµС… РЅР°СЃС‚СЂРѕРµРє View РІ РїРѕР»СЊР·РѕРІР°С‚РµР»СЊСЃРєРёС… РЅР°СЃС‚СЂРѕР№РєР°С…
+- РљРѕСЂСЂРµРєС‚РЅРѕРµ РІС‹С‡РёСЃР»РµРЅРёРµ С†РµРЅС‚СЂР° РіСЂСѓРїРї РґР»СЏ РѕСЃРё РєРѕРЅСЃС‚СЂРµР№РЅР°
+- РџРѕРґРґРµСЂР¶РєР° С„РёРєСЃР°С†РёРё РѕСЃРё Рє С‚РµРєСѓС‰РµР№ РїРѕР·РёС†РёРё РѕР±СЉРµРєС‚Р° РїСЂРё Р·Р°Р¶Р°С‚РёРё Shift
 
 ### Changed
-- Ось констрейна теперь фиксируется к центру объекта/группы, а не к курсору
-- Ось отображается в обе стороны от центра до краев видимой области
-- Настройки View (Grid, Game Mode, Snap To Grid, Object Boundaries, Object Collisions) теперь сохраняются между сессиями
-- Game Mode корректно восстанавливается при перезапуске редактора
+- РћСЃСЊ РєРѕРЅСЃС‚СЂРµР№РЅР° С‚РµРїРµСЂСЊ С„РёРєСЃРёСЂСѓРµС‚СЃСЏ Рє С†РµРЅС‚СЂСѓ РѕР±СЉРµРєС‚Р°/РіСЂСѓРїРїС‹, Р° РЅРµ Рє РєСѓСЂСЃРѕСЂСѓ
+- РћСЃСЊ РѕС‚РѕР±СЂР°Р¶Р°РµС‚СЃСЏ РІ РѕР±Рµ СЃС‚РѕСЂРѕРЅС‹ РѕС‚ С†РµРЅС‚СЂР° РґРѕ РєСЂР°РµРІ РІРёРґРёРјРѕР№ РѕР±Р»Р°СЃС‚Рё
+- РќР°СЃС‚СЂРѕР№РєРё View (Grid, Game Mode, Snap To Grid, Object Boundaries, Object Collisions) С‚РµРїРµСЂСЊ СЃРѕС…СЂР°РЅСЏСЋС‚СЃСЏ РјРµР¶РґСѓ СЃРµСЃСЃРёСЏРјРё
+- Game Mode РєРѕСЂСЂРµРєС‚РЅРѕ РІРѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµС‚СЃСЏ РїСЂРё РїРµСЂРµР·Р°РїСѓСЃРєРµ СЂРµРґР°РєС‚РѕСЂР°
 
 ### Fixed
-- Исправлена отрисовка оси констрейна с учетом зума и панорамирования камеры
-- Исправлено вычисление центра групп для более точного позиционирования оси
-- Исправлено сохранение состояния Game Mode при перезапуске
+- РСЃРїСЂР°РІР»РµРЅР° РѕС‚СЂРёСЃРѕРІРєР° РѕСЃРё РєРѕРЅСЃС‚СЂРµР№РЅР° СЃ СѓС‡РµС‚РѕРј Р·СѓРјР° Рё РїР°РЅРѕСЂР°РјРёСЂРѕРІР°РЅРёСЏ РєР°РјРµСЂС‹
+- РСЃРїСЂР°РІР»РµРЅРѕ РІС‹С‡РёСЃР»РµРЅРёРµ С†РµРЅС‚СЂР° РіСЂСѓРїРї РґР»СЏ Р±РѕР»РµРµ С‚РѕС‡РЅРѕРіРѕ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёСЏ РѕСЃРё
+- РСЃРїСЂР°РІР»РµРЅРѕ СЃРѕС…СЂР°РЅРµРЅРёРµ СЃРѕСЃС‚РѕСЏРЅРёСЏ Game Mode РїСЂРё РїРµСЂРµР·Р°РїСѓСЃРєРµ
 
 ## [3.9.0] - 2024-12-19
 
 ### Added
-- Новая система поиска в OutlinerPanel с использованием унифицированного SearchUtils
-- Контекстное меню для объектов в OutlinerPanel (OutlinerContextMenu)
-- Логика выделения диапазона объектов (Shift+клик)
-- Логика переключения единичных объектов (Ctrl+клик)
-- Поддержка выделения по отфильтрованному списку при активном поиске
-- Новый класс SearchUtils для унифицированного поиска в панелях
-- Поддержка Logger.outliner для логирования операций OutlinerPanel
+- РќРѕРІР°СЏ СЃРёСЃС‚РµРјР° РїРѕРёСЃРєР° РІ OutlinerPanel СЃ РёСЃРїРѕР»СЊР·РѕРІР°РЅРёРµРј СѓРЅРёС„РёС†РёСЂРѕРІР°РЅРЅРѕРіРѕ SearchUtils
+- РљРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ РґР»СЏ РѕР±СЉРµРєС‚РѕРІ РІ OutlinerPanel (OutlinerContextMenu)
+- Р›РѕРіРёРєР° РІС‹РґРµР»РµРЅРёСЏ РґРёР°РїР°Р·РѕРЅР° РѕР±СЉРµРєС‚РѕРІ (Shift+РєР»РёРє)
+- Р›РѕРіРёРєР° РїРµСЂРµРєР»СЋС‡РµРЅРёСЏ РµРґРёРЅРёС‡РЅС‹С… РѕР±СЉРµРєС‚РѕРІ (Ctrl+РєР»РёРє)
+- РџРѕРґРґРµСЂР¶РєР° РІС‹РґРµР»РµРЅРёСЏ РїРѕ РѕС‚С„РёР»СЊС‚СЂРѕРІР°РЅРЅРѕРјСѓ СЃРїРёСЃРєСѓ РїСЂРё Р°РєС‚РёРІРЅРѕРј РїРѕРёСЃРєРµ
+- РќРѕРІС‹Р№ РєР»Р°СЃСЃ SearchUtils РґР»СЏ СѓРЅРёС„РёС†РёСЂРѕРІР°РЅРЅРѕРіРѕ РїРѕРёСЃРєР° РІ РїР°РЅРµР»СЏС…
+- РџРѕРґРґРµСЂР¶РєР° Logger.outliner РґР»СЏ Р»РѕРіРёСЂРѕРІР°РЅРёСЏ РѕРїРµСЂР°С†РёР№ OutlinerPanel
 
 ### Changed
-- OutlinerPanel теперь использует общую систему поиска с LayersPanel
-- Стиль переименования объектов приведен в соответствие с LayersPanel
-- Позиционирование иконок типов объектов исправлено и выровнено
-- reassignIdsDeep теперь создает строковые ID вместо числовых
-- Улучшена индексация дублированных объектов в группах
+- OutlinerPanel С‚РµРїРµСЂСЊ РёСЃРїРѕР»СЊР·СѓРµС‚ РѕР±С‰СѓСЋ СЃРёСЃС‚РµРјСѓ РїРѕРёСЃРєР° СЃ LayersPanel
+- РЎС‚РёР»СЊ РїРµСЂРµРёРјРµРЅРѕРІР°РЅРёСЏ РѕР±СЉРµРєС‚РѕРІ РїСЂРёРІРµРґРµРЅ РІ СЃРѕРѕС‚РІРµС‚СЃС‚РІРёРµ СЃ LayersPanel
+- РџРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ РёРєРѕРЅРѕРє С‚РёРїРѕРІ РѕР±СЉРµРєС‚РѕРІ РёСЃРїСЂР°РІР»РµРЅРѕ Рё РІС‹СЂРѕРІРЅРµРЅРѕ
+- reassignIdsDeep С‚РµРїРµСЂСЊ СЃРѕР·РґР°РµС‚ СЃС‚СЂРѕРєРѕРІС‹Рµ ID РІРјРµСЃС‚Рѕ С‡РёСЃР»РѕРІС‹С…
+- РЈР»СѓС‡С€РµРЅР° РёРЅРґРµРєСЃР°С†РёСЏ РґСѓР±Р»РёСЂРѕРІР°РЅРЅС‹С… РѕР±СЉРµРєС‚РѕРІ РІ РіСЂСѓРїРїР°С…
 
 ### Fixed
-- Исправлено контекстное меню, которое постоянно показывалось и не исчезало
-- Исправлено накопление обработчиков событий при пересоздании контекстного меню
-- Исправлена работа контекстного меню на дублированных объектах
-- Исправлено позиционирование иконок типов объектов в OutlinerPanel
-- Исправлено появление скролл-бара при активации переименования
+- РСЃРїСЂР°РІР»РµРЅРѕ РєРѕРЅС‚РµРєСЃС‚РЅРѕРµ РјРµРЅСЋ, РєРѕС‚РѕСЂРѕРµ РїРѕСЃС‚РѕСЏРЅРЅРѕ РїРѕРєР°Р·С‹РІР°Р»РѕСЃСЊ Рё РЅРµ РёСЃС‡РµР·Р°Р»Рѕ
+- РСЃРїСЂР°РІР»РµРЅРѕ РЅР°РєРѕРїР»РµРЅРёРµ РѕР±СЂР°Р±РѕС‚С‡РёРєРѕРІ СЃРѕР±С‹С‚РёР№ РїСЂРё РїРµСЂРµСЃРѕР·РґР°РЅРёРё РєРѕРЅС‚РµРєСЃС‚РЅРѕРіРѕ РјРµРЅСЋ
+- РСЃРїСЂР°РІР»РµРЅР° СЂР°Р±РѕС‚Р° РєРѕРЅС‚РµРєСЃС‚РЅРѕРіРѕ РјРµРЅСЋ РЅР° РґСѓР±Р»РёСЂРѕРІР°РЅРЅС‹С… РѕР±СЉРµРєС‚Р°С…
+- РСЃРїСЂР°РІР»РµРЅРѕ РїРѕР·РёС†РёРѕРЅРёСЂРѕРІР°РЅРёРµ РёРєРѕРЅРѕРє С‚РёРїРѕРІ РѕР±СЉРµРєС‚РѕРІ РІ OutlinerPanel
+- РСЃРїСЂР°РІР»РµРЅРѕ РїРѕСЏРІР»РµРЅРёРµ СЃРєСЂРѕР»Р»-Р±Р°СЂР° РїСЂРё Р°РєС‚РёРІР°С†РёРё РїРµСЂРµРёРјРµРЅРѕРІР°РЅРёСЏ
 
 ## [3.8.8] - 2024-12-19
 
 ### Fixed
-- Исправлены координаты дублируемых объектов в открытых группах - теперь дубликаты появляются точно в том же месте, что и оригиналы
-- Исправлен расчет мировых координат для объектов внутри групп при дублировании
-- Упрощена логика размещения дублированных объектов в режиме редактирования групп
+- РСЃРїСЂР°РІР»РµРЅС‹ РєРѕРѕСЂРґРёРЅР°С‚С‹ РґСѓР±Р»РёСЂСѓРµРјС‹С… РѕР±СЉРµРєС‚РѕРІ РІ РѕС‚РєСЂС‹С‚С‹С… РіСЂСѓРїРїР°С… - С‚РµРїРµСЂСЊ РґСѓР±Р»РёРєР°С‚С‹ РїРѕСЏРІР»СЏСЋС‚СЃСЏ С‚РѕС‡РЅРѕ РІ С‚РѕРј Р¶Рµ РјРµСЃС‚Рµ, С‡С‚Рѕ Рё РѕСЂРёРіРёРЅР°Р»С‹
+- РСЃРїСЂР°РІР»РµРЅ СЂР°СЃС‡РµС‚ РјРёСЂРѕРІС‹С… РєРѕРѕСЂРґРёРЅР°С‚ РґР»СЏ РѕР±СЉРµРєС‚РѕРІ РІРЅСѓС‚СЂРё РіСЂСѓРїРї РїСЂРё РґСѓР±Р»РёСЂРѕРІР°РЅРёРё
+- РЈРїСЂРѕС‰РµРЅР° Р»РѕРіРёРєР° СЂР°Р·РјРµС‰РµРЅРёСЏ РґСѓР±Р»РёСЂРѕРІР°РЅРЅС‹С… РѕР±СЉРµРєС‚РѕРІ РІ СЂРµР¶РёРјРµ СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЏ РіСЂСѓРїРї
 
 ## [3.8.7] - 2024-12-19
 
 ### Added
-- Защита от добавления объектов на заблокированные слои через drag&drop
+- Р—Р°С‰РёС‚Р° РѕС‚ РґРѕР±Р°РІР»РµРЅРёСЏ РѕР±СЉРµРєС‚РѕРІ РЅР° Р·Р°Р±Р»РѕРєРёСЂРѕРІР°РЅРЅС‹Рµ СЃР»РѕРё С‡РµСЂРµР· drag&drop
 
 ### Changed
-- Ctrl+Click на слое теперь выбирает все объекты в слое вместо выбора слоёв
-- Alt+Click+Drag теперь работает на любых объектах, не только выбранных
+- Ctrl+Click РЅР° СЃР»РѕРµ С‚РµРїРµСЂСЊ РІС‹Р±РёСЂР°РµС‚ РІСЃРµ РѕР±СЉРµРєС‚С‹ РІ СЃР»РѕРµ РІРјРµСЃС‚Рѕ РІС‹Р±РѕСЂР° СЃР»РѕС‘РІ
+- Alt+Click+Drag С‚РµРїРµСЂСЊ СЂР°Р±РѕС‚Р°РµС‚ РЅР° Р»СЋР±С‹С… РѕР±СЉРµРєС‚Р°С…, РЅРµ С‚РѕР»СЊРєРѕ РІС‹Р±СЂР°РЅРЅС‹С…
 
 ### Fixed
-- Исправлена команда "Show All Layers" - объекты корректно отображаются после изменения видимости
-- Исправлено дублирование с Alt+Click на невыбранных объектах
+- РСЃРїСЂР°РІР»РµРЅР° РєРѕРјР°РЅРґР° "Show All Layers" - РѕР±СЉРµРєС‚С‹ РєРѕСЂСЂРµРєС‚РЅРѕ РѕС‚РѕР±СЂР°Р¶Р°СЋС‚СЃСЏ РїРѕСЃР»Рµ РёР·РјРµРЅРµРЅРёСЏ РІРёРґРёРјРѕСЃС‚Рё
+- РСЃРїСЂР°РІР»РµРЅРѕ РґСѓР±Р»РёСЂРѕРІР°РЅРёРµ СЃ Alt+Click РЅР° РЅРµРІС‹Р±СЂР°РЅРЅС‹С… РѕР±СЉРµРєС‚Р°С…
 
 ### Removed
-- Удалена команда "Move Objects to Main Layer" из контекстного меню слоёв
-- Удалена логика выбора слоёв (selectedLayers) и связанные методы
-- Удалены пункты меню "Select All Layers" и "Deselect All"
+- РЈРґР°Р»РµРЅР° РєРѕРјР°РЅРґР° "Move Objects to Main Layer" РёР· РєРѕРЅС‚РµРєСЃС‚РЅРѕРіРѕ РјРµРЅСЋ СЃР»РѕС‘РІ
+- РЈРґР°Р»РµРЅР° Р»РѕРіРёРєР° РІС‹Р±РѕСЂР° СЃР»РѕС‘РІ (selectedLayers) Рё СЃРІСЏР·Р°РЅРЅС‹Рµ РјРµС‚РѕРґС‹
+- РЈРґР°Р»РµРЅС‹ РїСѓРЅРєС‚С‹ РјРµРЅСЋ "Select All Layers" Рё "Deselect All"
 
 ## [3.8.6] - 2024-12-18
 
 ### Fixed
-- Исправлена система версионирования
-- Улучшена архитектура утилитарных классов
+- РСЃРїСЂР°РІР»РµРЅР° СЃРёСЃС‚РµРјР° РІРµСЂСЃРёРѕРЅРёСЂРѕРІР°РЅРёСЏ
+- РЈР»СѓС‡С€РµРЅР° Р°СЂС…РёС‚РµРєС‚СѓСЂР° СѓС‚РёР»РёС‚Р°СЂРЅС‹С… РєР»Р°СЃСЃРѕРІ

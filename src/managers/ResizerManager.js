@@ -225,10 +225,6 @@ export class ResizerManager extends BaseManager {
             panel.style.flexShrink = '0';
         }
         
-        // Update UI
-        if (this.levelEditor?.panelPositionManager) {
-            this.levelEditor.panelPositionManager._updateUI();
-        }
     }
 
     /**

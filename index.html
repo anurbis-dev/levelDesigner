@@ -256,61 +256,7 @@
                     }
                 }
 
-                // Apply assets panel visibility immediately
-                const assetsPanelVisible = userPrefs.get('assetsPanelVisible');
-                if (assetsPanelVisible !== undefined) {
-                    try {
-                        const assetsPanel = document.getElementById('assets-panel');
-                        const resizerAssets = document.getElementById('resizer-assets');
-                        if (assetsPanel) {
-                            if (assetsPanelVisible) {
-                                assetsPanel.classList.remove('hidden');
-                                assetsPanel.style.display = 'flex';
-                                if (resizerAssets) {
-                                    resizerAssets.classList.remove('hidden');
-                                    resizerAssets.style.display = 'block';
-                                }
-                            } else {
-                                assetsPanel.classList.add('hidden');
-                                assetsPanel.style.display = 'none';
-                                if (resizerAssets) {
-                                    resizerAssets.classList.add('hidden');
-                                    resizerAssets.style.display = 'none';
-                                }
-                            }
-                        }
-                    } catch (assetsError) {
-                        Logger.layout.warn('Failed to apply assets panel visibility:', assetsError);
-                    }
-                }
-
-                // Apply right panel visibility immediately
-                const rightPanelVisible = userPrefs.get('rightPanelVisible');
-                if (rightPanelVisible !== undefined) {
-                    try {
-                        const rightPanel = document.getElementById('right-tabs-panel');
-                        const resizerX = document.getElementById('resizer-right-tabs-panel');
-                        if (rightPanel) {
-                            if (rightPanelVisible) {
-                                rightPanel.classList.remove('hidden');
-                                rightPanel.style.display = 'flex';
-                                if (resizerX) {
-                                    resizerX.classList.remove('hidden');
-                                    resizerX.style.display = 'block';
-                                }
-                            } else {
-                                rightPanel.classList.add('hidden');
-                                rightPanel.style.display = 'none';
-                                if (resizerX) {
-                                    resizerX.classList.add('hidden');
-                                    resizerX.style.display = 'none';
-                                }
-                            }
-                        }
-                    } catch (rightError) {
-                        Logger.layout.warn('Failed to apply right panel visibility:', rightError);
-                    }
-                }
+                // Assets / L-R tab panels: dock tree owns presence (B5) — no early DOM hide
 
                 // Apply status bar visibility immediately
                 const statusBarVisible = userPrefs.get('statusBarVisible');
@@ -473,26 +419,18 @@
             // Function to force complete layout update
             function forceLayoutUpdate() {
                 try {
-                    // Get main elements
                     const mainContainer = document.querySelector('.flex.flex-grow.min-h-0');
-                    const mainPanel = document.getElementById('main-panel');
-                    const rightPanel = document.getElementById('right-tabs-panel');
-                    const assetsPanel = document.getElementById('assets-panel');
                     const consolePanel = document.getElementById('console-panel');
 
-                // Only reset console styles when hidden - preserve other panel sizes
-                // Don't reset height as it's managed by user preferences
-                if (consolePanel.classList.contains('hidden')) {
+                // Only reset console styles when hidden - preserve height from user prefs
+                if (consolePanel && consolePanel.classList.contains('hidden')) {
                     consolePanel.style.flexShrink = '';
                     consolePanel.style.display = '';
-                    // Height is preserved and restored from user preferences when shown
                 }
 
                 // Minimal reflow trigger - only for main container to avoid affecting panel positions
                 if (mainContainer) {
-                    // Use getComputedStyle instead of offsetHeight to avoid layout changes
                     const computedStyle = getComputedStyle(mainContainer);
-                    // This triggers a minimal reflow without changing layout
                     const _ = computedStyle.height;
                 }
 
@@ -527,149 +465,6 @@
 
         // Make updateCanvas globally available
         window.updateCanvas = updateCanvas;
-
-        // Assets panel resizing is now handled by PanelPositionManager
-                if (window.editor?.stateManager) {
-                    const assetsPanelHeight = window.editor.stateManager.get('panels.assetsPanelHeight');
-                    
-                    // Note: Right panel width is now handled by PanelPositionManager
-                    
-                    // Apply assets panel height
-                    if (assetsPanelHeight !== undefined) {
-                        const assetsPanel = document.getElementById('assets-panel');
-                        if (assetsPanel) {
-                            assetsPanel.style.height = assetsPanelHeight + 'px';
-                            assetsPanel.style.flexShrink = '0';
-                        }
-                    }
-                }
-                
-                const resizerAssets = document.getElementById('resizer-assets');
-                const assetsPanel = document.getElementById('assets-panel');
-
-                // Universal function for applying panel styles
-                function applyPanelStyles(panel, size, direction = 'width', display = 'flex') {
-                    if (direction === 'width') {
-                        panel.style.width = size + 'px';
-                        panel.style.flex = '0 0 auto';
-                    } else {
-                        panel.style.height = size + 'px';
-                        panel.style.flexShrink = '0';
-                    }
-                    panel.style.display = display;
-                }
-
-            // Note: Assets panel resizer is now handled by PanelPositionManager
-
-
-        // Tab dragging functionality
-        function setupTabDragging() {
-            try {
-                // Initialize global dragging state
-                if (!window.tabDraggingState) {
-                    window.tabDraggingState = {
-                        draggedTab: null,
-                        draggedIndex: -1,
-                        draggedPanel: null
-                    };
-                }
-
-                // Setup dragging for a specific tab container
-                function setupContainerDragging(tabContainer) {
-                    if (!tabContainer) return;
-
-                    const draggingState = window.tabDraggingState;
-                    const tabSelector = '.tab-right[data-tab], .tab-left[data-tab], .tab[data-tab]';
-
-                    // Make tabs draggable
-                    tabContainer.addEventListener('mousedown', (e) => {
-                        if (e.button !== 0) return;
-
-                        const tab = e.target.closest(tabSelector);
-                        if (!tab) return;
-
-                        draggingState.draggedTab = tab;
-                        draggingState.draggedIndex = Array.from(tabContainer.children).indexOf(tab);
-                        draggingState.draggedPanel = tabContainer.closest('[id$="-tabs-panel"]');
-                        
-                        // Add dragging class
-                        tab.classList.add('dragging');
-                        
-                        // Prevent default to avoid text selection
-                        e.preventDefault();
-                    });
-
-                    // Handle mouse move for drag over effects
-                    tabContainer.addEventListener('mousemove', (e) => {
-                        if (!draggingState.draggedTab || draggingState.draggedPanel !== tabContainer.closest('[id$="-tabs-panel"]')) return;
-
-                        const tab = e.target.closest(tabSelector);
-                        if (!tab || tab === draggingState.draggedTab) {
-                            // Remove drag-over from all tabs in this container
-                            tabContainer.querySelectorAll(tabSelector).forEach(t => t.classList.remove('tab-drag-over'));
-                            return;
-                        }
-
-                        const targetIndex = Array.from(tabContainer.children).indexOf(tab);
-                        
-                        // Remove drag-over from all tabs in this container
-                        tabContainer.querySelectorAll(tabSelector).forEach(t => t.classList.remove('tab-drag-over'));
-                        
-                        // Add drag-over to target tab
-                        tab.classList.add('tab-drag-over');
-                    });
-
-                    // Prevent text selection during drag
-                    tabContainer.addEventListener('selectstart', (e) => {
-                        if (draggingState.draggedTab) {
-                            e.preventDefault();
-                        }
-                    });
-                }
-
-                // Setup dragging for right panel
-                const rightTabContainer = document.querySelector('#right-tabs-panel .flex.border-b.border-gray-700');
-                setupContainerDragging(rightTabContainer);
-
-                // Setup dragging for left panel (will be added dynamically)
-                const leftTabContainer = document.querySelector('#left-tabs-panel .flex.border-b.border-gray-700');
-                setupContainerDragging(leftTabContainer);
-
-                // Handle mouse up to complete drag
-                document.addEventListener('mouseup', (e) => {
-                    const draggingState = window.tabDraggingState;
-                    if (!draggingState.draggedTab) return;
-
-                    const tabContainer = draggingState.draggedTab.parentElement;
-                    const targetTab = e.target.closest('.tab-right[data-tab], .tab-left[data-tab], .tab[data-tab]');
-                    
-                    if (targetTab && targetTab !== draggingState.draggedTab && tabContainer.contains(targetTab)) {
-                        const targetIndex = Array.from(tabContainer.children).indexOf(targetTab);
-                        const draggedIndex = Array.from(tabContainer.children).indexOf(draggingState.draggedTab);
-                        
-                        // Move the tab within the same container
-                        if (draggedIndex < targetIndex) {
-                            tabContainer.insertBefore(draggingState.draggedTab, targetTab.nextSibling);
-                        } else {
-                            tabContainer.insertBefore(draggingState.draggedTab, targetTab);
-                        }
-                    }
-
-                    // Clean up
-                    tabContainer.querySelectorAll('.tab-right[data-tab], .tab-left[data-tab], .tab[data-tab]').forEach(t => {
-                        t.classList.remove('dragging', 'tab-drag-over');
-                    });
-                    
-                    draggingState.draggedTab = null;
-                    draggingState.draggedIndex = -1;
-                    draggingState.draggedPanel = null;
-                });
-            } catch (error) {
-                Logger.layout.error('Error setting up tab dragging:', error);
-            }
-        }
-
-        // Tab dragging is managed by PanelPositionManager.
 
         // Console functionality
         let isConsoleVisible = false; // Global variable for console visibility state
@@ -1289,8 +1084,6 @@
                 }
             };
 
-
-            // Assets panel resizing is now handled by PanelPositionManager
 
             // Register console context menu with the manager
             if (window.editor && window.editor.contextMenuManager) {

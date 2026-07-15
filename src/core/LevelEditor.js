@@ -32,7 +32,6 @@ import { ProjectFileOperations } from './ProjectFileOperations.js';
 import { ContextMenuManager } from '../managers/ContextMenuManager.js';
 import { Logger } from '../utils/Logger.js';
 import { dialogReplacer } from '../utils/DialogReplacer.js';
-import { PanelPositionManager } from '../ui/PanelPositionManager.js';
 import { DockManager } from '../ui/dock/DockManager.js';
 
 // Import new utilities
@@ -116,11 +115,7 @@ export class LevelEditor {
         // Initialize ContextMenuManager
         this.contextMenuManager = new ContextMenuManager();
 
-        // Initialize Panel Position Manager (legacy; removed in B5)
-        this.panelPositionManager = new PanelPositionManager(this);
-        this.lifecycle.register('panelPositionManager', this.panelPositionManager, { priority: 2 });
-
-        // Split-tree dock (Phase B) — B1 singleton + persistence; real panels B2–B3
+        // Split-tree dock (replaces PanelPositionManager as of B5)
         this.dockManager = new DockManager(this);
         this.lifecycle.register('dockManager', this.dockManager, { priority: 2 });
 
@@ -460,13 +455,6 @@ export class LevelEditor {
             this.canvasRenderer.resizeCanvas();
             this.render();
         }
-    }
-
-    /**
-     * Toggle right panel position (left/right)
-     */
-    toggleRightPanelPosition() {
-        this.panelPositionManager.tabLayoutController.togglePanelPosition('rightPanel');
     }
 
     /**

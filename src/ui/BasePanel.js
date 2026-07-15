@@ -131,7 +131,7 @@ export class BasePanel {
 
             // Check if the event is from a panel that should handle Ctrl+scroll
             const target = e.target;
-            const isPanelElement = target.closest('#assets-panel, #right-panel, #console-panel, #settings-overlay');
+            const isPanelElement = target.closest('#assets-panel, .leaf-body, #console-panel, #settings-overlay');
             
             if (isPanelElement) {
                 // Check if it's specifically the asset previews container

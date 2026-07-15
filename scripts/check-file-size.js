@@ -19,9 +19,6 @@ const OVERRIDES = new Set([
     'ui/AssetViewRenderer.js',       // Фаза 4.2 extraction from AssetPanel.js — single-responsibility render module, not further split
     'ui/AssetFoldersController.js',  // Фаза 4.1 extraction from AssetPanel.js — folder/tab navigation module, not further split
     'core/LevelEditor.js',           // Фаза 3 done (2399->1583); remainder is backlog, not a named phase
-    'ui/panels/TabLayoutController.js',  // Фаза 4.5.1 extraction from PanelPositionManager.js — single-responsibility layout module, not further split
-    'ui/panels/TabDragController.js',    // Фаза 4.5.3 extraction from PanelPositionManager.js — single-responsibility drag protocol module, not further split
-    'ui/panels/SplitPaneController.js',  // Фаза 4.5.4 extraction from PanelPositionManager.js — single-responsibility split-pane window manager, not further split
     'ui/LayersPanel.js',
     'event-system/MouseHandlers.js',
     'core/RenderOperations.js',

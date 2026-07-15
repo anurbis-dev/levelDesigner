@@ -324,15 +324,10 @@ export class AssetFoldersController {
      */
     toggleFoldersPosition() {
         const assetPanel = this.assetPanel;
-        if (assetPanel.levelEditor.panelPositionManager) {
-            assetPanel.levelEditor.panelPositionManager.tabLayoutController.togglePanelPosition('folders');
-        } else {
-            // Fallback to old method if PanelPositionManager not available
-            assetPanel.foldersPosition = assetPanel.foldersPosition === 'left' ? 'right' : 'left';
-            this.saveFoldersPosition();
-            this.updateFoldersLayout();
-            Logger.ui.info(`Folders panel moved to ${assetPanel.foldersPosition}`);
-        }
+        assetPanel.foldersPosition = assetPanel.foldersPosition === 'left' ? 'right' : 'left';
+        this.saveFoldersPosition();
+        this.updateFoldersLayout();
+        Logger.ui.info(`Folders panel moved to ${assetPanel.foldersPosition}`);
     }
 
     /**

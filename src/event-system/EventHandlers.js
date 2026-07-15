@@ -488,9 +488,10 @@ export class EventHandlers extends BaseModule {
         const obj = this.editor.level.findObjectById(Array.from(selectedIds)[0]);
         if (!obj) return;
 
-        const leftHasOutliner = document.getElementById('left-tabs-panel')?.querySelector('[data-tab="outliner"]');
-        this.setActivePanelTab('outliner', leftHasOutliner ? 'left' : 'right');
-
+        // Ensure Outliner leaf is present (dock); then start inline rename on primary instance
+        if (this._dockInited()) {
+            this.editor.dockManager.showContentType('outliner');
+        }
         if (this.editor.outlinerPanel && typeof this.editor.outlinerPanel.startInlineRename === 'function') {
             this.editor.outlinerPanel.startInlineRename(obj);
         }
@@ -569,22 +570,9 @@ export class EventHandlers extends BaseModule {
             this.applyPanelVisibility(panel, visible);
         });
 
+        // Dock contentType presence is tree-driven (B3.1 / B5)
         if (this._dockInited()) {
-            // Dock contentType presence is tree-driven (B3.1)
             this.syncDockPanelMenuCheckboxes();
-        } else {
-            // Initialize left/right panel states but don't apply visibility yet
-            // PanelPositionManager will handle visibility based on actual tab positions
-            const tabPanelStates = ['rightPanel', 'leftPanel'];
-            tabPanelStates.forEach(panel => {
-                const prefKey = panel + 'Visible';
-                const visible = this.editor.userPrefs?.get(prefKey) ??
-                               this.editor.configManager.get(`editor.view.${panel}`) ?? true;
-
-                this.editor.stateManager.set(`view.${panel}`, visible);
-                this.updateViewCheckbox(panel, visible);
-                // Don't apply visibility here - let PanelPositionManager handle it
-            });
         }
 
         // Initialize other view states from user config
@@ -605,36 +593,9 @@ export class EventHandlers extends BaseModule {
             }
         });
 
-        // B0+: dock owns layout — skip legacy PanelPositionManager (it needs removed flex shell)
-        if (this.editor.dockManager?._inited) {
-            // B3: primary panels already mounted into leaves; search still needs registration
-            if (this.editor.initializeSearchControls) {
-                this.editor.initializeSearchControls();
-            }
-        } else if (this.editor.panelPositionManager) {
-            // Initialize panel positions using PanelPositionManager FIRST
-            this.editor.panelPositionManager.tabLayoutController.initializePanelPositions();
-
-            // Update panels after tab positions are initialized
-            if (this.editor.updateAllPanels) {
-                this.editor.updateAllPanels();
-            }
-
-            // Don't re-apply panel visibility here - PanelPositionManager handles it
-            // based on actual tab positions and panel existence
-
-            // Activate tabs after panel positions are initialized
-            this.activateTabsAfterPanelInitialization();
-
-            // Initialize search controls after panels are created
-            if (this.editor.initializeSearchControls) {
-                this.editor.initializeSearchControls();
-            }
-
-            // Setup tab event listeners after panels are created (this will call updateTabHandlers)
-            this.setupTabEventListeners();
-        } else {
-            // PanelPositionManager not found - this is expected during early initialization
+        // Dock owns layout — primary panels already mounted; register search controls
+        if (this.editor.initializeSearchControls) {
+            this.editor.initializeSearchControls();
         }
     }
 
@@ -833,22 +794,6 @@ export class EventHandlers extends BaseModule {
                     { id: 'resizer-assets', display: 'block' }
                 ]
             },
-            'rightPanel': {
-                type: 'tabs',
-                side: 'right',
-                elements: [
-                    { id: 'right-tabs-panel', display: 'flex' },
-                    { id: 'resizer-right-tabs-panel', display: 'block' }
-                ]
-            },
-            'leftPanel': {
-                type: 'tabs',
-                side: 'left',
-                elements: [
-                    { id: 'left-tabs-panel', display: 'flex' },
-                    { id: 'resizer-left-tabs-panel', display: 'block' }
-                ]
-            },
             'console': {
                 type: 'dom',
                 elements: [
@@ -876,7 +821,7 @@ export class EventHandlers extends BaseModule {
                 break;
 
             case 'dom':
-                // Handle DOM-based panels (like assets panel)
+                // Handle DOM-based panels (console, legacy assets footer)
                 config.elements.forEach(element => {
                     const el = document.getElementById(element.id);
                     if (el) {
@@ -897,41 +842,6 @@ export class EventHandlers extends BaseModule {
                     }
                 });
                 break;
-
-            case 'tabs':
-                // Handle tabs-based panels (left/right panels)
-                if (visible) {
-                    // Create panel if it doesn't exist
-                    this.editor.panelPositionManager.tabLayoutController.ensurePanelExists(config.side);
-
-                    // Show/hide panel elements
-                    config.elements.forEach(element => {
-                        const el = document.getElementById(element.id);
-                        if (el) {
-                            el.classList.remove('hidden');
-                            el.style.display = element.display;
-                        }
-                    });
-                } else {
-                    // Hiding: if the panel is EMPTY, remove it from the DOM entirely instead of
-                    // just display:none-ing it. Tab-drag's "does the other panel exist yet?"
-                    // check (TabDragController._installGlobalTabDragHandlers) only looks for
-                    // DOM presence — a hidden-but-still-present empty panel would satisfy that
-                    // check and be treated as "already exists", so the drag would never
-                    // auto-show it again (and it can't be a drop target while display:none).
-                    // removeEmptyPanel() is a no-op if the panel still has tabs, so this is
-                    // safe to call unconditionally.
-                    this.editor.panelPositionManager.splitPaneController.removeEmptyPanel(config.side);
-
-                    config.elements.forEach(element => {
-                        const el = document.getElementById(element.id);
-                        if (el) {
-                            el.classList.add('hidden');
-                            el.style.display = 'none';
-                        }
-                    });
-                }
-                break;
         }
         
         // Resize canvas after panel changes
@@ -949,9 +859,7 @@ export class EventHandlers extends BaseModule {
 
         const savedStates = {};
         const viewOptions = ['grid', 'fullscreen', 'gameMode', 'snapToGrid', 'objectBoundaries', 'objectCollisions', 'parallax'];
-        const panelOptions = this._dockInited()
-            ? ['toolbar', 'console', 'statusBar', ...DOCK_CONTENT_PANELS]
-            : ['toolbar', 'assetsPanel', 'rightPanel', 'leftPanel', 'console'];
+        const panelOptions = ['toolbar', 'console', 'statusBar', ...DOCK_CONTENT_PANELS];
 
         viewOptions.forEach(option => {
             const stateKey = `view.${option}`;
@@ -979,9 +887,7 @@ export class EventHandlers extends BaseModule {
             const enabled = savedStates[option];
 
             // Check if it's a panel option
-            const panelOptions = this._dockInited()
-                ? ['toolbar', 'console', 'statusBar', ...DOCK_CONTENT_PANELS]
-                : ['toolbar', 'assetsPanel', 'rightPanel', 'leftPanel', 'console'];
+            const panelOptions = ['toolbar', 'console', 'statusBar', ...DOCK_CONTENT_PANELS];
             if (panelOptions.includes(option)) {
                 // Sync state so subsequent saveViewStates() reads correct value
                 this.editor.stateManager.set(`view.${option}`, enabled);
@@ -1012,11 +918,7 @@ export class EventHandlers extends BaseModule {
                 console: this.editor.stateManager.get('console.visible')
                     ?? this.editor.stateManager.get('view.console')
                     ?? false,
-                statusBar: this.editor.stateManager.get('view.statusBar') ?? true,
-                // Legacy L/R when no dock
-                assetsPanel: this.editor.stateManager.get('view.assetsPanel') ?? true,
-                rightPanel: this.editor.stateManager.get('view.rightPanel') ?? true,
-                leftPanel: this.editor.stateManager.get('view.leftPanel') ?? true
+                statusBar: this.editor.stateManager.get('view.statusBar') ?? true
             };
             
             // Reset panel toggle states in menu to show they're disabled in Game Mode
@@ -1028,14 +930,6 @@ export class EventHandlers extends BaseModule {
                 // Only viewport remains present in tree
                 this.editor.stateManager.set('view.viewport', true);
                 this.updateViewCheckbox('viewport', true);
-            } else {
-                // Legacy: hide L/R tabs + assets footer
-                document.getElementById('right-tabs-panel')?.classList.add('hidden');
-                document.getElementById('assets-panel')?.classList.add('hidden');
-                document.getElementById('resizer-right-tabs-panel')?.classList.add('hidden');
-                document.getElementById('resizer-assets')?.classList.add('hidden');
-                document.getElementById('left-tabs-panel')?.classList.add('hidden');
-                document.getElementById('resizer-left-tabs-panel')?.classList.add('hidden');
             }
 
             consolePanel?.classList.add('hidden');
@@ -1160,13 +1054,6 @@ export class EventHandlers extends BaseModule {
             if (resizerConsole) resizerConsole.style.display = 'block';
         }
 
-        if (!this._dockInited()) {
-            // Legacy L/R/assets
-            this.applyPanelVisibility('assetsPanel', this.savedPanelStates.assetsPanel);
-            this.applyPanelVisibility('rightPanel', this.savedPanelStates.rightPanel);
-            this.applyPanelVisibility('leftPanel', this.savedPanelStates.leftPanel);
-        }
-
         // Clear saved states
         this.savedPanelStates = null;
     }
@@ -1175,23 +1062,13 @@ export class EventHandlers extends BaseModule {
      * Reset panel toggle states in menu when entering Game Mode
      */
     resetPanelToggleStates() {
-        if (this._dockInited()) {
-            // Visual only for dock types — do not remove leaves from tree
-            for (const type of DOCK_CONTENT_PANELS) {
-                this.editor.stateManager.set(`view.${type}`, false);
-                this.updateViewCheckbox(type, false);
-            }
-            const extra = ['toolbar', 'console', 'statusBar'];
-            extra.forEach((panel) => {
-                this.editor.stateManager.set(`view.${panel}`, false);
-                this.updateViewCheckbox(panel, false);
-                this.applyPanelVisibility(panel, false);
-            });
-            return;
+        // Visual only for dock types — do not remove leaves from tree (immersive does that)
+        for (const type of DOCK_CONTENT_PANELS) {
+            this.editor.stateManager.set(`view.${type}`, false);
+            this.updateViewCheckbox(type, false);
         }
-
-        const panelToggles = ['toolbar', 'assetsPanel', 'rightPanel', 'leftPanel', 'console'];
-        panelToggles.forEach(panel => {
+        const extra = ['toolbar', 'console', 'statusBar'];
+        extra.forEach((panel) => {
             this.editor.stateManager.set(`view.${panel}`, false);
             this.updateViewCheckbox(panel, false);
             this.applyPanelVisibility(panel, false);
@@ -1209,36 +1086,16 @@ export class EventHandlers extends BaseModule {
         this.updateViewCheckbox('toolbar', this.savedPanelStates.toolbar);
         this.applyPanelVisibility('toolbar', this.savedPanelStates.toolbar);
 
-        if (this._dockInited()) {
-            // Dock checkboxes restored from tree in restorePanelStates
-            this.editor.stateManager.set('console.visible', this.savedPanelStates.console);
-            this.editor.stateManager.set('view.console', this.savedPanelStates.console);
-            this.updateViewCheckbox('console', this.savedPanelStates.console);
-            this.applyPanelVisibility('console', this.savedPanelStates.console);
-            if (this.savedPanelStates.statusBar !== undefined) {
-                this.editor.stateManager.set('view.statusBar', this.savedPanelStates.statusBar);
-                this.updateViewCheckbox('statusBar', this.savedPanelStates.statusBar);
-                this.applyPanelVisibility('statusBar', this.savedPanelStates.statusBar);
-            }
-            return;
-        }
-
-        // Legacy assets / L/R
-        this.editor.stateManager.set('view.assetsPanel', this.savedPanelStates.assetsPanel);
-        this.updateViewCheckbox('assetsPanel', this.savedPanelStates.assetsPanel);
-        this.applyPanelVisibility('assetsPanel', this.savedPanelStates.assetsPanel);
-
-        this.editor.stateManager.set('view.rightPanel', this.savedPanelStates.rightPanel);
-        this.updateViewCheckbox('rightPanel', this.savedPanelStates.rightPanel);
-        this.applyPanelVisibility('rightPanel', this.savedPanelStates.rightPanel);
-
-        this.editor.stateManager.set('view.leftPanel', this.savedPanelStates.leftPanel);
-        this.updateViewCheckbox('leftPanel', this.savedPanelStates.leftPanel);
-        this.applyPanelVisibility('leftPanel', this.savedPanelStates.leftPanel);
-
+        // Dock checkboxes restored from tree in restorePanelStates
         this.editor.stateManager.set('console.visible', this.savedPanelStates.console);
+        this.editor.stateManager.set('view.console', this.savedPanelStates.console);
         this.updateViewCheckbox('console', this.savedPanelStates.console);
         this.applyPanelVisibility('console', this.savedPanelStates.console);
+        if (this.savedPanelStates.statusBar !== undefined) {
+            this.editor.stateManager.set('view.statusBar', this.savedPanelStates.statusBar);
+            this.updateViewCheckbox('statusBar', this.savedPanelStates.statusBar);
+            this.applyPanelVisibility('statusBar', this.savedPanelStates.statusBar);
+        }
     }
 
     /**
@@ -1420,88 +1277,14 @@ export class EventHandlers extends BaseModule {
     }
 
     /**
-     * Set active tab in panel programmatically
-     * @param {string} tabName - Name of the tab to activate
-     * @param {string} panelSide - 'left' or 'right' panel
+     * Focus a dock contentType (legacy name: "activate tab").
+     * @param {string} tabName - contentType / former tab name
+     * @param {string} [_panelSide] - ignored (B5: no L/R tab shells)
      */
-    setActivePanelTab(tabName, panelSide = 'right') {
-        this.ensurePanelTabMarkers();
-
-        // Find the tab in the specified panel
-        const panelId = `${panelSide}-tabs-panel`;
-        const panel = document.getElementById(panelId);
-        if (!panel) {
-            Logger.ui.warn(`Panel ${panelId} not found - skipping tab activation`);
-            return;
+    setActivePanelTab(tabName, _panelSide = 'right') {
+        if (this._dockInited() && this._isDockContentPanel(tabName)) {
+            this.editor.dockManager.showContentType(tabName);
         }
-
-        const tab = panel.querySelector(`[data-tab="${tabName}"]`);
-        if (!tab) {
-            Logger.ui.warn(`Tab ${tabName} not found in ${panelSide} panel - skipping activation`);
-            return;
-        }
-
-        // Remove active class from all tabs in the same panel
-        panel.querySelectorAll('.tab-right, .tab-left').forEach(t => t.classList.remove('active'));
-        
-        // Activate the specified tab
-        tab.classList.add('active');
-
-        // Update state manager with the active tab for this panel
-        // ConfigManager will be updated automatically via subscription in LevelEditor
-        if (panelSide === 'right') {
-            this.editor.stateManager.set('rightPanelTab', tabName);
-        } else if (panelSide === 'left') {
-            this.editor.stateManager.set('leftPanelTab', tabName);
-        }
-
-        // Show corresponding content only for the active tab in this panel
-        // Get current active tabs for both panels
-        const rightPanelActiveTab = this.editor.stateManager.get('rightPanelTab');
-        const leftPanelActiveTab = this.editor.stateManager.get('leftPanelTab');
-        
-        // Hide all tab content panels first (markers + legacy classes as safety net).
-        // Force inline display:none so component-level inline display styles cannot leak visibility.
-        document.querySelectorAll('[data-panel-tab-content="true"], .tab-content-right, .tab-content-left').forEach(content => {
-            content.classList.add('hidden');
-            content.style.display = 'none';
-        });
-        
-        // Show content for active tabs in both panels
-        // Find content panels in the correct panel containers
-        const rightPanel = document.getElementById('right-tabs-panel');
-        const leftPanel = document.getElementById('left-tabs-panel');
-        
-        if (rightPanelActiveTab && rightPanel) {
-            const rightContentPanel = rightPanel.querySelector(`[data-panel-tab-name="${rightPanelActiveTab}"]`) ||
-                rightPanel.querySelector(`#${rightPanelActiveTab}-content-panel`);
-            if (rightContentPanel) {
-                rightContentPanel.style.display = '';
-                rightContentPanel.classList.remove('hidden');
-                // A split (composite) tab wraps two nested content panels, both marked
-                // data-panel-tab-content="true" — the "hide all" pass above hid them too,
-                // so they need to be explicitly revealed along with their wrapper.
-                rightContentPanel.querySelectorAll('[data-panel-tab-content="true"]').forEach(nested => {
-                    nested.classList.remove('hidden');
-                    nested.style.display = '';
-                });
-            }
-        }
-
-        if (leftPanelActiveTab && leftPanel) {
-            const leftContentPanel = leftPanel.querySelector(`[data-panel-tab-name="${leftPanelActiveTab}"]`) ||
-                leftPanel.querySelector(`#${leftPanelActiveTab}-content-panel`);
-            if (leftContentPanel) {
-                leftContentPanel.style.display = '';
-                leftContentPanel.classList.remove('hidden');
-                leftContentPanel.querySelectorAll('[data-panel-tab-content="true"]').forEach(nested => {
-                    nested.classList.remove('hidden');
-                    nested.style.display = '';
-                });
-            }
-        }
-
-        // Show search section for layers and outliner tabs
         SearchSectionUtils.showSearchSectionForTab(tabName, this.editor);
     }
 

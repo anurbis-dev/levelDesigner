@@ -41,13 +41,7 @@ export class EditorPreferencesController extends BaseModule {
         if (!editor.userPrefs) return;
 
         try {
-            // Right/Left panel widths - handled by PanelPositionManager resizers
-            // Skip to avoid double application of styles
-
-            // Assets panel height - handled by PanelPositionManager.initializeAssetsPanel()
-            // Skip to avoid double application of styles
-
-            // Console height
+            // L/R widths + assets footer height — dock ratios own layout (B5). Console still overlay.
             const consoleHeight = editor.userPrefs.get('consoleHeight');
             if (consoleHeight) {
                 const consolePanel = document.getElementById('console-panel');
@@ -55,34 +49,6 @@ export class EditorPreferencesController extends BaseModule {
                     const height = Math.max(200, Math.min(window.innerHeight * 0.9, consoleHeight));
                     consolePanel.style.setProperty('height', height + 'px', 'important');
                     consolePanel.style.setProperty('bottom', 'auto', 'important');
-                }
-            }
-
-            // Apply panel visibility states
-            const rightPanelVisible = editor.userPrefs.get('rightPanelVisible');
-            if (rightPanelVisible !== undefined) {
-                const rightPanel = document.getElementById('right-panel');
-                if (rightPanel) {
-                    rightPanel.style.display = rightPanelVisible ? 'flex' : 'none';
-                }
-            }
-
-            const leftPanelVisible = editor.userPrefs.get('leftPanelVisible');
-            if (leftPanelVisible !== undefined) {
-                const leftPanel = document.getElementById('left-panel');
-                if (leftPanel) {
-                    leftPanel.style.display = leftPanelVisible ? 'flex' : 'none';
-                }
-            }
-
-            // B3+: assets visibility is dock tree presence, not footer flag
-            if (!editor.dockManager?._inited) {
-                const assetsPanelVisible = editor.userPrefs.get('assetsPanelVisible');
-                if (assetsPanelVisible !== undefined) {
-                    const assetsPanel = document.getElementById('assets-panel');
-                    if (assetsPanel) {
-                        assetsPanel.style.display = assetsPanelVisible ? 'flex' : 'none';
-                    }
                 }
             }
         } catch (error) {
@@ -98,21 +64,10 @@ export class EditorPreferencesController extends BaseModule {
         if (!editor.userPrefs) return;
 
         try {
-            // Apply asset tab order
+            // Asset tab order (Assets panel internal tabs — still used)
             const assetTabOrder = editor.userPrefs.get('assetTabOrder');
             if (assetTabOrder && Array.isArray(assetTabOrder)) {
                 editor.stateManager.set('assetTabOrder', assetTabOrder);
-            }
-
-            // Apply panel tab orders
-            const rightPanelTabOrder = editor.userPrefs.get('rightPanelTabOrder');
-            if (rightPanelTabOrder && Array.isArray(rightPanelTabOrder)) {
-                editor.stateManager.set('rightPanelTabOrder', rightPanelTabOrder);
-            }
-
-            const leftPanelTabOrder = editor.userPrefs.get('leftPanelTabOrder');
-            if (leftPanelTabOrder && Array.isArray(leftPanelTabOrder)) {
-                editor.stateManager.set('leftPanelTabOrder', leftPanelTabOrder);
             }
 
             // Re-render panels to apply tab order
@@ -148,17 +103,6 @@ export class EditorPreferencesController extends BaseModule {
                         editor.toolbar.saveState();
                     }
 
-                    // Save current panel tabs
-                    const currentRightPanelTab = editor.stateManager.get('rightPanelTab');
-                    if (currentRightPanelTab) {
-                        editor.configManager.set('editor.view.rightPanelTab', currentRightPanelTab);
-                    }
-
-                    const currentLeftPanelTab = editor.stateManager.get('leftPanelTab');
-                    if (currentLeftPanelTab) {
-                        editor.configManager.set('editor.view.leftPanelTab', currentLeftPanelTab);
-                    }
-
                     // Save current active asset tabs
                     const currentActiveAssetTabs = editor.stateManager.get('activeAssetTabs');
                     if (currentActiveAssetTabs) {
@@ -182,64 +126,13 @@ export class EditorPreferencesController extends BaseModule {
                         editor.configManager.set('canvas.snapToGrid', snapToGrid);
                     }
 
-                    // Save current panel sizes
-                    const rightPanelWidth = editor.stateManager.get('panels.rightPanelWidth');
-                    if (rightPanelWidth && rightPanelWidth > 0) {
-                        editor.userPrefs.set('rightPanelWidth', rightPanelWidth);
-                    }
-
-                    const leftPanelWidth = editor.stateManager.get('panels.leftPanelWidth');
-                    if (leftPanelWidth && leftPanelWidth > 0) {
-                        editor.userPrefs.set('leftPanelWidth', leftPanelWidth);
-                    }
-
-                    const assetsPanelHeight = editor.stateManager.get('panels.assetsPanelHeight');
-                    if (assetsPanelHeight && assetsPanelHeight > 0) {
-                        editor.userPrefs.set('assetsPanelHeight', assetsPanelHeight);
-                    }
-
-                    // Save panel tab orders
-                    const rightPanelTabOrder = editor.stateManager.get('rightPanelTabOrder');
-                    if (rightPanelTabOrder && Array.isArray(rightPanelTabOrder)) {
-                        editor.userPrefs.set('rightPanelTabOrder', rightPanelTabOrder);
-                    }
-
-                    const leftPanelTabOrder = editor.stateManager.get('leftPanelTabOrder');
-                    if (leftPanelTabOrder && Array.isArray(leftPanelTabOrder)) {
-                        editor.userPrefs.set('leftPanelTabOrder', leftPanelTabOrder);
-                    }
-
+                    // Asset tab order (internal Assets tabs)
                     const assetTabOrder = editor.stateManager.get('assetTabOrder');
                     if (assetTabOrder && Array.isArray(assetTabOrder)) {
                         editor.userPrefs.set('assetTabOrder', assetTabOrder);
                     }
 
-                    // Save tab positions (which panel each tab is in)
-                    const tabPositions = editor.stateManager.get('tabPositions');
-                    if (tabPositions) {
-                        Object.entries(tabPositions).forEach(([tabName, position]) => {
-                            editor.userPrefs.set(`tabPosition_${tabName}`, position);
-                        });
-                    }
-
-                    // Save panel visibility states
-                    const rightPanel = document.getElementById('right-panel');
-                    if (rightPanel) {
-                        const isRightPanelVisible = rightPanel.style.display !== 'none';
-                        editor.userPrefs.set('rightPanelVisible', isRightPanelVisible);
-                    }
-
-                    const leftPanel = document.getElementById('left-panel');
-                    if (leftPanel) {
-                        const isLeftPanelVisible = leftPanel.style.display !== 'none';
-                        editor.userPrefs.set('leftPanelVisible', isLeftPanelVisible);
-                    }
-
-                    const assetsPanel = document.getElementById('assets-panel');
-                    if (assetsPanel) {
-                        const isAssetsPanelVisible = assetsPanel.style.display !== 'none';
-                        editor.userPrefs.set('assetsPanelVisible', isAssetsPanelVisible);
-                    }
+                    // L/R widths, tab orders, tabPositions, L/R/assetsVisible — stopped (B5 dock)
 
                     // Save current grid settings from StateManager
                     const gridSize = editor.stateManager.get('canvas.gridSize');

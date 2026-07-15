@@ -9,46 +9,6 @@
     pointer-events: auto;
 }
 
-/* Left panel specific styles */
-#left-tabs-panel {
-    border-right: 1px solid #374151;
-    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
-}
-
-/* Right panel specific styles */
-#right-tabs-panel {
-    border-left: 1px solid #374151;
-    box-shadow: -2px 0 8px rgba(0, 0, 0, 0.3);
-}
-
-/* Legacy right panel (for compatibility) */
-#right-panel {
-    width: 320px;
-    flex-shrink: 0;
-    flex-grow: 0;
-    background-color: var(--ui-background-color, #111827);
-    display: flex;
-    flex-direction: column;
-}
-
-/* Right panel position toggle button */
-#right-panel-position-toggle {
-    transition: color 0.2s ease;
-}
-
-#right-panel-position-toggle:hover {
-    color: var(--ui-active-text-color, #ffffff) !important;
-    background-color: var(--ui-hover-background-color, #374151);
-}
-
-/* Right panel search */
-#right-panel-search {
-    display: none;
-    border-bottom: 1px solid #374151;
-    flex-shrink: 0;
-    padding: 0.25rem;
-}
-
 /* Base search container class */
 .search-container {
     padding: 0.25rem;
@@ -587,11 +547,6 @@ body.tab-dragging .tab {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
-}
-
-/* Compact mode overrides */
-.compact-mode #right-panel {
-    width: 280px;
 }
 
 /* Compact mode styles are now handled in compact-mode.css */

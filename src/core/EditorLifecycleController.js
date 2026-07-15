@@ -12,7 +12,6 @@ import { StatusBar } from '../ui/StatusBar.js';
 import { ActorPropertiesWindow } from '../ui/ActorPropertiesWindow.js';
 import { MenuManager } from '../managers/MenuManager.js';
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
-import { searchManager } from '../utils/SearchManager.js';
 import { Logger } from '../utils/Logger.js';
 import { ViewportViewManager } from './ViewportViewManager.js';
 
@@ -221,104 +220,9 @@ export class EditorLifecycleController extends BaseModule {
      * Setup listeners for panel size changes from StateManager
      */
     setupPanelSizeListeners() {
-        const editor = this.editor;
-
-        // Listen for right panel width changes
-        const rightPanelUnsubscribe = editor.stateManager.subscribe('panels.rightPanelWidth', (width) => {
-            const rightPanel = document.getElementById('right-panel');
-            if (rightPanel && width !== undefined) {
-                if (width === 0) {
-                    // Hide panel completely when collapsed
-                    rightPanel.style.display = 'none';
-                } else {
-                    // Apply width and show panel
-                    rightPanel.style.width = width + 'px';
-                    rightPanel.style.flex = '0 0 auto';
-                    rightPanel.style.display = 'flex';
-                }
-
-                // Update canvas and render
-                editor.updateCanvas();
-            }
-        });
-        editor.subscriptions.push(rightPanelUnsubscribe);
-
-        // Listen for assets panel height changes (legacy footer path; skip when dock hosts assets)
-        const assetsPanelUnsubscribe = editor.stateManager.subscribe('panels.assetsPanelHeight', (height) => {
-            if (editor.dockManager?._inited) return;
-            const assetsPanel = document.getElementById('assets-panel');
-            if (assetsPanel && height !== undefined) {
-                if (height === 0) {
-                    // Hide panel completely when collapsed
-                    assetsPanel.style.display = 'none';
-                } else {
-                    // Apply height and show panel
-                    assetsPanel.style.height = height + 'px';
-                    assetsPanel.style.flexShrink = '0';
-                    assetsPanel.style.display = 'flex';
-                }
-
-                // Update canvas and render
-                editor.updateCanvas();
-            }
-        });
-        editor.subscriptions.push(assetsPanelUnsubscribe);
-
-        // Listen for tab position changes
-        const tabPositionsUnsubscribe = editor.stateManager.subscribe('tabPositions', (tabPositions) => {
-            if (tabPositions && editor.panelPositionManager && !editor.panelPositionManager._initializing) {
-                Logger.ui.debug('Tab positions changed:', tabPositions);
-
-                // Refresh search listeners when tabs move between panels
-                searchManager.refreshAllSearches();
-
-                // Update search controls for active tabs
-                editor.initializeSearchControls();
-
-                // Force search listener refresh after a short delay to ensure DOM is updated
-                setTimeout(() => {
-                    Logger.ui.debug('LevelEditor: Delayed search refresh after tab move');
-                    searchManager.refreshAllSearches();
-                }, 50);
-
-                // Update canvas layout
-                editor.updateCanvas();
-            }
-        });
-        editor.subscriptions.push(tabPositionsUnsubscribe);
-
-        // Listen for active tab changes and save to ConfigManager
-        const rightPanelTabUnsubscribe = editor.stateManager.subscribe('rightPanelTab', (tabName) => {
-            if (tabName && editor.configManager) {
-                editor.configManager.set('editor.view.rightPanelTab', tabName);
-            }
-        });
-        editor.subscriptions.push(rightPanelTabUnsubscribe);
-
-        // ResizeObserver on #canvas-viewport (dock leaf measure host after B2).
+        // ResizeObserver on #canvas-viewport (dock leaf measure host).
+        // Legacy L/R widths, tabPositions, left/rightPanelTab — removed with PanelPositionManager (B5).
         this.setupViewportResizeObserver();
-
-        const leftPanelTabUnsubscribe = editor.stateManager.subscribe('leftPanelTab', (tabName) => {
-            if (tabName && editor.configManager) {
-                editor.configManager.set('editor.view.leftPanelTab', tabName);
-            }
-        });
-        editor.subscriptions.push(leftPanelTabUnsubscribe);
-
-        // Listen for panel visibility changes to update menu checkboxes
-        const rightPanelVisibilityUnsubscribe = editor.stateManager.subscribe('view.rightPanel', (visible) => {
-            if (editor.eventHandlers && editor.eventHandlers.updateViewCheckbox) {
-                editor.eventHandlers.updateViewCheckbox('rightPanel', visible);
-            }
-        });
-        editor.subscriptions.push(rightPanelVisibilityUnsubscribe);
-
-        const leftPanelVisibilityUnsubscribe = editor.stateManager.subscribe('view.leftPanel', (visible) => {
-            if (editor.eventHandlers && editor.eventHandlers.updateViewCheckbox) {
-                editor.eventHandlers.updateViewCheckbox('leftPanel', visible);
-            }
-        });
-        editor.subscriptions.push(leftPanelVisibilityUnsubscribe);
     }
 
     /**

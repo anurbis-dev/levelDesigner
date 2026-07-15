@@ -251,14 +251,14 @@ export class AssetPanel extends BasePanel {
     }
 
     /**
-     * Save folders position to user preferences (delegate — used by TabLayoutController)
+     * Save folders position to user preferences
      */
     saveFoldersPosition() {
         this.foldersController.saveFoldersPosition();
     }
 
     /**
-     * Update folders layout based on position (delegate — used by TabLayoutController)
+     * Update folders layout based on position
      */
     updateFoldersLayout() {
         this.foldersController.updateFoldersLayout();

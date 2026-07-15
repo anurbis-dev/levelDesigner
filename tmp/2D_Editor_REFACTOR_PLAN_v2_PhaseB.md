@@ -1,6 +1,6 @@
 # Замена оконной системы Level Designer на split-tree прототип (Фаза B)
 
-**Status:** B0–B4.2 done · **next = B5** (remove PanelPositionManager) · B6 pending  
+**Status:** B0–B5 done · **next = B6** (docs)  
 **Inventory date:** 2026-07-15 (call sites / init order / persist keys / index shell)
 
 ## Context
@@ -326,14 +326,14 @@ Multi-instance **не** в scope B3 (last-wins pool ок, один leaf на typ
 `handleAssetClick` liveness, Details no-selection DOM (`renderLevelStats` /
 `setupCameraStartPositionButton`). Не расширять scope без регрессии.
 
-### B5 — снос старого
+### B5 — снос старого  ✅
 
-- [ ] Delete `PanelPositionManager.js` + `src/ui/panels/*` (+ `PanelSubController`)
-- [ ] Dead `setupTabDragging` в `index.html`
-- [ ] Dock-rules в `styles/panels.css` (content CSS оставить)
-- [ ] OVERRIDES в `scripts/check-file-size.js`
-- [ ] Stale prefs/listeners `#left-panel`/`#right-panel`/`#resizer-x`
-- [ ] `grep panelPositionManager src` → **0**
+- [x] Delete `PanelPositionManager.js` + `src/ui/panels/*` (+ `PanelSubController`)
+- [x] Dead `setupTabDragging` в `index.html`
+- [x] Dock-rules в `styles/panels.css` (content CSS оставить)
+- [x] OVERRIDES в `scripts/check-file-size.js`
+- [x] Stale prefs/listeners `#left-panel`/`#right-panel`/`#resizer-x`
+- [x] `grep panelPositionManager src` → **0**
 
 **Commit:** `refactor(dock): B5 remove PanelPositionManager`
 
