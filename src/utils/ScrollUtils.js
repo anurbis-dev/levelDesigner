@@ -90,7 +90,156 @@ export class ScrollUtils {
         window.addEventListener('blur', this.globalBlurHandler);
 
         this.isGlobalHandlersSetup = true;
+        // Ensure panning cursor styles exist even without per-panel setupScrolling().
+        this.ensurePanningStyles();
         Logger.ui.debug('ScrollUtils: Universal middle-mouse panning enabled');
+    }
+
+    /** Default / clamp for ui.scrollbarSize (px). No browser-enforced 6px floor in our CSS. */
+    static SCROLLBAR_SIZE_MIN = 1;
+    static SCROLLBAR_SIZE_MAX = 24;
+    static SCROLLBAR_SIZE_DEFAULT = 2;
+
+    /**
+     * Clamp and apply scrollbar thickness globally.
+     * Chromium: pure ::-webkit-scrollbar + !important (never set scrollbar-width/color —
+     * those switch Chrome to the standard scrollbar path at ~system/8px thickness).
+     * Firefox: only scrollbar-width thin|auto (no px API).
+     * @param {number|string} sizePx
+     * @returns {number} applied size
+     */
+    static applyScrollbarSize(sizePx) {
+        let n = parseFloat(sizePx);
+        if (Number.isNaN(n)) n = this.SCROLLBAR_SIZE_DEFAULT;
+        n = Math.max(this.SCROLLBAR_SIZE_MIN, Math.min(this.SCROLLBAR_SIZE_MAX, Math.round(n)));
+
+        document.documentElement.style.setProperty('--ui-scrollbar-size', `${n}px`);
+        document.documentElement.style.setProperty('--ui-scrollbar-radius', `${Math.max(1, Math.round(n / 2))}px`);
+        this.ensureScrollbarStyles(n);
+        return n;
+    }
+
+    /**
+     * Authoritative scrollbar stylesheet (re-written on size change, last in cascade).
+     * @param {number} sizePx
+     */
+    static ensureScrollbarStyles(sizePx = this.SCROLLBAR_SIZE_DEFAULT) {
+        let style = document.querySelector('#ui-scrollbar-runtime-styles');
+        if (!style) {
+            style = document.createElement('style');
+            style.id = 'ui-scrollbar-runtime-styles';
+            document.head.appendChild(style);
+        }
+
+        // Keep at end of <head> so we beat spacing-mode / panels / injected remnants.
+        document.head.appendChild(style);
+
+        const track = 'var(--ui-scrollbar-track, #374151)';
+        const thumb = 'var(--ui-scrollbar-thumb, #6B7280)';
+        const thumbHover = 'var(--ui-scrollbar-thumb-hover, #9CA3AF)';
+        const radius = 'var(--ui-scrollbar-radius, 1px)';
+
+        style.textContent = `
+            /* Runtime scrollbar size — no min floor; size from --ui-scrollbar-size / settings */
+            html {
+                --ui-scrollbar-size: ${sizePx}px;
+            }
+
+            html *::-webkit-scrollbar {
+                width: ${sizePx}px !important;
+                height: ${sizePx}px !important;
+            }
+
+            html *::-webkit-scrollbar-track {
+                background: ${track} !important;
+                border-radius: ${radius} !important;
+            }
+
+            html *::-webkit-scrollbar-thumb {
+                background: ${thumb} !important;
+                border-radius: ${radius} !important;
+                border: none !important;
+                min-height: 0 !important;
+                min-width: 0 !important;
+            }
+
+            html *::-webkit-scrollbar-thumb:hover {
+                background: ${thumbHover} !important;
+            }
+
+            html *::-webkit-scrollbar-corner {
+                background: ${track} !important;
+            }
+
+            /* Explicit hide (toolbar / tab strips) — must win over the global size rule */
+            .horizontal-scroll-container::-webkit-scrollbar,
+            .toolbar-scroll::-webkit-scrollbar,
+            .scrollbar-hide::-webkit-scrollbar {
+                display: none !important;
+                width: 0 !important;
+                height: 0 !important;
+            }
+
+            .horizontal-scroll-container,
+            .toolbar-scroll,
+            .scrollbar-hide {
+                scrollbar-width: none !important;
+                -ms-overflow-style: none !important;
+            }
+
+            /* Firefox only: no custom px width — thin if user size ≤6, else auto */
+            @supports not selector(::-webkit-scrollbar) {
+                html * {
+                    scrollbar-width: ${sizePx <= 6 ? 'thin' : 'auto'};
+                    scrollbar-color: ${thumb} ${track};
+                }
+                .horizontal-scroll-container,
+                .toolbar-scroll,
+                .scrollbar-hide {
+                    scrollbar-width: none !important;
+                }
+            }
+        `;
+    }
+
+    /**
+     * Inject once: panning cursor / hover-lock rules.
+     * Scrollbar thickness: applyScrollbarSize / ensureScrollbarStyles (not here).
+     */
+    static ensurePanningStyles() {
+        const raw = getComputedStyle(document.documentElement).getPropertyValue('--ui-scrollbar-size');
+        const parsed = parseFloat(raw);
+        this.ensureScrollbarStyles(Number.isFinite(parsed) ? parsed : this.SCROLLBAR_SIZE_DEFAULT);
+
+        if (document.querySelector('#minimal-scrollbar-styles')) return;
+
+        const style = document.createElement('style');
+        style.id = 'minimal-scrollbar-styles';
+        style.textContent = `
+            /* Do NOT set scrollbar-color/width on .minimal-scrollbar — Chrome thickens bars. */
+
+            /* During middle-pan / viewport gesture: no hover on any UI (incl. other dock windows).
+               pointer-events only on descendants — body stays hit-testable so mouseup works. */
+            body.panning-mode {
+                user-select: none !important;
+                cursor: grabbing !important;
+            }
+
+            body.panning-mode * {
+                cursor: grabbing !important;
+                pointer-events: none !important;
+            }
+
+            /* Viewport object drag / marquee / transform / cam pan-zoom outside leaf */
+            body.viewport-gesture-mode {
+                user-select: none !important;
+            }
+
+            body.viewport-gesture-mode * {
+                pointer-events: none !important;
+            }
+        `;
+        document.head.appendChild(style);
     }
 
     /**
@@ -214,15 +363,50 @@ export class ScrollUtils {
             startScrollTop: container.scrollTop
         };
 
+        // Drop hover under cursor before locking pointer-events (needs hit-test still live).
+        this.clearActiveHovers(e.clientX, e.clientY);
+
         // Change cursor to panning cursor
         container.style.cursor = 'grabbing';
         document.body.style.cursor = 'grabbing';
         document.body.style.userSelect = 'none';
 
-        // Add panning class to body for global panning state
+        // Locks hover on all UI (incl. other dock windows) while middle-pan is active.
         document.body.classList.add('panning-mode');
 
         Logger.ui.debug(`ScrollUtils: Scrolling started on ${container.tagName}#${container.id || container.className}`);
+    }
+
+    /**
+     * Clear stuck hover styles on elements under the cursor when pan starts.
+     * @param {number} x
+     * @param {number} y
+     */
+    static clearActiveHovers(x, y) {
+        let node = null;
+        try {
+            const stack = document.elementsFromPoint?.(x, y) || [];
+            for (const el of stack) {
+                if (el instanceof HTMLElement) {
+                    node = el;
+                    break;
+                }
+            }
+        } catch (_) {
+            node = null;
+        }
+
+        // Walk ancestors and restore common HoverEffects inline marks.
+        while (node && node !== document.body) {
+            if (node._originalStyles) {
+                node.style.filter = node._originalStyles.filter || '';
+                node.style.backgroundColor = node._originalStyles.backgroundColor || '';
+                node.style.borderColor = node._originalStyles.borderColor || '';
+            } else if (node.style?.filter?.includes('brightness')) {
+                node.style.filter = '';
+            }
+            node = node.parentElement;
+        }
     }
 
     static updateScrolling(container, config, e) {
@@ -266,74 +450,14 @@ export class ScrollUtils {
     }
 
     /**
-     * Add minimal scrollbar styles to a container
+     * Thin scrollbar styles on a panel overflow container (both axes).
+     * Middle-mouse drag remains the primary pan interaction.
      * @param {HTMLElement} container - The container to style
-     * @param {Object} options - Style options
-     * @param {string} options.trackColor - Track color (default: #374151)
-     * @param {string} options.thumbColor - Thumb color (default: #6B7280)
-     * @param {string} options.hoverColor - Hover color (default: #9CA3AF)
-     * @param {number} options.width - Scrollbar width (default: 6px for thin)
      */
-    static addMinimalScrollbarStyles(container, options = {}) {
+    static addMinimalScrollbarStyles(container) {
         if (!container) return;
-
-        const config = {
-            trackColor: options.trackColor || '#374151',
-            thumbColor: options.thumbColor || '#6B7280',
-            hoverColor: options.hoverColor || '#9CA3AF',
-            width: options.width || '6px'
-        };
-
-        // Add scrollbar styles
-        const style = document.createElement('style');
-        style.textContent = `
-            .minimal-scrollbar::-webkit-scrollbar {
-                width: ${config.width};
-                height: ${config.width};
-            }
-            
-            .minimal-scrollbar::-webkit-scrollbar-track {
-                background: ${config.trackColor};
-                border-radius: 3px;
-            }
-            
-            .minimal-scrollbar::-webkit-scrollbar-thumb {
-                background: ${config.thumbColor};
-                border-radius: 3px;
-                border: none;
-            }
-            
-            .minimal-scrollbar::-webkit-scrollbar-thumb:hover {
-                background: ${config.hoverColor};
-            }
-            
-            .minimal-scrollbar::-webkit-scrollbar-corner {
-                background: ${config.trackColor};
-            }
-            
-            /* Firefox */
-            .minimal-scrollbar {
-                scrollbar-width: thin;
-                scrollbar-color: ${config.thumbColor} ${config.trackColor};
-            }
-            
-            /* Panning mode styles */
-            .panning-mode * {
-                cursor: grabbing !important;
-            }
-            
-            .panning-mode {
-                user-select: none !important;
-            }
-        `;
-        
-        // Only add style once
-        if (!document.querySelector('#minimal-scrollbar-styles')) {
-            style.id = 'minimal-scrollbar-styles';
-            document.head.appendChild(style);
-        }
-
-        container.classList.add('minimal-scrollbar');
+        this.ensurePanningStyles();
+        container.classList.add('minimal-scrollbar', 'panel-scroll-region');
     }
 
     /**

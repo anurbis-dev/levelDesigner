@@ -153,6 +153,57 @@ export const MENU_CONFIG = {
                     type: 'section'
                 },
                 {
+                    id: 'toggle-viewport',
+                    label: 'Viewport',
+                    type: 'toggle',
+                    stateKey: 'view.viewport',
+                    action: 'togglePanel',
+                    actionParam: 'viewport'
+                },
+                {
+                    id: 'toggle-outliner',
+                    label: 'Outliner',
+                    type: 'toggle',
+                    stateKey: 'view.outliner',
+                    action: 'togglePanel',
+                    actionParam: 'outliner',
+                    shortcutKey: 'ui.toggleLeftPanel'
+                },
+                {
+                    id: 'toggle-details',
+                    label: 'Details',
+                    type: 'toggle',
+                    stateKey: 'view.details',
+                    action: 'togglePanel',
+                    actionParam: 'details',
+                    shortcutKey: 'ui.toggleRightPanel'
+                },
+                {
+                    id: 'toggle-layers',
+                    label: 'Layers',
+                    type: 'toggle',
+                    stateKey: 'view.layers',
+                    action: 'togglePanel',
+                    actionParam: 'layers'
+                },
+                {
+                    id: 'toggle-assets',
+                    label: 'Assets',
+                    type: 'toggle',
+                    stateKey: 'view.assets',
+                    action: 'togglePanel',
+                    actionParam: 'assets',
+                    shortcutKey: 'ui.toggleAssetsPanel'
+                },
+                {
+                    id: 'toggle-levels',
+                    label: 'Levels',
+                    type: 'toggle',
+                    stateKey: 'view.levels',
+                    action: 'togglePanel',
+                    actionParam: 'levels'
+                },
+                {
                     id: 'toggle-toolbar',
                     label: 'Toolbar',
                     type: 'toggle',
@@ -160,33 +211,6 @@ export const MENU_CONFIG = {
                     action: 'togglePanel',
                     actionParam: 'toolbar',
                     shortcutKey: 'ui.toggleToolbar'
-                },
-                {
-                    id: 'toggle-assets-panel',
-                    label: 'Assets Panel',
-                    type: 'toggle',
-                    stateKey: 'view.assetsPanel',
-                    action: 'togglePanel',
-                    actionParam: 'assetsPanel',
-                    shortcutKey: 'ui.toggleAssetsPanel'
-                },
-                {
-                    id: 'toggle-right-panel',
-                    label: 'Right Panel',
-                    type: 'toggle',
-                    stateKey: 'view.rightPanel',
-                    action: 'togglePanel',
-                    actionParam: 'rightPanel',
-                    shortcutKey: 'ui.toggleRightPanel'
-                },
-                {
-                    id: 'toggle-left-panel',
-                    label: 'Left Panel',
-                    type: 'toggle',
-                    stateKey: 'view.leftPanel',
-                    action: 'togglePanel',
-                    actionParam: 'leftPanel',
-                    shortcutKey: 'ui.toggleLeftPanel'
                 },
                 {
                     id: 'toggle-console',

@@ -52,6 +52,7 @@ export class UserPreferencesManager extends BaseManager {
             'spacingH': 'ui.spacingH',
             'spacingV': 'ui.spacingV',
             'elementSize': 'ui.elementSize',
+            'scrollbarSize': 'ui.scrollbarSize',
             'menuGapBase': 'ui.menuGapBase',
             'foldersPosition': 'ui.foldersPosition',
             'foldersWidth': 'ui.foldersWidth',

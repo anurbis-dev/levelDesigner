@@ -5,6 +5,11 @@ import { HoverEffects } from '../utils/HoverEffects.js';
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 import { createLevelsPanelStructure, renderLevelsControls } from './panel-structures/LevelsPanelStructure.js';
 import { createListItemRow, updateListItemVisuals } from './panel-structures/ListItemRowStructure.js';
+import {
+    clearListReorderPlaceholder,
+    syncListReorderPlaceholder,
+    getListOrderAfterReorder
+} from './panel-structures/ListReorderPlaceholder.js';
 import { searchManager } from '../utils/SearchManager.js';
 
 /**
@@ -20,11 +25,23 @@ import { searchManager } from '../utils/SearchManager.js';
  * but as a plain click, without LayersPanel's paint-drag mousedown/mouseover gesture.
  */
 export class LevelsPanel extends BasePanel {
-    constructor(container, stateManager, levelEditor) {
+    /**
+     * @param {HTMLElement} container
+     * @param {object} stateManager
+     * @param {object} levelEditor
+     * @param {{ instanceKey?: string, isPrimary?: boolean }} [options]
+     */
+    constructor(container, stateManager, levelEditor, options = {}) {
         super(container, stateManager, levelEditor);
+        this.instanceKey = options.instanceKey || null;
+        this.isPrimary = options.isPrimary !== false && !this.instanceKey;
+        this.searchPanelId = this.instanceKey ? `levels-${this.instanceKey}` : 'levels';
+        this.searchInputId = this.instanceKey ? `levels-search-${this.instanceKey}` : 'levels-search';
+        this.contextMenuId = this.instanceKey ? `levels-${this.instanceKey}` : 'levels';
         this.searchFilter = '';
         this.subscriptions = [];
         this._draggedLevelId = null; // Track dragged level's id for drag-reorder (Phase 6)
+        this._draggedRowHeight = 0; // Pre-collapse height for reorder placeholder
 
         // Icon "paint drag" (mirrors LayersPanel) — mousedown on the eye/lock icon + drag over
         // other levels' icons of the same type applies the same value before mouseup.
@@ -36,8 +53,8 @@ export class LevelsPanel extends BasePanel {
 
         // Register search in universal search manager
         searchManager.registerSearch(
-            'levels',
-            'levels-search',
+            this.searchPanelId,
+            this.searchInputId,
             (searchFilter) => {
                 this.searchFilter = searchFilter;
                 this.renderLevelsSection();
@@ -54,14 +71,14 @@ export class LevelsPanel extends BasePanel {
      * Setup context menu for levels
      */
     setupContextMenus() {
-        this.levelContextMenu = new LevelsContextMenu(this.container.parentElement, this, {
+        this.levelContextMenu = new LevelsContextMenu(this.container, this, {
             onMakeCurrent: (session) => this.setCurrentLevelAndNotify(session.id),
             onRename: (session) => this.renameLevel(session.id),
             onClose: (session) => this.levelEditor.levelsManager.closeLevel(session.id)
         });
 
         if (this.levelEditor && this.levelEditor.contextMenuManager && this.levelContextMenu) {
-            this.levelEditor.contextMenuManager.registerMenu('levels', this.levelContextMenu);
+            this.levelEditor.contextMenuManager.registerMenu(this.contextMenuId, this.levelContextMenu);
         }
     }
 
@@ -80,13 +97,15 @@ export class LevelsPanel extends BasePanel {
 
     render() {
         // Save search input state before clearing
-        const searchInput = document.getElementById('levels-search');
+        const searchInput = this.container.querySelector(`#${this.searchInputId}`)
+            || this.container.querySelector('input[type="text"]');
         const wasSearchFocused = searchInput && document.activeElement === searchInput;
 
         this.renderLevelsSection();
 
         if (wasSearchFocused) {
-            const newSearchInput = document.getElementById('levels-search');
+            const newSearchInput = this.container.querySelector(`#${this.searchInputId}`)
+                || this.container.querySelector('input[type="text"]');
             if (newSearchInput) {
                 newSearchInput.focus();
                 newSearchInput.setSelectionRange(newSearchInput.value.length, newSearchInput.value.length);
@@ -101,28 +120,29 @@ export class LevelsPanel extends BasePanel {
         const topSection = this.panelElements?.topCustom;
         if (!topSection) return;
 
-        // Don't render if the Levels tab isn't active
-        const levelsContentPanel = document.getElementById('levels-content-panel');
-        if (!levelsContentPanel || levelsContentPanel.classList.contains('hidden')) {
+        if (!this.container || this.container.classList.contains('hidden')) {
             return;
         }
 
-        const searchInput = topSection.querySelector('#levels-search');
-        const addButton = topSection.querySelector('#add-level-btn');
+        const searchInput = topSection.querySelector(`#${this.searchInputId}`)
+            || topSection.querySelector('input[type="text"]');
+        const addButton = topSection.querySelector('#add-level-btn')
+            || topSection.querySelector('button');
 
         if (searchInput && addButton) {
-            const currentTerm = searchManager.getSearchTerm('levels');
+            const currentTerm = searchManager.getSearchTerm(this.searchPanelId);
             if (searchInput.value !== currentTerm) {
                 searchInput.value = currentTerm;
             }
             if (!searchInput.hasAttribute('data-search-managed')) {
-                searchManager.setupSearchListeners('levels');
+                searchManager.setupSearchListeners(this.searchPanelId);
             }
             return;
         }
 
         renderLevelsControls(topSection, {
-            getSearchFilter: () => searchManager.getSearchTerm('levels'),
+            searchInputId: this.searchInputId,
+            getSearchFilter: () => searchManager.getSearchTerm(this.searchPanelId),
             onSearch: (searchFilter) => {
                 this.searchFilter = searchFilter;
                 this.renderLevelsSection();
@@ -130,9 +150,10 @@ export class LevelsPanel extends BasePanel {
             onAddLevel: () => this.onAddLevel()
         });
 
-        const newSearchInput = topSection.querySelector('#levels-search');
+        const newSearchInput = topSection.querySelector(`#${this.searchInputId}`)
+            || topSection.querySelector('input[type="text"]');
         if (newSearchInput && !newSearchInput.hasAttribute('data-search-managed')) {
-            searchManager.setupSearchListeners('levels');
+            searchManager.setupSearchListeners(this.searchPanelId);
         }
     }
 
@@ -142,23 +163,30 @@ export class LevelsPanel extends BasePanel {
     renderLevelsSection() {
         const sessions = this.levelEditor.levelsManager.getOrderedSessions();
 
-        // Clear container but preserve custom sections
-        const children = Array.from(this.container.children);
-        children.forEach(child => {
-            if (!child.classList.contains('panel-top-custom')) {
-                this.container.removeChild(child);
-            }
-        });
-
         if (!this.panelElements?.topCustom || !this.container.contains(this.panelElements.topCustom)) {
+            Array.from(this.container.children).forEach(child => this.container.removeChild(child));
             this.panelElements = createLevelsPanelStructure(this.container);
+            this._levelsList = null;
         }
 
         this.renderLevelsSearchControls();
 
-        const levelsList = document.createElement('div');
-        levelsList.className = 'levels-list space-y-1';
-        levelsList.id = 'levels-list';
+        // Reuse list node so middle-pan registration stays stable across re-renders.
+        // List is the overflow region (search stays fixed in panel-top-custom).
+        if (!this._levelsList || !this.container.contains(this._levelsList)) {
+            this._levelsList = document.createElement('div');
+            this._levelsList.className = 'levels-list space-y-1';
+            this._levelsList.id = 'levels-list';
+            this.setupScrolling({
+                horizontal: true,
+                vertical: true,
+                sensitivity: 1.0,
+                target: this._levelsList
+            });
+        }
+
+        const levelsList = this._levelsList;
+        levelsList.innerHTML = '';
 
         const displayNames = this._computeDisplayNames(sessions);
         const filteredSessions = this.filterLevels(sessions);
@@ -167,14 +195,6 @@ export class LevelsPanel extends BasePanel {
         });
 
         this.container.appendChild(levelsList);
-
-        const scrollableContainer = this.container.closest('.flex-grow.overflow-y-auto');
-        this.setupScrolling({
-            horizontal: true,
-            vertical: true,
-            sensitivity: 1.0,
-            target: scrollableContainer || this.container
-        });
 
         if (this._eventHandlersRegistered) {
             eventHandlerManager.unregisterContainer(this.container);
@@ -243,7 +263,7 @@ export class LevelsPanel extends BasePanel {
                 soloed: session.soloed,
                 title: session.soloed ? 'Soloed — Ctrl+click to un-solo' : (session.visible ? 'Hide level (Ctrl+click to solo)' : 'Show level (Ctrl+click to solo)')
             },
-            color: { value: session.color, title: 'Click to change color' },
+            color: { value: session.color, title: 'Click to change color', shape: 'square' },
             lock: { locked: session.locked, title: session.locked ? 'Unlock level' : 'Lock level' },
             dirtyIndicator: isDirty
         });
@@ -252,8 +272,7 @@ export class LevelsPanel extends BasePanel {
 
         const colorElement = levelDiv.querySelector('.level-color');
         if (colorElement) {
-            // No dedicated .level-color CSS class exists (unlike .layer-color, which reads
-            // a --layer-color custom property set via setProperty) — set the fill directly.
+            // Fill is inline (levels have no --level-color var); shape comes from color.shape.
             colorElement.style.backgroundColor = session.color;
             HoverEffects.setupColorHover(colorElement);
         }
@@ -574,39 +593,70 @@ export class LevelsPanel extends BasePanel {
             dragstart: {
                 selector: '.level-item',
                 handler: (e) => {
-                    const levelsList = document.getElementById('levels-list');
+                    const levelsList = this._levelsList || this.container.querySelector('.levels-list');
                     if (!levelsList) return;
 
-                    if (e.target.classList.contains('level-item')) {
-                        // Don't allow dragging while a level name is being renamed
-                        const visibleInput = levelsList.querySelector('.level-name-input:not(.hidden)');
-                        if (visibleInput) {
-                            e.preventDefault();
-                            return;
-                        }
+                    const row = e.target.closest('.level-item');
+                    if (!row || !levelsList.contains(row)) return;
 
-                        // Store the id, not the element reference — if the list re-renders
-                        // mid-drag (e.g. another tab opens/closes concurrently), the original
-                        // node goes stale/detached and an identity check against it would
-                        // wrongly reject every drop for the rest of the gesture.
-                        this._draggedLevelId = e.target.dataset.levelId;
-                        e.target.style.opacity = '0.5';
+                    // Don't allow dragging while a level name is being renamed
+                    const visibleInput = levelsList.querySelector('.level-name-input:not(.hidden)');
+                    if (visibleInput) {
+                        e.preventDefault();
+                        return;
                     }
+
+                    // Id (not only element): list may re-render mid-drag. Collapse deferred to
+                    // dragover — .list-row-dragging in dragstart aborts HTML5 DnD in Chromium.
+                    if (e.dataTransfer) {
+                        e.dataTransfer.setData('text/plain', row.dataset.levelId || 'level');
+                        e.dataTransfer.effectAllowed = 'move';
+                    }
+                    this._draggedLevelId = row.dataset.levelId;
+                    this._draggedRowHeight = row.offsetHeight;
+                    row.style.opacity = '0.5';
                 }
             },
             dragend: {
                 selector: '.level-item',
                 handler: (e) => {
-                    if (e.target.classList.contains('level-item')) {
-                        e.target.style.opacity = '1';
-                        this._draggedLevelId = null;
+                    const levelsList = this._levelsList || this.container.querySelector('.levels-list');
+                    const row = e.target.closest('.level-item')
+                        || (this._draggedLevelId && levelsList?.querySelector(
+                            `.level-item[data-level-id="${this._draggedLevelId}"]`
+                        ));
+                    if (row) {
+                        row.classList.remove('list-row-dragging');
+                        row.style.opacity = '';
                     }
+                    clearListReorderPlaceholder(levelsList);
+                    this._draggedLevelId = null;
+                    this._draggedRowHeight = 0;
                 }
             },
             dragover: {
                 selector: '.levels-list',
                 handler: (e) => {
                     e.preventDefault();
+                    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+                    if (!this._draggedLevelId) return;
+                    const levelsList = this._levelsList || this.container.querySelector('.levels-list');
+                    if (!levelsList) return;
+                    const draggedEl = levelsList.querySelector(
+                        `.level-item[data-level-id="${this._draggedLevelId}"]`
+                    );
+                    if (!draggedEl) return;
+                    if (!draggedEl.classList.contains('list-row-dragging')) {
+                        draggedEl.classList.add('list-row-dragging');
+                        draggedEl.style.opacity = '';
+                    }
+                    syncListReorderPlaceholder({
+                        listEl: levelsList,
+                        draggedEl,
+                        clientY: e.clientY,
+                        isItem: (el) => el.classList.contains('level-item'),
+                        slotHeight: this._draggedRowHeight
+                    });
                 }
             },
             drop: {
@@ -616,21 +666,43 @@ export class LevelsPanel extends BasePanel {
 
                     if (!this._draggedLevelId) return;
 
-                    const dropTarget = e.target.closest('.level-item');
-                    if (!dropTarget || dropTarget.dataset.levelId === this._draggedLevelId) return;
-
-                    const levelsList = document.getElementById('levels-list');
+                    const levelsList = this._levelsList || this.container.querySelector('.levels-list');
                     if (!levelsList) return;
 
-                    const currentOrder = Array.from(levelsList.children).map(el => el.dataset.levelId);
+                    const isItem = (el) => el.classList.contains('level-item');
+                    const draggedEl = levelsList.querySelector(
+                        `.level-item[data-level-id="${this._draggedLevelId}"]`
+                    );
+                    if (draggedEl) {
+                        syncListReorderPlaceholder({
+                            listEl: levelsList,
+                            draggedEl,
+                            clientY: e.clientY,
+                            isItem,
+                            slotHeight: this._draggedRowHeight
+                        });
+                    }
 
-                    const draggedIndex = currentOrder.indexOf(this._draggedLevelId);
-                    const dropIndex = currentOrder.indexOf(dropTarget.dataset.levelId);
-                    if (draggedIndex === -1 || dropIndex === -1) return;
+                    const newOrder = getListOrderAfterReorder(
+                        levelsList,
+                        'levelId',
+                        this._draggedLevelId,
+                        isItem
+                    );
 
-                    const newOrder = [...currentOrder];
-                    newOrder.splice(draggedIndex, 1);
-                    newOrder.splice(dropIndex, 0, this._draggedLevelId);
+                    clearListReorderPlaceholder(levelsList);
+                    if (draggedEl) {
+                        draggedEl.classList.remove('list-row-dragging');
+                        draggedEl.style.opacity = '';
+                    }
+                    this._draggedLevelId = null;
+                    this._draggedRowHeight = 0;
+
+                    if (!newOrder) return;
+
+                    const before = this.levelEditor.levelOrder;
+                    if (newOrder.length !== before.length) return;
+                    if (newOrder.every((id, i) => id === before[i])) return;
 
                     this.levelEditor.levelsManager.reorderLevels(newOrder);
                 }
@@ -649,9 +721,12 @@ export class LevelsPanel extends BasePanel {
 
         // mouseup can land anywhere on the page once dragging off the panel, so end the
         // paint drag globally rather than only within this container.
+        this._iconPaintDragHandlerId = this.instanceKey
+            ? `levelsPanel-iconPaintDrag-${this.instanceKey}`
+            : 'levelsPanel-iconPaintDrag';
         eventHandlerManager.registerGlobalHandlers({
             mouseup: () => this._endIconPaintDrag()
-        }, 'levelsPanel-iconPaintDrag');
+        }, this._iconPaintDragHandlerId);
 
         Logger.ui.debug('LevelsPanel: event handlers setup complete');
         this._eventHandlersRegistered = true;
@@ -765,7 +840,9 @@ export class LevelsPanel extends BasePanel {
      */
     destroy() {
         eventHandlerManager.unregisterContainer(this.container);
-        eventHandlerManager.unregisterGlobalHandlers('levelsPanel-iconPaintDrag');
+        eventHandlerManager.unregisterGlobalHandlers(
+            this._iconPaintDragHandlerId || 'levelsPanel-iconPaintDrag'
+        );
 
         const topSection = this.panelElements?.topCustom;
         if (topSection) {
@@ -785,7 +862,7 @@ export class LevelsPanel extends BasePanel {
         });
         this.subscriptions = [];
 
-        searchManager.unregisterSearch('levels');
+        searchManager.unregisterSearch(this.searchPanelId || 'levels');
 
         if (this.levelContextMenu) {
             try {

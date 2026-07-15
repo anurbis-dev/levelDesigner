@@ -17,11 +17,22 @@ const TRANSFORM_DEFAULTS = {
  * Details panel UI component
  */
 export class DetailsPanel {
-    constructor(container, stateManager, levelEditor) {
+    /**
+     * @param {HTMLElement} container
+     * @param {object} stateManager
+     * @param {object} levelEditor
+     * @param {{ instanceKey?: string, isPrimary?: boolean }} [options]
+     */
+    constructor(container, stateManager, levelEditor, options = {}) {
         this.container = container;
         this.stateManager = stateManager;
         this.levelEditor = levelEditor;
-        
+        this.instanceKey = options.instanceKey || null;
+        this.isPrimary = options.isPrimary !== false && !this.instanceKey;
+        this.resetRegistryKey = this.instanceKey
+            ? `detailsPanel-${this.instanceKey}`
+            : 'detailsPanel';
+
         // Track subscriptions for cleanup
         this.subscriptions = [];
         // Track event listeners
@@ -103,7 +114,7 @@ export class DetailsPanel {
 
         if (selectedObjects.length === 0) {
             this.renderNoSelection();
-            ResetRegistry.setFields('detailsPanel', this._resettableFields);
+            ResetRegistry.setFields(this.resetRegistryKey, this._resettableFields);
             return;
         }
 
@@ -113,7 +124,7 @@ export class DetailsPanel {
             this.renderMultipleObjects(selectedObjects);
         }
 
-        ResetRegistry.setFields('detailsPanel', this._resettableFields);
+        ResetRegistry.setFields(this.resetRegistryKey, this._resettableFields);
 
         // Update tab title after rendering content
         this.updateTabTitle();
@@ -1299,7 +1310,7 @@ export class DetailsPanel {
      * Cleanup and destroy panel
      */
     destroy() {
-        ResetRegistry.clear('detailsPanel');
+        ResetRegistry.clear(this.resetRegistryKey || 'detailsPanel');
 
         // Unsubscribe from all state changes
         this.subscriptions.forEach(unsubscribe => {

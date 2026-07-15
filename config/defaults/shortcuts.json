@@ -240,12 +240,12 @@
     "toggleLeftPanel": {
       "key": "1",
       "altKey": true,
-      "description": "Toggle left panel"
+      "description": "Toggle Outliner panel (legacy key ui.toggleLeftPanel)"
     },
     "toggleRightPanel": {
       "key": "2",
       "altKey": true,
-      "description": "Toggle right panel"
+      "description": "Toggle Details panel (legacy key ui.toggleRightPanel)"
     },
     "toggleToolbar": {
       "key": "3",
@@ -255,7 +255,7 @@
     "toggleAssetsPanel": {
       "key": "4",
       "altKey": true,
-      "description": "Toggle assets panel"
+      "description": "Toggle Assets panel"
     },
     "resetToDefault": {
       "key": "Backspace",

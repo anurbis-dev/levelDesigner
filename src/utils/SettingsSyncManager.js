@@ -1,5 +1,6 @@
 import { ColorUtils } from './ColorUtils.js';
 import { ValidationUtils } from './ValidationUtils.js';
+import { ScrollUtils } from './ScrollUtils.js';
 
 /**
  * Settings Sync Manager
@@ -103,6 +104,7 @@ export class SettingsSyncManager {
             'ui.spacingH': 'ui.spacingH',
             'ui.spacingV': 'ui.spacingV',
             'ui.elementSize': 'ui.elementSize',
+            'ui.scrollbarSize': 'ui.scrollbarSize',
             'ui.menuGapBase': 'ui.menuGapBase',
             'ui.cursorMenuMargin': 'ui.cursorMenuMargin',
             'ui.backgroundColor': 'ui.backgroundColor',
@@ -209,7 +211,7 @@ export class SettingsSyncManager {
         const stateKey = this.stateMapping[path];
         if (stateKey) {
             // Coerce numeric UI values from range inputs
-            if (path === 'ui.fontScale' || path === 'ui.spacingH' || path === 'ui.spacingV' || path === 'ui.elementSize' || path === 'ui.menuGapBase' || path === 'ui.cursorMenuMargin' || path === 'editor.autoSaveInterval' || path === 'editor.axisConstraint.axisWidth') {
+            if (path === 'ui.fontScale' || path === 'ui.spacingH' || path === 'ui.spacingV' || path === 'ui.elementSize' || path === 'ui.scrollbarSize' || path === 'ui.menuGapBase' || path === 'ui.cursorMenuMargin' || path === 'editor.autoSaveInterval' || path === 'editor.axisConstraint.axisWidth') {
                 const parsed = ValidationUtils.validateNumeric(value, path);
                 if (parsed !== null) {
                     value = parsed;
@@ -267,6 +269,11 @@ export class SettingsSyncManager {
                 if (!Number.isNaN(sizeScale) && sizeScale >= 0) {
                     document.documentElement.style.setProperty('--element-size-scale', String(sizeScale));
                 }
+            }
+
+            // Panel/list scrollbar thickness (px) — ScrollUtils, no 6px floor
+            if (path === 'ui.scrollbarSize') {
+                ScrollUtils.applyScrollbarSize(value);
             }
 
             // Special handling for font scale to update UI immediately on slider move
@@ -477,6 +484,14 @@ export class SettingsSyncManager {
                 document.documentElement.style.setProperty('--element-size-scale', String(num));
             }
         }
+
+        // Scrollbar thickness (px) — applied even before first middle-pan setup
+        const scrollbarSize = this.levelEditor.stateManager.get('ui.scrollbarSize');
+        ScrollUtils.applyScrollbarSize(
+            scrollbarSize !== undefined && scrollbarSize !== null
+                ? scrollbarSize
+                : ScrollUtils.SCROLLBAR_SIZE_DEFAULT
+        );
 
         // Apply main menu gap base
         const menuGapBase = this.levelEditor.stateManager.get('ui.menuGapBase');
@@ -939,8 +954,15 @@ export class SettingsSyncManager {
             'toggle-object-collisions': 'view.objectCollisions',
             'toggle-parallax': 'view.parallax',
             'toggle-toolbar': 'view.toolbar',
-            'toggle-assets-panel': 'view.assetsPanel',
-            'toggle-right-panel': 'view.rightPanel'
+            // B3.1 dock contentTypes (presence-driven; still sync checkmarks from state)
+            'toggle-viewport': 'view.viewport',
+            'toggle-outliner': 'view.outliner',
+            'toggle-details': 'view.details',
+            'toggle-layers': 'view.layers',
+            'toggle-assets': 'view.assets',
+            'toggle-levels': 'view.levels',
+            'toggle-console': 'view.console',
+            'toggle-status-bar': 'view.statusBar'
         };
 
         Object.entries(menuMappings).forEach(([menuItemId, stateKey]) => {

@@ -767,6 +767,9 @@ export class ConfigManager extends BaseManager {
                 if (keys[1] === 'fontScale' && (typeof value !== 'number' || value < 0.5 || value > 3.0)) {
                     return false;
                 }
+                if (keys[1] === 'scrollbarSize' && (typeof value !== 'number' || value < 1 || value > 24)) {
+                    return false;
+                }
                 break;
             case 'canvas':
                 if (keys[1] === 'gridSize' && (typeof value !== 'number' || value < 8 || value > 512)) {

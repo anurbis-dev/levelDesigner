@@ -16,6 +16,8 @@ export class CanvasRenderer {
         this.ctx = canvas.getContext('2d');
         this.imageCache = new Map();
         this.typeIconCache = new Map();
+        /** @type {HTMLCanvasElement|null} primary canvas (never lost when retargeting) */
+        this.primaryCanvas = canvas;
 
         // Initialize grid renderers
         this.gridRenderers = new Map();
@@ -25,10 +27,32 @@ export class CanvasRenderer {
     }
 
     /**
-     * Resize canvas to fit #canvas-viewport measure host.
-     * B2: canvas lives inside the viewport leaf (or absolute-mirror legacy path).
+     * Point renderer at a canvas for multi-viewport draw (B4.2).
+     * @param {HTMLCanvasElement} canvas
+     */
+    setTarget(canvas) {
+        if (!canvas) return;
+        this.canvas = canvas;
+        this.ctx = canvas.getContext('2d');
+    }
+
+    /** Restore primary main-canvas target. */
+    restorePrimaryTarget() {
+        if (this.primaryCanvas) this.setTarget(this.primaryCanvas);
+    }
+
+    /**
+     * Resize canvas to fit measure host.
+     * Multi-view: ViewportViewManager.resizeAll(); primary path keeps #canvas-viewport.
      */
     resizeCanvas() {
+        const vvm = this.stateManager?.get?.('viewportViewManager')
+            || (typeof window !== 'undefined' && window.editor?.viewportViewManager);
+        if (vvm && typeof vvm.resizeAll === 'function' && vvm.views?.size > 0) {
+            vvm.resizeAll();
+            return;
+        }
+
         const viewport = document.getElementById('canvas-viewport');
         if (!viewport) {
             Logger.canvas.warn('CanvasRenderer.resizeCanvas: canvas-viewport not found');
@@ -50,13 +74,15 @@ export class CanvasRenderer {
 
         const width = Math.max(1, Math.floor(layoutW));
         const height = Math.max(1, Math.floor(layoutH));
+        const canvas = this.primaryCanvas || this.canvas;
 
-        this.canvas.width = width;
-        this.canvas.height = height;
-        this.canvas.style.width = width + 'px';
-        this.canvas.style.height = height + 'px';
-        this.canvas.style.display = 'block';
-        this.canvas.style.objectFit = 'none';
+        canvas.width = width;
+        canvas.height = height;
+        canvas.style.width = width + 'px';
+        canvas.style.height = height + 'px';
+        canvas.style.display = 'block';
+        canvas.style.objectFit = 'none';
+        this.setTarget(canvas);
 
         const canvasContainer = document.getElementById('canvas-container');
         if (canvasContainer) {
@@ -434,24 +460,42 @@ export class CanvasRenderer {
     }
 
     /**
-     * Screen to world coordinates
+     * CSS display size may differ from canvas buffer (dock forces width/height:100% while
+     * buffer is floor(measure)). Map client → buffer pixels before /zoom.
+     * @returns {{sx:number,sy:number}}
      */
-    screenToWorld(screenX, screenY, camera) {
+    _clientToCanvasScale() {
         const rect = this.canvas.getBoundingClientRect();
+        const rw = rect.width || 0;
+        const rh = rect.height || 0;
         return {
-            x: (screenX - rect.left) / camera.zoom + camera.x,
-            y: (screenY - rect.top) / camera.zoom + camera.y
+            rect,
+            sx: rw > 0 ? this.canvas.width / rw : 1,
+            sy: rh > 0 ? this.canvas.height / rh : 1
         };
     }
 
     /**
-     * World to screen coordinates
+     * Screen (client) to world coordinates — rotation/marquee hit-tests depend on this.
+     */
+    screenToWorld(screenX, screenY, camera) {
+        const { rect, sx, sy } = this._clientToCanvasScale();
+        const zoom = camera?.zoom > 0 ? camera.zoom : 1;
+        return {
+            x: ((screenX - rect.left) * sx) / zoom + (camera?.x || 0),
+            y: ((screenY - rect.top) * sy) / zoom + (camera?.y || 0)
+        };
+    }
+
+    /**
+     * World to screen (client) coordinates
      */
     worldToScreen(worldX, worldY, camera) {
-        const rect = this.canvas.getBoundingClientRect();
+        const { rect, sx, sy } = this._clientToCanvasScale();
+        const zoom = camera?.zoom > 0 ? camera.zoom : 1;
         return {
-            x: (worldX - camera.x) * camera.zoom + rect.left,
-            y: (worldY - camera.y) * camera.zoom + rect.top
+            x: ((worldX - (camera?.x || 0)) * zoom) / sx + rect.left,
+            y: ((worldY - (camera?.y || 0)) * zoom) / sy + rect.top
         };
     }
 

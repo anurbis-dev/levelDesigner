@@ -143,12 +143,42 @@ export class CacheManager extends BaseManager {
     }
 
     /**
-     * Get selectable objects in current viewport with caching
+     * Active camera + canvas for pick/marquee frustum (multi-viewport).
+     * Falls back to stateManager.camera + primary canvas.
+     * @returns {{ camera: {x:number,y:number,zoom:number}, canvas: HTMLCanvasElement|null, leafId: string }}
+     */
+    _resolvePickViewport() {
+        const mh = this.editor.mouseHandlers;
+        const vvm = this.editor.viewportViewManager;
+        const view = mh?.getInteractionView?.() || vvm?.getFocusedView?.() || vvm?.getPrimaryView?.();
+        const camera = (mh?.getInteractionCamera?.()
+            || (view && vvm?.resolveCamera?.(view))
+            || this.editor.stateManager.get('camera')
+            || { x: 0, y: 0, zoom: 1 });
+        const canvas = view?.canvas
+            || mh?.getInteractionCanvas?.()
+            || this.editor.canvasRenderer?.primaryCanvas
+            || this.editor.canvasRenderer?.canvas
+            || null;
+        return {
+            camera,
+            canvas,
+            leafId: view?.leafId || 'primary'
+        };
+    }
+
+    /**
+     * Get selectable objects in the interaction viewport with caching.
+     * Must use the same camera/canvas as click/marquee (not only primary stateManager.camera),
+     * otherwise multi-view or CSS-scaled canvases drop valid hit-test candidates.
      * @returns {Set<string>} Set of object IDs that are selectable in viewport
      */
     getSelectableObjectsInViewport() {
-        const camera = this.editor.stateManager.get('camera');
-        const cameraKey = `${camera.x}_${camera.y}_${camera.zoom}`;
+        const { camera, canvas, leafId } = this._resolvePickViewport();
+        const zoom = camera?.zoom > 0 ? camera.zoom : 1;
+        const cw = canvas?.width || 0;
+        const ch = canvas?.height || 0;
+        const cameraKey = `${leafId}_${camera.x}_${camera.y}_${zoom}_${cw}x${ch}`;
         const currentTime = performance.now();
 
         // Check cache first
@@ -164,20 +194,28 @@ export class CacheManager extends BaseManager {
         // Check the CURRENT level's own entry specifically — spatialIndex is now
         // Map<levelId,...> (multi-level), so a non-empty Map no longer implies the
         // current level's index exists (another open level's might be the only one built).
-        if (renderOps && renderOps.spatialIndex.has(this.editor.level?.id)) {
+        if (renderOps && renderOps.spatialIndex.has(this.editor.level?.id) && cw > 0 && ch > 0) {
             // Fast path: spatial index already knows which objects are in viewport (O(k), k ≪ N)
-            const viewportObjects = renderOps.getVisibleObjectsSpatial(camera);
-            viewportObjects.forEach(item => {
-                if (selectableObjects.has(item.obj.id)) selectableInViewport.add(item.obj.id);
-            });
+            // Temporarily ensure spatial query uses interaction camera (and canvas size via
+            // getVisibleObjects which reads canvasRenderer.canvas dimensions).
+            const cr = this.editor.canvasRenderer;
+            const prev = cr?.canvas;
+            if (canvas && cr) cr.setTarget(canvas);
+            try {
+                const viewportObjects = renderOps.getVisibleObjectsSpatial(camera);
+                viewportObjects.forEach(item => {
+                    if (selectableObjects.has(item.obj.id)) selectableInViewport.add(item.obj.id);
+                });
+            } finally {
+                if (prev && cr && prev !== canvas) cr.setTarget(prev);
+            }
         } else {
             // Fallback: AABB check against viewport for every selectable object
-            const canvas = this.editor.canvasRenderer.canvas;
-            const zoom = camera.zoom || 1;
+            const z = zoom;
             const viewportLeft = camera.x;
             const viewportTop = camera.y;
-            const viewportRight = camera.x + canvas.width / zoom;
-            const viewportBottom = camera.y + canvas.height / zoom;
+            const viewportRight = camera.x + (cw || 1) / z;
+            const viewportBottom = camera.y + (ch || 1) / z;
 
             selectableObjects.forEach(objId => {
                 const obj = this.getCachedObject(objId);

@@ -1,24 +1,8 @@
 /* Layers Panel Styles */
 
-/* Layer color indicator */
+/* Layer fill via CSS var (Levels set backgroundColor inline) */
 .layer-color {
-    width: 1rem;
-    height: 1rem;
-    border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid #6b7280;
-    transition: border-color 0.2s, transform 0.1s;
-    background-color: var(--layer-color, #6b7280);
-}
-
-.layer-color:hover {
-    border-color: #ffffff;
-    transform: scale(1.1);
-}
-
-.layer-color.selected {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 1px #3b82f6;
+    background-color: var(--layer-color, #F5E6A3);
 }
 
 /* Layer item */
@@ -246,28 +230,14 @@
     background-color: #374151;
 }
 
-/* Layers list */
-.layers-list {
-    flex: 1;
-    overflow-y: auto;
+/* Layers / Levels list — flex fill + both-axis overflow; bar size via --ui-scrollbar-size. */
+.layers-list,
+.levels-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    overflow: auto;
     padding: 0.25rem;
-}
-
-.layers-list::-webkit-scrollbar {
-    width: 0.25rem;
-}
-
-.layers-list::-webkit-scrollbar-track {
-    background: #1f2937;
-}
-
-.layers-list::-webkit-scrollbar-thumb {
-    background: #4b5563;
-    border-radius: 0.125rem;
-}
-
-.layers-list::-webkit-scrollbar-thumb:hover {
-    background: #6b7280;
 }
 
 /* Compact mode overrides */
@@ -276,7 +246,7 @@
     margin-bottom: 0.125rem;
 }
 
-.compact-mode .layer-color {
+.compact-mode .list-color-swatch {
     width: 0.75rem;
     height: 0.75rem;
 }

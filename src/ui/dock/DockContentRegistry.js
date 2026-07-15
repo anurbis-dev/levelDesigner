@@ -1,8 +1,33 @@
 /**
- * contentType → mount adapter + singleton metadata (Phase B).
- * B2: real viewport (toolbar + canvas measure); B3: remaining panels.
+ * contentType → mount adapter + singleton/multi-instance metadata (Phase B4).
+ * Primary roots: fixed DOM from initializeUIComponents.
+ * Copies: factory instances keyed by leaf node.id.
  */
 import { TYPE_META, TYPE_ORDER, typeLabel, typeColor } from './DockConstants.js';
+import {
+    isMultiInstanceType,
+    createPanelCopy,
+    destroyPanelCopy
+} from './DockPanelFactory.js';
+import { Logger } from '../../utils/Logger.js';
+
+/** contentType → legacy primary panel root id (index.html / initializeUIComponents). */
+const PANEL_ROOT_IDS = {
+    outliner: 'outliner-content-panel',
+    details: 'details-content-panel',
+    layers: 'layers-content-panel',
+    levels: 'levels-content-panel',
+    assets: 'assets-panel'
+};
+
+/** contentType → editor property holding primary panel instance. */
+const PRIMARY_PANEL_KEYS = {
+    outliner: 'outlinerPanel',
+    details: 'detailsPanel',
+    layers: 'layersPanel',
+    levels: 'levelsPanel',
+    assets: 'assetPanel'
+};
 
 export class DockContentRegistry {
     /**
@@ -12,19 +37,53 @@ export class DockContentRegistry {
         this.levelEditor = levelEditor;
         /** @type {Map<string, object>} */
         this._entries = new Map();
-        /** @type {Map<string, HTMLElement>} contentType → stable root (singleton pool by type) */
+        /** @type {Map<string, HTMLElement>} primary/singleton roots by contentType */
         this._rootsByType = new Map();
+        /**
+         * Live leaf bindings: leafId → { contentType, isPrimary, root, panel }
+         * @type {Map<string, { contentType: string, isPrimary: boolean, root: HTMLElement, panel: object|null }>}
+         */
+        this._byLeafId = new Map();
+        /** @type {Map<string, string>} contentType → primary leaf id */
+        this._primaryLeafIdByType = new Map();
         this._viewportResizeScheduled = false;
 
         TYPE_ORDER.forEach((type) => {
+            let mount = null;
+            if (type === 'viewport') {
+                mount = this._mountViewport.bind(this);
+            } else if (PANEL_ROOT_IDS[type]) {
+                mount = this._mountPanelLeaf.bind(this, type);
+            }
             this.register(type, {
                 label: typeLabel(type),
                 color: typeColor(type),
-                singleton: true,
+                singleton: !isMultiInstanceType(type),
+                // Primary viewport non-closeable; copies closeable (checked per-leaf in renderer)
                 closeable: type !== 'viewport',
-                mount: type === 'viewport' ? this._mountViewport.bind(this) : null
+                mount
             });
         });
+    }
+
+    /**
+     * Closeable: any viewport leaf when ≥2 viewports exist (including primary).
+     * Sole remaining viewport stays non-closeable.
+     * @param {string} contentType
+     * @param {string} [leafId]
+     */
+    isLeafCloseable(contentType, leafId) {
+        if (contentType !== 'viewport') return this.isCloseable(contentType);
+        if (!leafId) return false;
+        const model = this.levelEditor?.dockManager?.model;
+        if (model && typeof model.countLeavesByType === 'function') {
+            return model.countLeavesByType('viewport') > 1;
+        }
+        // Fallback without model: non-primary copies only
+        const b = this._byLeafId.get(leafId);
+        if (b) return !b.isPrimary;
+        const primaryId = this._primaryLeafIdByType.get('viewport');
+        return !!(primaryId && primaryId !== leafId);
     }
 
     /**
@@ -57,8 +116,13 @@ export class DockContentRegistry {
         return e ? e.closeable !== false : true;
     }
 
+    /** Primary leaf id for type, if claimed. */
+    getPrimaryLeafId(contentType) {
+        return this._primaryLeafIdByType.get(contentType) || null;
+    }
+
     /**
-     * Mount leaf body content. Reparents stable root by contentType (singleton) or node.id.
+     * Mount leaf body content.
      * @param {string} workspaceId
      * @param {object} node - leaf node
      * @param {HTMLElement} bodyEl
@@ -73,20 +137,244 @@ export class DockContentRegistry {
     }
 
     /**
-     * Viewport leaf: toolbar + canvas-viewport measure host with canvas inside (no full-screen absolute).
+     * After render: drop bindings for leaf ids no longer in the tree.
+     * Primary → park root (keep editor panel). Copy → destroy instance.
+     * @param {Iterable<string>} liveLeafIds
+     */
+    reconcileLiveLeaves(liveLeafIds) {
+        const live = liveLeafIds instanceof Set ? liveLeafIds : new Set(liveLeafIds);
+        const stale = [];
+        this._byLeafId.forEach((_binding, leafId) => {
+            if (!live.has(leafId)) stale.push(leafId);
+        });
+        stale.forEach((leafId) => this._releaseLeaf(leafId));
+    }
+
+    /**
+     * Viewport leaf: primary = toolbar+main canvas; copies = extra canvas views (B4.2).
      */
     _mountViewport(_workspaceId, node, bodyEl) {
-        let root = this._rootsByType.get('viewport');
-        if (!root) {
-            root = this._ensureViewportRoot();
-            this._rootsByType.set('viewport', root);
+        const primaryId = this._primaryLeafIdByType.get('viewport');
+        const primaryAlive = primaryId && this._byLeafId.has(primaryId)
+            && this._byLeafId.get(primaryId).isPrimary;
+
+        const existing = this._byLeafId.get(node.id);
+        if (existing && existing.contentType === 'viewport' && existing.root) {
+            // Promote former copy to primary when primary leaf was closed
+            if (!primaryAlive && !existing.isPrimary) {
+                destroyPanelCopy(existing);
+                this._byLeafId.delete(node.id);
+                // fall through to claim primary shell
+            } else {
+                this._attachRoot(existing.root, bodyEl, 'viewport', node.id);
+                if (existing.isPrimary) this._ensurePrimaryViewportView(node, existing.root);
+                this._scheduleViewportResize();
+                return;
+            }
         }
-        root.dataset.leafId = node.id;
-        root.dataset.contentType = 'viewport';
+
+        const stillPrimaryAlive = this._primaryLeafIdByType.get('viewport')
+            && this._byLeafId.has(this._primaryLeafIdByType.get('viewport'))
+            && this._byLeafId.get(this._primaryLeafIdByType.get('viewport')).isPrimary;
+
+        if (!stillPrimaryAlive || this._primaryLeafIdByType.get('viewport') === node.id) {
+            let root = this._rootsByType.get('viewport');
+            if (!root) {
+                root = this._ensureViewportRoot();
+                this._rootsByType.set('viewport', root);
+            }
+            this._primaryLeafIdByType.set('viewport', node.id);
+            this._byLeafId.set(node.id, {
+                contentType: 'viewport',
+                isPrimary: true,
+                root,
+                panel: null
+            });
+            this._attachRoot(root, bodyEl, 'viewport', node.id);
+            this._ensurePrimaryViewportView(node, root);
+            this._scheduleViewportResize();
+            return;
+        }
+
+        // Secondary viewport copy
+        const created = createPanelCopy('viewport', node.id, this.levelEditor);
+        if (!created) {
+            this._placeholderMount(node, bodyEl, this.get('viewport'));
+            return;
+        }
+        this._byLeafId.set(node.id, {
+            contentType: 'viewport',
+            isPrimary: false,
+            root: created.root,
+            panel: created.panel
+        });
+        this._attachRoot(created.root, bodyEl, 'viewport', node.id);
+        this._scheduleViewportResize();
+    }
+
+    /**
+     * Register primary shell with ViewportViewManager (idempotent / rebind leaf id).
+     * @param {object} node
+     * @param {HTMLElement} root
+     */
+    _ensurePrimaryViewportView(node, root) {
+        const vvm = this.levelEditor?.viewportViewManager;
+        if (!vvm) return;
+
+        const canvas = document.getElementById('main-canvas')
+            || root?.querySelector?.('canvas')
+            || this.levelEditor.canvasRenderer?.primaryCanvas
+            || this.levelEditor.canvasRenderer?.canvas;
+        const measure = document.getElementById('canvas-viewport')
+            || root?.querySelector?.('#canvas-viewport, .canvas-viewport, .dock-viewport-measure');
+        if (!canvas || !measure) {
+            Logger.ui.warn('DockContentRegistry: primary viewport canvas/measure missing');
+            return;
+        }
+
+        // Drop stale primary registration under a different leaf id
+        const prevPrimary = vvm.getPrimaryView();
+        if (prevPrimary && prevPrimary.leafId !== node.id) {
+            vvm.unregisterView(prevPrimary.leafId);
+        }
+
+        if (this.levelEditor.canvasRenderer) {
+            this.levelEditor.canvasRenderer.primaryCanvas = canvas;
+            this.levelEditor.canvasRenderer.setTarget(canvas);
+        }
+
+        // Re-register (registerView replaces same leafId)
+        vvm.registerView({
+            leafId: node.id,
+            isPrimary: true,
+            root: root || measure,
+            measureEl: measure,
+            canvas,
+            source: { kind: 'work' },
+            typeFilters: vvm.getView(node.id)?.typeFilters || new Set()
+        });
+    }
+
+    /**
+     * Multi or primary panel leaf mount.
+     * @param {string} contentType
+     */
+    _mountPanelLeaf(contentType, _workspaceId, node, bodyEl) {
+        const existing = this._byLeafId.get(node.id);
+        if (existing && existing.contentType !== contentType) {
+            this._releaseLeaf(node.id);
+        }
+
+        const rebound = this._byLeafId.get(node.id);
+        if (rebound && rebound.contentType === contentType && rebound.root) {
+            this._attachRoot(rebound.root, bodyEl, contentType, node.id);
+            return;
+        }
+
+        const primaryId = this._primaryLeafIdByType.get(contentType);
+        const primaryAlive = primaryId && this._byLeafId.has(primaryId)
+            && this._byLeafId.get(primaryId).isPrimary;
+
+        // Claim primary if free or this leaf already owns it
+        if (!primaryAlive || primaryId === node.id) {
+            this._mountPrimaryPanel(contentType, node, bodyEl);
+            return;
+        }
+
+        // Secondary copy
+        if (!isMultiInstanceType(contentType)) {
+            // Singleton last-wins: reparent primary root to this leaf
+            this._primaryLeafIdByType.set(contentType, node.id);
+            this._mountPrimaryPanel(contentType, node, bodyEl);
+            return;
+        }
+
+        this._mountCopyPanel(contentType, node, bodyEl);
+    }
+
+    /**
+     * @param {string} contentType
+     * @param {object} node
+     * @param {HTMLElement} bodyEl
+     */
+    _mountPrimaryPanel(contentType, node, bodyEl) {
+        let root = this._rootsByType.get(contentType);
+        if (!root) {
+            root = this._ensurePrimaryPanelRoot(contentType);
+            if (!root) {
+                this._placeholderMount(node, bodyEl, this.get(contentType));
+                return;
+            }
+            this._rootsByType.set(contentType, root);
+        }
+
+        const panelKey = PRIMARY_PANEL_KEYS[contentType];
+        const panel = (panelKey && this.levelEditor) ? (this.levelEditor[panelKey] || null) : null;
+
+        this._primaryLeafIdByType.set(contentType, node.id);
+        this._byLeafId.set(node.id, {
+            contentType,
+            isPrimary: true,
+            root,
+            panel
+        });
+        this._attachRoot(root, bodyEl, contentType, node.id);
+    }
+
+    /**
+     * @param {string} contentType
+     * @param {object} node
+     * @param {HTMLElement} bodyEl
+     */
+    _mountCopyPanel(contentType, node, bodyEl) {
+        const created = createPanelCopy(contentType, node.id, this.levelEditor);
+        if (!created) {
+            this._placeholderMount(node, bodyEl, this.get(contentType));
+            return;
+        }
+        this._byLeafId.set(node.id, {
+            contentType,
+            isPrimary: false,
+            root: created.root,
+            panel: created.panel
+        });
+        this._attachRoot(created.root, bodyEl, contentType, node.id);
+    }
+
+    /**
+     * @param {HTMLElement} root
+     * @param {HTMLElement} bodyEl
+     * @param {string} contentType
+     * @param {string} leafId
+     */
+    _attachRoot(root, bodyEl, contentType, leafId) {
+        root.dataset.leafId = leafId;
+        root.dataset.contentType = contentType;
+        root.classList.add('dock-panel-root');
+        if (contentType === 'assets') {
+            root.style.height = '';
+            root.style.flexShrink = '';
+            root.style.display = 'flex';
+        } else if (root.style.display === 'none') {
+            root.style.display = '';
+        }
         if (root.parentElement !== bodyEl) {
             bodyEl.appendChild(root);
         }
-        this._scheduleViewportResize();
+    }
+
+    /**
+     * @param {string} contentType
+     * @returns {HTMLElement|null}
+     */
+    _ensurePrimaryPanelRoot(contentType) {
+        const id = PANEL_ROOT_IDS[contentType];
+        if (!id) return null;
+        const el = document.getElementById(id);
+        if (!el) return null;
+        el.classList.add('dock-panel-root');
+        el.dataset.contentType = contentType;
+        return el;
     }
 
     _ensureViewportRoot() {
@@ -97,7 +385,6 @@ export class DockContentRegistry {
         const canvasContainer = document.getElementById('canvas-container');
 
         if (!mainPanel || !toolbar || !viewport) {
-            // Fallback placeholder if shell DOM is incomplete
             const fallback = document.createElement('div');
             fallback.className = 'dock-placeholder dock-viewport-root';
             fallback.dataset.contentType = 'viewport';
@@ -105,17 +392,14 @@ export class DockContentRegistry {
             return fallback;
         }
 
-        // Nest canvas under measure host so it moves with the leaf (floating + splits).
         if (canvasContainer && canvasContainer.parentElement !== viewport) {
             viewport.appendChild(canvasContainer);
         }
 
-        // Prefer main-workspace as stable root; else wrap main-panel.
         const root = mainWorkspace || mainPanel;
         root.classList.add('dock-viewport-root');
         root.dataset.contentType = 'viewport';
 
-        // Ensure panel children stay under main-panel if we reparented only workspace
         if (mainWorkspace && mainPanel.parentElement !== mainWorkspace) {
             mainWorkspace.appendChild(mainPanel);
         }
@@ -158,21 +442,60 @@ export class DockContentRegistry {
         if (root.parentElement !== bodyEl) {
             bodyEl.appendChild(root);
         }
+        this._byLeafId.set(node.id, {
+            contentType: node.contentType,
+            isPrimary: !!entry?.singleton,
+            root,
+            panel: null
+        });
     }
 
-    /** Park singleton roots into a pool element (used by renderer before chrome rebuild). */
+    /**
+     * @param {string} leafId
+     */
+    _releaseLeaf(leafId) {
+        const binding = this._byLeafId.get(leafId);
+        if (!binding) return;
+        this._byLeafId.delete(leafId);
+
+        if (binding.isPrimary) {
+            if (this._primaryLeafIdByType.get(binding.contentType) === leafId) {
+                this._primaryLeafIdByType.delete(binding.contentType);
+            }
+            // Primary viewport: keep shell; drop view registration for this leaf id
+            if (binding.contentType === 'viewport') {
+                this.levelEditor?.viewportViewManager?.unregisterView(leafId);
+            }
+            // Primary root stays in pool / offtree for reopen — do not destroy panel
+            return;
+        }
+
+        destroyPanelCopy(binding);
+    }
+
+    /** Park all known roots into pool (renderer rebuild). */
     parkRoots(poolEl) {
+        if (!poolEl) return;
+        this._byLeafId.forEach((binding) => {
+            if (binding.root && binding.root.parentElement !== poolEl) {
+                poolEl.appendChild(binding.root);
+            }
+        });
         this._rootsByType.forEach((root) => {
-            if (poolEl && root.parentElement !== poolEl) {
+            if (root.parentElement !== poolEl) {
                 poolEl.appendChild(root);
             }
         });
     }
 
     destroy() {
-        this._rootsByType.forEach((root) => {
-            if (root.parentElement) root.remove();
+        const leafIds = [...this._byLeafId.keys()];
+        leafIds.forEach((id) => {
+            const b = this._byLeafId.get(id);
+            if (b && !b.isPrimary) destroyPanelCopy(b);
         });
+        this._byLeafId.clear();
+        this._primaryLeafIdByType.clear();
         this._rootsByType.clear();
         this._entries.clear();
         this.levelEditor = null;

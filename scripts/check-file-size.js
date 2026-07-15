@@ -55,7 +55,11 @@ const OVERRIDES = new Set([
     'ui/CanvasRenderer.js',
     'core/LayerOperations.js',
     'core/DuplicateOperations.js',
-    'ui/UniversalDialog.js'
+    'ui/UniversalDialog.js',
+    'utils/ScrollUtils.js',          // scrollbar size runtime + panning styles (pre-existing WIP over 400)
+    'ui/dock/DockContentRegistry.js', // B4 multi-instance + B4.2 viewport multi mount
+    'ui/dock/DockRenderer.js',       // B4.2 viewport header chrome / leaf closeable
+    'core/ViewportViewManager.js'    // B4.2 multi-view camera registry
 ]);
 
 function walk(dir, files = []) {

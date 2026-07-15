@@ -113,6 +113,14 @@ export class StateManager extends BaseManager {
                 objectBoundaries: false,
                 objectCollisions: false,
                 parallax: false,
+                // Dock contentTypes (B3.1) — presence synced from dock tree
+                viewport: true,
+                outliner: true,
+                details: true,
+                layers: true,
+                assets: true,
+                levels: true,
+                // Legacy L/R/assetsPanel flags (pre-dock / fallback)
                 leftPanel: true,
                 rightPanel: true,
                 assetsPanel: true,
@@ -141,6 +149,7 @@ export class StateManager extends BaseManager {
                 ui: {
                     fontScale: 1.0,
                     spacing: 1.0,
+                    scrollbarSize: 2,
                     showTooltips: true,
                     backgroundColor: '#1f2937',
                     textColor: '#d1d5db',

@@ -106,52 +106,14 @@ export class BasePanel {
     }
 
     /**
-     * Setup minimal scrollbar styles with thin appearance
+     * Mark container for panel scroll styling (global size via ScrollUtils.applyScrollbarSize).
      * @param {HTMLElement} container - Container to style
      */
     setupThinScrollbars(container) {
         if (!container) return;
-
-        const style = document.createElement('style');
-        style.textContent = `
-            .thin-scrollbar::-webkit-scrollbar {
-                width: 6px;
-                height: 6px;
-            }
-            
-            .thin-scrollbar::-webkit-scrollbar-track {
-                background: #374151;
-                border-radius: 3px;
-            }
-            
-            .thin-scrollbar::-webkit-scrollbar-thumb {
-                background: #6B7280;
-                border-radius: 3px;
-                border: none;
-            }
-            
-            .thin-scrollbar::-webkit-scrollbar-thumb:hover {
-                background: #9CA3AF;
-            }
-            
-            .thin-scrollbar::-webkit-scrollbar-corner {
-                background: #374151;
-            }
-            
-            /* Firefox */
-            .thin-scrollbar {
-                scrollbar-width: thin;
-                scrollbar-color: #6B7280 #374151;
-            }
-        `;
-        
-        // Only add style once
-        if (!document.querySelector('#thin-scrollbar-styles')) {
-            style.id = 'thin-scrollbar-styles';
-            document.head.appendChild(style);
-        }
-
-        container.classList.add('thin-scrollbar');
+        // No per-container 6px override — thickness is ui.scrollbarSize / --ui-scrollbar-size.
+        container.classList.add('thin-scrollbar', 'panel-scroll-region', 'minimal-scrollbar');
+        ScrollUtils.ensurePanningStyles();
     }
 
     /**

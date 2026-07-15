@@ -11,6 +11,9 @@ export class HoverEffects {
      */
     static applyHoverEffect(element, effectType = 'brightness', options = {}) {
         if (!element) return;
+        // Middle-mouse panel pan / viewport gesture — no hover chrome on other UI/windows.
+        if (document.body.classList.contains('panning-mode')
+            || document.body.classList.contains('viewport-gesture-mode')) return;
 
         const defaultOptions = {
             brightness: 1.2,
@@ -99,6 +102,8 @@ export class HoverEffects {
         if (!element) return;
 
         element.addEventListener('mouseenter', () => {
+            if (document.body.classList.contains('panning-mode')
+                || document.body.classList.contains('viewport-gesture-mode')) return;
             // Check if element should be excluded
             const shouldExclude = excludeClasses.some(className => element.classList.contains(className));
             if (!shouldExclude) {
@@ -133,6 +138,8 @@ export class HoverEffects {
         }
 
         colorElement.addEventListener('mouseenter', () => {
+            if (document.body.classList.contains('panning-mode')
+                || document.body.classList.contains('viewport-gesture-mode')) return;
             colorElement.style.filter = `brightness(${config.brightness})`;
             colorElement.style.borderColor = config.borderColor;
             colorElement.style.transition = config.transition;

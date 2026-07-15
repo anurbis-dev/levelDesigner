@@ -1,4 +1,4 @@
-# Context Map - Level Designer v4.0.0 (Phase A: Refactor Фаза A — код-рефакторинг, дублей устранены, Template Method, новые утилиты)
+# Context Map - Level Designer v4.0.x (Phase A done; Phase B dock B0–B4.2 multi-viewport)
 
 ## ⚠️ КРИТИЧЕСКИ ВАЖНО - ЧИТАТЬ ПЕРВЫМ
 
@@ -14,15 +14,16 @@
 
 ## 🎯 Быстрый старт для агента
 
-### Основные компоненты (v4.0.0 Phase A: Refactor; prev v3.60.2 Phase 4.5: Project, декомпозиция LevelEditor, декомпозиция PanelPositionManager)
-- **LevelEditor** (v3.57.0 Phase 1-7; v3.60.0 Phase 3: декомпозиция на EditorConfigController/EditorLifecycleController/EditorPreferencesController) - главный класс, координатор всех систем; поддерживает несколько одновременно открытых LevelSession в `levelSessions: Map`; `this.level` = getter/setter через `currentLevelId` для обратной совместимости; новое поле `levelMRU: string[]` для отслеживания порядка недавних уровней (используется в closeLevel при выборе следующего уровня); Phase 7: новые поля `project` (текущий Project экземпляр, инициализируется при New/Open/Save Project) и `projectSettingsDialog`; Phase 3 (v3.60.0): инициализация разделена на три составных controller-модуля через BaseModule-композицию — конфигурация, lifecycle/bootstrap, пользовательские настройки
-- **Контроллеры инициализации** (v3.60.0 Phase 3, все extends BaseModule, wiring через `this.editor`):
-  - **EditorConfigController** — применение конфигурации (grid, цвета, дефолт-настройки)
-  - **EditorLifecycleController** — инициализация DOM, рендерера, UI, event-системы
-  - **EditorPreferencesController** — применение сохранённых пользовательских настроек (размеры панелей, автосохранение)
-- **14 менеджеров** - StateManager, ConfigManager, HistoryManager, EventHandlerManager, GlobalEventRegistry, LevelsManager (Phase 1: управление вкладками/сессиями; Phase 5: closeLevel и per-session dirty sync; Phase 6: levelMRU, cycleLevel, getVisibleSessionsForRender, reorderLevels, soft-cap warning видимости), MenuManager (меню переименовано с 'Level' на 'File', Phase 7)
-- **14 core операций** - ObjectOperations, LayerOperations, HistoryOperations, DuplicateOperations, GroupOperations, RenderOperations (Phase 3: multi-level compositing; Phase 5: видимые уровни рисуются одновременно), ViewportOperations, LevelFileOperations (Phase 5: addLevel/openLevel с dedup, per-session save), ProjectFileOperations (Phase 7: newProject/openProject/saveProject/saveProjectAs)
-- **UI компоненты** - панели (AssetPanel, DetailsPanel, LayersPanel, LevelsPanel (Phase 2: UI; Phase 5: Close/Save/dirty-индикатор; Phase 6: drag-reorder, дизамбигуация имён при коллизии), OutlinerPanel, SettingsPanel), диалоги (BaseDialog, SplashScreenDialog, ProjectSettingsDialog — Phase 7, пока стаб для редактирования project.name)
+### Основные компоненты (v4.0.x Phase B dock; Phase A Refactor done)
+- **LevelEditor** — координатор; multi-level sessions; `project`; controllers Config/Lifecycle/Preferences; **`viewportViewManager`** (multi-viewport B4.2); **`dockManager`** when dock shell active
+- **Dock (Phase B)**: `src/ui/dock/` — `DockManager`, `DockTreeModel`, `DockRenderer`, `DockDragController`, `DockContentRegistry`, `DockPanelFactory`, `DockTypeMenu`, `ViewportLeafChrome`, persistence `panels.dock.*`. Primary panels reparent into leaves; multi-instance copies for outliner/details/layers/levels/assets
+- **ViewportViewManager** + **ViewportViewNav** — N viewport leaves (work/game camera, per-view type filters, shared MouseHandlers, pointer-capture, gesture UI lock `viewport-gesture-mode`)
+- **TypeFilterMenu** — shared type filter UX (Outliner / Assets / Viewport chrome)
+- **Контроллеры инициализации**: EditorConfigController, EditorLifecycleController, EditorPreferencesController
+- **Менеджеры**: StateManager, ConfigManager, HistoryManager, EventHandlerManager, GlobalEventRegistry, LevelsManager, MenuManager, …
+- **Core ops**: ObjectOperations, LayerOperations, HistoryOperations, DuplicateOperations, GroupOperations, RenderOperations (multi-level + multi-viewport cull), ViewportOperations, LevelFileOperations, ProjectFileOperations
+- **UI**: Asset/Details/Layers/Levels/Outliner/Settings panels; BaseDialog, SplashScreen, ProjectSettingsDialog
+- **UI text rule**: tooltips, menus, parameters in the editor UI are **English** (agent/docs may stay Russian)
 
 ### Ключевые API (Phase 7 Project: контейнер многоуровневого проекта)
 ```javascript
@@ -207,8 +208,10 @@ level.settings.parallaxVertical // множитель вертикального
 - `src/core/ProjectFileOperations.js` - файловые операции проекта (Phase 7, BaseModule): `newProject()`/`openProject()`/`saveProject()`/`saveProjectAs()`, replace-not-merge семантика (New/Open заменяют весь набор открытых уровней, единый confirm при dirty)
 - `src/core/ObjectOperations.js` - операции с объектами
 - `src/core/LayerOperations.js` - операции со слоями
-- `src/core/RenderOperations.js` - рендеринг (Phase 3: multi-level compositing, объекты всех видимых уровней в одном кадре; Phase 5: все видимые уровни рисуются одновременно)
-- `src/event-system/MouseHandlers.js` - обработка мыши, в т.ч. rotate/scale жесты (`startObjectTransform`, `transformSelectedObjects`)
+- `src/core/RenderOperations.js` - рендеринг (multi-level compositing + multi-viewport: per-canvas frustum/cache, sticky interactive cull)
+- `src/core/ViewportViewManager.js` - registry of viewport leaves (camera source, pose, type filters)
+- `src/core/ViewportViewNav.js` - secondary canvas MouseHandlers bind + pointer-capture
+- `src/event-system/MouseHandlers.js` - мышь: rotate/scale; multi-view interaction pin (`getInteractionView|Camera|Canvas`); outside-leaf complete; viewport-gesture-mode
 - `src/constants/EditorConstants.js` - константы, включая `TRANSFORM` (rotate/scale жесты)
 - `src/utils/WorldPositionUtils.js` - мировые координаты, rotation-aware bounds (`getRotatedRectAABB`, `rotateBoundsAroundCenter`)
 - `src/utils/GroupTraversalUtils.js` - обход иерархии групп, включая `findObjectPath()` (путь индексов для z-порядка)
@@ -232,6 +235,9 @@ level.settings.parallaxVertical // множитель вертикального
 - `src/constants/AssetTypeIcons.js` - минималистичные SVG-иконки (24×24 px) для каждого типа; `buildTypeIconSvg()`
 
 ### UI
+- `src/ui/dock/` - Phase B dock shell (tree, render, drag, content registry, panel factory, type menu, viewport chrome)
+- `src/ui/dock/ViewportLeafChrome.js` - viewport leaf header: Work/Game camera menu + type filter (English UI; hover-switch menus)
+- `src/utils/TypeFilterMenu.js` - shared type-filter dropdown
 - `src/ui/BaseDialog.js` - базовый диалог
 - `src/ui/SplashScreenDialog.js` - splash screen диалог
 - `src/ui/ProjectSettingsDialog.js` - диалог настроек проекта (Phase 7, extends BaseDialog, пока стаб: редактируется только `project.name`)

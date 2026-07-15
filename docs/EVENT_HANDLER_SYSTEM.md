@@ -28,6 +28,12 @@
 - `registerCanvas(canvas, config, canvasId)` - унифицированная регистрация canvas
 - `isElementRegistered(element, elementId)` - проверка регистрации элемента
 
+### Multi-viewport input (Phase B4.2)
+- Secondary viewport canvases: `ViewportViewNav.bindSecondaryViewportNav` → `eventHandlerManager.registerCanvas` + `setPointerCapture` (buttons 0/1/2).
+- `MouseHandlers`: pin interaction leaf on mousedown (`_interactionViewLeafId`); `getInteractionView` / `getInteractionCamera` / `getInteractionCanvas` for all gesture geometry; do **not** use `canvasRenderer.canvas` alone after multi-view render restores primary.
+- Outside leaf: global move continues gesture; global mouseup **completes** drag/transform/marquee (does not cancel). `body.viewport-gesture-mode` + `ScrollUtils.clearActiveHovers` while gesture active.
+- Cursors (`grabbing` / `zoom-in`) only on interaction canvas; `_resetAllViewportCursors` on RMB/MMB end and window blur.
+
 ### GlobalEventRegistry (новый)
 **Файл**: `src/event-system/GlobalEventRegistry.js`
 

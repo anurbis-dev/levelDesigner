@@ -542,8 +542,8 @@ header .text-sm {
 .outliner-objects-container {
     flex: 1 1 auto;
     min-height: 0;
-    overflow-y: auto;
-    overflow-x: auto;
+    min-width: 0;
+    overflow: auto;
 }
 
 /* Styles for asset list and details items */
@@ -663,23 +663,7 @@ header .text-sm {
     display: none;
 }
 
-/* Console scrollbar styles to match other panels */
-.console-overlay .overflow-y-auto::-webkit-scrollbar {
-    width: 8px;
-}
-
-.console-overlay .overflow-y-auto::-webkit-scrollbar-track {
-    background: #1f2937; /* gray-800 */
-}
-
-.console-overlay .overflow-y-auto::-webkit-scrollbar-thumb {
-    background: #4b5563; /* gray-600 */
-    border-radius: 4px;
-}
-
-.console-overlay .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-    background: #6b7280; /* gray-500 */
-}
+/* Console scrollbars follow global --ui-scrollbar-size (ScrollUtils runtime styles). */
 
 /* Console text selection styles */
 .console-overlay .overflow-y-auto {

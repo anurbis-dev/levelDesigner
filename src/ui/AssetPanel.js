@@ -18,8 +18,20 @@ import { PanelSizeCalculator } from '../utils/PanelSizeCalculator.js';
  * Asset panel UI component
  */
 export class AssetPanel extends BasePanel {
-    constructor(container, assetManager, stateManager, levelEditor) {
+    /**
+     * @param {HTMLElement} container
+     * @param {object} assetManager
+     * @param {object} stateManager
+     * @param {object} levelEditor
+     * @param {{ instanceKey?: string, isPrimary?: boolean }} [options]
+     */
+    constructor(container, assetManager, stateManager, levelEditor, options = {}) {
         super(container, stateManager);
+        this.instanceKey = options.instanceKey || null;
+        this.isPrimary = options.isPrimary !== false && !this.instanceKey;
+        this.searchPanelId = this.instanceKey ? `assets-${this.instanceKey}` : 'assets';
+        this.searchInputId = this.instanceKey ? `assets-search-${this.instanceKey}` : 'assets-search';
+        this.eventComponentId = this.instanceKey ? `asset-panel-${this.instanceKey}` : 'asset-panel';
         this.assetManager = assetManager;
         this.levelEditor = levelEditor;
         this.tabsContainer = null;
@@ -74,8 +86,8 @@ export class AssetPanel extends BasePanel {
 
         // Register search in universal search manager
         searchManager.registerSearch(
-            'assets',
-            'assets-search',
+            this.searchPanelId,
+            this.searchInputId,
             (searchTerm) => {
                 this.searchTerm = searchTerm;
                 this.viewRenderer.renderPreviews(); // Only re-render previews, not entire panel
@@ -90,9 +102,15 @@ export class AssetPanel extends BasePanel {
     }
 
     init() {
-        // Use existing HTML structure from index.html
-        this.tabsContainer = this.container.querySelector('#asset-tabs-container');
-        this.previewsContainer = this.container.querySelector('#asset-previews-container');
+        // Primary: fixed ids from index.html; copies: data-asset-role from DockPanelFactory
+        this.tabsContainer = this.container.querySelector('[data-asset-role="tabs"]')
+            || this.container.querySelector('#asset-tabs-container');
+        this.previewsContainer = this.container.querySelector('[data-asset-role="previews"]')
+            || this.container.querySelector('#asset-previews-container');
+        if (!this.tabsContainer || !this.previewsContainer) {
+            Logger.ui.error('AssetPanel: missing tabs/previews containers');
+            return;
+        }
 
         // Create folders container
         this.foldersController.createFoldersContainer();
@@ -216,6 +234,14 @@ export class AssetPanel extends BasePanel {
     }
 
     /**
+     * Active folder path for Add menu / createAssetOfType (not root Content).
+     * @returns {string}
+     */
+    getActiveTabPath() {
+        return this.foldersController.getActiveTabPath();
+    }
+
+    /**
      * Get all assets from folder recursively (delegate — used by AssetViewRenderer)
      * @param {string} folderPath - Folder path (e.g., 'root' or 'root/assets/characters')
      * @returns {Array} Array of asset objects
@@ -307,7 +333,11 @@ export class AssetPanel extends BasePanel {
             }
         };
 
-        globalEventRegistry.registerComponentHandlers('asset-panel', windowResizeHandlers, 'window');
+        globalEventRegistry.registerComponentHandlers(
+            this.eventComponentId || 'asset-panel',
+            windowResizeHandlers,
+            'window'
+        );
 
         // ResizeObserver for asset panel container to handle all internal resizes (folders, other panels, etc.)
         // Track previous size to avoid unnecessary updates and prevent loops
@@ -982,7 +1012,7 @@ export class AssetPanel extends BasePanel {
         eventHandlerManager.unregisterElement(this.container);
         
         // Clean up global event handlers using GlobalEventRegistry
-        globalEventRegistry.unregisterComponentHandlers('asset-panel');
+        globalEventRegistry.unregisterComponentHandlers(this.eventComponentId || 'asset-panel');
         
 
         // Clean up ResizeObserver for drop overlay
@@ -1008,15 +1038,20 @@ export class AssetPanel extends BasePanel {
         }
 
         // Unregister search from SearchManager
-        searchManager.unregisterSearch('assets');
+        searchManager.unregisterSearch(this.searchPanelId || 'assets');
     }
 
     /**
      * Auto-resize panel height based on content
+     * No-op when assets is hosted in a dock leaf (B3+) — leaf size is tree-driven.
      */
     autoResizePanelHeight() {
-        const assetsPanel = document.getElementById('assets-panel');
+        const assetsPanel = this.container || document.getElementById('assets-panel');
         if (!assetsPanel) return;
+        if (assetsPanel.closest('#dock-workspace, #dock-content-pool, #dock-legacy-offtree')
+            || !this.isPrimary) {
+            return;
+        }
 
         const activeTab = this.foldersController.getActiveTab();
         if (!activeTab) return;
@@ -1136,7 +1171,12 @@ export class AssetPanel extends BasePanel {
 
         // Register wheel handler directly on the asset panel container to prevent bubbling
         // Requires preventDefault on Ctrl+wheel to zoom previews
-        eventHandlerManager.registerElement(this.container, assetWheelHandlers, 'asset-panel-wheel', { passive: false });
+        eventHandlerManager.registerElement(
+            this.container,
+            assetWheelHandlers,
+            this.instanceKey ? `asset-panel-wheel-${this.instanceKey}` : 'asset-panel-wheel',
+            { passive: false }
+        );
 
         // Setup drag and drop
         this.setupDragAndDrop();

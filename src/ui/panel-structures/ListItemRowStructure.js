@@ -22,7 +22,9 @@ export const LOCK_OPEN_PATH = '<path d="M10 2a5 5 0 00-5 5v2a2 2 0 00-2 2v5a2 2 
  * @param {{display: string, value: string}} config.name
  * @param {number} config.objectsCount
  * @param {{soloed: boolean, title: string}} config.visibility
- * @param {{value: string, title?: string}|null} [config.color] - null omits the slot
+ * @param {{value: string, title?: string, shape: 'circle'|'square'}|null} [config.color]
+ *        null omits the slot. `shape` is call-site presentation (not inferred from prefix):
+ *        shared class `list-color-swatch--{shape}`; `${prefix}-color` stays for panel selectors/fill.
  * @param {{locked: boolean, title: string}|null} [config.lock] - null omits the slot
  * @param {{value: number, title: string}|null} [config.parallax] - null omits the slot
  * @param {boolean|null} [config.dirtyIndicator] - null omits the slot
@@ -43,8 +45,9 @@ export function createListItemRow(prefix, config) {
     row.draggable = draggable;
     row.dataset[`${prefix}Id`] = id;
 
+    const colorShape = color?.shape === 'square' ? 'square' : 'circle';
     const colorHtml = color ? `
-                <div class="${prefix}-color w-4 h-4 rounded-full cursor-pointer border-2 border-gray-500"
+                <div class="${prefix}-color list-color-swatch list-color-swatch--${colorShape} w-4 h-4 cursor-pointer border-2 border-gray-500"
                      data-${prefix}-id="${id}"
                      data-color="${color.value}"
                      title="${color.title || 'Click to change color'}"></div>` : '';

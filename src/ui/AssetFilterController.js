@@ -2,7 +2,7 @@ import { Logger } from '../utils/Logger.js';
 import { createSearchInput } from './panel-structures/BasePanelStructure.js';
 import { searchManager } from '../utils/SearchManager.js';
 import { SearchUtils } from '../utils/SearchUtils.js';
-import { MenuPositioningUtils } from '../utils/MenuPositioningUtils.js';
+import { openTypeFilterMenu, hasActiveTypeFilters } from '../utils/TypeFilterMenu.js';
 
 /**
  * Search/filter controls for AssetPanel — search input, type-filter menu, filtering logic.
@@ -63,13 +63,18 @@ export class AssetFilterController {
             return;
         }
 
+        const searchPanelId = assetPanel.searchPanelId || 'assets';
+        const searchInputId = assetPanel.searchInputId || 'assets-search';
+
         // Check if controls are already rendered (avoid unnecessary re-rendering)
-        const existingControls = tabsRightContainer.querySelector('#asset-search-controls');
+        const existingControls = tabsRightContainer.querySelector('#asset-search-controls')
+            || tabsRightContainer.querySelector('[data-asset-search-controls]');
         if (existingControls) {
             // Controls already exist, just update search value
-            const searchInput = existingControls.querySelector('#assets-search');
+            const searchInput = existingControls.querySelector(`#${searchInputId}`)
+                || existingControls.querySelector('input[type="text"]');
             if (searchInput) {
-                const currentTerm = searchManager.getSearchTerm('assets');
+                const currentTerm = searchManager.getSearchTerm(searchPanelId);
                 if (searchInput.value !== currentTerm) {
                     searchInput.value = currentTerm;
                 }
@@ -79,15 +84,18 @@ export class AssetFilterController {
 
         // Create controls container
         const controlsContainer = document.createElement('div');
-        controlsContainer.id = 'asset-search-controls';
+        controlsContainer.id = assetPanel.instanceKey
+            ? `asset-search-controls-${assetPanel.instanceKey}`
+            : 'asset-search-controls';
+        controlsContainer.dataset.assetSearchControls = '1';
         controlsContainer.className = 'flex items-center justify-end gap-1 p-1 border-t border-gray-700 bg-gray-800';
 
         // Create search input with ESC support
         const searchInput = createSearchInput(
             'Search assets...',
-            'assets-search',
+            searchInputId,
             'w-32 bg-gray-700 px-2 py-1 rounded text-sm border border-gray-600 focus:border-blue-500 focus:outline-none',
-            searchManager.getSearchTerm('assets') || '',
+            searchManager.getSearchTerm(searchPanelId) || '',
             (searchTerm) => {
                 // Direct callback for immediate filtering
                 assetPanel.searchTerm = searchTerm;
@@ -98,13 +106,12 @@ export class AssetFilterController {
 
         // Create filter button
         const filterButton = document.createElement('button');
-        filterButton.id = 'assets-filter-btn';
+        filterButton.id = assetPanel.instanceKey
+            ? `assets-filter-btn-${assetPanel.instanceKey}`
+            : 'assets-filter-btn';
         filterButton.className = 'px-2 py-1 rounded text-sm flex items-center justify-center bg-gray-600 hover:bg-gray-700';
         filterButton.title = 'Filter by asset types';
-
-        // Set button state based on active filters
-        const hasActiveFilters = assetPanel.activeTypeFilters.size > 0 && !assetPanel.activeTypeFilters.has('DISABLE_ALL');
-        filterButton.className += hasActiveFilters ? ' bg-blue-600 hover:bg-blue-700' : ' bg-gray-600 hover:bg-gray-700';
+        this._syncFilterButton(filterButton);
 
         filterButton.innerHTML = `
             <svg width="14" height="14" viewBox="0 0 12 12" fill="currentColor">
@@ -112,209 +119,67 @@ export class AssetFilterController {
             </svg>
         `;
 
-        // Setup filter button listener
         filterButton.addEventListener('click', (e) => {
             e.stopPropagation();
             this.showAssetFilterMenu(filterButton);
         });
 
-        // Assemble controls
         controlsContainer.appendChild(searchInput);
         controlsContainer.appendChild(filterButton);
-
-        // Insert controls container into right container
         tabsRightContainer.appendChild(controlsContainer);
 
         Logger.ui.debug('Asset search controls rendered in tabs footer');
     }
 
     /**
-     * Show filter menu with asset types using MenuPositioningUtils
+     * Collect type labels available for filtering.
+     * @returns {string[]}
+     */
+    _collectAssetTypes() {
+        const assetPanel = this.assetPanel;
+        const allAssets = Array.from(assetPanel.assetManager.assets.values());
+        let allTypes = [...new Set(allAssets.map((asset) => asset.type).filter(Boolean))];
+        if (allTypes.length === 0) {
+            allTypes = Array.from(assetPanel.assetManager.categories || []);
+        }
+        return allTypes;
+    }
+
+    /**
+     * Type filter menu — shared TypeFilterMenu (apply each click, menu stays open, no Ctrl).
+     * @param {HTMLElement} button
      */
     showAssetFilterMenu(button) {
         const assetPanel = this.assetPanel;
-
-        // Get all available asset types from current assets
-        const allAssets = Array.from(assetPanel.assetManager.assets.values());
-        let allTypes = [...new Set(allAssets.map(asset => asset.type).filter(type => type))];
-
-        // If no types found, use categories as fallback
-        if (allTypes.length === 0) {
-            allTypes = Array.from(assetPanel.assetManager.categories);
-            Logger.ui.debug('No asset types found, using categories as types:', allTypes);
-        }
-
+        const allTypes = this._collectAssetTypes();
         if (allTypes.length === 0) {
             Logger.ui.warn('No asset types or categories available for filtering');
             return;
         }
 
-        // Create menu using utility
-        const menu = MenuPositioningUtils.createMenuElement({ className: 'p-2' });
-
-        // Position menu using utility
-        MenuPositioningUtils.showMenu(menu, button, {
-            alignment: 'right',
-            direction: 'below',
-            menuWidth: 192,
-            menuHeight: 200
-        });
-
-        // Ctrl+click: hold Ctrl to toggle multiple type checkboxes without applying the filter or
-        // closing the menu (each option's handler stops the click from bubbling to the menu's
-        // default close-on-click while Ctrl is held); the accumulated filter is applied AND the
-        // menu closes together, once, on Ctrl release. A plain click keeps applying immediately
-        // and closing right away, as it always did. Mirrors OutlinerPanel.showFilterMenu.
-        //
-        // If the cursor leaves the menu's hit area before Ctrl is released, MenuPositioningUtils
-        // closes the menu on its own (see setupMenuClosing) without going through
-        // ctrlReleaseHandler — so the accumulated-but-unapplied edits would otherwise be silently
-        // dropped while assetPanel.activeTypeFilters (mutated live by each checkbox click) stays out of
-        // sync with what's actually applied. Snapshot the pre-session filters and roll back to
-        // them on any close that didn't go through the apply paths below.
-        const filtersSnapshot = new Set(assetPanel.activeTypeFilters);
-        let filtersApplied = false;
-        const ctrlReleaseHandler = (e) => {
-            if (e.key === 'Control') {
-                assetPanel.stateManager.set('assetTypeFilters', assetPanel.activeTypeFilters);
+        openTypeFilterMenu({
+            anchor: button,
+            types: allTypes,
+            filters: assetPanel.activeTypeFilters,
+            onChange: (filters) => {
+                assetPanel.activeTypeFilters = filters;
+                assetPanel.stateManager.set('assetTypeFilters', filters);
                 assetPanel.viewRenderer.renderPreviews();
-                filtersApplied = true;
-                if (menu._closeMenuHandler) menu._closeMenuHandler();
-            }
-        };
-        document.addEventListener('keyup', ctrlReleaseHandler);
-        menu.addEventListener('menuclose', () => {
-            document.removeEventListener('keyup', ctrlReleaseHandler);
-            if (!filtersApplied) {
-                assetPanel.activeTypeFilters = filtersSnapshot;
-            }
-        });
-
-        const applyOrDefer = (e) => {
-            if (e.ctrlKey || e.metaKey) {
-                e.stopPropagation();
-                this.updateAssetFilterMenu(menu, button);
-            } else {
-                assetPanel.stateManager.set('assetTypeFilters', assetPanel.activeTypeFilters);
-                assetPanel.viewRenderer.renderPreviews();
-                filtersApplied = true;
-                this.updateAssetFilterMenu(menu, button);
-            }
-        };
-
-        // Add "Toggle All" option using utility
-        const allTypesActive = assetPanel.activeTypeFilters.size === 0;
-        const allOption = MenuPositioningUtils.createMenuItem({
-            text: 'Toggle All',
-            checked: allTypesActive
-        });
-        allOption.querySelector('input').id = 'filter-all';
-
-        allOption.addEventListener('click', (e) => {
-            // Check current state at the time of click
-            const currentlyAllActive = assetPanel.activeTypeFilters.size === 0;
-
-            if (currentlyAllActive) {
-                // Currently all types are active, deactivate all
-                assetPanel.activeTypeFilters = new Set(['DISABLE_ALL']);
-            } else {
-                // Currently some types are filtered or disabled, activate all
-                assetPanel.activeTypeFilters.clear();
-            }
-            applyOrDefer(e);
-        });
-
-        menu.appendChild(allOption);
-
-        // Add separator
-        const separator = document.createElement('div');
-        separator.className = 'border-t border-gray-600 my-1';
-        menu.appendChild(separator);
-
-        // Add individual type options using utility
-        allTypes.sort().forEach(type => {
-            // Type is active if: no filters (show all) OR specifically selected OR not in DISABLE_ALL mode
-            const isActive = assetPanel.activeTypeFilters.size === 0 ||
-                           (assetPanel.activeTypeFilters.has(type) && !assetPanel.activeTypeFilters.has('DISABLE_ALL'));
-
-            const option = MenuPositioningUtils.createMenuItem({
-                text: type,
-                checked: isActive
-            });
-            option.querySelector('input').id = `filter-${type}`;
-
-            option.addEventListener('click', (e) => {
-                if (assetPanel.activeTypeFilters.has('DISABLE_ALL')) {
-                    // If in DISABLE_ALL mode, start with this type only
-                    assetPanel.activeTypeFilters = new Set([type]);
-                } else if (assetPanel.activeTypeFilters.size === 0) {
-                    // If all were active, exclude this type (show all except this one)
-                    assetPanel.activeTypeFilters = new Set(allTypes.filter(t => t !== type));
-                } else if (assetPanel.activeTypeFilters.has(type)) {
-                    // Remove this type
-                    assetPanel.activeTypeFilters.delete(type);
-                    // If no types left, disable all (show nothing)
-                    if (assetPanel.activeTypeFilters.size === 0) {
-                        assetPanel.activeTypeFilters = new Set(['DISABLE_ALL']);
-                    }
-                } else {
-                    // Add this type
-                    assetPanel.activeTypeFilters.add(type);
-                }
-                applyOrDefer(e);
-            });
-
-            menu.appendChild(option);
-        });
-
-        // Real item count (and therefore real menu height) is only known now that all options
-        // are in — see MenuPositioningUtils.repositionMenu() for why the initial showMenu()
-        // position can be off.
-        MenuPositioningUtils.repositionMenu(menu, button, {
-            alignment: 'right',
-            direction: 'below',
-            menuWidth: 192,
-            menuHeight: 200
+                this._syncFilterButton(button);
+            },
+            position: { menuWidth: 192, menuHeight: 200 }
         });
     }
 
-    /**
-     * Update filter menu to reflect current filter state
-     */
-    updateAssetFilterMenu(menu, button) {
+    /** @param {HTMLElement} button */
+    _syncFilterButton(button) {
+        if (!button) return;
         const assetPanel = this.assetPanel;
-
-        // Update "Toggle All" option
-        const allOption = menu.querySelector('#filter-all');
-        if (allOption) {
-            allOption.checked = assetPanel.activeTypeFilters.size === 0;
-        }
-
-        // Update individual type options
-        const allAssets = Array.from(assetPanel.assetManager.assets.values());
-        let allTypes = [...new Set(allAssets.map(asset => asset.type).filter(type => type))];
-
-        // If no types found, use categories as fallback
-        if (allTypes.length === 0) {
-            allTypes = Array.from(assetPanel.assetManager.categories);
-        }
-
-        allTypes.forEach(type => {
-            const option = menu.querySelector(`#filter-${type}`);
-            if (option) {
-                const isActive = assetPanel.activeTypeFilters.size === 0 ||
-                               (assetPanel.activeTypeFilters.has(type) && !assetPanel.activeTypeFilters.has('DISABLE_ALL'));
-                option.checked = isActive;
-            }
-        });
-
-        // Update filter button appearance
-        const filterButton = document.querySelector('#assets-filter-btn');
-        if (filterButton) {
-            const hasActiveFilters = assetPanel.activeTypeFilters.size > 0 && !assetPanel.activeTypeFilters.has('DISABLE_ALL');
-            filterButton.className = filterButton.className.replace(/bg-(blue|gray)-600/, hasActiveFilters ? 'bg-blue-600' : 'bg-gray-600');
-            filterButton.className = filterButton.className.replace(/hover:bg-(blue|gray)-700/, hasActiveFilters ? 'hover:bg-blue-700' : 'hover:bg-gray-700');
-        }
+        const active = hasActiveTypeFilters(assetPanel.activeTypeFilters);
+        button.className = `px-2 py-1 rounded text-sm flex items-center justify-center ${
+            active ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 hover:bg-gray-700'
+        }`;
+        button.title = active ? 'Filter active - click to change' : 'Filter by asset types';
     }
 
     /**
@@ -364,7 +229,7 @@ export class AssetFilterController {
 
         // Apply type filter only if there are active filters
         if (assetPanel.activeTypeFilters.size > 0) {
-            filtered = filtered.filter(asset => this.shouldShowAsset(asset));
+            filtered = filtered.filter((asset) => this.shouldShowAsset(asset));
         }
 
         return filtered;

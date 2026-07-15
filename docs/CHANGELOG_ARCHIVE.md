@@ -2,6 +2,13 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## [Unreleased] (до commit Phase B B3–B4.2, 2026-07-15)
+
+- **B2 (Phase B dock):** viewport leaf hosts real toolbar + canvas (`DockContentRegistry._mountViewport`); canvas reparented into `#canvas-viewport` (leaf measure, not full-screen absolute); ResizeObserver always on measure host; `resizeCanvas` dock-hosted fill path.
+- Fix dock: horizontal (`resizer-row`) splitters hit-target — reset global `.resizer { width: 6px }` via `width: auto; align-self: stretch`.
+- Fix dock: removed debug `#dock-chips` strip (blocked main menu dropdowns; reopen via `dockManager.showContentType` / View later).
+- **B1 (Phase B dock):** `DockContentRegistry` (6 singleton types, placeholder mount); `DockPersistence` (`panels.dock.mainTree` / `panels.dock.floatingWindows`); chips only for missing types; viewport non-closeable + chip reopen; no type-menu/duplicate-on-drag; default tree includes assets as bottom strip; `DockFloatOps` extracted for size limit.
+
 ## [Unreleased] (до commit f07084b, 2026-07-15)
 
 - **B0 (Phase B dock):** split-tree engine port in `src/ui/dock/` (`DockTreeModel`, `DockRenderer` with leaf reparent by `node.id`, `DockDragController`, `DockDropOverlay`, `DockManager`); `styles/dock.css`; `index.html` shell `#dock-workspace` + chips; legacy panel DOM in `#dock-legacy-offtree`; `editor.dockManager` wired with placeholders (real panels B2–B3).

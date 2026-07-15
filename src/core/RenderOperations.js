@@ -301,58 +301,69 @@ export class RenderOperations extends BaseModule {
 
 
     /**
-     * Render the canvas
+     * Render all viewport views (multi-camera). Falls back to single primary canvas.
      */
     render() {
-        // Performance monitoring
         const renderStart = performance.now();
-        
-        // Счетчик рендеров для периодических логов
         if (!this.renderCount) this.renderCount = 0;
         this.renderCount++;
 
-        // Проверки на существование необходимых объектов
-        if (!this.editor || !this.editor.level || !this.editor.level.objects) {
-            return;
+        if (!this.editor || !this.editor.level || !this.editor.level.objects) return;
+        if (!this.editor.canvasRenderer || !this.editor.stateManager) return;
+
+        const vvm = this.editor.viewportViewManager;
+        const views = vvm && vvm.views && vvm.views.size > 0 ? vvm.getViews() : null;
+
+        if (!views) {
+            const camera = this.editor.stateManager.get('camera');
+            if (!camera?.zoom || camera.zoom <= 0) return;
+            const canvas = this.editor.canvasRenderer.canvas;
+            if (!canvas?.width || !canvas?.height) return;
+            this._renderFrame(camera, null, true);
+        } else {
+            const focusedId = vvm.getFocusedView()?.leafId;
+            for (const view of views) {
+                if (!view.canvas?.width || !view.canvas?.height) {
+                    vvm.resizeView(view.leafId);
+                }
+                if (!view.canvas?.width || !view.canvas?.height) continue;
+                const camera = vvm.resolveCamera(view);
+                if (!camera?.zoom || camera.zoom <= 0) continue;
+                this.editor.canvasRenderer.setTarget(view.canvas);
+                // Marquee / touch marquee only on the interaction leaf (not primary-always)
+                const overlayLeaf = this.editor.mouseHandlers?._interactionViewLeafId || focusedId;
+                this._renderFrame(camera, view, view.leafId === overlayLeaf);
+            }
+            this.editor.canvasRenderer.restorePrimaryTarget();
         }
 
-        if (!this.editor.canvasRenderer || !this.editor.canvasRenderer.canvas) {
-            return;
+        const renderTime = performance.now() - renderStart;
+        this.lastRenderDuration = renderTime;
+        this.lastRenderTime = performance.now();
+        if (renderTime > 16) {
+            this._throttledSlowFrameLog(renderTime, this.renderCount);
         }
+    }
 
-        if (!this.editor.stateManager) {
-            return;
-        }
-        
-        const camera = this.editor.stateManager.get('camera');
+    /**
+     * Draw one viewport frame onto the current canvasRenderer target.
+     * @param {{x:number,y:number,zoom:number}} camera
+     * @param {object|null} view - ViewportView or null (legacy)
+     * @param {boolean} drawInteractiveOverlays - marquee / touch marquee
+     */
+    _renderFrame(camera, view, drawInteractiveOverlays) {
+        const vvm = this.editor.viewportViewManager;
         const mouse = this.editor.stateManager.get('mouse');
-
-        if (!camera) {
-            return;
-        }
-
-        // Проверки на валидность canvas размеров и camera zoom
         const canvas = this.editor.canvasRenderer.canvas;
-        if (!canvas.width || !canvas.height || canvas.width <= 0 || canvas.height <= 0) {
-            return;
-        }
+        if (!canvas?.width || !canvas?.height || !camera?.zoom) return;
 
-        if (!camera.zoom || camera.zoom <= 0) {
-            return;
-        }
-
-        // Performance check - skip rendering if previous frame took too long
-        // Disabled to prevent flickering - LOD system in grid renderers handles performance
-        // if (this.lastRenderDuration && this.lastRenderDuration > 16) {
-        //     // Skip this frame if previous took more than 16ms (60fps threshold)
-        //     return;
-        // }
-        
         this.editor.canvasRenderer.clear();
         this.editor.canvasRenderer.setCamera(camera);
         
         // Draw background and grid
-        const showGrid = this.editor.stateManager.get('canvas.showGrid') ?? this.editor.level.settings.showGrid;
+        const showGrid = view && vvm
+            ? vvm.getDisplayFlag(view, 'showGrid')
+            : (this.editor.stateManager.get('canvas.showGrid') ?? this.editor.level.settings.showGrid);
         if (showGrid) {
             // Get grid parameters using centralized SnapUtils
             const gridSize = SnapUtils.getGridSize(this.editor.stateManager, this.editor.level);
@@ -438,7 +449,13 @@ export class RenderOperations extends BaseModule {
 
         sessionsForRender.forEach(session => {
             const isCurrent = session.level === currentLevel;
-            const levelSortedObjects = this.getVisibleObjects(camera, session.level);
+            let levelSortedObjects = this.getVisibleObjects(camera, session.level);
+            // Per-view object type display filter (independent of Outliner)
+            if (view && vvm) {
+                levelSortedObjects = levelSortedObjects.filter(
+                    (item) => vvm.passesTypeFilter(view, item.obj)
+                );
+            }
             totalVisibleCount += levelSortedObjects.length;
 
             // Check if parallax mode is enabled
@@ -470,20 +487,24 @@ export class RenderOperations extends BaseModule {
         const currentSessionVisible = visibleSessions.some(session => session.level === currentLevel);
 
         // Draw object boundaries if enabled
-        const showObjectBoundaries = this.editor.stateManager.get('view.objectBoundaries');
+        const showObjectBoundaries = view && vvm
+            ? vvm.getDisplayFlag(view, 'objectBoundaries')
+            : this.editor.stateManager.get('view.objectBoundaries');
         if (showObjectBoundaries && currentSessionVisible) {
             this.drawObjectBoundaries();
         }
 
         // Draw object collisions if enabled
-        const showObjectCollisions = this.editor.stateManager.get('view.objectCollisions');
+        const showObjectCollisions = view && vvm
+            ? vvm.getDisplayFlag(view, 'objectCollisions')
+            : this.editor.stateManager.get('view.objectCollisions');
         if (showObjectCollisions && currentSessionVisible) {
             this.drawObjectCollisions();
         }
 
         if (currentSessionVisible) {
-            // Draw selection
-            this.drawSelection();
+            // Draw selection (shared selection, per-view camera already applied)
+            this.drawSelection(camera);
 
             // If a single group is selected, highlight its nested groups with fading
             const selected = this.editor.stateManager.get('selectedObjects');
@@ -515,49 +536,43 @@ export class RenderOperations extends BaseModule {
             }
         }
 
-        // Draw marquee
-        if (mouse.marqueeRect) {
-            this.editor.canvasRenderer.drawMarquee(mouse.marqueeRect, camera);
-        }
-        
-        // Draw touch marquee selection
-        if (this.editor.touchHandlers) {
-            const touchState = this.editor.touchHandlers.getTouchState();
-            if (touchState && touchState.marqueeRect) {
-                this.editor.canvasRenderer.drawMarquee(touchState.marqueeRect, camera);
+        if (drawInteractiveOverlays) {
+            // Draw marquee
+            if (mouse.marqueeRect) {
+                this.editor.canvasRenderer.drawMarquee(mouse.marqueeRect, camera);
+            }
+
+            // Draw touch marquee selection
+            if (this.editor.touchHandlers) {
+                const touchState = this.editor.touchHandlers.getTouchState();
+                if (touchState && touchState.marqueeRect) {
+                    this.editor.canvasRenderer.drawMarquee(touchState.marqueeRect, camera);
+                }
+            }
+
+            // Draw axis constraint line
+            if (mouse.constrainedAxis && mouse.isDragging && mouse.axisCenter) {
+                const axisConfig = {
+                    showAxis: this.editor.stateManager.get('editor.axisConstraint.showAxis'),
+                    axisColor: this.editor.stateManager.get('editor.axisConstraint.axisColor'),
+                    axisWidth: this.editor.stateManager.get('editor.axisConstraint.axisWidth')
+                };
+                this.editor.canvasRenderer.drawAxisConstraint(
+                    mouse.constrainedAxis,
+                    mouse.axisCenter.x,
+                    mouse.axisCenter.y,
+                    camera,
+                    axisConfig
+                );
             }
         }
-        
-        // Draw axis constraint line
-        if (mouse.constrainedAxis && mouse.isDragging && mouse.axisCenter) {
-            const axisConfig = {
-                showAxis: this.editor.stateManager.get('editor.axisConstraint.showAxis'),
-                axisColor: this.editor.stateManager.get('editor.axisConstraint.axisColor'),
-                axisWidth: this.editor.stateManager.get('editor.axisConstraint.axisWidth')
-            };
-            this.editor.canvasRenderer.drawAxisConstraint(
-                mouse.constrainedAxis,
-                mouse.axisCenter.x,
-                mouse.axisCenter.y,
-                camera,
-                axisConfig
-            );
-        }
-        
+
         this.editor.canvasRenderer.restoreCamera();
 
-        // Performance monitoring - log slow frames (throttled to avoid console spam)
-        const renderTime = performance.now() - renderStart;
-        this.lastRenderDuration = renderTime;
-        
-        if (renderTime > 20) {
-            this._throttledSlowFrameLog(renderTime, this.renderCount);
-        }
-
-        // Периодический лог состояния (каждые 500 рендеров)
-        if (this.renderCount % 500 === 0) {
-            const visibleCount = totalVisibleCount;
-            Logger.render.info(`🎨 Render #${this.renderCount}: ${visibleCount} visible objects, ${renderTime.toFixed(2)}ms`);
+        if (this.renderCount % 500 === 0 && (!view || view.isPrimary)) {
+            Logger.render.info(
+                `🎨 Render #${this.renderCount}: ${totalVisibleCount} visible objects (view ${view?.leafId || 'primary'})`
+            );
         }
     }
 
@@ -565,9 +580,12 @@ export class RenderOperations extends BaseModule {
     /**
      * Draw selection outlines
      */
-    drawSelection() {
+    /**
+     * @param {{x:number,y:number,zoom:number}} [cameraOverride] - multi-view frame camera
+     */
+    drawSelection(cameraOverride = null) {
         const selectedObjects = this.editor.stateManager.get('selectedObjects');
-        const camera = this.editor.stateManager.get('camera');
+        const camera = cameraOverride || this.editor.stateManager.get('camera');
 
         if (this.isInGroupEditMode()) {
             const groupEditMode = this.getGroupEditMode();
@@ -808,6 +826,13 @@ export class RenderOperations extends BaseModule {
         const camera = this.editor.stateManager.get('camera');
         if (!camera) return;
 
+        // Size is part of the key (multi-view) — drop every entry for this pose by prefix
+        // is fragile; clear all is cheap after structural edits. Prefer full clear when
+        // multi-view active so secondary leaves don't keep a stale list.
+        if (this.editor.viewportViewManager?.views?.size > 1) {
+            this.visibleObjectsCache.clear();
+            return;
+        }
         this.visibleObjectsCache.delete(this._buildVisibleObjectsCacheKey(camera));
     }
 
@@ -826,6 +851,10 @@ export class RenderOperations extends BaseModule {
     clearVisibleObjectsCacheForCamera(camera) {
         if (!camera) return;
 
+        if (this.editor.viewportViewManager?.views?.size > 1) {
+            this.visibleObjectsCache.clear();
+            return;
+        }
         this.visibleObjectsCache.delete(this._buildVisibleObjectsCacheKey(camera));
     }
 
@@ -910,36 +939,66 @@ export class RenderOperations extends BaseModule {
      * {obj, parentX, parentY} entries served up to CACHE_TIMEOUT_MS later (the ungroup/
      * delete/duplicate flicker bug: parallaxKey was appended here but omitted from the
      * two clear-by-camera methods, so those deletes never matched a real entry).
+     *
+     * Canvas size is part of the key: multi-viewport leaves share the same camera pose
+     * but different buffer sizes → different frustums. Omitting size made views steal
+     * each other's cull lists and flicker objects at edges while the TTL expired.
      */
-    _buildVisibleObjectsCacheKey(camera, level = this.editor.level) {
+    _buildVisibleObjectsCacheKey(camera, level = this.editor.level, canvas = null) {
         const parallaxEnabled = this.parallaxRenderer.isParallaxEnabled();
         const parallaxState = parallaxEnabled ? this.parallaxRenderer.getParallaxState() : null;
         const parallaxKey = parallaxState?.startPosition ? `_${parallaxState.startPosition.x.toFixed(1)},${parallaxState.startPosition.y.toFixed(1)}` : '_off';
         const levelId = level?.id || 'default';
-        return `${levelId}_${camera.x.toFixed(1)},${camera.y.toFixed(1)},${camera.zoom.toFixed(2)}${parallaxKey}`;
+        const c = canvas || this.editor.canvasRenderer?.canvas;
+        const sizeKey = c ? `_${c.width}x${c.height}` : '';
+        return `${levelId}_${camera.x.toFixed(1)},${camera.y.toFixed(1)},${camera.zoom.toFixed(2)}${sizeKey}${parallaxKey}`;
+    }
+
+    /**
+     * True while a gesture mutates object world bounds without refreshing the spatial
+     * index (drag / rotate-scale / marquee). Mid-gesture TTL rebuilds would cull via
+     * stale cells and blink non-selected objects (worse with multi-view × N rebuilds).
+     * @returns {boolean}
+     */
+    _isInteractiveObjectGesture() {
+        const mouse = this.editor.stateManager?.get('mouse');
+        if (!mouse) return false;
+        return !!(mouse.isDragging || mouse.isTransforming || mouse.isMarqueeSelecting
+            || mouse.isPlacingObjects
+            || this.editor.stateManager.get('duplicate.isActive')
+            || this.editor.stateManager.get('duplicate.isAltDragMode'));
     }
 
     getVisibleObjects(camera, level = this.editor.level) {
-        if (!this._getValidCanvasOrNull(camera, level)) return [];
+        const canvas = this._getValidCanvasOrNull(camera, level);
+        if (!canvas) return [];
 
         const currentTime = performance.now();
-        const cameraKey = this._buildVisibleObjectsCacheKey(camera, level);
+        const cameraKey = this._buildVisibleObjectsCacheKey(camera, level, canvas);
+        const interactive = this._isInteractiveObjectGesture();
 
         // Check cache first
         if (this.visibleObjectsCache.has(cameraKey)) {
             const cached = this.visibleObjectsCache.get(cameraKey);
-            if (currentTime - cached.timestamp < this.cacheTimeout) {
+            // Sticky during interactive gestures: keep the pre-move candidate set
+            // (object refs still read live x/y). Avoids spatial-index TTL flicker.
+            if (interactive || currentTime - cached.timestamp < this.cacheTimeout) {
                 return cached.objects;
             }
         }
 
-        // Пытаемся использовать пространственный индекс для быстрого поиска
+        // Spatial index cells are stale while objects move — use full scan during
+        // gestures so pivot-compensated groups / siblings stay in the candidate set.
         let visibleObjects;
-        try {
-            visibleObjects = this.getVisibleObjectsSpatial(camera, level);
-        } catch (error) {
-            Logger.render.warn('Spatial index search failed, falling back to regular method', error);
+        if (interactive) {
             visibleObjects = this.getVisibleObjectsRegular(camera, level);
+        } else {
+            try {
+                visibleObjects = this.getVisibleObjectsSpatial(camera, level);
+            } catch (error) {
+                Logger.render.warn('Spatial index search failed, falling back to regular method', error);
+                visibleObjects = this.getVisibleObjectsRegular(camera, level);
+            }
         }
 
         // Sort objects by stacking order for proper layering (behind first, front last).
@@ -957,13 +1016,14 @@ export class RenderOperations extends BaseModule {
             objects: visibleObjects,
             timestamp: currentTime
         });
-        
-        // Clean old cache entries
-        if (this.visibleObjectsCache.size > 10) {
+
+        // Clean old cache entries (multi-view × multi-level needs more slots than single canvas)
+        const maxCache = Math.max(10, (this.editor.viewportViewManager?.views?.size || 1) * 4);
+        while (this.visibleObjectsCache.size > maxCache) {
             const oldestKey = this.visibleObjectsCache.keys().next().value;
             this.visibleObjectsCache.delete(oldestKey);
         }
-        
+
         return visibleObjects;
     }
 

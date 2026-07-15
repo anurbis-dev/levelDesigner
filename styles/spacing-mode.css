@@ -80,8 +80,8 @@
     height: calc(96px * max(var(--element-size-scale, 1.0), 0));
 }
 
-/* Layer colors */
-.layer-color {
+/* List color swatches (layers/levels) */
+.list-color-swatch {
     width: calc(1rem * max(var(--element-size-scale, 1.0), 0));
     height: calc(1rem * max(var(--element-size-scale, 1.0), 0));
 }
@@ -118,14 +118,30 @@
     margin-bottom: calc(0.5rem * max(var(--spacing-scale-v, 1.0), 0));
 }
 
-/* Scrollbars */
+/* Scrollbars: fallback only. Authoritative size is ScrollUtils.applyScrollbarSize
+   (#ui-scrollbar-runtime-styles, !important). Do not use spacing-scale or fixed 6–8px. */
 ::-webkit-scrollbar {
-    width: calc(8px * max(var(--spacing-scale, 1.0), 0));
-    height: calc(8px * max(var(--spacing-scale, 1.0), 0));
+    width: var(--ui-scrollbar-size, 2px);
+    height: var(--ui-scrollbar-size, 2px);
 }
 
 ::-webkit-scrollbar-thumb {
-    border-radius: calc(4px * max(var(--spacing-scale, 1.0), 0));
+    border-radius: var(--ui-scrollbar-radius, 1px);
+    background: var(--ui-scrollbar-thumb, #6B7280);
+    min-height: 0;
+    min-width: 0;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--ui-scrollbar-track, #374151);
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--ui-scrollbar-thumb-hover, #9CA3AF);
+}
+
+::-webkit-scrollbar-corner {
+    background: var(--ui-scrollbar-track, #374151);
 }
 
 /* Header and navigation - no padding for main interface elements */

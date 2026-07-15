@@ -10,7 +10,7 @@ export class Layer {
         this.visible = data.visible !== undefined ? data.visible : true;
         this.locked = data.locked !== undefined ? data.locked : false;
         this.order = data.order || 0;
-        this.color = data.color || '#3B82F6'; // Default blue color for layer indicator
+        this.color = data.color || '#F5E6A3'; // Default pale yellow for layer indicator
         this.parallaxOffset = data.parallaxOffset !== undefined ? data.parallaxOffset : 0;
         // Layer index for z-index calculation (calculated based on order)
         this.index = data.index !== undefined ? data.index : 0;

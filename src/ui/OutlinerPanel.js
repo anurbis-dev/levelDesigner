@@ -5,13 +5,25 @@ import { BasePanel } from './BasePanel.js';
 import { createOutlinerPanelStructure, renderOutlinerSearchControls } from './panel-structures/OutlinerPanelStructure.js';
 import { searchManager } from '../utils/SearchManager.js';
 import { MenuPositioningUtils } from '../utils/MenuPositioningUtils.js';
+import { openTypeFilterMenu, hasActiveTypeFilters } from '../utils/TypeFilterMenu.js';
 
 /**
  * Outliner panel UI component
  */
 export class OutlinerPanel extends BasePanel {
-    constructor(container, stateManager, levelEditor) {
+    /**
+     * @param {HTMLElement} container
+     * @param {object} stateManager
+     * @param {object} levelEditor
+     * @param {{ instanceKey?: string, isPrimary?: boolean }} [options] - B4 dock copy instances
+     */
+    constructor(container, stateManager, levelEditor, options = {}) {
         super(container, stateManager, levelEditor);
+        this.instanceKey = options.instanceKey || null;
+        this.isPrimary = options.isPrimary !== false && !this.instanceKey;
+        this.searchPanelId = this.instanceKey ? `outliner-${this.instanceKey}` : 'outliner';
+        this.searchInputId = this.instanceKey ? `outliner-search-${this.instanceKey}` : 'outliner-search';
+        this.contextMenuId = this.instanceKey ? `outliner-${this.instanceKey}` : 'outliner';
         this.searchTerm = '';
 
         // Track subscriptions for cleanup
@@ -41,8 +53,8 @@ export class OutlinerPanel extends BasePanel {
 
         // Register search in universal search manager
         searchManager.registerSearch(
-            'outliner',
-            'outliner-search',
+            this.searchPanelId,
+            this.searchInputId,
             (searchTerm) => {
                 this.searchTerm = searchTerm;
                 Logger.outliner.debug('Search term changed:', searchTerm);
@@ -181,19 +193,20 @@ export class OutlinerPanel extends BasePanel {
             return;
         }
 
-        // Check if outliner panel is currently active
-        const outlinerPanel = document.getElementById('outliner-content-panel');
-        if (!outlinerPanel || outlinerPanel.classList.contains('hidden')) {
-            return; // Don't render if outliner is not active
+        // Skip if this panel container is hidden (primary or copy)
+        if (!this.container || this.container.classList.contains('hidden')) {
+            return;
         }
 
         // Check if controls are already rendered (avoid unnecessary re-rendering)
-        const searchInput = topSection.querySelector('#outliner-search');
-        const filterButton = topSection.querySelector('#outliner-filter-btn');
+        const searchInput = topSection.querySelector(`#${this.searchInputId}`)
+            || topSection.querySelector('input[type="text"]');
+        const filterButton = topSection.querySelector('#outliner-filter-btn')
+            || topSection.querySelector('button');
 
         if (searchInput && filterButton) {
             // Controls already exist, just update search value
-            const currentTerm = searchManager.getSearchTerm('outliner');
+            const currentTerm = searchManager.getSearchTerm(this.searchPanelId);
             if (searchInput.value !== currentTerm) {
                 searchInput.value = currentTerm;
             }
@@ -203,7 +216,8 @@ export class OutlinerPanel extends BasePanel {
 
         // Use the structure's render function with callbacks
         renderOutlinerSearchControls(topSection, {
-            getSearchTerm: () => searchManager.getSearchTerm('outliner'),
+            searchInputId: this.searchInputId,
+            getSearchTerm: () => searchManager.getSearchTerm(this.searchPanelId),
             onSearch: (searchTerm) => {
                 this.searchTerm = searchTerm;
                 Logger.outliner.debug('Search term changed:', searchTerm);
@@ -217,201 +231,35 @@ export class OutlinerPanel extends BasePanel {
     }
 
     /**
-     * Show filter menu with object types.
-     *
-     * Positioned flush below the button (MenuPositioningUtils default), same as the identical
-     * filter menu in AssetPanel.showAssetFilterMenu. Closing relies on MenuPositioningUtils'
-     * setupMenuClosing(), which tracks real cursor coordinates against the button+menu rects
-     * rather than native mouseleave — so it doesn't matter that the cursor is over the BUTTON,
-     * not the menu, at the moment the menu opens.
-     *
-     * Ctrl+click: hold Ctrl to toggle multiple type checkboxes without applying the filter or
-     * closing the menu (each option's handler stops the click from bubbling to the menu's
-     * default close-on-click while Ctrl is held); the accumulated filter is applied AND the
-     * menu closes together, once, on Ctrl release. A plain click keeps applying immediately
-     * and closing right away, as it always did.
+     * Show type filter menu (shared TypeFilterMenu — apply on each click, no Ctrl session).
      */
     showFilterMenu(button) {
-        // Get all available object types from current level
         const level = this.levelEditor.getLevel();
         const allObjects = level.getAllObjects();
         const availableTypes = MenuPositioningUtils.getObjectTypes(allObjects);
 
-        // Create menu using utility
-        const menu = MenuPositioningUtils.createMenuElement({ className: 'p-2' });
-
-        // Position menu using utility
-        MenuPositioningUtils.showMenu(menu, button, {
-            alignment: 'right',
-            direction: 'below',
-            menuWidth: 192,
-            menuHeight: 200
-        });
-
-        // Applying (and closing) on Ctrl release commits whatever was accumulated while Ctrl
-        // was held. Only 'Control' — metaKey clicks are treated the same as Ctrl for the
-        // multi-select gesture itself, but Cmd has no equivalent reliable "just released" key.
-        //
-        // If the cursor leaves the menu's hit area before Ctrl is released, MenuPositioningUtils
-        // closes the menu on its own (see setupMenuClosing) without going through
-        // ctrlReleaseHandler — so the accumulated-but-unapplied edits would otherwise be silently
-        // dropped while this.activeTypeFilters (mutated live by each checkbox click) stays out of
-        // sync with what's actually applied. Snapshot the pre-session filters and roll back to
-        // them on any close that didn't go through the apply paths below.
-        const filtersSnapshot = new Set(this.activeTypeFilters);
-        let filtersApplied = false;
-        const ctrlReleaseHandler = (e) => {
-            if (e.key === 'Control') {
-                this.stateManager.update({ 'outliner.activeTypeFilters': this.activeTypeFilters });
+        openTypeFilterMenu({
+            anchor: button,
+            types: availableTypes,
+            filters: this.activeTypeFilters,
+            onChange: (filters) => {
+                this.activeTypeFilters = filters;
+                this.stateManager.update({ 'outliner.activeTypeFilters': filters });
                 this.render();
-                filtersApplied = true;
-                if (menu._closeMenuHandler) menu._closeMenuHandler();
-            }
-        };
-        document.addEventListener('keyup', ctrlReleaseHandler);
-        // Fires once the menu actually closes, whichever path (cursor-leave or click) triggered it.
-        menu.addEventListener('menuclose', () => {
-            document.removeEventListener('keyup', ctrlReleaseHandler);
-            if (!filtersApplied) {
-                this.activeTypeFilters = filtersSnapshot;
-            }
-        });
-
-        /**
-         * Apply the (already-mutated) this.activeTypeFilters. Ctrl-held: only refresh the
-         * checkboxes and stop the click from bubbling to the menu's default close-on-click, so
-         * the user can keep selecting more types (applied later by ctrlReleaseHandler above).
-         * Otherwise: apply immediately and let the click bubble on to close the menu, as before.
-         */
-        const applyOrDefer = (e) => {
-            if (e.ctrlKey || e.metaKey) {
-                e.stopPropagation();
-                this.updateFilterMenu(menu, button);
-            } else {
-                this.stateManager.update({ 'outliner.activeTypeFilters': this.activeTypeFilters });
-                this.render();
-                filtersApplied = true;
-                this.updateFilterMenu(menu, button);
-            }
-        };
-
-        // Add "Toggle All" option using utility
-        const allTypesActive = this.activeTypeFilters.size === 0;
-        const allOption = MenuPositioningUtils.createMenuItem({
-            text: 'Toggle All',
-            checked: allTypesActive
-        });
-        allOption.querySelector('input').id = 'filter-all';
-
-        allOption.addEventListener('click', (e) => {
-            // Check current state at the time of click
-            const currentlyAllActive = this.activeTypeFilters.size === 0;
-
-            if (currentlyAllActive) {
-                // Currently all types are active, deactivate all
-                this.activeTypeFilters = new Set(['DISABLE_ALL']);
-            } else {
-                // Currently some types are filtered or disabled, activate all
-                this.activeTypeFilters.clear();
-            }
-            applyOrDefer(e);
-        });
-
-        menu.appendChild(allOption);
-
-        // Add separator
-        const separator = document.createElement('div');
-        separator.className = 'border-t border-gray-600 my-1';
-        menu.appendChild(separator);
-
-        // Add individual type options using utility
-        Array.from(availableTypes).sort().forEach(type => {
-            // Type is active if: no filters (show all) OR specifically selected OR not in DISABLE_ALL mode
-            const isActive = this.activeTypeFilters.size === 0 ||
-                           (this.activeTypeFilters.has(type) && !this.activeTypeFilters.has('DISABLE_ALL'));
-
-            const option = MenuPositioningUtils.createMenuItem({
-                text: type,
-                checked: isActive
-            });
-            option.querySelector('input').id = `filter-${type}`;
-
-            option.addEventListener('click', (e) => {
-                if (this.activeTypeFilters.has('DISABLE_ALL')) {
-                    // If in DISABLE_ALL mode, start with this type only
-                    this.activeTypeFilters = new Set([type]);
-                } else if (this.activeTypeFilters.size === 0) {
-                    // If all were active, exclude this type (show all except this one)
-                    const level = this.levelEditor.getLevel();
-                    const allObjects = level.getAllObjects();
-                    const allTypes = MenuPositioningUtils.getObjectTypes(allObjects);
-                    // Create set with all types except the clicked one
-                    this.activeTypeFilters = new Set([...allTypes].filter(t => t !== type));
-                } else if (this.activeTypeFilters.has(type)) {
-                    // Remove this type
-                    this.activeTypeFilters.delete(type);
-                    // If no types left, disable all (show nothing)
-                    if (this.activeTypeFilters.size === 0) {
-                        this.activeTypeFilters = new Set(['DISABLE_ALL']);
-                    }
-                } else {
-                    // Add this type
-                    this.activeTypeFilters.add(type);
-                }
-                applyOrDefer(e);
-            });
-
-            menu.appendChild(option);
-        });
-
-        // Real item count (and therefore real menu height) is only known now that all options
-        // are in — see repositionMenu() for why the initial showMenu() position can be off.
-        MenuPositioningUtils.repositionMenu(menu, button, {
-            alignment: 'right',
-            direction: 'below',
-            menuWidth: 192,
-            menuHeight: 200
+                this._syncFilterButton(button);
+            },
+            position: { menuWidth: 192, menuHeight: 200 }
         });
     }
 
-    /**
-     * Update filter menu to reflect current filter state
-     */
-    updateFilterMenu(menu, button) {
-        // Get all available object types from current level using utility
-        const level = this.levelEditor.getLevel();
-        const allObjects = level.getAllObjects();
-        const availableTypes = MenuPositioningUtils.getObjectTypes(allObjects);
-
-        // Update "Toggle All" option
-        const allOption = menu.querySelector('#filter-all');
-        if (allOption) {
-            const allTypesActive = this.activeTypeFilters.size === 0;
-            
-            allOption.checked = allTypesActive;
-            const label = allOption.nextElementSibling;
-            if (label) {
-                // Label is static "Toggle All"
-                label.textContent = 'Toggle All';
-            }
-        }
-
-        // Update individual type options
-        Array.from(availableTypes).sort().forEach(type => {
-            const option = menu.querySelector(`#filter-${type}`);
-            if (option) {
-                const isActive = this.activeTypeFilters.size === 0 ||
-                               (this.activeTypeFilters.has(type) && !this.activeTypeFilters.has('DISABLE_ALL'));
-                option.checked = isActive;
-            }
-        });
-
-        // Update filter button appearance
-        const hasActiveFilters = this.activeTypeFilters.size > 0 && !this.activeTypeFilters.has('DISABLE_ALL');
+    /** @param {HTMLElement} button */
+    _syncFilterButton(button) {
+        if (!button) return;
+        const active = hasActiveTypeFilters(this.activeTypeFilters);
         button.className = `px-3 py-1 rounded text-sm flex items-center justify-center ${
-            hasActiveFilters ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 hover:bg-gray-700'
+            active ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-600 hover:bg-gray-700'
         }`;
-        button.title = hasActiveFilters ? 'Filter active - click to change' : 'Filter by object types';
+        button.title = active ? 'Filter active - click to change' : 'Filter by object types';
     }
 
     /**
@@ -549,7 +397,8 @@ export class OutlinerPanel extends BasePanel {
         this.container.classList.add('outliner-tab-layout');
 
         // Save search input state before clearing
-        const searchInput = document.getElementById('outliner-search');
+        const searchInput = this.container.querySelector(`#${this.searchInputId}`)
+            || this.container.querySelector('input[type="text"]');
         const wasSearchFocused = searchInput && document.activeElement === searchInput;
 
         // Bootstrap structural (top/bottom custom) sections once; only tear everything down
@@ -631,7 +480,8 @@ export class OutlinerPanel extends BasePanel {
 
         // Restore search input state after render
         if (wasSearchFocused) {
-            const newSearchInput = document.getElementById('outliner-search');
+            const newSearchInput = this.container.querySelector(`#${this.searchInputId}`)
+                || this.container.querySelector('input[type="text"]');
             if (newSearchInput) {
                 newSearchInput.focus();
                 newSearchInput.setSelectionRange(newSearchInput.value.length, newSearchInput.value.length);
@@ -1147,8 +997,8 @@ export class OutlinerPanel extends BasePanel {
             return;
         }
         
-        // Use the panel element, not the inner container
-        this.contextMenu = new OutlinerContextMenu(this.container.parentElement, this.levelEditor, {
+        // Bind to container (works for primary + dock copies before/after reparent)
+        this.contextMenu = new OutlinerContextMenu(this.container, this.levelEditor, {
             stateManager: this.stateManager, // Pass StateManager for marquee check
             onRename: (object) => this.handleRenameObject(object),
             onDelete: (object) => this.handleDeleteObject(object),
@@ -1161,7 +1011,7 @@ export class OutlinerPanel extends BasePanel {
 
         // Register context menu with ContextMenuManager for global resize handling
         if (this.levelEditor && this.levelEditor.contextMenuManager && this.contextMenu) {
-            this.levelEditor.contextMenuManager.registerMenu('outliner', this.contextMenu);
+            this.levelEditor.contextMenuManager.registerMenu(this.contextMenuId, this.contextMenu);
         }
     }
 
@@ -1353,7 +1203,7 @@ export class OutlinerPanel extends BasePanel {
         this.subscriptions = [];
         
         // Unregister search from SearchManager
-        searchManager.unregisterSearch('outliner');
+        searchManager.unregisterSearch(this.searchPanelId || 'outliner');
 
         // Destroy context menu
         if (this.contextMenu) {
@@ -1363,6 +1213,11 @@ export class OutlinerPanel extends BasePanel {
                 Logger.ui.warn('Failed to destroy context menu:', error);
             }
             this.contextMenu = null;
+        }
+        if (this.levelEditor?.contextMenuManager && this.contextMenuId) {
+            try {
+                this.levelEditor.contextMenuManager.unregisterMenu?.(this.contextMenuId);
+            } catch (_e) { /* optional API */ }
         }
 
         // Call parent destroy

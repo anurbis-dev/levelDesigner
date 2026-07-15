@@ -179,6 +179,17 @@
     display: none; /* Webkit browsers - hide scrollbar */
 }
 
+/* Scrollbar defaults — runtime #ui-scrollbar-runtime-styles (ScrollUtils.applyScrollbarSize)
+   owns width with !important. Never set scrollbar-width/color here on Chromium:
+   scrollbar-color switches Chrome to standard ~system-thick bars. */
+:root {
+    --ui-scrollbar-size: 2px;
+    --ui-scrollbar-radius: 1px;
+    --ui-scrollbar-track: #374151;
+    --ui-scrollbar-thumb: #6B7280;
+    --ui-scrollbar-thumb-hover: #9CA3AF;
+}
+
 /* Tab cursor - pointer for selection */
 .horizontal-scroll-container .tab {
     cursor: pointer;
@@ -500,6 +511,58 @@ body.tab-dragging .tab {
 .panel-empty-text {
     font-size: 0.875rem;
     margin: 0;
+}
+
+/* Empty insertion slot during list row HTML5 reorder (ListReorderPlaceholder) */
+.list-reorder-placeholder {
+    box-sizing: border-box;
+    min-height: 2rem;
+    margin-bottom: 0.25rem;
+    border: 2px dashed rgba(59, 130, 246, 0.65);
+    border-radius: 0.25rem;
+    background: rgba(59, 130, 246, 0.12);
+    pointer-events: none;
+    flex-shrink: 0;
+}
+
+/* Source row collapses while dragging — browser drag image already captured */
+.list-row-dragging {
+    height: 0 !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    opacity: 0 !important;
+    border-width: 0 !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+}
+
+/* Shared list row color swatch (ListItemRowStructure) — shape via call-site config.color.shape */
+.list-color-swatch {
+    width: 1rem;
+    height: 1rem;
+    cursor: pointer;
+    border: 2px solid #6b7280;
+    transition: border-color 0.2s, transform 0.1s;
+    flex-shrink: 0;
+}
+
+.list-color-swatch--circle {
+    border-radius: 50%;
+}
+
+.list-color-swatch--square {
+    border-radius: 0.25rem;
+}
+
+.list-color-swatch:hover {
+    border-color: #ffffff;
+    transform: scale(1.1);
+}
+
+.list-color-swatch.selected {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 1px #3b82f6;
 }
 
 /* Panel loading state */

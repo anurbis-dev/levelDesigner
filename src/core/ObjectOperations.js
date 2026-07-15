@@ -250,7 +250,8 @@ export class ObjectOperations extends BaseModule {
         }
 
         const candidateKey = matches.map(o => o.id).join(',');
-        const zoom = this.editor.stateManager.get('camera')?.zoom || 1;
+        // Interaction-view zoom (multi-viewport); not primary stateManager.camera only
+        const zoom = this._getInteractionZoom();
         const tolerance = 4 / zoom; // ~4 screen px, independent of zoom level
         const prev = this._clickCycle;
         const samePoint = prev &&
@@ -264,14 +265,34 @@ export class ObjectOperations extends BaseModule {
     }
 
     /**
+     * Zoom of the view receiving the current pick/drag (multi-viewport).
+     * @returns {number}
+     */
+    _getInteractionZoom() {
+        const mh = this.editor.mouseHandlers;
+        if (mh && typeof mh.getInteractionCamera === 'function') {
+            const z = mh.getInteractionCamera()?.zoom;
+            if (z > 0) return z;
+        }
+        const vvm = this.editor.viewportViewManager;
+        if (vvm?.getActiveCamera) {
+            const z = vvm.getActiveCamera()?.zoom;
+            if (z > 0) return z;
+        }
+        return this.editor.stateManager.get('camera')?.zoom || 1;
+    }
+
+    /**
      * Hit-test tolerance in WORLD units: expands the clickable area by a fixed
      * screen-pixel margin (selection.hitTestTolerance, default 4px) around the
      * object's boundary, independent of zoom — same convention as the click-cycle
      * tolerance in _pickWithClickCycle.
+     * Uses the interaction view's zoom so rotated hit-tests match on-screen pixels
+     * in secondary viewports (not primary camera only).
      */
     getHitTestTolerance() {
         const px = this.editor.stateManager.get('selection.hitTestTolerance') ?? 4;
-        const zoom = this.editor.stateManager.get('camera')?.zoom || 1;
+        const zoom = this._getInteractionZoom();
         return px / zoom;
     }
 

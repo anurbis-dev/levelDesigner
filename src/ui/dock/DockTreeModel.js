@@ -2,7 +2,7 @@
  * Pure split-tree + floating-window model (no DOM).
  * Port of tree/float logic from tmp/split-tree-prototype_v1_10.html.
  */
-import { FLOAT_MIN_W, FLOAT_MIN_H } from './DockConstants.js';
+import { FLOAT_MIN_W, FLOAT_MIN_H, typeLabel } from './DockConstants.js';
 import { DockFloatOps } from './DockFloatOps.js';
 
 export class DockTreeModel {
@@ -149,6 +149,56 @@ export class DockTreeModel {
 
     hasContentType(contentType) {
         return this.collectPresentContentTypes().has(contentType);
+    }
+
+    /**
+     * Set leaf contentType.
+     * Singleton types (viewport): if already open elsewhere → swap.
+     * Multi-instance types (B4): assign even when another leaf already has that type.
+     * @param {object} node
+     * @param {string} newType
+     * @param {{ isSingleton?: (type: string) => boolean }} [opts]
+     * @returns {boolean} true if model changed
+     */
+    applyLeafContentType(node, newType, opts = {}) {
+        if (!node || node.contentType === newType) return false;
+        const isSingleton = typeof opts.isSingleton === 'function'
+            ? opts.isSingleton(newType)
+            : true;
+        const other = this.findLeafByContentType(newType);
+        if (other && other.id !== node.id && isSingleton) {
+            const oldType = node.contentType;
+            node.contentType = newType;
+            node.label = typeLabel(newType);
+            other.contentType = oldType;
+            other.label = typeLabel(oldType);
+        } else {
+            node.contentType = newType;
+            node.label = typeLabel(newType);
+        }
+        return true;
+    }
+
+    /** All leaf node ids in main + floating trees. */
+    collectAllLeafIds() {
+        const ids = new Set();
+        const visit = (leaf) => {
+            if (leaf.id) ids.add(leaf.id);
+        };
+        this._walkLeaves(this.mainTree, visit);
+        this.floatingWindows.forEach((fw) => this._walkLeaves(fw.tree, visit));
+        return ids;
+    }
+
+    /** Count leaves with the given contentType across main + floating trees. */
+    countLeavesByType(contentType) {
+        let n = 0;
+        const visit = (leaf) => {
+            if (leaf.contentType === contentType) n++;
+        };
+        this._walkLeaves(this.mainTree, visit);
+        this.floatingWindows.forEach((fw) => this._walkLeaves(fw.tree, visit));
+        return n;
     }
 
     /** First leaf node with contentType, or null. */

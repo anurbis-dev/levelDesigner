@@ -36,6 +36,7 @@ export function renderGeneralSettings(stateManager) {
             fontScale: stateManager.get('ui.fontScale'),
             spacing: stateManager.get('ui.spacing'),
             elementSize: stateManager.get('ui.elementSize') ?? 1.0,
+            scrollbarSize: stateManager.get('ui.scrollbarSize') ?? 2,
             menuGapBase: stateManager.get('ui.menuGapBase') ?? 0.5,
             cursorMenuMargin: stateManager.get('ui.cursorMenuMargin') ?? 6,
             backgroundColor: stateManager.get('ui.backgroundColor') || '#1f2937',
@@ -130,6 +131,18 @@ export function renderGeneralSettings(stateManager) {
                     max: 4,
                     step: 0.05,
                     label: 'Main Menu Spacing'
+                })}
+            </div>
+            <div>
+                ${createSettingsRange({
+                    id: 'ui-scrollbar-size',
+                    dataSetting: 'ui.scrollbarSize',
+                    value: settings.ui?.scrollbarSize ?? 2,
+                    min: 1,
+                    max: 24,
+                    step: 1,
+                    unit: 'px',
+                    label: 'Scrollbar Size'
                 })}
             </div>
         `, { columns: 2, gap: '1rem' })}

@@ -1,6 +1,6 @@
 # Замена оконной системы Level Designer на split-tree прототип (Фаза B)
 
-**Status:** B0–B2 done · **next = B3** · B4–B6 pending  
+**Status:** B0–B4.2 done · **next = B5** (remove PanelPositionManager) · B6 pending  
 **Inventory date:** 2026-07-15 (call sites / init order / persist keys / index shell)
 
 ## Context
@@ -72,16 +72,19 @@ body.flex.flex-col.h-screen
 └── #console-panel                              // вне dock
 ```
 
-### Content types (singletons)
+### Content types
 
-| contentType | Instance | Notes |
-|-------------|----------|-------|
-| `viewport` | canvas + Toolbar | host: `#canvas-viewport` + toolbar |
-| `outliner` | `editor.outlinerPanel` | ctor не менять |
-| `details` | `editor.detailsPanel` | |
-| `layers` | `editor.layersPanel` | |
-| `assets` | `editor.assetPanel` | не fixed footer |
-| `levels` | `editor.levelsPanel` | |
+| contentType | Cardinality | Instance / Notes |
+|-------------|-------------|------------------|
+| `viewport` | **singleton** | canvas + Toolbar; host `#canvas-viewport`; **не** клонируется (один editor canvas) |
+| `outliner` | **multi** | primary: `editor.outlinerPanel`; self-drop / extra leaf → **отдельный instance** (B4) |
+| `details` | **multi** | primary: `editor.detailsPanel`; extra → clone/factory (B4) |
+| `layers` | **multi** | primary: `editor.layersPanel`; extra → clone/factory (B4) |
+| `assets` | **multi** | primary: `editor.assetPanel`; не fixed footer; extra → clone/factory (B4) |
+| `levels` | **multi** | primary: `editor.levelsPanel`; extra → clone/factory (B4) |
+
+**Primary** = первый/«канонический» instance, на который смотрит legacy `editor.*Panel` и существующие call sites.  
+**Copy** = независимый UI-instance того же `contentType` (свой DOM root, scroll, local UI state); данные уровня/selection — shared через editor/stateManager, не deep-copy document.
 
 ### Persist keys
 
@@ -144,8 +147,15 @@ Viewport: не close-кнопкой (View hide / chip reopen без уничто
 3. **Viewport — особый случай.** Canvas сейчас absolute full-area; в leaf — 0×0/hidden/floating.
    `resizeCanvas` уже guard'ит 0×0; render-loop должен пропускать пустой viewport. Close viewport
    не убивает selection/level data — только рендер. Prefer non-closeable + chip reopen.
-4. **Singleton-гвард.** Type-menu и duplicate-on-drag — off для 6 реальных типов; один instance
-   на тип, move between slots only.
+4. **Cardinality (post-B1 UX + B4 multi-instance):**
+   - type-menu **on**: free type → assign; уже open multi-type → **swap** (или assign на copy-slot — см. B4);
+   - self-drop **on** (прототип): drop на собственный leaf → tree-clone + zone split;
+   - **B0–B3:** mount pool по `contentType` (last-wins) — достаточно для primary wire;
+   - **B4:** multi panel types — **реальное копирование UI-instance** (не last-wins):
+     self-drop / второй leaf того же type → factory `createPanelInstance(type)` + root keyed by `node.id`;
+     viewport остаётся singleton (self-drop viewport → либо no-op, либо split с warning / только layout placeholder — зафиксировать в B4: prefer **block clone** или **second leaf without second canvas**);
+   - close non-primary copy → destroy/park instance; primary close → hide + reopen path;
+   - move between slots — drag-drop; reopen missing primary — `showContentType` / View.
 5. **Persist/restore** — `userPrefs`/`stateManager` + autosave unload (контракт
    `EditorPreferencesController`; snap/grid → отдельно, не эта фаза).
 6. **Пустое mainTree** — empty-zone + chips; viewport не должен пропадать «в один клик».
@@ -184,6 +194,9 @@ singleton + wire real content, не переписывание геометри�
 | `togglePanelPosition('rightPanel'\|'folders')` | show/focus leaf / `insertIntoTree` |
 | `ensurePanelExists` / `removeEmptyPanel` | tree ops |
 | `_updateUI()` | удалить call site |
+| View menu: Left/Right/Assets Panel | per-`contentType` toggles → `dockManager.showContentType` / hide (B3.1) |
+| `togglePanel('leftPanel'\|'rightPanel'\|'assetsPanel')` | `toggleDockContent(type)` (B3.1) |
+| prefs `view.leftPanel\|rightPanel\|assetsPanel` | presence in `panels.dock.mainTree` (+ floats) / optional `view.dock.*` |
 
 ## Порядок переноса (каждый шаг: `npm run check` + browser, отдельный коммит)
 
@@ -199,9 +212,11 @@ singleton + wire real content, не переписывание геометри�
 
 ### B1 — singleton-гвард + persistence  ✅
 
-- [x] `DockContentRegistry` (placeholder mount ok); type-menu/duplicate off для 6 типов
-- [x] Chips только для **missing** (закрытых) типов
-- [x] Viewport non-closeable / reopen path (`showContentType` + chips)
+- [x] `DockContentRegistry` (placeholder mount ok)
+- [x] Type-menu: restored post-B1 with singleton **swap** — see §4
+- [x] Self-drop duplicate restored (prototype): drop on own leaf → `makeLeaf` clone + zone split
+- [x] Chips только для **missing** (закрытых) типов (chips strip later removed; reopen API remains)
+- [x] Viewport non-closeable / reopen path (`showContentType` + chips/View)
 - [x] `DockPersistence` load/save; keys `panels.dock.mainTree` / `panels.dock.floatingWindows`
 - [x] Default assets = bottom strip under L/C/R workspace
 
@@ -215,17 +230,97 @@ singleton + wire real content, не переписывание геометри�
 
 **Commit:** `feat(dock): B2 viewport and toolbar in dock leaf`
 
-### B3 — Outliner / Details / Layers / Levels / Assets  ← **CURRENT**
+### B3 — Outliner / Details / Layers / Levels / Assets  ✅
 
 Порядок: Outliner → Details → Layers → Levels → Assets.  
-Ctor не менять — только container source + reparent.
+**Пока primary-only:** container source + reparent; ctor primary path не ломать.  
+Multi-instance **не** в scope B3 (last-wins pool ок, один leaf на type в default tree).
 
-- [ ] После каждой: Standard tier — dock/float/collapse; selection/scroll/dropdown живы
-- [ ] Assets: убрать fixed footer + `#resizer-assets` path
+- [x] `DockContentRegistry._mountPrimaryPanel` — reparent by `#*-content-panel` / `#assets-panel`
+- [x] CSS leaf fill for panel roots; `#resizer-assets` hidden under dock
+- [x] Assets: no fixed footer height (skip autoResize / assetsPanelHeight prefs when dock active)
+- [x] `applyPanelVisibility` skip assets/L-R when dock; search controls still init
+- [x] QA: `npm run check` + `tmp/check-b3.mjs` (all 5 roots in leaf bodies, non-zero size)
 
-**Commits:** per panel или один B3
+**Commit:** `feat(dock): B3 primary panels in dock leaves`
 
-### B4 — фиксы «по ходу» (только если регрессии B3)
+### B3.1 — View → Panels: список окон под dock  ✅
+
+Сейчас `config/menu.js` + `EventHandlers.togglePanel` всё ещё legacy **Left / Right / Assets Panel**  
+(`view.leftPanel|rightPanel|assetsPanel`). Chips-strip убран — **меню View = reopen path**.
+
+**Menu (`config/menu.js`, section Panels)**
+- [x] Убрать (или не показывать): `toggle-left-panel`, `toggle-right-panel`, `toggle-assets-panel`.
+- [x] Добавить toggles по contentType (labels = `TYPE_META`):
+  - Viewport, Outliner, Details, Layers, Assets, Levels  
+  - плюс **вне dock** как сейчас: Toolbar, Console, Status Bar.
+- [x] `stateKey` / checkmark = «primary (или любой) leaf этого type present»  
+  (sync из dock tree, не из старых `view.leftPanel`…).
+- [x] Shortcuts: remap `ui.toggleLeftPanel` / `Right` / `Assets` → Outliner/Details/Assets  
+  (legacy key names kept as aliases).
+
+**Handlers**
+- [x] `EventHandlers.togglePanel` / `applyPanelVisibility`:  
+  dock types → `editor.dockManager.showContentType(type)` / `hideContentType`  
+  (`hideContentType` / `toggleContentType` on `DockManager`).
+- [x] Immersive/game mode: `enterImmersiveLayout` / `exitImmersiveLayout` (snapshot → viewport-only).
+- [x] Menu checkbox refresh on dock structure change (`onStructureChange` → `syncDockPanelMenuCheckboxes`).
+
+**Вне scope B3.1:** multi-instance «N copies» в меню (только present/absent primary-or-any);  
+кол-во копий — не пункт меню (B4 layout only).
+
+**QA**
+- [x] View → закрыть Layers → leaf gone; снова Layers → `showContentType` restore.
+- [x] Viewport toggle: hide/show без destroy canvas state (non-closeable policy).
+- [x] Console / Status / Toolbar без регрессий.
+- [x] `npm run check` + `tmp/check-b3.1.mjs` (hide/show layers, viewport park, menu ids, legacy alias, immersive)
+
+**Commit:** `feat(dock): B3.1 View menu content-type panels`
+
+### B4 — multi-instance: реальное копирование панелей  ✅
+
+Цель: self-drop / второй leaf того же `contentType` даёт **рабочую копию UI**, не пустой last-wins slot.
+
+**Scope (multi):** `outliner`, `details`, `layers`, `assets`, `levels`.  
+**Вне scope (singleton):** `viewport` — один canvas/toolbar; self-drop viewport = **no-op** (или только structural refuse + log), без второго canvas.
+
+**Модель / registry**
+- [x] `DockContentRegistry`: `singleton: false` для multi-types; root map key = **`node.id`** (не contentType).
+- [x] Primary map `contentType → primaryNodeId` (или `editor.*Panel` ↔ primary leaf id) для legacy API.
+- [x] Factory: `DockPanelFactory.createPanelCopy` → new panel class instance; primary остаётся `editor.outlinerPanel` и т.д.
+- [x] Close copy: unmount + `destroy()` instance (`reconcileLiveLeaves`); close primary: hide/pool + reopen, **не** destroy editor state.
+- [x] Self-drop path уже делает `makeLeaf` + split — B4 **mount** второго instance; viewport self-drop blocked.
+- [x] Type-menu: два leaf одного type допустимы (`+`); singleton swap `⇄`; assign free type ok.
+- [x] Persist: tree уже хранит N leaf с одним contentType; restore → factory per leaf (primary = first claim / sticky primaryLeafId).
+
+**Панели (на каждую multi-type)**
+- [x] Instance: `instanceKey` + scoped search/context-menu ids; container-scoped DOM queries.
+- [x] Shared data only: selection, level, assets catalog через `levelEditor` / `stateManager`.
+- [x] Local UI state per instance: scroll/search/filter local to instance (shared filters still via state where primary already shared).
+- [x] Не дублировать document/level data.
+
+**QA**
+- [x] Self-drop Outliner → 2 Outliner: оба mount + hierarchy (`tmp/check-b4.mjs`).
+- [x] Layers×2 deep-check; other multi types via factory (same path).
+- [x] Close secondary → primary жив; re-render keeps 2× layers.
+- [x] Viewport singleton (no clone); `npm run check` green.
+
+**Commit:** `feat(dock): B4 multi-instance panel copies`
+
+### B4.2 — multi-viewport + work/game cameras  ✅
+
+- [x] `ViewportViewManager`: work camera (primary ↔ `stateManager.camera`) vs game cameras (`type===camera` objects)
+- [x] Viewport multi-instance: secondary canvas leaf; primary shell + toolbar; self-drop clone
+- [x] Per-view type display filter + camera source in leaf header (🎥 / filter)
+- [x] Secondary nav: wheel zoom + middle/alt pan; game-source unlocks to free work on pan
+- [x] `RenderOperations` multi-frame draw; `CanvasRenderer.setTarget`
+- [x] QA: `tmp/check-b4.2.mjs`
+
+**Deferred:** full MouseHandlers input on secondary (selection tools still primary-focused); persist per-view camera in dock snapshot.
+
+**Commit:** `feat(dock): B4.2 multi-viewport work/game cameras`
+
+### B4.1 — фиксы «по ходу» (только если регрессии B3/B4)
 
 Из v2 Фаза B.3: ownership Asset-контроллеров, dual `activeTypeFilters`,
 `handleAssetClick` liveness, Details no-selection DOM (`renderLevelStats` /
@@ -245,10 +340,10 @@ Ctor не менять — только container source + reparent.
 ### B6 — документация
 
 - [ ] DocCodeSync: `ARCHITECTURE.md`, `Context_map.md`, `CONTRIBUTING.md`, `CHANGELOG.md`
-- [ ] `tmp/2D_Editor_REFACTOR_PLAN_v2.md` — Фаза B closed + фактическая разбивка B0–B6
+- [ ] `tmp/2D_Editor_REFACTOR_PLAN_v2.md` — Фаза B closed + фактическая разбивка B0–B6 (+ B3.1 View menu, B4 multi-instance)
 
 Каждый шаг — отдельный коммит (clean move → wire → remove old, отдельно от behavior).  
-B2/B3: chrome-devtools Standard/Full tier (`evaluate_script` / `list_console_messages`,
+B2/B3/B3.1/B4: chrome-devtools Standard/Full tier (`evaluate_script` / `list_console_messages`,
 **без** `take_screenshot`).
 
 ## Risks
@@ -259,11 +354,16 @@ B2/B3: chrome-devtools Standard/Full tier (`evaluate_script` / `list_console_mes
 | Dual layout transition | shell swap B0; real panels B2/B3 |
 | Prefs | нет `panels.dock.*` → default tree |
 | ResizerManager L/R widths | ratios в tree; ResizerManager → dialogs only после B5 |
+| Multi-instance + global panel ids | B4: scoped roots; primary pointer for legacy |
+| Two panels fighting one DOM id | factory + no shared `#outliner-panel` singleton node for copies |
+| Viewport clone | blocked — singleton only |
 
 ## Верификация (сквозная, после всех шагов)
 
 - `npm run check` (lint + check:size + vitest + madge --circular) зелёный.
 - Браузер: 3–4-уровневый nested split, все 6 типов, floating + snap stack, collapse,
   close/reopen non-viewport, reload → layout + selection/asset-tab. 0 new console errors.
-- Меню, консоль (`` ` ``), статус-бар — без изменения поведения.
+- **View → Panels:** 6 contentType toggles (не Left/Right); hide/show через dock; Toolbar/Console/Status ok.
+- **Multi-instance:** ≥1 self-drop copy (e.g. Outliner×2) — оба interactive после reload.
+- Консоль (`` ` ``), статус-бар — без изменения поведения.
 - `grep -rn "panelPositionManager" src` → 0 после B5.

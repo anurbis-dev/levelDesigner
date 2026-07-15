@@ -17,12 +17,14 @@ export class DockDragController {
      * @param {import('./DockRenderer.js').DockRenderer} opts.renderer
      * @param {() => void} opts.render
      * @param {() => void} [opts.onStructureChange]
+     * @param {(type: string) => boolean} [opts.isSingleton]
      */
     constructor(opts) {
         this.model = opts.model;
         this.renderer = opts.renderer;
         this.render = opts.render;
         this.onStructureChange = opts.onStructureChange || (() => {});
+        this.isSingleton = opts.isSingleton || ((type) => type === 'viewport');
         this.overlay = new DockDropOverlay(opts.renderer, opts.model);
     }
 
@@ -111,9 +113,17 @@ export class DockDragController {
             if (holdFired) return;
             endGesture();
             if (moved && target) {
-                // Self-drop no-op (B1: no duplicate-on-drag for singleton types)
+                // Self-drop → split + clone for multi-instance types (incl. viewport B4.2).
                 if (opts.ownId && target.kind === 'leaf' && target.leafId === opts.ownId) {
-                    // ignore
+                    const ws = this.model.findWorkspaceContaining(opts.ownId);
+                    const original = ws
+                        ? this.model.findNode(this.model.getTreeOf(ws), opts.ownId)
+                        : null;
+                    if (original && !this.isSingleton(original.contentType)) {
+                        const dup = this.model.makeLeaf(original.contentType, original.label);
+                        this.model.applyDropTarget(target, dup);
+                        this.render();
+                    }
                 } else {
                     const node = this.model.resolveDraggedNode(getRawPayload());
                     if (node) {

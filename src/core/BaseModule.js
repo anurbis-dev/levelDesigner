@@ -98,8 +98,25 @@ export class BaseModule {
      * @returns {Object} World coordinates {x, y}
      */
     screenToWorld(e) {
-        const camera = this.editor.stateManager.get('camera');
-        return this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, camera);
+        const camera = this.getCameraState();
+        const cr = this.editor.canvasRenderer;
+        // Multi-view: always map against the interaction/focused leaf canvas.
+        // After each render frame canvasRenderer.canvas is restored to primary — do not
+        // trust it alone for pick/drag on secondary viewports.
+        const view = this.editor.mouseHandlers?.getInteractionView?.()
+            || this.editor.viewportViewManager?.getFocusedView?.();
+        const canvas = view?.canvas
+            || this.editor.mouseHandlers?.getInteractionCanvas?.()
+            || cr?.primaryCanvas
+            || cr?.canvas;
+        if (canvas && cr) {
+            const prev = cr.canvas;
+            cr.setTarget(canvas);
+            const pos = cr.screenToWorld(e.clientX, e.clientY, camera);
+            if (prev && prev !== canvas) cr.setTarget(prev);
+            return pos;
+        }
+        return cr.screenToWorld(e.clientX, e.clientY, camera);
     }
 
     /**
@@ -111,10 +128,16 @@ export class BaseModule {
     }
 
     /**
-     * Get current camera state
+     * Active camera for tools (primary work camera or secondary/local/game view).
      * @returns {Object} Camera state {x, y, zoom}
      */
     getCameraState() {
+        const mh = this.editor.mouseHandlers;
+        if (mh && typeof mh.getInteractionCamera === 'function') {
+            return mh.getInteractionCamera();
+        }
+        const vvm = this.editor.viewportViewManager;
+        if (vvm) return vvm.getActiveCamera();
         return this.editor.stateManager.get('camera');
     }
 

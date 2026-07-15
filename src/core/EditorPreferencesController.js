@@ -75,11 +75,14 @@ export class EditorPreferencesController extends BaseModule {
                 }
             }
 
-            const assetsPanelVisible = editor.userPrefs.get('assetsPanelVisible');
-            if (assetsPanelVisible !== undefined) {
-                const assetsPanel = document.getElementById('assets-panel');
-                if (assetsPanel) {
-                    assetsPanel.style.display = assetsPanelVisible ? 'flex' : 'none';
+            // B3+: assets visibility is dock tree presence, not footer flag
+            if (!editor.dockManager?._inited) {
+                const assetsPanelVisible = editor.userPrefs.get('assetsPanelVisible');
+                if (assetsPanelVisible !== undefined) {
+                    const assetsPanel = document.getElementById('assets-panel');
+                    if (assetsPanel) {
+                        assetsPanel.style.display = assetsPanelVisible ? 'flex' : 'none';
+                    }
                 }
             }
         } catch (error) {

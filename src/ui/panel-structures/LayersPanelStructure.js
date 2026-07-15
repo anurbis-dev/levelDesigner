@@ -78,7 +78,7 @@ export function renderLayersControls(topSection, callbacks = {}) {
     // Create search input with callback for ESC support
     const searchInput = createSearchInput(
         LayersPanelStructure.layerControls.searchInput.placeholder,
-        LayersPanelStructure.layerControls.searchInput.id,
+        callbacks.searchInputId || LayersPanelStructure.layerControls.searchInput.id,
         LayersPanelStructure.layerControls.searchInput.classes,
         callbacks.getSearchFilter ? callbacks.getSearchFilter() : '',
         callbacks.onSearch || null

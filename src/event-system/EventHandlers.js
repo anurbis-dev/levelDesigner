@@ -6,6 +6,18 @@ import { eventHandlerManager } from './EventHandlerManager.js';
 import { globalEventRegistry } from './GlobalEventRegistry.js';
 import { ResetRegistry } from '../utils/ResetRegistry.js';
 
+/** Dock leaf contentTypes (View → Panels, B3.1). */
+const DOCK_CONTENT_PANELS = Object.freeze([
+    'viewport', 'outliner', 'details', 'layers', 'assets', 'levels'
+]);
+
+/** Legacy L/R/assets menu keys → dock contentType when dock is active. */
+const LEGACY_PANEL_TO_DOCK = Object.freeze({
+    leftPanel: 'outliner',
+    rightPanel: 'details',
+    assetsPanel: 'assets'
+});
+
 /**
  * Event Handlers module for LevelEditor
  * Handles all event listener setup and management
@@ -23,6 +35,33 @@ export class EventHandlers extends BaseModule {
         this.mutationObservers = [];
         
         Logger.event.info('EventHandlers initialized');
+    }
+
+    _dockInited() {
+        return !!(this.editor.dockManager && this.editor.dockManager._inited);
+    }
+
+    /** Map legacy left/right/assetsPanel names to dock contentType when dock owns layout. */
+    _resolvePanelName(panel) {
+        if (!this._dockInited()) return panel;
+        return LEGACY_PANEL_TO_DOCK[panel] || panel;
+    }
+
+    _isDockContentPanel(panel) {
+        return DOCK_CONTENT_PANELS.includes(panel);
+    }
+
+    /**
+     * Sync View → dock contentType checkmarks from tree presence (not legacy view.leftPanel flags).
+     */
+    syncDockPanelMenuCheckboxes() {
+        if (!this._dockInited()) return;
+        const dm = this.editor.dockManager;
+        for (const type of DOCK_CONTENT_PANELS) {
+            const present = dm.hasContentType(type);
+            this.editor.stateManager.set(`view.${type}`, present);
+            this.updateViewCheckbox(type, present);
+        }
     }
 
     /**
@@ -514,8 +553,10 @@ export class EventHandlers extends BaseModule {
         this.editor.stateManager.set('canvas.snapToGrid', snapToGridEnabled);
         this.updateViewCheckbox('snapToGrid', snapToGridEnabled);
         
-        // Initialize panel states from user preferences
-        const panelStates = ['toolbar', 'assetsPanel', 'console', 'statusBar'];
+        // Initialize non-dock panel states from user preferences
+        const panelStates = this._dockInited()
+            ? ['toolbar', 'console', 'statusBar']
+            : ['toolbar', 'assetsPanel', 'console', 'statusBar'];
         panelStates.forEach(panel => {
             // Get visibility from user preferences, fallback to configManager, then to true
             const prefKey = panel + 'Visible'; // toolbarVisible, assetsPanelVisible, consoleVisible
@@ -528,18 +569,23 @@ export class EventHandlers extends BaseModule {
             this.applyPanelVisibility(panel, visible);
         });
 
-        // Initialize left/right panel states but don't apply visibility yet
-        // PanelPositionManager will handle visibility based on actual tab positions
-        const tabPanelStates = ['rightPanel', 'leftPanel'];
-        tabPanelStates.forEach(panel => {
-            const prefKey = panel + 'Visible';
-            const visible = this.editor.userPrefs?.get(prefKey) ??
-                           this.editor.configManager.get(`editor.view.${panel}`) ?? true;
-            
-            this.editor.stateManager.set(`view.${panel}`, visible);
-            this.updateViewCheckbox(panel, visible);
-            // Don't apply visibility here - let PanelPositionManager handle it
-        });
+        if (this._dockInited()) {
+            // Dock contentType presence is tree-driven (B3.1)
+            this.syncDockPanelMenuCheckboxes();
+        } else {
+            // Initialize left/right panel states but don't apply visibility yet
+            // PanelPositionManager will handle visibility based on actual tab positions
+            const tabPanelStates = ['rightPanel', 'leftPanel'];
+            tabPanelStates.forEach(panel => {
+                const prefKey = panel + 'Visible';
+                const visible = this.editor.userPrefs?.get(prefKey) ??
+                               this.editor.configManager.get(`editor.view.${panel}`) ?? true;
+
+                this.editor.stateManager.set(`view.${panel}`, visible);
+                this.updateViewCheckbox(panel, visible);
+                // Don't apply visibility here - let PanelPositionManager handle it
+            });
+        }
 
         // Initialize other view states from user config
         const viewStates = ['fullscreen', 'gameMode', 'objectBoundaries', 'objectCollisions', 'parallax'];
@@ -561,7 +607,10 @@ export class EventHandlers extends BaseModule {
 
         // B0+: dock owns layout — skip legacy PanelPositionManager (it needs removed flex shell)
         if (this.editor.dockManager?._inited) {
-            // Real panel mounts/tab activation return in B2–B3
+            // B3: primary panels already mounted into leaves; search still needs registration
+            if (this.editor.initializeSearchControls) {
+                this.editor.initializeSearchControls();
+            }
         } else if (this.editor.panelPositionManager) {
             // Initialize panel positions using PanelPositionManager FIRST
             this.editor.panelPositionManager.tabLayoutController.initializePanelPositions();
@@ -589,60 +638,32 @@ export class EventHandlers extends BaseModule {
         }
     }
 
+    /** Map view option / panel name → menu item id (toggle-*). */
+    _viewCheckboxItemId(option) {
+        switch (option) {
+            case 'toolbar': return 'toggle-toolbar';
+            case 'assetsPanel': return 'toggle-assets-panel'; // legacy
+            case 'assets': return 'toggle-assets';
+            case 'rightPanel': return 'toggle-right-panel'; // legacy
+            case 'leftPanel': return 'toggle-left-panel'; // legacy
+            case 'console': return 'toggle-console';
+            case 'statusBar': return 'toggle-status-bar';
+            case 'viewport': return 'toggle-viewport';
+            case 'outliner': return 'toggle-outliner';
+            case 'details': return 'toggle-details';
+            case 'layers': return 'toggle-layers';
+            case 'levels': return 'toggle-levels';
+            default:
+                return `toggle-${option.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
+        }
+    }
+
     updateViewCheckbox(option, enabled) {
+        const itemId = this._viewCheckboxItemId(option);
         if (this.menuManager) {
-            // Use MenuManager if available
-            let itemId;
-            // Map panel names to menu item IDs
-            switch(option) {
-                case 'toolbar':
-                    itemId = 'toggle-toolbar';
-                    break;
-                case 'assetsPanel':
-                    itemId = 'toggle-assets-panel';
-                    break;
-                case 'rightPanel':
-                    itemId = 'toggle-right-panel';
-                    break;
-                case 'leftPanel':
-                    itemId = 'toggle-left-panel';
-                    break;
-                case 'console':
-                    itemId = 'toggle-console';
-                    break;
-                case 'statusBar':
-                    itemId = 'toggle-status-bar';
-                    break;
-                default:
-                    itemId = `toggle-${option.replace(/([A-Z])/g, '-$1').toLowerCase()}`;
-            }
             this.menuManager.updateToggleState(itemId, enabled);
         } else {
-            // Fallback to direct DOM manipulation - use the same ID mapping as when menuManager is available
-            let checkId;
-            switch(option) {
-                case 'toolbar':
-                    checkId = 'toggle-toolbar-check';
-                    break;
-                case 'assetsPanel':
-                    checkId = 'toggle-assets-panel-check';
-                    break;
-                case 'rightPanel':
-                    checkId = 'toggle-right-panel-check';
-                    break;
-                case 'leftPanel':
-                    checkId = 'toggle-left-panel-check';
-                    break;
-                case 'console':
-                    checkId = 'toggle-console-check';
-                    break;
-                case 'statusBar':
-                    checkId = 'toggle-status-bar-check';
-                    break;
-                default:
-                    checkId = `toggle-${option.replace(/([A-Z])/g, '-$1').toLowerCase()}-check`;
-            }
-            const checkElement = document.getElementById(checkId);
+            const checkElement = document.getElementById(`${itemId}-check`);
             if (checkElement) {
                 if (enabled) {
                     checkElement.classList.remove('hidden');
@@ -701,29 +722,42 @@ export class EventHandlers extends BaseModule {
 
     /**
      * Toggle panel visibility
-     * @param {string} panel - Panel name (toolbar, assetsPanel, rightPanel)
+     * @param {string} panel - Panel name (toolbar, dock contentType, or legacy left/right/assetsPanel)
      */
     togglePanel(panel) {
-        const currentState = this.editor.stateManager.get(`view.${panel}`) || false;
+        const resolved = this._resolvePanelName(panel);
+
+        // B3.1: dock contentTypes → showContentType / hideContentType (tree presence)
+        if (this._dockInited() && this._isDockContentPanel(resolved)) {
+            const newState = this.editor.dockManager.toggleContentType(resolved);
+            this.editor.stateManager.set(`view.${resolved}`, newState);
+            this.updateViewCheckbox(resolved, newState);
+            document.querySelectorAll('#menu-file > div, #menu-view > div, #menu-settings > div').forEach(d => d.classList.add('hidden'));
+            return;
+        }
+
+        const currentState = this.editor.stateManager.get(`view.${resolved}`) || false;
         const newState = !currentState;
 
         // Update state
-        this.editor.stateManager.set(`view.${panel}`, newState);
+        this.editor.stateManager.set(`view.${resolved}`, newState);
 
         // Save to user preferences (this will also update the shared ConfigManager)
-        if (this.editor.userPrefs) {
-            const prefKey = panel + 'Visible'; // toolbarVisible, assetsPanelVisible, rightPanelVisible, leftPanelVisible
-            this.editor.userPrefs.set(prefKey, newState);
-        } else {
-            // Fallback to direct ConfigManager if userPrefs is not available
-            this.editor.configManager.set(`editor.view.${panel}`, newState);
+        // Dock layout owns contentType presence — do not write legacy *Visible prefs for them
+        if (!this._isDockContentPanel(resolved)) {
+            if (this.editor.userPrefs) {
+                const prefKey = resolved + 'Visible'; // toolbarVisible, consoleVisible, …
+                this.editor.userPrefs.set(prefKey, newState);
+            } else if (this.editor.configManager) {
+                this.editor.configManager.set(`editor.view.${resolved}`, newState);
+            }
         }
 
         // Update UI checkbox
-        this.updateViewCheckbox(panel, newState);
+        this.updateViewCheckbox(resolved, newState);
 
         // Apply the panel visibility
-        this.applyPanelVisibility(panel, newState);
+        this.applyPanelVisibility(resolved, newState);
 
         // Close the menu
         document.querySelectorAll('#menu-file > div, #menu-view > div, #menu-settings > div').forEach(d => d.classList.add('hidden'));
@@ -772,6 +806,19 @@ export class EventHandlers extends BaseModule {
      * @param {boolean} visible - Whether panel should be visible
      */
     applyPanelVisibility(panel, visible) {
+        const resolved = this._resolvePanelName(panel);
+
+        // B3.1: dock contentTypes — tree show/hide (not DOM display on legacy shells)
+        if (this._dockInited() && this._isDockContentPanel(resolved)) {
+            if (visible) this.editor.dockManager.showContentType(resolved);
+            else this.editor.dockManager.hideContentType(resolved);
+            if (this.editor.canvasRenderer) {
+                this.editor.canvasRenderer.resizeCanvas();
+                this.editor.render();
+            }
+            return;
+        }
+
         // Panel configuration mapping
         const panelConfig = {
             'toolbar': {
@@ -816,7 +863,7 @@ export class EventHandlers extends BaseModule {
             }
         };
 
-        const config = panelConfig[panel];
+        const config = panelConfig[resolved];
         if (!config) return;
 
         switch (config.type) {
@@ -902,7 +949,9 @@ export class EventHandlers extends BaseModule {
 
         const savedStates = {};
         const viewOptions = ['grid', 'fullscreen', 'gameMode', 'snapToGrid', 'objectBoundaries', 'objectCollisions', 'parallax'];
-        const panelOptions = ['toolbar', 'assetsPanel', 'rightPanel', 'leftPanel', 'console'];
+        const panelOptions = this._dockInited()
+            ? ['toolbar', 'console', 'statusBar', ...DOCK_CONTENT_PANELS]
+            : ['toolbar', 'assetsPanel', 'rightPanel', 'leftPanel', 'console'];
 
         viewOptions.forEach(option => {
             const stateKey = `view.${option}`;
@@ -930,7 +979,9 @@ export class EventHandlers extends BaseModule {
             const enabled = savedStates[option];
 
             // Check if it's a panel option
-            const panelOptions = ['toolbar', 'assetsPanel', 'rightPanel', 'leftPanel', 'console'];
+            const panelOptions = this._dockInited()
+                ? ['toolbar', 'console', 'statusBar', ...DOCK_CONTENT_PANELS]
+                : ['toolbar', 'assetsPanel', 'rightPanel', 'leftPanel', 'console'];
             if (panelOptions.includes(option)) {
                 // Sync state so subsequent saveViewStates() reads correct value
                 this.editor.stateManager.set(`view.${option}`, enabled);
@@ -949,40 +1000,47 @@ export class EventHandlers extends BaseModule {
     }
 
     toggleGameMode(enabled) {
-        // Get all panel elements
-        const rightPanel = document.getElementById('right-tabs-panel');
-        const assetsPanel = document.getElementById('assets-panel');
         const consolePanel = document.getElementById('console-panel');
         const toolbarContainer = document.getElementById('toolbar-container');
-        const resizerX = document.getElementById('resizer-right-tabs-panel');
-        const resizerAssets = document.getElementById('resizer-assets');
         const resizerConsole = document.getElementById('resizer-console');
+        const dockActive = this._dockInited();
         
         if (enabled) {
             // Store current panel states for restoration
             this.savedPanelStates = {
                 toolbar: this.editor.stateManager.get('view.toolbar') ?? true,
+                console: this.editor.stateManager.get('console.visible')
+                    ?? this.editor.stateManager.get('view.console')
+                    ?? false,
+                statusBar: this.editor.stateManager.get('view.statusBar') ?? true,
+                // Legacy L/R when no dock
                 assetsPanel: this.editor.stateManager.get('view.assetsPanel') ?? true,
                 rightPanel: this.editor.stateManager.get('view.rightPanel') ?? true,
-                leftPanel: this.editor.stateManager.get('view.leftPanel') ?? true,
-                console: this.editor.stateManager.get('console.visible') ?? false
+                leftPanel: this.editor.stateManager.get('view.leftPanel') ?? true
             };
             
             // Reset panel toggle states in menu to show they're disabled in Game Mode
             this.resetPanelToggleStates();
             
-            // Game Mode: Hide ALL panels except header and main canvas
-            rightPanel?.classList.add('hidden');
-            assetsPanel?.classList.add('hidden');
+            if (dockActive) {
+                // Snapshot tree → viewport-only (canvas stays mounted); restore on exit
+                this.editor.dockManager.enterImmersiveLayout();
+                // Only viewport remains present in tree
+                this.editor.stateManager.set('view.viewport', true);
+                this.updateViewCheckbox('viewport', true);
+            } else {
+                // Legacy: hide L/R tabs + assets footer
+                document.getElementById('right-tabs-panel')?.classList.add('hidden');
+                document.getElementById('assets-panel')?.classList.add('hidden');
+                document.getElementById('resizer-right-tabs-panel')?.classList.add('hidden');
+                document.getElementById('resizer-assets')?.classList.add('hidden');
+                document.getElementById('left-tabs-panel')?.classList.add('hidden');
+                document.getElementById('resizer-left-tabs-panel')?.classList.add('hidden');
+            }
+
             consolePanel?.classList.add('hidden');
             toolbarContainer?.classList.add('hidden');
-            resizerX?.classList.add('hidden');
-            resizerAssets?.classList.add('hidden');
             resizerConsole?.classList.add('hidden');
-            const leftTabs = document.getElementById('left-tabs-panel');
-            const resizerLeft = document.getElementById('resizer-left-tabs-panel');
-            leftTabs?.classList.add('hidden');
-            resizerLeft?.classList.add('hidden');
             
             // Also hide toolbar content
             if (this.editor.toolbar) {
@@ -1076,6 +1134,12 @@ export class EventHandlers extends BaseModule {
     restorePanelStates() {
         if (!this.savedPanelStates) return;
 
+        // Restore dock tree from immersive snapshot
+        if (this._dockInited()) {
+            this.editor.dockManager.exitImmersiveLayout();
+            this.syncDockPanelMenuCheckboxes();
+        }
+
         // Restore toolbar
         if (this.savedPanelStates.toolbar) {
             const toolbarContainer = document.getElementById('toolbar-container');
@@ -1096,10 +1160,12 @@ export class EventHandlers extends BaseModule {
             if (resizerConsole) resizerConsole.style.display = 'block';
         }
 
-        // Use applyPanelVisibility for panels that have proper handlers
-        this.applyPanelVisibility('assetsPanel', this.savedPanelStates.assetsPanel);
-        this.applyPanelVisibility('rightPanel', this.savedPanelStates.rightPanel);
-        this.applyPanelVisibility('leftPanel', this.savedPanelStates.leftPanel);
+        if (!this._dockInited()) {
+            // Legacy L/R/assets
+            this.applyPanelVisibility('assetsPanel', this.savedPanelStates.assetsPanel);
+            this.applyPanelVisibility('rightPanel', this.savedPanelStates.rightPanel);
+            this.applyPanelVisibility('leftPanel', this.savedPanelStates.leftPanel);
+        }
 
         // Clear saved states
         this.savedPanelStates = null;
@@ -1109,17 +1175,27 @@ export class EventHandlers extends BaseModule {
      * Reset panel toggle states in menu when entering Game Mode
      */
     resetPanelToggleStates() {
+        if (this._dockInited()) {
+            // Visual only for dock types — do not remove leaves from tree
+            for (const type of DOCK_CONTENT_PANELS) {
+                this.editor.stateManager.set(`view.${type}`, false);
+                this.updateViewCheckbox(type, false);
+            }
+            const extra = ['toolbar', 'console', 'statusBar'];
+            extra.forEach((panel) => {
+                this.editor.stateManager.set(`view.${panel}`, false);
+                this.updateViewCheckbox(panel, false);
+                this.applyPanelVisibility(panel, false);
+            });
+            return;
+        }
+
         const panelToggles = ['toolbar', 'assetsPanel', 'rightPanel', 'leftPanel', 'console'];
-        
         panelToggles.forEach(panel => {
-            // Sync hidden state to StateManager during Immersive Mode
             this.editor.stateManager.set(`view.${panel}`, false);
-            // Update checkbox in menu
             this.updateViewCheckbox(panel, false);
-            // Apply panel visibility (force hide)
             this.applyPanelVisibility(panel, false);
         });
-        
     }
 
     /**
@@ -1133,26 +1209,36 @@ export class EventHandlers extends BaseModule {
         this.updateViewCheckbox('toolbar', this.savedPanelStates.toolbar);
         this.applyPanelVisibility('toolbar', this.savedPanelStates.toolbar);
 
-        // Restore assets panel toggle
+        if (this._dockInited()) {
+            // Dock checkboxes restored from tree in restorePanelStates
+            this.editor.stateManager.set('console.visible', this.savedPanelStates.console);
+            this.editor.stateManager.set('view.console', this.savedPanelStates.console);
+            this.updateViewCheckbox('console', this.savedPanelStates.console);
+            this.applyPanelVisibility('console', this.savedPanelStates.console);
+            if (this.savedPanelStates.statusBar !== undefined) {
+                this.editor.stateManager.set('view.statusBar', this.savedPanelStates.statusBar);
+                this.updateViewCheckbox('statusBar', this.savedPanelStates.statusBar);
+                this.applyPanelVisibility('statusBar', this.savedPanelStates.statusBar);
+            }
+            return;
+        }
+
+        // Legacy assets / L/R
         this.editor.stateManager.set('view.assetsPanel', this.savedPanelStates.assetsPanel);
         this.updateViewCheckbox('assetsPanel', this.savedPanelStates.assetsPanel);
         this.applyPanelVisibility('assetsPanel', this.savedPanelStates.assetsPanel);
 
-        // Restore right panel toggle
         this.editor.stateManager.set('view.rightPanel', this.savedPanelStates.rightPanel);
         this.updateViewCheckbox('rightPanel', this.savedPanelStates.rightPanel);
         this.applyPanelVisibility('rightPanel', this.savedPanelStates.rightPanel);
 
-        // Restore left panel toggle
         this.editor.stateManager.set('view.leftPanel', this.savedPanelStates.leftPanel);
         this.updateViewCheckbox('leftPanel', this.savedPanelStates.leftPanel);
         this.applyPanelVisibility('leftPanel', this.savedPanelStates.leftPanel);
 
-        // Restore console toggle
         this.editor.stateManager.set('console.visible', this.savedPanelStates.console);
         this.updateViewCheckbox('console', this.savedPanelStates.console);
         this.applyPanelVisibility('console', this.savedPanelStates.console);
-
     }
 
     /**

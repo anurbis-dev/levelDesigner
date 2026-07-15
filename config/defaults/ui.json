@@ -5,6 +5,7 @@
   "spacingH": 0.4,
   "spacingV": 0.4,
   "elementSize": 1.0,
+  "scrollbarSize": 2,
   "menuGapBase": 0.5,
   "cursorMenuMargin": 6,
   "consoleHeight": null,

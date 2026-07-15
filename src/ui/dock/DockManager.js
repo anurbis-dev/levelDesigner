@@ -1,7 +1,6 @@
 /**
  * Facade for the split-tree dock system (replaces PanelPositionManager over B0–B5).
- * B2: viewport (toolbar + canvas) mounts into leaf; B3: remaining panels.
- * Reopen closed panels via showContentType / View menu later.
+ * B2–B4: real content leaves; multi-instance panel copies; reopen via showContentType / View.
  */
 import { Logger } from '../../utils/Logger.js';
 import { typeLabel } from './DockConstants.js';
@@ -24,6 +23,8 @@ export class DockManager {
         this.drag = null;
         this._inited = false;
         this._suppressPersist = false;
+        /** @type {{ mainTree: object|null, floatingWindows: object[] }|null} */
+        this._immersiveSnapshot = null;
     }
 
     /**
@@ -55,7 +56,9 @@ export class DockManager {
             floatingLayer,
             workspaceEl,
             mountLeafContent: (ws, node, body) => this.registry.mountLeafContent(ws, node, body),
-            isCloseable: (type) => this.registry.isCloseable(type),
+            isCloseable: (type, leafId) => this.registry.isLeafCloseable
+                ? this.registry.isLeafCloseable(type, leafId)
+                : this.registry.isCloseable(type),
             onStructureChange: () => this._onStructureChange()
         });
 
@@ -63,7 +66,8 @@ export class DockManager {
             model: this.model,
             renderer: this.renderer,
             render: () => this.renderer.render(),
-            onStructureChange: () => this._onStructureChange()
+            onStructureChange: () => this._onStructureChange(),
+            isSingleton: (type) => this.registry.isSingleton(type)
         });
         this.renderer.setDragController(this.drag);
 
@@ -78,7 +82,7 @@ export class DockManager {
         if (this.levelEditor?.updateCanvas) {
             this.levelEditor.updateCanvas();
         }
-        Logger.ui.info('DockManager initialized (B2 viewport leaf host)');
+        Logger.ui.info('DockManager initialized (B4 multi-instance panels)');
     }
 
     _onStructureChange() {
@@ -88,11 +92,18 @@ export class DockManager {
         if (this.levelEditor?.updateCanvas) {
             this.levelEditor.updateCanvas();
         }
+        // B3.1: keep View → Panels checkmarks aligned with tree presence
+        this.levelEditor?.eventHandlers?.syncDockPanelMenuCheckboxes?.();
     }
 
     /** Snapshot for persistence / debug. */
     getLayoutSnapshot() {
         return this.model.snapshot();
+    }
+
+    /** Whether any leaf of this contentType is present (main or floating). */
+    hasContentType(contentType) {
+        return !!(this._inited && this.model.hasContentType(contentType));
     }
 
     resetLayout() {
@@ -120,6 +131,75 @@ export class DockManager {
         }
         this.renderer.render();
         return node;
+    }
+
+    /**
+     * Hide primary (any) leaf of contentType — View menu / API.
+     * Allows hiding non-closeable viewport (X button still blocked); content parks in pool.
+     * @returns {boolean} true if a leaf was removed
+     */
+    hideContentType(contentType) {
+        if (!this._inited) return false;
+        const leaf = this.model.findLeafByContentType(contentType);
+        if (!leaf) return false;
+        const ws = this.model.findWorkspaceContaining(leaf.id);
+        if (!ws) return false;
+        this.model.setTreeOf(ws, this.model.removeLeaf(this.model.getTreeOf(ws), leaf.id));
+        this.renderer.render();
+        return true;
+    }
+
+    /**
+     * Toggle leaf presence for contentType.
+     * @returns {boolean} true if type is present after toggle
+     */
+    toggleContentType(contentType) {
+        if (!this._inited) return false;
+        if (this.model.hasContentType(contentType)) {
+            this.hideContentType(contentType);
+            return false;
+        }
+        this.showContentType(contentType);
+        return true;
+    }
+
+    /**
+     * Game/Immersive Mode: park layout snapshot and show only viewport (canvas stays live).
+     * Does not destroy panel state; other roots park in content pool.
+     */
+    enterImmersiveLayout() {
+        if (!this._inited || this._immersiveSnapshot) return;
+        this._immersiveSnapshot = JSON.parse(JSON.stringify(this.model.snapshot()));
+        const leaf = this.model.findLeafByContentType('viewport');
+        if (leaf) {
+            const ws = this.model.findWorkspaceContaining(leaf.id);
+            if (ws) {
+                this.model.setTreeOf(ws, this.model.removeLeaf(this.model.getTreeOf(ws), leaf.id));
+            }
+            this.model.mainTree = leaf;
+            this.model.floatingWindows = [];
+        } else {
+            this.model.mainTree = null;
+            this.model.floatingWindows = [];
+        }
+        this._suppressPersist = true;
+        this.renderer.render();
+        this._suppressPersist = false;
+    }
+
+    /** Restore dock tree saved by enterImmersiveLayout. */
+    exitImmersiveLayout() {
+        if (!this._inited || !this._immersiveSnapshot) return;
+        this.model.restoreFromSnapshot(this._immersiveSnapshot);
+        this._immersiveSnapshot = null;
+        this._suppressPersist = true;
+        this.renderer.render();
+        this._suppressPersist = false;
+        this.persistence.scheduleSave(this.model.snapshot());
+        this.levelEditor?.eventHandlers?.syncDockPanelMenuCheckboxes?.();
+        if (this.levelEditor?.updateCanvas) {
+            this.levelEditor.updateCanvas();
+        }
     }
 
     destroy() {

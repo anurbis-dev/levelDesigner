@@ -358,6 +358,21 @@
 - Управление viewport и камерой
 - Zoom, pan, focus операции
 
+### Phase B dock + multi-viewport (B0–B4.2)
+**Файлы**: `src/ui/dock/*`, `src/core/ViewportViewManager.js`, `src/core/ViewportViewNav.js`, `src/ui/dock/ViewportLeafChrome.js`, `src/utils/TypeFilterMenu.js`, `styles/dock.css`
+
+- **Dock shell**: `DockManager` + `DockTreeModel` / `DockRenderer` / `DockDragController` / `DockPersistence` / `DockContentRegistry` / `DockPanelFactory` / `DockTypeMenu`. Layout: `panels.dock.mainTree` + floating windows. When dock is active, legacy `PanelPositionManager.initializePanelPositions` is skipped.
+- **Content types**: viewport, outliner, details, layers, levels, assets. Multi-instance (`singleton:false`) for panels except viewport shell rules; primary parks, copies destroy on close.
+- **View → Panels** lists dock contentTypes (`hideContentType` / `toggleContentType`); Alt+1/2/4 → Outliner/Details/Assets; Immersive Mode snapshots dock layout (viewport-only).
+- **ViewportViewManager**: N viewport leaves, each with canvas + pose + type filters + camera source.
+  - **Work camera**: primary leaf uses `stateManager.camera` (level save); secondary work leaves keep `localCamera`.
+  - **Game camera**: source `{ kind:'game', objectId }` follows level object `type==='camera'`.
+- **ViewportLeafChrome**: leaf header icons — camera source menu (English UI) + per-view type filter via shared `TypeFilterMenu`; hover-switch between sibling menus after first open (main-menu style).
+- **Input**: secondary canvases share `MouseHandlers` via `ViewportViewNav` (`registerCanvas` + `setPointerCapture` LMB/MMB/RMB). Interaction routing: `_interactionViewLeafId` / `getInteractionView|Camera|Canvas` — never assume `canvasRenderer.canvas` is the gesture leaf after multi-view `render()` restores primary.
+- **Gestures outside leaf**: continue pan/zoom/drag/marquee; outside release **completes** (not cancel); `body.viewport-gesture-mode` blocks UI hover (like `panning-mode`). Cursors set only on interaction canvas; end/blur resets all viewport canvases.
+- **Render**: multi-target; `visibleObjectsCache` key includes canvas size; sticky interactive cache during drag/transform/marquee; pick/marquee use interaction camera + client→buffer mapping when CSS size ≠ buffer.
+- **Close ×**: any viewport closeable when ≥2 exist; closing primary promotes another leaf to primary shell.
+
 ### LevelFileOperations (v3.57.0 Phase 5 multi-level)
 **Файл**: `src/core/LevelFileOperations.js`
 - **Файловые операции уровней с поддержкой multi-level сессий** (Фаза 5):
@@ -374,6 +389,7 @@
 - **Multi-level композитинг** (Фаза 3): `render()` итерирует по `editor.levelsManager.getVisibleSessions()` и рисует объекты всех видимых уровней в одном кадре. Видимость = `session.visible` (per-level eye-icon в LevelsPanel), не зависит от "текущий" статуса уровня.
 - **Z-order рендера** (Фаза 6): Текущий уровень ВСЕГДА рисуется поверх остальных видимых уровней, независимо от позиции таба, через `editor.levelsManager.getVisibleSessionsForRender()` — переносит текущую сессию в конец массива компоузинга (она обрабатывается последней, рисуется поверх). Решение плана раздел 12 пункт 2, не реализованное полностью в Фазе 3 (раньше `render()` просто итерировал по `getVisibleSessions()` в tab-порядке), исправлено в Фазе 6.
 - **v4.0.0 Phase A refactor**: добавлены приватные хелперы `_getValidCanvasOrNull(camera, level)` и `_computeExtendedViewportBounds(camera, canvas)`, устраняющие тройное дублирование preamble-проверок в `getVisibleObjectsSpatial()`/`getVisibleObjectsRegular()`/`getVisibleObjects()` (DRY-улучшение)
+- **Multi-viewport (Phase B4.2)**: cache key includes canvas buffer size (shared camera ≠ shared frustum); during drag/transform/marquee — sticky visible cache + full cull scan; refresh spatial/visible caches on gesture end
 - **Non-composited элементы** (привязаны к текущему уровню только): grid/фон/selection-рамки/hierarchy-highlight/group-edit-frame/duplicate-ghost/debug-overlays (boundaries/collisions) — НЕ рисуются для non-current видимых уровней. Дополнительно гейтятся `currentSessionVisible` (не рендерятся, если сам текущий уровень скрыт через eye-icon).
 - **Dimming режимы** (isolate/solo/group-edit-mode) применяются ТОЛЬКО к текущему уровню; non-current видимые уровни всегда рендерятся нормально, независимо от этих режимов текущего.
 - **Namespacing кешей**: `visibleObjectsCache` ключируется как `${levelId}_${cameraKey}` (защита от коллизии при совпадении camera-ключей между уровнями); `visibleLayersCache` стал `Map<levelId, {layerIds, timestamp}>`; `CacheManager` использует `${levelId}:${objId}` для всех object-кешей (effectiveLayerCache/objectCache/topLevelObjectCache) — защита от коллизий id объектов между одновременно открытыми уровнями.

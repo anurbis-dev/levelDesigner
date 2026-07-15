@@ -124,6 +124,9 @@ export class LevelEditor {
         this.dockManager = new DockManager(this);
         this.lifecycle.register('dockManager', this.dockManager, { priority: 2 });
 
+        // Multi-viewport: work camera (stateManager.camera) + game cameras (type=camera objects)
+        this.viewportViewManager = null;
+
         // Initialize CacheManager
         this.cacheManager = new CacheManager(this);
         this.lifecycle.register('cacheManager', this.cacheManager, { priority: 5 });

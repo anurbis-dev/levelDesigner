@@ -5,6 +5,7 @@ import { SnapUtils } from '../utils/SnapUtils.js';
 import { throttle } from '../utils/PerformanceUtils.js';
 import { PERFORMANCE, TRANSFORM } from '../constants/EditorConstants.js';
 import { SelectionUtils } from '../utils/SelectionUtils.js';
+import { ScrollUtils } from '../utils/ScrollUtils.js';
 
 /**
  * Mouse Handlers module for LevelEditor
@@ -26,6 +27,9 @@ export class MouseHandlers extends BaseModule {
         // center, recomputed each frame) doesn't make untouched siblings drift on screen.
         // See _applyPivotCompensation for the math.
         this._pivotCompensationBaseline = null;
+
+        /** @type {string|null} viewport leaf receiving the current gesture (multi-view) */
+        this._interactionViewLeafId = null;
         
         // Create throttled versions of frequent event handlers
         this._throttledMouseMove = throttle(
@@ -42,10 +46,150 @@ export class MouseHandlers extends BaseModule {
         );
     }
 
+    /** @returns {object|null} ViewportView for the active gesture / focus */
+    getInteractionView() {
+        const vvm = this.editor.viewportViewManager;
+        if (!vvm) return null;
+        if (this._interactionViewLeafId) {
+            return vvm.getView(this._interactionViewLeafId) || null;
+        }
+        return vvm.getFocusedView() || vvm.getPrimaryView();
+    }
+
+    /** @returns {{x:number,y:number,zoom:number}} */
+    getInteractionCamera() {
+        const vvm = this.editor.viewportViewManager;
+        const view = this.getInteractionView();
+        if (vvm && view) return vvm.resolveCamera(view);
+        return this.editor.stateManager.get('camera') || { x: 0, y: 0, zoom: 1 };
+    }
+
+    /**
+     * Write camera pose to primary (stateManager) or secondary localCamera.
+     * @param {Partial<{x:number,y:number,zoom:number}>} patch
+     */
+    applyCameraPatch(patch) {
+        const vvm = this.editor.viewportViewManager;
+        const view = this.getInteractionView();
+        if (vvm && view) {
+            vvm.updateCamera(patch, view.leafId, { unlockGame: true });
+            return;
+        }
+        const cam = this.editor.stateManager.get('camera') || { x: 0, y: 0, zoom: 1 };
+        this.editor.stateManager.set('camera', {
+            x: patch.x !== undefined ? patch.x : cam.x,
+            y: patch.y !== undefined ? patch.y : cam.y,
+            zoom: patch.zoom !== undefined ? patch.zoom : cam.zoom
+        });
+    }
+
+    /**
+     * Canvas element for the active multi-view gesture / focus.
+     * Never use canvasRenderer.canvas alone after multi-view render (it is restored to primary).
+     * @returns {HTMLCanvasElement|null}
+     */
+    getInteractionCanvas() {
+        const view = this.getInteractionView();
+        return view?.canvas
+            || this.editor.canvasRenderer?.primaryCanvas
+            || this.editor.canvasRenderer?.canvas
+            || null;
+    }
+
+    /**
+     * Begin multi-view interaction: focus leaf, pin leaf id for camera routing, target canvas.
+     * @param {Event} e
+     * @param {{ sticky?: boolean }} [opts] - sticky=false for wheel/one-shot (do not pin leaf after)
+     */
+    _beginViewInteraction(e, opts = {}) {
+        const vvm = this.editor.viewportViewManager;
+        if (!vvm) return null;
+        const view = vvm.viewFromEventTarget(e?.target) || vvm.getFocusedView();
+        if (!view) return null;
+        const sticky = opts.sticky !== false;
+        if (sticky) this._interactionViewLeafId = view.leafId;
+        vvm.focus(view.leafId);
+        if (view.canvas && this.editor.canvasRenderer) {
+            this.editor.canvasRenderer.setTarget(view.canvas);
+        }
+        return view;
+    }
+
+    _endViewInteractionIfIdle() {
+        const mouse = this.getMouseState();
+        if (mouse?.isLeftDown || mouse?.isRightDown || mouse?.isMiddleDown) return;
+        this._interactionViewLeafId = null;
+        this.editor.canvasRenderer?.restorePrimaryTarget?.();
+    }
+
+    /**
+     * True while a viewport mouse gesture must keep exclusive control of the pointer path
+     * (continue outside the leaf; no UI hover on other dock windows).
+     */
+    _isViewportGestureActive() {
+        const mouse = this.getMouseState();
+        if (!mouse) return false;
+        return !!(
+            mouse.isLeftDown
+            || mouse.isRightDown
+            || mouse.isMiddleDown
+            || mouse.isDragging
+            || mouse.isTransforming
+            || mouse.isMarqueeSelecting
+            || this.editor.stateManager.get('duplicate.isAltDragMode')
+        );
+    }
+
+    /**
+     * Suppress hover on other UI while a viewport gesture is active (same idea as ScrollUtils panning-mode).
+     * @param {number} [clientX]
+     * @param {number} [clientY]
+     */
+    _syncViewportGestureUiLock(clientX, clientY) {
+        const active = this._isViewportGestureActive();
+        const on = document.body.classList.contains('viewport-gesture-mode');
+        if (active === on) return;
+        if (active) {
+            ScrollUtils.ensurePanningStyles();
+            if (clientX != null && clientY != null) {
+                ScrollUtils.clearActiveHovers(clientX, clientY);
+            }
+            document.body.classList.add('viewport-gesture-mode');
+        } else {
+            document.body.classList.remove('viewport-gesture-mode');
+        }
+    }
+
+    /**
+     * Set cursor on the interaction canvas only (never hardcode primary — multi-view leak).
+     * @param {string} cursor
+     */
+    _setInteractionCursor(cursor) {
+        const canvas = this.getInteractionCanvas();
+        if (canvas) canvas.style.cursor = cursor;
+    }
+
+    /**
+     * Clear pan/zoom cursors on every viewport canvas.
+     * Global RMB mousedown used to stamp grabbing on primary even when secondary was panned.
+     */
+    _resetAllViewportCursors() {
+        const vvm = this.editor.viewportViewManager;
+        if (vvm?.getViews) {
+            for (const view of vvm.getViews()) {
+                if (view?.canvas) view.canvas.style.cursor = 'default';
+            }
+        }
+        const primary = this.editor.canvasRenderer?.primaryCanvas
+            || this.editor.canvasRenderer?.canvas;
+        if (primary) primary.style.cursor = 'default';
+    }
+
     /**
      * Mouse event handlers
      */
     handleMouseDown(e) {
+        this._beginViewInteraction(e);
         const worldPos = this.screenToWorld(e);
         const mouse = this.getMouseState();
 
@@ -70,12 +214,13 @@ export class MouseHandlers extends BaseModule {
                 'mouse.altKey': e.altKey
             });
 
-            this.editor.canvasRenderer.canvas.style.cursor = 'grabbing';
+            this._setInteractionCursor('grabbing');
+            this._syncViewportGestureUiLock(e.clientX, e.clientY);
             return;
         }
         
         if (e.button === 1) { // Middle mouse button - zoom
-            const camera = this.editor.stateManager.get('camera');
+            const camera = this.getInteractionCamera();
             this.editor.stateManager.update({
                 'mouse.isMiddleDown': true,
                 'mouse.lastX': e.clientX,
@@ -84,7 +229,8 @@ export class MouseHandlers extends BaseModule {
                 'mouse.zoomStartY': e.clientY,
                 'mouse.initialZoom': camera.zoom
             });
-            this.editor.canvasRenderer.canvas.style.cursor = 'zoom-in';
+            this._setInteractionCursor('zoom-in');
+            this._syncViewportGestureUiLock(e.clientX, e.clientY);
             return;
         }
         
@@ -98,6 +244,7 @@ export class MouseHandlers extends BaseModule {
             // Skip selection/drag logic so the original object is not re-selected and
             // isDragging is not set (which would cause a spurious history save).
             if (mouse.isPlacingObjects) {
+                this._syncViewportGestureUiLock(e.clientX, e.clientY);
                 return;
             }
 
@@ -110,6 +257,8 @@ export class MouseHandlers extends BaseModule {
                 this.handleEmptyClick(e, worldPos);
             }
         }
+
+        this._syncViewportGestureUiLock(e.clientX, e.clientY);
     }
 
     /**
@@ -189,10 +338,10 @@ export class MouseHandlers extends BaseModule {
         }
 
         if (mouse.isRightDown) {
-            // Pan camera
+            // Pan camera (work camera of interaction view)
             const dx = e.clientX - mouse.lastX;
             const dy = e.clientY - mouse.lastY;
-            const camera = this.editor.stateManager.get('camera');
+            const camera = this.getInteractionCamera();
 
             // Check if this is significant movement (panning vs clicking)
             let shouldUpdatePanningFlag = false;
@@ -208,19 +357,19 @@ export class MouseHandlers extends BaseModule {
                 }
             }
 
-            // Update state
+            this.applyCameraPatch({
+                x: camera.x - dx / camera.zoom,
+                y: camera.y - dy / camera.zoom
+            });
             const stateUpdate = {
-                'camera.x': camera.x - dx / camera.zoom,
-                'camera.y': camera.y - dy / camera.zoom,
                 'mouse.lastX': e.clientX,
                 'mouse.lastY': e.clientY
             };
-
             if (shouldUpdatePanningFlag) {
                 stateUpdate['mouse.wasPanning'] = true;
             }
-
             this.editor.stateManager.update(stateUpdate);
+            this.editor.render();
 
         } else if (mouse.isMiddleDown) {
             // Interactive zoom with middle mouse button
@@ -321,7 +470,9 @@ export class MouseHandlers extends BaseModule {
                 });
             }, 100);
 
-            this.editor.canvasRenderer.canvas.style.cursor = 'default';
+            this._resetAllViewportCursors();
+            this._endViewInteractionIfIdle();
+            this._syncViewportGestureUiLock(e.clientX, e.clientY);
 
             // Right click cancels all current actions (except marquee - handled globally)
             this.editor.cancelAllActions();
@@ -332,7 +483,9 @@ export class MouseHandlers extends BaseModule {
                 'mouse.isMiddleDown': false,
                 'mouse.initialZoom': null
             });
-            this.editor.canvasRenderer.canvas.style.cursor = 'default';
+            this._resetAllViewportCursors();
+            this._endViewInteractionIfIdle();
+            this._syncViewportGestureUiLock(e.clientX, e.clientY);
         }
         
         if (e.button === 0) {
@@ -345,6 +498,11 @@ export class MouseHandlers extends BaseModule {
             this._pivotCompensationBaseline = null;
 
             if (mouse.isDragging) {
+                // Drag never updated spatial index / visible cache (sticky during gesture).
+                // Refresh now so post-drag pick/cull match final positions (multi-view too).
+                this.editor.renderOperations.clearVisibleObjectsCache();
+                this.editor.renderOperations.markSpatialIndexDirty();
+
                 this.editor.historyManager.saveState(
                     this.editor.level.objects,
                     this.editor.stateManager.get('selectedObjects'),
@@ -363,6 +521,7 @@ export class MouseHandlers extends BaseModule {
 
                 const transformedSelection = this.editor.stateManager.get('selectedObjects');
                 transformedSelection.forEach(id => this.editor.invalidateObjectCaches(id));
+                this.editor.renderOperations.clearVisibleObjectsCache();
                 this.editor.renderOperations.invalidateSpatialIndex();
 
                 this.editor.historyManager.saveState(
@@ -453,7 +612,7 @@ export class MouseHandlers extends BaseModule {
             if (mouse.pendingGroupClose && !wasDragging && !wasMarqueeSelecting) {
                 this.editor.stateManager.update({ 'mouse.pendingGroupClose': false });
                 if (this.isInGroupEditMode()) {
-                    const worldPos = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, this.editor.stateManager.get('camera'));
+                    const worldPos = this.screenToWorld(e);
                     const clickedExternal = this.editor.objectOperations.findObjectAtPoint(worldPos.x, worldPos.y);
                     if (clickedExternal) {
                         // External object clicked — select it, keep group open
@@ -556,16 +715,19 @@ export class MouseHandlers extends BaseModule {
             }
             
             if (mouse.isPlacingObjects) {
-                const worldPos = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, this.editor.stateManager.get('camera'));
+                const worldPos = this.screenToWorld(e);
                 this.finishPlacingObjects(worldPos);
             }
             
             // Handle Alt+drag duplication completion
             if (this.editor.stateManager.get('duplicate.isAltDragMode')) {
-                const worldPos = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, this.editor.stateManager.get('camera'));
+                const worldPos = this.screenToWorld(e);
                 Logger.mouse.debug('Alt+drag duplication completed');
                 this.editor.duplicateOperations.confirmPlacement(worldPos);
             }
+
+            this._endViewInteractionIfIdle();
+            this._syncViewportGestureUiLock(e.clientX, e.clientY);
         }
     }
 
@@ -586,7 +748,8 @@ export class MouseHandlers extends BaseModule {
                 'mouse.altKey': e.altKey
             });
 
-            this.editor.canvasRenderer.canvas.style.cursor = 'grabbing';
+            // Multi-view: only the interaction leaf — never stamp primary while secondary pans.
+            this._setInteractionCursor('grabbing');
         }
     }
 
@@ -600,10 +763,12 @@ export class MouseHandlers extends BaseModule {
 
     _handleGlobalMouseMoveImpl(e) {
         const mouse = this.editor.stateManager.get('mouse');
-        const canvas = this.editor.canvasRenderer.canvas;
+        const view = this.getInteractionView();
+        const canvas = this.getInteractionCanvas();
+        if (!canvas) return;
         const rect = canvas.getBoundingClientRect();
 
-        // Check if mouse is inside canvas bounds
+        // Check if mouse is inside the interaction canvas bounds
         const isInsideCanvas = e.clientX >= rect.left && e.clientX <= rect.right &&
                               e.clientY >= rect.top && e.clientY <= rect.bottom;
 
@@ -614,12 +779,23 @@ export class MouseHandlers extends BaseModule {
             this.editor.stateManager.set('mouse.isOverCanvas', isInsideCanvas);
         }
 
+        // Continue gestures outside the interaction leaf (multi-view: not primary rect)
+        if (mouse.isRightDown || mouse.isMiddleDown
+            || (mouse.isLeftDown && (mouse.isDragging || mouse.isTransforming || mouse.isMarqueeSelecting
+                || mouse.isPlacingObjects || this.editor.stateManager.get('duplicate.isAltDragMode')
+                || this.editor.stateManager.get('duplicate.isActive')))) {
+            this._handleMouseMoveImpl(e);
+            return;
+        }
+
         if (mouse.isMarqueeSelecting && !isInsideCanvas) {
-            // Constrain marquee to canvas bounds
+            // Constrain marquee to interaction canvas bounds
             const constrainedX = Math.max(rect.left, Math.min(rect.right, e.clientX));
             const constrainedY = Math.max(rect.top, Math.min(rect.bottom, e.clientY));
-
-            const worldPos = this.editor.canvasRenderer.screenToWorld(constrainedX, constrainedY, this.editor.stateManager.get('camera'));
+            const camera = this.getInteractionCamera();
+            const cr = this.editor.canvasRenderer;
+            if (view?.canvas) cr.setTarget(view.canvas);
+            const worldPos = cr.screenToWorld(constrainedX, constrainedY, camera);
             this.updateMarquee(worldPos);
             this.editor.render();
         }
@@ -629,75 +805,59 @@ export class MouseHandlers extends BaseModule {
         Logger.mouse.debug(`Global mouseup: button=${e.button}, target=${e.target.tagName}, (${e.clientX}, ${e.clientY})`);
 
         const mouse = this.editor.stateManager.get('mouse');
-        const canvas = this.editor.canvasRenderer.canvas;
+        // Multi-view: bounds of the leaf that owns the gesture, not canvasRenderer.canvas
+        // (render() restores primary target each frame).
+        const canvas = this.getInteractionCanvas();
+        if (!canvas) {
+            this._syncViewportGestureUiLock(e.clientX, e.clientY);
+            return;
+        }
         const rect = canvas.getBoundingClientRect();
-
-        // Check if mouse is outside canvas (with some tolerance for edge cases)
-        const tolerance = 10; // pixels
-        const isOutsideCanvas = e.clientX < (rect.left - tolerance) || e.clientX > (rect.right + tolerance) ||
-                               e.clientY < (rect.top - tolerance) || e.clientY > (rect.bottom + tolerance);
-
-        // Also check for very large coordinates that indicate mouse is outside window bounds
-        const isOutsideWindow = e.clientX < -1000 || e.clientX > 10000 || e.clientY < -1000 || e.clientY > 10000;
-        const shouldCancel = isOutsideCanvas || isOutsideWindow;
+        const isOutsideCanvas = e.clientX < rect.left || e.clientX > rect.right
+            || e.clientY < rect.top || e.clientY > rect.bottom;
 
         Logger.mouse.debug(`Global mouseup at (${e.clientX}, ${e.clientY}), canvas rect:`, rect, 'isOutside:', isOutsideCanvas);
-        
+
+        // Left: if canvas already handled mouseup (flags cleared), no-op.
+        // Outside leaf / other UI: complete the same way as canvas mouseup — never cancel
+        // drag/transform just because release is outside the viewport rect.
         if (e.button === 0) {
-            this._pivotCompensationBaseline = null;
-
-            // Handle marquee selection completion (both inside and outside canvas)
-            // Only finish marquee if it's still active (not already finished by canvas handler)
-            if (mouse.isMarqueeSelecting) {
-                Logger.mouse.info(`Left mouse released - finishing marquee selection (${isOutsideCanvas ? 'outside' : 'inside'} canvas)`);
-                this.finishMarqueeSelection();
+            const needsGestureEnd = !!(
+                mouse.isLeftDown
+                || mouse.isDragging
+                || mouse.isTransforming
+                || mouse.isMarqueeSelecting
+                || mouse.isPlacingObjects
+                || this.editor.stateManager.get('duplicate.isAltDragMode')
+            );
+            if (needsGestureEnd) {
+                Logger.mouse.info(
+                    `Left mouse released ${isOutsideCanvas ? 'outside' : 'inside'} canvas — completing gesture`
+                );
+                this.handleMouseUp(e);
+            } else {
+                this._endViewInteractionIfIdle();
+                this._syncViewportGestureUiLock(e.clientX, e.clientY);
             }
-
-            // Cancel object dragging if outside canvas
-            if (mouse.isDragging && shouldCancel) {
-                Logger.mouse.info('Mouse released outside canvas - canceling drag');
-                this.editor.stateManager.update({
-                    'mouse.isLeftDown': false,
-                    'mouse.isDragging': false,
-                    'mouse.constrainedAxis': null,
-                    'mouse.axisCenter': null,
-                    'mouse.snappedToGrid': false,
-                    'mouse.snapTargetX': null,
-                    'mouse.snapTargetY': null,
-                    'mouse.anchorX': null,
-                    'mouse.anchorY': null,
-                    'mouse.offsetX': null,
-                    'mouse.offsetY': null
-                });
-                this.editor.historyOperations.cancelToLastSavedState();
-                this.editor.render();
-            }
-
-            // Cancel rotate/scale transform if released outside canvas
-            if (mouse.isTransforming && shouldCancel) {
-                Logger.mouse.info('Mouse released outside canvas - canceling transform');
-                this._transformSnapshot = null;
-                this.editor.stateManager.update({
-                    'mouse.isLeftDown': false,
-                    'mouse.isTransforming': null,
-                    'mouse.transformPivot': null,
-                    'mouse.transformStartAngle': null,
-                    'mouse.transformStartDist': null,
-                    'mouse.transformPendingMode': null
-                });
-                this.editor.historyOperations.cancelToLastSavedState();
-                this.editor.render();
-            }
+            return;
         }
-        
+
         if (e.button === 2) {
             // Right mouse button marquee cancellation is now handled in BaseContextMenu
-            // This ensures consistent behavior and prevents conflicts
-
             this.editor.stateManager.update({
                 'mouse.isRightDown': false
             });
-            this.editor.canvasRenderer.canvas.style.cursor = 'default';
+            this._resetAllViewportCursors();
+            this._endViewInteractionIfIdle();
+            this._syncViewportGestureUiLock(e.clientX, e.clientY);
+            return;
+        }
+
+        if (e.button === 1) {
+            this.editor.stateManager.update({ 'mouse.isMiddleDown': false });
+            this._resetAllViewportCursors();
+            this._endViewInteractionIfIdle();
+            this._syncViewportGestureUiLock(e.clientX, e.clientY);
         }
     }
 
@@ -747,8 +907,13 @@ export class MouseHandlers extends BaseModule {
 
         this.editor.stateManager.update({
             'mouse.isLeftDown': false,
-            'mouse.isMiddleDown': false
+            'mouse.isMiddleDown': false,
+            'mouse.isRightDown': false
         });
+        this._resetAllViewportCursors();
+        this._interactionViewLeafId = null;
+        this.editor.canvasRenderer?.restorePrimaryTarget?.();
+        document.body.classList.remove('viewport-gesture-mode');
 
         this.editor.cancelAllActions();
     }
@@ -781,32 +946,38 @@ export class MouseHandlers extends BaseModule {
     }
     
     performZoom(e) {
+        // Pin leaf for this wheel step so camera/world use the event target view.
+        // Clear after unless a button is already down (pan/MMB zoom gesture in progress).
+        const mouse = this.getMouseState();
+        const hold = !!(mouse?.isLeftDown || mouse?.isRightDown || mouse?.isMiddleDown);
+        this._beginViewInteraction(e, { sticky: true });
+
         const zoomIntensity = 0.1;
         const direction = e.deltaY < 0 ? 1 : -1;
-        const camera = this.editor.stateManager.get('camera');
+        const camera = this.getInteractionCamera();
+        const view = this.getInteractionView();
+        const cr = this.editor.canvasRenderer;
+        if (view?.canvas) cr.setTarget(view.canvas);
 
-        const oldZoom = camera.zoom;
-        const newZoom = Math.max(0.1, Math.min(10, oldZoom * (1 + direction * zoomIntensity)));
+        const newZoom = Math.max(0.1, Math.min(10, camera.zoom * (1 + direction * zoomIntensity)));
 
         // Calculate new camera position to keep mouse position fixed
-        const mouseWorldPosBeforeZoom = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, camera);
+        const mouseWorldPosBeforeZoom = cr.screenToWorld(e.clientX, e.clientY, camera);
 
         // Create a temporary camera object for calculations
         const tempCamera = { ...camera, zoom: newZoom };
-        const mouseWorldPosAfterZoom = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, tempCamera);
+        const mouseWorldPosAfterZoom = cr.screenToWorld(e.clientX, e.clientY, tempCamera);
 
-        const newCameraX = camera.x + mouseWorldPosBeforeZoom.x - mouseWorldPosAfterZoom.x;
-        const newCameraY = camera.y + mouseWorldPosBeforeZoom.y - mouseWorldPosAfterZoom.y;
-
-        // Update camera in one operation
-        this.editor.stateManager.update({
-            'camera.zoom': newZoom,
-            'camera.x': newCameraX,
-            'camera.y': newCameraY
+        this.applyCameraPatch({
+            zoom: newZoom,
+            x: camera.x + mouseWorldPosBeforeZoom.x - mouseWorldPosAfterZoom.x,
+            y: camera.y + mouseWorldPosBeforeZoom.y - mouseWorldPosAfterZoom.y
         });
 
         // Immediate render for responsive zoom
         this.editor.render();
+        // Do not leave sticky leaf after plain wheel — next pick must re-resolve from event.
+        if (!hold) this._endViewInteractionIfIdle();
     }
 
     handleDragOver(e) {
@@ -826,6 +997,7 @@ export class MouseHandlers extends BaseModule {
         }
         
         e.preventDefault();
+        this._beginViewInteraction(e, { sticky: false });
 
         const mouse = this.editor.stateManager.get('mouse');
         if (!mouse.isDraggingAsset) return;
@@ -930,7 +1102,8 @@ export class MouseHandlers extends BaseModule {
     }
 
     handleDoubleClick(e) {
-        const worldPos = this.editor.canvasRenderer.screenToWorld(e.clientX, e.clientY, this.editor.stateManager.get('camera'));
+        this._beginViewInteraction(e, { sticky: false });
+        const worldPos = this.screenToWorld(e);
         // skipCycle: a dblclick is physically two single clicks, which would already have
         // advanced the click-cycle past the front-most object (see ObjectOperations.findObjectAtPoint)
         const clickedObject = this.editor.objectOperations.findObjectAtPoint(worldPos.x, worldPos.y, true);
@@ -1843,7 +2016,10 @@ export class MouseHandlers extends BaseModule {
      */
     handleMiddleMouseZoom(e) {
         const mouse = this.editor.stateManager.get('mouse');
-        const camera = this.editor.stateManager.get('camera');
+        const camera = this.getInteractionCamera();
+        const view = this.getInteractionView();
+        const cr = this.editor.canvasRenderer;
+        if (view?.canvas) cr.setTarget(view.canvas);
         
         // Get the initial zoom level when middle mouse was first pressed
         const initialZoom = mouse.initialZoom || camera.zoom;
@@ -1860,26 +2036,22 @@ export class MouseHandlers extends BaseModule {
         // Only update if zoom actually changed
         if (Math.abs(newZoom - camera.zoom) > 0.001) {
             // Use the original mouse position (zoomStartX, zoomStartY) for zoom center
-            const mouseWorldPosBeforeZoom = this.editor.canvasRenderer.screenToWorld(mouse.zoomStartX, mouse.zoomStartY, camera);
+            const mouseWorldPosBeforeZoom = cr.screenToWorld(mouse.zoomStartX, mouse.zoomStartY, camera);
             
             // Create temporary camera for calculations
             const tempCamera = { ...camera, zoom: newZoom };
-            const mouseWorldPosAfterZoom = this.editor.canvasRenderer.screenToWorld(mouse.zoomStartX, mouse.zoomStartY, tempCamera);
+            const mouseWorldPosAfterZoom = cr.screenToWorld(mouse.zoomStartX, mouse.zoomStartY, tempCamera);
             
-            // Adjust camera position to keep original mouse point fixed
-            const newCameraX = camera.x + mouseWorldPosBeforeZoom.x - mouseWorldPosAfterZoom.x;
-            const newCameraY = camera.y + mouseWorldPosBeforeZoom.y - mouseWorldPosAfterZoom.y;
-            
-            // Update camera
+            this.applyCameraPatch({
+                zoom: newZoom,
+                x: camera.x + mouseWorldPosBeforeZoom.x - mouseWorldPosAfterZoom.x,
+                y: camera.y + mouseWorldPosBeforeZoom.y - mouseWorldPosAfterZoom.y
+            });
             this.editor.stateManager.update({
-                'camera.zoom': newZoom,
-                'camera.x': newCameraX,
-                'camera.y': newCameraY,
                 'mouse.lastX': e.clientX,
                 'mouse.lastY': e.clientY
             });
-            
-            // Don't update cursor during zoom - it stays as set in handleMouseDown
+            this.editor.render();
         }
     }
 }

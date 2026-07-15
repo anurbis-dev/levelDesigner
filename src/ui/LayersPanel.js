@@ -6,18 +6,35 @@ import { HoverEffects } from '../utils/HoverEffects.js';
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 import { createLayersPanelStructure, renderLayersControls } from './panel-structures/LayersPanelStructure.js';
 import { createListItemRow, updateListItemVisuals } from './panel-structures/ListItemRowStructure.js';
+import {
+    clearListReorderPlaceholder,
+    syncListReorderPlaceholder,
+    getListOrderAfterReorder
+} from './panel-structures/ListReorderPlaceholder.js';
 import { searchManager } from '../utils/SearchManager.js';
 
 /**
  * Layers panel UI component
  */
 export class LayersPanel extends BasePanel {
-    constructor(container, stateManager, levelEditor) {
+    /**
+     * @param {HTMLElement} container
+     * @param {object} stateManager
+     * @param {object} levelEditor
+     * @param {{ instanceKey?: string, isPrimary?: boolean }} [options]
+     */
+    constructor(container, stateManager, levelEditor, options = {}) {
         super(container, stateManager, levelEditor);
+        this.instanceKey = options.instanceKey || null;
+        this.isPrimary = options.isPrimary !== false && !this.instanceKey;
+        this.searchPanelId = this.instanceKey ? `layers-${this.instanceKey}` : 'layers';
+        this.searchInputId = this.instanceKey ? `layers-search-${this.instanceKey}` : 'layers-search';
+        this.contextMenuId = this.instanceKey ? `layers-${this.instanceKey}` : 'layers';
         this.currentLayerId = null; // Track current layer (for new objects, blue highlight)
         this.searchFilter = ''; // Search filter for layers
         this.contextMenu = null; // Context menu instance
         this._draggedElement = null; // Track dragged element for drag and drop
+        this._draggedRowHeight = 0; // Pre-collapse height for reorder placeholder
 
         // Icon "paint drag": mousedown on an eye/lock icon + drag over others applies the
         // same state to every icon of that type under the cursor before mouseup. See
@@ -33,8 +50,8 @@ export class LayersPanel extends BasePanel {
 
         // Register search in universal search manager
         searchManager.registerSearch(
-            'layers',
-            'layers-search',
+            this.searchPanelId,
+            this.searchInputId,
             (searchFilter) => {
                 this.searchFilter = searchFilter;
                 this.renderLayersSection();
@@ -51,8 +68,8 @@ export class LayersPanel extends BasePanel {
      * Setup context menus for layers
      */
     setupContextMenus() {
-        // Layer context menu - use the panel element, not the inner container
-        this.layerContextMenu = new LayersContextMenu(this.container.parentElement, this, {
+        // Bind to container (works for primary + dock copies before/after reparent)
+        this.layerContextMenu = new LayersContextMenu(this.container, this, {
             stateManager: this.stateManager, // Pass StateManager for marquee check
             onMakeCurrent: (layer) => this.setCurrentLayerAndNotify(layer.id),
             onRename: (layer) => this.renameLayer(layer.id),
@@ -65,7 +82,7 @@ export class LayersPanel extends BasePanel {
 
         // Register context menu with ContextMenuManager for global resize handling
         if (this.levelEditor && this.levelEditor.contextMenuManager && this.layerContextMenu) {
-            this.levelEditor.contextMenuManager.registerMenu('layers', this.layerContextMenu);
+            this.levelEditor.contextMenuManager.registerMenu(this.contextMenuId, this.layerContextMenu);
         }
     }
 
@@ -172,7 +189,8 @@ export class LayersPanel extends BasePanel {
 
     render() {
         // Save search input state before clearing
-        const searchInput = document.getElementById('layers-search');
+        const searchInput = this.container.querySelector(`#${this.searchInputId}`)
+            || this.container.querySelector('input[type="text"]');
         const wasSearchFocused = searchInput && document.activeElement === searchInput;
 
         // Remove only non-custom children to preserve custom sections
@@ -203,7 +221,8 @@ export class LayersPanel extends BasePanel {
 
         // Restore search input state after render
         if (wasSearchFocused) {
-            const newSearchInput = document.getElementById('layers-search');
+            const newSearchInput = this.container.querySelector(`#${this.searchInputId}`)
+                || this.container.querySelector('input[type="text"]');
             if (newSearchInput) {
                 newSearchInput.focus();
                 newSearchInput.setSelectionRange(newSearchInput.value.length, newSearchInput.value.length);
@@ -222,29 +241,28 @@ export class LayersPanel extends BasePanel {
             return;
         }
 
-        // Check if layers panel is currently active
-        const layersPanel = document.getElementById('layers-content-panel');
-        if (!layersPanel || layersPanel.classList.contains('hidden')) {
-            return; // Don't render if layers is not active
+        if (!this.container || this.container.classList.contains('hidden')) {
+            return;
         }
 
 
         // Check if controls are already rendered (avoid unnecessary re-rendering)
-        const searchInput = topSection.querySelector('#layers-search');
-        const addButton = topSection.querySelector('#add-layer-btn');
+        const searchInput = topSection.querySelector(`#${this.searchInputId}`)
+            || topSection.querySelector('input[type="text"]');
+        const addButton = topSection.querySelector('#add-layer-btn')
+            || topSection.querySelector('button');
 
 
         if (searchInput && addButton) {
             // Controls already exist, just update search value
-            const currentTerm = searchManager.getSearchTerm('layers');
+            const currentTerm = searchManager.getSearchTerm(this.searchPanelId);
             if (searchInput.value !== currentTerm) {
                 searchInput.value = currentTerm;
             }
 
             // Always check and ensure search listeners are properly set up
             if (!searchInput.hasAttribute('data-search-managed')) {
-                searchManager.setupSearchListeners('layers');
-            } else {
+                searchManager.setupSearchListeners(this.searchPanelId);
             }
 
             return;
@@ -254,7 +272,8 @@ export class LayersPanel extends BasePanel {
 
         // Use the structure's render function with callbacks
         renderLayersControls(topSection, {
-            getSearchFilter: () => searchManager.getSearchTerm('layers'),
+            searchInputId: this.searchInputId,
+            getSearchFilter: () => searchManager.getSearchTerm(this.searchPanelId),
             onSearch: (searchFilter) => {
                 this.searchFilter = searchFilter;
                 this.renderLayersSection();
@@ -265,9 +284,10 @@ export class LayersPanel extends BasePanel {
         // Setup button event listeners (search is handled by SearchManager, add button by createButton)
 
         // Immediately ensure search listeners are set up after creating new controls
-        const newSearchInput = topSection.querySelector('#layers-search');
+        const newSearchInput = topSection.querySelector(`#${this.searchInputId}`)
+            || topSection.querySelector('input[type="text"]');
         if (newSearchInput && !newSearchInput.hasAttribute('data-search-managed')) {
-            searchManager.setupSearchListeners('layers');
+            searchManager.setupSearchListeners(this.searchPanelId);
         }
         
         // Register EventHandlerManager for top section if not already registered
@@ -293,28 +313,31 @@ export class LayersPanel extends BasePanel {
         const level = this.levelEditor.getLevel();
         const layers = level.getLayersSorted();
 
-        // Clear container but preserve custom sections
-        // Remove all children except custom sections
-        const children = Array.from(this.container.children);
-        children.forEach(child => {
-            if (!child.classList.contains('panel-top-custom') &&
-                !child.classList.contains('panel-bottom-custom')) {
-                this.container.removeChild(child);
-            }
-        });
-
         // Ensure custom sections exist (recreate if needed)
         if (!this.panelElements?.topCustom || !this.container.contains(this.panelElements.topCustom)) {
+            Array.from(this.container.children).forEach(child => this.container.removeChild(child));
             this.panelElements = createLayersPanelStructure(this.container);
+            this._layersList = null;
         }
 
         // Render layers controls in top custom section
         this.renderLayersSearchControls();
 
-        // Layers list container
-        const layersList = document.createElement('div');
-        layersList.className = 'layers-list space-y-1';
-        layersList.id = 'layers-list';
+        // Reuse list node so middle-pan registration stays stable across re-renders.
+        if (!this._layersList || !this.container.contains(this._layersList)) {
+            this._layersList = document.createElement('div');
+            this._layersList.className = 'layers-list space-y-1';
+            this._layersList.id = 'layers-list';
+            this.setupScrolling({
+                horizontal: true,
+                vertical: true,
+                sensitivity: 1.0,
+                target: this._layersList
+            });
+        }
+
+        const layersList = this._layersList;
+        layersList.innerHTML = '';
 
         // Filter layers based on search
         const filteredLayers = this.filterLayers(layers);
@@ -326,17 +349,6 @@ export class LayersPanel extends BasePanel {
         });
 
         this.container.appendChild(layersList);
-
-        // Setup scrolling using BasePanel - detect nearest tab content scroll container
-        // so it works regardless of panel side (left/right) and dynamic tab moves.
-        const scrollableContainer = this.container.closest('.flex-grow.overflow-y-auto');
-
-        this.setupScrolling({
-            horizontal: true,
-            vertical: true,
-            sensitivity: 1.0,
-            target: scrollableContainer || this.container
-        });
 
         // Update layer styles to show current layer highlight
         this.updateLayerStyles();
@@ -381,7 +393,7 @@ export class LayersPanel extends BasePanel {
                 soloed: layer.soloed,
                 title: layer.soloed ? 'Soloed — Ctrl+click to un-solo' : (layer.visible ? 'Hide layer (Ctrl+click to solo)' : 'Show layer (Ctrl+click to solo)')
             },
-            color: { value: layer.color, title: 'Click to change color' },
+            color: { value: layer.color, title: 'Click to change color', shape: 'circle' },
             lock: { locked: layer.locked, title: layer.locked ? 'Unlock layer' : 'Lock layer' },
             parallax: { value: layer.parallaxOffset, title: 'Parallax offset (0 = no parallax, negative = slower, positive = faster)' }
         });
@@ -869,7 +881,8 @@ export class LayersPanel extends BasePanel {
             return sum + level.getCachedLayerObjectsCount(layer.id, cachedStats);
         }, 0);
         
-        const statsElement = document.getElementById('layers-stats');
+        const statsElement = this.container.querySelector('#layers-stats')
+            || document.getElementById('layers-stats');
         if (statsElement) {
             statsElement.textContent = `${layers.length} layers, ${totalObjects} objects`;
         }
@@ -1242,7 +1255,8 @@ export class LayersPanel extends BasePanel {
      * Setup search functionality
      */
     setupSearch() {
-        const searchInput = document.getElementById('layers-search');
+        const searchInput = this.container.querySelector(`#${this.searchInputId}`)
+            || this.container.querySelector('input[type="text"]');
         if (!searchInput) return;
 
         SearchUtils.setupSearchListeners(searchInput, (searchTerm) => {
@@ -1677,35 +1691,65 @@ export class LayersPanel extends BasePanel {
             dragstart: {
                 selector: '.layer-item',
                 handler: (e) => {
-                    const layersList = document.getElementById('layers-list');
+                    const layersList = this._layersList || this.container.querySelector('.layers-list');
                     if (!layersList) return;
-                    
-                    if (e.target.classList.contains('layer-item')) {
-                        // Check if any layer name input is currently visible (renaming in progress)
-                        const visibleInput = layersList.querySelector('.layer-name-input:not(.hidden)');
-                        if (visibleInput) {
-                            e.preventDefault();
-                            return;
-                        }
-                        
-                        this._draggedElement = e.target;
-                        e.target.style.opacity = '0.5';
+
+                    // Event target may be a child; row is the draggable source.
+                    const row = e.target.closest('.layer-item');
+                    if (!row || !layersList.contains(row)) return;
+
+                    // Check if any layer name input is currently visible (renaming in progress)
+                    const visibleInput = layersList.querySelector('.layer-name-input:not(.hidden)');
+                    if (visibleInput) {
+                        e.preventDefault();
+                        return;
                     }
+
+                    // Required for reliable HTML5 DnD (esp. Firefox); collapse must wait —
+                    // applying .list-row-dragging here aborts the gesture in Chromium.
+                    if (e.dataTransfer) {
+                        e.dataTransfer.setData('text/plain', row.dataset.layerId || 'layer');
+                        e.dataTransfer.effectAllowed = 'move';
+                    }
+                    this._draggedElement = row;
+                    this._draggedRowHeight = row.offsetHeight;
+                    row.style.opacity = '0.5';
                 }
             },
             dragend: {
                 selector: '.layer-item',
                 handler: (e) => {
-                    if (e.target.classList.contains('layer-item')) {
-                        e.target.style.opacity = '1';
-                        this._draggedElement = null;
+                    const row = e.target.closest('.layer-item') || this._draggedElement;
+                    if (row) {
+                        row.classList.remove('list-row-dragging');
+                        row.style.opacity = '';
                     }
+                    const layersList = this._layersList || this.container.querySelector('.layers-list');
+                    clearListReorderPlaceholder(layersList);
+                    this._draggedElement = null;
+                    this._draggedRowHeight = 0;
                 }
             },
             dragover: {
                 selector: '.layers-list',
                 handler: (e) => {
                     e.preventDefault();
+                    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+                    if (!this._draggedElement) return;
+                    const layersList = this._layersList || this.container.querySelector('.layers-list');
+                    if (!layersList) return;
+                    // Collapse only after drag is live (safe on dragover, not dragstart)
+                    if (!this._draggedElement.classList.contains('list-row-dragging')) {
+                        this._draggedElement.classList.add('list-row-dragging');
+                        this._draggedElement.style.opacity = '';
+                    }
+                    syncListReorderPlaceholder({
+                        listEl: layersList,
+                        draggedEl: this._draggedElement,
+                        clientY: e.clientY,
+                        isItem: (el) => el.classList.contains('layer-item'),
+                        slotHeight: this._draggedRowHeight
+                    });
                 }
             },
             drop: {
@@ -1715,29 +1759,35 @@ export class LayersPanel extends BasePanel {
                     
                     if (!this._draggedElement) return;
                     
-                    const dropTarget = e.target.closest('.layer-item');
-                    if (!dropTarget || dropTarget === this._draggedElement) return;
-                    
-                    const layersList = document.getElementById('layers-list');
+                    const layersList = this._layersList || this.container.querySelector('.layers-list');
                     if (!layersList) return;
-                    
+
+                    const isItem = (el) => el.classList.contains('layer-item');
+                    // Final slot sync so drop without a recent dragover still matches cursor Y
+                    syncListReorderPlaceholder({
+                        listEl: layersList,
+                        draggedEl: this._draggedElement,
+                        clientY: e.clientY,
+                        isItem,
+                        slotHeight: this._draggedRowHeight
+                    });
+
+                    const draggedId = this._draggedElement.dataset.layerId;
+                    const newOrder = getListOrderAfterReorder(layersList, 'layerId', draggedId, isItem);
+
+                    clearListReorderPlaceholder(layersList);
+                    this._draggedElement.classList.remove('list-row-dragging');
+                    this._draggedElement.style.opacity = '';
+                    this._draggedElement = null;
+                    this._draggedRowHeight = 0;
+
+                    if (!newOrder) return;
+
                     const level = this.levelEditor.getLevel();
-                    
-                    // Get current order
-                    const currentOrder = Array.from(layersList.children).map(el => el.dataset.layerId);
-                    
-                    // Find positions
-                    const draggedIndex = currentOrder.indexOf(this._draggedElement.dataset.layerId);
-                    const dropIndex = currentOrder.indexOf(dropTarget.dataset.layerId);
-                    
-                    if (draggedIndex === -1 || dropIndex === -1) return;
-                    
-                    // Reorder array
-                    const newOrder = [...currentOrder];
-                    newOrder.splice(draggedIndex, 1);
-                    newOrder.splice(dropIndex, 0, this._draggedElement.dataset.layerId);
-                    
-                    // Update layer order
+                    const currentOrder = level.layers.map((l) => l.id);
+                    if (newOrder.length !== currentOrder.length) return;
+                    if (newOrder.every((id, i) => id === currentOrder[i])) return;
+
                     level.reorderLayers(newOrder);
                     this.render();
                     this.stateManager.markDirty();
@@ -1758,9 +1808,12 @@ export class LayersPanel extends BasePanel {
 
         // mouseup can land anywhere on the page once dragging off the panel, so end the
         // paint drag globally rather than only within this container.
+        this._iconPaintDragHandlerId = this.instanceKey
+            ? `layersPanel-iconPaintDrag-${this.instanceKey}`
+            : 'layersPanel-iconPaintDrag';
         eventHandlerManager.registerGlobalHandlers({
             mouseup: () => this._endIconPaintDrag()
-        }, 'layersPanel-iconPaintDrag');
+        }, this._iconPaintDragHandlerId);
 
         Logger.ui.debug('LayersPanel: New event handlers setup complete');
 
@@ -2029,7 +2082,9 @@ export class LayersPanel extends BasePanel {
     destroy() {
         // Remove event handlers using new system
         eventHandlerManager.unregisterContainer(this.container);
-        eventHandlerManager.unregisterGlobalHandlers('layersPanel-iconPaintDrag');
+        eventHandlerManager.unregisterGlobalHandlers(
+            this._iconPaintDragHandlerId || 'layersPanel-iconPaintDrag'
+        );
 
         // Also unregister top section
         const topSection = this.panelElements?.topCustom;
@@ -2053,7 +2108,7 @@ export class LayersPanel extends BasePanel {
         this.subscriptions = [];
         
         // Unregister search from SearchManager
-        searchManager.unregisterSearch('layers');
+        searchManager.unregisterSearch(this.searchPanelId || 'layers');
 
         // Destroy context menu
         if (this.layerContextMenu) {

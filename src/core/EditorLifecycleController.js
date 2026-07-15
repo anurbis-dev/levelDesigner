@@ -14,6 +14,7 @@ import { MenuManager } from '../managers/MenuManager.js';
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 import { searchManager } from '../utils/SearchManager.js';
 import { Logger } from '../utils/Logger.js';
+import { ViewportViewManager } from './ViewportViewManager.js';
 
 /**
  * Editor startup/shutdown-lifecycle: DOM/renderer/UI-component bootstrap, panel-size
@@ -63,6 +64,13 @@ export class EditorLifecycleController extends BaseModule {
         editor.canvasRenderer.stateManager = editor.stateManager; // Store reference for state updates
         editor.canvasRenderer.resizeCanvas();
         editor.lifecycle.register('canvasRenderer', editor.canvasRenderer, { priority: 1 });
+
+        // Multi-viewport: work camera (stateManager) + game cameras (level type=camera)
+        if (!editor.viewportViewManager) {
+            editor.viewportViewManager = new ViewportViewManager(editor);
+            editor.lifecycle.register('viewportViewManager', editor.viewportViewManager, { priority: 1 });
+        }
+        editor.stateManager.set('viewportViewManager', editor.viewportViewManager);
 
         // Register CanvasRenderer in StateManager for AssetManager sync
         editor.stateManager.set('canvasRenderer', editor.canvasRenderer);
@@ -235,8 +243,9 @@ export class EditorLifecycleController extends BaseModule {
         });
         editor.subscriptions.push(rightPanelUnsubscribe);
 
-        // Listen for assets panel height changes
+        // Listen for assets panel height changes (legacy footer path; skip when dock hosts assets)
         const assetsPanelUnsubscribe = editor.stateManager.subscribe('panels.assetsPanelHeight', (height) => {
+            if (editor.dockManager?._inited) return;
             const assetsPanel = document.getElementById('assets-panel');
             if (assetsPanel && height !== undefined) {
                 if (height === 0) {

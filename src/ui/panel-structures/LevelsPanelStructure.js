@@ -72,7 +72,7 @@ export function renderLevelsControls(topSection, callbacks = {}) {
     // Create search input with callback for ESC support
     const searchInput = createSearchInput(
         LevelsPanelStructure.levelControls.searchInput.placeholder,
-        LevelsPanelStructure.levelControls.searchInput.id,
+        callbacks.searchInputId || LevelsPanelStructure.levelControls.searchInput.id,
         LevelsPanelStructure.levelControls.searchInput.classes,
         callbacks.getSearchFilter ? callbacks.getSearchFilter() : '',
         callbacks.onSearch || null

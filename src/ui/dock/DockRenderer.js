@@ -3,6 +3,8 @@
  * Chrome may be rebuilt; content roots reparent only.
  */
 import { typeLabel, typeColor, COLLAPSED_H } from './DockConstants.js';
+import { openTypeMenu, closeTypeMenu } from './DockTypeMenu.js';
+import { buildViewportHeaderControls, syncViewportChromeState } from './ViewportLeafChrome.js';
 
 export class DockRenderer {
     constructor(opts) {
@@ -16,7 +18,12 @@ export class DockRenderer {
                 ? (ws, node, body) => this.registry.mountLeafContent(ws, node, body)
                 : this._defaultPlaceholderMount.bind(this));
         this.isCloseable = opts.isCloseable
-            || ((type) => (this.registry ? this.registry.isCloseable(type) : type !== 'viewport'));
+            || ((type, leafId) => {
+                if (this.registry?.isLeafCloseable) {
+                    return this.registry.isLeafCloseable(type, leafId);
+                }
+                return this.registry ? this.registry.isCloseable(type) : type !== 'viewport';
+            });
         this.onStructureChange = opts.onStructureChange || (() => {});
         this.drag = opts.drag || null;
         this._contentRoots = new Map();
@@ -57,6 +64,7 @@ export class DockRenderer {
         this._parkContentRoots();
         this._renderWorkspace('main', this.model.mainTree, this.splitRoot);
         this._renderFloatingLayer();
+        this._reconcileRegistry();
         this.onStructureChange();
     }
 
@@ -69,7 +77,13 @@ export class DockRenderer {
             if (fw) this._refreshFloatingWindow(fw);
             else this._renderFloatingLayer();
         }
+        this._reconcileRegistry();
         this.onStructureChange();
+    }
+
+    _reconcileRegistry() {
+        if (!this.registry || typeof this.registry.reconcileLiveLeaves !== 'function') return;
+        this.registry.reconcileLiveLeaves(this.model.collectAllLeafIds());
     }
 
     _renderWorkspace(workspaceId, treeNode, containerEl) {
@@ -140,19 +154,40 @@ export class DockRenderer {
     _buildHeader(node, workspaceId, opts) {
         const header = document.createElement('div');
         header.className = 'leaf-header';
-        const handle = document.createElement('div');
-        handle.className = 'drag-handle';
+
+        // Title: pointer cursor, type menu only (not a drag handle).
         const title = document.createElement('span');
         title.className = 'leaf-title';
         title.textContent = typeLabel(node.contentType);
-        handle.appendChild(title);
-        // Type-menu disabled for singleton real types (B1) — no caret / type switch.
+        title.title = 'Сменить тип панели';
+        const caret = document.createElement('span');
+        caret.className = 'type-caret';
+        caret.textContent = '▾';
+        caret.setAttribute('aria-hidden', 'true');
+        caret.title = 'Сменить тип панели';
 
+        const isSingleton = (t) => (this.registry ? this.registry.isSingleton(t) : t === 'viewport');
+        const openTypes = (e) => {
+            e.stopPropagation();
+            openTypeMenu(title, node.contentType, (newType) => {
+                if (this.model.applyLeafContentType(node, newType, { isSingleton })) this.render();
+            }, { presentTypes: this.model.collectPresentContentTypes(), isSingleton });
+        };
+        title.addEventListener('click', openTypes);
+        caret.addEventListener('click', openTypes);
+        header.appendChild(title);
+        header.appendChild(caret);
+
+        // Empty gap between title and right icons — only this area starts panel drag.
+        const handle = document.createElement('div');
+        handle.className = 'drag-handle leaf-header-gap';
+        handle.title = 'Перетащить панель';
         handle.addEventListener('pointerdown', (e) => {
             if (!this.drag) return;
             this.drag.startNodeDrag(e, () => node.id, {
                 ghostLabel: typeLabel(node.contentType),
                 ownId: node.id,
+                onTap: null,
                 onNoTargetDrop: (x, y) => {
                     const dragged = this.model.resolveDraggedNode(node.id);
                     if (!dragged) return;
@@ -164,6 +199,11 @@ export class DockRenderer {
             });
         });
         header.appendChild(handle);
+
+        // Viewport: camera source + type filter on the right side of the leaf header
+        if (node.contentType === 'viewport' && this.registry?.levelEditor) {
+            header.appendChild(buildViewportHeaderControls(node, this.registry.levelEditor));
+        }
 
         if (opts.onDetach) {
             const detachBtn = document.createElement('button');
@@ -195,15 +235,35 @@ export class DockRenderer {
         el.className = 'leaf-node';
         el.dataset.nodeId = node.id;
         el.dataset.contentType = node.contentType || '';
-        const canClose = this.isCloseable(node.contentType);
+        // Build header without close first — viewport primary/copy status is known only after mount.
         const header = this._buildHeader(node, workspaceId, {
             onDetach: () => this.detachLeafToFloating(workspaceId, node.id, el),
-            onClose: canClose ? () => this.closePane(workspaceId, node.id) : null
+            onClose: null
         });
         const body = document.createElement('div');
         body.className = 'leaf-body';
         body.dataset.leafId = node.id;
+        // Mount before chrome sync so ViewportViewManager has the leaf view (self-drop).
         this.mountLeafContent(workspaceId, node, body);
+        if (node.contentType === 'viewport' && this.registry?.levelEditor) {
+            const chrome = header.querySelector('.viewport-leaf-chrome');
+            if (chrome) syncViewportChromeState(chrome, node.id, this.registry.levelEditor);
+        }
+        // Close after mount: isLeafCloseable uses binding.isPrimary (pre-mount was often wrong for clones).
+        const canClose = typeof this.isCloseable === 'function'
+            ? this.isCloseable(node.contentType, node.id)
+            : node.contentType !== 'viewport';
+        if (canClose) {
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'icon-btn close';
+            closeBtn.title = 'Закрыть';
+            closeBtn.textContent = '×';
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.closePane(workspaceId, node.id);
+            });
+            header.appendChild(closeBtn);
+        }
         el.appendChild(header);
         el.appendChild(body);
         return el;
@@ -212,7 +272,7 @@ export class DockRenderer {
     closePane(workspaceId, id) {
         const current = this.model.getTreeOf(workspaceId);
         const node = this.model.findNode(current, id);
-        if (node && !this.isCloseable(node.contentType)) return;
+        if (node && !this.isCloseable(node.contentType, node.id)) return;
         this.model.setTreeOf(workspaceId, this.model.removeLeaf(current, id));
         // Content root stays in registry/pool for chip reopen (B1)
         this.render();
@@ -372,6 +432,7 @@ export class DockRenderer {
     }
 
     destroy() {
+        closeTypeMenu();
         this._contentRoots.clear();
         if (this._contentPool && this._contentPool.parentElement) {
             this._contentPool.remove();
