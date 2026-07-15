@@ -401,6 +401,9 @@ export class AssetManager extends BaseManager {
             const img = new Image();
             img.onload = () => {
                 this.imageCache.set(src, img);
+                // Objects may already have been drawn as a placeholder before this image
+                // was cached (async load race) — repaint so they pick it up immediately.
+                window.editor?.render?.();
                 resolve(img);
             };
             img.onerror = (error) => {

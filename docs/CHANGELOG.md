@@ -16,3 +16,4 @@
 - **A6.1**: BaseGridRenderer.js — Template Method паттерн: `render()` стал конкретным, `drawGrid()` абстрактный; наследники реализуют только `drawGrid()`
 - **A6.2**: PerformanceUtils.js — `memoizeWithInvalidation()` переведена на композицию с `memoize()` (устранено дублирование cache-логики)
 - **A8**: Документация синхронизирована с кодом: Context_map.md, ARCHITECTURE.md, CHANGELOG.md обновлены на v4.0.0
+- Fix: `AssetManager.loadImage()` теперь вызывает `window.editor?.render?.()` после успешного кэширования изображения — устраняет баг, когда объект, отрисованный до завершения асинхронной загрузки картинки, оставался плейсхолдером до случайного следующего render()
