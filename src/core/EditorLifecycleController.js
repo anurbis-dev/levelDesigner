@@ -180,6 +180,36 @@ export class EditorLifecycleController extends BaseModule {
     }
 
     /**
+     * Observe #canvas-viewport size changes (dock split / float resize).
+     * Safe to call multiple times; reconnects if the element was reparented.
+     */
+    setupViewportResizeObserver() {
+        const editor = this.editor;
+        if (!window.ResizeObserver) return;
+
+        const attach = (retryCount = 0) => {
+            const viewport = document.getElementById('canvas-viewport');
+            if (!viewport) {
+                if (retryCount < 10) {
+                    requestAnimationFrame(() => attach(retryCount + 1));
+                }
+                return;
+            }
+            if (editor.viewportResizeObserver) {
+                editor.viewportResizeObserver.disconnect();
+            }
+            editor.viewportResizeObserver = new ResizeObserver(() => {
+                // Skip while parked off-tree / display:none (0×0)
+                if (viewport.closest('#dock-legacy-offtree, #dock-content-pool')) return;
+                if (viewport.clientWidth <= 0 || viewport.clientHeight <= 0) return;
+                editor.updateCanvas();
+            });
+            editor.viewportResizeObserver.observe(viewport);
+        };
+        attach();
+    }
+
+    /**
      * Setup listeners for panel size changes from StateManager
      */
     setupPanelSizeListeners() {
@@ -256,22 +286,8 @@ export class EditorLifecycleController extends BaseModule {
         });
         editor.subscriptions.push(rightPanelTabUnsubscribe);
 
-        // Setup ResizeObserver for canvas-viewport to update canvas interactively.
-        // B0: viewport lives in #dock-legacy-offtree (0×0) — skip until B2 remounts into dock leaf.
-        if (!editor.dockManager?._inited) {
-            const setupViewportObserver = (retryCount = 0) => {
-                const viewport = document.getElementById('canvas-viewport');
-                if (viewport && window.ResizeObserver) {
-                    editor.viewportResizeObserver = new ResizeObserver(() => {
-                        editor.updateCanvas();
-                    });
-                    editor.viewportResizeObserver.observe(viewport);
-                } else if (!viewport && retryCount < 10) {
-                    requestAnimationFrame(() => setupViewportObserver(retryCount + 1));
-                }
-            };
-            setupViewportObserver();
-        }
+        // ResizeObserver on #canvas-viewport (dock leaf measure host after B2).
+        this.setupViewportResizeObserver();
 
         const leftPanelTabUnsubscribe = editor.stateManager.subscribe('leftPanelTab', (tabName) => {
             if (tabName && editor.configManager) {

@@ -25,7 +25,8 @@ export class CanvasRenderer {
     }
 
     /**
-     * Resize canvas to fit container
+     * Resize canvas to fit #canvas-viewport measure host.
+     * B2: canvas lives inside the viewport leaf (or absolute-mirror legacy path).
      */
     resizeCanvas() {
         const viewport = document.getElementById('canvas-viewport');
@@ -35,41 +36,49 @@ export class CanvasRenderer {
         }
 
         const rect = viewport.getBoundingClientRect();
+        const layoutW = viewport.clientWidth || rect.width;
+        const layoutH = viewport.clientHeight || rect.height;
 
-        // Проверки на валидность размеров контейнера
-        if (!rect.width || !rect.height || rect.width <= 0 || rect.height <= 0) {
-            // B0: #canvas-viewport is display:none inside #dock-legacy-offtree — expected until B2
-            if (!viewport.closest('#dock-legacy-offtree')) {
-                Logger.canvas.warn(`CanvasRenderer.resizeCanvas: Invalid viewport dimensions ${rect.width}x${rect.height}`);
+        // Invalid / parked in off-tree pool / display:none — skip quietly
+        if (!layoutW || !layoutH || layoutW <= 0 || layoutH <= 0) {
+            const parked = viewport.closest('#dock-legacy-offtree, #dock-content-pool');
+            if (!parked) {
+                Logger.canvas.warn(`CanvasRenderer.resizeCanvas: Invalid viewport dimensions ${layoutW}x${layoutH}`);
             }
             return;
         }
 
-        // Set canvas size to viewport size (минимум 1 пиксель для избежания ошибок)
-        const width = Math.max(1, Math.floor(rect.width));
-        const height = Math.max(1, Math.floor(rect.height));
+        const width = Math.max(1, Math.floor(layoutW));
+        const height = Math.max(1, Math.floor(layoutH));
 
         this.canvas.width = width;
         this.canvas.height = height;
-
-        // Ensure canvas fills the container without scaling
         this.canvas.style.width = width + 'px';
         this.canvas.style.height = height + 'px';
         this.canvas.style.display = 'block';
-        this.canvas.style.objectFit = 'none'; // Prevent scaling
+        this.canvas.style.objectFit = 'none';
 
-        // Update canvas-container position and size to match viewport
         const canvasContainer = document.getElementById('canvas-container');
         if (canvasContainer) {
-            canvasContainer.style.left = rect.left + 'px';
-            canvasContainer.style.top = rect.top + 'px';
-            canvasContainer.style.width = width + 'px';
-            canvasContainer.style.height = height + 'px';
-            canvasContainer.style.right = 'auto';
-            canvasContainer.style.bottom = 'auto';
+            // Dock-hosted: canvas-container is a child of #canvas-viewport — fill parent.
+            if (viewport.contains(canvasContainer)) {
+                canvasContainer.style.left = '0';
+                canvasContainer.style.top = '0';
+                canvasContainer.style.width = '100%';
+                canvasContainer.style.height = '100%';
+                canvasContainer.style.right = 'auto';
+                canvasContainer.style.bottom = 'auto';
+            } else {
+                // Legacy absolute mirror (pre-B2 / fallback)
+                canvasContainer.style.left = rect.left + 'px';
+                canvasContainer.style.top = rect.top + 'px';
+                canvasContainer.style.width = width + 'px';
+                canvasContainer.style.height = height + 'px';
+                canvasContainer.style.right = 'auto';
+                canvasContainer.style.bottom = 'auto';
+            }
         }
 
-        // Update stateManager with canvas position and size
         if (this.stateManager) {
             this.stateManager.set('canvas.position', { x: rect.left, y: rect.top });
             this.stateManager.set('canvas.size', { width, height });

@@ -1,6 +1,6 @@
 /**
- * contentType → mount adapter + singleton metadata (Phase B1).
- * B1: placeholder mount for all 6 types; B2–B3 replace mount() with real panel roots.
+ * contentType → mount adapter + singleton metadata (Phase B).
+ * B2: real viewport (toolbar + canvas measure); B3: remaining panels.
  */
 import { TYPE_META, TYPE_ORDER, typeLabel, typeColor } from './DockConstants.js';
 
@@ -14,6 +14,7 @@ export class DockContentRegistry {
         this._entries = new Map();
         /** @type {Map<string, HTMLElement>} contentType → stable root (singleton pool by type) */
         this._rootsByType = new Map();
+        this._viewportResizeScheduled = false;
 
         TYPE_ORDER.forEach((type) => {
             this.register(type, {
@@ -21,7 +22,7 @@ export class DockContentRegistry {
                 color: typeColor(type),
                 singleton: true,
                 closeable: type !== 'viewport',
-                mount: null // default placeholder
+                mount: type === 'viewport' ? this._mountViewport.bind(this) : null
             });
         });
     }
@@ -69,6 +70,77 @@ export class DockContentRegistry {
             return;
         }
         this._placeholderMount(node, bodyEl, entry);
+    }
+
+    /**
+     * Viewport leaf: toolbar + canvas-viewport measure host with canvas inside (no full-screen absolute).
+     */
+    _mountViewport(_workspaceId, node, bodyEl) {
+        let root = this._rootsByType.get('viewport');
+        if (!root) {
+            root = this._ensureViewportRoot();
+            this._rootsByType.set('viewport', root);
+        }
+        root.dataset.leafId = node.id;
+        root.dataset.contentType = 'viewport';
+        if (root.parentElement !== bodyEl) {
+            bodyEl.appendChild(root);
+        }
+        this._scheduleViewportResize();
+    }
+
+    _ensureViewportRoot() {
+        const mainWorkspace = document.getElementById('main-workspace');
+        const mainPanel = document.getElementById('main-panel');
+        const toolbar = document.getElementById('toolbar-container');
+        const viewport = document.getElementById('canvas-viewport');
+        const canvasContainer = document.getElementById('canvas-container');
+
+        if (!mainPanel || !toolbar || !viewport) {
+            // Fallback placeholder if shell DOM is incomplete
+            const fallback = document.createElement('div');
+            fallback.className = 'dock-placeholder dock-viewport-root';
+            fallback.dataset.contentType = 'viewport';
+            fallback.textContent = 'Viewport';
+            return fallback;
+        }
+
+        // Nest canvas under measure host so it moves with the leaf (floating + splits).
+        if (canvasContainer && canvasContainer.parentElement !== viewport) {
+            viewport.appendChild(canvasContainer);
+        }
+
+        // Prefer main-workspace as stable root; else wrap main-panel.
+        const root = mainWorkspace || mainPanel;
+        root.classList.add('dock-viewport-root');
+        root.dataset.contentType = 'viewport';
+
+        // Ensure panel children stay under main-panel if we reparented only workspace
+        if (mainWorkspace && mainPanel.parentElement !== mainWorkspace) {
+            mainWorkspace.appendChild(mainPanel);
+        }
+        if (toolbar.parentElement !== mainPanel) {
+            mainPanel.insertBefore(toolbar, mainPanel.firstChild);
+        }
+        if (viewport.parentElement !== mainPanel) {
+            mainPanel.appendChild(viewport);
+        }
+
+        return root;
+    }
+
+    _scheduleViewportResize() {
+        if (this._viewportResizeScheduled) return;
+        this._viewportResizeScheduled = true;
+        requestAnimationFrame(() => {
+            this._viewportResizeScheduled = false;
+            const editor = this.levelEditor;
+            if (editor && typeof editor.updateCanvas === 'function') {
+                editor.updateCanvas();
+            } else if (editor?.canvasRenderer) {
+                editor.canvasRenderer.resizeCanvas();
+            }
+        });
     }
 
     _placeholderMount(node, bodyEl, entry) {

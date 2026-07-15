@@ -405,12 +405,14 @@ export class LevelEditor {
                 this.log('warn', 'Failed to sync preloaded images to CanvasRenderer:', error.message);
             }
             this.lifecycleController.initializeUIComponents(domElements);
-            // B1: dock shell + restore panels.dock.*; real content mounts in B2–B3
+            // B2: dock shell + restore; viewport (toolbar+canvas) mounts into leaf
             if (this.dockManager) {
                 this.dockManager.init();
             }
             this.lifecycleController.initializeEventHandlerManager();
             this.lifecycleController.initializeMenuAndEvents();
+            // After dock mount + RO attached: measure real leaf size
+            this.updateCanvas();
             await this.initializeLevelAndData();
             await this.finalizeInitialization();
 
