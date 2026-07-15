@@ -22,6 +22,13 @@
 - When the conversation includes stable preferences, constraints, or style directives, store them in MemPalace via `mempalace_add_drawer` under a rules/preferences room and link with `mempalace_kg_add`.
 - Keep only reusable, stable rules; avoid storing transient one-off requests.
 
+## Git: agent owns commit + push (user does nothing by hand)
+- The user does **not** run git by hand. After finished work, the agent **commits and pushes** to `origin` (current branch, usually `master`) without asking the user to push.
+- Do not leave the branch only “ahead of origin” and tell the user to push.
+- Skip push only if it fails after retry (auth/network) — report the error; normal path is agent push.
+- Force-push only for history rewrite tasks or explicit user request; never casually.
+- Do not commit `node_modules/`, secrets, or junk.
+
 ## Response style
 - Отвечать на русском языке.
 - Только суть: без вступлений, вежливости, «отличный вопрос», «как видно из», «стоит отметить».

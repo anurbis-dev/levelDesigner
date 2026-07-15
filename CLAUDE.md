@@ -20,6 +20,15 @@
 - Only after these steps, report the issue briefly and continue with repository evidence as fallback.
 - If MemPalace is temporarily unavailable (e.g., MCP server not yet connected this session), fall back to the local auto-memory files and repository evidence.
 
+## Git: agent owns commit + push (user does nothing by hand)
+
+- The user does **not** run git commands. After a finished unit of work (feature/fix/docs/chore the user asked for), the agent must **commit and push** to `origin` without asking the user to commit/push.
+- Default remote/branch: `origin` / current branch (usually `master`). After commit: `git push -u origin HEAD` (or plain `git push` if upstream is set).
+- Do not leave the branch only “ahead of origin” and tell the user to push.
+- Skip push only if push fails after retry (auth/network) — then report the exact error; still do not ask the user to push manually as the normal path.
+- Force-push (`--force` / `--force-with-lease`) only when the task itself rewrote history (e.g. filter-repo) or the user explicitly asked; never force-push casually.
+- Same exclusions as usual: no `node_modules/`, secrets, or unrelated junk in commits.
+
 ## Post-fix mandatory steps
 
 After completing any code fix or feature implementation, always execute these steps in order before reporting done:
@@ -30,7 +39,8 @@ After completing any code fix or feature implementation, always execute these st
    - **`docs/CHANGELOG.md` stays unreleased-only**: it must contain only entries not yet in a git commit. At the moment of `git commit` touching `docs/CHANGELOG.md`, before committing, move everything already committed (i.e. the pre-commit `HEAD` content of the file) into `docs/CHANGELOG_ARCHIVE.md` (prepend, keep newest-first) and leave `CHANGELOG.md` holding only the new entries from this commit. Never let `CHANGELOG.md` re-accumulate multiple releases' worth of history — full history lives in `CHANGELOG_ARCHIVE.md` / `git log`.
 2. **Update MemPalace** — persist any stable architectural facts, design decisions, or newly discovered patterns via `mempalace_add_drawer` / `mempalace_update_drawer` and `mempalace_kg_add` if relevant.
 3. **Update local auto-memory** — only for always-on behavioral triggers (e.g., rate-limit handling, response language). Everything else goes to MemPalace, not local files.
-4. **Browser verification** — confirm the fix via `chrome-devtools` MCP (`list_console_messages`, `evaluate_script` for state check). Only then declare the task complete.
+4. **Browser verification** — confirm the fix via `chrome-devtools` MCP (`list_console_messages`, `evaluate_script` for state check).
+5. **Git commit + push** — per section above; do not declare the task complete while local commits that belong to this work are unpushed (unless push failed after retry).
 
 Do not skip these steps even for "small" fixes — consistency is what keeps docs and memory trustworthy over time.
 

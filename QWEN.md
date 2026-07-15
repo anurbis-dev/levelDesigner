@@ -19,6 +19,13 @@
 - Only after these steps, report the issue briefly and continue with repository evidence as fallback.
 - If MemPalace is temporarily unavailable (e.g., MCP server not yet connected this session), fall back to repository evidence.
 
+## Git: agent owns commit + push (user does nothing by hand)
+
+- The user does **not** run git by hand. After finished work, the agent **commits and pushes** to `origin` (current branch) without asking the user to push.
+- Do not leave the branch only “ahead of origin” and tell the user to push.
+- Skip push only if it fails after retry — report the error. Force-push only for history rewrite or explicit request.
+- Do not commit `node_modules/`, secrets, or junk.
+
 ## Response style
 
 - Отвечать на русском языке.
