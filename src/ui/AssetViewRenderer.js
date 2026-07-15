@@ -269,7 +269,11 @@ export class AssetViewRenderer {
     }
 
     /**
-     * Item select: plain LMB on mousedown; Ctrl/Shift keep click path (marquee pending).
+     * Item select for Assets:
+     * - Unselected + plain LMB: select on mousedown (HTML5 drag often swallows click).
+     * - Already selected (multi): do NOT replace on mousedown — keep multi for drag-to-canvas.
+     * - Plain click without drag on a multi-selected item: sole-select that item.
+     * - Ctrl/Shift: click path only (marquee pending on mousedown).
      * @param {HTMLElement} el
      * @param {object} asset
      */
@@ -277,12 +281,19 @@ export class AssetViewRenderer {
         el.addEventListener('mousedown', (e) => {
             if (e.button !== 0) return;
             if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+            const selected = this.assetPanel.stateManager.get('selectedAssets') || new Set();
+            // Preserve multi-select when grabbing an already-selected asset for canvas drop.
+            if (selected.has(asset.id)) return;
             this.assetPanel.handleItemClick(e, asset);
         });
         el.addEventListener('click', (e) => {
-            // Modifiers: marquee may consume mousedown; click completes toggle/range.
-            // Plain click: no-op if mousedown already selected (same selection).
             if (e.ctrlKey || e.metaKey || e.shiftKey) {
+                this.assetPanel.handleItemClick(e, asset);
+                return;
+            }
+            // No drag occurred (click fired): collapse multi to the clicked asset if needed.
+            const selected = this.assetPanel.stateManager.get('selectedAssets') || new Set();
+            if (selected.has(asset.id) && selected.size > 1) {
                 this.assetPanel.handleItemClick(e, asset);
             }
         });
