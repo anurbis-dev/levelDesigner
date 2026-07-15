@@ -287,9 +287,21 @@ export class SelectionUtils {
      * @param {Event} e - Событие mousemove
      * @param {StateManager} stateManager - Менеджер состояния
      */
+    /**
+     * Active panel/canvas marquee flag key for move/up.
+     * After modifier-pending activates, pending* is cleared — keep key via options.mouseStateKey
+     * or marquee.pendingMouseKey (set for the whole gesture, same as immediate start).
+     */
+    static _activeMarqueeMouseKey(stateManager) {
+        const opts = stateManager.get('marquee.options');
+        return stateManager.get('marquee.pendingMouseKey')
+            || opts?.mouseStateKey
+            || 'mouse.isMarqueeSelecting';
+    }
+
     static handleMarqueeMouseMove(e, stateManager) {
-        // Check active marquee selection
-        const mouseStateKey = stateManager.get('marquee.pendingMouseKey') || 'mouse.isMarqueeSelecting';
+        // Check active marquee selection (Assets uses isAssetMarqueeSelecting, not canvas key)
+        const mouseStateKey = this._activeMarqueeMouseKey(stateManager);
         if (stateManager.get(mouseStateKey)) {
             // Marquee already active - update it
             const marqueeDiv = stateManager.get('marquee.element');
@@ -297,6 +309,7 @@ export class SelectionUtils {
             if (marqueeDiv && container) {
                 const rect = container.getBoundingClientRect();
                 const startPos = stateManager.get('marquee.startPos');
+                if (!startPos) return;
 
                 const left = Math.min(startPos.x, e.clientX) - rect.left + container.scrollLeft;
                 const top = Math.min(startPos.y, e.clientY) - rect.top + container.scrollTop;
@@ -314,7 +327,7 @@ export class SelectionUtils {
             return;
         }
 
-        // If there is pending for Ctrl - activate at 4px threshold
+        // If there is pending for Ctrl/Shift - activate at 4px threshold
         const pendingStartPos = stateManager.get('marquee.pendingStartPos');
         if (pendingStartPos) {
             const dxp = e.clientX - pendingStartPos.x;
@@ -325,7 +338,10 @@ export class SelectionUtils {
                 const container = stateManager.get('marquee.pendingContainer');
                 const options = stateManager.get('marquee.pendingOptions');
                 const marqueeMode = stateManager.get('marquee.pendingMode');
-                const mouseStateKey = stateManager.get('marquee.pendingMouseKey') || 'mouse.isMarqueeSelecting';
+                const activeKey = stateManager.get('marquee.pendingMouseKey')
+                    || options?.mouseStateKey
+                    || 'mouse.isMarqueeSelecting';
+                if (!container) return;
 
                 const rect = container.getBoundingClientRect();
                 const marqueeDiv = document.createElement('div');
@@ -342,23 +358,26 @@ export class SelectionUtils {
                 marqueeDiv.style.pointerEvents = 'none';
                 marqueeDiv.style.zIndex = '1000';
 
-                stateManager.set(mouseStateKey, true);
+                stateManager.set(activeKey, true);
                 stateManager.set('marquee.startPos', pendingStartPos);
                 stateManager.set('marquee.element', marqueeDiv);
                 stateManager.set('marquee.container', container);
                 stateManager.set('marquee.options', options);
                 stateManager.set('marquee.mode', marqueeMode);
+                // Keep key for subsequent move/up (same as immediate-start path).
+                // Clearing this was the Assets bug: move fell back to isMarqueeSelecting
+                // and never resized the DOM rect under isAssetMarqueeSelecting.
+                stateManager.set('marquee.pendingMouseKey', activeKey);
 
                 // Update visual highlighting of elements
                 this.updateMarqueeSelection(container, marqueeDiv, stateManager);
 
-                // Clear pending
+                // Clear pending start only (not the active mouse key)
                 stateManager.set('marquee.pendingStartPos', null);
                 stateManager.set('marquee.pendingMode', null);
                 stateManager.set('marquee.pendingOptions', null);
                 stateManager.set('marquee.pendingContainer', null);
                 stateManager.set('marquee.pendingSelector', null);
-                stateManager.set('marquee.pendingMouseKey', null);
             }
         }
     }
@@ -369,57 +388,62 @@ export class SelectionUtils {
      * @param {StateManager} stateManager - Менеджер состояния
      */
     static handleMarqueeMouseUp(e, stateManager, options = {}) {
-        // Panel handlers MUST pass options.mouseStateKey (e.g. isAssetMarqueeSelecting).
-        // Prefer that key so we never steal/clear canvas marquee (mouse.isMarqueeSelecting +
-        // mouse.marqueeRect) on window mouseup from AssetPanel / other BasePanel listeners.
+        // Panel handlers pass options.mouseStateKey (e.g. isAssetMarqueeSelecting).
+        // Do not clear canvas mouse.isMarqueeSelecting / mouse.marqueeRect.
         const panelKey = options?.mouseStateKey || null;
         const pendingKey = stateManager.get('marquee.pendingMouseKey');
         const pendingOpts = stateManager.get('marquee.pendingOptions');
         const storedOptions = stateManager.get('marquee.options');
 
-        // Canvas finishMarqueeSelection stores getObjectsInMarquee — never treat as panel DOM marquee.
-        if (storedOptions?.getObjectsInMarquee) {
+        // Live canvas finalize stores getObjectsInMarquee — ignore while canvas marquee active.
+        if (storedOptions?.getObjectsInMarquee && stateManager.get('mouse.isMarqueeSelecting')) {
             return;
         }
 
         const mouseStateKey = panelKey
             || pendingKey
-            || pendingOpts?.mouseStateKey
             || storedOptions?.mouseStateKey
+            || pendingOpts?.mouseStateKey
             || 'mouse.isMarqueeSelecting';
 
-        // Not our panel's marquee/pending — leave canvas and other panels alone.
         if (panelKey) {
-            const ourPending = pendingKey === panelKey
-                || pendingOpts?.mouseStateKey === panelKey;
+            const ourPending = !!(
+                stateManager.get('marquee.pendingStartPos')
+                && (pendingKey === panelKey || pendingOpts?.mouseStateKey === panelKey)
+            );
             const ourActive = !!stateManager.get(panelKey);
             if (!ourActive && !ourPending) return;
 
-            if (ourPending) {
+            // Ctrl/Shift click without drag: drop pending; click handler does toggle/add.
+            if (ourPending && !ourActive) {
                 stateManager.set('marquee.pendingStartPos', null);
                 stateManager.set('marquee.pendingMode', null);
                 stateManager.set('marquee.pendingOptions', null);
                 stateManager.set('marquee.pendingContainer', null);
                 stateManager.set('marquee.pendingSelector', null);
-                stateManager.set('marquee.pendingMouseKey', null);
+                if (pendingKey === panelKey) {
+                    stateManager.set('marquee.pendingMouseKey', null);
+                }
+                return;
             }
             if (!ourActive) return;
         } else {
-            // Legacy path without panel key
             stateManager.set('marquee.pendingStartPos', null);
             stateManager.set('marquee.pendingMode', null);
             stateManager.set('marquee.pendingOptions', null);
             stateManager.set('marquee.pendingContainer', null);
             stateManager.set('marquee.pendingSelector', null);
-            stateManager.set('marquee.pendingMouseKey', null);
-            if (!stateManager.get(mouseStateKey)) return;
+            if (!stateManager.get(mouseStateKey)) {
+                stateManager.set('marquee.pendingMouseKey', null);
+                return;
+            }
         }
 
         const marqueeDiv = stateManager.get('marquee.element');
         const container = stateManager.get('marquee.container');
         const marqueeOptions = stateManager.get('marquee.options');
 
-        // DOM panel marquee only (needs element + container)
+        // DOM panel marquee only
         if (marqueeDiv && container && marqueeOptions && !marqueeOptions.getObjectsInMarquee) {
             this.finalizeMarqueeSelection(container, marqueeDiv, stateManager);
         }
@@ -428,7 +452,6 @@ export class SelectionUtils {
             marqueeDiv.parentNode.removeChild(marqueeDiv);
         }
 
-        // Clear only THIS panel flag + DOM marquee bookkeeping — never wipe canvas marqueeRect.
         stateManager.set(mouseStateKey, false);
         stateManager.set('marquee.startPos', null);
         stateManager.set('marquee.element', null);
@@ -442,7 +465,9 @@ export class SelectionUtils {
         stateManager.set('marquee.pendingOptions', null);
         stateManager.set('marquee.pendingContainer', null);
         stateManager.set('marquee.pendingSelector', null);
-        stateManager.set('marquee.pendingMouseKey', null);
+        if (!panelKey || pendingKey === panelKey || mouseStateKey === panelKey) {
+            stateManager.set('marquee.pendingMouseKey', null);
+        }
 
         if (marqueeOptions && marqueeOptions.onSelectionChange && !marqueeOptions.getObjectsInMarquee) {
             const selectedItems = stateManager.get(marqueeOptions.selectionKey || 'selectedObjects');
