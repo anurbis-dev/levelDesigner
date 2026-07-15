@@ -181,7 +181,7 @@ export class DockRenderer {
         // Empty gap between title and right icons — only this area starts panel drag.
         const handle = document.createElement('div');
         handle.className = 'drag-handle leaf-header-gap';
-        handle.title = 'Drag panel · Shift+drop outside to detach · Shift+drop on self to copy';
+        handle.title = 'Hold Shift to move/split/copy/detach panel';
         handle.addEventListener('pointerdown', (e) => {
             if (!this.drag) return;
             this.drag.startNodeDrag(e, () => node.id, {

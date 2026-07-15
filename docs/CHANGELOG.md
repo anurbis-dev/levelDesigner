@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- Dock UI customize: hold **Shift** for detach-to-floating, self-drop copy, and floating window snap/ungroup; normal re-dock/reorder without Shift (`isDockCustomizeKey`).
+- Dock UI customize: hold **Shift** for all layout ops (move/split/copy/detach/snap/resize) and drop/snap highlights; release mid-drag clears highlight and cancels layout commit (`isDockCustomizeKey`).

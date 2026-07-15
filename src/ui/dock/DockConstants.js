@@ -33,9 +33,10 @@ export function typeColor(contentType) {
 }
 
 /**
- * Global modifier for dock UI customization gestures:
- * detach to floating, self-drop clone/copy, floating window snap-to-neighbor.
- * Regular re-dock / drag-reorder inside the tree works without Shift.
+ * Global modifier for dock UI layout customization.
+ * With Shift only: move/split panels, self-drop clone, detach to floating,
+ * floating snap/ungroup, floating resize, drop-zone / snap highlights.
+ * Without Shift (or after Shift release mid-gesture): no layout change / no highlight.
  * @param {Event|{ shiftKey?: boolean }|null|undefined} e
  * @returns {boolean}
  */
