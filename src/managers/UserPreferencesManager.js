@@ -27,6 +27,9 @@ export class UserPreferencesManager extends BaseManager {
             'assetTabOrder': 'panels.assetTabOrder',
             'rightPanelSplits': 'panels.rightPanelSplits',
             'leftPanelSplits': 'panels.leftPanelSplits',
+            // Dock layout (Phase B1)
+            'dockMainTree': 'panels.dock.mainTree',
+            'dockFloatingWindows': 'panels.dock.floatingWindows',
             // Panel visibility states
             'rightPanelVisible': 'ui.rightPanelVisible',
             'leftPanelVisible': 'ui.leftPanelVisible',

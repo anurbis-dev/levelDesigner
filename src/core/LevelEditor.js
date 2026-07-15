@@ -120,7 +120,7 @@ export class LevelEditor {
         this.panelPositionManager = new PanelPositionManager(this);
         this.lifecycle.register('panelPositionManager', this.panelPositionManager, { priority: 2 });
 
-        // Split-tree dock (Phase B) — B0 placeholders; real panels B2–B3
+        // Split-tree dock (Phase B) — B1 singleton + persistence; real panels B2–B3
         this.dockManager = new DockManager(this);
         this.lifecycle.register('dockManager', this.dockManager, { priority: 2 });
 
@@ -405,7 +405,7 @@ export class LevelEditor {
                 this.log('warn', 'Failed to sync preloaded images to CanvasRenderer:', error.message);
             }
             this.lifecycleController.initializeUIComponents(domElements);
-            // B0: dock shell with placeholders (real content mounts in B2–B3)
+            // B1: dock shell + restore panels.dock.*; real content mounts in B2–B3
             if (this.dockManager) {
                 this.dockManager.init();
             }

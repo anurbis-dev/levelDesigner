@@ -269,6 +269,11 @@ export class EditorPreferencesController extends BaseModule {
                         editor.configManager.set('grid.subdivThickness', gridSubdivThickness);
                     }
 
+                    // Dock layout (B1) — ensure latest tree is in config before flush
+                    if (editor.dockManager?._inited) {
+                        editor.dockManager.persistence?.save(editor.dockManager.getLayoutSnapshot());
+                    }
+
                     // Force save all modified settings immediately
                     if (editor.configManager) {
                         editor.configManager.forceSaveAllSettings();

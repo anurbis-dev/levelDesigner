@@ -1,12 +1,14 @@
 /**
  * Facade for the split-tree dock system (replaces PanelPositionManager over B0–B5).
- * B0: placeholders only; real panel content mounts in B2–B3.
+ * B1: singleton registry + layout persistence; real panel content mounts in B2–B3.
  */
 import { Logger } from '../../utils/Logger.js';
 import { TYPE_ORDER, typeLabel } from './DockConstants.js';
 import { DockTreeModel } from './DockTreeModel.js';
 import { DockRenderer } from './DockRenderer.js';
 import { DockDragController } from './DockDragController.js';
+import { DockContentRegistry } from './DockContentRegistry.js';
+import { DockPersistence } from './DockPersistence.js';
 
 export class DockManager {
     /**
@@ -15,14 +17,17 @@ export class DockManager {
     constructor(levelEditor) {
         this.levelEditor = levelEditor;
         this.model = new DockTreeModel();
+        this.registry = new DockContentRegistry(levelEditor);
+        this.persistence = new DockPersistence(levelEditor);
         this.renderer = null;
         this.drag = null;
         this._inited = false;
         this._chipCleanups = [];
+        this._suppressPersist = false;
     }
 
     /**
-     * Mount dock into #dock-workspace / #split-root / #floating-layer and render default tree.
+     * Mount dock into #dock-workspace / #split-root / #floating-layer; restore layout if any.
      */
     init() {
         if (this._inited) return;
@@ -35,13 +40,22 @@ export class DockManager {
             return;
         }
 
-        this.model.reset();
+        const saved = this.persistence.load();
+        if (saved) {
+            this.model.restoreFromSnapshot(saved);
+            Logger.ui.info('DockManager: restored layout from panels.dock.*');
+        } else {
+            this.model.reset();
+        }
 
         this.renderer = new DockRenderer({
             model: this.model,
+            registry: this.registry,
             splitRoot,
             floatingLayer,
             workspaceEl,
+            mountLeafContent: (ws, node, body) => this.registry.mountLeafContent(ws, node, body),
+            isCloseable: (type) => this.registry.isCloseable(type),
             onStructureChange: () => this._onStructureChange()
         });
 
@@ -55,23 +69,41 @@ export class DockManager {
 
         this._wireChips();
         this._wireDebugActions();
+        this._suppressPersist = true;
         this.renderer.render();
+        this._suppressPersist = false;
+        this._updateChipVisibility();
         this._inited = true;
-        Logger.ui.info('DockManager initialized (B0 placeholders)');
+        Logger.ui.info('DockManager initialized (B1 singleton + persistence)');
     }
 
     _onStructureChange() {
-        // B1: DockPersistence.save — no-op in B0
+        this._updateChipVisibility();
+        if (this._suppressPersist || !this._inited) return;
+        this.persistence.scheduleSave(this.model.snapshot());
+    }
+
+    _updateChipVisibility() {
+        const present = this.model.collectPresentContentTypes();
+        document.querySelectorAll('#dock-chips .chip[data-new]').forEach((chip) => {
+            const type = chip.dataset.new;
+            const missing = type && !present.has(type);
+            chip.hidden = !missing;
+            chip.style.display = missing ? '' : 'none';
+        });
     }
 
     _wireChips() {
         const chips = document.querySelectorAll('#dock-chips .chip[data-new]');
         chips.forEach((chip) => {
             const handler = (e) => {
-                this.drag.startNodeDrag(e, () => `new:${chip.dataset.new}:${chip.dataset.label}`, {
-                    ghostLabel: chip.dataset.label,
+                const type = chip.dataset.new;
+                if (!type || this.model.hasContentType(type)) return;
+                this.drag.startNodeDrag(e, () => `new:${type}:${chip.dataset.label || typeLabel(type)}`, {
+                    ghostLabel: chip.dataset.label || typeLabel(type),
                     onNoTargetDrop: (x, y) => {
-                        const node = this.model.makeLeaf(chip.dataset.new, chip.dataset.label);
+                        if (this.model.hasContentType(type)) return;
+                        const node = this.model.makeLeaf(type, chip.dataset.label || typeLabel(type));
                         this.model.floatingWindows.push(
                             this.model.makeFloatingWindow(node, x - 70, y - 14, 220, 160)
                         );
@@ -90,13 +122,14 @@ export class DockManager {
             const onReset = () => {
                 this.model.reset();
                 this.renderer.render();
+                this.persistence.save(this.model.snapshot());
             };
             resetBtn.addEventListener('click', onReset);
             this._chipCleanups.push(() => resetBtn.removeEventListener('click', onReset));
         }
     }
 
-    /** Snapshot for B1 persistence / debug. */
+    /** Snapshot for persistence / debug. */
     getLayoutSnapshot() {
         return this.model.snapshot();
     }
@@ -105,9 +138,33 @@ export class DockManager {
         if (!this._inited) return;
         this.model.reset();
         this.renderer.render();
+        this.persistence.save(this.model.snapshot());
+    }
+
+    /** Ensure contentType is present (chip reopen / View menu later). Floating if main empty zone. */
+    showContentType(contentType, opts = {}) {
+        if (!this._inited) return null;
+        if (this.model.hasContentType(contentType)) {
+            return this.model.findLeafByContentType(contentType);
+        }
+        const node = this.model.makeLeaf(contentType, typeLabel(contentType));
+        if (!this.model.mainTree) {
+            this.model.mainTree = node;
+        } else {
+            const x = opts.x ?? 80;
+            const y = opts.y ?? 80;
+            this.model.floatingWindows.push(
+                this.model.makeFloatingWindow(node, x, y, opts.w ?? 280, opts.h ?? 200)
+            );
+        }
+        this.renderer.render();
+        return node;
     }
 
     destroy() {
+        if (this._inited) {
+            this.persistence.flush(this.model.snapshot());
+        }
         this._chipCleanups.forEach((fn) => {
             try {
                 fn();
@@ -116,6 +173,8 @@ export class DockManager {
         this._chipCleanups = [];
         if (this.drag) this.drag.destroy();
         if (this.renderer) this.renderer.destroy();
+        if (this.registry) this.registry.destroy();
+        if (this.persistence) this.persistence.destroy();
         this.drag = null;
         this.renderer = null;
         this._inited = false;

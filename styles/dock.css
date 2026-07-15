@@ -1,4 +1,4 @@
-/* Split-tree dock system (Phase B0) — port of tmp/split-tree-prototype_v1_10.html */
+/* Split-tree dock system (Phase B) — port of tmp/split-tree-prototype_v1_10.html */
 
 :root {
   --dock-panel-border: #262a35;
@@ -42,6 +42,11 @@
 
 #dock-chips .chip:active {
   cursor: grabbing;
+}
+
+/* B1: chips only for missing (closed) singleton types */
+#dock-chips .chip[hidden] {
+  display: none !important;
 }
 
 #dock-chips button.action {

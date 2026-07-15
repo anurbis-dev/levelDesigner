@@ -1,32 +1,25 @@
 /**
  * Dock DOM renderer with leaf-content reconciliation by node.id.
- * Chrome (headers/resizers/floating shells) may be rebuilt; content roots reparent only.
+ * Chrome may be rebuilt; content roots reparent only.
  */
-import { typeLabel, typeColor, FLOAT_MIN_W, FLOAT_MIN_H, COLLAPSED_H } from './DockConstants.js';
+import { typeLabel, typeColor, COLLAPSED_H } from './DockConstants.js';
 
 export class DockRenderer {
-    /**
-     * @param {object} opts
-     * @param {import('./DockTreeModel.js').DockTreeModel} opts.model
-     * @param {HTMLElement} opts.splitRoot
-     * @param {HTMLElement} opts.floatingLayer
-     * @param {HTMLElement} opts.workspaceEl
-     * @param {(workspaceId: string, node: object, bodyEl: HTMLElement) => void} [opts.mountLeafContent]
-     * @param {() => void} [opts.onStructureChange]
-     * @param {object} opts.drag  - DockDragController (set after construction if needed)
-     */
     constructor(opts) {
         this.model = opts.model;
         this.splitRoot = opts.splitRoot;
         this.floatingLayer = opts.floatingLayer;
         this.workspaceEl = opts.workspaceEl;
-        this.mountLeafContent = opts.mountLeafContent || this._defaultPlaceholderMount.bind(this);
+        this.registry = opts.registry || null;
+        this.mountLeafContent = opts.mountLeafContent
+            || (this.registry
+                ? (ws, node, body) => this.registry.mountLeafContent(ws, node, body)
+                : this._defaultPlaceholderMount.bind(this));
+        this.isCloseable = opts.isCloseable
+            || ((type) => (this.registry ? this.registry.isCloseable(type) : type !== 'viewport'));
         this.onStructureChange = opts.onStructureChange || (() => {});
         this.drag = opts.drag || null;
-
-        /** @type {Map<string, HTMLElement>} leafId -> stable content root */
         this._contentRoots = new Map();
-        /** @type {HTMLElement} off-tree pool for detached content roots */
         this._contentPool = document.createElement('div');
         this._contentPool.id = 'dock-content-pool';
         this._contentPool.style.display = 'none';
@@ -53,14 +46,10 @@ export class DockRenderer {
         }
     }
 
-    /**
-     * Park all known content roots into the off-tree pool before chrome rebuild.
-     */
     _parkContentRoots() {
+        if (this.registry) this.registry.parkRoots(this._contentPool);
         this._contentRoots.forEach((root) => {
-            if (root.parentElement !== this._contentPool) {
-                this._contentPool.appendChild(root);
-            }
+            if (root.parentElement !== this._contentPool) this._contentPool.appendChild(root);
         });
     }
 
@@ -157,10 +146,7 @@ export class DockRenderer {
         title.className = 'leaf-title';
         title.textContent = typeLabel(node.contentType);
         handle.appendChild(title);
-        const caret = document.createElement('span');
-        caret.className = 'type-caret';
-        caret.textContent = '▾';
-        handle.appendChild(caret);
+        // Type-menu disabled for singleton real types (B1) — no caret / type switch.
 
         handle.addEventListener('pointerdown', (e) => {
             if (!this.drag) return;
@@ -208,9 +194,11 @@ export class DockRenderer {
         const el = document.createElement('div');
         el.className = 'leaf-node';
         el.dataset.nodeId = node.id;
+        el.dataset.contentType = node.contentType || '';
+        const canClose = this.isCloseable(node.contentType);
         const header = this._buildHeader(node, workspaceId, {
             onDetach: () => this.detachLeafToFloating(workspaceId, node.id, el),
-            onClose: () => this.closePane(workspaceId, node.id)
+            onClose: canClose ? () => this.closePane(workspaceId, node.id) : null
         });
         const body = document.createElement('div');
         body.className = 'leaf-body';
@@ -223,8 +211,10 @@ export class DockRenderer {
 
     closePane(workspaceId, id) {
         const current = this.model.getTreeOf(workspaceId);
+        const node = this.model.findNode(current, id);
+        if (node && !this.isCloseable(node.contentType)) return;
         this.model.setTreeOf(workspaceId, this.model.removeLeaf(current, id));
-        // Keep content root in pool for potential reopen (B1)
+        // Content root stays in registry/pool for chip reopen (B1)
         this.render();
     }
 

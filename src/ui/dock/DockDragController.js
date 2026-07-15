@@ -111,18 +111,9 @@ export class DockDragController {
             if (holdFired) return;
             endGesture();
             if (moved && target) {
+                // Self-drop no-op (B1: no duplicate-on-drag for singleton types)
                 if (opts.ownId && target.kind === 'leaf' && target.leafId === opts.ownId) {
-                    // B0 QA: temporary duplicate; B1 enables singleton guard
-                    const original = this.model.findNode(this.model.mainTree, opts.ownId)
-                        || this.model.floatingWindows.reduce(
-                            (acc, fw) => acc || this.model.findNode(fw.tree, opts.ownId),
-                            null
-                        );
-                    if (original) {
-                        const dup = this.model.makeLeaf(original.contentType, original.label);
-                        this.model.applyDropTarget(target, dup);
-                        this.render();
-                    }
+                    // ignore
                 } else {
                     const node = this.model.resolveDraggedNode(getRawPayload());
                     if (node) {
