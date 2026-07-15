@@ -1,6 +1,6 @@
 # Замена оконной системы Level Designer на split-tree прототип (Фаза B)
 
-**Status:** B0–B5 done · **next = B6** (docs)  
+**Status:** B0–B6 done (Phase B closed)  
 **Inventory date:** 2026-07-15 (call sites / init order / persist keys / index shell)
 
 ## Context
@@ -337,10 +337,10 @@ Multi-instance **не** в scope B3 (last-wins pool ок, один leaf на typ
 
 **Commit:** `refactor(dock): B5 remove PanelPositionManager`
 
-### B6 — документация
+### B6 — документация  ✅
 
-- [ ] DocCodeSync: `ARCHITECTURE.md`, `Context_map.md`, `CONTRIBUTING.md`, `CHANGELOG.md`
-- [ ] `tmp/2D_Editor_REFACTOR_PLAN_v2.md` — Фаза B closed + фактическая разбивка B0–B6 (+ B3.1 View menu, B4 multi-instance)
+- [x] DocCodeSync: `ARCHITECTURE.md`, `Context_map.md`, `CONTRIBUTING.md`, `API_GUIDE.md`, `CHANGELOG.md`, `COMMON_MISTAKES.md`, `DEVELOPMENT_GUIDE.md`
+- [x] `tmp/2D_Editor_REFACTOR_PLAN_v2.md` — Фаза B closed + фактическая разбивка B0–B6 (+ B3.1 View menu, B4 multi-instance)
 
 Каждый шаг — отдельный коммит (clean move → wire → remove old, отдельно от behavior).  
 B2/B3/B3.1/B4: chrome-devtools Standard/Full tier (`evaluate_script` / `list_console_messages`,

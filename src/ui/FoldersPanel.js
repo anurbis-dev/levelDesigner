@@ -498,7 +498,8 @@ export class FoldersPanel extends BasePanel {
         // This will trigger subscription in AssetPanel which will sync tabs
         // DO NOT call syncFoldersToTabs() here - it causes double sync
         if (this.stateManager) {
-            this.stateManager.set('selectedFolders', Array.from(this.selectedFolders));
+            const key = this.assetPanel?.uiStateKey?.('selectedFolders') || 'selectedFolders';
+            this.stateManager.set(key, Array.from(this.selectedFolders));
         }
 
     }
@@ -688,7 +689,8 @@ export class FoldersPanel extends BasePanel {
         // Listen for tab changes to sync with folder selection
         // Note: Do not call set('selectedFolders') here to avoid recursion
         // syncTabsToFolders only updates visual selection, not state
-        this.subscriptions.push(this.stateManager.subscribe('activeAssetTabs', (activeTabs) => {
+        const tabsKey = this.assetPanel?.uiStateKey?.('activeAssetTabs') || 'activeAssetTabs';
+        this.subscriptions.push(this.stateManager.subscribe(tabsKey, (activeTabs) => {
             if (activeTabs && activeTabs.size > 0) {
                 // Only update visual selection, don't modify state
                 this.syncTabsToFolders(activeTabs);

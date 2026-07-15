@@ -75,8 +75,8 @@ export class AssetFoldersController {
      */
     getActiveTabPaths() {
         const assetPanel = this.assetPanel;
-        const activeTab = assetPanel.stateManager.get('activeAssetTab');
-        const activeTabs = assetPanel.stateManager.get('activeAssetTabs') || new Set();
+        const activeTab = assetPanel.stateManager.get(assetPanel.uiStateKey('activeAssetTab'));
+        const activeTabs = assetPanel.stateManager.get(assetPanel.uiStateKey('activeAssetTabs')) || new Set();
 
         // Always prioritize selected folders from FoldersPanel for content display
         if (assetPanel.foldersPanel?.selectedFolders && assetPanel.foldersPanel.selectedFolders.size > 0) {
@@ -191,6 +191,7 @@ export class AssetFoldersController {
      */
     saveFoldersPosition() {
         const assetPanel = this.assetPanel;
+        if (!assetPanel.isPrimary) return;
         if (assetPanel.levelEditor?.userPrefs) {
             assetPanel.levelEditor.userPrefs.set('foldersPosition', assetPanel.foldersPosition);
             Logger.ui.debug('Saved folders position to preferences:', assetPanel.foldersPosition);
@@ -384,28 +385,24 @@ export class AssetFoldersController {
                     // Restore to previous width
                     const newWidth = Math.min(previousFoldersWidth, maxWidth);
 
-                    // Update StateManager instead of direct styles
-                    if (assetPanel.levelEditor?.stateManager) {
+                    assetPanel.foldersContainer.style.width = newWidth + 'px';
+                    assetPanel.updateContentVisibility(newWidth);
+                    if (assetPanel.isPrimary && assetPanel.levelEditor?.stateManager) {
                         assetPanel.levelEditor.stateManager.set('panels.foldersWidth', newWidth);
                     }
-                    assetPanel.updateContentVisibility(newWidth);
-
-                    // Save to preferences
-                    if (assetPanel.levelEditor?.userPrefs) {
+                    if (assetPanel.isPrimary && assetPanel.levelEditor?.userPrefs) {
                         assetPanel.levelEditor.userPrefs.set('foldersWidth', newWidth);
                     }
                 } else {
                     // Save current width and collapse
                     const newWidth = minWidth;
 
-                    // Update StateManager instead of direct styles
-                    if (assetPanel.levelEditor?.stateManager) {
+                    assetPanel.foldersContainer.style.width = newWidth + 'px';
+                    assetPanel.updateContentVisibility(newWidth);
+                    if (assetPanel.isPrimary && assetPanel.levelEditor?.stateManager) {
                         assetPanel.levelEditor.stateManager.set('panels.foldersWidth', newWidth);
                     }
-                    assetPanel.updateContentVisibility(newWidth);
-
-                    // Save to preferences
-                    if (assetPanel.levelEditor?.userPrefs) {
+                    if (assetPanel.isPrimary && assetPanel.levelEditor?.userPrefs) {
                         assetPanel.levelEditor.userPrefs.set('foldersWidth', newWidth);
                     }
                 }

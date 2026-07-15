@@ -1,4 +1,4 @@
-# Context Map - Level Designer v4.0.x (Phase A done; Phase B dock B0–B4.2 multi-viewport)
+# Context Map - Level Designer v4.0.2 (Phase A done; Phase B dock B0–B5 done, B6 docs)
 
 ## ⚠️ КРИТИЧЕСКИ ВАЖНО - ЧИТАТЬ ПЕРВЫМ
 
@@ -14,9 +14,9 @@
 
 ## 🎯 Быстрый старт для агента
 
-### Основные компоненты (v4.0.x Phase B dock; Phase A Refactor done)
-- **LevelEditor** — координатор; multi-level sessions; `project`; controllers Config/Lifecycle/Preferences; **`viewportViewManager`** (multi-viewport B4.2); **`dockManager`** when dock shell active
-- **Dock (Phase B)**: `src/ui/dock/` — `DockManager`, `DockTreeModel`, `DockRenderer`, `DockDragController`, `DockContentRegistry`, `DockPanelFactory`, `DockTypeMenu`, `ViewportLeafChrome`, `DockFloatWorkspace` (relative float pos + edge snap prefs), persistence `panels.dock.*`. Primary panels reparent into leaves; multi-instance copies for outliner/details/layers/levels/assets
+### Основные компоненты (v4.0.2 Phase B dock closed B0–B5; Phase A Refactor done)
+- **LevelEditor** — координатор; multi-level sessions; `project`; controllers Config/Lifecycle/Preferences; **`viewportViewManager`** (multi-viewport B4.2); **`dockManager`** (единственный layout; B5 удалил `PanelPositionManager`)
+- **Dock (Phase B)**: `src/ui/dock/` — `DockManager`, `DockTreeModel`, `DockRenderer`, `DockDragController`, `DockContentRegistry`, `DockPanelFactory`, `DockTypeMenu`, `ViewportLeafChrome`, `DockFloatWorkspace`, `DockPersistence` (`panels.dock.mainTree` + `panels.dock.floatingWindows`). ContentTypes: viewport/outliner/details/layers/assets/levels. Multi-instance copies; nested binary splits (row/column). View menu = per-contentType, не Left/Right panel. **Assets copies**: UI-independent (`AssetPanel.uiStateKey` → `panelUI.<instanceKey>.*` for selection/tabs/filters; prefs persist primary only; catalog + canvas drop shared)
 - **ViewportViewManager** + **ViewportViewNav** — N viewport leaves (work/game camera, per-view type filters, shared MouseHandlers, pointer-capture, gesture UI lock `viewport-gesture-mode`)
 - **TypeFilterMenu** — shared type filter UX (Outliner / Assets / Viewport chrome)
 - **Контроллеры инициализации**: EditorConfigController, EditorLifecycleController, EditorPreferencesController
@@ -81,22 +81,19 @@ levelEditor.createAssetOfType(typeId) // создание placeholder-ассет
 // repositionMenu(menu, triggerElement, options) — пересчитывает позицию по реальным размерам после добавления пунктов (синхронно, без видимого прыжка)
 // Применяется: BaseContextMenu (было и раньше), OutlinerPanel/AssetPanel (меню фильтров), MenuManager (top-level dropdown через новый setupDropdownCursorMarginWatcher)
 
-// Nested Tab Split Sections (v3.59.0+): вложенная структура вкладок (SplitPaneController)
-// levelEditor.panelPositionManager.splitPaneController.mergeTabIntoSplit(draggedTabName, targetTabName, panelSide, position)
-//   — создаёт вложенную split-секцию: перетаскивание вкладки на контент другой вкладки
-//   — обе вкладки видны одновременно в верхней/нижней половине с resizer между ними
-//   — заголовок split переименовывается в "Parent/Child" формат
-// levelEditor.panelPositionManager.splitPaneController.replacePaneInSplit(draggedTabName, evictedTabName, panelSide)
-//   — замена содержимого одной половины УЖЕ существующего composite
-//   — перетаскивание вкладки на одну из двух половин (`.tab-split-pane`) заменяет занимающую эту половину вкладку
-//   — ЕСЛИ перетаскиваемая вкладка — plain standalone-вкладка: вытесненная становится standalone-вкладкой в панели-ИСТОЧНИКЕ перетаскиваемой вкладки (не в split-панели), заполняя освободившийся слот; при cross-panel drag это двусторонний swap между панелями
-//   — ЕСЛИ перетаскиваемая вкладка сама вложена в ДРУГОЙ composite: выполняется true pane-for-pane swap, вытесненная занимает место перетаскиваемой в исходном composite, оба composite остаются composites
-//   — "identity anchor": если заменяемая половина — якорь идентичности composite, якорь переносится на нетронутую половину (в обоих случаях; в nested-case происходит в обоих composite)
-// levelEditor.panelPositionManager.splitPaneController.detachFromSplit(tabName, targetPanelSide)
-//   — отсоединение вложенной панели в standalone-вкладку в левую/правую панель
-// Особенности: только 1 уровень вложенности; только вертикальный split;
-// членство в composite персистится между перезагрузками (leftPanelSplits/rightPanelSplits);
-// размер половин (ratio) персистится между перезагрузками; detach только в существующие панели
+// Dock layout (Phase B, editor.dockManager) — binary split-tree + floating windows
+// contentTypes: viewport | outliner | details | layers | assets | levels
+levelEditor.dockManager.init() // restore panels.dock.mainTree + floatingWindows, mount leaves
+levelEditor.dockManager.showContentType(type, opts?) // reopen closed panel (floating if main non-empty)
+levelEditor.dockManager.hideContentType(type) // remove leaf; content parks in pool
+levelEditor.dockManager.toggleContentType(type) // → boolean present after toggle
+levelEditor.dockManager.hasContentType(type) // leaf in main or floating
+levelEditor.dockManager.getLayoutSnapshot() // { mainTree, floatingWindows }
+levelEditor.dockManager.resetLayout() // default tree + save
+levelEditor.dockManager.enterImmersiveLayout() / exitImmersiveLayout() // Game Mode viewport-only
+// Nested splits: DockTreeModel binary tree (direction row|column, ratio); Shift = layout customize
+// Persist: panels.dock.mainTree, panels.dock.floatingWindows (stale: tabPositions, L/R tabOrder/splits/widths)
+// Multi-instance: DockPanelFactory self-drop clone; multi-viewport via ViewportViewManager
 
 // AssetTypes / ComponentTypes (каталоги типов)
 import { getAssetTypeById, getAssetTypesByCategory, ASSET_CATEGORIES, DEFAULT_ASSET_COMPONENTS } from 'src/constants/AssetTypes.js' // 29 типов ассетов: Camera, Actor, Image, Player Start (auto-managed spawn marker, со своим компонентом), Tilemap, Sound, Dialogue, Quest, Prefab и т.д.; DEFAULT_ASSET_COMPONENTS = {player_start: ['playerStart']} автоматически прикрепляет компонент при создании placeholder
@@ -196,12 +193,12 @@ level.settings.parallaxVertical // множитель вертикального
 ### Core
 - `src/core/LevelEditor.js` - главный класс, `this.level` = computed getter/setter через `levelSessions` + `currentLevelId` (v3.57.0 Phase 1+)
 - `src/core/LevelsManager.js` - управление множеством открытых LevelSession: addLevel, setCurrentLevel, closeLevel (Phase 1, 3, 5); cycleLevel, getVisibleSessionsForRender, reorderLevels, levelMRU fallback, soft-cap warning (Phase 6)
-- `src/ui/PanelPositionManager.js` - thin facade (74 строк) над 4 контроллерами (Фаза 4.5): `tabLayoutController`, `tabOrderController`, `tabDragController`, `splitPaneController`
-  - `src/ui/panels/TabLayoutController.js` - базовая раскладка панелей, collapse/expand, resize
-  - `src/ui/panels/TabOrderController.js` - программное перемещение/переупорядочивание вкладок
-  - `src/ui/panels/TabDragController.js` - drag-n-drop вкладок по tab-бару
-  - `src/ui/panels/SplitPaneController.js` - Blender-style split-pane/detach, nested tab split sections (v3.59.0+)
-  - `src/ui/panels/PanelSubController.js` - базовый класс для 4 контроллеров
+- `src/ui/dock/DockManager.js` - facade layout (`editor.dockManager`): init/destroy, show/hide/toggle contentType, immersive, snapshot
+  - `DockTreeModel.js` - pure binary split-tree + floatingWindows model
+  - `DockRenderer.js` / `DockDragController.js` - DOM reconciliation + Shift-drag layout
+  - `DockContentRegistry.js` / `DockPanelFactory.js` - mount primary roots + multi-instance copies
+  - `DockPersistence.js` - `panels.dock.mainTree` + `panels.dock.floatingWindows`
+  - `DockFloatWorkspace.js` / `ViewportLeafChrome.js` / `DockTypeMenu.js` / `DockConstants.js`
 - `src/models/LevelSession.js` - editor-only обёртка над Level (visible, fileName, isDirty, viewState, history per-session) — Phase 1
 - `src/core/LevelFileOperations.js` - файловые операции уровня (Phase 5: newLevel/openLevel добавляют вкладки, saveLevel/saveLevelAs работают per-session, closeLevel закрывает вкладку)
 - `src/models/Project.js` - модель проекта (Phase 7): `toJSON(levelSessions, levelOrder, currentLevelId)` эмбеддит Level.toJSON() каждого уровня + видимость/порядок/currentLevelIndex; статический `fromJSON(json)` парсит проект-файл
@@ -217,7 +214,7 @@ level.settings.parallaxVertical // множитель вертикального
 - `src/utils/GroupTraversalUtils.js` - обход иерархии групп, включая `findObjectPath()` (путь индексов для z-порядка)
 - `src/models/Level.js` - модель уровня, `compareStackOrder()` — единый компаратор z-порядка (без `zIndex`, объекты не хранят его)
 - `src/models/Layer.js` - модель слоя, включая transient `soloed` (Layer Solo, не сериализуется)
-- `src/event-system/EventHandlers.js` - клавиатурные хоткеи (`handleKeyDown`), в т.ч. Alt+1..4 (тоггл панелей), F2 (`renameSelectedObject`)
+- `src/event-system/EventHandlers.js` - клавиатурные хоткеи (`handleKeyDown`), Alt+1/2/4 → dock outliner/details/assets (legacy left/right/assets keys), F2 (`renameSelectedObject`); `syncDockPanelMenuCheckboxes`
 
 ### Managers
 - `src/managers/StateManager.js` - состояние
@@ -325,7 +322,7 @@ eventHandlerManager.registerElement(button, { click: onClick }, 'button-id');
 
 ## 🔧 Версионирование
 
-Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '4.0.0'` (Phase A refactor: GroupTraversalUtils-интеграция в LevelEditor, ensurePlayerStartExists→ObjectOperations, новые утилиты BaseModule.hasActiveMouseOperation/SnapUtils/RenderOperations приватные хелперы, Template Method в BaseGridRenderer, PerformanceUtils composition)
+Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '4.0.2'` (Phase A refactor + Phase B dock B0–B5; GroupTraversalUtils / ObjectOperations / BaseModule helpers; layout = `editor.dockManager`)
 
 Версия отображается динамически после полной инициализации через `updateVersionInfo()` и `updatePageTitle()`. Интерфейс скрыт до завершения загрузки, чтобы избежать отображения устаревшей версии. Pre-push hook блокирует коммит без бампа версии (`.claude/settings.json`).
 

@@ -102,7 +102,9 @@ export class AssetContextMenu extends BaseContextMenu {
             const asset = this.assetPanel.assetManager.getAsset(assetId);
             
             // Get selected assets count
-            const selectedAssets = this.assetPanel.stateManager.get('selectedAssets') || new Set();
+            const selectedAssets = this.assetPanel.stateManager.get(
+                this.assetPanel.uiStateKey('selectedAssets')
+            ) || new Set();
             const selectedCount = selectedAssets.size;
             
             contextData.asset = asset;

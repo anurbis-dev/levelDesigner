@@ -1,4 +1,4 @@
-# Архитектура Level Editor v4.0.0 (Phase A Refactor: код-рефакторинг, дублей устранены, Template Method, новые утилиты)
+# Архитектура Level Editor v4.0.2 (Phase A Refactor + Phase B dock: split-tree layout)
 
 **📚 Навигация:**
 - [Development Guide](./DEVELOPMENT_GUIDE.md) - примеры использования
@@ -17,11 +17,12 @@
 3. **Сканирование ассетов** - `assetManager.scanContentFolder()` и `preloadImages()`
 4. **Инициализация рендерера** - `initializeRenderer()` создает CanvasRenderer
 5. **Синхронизация изображений** - предзагруженные изображения синхронизируются с CanvasRenderer
-6. **Инициализация UI компонентов** - создание панелей, toolbar, диалогов
-7. **Инициализация обработчиков событий** - `initializeEventHandlerManager()`
-8. **Инициализация меню** - `initializeMenuAndEvents()`
-9. **Инициализация уровня** - `initializeLevelAndData()` создает новый уровень
-10. **Финализация** - `finalizeInitialization()`:
+6. **Инициализация UI компонентов** - создание панелей, toolbar, диалогов (primary roots в `#dock-content-pool`)
+7. **`dockManager.init()`** - restore `panels.dock.*`, mount leaves в `#split-root` / `#floating-layer`
+8. **Инициализация обработчиков событий** - `initializeEventHandlerManager()`
+9. **Инициализация меню** - `initializeMenuAndEvents()`
+10. **Инициализация уровня** - `initializeLevelAndData()` создает новый уровень
+11. **Финализация** - `finalizeInitialization()`:
     - Первый рендер
     - Обновление версии (`updateVersionInfo()`, `updatePageTitle()`)
     - Обновление всех панелей
@@ -32,42 +33,48 @@
 
 ## 🛠️ Утилиты
 
-### PanelPositionManager (v3.60.2 Фаза 4.5: декомпозиция на 4 контроллера)
-**Файл**: `src/ui/PanelPositionManager.js` (74 строки, thin facade)
-- Тонкая обёртка-фасад над 4 контроллерами: конструктор создаёт `this.tabLayoutController`, `this.tabOrderController`, `this.tabDragController`, `this.splitPaneController`; хранит `this.levelEditor`, `this.stateManager`, `this.userPrefs`, `this._initializing` (flag для циклов при инициализации); методы `_updateUI()` и `destroy()` остались на фасаде
-- **TabLayoutController** (719 строк, `src/ui/panels/TabLayoutController.js`)
-  - Базовая раскладка панелей: position left/right, ширины
-  - Методы: `initializePanelPositions()`, `initializePanelWidths()`, `initializeTabPositions()`, `initializePanelStates()`, `ensurePanelExists()`, `createTabsPanel()`, `collapse/expand()` (togglePanelCollapse, toggleTabPanelCollapse, toggleAssetsPanelCollapse, toggleFoldersPanelCollapse), `handlePanelResize()`, `initializeAssetsPanel()`
-- **TabOrderController** (379 строк, `src/ui/panels/TabOrderController.js`)
-  - Программное перемещение/переупорядочивание вкладок без drag-жеста
-  - Методы: `moveTab()`, `savePanelTabOrder()`, `applyPanelTabOrder()`, `moveTabDOM()`, `moveTabElements()`, `updateActiveTabAfterMove()`, `getTabClosestToSeparator()`
-- **TabDragController** (428 строк, `src/ui/panels/TabDragController.js`)
-  - Обычный drag-n-drop вкладок по tab-бару
-  - Инкапсулирует состояние drag'а в `_tabDraggingState` (было `window.tabDraggingState` до Фазы 2); регистрирует listener через `globalEventRegistry` вместо window-флага
-  - Методы: `setupTabDraggingForPanel()`, `createTemporaryTabContainer()`, `removeTemporaryTabContainer()`, `_initGlobalTabDraggingHandler()`, `destroy()`
-- **SplitPaneController** (1016 строк, `src/ui/panels/SplitPaneController.js`)
-  - Blender-style split-pane/detach window manager: методы `mergeTabIntoSplit()`, `replacePaneInSplit()`, `detachFromSplit()`, `_swapNestedPanes()`, `savePanelSplits()`, `applyPanelSplits()`, `removeEmptyPanel()`, `updatePanelStateAfterRemoval()`, `updatePanelStateAfterCreation()`, `updatePanelStateAfterTabAddition()`
-- **PanelSubController** (базовый класс, `src/ui/panels/PanelSubController.js`)
-  - Общая база для 4 контроллеров: геттеры/сеттеры `levelEditor`, `stateManager`, `userPrefs`, `_initializing`, проксирующие к manager
-- **Внешние вызовы обновлены** (Фаза 4.5):
-  - `src/core/LevelEditor.js` — `togglePanelPosition` → `tabLayoutController.togglePanelPosition`
-  - `src/event-system/EventHandlers.js` — `initializePanelPositions`/`ensurePanelExists` → `tabLayoutController.*`; `removeEmptyPanel` → `splitPaneController.removeEmptyPanel`
-  - `src/ui/AssetPanel.js` — `togglePanelPosition('folders')` → `tabLayoutController.togglePanelPosition('folders')`
-  - `_initializing` и `_updateUI()` остались на фасаде — внешние читатели: `EditorLifecycleController.js`, `ResizerManager.js`
-- **Alt+1/2/3/4** — глобальный тоггл видимости панелей (левая / правая / toolbar / панель ассетов), обрабатывается в `EventHandlers.handleKeyDown` через уже существующий `EventHandlers.togglePanel('leftPanel'|'rightPanel'|'toolbar'|'assetsPanel')` (не метод `PanelPositionManager`, но общий с пунктами меню View код пути)
+### DockManager (Phase B, B0–B5) — единственная оконная система
+**Файл**: `src/ui/dock/DockManager.js` (facade → `editor.dockManager`)
 
-#### Nested Tab Split Sections (v3.59.0+)
-**Функциональность**: вложенная структура вкладок — перетаскивание вкладки на КОНТЕНТ-область другой вкладки (не на её таб-бар) создаёт вложенную split-секцию; обе вкладки видны одновременно. Drag на половину УЖЕ существующего composite ЗАМЕНЯЕТ содержимое той половины без создания третьего уровня вложенности.
-- **Создание split (merge-режим)**: перетаскиванием вкладки (напр. Layers) на область контента другой вкладки (напр. Outliner) подсвечивает верхнюю/нижнюю половину под курсором; при отпускании создаётся вложенная split-секция с обеими вкладками (сверху/снизу с resizer между ними). Контракт `_findSplitDropTarget()`: возвращает `{mode:'merge', targetTabName, panelSide, position:'top'|'bottom', rect}`.
-- **Замена половины (replace-режим)**: перетаскивание вкладки на одну из двух половин (`.tab-split-pane`) УЖЕ существующего composite заменяет занимающую эту половину вкладку. Поведение зависит от того, где находится перетаскиваемая вкладка: **если это plain standalone-вкладка** — вытесненная вкладка становится новой standalone-вкладкой в ПАНЕЛИ-ИСТОЧНИКЕ перетаскиваемой вкладки (не в панели, содержащей composite) — заполняет ровно тот слот, который освободила перетащенная; при same-panel drag источник и панель composite совпадают, разницы нет. **Если перетаскиваемая вкладка сама вложена в другой composite** — вместо этого выполняется true pane-for-pane swap (код `_swapNestedPanes`): вытесненная вкладка занимает место перетаскиваемой вкладки в её исходном composite, поэтому оба composite остаются composites и просто обмениваются одним членом. Ни один composite не разрушается. Остаётся неактивной, если только перетащенная вкладка не была активной в исходной панели (тогда `_reactivateAfterTabRemoval` активирует вытесненную вместо неё). Контракт `_findSplitDropTarget()`: возвращает `{mode:'replace', evictedTabName, panelSide, position:'replace', rect}`. Важный нюанс "identity anchor": `.tab-split-container` и composite-кнопка хранят `dataset.panelTabName` — якорь идентичности composite (изначально целевая вкладка первого merge); если заменяемая половина содержит якорь, якорь ПЕРЕНОСИТСЯ на нетронутую половину (в обоих случаях: standalone-drag и nested-drag). В nested-drag случае такой перенос происходит и в целевом, и в исходном composite.
-- **Разделитель между панелями**: `.tab-split-resizer` (вертикальный drag-handle для изменения высоты верхней/нижней частей); при дублклике выравнивает половины поровну.
-- **Отсоединение**: перетаскивание заголовка вложенной панели (`.tab-split-pane-header`) обратно отсоединяет её в обычную standalone-вкладку в левую/правую панель.
-- **Переименование split**: основная кнопка вкладки в split переименовывается в формат "Parent/Child" (напр. "Outliner/Layers"), показывая иерархию. При replace-режиме кнопка и `dataset.tabGroup`/`dataset.panelTabName` обновляются, якорь может измениться.
-- **DOM структура**: `.tab-split-container` содержит две `.tab-split-pane` (верх/низ), каждая имеет `.tab-split-pane-header` и `.tab-content`; `.tab-split-resizer` между ними. `.tab-split-container.dataset.panelTabName` — якорь идентичности (переносится при replace-режиме).
-- **Методы**: `mergeTabIntoSplit(draggedTabName, targetTabName, panelSide, position, ratio = null)` создаёт split (merge-режим; опциональный `ratio` применяет сохранённую высоту верхней половины); `replacePaneInSplit(draggedTabName, evictedTabName, panelSide)` заменяет половину УЖЕ существующего composite (replace-режим, два branch: standalone-drag → вытеснение в исходную панель, nested-drag → true swap через `_swapNestedPanes`); `detachFromSplit(tabName, targetPanelSide)` отсоединяет панель обратно в standalone-вкладку. **Унификация drag-протоколов** (v3.59.0+): два независимых протокола (обычный tab-bar drag и split-pane-header detach drag) теперь оба поддерживают merge/replace через общий `_findSplitDropTarget(elUnder, clientY, draggedTabName)`. Приватные методы `_extractDraggedTab(draggedTabName)` и `_collapseSplitPane(tabName)` абстрагируют логику "откуда и как забрать перетаскиваемый таб" — работает одинаково независимо от того, тащимся ли standalone-кнопка (`.tab-right[data-tab]` / `.tab-left[data-tab]`) или таб, уже вложенный в чужой composite (protocol 2 case). `_swapNestedPanes(...)` выполняет true pane-for-pane swap для `replacePaneInSplit` когда перетаскиваемая вкладка сама вложена в другой composite — обновляет оба composite, сохраняя оба как composites (не разрушая ни один). `_startSplitPaneDetachDrag()` расширен: проверяет merge/replace-зоны через `_findSplitDropTarget`, показывая точные линии раздела (как обычный drag), вместо всегда полной подсветки панели; при drop теперь вызывает `replacePaneInSplit`/`mergeTabIntoSplit` если найдена зона, иначе fallback на `detachFromSplit`. Вложенный таб, перенесённый на контент другой панели, теперь не только отсоединяется, но и мерджится/заменяет пане там же как обычная standalone-кнопка. Хелперы `_showSplitHint()`, `_hideSplitHint()`, `_removeSplitHint()`, `_createSplitPane()`, `_setupSplitResizer()`, `_reactivateAfterTabRemoval()`, `_setupSplitPaneHeaderDragging()` управляют визуализацией и созданием. Визуализация hint: `_showSplitHint(rect, position)` для merge подсвечивает верхнюю (`'top'`) или нижнюю (`'bottom'`) половину, для replace подсвечивает весь rect пане (`position === 'replace'`).
-- **Ограничения v1**: только один уровень вложенности (composite не может быть drag-источником ни в merge, ни в replace); только вертикальный split (верх/низ, не лево/право); членство в composite и размер половин (ratio) персистятся между перезагрузками (leftPanelSplits/rightPanelSplits в config/user/panels.json, методы savePanelSplits/applyPanelSplits); detach работает только в существующие left/right панели (не создаёт новую панель лениво).
-- **CSS классы**: `.tab-split-container`, `.tab-split-pane`, `.tab-split-pane-header`, `.tab-split-resizer`, `.tab-split-drop-hint` (определены в `styles/main.css`).
-- **Изменения в EventHandlers**: `setActivePanelTab()` при показе composite-обёртки также un-hide'ит вложенные `data-panel-tab-content` дочерние элементы (needed для отображения содержимого обеих split-панелей одновременно).
+Заменяет удалённый `PanelPositionManager` + `src/ui/panels/*` (B5). Layout — binary split-tree + floating windows; нет фиксированных L/R tab shells.
+
+**Модули `src/ui/dock/`:**
+| Модуль | Роль |
+|--------|------|
+| `DockManager` | Facade: `init`/`destroy`, show/hide/toggle contentType, immersive, snapshot |
+| `DockTreeModel` | Pure model: `mainTree`, `floatingWindows`, split/leaf ops (без DOM) |
+| `DockRenderer` | Reconciliation DOM в `#split-root` / `#floating-layer` |
+| `DockDragController` | Drag/drop split, float detach, self-drop clone (Shift) |
+| `DockContentRegistry` | contentType → mount; primary reparent / multi-instance copies |
+| `DockPanelFactory` | Копии outliner/details/layers/levels/assets/viewport |
+| `DockPersistence` | `panels.dock.mainTree` + `panels.dock.floatingWindows` |
+| `DockFloatWorkspace` | Relative float pos + edge snap на resize workspace |
+| `DockTypeMenu` / `ViewportLeafChrome` | Меню типов / chrome viewport leaf |
+| `DockConstants` | `TYPE_ORDER`, `TYPE_META`, `isDockCustomizeKey` (Shift) |
+
+**Content types** (`TYPE_ORDER`): `viewport`, `outliner`, `details`, `layers`, `assets`, `levels`.
+
+**Публичный API** (`editor.dockManager`):
+- `init()` — mount shell, restore layout, first render
+- `destroy()` — flush persist, teardown renderer/drag/registry
+- `showContentType(type, opts?)` / `hideContentType(type)` / `toggleContentType(type)`
+- `hasContentType(type)` — leaf present in main or floating
+- `getLayoutSnapshot()` / `resetLayout()`
+- `enterImmersiveLayout()` / `exitImmersiveLayout()` — Game Mode: viewport-only snapshot
+
+**Persist (активные ключи):** `panels.dock.mainTree`, `panels.dock.floatingWindows`; опционально `panels.dock.floatEdgeSnap`, `panels.dock.floatEdgeMargin`.
+
+**Устаревшие prefs (неактивны после B5):** L/R tab shells, `tabPositions`, `leftPanelTabOrder`/`rightPanelTabOrder`, `leftPanelSplits`/`rightPanelSplits`, fixed L/R widths.
+
+**View → Panels:** per-contentType toggles (не Left/Right/Assets Panel). `EventHandlers.togglePanel` резолвит legacy `leftPanel`→`outliner`, `rightPanel`→`details`, `assetsPanel`→`assets` в dock contentType.
+
+**Alt+1/2/3/4** — `EventHandlers.togglePanel('leftPanel'|'rightPanel'|'toolbar'|'assetsPanel')`; при активном dock 1/2/4 → show/hide outliner/details/assets; toolbar остаётся вне tree.
+
+**Customize key:** `isDockCustomizeKey` — layout-жесты (move/split/clone/float snap) только с **Shift**; free-move float position и corner resize — без Shift.
+
+**Вне shell:** Menu (`<header>`), Console (`#console-panel`), StatusBar — не в dock tree. Диалоги / SettingsPanel — overlays, не leaf'ы.
+
+**Nested splits:** произвольная глубина binary split (`direction: 'row'|'column'`, `ratio`); не legacy «один уровень tab-split в L/R panel».
 
 ### MenuManager / ShortcutFormatter — единый источник хоткеев в главном меню
 **Файлы**: `src/managers/MenuManager.js`, `src/utils/ShortcutFormatter.js`
@@ -179,7 +186,9 @@
 - **Отложенные поля** (Open Questions #9): default asset import path, default grid/snap для новых уровней проекта, naming convention — явно задокументированы в UI, но реализация отложена.
 
 ### AssetPanel System (v3.60.2 Фаза 4 завершена: декомпозиция на 7 компонентов)
-**Основные файлы**: `src/ui/AssetPanel.js` (1154 строк, orchestration-слой), `src/ui/AssetViewRenderer.js` (614 строк, Фаза 4.2 extraction), `src/ui/AssetTabsManager.js`, `src/ui/FoldersPanel.js`
+**Основные файлы**: `src/ui/AssetPanel.js` (orchestration-слой), `src/ui/AssetViewRenderer.js` (Фаза 4.2 extraction), `src/ui/AssetTabsManager.js`, `src/ui/FoldersPanel.js`
+
+**Multi-instance (dock copies)**: primary and each copy have independent UI state via `AssetPanel.uiStateKey(base)` — primary keeps legacy keys (`selectedAssets`, `activeAssetTabs`, …); copies use `panelUI.<instanceKey>.<base>`. Independent: selection, folder tabs, folder selection, type filters, view size/mode (memory). Shared: `assetManager` catalog, HTML5 drop onto canvas from that panel’s selection. Prefs/config persist **primary only**. Asset marquee flag stays global (`mouse.isAssetMarqueeSelecting`) for mutual exclusion.
 
 **7 контроллеров** (все new AssetPanelController(assetPanel), паттерн владения — plain-класс, не BaseModule):
 - **AssetFoldersController** (Фаза 4.1) — навигация по папкам, управление табами папок, переключение активной папки
@@ -358,14 +367,14 @@
 - Управление viewport и камерой
 - Zoom, pan, focus операции
 
-### Phase B dock + multi-viewport (B0–B4.2)
+### Phase B dock + multi-viewport (B0–B5 done; B6 docs)
 **Файлы**: `src/ui/dock/*`, `src/core/ViewportViewManager.js`, `src/core/ViewportViewNav.js`, `src/ui/dock/ViewportLeafChrome.js`, `src/utils/TypeFilterMenu.js`, `styles/dock.css`
 
-- **Dock shell**: `DockManager` + `DockTreeModel` / `DockRenderer` / `DockDragController` / `DockPersistence` / `DockContentRegistry` / `DockPanelFactory` / `DockTypeMenu`. Layout: `panels.dock.mainTree` + floating windows. When dock is active, legacy `PanelPositionManager.initializePanelPositions` is skipped.
+- **Dock shell only**: `editor.dockManager` (`DockManager` + tree/renderer/drag/persistence/registry/factory). Layout: `panels.dock.mainTree` + `panels.dock.floatingWindows`. `PanelPositionManager` / `src/ui/panels/*` **удалены** (B5); `grep panelPositionManager src` = 0.
 - **UI customize key (Shift)**: `isDockCustomizeKey` — only while Shift held: move/split panels, self-drop clone, detach to floating, floating snap/ungroup, drop-zone & snap highlights. Floating free-move position + corner resize work without Shift; resize grip shows only when pointer is in the window’s bottom band.
 - **Floating vs workspace**: on browser/workspace resize, floating clusters keep **relative** position (`DockFloatWorkspace.applyFloatingWorkspaceResize`). Optional edge snap (`panels.dock.floatEdgeSnap`, default on) + margin (`panels.dock.floatEdgeMargin`, default 8px) pins free-moved windows to workspace edges within threshold; edge-affined clusters re-pin on resize.
-- **Content types**: viewport, outliner, details, layers, levels, assets. Multi-instance (`singleton:false`) for panels except viewport shell rules; primary parks, copies destroy on close.
-- **View → Panels** lists dock contentTypes (`hideContentType` / `toggleContentType`); Alt+1/2/4 → Outliner/Details/Assets; Immersive Mode snapshots dock layout (viewport-only).
+- **Content types**: viewport, outliner, details, layers, levels, assets. Multi-instance via `DockPanelFactory` (`isMultiInstanceType`); primary parks in content pool, copies destroy on close. Viewport multi-leaf (B4.2).
+- **View → Panels** lists dock contentTypes (`showContentType` / `hideContentType` / `toggleContentType`); Alt+1/2/4 → Outliner/Details/Assets; Immersive Mode snapshots dock layout (viewport-only).
 - **ViewportViewManager**: N viewport leaves, each with canvas + pose + type filters + camera source.
   - **Work camera**: primary leaf uses `stateManager.camera` (level save); secondary work leaves keep `localCamera`.
   - **Game camera**: source `{ kind:'game', objectId }` follows level object `type==='camera'`.

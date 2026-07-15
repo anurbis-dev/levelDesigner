@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- B5: removed `PanelPositionManager` + `src/ui/panels/*`; layout is dock-only (`editor.dockManager`). Dropped L/R tab prefs listeners, dead `setupTabDragging`, panel dock CSS for `#left-tabs-panel`/`#right-tabs-panel`.
+- B6 docs: ARCHITECTURE / Context_map / API_GUIDE / CONTRIBUTING / COMMON_MISTAKES / DEVELOPMENT_GUIDE — PanelPositionManager → DockManager; View menu contentTypes; persist `panels.dock.*`. Phase B (B0–B6) closed.

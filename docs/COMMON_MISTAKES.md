@@ -182,37 +182,25 @@ class ActorPropertiesWindow {
 }
 ```
 
-## ❌ НЕПРАВИЛЬНО: Дублирование обработчиков разделителей
+## ❌ НЕПРАВИЛЬНО: Свой layout / resizer вне dock
 
 ```javascript
-// ❌ НЕ ДЕЛАЙТЕ ТАК
-class PanelPositionManager {
-    setupPanelResizer(resizer, panel, panelSide) {
-        // Mouse события
-        resizer.addEventListener('mousedown', (e) => {
-            // ... mouse логика
-        });
-
-        // Дублирование логики!
-    }
-}
+// ❌ НЕ ДЕЛАЙТЕ ТАК — layout только через editor.dockManager (src/ui/dock/*)
+// Не восстанавливать L/R tab shells, panelPositionManager, custom mousedown-resizers для dock leaves
+aside.id = 'left-tabs-panel';
+resizer.addEventListener('mousedown', (e) => { /* ad-hoc panel resize */ });
 ```
 
-## ✅ ПРАВИЛЬНО: Использование ResizerManager
+## ✅ ПРАВИЛЬНО: Dock API + ResizerManager только вне tree
 
 ```javascript
-// ✅ ДЕЛАЙТЕ ТАК
-// В TabLayoutController (часть PanelPositionManager) или других контроллерах/панелях
-class TabLayoutController {
-    setupPanelResizer(resizer, panel, panelSide) {
-        // Единая система управления
-        if (this.levelEditor?.resizerManager) {
-            this.levelEditor.resizerManager.registerResizer(resizer, panel, panelSide, 'horizontal');
-        } else {
-            // Fallback на legacy код
-            this.setupLegacyPanelResizer(resizer, panel, panelSide);
-        }
-    }
+// ✅ Dock layout — show/hide contentType, tree ops в DockTreeModel / DockDragController
+editor.dockManager.showContentType('outliner');
+editor.dockManager.toggleContentType('details');
+
+// ✅ ResizerManager — для диалогов / non-dock UI, не для split-tree leaves
+if (this.levelEditor?.resizerManager) {
+    this.levelEditor.resizerManager.registerResizer(resizer, panel, panelSide, 'horizontal');
 }
 ```
 

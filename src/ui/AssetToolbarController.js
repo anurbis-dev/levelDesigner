@@ -69,6 +69,8 @@ export class AssetToolbarController {
      */
     saveAssetSize() {
         const assetPanel = this.assetPanel;
+        // Copies keep independent size in memory only
+        if (!assetPanel.isPrimary) return;
         if (assetPanel.levelEditor?.userPrefs) {
             assetPanel.levelEditor.userPrefs.set('assetSize', assetPanel.assetSize);
             Logger.ui.debug('Saved asset size to preferences:', assetPanel.assetSize);
@@ -94,6 +96,8 @@ export class AssetToolbarController {
      */
     saveViewMode() {
         const assetPanel = this.assetPanel;
+        // Copies keep independent view mode in memory only
+        if (!assetPanel.isPrimary) return;
         if (assetPanel.levelEditor?.userPrefs) {
             assetPanel.levelEditor.userPrefs.set('assetViewMode', assetPanel.viewMode);
             Logger.ui.debug('Saved asset view mode to preferences:', assetPanel.viewMode);

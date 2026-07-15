@@ -6,16 +6,19 @@
 добавить логику туда. Создавать новый файл **только если** ни один из существующих не подходит
 по ответственности.
 
-Проект прошёл полную декомпозицию God Object'ов (`LevelEditor.js`, `AssetPanel.js`,
-`PanelPositionManager.js` — см. `tmp/2D_Editor_REFACTOR_PLAN.md`), и без этого правила файлы
-снова начнут расти теми же темпами, какими они выросли до рефакторинга.
+Проект прошёл декомпозицию God Object'ов (`LevelEditor.js`, `AssetPanel.js` — см.
+`tmp/2D_Editor_REFACTOR_PLAN.md`) и замену layout на dock (`src/ui/dock/*`, Phase B —
+`tmp/2D_Editor_REFACTOR_PLAN_v2_PhaseB.md`). Без этого правила файлы снова начнут расти.
 
 Практически:
 - Ищи существующий `*Controller`/`*Operations`/`*Manager` с подходящей ответственностью
   (`docs/ARCHITECTURE.md` — карта модулей) прежде чем добавлять метод в `LevelEditor.js` или
   `AssetPanel.js` напрямую.
+- Layout/panels: только `editor.dockManager` и модули `src/ui/dock/` (`DockTreeModel`,
+  `DockRenderer`, `DockDragController`, `DockContentRegistry`, `DockPanelFactory`, …). Не
+  восстанавливать L/R tab shells / `PanelPositionManager`.
 - Если ни один не подходит — новый файл нужен, но проверь, не стоит ли сначала выделить общий
-  базовый класс (см. `BaseModule`, `BaseManager`, `PanelSubController` как примеры).
+  базовый класс (см. `BaseModule`, `BaseManager` как примеры).
 - `npm run check:size` — guardrail на рост файлов сверх 400 строк (см.
   `scripts/check-file-size.js`); если файл в `OVERRIDES` перестал превышать лимит, убери его
   из списка.
@@ -30,10 +33,10 @@
   Пример: ObjectOperations, GroupOperations, LevelFileOperations.
 - Голый constructor(owner) без общей базы — только для одного sub-controller, выносимого из
   конкретной панели/менеджера (owner), если это первый такой sub-controller у owner.
-- PanelSubController-подобный общий класс — как только у owner появляется ВТОРОЙ
-  sub-controller (т.е. декомпозиция панели/менеджера продолжается) — создать общий базовый
-  класс для этой группы сразу, а не после третьего-четвёртого файла. Не дожидаться, пока
-  копипаста в конструкторах/getter-ах наберётся сама.
+- Общий базовый класс для sub-controllers — как только у owner появляется ВТОРОЙ
+  sub-controller (декомпозиция продолжается) — создать общую базу для этой группы сразу
+  (исторический пример: удалённый `PanelSubController` у legacy panels; для dock — держать
+  логику в существующих `src/ui/dock/*` модулях, не плодить параллельный layout-стек).
 
 ## Периодическая проверка деградации
 

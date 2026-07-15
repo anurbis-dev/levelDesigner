@@ -68,14 +68,14 @@ export class AssetPanel extends BasePanel {
         this.searchTerm = '';
         this.activeTypeFilters = new Set(); // Set of active asset type filters
 
-        // Initialize asset type filters state if not exists
-        if (!this.stateManager.get('assetTypeFilters')) {
-            this.stateManager.set('assetTypeFilters', new Set());
+        // Per-instance type filters (primary keeps legacy key; copies are independent)
+        const filterKey = this.uiStateKey('assetTypeFilters');
+        if (!this.stateManager.get(filterKey)) {
+            this.stateManager.set(filterKey, new Set());
+            this.activeTypeFilters = new Set();
         } else {
-            // Load existing filters from state
-            this.activeTypeFilters = this.stateManager.get('assetTypeFilters') || new Set();
+            this.activeTypeFilters = this.stateManager.get(filterKey) || new Set();
         }
-
 
         this.init();
         this.setupEventListeners();
@@ -99,6 +99,19 @@ export class AssetPanel extends BasePanel {
 
         // Initialize asset tab context menu - now handled by AssetTabsManager
         // this.assetTabContextMenu removed - handled by tabsManager
+    }
+
+    /**
+     * StateManager key scoped to this panel instance (copies are UI-independent).
+     * Primary keeps unscoped legacy keys for prefs / global consumers.
+     * Copies use `panelUI.<instanceKey>.<base>` so dotted bases never nest under
+     * boolean leaves like `mouse.isAssetMarqueeSelecting`.
+     * @param {string} base
+     * @returns {string}
+     */
+    uiStateKey(base) {
+        if (!this.instanceKey) return base;
+        return `panelUI.${this.instanceKey}.${String(base).replace(/\./g, '_')}`;
     }
 
     init() {
@@ -172,7 +185,7 @@ export class AssetPanel extends BasePanel {
 
         // Listen for folder selection changes to sync active tab
         // Sync happens BEFORE render to avoid recursion
-        this.subscriptions.push(this.stateManager.subscribe('selectedFolders', (selectedFolders) => {
+        this.subscriptions.push(this.stateManager.subscribe(this.uiStateKey('selectedFolders'), (selectedFolders) => {
             if (this.foldersPanel && selectedFolders && this.tabsManager) {
                 // Normalize selectedFolders to Set format
                 const foldersSet = Array.isArray(selectedFolders) 
@@ -200,6 +213,17 @@ export class AssetPanel extends BasePanel {
      * No default tab is created - tabs are added only by user dragging folders
      */
     initializeActiveAssetTabs() {
+        // Copies: independent empty tabs (no shared config / primary state)
+        if (!this.isPrimary) {
+            this.stateManager.set(this.uiStateKey('activeAssetTabs'), new Set());
+            this.stateManager.set(this.uiStateKey('activeAssetTab'), null);
+            this.stateManager.set(this.uiStateKey('assetTabOrder'), []);
+            this.stateManager.set(this.uiStateKey('selectedAssets'), new Set());
+            this.stateManager.set(this.uiStateKey('selectedFolders'), ['root']);
+            Logger.ui.debug('AssetPanel: Initialized independent tabs for copy', this.instanceKey);
+            return;
+        }
+
         // Load tabs from config if available
         let activeTabs = new Set();
         let activeTab = null;
@@ -216,8 +240,8 @@ export class AssetPanel extends BasePanel {
             }
         }
         
-        this.stateManager.set('activeAssetTabs', activeTabs);
-        this.stateManager.set('activeAssetTab', activeTab);
+        this.stateManager.set(this.uiStateKey('activeAssetTabs'), activeTabs);
+        this.stateManager.set(this.uiStateKey('activeAssetTab'), activeTab);
         
         Logger.ui.debug('AssetPanel: Initialized tabs from config', { 
             activeTabs: Array.from(activeTabs), 
@@ -288,10 +312,12 @@ export class AssetPanel extends BasePanel {
     }
 
     setupEventListeners() {
-        // Setup selection functionality for assets
+        // Selection/tabs keys scoped per dock copy; marquee flag stays global
+        // (mutual exclusion + BaseContextMenu / SelectionUtils fixed key list).
+        const marqueeSuffix = this.instanceKey || 'primary';
         this.setupSelection({
-            selectionKey: 'selectedAssets',
-            anchorKey: 'assets.shiftAnchor',
+            selectionKey: this.uiStateKey('selectedAssets'),
+            anchorKey: this.uiStateKey('assets.shiftAnchor'),
             getItemList: () => this.selectionController.getAssetList(),
             getSelectableItems: () => this.selectionController.getSelectableAssetElements(),
             onSelectionChange: () => this.selectionController.updateSelectionVisuals(),
@@ -300,17 +326,17 @@ export class AssetPanel extends BasePanel {
             selectedClass: 'selected',
             enableMarquee: true,
             mouseStateKey: 'mouse.isAssetMarqueeSelecting',
-            marqueeId: 'asset-marquee-selection'
+            marqueeId: `asset-marquee-selection-${marqueeSuffix}`
         });
 
         // Subscribe to state changes
-        this.subscriptions.push(this.stateManager.subscribe('activeAssetTabs', () => {
+        this.subscriptions.push(this.stateManager.subscribe(this.uiStateKey('activeAssetTabs'), () => {
             Logger.ui.debug('AssetPanel: activeAssetTabs changed - render will be called');
             this.render();
         }));
 
         // Subscribe to active tab changes to update content
-        this.subscriptions.push(this.stateManager.subscribe('activeAssetTab', () => {
+        this.subscriptions.push(this.stateManager.subscribe(this.uiStateKey('activeAssetTab'), () => {
             Logger.ui.debug('AssetPanel: activeAssetTab changed - updating previews');
             this.viewRenderer.renderPreviews();
         }));

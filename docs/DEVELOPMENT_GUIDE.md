@@ -409,7 +409,8 @@ class ActorPropertiesWindow {
 
 #### Регистрация разделителя:
 ```javascript
-// В TabLayoutController (часть PanelPositionManager), AssetPanel или других панелях
+// Dock split ratios — внутри src/ui/dock (DockRenderer / DockTreeModel), не через ResizerManager.
+// ResizerManager — для non-dock UI (диалоги, legacy drawers):
 if (this.levelEditor?.resizerManager) {
     this.levelEditor.resizerManager.registerResizer(
         resizerElement,    // DOM элемент разделителя

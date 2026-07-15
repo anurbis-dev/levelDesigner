@@ -2,6 +2,10 @@
 
 Р—Р°РїРёСЃРё, РїРµСЂРµРЅРµСЃС‘РЅРЅС‹Рµ РёР· `CHANGELOG.md` РїСЂРё РєРѕРјРјРёС‚Р°С… (СЃРј. `git log` РґР»СЏ С‚РѕС‡РЅС‹С… РґРёС„С„РѕРІ). РђРєС‚СѓР°Р»СЊРЅС‹Р№ РЅРµРѕРїСѓР±Р»РёРєРѕРІР°РЅРЅС‹Р№ СЂР°Р·СЂРµР· вЂ” РІ `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (B5 commit 8c4ad4fe)
+
+- B5: removed `PanelPositionManager` + `src/ui/panels/*`; layout is dock-only (`editor.dockManager`). Dropped L/R tab prefs listeners, dead `setupTabDragging`, panel dock CSS for `#left-tabs-panel`/`#right-tabs-panel`.
+
 ## Archived from CHANGELOG.md (pre B5 commit)
 
 - Fix: Assets multi-select **click-drag drop on canvas** — mousedown keeps multi if item already selected; `dragstart` ships full `selectedAssets`; post-drag click does not sole-select.

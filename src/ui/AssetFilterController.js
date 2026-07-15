@@ -163,7 +163,7 @@ export class AssetFilterController {
             filters: assetPanel.activeTypeFilters,
             onChange: (filters) => {
                 assetPanel.activeTypeFilters = filters;
-                assetPanel.stateManager.set('assetTypeFilters', filters);
+                assetPanel.stateManager.set(assetPanel.uiStateKey('assetTypeFilters'), filters);
                 assetPanel.viewRenderer.renderPreviews();
                 this._syncFilterButton(button);
             },

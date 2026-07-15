@@ -36,7 +36,9 @@ export class AssetViewRenderer {
         // - If there's an active tab, use it (or multiple if multi-select)
         // - If no tabs exist, use selected folders from FoldersPanel (default behavior)
         const folderPathsToShow = this.assetPanel.getActiveTabPaths();
-        const selectedAssets = this.assetPanel.stateManager.get('selectedAssets');
+        const selectedAssets = this.assetPanel.stateManager.get(
+            this.assetPanel.uiStateKey('selectedAssets')
+        );
 
         // Collect assets from all selected folders recursively
         const allAssets = [];
@@ -308,7 +310,9 @@ export class AssetViewRenderer {
 
     /** @returns {Set<string>} */
     _selectedAssetIdSet() {
-        const raw = this.assetPanel.stateManager.get('selectedAssets');
+        const raw = this.assetPanel.stateManager.get(
+            this.assetPanel.uiStateKey('selectedAssets')
+        );
         if (raw instanceof Set) return raw;
         if (Array.isArray(raw)) return new Set(raw);
         return new Set();

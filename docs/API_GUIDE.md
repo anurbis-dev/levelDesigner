@@ -304,22 +304,27 @@
 - `savePanelSize(panelSide, direction, size)` - сохранение размера панели
 - `destroy()` - уничтожение менеджера и очистка всех разделителей
 
-### PanelPositionManager (src/ui/PanelPositionManager.js)
-Универсальное управление позицией и структурой панелей с поддержкой drag-and-drop и nested splits.
+### DockManager (src/ui/dock/DockManager.js)
+Единственная оконная система (Phase B). Экземпляр: `editor.dockManager`. Binary split-tree + floating windows; contentTypes: `viewport`, `outliner`, `details`, `layers`, `assets`, `levels`.
 
 #### Основные методы:
-- `setupTabDraggingForPanel(panel)` - настройка drag-and-drop для табов панели
-- `moveTab(tabName, fromPanel, toPanel)` - перемещение вкладки между панелями; создаёт целевую панель при необходимости
-- `mergeTabIntoSplit(draggedTabName, targetTabName, panelSide, position, ratio = null)` - создание вложенной split-секции (v3.59.0+); перетаскивание вкладки на контент другой вкладки; обе вкладки видны одновременно в верхней/нижней половине с resizer между ними; опциональный `ratio` применяет сохранённую высоту верхней половины (в % flex-basis)
-- `detachFromSplit(tabName, targetPanelSide)` - отсоединение вложенной панели в standalone-вкладку (v3.59.0+)
-- `ensurePanelExists(panelSide)` - создание панели при необходимости
+- `init()` — mount в `#dock-workspace` / `#split-root` / `#floating-layer`; restore `panels.dock.*` или default tree
+- `destroy()` — flush persist, teardown renderer/drag/registry
+- `showContentType(contentType, opts?)` — reopen closed type; если main tree уже есть — floating (`opts.x/y/w/h`); иначе root mainTree. No-op если type уже present
+- `hideContentType(contentType)` — remove leaf (content parks in pool); `true` если удалён
+- `toggleContentType(contentType)` — hide if present else show; returns whether present after toggle
+- `hasContentType(contentType)` — leaf present in main or floating
+- `getLayoutSnapshot()` — `{ mainTree, floatingWindows }`
+- `resetLayout()` — default tree + immediate save
+- `enterImmersiveLayout()` / `exitImmersiveLayout()` — Game Mode: viewport-only, restore previous snapshot
 
-#### Особенности nested splits (v3.59.0+):
-- **Создание**: перетаскивание вкладки на область контента другой вкладки подсвечивает верхнюю/нижнюю половину; отпускание создаёт split с обеими вкладками
-- **Разделитель**: `.tab-split-resizer` позволяет изменять высоту верхней/нижней части; дублклик выравнивает половины
-- **Отсоединение**: перетаскивание заголовка вложенной панели (`.tab-split-pane-header`) отсоединяет её в левую/правую панель
-- **DOM структура**: `.tab-split-container` содержит две `.tab-split-pane` с `.tab-split-pane-header` и `.tab-content`; `.tab-split-resizer` между ними
-- **Ограничения**: только 1 уровень вложенности; только вертикальный split; членство в composite и размер половин (ratio) персистятся между перезагрузками (leftPanelSplits/rightPanelSplits); detach только в существующие панели
+#### Persist / layout:
+- Активные ключи: `panels.dock.mainTree`, `panels.dock.floatingWindows` (`DockPersistence`)
+- Nested splits: `DockTreeModel` binary nodes (`direction: 'row'|'column'`, `ratio`, 2 children) — произвольная глубина
+- Customize: `isDockCustomizeKey` (Shift) для move/split/clone/float snap; free-move float без Shift
+- Multi-instance: `DockPanelFactory` (self-drop clone); multi-viewport — `ViewportViewManager`
+- View menu / Alt+1/2/4: `EventHandlers.togglePanel` → dock contentTypes (legacy left/right/assets → outliner/details/assets)
+- Stale (неактивны): L/R tab shells, `tabPositions`, `leftPanelTabOrder`/`rightPanelTabOrder`, `leftPanelSplits`/`rightPanelSplits`, fixed L/R widths
 
 ---
 

@@ -285,17 +285,27 @@ compute → cache.set), но реализуют разную семантику 
 
 ---
 
-## Фаза B — оконная система и содержимое панелей (после готовности прототипа)
+## Фаза B — оконная система и содержимое панелей — ✅ closed (B0–B6)
 
-Прототип готов (`tmp/split-tree-prototype_v1_10.html`), детальный план шагов B0-B6 —
-`tmp/2D_Editor_REFACTOR_PLAN_v2_PhaseB.md` (оценка прототипа, модульная разбивка `src/ui/dock/`,
-инкрементальный порядок переноса, критерии проверки). Рамка ниже — исходный список из аудита,
-из которого детальный план и вырос:
+Детальный план/чеклист: `tmp/2D_Editor_REFACTOR_PLAN_v2_PhaseB.md`.
+
+| Шаг | Суть | Status |
+|-----|------|--------|
+| B0 | Dock shell + placeholder leaves, wire `editor.dockManager` | ✅ |
+| B1 | Default tree layout (assets bottom strip) | ✅ |
+| B2 | Mount real viewport | ✅ |
+| B3 | Mount real panels (primary reparent) | ✅ |
+| B3.1 | View → Panels = contentTypes; show/hide/toggle | ✅ |
+| B4 | Multi-instance panel copies (`DockPanelFactory`) | ✅ |
+| B4.2 | Multi-viewport (work/game cameras) | ✅ |
+| B5 | Delete `PanelPositionManager` + `src/ui/panels/*` | ✅ |
+| B6 | Docs sync (ARCHITECTURE, Context_map, API_GUIDE, …) | ✅ |
+
+Исходный список из аудита (для истории):
 
 1. **Замена докинга/сплитов**: `PanelPositionManager.js` + `TabLayoutController`/
-   `TabOrderController`/`TabDragController`/`SplitPaneController` заменяются прототипом целиком.
-   `SplitPaneController.js` (1016 строк, уже в `OVERRIDES` с пометкой "not further split") —
-   не рефакторить точечно, он весь под замену.
+   `TabOrderController`/`TabDragController`/`SplitPaneController` **удалены** (B5); layout =
+   `src/ui/dock/*` only.
 2. **Миграция содержимого панелей**: `AssetPanel.js` + 7 контроллеров, `LayersPanel.js`,
    `OutlinerPanel.js`, `DetailsPanel.js`, `Toolbar.js`, `SettingsPanel.js`, диалоги
    (`BaseDialog.js`, `UniversalDialog.js`, `ActorPropertiesWindow.js`, `SplashScreenDialog.js`),
@@ -348,4 +358,4 @@ compute → cache.set), но реализуют разную семантику 
 | A6.2 PerformanceUtils дедуп | 16 строк, низкий приоритет | нет | опционально, не форсировать |
 | ~~A7 EditorPreferencesController~~ | **снято из Фазы A** — переехало в Фазу B (см. там) | — | — |
 | A8 Doc sync | — | нет | после A0-A6 |
-| B (весь UI + persist-логика панелей) | весь `src/ui/` + `setupAutoSaveOnUnload` | высокий (полная замена) | готовность прототипа |
+| B (dock B0–B6) | `src/ui/dock/*`, remove PanelPositionManager, docs | высокий | ✅ closed |

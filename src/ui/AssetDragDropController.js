@@ -28,7 +28,7 @@ export class AssetDragDropController {
         // Mark HTML5 drag so the following click does not sole-select and wipe multi.
         assetPanel._assetHtmlDragActive = true;
 
-        const raw = assetPanel.stateManager.get('selectedAssets');
+        const raw = assetPanel.stateManager.get(assetPanel.uiStateKey('selectedAssets'));
         const selectedAssets = raw instanceof Set
             ? raw
             : new Set(Array.isArray(raw) ? raw : []);

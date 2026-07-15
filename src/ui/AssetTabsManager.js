@@ -204,17 +204,26 @@ export class AssetTabsManager {
         // Setup folder drag and drop to tabs container
         this.setupFolderDragToTabs();
         
-        // Subscribe to activeAssetTab changes to update visual selection
-        this.stateManager.subscribe('activeAssetTab', () => {
+        // Subscribe to activeAssetTab changes to update visual selection (per-instance keys)
+        this.stateManager.subscribe(this._k('activeAssetTab'), () => {
             // Re-render tabs to update visual selection (active class)
             this.render();
         });
         
         // Subscribe to selectedFolders changes to update visual selection
         // syncTabToFolder is called from AssetPanel subscription, this only handles visual updates
-        this.stateManager.subscribe('selectedFolders', () => {
+        this.stateManager.subscribe(this._k('selectedFolders'), () => {
             this.render();
         });
+    }
+
+    /**
+     * Per-panel StateManager key (copies independent of primary).
+     * @param {string} base
+     * @returns {string}
+     */
+    _k(base) {
+        return this.assetPanel?.uiStateKey?.(base) ?? base;
     }
     
     /**
@@ -236,13 +245,15 @@ export class AssetTabsManager {
      * @param {Array} tabOrder - Tab order
      */
     _saveTabStateToConfig(activeTab, activeTabs, tabOrder) {
+        // Only primary panel persists tab layout to config
+        if (!this.assetPanel?.isPrimary) return;
         if (!this.levelEditor?.configManager) return;
         
         // Get current state if not provided
-        const currentActiveTabs = activeTabs || this.stateManager.get('activeAssetTabs');
-        const currentTabOrder = tabOrder || this.stateManager.get('assetTabOrder');
+        const currentActiveTabs = activeTabs || this.stateManager.get(this._k('activeAssetTabs'));
+        const currentTabOrder = tabOrder || this.stateManager.get(this._k('assetTabOrder'));
         
-        this.levelEditor.configManager.set('editor.view.activeAssetTabs', Array.from(currentActiveTabs));
+        this.levelEditor.configManager.set('editor.view.activeAssetTabs', Array.from(currentActiveTabs || []));
         if (activeTab !== undefined) {
             this.levelEditor.configManager.set('editor.view.activeAssetTab', activeTab);
         }
@@ -271,9 +282,9 @@ export class AssetTabsManager {
         // It should NOT be called when we're syncing from tab clicks
         // Tab clicks should directly activate the tab without going through this sync
         
-        const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
+        const activeTabs = this.stateManager.get(this._k('activeAssetTabs')) || new Set();
         const selectedFoldersSet = this._normalizeSelectedFolders(
-            this.stateManager.get('selectedFolders') || []
+            this.stateManager.get(this._k('selectedFolders')) || []
         );
         
         // Sync foldersPanel's selectedFolders if needed
@@ -290,9 +301,9 @@ export class AssetTabsManager {
             // Find first selected folder that has a tab for visual selection
             const firstSelectedWithTab = Array.from(selectedFoldersSet).find(path => activeTabs.has(path));
             if (firstSelectedWithTab) {
-                const currentActiveTab = this.stateManager.get('activeAssetTab');
+                const currentActiveTab = this.stateManager.get(this._k('activeAssetTab'));
                 if (currentActiveTab !== firstSelectedWithTab) {
-                    this.stateManager.set('activeAssetTab', firstSelectedWithTab);
+                    this.stateManager.set(this._k('activeAssetTab'), firstSelectedWithTab);
                     // Save to config
                     this._saveTabStateToConfig(firstSelectedWithTab);
                     return true;
@@ -309,9 +320,9 @@ export class AssetTabsManager {
         
         // If tab with selected folder name exists - activate it
         if (activeTabs.has(selectedFolderPath)) {
-            const currentActiveTab = this.stateManager.get('activeAssetTab');
+            const currentActiveTab = this.stateManager.get(this._k('activeAssetTab'));
             if (currentActiveTab !== selectedFolderPath) {
-                this.stateManager.set('activeAssetTab', selectedFolderPath);
+                this.stateManager.set(this._k('activeAssetTab'), selectedFolderPath);
                     // Save to config
                     this._saveTabStateToConfig(selectedFolderPath);
                 return true;
@@ -322,9 +333,9 @@ export class AssetTabsManager {
         
         // No tab exists for selected folder - clear active tab
         // Asset panel will show folder content directly via getActiveTabPath()
-        const currentActiveTab = this.stateManager.get('activeAssetTab');
+        const currentActiveTab = this.stateManager.get(this._k('activeAssetTab'));
         if (currentActiveTab !== null) {
-            this.stateManager.set('activeAssetTab', null);
+            this.stateManager.set(this._k('activeAssetTab'), null);
             // Save to config
             this._saveTabStateToConfig(null);
             return true;
@@ -361,24 +372,24 @@ export class AssetTabsManager {
             return;
         }
 
-        const activeTabs = new Set(this.stateManager.get('activeAssetTabs') || []);
+        const activeTabs = new Set(this.stateManager.get(this._k('activeAssetTabs')) || []);
         if (activeTabs.has(folderPath)) {
             // Just activate it
-            this.stateManager.set('activeAssetTab', folderPath);
+            this.stateManager.set(this._k('activeAssetTab'), folderPath);
             return;
         }
 
         activeTabs.add(folderPath);
-        this.stateManager.set('activeAssetTabs', activeTabs);
+        this.stateManager.set(this._k('activeAssetTabs'), activeTabs);
         
         // Set as active tab
-        this.stateManager.set('activeAssetTab', folderPath);
+        this.stateManager.set(this._k('activeAssetTab'), folderPath);
         
         // Update tab order to include new tab at the end
-        const currentOrder = this.stateManager.get('assetTabOrder') || [];
+        const currentOrder = this.stateManager.get(this._k('assetTabOrder')) || [];
         if (!currentOrder.includes(folderPath)) {
             const newOrder = [...currentOrder, folderPath];
-            this.stateManager.set('assetTabOrder', newOrder);
+            this.stateManager.set(this._k('assetTabOrder'), newOrder);
         }
         
         // Save to config
@@ -392,20 +403,20 @@ export class AssetTabsManager {
      * @param {string} folderPath - Folder path
      */
     removeFolderTab(folderPath) {
-        const activeTabs = new Set(this.stateManager.get('activeAssetTabs') || []);
+        const activeTabs = new Set(this.stateManager.get(this._k('activeAssetTabs')) || []);
         if (!activeTabs.has(folderPath)) {
             return;
         }
 
         activeTabs.delete(folderPath);
-        this.stateManager.set('activeAssetTabs', activeTabs);
+        this.stateManager.set(this._k('activeAssetTabs'), activeTabs);
 
         // Clear active tab if it was the removed tab
-        const currentActiveTab = this.stateManager.get('activeAssetTab');
+        const currentActiveTab = this.stateManager.get(this._k('activeAssetTab'));
         let newActiveTab = currentActiveTab;
         if (currentActiveTab === folderPath) {
             newActiveTab = null;
-            this.stateManager.set('activeAssetTab', null);
+            this.stateManager.set(this._k('activeAssetTab'), null);
         }
 
         // Save to config — pass newActiveTab explicitly so null is persisted
@@ -426,8 +437,8 @@ export class AssetTabsManager {
         this.tabsContainer.innerHTML = '';
         
         // Get current active tabs (after potential sync)
-        const currentActiveTabs = this.stateManager.get('activeAssetTabs') || new Set();
-        const tabOrder = this.stateManager.get('assetTabOrder') || [];
+        const currentActiveTabs = this.stateManager.get(this._k('activeAssetTabs')) || new Set();
+        const tabOrder = this.stateManager.get(this._k('assetTabOrder')) || [];
 
         // Filter tabOrder to only include available folder paths, and add any missing tabs at the end
         const orderedTabs = tabOrder.filter(path => currentActiveTabs.has(path));
@@ -439,7 +450,7 @@ export class AssetTabsManager {
         
         // Add tabs to left container
         // Active tab is stored separately in activeAssetTab state
-        const activeTab = this.stateManager.get('activeAssetTab');
+        const activeTab = this.stateManager.get(this._k('activeAssetTab'));
         const selectedFolders = this.foldersPanel?.selectedFolders;
         const isMultiSelect = selectedFolders && selectedFolders.size > 1;
         
@@ -502,15 +513,15 @@ export class AssetTabsManager {
                 this.foldersPanel.selectFolder(folderPath, syntheticEvent);
             }
             
-            this.stateManager.set('selectedAssets', new Set());
+            this.stateManager.set(this._k('selectedAssets'), new Set());
             return;
         }
         
         // Simple click - activate tab directly and select folder
-        const activeTabs = this.stateManager.get('activeAssetTabs') || new Set();
+        const activeTabs = this.stateManager.get(this._k('activeAssetTabs')) || new Set();
         if (activeTabs.has(folderPath)) {
             // Tab exists - activate it directly
-            this.stateManager.set('activeAssetTab', folderPath);
+            this.stateManager.set(this._k('activeAssetTab'), folderPath);
             // Save to config
                         this._saveTabStateToConfig(folderPath);
         }
@@ -520,7 +531,7 @@ export class AssetTabsManager {
             this.foldersPanel.selectFolder(folderPath, null);
         }
         
-        this.stateManager.set('selectedAssets', new Set());
+        this.stateManager.set(this._k('selectedAssets'), new Set());
     }
     
     /**
@@ -675,7 +686,7 @@ export class AssetTabsManager {
                     // Activate the dragged tab after drop and sync folder selection
                     const folderPath = draggedTab.dataset.folderPath;
                     if (folderPath) {
-                        this.stateManager.set('activeAssetTab', folderPath);
+                        this.stateManager.set(this._k('activeAssetTab'), folderPath);
                         this._saveTabStateToConfig(folderPath);
                         if (this.foldersPanel) {
                             this.foldersPanel.selectFolder(folderPath, null);
@@ -725,7 +736,7 @@ export class AssetTabsManager {
             .map(tab => tab.dataset.folderPath)
             .filter(path => path); // Remove any undefined paths
         
-        this.stateManager.set('assetTabOrder', newOrder);
+        this.stateManager.set(this._k('assetTabOrder'), newOrder);
         
         // Save to config
         this._saveTabStateToConfig(undefined, undefined, newOrder);

@@ -47,10 +47,11 @@ export class AssetSelectionController {
             assetPanel.foldersPanel.selectFolder(folderPath, null);
         }
 
-        // Select the asset
-        const selectedAssets = assetPanel.stateManager.get('selectedAssets') || new Set();
+        // Select the asset (per-instance selection key)
+        const selKey = assetPanel.uiStateKey('selectedAssets');
+        const selectedAssets = assetPanel.stateManager.get(selKey) || new Set();
         selectedAssets.add(assetId);
-        assetPanel.stateManager.set('selectedAssets', selectedAssets);
+        assetPanel.stateManager.set(selKey, selectedAssets);
 
         // Scroll to and highlight the asset
         setTimeout(() => {
@@ -124,13 +125,16 @@ export class AssetSelectionController {
      * Update selection visuals without re-rendering entire content
      */
     updateSelectionVisuals() {
-        const selectedAssets = this.assetPanel.stateManager.get('selectedAssets');
+        const assetPanel = this.assetPanel;
+        const selectedAssets = assetPanel.stateManager.get(assetPanel.uiStateKey('selectedAssets')) || new Set();
+        const root = assetPanel.previewsContainer || assetPanel.container;
+        if (!root) return;
 
-        // Update all asset elements - use CSS classes only
+        // Scope to this panel only (multi-instance copies)
         const selectors = ['.asset-thumbnail', '.asset-list-item', '.asset-details-row'];
 
         selectors.forEach(selector => {
-            document.querySelectorAll(selector).forEach(element => {
+            root.querySelectorAll(selector).forEach(element => {
                 const assetId = element.dataset.assetId;
                 if (assetId) {
                     if (selectedAssets.has(assetId)) {
@@ -163,7 +167,7 @@ export class AssetSelectionController {
         const uniqueAssets = Array.from(new Map(allAssets.map(asset => [asset.id, asset])).values());
         const allAssetIds = new Set(uniqueAssets.map(asset => asset.id));
 
-        assetPanel.stateManager.set('selectedAssets', allAssetIds);
+        assetPanel.stateManager.set(assetPanel.uiStateKey('selectedAssets'), allAssetIds);
     }
 
     /**
@@ -171,7 +175,8 @@ export class AssetSelectionController {
      */
     handleDeselectAll() {
         Logger.ui.debug('Deselecting all assets');
-        this.assetPanel.stateManager.set('selectedAssets', new Set());
+        const assetPanel = this.assetPanel;
+        assetPanel.stateManager.set(assetPanel.uiStateKey('selectedAssets'), new Set());
         // Force immediate visual update after deselect
         this.updateSelectionVisuals();
     }
