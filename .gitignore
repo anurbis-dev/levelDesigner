@@ -1,1 +1,9 @@
+# Local agent/session junk (plans in tmp/ stay tracked if already added)
 tmp/reports/
+tmp/_*.md
+tmp/fix-*.mjs
+
+# Vitest / tooling caches (even while node_modules is partially tracked)
+node_modules/.vite/
+**/.vitest/
+*.tsbuildinfo
