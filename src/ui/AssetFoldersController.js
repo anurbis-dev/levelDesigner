@@ -6,7 +6,7 @@ import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 /**
  * Folder/tab navigation for AssetPanel — tabsManager/foldersPanel lifecycle,
  * active-folder resolution, folder-position persistence.
- * Extracted from AssetPanel.js — Фаза 4.1 рефакторинга (tmp/2D_Editor_REFACTOR_PLAN.md).
+ * Extracted from AssetPanel.js — folder/tab navigation.
  */
 export class AssetFoldersController {
     constructor(assetPanel) {

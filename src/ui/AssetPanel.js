@@ -64,18 +64,9 @@ export class AssetPanel extends BasePanel {
         // Initialize panel size calculator
         this.panelSizeCalculator = new PanelSizeCalculator();
 
-        // Search and filter management
+        // Search and filter management — single source: instance field (not StateManager dual)
         this.searchTerm = '';
-        this.activeTypeFilters = new Set(); // Set of active asset type filters
-
-        // Per-instance type filters (primary keeps legacy key; copies are independent)
-        const filterKey = this.uiStateKey('assetTypeFilters');
-        if (!this.stateManager.get(filterKey)) {
-            this.stateManager.set(filterKey, new Set());
-            this.activeTypeFilters = new Set();
-        } else {
-            this.activeTypeFilters = this.stateManager.get(filterKey) || new Set();
-        }
+        this.activeTypeFilters = new Set();
 
         this.init();
         this.setupEventListeners();
@@ -1140,17 +1131,8 @@ export class AssetPanel extends BasePanel {
         // Create asset panel handlers configuration
         // Note: Tab clicks and context menu are handled by AssetTabsManager
         const assetHandlers = EventHandlerUtils.createPanelHandlers(
-            (e) => {
-                // Handle asset clicks (tabs are handled by AssetTabsManager)
-                const assetElement = e.target.closest('.asset-thumbnail, .asset-list-item, .asset-details-row, [data-asset-id]');
-                if (assetElement) {
-                    const assetId = assetElement.dataset.assetId;
-                    if (assetId) {
-                        this.itemActionsController.handleAssetClick(e, assetId);
-                    }
-                    return;
-                }
-            },
+            // Asset item select/dblclick: AssetViewRenderer; tabs: AssetTabsManager
+            () => {},
             (e) => {
                 // Handle button clicks
                 if (e.target.classList.contains('view-mode-btn')) {

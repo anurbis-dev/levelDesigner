@@ -75,7 +75,7 @@ export class DetailsPanel {
         this.subscriptions.push(unsubscribeLevel);
 
         // Subscribe to level structure changes (object/layer add/remove/reorder) — see
-        // Level.setStructureChangeCallback / tmp/REACTIVE_LEVEL_UPDATES_PLAN.md. Needed in
+        // Level.setStructureChangeCallback. Needed in
         // particular for the no-selection level-stats view (renderNoSelection/
         // renderLevelContent), which must stay live as objects are added/removed elsewhere.
         const unsubscribeStructure = this.stateManager.subscribe('levelStructureChanged', () => {

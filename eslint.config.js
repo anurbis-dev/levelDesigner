@@ -13,12 +13,8 @@ export default [
         }
     },
     {
-        // Фаза 3 (см. tmp/2D_Editor_REFACTOR_PLAN.md) extracted EditorConfigController/
-        // EditorLifecycleController/EditorPreferencesController — 46 imports -> 34. Still
-        // over the 20 limit (tree-search helpers, player-start tracking, and ~30 one-line
-        // delegate methods remain un-extracted, out of Фаза 3's explicit scope — logged as
-        // backlog for a future pass, not a new named phase). TODO remove override once those
-        // move out too.
+        // LevelEditor still exceeds import/max-dependencies after controller extract.
+        // TODO remove override when remaining one-line delegates move out.
         files: ['src/core/LevelEditor.js'],
         rules: {
             'import/max-dependencies': 'off'

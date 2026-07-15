@@ -5,7 +5,7 @@ import { ImageUtils } from '../utils/ImageUtils.js';
 
 /**
  * Renders the asset grid/list/details views for AssetPanel.
- * Extracted from AssetPanel.js — Фаза 4.2 рефакторинга (tmp/2D_Editor_REFACTOR_PLAN.md).
+ * Extracted from AssetPanel.js — grid/list/details previews.
  */
 export class AssetViewRenderer {
     constructor(assetPanel) {

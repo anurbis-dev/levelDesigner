@@ -3,9 +3,8 @@ import { globalEventRegistry } from '../event-system/GlobalEventRegistry.js';
 import { Logger } from '../utils/Logger.js';
 
 /**
- * Restores UI preferences (panel sizes, tab order) on startup and persists them
- * (auto-save on unload / tab-switch). Split out of EditorLifecycleController.js
- * to stay under the Фаза 1.2 400-line guardrail — see tmp/2D_Editor_REFACTOR_PLAN.md.
+ * Restores UI preferences (console height, asset tab order) on startup and
+ * persists them on unload / tab-switch. Dock layout is owned by DockPersistence.
  */
 export class EditorPreferencesController extends BaseModule {
     /**
@@ -16,32 +15,26 @@ export class EditorPreferencesController extends BaseModule {
         if (!editor.userPrefs) return;
 
         try {
-            // Apply panel sizes from user preferences
             this.applyPanelSizesFromPreferences();
-
-            // Apply tab order settings to prevent UI flicker
             this.applyTabOrderSettings();
 
-            // Update canvas after applying saved sizes
             if (editor.canvasRenderer) {
                 editor.canvasRenderer.resizeCanvas();
                 editor.render();
             }
-
         } catch (error) {
             Logger.layout.warn('Failed to apply saved panel settings:', error);
         }
     }
 
     /**
-     * Apply panel sizes from user preferences
+     * Apply panel sizes from user preferences (console overlay only; dock owns tree ratios)
      */
     applyPanelSizesFromPreferences() {
         const editor = this.editor;
         if (!editor.userPrefs) return;
 
         try {
-            // L/R widths + assets footer height — dock ratios own layout (B5). Console still overlay.
             const consoleHeight = editor.userPrefs.get('consoleHeight');
             if (consoleHeight) {
                 const consolePanel = document.getElementById('console-panel');
@@ -57,124 +50,112 @@ export class EditorPreferencesController extends BaseModule {
     }
 
     /**
-     * Apply tab order settings to prevent UI flicker
+     * Apply asset tab order settings
      */
     applyTabOrderSettings() {
         const editor = this.editor;
         if (!editor.userPrefs) return;
 
         try {
-            // Asset tab order (Assets panel internal tabs — still used)
             const assetTabOrder = editor.userPrefs.get('assetTabOrder');
             if (assetTabOrder && Array.isArray(assetTabOrder)) {
                 editor.stateManager.set('assetTabOrder', assetTabOrder);
             }
 
-            // Re-render panels to apply tab order
             if (editor.assetPanel) {
                 editor.assetPanel.render();
             }
-
         } catch (error) {
             Logger.ui.warn('Failed to apply tab order settings:', error);
         }
     }
 
     /**
+     * Persist canvas edit prefs (snap + grid) — independent of panel unload path.
+     */
+    saveEditingPreferences() {
+        const editor = this.editor;
+        if (!editor?.stateManager || !editor?.configManager) return;
+
+        const snapToGrid = editor.stateManager.get('canvas.snapToGrid');
+        if (snapToGrid !== undefined) {
+            editor.configManager.set('canvas.snapToGrid', snapToGrid);
+        }
+
+        const gridKeys = [
+            ['canvas.gridSize', 'grid.size'],
+            ['canvas.gridColor', 'grid.color'],
+            ['canvas.gridThickness', 'grid.thickness'],
+            ['canvas.gridOpacity', 'grid.opacity'],
+            ['canvas.gridSubdivisions', 'grid.subdivisions'],
+            ['canvas.gridSubdivColor', 'grid.subdivColor'],
+            ['canvas.gridSubdivThickness', 'grid.subdivThickness']
+        ];
+        for (const [stateKey, configKey] of gridKeys) {
+            const value = editor.stateManager.get(stateKey);
+            if (value !== undefined) {
+                editor.configManager.set(configKey, value);
+            }
+        }
+    }
+
+    /**
+     * Persist primary Assets UI + toolbar + dock snapshot (not canvas edit prefs).
+     */
+    savePanelUiPreferences() {
+        const editor = this.editor;
+
+        if (editor.toolbar) {
+            editor.toolbar.saveState();
+        }
+
+        const currentActiveAssetTabs = editor.stateManager.get('activeAssetTabs');
+        if (currentActiveAssetTabs) {
+            editor.configManager.set('editor.view.activeAssetTabs', Array.from(currentActiveAssetTabs));
+        }
+
+        if (editor.assetPanel?.assetSize) {
+            editor.configManager.set('ui.assetSize', editor.assetPanel.assetSize);
+        }
+        if (editor.assetPanel?.viewMode) {
+            editor.configManager.set('ui.assetViewMode', editor.assetPanel.viewMode);
+        }
+
+        const assetTabOrder = editor.stateManager.get('assetTabOrder');
+        if (assetTabOrder && Array.isArray(assetTabOrder)) {
+            editor.userPrefs.set('assetTabOrder', assetTabOrder);
+        }
+
+        if (editor.dockManager?._inited) {
+            editor.dockManager.persistence?.save(editor.dockManager.getLayoutSnapshot());
+        }
+    }
+
+    /**
+     * Full unload/visibility flush: panel UI + editing prefs + forceSave.
+     */
+    saveAllUserSettings() {
+        const editor = this.editor;
+        this.savePanelUiPreferences();
+        this.saveEditingPreferences();
+        if (editor.configManager) {
+            editor.configManager.forceSaveAllSettings();
+        }
+    }
+
+    /**
      * Setup auto-save on page unload
-     * Now saves only when page is closed/reloaded, not on every change
      */
     setupAutoSaveOnUnload() {
-        // Check if already registered to prevent duplicates
         if (this._autoSaveUnloadRegistered) {
             return;
         }
 
-        const editor = this.editor;
-
-        // Use GlobalEventRegistry for window events
         globalEventRegistry.registerComponentHandlers('level-editor-autosave-unload', {
             beforeunload: () => {
                 try {
                     Logger.ui.info('Saving user settings on page unload...');
-
-                    // Save toolbar state
-                    if (editor.toolbar) {
-                        editor.toolbar.saveState();
-                    }
-
-                    // Save current active asset tabs
-                    const currentActiveAssetTabs = editor.stateManager.get('activeAssetTabs');
-                    if (currentActiveAssetTabs) {
-                        const tabsArray = Array.from(currentActiveAssetTabs);
-                        editor.configManager.set('editor.view.activeAssetTabs', tabsArray);
-                    }
-
-                    // Save current asset panel size if it exists
-                    if (editor.assetPanel?.assetSize) {
-                        editor.configManager.set('ui.assetSize', editor.assetPanel.assetSize);
-                    }
-
-                    // Save current asset panel view mode if it exists
-                    if (editor.assetPanel?.viewMode) {
-                        editor.configManager.set('ui.assetViewMode', editor.assetPanel.viewMode);
-                    }
-
-                    // Save current snap to grid state
-                    const snapToGrid = editor.stateManager.get('canvas.snapToGrid');
-                    if (snapToGrid !== undefined) {
-                        editor.configManager.set('canvas.snapToGrid', snapToGrid);
-                    }
-
-                    // Asset tab order (internal Assets tabs)
-                    const assetTabOrder = editor.stateManager.get('assetTabOrder');
-                    if (assetTabOrder && Array.isArray(assetTabOrder)) {
-                        editor.userPrefs.set('assetTabOrder', assetTabOrder);
-                    }
-
-                    // L/R widths, tab orders, tabPositions, L/R/assetsVisible — stopped (B5 dock)
-
-                    // Save current grid settings from StateManager
-                    const gridSize = editor.stateManager.get('canvas.gridSize');
-                    const gridColor = editor.stateManager.get('canvas.gridColor');
-                    const gridThickness = editor.stateManager.get('canvas.gridThickness');
-                    const gridOpacity = editor.stateManager.get('canvas.gridOpacity');
-                    const gridSubdivisions = editor.stateManager.get('canvas.gridSubdivisions');
-                    const gridSubdivColor = editor.stateManager.get('canvas.gridSubdivColor');
-                    const gridSubdivThickness = editor.stateManager.get('canvas.gridSubdivThickness');
-
-                    if (gridSize !== undefined) {
-                        editor.configManager.set('grid.size', gridSize);
-                    }
-                    if (gridColor !== undefined) {
-                        editor.configManager.set('grid.color', gridColor);
-                    }
-                    if (gridThickness !== undefined) {
-                        editor.configManager.set('grid.thickness', gridThickness);
-                    }
-                    if (gridOpacity !== undefined) {
-                        editor.configManager.set('grid.opacity', gridOpacity);
-                    }
-                    if (gridSubdivisions !== undefined) {
-                        editor.configManager.set('grid.subdivisions', gridSubdivisions);
-                    }
-                    if (gridSubdivColor !== undefined) {
-                        editor.configManager.set('grid.subdivColor', gridSubdivColor);
-                    }
-                    if (gridSubdivThickness !== undefined) {
-                        editor.configManager.set('grid.subdivThickness', gridSubdivThickness);
-                    }
-
-                    // Dock layout (B1) — ensure latest tree is in config before flush
-                    if (editor.dockManager?._inited) {
-                        editor.dockManager.persistence?.save(editor.dockManager.getLayoutSnapshot());
-                    }
-
-                    // Force save all modified settings immediately
-                    if (editor.configManager) {
-                        editor.configManager.forceSaveAllSettings();
-                    }
-
+                    this.saveAllUserSettings();
                     Logger.ui.info('User settings saved successfully');
                 } catch (error) {
                     Logger.ui.error('Failed to save user settings:', error);
@@ -187,34 +168,24 @@ export class EditorPreferencesController extends BaseModule {
 
     /**
      * Setup auto-save on page visibility change (tab switch)
-     * Saves settings when user switches to another tab or minimizes browser
      */
     setupAutoSaveOnVisibilityChange() {
-        // Check if already registered to prevent duplicates
         if (this._autoSaveVisibilityRegistered) {
             return;
         }
 
         const editor = this.editor;
 
-        // Use GlobalEventRegistry for document events
         globalEventRegistry.registerComponentHandlers('level-editor-autosave-visibility', {
             visibilitychange: () => {
                 if (document.hidden) {
-                    // Reset any in-progress mouse action (drag/marquee) since the
-                    // page won't receive the eventual mouseup while unfocused
                     if (editor.mouseHandlers) {
                         editor.mouseHandlers.handleWindowBlur();
                     }
 
                     try {
                         Logger.ui.info('Saving user settings on tab switch...');
-
-                        // Force save all modified settings immediately
-                        if (editor.configManager) {
-                            editor.configManager.forceSaveAllSettings();
-                        }
-
+                        this.saveAllUserSettings();
                         Logger.ui.info('User settings saved on tab switch');
                     } catch (error) {
                         Logger.ui.error('Failed to save user settings on tab switch:', error);

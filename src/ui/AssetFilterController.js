@@ -6,7 +6,7 @@ import { openTypeFilterMenu, hasActiveTypeFilters } from '../utils/TypeFilterMen
 
 /**
  * Search/filter controls for AssetPanel — search input, type-filter menu, filtering logic.
- * Extracted from AssetPanel.js — Фаза 4.3 рефакторинга (tmp/2D_Editor_REFACTOR_PLAN.md).
+ * Extracted from AssetPanel.js — search/type filters.
  */
 export class AssetFilterController {
     constructor(assetPanel) {
@@ -163,7 +163,6 @@ export class AssetFilterController {
             filters: assetPanel.activeTypeFilters,
             onChange: (filters) => {
                 assetPanel.activeTypeFilters = filters;
-                assetPanel.stateManager.set(assetPanel.uiStateKey('assetTypeFilters'), filters);
                 assetPanel.viewRenderer.renderPreviews();
                 this._syncFilterButton(button);
             },

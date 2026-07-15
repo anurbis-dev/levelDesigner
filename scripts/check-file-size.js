@@ -1,11 +1,8 @@
 #!/usr/bin/env node
 /**
- * Фаза 1.2 (tmp/2D_Editor_REFACTOR_PLAN.md) — line-limit guardrail.
- * Fails on any src/**\/*.js file over LINE_LIMIT that isn't in the override
- * allowlist below. The allowlist is a snapshot of files already over the
- * limit when this script was introduced — remove an entry once that file's
- * decomposition phase (see the plan) actually shrinks it back under the
- * limit, don't just raise its number.
+ * Line-limit guardrail (400 lines).
+ * Fails on any src/**\/*.js file over LINE_LIMIT that isn't in OVERRIDES.
+ * Remove an entry only when the file is actually under the limit — do not raise limits.
  */
 import { readdirSync, statSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
@@ -13,12 +10,12 @@ import { join, relative } from 'node:path';
 const LINE_LIMIT = 400;
 const SRC_DIR = new URL('../src', import.meta.url).pathname.replace(/^\/([a-zA-Z]:)/, '$1');
 
-// TODO remove entries as each file's phase in tmp/2D_Editor_REFACTOR_PLAN.md lands.
+// Known files still over LINE_LIMIT (legacy size / intentional dense modules).
 const OVERRIDES = new Set([
-    'ui/AssetPanel.js',              // Фаза 4 done (3099->1154); orchestration layer, still above 400
-    'ui/AssetViewRenderer.js',       // Фаза 4.2 extraction from AssetPanel.js — single-responsibility render module, not further split
-    'ui/AssetFoldersController.js',  // Фаза 4.1 extraction from AssetPanel.js — folder/tab navigation module, not further split
-    'core/LevelEditor.js',           // Фаза 3 done (2399->1583); remainder is backlog, not a named phase
+    'ui/AssetPanel.js',
+    'ui/AssetViewRenderer.js',
+    'ui/AssetFoldersController.js',
+    'core/LevelEditor.js',
     'ui/LayersPanel.js',
     'event-system/MouseHandlers.js',
     'core/RenderOperations.js',
@@ -53,10 +50,10 @@ const OVERRIDES = new Set([
     'core/LayerOperations.js',
     'core/DuplicateOperations.js',
     'ui/UniversalDialog.js',
-    'utils/ScrollUtils.js',          // scrollbar size runtime + panning styles (pre-existing WIP over 400)
-    'ui/dock/DockContentRegistry.js', // B4 multi-instance + B4.2 viewport multi mount
-    'ui/dock/DockRenderer.js',       // B4.2 viewport header chrome / leaf closeable
-    'core/ViewportViewManager.js'    // B4.2 multi-view camera registry
+    'utils/ScrollUtils.js',
+    'ui/dock/DockContentRegistry.js',
+    'ui/dock/DockRenderer.js',
+    'core/ViewportViewManager.js'
 ]);
 
 function walk(dir, files = []) {
@@ -96,7 +93,7 @@ if (staleOverrides.length > 0) {
 if (violations.length > 0) {
     console.error(`\nFile size check FAILED — ${violations.length} file(s) exceed ${LINE_LIMIT} lines and are not in the known-overrides allowlist:`);
     violations.forEach(({ relPath, lineCount }) => console.error(`  ${relPath} (${lineCount} lines)`));
-    console.error('\nEither split the file, or if it is a pre-existing God Object being tracked in tmp/2D_Editor_REFACTOR_PLAN.md, add it to OVERRIDES in scripts/check-file-size.js with a TODO referencing the phase that will shrink it.');
+    console.error('\nEither split the file, or add it to OVERRIDES in scripts/check-file-size.js with a short reason if intentional.');
     process.exit(1);
 }
 

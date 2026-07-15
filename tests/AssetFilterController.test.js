@@ -5,7 +5,7 @@ import { AssetFilterController } from '../src/ui/AssetFilterController.js';
  * shouldShowAsset/filterAssets only read `this.assetPanel.activeTypeFilters` / `this.assetPanel.searchTerm` —
  * call them unbound against a controller wrapping a plain object instead of constructing a full
  * AssetPanel (which needs a real DOM container/assetManager/stateManager).
- * Moved from AssetPanel.js to AssetFilterController.js — Фаза 4.3 (tmp/2D_Editor_REFACTOR_PLAN.md).
+ * Moved from AssetPanel.js to AssetFilterController.js.
  */
 describe('AssetFilterController.shouldShowAsset (characterization)', () => {
     it('shows everything when no type filters are active', () => {

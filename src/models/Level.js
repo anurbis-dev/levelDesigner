@@ -14,7 +14,7 @@ export class Level {
 
         this.meta = {
             name: data.meta?.name || 'Untitled Level',
-            version: data.meta?.version || 'dynamic',
+            version: data.meta?.version || '1.0.0',
             created: data.meta?.created || new Date().toISOString(),
             modified: data.meta?.modified || new Date().toISOString(),
             author: data.meta?.author || '',
@@ -768,7 +768,7 @@ export class Level {
      * Set callback for level structure changes (object add/remove, layer add/remove/reorder).
      * Generalizes the same pattern as setLayerObjectsCountChangeCallback so callers of
      * addObject/removeObject/removeObjects/addLayer/removeLayer/reorderLayers never need to
-     * remember to tell panels about it themselves — see tmp/REACTIVE_LEVEL_UPDATES_PLAN.md.
+     * remember to tell panels about it themselves (levelStructureChanged / objectChanged).
      */
     setStructureChangeCallback(callback) {
         this.onLevelStructureChanged = callback;

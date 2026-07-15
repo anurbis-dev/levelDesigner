@@ -4,7 +4,7 @@ import { Logger } from '../utils/Logger.js';
 
 /**
  * Applies ConfigManager settings (grid, colors) to StateManager/Level.
- * Extracted from LevelEditor.js — Фаза 3.1 рефакторинга (tmp/2D_Editor_REFACTOR_PLAN.md).
+ * Extracted from LevelEditor.js (init-time config / DOM bootstrap).
  */
 export class EditorConfigController extends BaseModule {
     /**

@@ -3,7 +3,7 @@
  * Replaces browser dialogs with custom styled dialogs
  *
  * The window.alert/confirm/prompt reassignment below is the ONE intentionally-kept
- * global-state mutation in the project (see tmp/2D_Editor_REFACTOR_PLAN.md, Фаза 2) — it's
+ * global-state mutation in the project (intentional DialogReplacer exception) — it's
  * the whole point of this class: monkey-patching the native dialog globals IS the feature,
  * not incidental global state to encapsulate. Every other window.* write found during the
  * Фаза 2 audit (panel-drag state in PanelPositionManager.js) was an accidental global and

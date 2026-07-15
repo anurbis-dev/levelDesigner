@@ -18,7 +18,7 @@ import { ViewportViewManager } from './ViewportViewManager.js';
 /**
  * Editor startup/shutdown-lifecycle: DOM/renderer/UI-component bootstrap, panel-size
  * and auto-save listeners, first-visit splash. Extracted from LevelEditor.js —
- * Фаза 3.3 рефакторинга (tmp/2D_Editor_REFACTOR_PLAN.md).
+ * Lifecycle init/teardown extracted from LevelEditor.
  */
 export class EditorLifecycleController extends BaseModule {
     /**

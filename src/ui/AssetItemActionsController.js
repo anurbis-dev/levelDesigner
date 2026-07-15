@@ -5,7 +5,7 @@ import { AssetPanelContextMenu } from './AssetPanelContextMenu.js';
 /**
  * Context-menu/click actions for AssetPanel — context menu wiring, item click/double-click,
  * asset open/rename/duplicate/delete stubs.
- * Extracted from AssetPanel.js — Фаза 4.6 рефакторинга (tmp/2D_Editor_REFACTOR_PLAN.md).
+ * Extracted from AssetPanel.js — context menus / open / explorer.
  * Note: onSaveAsset/onSaveAssetChanges/onShowInExplorer and the panel-context-menu callbacks
  * (reset size, toggle view, refresh, settings, select/deselect all) call back into AssetPanel
  * directly — that logic isn't part of this phase's method list and stays where it is.
@@ -128,19 +128,6 @@ export class AssetItemActionsController {
         }
     }
 
-    /**
-     * Handle asset click events
-     * @param {Event} e - Click event
-     * @param {string} assetId - Asset ID
-     */
-    handleAssetClick(e, assetId) {
-        const assetPanel = this.assetPanel;
-        // Handle double click for asset properties
-        if (e.detail === 2) {
-            const asset = assetPanel.assetManager.getAssetById(assetId);
-            if (asset && assetPanel.levelEditor && assetPanel.levelEditor.showActorPropertiesPanel) {
-                assetPanel.levelEditor.showActorPropertiesPanel(asset);
-            }
-        }
-    }
+    // Selection / dblclick live on AssetViewRenderer (mousedown + dblclick).
+    // Dead panel-click detail===2 path removed after dock multi-instance.
 }

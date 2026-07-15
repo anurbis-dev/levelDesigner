@@ -4,11 +4,7 @@ import { Logger } from '../utils/Logger.js';
  * Drag & drop for AssetPanel — thumbnail drag-out (asset -> canvas), external-file drop
  * overlay (PNG import). AssetPanel.handleDrop (asset creation from dropped files) stays on
  * AssetPanel itself and calls into this controller's predicate methods.
- * Extracted from AssetPanel.js — Фаза 4.5 рефакторинга (tmp/2D_Editor_REFACTOR_PLAN.md).
- * Note: the plan's original jscpd finding about duplication with OutlinerPanel.js drag-drop
- * logic is stale — OutlinerPanel.js currently has no external-file-drop/overlay logic at all
- * (only the unrelated icon paint-drag feature for batch visibility toggling), so there is
- * nothing to share and no base class was introduced.
+ * Extracted from AssetPanel.js — thumbnail drag-out and external-file drop overlay.
  */
 export class AssetDragDropController {
     constructor(assetPanel) {

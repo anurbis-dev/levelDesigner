@@ -779,7 +779,7 @@ export class LevelEditor {
      * Set up layer objects count change tracking, plus the generalized level-structure-change
      * tracking (object add/remove, layer add/remove/reorder) that replaces per-operation
      * this.updateAllPanels() calls with automatic panel reactivity — see
-     * tmp/REACTIVE_LEVEL_UPDATES_PLAN.md. Both callbacks live on the Level INSTANCE, so this
+     * Reactive level updates. Both callbacks live on the Level INSTANCE, so this
      * must be re-called any time this.level is replaced wholesale (openLevel/newLevel in
      * LevelFileOperations.js), or the new level silently loses both callbacks.
      */

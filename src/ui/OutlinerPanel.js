@@ -168,7 +168,7 @@ export class OutlinerPanel extends BasePanel {
         this.subscriptions.push(unsubscribeLevel);
 
         // Subscribe to level structure changes (object/layer add/remove/reorder) — see
-        // Level.setStructureChangeCallback / tmp/REACTIVE_LEVEL_UPDATES_PLAN.md. Replaces
+        // Level.setStructureChangeCallback. Replaces
         // the need for every mutating operation to remember calling editor.updateAllPanels().
         const unsubscribeStructure = this.stateManager.subscribe('levelStructureChanged', () => this.render());
         this.subscriptions.push(unsubscribeStructure);

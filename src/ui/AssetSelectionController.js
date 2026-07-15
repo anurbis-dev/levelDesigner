@@ -3,7 +3,7 @@ import { Logger } from '../utils/Logger.js';
 /**
  * Asset selection for AssetPanel — selection container/list for BasePanel's selection
  * mixin, select-all/deselect-all, external asset-selection entry point (FoldersPanel).
- * Extracted from AssetPanel.js — Фаза 4.4 рефакторинга (tmp/2D_Editor_REFACTOR_PLAN.md).
+ * Extracted from AssetPanel.js — asset multi-select helpers.
  */
 export class AssetSelectionController {
     constructor(assetPanel) {

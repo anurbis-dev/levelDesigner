@@ -6,9 +6,8 @@
 добавить логику туда. Создавать новый файл **только если** ни один из существующих не подходит
 по ответственности.
 
-Проект прошёл декомпозицию God Object'ов (`LevelEditor.js`, `AssetPanel.js` — см.
-`tmp/2D_Editor_REFACTOR_PLAN.md`) и замену layout на dock (`src/ui/dock/*`, Phase B —
-`tmp/2D_Editor_REFACTOR_PLAN_v2_PhaseB.md`). Без этого правила файлы снова начнут расти.
+Проект прошёл декомпозицию God Object'ов (`LevelEditor.js`, `AssetPanel.js`, …) и layout
+на dock (`src/ui/dock/*`). Без этого правила файлы снова начнут расти.
 
 Практически:
 - Ищи существующий `*Controller`/`*Operations`/`*Manager` с подходящей ответственностью

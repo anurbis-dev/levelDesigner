@@ -3,7 +3,7 @@ import { Logger } from '../utils/Logger.js';
 /**
  * Toolbar controls for AssetPanel — asset size zoom, view mode switching, size/view-mode
  * persistence, panel toolbar action handlers (reset size, toggle view, refresh, settings).
- * Extracted from AssetPanel.js — Фаза 4.7 рефакторинга (tmp/2D_Editor_REFACTOR_PLAN.md).
+ * Extracted from AssetPanel.js — size/view-mode toolbar.
  */
 export class AssetToolbarController {
     constructor(assetPanel) {
