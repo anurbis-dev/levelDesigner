@@ -1,9 +1,27 @@
-# Local agent/session junk (plans in tmp/ stay tracked if already added)
-tmp/reports/
-tmp/_*.md
-tmp/fix-*.mjs
+# Dependencies (install via npm install; do not commit)
+node_modules/
 
-# Vitest / tooling caches (even while node_modules is partially tracked)
+# Package manager / build caches
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-store/
 node_modules/.vite/
 **/.vitest/
 *.tsbuildinfo
+.turbo/
+dist/
+coverage/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*~
+
+# Local agent/session junk (explicit plans in tmp/ may still be tracked if already added)
+tmp/reports/
+tmp/_*.md
+tmp/fix-*.mjs
+tmp/check-*.mjs
