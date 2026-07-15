@@ -1,0 +1,393 @@
+/**
+ * Dock DOM renderer with leaf-content reconciliation by node.id.
+ * Chrome (headers/resizers/floating shells) may be rebuilt; content roots reparent only.
+ */
+import { typeLabel, typeColor, FLOAT_MIN_W, FLOAT_MIN_H, COLLAPSED_H } from './DockConstants.js';
+
+export class DockRenderer {
+    /**
+     * @param {object} opts
+     * @param {import('./DockTreeModel.js').DockTreeModel} opts.model
+     * @param {HTMLElement} opts.splitRoot
+     * @param {HTMLElement} opts.floatingLayer
+     * @param {HTMLElement} opts.workspaceEl
+     * @param {(workspaceId: string, node: object, bodyEl: HTMLElement) => void} [opts.mountLeafContent]
+     * @param {() => void} [opts.onStructureChange]
+     * @param {object} opts.drag  - DockDragController (set after construction if needed)
+     */
+    constructor(opts) {
+        this.model = opts.model;
+        this.splitRoot = opts.splitRoot;
+        this.floatingLayer = opts.floatingLayer;
+        this.workspaceEl = opts.workspaceEl;
+        this.mountLeafContent = opts.mountLeafContent || this._defaultPlaceholderMount.bind(this);
+        this.onStructureChange = opts.onStructureChange || (() => {});
+        this.drag = opts.drag || null;
+
+        /** @type {Map<string, HTMLElement>} leafId -> stable content root */
+        this._contentRoots = new Map();
+        /** @type {HTMLElement} off-tree pool for detached content roots */
+        this._contentPool = document.createElement('div');
+        this._contentPool.id = 'dock-content-pool';
+        this._contentPool.style.display = 'none';
+        document.body.appendChild(this._contentPool);
+    }
+
+    setDragController(drag) {
+        this.drag = drag;
+    }
+
+    _defaultPlaceholderMount(workspaceId, node, bodyEl) {
+        let root = this._contentRoots.get(node.id);
+        if (!root) {
+            root = document.createElement('div');
+            root.className = 'dock-placeholder';
+            root.dataset.leafId = node.id;
+            root.textContent = node.contentType;
+            this._contentRoots.set(node.id, root);
+        }
+        root.style.background = typeColor(node.contentType);
+        root.textContent = node.contentType;
+        if (root.parentElement !== bodyEl) {
+            bodyEl.appendChild(root);
+        }
+    }
+
+    /**
+     * Park all known content roots into the off-tree pool before chrome rebuild.
+     */
+    _parkContentRoots() {
+        this._contentRoots.forEach((root) => {
+            if (root.parentElement !== this._contentPool) {
+                this._contentPool.appendChild(root);
+            }
+        });
+    }
+
+    render() {
+        this._parkContentRoots();
+        this._renderWorkspace('main', this.model.mainTree, this.splitRoot);
+        this._renderFloatingLayer();
+        this.onStructureChange();
+    }
+
+    refreshWorkspace(workspaceId) {
+        this._parkContentRoots();
+        if (workspaceId === 'main') {
+            this._renderWorkspace('main', this.model.mainTree, this.splitRoot);
+        } else {
+            const fw = this.model.floatingWindows.find((f) => f.id === workspaceId);
+            if (fw) this._refreshFloatingWindow(fw);
+            else this._renderFloatingLayer();
+        }
+        this.onStructureChange();
+    }
+
+    _renderWorkspace(workspaceId, treeNode, containerEl) {
+        containerEl.innerHTML = '';
+        if (!treeNode) {
+            const empty = document.createElement('div');
+            empty.className = 'empty-drop-zone';
+            empty.dataset.workspaceId = workspaceId;
+            empty.textContent = workspaceId === 'main'
+                ? 'Область пуста — перетащите сюда панель'
+                : 'Пусто';
+            containerEl.appendChild(empty);
+            return;
+        }
+        containerEl.appendChild(this._renderNode(treeNode, workspaceId));
+    }
+
+    _renderNode(node, workspaceId) {
+        if (node.type === 'leaf') return this._renderLeaf(node, workspaceId);
+        const el = document.createElement('div');
+        el.className = 'split-node';
+        el.style.flexDirection = node.direction === 'row' ? 'row' : 'column';
+        const a = this._renderNode(node.children[0], workspaceId);
+        const b = this._renderNode(node.children[1], workspaceId);
+        a.style.flex = `${node.ratio} 1 0`;
+        b.style.flex = `${1 - node.ratio} 1 0`;
+        const resizer = document.createElement('div');
+        resizer.className = `resizer ${node.direction === 'row' ? 'resizer-col' : 'resizer-row'}`;
+        this._setupResizer(resizer, node, el, a, b);
+        el.appendChild(a);
+        el.appendChild(resizer);
+        el.appendChild(b);
+        return el;
+    }
+
+    _setupResizer(resizer, node, container, elA, elB) {
+        resizer.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            resizer.setPointerCapture(e.pointerId);
+            resizer.classList.add('active');
+            document.body.style.userSelect = 'none';
+            document.body.style.cursor = node.direction === 'row' ? 'col-resize' : 'row-resize';
+            const rect = container.getBoundingClientRect();
+            const total = node.direction === 'row' ? rect.width : rect.height;
+            const start = node.direction === 'row' ? rect.left : rect.top;
+            const onMove = (ev) => {
+                const pos = node.direction === 'row' ? ev.clientX : ev.clientY;
+                const ratio = Math.max(0.08, Math.min(0.92, (pos - start) / total));
+                elA.style.flex = `${ratio} 1 0`;
+                elB.style.flex = `${1 - ratio} 1 0`;
+                node._pendingRatio = ratio;
+            };
+            const onUp = (ev) => {
+                if (node._pendingRatio !== undefined) node.ratio = node._pendingRatio;
+                resizer.classList.remove('active');
+                document.body.style.userSelect = '';
+                document.body.style.cursor = '';
+                resizer.releasePointerCapture(ev.pointerId);
+                resizer.removeEventListener('pointermove', onMove);
+                resizer.removeEventListener('pointerup', onUp);
+                this.onStructureChange();
+            };
+            resizer.addEventListener('pointermove', onMove);
+            resizer.addEventListener('pointerup', onUp);
+        });
+    }
+
+    _buildHeader(node, workspaceId, opts) {
+        const header = document.createElement('div');
+        header.className = 'leaf-header';
+        const handle = document.createElement('div');
+        handle.className = 'drag-handle';
+        const title = document.createElement('span');
+        title.className = 'leaf-title';
+        title.textContent = typeLabel(node.contentType);
+        handle.appendChild(title);
+        const caret = document.createElement('span');
+        caret.className = 'type-caret';
+        caret.textContent = '▾';
+        handle.appendChild(caret);
+
+        handle.addEventListener('pointerdown', (e) => {
+            if (!this.drag) return;
+            this.drag.startNodeDrag(e, () => node.id, {
+                ghostLabel: typeLabel(node.contentType),
+                ownId: node.id,
+                onNoTargetDrop: (x, y) => {
+                    const dragged = this.model.resolveDraggedNode(node.id);
+                    if (!dragged) return;
+                    this.model.floatingWindows.push(
+                        this.model.makeFloatingWindow(dragged, x - 70, y - 14, 220, 160)
+                    );
+                    this.render();
+                }
+            });
+        });
+        header.appendChild(handle);
+
+        if (opts.onDetach) {
+            const detachBtn = document.createElement('button');
+            detachBtn.className = 'icon-btn';
+            detachBtn.title = 'Открепить в плавающее окно';
+            detachBtn.textContent = '⇱';
+            detachBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                opts.onDetach();
+            });
+            header.appendChild(detachBtn);
+        }
+        if (opts.onClose) {
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'icon-btn close';
+            closeBtn.title = 'Закрыть';
+            closeBtn.textContent = '×';
+            closeBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                opts.onClose();
+            });
+            header.appendChild(closeBtn);
+        }
+        return header;
+    }
+
+    _renderLeaf(node, workspaceId) {
+        const el = document.createElement('div');
+        el.className = 'leaf-node';
+        el.dataset.nodeId = node.id;
+        const header = this._buildHeader(node, workspaceId, {
+            onDetach: () => this.detachLeafToFloating(workspaceId, node.id, el),
+            onClose: () => this.closePane(workspaceId, node.id)
+        });
+        const body = document.createElement('div');
+        body.className = 'leaf-body';
+        body.dataset.leafId = node.id;
+        this.mountLeafContent(workspaceId, node, body);
+        el.appendChild(header);
+        el.appendChild(body);
+        return el;
+    }
+
+    closePane(workspaceId, id) {
+        const current = this.model.getTreeOf(workspaceId);
+        this.model.setTreeOf(workspaceId, this.model.removeLeaf(current, id));
+        // Keep content root in pool for potential reopen (B1)
+        this.render();
+    }
+
+    detachLeafToFloating(workspaceId, id, leafEl) {
+        const current = this.model.getTreeOf(workspaceId);
+        const node = this.model.findNode(current, id);
+        if (!node) return;
+        const rect = leafEl.getBoundingClientRect();
+        this.model.setTreeOf(workspaceId, this.model.removeLeaf(current, id));
+        this.model.floatingWindows.push(
+            this.model.makeFloatingWindow(
+                node,
+                rect.left + 24,
+                rect.top + 24,
+                rect.width * 0.6,
+                rect.height * 0.6
+            )
+        );
+        this.render();
+    }
+
+    _renderFloatingLayer() {
+        // Park floating shells' content via global park; rebuild shells
+        this.floatingLayer.innerHTML = '';
+        this.model.floatingWindows.forEach((fw) => {
+            this.floatingLayer.appendChild(this._renderFloatingWindow(fw));
+        });
+    }
+
+    _refreshFloatingWindow(fw) {
+        const oldEl = this.floatingLayer.querySelector(`.floating-window[data-float-id="${fw.id}"]`);
+        const newEl = this._renderFloatingWindow(fw);
+        if (oldEl) oldEl.replaceWith(newEl);
+        else this.floatingLayer.appendChild(newEl);
+    }
+
+    _renderFloatingWindow(fw) {
+        const el = document.createElement('div');
+        el.className = `floating-window${fw.collapsed ? ' collapsed' : ''}${fw.groupId ? ' grouped' : ''}`;
+        el.dataset.floatId = fw.id;
+        el.style.left = `${fw.x}px`;
+        el.style.top = `${fw.y}px`;
+        el.style.width = `${fw.w}px`;
+        el.style.height = fw.collapsed ? 'auto' : `${fw.h}px`;
+        el.style.zIndex = String(fw.z);
+        el.addEventListener('pointerdown', () => {
+            this.model.bumpZ(fw);
+            el.style.zIndex = String(fw.z);
+        });
+
+        const chrome = document.createElement('div');
+        chrome.className = 'floating-chrome';
+        const arrow = document.createElement('span');
+        arrow.className = 'arrow';
+        arrow.textContent = fw.collapsed ? '▸' : '▾';
+        chrome.appendChild(arrow);
+        const title = document.createElement('span');
+        title.className = 'title';
+        title.textContent = fw.customName || 'окно';
+        chrome.appendChild(title);
+        const spacer = document.createElement('span');
+        spacer.className = 'chrome-spacer';
+        chrome.appendChild(spacer);
+        const closeAllBtn = document.createElement('button');
+        closeAllBtn.className = 'icon-btn close';
+        closeAllBtn.title = 'Закрыть окно целиком';
+        closeAllBtn.textContent = '×';
+        closeAllBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.model.detachAttachLinks(fw);
+            const gid = fw.groupId;
+            this.model.floatingWindows = this.model.floatingWindows.filter((w) => w.id !== fw.id);
+            if (gid) {
+                const rest = this.model.floatingWindows.filter((w) => w.groupId === gid);
+                if (rest.length === 1) rest[0].groupId = null;
+            }
+            this.render();
+        });
+        chrome.appendChild(closeAllBtn);
+        chrome.addEventListener('pointerdown', (e) => {
+            if (e.target === closeAllBtn || closeAllBtn.contains(e.target)) return;
+            if (!this.drag) return;
+            this.drag.startFloatingDrag(e, fw, el, {
+                onRename: () => this.drag.startRename(title, fw.customName || '', (v) => {
+                    fw.customName = v || null;
+                }),
+                onText: e.target === title || title.contains(e.target)
+            });
+        });
+        el.appendChild(chrome);
+
+        const body = document.createElement('div');
+        body.className = 'floating-body';
+        this._renderWorkspace(fw.id, fw.tree, body);
+        el.appendChild(body);
+        const corner = document.createElement('div');
+        corner.className = 'resize-corner';
+        corner.addEventListener('pointerdown', (e) => {
+            if (this.drag) this.drag.startFloatingResize(e, fw, el);
+        });
+        el.appendChild(corner);
+
+        this.applyCollapsedVisualState(el, fw);
+        return el;
+    }
+
+    applyCollapsedVisualState(el, fw) {
+        el.classList.toggle('collapsed', fw.collapsed);
+        el.style.height = fw.collapsed ? 'auto' : `${fw.h}px`;
+        const body = el.querySelector('.floating-body');
+        const corner = el.querySelector('.resize-corner');
+        const arrow = el.querySelector('.floating-chrome .arrow');
+        if (body) body.style.display = fw.collapsed ? 'none' : '';
+        if (corner) corner.style.display = fw.collapsed ? 'none' : '';
+        if (arrow) arrow.textContent = fw.collapsed ? '▸' : '▾';
+    }
+
+    toggleFloatingCollapse(fw) {
+        fw.collapsed = !fw.collapsed;
+        const el = this.floatingLayer.querySelector(`.floating-window[data-float-id="${fw.id}"]`);
+        if (el) this.applyCollapsedVisualState(el, fw);
+        this.model.restackBottomChain(fw, (f) => this.effectiveHeight(f), (f) => this.syncFloatingDom(f));
+        this.onStructureChange();
+    }
+
+    effectiveHeight(f) {
+        if (!f.collapsed) return f.h;
+        const chromeEl = this.floatingLayer.querySelector(
+            `.floating-window[data-float-id="${f.id}"] .floating-chrome`
+        );
+        return chromeEl ? chromeEl.getBoundingClientRect().height : COLLAPSED_H;
+    }
+
+    syncFloatingDom(f) {
+        const el = this.floatingLayer.querySelector(`.floating-window[data-float-id="${f.id}"]`);
+        if (!el) return;
+        el.style.left = `${f.x}px`;
+        el.style.top = `${f.y}px`;
+        el.style.width = `${f.w}px`;
+        if (!f.collapsed) el.style.height = `${f.h}px`;
+    }
+
+    workspaceRect() {
+        return this.workspaceEl.getBoundingClientRect();
+    }
+
+    floatingRectPx(f) {
+        const ws = this.workspaceRect();
+        return {
+            left: ws.left + f.x,
+            top: ws.top + f.y,
+            right: ws.left + f.x + f.w,
+            bottom: ws.top + f.y + this.effectiveHeight(f)
+        };
+    }
+
+    destroy() {
+        this._contentRoots.clear();
+        if (this._contentPool && this._contentPool.parentElement) {
+            this._contentPool.remove();
+        }
+        this._contentPool = null;
+        if (this.splitRoot) this.splitRoot.innerHTML = '';
+        if (this.floatingLayer) this.floatingLayer.innerHTML = '';
+    }
+}

@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- **B0 (Phase B dock):** split-tree engine port in `src/ui/dock/` (`DockTreeModel`, `DockRenderer` with leaf reparent by `node.id`, `DockDragController`, `DockDropOverlay`, `DockManager`); `styles/dock.css`; `index.html` shell `#dock-workspace` + chips; legacy panel DOM in `#dock-legacy-offtree`; `editor.dockManager` wired with placeholders (real panels B2–B3).
 - Refactor: Фаза A плана `tmp/2D_Editor_REFACTOR_PLAN_v2.md` (не-UI структурные находки аудита) завершена.
 - **A0**: CONTRIBUTING.md — добавлен раздел "Какой базовый класс/паттерн выбрать" с критериями выбора BaseManager/BaseModule/голый constructor/PanelSubController
 - **A1**: LevelEditor.js — удалены `findObjectInGroup`/`findObjectInGroupRecursive` (дублирующие обход дерева групп); интеграция с `GroupTraversalUtils.findInObjects`/`findInGroup`; файл сокращён ~1583→1500 строк; добавлен тест tests/LevelEditor.findObject.test.js (характеризационные тесты для A1)

@@ -33,6 +33,7 @@ import { ContextMenuManager } from '../managers/ContextMenuManager.js';
 import { Logger } from '../utils/Logger.js';
 import { dialogReplacer } from '../utils/DialogReplacer.js';
 import { PanelPositionManager } from '../ui/PanelPositionManager.js';
+import { DockManager } from '../ui/dock/DockManager.js';
 
 // Import new utilities
 import { ErrorHandler } from '../utils/ErrorHandler.js';
@@ -115,9 +116,13 @@ export class LevelEditor {
         // Initialize ContextMenuManager
         this.contextMenuManager = new ContextMenuManager();
 
-        // Initialize Panel Position Manager
+        // Initialize Panel Position Manager (legacy; removed in B5)
         this.panelPositionManager = new PanelPositionManager(this);
         this.lifecycle.register('panelPositionManager', this.panelPositionManager, { priority: 2 });
+
+        // Split-tree dock (Phase B) — B0 placeholders; real panels B2–B3
+        this.dockManager = new DockManager(this);
+        this.lifecycle.register('dockManager', this.dockManager, { priority: 2 });
 
         // Initialize CacheManager
         this.cacheManager = new CacheManager(this);
@@ -400,6 +405,10 @@ export class LevelEditor {
                 this.log('warn', 'Failed to sync preloaded images to CanvasRenderer:', error.message);
             }
             this.lifecycleController.initializeUIComponents(domElements);
+            // B0: dock shell with placeholders (real content mounts in B2–B3)
+            if (this.dockManager) {
+                this.dockManager.init();
+            }
             this.lifecycleController.initializeEventHandlerManager();
             this.lifecycleController.initializeMenuAndEvents();
             await this.initializeLevelAndData();

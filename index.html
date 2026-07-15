@@ -83,6 +83,7 @@
     <link rel="stylesheet" href="styles/console-context-menu.css">
     <link rel="stylesheet" href="styles/user-settings.css">
     <link rel="stylesheet" href="styles/status-bar.css">
+    <link rel="stylesheet" href="styles/dock.css">
     <style>
         /* Hide body until editor is fully initialized */
         body:not(.editor-ready) {
@@ -111,58 +112,46 @@
         </nav>
     </header>
 
-    <!-- Canvas container - bottom layer -->
-    <div id="canvas-container" class="absolute inset-0 z-0" style="top: 40px;">
-        <canvas id="main-canvas"></canvas>
+    <!-- B0 dock shell: chips + split-tree workspace (placeholders until B2/B3) -->
+    <div id="dock-chips">
+        <span class="label">Dock B0 →</span>
+        <div class="chip" data-new="viewport" data-label="Viewport">+ Viewport</div>
+        <div class="chip" data-new="outliner" data-label="Outliner">+ Outliner</div>
+        <div class="chip" data-new="details" data-label="Details">+ Details</div>
+        <div class="chip" data-new="layers" data-label="Layers">+ Layers</div>
+        <div class="chip" data-new="assets" data-label="Assets">+ Assets</div>
+        <div class="chip" data-new="levels" data-label="Levels">+ Levels</div>
+        <div class="spacer"></div>
+        <button type="button" class="action" id="dock-reset-layout">Сбросить layout</button>
+    </div>
+    <div id="dock-workspace">
+        <div id="split-root"></div>
+        <div id="floating-layer"></div>
     </div>
 
-    <!-- Main container with working areas - top layer -->
-    <div class="flex flex-grow min-h-0 relative z-10">
-        <!-- 1. Left Tabs Panel (dynamic, created when needed) -->
-        <!-- This will be created dynamically by PanelPositionManager -->
-        
-        <!-- 2. Main workspace container -->
-        <div id="main-workspace" class="flex-1 flex flex-col min-w-0">
-            <!-- Main Frame (main workspace) -->
-            <main id="main-panel" class="flex-1 flex flex-col bg-transparent min-w-0">
-                <!-- Toolbar in top part of canvas -->
-                <div id="toolbar-container" class="bg-gray-800 flex-shrink-0">
-                    <!-- Toolbar will be populated by Toolbar component -->
-                </div>
-                
-                <!-- Canvas area - transparent to show canvas below -->
-                <div id="canvas-viewport" class="flex-1 min-h-0 bg-transparent">
-                    <!-- Canvas is now in separate container below -->
-                </div>
+    <!-- Legacy panel DOM kept for editor boot (hidden in B0; remounted into leaves in B2–B3) -->
+    <div id="dock-legacy-offtree" aria-hidden="true">
+        <div id="canvas-container">
+            <canvas id="main-canvas"></canvas>
+        </div>
+        <div id="main-workspace">
+            <main id="main-panel">
+                <div id="toolbar-container"></div>
+                <div id="canvas-viewport"></div>
             </main>
         </div>
-
-        <!-- 3. Right Tabs Panel (dynamic, created when needed) -->
-        <!-- This will be created dynamically by PanelPositionManager -->
-    </div>
-
-    <!-- Content panels for right panel tabs (required for initialization) -->
-    <div id="details-content-panel" class="tab-content-right" style="display: none;">
-        <p class="text-gray-400">Select an object to see its properties.</p>
-    </div>
-    <div id="levels-content-panel" class="tab-content-right levels-panel-container" style="display: none;"></div>
-    <div id="layers-content-panel" class="tab-content-right layers-panel-container" style="display: none;"></div>
-    <div id="outliner-content-panel" class="tab-content-right" style="display: none;">
-        <!-- Outliner content here -->
-    </div>
-
-        <!-- Separator for changing asset panel height -->
-    <div id="resizer-assets" class="resizer-y"></div>
-
-        <!-- 3. Assets Drawer (assets panel) -->
-    <footer id="assets-panel" class="h-64 bg-gray-900 flex-shrink-0 flex flex-col relative">
-        <div id="asset-tabs-container" class="flex border-b border-gray-700">
-            <!-- Tabs will be generated dynamically -->
+        <div id="details-content-panel" class="tab-content-right">
+            <p class="text-gray-400">Select an object to see its properties.</p>
         </div>
-        <div id="asset-previews-container" class="flex-grow overflow-auto p-1">
-            <!-- Asset previews container will be generated dynamically -->
-        </div>
-    </footer>
+        <div id="levels-content-panel" class="tab-content-right levels-panel-container"></div>
+        <div id="layers-content-panel" class="tab-content-right layers-panel-container"></div>
+        <div id="outliner-content-panel" class="tab-content-right"></div>
+        <div id="resizer-assets" class="resizer-y"></div>
+        <footer id="assets-panel">
+            <div id="asset-tabs-container" class="flex border-b border-gray-700"></div>
+            <div id="asset-previews-container" class="flex-grow overflow-auto p-1"></div>
+        </footer>
+    </div>
 
     <!-- Status Bar — однострочная панель уведомлений -->
     <div id="status-bar">
