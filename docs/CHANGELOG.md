@@ -4,7 +4,7 @@
 
 ## [Unreleased]
 
-- Fix: Assets multi-select drag-to-canvas — mousedown on already-selected asset no longer replace-selects (kept collapsing multi to the item under cursor before drop).
+- Fix: Assets multi-select **click-drag drop on canvas** — mousedown keeps multi if item already selected; `dragstart` ships full `selectedAssets`; post-drag click does not sole-select.
 - Fix: empty-canvas click clears full multi-selection (0×0 replace marquee no longer re-hits a nearby object as sole select).
 - Fix: **Assets panel** marquee — after modifier threshold, keep `pendingMouseKey` so move tracks `isAssetMarqueeSelecting` (rect + Shift/Ctrl modes); panel mouseup no longer wipes canvas marquee keys.
 - Fix: canvas gesture lock — global move continues pending modifier-marquee; lock arms when marquee/transform actually starts (viewport OK).

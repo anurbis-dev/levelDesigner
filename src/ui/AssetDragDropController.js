@@ -25,11 +25,23 @@ export class AssetDragDropController {
             return;
         }
 
-        const selectedAssets = assetPanel.stateManager.get('selectedAssets');
-        const draggedAssetIds = selectedAssets.has(asset.id) ?
-            Array.from(selectedAssets) : [asset.id];
+        // Mark HTML5 drag so the following click does not sole-select and wipe multi.
+        assetPanel._assetHtmlDragActive = true;
 
-        Logger.ui.debug('Drag start for asset:', asset.id, 'draggedAssetIds:', draggedAssetIds, 'selectedAssets:', Array.from(selectedAssets));
+        const raw = assetPanel.stateManager.get('selectedAssets');
+        const selectedAssets = raw instanceof Set
+            ? raw
+            : new Set(Array.isArray(raw) ? raw : []);
+        // Drag whole multi-selection when the pressed item is part of it (drop on canvas).
+        const draggedAssetIds = selectedAssets.has(asset.id)
+            ? Array.from(selectedAssets)
+            : [asset.id];
+
+        Logger.ui.debug(
+            'Drag start for asset:', asset.id,
+            'draggedAssetIds:', draggedAssetIds,
+            'selectedAssets:', Array.from(selectedAssets)
+        );
 
         e.dataTransfer.setData('application/json', JSON.stringify(draggedAssetIds));
         e.dataTransfer.effectAllowed = 'copy';
@@ -40,7 +52,7 @@ export class AssetDragDropController {
     }
 
     handleThumbnailDragEnd(e, asset) {
-        // Reset dragging flag when drag ends
+        // Keep _assetHtmlDragActive until click handler clears it (same gesture).
         this.assetPanel.stateManager.update({
             'mouse.isDraggingAsset': false
         });

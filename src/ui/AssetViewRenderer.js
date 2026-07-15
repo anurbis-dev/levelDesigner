@@ -269,10 +269,11 @@ export class AssetViewRenderer {
     }
 
     /**
-     * Item select for Assets:
-     * - Unselected + plain LMB: select on mousedown (HTML5 drag often swallows click).
-     * - Already selected (multi): do NOT replace on mousedown — keep multi for drag-to-canvas.
-     * - Plain click without drag on a multi-selected item: sole-select that item.
+     * Item select vs click-drag drop onto canvas:
+     * - Unselected: select on mousedown (HTML5 drag often swallows click).
+     * - Already selected: leave multi intact so dragstart can ship all selectedAssets.
+     * - Plain click (no drag) on multi-selected item: sole-select.
+     * - After real HTML5 drag: ignore the synthetic click so multi is not collapsed.
      * - Ctrl/Shift: click path only (marquee pending on mousedown).
      * @param {HTMLElement} el
      * @param {object} asset
@@ -281,23 +282,36 @@ export class AssetViewRenderer {
         el.addEventListener('mousedown', (e) => {
             if (e.button !== 0) return;
             if (e.ctrlKey || e.metaKey || e.shiftKey) return;
-            const selected = this.assetPanel.stateManager.get('selectedAssets') || new Set();
-            // Preserve multi-select when grabbing an already-selected asset for canvas drop.
+            this.assetPanel._assetHtmlDragActive = false;
+            const selected = this._selectedAssetIdSet();
+            // Click-drag to canvas: do not replace multi when pressing an already-selected item.
             if (selected.has(asset.id)) return;
             this.assetPanel.handleItemClick(e, asset);
         });
         el.addEventListener('click', (e) => {
+            // dragstart → drop/end often still synthesizes click; skip sole-select then.
+            if (this.assetPanel._assetHtmlDragActive) {
+                this.assetPanel._assetHtmlDragActive = false;
+                return;
+            }
             if (e.ctrlKey || e.metaKey || e.shiftKey) {
                 this.assetPanel.handleItemClick(e, asset);
                 return;
             }
-            // No drag occurred (click fired): collapse multi to the clicked asset if needed.
-            const selected = this.assetPanel.stateManager.get('selectedAssets') || new Set();
+            const selected = this._selectedAssetIdSet();
             if (selected.has(asset.id) && selected.size > 1) {
                 this.assetPanel.handleItemClick(e, asset);
             }
         });
         el.addEventListener('dblclick', (e) => this.assetPanel.handleItemDoubleClick(e, asset));
+    }
+
+    /** @returns {Set<string>} */
+    _selectedAssetIdSet() {
+        const raw = this.assetPanel.stateManager.get('selectedAssets');
+        if (raw instanceof Set) return raw;
+        if (Array.isArray(raw)) return new Set(raw);
+        return new Set();
     }
 
     /**
