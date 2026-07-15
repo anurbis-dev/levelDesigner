@@ -374,10 +374,33 @@ export class DockRenderer {
         el.appendChild(body);
         const corner = document.createElement('div');
         corner.className = 'resize-corner';
+        corner.title = 'Resize window';
         corner.addEventListener('pointerdown', (e) => {
             if (this.drag) this.drag.startFloatingResize(e, fw, el);
         });
         el.appendChild(corner);
+
+        // Show resize grip only when pointer is in the bottom band of the window.
+        const BOTTOM_BAND_PX = 36;
+        const updateResizeGrip = (clientY) => {
+            if (fw.collapsed) {
+                el.classList.remove('show-resize-corner');
+                return;
+            }
+            const rect = el.getBoundingClientRect();
+            const inBottom = rect.bottom - clientY <= BOTTOM_BAND_PX && clientY <= rect.bottom;
+            el.classList.toggle('show-resize-corner', inBottom);
+        };
+        el.addEventListener('pointermove', (e) => {
+            if (e.target === corner || corner.contains(e.target)) {
+                el.classList.add('show-resize-corner');
+                return;
+            }
+            updateResizeGrip(e.clientY);
+        });
+        el.addEventListener('pointerleave', () => {
+            el.classList.remove('show-resize-corner');
+        });
 
         this.applyCollapsedVisualState(el, fw);
         return el;
@@ -391,6 +414,7 @@ export class DockRenderer {
         const arrow = el.querySelector('.floating-chrome .arrow');
         if (body) body.style.display = fw.collapsed ? 'none' : '';
         if (corner) corner.style.display = fw.collapsed ? 'none' : '';
+        if (fw.collapsed) el.classList.remove('show-resize-corner');
         if (arrow) arrow.textContent = fw.collapsed ? '▸' : '▾';
     }
 

@@ -35,7 +35,8 @@ export function typeColor(contentType) {
 /**
  * Global modifier for dock UI layout customization.
  * With Shift only: move/split panels, self-drop clone, detach to floating,
- * floating snap/ungroup, floating resize, drop-zone / snap highlights.
+ * floating snap/ungroup, drop-zone / snap highlights.
+ * Floating window free-move position and corner resize work without Shift.
  * Without Shift (or after Shift release mid-gesture): no layout change / no highlight.
  * @param {Event|{ shiftKey?: boolean }|null|undefined} e
  * @returns {boolean}

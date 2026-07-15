@@ -1,5 +1,5 @@
 /**
- * Floating window drag/resize (Shift-gated layout customize for snap/re-dock/resize).
+ * Floating window drag (Shift for snap/re-dock) + free resize (no Shift).
  */
 import {
     HOLD_MS,
@@ -210,14 +210,13 @@ export function startDockFloatingDrag(ctx, e, fw, el, opts) {
 }
 
 /**
+ * Resize floating window — not Shift-gated (always available).
  * @param {object} ctx
  * @param {PointerEvent} e
  * @param {object} fw
  * @param {HTMLElement} el
  */
-
 export function startDockFloatingResize(ctx, e, fw, el) {
-    if (!isDockCustomizeKey(e)) return;
     e.preventDefault();
     e.stopPropagation();
     const captureEl = e.currentTarget;
@@ -226,16 +225,9 @@ export function startDockFloatingResize(ctx, e, fw, el) {
     const startY = e.clientY;
     const origW = fw.w;
     const origH = fw.h;
-    let customize = true;
     document.body.style.userSelect = 'none';
 
-    const unbindKeys = bindDockCustomizeKeyWatch((shiftDown) => {
-        customize = shiftDown;
-    });
-
     const onMove = (ev) => {
-        customize = isDockCustomizeKey(ev);
-        if (!customize) return;
         fw.w = Math.max(FLOAT_MIN_W, origW + (ev.clientX - startX));
         fw.h = Math.max(FLOAT_MIN_H, origH + (ev.clientY - startY));
         el.style.width = `${fw.w}px`;
@@ -249,12 +241,11 @@ export function startDockFloatingResize(ctx, e, fw, el) {
         );
     };
     const onUp = (ev) => {
-        unbindKeys();
         captureEl.releasePointerCapture(ev.pointerId);
         captureEl.removeEventListener('pointermove', onMove);
         captureEl.removeEventListener('pointerup', onUp);
         document.body.style.userSelect = '';
-        if (isDockCustomizeKey(ev) && customize) ctx.onStructureChange();
+        ctx.onStructureChange();
     };
     captureEl.addEventListener('pointermove', onMove);
     captureEl.addEventListener('pointerup', onUp);

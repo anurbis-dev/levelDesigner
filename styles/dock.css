@@ -429,17 +429,26 @@
   cursor: row-resize;
 }
 
+/* Grip visible only while cursor is in the bottom band of the floating window
+   (class show-resize-corner toggled from DockRenderer). */
 .resize-corner {
   position: absolute;
   right: 0;
   bottom: 0;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   cursor: nwse-resize;
   background: linear-gradient(135deg, transparent 50%, var(--dock-accent) 50%);
-  opacity: 0.6;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
   touch-action: none;
   z-index: 3;
+}
+
+.floating-window.show-resize-corner:not(.collapsed) .resize-corner {
+  opacity: 0.85;
+  pointer-events: auto;
 }
 
 /* Legacy editor DOM kept for boot; remounted into leaves (B2 viewport, B3 panels) */

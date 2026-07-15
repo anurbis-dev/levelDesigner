@@ -362,7 +362,7 @@
 **Файлы**: `src/ui/dock/*`, `src/core/ViewportViewManager.js`, `src/core/ViewportViewNav.js`, `src/ui/dock/ViewportLeafChrome.js`, `src/utils/TypeFilterMenu.js`, `styles/dock.css`
 
 - **Dock shell**: `DockManager` + `DockTreeModel` / `DockRenderer` / `DockDragController` / `DockPersistence` / `DockContentRegistry` / `DockPanelFactory` / `DockTypeMenu`. Layout: `panels.dock.mainTree` + floating windows. When dock is active, legacy `PanelPositionManager.initializePanelPositions` is skipped.
-- **UI customize key (Shift)**: `isDockCustomizeKey` — only while Shift held: move/split panels, self-drop clone, detach to floating, floating snap/ungroup/resize, drop-zone & snap highlights. Release mid-drag clears highlights and cancels layout commit.
+- **UI customize key (Shift)**: `isDockCustomizeKey` — only while Shift held: move/split panels, self-drop clone, detach to floating, floating snap/ungroup, drop-zone & snap highlights. Floating free-move position + corner resize work without Shift; resize grip shows only when pointer is in the window’s bottom band.
 - **Content types**: viewport, outliner, details, layers, levels, assets. Multi-instance (`singleton:false`) for panels except viewport shell rules; primary parks, copies destroy on close.
 - **View → Panels** lists dock contentTypes (`hideContentType` / `toggleContentType`); Alt+1/2/4 → Outliner/Details/Assets; Immersive Mode snapshots dock layout (viewport-only).
 - **ViewportViewManager**: N viewport leaves, each with canvas + pose + type filters + camera source.
