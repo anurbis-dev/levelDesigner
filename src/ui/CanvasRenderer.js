@@ -38,7 +38,10 @@ export class CanvasRenderer {
 
         // Проверки на валидность размеров контейнера
         if (!rect.width || !rect.height || rect.width <= 0 || rect.height <= 0) {
-            Logger.canvas.warn(`CanvasRenderer.resizeCanvas: Invalid viewport dimensions ${rect.width}x${rect.height}`);
+            // B0: #canvas-viewport is display:none inside #dock-legacy-offtree — expected until B2
+            if (!viewport.closest('#dock-legacy-offtree')) {
+                Logger.canvas.warn(`CanvasRenderer.resizeCanvas: Invalid viewport dimensions ${rect.width}x${rect.height}`);
+            }
             return;
         }
 

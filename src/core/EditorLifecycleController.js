@@ -256,19 +256,22 @@ export class EditorLifecycleController extends BaseModule {
         });
         editor.subscriptions.push(rightPanelTabUnsubscribe);
 
-        // Setup ResizeObserver for canvas-viewport to update canvas interactively
-        const setupViewportObserver = (retryCount = 0) => {
-            const viewport = document.getElementById('canvas-viewport');
-            if (viewport && window.ResizeObserver) {
-                editor.viewportResizeObserver = new ResizeObserver(() => {
-                    editor.updateCanvas();
-                });
-                editor.viewportResizeObserver.observe(viewport);
-            } else if (!viewport && retryCount < 10) {
-                requestAnimationFrame(() => setupViewportObserver(retryCount + 1));
-            }
-        };
-        setupViewportObserver();
+        // Setup ResizeObserver for canvas-viewport to update canvas interactively.
+        // B0: viewport lives in #dock-legacy-offtree (0×0) — skip until B2 remounts into dock leaf.
+        if (!editor.dockManager?._inited) {
+            const setupViewportObserver = (retryCount = 0) => {
+                const viewport = document.getElementById('canvas-viewport');
+                if (viewport && window.ResizeObserver) {
+                    editor.viewportResizeObserver = new ResizeObserver(() => {
+                        editor.updateCanvas();
+                    });
+                    editor.viewportResizeObserver.observe(viewport);
+                } else if (!viewport && retryCount < 10) {
+                    requestAnimationFrame(() => setupViewportObserver(retryCount + 1));
+                }
+            };
+            setupViewportObserver();
+        }
 
         const leftPanelTabUnsubscribe = editor.stateManager.subscribe('leftPanelTab', (tabName) => {
             if (tabName && editor.configManager) {

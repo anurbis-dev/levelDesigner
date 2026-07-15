@@ -559,31 +559,34 @@ export class EventHandlers extends BaseModule {
             }
         });
 
-        // Initialize panel positions using PanelPositionManager FIRST
-        if (this.editor.panelPositionManager) {
+        // B0+: dock owns layout — skip legacy PanelPositionManager (it needs removed flex shell)
+        if (this.editor.dockManager?._inited) {
+            // Real panel mounts/tab activation return in B2–B3
+        } else if (this.editor.panelPositionManager) {
+            // Initialize panel positions using PanelPositionManager FIRST
             this.editor.panelPositionManager.tabLayoutController.initializePanelPositions();
-            
+
             // Update panels after tab positions are initialized
             if (this.editor.updateAllPanels) {
                 this.editor.updateAllPanels();
             }
-            
+
             // Don't re-apply panel visibility here - PanelPositionManager handles it
             // based on actual tab positions and panel existence
+
+            // Activate tabs after panel positions are initialized
+            this.activateTabsAfterPanelInitialization();
+
+            // Initialize search controls after panels are created
+            if (this.editor.initializeSearchControls) {
+                this.editor.initializeSearchControls();
+            }
+
+            // Setup tab event listeners after panels are created (this will call updateTabHandlers)
+            this.setupTabEventListeners();
         } else {
             // PanelPositionManager not found - this is expected during early initialization
         }
-
-        // Activate tabs after panel positions are initialized
-        this.activateTabsAfterPanelInitialization();
-
-        // Initialize search controls after panels are created
-        if (this.editor.initializeSearchControls) {
-            this.editor.initializeSearchControls();
-        }
-
-        // Setup tab event listeners after panels are created (this will call updateTabHandlers)
-        this.setupTabEventListeners();
     }
 
     updateViewCheckbox(option, enabled) {
