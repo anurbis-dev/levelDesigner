@@ -371,7 +371,7 @@
   - **Game camera**: source `{ kind:'game', objectId }` follows level object `type==='camera'`.
 - **ViewportLeafChrome**: leaf header icons — camera source menu (English UI) + per-view type filter via shared `TypeFilterMenu`; hover-switch between sibling menus after first open (main-menu style).
 - **Input**: secondary canvases share `MouseHandlers` via `ViewportViewNav` (`registerCanvas` + `setPointerCapture` LMB/MMB/RMB). Interaction routing: `_interactionViewLeafId` / `getInteractionView|Camera|Canvas` — never assume `canvasRenderer.canvas` is the gesture leaf after multi-view `render()` restores primary.
-- **Gestures outside leaf**: continue pan/zoom/drag/marquee; outside release **completes** (not cancel); `body.viewport-gesture-mode` blocks UI hover (like `panning-mode`). Cursors set only on interaction canvas; end/blur resets all viewport canvases.
+- **Gestures outside leaf**: continue pan/zoom/drag/marquee; outside release **completes** (not cancel); `body.viewport-gesture-mode` blocks UI hover (like `panning-mode`) only for real gestures (`isDragging` / marquee / transform / viewport pan-zoom) — not bare LMB down (avoids swallowing the first panel click). Cursors set only on interaction canvas; end/blur resets all viewport canvases.
 - **Render**: multi-target; `visibleObjectsCache` key includes canvas size; sticky interactive cache during drag/transform/marquee; pick/marquee use interaction camera + client→buffer mapping when CSS size ≠ buffer.
 - **Close ×**: any viewport closeable when ≥2 exist; closing primary promotes another leaf to primary shell.
 

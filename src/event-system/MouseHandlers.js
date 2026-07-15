@@ -125,18 +125,26 @@ export class MouseHandlers extends BaseModule {
     /**
      * True while a viewport mouse gesture must keep exclusive control of the pointer path
      * (continue outside the leaf; no UI hover on other dock windows).
+     *
+     * Must NOT use bare isLeftDown / isRightDown: a simple click-select would then set
+     * body.viewport-gesture-mode → pointer-events:none on all UI, so the next panel
+     * click is swallowed (first click "activates", second works).
      */
     _isViewportGestureActive() {
         const mouse = this.getMouseState();
         if (!mouse) return false;
+        // Viewport-owned button (pan/zoom) — leaf pinned by _beginViewInteraction.
+        const viewportButton =
+            !!this._interactionViewLeafId
+            && (mouse.isRightDown || mouse.isMiddleDown);
         return !!(
-            mouse.isLeftDown
-            || mouse.isRightDown
-            || mouse.isMiddleDown
-            || mouse.isDragging
+            mouse.isDragging
             || mouse.isTransforming
             || mouse.isMarqueeSelecting
+            || mouse.isPlacingObjects
+            || viewportButton
             || this.editor.stateManager.get('duplicate.isAltDragMode')
+            || this.editor.stateManager.get('duplicate.isActive')
         );
     }
 
@@ -734,22 +742,20 @@ export class MouseHandlers extends BaseModule {
     handleGlobalMouseDown(e) {
         Logger.mouse.debug(`Global mousedown: button=${e.button}, target=${e.target.tagName}, (${e.clientX}, ${e.clientY})`);
 
-        // Right mouse button marquee cancellation is now handled in BaseContextMenu
-        // This ensures consistent behavior across all panels and prevents conflicts
-        if (e.button === 2) { // Right mouse button
-            // Update right mouse state
+        // RMB pan state is owned by canvas handleMouseDown + _beginViewInteraction.
+        // Do not set isRightDown for panel/UI right-clicks (context menus) — that used to
+        // arm viewport-gesture-mode and block the next panel click.
+        if (e.button === 2) {
+            const t = e.target;
+            const onViewportCanvas = !!(t && t.closest
+                && t.closest('#main-canvas, .viewport-view-canvas, #canvas-container, .canvas-container, .canvas-viewport'));
+            if (!onViewportCanvas) return;
+            // Canvas path already set flags; keep lastX in sync if this is the bubbling window event.
             this.editor.stateManager.update({
-                'mouse.isRightDown': true,
                 'mouse.lastX': e.clientX,
                 'mouse.lastY': e.clientY,
-                'mouse.rightClickStartX': e.clientX,
-                'mouse.rightClickStartY': e.clientY,
-                'mouse.wasPanning': false,
                 'mouse.altKey': e.altKey
             });
-
-            // Multi-view: only the interaction leaf — never stamp primary while secondary pans.
-            this._setInteractionCursor('grabbing');
         }
     }
 
