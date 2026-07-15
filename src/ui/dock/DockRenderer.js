@@ -181,7 +181,7 @@ export class DockRenderer {
         // Empty gap between title and right icons — only this area starts panel drag.
         const handle = document.createElement('div');
         handle.className = 'drag-handle leaf-header-gap';
-        handle.title = 'Перетащить панель';
+        handle.title = 'Drag panel · Shift+drop outside to detach · Shift+drop on self to copy';
         handle.addEventListener('pointerdown', (e) => {
             if (!this.drag) return;
             this.drag.startNodeDrag(e, () => node.id, {
@@ -208,10 +208,12 @@ export class DockRenderer {
         if (opts.onDetach) {
             const detachBtn = document.createElement('button');
             detachBtn.className = 'icon-btn';
-            detachBtn.title = 'Открепить в плавающее окно';
+            detachBtn.title = 'Detach to floating window (hold Shift and click)';
             detachBtn.textContent = '⇱';
             detachBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
+                // UI customize: detach only with Shift held.
+                if (!e.shiftKey) return;
                 opts.onDetach();
             });
             header.appendChild(detachBtn);

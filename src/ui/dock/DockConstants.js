@@ -31,3 +31,14 @@ export function typeLabel(contentType) {
 export function typeColor(contentType) {
     return TYPE_META[contentType] ? TYPE_META[contentType].color : '#333';
 }
+
+/**
+ * Global modifier for dock UI customization gestures:
+ * detach to floating, self-drop clone/copy, floating window snap-to-neighbor.
+ * Regular re-dock / drag-reorder inside the tree works without Shift.
+ * @param {Event|{ shiftKey?: boolean }|null|undefined} e
+ * @returns {boolean}
+ */
+export function isDockCustomizeKey(e) {
+    return !!(e && e.shiftKey);
+}

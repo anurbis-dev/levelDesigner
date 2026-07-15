@@ -6,7 +6,8 @@ import {
     DOUBLE_TAP_MS,
     TAP_DELAY_MS,
     FLOAT_MIN_W,
-    FLOAT_MIN_H
+    FLOAT_MIN_H,
+    isDockCustomizeKey
 } from './DockConstants.js';
 import { DockDropOverlay } from './DockDropOverlay.js';
 
@@ -112,9 +113,11 @@ export class DockDragController {
         const onUp = (ev) => {
             if (holdFired) return;
             endGesture();
+            const customize = isDockCustomizeKey(ev);
             if (moved && target) {
-                // Self-drop → split + clone for multi-instance types (incl. viewport B4.2).
+                // Self-drop clone only with Shift (UI customize).
                 if (opts.ownId && target.kind === 'leaf' && target.leafId === opts.ownId) {
+                    if (!customize) return;
                     const ws = this.model.findWorkspaceContaining(opts.ownId);
                     const original = ws
                         ? this.model.findNode(this.model.getTreeOf(ws), opts.ownId)
@@ -132,7 +135,8 @@ export class DockDragController {
                     }
                 }
             } else if (moved && !target) {
-                if (opts.onNoTargetDrop) opts.onNoTargetDrop(ev.clientX, ev.clientY);
+                // Detach to floating only with Shift.
+                if (customize && opts.onNoTargetDrop) opts.onNoTargetDrop(ev.clientX, ev.clientY);
             } else if (!moved) {
                 const now = Date.now();
                 const last = captureEl._lastTapTime || 0;
@@ -200,7 +204,8 @@ export class DockDragController {
             this.overlay.hideSnapHighlight();
         };
 
-        let holdTimer = fw.groupId
+        // Hold-to-ungroup only when customize key is held at press (Shift).
+        let holdTimer = (fw.groupId && isDockCustomizeKey(e))
             ? setTimeout(() => {
                 clearHold();
                 this.model.detachFloating(fw);
@@ -244,10 +249,15 @@ export class DockDragController {
                 this.renderer.syncFloatingDom(f);
             });
 
-            snapTarget = this.model.findFloatingSnapTarget(
-                fw,
-                (f) => this.renderer.effectiveHeight(f)
-            );
+            // Snap-to-neighbor only with Shift.
+            if (isDockCustomizeKey(ev)) {
+                snapTarget = this.model.findFloatingSnapTarget(
+                    fw,
+                    (f) => this.renderer.effectiveHeight(f)
+                );
+            } else {
+                snapTarget = null;
+            }
             if (snapTarget) {
                 this.overlay.showSnapHighlight(fw, snapTarget);
                 this.overlay.hideDockOverlay();
@@ -263,9 +273,9 @@ export class DockDragController {
             }
         };
 
-        const onUp = () => {
+        const onUp = (ev) => {
             endGesture();
-            if (moved && snapTarget) {
+            if (moved && snapTarget && isDockCustomizeKey(ev)) {
                 this.model.applyFloatingSnap(
                     fw,
                     snapTarget,
