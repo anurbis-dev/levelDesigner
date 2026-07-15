@@ -4,6 +4,7 @@
 
 ## [Unreleased]
 
+- Fix: empty-canvas click clears full multi-selection (0×0 replace marquee no longer re-hits a nearby object as sole select).
 - Fix: **Assets panel** marquee — after modifier threshold, keep `pendingMouseKey` so move tracks `isAssetMarqueeSelecting` (rect + Shift/Ctrl modes); panel mouseup no longer wipes canvas marquee keys.
 - Fix: canvas gesture lock — global move continues pending modifier-marquee; lock arms when marquee/transform actually starts (viewport OK).
 - Fix: **Assets** first-click miss — keep `mouseStateKey`/`marqueeId` in `BasePanel.setupSelection` (asset marquee no longer sets canvas `isMarqueeSelecting`); select assets on mousedown (HTML5 `draggable` was swallowing click).

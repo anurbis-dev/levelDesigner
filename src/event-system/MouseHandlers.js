@@ -1907,29 +1907,47 @@ export class MouseHandlers extends BaseModule {
         if (!mouse.marqueeRect) return;
 
         const marqueeMode = mouse.marqueeMode || 'replace';
+        const marqueeRect = mouse.marqueeRect;
+        const isPlainClick = marqueeRect.width === 0 && marqueeRect.height === 0;
+
+        // Empty-canvas click (0×0 marquee, replace): handleEmptyClick already cleared
+        // selection on mousedown. Do NOT re-run point hit-tests here — isPointInObject can
+        // match a nearby object that findObjectAtPoint rejected, leaving a sole selection
+        // instead of a full deselect ("only the one you clicked").
+        if (isPlainClick && marqueeMode === 'replace') {
+            this.editor.stateManager.set('selectedObjects', new Set());
+            this.editor.updateAllPanels();
+            this.editor.stateManager.update({
+                'mouse.marqueeRect': null,
+                'mouse.marqueeStartX': null,
+                'mouse.marqueeStartY': null,
+                'mouse.isMarqueeSelecting': false,
+                'mouse.marqueeMode': null,
+                'marquee.options': null,
+                'marquee.mode': null,
+                'mouse.marqueePendingStartPos': null,
+                'mouse.marqueePendingWorldPos': null,
+                'mouse.marqueePendingMode': null,
+                'mouse.marqueePendingObjectId': null,
+                'mouse.marqueePendingClickInfo': null
+            });
+            this.editor.render();
+            return;
+        }
 
         // Setup options for SelectionUtils with canvas-specific callback
         const marqueeOptions = {
             selectionKey: 'selectedObjects',
-            getObjectsInMarquee: (marqueeRect) => {
+            getObjectsInMarquee: (rect) => {
                 // Canvas mode: get objects in marquee using world coordinates
                 const objectsInMarquee = [];
 
-                // A plain click (mousedown+mouseup with no movement) still goes through
-                // handleEmptyClick → a zero-size "marquee" at the click point, finalized
-                // here — it must behave like a real click: precise, rotation-aware
-                // point-in-shape testing via isPointInObject (the same test findObjectAtPoint
-                // already used to correctly reject/accept this point in handleMouseDown).
-                //
-                // A genuine drag uses the exact same rotated-rect geometry (getHitTestGeometry)
-                // the click test uses, checked against the marquee rect via SAT
-                // (rectIntersectsGeometry) — not a plain AABB-vs-rect overlap, which is larger
-                // than the true shape for any rotated object/group and would select things the
-                // drag rectangle never actually touches (or, for objects merely near a corner
-                // of the drag rect, wrongly include them).
-                const isPlainClick = marqueeRect.width === 0 && marqueeRect.height === 0;
-                const hitTest = isPlainClick
-                    ? (obj) => this.editor.objectOperations.isPointInObject(marqueeRect.x, marqueeRect.y, obj)
+                // Drag marquee: rotated-rect SAT vs marquee rect (not plain AABB).
+                // Plain click (0×0) handled above for replace; add/toggle plain click
+                // still uses precise point-in-shape tests.
+                const plain = rect.width === 0 && rect.height === 0;
+                const hitTest = plain
+                    ? (obj) => this.editor.objectOperations.isPointInObject(rect.x, rect.y, obj)
                     : (obj) => {
                         const effectiveLayerId = this.editor.renderOperations.getEffectiveLayerId(obj);
                         const parallaxOffset = this.editor.renderOperations.parallaxRenderer.isParallaxEnabled()
@@ -1942,15 +1960,13 @@ export class MouseHandlers extends BaseModule {
                         geom.cy -= parallaxOffset.y;
 
                         return WorldPositionUtils.rectIntersectsGeometry(
-                            marqueeRect.x, marqueeRect.y,
-                            marqueeRect.x + marqueeRect.width, marqueeRect.y + marqueeRect.height,
+                            rect.x, rect.y,
+                            rect.x + rect.width, rect.y + rect.height,
                             geom
                         );
                     };
 
                 if (this.isInGroupEditMode()) {
-                    // In group edit mode: same candidate set as findObjectAtPoint (active
-                    // group's children + siblings at every level of the open-group chain).
                     const selectable = this.editor.objectOperations.computeSelectableSet();
                     const candidates = this.editor.objectOperations.getSelectableCandidateObjects()
                         .filter(o => selectable.has(o.id));
@@ -1959,7 +1975,6 @@ export class MouseHandlers extends BaseModule {
                         if (hitTest(obj)) objectsInMarquee.push(obj.id);
                     });
                 } else {
-                    // Normal mode - use viewport optimization for better performance
                     const selectableInViewport = this.editor.getSelectableObjectsInViewport();
                     selectableInViewport.forEach(objId => {
                         const obj = this.editor.getCachedObject(objId);
@@ -1970,19 +1985,15 @@ export class MouseHandlers extends BaseModule {
                 return objectsInMarquee;
             },
             onSelectionChange: (selectedItems) => {
-                // Update panels after selection change
                 this.editor.updateAllPanels();
             }
         };
 
-        // Store options in state for SelectionUtils
         this.editor.stateManager.set('marquee.options', marqueeOptions);
         this.editor.stateManager.set('marquee.mode', marqueeMode);
 
-        // Use SelectionUtils to finalize marquee selection (canvas mode)
         SelectionUtils.finalizeMarqueeSelection(null, null, this.editor.stateManager);
 
-        // Cleanup marquee state
         this.editor.stateManager.update({
             'mouse.marqueeRect': null,
             'mouse.marqueeStartX': null,
@@ -1993,7 +2004,6 @@ export class MouseHandlers extends BaseModule {
             'marquee.mode': null
         });
         
-        // Clear pending marquee state if any
         this.editor.stateManager.update({
             'mouse.marqueePendingStartPos': null,
             'mouse.marqueePendingWorldPos': null,
@@ -2002,7 +2012,6 @@ export class MouseHandlers extends BaseModule {
             'mouse.marqueePendingClickInfo': null
         });
         
-        // Check if Alt is still pressed after marquee selection to start duplication
         const currentMouse = this.editor.stateManager.get('mouse');
         const selectedObjects = this.editor.stateManager.get('selectedObjects');
         if (currentMouse.altKey && selectedObjects && selectedObjects.size > 0) {
