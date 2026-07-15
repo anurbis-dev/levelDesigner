@@ -299,15 +299,19 @@ export class AssetPanel extends BasePanel {
      * Update content visibility based on folders width
      */
     updateContentVisibility(foldersWidth) {
-        // Hide folders container completely when width is very small
-        if (foldersWidth < 50) {
+        if (!this.foldersContainer) return;
+
+        // Hide folders strip when collapsed / near-zero; expand-tab stays on resizer
+        const collapsed = foldersWidth <= 0 || foldersWidth < 8;
+        if (collapsed) {
             this.foldersContainer.style.display = 'none';
+            this.foldersContainer.style.width = '0px';
         } else {
             this.foldersContainer.style.display = 'flex';
         }
 
-        if (this.foldersResizer) {
-            this.levelEditor.resizerManager.setCollapsed(this.foldersResizer, foldersWidth <= 0);
+        if (this.foldersResizer && this.levelEditor?.resizerManager) {
+            this.levelEditor.resizerManager.setCollapsed(this.foldersResizer, collapsed);
         }
     }
 

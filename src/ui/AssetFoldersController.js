@@ -204,33 +204,39 @@ export class AssetFoldersController {
     createFoldersContainer() {
         const assetPanel = this.assetPanel;
 
-        // Create main container for folders and content
+        // Create main container for folders and content (scoped ids for multi-instance)
+        const idSuffix = assetPanel.instanceKey || 'primary';
         const mainContainer = document.createElement('div');
-        mainContainer.id = 'asset-main-container';
+        mainContainer.id = `asset-main-container-${idSuffix}`;
+        mainContainer.dataset.assetRole = 'main';
         mainContainer.className = 'flex flex-grow overflow-hidden';
 
         // Create folders container
         assetPanel.foldersContainer = document.createElement('div');
-        assetPanel.foldersContainer.id = 'asset-folders-container';
+        assetPanel.foldersContainer.id = `asset-folders-container-${idSuffix}`;
+        assetPanel.foldersContainer.dataset.assetRole = 'folders';
         assetPanel.foldersContainer.className = 'border-r border-gray-700 flex flex-col flex-shrink-0';
         assetPanel.foldersContainer.style.backgroundColor = 'var(--ui-background-color, #1f2937)';
 
-        // Create resizer for folders panel
+        // Create resizer for folders panel (unique id per AssetPanel copy)
         assetPanel.foldersResizer = document.createElement('div');
-        assetPanel.foldersResizer.id = 'folders-resizer';
-        assetPanel.foldersResizer.className = 'resizer-x';
+        assetPanel.foldersResizer.id = `folders-resizer-${idSuffix}`;
+        assetPanel.foldersResizer.className = 'resizer-x folders-resizer';
+        assetPanel.foldersResizer.dataset.assetRole = 'folders-resizer';
         assetPanel.foldersResizer.style.cssText = `
             width: 4px;
             background-color: transparent;
             cursor: ew-resize;
             position: relative;
             z-index: 10;
+            flex-shrink: 0;
+            align-self: stretch;
         `;
-        assetPanel.foldersResizer.innerHTML = '<div class="resize-indicator"></div>';
 
         // Create content container (tabs + previews)
         const contentContainer = document.createElement('div');
-        contentContainer.id = 'asset-content-container';
+        contentContainer.id = `asset-content-container-${idSuffix}`;
+        contentContainer.dataset.assetRole = 'content';
         contentContainer.className = 'flex flex-col flex-grow overflow-hidden';
 
         // Move existing tabs and previews containers into content container
@@ -287,14 +293,21 @@ export class AssetFoldersController {
      */
     updateFoldersLayout() {
         const assetPanel = this.assetPanel;
-        const mainContainer = assetPanel.container.querySelector('#asset-main-container');
-        const foldersContainer = assetPanel.container.querySelector('#asset-folders-container');
-        const contentContainer = assetPanel.container.querySelector('#asset-content-container');
+        const mainContainer = assetPanel.container.querySelector('[data-asset-role="main"]')
+            || assetPanel.container.querySelector('#asset-main-container')
+            || assetPanel.container.querySelector('[id^="asset-main-container"]');
+        const foldersContainer = assetPanel.foldersContainer
+            || assetPanel.container.querySelector('[data-asset-role="folders"]');
+        const contentContainer = assetPanel.container.querySelector('[data-asset-role="content"]')
+            || assetPanel.container.querySelector('#asset-content-container')
+            || assetPanel.container.querySelector('[id^="asset-content-container"]');
 
         if (!mainContainer || !foldersContainer || !contentContainer) return;
 
-        // Clear existing layout
-        mainContainer.innerHTML = '';
+        // Reorder without wiping (keeps resizer node + collapse-tab handlers)
+        while (mainContainer.firstChild) {
+            mainContainer.removeChild(mainContainer.firstChild);
+        }
 
         if (assetPanel.foldersPosition === 'left') {
             // Folders on left, content on right
@@ -362,84 +375,103 @@ export class AssetFoldersController {
      */
     setupFoldersResizer() {
         const assetPanel = this.assetPanel;
-        if (!assetPanel.foldersResizer) return;
+        if (!assetPanel.foldersResizer || !assetPanel.levelEditor?.resizerManager) return;
 
         // Unregister old handlers if they exist to prevent duplicates
         assetPanel.levelEditor.resizerManager.unregisterResizer(assetPanel.foldersResizer);
         eventHandlerManager.unregisterElement(assetPanel.foldersResizer);
 
-        // Double click handler for collapse/expand
-        const onDoubleClick = (e, resizerElement, panelElement, panelSide) => {
-                e.preventDefault();
-                e.stopPropagation();
+        // Double click / collapse-tab: toggle folders strip; show expand tab when collapsed
+        const onDoubleClick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
 
-                const currentWidth = assetPanel.foldersContainer.offsetWidth;
-                const containerWidth = assetPanel.container.clientWidth;
-                const resizerWidth = 4;
-                const minWidth = 0;
-                const maxWidth = containerWidth - resizerWidth;
-                const previousFoldersWidth = 192; // Default width (w-48)
+            const foldersEl = assetPanel.foldersContainer;
+            if (!foldersEl) return;
 
-                // Check if already at minimum (collapsed)
-                if (currentWidth <= minWidth) {
-                    // Restore to previous width
-                    const newWidth = Math.min(previousFoldersWidth, maxWidth);
+            const isCollapsed = foldersEl.style.display === 'none'
+                || foldersEl.offsetWidth <= 0
+                || assetPanel.foldersResizer.classList.contains('collapsed');
+            const containerWidth = assetPanel.container.clientWidth;
+            const maxWidth = Math.max(48, containerWidth - 4);
 
-                    assetPanel.foldersContainer.style.width = newWidth + 'px';
-                    assetPanel.updateContentVisibility(newWidth);
-                    if (assetPanel.isPrimary && assetPanel.levelEditor?.stateManager) {
-                        assetPanel.levelEditor.stateManager.set('panels.foldersWidth', newWidth);
-                    }
-                    if (assetPanel.isPrimary && assetPanel.levelEditor?.userPrefs) {
-                        assetPanel.levelEditor.userPrefs.set('foldersWidth', newWidth);
-                    }
-                } else {
-                    // Save current width and collapse
-                    const newWidth = minWidth;
-
-                    assetPanel.foldersContainer.style.width = newWidth + 'px';
-                    assetPanel.updateContentVisibility(newWidth);
-                    if (assetPanel.isPrimary && assetPanel.levelEditor?.stateManager) {
-                        assetPanel.levelEditor.stateManager.set('panels.foldersWidth', newWidth);
-                    }
-                    if (assetPanel.isPrimary && assetPanel.levelEditor?.userPrefs) {
-                        assetPanel.levelEditor.userPrefs.set('foldersWidth', newWidth);
-                    }
-                }
+            if (isCollapsed) {
+                const restore = assetPanel._foldersWidthBeforeCollapse
+                    || (assetPanel.isPrimary
+                        ? assetPanel.levelEditor?.userPrefs?.get('foldersWidth')
+                        : null)
+                    || 192;
+                const newWidth = Math.min(Math.max(restore, 48), maxWidth);
+                foldersEl.style.width = newWidth + 'px';
+                foldersEl.style.flexShrink = '0';
+                foldersEl.style.flexGrow = '0';
+                assetPanel.updateContentVisibility(newWidth);
+                this._persistFoldersWidth(newWidth);
+            } else {
+                const currentWidth = foldersEl.offsetWidth || 192;
+                assetPanel._foldersWidthBeforeCollapse = currentWidth;
+                foldersEl.style.width = '0px';
+                assetPanel.updateContentVisibility(0);
+                this._persistFoldersWidth(0);
+            }
         };
 
-        // Register with unified ResizerManager
-            assetPanel.levelEditor.resizerManager.registerResizer(
-                assetPanel.foldersResizer,
-                assetPanel.foldersContainer,
-                'folders',
+        // Register with unified ResizerManager (owner = this AssetPanel instance)
+        assetPanel.levelEditor.resizerManager.registerResizer(
+            assetPanel.foldersResizer,
+            assetPanel.foldersContainer,
+            'folders',
             'horizontal',
-            onDoubleClick
-            );
+            onDoubleClick,
+            { assetPanel }
+        );
 
-        // Load saved width
-        if (assetPanel.levelEditor?.userPrefs) {
-            const savedWidth = assetPanel.levelEditor.userPrefs.get('foldersWidth');
-            if (savedWidth && typeof savedWidth === 'number' && savedWidth >= 0) {
-                assetPanel.foldersContainer.style.width = savedWidth + 'px';
+        // Load width once (primary: prefs; copies: seed from primary DOM or prefs, then diverge)
+        if (!assetPanel._foldersResizerWidthApplied) {
+            assetPanel._foldersResizerWidthApplied = true;
+            let width = null;
+            if (assetPanel.isPrimary && assetPanel.levelEditor?.userPrefs) {
+                const saved = assetPanel.levelEditor.userPrefs.get('foldersWidth');
+                if (typeof saved === 'number' && saved >= 0) width = saved;
+            } else if (!assetPanel.isPrimary) {
+                const primaryW = assetPanel.levelEditor?.assetPanel?.foldersContainer?.offsetWidth;
+                if (typeof primaryW === 'number' && primaryW > 0) {
+                    width = primaryW;
+                } else {
+                    const saved = assetPanel.levelEditor?.userPrefs?.get('foldersWidth');
+                    if (typeof saved === 'number' && saved >= 0) width = saved;
+                }
+            }
+            if (width !== null) {
+                assetPanel.foldersContainer.style.width = width + 'px';
                 assetPanel.foldersContainer.style.flexShrink = '0';
                 assetPanel.foldersContainer.style.flexGrow = '0';
-
-                // Update visibility based on loaded width
-                assetPanel.updateContentVisibility(savedWidth);
-
-                // Update grid layout if in grid view (deferred to ensure grid is rendered)
+                assetPanel.updateContentVisibility(width);
                 setTimeout(() => {
                     if (assetPanel.viewMode === 'grid') {
                         assetPanel.viewRenderer.updateGridViewSizes();
                     }
                 }, 0);
-
-                Logger.ui.debug('Loaded saved folders width:', savedWidth);
+                Logger.ui.debug('Loaded folders width:', width, assetPanel.instanceKey || 'primary');
             }
         }
 
         Logger.ui.debug('AssetPanel: Setup folders resizer with unified ResizerManager');
+    }
+
+    /**
+     * Persist folders width for primary panel only.
+     * @param {number} width
+     */
+    _persistFoldersWidth(width) {
+        const assetPanel = this.assetPanel;
+        if (!assetPanel.isPrimary) return;
+        if (assetPanel.levelEditor?.stateManager) {
+            assetPanel.levelEditor.stateManager.set('panels.foldersWidth', width);
+        }
+        if (assetPanel.levelEditor?.userPrefs) {
+            assetPanel.levelEditor.userPrefs.set('foldersWidth', width);
+        }
     }
 
     /**

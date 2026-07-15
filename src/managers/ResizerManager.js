@@ -30,15 +30,14 @@ export class ResizerManager extends BaseManager {
      * @param {string} panelSide - Panel side ('left', 'right', 'assets', 'folders')
      * @param {string} direction - Resize direction ('horizontal', 'vertical')
      * @param {Function} onDoubleClick - Double click handler (optional)
+     * @param {{ assetPanel?: object }} [options] - e.g. owning AssetPanel for multi-instance folders
      */
-    registerResizer(resizer, panel, panelSide, direction, onDoubleClick = null) {
+    registerResizer(resizer, panel, panelSide, direction, onDoubleClick = null, options = {}) {
         if (!resizer || !panel) {
             Logger.ui.warn('ResizerManager: Invalid resizer or panel element');
             return;
         }
 
-        const resizerId = resizer.id || `${panelSide}-resizer`;
-        
         // Store resizer data
         const resizerData = {
             element: resizer,
@@ -47,7 +46,8 @@ export class ResizerManager extends BaseManager {
             direction: direction,
             isActive: false,
             mouseHandlers: null,
-            onDoubleClick: onDoubleClick
+            onDoubleClick: onDoubleClick,
+            options: options || {}
         };
         
         this.activeResizers.set(resizer, resizerData);
@@ -151,9 +151,12 @@ export class ResizerManager extends BaseManager {
                 const deltaX = e.clientX - initialMouseX;
                 // For right panel or folders on right, resize should work in opposite direction
                 const isRightPanel = panelSide === 'right';
-                const isFoldersOnRight = panelSide === 'folders' && 
-                    this.levelEditor?.assetPanel?.foldersPosition === 'right';
-                newSize = Math.max(100, Math.min(800, initialPanelSize + ((isRightPanel || isFoldersOnRight) ? -deltaX : deltaX)));
+                const owner = resizerData.options?.assetPanel;
+                const isFoldersOnRight = panelSide === 'folders' &&
+                    (owner?.foldersPosition || this.levelEditor?.assetPanel?.foldersPosition) === 'right';
+                // Folders: allow drag down to near-collapse; other panels keep min 100
+                const minSize = panelSide === 'folders' ? 0 : 100;
+                newSize = Math.max(minSize, Math.min(800, initialPanelSize + ((isRightPanel || isFoldersOnRight) ? -deltaX : deltaX)));
             } else {
                 // Calculate new height based on mouse movement
                 const deltaY = e.clientY - initialMouseY;
@@ -163,7 +166,7 @@ export class ResizerManager extends BaseManager {
             }
             
             // Apply resize using unified logic
-            this.handlePanelResize(panel, panelSide, direction, newSize);
+            this.handlePanelResize(panel, panelSide, direction, newSize, resizerData);
         };
 
         // Mouse up handler
@@ -184,7 +187,7 @@ export class ResizerManager extends BaseManager {
             
             // Save final size
             const currentSize = direction === 'horizontal' ? panel.offsetWidth : panel.offsetHeight;
-            this.savePanelSize(panelSide, direction, currentSize);
+            this.savePanelSize(panelSide, direction, currentSize, resizerData);
             
             Logger.ui.debug(`ResizerManager: ${direction} resize completed for ${panelSide} panel: ${currentSize}px`);
         };
@@ -214,8 +217,13 @@ export class ResizerManager extends BaseManager {
 
     /**
      * Handle panel resize using unified logic
+     * @param {HTMLElement} panel
+     * @param {string} panelSide
+     * @param {string} direction
+     * @param {number} newSize
+     * @param {object} [resizerData]
      */
-    handlePanelResize(panel, panelSide, direction, newSize) {
+    handlePanelResize(panel, panelSide, direction, newSize, resizerData = null) {
         if (direction === 'horizontal') {
             panel.style.width = newSize + 'px';
             panel.style.flexShrink = '0';
@@ -224,28 +232,38 @@ export class ResizerManager extends BaseManager {
             panel.style.height = newSize + 'px';
             panel.style.flexShrink = '0';
         }
-        
+
+        // Live visibility/collapse-tab for the owning AssetPanel (not always primary)
+        if (panelSide === 'folders') {
+            const assetPanel = resizerData?.options?.assetPanel || this.levelEditor?.assetPanel;
+            assetPanel?.updateContentVisibility?.(newSize);
+        }
     }
 
     /**
      * Save panel size to StateManager and user preferences
+     * @param {string} panelSide
+     * @param {string} direction
+     * @param {number} size
+     * @param {object} [resizerData]
      */
-    savePanelSize(panelSide, direction, size) {
+    savePanelSize(panelSide, direction, size, resizerData = null) {
         const sizeKey = direction === 'horizontal' ? 'Width' : 'Height';
         const stateKey = `panels.${panelSide}Panel${sizeKey}`;
         const prefKey = `${panelSide}Panel${sizeKey}`;
         
-        // Special handling for folders panel
+        // Special handling for folders panel (per AssetPanel instance)
         if (panelSide === 'folders') {
-            if (this.stateManager) {
-                this.stateManager.set('panels.foldersWidth', size);
-            }
-            if (this.userPrefs) {
-                this.userPrefs.set('foldersWidth', size);
-            }
-            // Update content visibility for folders panel
-            if (this.levelEditor?.assetPanel) {
-                this.levelEditor.assetPanel.updateContentVisibility(size);
+            const assetPanel = resizerData?.options?.assetPanel || this.levelEditor?.assetPanel;
+            assetPanel?.updateContentVisibility?.(size);
+            // Prefs only for primary — copies keep independent width in DOM
+            if (assetPanel?.isPrimary) {
+                if (this.stateManager) {
+                    this.stateManager.set('panels.foldersWidth', size);
+                }
+                if (this.userPrefs) {
+                    this.userPrefs.set('foldersWidth', size);
+                }
             }
         } else {
             if (this.stateManager) {

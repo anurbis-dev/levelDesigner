@@ -22,7 +22,8 @@ export class PanelSizeCalculator {
      */
     calculateHorizontalPanelSize(element, input, initialData, options = {}) {
         const isRightPanel = element.id && element.id.includes('right');
-        const isFoldersResizer = element.id === 'folders-resizer';
+        const isFoldersResizer = element.classList?.contains('folders-resizer')
+            || (element.id && element.id.startsWith('folders-resizer'));
         const foldersPosition = options.foldersPosition || 'left';
         
         // Get container width for constraints
