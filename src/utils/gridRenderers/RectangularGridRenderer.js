@@ -1,21 +1,7 @@
 import { BaseGridRenderer } from './BaseGridRenderer.js';
 
 export class RectangularGridRenderer extends BaseGridRenderer {
-    render(ctx, gridSize, camera, viewport, options = {}) {
-        ctx.save();
-
-        // Fill background
-        if (options.backgroundColor) {
-            ctx.fillStyle = options.backgroundColor;
-            ctx.fillRect(0, 0, viewport.width, viewport.height);
-        }
-
-        // Skip rendering if grid is too small
-        if (!this.shouldRenderGrid(gridSize, camera)) {
-            ctx.restore();
-            return;
-        }
-
+    drawGrid(ctx, gridSize, camera, viewport, options) {
         const gridColor = options.color || 'rgba(255, 255, 255, 0.1)';
         const gridThickness = options.thickness || 1;
         const gridOpacity = options.opacity || 0.1;
@@ -38,7 +24,6 @@ export class RectangularGridRenderer extends BaseGridRenderer {
         const verticalLines = Math.floor((endX - startX) / gridSize);
         const horizontalLines = Math.floor((endY - startY) / gridSize);
         if (verticalLines > maxLines || horizontalLines > maxLines) {
-            ctx.restore();
             return;
         }
 
@@ -52,8 +37,6 @@ export class RectangularGridRenderer extends BaseGridRenderer {
             this.setGridStyle(ctx, gridSubdivColor, gridSubdivThickness, gridOpacity, camera);
             this.drawGridLines(ctx, startX, startY, endX, endY, subdivSize);
         }
-
-        ctx.restore();
     }
 
     /**

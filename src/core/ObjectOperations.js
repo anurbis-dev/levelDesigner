@@ -2,6 +2,7 @@ import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
 import { GroupTraversalUtils } from '../utils/GroupTraversalUtils.js';
 import { BaseModule } from './BaseModule.js';
 import { Logger } from '../utils/Logger.js';
+import { GameObject } from '../models/GameObject.js';
 
 /**
  * Object Operations module for LevelEditor
@@ -831,5 +832,63 @@ export class ObjectOperations extends BaseModule {
             x: totalX / count,
             y: totalY / count
         };
+    }
+
+    /**
+     * Check and auto-create Player Start if missing
+     * This method is called during level updates to ensure at least one Player Start exists
+     */
+    ensurePlayerStartExists() {
+        if (!this.editor.level) return;
+
+        // Use cached statistics (already updated in updateAllPanels)
+        const stats = this.editor.cachedLevelStats;
+        if (!stats) return;
+
+        // Check Player Start objects from cached stats
+        const playerStartCount = stats?.byType?.player_start || 0;
+
+        // Auto-create Player Start if missing
+        // Skip auto-creation during undo/redo operations to avoid history corruption
+        const isDuringUndoRedo = this.editor.historyManager.isUndoing || this.editor.historyManager.isRedoing;
+        if (playerStartCount === 0 && !isDuringUndoRedo) {
+            Logger.lifecycle.info('No Player Start found, creating one automatically');
+
+            const playerStartObject = new GameObject({
+                name: 'Player Start',
+                type: 'player_start',
+                x: 0,
+                y: 0,
+                width: 32,
+                height: 32,
+                color: 'lightblue',
+                visible: true,
+                locked: false,
+                properties: {}
+            });
+
+            this.editor.level.addObject(playerStartObject);
+
+            // Invalidate caches since new object was added
+            this.editor.invalidateObjectCaches(playerStartObject.id);
+
+            // Update history with current group edit mode
+            this.editor.historyManager.saveState(
+                this.editor.level.objects,
+                this.editor.stateManager.get('selectedObjects'),
+                false,
+                this.editor.stateManager.get('groupEditMode')
+            );
+
+            // Update cached stats after creation (without recursive call to ensurePlayerStartExists)
+            if (this.editor.level) {
+                this.editor.cachedLevelStats = this.editor.level.getStats();
+            }
+
+            // Re-render to show the new object
+            this.editor.render();
+
+            Logger.lifecycle.info('Player Start object created successfully');
+        }
     }
 }

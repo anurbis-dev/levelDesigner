@@ -303,6 +303,13 @@ export class AssetManager extends BaseManager {
     }
 
     /**
+     * Get asset by ID (null-safe alias expected by AssetItemActionsController.handleAssetClick)
+     */
+    getAssetById(id) {
+        return this.assets.get(id) ?? null;
+    }
+
+    /**
      * Get all assets
      */
     getAllAssets() {

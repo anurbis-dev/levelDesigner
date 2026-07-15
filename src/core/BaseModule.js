@@ -164,6 +164,20 @@ export class BaseModule {
     }
 
     /**
+     * Check if a mouse action (drag, marquee, duplicate placement) is currently in
+     * progress — used to guard bulk state-replacing operations (New/Open level or
+     * project) from running mid-gesture, which would pull the rug out from under
+     * in-progress mouse-event closures.
+     * @returns {boolean} True if any mouse operation is active
+     */
+    hasActiveMouseOperation() {
+        const mouse = this.editor.stateManager.get('mouse');
+        const duplicate = this.editor.stateManager.get('duplicate');
+        return mouse.isDragging || mouse.isMarqueeSelecting || mouse.isPlacingObjects ||
+            (duplicate && duplicate.isActive);
+    }
+
+    /**
      * Get selection bounds for given objects
      * @param {Array} objects - Array of objects to get bounds for
      * @returns {Object|null} Bounds {minX, minY, maxX, maxY} or null if no objects

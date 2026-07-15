@@ -15,21 +15,7 @@ export class HexagonalGridRenderer extends BaseGridRenderer {
         this.maxHexagonsThreshold = 4500; // Disable grid when more than 4500 hexagons
     }
 
-    render(ctx, gridSize, camera, viewport, options = {}) {
-        ctx.save();
-
-        // Fill background
-        if (options.backgroundColor) {
-            ctx.fillStyle = options.backgroundColor;
-            ctx.fillRect(0, 0, viewport.width, viewport.height);
-        }
-
-        // Skip rendering if grid is too small
-        if (!this.shouldRenderGrid(gridSize, camera)) {
-            ctx.restore();
-            return;
-        }
-
+    drawGrid(ctx, gridSize, camera, viewport, options) {
         // Debug: Log first render after restart (only once)
         // if (!this.lastCacheTime) {
         //     console.log('🔧 HexagonalGridRenderer: First render after restart');
@@ -64,7 +50,6 @@ export class HexagonalGridRenderer extends BaseGridRenderer {
         const estimatedHexagons = this.estimateHexagonCount(hexWidth, hexHeight, viewportLeft, viewportTop, viewportRight, viewportBottom, orientation);
         if (estimatedHexagons > this.maxHexagonsThreshold) {
             // Grid too dense - don't render it
-            ctx.restore();
             return;
         }
 
@@ -74,8 +59,6 @@ export class HexagonalGridRenderer extends BaseGridRenderer {
 
         // Use simple cached rendering
         this.drawHexagonalGridSimple(ctx, hexSize, hexWidth, hexHeight, viewportLeft, viewportTop, viewportRight, viewportBottom, orientation, camera);
-        
-        ctx.restore();
     }
 
 

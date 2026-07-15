@@ -189,29 +189,51 @@ export class RenderOperations extends BaseModule {
     }
 
     /**
+     * Shared preamble for getVisibleObjectsSpatial/getVisibleObjectsRegular/getVisibleObjects:
+     * validates editor/level/canvasRenderer/canvas/camera.zoom, returns the canvas or null.
+     */
+    _getValidCanvasOrNull(camera, level) {
+        if (!this.editor || !level || !level.objects) return null;
+        if (!this.editor.canvasRenderer || !this.editor.canvasRenderer.canvas) return null;
+        const canvas = this.editor.canvasRenderer.canvas;
+        if (!canvas.width || !canvas.height || canvas.width <= 0 || canvas.height <= 0) return null;
+        if (!camera.zoom || camera.zoom <= 0) return null;
+        return canvas;
+    }
+
+    /**
+     * Viewport bounds extended by culling padding (plus parallax-offset padding when
+     * parallax is enabled) — shared by getVisibleObjectsSpatial/getVisibleObjectsRegular.
+     */
+    _computeExtendedViewportBounds(camera, canvas) {
+        const viewportLeft = camera.x;
+        const viewportTop = camera.y;
+        const viewportRight = camera.x + canvas.width / camera.zoom;
+        const viewportBottom = camera.y + canvas.height / camera.zoom;
+
+        let padding = 100;
+        if (this.parallaxRenderer.isParallaxEnabled()) {
+            // Расширяем область на максимальное возможное параллакс смещение
+            // Предполагаем максимальный коэффициент параллакса ±10
+            const parallaxRange = Math.abs(camera.x - (this.parallaxRenderer.getParallaxState()?.startPosition?.x || 0)) * 10;
+            padding = Math.max(padding, parallaxRange + 200); // +200 для безопасности
+        }
+
+        return {
+            left: viewportLeft - padding,
+            top: viewportTop - padding,
+            right: viewportRight + padding,
+            bottom: viewportBottom + padding
+        };
+    }
+
+    /**
      * Быстрый поиск объектов в области видимости с помощью пространственного индекса
      * O(k) - где k - количество ячеек сетки в области видимости
      */
     getVisibleObjectsSpatial(camera, level = this.editor.level) {
-        // Проверки на существование необходимых объектов
-        if (!this.editor || !level || !level.objects) {
-            return [];
-        }
-
-        if (!this.editor.canvasRenderer || !this.editor.canvasRenderer.canvas) {
-            return [];
-        }
-
-        const canvas = this.editor.canvasRenderer.canvas;
-
-        // Проверки на валидность canvas размеров
-        if (!canvas.width || !canvas.height || canvas.width <= 0 || canvas.height <= 0) {
-            return [];
-        }
-
-        if (!camera.zoom || camera.zoom <= 0) {
-            return [];
-        }
+        const canvas = this._getValidCanvasOrNull(camera, level);
+        if (!canvas) return [];
 
         // _spatialIndexDirty only ever tracks the current level's index going stale
         // (see markSpatialIndexDirty callers) — only rebuild eagerly for that case.
@@ -236,26 +258,8 @@ export class RenderOperations extends BaseModule {
             }
         }
 
-        const viewportLeft = camera.x;
-        const viewportTop = camera.y;
-        const viewportRight = camera.x + canvas.width / camera.zoom;
-        const viewportBottom = camera.y + canvas.height / camera.zoom;
-
-        // Добавляем padding
-        let padding = 100;
-
-        // При включенном параллаксе расширяем область поиска, чтобы учесть возможные смещения объектов
-        if (this.parallaxRenderer.isParallaxEnabled()) {
-            // Расширяем область на максимальное возможное параллакс смещение
-            // Предполагаем максимальный коэффициент параллакса ±10
-            const parallaxRange = Math.abs(camera.x - (this.parallaxRenderer.getParallaxState()?.startPosition?.x || 0)) * 10;
-            padding = Math.max(padding, parallaxRange + 200); // +200 для безопасности
-        }
-
-        const extendedLeft = viewportLeft - padding;
-        const extendedTop = viewportTop - padding;
-        const extendedRight = viewportRight + padding;
-        const extendedBottom = viewportBottom + padding;
+        const { left: extendedLeft, top: extendedTop, right: extendedRight, bottom: extendedBottom } =
+            this._computeExtendedViewportBounds(camera, canvas);
 
         // Находим ячейки сетки, которые пересекают область видимости
         const startGridX = Math.floor(extendedLeft / this.spatialGridSize);
@@ -879,45 +883,12 @@ export class RenderOperations extends BaseModule {
      * Обычный метод поиска видимых объектов (fallback)
      */
     getVisibleObjectsRegular(camera, level = this.editor.level) {
-        // Проверки на существование необходимых объектов
-        if (!this.editor || !level || !level.objects) {
-            return [];
-        }
+        const canvas = this._getValidCanvasOrNull(camera, level);
+        if (!canvas) return [];
 
-        if (!this.editor.canvasRenderer || !this.editor.canvasRenderer.canvas) {
-            return [];
-        }
+        const { left: extendedLeft, top: extendedTop, right: extendedRight, bottom: extendedBottom } =
+            this._computeExtendedViewportBounds(camera, canvas);
 
-        const canvas = this.editor.canvasRenderer.canvas;
-
-        // Проверки на валидность canvas размеров
-        if (!canvas.width || !canvas.height || canvas.width <= 0 || canvas.height <= 0) {
-            return [];
-        }
-
-        if (!camera.zoom || camera.zoom <= 0) {
-            return [];
-        }
-
-        const viewportLeft = camera.x;
-        const viewportTop = camera.y;
-        const viewportRight = camera.x + canvas.width / camera.zoom;
-        const viewportBottom = camera.y + canvas.height / camera.zoom;
-
-        // Add some padding to avoid objects appearing/disappearing at edges
-        let padding = 100;
-
-        // При включенном параллаксе расширяем область поиска, чтобы учесть возможные смещения объектов
-        if (this.parallaxRenderer.isParallaxEnabled()) {
-            // Расширяем область на максимальное возможное параллакс смещение
-            const parallaxRange = Math.abs(camera.x - (this.parallaxRenderer.getParallaxState()?.startPosition?.x || 0)) * 10;
-            padding = Math.max(padding, parallaxRange + 200); // +200 для безопасности
-        }
-        const extendedLeft = viewportLeft - padding;
-        const extendedTop = viewportTop - padding;
-        const extendedRight = viewportRight + padding;
-        const extendedBottom = viewportBottom + padding;
-        
         // Get visible layer IDs for performance
         const visibleLayerIds = this.getVisibleLayerIds(level);
 
@@ -949,25 +920,7 @@ export class RenderOperations extends BaseModule {
     }
 
     getVisibleObjects(camera, level = this.editor.level) {
-        // Проверки на существование необходимых объектов
-        if (!this.editor || !level || !level.objects) {
-            return [];
-        }
-
-        if (!this.editor.canvasRenderer || !this.editor.canvasRenderer.canvas) {
-            return [];
-        }
-
-        const canvas = this.editor.canvasRenderer.canvas;
-
-        // Проверки на валидность canvas размеров
-        if (!canvas.width || !canvas.height || canvas.width <= 0 || canvas.height <= 0) {
-            return [];
-        }
-
-        if (!camera.zoom || camera.zoom <= 0) {
-            return [];
-        }
+        if (!this._getValidCanvasOrNull(camera, level)) return [];
 
         const currentTime = performance.now();
         const cameraKey = this._buildVisibleObjectsCacheKey(camera, level);

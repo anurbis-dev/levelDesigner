@@ -1,4 +1,4 @@
-# Context Map - Level Designer v3.60.2 (Phase 4.5: PanelPositionManager dekompozycja, nested tab splits, camera zoom, Player Start asset-type, Phase 3 refactor)
+# Context Map - Level Designer v4.0.0 (Phase A: Refactor Фаза A — код-рефакторинг, дублей устранены, Template Method, новые утилиты)
 
 ## ⚠️ КРИТИЧЕСКИ ВАЖНО - ЧИТАТЬ ПЕРВЫМ
 
@@ -14,7 +14,7 @@
 
 ## 🎯 Быстрый старт для агента
 
-### Основные компоненты (v3.57.0 Phase 7 + v3.60.0 Phase 3 + v3.60.2 Phase 4.5: Project, декомпозиция LevelEditor, декомпозиция PanelPositionManager)
+### Основные компоненты (v4.0.0 Phase A: Refactor; prev v3.60.2 Phase 4.5: Project, декомпозиция LevelEditor, декомпозиция PanelPositionManager)
 - **LevelEditor** (v3.57.0 Phase 1-7; v3.60.0 Phase 3: декомпозиция на EditorConfigController/EditorLifecycleController/EditorPreferencesController) - главный класс, координатор всех систем; поддерживает несколько одновременно открытых LevelSession в `levelSessions: Map`; `this.level` = getter/setter через `currentLevelId` для обратной совместимости; новое поле `levelMRU: string[]` для отслеживания порядка недавних уровней (используется в closeLevel при выборе следующего уровня); Phase 7: новые поля `project` (текущий Project экземпляр, инициализируется при New/Open/Save Project) и `projectSettingsDialog`; Phase 3 (v3.60.0): инициализация разделена на три составных controller-модуля через BaseModule-композицию — конфигурация, lifecycle/bootstrap, пользовательские настройки
 - **Контроллеры инициализации** (v3.60.0 Phase 3, все extends BaseModule, wiring через `this.editor`):
   - **EditorConfigController** — применение конфигурации (grid, цвета, дефолт-настройки)
@@ -109,6 +109,13 @@ gameObject.components // массив component stubs, сохраняется в
 canvasRenderer.drawSingleObject(obj, x, y) // рендер single объекта с rotation-поддержкой; если нет изображения (obj.imgSrc не загружен), рисует цветной fallback-прямоугольник + type-иконку (если type из каталога)
 canvasRenderer.getTypeIconImage(typeId) // растеризует buildTypeIconSvg() в data-URI Image, кэширует по ${typeId}|${цвет}, триггерит render() при онлоаде иконки
 canvasRenderer.typeIconCache // Map кэш type-иконок, чистится в destroy() вместе с imageCache
+
+// BaseModule (v4.0.0 Phase A: новый общий метод)
+baseModule.hasActiveMouseOperation() // проверка активной операции мыши (объединённый хелпер для LevelFileOperations/ProjectFileOperations/других BaseModule-классов, заменил дублирующиеся _hasActiveMouseOperation() приватные копии)
+
+// SnapUtils (v4.0.0 Phase A: новые статические методы)
+SnapUtils.findNearestSnapGridPoint(anchorX, anchorY, stateManager, level, userPrefs) // поиск ближайшей точки сетки snap (используется в DuplicateOperations.confirmPlacement и MouseHandlers.dragSelectedObjects)
+SnapUtils.computeBottomLeftSnapDelta(gridPoint, referenceObject, objectOperations) // вычисление дельты смещения для bottom-left snapping
 
 // StateManager
 stateManager.get(key)
@@ -312,7 +319,7 @@ eventHandlerManager.registerElement(button, { click: onClick }, 'button-id');
 
 ## 🔧 Версионирование
 
-Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '3.60.2'` (Phase 3 декомпозиция LevelEditor.js завершена; EditorConfigController/EditorLifecycleController/EditorPreferencesController извлечены; 2399→1583 строк LevelEditor; nested tab split sections + viewport "jump to camera" hotkey + Levels panel lock-иконка, Player Start asset-type, camera zoom)
+Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '4.0.0'` (Phase A refactor: GroupTraversalUtils-интеграция в LevelEditor, ensurePlayerStartExists→ObjectOperations, новые утилиты BaseModule.hasActiveMouseOperation/SnapUtils/RenderOperations приватные хелперы, Template Method в BaseGridRenderer, PerformanceUtils composition)
 
 Версия отображается динамически после полной инициализации через `updateVersionInfo()` и `updatePageTitle()`. Интерфейс скрыт до завершения загрузки, чтобы избежать отображения устаревшей версии. Pre-push hook блокирует коммит без бампа версии (`.claude/settings.json`).
 

@@ -1,21 +1,7 @@
 import { BaseGridRenderer } from './BaseGridRenderer.js';
 
 export class DiamondGridRenderer extends BaseGridRenderer {
-    render(ctx, gridSize, camera, viewport, options = {}) {
-        ctx.save();
-
-        // Fill background
-        if (options.backgroundColor) {
-            ctx.fillStyle = options.backgroundColor;
-            ctx.fillRect(0, 0, viewport.width, viewport.height);
-        }
-
-        // Skip rendering if grid is too small
-        if (!this.shouldRenderGrid(gridSize, camera)) {
-            ctx.restore();
-            return;
-        }
-
+    drawGrid(ctx, gridSize, camera, viewport, options) {
         const gridColor = options.color || 'rgba(255, 255, 255, 0.1)';
         const gridThickness = options.thickness || 1;
         const gridOpacity = options.opacity || 0.1;
@@ -29,7 +15,6 @@ export class DiamondGridRenderer extends BaseGridRenderer {
 
         // Draw diamond grid lines (60° and 120° angles)
         this.drawDiamondLines(ctx, gridSize, camera, viewportLeft, viewportTop, viewportRight, viewportBottom);
-        ctx.restore();
     }
 
 

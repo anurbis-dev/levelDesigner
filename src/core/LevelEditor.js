@@ -6,6 +6,7 @@ import { ConfigManager } from '../managers/ConfigManager.js';
 import { CacheManager } from '../managers/CacheManager.js';
 import { ResizerManager } from '../managers/ResizerManager.js';
 import { SearchSectionUtils } from '../utils/SearchSectionUtils.js';
+import { GroupTraversalUtils } from '../utils/GroupTraversalUtils.js';
 import { Level } from '../models/Level.js';
 import { GameObject } from '../models/GameObject.js';
 import { Group } from '../models/Group.js';
@@ -47,7 +48,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '4.0.0';
+    static VERSION = '4.0.1';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -578,57 +579,7 @@ export class LevelEditor {
      * This method is called during level updates to ensure at least one Player Start exists
      */
     ensurePlayerStartExists() {
-        if (!this.level) return;
-
-        // Use cached statistics (already updated in updateAllPanels)
-        const stats = this.cachedLevelStats;
-        if (!stats) return;
-
-        // Check Player Start objects from cached stats
-        const playerStartCount = stats?.byType?.player_start || 0;
-
-        // Auto-create Player Start if missing
-        // Skip auto-creation during undo/redo operations to avoid history corruption
-        const isDuringUndoRedo = this.historyManager.isUndoing || this.historyManager.isRedoing;
-        if (playerStartCount === 0 && !isDuringUndoRedo) {
-            Logger.lifecycle.info('No Player Start found, creating one automatically');
-            
-            const playerStartObject = new GameObject({
-                name: 'Player Start',
-                type: 'player_start',
-                x: 0,
-                y: 0,
-                width: 32,
-                height: 32,
-                color: 'lightblue',
-                visible: true,
-                locked: false,
-                properties: {}
-            });
-
-            this.level.addObject(playerStartObject);
-
-            // Invalidate caches since new object was added
-            this.invalidateObjectCaches(playerStartObject.id);
-
-            // Update history with current group edit mode
-            this.historyManager.saveState(
-                this.level.objects, 
-                this.stateManager.get('selectedObjects'), 
-                false, 
-                this.stateManager.get('groupEditMode')
-            );
-
-            // Update cached stats after creation (without recursive call to ensurePlayerStartExists)
-            if (this.level) {
-                this.cachedLevelStats = this.level.getStats();
-            }
-            
-            // Re-render to show the new object
-            this.render();
-            
-            Logger.lifecycle.info('Player Start object created successfully');
-        }
+        this.objectOperations.ensurePlayerStartExists();
     }
 
     updateLevelStatsPanel() {
@@ -1331,14 +1282,11 @@ export class LevelEditor {
 
         // If not found as top-level, search in groups recursively
         for (const obj of this.level.objects) {
-            if (obj.type === 'group') {
-                const found = this.findObjectInGroup(obj, objId);
-                if (found) {
-                    if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
-                        Logger.layer.debug(`Found in group: ${obj.id}`);
-                    }
-                    return obj; // Return the top-level group that contains this object
+            if (obj.type === 'group' && GroupTraversalUtils.findInGroup(obj, o => o.id === objId)) {
+                if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
+                    Logger.layer.debug(`Found in group: ${obj.id}`);
                 }
+                return obj; // Return the top-level group that contains this object
             }
         }
 
@@ -1349,84 +1297,12 @@ export class LevelEditor {
     }
 
     /**
-     * Recursively search for object in group
-     * @param {Object} group - Group to search in
-     * @param {string} objId - Object ID to find
-     * @returns {boolean} true if found
-     */
-    findObjectInGroup(group, objId) {
-        if (group.id === objId) {
-            return true;
-        }
-
-        if (group.children) {
-            for (const child of group.children) {
-                if (child.id === objId) {
-                    return true;
-                }
-                if (child.type === 'group') {
-                    if (this.findObjectInGroup(child, objId)) {
-                        return true;
-                    }
-                }
-            }
-        }
-
-        return false;
-    }
-
-    /**
      * Find object by ID in the level, including objects inside groups
      * @param {string} objId - Object ID to find
      * @returns {GameObject|null} - The found object or null
      */
     findObjectById(objId) {
-
-        // First try to find as top-level object
-        const topLevelObj = this.level.objects.find(obj => obj.id === objId);
-        if (topLevelObj) {
-            return topLevelObj;
-        }
-
-        // If not found, search in groups recursively
-        for (const obj of this.level.objects) {
-            if (obj.type === 'group') {
-                const found = this.findObjectInGroupRecursive(obj, objId);
-                if (found) {
-                    return found;
-                }
-            }
-        }
-
-        return null;
-    }
-
-    /**
-     * Recursively find object in group and return the object itself
-     * @param {Group} group - Group to search in
-     * @param {string} objId - Object ID to find
-     * @returns {GameObject|null} - The found object or null
-     */
-    findObjectInGroupRecursive(group, objId) {
-        if (group.id === objId) {
-            return group;
-        }
-
-        if (group.children) {
-            for (const child of group.children) {
-                if (child.id === objId) {
-                    return child; // Return the actual object
-                }
-                if (child.type === 'group') {
-                    const found = this.findObjectInGroupRecursive(child, objId);
-                    if (found) {
-                        return found;
-                    }
-                }
-            }
-        }
-
-        return null;
+        return GroupTraversalUtils.findInObjects(this.level.objects, obj => obj.id === objId);
     }
 
     /**

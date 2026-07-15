@@ -13,29 +13,12 @@ export class LevelFileOperations extends BaseModule {
     }
 
     /**
-     * Returns true if a mouse action (drag, marquee, duplicate) is currently in
-     * progress. New/Open must not run while the canvas is mid-action: even though
-     * they no longer call stateManager.reset() (Phase 5 — they add a tab instead of
-     * replacing the level), addLevel()/setCurrentLevel() still fully swaps
-     * selectedObjects/camera/etc. via stateManager.set() — mid-drag, that pulls the
-     * rug out from under the in-progress mouse-event closures (they keep holding
-     * object references from whatever session was active when the drag started),
-     * risking a "ghost edit" landing in the wrong session once mouseup finally fires.
-     */
-    _hasActiveMouseOperation() {
-        const mouse = this.editor.stateManager.get('mouse');
-        const duplicate = this.editor.stateManager.get('duplicate');
-        return mouse.isDragging || mouse.isMarqueeSelecting || mouse.isPlacingObjects ||
-            (duplicate && duplicate.isActive);
-    }
-
-    /**
      * Create a brand-new level and add it as a new tab (does NOT replace/discard the
      * currently open level or any other open tab — see plan section 6.2). No unsaved-
      * changes confirm needed since nothing is being discarded anymore.
      */
     async newLevel() {
-        if (this._hasActiveMouseOperation()) {
+        if (this.hasActiveMouseOperation()) {
             Logger.file.warn('newLevel() blocked: mouse action in progress — finish or cancel it first');
             return;
         }
@@ -68,7 +51,7 @@ export class LevelFileOperations extends BaseModule {
      * @returns {Promise<void>}
      */
     async openLevel() {
-        if (this._hasActiveMouseOperation()) {
+        if (this.hasActiveMouseOperation()) {
             Logger.file.warn('openLevel() blocked: mouse action in progress — finish or cancel it first');
             return;
         }

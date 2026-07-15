@@ -19,24 +19,12 @@ export class ProjectFileOperations extends BaseModule {
     }
 
     /**
-     * Mirrors LevelFileOperations._hasActiveMouseOperation() — New/Open Project bulk-
-     * replace every open session's live editor state (camera/selection/etc.), which
-     * would pull the rug out from under an in-progress mouse gesture.
-     */
-    _hasActiveMouseOperation() {
-        const mouse = this.editor.stateManager.get('mouse');
-        const duplicate = this.editor.stateManager.get('duplicate');
-        return mouse.isDragging || mouse.isMarqueeSelecting || mouse.isPlacingObjects ||
-            (duplicate && duplicate.isActive);
-    }
-
-    /**
      * Create a fresh Project with a single new level, replacing every currently open
      * level (Edge Case 10 — "New Project" always replaces, single combined confirm if
      * any open level has unsaved changes, no per-tab confirms).
      */
     async newProject() {
-        if (this._hasActiveMouseOperation()) {
+        if (this.hasActiveMouseOperation()) {
             Logger.file.warn('newProject() blocked: mouse action in progress — finish or cancel it first');
             return;
         }
@@ -71,7 +59,7 @@ export class ProjectFileOperations extends BaseModule {
      * still be done afterwards via Open Level...).
      */
     async openProject() {
-        if (this._hasActiveMouseOperation()) {
+        if (this.hasActiveMouseOperation()) {
             Logger.file.warn('openProject() blocked: mouse action in progress — finish or cancel it first');
             return;
         }

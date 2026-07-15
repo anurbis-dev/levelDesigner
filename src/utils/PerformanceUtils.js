@@ -128,36 +128,27 @@ export function memoize(fn, keyFn = null) {
  * );
  */
 export function memoizeWithInvalidation(fn, keyFn, getDeps) {
-    const cache = new Map();
+    // Delegates the actual caching to memoize() — this wrapper only adds the
+    // deps-changed check that clears that cache before each call.
+    const memoized = memoize(fn, keyFn);
     let lastDeps = null;
-    
-    const memoized = function(...args) {
-        // Check if dependencies changed
+
+    const wrapped = function(...args) {
         const currentDeps = getDeps();
         if (lastDeps !== null && !areArraysEqual(lastDeps, currentDeps)) {
-            cache.clear();
+            memoized.clearCache();
         }
         lastDeps = currentDeps;
-        
-        // Standard memoization
-        const key = keyFn(...args);
-        
-        if (cache.has(key)) {
-            return cache.get(key);
-        }
-        
-        const result = fn.apply(this, args);
-        cache.set(key, result);
-        
-        return result;
+
+        return memoized.apply(this, args);
     };
-    
-    memoized.clearCache = function() {
-        cache.clear();
+
+    wrapped.clearCache = function() {
+        memoized.clearCache();
         lastDeps = null;
     };
-    
-    return memoized;
+
+    return wrapped;
 }
 
 /**

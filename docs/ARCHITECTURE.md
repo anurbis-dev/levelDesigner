@@ -1,4 +1,4 @@
-# Архитектура Level Editor v3.60.2 (Phase 7 Project + Phase 3 Refactor: LevelEditor декомпозиция)
+# Архитектура Level Editor v4.0.0 (Phase A Refactor: код-рефакторинг, дублей устранены, Template Method, новые утилиты)
 
 **📚 Навигация:**
 - [Development Guide](./DEVELOPMENT_GUIDE.md) - примеры использования
@@ -125,11 +125,12 @@
 - `rotateBoundsAroundCenter(bounds, deg)` — консервативный AABB для уже вычисленных bounds, повёрнутых вокруг их центра
 - `getWorldBounds()` / `isPointInWorldBounds()` учитывают `rotation`: точный inverse-rotate hit-test для одиночных объектов, консервативный AABB для групп
 
-### GroupTraversalUtils
+### GroupTraversalUtils (v4.0.0 Phase A: интеграция в LevelEditor)
 **Файл**: `src/utils/GroupTraversalUtils.js`
 - Система обхода иерархии групп
 - 12 методов работы с группами
 - `findObjectPath(topLevelObjects, targetId)` — DFS-поиск пути индексов от корня (`Level.objects`) до объекта через вложенные `group.children`; единый источник истины для порядка рендера/hit-test, используется в `Level.compareStackOrder()`
+- **v4.0.0 Phase A refactor**: методы `findInObjects()` и `findInGroup()` теперь используются в LevelEditor.js вместо удалённых дублирующихся приватных методов `findObjectInGroup()` и `findObjectInGroupRecursive()` (DRY-улучшение)
 
 ### File Menu Structure (v3.57.0 Phase 7)
 **Файл**: `config/menu.js`, id `file` (переименовано с `level` в Phase 7)
@@ -224,17 +225,36 @@
 - Глобальные перехватчики
 - Стратегии восстановления
 
-### PerformanceUtils
+### BaseModule (v4.0.0 Phase A: новый общий метод)
+**Файл**: `src/core/BaseModule.js`
+- Базовый класс для всех модулей и контроллеров
+- Паттерн владения (owner + стандартные сеттеры для `levelEditor`, `stateManager` и др.)
+- **v4.0.0 Phase A**: добавлен общий метод `hasActiveMouseOperation()` — проверка активной операции мыши (объединённый хелпер для LevelFileOperations/ProjectFileOperations/других BaseModule-классов, заменил дублирующиеся приватные копии `_hasActiveMouseOperation()` в разных файлах; DRY-улучшение)
+
+### PerformanceUtils (v4.0.0 Phase A: composition-рефакторинг)
 **Файл**: `src/utils/PerformanceUtils.js`
 - throttle, debounce, memoize
 - batchRAF, LRUCache
 - Применение: MouseHandlers throttled (8ms mousemove, 16ms wheel)
+- **v4.0.0 Phase A**: `memoizeWithInvalidation()` теперь реализован через композицию с `memoize()` вместо дублирования cache-логики (устранено дублирование бизнес-логики кэша)
 
 ### SearchUtils
 **Файл**: `src/utils/SearchUtils.js`
 - Унифицированная система поиска
 - Рекурсивный поиск по иерархическим структурам
 - Используется в Outliner/Layers/Assets, а также в SettingsPanel (единый поиск в шапке окна, см. ниже)
+
+### SnapUtils (v4.0.0 Phase A: новые статические методы)
+**Файл**: `src/utils/SnapUtils.js`
+- Утилита для snap-to-grid функциональности
+- **v4.0.0 Phase A**: добавлены два новых статических метода:
+  - `findNearestSnapGridPoint(anchorX, anchorY, stateManager, level, userPrefs)` — поиск ближайшей точки сетки snap (используется в `DuplicateOperations.confirmPlacement()` и `MouseHandlers.dragSelectedObjects()`)
+  - `computeBottomLeftSnapDelta(gridPoint, referenceObject, objectOperations)` — вычисление дельты смещения для bottom-left snapping (устраняет дублирование inline-логики в двух местах)
+
+### Grid Renderers (v4.0.0 Phase A refactor: Template Method pattern)
+**Файлы**: `src/utils/gridRenderers/BaseGridRenderer.js`, `src/utils/gridRenderers/RectangularGridRenderer.js`, `src/utils/gridRenderers/DiamondGridRenderer.js`, `src/utils/gridRenderers/HexagonalGridRenderer.js`
+- **Template Method паттерн**: `BaseGridRenderer.render()` стал конкретным методом, реализующим Template Method (save ctx state → check shouldRenderGrid → draw background → call `drawGrid()` → restore ctx state), абстрактный метод `drawGrid(ctx, gridSize, camera, viewport, options)` для переопределения в наследниках
+- **Наследники** (RectangularGridRenderer, DiamondGridRenderer, HexagonalGridRenderer) теперь реализуют только `drawGrid()` вместо полного `render()` — дублирование boilerplate-кода устранено (DRY-улучшение)
 
 ### SettingsPanel — поиск параметров по всему окну
 **Файлы**: `src/ui/SettingsPanel.js`, `src/ui/panel-structures/SettingsSectionConstructor.js`
@@ -294,13 +314,15 @@
 - TTL Cache, LRU Strategy
 - **Multi-level namespacing** (Фаза 3): `objectCache`, `topLevelObjectCache`, `effectiveLayerCache`, `_layerToObjectIds` используют ключ `${levelId}:${objId}` вместо голого `${objId}` — защита от коллизий object id между одновременно открытыми уровнями (каждый уровень обычно имеет объекты 1, 2, 3..., которые не пересекаются id, но могут конфликтовать в общем кэше при вычислении effective-layer или при bulk-lookups). Внутренний метод `_namespacedKey(id)` возвращает `${editor.currentLevelId}:${id}` — осознанное решение не передавать `level` параметром (не менять ~15 external call sites), вместо этого неявно используется текущий уровень как scope кэша.
 
-### ConfigManager
+### ConfigManager (v4.0.0 Phase A refactor)
 **Файл**: `src/managers/ConfigManager.js`
 - Управление конфигурацией (editor.json, ui.json, canvas.json и др.)
+- **v4.0.0 Phase A**: удалён неиспользуемый мёртвый метод `loadDefaultConfigs()` (~106 строк); единственный живой метод — `getDefaultConfigs()` (DRY-улучшение)
 
-### AssetManager & FileManager
+### AssetManager & FileManager (v4.0.0 Phase A: новый null-safe метод)
 **Файл**: `src/managers/AssetManager.js`, `src/core/LevelFileOperations.js`
 - **AssetManager**: управление библиотекой ассетов, сканирование папки `content/`, кэширование изображений
+  - **v4.0.0 Phase A**: добавлен метод `getAssetById(id)` (null-safe алиас к существующему `getAsset(assetId)`, устраняет краш в AssetItemActionsController.handleAssetClick при доступе к несуществующему методу)
   - **AssetTypes каталог** (`src/constants/AssetTypes.js`): 29 предопределённых типов ассетов в 6 категориях (Core: Camera, Actor, Image, ImageAtlas, Volume, Player Start; Visual/Render: SpriteAnimationClip, Tileset, Tilemap, NineSliceSprite, FontTextStyle, ParticleEffect, MaterialShaderPreset, Light; Audio: SoundEffect, MusicTrack, AudioZone; Data/System: DialogueGraph, QuestObjective, ItemDefinition, InventorySchema, LocalizationTable, SaveSchema, InputMap; Navigation/AI: PathSpline, NavMesh, AIBehaviorPreset; Other: Prefab, SequenceCutscene). `Player Start` — это не только тип ассета, но и auto-managed GameObject marker (ровно один на уровень, auto-создание при отсутствии, валидация в DetailsPanel/LevelFileOperations статистике) — через меню Assets → Add → Core → Player Start теперь можно вручную создать placeholder-ассет, который при размещении на уровне создаёт GameObject с `type='player_start'`, распознаваемый существующей системой. Вспомогательные функции `getAssetTypeById(id)`, `getAssetTypesByCategory(categoryId)`, `getAssetCategoriesWithTypes()`
   - **ComponentTypes каталог** (`src/constants/ComponentTypes.js`): 19 типов компонентов (Collider, Trigger, TransformAnimation, SpriteUiAnimation, Interactable, Pickup, DialogueTrigger, DamageHealth, MovablePushable, MountableVehicleSeat, PathFollower, Spawner, StateMachineBehavior, PlayerStart, CheckpointSavePoint, ClimbableLadder, ConveyorZiplineJumpPadPortal, DestructibleContainer, VariableModifier) — editor-side metadata-стабы ({id, type, enabled, properties}), которые прикрепляются к Asset/GameObject; runtime-поведение реализуется в game engine, который импортирует JSON; вспомогательные функции `getComponentTypeById(id)`, `createComponentStub(typeId)`
   - **AssetTypeIcons** (`src/constants/AssetTypeIcons.js`): минималистичная гліфическая библиотека (stroke SVG, 24×24px) для каждого типа ассета/компонента; функция `buildTypeIconSvg(typeId, color, size)` возвращает inline `<svg>` строку
@@ -346,11 +368,12 @@
   - Per-level `isDirty` (Фаза 5) — каждая LevelSession трекит свой `isDirty` флаг независимо. `LevelsManager.setCurrentLevel()` снапшотит/восстанавливает глобальный `stateManager.isDirty` при переключении между вкладками, позволяя существующему коду работать без изменений (через единый глобальный флаг).
   - Per-level visible индикатор в LevelsPanel — точка в панели теперь точна для всех вкладок, не только текущей (может быть прочитана из `session.isDirty` каждой открытой сессии).
 
-### RenderOperations (v3.57.0 Phase 3-6 multi-level)
+### RenderOperations (v4.0.0 Phase A refactor + v3.57.0 Phase 3-6 multi-level)
 **Файл**: `src/core/RenderOperations.js`
 - Операции рендеринга с композитингом нескольких видимых уровней
 - **Multi-level композитинг** (Фаза 3): `render()` итерирует по `editor.levelsManager.getVisibleSessions()` и рисует объекты всех видимых уровней в одном кадре. Видимость = `session.visible` (per-level eye-icon в LevelsPanel), не зависит от "текущий" статуса уровня.
 - **Z-order рендера** (Фаза 6): Текущий уровень ВСЕГДА рисуется поверх остальных видимых уровней, независимо от позиции таба, через `editor.levelsManager.getVisibleSessionsForRender()` — переносит текущую сессию в конец массива компоузинга (она обрабатывается последней, рисуется поверх). Решение плана раздел 12 пункт 2, не реализованное полностью в Фазе 3 (раньше `render()` просто итерировал по `getVisibleSessions()` в tab-порядке), исправлено в Фазе 6.
+- **v4.0.0 Phase A refactor**: добавлены приватные хелперы `_getValidCanvasOrNull(camera, level)` и `_computeExtendedViewportBounds(camera, canvas)`, устраняющие тройное дублирование preamble-проверок в `getVisibleObjectsSpatial()`/`getVisibleObjectsRegular()`/`getVisibleObjects()` (DRY-улучшение)
 - **Non-composited элементы** (привязаны к текущему уровню только): grid/фон/selection-рамки/hierarchy-highlight/group-edit-frame/duplicate-ghost/debug-overlays (boundaries/collisions) — НЕ рисуются для non-current видимых уровней. Дополнительно гейтятся `currentSessionVisible` (не рендерятся, если сам текущий уровень скрыт через eye-icon).
 - **Dimming режимы** (isolate/solo/group-edit-mode) применяются ТОЛЬКО к текущему уровню; non-current видимые уровни всегда рендерятся нормально, независимо от этих режимов текущего.
 - **Namespacing кешей**: `visibleObjectsCache` ключируется как `${levelId}_${cameraKey}` (защита от коллизии при совпадении camera-ключей между уровнями); `visibleLayersCache` стал `Map<levelId, {layerIds, timestamp}>`; `CacheManager` использует `${levelId}:${objId}` для всех object-кешей (effectiveLayerCache/objectCache/topLevelObjectCache) — защита от коллизий id объектов между одновременно открытыми уровнями.
@@ -359,10 +382,11 @@
 - **Пространственный индекс**: `spatialIndex` был уже `Map<levelId, ...>` с Фазы 1, дополнительных правок не потребовалось.
 - **Побочные фиксы**: объединены два дублирующихся метода `invalidateSpatialIndex()` в один `invalidateSpatialIndex(levelId = null)`; удалён мёртвый код (`this.editor.effectiveLayerCache` на несуществующем поле, неиспользуемый `clearEffectiveLayerCache()`).
 
-### ObjectOperations
+### ObjectOperations (v4.0.0 Phase A refactor)
 **Файл**: `src/core/ObjectOperations.js`
 - Операции с объектами
 - Выбор, выделение, свойства
+- **v4.0.0 Phase A**: добавлен метод `ensurePlayerStartExists()` (логика автосоздания Player Start, перенесена из LevelEditor.js; тонкий делегат остался в LevelEditor.js для обратной совместимости)
 
 ### DuplicateOperations
 **Файл**: `src/core/DuplicateOperations.js`

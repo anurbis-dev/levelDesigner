@@ -167,6 +167,48 @@ export class SnapUtils {
     }
 
     /**
+     * Resolve the nearest grid point to an anchor position, using the current grid size
+     * and the user's snap-tolerance preference. Identical setup step shared by
+     * DuplicateOperations.confirmPlacement and MouseHandlers.dragSelectedObjects before
+     * they diverge into different snap state machines (see computeBottomLeftSnapDelta).
+     * @param {number} anchorX - Anchor X (typically the cursor's world position)
+     * @param {number} anchorY - Anchor Y
+     * @param {Object} stateManager - editor.stateManager
+     * @param {Object} level - editor.level
+     * @param {Object} [userPrefs] - editor.userPrefs (for the snapTolerance preference)
+     * @returns {Object|null} Nearest grid point {x, y} or null if none within tolerance
+     */
+    static findNearestSnapGridPoint(anchorX, anchorY, stateManager, level, userPrefs) {
+        const gridSize = this.getGridSize(stateManager, level);
+        const snapTolerancePercent = userPrefs?.get('snapTolerance') || 80;
+        const tolerance = gridSize * (snapTolerancePercent / 100);
+        return this.findNearestGridPoint(anchorX, anchorY, gridSize, tolerance);
+    }
+
+    /**
+     * Delta that moves a reference object's bottom-left corner onto a given grid point.
+     * Shared by DuplicateOperations.confirmPlacement and MouseHandlers.dragSelectedObjects —
+     * only this "grid point + reference object -> delta" step is byte-identical between
+     * the two call sites; the surrounding no-grid-point/already-snapped state machines
+     * differ (drag has grid "stickiness" across frames, placement is one-shot) and are
+     * intentionally NOT unified here.
+     * @param {{x:number,y:number}} gridPoint - Target grid point (from findNearestGridPoint)
+     * @param {Object} referenceObject - Object whose bottom-left corner anchors the snap
+     * @param {Object} objectOperations - editor.objectOperations (for getObjectWorldPosition)
+     * @returns {{dx:number, dy:number}}
+     */
+    static computeBottomLeftSnapDelta(gridPoint, referenceObject, objectOperations) {
+        const objWorldPos = objectOperations.getObjectWorldPosition(referenceObject);
+        const objHeight = referenceObject.height || 32;
+        const currentBottomLeftX = objWorldPos.x;
+        const currentBottomLeftY = objWorldPos.y + objHeight;
+        return {
+            dx: gridPoint.x - currentBottomLeftX,
+            dy: gridPoint.y - currentBottomLeftY
+        };
+    }
+
+    /**
      * Snap objects during duplication
      * @param {Array} duplicateObjects - Array of duplicate objects
      * @param {number} worldX - World X position (mouse position)

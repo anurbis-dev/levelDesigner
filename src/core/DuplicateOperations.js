@@ -254,28 +254,14 @@ export class DuplicateOperations extends BaseModule {
         let dx, dy;
 
         if (snapEnabled) {
-            // Use cursor position as anchor for snap mode
-            const currentAnchorX = worldPos.x;
-            const currentAnchorY = worldPos.y;
-            
-            const gridSize = SnapUtils.getGridSize(this.editor.stateManager, this.editor.level);
-            const snapTolerancePercent = this.editor.userPrefs?.get('snapTolerance') || 80;
-            const tolerance = gridSize * (snapTolerancePercent / 100);
-            
             // Find nearest grid point for cursor
-            const nearestGrid = SnapUtils.findNearestGridPoint(currentAnchorX, currentAnchorY, gridSize, tolerance);
-            
+            const nearestGrid = SnapUtils.findNearestSnapGridPoint(
+                worldPos.x, worldPos.y, this.editor.stateManager, this.editor.level, this.editor.userPrefs
+            );
+
             if (nearestGrid) {
-                // Calculate current position of first duplicate object's bottom-left corner
-                const firstObj = duplicate.objects[0];
-                const firstObjWorldPos = this.editor.objectOperations.getObjectWorldPosition(firstObj);
-                const firstObjHeight = firstObj.height || 32;
-                const currentBottomLeftX = firstObjWorldPos.x;
-                const currentBottomLeftY = firstObjWorldPos.y + firstObjHeight;
-                
                 // Move object so its bottom-left corner goes to grid point
-                dx = nearestGrid.x - currentBottomLeftX;
-                dy = nearestGrid.y - currentBottomLeftY;
+                ({ dx, dy } = SnapUtils.computeBottomLeftSnapDelta(nearestGrid, duplicate.objects[0], this.editor.objectOperations));
             } else {
                 // No grid point within tolerance - follow cursor normally
                 dx = worldPos.x - duplicate.basePosition.x;

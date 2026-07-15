@@ -1229,35 +1229,23 @@ export class MouseHandlers extends BaseModule {
         let dx, dy;
 
         if (snapEnabled) {
-            // Use cursor position as anchor for snap mode
-            const currentAnchorX = worldPos.x;
-            const currentAnchorY = worldPos.y;
-            
-            const gridSize = SnapUtils.getGridSize(this.editor.stateManager, this.editor.level);
-            const snapTolerancePercent = this.editor.userPrefs?.get('snapTolerance') || 80;
-            const tolerance = gridSize * (snapTolerancePercent / 100);
-            
             // Find nearest grid point for cursor
-            const nearestGrid = SnapUtils.findNearestGridPoint(currentAnchorX, currentAnchorY, gridSize, tolerance);
-            
+            const nearestGrid = SnapUtils.findNearestSnapGridPoint(
+                worldPos.x, worldPos.y, this.editor.stateManager, this.editor.level, this.editor.userPrefs
+            );
+
             if (nearestGrid) {
-                // Calculate current position of object's bottom-left corner
+                // Calculate the delta that would move the object's bottom-left corner to
+                // this grid point — same reference-object-to-grid-point math as
+                // DuplicateOperations.confirmPlacement (see SnapUtils.computeBottomLeftSnapDelta),
+                // with a fallback to mouse.anchorX/Y when no selected object is found.
                 const selectedObjects = this.editor.stateManager.get('selectedObjects');
-                let currentBottomLeftX = mouse.anchorX;
-                let currentBottomLeftY = mouse.anchorY;
-                
-                // If we have selected objects, get the current position of the first one
-                if (selectedObjects && selectedObjects.size > 0) {
-                    const firstObjId = Array.from(selectedObjects)[0];
-                    const firstObj = this.editor.level.findObjectById(firstObjId);
-                    if (firstObj) {
-                        const objWorldPos = this.editor.objectOperations.getObjectWorldPosition(firstObj);
-                        const objHeight = firstObj.height || 32;
-                        currentBottomLeftX = objWorldPos.x;
-                        currentBottomLeftY = objWorldPos.y + objHeight;
-                    }
-                }
-                
+                const firstObjId = selectedObjects && selectedObjects.size > 0 ? Array.from(selectedObjects)[0] : null;
+                const firstObj = firstObjId ? this.editor.level.findObjectById(firstObjId) : null;
+                const bottomLeftDelta = firstObj
+                    ? SnapUtils.computeBottomLeftSnapDelta(nearestGrid, firstObj, this.editor.objectOperations)
+                    : { dx: nearestGrid.x - mouse.anchorX, dy: nearestGrid.y - mouse.anchorY };
+
                 // Snap to grid - move anchor to grid point
                 if (!mouse.snappedToGrid) {
                     // First time snapping - record the snap target and calculate movement
@@ -1266,11 +1254,10 @@ export class MouseHandlers extends BaseModule {
                         'mouse.snapTargetX': nearestGrid.x,
                         'mouse.snapTargetY': nearestGrid.y
                     });
-                    
-                    // Move object so its bottom-left corner goes to grid point
-                    dx = nearestGrid.x - currentBottomLeftX;
-                    dy = nearestGrid.y - currentBottomLeftY;
-                    
+
+                    dx = bottomLeftDelta.dx;
+                    dy = bottomLeftDelta.dy;
+
                 } else {
                     // Already snapped - check if we need to move to a new grid point
                     if (nearestGrid.x !== mouse.snapTargetX || nearestGrid.y !== mouse.snapTargetY) {
@@ -1279,11 +1266,10 @@ export class MouseHandlers extends BaseModule {
                             'mouse.snapTargetX': nearestGrid.x,
                             'mouse.snapTargetY': nearestGrid.y
                         });
-                        
-                        // Move object to new grid point
-                        dx = nearestGrid.x - currentBottomLeftX;
-                        dy = nearestGrid.y - currentBottomLeftY;
-                        
+
+                        dx = bottomLeftDelta.dx;
+                        dy = bottomLeftDelta.dy;
+
                     } else {
                         // Same grid point - no movement
                         dx = 0;

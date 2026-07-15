@@ -6,7 +6,8 @@ import { ColorUtils } from '../ColorUtils.js';
  */
 export class BaseGridRenderer {
     /**
-     * Render grid method - to be implemented by subclasses
+     * Template method shared by all grid renderers: background fill, zoom-based skip,
+     * save/restore — subclasses implement only drawGrid() for their own line geometry.
      * @param {CanvasRenderingContext2D} ctx - Canvas context
      * @param {number} gridSize - Size of grid cells
      * @param {Object} camera - Camera object {x, y, zoom}
@@ -14,7 +15,29 @@ export class BaseGridRenderer {
      * @param {Object} options - Grid options
      */
     render(ctx, gridSize, camera, viewport, options = {}) {
-        throw new Error('render() method must be implemented by subclass');
+        ctx.save();
+        if (options.backgroundColor) {
+            ctx.fillStyle = options.backgroundColor;
+            ctx.fillRect(0, 0, viewport.width, viewport.height);
+        }
+        if (!this.shouldRenderGrid(gridSize, camera)) {
+            ctx.restore();
+            return;
+        }
+        this.drawGrid(ctx, gridSize, camera, viewport, options);
+        ctx.restore();
+    }
+
+    /**
+     * Draw the actual grid lines - to be implemented by subclasses
+     * @param {CanvasRenderingContext2D} ctx - Canvas context
+     * @param {number} gridSize - Size of grid cells
+     * @param {Object} camera - Camera object {x, y, zoom}
+     * @param {Object} viewport - Viewport dimensions {width, height}
+     * @param {Object} options - Grid options
+     */
+    drawGrid(ctx, gridSize, camera, viewport, options) {
+        throw new Error('drawGrid() method must be implemented by subclass');
     }
 
     /**
