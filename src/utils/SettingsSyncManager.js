@@ -137,6 +137,10 @@ export class SettingsSyncManager {
             'ui.assetsPanelVisible': 'view.assetsPanel',
             'ui.consoleVisible': 'view.console',
             'ui.toolbarVisible': 'view.toolbar',
+
+            // Dock floating workspace edge snap
+            'panels.dock.floatEdgeSnap': 'panels.dock.floatEdgeSnap',
+            'panels.dock.floatEdgeMargin': 'panels.dock.floatEdgeMargin',
             
             // Panel settings - excluded from sync to prevent unwanted resizing
             // 'panels.rightPanelWidth': 'panels.rightPanelWidth',
@@ -211,7 +215,7 @@ export class SettingsSyncManager {
         const stateKey = this.stateMapping[path];
         if (stateKey) {
             // Coerce numeric UI values from range inputs
-            if (path === 'ui.fontScale' || path === 'ui.spacingH' || path === 'ui.spacingV' || path === 'ui.elementSize' || path === 'ui.scrollbarSize' || path === 'ui.menuGapBase' || path === 'ui.cursorMenuMargin' || path === 'editor.autoSaveInterval' || path === 'editor.axisConstraint.axisWidth') {
+            if (path === 'ui.fontScale' || path === 'ui.spacingH' || path === 'ui.spacingV' || path === 'ui.elementSize' || path === 'ui.scrollbarSize' || path === 'ui.menuGapBase' || path === 'ui.cursorMenuMargin' || path === 'editor.autoSaveInterval' || path === 'editor.axisConstraint.axisWidth' || path === 'panels.dock.floatEdgeMargin') {
                 const parsed = ValidationUtils.validateNumeric(value, path);
                 if (parsed !== null) {
                     value = parsed;

@@ -57,6 +57,10 @@ export function renderGeneralSettings(stateManager) {
                 axisColor: stateManager.get('editor.axisConstraint.axisColor'),
                 axisWidth: stateManager.get('editor.axisConstraint.axisWidth')
             }
+        },
+        dock: {
+            floatEdgeSnap: stateManager.get('panels.dock.floatEdgeSnap') ?? true,
+            floatEdgeMargin: stateManager.get('panels.dock.floatEdgeMargin') ?? 8
         }
     };
     
@@ -199,6 +203,32 @@ export function renderGeneralSettings(stateManager) {
             })}
         </div>
     `);
+
+    const floatingWindowsContent = createSettingsFormGroup(`
+        <div>
+            ${createSettingsCheckbox({
+                id: 'dock-float-edge-snap',
+                dataSetting: 'panels.dock.floatEdgeSnap',
+                checked: settings.dock?.floatEdgeSnap !== false,
+                label: 'Snap floating windows to workspace edges'
+            })}
+        </div>
+        <div>
+            ${createSettingsRange({
+                id: 'dock-float-edge-margin',
+                dataSetting: 'panels.dock.floatEdgeMargin',
+                value: settings.dock?.floatEdgeMargin ?? 8,
+                min: 0,
+                max: 64,
+                step: 1,
+                unit: 'px',
+                label: 'Floating window edge margin'
+            })}
+        </div>
+        <p style="font-size: 0.8rem; color: #9ca3af; margin: 0;">
+            On browser resize, floating windows keep relative position; edge-snapped ones stay pinned with this margin.
+        </p>
+    `);
     
     return `
         <h3>General Settings</h3>
@@ -206,6 +236,7 @@ export function renderGeneralSettings(stateManager) {
         ${createSettingsContainer(`
             ${createSettingsSection('UI Settings', uiSettingsContent)}
             ${createSettingsSection('Editor Settings', editorSettingsContent)}
+            ${createSettingsSection('Floating Windows', floatingWindowsContent)}
         `)}
     `;
 }

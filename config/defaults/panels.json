@@ -4,6 +4,10 @@
   "assetTabOrder": [],
   "rightPanelSplits": [],
   "leftPanelSplits": [],
+  "dock": {
+    "floatEdgeSnap": true,
+    "floatEdgeMargin": 8
+  },
   "selection": {
     "outlineColor": "#3B82F6",
     "outlineWidth": 2,

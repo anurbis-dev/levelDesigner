@@ -10,6 +10,7 @@ import {
     isDockCustomizeKey
 } from './DockConstants.js';
 import { bindDockCustomizeKeyWatch } from './DockDragKeyWatch.js';
+import { applyClusterWorkspaceEdgeSnap } from './DockFloatWorkspace.js';
 
 export function startDockFloatingDrag(ctx, e, fw, el, opts) {
     e.preventDefault();
@@ -201,6 +202,25 @@ export function startDockFloatingDrag(ctx, e, fw, el, opts) {
                 }
             }
         } else if (didMove) {
+            // Free move: optional snap to workspace edges (not Shift-gated).
+            const prefs = typeof ctx.getFloatWorkspacePrefs === 'function'
+                ? ctx.getFloatWorkspacePrefs()
+                : null;
+            if (prefs?.enabled) {
+                const ws = ctx.renderer.workspaceRect();
+                applyClusterWorkspaceEdgeSnap(
+                    ctx.model.floatingWindows,
+                    fw,
+                    ws.width,
+                    ws.height,
+                    prefs,
+                    (f) => ctx.renderer.effectiveHeight(f)
+                );
+                const ids = fw.groupId
+                    ? ctx.model.floatingWindows.filter((f) => f.groupId === fw.groupId)
+                    : [fw];
+                ids.forEach((f) => ctx.renderer.syncFloatingDom(f));
+            }
             ctx.onStructureChange();
         }
     };

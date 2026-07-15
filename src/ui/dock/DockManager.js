@@ -9,6 +9,10 @@ import { DockRenderer } from './DockRenderer.js';
 import { DockDragController } from './DockDragController.js';
 import { DockContentRegistry } from './DockContentRegistry.js';
 import { DockPersistence } from './DockPersistence.js';
+import {
+    readFloatWorkspacePrefs,
+    applyFloatingWorkspaceResize
+} from './DockFloatWorkspace.js';
 
 export class DockManager {
     /**
@@ -25,6 +29,10 @@ export class DockManager {
         this._suppressPersist = false;
         /** @type {{ mainTree: object|null, floatingWindows: object[] }|null} */
         this._immersiveSnapshot = null;
+        /** @type {{ w: number, h: number }} */
+        this._wsSize = { w: 0, h: 0 };
+        /** @type {ResizeObserver|null} */
+        this._wsRo = null;
     }
 
     /**
@@ -67,7 +75,8 @@ export class DockManager {
             renderer: this.renderer,
             render: () => this.renderer.render(),
             onStructureChange: () => this._onStructureChange(),
-            isSingleton: (type) => this.registry.isSingleton(type)
+            isSingleton: (type) => this.registry.isSingleton(type),
+            getFloatWorkspacePrefs: () => this._floatWorkspacePrefs()
         });
         this.renderer.setDragController(this.drag);
 
@@ -75,6 +84,9 @@ export class DockManager {
         this.renderer.render();
         this._suppressPersist = false;
         this._inited = true;
+        this._captureWorkspaceSize();
+        this._wsRo = new ResizeObserver(() => this._onWorkspaceResize());
+        this._wsRo.observe(workspaceEl);
         // Viewport may have just been reparented into a leaf — measure + RO reconnect.
         if (this.levelEditor?.lifecycleController?.setupViewportResizeObserver) {
             this.levelEditor.lifecycleController.setupViewportResizeObserver();
@@ -83,6 +95,58 @@ export class DockManager {
             this.levelEditor.updateCanvas();
         }
         Logger.ui.info('DockManager initialized (B4 multi-instance panels)');
+    }
+
+    _configManager() {
+        const ed = this.levelEditor;
+        if (!ed) return null;
+        return ed.configManager || ed.userPrefs?.configManager || null;
+    }
+
+    _floatWorkspacePrefs() {
+        return readFloatWorkspacePrefs(this._configManager());
+    }
+
+    _captureWorkspaceSize() {
+        if (!this.renderer?.workspaceEl) return;
+        const r = this.renderer.workspaceRect();
+        this._wsSize = { w: r.width, h: r.height };
+    }
+
+    /**
+     * Browser / shell resize: keep floating clusters at relative position;
+     * with edge-snap on, re-pin clusters that were on an edge (margin).
+     */
+    _onWorkspaceResize() {
+        if (!this._inited || !this.renderer || this._immersiveSnapshot) return;
+        const r = this.renderer.workspaceRect();
+        const newW = r.width;
+        const newH = r.height;
+        const oldW = this._wsSize.w;
+        const oldH = this._wsSize.h;
+        if (!(oldW > 0) || !(oldH > 0)) {
+            this._wsSize = { w: newW, h: newH };
+            return;
+        }
+        if (Math.abs(newW - oldW) < 0.5 && Math.abs(newH - oldH) < 0.5) return;
+
+        const prefs = this._floatWorkspacePrefs();
+        const changed = applyFloatingWorkspaceResize(
+            this.model.floatingWindows,
+            oldW,
+            oldH,
+            newW,
+            newH,
+            prefs,
+            (f) => this.renderer.effectiveHeight(f)
+        );
+        this._wsSize = { w: newW, h: newH };
+        if (!changed) return;
+
+        this.model.floatingWindows.forEach((f) => this.renderer.syncFloatingDom(f));
+        if (!this._suppressPersist) {
+            this.persistence.scheduleSave(this.model.snapshot());
+        }
     }
 
     _onStructureChange() {
@@ -203,6 +267,10 @@ export class DockManager {
     }
 
     destroy() {
+        if (this._wsRo) {
+            this._wsRo.disconnect();
+            this._wsRo = null;
+        }
         if (this._inited) {
             this.persistence.flush(this.model.snapshot());
         }

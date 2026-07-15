@@ -16,7 +16,7 @@
 
 ### Основные компоненты (v4.0.x Phase B dock; Phase A Refactor done)
 - **LevelEditor** — координатор; multi-level sessions; `project`; controllers Config/Lifecycle/Preferences; **`viewportViewManager`** (multi-viewport B4.2); **`dockManager`** when dock shell active
-- **Dock (Phase B)**: `src/ui/dock/` — `DockManager`, `DockTreeModel`, `DockRenderer`, `DockDragController`, `DockContentRegistry`, `DockPanelFactory`, `DockTypeMenu`, `ViewportLeafChrome`, persistence `panels.dock.*`. Primary panels reparent into leaves; multi-instance copies for outliner/details/layers/levels/assets
+- **Dock (Phase B)**: `src/ui/dock/` — `DockManager`, `DockTreeModel`, `DockRenderer`, `DockDragController`, `DockContentRegistry`, `DockPanelFactory`, `DockTypeMenu`, `ViewportLeafChrome`, `DockFloatWorkspace` (relative float pos + edge snap prefs), persistence `panels.dock.*`. Primary panels reparent into leaves; multi-instance copies for outliner/details/layers/levels/assets
 - **ViewportViewManager** + **ViewportViewNav** — N viewport leaves (work/game camera, per-view type filters, shared MouseHandlers, pointer-capture, gesture UI lock `viewport-gesture-mode`)
 - **TypeFilterMenu** — shared type filter UX (Outliner / Assets / Viewport chrome)
 - **Контроллеры инициализации**: EditorConfigController, EditorLifecycleController, EditorPreferencesController

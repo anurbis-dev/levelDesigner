@@ -14,6 +14,7 @@ export class DockDragController {
      * @param {() => void} opts.render
      * @param {() => void} [opts.onStructureChange]
      * @param {(type: string) => boolean} [opts.isSingleton]
+     * @param {() => { enabled: boolean, margin: number, threshold: number }} [opts.getFloatWorkspacePrefs]
      */
     constructor(opts) {
         this.model = opts.model;
@@ -21,6 +22,8 @@ export class DockDragController {
         this.render = opts.render;
         this.onStructureChange = opts.onStructureChange || (() => {});
         this.isSingleton = opts.isSingleton || ((type) => type === 'viewport');
+        this.getFloatWorkspacePrefs = opts.getFloatWorkspacePrefs
+            || (() => ({ enabled: true, margin: 8, threshold: 16 }));
         this.overlay = new DockDropOverlay(opts.renderer, opts.model);
     }
 

@@ -363,6 +363,7 @@
 
 - **Dock shell**: `DockManager` + `DockTreeModel` / `DockRenderer` / `DockDragController` / `DockPersistence` / `DockContentRegistry` / `DockPanelFactory` / `DockTypeMenu`. Layout: `panels.dock.mainTree` + floating windows. When dock is active, legacy `PanelPositionManager.initializePanelPositions` is skipped.
 - **UI customize key (Shift)**: `isDockCustomizeKey` — only while Shift held: move/split panels, self-drop clone, detach to floating, floating snap/ungroup, drop-zone & snap highlights. Floating free-move position + corner resize work without Shift; resize grip shows only when pointer is in the window’s bottom band.
+- **Floating vs workspace**: on browser/workspace resize, floating clusters keep **relative** position (`DockFloatWorkspace.applyFloatingWorkspaceResize`). Optional edge snap (`panels.dock.floatEdgeSnap`, default on) + margin (`panels.dock.floatEdgeMargin`, default 8px) pins free-moved windows to workspace edges within threshold; edge-affined clusters re-pin on resize.
 - **Content types**: viewport, outliner, details, layers, levels, assets. Multi-instance (`singleton:false`) for panels except viewport shell rules; primary parks, copies destroy on close.
 - **View → Panels** lists dock contentTypes (`hideContentType` / `toggleContentType`); Alt+1/2/4 → Outliner/Details/Assets; Immersive Mode snapshots dock layout (viewport-only).
 - **ViewportViewManager**: N viewport leaves, each with canvas + pose + type filters + camera source.
