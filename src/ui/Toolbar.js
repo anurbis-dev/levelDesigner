@@ -5,6 +5,7 @@ import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
 import { HorizontalScrollUtils } from '../utils/HorizontalScrollUtils.js';
 import { ShortcutFormatter } from '../utils/ShortcutFormatter.js';
+import { setToolbarRevealCaretVisible } from './dock/DockRenderer.js';
 
 /** View-scoped display toggles (VP-HK / VP-TB) — map toolbar action → displayOptions key. */
 const VIEW_DISPLAY_ACTIONS = {
@@ -311,26 +312,22 @@ export class Toolbar {
     }
 
     /**
+     * Resolve viewport leaf id for this toolbar (copy or primary shell).
+     * @returns {string|null}
+     */
+    resolveLeafId() {
+        if (this.viewLeafId) return this.viewLeafId;
+        return this.levelEditor?.viewportViewManager?.getPrimaryView?.()?.leafId
+            ?? this.levelEditor?.dockManager?.registry?.getPrimaryLeafId?.('viewport')
+            ?? null;
+    }
+
+    /**
      * Render toolbar
      */
     render() {
         this.container.innerHTML = '';
-        this.container.style.display = 'flex';
-        this.container.classList.add('toolbar-shell');
-
-        // Reveal control: visible only when this toolbar instance is hidden (per-copy Hide)
-        const revealBtn = document.createElement('button');
-        revealBtn.type = 'button';
-        revealBtn.className = 'toolbar-reveal-btn';
-        revealBtn.textContent = '▼';
-        revealBtn.title = 'Show toolbar';
-        revealBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            this.setVisible(true);
-        });
-        this.container.appendChild(revealBtn);
-        this.revealBtn = revealBtn;
+        this.revealBtn = null;
         
         // Create toolbar content with horizontal scrolling
         const toolbarContent = document.createElement('div');
@@ -819,7 +816,8 @@ export class Toolbar {
     }
 
     /**
-     * Set toolbar visibility for this instance only (shell stays for reveal ▼).
+     * Set toolbar visibility for this instance only.
+     * When hidden: container gone; leaf-header ▾ appears to restore.
      */
     setVisible(visible) {
         this.isVisible = !!visible;
@@ -838,20 +836,18 @@ export class Toolbar {
     }
 
     /**
-     * Show toolbar content vs compact reveal strip (per-instance Hide).
+     * Hide/show toolbar strip fully; sync leaf-header ▾ reveal control.
      */
     syncVisibilityUi() {
         if (this.container) {
-            this.container.style.display = 'flex';
-            this.container.classList.toggle('toolbar-is-hidden', !this.isVisible);
+            this.container.style.display = this.isVisible ? 'flex' : 'none';
+            this.container.classList.remove('toolbar-is-hidden');
         }
         if (this.toolbarContent) {
             this.toolbarContent.style.display = this.isVisible ? 'flex' : 'none';
         }
-        if (this.revealBtn) {
-            this.revealBtn.style.display = this.isVisible ? 'none' : 'inline-flex';
-            this.revealBtn.setAttribute('aria-hidden', this.isVisible ? 'true' : 'false');
-        }
+        const leafId = this.resolveLeafId();
+        if (leafId) setToolbarRevealCaretVisible(leafId, this.isVisible);
     }
 
     /**

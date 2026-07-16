@@ -160,9 +160,32 @@ body.dock-customize #dock-workspace .leaf-header .leaf-header-gap:active {
   background: rgba(255, 255, 255, 0.06);
 }
 
-#dock-workspace .leaf-header .type-caret {
-  cursor: pointer;
+/* Viewport toolbar reveal ▾ — sibling of .leaf-title, not inside title hit target */
+#dock-workspace .leaf-header .toolbar-reveal-caret,
+.floating-body .leaf-header .toolbar-reveal-caret {
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  margin-left: 2px;
+  padding: 2px 4px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  font-size: 9px;
+  line-height: 1;
+  color: var(--dock-text-dim);
+  cursor: pointer;
+}
+#dock-workspace .leaf-header .toolbar-reveal-caret[hidden],
+.floating-body .leaf-header .toolbar-reveal-caret[hidden] {
+  display: none !important;
+}
+#dock-workspace .leaf-header .toolbar-reveal-caret:hover,
+.floating-body .leaf-header .toolbar-reveal-caret:hover {
+  color: var(--dock-text);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 #dock-workspace .icon-btn,
@@ -189,12 +212,7 @@ body.dock-customize #dock-workspace .leaf-header .leaf-header-gap:active {
   color: #f87171;
 }
 
-#dock-workspace .type-caret,
-.floating-window .type-caret {
-  font-size: 9px;
-  color: var(--dock-text-dim);
-  margin-left: 2px;
-}
+
 
 /* Fixed overlay — not clipped by dock workspace stacking */
 .type-menu {
@@ -559,9 +577,7 @@ body.dock-customize .floating-body .leaf-header .drag-handle:active {
   min-height: 2.5rem;
   background: #1f2937;
 }
-#dock-workspace .viewport-toolbar-copy.toolbar-is-hidden {
-  min-height: 1.5rem;
-}
+
 
 #dock-workspace #canvas-viewport {
   flex: 1 1 0;

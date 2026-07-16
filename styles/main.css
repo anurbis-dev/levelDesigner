@@ -270,38 +270,6 @@ input, textarea {
     background: rgba(75, 85, 99, 0.5);
 }
 
-/* Whole-toolbar reveal when instance is hidden via RMB Hide */
-#toolbar-container .toolbar-reveal-btn,
-.viewport-toolbar .toolbar-reveal-btn {
-    display: none;
-    align-items: center;
-    justify-content: center;
-    margin: 0.1rem 0.25rem;
-    padding: 0 0.4rem;
-    min-height: 1.25rem;
-    font-size: 0.7rem;
-    line-height: 1;
-    border: none;
-    border-radius: 0.2rem;
-    background: transparent;
-    color: var(--ui-text-color, #9ca3af) !important;
-    cursor: pointer;
-}
-#toolbar-container.toolbar-is-hidden,
-.viewport-toolbar.toolbar-is-hidden {
-    min-height: 1.5rem;
-    align-items: center;
-}
-#toolbar-container.toolbar-is-hidden .toolbar-reveal-btn,
-.viewport-toolbar.toolbar-is-hidden .toolbar-reveal-btn {
-    display: inline-flex;
-}
-#toolbar-container .toolbar-reveal-btn:hover,
-.viewport-toolbar .toolbar-reveal-btn:hover {
-    color: var(--ui-text-color, #d1d5db) !important;
-    background: rgba(75, 85, 99, 0.5);
-}
-
 /* Assets panel background */
 #assets-panel {
     background-color: var(--ui-background-color, #111827) !important;

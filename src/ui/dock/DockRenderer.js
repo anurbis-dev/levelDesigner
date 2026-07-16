@@ -6,6 +6,35 @@ import { typeLabel, typeColor, COLLAPSED_H, floatDetachLayoutFromClient } from '
 import { openTypeMenu, closeTypeMenu } from './DockTypeMenu.js';
 import { buildViewportHeaderControls, syncViewportChromeState } from './ViewportLeafChrome.js';
 
+/**
+ * Toolbar instance paired with a viewport leaf (copy map or primary shell).
+ * @param {object|null|undefined} editor
+ * @param {string} leafId
+ * @returns {object|null}
+ */
+export function getToolbarForLeaf(editor, leafId) {
+    if (!editor || !leafId) return null;
+    const copy = editor.viewportToolbars?.get?.(leafId);
+    if (copy) return copy;
+    const primaryLeafId = editor.viewportViewManager?.getPrimaryView?.()?.leafId
+        ?? editor.dockManager?.registry?.getPrimaryLeafId?.('viewport')
+        ?? null;
+    if (primaryLeafId === leafId && editor.toolbar) return editor.toolbar;
+    return null;
+}
+
+/**
+ * Show/hide leaf-header ▾ for toolbar restore (per viewport leaf).
+ * @param {string} leafId
+ * @param {boolean} toolbarVisible
+ */
+export function setToolbarRevealCaretVisible(leafId, toolbarVisible) {
+    if (!leafId) return;
+    document.querySelectorAll(`.toolbar-reveal-caret[data-leaf-id="${leafId}"]`).forEach((caret) => {
+        caret.hidden = !!toolbarVisible;
+    });
+}
+
 export class DockRenderer {
     constructor(opts) {
         this.model = opts.model;
@@ -196,16 +225,11 @@ export class DockRenderer {
         const header = document.createElement('div');
         header.className = 'leaf-header';
 
-        // Title: pointer cursor, type menu only (not a drag handle).
+        // Title: type menu only (not a drag handle). Caret is separate — viewport toolbar reveal.
         const title = document.createElement('span');
         title.className = 'leaf-title';
         title.textContent = typeLabel(node.contentType);
         title.title = 'Сменить тип панели';
-        const caret = document.createElement('span');
-        caret.className = 'type-caret';
-        caret.textContent = '▾';
-        caret.setAttribute('aria-hidden', 'true');
-        caret.title = 'Сменить тип панели';
 
         const isSingleton = (t) => (this.registry ? this.registry.isSingleton(t) : t === 'viewport');
         const openTypes = (e) => {
@@ -215,9 +239,27 @@ export class DockRenderer {
             }, { presentTypes: this.model.collectPresentContentTypes(), isSingleton });
         };
         title.addEventListener('click', openTypes);
-        caret.addEventListener('click', openTypes);
         header.appendChild(title);
-        header.appendChild(caret);
+
+        // Viewport: ▾ right of title — show toolbar when hidden; hidden while toolbar visible.
+        // Not part of type-menu hit target (title only).
+        if (node.contentType === 'viewport') {
+            const caret = document.createElement('button');
+            caret.type = 'button';
+            caret.className = 'toolbar-reveal-caret';
+            caret.textContent = '▾';
+            caret.title = 'Показать toolbar';
+            caret.setAttribute('aria-label', 'Показать toolbar');
+            caret.hidden = true;
+            caret.dataset.leafId = node.id;
+            caret.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const tb = getToolbarForLeaf(this.registry?.levelEditor, node.id);
+                tb?.setVisible?.(true);
+            });
+            header.appendChild(caret);
+        }
 
         // Empty gap between title and right icons — drag (Shift) + collapse tap (DK-CLP).
         const handle = document.createElement('div');
@@ -292,6 +334,10 @@ export class DockRenderer {
         if (node.contentType === 'viewport' && this.registry?.levelEditor) {
             const chrome = header.querySelector('.viewport-leaf-chrome');
             if (chrome) syncViewportChromeState(chrome, node.id, this.registry.levelEditor);
+            // After toolbar mount: hide ▾ when toolbar visible, show when hidden
+            const tb = getToolbarForLeaf(this.registry.levelEditor, node.id);
+            const caret = header.querySelector('.toolbar-reveal-caret');
+            if (caret) caret.hidden = tb?.getVisible?.() !== false;
         }
         // Close after mount: isLeafCloseable uses binding.isPrimary (pre-mount was often wrong for clones).
         const canClose = typeof this.isCloseable === 'function'

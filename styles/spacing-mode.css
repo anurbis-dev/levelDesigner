@@ -17,10 +17,7 @@
     overflow: visible; /* Ensure buttons are not clipped */
     min-height: 2.5rem; /* Reduced minimum height for more compact toolbar */
 }
-#toolbar-container.toolbar-is-hidden,
-.viewport-toolbar.toolbar-is-hidden {
-    min-height: 1.5rem;
-}
+
 
 #right-panel {
     padding: 0; /* No padding for main interface elements */
