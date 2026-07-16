@@ -913,6 +913,8 @@ export class SettingsPanel {
             // refreshShortcutLabels() can only update a span that already exists, so a rebind
             // from empty to a real key needs the item's DOM rebuilt, not just its label text.
             this.levelEditor?.menuManager?.refresh();
+            // U2: toolbar/Details titles use the same shortcuts config
+            this.levelEditor?.refreshUiShortcutTitles?.();
         }
     }
 

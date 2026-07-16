@@ -5,11 +5,12 @@
 
 ## Open
 
-*(пусто — следующий product из todos P1: U2–U4 / C1–C2 / A4–A5)*
+*(пусто — следующий product из todos P1: U3–U4 / C1–C2 / A4–A5; B2 smoke when browser MCP)*
 
 
 ## Closed (архив)
 
+✅ U2 — toolbar/Details titles = live hotkeys from Settings; ui.showTooltips; refreshUiShortcutTitles  
 ✅ VP-OVL — оверлей HUD на viewport: cam/zoom/флаги P·B·C / stats; eye **Info**; `ViewportInfoOverlay`  
 ✅ VP-BND — zoom соседнего viewport не меняет thickness boundaries/collisions/hit-test на текущем (`strokeFrame` + frame camera, не focused `stateManager.camera`)  
 ✅ DK-CLP — схлопывание leaf кликом по header gap при column-соседях (`leaf.collapsed`)  

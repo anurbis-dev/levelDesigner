@@ -49,9 +49,9 @@ export class SettingsSyncManager {
         // Initialize setting callbacks for special handling
         this.settingCallbacks = {
             'ui.showTooltips': (value) => {
-                // Apply showTooltips setting (when tooltips are implemented)
                 this.levelEditor.stateManager.set('ui.showTooltips', value);
-                // TODO: Apply to actual tooltip system when implemented
+                // U2: native title tooltips on toolbar (and re-render Details next selection)
+                this.levelEditor.refreshUiShortcutTitles?.();
             },
             'ui.menuGapBase': (value) => {
                 const num = parseFloat(value);

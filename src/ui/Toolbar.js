@@ -4,6 +4,7 @@ import { CommandAvailability } from '../utils/CommandAvailability.js';
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
 import { HorizontalScrollUtils } from '../utils/HorizontalScrollUtils.js';
+import { ShortcutFormatter } from '../utils/ShortcutFormatter.js';
 
 /** View-scoped display toggles (VP-HK / VP-TB) — map toolbar action → displayOptions key. */
 const VIEW_DISPLAY_ACTIONS = {
@@ -11,6 +12,26 @@ const VIEW_DISPLAY_ACTIONS = {
     toggleParallax: 'parallax',
     toggleObjectBoundaries: 'objectBoundaries',
     toggleObjectCollisions: 'objectCollisions'
+};
+
+/** U2: toolbar data-action → shortcuts.json path (Settings Hotkeys ↔ button title). */
+const ACTION_SHORTCUT_KEYS = {
+    newLevel: 'editor.newLevel',
+    openLevel: 'editor.openLevel',
+    saveLevel: 'editor.saveLevel',
+    undo: 'editor.undo',
+    redo: 'editor.redo',
+    duplicate: 'editor.duplicate',
+    deleteSelected: 'editor.delete',
+    toggleGrid: 'editor.toggleGrid',
+    toggleSnapToGrid: 'editor.toggleSnapToGrid',
+    toggleParallax: 'editor.toggleParallax',
+    toggleObjectBoundaries: 'editor.toggleObjectBoundaries',
+    toggleObjectCollisions: 'editor.toggleObjectCollisions',
+    focusSelection: 'editor.focusSelection',
+    focusAll: 'editor.focusAll',
+    groupSelected: 'editor.groupObjects',
+    ungroupSelected: 'editor.ungroupObjects'
 };
 
 /**
@@ -278,6 +299,9 @@ export class Toolbar {
             this.updateCommandAvailability();
         });
 
+        // U2: live tooltip titles when showTooltips toggles
+        this.stateManager.subscribe('ui.showTooltips', () => this.refreshTooltips());
+
         // Listen for history changes to update undo/redo availability
         // History changes are handled through level editor events, so we listen to a proxy event
         if (this.levelEditor?.historyManager) {
@@ -422,14 +446,17 @@ export class Toolbar {
             : `toolbar-${config.id}`;
         button.className = 'px-3 py-1 text-sm bg-gray-700 hover:bg-gray-600 rounded flex items-center space-x-1 transition-colors cursor-pointer';
         button.setAttribute('data-action', config.action);
-        button.setAttribute('title', config.label);
-        
+        button.dataset.baseTitle = config.label;
+        const shortcutKey = ACTION_SHORTCUT_KEYS[config.action];
+        if (shortcutKey) button.dataset.shortcutKey = shortcutKey;
+        this.applyButtonTooltip(button);
+
         // Add icon
         const iconSpan = document.createElement('span');
         iconSpan.className = 'icon';
         iconSpan.textContent = config.icon;
         button.appendChild(iconSpan);
-        
+
         // Add label
         const labelSpan = document.createElement('span');
         labelSpan.className = 'text';
@@ -443,6 +470,35 @@ export class Toolbar {
         }
 
         return button;
+    }
+
+    /**
+     * U2: set `title` from base label + live Settings Hotkeys binding (or clear if tooltips off).
+     * @param {HTMLElement} button
+     */
+    applyButtonTooltip(button) {
+        if (!button) return;
+        const show = this.stateManager?.get?.('ui.showTooltips') !== false;
+        if (!show) {
+            button.removeAttribute('title');
+            return;
+        }
+        const base = button.dataset.baseTitle || button.getAttribute('data-action') || '';
+        const shortcutKey = button.dataset.shortcutKey;
+        const sc = shortcutKey
+            ? ShortcutFormatter.resolveLabel(this.levelEditor?.configManager, shortcutKey)
+            : '';
+        button.title = ShortcutFormatter.formatTitle(base, sc);
+    }
+
+    /**
+     * U2: re-resolve all toolbar button tooltips after rebind / showTooltips change.
+     */
+    refreshTooltips() {
+        if (!this.container) return;
+        this.container.querySelectorAll('button[data-action]').forEach((btn) => {
+            this.applyButtonTooltip(btn);
+        });
     }
 
 

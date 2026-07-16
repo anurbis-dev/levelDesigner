@@ -2,6 +2,7 @@ import { GroupTraversalUtils } from '../utils/GroupTraversalUtils.js';
 import { UIFactory } from '../utils/UIFactory.js';
 import { ResetRegistry } from '../utils/ResetRegistry.js';
 import { DEFAULT_OBJECT } from '../constants/EditorConstants.js';
+import { ShortcutFormatter } from '../utils/ShortcutFormatter.js';
 
 // Default value per Transform field, keyed by the input's data-property (see
 // createTransformsSectionHTML) — used by Backspace-to-reset (ResetRegistry).
@@ -368,17 +369,29 @@ export class DetailsPanel {
         const row = document.createElement('div');
         row.className = 'grid grid-cols-2 gap-2';
 
+        // U2: titles from live shortcuts.json (not hardcoded Ctrl+…)
+        const orderShortcut = {
+            bringToFront: 'editor.bringToFront',
+            sendToBack: 'editor.sendToBack',
+            moveForward: 'editor.bringForward',
+            moveBackward: 'editor.sendBackward'
+        };
+        const showTips = this.stateManager?.get?.('ui.showTooltips') !== false;
+        const cm = this.levelEditor?.configManager;
         const actions = [
-            { text: 'Bring to Front', action: 'bringToFront', title: 'Ctrl + Shift + Up' },
-            { text: 'Send to Back', action: 'sendToBack', title: 'Ctrl + Shift + Down' },
-            { text: 'Bring Forward', action: 'moveForward', title: 'Ctrl + Up' },
-            { text: 'Send Backward', action: 'moveBackward', title: 'Ctrl + Down' }
+            { text: 'Bring to Front', action: 'bringToFront' },
+            { text: 'Send to Back', action: 'sendToBack' },
+            { text: 'Bring Forward', action: 'moveForward' },
+            { text: 'Send Backward', action: 'moveBackward' }
         ];
 
-        actions.forEach(({ text, action, title }) => {
+        actions.forEach(({ text, action }) => {
+            const sc = showTips
+                ? ShortcutFormatter.resolveLabel(cm, orderShortcut[action])
+                : '';
             row.appendChild(UIFactory.createButton({
                 text,
-                title,
+                title: showTips ? ShortcutFormatter.formatTitle(text, sc) : undefined,
                 variant: 'secondary',
                 onClick: () => this.levelEditor.objectOperations.applyStackOrderAction(objects, action)
             }));

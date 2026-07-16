@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- Fix: pan/zoom/F/A while a viewport is bound to a **game Camera** no longer unlocks to work camera — pose writes into the Camera object; jump-to-camera binds `source: game`.
+- Feature **U2**: toolbar + Details stack-order buttons show live hotkeys in native `title` (`Label (Ctrl+S)`); source = Settings → Hotkeys / `shortcuts.json`; respects `ui.showTooltips`; rebind refreshes via `LevelEditor.refreshUiShortcutTitles`.

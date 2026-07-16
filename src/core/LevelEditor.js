@@ -50,7 +50,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '4.6.1';
+    static VERSION = '4.6.2';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -1028,6 +1028,22 @@ export class LevelEditor {
         for (const tb of map.values()) {
             try {
                 tb.updateToggleStates?.();
+            } catch (_e) { /* ignore */ }
+        }
+    }
+
+    /**
+     * U2: re-apply native `title` tooltips (label + live Settings Hotkeys) on all toolbars.
+     */
+    refreshUiShortcutTitles() {
+        try {
+            this.toolbar?.refreshTooltips?.();
+        } catch (_e) { /* ignore */ }
+        const map = this.viewportToolbars;
+        if (!map?.size) return;
+        for (const tb of map.values()) {
+            try {
+                tb.refreshTooltips?.();
             } catch (_e) { /* ignore */ }
         }
     }

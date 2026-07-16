@@ -82,13 +82,7 @@ export class MenuManager extends BaseManager {
      * @returns {string} Formatted shortcut string, or '' if not found
      */
     resolveShortcutLabel(shortcutKey) {
-        const configManager = this.editor?.configManager;
-        if (!configManager || !shortcutKey) return '';
-
-        const [category, action] = shortcutKey.split('.');
-        const shortcuts = configManager.getShortcuts?.() || {};
-        const shortcut = shortcuts[category]?.[action];
-        return shortcut ? ShortcutFormatter.format(shortcut) : '';
+        return ShortcutFormatter.resolveLabel(this.editor?.configManager, shortcutKey);
     }
 
     /**

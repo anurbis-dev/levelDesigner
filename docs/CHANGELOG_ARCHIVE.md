@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (U2 tooltips commit)
+
+- Fix: pan/zoom/F/A while a viewport is bound to a **game Camera** no longer unlocks to work camera — pose writes into the Camera object; jump-to-camera binds `source: game`.
+
 ## Archived from CHANGELOG.md (game-cam pan keep source commit)
 
 - Feature: **VP-OVL** — per-viewport info overlay (DOM HUD): camera source, zoom, active display-flag badges (parallax/boundaries/collisions), level name + objects/layers/selection counts. Toggle via viewport eye menu **Info** (`displayOptions.infoOverlay`, default on). Module: `ViewportInfoOverlay.js`.

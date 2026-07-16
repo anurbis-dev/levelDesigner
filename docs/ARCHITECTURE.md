@@ -76,13 +76,14 @@
 
 **Nested splits:** произвольная глубина binary split (`direction: 'row'|'column'`, `ratio`); не legacy «один уровень tab-split в L/R panel».
 
-### MenuManager / ShortcutFormatter — единый источник хоткеев в главном меню
-**Файлы**: `src/managers/MenuManager.js`, `src/utils/ShortcutFormatter.js`
+### MenuManager / ShortcutFormatter — единый источник хоткеев (меню + title tooltips)
+**Файлы**: `src/managers/MenuManager.js`, `src/utils/ShortcutFormatter.js`, `src/ui/Toolbar.js`, `src/ui/DetailsPanel.js`
 - Пункты `config/menu.js` больше не хранят хардкод-строку хоткея (`shortcut: 'Ctrl+S'`), а ссылаются на дот-путь в `config/defaults/shortcuts.json` через `shortcutKey: 'editor.saveLevel'` — единый источник истины, не дублирующий значение.
-- `ShortcutFormatter.format(shortcut)` — форматирует объект хоткея (`{key, ctrlKey, altKey, shiftKey, metaKey}`) в строку вида `"Ctrl+Alt+N"`; общий примитив, используется и `MenuManager`, и `SettingsPanel.formatShortcut()` (теперь тонкая обёртка над ним) — рассинхронизация формата исключена по построению.
-- `MenuManager.resolveShortcutLabel(shortcutKey)` — резолвит `shortcutKey` через `configManager.getShortcuts()` в отображаемую строку; `MenuManager.createMenuItem()` рендерит её в `<span data-shortcut-key="...">`.
-- `MenuManager.refreshShortcutLabels()` — перечитывает все `[data-shortcut-key]`-спаны в уже отрисованном DOM меню и обновляет их текст. Вызывается один раз из `MenuManager.initialize()` (защитно, на случай если `ConfigManager` ещё грузился при первом рендере меню) и из `SettingsPanel.saveHotkey()` сразу после того как ребинд уже персистирован через `configManager.set('shortcuts.category.action', ...)` — так подпись в меню сразу отражает новый хоткей без перезагрузки страницы.
-- **Известное ограничение**: ребинд в Settings → Hotkeys обновляет только отображаемую подпись в меню. `EventHandlers.handleKeyDown` — хардкод-цепочка `if/else`, не читающая `shortcuts.json` в рантайме; фактическая обработка нажатия клавиш не зависит от ребинда.
+- `ShortcutFormatter.format(shortcut)` — строка вида `"Ctrl+Alt+N"`; `resolveLabel(configManager, shortcutKey)` / `formatTitle(base, sc)` — для меню и native `title` tooltips (**U2**).
+- `MenuManager.resolveShortcutLabel(shortcutKey)` — делегирует в `ShortcutFormatter.resolveLabel`; `createMenuItem()` → `<span data-shortcut-key="...">`.
+- `MenuManager.refreshShortcutLabels()` — обновляет `[data-shortcut-key]` в DOM меню; после rebind `SettingsPanel.saveHotkey()` вызывает `menuManager.refresh()` + `levelEditor.refreshUiShortcutTitles()` (toolbar + viewport toolbar copies).
+- **U2 tooltips**: `Toolbar` buttons store `data-base-title` + `data-shortcut-key`; title = `Label (Ctrl+S)` when `ui.showTooltips` is on (Settings → UI); off → no `title`. Details stack-order buttons resolve the same shortcuts live at render.
+- **Известное ограничение**: rebind обновляет подписи UI; `EventHandlers.handleKeyDown` читает bindings via `_matchesShortcut` (data-driven) — см. DEVELOPMENT_GUIDE hotkeys.
 
 ### MenuManager — generic disabled-состояние и иконки пунктов; единая разметка пунктов (v3.55.0+)
 **Файлы**: `src/managers/MenuManager.js`, `src/utils/MenuItemTemplateUtils.js`, `config/menu.js`
