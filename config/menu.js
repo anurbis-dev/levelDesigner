@@ -63,6 +63,13 @@ export const MENU_CONFIG = {
                     type: 'action',
                     action: 'openProject'
                 },
+                {
+                    id: 'open-recent',
+                    label: 'Open Recent',
+                    type: 'submenu',
+                    dynamic: 'recentFiles',
+                    items: []
+                },
                 { type: 'separator' },
                 {
                     id: 'save-project',

@@ -81,6 +81,7 @@ export class UserPreferencesManager extends BaseManager {
             'autoSave': 'editor.autoSave',
             'autoSaveInterval': 'editor.autoSaveInterval',
             'multiSelectMode': 'editor.multiSelectMode',
+            'recentFiles': 'editor.recentFiles',
 
             // Selection preferences
             'selectionOutlineColor': 'panels.selection.outlineColor',

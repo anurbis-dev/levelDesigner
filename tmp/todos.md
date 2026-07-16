@@ -36,6 +36,7 @@
 - ✅ **VP-BND** — peer zoom no longer reskins boundaries/collisions stroke on sibling views
 - ✅ **VP-OVL** — per-view DOM info overlay (cam/zoom/flags/stats); eye menu Info
 - ✅ **U2** — tooltips + live hotkeys on toolbar / Details order (`title` ↔ Settings Hotkeys)
+- ✅ **U3** — Open Recent Project/Level (File menu + `editor.recentFiles` snapshot cache)
 
 ---
 
@@ -86,7 +87,7 @@
 |---|--------|---------|
 | U1 | Тип ассета **Level** (если ещё в каталоге/создании) | `AssetTypes` / Add menu |
 | ~~**U2**~~ | ✅ Tooltips + **актуальные хоткеи** | Settings Hotkeys ↔ title |
-| U3 | **Open Recent…** Project / Level | File menu + userPrefs |
+| ~~**U3**~~ | ✅ **Open Recent…** Project / Level | File menu + `editor.recentFiles` |
 | U4 | Context menu selection: **перенос по слоям** | Canvas / Outliner |
 
 ### Cameras (editor-side)
@@ -131,9 +132,9 @@
 
 ## Порядок работ (рекомендуемый)
 
-1. **OL-F** / **DK-*** / **VP-BND** / **VP-OVL** / **U2** ✅  
+1. **OL-F** / **DK-*** / **VP-BND** / **VP-OVL** / **U2** / **U3** ✅  
 2. **B2** — browser smoke multi-view / Assets×N (chrome-devtools when available)  
-3. **U3**, **U4**, **C1–C2** — старый product хвост  
+3. **U4**, **C1–C2** — старый product хвост  
 4. **Q\*** / **D\*** — opportunistically  
 5. Engine — **не из этого файла**
 

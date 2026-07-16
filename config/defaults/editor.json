@@ -5,6 +5,7 @@
   "showFPS": false,
   "showObjectCount": true,
   "multiSelectMode": "additive",
+  "recentFiles": [],
   "axisConstraint": {
     "showAxis": true,
     "axisColor": "#cccccc",

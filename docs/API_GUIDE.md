@@ -9,16 +9,18 @@
 
 #### Файловые операции — уровни (v3.57.0 Phase 5-6: multi-level tabs):
 - `async newLevel()` - создание нового уровня ДОБАВЛЯЕТ вкладку (LevelSession), а не заменяет текущий открытый уровень; переключает на новый уровень через `levelsManager.addLevel()`
-- `async openLevel()` - открытие уровня из файла ДОБАВЛЯЕТ вкладку; делает best-effort деdup по fileName — если файл уже открыт, переключается на существующую вкладку вместо дубликата
-- `saveLevel()` - сохранение текущего уровня; использует per-session fileName из текущей LevelSession; при отсутствии имени файла показывает prompt "Enter file name:" с дефолтом "level.json" (не сохраняет под дефолтным без подтверждения)
-- `async saveLevelAs()` - сохранение текущего уровня с выбором файла (показывает prompt); обновляет per-session `session.fileName` для текущей сессии
+- `async openLevel()` - открытие уровня из файла ДОБАВЛЯЕТ вкладку; делает best-effort деdup по fileName — если файл уже открыт, переключается на существующую вкладку вместо дубликата; пишет Open Recent
+- `saveLevel()` - сохранение текущего уровня; использует per-session fileName из текущей LevelSession; при отсутствии имени файла показывает prompt "Enter file name:" с дефолтом "level.json" (не сохраняет под дефолтным без подтверждения); пишет Open Recent
+- `async saveLevelAs()` - сохранение текущего уровня с выбором файла (показывает prompt); обновляет per-session `session.fileName` для текущей сессии; пишет Open Recent
 - `async closeLevel(levelId)` (новый, v3.57.0) - закрытие вкладки уровня; нельзя закрыть последний открытый уровень; спрашивает подтверждение если уровень содержит несохранённые изменения
 
 #### Файловые операции — проект (v3.57.0 Phase 7: Project):
 - `async newProject()` - создание нового проекта: очищает все открытые уровни, создаёт один пустой уровень с baseline history. Единый confirm-диалог при несохранённых правках вместо N диалогов. **Replace-not-merge**: заменяет весь набор открытых вкладок.
-- `async openProject()` - открытие проекта из файла: парсит все уровни из project-JSON, восстанавливает видимость/порядок/currentLevelIndex. **Replace-not-merge**: новые уровни заменяют весь набор открытых табов. Единый confirm при dirty (Edge Case 11).
-- `async saveProject()` - сохранение текущего проекта; при отсутствии `project.fileName` имя берётся из `project.name` (не спрашивает имя файла); требует предварительного `newProject()` или `openProject()` (иначе no-op)
-- `async saveProjectAs()` - сохранение проекта с выбором имени файла (показывает prompt)
+- `async openProject()` - открытие проекта из файла: парсит все уровни из project-JSON, восстанавливает видимость/порядок/currentLevelIndex. **Replace-not-merge**: новые уровни заменяют весь набор открытых табов. Единый confirm при dirty (Edge Case 11). Пишет Open Recent.
+- `async saveProject()` - сохранение текущего проекта; при отсутствии pinned `project.fileName` имя берётся из `project.name` (auto пересчитывается пока `fileNameIsAuto`); пишет Open Recent
+- `async saveProjectAs()` - сохранение проекта с выбором имени файла (показывает prompt); пишет Open Recent
+- `async openRecentFile(id)` - U3: открыть level/project из MRU-кэша (`editor.recentFiles`)
+- `clearRecentFiles()` - U3: очистить список Open Recent
 - `async openProjectSettings()` - открытие диалога ProjectSettingsDialog (пока стаб: редактируется только `project.name`)
 
 #### Версия:

@@ -175,11 +175,18 @@
 
 **ProjectFileOperations** (BaseModule):
 - `newProject()` — создание нового проекта: очищает все открытые уровни, создаёт один пустой с `seeded history baseline` (один undo-шаг для начального состояния). Единый confirm-диалог при несохранённых правках, вместо N диалогов по одному на каждый уровень (Edge Case 10/11).
-- `openProject()` — открытие проекта из файла (парсит all уровни ДО очистки текущих, чтобы невалидная запись не оставила редактор без единого открытого уровня; Edge Case 3). Replace-not-merge семантика: новые уровни заменяют весь набор открытых табов.
-- `saveProject()` — сохранение текущего проекта (скачивание в браузер). При отсутствии `project.fileName` имя берётся из `project.name` через приватный метод `_deriveFileNameFromProjectName()` (заменяет `/` и `\` на `-`, добавляет `.json`). Требует предварительного `newProject()` или `openProject()` (иначе no-op).
+- `openProject()` — picker + read, затем `openProjectFromData(json, fileName)`.
+- `openProjectFromData(json, fileName)` — открытие из JSON (диск или Open Recent): парсит all уровни ДО очистки текущих (Edge Case 3); replace-not-merge; пишет MRU.
+- `saveProject()` — сохранение текущего проекта (скачивание в браузер). При отсутствии pinned `project.fileName` имя берётся из `project.name` через `_deriveFileNameFromProjectName()`; auto-имя пересчитывается пока `fileNameIsAuto`. После save — MRU.
 - `saveProjectAs()` — сохранение проекта с выбором имени файла (показывает prompt).
 - **Per-session history bootstrap**: каждой фоновой (non-current) сессии при загрузке вручную seeded `.history` через `HistoryManager.saveState()` (т.к. `addLevel({makeCurrent:false})` не пропускает живой HistoryManager).
 - **Cache cleanup**: `newProject()`/`openProject()` вызывают приватный `_cleanupAllOpenSessions()` для очистки orphaned entries в `renderOperations.spatialIndex`, `visibleLayersCache`, и прочих per-levelId кешах (иначе повторные New/Open Project копили zombie-данные по старым levelId).
+
+### Open Recent (U3)
+**Файлы**: `src/managers/RecentFilesManager.js`, `config/menu.js` (`open-recent` dynamic submenu), `MenuManager.rebuildRecentFilesSubmenu`, prefs `editor.recentFiles` / `userPrefs.recentFiles`
+- Браузер не даёт стабильный path — в localStorage кладётся snapshot JSON (cap 10, skip >~1.5MB).
+- Запись: успешные open/save level и project.
+- Меню: File → Open Recent (rebuild on hover) + Clear Recent.
 
 **ProjectSettingsDialog** (extends BaseDialog):
 - Диалог редактирования параметров проекта (Phase 7, пока стаб).

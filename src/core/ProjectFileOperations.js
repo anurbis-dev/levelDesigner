@@ -64,10 +64,7 @@ export class ProjectFileOperations extends BaseModule {
             return;
         }
 
-        if (this.editor.levelsManager.hasAnyUnsavedChanges()) {
-            const ok = await confirm('Opening a project will close all currently open levels. Unsaved changes will be lost. Continue?');
-            if (!ok) return;
-        }
+        if (!(await this._confirmReplaceOpenLevels('Opening a project'))) return;
 
         let file;
         try {
@@ -97,6 +94,24 @@ export class ProjectFileOperations extends BaseModule {
             return;
         }
 
+        await this.openProjectFromData(json, file.name, { skipGuards: true });
+    }
+
+    /**
+     * Apply a project JSON payload (from disk or Open Recent cache).
+     * @param {Object} json
+     * @param {string} fileName
+     * @param {{skipGuards?: boolean}} [opts] - skipGuards when caller already ran mouse/dirty checks
+     */
+    async openProjectFromData(json, fileName, opts = {}) {
+        if (!opts.skipGuards) {
+            if (this.hasActiveMouseOperation()) {
+                Logger.file.warn('openProjectFromData() blocked: mouse action in progress');
+                return;
+            }
+            if (!(await this._confirmReplaceOpenLevels('Opening a project'))) return;
+        }
+
         if (!json || !Array.isArray(json.levels) || json.levels.length === 0) {
             await alert('Invalid project file: no levels found.');
             return;
@@ -118,7 +133,7 @@ export class ProjectFileOperations extends BaseModule {
         }
 
         const project = Project.fromJSON(json);
-        project.fileName = file.name;
+        project.fileName = fileName || 'project.json';
         project.fileNameIsAuto = false;
 
         this._cleanupAllOpenSessions();
@@ -152,8 +167,22 @@ export class ProjectFileOperations extends BaseModule {
         this._activateBootstrappedSession(targetId);
         this._updateParallaxStartPosition();
 
+        this.editor.recentFilesManager?.remember('project', project.fileName, json);
+
         Logger.file.info(`✅ Project loaded: ${sortedEntries.length} level(s)`);
         Logger.status.success(`Project loaded: ${sortedEntries.length} level(s)`);
+    }
+
+    /**
+     * @private
+     * @param {string} actionLabel - start of confirm sentence
+     * @returns {Promise<boolean>}
+     */
+    async _confirmReplaceOpenLevels(actionLabel) {
+        if (!this.editor.levelsManager.hasAnyUnsavedChanges()) return true;
+        return confirm(
+            `${actionLabel} will close all currently open levels. Unsaved changes will be lost. Continue?`
+        );
     }
 
     /**
@@ -214,6 +243,8 @@ export class ProjectFileOperations extends BaseModule {
         this.editor.project.fileName = fileName;
         this.editor.project.fileNameIsAuto = isAuto;
         this.editor.project.isDirty = false;
+
+        this.editor.recentFilesManager?.remember('project', fileName, data);
 
         Logger.file.info(`💾 Project saved: ${fileName}`);
         Logger.status.success(`Project saved: ${fileName}`);

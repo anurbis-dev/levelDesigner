@@ -321,6 +321,9 @@ export class MenuManager extends BaseManager {
         wrapper.appendChild(submenu);
 
         wrapper.addEventListener('mouseenter', () => {
+            if (itemConfig.dynamic === 'recentFiles') {
+                this.rebuildRecentFilesSubmenu(submenu);
+            }
             // Close sibling submenus at the same level before opening this one
             Array.from(wrapper.parentElement.children).forEach(sibling => {
                 if (sibling !== wrapper) {
@@ -337,6 +340,70 @@ export class MenuManager extends BaseManager {
         });
 
         return wrapper;
+    }
+
+    /**
+     * Rebuild File → Open Recent flyout from RecentFilesManager (U3).
+     * Menu DOM is static at init; this list must refresh every hover.
+     * @param {HTMLElement} container
+     */
+    rebuildRecentFilesSubmenu(container) {
+        container.innerHTML = '';
+        const list = this.editor?.recentFilesManager?.list?.() || [];
+
+        if (list.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'px-4 py-2 text-sm opacity-50 pointer-events-none';
+            empty.style.color = 'var(--ui-text-color, #d1d5db)';
+            empty.textContent = '(empty)';
+            container.appendChild(empty);
+        } else {
+            list.forEach(entry => {
+                const item = document.createElement('a');
+                item.href = '#';
+                item.className = 'block px-4 py-2 text-sm hover:bg-gray-700 cursor-pointer';
+                item.style.color = 'var(--ui-text-color, #d1d5db)';
+                const kindLabel = entry.kind === 'project' ? 'Project' : 'Level';
+                const leadingHtml = renderMenuItemLeadingHtml({});
+                const bodyHtml = renderMenuItemBodyHtml({
+                    leadingHtml,
+                    label: `${kindLabel}: ${entry.name}`
+                });
+                item.innerHTML = bodyHtml;
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    if (typeof this.editor?.openRecentFile === 'function') {
+                        this.editor.openRecentFile(entry.id);
+                    }
+                    this.closeAllDropdowns();
+                });
+                container.appendChild(item);
+            });
+        }
+
+        const sep = document.createElement('div');
+        sep.className = 'border-t border-gray-600 my-1';
+        container.appendChild(sep);
+
+        const clear = document.createElement('a');
+        clear.href = '#';
+        clear.className = 'block px-4 py-2 text-sm hover:bg-gray-700 cursor-pointer';
+        clear.style.color = 'var(--ui-text-color, #d1d5db)';
+        clear.innerHTML = renderMenuItemBodyHtml({
+            leadingHtml: renderMenuItemLeadingHtml({}),
+            label: 'Clear Recent'
+        });
+        clear.classList.toggle('opacity-50', list.length === 0);
+        clear.classList.toggle('pointer-events-none', list.length === 0);
+        clear.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (list.length === 0) return;
+            if (typeof this.editor?.clearRecentFiles === 'function') {
+                this.editor.clearRecentFiles();
+            }
+            this.closeAllDropdowns();
+        });
+        container.appendChild(clear);
     }
 
     /**

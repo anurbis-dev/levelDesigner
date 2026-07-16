@@ -1,5 +1,6 @@
 import { BaseModule } from './BaseModule.js';
 import { Logger } from '../utils/Logger.js';
+import { Level } from '../models/Level.js';
 
 /**
  * Level File Operations module for LevelEditor
@@ -71,31 +72,60 @@ export class LevelFileOperations extends BaseModule {
             // back immediately (nothing else runs in between) rather than changing that
             // method's return signature.
             const fileName = this.editor.fileManager.getCurrentFileName();
-
-            const alreadyOpenSession = this.editor.levelsManager.getOrderedSessions()
-                .find(session => session.fileName && session.fileName === fileName);
-            if (alreadyOpenSession) {
-                this.editor.levelsManager.setCurrentLevel(alreadyOpenSession.id);
-                Logger.file.info(`"${fileName}" is already open — switched to its tab`);
-                Logger.status.info(`"${fileName}" is already open`);
-                return;
-            }
-
-            this.editor.levelsManager.addLevel(loadedLevel, { makeCurrent: true, visible: true, fileName });
-
-            // addLevel() -> setCurrentLevel() already rendered/updated panels and imported
-            // this session's empty history stack — seed it so Ctrl+Z has a baseline.
-            this.editor.historyManager.saveState(loadedLevel.objects, new Set(), true, null);
-
-            this._updateParallaxStartPosition();
-
-            Logger.file.info(`✅ Level loaded: ${loadedLevel.objects.length} objects`);
-            Logger.status.success(`Level loaded: ${loadedLevel.objects.length} objects`);
+            await this.openLevelFromData(loadedLevel.toJSON(), fileName, { skipMouseGuard: true });
         } catch (error) {
             Logger.file.error(`❌ Failed to load level: ${error.message}`);
             Logger.status.error(`Failed to load level: ${error.message}`);
             await alert("Error loading level: " + error.message);
         }
+    }
+
+    /**
+     * Open a level from JSON (disk open or Open Recent cache). Adds a tab; dedups by fileName.
+     * @param {Object} json - Level.toJSON() payload
+     * @param {string} fileName
+     * @param {{skipMouseGuard?: boolean}} [opts]
+     */
+    async openLevelFromData(json, fileName, opts = {}) {
+        if (!opts.skipMouseGuard && this.hasActiveMouseOperation()) {
+            Logger.file.warn('openLevelFromData() blocked: mouse action in progress');
+            return;
+        }
+
+        let loadedLevel;
+        try {
+            loadedLevel = Level.fromJSON(json);
+        } catch (error) {
+            Logger.file.error(`❌ Failed to parse level: ${error.message}`);
+            Logger.status.error(`Failed to parse level: ${error.message}`);
+            await alert('Error loading level: ' + error.message);
+            return;
+        }
+
+        const name = fileName || 'level.json';
+        this.editor.fileManager.setCurrentFileName(name);
+
+        const alreadyOpenSession = this.editor.levelsManager.getOrderedSessions()
+            .find(session => session.fileName && session.fileName === name);
+        if (alreadyOpenSession) {
+            this.editor.levelsManager.setCurrentLevel(alreadyOpenSession.id);
+            this.editor.recentFilesManager?.remember('level', name, json);
+            Logger.file.info(`"${name}" is already open — switched to its tab`);
+            Logger.status.info(`"${name}" is already open`);
+            return;
+        }
+
+        this.editor.levelsManager.addLevel(loadedLevel, { makeCurrent: true, visible: true, fileName: name });
+
+        // addLevel() -> setCurrentLevel() already rendered/updated panels and imported
+        // this session's empty history stack — seed it so Ctrl+Z has a baseline.
+        this.editor.historyManager.saveState(loadedLevel.objects, new Set(), true, null);
+
+        this._updateParallaxStartPosition();
+        this.editor.recentFilesManager?.remember('level', name, json);
+
+        Logger.file.info(`✅ Level loaded: ${loadedLevel.objects.length} objects`);
+        Logger.status.success(`Level loaded: ${loadedLevel.objects.length} objects`);
     }
 
     /**
@@ -121,6 +151,7 @@ export class LevelFileOperations extends BaseModule {
         session.fileName = this.editor.fileManager.saveLevel(this.editor.level, fileName);
         session.isDirty = false;
         this.editor.stateManager.markClean();
+        this.editor.recentFilesManager?.remember('level', session.fileName, this.editor.level.toJSON());
         Logger.file.info('💾 Level saved successfully');
         Logger.status.success('Level saved');
     }
@@ -146,6 +177,7 @@ export class LevelFileOperations extends BaseModule {
         session.fileName = this.editor.fileManager.saveLevel(this.editor.level, fileName);
         session.isDirty = false;
         this.editor.stateManager.markClean();
+        this.editor.recentFilesManager?.remember('level', session.fileName, this.editor.level.toJSON());
         Logger.file.info(`💾 Level saved as: ${fileName}`);
         Logger.status.success(`Saved as: ${fileName}`);
     }

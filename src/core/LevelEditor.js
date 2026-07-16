@@ -32,6 +32,7 @@ import { ProjectFileOperations } from './ProjectFileOperations.js';
 import { PlayOperations } from './PlayOperations.js';
 import { GameBuildOperations } from './GameBuildOperations.js';
 import { ContextMenuManager } from '../managers/ContextMenuManager.js';
+import { RecentFilesManager } from '../managers/RecentFilesManager.js';
 import { Logger } from '../utils/Logger.js';
 import { dialogReplacer } from '../utils/DialogReplacer.js';
 import { DockManager } from '../ui/dock/DockManager.js';
@@ -50,7 +51,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '4.6.3';
+    static VERSION = '4.6.4';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -143,6 +144,7 @@ export class LevelEditor {
         this.viewportOperations = new ViewportOperations(this);
         this.levelFileOperations = new LevelFileOperations(this);
         this.projectFileOperations = new ProjectFileOperations(this);
+        this.recentFilesManager = new RecentFilesManager(this);
         this.playOperations = new PlayOperations(this);
         this.gameBuildOperations = new GameBuildOperations(this);
         this.configController = new EditorConfigController(this);
@@ -156,6 +158,7 @@ export class LevelEditor {
         this.lifecycle.register('viewportOperations', this.viewportOperations, { priority: 7 });
         this.lifecycle.register('levelFileOperations', this.levelFileOperations, { priority: 6 });
         this.lifecycle.register('projectFileOperations', this.projectFileOperations, { priority: 6 });
+        this.lifecycle.register('recentFilesManager', this.recentFilesManager, { priority: 6 });
         this.lifecycle.register('playOperations', this.playOperations, { priority: 6 });
         this.lifecycle.register('gameBuildOperations', this.gameBuildOperations, { priority: 6 });
         this.lifecycle.register('levelsManager', this.levelsManager, { priority: 6 });
@@ -880,6 +883,16 @@ export class LevelEditor {
         return this.projectFileOperations.saveProjectAs();
     }
 
+    /** U3 — File → Open Recent entry */
+    async openRecentFile(id) {
+        return this.recentFilesManager.open(id);
+    }
+
+    /** U3 — clear MRU list */
+    clearRecentFiles() {
+        return this.recentFilesManager.clear();
+    }
+
     async openProjectSettings() {
         if (!this.projectSettingsDialog) {
             const { ProjectSettingsDialog } = await import('../ui/ProjectSettingsDialog.js');
@@ -1511,6 +1524,7 @@ export class LevelEditor {
         this.duplicateOperations = null;
         this.levelsManager = null;
         this.projectFileOperations = null;
+        this.recentFilesManager = null;
         this.playOperations = null;
         this.gameBuildOperations = null;
 

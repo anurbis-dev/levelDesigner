@@ -49,9 +49,12 @@ levelEditor.newProject() // создание нового проекта: очи
 levelEditor.openProject() // открытие проекта из файла: парсит все уровни из project-JSON, заменяет весь набор открытых вкладок (Edge Case 11); unit confirm при dirty
 levelEditor.saveProject() // сохранение текущего проекта; при отсутствии project.fileName берёт имя из project.name через _deriveFileNameFromProjectName() (заменяет /, \ на -), не спрашивает имя файла; требует предварительного newProject()/openProject()
 levelEditor.saveProjectAs() // сохранение проекта с выбором имени файла (показывает prompt)
+levelEditor.openRecentFile(id) // U3: открыть level/project из MRU-кэша (editor.recentFiles)
+levelEditor.clearRecentFiles() // U3: очистить Open Recent
+levelEditor.recentFilesManager // RecentFilesManager: list/remember/open/clear; snapshot JSON в userPrefs
 levelEditor.openProjectSettings() // открытие ProjectSettingsDialog; пока стаб (редактируется только project.name)
 levelEditor.project // текущий Project экземпляр (инициализируется при New/Open/Save Project); null до первого вызова
-levelEditor.projectFileOperations // BaseModule для файловых операций проекта (newProject/openProject/saveProject/saveProjectAs)
+levelEditor.projectFileOperations // BaseModule: newProject/openProject/openProjectFromData/saveProject/saveProjectAs
 
 // LevelEditor основное
 levelEditor.createObject(type, x, y, properties)
@@ -205,7 +208,8 @@ level.settings.parallaxVertical // множитель вертикального
 - `src/core/LevelFileOperations.js` - файловые операции уровня (Phase 5: newLevel/openLevel добавляют вкладки, saveLevel/saveLevelAs работают per-session, closeLevel закрывает вкладку)
 - `src/models/Project.js` - модель проекта (Phase 7): `toJSON(levelSessions, levelOrder, currentLevelId)` эмбеддит Level.toJSON() каждого уровня + видимость/порядок/currentLevelIndex; статический `fromJSON(json)` парсит проект-файл
 - `src/models/ProjectExporter.js` - трансформер editor-Project в runtime-Project манифест (engine plan Фаза 0); статический `export(levelSessions, levelOrder, project, opts)` возвращает `{formatVersion, name, entryLevelId, levels: [{id, data}]}`
-- `src/core/ProjectFileOperations.js` - файловые операции проекта (Phase 7, BaseModule): `newProject()`/`openProject()`/`saveProject()`/`saveProjectAs()`, replace-not-merge семантика (New/Open заменяют весь набор открытых уровней, единый confirm при dirty)
+- `src/core/ProjectFileOperations.js` - файловые операции проекта (Phase 7, BaseModule): `newProject()`/`openProject()`/`openProjectFromData()`/`saveProject()`/`saveProjectAs()`, replace-not-merge; MRU remember
+- `src/managers/RecentFilesManager.js` - U3 Open Recent: MRU level/project snapshots в `editor.recentFiles`
 - `src/core/ObjectOperations.js` - операции с объектами
 - `src/core/LayerOperations.js` - операции со слоями
 - `src/core/RenderOperations.js` - рендеринг (multi-level compositing + multi-viewport: per-canvas frustum/cache, sticky interactive cull)
@@ -226,7 +230,7 @@ level.settings.parallaxVertical // множитель вертикального
 - `src/managers/HistoryManager.js` - undo/redo, `exportState()`/`importState()` для per-level history
 - `src/managers/EventHandlerManager.js` - события
 - `src/event-system/GlobalEventRegistry.js` - глобальные события
-- `src/managers/MenuManager.js` - главное меню, единый источник хоткей-подписей через `shortcutKey` (`resolveShortcutLabel`, `refreshShortcutLabels`)
+- `src/managers/MenuManager.js` - главное меню, `shortcutKey` labels; dynamic submenu `rebuildRecentFilesSubmenu` (Open Recent)
 - `src/managers/AssetManager.js` - управление библиотекой ассетов (сканирование, кэширование), placeholder-создание по каталогу типов через `createPlaceholderAsset(typeId)` с опциональными компонентами
 - `src/core/LevelsManager.js` - управление открытыми уровнями (LevelSession)
 
