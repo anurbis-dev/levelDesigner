@@ -42,7 +42,7 @@
     },
     "jumpToCamera": {
       "key": ".",
-      "description": "Jump viewport to selected/last/main camera object"
+      "description": "Toggle viewport work camera ↔ selected/last/main game camera"
     },
     "cycleNextCamera": {
       "key": "]",

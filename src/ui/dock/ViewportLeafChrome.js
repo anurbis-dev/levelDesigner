@@ -28,10 +28,27 @@ export function buildViewportHeaderControls(node, levelEditor) {
     const camBtn = document.createElement('button');
     camBtn.type = 'button';
     camBtn.className = 'icon-btn viewport-cam-btn';
-    camBtn.title = 'Camera source: work / game (Camera objects)';
+    camBtn.title = 'Toggle work / last game camera (click); pick source (RMB)';
     // Default icon so chrome is never blank before view registration (self-drop race).
     camBtn.innerHTML = buildTypeIconSvg('camera', WORK_CAM_COLOR, 14);
+    // Click = toggle work ↔ last/selected game (same as jumpToCamera `.`)
     camBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // If cam menu already open, close it (don't also toggle)
+        if (chromeMenuState.kind === 'cam' && chromeMenuState.menu && chromeMenuState.root === wrap) {
+            closeChromeMenu(false);
+            return;
+        }
+        closeChromeMenu(false);
+        const vvm = levelEditor?.viewportViewManager;
+        const view = vvm?.getView?.(node.id) || null;
+        if (typeof levelEditor?.jumpToCamera === 'function') {
+            levelEditor.jumpToCamera(view);
+        }
+    });
+    // RMB = full camera source menu (Work + Camera objects)
+    camBtn.addEventListener('contextmenu', (e) => {
+        e.preventDefault();
         e.stopPropagation();
         openChromeKind(wrap, 'cam', camBtn, node.id, levelEditor);
     });

@@ -204,8 +204,11 @@ export class ViewportOperations extends BaseModule {
     }
 
     /**
-     * Jump viewport to the selected camera-type object, or the last camera jumped to
-     * if nothing is selected. Fallback: level main camera, then first camera.
+     * Toggle viewport between work camera and last/selected game camera.
+     * Hotkey `.` and viewport chrome cam-button click.
+     * - On game source: switch to work (unless a *different* camera is selected → bind that).
+     * - On work source: bind selected → last → main game camera.
+     * Chrome icon/menu check update via `setSource` → `refreshAllViewportChrome`.
      * @param {object|null} [view] - target ViewportView (VP-HK)
      */
     jumpToCamera(view = null) {
@@ -218,26 +221,37 @@ export class ViewportOperations extends BaseModule {
 
         const session = this.editor.levelsManager?.getCurrentSession();
         const vvm = this.editor.viewportViewManager;
+        const target = this._resolveHotkeyView(view);
+        const onGame = target?.source?.kind === 'game' && !!target.source.objectId;
 
-        if (selectedCamera) {
-            this.applyCameraObjectToViewport(selectedCamera, view);
+        // Selected camera that is not the current bind → switch to it (no toggle-off)
+        if (selectedCamera && !(onGame && target.source.objectId === selectedCamera.id)) {
+            this.applyCameraObjectToViewport(selectedCamera, target || view);
             if (session) session.viewState.lastCameraObjectId = selectedCamera.id;
             Logger.viewport.info(`Jumped to camera ${selectedCamera.id}`);
             return;
         }
 
-        const lastCameraId = session?.viewState.lastCameraObjectId;
+        // Already on this game cam (or no selection while on game) → back to work
+        if (onGame && target && vvm) {
+            vvm.focus(target.leafId);
+            vvm.setSource(target.leafId, { kind: 'work' });
+            Logger.viewport.info('Toggled to work camera');
+            return;
+        }
+
+        // Work → last / main game camera
+        const lastCameraId = session?.viewState?.lastCameraObjectId;
         const lastCamera = lastCameraId ? this.editor.getCachedObject(lastCameraId) : null;
         if (lastCamera && lastCamera.type === 'camera') {
-            this.applyCameraObjectToViewport(lastCamera, view);
+            this.applyCameraObjectToViewport(lastCamera, target || view);
             Logger.viewport.info(`Jumped to remembered camera ${lastCamera.id}`);
             return;
         }
 
-        // C3: main / first camera fallback
         const mainCam = vvm?.getMainCameraObject?.() || null;
         if (mainCam) {
-            this.applyCameraObjectToViewport(mainCam, view);
+            this.applyCameraObjectToViewport(mainCam, target || view);
             if (session) session.viewState.lastCameraObjectId = mainCam.id;
             Logger.viewport.info(`Jumped to main camera ${mainCam.id}`);
             return;

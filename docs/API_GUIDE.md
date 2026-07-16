@@ -460,7 +460,7 @@
 - `duplicateSelectedObjects()` - дублирование выделенных объектов
 - `focusOnSelection()` - фокус на выделении (хоткей `F`)
 - `focusOnAll()` - фокус на всех объектах (хоткей `A`)
-- `jumpToCamera()` - прыжок вьюпорта на камеру (хоткей `.`); цепочка: selected camera → `lastCameraObjectId` → main (`properties.isMain` / first) → warn. Bind game source + pose via `applyCameraObjectToViewport`
+- `jumpToCamera()` - toggle work ↔ game camera (хоткей `.` / click cam icon): if on game → work (unless selected is another camera); if on work → selected → `lastCameraObjectId` → main. Chrome icon via `setSource` → `refreshAllViewportChrome`. RMB on cam icon opens full source menu
 - `cycleNextCamera()` / `cyclePrevCamera()` - C3, хоткеи `]` / `[`; цикл по `listGameCameraObjects`, bind focused viewport, select camera, update `lastCameraObjectId`
 - `ViewportViewManager.getMainCameraObject()` / `setMainCamera(id, isMain)` — level default camera (`properties.isMain`, exclusive)
 - `toggleObjectVisibility(obj)` - переключение `obj.visible`; каскадом применяется ко всем потомкам, если `obj.type === 'group'`

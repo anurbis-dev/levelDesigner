@@ -2,6 +2,11 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (C3 + Player Start component)
+
+- **C3**: Multiple game cameras — exclusive `properties.isMain` (Details Main; first placed camera auto-main); jump `.` fallback selected→last→main; cycle `]`/`[` binds focused viewport + selects; chrome menu ★ main; gold frustum for main (`FRAME_COLOR_MAIN`).
+- **fix**: auto-created Player Start (`FileManager.createNewLevel`/`ObjectOperations.ensurePlayerStartExists`) had no `playerStart` component — Play-in-editor showed only the static marker, no controllable player. Both now attach the component; regression tests added.
+
 ## Archived from CHANGELOG.md (NUM-SCRUB)
 
 - **NUM-SCRUB**: Global numeric fields via `src/utils/NumericInput.js` + `styles/numeric-input.css` — no native spinner arrows anywhere (Settings, Grid, Actor Properties, Layers parallax, Details). `createSettingsInput({type:'number'})` / `UIFactory` coerce to scrub text; `NumericInput.wireAll(root)` after render; leftover `type=number` stripped by CSS + wireAll.

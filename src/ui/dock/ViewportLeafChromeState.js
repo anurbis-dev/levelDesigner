@@ -147,13 +147,15 @@ export function syncViewportChromeState(chrome, leafId, levelEditor) {
         const isGame = view.source?.kind === 'game';
         camBtn.classList.toggle('viewport-chrome-active', isGame);
         let stroke = WORK_CAM_COLOR;
-        let title = 'Editor work camera (pan/zoom for this viewport)';
+        let title = 'Work camera — click: last game cam; RMB: pick source';
         if (isGame) {
             const camObj = (vvm.listGameCameraObjects() || [])
                 .find((c) => c.id === view.source.objectId);
             stroke = camObj?.color || WORK_CAM_COLOR;
             const name = camObj?.name || view.source.objectId;
-            title = `Game camera: ${name}`;
+            const main = vvm.getMainCameraObject?.();
+            const star = main && main.id === camObj?.id ? ' ★' : '';
+            title = `Game camera: ${name}${star} — click: work cam; RMB: pick source`;
         }
         camBtn.innerHTML = buildTypeIconSvg('camera', stroke, 14);
         camBtn.title = title;

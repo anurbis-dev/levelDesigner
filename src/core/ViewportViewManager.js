@@ -328,6 +328,9 @@ export class ViewportViewManager {
         if (!view) return;
         if (source?.kind === 'game' && source.objectId) {
             view.source = { kind: 'game', objectId: source.objectId };
+            // Remember for chrome-button / jumpToCamera toggle (work ↔ last game)
+            const session = this.editor.levelsManager?.getCurrentSession?.();
+            if (session?.viewState) session.viewState.lastCameraObjectId = source.objectId;
         } else {
             // Bake current on-screen pose (game or work) into local work camera
             const pose = this.resolveCamera(view);
@@ -335,6 +338,8 @@ export class ViewportViewManager {
             view.localCamera = { ...pose };
         }
         this.editor.render?.();
+        // Icon color/title + active class must track source (jump/cycle/menu/toggle)
+        refreshAllViewportChrome(this.editor);
     }
 
     /**
