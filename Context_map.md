@@ -202,6 +202,7 @@ level.settings.parallaxVertical // множитель вертикального
 - `src/models/LevelSession.js` - editor-only обёртка над Level (visible, fileName, isDirty, viewState, history per-session) — Phase 1
 - `src/core/LevelFileOperations.js` - файловые операции уровня (Phase 5: newLevel/openLevel добавляют вкладки, saveLevel/saveLevelAs работают per-session, closeLevel закрывает вкладку)
 - `src/models/Project.js` - модель проекта (Phase 7): `toJSON(levelSessions, levelOrder, currentLevelId)` эмбеддит Level.toJSON() каждого уровня + видимость/порядок/currentLevelIndex; статический `fromJSON(json)` парсит проект-файл
+- `src/models/ProjectExporter.js` - трансформер editor-Project в runtime-Project манифест (engine plan Фаза 0); статический `export(levelSessions, levelOrder, project, opts)` возвращает `{formatVersion, name, entryLevelId, levels: [{id, data}]}`
 - `src/core/ProjectFileOperations.js` - файловые операции проекта (Phase 7, BaseModule): `newProject()`/`openProject()`/`saveProject()`/`saveProjectAs()`, replace-not-merge семантика (New/Open заменяют весь набор открытых уровней, единый confirm при dirty)
 - `src/core/ObjectOperations.js` - операции с объектами
 - `src/core/LayerOperations.js` - операции со слоями
@@ -260,6 +261,10 @@ level.settings.parallaxVertical // множитель вертикального
 - `src/utils/ValidationUtils.js` - валидация
 - `src/utils/ResetRegistry.js` - Backspace-to-reset (hover-based), singleton `ResetRegistry`, вызывается из `EventHandlers.handleKeyDown`
 - `src/utils/ShortcutFormatter.js` - `ShortcutFormatter.format(shortcut)` — единый формат хоткея (`"Ctrl+Alt+N"`), используется `MenuManager` и `SettingsPanel.formatShortcut()`
+
+### Docs — Engine Runtime (engine plan Фаза 0)
+- `docs/RUNTIME_SCHEMA.md` - контракт runtime-схемы: per-type `schemaVersion`/`properties` для 29 asset-типов и 19 component-типов, плюс раздел `## Versioning` про `Level.meta.version` (semver уровня, отдельная ось от `LevelEditor.VERSION`)
+- `docs/CONTENT_MODEL.md` - три типа контент-паков движка: Project (база+патчи), Addon (overrides/additions), Special Event (без overrides); различие editor-Project (табы редактора) от runtime-Project (релиз), роль `ProjectExporter`
 
 ## 🏗️ Архитектурные принципы
 
