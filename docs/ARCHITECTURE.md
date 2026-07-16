@@ -381,7 +381,7 @@
   - **Game camera**: source `{ kind:'game', objectId }` follows level object `type==='camera'`.
   - **VP-HK**: `getViewUnderCursor()` / `viewFromClientPoint` — hotkeys F/A/Grid/Boundaries/Collisions/Parallax (and jump-to-camera) target the leaf under the cursor; `getDisplayFlag` / `toggleDisplayFlag` are per-view only. **OL-F**: if F is pressed while the cursor is over Outliner, route to `OutlinerPanel.scrollToSelection()` instead of framing the viewport.
   - **VP-TB**: each secondary leaf mounts its own `Toolbar` copy; View toggles + Focus apply to the paired leaf; File/Edit/Group/Play/Snap remain global.
-- **ViewportLeafChrome**: leaf header icons — camera source menu (English UI) + per-view type filter via shared `TypeFilterMenu` + **VP-EYE** eye icon (per-view display checklist); hover-switch between sibling menus after first open (main-menu style).
+- **ViewportLeafChrome**: leaf header icons — camera source menu (English UI) + per-view type filter via shared `TypeFilterMenu` + **VP-EYE** eye icon (per-view display checklist); hover-switch between sibling menus after first open (main-menu style). Split across 3 files (400-line guardrail): `ViewportLeafChrome.js` (icon buttons, public API), `ViewportLeafMenus.js` (dropdown bodies), `ViewportLeafChromeState.js` (shared hover/close state + `syncViewportChromeState` DOM sync) — no circular import between them.
 - **Input**: secondary canvases share `MouseHandlers` via `ViewportViewNav` (`registerCanvas` + `setPointerCapture` LMB/MMB/RMB). Interaction routing: `_interactionViewLeafId` / `getInteractionView|Camera|Canvas` — never assume `canvasRenderer.canvas` is the gesture leaf after multi-view `render()` restores primary. Global mousemove keeps `mouse.x/y` current for under-cursor hit-tests.
 - **Gestures outside leaf**: continue pan/zoom/drag/marquee; outside release **completes** (not cancel); `body.viewport-gesture-mode` blocks UI hover (like `panning-mode`) only for real gestures (`isDragging` / marquee / transform / viewport pan-zoom) — not bare LMB down (avoids swallowing the first panel click). Cursors set only on interaction canvas; end/blur resets all viewport canvases.
 - **Render**: multi-target; `visibleObjectsCache` key includes canvas size; sticky interactive cache during drag/transform/marquee; pick/marquee use interaction camera + client→buffer mapping when CSS size ≠ buffer.
@@ -400,6 +400,10 @@
 ### PlayOperations (v4.4.0 Фаза 3: Play-in-editor)
 **Файл**: `src/core/PlayOperations.js`
 - Запуск игрового режима в редакторе через fullscreen canvas overlay; валидирует PlayerStart, сериализует текущий уровень через ProjectExporter, создаёт GameEngine; методы `play()`/`stop()`/`toggle()`/`isPlaying()`
+
+### Engine release build (v4.4.1 Фаза 4, minimal cut)
+**Файлы**: `src/engine/index.js` (bundle entry — `GameEngine`/`EntityFactory`/`BehaviorRegistry`/`ProjectLoader`), `scripts/build-game.mjs`, `scripts/build-addon.mjs`/`build-event.mjs` (stubs)
+- `npm run build:game -- --project=<saved-project.json> [--out=dist/game]` — reads an editor-saved `Project.toJSON()` file (no live browser access from Node), derives a manifest via the same `ProjectExporter.export()` Play-in-editor uses, bundles `src/engine/index.js` standalone through esbuild, copies `content/` verbatim, writes `player.html`. No "include in build" level flag or asset-usage-graph trimming yet — every level/asset ships as-is; see `tmp/2D_Editor_ENGINE_PLAN.md` §4 for the deferred full-criterion scope.
 
 ### RenderOperations (v4.0.0 Phase A refactor + v3.57.0 Phase 3-6 multi-level)
 **Файл**: `src/core/RenderOperations.js`

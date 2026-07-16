@@ -1,6 +1,6 @@
 {
   "name": "level-editor-2d",
-  "version": "4.4.1",
+  "version": "4.5.0",
   "description": "Профессиональный 2D редактор уровней с утилитарной архитектурой мирового класса",
   "main": "index.html",
   "type": "module",
@@ -19,7 +19,10 @@
     "check:size": "node scripts/check-file-size.js",
     "check": "npm run lint && npm run check:size && npm test && npx madge --circular src",
     "check:unused": "knip",
-    "check:dedup": "npx jscpd src --min-lines 15"
+    "check:dedup": "npx jscpd src --min-lines 15",
+    "build:game": "node scripts/build-game.mjs",
+    "build:addon": "node scripts/build-addon.mjs",
+    "build:event": "node scripts/build-event.mjs"
   },
   "keywords": [
     "level-editor",
@@ -54,6 +57,7 @@
   ],
   "devDependencies": {
     "autoprefixer": "^10.4.21",
+    "esbuild": "^0.28.1",
     "eslint": "^9.39.5",
     "eslint-plugin-import": "^2.32.0",
     "knip": "^6.26.0",
