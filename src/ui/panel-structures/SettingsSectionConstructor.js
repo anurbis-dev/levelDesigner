@@ -9,6 +9,7 @@
  */
 
 import { ColorUtils } from '../../utils/ColorUtils.js';
+import { NumericInput } from '../../utils/NumericInput.js';
 
 /**
  * Create a settings section container with consistent styling
@@ -118,7 +119,8 @@ export function createSettingsLabel(text, forId = '', options = {}) {
 }
 
 /**
- * Create a settings input with consistent styling
+ * Create a settings input with consistent styling.
+ * type: 'number' is coerced to scrub-style text (NumericInput) — never native spinners.
  * @param {Object} inputConfig - Input configuration
  * @returns {string} - HTML string for the input
  */
@@ -134,24 +136,40 @@ export function createSettingsInput(inputConfig) {
         step = '',
         className = 'setting-input',
         style = '',
-        dataSetting = ''
+        dataSetting = '',
+        readonly = false
     } = inputConfig;
 
-    const idAttr = id ? ` id="${id}"` : '';
-    const nameAttr = name ? ` name="${name}"` : '';
-    const valueAttr = value ? ` value="${value}"` : '';
-    const placeholderAttr = placeholder ? ` placeholder="${placeholder}"` : '';
-    const minAttr = min ? ` min="${min}"` : '';
-    const maxAttr = max ? ` max="${max}"` : '';
-    const stepAttr = step ? ` step="${step}"` : '';
-    const classAttr = className ? ` class="${className}"` : '';
-    const dataSettingAttr = dataSetting ? ` data-setting="${dataSetting}"` : '';
-    
     const defaultStyle = 'width: 100%; padding: calc(0.5rem * max(var(--spacing-scale, 1.0), 0.5)); background: #374151; border: 1px solid #4b5563; border-radius: calc(0.25rem * max(var(--spacing-scale, 1.0), 0.5)); color: white;';
     const combinedStyle = style ? `${defaultStyle} ${style}` : defaultStyle;
 
+    // Numeric: always NumericInput scrub field (type=number banned)
+    if (type === 'number') {
+        return `<input ${NumericInput.htmlAttrs({
+            id,
+            name: name || id,
+            value,
+            min,
+            max,
+            step,
+            className: `${className} ${NumericInput.NUM_CLASS}`.trim(),
+            placeholder,
+            dataSetting,
+            style: combinedStyle,
+            extra: readonly ? 'readonly' : ''
+        })}>`;
+    }
+
+    const idAttr = id ? ` id="${id}"` : '';
+    const nameAttr = name ? ` name="${name}"` : '';
+    const valueAttr = value !== '' && value !== undefined && value !== null ? ` value="${value}"` : '';
+    const placeholderAttr = placeholder ? ` placeholder="${placeholder}"` : '';
+    const classAttr = className ? ` class="${className}"` : '';
+    const dataSettingAttr = dataSetting ? ` data-setting="${dataSetting}"` : '';
+    const readonlyAttr = readonly ? ' readonly' : '';
+
     return `
-        <input type="${type}"${idAttr}${nameAttr}${valueAttr}${placeholderAttr}${minAttr}${maxAttr}${stepAttr}${classAttr}${dataSettingAttr} style="${combinedStyle}">
+        <input type="${type}"${idAttr}${nameAttr}${valueAttr}${placeholderAttr}${classAttr}${dataSettingAttr}${readonlyAttr} style="${combinedStyle}">
     `;
 }
 
@@ -278,7 +296,13 @@ export function createSettingsRange(rangeConfig) {
         <div class="settings-range-wrapper">
             <input type="range"${idAttr}${nameAttr}${valueAttr}${minAttr}${maxAttr}${stepAttr}${dataSettingAttr} class="setting-input settings-range-input" data-unit="${unit}">
             <span class="settings-range-value">${displayValue}${unit}</span>
-            <input type="number"${minAttr}${maxAttr}${stepAttr} class="settings-range-edit" tabindex="-1">
+            <input ${NumericInput.htmlAttrs({
+                min,
+                max,
+                step,
+                className: 'settings-range-edit',
+                tabindex: -1
+            })}>
         </div>
     `;
 

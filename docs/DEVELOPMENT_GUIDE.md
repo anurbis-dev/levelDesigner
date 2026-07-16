@@ -69,6 +69,10 @@ const input = UIFactory.createLabeledInput({
     onChange: (e) => console.log(e.target.value)
 });
 // Используется в DetailsPanel (Basic Properties, Visual) и других панелях
+
+// Числовые поля: никогда type="number" в HTML — только NumericInput (scrub + ввод).
+// createSettingsInput({ type: 'number', ... }) и UIFactory type:'number' коэрцят в scrub.
+// После вставки HTML: NumericInput.wireAll(root)
 ```
 
 

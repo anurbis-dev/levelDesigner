@@ -3,6 +3,7 @@ import { UIFactory } from '../utils/UIFactory.js';
 import { ResetRegistry } from '../utils/ResetRegistry.js';
 import { DEFAULT_OBJECT, CAMERA } from '../constants/EditorConstants.js';
 import { ShortcutFormatter } from '../utils/ShortcutFormatter.js';
+import { NumericInput } from '../utils/NumericInput.js';
 
 // Default value per Transform field, keyed by the input's data-property (see
 // createTransformsSectionHTML) — used by Backspace-to-reset (ResetRegistry).
@@ -127,6 +128,9 @@ export class DetailsPanel {
         }
 
         ResetRegistry.setFields(this.resetRegistryKey, this._resettableFields);
+
+        // Catch any numeric fields (scrub wiring; converts leftover type=number)
+        NumericInput.wireAll(this.container);
 
         // Update tab title after rendering content
         this.updateTabTitle();
@@ -582,19 +586,17 @@ export class DetailsPanel {
         fields.forEach(f => {
             const fieldDiv = document.createElement('div');
             fieldDiv.className = 'flex-1 relative';
-            // type=text + inputmode=decimal: no native spinner arrows; scrub wired later
+            // NumericInput: type=text + scrub; never native type=number spinners
             fieldDiv.innerHTML = `
                 <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs pointer-events-none" style="color: var(--ui-text-color, #9ca3af);">${f.prefix}</span>
-                <input type="text"
-                       inputmode="decimal"
-                       autocomplete="off"
-                       spellcheck="false"
-                       ${f.id ? `id="${f.id}"` : ''}
-                       ${f.step ? `step="${f.step}"` : ''}
-                       class="details-num-input w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm"
-                       placeholder="0"
-                       data-property="${f.property}"
-                       ${f.nested ? 'data-nested="1"' : ''}>
+                <input ${NumericInput.htmlAttrs({
+                    id: f.id || '',
+                    step: f.step || '',
+                    className: 'details-num-input w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm',
+                    placeholder: '0',
+                    dataProperty: f.property,
+                    nested: !!f.nested
+                })}>
             `;
             fieldsWrap.appendChild(fieldDiv);
         });
@@ -604,76 +606,11 @@ export class DetailsPanel {
     }
 
     /**
-     * Horizontal click-drag scrub on a details numeric field (Blender-style).
-     * Click without move → focus + select for typing. Drag → continuous value change.
-     * Dispatches `input` during drag and `blur`-like commit via `change` on release if moved.
      * @param {HTMLInputElement} input
      * @param {{ step?: number, min?: number, max?: number, decimals?: number }} [opts]
      */
     wireNumberScrub(input, opts = {}) {
-        if (!input || input._detailsScrubWired) return;
-        input._detailsScrubWired = true;
-
-        const step = opts.step ?? (parseFloat(input.step) || 1);
-        const decimals = opts.decimals ?? (step < 1 ? 2 : 1);
-        let pointerId = null;
-        let startX = 0;
-        let startVal = 0;
-        let moved = false;
-        let scrubbing = false;
-
-        const clamp = (v) => {
-            let n = v;
-            if (opts.min !== undefined && Number.isFinite(opts.min)) n = Math.max(opts.min, n);
-            if (opts.max !== undefined && Number.isFinite(opts.max)) n = Math.min(opts.max, n);
-            return n;
-        };
-
-        input.addEventListener('pointerdown', (e) => {
-            if (e.button !== 0) return;
-            // Already typing — allow normal caret/selection
-            if (document.activeElement === input) return;
-            pointerId = e.pointerId;
-            startX = e.clientX;
-            startVal = parseFloat(input.value);
-            if (!Number.isFinite(startVal)) startVal = 0;
-            moved = false;
-            scrubbing = true;
-            try { input.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
-            e.preventDefault();
-        });
-
-        input.addEventListener('pointermove', (e) => {
-            if (!scrubbing || e.pointerId !== pointerId) return;
-            const dx = e.clientX - startX;
-            if (!moved && Math.abs(dx) < 3) return;
-            moved = true;
-            const sens = e.shiftKey ? 0.1 : 1;
-            // ~1px = step * sens (smooth scrub)
-            let value = clamp(startVal + dx * step * sens);
-            if (step >= 1) value = Math.round(value / step) * step;
-            else value = Math.round(value / step) * step;
-            input.value = Number(value).toFixed(decimals);
-            input.dispatchEvent(new Event('input', { bubbles: true }));
-        });
-
-        const endScrub = (e) => {
-            if (!scrubbing || (e && e.pointerId !== pointerId)) return;
-            scrubbing = false;
-            try { input.releasePointerCapture(pointerId); } catch (_) { /* ignore */ }
-            pointerId = null;
-            if (!moved) {
-                input.focus();
-                input.select();
-                return;
-            }
-            // Commit via blur handlers (history / dirty)
-            input.dispatchEvent(new Event('change', { bubbles: true }));
-            input.blur();
-        };
-
-        input.addEventListener('pointerup', endScrub);
-        input.addEventListener('pointercancel', endScrub);
+        NumericInput.wireScrub(input, opts);
     }
 
     /**

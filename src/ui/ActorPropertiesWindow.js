@@ -8,6 +8,7 @@ import {
     createSettingsLabel 
 } from './panel-structures/SettingsSectionConstructor.js';
 import { Logger } from '../utils/Logger.js';
+import { NumericInput } from '../utils/NumericInput.js';
 import { COMPONENT_TYPES, COMPONENT_CATEGORY, getComponentTypeById, createComponentStub } from '../constants/ComponentTypes.js';
 import { buildTypeIconSvg } from '../constants/AssetTypeIcons.js';
 
@@ -92,6 +93,8 @@ export class ActorPropertiesWindow extends BaseDialog {
         // Called after dialog is shown
         // Use setTimeout to ensure DOM is fully rendered before saving initial state
         setTimeout(() => {
+            // Scrub numerics (createSettingsInput type:number → NumericInput; wire scrub)
+            if (this.overlay) NumericInput.wireAll(this.overlay);
             this.saveInitialState();
             this.hasChanges = false;
             this.updateApplyButton();

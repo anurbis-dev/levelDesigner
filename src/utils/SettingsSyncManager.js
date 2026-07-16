@@ -398,7 +398,8 @@ export class SettingsSyncManager {
                 
                 if (input.type === 'checkbox') {
                     value = input.checked;
-                } else if (input.type === 'number' || input.type === 'range') {
+                } else if (input.type === 'number' || input.type === 'range'
+                    || input.dataset?.num === '1' || input.classList?.contains('num-input')) {
                     value = parseFloat(input.value);
                 } else {
                     value = input.value;

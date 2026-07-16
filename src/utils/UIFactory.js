@@ -2,6 +2,8 @@
  * Factory for creating common UI elements
  * Eliminates CSS class duplication and provides consistent styling
  */
+import { NumericInput } from './NumericInput.js';
+
 export class UIFactory {
     /**
      * Common CSS class configurations
@@ -56,10 +58,20 @@ export class UIFactory {
         }
 
         const input = document.createElement('input');
-        input.type = type;
+        // type:number → scrub text field (never native spinner arrows)
+        if (type === 'number') {
+            input.type = 'text';
+            input.inputMode = 'decimal';
+            input.dataset.num = '1';
+            input.className = `${this.CSS.input} num-input`;
+            input.autocomplete = 'off';
+            input.spellcheck = false;
+        } else {
+            input.type = type;
+            input.className = this.CSS.input;
+        }
         input.value = value;
         input.placeholder = placeholder;
-        input.className = this.CSS.input;
         input.style.cssText = 'flex: 1 1 auto; min-width: 0; margin-top: 0;';
         input.disabled = disabled;
         
@@ -74,6 +86,10 @@ export class UIFactory {
         
         if (onBlur) {
             input.addEventListener('blur', onBlur);
+        }
+
+        if (type === 'number') {
+            NumericInput.wireScrub(input);
         }
 
         container.appendChild(input);
@@ -96,10 +112,20 @@ export class UIFactory {
         } = options;
 
         const input = document.createElement('input');
-        input.type = type;
+        if (type === 'number') {
+            input.type = 'text';
+            input.inputMode = 'decimal';
+            input.dataset.num = '1';
+            input.className = `${this.CSS.input} num-input`;
+            input.autocomplete = 'off';
+            input.spellcheck = false;
+            NumericInput.wireScrub(input);
+        } else {
+            input.type = type;
+            input.className = this.CSS.input;
+        }
         input.value = value;
         input.placeholder = placeholder;
-        input.className = this.CSS.input;
         input.disabled = disabled;
         
         if (id) {

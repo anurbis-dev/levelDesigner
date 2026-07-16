@@ -8,17 +8,4 @@
     background-color: var(--layer-color, #F5E6A3);
 }
 
-/* Numeric fields: no spinner arrows; scrub via horizontal drag (see DetailsPanel.wireNumberScrub) */
-.details-num-input {
-    -moz-appearance: textfield;
-    appearance: textfield;
-    cursor: ew-resize;
-}
-.details-num-input:focus {
-    cursor: text;
-}
-.details-num-input::-webkit-outer-spin-button,
-.details-num-input::-webkit-inner-spin-button {
-    -webkit-appearance: none;
-    margin: 0;
-}
+/* Numeric scrub styles live in styles/numeric-input.css (.num-input / .details-num-input). */

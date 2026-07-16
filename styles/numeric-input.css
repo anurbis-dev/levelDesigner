@@ -1,0 +1,44 @@
+/**
+ * Global numeric field style — no native spinner arrows.
+ * All scrub fields use .num-input / [data-num="1"] (see src/utils/NumericInput.js).
+ * Fallback also strips spinners from any leftover input[type=number].
+ */
+
+input[type="number"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.num-input,
+input[data-num="1"],
+.details-num-input,
+.settings-range-edit {
+    -moz-appearance: textfield;
+    appearance: textfield;
+    cursor: ew-resize;
+}
+
+.num-input:focus,
+input[data-num="1"]:focus,
+.details-num-input:focus,
+.settings-range-edit:focus {
+    cursor: text;
+}
+
+.num-input::-webkit-outer-spin-button,
+.num-input::-webkit-inner-spin-button,
+input[data-num="1"]::-webkit-outer-spin-button,
+input[data-num="1"]::-webkit-inner-spin-button,
+.details-num-input::-webkit-outer-spin-button,
+.details-num-input::-webkit-inner-spin-button,
+.settings-range-edit::-webkit-outer-spin-button,
+.settings-range-edit::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}

@@ -1,5 +1,6 @@
 import { RenderUtils } from '../utils/RenderUtils.js';
 import { ColorUtils } from '../utils/ColorUtils.js';
+import { NumericInput } from '../utils/NumericInput.js';
 
 /**
  * Grid Settings Module
@@ -67,7 +68,7 @@ export class GridSettings {
                 <div class="settings-form-group">
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Size (px)</label>
-                        <input type="number" id="grid-size" min="8" max="512" step="8" class="settings-input" name="setting-input" data-setting="grid.size" value="${gridSize}" oninput="this.value = Math.min(512, Math.max(8, parseInt(this.value) || 8))"/>
+                        <input ${NumericInput.htmlAttrs({ id: 'grid-size', name: 'setting-input', min: 8, max: 512, step: 8, className: 'settings-input', dataSetting: 'grid.size', value: gridSize })}/>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Color</label>
@@ -75,11 +76,11 @@ export class GridSettings {
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Thickness</label>
-                        <input type="number" id="grid-thickness" min="0.1" max="5" step="0.1" class="settings-input" name="setting-input" data-setting="grid.thickness" value="${gridThickness}"/>
+                        <input ${NumericInput.htmlAttrs({ id: 'grid-thickness', name: 'setting-input', min: 0.1, max: 5, step: 0.1, className: 'settings-input', dataSetting: 'grid.thickness', value: gridThickness })}/>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Snap Tolerance (%)</label>
-                        <input type="number" id="snap-tolerance" min="5" max="100" step="5" class="settings-input" name="setting-input" data-setting="canvas.snapTolerance" value="${snapTolerance}"/>
+                        <input ${NumericInput.htmlAttrs({ id: 'snap-tolerance', name: 'setting-input', min: 5, max: 100, step: 5, className: 'settings-input', dataSetting: 'canvas.snapTolerance', value: snapTolerance })}/>
                     </div>
                     <div class="settings-form-item">
                         <label style="display: flex; align-items: center; margin-top: 0.5rem;">
@@ -102,12 +103,12 @@ export class GridSettings {
                         <div class="settings-range-wrapper">
                             <input type="range" id="grid-opacity" min="0" max="1" step="0.05" class="settings-input settings-range-input" name="setting-input" data-setting="grid.opacity" data-unit="" value="${gridOpacity}"/>
                             <span class="settings-range-value">${parseFloat(gridOpacity).toFixed(1)}</span>
-                            <input type="number" min="0" max="1" step="0.05" class="settings-range-edit" tabindex="-1">
+                            <input ${NumericInput.htmlAttrs({ min: 0, max: 1, step: 0.05, className: 'settings-range-edit', tabindex: -1 })}>
                         </div>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Subdivisions</label>
-                        <input type="number" id="grid-subdivisions" min="0" max="10" step="1" class="settings-input" name="setting-input" data-setting="grid.subdivisions" value="${gridSubdivisions}" oninput="this.value = Math.min(10, Math.max(0, parseInt(this.value) || 0))"/>
+                        <input ${NumericInput.htmlAttrs({ id: 'grid-subdivisions', name: 'setting-input', min: 0, max: 10, step: 1, className: 'settings-input', dataSetting: 'grid.subdivisions', value: gridSubdivisions })}/>
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Subdiv. Color</label>
@@ -115,7 +116,7 @@ export class GridSettings {
                     </div>
                     <div class="settings-form-item">
                         <label class="settings-label">Grid Subdiv. Thickness</label>
-                        <input type="number" id="grid-subdiv-thickness" min="0.1" max="3" step="0.1" class="settings-input" name="setting-input" data-setting="grid.subdivThickness" value="${gridSubdivThickness}"/>
+                        <input ${NumericInput.htmlAttrs({ id: 'grid-subdiv-thickness', name: 'setting-input', min: 0.1, max: 3, step: 0.1, className: 'settings-input', dataSetting: 'grid.subdivThickness', value: gridSubdivThickness })}/>
                     </div>
                 </div>
             </div>
@@ -144,9 +145,17 @@ export class GridSettings {
                     <!-- Axis Width -->
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <label style="font-size: 0.875rem; color: var(--ui-text-color, #d1d5db);">Width:</label>
-                        <input type="number" id="axis-width" step="1" min="1" max="10" class="settings-input" name="setting-input" data-setting="editor.axisConstraint.axisWidth"
-                               value="${axisWidth}"
-                               style="width: 4rem; padding: 0.25rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white; text-align: center;">
+                        <input ${NumericInput.htmlAttrs({
+                            id: 'axis-width',
+                            name: 'setting-input',
+                            step: 1,
+                            min: 1,
+                            max: 10,
+                            className: 'settings-input',
+                            dataSetting: 'editor.axisConstraint.axisWidth',
+                            value: axisWidth,
+                            style: 'width: 4rem; padding: 0.25rem; background: #374151; border: 1px solid #4b5563; border-radius: 0.25rem; color: white; text-align: center;'
+                        })}>
                     </div>
                 </div>
             </div>

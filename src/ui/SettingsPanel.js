@@ -19,6 +19,7 @@ import {
     renderAssetsSettings,
     renderPerformanceSettings
 } from './panel-structures/SettingsPanelRenderers.js';
+import { NumericInput } from '../utils/NumericInput.js';
 
 /**
  * Settings Panel UI Component
@@ -567,6 +568,13 @@ export class SettingsPanel {
         // Wire the custom slider widget (value overlay + double-click numeric edit) for
         // every range input currently in the DOM, regardless of which tab rendered it.
         this.setupRangeSliders();
+
+        // Scrub-style numeric fields (no spinner arrows) — settings + grid + range-edit
+        NumericInput.wireAll(
+            document.getElementById('settings-content')
+            || document.getElementById('settings-panel-container')
+            || document
+        );
 
         // Setup real-time sync from StateManager to UI (for toolbar/menu changes)
         this.setupStateManagerSubscriptions();

@@ -2,6 +2,11 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (DET-LIVE / CAM-HIDE)
+
+- **DET-LIVE**: Details live transform/camera fields, scrub numerics in Details, live viewport from Details; no selectedObjects re-fire on property change.
+- **CAM-HIDE**: game-source viewport hides driving camera asset.
+
 ## Archived from CHANGELOG.md (Engine Phase 2)
 
 - **Engine Phase 2**: Input system and player movement — `src/engine/Input.js`, `PlayerMovementBehavior`, `Scene.spawnPlayer()`, `GameEngine` Input lifecycle.

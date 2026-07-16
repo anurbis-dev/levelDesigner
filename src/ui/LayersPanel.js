@@ -12,6 +12,7 @@ import {
     getListOrderAfterReorder
 } from './panel-structures/ListReorderPlaceholder.js';
 import { searchManager } from '../utils/SearchManager.js';
+import { NumericInput } from '../utils/NumericInput.js';
 
 /**
  * Layers panel UI component
@@ -228,6 +229,9 @@ export class LayersPanel extends BasePanel {
                 newSearchInput.setSelectionRange(newSearchInput.value.length, newSearchInput.value.length);
             }
         }
+
+        // Layer parallax (and any other numeric fields) — scrub, no spinner arrows
+        NumericInput.wireAll(this.container);
     }
 
     /**

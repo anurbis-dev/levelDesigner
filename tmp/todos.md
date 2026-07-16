@@ -47,6 +47,7 @@
 - ✅ **C2** — aspect presets + letterbox/vignette on game viewport; Details Aspect/Res/Vignette
 - ✅ **CAM-HIDE** — game-source viewport hides driving camera asset
 - ✅ **DET-LIVE** — Details live transform/camera fields + scrub numerics + live viewport from Details
+- ✅ **NUM-SCRUB** — global NumericInput (Settings/Actor/Layers/Details); no type=number spinners
 
 ---
 

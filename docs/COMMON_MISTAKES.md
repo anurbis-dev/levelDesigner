@@ -13,6 +13,7 @@
 - ❌ **НЕ создавайте обработчики с нуля** → ✅ **Используйте EventHandlerManager**
 - ❌ **НЕ вешайте непассивные wheel-листенеры без необходимости** → ✅ **По умолчанию passive, только там где нужен preventDefault — non-passive**
 - ❌ **НЕ работайте с DOM напрямую** → ✅ **Используйте UIFactory**
+- ❌ **НЕ используйте `<input type="number">`** (белые стрелки-спиннеры) → ✅ **`type: 'number'` только в `createSettingsInput` / `UIFactory` (коэрцится в scrub) или `NumericInput.htmlAttrs` / `NumericInput.wireAll(root)`**
 
 **📖 Подробные примеры:** См. разделы ниже
 
