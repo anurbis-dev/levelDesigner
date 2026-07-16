@@ -45,6 +45,8 @@
 - ✅ **TB-OP** — Settings: toolbar underlay opacity slider (`ui.toolbarBackgroundOpacity`)
 - ✅ **C1** — camera view frame gizmo (frustum dashed rect + cross; design res / zoom)
 - ✅ **C2** — aspect presets + letterbox/vignette on game viewport; Details Aspect/Res/Vignette
+- ✅ **CAM-HIDE** — game-source viewport hides driving camera asset
+- ✅ **DET-LIVE** — Details live transform/camera fields + scrub numerics + live viewport from Details
 
 ---
 

@@ -460,6 +460,14 @@ export class RenderOperations extends BaseModule {
                     (item) => vvm.passesTypeFilter(view, item.obj)
                 );
             }
+            // Game-camera leaf: hide the driving camera's own asset (sprite/gizmo);
+            // frustum + letterbox/vignette stay via drawCameraViewFrames / aspect mask.
+            const hideSelfCameraId = view?.source?.kind === 'game' ? view.source.objectId : null;
+            if (hideSelfCameraId) {
+                levelSortedObjects = levelSortedObjects.filter(
+                    (item) => item.obj?.id !== hideSelfCameraId
+                );
+            }
             totalVisibleCount += levelSortedObjects.length;
 
             // Parallax: per-view displayOptions when multi-viewport (VP-HK), else global
@@ -498,7 +506,7 @@ export class RenderOperations extends BaseModule {
             ? vvm.getDisplayFlag(view, 'objectBoundaries')
             : this.editor.stateManager.get('view.objectBoundaries');
         if (showObjectBoundaries && currentSessionVisible) {
-            this.drawObjectBoundaries(camera);
+            this.drawObjectBoundaries(camera, view);
         }
 
         // Draw object collisions if enabled
@@ -506,12 +514,12 @@ export class RenderOperations extends BaseModule {
             ? vvm.getDisplayFlag(view, 'objectCollisions')
             : this.editor.stateManager.get('view.objectCollisions');
         if (showObjectCollisions && currentSessionVisible) {
-            this.drawObjectCollisions(camera);
+            this.drawObjectCollisions(camera, view);
         }
 
         if (currentSessionVisible) {
             // Draw selection (shared selection, per-view camera already applied)
-            this.drawSelection(camera);
+            this.drawSelection(camera, view);
 
             // If a single group is selected, highlight its nested groups with fading
             const selected = this.editor.stateManager.get('selectedObjects');
@@ -594,39 +602,39 @@ export class RenderOperations extends BaseModule {
 
     /**
      * Draw selection outlines
-     */
-    /**
      * @param {{x:number,y:number,zoom:number}} [cameraOverride] - multi-view frame camera
+     * @param {object|null} [view] - viewport view (skip self-camera asset when game-source)
      */
-    drawSelection(cameraOverride = null) {
+    drawSelection(cameraOverride = null, view = null) {
         const selectedObjects = this.editor.stateManager.get('selectedObjects');
         const camera = cameraOverride || this.editor.stateManager.get('camera');
+        const hideSelfCameraId = view?.source?.kind === 'game' ? view.source.objectId : null;
 
         if (this.isInGroupEditMode()) {
             const groupEditMode = this.getGroupEditMode();
             // In group edit mode, draw selection for all objects including nested ones
             this.editor.level.getAllObjects().forEach(obj => {
-                if (selectedObjects.has(obj.id)) {
-                    const effectiveLayerId = this.getEffectiveLayerId(obj);
-                    const bounds = this.parallaxRenderer.getObjectWorldBoundsWithParallax(obj, effectiveLayerId);
-                    const mouse = this.editor.stateManager.get('mouse');
+                if (!selectedObjects.has(obj.id)) return;
+                if (hideSelfCameraId && obj.id === hideSelfCameraId) return;
+                const effectiveLayerId = this.getEffectiveLayerId(obj);
+                const bounds = this.parallaxRenderer.getObjectWorldBoundsWithParallax(obj, effectiveLayerId);
+                const mouse = this.editor.stateManager.get('mouse');
 
-                    // Special visual feedback for Alt+drag in group edit mode
-                    if (mouse.altKey && mouse.isDragging && this.editor.objectOperations.isObjectInGroup(obj, groupEditMode.group)) {
-                        this.drawAltDragSelectionRect(obj, bounds, camera);
-                    } else {
-                        this.drawObjectSelectionRect(obj, bounds, camera);
-                    }
+                // Special visual feedback for Alt+drag in group edit mode
+                if (mouse.altKey && mouse.isDragging && this.editor.objectOperations.isObjectInGroup(obj, groupEditMode.group)) {
+                    this.drawAltDragSelectionRect(obj, bounds, camera);
+                } else {
+                    this.drawObjectSelectionRect(obj, bounds, camera);
                 }
             });
         } else {
             // Normal mode - draw selection for top-level objects only
             this.editor.level.objects.forEach(obj => {
-                if (selectedObjects.has(obj.id)) {
-                    const effectiveLayerId = this.getEffectiveLayerId(obj);
-                    const bounds = this.parallaxRenderer.getObjectWorldBoundsWithParallax(obj, effectiveLayerId);
-                    this.drawObjectSelectionRect(obj, bounds, camera);
-                }
+                if (!selectedObjects.has(obj.id)) return;
+                if (hideSelfCameraId && obj.id === hideSelfCameraId) return;
+                const effectiveLayerId = this.getEffectiveLayerId(obj);
+                const bounds = this.parallaxRenderer.getObjectWorldBoundsWithParallax(obj, effectiveLayerId);
+                this.drawObjectSelectionRect(obj, bounds, camera);
             });
         }
     }
@@ -1474,12 +1482,15 @@ export class RenderOperations extends BaseModule {
     /**
      * Draw object boundaries for debugging.
      * @param {{x:number,y:number,zoom:number}|null} [cameraOverride] - multi-view frame camera
+     * @param {object|null} [view] - skip self-camera asset when game-source
      */
-    drawObjectBoundaries(cameraOverride = null) {
+    drawObjectBoundaries(cameraOverride = null, view = null) {
         const camera = cameraOverride || this.editor.stateManager.get('camera');
         const visibleLayerIds = this.getVisibleLayerIds();
+        const hideSelfCameraId = view?.source?.kind === 'game' ? view.source.objectId : null;
 
         this.editor.level.objects.forEach(obj => {
+            if (hideSelfCameraId && obj.id === hideSelfCameraId) return;
             if (obj.visible && visibleLayerIds.has(this.getEffectiveLayerId(obj))) {
                 if (obj.type === 'group') {
                     this.drawGroupBoundaries(obj, camera);
@@ -1562,12 +1573,15 @@ export class RenderOperations extends BaseModule {
     /**
      * Draw object collision boxes for debugging
      * @param {{x:number,y:number,zoom:number}|null} [cameraOverride] - multi-view frame camera
+     * @param {object|null} [view] - skip self-camera asset when game-source
      */
-    drawObjectCollisions(cameraOverride = null) {
+    drawObjectCollisions(cameraOverride = null, view = null) {
         const camera = cameraOverride || this.editor.stateManager.get('camera');
         const visibleLayerIds = this.getVisibleLayerIds();
+        const hideSelfCameraId = view?.source?.kind === 'game' ? view.source.objectId : null;
 
         this.editor.level.objects.forEach(obj => {
+            if (hideSelfCameraId && obj.id === hideSelfCameraId) return;
             if (obj.visible && visibleLayerIds.has(this.getEffectiveLayerId(obj))) {
                 if (obj.type === 'group') {
                     this.drawGroupCollisions(obj, camera);

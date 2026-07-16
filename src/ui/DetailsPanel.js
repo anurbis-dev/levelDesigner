@@ -87,19 +87,20 @@ export class DetailsPanel {
 
         // Subscribe to object property changes (for immediate updates like layer changes)
         const unsubscribeProperty = this.stateManager.subscribe('objectPropertyChanged', (changedObject, changeData) => {
+            const selectedIds = this.stateManager.get('selectedObjects');
+            if (!selectedIds || !selectedIds.has(changedObject?.id)) return;
 
-            // Skip real-time updates for position properties to avoid performance issues
-            // Position updates will happen on: selection change, drag end, duplicate end
-            if (changeData?.property === 'x' || changeData?.property === 'y') {
+            const prop = changeData?.property;
+            // Transform / camera pose: cheap field refresh (no DOM rebuild — preserves focus/scrub)
+            if (prop === 'x' || prop === 'y' || prop === 'width' || prop === 'height'
+                || prop === 'rotation' || prop === 'properties.zoom' || prop === 'zoom') {
+                this.refreshTransformFieldsLive();
                 return;
             }
 
-            // Check if the changed object is currently selected
-            const selectedIds = this.stateManager.get('selectedObjects');
-            if (selectedIds && selectedIds.has(changedObject?.id)) {
-                this.render();
-                this.updateTabTitle();
-            }
+            // Structural / non-numeric: full re-render
+            this.render();
+            this.updateTabTitle();
         });
         this.subscriptions.push(unsubscribeProperty);
     }
@@ -307,7 +308,7 @@ export class DetailsPanel {
         obj.properties = obj.properties || {};
 
         const zoomRow = this.createDualFieldRow('Zoom', [
-            { prefix: 'Z', property: 'zoom', id: 'details-camera-zoom', step: '0.05' }
+            { prefix: 'Z', property: 'zoom', id: 'details-camera-zoom', step: '0.05', nested: true }
         ]);
         section._content.appendChild(zoomRow);
 
@@ -354,73 +355,96 @@ export class DetailsPanel {
 
         if ((obj.properties.aspect || '16:9') === 'custom') {
             const resRow = this.createDualFieldRow('Resolution', [
-                { prefix: 'W', property: 'resolutionWidth', id: 'details-camera-res-w', step: '1' },
-                { prefix: 'H', property: 'resolutionHeight', id: 'details-camera-res-h', step: '1' }
+                { prefix: 'W', property: 'resolutionWidth', id: 'details-camera-res-w', step: '1', nested: true },
+                { prefix: 'H', property: 'resolutionHeight', id: 'details-camera-res-h', step: '1', nested: true }
             ]);
             section._content.appendChild(resRow);
-            const wIn = resRow.querySelector('#details-camera-res-w');
-            const hIn = resRow.querySelector('#details-camera-res-h');
-            if (wIn) {
-                wIn.value = String(obj.properties.resolutionWidth ?? 1920);
-                wIn.addEventListener('blur', (e) => {
-                    let value = parseInt(e.target.value, 10);
-                    if (!Number.isFinite(value) || value < 16) value = 1920;
-                    obj.properties.resolutionWidth = value;
-                    e.target.value = String(value);
-                    this.notifyPropertyChange(obj, 'properties.resolutionWidth', value);
-                    this.levelEditor?.render?.();
-                });
-            }
-            if (hIn) {
-                hIn.value = String(obj.properties.resolutionHeight ?? 1080);
-                hIn.addEventListener('blur', (e) => {
-                    let value = parseInt(e.target.value, 10);
-                    if (!Number.isFinite(value) || value < 16) value = 1080;
-                    obj.properties.resolutionHeight = value;
-                    e.target.value = String(value);
-                    this.notifyPropertyChange(obj, 'properties.resolutionHeight', value);
-                    this.levelEditor?.render?.();
-                });
-            }
+            this.wireCameraNestedNumber(obj, resRow.querySelector('#details-camera-res-w'), {
+                key: 'resolutionWidth',
+                defaultValue: 1920,
+                min: 16,
+                integer: true,
+                decimals: 0
+            });
+            this.wireCameraNestedNumber(obj, resRow.querySelector('#details-camera-res-h'), {
+                key: 'resolutionHeight',
+                defaultValue: 1080,
+                min: 16,
+                integer: true,
+                decimals: 0
+            });
         }
 
         const vigRow = this.createDualFieldRow('Vignette', [
-            { prefix: 'V', property: 'vignette', id: 'details-camera-vignette', step: '0.05' }
+            { prefix: 'V', property: 'vignette', id: 'details-camera-vignette', step: '0.05', nested: true }
         ]);
         section._content.appendChild(vigRow);
 
         this.container.appendChild(section);
 
-        const input = zoomRow.querySelector('#details-camera-zoom');
-        if (input) {
-            input.value = (obj.properties?.zoom ?? 1).toFixed(2);
-            input.addEventListener('blur', (e) => {
-                let value = parseFloat(e.target.value);
-                if (isNaN(value) || value <= 0) value = 1;
-                obj.properties = obj.properties || {};
-                obj.properties.zoom = value;
-                e.target.value = value.toFixed(2);
-                this.notifyPropertyChange(obj, 'properties.zoom', value);
-            });
-        }
+        this.wireCameraNestedNumber(obj, zoomRow.querySelector('#details-camera-zoom'), {
+            key: 'zoom',
+            defaultValue: 1,
+            min: 0.01,
+            decimals: 2
+        });
+        this.wireCameraNestedNumber(obj, vigRow.querySelector('#details-camera-vignette'), {
+            key: 'vignette',
+            defaultValue: CAMERA.VIGNETTE_STRENGTH,
+            min: 0,
+            max: 1,
+            decimals: 2
+        });
+    }
 
-        const vigInput = vigRow.querySelector('#details-camera-vignette');
-        if (vigInput) {
-            const defaultVig = CAMERA.VIGNETTE_STRENGTH;
-            vigInput.value = (obj.properties?.vignette ?? defaultVig).toFixed(2);
-            vigInput.min = '0';
-            vigInput.max = '1';
-            vigInput.addEventListener('blur', (e) => {
-                let value = parseFloat(e.target.value);
-                if (isNaN(value)) value = defaultVig;
-                value = Math.min(1, Math.max(0, value));
-                obj.properties = obj.properties || {};
-                obj.properties.vignette = value;
-                e.target.value = value.toFixed(2);
-                this.notifyPropertyChange(obj, 'properties.vignette', value);
-                this.levelEditor?.render?.();
-            });
-        }
+    /**
+     * Camera nested properties (properties.*) — live viewport on input, history/dirty on blur.
+     * @param {object} obj
+     * @param {HTMLInputElement|null} input
+     * @param {{ key: string, defaultValue: number, min?: number, max?: number, integer?: boolean, decimals?: number }} opts
+     */
+    wireCameraNestedNumber(obj, input, opts) {
+        if (!input) return;
+        const decimals = opts.decimals ?? 2;
+        const format = (v) => (opts.integer ? String(Math.round(v)) : v.toFixed(decimals));
+        const parse = (raw) => {
+            let value = opts.integer ? parseInt(raw, 10) : parseFloat(raw);
+            if (!Number.isFinite(value)) value = opts.defaultValue;
+            if (opts.min !== undefined && value < opts.min) value = opts.min;
+            if (opts.max !== undefined && value > opts.max) value = opts.max;
+            return value;
+        };
+
+        const initial = obj.properties?.[opts.key];
+        input.value = format(initial === undefined || initial === null ? opts.defaultValue : Number(initial));
+        if (opts.min !== undefined) input.min = String(opts.min);
+        if (opts.max !== undefined) input.max = String(opts.max);
+
+        const applyLive = (raw) => {
+            const value = parse(raw);
+            obj.properties = obj.properties || {};
+            obj.properties[opts.key] = value;
+            // Immediate multi-viewport feedback (vignette / zoom / res → letterbox)
+            this.levelEditor?.render?.();
+            return value;
+        };
+
+        input.addEventListener('input', (e) => {
+            if (e.target.value === '' || e.target.value === '-' || e.target.value === '.') return;
+            applyLive(e.target.value);
+        });
+        input.addEventListener('blur', (e) => {
+            const value = applyLive(e.target.value);
+            e.target.value = format(value);
+            this.notifyPropertyChange(obj, `properties.${opts.key}`, value);
+        });
+
+        this.wireNumberScrub(input, {
+            decimals,
+            min: opts.min,
+            max: opts.max,
+            step: parseFloat(input.step) || (opts.integer ? 1 : 0.05)
+        });
     }
 
     /**
@@ -539,8 +563,9 @@ export class DetailsPanel {
      * Create a single-line "label + N number fields" row (label left, fields sharing the rest
      * of the row) — shared by Transform's Position/Size/Rotation rows and the Level panel's
      * Parallax multiplier row, so a label never sits on its own line above its control(s).
+     * Number fields: no spinner arrows; value via type or horizontal click-drag scrub.
      * @param {string} label - Row label
-     * @param {Array<{prefix: string, property: string, id?: string, step?: string}>} fields
+     * @param {Array<{prefix: string, property: string, id?: string, step?: string, nested?: boolean}>} fields
      * @returns {HTMLElement}
      */
     createDualFieldRow(label, fields) {
@@ -557,20 +582,98 @@ export class DetailsPanel {
         fields.forEach(f => {
             const fieldDiv = document.createElement('div');
             fieldDiv.className = 'flex-1 relative';
+            // type=text + inputmode=decimal: no native spinner arrows; scrub wired later
             fieldDiv.innerHTML = `
                 <span class="absolute left-2 top-1/2 transform -translate-y-1/2 text-xs pointer-events-none" style="color: var(--ui-text-color, #9ca3af);">${f.prefix}</span>
-                <input type="number"
+                <input type="text"
+                       inputmode="decimal"
+                       autocomplete="off"
+                       spellcheck="false"
                        ${f.id ? `id="${f.id}"` : ''}
                        ${f.step ? `step="${f.step}"` : ''}
-                       class="w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm"
+                       class="details-num-input w-full bg-gray-700 border border-gray-600 rounded px-6 py-1 text-sm"
                        placeholder="0"
-                       data-property="${f.property}">
+                       data-property="${f.property}"
+                       ${f.nested ? 'data-nested="1"' : ''}>
             `;
             fieldsWrap.appendChild(fieldDiv);
         });
         row.appendChild(fieldsWrap);
 
         return row;
+    }
+
+    /**
+     * Horizontal click-drag scrub on a details numeric field (Blender-style).
+     * Click without move → focus + select for typing. Drag → continuous value change.
+     * Dispatches `input` during drag and `blur`-like commit via `change` on release if moved.
+     * @param {HTMLInputElement} input
+     * @param {{ step?: number, min?: number, max?: number, decimals?: number }} [opts]
+     */
+    wireNumberScrub(input, opts = {}) {
+        if (!input || input._detailsScrubWired) return;
+        input._detailsScrubWired = true;
+
+        const step = opts.step ?? (parseFloat(input.step) || 1);
+        const decimals = opts.decimals ?? (step < 1 ? 2 : 1);
+        let pointerId = null;
+        let startX = 0;
+        let startVal = 0;
+        let moved = false;
+        let scrubbing = false;
+
+        const clamp = (v) => {
+            let n = v;
+            if (opts.min !== undefined && Number.isFinite(opts.min)) n = Math.max(opts.min, n);
+            if (opts.max !== undefined && Number.isFinite(opts.max)) n = Math.min(opts.max, n);
+            return n;
+        };
+
+        input.addEventListener('pointerdown', (e) => {
+            if (e.button !== 0) return;
+            // Already typing — allow normal caret/selection
+            if (document.activeElement === input) return;
+            pointerId = e.pointerId;
+            startX = e.clientX;
+            startVal = parseFloat(input.value);
+            if (!Number.isFinite(startVal)) startVal = 0;
+            moved = false;
+            scrubbing = true;
+            try { input.setPointerCapture(e.pointerId); } catch (_) { /* ignore */ }
+            e.preventDefault();
+        });
+
+        input.addEventListener('pointermove', (e) => {
+            if (!scrubbing || e.pointerId !== pointerId) return;
+            const dx = e.clientX - startX;
+            if (!moved && Math.abs(dx) < 3) return;
+            moved = true;
+            const sens = e.shiftKey ? 0.1 : 1;
+            // ~1px = step * sens (smooth scrub)
+            let value = clamp(startVal + dx * step * sens);
+            if (step >= 1) value = Math.round(value / step) * step;
+            else value = Math.round(value / step) * step;
+            input.value = Number(value).toFixed(decimals);
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+
+        const endScrub = (e) => {
+            if (!scrubbing || (e && e.pointerId !== pointerId)) return;
+            scrubbing = false;
+            try { input.releasePointerCapture(pointerId); } catch (_) { /* ignore */ }
+            pointerId = null;
+            if (!moved) {
+                input.focus();
+                input.select();
+                return;
+            }
+            // Commit via blur handlers (history / dirty)
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            input.blur();
+        };
+
+        input.addEventListener('pointerup', endScrub);
+        input.addEventListener('pointercancel', endScrub);
     }
 
     /**
@@ -620,13 +723,14 @@ export class DetailsPanel {
             this.registerResettable(input, defaultValue);
 
             input.addEventListener('input', (e) => {
+                if (e.target.value === '' || e.target.value === '-' || e.target.value === '.') return;
                 const property = e.target.dataset.property;
                 let value = parseFloat(e.target.value);
                 if (isNaN(value)) value = 0;
 
                 obj[property] = value;
 
-                // Live canvas feedback while typing/using the number spinner.
+                // Live canvas feedback while typing / scrubbing.
                 // History + full listener notification (markDirty, tab title, etc.)
                 // still only fire on blur to avoid flooding undo with per-keystroke entries.
                 if (this.levelEditor && this.levelEditor.render) {
@@ -640,7 +744,14 @@ export class DetailsPanel {
                 if (isNaN(value)) value = 0;
 
                 obj[property] = value;
+                e.target.value = value.toFixed(1);
                 this.notifyPropertyChange(obj, property, value);
+            });
+
+            this.wireNumberScrub(input, {
+                step: parseFloat(input.step) || 1,
+                decimals: 1,
+                min: (property === 'width' || property === 'height') ? 1 : undefined
             });
         });
     }
@@ -652,25 +763,37 @@ export class DetailsPanel {
      * @param {any} newValue - New value
      */
     notifyPropertyChange(obj, property, newValue) {
-            this.stateManager.markDirty();
+        this.stateManager.markDirty();
 
-            // Notify about object property change
+        // Nested keys like properties.zoom — oldValue from root would be wrong
+        let oldValue;
+        if (typeof property === 'string' && property.startsWith('properties.')) {
+            const key = property.slice('properties.'.length);
+            oldValue = obj.properties?.[key];
+        } else {
+            oldValue = obj[property];
+        }
+
         this.stateManager.notifyListeners('objectPropertyChanged', obj, {
-            property: property,
-            oldValue: obj[property],
-                newValue: newValue
-            });
+            property,
+            oldValue,
+            newValue
+        });
 
-            // Trigger redraw of selected objects
-            this.stateManager.notifyListeners('selectedObjects', this.stateManager.get('selectedObjects'), this.stateManager.get('selectedObjects'));
+        // Canvas only — do NOT re-fire selectedObjects (that full-rebuilds Details/Outliner/Layers
+        // via EventHandlers and steals focus / breaks live scrub).
+        if (this.levelEditor && this.levelEditor.render) {
+            this.levelEditor.render();
+        }
 
-            // Force canvas redraw to reflect the property change
-            if (this.levelEditor && this.levelEditor.render) {
-                this.levelEditor.render();
-            }
+        // Name/color affect Outliner labels and chrome — refresh lists without Details rebuild
+        if (property === 'name' || property === 'color') {
+            this.levelEditor?.outlinerPanel?.render?.();
+            this.levelEditor?.forEachDockPanelCopy?.('outliner', (p) => p.render?.());
+            this.levelEditor?.toolbar?.updateCameraButtons?.();
+        }
 
-            // Update tab title immediately
-            this.updateTabTitle();
+        this.updateTabTitle();
     }
 
     renderObjectDetails(obj) {
@@ -926,14 +1049,14 @@ export class DetailsPanel {
             }
 
             input.addEventListener('input', (e) => {
+                if (e.target.value === '' || e.target.value === '-' || e.target.value === '.') return;
                 const property = e.target.dataset.property;
                 let value = parseFloat(e.target.value);
                 if (isNaN(value)) value = 0;
 
                 objects.forEach(obj => obj[property] = value);
 
-                // Live canvas feedback while typing/using the number spinner (see
-                // setupTransformsListeners for why history/notify stay on blur).
+                // Live canvas feedback while typing/scrubbing (see setupTransformsListeners).
                 if (this.levelEditor && this.levelEditor.render) {
                     this.levelEditor.render();
                 }
@@ -944,10 +1067,17 @@ export class DetailsPanel {
                 let value = parseFloat(e.target.value);
                 if (isNaN(value)) value = 0;
 
+                e.target.value = value.toFixed(1);
                 objects.forEach(obj => {
                     obj[property] = value;
                     this.notifyPropertyChange(obj, property, value);
                 });
+            });
+
+            this.wireNumberScrub(input, {
+                step: parseFloat(input.step) || 1,
+                decimals: 1,
+                min: (property === 'width' || property === 'height') ? 1 : undefined
             });
         });
     }
@@ -1354,17 +1484,24 @@ export class DetailsPanel {
             const property = input.dataset.property;
             input.value = (level.settings[property] ?? 1).toFixed(1);
 
-            input.addEventListener('blur', (e) => {
-                let value = parseFloat(e.target.value);
+            const apply = (raw) => {
+                let value = parseFloat(raw);
                 if (isNaN(value)) value = 1;
                 level.settings[property] = value;
-                e.target.value = value.toFixed(1);
+                this.levelEditor?.render?.();
+                return value;
+            };
 
-                this.stateManager.markDirty();
-                if (this.levelEditor && this.levelEditor.render) {
-                    this.levelEditor.render();
-                }
+            input.addEventListener('input', (e) => {
+                if (e.target.value === '' || e.target.value === '-' || e.target.value === '.') return;
+                apply(e.target.value);
             });
+            input.addEventListener('blur', (e) => {
+                const value = apply(e.target.value);
+                e.target.value = value.toFixed(1);
+                this.stateManager.markDirty();
+            });
+            this.wireNumberScrub(input, { step: 0.1, decimals: 1 });
         });
     }
 
@@ -1386,31 +1523,52 @@ export class DetailsPanel {
     }
 
     /**
-     * Cheaply refresh Transform input values (Position/Size/Rotation) from the live model,
-     * without rebuilding the DOM — safe to call every mousemove during drag/rotate/scale.
-     * Skips inputs the user is actively typing into so it never fights their keystrokes.
+     * Cheaply refresh Transform + camera numeric fields from the live model,
+     * without rebuilding the DOM — safe every mousemove during drag/rotate/scale/pan.
+     * Skips inputs the user is actively typing/scrubbing into.
      */
     refreshTransformFieldsLive() {
-        const inputs = this.container.querySelectorAll('input[data-property]');
-        if (inputs.length === 0) return;
+        if (!this.container) return;
 
         const selectedObjects = this.getSelectedObjects();
         if (selectedObjects.length === 0) return;
 
+        const inputs = this.container.querySelectorAll('input[data-property]');
         inputs.forEach(input => {
             if (document.activeElement === input) return;
+            // Nested camera props (zoom/vignette/res) handled below by id
+            if (input.dataset.nested === '1') return;
 
             const property = input.dataset.property;
             const firstValue = selectedObjects[0][property] || 0;
             const allSame = selectedObjects.every(obj => (obj[property] || 0) === firstValue);
 
             if (allSame) {
-                input.value = firstValue.toFixed(1);
+                input.value = Number(firstValue).toFixed(1);
             } else if (selectedObjects.length > 1) {
                 input.value = '';
                 input.placeholder = 'multiple values';
             }
         });
+
+        // Single camera object: keep zoom/vignette in sync with game-viewport pan/zoom pose
+        if (selectedObjects.length === 1 && selectedObjects[0].type === 'camera') {
+            const cam = selectedObjects[0];
+            const props = cam.properties || {};
+            const setIfIdle = (sel, value, decimals) => {
+                const el = this.container.querySelector(sel);
+                if (!el || document.activeElement === el) return;
+                el.value = Number(value).toFixed(decimals);
+            };
+            setIfIdle('#details-camera-zoom', props.zoom ?? 1, 2);
+            if (props.vignette !== undefined && props.vignette !== null) {
+                setIfIdle('#details-camera-vignette', props.vignette, 2);
+            }
+            if ((props.aspect || '16:9') === 'custom') {
+                setIfIdle('#details-camera-res-w', props.resolutionWidth ?? 1920, 0);
+                setIfIdle('#details-camera-res-h', props.resolutionHeight ?? 1080, 0);
+            }
+        }
     }
 
     updateTabTitle() {

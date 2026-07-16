@@ -305,11 +305,17 @@ export class ViewportViewManager {
         if (!obj.properties) obj.properties = {};
         obj.properties.zoom = zoom;
 
-        // x/y notify is skipped by DetailsPanel (perf); keeps outliner/gizmo caches coherent
+        // DetailsPanel live-refreshes transform + camera zoom without full re-render
         this.editor.stateManager?.notifyListeners?.('objectPropertyChanged', obj, {
             property: 'x',
             newValue: obj.x
         });
+        if (patch.zoom !== undefined) {
+            this.editor.stateManager?.notifyListeners?.('objectPropertyChanged', obj, {
+                property: 'properties.zoom',
+                newValue: zoom
+            });
+        }
         return true;
     }
 

@@ -577,13 +577,50 @@ export class LevelEditor {
         // Update cached level statistics for quick access
         this.updateCachedLevelStats();
 
-        this.detailsPanel.render();
-        this.outlinerPanel.render();
-        this.levelsPanel.render();
-        this.layersPanel.render();
+        this.detailsPanel?.render();
+        this.outlinerPanel?.render();
+        this.levelsPanel?.render();
+        this.layersPanel?.render();
+
+        // Dock copies (primary already covered above)
+        this.forEachDockPanelCopy('details', (p) => p.render?.());
+        this.forEachDockPanelCopy('outliner', (p) => p.render?.());
+        this.forEachDockPanelCopy('layers', (p) => p.render?.());
+        this.forEachDockPanelCopy('levels', (p) => p.render?.());
         
         // Update level stats panel (includes Player Start restoration logic)
         this.updateLevelStatsPanel();
+    }
+
+    /**
+     * Primary + dock copy Details panels (live field refresh during drag/pan).
+     * @param {(panel: object) => void} fn
+     */
+    forEachDetailsPanel(fn) {
+        if (!fn) return;
+        if (this.detailsPanel) fn(this.detailsPanel);
+        this.forEachDockPanelCopy('details', fn);
+    }
+
+    /**
+     * Non-primary dock panel instances of a content type.
+     * @param {string} contentType
+     * @param {(panel: object, binding: object) => void} fn
+     */
+    forEachDockPanelCopy(contentType, fn) {
+        const reg = this.dockManager?.contentRegistry;
+        if (!reg?._byLeafId || !fn) return;
+        for (const bind of reg._byLeafId.values()) {
+            if (bind.contentType !== contentType || bind.isPrimary || !bind.panel) continue;
+            fn(bind.panel, bind);
+        }
+    }
+
+    /**
+     * Cheap live refresh of Details transform/camera fields (all instances).
+     */
+    refreshDetailsLive() {
+        this.forEachDetailsPanel((p) => p.refreshTransformFieldsLive?.());
     }
 
 

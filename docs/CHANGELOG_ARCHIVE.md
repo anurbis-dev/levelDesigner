@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (Engine Phase 2)
+
+- **Engine Phase 2**: Input system and player movement — `src/engine/Input.js`, `PlayerMovementBehavior`, `Scene.spawnPlayer()`, `GameEngine` Input lifecycle.
+
 ## Archived from CHANGELOG.md (C2)
 
 - **C2**: camera aspect presets (16:9/4:3/1:1/3:2/21:9/custom), game-viewport letterbox + vignette; Details Aspect/Resolution/Vignette.

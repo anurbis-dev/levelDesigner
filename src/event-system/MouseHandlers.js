@@ -398,18 +398,21 @@ export class MouseHandlers extends BaseModule {
             }
             this.editor.stateManager.update(stateUpdate);
             this.editor.render();
+            // Game-camera pan writes object x/y/zoom — keep Details in sync live
+            this.editor.refreshDetailsLive?.();
 
         } else if (mouse.isMiddleDown) {
             // Interactive zoom with middle mouse button
             this.handleMiddleMouseZoom(e);
+            this.editor.refreshDetailsLive?.();
         } else if (mouse.isLeftDown && mouse.isDragging) {
             // Drag objects
             objectsMovedToGroup = this.dragSelectedObjects(worldPos, e);
-            this.editor.detailsPanel?.refreshTransformFieldsLive();
+            this.editor.refreshDetailsLive?.();
         } else if (mouse.isLeftDown && mouse.isTransforming) {
             // Rotate/scale selected objects (Ctrl+drag / Ctrl+Alt+drag)
             this.transformSelectedObjects(worldPos);
-            this.editor.detailsPanel?.refreshTransformFieldsLive();
+            this.editor.refreshDetailsLive?.();
         } else if (mouse.isLeftDown && e.altKey && !(e.ctrlKey || e.metaKey) && !mouse.transformPendingMode && !this.editor.stateManager.get('duplicate.isActive')) {
             // Check if we should start Alt+drag duplication
             const selectedObjects = this.editor.stateManager.get('selectedObjects');
