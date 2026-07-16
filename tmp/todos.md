@@ -23,6 +23,7 @@
 - ✅ **VP-COL** — camera color/name → chrome icon live
 - ✅ **VP-FIL** — active filter icon blue
 - ✅ **AS-FAV / AS-MMB** — empty favorites hint + MMB close tab
+- ✅ **AS-REN-END** — empty/outside click всегда закрывает inline rename (capture pointerdown)
 
 ---
 
@@ -30,7 +31,6 @@
 
 | # | Задача | Где смотреть | Критерий |
 |---|--------|--------------|----------|
-| **AS-REN-END** | Inline rename ассета: клик в **пустое** место панели **не всегда** закрывает поле имени | `AssetItemActionsController.startInlineRename` (blur/finish); click empty / outside input | любой click вне input → commit/cancel, поле скрыто |
 | B2 | Проверить dock multi-viewport + Assets×N после polish | browser | 0 console errors; multi-drop все; folders width независим |
 
 ---
@@ -118,14 +118,13 @@
 
 ## Порядок работ (рекомендуемый)
 
-1. **AS-REN-END** — клик в пустое → всегда закрыть inline rename (регрессия AS-REN)  
-2. **VP-HK / VP-EYE / VP-TB** — multi-viewport input + chrome + toolbar pair  
-3. **OL-F** — F over Outliner scroll  
-4. **DK-ICO / DK-CUR / DK-GST / DK-CLP** — dock polish  
-5. **B2** — browser smoke multi-view / Assets×N  
-6. **U2–U3**, **U4**, **C1–C2** — старый product хвост  
-7. **Q\*** / **D\*** — opportunistically  
-8. Engine — **не из этого файла**
+1. **VP-HK / VP-EYE / VP-TB** — multi-viewport input + chrome + toolbar pair  
+2. **OL-F** — F over Outliner scroll  
+3. **DK-ICO / DK-CUR / DK-GST / DK-CLP** — dock polish  
+4. **B2** — browser smoke multi-view / Assets×N  
+5. **U2–U3**, **U4**, **C1–C2** — старый product хвост  
+6. **Q\*** / **D\*** — opportunistically  
+7. Engine — **не из этого файла**
 
 ---
 

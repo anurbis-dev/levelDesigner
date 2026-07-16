@@ -189,11 +189,19 @@ export class AssetItemActionsController {
         this._renamingAssetId = asset.id;
 
         let finished = false;
+        /** Capture-phase: empty panel / marquee mousedown may not blur the input. */
+        const onOutsidePointerDown = (e) => {
+            if (finished) return;
+            if (e.target === input || input.contains(e.target)) return;
+            finishRename(true);
+        };
+
         const finishRename = (save) => {
             if (finished) return;
             finished = true;
             this._renamingAssetId = null;
             item.draggable = wasDraggable;
+            document.removeEventListener('pointerdown', onOutsidePointerDown, true);
 
             const newName = input.value.trim();
             if (save && newName && newName !== oldName) {
@@ -202,6 +210,13 @@ export class AssetItemActionsController {
                     Logger.ui.warn('Rename failed:', asset.id);
                     if (input.isConnected) input.replaceWith(nameEl);
                     return;
+                }
+                // Restore label if re-render is deferred; assetsChanged usually rebuilds DOM.
+                if (input.isConnected) {
+                    const temp = asset.properties?.isTemporary;
+                    nameEl.textContent = temp ? `⏳ ${newName}` : newName;
+                    nameEl.title = temp ? `${newName} - TEMPORARY` : newName;
+                    input.replaceWith(nameEl);
                 }
                 this.assetPanel.stateManager?.set('assetsLibraryDirty', true);
                 this._notifyAssetsChanged();
@@ -234,6 +249,13 @@ export class AssetItemActionsController {
         nameEl.replaceWith(input);
         input.focus();
         input.select();
+
+        // After current event (F2 / dblclick / menu) so the opener click does not auto-commit.
+        setTimeout(() => {
+            if (!finished) {
+                document.addEventListener('pointerdown', onOutsidePointerDown, true);
+            }
+        }, 0);
     }
 
     /**

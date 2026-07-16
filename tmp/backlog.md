@@ -17,6 +17,7 @@
 
 ## Closed (архив)
 
+✅ AS-REN-END — inline rename: клик в пустое / вне input всегда закрывает поле (capture pointerdown)  
 ✅ AS-FAV/MMB — empty favorites «Drop favorite folders here»; MMB closes favorite tab  
 ✅ VP-COL — color/name game camera → live refresh chrome icon (`refreshAllViewportChrome`)  
 ✅ VP-FIL — active viewport type-filter icon blue (`viewport-filter-active`)  
