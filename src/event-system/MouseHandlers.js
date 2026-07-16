@@ -72,7 +72,8 @@ export class MouseHandlers extends BaseModule {
         const vvm = this.editor.viewportViewManager;
         const view = this.getInteractionView();
         if (vvm && view) {
-            vvm.updateCamera(patch, view.leafId, { unlockGame: true });
+            // Game-bound views keep source=game (pose writes into Camera object)
+            vvm.updateCamera(patch, view.leafId);
             return;
         }
         const cam = this.editor.stateManager.get('camera') || { x: 0, y: 0, zoom: 1 };

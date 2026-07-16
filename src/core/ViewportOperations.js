@@ -114,7 +114,7 @@ export class ViewportOperations extends BaseModule {
         const vvm = this.editor.viewportViewManager;
         if (vvm && target) {
             vvm.focus(target.leafId);
-            vvm.updateCamera(patch, target.leafId, { unlockGame: true });
+            vvm.updateCamera(patch, target.leafId);
         } else {
             this.editor.stateManager.update({
                 'camera.x': patch.x,
@@ -167,14 +167,16 @@ export class ViewportOperations extends BaseModule {
     }
 
     /**
-     * Move the working viewport to a camera object's position and apply its own
-     * zoom (obj.properties.zoom, default 1) — unlike focusOnSelection/focusOnAll,
-     * this does NOT fit-to-bounds; it restores the camera object's own settings,
-     * same shape as the viewport camera itself {x, y, zoom}.
+     * Bind viewport to a Camera object (game source) so pan/zoom keep editing that cam.
+     * Legacy single-canvas path copies pose into stateManager.camera (work).
      * @param {Object} cameraObj
      * @param {object|null} [view] - target ViewportView (VP-HK)
      */
     applyCameraObjectToViewport(cameraObj, view = null) {
+        if (!cameraObj?.id) {
+            Logger.viewport.warn('Camera object missing id');
+            return;
+        }
         const target = this._resolveHotkeyView(view);
         const canvas = target?.canvas || this.editor.canvasRenderer?.canvas;
         if (!canvas) {
@@ -182,26 +184,22 @@ export class ViewportOperations extends BaseModule {
             return;
         }
 
-        const zoom = cameraObj.properties?.zoom ?? 1;
-        const centerX = cameraObj.x + cameraObj.width / 2;
-        const centerY = cameraObj.y + cameraObj.height / 2;
-        const patch = {
-            zoom,
-            x: centerX - canvas.width / (2 * zoom),
-            y: centerY - canvas.height / (2 * zoom)
-        };
-
         const vvm = this.editor.viewportViewManager;
         if (vvm && target) {
             vvm.focus(target.leafId);
-            vvm.updateCamera(patch, target.leafId, { unlockGame: true });
-        } else {
-            this.editor.stateManager.update({
-                'camera.zoom': patch.zoom,
-                'camera.x': patch.x,
-                'camera.y': patch.y
-            });
+            // Bind, do not bake into work — pan/zoom must stay on this game camera
+            vvm.setSource(target.leafId, { kind: 'game', objectId: cameraObj.id });
+            return;
         }
+
+        const zoom = cameraObj.properties?.zoom ?? 1;
+        const centerX = cameraObj.x + (cameraObj.width || 0) / 2;
+        const centerY = cameraObj.y + (cameraObj.height || 0) / 2;
+        this.editor.stateManager.update({
+            'camera.zoom': zoom,
+            'camera.x': centerX - canvas.width / (2 * zoom),
+            'camera.y': centerY - canvas.height / (2 * zoom)
+        });
         this.editor.render();
     }
 
@@ -293,7 +291,7 @@ export class ViewportOperations extends BaseModule {
         const vvm = this.editor.viewportViewManager;
         if (vvm && target) {
             vvm.focus(target.leafId);
-            vvm.updateCamera(patch, target.leafId, { unlockGame: true });
+            vvm.updateCamera(patch, target.leafId);
         } else {
             this.editor.stateManager.update({
                 'camera.zoom': patch.zoom,

@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (game-cam pan keep source commit)
+
+- Feature: **VP-OVL** — per-viewport info overlay (DOM HUD): camera source, zoom, active display-flag badges (parallax/boundaries/collisions), level name + objects/layers/selection counts. Toggle via viewport eye menu **Info** (`displayOptions.infoOverlay`, default on). Module: `ViewportInfoOverlay.js`.
+
 ## Archived from CHANGELOG.md (VP-OVL commit)
 
 - Feature: **Game** top-level menu — moved **Play** out of the toolbar into `Game > Play`; added `Game > Build...`, which saves the project and generates `build-game.bat` (via `FileUtils.saveDataDirectly`) that runs `npm run build:game` — browser has no shell/fs access to invoke esbuild itself. Both files need to end up next to `package.json`.

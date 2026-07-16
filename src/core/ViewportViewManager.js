@@ -238,20 +238,23 @@ export class ViewportViewManager {
     }
 
     /**
-     * Write pose into the focused (or given) work view. Game-bound views ignore pan
-     * unless unlockToWork is set (converts source to work first).
+     * Write pose into the focused (or given) view.
+     * Game-bound views keep `source: game` and write into the Camera object
+     * (pan/zoom edits that object — never auto-switch to work). Switch to work
+     * only via `setSource(..., { kind:'work' })` (chrome menu).
      * @param {Partial<CameraPose>} patch
      * @param {string} [leafId]
-     * @param {{ unlockGame?: boolean }} [opts]
+     * @param {{ unlockGame?: boolean }} [opts] - deprecated no-op; kept for call-site compat
      */
-    updateCamera(patch, leafId = null, opts = {}) {
+    updateCamera(patch, leafId = null, _opts = {}) {
         const view = leafId
             ? this.views.get(leafId)
             : this.getFocusedView();
         if (!view) return;
 
         if (view.source?.kind === 'game') {
-            if (!opts.unlockGame) return;
+            if (this._applyPoseToGameCamera(view, patch)) return;
+            // Missing/deleted camera object → fall back to work with baked pose
             const pose = this.resolveGameCameraObject(view.source.objectId, view.canvas)
                 || { ...view.localCamera };
             view.source = { kind: 'work' };
@@ -268,6 +271,46 @@ export class ViewportViewManager {
         if (view.leafId === this.focusedLeafId || this.views.size === 1) {
             this.editor.stateManager?.set('camera', { ...view.localCamera });
         }
+    }
+
+    /**
+     * Inverse of resolveGameCameraObject: viewport pose → camera object center + zoom.
+     * @param {ViewportView} view
+     * @param {Partial<CameraPose>} patch
+     * @returns {boolean} true if applied
+     */
+    _applyPoseToGameCamera(view, patch) {
+        const objectId = view?.source?.objectId;
+        if (!objectId) return false;
+        const obj = this.editor.getCachedObject?.(objectId)
+            || this.editor.level?.findObjectById?.(objectId);
+        if (!obj || obj.type !== 'camera') return false;
+
+        const canvas = view.canvas;
+        const w = canvas?.width || 1;
+        const h = canvas?.height || 1;
+        const cur = this.resolveGameCameraObject(objectId, canvas)
+            || { x: 0, y: 0, zoom: obj.properties?.zoom ?? 1 };
+        let zoom = patch.zoom !== undefined ? patch.zoom : (obj.properties?.zoom ?? cur.zoom ?? 1);
+        if (!zoom || zoom <= 0) zoom = 1;
+        const x = patch.x !== undefined ? patch.x : cur.x;
+        const y = patch.y !== undefined ? patch.y : cur.y;
+
+        const centerX = x + w / (2 * zoom);
+        const centerY = y + h / (2 * zoom);
+        const ow = obj.width || 0;
+        const oh = obj.height || 0;
+        obj.x = centerX - ow / 2;
+        obj.y = centerY - oh / 2;
+        if (!obj.properties) obj.properties = {};
+        obj.properties.zoom = zoom;
+
+        // x/y notify is skipped by DetailsPanel (perf); keeps outliner/gizmo caches coherent
+        this.editor.stateManager?.notifyListeners?.('objectPropertyChanged', obj, {
+            property: 'x',
+            newValue: obj.x
+        });
+        return true;
     }
 
     /**
