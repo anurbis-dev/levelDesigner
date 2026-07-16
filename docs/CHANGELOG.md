@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- Feature **VP-HK**: хоткеи F / A / Grid / Boundaries / Collisions / Parallax (и jump-to-camera) применяются к viewport **под курсором** — `displayOptions` per view + камера leaf, не только primary/global.
+- Feature **VP-EYE**: иконка глаза в шапке viewport — меню Grid/Boundaries/Collisions/Parallax для этого viewport (`ViewportLeafChrome` + `ViewportViewManager.getDisplayFlag/toggleDisplayFlag`, тот же per-view `displayOptions` что и у VP-HK).

@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (VP-HK commit)
+
+- Feature **VP-HK**: хоткеи F / A / Grid / Boundaries / Collisions / Parallax (и jump-to-camera) применяются к viewport **под курсором** — `displayOptions` per view + камера leaf, не только primary/global.
+
 ## Archived from CHANGELOG.md (AS-REN-END commit)
 
 - Fix **AS-REN-END**: клик в пустое место панели Assets (и любой outside click) всегда завершает inline rename — document capture `pointerdown`, не только `blur`.

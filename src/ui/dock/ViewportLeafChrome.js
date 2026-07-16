@@ -9,6 +9,14 @@ import { openTypeFilterMenu, hasActiveTypeFilters } from '../../utils/TypeFilter
 
 const WORK_CAM_COLOR = '#9ca3af';
 
+/** VP-EYE: per-view display-flag menu entries (ViewportViewManager.DISPLAY_FLAG_KEYS). */
+const DISPLAY_MENU_ITEMS = [
+    { key: 'showGrid', label: 'Grid' },
+    { key: 'objectBoundaries', label: 'Boundaries' },
+    { key: 'objectCollisions', label: 'Collisions' },
+    { key: 'parallax', label: 'Parallax' }
+];
+
 /** @type {{ hover: boolean, root: HTMLElement|null, kind: string|null, menu: HTMLElement|null }} */
 const chromeMenuState = {
     hover: false,
@@ -134,8 +142,27 @@ export function buildViewportHeaderControls(node, levelEditor) {
         openChromeKind(wrap, 'filter', filterBtn, node.id, levelEditor);
     });
 
+    const eyeBtn = document.createElement('button');
+    eyeBtn.type = 'button';
+    eyeBtn.className = 'icon-btn viewport-eye-btn';
+    eyeBtn.title = 'View: grid / boundaries / collisions / parallax (this viewport)';
+    eyeBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3">
+        <path d="M1 8s2.6-5 7-5 7 5 7 5-2.6 5-7 5-7-5-7-5z"/>
+        <circle cx="8" cy="8" r="2" fill="currentColor" stroke="none"/>
+    </svg>`;
+    eyeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openChromeKind(wrap, 'eye', eyeBtn, node.id, levelEditor);
+    });
+    eyeBtn.addEventListener('mouseenter', () => {
+        if (!chromeMenuState.hover || chromeMenuState.root !== wrap) return;
+        if (chromeMenuState.kind === 'eye' && chromeMenuState.menu) return;
+        openChromeKind(wrap, 'eye', eyeBtn, node.id, levelEditor);
+    });
+
     wrap.appendChild(camBtn);
     wrap.appendChild(filterBtn);
+    wrap.appendChild(eyeBtn);
     syncViewportChromeState(wrap, node.id, levelEditor);
     return wrap;
 }
@@ -160,6 +187,8 @@ function openChromeKind(root, kind, anchor, leafId, levelEditor) {
 
     if (kind === 'cam') {
         openCameraSourceMenu(anchor, leafId, levelEditor, root);
+    } else if (kind === 'eye') {
+        openViewportDisplayMenu(anchor, leafId, levelEditor, root);
     } else {
         openViewportTypeFilterMenu(anchor, leafId, levelEditor, root);
     }
@@ -193,6 +222,17 @@ export function syncViewportChromeState(chrome, leafId, levelEditor) {
         filterBtn.title = filterOn
             ? 'Type filter active (this viewport)'
             : 'Object type filter (this viewport only)';
+    }
+    const eyeBtn = chrome.querySelector('.viewport-eye-btn');
+    if (eyeBtn) {
+        const hasOverride = DISPLAY_MENU_ITEMS.some(({ key }) => {
+            const v = view.displayOptions?.[key];
+            return v === true || v === false;
+        });
+        eyeBtn.classList.toggle('viewport-chrome-active', hasOverride);
+        eyeBtn.title = hasOverride
+            ? 'View overrides active (this viewport)'
+            : 'View: grid / boundaries / collisions / parallax (this viewport)';
     }
     if (camBtn) {
         const isGame = view.source?.kind === 'game';
@@ -336,4 +376,50 @@ function openViewportTypeFilterMenu(anchor, leafId, levelEditor, chromeRoot) {
     if (menu) {
         registerChromeMenu(menu, chromeRoot || anchor.closest('.viewport-leaf-chrome'), 'filter');
     }
+}
+
+/**
+ * VP-EYE: per-view display-flag menu (grid / boundaries / collisions / parallax).
+ * Mirrors TypeFilterMenu UX — each click toggles and applies immediately, menu stays open.
+ * @param {HTMLElement} anchor
+ * @param {string} leafId
+ * @param {object} levelEditor
+ * @param {HTMLElement} [chromeRoot]
+ */
+function openViewportDisplayMenu(anchor, leafId, levelEditor, chromeRoot) {
+    const vvm = levelEditor.viewportViewManager;
+    if (!vvm) return;
+    const view = vvm.getView(leafId);
+    if (!view) return;
+
+    const menu = MenuPositioningUtils.createMenuElement({ className: 'p-2 viewport-eye-menu' });
+    const posOpts = { alignment: 'right', direction: 'below', menuWidth: 180, menuHeight: 160 };
+    MenuPositioningUtils.showMenu(menu, anchor, posOpts);
+    registerChromeMenu(menu, chromeRoot || anchor.closest('.viewport-leaf-chrome'), 'eye');
+
+    const refreshChecks = () => {
+        menu.querySelectorAll('[data-display-key]').forEach((row) => {
+            const key = row.dataset.displayKey;
+            const input = row.querySelector('input');
+            if (input) input.checked = vvm.getDisplayFlag(view, key);
+        });
+    };
+
+    DISPLAY_MENU_ITEMS.forEach(({ key, label }) => {
+        const item = MenuPositioningUtils.createMenuItem({
+            text: label,
+            checked: vvm.getDisplayFlag(view, key)
+        });
+        item.dataset.displayKey = key;
+        item.addEventListener('click', (e) => {
+            e.stopPropagation();
+            vvm.toggleDisplayFlag(view, key);
+            refreshChecks();
+            const chrome = anchor.closest('.viewport-leaf-chrome');
+            if (chrome) syncViewportChromeState(chrome, leafId, levelEditor);
+        });
+        menu.appendChild(item);
+    });
+
+    MenuPositioningUtils.repositionMenu(menu, anchor, posOpts);
 }
