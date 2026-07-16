@@ -67,7 +67,7 @@ export class DockContentRegistry {
     }
 
     /**
-     * Closeable: any viewport leaf when ≥2 viewports exist (including primary).
+     * Closeable: any viewport leaf when ≥2 exist (VP-EQ — shell is not privileged).
      * Sole remaining viewport stays non-closeable.
      * @param {string} contentType
      * @param {string} [leafId]
@@ -79,11 +79,12 @@ export class DockContentRegistry {
         if (model && typeof model.countLeavesByType === 'function') {
             return model.countLeavesByType('viewport') > 1;
         }
-        // Fallback without model: non-primary copies only
-        const b = this._byLeafId.get(leafId);
-        if (b) return !b.isPrimary;
-        const primaryId = this._primaryLeafIdByType.get('viewport');
-        return !!(primaryId && primaryId !== leafId);
+        // Fallback without model: count live viewport bindings
+        let n = 0;
+        for (const b of this._byLeafId.values()) {
+            if (b.contentType === 'viewport') n += 1;
+        }
+        return n > 1;
     }
 
     /**
@@ -159,9 +160,24 @@ export class DockContentRegistry {
             && this._byLeafId.get(primaryId).isPrimary;
 
         const existing = this._byLeafId.get(node.id);
+        /** @type {{ localCamera?: object, displayOptions?: object, typeFilters?: Set<string>, source?: object }|null} */
+        let promoteCarry = null;
         if (existing && existing.contentType === 'viewport' && existing.root) {
-            // Promote former copy to primary when primary leaf was closed
+            // Promote former copy to shell when shell leaf was closed (VP-EQ: keep pose/display)
             if (!primaryAlive && !existing.isPrimary) {
+                const prevView = this.levelEditor?.viewportViewManager?.getView(node.id);
+                if (prevView) {
+                    promoteCarry = {
+                        localCamera: prevView.localCamera ? { ...prevView.localCamera } : null,
+                        displayOptions: prevView.displayOptions
+                            ? { ...prevView.displayOptions }
+                            : null,
+                        typeFilters: prevView.typeFilters
+                            ? new Set(prevView.typeFilters)
+                            : null,
+                        source: prevView.source ? { ...prevView.source } : null
+                    };
+                }
                 destroyPanelCopy(existing);
                 this._byLeafId.delete(node.id);
                 // fall through to claim primary shell
@@ -191,7 +207,7 @@ export class DockContentRegistry {
                 panel: null
             });
             this._attachRoot(root, bodyEl, 'viewport', node.id);
-            this._ensurePrimaryViewportView(node, root);
+            this._ensurePrimaryViewportView(node, root, promoteCarry);
             this._scheduleViewportResize();
             return;
         }
@@ -213,11 +229,12 @@ export class DockContentRegistry {
     }
 
     /**
-     * Register primary shell with ViewportViewManager (idempotent / rebind leaf id).
+     * Register shell viewport with ViewportViewManager (idempotent / rebind leaf id).
      * @param {object} node
      * @param {HTMLElement} root
+     * @param {{ localCamera?: object, displayOptions?: object, typeFilters?: Set, source?: object }|null} [carry]
      */
-    _ensurePrimaryViewportView(node, root) {
+    _ensurePrimaryViewportView(node, root, carry = null) {
         const vvm = this.levelEditor?.viewportViewManager;
         if (!vvm) return;
 
@@ -232,7 +249,7 @@ export class DockContentRegistry {
             return;
         }
 
-        // Drop stale primary registration under a different leaf id
+        // Drop stale shell registration under a different leaf id
         const prevPrimary = vvm.getPrimaryView();
         if (prevPrimary && prevPrimary.leafId !== node.id) {
             vvm.unregisterView(prevPrimary.leafId);
@@ -243,15 +260,18 @@ export class DockContentRegistry {
             this.levelEditor.canvasRenderer.setTarget(canvas);
         }
 
-        // Re-register (registerView replaces same leafId)
+        const existing = vvm.getView(node.id);
+        // Re-register (registerView replaces same leafId); carry preserves promote state
         vvm.registerView({
             leafId: node.id,
             isPrimary: true,
             root: root || measure,
             measureEl: measure,
             canvas,
-            source: { kind: 'work' },
-            typeFilters: vvm.getView(node.id)?.typeFilters || new Set()
+            source: carry?.source || existing?.source || { kind: 'work' },
+            localCamera: carry?.localCamera || existing?.localCamera || undefined,
+            typeFilters: carry?.typeFilters || existing?.typeFilters || new Set(),
+            displayOptions: carry?.displayOptions || existing?.displayOptions || undefined
         });
     }
 

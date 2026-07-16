@@ -136,7 +136,7 @@ export class ViewportOperations extends BaseModule {
         if (view) return view;
         const vvm = this.editor.viewportViewManager;
         if (!vvm) return null;
-        return vvm.getViewUnderCursor() || vvm.getFocusedView() || vvm.getPrimaryView();
+        return vvm.getViewUnderCursor() || vvm.getFocusedView() || vvm.getAnyView?.() || null;
     }
 
     /**

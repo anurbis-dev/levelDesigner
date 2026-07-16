@@ -27,6 +27,7 @@
 - ✅ **VP-HK** — hotkeys F/A/Grid/Boundaries/Collisions/Parallax → viewport under cursor
 - ✅ **VP-EYE** — eye icon in viewport header: per-view Grid/Boundaries/Collisions/Parallax menu
 - ✅ **VP-TB** — toolbar copies paired with viewport copies (View toggles + Focus per leaf)
+- ✅ **VP-EQ** — viewport peers: no primary display authority; last leaf only non-closeable
 
 ---
 

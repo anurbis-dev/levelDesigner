@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- Feature **VP-TB**: копии Toolbar для копий viewport (`DockPanelFactory` + `Toolbar` isCopy/viewLeafId) — View toggles и Focus/Focus All работают на paired leaf; File/Edit/Group/Play/Snap глобальные; `refreshViewportToolbars` + sync hide/show с View→Toolbar.
+- Fix **VP-EQ**: viewport leaves equal for display/filter/work camera — `setDisplayFlag` no longer writes global state; each view owns seeded `displayOptions`; work pose always `localCamera` (focused mirrors to level-save camera); menu/hotkeys target under-cursor/focused/any; last viewport only non-closeable; promote-to-shell carries pose/display/filters.

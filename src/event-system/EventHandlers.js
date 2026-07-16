@@ -701,17 +701,29 @@ export class EventHandlers extends BaseModule {
         }
     }
 
+    /**
+     * Display flags that are per-viewport (VP-EQ) — menu routes through scoped path.
+     * @param {string} option
+     * @returns {boolean}
+     */
+    _isViewportDisplayOption(option) {
+        return option === 'grid'
+            || option === 'objectBoundaries'
+            || option === 'objectCollisions'
+            || option === 'parallax';
+    }
+
     toggleViewOption(option) {
+        // VP-EQ: Grid/Boundaries/Collisions/Parallax are never global multi-view stomps
+        if (this._isViewportDisplayOption(option)) {
+            this.toggleViewOptionScoped(option);
+            return;
+        }
+
         let currentState, newState, stateKey, configKey;
         
-        if (option === 'grid') {
-            // Grid uses canvas.showGrid as single source of truth
-            currentState = this.editor.stateManager.get('canvas.showGrid') || false;
-            newState = !currentState;
-            stateKey = 'canvas.showGrid';
-            configKey = 'canvas.showGrid';
-        } else if (option === 'snapToGrid') {
-            // Snap to grid uses canvas.snapToGrid as primary storage
+        if (option === 'snapToGrid') {
+            // Snap to grid uses canvas.snapToGrid as primary storage (editor-global)
             currentState = this.editor.stateManager.get('canvas.snapToGrid') || false;
             newState = !currentState;
             stateKey = 'canvas.snapToGrid';
@@ -741,33 +753,62 @@ export class EventHandlers extends BaseModule {
     }
 
     /**
-     * Viewport under cursor for view-scoped hotkeys (VP-HK).
+     * Target viewport for view-scoped UI (VP-HK / VP-EQ).
+     * Under cursor → focused → any peer.
      * @returns {object|null}
      */
     _hotkeyTargetView() {
         const vvm = this.editor.viewportViewManager;
         if (!vvm?.views?.size) return null;
-        return vvm.getViewUnderCursor();
+        return vvm.getViewUnderCursor()
+            || vvm.getFocusedView()
+            || vvm.getAnyView?.()
+            || null;
     }
 
     /**
-     * Toggle a view-display option on the viewport under the cursor (VP-HK).
-     * Falls back to global toggleViewOption when multi-view is unavailable.
+     * Toggle a view-display option on one viewport only (VP-EQ peers).
+     * Falls back to global state only when multi-view is unavailable.
      * @param {'grid'|'objectBoundaries'|'objectCollisions'|'parallax'} option
      */
     toggleViewOptionScoped(option) {
         const vvm = this.editor.viewportViewManager;
         const view = this._hotkeyTargetView();
         if (vvm && view) {
-            vvm.toggleDisplayFlag(view, option);
-            // Menu reflects primary effective flag; per-view toolbars refresh via setDisplayFlag.
-            const primary = vvm.getPrimaryView() || view;
-            this.updateViewCheckbox(option, vvm.getDisplayFlag(primary, option));
+            const next = vvm.toggleDisplayFlag(view, option);
+            // Menu checkbox reflects the view that was toggled (not a "main" leaf)
+            this.updateViewCheckbox(option, next);
             document.querySelectorAll('#menu-file > div, #menu-view > div, #menu-settings > div')
                 .forEach(d => d.classList.add('hidden'));
             return;
         }
-        this.toggleViewOption(option);
+        // No multi-view registry yet — legacy single-canvas path
+        this._toggleViewOptionGlobal(option);
+    }
+
+    /**
+     * Legacy global toggle for display flags when VVM has no views.
+     * @param {'grid'|'objectBoundaries'|'objectCollisions'|'parallax'} option
+     */
+    _toggleViewOptionGlobal(option) {
+        let currentState, newState, stateKey, configKey;
+        if (option === 'grid') {
+            currentState = this.editor.stateManager.get('canvas.showGrid') || false;
+            newState = !currentState;
+            stateKey = 'canvas.showGrid';
+            configKey = 'canvas.showGrid';
+        } else {
+            currentState = this.editor.stateManager.get(`view.${option}`) || false;
+            newState = !currentState;
+            stateKey = `view.${option}`;
+            configKey = `editor.view.${option}`;
+        }
+        this.editor.stateManager.set(stateKey, newState);
+        this.editor.configManager.set(configKey, newState);
+        this.updateViewCheckbox(option, newState);
+        this.applyViewOption(option, newState);
+        document.querySelectorAll('#menu-file > div, #menu-view > div, #menu-settings > div')
+            .forEach(d => d.classList.add('hidden'));
     }
 
     /**

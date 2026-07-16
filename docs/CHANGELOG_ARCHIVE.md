@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (VP-TB commit)
+
+- Feature **VP-TB**: копии Toolbar для копий viewport (`DockPanelFactory` + `Toolbar` isCopy/viewLeafId) — View toggles и Focus/Focus All работают на paired leaf; File/Edit/Group/Play/Snap глобальные; `refreshViewportToolbars` + sync hide/show с View→Toolbar.
+
 ## Archived from CHANGELOG.md (VP-EYE commit)
 
 - Feature **VP-EYE**: иконка глаза в шапке viewport — меню Grid/Boundaries/Collisions/Parallax для этого viewport (`ViewportLeafChrome` + `ViewportViewManager.getDisplayFlag/toggleDisplayFlag`, тот же per-view `displayOptions` что и у VP-HK).

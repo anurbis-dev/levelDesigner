@@ -83,7 +83,8 @@ export class Toolbar {
         const vvm = this.levelEditor?.viewportViewManager;
         if (!vvm) return null;
         if (this.viewLeafId) return vvm.getView(this.viewLeafId) || null;
-        return vvm.getPrimaryView() || null;
+        // Shell toolbar: dock shell leaf if present, else focused/any peer
+        return vvm.getPrimaryView() || vvm.getFocusedView() || vvm.getAnyView?.() || null;
     }
 
     /**
@@ -530,7 +531,8 @@ export class Toolbar {
             if (vvm && view) {
                 const next = vvm.toggleDisplayFlag(view, displayKey);
                 this.updateToggleButtonState(action, next);
-                if (view.isPrimary && this.levelEditor.eventHandlers) {
+                // Menu checkbox = this view (no privileged shell)
+                if (this.levelEditor.eventHandlers) {
                     const menuOpt = displayKey === 'showGrid' ? 'grid' : displayKey;
                     this.levelEditor.eventHandlers.updateViewCheckbox(menuOpt, next);
                 }

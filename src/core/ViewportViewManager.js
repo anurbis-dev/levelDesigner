@@ -8,7 +8,11 @@
  *   A view can bind source { kind:'game', objectId } and follow that object pose.
  *
  * Shared across all views: level data, layers, selection, assets.
- * Per view: camera source, resolved pose, object-type display filters, display options.
+ * Per view: camera source, local pose, object-type display filters, display options.
+ *
+ * Equality (VP-EQ): all leaves are peers for display/filter/camera pose.
+ * `isPrimary` only marks the dock shell that hosts legacy #main-canvas DOM —
+ * not settings authority. Last remaining viewport is non-closeable; any other may close.
  */
 import { Logger } from '../utils/Logger.js';
 import { bindSecondaryViewportNav, unbindSecondaryViewportNav } from './ViewportViewNav.js';
@@ -25,10 +29,10 @@ import { refreshAllViewportChrome } from '../ui/dock/ViewportLeafChrome.js';
  * @property {HTMLElement} measureEl - size host for canvas
  * @property {HTMLCanvasElement} canvas
  * @property {CameraSource} source
- * @property {CameraPose} localCamera - used when source.kind === 'work' && !isPrimary
+ * @property {CameraPose} localCamera - work-camera pose for this leaf (all views; peers)
  * @property {Set<string>} typeFilters - empty = all types; 'DISABLE_ALL' = none
- * @property {{ showGrid?: boolean|null, objectBoundaries?: boolean|null, objectCollisions?: boolean|null, parallax?: boolean|null }} displayOptions
- *   null/undefined = inherit global view/canvas flags
+ * @property {{ showGrid: boolean, objectBoundaries: boolean, objectCollisions: boolean, parallax: boolean }} displayOptions
+ *   fully owned per view (never live-inherit global after seed)
  * @property {ResizeObserver|null} resizeObserver
  */
 
@@ -83,10 +87,11 @@ export class ViewportViewManager {
             this.unregisterView(leafId);
         }
 
-        const primaryCam = this._readPrimaryCamera();
+        const seedCam = this._readSavedCamera();
         /** @type {ViewportView} */
         const view = {
             leafId,
+            // Shell marker only (legacy #main-canvas host) — not display/filter authority
             isPrimary: !!opts.isPrimary,
             root: opts.root,
             measureEl: opts.measureEl,
@@ -94,11 +99,14 @@ export class ViewportViewManager {
             source: opts.source || keepSource || { kind: 'work' },
             localCamera: opts.localCamera
                 ? { ...opts.localCamera }
-                : (keepLocal ? { ...keepLocal } : { x: primaryCam.x, y: primaryCam.y, zoom: primaryCam.zoom }),
+                : (keepLocal ? { ...keepLocal } : { x: seedCam.x, y: seedCam.y, zoom: seedCam.zoom }),
             typeFilters: opts.typeFilters instanceof Set
                 ? new Set(opts.typeFilters)
                 : (keepFilters ? new Set(keepFilters) : new Set()),
-            displayOptions: opts.displayOptions || prev?.displayOptions || {},
+            // Independent snapshot — never live-link to global state after create
+            displayOptions: this._seedDisplayOptions(
+                opts.displayOptions || prev?.displayOptions || null
+            ),
             resizeObserver: null
         };
 
@@ -106,6 +114,8 @@ export class ViewportViewManager {
         view.canvas.classList.add('viewport-view-canvas');
         if (view.isPrimary) {
             view.canvas.dataset.viewportPrimary = '1';
+        } else {
+            delete view.canvas.dataset.viewportPrimary;
         }
 
         this._bindFocus(view);
@@ -113,11 +123,12 @@ export class ViewportViewManager {
         bindSecondaryViewportNav(this, view);
 
         this.views.set(leafId, view);
-        if (!this.focusedLeafId || view.isPrimary) {
+        // Do not steal focus when rebinding shell leaf
+        if (!this.focusedLeafId || !this.views.has(this.focusedLeafId)) {
             this.focusedLeafId = leafId;
         }
         this.resizeView(leafId);
-        Logger.ui.debug(`ViewportView registered ${leafId} primary=${view.isPrimary}`);
+        Logger.ui.debug(`ViewportView registered ${leafId} shell=${view.isPrimary}`);
         return view;
     }
 
@@ -133,8 +144,7 @@ export class ViewportViewManager {
         unbindSecondaryViewportNav(view);
         this.views.delete(leafId);
         if (this.focusedLeafId === leafId) {
-            const primary = this.getPrimaryView();
-            this.focusedLeafId = primary ? primary.leafId : (this.views.keys().next().value || null);
+            this.focusedLeafId = this.views.keys().next().value || null;
         }
     }
 
@@ -148,7 +158,10 @@ export class ViewportViewManager {
         return this.views.get(leafId) || null;
     }
 
-    /** @returns {ViewportView|null} */
+    /**
+     * Dock shell leaf (hosts legacy #main-canvas). Not settings authority.
+     * @returns {ViewportView|null}
+     */
     getPrimaryView() {
         for (const v of this.views.values()) {
             if (v.isPrimary) return v;
@@ -156,12 +169,17 @@ export class ViewportViewManager {
         return null;
     }
 
+    /** First registered peer (stable fallback when no focus). */
+    getAnyView() {
+        return this.views.values().next().value || null;
+    }
+
     /** @returns {ViewportView|null} */
     getFocusedView() {
         if (this.focusedLeafId && this.views.has(this.focusedLeafId)) {
             return this.views.get(this.focusedLeafId);
         }
-        return this.getPrimaryView();
+        return this.getAnyView();
     }
 
     /**
@@ -173,6 +191,11 @@ export class ViewportViewManager {
         this.views.forEach((v) => {
             v.root?.classList.toggle('viewport-view-focused', v.leafId === leafId);
         });
+        // Persist focused work pose for level save (peers stay independent)
+        const view = this.views.get(leafId);
+        if (view && view.source?.kind !== 'game') {
+            this.editor.stateManager?.set('camera', { ...view.localCamera });
+        }
     }
 
     /**
@@ -184,7 +207,7 @@ export class ViewportViewManager {
         const view = typeof leafIdOrView === 'string'
             ? this.views.get(leafIdOrView)
             : leafIdOrView;
-        if (!view) return this._readPrimaryCamera();
+        if (!view) return this._readSavedCamera();
 
         if (view.source?.kind === 'game' && view.source.objectId) {
             const gameCam = this.resolveGameCameraObject(view.source.objectId, view.canvas);
@@ -192,9 +215,7 @@ export class ViewportViewManager {
             // Missing object → fall back to work pose
         }
 
-        if (view.isPrimary) {
-            return this._readPrimaryCamera();
-        }
+        // All peers store work pose in localCamera (VP-EQ)
         return { ...view.localCamera };
     }
 
@@ -227,22 +248,16 @@ export class ViewportViewManager {
             view.localCamera = { ...pose };
         }
 
-        if (view.isPrimary) {
-            const cam = this._readPrimaryCamera();
-            const next = {
-                x: patch.x !== undefined ? patch.x : cam.x,
-                y: patch.y !== undefined ? patch.y : cam.y,
-                zoom: patch.zoom !== undefined ? patch.zoom : cam.zoom
-            };
-            this.editor.stateManager.set('camera', next);
-            return;
-        }
-
         view.localCamera = {
             x: patch.x !== undefined ? patch.x : view.localCamera.x,
             y: patch.y !== undefined ? patch.y : view.localCamera.y,
             zoom: patch.zoom !== undefined ? patch.zoom : view.localCamera.zoom
         };
+
+        // Level-save camera: mirror focused work view into stateManager (no peer coupling)
+        if (view.leafId === this.focusedLeafId || this.views.size === 1) {
+            this.editor.stateManager?.set('camera', { ...view.localCamera });
+        }
     }
 
     /**
@@ -252,13 +267,13 @@ export class ViewportViewManager {
     setSource(leafId, source) {
         const view = this.views.get(leafId);
         if (!view) return;
-        view.source = source?.kind === 'game'
-            ? { kind: 'game', objectId: source.objectId }
-            : { kind: 'work' };
-        if (view.source.kind === 'work' && !view.isPrimary) {
-            // Keep current on-screen pose when switching back to free work camera
-            const resolved = this.resolveCamera(view);
-            view.localCamera = { ...resolved };
+        if (source?.kind === 'game' && source.objectId) {
+            view.source = { kind: 'game', objectId: source.objectId };
+        } else {
+            // Bake current on-screen pose (game or work) into local work camera
+            const pose = this.resolveCamera(view);
+            view.source = { kind: 'work' };
+            view.localCamera = { ...pose };
         }
         this.editor.render?.();
     }
@@ -333,25 +348,27 @@ export class ViewportViewManager {
     }
 
     /**
-     * Effective display flag: per-view override or global state.
+     * Effective display flag for one view only (VP-EQ: no live global inherit).
      * @param {ViewportView} view
      * @param {'showGrid'|'objectBoundaries'|'objectCollisions'|'parallax'|'grid'} key
      * @returns {boolean}
      */
     getDisplayFlag(view, key) {
         const k = this.normalizeDisplayKey(key);
-        const local = view?.displayOptions?.[k];
-        if (local === true || local === false) return local;
-        if (k === 'showGrid') {
-            return this.editor.stateManager.get('canvas.showGrid')
-                ?? this.editor.level?.settings?.showGrid
-                ?? true;
+        if (!view) return this._defaultDisplayFlag(k);
+        if (!view.displayOptions) {
+            view.displayOptions = this._seedDisplayOptions(null);
         }
-        return !!this.editor.stateManager.get(`view.${k}`);
+        const local = view.displayOptions[k];
+        if (local === true || local === false) return local;
+        // Lazily materialize missing keys so peers never couple through globals
+        const seeded = this._defaultDisplayFlag(k);
+        view.displayOptions[k] = seeded;
+        return seeded;
     }
 
     /**
-     * Set per-view display override. Primary also syncs global state (menu/toolbar).
+     * Set display flag on one view only — never writes global state (VP-EQ).
      * @param {string|ViewportView} leafIdOrView
      * @param {string} key
      * @param {boolean} value
@@ -363,24 +380,13 @@ export class ViewportViewManager {
         if (!view) return;
         const k = this.normalizeDisplayKey(key);
         if (!DISPLAY_FLAG_KEYS.has(k)) return;
-        if (!view.displayOptions) view.displayOptions = {};
+        if (!view.displayOptions) view.displayOptions = this._seedDisplayOptions(null);
         view.displayOptions[k] = !!value;
 
-        // Primary keeps global/menu in sync (menu + primary toolbar inheritance).
-        if (view.isPrimary) {
-            if (k === 'showGrid') {
-                this.editor.stateManager?.set('canvas.showGrid', !!value);
-                this.editor.configManager?.set('canvas.showGrid', !!value);
-            } else {
-                this.editor.stateManager?.set(`view.${k}`, !!value);
-                this.editor.configManager?.set(`editor.view.${k}`, !!value);
-            }
-        }
         this.editor.render?.();
-        // VP-TB: eye/hotkey/toolbar toggles keep all paired toolbars + chrome in sync
         refreshAllViewportChrome(this.editor);
-        // All toolbars: primary global sync may affect copies that still inherit flags
-        this.editor.refreshViewportToolbars?.();
+        // Only the paired toolbar for this leaf + primary shell toolbar states
+        this.editor.refreshViewportToolbars?.(view.leafId);
     }
 
     /**
@@ -437,7 +443,7 @@ export class ViewportViewManager {
         const hit = this.viewFromClientPoint(mouse?.x, mouse?.y);
         if (hit) return hit;
         if (!fallback) return null;
-        return this.getFocusedView() || this.getPrimaryView();
+        return this.getFocusedView() || this.getAnyView();
     }
 
     /**
@@ -499,8 +505,8 @@ export class ViewportViewManager {
         if (!canvas) return null;
         const id = canvas.dataset.viewportLeafId;
         if (id && this.views.has(id)) return this.views.get(id);
-        // main-canvas without dataset yet
-        return this.getPrimaryView();
+        // main-canvas without dataset yet → shell leaf if any
+        return this.getPrimaryView() || this.getAnyView();
     }
 
     destroy() {
@@ -514,7 +520,46 @@ export class ViewportViewManager {
 
     // --- internals ---
 
+    /**
+     * Defaults for seeding a new view's displayOptions (snapshot, not a live link).
+     * @param {string} k
+     * @returns {boolean}
+     */
+    _defaultDisplayFlag(k) {
+        if (k === 'showGrid') {
+            return this.editor?.stateManager?.get('canvas.showGrid')
+                ?? this.editor?.level?.settings?.showGrid
+                ?? true;
+        }
+        return !!this.editor?.stateManager?.get(`view.${k}`);
+    }
+
+    /**
+     * Full independent displayOptions object for a view.
+     * @param {object|null} partial
+     * @returns {{ showGrid: boolean, objectBoundaries: boolean, objectCollisions: boolean, parallax: boolean }}
+     */
+    _seedDisplayOptions(partial) {
+        const base = {
+            showGrid: this._defaultDisplayFlag('showGrid'),
+            objectBoundaries: this._defaultDisplayFlag('objectBoundaries'),
+            objectCollisions: this._defaultDisplayFlag('objectCollisions'),
+            parallax: this._defaultDisplayFlag('parallax')
+        };
+        if (partial && typeof partial === 'object') {
+            for (const k of DISPLAY_FLAG_KEYS) {
+                if (partial[k] === true || partial[k] === false) base[k] = partial[k];
+            }
+        }
+        return base;
+    }
+
+    /** @deprecated use _readSavedCamera — name kept for any external callers */
     _readPrimaryCamera() {
+        return this._readSavedCamera();
+    }
+
+    _readSavedCamera() {
         const cam = this.editor?.stateManager?.get('camera');
         return {
             x: cam?.x ?? 0,

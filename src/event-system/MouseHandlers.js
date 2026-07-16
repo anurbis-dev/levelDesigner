@@ -53,7 +53,7 @@ export class MouseHandlers extends BaseModule {
         if (this._interactionViewLeafId) {
             return vvm.getView(this._interactionViewLeafId) || null;
         }
-        return vvm.getFocusedView() || vvm.getPrimaryView();
+        return vvm.getFocusedView() || vvm.getAnyView?.() || vvm.getPrimaryView();
     }
 
     /** @returns {{x:number,y:number,zoom:number}} */
