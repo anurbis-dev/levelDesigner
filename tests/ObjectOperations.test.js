@@ -113,3 +113,30 @@ describe('ObjectOperations.toggleObjectVisibility (characterization)', () => {
         expect(grandchild.visible).toBe(false);
     });
 });
+
+describe('ObjectOperations.ensurePlayerStartExists', () => {
+    // Regression: the auto-created object must carry a playerStart component, not just the
+    // right `type` — Scene.findPlayerStartEntity() (src/engine/Scene.js) resolves entities by
+    // component (`getSpawnPosition`), and GameEngine only spawns a controllable player from
+    // that. Without it, Play-in-editor rendered only the static lightblue marker (bug fixed
+    // alongside FileManager.createNewLevel(), same root cause).
+    it('attaches a playerStart component to the auto-created object', () => {
+        const objects = [];
+        const editor = {
+            level: { objects, addObject: (obj) => objects.push(obj), getStats: () => ({ byType: { player_start: 1 } }) },
+            cachedLevelStats: { byType: {} },
+            historyManager: { isUndoing: false, isRedoing: false, saveState: () => {} },
+            stateManager: { get: () => null },
+            invalidateObjectCaches: () => {},
+            render: () => {}
+        };
+        editor.objectOperations = new ObjectOperations(editor);
+
+        editor.objectOperations.ensurePlayerStartExists();
+
+        expect(objects).toHaveLength(1);
+        expect(objects[0].components).toEqual([
+            expect.objectContaining({ type: 'playerStart', enabled: true })
+        ]);
+    });
+});
