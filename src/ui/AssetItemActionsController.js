@@ -1,10 +1,11 @@
 import { Logger } from '../utils/Logger.js';
 import { AssetContextMenu } from './AssetContextMenu.js';
 import { AssetPanelContextMenu } from './AssetPanelContextMenu.js';
+import { UniversalDialog } from './UniversalDialog.js';
 
 /**
  * Context-menu/click actions for AssetPanel — context menu wiring, item click/double-click,
- * asset open/rename/duplicate/delete stubs.
+ * asset open / rename / duplicate / delete.
  * Extracted from AssetPanel.js — context menus / open / explorer.
  * Note: onSaveAsset/onSaveAssetChanges/onShowInExplorer and the panel-context-menu callbacks
  * (reset size, toggle view, refresh, settings, select/deselect all) call back into AssetPanel
@@ -13,6 +14,35 @@ import { AssetPanelContextMenu } from './AssetPanelContextMenu.js';
 export class AssetItemActionsController {
     constructor(assetPanel) {
         this.assetPanel = assetPanel;
+    }
+
+    _assetManager() {
+        return this.assetPanel.assetManager || this.assetPanel.levelEditor?.assetManager;
+    }
+
+    _notifyAssetsChanged() {
+        const sm = this.assetPanel.stateManager;
+        if (!sm) return;
+        sm.set('assetsChanged', Date.now());
+        sm.notify('assetsChanged');
+    }
+
+    _selectedAssetIds() {
+        const raw = this.assetPanel.stateManager.get(
+            this.assetPanel.uiStateKey('selectedAssets')
+        );
+        if (raw instanceof Set) return raw;
+        if (Array.isArray(raw)) return new Set(raw);
+        return new Set();
+    }
+
+    _uniqueAssetName(baseName) {
+        const am = this._assetManager();
+        const names = new Set((am?.getAllAssets() || []).map((a) => a.name));
+        if (!names.has(baseName)) return baseName;
+        let i = 2;
+        while (names.has(`${baseName} ${i}`)) i += 1;
+        return `${baseName} ${i}`;
     }
 
     /**
@@ -78,30 +108,118 @@ export class AssetItemActionsController {
     }
 
     /**
-     * Handle asset rename
-     * @param {Object} asset - The asset to rename
+     * Handle asset rename (in-memory + dirty flag; file rename via Save).
+     * @param {Object} asset
      */
-    handleAssetRename(asset) {
-        Logger.ui.debug('Renaming asset:', asset.name);
-        // TODO: Implement asset rename functionality
+    async handleAssetRename(asset) {
+        if (!asset) return;
+        const am = this._assetManager();
+        if (!am) {
+            Logger.ui.warn('Rename: AssetManager unavailable');
+            return;
+        }
+
+        const entered = await UniversalDialog.prompt('Rename asset', asset.name);
+        if (entered == null) return;
+        const newName = String(entered).trim();
+        if (!newName || newName === asset.name) return;
+
+        const ok = am.updateAsset(asset.id, { name: newName });
+        if (!ok) {
+            Logger.ui.warn('Rename failed:', asset.id);
+            return;
+        }
+        this._notifyAssetsChanged();
+        Logger.ui.info(`Renamed asset → "${newName}"`);
     }
 
     /**
-     * Handle asset duplicate
-     * @param {Object} asset - The asset to duplicate
+     * Handle asset duplicate — new id, unique name, marked temporary/unsaved.
+     * @param {Object} asset
      */
     handleAssetDuplicate(asset) {
-        Logger.ui.debug('Duplicating asset:', asset.name);
-        // TODO: Implement asset duplicate functionality
+        if (!asset) return;
+        const am = this._assetManager();
+        if (!am) {
+            Logger.ui.warn('Duplicate: AssetManager unavailable');
+            return;
+        }
+
+        const data = asset.toJSON ? asset.toJSON() : { ...asset };
+        delete data.id;
+        const copyName = this._uniqueAssetName(`${asset.name} Copy`);
+        data.name = copyName;
+
+        const dir = data.path && data.path.includes('/')
+            ? data.path.slice(0, data.path.lastIndexOf('/'))
+            : (data.category || 'Misc');
+        data.path = `${dir}/${copyName.replace(/[/\\]/g, '-')}.json`;
+
+        data.properties = {
+            ...(data.properties || {}),
+            isTemporary: true,
+            hasUnsavedChanges: true,
+            lastModified: Date.now(),
+            duplicatedFrom: asset.id
+        };
+        if (Array.isArray(data.tags)) {
+            data.tags = [...data.tags, 'duplicated'];
+        } else {
+            data.tags = ['duplicated'];
+        }
+        if (Array.isArray(data.components)) {
+            data.components = data.components.map((c) => ({
+                ...c,
+                properties: { ...(c.properties || {}) }
+            }));
+        }
+
+        const clone = am.addExternalAsset(data);
+        const selKey = this.assetPanel.uiStateKey('selectedAssets');
+        this.assetPanel.stateManager.set(selKey, new Set([clone.id]));
+        this._notifyAssetsChanged();
+        Logger.ui.info(`Duplicated asset: ${asset.name} → ${clone.name}`);
     }
 
     /**
-     * Handle asset delete
-     * @param {Object} asset - The asset to delete
+     * Handle asset delete (+ multi if target is in selection). Confirm; in-memory only.
+     * @param {Object} asset
      */
-    handleAssetDelete(asset) {
-        Logger.ui.debug('Deleting asset:', asset.name);
-        // TODO: Implement asset delete functionality
+    async handleAssetDelete(asset) {
+        if (!asset) return;
+        const am = this._assetManager();
+        if (!am) {
+            Logger.ui.warn('Delete: AssetManager unavailable');
+            return;
+        }
+
+        const selected = this._selectedAssetIds();
+        const ids = (selected.has(asset.id) && selected.size > 1)
+            ? Array.from(selected)
+            : [asset.id];
+
+        const message = ids.length > 1
+            ? `Delete ${ids.length} assets from the library? This cannot be undone (in-memory; files on disk are not removed).`
+            : `Delete asset "${asset.name}" from the library? This cannot be undone (in-memory; files on disk are not removed).`;
+
+        const confirmed = await confirm(message);
+        if (!confirmed) return;
+
+        let removed = 0;
+        for (const id of ids) {
+            if (am.removeAsset(id)) removed += 1;
+        }
+
+        const nextSel = new Set([...selected].filter((id) => !ids.includes(id)));
+        this.assetPanel.stateManager.set(
+            this.assetPanel.uiStateKey('selectedAssets'),
+            nextSel
+        );
+
+        // Level is not dirty from library edit, but surface library change for UI.
+        this.assetPanel.stateManager.set('assetsLibraryDirty', true);
+        this._notifyAssetsChanged();
+        Logger.ui.info(`Deleted ${removed} asset(s) from library`);
     }
 
     /**

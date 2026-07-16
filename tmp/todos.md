@@ -34,9 +34,9 @@
 
 | # | Задача | Файлы / заметки |
 |---|--------|-----------------|
-| A1 | Реализовать **rename** ассета | stub `AssetItemActionsController` TODO |
-| A2 | Реализовать **duplicate** ассета | stub там же |
-| A3 | Реализовать **delete** ассета (+ confirm, dirty) | stub там же |
+| ✅ A1 | Реализовать **rename** ассета | `AssetItemActionsController.handleAssetRename` + UniversalDialog.prompt |
+| ✅ A2 | Реализовать **duplicate** ассета | clone via `addExternalAsset`, temp+unsaved, unique name |
+| ✅ A3 | Реализовать **delete** ассета (+ confirm, dirty) | multi if in selection; confirm; in-memory; `assetsLibraryDirty` |
 | A4 | «Open / edit asset» (если нужен отдельный editor, не только ActorProperties) | stub «asset editor» |
 | A5 | Toolbar **panel settings** для Assets | `AssetToolbarController` TODO |
 

@@ -2,6 +2,10 @@
 
 Р—Р°РїРёСЃРё, РїРµСЂРµРЅРµСЃС‘РЅРЅС‹Рµ РёР· `CHANGELOG.md` РїСЂРё РєРѕРјРјРёС‚Р°С… (СЃРј. `git log` РґР»СЏ С‚РѕС‡РЅС‹С… РґРёС„С„РѕРІ). РђРєС‚СѓР°Р»СЊРЅС‹Р№ РЅРµРѕРїСѓР±Р»РёРєРѕРІР°РЅРЅС‹Р№ СЂР°Р·СЂРµР· вЂ” РІ `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (B1 parallax fix)
+
+- Fix (B1): `ParallaxRenderer.getParallaxOffset` — shift = `cameraOffset × parallaxOffset` (было `× (1 + offset)`: любой ненулевой offset давал ~2× скорость и разрыв с offset=0). Скорость слоя = `1 + offset` (−0.8 far, 0 none, 0.5 near, −1 screen-fixed). Docs: `USER_MANUAL` UI layer −1, not 0.
+
 ## Archived from CHANGELOG.md (pre B1 parallax fix)
 
 - Chore: cleared obsolete `tmp/*` (refactor/dock/perf/multi-level plans, prototype, one-off check scripts); kept only `tmp/2D_Editor_ENGINE_PLAN.md` for parallel engine work.
