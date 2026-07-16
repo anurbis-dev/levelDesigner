@@ -315,12 +315,26 @@ export class Toolbar {
      */
     render() {
         this.container.innerHTML = '';
+        this.container.style.display = 'flex';
+        this.container.classList.add('toolbar-shell');
 
-        this.container.style.display = this.isVisible ? 'flex' : 'none';
+        // Reveal control: visible only when this toolbar instance is hidden (per-copy Hide)
+        const revealBtn = document.createElement('button');
+        revealBtn.type = 'button';
+        revealBtn.className = 'toolbar-reveal-btn';
+        revealBtn.textContent = '▼';
+        revealBtn.title = 'Show toolbar';
+        revealBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.setVisible(true);
+        });
+        this.container.appendChild(revealBtn);
+        this.revealBtn = revealBtn;
         
         // Create toolbar content with horizontal scrolling
         const toolbarContent = document.createElement('div');
-        toolbarContent.className = 'flex items-center space-x-2 overflow-x-auto scrollbar-hide';
+        toolbarContent.className = 'flex items-center space-x-2 overflow-x-auto scrollbar-hide toolbar-content';
         toolbarContent.style.cssText = `
             overflow-x: auto;
             overflow-y: hidden;
@@ -374,6 +388,7 @@ export class Toolbar {
         
         // Store reference to toolbar content for scrolling
         this.toolbarContent = toolbarContent;
+        this.syncVisibilityUi();
         
         // Apply current display settings immediately
         this.updateButtonDisplay();
@@ -396,11 +411,12 @@ export class Toolbar {
      */
     createButtonGroup(title, buttons) {
         const group = document.createElement('div');
-        group.className = 'flex items-center space-x-1';
+        group.className = 'flex items-center space-x-1 toolbar-button-group';
+        group.dataset.section = title;
         
-        // Add collapsible title
+        // Section title (click collapses) — arrow is a separate control to the right
         const titleSpan = document.createElement('span');
-        titleSpan.className = 'text-xs mr-2 cursor-pointer select-none';
+        titleSpan.className = 'toolbar-section-title text-xs cursor-pointer select-none';
         titleSpan.style.color = 'var(--ui-text-color, #9ca3af)';
         titleSpan.addEventListener('mouseenter', () => {
             titleSpan.style.color = 'var(--ui-text-color, #d1d5db)';
@@ -410,15 +426,27 @@ export class Toolbar {
         });
         titleSpan.textContent = title;
         titleSpan.setAttribute('data-collapsed', 'false');
-        
-        // Add click handler for collapsing/expanding
         titleSpan.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            this.toggleGroupCollapse(titleSpan, group);
+            this.toggleGroupCollapse(group);
+        });
+        
+        // Expand arrow — right of title, hidden while expanded
+        const expandBtn = document.createElement('button');
+        expandBtn.type = 'button';
+        expandBtn.className = 'toolbar-section-expand';
+        expandBtn.textContent = '▼';
+        expandBtn.title = `Expand ${title}`;
+        expandBtn.setAttribute('aria-label', `Expand ${title}`);
+        expandBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.expandGroup(group);
         });
         
         group.appendChild(titleSpan);
+        group.appendChild(expandBtn);
         
         // Add buttons container
         const buttonsContainer = document.createElement('div');
@@ -791,17 +819,11 @@ export class Toolbar {
     }
 
     /**
-     * Set toolbar visibility
+     * Set toolbar visibility for this instance only (shell stays for reveal ▼).
      */
     setVisible(visible) {
-        this.isVisible = visible;
-        if (this.container) {
-            if (visible) {
-                this.container.style.display = 'flex';
-            } else {
-                this.container.style.display = 'none';
-            }
-        }
+        this.isVisible = !!visible;
+        this.syncVisibilityUi();
 
         // Resize canvas to adapt to new available space (primary shell)
         if (!this.isCopy && this.levelEditor?.canvasRenderer) {
@@ -813,6 +835,23 @@ export class Toolbar {
         }
 
         this.saveState();
+    }
+
+    /**
+     * Show toolbar content vs compact reveal strip (per-instance Hide).
+     */
+    syncVisibilityUi() {
+        if (this.container) {
+            this.container.style.display = 'flex';
+            this.container.classList.toggle('toolbar-is-hidden', !this.isVisible);
+        }
+        if (this.toolbarContent) {
+            this.toolbarContent.style.display = this.isVisible ? 'flex' : 'none';
+        }
+        if (this.revealBtn) {
+            this.revealBtn.style.display = this.isVisible ? 'none' : 'inline-flex';
+            this.revealBtn.setAttribute('aria-hidden', this.isVisible ? 'true' : 'false');
+        }
     }
 
     /**
@@ -841,11 +880,12 @@ export class Toolbar {
 
         // Save collapsed sections state
         const collapsedSections = {};
-        const groups = this.container.querySelectorAll('[data-collapsed]');
-        groups.forEach(titleSpan => {
-            const sectionName = titleSpan.textContent.replace('▼', '').trim();
-            const isCollapsed = titleSpan.getAttribute('data-collapsed') === 'true';
-            collapsedSections[sectionName] = isCollapsed;
+        this.container.querySelectorAll('.toolbar-button-group').forEach(group => {
+            const sectionName = group.dataset.section
+                || group.querySelector('.toolbar-section-title')?.textContent?.trim();
+            if (!sectionName) return;
+            const titleSpan = group.querySelector('.toolbar-section-title');
+            collapsedSections[sectionName] = titleSpan?.getAttribute('data-collapsed') === 'true';
         });
 
         // Toolbar state saved
@@ -916,24 +956,13 @@ export class Toolbar {
         if (!this.levelEditor || !this.levelEditor.configManager) return;
 
         const collapsedSections = this.levelEditor.configManager.get('toolbar.collapsedSections') || {};
-        const groups = this.container.querySelectorAll('[data-collapsed]');
-
-        groups.forEach(titleSpan => {
-            const sectionName = titleSpan.textContent.replace('▼', '').trim();
-            const isCollapsed = collapsedSections[sectionName];
-
-            if (typeof isCollapsed === 'boolean' && isCollapsed) {
-                const group = titleSpan.parentElement;
-                const buttonsContainer = group.querySelector('[data-buttons-container="true"]');
-
-                if (buttonsContainer) {
-                    buttonsContainer.style.display = 'none';
-                    titleSpan.setAttribute('data-collapsed', 'true');
-                    titleSpan.textContent = '▼ ' + sectionName;
-                }
+        this.container.querySelectorAll('.toolbar-button-group').forEach(group => {
+            const sectionName = group.dataset.section
+                || group.querySelector('.toolbar-section-title')?.textContent?.trim();
+            if (sectionName && collapsedSections[sectionName]) {
+                this.collapseGroup(group, { persist: false });
             }
         });
-
     }
 
     /**
@@ -1182,29 +1211,51 @@ export class Toolbar {
     }
 
     /**
-     * Toggle group collapse/expand
+     * Toggle group collapse/expand (title click).
+     * @param {HTMLElement} group
      */
-    toggleGroupCollapse(titleSpan, group) {
+    toggleGroupCollapse(group) {
+        const titleSpan = group?.querySelector?.('.toolbar-section-title');
+        if (!titleSpan) return;
         const isCollapsed = titleSpan.getAttribute('data-collapsed') === 'true';
-        const buttonsContainer = group.querySelector('[data-buttons-container="true"]');
-        const sectionName = titleSpan.textContent.replace('▼', '').trim();
-        
-        if (isCollapsed) {
-            // Expand group
-            buttonsContainer.style.display = 'flex';
-            titleSpan.setAttribute('data-collapsed', 'false');
-            titleSpan.textContent = sectionName;
-        } else {
-            // Collapse group
-            buttonsContainer.style.display = 'none';
-            titleSpan.setAttribute('data-collapsed', 'true');
-            titleSpan.textContent = '▼ ' + sectionName;
-        }
+        if (isCollapsed) this.expandGroup(group);
+        else this.collapseGroup(group);
+    }
 
-        // Save collapsed state
-        this.saveCollapsedState(sectionName, !isCollapsed);
-        
-        Logger.ui.debug(`Toolbar group ${isCollapsed ? 'expanded' : 'collapsed'}`);
+    /**
+     * Collapse section buttons; show expand ▼ to the right of title.
+     * @param {HTMLElement} group
+     * @param {{ persist?: boolean }} [opts]
+     */
+    collapseGroup(group, opts = {}) {
+        const titleSpan = group?.querySelector?.('.toolbar-section-title');
+        const buttonsContainer = group?.querySelector?.('[data-buttons-container="true"]');
+        if (!titleSpan || !buttonsContainer) return;
+        const sectionName = group.dataset.section || titleSpan.textContent.trim();
+        buttonsContainer.style.display = 'none';
+        titleSpan.setAttribute('data-collapsed', 'true');
+        titleSpan.textContent = sectionName;
+        group.classList.add('is-collapsed');
+        if (opts.persist !== false) this.saveCollapsedState(sectionName, true);
+        Logger.ui.debug(`Toolbar group collapsed: ${sectionName}`);
+    }
+
+    /**
+     * Expand section buttons; hide expand ▼.
+     * @param {HTMLElement} group
+     * @param {{ persist?: boolean }} [opts]
+     */
+    expandGroup(group, opts = {}) {
+        const titleSpan = group?.querySelector?.('.toolbar-section-title');
+        const buttonsContainer = group?.querySelector?.('[data-buttons-container="true"]');
+        if (!titleSpan || !buttonsContainer) return;
+        const sectionName = group.dataset.section || titleSpan.textContent.trim();
+        buttonsContainer.style.display = 'flex';
+        titleSpan.setAttribute('data-collapsed', 'false');
+        titleSpan.textContent = sectionName;
+        group.classList.remove('is-collapsed');
+        if (opts.persist !== false) this.saveCollapsedState(sectionName, false);
+        Logger.ui.debug(`Toolbar group expanded: ${sectionName}`);
     }
 
     /**
@@ -1360,17 +1411,14 @@ export class Toolbar {
     }
 
     /**
-     * Hide toolbar
+     * Hide this toolbar instance only (not global view.toolbar / sibling copies).
      */
     hideToolbar() {
-        this.stateManager.set('view.toolbar', false);
-        // Update menu checkbox to reflect toolbar state
-        this.levelEditor.eventHandlers.updateViewCheckbox('toolbar', false);
-        // Close context menu after hiding toolbar
+        this.setVisible(false);
         if (this.contextMenu) {
             this.contextMenu.hideMenu();
         }
-        Logger.ui.debug('Toolbar hidden via context menu');
+        Logger.ui.debug('Toolbar hidden via context menu (instance only)');
     }
 
     /**

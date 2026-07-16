@@ -4,6 +4,6 @@
 
 ## [Unreleased]
 
-- View menu: remove Viewport toggle (last viewport leaf cannot be closed).
-- View menu Grid / Boundaries / Collisions / Parallax apply to all viewport copies (`setDisplayFlagAll`); eye menu, paired toolbar, and hotkeys stay per-view.
-- Outliner context menu: remove Select; Toggle Visibility uses selection (same as H / `toggleVisibilityForSelection`).
+- Toolbar RMB **Hide**: per-instance only (does not set global `view.toolbar` / other viewport toolbar copies).
+- Toolbar: when instance hidden, compact **▼** reveal strip restores that toolbar only.
+- Toolbar section titles: expand **▼** is a separate control to the right of the title (hidden while expanded; shown when section collapsed).
