@@ -27,10 +27,13 @@ import { refreshAllViewportChrome } from '../ui/dock/ViewportLeafChrome.js';
  * @property {CameraSource} source
  * @property {CameraPose} localCamera - used when source.kind === 'work' && !isPrimary
  * @property {Set<string>} typeFilters - empty = all types; 'DISABLE_ALL' = none
- * @property {{ showGrid?: boolean|null, objectBoundaries?: boolean|null, objectCollisions?: boolean|null }} displayOptions
+ * @property {{ showGrid?: boolean|null, objectBoundaries?: boolean|null, objectCollisions?: boolean|null, parallax?: boolean|null }} displayOptions
  *   null/undefined = inherit global view/canvas flags
  * @property {ResizeObserver|null} resizeObserver
  */
+
+/** @type {ReadonlySet<string>} */
+const DISPLAY_FLAG_KEYS = new Set(['showGrid', 'objectBoundaries', 'objectCollisions', 'parallax']);
 
 export class ViewportViewManager {
     /**
@@ -320,20 +323,117 @@ export class ViewportViewManager {
     }
 
     /**
+     * Normalize hotkey/menu option names to displayOptions keys.
+     * @param {string} key
+     * @returns {'showGrid'|'objectBoundaries'|'objectCollisions'|'parallax'|string}
+     */
+    normalizeDisplayKey(key) {
+        if (key === 'grid' || key === 'showGrid') return 'showGrid';
+        return key;
+    }
+
+    /**
      * Effective display flag: per-view override or global state.
      * @param {ViewportView} view
-     * @param {'showGrid'|'objectBoundaries'|'objectCollisions'} key
+     * @param {'showGrid'|'objectBoundaries'|'objectCollisions'|'parallax'|'grid'} key
      * @returns {boolean}
      */
     getDisplayFlag(view, key) {
-        const local = view?.displayOptions?.[key];
+        const k = this.normalizeDisplayKey(key);
+        const local = view?.displayOptions?.[k];
         if (local === true || local === false) return local;
-        if (key === 'showGrid') {
+        if (k === 'showGrid') {
             return this.editor.stateManager.get('canvas.showGrid')
                 ?? this.editor.level?.settings?.showGrid
                 ?? true;
         }
-        return !!this.editor.stateManager.get(`view.${key}`);
+        return !!this.editor.stateManager.get(`view.${k}`);
+    }
+
+    /**
+     * Set per-view display override. Primary also syncs global state (menu/toolbar).
+     * @param {string|ViewportView} leafIdOrView
+     * @param {string} key
+     * @param {boolean} value
+     */
+    setDisplayFlag(leafIdOrView, key, value) {
+        const view = typeof leafIdOrView === 'string'
+            ? this.views.get(leafIdOrView)
+            : leafIdOrView;
+        if (!view) return;
+        const k = this.normalizeDisplayKey(key);
+        if (!DISPLAY_FLAG_KEYS.has(k)) return;
+        if (!view.displayOptions) view.displayOptions = {};
+        view.displayOptions[k] = !!value;
+
+        // Primary keeps global/menu/toolbar in sync (single source for non-scoped UI).
+        if (view.isPrimary) {
+            if (k === 'showGrid') {
+                this.editor.stateManager?.set('canvas.showGrid', !!value);
+                this.editor.configManager?.set('canvas.showGrid', !!value);
+            } else {
+                this.editor.stateManager?.set(`view.${k}`, !!value);
+                this.editor.configManager?.set(`editor.view.${k}`, !!value);
+            }
+        }
+        this.editor.render?.();
+    }
+
+    /**
+     * Toggle effective display flag on a view (materializes override).
+     * @param {string|ViewportView} leafIdOrView
+     * @param {string} key
+     * @returns {boolean} new value
+     */
+    toggleDisplayFlag(leafIdOrView, key) {
+        const view = typeof leafIdOrView === 'string'
+            ? this.views.get(leafIdOrView)
+            : leafIdOrView;
+        if (!view) return false;
+        const next = !this.getDisplayFlag(view, key);
+        this.setDisplayFlag(view, key, next);
+        return next;
+    }
+
+    /**
+     * Hit-test viewport leaves (root → measureEl → canvas) at client coordinates.
+     * Prefer smaller rect when overlapping (float over dock).
+     * @param {number} clientX
+     * @param {number} clientY
+     * @returns {ViewportView|null}
+     */
+    viewFromClientPoint(clientX, clientY) {
+        if (typeof clientX !== 'number' || typeof clientY !== 'number') return null;
+        /** @type {ViewportView|null} */
+        let hit = null;
+        let bestArea = Infinity;
+        for (const view of this.views.values()) {
+            const el = view.root || view.measureEl || view.canvas;
+            if (!el?.getBoundingClientRect) continue;
+            const r = el.getBoundingClientRect();
+            if (r.width <= 0 || r.height <= 0) continue;
+            if (clientX < r.left || clientX > r.right || clientY < r.top || clientY > r.bottom) continue;
+            const area = r.width * r.height;
+            if (area < bestArea) {
+                bestArea = area;
+                hit = view;
+            }
+        }
+        return hit;
+    }
+
+    /**
+     * Viewport under last known mouse client pos (VP-HK), else focused/primary.
+     * @param {{ fallback?: boolean }} [opts] fallback default true
+     * @returns {ViewportView|null}
+     */
+    getViewUnderCursor(opts = {}) {
+        const fallback = opts.fallback !== false;
+        const mouse = this.editor.stateManager?.get('mouse');
+        const hit = this.viewFromClientPoint(mouse?.x, mouse?.y);
+        if (hit) return hit;
+        if (!fallback) return null;
+        return this.getFocusedView() || this.getPrimaryView();
     }
 
     /**

@@ -998,17 +998,17 @@ export class LevelEditor {
         }
     }
 
-    // Delegate methods to appropriate modules
-    focusOnSelection() {
-        this.viewportOperations.focusOnSelection();
+    // Delegate methods to appropriate modules (optional view = VP-HK target)
+    focusOnSelection(view = null) {
+        this.viewportOperations.focusOnSelection(view);
     }
 
-    focusOnAll() {
-        this.viewportOperations.focusOnAll();
+    focusOnAll(view = null) {
+        this.viewportOperations.focusOnAll(view);
     }
 
-    jumpToCamera() {
-        this.viewportOperations.jumpToCamera();
+    jumpToCamera(view = null) {
+        this.viewportOperations.jumpToCamera(view);
     }
 
     deleteSelectedObjects() {

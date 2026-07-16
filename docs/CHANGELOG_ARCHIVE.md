@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (AS-REN-END commit)
+
+- Fix **AS-REN-END**: клик в пустое место панели Assets (и любой outside click) всегда завершает inline rename — document capture `pointerdown`, не только `blur`.
+
 ## Archived from CHANGELOG.md (engine Фаза 3 commit)
 
 - Feat (engine Фаза 3): Play-in-editor — `src/core/PlayOperations.js` сериализует текущий уровень через `ProjectExporter.export()`, валидирует наличие Player Start (`editor.getPlayerStartCount()`), поднимает `GameEngine` в fullscreen-overlay canvas (вне `ViewportViewManager`/`RenderOperations`, чтобы не конкурировать с editor-рендером); toolbar-кнопка Play/Stop (`toggle-play`), `Esc` останавливает через `EventHandlers.handleKeyDown` (`playMode`-guard блокирует остальные editor-хоткеи во время игры). Без Input/player-controller — сознательно отложено на отдельный шаг.

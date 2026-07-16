@@ -109,13 +109,8 @@ export class ParallaxRenderer {
      *   the right level's own layer tree instead of the current level's)
      */
     renderParallaxObjects(visibleObjects, camera, level = this.editor.level) {
-        if (!this.isParallaxEnabled()) {
-            // Fallback to normal rendering
-            visibleObjects.forEach(obj => {
-                this.editor.canvasRenderer.drawObject(obj);
-            });
-            return;
-        }
+        // Caller decides whether parallax applies (global or per-view VP-HK flag).
+        // Do not re-check view.parallax here — secondary leaves may override globally off.
 
         const cameraOffset = this.getCameraOffset(camera);
 

@@ -458,8 +458,11 @@ export class RenderOperations extends BaseModule {
             }
             totalVisibleCount += levelSortedObjects.length;
 
-            // Check if parallax mode is enabled
-            if (this.parallaxRenderer.isParallaxEnabled()) {
+            // Parallax: per-view displayOptions when multi-viewport (VP-HK), else global
+            const parallaxEnabled = view && vvm
+                ? vvm.getDisplayFlag(view, 'parallax')
+                : this.parallaxRenderer.isParallaxEnabled();
+            if (parallaxEnabled) {
                 // For parallax, we need to convert back to simple objects for compatibility
                 const soloFiltered = (isCurrent && soloedTopLevelObjectId)
                     ? levelSortedObjects.filter(item => item.obj.id === soloedTopLevelObjectId)

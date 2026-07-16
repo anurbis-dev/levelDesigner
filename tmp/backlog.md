@@ -5,7 +5,6 @@
 
 ## Open
 
-- хоткеи F, A, Grid, Boundaries, Collisions, Parallax должны учитывать панель вьюпорта под курсором
 - в шапку вьюпорта добавить иконку глаза (View) в меню которой можно выбрать отображение разных состояний вьюпорта (коллизии, и прочее)
 - добавить копии тулбара для копий вьюпорта работающие в паре.
 - хоткеи F должен срабатывать над аутлайнером и авто-скроллить содержимое что-бы выбранный ассет попал в видимое поле, если возможно. Если выбрано несколько - усреднять.
@@ -17,6 +16,7 @@
 
 ## Closed (архив)
 
+✅ VP-HK — хоткеи F/A/Grid/Boundaries/Collisions/Parallax на viewport под курсором (view-scoped displayOptions + camera)  
 ✅ AS-REN-END — inline rename: клик в пустое / вне input всегда закрывает поле (capture pointerdown)  
 ✅ AS-FAV/MMB — empty favorites «Drop favorite folders here»; MMB closes favorite tab  
 ✅ VP-COL — color/name game camera → live refresh chrome icon (`refreshAllViewportChrome`)  

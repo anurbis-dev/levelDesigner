@@ -24,6 +24,7 @@
 - ✅ **VP-FIL** — active filter icon blue
 - ✅ **AS-FAV / AS-MMB** — empty favorites hint + MMB close tab
 - ✅ **AS-REN-END** — empty/outside click всегда закрывает inline rename (capture pointerdown)
+- ✅ **VP-HK** — hotkeys F/A/Grid/Boundaries/Collisions/Parallax → viewport under cursor
 
 ---
 
@@ -48,7 +49,7 @@
 
 | # | Задача | Заметки / критерий |
 |---|--------|-------------------|
-| **VP-HK** | Хоткеи **F, A, Grid, Boundaries, Collisions, Parallax** — на viewport **под курсором** | не только primary; view-scoped state |
+| ~~**VP-HK**~~ | ✅ Хоткеи F/A/G/Boundaries/Collisions/Parallax — viewport **под курсором** | view-scoped displayOptions + camera |
 | **VP-EYE** | В шапку viewport — иконка **глаза (View)**: меню состояний (collisions, boundaries, grid, parallax, …) | chrome рядом cam/filter |
 | **VP-TB** | Копии **Toolbar** для копий viewport, работающие в паре | multi-view: toolbar ↔ active view |
 
@@ -118,7 +119,7 @@
 
 ## Порядок работ (рекомендуемый)
 
-1. **VP-HK / VP-EYE / VP-TB** — multi-viewport input + chrome + toolbar pair  
+1. **VP-EYE / VP-TB** — multi-viewport chrome + toolbar pair (VP-HK ✅)  
 2. **OL-F** — F over Outliner scroll  
 3. **DK-ICO / DK-CUR / DK-GST / DK-CLP** — dock polish  
 4. **B2** — browser smoke multi-view / Assets×N  

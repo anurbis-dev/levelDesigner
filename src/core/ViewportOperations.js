@@ -101,22 +101,49 @@ export class ViewportOperations extends BaseModule {
     /**
      * Reset canvas view to default position and zoom
      * @param {Object} [defaults] - Default camera settings
+     * @param {object|null} [view] - target ViewportView (VP-HK)
      */
-    resetView(defaults = { x: 0, y: 0, zoom: 1.0 }) {
-        this.editor.stateManager.update({
-            'camera.x': defaults.x,
-            'camera.y': defaults.y,
-            'camera.zoom': defaults.zoom
-        });
+    resetView(defaults = { x: 0, y: 0, zoom: 1.0 }, view = null) {
+        const d = defaults || { x: 0, y: 0, zoom: 1.0 };
+        const patch = {
+            x: d.x ?? 0,
+            y: d.y ?? 0,
+            zoom: d.zoom ?? 1.0
+        };
+        const target = this._resolveHotkeyView(view);
+        const vvm = this.editor.viewportViewManager;
+        if (vvm && target) {
+            vvm.focus(target.leafId);
+            vvm.updateCamera(patch, target.leafId, { unlockGame: true });
+        } else {
+            this.editor.stateManager.update({
+                'camera.x': patch.x,
+                'camera.y': patch.y,
+                'camera.zoom': patch.zoom
+            });
+        }
         this.editor.render();
         
         Logger.viewport.info('View reset to default');
     }
 
     /**
-     * Focus camera on selected objects
+     * Resolve target viewport for F/A/jump (VP-HK: under cursor → focused → primary).
+     * @param {object|null} [view]
+     * @returns {object|null}
      */
-    focusOnSelection() {
+    _resolveHotkeyView(view = null) {
+        if (view) return view;
+        const vvm = this.editor.viewportViewManager;
+        if (!vvm) return null;
+        return vvm.getViewUnderCursor() || vvm.getFocusedView() || vvm.getPrimaryView();
+    }
+
+    /**
+     * Focus camera on selected objects
+     * @param {object|null} [view] - target ViewportView (VP-HK)
+     */
+    focusOnSelection(view = null) {
         const selectedObjects = this.editor.stateManager.get('selectedObjects');
         if (!selectedObjects || selectedObjects.size === 0) {
             Logger.viewport.info('No objects selected to focus on');
@@ -133,7 +160,7 @@ export class ViewportOperations extends BaseModule {
         }
 
         const bounds = this.getSelectionBounds(selection);
-        this.focusOnBounds(bounds);
+        this.focusOnBounds(bounds, 50, view);
         this.editor.render();
         
         Logger.viewport.info(`Focused on ${selection.length} selected objects`);
@@ -145,9 +172,11 @@ export class ViewportOperations extends BaseModule {
      * this does NOT fit-to-bounds; it restores the camera object's own settings,
      * same shape as the viewport camera itself {x, y, zoom}.
      * @param {Object} cameraObj
+     * @param {object|null} [view] - target ViewportView (VP-HK)
      */
-    applyCameraObjectToViewport(cameraObj) {
-        const canvas = this.editor.canvasRenderer?.canvas;
+    applyCameraObjectToViewport(cameraObj, view = null) {
+        const target = this._resolveHotkeyView(view);
+        const canvas = target?.canvas || this.editor.canvasRenderer?.canvas;
         if (!canvas) {
             Logger.viewport.warn('Canvas not available');
             return;
@@ -156,20 +185,32 @@ export class ViewportOperations extends BaseModule {
         const zoom = cameraObj.properties?.zoom ?? 1;
         const centerX = cameraObj.x + cameraObj.width / 2;
         const centerY = cameraObj.y + cameraObj.height / 2;
+        const patch = {
+            zoom,
+            x: centerX - canvas.width / (2 * zoom),
+            y: centerY - canvas.height / (2 * zoom)
+        };
 
-        this.editor.stateManager.update({
-            'camera.zoom': zoom,
-            'camera.x': centerX - canvas.width / (2 * zoom),
-            'camera.y': centerY - canvas.height / (2 * zoom)
-        });
+        const vvm = this.editor.viewportViewManager;
+        if (vvm && target) {
+            vvm.focus(target.leafId);
+            vvm.updateCamera(patch, target.leafId, { unlockGame: true });
+        } else {
+            this.editor.stateManager.update({
+                'camera.zoom': patch.zoom,
+                'camera.x': patch.x,
+                'camera.y': patch.y
+            });
+        }
         this.editor.render();
     }
 
     /**
      * Jump viewport to the selected camera-type object, or the last camera jumped to
      * if nothing is selected. Warns via the status bar when neither is available.
+     * @param {object|null} [view] - target ViewportView (VP-HK)
      */
-    jumpToCamera() {
+    jumpToCamera(view = null) {
         const selectedObjects = this.editor.stateManager.get('selectedObjects');
         const selectedCamera = selectedObjects && selectedObjects.size > 0
             ? Array.from(selectedObjects)
@@ -180,7 +221,7 @@ export class ViewportOperations extends BaseModule {
         const session = this.editor.levelsManager?.getCurrentSession();
 
         if (selectedCamera) {
-            this.applyCameraObjectToViewport(selectedCamera);
+            this.applyCameraObjectToViewport(selectedCamera, view);
             if (session) session.viewState.lastCameraObjectId = selectedCamera.id;
             Logger.viewport.info(`Jumped to camera ${selectedCamera.id}`);
             return;
@@ -189,7 +230,7 @@ export class ViewportOperations extends BaseModule {
         const lastCameraId = session?.viewState.lastCameraObjectId;
         const lastCamera = lastCameraId ? this.editor.getCachedObject(lastCameraId) : null;
         if (lastCamera && lastCamera.type === 'camera') {
-            this.applyCameraObjectToViewport(lastCamera);
+            this.applyCameraObjectToViewport(lastCamera, view);
             Logger.viewport.info(`Jumped to remembered camera ${lastCamera.id}`);
             return;
         }
@@ -199,16 +240,17 @@ export class ViewportOperations extends BaseModule {
 
     /**
      * Focus camera on all objects in the level
+     * @param {object|null} [view] - target ViewportView (VP-HK)
      */
-    focusOnAll() {
+    focusOnAll(view = null) {
         if (!this.editor.level || this.editor.level.objects.length === 0) {
             Logger.viewport.info('No objects in level to focus on');
-            this.resetView();
+            this.resetView(undefined, view);
             return;
         }
 
         const bounds = this.getSelectionBounds(this.editor.level.objects);
-        this.focusOnBounds(bounds);
+        this.focusOnBounds(bounds, 50, view);
         this.editor.render();
         
         Logger.viewport.info(`Focused on all ${this.editor.level.objects.length} objects`);
@@ -218,14 +260,16 @@ export class ViewportOperations extends BaseModule {
      * Focus camera on given bounds (inherited from BaseModule and enhanced)
      * @param {Object} bounds - Bounds to focus on {minX, minY, maxX, maxY}
      * @param {number} [padding=50] - Padding around bounds
+     * @param {object|null} [view] - target ViewportView (VP-HK)
      */
-    focusOnBounds(bounds, padding = 50) {
+    focusOnBounds(bounds, padding = 50, view = null) {
         if (!bounds || bounds.minX === Infinity) {
             Logger.viewport.warn('Invalid bounds for focus');
             return;
         }
-        
-        const canvas = this.editor.canvasRenderer?.canvas;
+
+        const target = this._resolveHotkeyView(view);
+        const canvas = target?.canvas || this.editor.canvasRenderer?.canvas;
         if (!canvas) {
             Logger.viewport.warn('Canvas not available');
             return;
@@ -240,12 +284,23 @@ export class ViewportOperations extends BaseModule {
         const newZoom = Math.max(0.1, Math.min(10, Math.min(zoomX, zoomY)));
         const centerX = bounds.minX + boundsWidth / 2;
         const centerY = bounds.minY + boundsHeight / 2;
-        
-        this.editor.stateManager.update({
-            'camera.zoom': newZoom,
-            'camera.x': centerX - canvas.width / (2 * newZoom),
-            'camera.y': centerY - canvas.height / (2 * newZoom)
-        });
+        const patch = {
+            zoom: newZoom,
+            x: centerX - canvas.width / (2 * newZoom),
+            y: centerY - canvas.height / (2 * newZoom)
+        };
+
+        const vvm = this.editor.viewportViewManager;
+        if (vvm && target) {
+            vvm.focus(target.leafId);
+            vvm.updateCamera(patch, target.leafId, { unlockGame: true });
+        } else {
+            this.editor.stateManager.update({
+                'camera.zoom': patch.zoom,
+                'camera.x': patch.x,
+                'camera.y': patch.y
+            });
+        }
         
         if (Logger.currentLevel <= Logger.LEVELS.DEBUG) {
             Logger.viewport.debug(`Focused on bounds: center(${centerX.toFixed(0)}, ${centerY.toFixed(0)}), zoom: ${newZoom.toFixed(2)}`);

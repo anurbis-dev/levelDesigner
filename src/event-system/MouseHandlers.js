@@ -784,6 +784,14 @@ export class MouseHandlers extends BaseModule {
 
     _handleGlobalMouseMoveImpl(e) {
         const mouse = this.editor.stateManager.get('mouse');
+        // VP-HK: always keep client pos current so view-under-cursor hotkeys hit-test correctly
+        // even when the pointer is only hovering (no canvas mousemove / gesture).
+        if (mouse.x !== e.clientX || mouse.y !== e.clientY) {
+            this.editor.stateManager.update({
+                'mouse.x': e.clientX,
+                'mouse.y': e.clientY
+            });
+        }
         const view = this.getInteractionView();
         const canvas = this.getInteractionCanvas();
         if (!canvas) return;

@@ -361,13 +361,17 @@ export class EventHandlers extends BaseModule {
             this.editor.pasteObjects();
         } else if (this._matchesShortcut(e, 'editor', 'focusSelection')) {
             e.preventDefault();
-            if (typeof this.editor.focusOnSelection === 'function') this.editor.focusOnSelection();
+            // VP-HK: F frames selection on the viewport under the cursor
+            const targetView = this._hotkeyTargetView();
+            if (typeof this.editor.focusOnSelection === 'function') this.editor.focusOnSelection(targetView);
         } else if (this._matchesShortcut(e, 'editor', 'focusAll')) {
             e.preventDefault();
-            if (typeof this.editor.focusOnAll === 'function') this.editor.focusOnAll();
+            const targetView = this._hotkeyTargetView();
+            if (typeof this.editor.focusOnAll === 'function') this.editor.focusOnAll(targetView);
         } else if (this._matchesShortcut(e, 'editor', 'jumpToCamera')) {
             e.preventDefault();
-            if (typeof this.editor.jumpToCamera === 'function') this.editor.jumpToCamera();
+            const targetView = this._hotkeyTargetView();
+            if (typeof this.editor.jumpToCamera === 'function') this.editor.jumpToCamera(targetView);
         } else if (this._matchesShortcut(e, 'editor', 'toggleGrid')) {
             e.preventDefault();
             this.toggleGrid();
@@ -379,7 +383,7 @@ export class EventHandlers extends BaseModule {
             this.editor.ungroupSelectedObjects?.();
         } else if (this._matchesShortcut(e, 'editor', 'toggleParallax')) {
             e.preventDefault();
-            this.toggleViewOption('parallax');
+            this.toggleViewOptionScoped('parallax');
         } else if (this._matchesShortcut(e, 'editor', 'undo')) {
             e.preventDefault();
             if (typeof this.editor.undo === 'function') this.editor.undo();
@@ -461,10 +465,10 @@ export class EventHandlers extends BaseModule {
             this.toggleViewOption('snapToGrid');
         } else if (this._matchesShortcut(e, 'editor', 'toggleObjectBoundaries')) {
             e.preventDefault();
-            this.toggleViewOption('objectBoundaries');
+            this.toggleViewOptionScoped('objectBoundaries');
         } else if (this._matchesShortcut(e, 'editor', 'toggleObjectCollisions')) {
             e.preventDefault();
-            this.toggleViewOption('objectCollisions');
+            this.toggleViewOptionScoped('objectCollisions');
         } else if (this._matchesShortcut(e, 'editor', 'openProjectSettings')) {
             e.preventDefault();
             if (typeof this.editor.openProjectSettings === 'function') this.editor.openProjectSettings();
@@ -737,10 +741,40 @@ export class EventHandlers extends BaseModule {
     }
 
     /**
-     * Toggle grid visibility (hotkey G)
+     * Viewport under cursor for view-scoped hotkeys (VP-HK).
+     * @returns {object|null}
+     */
+    _hotkeyTargetView() {
+        const vvm = this.editor.viewportViewManager;
+        if (!vvm?.views?.size) return null;
+        return vvm.getViewUnderCursor();
+    }
+
+    /**
+     * Toggle a view-display option on the viewport under the cursor (VP-HK).
+     * Falls back to global toggleViewOption when multi-view is unavailable.
+     * @param {'grid'|'objectBoundaries'|'objectCollisions'|'parallax'} option
+     */
+    toggleViewOptionScoped(option) {
+        const vvm = this.editor.viewportViewManager;
+        const view = this._hotkeyTargetView();
+        if (vvm && view) {
+            vvm.toggleDisplayFlag(view, option);
+            // Menu reflects primary effective flag (toolbar still global until VP-TB).
+            const primary = vvm.getPrimaryView() || view;
+            this.updateViewCheckbox(option, vvm.getDisplayFlag(primary, option));
+            document.querySelectorAll('#menu-file > div, #menu-view > div, #menu-settings > div')
+                .forEach(d => d.classList.add('hidden'));
+            return;
+        }
+        this.toggleViewOption(option);
+    }
+
+    /**
+     * Toggle grid visibility (hotkey G) — view under cursor when multi-viewport.
      */
     toggleGrid() {
-        this.toggleViewOption('grid');
+        this.toggleViewOptionScoped('grid');
     }
 
     /**

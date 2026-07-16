@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- Fix **AS-REN-END**: клик в пустое место панели Assets (и любой outside click) всегда завершает inline rename — document capture `pointerdown`, не только `blur`.
+- Feature **VP-HK**: хоткеи F / A / Grid / Boundaries / Collisions / Parallax (и jump-to-camera) применяются к viewport **под курсором** — `displayOptions` per view + камера leaf, не только primary/global.
