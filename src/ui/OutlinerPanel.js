@@ -163,6 +163,18 @@ export class OutlinerPanel extends BasePanel {
             selectedClass: 'selected'
         });
 
+        // Empty space (list padding / below items / panel chrome outside rows) clears selection.
+        // Bound on container so primary + dock copies behave the same; item clicks no-op via closest.
+        this.container.addEventListener('click', (e) => {
+            if (e.button !== 0) return;
+            if (e.target.closest('.outliner-item')) return;
+            if (e.target.closest('input, button, .panel-top-custom, .panel-bottom-custom')) return;
+            const selected = this.stateManager.get('selectedObjects');
+            if (!(selected instanceof Set) || selected.size === 0) return;
+            this.clearSelection();
+            this.stateManager.update({ 'outliner.shiftAnchor': null });
+        });
+
         // Subscribe to level changes
         const unsubscribeLevel = this.stateManager.subscribe('level', () => this.render());
         this.subscriptions.push(unsubscribeLevel);

@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (outliner empty-click deselect)
+
+- Fix: Outliner context menu flicker (open → reselect under cursor → close/reopen) — select target on RMB mousedown before `contextmenu`; do not change selection inside `showContextMenu` (that triggered `updateAllPanels` mid-open).
+
 ## Archived from CHANGELOG.md (outliner context menu flicker)
 
 - Fix: after RMB pan, releasing over panels/UI no longer opens that panel's context menu (`wasPanning` / `suppressContextMenu` capture block + global mouseup finishes pan path).
