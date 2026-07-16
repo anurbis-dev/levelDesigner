@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- **NUM-SCRUB**: Global numeric fields via `src/utils/NumericInput.js` + `styles/numeric-input.css` — no native spinner arrows anywhere (Settings, Grid, Actor Properties, Layers parallax, Details). `createSettingsInput({type:'number'})` / `UIFactory` coerce to scrub text; `NumericInput.wireAll(root)` after render; leftover `type=number` stripped by CSS + wireAll.
+- **C3**: Multiple game cameras — exclusive `properties.isMain` (Details Main; first placed camera auto-main); jump `.` fallback selected→last→main; cycle `]`/`[` binds focused viewport + selects; chrome menu ★ main; gold frustum for main (`FRAME_COLOR_MAIN`).

@@ -71,6 +71,7 @@ export function openCameraSourceMenu(anchor, leafId, levelEditor, chromeRoot) {
     menu.appendChild(sep);
 
     const cameras = vvm.listGameCameraObjects();
+    const mainCam = vvm.getMainCameraObject?.() || null;
     if (cameras.length === 0) {
         const empty = document.createElement('div');
         empty.className = 'text-xs text-gray-400 px-2 py-1';
@@ -78,7 +79,8 @@ export function openCameraSourceMenu(anchor, leafId, levelEditor, chromeRoot) {
         menu.appendChild(empty);
     } else {
         cameras.forEach((cam) => {
-            const name = cam.name || cam.id;
+            const isMain = mainCam && mainCam.id === cam.id;
+            const name = (cam.name || cam.id) + (isMain ? ' ★' : '');
             const color = cam.color || WORK_CAM_COLOR;
             addItem(
                 name,

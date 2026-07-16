@@ -42,7 +42,15 @@
     },
     "jumpToCamera": {
       "key": ".",
-      "description": "Jump viewport to selected/last camera object"
+      "description": "Jump viewport to selected/last/main camera object"
+    },
+    "cycleNextCamera": {
+      "key": "]",
+      "description": "Cycle focused viewport to next game camera"
+    },
+    "cyclePrevCamera": {
+      "key": "[",
+      "description": "Cycle focused viewport to previous game camera"
     },
     "toggleGrid": {
       "key": "G",

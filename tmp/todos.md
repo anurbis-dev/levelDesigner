@@ -48,6 +48,7 @@
 - ✅ **CAM-HIDE** — game-source viewport hides driving camera asset
 - ✅ **DET-LIVE** — Details live transform/camera fields + scrub numerics + live viewport from Details
 - ✅ **NUM-SCRUB** — global NumericInput (Settings/Actor/Layers/Details); no type=number spinners
+- ✅ **C3** — multi camera: Main flag + cycle hotkeys `]`/`[` + jump fallback to main
 
 ---
 
@@ -75,8 +76,8 @@
 |---|--------|---------|
 | ~~C1~~ | ~~Camera view frame~~ | ✅ |
 | ~~C2~~ | ~~Aspect / vignette / letterbox~~ | ✅ |
+| ~~C3~~ | ~~Несколько камер + Main + cycle hotkeys~~ | ✅ |
 
-| C3 | Несколько камер + выбор / хоткей | Level data; play — engine |
 | C4 | Adaptive fit нестандартных aspect | UI preview only |
 
 ---
@@ -115,7 +116,7 @@
 1. ~~VW-NOVP / VW-ALL / OL-CTX~~ ✅  
 2. **B2** — browser smoke multi-view / Assets×N  
 3. ~~C1–C2~~ ✅  
-4. **Q\*** / **D\*** — opportunistically; next product **C3** / **A4–A5**  
+4. **Q\*** / **D\*** — opportunistically; next product **C4** / **A4–A5**  
 
 5. Engine — **не из этого файла**
 

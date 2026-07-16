@@ -1104,6 +1104,11 @@ export class MouseHandlers extends BaseModule {
                     this.editor.level.addObject(newObject, currentLayer ? currentLayer.id : null);
                 }
 
+                // C3: first camera (or when no main) becomes level main
+                if (newObject.type === 'camera') {
+                    this.editor.viewportViewManager?.ensureMainCameraOnPlace?.(newObject);
+                }
+
                 newIds.add(newObject.id);
             }
         });

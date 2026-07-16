@@ -205,7 +205,7 @@ export class ViewportOperations extends BaseModule {
 
     /**
      * Jump viewport to the selected camera-type object, or the last camera jumped to
-     * if nothing is selected. Warns via the status bar when neither is available.
+     * if nothing is selected. Fallback: level main camera, then first camera.
      * @param {object|null} [view] - target ViewportView (VP-HK)
      */
     jumpToCamera(view = null) {
@@ -217,6 +217,7 @@ export class ViewportOperations extends BaseModule {
             : null;
 
         const session = this.editor.levelsManager?.getCurrentSession();
+        const vvm = this.editor.viewportViewManager;
 
         if (selectedCamera) {
             this.applyCameraObjectToViewport(selectedCamera, view);
@@ -233,7 +234,77 @@ export class ViewportOperations extends BaseModule {
             return;
         }
 
+        // C3: main / first camera fallback
+        const mainCam = vvm?.getMainCameraObject?.() || null;
+        if (mainCam) {
+            this.applyCameraObjectToViewport(mainCam, view);
+            if (session) session.viewState.lastCameraObjectId = mainCam.id;
+            Logger.viewport.info(`Jumped to main camera ${mainCam.id}`);
+            return;
+        }
+
         Logger.status.warn('No camera selected — select or place a camera object to jump to it.');
+    }
+
+    /**
+     * C3: cycle focused viewport through level camera objects (±1), bind as game source,
+     * select the camera, remember lastCameraObjectId.
+     * @param {number} [direction=1] - +1 next, -1 previous
+     * @param {object|null} [view] - target ViewportView (VP-HK)
+     */
+    cycleCamera(direction = 1, view = null) {
+        const vvm = this.editor.viewportViewManager;
+        const cameras = vvm?.listGameCameraObjects?.() || [];
+        if (!cameras.length) {
+            Logger.status.warn('No camera objects in level — place a Camera asset to cycle.');
+            return;
+        }
+
+        const target = this._resolveHotkeyView(view);
+        const session = this.editor.levelsManager?.getCurrentSession();
+        const dir = direction < 0 ? -1 : 1;
+
+        // Current index: bound game source → last jumped → main → 0
+        let idx = -1;
+        const boundId = target?.source?.kind === 'game' ? target.source.objectId : null;
+        if (boundId) idx = cameras.findIndex((c) => c.id === boundId);
+        if (idx < 0) {
+            const lastId = session?.viewState?.lastCameraObjectId;
+            if (lastId) idx = cameras.findIndex((c) => c.id === lastId);
+        }
+        if (idx < 0) {
+            const main = vvm.getMainCameraObject?.();
+            if (main) idx = cameras.findIndex((c) => c.id === main.id);
+        }
+        if (idx < 0) idx = 0;
+
+        const nextIdx = (idx + dir + cameras.length) % cameras.length;
+        const cam = cameras[nextIdx];
+        if (!cam) return;
+
+        this.applyCameraObjectToViewport(cam, target || view);
+        if (session) session.viewState.lastCameraObjectId = cam.id;
+
+        // Select for Details / Outliner feedback
+        const sel = new Set([cam.id]);
+        this.editor.stateManager?.set?.('selectedObjects', sel);
+
+        const label = cam.name || cam.id;
+        Logger.viewport.info(`Cycled to camera ${label} (${nextIdx + 1}/${cameras.length})`);
+    }
+
+    /**
+     * @param {object|null} [view]
+     */
+    cycleNextCamera(view = null) {
+        this.cycleCamera(1, view);
+    }
+
+    /**
+     * @param {object|null} [view]
+     */
+    cyclePrevCamera(view = null) {
+        this.cycleCamera(-1, view);
     }
 
     /**

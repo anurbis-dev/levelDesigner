@@ -10,6 +10,7 @@
 
 ## Closed (архив)
 
+✅ C3 — multi camera: `properties.isMain` (Details Main), cycle `]`/`[`, jump fallback main, chrome ★, gold frustum  
 ✅ C2 — aspect presets + letterbox/vignette на game-source viewport; Details Aspect/Resolution/Vignette  
 ✅ C1 — рамка game camera: dashed frustum (design res / zoom) + cross; skip active viewport source  
 ✅ TB-OP — прозрачность подложки тулбара: Settings slider `ui.toolbarBackgroundOpacity` → `--ui-toolbar-background-color`  

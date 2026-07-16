@@ -460,7 +460,9 @@
 - `duplicateSelectedObjects()` - дублирование выделенных объектов
 - `focusOnSelection()` - фокус на выделении (хоткей `F`)
 - `focusOnAll()` - фокус на всех объектах (хоткей `A`)
-- `jumpToCamera()` - прыжок вьюпорта на выбранный/последний объект типа камера (хоткей `.`); если выделенный объект имеет `type === 'camera'`, восстанавливает его сохранённые координаты и zoom (`x + width/2`, `y + height/2`, `properties.zoom ?? 1`) вместо fit-to-bounds, сохраняет его id в `lastCameraObjectId`; если ничего не выбрано, использует запомненный `lastCameraObjectId`; если оба варианта не сработали, показывает warning в статус-баре. Реализация: `ViewportOperations.applyCameraObjectToViewport(cameraObj)` читает zoom из `cameraObj.properties.zoom`
+- `jumpToCamera()` - прыжок вьюпорта на камеру (хоткей `.`); цепочка: selected camera → `lastCameraObjectId` → main (`properties.isMain` / first) → warn. Bind game source + pose via `applyCameraObjectToViewport`
+- `cycleNextCamera()` / `cyclePrevCamera()` - C3, хоткеи `]` / `[`; цикл по `listGameCameraObjects`, bind focused viewport, select camera, update `lastCameraObjectId`
+- `ViewportViewManager.getMainCameraObject()` / `setMainCamera(id, isMain)` — level default camera (`properties.isMain`, exclusive)
 - `toggleObjectVisibility(obj)` - переключение `obj.visible`; каскадом применяется ко всем потомкам, если `obj.type === 'group'`
 - `toggleVisibilityForSelection()` - хоткей `H`, переключает видимость всех выделенных объектов
 - `unhideAllObjects()` - хоткей `Alt+H`, показывает все скрытые объекты на любом уровне вложенности

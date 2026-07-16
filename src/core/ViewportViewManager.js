@@ -361,6 +361,65 @@ export class ViewportViewManager {
     }
 
     /**
+     * C3: level main/default game camera — explicit `properties.isMain`, else first camera.
+     * Used by jump/cycle fallbacks and (later) engine play default.
+     * @returns {object|null}
+     */
+    getMainCameraObject() {
+        const cameras = this.listGameCameraObjects();
+        if (!cameras.length) return null;
+        const explicit = cameras.find((c) => c?.properties?.isMain);
+        return explicit || cameras[0];
+    }
+
+    /**
+     * C3: set exclusive main flag on a camera object (clears others when isMain=true).
+     * @param {string} objectId
+     * @param {boolean} [isMain=true]
+     * @returns {boolean} whether the target camera was found
+     */
+    setMainCamera(objectId, isMain = true) {
+        if (!objectId) return false;
+        const cameras = this.listGameCameraObjects();
+        const target = cameras.find((c) => c.id === objectId);
+        if (!target) return false;
+
+        for (const cam of cameras) {
+            cam.properties = cam.properties || {};
+            if (isMain) {
+                cam.properties.isMain = cam.id === objectId;
+            } else if (cam.id === objectId) {
+                cam.properties.isMain = false;
+            }
+        }
+
+        this.editor.stateManager?.markDirty?.();
+        this.editor.stateManager?.notifyListeners?.('objectPropertyChanged', target, {
+            property: 'properties.isMain',
+            newValue: !!isMain
+        });
+        this.editor.render?.();
+        return true;
+    }
+
+    /**
+     * C3: after placing a camera, mark it main only if it is the sole camera
+     * and none already has `isMain` (does not steal main from older unmarked cams).
+     * @param {object} cameraObj
+     */
+    ensureMainCameraOnPlace(cameraObj) {
+        if (!cameraObj || cameraObj.type !== 'camera') return;
+        cameraObj.properties = cameraObj.properties || {};
+        if (cameraObj.properties.isMain) return;
+        const cameras = this.listGameCameraObjects();
+        if (cameras.some((c) => c?.properties?.isMain)) return;
+        const others = cameras.filter((c) => c.id !== cameraObj.id);
+        if (others.length === 0) {
+            cameraObj.properties.isMain = true;
+        }
+    }
+
+    /**
      * @param {string} objectId
      * @param {HTMLCanvasElement} canvas
      * @returns {CameraPose|null}

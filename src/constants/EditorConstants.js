@@ -64,6 +64,8 @@ export const CAMERA = {
     },
     FRAME_COLOR: 'rgba(56, 189, 248, 0.75)',
     FRAME_COLOR_SELECTED: 'rgba(14, 165, 233, 1)',
+    /** C3: level main camera frustum (when not selected) */
+    FRAME_COLOR_MAIN: 'rgba(250, 204, 21, 0.85)',
     FRAME_WIDTH: 1.5,
     FRAME_DASH: [6, 4],
     LETTERBOX_COLOR: 'rgba(0, 0, 0, 0.62)',

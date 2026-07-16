@@ -1326,6 +1326,7 @@ export class RenderOperations extends BaseModule {
 
         const selected = this.editor.stateManager.get('selectedObjects');
         const activeGameId = view?.source?.kind === 'game' ? view.source.objectId : null;
+        const mainCamId = vvm?.getMainCameraObject?.()?.id || null;
         const visibleLayerIds = this.getVisibleLayerIds();
 
         for (const obj of cameras) {
@@ -1338,8 +1339,12 @@ export class RenderOperations extends BaseModule {
             if (!frame) continue;
 
             const isSelected = selected && selected.has(obj.id);
+            const isMain = mainCamId && obj.id === mainCamId;
+            const frameColor = isSelected
+                ? CAMERA.FRAME_COLOR_SELECTED
+                : (isMain ? CAMERA.FRAME_COLOR_MAIN : CAMERA.FRAME_COLOR);
             this.strokeFrame(frame, camera, {
-                color: isSelected ? CAMERA.FRAME_COLOR_SELECTED : CAMERA.FRAME_COLOR,
+                color: frameColor,
                 width: CAMERA.FRAME_WIDTH,
                 dash: CAMERA.FRAME_DASH
             }, 0);
@@ -1350,7 +1355,7 @@ export class RenderOperations extends BaseModule {
             const cx = (frame.minX + frame.maxX) / 2;
             const cy = (frame.minY + frame.maxY) / 2;
             ctx.save();
-            ctx.strokeStyle = isSelected ? CAMERA.FRAME_COLOR_SELECTED : CAMERA.FRAME_COLOR;
+            ctx.strokeStyle = frameColor;
             ctx.lineWidth = CAMERA.FRAME_WIDTH / camera.zoom;
             ctx.setLineDash([]);
             ctx.beginPath();

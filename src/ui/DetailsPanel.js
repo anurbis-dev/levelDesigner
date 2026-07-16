@@ -311,6 +311,47 @@ export class DetailsPanel {
         const section = this.createSection('Camera');
         obj.properties = obj.properties || {};
 
+        // C3: exclusive main/default camera for level (engine play + jump fallback)
+        const mainRow = document.createElement('div');
+        mainRow.className = 'details-field-row';
+        mainRow.style.cssText = 'display:flex;align-items:center;gap:0.5rem;margin-bottom:0.35rem;';
+        const mainLabel = document.createElement('label');
+        mainLabel.textContent = 'Main';
+        mainLabel.htmlFor = 'details-camera-main';
+        mainLabel.style.cssText = 'flex:0 0 4.5rem;font-size:0.8rem;color:var(--ui-text-color,#9ca3af);';
+        const mainCheck = document.createElement('input');
+        mainCheck.type = 'checkbox';
+        mainCheck.id = 'details-camera-main';
+        mainCheck.checked = !!obj.properties.isMain;
+        // Implicit main: first camera when none marked — show checked for resolved main
+        if (!mainCheck.checked) {
+            const main = this.levelEditor?.viewportViewManager?.getMainCameraObject?.();
+            if (main && main.id === obj.id) {
+                const anyExplicit = (this.levelEditor?.viewportViewManager?.listGameCameraObjects?.() || [])
+                    .some((c) => c?.properties?.isMain);
+                if (!anyExplicit) mainCheck.checked = true;
+            }
+        }
+        mainCheck.addEventListener('change', () => {
+            const vvm = this.levelEditor?.viewportViewManager;
+            if (vvm?.setMainCamera) {
+                vvm.setMainCamera(obj.id, mainCheck.checked);
+            } else {
+                obj.properties.isMain = mainCheck.checked;
+                this.notifyPropertyChange(obj, 'properties.isMain', mainCheck.checked);
+            }
+            // Refresh Details so exclusive main unchecks siblings if multi-select rare
+            this.render();
+            this.levelEditor?.render?.();
+        });
+        const mainHint = document.createElement('span');
+        mainHint.textContent = 'level default';
+        mainHint.style.cssText = 'font-size:0.75rem;color:#6b7280;';
+        mainRow.appendChild(mainLabel);
+        mainRow.appendChild(mainCheck);
+        mainRow.appendChild(mainHint);
+        section._content.appendChild(mainRow);
+
         const zoomRow = this.createDualFieldRow('Zoom', [
             { prefix: 'Z', property: 'zoom', id: 'details-camera-zoom', step: '0.05', nested: true }
         ]);

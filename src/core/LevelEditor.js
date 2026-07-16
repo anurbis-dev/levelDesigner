@@ -1111,6 +1111,16 @@ export class LevelEditor {
         this.viewportOperations.jumpToCamera(view);
     }
 
+    /** C3: next game camera on focused viewport */
+    cycleNextCamera(view = null) {
+        this.viewportOperations.cycleNextCamera(view);
+    }
+
+    /** C3: previous game camera on focused viewport */
+    cyclePrevCamera(view = null) {
+        this.viewportOperations.cyclePrevCamera(view);
+    }
+
     deleteSelectedObjects() {
         // Get selected objects before deletion for cache invalidation
         const selectedObjects = this.stateManager.get('selectedObjects');

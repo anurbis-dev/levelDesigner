@@ -377,6 +377,14 @@ export class EventHandlers extends BaseModule {
             e.preventDefault();
             const targetView = this._hotkeyTargetView();
             if (typeof this.editor.jumpToCamera === 'function') this.editor.jumpToCamera(targetView);
+        } else if (this._matchesShortcut(e, 'editor', 'cycleNextCamera')) {
+            e.preventDefault();
+            const targetView = this._hotkeyTargetView();
+            if (typeof this.editor.cycleNextCamera === 'function') this.editor.cycleNextCamera(targetView);
+        } else if (this._matchesShortcut(e, 'editor', 'cyclePrevCamera')) {
+            e.preventDefault();
+            const targetView = this._hotkeyTargetView();
+            if (typeof this.editor.cyclePrevCamera === 'function') this.editor.cyclePrevCamera(targetView);
         } else if (this._matchesShortcut(e, 'editor', 'toggleGrid')) {
             e.preventDefault();
             this.toggleGrid();
