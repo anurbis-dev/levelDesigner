@@ -476,12 +476,17 @@ export class EventHandlers extends BaseModule {
     }
 
     /**
-     * F2: rename the single selected object inline via the Outliner (see
-     * OutlinerPanel.startInlineRename). Switches to whichever panel side currently hosts the
-     * Outliner tab first, since that method needs the object's row to already be in the DOM
-     * and visible for the user to actually see/use the rename input.
+     * F2: panel under cursor decides target.
+     * - Over Assets → rename selected library asset (AS-F2 / AS-REN inline)
+     * - Otherwise → single selected level object via Outliner.startInlineRename
      */
     renameSelectedObject() {
+        const assetsPanel = this._assetsPanelUnderCursor();
+        if (assetsPanel) {
+            this._renameSelectedAssetInPanel(assetsPanel);
+            return;
+        }
+
         const selectedIds = this.editor.stateManager.get('selectedObjects');
         if (!selectedIds || selectedIds.size !== 1) return;
 
@@ -494,6 +499,49 @@ export class EventHandlers extends BaseModule {
         }
         if (this.editor.outlinerPanel && typeof this.editor.outlinerPanel.startInlineRename === 'function') {
             this.editor.outlinerPanel.startInlineRename(obj);
+        }
+    }
+
+    /**
+     * AssetPanel instance under cursor (primary or dock copy), or null.
+     * Uses CSS :hover so we do not need last-known client coords for F2.
+     * @returns {import('../ui/AssetPanel.js').AssetPanel|null}
+     */
+    _assetsPanelUnderCursor() {
+        const reg = this.editor.dockManager?.contentRegistry;
+        if (reg?._byLeafId) {
+            for (const bind of reg._byLeafId.values()) {
+                if (bind.contentType !== 'assets' || !bind.panel || !bind.root) continue;
+                if (bind.root.matches(':hover')) return bind.panel;
+            }
+        }
+        const primaryRoot = document.getElementById('assets-panel');
+        if (primaryRoot?.matches(':hover') && this.editor.assetPanel) {
+            return this.editor.assetPanel;
+        }
+        return null;
+    }
+
+    /**
+     * F2 over Assets: rename the single selected library asset in that panel instance.
+     * @param {import('../ui/AssetPanel.js').AssetPanel} assetsPanel
+     */
+    _renameSelectedAssetInPanel(assetsPanel) {
+        const key = typeof assetsPanel.uiStateKey === 'function'
+            ? assetsPanel.uiStateKey('selectedAssets')
+            : 'selectedAssets';
+        const raw = this.editor.stateManager.get(key);
+        const selected = raw instanceof Set ? raw : new Set(Array.isArray(raw) ? raw : []);
+        if (selected.size !== 1) return;
+
+        const assetId = Array.from(selected)[0];
+        const asset = this.editor.assetManager?.getAsset?.(assetId)
+            || this.editor.assetManager?.assets?.get?.(assetId);
+        if (!asset) return;
+
+        const ctrl = assetsPanel.itemActionsController;
+        if (ctrl && typeof ctrl.startInlineRename === 'function') {
+            ctrl.startInlineRename(asset);
         }
     }
 

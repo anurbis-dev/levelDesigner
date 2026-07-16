@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- Fix **VP-MMB**: middle-button drag zoom снова работает — canvas внутри dock `.leaf-body` больше не уходит в ScrollUtils pan (`MouseHandlers._shouldDeferMiddleMouseToPanel`).
+- Feat **AS-REN / AS-F2 / AS-DBL**: rename ассета inline (поле имени, без dialog); F2 над Assets → selected library asset; dblclick на имени → rename, на thumbnail → properties.

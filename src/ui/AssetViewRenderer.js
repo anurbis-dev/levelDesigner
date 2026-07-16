@@ -372,9 +372,9 @@ export class AssetViewRenderer {
 
         item.appendChild(previewDiv);
 
-        // Create name with truncation
+        // Create name with truncation (class for inline rename / AS-DBL)
         const nameDiv = document.createElement('div');
-        nameDiv.className = 'flex-1 text-xs truncate text-center';
+        nameDiv.className = 'asset-name-label flex-1 text-xs truncate text-center';
         // Color handled by CSS
         const displayName = asset.properties && asset.properties.isTemporary
             ? `⏳ ${asset.name}`
@@ -442,9 +442,9 @@ export class AssetViewRenderer {
             preview.appendChild(colorDiv);
         }
 
-        // Name column
+        // Name column (class for inline rename / AS-DBL)
         const name = document.createElement('div');
-        name.className = 'text-sm truncate';
+        name.className = 'asset-name-label text-sm truncate';
         // Color handled by CSS
         name.textContent = asset.properties && asset.properties.isTemporary
             ? `⏳ ${asset.name}`

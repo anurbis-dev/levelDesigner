@@ -19,6 +19,7 @@
 - ✅ **A1–A3** — rename (dialog) / duplicate / delete ассета  
   *(A1 dialog — временно; см. **AS-REN** — заменить на inline как Outliner)*
 - ✅ **VP-MMB** — MMB zoom: canvas внутри `.leaf-body` больше не глотает middle-drag
+- ✅ **AS-REN / AS-F2 / AS-DBL** — inline rename ассета; F2 panel-aware; dblclick имени
 
 ---
 
@@ -38,12 +39,9 @@
 
 | # | Задача | Заметки / критерий |
 |---|--------|-------------------|
-| **AS-REN** | Rename **inline** (поле имени), не dialog; убрать prompt-окно A1 | как Outliner; context Rename + F2 + dblclick на имени |
-| **AS-F2** | **F2** с учётом панели под курсором: над Assets → rename ассета в библиотеке | hover panel hit-test; не глобальный rename level-object |
-| **AS-DBL** | Dblclick на **имени** ассета → inline rename | не путать с open properties (dblclick thumbnail?) |
 | **AS-FAV** | Favorites drop-zone: если пусто — серый текст «Drop favorite folders here» | tabs strip empty state |
 | **AS-MMB** | Удаление закладки favorite-folder **средним кликом** | middle-click tab close |
-| A4 | «Open / edit asset» (отдельный editor, если нужен) | stub; ниже AS-REN |
+| A4 | «Open / edit asset» (отдельный editor, если нужен) | stub |
 | A5 | Toolbar **panel settings** для Assets | `AssetToolbarController` TODO |
 
 ### Viewport / multi-view
@@ -120,16 +118,15 @@
 
 ## Порядок работ (рекомендуемый)
 
-1. **AS-REN / AS-F2 / AS-DBL** — inline rename + F2/panel-aware (заменяет dialog A1)  
-2. **VP-COL / VP-FIL** — быстрые viewport chrome баги  
-3. **AS-FAV / AS-MMB** — favorites UX  
-4. **VP-HK / VP-EYE / VP-TB** — multi-viewport input + chrome + toolbar pair  
-5. **OL-F** — F over Outliner scroll  
-6. **DK-ICO / DK-CUR / DK-GST / DK-CLP** — dock polish  
-7. **B2** — browser smoke multi-view / Assets×N  
-8. **U2–U3**, **U4**, **C1–C2** — старый product хвост  
-9. **Q\*** / **D\*** — opportunistically  
-10. Engine — **не из этого файла**
+1. **VP-COL / VP-FIL** — быстрые viewport chrome баги  
+2. **AS-FAV / AS-MMB** — favorites UX  
+3. **VP-HK / VP-EYE / VP-TB** — multi-viewport input + chrome + toolbar pair  
+4. **OL-F** — F over Outliner scroll  
+5. **DK-ICO / DK-CUR / DK-GST / DK-CLP** — dock polish  
+6. **B2** — browser smoke multi-view / Assets×N  
+7. **U2–U3**, **U4**, **C1–C2** — старый product хвост  
+8. **Q\*** / **D\*** — opportunistically  
+9. Engine — **не из этого файла**
 
 ---
 

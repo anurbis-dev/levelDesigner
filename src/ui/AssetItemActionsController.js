@@ -1,7 +1,6 @@
 import { Logger } from '../utils/Logger.js';
 import { AssetContextMenu } from './AssetContextMenu.js';
 import { AssetPanelContextMenu } from './AssetPanelContextMenu.js';
-import { UniversalDialog } from './UniversalDialog.js';
 
 /**
  * Context-menu/click actions for AssetPanel — context menu wiring, item click/double-click,
@@ -14,6 +13,8 @@ import { UniversalDialog } from './UniversalDialog.js';
 export class AssetItemActionsController {
     constructor(assetPanel) {
         this.assetPanel = assetPanel;
+        /** @type {string|null} asset id while inline rename input is open */
+        this._renamingAssetId = null;
     }
 
     _assetManager() {
@@ -108,29 +109,131 @@ export class AssetItemActionsController {
     }
 
     /**
-     * Handle asset rename (in-memory + dirty flag; file rename via Save).
+     * Handle asset rename — inline name field (Outliner/Layers style), not a dialog.
      * @param {Object} asset
      */
-    async handleAssetRename(asset) {
-        if (!asset) return;
+    handleAssetRename(asset) {
+        this.startInlineRename(asset);
+    }
+
+    /**
+     * Activate inline rename on the asset row/thumbnail name in this panel instance.
+     * @param {Object} asset
+     */
+    startInlineRename(asset) {
+        if (!asset?.id) return;
         const am = this._assetManager();
         if (!am) {
             Logger.ui.warn('Rename: AssetManager unavailable');
             return;
         }
 
-        const entered = await UniversalDialog.prompt('Rename asset', asset.name);
-        if (entered == null) return;
-        const newName = String(entered).trim();
-        if (!newName || newName === asset.name) return;
+        const container = this.assetPanel.container;
+        if (!container) return;
 
-        const ok = am.updateAsset(asset.id, { name: newName });
-        if (!ok) {
-            Logger.ui.warn('Rename failed:', asset.id);
+        // Already editing this asset
+        if (this._renamingAssetId === asset.id
+            && container.querySelector(`.asset-name-input[data-asset-id="${asset.id}"]`)) {
+            const existing = container.querySelector(`.asset-name-input[data-asset-id="${asset.id}"]`);
+            existing?.focus();
+            existing?.select();
             return;
         }
-        this._notifyAssetsChanged();
-        Logger.ui.info(`Renamed asset → "${newName}"`);
+
+        const item = container.querySelector(`[data-asset-id="${CSS.escape(asset.id)}"]`);
+        if (!item) {
+            Logger.ui.warn('Rename: asset row not in DOM', asset.id);
+            return;
+        }
+
+        const nameEl = item.querySelector('.asset-name-label');
+        if (!nameEl) {
+            Logger.ui.warn('Rename: .asset-name-label missing for', asset.id);
+            return;
+        }
+
+        // Cancel any other open rename in this panel
+        const openInput = container.querySelector('.asset-name-input');
+        if (openInput) openInput.blur();
+
+        const oldName = asset.name || '';
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'asset-name-input rename-input';
+        input.dataset.assetId = asset.id;
+        input.value = oldName;
+        input.setAttribute('aria-label', 'Rename asset');
+
+        // Match grid label placement; list/details stay in-flow
+        if (nameEl.classList.contains('asset-name-label') && item.classList.contains('asset-thumbnail')) {
+            input.style.cssText = [
+                'position:absolute', 'bottom:0', 'left:0', 'right:0',
+                'width:100%', 'box-sizing:border-box', 'z-index:5',
+                'font-size:10px', 'padding:2px 4px', 'text-align:center',
+                'border:1px solid var(--ui-accent-color, #3b82f6)',
+                'background:var(--ui-input-bg, #1f2937)',
+                'color:var(--ui-active-text-color, #fff)'
+            ].join(';');
+        } else {
+            input.style.cssText = [
+                'width:100%', 'min-width:0', 'box-sizing:border-box',
+                'font-size:inherit', 'padding:1px 4px',
+                'border:1px solid var(--ui-accent-color, #3b82f6)',
+                'background:var(--ui-input-bg, #1f2937)',
+                'color:var(--ui-active-text-color, #fff)'
+            ].join(';');
+        }
+
+        const wasDraggable = item.draggable;
+        item.draggable = false;
+        this._renamingAssetId = asset.id;
+
+        let finished = false;
+        const finishRename = (save) => {
+            if (finished) return;
+            finished = true;
+            this._renamingAssetId = null;
+            item.draggable = wasDraggable;
+
+            const newName = input.value.trim();
+            if (save && newName && newName !== oldName) {
+                const ok = am.updateAsset(asset.id, { name: newName });
+                if (!ok) {
+                    Logger.ui.warn('Rename failed:', asset.id);
+                    if (input.isConnected) input.replaceWith(nameEl);
+                    return;
+                }
+                this.assetPanel.stateManager?.set('assetsLibraryDirty', true);
+                this._notifyAssetsChanged();
+                Logger.ui.info(`Renamed asset → "${newName}"`);
+                return;
+            }
+
+            if (input.isConnected) input.replaceWith(nameEl);
+        };
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                finishRename(true);
+            } else if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                finishRename(false);
+            }
+            // Keep typing from hitting global hotkeys
+            e.stopPropagation();
+        });
+        input.addEventListener('blur', () => finishRename(true));
+        input.addEventListener('mousedown', (e) => e.stopPropagation());
+        input.addEventListener('click', (e) => e.stopPropagation());
+        input.addEventListener('dblclick', (e) => e.stopPropagation());
+        input.addEventListener('pointerdown', (e) => e.stopPropagation());
+
+        nameEl.replaceWith(input);
+        input.focus();
+        input.select();
     }
 
     /**
@@ -237,7 +340,13 @@ export class AssetItemActionsController {
             return;
         }
 
-        // Open Asset Properties Panel
+        // AS-DBL: dblclick on name → inline rename (not properties)
+        if (e.target?.closest?.('.asset-name-label, .asset-name-input')) {
+            this.startInlineRename(asset);
+            return;
+        }
+
+        // Thumbnail / rest of row → Asset Properties Panel
         if (assetPanel.levelEditor && assetPanel.levelEditor.showActorPropertiesPanel) {
             assetPanel.levelEditor.showActorPropertiesPanel(asset);
             Logger.ui.info(`Double-clicked asset: ${asset.name}, opening Asset Properties Panel`);
