@@ -2,6 +2,12 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (toolbar hide + leaf caret)
+
+- Toolbar RMB **Hide**: per-instance only (not global `view.toolbar` / sibling copies).
+- Viewport leaf header: **▾** is a separate control right of the panel title (not type-menu); appears only when that leaf’s toolbar is hidden; click restores toolbar and hides ▾. Title alone opens type menu.
+- Removed residual toolbar strip when hidden — toolbar container fully `display:none`.
+
 ## Archived from CHANGELOG.md (view menu + outliner ctx)
 
 - View menu: remove Viewport toggle (last viewport leaf cannot be closed).

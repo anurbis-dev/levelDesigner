@@ -4,6 +4,4 @@
 
 ## [Unreleased]
 
-- Toolbar RMB **Hide**: per-instance only (not global `view.toolbar` / sibling copies).
-- Viewport leaf header: **▾** is a separate control right of the panel title (not type-menu); appears only when that leaf’s toolbar is hidden; click restores toolbar and hides ▾. Title alone opens type menu.
-- Removed residual toolbar strip when hidden — toolbar container fully `display:none`.
+- **DK-CLS**: leaf-header close × only while Shift layout-edit (`body.dock-customize`) and only on the header under the cursor; floating-window chrome × unchanged.

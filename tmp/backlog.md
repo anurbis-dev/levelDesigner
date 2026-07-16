@@ -10,6 +10,7 @@
 
 ## Closed (архив)
 
+✅ DK-CLS — крестик закрытия leaf только при Shift (`body.dock-customize`) и hover шапки этой панели  
 ✅ VW-NOVP — View menu: Viewport toggle removed (cannot disable last viewport leaf)  
 ✅ VW-ALL — View menu Grid/Boundaries/Collisions/Parallax apply to all viewport copies (`setDisplayFlagAll`); eye/toolbar/hotkeys remain per-view  
 ✅ OL-CTX — Outliner RMB: Select removed; Toggle Visibility uses `toggleVisibilityForSelection` (H-path)  

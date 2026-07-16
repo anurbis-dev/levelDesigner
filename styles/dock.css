@@ -212,6 +212,18 @@ body.dock-customize #dock-workspace .leaf-header .leaf-header-gap:active {
   color: #f87171;
 }
 
+/* DK-CLS: leaf close × only in layout-edit (Shift / body.dock-customize)
+   and only for the header under the cursor. Floating window chrome × stays. */
+#dock-workspace .leaf-header > .icon-btn.close,
+.floating-body .leaf-header > .icon-btn.close {
+  display: none;
+}
+
+body.dock-customize #dock-workspace .leaf-header:hover > .icon-btn.close,
+body.dock-customize .floating-body .leaf-header:hover > .icon-btn.close {
+  display: inline-block;
+}
+
 
 
 /* Fixed overlay — not clipped by dock workspace stacking */
