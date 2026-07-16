@@ -134,46 +134,49 @@ export function startDockNodeDrag(ctx, e, getRawPayload, opts) {
         const didMove = moved;
         endGesture();
 
-        if (!customize) return;
-
-        if (didMove && dropTarget) {
-            if (opts.ownId && dropTarget.kind === 'leaf' && dropTarget.leafId === opts.ownId) {
-                const ws = ctx.model.findWorkspaceContaining(opts.ownId);
-                const original = ws
-                    ? ctx.model.findNode(ctx.model.getTreeOf(ws), opts.ownId)
-                    : null;
-                if (original && !ctx.isSingleton(original.contentType)) {
-                    const dup = ctx.model.makeLeaf(original.contentType, original.label);
-                    ctx.model.applyDropTarget(dropTarget, dup);
-                    ctx.render();
+        // Layout drop requires Shift (customize). Plain tap works without Shift (DK-CLP collapse).
+        if (didMove) {
+            if (!customize) return;
+            if (dropTarget) {
+                if (opts.ownId && dropTarget.kind === 'leaf' && dropTarget.leafId === opts.ownId) {
+                    const ws = ctx.model.findWorkspaceContaining(opts.ownId);
+                    const original = ws
+                        ? ctx.model.findNode(ctx.model.getTreeOf(ws), opts.ownId)
+                        : null;
+                    if (original && !ctx.isSingleton(original.contentType)) {
+                        const dup = ctx.model.makeLeaf(original.contentType, original.label);
+                        ctx.model.applyDropTarget(dropTarget, dup);
+                        ctx.render();
+                    }
+                } else {
+                    const node = ctx.model.resolveDraggedNode(getRawPayload());
+                    if (node) {
+                        ctx.model.applyDropTarget(dropTarget, node);
+                        ctx.render();
+                    }
                 }
-            } else {
-                const node = ctx.model.resolveDraggedNode(getRawPayload());
-                if (node) {
-                    ctx.model.applyDropTarget(dropTarget, node);
-                    ctx.render();
-                }
+            } else if (opts.onNoTargetDrop) {
+                opts.onNoTargetDrop(ev.clientX, ev.clientY);
             }
-        } else if (didMove && !dropTarget) {
-            if (opts.onNoTargetDrop) opts.onNoTargetDrop(ev.clientX, ev.clientY);
-        } else if (!didMove) {
-            const now = Date.now();
-            const last = captureEl._lastTapTime || 0;
-            if (opts.onDoubleTap && (now - last) < DOUBLE_TAP_MS) {
-                captureEl._lastTapTime = 0;
-                if (captureEl._tapTimer) {
-                    clearTimeout(captureEl._tapTimer);
+            return;
+        }
+
+        const now = Date.now();
+        const last = captureEl._lastTapTime || 0;
+        if (opts.onDoubleTap && (now - last) < DOUBLE_TAP_MS) {
+            captureEl._lastTapTime = 0;
+            if (captureEl._tapTimer) {
+                clearTimeout(captureEl._tapTimer);
+                captureEl._tapTimer = null;
+            }
+            opts.onDoubleTap();
+        } else {
+            captureEl._lastTapTime = now;
+            if (opts.onTap) {
+                captureEl._tapTimer = setTimeout(() => {
                     captureEl._tapTimer = null;
-                }
-                opts.onDoubleTap();
-            } else {
-                captureEl._lastTapTime = now;
-                if (opts.onTap) {
-                    captureEl._tapTimer = setTimeout(() => {
-                        captureEl._tapTimer = null;
-                        opts.onTap();
-                    }, opts.onDoubleTap ? TAP_DELAY_MS : 0);
-                }
+                    opts.onTap();
+                }, opts.onDoubleTap ? TAP_DELAY_MS : 0);
             }
         }
     };

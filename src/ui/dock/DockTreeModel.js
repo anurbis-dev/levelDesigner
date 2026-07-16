@@ -4,6 +4,12 @@
  */
 import { FLOAT_MIN_W, FLOAT_MIN_H, typeLabel } from './DockConstants.js';
 import { DockFloatOps } from './DockFloatOps.js';
+import {
+    isNodeCollapsed as isNodeCollapsedFn,
+    sanitizeCollapsedFlags as sanitizeCollapsedFlagsFn,
+    canToggleLeafCollapse as canToggleLeafCollapseFn,
+    toggleLeafCollapse as toggleLeafCollapseFn
+} from './DockLeafCollapse.js';
 
 export class DockTreeModel {
     constructor() {
@@ -20,7 +26,8 @@ export class DockTreeModel {
             type: 'leaf',
             id: `leaf-${this.idCounter++}`,
             contentType,
-            label: label || contentType
+            label: label || contentType,
+            collapsed: false
         };
     }
 
@@ -265,6 +272,31 @@ export class DockTreeModel {
             if (f) return f;
         }
         return null;
+    }
+
+    isNodeCollapsed(node) {
+        return isNodeCollapsedFn(node);
+    }
+
+    sanitizeCollapsedFlags(node, parentDirection = null) {
+        sanitizeCollapsedFlagsFn(node, parentDirection);
+    }
+
+    /** DK-CLP: column parent + expandable sibling. */
+    canToggleLeafCollapse(workspaceId, leafId) {
+        return canToggleLeafCollapseFn(
+            this.getTreeOf(workspaceId),
+            leafId,
+            (n, id) => this.findNode(n, id)
+        );
+    }
+
+    toggleLeafCollapse(workspaceId, leafId) {
+        return toggleLeafCollapseFn(
+            this.getTreeOf(workspaceId),
+            leafId,
+            (n, id) => this.findNode(n, id)
+        );
     }
 
     findWorkspaceContaining(leafId) {

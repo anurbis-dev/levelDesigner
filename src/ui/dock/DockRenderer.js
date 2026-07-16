@@ -61,6 +61,8 @@ export class DockRenderer {
     }
 
     render() {
+        this.model.sanitizeCollapsedFlags(this.model.mainTree);
+        this.model.floatingWindows.forEach((fw) => this.model.sanitizeCollapsedFlags(fw.tree));
         this._parkContentRoots();
         this._renderWorkspace('main', this.model.mainTree, this.splitRoot);
         this._renderFloatingLayer();
@@ -69,6 +71,12 @@ export class DockRenderer {
     }
 
     refreshWorkspace(workspaceId) {
+        if (workspaceId === 'main') {
+            this.model.sanitizeCollapsedFlags(this.model.mainTree);
+        } else {
+            const fw = this.model.floatingWindows.find((f) => f.id === workspaceId);
+            if (fw) this.model.sanitizeCollapsedFlags(fw.tree);
+        }
         this._parkContentRoots();
         if (workspaceId === 'main') {
             this._renderWorkspace('main', this.model.mainTree, this.splitRoot);
@@ -108,15 +116,48 @@ export class DockRenderer {
         el.style.flexDirection = node.direction === 'row' ? 'row' : 'column';
         const a = this._renderNode(node.children[0], workspaceId);
         const b = this._renderNode(node.children[1], workspaceId);
-        a.style.flex = `${node.ratio} 1 0`;
-        b.style.flex = `${1 - node.ratio} 1 0`;
         const resizer = document.createElement('div');
         resizer.className = `resizer ${node.direction === 'row' ? 'resizer-col' : 'resizer-row'}`;
+        this._applySplitFlex(node, a, b, resizer);
         this._setupResizer(resizer, node, el, a, b);
         el.appendChild(a);
         el.appendChild(resizer);
         el.appendChild(b);
         return el;
+    }
+
+    /**
+     * Column + collapsed leaf (DK-CLP): fixed chrome height, sibling takes rest; hide resizer.
+     * @param {object} node split
+     * @param {HTMLElement} elA
+     * @param {HTMLElement} elB
+     * @param {HTMLElement} resizer
+     */
+    _applySplitFlex(node, elA, elB, resizer) {
+        if (node.direction === 'column') {
+            const aCol = this.model.isNodeCollapsed(node.children[0]);
+            const bCol = this.model.isNodeCollapsed(node.children[1]);
+            if (aCol && !bCol) {
+                elA.style.flex = '0 0 auto';
+                elB.style.flex = '1 1 0';
+                resizer.style.display = 'none';
+                return;
+            }
+            if (!aCol && bCol) {
+                elA.style.flex = '1 1 0';
+                elB.style.flex = '0 0 auto';
+                resizer.style.display = 'none';
+                return;
+            }
+            if (aCol && bCol) {
+                elA.style.flex = '0 0 auto';
+                elB.style.flex = '0 0 auto';
+                resizer.style.display = 'none';
+                return;
+            }
+        }
+        elA.style.flex = `${node.ratio} 1 0`;
+        elB.style.flex = `${1 - node.ratio} 1 0`;
     }
 
     _setupResizer(resizer, node, container, elA, elB) {
@@ -178,16 +219,28 @@ export class DockRenderer {
         header.appendChild(title);
         header.appendChild(caret);
 
-        // Empty gap between title and right icons — only this area starts panel drag.
+        // Empty gap between title and right icons — drag (Shift) + collapse tap (DK-CLP).
         const handle = document.createElement('div');
         handle.className = 'drag-handle leaf-header-gap';
-        handle.title = 'Hold Shift to move/split/copy/detach panel';
+        const canCollapse = this.model.canToggleLeafCollapse(workspaceId, node.id);
+        if (canCollapse) {
+            handle.title = node.collapsed
+                ? 'Развернуть панель · Shift — переместить'
+                : 'Свернуть панель · Shift — переместить/split/copy/detach';
+            handle.classList.add('leaf-header-gap--collapsible');
+        } else {
+            handle.title = 'Hold Shift to move/split/copy/detach panel';
+        }
         handle.addEventListener('pointerdown', (e) => {
             if (!this.drag) return;
             this.drag.startNodeDrag(e, () => node.id, {
                 ghostLabel: typeLabel(node.contentType),
                 ownId: node.id,
-                onTap: null,
+                onTap: canCollapse
+                    ? () => {
+                        if (this.model.toggleLeafCollapse(workspaceId, node.id)) this.render();
+                    }
+                    : null,
                 onNoTargetDrop: (x, y) => {
                     const dragged = this.model.resolveDraggedNode(node.id);
                     if (!dragged) return;
@@ -222,7 +275,7 @@ export class DockRenderer {
 
     _renderLeaf(node, workspaceId) {
         const el = document.createElement('div');
-        el.className = 'leaf-node';
+        el.className = `leaf-node${node.collapsed ? ' collapsed' : ''}`;
         el.dataset.nodeId = node.id;
         el.dataset.contentType = node.contentType || '';
         // Build header without close first — viewport primary/copy status is known only after mount.
@@ -233,6 +286,7 @@ export class DockRenderer {
         const body = document.createElement('div');
         body.className = 'leaf-body';
         body.dataset.leafId = node.id;
+        if (node.collapsed) body.style.display = 'none';
         // Mount before chrome sync so ViewportViewManager has the leaf view (self-drop).
         this.mountLeafContent(workspaceId, node, body);
         if (node.contentType === 'viewport' && this.registry?.levelEditor) {

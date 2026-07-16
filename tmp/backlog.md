@@ -7,11 +7,11 @@
 
 - зум других вьюпортов не должен влиять на отображение элементов с соседних - сейчас включенные в одном окне boundaries меняются при зуме другого окна
 - добавить оверлей поверх вьюпорта для заполнения блоками отображения различных данных. Например: индикация включенного параллакса, имя активной камеры, общая статистика уровня/слоя и т.д.
-- добавить схлопывание пенели по клику в шапке. условие схлопывания - есть другие панели сверху или снизу
 
 
 ## Closed (архив)
 
+✅ DK-CLP — схлопывание leaf кликом по header gap при column-соседях (`leaf.collapsed`)  
 ✅ float viewport chrome menus — `MenuPositioningUtils` z-index 10000 поверх `#floating-layer`  
 ✅ DK-GST — ghost float-окна при Shift-drag без dock target (`.float-detach-ghost` + `floatDetachLayoutFromClient`)  
 ✅ DK-CUR — grab cursor на leaf header gap только при Shift (`body.dock-customize`); иначе pointer  

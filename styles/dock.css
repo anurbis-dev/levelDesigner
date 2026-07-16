@@ -81,6 +81,23 @@
   border: 1px solid var(--dock-panel-border);
 }
 
+/* DK-CLP: column-stack leaf collapsed to header only */
+#dock-workspace .leaf-node.collapsed,
+.floating-body .leaf-node.collapsed {
+  min-height: 0;
+  overflow: hidden;
+}
+
+#dock-workspace .leaf-node.collapsed > .leaf-body,
+.floating-body .leaf-node.collapsed > .leaf-body {
+  display: none !important;
+}
+
+#dock-workspace .leaf-node.collapsed > .leaf-header,
+.floating-body .leaf-node.collapsed > .leaf-header {
+  border-bottom: none;
+}
+
 #dock-workspace .leaf-header {
   flex: 0 0 auto;
   display: flex;
@@ -101,7 +118,7 @@
 }
 
 /* Drag only on empty gap between title and right icons (not on title text).
-   DK-CUR: pointer by default (click/collapse); grab only while body.dock-customize (Shift). */
+   DK-CUR: pointer by default (click/collapse DK-CLP); grab only while body.dock-customize (Shift). */
 #dock-workspace .leaf-header .drag-handle,
 #dock-workspace .leaf-header .leaf-header-gap {
   cursor: pointer;
@@ -110,6 +127,11 @@
   min-width: 8px;
   touch-action: none;
   user-select: none;
+}
+
+#dock-workspace .leaf-header .leaf-header-gap--collapsible:hover,
+.floating-body .leaf-header .leaf-header-gap--collapsible:hover {
+  background: rgba(255, 255, 255, 0.04);
 }
 
 body.dock-customize #dock-workspace .leaf-header .drag-handle,
