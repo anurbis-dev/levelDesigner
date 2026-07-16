@@ -57,20 +57,21 @@ export class OutlinerContextMenu extends BaseContextMenu {
     }
 
     /**
-     * If the right-clicked object is not already selected, select only it so
-     * selection-based commands (Move to Layer) target the expected object(s).
-     * Multi-select is kept when the target is already part of the selection.
-     * @param {Object} contextData
+     * Setup context menu — preventDefault so browser / other handlers don't re-fire.
      */
-    ensureObjectInSelection(contextData) {
-        const objectId = contextData?.objectId || contextData?.object?.id;
-        if (!objectId || !this.levelEditor?.stateManager) return;
-
-        const selected = this.levelEditor.stateManager.get('selectedObjects');
-        if (selected instanceof Set && selected.has(objectId)) {
-            return;
+    setupContextMenu() {
+        if (this.contextMenuHandler) {
+            this.panel.removeEventListener('contextmenu', this.contextMenuHandler);
         }
-        this.levelEditor.stateManager.set('selectedObjects', new Set([objectId]));
+
+        this.contextMenuHandler = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const contextData = this.extractContextData(e.target);
+            this.showContextMenu(e, contextData);
+        };
+
+        this.panel.addEventListener('contextmenu', this.contextMenuHandler);
     }
 
     /**
@@ -224,8 +225,9 @@ export class OutlinerContextMenu extends BaseContextMenu {
 
         Logger.outliner.debug('Showing context menu for object:', contextData.object.name, 'type:', contextData.object.type);
 
-        // Selection-based layer commands operate on selectedObjects
-        this.ensureObjectInSelection(contextData);
+        // Selection for RMB is applied on mousedown (OutlinerPanel.selectObjectForContextMenu)
+        // before this event — do not set('selectedObjects') here: that triggers
+        // updateAllPanels() mid-open and the menu hides/rebuilds (flicker).
 
         super.showContextMenu(e, contextData);
     }

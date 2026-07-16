@@ -843,6 +843,9 @@ export class OutlinerPanel extends BasePanel {
             visibilityBtn = item.querySelector(':scope > .outliner-visibility-btn');
         }
 
+        // RMB select-before-menu: bind once per node (new + cached after hot reload)
+        this._bindContextMenuSelect(item, { skipIfCollapse: true });
+
         // --- Parts refreshed on every render, whether the node is new or reused ---
         item.dataset.id = group.id;
         item.style.paddingLeft = `calc(${5 + depth * 15}px * max(var(--spacing-scale, 1.0), 0))`;
@@ -909,6 +912,8 @@ export class OutlinerPanel extends BasePanel {
             visibilityBtn = item.querySelector(':scope > .outliner-visibility-btn');
         }
 
+        this._bindContextMenuSelect(item);
+
         // --- Parts refreshed on every render, whether the node is new or reused ---
         item.dataset.id = obj.id;
         item.style.paddingLeft = `calc(${5 + depth * 15}px * max(var(--spacing-scale, 1.0), 0))`;
@@ -930,6 +935,38 @@ export class OutlinerPanel extends BasePanel {
 
     // Note: handleObjectClick, handleShiftClick, handleCtrlClick methods removed
     // Now using BasePanel.handleItemClick with SelectionUtils
+
+    /**
+     * Bind once: RMB mousedown selects the row before contextmenu opens.
+     * @param {HTMLElement} item
+     * @param {{ skipIfCollapse?: boolean }} [opts]
+     */
+    _bindContextMenuSelect(item, opts = {}) {
+        if (!item || item.dataset.ctxSelectBound === '1') return;
+        item.dataset.ctxSelectBound = '1';
+        item.addEventListener('mousedown', (e) => {
+            if (e.button !== 2) return;
+            if (opts.skipIfCollapse && e.target.classList.contains('outliner-collapse-indicator')) return;
+            this.selectObjectForContextMenu(item.dataset.id);
+        });
+    }
+
+    /**
+     * Select object under RMB before the contextmenu event (so OutlinerContextMenu does not
+     * change selection mid-open). Multi-select kept if the target is already selected.
+     * @param {string} objectId
+     */
+    selectObjectForContextMenu(objectId) {
+        if (!objectId) return;
+        const selected = this.stateManager.get('selectedObjects');
+        if (selected instanceof Set && selected.has(objectId)) return;
+        const obj = this.levelEditor.level.findObjectById(objectId);
+        if (!obj) return;
+        const canSelect = this.selectionOptions?.canSelect;
+        if (canSelect && !canSelect(obj)) return;
+        this.stateManager.set('selectedObjects', new Set([objectId]));
+        this.stateManager.update({ 'outliner.shiftAnchor': objectId });
+    }
 
     /**
      * Get flat list of all objects in the outliner (in display order)

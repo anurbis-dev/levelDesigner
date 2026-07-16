@@ -4,5 +4,4 @@
 
 ## [Unreleased]
 
-- Fix: after RMB pan, releasing over panels/UI no longer opens that panel's context menu (`wasPanning` / `suppressContextMenu` capture block + global mouseup finishes pan path).
-- Feature: Canvas/Outliner context menus — stack order (Bring to Front / Send to Back / Bring Forward / Send Backward) via `ObjectOperations.applyStackOrderActionToSelection` (same as Details); separators around layer-move block.
+- Fix: Outliner context menu flicker (open → reselect under cursor → close/reopen) — select target on RMB mousedown before `contextmenu`; do not change selection inside `showContextMenu` (that triggered `updateAllPanels` mid-open).
