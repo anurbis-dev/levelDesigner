@@ -365,9 +365,10 @@
 - Централизованный модуль undo/redo
 - Восстановление состояния
 
-### LayerOperations (v3.41.0)
+### LayerOperations (v3.41.0 / U4)
 **Файл**: `src/core/LayerOperations.js`
-- Управление слоями объектов
+- Управление слоями объектов; adjacent / extreme moves (PageUp/PageDown)
+- **U4**: `moveSelectedObjectsToLayerId` + `buildMoveToLayerMenuItems` — context menu Move to Layer (Canvas/Outliner); locked/current disabled
 - Batch processing, smart caching
 
 ### ViewportOperations (v3.44.0)

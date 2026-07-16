@@ -426,9 +426,15 @@ export class BaseContextMenu {
     findMenuItemById(id, items = this.menuItems) {
         for (const item of items) {
             if (item.id === id) return item;
-            if (item.type === 'submenu' && Array.isArray(item.items)) {
-                const found = this.findMenuItemById(id, item.items);
-                if (found) return found;
+            if (item.type === 'submenu') {
+                // Prefer last-built list (function-valued items resolved in createSubmenuItem)
+                const nested = Array.isArray(item._resolvedItems)
+                    ? item._resolvedItems
+                    : (Array.isArray(item.items) ? item.items : null);
+                if (nested) {
+                    const found = this.findMenuItemById(id, nested);
+                    if (found) return found;
+                }
             }
         }
         return null;
@@ -560,9 +566,16 @@ export class BaseContextMenu {
         // gets clipped to this box regardless of which element is its own positioning
         // ancestor — this is what previously broke the Assets-panel Add -> category -> type
         // third level. Works at any nesting depth since it's recomputed per invocation.
-        const hasNestedSubmenu = (item.items || []).some(subItem => subItem.type === 'submenu');
+        // items may be a static array or a function re-resolved on every menu open
+        // (dynamic lists: layers, recent files pattern, etc.)
+        const nestedItems = typeof item.items === 'function'
+            ? (item.items(contextData) || [])
+            : (item.items || []);
+        item._resolvedItems = nestedItems;
+
+        const hasNestedSubmenu = nestedItems.some(subItem => subItem.type === 'submenu');
         submenu.className = 'base-context-menu submenu-flyout' + (hasNestedSubmenu ? '' : ' submenu-flyout--scrollable');
-        (item.items || []).forEach(subItem => {
+        nestedItems.forEach(subItem => {
             if (this.shouldShowMenuItem(subItem, contextData)) {
                 submenu.appendChild(this.createMenuItem(subItem, contextData));
             }
@@ -583,7 +596,7 @@ export class BaseContextMenu {
      * Add a flyout submenu entry (category header expanding into nested items)
      * @param {string} text - Trigger text
      * @param {string} icon - Trigger icon (optional)
-     * @param {Array<Object>} items - Nested item configs (same shape as addMenuItem entries)
+     * @param {Array<Object>|Function} items - Nested item configs, or () => items (resolved each open)
      * @param {Object} options - { id, visible, disabled }
      */
     addSubmenuItem(text, icon, items, options = {}) {

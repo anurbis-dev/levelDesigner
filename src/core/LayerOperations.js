@@ -19,46 +19,141 @@ export class LayerOperations extends BaseModule {
      * @param {boolean} moveToExtreme - true to move to first/last layer, false to move to adjacent layer
      */
     moveSelectedObjectsToLayer(moveUp, moveToExtreme = false) {
-        // Quick check for selected objects
+        if (!this.canMoveObjectsToLayer()) {
+            return;
+        }
+
         const selectedObjects = this.editor.stateManager.get('selectedObjects');
-        if (!selectedObjects || selectedObjects.size === 0) {
+        this._saveUndoBeforeLayerMove();
+
+        const movedCount = this.assignSelectedObjectsToLayer(selectedObjects, moveUp, moveToExtreme);
+        const direction = moveToExtreme ? (moveUp ? 'top' : 'bottom') : (moveUp ? 'up' : 'down');
+        this._finishLayerMove(movedCount, `layer ${direction}`);
+    }
+
+    /**
+     * Move selected objects to a specific layer by id (context menu "Move to Layer").
+     * Skips locked / missing layers.
+     * @param {string} targetLayerId
+     */
+    moveSelectedObjectsToLayerId(targetLayerId) {
+        if (!this.canMoveObjectsToLayer() || !targetLayerId) {
             return;
         }
 
-        // Check for active duplication only
-        const duplicate = this.editor.stateManager.get('duplicate');
-        if (duplicate && duplicate.isActive) {
-            Logger.layer.warn('Cannot move objects while duplication is active');
+        const layer = this.editor.level.getLayerById(targetLayerId);
+        if (!layer) {
+            Logger.layer.warn(`Cannot move: layer ${targetLayerId} not found`);
+            return;
+        }
+        if (layer.locked) {
+            Logger.layer.warn(`Cannot move objects to locked layer "${layer.name}"`);
+            Logger.status.warn(`Layer "${layer.name}" is locked`);
             return;
         }
 
-        // Save state for undo with current group edit mode
-        this.editor.historyManager.saveState(
-            this.editor.level.objects, 
-            this.editor.stateManager.get('selectedObjects'), 
-            false, 
-            this.editor.stateManager.get('groupEditMode')
+        const selectedObjects = this.editor.stateManager.get('selectedObjects');
+        this._saveUndoBeforeLayerMove();
+
+        const processedGroups = new Set();
+        const batchedNotifications = {
+            objectPropertyChanges: new Map(),
+            layerCountChanges: new Map()
+        };
+        const changedObjectIds = new Set();
+        const affectedLayers = new Set();
+
+        const { movedCount } = this.batchProcessLayerAssignment(
+            selectedObjects,
+            targetLayerId,
+            processedGroups,
+            batchedNotifications,
+            changedObjectIds,
+            affectedLayers
         );
 
-        let movedCount = 0;
+        this.flushBatchedNotifications(batchedNotifications);
+        this.editor.invalidateAfterLayerChanges(changedObjectIds, affectedLayers);
 
-        // Use improved layer assignment logic
-        movedCount = this.assignSelectedObjectsToLayer(selectedObjects, moveUp, moveToExtreme);
+        if (changedObjectIds.size > 10 && this.editor.renderOperations) {
+            this.editor.renderOperations.markSpatialIndexDirty();
+        }
 
+        this.editor.stateManager.markDirty();
+        this.editor.render();
+
+        this._finishLayerMove(movedCount, `"${layer.name}"`);
+    }
+
+    /**
+     * Build context-menu flyout items for "Move to Layer" (Canvas / Outliner).
+     * Layers listed in stack order; current layer (all selection on it) and locked layers disabled.
+     * @returns {Array<Object>}
+     */
+    buildMoveToLayerMenuItems() {
+        const level = this.editor.level;
+        if (!level) return [];
+
+        const layersSorted = level.getLayersSorted();
+        const selectedObjects = this.editor.stateManager.get('selectedObjects');
+        const currentLayerIds = new Set();
+
+        if (selectedObjects && selectedObjects.size > 0) {
+            selectedObjects.forEach(objId => {
+                const obj = this.editor.getCachedObject?.(objId) || level.findObjectById?.(objId);
+                if (!obj) return;
+                const layerId = this.editor.getCachedEffectiveLayerId?.(obj)
+                    || obj.layerId
+                    || level.getMainLayerId();
+                if (layerId) currentLayerIds.add(layerId);
+            });
+        }
+
+        const singleCurrent = currentLayerIds.size === 1
+            ? currentLayerIds.values().next().value
+            : null;
+
+        return layersSorted.map(layer => {
+            const isCurrent = singleCurrent !== null && layer.id === singleCurrent;
+            const locked = !!layer.locked;
+            return {
+                id: `move-to-layer-${layer.id}`,
+                text: locked ? `${layer.name} (locked)` : layer.name,
+                icon: isCurrent ? '✓' : (locked ? '🔒' : '⬜'),
+                disabled: () => locked || isCurrent || !this.canMoveObjectsToLayer(),
+                action: () => this.moveSelectedObjectsToLayerId(layer.id)
+            };
+        });
+    }
+
+    /**
+     * @private
+     */
+    _saveUndoBeforeLayerMove() {
+        this.editor.historyManager.saveState(
+            this.editor.level.objects,
+            this.editor.stateManager.get('selectedObjects'),
+            false,
+            this.editor.stateManager.get('groupEditMode')
+        );
+    }
+
+    /**
+     * Shared post-move UI / status after layer reassignment.
+     * @param {number} movedCount
+     * @param {string} destinationLabel
+     * @private
+     */
+    _finishLayerMove(movedCount, destinationLabel) {
         if (movedCount > 0) {
-            // Mark level as modified and update UI
             this.editor.stateManager.markDirty();
             this.editor.level.updateModified();
-
-            // Update all panels to reflect changes. (Previously this also fired a
-            // stateManager.set('level', JSON.parse(JSON.stringify(level))) deep-clone just to
-            // trigger the 'level' subscribers — updateAllPanels() already re-renders the same
-            // panels directly, so that clone was a redundant, expensive extra render pass.)
             this.editor.updateAllPanels();
 
-            const direction = moveToExtreme ? (moveUp ? 'top' : 'bottom') : (moveUp ? 'up' : 'down');
-            Logger.layer.info(`Moved ${movedCount} objects to ${moveToExtreme ? (moveUp ? 'first' : 'last') : (moveUp ? 'upper' : 'lower')} layer`);
-            Logger.status.info(`Moved ${movedCount} object${movedCount > 1 ? 's' : ''} to layer ${direction}`);
+            Logger.layer.info(`Moved ${movedCount} objects to ${destinationLabel}`);
+            Logger.status.info(
+                `Moved ${movedCount} object${movedCount > 1 ? 's' : ''} to ${destinationLabel}`
+            );
         } else {
             Logger.layer.info('No objects were moved (already in target layer or no valid objects found)');
             Logger.status.warn('Already at target layer');

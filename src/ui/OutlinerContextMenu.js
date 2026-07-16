@@ -25,6 +25,7 @@
 
 import { BaseContextMenu } from './BaseContextMenu.js';
 import { Logger } from '../utils/Logger.js';
+import { ShortcutFormatter } from '../utils/ShortcutFormatter.js';
 
 export class OutlinerContextMenu extends BaseContextMenu {
     constructor(panel, levelEditor, callbacks = {}) {
@@ -42,6 +43,34 @@ export class OutlinerContextMenu extends BaseContextMenu {
         this.levelEditor = levelEditor;
         this.setupMenuItems();
         Logger.ui.info('OutlinerContextMenu initialized successfully');
+    }
+
+    /**
+     * Resolve shortcuts.json binding to display label (same as CanvasContextMenu).
+     * @param {string} category
+     * @param {string} action
+     * @returns {string}
+     */
+    resolveShortcut(category, action) {
+        const shortcut = this.levelEditor?.configManager?.getShortcuts?.()?.[category]?.[action];
+        return ShortcutFormatter.format(shortcut);
+    }
+
+    /**
+     * If the right-clicked object is not already selected, select only it so
+     * selection-based commands (Move to Layer) target the expected object(s).
+     * Multi-select is kept when the target is already part of the selection.
+     * @param {Object} contextData
+     */
+    ensureObjectInSelection(contextData) {
+        const objectId = contextData?.objectId || contextData?.object?.id;
+        if (!objectId || !this.levelEditor?.stateManager) return;
+
+        const selected = this.levelEditor.stateManager.get('selectedObjects');
+        if (selected instanceof Set && selected.has(objectId)) {
+            return;
+        }
+        this.levelEditor.stateManager.set('selectedObjects', new Set([objectId]));
     }
 
     /**
@@ -70,6 +99,34 @@ export class OutlinerContextMenu extends BaseContextMenu {
             Logger.outliner.debug('Context menu: Toggle visibility', contextData.object?.name);
             this.callbacks.onToggleVisibility(contextData.object);
         }, { id: 'visibility' });
+
+        this.addSeparator();
+
+        this.addMenuItem('Move Layer Up', '⬆', () => {
+            this.levelEditor?.moveSelectedObjectsToLayer?.(true, false);
+        }, {
+            id: 'move-layer-up',
+            disabled: () => !(this.levelEditor?.canMoveObjectsToLayer?.()),
+            shortcut: () => this.resolveShortcut('editor', 'moveLayerUp')
+        });
+
+        this.addMenuItem('Move Layer Down', '⬇', () => {
+            this.levelEditor?.moveSelectedObjectsToLayer?.(false, false);
+        }, {
+            id: 'move-layer-down',
+            disabled: () => !(this.levelEditor?.canMoveObjectsToLayer?.()),
+            shortcut: () => this.resolveShortcut('editor', 'moveLayerDown')
+        });
+
+        this.addSubmenuItem(
+            'Move to Layer',
+            '📑',
+            () => this.levelEditor?.buildMoveToLayerMenuItems?.() || [],
+            {
+                id: 'move-to-layer',
+                disabled: () => !(this.levelEditor?.canMoveObjectsToLayer?.())
+            }
+        );
 
         this.addSeparator();
 
@@ -123,24 +180,10 @@ export class OutlinerContextMenu extends BaseContextMenu {
 
         Logger.outliner.debug('Showing context menu for object:', contextData.object.name, 'type:', contextData.object.type);
 
-        // Filter menu items based on object type
-        const filteredItems = this.menuItems.filter(item => {
-            if (!item.id) return true; // Keep separators
+        // Selection-based layer commands operate on selectedObjects
+        this.ensureObjectInSelection(contextData);
 
-            // Show all items for now - no special filtering needed
-            return true;
-        });
-
-        // Temporarily set filtered items
-        const originalItems = this.menuItems;
-        this.menuItems = filteredItems;
-
-        try {
-            super.showContextMenu(e, contextData);
-        } finally {
-            // Restore original items
-            this.menuItems = originalItems;
-        }
+        super.showContextMenu(e, contextData);
     }
 
     /**

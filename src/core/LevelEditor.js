@@ -51,7 +51,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '4.6.4';
+    static VERSION = '4.6.5';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -1316,6 +1316,22 @@ export class LevelEditor {
      */
     moveSelectedObjectsToLayer(moveUp, moveToExtreme = false) {
         this.layerOperations.moveSelectedObjectsToLayer(moveUp, moveToExtreme);
+    }
+
+    /**
+     * Move selected objects to a specific layer by id (context menu)
+     * @param {string} targetLayerId
+     */
+    moveSelectedObjectsToLayerId(targetLayerId) {
+        this.layerOperations.moveSelectedObjectsToLayerId(targetLayerId);
+    }
+
+    /**
+     * Context-menu flyout items for "Move to Layer"
+     * @returns {Array<Object>}
+     */
+    buildMoveToLayerMenuItems() {
+        return this.layerOperations.buildMoveToLayerMenuItems();
     }
 
     /**

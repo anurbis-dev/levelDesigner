@@ -52,6 +52,8 @@ levelEditor.saveProjectAs() // сохранение проекта с выбор
 levelEditor.openRecentFile(id) // U3: открыть level/project из MRU-кэша (editor.recentFiles)
 levelEditor.clearRecentFiles() // U3: очистить Open Recent
 levelEditor.recentFilesManager // RecentFilesManager: list/remember/open/clear; snapshot JSON в userPrefs
+levelEditor.moveSelectedObjectsToLayerId(layerId) // U4: перенос selection на слой (context menu)
+levelEditor.buildMoveToLayerMenuItems() // U4: пункты flyout Move to Layer
 levelEditor.openProjectSettings() // открытие ProjectSettingsDialog; пока стаб (редактируется только project.name)
 levelEditor.project // текущий Project экземпляр (инициализируется при New/Open/Save Project); null до первого вызова
 levelEditor.projectFileOperations // BaseModule: newProject/openProject/openProjectFromData/saveProject/saveProjectAs
@@ -75,8 +77,9 @@ levelEditor.createAssetOfType(typeId) // создание placeholder-ассет
 // - item rows: 'base-context-menu-item px-4 py-2 text-sm hover:bg-gray-700' (идентично MenuManager); separators: 'border-t border-gray-600 my-1'; submenu-триггеры с явным ▸-гліфом
 // - применяют полный disabled-scheme (opacity-50/pointer-events-none/cursor-not-allowed, как MenuManager)
 // - contextMenu.addSubmenuItem(text, icon, items, options) — flyout подменю (раскрывается hover), в т.ч. вложенные уровни
+// - items может быть Array или Function (re-resolve на каждый open) — U4 Move to Layer list
 // - фикс клиппинга: .submenu-flyout--scrollable применяется ТОЛЬКО к самому глубокому подменю в цепочке
-// - опционально поддерживают item.shortcut в trailing-слоте (пока не используется в коде)
+// - item.shortcut в trailing-слоте (Canvas/Outliner: PageUp/PageDown для Move Layer Up/Down)
 
 // MenuPositioningUtils (v3.55.0+): унифицированный cursor margin для всех меню (v3.55.0)
 // getCursorMenuMargin() — читает ui.cursorMenuMargin из StateManager (дефолт 2px, диапазон 0-60)

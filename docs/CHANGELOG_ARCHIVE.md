@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (U4 Move to Layer commit)
+
+- Feature **U3**: File → **Open Recent** — MRU levels/projects (up to 10) with JSON snapshot in `userPrefs` / `editor.recentFiles`; open/save level or project records the list; browser has no path, so re-open uses the cache (`RecentFilesManager`). Submenu rebuilds on hover; **Clear Recent**.
+
 ## Archived from CHANGELOG.md (U3 Open Recent commit)
 
 - Feature **U2**: toolbar + Details stack-order buttons show live hotkeys in native `title` (`Label (Ctrl+S)`); source = Settings → Hotkeys / `shortcuts.json`; respects `ui.showTooltips`; rebind refreshes via `LevelEditor.refreshUiShortcutTitles`.

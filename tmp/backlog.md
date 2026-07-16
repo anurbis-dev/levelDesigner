@@ -5,11 +5,12 @@
 
 ## Open
 
-*(пусто — следующий product из todos P1: U4 / C1–C2 / A4–A5; B2 smoke when browser MCP)*
+*(пусто — следующий product из todos P1: C1–C2 / A4–A5; B2 smoke when browser MCP)*
 
 
 ## Closed (архив)
 
+✅ U4 — Context menu Move to Layer (Canvas/Outliner; LayerOperations.moveSelectedObjectsToLayerId)  
 ✅ U3 — File → Open Recent (MRU level/project snapshots in editor.recentFiles; RecentFilesManager)  
 ✅ U2 — toolbar/Details titles = live hotkeys from Settings; ui.showTooltips; refreshUiShortcutTitles  
 ✅ VP-OVL — оверлей HUD на viewport: cam/zoom/флаги P·B·C / stats; eye **Info**; `ViewportInfoOverlay`  

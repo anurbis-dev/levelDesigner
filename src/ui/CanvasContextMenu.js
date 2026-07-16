@@ -234,6 +234,33 @@ export class CanvasContextMenu extends BaseContextMenu {
             shortcut: () => this.resolveShortcut('editor', 'ungroupObjects')
         });
 
+        this.addSeparator();
+
+        // Layer assignment (PageUp/PageDown + explicit target list)
+        this.addMenuItem('Move Layer Up', '⬆', () => {
+            this.levelEditor?.moveSelectedObjectsToLayer?.(true, false);
+        }, {
+            disabled: () => !(this.levelEditor?.canMoveObjectsToLayer?.()),
+            shortcut: () => this.resolveShortcut('editor', 'moveLayerUp')
+        });
+
+        this.addMenuItem('Move Layer Down', '⬇', () => {
+            this.levelEditor?.moveSelectedObjectsToLayer?.(false, false);
+        }, {
+            disabled: () => !(this.levelEditor?.canMoveObjectsToLayer?.()),
+            shortcut: () => this.resolveShortcut('editor', 'moveLayerDown')
+        });
+
+        this.addSubmenuItem(
+            'Move to Layer',
+            '📑',
+            () => this.levelEditor?.buildMoveToLayerMenuItems?.() || [],
+            {
+                id: 'move-to-layer',
+                disabled: () => !(this.levelEditor?.canMoveObjectsToLayer?.())
+            }
+        );
+
         this.addSeparatorWithClass('object-view-separator');
 
         // View operations
