@@ -43,6 +43,7 @@
 - ✅ **VW-ALL** — View menu Grid/Boundaries/Collisions/Parallax → all viewport copies
 - ✅ **OL-CTX** — Outliner RMB: no Select; Toggle Visibility → selection (H-path)
 - ✅ **TB-OP** — Settings: toolbar underlay opacity slider (`ui.toolbarBackgroundOpacity`)
+- ✅ **C1** — camera view frame gizmo (frustum dashed rect + cross; design res / zoom)
 
 ---
 
@@ -68,8 +69,9 @@
 
 | # | Задача | Заметки |
 |---|--------|---------|
-| C1 | Camera view — рамка / preview «что видит» game camera | base B4.2 |
-| C2 | Виньетка, bg, aspect (1:1, 4:3, 16:9, …) | editor prefs + gizmo |
+| ~~C1~~ | ~~Camera view frame~~ | ✅ |
+| C2 | Виньетка, bg, aspect (1:1, 4:3, 16:9, …) | editor prefs + gizmo; base C1 frame |
+
 | C3 | Несколько камер + выбор / хоткей | Level data; play — engine |
 | C4 | Adaptive fit нестандартных aspect | UI preview only |
 
@@ -108,7 +110,7 @@
 
 1. ~~VW-NOVP / VW-ALL / OL-CTX~~ ✅  
 2. **B2** — browser smoke multi-view / Assets×N  
-3. **C1–C2** — старый product хвост  
+3. **C2** (C1 ✅) — aspect / vignette / bg  
 4. **Q\*** / **D\*** — opportunistically  
 5. Engine — **не из этого файла**
 

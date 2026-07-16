@@ -10,6 +10,7 @@
 
 ## Closed (архив)
 
+✅ C1 — рамка game camera: dashed frustum (design res / zoom) + cross; skip active viewport source  
 ✅ TB-OP — прозрачность подложки тулбара: Settings slider `ui.toolbarBackgroundOpacity` → `--ui-toolbar-background-color`  
 ✅ DK-CLS — крестик закрытия leaf только при Shift (`body.dock-customize`) и hover шапки этой панели  
 ✅ VW-NOVP — View menu: Viewport toggle removed (cannot disable last viewport leaf)  

@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (TB-OP)
+
+- **TB-OP**: Settings → General → «Toolbar Background Opacity» (`ui.toolbarBackgroundOpacity`, 0–1); underlay uses `--ui-toolbar-background-color` (bg × opacity) for primary + viewport toolbar copies.
+
 ## Archived from CHANGELOG.md (DK-CLS)
 
 - **DK-CLS**: leaf-header close × only while Shift layout-edit (`body.dock-customize`) and only on the header under the cursor; floating-window chrome × unchanged.

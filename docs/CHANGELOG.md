@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- **TB-OP**: Settings → General → «Toolbar Background Opacity» (`ui.toolbarBackgroundOpacity`, 0–1); underlay uses `--ui-toolbar-background-color` (bg × opacity) for primary + viewport toolbar copies.
+- **C1**: game-camera view frame gizmo — dashed frustum (default 1920×1080 / zoom) on canvas for each `type===camera` object; skip active game-source of the current viewport.

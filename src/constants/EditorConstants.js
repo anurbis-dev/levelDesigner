@@ -50,7 +50,14 @@ export const CAMERA = {
     MIN_ZOOM: 0.1,
     MAX_ZOOM: 10.0,
     ZOOM_STEP: 0.1,
-    PAN_SPEED: 1.0
+    PAN_SPEED: 1.0,
+    /** C1: default design resolution for game-camera view frame gizmo (world size = ref / zoom) */
+    VIEW_REF_WIDTH: 1920,
+    VIEW_REF_HEIGHT: 1080,
+    FRAME_COLOR: 'rgba(56, 189, 248, 0.75)',
+    FRAME_COLOR_SELECTED: 'rgba(14, 165, 233, 1)',
+    FRAME_WIDTH: 1.5,
+    FRAME_DASH: [6, 4]
 };
 
 /**

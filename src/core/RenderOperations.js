@@ -3,7 +3,7 @@ import { Logger } from '../utils/Logger.js';
 import { ParallaxRenderer } from '../utils/ParallaxRenderer.js';
 import { RenderUtils } from '../utils/RenderUtils.js';
 import { SnapUtils } from '../utils/SnapUtils.js';
-import { PERFORMANCE } from '../constants/EditorConstants.js';
+import { PERFORMANCE, CAMERA } from '../constants/EditorConstants.js';
 import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
 import { throttle } from '../utils/PerformanceUtils.js';
 import { refreshAllViewportInfoOverlays } from '../ui/dock/ViewportInfoOverlay.js';
@@ -525,6 +525,9 @@ export class RenderOperations extends BaseModule {
 
             // Draw group edit mode frame
             this.drawGroupEditFrame(camera);
+
+            // C1: game-camera frustum frames (what each camera object “sees”)
+            this.drawCameraViewFrames(camera, view);
 
             // Draw placing objects (duplicates) BEFORE restoreCamera() (world space)
             const duplicate = this.editor.stateManager.get('duplicate');
@@ -1282,6 +1285,98 @@ export class RenderOperations extends BaseModule {
         }
 
         return intersects;
+    }
+
+    /**
+     * C1: draw dashed world-space frames for each game camera object — the area
+     * `resolveGameCameraObject` would show at the design resolution (default 1920×1080,
+     * overridable via `properties.resolutionWidth/Height`). Skips the camera currently
+     * driving this viewport (frame would fill the whole canvas).
+     * @param {{x:number,y:number,zoom:number}} camera - frame (work) camera
+     * @param {object|null} view - ViewportView or null
+     */
+    drawCameraViewFrames(camera, view = null) {
+        if (!camera?.zoom || camera.zoom <= 0) return;
+        const level = this.editor.level;
+        if (!level) return;
+
+        const vvm = this.editor.viewportViewManager;
+        let cameras;
+        if (vvm?.listGameCameraObjects) {
+            cameras = vvm.listGameCameraObjects();
+        } else if (level.getAllObjects) {
+            cameras = level.getAllObjects().filter((o) => o.type === 'camera');
+        } else {
+            cameras = (level.objects || []).filter((o) => o.type === 'camera');
+        }
+        if (!cameras.length) return;
+
+        const selected = this.editor.stateManager.get('selectedObjects');
+        const activeGameId = view?.source?.kind === 'game' ? view.source.objectId : null;
+        const visibleLayerIds = this.getVisibleLayerIds();
+
+        for (const obj of cameras) {
+            if (!obj || obj.visible === false) continue;
+            if (activeGameId && obj.id === activeGameId) continue;
+            if (visibleLayerIds && !visibleLayerIds.has(this.getEffectiveLayerId(obj))) continue;
+            if (view && vvm && !vvm.passesTypeFilter(view, obj)) continue;
+
+            const frame = this.getCameraViewWorldRect(obj);
+            if (!frame) continue;
+
+            const isSelected = selected && selected.has(obj.id);
+            this.strokeFrame(frame, camera, {
+                color: isSelected ? CAMERA.FRAME_COLOR_SELECTED : CAMERA.FRAME_COLOR,
+                width: CAMERA.FRAME_WIDTH,
+                dash: CAMERA.FRAME_DASH
+            }, 0);
+
+            // Center cross (screen-constant length)
+            const ctx = this.editor.canvasRenderer.ctx;
+            const half = 8 / camera.zoom;
+            const cx = (frame.minX + frame.maxX) / 2;
+            const cy = (frame.minY + frame.maxY) / 2;
+            ctx.save();
+            ctx.strokeStyle = isSelected ? CAMERA.FRAME_COLOR_SELECTED : CAMERA.FRAME_COLOR;
+            ctx.lineWidth = CAMERA.FRAME_WIDTH / camera.zoom;
+            ctx.setLineDash([]);
+            ctx.beginPath();
+            ctx.moveTo(cx - half, cy);
+            ctx.lineTo(cx + half, cy);
+            ctx.moveTo(cx, cy - half);
+            ctx.lineTo(cx, cy + half);
+            ctx.stroke();
+            ctx.restore();
+        }
+    }
+
+    /**
+     * World AABB for a game camera's design frustum (center = object center, size = ref/zoom).
+     * @param {object} obj - level object type === 'camera'
+     * @returns {{minX:number,minY:number,maxX:number,maxY:number}|null}
+     */
+    getCameraViewWorldRect(obj) {
+        if (!obj || obj.type !== 'camera') return null;
+        let zoom = obj.properties?.zoom ?? CAMERA.DEFAULT_ZOOM;
+        if (!zoom || zoom <= 0) zoom = CAMERA.DEFAULT_ZOOM;
+
+        const refW = Number(obj.properties?.resolutionWidth) > 0
+            ? Number(obj.properties.resolutionWidth)
+            : CAMERA.VIEW_REF_WIDTH;
+        const refH = Number(obj.properties?.resolutionHeight) > 0
+            ? Number(obj.properties.resolutionHeight)
+            : CAMERA.VIEW_REF_HEIGHT;
+
+        const worldW = refW / zoom;
+        const worldH = refH / zoom;
+        const cx = obj.x + (obj.width || 0) / 2;
+        const cy = obj.y + (obj.height || 0) / 2;
+        return {
+            minX: cx - worldW / 2,
+            minY: cy - worldH / 2,
+            maxX: cx + worldW / 2,
+            maxY: cy + worldH / 2
+        };
     }
 
     /**
