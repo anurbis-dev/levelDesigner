@@ -213,15 +213,30 @@ body.dock-customize #dock-workspace .leaf-header .leaf-header-gap:active {
 }
 
 /* DK-CLS: leaf close × only in layout-edit (Shift / body.dock-customize)
-   and only for the header under the cursor. Floating window chrome × stays. */
+   and only for the header under the cursor. Keep in flow (opacity) so
+   header height/width do not jump. Floating window chrome × stays. */
 #dock-workspace .leaf-header > .icon-btn.close,
 .floating-body .leaf-header > .icon-btn.close {
-  display: none;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  /* Fixed metrics — × glyph + padding must not grow the header line-box */
+  box-sizing: border-box;
+  width: 20px;
+  height: 18px;
+  padding: 0;
+  margin: 0;
+  line-height: 18px;
+  font-size: 14px;
+  text-align: center;
+  flex: 0 0 20px;
 }
 
 body.dock-customize #dock-workspace .leaf-header:hover > .icon-btn.close,
 body.dock-customize .floating-body .leaf-header:hover > .icon-btn.close {
-  display: inline-block;
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
 }
 
 
