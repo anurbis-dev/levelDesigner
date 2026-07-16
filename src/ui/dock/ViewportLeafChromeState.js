@@ -15,7 +15,8 @@ export const DISPLAY_MENU_ITEMS = [
     { key: 'showGrid', label: 'Grid' },
     { key: 'objectBoundaries', label: 'Boundaries' },
     { key: 'objectCollisions', label: 'Collisions' },
-    { key: 'parallax', label: 'Parallax' }
+    { key: 'parallax', label: 'Parallax' },
+    { key: 'infoOverlay', label: 'Info' }
 ];
 
 /** @type {{ hover: boolean, root: HTMLElement|null, kind: string|null, menu: HTMLElement|null }} */

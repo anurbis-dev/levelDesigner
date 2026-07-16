@@ -143,7 +143,7 @@ export function openViewportDisplayMenu(anchor, leafId, levelEditor, chromeRoot)
     if (!view) return;
 
     const menu = MenuPositioningUtils.createMenuElement({ className: 'p-2 viewport-eye-menu' });
-    const posOpts = { alignment: 'right', direction: 'below', menuWidth: 180, menuHeight: 160 };
+    const posOpts = { alignment: 'right', direction: 'below', menuWidth: 180, menuHeight: 200 };
     MenuPositioningUtils.showMenu(menu, anchor, posOpts);
     registerChromeMenu(menu, chromeRoot || anchor.closest('.viewport-leaf-chrome'), 'eye');
 

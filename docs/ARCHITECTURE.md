@@ -386,6 +386,7 @@
 - **Gestures outside leaf**: continue pan/zoom/drag/marquee; outside release **completes** (not cancel); `body.viewport-gesture-mode` blocks UI hover (like `panning-mode`) only for real gestures (`isDragging` / marquee / transform / viewport pan-zoom) — not bare LMB down (avoids swallowing the first panel click). Cursors set only on interaction canvas; end/blur resets all viewport canvases.
 - **Render**: multi-target; `visibleObjectsCache` key includes canvas size; sticky interactive cache during drag/transform/marquee; pick/marquee use interaction camera + client→buffer mapping when CSS size ≠ buffer.
   - **VP-BND**: debug overlays (boundaries / hit-test / collisions) and group-edit frame stroke scale use the **frame** camera from `_renderFrame`, not focused `stateManager.camera` — peer zoom no longer changes line width / hit-box padding on sibling views.
+  - **VP-OVL**: per-view DOM HUD (`ViewportInfoOverlay`) on `measureEl` — camera name, zoom, active flag badges (P/B/C), level name + object/layer/selection stats. Toggle `displayOptions.infoOverlay` via eye menu **Info** (default on). Updated each `RenderOperations.render`; pointer-events none.
 - **Close ×**: any viewport closeable when ≥2 exist; closing shell promotes another leaf (carry pose/display).
 
 ### LevelFileOperations (v3.57.0 Phase 5 multi-level)

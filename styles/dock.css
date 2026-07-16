@@ -682,6 +682,94 @@ body.dock-customize .floating-body .leaf-header .drag-handle:active {
   fill: currentColor;
 }
 
+/* VP-OVL: per-viewport info HUD (DOM, not canvas) */
+.viewport-info-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+  font: 11px/1.35 ui-sans-serif, system-ui, -apple-system, sans-serif;
+  color: rgba(229, 231, 235, 0.92);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.85);
+  user-select: none;
+}
+
+.viewport-info-overlay.viewport-info-overlay-hidden {
+  display: none;
+}
+
+.viewport-info-block {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: min(50%, 220px);
+  padding: 6px 8px;
+  border-radius: 4px;
+  background: rgba(17, 24, 39, 0.45);
+  backdrop-filter: blur(2px);
+}
+
+.viewport-info-tl {
+  top: 6px;
+  left: 6px;
+}
+
+.viewport-info-br {
+  right: 6px;
+  bottom: 6px;
+  text-align: right;
+  align-items: flex-end;
+}
+
+.viewport-info-row {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.viewport-info-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 1px;
+}
+
+.viewport-info-flags.viewport-info-flags-empty {
+  display: none;
+}
+
+.viewport-info-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.1rem;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: rgba(59, 130, 246, 0.35);
+  color: #dbeafe;
+}
+
+.viewport-info-badge-parallax {
+  background: rgba(16, 185, 129, 0.4);
+  color: #d1fae5;
+}
+
+.viewport-info-badge-objectBoundaries {
+  background: rgba(245, 158, 11, 0.4);
+  color: #fef3c7;
+}
+
+.viewport-info-badge-objectCollisions {
+  background: rgba(239, 68, 68, 0.4);
+  color: #fee2e2;
+}
+
 /* Floating viewport chrome too */
 .floating-body .viewport-leaf-chrome .viewport-filter-btn.viewport-filter-active,
 .floating-body .viewport-leaf-chrome .viewport-filter-btn.viewport-chrome-active {

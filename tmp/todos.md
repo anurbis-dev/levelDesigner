@@ -34,6 +34,7 @@
 - ✅ **DK-GST** — float detach ghost preview on no-target Shift-drag
 - ✅ **DK-CLP** — header-gap click collapse when vertical (column) neighbors
 - ✅ **VP-BND** — peer zoom no longer reskins boundaries/collisions stroke on sibling views
+- ✅ **VP-OVL** — per-view DOM info overlay (cam/zoom/flags/stats); eye menu Info
 
 ---
 
@@ -61,6 +62,7 @@
 | ~~**VP-HK**~~ | ✅ Хоткеи F/A/G/Boundaries/Collisions/Parallax — viewport **под курсором** | view-scoped displayOptions + camera |
 | ~~**VP-EYE**~~ | ✅ Иконка **глаза (View)** в шапке viewport: меню Grid/Boundaries/Collisions/Parallax | chrome рядом cam/filter |
 | ~~**VP-TB**~~ | ✅ Копии **Toolbar** для копий viewport, работающие в паре | View toggles + Focus per leaf |
+| ~~**VP-OVL**~~ | ✅ Info HUD-блоки поверх viewport (cam/zoom/flags/stats) | `ViewportInfoOverlay` + eye Info |
 
 ### Outliner
 
@@ -128,12 +130,11 @@
 
 ## Порядок работ (рекомендуемый)
 
-1. **OL-F** / **DK-*** / **VP-BND** ✅  
+1. **OL-F** / **DK-*** / **VP-BND** / **VP-OVL** ✅  
 2. **B2** — browser smoke multi-view / Assets×N  
-3. **viewport overlay** (backlog Open)  
-4. **U2–U3**, **U4**, **C1–C2** — старый product хвост  
-5. **Q\*** / **D\*** — opportunistically  
-6. Engine — **не из этого файла**
+3. **U2–U3**, **U4**, **C1–C2** — старый product хвост  
+4. **Q\*** / **D\*** — opportunistically  
+5. Engine — **не из этого файла**
 
 ---
 

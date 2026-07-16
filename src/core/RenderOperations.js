@@ -6,6 +6,7 @@ import { SnapUtils } from '../utils/SnapUtils.js';
 import { PERFORMANCE } from '../constants/EditorConstants.js';
 import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
 import { throttle } from '../utils/PerformanceUtils.js';
+import { refreshAllViewportInfoOverlays } from '../ui/dock/ViewportInfoOverlay.js';
 
 /**
  * Render Operations module for LevelEditor
@@ -336,6 +337,9 @@ export class RenderOperations extends BaseModule {
             }
             this.editor.canvasRenderer.restorePrimaryTarget();
         }
+
+        // VP-OVL: DOM HUD blocks (camera/zoom/flags/stats) — cheap text updates only
+        refreshAllViewportInfoOverlays(this.editor);
 
         const renderTime = performance.now() - renderStart;
         this.lastRenderDuration = renderTime;

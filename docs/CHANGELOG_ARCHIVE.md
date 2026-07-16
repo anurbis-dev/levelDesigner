@@ -2,6 +2,11 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (VP-OVL commit)
+
+- Feature: **Game** top-level menu — moved **Play** out of the toolbar into `Game > Play`; added `Game > Build...`, which saves the project and generates `build-game.bat` (via `FileUtils.saveDataDirectly`) that runs `npm run build:game` — browser has no shell/fs access to invoke esbuild itself. Both files need to end up next to `package.json`.
+- Fix: `FileUtils.saveDataDirectly`'s native save-picker filter was hardcoded to `.json` regardless of the caller's `mimeType`/filename (would have forced `.bat` saves through a JSON filter) — now derives the picker `accept`/description from the actual filename extension.
+
 ## Archived from CHANGELOG.md (VP-BND commit)
 
 - Feature **DK-CLP**: click leaf header gap collapses panel when stacked vertically (column parent + expandable sibling); expand on second click; state on `leaf.collapsed` (persisted with dock tree).

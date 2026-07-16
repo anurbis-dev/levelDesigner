@@ -17,6 +17,11 @@
 import { Logger } from '../utils/Logger.js';
 import { bindSecondaryViewportNav, unbindSecondaryViewportNav } from './ViewportViewNav.js';
 import { refreshAllViewportChrome } from '../ui/dock/ViewportLeafChrome.js';
+import {
+    ensureViewportInfoOverlay,
+    removeViewportInfoOverlay,
+    updateViewportInfoOverlay
+} from '../ui/dock/ViewportInfoOverlay.js';
 
 /** @typedef {{ kind: 'work' } | { kind: 'game', objectId: string }} CameraSource */
 /** @typedef {{ x: number, y: number, zoom: number }} CameraPose */
@@ -31,13 +36,15 @@ import { refreshAllViewportChrome } from '../ui/dock/ViewportLeafChrome.js';
  * @property {CameraSource} source
  * @property {CameraPose} localCamera - work-camera pose for this leaf (all views; peers)
  * @property {Set<string>} typeFilters - empty = all types; 'DISABLE_ALL' = none
- * @property {{ showGrid: boolean, objectBoundaries: boolean, objectCollisions: boolean, parallax: boolean }} displayOptions
+ * @property {{ showGrid: boolean, objectBoundaries: boolean, objectCollisions: boolean, parallax: boolean, infoOverlay: boolean }} displayOptions
  *   fully owned per view (never live-inherit global after seed)
  * @property {ResizeObserver|null} resizeObserver
  */
 
 /** @type {ReadonlySet<string>} */
-const DISPLAY_FLAG_KEYS = new Set(['showGrid', 'objectBoundaries', 'objectCollisions', 'parallax']);
+const DISPLAY_FLAG_KEYS = new Set([
+    'showGrid', 'objectBoundaries', 'objectCollisions', 'parallax', 'infoOverlay'
+]);
 
 export class ViewportViewManager {
     /**
@@ -128,6 +135,8 @@ export class ViewportViewManager {
             this.focusedLeafId = leafId;
         }
         this.resizeView(leafId);
+        ensureViewportInfoOverlay(view);
+        updateViewportInfoOverlay(view, this.editor);
         Logger.ui.debug(`ViewportView registered ${leafId} shell=${view.isPrimary}`);
         return view;
     }
@@ -141,6 +150,7 @@ export class ViewportViewManager {
         if (view.resizeObserver) {
             try { view.resizeObserver.disconnect(); } catch (_e) { /* */ }
         }
+        removeViewportInfoOverlay(view);
         unbindSecondaryViewportNav(view);
         this.views.delete(leafId);
         if (this.focusedLeafId === leafId) {
@@ -531,20 +541,23 @@ export class ViewportViewManager {
                 ?? this.editor?.level?.settings?.showGrid
                 ?? true;
         }
+        // VP-OVL: HUD on by default (not stored in global view.* prefs)
+        if (k === 'infoOverlay') return true;
         return !!this.editor?.stateManager?.get(`view.${k}`);
     }
 
     /**
      * Full independent displayOptions object for a view.
      * @param {object|null} partial
-     * @returns {{ showGrid: boolean, objectBoundaries: boolean, objectCollisions: boolean, parallax: boolean }}
+     * @returns {{ showGrid: boolean, objectBoundaries: boolean, objectCollisions: boolean, parallax: boolean, infoOverlay: boolean }}
      */
     _seedDisplayOptions(partial) {
         const base = {
             showGrid: this._defaultDisplayFlag('showGrid'),
             objectBoundaries: this._defaultDisplayFlag('objectBoundaries'),
             objectCollisions: this._defaultDisplayFlag('objectCollisions'),
-            parallax: this._defaultDisplayFlag('parallax')
+            parallax: this._defaultDisplayFlag('parallax'),
+            infoOverlay: this._defaultDisplayFlag('infoOverlay')
         };
         if (partial && typeof partial === 'object') {
             for (const k of DISPLAY_FLAG_KEYS) {

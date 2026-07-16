@@ -5,11 +5,12 @@
 
 ## Open
 
-- добавить оверлей поверх вьюпорта для заполнения блоками отображения различных данных. Например: индикация включенного параллакса, имя активной камеры, общая статистика уровня/слоя и т.д.
+*(пусто — следующий product из todos P1: U2–U4 / C1–C2 / A4–A5)*
 
 
 ## Closed (архив)
 
+✅ VP-OVL — оверлей HUD на viewport: cam/zoom/флаги P·B·C / stats; eye **Info**; `ViewportInfoOverlay`  
 ✅ VP-BND — zoom соседнего viewport не меняет thickness boundaries/collisions/hit-test на текущем (`strokeFrame` + frame camera, не focused `stateManager.camera`)  
 ✅ DK-CLP — схлопывание leaf кликом по header gap при column-соседях (`leaf.collapsed`)  
 ✅ float viewport chrome menus — `MenuPositioningUtils` z-index 10000 поверх `#floating-layer`  
