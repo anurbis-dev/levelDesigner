@@ -19,12 +19,24 @@ export class GameBuildOperations extends BaseModule {
             return;
         }
 
-        const batName = 'build-game.bat';
-        await FileUtils.saveDataDirectly(this._buildBatScript(fileName), batName, FileUtils.TYPES.TEXT, false);
+        const batName = this._buildBatFileName(this.editor.project?.name);
+        // Plain download (not FileUtils.saveDataDirectly's native save-picker) —
+        // the picker's 10s ExtensionErrorUtils.withTimeout race doesn't cancel the
+        // underlying showSaveFilePicker() promise on timeout, so a slow pick would
+        // fire BOTH the download fallback and (if the user then completes the still-
+        // open dialog) the picker's own write, saving the .bat twice.
+        FileUtils.downloadData(this._buildBatScript(fileName), batName, FileUtils.TYPES.TEXT, false);
 
         Logger.status.success(
             `Build: saved "${fileName}" and "${batName}" — put both next to package.json (project root), then run the .bat`
         );
+    }
+
+    /** @private */
+    _buildBatFileName(projectName) {
+        if (!projectName || projectName === 'Untitled Project') return 'build-game.bat';
+        const safe = projectName.replace(/[\\/:*?"<>|]/g, '-').trim();
+        return safe ? `build-${safe}-game.bat` : 'build-game.bat';
     }
 
     /** @private */
