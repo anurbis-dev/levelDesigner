@@ -283,7 +283,8 @@ level.settings.parallaxVertical // множитель вертикального
   - `src/engine/render/ParallaxController.js` - чистые функции `getCameraOffset/getParallaxOffset` (портированы 1:1 из ParallaxRenderer)
   - `src/engine/render/Renderer.js` - Canvas 2D рендер (setCamera/restoreCamera/clear/drawBackground/drawEntity/renderScene), порт CanvasRenderer без editor-флагов
   - `src/engine/AssetLoader.js` - `LOADABLE_ASSET_TYPES/DATA_ONLY_ASSET_TYPES`, `collectImageSources(scene)`, `loadImages(sources)` с guard `typeof Image !== 'undefined'`
-  - `src/engine/GameEngine.js` - оркестратор (constructor, loadProject async, tick, start/stop requestAnimationFrame-цикл)
+  - `src/engine/GameEngine.js` - оркестратор (constructor, loadProject async, tick, start/stop requestAnimationFrame-цикл); создаёт/уничтожает Input
+  - `src/engine/Input.js` - клавиатурный стейт (arrows/WASD → нормализованная ось `{x,y}` в [-1,1]), методы `isDown()`/`getAxis()`/`destroy()`
   - **Фаза 2 MVP-поведения** (`src/engine/behaviors/` дочерние классы, `src/engine/BehaviorRegistry.js` реестр):
     - `src/engine/BehaviorRegistry.js` - `register(type, Class)`, `get(type)`, `has(type)`, явная регистрация (не import-side-effects)
     - `src/engine/behaviors/Behavior.js` - базовый класс (`entity`, `properties`, `enabled`, no-op `update(dt, scene)`)
@@ -292,8 +293,9 @@ level.settings.parallaxVertical // множитель вертикального
     - `src/engine/behaviors/TriggerBehavior.js` - `checkEntities(candidates)` → `{entered, exited}`, `isOverlapping(id)`, `update(dt, scene)` — зовёт `checkEntities(scene.getAllEntities())`
     - `src/engine/behaviors/InteractableBehavior.js` - `radius`/`hint` (properties), `isInRange(point)`
     - `src/engine/behaviors/PlayerStartBehavior.js` - `getSpawnPosition()`
+    - `src/engine/behaviors/PlayerMovementBehavior.js` - runtime-поведение (не component-тип схемы) управляемого игрока; читает `scene.input.getAxis()`, движет entity, per-axis AABB-коллизия
     - `src/engine/behaviors/registerDefaultBehaviors.js` - регистрирует collider/trigger/interactable/playerStart в `BehaviorRegistry`
-    - Обновлены: `Entity.js` (`behaviors: []`), `EntityFactory.js` (компоненты → behaviors через реестр), `Scene.js` (`getAllEntities()`, `getPlayerStart()`), `GameEngine.js` (регистрация + `_update(dt)` перед рендером)
+    - Обновлены: `Entity.js` (`behaviors: []`), `EntityFactory.js` (компоненты → behaviors через реестр), `Scene.js` (`getAllEntities()`, `findPlayerStartEntity()`, `getPlayerStart()`, `spawnPlayer(speed)`), `GameEngine.js` (регистрация + `_update(dt)` перед рендером, Input управление, `dt` вычисление из requestAnimationFrame)
 
 ## 🏗️ Архитектурные принципы
 

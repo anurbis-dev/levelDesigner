@@ -7,7 +7,8 @@ import { GameEngine } from '../engine/GameEngine.js';
  * Play-in-editor (engine plan §3, tmp/2D_Editor_ENGINE_PLAN.md). Serializes the current
  * level through the same ProjectExporter used for release builds (Фаза 4), boots a
  * self-contained src/engine/GameEngine in a fullscreen overlay canvas, and tears it down
- * on Stop. Deliberately no Input/player-movement here — see plan §"Не входит в эту фазу".
+ * on Stop. GameEngine.loadProject() spawns the controllable player and owns its own
+ * keyboard Input instance (src/engine/Input.js) — nothing input-related lives here.
  * @extends BaseModule
  */
 export class PlayOperations extends BaseModule {

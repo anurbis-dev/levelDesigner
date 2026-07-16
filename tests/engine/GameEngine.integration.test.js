@@ -93,6 +93,83 @@ function verticalSliceManifest() {
     };
 }
 
+// Input/player-movement (see PlayOperations.js history — deliberately deferred past Фаза 3,
+// filled in now): loadProject() spawns a controllable player at the playerStart marker and
+// wires scene.input so PlayerMovementBehavior can move it, blocked by colliders.
+function movementManifest() {
+    return {
+        formatVersion: 1,
+        name: 'Demo',
+        entryLevelId: 'level_a',
+        levels: [{
+            id: 'level_a',
+            data: {
+                meta: { name: 'Level A' },
+                camera: { x: 0, y: 0, zoom: 1 },
+                layers: [],
+                objects: [
+                    { id: 'spawn', type: 'player_start', x: 0, y: 0, width: 32, height: 32,
+                        components: [{ id: 'c1', type: 'playerStart', enabled: true, properties: {} }] },
+                    { id: 'wall', type: 'actor', x: 50, y: -10, width: 32, height: 52,
+                        components: [{ id: 'c2', type: 'collider', enabled: true, properties: {} }] }
+                ]
+            }
+        }]
+    };
+}
+
+describe('GameEngine — Input/player-movement', () => {
+    it('spawns a player at the playerStart marker and hides the marker', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(movementManifest());
+
+        expect(engine.scene.player).toBeTruthy();
+        expect(engine.scene.player.x).toBe(0);
+        const marker = engine.scene.entities.find(e => e.id === 'spawn');
+        expect(marker.visible).toBe(false);
+    });
+
+    it('moves the player from scene.input and stops it at a collider (small per-tick steps, no tunneling)', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(movementManifest());
+        engine.scene.input = { getAxis: () => ({ x: 1, y: 0 }) };
+
+        // dt=0.05s * speed 200px/s = 10px/tick; wall starts at x=50 — small steps so the
+        // discrete AABB check (compare end-of-step bounds) can't skip over it in one tick.
+        for (let i = 0; i < 5; i++) engine.tick(0.05);
+
+        expect(engine.scene.player.x).toBe(10);
+
+        const stalled = engine.scene.player.x;
+        engine.tick(0.05);
+        expect(engine.scene.player.x).toBe(stalled);
+    });
+
+    it('start() computes real per-frame dt from rAF timestamps', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(movementManifest());
+        engine.scene.input = { getAxis: () => ({ x: 1, y: 0 }) };
+
+        let frame = 0;
+        const timestamps = [1000, 1016, 1032];
+        global.requestAnimationFrame = (cb) => setTimeout(() => cb(timestamps[Math.min(frame++, timestamps.length - 1)]), 0);
+        global.cancelAnimationFrame = (id) => clearTimeout(id);
+
+        engine.start();
+        await new Promise(resolve => setTimeout(resolve, 10));
+        engine.stop();
+
+        // first frame's dt is 0 (baseline), later frames move ~200px/s * 0.016s ≈ 3.2px each
+        expect(engine.scene.player.x).toBeGreaterThan(0);
+
+        delete global.requestAnimationFrame;
+        delete global.cancelAnimationFrame;
+    });
+});
+
 describe('GameEngine — Фаза 2 vertical slice (BehaviorRegistry + collider/trigger/playerStart)', () => {
     it('resolves playerStart/collider/trigger to real behaviors and tracks trigger enter/exit across ticks', async () => {
         const { canvas } = mockCanvas();

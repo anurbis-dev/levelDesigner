@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- **C2**: camera aspect presets (16:9/4:3/1:1/3:2/21:9/custom), game-viewport letterbox + vignette; Details Aspect/Resolution/Vignette.
+- **Engine Phase 2**: Input system and player movement — `src/engine/Input.js` (keyboard state: arrows/WASD → normalized axis), `src/engine/behaviors/PlayerMovementBehavior.js` (runtime player entity driven by Input, per-axis AABB collision), `Scene.spawnPlayer()` (creates player at playerStart marker, hides marker gizmo), `GameEngine` owns Input lifecycle (destroy on stop).

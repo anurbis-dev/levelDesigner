@@ -113,7 +113,7 @@ implemented`, `properties: {}`, `schemaVersion: 1`. `BehaviorRegistry` (движ
 | `collider` | Collider | 1 | implemented | `offsetX`/`offsetY`/`width`/`height` (все опциональные, дефолт — сам bounding box entity); AABB-прямоугольник, `shape` пока не читается (только rect) |
 | `trigger` | Trigger | 1 | implemented | те же поля, что `collider` (использует ту же `getEntityBounds`); enter/exit трекается против любого поведения с `getBounds()`, не только `collider` |
 | `interactable` | Interactable | 1 | implemented | `radius` (опционально, дефолт `32`), `hint` (опционально, дефолт `'Interact'`) |
-| `playerStart` | Player Start | 1 | implemented | нет собственных полей — позиция берётся из `entity.x/y` |
+| `playerStart` | Player Start | 1 | implemented | нет собственных полей — позиция берётся из `entity.x/y` (используется `Scene.spawnPlayer()` для создания управляемого игрока при запуске уровня; сама маркер-сущность скрывается, не отображается в игре) |
 | `transformAnimation` | Transform Animation | 1 | not implemented | TBD |
 | `spriteUiAnimation` | Sprite / UI Animation | 1 | not implemented | TBD |
 | `pickup` | Pickup | 1 | not implemented | TBD |

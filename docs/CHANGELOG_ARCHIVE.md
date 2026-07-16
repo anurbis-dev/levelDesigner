@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (C2)
+
+- **C2**: camera aspect presets (16:9/4:3/1:1/3:2/21:9/custom), game-viewport letterbox + vignette; Details Aspect/Resolution/Vignette.
+
 ## Archived from CHANGELOG.md (C1)
 
 - **C1**: game-camera view frame gizmo — dashed frustum (default 1920×1080 / zoom) on canvas for each `type===camera` object; skip active game-source of the current viewport.

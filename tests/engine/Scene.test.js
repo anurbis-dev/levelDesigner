@@ -43,3 +43,39 @@ describe('Scene.getPlayerStart', () => {
         expect(scene.getPlayerStart()).toBeNull();
     });
 });
+
+describe('Scene.spawnPlayer', () => {
+    function makeScene() {
+        return new Scene({
+            objects: [
+                { id: 'start', type: 'player_start', x: 40, y: 60, width: 32, height: 32,
+                    components: [{ id: 'c1', type: 'playerStart', enabled: true, properties: {} }] }
+            ]
+        });
+    }
+
+    it('spawns a player entity at the marker position and hides the marker', () => {
+        const scene = makeScene();
+        const player = scene.spawnPlayer();
+
+        expect(player).toMatchObject({ id: '__player', x: 40, y: 60, width: 32, height: 32 });
+        expect(scene.entities).toContain(player);
+        expect(scene.player).toBe(player);
+
+        const marker = scene.entities.find(e => e.id === 'start');
+        expect(marker.visible).toBe(false);
+    });
+
+    it('gives the player a collider and a movement behavior', () => {
+        const player = makeScene().spawnPlayer();
+        expect(player.behaviors.some(b => typeof b.getBounds === 'function')).toBe(true);
+        expect(player.behaviors.some(b => typeof b.update === 'function' && b.speed !== undefined)).toBe(true);
+    });
+
+    it('returns null and adds nothing when the level has no playerStart', () => {
+        const scene = new Scene({ objects: [{ id: 'a', type: 'actor' }] });
+        const before = scene.entities.length;
+        expect(scene.spawnPlayer()).toBeNull();
+        expect(scene.entities.length).toBe(before);
+    });
+});

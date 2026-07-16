@@ -1,5 +1,6 @@
 import { ProjectLoader } from './ProjectLoader.js';
 import { Renderer } from './render/Renderer.js';
+import { Input } from './Input.js';
 import { registerDefaultBehaviors } from './behaviors/registerDefaultBehaviors.js';
 
 /**
@@ -9,10 +10,12 @@ import { registerDefaultBehaviors } from './behaviors/registerDefaultBehaviors.j
 export class GameEngine {
     constructor(canvas) {
         this.renderer = new Renderer(canvas);
+        this.input = new Input();
         this.scene = null;
         this.camera = null;
         this.parallaxStartPosition = null;
         this._rafId = null;
+        this._lastFrameTime = null;
         registerDefaultBehaviors();
     }
 
@@ -24,6 +27,8 @@ export class GameEngine {
         const registries = ProjectLoader.load(manifest, opts);
         const levelId = opts.levelId ?? registries.entryLevelId;
         this.scene = ProjectLoader.loadLevel(levelId, registries);
+        this.scene.input = this.input;
+        this.scene.spawnPlayer();
         this.camera = { ...this.scene.camera };
         this.parallaxStartPosition = { ...this.camera };
     }
@@ -45,8 +50,12 @@ export class GameEngine {
 
     start() {
         if (this._rafId !== null || typeof requestAnimationFrame === 'undefined') return;
-        const loop = () => {
-            this.tick();
+        this._lastFrameTime = null;
+        const loop = (now) => {
+            if (this._lastFrameTime === null) this._lastFrameTime = now;
+            const dt = (now - this._lastFrameTime) / 1000;
+            this._lastFrameTime = now;
+            this.tick(dt);
             this._rafId = requestAnimationFrame(loop);
         };
         this._rafId = requestAnimationFrame(loop);
@@ -57,5 +66,6 @@ export class GameEngine {
             cancelAnimationFrame(this._rafId);
         }
         this._rafId = null;
+        this.input.destroy();
     }
 }

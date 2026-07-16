@@ -1,4 +1,7 @@
 import { EntityFactory } from './EntityFactory.js';
+import { Entity } from './Entity.js';
+import { ColliderBehavior } from './behaviors/ColliderBehavior.js';
+import { PlayerMovementBehavior } from './behaviors/PlayerMovementBehavior.js';
 
 /**
  * Runtime scene — one loaded level's worth of entities/layers/settings/camera.
@@ -46,11 +49,44 @@ export class Scene {
         return result;
     }
 
+    /** @returns {import('./Entity.js').Entity|null} the first entity carrying a playerStart behavior. */
+    findPlayerStartEntity() {
+        return this.getAllEntities()
+            .find(entity => entity.behaviors.some(b => typeof b.getSpawnPosition === 'function'));
+    }
+
     /** @returns {{x: number, y: number}|null} spawn position from the first playerStart entity found. */
     getPlayerStart() {
-        const playerStart = this.getAllEntities()
-            .flatMap(entity => entity.behaviors)
-            .find(behavior => typeof behavior.getSpawnPosition === 'function');
-        return playerStart ? playerStart.getSpawnPosition() : null;
+        const entity = this.findPlayerStartEntity();
+        if (!entity) return null;
+        const behavior = entity.behaviors.find(b => typeof b.getSpawnPosition === 'function');
+        return behavior.getSpawnPosition();
+    }
+
+    /**
+     * Creates the runtime player entity at the playerStart marker's position and hides the
+     * marker itself (it's a design-time gizmo, not something that should render alongside
+     * the actual player). No-op if the level has no playerStart entity.
+     * @param {number} [speed] - px/sec, forwarded to PlayerMovementBehavior.
+     * @returns {import('./Entity.js').Entity|null}
+     */
+    spawnPlayer(speed = 200) {
+        const marker = this.findPlayerStartEntity();
+        if (!marker) return null;
+        const spawn = marker.behaviors.find(b => typeof b.getSpawnPosition === 'function').getSpawnPosition();
+        marker.visible = false;
+
+        const player = new Entity({
+            id: '__player', type: 'player', x: spawn.x, y: spawn.y,
+            width: marker.width, height: marker.height, color: '#22c55e'
+        });
+        player.behaviors = [
+            new ColliderBehavior(player, {}),
+            new PlayerMovementBehavior(player, { properties: { speed } })
+        ];
+
+        this.player = player;
+        this.entities.push(player);
+        return player;
     }
 }
