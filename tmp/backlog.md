@@ -5,12 +5,12 @@
 
 ## Open
 
-- зум других вьюпортов не должен влиять на отображение элементов с соседних - сейчас включенные в одном окне boundaries меняются при зуме другого окна
 - добавить оверлей поверх вьюпорта для заполнения блоками отображения различных данных. Например: индикация включенного параллакса, имя активной камеры, общая статистика уровня/слоя и т.д.
 
 
 ## Closed (архив)
 
+✅ VP-BND — zoom соседнего viewport не меняет thickness boundaries/collisions/hit-test на текущем (`strokeFrame` + frame camera, не focused `stateManager.camera`)  
 ✅ DK-CLP — схлопывание leaf кликом по header gap при column-соседях (`leaf.collapsed`)  
 ✅ float viewport chrome menus — `MenuPositioningUtils` z-index 10000 поверх `#floating-layer`  
 ✅ DK-GST — ghost float-окна при Shift-drag без dock target (`.float-detach-ghost` + `floatDetachLayoutFromClient`)  

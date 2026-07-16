@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- Feature **DK-CLP**: click leaf header gap collapses panel when stacked vertically (column parent + expandable sibling); expand on second click; state on `leaf.collapsed` (persisted with dock tree).
+- Fix **VP-BND**: multi-viewport boundaries / collisions / hit-test overlay / group-edit frame use frame camera for stroke scale (peer zoom no longer changes sibling debug overlays).

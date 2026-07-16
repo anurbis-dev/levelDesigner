@@ -489,12 +489,12 @@ export class RenderOperations extends BaseModule {
         // never rendered this frame (current level hidden via its own eye icon).
         const currentSessionVisible = visibleSessions.some(session => session.level === currentLevel);
 
-        // Draw object boundaries if enabled
+        // Draw object boundaries if enabled (frame camera — not focused stateManager.camera)
         const showObjectBoundaries = view && vvm
             ? vvm.getDisplayFlag(view, 'objectBoundaries')
             : this.editor.stateManager.get('view.objectBoundaries');
         if (showObjectBoundaries && currentSessionVisible) {
-            this.drawObjectBoundaries();
+            this.drawObjectBoundaries(camera);
         }
 
         // Draw object collisions if enabled
@@ -502,7 +502,7 @@ export class RenderOperations extends BaseModule {
             ? vvm.getDisplayFlag(view, 'objectCollisions')
             : this.editor.stateManager.get('view.objectCollisions');
         if (showObjectCollisions && currentSessionVisible) {
-            this.drawObjectCollisions();
+            this.drawObjectCollisions(camera);
         }
 
         if (currentSessionVisible) {
@@ -520,7 +520,7 @@ export class RenderOperations extends BaseModule {
             }
 
             // Draw group edit mode frame
-            this.drawGroupEditFrame();
+            this.drawGroupEditFrame(camera);
 
             // Draw placing objects (duplicates) BEFORE restoreCamera() (world space)
             const duplicate = this.editor.stateManager.get('duplicate');
@@ -707,11 +707,12 @@ export class RenderOperations extends BaseModule {
 
     /**
      * Draw group edit mode frame
+     * @param {{x:number,y:number,zoom:number}|null} [cameraOverride] - multi-view frame camera
      */
-    drawGroupEditFrame() {
+    drawGroupEditFrame(cameraOverride = null) {
         if (!this.isInGroupEditMode()) return;
 
-        const camera = this.editor.stateManager.get('camera');
+        const camera = cameraOverride || this.editor.stateManager.get('camera');
         const group = this.getActiveGroup();
         const groupEditMode = this.getGroupEditMode();
 
@@ -1280,20 +1281,19 @@ export class RenderOperations extends BaseModule {
     }
 
     /**
-     * Draw object boundaries for debugging
+     * Draw object boundaries for debugging.
+     * @param {{x:number,y:number,zoom:number}|null} [cameraOverride] - multi-view frame camera
      */
-    drawObjectBoundaries() {
-        // Get visible layer IDs for filtering
+    drawObjectBoundaries(cameraOverride = null) {
+        const camera = cameraOverride || this.editor.stateManager.get('camera');
         const visibleLayerIds = this.getVisibleLayerIds();
 
-        // Only draw boundaries for visible top-level objects
         this.editor.level.objects.forEach(obj => {
-            // Check if object is visible and in visible layer
             if (obj.visible && visibleLayerIds.has(this.getEffectiveLayerId(obj))) {
                 if (obj.type === 'group') {
-                    this.drawGroupBoundaries(obj);
+                    this.drawGroupBoundaries(obj, camera);
                 } else {
-                    this.drawSingleObjectBoundary(obj);
+                    this.drawSingleObjectBoundary(obj, camera);
                 }
             }
         });
@@ -1305,17 +1305,19 @@ export class RenderOperations extends BaseModule {
      * (see drawObjectSelectionRect) so this debug overlay can never drift out of sync
      * with what's actually rendered/selectable, unlike the old plain strokeRect(worldPos)
      * which ignored rotation entirely.
+     * @param {object} obj
+     * @param {{x:number,y:number,zoom:number}|null} [cameraOverride]
      */
-    drawSingleObjectBoundary(obj) {
+    drawSingleObjectBoundary(obj, cameraOverride = null) {
         const bounds = this.editor.objectOperations.getObjectWorldBounds(obj);
-        const camera = this.editor.stateManager.get('camera');
+        const camera = cameraOverride || this.editor.stateManager.get('camera');
         const geometry = WorldPositionUtils.getFrameGeometry(obj, this.editor.level.objects);
         const cx = (bounds.minX + bounds.maxX) / 2;
         const cy = (bounds.minY + bounds.maxY) / 2;
         const rect = { minX: cx - geometry.halfW, minY: cy - geometry.halfH, maxX: cx + geometry.halfW, maxY: cy + geometry.halfH };
 
         this.strokeFrame(rect, camera, { color: 'rgba(0, 255, 0, 0.5)', width: 1, dash: [2, 2] }, geometry.rotationDeg);
-        this.drawHitTestArea(obj);
+        this.drawHitTestArea(obj, camera);
     }
 
     /**
@@ -1326,10 +1328,15 @@ export class RenderOperations extends BaseModule {
      * drawing them independently. Drawn as a plain expanded box (square corners); the real
      * tolerance test is circular around the click point (see WorldPositionUtils._pointNearRect),
      * so actual clicks near a corner are forgiven slightly less than this box implies.
+     * Stroke width and world tolerance use the frame camera so peer zoom does not reskin this view.
+     * @param {object} obj
+     * @param {{x:number,y:number,zoom:number}|null} [cameraOverride]
      */
-    drawHitTestArea(obj) {
-        const camera = this.editor.stateManager.get('camera');
-        const tolerance = this.editor.objectOperations.getHitTestTolerance();
+    drawHitTestArea(obj, cameraOverride = null) {
+        const camera = cameraOverride || this.editor.stateManager.get('camera');
+        const px = this.editor.stateManager.get('selection.hitTestTolerance') ?? 4;
+        const zoom = camera?.zoom > 0 ? camera.zoom : 1;
+        const tolerance = px / zoom;
         const geom = WorldPositionUtils.getHitTestGeometry(obj, this.editor.level.objects);
         const rect = {
             minX: geom.cx - geom.halfW - tolerance,
@@ -1343,17 +1350,19 @@ export class RenderOperations extends BaseModule {
 
     /**
      * Draw boundaries for a group and its children
+     * @param {object} group
+     * @param {{x:number,y:number,zoom:number}|null} [cameraOverride]
      */
-    drawGroupBoundaries(group) {
-        this.drawSingleObjectBoundary(group);
+    drawGroupBoundaries(group, cameraOverride = null) {
+        const camera = cameraOverride || this.editor.stateManager.get('camera');
+        this.drawSingleObjectBoundary(group, camera);
 
-        // Draw children boundaries
         if (group.children) {
             group.children.forEach(child => {
                 if (child.type === 'group') {
-                    this.drawGroupBoundaries(child);
+                    this.drawGroupBoundaries(child, camera);
                 } else {
-                    this.drawSingleObjectBoundary(child);
+                    this.drawSingleObjectBoundary(child, camera);
                 }
             });
         }
@@ -1361,19 +1370,18 @@ export class RenderOperations extends BaseModule {
 
     /**
      * Draw object collision boxes for debugging
+     * @param {{x:number,y:number,zoom:number}|null} [cameraOverride] - multi-view frame camera
      */
-    drawObjectCollisions() {
-        // Get visible layer IDs for filtering
+    drawObjectCollisions(cameraOverride = null) {
+        const camera = cameraOverride || this.editor.stateManager.get('camera');
         const visibleLayerIds = this.getVisibleLayerIds();
 
-        // Only draw collisions for visible top-level objects
         this.editor.level.objects.forEach(obj => {
-            // Check if object is visible and in visible layer
             if (obj.visible && visibleLayerIds.has(this.getEffectiveLayerId(obj))) {
                 if (obj.type === 'group') {
-                    this.drawGroupCollisions(obj);
+                    this.drawGroupCollisions(obj, camera);
                 } else {
-                    this.drawSingleObjectCollision(obj);
+                    this.drawSingleObjectCollision(obj, camera);
                 }
             }
         });
@@ -1383,10 +1391,12 @@ export class RenderOperations extends BaseModule {
      * Draw collision box for a single object, rotated to match its true on-screen
      * orientation. Shares strokeFrame()/getFrameGeometry() with the selection outline
      * and drawSingleObjectBoundary — see drawObjectSelectionRect.
+     * @param {object} obj
+     * @param {{x:number,y:number,zoom:number}|null} [cameraOverride]
      */
-    drawSingleObjectCollision(obj) {
+    drawSingleObjectCollision(obj, cameraOverride = null) {
         const bounds = this.editor.objectOperations.getObjectWorldBounds(obj);
-        const camera = this.editor.stateManager.get('camera');
+        const camera = cameraOverride || this.editor.stateManager.get('camera');
         const geometry = WorldPositionUtils.getFrameGeometry(obj, this.editor.level.objects);
         const cx = (bounds.minX + bounds.maxX) / 2;
         const cy = (bounds.minY + bounds.maxY) / 2;
@@ -1394,7 +1404,6 @@ export class RenderOperations extends BaseModule {
 
         this.strokeFrame(rect, camera, { color: 'rgba(255, 0, 0, 0.7)', width: 2, dash: [] }, geometry.rotationDeg);
 
-        // Center point (rotation-invariant, so no transform needed)
         const ctx = this.editor.canvasRenderer.ctx;
         ctx.save();
         ctx.fillStyle = 'rgba(255, 0, 0, 0.8)';
@@ -1405,18 +1414,19 @@ export class RenderOperations extends BaseModule {
 
     /**
      * Draw collision boxes for a group and its children
+     * @param {object} group
+     * @param {{x:number,y:number,zoom:number}|null} [cameraOverride]
      */
-    drawGroupCollisions(group) {
-        // Draw group collision
-        this.drawSingleObjectCollision(group);
+    drawGroupCollisions(group, cameraOverride = null) {
+        const camera = cameraOverride || this.editor.stateManager.get('camera');
+        this.drawSingleObjectCollision(group, camera);
 
-        // Draw children collisions
         if (group.children) {
             group.children.forEach(child => {
                 if (child.type === 'group') {
-                    this.drawGroupCollisions(child);
+                    this.drawGroupCollisions(child, camera);
                 } else {
-                    this.drawSingleObjectCollision(child);
+                    this.drawSingleObjectCollision(child, camera);
                 }
             });
         }

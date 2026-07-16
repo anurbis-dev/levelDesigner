@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (VP-BND commit)
+
+- Feature **DK-CLP**: click leaf header gap collapses panel when stacked vertically (column parent + expandable sibling); expand on second click; state on `leaf.collapsed` (persisted with dock tree).
+
 ## Archived from CHANGELOG.md (DK-CLP commit)
 
 - Fix: body-fixed menus (`MenuPositioningUtils`) use `z-index: 10000` so viewport chrome cam/filter/eye (and other popups) work over floating windows (`#floating-layer` was 100 > old `z-50`).

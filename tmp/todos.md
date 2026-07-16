@@ -33,6 +33,7 @@
 - ✅ **DK-CUR** — header drag-gap grab only with Shift; else pointer
 - ✅ **DK-GST** — float detach ghost preview on no-target Shift-drag
 - ✅ **DK-CLP** — header-gap click collapse when vertical (column) neighbors
+- ✅ **VP-BND** — peer zoom no longer reskins boundaries/collisions stroke on sibling views
 
 ---
 
@@ -127,8 +128,9 @@
 
 ## Порядок работ (рекомендуемый)
 
-1. **OL-F** / **DK-ICO** / **DK-CUR** / **DK-GST** / **DK-CLP** ✅  
+1. **OL-F** / **DK-*** / **VP-BND** ✅  
 2. **B2** — browser smoke multi-view / Assets×N  
+3. **viewport overlay** (backlog Open)  
 4. **U2–U3**, **U4**, **C1–C2** — старый product хвост  
 5. **Q\*** / **D\*** — opportunistically  
 6. Engine — **не из этого файла**
