@@ -264,9 +264,18 @@ level.settings.parallaxVertical // множитель вертикального
 - `src/utils/ResetRegistry.js` - Backspace-to-reset (hover-based), singleton `ResetRegistry`, вызывается из `EventHandlers.handleKeyDown`
 - `src/utils/ShortcutFormatter.js` - `ShortcutFormatter.format(shortcut)` — единый формат хоткея (`"Ctrl+Alt+N"`), используется `MenuManager` и `SettingsPanel.formatShortcut()`
 
-### Docs — Engine Runtime (engine plan Фаза 0)
+### Docs — Engine Runtime (engine plan Фаза 0–1)
 - `docs/RUNTIME_SCHEMA.md` - контракт runtime-схемы: per-type `schemaVersion`/`properties` для 29 asset-типов и 19 component-типов, плюс раздел `## Versioning` про `Level.meta.version` (semver уровня, отдельная ось от `LevelEditor.VERSION`)
 - `docs/CONTENT_MODEL.md` - три типа контент-паков движка: Project (база+патчи), Addon (overrides/additions), Special Event (без overrides); различие editor-Project (табы редактора) от runtime-Project (релиз), роль `ProjectExporter`
+- **Фаза 1 MVP-ядро** (`src/engine/` самодостаточен, ноль импортов из `src/constants|core|managers|models|ui|utils|widgets`):
+  - `src/engine/Entity.js` - тонкий runtime-класс (id/name/type/x/y/width/height/color/rotation/imgSrc/visible/layerId/properties/components/children)
+  - `src/engine/EntityFactory.js` - `fromGameObjectData(data)` → Entity, рекурсивно для children
+  - `src/engine/Scene.js` - уровень рантайма (entities, layers, settings, camera), методы `getLayersSorted/getLayerById/getVisibleLayerIds()`
+  - `src/engine/ProjectLoader.js` - `load(manifest, opts)` → {levelsById, entryLevelId, assetsById: Map(), eventsById: Map()}; `loadLevel(levelId, registries)` → Scene
+  - `src/engine/render/ParallaxController.js` - чистые функции `getCameraOffset/getParallaxOffset` (портированы 1:1 из ParallaxRenderer)
+  - `src/engine/render/Renderer.js` - Canvas 2D рендер (setCamera/restoreCamera/clear/drawBackground/drawEntity/renderScene), порт CanvasRenderer без editor-флагов
+  - `src/engine/AssetLoader.js` - `LOADABLE_ASSET_TYPES/DATA_ONLY_ASSET_TYPES`, `collectImageSources(scene)`, `loadImages(sources)` с guard `typeof Image !== 'undefined'`
+  - `src/engine/GameEngine.js` - оркестратор (constructor, loadProject async, tick, start/stop requestAnimationFrame-цикл)
 
 ## 🏗️ Архитектурные принципы
 
