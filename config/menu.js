@@ -283,6 +283,25 @@ export const MENU_CONFIG = {
         },
         buildAssetsMenu(),
         {
+            id: 'game',
+            label: 'Game',
+            items: [
+                {
+                    id: 'toggle-play',
+                    label: 'Play',
+                    type: 'action',
+                    action: 'togglePlayMode'
+                },
+                { type: 'separator' },
+                {
+                    id: 'build-game',
+                    label: 'Build...',
+                    type: 'action',
+                    action: 'buildGame'
+                }
+            ]
+        },
+        {
             id: 'settings',
             label: 'Settings',
             items: [

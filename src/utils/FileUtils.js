@@ -81,12 +81,7 @@ export class FileUtils {
             const fileHandle = await ExtensionErrorUtils.withTimeout(
                 window.showSaveFilePicker({
                     suggestedName: filename,
-                    types: [{
-                        description: 'JSON files',
-                        accept: {
-                            'application/json': ['.json']
-                        }
-                    }]
+                    types: [this._pickerTypeFor(mimeType, filename)]
                 }),
                 10000,
                 'File picker'
@@ -119,6 +114,24 @@ export class FileUtils {
         }
     }
 
+    /**
+     * `showSaveFilePicker`'s `types[0]` filter for a given mime type/filename — was
+     * hardcoded to `application/json`/`.json` regardless of the caller's mimeType
+     * (forced a `.json` filter even for non-JSON saves, e.g. `.bat`). Extension is
+     * read from `filename` itself so any mime type works without a lookup table.
+     * @param {string} mimeType
+     * @param {string} filename
+     * @returns {{description: string, accept: Record<string, string[]>}}
+     */
+    static _pickerTypeFor(mimeType, filename) {
+        const dot = filename.lastIndexOf('.');
+        const ext = dot >= 0 ? filename.slice(dot) : '';
+        const label = ext ? `${ext.slice(1).toUpperCase()} files` : 'Files';
+        return {
+            description: label,
+            accept: { [mimeType]: ext ? [ext] : [] }
+        };
+    }
 
     /**
      * Read file content as text

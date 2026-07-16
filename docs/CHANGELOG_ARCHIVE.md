@@ -10,6 +10,10 @@
 
 - Fix: body-fixed menus (`MenuPositioningUtils`) use `z-index: 10000` so viewport chrome cam/filter/eye (and other popups) work over floating windows (`#floating-layer` was 100 > old `z-50`).
 
+## Archived from CHANGELOG.md (Game menu commit)
+
+- Fix **VP-BND**: multi-viewport boundaries / collisions / hit-test overlay / group-edit frame use frame camera for stroke scale (peer zoom no longer changes sibling debug overlays).
+
 ## Archived from CHANGELOG.md (build:game commit)
 
 - UX **DK-CUR**: leaf header drag-gap cursor is `pointer` by default; `grab`/`grabbing` only while Shift (`body.dock-customize` via `bindDockCustomizeModeClass`); floating window chrome free-move still grab without Shift.

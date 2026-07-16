@@ -401,6 +401,11 @@
 ### PlayOperations (v4.4.0 Фаза 3: Play-in-editor)
 **Файл**: `src/core/PlayOperations.js`
 - Запуск игрового режима в редакторе через fullscreen canvas overlay; валидирует PlayerStart, сериализует текущий уровень через ProjectExporter, создаёт GameEngine; методы `play()`/`stop()`/`toggle()`/`isPlaying()`
+- Триггер — пункт **Game > Play** в главном меню (`config/menu.js`, `LevelEditor.togglePlayMode()`); Toolbar больше не содержит кнопку Play (перенесена в меню).
+
+### GameBuildOperations (v4.5.0, Game menu "Build...")
+**Файл**: `src/core/GameBuildOperations.js`
+- У браузерного редактора нет shell/fs-доступа для запуска esbuild напрямую. `buildGame()` сохраняет проект (как File > Save Project) и генерирует `build-game.bat`, запускающий `npm run build:game` (через `FileUtils.saveDataDirectly`, native save-picker). Оба файла нужно положить рядом с `package.json`. Триггер — **Game > Build...** в главном меню.
 
 ### Engine release build (v4.4.1 Фаза 4, minimal cut)
 **Файлы**: `src/engine/index.js` (bundle entry — `GameEngine`/`EntityFactory`/`BehaviorRegistry`/`ProjectLoader`), `scripts/build-game.mjs`, `scripts/build-addon.mjs`/`build-event.mjs` (stubs)
