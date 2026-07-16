@@ -735,9 +735,10 @@ export class EventHandlers extends BaseModule {
     }
 
     toggleViewOption(option) {
-        // VP-EQ: Grid/Boundaries/Collisions/Parallax are never global multi-view stomps
+        // Main View menu: Grid/Boundaries/Collisions/Parallax → all viewport copies.
+        // Hotkeys / eye / toolbar stay per-view (toggleViewOptionScoped).
         if (this._isViewportDisplayOption(option)) {
-            this.toggleViewOptionScoped(option);
+            this.toggleViewOptionAllViews(option);
             return;
         }
 
@@ -805,6 +806,28 @@ export class EventHandlers extends BaseModule {
         }
         // No multi-view registry yet — legacy single-canvas path
         this._toggleViewOptionGlobal(option);
+    }
+
+    /**
+     * Main View menu: toggle display flag on every viewport leaf (same next value).
+     * @param {'grid'|'objectBoundaries'|'objectCollisions'|'parallax'} option
+     */
+    toggleViewOptionAllViews(option) {
+        const vvm = this.editor.viewportViewManager;
+        if (!vvm?.views?.size) {
+            this._toggleViewOptionGlobal(option);
+            return;
+        }
+        const first = vvm.getFocusedView?.() || vvm.getAnyView?.() || [...vvm.views.values()][0];
+        if (!first) {
+            this._toggleViewOptionGlobal(option);
+            return;
+        }
+        const next = !vvm.getDisplayFlag(first, option);
+        vvm.setDisplayFlagAll(option, next);
+        this.updateViewCheckbox(option, next);
+        document.querySelectorAll('#menu-file > div, #menu-view > div, #menu-settings > div')
+            .forEach(d => d.classList.add('hidden'));
     }
 
     /**

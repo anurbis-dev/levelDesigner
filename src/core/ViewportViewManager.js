@@ -425,8 +425,9 @@ export class ViewportViewManager {
      * @param {string|ViewportView} leafIdOrView
      * @param {string} key
      * @param {boolean} value
+     * @param {{ silent?: boolean }} [opts] silent: skip render/chrome (batch via setDisplayFlagAll)
      */
-    setDisplayFlag(leafIdOrView, key, value) {
+    setDisplayFlag(leafIdOrView, key, value, opts = {}) {
         const view = typeof leafIdOrView === 'string'
             ? this.views.get(leafIdOrView)
             : leafIdOrView;
@@ -436,10 +437,28 @@ export class ViewportViewManager {
         if (!view.displayOptions) view.displayOptions = this._seedDisplayOptions(null);
         view.displayOptions[k] = !!value;
 
+        if (opts.silent) return;
+
         this.editor.render?.();
         refreshAllViewportChrome(this.editor);
         // Only the paired toolbar for this leaf + primary shell toolbar states
         this.editor.refreshViewportToolbars?.(view.leafId);
+    }
+
+    /**
+     * Set the same display flag on every viewport leaf (main View menu).
+     * @param {string} key
+     * @param {boolean} value
+     */
+    setDisplayFlagAll(key, value) {
+        const k = this.normalizeDisplayKey(key);
+        if (!DISPLAY_FLAG_KEYS.has(k)) return;
+        for (const view of this.views.values()) {
+            this.setDisplayFlag(view, k, value, { silent: true });
+        }
+        this.editor.render?.();
+        refreshAllViewportChrome(this.editor);
+        this.editor.refreshViewportToolbars?.(); // null → all toolbar copies
     }
 
     /**

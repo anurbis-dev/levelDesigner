@@ -33,7 +33,6 @@ export class OutlinerContextMenu extends BaseContextMenu {
             onRename: callbacks.onRename || (() => {}),
             onDelete: callbacks.onDelete || (() => {}),
             onToggleVisibility: callbacks.onToggleVisibility || (() => {}),
-            onSelect: callbacks.onSelect || (() => {}),
             onDuplicate: callbacks.onDuplicate || (() => {}),
             onExpandAllGroups: callbacks.onExpandAllGroups || (() => {}),
             onCollapseAllGroups: callbacks.onCollapseAllGroups || (() => {}),
@@ -78,12 +77,7 @@ export class OutlinerContextMenu extends BaseContextMenu {
      * Setup context menu items for different object types
      */
     setupMenuItems() {
-        // Object operations
-        this.addMenuItem('Select', '🎯', (contextData) => {
-            Logger.outliner.debug('Context menu: Select object', contextData.object?.name);
-            this.callbacks.onSelect(contextData.object);
-        }, { id: 'select' });
-
+        // Object operations (Select removed — RMB already selects; redundant)
         this.addMenuItem('Rename', '✏️', (contextData) => {
             Logger.outliner.debug('Context menu: Rename object', contextData.object?.name);
             this.callbacks.onRename(contextData.object);
@@ -96,9 +90,9 @@ export class OutlinerContextMenu extends BaseContextMenu {
 
         this.addSeparator();
 
-        this.addMenuItem('Toggle Visibility', '👁️', (contextData) => {
-            Logger.outliner.debug('Context menu: Toggle visibility', contextData.object?.name);
-            this.callbacks.onToggleVisibility(contextData.object);
+        this.addMenuItem('Toggle Visibility', '👁️', () => {
+            Logger.outliner.debug('Context menu: Toggle visibility for selection');
+            this.callbacks.onToggleVisibility();
         }, { id: 'visibility' });
 
         this.addSeparator();

@@ -160,14 +160,6 @@ export const MENU_CONFIG = {
                     type: 'section'
                 },
                 {
-                    id: 'toggle-viewport',
-                    label: 'Viewport',
-                    type: 'toggle',
-                    stateKey: 'view.viewport',
-                    action: 'togglePanel',
-                    actionParam: 'viewport'
-                },
-                {
                     id: 'toggle-outliner',
                     label: 'Outliner',
                     type: 'toggle',

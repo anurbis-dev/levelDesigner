@@ -1051,8 +1051,7 @@ export class OutlinerPanel extends BasePanel {
             stateManager: this.stateManager, // Pass StateManager for marquee check
             onRename: (object) => this.handleRenameObject(object),
             onDelete: (object) => this.handleDeleteObject(object),
-            onToggleVisibility: (object) => this.handleToggleVisibility(object),
-            onSelect: (object) => this.handleSelectObject(object),
+            onToggleVisibility: () => this.handleToggleVisibility(),
             onDuplicate: (object) => this.handleDuplicateObject(object),
             onExpandAllGroups: () => this.handleExpandAllGroups(),
             onCollapseAllGroups: () => this.handleCollapseAllGroups()
@@ -1081,16 +1080,9 @@ export class OutlinerPanel extends BasePanel {
         }
     }
 
-    handleToggleVisibility(object) {
-        Logger.outliner.info('Toggle visibility for object:', object.name);
-        // TODO: Implement visibility toggle
-        // This would require adding visibility property to objects
-    }
-
-    handleSelectObject(object) {
-        Logger.outliner.debug('Select object:', object.name);
-        const selectedObjects = new Set([object.id]);
-        this.stateManager.set('selectedObjects', selectedObjects);
+    handleToggleVisibility() {
+        // Same path as H hotkey — toggles all selected (RMB already selected the row)
+        this.levelEditor?.objectOperations?.toggleVisibilityForSelection?.();
     }
 
     handleDuplicateObject(object) {

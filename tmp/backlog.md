@@ -10,6 +10,10 @@
 
 ## Closed (архив)
 
+✅ VW-NOVP — View menu: Viewport toggle removed (cannot disable last viewport leaf)  
+✅ VW-ALL — View menu Grid/Boundaries/Collisions/Parallax apply to all viewport copies (`setDisplayFlagAll`); eye/toolbar/hotkeys remain per-view  
+✅ OL-CTX — Outliner RMB: Select removed; Toggle Visibility uses `toggleVisibilityForSelection` (H-path)  
+✅ OL-EMPTY — Outliner empty-space click clears selection (any copy)  
 ✅ U4 — Context menu Move to Layer (Canvas/Outliner; LayerOperations.moveSelectedObjectsToLayerId)  
 ✅ U3 — File → Open Recent (MRU level/project snapshots in editor.recentFiles; RecentFilesManager)  
 ✅ U2 — toolbar/Details titles = live hotkeys from Settings; ui.showTooltips; refreshUiShortcutTitles  

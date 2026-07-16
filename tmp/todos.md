@@ -38,6 +38,10 @@
 - ✅ **U2** — tooltips + live hotkeys on toolbar / Details order (`title` ↔ Settings Hotkeys)
 - ✅ **U3** — Open Recent Project/Level (File menu + `editor.recentFiles` snapshot cache)
 - ✅ **U4** — Context menu selection: Move to Layer (Canvas / Outliner)
+- ✅ **OL-EMPTY** — click empty Outliner (any copy) clears selection
+- ✅ **VW-NOVP** — View menu: no Viewport toggle (last leaf non-closeable)
+- ✅ **VW-ALL** — View menu Grid/Boundaries/Collisions/Parallax → all viewport copies
+- ✅ **OL-CTX** — Outliner RMB: no Select; Toggle Visibility → selection (H-path)
 
 ---
 
@@ -46,6 +50,7 @@
 | # | Задача | Где смотреть | Критерий |
 |---|--------|--------------|----------|
 | B2 | Проверить dock multi-viewport + Assets×N после polish | browser | 0 console errors; multi-drop все; folders width независим |
+| VW-EYE? | Eye/toolbar per-view vs main menu global — ok by design; recheck if user meant eye→all | browser | — |
 
 ---
 
@@ -57,39 +62,6 @@
 |---|--------|-------------------|
 | A4 | «Open / edit asset» (отдельный editor, если нужен) | stub |
 | A5 | Toolbar **panel settings** для Assets | `AssetToolbarController` TODO |
-
-### Viewport / multi-view
-
-| # | Задача | Заметки / критерий |
-|---|--------|-------------------|
-| ~~**VP-HK**~~ | ✅ Хоткеи F/A/G/Boundaries/Collisions/Parallax — viewport **под курсором** | view-scoped displayOptions + camera |
-| ~~**VP-EYE**~~ | ✅ Иконка **глаза (View)** в шапке viewport: меню Grid/Boundaries/Collisions/Parallax | chrome рядом cam/filter |
-| ~~**VP-TB**~~ | ✅ Копии **Toolbar** для копий viewport, работающие в паре | View toggles + Focus per leaf |
-| ~~**VP-OVL**~~ | ✅ Info HUD-блоки поверх viewport (cam/zoom/flags/stats) | `ViewportInfoOverlay` + eye Info |
-
-### Outliner
-
-| # | Задача | Заметки / критерий |
-|---|--------|-------------------|
-| ~~**OL-F**~~ | ✅ **F** над Outliner: auto-scroll к selection; multi → average Y | `OutlinerPanel.scrollToSelection` |
-
-### Dock / float UX
-
-| # | Задача | Заметки / критерий |
-|---|--------|-------------------|
-| ~~**DK-ICO**~~ | ✅ Нет иконки отрыва — float через Shift+drag gap | chrome cleanup |
-| ~~**DK-CUR**~~ | ✅ Grab на gap только при Shift (`body.dock-customize`) | header cursor |
-| ~~**DK-GST**~~ | ✅ Ghost float-окна при no-target Shift-drag | `.float-detach-ghost` |
-| ~~**DK-CLP**~~ | ✅ Схлопывание кликом по gap шапки при column-соседях | `leaf.collapsed` |
-
-### UX / workflow (старый хвост)
-
-| # | Задача | Заметки |
-|---|--------|---------|
-| U1 | Тип ассета **Level** (если ещё в каталоге/создании) | `AssetTypes` / Add menu |
-| ~~**U2**~~ | ✅ Tooltips + **актуальные хоткеи** | Settings Hotkeys ↔ title |
-| ~~**U3**~~ | ✅ **Open Recent…** Project / Level | File menu + `editor.recentFiles` |
-| ~~**U4**~~ | ✅ Context menu selection: **перенос по слоям** | Canvas / Outliner |
 
 ### Cameras (editor-side)
 
@@ -116,7 +88,7 @@
 | # | Задача | Критерий |
 |---|--------|----------|
 | Q3 | Ownership state Asset-контроллеров | по мере AS-* / A4–A5 |
-| Q4 | Outliner inline rename / visibility stubs | пересекается с OL-F / F2-паттерном |
+| Q4 | Outliner inline rename / visibility stubs | rename ok; visibility via H/menu |
 | Q5 | Settings tooltip system | `SettingsSyncManager` |
 
 ---
@@ -133,8 +105,8 @@
 
 ## Порядок работ (рекомендуемый)
 
-1. **OL-F** / **DK-*** / **VP-BND** / **VP-OVL** / **U2** / **U3** / **U4** ✅  
-2. **B2** — browser smoke multi-view / Assets×N (chrome-devtools when available)  
+1. ~~VW-NOVP / VW-ALL / OL-CTX~~ ✅  
+2. **B2** — browser smoke multi-view / Assets×N  
 3. **C1–C2** — старый product хвост  
 4. **Q\*** / **D\*** — opportunistically  
 5. Engine — **не из этого файла**
