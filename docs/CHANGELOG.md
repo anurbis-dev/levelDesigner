@@ -4,8 +4,4 @@
 
 ## [Unreleased]
 
-- Chore: cleared obsolete `tmp/*` (refactor/dock/perf/multi-level plans, prototype, one-off check scripts); kept only `tmp/2D_Editor_ENGINE_PLAN.md` for parallel engine work.
-- Refactor tail: `EditorPreferencesController.saveEditingPreferences` / `savePanelUiPreferences` / `saveAllUserSettings`; Assets type filters single-source (`activeTypeFilters` only); removed dead `handleAssetClick`; OVERRIDES/comments no longer point at deleted plans.
-- Assets folders resizer per instance (unique id + owner in ResizerManager); collapse tab on dblclick restore; removed center tongue (`::after`) on panel/dock split lines.
-- Assets multi-instance: dock copies UI-independent (`AssetPanel.uiStateKey` → `panelUI.<instanceKey>.*`) — own selection/tabs/filters/view; catalog + canvas drop shared; prefs primary only.
-- Engine plan Фаза 0: `docs/RUNTIME_SCHEMA.md` (per-type schema contract, 29 asset + 19 component types) + `docs/CONTENT_MODEL.md` (Project/Addon/Special Event manifest formats) + `ProjectExporter.js` (editor-Project → runtime-Project manifest transform, unused so far) + `Level.meta.version` default `'dynamic'` → `'1.0.0'`.
+- Fix (B1): `ParallaxRenderer.getParallaxOffset` — shift = `cameraOffset × parallaxOffset` (было `× (1 + offset)`: любой ненулевой offset давал ~2× скорость и разрыв с offset=0). Скорость слоя = `1 + offset` (−0.8 far, 0 none, 0.5 near, −1 screen-fixed). Docs: `USER_MANUAL` UI layer −1, not 0.

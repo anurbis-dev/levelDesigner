@@ -42,7 +42,17 @@ export class ParallaxRenderer {
     }
 
     /**
-     * Calculate parallax offset for a layer
+     * Drawing shift for a layer so that after camera transform
+     * screen ≈ (world − camera × (1 + parallaxOffset)) × zoom.
+     *
+     * Formula: shift = cameraOffset × parallaxOffset
+     * - −0.8 → scroll 0.2 (far / slow)
+     * - 0    → scroll 1.0 (no parallax)
+     * - 0.5  → scroll 1.5 (near / fast)
+     * - −1   → scroll 0   (screen-fixed UI)
+     *
+     * Do not use (1 + parallaxOffset) as the shift multiplier — that doubles
+     * motion for any non-zero offset and jumps discontinuously vs offset 0.
      */
     getParallaxOffset(layer) {
         if (!layer) return { x: 0, y: 0 };
@@ -57,8 +67,8 @@ export class ParallaxRenderer {
         const cameraOffset = this.getCameraOffset(this.editor.stateManager.get('camera'));
 
         return {
-            x: cameraOffset.x * (1 + parallaxOffset),
-            y: cameraOffset.y * (1 + parallaxOffset)
+            x: cameraOffset.x * parallaxOffset,
+            y: cameraOffset.y * parallaxOffset
         };
     }
 

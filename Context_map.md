@@ -185,7 +185,9 @@ menuManager.refreshShortcutLabels() // перечитывает [data-shortcut-k
 // Параллакс множители уровня (независимо по осям, на основе смещения камеры)
 level.settings.parallaxHorizontal // множитель горизонтального параллакса (дефолт 1, сохраняется в JSON)
 level.settings.parallaxVertical // множитель вертикального параллакса (дефолт 1, сохраняется в JSON)
-// ParallaxRenderer.getCameraOffset() применяет множители к смещению камеры, масштабируя offset * multiplier независимо для X и Y; комбинируется с per-layer parallaxOffset в getParallaxOffset()
+// ParallaxRenderer.getCameraOffset() — cameraDelta × level multipliers (H/V);
+// getParallaxOffset(layer) — shift = cameraOffset × layer.parallaxOffset
+// (scroll factor = 1 + offset; NOT ×(1+offset) as shift — that doubled motion)
 ```
 
 ## 📁 Основные файлы (Phase 7 Project завершена)

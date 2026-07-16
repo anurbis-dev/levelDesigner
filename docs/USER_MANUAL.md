@@ -135,11 +135,12 @@
 - Параллакс регулируется на двух уровнях: **Per-Layer** (индивидуальный для каждого слоя) и **Level-Wide** (общие множители для всего уровня)
 
 ### Per-Layer Parallax Offset (для каждого слоя)
-Каждый слой имеет свой `parallaxOffset`, который масштабирует скорость смещения камеры на этом слое:
-- **Background layer**: parallaxOffset = -0.8 (медленное движение)
-- **Middle layer**: parallaxOffset = -0.3 (средняя скорость)
-- **Foreground layer**: parallaxOffset = 0.5 (быстрое движение)
-- **UI layer**: parallaxOffset = 0 (не двигается с камерой)
+Каждый слой имеет свой `parallaxOffset`. Сдвиг при отрисовке: `cameraOffset × parallaxOffset`, итоговая скорость относительно камеры `1 + parallaxOffset`:
+- **Background layer**: parallaxOffset = -0.8 → scroll 0.2 (медленное движение)
+- **Middle layer**: parallaxOffset = -0.3 → scroll 0.7 (средняя скорость)
+- **Main / no parallax**: parallaxOffset = 0 → scroll 1.0 (как камера)
+- **Foreground layer**: parallaxOffset = 0.5 → scroll 1.5 (быстрое движение)
+- **UI layer**: parallaxOffset = -1 → scroll 0 (закреплён на экране)
 
 ### Level-Wide Parallax Multipliers (множители уровня)
 Управляются в DetailsPanel в панели "Camera" (при отсутствии выделения объектов):
