@@ -588,6 +588,32 @@
   background: rgba(59, 130, 246, 0.15);
 }
 
+/* VP-FIL: active type-filter icon = blue (match Outliner/Assets filter active) */
+#dock-workspace .viewport-leaf-chrome .viewport-filter-btn.viewport-filter-active,
+#dock-workspace .viewport-leaf-chrome .viewport-filter-btn.viewport-chrome-active {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.2);
+}
+
+#dock-workspace .viewport-leaf-chrome .viewport-filter-btn.viewport-filter-active svg,
+#dock-workspace .viewport-leaf-chrome .viewport-filter-btn.viewport-chrome-active svg {
+  color: #3b82f6;
+  fill: currentColor;
+}
+
+/* Floating viewport chrome too */
+.floating-body .viewport-leaf-chrome .viewport-filter-btn.viewport-filter-active,
+.floating-body .viewport-leaf-chrome .viewport-filter-btn.viewport-chrome-active {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.floating-body .viewport-leaf-chrome .viewport-filter-btn.viewport-filter-active svg,
+.floating-body .viewport-leaf-chrome .viewport-filter-btn.viewport-chrome-active svg {
+  color: #3b82f6;
+  fill: currentColor;
+}
+
 /* Floating leaf headers: same grab-only-on-handle rule */
 .floating-body .leaf-header {
   cursor: default;

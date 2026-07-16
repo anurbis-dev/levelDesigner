@@ -20,6 +20,8 @@
   *(A1 dialog — временно; см. **AS-REN** — заменить на inline как Outliner)*
 - ✅ **VP-MMB** — MMB zoom: canvas внутри `.leaf-body` больше не глотает middle-drag
 - ✅ **AS-REN / AS-F2 / AS-DBL** — inline rename ассета; F2 panel-aware; dblclick имени
+- ✅ **VP-COL** — camera color/name → chrome icon live
+- ✅ **VP-FIL** — active filter icon blue
 
 ---
 
@@ -28,8 +30,6 @@
 | # | Задача | Где смотреть | Критерий |
 |---|--------|--------------|----------|
 | B2 | Проверить dock multi-viewport + Assets×N после polish | browser | 0 console errors; multi-drop все; folders width независим |
-| **VP-COL** | Смена цвета camera → иконка в шапке viewport **сразу** (сейчас только после выбора камеры в меню) | viewport chrome / camera color | live color sync без re-select |
-| **VP-FIL** | Иконка активного type-filter viewport — **синяя**, как фильтры в других панелях | ViewportView chrome | цвет active = panel filter style |
 
 ---
 
@@ -118,15 +118,14 @@
 
 ## Порядок работ (рекомендуемый)
 
-1. **VP-COL / VP-FIL** — быстрые viewport chrome баги  
-2. **AS-FAV / AS-MMB** — favorites UX  
-3. **VP-HK / VP-EYE / VP-TB** — multi-viewport input + chrome + toolbar pair  
-4. **OL-F** — F over Outliner scroll  
-5. **DK-ICO / DK-CUR / DK-GST / DK-CLP** — dock polish  
-6. **B2** — browser smoke multi-view / Assets×N  
-7. **U2–U3**, **U4**, **C1–C2** — старый product хвост  
-8. **Q\*** / **D\*** — opportunistically  
-9. Engine — **не из этого файла**
+1. **AS-FAV / AS-MMB** — favorites UX  
+2. **VP-HK / VP-EYE / VP-TB** — multi-viewport input + chrome + toolbar pair  
+3. **OL-F** — F over Outliner scroll  
+4. **DK-ICO / DK-CUR / DK-GST / DK-CLP** — dock polish  
+5. **B2** — browser smoke multi-view / Assets×N  
+6. **U2–U3**, **U4**, **C1–C2** — старый product хвост  
+7. **Q\*** / **D\*** — opportunistically  
+8. Engine — **не из этого файла**
 
 ---
 

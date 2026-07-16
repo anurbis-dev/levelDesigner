@@ -97,6 +97,7 @@ function registerChromeMenu(menu, root, kind) {
 export function buildViewportHeaderControls(node, levelEditor) {
     const wrap = document.createElement('div');
     wrap.className = 'viewport-leaf-chrome';
+    wrap.dataset.leafId = node.id;
     // Keep drag on leaf title strip only — chrome is not a drag/grab zone.
     wrap.addEventListener('pointerdown', (e) => e.stopPropagation());
 
@@ -186,7 +187,12 @@ export function syncViewportChromeState(chrome, leafId, levelEditor) {
     }
 
     if (filterBtn) {
-        filterBtn.classList.toggle('viewport-chrome-active', hasActiveTypeFilters(view.typeFilters));
+        const filterOn = hasActiveTypeFilters(view.typeFilters);
+        filterBtn.classList.toggle('viewport-chrome-active', filterOn);
+        filterBtn.classList.toggle('viewport-filter-active', filterOn);
+        filterBtn.title = filterOn
+            ? 'Type filter active (this viewport)'
+            : 'Object type filter (this viewport only)';
     }
     if (camBtn) {
         const isGame = view.source?.kind === 'game';
@@ -204,6 +210,19 @@ export function syncViewportChromeState(chrome, leafId, levelEditor) {
         camBtn.title = title;
         camBtn.style.color = stroke;
     }
+}
+
+/**
+ * Re-sync every viewport leaf chrome in the DOM (camera color/name, filter active).
+ * Call when camera object props change without re-opening the source menu (VP-COL).
+ * @param {object} levelEditor
+ */
+export function refreshAllViewportChrome(levelEditor) {
+    if (!levelEditor) return;
+    document.querySelectorAll('.viewport-leaf-chrome[data-leaf-id]').forEach((chrome) => {
+        const leafId = chrome.dataset.leafId;
+        if (leafId) syncViewportChromeState(chrome, leafId, levelEditor);
+    });
 }
 
 /**

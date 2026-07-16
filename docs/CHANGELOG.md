@@ -4,4 +4,5 @@
 
 ## [Unreleased]
 
-- Feat **AS-REN / AS-F2 / AS-DBL**: rename ассета inline (поле имени, без dialog); F2 над Assets → selected library asset; dblclick на имени → rename, на thumbnail → properties.
+- Fix **VP-COL**: цвет иконки game camera в шапке viewport обновляется сразу при смене color/name объекта (`objectPropertyChanged` → `refreshAllViewportChrome`).
+- Fix **VP-FIL**: активный type-filter в шапке viewport — синяя иконка (как Outliner/Assets `bg-blue-600`).

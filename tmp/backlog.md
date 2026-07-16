@@ -7,8 +7,6 @@
 
 - зона для дропа фолдеров в панели ассетов (favorites) если пустая то отображать серый текст "Drop favorite folders here"
 - удаление закладки фолдера из favorites по среднему клику
-- при смене цвета объекта camera сразу обновлять цвет иконки в шапке вьюпорта где она активна. сейчас только после выбора камеры через меню апдейтится
-- цвет иконки активного фильтра вьюпорта должен быть синим (посмотри как подсвечиваются фильтры в других панелях)
 - хоткеи F, A, Grid, Boundaries, Collisions, Parallax должны учитывать панель вьюпорта под курсором
 - в шапку вьюпорта добавить иконку глаза (View) в меню которой можно выбрать отображение разных состояний вьюпорта (коллизии, и прочее)
 - добавить копии тулбара для копий вьюпорта работающие в паре.
@@ -21,6 +19,8 @@
 
 ## Closed (архив)
 
+✅ VP-COL — color/name game camera → live refresh chrome icon (`refreshAllViewportChrome`)  
+✅ VP-FIL — active viewport type-filter icon blue (`viewport-filter-active`)  
 ✅ AS-REN/F2/DBL — inline rename ассета (без dialog); F2 над Assets → library asset; dblclick имени → rename  
 ✅ регрессия MMB zoom viewport — `MouseHandlers` early-return по `.leaf-body` глотал canvas (dock); `_shouldDeferMiddleMouseToPanel` исключает viewport canvas  
 ✅ параллакс первого слоя слишком сильный — `getParallaxOffset` использовал `cam×(1+offset)` вместо `cam×offset`  

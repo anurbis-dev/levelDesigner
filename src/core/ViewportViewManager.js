@@ -12,6 +12,7 @@
  */
 import { Logger } from '../utils/Logger.js';
 import { bindSecondaryViewportNav, unbindSecondaryViewportNav } from './ViewportViewNav.js';
+import { refreshAllViewportChrome } from '../ui/dock/ViewportLeafChrome.js';
 
 /** @typedef {{ kind: 'work' } | { kind: 'game', objectId: string }} CameraSource */
 /** @typedef {{ x: number, y: number, zoom: number }} CameraPose */
@@ -41,6 +42,27 @@ export class ViewportViewManager {
         this.views = new Map();
         /** @type {string|null} */
         this.focusedLeafId = null;
+        /** @type {Function|null} */
+        this._unsubObjectProperty = null;
+        this._bindChromePropertySync();
+    }
+
+    /**
+     * VP-COL: when a game Camera object's color/name changes, refresh header icons
+     * without requiring re-select via the camera source menu.
+     */
+    _bindChromePropertySync() {
+        if (this._unsubObjectProperty) return;
+        const sm = this.editor?.stateManager;
+        if (!sm?.subscribe) return;
+        this._unsubObjectProperty = sm.subscribe('objectPropertyChanged', (obj, change) => {
+            if (!obj || obj.type !== 'camera') return;
+            const prop = change?.property;
+            // Color/name affect chrome icon; ignore unrelated props to avoid extra DOM work.
+            if (prop && prop !== 'color' && prop !== 'name') return;
+            // Only if some view is bound to this (or any) game camera — cheap enough to always refresh.
+            refreshAllViewportChrome(this.editor);
+        });
     }
 
     /**
@@ -378,6 +400,10 @@ export class ViewportViewManager {
     }
 
     destroy() {
+        if (typeof this._unsubObjectProperty === 'function') {
+            try { this._unsubObjectProperty(); } catch (_e) { /* */ }
+            this._unsubObjectProperty = null;
+        }
         [...this.views.keys()].forEach((id) => this.unregisterView(id));
         this.editor = null;
     }
