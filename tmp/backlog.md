@@ -12,6 +12,7 @@
 
 ## Closed (архив)
 
+✅ float viewport chrome menus — `MenuPositioningUtils` z-index 10000 поверх `#floating-layer`  
 ✅ DK-GST — ghost float-окна при Shift-drag без dock target (`.float-detach-ghost` + `floatDetachLayoutFromClient`)  
 ✅ DK-CUR — grab cursor на leaf header gap только при Shift (`body.dock-customize`); иначе pointer  
 ✅ DK-ICO — иконка отрыва панели в окно убрана; float только Shift+drag gap  

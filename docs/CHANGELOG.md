@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- Feature **DK-GST**: Shift-drag leaf with no dock drop target shows floating-window ghost (`.float-detach-ghost`); detach size/pos via `floatDetachLayoutFromClient` (workspace-local coords).
+- Fix: body-fixed menus (`MenuPositioningUtils`) use `z-index: 10000` so viewport chrome cam/filter/eye (and other popups) work over floating windows (`#floating-layer` was 100 > old `z-50`).

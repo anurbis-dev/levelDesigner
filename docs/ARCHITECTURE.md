@@ -556,6 +556,8 @@
 
 **Файл**: `src/utils/MenuPositioningUtils.js`
 
+`createMenuElement` / `showMenu` set `z-index: 10000` so body-fixed popups paint above `#floating-layer` (100) — viewport chrome menus (cam/filter/eye) work inside floating windows.
+
 Три системы меню (ПКМ-контекстные, меню фильтров Outliner/AssetPanel, главное меню nav-bar) теперь одинаково работают с `ui.cursorMenuMargin` благодаря унифицированной логике в `MenuPositioningUtils`.
 
 - **`static getCursorMenuMargin()`** — читает `ui.cursorMenuMargin` из `stateManager` (дефолт 2px из `CURSOR_MENU_MARGIN`, диапазон 0-60, ранее жёстко закодировано в `BaseContextMenu.CURSOR_MENU_MARGIN = 2`). Отдельная копия вместо cross-import, т.к. `BaseContextMenu.getCursorMenuMargin()` — instance-метод, привязанный к иерархии класса.

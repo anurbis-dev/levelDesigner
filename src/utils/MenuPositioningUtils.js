@@ -30,10 +30,16 @@ export class MenuPositioningUtils {
     }
 
     /**
-     * Standard CSS classes for popup menus
+     * Above #floating-layer (z-index:100) and dock overlays — body-fixed menus must
+     * paint over floating windows (viewport chrome cam/filter/eye, type filter, etc.).
+     */
+    static MENU_Z_INDEX = '10000';
+
+    /**
+     * Standard CSS classes for popup menus (z-index applied in createMenuElement).
      */
     static get MENU_CLASSES() {
-        return 'fixed z-50 bg-gray-800 border border-gray-600 rounded shadow-lg';
+        return 'fixed bg-gray-800 border border-gray-600 rounded shadow-lg';
     }
     
     /**
@@ -121,6 +127,7 @@ export class MenuPositioningUtils {
         
         const menu = document.createElement('div');
         menu.className = `${this.MENU_CLASSES} ${minWidth} ${className}`.trim();
+        menu.style.zIndex = this.MENU_Z_INDEX;
         
         return menu;
     }
@@ -242,6 +249,7 @@ export class MenuPositioningUtils {
         const position = this.calculateMenuPosition(triggerElement, options);
         menu.style.left = `${position.x}px`;
         menu.style.top = `${position.y}px`;
+        if (!menu.style.zIndex) menu.style.zIndex = this.MENU_Z_INDEX;
         
         document.body.appendChild(menu);
 

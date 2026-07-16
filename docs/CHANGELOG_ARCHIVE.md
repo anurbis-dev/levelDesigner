@@ -6,6 +6,10 @@
 
 - UX **DK-CUR**: leaf header drag-gap cursor is `pointer` by default; `grab`/`grabbing` only while Shift (`body.dock-customize` via `bindDockCustomizeModeClass`); floating window chrome free-move still grab without Shift.
 
+## Archived from CHANGELOG.md (float chrome menus z-index fix)
+
+- Feature **DK-GST**: Shift-drag leaf with no dock drop target shows floating-window ghost (`.float-detach-ghost`); detach size/pos via `floatDetachLayoutFromClient` (workspace-local coords).
+
 ## Archived from CHANGELOG.md (DK-GST commit)
 
 - UX **DK-CUR**: leaf header drag-gap cursor is `pointer` by default; `grab`/`grabbing` only while Shift (`body.dock-customize` via `bindDockCustomizeModeClass`); floating window chrome free-move still grab without Shift.
