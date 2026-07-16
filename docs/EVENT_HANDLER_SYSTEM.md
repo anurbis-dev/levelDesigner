@@ -33,6 +33,7 @@
 - `MouseHandlers`: pin interaction leaf on mousedown (`_interactionViewLeafId`); `getInteractionView` / `getInteractionCamera` / `getInteractionCanvas` for all gesture geometry; do **not** use `canvasRenderer.canvas` alone after multi-view render restores primary.
 - Outside leaf: global move continues gesture; global mouseup **completes** drag/transform/marquee (does not cancel). `body.viewport-gesture-mode` + `ScrollUtils.clearActiveHovers` while gesture active.
 - Cursors (`grabbing` / `zoom-in`) only on interaction canvas; `_resetAllViewportCursors` on RMB/MMB end and window blur.
+- MMB zoom vs panel pan: `_shouldDeferMiddleMouseToPanel` — viewport canvases (`#main-canvas` / `.viewport-view-canvas`) keep zoom even though they live under `.leaf-body` after dock; ScrollUtils still owns non-canvas MMB pan.
 
 ### GlobalEventRegistry (новый)
 **Файл**: `src/event-system/GlobalEventRegistry.js`

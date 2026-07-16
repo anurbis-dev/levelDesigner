@@ -201,21 +201,35 @@ export class MouseHandlers extends BaseModule {
     }
 
     /**
+     * MMB on panels → ScrollUtils pan; MMB on viewport canvas → zoom.
+     * After dock, canvases live under `.leaf-body` — that alone must not defer zoom.
+     * @param {EventTarget|null} target
+     * @returns {boolean}
+     */
+    _shouldDeferMiddleMouseToPanel(target) {
+        if (!target?.closest) return false;
+        // Viewport canvas (primary + multi-view copies)
+        if (target.closest(
+            'canvas#main-canvas, canvas.viewport-view-canvas, canvas[data-viewport-leaf-id],'
+            + ' #main-canvas, .viewport-view-canvas, #canvas-container, .canvas-container, .canvas-viewport'
+        )) {
+            return false;
+        }
+        return !!(target.closest('.leaf-body') || target.closest('#toolbar-container'));
+    }
+
+    /**
      * Mouse event handlers
      */
     handleMouseDown(e) {
+        // Panel MMB pan is ScrollUtils; must run before view pin (canvas is inside .leaf-body)
+        if (e.button === 1 && this._shouldDeferMiddleMouseToPanel(e.target)) {
+            return;
+        }
+
         this._beginViewInteraction(e);
         const worldPos = this.screenToWorld(e);
         const mouse = this.getMouseState();
-
-        // Ignore middle mouse button if clicked on panels (handled by ScrollUtils)
-        if (e.button === 1) { // Middle mouse button
-            const target = e.target;
-            // Check if click is on right panel or toolbar (let respective handlers handle this)
-            if (target.closest('.leaf-body') || target.closest('#toolbar-container')) {
-                return; // Let ScrollUtils or Toolbar handle this
-            }
-        }
 
         if (e.button === 2) { // Right mouse button
             // Handle right click for canvas panning
@@ -297,13 +311,8 @@ export class MouseHandlers extends BaseModule {
 
         this.updateMouseState(e, worldPos);
 
-        // Skip processing if middle mouse button and event is from panels
-        if (mouse.isMiddleDown) {
-            const target = e.target;
-            if (target.closest('.leaf-body')) {
-                return; // Let ScrollUtils handle this
-            }
-        }
+        // isMiddleDown is canvas-zoom only (ScrollUtils pan uses its own session).
+        // Do not bail on `.leaf-body` — dock canvases live inside leaf-body.
 
         // Check for pending marquee from object click with modifiers
         const pendingStartPos = mouse.marqueePendingStartPos;
@@ -459,12 +468,9 @@ export class MouseHandlers extends BaseModule {
     handleMouseUp(e) {
         const mouse = this.editor.stateManager.get('mouse');
 
-        // Skip processing middle mouse button if event is from panels
-        if (e.button === 1) { // Middle mouse button
-            const target = e.target;
-            if (target.closest('.leaf-body') || target.closest('#toolbar-container')) {
-                return; // Let ScrollUtils or Toolbar handle this
-            }
+        // Panel MMB pan is ScrollUtils; viewport zoom must still clear isMiddleDown
+        if (e.button === 1 && this._shouldDeferMiddleMouseToPanel(e.target) && !mouse.isMiddleDown) {
+            return;
         }
 
         if (e.button === 2) {

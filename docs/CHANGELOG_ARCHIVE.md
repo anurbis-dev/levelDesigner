@@ -2,6 +2,10 @@
 
 Р—Р°РїРёСЃРё, РїРµСЂРµРЅРµСЃС‘РЅРЅС‹Рµ РёР· `CHANGELOG.md` РїСЂРё РєРѕРјРјРёС‚Р°С… (СЃРј. `git log` РґР»СЏ С‚РѕС‡РЅС‹С… РґРёС„С„РѕРІ). РђРєС‚СѓР°Р»СЊРЅС‹Р№ РЅРµРѕРїСѓР±Р»РёРєРѕРІР°РЅРЅС‹Р№ СЂР°Р·СЂРµР· вЂ” РІ `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (engine Фаза 2 commit)
+
+- Feat (engine Фаза 2): BehaviorRegistry + 4 MVP-компонента (Collider, Trigger, Interactable, PlayerStart) — `src/engine/BehaviorRegistry.js`, `src/engine/behaviors/{Behavior,AABB,ColliderBehavior,TriggerBehavior,InteractableBehavior,PlayerStartBehavior,registerDefaultBehaviors}.js`; Entity/EntityFactory/Scene/GameEngine обновлены для `_update(dt)` и duck-typed behavior injection; 27 новых тестов (91→118).
+
 ## Archived from CHANGELOG.md (pre engine Фаза 2 commit)
 
 - Feat (engine Фаза 1): MVP-ядро движка — `src/engine/` (Entity, EntityFactory, Scene, ProjectLoader, Renderer, AssetLoader, GameEngine), самодостаточен (ноль импортов из editor-кода), 21 тест vitest.
