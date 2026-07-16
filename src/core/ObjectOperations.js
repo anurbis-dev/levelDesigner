@@ -3,6 +3,7 @@ import { GroupTraversalUtils } from '../utils/GroupTraversalUtils.js';
 import { BaseModule } from './BaseModule.js';
 import { Logger } from '../utils/Logger.js';
 import { GameObject } from '../models/GameObject.js';
+import { createComponentStub } from '../constants/ComponentTypes.js';
 
 /**
  * Object Operations module for LevelEditor
@@ -898,7 +899,8 @@ export class ObjectOperations extends BaseModule {
                 color: 'lightblue',
                 visible: true,
                 locked: false,
-                properties: {}
+                properties: {},
+                components: [createComponentStub('playerStart')]
             });
 
             this.editor.level.addObject(playerStartObject);

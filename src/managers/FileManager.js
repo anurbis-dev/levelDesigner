@@ -2,6 +2,7 @@ import { Level } from '../models/Level.js';
 import { FileUtils } from '../utils/FileUtils.js';
 import { ErrorHandler } from '../utils/ErrorHandler.js';
 import { BaseManager } from './BaseManager.js';
+import { createComponentStub } from '../constants/ComponentTypes.js';
 
 /**
  * File operations for level editor
@@ -35,9 +36,10 @@ export class FileManager extends BaseManager {
             color: 'lightblue',
             visible: true,
             locked: false,
-            properties: {}
+            properties: {},
+            components: [createComponentStub('playerStart')]
         });
-        
+
         this.currentFileName = null;
         return level;
     }
