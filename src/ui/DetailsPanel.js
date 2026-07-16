@@ -1,7 +1,7 @@
 import { GroupTraversalUtils } from '../utils/GroupTraversalUtils.js';
 import { UIFactory } from '../utils/UIFactory.js';
 import { ResetRegistry } from '../utils/ResetRegistry.js';
-import { DEFAULT_OBJECT } from '../constants/EditorConstants.js';
+import { DEFAULT_OBJECT, CAMERA } from '../constants/EditorConstants.js';
 import { ShortcutFormatter } from '../utils/ShortcutFormatter.js';
 
 // Default value per Transform field, keyed by the input's data-property (see
@@ -304,25 +304,123 @@ export class DetailsPanel {
      */
     renderCameraObjectProperties(obj) {
         const section = this.createSection('Camera');
+        obj.properties = obj.properties || {};
 
         const zoomRow = this.createDualFieldRow('Zoom', [
             { prefix: 'Z', property: 'zoom', id: 'details-camera-zoom', step: '0.05' }
         ]);
         section._content.appendChild(zoomRow);
+
+        // C2: aspect preset (drives frame gizmo + game-viewport letterbox)
+        const aspectRow = document.createElement('div');
+        aspectRow.className = 'details-field-row';
+        aspectRow.style.cssText = 'display:flex;align-items:center;gap:0.5rem;margin-top:0.35rem;';
+        const aspectLabel = document.createElement('label');
+        aspectLabel.textContent = 'Aspect';
+        aspectLabel.htmlFor = 'details-camera-aspect';
+        aspectLabel.style.cssText = 'flex:0 0 4.5rem;font-size:0.8rem;color:var(--ui-text-color,#9ca3af);';
+        const aspectSelect = document.createElement('select');
+        aspectSelect.id = 'details-camera-aspect';
+        aspectSelect.className = 'details-input';
+        aspectSelect.style.cssText = 'flex:1;min-width:0;background:#374151;color:var(--ui-text-color,#d1d5db);border:1px solid #4b5563;border-radius:0.25rem;padding:0.2rem 0.35rem;font-size:0.8rem;';
+        const aspects = [
+            { v: '16:9', t: '16:9' },
+            { v: '4:3', t: '4:3' },
+            { v: '1:1', t: '1:1' },
+            { v: '3:2', t: '3:2' },
+            { v: '21:9', t: '21:9' },
+            { v: 'custom', t: 'Custom' }
+        ];
+        const curAspect = obj.properties.aspect || '16:9';
+        aspects.forEach(({ v, t }) => {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = t;
+            if (v === curAspect) opt.selected = true;
+            aspectSelect.appendChild(opt);
+        });
+        aspectSelect.addEventListener('change', () => {
+            obj.properties.aspect = aspectSelect.value;
+            this.notifyPropertyChange(obj, 'properties.aspect', aspectSelect.value);
+            this.levelEditor?.render?.();
+            // Re-render details for custom res fields
+            if (aspectSelect.value === 'custom' || curAspect === 'custom') {
+                this.render();
+            }
+        });
+        aspectRow.appendChild(aspectLabel);
+        aspectRow.appendChild(aspectSelect);
+        section._content.appendChild(aspectRow);
+
+        if ((obj.properties.aspect || '16:9') === 'custom') {
+            const resRow = this.createDualFieldRow('Resolution', [
+                { prefix: 'W', property: 'resolutionWidth', id: 'details-camera-res-w', step: '1' },
+                { prefix: 'H', property: 'resolutionHeight', id: 'details-camera-res-h', step: '1' }
+            ]);
+            section._content.appendChild(resRow);
+            const wIn = resRow.querySelector('#details-camera-res-w');
+            const hIn = resRow.querySelector('#details-camera-res-h');
+            if (wIn) {
+                wIn.value = String(obj.properties.resolutionWidth ?? 1920);
+                wIn.addEventListener('blur', (e) => {
+                    let value = parseInt(e.target.value, 10);
+                    if (!Number.isFinite(value) || value < 16) value = 1920;
+                    obj.properties.resolutionWidth = value;
+                    e.target.value = String(value);
+                    this.notifyPropertyChange(obj, 'properties.resolutionWidth', value);
+                    this.levelEditor?.render?.();
+                });
+            }
+            if (hIn) {
+                hIn.value = String(obj.properties.resolutionHeight ?? 1080);
+                hIn.addEventListener('blur', (e) => {
+                    let value = parseInt(e.target.value, 10);
+                    if (!Number.isFinite(value) || value < 16) value = 1080;
+                    obj.properties.resolutionHeight = value;
+                    e.target.value = String(value);
+                    this.notifyPropertyChange(obj, 'properties.resolutionHeight', value);
+                    this.levelEditor?.render?.();
+                });
+            }
+        }
+
+        const vigRow = this.createDualFieldRow('Vignette', [
+            { prefix: 'V', property: 'vignette', id: 'details-camera-vignette', step: '0.05' }
+        ]);
+        section._content.appendChild(vigRow);
+
         this.container.appendChild(section);
 
         const input = zoomRow.querySelector('#details-camera-zoom');
-        if (!input) return;
+        if (input) {
+            input.value = (obj.properties?.zoom ?? 1).toFixed(2);
+            input.addEventListener('blur', (e) => {
+                let value = parseFloat(e.target.value);
+                if (isNaN(value) || value <= 0) value = 1;
+                obj.properties = obj.properties || {};
+                obj.properties.zoom = value;
+                e.target.value = value.toFixed(2);
+                this.notifyPropertyChange(obj, 'properties.zoom', value);
+            });
+        }
 
-        input.value = (obj.properties?.zoom ?? 1).toFixed(2);
-        input.addEventListener('blur', (e) => {
-            let value = parseFloat(e.target.value);
-            if (isNaN(value) || value <= 0) value = 1;
-            obj.properties = obj.properties || {};
-            obj.properties.zoom = value;
-            e.target.value = value.toFixed(2);
-            this.notifyPropertyChange(obj, 'properties.zoom', value);
-        });
+        const vigInput = vigRow.querySelector('#details-camera-vignette');
+        if (vigInput) {
+            const defaultVig = CAMERA.VIGNETTE_STRENGTH;
+            vigInput.value = (obj.properties?.vignette ?? defaultVig).toFixed(2);
+            vigInput.min = '0';
+            vigInput.max = '1';
+            vigInput.addEventListener('blur', (e) => {
+                let value = parseFloat(e.target.value);
+                if (isNaN(value)) value = defaultVig;
+                value = Math.min(1, Math.max(0, value));
+                obj.properties = obj.properties || {};
+                obj.properties.vignette = value;
+                e.target.value = value.toFixed(2);
+                this.notifyPropertyChange(obj, 'properties.vignette', value);
+                this.levelEditor?.render?.();
+            });
+        }
     }
 
     /**

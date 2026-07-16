@@ -579,6 +579,11 @@ export class RenderOperations extends BaseModule {
 
         this.editor.canvasRenderer.restoreCamera();
 
+        // C2: aspect letterbox + soft vignette when looking through a game camera
+        if (view?.source?.kind === 'game' && view.source.objectId) {
+            this.drawGameCameraAspectMask(view);
+        }
+
         if (this.renderCount % 500 === 0 && (!view || view.isPrimary)) {
             Logger.render.info(
                 `🎨 Render #${this.renderCount}: ${totalVisibleCount} visible objects (view ${view?.leafId || 'primary'})`
@@ -1351,6 +1356,23 @@ export class RenderOperations extends BaseModule {
     }
 
     /**
+     * Design pixel size for a game camera (aspect preset or custom resolution).
+     * @param {object} obj - type === 'camera'
+     * @returns {{w:number,h:number}}
+     */
+    getCameraDesignSize(obj) {
+        const props = obj?.properties || {};
+        const aspect = props.aspect || CAMERA.DEFAULT_ASPECT;
+        if (aspect === 'custom') {
+            const w = Number(props.resolutionWidth) > 0 ? Number(props.resolutionWidth) : CAMERA.VIEW_REF_WIDTH;
+            const h = Number(props.resolutionHeight) > 0 ? Number(props.resolutionHeight) : CAMERA.VIEW_REF_HEIGHT;
+            return { w, h };
+        }
+        const preset = CAMERA.ASPECT_PRESETS[aspect] || CAMERA.ASPECT_PRESETS[CAMERA.DEFAULT_ASPECT];
+        return { w: preset.w, h: preset.h };
+    }
+
+    /**
      * World AABB for a game camera's design frustum (center = object center, size = ref/zoom).
      * @param {object} obj - level object type === 'camera'
      * @returns {{minX:number,minY:number,maxX:number,maxY:number}|null}
@@ -1360,13 +1382,7 @@ export class RenderOperations extends BaseModule {
         let zoom = obj.properties?.zoom ?? CAMERA.DEFAULT_ZOOM;
         if (!zoom || zoom <= 0) zoom = CAMERA.DEFAULT_ZOOM;
 
-        const refW = Number(obj.properties?.resolutionWidth) > 0
-            ? Number(obj.properties.resolutionWidth)
-            : CAMERA.VIEW_REF_WIDTH;
-        const refH = Number(obj.properties?.resolutionHeight) > 0
-            ? Number(obj.properties.resolutionHeight)
-            : CAMERA.VIEW_REF_HEIGHT;
-
+        const { w: refW, h: refH } = this.getCameraDesignSize(obj);
         const worldW = refW / zoom;
         const worldH = refH / zoom;
         const cx = obj.x + (obj.width || 0) / 2;
@@ -1377,6 +1393,82 @@ export class RenderOperations extends BaseModule {
             maxX: cx + worldW / 2,
             maxY: cy + worldH / 2
         };
+    }
+
+    /**
+     * C2: screen-space letterbox + soft vignette for a game-camera viewport leaf.
+     * Crops the canvas visually to the camera's design aspect (bars + optional bg).
+     * @param {object} view - ViewportView with source.kind === 'game'
+     */
+    drawGameCameraAspectMask(view) {
+        const canvas = this.editor.canvasRenderer?.canvas;
+        const ctx = this.editor.canvasRenderer?.ctx;
+        if (!canvas?.width || !canvas?.height || !ctx) return;
+
+        const objectId = view?.source?.objectId;
+        const obj = this.editor.getCachedObject?.(objectId)
+            || this.editor.level?.findObjectById?.(objectId);
+        if (!obj || obj.type !== 'camera') return;
+
+        const { w: refW, h: refH } = this.getCameraDesignSize(obj);
+        if (!(refW > 0) || !(refH > 0)) return;
+
+        const cw = canvas.width;
+        const ch = canvas.height;
+        const designAspect = refW / refH;
+        const canvasAspect = cw / ch;
+
+        let safeW;
+        let safeH;
+        let ox;
+        let oy;
+        if (canvasAspect > designAspect) {
+            safeH = ch;
+            safeW = ch * designAspect;
+            ox = (cw - safeW) / 2;
+            oy = 0;
+        } else {
+            safeW = cw;
+            safeH = cw / designAspect;
+            ox = 0;
+            oy = (ch - safeH) / 2;
+        }
+
+        const barColor = obj.properties?.letterboxColor || CAMERA.LETTERBOX_COLOR;
+        ctx.save();
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.fillStyle = barColor;
+        if (oy > 0.5) {
+            ctx.fillRect(0, 0, cw, oy);
+            ctx.fillRect(0, oy + safeH, cw, ch - (oy + safeH));
+        }
+        if (ox > 0.5) {
+            ctx.fillRect(0, 0, ox, ch);
+            ctx.fillRect(ox + safeW, 0, cw - (ox + safeW), ch);
+        }
+
+        // Soft vignette inside the safe rect (radial darkening toward edges)
+        const strength = obj.properties?.vignette;
+        const vig = strength === undefined || strength === null
+            ? CAMERA.VIGNETTE_STRENGTH
+            : Math.min(1, Math.max(0, Number(strength)));
+        if (vig > 0.001) {
+            const cx = ox + safeW / 2;
+            const cy = oy + safeH / 2;
+            const r = Math.hypot(safeW, safeH) * 0.55;
+            const grad = ctx.createRadialGradient(cx, cy, r * 0.35, cx, cy, r);
+            grad.addColorStop(0, 'rgba(0,0,0,0)');
+            grad.addColorStop(1, `rgba(0,0,0,${vig})`);
+            ctx.fillStyle = grad;
+            ctx.fillRect(ox, oy, safeW, safeH);
+        }
+
+        // Thin safe-frame outline
+        ctx.strokeStyle = CAMERA.FRAME_COLOR;
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 3]);
+        ctx.strokeRect(ox + 0.5, oy + 0.5, safeW - 1, safeH - 1);
+        ctx.restore();
     }
 
     /**

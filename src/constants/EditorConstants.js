@@ -51,13 +51,23 @@ export const CAMERA = {
     MAX_ZOOM: 10.0,
     ZOOM_STEP: 0.1,
     PAN_SPEED: 1.0,
-    /** C1: default design resolution for game-camera view frame gizmo (world size = ref / zoom) */
+    /** C1/C2: design resolution / aspect for game-camera frame + letterbox */
     VIEW_REF_WIDTH: 1920,
     VIEW_REF_HEIGHT: 1080,
+    DEFAULT_ASPECT: '16:9',
+    ASPECT_PRESETS: {
+        '16:9': { w: 1920, h: 1080 },
+        '4:3': { w: 1440, h: 1080 },
+        '1:1': { w: 1080, h: 1080 },
+        '3:2': { w: 1620, h: 1080 },
+        '21:9': { w: 2560, h: 1080 }
+    },
     FRAME_COLOR: 'rgba(56, 189, 248, 0.75)',
     FRAME_COLOR_SELECTED: 'rgba(14, 165, 233, 1)',
     FRAME_WIDTH: 1.5,
-    FRAME_DASH: [6, 4]
+    FRAME_DASH: [6, 4],
+    LETTERBOX_COLOR: 'rgba(0, 0, 0, 0.62)',
+    VIGNETTE_STRENGTH: 0.28
 };
 
 /**

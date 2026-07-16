@@ -10,6 +10,7 @@
 
 ## Closed (архив)
 
+✅ C2 — aspect presets + letterbox/vignette на game-source viewport; Details Aspect/Resolution/Vignette  
 ✅ C1 — рамка game camera: dashed frustum (design res / zoom) + cross; skip active viewport source  
 ✅ TB-OP — прозрачность подложки тулбара: Settings slider `ui.toolbarBackgroundOpacity` → `--ui-toolbar-background-color`  
 ✅ DK-CLS — крестик закрытия leaf только при Shift (`body.dock-customize`) и hover шапки этой панели  
