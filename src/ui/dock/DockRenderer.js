@@ -205,19 +205,6 @@ export class DockRenderer {
             header.appendChild(buildViewportHeaderControls(node, this.registry.levelEditor));
         }
 
-        if (opts.onDetach) {
-            const detachBtn = document.createElement('button');
-            detachBtn.className = 'icon-btn';
-            detachBtn.title = 'Detach to floating window (hold Shift and click)';
-            detachBtn.textContent = '⇱';
-            detachBtn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                // UI customize: detach only with Shift held.
-                if (!e.shiftKey) return;
-                opts.onDetach();
-            });
-            header.appendChild(detachBtn);
-        }
         if (opts.onClose) {
             const closeBtn = document.createElement('button');
             closeBtn.className = 'icon-btn close';
@@ -238,8 +225,8 @@ export class DockRenderer {
         el.dataset.nodeId = node.id;
         el.dataset.contentType = node.contentType || '';
         // Build header without close first — viewport primary/copy status is known only after mount.
+        // Detach-to-float: Shift+drag gap only (no chrome icon — DK-ICO).
         const header = this._buildHeader(node, workspaceId, {
-            onDetach: () => this.detachLeafToFloating(workspaceId, node.id, el),
             onClose: null
         });
         const body = document.createElement('div');
@@ -277,24 +264,6 @@ export class DockRenderer {
         if (node && !this.isCloseable(node.contentType, node.id)) return;
         this.model.setTreeOf(workspaceId, this.model.removeLeaf(current, id));
         // Content root stays in registry/pool for chip reopen (B1)
-        this.render();
-    }
-
-    detachLeafToFloating(workspaceId, id, leafEl) {
-        const current = this.model.getTreeOf(workspaceId);
-        const node = this.model.findNode(current, id);
-        if (!node) return;
-        const rect = leafEl.getBoundingClientRect();
-        this.model.setTreeOf(workspaceId, this.model.removeLeaf(current, id));
-        this.model.floatingWindows.push(
-            this.model.makeFloatingWindow(
-                node,
-                rect.left + 24,
-                rect.top + 24,
-                rect.width * 0.6,
-                rect.height * 0.6
-            )
-        );
         this.render();
     }
 

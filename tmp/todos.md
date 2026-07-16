@@ -29,6 +29,7 @@
 - ✅ **VP-TB** — toolbar copies paired with viewport copies (View toggles + Focus per leaf)
 - ✅ **VP-EQ** — viewport peers: no primary display authority; last leaf only non-closeable
 - ✅ **OL-F** — F over Outliner: scroll selection into view (multi → avg Y); expand ancestors
+- ✅ **DK-ICO** — no leaf detach icon; float via Shift+drag only
 
 ---
 
@@ -67,7 +68,7 @@
 
 | # | Задача | Заметки / критерий |
 |---|--------|-------------------|
-| **DK-ICO** | Убрать иконку «отрыв в окно» — достаточно Shift-layout | chrome cleanup |
+| ~~**DK-ICO**~~ | ✅ Нет иконки отрыва — float через Shift+drag gap | chrome cleanup |
 | **DK-GST** | При отрыве + hover zone float — **ghost** будущего окна | preview rect before drop |
 | **DK-CUR** | Курсор grab на шапке **только при Shift** (edit layout); иначе pointer (клик) | header cursor |
 | **DK-CLP** | Схлопывание панели кликом по шапке, если есть соседи сверху/снизу | accordion collapse |
@@ -123,8 +124,8 @@
 
 ## Порядок работ (рекомендуемый)
 
-1. **OL-F** — F over Outliner scroll (VP-HK/EYE/TB ✅)  
-2. **DK-ICO / DK-CUR / DK-GST / DK-CLP** — dock polish  
+1. **OL-F** / **DK-ICO** ✅  
+2. **DK-CUR / DK-GST / DK-CLP** — dock polish  
 3. **B2** — browser smoke multi-view / Assets×N  
 4. **U2–U3**, **U4**, **C1–C2** — старый product хвост  
 5. **Q\*** / **D\*** — opportunistically  

@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- Feature **OL-F**: hotkey **F** over Outliner scrolls the object list to selection (`scrollToSelection`) — single row centers; multi uses average Y; expands collapsed ancestor groups; otherwise F still frames on viewport under cursor (VP-HK).
+- Cleanup **DK-ICO**: removed leaf-header detach icon (`⇱`); float only via Shift+drag gap (`onNoTargetDrop`); dropped dead `detachLeafToFloating`.
