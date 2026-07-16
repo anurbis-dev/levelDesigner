@@ -13,6 +13,7 @@ import {
     readFloatWorkspacePrefs,
     applyFloatingWorkspaceResize
 } from './DockFloatWorkspace.js';
+import { bindDockCustomizeModeClass } from './DockDragKeyWatch.js';
 
 export class DockManager {
     /**
@@ -33,6 +34,8 @@ export class DockManager {
         this._wsSize = { w: 0, h: 0 };
         /** @type {ResizeObserver|null} */
         this._wsRo = null;
+        /** @type {(() => void)|null} DK-CUR Shift → body.dock-customize */
+        this._unbindCustomizeMode = null;
     }
 
     /**
@@ -79,6 +82,8 @@ export class DockManager {
             getFloatWorkspacePrefs: () => this._floatWorkspacePrefs()
         });
         this.renderer.setDragController(this.drag);
+        // DK-CUR: leaf header gap cursor grab only while Shift held.
+        this._unbindCustomizeMode = bindDockCustomizeModeClass(document.body);
 
         this._suppressPersist = true;
         this.renderer.render();
@@ -270,6 +275,10 @@ export class DockManager {
         if (this._wsRo) {
             this._wsRo.disconnect();
             this._wsRo = null;
+        }
+        if (this._unbindCustomizeMode) {
+            this._unbindCustomizeMode();
+            this._unbindCustomizeMode = null;
         }
         if (this._inited) {
             this.persistence.flush(this.model.snapshot());

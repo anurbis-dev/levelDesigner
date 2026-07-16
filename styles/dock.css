@@ -100,10 +100,11 @@
   min-width: 0;
 }
 
-/* Drag only on empty gap between title and right icons (not on title text). */
+/* Drag only on empty gap between title and right icons (not on title text).
+   DK-CUR: pointer by default (click/collapse); grab only while body.dock-customize (Shift). */
 #dock-workspace .leaf-header .drag-handle,
 #dock-workspace .leaf-header .leaf-header-gap {
-  cursor: grab;
+  cursor: pointer;
   flex: 1 1 auto;
   align-self: stretch;
   min-width: 8px;
@@ -111,8 +112,13 @@
   user-select: none;
 }
 
-#dock-workspace .leaf-header .drag-handle:active,
-#dock-workspace .leaf-header .leaf-header-gap:active {
+body.dock-customize #dock-workspace .leaf-header .drag-handle,
+body.dock-customize #dock-workspace .leaf-header .leaf-header-gap {
+  cursor: grab;
+}
+
+body.dock-customize #dock-workspace .leaf-header .drag-handle:active,
+body.dock-customize #dock-workspace .leaf-header .leaf-header-gap:active {
   cursor: grabbing;
 }
 
@@ -376,7 +382,7 @@
 }
 
 .floating-body .leaf-header .drag-handle {
-  cursor: grab;
+  cursor: pointer;
   padding: 2px 4px;
   flex: 1 1 auto;
   display: flex;
@@ -384,6 +390,14 @@
   gap: 6px;
   min-width: 0;
   touch-action: none;
+}
+
+body.dock-customize .floating-body .leaf-header .drag-handle {
+  cursor: grab;
+}
+
+body.dock-customize .floating-body .leaf-header .drag-handle:active {
+  cursor: grabbing;
 }
 
 .floating-body .leaf-body {
@@ -641,10 +655,20 @@
 
 .floating-body .leaf-header .drag-handle,
 .floating-body .leaf-header .leaf-header-gap {
-  cursor: grab;
+  cursor: pointer;
   flex: 1 1 auto;
   align-self: stretch;
   min-width: 8px;
+}
+
+body.dock-customize .floating-body .leaf-header .drag-handle,
+body.dock-customize .floating-body .leaf-header .leaf-header-gap {
+  cursor: grab;
+}
+
+body.dock-customize .floating-body .leaf-header .drag-handle:active,
+body.dock-customize .floating-body .leaf-header .leaf-header-gap:active {
+  cursor: grabbing;
 }
 
 /* Fill entire leaf with canvas bg (same gray as primary #main-canvas) */

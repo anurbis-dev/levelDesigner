@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- Cleanup **DK-ICO**: removed leaf-header detach icon (`⇱`); float only via Shift+drag gap (`onNoTargetDrop`); dropped dead `detachLeafToFloating`.
+- UX **DK-CUR**: leaf header drag-gap cursor is `pointer` by default; `grab`/`grabbing` only while Shift (`body.dock-customize` via `bindDockCustomizeModeClass`); floating window chrome free-move still grab without Shift.

@@ -2,6 +2,14 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (DK-CUR commit)
+
+- Cleanup **DK-ICO**: removed leaf-header detach icon (`⇱`); float only via Shift+drag gap (`onNoTargetDrop`); dropped dead `detachLeafToFloating`. *(повторно сброшено из Unreleased при коммите DK-CUR)*
+
+## Archived from CHANGELOG.md (DK-ICO commit)
+
+- Cleanup **DK-ICO**: removed leaf-header detach icon (`⇱`); float only via Shift+drag gap (`onNoTargetDrop`); dropped dead `detachLeafToFloating`.
+
 ## Archived from CHANGELOG.md (OL-F commit)
 
 - Feature **OL-F**: hotkey **F** over Outliner scrolls the object list to selection (`scrollToSelection`) — single row centers; multi uses average Y; expands collapsed ancestor groups; otherwise F still frames on viewport under cursor (VP-HK).
