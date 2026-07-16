@@ -32,4 +32,25 @@ export class Scene {
     getVisibleLayerIds() {
         return new Set(this.layers.filter(layer => layer.visible !== false).map(layer => layer.id));
     }
+
+    /** Flat list of all entities, including nested group children. */
+    getAllEntities() {
+        const result = [];
+        const walk = (list) => {
+            for (const entity of list) {
+                result.push(entity);
+                if (entity.children) walk(entity.children);
+            }
+        };
+        walk(this.entities);
+        return result;
+    }
+
+    /** @returns {{x: number, y: number}|null} spawn position from the first playerStart entity found. */
+    getPlayerStart() {
+        const playerStart = this.getAllEntities()
+            .flatMap(entity => entity.behaviors)
+            .find(behavior => typeof behavior.getSpawnPosition === 'function');
+        return playerStart ? playerStart.getSpawnPosition() : null;
+    }
 }

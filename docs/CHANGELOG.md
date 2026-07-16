@@ -4,5 +4,4 @@
 
 ## [Unreleased]
 
-- Feat (engine Фаза 1): MVP-ядро движка — `src/engine/` (Entity, EntityFactory, Scene, ProjectLoader, Renderer, AssetLoader, GameEngine), самодостаточен (ноль импортов из editor-кода), 21 тест vitest.
-- Feat (A1–A3): Assets context menu **Rename** / **Duplicate** / **Delete** — `AssetItemActionsController` (prompt rename → `updateAsset`; clone via `addExternalAsset` as temporary unsaved; delete with confirm, multi if target in selection, in-memory only + `assetsLibraryDirty`).
+- Feat (engine Фаза 2): BehaviorRegistry + 4 MVP-компонента (Collider, Trigger, Interactable, PlayerStart) — `src/engine/BehaviorRegistry.js`, `src/engine/behaviors/{Behavior,AABB,ColliderBehavior,TriggerBehavior,InteractableBehavior,PlayerStartBehavior,registerDefaultBehaviors}.js`; Entity/EntityFactory/Scene/GameEngine обновлены для `_update(dt)` и duck-typed behavior injection; 27 новых тестов (91→118).

@@ -236,7 +236,26 @@ Asset Loader (блок 5) должен явно различать эти две
 
 ---
 
-## Фаза 2 — Behavior Registry + первые 4 компонента (вертикальный срез)
+## Фаза 2 — Behavior Registry + первые 4 компонента (вертикальный срез)  ✅ ЗАВЕРШЕНА 2026-07-16
+
+`src/engine/BehaviorRegistry.js` + `src/engine/behaviors/{Behavior,AABB,ColliderBehavior,
+TriggerBehavior,InteractableBehavior,PlayerStartBehavior,registerDefaultBehaviors}.js` — 27
+новых vitest-тестов (91→118). Архитектурные решения:
+- **Explicit registration, не import-side-effects** — `GameEngine` конструктор явно зовёт
+  `registerDefaultBehaviors()`, а не полагается на порядок side-effect импортов.
+- **Duck-typing вместо `instanceof`** между поведениями (`TriggerBehavior` ищет `getBounds`,
+  `Scene.getPlayerStart()` ищет `getSpawnPosition`) — `Scene` не импортирует поведения,
+  `Trigger` не завязан на конкретный класс `Collider`.
+- **Явная оговорка по скоупу "играбельности":** дословный критерий готовности ниже требует
+  "реально играбелен через Play-in-editor" — Play-in-editor (Фаза 3) и Input ещё не существуют,
+  проверить это физически нечем. Сдано: BehaviorRegistry + 4 класса с реальной логикой (AABB-
+  коллизии, enter/exit трекинг триггера, radius-проверка интерактива, точка спавна) —
+  необходимое, но не достаточное условие; сама играбельность проверяется в Фазе 3.
+- `docs/RUNTIME_SCHEMA.md` — 4 компонента переведены `not implemented` → `implemented` с
+  конкретными полями (`offsetX/offsetY/width/height` для collider/trigger, `radius/hint` для
+  interactable, playerStart — без полей).
+
+Ниже — исходный §2 плана как есть (реализация ему соответствует 1:1, см. выше).
 
 **Зачем именно вертикальный срез:** 19 component-типов и 28 asset-типов реализовывать все сразу —
 гарантированный способ никогда не дойти до работающей игры. Правильный порядок — взять минимальный

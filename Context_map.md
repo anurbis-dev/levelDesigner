@@ -276,6 +276,16 @@ level.settings.parallaxVertical // множитель вертикального
   - `src/engine/render/Renderer.js` - Canvas 2D рендер (setCamera/restoreCamera/clear/drawBackground/drawEntity/renderScene), порт CanvasRenderer без editor-флагов
   - `src/engine/AssetLoader.js` - `LOADABLE_ASSET_TYPES/DATA_ONLY_ASSET_TYPES`, `collectImageSources(scene)`, `loadImages(sources)` с guard `typeof Image !== 'undefined'`
   - `src/engine/GameEngine.js` - оркестратор (constructor, loadProject async, tick, start/stop requestAnimationFrame-цикл)
+  - **Фаза 2 MVP-поведения** (`src/engine/behaviors/` дочерние классы, `src/engine/BehaviorRegistry.js` реестр):
+    - `src/engine/BehaviorRegistry.js` - `register(type, Class)`, `get(type)`, `has(type)`, явная регистрация (не import-side-effects)
+    - `src/engine/behaviors/Behavior.js` - базовый класс (`entity`, `properties`, `enabled`, no-op `update(dt, scene)`)
+    - `src/engine/behaviors/AABB.js` - чистые функции `getEntityBounds(entity, properties)`, `rectsIntersect(a, b)` (стабильная AABB-коллизия)
+    - `src/engine/behaviors/ColliderBehavior.js` - `getBounds()` (duck-typed для Trigger)
+    - `src/engine/behaviors/TriggerBehavior.js` - `checkEntities(candidates)` → `{entered, exited}`, `isOverlapping(id)`, `update(dt, scene)` — зовёт `checkEntities(scene.getAllEntities())`
+    - `src/engine/behaviors/InteractableBehavior.js` - `radius`/`hint` (properties), `isInRange(point)`
+    - `src/engine/behaviors/PlayerStartBehavior.js` - `getSpawnPosition()`
+    - `src/engine/behaviors/registerDefaultBehaviors.js` - регистрирует collider/trigger/interactable/playerStart в `BehaviorRegistry`
+    - Обновлены: `Entity.js` (`behaviors: []`), `EntityFactory.js` (компоненты → behaviors через реестр), `Scene.js` (`getAllEntities()`, `getPlayerStart()`), `GameEngine.js` (регистрация + `_update(dt)` перед рендером)
 
 ## 🏗️ Архитектурные принципы
 

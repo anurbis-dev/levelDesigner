@@ -1,9 +1,10 @@
 import { ProjectLoader } from './ProjectLoader.js';
 import { Renderer } from './render/Renderer.js';
+import { registerDefaultBehaviors } from './behaviors/registerDefaultBehaviors.js';
 
 /**
- * Top-level engine orchestrator. Фаза 1 MVP: load a runtime-Project manifest, render
- * one level. No update/behavior step yet (Фаза 2), no Addon/Event application (Фаза 3/4).
+ * Top-level engine orchestrator. Loads a runtime-Project manifest, updates behaviors,
+ * renders one level. No Addon/Event application yet (Фаза 3/4).
  */
 export class GameEngine {
     constructor(canvas) {
@@ -12,6 +13,7 @@ export class GameEngine {
         this.camera = null;
         this.parallaxStartPosition = null;
         this._rafId = null;
+        registerDefaultBehaviors();
     }
 
     /**
@@ -26,10 +28,19 @@ export class GameEngine {
         this.parallaxStartPosition = { ...this.camera };
     }
 
-    /** Render exactly one frame. No timing/update step in MVP. */
-    tick() {
+    /** Runs one update+render frame. */
+    tick(dt = 0) {
         if (!this.scene) return;
+        this._update(dt);
         this.renderer.renderScene(this.scene, this.camera, this.parallaxStartPosition);
+    }
+
+    _update(dt) {
+        for (const entity of this.scene.getAllEntities()) {
+            for (const behavior of entity.behaviors) {
+                behavior.update(dt, this.scene);
+            }
+        }
     }
 
     start() {

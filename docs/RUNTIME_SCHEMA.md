@@ -110,10 +110,10 @@ implemented`, `properties: {}`, `schemaVersion: 1`. `BehaviorRegistry` (движ
 
 | id | label | schemaVersion | status | fields |
 |---|---|---|---|---|
-| `collider` | Collider | 1 | not implemented | TBD (Фаза 2 MVP-компонент) |
-| `trigger` | Trigger | 1 | not implemented | TBD (Фаза 2 MVP-компонент) |
-| `interactable` | Interactable | 1 | not implemented | TBD (Фаза 2 MVP-компонент) |
-| `playerStart` | Player Start | 1 | not implemented | TBD (Фаза 2 MVP-компонент) |
+| `collider` | Collider | 1 | implemented | `offsetX`/`offsetY`/`width`/`height` (все опциональные, дефолт — сам bounding box entity); AABB-прямоугольник, `shape` пока не читается (только rect) |
+| `trigger` | Trigger | 1 | implemented | те же поля, что `collider` (использует ту же `getEntityBounds`); enter/exit трекается против любого поведения с `getBounds()`, не только `collider` |
+| `interactable` | Interactable | 1 | implemented | `radius` (опционально, дефолт `32`), `hint` (опционально, дефолт `'Interact'`) |
+| `playerStart` | Player Start | 1 | implemented | нет собственных полей — позиция берётся из `entity.x/y` |
 | `transformAnimation` | Transform Animation | 1 | not implemented | TBD |
 | `spriteUiAnimation` | Sprite / UI Animation | 1 | not implemented | TBD |
 | `pickup` | Pickup | 1 | not implemented | TBD |
@@ -130,6 +130,6 @@ implemented`, `properties: {}`, `schemaVersion: 1`. `BehaviorRegistry` (движ
 | `destructibleContainer` | Destructible Container | 1 | not implemented | TBD |
 | `variableModifier` | Variable Modifier | 1 | not implemented | TBD |
 
-Первые 4 (`collider`/`trigger`/`interactable`/`playerStart`) — вертикальный срез Фазы 2 плана
-движка (`tmp/2D_Editor_ENGINE_PLAN.md` §2.2), остальные 15 — бэклог, реализуются по мере
-реальной потребности конкретной игры, не заранее.
+Первые 4 (`collider`/`trigger`/`interactable`/`playerStart`) реализованы как вертикальный срез
+Фазы 2 плана движка (`tmp/2D_Editor_ENGINE_PLAN.md` §2.2, `src/engine/behaviors/*`), остальные
+15 — бэклог, реализуются по мере реальной потребности конкретной игры, не заранее.

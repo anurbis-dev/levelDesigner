@@ -20,5 +20,6 @@ export class Entity {
         this.properties = data.properties || {};
         this.components = data.components || [];
         this.children = data.children || null;
+        this.behaviors = [];
     }
 }

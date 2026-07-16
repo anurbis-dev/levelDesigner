@@ -1,5 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll, vi } from 'vitest';
 import { EntityFactory } from '../../src/engine/EntityFactory.js';
+import { registerDefaultBehaviors } from '../../src/engine/behaviors/registerDefaultBehaviors.js';
+import { ColliderBehavior } from '../../src/engine/behaviors/ColliderBehavior.js';
+
+beforeAll(() => {
+    registerDefaultBehaviors();
+});
 
 describe('EntityFactory.fromGameObjectData', () => {
     it('converts a plain GameObject-shaped object, dropping editor-only fields', () => {
@@ -44,5 +50,43 @@ describe('EntityFactory.fromGameObjectData', () => {
     it('non-group objects have null children', () => {
         const entity = EntityFactory.fromGameObjectData({ id: 'a', type: 'actor' });
         expect(entity.children).toBeNull();
+    });
+});
+
+describe('EntityFactory.fromGameObjectData — component resolution', () => {
+    it('instantiates a registered behavior for a known component type', () => {
+        const entity = EntityFactory.fromGameObjectData({
+            id: 'obj_1', type: 'actor',
+            components: [{ id: 'c1', type: 'collider', enabled: true, properties: {} }]
+        });
+
+        expect(entity.behaviors).toHaveLength(1);
+        expect(entity.behaviors[0]).toBeInstanceOf(ColliderBehavior);
+    });
+
+    it('warns and skips an unknown/unimplemented component type instead of throwing', () => {
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        const entity = EntityFactory.fromGameObjectData({
+            id: 'obj_1', type: 'actor',
+            components: [{ id: 'c1', type: 'aiBehaviorPreset', enabled: true, properties: {} }]
+        });
+
+        expect(entity.behaviors).toHaveLength(0);
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('aiBehaviorPreset'));
+        warnSpy.mockRestore();
+    });
+
+    it('skips a disabled component without warning', () => {
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        const entity = EntityFactory.fromGameObjectData({
+            id: 'obj_1', type: 'actor',
+            components: [{ id: 'c1', type: 'collider', enabled: false, properties: {} }]
+        });
+
+        expect(entity.behaviors).toHaveLength(0);
+        expect(warnSpy).not.toHaveBeenCalled();
+        warnSpy.mockRestore();
     });
 });

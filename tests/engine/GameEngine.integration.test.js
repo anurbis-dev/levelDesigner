@@ -62,3 +62,60 @@ describe('GameEngine — Фаза 1 readiness criterion', () => {
         expect(secondTranslate[1]).toBe(-0);
     });
 });
+
+// Фаза 2 vertical slice (tmp/2D_Editor_ENGINE_PLAN.md §2): playerStart + collider + trigger
+// resolve to real behaviors and the trigger tracks enter/exit as entities move between ticks.
+// No Input/player-entity yet (Фаза 3) — the "candidate" below stands in for a would-be player.
+function verticalSliceManifest() {
+    return {
+        formatVersion: 1,
+        name: 'Demo',
+        entryLevelId: 'level_a',
+        levels: [{
+            id: 'level_a',
+            data: {
+                meta: { name: 'Level A' },
+                settings: { backgroundColor: '#000000' },
+                camera: { x: 0, y: 0, zoom: 1 },
+                layers: [],
+                objects: [
+                    { id: 'spawn', type: 'player_start', x: 0, y: 0,
+                        components: [{ id: 'c1', type: 'playerStart', enabled: true, properties: {} }] },
+                    { id: 'wall', type: 'actor', x: 100, y: 100, width: 32, height: 32,
+                        components: [{ id: 'c2', type: 'collider', enabled: true, properties: {} }] },
+                    { id: 'zone', type: 'volume', x: 200, y: 200, width: 20, height: 20,
+                        components: [{ id: 'c3', type: 'trigger', enabled: true, properties: {} }] },
+                    { id: 'candidate', type: 'actor', x: 500, y: 500, width: 10, height: 10,
+                        components: [{ id: 'c4', type: 'collider', enabled: true, properties: {} }] }
+                ]
+            }
+        }]
+    };
+}
+
+describe('GameEngine — Фаза 2 vertical slice (BehaviorRegistry + collider/trigger/playerStart)', () => {
+    it('resolves playerStart/collider/trigger to real behaviors and tracks trigger enter/exit across ticks', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+
+        await engine.loadProject(verticalSliceManifest());
+
+        expect(engine.scene.getPlayerStart()).toEqual({ x: 0, y: 0 });
+
+        const zone = engine.scene.entities.find(e => e.id === 'zone');
+        const trigger = zone.behaviors.find(b => typeof b.isOverlapping === 'function');
+        const candidate = engine.scene.entities.find(e => e.id === 'candidate');
+
+        engine.tick();
+        expect(trigger.isOverlapping('candidate')).toBe(false);
+
+        candidate.x = 205;
+        candidate.y = 205;
+        engine.tick();
+        expect(trigger.isOverlapping('candidate')).toBe(true);
+
+        candidate.x = 500;
+        engine.tick();
+        expect(trigger.isOverlapping('candidate')).toBe(false);
+    });
+});
