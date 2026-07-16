@@ -361,9 +361,14 @@ export class EventHandlers extends BaseModule {
             this.editor.pasteObjects();
         } else if (this._matchesShortcut(e, 'editor', 'focusSelection')) {
             e.preventDefault();
-            // VP-HK: F frames selection on the viewport under the cursor
-            const targetView = this._hotkeyTargetView();
-            if (typeof this.editor.focusOnSelection === 'function') this.editor.focusOnSelection(targetView);
+            // OL-F: over Outliner → scroll list to selection; otherwise VP-HK frame on viewport
+            const outlinerPanel = this._outlinerPanelUnderCursor();
+            if (outlinerPanel && typeof outlinerPanel.scrollToSelection === 'function') {
+                outlinerPanel.scrollToSelection();
+            } else {
+                const targetView = this._hotkeyTargetView();
+                if (typeof this.editor.focusOnSelection === 'function') this.editor.focusOnSelection(targetView);
+            }
         } else if (this._matchesShortcut(e, 'editor', 'focusAll')) {
             e.preventDefault();
             const targetView = this._hotkeyTargetView();
@@ -533,6 +538,26 @@ export class EventHandlers extends BaseModule {
         const primaryRoot = document.getElementById('assets-panel');
         if (primaryRoot?.matches(':hover') && this.editor.assetPanel) {
             return this.editor.assetPanel;
+        }
+        return null;
+    }
+
+    /**
+     * OutlinerPanel under cursor (primary or dock copy), or null.
+     * Same :hover probe as Assets (OL-F / F2-style panel routing).
+     * @returns {import('../ui/OutlinerPanel.js').OutlinerPanel|null}
+     */
+    _outlinerPanelUnderCursor() {
+        const reg = this.editor.dockManager?.contentRegistry;
+        if (reg?._byLeafId) {
+            for (const bind of reg._byLeafId.values()) {
+                if (bind.contentType !== 'outliner' || !bind.panel || !bind.root) continue;
+                if (bind.root.matches(':hover')) return bind.panel;
+            }
+        }
+        const primaryRoot = document.getElementById('outliner-content-panel');
+        if (primaryRoot?.matches(':hover') && this.editor.outlinerPanel) {
+            return this.editor.outlinerPanel;
         }
         return null;
     }

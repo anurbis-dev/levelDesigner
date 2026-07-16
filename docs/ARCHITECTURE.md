@@ -379,7 +379,7 @@
   - **VP-EQ**: leaves are equal for display/filter/work camera. `isPrimary` is only the dock **shell** flag (hosts legacy `#main-canvas` DOM) — not settings authority. `setDisplayFlag` never writes global state; new views seed independent `displayOptions` snapshots. Menu/hotkeys target under-cursor → focused → any. Close ×: any leaf when ≥2 viewports; last one non-closeable; promote-to-shell carries pose/display/filters.
   - **Work camera**: every leaf uses `localCamera`; focused work view mirrors into `stateManager.camera` for level save.
   - **Game camera**: source `{ kind:'game', objectId }` follows level object `type==='camera'`.
-  - **VP-HK**: `getViewUnderCursor()` / `viewFromClientPoint` — hotkeys F/A/Grid/Boundaries/Collisions/Parallax (and jump-to-camera) target the leaf under the cursor; `getDisplayFlag` / `toggleDisplayFlag` are per-view only.
+  - **VP-HK**: `getViewUnderCursor()` / `viewFromClientPoint` — hotkeys F/A/Grid/Boundaries/Collisions/Parallax (and jump-to-camera) target the leaf under the cursor; `getDisplayFlag` / `toggleDisplayFlag` are per-view only. **OL-F**: if F is pressed while the cursor is over Outliner, route to `OutlinerPanel.scrollToSelection()` instead of framing the viewport.
   - **VP-TB**: each secondary leaf mounts its own `Toolbar` copy; View toggles + Focus apply to the paired leaf; File/Edit/Group/Play/Snap remain global.
 - **ViewportLeafChrome**: leaf header icons — camera source menu (English UI) + per-view type filter via shared `TypeFilterMenu` + **VP-EYE** eye icon (per-view display checklist); hover-switch between sibling menus after first open (main-menu style).
 - **Input**: secondary canvases share `MouseHandlers` via `ViewportViewNav` (`registerCanvas` + `setPointerCapture` LMB/MMB/RMB). Interaction routing: `_interactionViewLeafId` / `getInteractionView|Camera|Canvas` — never assume `canvasRenderer.canvas` is the gesture leaf after multi-view `render()` restores primary. Global mousemove keeps `mouse.x/y` current for under-cursor hit-tests.
@@ -751,6 +751,7 @@ stateManager.subscribe('levelStructureChanged', () => {
 - Умное выделение (Shift+клик, Ctrl+клик)
 - Фильтрованное выделение
 - **F2 — inline-переименование**: `EventHandlers.renameSelectedObject()` переключает вкладку на Outliner (если она не видна на текущей активной панели) и вызывает `OutlinerPanel.startInlineRename(obj)`
+- **OL-F — F над списком**: `EventHandlers._outlinerPanelUnderCursor()` → `scrollToSelection()` — single row `scrollIntoView(center)`; multi — average Y midpoints; expands collapsed ancestors first
 - **Иконки-глаза видимости**: `createVisibilityButton(item)`/`updateVisibilityButton()` — см. раздел «Видимость объектов» выше
 - **Object Solo** (Ctrl+click на иконку глаза объекта): `ObjectOperations.toggleObjectSolo(obj)` — см. раздел «Isolate и Layer Solo» выше
 - **Фильтр типов**: `showFilterMenu(button)` — click-outside-to-close (`mousedown`-листенер на `document`) и Ctrl+click мульти-select с применением фильтра на `keyup` — см. раздел «Isolate и Layer Solo» выше

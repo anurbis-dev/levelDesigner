@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- Fix **VP-EQ**: viewport leaves equal for display/filter/work camera — `setDisplayFlag` no longer writes global state; each view owns seeded `displayOptions`; work pose always `localCamera` (focused mirrors to level-save camera); menu/hotkeys target under-cursor/focused/any; last viewport only non-closeable; promote-to-shell carries pose/display/filters.
+- Feature **OL-F**: hotkey **F** over Outliner scrolls the object list to selection (`scrollToSelection`) — single row centers; multi uses average Y; expands collapsed ancestor groups; otherwise F still frames on viewport under cursor (VP-HK).

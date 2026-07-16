@@ -28,6 +28,7 @@
 - ✅ **VP-EYE** — eye icon in viewport header: per-view Grid/Boundaries/Collisions/Parallax menu
 - ✅ **VP-TB** — toolbar copies paired with viewport copies (View toggles + Focus per leaf)
 - ✅ **VP-EQ** — viewport peers: no primary display authority; last leaf only non-closeable
+- ✅ **OL-F** — F over Outliner: scroll selection into view (multi → avg Y); expand ancestors
 
 ---
 
@@ -60,7 +61,7 @@
 
 | # | Задача | Заметки / критерий |
 |---|--------|-------------------|
-| **OL-F** | **F** над Outliner: auto-scroll к selection; multi → усреднять позицию | frame selection in list |
+| ~~**OL-F**~~ | ✅ **F** над Outliner: auto-scroll к selection; multi → average Y | `OutlinerPanel.scrollToSelection` |
 
 ### Dock / float UX
 

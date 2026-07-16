@@ -1182,6 +1182,83 @@ export class OutlinerPanel extends BasePanel {
 
         this.render();
     }
+
+    /**
+     * OL-F: expand collapsed ancestor groups so selected ids appear in the flat list.
+     * @param {Iterable<string>} selectedIds
+     * @returns {boolean} true if any group was expanded (list re-rendered)
+     */
+    _expandAncestorsForSelection(selectedIds) {
+        const outlinerState = this.stateManager.get('outliner') || {};
+        const collapsed = outlinerState.collapsedGroups;
+        if (!collapsed || collapsed.size === 0) return false;
+
+        const groupOps = this.levelEditor.groupOperations;
+        if (!groupOps || typeof groupOps._findParentGroup !== 'function') return false;
+
+        const level = this.levelEditor.getLevel();
+        const nextCollapsed = new Set(collapsed);
+        let changed = false;
+
+        for (const id of selectedIds) {
+            let current = level.findObjectById(id);
+            if (!current) continue;
+            let parent = groupOps._findParentGroup(current);
+            while (parent) {
+                if (nextCollapsed.has(parent.id)) {
+                    nextCollapsed.delete(parent.id);
+                    changed = true;
+                }
+                parent = groupOps._findParentGroup(parent);
+            }
+        }
+
+        if (!changed) return false;
+
+        this.stateManager.update({
+            'outliner.collapsedGroups': nextCollapsed
+        });
+        this.render();
+        return true;
+    }
+
+    /**
+     * OL-F: scroll the object list so selection is in view.
+     * Single selection → center that row. Multi → center on average Y of selected rows.
+     * @returns {boolean} true if scrolled (or attempted with at least one visible row)
+     */
+    scrollToSelection() {
+        const selectedIds = this.stateManager.get('selectedObjects');
+        if (!selectedIds || selectedIds.size === 0) return false;
+
+        this._expandAncestorsForSelection(selectedIds);
+
+        const container = this._objectsContainer;
+        if (!container) return false;
+
+        const nodes = [];
+        for (const id of selectedIds) {
+            const node = this._itemNodeCache.get(id)
+                || container.querySelector(`[data-id="${CSS.escape(String(id))}"]`);
+            if (node) nodes.push(node);
+        }
+        if (nodes.length === 0) return false;
+
+        if (nodes.length === 1) {
+            nodes[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return true;
+        }
+
+        // Multi: average vertical midpoint of selected rows relative to scroll content
+        let sumMidY = 0;
+        for (const node of nodes) {
+            sumMidY += node.offsetTop + node.offsetHeight / 2;
+        }
+        const avgMidY = sumMidY / nodes.length;
+        const top = Math.max(0, avgMidY - container.clientHeight / 2);
+        container.scrollTo({ top, behavior: 'smooth' });
+        return true;
+    }
     
     /**
      * Cleanup and destroy panel
