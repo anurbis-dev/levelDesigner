@@ -25,6 +25,7 @@
 
 | # | Задача | Где смотреть | Критерий |
 |---|--------|--------------|----------|
+| **VP-MMB** | Регрессия: viewport **не зумится** middle-button click-drag | MouseHandlers / multi-view pointer / MMB zoom | MMB drag zoom как раньше, на primary и copies |
 | B2 | Проверить dock multi-viewport + Assets×N после polish | browser | 0 console errors; multi-drop все; folders width независим |
 | **VP-COL** | Смена цвета camera → иконка в шапке viewport **сразу** (сейчас только после выбора камеры в меню) | viewport chrome / camera color | live color sync без re-select |
 | **VP-FIL** | Иконка активного type-filter viewport — **синяя**, как фильтры в других панелях | ViewportView chrome | цвет active = panel filter style |
@@ -119,16 +120,17 @@
 
 ## Порядок работ (рекомендуемый)
 
-1. **AS-REN / AS-F2 / AS-DBL** — inline rename + F2/panel-aware (заменяет dialog A1)  
-2. **VP-COL / VP-FIL** — быстрые viewport chrome баги  
-3. **AS-FAV / AS-MMB** — favorites UX  
-4. **VP-HK / VP-EYE / VP-TB** — multi-viewport input + chrome + toolbar pair  
-5. **OL-F** — F over Outliner scroll  
-6. **DK-ICO / DK-CUR / DK-GST / DK-CLP** — dock polish  
-7. **B2** — browser smoke multi-view / Assets×N  
-8. **U2–U3**, **U4**, **C1–C2** — старый product хвост  
-9. **Q\*** / **D\*** — opportunistically  
-10. Engine — **не из этого файла**
+1. **VP-MMB** — регрессия middle-button zoom (сразу)  
+2. **AS-REN / AS-F2 / AS-DBL** — inline rename + F2/panel-aware (заменяет dialog A1)  
+3. **VP-COL / VP-FIL** — быстрые viewport chrome баги  
+4. **AS-FAV / AS-MMB** — favorites UX  
+5. **VP-HK / VP-EYE / VP-TB** — multi-viewport input + chrome + toolbar pair  
+6. **OL-F** — F over Outliner scroll  
+7. **DK-ICO / DK-CUR / DK-GST / DK-CLP** — dock polish  
+8. **B2** — browser smoke multi-view / Assets×N  
+9. **U2–U3**, **U4**, **C1–C2** — старый product хвост  
+10. **Q\*** / **D\*** — opportunistically  
+11. Engine — **не из этого файла**
 
 ---
 
