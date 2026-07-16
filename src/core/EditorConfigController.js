@@ -34,6 +34,9 @@ export class EditorConfigController extends BaseModule {
         const uiColors = this.editor.configManager.get('ui');
         if (uiColors) {
             this.editor.stateManager.set('ui.backgroundColor', uiColors.backgroundColor);
+            if (uiColors.toolbarBackgroundOpacity !== undefined) {
+                this.editor.stateManager.set('ui.toolbarBackgroundOpacity', uiColors.toolbarBackgroundOpacity);
+            }
             this.editor.stateManager.set('ui.textColor', uiColors.textColor);
             this.editor.stateManager.set('ui.activeColor', uiColors.activeColor);
             this.editor.stateManager.set('ui.activeTextColor', uiColors.activeTextColor);

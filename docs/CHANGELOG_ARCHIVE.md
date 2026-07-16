@@ -2,6 +2,11 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (DK-CLS)
+
+- **DK-CLS**: leaf-header close × only while Shift layout-edit (`body.dock-customize`) and only on the header under the cursor; floating-window chrome × unchanged.
+- **DK-CLS**: close × uses opacity (always in layout, fixed 20×18) so header height/panel position do not jump on hover.
+
 ## Archived from CHANGELOG.md (toolbar hide + leaf caret)
 
 - Toolbar RMB **Hide**: per-instance only (not global `view.toolbar` / sibling copies).

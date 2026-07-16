@@ -213,10 +213,10 @@ input, textarea {
     pointer-events: none; /* Allow events to pass through to canvas below */
 }
 
-/* Toolbar background (primary + VP-TB copies) */
+/* Toolbar underlay (primary + VP-TB copies); opacity via --ui-toolbar-background-color */
 #toolbar-container,
 .viewport-toolbar {
-    background-color: var(--ui-background-color, #1f2937) !important;
+    background-color: var(--ui-toolbar-background-color, var(--ui-background-color, #1f2937)) !important;
     pointer-events: auto; /* Enable events for toolbar elements */
 }
 

@@ -29,6 +29,7 @@
   "assetSize": 96,
   "assetViewMode": "grid",
   "backgroundColor": "#1f2937",
+  "toolbarBackgroundOpacity": 1,
   "textColor": "#d1d5db",
   "activeColor": "#3b82f6",
   "activeTextColor": "#ffffff",

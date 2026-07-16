@@ -108,6 +108,7 @@ export class SettingsSyncManager {
             'ui.menuGapBase': 'ui.menuGapBase',
             'ui.cursorMenuMargin': 'ui.cursorMenuMargin',
             'ui.backgroundColor': 'ui.backgroundColor',
+            'ui.toolbarBackgroundOpacity': 'ui.toolbarBackgroundOpacity',
             'ui.textColor': 'ui.textColor',
             'ui.activeColor': 'ui.activeColor',
             'ui.activeTextColor': 'ui.activeTextColor',
@@ -215,7 +216,7 @@ export class SettingsSyncManager {
         const stateKey = this.stateMapping[path];
         if (stateKey) {
             // Coerce numeric UI values from range inputs
-            if (path === 'ui.fontScale' || path === 'ui.spacingH' || path === 'ui.spacingV' || path === 'ui.elementSize' || path === 'ui.scrollbarSize' || path === 'ui.menuGapBase' || path === 'ui.cursorMenuMargin' || path === 'editor.autoSaveInterval' || path === 'editor.axisConstraint.axisWidth' || path === 'panels.dock.floatEdgeMargin') {
+            if (path === 'ui.fontScale' || path === 'ui.spacingH' || path === 'ui.spacingV' || path === 'ui.elementSize' || path === 'ui.scrollbarSize' || path === 'ui.menuGapBase' || path === 'ui.cursorMenuMargin' || path === 'ui.toolbarBackgroundOpacity' || path === 'editor.autoSaveInterval' || path === 'editor.axisConstraint.axisWidth' || path === 'panels.dock.floatEdgeMargin') {
                 const parsed = ValidationUtils.validateNumeric(value, path);
                 if (parsed !== null) {
                     value = parsed;
@@ -301,6 +302,13 @@ export class SettingsSyncManager {
             };
             if (sbColorMap[path]) {
                 document.documentElement.style.setProperty(sbColorMap[path], value);
+            }
+
+            // Toolbar underlay opacity / UI bg → --ui-toolbar-background-color
+            if (path === 'ui.toolbarBackgroundOpacity') {
+                this.applyToolbarBackgroundColor();
+            } else if (path === 'ui.backgroundColor') {
+                this.applyColorSettings();
             }
 
             // Call custom callback if exists
@@ -581,7 +589,26 @@ export class SettingsSyncManager {
             document.documentElement.style.setProperty('--canvas-background-color', canvasBackgroundColor);
         }
 
+        this.applyToolbarBackgroundColor();
+
         return { canvasBackgroundColor };
+    }
+
+    /**
+     * Toolbar underlay: ui.backgroundColor × ui.toolbarBackgroundOpacity → CSS var
+     * (primary #toolbar-container + VP-TB .viewport-toolbar copies).
+     */
+    applyToolbarBackgroundColor() {
+        if (!this.levelEditor?.stateManager) return;
+        const backgroundColor = this.levelEditor.stateManager.get('ui.backgroundColor') || '#1f2937';
+        let opacity = this.levelEditor.stateManager.get('ui.toolbarBackgroundOpacity');
+        opacity = opacity === undefined || opacity === null ? 1 : parseFloat(opacity);
+        if (!Number.isFinite(opacity)) opacity = 1;
+        opacity = Math.min(1, Math.max(0, opacity));
+        document.documentElement.style.setProperty(
+            '--ui-toolbar-background-color',
+            ColorUtils.toRgba(backgroundColor, opacity)
+        );
     }
 
     /**

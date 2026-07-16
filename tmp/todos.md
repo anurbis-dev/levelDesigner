@@ -42,6 +42,7 @@
 - ✅ **VW-NOVP** — View menu: no Viewport toggle (last leaf non-closeable)
 - ✅ **VW-ALL** — View menu Grid/Boundaries/Collisions/Parallax → all viewport copies
 - ✅ **OL-CTX** — Outliner RMB: no Select; Toggle Visibility → selection (H-path)
+- ✅ **TB-OP** — Settings: toolbar underlay opacity slider (`ui.toolbarBackgroundOpacity`)
 
 ---
 

@@ -602,7 +602,7 @@ body.dock-customize .floating-body .leaf-header .drag-handle:active {
   border-bottom: 0.5px solid #374151;
   overflow: visible;
   min-height: 2.5rem;
-  background: #1f2937;
+  background: var(--ui-toolbar-background-color, var(--ui-background-color, #1f2937));
 }
 
 

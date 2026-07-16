@@ -40,6 +40,7 @@ export function renderGeneralSettings(stateManager) {
             menuGapBase: stateManager.get('ui.menuGapBase') ?? 0.5,
             cursorMenuMargin: stateManager.get('ui.cursorMenuMargin') ?? 6,
             backgroundColor: stateManager.get('ui.backgroundColor') || '#1f2937',
+            toolbarBackgroundOpacity: stateManager.get('ui.toolbarBackgroundOpacity') ?? 1,
             textColor: stateManager.get('ui.textColor') || '#d1d5db',
             activeColor: stateManager.get('ui.activeColor') || '#3b82f6',
             activeTextColor: stateManager.get('ui.activeTextColor') || '#ffffff',
@@ -161,6 +162,18 @@ export function renderGeneralSettings(stateManager) {
                     max: 60,
                     step: 1,
                     label: 'Context Menu Cursor Margin (px)'
+                })}
+            </div>
+            <div>
+                ${createSettingsRange({
+                    id: 'ui-toolbar-bg-opacity',
+                    dataSetting: 'ui.toolbarBackgroundOpacity',
+                    value: settings.ui?.toolbarBackgroundOpacity ?? 1,
+                    min: 0,
+                    max: 1,
+                    step: 0.05,
+                    unit: '',
+                    label: 'Toolbar Background Opacity'
                 })}
             </div>
         `, { columns: 2, gap: '1rem' })}

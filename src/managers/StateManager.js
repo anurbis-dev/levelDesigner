@@ -152,6 +152,7 @@ export class StateManager extends BaseManager {
                     scrollbarSize: 2,
                     showTooltips: true,
                     backgroundColor: '#1f2937',
+                    toolbarBackgroundOpacity: 1,
                     textColor: '#d1d5db',
                     activeColor: '#3b82f6',
                     activeTextColor: '#ffffff',

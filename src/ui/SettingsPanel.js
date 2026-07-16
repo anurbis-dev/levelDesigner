@@ -497,7 +497,7 @@ export class SettingsPanel {
                 // Font scale / spacing sliders apply immediately, except font scale itself
                 // (which only applies on mouse release — see the 'change' listener below).
                 // The live value overlay for all range sliders is handled by setupRangeSliders().
-                if (input.type === 'range' && (path === 'ui.fontScale' || path === 'ui.spacingH' || path === 'ui.spacingV' || path === 'ui.elementSize' || path === 'ui.scrollbarSize' || path === 'ui.menuGapBase')) {
+                if (input.type === 'range' && (path === 'ui.fontScale' || path === 'ui.spacingH' || path === 'ui.spacingV' || path === 'ui.elementSize' || path === 'ui.scrollbarSize' || path === 'ui.menuGapBase' || path === 'ui.toolbarBackgroundOpacity')) {
                     if (path !== 'ui.fontScale' && this.syncManager) {
                         this.syncManager.syncSettingToState(path, value);
                     }
@@ -547,7 +547,7 @@ export class SettingsPanel {
             input.addEventListener('input', input._inputHandler);
             
             // Add change listener for scaling sliders (ensure final value applied)
-            if (input.type === 'range' && (input.dataset.setting === 'ui.fontScale' || input.dataset.setting === 'ui.spacingH' || input.dataset.setting === 'ui.spacingV' || input.dataset.setting === 'ui.elementSize' || input.dataset.setting === 'ui.scrollbarSize' || input.dataset.setting === 'ui.menuGapBase')) {
+            if (input.type === 'range' && (input.dataset.setting === 'ui.fontScale' || input.dataset.setting === 'ui.spacingH' || input.dataset.setting === 'ui.spacingV' || input.dataset.setting === 'ui.elementSize' || input.dataset.setting === 'ui.scrollbarSize' || input.dataset.setting === 'ui.menuGapBase' || input.dataset.setting === 'ui.toolbarBackgroundOpacity')) {
                 input._changeHandler = (e) => {
                     if (!this.autoApply) return;
 
@@ -802,7 +802,7 @@ export class SettingsPanel {
         });
 
         // Sync UI spacing and size sliders from StateManager
-        const uiKeys = ['ui.fontScale', 'ui.spacingH', 'ui.spacingV', 'ui.elementSize', 'ui.scrollbarSize', 'ui.menuGapBase'];
+        const uiKeys = ['ui.fontScale', 'ui.spacingH', 'ui.spacingV', 'ui.elementSize', 'ui.scrollbarSize', 'ui.menuGapBase', 'ui.toolbarBackgroundOpacity'];
         uiKeys.forEach((key) => {
             this.levelEditor.stateManager.subscribe(key, (value) => {
                 if (this.isVisible) {
