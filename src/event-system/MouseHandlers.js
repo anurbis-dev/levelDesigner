@@ -1102,9 +1102,13 @@ export class MouseHandlers extends BaseModule {
 
         // Schedule full cache invalidation since multiple objects were added
         this.editor.scheduleCacheInvalidation();
-        
-        // Also invalidate spatial index for immediate visibility
+
+        // Same as DuplicateOperations.place(): scheduleCacheInvalidation is debounced —
+        // without a sync clear, render() serves the pre-drop visibleObjectsCache entry
+        // (objects missing, selection outlines still drawn via level.objects → "frame only
+        // until mouse move"). Multi-view copies share the same cache map.
         if (this.editor.renderOperations) {
+            this.editor.renderOperations.clearVisibleObjectsCache();
             this.editor.renderOperations.invalidateSpatialIndex();
         }
 

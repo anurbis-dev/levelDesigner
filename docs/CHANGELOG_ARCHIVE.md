@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (asset-drop visible cache fix)
+
+- Feature **U4**: Context menu **Move to Layer** (Canvas + Outliner) — flyout of all layers; current layer / locked disabled; also **Move Layer Up/Down** (PageUp/PageDown). API: `LayerOperations.moveSelectedObjectsToLayerId` + `buildMoveToLayerMenuItems`. Outliner ensures right-clicked object is in selection. `BaseContextMenu` submenus accept function-valued `items` (resolved each open).
+
 ## Archived from CHANGELOG.md (U4 Move to Layer commit)
 
 - Feature **U3**: File → **Open Recent** — MRU levels/projects (up to 10) with JSON snapshot in `userPrefs` / `editor.recentFiles`; open/save level or project records the list; browser has no path, so re-open uses the cache (`RecentFilesManager`). Submenu rebuilds on hover; **Clear Recent**.

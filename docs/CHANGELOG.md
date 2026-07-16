@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- Feature **U4**: Context menu **Move to Layer** (Canvas + Outliner) — flyout of all layers; current layer / locked disabled; also **Move Layer Up/Down** (PageUp/PageDown). API: `LayerOperations.moveSelectedObjectsToLayerId` + `buildMoveToLayerMenuItems`. Outliner ensures right-clicked object is in selection. `BaseContextMenu` submenus accept function-valued `items` (resolved each open).
+- Fix: asset drop onto viewport showed only selection frames until mouse moved (and same on viewport copies) — `handleDrop` cleared spatial index but not `visibleObjectsCache` (same class of bug as duplicate place).
