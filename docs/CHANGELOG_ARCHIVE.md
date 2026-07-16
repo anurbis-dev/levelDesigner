@@ -2,6 +2,10 @@
 
 Р—Р°РїРёСЃРё, РїРµСЂРµРЅРµСЃС‘РЅРЅС‹Рµ РёР· `CHANGELOG.md` РїСЂРё РєРѕРјРјРёС‚Р°С… (СЃРј. `git log` РґР»СЏ С‚РѕС‡РЅС‹С… РґРёС„С„РѕРІ). РђРєС‚СѓР°Р»СЊРЅС‹Р№ РЅРµРѕРїСѓР±Р»РёРєРѕРІР°РЅРЅС‹Р№ СЂР°Р·СЂРµР· вЂ” РІ `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (pre engine Фаза 3 commit)
+
+- Feat **AS-FAV / AS-MMB**: пустые favorites — серый «Drop favorite folders here»; MMB по закладке фолдера снимает её.
+
 ## Archived from CHANGELOG.md (VP-COL/FIL commit)
 
 - Fix **VP-COL**: цвет иконки game camera в шапке viewport обновляется сразу при смене color/name объекта (`objectPropertyChanged` → `refreshAllViewportChrome`).

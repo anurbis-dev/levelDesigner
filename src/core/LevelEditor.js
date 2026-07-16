@@ -29,6 +29,7 @@ import { EditorLifecycleController } from './EditorLifecycleController.js';
 import { EditorPreferencesController } from './EditorPreferencesController.js';
 import { LevelsManager } from './LevelsManager.js';
 import { ProjectFileOperations } from './ProjectFileOperations.js';
+import { PlayOperations } from './PlayOperations.js';
 import { ContextMenuManager } from '../managers/ContextMenuManager.js';
 import { Logger } from '../utils/Logger.js';
 import { dialogReplacer } from '../utils/DialogReplacer.js';
@@ -48,7 +49,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '4.3.0';
+    static VERSION = '4.4.0';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -139,6 +140,7 @@ export class LevelEditor {
         this.viewportOperations = new ViewportOperations(this);
         this.levelFileOperations = new LevelFileOperations(this);
         this.projectFileOperations = new ProjectFileOperations(this);
+        this.playOperations = new PlayOperations(this);
         this.configController = new EditorConfigController(this);
         this.lifecycleController = new EditorLifecycleController(this);
         this.preferencesController = new EditorPreferencesController(this);
@@ -150,6 +152,7 @@ export class LevelEditor {
         this.lifecycle.register('viewportOperations', this.viewportOperations, { priority: 7 });
         this.lifecycle.register('levelFileOperations', this.levelFileOperations, { priority: 6 });
         this.lifecycle.register('projectFileOperations', this.projectFileOperations, { priority: 6 });
+        this.lifecycle.register('playOperations', this.playOperations, { priority: 6 });
         this.lifecycle.register('levelsManager', this.levelsManager, { priority: 6 });
         
         // Store reference to duplicate render utils
@@ -746,6 +749,13 @@ export class LevelEditor {
 
     async openLevel() {
         return this.levelFileOperations.openLevel();
+    }
+
+    /**
+     * Play-in-editor toggle (delegated to PlayOperations)
+     */
+    togglePlayMode() {
+        return this.playOperations.toggle();
     }
 
     /**
@@ -1451,6 +1461,7 @@ export class LevelEditor {
         this.duplicateOperations = null;
         this.levelsManager = null;
         this.projectFileOperations = null;
+        this.playOperations = null;
 
         // Clear lifecycle
         this.lifecycle = null;

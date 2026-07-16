@@ -581,6 +581,20 @@ header .text-sm {
     max-height: 90vh;
 }
 
+/* Play-in-editor overlay (engine plan §3) — fullscreen, replaces editor view while running */
+.play-overlay {
+    position: fixed;
+    inset: 0;
+    background: #000;
+    z-index: 9999;
+}
+
+.play-overlay canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
 .console-resize-handle {
     position: absolute;
     bottom: 0;

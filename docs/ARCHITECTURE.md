@@ -394,6 +394,10 @@
   - Per-level `isDirty` (Фаза 5) — каждая LevelSession трекит свой `isDirty` флаг независимо. `LevelsManager.setCurrentLevel()` снапшотит/восстанавливает глобальный `stateManager.isDirty` при переключении между вкладками, позволяя существующему коду работать без изменений (через единый глобальный флаг).
   - Per-level visible индикатор в LevelsPanel — точка в панели теперь точна для всех вкладок, не только текущей (может быть прочитана из `session.isDirty` каждой открытой сессии).
 
+### PlayOperations (v4.4.0 Фаза 3: Play-in-editor)
+**Файл**: `src/core/PlayOperations.js`
+- Запуск игрового режима в редакторе через fullscreen canvas overlay; валидирует PlayerStart, сериализует текущий уровень через ProjectExporter, создаёт GameEngine; методы `play()`/`stop()`/`toggle()`/`isPlaying()`
+
 ### RenderOperations (v4.0.0 Phase A refactor + v3.57.0 Phase 3-6 multi-level)
 **Файл**: `src/core/RenderOperations.js`
 - Операции рендеринга с композитингом нескольких видимых уровней

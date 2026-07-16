@@ -209,6 +209,7 @@ level.settings.parallaxVertical // множитель вертикального
 - `src/core/ObjectOperations.js` - операции с объектами
 - `src/core/LayerOperations.js` - операции со слоями
 - `src/core/RenderOperations.js` - рендеринг (multi-level compositing + multi-viewport: per-canvas frustum/cache, sticky interactive cull)
+- `src/core/PlayOperations.js` - Play-in-editor (Фаза 3 движка: `play()`/`stop()`/`toggle()`/`isPlaying()`)
 - `src/core/ViewportViewManager.js` - registry of viewport leaves (camera source, pose, type filters)
 - `src/core/ViewportViewNav.js` - secondary canvas MouseHandlers bind + pointer-capture
 - `src/event-system/MouseHandlers.js` - мышь: rotate/scale; multi-view interaction pin (`getInteractionView|Camera|Canvas`); outside-leaf complete; viewport-gesture-mode

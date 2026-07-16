@@ -231,6 +231,9 @@ export class Toolbar {
             this.updateToggleButtonState('toggleObjectCollisions', enabled);
             this.levelEditor.eventHandlers.updateViewCheckbox('objectCollisions', enabled);
         });
+        this.stateManager.subscribe('playMode', (enabled) => {
+            this.updateToggleButtonState('playToggle', enabled);
+        });
 
         // Listen for selection changes to update command availability
         this.stateManager.subscribe('selectedObjects', () => {
@@ -303,6 +306,10 @@ export class Toolbar {
         toolbarContent.appendChild(this.createButtonGroup('Group', [
             { id: 'group-selected', label: 'Group', icon: '📦', action: 'groupSelected' },
             { id: 'ungroup-selected', label: 'Ungroup', icon: '📤', action: 'ungroupSelected' }
+        ]));
+
+        toolbarContent.appendChild(this.createButtonGroup('Play', [
+            { id: 'toggle-play', label: 'Play', icon: '▶', action: 'playToggle', toggle: true }
         ]));
 
         this.container.appendChild(toolbarContent);
@@ -453,6 +460,9 @@ export class Toolbar {
                     break;
                 case 'ungroupSelected':
                     this.levelEditor.ungroupSelectedObjects();
+                    break;
+                case 'playToggle':
+                    await this.levelEditor.togglePlayMode();
                     break;
                 default:
                     Logger.ui.warn(`Unknown toolbar action: ${action}`);
@@ -905,7 +915,8 @@ export class Toolbar {
         this.updateToggleButtonState('toggleParallax', this.stateManager.get('view.parallax') || false);
         this.updateToggleButtonState('toggleObjectBoundaries', this.stateManager.get('view.objectBoundaries') || false);
         this.updateToggleButtonState('toggleObjectCollisions', this.stateManager.get('view.objectCollisions') || false);
-        
+        this.updateToggleButtonState('playToggle', this.stateManager.get('playMode') || false);
+
         // Update grid button icon based on current grid type
         this.updateGridButtonIcon();
     }

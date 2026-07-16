@@ -289,6 +289,17 @@ export class EventHandlers extends BaseModule {
         // clicks never triggered).
         if (e.repeat) return;
 
+        // Play-in-editor is running (src/core/PlayOperations.js) — editor shortcuts
+        // (undo/redo, delete, tools) must not fire underneath it. Escape is the one
+        // exception, so the user always has a way out without reaching for the mouse.
+        if (this.editor.stateManager.get('playMode')) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                this.editor.playOperations?.stop();
+            }
+            return;
+        }
+
         // Backspace-to-reset (hover-based, see ResetRegistry) must run even while some
         // unrelated input has focus — checked before the focused-input early-return below.
         if (this._matchesShortcut(e, 'ui', 'resetToDefault') && ResetRegistry.handleBackspace()) {
@@ -550,6 +561,9 @@ export class EventHandlers extends BaseModule {
      * @param {KeyboardEvent} e - The keyboard event
      */
     handleKeyUp(e) {
+        // Play-in-editor running — see matching guard in handleKeyDown.
+        if (this.editor.stateManager.get('playMode')) return;
+
         // Allow input fields to work normally
         if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.contentEditable === 'true')) {
             return;
