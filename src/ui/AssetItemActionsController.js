@@ -87,13 +87,26 @@ export class AssetItemActionsController {
             assetPanel.panelContextMenu.completeDeferredInit();
         }
 
-        // Register context menus with ContextMenuManager for global resize handling
+        // Register context menus with ContextMenuManager for global resize handling.
+        // Unique ids per instance (Outliner/Layers pattern) so Assets panel copies don't
+        // overwrite primary's registration.
         if (assetPanel.levelEditor && assetPanel.levelEditor.contextMenuManager) {
+            const key = assetPanel.instanceKey || 'primary';
+            assetPanel._contextMenuIds = {
+                asset: key === 'primary' ? 'asset' : `asset-${key}`,
+                assetPanel: key === 'primary' ? 'assetPanel' : `assetPanel-${key}`
+            };
             if (assetPanel.assetContextMenu) {
-                assetPanel.levelEditor.contextMenuManager.registerMenu('asset', assetPanel.assetContextMenu);
+                assetPanel.levelEditor.contextMenuManager.registerMenu(
+                    assetPanel._contextMenuIds.asset,
+                    assetPanel.assetContextMenu
+                );
             }
             if (assetPanel.panelContextMenu) {
-                assetPanel.levelEditor.contextMenuManager.registerMenu('assetPanel', assetPanel.panelContextMenu);
+                assetPanel.levelEditor.contextMenuManager.registerMenu(
+                    assetPanel._contextMenuIds.assetPanel,
+                    assetPanel.panelContextMenu
+                );
             }
             // AssetTabContextMenu handles events through delegation, no global registration needed
         }

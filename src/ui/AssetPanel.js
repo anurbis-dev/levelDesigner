@@ -1048,6 +1048,14 @@ export class AssetPanel extends BasePanel {
 
 
         // Clean up context menus
+        if (this.levelEditor?.contextMenuManager && this._contextMenuIds) {
+            if (this._contextMenuIds.asset) {
+                this.levelEditor.contextMenuManager.unregisterMenu?.(this._contextMenuIds.asset);
+            }
+            if (this._contextMenuIds.assetPanel) {
+                this.levelEditor.contextMenuManager.unregisterMenu?.(this._contextMenuIds.assetPanel);
+            }
+        }
         if (this.assetContextMenu) {
             this.assetContextMenu.destroy();
         }

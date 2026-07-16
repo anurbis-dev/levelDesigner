@@ -28,7 +28,17 @@ export function bindSecondaryViewportNav(vvm, view) {
         onDoubleClick: (e) => mh.handleDoubleClick(e),
         onDragOver: (e) => mh.handleDragOver(e),
         onDrop: (e) => mh.handleDrop(e),
-        onContextMenu: (e) => e.preventDefault()
+        // Primary uses CanvasContextMenu bound to #main-canvas; secondary canvases
+        // must route RMB to the same menu (copy / float leaves had only preventDefault).
+        onContextMenu: (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const cm = editor.canvasContextMenu;
+            if (!cm?.handleContextMenuEvent) return;
+            // Same rAF deferral as CanvasContextMenu.setupContextMenu — pan detection
+            // finishes on mouseup before wasPanning is checked.
+            requestAnimationFrame(() => cm.handleContextMenuEvent(e));
+        }
     };
 
     eventHandlerManager.registerCanvas(view.canvas, canvasConfig, canvasId);

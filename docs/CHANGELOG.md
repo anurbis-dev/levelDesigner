@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- Fix: asset drop onto viewport showed only selection frames until mouse moved (and same on viewport copies) — `handleDrop` cleared spatial index but not `visibleObjectsCache` (same class of bug as duplicate place).
+- Fix: canvas context menu (RMB on objects/assets in viewport) missing on secondary viewport leaves and floats — `ViewportViewNav` only called `preventDefault`; now routes to shared `CanvasContextMenu` (same as primary). Assets panel copies use unique ContextMenuManager ids (no primary overwrite).
