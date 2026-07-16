@@ -99,6 +99,19 @@ export class ObjectOperations extends BaseModule {
     }
 
     /**
+     * Stack-order action for the current selection (Details buttons, hotkeys, context menus).
+     * @param {'bringToFront'|'sendToBack'|'moveForward'|'moveBackward'} action
+     */
+    applyStackOrderActionToSelection(action) {
+        const selectedIds = this.editor.stateManager.get('selectedObjects');
+        if (!selectedIds || selectedIds.size === 0) return;
+        const objects = Array.from(selectedIds)
+            .map(id => this.editor.level.findObjectById(id))
+            .filter(Boolean);
+        this.applyStackOrderAction(objects, action);
+    }
+
+    /**
      * Return the set of group IDs that must be excluded from selection while in
      * group edit mode: all openGroups + ALL their ancestors (handles groups opened
      * directly via the outliner, bypassing parent-first navigation).

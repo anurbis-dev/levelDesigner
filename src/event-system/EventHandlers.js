@@ -419,17 +419,13 @@ export class EventHandlers extends BaseModule {
         } else if (this._matchesShortcut(e, 'editor', 'bringToFront') || this._matchesShortcut(e, 'editor', 'sendToBack') ||
                    this._matchesShortcut(e, 'editor', 'bringForward') || this._matchesShortcut(e, 'editor', 'sendBackward')) {
             e.preventDefault();
-            const selectedIds = this.editor.stateManager.get('selectedObjects');
-            if (selectedIds && selectedIds.size > 0 && this.editor.objectOperations) {
-                const objects = Array.from(selectedIds)
-                    .map(id => this.editor.level.findObjectById(id))
-                    .filter(Boolean);
+            if (this.editor.objectOperations) {
                 let stackAction;
                 if (this._matchesShortcut(e, 'editor', 'bringToFront'))      stackAction = 'bringToFront';
                 else if (this._matchesShortcut(e, 'editor', 'sendToBack'))   stackAction = 'sendToBack';
                 else if (this._matchesShortcut(e, 'editor', 'bringForward')) stackAction = 'moveForward';
                 else                                                           stackAction = 'moveBackward';
-                this.editor.objectOperations.applyStackOrderAction(objects, stackAction);
+                this.editor.objectOperations.applyStackOrderActionToSelection(stackAction);
             }
         } else if (this._matchesShortcut(e, 'editor', 'moveLayerUp') || this._matchesShortcut(e, 'editor', 'moveLayerUpExtreme')) {
             e.preventDefault();

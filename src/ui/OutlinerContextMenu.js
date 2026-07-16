@@ -102,6 +102,50 @@ export class OutlinerContextMenu extends BaseContextMenu {
 
         this.addSeparator();
 
+        // Stacking order within sibling list / layer (same as Details order buttons)
+        this.addMenuItem('Bring to Front', '⏫', () => {
+            this.levelEditor?.objectOperations?.applyStackOrderActionToSelection?.('bringToFront');
+        }, {
+            id: 'bring-to-front',
+            disabled: () => {
+                const sel = this.levelEditor?.stateManager?.get('selectedObjects');
+                return !(sel && sel.size > 0);
+            },
+            shortcut: () => this.resolveShortcut('editor', 'bringToFront')
+        });
+        this.addMenuItem('Send to Back', '⏬', () => {
+            this.levelEditor?.objectOperations?.applyStackOrderActionToSelection?.('sendToBack');
+        }, {
+            id: 'send-to-back',
+            disabled: () => {
+                const sel = this.levelEditor?.stateManager?.get('selectedObjects');
+                return !(sel && sel.size > 0);
+            },
+            shortcut: () => this.resolveShortcut('editor', 'sendToBack')
+        });
+        this.addMenuItem('Bring Forward', '🔼', () => {
+            this.levelEditor?.objectOperations?.applyStackOrderActionToSelection?.('moveForward');
+        }, {
+            id: 'bring-forward',
+            disabled: () => {
+                const sel = this.levelEditor?.stateManager?.get('selectedObjects');
+                return !(sel && sel.size > 0);
+            },
+            shortcut: () => this.resolveShortcut('editor', 'bringForward')
+        });
+        this.addMenuItem('Send Backward', '🔽', () => {
+            this.levelEditor?.objectOperations?.applyStackOrderActionToSelection?.('moveBackward');
+        }, {
+            id: 'send-backward',
+            disabled: () => {
+                const sel = this.levelEditor?.stateManager?.get('selectedObjects');
+                return !(sel && sel.size > 0);
+            },
+            shortcut: () => this.resolveShortcut('editor', 'sendBackward')
+        });
+
+        this.addSeparator();
+
         this.addMenuItem('Move Layer Up', '⬆', () => {
             this.levelEditor?.moveSelectedObjectsToLayer?.(true, false);
         }, {

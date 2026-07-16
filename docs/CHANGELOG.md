@@ -4,4 +4,5 @@
 
 ## [Unreleased]
 
-- Fix: canvas context menu (RMB on objects/assets in viewport) missing on secondary viewport leaves and floats — `ViewportViewNav` only called `preventDefault`; now routes to shared `CanvasContextMenu` (same as primary). Assets panel copies use unique ContextMenuManager ids (no primary overwrite).
+- Fix: after RMB pan, releasing over panels/UI no longer opens that panel's context menu (`wasPanning` / `suppressContextMenu` capture block + global mouseup finishes pan path).
+- Feature: Canvas/Outliner context menus — stack order (Bring to Front / Send to Back / Bring Forward / Send Backward) via `ObjectOperations.applyStackOrderActionToSelection` (same as Details); separators around layer-move block.

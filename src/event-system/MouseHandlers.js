@@ -479,11 +479,14 @@ export class MouseHandlers extends BaseModule {
             Logger.mouse.debug('Right mouse up, was panning:', mouse.wasPanning);
 
             // Don't reset wasPanning immediately - let contextmenu handler do it
-            // This prevents race condition between mouseup and contextmenu events
-
+            // This prevents race condition between mouseup and contextmenu events.
+            // Also set suppressContextMenu so release over panels after a pan cannot open
+            // Outliner/Assets/etc. context menus (capture handler in ContextMenuManager).
+            const suppressMenu = !!mouse.wasPanning;
             this.editor.stateManager.update({
                 'mouse.isRightDown': false,
-                'mouse.altKey': e.altKey
+                'mouse.altKey': e.altKey,
+                ...(suppressMenu ? { 'mouse.suppressContextMenu': true } : {})
             });
 
             // Schedule cleanup after contextmenu event
@@ -491,7 +494,8 @@ export class MouseHandlers extends BaseModule {
                 this.editor.stateManager.update({
                     'mouse.rightClickStartX': undefined,
                     'mouse.rightClickStartY': undefined,
-                    'mouse.wasPanning': false
+                    'mouse.wasPanning': false,
+                    'mouse.suppressContextMenu': false
                 });
             }, 100);
 
@@ -867,12 +871,18 @@ export class MouseHandlers extends BaseModule {
         }
 
         if (e.button === 2) {
-            // Right mouse button marquee cancellation is now handled in BaseContextMenu
-            this.editor.stateManager.update({
-                'mouse.isRightDown': false
-            });
-            this._resetAllViewportCursors();
-            this._endViewInteractionIfIdle();
+            // Finish the same path as canvas mouseup when RMB pan/gesture started on a
+            // viewport (incl. release over other UI) so wasPanning / suppressContextMenu
+            // are set and the spurious panel contextmenu is blocked.
+            if (mouse.isRightDown || mouse.wasPanning || mouse.rightClickStartX !== undefined) {
+                this.handleMouseUp(e);
+            } else {
+                this.editor.stateManager.update({
+                    'mouse.isRightDown': false
+                });
+                this._resetAllViewportCursors();
+                this._endViewInteractionIfIdle();
+            }
             this._syncViewportGestureUiLock(e.clientX, e.clientY);
             return;
         }

@@ -236,6 +236,34 @@ export class CanvasContextMenu extends BaseContextMenu {
 
         this.addSeparator();
 
+        // Stacking order within sibling list / layer (same as Details order buttons)
+        this.addMenuItem('Bring to Front', '⏫', () => {
+            this.levelEditor?.objectOperations?.applyStackOrderActionToSelection?.('bringToFront');
+        }, {
+            disabled: (context) => !CommandAvailability.check('copy', this.levelEditor),
+            shortcut: () => this.resolveShortcut('editor', 'bringToFront')
+        });
+        this.addMenuItem('Send to Back', '⏬', () => {
+            this.levelEditor?.objectOperations?.applyStackOrderActionToSelection?.('sendToBack');
+        }, {
+            disabled: (context) => !CommandAvailability.check('copy', this.levelEditor),
+            shortcut: () => this.resolveShortcut('editor', 'sendToBack')
+        });
+        this.addMenuItem('Bring Forward', '🔼', () => {
+            this.levelEditor?.objectOperations?.applyStackOrderActionToSelection?.('moveForward');
+        }, {
+            disabled: (context) => !CommandAvailability.check('copy', this.levelEditor),
+            shortcut: () => this.resolveShortcut('editor', 'bringForward')
+        });
+        this.addMenuItem('Send Backward', '🔽', () => {
+            this.levelEditor?.objectOperations?.applyStackOrderActionToSelection?.('moveBackward');
+        }, {
+            disabled: (context) => !CommandAvailability.check('copy', this.levelEditor),
+            shortcut: () => this.resolveShortcut('editor', 'sendBackward')
+        });
+
+        this.addSeparator();
+
         // Layer assignment (PageUp/PageDown + explicit target list)
         this.addMenuItem('Move Layer Up', '⬆', () => {
             this.levelEditor?.moveSelectedObjectsToLayer?.(true, false);

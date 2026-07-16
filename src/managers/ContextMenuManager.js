@@ -40,18 +40,26 @@ export class ContextMenuManager extends BaseManager {
     }
 
     /**
-     * Setup global context menu blocker and closer for the entire document
+     * Setup global context menu blocker and closer for the entire document.
      */
     setupGlobalContextMenuBlocker() {
+        // Capture: after viewport RMB pan, browser still fires `contextmenu` on whatever is
+        // under the cursor (panels/tabs) — kill that before any panel menu opens.
         document.addEventListener('contextmenu', (e) => {
-            // Check if any custom menu handled this event
+            const mouse = window.editor?.stateManager?.get?.('mouse');
+            if (mouse?.wasPanning || mouse?.suppressContextMenu) {
+                e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
+            }
+        }, { capture: true, passive: false });
+
+        // Bubble: block native browser menu when no custom handler claimed the event
+        document.addEventListener('contextmenu', (e) => {
             if (!e.defaultPrevented) {
-                // No custom menu handled this event - close all active menus
                 if (this.hasActiveMenu()) {
                     this.closeAllMenus();
                 }
-
-                // Block the default browser context menu
                 e.preventDefault();
             }
         }, { passive: false });

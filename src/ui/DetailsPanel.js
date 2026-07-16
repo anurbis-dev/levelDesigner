@@ -393,7 +393,7 @@ export class DetailsPanel {
                 text,
                 title: showTips ? ShortcutFormatter.formatTitle(text, sc) : undefined,
                 variant: 'secondary',
-                onClick: () => this.levelEditor.objectOperations.applyStackOrderAction(objects, action)
+                onClick: () => this.levelEditor.objectOperations.applyStackOrderActionToSelection(action)
             }));
         });
 
