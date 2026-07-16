@@ -7,12 +7,12 @@
 
 - зум других вьюпортов не должен влиять на отображение элементов с соседних - сейчас включенные в одном окне boundaries меняются при зуме другого окна
 - добавить оверлей поверх вьюпорта для заполнения блоками отображения различных данных. Например: индикация включенного параллакса, имя активной камеры, общая статистика уровня/слоя и т.д.
-- при отрыве окна и наведении на зону где создается отдельное окно - показывать гост будущего окна.
 - добавить схлопывание пенели по клику в шапке. условие схлопывания - есть другие панели сверху или снизу
 
 
 ## Closed (архив)
 
+✅ DK-GST — ghost float-окна при Shift-drag без dock target (`.float-detach-ghost` + `floatDetachLayoutFromClient`)  
 ✅ DK-CUR — grab cursor на leaf header gap только при Shift (`body.dock-customize`); иначе pointer  
 ✅ DK-ICO — иконка отрыва панели в окно убрана; float только Shift+drag gap  
 ✅ OL-F — F над Outliner: scrollToSelection (single center / multi average Y); expand collapsed ancestors  

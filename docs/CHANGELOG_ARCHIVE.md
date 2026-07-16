@@ -6,6 +6,10 @@
 
 - UX **DK-CUR**: leaf header drag-gap cursor is `pointer` by default; `grab`/`grabbing` only while Shift (`body.dock-customize` via `bindDockCustomizeModeClass`); floating window chrome free-move still grab without Shift.
 
+## Archived from CHANGELOG.md (DK-GST commit)
+
+- UX **DK-CUR**: leaf header drag-gap cursor is `pointer` by default; `grab`/`grabbing` only while Shift (`body.dock-customize` via `bindDockCustomizeModeClass`); floating window chrome free-move still grab without Shift.
+
 ## Archived from CHANGELOG.md (DK-CUR commit)
 
 - Cleanup **DK-ICO**: removed leaf-header detach icon (`⇱`); float only via Shift+drag gap (`onNoTargetDrop`); dropped dead `detachLeafToFloating`. *(повторно сброшено из Unreleased при коммите DK-CUR)*

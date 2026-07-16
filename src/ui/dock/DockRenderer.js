@@ -2,7 +2,7 @@
  * Dock DOM renderer with leaf-content reconciliation by node.id.
  * Chrome may be rebuilt; content roots reparent only.
  */
-import { typeLabel, typeColor, COLLAPSED_H } from './DockConstants.js';
+import { typeLabel, typeColor, COLLAPSED_H, floatDetachLayoutFromClient } from './DockConstants.js';
 import { openTypeMenu, closeTypeMenu } from './DockTypeMenu.js';
 import { buildViewportHeaderControls, syncViewportChromeState } from './ViewportLeafChrome.js';
 
@@ -191,8 +191,9 @@ export class DockRenderer {
                 onNoTargetDrop: (x, y) => {
                     const dragged = this.model.resolveDraggedNode(node.id);
                     if (!dragged) return;
+                    const layout = floatDetachLayoutFromClient(x, y, this.workspaceRect());
                     this.model.floatingWindows.push(
-                        this.model.makeFloatingWindow(dragged, x - 70, y - 14, 220, 160)
+                        this.model.makeFloatingWindow(dragged, layout.x, layout.y, layout.w, layout.h)
                     );
                     this.render();
                 }

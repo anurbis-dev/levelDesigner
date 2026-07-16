@@ -5,7 +5,8 @@ import {
     HOLD_MS,
     DOUBLE_TAP_MS,
     TAP_DELAY_MS,
-    isDockCustomizeKey
+    isDockCustomizeKey,
+    floatDetachLayoutFromClient
 } from './DockConstants.js';
 import { bindDockCustomizeKeyWatch } from './DockDragKeyWatch.js';
 
@@ -25,6 +26,7 @@ export function startDockNodeDrag(ctx, e, getRawPayload, opts) {
     let holdFired = false;
     let unbindKeys = null;
     let holdTimer = null;
+    const canDetachFloat = typeof opts.onNoTargetDrop === 'function';
 
     const clearHold = () => {
         if (holdTimer) {
@@ -36,6 +38,7 @@ export function startDockNodeDrag(ctx, e, getRawPayload, opts) {
     const clearCustomizeUi = () => {
         target = null;
         ctx.overlay.hideDockOverlay();
+        ctx.overlay.hideFloatDetachGhost();
     };
 
     const refreshDropUi = () => {
@@ -46,6 +49,14 @@ export function startDockNodeDrag(ctx, e, getRawPayload, opts) {
         }
         target = ctx.overlay.detectDropTarget(lastX, lastY, ghost);
         ctx.overlay.showDockOverlayFor(target);
+        // DK-GST: when drop would create a floating window, preview its rect.
+        if (canDetachFloat && !target) {
+            const ws = ctx.renderer?.workspaceRect?.() || null;
+            const layout = floatDetachLayoutFromClient(lastX, lastY, ws);
+            ctx.overlay.showFloatDetachGhost(layout, opts.ghostLabel || '');
+        } else {
+            ctx.overlay.hideFloatDetachGhost();
+        }
     };
 
     const endGesture = () => {
@@ -60,6 +71,7 @@ export function startDockNodeDrag(ctx, e, getRawPayload, opts) {
         captureEl.removeEventListener('pointermove', onMove);
         captureEl.removeEventListener('pointerup', onUp);
         ctx.overlay.hideDockOverlay();
+        ctx.overlay.hideFloatDetachGhost();
         if (ghost) {
             ghost.remove();
             ghost = null;

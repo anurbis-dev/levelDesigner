@@ -16,11 +16,39 @@ export const TYPE_ORDER = ['viewport', 'outliner', 'details', 'layers', 'assets'
 
 export const FLOAT_MIN_W = 130;
 export const FLOAT_MIN_H = 60;
+/** Default size when detaching a leaf to a new floating window (DK-GST / onNoTargetDrop). */
+export const FLOAT_DETACH_W = 220;
+export const FLOAT_DETACH_H = 160;
+/** Cursor hotspot inside the detach ghost (left/top offset from pointer). */
+export const FLOAT_DETACH_HOTSPOT_X = 70;
+export const FLOAT_DETACH_HOTSPOT_Y = 14;
 export const COLLAPSED_H = 28;
 export const SNAP_THRESHOLD = 16;
 export const HOLD_MS = 500;
 export const DOUBLE_TAP_MS = 350;
 export const TAP_DELAY_MS = 260;
+
+/**
+ * Layout for detach-to-float at pointer (DK-GST preview + drop).
+ * @param {number} clientX
+ * @param {number} clientY
+ * @param {{ left: number, top: number }|null|undefined} workspaceRect
+ * @returns {{ x: number, y: number, w: number, h: number, screenLeft: number, screenTop: number }}
+ */
+export function floatDetachLayoutFromClient(clientX, clientY, workspaceRect) {
+    const screenLeft = clientX - FLOAT_DETACH_HOTSPOT_X;
+    const screenTop = clientY - FLOAT_DETACH_HOTSPOT_Y;
+    const wsLeft = workspaceRect?.left ?? 0;
+    const wsTop = workspaceRect?.top ?? 0;
+    return {
+        x: screenLeft - wsLeft,
+        y: screenTop - wsTop,
+        w: FLOAT_DETACH_W,
+        h: FLOAT_DETACH_H,
+        screenLeft,
+        screenTop
+    };
+}
 
 export const OPPOSITE = { left: 'right', right: 'left', top: 'bottom', bottom: 'top' };
 

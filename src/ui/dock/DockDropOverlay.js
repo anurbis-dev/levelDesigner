@@ -1,5 +1,5 @@
 /**
- * Dock-zone and floating-snap overlay helpers (DOM only).
+ * Dock-zone, float-detach ghost (DK-GST), and floating-snap overlay helpers (DOM only).
  */
 export class DockDropOverlay {
     constructor(renderer, model) {
@@ -7,6 +7,8 @@ export class DockDropOverlay {
         this.model = model;
         this.dockOverlay = null;
         this.snapOverlayEl = null;
+        /** @type {HTMLElement|null} */
+        this.floatDetachGhostEl = null;
     }
 
     getDockOverlay() {
@@ -102,6 +104,42 @@ export class DockDropOverlay {
         if (this.dockOverlay) this.dockOverlay.style.display = 'none';
     }
 
+    /**
+     * DK-GST: ghost of the floating window that would be created on no-target drop.
+     * @param {{ screenLeft: number, screenTop: number, w: number, h: number }} layout
+     * @param {string} [label]
+     */
+    showFloatDetachGhost(layout, label = '') {
+        if (!layout) {
+            this.hideFloatDetachGhost();
+            return;
+        }
+        if (!this.floatDetachGhostEl) {
+            this.floatDetachGhostEl = document.createElement('div');
+            this.floatDetachGhostEl.className = 'float-detach-ghost';
+            this.floatDetachGhostEl.setAttribute('aria-hidden', 'true');
+            const chrome = document.createElement('div');
+            chrome.className = 'float-detach-ghost-chrome';
+            this.floatDetachGhostEl.appendChild(chrome);
+            const body = document.createElement('div');
+            body.className = 'float-detach-ghost-body';
+            this.floatDetachGhostEl.appendChild(body);
+            document.body.appendChild(this.floatDetachGhostEl);
+        }
+        const chrome = this.floatDetachGhostEl.querySelector('.float-detach-ghost-chrome');
+        if (chrome) chrome.textContent = label || 'окно';
+        const el = this.floatDetachGhostEl;
+        el.style.display = 'flex';
+        el.style.left = `${layout.screenLeft}px`;
+        el.style.top = `${layout.screenTop}px`;
+        el.style.width = `${layout.w}px`;
+        el.style.height = `${layout.h}px`;
+    }
+
+    hideFloatDetachGhost() {
+        if (this.floatDetachGhostEl) this.floatDetachGhostEl.style.display = 'none';
+    }
+
     getSnapOverlay() {
         if (!this.snapOverlayEl) {
             this.snapOverlayEl = document.createElement('div');
@@ -154,6 +192,10 @@ export class DockDropOverlay {
         if (this.snapOverlayEl) {
             this.snapOverlayEl.remove();
             this.snapOverlayEl = null;
+        }
+        if (this.floatDetachGhostEl) {
+            this.floatDetachGhostEl.remove();
+            this.floatDetachGhostEl = null;
         }
     }
 }

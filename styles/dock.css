@@ -268,6 +268,41 @@ body.dock-customize #dock-workspace .leaf-header .leaf-header-gap:active {
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 
+/* DK-GST: preview of floating window on detach (no dock drop target) */
+.float-detach-ghost {
+  position: fixed;
+  display: none;
+  flex-direction: column;
+  pointer-events: none;
+  z-index: 440;
+  border: 2px dashed var(--dock-accent);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(59, 130, 246, 0.12);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+  color: var(--dock-text);
+}
+
+.float-detach-ghost-chrome {
+  flex: 0 0 auto;
+  padding: 6px 10px;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dock-text-dim);
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.28), rgba(59, 130, 246, 0.08));
+  border-bottom: 1px solid rgba(59, 130, 246, 0.45);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.float-detach-ghost-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  background: rgba(15, 20, 32, 0.45);
+}
+
 .rename-input {
   background: #0f1420;
   border: 1px solid var(--dock-accent);
