@@ -2,7 +2,8 @@
 
 **Дата:** 2026-07-16  
 **Статус:** живой список «что ещё сделать» в редакторе.  
-**Не сюда:** игровой движок — параллельный трек, план только в `tmp/2D_Editor_ENGINE_PLAN.md` (Фаза 0 ✅, далее 1–4).
+**Не сюда:** игровой движок — параллельный трек, план только в `tmp/2D_Editor_ENGINE_PLAN.md` (Фаза 0–1 ✅, далее 2–4).  
+**Баги:** `tmp/backlog.md` (Open → сюда в P0; Closed — 🟢).
 
 ---
 
@@ -13,17 +14,20 @@
 - Assets multi-instance UI (selection/tabs/filters/folders resizer независимы)
 - PPM удалён; layout = `src/ui/dock/*`
 - Хвост: prefs split (`saveEditingPreferences` / `savePanelUiPreferences`), dead `handleAssetClick`
-- Лишние docs в `tmp/` вычищены (остались ENGINE_PLAN + этот backlog + `bugs.md`)
+- Лишние docs в `tmp/` вычищены (ENGINE_PLAN + `todos.md` + `backlog.md`)
+- 🟢 **B1** — параллакс: `ParallaxRenderer.getParallaxOffset` = `cam × offset` (не `×(1+offset)`); docs −0.8/0/0.5/−1
+- 🟢 **A1** — rename ассета (`AssetItemActionsController` + UniversalDialog.prompt)
+- 🟢 **A2** — duplicate ассета (clone `addExternalAsset`, temp+unsaved, unique name)
+- 🟢 **A3** — delete ассета (confirm; multi if in selection; in-memory; `assetsLibraryDirty`)
 
 ---
 
 ## P0 — баги / регрессии
 
-Источник: `tmp/bugs.md` + свежие UX-находки.
+Источник: `tmp/backlog.md` Open + свежие UX-находки.
 
 | # | Задача | Где смотреть | Критерий |
 |---|--------|--------------|----------|
-| ✅ B1 | Параллакс первого слоя слишком сильный относительно остальных | `ParallaxRenderer.getParallaxOffset`: shift = cam × offset (было ×(1+offset)) | формула + docs: −0.8/0/0.5/−1 |
 | B2 | Проверить dock multi-viewport + Assets×N после polish (selection, folders collapse tab, drag→canvas) | browser | 0 console errors; multi-select drop кладёт все; folders width не шарится между копиями |
 
 ---
@@ -34,9 +38,6 @@
 
 | # | Задача | Файлы / заметки |
 |---|--------|-----------------|
-| ✅ A1 | Реализовать **rename** ассета | `AssetItemActionsController.handleAssetRename` + UniversalDialog.prompt |
-| ✅ A2 | Реализовать **duplicate** ассета | clone via `addExternalAsset`, temp+unsaved, unique name |
-| ✅ A3 | Реализовать **delete** ассета (+ confirm, dirty) | multi if in selection; confirm; in-memory; `assetsLibraryDirty` |
 | A4 | «Open / edit asset» (если нужен отдельный editor, не только ActorProperties) | stub «asset editor» |
 | A5 | Toolbar **panel settings** для Assets | `AssetToolbarController` TODO |
 
@@ -97,12 +98,12 @@
 
 ## Порядок работ (рекомендуемый)
 
-1. **B1–B2** — стабильность  
-2. **A1–A3** — CRUD ассетов (самый частый stub)  
-3. **U2–U3** — discoverability (tooltips + recent)  
-4. **U4**, **C1–C2** — selection/camera editor UX  
+1. **B2** — browser-проверка multi-viewport / Assets×N  
+2. **U2–U3** — discoverability (tooltips + recent)  
+3. **A4–A5**, **U1**, **U4**  
+4. **C1–C2** — camera editor UX  
 5. **Q3–Q5** — stubs по касанию  
-6. **Q-DEDUP / Q-GOD** — только opportunistically (см. таблицу выше), не отдельный рефактор-спринт  
+6. **Q-DEDUP / Q-GOD** — только opportunistically  
 7. Engine — **не из этого файла**
 
 ---
@@ -110,6 +111,6 @@
 ## Как вести этот файл
 
 - Новая задача — одна строка в таблице + приоритет P0–P3  
-- Закрыто — `✅` в первой колонке или перенос в «Уже закрыто»  
-- Баги с шагами воспроизведения — дублировать кратко в `tmp/bugs.md`  
-- Не тащить сюда Фазы 1–4 engine (см. ENGINE_PLAN)
+- Закрыто — 🟢 + перенос в «Уже закрыто» (не оставлять ✅-строки в active-таблицах)  
+- Баги с шагами — `tmp/backlog.md` Open; при закрытии 🟢 + Closed там и 🟢-строка здесь  
+- Не тащить сюда Фазы engine (см. ENGINE_PLAN)  
