@@ -7,6 +7,7 @@ import { DetailsPanel } from '../DetailsPanel.js';
 import { LayersPanel } from '../LayersPanel.js';
 import { LevelsPanel } from '../LevelsPanel.js';
 import { AssetPanel } from '../AssetPanel.js';
+import { Toolbar } from '../Toolbar.js';
 import { Logger } from '../../utils/Logger.js';
 
 const MULTI_TYPES = new Set(['outliner', 'details', 'layers', 'levels', 'assets', 'viewport']);
@@ -83,7 +84,7 @@ export function createPanelCopy(contentType, leafId, levelEditor) {
                 break;
             }
             case 'viewport':
-                // Secondary viewport: canvas-only (toolbar stays on primary)
+                // Secondary viewport: paired toolbar + canvas (VP-TB)
                 return createViewportCopy(leafId, levelEditor, root);
             default:
                 return null;
@@ -125,6 +126,14 @@ function createViewportCopy(leafId, levelEditor, root) {
     root.style.minHeight = '0';
     root.style.flex = '1';
     root.style.backgroundColor = bg;
+
+    // VP-TB: toolbar copy paired with this viewport leaf
+    const toolbarEl = document.createElement('div');
+    toolbarEl.className = 'toolbar-container viewport-toolbar viewport-toolbar-copy';
+    toolbarEl.dataset.viewportLeafId = leafId;
+    toolbarEl.style.flex = '0 0 auto';
+    toolbarEl.style.pointerEvents = 'auto';
+    root.appendChild(toolbarEl);
 
     const measure = document.createElement('div');
     measure.className = 'canvas-viewport dock-viewport-measure';
@@ -176,9 +185,29 @@ function createViewportCopy(leafId, levelEditor, root) {
         typeFilters: new Set()
     });
 
+    let toolbar = null;
+    try {
+        toolbar = new Toolbar(toolbarEl, levelEditor.stateManager, levelEditor, {
+            viewLeafId: leafId,
+            isCopy: true
+        });
+        // Match global toolbar visibility
+        const toolbarVisible = levelEditor.stateManager?.get('view.toolbar') ?? true;
+        if (!toolbarVisible) toolbar.setVisible(false);
+    } catch (tbErr) {
+        Logger.ui.warn('DockPanelFactory: viewport toolbar copy failed', tbErr);
+    }
+
     const panel = {
         leafId,
+        toolbar,
         destroy() {
+            try {
+                toolbar?.destroy?.();
+            } catch (err) {
+                Logger.ui.warn('DockPanelFactory: viewport toolbar destroy failed', err);
+            }
+            toolbar = null;
             levelEditor.viewportViewManager?.unregisterView(leafId);
         }
     };

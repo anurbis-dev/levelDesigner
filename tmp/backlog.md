@@ -5,7 +5,6 @@
 
 ## Open
 
-- добавить копии тулбара для копий вьюпорта работающие в паре.
 - хоткеи F должен срабатывать над аутлайнером и авто-скроллить содержимое что-бы выбранный ассет попал в видимое поле, если возможно. Если выбрано несколько - усреднять.
 - иконка отрыва панели в окно не нужна - достаточно функционала по шифту
 - при отрыве окна и наведении на зону где создается отдельное окно - показывать гост будущего окна.
@@ -15,6 +14,7 @@
 
 ## Closed (архив)
 
+✅ VP-TB — копии тулбара для копий viewport, View toggles + Focus paired с leaf  
 ✅ VP-EYE — иконка глаза в шапке viewport: меню Grid/Boundaries/Collisions/Parallax per-view  
 ✅ VP-HK — хоткеи F/A/Grid/Boundaries/Collisions/Parallax на viewport под курсором (view-scoped displayOptions + camera)  
 ✅ AS-REN-END — inline rename: клик в пустое / вне input всегда закрывает поле (capture pointerdown)  

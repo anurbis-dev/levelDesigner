@@ -366,7 +366,7 @@ export class ViewportViewManager {
         if (!view.displayOptions) view.displayOptions = {};
         view.displayOptions[k] = !!value;
 
-        // Primary keeps global/menu/toolbar in sync (single source for non-scoped UI).
+        // Primary keeps global/menu in sync (menu + primary toolbar inheritance).
         if (view.isPrimary) {
             if (k === 'showGrid') {
                 this.editor.stateManager?.set('canvas.showGrid', !!value);
@@ -377,6 +377,10 @@ export class ViewportViewManager {
             }
         }
         this.editor.render?.();
+        // VP-TB: eye/hotkey/toolbar toggles keep all paired toolbars + chrome in sync
+        refreshAllViewportChrome(this.editor);
+        // All toolbars: primary global sync may affect copies that still inherit flags
+        this.editor.refreshViewportToolbars?.();
     }
 
     /**

@@ -87,6 +87,8 @@ export class LevelEditor {
         this.levelsPanel = null;
         this.settingsPanel = null;
         this.toolbar = null;
+        /** @type {Map<string, import('../ui/Toolbar.js').Toolbar>} leafId → secondary viewport toolbars (VP-TB) */
+        this.viewportToolbars = new Map();
         this.statusBar = null;
         this.canvasContextMenu = null;
         
@@ -995,6 +997,27 @@ export class LevelEditor {
         this.currentLevelId = null;
         if (newLevel) {
             this.levelsManager.addLevel(newLevel, { makeCurrent: true, visible: true });
+        }
+    }
+
+    /**
+     * Refresh toolbar toggle UI for primary + paired viewport copies (VP-TB).
+     * @param {string|null} [leafId] - if set, only that copy (+ always primary)
+     */
+    refreshViewportToolbars(leafId = null) {
+        try {
+            this.toolbar?.updateToggleStates?.();
+        } catch (_e) { /* ignore */ }
+        const map = this.viewportToolbars;
+        if (!map?.size) return;
+        if (leafId) {
+            map.get(leafId)?.updateToggleStates?.();
+            return;
+        }
+        for (const tb of map.values()) {
+            try {
+                tb.updateToggleStates?.();
+            } catch (_e) { /* ignore */ }
         }
     }
 

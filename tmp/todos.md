@@ -26,6 +26,7 @@
 - ✅ **AS-REN-END** — empty/outside click всегда закрывает inline rename (capture pointerdown)
 - ✅ **VP-HK** — hotkeys F/A/Grid/Boundaries/Collisions/Parallax → viewport under cursor
 - ✅ **VP-EYE** — eye icon in viewport header: per-view Grid/Boundaries/Collisions/Parallax menu
+- ✅ **VP-TB** — toolbar copies paired with viewport copies (View toggles + Focus per leaf)
 
 ---
 
@@ -52,7 +53,7 @@
 |---|--------|-------------------|
 | ~~**VP-HK**~~ | ✅ Хоткеи F/A/G/Boundaries/Collisions/Parallax — viewport **под курсором** | view-scoped displayOptions + camera |
 | ~~**VP-EYE**~~ | ✅ Иконка **глаза (View)** в шапке viewport: меню Grid/Boundaries/Collisions/Parallax | chrome рядом cam/filter |
-| **VP-TB** | Копии **Toolbar** для копий viewport, работающие в паре | multi-view: toolbar ↔ active view |
+| ~~**VP-TB**~~ | ✅ Копии **Toolbar** для копий viewport, работающие в паре | View toggles + Focus per leaf |
 
 ### Outliner
 
@@ -120,13 +121,12 @@
 
 ## Порядок работ (рекомендуемый)
 
-1. **VP-TB** — toolbar copies paired with viewport copies (VP-HK ✅, VP-EYE ✅)  
-2. **OL-F** — F over Outliner scroll  
-3. **DK-ICO / DK-CUR / DK-GST / DK-CLP** — dock polish  
-4. **B2** — browser smoke multi-view / Assets×N  
-5. **U2–U3**, **U4**, **C1–C2** — старый product хвост  
-6. **Q\*** / **D\*** — opportunistically  
-7. Engine — **не из этого файла**
+1. **OL-F** — F over Outliner scroll (VP-HK/EYE/TB ✅)  
+2. **DK-ICO / DK-CUR / DK-GST / DK-CLP** — dock polish  
+3. **B2** — browser smoke multi-view / Assets×N  
+4. **U2–U3**, **U4**, **C1–C2** — старый product хвост  
+5. **Q\*** / **D\*** — opportunistically  
+6. Engine — **не из этого файла**
 
 ---
 

@@ -215,7 +215,8 @@ export class MouseHandlers extends BaseModule {
         )) {
             return false;
         }
-        return !!(target.closest('.leaf-body') || target.closest('#toolbar-container'));
+        return !!(target.closest('.leaf-body')
+            || target.closest('#toolbar-container, .viewport-toolbar, .toolbar-container'));
     }
 
     /**

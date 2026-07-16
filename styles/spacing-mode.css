@@ -10,7 +10,8 @@
     padding: 0; /* No padding for main interface elements */
 }
 
-#toolbar-container {
+#toolbar-container,
+.viewport-toolbar {
     padding: 0.0625rem 0.25rem 0.03125rem 0.25rem; /* Minimal vertical padding - Top, right, bottom, left */
     border-bottom: 0.5px solid #374151; /* Thinner border */
     overflow: visible; /* Ensure buttons are not clipped */
@@ -164,19 +165,22 @@ nav {
     min-height: calc(2rem * max(var(--element-size-scale, 1.0), 0));
 }
 
-/* Toolbar buttons */
-#toolbar-container .button {
+/* Toolbar buttons (primary + VP-TB copies) */
+#toolbar-container .button,
+.viewport-toolbar .button {
     padding: calc(0.25rem * max(var(--element-size-scale, 1.0), 0)) calc(0.5rem * max(var(--element-size-scale, 1.0), 0));
     min-height: calc(2rem * max(var(--element-size-scale, 1.0), 0));
     margin: calc(0.125rem * max(var(--spacing-scale-v, 1.0), 0));
 }
 
-#toolbar-container .flex {
+#toolbar-container .flex,
+.viewport-toolbar .flex {
     gap: calc(20px * max(var(--spacing-scale-h, 1.0), 0));
 }
 
 /* Toolbar specific button styles - prevent icons from moving down */
-#toolbar-container button {
+#toolbar-container button,
+.viewport-toolbar button {
     padding: calc(0.125rem * max(var(--element-size-scale, 1.0), 0.2)) calc(0.5rem * max(var(--element-size-scale, 1.0), 0.2)) !important;
     min-height: calc(1.75rem * max(var(--element-size-scale, 1.0), 0.5)) !important;
     display: flex !important;
@@ -186,7 +190,8 @@ nav {
     color: var(--ui-text-color, #d1d5db) !important;
 }
 
-#toolbar-container button .icon {
+#toolbar-container button .icon,
+.viewport-toolbar button .icon {
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
@@ -197,41 +202,49 @@ nav {
 }
 
 /* Allow dynamic display control for toolbar icons and text */
-#toolbar-container button .icon[style*="display: none"] {
+#toolbar-container button .icon[style*="display: none"],
+.viewport-toolbar button .icon[style*="display: none"] {
     display: none !important;
 }
 
-#toolbar-container button .text[style*="display: none"] {
+#toolbar-container button .text[style*="display: none"],
+.viewport-toolbar button .text[style*="display: none"] {
     display: none !important;
 }
 
-#toolbar-container button .icon[style*="display: inline"] {
+#toolbar-container button .icon[style*="display: inline"],
+.viewport-toolbar button .icon[style*="display: inline"] {
     display: flex !important;
 }
 
-#toolbar-container button .text[style*="display: inline"] {
+#toolbar-container button .text[style*="display: inline"],
+.viewport-toolbar button .text[style*="display: inline"] {
     display: flex !important;
 }
 
-#toolbar-container button .text {
+#toolbar-container button .text,
+.viewport-toolbar button .text {
     display: flex !important;
     align-items: center !important;
     line-height: 1 !important;
 }
 
 /* Override general px-3 and py-1 classes for toolbar buttons */
-#toolbar-container button.px-3 {
+#toolbar-container button.px-3,
+.viewport-toolbar button.px-3 {
     padding-left: calc(0.5rem * max(var(--element-size-scale, 1.0), 0.2)) !important;
     padding-right: calc(0.5rem * max(var(--element-size-scale, 1.0), 0.2)) !important;
 }
 
-#toolbar-container button.py-1 {
+#toolbar-container button.py-1,
+.viewport-toolbar button.py-1 {
     padding-top: calc(0.125rem * max(var(--element-size-scale, 1.0), 0.2)) !important;
     padding-bottom: calc(0.125rem * max(var(--element-size-scale, 1.0), 0.2)) !important;
 }
 
 /* Override space-x-1 for toolbar buttons */
-#toolbar-container button.space-x-1 > * + * {
+#toolbar-container button.space-x-1 > * + *,
+.viewport-toolbar button.space-x-1 > * + * {
     margin-left: calc(0.25rem * max(var(--spacing-scale-h, 1.0), 0.2));
 }
 

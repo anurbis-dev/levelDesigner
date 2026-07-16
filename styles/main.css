@@ -213,27 +213,32 @@ input, textarea {
     pointer-events: none; /* Allow events to pass through to canvas below */
 }
 
-/* Toolbar background */
-#toolbar-container {
+/* Toolbar background (primary + VP-TB copies) */
+#toolbar-container,
+.viewport-toolbar {
     background-color: var(--ui-background-color, #1f2937) !important;
     pointer-events: auto; /* Enable events for toolbar elements */
 }
 
 /* Toolbar buttons text color */
-#toolbar-container button {
+#toolbar-container button,
+.viewport-toolbar button {
     color: var(--ui-text-color, #d1d5db) !important;
 }
 
-#toolbar-container button .text {
+#toolbar-container button .text,
+.viewport-toolbar button .text {
     color: var(--ui-text-color, #d1d5db) !important;
 }
 
-#toolbar-container button .icon {
+#toolbar-container button .icon,
+.viewport-toolbar button .icon {
     color: var(--ui-text-color, #d1d5db) !important;
 }
 
 /* Toolbar section titles */
-#toolbar-container span {
+#toolbar-container span,
+.viewport-toolbar span {
     color: var(--ui-text-color, #9ca3af) !important;
 }
 

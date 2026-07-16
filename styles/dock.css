@@ -473,10 +473,20 @@
   background: transparent;
 }
 
-#dock-workspace #toolbar-container {
+#dock-workspace #toolbar-container,
+#dock-workspace .viewport-toolbar {
   flex: 0 0 auto;
   pointer-events: auto;
   z-index: 1;
+}
+
+/* VP-TB: secondary viewport toolbar strip matches primary shell */
+#dock-workspace .viewport-toolbar-copy {
+  padding: 0.0625rem 0.25rem 0.03125rem 0.25rem;
+  border-bottom: 0.5px solid #374151;
+  overflow: visible;
+  min-height: 2.5rem;
+  background: #1f2937;
 }
 
 #dock-workspace #canvas-viewport {

@@ -760,7 +760,7 @@ export class EventHandlers extends BaseModule {
         const view = this._hotkeyTargetView();
         if (vvm && view) {
             vvm.toggleDisplayFlag(view, option);
-            // Menu reflects primary effective flag (toolbar still global until VP-TB).
+            // Menu reflects primary effective flag; per-view toolbars refresh via setDisplayFlag.
             const primary = vvm.getPrimaryView() || view;
             this.updateViewCheckbox(option, vvm.getDisplayFlag(primary, option));
             document.querySelectorAll('#menu-file > div, #menu-view > div, #menu-settings > div')
@@ -913,6 +913,14 @@ export class EventHandlers extends BaseModule {
                 const component = config.component();
                 if (component && typeof component[config.method] === 'function') {
                     component[config.method](visible);
+                }
+                // VP-TB: hide/show paired viewport toolbars with global toolbar
+                if (resolved === 'toolbar' && this.editor.viewportToolbars?.size) {
+                    for (const tb of this.editor.viewportToolbars.values()) {
+                        try {
+                            tb.setVisible?.(visible);
+                        } catch (_e) { /* ignore */ }
+                    }
                 }
                 break;
 

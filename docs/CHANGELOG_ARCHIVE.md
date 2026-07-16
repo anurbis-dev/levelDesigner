@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (VP-EYE commit)
+
+- Feature **VP-EYE**: иконка глаза в шапке viewport — меню Grid/Boundaries/Collisions/Parallax для этого viewport (`ViewportLeafChrome` + `ViewportViewManager.getDisplayFlag/toggleDisplayFlag`, тот же per-view `displayOptions` что и у VP-HK).
+
 ## Archived from CHANGELOG.md (VP-HK commit)
 
 - Feature **VP-HK**: хоткеи F / A / Grid / Boundaries / Collisions / Parallax (и jump-to-camera) применяются к viewport **под курсором** — `displayOptions` per view + камера leaf, не только primary/global.

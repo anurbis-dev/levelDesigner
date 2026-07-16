@@ -5,17 +5,36 @@ import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
 import { HorizontalScrollUtils } from '../utils/HorizontalScrollUtils.js';
 
+/** View-scoped display toggles (VP-HK / VP-TB) — map toolbar action → displayOptions key. */
+const VIEW_DISPLAY_ACTIONS = {
+    toggleGrid: 'showGrid',
+    toggleParallax: 'parallax',
+    toggleObjectBoundaries: 'objectBoundaries',
+    toggleObjectCollisions: 'objectCollisions'
+};
+
 /**
  * Toolbar UI component
- * Provides a horizontal toolbar with various control buttons
+ * Provides a horizontal toolbar with various control buttons.
+ * VP-TB: optional `viewLeafId` binds View toggles / Focus to a viewport leaf pair.
  */
 export class Toolbar {
-    constructor(container, stateManager, levelEditor) {
+    /**
+     * @param {HTMLElement} container
+     * @param {object} stateManager
+     * @param {object} levelEditor
+     * @param {{ viewLeafId?: string|null, isCopy?: boolean }} [options]
+     */
+    constructor(container, stateManager, levelEditor, options = {}) {
         this.container = container;
         this.stateManager = stateManager;
         this.levelEditor = levelEditor;
         this.isVisible = true;
-        
+        /** @type {string|null} paired viewport leaf (null = primary shell / resolve primary) */
+        this.viewLeafId = options.viewLeafId || null;
+        /** @type {boolean} secondary copy — no global prefs persist */
+        this.isCopy = !!options.isCopy;
+
         // Scrolling will be handled by HorizontalScrollUtils
         
         // Context menu state
@@ -28,6 +47,11 @@ export class Toolbar {
         this.currentGridTypeIndex = 0;
         this.gridTypeConfig = new Map();
         this.settingsMenuItemAdded = false;
+
+        if (this.isCopy && this.container) {
+            this.container.classList.add('toolbar-container', 'viewport-toolbar', 'viewport-toolbar-copy');
+            if (this.viewLeafId) this.container.dataset.viewportLeafId = this.viewLeafId;
+        }
         
         // Initialize grid types from available renderers first
         this.initializeGridTypes();
@@ -44,6 +68,22 @@ export class Toolbar {
         this.setupNewEventHandlers();
         // Load scroll position after toolbar is fully rendered
         this.loadScrollPosition();
+
+        if (this.isCopy && this.viewLeafId && levelEditor) {
+            if (!levelEditor.viewportToolbars) levelEditor.viewportToolbars = new Map();
+            levelEditor.viewportToolbars.set(this.viewLeafId, this);
+        }
+    }
+
+    /**
+     * Viewport this toolbar is paired with (VP-TB).
+     * @returns {object|null}
+     */
+    getPairedView() {
+        const vvm = this.levelEditor?.viewportViewManager;
+        if (!vvm) return null;
+        if (this.viewLeafId) return vvm.getView(this.viewLeafId) || null;
+        return vvm.getPrimaryView() || null;
     }
 
     /**
@@ -209,28 +249,28 @@ export class Toolbar {
             this.setVisible(visible);
         });
 
-        // Listen for grid changes (use canvas.showGrid as single source of truth)
-        this.stateManager.subscribe('canvas.showGrid', (enabled) => {
-            this.updateToggleButtonState('toggleGrid', enabled);
-            this.levelEditor.eventHandlers.updateViewCheckbox('grid', enabled);
-        });
-        // Subscribe to canvas.snapToGrid as primary source (settings panel changes)
+        // Global flag changes → re-read paired view effective flags (VP-TB copies inherit)
+        const refreshViewToggles = () => {
+            this.updateToggleStates();
+            if (!this.isCopy && this.levelEditor?.eventHandlers) {
+                const eh = this.levelEditor.eventHandlers;
+                eh.updateViewCheckbox('grid', this.stateManager.get('canvas.showGrid') || false);
+                eh.updateViewCheckbox('snapToGrid', this.stateManager.get('canvas.snapToGrid') || false);
+                eh.updateViewCheckbox('parallax', this.stateManager.get('view.parallax') || false);
+                eh.updateViewCheckbox('objectBoundaries', this.stateManager.get('view.objectBoundaries') || false);
+                eh.updateViewCheckbox('objectCollisions', this.stateManager.get('view.objectCollisions') || false);
+            }
+        };
+        this.stateManager.subscribe('canvas.showGrid', refreshViewToggles);
         this.stateManager.subscribe('canvas.snapToGrid', (enabled) => {
             this.updateToggleButtonState('toggleSnapToGrid', enabled);
-            this.levelEditor.eventHandlers.updateViewCheckbox('snapToGrid', enabled);
+            if (!this.isCopy) {
+                this.levelEditor.eventHandlers.updateViewCheckbox('snapToGrid', enabled);
+            }
         });
-        this.stateManager.subscribe('view.parallax', (enabled) => {
-            this.updateToggleButtonState('toggleParallax', enabled);
-            this.levelEditor.eventHandlers.updateViewCheckbox('parallax', enabled);
-        });
-        this.stateManager.subscribe('view.objectBoundaries', (enabled) => {
-            this.updateToggleButtonState('toggleObjectBoundaries', enabled);
-            this.levelEditor.eventHandlers.updateViewCheckbox('objectBoundaries', enabled);
-        });
-        this.stateManager.subscribe('view.objectCollisions', (enabled) => {
-            this.updateToggleButtonState('toggleObjectCollisions', enabled);
-            this.levelEditor.eventHandlers.updateViewCheckbox('objectCollisions', enabled);
-        });
+        this.stateManager.subscribe('view.parallax', refreshViewToggles);
+        this.stateManager.subscribe('view.objectBoundaries', refreshViewToggles);
+        this.stateManager.subscribe('view.objectCollisions', refreshViewToggles);
         this.stateManager.subscribe('playMode', (enabled) => {
             this.updateToggleButtonState('playToggle', enabled);
         });
@@ -382,7 +422,10 @@ export class Toolbar {
      */
     createButton(config) {
         const button = document.createElement('button');
-        button.id = `toolbar-${config.id}`;
+        // Unique ids for multi-toolbar (VP-TB copies); primary keeps stable toolbar-* ids
+        button.id = this.isCopy && this.viewLeafId
+            ? `toolbar-${this.viewLeafId}-${config.id}`
+            : `toolbar-${config.id}`;
         button.className = 'px-3 py-1 text-sm bg-gray-700 hover:bg-gray-600 rounded flex items-center space-x-1 transition-colors cursor-pointer';
         button.setAttribute('data-action', config.action);
         button.setAttribute('title', config.label);
@@ -450,10 +493,10 @@ export class Toolbar {
                     this.levelEditor.deleteSelectedObjects();
                     break;
                 case 'focusSelection':
-                    this.levelEditor.focusOnSelection();
+                    this.levelEditor.focusOnSelection(this.getPairedView());
                     break;
                 case 'focusAll':
-                    this.levelEditor.focusOnAll();
+                    this.levelEditor.focusOnAll(this.getPairedView());
                     break;
                 case 'groupSelected':
                     this.levelEditor.groupSelectedObjects();
@@ -478,6 +521,22 @@ export class Toolbar {
     handleToggleAction(action) {
         const button = this.container.querySelector(`[data-action="${action}"]`);
         if (!button) return;
+
+        // VP-TB / VP-HK: Grid / Parallax / Boundaries / Collisions → paired viewport
+        const displayKey = VIEW_DISPLAY_ACTIONS[action];
+        if (displayKey) {
+            const view = this.getPairedView();
+            const vvm = this.levelEditor?.viewportViewManager;
+            if (vvm && view) {
+                const next = vvm.toggleDisplayFlag(view, displayKey);
+                this.updateToggleButtonState(action, next);
+                if (view.isPrimary && this.levelEditor.eventHandlers) {
+                    const menuOpt = displayKey === 'showGrid' ? 'grid' : displayKey;
+                    this.levelEditor.eventHandlers.updateViewCheckbox(menuOpt, next);
+                }
+                return;
+            }
+        }
 
         // Update button state immediately
         this.toggleButtonState(button);
@@ -582,30 +641,39 @@ export class Toolbar {
     }
 
     /**
-     * Update toggle button state based on StateManager
+     * Effective toggle value for this toolbar (paired view when multi-viewport).
+     * @param {string} action
+     * @returns {boolean}
+     */
+    _effectiveToggleValue(action) {
+        const displayKey = VIEW_DISPLAY_ACTIONS[action];
+        if (displayKey) {
+            const view = this.getPairedView();
+            const vvm = this.levelEditor?.viewportViewManager;
+            if (vvm && view) return vvm.getDisplayFlag(view, displayKey);
+            if (displayKey === 'showGrid') {
+                return this.stateManager.get('canvas.showGrid') || false;
+            }
+            return this.stateManager.get(`view.${displayKey}`) || false;
+        }
+        if (action === 'toggleSnapToGrid') {
+            return this.stateManager.get('canvas.snapToGrid')
+                ?? this.stateManager.get('view.snapToGrid')
+                ?? false;
+        }
+        if (action === 'playToggle') {
+            return this.stateManager.get('playMode') || false;
+        }
+        return false;
+    }
+
+    /**
+     * Update toggle button state based on StateManager / paired view
      */
     updateToggleState(button, action) {
         if (!button.classList.contains('toggle-button')) return;
 
-        let isActive = false;
-
-        switch (action) {
-            case 'toggleGrid':
-                isActive = this.stateManager.get('canvas.showGrid') || false;
-                break;
-            case 'toggleSnapToGrid':
-                isActive = this.stateManager.get('view.snapToGrid') || false;
-                break;
-            case 'toggleParallax':
-                isActive = this.stateManager.get('view.parallax') || false;
-                break;
-            case 'toggleObjectBoundaries':
-                isActive = this.stateManager.get('view.objectBoundaries') || false;
-                break;
-            case 'toggleObjectCollisions':
-                isActive = this.stateManager.get('view.objectCollisions') || false;
-                break;
-        }
+        const isActive = this._effectiveToggleValue(action);
 
         if (isActive) {
             button.classList.add('bg-blue-600', 'hover:bg-blue-700');
@@ -682,16 +750,21 @@ export class Toolbar {
      */
     setVisible(visible) {
         this.isVisible = visible;
-        if (visible) {
-            this.container.style.display = 'flex';
-        } else {
-            this.container.style.display = 'none';
+        if (this.container) {
+            if (visible) {
+                this.container.style.display = 'flex';
+            } else {
+                this.container.style.display = 'none';
+            }
         }
 
-        // Resize canvas to adapt to new available space
-        if (this.levelEditor?.canvasRenderer) {
+        // Resize canvas to adapt to new available space (primary shell)
+        if (!this.isCopy && this.levelEditor?.canvasRenderer) {
             this.levelEditor.canvasRenderer.resizeCanvas();
             this.levelEditor.render();
+        } else if (this.isCopy && this.viewLeafId) {
+            this.levelEditor?.viewportViewManager?.resizeView?.(this.viewLeafId);
+            this.levelEditor?.render?.();
         }
 
         this.saveState();
@@ -708,6 +781,8 @@ export class Toolbar {
      * Save toolbar state to configuration
      */
     saveState() {
+        // VP-TB copies must not overwrite primary toolbar prefs
+        if (this.isCopy) return;
         if (!this.levelEditor || !this.levelEditor.configManager) return;
 
         const buttonStates = {};
@@ -779,6 +854,7 @@ export class Toolbar {
      * Save collapsed state of a section
      */
     saveCollapsedState(sectionName, isCollapsed) {
+        if (this.isCopy) return;
         if (!this.levelEditor || !this.levelEditor.configManager) return;
 
         const collapsedSections = this.levelEditor.configManager.get('toolbar.collapsedSections') || {};
@@ -906,16 +982,15 @@ export class Toolbar {
     }
 
     /**
-     * Update all toggle states
+     * Update all toggle states (view flags from paired viewport when available)
      */
     updateToggleStates() {
-        // Update each toggle button from StateManager
-        this.updateToggleButtonState('toggleGrid', this.stateManager.get('canvas.showGrid') || false);
-        this.updateToggleButtonState('toggleSnapToGrid', this.stateManager.get('canvas.snapToGrid') || false);
-        this.updateToggleButtonState('toggleParallax', this.stateManager.get('view.parallax') || false);
-        this.updateToggleButtonState('toggleObjectBoundaries', this.stateManager.get('view.objectBoundaries') || false);
-        this.updateToggleButtonState('toggleObjectCollisions', this.stateManager.get('view.objectCollisions') || false);
-        this.updateToggleButtonState('playToggle', this.stateManager.get('playMode') || false);
+        this.updateToggleButtonState('toggleGrid', this._effectiveToggleValue('toggleGrid'));
+        this.updateToggleButtonState('toggleSnapToGrid', this._effectiveToggleValue('toggleSnapToGrid'));
+        this.updateToggleButtonState('toggleParallax', this._effectiveToggleValue('toggleParallax'));
+        this.updateToggleButtonState('toggleObjectBoundaries', this._effectiveToggleValue('toggleObjectBoundaries'));
+        this.updateToggleButtonState('toggleObjectCollisions', this._effectiveToggleValue('toggleObjectCollisions'));
+        this.updateToggleButtonState('playToggle', this._effectiveToggleValue('playToggle'));
 
         // Update grid button icon based on current grid type
         this.updateGridButtonIcon();
@@ -1299,14 +1374,22 @@ export class Toolbar {
      */
     destroy() {
         Logger.ui.debug('Destroying Toolbar');
+
+        if (this.isCopy && this.viewLeafId && this.levelEditor?.viewportToolbars) {
+            if (this.levelEditor.viewportToolbars.get(this.viewLeafId) === this) {
+                this.levelEditor.viewportToolbars.delete(this.viewLeafId);
+            }
+        }
         
         // Remove event handlers using new system
-        eventHandlerManager.unregisterContainer(this.container);
+        if (this.container) {
+            eventHandlerManager.unregisterContainer(this.container);
+        }
         
         // Remove horizontal scrolling
         HorizontalScrollUtils.removeScrolling(this.toolbarContent);
         
-        // Save current state before destroying
+        // Save current state before destroying (primary only)
         this.saveState();
         
         // Destroy context menu
