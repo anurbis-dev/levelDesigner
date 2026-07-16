@@ -453,26 +453,36 @@ export class AssetTabsManager {
         const activeTab = this.stateManager.get(this._k('activeAssetTab'));
         const selectedFolders = this.foldersPanel?.selectedFolders;
         const isMultiSelect = selectedFolders && selectedFolders.size > 1;
-        
-        finalOrder.forEach((folderPath) => {
-            if (!currentActiveTabs.has(folderPath)) {
-                return; // Skip if not in active tabs
-            }
-            
-            const tabButton = document.createElement('button');
-            // Mark as active if:
-            // - Single selection: matches activeTab
-            // - Multi-select: is in selectedFolders
-            const isActive = isMultiSelect 
-                ? (selectedFolders && selectedFolders.has(folderPath))
-                : (folderPath === activeTab);
-            tabButton.className = `tab ${isActive ? 'active' : ''}`;
-            tabButton.textContent = this.getFolderName(folderPath);
-            tabButton.dataset.folderPath = folderPath;
-            tabButton.draggable = true; // Enable tab dragging
-            
-            this.tabsContainer.appendChild(tabButton);
-        });
+
+        // AS-FAV: empty favorites strip hint (drop folder from tree)
+        if (finalOrder.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'asset-tabs-empty-hint';
+            empty.textContent = 'Drop favorite folders here';
+            empty.setAttribute('aria-hidden', 'true');
+            this.tabsContainer.appendChild(empty);
+        } else {
+            finalOrder.forEach((folderPath) => {
+                if (!currentActiveTabs.has(folderPath)) {
+                    return; // Skip if not in active tabs
+                }
+
+                const tabButton = document.createElement('button');
+                // Mark as active if:
+                // - Single selection: matches activeTab
+                // - Multi-select: is in selectedFolders
+                const isActive = isMultiSelect
+                    ? (selectedFolders && selectedFolders.has(folderPath))
+                    : (folderPath === activeTab);
+                tabButton.className = `tab ${isActive ? 'active' : ''}`;
+                tabButton.textContent = this.getFolderName(folderPath);
+                tabButton.dataset.folderPath = folderPath;
+                tabButton.draggable = true; // Enable tab dragging
+                tabButton.title = 'Middle-click to remove favorite';
+
+                this.tabsContainer.appendChild(tabButton);
+            });
+        }
 
         // Setup tab dragging after rendering (only once)
         if (!this.tabDraggingSetup) {
@@ -602,6 +612,17 @@ export class AssetTabsManager {
         // Track mousedown to detect button (capture phase to run before drag events)
         this.tabDraggingMousedownHandler = (e) => {
             lastMouseButton = e.button;
+            // AS-MMB: middle-click favorite tab → remove (before horizontal pan starts)
+            if (e.button === 1) {
+                const tab = e.target.closest?.('.tab');
+                const folderPath = tab?.dataset?.folderPath;
+                if (folderPath) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.removeFolderTab(folderPath);
+                    lastMouseButton = 0;
+                }
+            }
         };
         this.tabsContainer.addEventListener('mousedown', this.tabDraggingMousedownHandler, { capture: true });
         

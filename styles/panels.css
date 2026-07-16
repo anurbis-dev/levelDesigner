@@ -121,6 +121,21 @@
     flex-shrink: 0;
 }
 
+/* AS-FAV: empty favorites strip */
+.asset-tabs-empty-hint {
+    flex: 1 1 auto;
+    min-width: 8rem;
+    padding: 0 0.5rem;
+    font-size: 0.75rem;
+    line-height: 1.75rem;
+    color: #6b7280;
+    user-select: none;
+    pointer-events: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
 /* Tab text - prevent wrapping */
 .tab {
     white-space: nowrap;

@@ -2,6 +2,11 @@
 
 Р—Р°РїРёСЃРё, РїРµСЂРµРЅРµСЃС‘РЅРЅС‹Рµ РёР· `CHANGELOG.md` РїСЂРё РєРѕРјРјРёС‚Р°С… (СЃРј. `git log` РґР»СЏ С‚РѕС‡РЅС‹С… РґРёС„С„РѕРІ). РђРєС‚СѓР°Р»СЊРЅС‹Р№ РЅРµРѕРїСѓР±Р»РёРєРѕРІР°РЅРЅС‹Р№ СЂР°Р·СЂРµР· вЂ” РІ `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (VP-COL/FIL commit)
+
+- Fix **VP-COL**: цвет иконки game camera в шапке viewport обновляется сразу при смене color/name объекта (`objectPropertyChanged` → `refreshAllViewportChrome`).
+- Fix **VP-FIL**: активный type-filter в шапке viewport — синяя иконка (как Outliner/Assets `bg-blue-600`).
+
 ## Archived from CHANGELOG.md (AS-REN/F2/DBL commit)
 
 - Feat **AS-REN / AS-F2 / AS-DBL**: rename ассета inline (поле имени, без dialog); F2 над Assets → selected library asset; dblclick на имени → rename, на thumbnail → properties.

@@ -5,8 +5,6 @@
 
 ## Open
 
-- зона для дропа фолдеров в панели ассетов (favorites) если пустая то отображать серый текст "Drop favorite folders here"
-- удаление закладки фолдера из favorites по среднему клику
 - хоткеи F, A, Grid, Boundaries, Collisions, Parallax должны учитывать панель вьюпорта под курсором
 - в шапку вьюпорта добавить иконку глаза (View) в меню которой можно выбрать отображение разных состояний вьюпорта (коллизии, и прочее)
 - добавить копии тулбара для копий вьюпорта работающие в паре.
@@ -19,6 +17,7 @@
 
 ## Closed (архив)
 
+✅ AS-FAV/MMB — empty favorites «Drop favorite folders here»; MMB closes favorite tab  
 ✅ VP-COL — color/name game camera → live refresh chrome icon (`refreshAllViewportChrome`)  
 ✅ VP-FIL — active viewport type-filter icon blue (`viewport-filter-active`)  
 ✅ AS-REN/F2/DBL — inline rename ассета (без dialog); F2 над Assets → library asset; dblclick имени → rename  

@@ -22,6 +22,7 @@
 - ✅ **AS-REN / AS-F2 / AS-DBL** — inline rename ассета; F2 panel-aware; dblclick имени
 - ✅ **VP-COL** — camera color/name → chrome icon live
 - ✅ **VP-FIL** — active filter icon blue
+- ✅ **AS-FAV / AS-MMB** — empty favorites hint + MMB close tab
 
 ---
 
@@ -39,8 +40,6 @@
 
 | # | Задача | Заметки / критерий |
 |---|--------|-------------------|
-| **AS-FAV** | Favorites drop-zone: если пусто — серый текст «Drop favorite folders here» | tabs strip empty state |
-| **AS-MMB** | Удаление закладки favorite-folder **средним кликом** | middle-click tab close |
 | A4 | «Open / edit asset» (отдельный editor, если нужен) | stub |
 | A5 | Toolbar **panel settings** для Assets | `AssetToolbarController` TODO |
 
@@ -118,14 +117,13 @@
 
 ## Порядок работ (рекомендуемый)
 
-1. **AS-FAV / AS-MMB** — favorites UX  
-2. **VP-HK / VP-EYE / VP-TB** — multi-viewport input + chrome + toolbar pair  
-3. **OL-F** — F over Outliner scroll  
-4. **DK-ICO / DK-CUR / DK-GST / DK-CLP** — dock polish  
-5. **B2** — browser smoke multi-view / Assets×N  
-6. **U2–U3**, **U4**, **C1–C2** — старый product хвост  
-7. **Q\*** / **D\*** — opportunistically  
-8. Engine — **не из этого файла**
+1. **VP-HK / VP-EYE / VP-TB** — multi-viewport input + chrome + toolbar pair  
+2. **OL-F** — F over Outliner scroll  
+3. **DK-ICO / DK-CUR / DK-GST / DK-CLP** — dock polish  
+4. **B2** — browser smoke multi-view / Assets×N  
+5. **U2–U3**, **U4**, **C1–C2** — старый product хвост  
+6. **Q\*** / **D\*** — opportunistically  
+7. Engine — **не из этого файла**
 
 ---
 

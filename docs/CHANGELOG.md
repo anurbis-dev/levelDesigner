@@ -4,5 +4,4 @@
 
 ## [Unreleased]
 
-- Fix **VP-COL**: цвет иконки game camera в шапке viewport обновляется сразу при смене color/name объекта (`objectPropertyChanged` → `refreshAllViewportChrome`).
-- Fix **VP-FIL**: активный type-filter в шапке viewport — синяя иконка (как Outliner/Assets `bg-blue-600`).
+- Feat **AS-FAV / AS-MMB**: пустые favorites — серый «Drop favorite folders here»; MMB по закладке фолдера снимает её.
