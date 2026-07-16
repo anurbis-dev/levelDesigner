@@ -11,6 +11,11 @@ export class Project {
     constructor(opts = {}) {
         this.name = opts.name ?? 'Untitled Project';
         this.fileName = opts.fileName ?? null;
+        // True until the file name is pinned by an explicit user action (Save As /
+        // Open) — while true, saveProject() re-derives the file name from `name` on
+        // every save instead of reusing a stale name cached from an earlier save
+        // (see ProjectFileOperations.saveProject()).
+        this.fileNameIsAuto = opts.fileNameIsAuto ?? true;
         this.isDirty = opts.isDirty ?? false;
         this.settings = opts.settings ?? Project.defaultSettings();
     }

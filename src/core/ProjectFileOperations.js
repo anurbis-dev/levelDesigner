@@ -119,6 +119,7 @@ export class ProjectFileOperations extends BaseModule {
 
         const project = Project.fromJSON(json);
         project.fileName = file.name;
+        project.fileNameIsAuto = false;
 
         this._cleanupAllOpenSessions();
         this.editor.level = null; // clear every open session (see newProject() re: this setter)
@@ -161,10 +162,16 @@ export class ProjectFileOperations extends BaseModule {
      * "Untitled Project", editable via Project Settings), so a never-saved project
      * derives its file name from that instead of prompting — mirrors Save Level's
      * "reuse the known name, no dialog" behavior rather than Save Level As.
+     * While the file name is still auto-derived (never pinned via Save As/Open —
+     * see Project.fileNameIsAuto), re-derive it from the current project name on
+     * every save so a rename in Project Settings after the first save takes effect
+     * instead of being stuck on whatever name was current at that first save.
      */
     async saveProject() {
-        const fileName = this.editor.project?.fileName || this._deriveFileNameFromProjectName();
-        this._doSaveProject(fileName);
+        const project = this.editor.project;
+        const pinned = !!(project?.fileName && !project.fileNameIsAuto);
+        const fileName = pinned ? project.fileName : this._deriveFileNameFromProjectName();
+        this._doSaveProject(fileName, !pinned);
     }
 
     /**
@@ -174,7 +181,7 @@ export class ProjectFileOperations extends BaseModule {
         const currentFileName = this.editor.project?.fileName || 'project.json';
         const fileName = await prompt('Enter project file name:', currentFileName);
         if (!fileName) return;
-        this._doSaveProject(fileName);
+        this._doSaveProject(fileName, false);
     }
 
     /**
@@ -193,8 +200,10 @@ export class ProjectFileOperations extends BaseModule {
 
     /**
      * @private
+     * @param {string} fileName
+     * @param {boolean} isAuto - see Project.fileNameIsAuto
      */
-    _doSaveProject(fileName) {
+    _doSaveProject(fileName, isAuto) {
         if (!this.editor.project) {
             this.editor.project = new Project();
         }
@@ -203,6 +212,7 @@ export class ProjectFileOperations extends BaseModule {
         FileUtils.downloadData(data, fileName, FileUtils.TYPES.JSON);
 
         this.editor.project.fileName = fileName;
+        this.editor.project.fileNameIsAuto = isAuto;
         this.editor.project.isDirty = false;
 
         Logger.file.info(`💾 Project saved: ${fileName}`);
