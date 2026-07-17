@@ -191,6 +191,6 @@ export function normalizeEffect(fx) {
 
 /** Effect type labels for UI. */
 export const EFFECT_TYPES = [
-    { id: 'giveItem', label: 'Give item → player (NPC даёт)' },
-    { id: 'takeItem', label: 'Take item ← player (NPC забирает)' }
+    { id: 'giveItem', label: 'Give item → player' },
+    { id: 'takeItem', label: 'Take item ← player' }
 ];

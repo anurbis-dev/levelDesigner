@@ -80,7 +80,7 @@ export class FileManager extends BaseManager {
             { 
                 source: 'FileManager.loadLevel', 
                 showUser: true,
-                userMessage: 'Не удалось загрузить уровень. Проверьте формат файла.' 
+                userMessage: 'Failed to load level. Check the file format.' 
             }
         );
     }
@@ -144,7 +144,7 @@ export class FileManager extends BaseManager {
             { 
                 source: 'FileManager.importLevelData',
                 showUser: true,
-                userMessage: 'Не удалось импортировать данные уровня. Проверьте формат JSON.' 
+                userMessage: 'Failed to import level data. Check the JSON format.' 
             }
         );
     }
@@ -176,7 +176,7 @@ export class FileManager extends BaseManager {
             { 
                 source: 'FileManager.loadAssetLibrary',
                 showUser: true,
-                userMessage: 'Не удалось загрузить библиотеку ассетов. Проверьте формат файла.' 
+                userMessage: 'Failed to load asset library. Check the file format.' 
             }
         );
     }

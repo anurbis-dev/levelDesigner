@@ -95,7 +95,7 @@ export class DialoguesPanel {
 
         const hint = document.createElement('span');
         hint.style.cssText = 'color:#6b7280;font-size:11px;margin-left:auto;';
-        hint.textContent = 'choices = ответы игрока · effects = предметы · participants = multi-NPC';
+        hint.textContent = 'choices = player replies · effects = items · participants = multi-NPC';
         toolbar.appendChild(hint);
         this.container.appendChild(toolbar);
 
@@ -468,7 +468,7 @@ export class DialoguesPanel {
         this.formEl.appendChild(text);
 
         // Node enter effects
-        this.formEl.appendChild(this._fieldLabel('On enter — item effects (NPC даёт/забирает)'));
+        this.formEl.appendChild(this._fieldLabel('On enter — item effects (give/take)'));
         this.formEl.appendChild(this._effectsEditor(dialogue, node, node.effects || [], (effects) => {
             const next = { ...node, effects };
             if (!effects.length) delete next.effects;
@@ -685,7 +685,7 @@ export class DialoguesPanel {
         opIn.addEventListener('change', applyCond);
         valIn.addEventListener('change', applyCond);
 
-        box.appendChild(this._fieldLabel('Require item (скрыть без предмета)'));
+        box.appendChild(this._fieldLabel('Require item (hide if missing)'));
         const reqRow = document.createElement('div');
         reqRow.style.cssText = 'display:flex;gap:4px;';
         const reqItem = document.createElement('input');
@@ -727,7 +727,7 @@ export class DialoguesPanel {
             }
         });
         pickLab.appendChild(pickCb);
-        pickLab.appendChild(document.createTextNode('Item pick — игрок выбирает предмет (отдать NPC)'));
+        pickLab.appendChild(document.createTextNode('Item pick — player chooses an item to give'));
         box.appendChild(pickLab);
 
         box.appendChild(this._fieldLabel('On select — item effects'));

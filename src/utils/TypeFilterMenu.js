@@ -135,7 +135,7 @@ export function openTypeFilterMenu(opts) {
     if (allTypes.length === 0) {
         const empty = document.createElement('div');
         empty.className = 'text-xs text-gray-400 px-2 py-1';
-        empty.textContent = 'Нет типов';
+        empty.textContent = 'No types';
         menu.appendChild(empty);
     } else {
         allTypes.forEach((type) => {

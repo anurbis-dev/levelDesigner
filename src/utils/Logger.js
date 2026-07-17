@@ -84,8 +84,8 @@ export class Logger {
      * Используй вместо Logger.ui.warn/Logger.asset.warn когда событие важно для пользователя.
      *
      * Пример:
-     *   Logger.status.error('Импорт не удался: нет PNG-файлов в выбранных файлах');
-     *   Logger.status.success('Уровень сохранён');
+     *   Logger.status.error('Import failed: no PNG files in selection');
+     *   Logger.status.success('Level saved');
      */
     static status = {
         info: (message, ...args) => {

@@ -58,8 +58,8 @@ export function openTypeMenu(anchor, currentType, onSelect, opts = {}) {
         label.textContent = text;
         item.appendChild(label);
         item.title = type === currentType
-            ? 'Текущий тип'
-            : (willSwap ? 'Поменять местами' : (alreadyOpen ? 'Добавить ещё один' : 'Установить'));
+            ? 'Current type'
+            : (willSwap ? 'Swap places' : (alreadyOpen ? 'Add another' : 'Set type'));
         item.addEventListener('click', (e) => {
             e.stopPropagation();
             closeTypeMenu();

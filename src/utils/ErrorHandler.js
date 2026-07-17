@@ -139,7 +139,7 @@ export class ErrorHandler {
      * // Handle error with context
      * const result = ErrorHandler.handle(
      *     new Error('Network failed'),
-     *     { source: 'API', showUser: true, userMessage: 'Не удалось загрузить данные' }
+     *     { source: 'API', showUser: true, userMessage: 'Failed to load data' }
      * );
      * 
      * @example
@@ -261,7 +261,7 @@ export class ErrorHandler {
      *     { 
      *         source: 'FileManager.loadLevel',
      *         showUser: true,
-     *         userMessage: 'Не удалось загрузить уровень'
+     *         userMessage: 'Failed to load level'
      *     }
      * );
      * 
@@ -389,14 +389,14 @@ export class ErrorHandler {
      */
     static getUserMessage(error, context) {
         const errorMessages = {
-            'FileNotFoundError': 'Файл не найден. Проверьте путь и попробуйте снова.',
-            'NetworkError': 'Проблема с сетью. Проверьте подключение к интернету.',
-            'ValidationError': 'Данные не прошли проверку. Проверьте введенные значения.',
-            'PermissionError': 'Недостаточно прав для выполнения операции.',
-            'TypeError': 'Ошибка типа данных. Пожалуйста, сообщите разработчикам.',
-            'SyntaxError': 'Ошибка синтаксиса. Пожалуйста, сообщите разработчикам.',
-            'RangeError': 'Значение выходит за допустимые пределы.',
-            'ReferenceError': 'Ошибка обращения к переменной. Пожалуйста, сообщите разработчикам.'
+            'FileNotFoundError': 'File not found. Check the path and try again.',
+            'NetworkError': 'Network problem. Check your internet connection.',
+            'ValidationError': 'Validation failed. Check the entered values.',
+            'PermissionError': 'Insufficient permissions for this operation.',
+            'TypeError': 'Type error. Please report this to the developers.',
+            'SyntaxError': 'Syntax error. Please report this to the developers.',
+            'RangeError': 'Value is out of the allowed range.',
+            'ReferenceError': 'Reference error. Please report this to the developers.'
         };
         
         // Use custom message from context if provided
@@ -411,7 +411,7 @@ export class ErrorHandler {
         }
         
         // Fallback to error message
-        return `Произошла ошибка: ${error.message}`;
+        return `An error occurred: ${error.message}`;
     }
     
     /**

@@ -130,8 +130,8 @@ export class DockRenderer {
             empty.className = 'empty-drop-zone';
             empty.dataset.workspaceId = workspaceId;
             empty.textContent = workspaceId === 'main'
-                ? 'Область пуста — перетащите сюда панель'
-                : 'Пусто';
+                ? 'Empty area — drop a panel here'
+                : 'Empty';
             containerEl.appendChild(empty);
             return;
         }
@@ -229,7 +229,7 @@ export class DockRenderer {
         const title = document.createElement('span');
         title.className = 'leaf-title';
         title.textContent = typeLabel(node.contentType);
-        title.title = 'Сменить тип панели';
+        title.title = 'Change panel type';
 
         const isSingleton = (t) => (this.registry ? this.registry.isSingleton(t) : t === 'viewport');
         const openTypes = (e) => {
@@ -248,8 +248,8 @@ export class DockRenderer {
             caret.type = 'button';
             caret.className = 'toolbar-reveal-caret';
             caret.textContent = '▾';
-            caret.title = 'Показать toolbar';
-            caret.setAttribute('aria-label', 'Показать toolbar');
+            caret.title = 'Show toolbar';
+            caret.setAttribute('aria-label', 'Show toolbar');
             caret.hidden = true;
             caret.dataset.leafId = node.id;
             caret.addEventListener('click', (e) => {
@@ -267,8 +267,8 @@ export class DockRenderer {
         const canCollapse = this.model.canToggleLeafCollapse(workspaceId, node.id);
         if (canCollapse) {
             handle.title = node.collapsed
-                ? 'Развернуть панель · Shift — переместить'
-                : 'Свернуть панель · Shift — переместить/split/copy/detach';
+                ? 'Expand panel · Shift — move'
+                : 'Collapse panel · Shift — move/split/copy/detach';
             handle.classList.add('leaf-header-gap--collapsible');
         } else {
             handle.title = 'Hold Shift to move/split/copy/detach panel';
@@ -304,7 +304,7 @@ export class DockRenderer {
         if (opts.onClose) {
             const closeBtn = document.createElement('button');
             closeBtn.className = 'icon-btn close';
-            closeBtn.title = 'Закрыть';
+            closeBtn.title = 'Close';
             closeBtn.textContent = '×';
             closeBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -346,7 +346,7 @@ export class DockRenderer {
         if (canClose) {
             const closeBtn = document.createElement('button');
             closeBtn.className = 'icon-btn close';
-            closeBtn.title = 'Закрыть';
+            closeBtn.title = 'Close';
             closeBtn.textContent = '×';
             closeBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -406,14 +406,14 @@ export class DockRenderer {
         chrome.appendChild(arrow);
         const title = document.createElement('span');
         title.className = 'title';
-        title.textContent = fw.customName || 'окно';
+        title.textContent = fw.customName || 'window';
         chrome.appendChild(title);
         const spacer = document.createElement('span');
         spacer.className = 'chrome-spacer';
         chrome.appendChild(spacer);
         const closeAllBtn = document.createElement('button');
         closeAllBtn.className = 'icon-btn close';
-        closeAllBtn.title = 'Закрыть окно целиком';
+        closeAllBtn.title = 'Close entire window';
         closeAllBtn.textContent = '×';
         closeAllBtn.addEventListener('click', (e) => {
             e.stopPropagation();

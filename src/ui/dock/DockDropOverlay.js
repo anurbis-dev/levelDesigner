@@ -127,7 +127,7 @@ export class DockDropOverlay {
             document.body.appendChild(this.floatDetachGhostEl);
         }
         const chrome = this.floatDetachGhostEl.querySelector('.float-detach-ghost-chrome');
-        if (chrome) chrome.textContent = label || 'окно';
+        if (chrome) chrome.textContent = label || 'window';
         const el = this.floatDetachGhostEl;
         el.style.display = 'flex';
         el.style.left = `${layout.screenLeft}px`;
