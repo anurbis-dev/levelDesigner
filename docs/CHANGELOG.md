@@ -5,3 +5,4 @@
 ## [Unreleased]
 
 - **C4**: adaptive fit of game-camera design frustum into any viewport (letterbox safe-rect); `CameraAspectUtils`; design zoom preserved in object props.
+- **Engine**: GameEngine now follows player with camera each tick via `_updateCamera()` method (centers camera on player position; no change if level has no playerStart).

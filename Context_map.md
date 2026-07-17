@@ -283,7 +283,7 @@ level.settings.parallaxVertical // множитель вертикального
   - `src/engine/render/ParallaxController.js` - чистые функции `getCameraOffset/getParallaxOffset` (портированы 1:1 из ParallaxRenderer)
   - `src/engine/render/Renderer.js` - Canvas 2D рендер (setCamera/restoreCamera/clear/drawBackground/drawEntity/renderScene), порт CanvasRenderer без editor-флагов
   - `src/engine/AssetLoader.js` - `LOADABLE_ASSET_TYPES/DATA_ONLY_ASSET_TYPES`, `collectImageSources(scene)`, `loadImages(sources)` с guard `typeof Image !== 'undefined'`
-  - `src/engine/GameEngine.js` - оркестратор (constructor, loadProject async, tick, start/stop requestAnimationFrame-цикл); создаёт/уничтожает Input
+  - `src/engine/GameEngine.js` - оркестратор (constructor, loadProject async, tick с автоследованием камеры за игроком, start/stop requestAnimationFrame-цикл); создаёт/уничтожает Input
   - `src/engine/Input.js` - клавиатурный стейт (arrows/WASD → нормализованная ось `{x,y}` в [-1,1]), методы `isDown()`/`getAxis()`/`destroy()`
   - **Фаза 2 MVP-поведения** (`src/engine/behaviors/` дочерние классы, `src/engine/BehaviorRegistry.js` реестр):
     - `src/engine/BehaviorRegistry.js` - `register(type, Class)`, `get(type)`, `has(type)`, явная регистрация (не import-side-effects)
