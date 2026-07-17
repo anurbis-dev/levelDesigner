@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- **Dialogue UI + Event Graph pickers (Фаза H)**: dock `dialogues` panel (graphs/nodes/form, choices+conditions); `HistoryManager` snapshots `level.dialogues`. Event Graph params: `objectId`/`dialogueId` selects via `LevelObjectPicker` (level objects + dialogues).
+- **Dialogue items + multi-NPC (Фаза I)**: `participants` / `speakerId`; player `choices` as replies; `giveItem`/`takeItem` effects, `requireItem`, `itemPick` on choices; `Inventory` + `Scene.inventory` / `level.inventory` seed. Dialogues panel authoring for all of the above.

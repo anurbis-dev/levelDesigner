@@ -385,6 +385,22 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
 
 ---
 
+## Фаза I — Dialogue items + multi-NPC (schema/runtime/UI)  ✅ ЗАВЕРШЕНА 2026-07-17
+
+### Заложено
+- **Participants** multi-NPC (`role: player|npc`, `objectId`, `displayName`) + `node.speakerId`.
+- **Player replies** = `choices[]` (UI: «Player reply options»).
+- **Items** (player bag `Scene.inventory` / `Inventory.js`, seed `level.inventory`):
+  - `giveItem` / `takeItem` effects on node enter and on choice select (NPC даёт / забирает).
+  - `requireItem` on choice — скрыть ответ без предмета.
+  - `itemPick` on choice — `advance(i, { selectedItemId })` отдаёт выбранный предмет.
+- Authoring: Dialogues panel participants + effects + require/pick.
+- MVP: only player bag is real; NPC bags deferred. Full Item Definition asset UI deferred.
+
+**Критерий:** vitest give/take/require/itemPick + multi-speaker; UI fields present.
+
+---
+
 ## §7 — Унаследованный бэклог из `ENGINE_PLAN.md` (не потерян, перенесён сюда)
 
 Не покрыто этим документом, остаётся отдельным бэклогом без привязки к фазам A-F:

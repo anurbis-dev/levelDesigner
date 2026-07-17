@@ -2,6 +2,7 @@ import { EntityFactory } from './EntityFactory.js';
 import { Entity } from './Entity.js';
 import { ColliderBehavior } from './behaviors/ColliderBehavior.js';
 import { PlayerMovementBehavior } from './behaviors/PlayerMovementBehavior.js';
+import { Inventory } from './Inventory.js';
 
 /**
  * Runtime scene — one loaded level's worth of entities/layers/settings/camera.
@@ -34,6 +35,8 @@ export class Scene {
         this.dialogues = new Map((levelData.dialogues || []).map(d => [d.id, d]));
         this.dialogueRunner = null;
         this.dialogueActive = false;
+        // Player item bag for dialogue give/take/require (levelData.inventory seed optional).
+        this.inventory = new Inventory(levelData.inventory || null);
         // Active camera marker entity (docs/RUNTIME_SCHEMA.md `camera`), set by
         // hideCameraMarker() at load time; null when the level has none (GameEngine falls
         // back to hardcoded player-centering, see GameEngine._updateCamera()).

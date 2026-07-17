@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (Dialogue UI + EG pickers, Фаза H)
+
+- **Dialogue UI + Event Graph pickers (Фаза H)**: dock `dialogues` panel (graphs/nodes/form, choices+conditions); `HistoryManager` snapshots `level.dialogues`. Event Graph params: `objectId`/`dialogueId` selects via `LevelObjectPicker` (level objects + dialogues).
+
 ## Archived from CHANGELOG.md (Event Graph UI, Фаза G)
 
 - **Event Graph UI (Фаза G, level-scope)**: dock contentType `eventGraph` (`src/ui/event-graph/*`) — canvas nodes/edges, add-node palette, params Details, variables list, Play variables watch + runtime `recentNodeIds` highlight. `HistoryManager` snapshots `level.eventGraph` via provider on every `saveState`; undo/redo restores graph. Asset-scope graph still backlog.

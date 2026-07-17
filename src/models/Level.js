@@ -41,6 +41,8 @@ export class Level {
         // Dialogues dock panels (src/ui/event-graph, src/ui/dialogues).
         this.eventGraph = data.eventGraph || null;
         this.dialogues = data.dialogues || [];
+        // Optional seed for Scene.inventory at Play ([{itemId,count}] or map).
+        this.inventory = data.inventory || null;
 
         this.objects = data.objects || [];
         this.nextObjectId = data.nextObjectId || 1;
@@ -809,6 +811,7 @@ export class Level {
             camera: this.camera,
             eventGraph: this.eventGraph,
             dialogues: this.dialogues,
+            inventory: this.inventory,
             objects: this.objects.map(obj => {
                 if (obj.type === 'group') {
                     return Group.fromJSON(obj).toJSON();

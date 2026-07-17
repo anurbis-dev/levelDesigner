@@ -11,7 +11,20 @@ runtime-контракт (`properties`) поверх уже существующ
 
 **Примечание:** уровень-широкие данные (например, `eventGraph` из Фаза D LOGIC_SYSTEMS_PLAN и `dialogues` из Фаза E LOGIC_SYSTEMS_PLAN) не являются
 component- или asset-типами и поэтому не документируются в таблицах per-type ниже. Они хранятся в
-корневых полях JSON-уровня (`levelData.eventGraph`, `levelData.dialogues` — массив Dialogue Graph'ов по id).
+корневых полях JSON-уровня (`levelData.eventGraph`, `levelData.dialogues` — массив Dialogue Graph'ов по id,
+`levelData.inventory` — seed player bag `[{itemId,count}]` для Play).
+
+### Dialogue graph (level.dialogues[])
+
+| Поле | Назначение |
+|------|------------|
+| `participants[]` | Multi-NPC: `{id, role:player\|npc, displayName?, objectId?}` |
+| `nodes[].speakerId` | Кто говорит (ref participant); `speaker` — fallback label |
+| `nodes[].effects[]` | On enter: `{type:giveItem\|takeItem, itemId, count?}` → player bag (`Scene.inventory`) |
+| `nodes[].choices[]` | **Ответы игрока**: `text`, `next`, optional `condition`, `requireItem`, `itemPick`, `effects` |
+| `choice.requireItem` | Скрыть ответ без предмета `{itemId, count?}` |
+| `choice.itemPick` | Игрок выбирает itemId при ответе (`advance(i, {selectedItemId})`) |
+| `choice.effects` | After select: give/take (оплата, награда) |
 
 **Процесс:** секция типа переходит из "not implemented" в конкретный список полей в том же
 коммите, где движок реально реализует behavior/рендер для этого типа (Фаза 2/3 плана движка).

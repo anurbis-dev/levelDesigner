@@ -3,19 +3,27 @@ import {
     createEmptyDialogue,
     nextDialogueId,
     nextNodeId,
+    nextParticipantId,
     upsertDialogue,
     removeDialogue,
     upsertNode,
     removeNode,
-    normalizeCondition
+    upsertParticipant,
+    removeParticipant,
+    normalizeCondition,
+    normalizeEffect,
+    normalizeDialogue
 } from '../src/ui/dialogues/DialogueModel.js';
 
 describe('DialogueModel', () => {
-    it('creates dialogue with start node', () => {
+    it('creates dialogue with start node and participants', () => {
         const d = createEmptyDialogue('guard');
         expect(d.id).toBe('guard');
+        expect(d.formatVersion).toBe(2);
         expect(d.startNode).toBe('d1');
         expect(d.nodes).toHaveLength(1);
+        expect(d.participants.some((p) => p.role === 'player')).toBe(true);
+        expect(d.participants.some((p) => p.role === 'npc')).toBe(true);
     });
 
     it('upserts and removes dialogues by id', () => {
@@ -53,5 +61,22 @@ describe('DialogueModel', () => {
         expect(normalizeCondition({ var: 'hasPass', op: '==', value: true })).toEqual({
             var: 'hasPass', op: '==', value: true
         });
+    });
+
+    it('normalizeEffect and participants helpers', () => {
+        expect(normalizeEffect({ type: 'giveItem', itemId: 'k', count: 2 })).toEqual({
+            type: 'giveItem', itemId: 'k', count: 2
+        });
+        expect(normalizeEffect({ type: 'x', itemId: '' })).toBeNull();
+        let d = createEmptyDialogue('g');
+        const pid = nextParticipantId(d);
+        d = upsertParticipant(d, { id: pid, role: 'npc', displayName: 'Extra' });
+        expect(d.participants).toHaveLength(3);
+        d = removeParticipant(d, pid);
+        expect(d.participants).toHaveLength(2);
+        d = removeParticipant(d, 'player');
+        expect(d.participants.some((p) => p.role === 'player')).toBe(true);
+        const legacy = normalizeDialogue({ id: 'old', startNode: 'd1', nodes: [{ id: 'd1', speaker: 'A', text: 'hi' }] });
+        expect(legacy.participants.length).toBeGreaterThan(0);
     });
 });
