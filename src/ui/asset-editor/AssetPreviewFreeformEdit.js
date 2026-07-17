@@ -45,10 +45,11 @@ export function ensureFreeformPoints(levelEditor, assetId, componentId, aw, ah) 
     const existing = resolveFreeformPoints(comp.properties);
     if (existing) return existing.map((p) => ({ ...p }));
     const seeded = defaultFreeformPoints(aw, ah, comp.properties);
+    // Seed once into history (user-visible data change)
     patchEditingComponent(levelEditor, assetId, componentId, (c) => {
         c.properties = { ...(c.properties || {}), points: seeded.map((p) => ({ ...p })) };
         return c;
-    });
+    }, { recordHistory: true });
     return seeded.map((p) => ({ ...p }));
 }
 
@@ -167,6 +168,13 @@ export function freeformPointerDown(opts) {
     const comp = (asset.components || []).find((c) => c.id === compId);
     if (!isFreeformShapeComponent(comp)) return null;
 
+    // Baseline before any freeform mutation / drag
+    const hm = levelEditor?.historyManager;
+    const am = levelEditor?.assetManager;
+    if (hm && am?.snapshotForHistory) {
+        hm.ensureAssetBaseline(am.snapshotForHistory());
+    }
+
     const world = clientToWorld(canvas, clientX, clientY, camera);
     const pts = ensureFreeformPoints(levelEditor, asset.id, compId, aw, ah);
     const hitR = freeformHitRadius(camera.zoom);
@@ -178,14 +186,14 @@ export function freeformPointerDown(opts) {
             return { mode: 'move', index: idx };
         }
         const next = [...pts, { x: world.x, y: world.y }];
-        patchPoints(levelEditor, asset.id, compId, next);
+        patchPoints(levelEditor, asset.id, compId, next, { recordHistory: true });
         return null;
     }
 
     if (tool === 'delete') {
         if (idx >= 0 && pts.length > 0) {
             const next = pts.filter((_, i) => i !== idx);
-            patchPoints(levelEditor, asset.id, compId, next);
+            patchPoints(levelEditor, asset.id, compId, next, { recordHistory: true });
         }
         return null;
     }
@@ -211,7 +219,8 @@ export function freeformMovePoint(levelEditor, assetId, componentId, index, x, y
         || defaultFreeformPoints(aw, ah, comp.properties);
     if (index < 0 || index >= pts.length) return;
     const next = pts.map((p, i) => (i === index ? { x, y } : { ...p }));
-    patchPoints(levelEditor, assetId, componentId, next);
+    // Drag intermediate: commit history once on pointerup via recordAssetEditorHistory
+    patchPoints(levelEditor, assetId, componentId, next, { recordHistory: false });
 }
 
 /**
@@ -220,7 +229,14 @@ export function freeformMovePoint(levelEditor, assetId, componentId, index, x, y
  * @param {string} componentId
  * @param {{ x: number, y: number }[]} points
  */
-function patchPoints(levelEditor, assetId, componentId, points) {
+/**
+ * @param {object} levelEditor
+ * @param {string} assetId
+ * @param {string} componentId
+ * @param {{ x: number, y: number }[]} points
+ * @param {{ recordHistory?: boolean }} [opts]
+ */
+function patchPoints(levelEditor, assetId, componentId, points, opts = {}) {
     patchEditingComponent(levelEditor, assetId, componentId, (c) => {
         c.properties = {
             ...(c.properties || {}),
@@ -228,5 +244,5 @@ function patchPoints(levelEditor, assetId, componentId, points) {
             points: points.map((p) => ({ x: p.x, y: p.y }))
         };
         return c;
-    });
+    }, opts);
 }

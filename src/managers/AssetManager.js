@@ -4,7 +4,8 @@ import { getAssetTypeById, ASSET_CATEGORIES, DEFAULT_ASSET_COMPONENTS } from '..
 import {
     ensureAssetVisualModel,
     isImageAsset,
-    resolveTextureSrc
+    resolveTextureSrc,
+    assetToPersistable
 } from '../ui/asset-editor/AssetVisualMigrate.js';
 import { createComponentStub } from '../constants/ComponentTypes.js';
 import { BaseManager } from './BaseManager.js';
@@ -639,6 +640,58 @@ export class AssetManager extends BaseManager {
         }
         
         return true;
+    }
+
+    /**
+     * Deep JSON snapshot of the catalog for asset undo/redo (Phase C).
+     * @returns {Array<object>}
+     */
+    snapshotForHistory() {
+        const out = [];
+        for (const asset of this.assets.values()) {
+            out.push(JSON.parse(JSON.stringify(assetToPersistable(asset))));
+        }
+        return out;
+    }
+
+    /**
+     * Restore catalog fields from HistoryManager asset stack (keeps Asset instances + _originalState).
+     * @param {Array<object>} snapshot
+     */
+    restoreFromHistory(snapshot) {
+        if (!Array.isArray(snapshot)) return;
+        const byId = new Map(snapshot.map((d) => [d.id, d]));
+        for (const asset of this.assets.values()) {
+            const data = byId.get(asset.id);
+            if (!data) continue;
+            asset.name = data.name;
+            asset.type = data.type;
+            asset.category = data.category;
+            asset.path = data.path ?? asset.path;
+            asset.width = data.width;
+            asset.height = data.height;
+            asset.color = data.color;
+            asset.tags = Array.isArray(data.tags) ? [...data.tags] : [];
+            asset.properties = data.properties && typeof data.properties === 'object'
+                ? JSON.parse(JSON.stringify(data.properties))
+                : {};
+            asset.components = Array.isArray(data.components)
+                ? JSON.parse(JSON.stringify(data.components))
+                : [];
+            if (isImageAsset(asset)) {
+                asset.imgSrc = data.imgSrc || null;
+            } else {
+                asset.imgSrc = null;
+            }
+            ensureAssetVisualModel(asset, this);
+            const hasChanges = asset.hasChangesFromOriginal ? asset.hasChangesFromOriginal() : false;
+            if (!asset.properties) asset.properties = {};
+            asset.properties.hasUnsavedChanges = hasChanges;
+        }
+        if (this.stateManager) {
+            this.stateManager.set('assetsChanged', Date.now());
+        }
+        Logger.asset.info('AssetManager: restored catalog from history');
     }
 
     /**

@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (Visual ownership)
+
+- **Visual ownership cleanup**: only **Image** assets store disk/`imgSrc`; **Sprite** uses `imageAssetId` → Image (no path). Base asset no longer mirrors texture from components. Content JSON migrated (strip Sprite from images). Thumbs/preview/placement resolve via AssetManager.
+
 ## Archived from CHANGELOG.md (Collider shapes + Level eventGraph)
 
 - **Collider shapes**: `shape` = `box` | `circle` | `freeform`; per-instance `color` for stroke frame; freeform Preview edit mode (Add/Move/Delete vertices). Runtime still AABB of shape.

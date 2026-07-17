@@ -253,10 +253,17 @@ export class AssetComponentDetailsPanel {
      * @param {(c: object) => object} mapFn
      * @private
      */
-    _livePatch(assetId, componentId, mapFn) {
+    /**
+     * @param {string} assetId
+     * @param {string} componentId
+     * @param {(c: object) => object} mapFn
+     * @param {{ recordHistory?: boolean }} [opts]
+     * @private
+     */
+    _livePatch(assetId, componentId, mapFn, opts = {}) {
         this._selfPatch = true;
         try {
-            patchEditingComponent(this.levelEditor, assetId, componentId, mapFn);
+            patchEditingComponent(this.levelEditor, assetId, componentId, mapFn, opts);
         } finally {
             this._selfPatch = false;
         }
@@ -304,7 +311,7 @@ export class AssetComponentDetailsPanel {
             const key = el.dataset.field;
             const field = schema.find((f) => f.key === key);
             if (!field) return;
-            const apply = () => {
+            const apply = (recordHistory = true) => {
                 let raw = field.kind === 'bool' ? el.checked : el.value;
                 // color: empty means palette default
                 if (field.kind === 'color' && el.dataset.empty === '1' && el.type === 'color') {
@@ -350,17 +357,20 @@ export class AssetComponentDetailsPanel {
                     }
                     c.properties = next;
                     return c;
-                });
+                }, { recordHistory });
             };
-            // Live commit for preview + info overlay (json still on change — partial JSON invalid)
+            // Live preview on input; history on change (blur/commit) to avoid per-keystroke stack spam
             if (field.kind === 'json') {
-                el.addEventListener('change', apply);
-            } else if (field.kind === 'select' || field.kind === 'color' || field.kind === 'assetRef') {
-                el.addEventListener('input', apply);
-                el.addEventListener('change', apply);
+                el.addEventListener('change', () => apply(true));
+            } else if (field.kind === 'select' || field.kind === 'assetRef' || field.kind === 'bool') {
+                el.addEventListener('change', () => apply(true));
+                el.addEventListener('input', () => apply(true));
+            } else if (field.kind === 'color') {
+                el.addEventListener('input', () => apply(false));
+                el.addEventListener('change', () => apply(true));
             } else {
-                el.addEventListener('input', apply);
-                el.addEventListener('change', apply);
+                el.addEventListener('input', () => apply(false));
+                el.addEventListener('change', () => apply(true));
             }
         });
 

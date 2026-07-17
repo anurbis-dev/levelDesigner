@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- **Visual ownership cleanup**: only **Image** assets store disk/`imgSrc`; **Sprite** uses `imageAssetId` → Image (no path). Base asset no longer mirrors texture from components. Content JSON migrated (strip Sprite from images). Thumbs/preview/placement resolve via AssetManager.
+- **Asset Editor undo/redo (Phase C closed)**: project-global asset catalog stack in `HistoryManager` (`saveAssetState`/`undoAsset`/`redoAsset`); Ctrl+Z prefers asset undo while Asset Editor open. Freeform drag commits one history step on pointerup; Details text fields history on change (not per keystroke).

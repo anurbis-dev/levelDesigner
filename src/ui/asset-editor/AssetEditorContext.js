@@ -87,16 +87,42 @@ export function paintAssetEditorPreviews(levelEditor) {
 }
 
 /**
+ * Record asset-catalog snapshot on HistoryManager (project-global asset stack).
+ * @param {object|null|undefined} levelEditor
+ */
+export function recordAssetEditorHistory(levelEditor) {
+    const hm = levelEditor?.historyManager;
+    const am = levelEditor?.assetManager;
+    if (!hm || !am || typeof am.snapshotForHistory !== 'function') return;
+    if (hm.isUndoing || hm.isRedoing || hm.isRecording === false) return;
+    const snap = am.snapshotForHistory();
+    hm.ensureAssetBaseline(snap);
+    hm.saveAssetState(snap);
+}
+
+/**
  * @param {object|null|undefined} levelEditor
  * @param {string} assetId
  * @param {object} patch
+ * @param {{ recordHistory?: boolean }} [opts]
  * @returns {boolean}
  */
-export function patchEditingAsset(levelEditor, assetId, patch) {
+export function patchEditingAsset(levelEditor, assetId, patch, opts = {}) {
     const am = levelEditor?.assetManager;
     if (!am || !assetId || !patch) return false;
+    const recordHistory = opts.recordHistory !== false;
+    if (recordHistory) {
+        // Baseline before first mutation in a session
+        const hm = levelEditor?.historyManager;
+        if (hm && typeof am.snapshotForHistory === 'function' && hm.assetUndoStack?.length === 0) {
+            hm.ensureAssetBaseline(am.snapshotForHistory());
+        }
+    }
     const ok = !!am.updateAsset(assetId, patch);
-    if (ok) paintAssetEditorPreviews(levelEditor);
+    if (ok) {
+        paintAssetEditorPreviews(levelEditor);
+        if (recordHistory) recordAssetEditorHistory(levelEditor);
+    }
     return ok;
 }
 
@@ -107,9 +133,10 @@ export function patchEditingAsset(levelEditor, assetId, patch) {
  * @param {string} assetId
  * @param {string} componentId
  * @param {(comp: object) => object} mapFn
+ * @param {{ recordHistory?: boolean }} [opts]
  * @returns {boolean}
  */
-export function patchEditingComponent(levelEditor, assetId, componentId, mapFn) {
+export function patchEditingComponent(levelEditor, assetId, componentId, mapFn, opts = {}) {
     const asset = getEditingAsset(levelEditor);
     if (!asset || asset.id !== assetId) return false;
     const list = Array.isArray(asset.components) ? asset.components : [];
@@ -126,7 +153,7 @@ export function patchEditingComponent(levelEditor, assetId, componentId, mapFn) 
     if (!isImageAsset(asset) && asset.imgSrc) {
         patch.imgSrc = null;
     }
-    return patchEditingAsset(levelEditor, assetId, patch);
+    return patchEditingAsset(levelEditor, assetId, patch, opts);
 }
 
 /**

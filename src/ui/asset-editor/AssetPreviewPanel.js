@@ -1,6 +1,7 @@
 /** Asset preview mini-viewport: local camera, info HUD; F/A via EventHandlers. */
 import {
-    getEditingAsset, getEditingComponentId, subscribeAssetEditor
+    getEditingAsset, getEditingComponentId, subscribeAssetEditor,
+    recordAssetEditorHistory
 } from './AssetEditorContext.js';
 import {
     PREVIEW_ZOOM_WHEEL, PREVIEW_ZOOM_MMB, fitCameraToAsset, fitCameraToBounds,
@@ -312,11 +313,15 @@ export class AssetPreviewPanel {
      */
     _onPointerUp(e) {
         if (!this._drag) return;
+        const wasFreeformMove = this._drag.mode === 'freeformMove';
         this._drag = null;
         this._syncCursor();
         try {
             this.canvas.releasePointerCapture?.(e.pointerId);
         } catch { /* ignore */ }
+        if (wasFreeformMove) {
+            recordAssetEditorHistory(this.levelEditor);
+        }
     }
 
     /**

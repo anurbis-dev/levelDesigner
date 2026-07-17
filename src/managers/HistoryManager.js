@@ -8,6 +8,9 @@ export class HistoryManager extends BaseManager {
         super();
         this.undoStack = [];
         this.redoStack = [];
+        /** Asset catalog stack (project-global; not per-level — avoids multi-level wipe). */
+        this.assetUndoStack = [];
+        this.assetRedoStack = [];
         this.maxSize = maxSize;
         this.isRecording = true;
         this.isUndoing = false;
@@ -153,11 +156,98 @@ export class HistoryManager extends BaseManager {
     }
 
     /**
+     * Push asset-catalog snapshot (JSON-serializable array from AssetManager).
+     * First call seeds baseline; later calls record edits. Same dedupe as level stack.
+     * @param {Array} assetsSnapshot
+     * @param {boolean} [isInitial=false]
+     */
+    saveAssetState(assetsSnapshot, isInitial = false) {
+        if (!this.isRecording && !isInitial) return;
+        if (assetsSnapshot == null) return;
+
+        const stateSnapshot = JSON.stringify(assetsSnapshot);
+        const lastState = this.assetUndoStack[this.assetUndoStack.length - 1];
+        if (!isInitial && stateSnapshot === lastState) return;
+
+        this.assetUndoStack.push(stateSnapshot);
+        if (this.assetUndoStack.length > this.maxSize) {
+            this.assetUndoStack.shift();
+        }
+        if (!isInitial) {
+            this.assetRedoStack = [];
+        }
+    }
+
+    /**
+     * Ensure a baseline exists so the first asset edit can be undone.
+     * @param {Array} assetsSnapshot
+     */
+    ensureAssetBaseline(assetsSnapshot) {
+        if (this.assetUndoStack.length === 0 && assetsSnapshot != null) {
+            this.saveAssetState(assetsSnapshot, true);
+        }
+    }
+
+    /**
+     * @returns {Array|null} previous assets snapshot
+     */
+    undoAsset() {
+        if (this.assetUndoStack.length <= 1) return null;
+
+        this.isUndoing = true;
+        this.clearOperationFlagTimeout();
+        try {
+            const currentState = this.assetUndoStack.pop();
+            this.assetRedoStack.push(currentState);
+            return JSON.parse(this.assetUndoStack[this.assetUndoStack.length - 1]);
+        } finally {
+            this.operationFlagTimeout = setTimeout(() => {
+                this.isUndoing = false;
+                this.operationFlagTimeout = null;
+            }, 100);
+        }
+    }
+
+    /**
+     * @returns {Array|null} next assets snapshot
+     */
+    redoAsset() {
+        if (this.assetRedoStack.length === 0) return null;
+
+        this.isRedoing = true;
+        this.clearOperationFlagTimeout();
+        try {
+            const nextState = this.assetRedoStack.pop();
+            this.assetUndoStack.push(nextState);
+            return JSON.parse(nextState);
+        } finally {
+            this.operationFlagTimeout = setTimeout(() => {
+                this.isRedoing = false;
+                this.operationFlagTimeout = null;
+            }, 100);
+        }
+    }
+
+    canUndoAsset() {
+        return this.assetUndoStack.length > 1;
+    }
+
+    canRedoAsset() {
+        return this.assetRedoStack.length > 0;
+    }
+
+    clearAssetHistory() {
+        this.assetUndoStack = [];
+        this.assetRedoStack = [];
+    }
+
+    /**
      * Clear all history
      */
     clear() {
         this.undoStack = [];
         this.redoStack = [];
+        this.clearAssetHistory();
     }
 
     /**

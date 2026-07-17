@@ -2,6 +2,7 @@ import { GameObject } from '../models/GameObject.js';
 import { Group } from '../models/Group.js';
 import { BaseModule } from './BaseModule.js';
 import { Logger } from '../utils/Logger.js';
+import { paintAssetEditorPreviews } from '../ui/asset-editor/AssetEditorContext.js';
 
 /**
  * HistoryOperations - handles undo/redo logic
@@ -16,12 +17,20 @@ export class HistoryOperations extends BaseModule {
     }
 
     /**
-     * Execute undo operation
-     * @returns {boolean} True if undo was successful
+     * Prefer asset-catalog undo while Asset Editor is open (project-global stack).
+     * @returns {boolean}
      */
     undo() {
+        const editingAsset = !!this.editor.stateManager?.get('editingAssetId');
+        if (editingAsset && this.editor.historyManager.canUndoAsset()) {
+            return this.undoAsset();
+        }
         const previousState = this.editor.historyManager.undo();
         if (!previousState) {
+            // Fallback: asset undo even if editor closed (still useful after edits)
+            if (this.editor.historyManager.canUndoAsset()) {
+                return this.undoAsset();
+            }
             Logger.status.info('Nothing to undo');
             return false;
         }
@@ -32,12 +41,18 @@ export class HistoryOperations extends BaseModule {
     }
 
     /**
-     * Execute redo operation
-     * @returns {boolean} True if redo was successful
+     * @returns {boolean}
      */
     redo() {
+        const editingAsset = !!this.editor.stateManager?.get('editingAssetId');
+        if (editingAsset && this.editor.historyManager.canRedoAsset()) {
+            return this.redoAsset();
+        }
         const nextState = this.editor.historyManager.redo();
         if (!nextState) {
+            if (this.editor.historyManager.canRedoAsset()) {
+                return this.redoAsset();
+            }
             Logger.status.info('Nothing to redo');
             return false;
         }
@@ -45,6 +60,44 @@ export class HistoryOperations extends BaseModule {
         this._applyRestoredState(nextState);
         Logger.status.info('Redo');
         return true;
+    }
+
+    /**
+     * @returns {boolean}
+     */
+    undoAsset() {
+        const previous = this.editor.historyManager.undoAsset();
+        if (!previous) {
+            Logger.status.info('Nothing to undo (assets)');
+            return false;
+        }
+        this._applyRestoredAssets(previous);
+        Logger.status.info('Undo (assets)');
+        return true;
+    }
+
+    /**
+     * @returns {boolean}
+     */
+    redoAsset() {
+        const next = this.editor.historyManager.redoAsset();
+        if (!next) {
+            Logger.status.info('Nothing to redo (assets)');
+            return false;
+        }
+        this._applyRestoredAssets(next);
+        Logger.status.info('Redo (assets)');
+        return true;
+    }
+
+    /**
+     * @param {Array} assetsSnapshot
+     * @private
+     */
+    _applyRestoredAssets(assetsSnapshot) {
+        this.editor.assetManager?.restoreFromHistory?.(assetsSnapshot);
+        paintAssetEditorPreviews(this.editor);
+        this.editor.updateAllPanels?.();
     }
 
     /**
