@@ -16,6 +16,34 @@ export class HistoryManager extends BaseManager {
         this.isUndoing = false;
         this.isRedoing = false;
         this.operationFlagTimeout = null;
+        /**
+         * Optional () => eventGraph|null so every saveState snapshots level.eventGraph
+         * without rewriting all call sites (Event Graph UI).
+         * @type {null|(() => object|null|undefined)}
+         */
+        this._eventGraphProvider = null;
+    }
+
+    /**
+     * @param {null|(() => object|null|undefined)} provider
+     */
+    setEventGraphProvider(provider) {
+        this._eventGraphProvider = typeof provider === 'function' ? provider : null;
+    }
+
+    /**
+     * @returns {object|null|undefined}
+     * @private
+     */
+    _snapshotEventGraph() {
+        if (!this._eventGraphProvider) return undefined;
+        try {
+            const g = this._eventGraphProvider();
+            if (g === undefined) return undefined;
+            return g == null ? null : JSON.parse(JSON.stringify(g));
+        } catch {
+            return null;
+        }
     }
 
     /**
@@ -39,6 +67,11 @@ export class HistoryManager extends BaseManager {
                 frameFrozen: groupEditMode.frameFrozen || false
             } : null
         };
+
+        const eventGraph = this._snapshotEventGraph();
+        if (eventGraph !== undefined) {
+            stateData.eventGraph = eventGraph;
+        }
 
         const stateSnapshot = JSON.stringify(stateData);
         const lastState = this.undoStack[this.undoStack.length - 1];
@@ -76,7 +109,10 @@ export class HistoryManager extends BaseManager {
         return {
             objects: parsedState.objects,
             selection: new Set(parsedState.selection || []),
-            groupEditMode: parsedState.groupEditMode || null
+            groupEditMode: parsedState.groupEditMode || null,
+            eventGraph: Object.prototype.hasOwnProperty.call(parsedState, 'eventGraph')
+                ? parsedState.eventGraph
+                : undefined
         };
     }
 
@@ -100,7 +136,10 @@ export class HistoryManager extends BaseManager {
             return {
                 objects: parsedState.objects,
                 selection: new Set(parsedState.selection || []),
-                groupEditMode: parsedState.groupEditMode || null
+                groupEditMode: parsedState.groupEditMode || null,
+                eventGraph: Object.prototype.hasOwnProperty.call(parsedState, 'eventGraph')
+                    ? parsedState.eventGraph
+                    : undefined
             };
         } finally {
             // Delay clearing the flag to prevent accidental selection clearing by empty clicks
@@ -130,7 +169,10 @@ export class HistoryManager extends BaseManager {
             return {
                 objects: parsedState.objects,
                 selection: new Set(parsedState.selection || []),
-                groupEditMode: parsedState.groupEditMode || null
+                groupEditMode: parsedState.groupEditMode || null,
+                eventGraph: Object.prototype.hasOwnProperty.call(parsedState, 'eventGraph')
+                    ? parsedState.eventGraph
+                    : undefined
             };
         } finally {
             // Delay clearing the flag to prevent accidental selection clearing by empty clicks

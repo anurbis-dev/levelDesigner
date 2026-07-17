@@ -12,12 +12,14 @@ import { AssetIdentityPanel } from '../asset-editor/AssetIdentityPanel.js';
 import { AssetComponentsPanel } from '../asset-editor/AssetComponentsPanel.js';
 import { AssetComponentDetailsPanel } from '../asset-editor/AssetComponentDetailsPanel.js';
 import { AssetPreviewPanel } from '../asset-editor/AssetPreviewPanel.js';
-import { ASSET_EDITOR_TYPES } from './DockConstants.js';
+import { EventGraphPanel } from '../event-graph/EventGraphPanel.js';
+import { ASSET_EDITOR_TYPES, FACTORY_ONLY_LEVEL_TYPES } from './DockConstants.js';
 import { Logger } from '../../utils/Logger.js';
 
 const MULTI_TYPES = new Set([
     'outliner', 'details', 'layers', 'levels', 'assets', 'viewport',
-    ...ASSET_EDITOR_TYPES
+    ...ASSET_EDITOR_TYPES,
+    ...FACTORY_ONLY_LEVEL_TYPES
 ]);
 
 /**
@@ -109,6 +111,14 @@ export function createPanelCopy(contentType, leafId, levelEditor) {
             case 'assetPreview':
                 root.classList.add('tab-content-right');
                 panel = new AssetPreviewPanel(root, levelEditor.stateManager, levelEditor, opts);
+                break;
+            case 'eventGraph':
+                root.classList.add('tab-content-right');
+                root.style.display = 'flex';
+                root.style.flexDirection = 'column';
+                root.style.minHeight = '0';
+                root.style.height = '100%';
+                panel = new EventGraphPanel(root, levelEditor.stateManager, levelEditor, opts);
                 break;
             default:
                 return null;

@@ -128,7 +128,23 @@ export class HistoryOperations extends BaseModule {
         this.recalculateGroupBounds();
         this.invalidateCachesAfterRestore();
         this.restoreSelection(state.selection);
+        this.restoreEventGraphFromHistory(state.eventGraph);
         this.finalizeHistoryRestore();
+    }
+
+    /**
+     * Restore level.eventGraph from history (undefined = legacy snapshot, leave as-is).
+     * @param {object|null|undefined} eventGraph
+     */
+    restoreEventGraphFromHistory(eventGraph) {
+        if (eventGraph === undefined || !this.editor.level) return;
+        this.editor.level.eventGraph = eventGraph == null
+            ? null
+            : JSON.parse(JSON.stringify(eventGraph));
+        this.editor.stateManager?.set?.(
+            'eventGraphRevision',
+            (this.editor.stateManager.get('eventGraphRevision') || 0) + 1
+        );
     }
 
     /**

@@ -10,6 +10,7 @@ export const TYPE_META = {
     layers: { label: 'Layers', color: '#1f4d33' },
     assets: { label: 'Assets', color: '#5b4a1f' },
     levels: { label: 'Levels', color: '#1f3f5b' },
+    eventGraph: { label: 'Event Graph', color: '#3b1f5b' },
     // Asset editor (float workspace) — not in View menu
     assetPreview: { label: 'Preview', color: '#1a3a4a' },
     assetIdentity: { label: 'Identity', color: '#3a2a4a' },
@@ -18,7 +19,7 @@ export const TYPE_META = {
 };
 
 /** Level dock panels (View menu / default layout). */
-export const LEVEL_TYPE_ORDER = ['viewport', 'outliner', 'details', 'layers', 'assets', 'levels'];
+export const LEVEL_TYPE_ORDER = ['viewport', 'outliner', 'details', 'layers', 'assets', 'levels', 'eventGraph'];
 
 /** Asset-editor panel types (float role=assetEditor only in type menu). */
 export const ASSET_EDITOR_TYPES = [
@@ -28,11 +29,23 @@ export const ASSET_EDITOR_TYPES = [
     'assetComponentDetails'
 ];
 
+/**
+ * Level content types with no fixed primary DOM in index.html — always factory copies
+ * (same mount path as asset-editor panels).
+ */
+export const FACTORY_ONLY_LEVEL_TYPES = ['eventGraph'];
+
 const ASSET_EDITOR_TYPE_SET = new Set(ASSET_EDITOR_TYPES);
+const FACTORY_ONLY_LEVEL_SET = new Set(FACTORY_ONLY_LEVEL_TYPES);
 
 /** @param {string} contentType */
 export function isAssetEditorType(contentType) {
     return ASSET_EDITOR_TYPE_SET.has(contentType);
+}
+
+/** @param {string} contentType */
+export function isFactoryOnlyLevelType(contentType) {
+    return FACTORY_ONLY_LEVEL_SET.has(contentType);
 }
 
 /** All registered contentTypes (level + asset editor). */

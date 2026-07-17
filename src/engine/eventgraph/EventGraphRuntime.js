@@ -32,6 +32,11 @@ export class EventGraphRuntime {
             this._customListeners.set(name, list);
         }
         this._interactWasDown = false;
+        /** Node ids executed recently — Event Graph UI highlight during Play. */
+        this.recentNodeIds = new Set();
+        /** @type {Map<string, number>} nodeId → expiry ms (performance.now) */
+        this._recentExpiry = new Map();
+        this._recentHighlightMs = 450;
 
         this._fireEntriesOfType('OnStart', {});
     }
@@ -46,6 +51,7 @@ export class EventGraphRuntime {
 
     /** Advances OnTick/OnTimer/OnInteract entry nodes. Called once per GameEngine.tick(dt). */
     tick(dt) {
+        this._pruneRecent();
         this._tickCount++;
         for (const node of this.graph.nodes || []) {
             if (node.type !== 'OnTick') continue;
@@ -131,6 +137,7 @@ export class EventGraphRuntime {
 
     /** Walks outgoing edges from `nodeId`, executing each target's handler, depth-first. */
     _runFrom(nodeId, ctx) {
+        this._markRecent(nodeId);
         for (const edge of (this.graph.edges || []).filter(e => e.from === nodeId)) {
             const targetNode = (this.graph.nodes || []).find(n => n.id === edge.to);
             if (!targetNode) continue;
@@ -141,9 +148,30 @@ export class EventGraphRuntime {
                 continue;
             }
 
+            this._markRecent(targetNode.id);
             const result = handler(targetNode, { runtime: this, scene: this.scene, ...ctx });
             if (result === false) continue;
             this._runFrom(targetNode.id, ctx);
+        }
+    }
+
+    /** @private */
+    _markRecent(nodeId) {
+        if (!nodeId) return;
+        const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        this._recentExpiry.set(nodeId, now + this._recentHighlightMs);
+        this.recentNodeIds.add(nodeId);
+    }
+
+    /** @private */
+    _pruneRecent() {
+        if (this._recentExpiry.size === 0) return;
+        const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
+        for (const [id, exp] of this._recentExpiry) {
+            if (exp <= now) {
+                this._recentExpiry.delete(id);
+                this.recentNodeIds.delete(id);
+            }
         }
     }
 }

@@ -65,6 +65,8 @@ export class LevelEditor {
         // Initialize managers
         this.stateManager = new StateManager();
         this.historyManager = new HistoryManager();
+        // Snapshot level.eventGraph on every saveState without rewriting call sites
+        this.historyManager.setEventGraphProvider(() => this.level?.eventGraph ?? null);
         this.assetManager = new AssetManager(this.stateManager);
         this.fileManager = new FileManager();
         this.resizerManager = new ResizerManager(this);
@@ -588,6 +590,8 @@ export class LevelEditor {
         this.forEachDockPanelCopy('outliner', (p) => p.render?.());
         this.forEachDockPanelCopy('layers', (p) => p.render?.());
         this.forEachDockPanelCopy('levels', (p) => p.render?.());
+        // eventGraph is factory-only (all instances are "copies")
+        this.forEachDockPanelCopy('eventGraph', (p) => p.render?.());
         
         // Update level stats panel (includes Player Start restoration logic)
         this.updateLevelStatsPanel();

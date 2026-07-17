@@ -3,7 +3,14 @@
  * Primary roots: fixed DOM from initializeUIComponents.
  * Copies: factory instances keyed by leaf node.id.
  */
-import { TYPE_META, TYPE_ORDER, typeLabel, typeColor, isAssetEditorType } from './DockConstants.js';
+import {
+    TYPE_META,
+    TYPE_ORDER,
+    typeLabel,
+    typeColor,
+    isAssetEditorType,
+    isFactoryOnlyLevelType
+} from './DockConstants.js';
 import {
     isMultiInstanceType,
     createPanelCopy,
@@ -52,8 +59,8 @@ export class DockContentRegistry {
             let mount = null;
             if (type === 'viewport') {
                 mount = this._mountViewport.bind(this);
-            } else if (PANEL_ROOT_IDS[type] || isAssetEditorType(type)) {
-                // Level panels (fixed primary DOM) + asset-editor factory-only panels
+            } else if (PANEL_ROOT_IDS[type] || isAssetEditorType(type) || isFactoryOnlyLevelType(type)) {
+                // Level panels (fixed primary DOM) + factory-only panels (asset editor / eventGraph)
                 mount = this._mountPanelLeaf.bind(this, type);
             }
             this.register(type, {
@@ -292,8 +299,8 @@ export class DockContentRegistry {
             return;
         }
 
-        // Asset-editor panels have no fixed primary DOM — always factory instances.
-        if (isAssetEditorType(contentType)) {
+        // Factory-only panels have no fixed primary DOM — always factory instances.
+        if (isAssetEditorType(contentType) || isFactoryOnlyLevelType(contentType)) {
             this._mountCopyPanel(contentType, node, bodyEl);
             return;
         }
