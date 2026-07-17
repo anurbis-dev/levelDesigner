@@ -22,6 +22,11 @@ export class HistoryManager extends BaseManager {
          * @type {null|(() => object|null|undefined)}
          */
         this._eventGraphProvider = null;
+        /**
+         * Optional () => dialogues[] for level.dialogues snapshots (Dialogue UI).
+         * @type {null|(() => Array|undefined)}
+         */
+        this._dialoguesProvider = null;
     }
 
     /**
@@ -29,6 +34,13 @@ export class HistoryManager extends BaseManager {
      */
     setEventGraphProvider(provider) {
         this._eventGraphProvider = typeof provider === 'function' ? provider : null;
+    }
+
+    /**
+     * @param {null|(() => Array|undefined)} provider
+     */
+    setDialoguesProvider(provider) {
+        this._dialoguesProvider = typeof provider === 'function' ? provider : null;
     }
 
     /**
@@ -43,6 +55,21 @@ export class HistoryManager extends BaseManager {
             return g == null ? null : JSON.parse(JSON.stringify(g));
         } catch {
             return null;
+        }
+    }
+
+    /**
+     * @returns {Array|undefined}
+     * @private
+     */
+    _snapshotDialogues() {
+        if (!this._dialoguesProvider) return undefined;
+        try {
+            const d = this._dialoguesProvider();
+            if (d === undefined) return undefined;
+            return JSON.parse(JSON.stringify(Array.isArray(d) ? d : []));
+        } catch {
+            return [];
         }
     }
 
@@ -71,6 +98,10 @@ export class HistoryManager extends BaseManager {
         const eventGraph = this._snapshotEventGraph();
         if (eventGraph !== undefined) {
             stateData.eventGraph = eventGraph;
+        }
+        const dialogues = this._snapshotDialogues();
+        if (dialogues !== undefined) {
+            stateData.dialogues = dialogues;
         }
 
         const stateSnapshot = JSON.stringify(stateData);
@@ -106,12 +137,24 @@ export class HistoryManager extends BaseManager {
         if (this.undoStack.length === 0) return null;
 
         const parsedState = JSON.parse(this.undoStack[this.undoStack.length - 1]);
+        return this._parsedHistoryState(parsedState);
+    }
+
+    /**
+     * @param {object} parsedState
+     * @returns {object}
+     * @private
+     */
+    _parsedHistoryState(parsedState) {
         return {
             objects: parsedState.objects,
             selection: new Set(parsedState.selection || []),
             groupEditMode: parsedState.groupEditMode || null,
             eventGraph: Object.prototype.hasOwnProperty.call(parsedState, 'eventGraph')
                 ? parsedState.eventGraph
+                : undefined,
+            dialogues: Object.prototype.hasOwnProperty.call(parsedState, 'dialogues')
+                ? parsedState.dialogues
                 : undefined
         };
     }
@@ -132,15 +175,7 @@ export class HistoryManager extends BaseManager {
             const previousState = this.undoStack[this.undoStack.length - 1];
             const parsedState = JSON.parse(previousState);
 
-            // Convert selection array back to Set
-            return {
-                objects: parsedState.objects,
-                selection: new Set(parsedState.selection || []),
-                groupEditMode: parsedState.groupEditMode || null,
-                eventGraph: Object.prototype.hasOwnProperty.call(parsedState, 'eventGraph')
-                    ? parsedState.eventGraph
-                    : undefined
-            };
+            return this._parsedHistoryState(parsedState);
         } finally {
             // Delay clearing the flag to prevent accidental selection clearing by empty clicks
             this.operationFlagTimeout = setTimeout(() => {
@@ -164,16 +199,7 @@ export class HistoryManager extends BaseManager {
             this.undoStack.push(nextState);
 
             const parsedState = JSON.parse(nextState);
-
-            // Convert selection array back to Set
-            return {
-                objects: parsedState.objects,
-                selection: new Set(parsedState.selection || []),
-                groupEditMode: parsedState.groupEditMode || null,
-                eventGraph: Object.prototype.hasOwnProperty.call(parsedState, 'eventGraph')
-                    ? parsedState.eventGraph
-                    : undefined
-            };
+            return this._parsedHistoryState(parsedState);
         } finally {
             // Delay clearing the flag to prevent accidental selection clearing by empty clicks
             this.operationFlagTimeout = setTimeout(() => {

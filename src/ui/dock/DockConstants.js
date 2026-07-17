@@ -11,6 +11,7 @@ export const TYPE_META = {
     assets: { label: 'Assets', color: '#5b4a1f' },
     levels: { label: 'Levels', color: '#1f3f5b' },
     eventGraph: { label: 'Event Graph', color: '#3b1f5b' },
+    dialogues: { label: 'Dialogues', color: '#5b1f3b' },
     // Asset editor (float workspace) — not in View menu
     assetPreview: { label: 'Preview', color: '#1a3a4a' },
     assetIdentity: { label: 'Identity', color: '#3a2a4a' },
@@ -19,7 +20,9 @@ export const TYPE_META = {
 };
 
 /** Level dock panels (View menu / default layout). */
-export const LEVEL_TYPE_ORDER = ['viewport', 'outliner', 'details', 'layers', 'assets', 'levels', 'eventGraph'];
+export const LEVEL_TYPE_ORDER = [
+    'viewport', 'outliner', 'details', 'layers', 'assets', 'levels', 'eventGraph', 'dialogues'
+];
 
 /** Asset-editor panel types (float role=assetEditor only in type menu). */
 export const ASSET_EDITOR_TYPES = [
@@ -33,7 +36,7 @@ export const ASSET_EDITOR_TYPES = [
  * Level content types with no fixed primary DOM in index.html — always factory copies
  * (same mount path as asset-editor panels).
  */
-export const FACTORY_ONLY_LEVEL_TYPES = ['eventGraph'];
+export const FACTORY_ONLY_LEVEL_TYPES = ['eventGraph', 'dialogues'];
 
 const ASSET_EDITOR_TYPE_SET = new Set(ASSET_EDITOR_TYPES);
 const FACTORY_ONLY_LEVEL_SET = new Set(FACTORY_ONLY_LEVEL_TYPES);

@@ -19,6 +19,11 @@ import {
     removeVariable
 } from './EventGraphModel.js';
 import { EventGraphCanvas } from './EventGraphCanvas.js';
+import {
+    listLevelObjectOptions,
+    listDialogueOptions,
+    createIdSelect
+} from '../LevelObjectPicker.js';
 import { Logger } from '../../utils/Logger.js';
 
 export class EventGraphPanel {
@@ -310,6 +315,20 @@ export class EventGraphPanel {
                         input.style.borderColor = '#ef4444';
                         Logger.ui?.warn?.('EventGraphPanel: invalid JSON for ' + field.key);
                     }
+                });
+            } else if (field.type === 'objectId') {
+                input = createIdSelect({
+                    value: raw ?? '',
+                    emptyLabel: '— object —',
+                    options: listLevelObjectOptions(this.levelEditor?.level),
+                    onChange: (v) => this._patchParams(node.id, { [field.key]: v })
+                });
+            } else if (field.type === 'dialogueId') {
+                input = createIdSelect({
+                    value: raw ?? '',
+                    emptyLabel: '— dialogue —',
+                    options: listDialogueOptions(this.levelEditor?.level),
+                    onChange: (v) => this._patchParams(node.id, { [field.key]: v })
                 });
             } else {
                 input = document.createElement('input');

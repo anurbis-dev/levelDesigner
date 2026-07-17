@@ -37,8 +37,8 @@ export class Level {
         };
 
         // Level-scope logic (tmp/2D_Editor_LOGIC_SYSTEMS_PLAN.md Фаза D/E) — opaque to the
-        // editor's own object/layer model, read only by src/engine/Scene.js at Play/build time.
-        // No dedicated UI yet; authored as raw JSON until the Event Graph/Dialogue widgets land.
+        // editor's own object/layer model; Play/build via Scene.js. Authoring: Event Graph /
+        // Dialogues dock panels (src/ui/event-graph, src/ui/dialogues).
         this.eventGraph = data.eventGraph || null;
         this.dialogues = data.dialogues || [];
 

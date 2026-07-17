@@ -129,6 +129,7 @@ export class HistoryOperations extends BaseModule {
         this.invalidateCachesAfterRestore();
         this.restoreSelection(state.selection);
         this.restoreEventGraphFromHistory(state.eventGraph);
+        this.restoreDialoguesFromHistory(state.dialogues);
         this.finalizeHistoryRestore();
     }
 
@@ -144,6 +145,19 @@ export class HistoryOperations extends BaseModule {
         this.editor.stateManager?.set?.(
             'eventGraphRevision',
             (this.editor.stateManager.get('eventGraphRevision') || 0) + 1
+        );
+    }
+
+    /**
+     * Restore level.dialogues from history (undefined = legacy snapshot, leave as-is).
+     * @param {Array|undefined} dialogues
+     */
+    restoreDialoguesFromHistory(dialogues) {
+        if (dialogues === undefined || !this.editor.level) return;
+        this.editor.level.dialogues = JSON.parse(JSON.stringify(Array.isArray(dialogues) ? dialogues : []));
+        this.editor.stateManager?.set?.(
+            'dialoguesRevision',
+            (this.editor.stateManager.get('dialoguesRevision') || 0) + 1
         );
     }
 

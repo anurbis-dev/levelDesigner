@@ -331,6 +331,7 @@ Event Graph (катсцены), обычная покадровая логика
 | E | Dialogue | — |
 | F | Animation state machine | — |
 | G | Event Graph UI (level) | Authored graph without raw JSON |
+| H | Dialogue UI + EG pickers | Authored dialogues; objectId/dialogueId selects |
 
 A и B независимы — можно делать параллельно/в любом порядке. C логически можно начать сразу
 после A (Details/Viewport не ждут графа), но Event Graph-вкладка в С физически зависит от виджета
@@ -358,11 +359,29 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
 
 ### Вне MVP / backlog
 - Asset-scope graph (`scope: "asset"`, поле на Asset, multi EventGraphRuntime).
-- Object-picker UI (сейчас text objectId).
 - Multi-port dataflow; step-debugger.
-- Специализированные Dialogue tree / Animation SM editors.
+- Специализированный Animation SM editor.
 
 **Критерий:** add nodes + wire + vars → Ctrl+Z → Save/Load → Play Watch видит variables.
+
+---
+
+## Фаза H — Dialogue UI + Event Graph object/dialogue pickers  ✅ ЗАВЕРШЕНА 2026-07-17 (editor-track)
+
+### Dialogue authoring
+- Dock contentType `dialogues` (factory-only), `src/ui/dialogues/DialoguesPanel.js` +
+  `DialogueModel.js`.
+- UI: list graphs → list nodes → form (speaker/text, linear next | choices + condition).
+- Data: `level.dialogues[]` (`id`, `formatVersion`, `startNode`, `nodes`) — тот же контракт
+  Scene Map / `StartDialogue`.
+- History: `HistoryManager.setDialoguesProvider` + restore в `HistoryOperations`.
+
+### Object / dialogue pickers (Event Graph)
+- Field types `objectId` / `dialogueId` в `EventGraphNodeCatalog`.
+- Shared `src/ui/LevelObjectPicker.js` (`listLevelObjectOptions`, `listDialogueOptions`,
+  `createIdSelect`); orphan ids preserved as "(missing)".
+
+**Критерий:** создать dialogue + choices → выбрать objectId/dialogueId из select → undo.
 
 ---
 

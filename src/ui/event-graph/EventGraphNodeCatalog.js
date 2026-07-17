@@ -4,7 +4,7 @@
  * this catalog only drives palette / details UI.
  */
 
-/** @typedef {{ key: string, label: string, type: 'string'|'number'|'boolean'|'json', optional?: boolean }} NodeField */
+/** @typedef {{ key: string, label: string, type: 'string'|'number'|'boolean'|'json'|'objectId'|'dialogueId', optional?: boolean }} NodeField */
 /** @typedef {{ type: string, label: string, category: 'entry'|'condition'|'action', defaults: object, fields: NodeField[] }} NodeDef */
 
 /** @type {NodeDef[]} */
@@ -24,7 +24,7 @@ export const EVENT_GRAPH_NODE_DEFS = [
         category: 'entry',
         defaults: { objectId: '', layer: '' },
         fields: [
-            { key: 'objectId', label: 'Trigger object id', type: 'string' },
+            { key: 'objectId', label: 'Trigger object', type: 'objectId' },
             { key: 'layer', label: 'Other layer (optional)', type: 'string', optional: true }
         ]
     },
@@ -34,7 +34,7 @@ export const EVENT_GRAPH_NODE_DEFS = [
         category: 'entry',
         defaults: { objectId: '', layer: '' },
         fields: [
-            { key: 'objectId', label: 'Trigger object id', type: 'string' },
+            { key: 'objectId', label: 'Trigger object', type: 'objectId' },
             { key: 'layer', label: 'Other layer (optional)', type: 'string', optional: true }
         ]
     },
@@ -43,7 +43,7 @@ export const EVENT_GRAPH_NODE_DEFS = [
         label: 'On Interact',
         category: 'entry',
         defaults: { objectId: '' },
-        fields: [{ key: 'objectId', label: 'Interactable object id', type: 'string' }]
+        fields: [{ key: 'objectId', label: 'Interactable object', type: 'objectId' }]
     },
     {
         type: 'OnTimer',
@@ -116,7 +116,7 @@ export const EVENT_GRAPH_NODE_DEFS = [
         category: 'action',
         defaults: { objectId: '', componentType: 'collider', enabled: false },
         fields: [
-            { key: 'objectId', label: 'Object id', type: 'string' },
+            { key: 'objectId', label: 'Object', type: 'objectId' },
             { key: 'componentType', label: 'Component type', type: 'string' },
             { key: 'enabled', label: 'Enabled', type: 'boolean' }
         ]
@@ -127,7 +127,7 @@ export const EVENT_GRAPH_NODE_DEFS = [
         category: 'action',
         defaults: { objectId: '', x: 0, y: 0 },
         fields: [
-            { key: 'objectId', label: 'Object id', type: 'string' },
+            { key: 'objectId', label: 'Object', type: 'objectId' },
             { key: 'x', label: 'X', type: 'number' },
             { key: 'y', label: 'Y', type: 'number' }
         ]
@@ -137,7 +137,7 @@ export const EVENT_GRAPH_NODE_DEFS = [
         label: 'Destroy Object',
         category: 'action',
         defaults: { objectId: '' },
-        fields: [{ key: 'objectId', label: 'Object id', type: 'string' }]
+        fields: [{ key: 'objectId', label: 'Object', type: 'objectId' }]
     },
     {
         type: 'EmitCustomEvent',
@@ -151,7 +151,7 @@ export const EVENT_GRAPH_NODE_DEFS = [
         label: 'Start Dialogue',
         category: 'action',
         defaults: { dialogueId: '' },
-        fields: [{ key: 'dialogueId', label: 'Dialogue id', type: 'string' }]
+        fields: [{ key: 'dialogueId', label: 'Dialogue', type: 'dialogueId' }]
     },
     {
         type: 'PlayAnimation',
@@ -159,7 +159,7 @@ export const EVENT_GRAPH_NODE_DEFS = [
         category: 'action',
         defaults: { objectId: '', clip: '' },
         fields: [
-            { key: 'objectId', label: 'Object id', type: 'string' },
+            { key: 'objectId', label: 'Object', type: 'objectId' },
             { key: 'clip', label: 'Clip name', type: 'string' }
         ]
     }
