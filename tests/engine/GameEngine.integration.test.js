@@ -302,6 +302,77 @@ describe('GameEngine — Фаза D Event Graph MVP (OnCollisionEnter → SetVar
     });
 });
 
+// Фаза E (tmp/2D_Editor_LOGIC_SYSTEMS_PLAN.md) readiness criterion: OnStart -> StartDialogue
+// shows the first node, movement pauses while dialogueActive, advance()/isEnded() drives
+// OnDialogueEnded, which itself can run further graph actions (SetVariable here).
+describe('GameEngine — Фаза E Dialogue MVP (OnStart → StartDialogue → advance → OnDialogueEnded)', () => {
+    function dialogueManifest() {
+        return {
+            formatVersion: 1, name: 'Demo', entryLevelId: 'level_a',
+            levels: [{
+                id: 'level_a',
+                data: {
+                    meta: { name: 'Level A' },
+                    camera: { x: 0, y: 0, zoom: 1 },
+                    layers: [],
+                    eventGraph: {
+                        formatVersion: 1, scope: 'level',
+                        variables: [{ name: 'talkedToGuard', type: 'bool', default: false }],
+                        nodes: [
+                            { id: 'n1', type: 'OnStart' },
+                            { id: 'n2', type: 'StartDialogue', params: { dialogueId: 'guard' } },
+                            { id: 'n3', type: 'OnDialogueEnded' },
+                            { id: 'n4', type: 'SetVariable', params: { name: 'talkedToGuard', value: true } }
+                        ],
+                        edges: [{ from: 'n1', to: 'n2' }, { from: 'n3', to: 'n4' }]
+                    },
+                    dialogues: [
+                        { id: 'guard', formatVersion: 1, startNode: 'd1', nodes: [
+                            { id: 'd1', speaker: 'Guard', text: 'Стой!', choices: [{ text: 'Уйти', next: null }] }
+                        ] }
+                    ],
+                    objects: [
+                        { id: 'spawn', type: 'player_start', x: 0, y: 0, width: 32, height: 32,
+                            components: [{ id: 'c1', type: 'playerStart', enabled: true, properties: {} }] }
+                    ]
+                }
+            }]
+        };
+    }
+
+    it('OnStart fires StartDialogue immediately, showing the first node', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(dialogueManifest());
+
+        expect(engine.scene.dialogueActive).toBe(true);
+        expect(engine.scene.dialogueRunner.getCurrentNode().text).toBe('Стой!');
+    });
+
+    it('pauses player movement while dialogueActive', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(dialogueManifest());
+        engine.scene.input = { getAxis: () => ({ x: 1, y: 0 }) };
+
+        engine.tick(0.05);
+        expect(engine.scene.player.x).toBe(0);
+    });
+
+    it('advance() ending the dialogue fires OnDialogueEnded next tick and clears dialogueActive', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(dialogueManifest());
+
+        engine.scene.dialogueRunner.advance(0); // only choice, next: null -> ended
+        engine.tick(0.05);
+
+        expect(engine.scene.dialogueActive).toBe(false);
+        expect(engine.scene.dialogueRunner).toBe(null);
+        expect(engine.scene.eventGraphRuntime.getVariable('talkedToGuard')).toBe(true);
+    });
+});
+
 describe('GameEngine — Фаза 2 vertical slice (BehaviorRegistry + collider/trigger/playerStart)', () => {
     it('resolves playerStart/collider/trigger to real behaviors and tracks trigger enter/exit across ticks', async () => {
         const { canvas } = mockCanvas();

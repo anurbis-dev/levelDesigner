@@ -28,6 +28,12 @@ export class Scene {
         // constructor-built) so ProjectLoader.loadLevel() doesn't need to know about it.
         this.eventGraph = levelData.eventGraph || null;
         this.eventGraphRuntime = null;
+        // Level-scope Dialogue Graphs (Фаза E), keyed by id — same "plain field, not asset
+        // registry" shortcut as eventGraph above (ProjectLoader's assetsById plumbing is
+        // deferred to Фаза 3/4). StartDialogue resolves node.params.dialogueId against this map.
+        this.dialogues = new Map((levelData.dialogues || []).map(d => [d.id, d]));
+        this.dialogueRunner = null;
+        this.dialogueActive = false;
     }
 
     getLayersSorted() {

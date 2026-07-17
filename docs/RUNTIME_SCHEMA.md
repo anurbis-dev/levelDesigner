@@ -9,9 +9,9 @@ asset-типа (`src/constants/AssetTypes.js`) и component-типа (`src/const
 и `src/constants/{AssetTypes,ComponentTypes}.js` — этот файл их не дублирует, а добавляет
 runtime-контракт (`properties`) поверх уже существующего каталога.
 
-**Примечание:** уровень-широкие данные (например, `eventGraph` из Фаза D LOGIC_SYSTEMS_PLAN) не являются
+**Примечание:** уровень-широкие данные (например, `eventGraph` из Фаза D LOGIC_SYSTEMS_PLAN и `dialogues` из Фаза E LOGIC_SYSTEMS_PLAN) не являются
 component- или asset-типами и поэтому не документируются в таблицах per-type ниже. Они хранятся в
-корневых полях JSON-уровня (`levelData.eventGraph` и т.д.).
+корневых полях JSON-уровня (`levelData.eventGraph`, `levelData.dialogues` — массив Dialogue Graph'ов по id).
 
 **Процесс:** секция типа переходит из "not implemented" в конкретный список полей в том же
 коммите, где движок реально реализует behavior/рендер для этого типа (Фаза 2/3 плана движка).
@@ -121,7 +121,7 @@ implemented`, `properties: {}`, `schemaVersion: 1`. `BehaviorRegistry` (движ
 | `transformAnimation` | Transform Animation | 1 | not implemented | TBD |
 | `spriteUiAnimation` | Sprite / UI Animation | 1 | implemented | `frames` — массив `{x,y,w,h,duration}` (source-rect в атласе, взятом из `entity.imgSrc`; `duration` в мс), `loop` (опционально, дефолт `true`; `false` — держит последний кадр вместо рестарта). Один клип, без стейт-машины/переходов — та часть (несколько именованных состояний + условия перехода) в бэклоге, `tmp/2D_Editor_LOGIC_SYSTEMS_PLAN.md` Фаза F |
 | `pickup` | Pickup | 1 | not implemented | TBD |
-| `dialogueTrigger` | Dialogue Trigger | 1 | not implemented | TBD |
+| `dialogueTrigger` | Dialogue Trigger | 1 | implemented | `dialogueId` (string, опционально), `layer` (string, опционально) — component-маркер сущности, инициирующей диалоги; фактический dialogueId берётся из Event Graph действия `StartDialogue` (action params), не из этого компонента |
 | `damageHealth` | Damage / Health | 1 | not implemented | TBD |
 | `movablePushable` | Movable / Pushable | 1 | not implemented | TBD |
 | `mountableVehicleSeat` | Mountable / Vehicle Seat | 1 | not implemented | TBD |

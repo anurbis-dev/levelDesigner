@@ -210,7 +210,21 @@ multi-port dataflow для булевых операций.
 
 ---
 
-## Фаза E — Dialogue (потребитель графа)
+## Фаза E — Dialogue (потребитель графа)  ✅ ЗАВЕРШЕНА 2026-07-17 (engine-track сессия, движковая часть)
+
+Реализовано строго в рамках рантайма (`src/engine/DialogueRunner.js`,
+`src/engine/eventgraph/ConditionEvaluator.js`, `src/engine/behaviors/DialogueTriggerBehavior.js`),
+без UI (список/форма реплик — будущая задача, не canvas-виджет). `ConditionEvaluator` вынесен из
+Фазы D в общий модуль — Event Graph (Compare/And/Or/Not) и DialogueRunner (choice.condition)
+используют один и тот же `compareOp`/`evalSpec`, без дублирования, как и требовал план.
+`dialogueTrigger` — чистый data-holder (dialogueId/layer), реальный dialogueId для запуска
+диалога Event Graph's `StartDialogue` action несёт в своих params, а не читает из компонента.
+`scene.dialogues` — level-scope `Map` по id (тот же приём, что `eventGraph` в Фазе D — полноценный
+`assetsById` registry в `ProjectLoader` остаётся отложенным до Фазы 3/4).
+
+Критерий готовности подтверждён vitest (`tests/engine/DialogueRunner.test.js`,
+`GameEngine.integration.test.js` Фаза E describe-блок, 106/106 суммарно) и живым запуском в
+браузере (chrome-devtools), идентичный результат.
 
 **Не собирается из блоков Event Graph** — ветвящийся текст как generic-граф нечитаем уже на
 3-4 репликах, весь опыт индустрии (Ink/Yarn Spinner/RPG Maker/Godot Dialogue Manager) поэтому

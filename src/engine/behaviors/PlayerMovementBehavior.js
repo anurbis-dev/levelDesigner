@@ -18,6 +18,7 @@ export class PlayerMovementBehavior extends Behavior {
     update(dt, scene) {
         const input = scene.input;
         if (!input || dt <= 0) return;
+        if (scene.dialogueActive) return; // Фаза E: movement pauses while a dialogue is open
 
         const axis = input.getAxis();
         if (axis.x === 0 && axis.y === 0) return;

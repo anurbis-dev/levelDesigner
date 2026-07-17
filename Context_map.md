@@ -302,6 +302,11 @@ level.settings.parallaxVertical // множитель вертикального
     - `src/engine/eventgraph/EventGraphRuntime.js` - интерпретатор графа (переменные, ходьба по рёбрам, синхронизация с TriggerBehavior, pub/sub-мост для OnCustomEvent)
     - `src/engine/eventgraph/registerDefaultEventGraphNodes.js` - MVP-словарь узлов (Entry: OnStart/OnTick/OnCollisionEnter/OnCollisionExit/OnInteract/OnTimer/OnCustomEvent; Conditions: Compare/And/Or/Not; Actions: SetVariable/SetComponentEnabled/Teleport/DestroyObject/EmitCustomEvent)
     - Обновлены: `Behavior.js` (`.type` и `.enabled` live после конструкции), `Scene.js` (`.eventGraph` + `.destroyEntity(id)`), `GameEngine.js` (вызов `registerDefaultEventGraphNodes()` и создание `EventGraphRuntime`), `TriggerBehavior.js` (пересылка enter/exit → `scene.eventGraphRuntime.notifyCollision()`), `PlayerMovementBehavior.js` (фильтр из solids объектов с отключённым `.enabled` и TriggerBehavior)
+  - **Фаза E Dialogue MVP** (`src/engine/`, Фаза E LOGIC_SYSTEMS_PLAN):
+    - `src/engine/DialogueRunner.js` - интерпретатор Dialogue Graph ({formatVersion, startNode, nodes:[{id,speaker,text,choices?,next?}]}); методы getCurrentNode(), getVisibleChoices() (фильтр по condition через evalSpec), advance(choiceIndex?), isEnded()
+    - `src/engine/eventgraph/ConditionEvaluator.js` - вынесенный общий compareOp/evalSpec({var,op,value}) для Event Graph (Compare/And/Or/Not, Фаза D) и DialogueRunner (Фаза E)
+    - `src/engine/behaviors/DialogueTriggerBehavior.js` - новый component-тип `dialogueTrigger` (data-holder: dialogueId + layer), запуск диалога через Event Graph StartDialogue action + trigger/interactable связка
+    - Обновлены: `src/engine/eventgraph/registerDefaultEventGraphNodes.js` (entry OnDialogueEnded для диспатча, action StartDialogue создаёт DialogueRunner), `src/engine/eventgraph/EventGraphRuntime.js` (polling _checkDialogueEnded() в tick), `src/engine/Scene.js` (уровень-scope `dialogues` Map, `dialogueRunner`, `dialogueActive`), `src/engine/behaviors/PlayerMovementBehavior.js` (return рано если scene.dialogueActive), `src/engine/behaviors/registerDefaultBehaviors.js` (зарегистрирован dialogueTrigger)
 
 ## 🏗️ Архитектурные принципы
 

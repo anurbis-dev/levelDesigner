@@ -1,33 +1,18 @@
 import { EventGraphNodeRegistry } from './EventGraphNodeRegistry.js';
-
-function compareOp(a, op, b) {
-    switch (op) {
-        case '==': return a === b;
-        case '!=': return a !== b;
-        case '>': return a > b;
-        case '<': return a < b;
-        default:
-            console.warn(`[engine] event graph Compare: unknown op '${op}'`);
-            return false;
-    }
-}
-
-/** `spec` is `{var, op, value}` — the same shape node.params uses for Compare itself. */
-function evalSpec(spec, runtime) {
-    return compareOp(runtime.getVariable(spec.var), spec.op, spec.value);
-}
+import { evalSpec } from './ConditionEvaluator.js';
+import { DialogueRunner } from '../DialogueRunner.js';
 
 function findEntity(scene, id) {
     return scene.getAllEntities().find(e => e.id === id);
 }
 
 /**
- * Registers the Фаза D MVP node vocabulary (see docs/RUNTIME_SCHEMA.md discipline applied to
+ * Registers the Фаза D/E MVP node vocabulary (see docs/RUNTIME_SCHEMA.md discipline applied to
  * BehaviorRegistry — same idea here: only nodes with a real, working implementation get
  * registered; the rest of the plan's word list (PlaySound, SpawnObject, LoadLevel,
- * StartDialogue, PlayAnimation) stays unregistered until Фаза E/F actually need them —
- * EventGraphRuntime already warns-and-skips unknown node types, so referencing one of those
- * early is safe, just inert.
+ * PlayAnimation) stays unregistered until Фаза F actually needs them — EventGraphRuntime
+ * already warns-and-skips unknown node types, so referencing one of those early is safe,
+ * just inert.
  *
  * Boolean combinators (And/Or/Not) take `params.conditions: [{var,op,value}, ...]` — an
  * explicit list of Compare-shaped specs evaluated against current variables, not further graph
@@ -44,6 +29,7 @@ export function registerDefaultEventGraphNodes() {
     EventGraphNodeRegistry.register('OnInteract', () => {});
     EventGraphNodeRegistry.register('OnTimer', () => {});
     EventGraphNodeRegistry.register('OnCustomEvent', () => {});
+    EventGraphNodeRegistry.register('OnDialogueEnded', () => {});
 
     // Conditions
     EventGraphNodeRegistry.register('Compare', (node, ctx) => evalSpec(node.params, ctx.runtime));
@@ -77,5 +63,17 @@ export function registerDefaultEventGraphNodes() {
     });
     EventGraphNodeRegistry.register('EmitCustomEvent', (node, ctx) => {
         ctx.runtime.emitCustomEvent(node.params.name);
+    });
+    // Фаза E: dialogueId resolves against scene.dialogues (level-scope map, see Scene.js),
+    // not the dialogueTrigger component — the component is a design-time reference only,
+    // the graph node still carries its own dialogueId explicitly (plan's stated schema).
+    EventGraphNodeRegistry.register('StartDialogue', (node, ctx) => {
+        const dialogueData = ctx.scene.dialogues?.get(node.params.dialogueId);
+        if (!dialogueData) {
+            console.warn(`[engine] StartDialogue: unknown dialogueId '${node.params.dialogueId}'`);
+            return;
+        }
+        ctx.scene.dialogueRunner = new DialogueRunner(dialogueData, ctx.runtime);
+        ctx.scene.dialogueActive = true;
     });
 }

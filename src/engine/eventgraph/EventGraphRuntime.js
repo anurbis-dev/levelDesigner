@@ -8,9 +8,11 @@ import { EventGraphNodeRegistry } from './EventGraphNodeRegistry.js';
  * component types), doesn't throw or abort the rest of the graph.
  *
  * Entry-node dispatch is driven by the engine, not by this class discovering events on its
- * own: GameEngine.tick() calls `.tick(dt)` (OnTick/OnTimer/OnInteract), TriggerBehavior.update()
- * calls `.notifyCollision()` (OnCollisionEnter/OnCollisionExit) directly when it detects an
- * enter/exit for this tick.
+ * own: GameEngine.tick() calls `.tick(dt)` (OnTick/OnTimer/OnInteract/OnDialogueEnded polling),
+ * TriggerBehavior.update() calls `.notifyCollision()` (OnCollisionEnter/OnCollisionExit)
+ * directly when it detects an enter/exit for this tick. StartDialogue (Фаза E) is the one
+ * action that hands control to a separate interpreter (DialogueRunner) rather than acting
+ * immediately — see _checkDialogueEnded().
  */
 export class EventGraphRuntime {
     constructor(graphData, scene) {
@@ -60,6 +62,7 @@ export class EventGraphRuntime {
         }
 
         this._checkInteractNodes();
+        this._checkDialogueEnded();
     }
 
     /**
@@ -107,6 +110,18 @@ export class EventGraphRuntime {
                 this._runFrom(node.id, { otherEntity: target });
             }
         }
+    }
+
+    /**
+     * Detects DialogueRunner.isEnded() (set by an external UI calling .advance() past the last
+     * node) and fires OnDialogueEnded (Фаза E) — polled per-tick, the same pattern OnInteract
+     * already uses for edge-detecting external state this class doesn't own.
+     */
+    _checkDialogueEnded() {
+        if (!this.scene.dialogueActive || !this.scene.dialogueRunner?.isEnded()) return;
+        this.scene.dialogueActive = false;
+        this.scene.dialogueRunner = null;
+        this._fireEntriesOfType('OnDialogueEnded', {});
     }
 
     _entityHasLayer(entity, layer) {
