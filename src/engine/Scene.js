@@ -34,6 +34,10 @@ export class Scene {
         this.dialogues = new Map((levelData.dialogues || []).map(d => [d.id, d]));
         this.dialogueRunner = null;
         this.dialogueActive = false;
+        // Active camera marker entity (docs/RUNTIME_SCHEMA.md `camera`), set by
+        // hideCameraMarker() at load time; null when the level has none (GameEngine falls
+        // back to hardcoded player-centering, see GameEngine._updateCamera()).
+        this.cameraEntity = null;
     }
 
     getLayersSorted() {
@@ -118,6 +122,25 @@ export class Scene {
         };
         const removed = removeFrom(this.entities);
         if (removed && this.player?.id === id) this.player = null;
+        if (removed && this.cameraEntity?.id === id) this.cameraEntity = null;
         return removed;
+    }
+
+    /** @returns {import('./Entity.js').Entity|null} the first entity carrying a CameraBehavior. */
+    findCameraEntity() {
+        return this.getAllEntities()
+            .find(entity => entity.behaviors.some(b => typeof b.computeCamera === 'function'));
+    }
+
+    /**
+     * Hides the camera marker (design-time gizmo, like playerStart) so it doesn't render as a
+     * stray colored box, and caches it on `this.cameraEntity` for GameEngine._updateCamera().
+     * No-op if the level has no camera marker.
+     */
+    hideCameraMarker() {
+        const entity = this.findCameraEntity();
+        if (entity) entity.visible = false;
+        this.cameraEntity = entity || null;
+        return entity;
     }
 }

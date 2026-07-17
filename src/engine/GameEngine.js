@@ -33,6 +33,7 @@ export class GameEngine {
         this.scene = ProjectLoader.loadLevel(levelId, registries);
         this.scene.input = this.input;
         this.scene.spawnPlayer();
+        this.scene.hideCameraMarker();
         this.scene.eventGraphRuntime = this.scene.eventGraph
             ? new EventGraphRuntime(this.scene.eventGraph, this.scene)
             : null;
@@ -61,8 +62,20 @@ export class GameEngine {
         this.scene.eventGraphRuntime?.tick(dt);
     }
 
-    /** Centers the camera on scene.player, if any (static camera otherwise). */
+    /**
+     * Delegates to the level's `camera` marker (follow target/deadzone/bounds, see
+     * CameraBehavior) when present and enabled; otherwise falls back to the legacy
+     * hardcoded hard-center-on-player (static camera if there's no player either) —
+     * kept for levels authored before the camera asset/component existed.
+     */
     _updateCamera() {
+        const cameraEntity = this.scene.cameraEntity;
+        const behavior = cameraEntity?.behaviors.find(b => typeof b.computeCamera === 'function');
+        if (behavior?.enabled) {
+            behavior.computeCamera(this.scene, this.camera, this.renderer.canvas);
+            return;
+        }
+
         const player = this.scene.player;
         if (!player) return;
         const zoom = this.camera.zoom || 1;

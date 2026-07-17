@@ -5,6 +5,7 @@ import { InteractableBehavior } from './InteractableBehavior.js';
 import { PlayerStartBehavior } from './PlayerStartBehavior.js';
 import { SpriteAnimationBehavior } from './SpriteAnimationBehavior.js';
 import { DialogueTriggerBehavior } from './DialogueTriggerBehavior.js';
+import { CameraBehavior } from './CameraBehavior.js';
 
 /**
  * Registers the Фаза 2 MVP component vertical slice (see docs/RUNTIME_SCHEMA.md).
@@ -18,4 +19,5 @@ export function registerDefaultBehaviors() {
     BehaviorRegistry.register('playerStart', PlayerStartBehavior);
     BehaviorRegistry.register('spriteUiAnimation', SpriteAnimationBehavior);
     BehaviorRegistry.register('dialogueTrigger', DialogueTriggerBehavior);
+    BehaviorRegistry.register('camera', CameraBehavior);
 }

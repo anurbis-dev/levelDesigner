@@ -103,8 +103,8 @@ levelEditor.dockManager.enterImmersiveLayout() / exitImmersiveLayout() // Game M
 // Multi-instance: DockPanelFactory self-drop clone; multi-viewport via ViewportViewManager
 
 // AssetTypes / ComponentTypes (каталоги типов)
-import { getAssetTypeById, getAssetTypesByCategory, ASSET_CATEGORIES, DEFAULT_ASSET_COMPONENTS } from 'src/constants/AssetTypes.js' // 29 типов ассетов: Camera, Actor, Image, Player Start (auto-managed spawn marker, со своим компонентом), Tilemap, Sound, Dialogue, Quest, Prefab и т.д.; DEFAULT_ASSET_COMPONENTS = {player_start: ['playerStart']} автоматически прикрепляет компонент при создании placeholder
-import { getComponentTypeById, createComponentStub } from 'src/constants/ComponentTypes.js' // 19 типов компонентов: Collider, Trigger, Interactable, PathFollower, Spawner и т.д.
+import { getAssetTypeById, getAssetTypesByCategory, ASSET_CATEGORIES, DEFAULT_ASSET_COMPONENTS } from 'src/constants/AssetTypes.js' // 29 типов ассетов: Camera (follow-target/deadzone/bounds, реализован), Actor, Image, Player Start (auto-managed spawn marker, со своим компонентом), Tilemap, Sound, Dialogue, Quest, Prefab и т.д.; DEFAULT_ASSET_COMPONENTS = {player_start: ['playerStart'], camera: ['camera']} автоматически прикрепляет компонент при создании placeholder
+import { getComponentTypeById, createComponentStub } from 'src/constants/ComponentTypes.js' // 20 типов компонентов: Collider, Trigger, Interactable, PathFollower, Spawner, Camera (follow-target/deadzone/bounds) и т.д.
 import { buildTypeIconSvg } from 'src/constants/AssetTypeIcons.js' // type-specific SVG icons (24×24 stroke glyphs, inline, растеризуются как data-URI Image в CanvasRenderer для canvas-рендера и AssetPanel для preview)
 assetManager.createPlaceholderAsset(typeId, customName?, folderPath?) // создать заполнитель ассета (без imgSrc, используются опциональные typeDef.width/height/color если заданы, иначе 48×48 + цвет категории, отображается с type-иконкой в AssetPanel и на canvas); автоматически создаёт и прикрепляет компоненты из DEFAULT_ASSET_COMPONENTS[typeId] (сейчас только player_start → playerStart)
 asset.components // массив component stubs [{id, type, enabled, properties}], наследуется при размещении GameObject
@@ -240,7 +240,7 @@ level.settings.parallaxVertical // множитель вертикального
 
 ### Constants & Catalogs
 - `src/constants/AssetTypes.js` - каталог 29 типов ассетов (Camera, Actor, Image, Player Start, Tilemap и т.д.) в 6 категориях; `DEFAULT_ASSET_COMPONENTS` для auto-attach компонентов; `getAssetTypeById()`, `getAssetCategoriesWithTypes()`
-- `src/constants/ComponentTypes.js` - каталог 19 типов компонентов (Collider, Trigger, Interactable, PlayerStart и т.д.); `createComponentStub()`
+- `src/constants/ComponentTypes.js` - каталог 20 типов компонентов (Collider, Trigger, Interactable, PlayerStart, Camera и т.д.); `createComponentStub()`
 - `src/constants/AssetTypeIcons.js` - минималистичные SVG-иконки (24×24 px) для каждого типа; `buildTypeIconSvg()`
 
 ### UI
@@ -284,7 +284,7 @@ level.settings.parallaxVertical // множитель вертикального
   - `src/engine/render/ParallaxController.js` - чистые функции `getCameraOffset/getParallaxOffset` (портированы 1:1 из ParallaxRenderer)
   - `src/engine/render/Renderer.js` - Canvas 2D рендер (setCamera/restoreCamera/clear/drawBackground/drawEntity/renderScene), порт CanvasRenderer без editor-флагов
   - `src/engine/AssetLoader.js` - `LOADABLE_ASSET_TYPES/DATA_ONLY_ASSET_TYPES`, `collectImageSources(scene)`, `loadImages(sources)` с guard `typeof Image !== 'undefined'`
-  - `src/engine/GameEngine.js` - оркестратор (constructor, loadProject async, tick с автоследованием камеры за игроком, start/stop requestAnimationFrame-цикл); создаёт/уничтожает Input
+  - `src/engine/GameEngine.js` - оркестратор (constructor, loadProject async, tick); `_updateCamera()` делегирует `camera`-маркеру уровня (`CameraBehavior.computeCamera`), без маркера — legacy hard-center на игроке; start/stop requestAnimationFrame-цикл; создаёт/уничтожает Input
   - `src/engine/Input.js` - клавиатурный стейт (arrows/WASD → нормализованная ось `{x,y}` в [-1,1]), методы `isDown()`/`getAxis()`/`destroy()`
   - **Фаза 2 MVP-поведения** (`src/engine/behaviors/` дочерние классы, `src/engine/BehaviorRegistry.js` реестр):
     - `src/engine/BehaviorRegistry.js` - `register(type, Class)`, `get(type)`, `has(type)`, явная регистрация (не import-side-effects)
@@ -295,8 +295,9 @@ level.settings.parallaxVertical // множитель вертикального
     - `src/engine/behaviors/InteractableBehavior.js` - `radius`/`hint` (properties), `isInRange(point)`
     - `src/engine/behaviors/PlayerStartBehavior.js` - `getSpawnPosition()`
     - `src/engine/behaviors/PlayerMovementBehavior.js` - runtime-поведение (не component-тип схемы) управляемого игрока; читает `scene.input.getAxis()`, движет entity, per-axis AABB-коллизия
-    - `src/engine/behaviors/registerDefaultBehaviors.js` - регистрирует collider/trigger/interactable/playerStart в `BehaviorRegistry`
-    - Обновлены: `Entity.js` (`behaviors: []`), `EntityFactory.js` (компоненты → behaviors через реестр), `Scene.js` (`getAllEntities()`, `findPlayerStartEntity()`, `getPlayerStart()`, `spawnPlayer(speed)`), `GameEngine.js` (регистрация + `_update(dt)` перед рендером, Input управление, `dt` вычисление из requestAnimationFrame)
+    - `src/engine/behaviors/CameraBehavior.js` - `computeCamera(scene, camera, canvas)` (не через generic `update(dt,scene)` — вызывается напрямую из `GameEngine._updateCamera()`); `followTargetId`/`deadzoneWidth`/`deadzoneHeight`/`bounds` properties (§7 backlog "Camera asset", закрыт 2026-07-17)
+    - `src/engine/behaviors/registerDefaultBehaviors.js` - регистрирует collider/trigger/interactable/playerStart/spriteUiAnimation/dialogueTrigger/camera в `BehaviorRegistry`
+    - Обновлены: `Entity.js` (`behaviors: []`), `EntityFactory.js` (компоненты → behaviors через реестр), `Scene.js` (`getAllEntities()`, `findPlayerStartEntity()`, `getPlayerStart()`, `spawnPlayer(speed)`, `findCameraEntity()`, `hideCameraMarker()` — кеширует `scene.cameraEntity`), `GameEngine.js` (регистрация + `_update(dt)` перед рендером, Input управление, `dt` вычисление из requestAnimationFrame)
   - **Фаза D Event Graph MVP** (`src/engine/eventgraph/`, Фаза D LOGIC_SYSTEMS_PLAN):
     - `src/engine/eventgraph/EventGraphNodeRegistry.js` - реестр узлов (тип → функция-обработчик), явная регистрация, минимальный API как BehaviorRegistry
     - `src/engine/eventgraph/EventGraphRuntime.js` - интерпретатор графа (переменные, ходьба по рёбрам, синхронизация с TriggerBehavior, pub/sub-мост для OnCustomEvent)

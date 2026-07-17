@@ -50,7 +50,13 @@ const SCHEMAS = {
         { key: 'defaultState', label: 'Default State', kind: 'text', default: '' },
         { key: 'states', label: 'States (JSON: [{name,clip,transitions}])', kind: 'json', default: [] }
     ],
-    playerStart: []
+    playerStart: [],
+    camera: [
+        { key: 'followTargetId', label: 'Follow Target Id (empty = player)', kind: 'text', default: '' },
+        { key: 'deadzoneWidth', label: 'Deadzone Width', kind: 'number', default: 0 },
+        { key: 'deadzoneHeight', label: 'Deadzone Height', kind: 'number', default: 0 },
+        { key: 'bounds', label: 'Bounds (JSON {x,y,width,height}; empty = unbounded)', kind: 'json', default: null }
+    ]
 };
 
 /**

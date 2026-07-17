@@ -370,9 +370,13 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
 
 Не покрыто этим документом, остаётся отдельным бэклогом без привязки к фазам A-F:
 
-- **Camera asset** (FOV/zoom/follow-target/bounds, блок 11 каталога) — то, что реализовано в
-  этой сессии (`GameEngine._updateCamera`, v4.8.0) — заглушка-плейсхолдер для играбельности,
-  не полноценный camera-компонент из `AssetTypes.js`.
+- **Camera asset** (follow-target/deadzone/bounds) ✅ ЗАВЕРШЕНА 2026-07-17 (engine-track сессия) —
+  `camera` component + `CameraBehavior` (`src/engine/behaviors/CameraBehavior.js`), auto-attached
+  на асset-тип `camera` (`DEFAULT_ASSET_COMPONENTS`). `GameEngine._updateCamera()` делегирует
+  маркеру, если он есть на уровне; иначе legacy hard-center на игроке (v4.8.0 заглушка) остаётся
+  как fallback для уровней без камеры. Без своего UI-виджета — generic Details JSON, как
+  `spriteUiAnimation`. render layers (часть исходного описания в каталоге) не реализованы —
+  все слои рендерятся одинаково для любой камеры, не было конкретной потребности.
 - **Компоненты без отдельной фазы**: `pickup`, `damageHealth`, `movablePushable`,
   `mountableVehicleSeat`, `pathFollower`, `spawner`, `checkpointSavePoint`, `climbableLadder`,
   `conveyorZiplineJumpPadPortal`, `destructibleContainer`, `variableModifier` — реализуются по

@@ -196,6 +196,30 @@ describe('GameEngine — Input/player-movement', () => {
 
         expect(engine.camera.x).toBe(42);
     });
+
+    // §7 backlog item closed: real `camera` asset/component (docs/RUNTIME_SCHEMA.md) replaces
+    // the always-on player-centering above when a level authors a camera marker.
+    it('follows the camera marker\'s target instead of hard-centering on the player, and hides the marker', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        const manifest = movementManifest();
+        manifest.levels[0].data.objects.push({
+            id: 'cam1', type: 'camera', x: 0, y: 0, width: 32, height: 32,
+            components: [{ id: 'c3', type: 'camera', enabled: true, properties: { deadzoneWidth: 100, deadzoneHeight: 100 } }]
+        });
+        await engine.loadProject(manifest);
+        engine.scene.input = { getAxis: () => ({ x: 1, y: 0 }) };
+
+        const marker = engine.scene.entities.find(e => e.id === 'cam1');
+        expect(marker.visible).toBe(false);
+
+        engine.tick(0);
+        expect(engine.camera.x).toBe(0 + 16 - 400);
+
+        // Player moves ~3.2px — stays inside the 100px deadzone, camera doesn't follow yet.
+        engine.tick(0.05);
+        expect(engine.camera.x).toBe(0 + 16 - 400);
+    });
 });
 
 // Фаза B (tmp/2D_Editor_LOGIC_SYSTEMS_PLAN.md): sprite-sheet playback. Also closes a real,

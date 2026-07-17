@@ -26,6 +26,7 @@ export const COMPONENT_TYPES = [
     { id: 'spawner', label: 'Spawner', description: 'Periodically/conditionally spawns other Actors.', genres: 'action, roguelike' },
     { id: 'stateMachineBehavior', label: 'State Machine / Behavior', description: 'Finite state machine for NPCs/mechanisms.', genres: 'action-AI' },
     { id: 'playerStart', label: 'Player Start', description: 'Player spawn point marker.', genres: 'all' },
+    { id: 'camera', label: 'Camera', description: 'Marks the active scene camera: follow target, deadzone, bounds clamp.', genres: 'all' },
     { id: 'checkpointSavePoint', label: 'Checkpoint / Save Point', description: 'Fixes progress / respawn point.', genres: 'platformer, RPG' },
     { id: 'climbableLadder', label: 'Climbable / Ladder', description: 'Allows vertical movement along the Actor.', genres: 'platformer, metroidvania' },
     { id: 'conveyorZiplineJumpPadPortal', label: 'Conveyor / Zipline / Jump Pad / Portal', description: 'Specialized movement-on-contact Volume/Trigger + impulse or teleport.', genres: 'platformer, puzzle' },

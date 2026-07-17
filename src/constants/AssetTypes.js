@@ -15,8 +15,10 @@ export const ASSET_CATEGORIES = {
 };
 
 export const ASSET_TYPES = [
-    // Core (section 1 — not yet backed by dedicated code, only Level/Image/Actor are real today)
-    { id: 'camera', label: 'Camera', category: 'core', description: 'Scene camera: FOV/zoom, follow-target, bounds, render layers.' },
+    // Core (section 1 — Level/Image/Actor/Camera backed by dedicated code, rest are stubs)
+    // width/height/color mirror player_start's marker look — placed as a visible-in-editor,
+    // hidden-at-runtime gizmo (see Scene.hideCameraMarker()).
+    { id: 'camera', label: 'Camera', category: 'core', description: 'Scene camera: follow target, deadzone, bounds clamp.', width: 32, height: 32, color: '#38bdf8' },
     { id: 'actor', label: 'Actor Placeholder', category: 'core', description: 'Generic Actor container asset (visual + collisions + triggers + animation).' },
     { id: 'image', label: 'Image', category: 'core', description: 'Raw bitmap resource.' },
     { id: 'imageAtlas', label: 'Image Atlas', category: 'core', description: 'Auto-packed image atlas / sprite sheet source.' },
@@ -66,6 +68,7 @@ export const ASSET_TYPES = [
 // of requiring the user to remember to add the matching component manually.
 export const DEFAULT_ASSET_COMPONENTS = {
     player_start: ['playerStart'],
+    camera: ['camera'],
     // Image assets own the disk file (imgSrc) — no Sprite.
     // Composites get Sprite → imageAssetId pointing at an Image asset.
     actor: ['sprite'],

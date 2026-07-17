@@ -79,3 +79,41 @@ describe('Scene.spawnPlayer', () => {
         expect(scene.entities.length).toBe(before);
     });
 });
+
+describe('Scene camera marker', () => {
+    function makeScene() {
+        return new Scene({
+            objects: [
+                { id: 'cam1', type: 'camera', x: 10, y: 20, width: 32, height: 32,
+                    components: [{ id: 'c1', type: 'camera', enabled: true, properties: {} }] }
+            ]
+        });
+    }
+
+    it('findCameraEntity() locates the entity carrying a camera component', () => {
+        const scene = makeScene();
+        expect(scene.findCameraEntity().id).toBe('cam1');
+    });
+
+    it('returns null when the level has no camera marker', () => {
+        const scene = new Scene({ objects: [{ id: 'a', type: 'actor' }] });
+        expect(scene.findCameraEntity()).toBeUndefined();
+    });
+
+    it('hideCameraMarker() hides the marker and caches it on scene.cameraEntity', () => {
+        const scene = makeScene();
+        const entity = scene.hideCameraMarker();
+
+        expect(entity.id).toBe('cam1');
+        expect(entity.visible).toBe(false);
+        expect(scene.cameraEntity).toBe(entity);
+    });
+
+    it('destroyEntity() clears scene.cameraEntity when the marker is removed', () => {
+        const scene = makeScene();
+        scene.hideCameraMarker();
+        scene.destroyEntity('cam1');
+
+        expect(scene.cameraEntity).toBeNull();
+    });
+});
