@@ -9,7 +9,6 @@ import { LevelsPanel } from '../ui/LevelsPanel.js';
 import { SettingsPanel } from '../ui/SettingsPanel.js';
 import { Toolbar } from '../ui/Toolbar.js';
 import { StatusBar } from '../ui/StatusBar.js';
-import { ActorPropertiesWindow } from '../ui/ActorPropertiesWindow.js';
 import { MenuManager } from '../managers/MenuManager.js';
 import { eventHandlerManager } from '../event-system/EventHandlerManager.js';
 import { Logger } from '../utils/Logger.js';
@@ -33,7 +32,6 @@ export class EditorLifecycleController extends BaseModule {
         const layersPanel = document.getElementById('layers-content-panel');
         const levelsPanel = document.getElementById('levels-content-panel');
         const toolbarContainer = document.getElementById('toolbar-container');
-        const actorPropsPanelContainer = document.getElementById('actor-properties-panel');
 
         if (!canvas || !assetsPanel || !detailsPanel || !outlinerPanel || !layersPanel || !levelsPanel || !toolbarContainer) {
             throw new Error('Required DOM elements not found');
@@ -46,8 +44,7 @@ export class EditorLifecycleController extends BaseModule {
             outlinerPanel,
             layersPanel,
             levelsPanel,
-            toolbarContainer,
-            actorPropsPanelContainer
+            toolbarContainer
         };
     }
 
@@ -109,9 +106,6 @@ export class EditorLifecycleController extends BaseModule {
         editor.layersPanel = new LayersPanel(layersPanel, editor.stateManager, editor);
         editor.settingsPanel = new SettingsPanel(document.body, editor.configManager, editor);
 
-        // Initialize Asset Properties Window
-        editor.actorPropertiesWindow = new ActorPropertiesWindow(editor.stateManager, editor);
-
         // Register all UI components in lifecycle manager
         editor.lifecycle.register('assetPanel', editor.assetPanel, { priority: 3 });
         editor.lifecycle.register('detailsPanel', editor.detailsPanel, { priority: 3 });
@@ -119,7 +113,6 @@ export class EditorLifecycleController extends BaseModule {
         editor.lifecycle.register('levelsPanel', editor.levelsPanel, { priority: 3 });
         editor.lifecycle.register('layersPanel', editor.layersPanel, { priority: 3 });
         editor.lifecycle.register('settingsPanel', editor.settingsPanel, { priority: 2 });
-        editor.lifecycle.register('actorPropertiesWindow', editor.actorPropertiesWindow, { priority: 2 });
 
         // Initial render of asset panel
         editor.assetPanel.render();

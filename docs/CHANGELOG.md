@@ -4,7 +4,4 @@
 
 ## [Unreleased]
 
-- **D1**: Assets dock copies persist UI per leaf (`ui.assetCopyUiState[instanceKey]`: tabs, size, viewMode, foldersWidth); primary prefs unchanged; flush on `savePanelUiPreferences`.
-- **D2**: Outliner dock copies keep independent type filters (primary only writes `outliner.activeTypeFilters`); search already per-instance.
-- **Q-GOD**: `ViewportOperations.js` / `UIFactory.js` back under 400-line guardrail (check:size green without new OVERRIDES).
-- **B2**: browser smoke multi-viewport + Assets×N closed (0 editor console errors; multi-drop; folders width independent).
+- **Asset Editor float**: modal `ActorPropertiesWindow` removed; dblclick/open asset → dock floating workspace (`role=assetEditor`) with panels `assetPreview` / `assetIdentity` / `assetComponents` / `assetComponentDetails`; live `assetManager.updateAsset`; state `editingAssetId` / `editingComponentId`; `DockManager.openAssetEditorWorkspace` / `closeAssetEditorWorkspace` / `syncAssetEditorTitle`; View menu stays level types only; type-menu filters asset* vs level types.

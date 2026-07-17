@@ -8,9 +8,17 @@ import { LayersPanel } from '../LayersPanel.js';
 import { LevelsPanel } from '../LevelsPanel.js';
 import { AssetPanel } from '../AssetPanel.js';
 import { Toolbar } from '../Toolbar.js';
+import { AssetIdentityPanel } from '../asset-editor/AssetIdentityPanel.js';
+import { AssetComponentsPanel } from '../asset-editor/AssetComponentsPanel.js';
+import { AssetComponentDetailsPanel } from '../asset-editor/AssetComponentDetailsPanel.js';
+import { AssetPreviewPanel } from '../asset-editor/AssetPreviewPanel.js';
+import { ASSET_EDITOR_TYPES } from './DockConstants.js';
 import { Logger } from '../../utils/Logger.js';
 
-const MULTI_TYPES = new Set(['outliner', 'details', 'layers', 'levels', 'assets', 'viewport']);
+const MULTI_TYPES = new Set([
+    'outliner', 'details', 'layers', 'levels', 'assets', 'viewport',
+    ...ASSET_EDITOR_TYPES
+]);
 
 /**
  * @param {string} contentType
@@ -86,6 +94,22 @@ export function createPanelCopy(contentType, leafId, levelEditor) {
             case 'viewport':
                 // Secondary viewport: paired toolbar + canvas (VP-TB)
                 return createViewportCopy(leafId, levelEditor, root);
+            case 'assetIdentity':
+                root.classList.add('tab-content-right');
+                panel = new AssetIdentityPanel(root, levelEditor.stateManager, levelEditor, opts);
+                break;
+            case 'assetComponents':
+                root.classList.add('tab-content-right');
+                panel = new AssetComponentsPanel(root, levelEditor.stateManager, levelEditor, opts);
+                break;
+            case 'assetComponentDetails':
+                root.classList.add('tab-content-right');
+                panel = new AssetComponentDetailsPanel(root, levelEditor.stateManager, levelEditor, opts);
+                break;
+            case 'assetPreview':
+                root.classList.add('tab-content-right');
+                panel = new AssetPreviewPanel(root, levelEditor.stateManager, levelEditor, opts);
+                break;
             default:
                 return null;
         }

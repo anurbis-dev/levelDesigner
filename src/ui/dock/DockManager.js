@@ -14,6 +14,8 @@ import {
     applyFloatingWorkspaceResize
 } from './DockFloatWorkspace.js';
 import { bindDockCustomizeModeClass } from './DockDragKeyWatch.js';
+import { ASSET_EDITOR_ROLE, getEditingAsset } from '../asset-editor/AssetEditorContext.js';
+import { buildDefaultAssetEditorTree } from '../asset-editor/defaultAssetEditorTree.js';
 
 export class DockManager {
     /**
@@ -163,6 +165,79 @@ export class DockManager {
         }
         // B3.1: keep View → Panels checkmarks aligned with tree presence
         this.levelEditor?.eventHandlers?.syncDockPanelMenuCheckboxes?.();
+        // Asset editor float closed → clear editing context
+        if (!this.findAssetEditorFloat()) {
+            const sm = this.levelEditor?.stateManager;
+            if (sm?.get('editingAssetId')) {
+                sm.set('editingAssetId', null);
+                sm.set('editingComponentId', null);
+            }
+        }
+    }
+
+    /**
+     * @returns {object|null} floating window with role=assetEditor
+     */
+    findAssetEditorFloat() {
+        return (this.model.floatingWindows || []).find((f) => f.role === ASSET_EDITOR_ROLE) || null;
+    }
+
+    /**
+     * Open or focus the asset-editor floating workspace (split tree of asset* panels).
+     * @param {{ x?: number, y?: number, w?: number, h?: number, title?: string }} [opts]
+     * @returns {object|null} floating window
+     */
+    openAssetEditorWorkspace(opts = {}) {
+        if (!this._inited) return null;
+        let fw = this.findAssetEditorFloat();
+        if (fw) {
+            this.model.bumpZ(fw);
+            if (opts.title) fw.customName = opts.title;
+            this.renderer.render();
+            return fw;
+        }
+        const tree = buildDefaultAssetEditorTree(this.model);
+        fw = this.model.makeFloatingWindow(
+            tree,
+            opts.x ?? 96,
+            opts.y ?? 72,
+            opts.w ?? 720,
+            opts.h ?? 480
+        );
+        fw.role = ASSET_EDITOR_ROLE;
+        fw.customName = opts.title || 'Asset Editor';
+        this.model.floatingWindows.push(fw);
+        this.renderer.render();
+        return fw;
+    }
+
+    /** Update float chrome title from current editing asset. */
+    syncAssetEditorTitle() {
+        const fw = this.findAssetEditorFloat();
+        if (!fw) return;
+        const asset = getEditingAsset(this.levelEditor);
+        const next = asset ? `Asset: ${asset.name || asset.id}` : 'Asset Editor';
+        if (fw.customName === next) return;
+        fw.customName = next;
+        const el = this.renderer?.floatingLayer?.querySelector(
+            `.floating-window[data-float-id="${fw.id}"] .title`
+        );
+        if (el) el.textContent = next;
+        else if (this.renderer) this.renderer.render();
+    }
+
+    /**
+     * Close asset-editor float if present.
+     * @returns {boolean}
+     */
+    closeAssetEditorWorkspace() {
+        if (!this._inited) return false;
+        const fw = this.findAssetEditorFloat();
+        if (!fw) return false;
+        this.model.detachAttachLinks?.(fw);
+        this.model.floatingWindows = this.model.floatingWindows.filter((w) => w.id !== fw.id);
+        this.renderer.render();
+        return true;
     }
 
     /** Snapshot for persistence / debug. */

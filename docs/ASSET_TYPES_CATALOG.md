@@ -7,7 +7,7 @@
 Две независимые сущности, которые специально не смешаны в одну модель типов:
 
 1. **Asset-типы** (`src/constants/AssetTypes.js`) — контент/ресурсы: то, что создаётся как файл-ассет (картинка, атлас, уровень, диалог, префаб).
-2. **Component-типы** (`src/constants/ComponentTypes.js`) — поведение, навешиваемое на `Actor`/`GameObject` через `components[]` (коллизия, триггер, интерактивность и т.д.), редактируется в секции "Components" `ActorPropertiesWindow`.
+2. **Component-типы** (`src/constants/ComponentTypes.js`) — поведение, навешиваемое на `Actor`/`GameObject` через `components[]` (коллизия, триггер, интерактивность и т.д.), редактируется в asset-editor float (`assetComponents` / `assetComponentDetails`).
 
 `Actor` — универсальный контейнер; специализированные сущности (Door, Chest, NPC, Vehicle) не стали отдельными asset-типами — предполагается собирать их как `Prefab` (Actor + набор компонентов).
 
@@ -19,7 +19,7 @@
 - `buildTypeIconSvg(typeId, color, size)` (`AssetTypeIcons.js`) — минималистичная SVG-иконка по типу; используется в двух местах:
   - В гриде/списке ассетов (AssetPanel): подставляется вместо color-swatch + первой буквы, если `asset.type` совпадает с ID из каталога.
   - На canvas (CanvasRenderer): при размещении GameObject без загруженного изображения, иконка рисуется поверх fallback-прямоугольника (50% от меньшего измерения объекта, центрирована). Обеспечивает визуальное узнавание placeholder-объектов на canvas, не только в панели.
-- `createComponentStub(typeId)` создаёт стаб компонента (`{id, type, enabled, properties:{}}`), добавляется в `actor.components[]` через UI `ActorPropertiesWindow.renderComponentsSection()` и сохраняется в `toJSON()`.
+- `createComponentStub(typeId)` создаёт стаб компонента (`{id, type, enabled, properties:{}}`), добавляется в `asset.components[]` через `AssetComponentsPanel` и сохраняется в `toJSON()`.
 - **Важно**: и asset-типы, и component-типы на данном этапе — только каталог метаданных + UI создания/иконка. Реальная логика (автотайлинг Tileset, воспроизведение Dialogue Graph, физика Collider и т.п.) не реализована — это зона ответственности игрового рантайма, потребляющего экспортированный уровень.
 
 ## 1. Core (6)
@@ -63,7 +63,7 @@
 
 - План описывал 29 потенциальных asset-типов (Уровень 1-3 + уже определённые); в `ASSET_TYPES` попали 28 — структура категорий и состав типов перенесены практически 1:1.
 - Приоритетные "уровни внедрения" (1/2/3) из плана в код не перенесены как отдельные метаданные — каталог не различает приоритет типа программно, все типы равноправны и доступны для создания сразу.
-- Все типы обеих таблиц (asset и component) реализованы только как каталог + placeholder/stub — ни один не имеет специфичного редакторского UI сверх общего (кроме `actor.components[]`, который получил отдельную секцию в `ActorPropertiesWindow`).
+- Все типы обеих таблиц (asset и component) реализованы только как каталог + placeholder/stub — ни один не имеет специфичного редакторского UI сверх общего (кроме `asset.components[]` в asset-editor float).
 
 ## Связанные файлы
 
@@ -71,5 +71,5 @@
 - `src/constants/ComponentTypes.js` — каталог component-типов.
 - `src/constants/AssetTypeIcons.js` — SVG-иконки по типу.
 - `src/managers/AssetManager.js` — `createPlaceholderAsset()`.
-- `src/ui/ActorPropertiesWindow.js` — секция "Components".
+- `src/ui/asset-editor/AssetComponentsPanel.js` — список Components; `AssetComponentDetailsPanel.js` — stub details.
 - `src/ui/AssetPanelContextMenu.js`, `config/menu.js` (`buildAssetsMenu()`) — точки создания ассета по типу.

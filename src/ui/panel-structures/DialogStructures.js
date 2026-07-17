@@ -61,32 +61,6 @@ export const SettingsDialogStructure = {
 };
 
 /**
- * Asset properties dialog structure
- */
-export const ActorPropertiesDialogStructure = {
-    id: 'actor-properties-dialog',
-    title: 'Asset Properties',
-    showCloseButton: true,
-    showFooter: true,
-    footerButtons: [
-        {
-            id: 'cancel',
-            text: 'Cancel',
-            class: 'settings-btn-cancel',
-            backgroundColor: '#6b7280',
-            textColor: 'white'
-        },
-        {
-            id: 'apply',
-            text: 'Close',
-            class: 'settings-btn-save',
-            backgroundColor: '#2563eb',
-            textColor: 'white'
-        }
-    ]
-};
-
-/**
  * Universal dialog structure (for alert, confirm, prompt)
  */
 export const UniversalDialogStructure = {
@@ -180,14 +154,12 @@ export function createDialogStructure(customConfig = {}, baseStructure = Standar
 
 /**
  * Get dialog structure by type
- * @param {string} type - Dialog type ('settings', 'actor-properties', 'universal', 'folder-picker', 'grid-settings')
- * Note: 'actor-properties' is used for Asset Properties dialog
+ * @param {string} type - Dialog type ('settings', 'universal', 'folder-picker', 'grid-settings')
  * @returns {Object} - Dialog structure
  */
 export function getDialogStructure(type) {
     const structures = {
         'settings': SettingsDialogStructure,
-        'actor-properties': ActorPropertiesDialogStructure,
         'universal': UniversalDialogStructure,
         'folder-picker': FolderPickerDialogStructure,
         'grid-settings': GridSettingsDialogStructure

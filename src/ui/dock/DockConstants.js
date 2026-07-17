@@ -9,10 +9,34 @@ export const TYPE_META = {
     details: { label: 'Details', color: '#5b2e2e' },
     layers: { label: 'Layers', color: '#1f4d33' },
     assets: { label: 'Assets', color: '#5b4a1f' },
-    levels: { label: 'Levels', color: '#1f3f5b' }
+    levels: { label: 'Levels', color: '#1f3f5b' },
+    // Asset editor (float workspace) — not in View menu
+    assetPreview: { label: 'Preview', color: '#1a3a4a' },
+    assetIdentity: { label: 'Identity', color: '#3a2a4a' },
+    assetComponents: { label: 'Components', color: '#2a4a3a' },
+    assetComponentDetails: { label: 'Comp. Details', color: '#4a3a2a' }
 };
 
-export const TYPE_ORDER = ['viewport', 'outliner', 'details', 'layers', 'assets', 'levels'];
+/** Level dock panels (View menu / default layout). */
+export const LEVEL_TYPE_ORDER = ['viewport', 'outliner', 'details', 'layers', 'assets', 'levels'];
+
+/** Asset-editor panel types (float role=assetEditor only in type menu). */
+export const ASSET_EDITOR_TYPES = [
+    'assetPreview',
+    'assetIdentity',
+    'assetComponents',
+    'assetComponentDetails'
+];
+
+const ASSET_EDITOR_TYPE_SET = new Set(ASSET_EDITOR_TYPES);
+
+/** @param {string} contentType */
+export function isAssetEditorType(contentType) {
+    return ASSET_EDITOR_TYPE_SET.has(contentType);
+}
+
+/** All registered contentTypes (level + asset editor). */
+export const TYPE_ORDER = [...LEVEL_TYPE_ORDER, ...ASSET_EDITOR_TYPES];
 
 export const FLOAT_MIN_W = 130;
 export const FLOAT_MIN_H = 60;

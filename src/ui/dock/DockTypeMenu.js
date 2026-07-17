@@ -1,7 +1,13 @@
 /**
  * Floating content-type picker for dock leaf headers.
  */
-import { TYPE_ORDER, TYPE_META, typeLabel } from './DockConstants.js';
+import {
+    LEVEL_TYPE_ORDER,
+    ASSET_EDITOR_TYPES,
+    TYPE_META,
+    typeLabel,
+    isAssetEditorType
+} from './DockConstants.js';
 
 let activeMenu = null;
 
@@ -30,7 +36,10 @@ export function openTypeMenu(anchor, currentType, onSelect, opts = {}) {
         ? opts.isSingleton
         : (t) => t === 'viewport';
 
-    TYPE_ORDER.forEach((type) => {
+    // Asset-editor leaves only swap among asset* types; level leaves among level types.
+    const typeOrder = isAssetEditorType(currentType) ? ASSET_EDITOR_TYPES : LEVEL_TYPE_ORDER;
+
+    typeOrder.forEach((type) => {
         const meta = TYPE_META[type] || { label: type, color: '#333' };
         const item = document.createElement('div');
         item.className = 'item';

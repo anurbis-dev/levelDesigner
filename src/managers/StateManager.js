@@ -42,6 +42,9 @@ export class StateManager extends BaseManager {
             activeAssetTabs: new Set(), // No default tabs - loaded from content
             assetTabOrder: [], // No default tabs - loaded from content
             selectedAssets: new Set(),
+            // Asset editor float (dock role=assetEditor)
+            editingAssetId: null,
+            editingComponentId: null,
             rightPanelTab: 'details',
             leftPanelTab: 'details', // Separate tab state for left panel
             

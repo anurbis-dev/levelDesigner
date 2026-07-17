@@ -2,6 +2,13 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (D1/D2 multi-instance polish)
+
+- **D1**: Assets dock copies persist UI per leaf (`ui.assetCopyUiState[instanceKey]`: tabs, size, viewMode, foldersWidth); primary prefs unchanged; flush on `savePanelUiPreferences`.
+- **D2**: Outliner dock copies keep independent type filters (primary only writes `outliner.activeTypeFilters`); search already per-instance.
+- **Q-GOD**: `ViewportOperations.js` / `UIFactory.js` back under 400-line guardrail (check:size green without new OVERRIDES).
+- **B2**: browser smoke multi-viewport + Assets×N closed (0 editor console errors; multi-drop; folders width independent).
+
 ## Archived from CHANGELOG.md (A5)
 
 - **A5**: Assets «Panel Settings» (RMB empty / gear path) opens global Settings on the **Assets** tab; `SettingsPanel.show(tab)` / `LevelEditor.openSettings(tab)`.

@@ -44,7 +44,6 @@ const OVERRIDES = new Set([
     'event-system/EventHandlerUtils.js',
     'utils/Logger.js',
     'managers/StateManager.js',
-    'ui/ActorPropertiesWindow.js',
     'ui/BaseDialog.js',
     'ui/CanvasRenderer.js',
     'core/LayerOperations.js',

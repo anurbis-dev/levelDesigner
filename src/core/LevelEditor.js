@@ -976,21 +976,25 @@ export class LevelEditor {
     }
 
     /**
-     * Show Asset Properties Window for the given asset
-     * @param {Object} asset - Asset to show properties for
+     * Open asset-editor floating dock workspace for the given asset.
+     * @param {Object} asset - Asset to edit
      */
     showActorPropertiesPanel(asset) {
         if (!asset) {
-            Logger.ui.warn('Cannot show Asset Properties Window: no asset provided');
+            Logger.ui.warn('Cannot open Asset Editor: no asset provided');
             return;
         }
-
-        if (this.actorPropertiesWindow) {
-            this.actorPropertiesWindow.show(asset);
-            Logger.ui.info(`Opened Asset Properties Window for asset: ${asset.name}`);
-        } else {
-            Logger.ui.warn('Asset Properties Window not initialized');
+        if (!this.dockManager) {
+            Logger.ui.warn('Cannot open Asset Editor: dockManager missing');
+            return;
         }
+        this.stateManager?.set('editingAssetId', asset.id);
+        this.stateManager?.set('editingComponentId', null);
+        this.dockManager.openAssetEditorWorkspace({
+            title: `Asset: ${asset.name || asset.id}`
+        });
+        this.dockManager.syncAssetEditorTitle();
+        Logger.ui.info(`Opened Asset Editor for asset: ${asset.name}`);
     }
 
     /**
@@ -1562,7 +1566,7 @@ export class LevelEditor {
         this.layersPanel = null;
         this.levelsPanel = null;
         this.settingsPanel = null;
-        this.actorPropertiesWindow = null;
+
         // Lazily created (openProjectSettings()), not lifecycle-registered — destroy it
         // directly rather than relying on lifecycle.destroyAll() above.
         if (this.projectSettingsDialog) {
