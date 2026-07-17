@@ -6,6 +6,8 @@ import { Logger } from '../../utils/Logger.js';
 
 const KEY_MAIN = 'panels.dock.mainTree';
 const KEY_FLOAT = 'panels.dock.floatingWindows';
+/** Last known asset-editor float geometry + inner tree (survives close). */
+export const KEY_ASSET_EDITOR_LAYOUT = 'panels.dock.assetEditorLayout';
 
 function cloneJson(value) {
     if (value === undefined) return undefined;
@@ -147,6 +149,43 @@ export class DockPersistence {
             cm.forceSaveAllSettings();
         } else if (cm && typeof cm.saveModifiedConfigs === 'function') {
             cm.saveModifiedConfigs();
+        }
+    }
+
+    /**
+     * Persist last asset-editor float layout (relative pos + size + inner tree).
+     * @param {object|null|undefined} layout
+     */
+    saveAssetEditorLayout(layout) {
+        const cm = this._configManager();
+        if (!cm || !layout) return;
+        try {
+            const data = cloneJson(layout);
+            cm.set(KEY_ASSET_EDITOR_LAYOUT, data);
+            this.levelEditor?.stateManager?.set?.(KEY_ASSET_EDITOR_LAYOUT, data);
+            if (typeof cm.debouncedSave === 'function') cm.debouncedSave();
+        } catch (err) {
+            Logger.ui.warn('DockPersistence.saveAssetEditorLayout failed:', err?.message || err);
+        }
+    }
+
+    /**
+     * @returns {object|null}
+     */
+    loadAssetEditorLayout() {
+        const cm = this._configManager();
+        if (!cm) return null;
+        try {
+            const raw = cm.get(KEY_ASSET_EDITOR_LAYOUT);
+            if (!raw || typeof raw !== 'object') return null;
+            if (raw.tree && !validateTree(raw.tree)) {
+                Logger.ui.warn('DockPersistence: invalid assetEditorLayout.tree — ignore');
+                return null;
+            }
+            return cloneJson(raw);
+        } catch (err) {
+            Logger.ui.warn('DockPersistence.loadAssetEditorLayout failed:', err?.message || err);
+            return null;
         }
     }
 

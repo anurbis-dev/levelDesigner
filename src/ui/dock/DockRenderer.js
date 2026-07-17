@@ -416,6 +416,10 @@ export class DockRenderer {
         closeAllBtn.textContent = '×';
         closeAllBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            // Persist asset-editor geometry/tree before drop so next open restores it
+            if (fw.role === 'assetEditor') {
+                this.registry?.levelEditor?.dockManager?._saveAssetEditorLayout?.(fw);
+            }
             this.model.detachAttachLinks(fw);
             const gid = fw.groupId;
             this.model.floatingWindows = this.model.floatingWindows.filter((w) => w.id !== fw.id);

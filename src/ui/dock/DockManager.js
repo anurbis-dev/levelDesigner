@@ -3,7 +3,7 @@
  * B2–B4: real content leaves; multi-instance panel copies; reopen via showContentType / View.
  */
 import { Logger } from '../../utils/Logger.js';
-import { typeLabel } from './DockConstants.js';
+import { typeLabel, FLOAT_MIN_W, FLOAT_MIN_H } from './DockConstants.js';
 import { DockTreeModel } from './DockTreeModel.js';
 import { DockRenderer } from './DockRenderer.js';
 import { DockDragController } from './DockDragController.js';
@@ -15,7 +15,10 @@ import {
 } from './DockFloatWorkspace.js';
 import { bindDockCustomizeModeClass } from './DockDragKeyWatch.js';
 import { ASSET_EDITOR_ROLE, getEditingAsset } from '../asset-editor/AssetEditorContext.js';
-import { buildDefaultAssetEditorTree } from '../asset-editor/defaultAssetEditorTree.js';
+import {
+    buildDefaultAssetEditorTree,
+    remapAssetEditorTree
+} from '../asset-editor/defaultAssetEditorTree.js';
 
 export class DockManager {
     /**
@@ -165,8 +168,11 @@ export class DockManager {
         }
         // B3.1: keep View → Panels checkmarks aligned with tree presence
         this.levelEditor?.eventHandlers?.syncDockPanelMenuCheckboxes?.();
-        // Asset editor float closed → clear editing context
-        if (!this.findAssetEditorFloat()) {
+        // Keep last asset-editor layout (relative pos + inner tree) even after close
+        const ae = this.findAssetEditorFloat();
+        if (ae) {
+            this._saveAssetEditorLayout(ae);
+        } else {
             const sm = this.levelEditor?.stateManager;
             if (sm?.get('editingAssetId')) {
                 sm.set('editingAssetId', null);
@@ -182,8 +188,88 @@ export class DockManager {
         return (this.model.floatingWindows || []).find((f) => f.role === ASSET_EDITOR_ROLE) || null;
     }
 
+    /** @returns {{ width: number, height: number }} */
+    _workspaceSize() {
+        const r = this.renderer?.workspaceRect?.();
+        return {
+            width: Math.max(1, r?.width || 1),
+            height: Math.max(1, r?.height || 1)
+        };
+    }
+
+    /**
+     * Snapshot geometry (relative to workspace) + full inner split-tree.
+     * @param {object} fw
+     */
+    _saveAssetEditorLayout(fw) {
+        if (!fw?.tree) return;
+        const { width: wsW, height: wsH } = this._workspaceSize();
+        const layout = {
+            relX: fw.x / wsW,
+            relY: fw.y / wsH,
+            relW: fw.w / wsW,
+            relH: fw.h / wsH,
+            w: fw.w,
+            h: fw.h,
+            collapsed: !!fw.collapsed,
+            tree: JSON.parse(JSON.stringify(fw.tree))
+        };
+        this.persistence.saveAssetEditorLayout(layout);
+    }
+
+    /**
+     * Resolve open geometry from saved relative layout or opts/defaults.
+     * @param {object|null} saved
+     * @param {object} opts
+     * @returns {{ x: number, y: number, w: number, h: number, collapsed: boolean, tree: object }}
+     */
+    _resolveAssetEditorOpenLayout(saved, opts = {}) {
+        const { width: wsW, height: wsH } = this._workspaceSize();
+        let w = opts.w;
+        let h = opts.h;
+        let x = opts.x;
+        let y = opts.y;
+        let collapsed = false;
+        let tree = null;
+
+        if (saved) {
+            if (w == null) {
+                w = typeof saved.relW === 'number'
+                    ? saved.relW * wsW
+                    : (saved.w ?? 720);
+            }
+            if (h == null) {
+                h = typeof saved.relH === 'number'
+                    ? saved.relH * wsH
+                    : (saved.h ?? 480);
+            }
+            if (x == null) {
+                x = typeof saved.relX === 'number' ? saved.relX * wsW : (saved.x ?? 96);
+            }
+            if (y == null) {
+                y = typeof saved.relY === 'number' ? saved.relY * wsH : (saved.y ?? 72);
+            }
+            collapsed = !!saved.collapsed;
+            if (saved.tree) {
+                tree = remapAssetEditorTree(this.model, saved.tree);
+            }
+        }
+
+        w = Math.max(FLOAT_MIN_W, w ?? 720);
+        h = Math.max(FLOAT_MIN_H, h ?? 480);
+        // Keep fully on-screen when possible
+        w = Math.min(w, wsW);
+        h = Math.min(h, wsH);
+        x = Math.max(0, Math.min(x ?? 96, Math.max(0, wsW - w)));
+        y = Math.max(0, Math.min(y ?? 72, Math.max(0, wsH - h)));
+
+        if (!tree) tree = buildDefaultAssetEditorTree(this.model);
+        return { x, y, w, h, collapsed, tree };
+    }
+
     /**
      * Open or focus the asset-editor floating workspace (split tree of asset* panels).
+     * Restores last relative position + inner layout after close / across sessions.
      * @param {{ x?: number, y?: number, w?: number, h?: number, title?: string }} [opts]
      * @returns {object|null} floating window
      */
@@ -196,18 +282,16 @@ export class DockManager {
             this.renderer.render();
             return fw;
         }
-        const tree = buildDefaultAssetEditorTree(this.model);
-        fw = this.model.makeFloatingWindow(
-            tree,
-            opts.x ?? 96,
-            opts.y ?? 72,
-            opts.w ?? 720,
-            opts.h ?? 480
-        );
+        const saved = this.persistence.loadAssetEditorLayout();
+        const geo = this._resolveAssetEditorOpenLayout(saved, opts);
+        fw = this.model.makeFloatingWindow(geo.tree, geo.x, geo.y, geo.w, geo.h);
         fw.role = ASSET_EDITOR_ROLE;
         fw.customName = opts.title || 'Asset Editor';
+        fw.collapsed = geo.collapsed;
         this.model.floatingWindows.push(fw);
         this.renderer.render();
+        // Persist resolved layout (fresh leaf ids already in tree)
+        this._saveAssetEditorLayout(fw);
         return fw;
     }
 
@@ -227,13 +311,14 @@ export class DockManager {
     }
 
     /**
-     * Close asset-editor float if present.
+     * Close asset-editor float if present (layout saved for next open).
      * @returns {boolean}
      */
     closeAssetEditorWorkspace() {
         if (!this._inited) return false;
         const fw = this.findAssetEditorFloat();
         if (!fw) return false;
+        this._saveAssetEditorLayout(fw);
         this.model.detachAttachLinks?.(fw);
         this.model.floatingWindows = this.model.floatingWindows.filter((w) => w.id !== fw.id);
         this.renderer.render();
