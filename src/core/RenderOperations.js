@@ -7,6 +7,10 @@ import { PERFORMANCE, CAMERA } from '../constants/EditorConstants.js';
 import { WorldPositionUtils } from '../utils/WorldPositionUtils.js';
 import { throttle } from '../utils/PerformanceUtils.js';
 import { refreshAllViewportInfoOverlays } from '../ui/dock/ViewportInfoOverlay.js';
+import {
+    getCameraDesignSize as utilGetCameraDesignSize,
+    getAspectSafeRect
+} from '../utils/CameraAspectUtils.js';
 
 /**
  * Render Operations module for LevelEditor
@@ -1374,15 +1378,7 @@ export class RenderOperations extends BaseModule {
      * @returns {{w:number,h:number}}
      */
     getCameraDesignSize(obj) {
-        const props = obj?.properties || {};
-        const aspect = props.aspect || CAMERA.DEFAULT_ASPECT;
-        if (aspect === 'custom') {
-            const w = Number(props.resolutionWidth) > 0 ? Number(props.resolutionWidth) : CAMERA.VIEW_REF_WIDTH;
-            const h = Number(props.resolutionHeight) > 0 ? Number(props.resolutionHeight) : CAMERA.VIEW_REF_HEIGHT;
-            return { w, h };
-        }
-        const preset = CAMERA.ASPECT_PRESETS[aspect] || CAMERA.ASPECT_PRESETS[CAMERA.DEFAULT_ASPECT];
-        return { w: preset.w, h: preset.h };
+        return utilGetCameraDesignSize(obj);
     }
 
     /**
@@ -1424,28 +1420,11 @@ export class RenderOperations extends BaseModule {
         if (!obj || obj.type !== 'camera') return;
 
         const { w: refW, h: refH } = this.getCameraDesignSize(obj);
-        if (!(refW > 0) || !(refH > 0)) return;
-
         const cw = canvas.width;
         const ch = canvas.height;
-        const designAspect = refW / refH;
-        const canvasAspect = cw / ch;
-
-        let safeW;
-        let safeH;
-        let ox;
-        let oy;
-        if (canvasAspect > designAspect) {
-            safeH = ch;
-            safeW = ch * designAspect;
-            ox = (cw - safeW) / 2;
-            oy = 0;
-        } else {
-            safeW = cw;
-            safeH = cw / designAspect;
-            ox = 0;
-            oy = (ch - safeH) / 2;
-        }
+        const safe = getAspectSafeRect(cw, ch, refW, refH);
+        if (!safe) return;
+        const { safeW, safeH, ox, oy } = safe;
 
         const barColor = obj.properties?.letterboxColor || CAMERA.LETTERBOX_COLOR;
         ctx.save();

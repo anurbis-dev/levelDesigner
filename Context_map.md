@@ -17,7 +17,7 @@
 ### Основные компоненты (v4.0.2 Phase B dock closed B0–B5; Phase A Refactor done)
 - **LevelEditor** — координатор; multi-level sessions; `project`; controllers Config/Lifecycle/Preferences; **`viewportViewManager`** (multi-viewport B4.2); **`dockManager`** (единственный layout; B5 удалил `PanelPositionManager`)
 - **Dock (Phase B)**: `src/ui/dock/` — `DockManager`, `DockTreeModel`, `DockRenderer`, `DockDragController`, `DockContentRegistry`, `DockPanelFactory`, `DockTypeMenu`, `ViewportLeafChrome`, `DockFloatWorkspace`, `DockPersistence` (`panels.dock.mainTree` + `panels.dock.floatingWindows`). ContentTypes: viewport/outliner/details/layers/assets/levels. Multi-instance copies; nested binary splits (row/column). View menu = per-contentType, не Left/Right panel. **Assets copies**: UI-independent (`AssetPanel.uiStateKey` → `panelUI.<instanceKey>.*` for selection/tabs/filters; prefs persist primary only; catalog + canvas drop shared)
-- **ViewportViewManager** + **ViewportViewNav** — N viewport leaves (work/game camera, per-view type filters, shared MouseHandlers, pointer-capture, gesture UI lock `viewport-gesture-mode`)
+- **ViewportViewManager** + **ViewportViewNav** — N viewport leaves (work/game camera, per-view type filters, shared MouseHandlers, pointer-capture, gesture UI lock `viewport-gesture-mode`); game source adaptive fit via `CameraAspectUtils` (C4)
 - **TypeFilterMenu** — shared type filter UX (Outliner / Assets / Viewport chrome)
 - **Контроллеры инициализации**: EditorConfigController, EditorLifecycleController, EditorPreferencesController
 - **Менеджеры**: StateManager, ConfigManager, HistoryManager, EventHandlerManager, GlobalEventRegistry, LevelsManager, MenuManager, …

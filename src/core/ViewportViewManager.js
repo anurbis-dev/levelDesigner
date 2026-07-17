@@ -22,6 +22,11 @@ import {
     removeViewportInfoOverlay,
     updateViewportInfoOverlay
 } from '../ui/dock/ViewportInfoOverlay.js';
+import {
+    getCameraDesignSize,
+    resolveAdaptiveGameCameraPose,
+    viewZoomToDesignZoom
+} from '../utils/CameraAspectUtils.js';
 
 /** @typedef {{ kind: 'work' } | { kind: 'game', objectId: string }} CameraSource */
 /** @typedef {{ x: number, y: number, zoom: number }} CameraPose */
@@ -274,7 +279,8 @@ export class ViewportViewManager {
     }
 
     /**
-     * Inverse of resolveGameCameraObject: viewport pose → camera object center + zoom.
+     * Inverse of resolveGameCameraObject: viewport pose → camera object center + design zoom.
+     * View zoom is adaptive (C4); `properties.zoom` stays design-space.
      * @param {ViewportView} view
      * @param {Partial<CameraPose>} patch
      * @returns {boolean} true if applied
@@ -290,20 +296,25 @@ export class ViewportViewManager {
         const w = canvas?.width || 1;
         const h = canvas?.height || 1;
         const cur = this.resolveGameCameraObject(objectId, canvas)
-            || { x: 0, y: 0, zoom: obj.properties?.zoom ?? 1 };
-        let zoom = patch.zoom !== undefined ? patch.zoom : (obj.properties?.zoom ?? cur.zoom ?? 1);
-        if (!zoom || zoom <= 0) zoom = 1;
+            || { x: 0, y: 0, zoom: 1 };
+        const viewZoom = patch.zoom !== undefined
+            ? patch.zoom
+            : (cur.zoom > 0 ? cur.zoom : 1);
+        const vz = viewZoom > 0 ? viewZoom : 1;
         const x = patch.x !== undefined ? patch.x : cur.x;
         const y = patch.y !== undefined ? patch.y : cur.y;
 
-        const centerX = x + w / (2 * zoom);
-        const centerY = y + h / (2 * zoom);
+        const centerX = x + w / (2 * vz);
+        const centerY = y + h / (2 * vz);
         const ow = obj.width || 0;
         const oh = obj.height || 0;
         obj.x = centerX - ow / 2;
         obj.y = centerY - oh / 2;
         if (!obj.properties) obj.properties = {};
-        obj.properties.zoom = zoom;
+
+        const { w: refW, h: refH } = getCameraDesignSize(obj);
+        const designZoom = viewZoomToDesignZoom(vz, w, h, refW, refH);
+        obj.properties.zoom = designZoom;
 
         // DetailsPanel live-refreshes transform + camera zoom without full re-render
         this.editor.stateManager?.notifyListeners?.('objectPropertyChanged', obj, {
@@ -313,7 +324,7 @@ export class ViewportViewManager {
         if (patch.zoom !== undefined) {
             this.editor.stateManager?.notifyListeners?.('objectPropertyChanged', obj, {
                 property: 'properties.zoom',
-                newValue: zoom
+                newValue: designZoom
             });
         }
         return true;
@@ -425,6 +436,7 @@ export class ViewportViewManager {
     }
 
     /**
+     * C4: game-camera object → adaptive view pose (design frustum fills letterbox safe-rect).
      * @param {string} objectId
      * @param {HTMLCanvasElement} canvas
      * @returns {CameraPose|null}
@@ -432,18 +444,7 @@ export class ViewportViewManager {
     resolveGameCameraObject(objectId, canvas) {
         const obj = this.editor.getCachedObject?.(objectId)
             || this.editor.level?.findObjectById?.(objectId);
-        if (!obj || obj.type !== 'camera') return null;
-
-        const zoom = obj.properties?.zoom ?? 1;
-        const w = canvas?.width || 1;
-        const h = canvas?.height || 1;
-        const centerX = obj.x + (obj.width || 0) / 2;
-        const centerY = obj.y + (obj.height || 0) / 2;
-        return {
-            zoom,
-            x: centerX - w / (2 * zoom),
-            y: centerY - h / (2 * zoom)
-        };
+        return resolveAdaptiveGameCameraPose(obj, canvas);
     }
 
     /**

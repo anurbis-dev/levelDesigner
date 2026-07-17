@@ -5,11 +5,13 @@
 
 ## Open
 
-*(пусто — следующий product из todos P1: C1–C2 / A4–A5; B2 smoke when browser MCP)*
+*(пусто — следующий product из todos P1: A4–A5; B2 smoke when browser MCP)*
 
 
 ## Closed (архив)
 
+✅ C4 — adaptive fit: design frustum fills letterbox safe-rect on any viewport size/aspect (UI preview; `CameraAspectUtils`)  
+✅ C3-toggle — cam icon click + `.` toggle work ↔ last/selected game; chrome icon refresh on setSource  
 ✅ C3 — multi camera: `properties.isMain` (Details Main), cycle `]`/`[`, jump fallback main, chrome ★, gold frustum  
 ✅ C2 — aspect presets + letterbox/vignette на game-source viewport; Details Aspect/Resolution/Vignette  
 ✅ C1 — рамка game camera: dashed frustum (design res / zoom) + cross; skip active viewport source  

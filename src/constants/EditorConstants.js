@@ -51,7 +51,7 @@ export const CAMERA = {
     MAX_ZOOM: 10.0,
     ZOOM_STEP: 0.1,
     PAN_SPEED: 1.0,
-    /** C1/C2: design resolution / aspect for game-camera frame + letterbox */
+    /** C1/C2/C4: design resolution / aspect for frame + letterbox + adaptive fit */
     VIEW_REF_WIDTH: 1920,
     VIEW_REF_HEIGHT: 1080,
     DEFAULT_ASPECT: '16:9',

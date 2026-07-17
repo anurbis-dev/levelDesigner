@@ -77,8 +77,17 @@ export function updateViewportInfoOverlay(view, editor) {
     const camRow = el.querySelector('[data-k="cam"]');
     if (camRow) camRow.style.color = cam.color || '';
 
-    const pose = vvm?.resolveCamera?.(view) || editor.stateManager?.get('camera') || { zoom: 1 };
-    const zoomPct = Math.round((pose.zoom || 1) * 100);
+    // Game source: show design zoom (properties.zoom), not adaptive view zoom (C4)
+    let zoomVal = 1;
+    if (view?.source?.kind === 'game' && view.source.objectId) {
+        const camObj = editor.getCachedObject?.(view.source.objectId)
+            || editor.level?.findObjectById?.(view.source.objectId);
+        zoomVal = camObj?.properties?.zoom ?? 1;
+    } else {
+        const pose = vvm?.resolveCamera?.(view) || editor.stateManager?.get('camera') || { zoom: 1 };
+        zoomVal = pose.zoom || 1;
+    }
+    const zoomPct = Math.round((zoomVal || 1) * 100);
     setText(el.querySelector('[data-k="zoom"]'), `Zoom ${zoomPct}%`);
 
     updateFlags(el.querySelector('[data-k="flags"]'), view, vvm);

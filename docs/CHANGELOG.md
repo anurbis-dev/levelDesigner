@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- **C3-toggle**: cam icon click + hotkey `.` toggle work ↔ last/selected game camera; `setSource` refreshes chrome icon; RMB opens source menu; menu pick still updates icon/check.
+- **C4**: adaptive fit of game-camera design frustum into any viewport (letterbox safe-rect); `CameraAspectUtils`; design zoom preserved in object props.
