@@ -628,6 +628,98 @@ header .text-sm {
     height: 100%;
 }
 
+/* Play dialogue HUD (choices + item pick) */
+.dialogue-play-hud {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: none;
+    justify-content: center;
+    align-items: flex-end;
+    padding: 16px 20px 28px;
+    pointer-events: none;
+    z-index: 2;
+    box-sizing: border-box;
+}
+
+.dialogue-play-hud__panel {
+    pointer-events: auto;
+    width: min(640px, 100%);
+    background: rgba(15, 23, 42, 0.92);
+    border: 1px solid #4b5563;
+    border-radius: 10px;
+    padding: 14px 16px;
+    color: #e5e7eb;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+    font-family: system-ui, sans-serif;
+}
+
+.dialogue-play-hud__speaker {
+    font-weight: 700;
+    font-size: 13px;
+    color: #fbbf24;
+    margin-bottom: 6px;
+}
+
+.dialogue-play-hud__text {
+    font-size: 15px;
+    line-height: 1.45;
+    margin-bottom: 12px;
+    white-space: pre-wrap;
+}
+
+.dialogue-play-hud__actions,
+.dialogue-play-hud__picks {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.dialogue-play-hud__btn {
+    appearance: none;
+    text-align: left;
+    background: #1e3a5f;
+    color: #e5e7eb;
+    border: 1px solid #3b82f6;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.dialogue-play-hud__btn:hover {
+    background: #2563eb;
+}
+
+.dialogue-play-hud__btn--item {
+    border-color: #10b981;
+    background: #064e3b;
+}
+
+.dialogue-play-hud__btn--item:hover {
+    background: #059669;
+}
+
+.dialogue-play-hud__btn--secondary {
+    border-color: #6b7280;
+    background: #374151;
+}
+
+.dialogue-play-hud__hint {
+    font-size: 12px;
+    color: #9ca3af;
+    margin-bottom: 4px;
+}
+
+.dialogue-play-hud__inv {
+    margin-top: 10px;
+    font-size: 11px;
+    color: #6b7280;
+    border-top: 1px solid #374151;
+    padding-top: 8px;
+}
+
 .console-resize-handle {
     position: absolute;
     bottom: 0;

@@ -1,6 +1,6 @@
 /**
  * Minimal item bag for dialogue give/take/require (LOGIC_SYSTEMS dialogue extensions).
- * itemId → count. Full inventory UI / Item Definition assets are separate backlog.
+ * itemId → count. Used for player bag and per-NPC bags (Scene.npcInventories).
  */
 export class Inventory {
     /**

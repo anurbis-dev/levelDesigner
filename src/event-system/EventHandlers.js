@@ -8,7 +8,7 @@ import { ResetRegistry } from '../utils/ResetRegistry.js';
 
 /** Dock leaf contentTypes (View → Panels, B3.1). */
 const DOCK_CONTENT_PANELS = Object.freeze([
-    'viewport', 'outliner', 'details', 'layers', 'assets', 'levels', 'eventGraph', 'dialogues'
+    'viewport', 'outliner', 'details', 'layers', 'assets', 'levels', 'eventGraph', 'dialogues', 'items'
 ]);
 
 /** Legacy L/R/assets menu keys → dock contentType when dock is active. */

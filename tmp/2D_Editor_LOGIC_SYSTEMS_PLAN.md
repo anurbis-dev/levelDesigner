@@ -399,6 +399,12 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
 
 **Критерий:** vitest give/take/require/itemPick + multi-speaker; UI fields present.
 
+### Follow-up (2026-07-17) — Play HUD + Items UI + NPC bags ✅
+
+- `DialoguePlayHud` on play overlay: Continue / choice buttons / item pick list.
+- Dock `items`: `level.items`, `level.inventory`, `level.npcInventories` + history provider.
+- Runtime multi-bag: `Scene.npcInventories` / `getBag`; effects `to`/`from`; itemPick → speaker bag.
+
 ---
 
 ## §7 — Унаследованный бэклог из `ENGINE_PLAN.md` (не потерян, перенесён сюда)

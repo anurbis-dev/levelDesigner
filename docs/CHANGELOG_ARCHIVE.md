@@ -2,6 +2,11 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (English UI + Dialogue items/multi-NPC)
+
+- **UI English-only**: user-facing Russian strings in Dialogues panel, dock chrome (tooltips/empty states/type menu), TypeFilterMenu, ErrorHandler, FileManager → English.
+- **Dialogue items + multi-NPC (Фаза I)**: `participants` / `speakerId`; player `choices` as replies; `giveItem`/`takeItem` effects, `requireItem`, `itemPick` on choices; `Inventory` + `Scene.inventory` / `level.inventory` seed. Dialogues panel authoring for all of the above.
+
 ## Archived from CHANGELOG.md (Dialogue UI + EG pickers, Фаза H)
 
 - **Dialogue UI + Event Graph pickers (Фаза H)**: dock `dialogues` panel (graphs/nodes/form, choices+conditions); `HistoryManager` snapshots `level.dialogues`. Event Graph params: `objectId`/`dialogueId` selects via `LevelObjectPicker` (level objects + dialogues).

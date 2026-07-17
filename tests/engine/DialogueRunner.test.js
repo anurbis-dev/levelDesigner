@@ -173,4 +173,77 @@ describe('DialogueRunner', () => {
         expect(rt.scene.inventory.count('coin')).toBe(3);
         expect(runner.isEnded()).toBe(true);
     });
+
+    it('giveItem to NPC objectId bag and takeItem from it', () => {
+        const bags = new Map();
+        const scene = {
+            inventory: new Inventory([{ itemId: 'gold', count: 0 }]),
+            getBag(ref) {
+                if (!ref || ref === 'player') return this.inventory;
+                if (!bags.has(ref)) bags.set(ref, new Inventory(null));
+                return bags.get(ref);
+            }
+        };
+        const rt = {
+            getVariable: () => undefined,
+            setVariable: () => {},
+            scene
+        };
+        const data = {
+            formatVersion: 2,
+            startNode: 'd1',
+            participants: [
+                { id: 'player', role: 'player' },
+                { id: 'merchant', role: 'npc', objectId: 'npc_m' }
+            ],
+            nodes: [{
+                id: 'd1',
+                speakerId: 'merchant',
+                text: 'Trade',
+                effects: [{ type: 'giveItem', itemId: 'gem', count: 2, to: 'npc_m' }],
+                choices: [{
+                    text: 'Buy gem',
+                    next: null,
+                    effects: [{ type: 'takeItem', itemId: 'gem', count: 1, from: 'npc_m' },
+                        { type: 'giveItem', itemId: 'gem', count: 1, to: 'player' }]
+                }]
+            }]
+        };
+        const runner = new DialogueRunner(data, rt);
+        expect(scene.getBag('npc_m').count('gem')).toBe(2);
+        runner.advance(0);
+        expect(scene.getBag('npc_m').count('gem')).toBe(1);
+        expect(scene.inventory.count('gem')).toBe(1);
+    });
+
+    it('itemPick deposits into speaker object bag', () => {
+        const bags = new Map();
+        const scene = {
+            inventory: new Inventory([{ itemId: 'apple', count: 1 }]),
+            getBag(ref) {
+                if (!ref || ref === 'player') return this.inventory;
+                if (!bags.has(ref)) bags.set(ref, new Inventory(null));
+                return bags.get(ref);
+            }
+        };
+        const rt = { getVariable: () => undefined, setVariable: () => {}, scene };
+        const data = {
+            formatVersion: 2,
+            startNode: 'd1',
+            participants: [
+                { id: 'player', role: 'player' },
+                { id: 'guard', role: 'npc', objectId: 'g1', displayName: 'Guard' }
+            ],
+            nodes: [{
+                id: 'd1',
+                speakerId: 'guard',
+                text: 'Tribute',
+                choices: [{ text: 'Offer…', next: null, itemPick: { count: 1 } }]
+            }]
+        };
+        const runner = new DialogueRunner(data, rt);
+        expect(runner.advance(0, { selectedItemId: 'apple' }).ok).toBe(true);
+        expect(scene.inventory.has('apple')).toBe(false);
+        expect(scene.getBag('g1').has('apple')).toBe(true);
+    });
 });

@@ -130,6 +130,7 @@ export class HistoryOperations extends BaseModule {
         this.restoreSelection(state.selection);
         this.restoreEventGraphFromHistory(state.eventGraph);
         this.restoreDialoguesFromHistory(state.dialogues);
+        this.restoreInventoryDataFromHistory(state.inventoryData);
         this.finalizeHistoryRestore();
     }
 
@@ -158,6 +159,24 @@ export class HistoryOperations extends BaseModule {
         this.editor.stateManager?.set?.(
             'dialoguesRevision',
             (this.editor.stateManager.get('dialoguesRevision') || 0) + 1
+        );
+    }
+
+    /**
+     * Restore level.items / inventory / npcInventories from history.
+     * @param {object|undefined} data
+     */
+    restoreInventoryDataFromHistory(data) {
+        if (data === undefined || !this.editor.level) return;
+        const copy = JSON.parse(JSON.stringify(data || {}));
+        this.editor.level.items = Array.isArray(copy.items) ? copy.items : [];
+        this.editor.level.inventory = copy.inventory ?? [];
+        this.editor.level.npcInventories = copy.npcInventories && typeof copy.npcInventories === 'object'
+            ? copy.npcInventories
+            : {};
+        this.editor.stateManager?.set?.(
+            'inventoryRevision',
+            (this.editor.stateManager.get('inventoryRevision') || 0) + 1
         );
     }
 

@@ -2,6 +2,7 @@ import { BaseModule } from './BaseModule.js';
 import { Logger } from '../utils/Logger.js';
 import { ProjectExporter } from '../models/ProjectExporter.js';
 import { GameEngine } from '../engine/GameEngine.js';
+import { DialoguePlayHud } from '../engine/DialoguePlayHud.js';
 
 /**
  * Play-in-editor (engine plan §3, tmp/2D_Editor_ENGINE_PLAN.md). Serializes the current
@@ -9,6 +10,7 @@ import { GameEngine } from '../engine/GameEngine.js';
  * self-contained src/engine/GameEngine in a fullscreen overlay canvas, and tears it down
  * on Stop. GameEngine.loadProject() spawns the controllable player and owns its own
  * keyboard Input instance (src/engine/Input.js) — nothing input-related lives here.
+ * DialoguePlayHud mounts on the overlay for choices / item pick.
  * @extends BaseModule
  */
 export class PlayOperations extends BaseModule {
@@ -17,6 +19,8 @@ export class PlayOperations extends BaseModule {
         this._engine = null;
         this._overlay = null;
         this._resizeObserver = null;
+        /** @type {DialoguePlayHud|null} */
+        this._dialogueHud = null;
         Logger.lifecycle.info('PlayOperations module initialized.');
     }
 
@@ -57,6 +61,8 @@ export class PlayOperations extends BaseModule {
         }
 
         this._engine.start();
+        this._dialogueHud = new DialoguePlayHud(this._overlay, () => this._engine?.scene);
+        this._dialogueHud.start();
         this.editor.stateManager.set('playMode', true);
         Logger.status.success('Play started — Esc to stop');
     }
@@ -64,6 +70,10 @@ export class PlayOperations extends BaseModule {
     stop() {
         if (!this.isPlaying()) return;
 
+        if (this._dialogueHud) {
+            this._dialogueHud.stop();
+            this._dialogueHud = null;
+        }
         this._engine.stop();
         this._engine = null;
         this._destroyOverlay();

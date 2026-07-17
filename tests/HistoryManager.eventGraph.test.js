@@ -53,5 +53,23 @@ describe('HistoryManager eventGraph snapshots', () => {
         const next = hm.redo();
         expect(next.dialogues[0].id).toBe('guard');
     });
+
+    it('includes inventoryData in undo restore', () => {
+        let inv = { items: [], inventory: [], npcInventories: {} };
+        hm.setInventoryDataProvider(() => inv);
+        graph = null;
+        hm.saveState([], new Set(), true, null);
+        inv = {
+            items: [{ id: 'key', displayName: 'Key' }],
+            inventory: [{ itemId: 'key', count: 1 }],
+            npcInventories: { o1: [{ itemId: 'key', count: 2 }] }
+        };
+        hm.saveState([], new Set(), false, null);
+        const prev = hm.undo();
+        expect(prev.inventoryData.items).toEqual([]);
+        const next = hm.redo();
+        expect(next.inventoryData.items[0].id).toBe('key');
+        expect(next.inventoryData.npcInventories.o1[0].count).toBe(2);
+    });
 });
 

@@ -21,6 +21,7 @@ import {
     EFFECT_TYPES
 } from './DialogueModel.js';
 import { createIdSelect, listLevelObjectOptions } from '../LevelObjectPicker.js';
+import { listItemOptions } from '../items/ItemModel.js';
 
 const INPUT_CSS = 'width:100%;box-sizing:border-box;background:#1f2937;color:#e5e7eb;border:1px solid #4b5563;border-radius:4px;padding:3px 6px;';
 const BTN_CSS = 'background:#374151;color:#e5e7eb;border:1px solid #4b5563;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:12px;';
@@ -537,11 +538,39 @@ export class DialoguesPanel {
     }
 
     /**
+     * Bag target options: player + NPC participants (objectId preferred).
+     * @private
+     */
+    _bagOptions(dialogue) {
+        const opts = [{ id: 'player', label: 'Player bag' }];
+        const seen = new Set(['player']);
+        for (const p of dialogue.participants || []) {
+            if (p.role === 'player') continue;
+            const key = p.objectId || p.id;
+            if (!key || seen.has(key)) continue;
+            seen.add(key);
+            opts.push({
+                id: key,
+                label: `${p.displayName || p.id} bag${p.objectId ? '' : ' (no object)'}`
+            });
+        }
+        return opts;
+    }
+
+    /** @private */
+    _itemOptions(extraIds = []) {
+        const items = this.levelEditor?.level?.items || [];
+        return listItemOptions(items, extraIds);
+    }
+
+    /**
      * @private
      */
     _effectsEditor(dialogue, node, effects, onChange) {
         const wrap = document.createElement('div');
         wrap.style.cssText = 'border:1px solid #374151;border-radius:6px;padding:6px;background:#0f172a;';
+        const itemOpts = this._itemOptions(effects.map((e) => e.itemId).filter(Boolean));
+        const bagOpts = this._bagOptions(dialogue);
 
         effects.forEach((fx, index) => {
             const row = document.createElement('div');
@@ -562,16 +591,30 @@ export class DialoguesPanel {
             });
             row.appendChild(typeSel);
 
-            const itemIn = document.createElement('input');
-            itemIn.type = 'text';
-            itemIn.placeholder = 'itemId';
-            itemIn.value = fx.itemId || '';
-            itemIn.style.cssText = INPUT_CSS + 'flex:1;min-width:80px;';
-            itemIn.addEventListener('change', () => {
-                const next = effects.map((e, i) => (i === index ? { ...e, itemId: itemIn.value } : e));
-                onChange(next.map(normalizeEffect).filter(Boolean));
-            });
-            row.appendChild(itemIn);
+            if (itemOpts.length) {
+                const itemSel = createIdSelect({
+                    value: fx.itemId || '',
+                    emptyLabel: '— item —',
+                    options: itemOpts,
+                    onChange: (v) => {
+                        const next = effects.map((e, i) => (i === index ? { ...e, itemId: v } : e));
+                        onChange(next.map(normalizeEffect).filter(Boolean));
+                    }
+                });
+                itemSel.style.cssText = INPUT_CSS + 'flex:1;min-width:100px;';
+                row.appendChild(itemSel);
+            } else {
+                const itemIn = document.createElement('input');
+                itemIn.type = 'text';
+                itemIn.placeholder = 'itemId';
+                itemIn.value = fx.itemId || '';
+                itemIn.style.cssText = INPUT_CSS + 'flex:1;min-width:80px;';
+                itemIn.addEventListener('change', () => {
+                    const next = effects.map((e, i) => (i === index ? { ...e, itemId: itemIn.value } : e));
+                    onChange(next.map(normalizeEffect).filter(Boolean));
+                });
+                row.appendChild(itemIn);
+            }
 
             const cnt = document.createElement('input');
             cnt.type = 'number';
@@ -585,6 +628,35 @@ export class DialoguesPanel {
                 onChange(next.map(normalizeEffect).filter(Boolean));
             });
             row.appendChild(cnt);
+
+            const bagKey = fx.type === 'takeItem' ? 'from' : 'to';
+            const bagVal = fx[bagKey] || 'player';
+            const bagSel = createIdSelect({
+                value: bagVal,
+                emptyLabel: 'Player bag',
+                options: bagOpts,
+                onChange: (v) => {
+                    const next = effects.map((e, i) => {
+                        if (i !== index) return e;
+                        const copy = { ...e };
+                        if (!v || v === 'player') {
+                            delete copy.to;
+                            delete copy.from;
+                        } else if (copy.type === 'takeItem') {
+                            copy.from = v;
+                            delete copy.to;
+                        } else {
+                            copy.to = v;
+                            delete copy.from;
+                        }
+                        return copy;
+                    });
+                    onChange(next.map(normalizeEffect).filter(Boolean));
+                }
+            });
+            bagSel.style.cssText = INPUT_CSS + 'flex:1;min-width:110px;';
+            bagSel.title = bagKey === 'from' ? 'From bag' : 'To bag';
+            row.appendChild(bagSel);
 
             const rm = document.createElement('button');
             rm.type = 'button';
@@ -602,7 +674,8 @@ export class DialoguesPanel {
         add.textContent = '+ Effect';
         add.style.cssText = BTN_CSS;
         add.addEventListener('click', () => {
-            onChange([...(effects || []), { type: 'giveItem', itemId: '', count: 1 }]);
+            const defaultItem = this.levelEditor?.level?.items?.[0]?.id || '';
+            onChange([...(effects || []), { type: 'giveItem', itemId: defaultItem, count: 1 }]);
         });
         wrap.appendChild(add);
         return wrap;
@@ -688,18 +761,58 @@ export class DialoguesPanel {
         box.appendChild(this._fieldLabel('Require item (hide if missing)'));
         const reqRow = document.createElement('div');
         reqRow.style.cssText = 'display:flex;gap:4px;';
-        const reqItem = document.createElement('input');
-        reqItem.type = 'text';
-        reqItem.placeholder = 'itemId';
-        reqItem.value = choice.requireItem?.itemId || '';
-        reqItem.style.cssText = INPUT_CSS + 'flex:1;';
+        const reqItemOpts = this._itemOptions(
+            choice.requireItem?.itemId ? [choice.requireItem.itemId] : []
+        );
         const reqCnt = document.createElement('input');
         reqCnt.type = 'number';
         reqCnt.min = '1';
         reqCnt.value = String(choice.requireItem?.count ?? 1);
         reqCnt.style.cssText = INPUT_CSS + 'width:56px;';
-        const applyReq = () => {
-            const id = reqItem.value.trim();
+        /** @type {() => string} */
+        let getReqItemId = () => '';
+        if (reqItemOpts.length) {
+            const reqSel = createIdSelect({
+                value: choice.requireItem?.itemId || '',
+                emptyLabel: '— none —',
+                options: reqItemOpts,
+                onChange: (v) => {
+                    if (!v) {
+                        this._patchChoice(dialogue, node, index, { clearRequireItem: true });
+                        return;
+                    }
+                    this._patchChoice(dialogue, node, index, {
+                        requireItem: {
+                            itemId: v,
+                            count: Number(reqCnt.value) || 1
+                        }
+                    });
+                }
+            });
+            reqSel.style.cssText = INPUT_CSS + 'flex:1;';
+            reqRow.appendChild(reqSel);
+            getReqItemId = () => reqSel.value;
+        } else {
+            const reqItem = document.createElement('input');
+            reqItem.type = 'text';
+            reqItem.placeholder = 'itemId';
+            reqItem.value = choice.requireItem?.itemId || '';
+            reqItem.style.cssText = INPUT_CSS + 'flex:1;';
+            reqItem.addEventListener('change', () => {
+                const id = reqItem.value.trim();
+                if (!id) {
+                    this._patchChoice(dialogue, node, index, { clearRequireItem: true });
+                    return;
+                }
+                this._patchChoice(dialogue, node, index, {
+                    requireItem: { itemId: id, count: Number(reqCnt.value) || 1 }
+                });
+            });
+            reqRow.appendChild(reqItem);
+            getReqItemId = () => reqItem.value.trim();
+        }
+        reqCnt.addEventListener('change', () => {
+            const id = getReqItemId();
             if (!id) {
                 this._patchChoice(dialogue, node, index, { clearRequireItem: true });
                 return;
@@ -707,10 +820,7 @@ export class DialoguesPanel {
             this._patchChoice(dialogue, node, index, {
                 requireItem: { itemId: id, count: Number(reqCnt.value) || 1 }
             });
-        };
-        reqItem.addEventListener('change', applyReq);
-        reqCnt.addEventListener('change', applyReq);
-        reqRow.appendChild(reqItem);
+        });
         reqRow.appendChild(reqCnt);
         box.appendChild(reqRow);
 

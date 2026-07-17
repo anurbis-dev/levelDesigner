@@ -35,12 +35,43 @@ export class Scene {
         this.dialogues = new Map((levelData.dialogues || []).map(d => [d.id, d]));
         this.dialogueRunner = null;
         this.dialogueActive = false;
+        // Item definitions (levelData.items) — display names for HUD / pickers.
+        this.itemDefs = new Map(
+            (levelData.items || [])
+                .filter((i) => i && i.id)
+                .map((i) => [i.id, i])
+        );
         // Player item bag for dialogue give/take/require (levelData.inventory seed optional).
         this.inventory = new Inventory(levelData.inventory || null);
+        // Per-object NPC bags (levelData.npcInventories: { [objectId]: seed }).
+        /** @type {Map<string, Inventory>} */
+        this.npcInventories = new Map();
+        const npcSeed = levelData.npcInventories || {};
+        if (npcSeed && typeof npcSeed === 'object') {
+            for (const [objectId, seed] of Object.entries(npcSeed)) {
+                if (!objectId) continue;
+                this.npcInventories.set(objectId, new Inventory(seed));
+            }
+        }
         // Active camera marker entity (docs/RUNTIME_SCHEMA.md `camera`), set by
         // hideCameraMarker() at load time; null when the level has none (GameEngine falls
         // back to hardcoded player-centering, see GameEngine._updateCamera()).
         this.cameraEntity = null;
+    }
+
+    /**
+     * Resolve a bag: 'player' | empty → player inventory; else objectId NPC bag (created empty).
+     * @param {string|null|undefined} bagRef
+     * @returns {Inventory}
+     */
+    getBag(bagRef) {
+        if (!bagRef || bagRef === 'player') return this.inventory;
+        let bag = this.npcInventories.get(bagRef);
+        if (!bag) {
+            bag = new Inventory(null);
+            this.npcInventories.set(bagRef, bag);
+        }
+        return bag;
     }
 
     getLayersSorted() {

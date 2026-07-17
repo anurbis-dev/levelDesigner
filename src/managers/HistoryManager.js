@@ -27,6 +27,11 @@ export class HistoryManager extends BaseManager {
          * @type {null|(() => Array|undefined)}
          */
         this._dialoguesProvider = null;
+        /**
+         * Optional () => { items, inventory, npcInventories } for Items/Inventory UI.
+         * @type {null|(() => object|undefined)}
+         */
+        this._inventoryDataProvider = null;
     }
 
     /**
@@ -41,6 +46,13 @@ export class HistoryManager extends BaseManager {
      */
     setDialoguesProvider(provider) {
         this._dialoguesProvider = typeof provider === 'function' ? provider : null;
+    }
+
+    /**
+     * @param {null|(() => object|undefined)} provider
+     */
+    setInventoryDataProvider(provider) {
+        this._inventoryDataProvider = typeof provider === 'function' ? provider : null;
     }
 
     /**
@@ -74,6 +86,25 @@ export class HistoryManager extends BaseManager {
     }
 
     /**
+     * @returns {object|undefined}
+     * @private
+     */
+    _snapshotInventoryData() {
+        if (!this._inventoryDataProvider) return undefined;
+        try {
+            const d = this._inventoryDataProvider();
+            if (d === undefined) return undefined;
+            return JSON.parse(JSON.stringify(d || {
+                items: [],
+                inventory: [],
+                npcInventories: {}
+            }));
+        } catch {
+            return { items: [], inventory: [], npcInventories: {} };
+        }
+    }
+
+    /**
      * Save current state to history
      * @param {Array} objects - Level objects array
      * @param {Set} selection - Selected objects set
@@ -102,6 +133,10 @@ export class HistoryManager extends BaseManager {
         const dialogues = this._snapshotDialogues();
         if (dialogues !== undefined) {
             stateData.dialogues = dialogues;
+        }
+        const inventoryData = this._snapshotInventoryData();
+        if (inventoryData !== undefined) {
+            stateData.inventoryData = inventoryData;
         }
 
         const stateSnapshot = JSON.stringify(stateData);
@@ -155,6 +190,9 @@ export class HistoryManager extends BaseManager {
                 : undefined,
             dialogues: Object.prototype.hasOwnProperty.call(parsedState, 'dialogues')
                 ? parsedState.dialogues
+                : undefined,
+            inventoryData: Object.prototype.hasOwnProperty.call(parsedState, 'inventoryData')
+                ? parsedState.inventoryData
                 : undefined
         };
     }

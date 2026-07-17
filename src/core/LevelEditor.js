@@ -68,6 +68,11 @@ export class LevelEditor {
         // Snapshot level logic fields on every saveState without rewriting call sites
         this.historyManager.setEventGraphProvider(() => this.level?.eventGraph ?? null);
         this.historyManager.setDialoguesProvider(() => this.level?.dialogues ?? []);
+        this.historyManager.setInventoryDataProvider(() => ({
+            items: this.level?.items ?? [],
+            inventory: this.level?.inventory ?? [],
+            npcInventories: this.level?.npcInventories ?? {}
+        }));
         this.assetManager = new AssetManager(this.stateManager);
         this.fileManager = new FileManager();
         this.resizerManager = new ResizerManager(this);
@@ -594,6 +599,7 @@ export class LevelEditor {
         // factory-only panels (all instances are "copies")
         this.forEachDockPanelCopy('eventGraph', (p) => p.render?.());
         this.forEachDockPanelCopy('dialogues', (p) => p.render?.());
+        this.forEachDockPanelCopy('items', (p) => p.render?.());
         
         // Update level stats panel (includes Player Start restoration logic)
         this.updateLevelStatsPanel();

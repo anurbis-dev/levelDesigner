@@ -3,7 +3,7 @@ import { evalSpec } from './eventgraph/ConditionEvaluator.js';
 /**
  * Interpreter for one Dialogue Graph.
  *
- * Schema (formatVersion ≥ 1, extensions for items / multi-NPC):
+ * Schema (formatVersion ≥ 1, extensions for items / multi-NPC / bags):
  * {
  *   formatVersion, startNode,
  *   participants?: [{ id, role:'player'|'npc', displayName?, objectId? }],
@@ -14,21 +14,21 @@ import { evalSpec } from './eventgraph/ConditionEvaluator.js';
  *   }]
  * }
  * Effect: { type:'giveItem'|'takeItem', itemId, count?, to?, from? }
- *   — MVP: only player inventory is real; giveItem → player.add, takeItem → player.remove
+ *   — to/from: 'player' | participantId | objectId (default player bag)
  * Choice: {
  *   text, next, condition?: {var,op,value},
- *   requireItem?: { itemId, count? },  // hide if player lacks
- *   itemPick?: { count? },             // player picks itemId to give (advance opts.selectedItemId)
+ *   requireItem?: { itemId, count?, bag? },  // hide if bag lacks (default player)
+ *   itemPick?: { count?, to? }, // player picks itemId; remove player, optional to bag
  *   effects?: Effect[]                 // on select (after itemPick transfer)
  * }
  *
  * Not a Behavior — modal scene state (Scene.dialogueActive).
- * `runtime` = EventGraphRuntime (variables + scene.inventory).
+ * `runtime` = EventGraphRuntime (variables + scene bags).
  */
 export class DialogueRunner {
     /**
      * @param {object} dialogueData
-     * @param {object} runtime EventGraphRuntime (variables; .scene.inventory)
+     * @param {object} runtime EventGraphRuntime (variables; .scene)
      */
     constructor(dialogueData, runtime) {
         this.data = dialogueData;
@@ -41,9 +41,14 @@ export class DialogueRunner {
         this._applyNodeEnter(this.getCurrentNode());
     }
 
+    /** @returns {import('./Scene.js').Scene|null} */
+    get scene() {
+        return this.runtime?.scene || null;
+    }
+
     /** @returns {import('./Inventory.js').Inventory|null} */
     get inventory() {
-        return this.runtime?.scene?.inventory || null;
+        return this.scene?.inventory || null;
     }
 
     getCurrentNode() {
@@ -78,18 +83,49 @@ export class DialogueRunner {
     }
 
     /**
+     * Map bag ref: empty/'player' → player; participantId → its objectId or player;
+     * otherwise treat as objectId.
+     * @param {string|null|undefined} ref
+     * @returns {string} 'player' | objectId
+     */
+    resolveBagKey(ref) {
+        if (!ref || ref === 'player') return 'player';
+        const p = (this.data.participants || []).find((x) => x.id === ref);
+        if (p) {
+            if (p.role === 'player') return 'player';
+            if (p.objectId) return p.objectId;
+            // NPC without object link — no dedicated bag; use synthetic key by participant id
+            return `participant:${p.id}`;
+        }
+        return ref;
+    }
+
+    /**
+     * @param {string|null|undefined} ref
+     * @returns {import('./Inventory.js').Inventory|null}
+     */
+    getBag(ref) {
+        const scene = this.scene;
+        if (!scene) return null;
+        if (typeof scene.getBag === 'function') {
+            return scene.getBag(this.resolveBagKey(ref));
+        }
+        return scene.inventory || null;
+    }
+
+    /**
      * Choices visible to the player (conditions + requireItem).
      * Player response options = this list.
      */
     getVisibleChoices() {
         const node = this.getCurrentNode();
         if (!node?.choices) return [];
-        const inv = this.inventory;
         return node.choices.filter((choice) => {
             if (choice.condition && !evalSpec(choice.condition, this.runtime)) return false;
             if (choice.requireItem?.itemId) {
                 const need = choice.requireItem.count ?? 1;
-                if (!inv?.has(choice.requireItem.itemId, need)) return false;
+                const bag = this.getBag(choice.requireItem.bag || 'player');
+                if (!bag?.has(choice.requireItem.itemId, need)) return false;
             }
             return true;
         });
@@ -127,11 +163,19 @@ export class DialogueRunner {
                     return { ok: false, needItemPick: true, reason: 'needItemPick' };
                 }
                 const count = selectedChoice.itemPick.count ?? 1;
-                if (!this.inventory?.remove(itemId, count)) {
+                const playerBag = this.getBag('player');
+                if (!playerBag?.remove(itemId, count)) {
                     this.lastError = 'missingItem';
                     return { ok: false, reason: 'missingItem' };
                 }
-                // Item left the player (payment / gift to NPC). NPC bag not tracked in MVP.
+                // Deposit into target bag (explicit to, else current speaker object/participant).
+                const toRef = selectedChoice.itemPick.to
+                    || this.getCurrentSpeaker().objectId
+                    || this.getCurrentSpeaker().id
+                    || null;
+                if (toRef && this.resolveBagKey(toRef) !== 'player') {
+                    this.getBag(toRef)?.add(itemId, count);
+                }
             }
 
             this._applyEffects(selectedChoice.effects);
@@ -166,21 +210,22 @@ export class DialogueRunner {
      */
     _applyEffects(effects) {
         if (!Array.isArray(effects) || !effects.length) return;
-        const inv = this.inventory;
-        if (!inv) {
-            console.warn('[engine] DialogueRunner: no scene.inventory, item effects skipped');
+        if (!this.scene) {
+            console.warn('[engine] DialogueRunner: no scene, item effects skipped');
             return;
         }
         for (const fx of effects) {
             if (!fx || !fx.itemId) continue;
             const count = fx.count ?? 1;
             const type = fx.type;
-            // MVP: player bag only. giveItem → player gains; takeItem → player loses.
-            // to/from fields reserved for multi-bag later; ignored except documentation.
             if (type === 'giveItem') {
-                inv.add(fx.itemId, count);
+                // Give to bag (default player). Semantic: item appears in target bag.
+                const bag = this.getBag(fx.to || 'player');
+                bag?.add(fx.itemId, count);
             } else if (type === 'takeItem') {
-                if (!inv.remove(fx.itemId, count)) {
+                // Take from bag (default player).
+                const bag = this.getBag(fx.from || 'player');
+                if (!bag?.remove(fx.itemId, count)) {
                     console.warn(
                         `[engine] DialogueRunner: takeItem failed (need ${count}× ${fx.itemId})`
                     );
