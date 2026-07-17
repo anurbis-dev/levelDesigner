@@ -21,7 +21,12 @@ export class PlayerMovementBehavior extends Behavior {
         if (scene.dialogueActive) return; // Фаза E: movement pauses while a dialogue is open
 
         const axis = input.getAxis();
-        if (axis.x === 0 && axis.y === 0) return;
+        const isMoving = axis.x !== 0 || axis.y !== 0;
+        // Фаза F: same level-scope variable store as Event Graph/Dialogue (no separate
+        // per-instance channel) — SpriteAnimationBehavior state machines read 'speed' to
+        // drive idle<->walk transitions.
+        scene.eventGraphRuntime?.setVariable('speed', isMoving ? this.speed : 0);
+        if (!isMoving) return;
 
         const length = Math.hypot(axis.x, axis.y);
         const dx = (axis.x / length) * this.speed * dt;

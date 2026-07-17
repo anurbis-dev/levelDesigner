@@ -373,6 +373,99 @@ describe('GameEngine — Фаза E Dialogue MVP (OnStart → StartDialogue → 
     });
 });
 
+// Фаза F (tmp/2D_Editor_LOGIC_SYSTEMS_PLAN.md) readiness criterion: a state machine on
+// spriteUiAnimation switches idle<->walk off the 'speed' variable PlayerMovementBehavior writes
+// each tick (same shared level-scope store as Event Graph/Dialogue), and Event Graph's
+// PlayAnimation can force a clip on top, resuming state-machine control on its next transition.
+describe('GameEngine — Фаза F Animation state machine (idle<->walk via speed variable, PlayAnimation override)', () => {
+    function animationManifest() {
+        return {
+            formatVersion: 1, name: 'Demo', entryLevelId: 'level_a',
+            levels: [{
+                id: 'level_a',
+                data: {
+                    meta: { name: 'Level A' },
+                    camera: { x: 0, y: 0, zoom: 1 },
+                    layers: [],
+                    eventGraph: {
+                        formatVersion: 1, scope: 'level',
+                        variables: [],
+                        nodes: [
+                            { id: 'n1', type: 'OnCustomEvent', params: { name: 'forceAttack' } },
+                            { id: 'n2', type: 'PlayAnimation', params: { objectId: 'hero', clip: 'hero_attack' } }
+                        ],
+                        edges: [{ from: 'n1', to: 'n2' }]
+                    },
+                    objects: [
+                        { id: 'spawn', type: 'player_start', x: 0, y: 0, width: 32, height: 32,
+                            components: [{ id: 'c1', type: 'playerStart', enabled: true, properties: {} }] },
+                        { id: 'hero', type: 'actor', x: 0, y: 0, width: 32, height: 32, imgSrc: 'hero.png',
+                            components: [{ id: 'c2', type: 'spriteUiAnimation', enabled: true, properties: {
+                                defaultState: 'idle',
+                                clips: {
+                                    hero_idle: [{ x: 0, y: 0, w: 32, h: 32, duration: 100 }],
+                                    hero_walk: [{ x: 32, y: 0, w: 32, h: 32, duration: 100 }],
+                                    hero_attack: [{ x: 64, y: 0, w: 32, h: 32, duration: 100 }]
+                                },
+                                states: [
+                                    { name: 'idle', clip: 'hero_idle', transitions: [
+                                        { condition: { var: 'speed', op: '>', value: 0 }, target: 'walk' }
+                                    ] },
+                                    { name: 'walk', clip: 'hero_walk', transitions: [
+                                        { condition: { var: 'speed', op: '==', value: 0 }, target: 'idle' }
+                                    ] }
+                                ]
+                            } }] }
+                    ]
+                }
+            }]
+        };
+    }
+
+    it('starts on the defaultState clip', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(animationManifest());
+        const hero = engine.scene.entities.find(e => e.id === 'hero');
+        const anim = hero.behaviors.find(b => typeof b.getSourceRect === 'function');
+
+        expect(anim.getSourceRect()).toEqual({ x: 0, y: 0, w: 32, h: 32 }); // hero_idle
+    });
+
+    it('switches idle→walk once the moving player writes a positive speed variable (one-tick lag, same as OnInteract polling)', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(animationManifest());
+        const hero = engine.scene.entities.find(e => e.id === 'hero');
+        const anim = hero.behaviors.find(b => typeof b.getSourceRect === 'function');
+        engine.scene.input = { getAxis: () => ({ x: 1, y: 0 }) };
+
+        engine.tick(0.05); // hero's transition check runs before player writes 'speed' this tick
+        expect(anim.getSourceRect()).toEqual({ x: 0, y: 0, w: 32, h: 32 }); // still idle
+
+        engine.tick(0.05); // now reads speed=200 written last tick
+        expect(anim.getSourceRect()).toEqual({ x: 32, y: 0, w: 32, h: 32 }); // hero_walk
+    });
+
+    it("PlayAnimation forces a clip; the state machine resumes control on its own next transition", async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(animationManifest());
+        const hero = engine.scene.entities.find(e => e.id === 'hero');
+        const anim = hero.behaviors.find(b => typeof b.getSourceRect === 'function');
+
+        engine.scene.eventGraphRuntime.emitCustomEvent('forceAttack');
+        expect(anim.getSourceRect()).toEqual({ x: 64, y: 0, w: 32, h: 32 }); // hero_attack, forced
+
+        engine.scene.input = { getAxis: () => ({ x: 1, y: 0 }) };
+        engine.tick(0.05); // still reads old speed=0 -> no transition fires, forced clip persists
+        expect(anim.getSourceRect()).toEqual({ x: 64, y: 0, w: 32, h: 32 });
+
+        engine.tick(0.05); // reads speed=200 -> idle's own transition fires -> plays hero_walk
+        expect(anim.getSourceRect()).toEqual({ x: 32, y: 0, w: 32, h: 32 });
+    });
+});
+
 describe('GameEngine — Фаза 2 vertical slice (BehaviorRegistry + collider/trigger/playerStart)', () => {
     it('resolves playerStart/collider/trigger to real behaviors and tracks trigger enter/exit across ticks', async () => {
         const { canvas } = mockCanvas();

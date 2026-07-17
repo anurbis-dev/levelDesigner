@@ -268,7 +268,24 @@ multi-port dataflow для булевых операций.
 
 ---
 
-## Фаза F — Animation state machine (потребитель графа + Фазы B)
+## Фаза F — Animation state machine (потребитель графа + Фазы B) ✅ ЗАВЕРШЕНА 2026-07-17 (engine-track сессия, движковая часть)
+
+Реализовано: `SpriteAnimationBehavior` расширен — `properties.states`/`defaultState`/`clips`
+({clipName: frames[]}) поверх Фазы B (без `states` — прежнее поведение, полная обратная
+совместимость). Каждый тик проверяет переходы текущего состояния через тот же `evalSpec`
+(`ConditionEvaluator.js`, общий с Event Graph/Диалогами), первый true-переход побеждает. Читает
+переменные из `scene.eventGraphRuntime` — то же общее хранилище, что у Фазы D/E, отдельного
+per-instance канала не заводили (как и предполагал план). `PlayerMovementBehavior` пишет `speed`
+в `eventGraphRuntime` каждый тик (0, если нет ввода/диалог активен). Новый Event Graph action
+`PlayAnimation(objectId, clip)` — форсирует клип через `SpriteAnimationBehavior.play()`, не
+трогая `currentState`; стейт-машина подхватывает управление на своём следующем переходе (не
+раньше — если ни один переход не срабатывает, форсированный клип держится, что и означает
+формулировка плана буквально). `ComponentPropertySchema.js` получил generic JSON-поля для
+`clips`/`states` (тот же паттерн, что уже был у `frames`, без нового виджета).
+Проверено дважды: 116/116 vitest (было 106, +10 новых тестов) и live в браузере через
+chrome-devtools (dynamic import GameEngine) — идентичный результат обоих прогонов, включая
+one-tick lag speed-записи и forced-clip-persists-until-next-transition поведение.
+
 
 **Не отдельный визуальный граф.** Стейт-машина как данные на компоненте — Details-форма
 (состояния + переходы), не canvas. Ручное форсирование — через `PlayAnimation` action-узел

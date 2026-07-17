@@ -119,7 +119,7 @@ implemented`, `properties: {}`, `schemaVersion: 1`. `BehaviorRegistry` (движ
 | `interactable` | Interactable | 1 | implemented | `radius` (опционально, дефолт `32`), `hint` (опционально, дефолт `'Interact'`) |
 | `playerStart` | Player Start | 1 | implemented | нет собственных полей — позиция берётся из `entity.x/y` (используется `Scene.spawnPlayer()` для создания управляемого игрока при запуске уровня; сама маркер-сущность скрывается, не отображается в игре) |
 | `transformAnimation` | Transform Animation | 1 | not implemented | TBD |
-| `spriteUiAnimation` | Sprite / UI Animation | 1 | implemented | `frames` — массив `{x,y,w,h,duration}` (source-rect в атласе, взятом из `entity.imgSrc`; `duration` в мс), `loop` (опционально, дефолт `true`; `false` — держит последний кадр вместо рестарта). Один клип, без стейт-машины/переходов — та часть (несколько именованных состояний + условия перехода) в бэклоге, `tmp/2D_Editor_LOGIC_SYSTEMS_PLAN.md` Фаза F |
+| `spriteUiAnimation` | Sprite / UI Animation | 1 | implemented | `frames` — массив `{x,y,w,h,duration}` (source-rect в атласе, взятом из `entity.imgSrc`; `duration` в мс), `loop` (опционально, дефолт `true`; `false` — держит последний кадр вместо рестарта). **Фаза F state machine:** `states` (array `{name, clip, transitions: [{condition:{var,op,value}, target}]}`), `clips` (named `{clipName: frames[]}` catalog заменяет flat `frames` в режиме state machine), `defaultState` (initial state name) — каждый tick проверяет переходы (первый matching `condition` wins) против `scene.eventGraphRuntime` variables; `play(clipName)` метод Event Graph `PlayAnimation` действия. Без `states` — полная обратная совместимость с Фазой B |
 | `pickup` | Pickup | 1 | not implemented | TBD |
 | `dialogueTrigger` | Dialogue Trigger | 1 | implemented | `dialogueId` (string, опционально), `layer` (string, опционально) — component-маркер сущности, инициирующей диалоги; фактический dialogueId берётся из Event Graph действия `StartDialogue` (action params), не из этого компонента |
 | `damageHealth` | Damage / Health | 1 | not implemented | TBD |
@@ -138,4 +138,4 @@ implemented`, `properties: {}`, `schemaVersion: 1`. `BehaviorRegistry` (движ
 движкового MVP (`src/engine/behaviors/*`), остальные 14 — бэклог (см.
 `tmp/2D_Editor_LOGIC_SYSTEMS_PLAN.md` §7), реализуются по мере реальной потребности конкретной
 игры, не заранее. `collider`/`trigger` `layer`/`collidesWith` — Фаза A того же плана,
-`spriteUiAnimation` (один клип, без стейт-машины) — Фаза B.
+`spriteUiAnimation` — Фаза B (один клип), Фаза F (state machine с transitions/clips/defaultState).

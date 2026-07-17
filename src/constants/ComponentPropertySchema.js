@@ -29,7 +29,12 @@ const SCHEMAS = {
     ],
     spriteUiAnimation: [
         { key: 'frames', label: 'Frames (JSON array)', kind: 'json', default: [] },
-        { key: 'loop', label: 'Loop', kind: 'bool', default: true }
+        { key: 'loop', label: 'Loop', kind: 'bool', default: true },
+        // Фаза F: state machine mode — when 'states' is non-empty, 'clips' (named {clipName:
+        // frames[]}) replaces the flat 'frames' array above as the frame-data source.
+        { key: 'clips', label: 'Clips (JSON: {name: frames[]})', kind: 'json', default: {} },
+        { key: 'defaultState', label: 'Default State', kind: 'text', default: '' },
+        { key: 'states', label: 'States (JSON: [{name,clip,transitions}])', kind: 'json', default: [] }
     ],
     playerStart: []
 };

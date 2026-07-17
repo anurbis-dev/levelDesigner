@@ -307,6 +307,11 @@ level.settings.parallaxVertical // множитель вертикального
     - `src/engine/eventgraph/ConditionEvaluator.js` - вынесенный общий compareOp/evalSpec({var,op,value}) для Event Graph (Compare/And/Or/Not, Фаза D) и DialogueRunner (Фаза E)
     - `src/engine/behaviors/DialogueTriggerBehavior.js` - новый component-тип `dialogueTrigger` (data-holder: dialogueId + layer), запуск диалога через Event Graph StartDialogue action + trigger/interactable связка
     - Обновлены: `src/engine/eventgraph/registerDefaultEventGraphNodes.js` (entry OnDialogueEnded для диспатча, action StartDialogue создаёт DialogueRunner), `src/engine/eventgraph/EventGraphRuntime.js` (polling _checkDialogueEnded() в tick), `src/engine/Scene.js` (уровень-scope `dialogues` Map, `dialogueRunner`, `dialogueActive`), `src/engine/behaviors/PlayerMovementBehavior.js` (return рано если scene.dialogueActive), `src/engine/behaviors/registerDefaultBehaviors.js` (зарегистрирован dialogueTrigger)
+  - **Фаза F Animation state machine** (`src/engine/`, Фаза F LOGIC_SYSTEMS_PLAN):
+    - `src/engine/behaviors/SpriteAnimationBehavior.js` — расширен: `properties.states` (array `{name, clip, transitions: [{condition:{var,op,value}, target}]}`), `properties.clips` (named `{clipName: frames[]}` catalog заменяет flat `frames`), `properties.defaultState` (initial state name); `_checkTransitions()` evaluates первый matching condition против `scene.eventGraphRuntime`, `play(clipName)` метод для Event Graph override (state machine resumes на следующем transition); обратно совместим (без `states` = Фаза B)
+    - `src/engine/behaviors/PlayerMovementBehavior.js` — пишет `speed` variable в `scene.eventGraphRuntime` каждый tick (entity's скорость когда движется, 0 когда idle/нет input/диалог паузирует), используется state machine transitions (idle<->walk)
+    - `src/engine/eventgraph/registerDefaultEventGraphNodes.js` — новый action `PlayAnimation` (params: `objectId`, `clip`) — находит animation behavior и вызывает `.play()`
+    - `src/constants/ComponentPropertySchema.js` — `spriteUiAnimation` схема добавила 3 новых поля: `clips` (kind 'json'), `defaultState` (kind 'text'), `states` (kind 'json'), свободный JSON-текст паттерн как existing `frames`
 
 ## 🏗️ Архитектурные принципы
 

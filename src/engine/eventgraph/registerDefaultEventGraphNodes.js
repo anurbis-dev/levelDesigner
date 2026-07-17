@@ -7,12 +7,11 @@ function findEntity(scene, id) {
 }
 
 /**
- * Registers the Фаза D/E MVP node vocabulary (see docs/RUNTIME_SCHEMA.md discipline applied to
+ * Registers the Фаза D/E/F MVP node vocabulary (see docs/RUNTIME_SCHEMA.md discipline applied to
  * BehaviorRegistry — same idea here: only nodes with a real, working implementation get
- * registered; the rest of the plan's word list (PlaySound, SpawnObject, LoadLevel,
- * PlayAnimation) stays unregistered until Фаза F actually needs them — EventGraphRuntime
- * already warns-and-skips unknown node types, so referencing one of those early is safe,
- * just inert.
+ * registered; the rest of the plan's word list (PlaySound, SpawnObject, LoadLevel) stays
+ * unregistered until a later phase actually needs them — EventGraphRuntime already
+ * warns-and-skips unknown node types, so referencing one of those early is safe, just inert.
  *
  * Boolean combinators (And/Or/Not) take `params.conditions: [{var,op,value}, ...]` — an
  * explicit list of Compare-shaped specs evaluated against current variables, not further graph
@@ -75,5 +74,16 @@ export function registerDefaultEventGraphNodes() {
         }
         ctx.scene.dialogueRunner = new DialogueRunner(dialogueData, ctx.runtime);
         ctx.scene.dialogueActive = true;
+    });
+    // Фаза F: forces a clip on SpriteAnimationBehavior directly, without touching the state
+    // machine's currentState — it resumes its own clip next time a transition fires.
+    EventGraphNodeRegistry.register('PlayAnimation', (node, ctx) => {
+        const target = findEntity(ctx.scene, node.params.objectId);
+        const anim = target?.behaviors?.find(b => typeof b.play === 'function');
+        if (!anim) {
+            console.warn(`[engine] PlayAnimation: no animation behavior on '${node.params.objectId}'`);
+            return;
+        }
+        anim.play(node.params.clip);
     });
 }
