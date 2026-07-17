@@ -115,7 +115,7 @@ implemented`, `properties: {}`, `schemaVersion: 1`. `BehaviorRegistry` (движ
 | `interactable` | Interactable | 1 | implemented | `radius` (опционально, дефолт `32`), `hint` (опционально, дефолт `'Interact'`) |
 | `playerStart` | Player Start | 1 | implemented | нет собственных полей — позиция берётся из `entity.x/y` (используется `Scene.spawnPlayer()` для создания управляемого игрока при запуске уровня; сама маркер-сущность скрывается, не отображается в игре) |
 | `transformAnimation` | Transform Animation | 1 | not implemented | TBD |
-| `spriteUiAnimation` | Sprite / UI Animation | 1 | not implemented | TBD |
+| `spriteUiAnimation` | Sprite / UI Animation | 1 | implemented | `frames` — массив `{x,y,w,h,duration}` (source-rect в атласе, взятом из `entity.imgSrc`; `duration` в мс), `loop` (опционально, дефолт `true`; `false` — держит последний кадр вместо рестарта). Один клип, без стейт-машины/переходов — та часть (несколько именованных состояний + условия перехода) в бэклоге, `tmp/2D_Editor_LOGIC_SYSTEMS_PLAN.md` Фаза F |
 | `pickup` | Pickup | 1 | not implemented | TBD |
 | `dialogueTrigger` | Dialogue Trigger | 1 | not implemented | TBD |
 | `damageHealth` | Damage / Health | 1 | not implemented | TBD |
@@ -131,6 +131,7 @@ implemented`, `properties: {}`, `schemaVersion: 1`. `BehaviorRegistry` (движ
 | `variableModifier` | Variable Modifier | 1 | not implemented | TBD |
 
 Первые 4 (`collider`/`trigger`/`interactable`/`playerStart`) реализованы как вертикальный срез
-движкового MVP (`src/engine/behaviors/*`), остальные 15 — бэклог (см.
+движкового MVP (`src/engine/behaviors/*`), остальные 14 — бэклог (см.
 `tmp/2D_Editor_LOGIC_SYSTEMS_PLAN.md` §7), реализуются по мере реальной потребности конкретной
-игры, не заранее. `collider`/`trigger` `layer`/`collidesWith` — Фаза A того же плана.
+игры, не заранее. `collider`/`trigger` `layer`/`collidesWith` — Фаза A того же плана,
+`spriteUiAnimation` (один клип, без стейт-машины) — Фаза B.

@@ -1,6 +1,7 @@
 import { ProjectLoader } from './ProjectLoader.js';
 import { Renderer } from './render/Renderer.js';
 import { Input } from './Input.js';
+import { AssetLoader } from './AssetLoader.js';
 import { registerDefaultBehaviors } from './behaviors/registerDefaultBehaviors.js';
 
 /**
@@ -31,6 +32,9 @@ export class GameEngine {
         this.scene.spawnPlayer();
         this.camera = { ...this.scene.camera };
         this.parallaxStartPosition = { ...this.camera };
+
+        const sources = AssetLoader.collectImageSources(this.scene);
+        this.renderer.imageCache = await AssetLoader.loadImages(sources);
     }
 
     /** Runs one update+render frame. */

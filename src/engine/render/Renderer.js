@@ -58,7 +58,13 @@ export class Renderer {
 
         const img = entity.imgSrc && this.imageCache?.get(entity.imgSrc);
         if (img && img.complete && img.naturalHeight !== 0) {
-            this.ctx.drawImage(img, x, y, entity.width, entity.height);
+            const spriteAnim = entity.behaviors?.find(b => typeof b.getSourceRect === 'function');
+            const sourceRect = spriteAnim?.getSourceRect();
+            if (sourceRect) {
+                this.ctx.drawImage(img, sourceRect.x, sourceRect.y, sourceRect.w, sourceRect.h, x, y, entity.width, entity.height);
+            } else {
+                this.ctx.drawImage(img, x, y, entity.width, entity.height);
+            }
         } else {
             this.ctx.fillStyle = entity.color || '#cccccc';
             this.ctx.fillRect(x, y, entity.width, entity.height);

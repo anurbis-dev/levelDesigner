@@ -198,6 +198,57 @@ describe('GameEngine — Input/player-movement', () => {
     });
 });
 
+// Фаза B (tmp/2D_Editor_LOGIC_SYSTEMS_PLAN.md): sprite-sheet playback. Also closes a real,
+// previously-unnoticed gap — renderer.imageCache was never populated by loadProject(), so no
+// entity's imgSrc ever actually rendered (always fell back to the flat-color rect).
+describe('GameEngine — Фаза B sprite-sheet playback', () => {
+    function spriteManifest() {
+        return {
+            formatVersion: 1, name: 'Demo', entryLevelId: 'level_a',
+            levels: [{
+                id: 'level_a',
+                data: {
+                    meta: { name: 'Level A' },
+                    camera: { x: 0, y: 0, zoom: 1 },
+                    layers: [],
+                    objects: [
+                        {
+                            id: 'hero', type: 'actor', x: 0, y: 0, width: 32, height: 32, imgSrc: 'hero.png',
+                            components: [{ id: 'c1', type: 'spriteUiAnimation', enabled: true, properties: {
+                                frames: [
+                                    { x: 0, y: 0, w: 32, h: 32, duration: 100 },
+                                    { x: 32, y: 0, w: 32, h: 32, duration: 100 }
+                                ], loop: true
+                            } }]
+                        }
+                    ]
+                }
+            }]
+        };
+    }
+
+    it('loadProject() wires renderer.imageCache (Map) even without an Image global (Node test env)', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+
+        await engine.loadProject(spriteManifest());
+
+        expect(engine.renderer.imageCache).toBeInstanceOf(Map);
+    });
+
+    it('advances the sprite animation frame over ticks', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(spriteManifest());
+        const hero = engine.scene.entities.find(e => e.id === 'hero');
+        const anim = hero.behaviors.find(b => typeof b.getSourceRect === 'function');
+
+        expect(anim.getSourceRect()).toEqual({ x: 0, y: 0, w: 32, h: 32 });
+        engine.tick(0.1);
+        expect(anim.getSourceRect()).toEqual({ x: 32, y: 0, w: 32, h: 32 });
+    });
+});
+
 describe('GameEngine — Фаза 2 vertical slice (BehaviorRegistry + collider/trigger/playerStart)', () => {
     it('resolves playerStart/collider/trigger to real behaviors and tracks trigger enter/exit across ticks', async () => {
         const { canvas } = mockCanvas();

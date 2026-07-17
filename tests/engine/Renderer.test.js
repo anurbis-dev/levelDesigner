@@ -92,4 +92,30 @@ describe('Renderer.drawEntity', () => {
 
         expect(ctx.fillRect).toHaveBeenCalledWith(15, 15, 8, 8);
     });
+
+    it('draws the whole cached image (5-arg drawImage) when there is no sprite-animation behavior', () => {
+        const { canvas, ctx } = mockCanvas();
+        const renderer = new Renderer(canvas);
+        const img = { complete: true, naturalHeight: 32 };
+        renderer.imageCache = new Map([['hero.png', img]]);
+
+        renderer.drawEntity({ visible: true, type: 'actor', x: 5, y: 5, width: 32, height: 32, imgSrc: 'hero.png' });
+
+        expect(ctx.drawImage).toHaveBeenCalledWith(img, 5, 5, 32, 32);
+    });
+
+    it('draws the current animation frame (9-arg drawImage source-rect) when a getSourceRect behavior is present', () => {
+        const { canvas, ctx } = mockCanvas();
+        const renderer = new Renderer(canvas);
+        const img = { complete: true, naturalHeight: 32 };
+        renderer.imageCache = new Map([['hero.png', img]]);
+        const spriteAnim = { getSourceRect: () => ({ x: 32, y: 0, w: 16, h: 16 }) };
+
+        renderer.drawEntity({
+            visible: true, type: 'actor', x: 5, y: 5, width: 16, height: 16, imgSrc: 'hero.png',
+            behaviors: [spriteAnim]
+        });
+
+        expect(ctx.drawImage).toHaveBeenCalledWith(img, 32, 0, 16, 16, 5, 5, 16, 16);
+    });
 });
