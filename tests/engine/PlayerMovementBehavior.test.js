@@ -7,9 +7,9 @@ function fakeInput(axis) {
     return { getAxis: () => axis };
 }
 
-function wall(x, y, width = 32, height = 32) {
+function wall(x, y, width = 32, height = 32, colliderProps = {}) {
     const entity = new Entity({ id: 'wall', type: 'actor', x, y, width, height });
-    entity.behaviors = [new ColliderBehavior(entity, {})];
+    entity.behaviors = [new ColliderBehavior(entity, { properties: colliderProps })];
     return entity;
 }
 
@@ -58,6 +58,28 @@ describe('PlayerMovementBehavior', () => {
 
         expect(player.x).toBe(0);
         expect(player.y).toBeGreaterThan(0);
+    });
+
+    it('with a collidesWith list, passes through a collider whose layer is not listed', () => {
+        const player = new Entity({ id: '__player', x: 0, y: 0, width: 10, height: 10 });
+        const movement = new PlayerMovementBehavior(player, { properties: { speed: 100, collidesWith: ['environment'] } });
+        const blocker = wall(50, 0, 32, 32, { layer: 'enemy' });
+        const scene = { input: fakeInput({ x: 1, y: 0 }), getAllEntities: () => [player, blocker] };
+
+        for (let i = 0; i < 6; i++) movement.update(0.1, scene);
+
+        expect(player.x).toBe(60);
+    });
+
+    it('with a collidesWith list, is still blocked by a collider whose layer is listed', () => {
+        const player = new Entity({ id: '__player', x: 0, y: 0, width: 10, height: 10 });
+        const movement = new PlayerMovementBehavior(player, { properties: { speed: 100, collidesWith: ['environment'] } });
+        const blocker = wall(50, 0, 32, 32, { layer: 'environment' });
+        const scene = { input: fakeInput({ x: 1, y: 0 }), getAllEntities: () => [player, blocker] };
+
+        for (let i = 0; i < 6; i++) movement.update(0.1, scene);
+
+        expect(player.x).toBe(40);
     });
 
     it('does nothing without scene.input or with dt <= 0', () => {

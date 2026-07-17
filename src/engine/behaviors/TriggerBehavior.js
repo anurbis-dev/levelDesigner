@@ -1,5 +1,5 @@
 import { Behavior } from './Behavior.js';
-import { getEntityBounds, rectsIntersect } from './AABB.js';
+import { getEntityBounds, rectsIntersect, matchesLayer } from './AABB.js';
 
 /**
  * Zone reacting to enter/exit of any other entity that exposes getBounds() (duck-typed —
@@ -27,6 +27,7 @@ export class TriggerBehavior extends Behavior {
             if (other === this.entity) continue;
             const colliderBehavior = other.behaviors?.find(b => typeof b.getBounds === 'function');
             if (!colliderBehavior) continue;
+            if (!matchesLayer(this.properties.collidesWith, colliderBehavior.properties?.layer)) continue;
             if (rectsIntersect(bounds, colliderBehavior.getBounds())) {
                 currentlyInside.add(other.id);
             }

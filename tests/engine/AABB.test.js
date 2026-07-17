@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { getEntityBounds, rectsIntersect } from '../../src/engine/behaviors/AABB.js';
+import { getEntityBounds, rectsIntersect, matchesLayer } from '../../src/engine/behaviors/AABB.js';
 
 describe('getEntityBounds', () => {
     it('defaults to the entity own x/y/width/height', () => {
@@ -25,5 +25,22 @@ describe('rectsIntersect', () => {
 
     it('treats edge-touching rects as not intersecting', () => {
         expect(rectsIntersect({ x: 0, y: 0, width: 10, height: 10 }, { x: 10, y: 0, width: 10, height: 10 })).toBe(false);
+    });
+});
+
+describe('matchesLayer', () => {
+    it('matches any layer when collidesWith is undefined (back-compat default)', () => {
+        expect(matchesLayer(undefined, 'enemy')).toBe(true);
+        expect(matchesLayer(undefined, undefined)).toBe(true);
+    });
+
+    it('matches any layer when collidesWith is an empty list', () => {
+        expect(matchesLayer([], 'enemy')).toBe(true);
+    });
+
+    it('matches only listed layers when collidesWith is non-empty', () => {
+        expect(matchesLayer(['player', 'environment'], 'player')).toBe(true);
+        expect(matchesLayer(['player', 'environment'], 'enemy')).toBe(false);
+        expect(matchesLayer(['player'], undefined)).toBe(false);
     });
 });

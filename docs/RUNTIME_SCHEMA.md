@@ -110,8 +110,8 @@ implemented`, `properties: {}`, `schemaVersion: 1`. `BehaviorRegistry` (движ
 
 | id | label | schemaVersion | status | fields |
 |---|---|---|---|---|
-| `collider` | Collider | 1 | implemented | `offsetX`/`offsetY`/`width`/`height` (все опциональные, дефолт — сам bounding box entity); AABB-прямоугольник, `shape` пока не читается (только rect) |
-| `trigger` | Trigger | 1 | implemented | те же поля, что `collider` (использует ту же `getEntityBounds`); enter/exit трекается против любого поведения с `getBounds()`, не только `collider` |
+| `collider` | Collider | 2 | implemented | `offsetX`/`offsetY`/`width`/`height` (все опциональные, дефолт — сам bounding box entity); AABB-прямоугольник, `shape` пока не читается (только rect); `layer` (опционально, строка-категория) + `collidesWith` (опционально, список категорий — пусто/не задано = реагирует со всеми, back-compat) |
+| `trigger` | Trigger | 2 | implemented | те же поля, что `collider` (использует ту же `getEntityBounds`), включая `layer`/`collidesWith`; enter/exit трекается против любого поведения с `getBounds()`, не только `collider`, отфильтрованного по `collidesWith` до геометрической проверки |
 | `interactable` | Interactable | 1 | implemented | `radius` (опционально, дефолт `32`), `hint` (опционально, дефолт `'Interact'`) |
 | `playerStart` | Player Start | 1 | implemented | нет собственных полей — позиция берётся из `entity.x/y` (используется `Scene.spawnPlayer()` для создания управляемого игрока при запуске уровня; сама маркер-сущность скрывается, не отображается в игре) |
 | `transformAnimation` | Transform Animation | 1 | not implemented | TBD |
@@ -131,5 +131,6 @@ implemented`, `properties: {}`, `schemaVersion: 1`. `BehaviorRegistry` (движ
 | `variableModifier` | Variable Modifier | 1 | not implemented | TBD |
 
 Первые 4 (`collider`/`trigger`/`interactable`/`playerStart`) реализованы как вертикальный срез
-Фазы 2 плана движка (`tmp/2D_Editor_ENGINE_PLAN.md` §2.2, `src/engine/behaviors/*`), остальные
-15 — бэклог, реализуются по мере реальной потребности конкретной игры, не заранее.
+движкового MVP (`src/engine/behaviors/*`), остальные 15 — бэклог (см.
+`tmp/2D_Editor_LOGIC_SYSTEMS_PLAN.md` §7), реализуются по мере реальной потребности конкретной
+игры, не заранее. `collider`/`trigger` `layer`/`collidesWith` — Фаза A того же плана.

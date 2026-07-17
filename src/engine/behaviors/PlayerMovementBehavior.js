@@ -1,5 +1,5 @@
 import { Behavior } from './Behavior.js';
-import { getEntityBounds, rectsIntersect } from './AABB.js';
+import { getEntityBounds, rectsIntersect, matchesLayer } from './AABB.js';
 
 /**
  * Drives the runtime player entity from scene.input (see Scene.spawnPlayer()). Not a
@@ -29,7 +29,8 @@ export class PlayerMovementBehavior extends Behavior {
         const solids = scene.getAllEntities()
             .filter(candidate => candidate !== this.entity)
             .map(candidate => candidate.behaviors.find(b => typeof b.getBounds === 'function'))
-            .filter(Boolean);
+            .filter(Boolean)
+            .filter(solid => matchesLayer(this.properties.collidesWith, solid.properties?.layer));
 
         this._moveAxis(dx, 0, solids);
         this._moveAxis(0, dy, solids);
