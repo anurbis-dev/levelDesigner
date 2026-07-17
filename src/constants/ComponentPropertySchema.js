@@ -7,6 +7,9 @@
 
 /** @type {Record<string, CompField[]>} */
 const SCHEMAS = {
+    sprite: [
+        { key: 'src', label: 'Image Path', kind: 'text', default: '' }
+    ],
     collider: [
         { key: 'offsetX', label: 'Offset X', kind: 'number', default: 0 },
         { key: 'offsetY', label: 'Offset Y', kind: 'number', default: 0 },

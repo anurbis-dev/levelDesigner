@@ -1,5 +1,5 @@
 /**
- * Asset identity / size / appearance / meta (live commit via AssetManager).
+ * Asset identity / size / meta (live commit). Image path lives on Sprite component, not here.
  */
 import { NumericInput } from '../../utils/NumericInput.js';
 import {
@@ -28,22 +28,44 @@ export class AssetIdentityPanel {
         this.stateManager = stateManager;
         this.levelEditor = levelEditor;
         this.instanceKey = options.instanceKey || null;
-        this._unsub = subscribeAssetEditor(stateManager, () => this.render());
+        this._selfPatch = false;
+        this._renderedAssetId = null;
+        this._unsub = subscribeAssetEditor(stateManager, () => this._onContext());
         this.container.style.cssText = 'overflow:auto;padding:8px;font-size:12px;height:100%;box-sizing:border-box;';
+        this.render();
+    }
+
+    /** @private */
+    _onContext() {
+        if (this._selfPatch) return;
+        const asset = getEditingAsset(this.levelEditor);
+        const id = asset?.id || null;
+        if (id !== this._renderedAssetId) {
+            this.render();
+            return;
+        }
+        if (this.container.contains(document.activeElement)) {
+            // Soft: only update read-only image path line
+            const pathEl = this.container.querySelector('#ae-img-readonly');
+            if (pathEl) pathEl.textContent = resolveAssetImageSrc(asset) || '(no Sprite src)';
+            return;
+        }
         this.render();
     }
 
     render() {
         const asset = getEditingAsset(this.levelEditor);
+        this._renderedAssetId = asset?.id || null;
         if (!asset) {
             this.container.innerHTML = '<div style="color:var(--ui-text-color,#9ca3af);padding:8px;">No asset selected</div>';
             return;
         }
 
         const tagsStr = Array.isArray(asset.tags) ? asset.tags.join(', ') : '';
-        const imgDisplay = resolveAssetImageSrc(asset) || '';
+        const imgDisplay = resolveAssetImageSrc(asset) || '(no Sprite src)';
         const dirty = asset.properties?.hasUnsavedChanges === true;
         const temp = asset.properties?.isTemporary === true;
+        const compCount = (asset.components || []).length;
 
         this.container.innerHTML = createSettingsFormGroup(`
             ${createSettingsSection('Basic', createSettingsFormGroup(`
@@ -84,13 +106,9 @@ export class AssetIdentityPanel {
                     ${createSettingsInput({ id: 'ae-color', type: 'color', value: asset.color || '#3B82F6' })}
                 `)}
                 ${createSettingsFormGroup(`
-                    ${createSettingsLabel('Image Path:', 'ae-imgSrc')}
-                    ${createSettingsInput({
-                        id: 'ae-imgSrc',
-                        type: 'text',
-                        value: imgDisplay,
-                        placeholder: './content/.../image.png'
-                    })}
+                    ${createSettingsLabel('Image (Sprite component):', 'ae-img-readonly')}
+                    <div id="ae-img-readonly" style="font-size:11px;color:var(--ui-text-color,#9ca3af);word-break:break-all;padding:4px 0;">${this._esc(imgDisplay)}</div>
+                    <div style="font-size:10px;color:#6b7280;">Edit path on the <strong>Sprite</strong> component in Components / Details.</div>
                 `)}
                 ${createSettingsFormGroup(`
                     ${createSettingsLabel('Category:', 'ae-category')}
@@ -115,7 +133,7 @@ export class AssetIdentityPanel {
                 <div style="font-size:11px;color:var(--ui-text-color,#9ca3af);line-height:1.5;">
                     Dirty: <strong style="color:${dirty ? '#fbbf24' : '#6b7280'}">${dirty ? 'yes' : 'no'}</strong>
                     · Temporary: <strong>${temp ? 'yes' : 'no'}</strong>
-                    · Components: <strong>${(asset.components || []).length}</strong>
+                    · Components: <strong>${compCount}</strong>
                 </div>
             `)}
         `, { gap: '1rem' });
@@ -134,30 +152,41 @@ export class AssetIdentityPanel {
             const width = parseFloat(this.container.querySelector('#ae-width')?.value);
             const height = parseFloat(this.container.querySelector('#ae-height')?.value);
             const color = this.container.querySelector('#ae-color')?.value || '#3B82F6';
-            const imgRaw = this.container.querySelector('#ae-imgSrc')?.value || '';
             const category = this.container.querySelector('#ae-category')?.value || '';
             const tagsRaw = this.container.querySelector('#ae-tags')?.value || '';
             const tags = tagsRaw.split(',').map((t) => t.trim()).filter(Boolean);
-            patchEditingAsset(this.levelEditor, assetId, {
-                name,
-                width: Number.isFinite(width) ? width : 32,
-                height: Number.isFinite(height) ? height : 32,
-                color,
-                imgSrc: imgRaw === '' ? null : imgRaw,
-                category,
-                tags
-            });
+            this._selfPatch = true;
+            try {
+                patchEditingAsset(this.levelEditor, assetId, {
+                    name,
+                    width: Number.isFinite(width) ? width : 32,
+                    height: Number.isFinite(height) ? height : 32,
+                    color,
+                    category,
+                    tags
+                });
+            } finally {
+                this._selfPatch = false;
+            }
             this.levelEditor?.dockManager?.syncAssetEditorTitle?.();
         };
 
-        ['ae-name', 'ae-width', 'ae-height', 'ae-color', 'ae-imgSrc', 'ae-category', 'ae-tags'].forEach((id) => {
+        ['ae-name', 'ae-width', 'ae-height', 'ae-color', 'ae-category', 'ae-tags'].forEach((id) => {
             const el = this.container.querySelector(`#${id}`);
             if (!el) return;
             el.addEventListener('change', commit);
-            el.addEventListener('input', () => {
-                if (id === 'ae-color') commit();
-            });
+            if (id === 'ae-color' || id === 'ae-width' || id === 'ae-height') {
+                el.addEventListener('input', commit);
+            }
         });
+    }
+
+    /** @private */
+    _esc(s) {
+        return String(s ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/"/g, '&quot;');
     }
 
     destroy() {

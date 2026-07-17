@@ -104,6 +104,13 @@ export class Asset {
      * @param {string} layerId - Layer ID for the new object (optional)
      */
     createInstance(x = 0, y = 0, layerId = null) {
+        // Prefer Sprite component src for placed object texture (engine still reads entity.imgSrc)
+        let imgSrc = this.imgSrc;
+        const spr = (this.components || []).find((c) => c && c.type === 'sprite' && c.enabled !== false);
+        if (spr?.properties?.src) {
+            const s = spr.properties.src;
+            imgSrc = Array.isArray(s) ? (s[0] || imgSrc) : s;
+        }
         const instanceData = {
             id: `obj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             name: this.name,
@@ -113,7 +120,7 @@ export class Asset {
             width: this.width,
             height: this.height,
             color: this.color,
-            imgSrc: this.imgSrc,
+            imgSrc,
             visible: true,
             locked: false,
             layerId: layerId, // Will be set by level.addObject() if not provided

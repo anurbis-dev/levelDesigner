@@ -65,7 +65,12 @@ export const ASSET_TYPES = [
 // type is created — so e.g. a placed "Player Start" already carries its behavior stub instead
 // of requiring the user to remember to add the matching component manually.
 export const DEFAULT_ASSET_COMPONENTS = {
-    player_start: ['playerStart']
+    player_start: ['playerStart'],
+    // Visual assets get a Sprite component that owns the texture path (not Identity.imgSrc).
+    image: ['sprite'],
+    imageAtlas: ['sprite'],
+    actor: ['sprite'],
+    prefab: ['sprite']
 };
 
 const ASSET_TYPE_MAP = new Map(ASSET_TYPES.map(t => [t.id, t]));

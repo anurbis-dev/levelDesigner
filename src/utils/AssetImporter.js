@@ -586,7 +586,14 @@ export class AssetImporter {
                     lastModified: Date.now(),
                     isTemporary: true // Mark as temporary
                 },
-                tags: [category, 'imported', 'temporary']
+                tags: [category, 'imported', 'temporary'],
+                // Texture owned by Sprite component (mirrored to imgSrc for engine)
+                components: imgSrc ? [{
+                    id: `comp_sprite_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`,
+                    type: 'sprite',
+                    enabled: true,
+                    properties: { src: imgSrc }
+                }] : []
             };
 
             Logger.asset.info(`🔍 ASSET DATA PATH CHECK: filePath parameter="${filePath}", assetData.path="${assetData.path}"`);

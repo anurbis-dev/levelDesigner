@@ -114,7 +114,8 @@ implemented`, `properties: {}`, `schemaVersion: 1`. `BehaviorRegistry` (движ
 
 | id | label | schemaVersion | status | fields |
 |---|---|---|---|---|
-| `collider` | Collider | 2 | implemented | `offsetX`/`offsetY`/`width`/`height` (все опциональные, дефолт — сам bounding box entity); AABB-прямоугольник, `shape` пока не читается (только rect); `layer` (опционально, строка-категория) + `collidesWith` (опционально, список категорий — пусто/не задано = реагирует со всеми, back-compat) |
+| `sprite` | Sprite | 1 | editor+placement | `src` (string, path/data URL of texture). Editor: primary image source for asset; mirrored to `asset.imgSrc` / `entity.imgSrc` for engine renderer. Static display only (animation frames stay on `spriteUiAnimation`). |
+| `collider` | Collider | 2 | implemented | `offsetX`/`offsetY`/`width`/`height` (все опциональные, дефолт — сам bounding box entity); AABB-прямоугольник, `shape` пока не читается (только rect); `layer` (опционально, строка-категория) + `collidesWith` (опционально, список категорий — пусто/не задано = реагирует со всеми, back-compat). Editor Preview: stroke frame only — never crops sprite. |
 | `trigger` | Trigger | 2 | implemented | те же поля, что `collider` (использует ту же `getEntityBounds`), включая `layer`/`collidesWith`; enter/exit трекается против любого поведения с `getBounds()`, не только `collider`, отфильтрованного по `collidesWith` до геометрической проверки |
 | `interactable` | Interactable | 1 | implemented | `radius` (опционально, дефолт `32`), `hint` (опционально, дефолт `'Interact'`) |
 | `playerStart` | Player Start | 1 | implemented | нет собственных полей — позиция берётся из `entity.x/y` (используется `Scene.spawnPlayer()` для создания управляемого игрока при запуске уровня; сама маркер-сущность скрывается, не отображается в игре) |

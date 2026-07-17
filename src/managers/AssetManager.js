@@ -1,6 +1,7 @@
 import { Asset } from '../models/Asset.js';
 import { Logger } from '../utils/Logger.js';
 import { getAssetTypeById, ASSET_CATEGORIES, DEFAULT_ASSET_COMPONENTS } from '../constants/AssetTypes.js';
+import { ensureSpriteComponent } from '../ui/asset-editor/AssetVisualMigrate.js';
 import { createComponentStub } from '../constants/ComponentTypes.js';
 import { BaseManager } from './BaseManager.js';
 
@@ -211,7 +212,7 @@ export class AssetManager extends BaseManager {
             Logger.asset.info(`AssetManager: Generated unique ID from path: ${assetId}`);
         }
 
-        // Create asset with normalized data (single image only)
+        // Create asset with normalized data (single image only) + components from JSON
         const asset = this.addAsset({
             id: assetId,
             name: assetData.name,
@@ -223,8 +224,21 @@ export class AssetManager extends BaseManager {
             color: assetData.color || '#cccccc',
             imgSrc: imgSrc,
             properties: assetData.properties || {},
-            tags: assetData.tags || []
+            tags: assetData.tags || [],
+            components: Array.isArray(assetData.components) ? assetData.components : []
         });
+
+        // Sprite owns texture; migrate legacy imgSrc/image; prefer resolved content path
+        ensureSpriteComponent(asset);
+        const spr = (asset.components || []).find((c) => c.type === 'sprite');
+        if (spr && imgSrc) {
+            const cur = spr.properties?.src;
+            if (!cur || (!String(cur).startsWith('./') && !String(cur).startsWith('http') && !String(cur).startsWith('data:'))) {
+                spr.properties = { ...(spr.properties || {}), src: imgSrc };
+            }
+            asset.imgSrc = imgSrc;
+        }
+        asset.saveOriginalState?.();
 
         result.loadedAssets++;
         Logger.asset.info(`AssetManager: Loaded asset "${asset.name}" with imgSrc: ${asset.imgSrc}`);
@@ -605,9 +619,9 @@ export class AssetManager extends BaseManager {
         Logger.asset.debug(`Asset ${asset.name}: hasUnsavedChanges = ${hasChanges}`);
         Logger.asset.info(`Updated asset: ${asset.name}`);
         
-        // Notify UI components
+        // Notify UI (set bumps value so subscribers always fire; live asset-editor depends on this)
         if (this.stateManager) {
-            this.stateManager.notify('assetsChanged');
+            this.stateManager.set('assetsChanged', Date.now());
         }
         
         return true;

@@ -7,7 +7,7 @@ import {
     getComponentBounds, zoomAtClient, panCamera
 } from './AssetPreviewCamera.js';
 import {
-    drawPreviewGrid, drawAssetBody, drawComponentOverlays, paintPreviewEmpty
+    drawPreviewGrid, drawAssetBody, drawAllComponentOverlays, paintPreviewEmpty
 } from './AssetPreviewDraw.js';
 import {
     ensureAssetPreviewInfoOverlay, updateAssetPreviewInfoOverlay
@@ -333,15 +333,17 @@ export class AssetPreviewPanel {
 
         const asset = getEditingAsset(this.levelEditor);
         const compId = getEditingComponentId(this.levelEditor);
-        const comp = asset && compId
-            ? (asset.components || []).find((c) => c.id === compId)
-            : null;
+        const comps = asset && Array.isArray(asset.components) ? asset.components : [];
+        const comp = asset && compId ? comps.find((c) => c.id === compId) : null;
 
         if (!asset) {
             paintPreviewEmpty(ctx, cw, ch, null);
             updateAssetPreviewInfoOverlay(this.infoOverlay, null, null, this.camera);
             return;
         }
+
+        // Sprite path may change live — refresh image each paint path via _ensureImage
+        this._ensureImage(asset);
 
         const z = this.camera.zoom > 0 ? this.camera.zoom : 1;
         const aw = Math.max(1, Number(asset.width) || 32);
@@ -353,7 +355,8 @@ export class AssetPreviewPanel {
         ctx.scale(z, z);
         drawPreviewGrid(ctx, aw, ah, z);
         drawAssetBody(ctx, this._img, aw, ah, color, z);
-        drawComponentOverlays(ctx, comp, aw, ah, z);
+        // All colliders/triggers as frames (not crop); selected emphasized
+        drawAllComponentOverlays(ctx, comps, compId, aw, ah, z);
         ctx.restore();
 
         updateAssetPreviewInfoOverlay(this.infoOverlay, asset, comp, this.camera);

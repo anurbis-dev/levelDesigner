@@ -47,6 +47,7 @@ export const TYPE_ICON_PATHS = {
     sequenceCutscene: '<rect x="3" y="6" width="18" height="14" rx="1"/><path d="M3 10h18"/><path d="M6 6l2 4M11 6l2 4M16 6l2 4"/>',
 
     // --- Components (section 3, attach to Actor) ---
+    sprite: '<rect x="3" y="3" width="18" height="18" rx="1"/><circle cx="9" cy="9" r="1.5"/><path d="M3 16l5-5 4 4 3-3 6 6"/>',
     collider: '<rect x="3.5" y="3.5" width="17" height="17" stroke-dasharray="2.5 2"/>',
     trigger: '<circle cx="12" cy="12" r="8.5" stroke-dasharray="2.5 2"/><path d="M2 12h7M9 9l3 3-3 3"/>',
     transformAnimation: '<path d="M4 12a8 8 0 0 1 14-5"/><path d="M20 12a8 8 0 0 1-14 5"/><path d="M18 3v4h-4M6 21v-4h4"/>',

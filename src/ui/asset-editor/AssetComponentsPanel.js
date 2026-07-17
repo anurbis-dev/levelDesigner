@@ -29,16 +29,31 @@ export class AssetComponentsPanel {
         this.stateManager = stateManager;
         this.levelEditor = levelEditor;
         this.instanceKey = options.instanceKey || null;
-        this._unsub = subscribeAssetEditor(stateManager, () => this.render());
+        this._sig = '';
+        this._unsub = subscribeAssetEditor(stateManager, () => this._onContext());
         this.container.style.cssText =
             'overflow:hidden;padding:8px;font-size:12px;height:100%;box-sizing:border-box;'
             + 'display:flex;flex-direction:column;gap:8px;';
         this.render();
     }
 
+    /**
+     * Rebuild list only when membership/selection/enabled changes — not every prop keystroke.
+     * @private
+     */
+    _onContext() {
+        const asset = getEditingAsset(this.levelEditor);
+        const selectedId = getEditingComponentId(this.levelEditor);
+        const comps = asset && Array.isArray(asset.components) ? asset.components : [];
+        const sig = `${asset?.id || ''}|${selectedId || ''}|${comps.map((c) => `${c.id}:${c.type}:${c.enabled !== false ? 1 : 0}`).join(',')}`;
+        if (sig === this._sig) return;
+        this.render();
+    }
+
     render() {
         const asset = getEditingAsset(this.levelEditor);
         if (!asset) {
+            this._sig = '';
             this.container.innerHTML =
                 '<div style="color:var(--ui-text-color,#9ca3af);">No asset selected</div>';
             return;
@@ -46,6 +61,7 @@ export class AssetComponentsPanel {
 
         const selectedId = getEditingComponentId(this.levelEditor);
         const components = Array.isArray(asset.components) ? asset.components : [];
+        this._sig = `${asset.id}|${selectedId || ''}|${components.map((c) => `${c.id}:${c.type}:${c.enabled !== false ? 1 : 0}`).join(',')}`;
         const labels = buildComponentDisplayLabels(components);
         const options = COMPONENT_TYPES
             .map((c) => `<option value="${c.id}">${c.label}</option>`)
