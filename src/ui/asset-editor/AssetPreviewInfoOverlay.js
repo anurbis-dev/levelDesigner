@@ -1,6 +1,8 @@
 /**
  * DOM info HUD for Asset Preview — same classes as viewport-info-overlay (VP-OVL).
+ * Updated every paint from live asset/component data (realtime property edits).
  */
+import { buildComponentDisplayLabels, getComponentTypeById } from '../../constants/ComponentTypes.js';
 
 /**
  * @param {HTMLElement} host - position:relative measure host
@@ -57,9 +59,13 @@ export function updateAssetPreviewInfoOverlay(overlay, asset, comp, camera) {
     setText(overlay.querySelector('[data-k="zoom"]'), `Zoom ${zoomPct}%`);
 
     if (comp) {
-        const type = comp.type || 'component';
+        const labels = buildComponentDisplayLabels(comps);
+        const label = labels.get(comp.id)
+            || getComponentTypeById(comp.type)?.label
+            || comp.type
+            || 'component';
         const en = comp.enabled === false ? 'off' : 'on';
-        setText(overlay.querySelector('[data-k="comp"]'), `${type} · ${en}`);
+        setText(overlay.querySelector('[data-k="comp"]'), `${label} · ${en}`);
         setText(overlay.querySelector('[data-k="compDetail"]'), formatCompDetail(comp, w, h));
     } else {
         setText(overlay.querySelector('[data-k="comp"]'), 'No component');

@@ -38,13 +38,49 @@ export function getComponentTypeById(id) {
     return COMPONENT_TYPE_MAP.get(id) || null;
 }
 
+/** Monotonic counter so same-ms stubs never share an id. */
+let _componentStubSeq = 0;
+
+/**
+ * New component instance — always unique `id` (type may repeat on one asset).
+ * @param {string} typeId
+ * @returns {{ id: string, type: string, enabled: boolean, properties: object }|null}
+ */
 export function createComponentStub(typeId) {
     const def = getComponentTypeById(typeId);
     if (!def) return null;
+    _componentStubSeq = (_componentStubSeq + 1) >>> 0;
     return {
-        id: `comp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        id: `comp_${Date.now().toString(36)}_${_componentStubSeq.toString(36)}_${Math.random().toString(36).slice(2, 9)}`,
         type: typeId,
         enabled: true,
         properties: { ...getDefaultComponentProperties(typeId) }
     };
+}
+
+/**
+ * Display labels for a component list: same type → "Collider", "Collider 2", …
+ * Identity is always `comp.id` (like Outliner object ids; labels are not keys).
+ * @param {Array<{ id?: string, type?: string }>} components
+ * @returns {Map<string, string>} id → label
+ */
+export function buildComponentDisplayLabels(components) {
+    const list = Array.isArray(components) ? components : [];
+    const typeTotal = new Map();
+    for (const c of list) {
+        const t = c?.type || 'unknown';
+        typeTotal.set(t, (typeTotal.get(t) || 0) + 1);
+    }
+    const typeSeen = new Map();
+    const labels = new Map();
+    for (const c of list) {
+        if (!c?.id) continue;
+        const t = c.type || 'unknown';
+        const def = getComponentTypeById(t);
+        const base = def?.label || t;
+        const n = (typeSeen.get(t) || 0) + 1;
+        typeSeen.set(t, n);
+        labels.set(c.id, typeTotal.get(t) > 1 ? `${base} ${n}` : base);
+    }
+    return labels;
 }

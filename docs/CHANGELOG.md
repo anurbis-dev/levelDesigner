@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- **Asset Preview info HUD + F/A**: bottom status bar removed; viewport-style DOM info overlay (asset/size/zoom + component detail); no dblclick fit — **F** frames selected component, **A** frames whole asset when Asset Editor/Preview is under cursor; `dockManager.registry` used for panel hotkey routing.
+- **Asset Editor Components polish**: multi-instance same type (unique ids + labels `Collider` / `Collider 2`); no nested Components header; Add control at top; Preview always re-centers on open (camera not stored); Details live `input` commits so Preview + info overlay update in realtime.

@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (Asset Preview info HUD + F/A)
+
+- **Asset Preview info HUD + F/A**: bottom status bar removed; viewport-style DOM info overlay (asset/size/zoom + component detail); no dblclick fit — **F** frames selected component, **A** frames whole asset when Asset Editor/Preview is under cursor; `dockManager.registry` used for panel hotkey routing.
+
 ## Archived from CHANGELOG.md (Dialogue MVP + Asset Preview camera)
 
 - **Dialogue MVP runtime (Фаза E)**: DialogueRunner интерпретатор, ConditionEvaluator для условий, DialogueTriggerBehavior компонент; OnDialogueEnded event-граф вход, StartDialogue action; Scene.dialogues и dialogue state (dialogueActive/dialogueRunner); PlayerMovementBehavior паузится при активном диалоге.

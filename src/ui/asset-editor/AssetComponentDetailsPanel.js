@@ -1,7 +1,11 @@
 /**
  * Selected component: enabled + typed property form (RUNTIME_SCHEMA fields).
+ * Live input commits so Preview/info overlay update in realtime; self-patches skip form rebuild.
  */
-import { getComponentTypeById } from '../../constants/ComponentTypes.js';
+import {
+    getComponentTypeById,
+    buildComponentDisplayLabels
+} from '../../constants/ComponentTypes.js';
 import {
     getComponentFields,
     readFieldValue,
@@ -28,18 +32,39 @@ export class AssetComponentDetailsPanel {
         this.stateManager = stateManager;
         this.levelEditor = levelEditor;
         this.instanceKey = options.instanceKey || null;
-        this._unsub = subscribeAssetEditor(stateManager, () => this.render());
+        /** @type {boolean} skip full re-render while we own a live patch */
+        this._selfPatch = false;
+        this._renderedKey = null;
+        this._unsub = subscribeAssetEditor(stateManager, () => this._onContext());
         this.container.style.cssText = 'overflow:auto;padding:8px;font-size:12px;height:100%;box-sizing:border-box;';
+        this.render();
+    }
+
+    /** @private */
+    _onContext() {
+        if (this._selfPatch) return;
+        const asset = getEditingAsset(this.levelEditor);
+        const compId = getEditingComponentId(this.levelEditor);
+        const key = `${asset?.id || ''}|${compId || ''}`;
+        // Selection/asset change → always rebuild form
+        if (key !== this._renderedKey) {
+            this.render();
+            return;
+        }
+        // Same selection: live field edits already own the DOM; don't steal focus
+        if (this.container.contains(document.activeElement)) return;
         this.render();
     }
 
     render() {
         const asset = getEditingAsset(this.levelEditor);
         if (!asset) {
+            this._renderedKey = '|';
             this.container.innerHTML = '<div style="color:var(--ui-text-color,#9ca3af);">No asset selected</div>';
             return;
         }
         const compId = getEditingComponentId(this.levelEditor);
+        this._renderedKey = `${asset.id}|${compId || ''}`;
         if (!compId) {
             this.container.innerHTML = '<div style="color:var(--ui-text-color,#9ca3af);">Select a component in the Components panel</div>';
             return;
@@ -50,8 +75,11 @@ export class AssetComponentDetailsPanel {
             return;
         }
 
+        const labels = buildComponentDisplayLabels(asset.components || []);
+        const label = labels.get(comp.id)
+            || getComponentTypeById(comp.type)?.label
+            || comp.type;
         const def = getComponentTypeById(comp.type);
-        const label = def ? def.label : comp.type;
         const desc = def?.description || '';
         const schema = getComponentFields(comp.type);
         const props = comp.properties || {};
@@ -156,10 +184,31 @@ export class AssetComponentDetailsPanel {
      * @param {Array|null} schema
      * @private
      */
+    /**
+     * @param {string} assetId
+     * @param {string} componentId
+     * @param {(c: object) => object} mapFn
+     * @private
+     */
+    _livePatch(assetId, componentId, mapFn) {
+        this._selfPatch = true;
+        try {
+            patchEditingComponent(this.levelEditor, assetId, componentId, mapFn);
+        } finally {
+            this._selfPatch = false;
+        }
+    }
+
+    /**
+     * @param {string} assetId
+     * @param {string} componentId
+     * @param {Array|null} schema
+     * @private
+     */
     _bind(assetId, componentId, schema) {
         const enabled = this.container.querySelector('.ae-comp-enabled');
         enabled?.addEventListener('change', () => {
-            patchEditingComponent(this.levelEditor, assetId, componentId, (c) => {
+            this._livePatch(assetId, componentId, (c) => {
                 c.enabled = !!enabled.checked;
                 return c;
             });
@@ -168,7 +217,7 @@ export class AssetComponentDetailsPanel {
         if (!schema) {
             const ta = this.container.querySelector('.ae-raw-props');
             const err = this.container.querySelector('.ae-field-error');
-            ta?.addEventListener('change', () => {
+            const applyRaw = () => {
                 try {
                     const parsed = JSON.parse(ta.value || '{}');
                     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
@@ -176,14 +225,15 @@ export class AssetComponentDetailsPanel {
                         return;
                     }
                     if (err) err.textContent = '';
-                    patchEditingComponent(this.levelEditor, assetId, componentId, (c) => {
+                    this._livePatch(assetId, componentId, (c) => {
                         c.properties = parsed;
                         return c;
                     });
                 } catch (e) {
                     if (err) err.textContent = e.message || 'Invalid JSON';
                 }
-            });
+            };
+            ta?.addEventListener('change', applyRaw);
             return;
         }
 
@@ -200,7 +250,7 @@ export class AssetComponentDetailsPanel {
                     return;
                 }
                 if (errEl) errEl.textContent = '';
-                patchEditingComponent(this.levelEditor, assetId, componentId, (c) => {
+                this._livePatch(assetId, componentId, (c) => {
                     const next = { ...(c.properties || {}) };
                     if (parsed.value === null && (field.key === 'width' || field.key === 'height')) {
                         delete next[field.key];
@@ -211,8 +261,13 @@ export class AssetComponentDetailsPanel {
                     return c;
                 });
             };
-            el.addEventListener('change', apply);
-            if (field.kind === 'bool') el.addEventListener('input', apply);
+            // Live commit for preview + info overlay (json still on change — partial JSON invalid)
+            if (field.kind === 'json') {
+                el.addEventListener('change', apply);
+            } else {
+                el.addEventListener('input', apply);
+                el.addEventListener('change', apply);
+            }
         });
     }
 

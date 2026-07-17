@@ -51,7 +51,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '4.11.0';
+    static VERSION = '4.12.0';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -994,7 +994,25 @@ export class LevelEditor {
             title: `Asset: ${asset.name || asset.id}`
         });
         this.dockManager.syncAssetEditorTitle();
+        // Always re-center Preview (camera pose is never remembered)
+        requestAnimationFrame(() => this.fitAssetEditorPreviews());
         Logger.ui.info(`Opened Asset Editor for asset: ${asset.name}`);
+    }
+
+    /**
+     * Fit every assetPreview panel camera to the editing asset (open / re-open).
+     */
+    fitAssetEditorPreviews() {
+        const reg = this.dockManager?.registry || this.dockManager?.contentRegistry;
+        if (!reg?._byLeafId) return;
+        for (const bind of reg._byLeafId.values()) {
+            if (bind.contentType !== 'assetPreview' || !bind.panel) continue;
+            if (typeof bind.panel.requestInitialFit === 'function') {
+                bind.panel.requestInitialFit();
+            } else if (typeof bind.panel.fitToAsset === 'function') {
+                bind.panel.fitToAsset();
+            }
+        }
     }
 
     /**

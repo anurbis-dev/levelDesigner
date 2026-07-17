@@ -1,31 +1,16 @@
-/**
- * Asset preview mini-viewport: local camera (RMB pan, wheel/MMB zoom), asset + overlays.
- * Info HUD (viewport-info-overlay). Focus: F = component, A = asset (via EventHandlers).
- */
+/** Asset preview mini-viewport: local camera, info HUD; F/A via EventHandlers. */
 import {
-    getEditingAsset,
-    getEditingComponentId,
-    subscribeAssetEditor,
-    resolveAssetImageSrc
+    getEditingAsset, getEditingComponentId, subscribeAssetEditor, resolveAssetImageSrc
 } from './AssetEditorContext.js';
 import {
-    PREVIEW_ZOOM_WHEEL,
-    PREVIEW_ZOOM_MMB,
-    fitCameraToAsset,
-    fitCameraToBounds,
-    getComponentBounds,
-    zoomAtClient,
-    panCamera
+    PREVIEW_ZOOM_WHEEL, PREVIEW_ZOOM_MMB, fitCameraToAsset, fitCameraToBounds,
+    getComponentBounds, zoomAtClient, panCamera
 } from './AssetPreviewCamera.js';
 import {
-    drawPreviewGrid,
-    drawAssetBody,
-    drawComponentOverlays,
-    paintPreviewEmpty
+    drawPreviewGrid, drawAssetBody, drawComponentOverlays, paintPreviewEmpty
 } from './AssetPreviewDraw.js';
 import {
-    ensureAssetPreviewInfoOverlay,
-    updateAssetPreviewInfoOverlay
+    ensureAssetPreviewInfoOverlay, updateAssetPreviewInfoOverlay
 } from './AssetPreviewInfoOverlay.js';
 
 export class AssetPreviewPanel {
@@ -40,20 +25,18 @@ export class AssetPreviewPanel {
         this.stateManager = stateManager;
         this.levelEditor = levelEditor;
         this.instanceKey = options.instanceKey || null;
-
         /** @type {{ x: number, y: number, zoom: number }} */
         this.camera = { x: 0, y: 0, zoom: 1 };
-        /** @type {string|null} */
         this._boundAssetId = null;
-        /** @type {HTMLImageElement|null} */
         this._img = null;
-        /** @type {string|null} */
         this._imgSrc = null;
         /** @type {{ mode: 'pan'|'zoom', lastX: number, lastY: number, startX: number, startY: number, initialZoom: number }|null} */
         this._drag = null;
         this._raf = null;
         this._ro = null;
         this._dpr = 1;
+        // Camera pose never persisted — fit once host has real size / on open
+        this._needsFit = true;
 
         this.container.style.cssText =
             'overflow:hidden;padding:0;height:100%;box-sizing:border-box;'
@@ -90,6 +73,7 @@ export class AssetPreviewPanel {
 
         this._ro = new ResizeObserver(() => {
             this._resizeCanvas();
+            if (this._needsFit) this._tryInitialFit();
             this._draw();
         });
         this._ro.observe(this.host);
@@ -101,12 +85,27 @@ export class AssetPreviewPanel {
 
     /** A — frame whole asset. */
     fitToAsset() {
+        this._applyFitToAsset();
+        this._needsFit = false;
+        this._draw();
+    }
+
+    /**
+     * Request re-center on next sized frame (open editor / new asset). Pose not stored.
+     */
+    requestInitialFit() {
+        this._needsFit = true;
+        this._tryInitialFit();
+        this._draw();
+    }
+
+    /** @private */
+    _applyFitToAsset() {
         const asset = getEditingAsset(this.levelEditor);
         const { cw, ch } = this._cssSize();
-        if (!asset) {
-            this.camera = { x: 0, y: 0, zoom: 1 };
-            this._draw();
-            return;
+        if (!asset || cw < 16 || ch < 16) {
+            if (!asset) this.camera = { x: 0, y: 0, zoom: 1 };
+            return false;
         }
         this.camera = fitCameraToAsset(
             cw,
@@ -114,7 +113,13 @@ export class AssetPreviewPanel {
             Math.max(1, Number(asset.width) || 32),
             Math.max(1, Number(asset.height) || 32)
         );
-        this._draw();
+        return true;
+    }
+
+    /** @private */
+    _tryInitialFit() {
+        if (!this._needsFit) return;
+        if (this._applyFitToAsset()) this._needsFit = false;
     }
 
     /** F — frame selected component (no-op if none). */
@@ -151,19 +156,10 @@ export class AssetPreviewPanel {
             this._boundAssetId = id;
             this._img = null;
             this._imgSrc = null;
-            // Initial open: frame asset (same as A), no dblclick.
-            if (asset) {
-                const { cw, ch } = this._cssSize();
-                this.camera = fitCameraToAsset(
-                    cw,
-                    ch,
-                    Math.max(1, Number(asset.width) || 32),
-                    Math.max(1, Number(asset.height) || 32)
-                );
-            } else {
-                this.camera = { x: 0, y: 0, zoom: 1 };
-            }
+            // New asset → center (never restore previous camera pose)
+            this._needsFit = true;
         }
+        this._tryInitialFit();
         if (asset) this._ensureImage(asset);
         this._draw();
     }
