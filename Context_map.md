@@ -224,7 +224,7 @@ level.settings.parallaxVertical // множитель вертикального
 - `src/constants/EditorConstants.js` - константы, включая `TRANSFORM` (rotate/scale жесты)
 - `src/utils/WorldPositionUtils.js` - мировые координаты, rotation-aware bounds (`getRotatedRectAABB`, `rotateBoundsAroundCenter`)
 - `src/utils/GroupTraversalUtils.js` - обход иерархии групп, включая `findObjectPath()` (путь индексов для z-порядка)
-- `src/models/Level.js` - модель уровня, `compareStackOrder()` — единый компаратор z-порядка (без `zIndex`, объекты не хранят его)
+- `src/models/Level.js` - модель уровня, `compareStackOrder()` — единый компаратор z-порядка (без `zIndex`, объекты не хранят его); хранит и сериализует level-scope `eventGraph`/`dialogues` (Фаза D/E LOGIC_SYSTEMS_PLAN, читает `src/engine/Scene.js`) — без своего UI, авторинг сырым JSON
 - `src/models/Layer.js` - модель слоя, включая transient `soloed` (Layer Solo, не сериализуется)
 - `src/event-system/EventHandlers.js` - клавиатурные хоткеи (`handleKeyDown`), Alt+1/2/4 → dock outliner/details/assets (legacy left/right/assets keys), F2 (`renameSelectedObject`); `syncDockPanelMenuCheckboxes`
 

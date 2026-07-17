@@ -35,7 +35,13 @@ export class Level {
             y: data.camera?.y || 0,
             zoom: data.camera?.zoom || 1
         };
-        
+
+        // Level-scope logic (tmp/2D_Editor_LOGIC_SYSTEMS_PLAN.md Фаза D/E) — opaque to the
+        // editor's own object/layer model, read only by src/engine/Scene.js at Play/build time.
+        // No dedicated UI yet; authored as raw JSON until the Event Graph/Dialogue widgets land.
+        this.eventGraph = data.eventGraph || null;
+        this.dialogues = data.dialogues || [];
+
         this.objects = data.objects || [];
         this.nextObjectId = data.nextObjectId || 1;
 
@@ -801,6 +807,8 @@ export class Level {
             meta: this.meta,
             settings: this.settings,
             camera: this.camera,
+            eventGraph: this.eventGraph,
+            dialogues: this.dialogues,
             objects: this.objects.map(obj => {
                 if (obj.type === 'group') {
                     return Group.fromJSON(obj).toJSON();
