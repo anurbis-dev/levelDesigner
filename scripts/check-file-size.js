@@ -52,6 +52,7 @@ const OVERRIDES = new Set([
     'utils/ScrollUtils.js',
     'ui/dock/DockContentRegistry.js',
     'ui/dock/DockRenderer.js',
+    'ui/dock/DockManager.js', // asset-editor workspace + layout persist; split backlog
     'core/ViewportViewManager.js'
 ]);
 

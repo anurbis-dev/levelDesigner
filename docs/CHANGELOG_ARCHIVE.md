@@ -2,6 +2,12 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (Event Graph MVP + Asset Editor data/layout)
+
+- **Event Graph MVP runtime** (Фаза D): engine-side interpreter for level-scope event graphs (`src/engine/eventgraph/`); NodeRegistry pattern like BehaviorRegistry; EventGraphRuntime executes graph traversal via entry dispatch (OnStart/OnTick/OnCollisionEnter/OnCollisionExit/OnInteract/OnTimer/OnCustomEvent); Conditions: Compare/And/Or/Not (inline spec-based, not graph edges); Actions: SetVariable/SetComponentEnabled/Teleport/DestroyObject/EmitCustomEvent; integration with TriggerBehavior.notifyCollision() + SetComponentEnabled now live-flips .enabled at runtime.
+- **Asset Editor layout persist**: float remembers relative position/size (`relX/Y/W/H`) + full inner split-tree in `panels.dock.assetEditorLayout` across close/reopen and sessions; reopen remaps leaf ids.
+- **Asset Editor data wiring**: typed component property forms from `ComponentPropertySchema` (collider/trigger/interactable/spriteUiAnimation/playerStart + raw JSON fallback); defaults on `createComponentStub`; Components list shows type/props count + fixed **Add Component** bar; Details: enabled + fields; Preview: resolved image, AABB/radius overlays for selected component; Identity: id/path/tags/status.
+
 ## Archived from CHANGELOG.md (Asset Editor float shell)
 
 - **Asset Editor float**: modal `ActorPropertiesWindow` removed; dblclick/open asset → dock floating workspace (`role=assetEditor`) with panels `assetPreview` / `assetIdentity` / `assetComponents` / `assetComponentDetails`; live `assetManager.updateAsset`; state `editingAssetId` / `editingComponentId`; `DockManager.openAssetEditorWorkspace` / `closeAssetEditorWorkspace` / `syncAssetEditorTitle`; View menu stays level types only; type-menu filters asset* vs level types.

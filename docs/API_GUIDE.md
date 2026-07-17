@@ -307,7 +307,7 @@
 - `destroy()` - уничтожение менеджера и очистка всех разделителей
 
 ### DockManager (src/ui/dock/DockManager.js)
-Единственная оконная система (Phase B). Экземпляр: `editor.dockManager`. Binary split-tree + floating windows; level contentTypes: `viewport`, `outliner`, `details`, `layers`, `assets`, `levels`; asset-editor (float `role=assetEditor`): `assetPreview`, `assetIdentity`, `assetComponents`, `assetComponentDetails`. API: `openAssetEditorWorkspace(opts?)`, `closeAssetEditorWorkspace()`, `syncAssetEditorTitle()`, `findAssetEditorFloat()`. Entry: `editor.showActorPropertiesPanel(asset)` sets `editingAssetId` and opens the float.
+Единственная оконная система (Phase B). Экземпляр: `editor.dockManager`. Binary split-tree + floating windows; level contentTypes: `viewport`, `outliner`, `details`, `layers`, `assets`, `levels`; asset-editor (float `role=assetEditor`): `assetPreview` (canvas mini-viewport: local camera RMB pan / wheel+MMB zoom / dblclick fit), `assetIdentity`, `assetComponents`, `assetComponentDetails`. API: `openAssetEditorWorkspace(opts?)`, `closeAssetEditorWorkspace()`, `syncAssetEditorTitle()`, `findAssetEditorFloat()`. Entry: `editor.showActorPropertiesPanel(asset)` sets `editingAssetId` and opens the float.
 
 #### Основные методы:
 - `init()` — mount в `#dock-workspace` / `#split-root` / `#floating-layer`; restore `panels.dock.*` или default tree
