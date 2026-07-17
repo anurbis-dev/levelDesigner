@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (Asset Editor float shell)
+
+- **Asset Editor float**: modal `ActorPropertiesWindow` removed; dblclick/open asset → dock floating workspace (`role=assetEditor`) with panels `assetPreview` / `assetIdentity` / `assetComponents` / `assetComponentDetails`; live `assetManager.updateAsset`; state `editingAssetId` / `editingComponentId`; `DockManager.openAssetEditorWorkspace` / `closeAssetEditorWorkspace` / `syncAssetEditorTitle`; View menu stays level types only; type-menu filters asset* vs level types.
+
 ## Archived from CHANGELOG.md (D1/D2 multi-instance polish)
 
 - **D1**: Assets dock copies persist UI per leaf (`ui.assetCopyUiState[instanceKey]`: tabs, size, viewMode, foldersWidth); primary prefs unchanged; flush on `savePanelUiPreferences`.
