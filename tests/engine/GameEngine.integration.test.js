@@ -168,6 +168,34 @@ describe('GameEngine — Input/player-movement', () => {
         delete global.requestAnimationFrame;
         delete global.cancelAnimationFrame;
     });
+
+    // Camera-follow (closes the "не входит" gap noted in tmp/2D_Editor_ENGINE_PLAN.md §4):
+    // GameEngine.camera used to be set once in loadProject() and never updated in tick(),
+    // so the player could walk off-screen. _updateCamera() now centers it on scene.player.
+    it('centers the camera on the player as it moves, canvas 800x600 zoom 1', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(movementManifest());
+        engine.scene.input = { getAxis: () => ({ x: 1, y: 0 }) };
+
+        engine.tick(0);
+        expect(engine.camera.x).toBe(0 + 16 - 400);
+        expect(engine.camera.y).toBe(0 + 16 - 300);
+
+        engine.tick(0.05);
+        expect(engine.camera.x).toBe(engine.scene.player.x + 16 - 400);
+    });
+
+    it('leaves the camera static when the level has no player (no playerStart)', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(fixtureManifest());
+
+        engine.camera.x = 42;
+        engine.tick();
+
+        expect(engine.camera.x).toBe(42);
+    });
 });
 
 describe('GameEngine — Фаза 2 vertical slice (BehaviorRegistry + collider/trigger/playerStart)', () => {

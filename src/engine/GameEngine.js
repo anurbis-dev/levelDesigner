@@ -37,6 +37,7 @@ export class GameEngine {
     tick(dt = 0) {
         if (!this.scene) return;
         this._update(dt);
+        this._updateCamera();
         this.renderer.renderScene(this.scene, this.camera, this.parallaxStartPosition);
     }
 
@@ -46,6 +47,16 @@ export class GameEngine {
                 behavior.update(dt, this.scene);
             }
         }
+    }
+
+    /** Centers the camera on scene.player, if any (static camera otherwise). */
+    _updateCamera() {
+        const player = this.scene.player;
+        if (!player) return;
+        const zoom = this.camera.zoom || 1;
+        const canvas = this.renderer.canvas;
+        this.camera.x = player.x + player.width / 2 - (canvas.width / zoom) / 2;
+        this.camera.y = player.y + player.height / 2 - (canvas.height / zoom) / 2;
     }
 
     start() {
