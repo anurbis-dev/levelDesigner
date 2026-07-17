@@ -22,6 +22,12 @@ export class Scene {
             y: levelData.camera?.y || 0,
             zoom: levelData.camera?.zoom || 1
         };
+        // Level-scope Event Graph (tmp/2D_Editor_LOGIC_SYSTEMS_PLAN.md Фаза D), null when the
+        // level has none authored yet. GameEngine wires the interpreter into
+        // `this.eventGraphRuntime` after construction — kept as a plain Scene field (not
+        // constructor-built) so ProjectLoader.loadLevel() doesn't need to know about it.
+        this.eventGraph = levelData.eventGraph || null;
+        this.eventGraphRuntime = null;
     }
 
     getLayersSorted() {
@@ -88,5 +94,24 @@ export class Scene {
         this.player = player;
         this.entities.push(player);
         return player;
+    }
+
+    /**
+     * Removes an entity by id (searches nested group children too). Used by Event Graph's
+     * DestroyObject action (Фаза D) — no-op if the id isn't found (already destroyed/unknown).
+     * @returns {boolean} true if an entity was actually removed
+     */
+    destroyEntity(id) {
+        const removeFrom = (list) => {
+            const index = list.findIndex(entity => entity.id === id);
+            if (index !== -1) {
+                list.splice(index, 1);
+                return true;
+            }
+            return list.some(entity => entity.children && removeFrom(entity.children));
+        };
+        const removed = removeFrom(this.entities);
+        if (removed && this.player?.id === id) this.player = null;
+        return removed;
     }
 }

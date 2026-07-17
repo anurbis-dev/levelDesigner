@@ -26,7 +26,7 @@ export class TriggerBehavior extends Behavior {
         for (const other of candidates) {
             if (other === this.entity) continue;
             const colliderBehavior = other.behaviors?.find(b => typeof b.getBounds === 'function');
-            if (!colliderBehavior) continue;
+            if (!colliderBehavior || !colliderBehavior.enabled) continue;
             if (!matchesLayer(this.properties.collidesWith, colliderBehavior.properties?.layer)) continue;
             if (rectsIntersect(bounds, colliderBehavior.getBounds())) {
                 currentlyInside.add(other.id);
@@ -39,8 +39,21 @@ export class TriggerBehavior extends Behavior {
         return { entered, exited };
     }
 
+    // Feeds Event Graph's OnCollisionEnter/OnCollisionExit (Фаза D) — checkEntities() itself
+    // stays pure/testable (see tests/engine/TriggerBehavior.test.js), this is the only place
+    // enter/exit results get consumed at runtime.
     update(dt, scene) {
-        this.checkEntities(scene.getAllEntities());
+        const { entered, exited } = this.checkEntities(scene.getAllEntities());
+        const runtime = scene.eventGraphRuntime;
+        if (!runtime || (entered.length === 0 && exited.length === 0)) return;
+
+        const allEntities = scene.getAllEntities();
+        for (const id of entered) {
+            runtime.notifyCollision('Enter', this.entity.id, allEntities.find(e => e.id === id));
+        }
+        for (const id of exited) {
+            runtime.notifyCollision('Exit', this.entity.id, allEntities.find(e => e.id === id));
+        }
     }
 
     isOverlapping(entityId) {

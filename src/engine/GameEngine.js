@@ -3,6 +3,8 @@ import { Renderer } from './render/Renderer.js';
 import { Input } from './Input.js';
 import { AssetLoader } from './AssetLoader.js';
 import { registerDefaultBehaviors } from './behaviors/registerDefaultBehaviors.js';
+import { EventGraphRuntime } from './eventgraph/EventGraphRuntime.js';
+import { registerDefaultEventGraphNodes } from './eventgraph/registerDefaultEventGraphNodes.js';
 
 /**
  * Top-level engine orchestrator. Loads a runtime-Project manifest, updates behaviors,
@@ -18,6 +20,7 @@ export class GameEngine {
         this._rafId = null;
         this._lastFrameTime = null;
         registerDefaultBehaviors();
+        registerDefaultEventGraphNodes();
     }
 
     /**
@@ -30,6 +33,9 @@ export class GameEngine {
         this.scene = ProjectLoader.loadLevel(levelId, registries);
         this.scene.input = this.input;
         this.scene.spawnPlayer();
+        this.scene.eventGraphRuntime = this.scene.eventGraph
+            ? new EventGraphRuntime(this.scene.eventGraph, this.scene)
+            : null;
         this.camera = { ...this.scene.camera };
         this.parallaxStartPosition = { ...this.camera };
 
@@ -48,9 +54,11 @@ export class GameEngine {
     _update(dt) {
         for (const entity of this.scene.getAllEntities()) {
             for (const behavior of entity.behaviors) {
+                if (!behavior.enabled) continue;
                 behavior.update(dt, this.scene);
             }
         }
+        this.scene.eventGraphRuntime?.tick(dt);
     }
 
     /** Centers the camera on scene.player, if any (static camera otherwise). */

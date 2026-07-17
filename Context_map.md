@@ -297,6 +297,11 @@ level.settings.parallaxVertical // множитель вертикального
     - `src/engine/behaviors/PlayerMovementBehavior.js` - runtime-поведение (не component-тип схемы) управляемого игрока; читает `scene.input.getAxis()`, движет entity, per-axis AABB-коллизия
     - `src/engine/behaviors/registerDefaultBehaviors.js` - регистрирует collider/trigger/interactable/playerStart в `BehaviorRegistry`
     - Обновлены: `Entity.js` (`behaviors: []`), `EntityFactory.js` (компоненты → behaviors через реестр), `Scene.js` (`getAllEntities()`, `findPlayerStartEntity()`, `getPlayerStart()`, `spawnPlayer(speed)`), `GameEngine.js` (регистрация + `_update(dt)` перед рендером, Input управление, `dt` вычисление из requestAnimationFrame)
+  - **Фаза D Event Graph MVP** (`src/engine/eventgraph/`, Фаза D LOGIC_SYSTEMS_PLAN):
+    - `src/engine/eventgraph/EventGraphNodeRegistry.js` - реестр узлов (тип → функция-обработчик), явная регистрация, минимальный API как BehaviorRegistry
+    - `src/engine/eventgraph/EventGraphRuntime.js` - интерпретатор графа (переменные, ходьба по рёбрам, синхронизация с TriggerBehavior, pub/sub-мост для OnCustomEvent)
+    - `src/engine/eventgraph/registerDefaultEventGraphNodes.js` - MVP-словарь узлов (Entry: OnStart/OnTick/OnCollisionEnter/OnCollisionExit/OnInteract/OnTimer/OnCustomEvent; Conditions: Compare/And/Or/Not; Actions: SetVariable/SetComponentEnabled/Teleport/DestroyObject/EmitCustomEvent)
+    - Обновлены: `Behavior.js` (`.type` и `.enabled` live после конструкции), `Scene.js` (`.eventGraph` + `.destroyEntity(id)`), `GameEngine.js` (вызов `registerDefaultEventGraphNodes()` и создание `EventGraphRuntime`), `TriggerBehavior.js` (пересылка enter/exit → `scene.eventGraphRuntime.notifyCollision()`), `PlayerMovementBehavior.js` (фильтр из solids объектов с отключённым `.enabled` и TriggerBehavior)
 
 ## 🏗️ Архитектурные принципы
 

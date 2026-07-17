@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Entity } from '../../src/engine/Entity.js';
 import { ColliderBehavior } from '../../src/engine/behaviors/ColliderBehavior.js';
+import { TriggerBehavior } from '../../src/engine/behaviors/TriggerBehavior.js';
 import { PlayerMovementBehavior } from '../../src/engine/behaviors/PlayerMovementBehavior.js';
 
 function fakeInput(axis) {
@@ -80,6 +81,18 @@ describe('PlayerMovementBehavior', () => {
         for (let i = 0; i < 6; i++) movement.update(0.1, scene);
 
         expect(player.x).toBe(40);
+    });
+
+    it('walks through a trigger zone unblocked (TriggerBehavior.getBounds() is not solid)', () => {
+        const player = new Entity({ id: '__player', x: 0, y: 0, width: 10, height: 10 });
+        const movement = new PlayerMovementBehavior(player, { properties: { speed: 100 } });
+        const zoneEntity = new Entity({ id: 'zone', type: 'volume', x: 5, y: 0, width: 32, height: 32 });
+        zoneEntity.behaviors = [new TriggerBehavior(zoneEntity, { properties: {} })];
+        const scene = { input: fakeInput({ x: 1, y: 0 }), getAllEntities: () => [player, zoneEntity] };
+
+        for (let i = 0; i < 6; i++) movement.update(0.1, scene);
+
+        expect(player.x).toBe(60);
     });
 
     it('does nothing without scene.input or with dt <= 0', () => {

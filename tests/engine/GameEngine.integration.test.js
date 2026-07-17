@@ -249,6 +249,59 @@ describe('GameEngine — Фаза B sprite-sheet playback', () => {
     });
 });
 
+// Фаза D (tmp/2D_Editor_LOGIC_SYSTEMS_PLAN.md) readiness criterion, verbatim: a trigger's
+// OnCollisionEnter → SetVariable → SetComponentEnabled (disable a door's collider) actually
+// works through Play-in-editor. TriggerBehavior.update() used to compute entered/exited and
+// discard them (see checkEntities in tests/engine/TriggerBehavior.test.js) — this is the first
+// place that result is consumed at runtime.
+describe('GameEngine — Фаза D Event Graph MVP (OnCollisionEnter → SetVariable → SetComponentEnabled)', () => {
+    function graphManifest() {
+        return {
+            formatVersion: 1, name: 'Demo', entryLevelId: 'level_a',
+            levels: [{
+                id: 'level_a',
+                data: {
+                    meta: { name: 'Level A' },
+                    camera: { x: 0, y: 0, zoom: 1 },
+                    layers: [],
+                    eventGraph: {
+                        formatVersion: 1, scope: 'level',
+                        variables: [{ name: 'doorOpen', type: 'bool', default: false }],
+                        nodes: [
+                            { id: 'n1', type: 'OnCollisionEnter', params: { objectId: 'zone' } },
+                            { id: 'n2', type: 'SetVariable', params: { name: 'doorOpen', value: true } },
+                            { id: 'n3', type: 'SetComponentEnabled', params: { objectId: 'door', componentType: 'collider', enabled: false } }
+                        ],
+                        edges: [{ from: 'n1', to: 'n2' }, { from: 'n2', to: 'n3' }]
+                    },
+                    objects: [
+                        { id: 'spawn', type: 'player_start', x: 0, y: 0, width: 32, height: 32,
+                            components: [{ id: 'c1', type: 'playerStart', enabled: true, properties: {} }] },
+                        { id: 'door', type: 'actor', x: 50, y: -10, width: 32, height: 52,
+                            components: [{ id: 'c2', type: 'collider', enabled: true, properties: {} }] },
+                        { id: 'zone', type: 'volume', x: -5, y: -5, width: 40, height: 40,
+                            components: [{ id: 'c3', type: 'trigger', enabled: true, properties: {} }] }
+                    ]
+                }
+            }]
+        };
+    }
+
+    it('disables the door collider once the player steps into the zone, unblocking movement', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(graphManifest());
+        engine.scene.input = { getAxis: () => ({ x: 1, y: 0 }) };
+
+        for (let i = 0; i < 5; i++) engine.tick(0.05); // 5 * 10px = 50px total, would stall at x=10 without the graph (see Input/player-movement suite above)
+
+        expect(engine.scene.eventGraphRuntime.getVariable('doorOpen')).toBe(true);
+        const doorCollider = engine.scene.entities.find(e => e.id === 'door').behaviors.find(b => b.type === 'collider');
+        expect(doorCollider.enabled).toBe(false);
+        expect(engine.scene.player.x).toBe(50);
+    });
+});
+
 describe('GameEngine — Фаза 2 vertical slice (BehaviorRegistry + collider/trigger/playerStart)', () => {
     it('resolves playerStart/collider/trigger to real behaviors and tracks trigger enter/exit across ticks', async () => {
         const { canvas } = mockCanvas();

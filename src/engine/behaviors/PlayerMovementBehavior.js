@@ -26,10 +26,16 @@ export class PlayerMovementBehavior extends Behavior {
         const dx = (axis.x / length) * this.speed * dt;
         const dy = (axis.y / length) * this.speed * dt;
 
+        // TriggerBehavior also exposes getBounds() (so trigger-vs-trigger/collider overlap
+        // checks can duck-type it the same way) but must never itself block movement — a
+        // trigger zone is a walk-through sensor, distinguished here by isOverlapping (same
+        // duck-typing tests use to find "the trigger" among an entity's behaviors).
         const solids = scene.getAllEntities()
             .filter(candidate => candidate !== this.entity)
             .map(candidate => candidate.behaviors.find(b => typeof b.getBounds === 'function'))
             .filter(Boolean)
+            .filter(solid => solid.enabled)
+            .filter(solid => typeof solid.isOverlapping !== 'function')
             .filter(solid => matchesLayer(this.properties.collidesWith, solid.properties?.layer));
 
         this._moveAxis(dx, 0, solids);

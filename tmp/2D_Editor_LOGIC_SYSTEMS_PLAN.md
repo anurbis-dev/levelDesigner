@@ -127,7 +127,32 @@ Details) идёт через существующий `historyManager.saveState(
 
 ---
 
-## Фаза D — Event Graph MVP (ядро)  🔨 В РАБОТЕ (engine-track сессия, с 2026-07-17 — только рантайм/схема в `src/engine/`, без UI-виджета графа, чтобы не пересекаться с Фазой C)
+## Фаза D — Event Graph MVP (ядро)  ✅ ЗАВЕРШЕНА 2026-07-17 (engine-track сессия, v4.10.0)
+
+Реализовано строго в рамках рантайма (`src/engine/eventgraph/`), без UI-виджета графа — тот
+остаётся будущей задачей (вероятно вкладка Event Graph в Фазе C). Из словаря узлов
+зарегистрированы (`registerDefaultEventGraphNodes.js`) только те, что реально можно исполнить
+уже сейчас: Entry — `OnStart/OnTick/OnCollisionEnter/OnCollisionExit/OnInteract/OnTimer/
+OnCustomEvent`; Условия — `Compare/And/Or/Not`; Действия — `SetVariable/SetComponentEnabled/
+Teleport/DestroyObject/EmitCustomEvent`. `PlaySound/SpawnObject/LoadLevel/StartDialogue/
+PlayAnimation` сознательно не зарегистрированы (та же дисциплина, что и в
+`docs/RUNTIME_SCHEMA.md` для нереализованных component-типов) — до Фаз E/F.
+
+Упрощение против исходного текста фазы: `And/Or/Not` берут `params.conditions:
+[{var,op,value}, ...]` явным списком, не через дополнительные рёбра графа — MVP-интерпретатор
+моделирует только однонаправленную цепочку исполнения (`_runFrom`), не полноценный
+multi-port dataflow для булевых операций.
+
+Попутно найдены и исправлены два реальных, ранее незамеченных бага (в духе Фазы B/imageCache):
+`Behavior.enabled` нигде не проверялся в рантайме (значит `SetComponentEnabled` не имел бы
+никакого эффекта) — теперь `GameEngine._update` пропускает `update()` для выключенных behavior,
+`PlayerMovementBehavior`/`TriggerBehavior` игнорируют выключенные коллайдеры; и
+`PlayerMovementBehavior` считал `TriggerBehavior` твёрдым телом (оба экспонируют `getBounds()`)
+— триггер-зона блокировала игрока как стена. Исправлено фильтром по `isOverlapping`.
+
+Критерий готовности подтверждён vitest (`tests/engine/EventGraphRuntime.test.js`,
+`GameEngine.integration.test.js`) и живым запуском в браузере (chrome-devtools,
+идентичный результат).
 
 ### Схема графа (своя версия, независимая от версии уровня — принцип из движкового Фаза 0.2)
 ```jsonc
