@@ -2,6 +2,12 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (Sprite owns image, multi-collider frames, live preview)
+
+- **Asset visual model**: new **Sprite** component owns image `src`; Identity no longer edits imgSrc; content JSON migrated with sprite; load/import ensure Sprite; `imgSrc` mirrored for engine placement.
+- **Preview colliders**: draw **all** colliders/triggers as stroke frames (palette + corners), never tint/crop sprite; selected emphasized.
+- **Realtime Details→Preview**: `updateAsset` uses `set('assetsChanged')`; live patch paints previews immediately; Components list skips re-render on pure prop edits.
+
 ## Archived from CHANGELOG.md (Asset Preview info HUD + F/A)
 
 - **Asset Preview info HUD + F/A**: bottom status bar removed; viewport-style DOM info overlay (asset/size/zoom + component detail); no dblclick fit — **F** frames selected component, **A** frames whole asset when Asset Editor/Preview is under cursor; `dockManager.registry` used for panel hotkey routing.

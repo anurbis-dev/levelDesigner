@@ -4,6 +4,4 @@
 
 ## [Unreleased]
 
-- **Asset visual model**: new **Sprite** component owns image `src`; Identity no longer edits imgSrc; content JSON migrated with sprite; load/import ensure Sprite; `imgSrc` mirrored for engine placement.
-- **Preview colliders**: draw **all** colliders/triggers as stroke frames (palette + corners), never tint/crop sprite; selected emphasized.
-- **Realtime Details→Preview**: `updateAsset` uses `set('assetsChanged')`; live patch paints previews immediately; Components list skips re-render on pure prop edits.
+- **Collider shapes**: `shape` = `box` | `circle` | `freeform`; per-instance `color` for stroke frame; freeform Preview edit mode (Add/Move/Delete vertices). Runtime still AABB of shape.

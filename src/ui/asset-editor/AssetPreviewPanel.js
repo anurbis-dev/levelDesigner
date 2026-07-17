@@ -1,17 +1,21 @@
 /** Asset preview mini-viewport: local camera, info HUD; F/A via EventHandlers. */
 import {
-    getEditingAsset, getEditingComponentId, subscribeAssetEditor, resolveAssetImageSrc
+    getEditingAsset, getEditingComponentId, subscribeAssetEditor
 } from './AssetEditorContext.js';
 import {
     PREVIEW_ZOOM_WHEEL, PREVIEW_ZOOM_MMB, fitCameraToAsset, fitCameraToBounds,
-    getComponentBounds, zoomAtClient, panCamera
+    getComponentBounds, zoomAtClient, panCamera, clientToWorld
 } from './AssetPreviewCamera.js';
+import { ensureAssetPreviewInfoOverlay } from './AssetPreviewInfoOverlay.js';
 import {
-    drawPreviewGrid, drawAssetBody, drawAllComponentOverlays, paintPreviewEmpty
-} from './AssetPreviewDraw.js';
+    isFreeformShapeComponent,
+    mountFreeformToolbar,
+    freeformPointerDown,
+    freeformMovePoint
+} from './AssetPreviewFreeformEdit.js';
 import {
-    ensureAssetPreviewInfoOverlay, updateAssetPreviewInfoOverlay
-} from './AssetPreviewInfoOverlay.js';
+    ensurePreviewImage, resizePreviewCanvas, paintPreviewFrame
+} from './AssetPreviewRender.js';
 
 export class AssetPreviewPanel {
     /**
@@ -30,13 +34,15 @@ export class AssetPreviewPanel {
         this._boundAssetId = null;
         this._img = null;
         this._imgSrc = null;
-        /** @type {{ mode: 'pan'|'zoom', lastX: number, lastY: number, startX: number, startY: number, initialZoom: number }|null} */
+        /** @type {{ mode: 'pan'|'zoom'|'freeformMove', lastX: number, lastY: number, startX: number, startY: number, initialZoom: number, pointIndex?: number }|null} */
         this._drag = null;
         this._raf = null;
         this._ro = null;
         this._dpr = 1;
-        // Camera pose never persisted — fit once host has real size / on open
         this._needsFit = true;
+        this._ffActive = false;
+        /** @type {'add'|'move'|'delete'} */
+        this._ffTool = 'move';
 
         this.container.style.cssText =
             'overflow:hidden;padding:0;height:100%;box-sizing:border-box;'
@@ -56,6 +62,26 @@ export class AssetPreviewPanel {
 
         this.host.appendChild(this.canvas);
         this.infoOverlay = ensureAssetPreviewInfoOverlay(this.host);
+        this._ffBar = mountFreeformToolbar(this.host, {
+            getActive: () => this._ffActive,
+            getTool: () => this._ffTool,
+            setActive: (v) => {
+                this._ffActive = !!v;
+                this._syncCursor();
+                this._draw();
+            },
+            setTool: (t) => {
+                this._ffTool = t;
+                this._syncCursor();
+                this._draw();
+            },
+            isVisible: () => {
+                const asset = getEditingAsset(this.levelEditor);
+                const id = getEditingComponentId(this.levelEditor);
+                const c = id ? (asset?.components || []).find((x) => x.id === id) : null;
+                return isFreeformShapeComponent(c);
+            }
+        });
         this.container.appendChild(this.host);
 
         this._onPointerDown = this._onPointerDown.bind(this);
@@ -72,14 +98,14 @@ export class AssetPreviewPanel {
         this.canvas.addEventListener('contextmenu', this._onContextMenu);
 
         this._ro = new ResizeObserver(() => {
-            this._resizeCanvas();
+            resizePreviewCanvas(this);
             if (this._needsFit) this._tryInitialFit();
             this._draw();
         });
         this._ro.observe(this.host);
 
         this._unsub = subscribeAssetEditor(stateManager, () => this._onContextChange());
-        this._resizeCanvas();
+        resizePreviewCanvas(this);
         this._onContextChange();
     }
 
@@ -90,9 +116,7 @@ export class AssetPreviewPanel {
         this._draw();
     }
 
-    /**
-     * Request re-center on next sized frame (open editor / new asset). Pose not stored.
-     */
+    /** Request re-center on next sized frame (open editor / new asset). */
     requestInitialFit() {
         this._needsFit = true;
         this._tryInitialFit();
@@ -108,8 +132,7 @@ export class AssetPreviewPanel {
             return false;
         }
         this.camera = fitCameraToAsset(
-            cw,
-            ch,
+            cw, ch,
             Math.max(1, Number(asset.width) || 32),
             Math.max(1, Number(asset.height) || 32)
         );
@@ -156,61 +179,30 @@ export class AssetPreviewPanel {
             this._boundAssetId = id;
             this._img = null;
             this._imgSrc = null;
-            // New asset → center (never restore previous camera pose)
             this._needsFit = true;
+            this._ffActive = false;
         }
+        const compId = getEditingComponentId(this.levelEditor);
+        const comp = compId ? (asset?.components || []).find((c) => c.id === compId) : null;
+        if (!isFreeformShapeComponent(comp)) this._ffActive = false;
         this._tryInitialFit();
-        if (asset) this._ensureImage(asset);
+        if (asset) ensurePreviewImage(this, asset);
+        this._ffBar?.refresh();
+        this._syncCursor();
         this._draw();
     }
 
-    /**
-     * @param {object} asset
-     * @private
-     */
-    _ensureImage(asset) {
-        const src = resolveAssetImageSrc(asset);
-        if (!src) {
-            this._img = null;
-            this._imgSrc = null;
-            return;
-        }
-        if (this._imgSrc === src && this._img) return;
-        this._imgSrc = src;
-        const am = this.levelEditor?.assetManager;
-        const cached = am?.imageCache?.get?.(src) || am?.getCachedImage?.(src);
-        if (cached) {
-            this._img = cached;
-            return;
-        }
-        const apply = (img) => {
-            if (this._imgSrc !== src) return;
-            this._img = img || null;
-            this._draw();
-        };
-        if (am?.loadImage) {
-            Promise.resolve(am.loadImage(src)).then(apply).catch(() => apply(null));
-            return;
-        }
-        const img = new Image();
-        img.onload = () => apply(img);
-        img.onerror = () => apply(null);
-        img.src = src;
-    }
-
     /** @private */
-    _resizeCanvas() {
-        const dpr = window.devicePixelRatio || 1;
-        const rect = this.canvas.getBoundingClientRect();
-        const w = Math.max(1, Math.floor(rect.width));
-        const h = Math.max(1, Math.floor(rect.height));
-        const bw = Math.floor(w * dpr);
-        const bh = Math.floor(h * dpr);
-        if (this.canvas.width !== bw || this.canvas.height !== bh) {
-            this.canvas.width = bw;
-            this.canvas.height = bh;
+    _syncCursor() {
+        if (!this.canvas) return;
+        if (this._drag?.mode === 'pan') this.canvas.style.cursor = 'grabbing';
+        else if (this._drag?.mode === 'zoom') this.canvas.style.cursor = 'zoom-in';
+        else if (this._ffActive) {
+            this.canvas.style.cursor = this._ffTool === 'add' ? 'crosshair'
+                : this._ffTool === 'delete' ? 'pointer' : 'move';
+        } else {
+            this.canvas.style.cursor = 'default';
         }
-        this._dpr = dpr;
     }
 
     /**
@@ -222,10 +214,8 @@ export class AssetPreviewPanel {
             e.preventDefault();
             this._drag = {
                 mode: 'pan',
-                lastX: e.clientX,
-                lastY: e.clientY,
-                startX: e.clientX,
-                startY: e.clientY,
+                lastX: e.clientX, lastY: e.clientY,
+                startX: e.clientX, startY: e.clientY,
                 initialZoom: this.camera.zoom
             };
             this.canvas.style.cursor = 'grabbing';
@@ -236,14 +226,41 @@ export class AssetPreviewPanel {
             e.preventDefault();
             this._drag = {
                 mode: 'zoom',
-                lastX: e.clientX,
-                lastY: e.clientY,
-                startX: e.clientX,
-                startY: e.clientY,
+                lastX: e.clientX, lastY: e.clientY,
+                startX: e.clientX, startY: e.clientY,
                 initialZoom: this.camera.zoom
             };
             this.canvas.style.cursor = 'zoom-in';
             this.canvas.setPointerCapture?.(e.pointerId);
+            return;
+        }
+        if (e.button === 0 && this._ffActive) {
+            const asset = getEditingAsset(this.levelEditor);
+            if (!asset) return;
+            const aw = Math.max(1, Number(asset.width) || 32);
+            const ah = Math.max(1, Number(asset.height) || 32);
+            const drag = freeformPointerDown({
+                levelEditor: this.levelEditor,
+                canvas: this.canvas,
+                camera: this.camera,
+                clientX: e.clientX,
+                clientY: e.clientY,
+                tool: this._ffTool,
+                aw,
+                ah
+            });
+            e.preventDefault();
+            if (drag?.mode === 'move') {
+                this._drag = {
+                    mode: 'freeformMove',
+                    lastX: e.clientX, lastY: e.clientY,
+                    startX: e.clientX, startY: e.clientY,
+                    initialZoom: this.camera.zoom,
+                    pointIndex: drag.index
+                };
+                this.canvas.setPointerCapture?.(e.pointerId);
+            }
+            this._draw();
         }
     }
 
@@ -254,23 +271,36 @@ export class AssetPreviewPanel {
     _onPointerMove(e) {
         if (!this._drag) return;
         if (this._drag.mode === 'pan') {
-            const dx = e.clientX - this._drag.lastX;
-            const dy = e.clientY - this._drag.lastY;
-            this.camera = panCamera(this.camera, dx, dy);
+            this.camera = panCamera(
+                this.camera,
+                e.clientX - this._drag.lastX,
+                e.clientY - this._drag.lastY
+            );
             this._drag.lastX = e.clientX;
             this._drag.lastY = e.clientY;
             this._draw();
             return;
         }
         if (this._drag.mode === 'zoom') {
-            const deltaY = e.clientY - this._drag.startY;
-            const factor = 1 + deltaY * PREVIEW_ZOOM_MMB;
+            const factor = 1 + (e.clientY - this._drag.startY) * PREVIEW_ZOOM_MMB;
             this.camera = zoomAtClient(
-                this.camera,
-                this.canvas,
-                this._drag.startX,
-                this._drag.startY,
+                this.camera, this.canvas,
+                this._drag.startX, this._drag.startY,
                 this._drag.initialZoom * factor
+            );
+            this._draw();
+            return;
+        }
+        if (this._drag.mode === 'freeformMove') {
+            const asset = getEditingAsset(this.levelEditor);
+            const compId = getEditingComponentId(this.levelEditor);
+            if (!asset || !compId || this._drag.pointIndex == null) return;
+            const world = clientToWorld(this.canvas, e.clientX, e.clientY, this.camera);
+            freeformMovePoint(
+                this.levelEditor, asset.id, compId,
+                this._drag.pointIndex, world.x, world.y,
+                Math.max(1, Number(asset.width) || 32),
+                Math.max(1, Number(asset.height) || 32)
             );
             this._draw();
         }
@@ -283,12 +313,10 @@ export class AssetPreviewPanel {
     _onPointerUp(e) {
         if (!this._drag) return;
         this._drag = null;
-        this.canvas.style.cursor = 'default';
+        this._syncCursor();
         try {
             this.canvas.releasePointerCapture?.(e.pointerId);
-        } catch {
-            /* ignore */
-        }
+        } catch { /* ignore */ }
     }
 
     /**
@@ -300,10 +328,7 @@ export class AssetPreviewPanel {
         e.stopPropagation();
         const direction = e.deltaY < 0 ? 1 : -1;
         this.camera = zoomAtClient(
-            this.camera,
-            this.canvas,
-            e.clientX,
-            e.clientY,
+            this.camera, this.canvas, e.clientX, e.clientY,
             this.camera.zoom * (1 + direction * PREVIEW_ZOOM_WHEEL)
         );
         this._draw();
@@ -320,46 +345,11 @@ export class AssetPreviewPanel {
 
     /** @private */
     _paint() {
-        this._resizeCanvas();
-        const ctx = this.canvas.getContext('2d');
-        if (!ctx) return;
-        const dpr = this._dpr || 1;
-        const cw = this.canvas.width / dpr;
-        const ch = this.canvas.height / dpr;
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        ctx.clearRect(0, 0, cw, ch);
-        ctx.fillStyle = '#0f172a';
-        ctx.fillRect(0, 0, cw, ch);
-
         const asset = getEditingAsset(this.levelEditor);
         const compId = getEditingComponentId(this.levelEditor);
         const comps = asset && Array.isArray(asset.components) ? asset.components : [];
         const comp = asset && compId ? comps.find((c) => c.id === compId) : null;
-
-        if (!asset) {
-            paintPreviewEmpty(ctx, cw, ch, null);
-            updateAssetPreviewInfoOverlay(this.infoOverlay, null, null, this.camera);
-            return;
-        }
-
-        // Sprite path may change live — refresh image each paint path via _ensureImage
-        this._ensureImage(asset);
-
-        const z = this.camera.zoom > 0 ? this.camera.zoom : 1;
-        const aw = Math.max(1, Number(asset.width) || 32);
-        const ah = Math.max(1, Number(asset.height) || 32);
-        const color = asset.color || '#3B82F6';
-
-        ctx.save();
-        ctx.translate(-this.camera.x * z, -this.camera.y * z);
-        ctx.scale(z, z);
-        drawPreviewGrid(ctx, aw, ah, z);
-        drawAssetBody(ctx, this._img, aw, ah, color, z);
-        // All colliders/triggers as frames (not crop); selected emphasized
-        drawAllComponentOverlays(ctx, comps, compId, aw, ah, z);
-        ctx.restore();
-
-        updateAssetPreviewInfoOverlay(this.infoOverlay, asset, comp, this.camera);
+        paintPreviewFrame(this, asset, comp, compId, comps);
     }
 
     destroy() {
@@ -371,6 +361,8 @@ export class AssetPreviewPanel {
         }
         this._ro?.disconnect();
         this._ro = null;
+        this._ffBar?.destroy();
+        this._ffBar = null;
         this.canvas?.removeEventListener('pointerdown', this._onPointerDown);
         window.removeEventListener('pointermove', this._onPointerMove);
         window.removeEventListener('pointerup', this._onPointerUp);

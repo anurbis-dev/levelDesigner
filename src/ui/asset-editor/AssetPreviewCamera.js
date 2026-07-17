@@ -1,6 +1,7 @@
 /**
  * Local camera math for Asset Preview mini-viewport (matches CanvasRenderer camera model).
  */
+import { getColliderLocalBounds } from './AssetColliderGeometry.js';
 
 export const PREVIEW_MIN_ZOOM = 0.1;
 export const PREVIEW_MAX_ZOOM = 10;
@@ -80,19 +81,9 @@ export function getComponentBounds(comp, aw, ah) {
     if (!comp || comp.enabled === false) {
         return { minX: 0, minY: 0, maxX: w, maxY: h };
     }
-    const p = comp.properties || {};
     const type = comp.type;
     if (type === 'collider' || type === 'trigger') {
-        const ox = Number(p.offsetX) || 0;
-        const oy = Number(p.offsetY) || 0;
-        const bw = p.width != null && p.width !== '' ? Number(p.width) : w;
-        const bh = p.height != null && p.height !== '' ? Number(p.height) : h;
-        return {
-            minX: ox,
-            minY: oy,
-            maxX: ox + Math.max(1, bw),
-            maxY: oy + Math.max(1, bh)
-        };
+        return getColliderLocalBounds(comp.properties || {}, w, h);
     }
     if (type === 'interactable') {
         const r = Number(p.radius) || 32;

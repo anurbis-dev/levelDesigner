@@ -12,8 +12,8 @@ export const COMPONENT_CATEGORY = { label: 'Component Library', color: '#f87171'
 
 export const COMPONENT_TYPES = [
     { id: 'sprite', label: 'Sprite', description: 'Static visual: image source for the actor (atlas / texture).', genres: 'all' },
-    { id: 'collider', label: 'Collider', description: 'Collision shape (AABB frame only — does not crop the sprite).', genres: 'all' },
-    { id: 'trigger', label: 'Trigger', description: 'Zone reacting to player enter/exit.', genres: 'all' },
+    { id: 'collider', label: 'Collider', description: 'Collision frame: box / circle / freeform; optional color. Does not crop the sprite.', genres: 'all' },
+    { id: 'trigger', label: 'Trigger', description: 'Zone (box / circle / freeform) reacting to enter/exit.', genres: 'all' },
     { id: 'transformAnimation', label: 'Transform Animation', description: 'Move/rotate/scale along a Path or curve.', genres: 'platformer, transport' },
     { id: 'spriteUiAnimation', label: 'Sprite / UI Animation', description: 'Frame-by-frame animation playback (uses Sprite src as atlas).', genres: 'all' },
     { id: 'interactable', label: 'Interactable', description: 'Makes Actor usable via interact button (radius + hint).', genres: 'adventure, RPG, puzzle' },

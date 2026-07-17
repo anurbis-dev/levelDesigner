@@ -148,6 +148,8 @@ export class AssetComponentDetailsPanel {
     _fieldHtml(field, props) {
         const val = readFieldValue(field, props);
         const id = `ae-cf-${field.key}`;
+        const labelStyle = 'display:block;font-size:11px;margin-bottom:2px;color:var(--ui-text-color,#9ca3af);';
+        const err = `<div class="ae-field-error" data-err-for="${field.key}" style="color:#f87171;font-size:11px;min-height:1em;"></div>`;
         if (field.kind === 'bool') {
             return `
                 <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
@@ -156,24 +158,62 @@ export class AssetComponentDetailsPanel {
                 </label>
             `;
         }
+        if (field.kind === 'select') {
+            const opts = (field.options || []).map((o) => {
+                const sel = String(val ?? field.default ?? '') === o.value ? ' selected' : '';
+                return `<option value="${this._esc(o.value)}"${sel}>${this._esc(o.label)}</option>`;
+            }).join('');
+            return `
+                <div>
+                    <label for="${id}" style="${labelStyle}">${this._esc(field.label)}</label>
+                    <select data-field="${field.key}" class="ae-cf" id="${id}"
+                        style="width:100%;box-sizing:border-box;background:var(--ui-input-background,#111827);color:var(--ui-text-color,#d1d5db);border:1px solid var(--ui-border-color,#374151);border-radius:4px;padding:4px 6px;">
+                        ${opts}
+                    </select>
+                    ${err}
+                </div>
+            `;
+        }
+        if (field.kind === 'color') {
+            const hex = (typeof val === 'string' && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(val))
+                ? val
+                : '#fbbf24';
+            const empty = !val;
+            return `
+                <div>
+                    <label for="${id}" style="${labelStyle}">${this._esc(field.label)}</label>
+                    <div style="display:flex;gap:6px;align-items:center;">
+                        <input type="color" data-field="${field.key}" class="ae-cf ae-cf-color" id="${id}"
+                            value="${this._esc(hex)}" ${empty ? 'data-empty="1"' : ''}
+                            style="width:40px;height:28px;padding:0;border:1px solid var(--ui-border-color,#374151);border-radius:4px;background:transparent;cursor:pointer;" />
+                        <button type="button" class="ae-cf-color-clear" data-for="${field.key}"
+                            style="padding:3px 8px;font-size:11px;border-radius:4px;border:1px solid var(--ui-border-color,#374151);background:var(--ui-input-background,#111827);color:var(--ui-text-color,#9ca3af);cursor:pointer;">
+                            Auto
+                        </button>
+                        <span style="font-size:10px;color:var(--ui-text-color,#6b7280);">${empty ? 'palette' : this._esc(hex)}</span>
+                    </div>
+                    ${err}
+                </div>
+            `;
+        }
         if (field.kind === 'json') {
             return `
                 <div>
-                    <label for="${id}" style="display:block;font-size:11px;margin-bottom:2px;color:var(--ui-text-color,#9ca3af);">${this._esc(field.label)}</label>
+                    <label for="${id}" style="${labelStyle}">${this._esc(field.label)}</label>
                     <textarea data-field="${field.key}" class="ae-cf" id="${id}" rows="6"
                         style="width:100%;box-sizing:border-box;font-family:monospace;font-size:11px;background:var(--ui-input-background,#111827);color:var(--ui-text-color,#d1d5db);border:1px solid var(--ui-border-color,#374151);border-radius:4px;padding:6px;">${this._esc(formatFieldValue(field, val))}</textarea>
-                    <div class="ae-field-error" data-err-for="${field.key}" style="color:#f87171;font-size:11px;min-height:1em;"></div>
+                    ${err}
                 </div>
             `;
         }
         const inputType = field.kind === 'number' ? 'number' : 'text';
         return `
             <div>
-                <label for="${id}" style="display:block;font-size:11px;margin-bottom:2px;color:var(--ui-text-color,#9ca3af);">${this._esc(field.label)}</label>
+                <label for="${id}" style="${labelStyle}">${this._esc(field.label)}</label>
                 <input type="${inputType}" data-field="${field.key}" class="ae-cf" id="${id}"
                     value="${this._esc(formatFieldValue(field, val))}"
                     style="width:100%;box-sizing:border-box;background:var(--ui-input-background,#111827);color:var(--ui-text-color,#d1d5db);border:1px solid var(--ui-border-color,#374151);border-radius:4px;padding:4px 6px;" />
-                <div class="ae-field-error" data-err-for="${field.key}" style="color:#f87171;font-size:11px;min-height:1em;"></div>
+                ${err}
             </div>
         `;
     }
@@ -242,7 +282,15 @@ export class AssetComponentDetailsPanel {
             const field = schema.find((f) => f.key === key);
             if (!field) return;
             const apply = () => {
-                const raw = field.kind === 'bool' ? el.checked : el.value;
+                let raw = field.kind === 'bool' ? el.checked : el.value;
+                // color: empty means palette default
+                if (field.kind === 'color' && el.dataset.empty === '1' && el.type === 'color') {
+                    // first interaction with picker clears empty flag via input
+                }
+                if (field.kind === 'color' && el.type === 'color') {
+                    el.dataset.empty = '';
+                    raw = el.value;
+                }
                 const parsed = parseFieldInput(field, raw);
                 const errEl = this.container.querySelector(`[data-err-for="${key}"]`);
                 if (!parsed.ok) {
@@ -252,10 +300,30 @@ export class AssetComponentDetailsPanel {
                 if (errEl) errEl.textContent = '';
                 this._livePatch(assetId, componentId, (c) => {
                     const next = { ...(c.properties || {}) };
-                    if (parsed.value === null && (field.key === 'width' || field.key === 'height')) {
+                    if (parsed.value === null && (field.key === 'width' || field.key === 'height' || field.key === 'radius')) {
+                        delete next[field.key];
+                    } else if (field.kind === 'color' && parsed.value === '') {
                         delete next[field.key];
                     } else {
                         next[field.key] = parsed.value;
+                    }
+                    // Seed freeform points when switching to freeform with empty points
+                    if (field.key === 'shape' && parsed.value === 'freeform') {
+                        if (!Array.isArray(next.points) || next.points.length === 0) {
+                            const asset = getEditingAsset(this.levelEditor);
+                            const aw = Math.max(1, Number(asset?.width) || 32);
+                            const ah = Math.max(1, Number(asset?.height) || 32);
+                            const ox = Number(next.offsetX) || 0;
+                            const oy = Number(next.offsetY) || 0;
+                            const w = next.width != null ? Number(next.width) : aw;
+                            const h = next.height != null ? Number(next.height) : ah;
+                            next.points = [
+                                { x: ox, y: oy },
+                                { x: ox + w, y: oy },
+                                { x: ox + w, y: oy + h },
+                                { x: ox, y: oy + h }
+                            ];
+                        }
                     }
                     c.properties = next;
                     return c;
@@ -264,10 +332,30 @@ export class AssetComponentDetailsPanel {
             // Live commit for preview + info overlay (json still on change — partial JSON invalid)
             if (field.kind === 'json') {
                 el.addEventListener('change', apply);
+            } else if (field.kind === 'select' || field.kind === 'color') {
+                el.addEventListener('input', apply);
+                el.addEventListener('change', apply);
             } else {
                 el.addEventListener('input', apply);
                 el.addEventListener('change', apply);
             }
+        });
+
+        this.container.querySelectorAll('.ae-cf-color-clear').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const key = btn.dataset.for;
+                const field = schema.find((f) => f.key === key);
+                if (!field) return;
+                const colorEl = this.container.querySelector(`.ae-cf-color[data-field="${key}"]`);
+                if (colorEl) colorEl.dataset.empty = '1';
+                this._livePatch(assetId, componentId, (c) => {
+                    const next = { ...(c.properties || {}) };
+                    delete next[key];
+                    c.properties = next;
+                    return c;
+                });
+                this.render();
+            });
         });
     }
 

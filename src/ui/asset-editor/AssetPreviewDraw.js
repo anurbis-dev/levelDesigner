@@ -2,6 +2,14 @@
  * Canvas paint helpers for AssetPreviewPanel.
  * Sprite body is independent of colliders; colliders/triggers are stroke frames only.
  */
+import {
+    resolveColliderShape,
+    resolveColliderColor,
+    resolveBox,
+    resolveCircle,
+    resolveFreeformPoints,
+    defaultFreeformPoints
+} from './AssetColliderGeometry.js';
 
 /**
  * @param {CanvasRenderingContext2D} ctx
@@ -81,8 +89,9 @@ const TRIGGER_PALETTE = ['#22d3ee', '#06b6d4', '#67e8f9', '#0891b2'];
  * @param {number} aw
  * @param {number} ah
  * @param {number} z
+ * @param {{ editActive?: boolean, tool?: string }|null} [freeformEdit]
  */
-export function drawAllComponentOverlays(ctx, components, selectedId, aw, ah, z) {
+export function drawAllComponentOverlays(ctx, components, selectedId, aw, ah, z, freeformEdit = null) {
     const list = Array.isArray(components) ? components : [];
     let collIdx = 0;
     let trigIdx = 0;
@@ -91,11 +100,19 @@ export function drawAllComponentOverlays(ctx, components, selectedId, aw, ah, z)
         if (!comp || comp.enabled === false) return;
         const type = comp.type;
         if (type === 'collider') {
-            drawAabbFrame(ctx, comp, aw, ah, z, COLLIDER_PALETTE[collIdx++ % COLLIDER_PALETTE.length], selected);
+            const stroke = resolveColliderColor(
+                comp.properties,
+                COLLIDER_PALETTE[collIdx++ % COLLIDER_PALETTE.length]
+            );
+            drawShapeFrame(ctx, comp, aw, ah, z, stroke, selected, freeformEdit && selected);
             return;
         }
         if (type === 'trigger') {
-            drawAabbFrame(ctx, comp, aw, ah, z, TRIGGER_PALETTE[trigIdx++ % TRIGGER_PALETTE.length], selected);
+            const stroke = resolveColliderColor(
+                comp.properties,
+                TRIGGER_PALETTE[trigIdx++ % TRIGGER_PALETTE.length]
+            );
+            drawShapeFrame(ctx, comp, aw, ah, z, stroke, selected, freeformEdit && selected);
             return;
         }
         if (type === 'interactable') {
@@ -103,7 +120,6 @@ export function drawAllComponentOverlays(ctx, components, selectedId, aw, ah, z)
         }
     };
 
-    // Unselected under, selected on top
     for (const c of list) {
         if (c.id === selectedId) continue;
         paint(c, false);
@@ -120,15 +136,32 @@ export function drawAllComponentOverlays(ctx, components, selectedId, aw, ah, z)
  * @param {number} z
  * @param {string} stroke
  * @param {boolean} selected
+ * @param {{ editActive?: boolean }|null} [edit]
  */
-function drawAabbFrame(ctx, comp, aw, ah, z, stroke, selected) {
-    const p = comp.properties || {};
-    const ox = Number(p.offsetX) || 0;
-    const oy = Number(p.offsetY) || 0;
-    const bw = p.width != null && p.width !== '' ? Number(p.width) : aw;
-    const bh = p.height != null && p.height !== '' ? Number(p.height) : ah;
-    const w = Math.max(1, bw);
-    const h = Math.max(1, bh);
+function drawShapeFrame(ctx, comp, aw, ah, z, stroke, selected, edit) {
+    const shape = resolveColliderShape(comp.properties);
+    if (shape === 'circle') {
+        drawCircleFrame(ctx, comp.properties, aw, ah, z, stroke, selected);
+        return;
+    }
+    if (shape === 'freeform') {
+        drawFreeformFrame(ctx, comp.properties, aw, ah, z, stroke, selected, edit);
+        return;
+    }
+    drawBoxFrame(ctx, comp.properties, aw, ah, z, stroke, selected);
+}
+
+/**
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {object} props
+ * @param {number} aw
+ * @param {number} ah
+ * @param {number} z
+ * @param {string} stroke
+ * @param {boolean} selected
+ */
+function drawBoxFrame(ctx, props, aw, ah, z, stroke, selected) {
+    const { ox, oy, w, h } = resolveBox(props, aw, ah);
     const lw = Math.max(1, (selected ? 2.5 : 1.5) / z);
 
     ctx.save();
@@ -137,7 +170,6 @@ function drawAabbFrame(ctx, comp, aw, ah, z, stroke, selected) {
     ctx.lineWidth = lw;
     ctx.setLineDash(selected ? [] : [5 / z, 4 / z]);
     ctx.fillStyle = 'transparent';
-    // No fill — frames only (do not tint sprite)
     ctx.strokeRect(ox, oy, w, h);
     // Corner marks for multi-instance readability
     const m = Math.min(4, w / 4, h / 4);
@@ -156,6 +188,86 @@ function drawAabbFrame(ctx, comp, aw, ah, z, stroke, selected) {
     ctx.lineTo(ox, oy + h);
     ctx.lineTo(ox, oy + h - m);
     ctx.stroke();
+    ctx.restore();
+}
+
+/**
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {object} props
+ * @param {number} aw
+ * @param {number} ah
+ * @param {number} z
+ * @param {string} stroke
+ * @param {boolean} selected
+ */
+function drawCircleFrame(ctx, props, aw, ah, z, stroke, selected) {
+    const { cx, cy, r } = resolveCircle(props, aw, ah);
+    const lw = Math.max(1, (selected ? 2.5 : 1.5) / z);
+    ctx.save();
+    ctx.strokeStyle = stroke;
+    ctx.globalAlpha = selected ? 1 : 0.75;
+    ctx.lineWidth = lw;
+    ctx.setLineDash(selected ? [] : [5 / z, 4 / z]);
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+    // Center tick when selected
+    if (selected) {
+        const t = Math.min(3, r / 3);
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(cx - t, cy);
+        ctx.lineTo(cx + t, cy);
+        ctx.moveTo(cx, cy - t);
+        ctx.lineTo(cx, cy + t);
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
+/**
+ * @param {CanvasRenderingContext2D} ctx
+ * @param {object} props
+ * @param {number} aw
+ * @param {number} ah
+ * @param {number} z
+ * @param {string} stroke
+ * @param {boolean} selected
+ * @param {{ editActive?: boolean }|null} [edit]
+ */
+function drawFreeformFrame(ctx, props, aw, ah, z, stroke, selected, edit) {
+    const pts = resolveFreeformPoints(props) || defaultFreeformPoints(aw, ah, props);
+    if (pts.length === 0) return;
+    const lw = Math.max(1, (selected ? 2.5 : 1.5) / z);
+    const showVerts = selected || (edit && edit.editActive);
+
+    ctx.save();
+    ctx.strokeStyle = stroke;
+    ctx.globalAlpha = selected ? 1 : 0.75;
+    ctx.lineWidth = lw;
+    ctx.setLineDash(selected ? [] : [5 / z, 4 / z]);
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) {
+        ctx.lineTo(pts[i].x, pts[i].y);
+    }
+    if (pts.length >= 3) ctx.closePath();
+    ctx.stroke();
+
+    if (showVerts) {
+        const vr = Math.max(2.5, 5 / z);
+        ctx.setLineDash([]);
+        for (let i = 0; i < pts.length; i++) {
+            const p = pts[i];
+            ctx.fillStyle = edit?.editActive ? '#fff' : stroke;
+            ctx.strokeStyle = '#0f172a';
+            ctx.lineWidth = Math.max(1, 1 / z);
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, vr, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        }
+    }
     ctx.restore();
 }
 

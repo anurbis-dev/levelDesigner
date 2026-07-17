@@ -3,29 +3,39 @@
  * for implemented types; unknown types get a generic JSON bag of existing keys.
  */
 
-/** @typedef {{ key: string, label: string, kind: 'number'|'text'|'bool'|'stringList'|'json', default?: * }} CompField */
+/**
+ * @typedef {{ key: string, label: string,
+ *   kind: 'number'|'text'|'bool'|'stringList'|'json'|'select'|'color',
+ *   default?: *, options?: { value: string, label: string }[] }} CompField
+ */
+
+const COLLIDER_SHAPE_OPTIONS = [
+    { value: 'box', label: 'Box (square / rect)' },
+    { value: 'circle', label: 'Circle' },
+    { value: 'freeform', label: 'Freeform (polygon)' }
+];
+
+/** Shared shape fields for collider + trigger. */
+const COLLIDER_SHAPE_FIELDS = [
+    { key: 'shape', label: 'Shape', kind: 'select', default: 'box', options: COLLIDER_SHAPE_OPTIONS },
+    { key: 'color', label: 'Frame Color', kind: 'color', default: '' },
+    { key: 'offsetX', label: 'Offset X (box TL / circle center)', kind: 'number', default: 0 },
+    { key: 'offsetY', label: 'Offset Y (box TL / circle center)', kind: 'number', default: 0 },
+    { key: 'width', label: 'Width (box; empty = entity)', kind: 'number', default: null },
+    { key: 'height', label: 'Height (box; empty = entity)', kind: 'number', default: null },
+    { key: 'radius', label: 'Radius (circle)', kind: 'number', default: null },
+    { key: 'points', label: 'Points (freeform JSON [{x,y}])', kind: 'json', default: [] },
+    { key: 'layer', label: 'Layer', kind: 'text', default: '' },
+    { key: 'collidesWith', label: 'Collides With (comma list)', kind: 'stringList', default: [] }
+];
 
 /** @type {Record<string, CompField[]>} */
 const SCHEMAS = {
     sprite: [
         { key: 'src', label: 'Image Path', kind: 'text', default: '' }
     ],
-    collider: [
-        { key: 'offsetX', label: 'Offset X', kind: 'number', default: 0 },
-        { key: 'offsetY', label: 'Offset Y', kind: 'number', default: 0 },
-        { key: 'width', label: 'Width (empty = entity)', kind: 'number', default: null },
-        { key: 'height', label: 'Height (empty = entity)', kind: 'number', default: null },
-        { key: 'layer', label: 'Layer', kind: 'text', default: '' },
-        { key: 'collidesWith', label: 'Collides With (comma list)', kind: 'stringList', default: [] }
-    ],
-    trigger: [
-        { key: 'offsetX', label: 'Offset X', kind: 'number', default: 0 },
-        { key: 'offsetY', label: 'Offset Y', kind: 'number', default: 0 },
-        { key: 'width', label: 'Width (empty = entity)', kind: 'number', default: null },
-        { key: 'height', label: 'Height (empty = entity)', kind: 'number', default: null },
-        { key: 'layer', label: 'Layer', kind: 'text', default: '' },
-        { key: 'collidesWith', label: 'Collides With (comma list)', kind: 'stringList', default: [] }
-    ],
+    collider: COLLIDER_SHAPE_FIELDS,
+    trigger: COLLIDER_SHAPE_FIELDS,
     interactable: [
         { key: 'radius', label: 'Radius', kind: 'number', default: 32 },
         { key: 'hint', label: 'Hint', kind: 'text', default: 'Interact' }
@@ -99,6 +109,22 @@ export function parseFieldInput(field, raw) {
         const n = parseFloat(s);
         if (!Number.isFinite(n)) return { ok: false, error: 'Invalid number' };
         return { ok: true, value: n };
+    }
+    if (field.kind === 'select') {
+        const v = String(raw ?? '').trim();
+        const allowed = (field.options || []).map((o) => o.value);
+        if (allowed.length && !allowed.includes(v)) {
+            return { ok: false, error: 'Invalid option' };
+        }
+        return { ok: true, value: v || field.default || '' };
+    }
+    if (field.kind === 'color') {
+        const s = String(raw ?? '').trim();
+        if (!s) return { ok: true, value: '' };
+        if (!/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(s)) {
+            return { ok: false, error: 'Use #RGB or #RRGGBB' };
+        }
+        return { ok: true, value: s };
     }
     if (field.kind === 'stringList') {
         const s = String(raw ?? '').trim();

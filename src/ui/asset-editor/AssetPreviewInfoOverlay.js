@@ -88,11 +88,27 @@ function formatCompDetail(comp, aw, ah) {
     const p = comp.properties || {};
     const type = comp.type;
     if (type === 'collider' || type === 'trigger') {
+        const shape = p.shape === 'circle' || p.shape === 'freeform' ? p.shape : 'box';
+        if (shape === 'circle') {
+            const r = p.radius != null && p.radius !== ''
+                ? Number(p.radius)
+                : Math.min(
+                    p.width != null ? Number(p.width) : aw,
+                    p.height != null ? Number(p.height) : ah
+                ) / 2;
+            const cx = Number(p.offsetX) || 0;
+            const cy = Number(p.offsetY) || 0;
+            return `${shape} · c ${cx},${cy} r ${r}${p.color ? ` · ${p.color}` : ''}`;
+        }
+        if (shape === 'freeform') {
+            const n = Array.isArray(p.points) ? p.points.length : 0;
+            return `${shape} · ${n} pts${p.color ? ` · ${p.color}` : ''}`;
+        }
         const ox = Number(p.offsetX) || 0;
         const oy = Number(p.offsetY) || 0;
         const bw = p.width != null && p.width !== '' ? Number(p.width) : aw;
         const bh = p.height != null && p.height !== '' ? Number(p.height) : ah;
-        return `off ${ox},${oy} · ${bw}×${bh}`;
+        return `${shape} · off ${ox},${oy} · ${bw}×${bh}${p.color ? ` · ${p.color}` : ''}`;
     }
     if (type === 'interactable') {
         return `r ${Number(p.radius) || 32}`;
