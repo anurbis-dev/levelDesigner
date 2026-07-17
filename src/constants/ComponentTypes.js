@@ -6,6 +6,8 @@
  * level JSON, not by the editor itself.
  */
 
+import { defaultComponentProperties as getDefaultComponentProperties } from './ComponentPropertySchema.js';
+
 export const COMPONENT_CATEGORY = { label: 'Component Library', color: '#f87171' };
 
 export const COMPONENT_TYPES = [
@@ -43,6 +45,6 @@ export function createComponentStub(typeId) {
         id: `comp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         type: typeId,
         enabled: true,
-        properties: {}
+        properties: { ...getDefaultComponentProperties(typeId) }
     };
 }

@@ -71,3 +71,41 @@ export function patchEditingAsset(levelEditor, assetId, patch) {
     if (!am || !assetId || !patch) return false;
     return !!am.updateAsset(assetId, patch);
 }
+
+/**
+ * Replace one component on the editing asset (immutable components array).
+ * @param {object|null|undefined} levelEditor
+ * @param {string} assetId
+ * @param {string} componentId
+ * @param {(comp: object) => object} mapFn
+ * @returns {boolean}
+ */
+export function patchEditingComponent(levelEditor, assetId, componentId, mapFn) {
+    const asset = getEditingAsset(levelEditor);
+    if (!asset || asset.id !== assetId) return false;
+    const list = Array.isArray(asset.components) ? asset.components : [];
+    let found = false;
+    const next = list.map((c) => {
+        if (c.id !== componentId) return c;
+        found = true;
+        return mapFn({ ...c, properties: { ...(c.properties || {}) } });
+    });
+    if (!found) return false;
+    return patchEditingAsset(levelEditor, assetId, { components: next });
+}
+
+/**
+ * Resolve display image URL for an asset (string path, data URL, or first array entry).
+ * @param {object|null|undefined} asset
+ * @returns {string|null}
+ */
+export function resolveAssetImageSrc(asset) {
+    if (!asset) return null;
+    let src = asset.imgSrc;
+    if (Array.isArray(src)) src = src[0] || null;
+    if (!src && asset.properties?.sourceFile) src = asset.properties.sourceFile;
+    if (!src && asset.image) src = asset.image;
+    if (!src || typeof src !== 'string') return null;
+    const t = src.trim();
+    return t || null;
+}

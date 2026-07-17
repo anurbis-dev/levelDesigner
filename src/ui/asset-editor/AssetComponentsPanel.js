@@ -1,5 +1,5 @@
 /**
- * Asset components list + add/remove (live commit).
+ * Asset components list + Add Component control (live commit).
  */
 import {
     COMPONENT_TYPES,
@@ -29,7 +29,7 @@ export class AssetComponentsPanel {
         this.levelEditor = levelEditor;
         this.instanceKey = options.instanceKey || null;
         this._unsub = subscribeAssetEditor(stateManager, () => this.render());
-        this.container.style.cssText = 'overflow:auto;padding:8px;font-size:12px;height:100%;box-sizing:border-box;';
+        this.container.style.cssText = 'overflow:auto;padding:8px;font-size:12px;height:100%;box-sizing:border-box;display:flex;flex-direction:column;';
         this.render();
     }
 
@@ -47,33 +47,47 @@ export class AssetComponentsPanel {
             .join('');
 
         const rows = components.length === 0
-            ? '<div style="color:var(--ui-text-color,#9ca3af);font-size:11px;">No components attached</div>'
+            ? '<div style="color:var(--ui-text-color,#9ca3af);font-size:11px;padding:8px 0;">No components — use Add Component below</div>'
             : components.map((comp) => {
                 const def = getComponentTypeById(comp.type);
                 const label = def ? def.label : comp.type;
                 const icon = buildTypeIconSvg(comp.type, COMPONENT_CATEGORY.color, 16);
                 const sel = comp.id === selectedId
-                    ? 'outline:1px solid var(--ui-accent-color,#2563eb);'
+                    ? 'outline:1px solid var(--ui-accent-color,#2563eb);background:var(--ui-active-color,#1e3a5f);'
+                    : 'background:var(--ui-input-background,#111827);';
+                const en = comp.enabled === false
+                    ? '<span style="font-size:10px;color:#6b7280;">off</span>'
                     : '';
+                const propCount = comp.properties ? Object.keys(comp.properties).length : 0;
                 return `
                     <div class="ae-comp-row" data-component-id="${comp.id}"
-                        style="display:flex;align-items:center;gap:6px;padding:4px 6px;background:var(--ui-input-background,#111827);border-radius:4px;cursor:pointer;${sel}">
+                        style="display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:4px;cursor:pointer;${sel}">
                         <span style="display:flex;flex-shrink:0;">${icon}</span>
-                        <span style="flex:1;font-size:12px;">${label}</span>
-                        <button type="button" data-remove-component="${comp.id}" title="Remove"
-                            style="background:none;border:none;color:var(--ui-text-color,#9ca3af);cursor:pointer;font-size:14px;line-height:1;">×</button>
+                        <span style="flex:1;font-size:12px;min-width:0;">
+                            <span style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${label}</span>
+                            <span style="font-size:10px;color:#6b7280;">${comp.type}${propCount ? ` · ${propCount} props` : ''}</span>
+                        </span>
+                        ${en}
+                        <button type="button" data-remove-component="${comp.id}" title="Remove component"
+                            style="background:none;border:none;color:var(--ui-text-color,#9ca3af);cursor:pointer;font-size:16px;line-height:1;padding:0 4px;">×</button>
                     </div>`;
             }).join('');
 
         this.container.innerHTML = `
-            <div style="font-weight:600;margin-bottom:6px;">Components</div>
-            <div class="ae-comp-list" style="display:flex;flex-direction:column;gap:4px;margin-bottom:8px;">${rows}</div>
-            <div style="display:flex;gap:8px;align-items:center;">
-                <select class="ae-add-select" style="flex:1;background:var(--ui-input-background,#111827);color:var(--ui-text-color,#d1d5db);border:1px solid var(--ui-border-color,#374151);border-radius:4px;padding:4px 6px;">
-                    ${options}
-                </select>
-                <button type="button" class="ae-add-btn"
-                    style="padding:4px 10px;background:var(--ui-accent-color,#2563eb);color:#fff;border-radius:4px;border:none;cursor:pointer;">+ Add</button>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px;">
+                <div style="font-weight:600;">Components <span style="font-weight:400;color:#6b7280;">(${components.length})</span></div>
+            </div>
+            <div class="ae-comp-list" style="display:flex;flex-direction:column;gap:4px;flex:1;min-height:0;overflow:auto;margin-bottom:10px;">${rows}</div>
+            <div style="border-top:1px solid var(--ui-border-color,#374151);padding-top:8px;flex-shrink:0;">
+                <div style="font-size:11px;color:#9ca3af;margin-bottom:4px;">Add Component</div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <select class="ae-add-select" title="Component type"
+                        style="flex:1;min-width:0;background:var(--ui-input-background,#111827);color:var(--ui-text-color,#d1d5db);border:1px solid var(--ui-border-color,#374151);border-radius:4px;padding:6px 8px;">
+                        ${options}
+                    </select>
+                    <button type="button" class="ae-add-btn" title="Add component to asset"
+                        style="padding:6px 12px;background:var(--ui-accent-color,#2563eb);color:#fff;border-radius:4px;border:none;cursor:pointer;white-space:nowrap;font-weight:600;">+ Add</button>
+                </div>
             </div>
         `;
 

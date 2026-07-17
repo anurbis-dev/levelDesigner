@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- **Asset Editor float**: modal `ActorPropertiesWindow` removed; dblclick/open asset → dock floating workspace (`role=assetEditor`) with panels `assetPreview` / `assetIdentity` / `assetComponents` / `assetComponentDetails`; live `assetManager.updateAsset`; state `editingAssetId` / `editingComponentId`; `DockManager.openAssetEditorWorkspace` / `closeAssetEditorWorkspace` / `syncAssetEditorTitle`; View menu stays level types only; type-menu filters asset* vs level types.
+- **Asset Editor data wiring**: typed component property forms from `ComponentPropertySchema` (collider/trigger/interactable/spriteUiAnimation/playerStart + raw JSON fallback); defaults on `createComponentStub`; Components list shows type/props count + fixed **Add Component** bar; Details: enabled + fields; Preview: resolved image, AABB/radius overlays for selected component; Identity: id/path/tags/status.
