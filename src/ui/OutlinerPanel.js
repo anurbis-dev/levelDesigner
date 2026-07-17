@@ -88,8 +88,12 @@ export class OutlinerPanel extends BasePanel {
             this.stateManager.set('outliner', outlinerState);
         }
 
-        // Get active type filters from state
-        this.activeTypeFilters = this.stateManager.get('outliner').activeTypeFilters || new Set();
+        // Filters: primary shares `outliner.activeTypeFilters`; copies keep independent Set (D2)
+        if (this.isPrimary) {
+            this.activeTypeFilters = this.stateManager.get('outliner').activeTypeFilters || new Set();
+        } else {
+            this.activeTypeFilters = new Set();
+        }
 
         this.setupEventListeners();
         this.setupContextMenu();
@@ -185,10 +189,11 @@ export class OutlinerPanel extends BasePanel {
         const unsubscribeStructure = this.stateManager.subscribe('levelStructureChanged', () => this.render());
         this.subscriptions.push(unsubscribeStructure);
 
-        // Subscribe to outliner state changes (including filters)
+        // Subscribe to outliner state (collapsed groups etc.). Filters: primary only (D2).
         const unsubscribeOutliner = this.stateManager.subscribe('outliner', () => {
-            // Update activeTypeFilters from state
-            this.activeTypeFilters = this.stateManager.get('outliner').activeTypeFilters || new Set();
+            if (this.isPrimary) {
+                this.activeTypeFilters = this.stateManager.get('outliner').activeTypeFilters || new Set();
+            }
             this.render();
         });
         this.subscriptions.push(unsubscribeOutliner);
@@ -256,7 +261,10 @@ export class OutlinerPanel extends BasePanel {
             filters: this.activeTypeFilters,
             onChange: (filters) => {
                 this.activeTypeFilters = filters;
-                this.stateManager.update({ 'outliner.activeTypeFilters': filters });
+                // Primary only writes shared state — copies stay independent (D2)
+                if (this.isPrimary) {
+                    this.stateManager.update({ 'outliner.activeTypeFilters': filters });
+                }
                 this.render();
                 this._syncFilterButton(button);
             },

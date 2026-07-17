@@ -357,12 +357,7 @@ export class UIFactory {
         return thumb;
     }
 
-    /**
-     * Show/hide loading state on element
-     * @param {HTMLElement} element - Element to modify
-     * @param {boolean} loading - Whether to show loading state
-     * @param {string} loadingText - Text to show while loading
-     */
+    /** @param {HTMLElement} element @param {boolean} loading @param {string} [loadingText] */
     static setLoadingState(element, loading, loadingText = 'Loading...') {
         if (loading) {
             element.dataset.originalContent = element.innerHTML;
@@ -375,27 +370,13 @@ export class UIFactory {
         }
     }
 
-    /**
-     * Create a grid container for assets or other items
-     * @param {Object} options - Configuration options
-     * @param {number} options.columns - Number of columns (default: responsive)
-     * @param {string} options.gap - Gap between items
-     * @returns {HTMLDivElement} Grid container
-     */
+    /** @param {{ columns?: string|number, gap?: string }} [options] @returns {HTMLDivElement} */
     static createGrid(options = {}) {
-        const {
-            columns = 'responsive',
-            gap = '4'
-        } = options;
-
+        const { columns = 'responsive', gap = '4' } = options;
         const grid = document.createElement('div');
-        
-        if (columns === 'responsive') {
-            grid.className = 'grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-' + gap;
-        } else {
-            grid.className = `grid grid-cols-${columns} gap-${gap}`;
-        }
-
+        grid.className = columns === 'responsive'
+            ? `grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-12 gap-${gap}`
+            : `grid grid-cols-${columns} gap-${gap}`;
         return grid;
     }
 }

@@ -5,11 +5,17 @@
 
 ## Open
 
-*(пусто — B2 smoke when browser MCP; A4 stub only if dedicated asset editor is needed)*
+*(пусто — optional: Q-DEDUP / Q-GOD by-touch, Q3 ownership, D3 float bugs)*
 
 
 ## Closed (архив)
 
+✅ D1 — Assets copy UI persist `ui.assetCopyUiState[instanceKey]` (tabs/size/viewMode/foldersWidth)  
+✅ D2 — Outliner copy type filters independent; Details selection shared by design  
+✅ Q-GOD partial — ViewportOperations + UIFactory under 400 lines  
+✅ Q4 / Q5 / VW-EYE? — closed as already done / by design  
+✅ B2 — browser smoke multi-viewport + Assets×N  
+⏭ A4 — dedicated asset editor skipped (no product scope)  
 ✅ A5 — Assets Panel Settings opens Settings on Assets tab (`SettingsPanel.show('assets')` / `openSettings(tab)`)  
 ✅ C4 — adaptive fit: design frustum fills letterbox safe-rect on any viewport size/aspect (UI preview; `CameraAspectUtils`)  
 ✅ C3-toggle — cam icon click + `.` toggle work ↔ last/selected game; chrome icon refresh on setSource  

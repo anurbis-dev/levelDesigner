@@ -126,6 +126,27 @@ export class EditorPreferencesController extends BaseModule {
             editor.userPrefs.set('assetTabOrder', assetTabOrder);
         }
 
+        // D1: flush live Assets copy UI (tabs/size/view/folders) into ui.assetCopyUiState
+        const reg = editor.dockManager?.registry;
+        if (reg?._byLeafId) {
+            for (const [, binding] of reg._byLeafId) {
+                if (binding.contentType !== 'assets' || binding.isPrimary || !binding.panel) continue;
+                const p = binding.panel;
+                if (typeof p.patchCopyUiState !== 'function') continue;
+                const tabs = p.stateManager?.get(p.uiStateKey('activeAssetTabs'));
+                const order = p.stateManager?.get(p.uiStateKey('assetTabOrder'));
+                const active = p.stateManager?.get(p.uiStateKey('activeAssetTab'));
+                p.patchCopyUiState({
+                    activeAssetTabs: tabs ? Array.from(tabs) : [],
+                    activeAssetTab: active ?? null,
+                    assetTabOrder: Array.isArray(order) ? order : [],
+                    assetSize: p.assetSize,
+                    assetViewMode: p.viewMode,
+                    foldersWidth: p.foldersContainer?.offsetWidth ?? p.getCopyUiState()?.foldersWidth
+                });
+            }
+        }
+
         if (editor.dockManager?._inited) {
             editor.dockManager.persistence?.save(editor.dockManager.getLayoutSnapshot());
         }

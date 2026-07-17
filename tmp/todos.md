@@ -52,6 +52,13 @@
 - ✅ **C3-toggle** — cam icon click / `.` toggle work ↔ last game; chrome icon refresh
 - ✅ **C4** — adaptive fit design frustum → letterbox safe-rect (`CameraAspectUtils`)
 - ✅ **A5** — Assets Panel Settings → Settings tab Assets (`openSettings('assets')`)
+- ✅ **B2** — browser smoke multi-viewport + Assets×N (2026-07-17)
+- ✅ **D1** — Assets copy UI persist: `ui.assetCopyUiState[instanceKey]` (tabs/size/view/foldersWidth)
+- ✅ **D2** — Outliner copy type filters independent (primary-only shared state write)
+- ✅ **Q-GOD (partial)** — ViewportOperations + UIFactory ≤400; rest OVERRIDES still by-touch
+- ✅ **Q4** — Outliner rename + visibility via H/menu (already; closed as done)
+- ✅ **Q5** — Settings tooltips via U2 / `SettingsSyncManager` + `showTooltips` (closed as done)
+- ✅ **VW-EYE?** — by design: eye/toolbar per-view; View menu → all (VW-ALL)
 
 ---
 
@@ -59,8 +66,7 @@
 
 | # | Задача | Где смотреть | Критерий |
 |---|--------|--------------|----------|
-| B2 | Проверить dock multi-viewport + Assets×N после polish | browser | 0 console errors; multi-drop все; folders width независим |
-| VW-EYE? | Eye/toolbar per-view vs main menu global — ok by design; recheck if user meant eye→all | browser | — |
+| — | *(пусто)* | — | — |
 
 ---
 
@@ -70,18 +76,14 @@
 
 | # | Задача | Заметки / критерий |
 |---|--------|-------------------|
-| A4 | «Open / edit asset» (отдельный editor, если нужен) | stub — нет product-scope editor |
-| ~~A5~~ | ~~Toolbar panel settings~~ | ✅ Settings → Assets |
+| ~~A4~~ | ~~Open / edit asset (dedicated editor)~~ | ⏭ skip |
+| ~~A5~~ | ~~Toolbar panel settings~~ | ✅ |
 
 ### Cameras (editor-side)
 
 | # | Задача | Заметки |
 |---|--------|---------|
-| ~~C1~~ | ~~Camera view frame~~ | ✅ |
-| ~~C2~~ | ~~Aspect / vignette / letterbox~~ | ✅ |
-| ~~C3~~ | ~~Несколько камер + Main + cycle hotkeys~~ | ✅ |
-
-| ~~C4~~ | ~~Adaptive fit нестандартных aspect~~ | ✅ UI preview |
+| ~~C1–C4~~ | ~~camera suite~~ | ✅ |
 
 ---
 
@@ -93,14 +95,7 @@
 |---|-----|---------------|---------------|
 | **Q-DEDUP** | UI-дедуп context menus / dialogs | по касанию обоих клонов | `check:dedup` ↓ |
 | **Q-GOD** | split god-files из OVERRIDES | по касанию файла | &lt;400 → снять OVERRIDES |
-
-### Прочие stubs
-
-| # | Задача | Критерий |
-|---|--------|----------|
-| Q3 | Ownership state Asset-контроллеров | по мере AS-* / A4–A5 |
-| Q4 | Outliner inline rename / visibility stubs | rename ok; visibility via H/menu |
-| Q5 | Settings tooltip system | `SettingsSyncManager` |
+| **Q3** | Ownership state Asset-контроллеров | по мере AS-* | — |
 
 ---
 
@@ -108,21 +103,18 @@
 
 | # | Задача |
 |---|--------|
-| D1 | Persist UI-state копий Assets (tabs/size) per-leaf id |
-| D2 | Независимость Outliner/Details copies (filters/scroll) |
+| ~~D1~~ | ~~Assets copy UI persist~~ ✅ |
+| ~~D2~~ | ~~Outliner filter independence~~ ✅ (Details selection shared by design; scroll per DOM) |
 | D3 | Float edge-cases (snap + relative resize) — по багрепортам; см. также **DK-GST** |
 
 ---
 
 ## Порядок работ (рекомендуемый)
 
-1. ~~VW-NOVP / VW-ALL / OL-CTX~~ ✅  
-2. **B2** — browser smoke multi-view / Assets×N (нужен chrome-devtools MCP)  
-3. ~~C1–C4 / A5~~ ✅  
-4. **A4** only if product needs dedicated asset editor; else **Q\*** / **D\***
-
-
-5. Engine — **не из этого файла**
+1. ~~P0/P1 product~~ ✅ (B2, C*, A5; A4 skip)  
+2. ~~D1/D2 + Q-GOD under-limit + Q4/Q5/VW-EYE~~ ✅  
+3. Optional left: **Q-DEDUP / Q-GOD by-touch / Q3 / D3**  
+4. Engine — **не из этого файла**
 
 ---
 

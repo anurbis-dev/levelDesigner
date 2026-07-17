@@ -256,8 +256,10 @@ export class ResizerManager extends BaseManager {
         if (panelSide === 'folders') {
             const assetPanel = resizerData?.options?.assetPanel || this.levelEditor?.assetPanel;
             assetPanel?.updateContentVisibility?.(size);
-            // Prefs only for primary — copies keep independent width in DOM
-            if (assetPanel?.isPrimary) {
+            // Primary → global prefs; copy → D1 per-leaf (via foldersController)
+            if (assetPanel?.foldersController?._persistFoldersWidth) {
+                assetPanel.foldersController._persistFoldersWidth(size);
+            } else if (assetPanel?.isPrimary) {
                 if (this.stateManager) {
                     this.stateManager.set('panels.foldersWidth', size);
                 }

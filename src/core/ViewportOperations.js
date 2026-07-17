@@ -390,11 +390,7 @@ export class ViewportOperations extends BaseModule {
         }
     }
 
-    /**
-     * Destroy method for cleanup
-     */
     destroy() {
         Logger.lifecycle.info('ViewportOperations module destroyed.');
-        // No specific DOM elements or event listeners to clean up here.
     }
 }

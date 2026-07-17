@@ -22,6 +22,8 @@ export class UserPreferencesManager extends BaseManager {
             'assetsPanelHeight': 'ui.assetsPanelHeight',
             'assetSize': 'ui.assetSize',
             'assetViewMode': 'ui.assetViewMode',
+            // D1: per dock-leaf Assets copy UI (tabs/size/view/folders width), keyed by instanceKey
+            'assetCopyUiState': 'ui.assetCopyUiState',
             'rightPanelTabOrder': 'panels.rightPanelTabOrder',
             'leftPanelTabOrder': 'panels.leftPanelTabOrder',
             'assetTabOrder': 'panels.assetTabOrder',

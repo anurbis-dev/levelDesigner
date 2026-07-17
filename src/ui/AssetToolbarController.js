@@ -51,26 +51,30 @@ export class AssetToolbarController {
     }
 
     /**
-     * Load asset size from user preferences
+     * Load asset size from user preferences (primary) or D1 copy UI state.
      */
     loadAssetSize() {
         const assetPanel = this.assetPanel;
-        const savedSize = assetPanel.levelEditor?.userPrefs?.get('assetSize');
+        const savedSize = !assetPanel.isPrimary
+            ? assetPanel.getCopyUiState()?.assetSize
+            : assetPanel.levelEditor?.userPrefs?.get('assetSize');
         if (savedSize && typeof savedSize === 'number' && savedSize >= assetPanel.minAssetSize && savedSize <= assetPanel.maxAssetSize) {
-            Logger.ui.debug('Loaded asset size from preferences:', savedSize);
+            Logger.ui.debug('Loaded asset size from preferences:', savedSize, assetPanel.instanceKey || 'primary');
             return savedSize;
         }
         Logger.ui.debug('Using default asset size:', 96);
-        return 96; // Default size
+        return 96;
     }
 
     /**
-     * Save asset size to user preferences
+     * Save asset size — primary → global prefs; copy → D1 per-leaf map.
      */
     saveAssetSize() {
         const assetPanel = this.assetPanel;
-        // Copies keep independent size in memory only
-        if (!assetPanel.isPrimary) return;
+        if (!assetPanel.isPrimary) {
+            assetPanel.patchCopyUiState({ assetSize: assetPanel.assetSize });
+            return;
+        }
         if (assetPanel.levelEditor?.userPrefs) {
             assetPanel.levelEditor.userPrefs.set('assetSize', assetPanel.assetSize);
             Logger.ui.debug('Saved asset size to preferences:', assetPanel.assetSize);
@@ -78,26 +82,30 @@ export class AssetToolbarController {
     }
 
     /**
-     * Load view mode from user preferences
+     * Load view mode from user preferences (primary) or D1 copy UI state.
      */
     loadViewMode() {
         const assetPanel = this.assetPanel;
-        const savedMode = assetPanel.levelEditor?.userPrefs?.get('assetViewMode');
+        const savedMode = !assetPanel.isPrimary
+            ? assetPanel.getCopyUiState()?.assetViewMode
+            : assetPanel.levelEditor?.userPrefs?.get('assetViewMode');
         if (savedMode && ['grid', 'list', 'details'].includes(savedMode)) {
-            Logger.ui.debug('Loaded asset view mode from preferences:', savedMode);
+            Logger.ui.debug('Loaded asset view mode from preferences:', savedMode, assetPanel.instanceKey || 'primary');
             return savedMode;
         }
         Logger.ui.debug('Using default asset view mode: grid');
-        return 'grid'; // Default mode
+        return 'grid';
     }
 
     /**
-     * Save view mode to user preferences
+     * Save view mode — primary → global prefs; copy → D1 per-leaf map.
      */
     saveViewMode() {
         const assetPanel = this.assetPanel;
-        // Copies keep independent view mode in memory only
-        if (!assetPanel.isPrimary) return;
+        if (!assetPanel.isPrimary) {
+            assetPanel.patchCopyUiState({ assetViewMode: assetPanel.viewMode });
+            return;
+        }
         if (assetPanel.levelEditor?.userPrefs) {
             assetPanel.levelEditor.userPrefs.set('assetViewMode', assetPanel.viewMode);
             Logger.ui.debug('Saved asset view mode to preferences:', assetPanel.viewMode);

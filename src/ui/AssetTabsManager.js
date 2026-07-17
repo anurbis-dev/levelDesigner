@@ -245,15 +245,27 @@ export class AssetTabsManager {
      * @param {Array} tabOrder - Tab order
      */
     _saveTabStateToConfig(activeTab, activeTabs, tabOrder) {
-        // Only primary panel persists tab layout to config
-        if (!this.assetPanel?.isPrimary) return;
-        if (!this.levelEditor?.configManager) return;
-        
-        // Get current state if not provided
+        if (!this.assetPanel) return;
+
         const currentActiveTabs = activeTabs || this.stateManager.get(this._k('activeAssetTabs'));
         const currentTabOrder = tabOrder || this.stateManager.get(this._k('assetTabOrder'));
-        
-        this.levelEditor.configManager.set('editor.view.activeAssetTabs', Array.from(currentActiveTabs || []));
+        const tabsArr = Array.from(currentActiveTabs || []);
+        const resolvedActive = activeTab !== undefined
+            ? activeTab
+            : this.stateManager.get(this._k('activeAssetTab'));
+
+        // D1: copies persist tabs under ui.assetCopyUiState[instanceKey]
+        if (!this.assetPanel.isPrimary) {
+            this.assetPanel.patchCopyUiState({
+                activeAssetTabs: tabsArr,
+                activeAssetTab: resolvedActive ?? null,
+                assetTabOrder: Array.isArray(currentTabOrder) ? currentTabOrder : tabsArr
+            });
+            return;
+        }
+
+        if (!this.levelEditor?.configManager) return;
+        this.levelEditor.configManager.set('editor.view.activeAssetTabs', tabsArr);
         if (activeTab !== undefined) {
             this.levelEditor.configManager.set('editor.view.activeAssetTab', activeTab);
         }

@@ -105,6 +105,31 @@ export class AssetPanel extends BasePanel {
         return `panelUI.${this.instanceKey}.${String(base).replace(/\./g, '_')}`;
     }
 
+    /**
+     * D1: read persisted UI for this Assets copy (`ui.assetCopyUiState[instanceKey]`).
+     * @returns {object|null}
+     */
+    getCopyUiState() {
+        if (this.isPrimary || !this.instanceKey) return null;
+        const all = this.levelEditor?.userPrefs?.get('assetCopyUiState');
+        if (!all || typeof all !== 'object') return null;
+        const entry = all[this.instanceKey];
+        return entry && typeof entry === 'object' ? entry : null;
+    }
+
+    /**
+     * D1: merge-patch + save UI for this Assets copy (tabs/size/view/folders).
+     * @param {object} patch
+     */
+    patchCopyUiState(patch) {
+        if (this.isPrimary || !this.instanceKey || !patch || typeof patch !== 'object') return;
+        const prefs = this.levelEditor?.userPrefs;
+        if (!prefs) return;
+        const all = { ...(prefs.get('assetCopyUiState') || {}) };
+        all[this.instanceKey] = { ...(all[this.instanceKey] || {}), ...patch };
+        prefs.set('assetCopyUiState', all);
+    }
+
     init() {
         // Primary: fixed ids from index.html; copies: data-asset-role from DockPanelFactory
         this.tabsContainer = this.container.querySelector('[data-asset-role="tabs"]')
@@ -204,14 +229,22 @@ export class AssetPanel extends BasePanel {
      * No default tab is created - tabs are added only by user dragging folders
      */
     initializeActiveAssetTabs() {
-        // Copies: independent empty tabs (no shared config / primary state)
+        // Copies: independent tabs (D1 restore from ui.assetCopyUiState[instanceKey] if any)
         if (!this.isPrimary) {
-            this.stateManager.set(this.uiStateKey('activeAssetTabs'), new Set());
-            this.stateManager.set(this.uiStateKey('activeAssetTab'), null);
-            this.stateManager.set(this.uiStateKey('assetTabOrder'), []);
+            const saved = this.getCopyUiState();
+            const tabs = Array.isArray(saved?.activeAssetTabs) ? saved.activeAssetTabs : [];
+            const order = Array.isArray(saved?.assetTabOrder) ? saved.assetTabOrder : tabs.slice();
+            const active = (saved?.activeAssetTab && tabs.includes(saved.activeAssetTab))
+                ? saved.activeAssetTab
+                : (tabs[0] || null);
+            this.stateManager.set(this.uiStateKey('activeAssetTabs'), new Set(tabs));
+            this.stateManager.set(this.uiStateKey('activeAssetTab'), active);
+            this.stateManager.set(this.uiStateKey('assetTabOrder'), order);
             this.stateManager.set(this.uiStateKey('selectedAssets'), new Set());
             this.stateManager.set(this.uiStateKey('selectedFolders'), ['root']);
-            Logger.ui.debug('AssetPanel: Initialized independent tabs for copy', this.instanceKey);
+            Logger.ui.debug('AssetPanel: Initialized independent tabs for copy', this.instanceKey, {
+                tabs, active
+            });
             return;
         }
 

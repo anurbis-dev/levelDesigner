@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (A5)
+
+- **A5**: Assets «Panel Settings» (RMB empty / gear path) opens global Settings on the **Assets** tab; `SettingsPanel.show(tab)` / `LevelEditor.openSettings(tab)`.
+
 ## Archived from CHANGELOG.md (C4 + Engine follow-player)
 
 - **C4**: adaptive fit of game-camera design frustum into any viewport (letterbox safe-rect); `CameraAspectUtils`; design zoom preserved in object props.

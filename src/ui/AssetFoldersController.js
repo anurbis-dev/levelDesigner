@@ -399,7 +399,7 @@ export class AssetFoldersController {
                 const restore = assetPanel._foldersWidthBeforeCollapse
                     || (assetPanel.isPrimary
                         ? assetPanel.levelEditor?.userPrefs?.get('foldersWidth')
-                        : null)
+                        : assetPanel.getCopyUiState()?.foldersWidth)
                     || 192;
                 const newWidth = Math.min(Math.max(restore, 48), maxWidth);
                 foldersEl.style.width = newWidth + 'px';
@@ -426,7 +426,7 @@ export class AssetFoldersController {
             { assetPanel }
         );
 
-        // Load width once (primary: prefs; copies: seed from primary DOM or prefs, then diverge)
+        // Load width once (primary: prefs; copies: D1 per-leaf or seed from primary)
         if (!assetPanel._foldersResizerWidthApplied) {
             assetPanel._foldersResizerWidthApplied = true;
             let width = null;
@@ -434,12 +434,17 @@ export class AssetFoldersController {
                 const saved = assetPanel.levelEditor.userPrefs.get('foldersWidth');
                 if (typeof saved === 'number' && saved >= 0) width = saved;
             } else if (!assetPanel.isPrimary) {
-                const primaryW = assetPanel.levelEditor?.assetPanel?.foldersContainer?.offsetWidth;
-                if (typeof primaryW === 'number' && primaryW > 0) {
-                    width = primaryW;
+                const copyW = assetPanel.getCopyUiState()?.foldersWidth;
+                if (typeof copyW === 'number' && copyW >= 0) {
+                    width = copyW;
                 } else {
-                    const saved = assetPanel.levelEditor?.userPrefs?.get('foldersWidth');
-                    if (typeof saved === 'number' && saved >= 0) width = saved;
+                    const primaryW = assetPanel.levelEditor?.assetPanel?.foldersContainer?.offsetWidth;
+                    if (typeof primaryW === 'number' && primaryW > 0) {
+                        width = primaryW;
+                    } else {
+                        const saved = assetPanel.levelEditor?.userPrefs?.get('foldersWidth');
+                        if (typeof saved === 'number' && saved >= 0) width = saved;
+                    }
                 }
             }
             if (width !== null) {
@@ -460,12 +465,15 @@ export class AssetFoldersController {
     }
 
     /**
-     * Persist folders width for primary panel only.
+     * Persist folders width — primary → global prefs; copy → D1 per-leaf map.
      * @param {number} width
      */
     _persistFoldersWidth(width) {
         const assetPanel = this.assetPanel;
-        if (!assetPanel.isPrimary) return;
+        if (!assetPanel.isPrimary) {
+            assetPanel.patchCopyUiState({ foldersWidth: width });
+            return;
+        }
         if (assetPanel.levelEditor?.stateManager) {
             assetPanel.levelEditor.stateManager.set('panels.foldersWidth', width);
         }
