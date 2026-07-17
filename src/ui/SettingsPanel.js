@@ -132,7 +132,10 @@ export class SettingsPanel {
     }
 
 
-    show() {
+    /**
+     * @param {string|null} [preferredTab=null] - Optional tab id (e.g. 'assets'); overrides saved last tab
+     */
+    show(preferredTab = null) {
         try {
             // Store original values before showing panel
             this.storeOriginalValues();
@@ -177,10 +180,18 @@ export class SettingsPanel {
                     Logger.ui.warn('Error setting up event handlers:', error);
                 }
 
-                // Load last active tab from localStorage
+                // Preferred tab (e.g. Assets panel → Settings) > last saved > general
+                const validTabs = new Set([
+                    'general', 'colors', 'grid', 'camera', 'selection', 'assets', 'hotkeys', 'performance'
+                ]);
                 const savedTab = localStorage.getItem('levelEditor_lastActiveSettingsTab');
-                const activeTab = savedTab || 'general';
+                const activeTab = (preferredTab && validTabs.has(preferredTab))
+                    ? preferredTab
+                    : (savedTab && validTabs.has(savedTab) ? savedTab : 'general');
                 this.lastActiveTab = activeTab;
+                if (preferredTab && validTabs.has(preferredTab)) {
+                    localStorage.setItem('levelEditor_lastActiveSettingsTab', activeTab);
+                }
                 
                 // Activate the correct tab visually
                 try {

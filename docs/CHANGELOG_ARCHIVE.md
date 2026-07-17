@@ -2,6 +2,11 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (C4 + Engine follow-player)
+
+- **C4**: adaptive fit of game-camera design frustum into any viewport (letterbox safe-rect); `CameraAspectUtils`; design zoom preserved in object props.
+- **Engine**: GameEngine now follows player with camera each tick via `_updateCamera()` method (centers camera on player position; no change if level has no playerStart).
+
 ## Archived from CHANGELOG.md (C3-toggle)
 
 - **C3-toggle**: cam icon click + hotkey `.` toggle work ↔ last/selected game camera; `setSource` refreshes chrome icon; RMB opens source menu; menu pick still updates icon/check.

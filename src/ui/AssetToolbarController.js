@@ -161,10 +161,21 @@ export class AssetToolbarController {
     }
 
     /**
-     * Handle panel settings
+     * Open global Settings on the Assets tab (panel gear / RMB "Panel Settings").
      */
     handleSettings() {
-        Logger.ui.debug('Opening panel settings');
-        // TODO: Implement panel settings
+        const editor = this.assetPanel?.levelEditor;
+        if (!editor) {
+            Logger.ui.warn('Panel settings: LevelEditor unavailable');
+            return;
+        }
+        Logger.ui.debug('Opening Settings → Assets');
+        if (typeof editor.openSettings === 'function') {
+            editor.openSettings('assets');
+        } else if (editor.settingsPanel?.show) {
+            editor.settingsPanel.show('assets');
+        } else {
+            Logger.ui.warn('Panel settings: SettingsPanel unavailable');
+        }
     }
 }

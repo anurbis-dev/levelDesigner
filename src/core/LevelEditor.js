@@ -955,8 +955,11 @@ export class LevelEditor {
         return asset;
     }
 
-    openSettings() {
-        this.settingsPanel.show();
+    /**
+     * @param {string|null} [tab=null] - Optional Settings tab id (e.g. 'assets')
+     */
+    openSettings(tab = null) {
+        this.settingsPanel.show(tab);
     }
 
     /**

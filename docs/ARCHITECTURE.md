@@ -205,7 +205,7 @@
 - **AssetSelectionController** (Фаза 4.4) — выделение ассетов (multi-select через Shift+Ctrl), select-all/deselect-all, обновление визуалов
 - **AssetDragDropController** (Фаза 4.5) — drag-out ассетов на канвас, external PNG file drop overlay, создание ассетов из файлов
 - **AssetItemActionsController** (Фаза 4.6) — контекстные меню (AssetContextMenu, AssetPanelContextMenu), клики по ассетам, open/show-in-explorer
-- **AssetToolbarController** (Фаза 4.7) — тулбар (размер превью, режимы просмотра), персистентность настроек, refresh ассетов
+- **AssetToolbarController** (Фаза 4.7) — тулбар (размер превью, режимы просмотра), персистентность, refresh; Panel Settings → `LevelEditor.openSettings('assets')`
 
 **Декомпозиция завершена** (Фаза 4): AssetPanel.js остаётся orchestration-слоем (constructor, init, destroy, setupEventListeners, setupAssetPanelHandlers, setupAssetEvents, updateContentVisibility, handleAssetWheel, handleDrop/createTemporaryAssetFromFile, handleAssetSave/handleAssetSaveChanges/handleAssetShowInExplorer, autoResizePanelHeight, showSaveSuccessMessage/showSaveErrorMessage/showErrorMessage, shouldShowUnsavedIndicator, плюс delegate-методы для контроллеров). Архитектура: 3099→1154 строк (62% сокращение).
 

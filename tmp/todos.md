@@ -51,6 +51,7 @@
 - ✅ **C3** — multi camera: Main flag + cycle hotkeys `]`/`[` + jump fallback to main
 - ✅ **C3-toggle** — cam icon click / `.` toggle work ↔ last game; chrome icon refresh
 - ✅ **C4** — adaptive fit design frustum → letterbox safe-rect (`CameraAspectUtils`)
+- ✅ **A5** — Assets Panel Settings → Settings tab Assets (`openSettings('assets')`)
 
 ---
 
@@ -69,8 +70,8 @@
 
 | # | Задача | Заметки / критерий |
 |---|--------|-------------------|
-| A4 | «Open / edit asset» (отдельный editor, если нужен) | stub |
-| A5 | Toolbar **panel settings** для Assets | `AssetToolbarController` TODO |
+| A4 | «Open / edit asset» (отдельный editor, если нужен) | stub — нет product-scope editor |
+| ~~A5~~ | ~~Toolbar panel settings~~ | ✅ Settings → Assets |
 
 ### Cameras (editor-side)
 
@@ -116,9 +117,9 @@
 ## Порядок работ (рекомендуемый)
 
 1. ~~VW-NOVP / VW-ALL / OL-CTX~~ ✅  
-2. **B2** — browser smoke multi-view / Assets×N  
-3. ~~C1–C2~~ ✅  
-4. **Q\*** / **D\*** — opportunistically; next product **A4–A5**  
+2. **B2** — browser smoke multi-view / Assets×N (нужен chrome-devtools MCP)  
+3. ~~C1–C4 / A5~~ ✅  
+4. **A4** only if product needs dedicated asset editor; else **Q\*** / **D\***
 
 
 5. Engine — **не из этого файла**

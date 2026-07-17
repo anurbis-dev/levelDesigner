@@ -5,11 +5,12 @@
 
 ## Open
 
-*(пусто — следующий product из todos P1: A4–A5; B2 smoke when browser MCP)*
+*(пусто — B2 smoke when browser MCP; A4 stub only if dedicated asset editor is needed)*
 
 
 ## Closed (архив)
 
+✅ A5 — Assets Panel Settings opens Settings on Assets tab (`SettingsPanel.show('assets')` / `openSettings(tab)`)  
 ✅ C4 — adaptive fit: design frustum fills letterbox safe-rect on any viewport size/aspect (UI preview; `CameraAspectUtils`)  
 ✅ C3-toggle — cam icon click + `.` toggle work ↔ last/selected game; chrome icon refresh on setSource  
 ✅ C3 — multi camera: `properties.isMain` (Details Main), cycle `]`/`[`, jump fallback main, chrome ★, gold frustum  
