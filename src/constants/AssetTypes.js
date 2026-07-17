@@ -66,9 +66,8 @@ export const ASSET_TYPES = [
 // of requiring the user to remember to add the matching component manually.
 export const DEFAULT_ASSET_COMPONENTS = {
     player_start: ['playerStart'],
-    // Visual assets get a Sprite component that owns the texture path (not Identity.imgSrc).
-    image: ['sprite'],
-    imageAtlas: ['sprite'],
+    // Image assets own the disk file (imgSrc) — no Sprite.
+    // Composites get Sprite → imageAssetId pointing at an Image asset.
     actor: ['sprite'],
     prefab: ['sprite']
 };

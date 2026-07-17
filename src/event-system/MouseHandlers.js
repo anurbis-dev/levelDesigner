@@ -1084,7 +1084,11 @@ export class MouseHandlers extends BaseModule {
                 }
 
                 // Get current layer for new objects (already checked above)
-                const newObject = asset.createInstance(x, y, currentLayer ? currentLayer.id : null);
+                const newObject = asset.createInstance(
+                    x, y,
+                    currentLayer ? currentLayer.id : null,
+                    this.editor?.assetManager || null
+                );
 
                 // Check if we're in group edit mode and the drop point is inside the group bounds
                 if (this.isInGroupEditMode() && this.editor.objectOperations.isPointInGroupBounds(worldPos.x, worldPos.y)) {

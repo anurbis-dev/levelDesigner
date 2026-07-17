@@ -1,7 +1,11 @@
 import { Asset } from '../models/Asset.js';
 import { Logger } from '../utils/Logger.js';
 import { getAssetTypeById, ASSET_CATEGORIES, DEFAULT_ASSET_COMPONENTS } from '../constants/AssetTypes.js';
-import { ensureSpriteComponent } from '../ui/asset-editor/AssetVisualMigrate.js';
+import {
+    ensureAssetVisualModel,
+    isImageAsset,
+    resolveTextureSrc
+} from '../ui/asset-editor/AssetVisualMigrate.js';
 import { createComponentStub } from '../constants/ComponentTypes.js';
 import { BaseManager } from './BaseManager.js';
 
@@ -83,9 +87,8 @@ export class AssetManager extends BaseManager {
                 Logger.asset.info(`AssetManager: Content scan complete. Loaded ${result.loadedAssets} assets from ${result.totalFiles} files`);
                 Logger.asset.info(`AssetManager: Categories found: ${Array.from(result.categories).join(', ')}`);
 
-                // DO NOT create tabs here - tabs are managed by AssetPanel
-                // AssetPanel will create only one default tab 'root' at initialization
-                // Other tabs are created by user dragging folders to tabs container
+                // Second pass: link Sprite.imageAssetId now that all Image assets exist
+                this.relinkAllVisualModels();
 
                 // Notify state manager about asset changes
                 if (this.stateManager) {
@@ -183,40 +186,39 @@ export class AssetManager extends BaseManager {
         // For "maps/subfolder/file.json" -> category is "subfolder"
         const category = pathParts[pathParts.length - 2] || pathParts[0] || 'Uncategorized';
 
-        // Get single image source (support both imgSrc and image fields)
+        // Disk texture: only meaningful for type=image (also accept legacy image field)
         let imgSrc = null;
         if (assetData.imgSrc) {
-            // If imgSrc is array, take first element; otherwise use as is
             imgSrc = Array.isArray(assetData.imgSrc) ? assetData.imgSrc[0] : assetData.imgSrc;
         } else if (assetData.image) {
             imgSrc = assetData.image;
         }
 
-        // Build full path to image relative to content folder
-        if (imgSrc && !imgSrc.startsWith('http') && !imgSrc.startsWith('data:')) {
+        const assetType = assetData.type || 'image';
+        // Build full path to image relative to content folder (Image assets only)
+        if (imgSrc && assetType === 'image' && !imgSrc.startsWith('http') && !imgSrc.startsWith('data:')) {
             const assetDir = pathParts.slice(0, -1).join('/');
             imgSrc = `./content/${assetDir}/${imgSrc}`;
             Logger.asset.info(`AssetManager: Built image path: ${imgSrc}`);
-            Logger.asset.info(`AssetManager: Image should be at: content/${assetDir}/${imgSrc.split('/').pop()}`);
-        } else if (!imgSrc) {
+        } else if (assetType === 'image' && !imgSrc) {
             Logger.asset.warn(`AssetManager: No image source found for ${assetData.name} in ${filePath}`);
+        }
+        if (assetType !== 'image') {
+            imgSrc = null;
         }
 
         // Generate UNIQUE ID from full path if not provided
-        // This ensures same filename in different folders gets different IDs
         let assetId = assetData.id;
         if (!assetId) {
-            // Use full path to ensure uniqueness: "assets/TEST/file" -> "asset_assets_TEST_file"
             const pathForId = pathParts.slice(0, -1).join('_') + '_' + filename;
             assetId = `asset_${pathForId}`.replace(/[^a-zA-Z0-9_]/g, '_');
             Logger.asset.info(`AssetManager: Generated unique ID from path: ${assetId}`);
         }
 
-        // Create asset with normalized data (single image only) + components from JSON
         const asset = this.addAsset({
             id: assetId,
             name: assetData.name,
-            type: assetData.type || 'image',
+            type: assetType,
             category: category,
             path: filePath,
             width: assetData.width || 32,
@@ -228,20 +230,15 @@ export class AssetManager extends BaseManager {
             components: Array.isArray(assetData.components) ? assetData.components : []
         });
 
-        // Sprite owns texture; migrate legacy imgSrc/image; prefer resolved content path
-        ensureSpriteComponent(asset);
-        const spr = (asset.components || []).find((c) => c.type === 'sprite');
-        if (spr && imgSrc) {
-            const cur = spr.properties?.src;
-            if (!cur || (!String(cur).startsWith('./') && !String(cur).startsWith('http') && !String(cur).startsWith('data:'))) {
-                spr.properties = { ...(spr.properties || {}), src: imgSrc };
-            }
-            asset.imgSrc = imgSrc;
-        }
+        // Image: disk only; composites: Sprite.imageAssetId (second pass links after all load)
+        ensureAssetVisualModel(asset, this);
         asset.saveOriginalState?.();
 
         result.loadedAssets++;
-        Logger.asset.info(`AssetManager: Loaded asset "${asset.name}" with imgSrc: ${asset.imgSrc}`);
+        Logger.asset.info(
+            `AssetManager: Loaded asset "${asset.name}" type=${asset.type}`
+            + (isImageAsset(asset) ? ` imgSrc=${asset.imgSrc}` : '')
+        );
     }
 
     /**
@@ -378,27 +375,38 @@ export class AssetManager extends BaseManager {
     /**
      * Preload asset images and sync to CanvasRenderer
      */
+    /**
+     * Re-run visual ownership pass (Image disk vs Sprite→Image refs).
+     */
+    relinkAllVisualModels() {
+        for (const asset of this.getAllAssets()) {
+            ensureAssetVisualModel(asset, this);
+            asset.saveOriginalState?.();
+        }
+    }
+
     async preloadImages() {
         try {
-            const assetsWithImages = this.getAllAssets().filter(asset => asset.imgSrc);
-            Logger.asset.info(`AssetManager: Preloading ${assetsWithImages.length} images`);
-            
-            const promises = assetsWithImages.map(async (asset) => {
+            // Only Image assets hold disk textures
+            const imageAssets = this.getAllAssets().filter(
+                (asset) => isImageAsset(asset) && asset.imgSrc
+            );
+            Logger.asset.info(`AssetManager: Preloading ${imageAssets.length} Image assets`);
+
+            const promises = imageAssets.map(async (asset) => {
                 try {
                     const img = await this.loadImage(asset.imgSrc);
-                    // Sync to CanvasRenderer cache
                     this.syncImageToCanvasRenderer(asset.imgSrc, img);
                     Logger.asset.debug(`✅ Preloaded and synced: ${asset.name}`);
                 } catch (error) {
                     Logger.asset.warn(`⚠️ Failed to preload ${asset.name}:`, error);
                 }
             });
-            
+
             await Promise.all(promises);
             Logger.asset.info('AssetManager: Image preloading complete');
         } catch (error) {
             Logger.asset.warn('Failed to preload some images:', error);
-            // Don't throw - let the editor continue with partial asset loading
         }
     }
 
@@ -514,13 +522,14 @@ export class AssetManager extends BaseManager {
         this.assets.set(asset.id, asset);
         this.categories.add(asset.category);
 
-        // Load image into cache if imgSrc is available
-        if (asset.imgSrc && asset.imgSrc.trim() !== '') {
+        ensureAssetVisualModel(asset, this);
+
+        // Cache disk texture for Image assets only
+        if (isImageAsset(asset) && asset.imgSrc && asset.imgSrc.trim() !== '') {
             this.loadImage(asset.imgSrc).then((img) => {
                 Logger.asset.debug(`✅ AssetManager: Image cached for ${asset.name}`);
-                // Also cache in CanvasRenderer if available
                 this.syncImageToCanvasRenderer(asset.imgSrc, img);
-            }).catch(error => {
+            }).catch((error) => {
                 Logger.asset.warn(`⚠️ AssetManager: Failed to cache image for ${asset.name}:`, error);
             });
         }
@@ -597,7 +606,12 @@ export class AssetManager extends BaseManager {
         
         // Update asset properties (current state - state 2)
         Object.assign(asset, updatedData);
-        
+        // Enforce ownership: only Image assets keep disk imgSrc
+        if (!isImageAsset(asset)) {
+            asset.imgSrc = null;
+        }
+        ensureAssetVisualModel(asset, this);
+
         // Update categories if category changed
         if (updatedData.category && updatedData.category !== asset.category) {
             this.categories.add(updatedData.category);

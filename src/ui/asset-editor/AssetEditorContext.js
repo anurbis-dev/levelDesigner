@@ -2,10 +2,14 @@
  * Shared context for asset-editor dock panels (editing asset + selected component).
  */
 import {
+    ensureAssetVisualModel,
     ensureSpriteComponent,
     normalizeImageSrc,
+    resolveTextureSrc,
     resolveSpriteSrc,
-    syncImgSrcFromSprite
+    findSpriteComponent,
+    isImageAsset,
+    getImageDiskSrc
 } from './AssetVisualMigrate.js';
 
 export const ASSET_EDITOR_ROLE = 'assetEditor';
@@ -98,7 +102,7 @@ export function patchEditingAsset(levelEditor, assetId, patch) {
 
 /**
  * Replace one component on the editing asset (immutable components array).
- * Mirrors Sprite.src → asset.imgSrc for engine/placement.
+ * Does not mirror texture paths onto non-image base assets.
  * @param {object|null|undefined} levelEditor
  * @param {string} assetId
  * @param {string} componentId
@@ -117,33 +121,35 @@ export function patchEditingComponent(levelEditor, assetId, componentId, mapFn) 
     });
     if (!found) return false;
 
-    // Temporary apply for sync helper
-    const prev = asset.components;
-    asset.components = next;
-    syncImgSrcFromSprite(asset);
-    const imgSrc = asset.imgSrc;
-    asset.components = prev;
-
-    return patchEditingAsset(levelEditor, assetId, {
-        components: next,
-        ...(imgSrc != null ? { imgSrc } : {})
-    });
+    const patch = { components: next };
+    // Image assets: never store texture on components; non-image: clear leaked imgSrc
+    if (!isImageAsset(asset) && asset.imgSrc) {
+        patch.imgSrc = null;
+    }
+    return patchEditingAsset(levelEditor, assetId, patch);
 }
 
 /**
- * Resolve display image URL: Sprite component first, then legacy asset fields.
+ * Resolve display image URL (needs AssetManager for Sprite→Image refs).
  * @param {object|null|undefined} asset
+ * @param {object|null|undefined} [assetManagerOrEditor] AssetManager or levelEditor
  * @returns {string|null}
  */
-export function resolveAssetImageSrc(asset) {
+export function resolveAssetImageSrc(asset, assetManagerOrEditor) {
     if (!asset) return null;
-    const fromSprite = resolveSpriteSrc(asset);
-    if (fromSprite) return fromSprite;
-    let src = asset.imgSrc;
-    if (Array.isArray(src)) src = src[0] || null;
-    if (!src && asset.properties?.sourceFile) src = asset.properties.sourceFile;
-    if (!src && asset.image) src = asset.image;
-    return normalizeImageSrc(src);
+    const am = assetManagerOrEditor?.getAsset
+        ? assetManagerOrEditor
+        : assetManagerOrEditor?.assetManager || null;
+    return resolveTextureSrc(asset, am);
 }
 
-export { ensureSpriteComponent, resolveSpriteSrc, findSpriteComponent } from './AssetVisualMigrate.js';
+export {
+    ensureAssetVisualModel,
+    ensureSpriteComponent,
+    resolveSpriteSrc,
+    resolveTextureSrc,
+    findSpriteComponent,
+    isImageAsset,
+    getImageDiskSrc,
+    normalizeImageSrc
+};

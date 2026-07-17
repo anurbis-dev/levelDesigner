@@ -3,7 +3,6 @@
   "type": "image",
   "category": "TEST",
   "imgSrc": "FG_flora_001.png",
-  "image": "FG_flora_001.png",
   "color": "#cccccc",
   "width": 63,
   "height": 38,
@@ -12,14 +11,5 @@
     "isTemporary": false,
     "wasDragDropped": true
   },
-  "components": [
-    {
-      "id": "comp_sprite_mrp1o6vc_y87l8p",
-      "type": "sprite",
-      "enabled": true,
-      "properties": {
-        "src": "FG_flora_001.png"
-      }
-    }
-  ]
+  "components": []
 }

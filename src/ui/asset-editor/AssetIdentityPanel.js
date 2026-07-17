@@ -1,5 +1,6 @@
 /**
- * Asset identity / size / meta (live commit). Image path lives on Sprite component, not here.
+ * Asset identity / size / meta (live commit).
+ * Disk path only on type=image; composites show linked Image asset name.
  */
 import { NumericInput } from '../../utils/NumericInput.js';
 import {
@@ -13,7 +14,10 @@ import {
     getEditingAsset,
     subscribeAssetEditor,
     patchEditingAsset,
-    resolveAssetImageSrc
+    resolveAssetImageSrc,
+    isImageAsset,
+    getImageDiskSrc,
+    findSpriteComponent
 } from './AssetEditorContext.js';
 
 export class AssetIdentityPanel {
@@ -45,12 +49,40 @@ export class AssetIdentityPanel {
             return;
         }
         if (this.container.contains(document.activeElement)) {
-            // Soft: only update read-only image path line
-            const pathEl = this.container.querySelector('#ae-img-readonly');
-            if (pathEl) pathEl.textContent = resolveAssetImageSrc(asset) || '(no Sprite src)';
+            this._refreshVisualLine(asset);
             return;
         }
         this.render();
+    }
+
+    /**
+     * @param {object|null} asset
+     * @private
+     */
+    _refreshVisualLine(asset) {
+        const el = this.container.querySelector('#ae-visual-readonly');
+        if (!el || !asset) return;
+        el.textContent = this._visualSummary(asset);
+    }
+
+    /**
+     * @param {object} asset
+     * @private
+     */
+    _visualSummary(asset) {
+        const am = this.levelEditor?.assetManager;
+        if (isImageAsset(asset)) {
+            return getImageDiskSrc(asset) || '(no disk path)';
+        }
+        const spr = findSpriteComponent(asset.components);
+        const refId = spr?.properties?.imageAssetId;
+        if (refId && am?.getAsset) {
+            const img = am.getAsset(refId);
+            if (img) return `Image: ${img.name || img.id}`;
+            return `Image id: ${refId} (missing)`;
+        }
+        if (!spr) return '(no Sprite component)';
+        return '(Sprite: pick Image asset in Details)';
     }
 
     render() {
@@ -62,10 +94,16 @@ export class AssetIdentityPanel {
         }
 
         const tagsStr = Array.isArray(asset.tags) ? asset.tags.join(', ') : '';
-        const imgDisplay = resolveAssetImageSrc(asset) || '(no Sprite src)';
         const dirty = asset.properties?.hasUnsavedChanges === true;
         const temp = asset.properties?.isTemporary === true;
         const compCount = (asset.components || []).length;
+        const isImg = isImageAsset(asset);
+        const visualLabel = isImg ? 'Disk path (Image):' : 'Visual:';
+        const visualHint = isImg
+            ? 'Only Image assets store a file path. Other assets use Sprite → Image.'
+            : 'Texture comes from Sprite → Image asset. Edit link in Components / Details.';
+        const visualValue = this._visualSummary(asset);
+        const resolved = resolveAssetImageSrc(asset, this.levelEditor) || '';
 
         this.container.innerHTML = createSettingsFormGroup(`
             ${createSettingsSection('Basic', createSettingsFormGroup(`
@@ -105,10 +143,20 @@ export class AssetIdentityPanel {
                     ${createSettingsLabel('Color:', 'ae-color')}
                     ${createSettingsInput({ id: 'ae-color', type: 'color', value: asset.color || '#3B82F6' })}
                 `)}
+                ${isImg ? createSettingsFormGroup(`
+                    ${createSettingsLabel('Disk path:', 'ae-imgSrc')}
+                    ${createSettingsInput({
+                        id: 'ae-imgSrc',
+                        type: 'text',
+                        value: getImageDiskSrc(asset) || '',
+                        placeholder: './content/.../file.png'
+                    })}
+                `) : ''}
                 ${createSettingsFormGroup(`
-                    ${createSettingsLabel('Image (Sprite component):', 'ae-img-readonly')}
-                    <div id="ae-img-readonly" style="font-size:11px;color:var(--ui-text-color,#9ca3af);word-break:break-all;padding:4px 0;">${this._esc(imgDisplay)}</div>
-                    <div style="font-size:10px;color:#6b7280;">Edit path on the <strong>Sprite</strong> component in Components / Details.</div>
+                    ${createSettingsLabel(visualLabel, 'ae-visual-readonly')}
+                    <div id="ae-visual-readonly" style="font-size:11px;color:var(--ui-text-color,#9ca3af);word-break:break-all;padding:4px 0;">${this._esc(visualValue)}</div>
+                    ${resolved && !isImg ? `<div style="font-size:10px;color:#6b7280;word-break:break-all;">resolved: ${this._esc(resolved)}</div>` : ''}
+                    <div style="font-size:10px;color:#6b7280;">${visualHint}</div>
                 `)}
                 ${createSettingsFormGroup(`
                     ${createSettingsLabel('Category:', 'ae-category')}
@@ -139,14 +187,15 @@ export class AssetIdentityPanel {
         `, { gap: '1rem' });
 
         NumericInput.wireAll(this.container);
-        this._bind(asset.id);
+        this._bind(asset.id, isImg);
     }
 
     /**
      * @param {string} assetId
+     * @param {boolean} isImg
      * @private
      */
-    _bind(assetId) {
+    _bind(assetId, isImg) {
         const commit = () => {
             const name = this.container.querySelector('#ae-name')?.value || '';
             const width = parseFloat(this.container.querySelector('#ae-width')?.value);
@@ -155,23 +204,32 @@ export class AssetIdentityPanel {
             const category = this.container.querySelector('#ae-category')?.value || '';
             const tagsRaw = this.container.querySelector('#ae-tags')?.value || '';
             const tags = tagsRaw.split(',').map((t) => t.trim()).filter(Boolean);
+            /** @type {object} */
+            const patch = {
+                name,
+                width: Number.isFinite(width) ? width : 32,
+                height: Number.isFinite(height) ? height : 32,
+                color,
+                category,
+                tags
+            };
+            if (isImg) {
+                const disk = this.container.querySelector('#ae-imgSrc')?.value?.trim() || null;
+                patch.imgSrc = disk;
+            }
             this._selfPatch = true;
             try {
-                patchEditingAsset(this.levelEditor, assetId, {
-                    name,
-                    width: Number.isFinite(width) ? width : 32,
-                    height: Number.isFinite(height) ? height : 32,
-                    color,
-                    category,
-                    tags
-                });
+                patchEditingAsset(this.levelEditor, assetId, patch);
             } finally {
                 this._selfPatch = false;
             }
             this.levelEditor?.dockManager?.syncAssetEditorTitle?.();
+            this._refreshVisualLine(getEditingAsset(this.levelEditor));
         };
 
-        ['ae-name', 'ae-width', 'ae-height', 'ae-color', 'ae-category', 'ae-tags'].forEach((id) => {
+        const ids = ['ae-name', 'ae-width', 'ae-height', 'ae-color', 'ae-category', 'ae-tags'];
+        if (isImg) ids.push('ae-imgSrc');
+        ids.forEach((id) => {
             const el = this.container.querySelector(`#${id}`);
             if (!el) return;
             el.addEventListener('change', commit);

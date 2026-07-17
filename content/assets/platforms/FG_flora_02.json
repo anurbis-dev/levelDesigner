@@ -3,7 +3,6 @@
   "type": "image",
   "category": "Enemies",
   "imgSrc": "FG_flora_02.png",
-  "image": "FG_flora_02.png",
   "color": "#CCCCCC",
   "width": 63,
   "height": 38,
@@ -12,14 +11,5 @@
     "isTemporary": false,
     "wasDragDropped": true
   },
-  "components": [
-    {
-      "id": "comp_sprite_mrp1o6v8_lwvmil",
-      "type": "sprite",
-      "enabled": true,
-      "properties": {
-        "src": "FG_flora_02.png"
-      }
-    }
-  ]
+  "components": []
 }

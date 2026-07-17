@@ -150,6 +150,29 @@ export class AssetComponentDetailsPanel {
         const id = `ae-cf-${field.key}`;
         const labelStyle = 'display:block;font-size:11px;margin-bottom:2px;color:var(--ui-text-color,#9ca3af);';
         const err = `<div class="ae-field-error" data-err-for="${field.key}" style="color:#f87171;font-size:11px;min-height:1em;"></div>`;
+        if (field.kind === 'assetRef') {
+            const types = field.assetTypes || ['image'];
+            const am = this.levelEditor?.assetManager;
+            const list = (am?.getAllAssets?.() || []).filter((a) => types.includes(a.type));
+            const cur = String(val ?? field.default ?? '');
+            const opts = [
+                `<option value="">(none)</option>`,
+                ...list.map((a) => {
+                    const sel = a.id === cur ? ' selected' : '';
+                    return `<option value="${this._esc(a.id)}"${sel}>${this._esc(a.name || a.id)}</option>`;
+                })
+            ].join('');
+            return `
+                <div>
+                    <label for="${id}" style="${labelStyle}">${this._esc(field.label)}</label>
+                    <select data-field="${field.key}" class="ae-cf" id="${id}"
+                        style="width:100%;box-sizing:border-box;background:var(--ui-input-background,#111827);color:var(--ui-text-color,#d1d5db);border:1px solid var(--ui-border-color,#374151);border-radius:4px;padding:4px 6px;">
+                        ${opts}
+                    </select>
+                    ${err}
+                </div>
+            `;
+        }
         if (field.kind === 'bool') {
             return `
                 <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
@@ -332,7 +355,7 @@ export class AssetComponentDetailsPanel {
             // Live commit for preview + info overlay (json still on change — partial JSON invalid)
             if (field.kind === 'json') {
                 el.addEventListener('change', apply);
-            } else if (field.kind === 'select' || field.kind === 'color') {
+            } else if (field.kind === 'select' || field.kind === 'color' || field.kind === 'assetRef') {
                 el.addEventListener('input', apply);
                 el.addEventListener('change', apply);
             } else {

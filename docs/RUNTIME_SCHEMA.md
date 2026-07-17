@@ -114,7 +114,7 @@ implemented`, `properties: {}`, `schemaVersion: 1`. `BehaviorRegistry` (движ
 
 | id | label | schemaVersion | status | fields |
 |---|---|---|---|---|
-| `sprite` | Sprite | 1 | editor+placement | `src` (string, path/data URL of texture). Editor: primary image source for asset; mirrored to `asset.imgSrc` / `entity.imgSrc` for engine renderer. Static display only (animation frames stay on `spriteUiAnimation`). |
+| `sprite` | Sprite | 2 | editor+placement | `imageAssetId` (string, id of a catalog **Image** asset). Does **not** store a disk path — only Image assets hold `imgSrc`/file. At place-time editor resolves Image → URL into `entity.imgSrc` for the engine. Static display only (animation frames stay on `spriteUiAnimation`). |
 | `collider` | Collider | 3 | implemented | `shape` (`box`\|`circle`\|`freeform`, default `box`); `color` (optional `#RGB`/`#RRGGBB` stroke in editor; empty = palette); box: `offsetX`/`offsetY`/`width`/`height` (опц., дефолт — entity box); circle: `offsetX`/`offsetY` = center, `radius` (или inscribed in box fields); freeform: `points` `[{x,y},…]` asset-local; `layer` + `collidesWith` (пусто = all). Runtime collision = AABB of shape. Editor Preview: stroke frames only — never crops sprite; freeform has Add/Move/Delete vertex tools. |
 | `trigger` | Trigger | 3 | implemented | те же shape/color/geometry поля, что `collider` (та же `getEntityBounds`); enter/exit vs любой behavior с `getBounds()`, фильтр `collidesWith` |
 | `interactable` | Interactable | 1 | implemented | `radius` (опционально, дефолт `32`), `hint` (опционально, дефолт `'Interact'`) |

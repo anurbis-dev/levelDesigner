@@ -2,6 +2,11 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (Collider shapes + Level eventGraph)
+
+- **Collider shapes**: `shape` = `box` | `circle` | `freeform`; per-instance `color` for stroke frame; freeform Preview edit mode (Add/Move/Delete vertices). Runtime still AABB of shape.
+- **Level model: `eventGraph`/`dialogues` fields**: `Level.js` now stores and round-trips level-scope `eventGraph`/`dialogues` (constructor + `toJSON()`), matching the `docs/RUNTIME_SCHEMA.md` root-field contract — previously an authored value would silently vanish on save since the model didn't know the keys existed. No editor UI yet; authored as raw JSON until the Event Graph/Dialogue widgets land (Фаза C).
+
 ## Archived from CHANGELOG.md (Sprite owns image, multi-collider frames, live preview)
 
 - **Asset visual model**: new **Sprite** component owns image `src`; Identity no longer edits imgSrc; content JSON migrated with sprite; load/import ensure Sprite; `imgSrc` mirrored for engine placement.

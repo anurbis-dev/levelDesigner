@@ -11,7 +11,7 @@ import { defaultComponentProperties as getDefaultComponentProperties } from './C
 export const COMPONENT_CATEGORY = { label: 'Component Library', color: '#f87171' };
 
 export const COMPONENT_TYPES = [
-    { id: 'sprite', label: 'Sprite', description: 'Static visual: image source for the actor (atlas / texture).', genres: 'all' },
+    { id: 'sprite', label: 'Sprite', description: 'Static visual: references an Image asset (not a disk path).', genres: 'all' },
     { id: 'collider', label: 'Collider', description: 'Collision frame: box / circle / freeform; optional color. Does not crop the sprite.', genres: 'all' },
     { id: 'trigger', label: 'Trigger', description: 'Zone (box / circle / freeform) reacting to enter/exit.', genres: 'all' },
     { id: 'transformAnimation', label: 'Transform Animation', description: 'Move/rotate/scale along a Path or curve.', genres: 'platformer, transport' },

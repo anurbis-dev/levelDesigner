@@ -3,7 +3,6 @@
   "type": "image",
   "category": "Enemies",
   "imgSrc": "map_miningFacility_LVL01_prototype_v01.png",
-  "image": "map_miningFacility_LVL01_prototype_v01.png",
   "color": "#CCCCCC",
   "width": 1451,
   "height": 341,
@@ -12,14 +11,5 @@
     "isTemporary": false,
     "wasDragDropped": true
   },
-  "components": [
-    {
-      "id": "comp_sprite_mrp1o6vc_p8enn9",
-      "type": "sprite",
-      "enabled": true,
-      "properties": {
-        "src": "map_miningFacility_LVL01_prototype_v01.png"
-      }
-    }
-  ]
+  "components": []
 }

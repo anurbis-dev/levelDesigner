@@ -1,4 +1,10 @@
 import { GameObject } from './GameObject.js';
+import {
+    isImageAsset,
+    getImageDiskSrc,
+    resolveTextureSrc,
+    assetToPersistable
+} from '../ui/asset-editor/AssetVisualMigrate.js';
 
 /**
  * Asset definition for the asset library
@@ -13,12 +19,14 @@ export class Asset {
         this.width = data.width || 32;
         this.height = data.height || 32;
         this.color = data.color || '#cccccc';
-        this.imgSrc = data.imgSrc || null;
+        // Disk texture only for type=image; composites use Sprite.imageAssetId
+        this.imgSrc = isImageAsset({ type: this.type })
+            ? (data.imgSrc || null)
+            : null;
         this.properties = data.properties || {};
         this.tags = data.tags || [];
-        this.components = data.components || []; // Component stubs (see ComponentTypes.js), copied into instances on placement
+        this.components = data.components || [];
 
-        // Store original state for comparison (state 1 - from JSON file)
         this._originalState = null;
         if (!data._isClone) {
             this.saveOriginalState();
@@ -33,9 +41,7 @@ export class Asset {
      * Save current state as original state (from JSON file)
      */
     saveOriginalState() {
-        // Normalize imgSrc when saving original state to match comparison logic
-        const normalizedImgSrc = (this.imgSrc === null || this.imgSrc === undefined || this.imgSrc === '') ? null : this.imgSrc;
-        
+        const disk = isImageAsset(this) ? (getImageDiskSrc(this) || null) : null;
         this._originalState = {
             name: this.name,
             type: this.type,
@@ -43,33 +49,29 @@ export class Asset {
             width: this.width,
             height: this.height,
             color: this.color,
-            imgSrc: normalizedImgSrc,
+            imgSrc: disk,
             componentsSignature: JSON.stringify(this.components || [])
         };
     }
 
     /**
      * Check if current state differs from original state
-     * @returns {boolean} True if asset has been modified
+     * @returns {boolean}
      */
     hasChangesFromOriginal() {
         if (!this._originalState) return false;
 
-        // Normalize imgSrc values: null, undefined, and empty string are treated as equivalent
-        const currentImgSrc = (this.imgSrc === null || this.imgSrc === undefined || this.imgSrc === '') ? null : this.imgSrc;
-        const originalImgSrc = (this._originalState.imgSrc === null || this._originalState.imgSrc === undefined || this._originalState.imgSrc === '') ? null : this._originalState.imgSrc;
+        const currentImgSrc = isImageAsset(this) ? (getImageDiskSrc(this) || null) : null;
+        const originalImgSrc = this._originalState.imgSrc || null;
 
-        // Compare values, converting numbers to ensure type consistency
         const currentWidth = Number(this.width);
         const originalWidth = Number(this._originalState.width);
         const currentHeight = Number(this.height);
         const originalHeight = Number(this._originalState.height);
-        
-        // Normalize color values (case-insensitive comparison)
+
         const currentColor = (this.color || '').toUpperCase().trim();
         const originalColor = (this._originalState.color || '').toUpperCase().trim();
-        
-        // Normalize name, type, category (trim whitespace)
+
         const currentName = (this.name || '').trim();
         const originalName = (this._originalState.name || '').trim();
         const currentType = (this.type || '').trim();
@@ -78,83 +80,59 @@ export class Asset {
         const originalCategory = (this._originalState.category || '').trim();
 
         return (
-            currentName !== originalName ||
-            currentType !== originalType ||
-            currentCategory !== originalCategory ||
-            currentWidth !== originalWidth ||
-            currentHeight !== originalHeight ||
-            currentColor !== originalColor ||
-            currentImgSrc !== originalImgSrc ||
-            JSON.stringify(this.components || []) !== (this._originalState.componentsSignature || '[]')
+            currentName !== originalName
+            || currentType !== originalType
+            || currentCategory !== originalCategory
+            || currentWidth !== originalWidth
+            || currentHeight !== originalHeight
+            || currentColor !== originalColor
+            || currentImgSrc !== originalImgSrc
+            || JSON.stringify(this.components || []) !== (this._originalState.componentsSignature || '[]')
         );
     }
 
-    /**
-     * Get original state
-     * @returns {Object} Original state object
-     */
     getOriginalState() {
         return this._originalState ? { ...this._originalState } : null;
     }
 
     /**
-     * Create a game object instance from this asset
-     * @param {number} x - X coordinate
-     * @param {number} y - Y coordinate
-     * @param {string} layerId - Layer ID for the new object (optional)
+     * Create a game object instance from this asset.
+     * @param {number} x
+     * @param {number} y
+     * @param {string|null} layerId
+     * @param {object|null} [assetManager] required to resolve Sprite→Image refs
      */
-    createInstance(x = 0, y = 0, layerId = null) {
-        // Prefer Sprite component src for placed object texture (engine still reads entity.imgSrc)
-        let imgSrc = this.imgSrc;
-        const spr = (this.components || []).find((c) => c && c.type === 'sprite' && c.enabled !== false);
-        if (spr?.properties?.src) {
-            const s = spr.properties.src;
-            imgSrc = Array.isArray(s) ? (s[0] || imgSrc) : s;
-        }
+    createInstance(x = 0, y = 0, layerId = null, assetManager = null) {
+        const imgSrc = resolveTextureSrc(this, assetManager);
         const instanceData = {
             id: `obj_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
             name: this.name,
             type: this.type,
-            x: x,
-            y: y,
+            x,
+            y,
             width: this.width,
             height: this.height,
             color: this.color,
             imgSrc,
             visible: true,
             locked: false,
-            layerId: layerId, // Will be set by level.addObject() if not provided
+            layerId,
             properties: { ...this.properties },
-            components: (this.components || []).map(c => ({ ...c, properties: { ...c.properties } }))
+            components: (this.components || []).map((c) => ({
+                ...c,
+                properties: { ...(c.properties || {}) }
+            }))
         };
-
-        // Create proper GameObject instance instead of plain object
         return new GameObject(instanceData);
     }
 
     /**
-     * Serialize asset to JSON
+     * Serialize asset to JSON (no imgSrc on non-image).
      */
     toJSON() {
-        return {
-            id: this.id,
-            name: this.name,
-            type: this.type,
-            category: this.category,
-            path: this.path,
-            width: this.width,
-            height: this.height,
-            color: this.color,
-            imgSrc: this.imgSrc,
-            properties: this.properties,
-            tags: this.tags,
-            components: this.components
-        };
+        return assetToPersistable(this);
     }
 
-    /**
-     * Create asset from JSON data
-     */
     static fromJSON(data) {
         return new Asset(data);
     }

@@ -4,5 +4,4 @@
 
 ## [Unreleased]
 
-- **Collider shapes**: `shape` = `box` | `circle` | `freeform`; per-instance `color` for stroke frame; freeform Preview edit mode (Add/Move/Delete vertices). Runtime still AABB of shape.
-- **Level model: `eventGraph`/`dialogues` fields**: `Level.js` now stores and round-trips level-scope `eventGraph`/`dialogues` (constructor + `toJSON()`), matching the `docs/RUNTIME_SCHEMA.md` root-field contract — previously an authored value would silently vanish on save since the model didn't know the keys existed. No editor UI yet; authored as raw JSON until the Event Graph/Dialogue widgets land (Фаза C).
+- **Visual ownership cleanup**: only **Image** assets store disk/`imgSrc`; **Sprite** uses `imageAssetId` → Image (no path). Base asset no longer mirrors texture from components. Content JSON migrated (strip Sprite from images). Thumbs/preview/placement resolve via AssetManager.

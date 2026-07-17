@@ -5,8 +5,8 @@
 
 /**
  * @typedef {{ key: string, label: string,
- *   kind: 'number'|'text'|'bool'|'stringList'|'json'|'select'|'color',
- *   default?: *, options?: { value: string, label: string }[] }} CompField
+ *   kind: 'number'|'text'|'bool'|'stringList'|'json'|'select'|'color'|'assetRef',
+ *   default?: *, options?: { value: string, label: string }[], assetTypes?: string[] }} CompField
  */
 
 const COLLIDER_SHAPE_OPTIONS = [
@@ -32,7 +32,8 @@ const COLLIDER_SHAPE_FIELDS = [
 /** @type {Record<string, CompField[]>} */
 const SCHEMAS = {
     sprite: [
-        { key: 'src', label: 'Image Path', kind: 'text', default: '' }
+        // References a catalog Image asset (disk path lives only on that Image)
+        { key: 'imageAssetId', label: 'Image Asset', kind: 'assetRef', assetTypes: ['image'], default: '' }
     ],
     collider: COLLIDER_SHAPE_FIELDS,
     trigger: COLLIDER_SHAPE_FIELDS,
@@ -117,6 +118,9 @@ export function parseFieldInput(field, raw) {
             return { ok: false, error: 'Invalid option' };
         }
         return { ok: true, value: v || field.default || '' };
+    }
+    if (field.kind === 'assetRef') {
+        return { ok: true, value: String(raw ?? '').trim() };
     }
     if (field.kind === 'color') {
         const s = String(raw ?? '').trim();

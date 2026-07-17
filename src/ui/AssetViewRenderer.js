@@ -2,6 +2,7 @@ import { Logger } from '../utils/Logger.js';
 import { getAssetTypeById } from '../constants/AssetTypes.js';
 import { buildTypeIconSvg } from '../constants/AssetTypeIcons.js';
 import { ImageUtils } from '../utils/ImageUtils.js';
+import { resolveTextureSrc } from './asset-editor/AssetVisualMigrate.js';
 
 /**
  * Renders the asset grid/list/details views for AssetPanel.
@@ -193,10 +194,11 @@ export class AssetViewRenderer {
         thumb.draggable = true;
 
 
-        if (asset.imgSrc && this.isValidImageSrc(asset.imgSrc)) {
-            Logger.ui.debug(`🎨 Creating image thumbnail for ${asset.name} with imgSrc: ${asset.imgSrc.substring(0, 50)}...`);
+        const thumbSrc = this.resolveAssetThumbSrc(asset);
+        if (thumbSrc && this.isValidImageSrc(thumbSrc)) {
+            Logger.ui.debug(`🎨 Creating image thumbnail for ${asset.name} with imgSrc: ${thumbSrc.substring(0, 50)}...`);
             const img = document.createElement('img');
-            img.src = asset.imgSrc;
+            img.src = thumbSrc;
             img.alt = asset.name;
             img.draggable = false;
             img.style.width = '100%';
@@ -207,15 +209,13 @@ export class AssetViewRenderer {
             };
             img.onerror = (error) => {
                 Logger.ui.warn(`❌ Image failed to load for ${asset.name}:`, error);
-                // Fallback to colored rectangle if image fails to load
                 img.style.display = 'none';
                 const colorDiv = this.createColorFallback(asset);
                 thumb.appendChild(colorDiv);
             };
             thumb.appendChild(img);
         } else {
-            Logger.ui.debug(`🎨 Creating color fallback for ${asset.name} - imgSrc: ${asset.imgSrc}, isValid: ${this.isValidImageSrc(asset.imgSrc)}`);
-            // Create colored rectangle as fallback (same as default assets)
+            Logger.ui.debug(`🎨 Creating color fallback for ${asset.name} - src: ${thumbSrc}`);
             const colorDiv = this.createColorFallback(asset);
             thumb.appendChild(colorDiv);
         }
@@ -344,22 +344,21 @@ export class AssetViewRenderer {
         previewDiv.style.borderRadius = '2px';
         previewDiv.style.overflow = 'hidden';
 
-        if (asset.imgSrc && this.isValidImageSrc(asset.imgSrc)) {
+        const listSrc = this.resolveAssetThumbSrc(asset);
+        if (listSrc && this.isValidImageSrc(listSrc)) {
             const img = document.createElement('img');
-            img.src = asset.imgSrc;
+            img.src = listSrc;
             img.alt = asset.name;
             img.draggable = false;
             img.style.width = '100%';
             img.style.height = '100%';
             img.style.objectFit = 'cover';
             img.onerror = () => {
-                // Fallback to colored rectangle if image fails to load
                 img.style.display = 'none';
                 previewDiv.style.backgroundColor = asset.color;
             };
             previewDiv.appendChild(img);
         } else {
-            // Create colored rectangle as fallback (same as default assets)
             previewDiv.style.backgroundColor = asset.color;
             const typeIconMarkup = this.getTypeIconMarkup(asset);
             if (typeIconMarkup) {
@@ -415,14 +414,14 @@ export class AssetViewRenderer {
         preview.style.width = `${this.assetPanel.assetSize * 0.5}px`;
         preview.style.height = `${this.assetPanel.assetSize * 0.5}px`;
 
-        if (asset.imgSrc && this.isValidImageSrc(asset.imgSrc)) {
+        const rowSrc = this.resolveAssetThumbSrc(asset);
+        if (rowSrc && this.isValidImageSrc(rowSrc)) {
             const img = document.createElement('img');
-            img.src = asset.imgSrc;
+            img.src = rowSrc;
             img.alt = asset.name;
             img.className = 'w-full h-full object-cover rounded';
             img.draggable = false;
             img.onerror = () => {
-                // Fallback to colored rectangle with text if image fails to load
                 img.style.display = 'none';
                 const colorDiv = this.createColorFallback(asset, {
                     text: asset.name.charAt(0).toUpperCase(),
@@ -504,20 +503,26 @@ export class AssetViewRenderer {
     }
 
     /**
+     * Resolve thumbnail texture: Image.imgSrc or Sprite→Image.
+     * @param {object} asset
+     * @returns {string|null}
+     */
+    resolveAssetThumbSrc(asset) {
+        const am = this.assetPanel?.levelEditor?.assetManager
+            || this.assetPanel?.assetManager
+            || window.editor?.assetManager
+            || null;
+        return resolveTextureSrc(asset, am);
+    }
+
+    /**
      * Check if an image source is valid (exists and can be loaded)
      * @param {string} imgSrc - Image source path
      * @returns {boolean} - True if image is valid, false otherwise
      */
     isValidImageSrc(imgSrc) {
         if (!imgSrc) return false;
-
-        // Check if it's a data URL (starts with data:)
-        if (imgSrc.startsWith('data:')) {
-            return true; // Data URLs are valid
-        }
-
-        // In a real implementation, this would check if the file actually exists
-
+        if (imgSrc.startsWith('data:')) return true;
         return true;
     }
 

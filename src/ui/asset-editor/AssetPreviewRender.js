@@ -13,7 +13,7 @@ import { isFreeformShapeComponent } from './AssetPreviewFreeformEdit.js';
  * @param {object} asset
  */
 export function ensurePreviewImage(panel, asset) {
-    const src = resolveAssetImageSrc(asset);
+    const src = resolveAssetImageSrc(asset, panel.levelEditor);
     if (!src) {
         panel._img = null;
         panel._imgSrc = null;

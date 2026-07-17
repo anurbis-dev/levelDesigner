@@ -36,7 +36,7 @@ import { RecentFilesManager } from '../managers/RecentFilesManager.js';
 import { Logger } from '../utils/Logger.js';
 import { dialogReplacer } from '../utils/DialogReplacer.js';
 import { DockManager } from '../ui/dock/DockManager.js';
-import { ensureSpriteComponent } from '../ui/asset-editor/AssetVisualMigrate.js';
+import { ensureAssetVisualModel } from '../ui/asset-editor/AssetVisualMigrate.js';
 
 // Import new utilities
 import { ErrorHandler } from '../utils/ErrorHandler.js';
@@ -989,7 +989,7 @@ export class LevelEditor {
             Logger.ui.warn('Cannot open Asset Editor: dockManager missing');
             return;
         }
-        ensureSpriteComponent(asset);
+        ensureAssetVisualModel(asset, this.assetManager);
 
         this.stateManager?.set('editingAssetId', asset.id);
         this.stateManager?.set('editingComponentId', null);
