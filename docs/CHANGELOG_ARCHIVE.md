@@ -2,6 +2,11 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (Dialogue MVP + Asset Preview camera)
+
+- **Dialogue MVP runtime (Фаза E)**: DialogueRunner интерпретатор, ConditionEvaluator для условий, DialogueTriggerBehavior компонент; OnDialogueEnded event-граф вход, StartDialogue action; Scene.dialogues и dialogue state (dialogueActive/dialogueRunner); PlayerMovementBehavior паузится при активном диалоге.
+- **Asset Preview viewport camera**: Preview panel is a canvas mini-viewport with local camera (RMB pan, wheel zoom toward cursor, MMB drag zoom); grid + asset body + component overlays redraw without resetting pose on property edits.
+
 ## Archived from CHANGELOG.md (Event Graph MVP + Asset Editor data/layout)
 
 - **Event Graph MVP runtime** (Фаза D): engine-side interpreter for level-scope event graphs (`src/engine/eventgraph/`); NodeRegistry pattern like BehaviorRegistry; EventGraphRuntime executes graph traversal via entry dispatch (OnStart/OnTick/OnCollisionEnter/OnCollisionExit/OnInteract/OnTimer/OnCustomEvent); Conditions: Compare/And/Or/Not (inline spec-based, not graph edges); Actions: SetVariable/SetComponentEnabled/Teleport/DestroyObject/EmitCustomEvent; integration with TriggerBehavior.notifyCollision() + SetComponentEnabled now live-flips .enabled at runtime.

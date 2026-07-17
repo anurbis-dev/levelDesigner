@@ -116,29 +116,16 @@ export function drawComponentOverlays(ctx, comp, aw, ah, z) {
 }
 
 /**
+ * Empty-state message only (asset/comp text lives in DOM info overlay).
  * @param {CanvasRenderingContext2D} ctx
  * @param {number} cw
  * @param {number} ch
  * @param {object|null} asset
- * @param {object|null} [comp]
  */
-export function paintPreviewHud(ctx, cw, ch, asset, comp) {
-    if (!asset) {
-        ctx.fillStyle = '#9ca3af';
-        ctx.font = '12px system-ui,sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('No asset selected', cw / 2, ch / 2);
-        return;
-    }
-    if (comp?.type === 'spriteUiAnimation') {
-        const n = Array.isArray(comp.properties?.frames) ? comp.properties.frames.length : 0;
-        if (n) {
-            ctx.fillStyle = '#000a';
-            ctx.fillRect(6, 6, 72, 16);
-            ctx.fillStyle = '#34d399';
-            ctx.font = '10px system-ui,sans-serif';
-            ctx.textAlign = 'left';
-            ctx.fillText(`${n} frames`, 10, 17);
-        }
-    }
+export function paintPreviewEmpty(ctx, cw, ch, asset) {
+    if (asset) return;
+    ctx.fillStyle = '#9ca3af';
+    ctx.font = '12px system-ui,sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('No asset selected', cw / 2, ch / 2);
 }

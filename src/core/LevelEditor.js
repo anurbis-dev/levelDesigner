@@ -608,7 +608,7 @@ export class LevelEditor {
      * @param {(panel: object, binding: object) => void} fn
      */
     forEachDockPanelCopy(contentType, fn) {
-        const reg = this.dockManager?.contentRegistry;
+        const reg = this.dockManager?.registry || this.dockManager?.contentRegistry;
         if (!reg?._byLeafId || !fn) return;
         for (const bind of reg._byLeafId.values()) {
             if (bind.contentType !== contentType || bind.isPrimary || !bind.panel) continue;

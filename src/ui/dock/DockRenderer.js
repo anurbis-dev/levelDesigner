@@ -387,6 +387,7 @@ export class DockRenderer {
         const el = document.createElement('div');
         el.className = `floating-window${fw.collapsed ? ' collapsed' : ''}${fw.groupId ? ' grouped' : ''}`;
         el.dataset.floatId = fw.id;
+        if (fw.role) el.dataset.role = fw.role;
         el.style.left = `${fw.x}px`;
         el.style.top = `${fw.y}px`;
         el.style.width = `${fw.w}px`;

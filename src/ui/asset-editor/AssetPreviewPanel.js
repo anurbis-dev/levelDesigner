@@ -1,5 +1,6 @@
 /**
  * Asset preview mini-viewport: local camera (RMB pan, wheel/MMB zoom), asset + overlays.
+ * Info HUD (viewport-info-overlay). Focus: F = component, A = asset (via EventHandlers).
  */
 import {
     getEditingAsset,
@@ -11,6 +12,8 @@ import {
     PREVIEW_ZOOM_WHEEL,
     PREVIEW_ZOOM_MMB,
     fitCameraToAsset,
+    fitCameraToBounds,
+    getComponentBounds,
     zoomAtClient,
     panCamera
 } from './AssetPreviewCamera.js';
@@ -18,8 +21,12 @@ import {
     drawPreviewGrid,
     drawAssetBody,
     drawComponentOverlays,
-    paintPreviewHud
+    paintPreviewEmpty
 } from './AssetPreviewDraw.js';
+import {
+    ensureAssetPreviewInfoOverlay,
+    updateAssetPreviewInfoOverlay
+} from './AssetPreviewInfoOverlay.js';
 
 export class AssetPreviewPanel {
     /**
@@ -52,29 +59,27 @@ export class AssetPreviewPanel {
             'overflow:hidden;padding:0;height:100%;box-sizing:border-box;'
             + 'display:flex;flex-direction:column;background:#0f172a;';
 
+        this.host = document.createElement('div');
+        this.host.className = 'ae-preview-host';
+        this.host.style.cssText =
+            'position:relative;flex:1 1 auto;width:100%;min-height:0;overflow:hidden;';
+
         this.canvas = document.createElement('canvas');
         this.canvas.className = 'ae-preview-canvas';
         this.canvas.style.cssText =
-            'flex:1 1 auto;width:100%;min-height:0;display:block;cursor:default;touch-action:none;';
+            'position:absolute;inset:0;width:100%;height:100%;display:block;'
+            + 'cursor:default;touch-action:none;';
         this.canvas.tabIndex = 0;
 
-        this.statusEl = document.createElement('div');
-        this.statusEl.style.cssText =
-            'flex:0 0 auto;font-size:10px;color:#94a3b8;padding:4px 8px;'
-            + 'border-top:1px solid #1e293b;display:flex;justify-content:space-between;gap:8px;user-select:none;';
-
-        this.container.appendChild(this.canvas);
-        this.container.appendChild(this.statusEl);
+        this.host.appendChild(this.canvas);
+        this.infoOverlay = ensureAssetPreviewInfoOverlay(this.host);
+        this.container.appendChild(this.host);
 
         this._onPointerDown = this._onPointerDown.bind(this);
         this._onPointerMove = this._onPointerMove.bind(this);
         this._onPointerUp = this._onPointerUp.bind(this);
         this._onWheel = this._onWheel.bind(this);
         this._onContextMenu = (e) => e.preventDefault();
-        this._onDblClick = () => {
-            this.fitToAsset();
-            this._draw();
-        };
 
         this.canvas.addEventListener('pointerdown', this._onPointerDown);
         window.addEventListener('pointermove', this._onPointerMove);
@@ -82,27 +87,25 @@ export class AssetPreviewPanel {
         window.addEventListener('pointercancel', this._onPointerUp);
         this.canvas.addEventListener('wheel', this._onWheel, { passive: false });
         this.canvas.addEventListener('contextmenu', this._onContextMenu);
-        this.canvas.addEventListener('dblclick', this._onDblClick);
 
         this._ro = new ResizeObserver(() => {
             this._resizeCanvas();
             this._draw();
         });
-        this._ro.observe(this.container);
+        this._ro.observe(this.host);
 
         this._unsub = subscribeAssetEditor(stateManager, () => this._onContextChange());
         this._resizeCanvas();
         this._onContextChange();
     }
 
-    /** Fit camera to asset bounds (also double-click). */
+    /** A — frame whole asset. */
     fitToAsset() {
         const asset = getEditingAsset(this.levelEditor);
-        const rect = this.canvas.getBoundingClientRect();
-        const cw = Math.max(1, rect.width);
-        const ch = Math.max(1, rect.height);
+        const { cw, ch } = this._cssSize();
         if (!asset) {
             this.camera = { x: 0, y: 0, zoom: 1 };
+            this._draw();
             return;
         }
         this.camera = fitCameraToAsset(
@@ -111,6 +114,33 @@ export class AssetPreviewPanel {
             Math.max(1, Number(asset.width) || 32),
             Math.max(1, Number(asset.height) || 32)
         );
+        this._draw();
+    }
+
+    /** F — frame selected component (no-op if none). */
+    fitToSelection() {
+        const asset = getEditingAsset(this.levelEditor);
+        if (!asset) return;
+        const compId = getEditingComponentId(this.levelEditor);
+        const comp = compId
+            ? (asset.components || []).find((c) => c.id === compId)
+            : null;
+        if (!comp) return;
+        const aw = Math.max(1, Number(asset.width) || 32);
+        const ah = Math.max(1, Number(asset.height) || 32);
+        const b = getComponentBounds(comp, aw, ah);
+        const { cw, ch } = this._cssSize();
+        this.camera = fitCameraToBounds(cw, ch, b.minX, b.minY, b.maxX, b.maxY);
+        this._draw();
+    }
+
+    /** @private */
+    _cssSize() {
+        const rect = this.canvas.getBoundingClientRect();
+        return {
+            cw: Math.max(1, rect.width || this.host.clientWidth || 1),
+            ch: Math.max(1, rect.height || this.host.clientHeight || 1)
+        };
     }
 
     /** @private */
@@ -121,7 +151,18 @@ export class AssetPreviewPanel {
             this._boundAssetId = id;
             this._img = null;
             this._imgSrc = null;
-            this.fitToAsset();
+            // Initial open: frame asset (same as A), no dblclick.
+            if (asset) {
+                const { cw, ch } = this._cssSize();
+                this.camera = fitCameraToAsset(
+                    cw,
+                    ch,
+                    Math.max(1, Number(asset.width) || 32),
+                    Math.max(1, Number(asset.height) || 32)
+                );
+            } else {
+                this.camera = { x: 0, y: 0, zoom: 1 };
+            }
         }
         if (asset) this._ensureImage(asset);
         this._draw();
@@ -295,9 +336,14 @@ export class AssetPreviewPanel {
         ctx.fillRect(0, 0, cw, ch);
 
         const asset = getEditingAsset(this.levelEditor);
+        const compId = getEditingComponentId(this.levelEditor);
+        const comp = asset && compId
+            ? (asset.components || []).find((c) => c.id === compId)
+            : null;
+
         if (!asset) {
-            paintPreviewHud(ctx, cw, ch, null, null);
-            this._updateStatus(null);
+            paintPreviewEmpty(ctx, cw, ch, null);
+            updateAssetPreviewInfoOverlay(this.infoOverlay, null, null, this.camera);
             return;
         }
 
@@ -311,45 +357,10 @@ export class AssetPreviewPanel {
         ctx.scale(z, z);
         drawPreviewGrid(ctx, aw, ah, z);
         drawAssetBody(ctx, this._img, aw, ah, color, z);
-
-        const compId = getEditingComponentId(this.levelEditor);
-        const comp = compId
-            ? (asset.components || []).find((c) => c.id === compId)
-            : null;
         drawComponentOverlays(ctx, comp, aw, ah, z);
         ctx.restore();
 
-        paintPreviewHud(ctx, cw, ch, asset, comp);
-        this._updateStatus(asset, comp);
-    }
-
-    /**
-     * @param {object|null} asset
-     * @param {object|null} [comp]
-     * @private
-     */
-    _updateStatus(asset, comp) {
-        if (!asset) {
-            this.statusEl.innerHTML =
-                '<span>No asset</span><span>dblclick fit · RMB pan · wheel zoom</span>';
-            return;
-        }
-        const w = Math.max(1, Number(asset.width) || 32);
-        const h = Math.max(1, Number(asset.height) || 32);
-        const zoomPct = Math.round((this.camera.zoom || 1) * 100);
-        const name = this._esc(asset.name || '');
-        const extra = comp ? ` · ${this._esc(comp.type)}` : '';
-        this.statusEl.innerHTML =
-            `<span>${name} · ${w}×${h}${extra}</span>`
-            + `<span>${zoomPct}% · dblclick fit · RMB pan · wheel/MMB zoom</span>`;
-    }
-
-    /** @private */
-    _esc(s) {
-        return String(s ?? '')
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/"/g, '&quot;');
+        updateAssetPreviewInfoOverlay(this.infoOverlay, asset, comp, this.camera);
     }
 
     destroy() {
@@ -367,10 +378,10 @@ export class AssetPreviewPanel {
         window.removeEventListener('pointercancel', this._onPointerUp);
         this.canvas?.removeEventListener('wheel', this._onWheel);
         this.canvas?.removeEventListener('contextmenu', this._onContextMenu);
-        this.canvas?.removeEventListener('dblclick', this._onDblClick);
         this.container.innerHTML = '';
         this.canvas = null;
-        this.statusEl = null;
+        this.host = null;
+        this.infoOverlay = null;
         this._img = null;
         this.levelEditor = null;
         this.stateManager = null;

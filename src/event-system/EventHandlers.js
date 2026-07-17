@@ -361,18 +361,30 @@ export class EventHandlers extends BaseModule {
             this.editor.pasteObjects();
         } else if (this._matchesShortcut(e, 'editor', 'focusSelection')) {
             e.preventDefault();
-            // OL-F: over Outliner → scroll list to selection; otherwise VP-HK frame on viewport
-            const outlinerPanel = this._outlinerPanelUnderCursor();
-            if (outlinerPanel && typeof outlinerPanel.scrollToSelection === 'function') {
-                outlinerPanel.scrollToSelection();
+            // AE-F: over Asset Preview / Asset Editor → frame selected component
+            const assetPreview = this._assetPreviewForHotkey();
+            if (assetPreview && typeof assetPreview.fitToSelection === 'function') {
+                assetPreview.fitToSelection();
             } else {
-                const targetView = this._hotkeyTargetView();
-                if (typeof this.editor.focusOnSelection === 'function') this.editor.focusOnSelection(targetView);
+                // OL-F: over Outliner → scroll list to selection; otherwise VP-HK frame on viewport
+                const outlinerPanel = this._outlinerPanelUnderCursor();
+                if (outlinerPanel && typeof outlinerPanel.scrollToSelection === 'function') {
+                    outlinerPanel.scrollToSelection();
+                } else {
+                    const targetView = this._hotkeyTargetView();
+                    if (typeof this.editor.focusOnSelection === 'function') this.editor.focusOnSelection(targetView);
+                }
             }
         } else if (this._matchesShortcut(e, 'editor', 'focusAll')) {
             e.preventDefault();
-            const targetView = this._hotkeyTargetView();
-            if (typeof this.editor.focusOnAll === 'function') this.editor.focusOnAll(targetView);
+            // AE-A: over Asset Preview / Asset Editor → frame whole asset
+            const assetPreview = this._assetPreviewForHotkey();
+            if (assetPreview && typeof assetPreview.fitToAsset === 'function') {
+                assetPreview.fitToAsset();
+            } else {
+                const targetView = this._hotkeyTargetView();
+                if (typeof this.editor.focusOnAll === 'function') this.editor.focusOnAll(targetView);
+            }
         } else if (this._matchesShortcut(e, 'editor', 'jumpToCamera')) {
             e.preventDefault();
             const targetView = this._hotkeyTargetView();
@@ -532,7 +544,7 @@ export class EventHandlers extends BaseModule {
      * @returns {import('../ui/AssetPanel.js').AssetPanel|null}
      */
     _assetsPanelUnderCursor() {
-        const reg = this.editor.dockManager?.contentRegistry;
+        const reg = this.editor.dockManager?.registry || this.editor.dockManager?.contentRegistry;
         if (reg?._byLeafId) {
             for (const bind of reg._byLeafId.values()) {
                 if (bind.contentType !== 'assets' || !bind.panel || !bind.root) continue;
@@ -552,7 +564,7 @@ export class EventHandlers extends BaseModule {
      * @returns {import('../ui/OutlinerPanel.js').OutlinerPanel|null}
      */
     _outlinerPanelUnderCursor() {
-        const reg = this.editor.dockManager?.contentRegistry;
+        const reg = this.editor.dockManager?.registry || this.editor.dockManager?.contentRegistry;
         if (reg?._byLeafId) {
             for (const bind of reg._byLeafId.values()) {
                 if (bind.contentType !== 'outliner' || !bind.panel || !bind.root) continue;
@@ -563,6 +575,37 @@ export class EventHandlers extends BaseModule {
         if (primaryRoot?.matches(':hover') && this.editor.outlinerPanel) {
             return this.editor.outlinerPanel;
         }
+        return null;
+    }
+
+    /**
+     * AssetPreviewPanel for F/A: under cursor, or any preview if Asset Editor float is hovered.
+     * @returns {import('../ui/asset-editor/AssetPreviewPanel.js').AssetPreviewPanel|null}
+     */
+    _assetPreviewForHotkey() {
+        const reg = this.editor.dockManager?.registry || this.editor.dockManager?.contentRegistry;
+        if (!reg?._byLeafId) return null;
+        let hoveredPreview = null;
+        let anyPreview = null;
+        let editorHovered = false;
+        for (const bind of reg._byLeafId.values()) {
+            if (bind.contentType === 'assetPreview' && bind.panel) {
+                anyPreview = anyPreview || bind.panel;
+                if (bind.root?.matches?.(':hover') || bind.panel.host?.matches?.(':hover')
+                    || bind.panel.canvas?.matches?.(':hover')) {
+                    hoveredPreview = bind.panel;
+                }
+            }
+            // Any asset-editor leaf under cursor → route F/A to preview
+            if (bind.contentType?.startsWith?.('asset') && bind.root?.matches?.(':hover')) {
+                editorHovered = true;
+            }
+        }
+        if (hoveredPreview) return hoveredPreview;
+        if (editorHovered && anyPreview) return anyPreview;
+        // Float chrome (title bar) may not be a content leaf
+        const float = document.querySelector('.floating-window[data-role="assetEditor"]:hover');
+        if (float && anyPreview) return anyPreview;
         return null;
     }
 
