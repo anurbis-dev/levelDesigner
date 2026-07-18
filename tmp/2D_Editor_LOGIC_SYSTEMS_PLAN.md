@@ -430,6 +430,18 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     пересечения с `scene.player`, `scene.inventory.add(itemId, count)` +
     `scene.destroyEntity()` (если `destroyOnPickup`). Схема `itemId`/`count`/`destroyOnPickup`
     в `src/constants/ComponentPropertySchema.js`.
+  - `damageHealth` ✅ ЗАВЕРШЕНА 2026-07-19: `DamageHealthBehavior`
+    (`src/engine/behaviors/DamageHealthBehavior.js`) — один тип компонента покрывает обе
+    стороны контактного урона: `maxHealth`/`currentHealth` — пул здоровья, `contactDamage` —
+    сколько эта сущность наносит другим при касании (0 = только получает урон, не наносит).
+    Тик AABB-проверка против всех сущностей с `damageHealth`-поведением (не только
+    `scene.player`, в отличие от `pickup` — иначе враг не мог бы получать урон от игрока);
+    переиспользует `layer`/`collidesWith` из Фазы A (`AABB.matchesLayer`) для фильтрации, кто
+    кому наносит урон. `invulnerabilityDuration` — окно неуязвимости (i-frames) после
+    получения урона. При `currentHealth <= 0` — `scene.destroyEntity()` (если
+    `destroyOnDeath`). Без интеграции в Event Graph в этом проходе (нет `OnDeath`-узла) — как и
+    `pickup` не добавлял `OnPickup`, здесь тоже не выходили за рамки задачи; HP HUD/отображение
+    здоровья — отдельный бэклог, не запрошен. Схема в `src/constants/ComponentPropertySchema.js`.
 - **Полный критерий Фазы 4 движка** (было решено сдать минимальным срезом, v4.6.x): eslint-
   plugin-boundaries для границы `engine/`↔остальной `src/`, asset-usage-граф для отсечения
   мёртвого контента в `build:game`, флаг "включено в билд" на уровне, `build:addon`/`build:event`

@@ -46,6 +46,15 @@ const SCHEMAS = {
         { key: 'count', label: 'Count', kind: 'number', default: 1 },
         { key: 'destroyOnPickup', label: 'Destroy On Pickup', kind: 'bool', default: true }
     ],
+    damageHealth: [
+        { key: 'maxHealth', label: 'Max Health', kind: 'number', default: 100 },
+        { key: 'currentHealth', label: 'Current Health (empty = max)', kind: 'number', default: null },
+        { key: 'contactDamage', label: 'Contact Damage (dealt to others on touch)', kind: 'number', default: 0 },
+        { key: 'invulnerabilityDuration', label: 'Invulnerability After Hit (sec)', kind: 'number', default: 0.5 },
+        { key: 'destroyOnDeath', label: 'Destroy On Death', kind: 'bool', default: true },
+        { key: 'layer', label: 'Layer', kind: 'text', default: '' },
+        { key: 'collidesWith', label: 'Takes Damage From (comma list)', kind: 'stringList', default: [] }
+    ],
     spriteUiAnimation: [
         { key: 'frames', label: 'Frames (JSON array)', kind: 'json', default: [] },
         { key: 'loop', label: 'Loop', kind: 'bool', default: true },
