@@ -2,6 +2,11 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (damageHealth component, parallax pure-zoom fix, v4.14.2/v4.15.0)
+
+- **damageHealth component (§7 backlog item 2/12)**: new behavior `DamageHealthBehavior` (registered in `BehaviorRegistry`); AABB-checks every tick against other damageHealth entities; one component type covers both dealing and receiving damage — source sets `contactDamage>0` + `layer`, receiver sets `maxHealth`/`currentHealth` + `collidesWith`; `invulnerabilityDuration` (sec, default 0.5) provides i-frame window after each hit; `destroyOnDeath` (default true) calls `scene.destroyEntity()` when `currentHealth≤0`; no Event Graph integration this pass (no OnDeath node).
+- **Fix: parallax layers shifting on pure zoom (no pan)**: `ParallaxRenderer.getCameraOffset()` compared raw `camera.x/y` (the viewport's top-left corner) against `parallax.startPosition` — but raw camera.x/y is entangled with zoom itself (`camera.x = centerX - canvasWidth/(2*zoom)`), so just zooming in/out with zero actual panning still shifted every parallax layer. New `ParallaxRenderer.getCameraCenter(camera)` derives the zoom-invariant viewport-center world point; `getCameraOffset` and all 5 "capture start position" call sites (level load, project load, Details panel button, x2 in LevelEditor) now use the center instead of raw camera.x/y. Real panning still shifts layers as before; zooming alone (center-anchored or cursor-anchored near center) no longer does.
+
 ## Archived from CHANGELOG.md (Parallax sprite/selection desync fix, v4.14.1)
 
 - **Fix: parallax sprite/selection desync on camera zoom/pan**: `ParallaxRenderer.isParallaxEnabled()`/`getParallaxOffset()` read a standalone `stateManager.view.parallax` key that nothing in the current UI sets anymore — the real Parallax toolbar toggle only flips the per-viewport `displayOptions.parallax` flag. Selection bounds, mouse hit-testing, and duplicate-ghost offsets used the dead global key (effectively always parallax-off), while sprite rendering used the per-view flag — so sprites and selection boxes drifted apart as soon as the camera panned/zoomed with parallax on. Both paths now resolve the same per-view flag + that view's own camera.

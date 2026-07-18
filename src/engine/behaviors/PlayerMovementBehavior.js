@@ -44,18 +44,25 @@ export class PlayerMovementBehavior extends Behavior {
             .filter(solid => typeof solid.isOverlapping !== 'function')
             .filter(solid => matchesLayer(this.properties.collidesWith, solid.properties?.layer));
 
-        this._moveAxis(dx, 0, solids);
-        this._moveAxis(0, dy, solids);
+        this._moveAxis(dx, 0, solids, scene);
+        this._moveAxis(0, dy, solids, scene);
     }
 
     // Discrete end-of-step overlap check, not swept collision — assumes a single tick's
     // movement distance stays small relative to solid size (true at any normal frame rate;
     // an extreme dt spike combined with a thin solid could still tunnel through it).
-    _moveAxis(dx, dy, solids) {
+    _moveAxis(dx, dy, solids, scene) {
         if (dx === 0 && dy === 0) return;
         this.entity.x += dx;
         this.entity.y += dy;
         const bounds = getEntityBounds(this.entity, {});
+        let blockers = solids.filter(solid => rectsIntersect(bounds, solid.getBounds()));
+        // MovablePushableBehavior duck-types tryPush (same convention as TriggerBehavior's
+        // isOverlapping) — give each blocker a chance to slide out of the way before we
+        // decide the step is actually blocked.
+        for (const blocker of blockers) {
+            if (typeof blocker.tryPush === 'function') blocker.tryPush(dx, dy, scene);
+        }
         const blocked = solids.some(solid => rectsIntersect(bounds, solid.getBounds()));
         if (blocked) {
             this.entity.x -= dx;

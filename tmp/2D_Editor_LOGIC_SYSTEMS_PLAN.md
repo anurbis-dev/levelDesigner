@@ -442,6 +442,22 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     `destroyOnDeath`). Без интеграции в Event Graph в этом проходе (нет `OnDeath`-узла) — как и
     `pickup` не добавлял `OnPickup`, здесь тоже не выходили за рамки задачи; HP HUD/отображение
     здоровья — отдельный бэклог, не запрошен. Схема в `src/constants/ComponentPropertySchema.js`.
+  - `movablePushable` ✅ ЗАВЕРШЕНА 2026-07-19: `MovablePushableBehavior`
+    (`src/engine/behaviors/MovablePushableBehavior.js`) — Sokoban-style ящик. В отличие от
+    `pickup`/`damageHealth` не может быть полностью самодостаточным: сдвиг ящика должен
+    происходить синхронно с шагом игрока, который его толкает, поэтому единственная точка
+    интеграции — `PlayerMovementBehavior._moveAxis` (`src/engine/behaviors/PlayerMovementBehavior.js`)
+    duck-type-вызывает `blocker.tryPush(dx, dy, scene)` на любом блокере (тот же приём, что уже
+    использовался для `TriggerBehavior.isOverlapping`) перед откатом заблокированного шага.
+    `tryPush` двигает свою сущность на тот же вектор и тут же проверяет, свободен ли пункт
+    назначения от других solid-сущностей (кроме triggers) — если нет, откатывает себя и
+    возвращает false, шаг игрока тоже откатывается как обычно. `getBounds()` делает ящик solid
+    по умолчанию (блокирует, если не толкают). `layer`/`collidesWith` (Фаза A) фильтруют, что
+    именно блокирует пункт назначения при толчке. Без цепочки "ящик толкает ящик" за один
+    tryPush-вызов — если такое понадобится, можно рекурсивно звать `tryPush` на найденных
+    блокерах внутри самого `tryPush`, не делали, т.к. не запрошено. Схема
+    `layer`/`collidesWith` в `src/constants/ComponentPropertySchema.js`; тесты
+    `tests/engine/MovablePushableBehavior.test.js`.
 - **Полный критерий Фазы 4 движка** (было решено сдать минимальным срезом, v4.6.x): eslint-
   plugin-boundaries для границы `engine/`↔остальной `src/`, asset-usage-граф для отсечения
   мёртвого контента в `build:game`, флаг "включено в билд" на уровне, `build:addon`/`build:event`

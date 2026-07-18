@@ -55,6 +55,10 @@ const SCHEMAS = {
         { key: 'layer', label: 'Layer', kind: 'text', default: '' },
         { key: 'collidesWith', label: 'Takes Damage From (comma list)', kind: 'stringList', default: [] }
     ],
+    movablePushable: [
+        { key: 'layer', label: 'Layer', kind: 'text', default: '' },
+        { key: 'collidesWith', label: 'Blocked By (comma list; empty = all)', kind: 'stringList', default: [] }
+    ],
     spriteUiAnimation: [
         { key: 'frames', label: 'Frames (JSON array)', kind: 'json', default: [] },
         { key: 'loop', label: 'Loop', kind: 'bool', default: true },
