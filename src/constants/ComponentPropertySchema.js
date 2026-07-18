@@ -41,6 +41,11 @@ const SCHEMAS = {
         { key: 'radius', label: 'Radius', kind: 'number', default: 32 },
         { key: 'hint', label: 'Hint', kind: 'text', default: 'Interact' }
     ],
+    pickup: [
+        { key: 'itemId', label: 'Item Id (level.items[].id)', kind: 'text', default: '' },
+        { key: 'count', label: 'Count', kind: 'number', default: 1 },
+        { key: 'destroyOnPickup', label: 'Destroy On Pickup', kind: 'bool', default: true }
+    ],
     spriteUiAnimation: [
         { key: 'frames', label: 'Frames (JSON array)', kind: 'json', default: [] },
         { key: 'loop', label: 'Loop', kind: 'bool', default: true },

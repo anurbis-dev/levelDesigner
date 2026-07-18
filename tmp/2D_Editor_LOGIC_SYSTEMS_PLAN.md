@@ -418,13 +418,18 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
   как fallback для уровней без камеры. Без своего UI-виджета — generic Details JSON, как
   `spriteUiAnimation`. render layers (часть исходного описания в каталоге) не реализованы —
   все слои рендерятся одинаково для любой камеры, не было конкретной потребности.
-- **Компоненты без отдельной фазы**: `pickup`, `damageHealth`, `movablePushable`,
+- **Компоненты без отдельной фазы**: `damageHealth`, `movablePushable`,
   `mountableVehicleSeat`, `pathFollower`, `spawner`, `checkpointSavePoint`, `climbableLadder`,
   `conveyorZiplineJumpPadPortal`, `destructibleContainer`, `variableModifier` — реализуются по
   мере того, в какие реально упирается конкретная игра (та же дисциплина, что была в
   ENGINE_PLAN §2.3). `stateMachineBehavior` — уточнить при реализации: это AI-стейт-машина NPC
   (patrol/chase), отдельная от анимационной (Фаза F) — общий механизм переходов можно
   переиспользовать, но это не один и тот же компонент.
+  - `pickup` ✅ ЗАВЕРШЕНА 2026-07-18: `PickupBehavior` (`src/engine/behaviors/PickupBehavior.js`)
+    — самодостаточное поведение (не data-holder, как `dialogueTrigger`), тик AABB-проверка
+    пересечения с `scene.player`, `scene.inventory.add(itemId, count)` +
+    `scene.destroyEntity()` (если `destroyOnPickup`). Схема `itemId`/`count`/`destroyOnPickup`
+    в `src/constants/ComponentPropertySchema.js`.
 - **Полный критерий Фазы 4 движка** (было решено сдать минимальным срезом, v4.6.x): eslint-
   plugin-boundaries для границы `engine/`↔остальной `src/`, asset-usage-граф для отсечения
   мёртвого контента в `build:game`, флаг "включено в билд" на уровне, `build:addon`/`build:event`
