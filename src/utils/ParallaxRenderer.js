@@ -36,6 +36,24 @@ export class ParallaxRenderer {
     }
 
     /**
+     * World-space point at the center of the viewport — unlike raw camera.x/y (the
+     * top-left corner, defined as centerX - canvasWidth/(2*zoom)), this is invariant to
+     * zoom alone: zooming in/out around the viewport center leaves it unchanged, it only
+     * moves via real panning (or a cursor-anchored zoom deliberately recentering toward
+     * the cursor). Using raw camera.x/y for parallax made a plain zoom (no pan at all)
+     * shift every parallax layer, because camera.x/y itself shifts by
+     * canvasWidth*(1/2/oldZoom - 1/2/newZoom) purely from the zoom, with zero real pan.
+     */
+    getCameraCenter(camera) {
+        const canvas = this.editor.canvasRenderer?.canvas;
+        if (!canvas || !camera.zoom) return { x: camera.x, y: camera.y };
+        return {
+            x: camera.x + canvas.width / (2 * camera.zoom),
+            y: camera.y + canvas.height / (2 * camera.zoom)
+        };
+    }
+
+    /**
      * Get camera offset from start position
      */
     getCameraOffset(camera) {
@@ -45,9 +63,11 @@ export class ParallaxRenderer {
         const multiplierX = levelSettings.parallaxHorizontal ?? 1;
         const multiplierY = levelSettings.parallaxVertical ?? 1;
 
+        const center = this.getCameraCenter(camera);
+
         return {
-            x: (camera.x - startPosition.x) * multiplierX,
-            y: (camera.y - startPosition.y) * multiplierY
+            x: (center.x - startPosition.x) * multiplierX,
+            y: (center.y - startPosition.y) * multiplierY
         };
     }
 

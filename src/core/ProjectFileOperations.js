@@ -297,10 +297,8 @@ export class ProjectFileOperations extends BaseModule {
      */
     _updateParallaxStartPosition() {
         const currentCamera = this.editor.stateManager.get('camera');
-        this.editor.stateManager.set('parallax.startPosition', {
-            x: currentCamera.x,
-            y: currentCamera.y
-        });
+        const center = this.editor.renderOperations.parallaxRenderer.getCameraCenter(currentCamera);
+        this.editor.stateManager.set('parallax.startPosition', center);
     }
 
     /**

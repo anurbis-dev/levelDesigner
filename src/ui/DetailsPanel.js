@@ -1493,10 +1493,8 @@ export class DetailsPanel {
 
         newBtn.addEventListener('click', () => {
             const currentCamera = this.levelEditor.stateManager.get('camera');
-            this.levelEditor.stateManager.set('parallax.startPosition', {
-                x: currentCamera.x,
-                y: currentCamera.y
-            });
+            const center = this.levelEditor.renderOperations.parallaxRenderer.getCameraCenter(currentCamera);
+            this.levelEditor.stateManager.set('parallax.startPosition', center);
         });
     }
 

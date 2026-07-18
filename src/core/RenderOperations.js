@@ -219,8 +219,12 @@ export class RenderOperations extends BaseModule {
         let padding = 100;
         if (this.parallaxRenderer.isParallaxEnabled()) {
             // Расширяем область на максимальное возможное параллакс смещение
-            // Предполагаем максимальный коэффициент параллакса ±10
-            const parallaxRange = Math.abs(camera.x - (this.parallaxRenderer.getParallaxState()?.startPosition?.x || 0)) * 10;
+            // Предполагаем максимальный коэффициент параллакса ±10.
+            // startPosition is the viewport CENTER (see getCameraCenter) — compare against
+            // this camera's own center, not raw camera.x, or panning-free zoom would look
+            // like a huge parallax range and over-pad every frame.
+            const center = this.parallaxRenderer.getCameraCenter(camera);
+            const parallaxRange = Math.abs(center.x - (this.parallaxRenderer.getParallaxState()?.startPosition?.x || 0)) * 10;
             padding = Math.max(padding, parallaxRange + 200); // +200 для безопасности
         }
 

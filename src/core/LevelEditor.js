@@ -52,7 +52,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '4.14.1';
+    static VERSION = '4.14.2';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -536,12 +536,11 @@ export class LevelEditor {
         // Update all panels
         this.updateAllPanels();
 
-        // Auto-set parallax start position to current camera position
+        // Auto-set parallax start position to current camera position (viewport CENTER,
+        // not raw camera.x/y — see ParallaxRenderer.getCameraCenter for why)
         const currentCamera = this.stateManager.get('camera');
-        this.stateManager.set('parallax.startPosition', {
-            x: currentCamera.x,
-            y: currentCamera.y
-        });
+        this.stateManager.set('parallax.startPosition',
+            this.renderOperations.parallaxRenderer.getCameraCenter(currentCamera));
 
         // Ensure selection is clear before saving initial state
         this.stateManager.set('selectedObjects', new Set());
@@ -698,12 +697,10 @@ export class LevelEditor {
         eventHandlerManager.registerElement(btn, {
             click: () => {
                 const currentCamera = this.stateManager.get('camera');
-                this.stateManager.set('parallax.startPosition', {
-                    x: currentCamera.x,
-                    y: currentCamera.y
-                });
+                const center = this.renderOperations.parallaxRenderer.getCameraCenter(currentCamera);
+                this.stateManager.set('parallax.startPosition', center);
 
-                Logger.parallax.info(`Set camera start position: (${currentCamera.x}, ${currentCamera.y})`);
+                Logger.parallax.info(`Set camera start position: (${center.x}, ${center.y})`);
             }
         }, 'set-camera-start-position-btn');
     }
