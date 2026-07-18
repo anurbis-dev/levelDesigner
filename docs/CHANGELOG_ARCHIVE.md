@@ -2,6 +2,13 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (Play dialogue HUD, Items dock, NPC bags, Pickup component)
+
+- **Play dialogue HUD**: choices buttons + item picker (`DialoguePlayHud` on play overlay); inventory strip with item display names.
+- **Items & Inventory dock**: level `items[]` definitions, player bag seed, per-object NPC bags (`npcInventories`); history + undo.
+- **NPC bags runtime**: `Scene.getBag` / `npcInventories`; dialogue effects `to`/`from`; `itemPick` deposits into speaker bag.
+- **Pickup behavior**: сбор предметов через AABB-пересечение с игроком; автоудаление сущности и добавление в инвентарь (свойства: `itemId`, `count`, `destroyOnPickup`).
+
 ## Archived from CHANGELOG.md (English UI + Dialogue items/multi-NPC)
 
 - **UI English-only**: user-facing Russian strings in Dialogues panel, dock chrome (tooltips/empty states/type menu), TypeFilterMenu, ErrorHandler, FileManager → English.

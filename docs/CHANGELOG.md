@@ -4,7 +4,4 @@
 
 ## [Unreleased]
 
-- **Play dialogue HUD**: choices buttons + item picker (`DialoguePlayHud` on play overlay); inventory strip with item display names.
-- **Items & Inventory dock**: level `items[]` definitions, player bag seed, per-object NPC bags (`npcInventories`); history + undo.
-- **NPC bags runtime**: `Scene.getBag` / `npcInventories`; dialogue effects `to`/`from`; `itemPick` deposits into speaker bag.
-- **Pickup behavior**: сбор предметов через AABB-пересечение с игроком; автоудаление сущности и добавление в инвентарь (свойства: `itemId`, `count`, `destroyOnPickup`).
+- **Fix: parallax sprite/selection desync on camera zoom/pan**: `ParallaxRenderer.isParallaxEnabled()`/`getParallaxOffset()` read a standalone `stateManager.view.parallax` key that nothing in the current UI sets anymore — the real Parallax toolbar toggle only flips the per-viewport `displayOptions.parallax` flag. Selection bounds, mouse hit-testing, and duplicate-ghost offsets used the dead global key (effectively always parallax-off), while sprite rendering used the per-view flag — so sprites and selection boxes drifted apart as soon as the camera panned/zoomed with parallax on. Both paths now resolve the same per-view flag + that view's own camera.

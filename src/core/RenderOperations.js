@@ -484,7 +484,7 @@ export class RenderOperations extends BaseModule {
                     ? levelSortedObjects.filter(item => item.obj.id === soloedTopLevelObjectId)
                     : levelSortedObjects;
                 const simpleObjects = soloFiltered.map(item => item.obj);
-                this.parallaxRenderer.renderParallaxObjects(simpleObjects, camera, session.level);
+                this.parallaxRenderer.renderParallaxObjects(simpleObjects, camera, session.level, view);
             } else {
                 levelSortedObjects.forEach(item => {
                     const id = item.obj.id;
@@ -621,7 +621,7 @@ export class RenderOperations extends BaseModule {
                 if (!selectedObjects.has(obj.id)) return;
                 if (hideSelfCameraId && obj.id === hideSelfCameraId) return;
                 const effectiveLayerId = this.getEffectiveLayerId(obj);
-                const bounds = this.parallaxRenderer.getObjectWorldBoundsWithParallax(obj, effectiveLayerId);
+                const bounds = this.parallaxRenderer.getObjectWorldBoundsWithParallax(obj, effectiveLayerId, view);
                 const mouse = this.editor.stateManager.get('mouse');
 
                 // Special visual feedback for Alt+drag in group edit mode
@@ -637,7 +637,7 @@ export class RenderOperations extends BaseModule {
                 if (!selectedObjects.has(obj.id)) return;
                 if (hideSelfCameraId && obj.id === hideSelfCameraId) return;
                 const effectiveLayerId = this.getEffectiveLayerId(obj);
-                const bounds = this.parallaxRenderer.getObjectWorldBoundsWithParallax(obj, effectiveLayerId);
+                const bounds = this.parallaxRenderer.getObjectWorldBoundsWithParallax(obj, effectiveLayerId, view);
                 this.drawObjectSelectionRect(obj, bounds, camera);
             });
         }

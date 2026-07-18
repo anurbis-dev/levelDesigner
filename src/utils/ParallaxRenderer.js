@@ -12,9 +12,19 @@ export class ParallaxRenderer {
     }
 
     /**
-     * Check if parallax mode is enabled
+     * Check if parallax mode is enabled for a view (defaults to the focused view).
+     * The per-view display flag (VP-HK, ViewportViewManager.displayOptions.parallax) is
+     * the live source of truth — it's what the Parallax toolbar toggle actually flips.
+     * Falls back to the standalone stateManager 'view.parallax' key only when no
+     * ViewportViewManager view is resolvable (no vvm / zero views).
+     * @param {object|null} [view] - ViewportView to check; omit to use the focused view
      */
-    isParallaxEnabled() {
+    isParallaxEnabled(view = null) {
+        const vvm = this.editor.viewportViewManager;
+        const targetView = view || vvm?.getFocusedView?.();
+        if (targetView && vvm) {
+            return vvm.getDisplayFlag(targetView, 'parallax');
+        }
         return this.editor.stateManager.get('view.parallax') === true;
     }
 
@@ -54,7 +64,7 @@ export class ParallaxRenderer {
      * Do not use (1 + parallaxOffset) as the shift multiplier — that doubles
      * motion for any non-zero offset and jumps discontinuously vs offset 0.
      */
-    getParallaxOffset(layer) {
+    getParallaxOffset(layer, view = null) {
         if (!layer) return { x: 0, y: 0 };
 
         const parallaxOffset = layer.parallaxOffset || 0;
@@ -64,7 +74,9 @@ export class ParallaxRenderer {
             return { x: 0, y: 0 };
         }
 
-        const cameraOffset = this.getCameraOffset(this.editor.stateManager.get('camera'));
+        const vvm = this.editor.viewportViewManager;
+        const camera = (view && vvm) ? vvm.resolveCamera(view) : this.editor.stateManager.get('camera');
+        const cameraOffset = this.getCameraOffset(camera);
 
         return {
             x: cameraOffset.x * parallaxOffset,
@@ -83,7 +95,7 @@ export class ParallaxRenderer {
     /**
      * Apply parallax transformation to object coordinates
      */
-    applyParallaxToObject(obj, effectiveLayerId) {
+    applyParallaxToObject(obj, effectiveLayerId, view = null) {
         const layer = this.editor.level.getLayerById(effectiveLayerId);
 
         if (!this.isLayerParallaxEnabled(layer)) {
@@ -91,7 +103,7 @@ export class ParallaxRenderer {
             return null;
         }
 
-        const parallaxOffset = this.getParallaxOffset(layer);
+        const parallaxOffset = this.getParallaxOffset(layer, view);
 
         return {
             x: obj.x - parallaxOffset.x,
@@ -107,12 +119,13 @@ export class ParallaxRenderer {
      *   pass explicitly when called from RenderOperations.render()'s composited loop for
      *   a non-current visible session, so effective-layer/layer lookups resolve against
      *   the right level's own layer tree instead of the current level's)
+     * @param {object|null} [view] - ViewportView being rendered; threaded through to
+     *   getParallaxOffset() so the shift is computed from THIS view's own camera (matches
+     *   the `camera` param) instead of silently falling back to the focused view's camera.
      */
-    renderParallaxObjects(visibleObjects, camera, level = this.editor.level) {
+    renderParallaxObjects(visibleObjects, camera, level = this.editor.level, view = null) {
         // Caller decides whether parallax applies (global or per-view VP-HK flag).
         // Do not re-check view.parallax here — secondary leaves may override globally off.
-
-        const cameraOffset = this.getCameraOffset(camera);
 
         visibleObjects.forEach(obj => {
             // Get object's effective layer
@@ -126,7 +139,7 @@ export class ParallaxRenderer {
             }
 
             // Calculate parallax offset for this layer
-            const parallaxOffset = this.getParallaxOffset(layer);
+            const parallaxOffset = this.getParallaxOffset(layer, view);
 
             // Temporarily modify object position for rendering
             const originalX = obj.x;
@@ -147,16 +160,16 @@ export class ParallaxRenderer {
     /**
      * Convert screen coordinates to world coordinates considering parallax
      */
-    screenToWorldWithParallax(screenX, screenY, camera, effectiveLayerId) {
+    screenToWorldWithParallax(screenX, screenY, camera, effectiveLayerId, view = null) {
         const layer = this.editor.level.getLayerById(effectiveLayerId);
 
-        if (!this.isParallaxEnabled() || !this.isLayerParallaxEnabled(layer)) {
+        if (!this.isParallaxEnabled(view) || !this.isLayerParallaxEnabled(layer)) {
             // No parallax or layer doesn't participate, use normal conversion
             return this.editor.canvasRenderer.screenToWorld(screenX, screenY, camera);
         }
 
         // Get parallax offset for the layer
-        const parallaxOffset = this.getParallaxOffset(layer);
+        const parallaxOffset = this.getParallaxOffset(layer, view);
 
         // Adjust screen coordinates by parallax offset before conversion
         const adjustedScreenX = screenX + parallaxOffset.x * camera.zoom;
@@ -168,16 +181,16 @@ export class ParallaxRenderer {
     /**
      * Convert world coordinates to screen coordinates considering parallax
      */
-    worldToScreenWithParallax(worldX, worldY, camera, effectiveLayerId) {
+    worldToScreenWithParallax(worldX, worldY, camera, effectiveLayerId, view = null) {
         const layer = this.editor.level.getLayerById(effectiveLayerId);
 
-        if (!this.isParallaxEnabled() || !this.isLayerParallaxEnabled(layer)) {
+        if (!this.isParallaxEnabled(view) || !this.isLayerParallaxEnabled(layer)) {
             // No parallax or layer doesn't participate, use normal conversion
             return this.editor.canvasRenderer.worldToScreen(worldX, worldY, camera);
         }
 
         // Get parallax offset for the layer
-        const parallaxOffset = this.getParallaxOffset(layer);
+        const parallaxOffset = this.getParallaxOffset(layer, view);
 
         // Adjust world coordinates by parallax offset before conversion
         const adjustedWorldX = worldX + parallaxOffset.x;
@@ -189,16 +202,16 @@ export class ParallaxRenderer {
     /**
      * Get effective world bounds for object considering parallax
      */
-    getObjectWorldBoundsWithParallax(obj, effectiveLayerId) {
+    getObjectWorldBoundsWithParallax(obj, effectiveLayerId, view = null) {
         const layer = this.editor.level.getLayerById(effectiveLayerId);
 
-        if (!this.isParallaxEnabled() || !this.isLayerParallaxEnabled(layer)) {
+        if (!this.isParallaxEnabled(view) || !this.isLayerParallaxEnabled(layer)) {
             // No parallax or layer doesn't participate, use normal bounds
             return this.editor.objectOperations.getObjectWorldBounds(obj);
         }
 
         // Apply parallax transformation to bounds
-        const parallaxOffset = this.getParallaxOffset(layer);
+        const parallaxOffset = this.getParallaxOffset(layer, view);
         const originalBounds = this.editor.objectOperations.getObjectWorldBounds(obj);
 
         if (!originalBounds) return null;
