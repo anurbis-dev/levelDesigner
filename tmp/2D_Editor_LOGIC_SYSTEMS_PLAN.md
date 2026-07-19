@@ -511,6 +511,26 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     `template`/`interval`/`maxAlive`/`maxSpawns`/`spawnOffsetX`/`spawnOffsetY` в
     `src/constants/ComponentPropertySchema.js`; тесты `tests/engine/SpawnerBehavior.test.js`
     (8 тестов).
+  - `stateMachineBehavior` ✅ ЗАВЕРШЕНА 2026-07-19: `StateMachineBehavior`
+    (`src/engine/behaviors/StateMachineBehavior.js`) — уточнено при реализации согласно
+    заметке в этом же бэклоге: AI-стейт-машина NPC (patrol/chase), отдельный компонент от
+    `spriteUiAnimation`'s Фаза F clip-state-machine (та переключает спрайт-клипы, эта двигает
+    entity), но переиспользует тот же механизм переходов — каждый тик перебирает
+    `transitions` текущего состояния по порядку (первый matching wins, тот же convention что
+    `DialogueRunner.getVisibleChoices`/`EventGraphRuntime._runFrom`/Фаза F). Условие двух
+    видов: `{type:'distance', op, value}` — дистанция от entity до `scene.player` (единственная
+    поддерживаемая chase/flee-цель в этом проходе, тот же "не завели generic target list, не
+    запрошено" приём, что `pickup`/`mountableVehicleSeat` жёстко используют `scene.player`), и
+    `{var, op, value}` — переиспользует общий `ConditionEvaluator.evalSpec`/`compareOp` (та же
+    библиотека, что Event Graph Compare/Dialogue conditions/Фаза F, без дублирования) против
+    `scene.eventGraphRuntime`. `movement` каждого состояния — `patrol` (ping-pong между
+    `waypoints`, offsets от spawn, тот же asset-local приём что `pathFollower.waypoints`),
+    `chase`/`flee` (прямое движение к/от `scene.player` на `speed`, дефолт 100), без
+    `movement`/`idle` — нет движения. Без коллизий с solids (проходит сквозь геометрию, как
+    `pathFollower`). Публичный `setState(name)` — duck-typed hook (как `tryPush`/`spawnOne`)
+    для будущего Event Graph action "SetAIState" (не подключён — вне рамок прохода). Схема
+    `defaultState`/`states` в `src/constants/ComponentPropertySchema.js`; тесты
+    `tests/engine/StateMachineBehavior.test.js` (9 тестов).
 - **Полный критерий Фазы 4 движка** (было решено сдать минимальным срезом, v4.6.x): eslint-
   plugin-boundaries для границы `engine/`↔остальной `src/`, asset-usage-граф для отсечения
   мёртвого контента в `build:game`, флаг "включено в билд" на уровне, `build:addon`/`build:event`

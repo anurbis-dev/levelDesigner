@@ -85,6 +85,10 @@ const SCHEMAS = {
         { key: 'spawnOffsetX', label: 'Spawn Offset X', kind: 'number', default: 0 },
         { key: 'spawnOffsetY', label: 'Spawn Offset Y', kind: 'number', default: 0 }
     ],
+    stateMachineBehavior: [
+        { key: 'defaultState', label: 'Default State', kind: 'text', default: '' },
+        { key: 'states', label: 'States (JSON: [{name,movement,speed,waypoints,transitions}])', kind: 'json', default: [] }
+    ],
     spriteUiAnimation: [
         { key: 'frames', label: 'Frames (JSON array)', kind: 'json', default: [] },
         { key: 'loop', label: 'Loop', kind: 'bool', default: true },

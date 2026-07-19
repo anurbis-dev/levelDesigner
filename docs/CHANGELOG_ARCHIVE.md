@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (spawner component, v4.19.0)
+
+- **Feat: spawner component (§7 backlog item 6/12)**: new behavior `SpawnerBehavior` (registered in `BehaviorRegistry`) — self-contained periodic entity spawner; `template` (JSON, full GameObject-shaped data consumed by `EntityFactory.fromGameObjectData` — no runtime asset registry exists yet, so the spawned entity's data lives inline, same convention as `pathFollower.waypoints`), `interval` (sec, default 3, `<=0` disables), `maxAlive`/`maxSpawns` (default 0 = unlimited), `spawnOffsetX`/`spawnOffsetY` (default 0, asset-local offset from the spawner's own position). Spawned entities get id `${entity.id}__spawnN` and are pushed directly into `scene.entities`. Public `spawnOne(scene)` hook exposed for a future Event Graph "SpawnObject" action — not wired this pass.
+
 ## Archived from CHANGELOG.md (pathFollower component, v4.18.0)
 
 - **Feat: pathFollower component (§7 backlog item 5/12)**: new behavior `PathFollowerBehavior` (registered in `BehaviorRegistry`) — self-contained kinematic waypoint patrol; `waypoints` (JSON `[{x,y},…]`, offsets from entity spawn position, same asset-local convention as collider freeform `points`); moves `entity.x/y` toward the current target waypoint at `speed` px/sec, pauses `waitAtWaypoint` sec on arrival, then advances per `mode` (`loop` wraps to first, `pingpong` reverses at ends, `once` stops at last). No collision checks against solids and no player/passenger carrying — out of scope for this pass.
