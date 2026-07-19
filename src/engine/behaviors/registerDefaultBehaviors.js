@@ -11,6 +11,7 @@ import { DamageHealthBehavior } from './DamageHealthBehavior.js';
 import { MovablePushableBehavior } from './MovablePushableBehavior.js';
 import { MountableVehicleSeatBehavior } from './MountableVehicleSeatBehavior.js';
 import { PathFollowerBehavior } from './PathFollowerBehavior.js';
+import { SpawnerBehavior } from './SpawnerBehavior.js';
 
 /**
  * Registers the Фаза 2 MVP component vertical slice (see docs/RUNTIME_SCHEMA.md).
@@ -30,4 +31,5 @@ export function registerDefaultBehaviors() {
     BehaviorRegistry.register('movablePushable', MovablePushableBehavior);
     BehaviorRegistry.register('mountableVehicleSeat', MountableVehicleSeatBehavior);
     BehaviorRegistry.register('pathFollower', PathFollowerBehavior);
+    BehaviorRegistry.register('spawner', SpawnerBehavior);
 }

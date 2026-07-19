@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (pathFollower component, v4.18.0)
+
+- **Feat: pathFollower component (§7 backlog item 5/12)**: new behavior `PathFollowerBehavior` (registered in `BehaviorRegistry`) — self-contained kinematic waypoint patrol; `waypoints` (JSON `[{x,y},…]`, offsets from entity spawn position, same asset-local convention as collider freeform `points`); moves `entity.x/y` toward the current target waypoint at `speed` px/sec, pauses `waitAtWaypoint` sec on arrival, then advances per `mode` (`loop` wraps to first, `pingpong` reverses at ends, `once` stops at last). No collision checks against solids and no player/passenger carrying — out of scope for this pass.
+
 ## Archived from CHANGELOG.md (mountableVehicleSeat component, v4.17.0)
 
 - **mountableVehicleSeat component (§7 backlog item 4/12)**: new behavior `MountableVehicleSeatBehavior` (registered in `BehaviorRegistry`) — self-contained, polls `scene.input.isDown('e')` directly (own edge-detect, no Event Graph node required); mounts when player is within `mountRadius`, hides `scene.player` and snaps it to the vehicle; while mounted drives the vehicle entity itself (`speed`/`layer`/`collidesWith`, same AABB-blocking pattern as `PlayerMovementBehavior`) and keeps `scene.player` position synced each tick (camera keeps following `scene.player` unchanged); second E press dismounts to a fixed offset beside the vehicle. `PlayerMovementBehavior.update()` gained one guard line: `if (scene.mountedVehicle) return;` (same pattern as the existing `dialogueActive` pause). Parked (unmounted) vehicle is solid via `getBounds()`.

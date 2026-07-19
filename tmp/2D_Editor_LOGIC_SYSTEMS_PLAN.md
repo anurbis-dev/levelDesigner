@@ -493,6 +493,24 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     не выходили за рамки задачи. Схема `waypoints`/`speed`/`mode`/`waitAtWaypoint` в
     `src/constants/ComponentPropertySchema.js`; тесты
     `tests/engine/PathFollowerBehavior.test.js` (8 тестов).
+  - `spawner` ✅ ЗАВЕРШЕНА 2026-07-19: `SpawnerBehavior`
+    (`src/engine/behaviors/SpawnerBehavior.js`) — самодостаточное поведение (не data-holder),
+    как `pickup`/`pathFollower`. Ассет-реестра на рантайме ещё нет (`ProjectLoader.assetsById`
+    — пустой Map, см. `ProjectLoader.js`), поэтому `template` — полноценные GameObject-данные
+    инлайн (тот же формат, что принимает `EntityFactory.fromGameObjectData`), а не ссылка на
+    ассет — тот же приём инлайновых данных без ассет-реестра, что `pathFollower.waypoints`.
+    Каждый тик: прунит `_alive` по факту присутствия в `scene.entities`, при `interval>0` и не
+    исчерпанных `maxAlive`/`maxSpawns` — копит таймер, по достижении `interval` вызывает
+    `EntityFactory.fromGameObjectData({...template, id, x, y})` с координатами
+    `entity.x/y + spawnOffsetX/Y` (asset-local offset, как у `pathFollower`) и пушит в
+    `scene.entities` напрямую (тот же приём, что `Scene.spawnPlayer()`). `template.x/y`
+    игнорируются — один template переиспользуем на разных размещениях spawner'а.
+    `maxAlive`/`maxSpawns` — `0` = без лимита. Публичный `spawnOne(scene)` — duck-typed hook
+    для будущего Event Graph "SpawnObject" action (не подключён — вне рамок прохода, как
+    Event Graph-триггеры не заводились для `pickup`/`damageHealth`). Схема
+    `template`/`interval`/`maxAlive`/`maxSpawns`/`spawnOffsetX`/`spawnOffsetY` в
+    `src/constants/ComponentPropertySchema.js`; тесты `tests/engine/SpawnerBehavior.test.js`
+    (8 тестов).
 - **Полный критерий Фазы 4 движка** (было решено сдать минимальным срезом, v4.6.x): eslint-
   plugin-boundaries для границы `engine/`↔остальной `src/`, asset-usage-граф для отсечения
   мёртвого контента в `build:game`, флаг "включено в билд" на уровне, `build:addon`/`build:event`

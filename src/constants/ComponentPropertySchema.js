@@ -77,6 +77,14 @@ const SCHEMAS = {
         { key: 'mode', label: 'Mode', kind: 'select', default: 'loop', options: PATH_FOLLOWER_MODE_OPTIONS },
         { key: 'waitAtWaypoint', label: 'Wait At Waypoint (sec)', kind: 'number', default: 0 }
     ],
+    spawner: [
+        { key: 'template', label: 'Template (JSON GameObject data, id/x/y ignored)', kind: 'json', default: {} },
+        { key: 'interval', label: 'Interval (sec, <=0 = disabled)', kind: 'number', default: 3 },
+        { key: 'maxAlive', label: 'Max Alive (0 = unlimited)', kind: 'number', default: 0 },
+        { key: 'maxSpawns', label: 'Max Total Spawns (0 = unlimited)', kind: 'number', default: 0 },
+        { key: 'spawnOffsetX', label: 'Spawn Offset X', kind: 'number', default: 0 },
+        { key: 'spawnOffsetY', label: 'Spawn Offset Y', kind: 'number', default: 0 }
+    ],
     spriteUiAnimation: [
         { key: 'frames', label: 'Frames (JSON array)', kind: 'json', default: [] },
         { key: 'loop', label: 'Loop', kind: 'bool', default: true },
