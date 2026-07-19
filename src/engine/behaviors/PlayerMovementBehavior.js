@@ -19,6 +19,7 @@ export class PlayerMovementBehavior extends Behavior {
         const input = scene.input;
         if (!input || dt <= 0) return;
         if (scene.dialogueActive) return; // Фаза E: movement pauses while a dialogue is open
+        if (scene.mountedVehicle) return; // §7 mountableVehicleSeat: vehicle drives instead
 
         const axis = input.getAxis();
         const isMoving = axis.x !== 0 || axis.y !== 0;

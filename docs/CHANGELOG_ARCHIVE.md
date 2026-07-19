@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (movablePushable component, v4.16.0)
+
+- **movablePushable component (§7 backlog item 3/12)**: new behavior `MovablePushableBehavior` (registered in `BehaviorRegistry`) — Sokoban-style box, solid by default (`getBounds()`); `PlayerMovementBehavior._moveAxis` duck-type-calls `blocker.tryPush(dx,dy,scene)` on a blocking solid before reverting a blocked step, letting the box slide along; push only succeeds if the destination is itself clear of other solids (walls, other boxes); `layer`/`collidesWith` gate which solids block the destination.
+
 ## Archived from CHANGELOG.md (damageHealth component, parallax pure-zoom fix, v4.14.2/v4.15.0)
 
 - **damageHealth component (§7 backlog item 2/12)**: new behavior `DamageHealthBehavior` (registered in `BehaviorRegistry`); AABB-checks every tick against other damageHealth entities; one component type covers both dealing and receiving damage — source sets `contactDamage>0` + `layer`, receiver sets `maxHealth`/`currentHealth` + `collidesWith`; `invulnerabilityDuration` (sec, default 0.5) provides i-frame window after each hit; `destroyOnDeath` (default true) calls `scene.destroyEntity()` when `currentHealth≤0`; no Event Graph integration this pass (no OnDeath node).

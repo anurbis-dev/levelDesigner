@@ -59,6 +59,12 @@ const SCHEMAS = {
         { key: 'layer', label: 'Layer', kind: 'text', default: '' },
         { key: 'collidesWith', label: 'Blocked By (comma list; empty = all)', kind: 'stringList', default: [] }
     ],
+    mountableVehicleSeat: [
+        { key: 'mountRadius', label: 'Mount Radius', kind: 'number', default: 32 },
+        { key: 'speed', label: 'Vehicle Speed (px/sec)', kind: 'number', default: 150 },
+        { key: 'layer', label: 'Layer', kind: 'text', default: '' },
+        { key: 'collidesWith', label: 'Blocked By (comma list; empty = all)', kind: 'stringList', default: [] }
+    ],
     spriteUiAnimation: [
         { key: 'frames', label: 'Frames (JSON array)', kind: 'json', default: [] },
         { key: 'loop', label: 'Loop', kind: 'bool', default: true },

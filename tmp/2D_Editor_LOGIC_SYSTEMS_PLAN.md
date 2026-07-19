@@ -458,6 +458,28 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     блокерах внутри самого `tryPush`, не делали, т.к. не запрошено. Схема
     `layer`/`collidesWith` в `src/constants/ComponentPropertySchema.js`; тесты
     `tests/engine/MovablePushableBehavior.test.js`.
+  - `mountableVehicleSeat` ✅ ЗАВЕРШЕНА 2026-07-19: `MountableVehicleSeatBehavior`
+    (`src/engine/behaviors/MountableVehicleSeatBehavior.js`) — самодостаточно, как `pickup`:
+    сам опрашивает `scene.input.isDown('e')` с собственным edge-detect (не через
+    `EventGraphRuntime`/`OnInteract` — не стали требовать авторства Event Graph узла ради
+    базового mount/dismount, та же дисциплина, что `pickup` не заводил `OnPickup`). На E рядом
+    (`mountRadius`, дефолт 32, дистанция от центра к центру игрока) — `scene.mountedVehicle =
+    this.entity`, `scene.player.visible = false`, игрок телепортируется на позицию машины.
+    Пока сел — ведёт машину сам (`_driveVehicle`: тот же `getAxis()`/AABB-blocking паттерн,
+    что `PlayerMovementBehavior`, свои `speed`/`layer`/`collidesWith`), `scene.player.x/y`
+    каждый тик синхронизируется с машиной (камера следит за `scene.player` по умолчанию —
+    без правок `CameraBehavior`). Единственная правка вне нового файла:
+    `PlayerMovementBehavior.update()` — добавлен `if (scene.mountedVehicle) return;` (тот же
+    приём, что уже был для `scene.dialogueActive`). `getBounds()` делает припаркованную машину
+    solid по умолчанию (блокирует игрока, пока не сел) — как `ColliderBehavior`/
+    `MovablePushableBehavior`. Повторный E — dismount на фиксированный оффсет
+    (`vehicle.x + vehicle.width + 4`, без поиска свободной клетки — вне рамок задачи). Guard
+    `scene.mountedVehicle && scene.mountedVehicle !== this.entity → return` в начале `update()`
+    защищает от одновременной посадки в две машины, стоящие в радиусе друг друга на одном тике.
+    Схема `mountRadius`/`speed`/`layer`/`collidesWith` в
+    `src/constants/ComponentPropertySchema.js`; тесты
+    `tests/engine/MountableVehicleSeatBehavior.test.js` (6 тестов). Без Event Graph
+    (OnMount/OnDismount), без смены спрайта/анимации на посадку, без пассажиров.
 - **Полный критерий Фазы 4 движка** (было решено сдать минимальным срезом, v4.6.x): eslint-
   plugin-boundaries для границы `engine/`↔остальной `src/`, asset-usage-граф для отсечения
   мёртвого контента в `build:game`, флаг "включено в билд" на уровне, `build:addon`/`build:event`
