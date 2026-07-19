@@ -80,6 +80,50 @@ describe('Scene.spawnPlayer', () => {
     });
 });
 
+describe('Scene.respawnPlayer', () => {
+    function makeScene() {
+        return new Scene({
+            objects: [
+                { id: 'start', type: 'player_start', x: 40, y: 60, width: 32, height: 32,
+                    components: [{ id: 'c1', type: 'playerStart', enabled: true, properties: {} }] }
+            ]
+        });
+    }
+
+    it('is a no-op and returns the current player when one is already alive', () => {
+        const scene = makeScene();
+        const player = scene.spawnPlayer();
+        expect(scene.respawnPlayer()).toBe(player);
+        expect(scene.entities.filter(e => e.id === '__player').length).toBe(1);
+    });
+
+    it('recreates the player at the playerStart marker when no checkpoint was activated', () => {
+        const scene = makeScene();
+        scene.spawnPlayer();
+        scene.destroyEntity('__player');
+
+        const respawned = scene.respawnPlayer();
+        expect(respawned).toMatchObject({ id: '__player', x: 40, y: 60 });
+        expect(scene.player).toBe(respawned);
+    });
+
+    it('recreates the player at scene.checkpointPosition when a checkpoint was activated', () => {
+        const scene = makeScene();
+        scene.spawnPlayer();
+        scene.checkpointPosition = { x: 400, y: 500 };
+        scene.destroyEntity('__player');
+
+        const respawned = scene.respawnPlayer();
+        expect(respawned).toMatchObject({ id: '__player', x: 400, y: 500 });
+    });
+
+    it('returns null when the level never had a playerStart marker', () => {
+        const scene = new Scene({ objects: [{ id: 'a', type: 'actor' }] });
+        expect(scene.spawnPlayer()).toBeNull();
+        expect(scene.respawnPlayer()).toBeNull();
+    });
+});
+
 describe('Scene camera marker', () => {
     function makeScene() {
         return new Scene({

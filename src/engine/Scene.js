@@ -57,6 +57,10 @@ export class Scene {
         // hideCameraMarker() at load time; null when the level has none (GameEngine falls
         // back to hardcoded player-centering, see GameEngine._updateCamera()).
         this.cameraEntity = null;
+        // Respawn state written by CheckpointSaveBehavior.activate() — null until the player
+        // crosses a checkpoint, at which point respawnPlayer() prefers it over playerStart.
+        this.checkpointPosition = null;
+        this.activeCheckpoint = null;
     }
 
     /**
@@ -125,7 +129,26 @@ export class Scene {
         if (!marker) return null;
         const spawn = marker.behaviors.find(b => typeof b.getSpawnPosition === 'function').getSpawnPosition();
         marker.visible = false;
+        this._playerStartMarker = marker;
+        return this._createPlayer(spawn, marker, speed);
+    }
 
+    /**
+     * Recreates the player entity after death (see DamageHealthBehavior.destroyOnDeath),
+     * at `checkpointPosition` if a `checkpointSavePoint` was activated (CheckpointSaveBehavior),
+     * else back at the playerStart marker. No-op if the player is already alive or the level
+     * has no playerStart marker (spawnPlayer() was never able to run either).
+     */
+    respawnPlayer(speed = 200) {
+        if (this.player) return this.player;
+        const marker = this._playerStartMarker;
+        if (!marker) return null;
+        const spawn = this.checkpointPosition
+            || marker.behaviors.find(b => typeof b.getSpawnPosition === 'function').getSpawnPosition();
+        return this._createPlayer(spawn, marker, speed);
+    }
+
+    _createPlayer(spawn, marker, speed) {
         const player = new Entity({
             id: '__player', type: 'player', x: spawn.x, y: spawn.y,
             width: marker.width, height: marker.height, color: '#22c55e'

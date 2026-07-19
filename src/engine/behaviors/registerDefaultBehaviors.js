@@ -13,6 +13,7 @@ import { MountableVehicleSeatBehavior } from './MountableVehicleSeatBehavior.js'
 import { PathFollowerBehavior } from './PathFollowerBehavior.js';
 import { SpawnerBehavior } from './SpawnerBehavior.js';
 import { StateMachineBehavior } from './StateMachineBehavior.js';
+import { CheckpointSaveBehavior } from './CheckpointSaveBehavior.js';
 
 /**
  * Registers the Фаза 2 MVP component vertical slice (see docs/RUNTIME_SCHEMA.md).
@@ -34,4 +35,5 @@ export function registerDefaultBehaviors() {
     BehaviorRegistry.register('pathFollower', PathFollowerBehavior);
     BehaviorRegistry.register('spawner', SpawnerBehavior);
     BehaviorRegistry.register('stateMachineBehavior', StateMachineBehavior);
+    BehaviorRegistry.register('checkpointSavePoint', CheckpointSaveBehavior);
 }

@@ -85,6 +85,7 @@ const SCHEMAS = {
         { key: 'spawnOffsetX', label: 'Spawn Offset X', kind: 'number', default: 0 },
         { key: 'spawnOffsetY', label: 'Spawn Offset Y', kind: 'number', default: 0 }
     ],
+    checkpointSavePoint: [],
     stateMachineBehavior: [
         { key: 'defaultState', label: 'Default State', kind: 'text', default: '' },
         { key: 'states', label: 'States (JSON: [{name,movement,speed,waypoints,transitions}])', kind: 'json', default: [] }

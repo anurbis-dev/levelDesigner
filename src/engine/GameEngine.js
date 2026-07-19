@@ -60,6 +60,7 @@ export class GameEngine {
             }
         }
         this.scene.eventGraphRuntime?.tick(dt);
+        if (!this.scene.player) this.scene.respawnPlayer();
     }
 
     /**

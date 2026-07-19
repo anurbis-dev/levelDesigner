@@ -531,6 +531,23 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     для будущего Event Graph action "SetAIState" (не подключён — вне рамок прохода). Схема
     `defaultState`/`states` в `src/constants/ComponentPropertySchema.js`; тесты
     `tests/engine/StateMachineBehavior.test.js` (9 тестов).
+  - `checkpointSavePoint` ✅ ЗАВЕРШЕНА 2026-07-19: `CheckpointSaveBehavior`
+    (`src/engine/behaviors/CheckpointSaveBehavior.js`) — самодостаточное поведение (как
+    `pickup`), пустая схема свойств (как `playerStart` — триггер-зона = entity box, без
+    offset/shape override). Каждый тик, пока не активен, AABB-проверка пересечения с
+    `scene.player`; при пересечении вызывает публичный `activate(scene)` (duck-typed hook,
+    как `setState`/`tryPush`/`spawnOne` — пригоден и для будущего Event Graph action): снимает
+    `isActive` с прежнего `scene.activeCheckpoint` (единственный источник истины, одновременно
+    активен только один чекпоинт), помечает себя, пишет `scene.checkpointPosition = {x,y}`.
+    Респавн реализован в `Scene.js`: `spawnPlayer()`/новый `respawnPlayer()` шарят общий
+    `_createPlayer()` helper; `respawnPlayer()` — no-op если `scene.player` уже жив, иначе
+    создаёт игрока в `checkpointPosition` (если задан) либо в позиции `playerStart` маркера
+    (кэширован в `scene._playerStartMarker` при первом `spawnPlayer()`). `GameEngine._update()`
+    зовёт `scene.respawnPlayer()` каждый тик, когда `scene.player` отсутствует — единственная
+    точка входа для респавна после `DamageHealthBehavior.destroyOnDeath` (который до этого
+    молча оставлял `scene.player = null` без какой-либо реакции движка). Тесты:
+    `tests/engine/CheckpointSaveBehavior.test.js` (4), плюс 3 новых в `tests/engine/Scene.test.js`
+    (`Scene.respawnPlayer`).
 - **Полный критерий Фазы 4 движка** (было решено сдать минимальным срезом, v4.6.x): eslint-
   plugin-boundaries для границы `engine/`↔остальной `src/`, asset-usage-граф для отсечения
   мёртвого контента в `build:game`, флаг "включено в билд" на уровне, `build:addon`/`build:event`
