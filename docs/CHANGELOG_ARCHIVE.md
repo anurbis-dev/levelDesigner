@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (mountableVehicleSeat component, v4.17.0)
+
+- **mountableVehicleSeat component (§7 backlog item 4/12)**: new behavior `MountableVehicleSeatBehavior` (registered in `BehaviorRegistry`) — self-contained, polls `scene.input.isDown('e')` directly (own edge-detect, no Event Graph node required); mounts when player is within `mountRadius`, hides `scene.player` and snaps it to the vehicle; while mounted drives the vehicle entity itself (`speed`/`layer`/`collidesWith`, same AABB-blocking pattern as `PlayerMovementBehavior`) and keeps `scene.player` position synced each tick (camera keeps following `scene.player` unchanged); second E press dismounts to a fixed offset beside the vehicle. `PlayerMovementBehavior.update()` gained one guard line: `if (scene.mountedVehicle) return;` (same pattern as the existing `dialogueActive` pause). Parked (unmounted) vehicle is solid via `getBounds()`.
+
 ## Archived from CHANGELOG.md (movablePushable component, v4.16.0)
 
 - **movablePushable component (§7 backlog item 3/12)**: new behavior `MovablePushableBehavior` (registered in `BehaviorRegistry`) — Sokoban-style box, solid by default (`getBounds()`); `PlayerMovementBehavior._moveAxis` duck-type-calls `blocker.tryPush(dx,dy,scene)` on a blocking solid before reverting a blocked step, letting the box slide along; push only succeeds if the destination is itself clear of other solids (walls, other boxes); `layer`/`collidesWith` gate which solids block the destination.

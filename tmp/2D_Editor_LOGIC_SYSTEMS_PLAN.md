@@ -480,6 +480,19 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     `src/constants/ComponentPropertySchema.js`; тесты
     `tests/engine/MountableVehicleSeatBehavior.test.js` (6 тестов). Без Event Graph
     (OnMount/OnDismount), без смены спрайта/анимации на посадку, без пассажиров.
+  - `pathFollower` ✅ ЗАВЕРШЕНА 2026-07-19: `PathFollowerBehavior`
+    (`src/engine/behaviors/PathFollowerBehavior.js`) — самодостаточное кинематическое
+    поведение (не data-holder), как `pickup`/`damageHealth`. `waypoints` — JSON
+    `[{x,y},…]`, offsets от spawn-позиции entity (тот же asset-local приём, что freeform
+    `points` у collider/trigger) — один конфиг пути переиспользуем на разных размещениях
+    актора. Каждый тик двигает `entity.x/y` к текущей target-waypoint на `speed` px/sec;
+    по достижении — пауза `waitAtWaypoint` сек, затем переход по `mode`
+    (`loop` wrap к первой / `pingpong` реверс на концах / `once` останов на последней).
+    Без коллизий с solids (не блокируется геометрией, проходит сквозь) и без переноса
+    игрока/пассажиров на движущейся платформе — не запрошено, как и другие §7-компоненты
+    не выходили за рамки задачи. Схема `waypoints`/`speed`/`mode`/`waitAtWaypoint` в
+    `src/constants/ComponentPropertySchema.js`; тесты
+    `tests/engine/PathFollowerBehavior.test.js` (8 тестов).
 - **Полный критерий Фазы 4 движка** (было решено сдать минимальным срезом, v4.6.x): eslint-
   plugin-boundaries для границы `engine/`↔остальной `src/`, asset-usage-граф для отсечения
   мёртвого контента в `build:game`, флаг "включено в билд" на уровне, `build:addon`/`build:event`

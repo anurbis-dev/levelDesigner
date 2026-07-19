@@ -9,6 +9,12 @@
  *   default?: *, options?: { value: string, label: string }[], assetTypes?: string[] }} CompField
  */
 
+const PATH_FOLLOWER_MODE_OPTIONS = [
+    { value: 'loop', label: 'Loop (wraps to first waypoint)' },
+    { value: 'pingpong', label: 'Ping-pong (reverses at ends)' },
+    { value: 'once', label: 'Once (stops at last waypoint)' }
+];
+
 const COLLIDER_SHAPE_OPTIONS = [
     { value: 'box', label: 'Box (square / rect)' },
     { value: 'circle', label: 'Circle' },
@@ -64,6 +70,12 @@ const SCHEMAS = {
         { key: 'speed', label: 'Vehicle Speed (px/sec)', kind: 'number', default: 150 },
         { key: 'layer', label: 'Layer', kind: 'text', default: '' },
         { key: 'collidesWith', label: 'Blocked By (comma list; empty = all)', kind: 'stringList', default: [] }
+    ],
+    pathFollower: [
+        { key: 'waypoints', label: 'Waypoints (JSON [{x,y}], offsets from spawn)', kind: 'json', default: [] },
+        { key: 'speed', label: 'Speed (px/sec)', kind: 'number', default: 100 },
+        { key: 'mode', label: 'Mode', kind: 'select', default: 'loop', options: PATH_FOLLOWER_MODE_OPTIONS },
+        { key: 'waitAtWaypoint', label: 'Wait At Waypoint (sec)', kind: 'number', default: 0 }
     ],
     spriteUiAnimation: [
         { key: 'frames', label: 'Frames (JSON array)', kind: 'json', default: [] },
