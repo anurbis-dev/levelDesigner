@@ -601,6 +601,60 @@ describe('GameEngine — §7 backlog SpawnObject action (prefab, Tier 2)', () =>
     });
 });
 
+// §7 backlog Tier 3 (questObjective): StartQuest begins tracking; QuestRunner.tick() (driven by
+// EventGraphRuntime.tick(), not a separate GameEngine hook) polls objective.condition against
+// eventGraphRuntime variables and applies the reward once every objective completes.
+describe('GameEngine — §7 backlog StartQuest action (questObjective, Tier 3)', () => {
+    function questManifest() {
+        return {
+            formatVersion: 1, name: 'Demo', entryLevelId: 'level_a',
+            levels: [{
+                id: 'level_a',
+                data: {
+                    meta: { name: 'Level A' },
+                    camera: { x: 0, y: 0, zoom: 1 },
+                    layers: [],
+                    quests: [{
+                        id: 'quest_key',
+                        name: 'Find the key',
+                        objectives: [{ id: 'obj_found', condition: { var: 'hasKey', op: '==', value: true } }],
+                        reward: [{ type: 'giveItem', itemId: 'gold', count: 5 }]
+                    }],
+                    eventGraph: {
+                        formatVersion: 1, scope: 'level',
+                        variables: [{ name: 'hasKey', default: false }],
+                        nodes: [
+                            { id: 'n1', type: 'OnCustomEvent', params: { name: 'begin' } },
+                            { id: 'n2', type: 'StartQuest', params: { questId: 'quest_key' } }
+                        ],
+                        edges: [{ from: 'n1', to: 'n2' }]
+                    },
+                    objects: []
+                }
+            }]
+        };
+    }
+
+    it('completes the quest and applies its reward once the objective condition is met', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(questManifest());
+
+        engine.scene.eventGraphRuntime.emitCustomEvent('begin');
+        expect(engine.scene.questRunner.getStatus('quest_key')).toBe('active');
+
+        engine.tick(0);
+        expect(engine.scene.questRunner.getStatus('quest_key')).toBe('active');
+        expect(engine.scene.inventory.count('gold')).toBe(0);
+
+        engine.scene.eventGraphRuntime.setVariable('hasKey', true);
+        engine.tick(0);
+
+        expect(engine.scene.questRunner.getStatus('quest_key')).toBe('completed');
+        expect(engine.scene.inventory.count('gold')).toBe(5);
+    });
+});
+
 describe('GameEngine — Фаза 2 vertical slice (BehaviorRegistry + collider/trigger/playerStart)', () => {
     it('resolves playerStart/collider/trigger to real behaviors and tracks trigger enter/exit across ticks', async () => {
         const { canvas } = mockCanvas();

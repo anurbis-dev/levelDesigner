@@ -69,6 +69,11 @@ export class EventGraphRuntime {
 
         this._checkInteractNodes();
         this._checkDialogueEnded();
+        // §7 backlog (questObjective, Tier 3): objective conditions read this runtime's
+        // variables, so polling belongs here rather than a separate GameEngine._update() call —
+        // keeps quest wiring out of GameEngine.js entirely (QuestRunner.tick() is itself a no-op
+        // without an EventGraphRuntime, so this can't double-fire or run stale).
+        this.scene.questRunner?.tick();
     }
 
     /**

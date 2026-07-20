@@ -161,3 +161,25 @@ describe('Scene camera marker', () => {
         expect(scene.cameraEntity).toBeNull();
     });
 });
+
+describe('Scene quests (§7 backlog questObjective, Tier 3)', () => {
+    it('builds scene.quests keyed by id, and constructs a QuestRunner', () => {
+        const scene = new Scene({
+            quests: [{ id: 'quest_1', name: 'Find the key', objectives: [] }]
+        });
+
+        expect(scene.quests.get('quest_1').name).toBe('Find the key');
+        expect(scene.questRunner).toBeTruthy();
+        expect(scene.questRunner.scene).toBe(scene);
+    });
+
+    it('skips quest entries without an id', () => {
+        const scene = new Scene({ quests: [{ name: 'No id' }] });
+        expect(scene.quests.size).toBe(0);
+    });
+
+    it('defaults to an empty quests map when levelData.quests is absent', () => {
+        const scene = new Scene({});
+        expect(scene.quests.size).toBe(0);
+    });
+});

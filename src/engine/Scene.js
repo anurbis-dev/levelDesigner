@@ -3,6 +3,7 @@ import { Entity } from './Entity.js';
 import { ColliderBehavior } from './behaviors/ColliderBehavior.js';
 import { PlayerMovementBehavior } from './behaviors/PlayerMovementBehavior.js';
 import { Inventory } from './Inventory.js';
+import { QuestRunner } from './QuestRunner.js';
 
 /**
  * Runtime scene — one loaded level's worth of entities/layers/settings/camera.
@@ -29,9 +30,9 @@ export class Scene {
         // constructor-built) so ProjectLoader.loadLevel() doesn't need to know about it.
         this.eventGraph = levelData.eventGraph || null;
         this.eventGraphRuntime = null;
-        // Level-scope Dialogue Graphs (Фаза E), keyed by id — same "plain field, not asset
-        // registry" shortcut as eventGraph above (ProjectLoader's assetsById plumbing is
-        // deferred to Фаза 3/4). StartDialogue resolves node.params.dialogueId against this map.
+        // Level-scope Dialogue Graphs (Фаза E), keyed by id — a plain field/level-scope map,
+        // not the catalog `assetsById` registry (see below, §7 backlog prefab Tier 2) — dialogues
+        // aren't catalog assets. StartDialogue resolves node.params.dialogueId against this map.
         this.dialogues = new Map((levelData.dialogues || []).map(d => [d.id, d]));
         this.dialogueRunner = null;
         this.dialogueActive = false;
@@ -60,6 +61,13 @@ export class Scene {
                 this.npcInventories.set(objectId, new Inventory(seed));
             }
         }
+        // §7 backlog (questObjective, Tier 3): quest definitions (level.quests), keyed by id —
+        // same level-scope-map convention as dialogues/canvases/itemDefs above. QuestRunner is
+        // self-contained (only needs `this`, resolves `this.eventGraphRuntime` lazily on each
+        // tick — see QuestRunner.js), so it's built here directly rather than wired post-hoc by
+        // GameEngine like eventGraphRuntime/dialogueRunner are.
+        this.quests = new Map((levelData.quests || []).filter(q => q?.id).map(q => [q.id, q]));
+        this.questRunner = new QuestRunner(this);
         // §7 backlog (prefab, Tier 2): catalog asset registry, keyed by asset id — populated
         // by ProjectLoader.loadLevel() from registries.assetsById (empty Map by default here,
         // e.g. for tests/callers constructing a Scene directly). Consumed by the `SpawnObject`

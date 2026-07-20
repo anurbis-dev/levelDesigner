@@ -707,5 +707,22 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     было). Без editor UI для авторства `SpawnObject`-нод — не запрошено в этом срезе.
     Тесты: 2 в `tests/ProjectExporter.test.js`, 2 в `tests/engine/ProjectLoader.test.js`,
     7 в `tests/engine/EntityFactory.test.js`, 2 в `tests/engine/GameEngine.integration.test.js`.
-    Следующий приоритет — Tier 3 (`questObjective`/`saveSchema`/`inputMap`/`musicTrack`/
-    `audioZone`/`tileset`+`tilemap`).
+  - **Tier 3 в работе — `questObjective` завершён ✅ 2026-07-21.** Новый `level.quests[]`
+    (`{id, name?, objectives:[{id,description?,condition}], reward?}`), level-scope map как
+    `dialogues`/`canvases`. Новый `QuestRunner` (`src/engine/QuestRunner.js`) — один экземпляр
+    на Scene, строится прямо в конструкторе `Scene` (не post-hoc wiring как
+    `eventGraphRuntime`/`dialogueRunner`, т.к. нужен только `this`, резолвит
+    `this.eventGraphRuntime` лениво на каждый tick). Квесты не модальны (в отличие от Dialogue)
+    — несколько активны одновременно. Новый Event Graph action `StartQuest`
+    (`params: {questId}`) запускает трекинг; `QuestRunner.tick()` — вызывается из
+    `EventGraphRuntime.tick()`, намеренно НЕ новый хук в `GameEngine._update()` (чтобы не
+    трогать `GameEngine.js`, пока там были незакоммиченные правки параллельной HUD-сессии) —
+    прогоняет `evalSpec(objective.condition, eventGraphRuntime)` для незавершённых objectives
+    активных квестов; когда все завершены — статус `'completed'`, `reward` (тот же Effect-формат
+    `{type:'giveItem'|'takeItem',...}`, что Dialogue's `effects`) применяется автоматически через
+    `scene.getBag()`. Без выделенного `type:'inventoryCount'` условия — objectives по количеству
+    предметов зеркалят инвентарь в переменную через `variableModifier`. Без editor UI/quest-log
+    HUD виджета — не запрошено в этом срезе (тот же паттерн, что HUD Canvas/Event Graph MVP).
+    Тесты: `tests/engine/QuestRunner.test.js` (11), 3 в `tests/engine/Scene.test.js`, 1 e2e в
+    `tests/engine/GameEngine.integration.test.js`.
+    Следующий приоритет — `saveSchema`/`inputMap`/`musicTrack`/`audioZone`/`tileset`+`tilemap`.

@@ -109,4 +109,10 @@ export function registerDefaultEventGraphNodes() {
         }, ctx.scene.assetsById);
         ctx.scene.entities.push(entity);
     });
+    // §7 backlog (questObjective, Tier 3): starts tracking — objective completion/reward is
+    // handled by QuestRunner.tick() (called from EventGraphRuntime.tick(), see QuestRunner.js),
+    // not a separate action; no CompleteQuest/GiveReward node needed.
+    EventGraphNodeRegistry.register('StartQuest', (node, ctx) => {
+        ctx.scene.questRunner?.startQuest(node.params.questId);
+    });
 }
