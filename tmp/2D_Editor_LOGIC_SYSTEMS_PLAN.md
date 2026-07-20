@@ -641,3 +641,12 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
 - **~20 нереализованных asset-типов** без runtime-поведения (`tileset`, `particleEffect`,
   `navMesh` и т.д., за вычетом того, что теперь покрыто §B/§E: `spriteAnimationClip`,
   `dialogueGraph`) — бэклог `docs/RUNTIME_SCHEMA.md`, без дедлайна.
+  - `soundEffect` Tier 1 частично 🔨 2026-07-20: `PlaySound` event-graph action зарегистрирован
+    (`src/engine/eventgraph/registerDefaultEventGraphNodes.js`) — `params: {src, volume?, loop?}`
+    напрямую (тот же inline-приём, что `Teleport`, без резолва через `assetsById`, который
+    по-прежнему пустой `Map`, см. `ProjectLoader.js` шапку). Проигрывание —
+    `AudioPlayer.play()` (`src/engine/AudioPlayer.js`), browser-guarded static-хелпер, только
+    one-shot SFX (без instance-tracking/stop). Каталожный asset-тип `soundEffect` остаётся
+    плейсхолдером без выделенной Asset Editor формы — не запрошено в этом срезе.
+    Тесты: `tests/engine/AudioPlayer.test.js` (5), `GameEngine.integration.test.js` §7 PlaySound
+    (1). `musicTrack`/`audioZone` (loop/crossfade/ambient-on-enter) — следующий Tier, не начат.

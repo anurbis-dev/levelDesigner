@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { GameEngine } from '../../src/engine/GameEngine.js';
 
 function mockCanvas() {
@@ -487,6 +487,55 @@ describe('GameEngine — Фаза F Animation state machine (idle<->walk via spe
 
         engine.tick(0.05); // reads speed=200 -> idle's own transition fires -> plays hero_walk
         expect(anim.getSourceRect()).toEqual({ x: 32, y: 0, w: 32, h: 32 });
+    });
+});
+
+// §7 backlog Tier 1 (soundEffect): PlaySound reads {src, volume?, loop?} straight off node.params
+// (Teleport-style inline data, see registerDefaultEventGraphNodes.js) and hands it to AudioPlayer.
+describe('GameEngine — §7 backlog PlaySound action', () => {
+    function soundManifest() {
+        return {
+            formatVersion: 1, name: 'Demo', entryLevelId: 'level_a',
+            levels: [{
+                id: 'level_a',
+                data: {
+                    meta: { name: 'Level A' },
+                    camera: { x: 0, y: 0, zoom: 1 },
+                    layers: [],
+                    eventGraph: {
+                        formatVersion: 1, scope: 'level',
+                        variables: [],
+                        nodes: [
+                            { id: 'n1', type: 'OnCustomEvent', params: { name: 'hit' } },
+                            { id: 'n2', type: 'PlaySound', params: { src: 'hit.wav', volume: 0.5 } }
+                        ],
+                        edges: [{ from: 'n1', to: 'n2' }]
+                    },
+                    objects: []
+                }
+            }]
+        };
+    }
+
+    afterEach(() => {
+        delete global.Audio;
+    });
+
+    it('constructs and plays an Audio element with the node\'s src/volume when the event fires', async () => {
+        const play = vi.fn().mockResolvedValue(undefined);
+        global.Audio = vi.fn(function (src) {
+            this.src = src;
+            this.play = play;
+        });
+
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(soundManifest());
+
+        engine.scene.eventGraphRuntime.emitCustomEvent('hit');
+
+        expect(global.Audio).toHaveBeenCalledWith('hit.wav');
+        expect(play).toHaveBeenCalled();
     });
 });
 

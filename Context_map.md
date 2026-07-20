@@ -1,4 +1,4 @@
-# Context Map - Level Designer v4.26.0 (Phase A done; Phase B dock B0–B5 done; §7 backlog 12/12 done: camera/pickup/damageHealth/movablePushable/mountableVehicleSeat/pathFollower/spawner/stateMachineBehavior/checkpointSavePoint/climbableLadder/conveyorZiplineJumpPadPortal/variableModifier/destructibleContainer; camera render layers extension, v4.26.0)
+# Context Map - Level Designer v4.27.0 (Phase A done; Phase B dock B0–B5 done; §7 backlog 12/12 done: camera/pickup/damageHealth/movablePushable/mountableVehicleSeat/pathFollower/spawner/stateMachineBehavior/checkpointSavePoint/climbableLadder/conveyorZiplineJumpPadPortal/variableModifier/destructibleContainer; §7 soundEffect Tier 1 (PlaySound action) wired, v4.27.0)
 
 ## ⚠️ КРИТИЧЕСКИ ВАЖНО - ЧИТАТЬ ПЕРВЫМ
 
@@ -284,6 +284,7 @@ level.settings.parallaxVertical // множитель вертикального
   - `src/engine/render/ParallaxController.js` - чистые функции `getCameraOffset/getParallaxOffset` (портированы 1:1 из ParallaxRenderer)
   - `src/engine/render/Renderer.js` - Canvas 2D рендер (setCamera/restoreCamera/clear/drawBackground/drawEntity/renderScene), порт CanvasRenderer без editor-флагов; `renderScene(scene, camera, parallaxStartPosition, renderLayers = null)` 4-й параметр фильтрует сущности по `layerId` (пропускает те, чьи слои не в массиве; null = все слои), сущности без `layerId` рендерятся всегда
   - `src/engine/AssetLoader.js` - `LOADABLE_ASSET_TYPES/DATA_ONLY_ASSET_TYPES`, `collectImageSources(scene)`, `loadImages(sources)` с guard `typeof Image !== 'undefined'`
+  - `src/engine/AudioPlayer.js` - static `play(src, {volume?, loop?})` — browser-guarded fire-and-forget one-shot playback, no-op if `Audio` global unavailable (§7 soundEffect Tier 1, v4.27.0)
   - `src/engine/GameEngine.js` - оркестратор (constructor, loadProject async, tick); `_updateCamera()` делегирует `camera`-маркеру уровня (`CameraBehavior.computeCamera`), без маркера — legacy hard-center на игроке; новое поле `this.cameraRenderLayers` заполняется из `behavior.getRenderLayers()` и передаётся в `renderer.renderScene()` для фильтра слоёв (или null если маркер отсутствует); start/stop requestAnimationFrame-цикл; создаёт/уничтожает Input
   - `src/engine/Input.js` - клавиатурный стейт (arrows/WASD → нормализованная ось `{x,y}` в [-1,1]), методы `isDown()`/`getAxis()`/`destroy()`
   - **Фаза 2 MVP-поведения** (`src/engine/behaviors/` дочерние классы, `src/engine/BehaviorRegistry.js` реестр):
@@ -310,7 +311,7 @@ level.settings.parallaxVertical // множитель вертикального
   - **Фаза D Event Graph MVP** (`src/engine/eventgraph/`, Фаза D LOGIC_SYSTEMS_PLAN):
     - `src/engine/eventgraph/EventGraphNodeRegistry.js` - реестр узлов (тип → функция-обработчик), явная регистрация, минимальный API как BehaviorRegistry
     - `src/engine/eventgraph/EventGraphRuntime.js` - интерпретатор графа (переменные, ходьба по рёбрам, синхронизация с TriggerBehavior, pub/sub-мост для OnCustomEvent)
-    - `src/engine/eventgraph/registerDefaultEventGraphNodes.js` - MVP-словарь узлов (Entry: OnStart/OnTick/OnCollisionEnter/OnCollisionExit/OnInteract/OnTimer/OnCustomEvent; Conditions: Compare/And/Or/Not; Actions: SetVariable/SetComponentEnabled/Teleport/DestroyObject/EmitCustomEvent)
+    - `src/engine/eventgraph/registerDefaultEventGraphNodes.js` - MVP-словарь узлов (Entry: OnStart/OnTick/OnCollisionEnter/OnCollisionExit/OnInteract/OnTimer/OnCustomEvent/OnDialogueEnded; Conditions: Compare/And/Or/Not; Actions: SetVariable/SetComponentEnabled/Teleport/DestroyObject/EmitCustomEvent/StartDialogue/PlayAnimation/PlaySound)
     - Обновлены: `Behavior.js` (`.type` и `.enabled` live после конструкции), `Scene.js` (`.eventGraph` + `.destroyEntity(id)`), `GameEngine.js` (вызов `registerDefaultEventGraphNodes()` и создание `EventGraphRuntime`), `TriggerBehavior.js` (пересылка enter/exit → `scene.eventGraphRuntime.notifyCollision()`), `PlayerMovementBehavior.js` (фильтр из solids объектов с отключённым `.enabled` и TriggerBehavior)
   - **Фаза E Dialogue MVP** (`src/engine/`, Фаза E LOGIC_SYSTEMS_PLAN):
     - `src/engine/DialogueRunner.js` - интерпретатор Dialogue Graph ({formatVersion, startNode, nodes:[{id,speaker,text,choices?,next?}]}); методы getCurrentNode(), getVisibleChoices() (фильтр по condition через evalSpec), advance(choiceIndex?), isEnded()

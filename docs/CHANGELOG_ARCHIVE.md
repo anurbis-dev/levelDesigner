@@ -2,6 +2,10 @@
 
 Записи, перенесённые из `CHANGELOG.md` при коммитах (см. `git log` для точных диффов). Актуальный неопубликованный разрез — в `docs/CHANGELOG.md`.
 
+## Archived from CHANGELOG.md (camera render layers, v4.26.0)
+
+- **Feat: camera render layers (v4.26.0)**: runtime-side layer filtering for active game camera. `CameraBehavior` gained new method `getRenderLayers()` returning array of layer ids from `this.properties.renderLayers` (empty/unset → `null`, meaning all layers). `Renderer.renderScene()` gained 4th parameter `renderLayers` (default null) and filters `scene.entities` by `entity.layerId`, skipping entities whose `layerId` is not in the filter (entities without `layerId` always render). `GameEngine` new field `this.cameraRenderLayers` populated in `_updateCamera()` from `behavior.getRenderLayers()` and passed to `renderer.renderScene()` for per-frame filtering. `ComponentPropertySchema` camera component added `renderLayers` field (kind `stringList`, default `[]`) for Details editor form. Tests: all 315 tests pass (CameraBehavior.test.js, Renderer.test.js, GameEngine.integration.test.js updated). Closes §7 Camera asset backlog extension post-release.
+
 ## Archived from CHANGELOG.md (sync LevelEditor.VERSION, v4.25.1)
 
 - **Chore: sync `LevelEditor.VERSION` to `4.25.1`**: static version field had drifted from `package.json` across the last 3 releases (conveyorZiplineJumpPadPortal/variableModifier/destructibleContainer bumped `package.json` but not `LevelEditor.js`), failing `npm run validate:version`.

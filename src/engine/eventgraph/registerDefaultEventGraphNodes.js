@@ -1,6 +1,7 @@
 import { EventGraphNodeRegistry } from './EventGraphNodeRegistry.js';
 import { evalSpec } from './ConditionEvaluator.js';
 import { DialogueRunner } from '../DialogueRunner.js';
+import { AudioPlayer } from '../AudioPlayer.js';
 
 function findEntity(scene, id) {
     return scene.getAllEntities().find(e => e.id === id);
@@ -9,7 +10,7 @@ function findEntity(scene, id) {
 /**
  * Registers the Фаза D/E/F MVP node vocabulary (see docs/RUNTIME_SCHEMA.md discipline applied to
  * BehaviorRegistry — same idea here: only nodes with a real, working implementation get
- * registered; the rest of the plan's word list (PlaySound, SpawnObject, LoadLevel) stays
+ * registered; the rest of the plan's word list (SpawnObject, LoadLevel) stays
  * unregistered until a later phase actually needs them — EventGraphRuntime already
  * warns-and-skips unknown node types, so referencing one of those early is safe, just inert.
  *
@@ -85,5 +86,11 @@ export function registerDefaultEventGraphNodes() {
             return;
         }
         anim.play(node.params.clip);
+    });
+    // §7 backlog (soundEffect, Tier 1): params carry {src, volume?, loop?} directly, same
+    // inline-data convention as Teleport — no assetId lookup, ProjectLoader.assetsById is
+    // still intentionally empty (see its header comment).
+    EventGraphNodeRegistry.register('PlaySound', (node) => {
+        AudioPlayer.play(node.params.src, { volume: node.params.volume, loop: node.params.loop });
     });
 }
