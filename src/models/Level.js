@@ -43,6 +43,9 @@ export class Level {
         this.dialogues = data.dialogues || [];
         // Item definitions catalog (Items dock): [{ id, displayName, description? }].
         this.items = data.items || [];
+        // HUD Canvases (camera-assignable via component.properties.canvasIds):
+        // [{ id, name, widgets: [{ id, type, anchor, offsetX, offsetY, ... }] }].
+        this.canvases = data.canvases || [];
         // Optional seed for Scene.inventory at Play ([{itemId,count}] or map).
         this.inventory = data.inventory || null;
         // Per-object NPC bag seeds: { [objectId]: [{itemId,count}] }.
@@ -816,6 +819,7 @@ export class Level {
             eventGraph: this.eventGraph,
             dialogues: this.dialogues,
             items: this.items,
+            canvases: this.canvases,
             inventory: this.inventory,
             npcInventories: this.npcInventories,
             objects: this.objects.map(obj => {

@@ -76,10 +76,12 @@ export class GameEngine {
         if (behavior?.enabled) {
             behavior.computeCamera(this.scene, this.camera, this.renderer.canvas);
             this.cameraRenderLayers = behavior.getRenderLayers();
+            this.scene.activeCanvasIds = behavior.getCanvasIds();
             return;
         }
 
         this.cameraRenderLayers = null;
+        this.scene.activeCanvasIds = null;
         const player = this.scene.player;
         if (!player) return;
         const zoom = this.camera.zoom || 1;

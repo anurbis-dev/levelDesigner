@@ -184,7 +184,8 @@ const SCHEMAS = {
         { key: 'deadzoneWidth', label: 'Deadzone Width', kind: 'number', default: 0 },
         { key: 'deadzoneHeight', label: 'Deadzone Height', kind: 'number', default: 0 },
         { key: 'bounds', label: 'Bounds (JSON {x,y,width,height}; empty = unbounded)', kind: 'json', default: null },
-        { key: 'renderLayers', label: 'Render Layers (comma list of layer ids; empty = all)', kind: 'stringList', default: [] }
+        { key: 'renderLayers', label: 'Render Layers (comma list of layer ids; empty = all)', kind: 'stringList', default: [] },
+        { key: 'canvasIds', label: 'HUD Canvas Ids (comma list; empty = none)', kind: 'stringList', default: [] }
     ]
 };
 

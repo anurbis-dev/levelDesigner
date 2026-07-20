@@ -59,6 +59,17 @@ export class CameraBehavior extends Behavior {
         return Array.isArray(layers) && layers.length ? layers : null;
     }
 
+    /**
+     * @returns {string[]|null} HUD Canvas ids this camera shows, or null for "none" — unlike
+     * getRenderLayers()'s "empty = all" convention, an unset canvasIds means no HUD is drawn
+     * (a level typically defines several canvases — main HUD, pause menu, debug overlay —
+     * and only the ones explicitly assigned to the active camera should render).
+     */
+    getCanvasIds() {
+        const ids = this.properties.canvasIds;
+        return Array.isArray(ids) && ids.length ? ids : null;
+    }
+
     /** @returns {import('../Entity.js').Entity|null} followTargetId entity, or scene.player. */
     _resolveTarget(scene) {
         const id = this.properties.followTargetId;

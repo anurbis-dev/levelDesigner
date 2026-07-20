@@ -123,3 +123,20 @@ describe('CameraBehavior.getRenderLayers', () => {
         expect(behavior.getRenderLayers()).toEqual(['bg', 'gameplay']);
     });
 });
+
+describe('CameraBehavior.getCanvasIds', () => {
+    it('returns null (no HUD) when canvasIds is unset', () => {
+        const behavior = new CameraBehavior({}, { properties: {} });
+        expect(behavior.getCanvasIds()).toBeNull();
+    });
+
+    it('returns null (no HUD) when canvasIds is an empty array', () => {
+        const behavior = new CameraBehavior({}, { properties: { canvasIds: [] } });
+        expect(behavior.getCanvasIds()).toBeNull();
+    });
+
+    it('returns the configured canvas id list', () => {
+        const behavior = new CameraBehavior({}, { properties: { canvasIds: ['mainHud', 'debug'] } });
+        expect(behavior.getCanvasIds()).toEqual(['mainHud', 'debug']);
+    });
+});

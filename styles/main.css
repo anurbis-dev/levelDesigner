@@ -720,6 +720,54 @@ header .text-sm {
     padding-top: 8px;
 }
 
+/* HUD Canvases (CanvasHudRenderer) — absolutely-positioned widgets over the play canvas */
+.canvas-hud {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 1;
+    font-family: system-ui, sans-serif;
+    color: #e5e7eb;
+}
+
+.canvas-hud__widget {
+    box-sizing: border-box;
+}
+
+.canvas-hud__widget--button {
+    pointer-events: auto;
+    appearance: none;
+    cursor: pointer;
+    background: #1e3a5f;
+    color: #e5e7eb;
+    border: 1px solid #3b82f6;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+}
+
+.canvas-hud__widget--button:hover {
+    background: #2563eb;
+}
+
+.canvas-hud__widget--panel {
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid #4b5563;
+    border-radius: 8px;
+}
+
+.canvas-hud__widget--progressBar {
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid #4b5563;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.canvas-hud__widget-fill {
+    height: 100%;
+    background: #22c55e;
+}
+
 .console-resize-handle {
     position: absolute;
     bottom: 0;

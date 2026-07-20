@@ -3,6 +3,7 @@ import { Logger } from '../utils/Logger.js';
 import { ProjectExporter } from '../models/ProjectExporter.js';
 import { GameEngine } from '../engine/GameEngine.js';
 import { DialoguePlayHud } from '../engine/DialoguePlayHud.js';
+import { CanvasHudRenderer } from '../engine/CanvasHudRenderer.js';
 
 /**
  * Play-in-editor (engine plan §3, tmp/2D_Editor_ENGINE_PLAN.md). Serializes the current
@@ -10,7 +11,8 @@ import { DialoguePlayHud } from '../engine/DialoguePlayHud.js';
  * self-contained src/engine/GameEngine in a fullscreen overlay canvas, and tears it down
  * on Stop. GameEngine.loadProject() spawns the controllable player and owns its own
  * keyboard Input instance (src/engine/Input.js) — nothing input-related lives here.
- * DialoguePlayHud mounts on the overlay for choices / item pick.
+ * DialoguePlayHud mounts on the overlay for choices / item pick; CanvasHudRenderer mounts
+ * alongside it for the level's HUD Canvases (main HUD, pause menu, etc.).
  * @extends BaseModule
  */
 export class PlayOperations extends BaseModule {
@@ -21,6 +23,8 @@ export class PlayOperations extends BaseModule {
         this._resizeObserver = null;
         /** @type {DialoguePlayHud|null} */
         this._dialogueHud = null;
+        /** @type {CanvasHudRenderer|null} */
+        this._canvasHud = null;
         Logger.lifecycle.info('PlayOperations module initialized.');
     }
 
@@ -63,6 +67,8 @@ export class PlayOperations extends BaseModule {
         this._engine.start();
         this._dialogueHud = new DialoguePlayHud(this._overlay, () => this._engine?.scene);
         this._dialogueHud.start();
+        this._canvasHud = new CanvasHudRenderer(this._overlay, () => this._engine?.scene);
+        this._canvasHud.start();
         this.editor.stateManager.set('playMode', true);
         Logger.status.success('Play started — Esc to stop');
     }
@@ -73,6 +79,10 @@ export class PlayOperations extends BaseModule {
         if (this._dialogueHud) {
             this._dialogueHud.stop();
             this._dialogueHud = null;
+        }
+        if (this._canvasHud) {
+            this._canvasHud.stop();
+            this._canvasHud = null;
         }
         this._engine.stop();
         this._engine = null;
