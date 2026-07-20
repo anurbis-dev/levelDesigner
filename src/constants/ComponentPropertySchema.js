@@ -86,6 +86,16 @@ const SCHEMAS = {
         { key: 'spawnOffsetY', label: 'Spawn Offset Y', kind: 'number', default: 0 }
     ],
     checkpointSavePoint: [],
+    climbableLadder: [
+        { key: 'climbSpeed', label: 'Climb Speed (px/sec)', kind: 'number', default: 100 },
+        { key: 'shape', label: 'Shape', kind: 'select', default: 'box', options: COLLIDER_SHAPE_OPTIONS },
+        { key: 'offsetX', label: 'Offset X (box TL / circle center)', kind: 'number', default: 0 },
+        { key: 'offsetY', label: 'Offset Y (box TL / circle center)', kind: 'number', default: 0 },
+        { key: 'width', label: 'Width (box; empty = entity)', kind: 'number', default: null },
+        { key: 'height', label: 'Height (box; empty = entity)', kind: 'number', default: null },
+        { key: 'radius', label: 'Radius (circle)', kind: 'number', default: null },
+        { key: 'points', label: 'Points (freeform JSON [{x,y}])', kind: 'json', default: [] }
+    ],
     stateMachineBehavior: [
         { key: 'defaultState', label: 'Default State', kind: 'text', default: '' },
         { key: 'states', label: 'States (JSON: [{name,movement,speed,waypoints,transitions}])', kind: 'json', default: [] }

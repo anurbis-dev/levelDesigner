@@ -548,6 +548,22 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     молча оставлял `scene.player = null` без какой-либо реакции движка). Тесты:
     `tests/engine/CheckpointSaveBehavior.test.js` (4), плюс 3 новых в `tests/engine/Scene.test.js`
     (`Scene.respawnPlayer`).
+  - `climbableLadder` ✅ ЗАВЕРШЕНА 2026-07-20: `ClimbableLadderBehavior`
+    (`src/engine/behaviors/ClimbableLadderBehavior.js`) — никогда не solid: `isOverlapping()`
+    существует только как duck-type маркер, тот же приём, что `TriggerBehavior` — уже
+    существующий фильтр solids в `PlayerMovementBehavior` (`typeof x.isOverlapping !==
+    'function'`) исключает ladder-зону без правок самого фильтра. `getBounds()` — та же
+    shape/offset/circle/freeform схема, что `collider`/`trigger`; `getClimbSpeed()` —
+    `properties.climbSpeed` (дефолт 100). Единственная точка интеграции —
+    `PlayerMovementBehavior._findLadder(scene)` (duck-type на `getClimbSpeed`): пока bounds
+    игрока пересекают включённую ladder-зону, горизонтальный ввод обнуляется (climb только по
+    вертикали), скорость переключается с обычной ходьбы на `climbSpeed`; обычная per-axis
+    solid-блокировка (коллайдеры) продолжает действовать во время climb — без обхода стен.
+    Без Event Graph (`OnLadderEnter`), без авто-центрирования игрока по горизонтали ladder —
+    не запрошено, та же дисциплина, что у остальных §7-компонентов. Схема
+    `climbSpeed`/`shape`/`offsetX`/`offsetY`/`width`/`height`/`radius`/`points` в
+    `src/constants/ComponentPropertySchema.js`; тесты
+    `tests/engine/ClimbableLadderBehavior.test.js` (6 тестов).
 - **Полный критерий Фазы 4 движка** (было решено сдать минимальным срезом, v4.6.x): eslint-
   plugin-boundaries для границы `engine/`↔остальной `src/`, asset-usage-граф для отсечения
   мёртвого контента в `build:game`, флаг "включено в билд" на уровне, `build:addon`/`build:event`

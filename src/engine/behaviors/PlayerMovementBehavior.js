@@ -22,16 +22,21 @@ export class PlayerMovementBehavior extends Behavior {
         if (scene.mountedVehicle) return; // §7 mountableVehicleSeat: vehicle drives instead
 
         const axis = input.getAxis();
-        const isMoving = axis.x !== 0 || axis.y !== 0;
+        // §7 climbableLadder: while overlapping a ladder zone, horizontal input is ignored
+        // (climb straight up/down) and speed switches to the ladder's own climbSpeed.
+        const ladder = this._findLadder(scene);
+        const effectiveAxis = ladder ? { x: 0, y: axis.y } : axis;
+        const speed = ladder ? ladder.getClimbSpeed() : this.speed;
+        const isMoving = effectiveAxis.x !== 0 || effectiveAxis.y !== 0;
         // Фаза F: same level-scope variable store as Event Graph/Dialogue (no separate
         // per-instance channel) — SpriteAnimationBehavior state machines read 'speed' to
         // drive idle<->walk transitions.
-        scene.eventGraphRuntime?.setVariable('speed', isMoving ? this.speed : 0);
+        scene.eventGraphRuntime?.setVariable('speed', isMoving ? speed : 0);
         if (!isMoving) return;
 
-        const length = Math.hypot(axis.x, axis.y);
-        const dx = (axis.x / length) * this.speed * dt;
-        const dy = (axis.y / length) * this.speed * dt;
+        const length = Math.hypot(effectiveAxis.x, effectiveAxis.y);
+        const dx = (effectiveAxis.x / length) * speed * dt;
+        const dy = (effectiveAxis.y / length) * speed * dt;
 
         // TriggerBehavior also exposes getBounds() (so trigger-vs-trigger/collider overlap
         // checks can duck-type it the same way) but must never itself block movement — a
@@ -69,5 +74,16 @@ export class PlayerMovementBehavior extends Behavior {
             this.entity.x -= dx;
             this.entity.y -= dy;
         }
+    }
+
+    // Duck-typed on getClimbSpeed() (ClimbableLadderBehavior) — mirrors the getBounds()/
+    // tryPush() scans above, just a different marker method.
+    _findLadder(scene) {
+        const bounds = getEntityBounds(this.entity, {});
+        return scene.getAllEntities()
+            .map(candidate => candidate.behaviors?.find(b => typeof b.getClimbSpeed === 'function'))
+            .filter(Boolean)
+            .filter(ladder => ladder.enabled)
+            .find(ladder => rectsIntersect(bounds, ladder.getBounds()));
     }
 }
