@@ -564,6 +564,35 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     `climbSpeed`/`shape`/`offsetX`/`offsetY`/`width`/`height`/`radius`/`points` в
     `src/constants/ComponentPropertySchema.js`; тесты
     `tests/engine/ClimbableLadderBehavior.test.js` (6 тестов).
+  - `conveyorZiplineJumpPadPortal` ✅ ЗАВЕРШЕНА 2026-07-20: один компонент, `kind` enum
+    (`conveyor`|`zipline`|`jumpPad`|`portal`) — тот же приём shape-enum, что `collider`'s
+    `box|circle|freeform`, а не четыре отдельных component-типа, т.к. все четыре — одна и та
+    же зона (never solid, `isOverlapping()` возвращает false, тот же duck-type, что
+    `ClimbableLadderBehavior`), различается только эффект на `scene.player` при контакте.
+    Реагирует только на `scene.player` (та же "не обобщено на произвольные сущности, не
+    запрошено" дисциплина, что `pickup`/`checkpointSavePoint`/`mountableVehicleSeat`).
+    `conveyor` — непрерывный толчок каждый тик, пока пересекается (`directionX`/`directionY`
+    × `speed`). `jumpPad` — одноразовое мгновенное смещение (`launchOffsetX`/`launchOffsetY`)
+    при входе в зону (edge-detect по `_wasOverlapping`, не повторяется, пока игрок стоит
+    внутри); двигатель без гравитации/velocity-интегратора (та же design rationale, что у
+    `climbableLadder`), поэтому "импульс" — мгновенное смещение позиции, а не физическая
+    сила. `zipline` — захватывает управление игроком: `PlayerMovementBehavior` получил новый
+    guard `if (scene.zipliningEntity) return;` (тот же приём, что `scene.mountedVehicle`/
+    `scene.dialogueActive`); при входе в зону ставит `scene.zipliningEntity = this.entity` и
+    везёт `scene.player` к `targetOffsetX`/`targetOffsetY` (offset от spawn-позиции entity,
+    тот же asset-local приём, что `pathFollower.waypoints`) на `speed`, по достижении
+    отпускает управление (`scene.zipliningEntity = null`); вторая zipline-зона игнорирует
+    оверлап, пока едет первая (guard на `scene.zipliningEntity !== this.entity`). `portal` —
+    одноразовый телепорт на `targetId` (тот же resolve, что Event Graph's `Teleport` action:
+    `scene.getAllEntities().find(e => e.id === targetId)`), edge-detected, чтобы стоять в
+    зоне не значило телепортироваться каждый тик. Два портала, направленные друг на друга,
+    всё ещё могут дать один "пинг-понг" переход на входе — не предотвращается намеренно
+    (ответственность автора уровня — разносить точки назначения), та же "не запрошено"
+    дисциплина, что у остальных §7-компонентов. Схема (`kind`/shape-поля/`speed`/
+    `directionX`/`directionY`/`targetOffsetX`/`targetOffsetY`/`launchOffsetX`/
+    `launchOffsetY`/`targetId`) в `src/constants/ComponentPropertySchema.js`; тесты
+    `tests/engine/ConveyorZiplineJumpPadPortalBehavior.test.js` (9 тестов, включая
+    zipline+`PlayerMovementBehavior` suspend/resume и double-zipline guard).
 - **Полный критерий Фазы 4 движка** (было решено сдать минимальным срезом, v4.6.x): eslint-
   plugin-boundaries для границы `engine/`↔остальной `src/`, asset-usage-граф для отсечения
   мёртвого контента в `build:game`, флаг "включено в билд" на уровне, `build:addon`/`build:event`

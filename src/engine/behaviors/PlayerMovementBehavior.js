@@ -20,6 +20,7 @@ export class PlayerMovementBehavior extends Behavior {
         if (!input || dt <= 0) return;
         if (scene.dialogueActive) return; // Фаза E: movement pauses while a dialogue is open
         if (scene.mountedVehicle) return; // §7 mountableVehicleSeat: vehicle drives instead
+        if (scene.zipliningEntity) return; // §7 conveyorZiplineJumpPadPortal: zipline drives instead
 
         const axis = input.getAxis();
         // §7 climbableLadder: while overlapping a ladder zone, horizontal input is ignored

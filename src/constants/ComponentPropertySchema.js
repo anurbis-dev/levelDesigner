@@ -15,6 +15,13 @@ const PATH_FOLLOWER_MODE_OPTIONS = [
     { value: 'once', label: 'Once (stops at last waypoint)' }
 ];
 
+const CONVEYOR_ZIPLINE_JUMPPAD_PORTAL_KIND_OPTIONS = [
+    { value: 'conveyor', label: 'Conveyor (continuous push while overlapping)' },
+    { value: 'zipline', label: 'Zipline (rides player to a target point)' },
+    { value: 'jumpPad', label: 'Jump Pad (instant offset on entry)' },
+    { value: 'portal', label: 'Portal (teleport to target object)' }
+];
+
 const COLLIDER_SHAPE_OPTIONS = [
     { value: 'box', label: 'Box (square / rect)' },
     { value: 'circle', label: 'Circle' },
@@ -95,6 +102,24 @@ const SCHEMAS = {
         { key: 'height', label: 'Height (box; empty = entity)', kind: 'number', default: null },
         { key: 'radius', label: 'Radius (circle)', kind: 'number', default: null },
         { key: 'points', label: 'Points (freeform JSON [{x,y}])', kind: 'json', default: [] }
+    ],
+    conveyorZiplineJumpPadPortal: [
+        { key: 'kind', label: 'Kind', kind: 'select', default: 'conveyor', options: CONVEYOR_ZIPLINE_JUMPPAD_PORTAL_KIND_OPTIONS },
+        { key: 'shape', label: 'Shape', kind: 'select', default: 'box', options: COLLIDER_SHAPE_OPTIONS },
+        { key: 'offsetX', label: 'Offset X (box TL / circle center)', kind: 'number', default: 0 },
+        { key: 'offsetY', label: 'Offset Y (box TL / circle center)', kind: 'number', default: 0 },
+        { key: 'width', label: 'Width (box; empty = entity)', kind: 'number', default: null },
+        { key: 'height', label: 'Height (box; empty = entity)', kind: 'number', default: null },
+        { key: 'radius', label: 'Radius (circle)', kind: 'number', default: null },
+        { key: 'points', label: 'Points (freeform JSON [{x,y}])', kind: 'json', default: [] },
+        { key: 'speed', label: 'Speed (px/sec) — conveyor push / zipline ride', kind: 'number', default: 100 },
+        { key: 'directionX', label: 'Conveyor Direction X', kind: 'number', default: 1 },
+        { key: 'directionY', label: 'Conveyor Direction Y', kind: 'number', default: 0 },
+        { key: 'targetOffsetX', label: 'Zipline Target Offset X (from spawn)', kind: 'number', default: 0 },
+        { key: 'targetOffsetY', label: 'Zipline Target Offset Y (from spawn)', kind: 'number', default: -200 },
+        { key: 'launchOffsetX', label: 'Jump Pad Launch Offset X', kind: 'number', default: 0 },
+        { key: 'launchOffsetY', label: 'Jump Pad Launch Offset Y', kind: 'number', default: -96 },
+        { key: 'targetId', label: 'Portal Target Object Id', kind: 'text', default: '' }
     ],
     stateMachineBehavior: [
         { key: 'defaultState', label: 'Default State', kind: 'text', default: '' },
