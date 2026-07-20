@@ -15,6 +15,7 @@ export class Entity {
         this.color = data.color || '#cccccc';
         this.rotation = data.rotation || 0;
         this.imgSrc = data.imgSrc || null;
+        this.materialPreset = data.materialPreset || null;
         this.visible = data.visible !== undefined ? data.visible : true;
         this.layerId = data.layerId || null;
         this.properties = data.properties || {};

@@ -1,4 +1,4 @@
-# Context Map - Level Designer v4.30.0 (Phase A done; Phase B dock B0–B5 done; §7 backlog 12/12 done: camera/pickup/damageHealth/movablePushable/mountableVehicleSeat/pathFollower/spawner/stateMachineBehavior/checkpointSavePoint/climbableLadder/conveyorZiplineJumpPadPortal/variableModifier/destructibleContainer; §7 soundEffect Tier 1 (PlaySound action) wired; §7 pathSpline Tier 1 (smooth Catmull-Rom interpolation in pathFollower); §7 aiBehaviorPreset Tier 1 (aiPreset shorthand in stateMachineBehavior), v4.30.0)
+# Context Map - Level Designer v4.31.0 (Phase A done; Phase B dock B0–B5 done; §7 backlog 12/12 done: camera/pickup/damageHealth/movablePushable/mountableVehicleSeat/pathFollower/spawner/stateMachineBehavior/checkpointSavePoint/climbableLadder/conveyorZiplineJumpPadPortal/variableModifier/destructibleContainer; §7 Tier 1 all 4 done: soundEffect (PlaySound action), pathSpline (smooth Catmull-Rom), aiBehaviorPreset (aiPreset shorthand), materialShaderPreset (materialPreset field + filter string), v4.31.0)
 
 ## ⚠️ КРИТИЧЕСКИ ВАЖНО - ЧИТАТЬ ПЕРВЫМ
 
@@ -277,12 +277,12 @@ level.settings.parallaxVertical // множитель вертикального
 - `docs/RUNTIME_SCHEMA.md` - контракт runtime-схемы: per-type `schemaVersion`/`properties` для 29 asset-типов и 19 component-типов, плюс раздел `## Versioning` про `Level.meta.version` (semver уровня, отдельная ось от `LevelEditor.VERSION`)
 - `docs/CONTENT_MODEL.md` - три типа контент-паков движка: Project (база+патчи), Addon (overrides/additions), Special Event (без overrides); различие editor-Project (табы редактора) от runtime-Project (релиз), роль `ProjectExporter`
 - **Фаза 1 MVP-ядро** (`src/engine/` самодостаточен, ноль импортов из `src/constants|core|managers|models|ui|utils|widgets`):
-  - `src/engine/Entity.js` - тонкий runtime-класс (id/name/type/x/y/width/height/color/rotation/imgSrc/visible/layerId/properties/components/children)
+  - `src/engine/Entity.js` - тонкий runtime-класс (id/name/type/x/y/width/height/color/rotation/imgSrc/materialPreset/visible/layerId/properties/components/children)
   - `src/engine/EntityFactory.js` - `fromGameObjectData(data)` → Entity, рекурсивно для children
   - `src/engine/Scene.js` - уровень рантайма (entities, layers, settings, camera), методы `getLayersSorted/getLayerById/getVisibleLayerIds()`
   - `src/engine/ProjectLoader.js` - `load(manifest, opts)` → {levelsById, entryLevelId, assetsById: Map(), eventsById: Map()}; `loadLevel(levelId, registries)` → Scene
   - `src/engine/render/ParallaxController.js` - чистые функции `getCameraOffset/getParallaxOffset` (портированы 1:1 из ParallaxRenderer)
-  - `src/engine/render/Renderer.js` - Canvas 2D рендер (setCamera/restoreCamera/clear/drawBackground/drawEntity/renderScene), порт CanvasRenderer без editor-флагов; `renderScene(scene, camera, parallaxStartPosition, renderLayers = null)` 4-й параметр фильтрует сущности по `layerId` (пропускает те, чьи слои не в массиве; null = все слои), сущности без `layerId` рендерятся всегда
+  - `src/engine/render/Renderer.js` - Canvas 2D рендер (setCamera/restoreCamera/clear/drawBackground/drawEntity/renderScene), порт CanvasRenderer без editor-флагов; `renderScene(scene, camera, parallaxStartPosition, renderLayers = null)` 4-й параметр фильтрует сущности по `layerId` (пропускает те, чьи слои не в массиве; null = все слои), сущности без `layerId` рендерятся всегда; `_buildFilterString(preset)` static — преобразует `materialPreset` JSON в CSS 2D filter-строку (blur/brightness/saturate/hueRotate/dropShadow), применяется в `_drawSingle()` перед рисованием каждого объекта, сбрасывается в 'none' после (§7 materialShaderPreset Tier 1, v4.31.0)
   - `src/engine/AssetLoader.js` - `LOADABLE_ASSET_TYPES/DATA_ONLY_ASSET_TYPES`, `collectImageSources(scene)`, `loadImages(sources)` с guard `typeof Image !== 'undefined'`
   - `src/engine/AudioPlayer.js` - static `play(src, {volume?, loop?})` — browser-guarded fire-and-forget one-shot playback, no-op if `Audio` global unavailable (§7 soundEffect Tier 1, v4.27.0)
   - `src/engine/GameEngine.js` - оркестратор (constructor, loadProject async, tick); `_updateCamera()` делегирует `camera`-маркеру уровня (`CameraBehavior.computeCamera`), без маркера — legacy hard-center на игроке; новое поле `this.cameraRenderLayers` заполняется из `behavior.getRenderLayers()` и передаётся в `renderer.renderScene()` для фильтра слоёв (или null если маркер отсутствует); start/stop requestAnimationFrame-цикл; создаёт/уничтожает Input
@@ -385,7 +385,7 @@ eventHandlerManager.registerElement(button, { click: onClick }, 'button-id');
 
 ## 🔧 Версионирование
 
-Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '4.30.0'` (Phase A refactor + Phase B dock B0–B5 + §7 backlog all 12/12 done: camera/pickup/damageHealth/movablePushable/mountableVehicleSeat/pathFollower/spawner/stateMachineBehavior/checkpointSavePoint/climbableLadder/conveyorZiplineJumpPadPortal/variableModifier/destructibleContainer; §7 soundEffect/pathSpline/aiBehaviorPreset Tier 1; layout = `editor.dockManager`)
+Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '4.31.0'` (Phase A refactor + Phase B dock B0–B5 + §7 backlog all 12/12 done: camera/pickup/damageHealth/movablePushable/mountableVehicleSeat/pathFollower/spawner/stateMachineBehavior/checkpointSavePoint/climbableLadder/conveyorZiplineJumpPadPortal/variableModifier/destructibleContainer; §7 Tier 1 all 4 done: soundEffect/pathSpline/aiBehaviorPreset/materialShaderPreset; layout = `editor.dockManager`)
 
 Версия отображается динамически после полной инициализации через `updateVersionInfo()` и `updatePageTitle()`. Интерфейс скрыт до завершения загрузки, чтобы избежать отображения устаревшей версии. Pre-push hook блокирует коммит без бампа версии (`.claude/settings.json`).
 

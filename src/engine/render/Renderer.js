@@ -56,6 +56,8 @@ export class Renderer {
             this.ctx.translate(-cx, -cy);
         }
 
+        this.ctx.filter = Renderer._buildFilterString(entity.materialPreset) || 'none';
+
         const img = entity.imgSrc && this.imageCache?.get(entity.imgSrc);
         if (img && img.complete && img.naturalHeight !== 0) {
             const spriteAnim = entity.behaviors?.find(b => typeof b.getSourceRect === 'function');
@@ -73,6 +75,31 @@ export class Renderer {
         if (rotation) {
             this.ctx.restore();
         }
+    }
+
+    /**
+     * §7 backlog (materialShaderPreset, Tier 1): `entity.materialPreset` is a direct GameObject
+     * field (same convention as `entity.color`/`imgSrc`, not a component under `properties`) —
+     * `{blur?, brightness?, saturate?, hueRotate?, dropShadow?:{x?,y?,blur?,color?}}` — turned
+     * into a canvas 2D CSS `filter` string. No separate reusable catalog asset/registry yet
+     * (`ProjectLoader.assetsById` still an intentionally empty Map, Tier 2+); the preset data is
+     * inline on the object, same "no assetId lookup" convention as `PlaySound`/`pathFollower
+     * .interpolation`/`stateMachineBehavior.aiPreset`. Applies to any entity (not gated behind
+     * a `volume` trigger zone — `volume` itself is a separate, still-unimplemented §7 item).
+     * @returns {string|null} CSS filter string, or null for an empty/absent preset.
+     */
+    static _buildFilterString(preset) {
+        if (!preset) return null;
+        const parts = [];
+        if (preset.blur) parts.push(`blur(${preset.blur}px)`);
+        if (preset.brightness !== undefined) parts.push(`brightness(${preset.brightness})`);
+        if (preset.saturate !== undefined) parts.push(`saturate(${preset.saturate})`);
+        if (preset.hueRotate) parts.push(`hue-rotate(${preset.hueRotate}deg)`);
+        if (preset.dropShadow) {
+            const d = preset.dropShadow;
+            parts.push(`drop-shadow(${d.x ?? 0}px ${d.y ?? 0}px ${d.blur ?? 0}px ${d.color ?? 'rgba(0,0,0,0.5)'})`);
+        }
+        return parts.length ? parts.join(' ') : null;
     }
 
     /**

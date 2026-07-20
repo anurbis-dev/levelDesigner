@@ -677,4 +677,16 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     отдельного каталожного ассета — конфиг инлайн на `stateMachineBehavior.properties`, тот же
     приём, что `pathFollower.interpolation`/`PlaySound`. Schema-поле: `ComponentPropertySchema.js`
     `aiPreset` (JSON). Тесты: 6 новых в `tests/engine/StateMachineBehavior.test.js`.
-    `materialShaderPreset` — следующий Tier 1 пункт, не начат.
+  - `materialShaderPreset` Tier 1 завершён ✅ 2026-07-20: `entity.materialPreset` — прямое поле
+    GameObject (как `color`/`imgSrc`, не component `properties`), JSON `{blur?, brightness?,
+    saturate?, hueRotate?, dropShadow?:{x?,y?,blur?,color?}}`. `Renderer._buildFilterString()`
+    (`src/engine/render/Renderer.js`) собирает CSS `filter`-строку, применяется в `_drawSingle`
+    к каждому draw (картинка или fallback rect), сбрасывается в `'none'` для сущностей без
+    пресета (не течёт на следующую). Не привязано к `volume`-зоне — `volume` (произвольной формы
+    визуальная триггер-зона) отдельный, всё ещё не реализованный §7 пункт; фильтр применяется к
+    любой сущности. Без отдельного каталожного ассета — тот же inline-приём, что
+    `pathFollower.interpolation`/`stateMachineBehavior.aiPreset`/`PlaySound`.
+    Тесты: 3 новых в `tests/engine/Renderer.test.js`.
+    **Весь Tier 1 §7 backlog (soundEffect/pathSpline/aiBehaviorPreset/materialShaderPreset)
+    закрыт.** Следующий приоритет — Tier 2 (`ProjectLoader.assetsById` реальный asset-реестр,
+    затем `prefab`).

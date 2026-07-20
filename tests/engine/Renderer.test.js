@@ -6,7 +6,7 @@ function mockCanvas() {
     const ctx = {
         fillRect: vi.fn(), clearRect: vi.fn(), drawImage: vi.fn(),
         save: vi.fn(), restore: vi.fn(), translate: vi.fn(), scale: vi.fn(), rotate: vi.fn(),
-        fillStyle: null
+        fillStyle: null, filter: 'none'
     };
     const canvas = { width: 800, height: 600, getContext: () => ctx };
     return { canvas, ctx };
@@ -167,5 +167,37 @@ describe('Renderer.drawEntity', () => {
         });
 
         expect(ctx.drawImage).toHaveBeenCalledWith(img, 32, 0, 16, 16, 5, 5, 16, 16);
+    });
+
+    it('sets ctx.filter to "none" for an entity with no materialPreset', () => {
+        const { canvas, ctx } = mockCanvas();
+        const renderer = new Renderer(canvas);
+
+        renderer.drawEntity({ visible: true, type: 'actor', x: 0, y: 0, width: 10, height: 10, color: '#fff' });
+
+        expect(ctx.filter).toBe('none');
+    });
+
+    it('builds a CSS filter string from materialPreset (§7 backlog materialShaderPreset Tier 1)', () => {
+        const { canvas, ctx } = mockCanvas();
+        const renderer = new Renderer(canvas);
+
+        renderer.drawEntity({
+            visible: true, type: 'actor', x: 0, y: 0, width: 10, height: 10, color: '#fff',
+            materialPreset: { blur: 4, brightness: 1.2, saturate: 0.5, hueRotate: 90, dropShadow: { x: 2, y: 2, blur: 3, color: 'red' } }
+        });
+
+        expect(ctx.filter).toBe('blur(4px) brightness(1.2) saturate(0.5) hue-rotate(90deg) drop-shadow(2px 2px 3px red)');
+    });
+
+    it('resets ctx.filter to "none" for the next entity after a filtered one', () => {
+        const { canvas, ctx } = mockCanvas();
+        const renderer = new Renderer(canvas);
+
+        renderer.drawEntity({ visible: true, type: 'actor', x: 0, y: 0, width: 10, height: 10, materialPreset: { blur: 4 } });
+        expect(ctx.filter).toBe('blur(4px)');
+
+        renderer.drawEntity({ visible: true, type: 'actor', x: 0, y: 0, width: 10, height: 10 });
+        expect(ctx.filter).toBe('none');
     });
 });
