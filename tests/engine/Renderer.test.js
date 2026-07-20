@@ -59,6 +59,56 @@ describe('Renderer.renderScene', () => {
         expect(secondCallArgs[0]).toBe(-50);
         expect(secondCallArgs[1]).toBe(-0);
     });
+
+    it('with a renderLayers filter, skips entities on layers outside the list', () => {
+        const { canvas, ctx } = mockCanvas();
+        const renderer = new Renderer(canvas);
+        const scene = sceneWith({
+            layers: [{ id: 'bg' }, { id: 'fg' }],
+            objects: [
+                { id: 'a', type: 'actor', x: 0, y: 0, width: 10, height: 10, color: '#111111', layerId: 'bg' },
+                { id: 'b', type: 'actor', x: 20, y: 20, width: 10, height: 10, color: '#222222', layerId: 'fg' }
+            ]
+        });
+
+        renderer.renderScene(scene, scene.camera, scene.camera, ['fg']);
+
+        // background fillRect + exactly one entity (the 'bg'-layer entity is skipped)
+        expect(ctx.fillRect).toHaveBeenCalledTimes(2);
+        expect(ctx.fillRect).toHaveBeenCalledWith(20, 20, 10, 10);
+    });
+
+    it('with a renderLayers filter, still draws entities without a layerId', () => {
+        const { canvas, ctx } = mockCanvas();
+        const renderer = new Renderer(canvas);
+        const scene = sceneWith({
+            layers: [{ id: 'fg' }],
+            objects: [
+                { id: 'a', type: 'actor', x: 0, y: 0, width: 10, height: 10, color: '#111111' }
+            ]
+        });
+
+        renderer.renderScene(scene, scene.camera, scene.camera, ['fg']);
+
+        expect(ctx.fillRect).toHaveBeenCalledWith(0, 0, 10, 10);
+    });
+
+    it('a null/empty renderLayers renders every entity (no restriction)', () => {
+        const { canvas, ctx } = mockCanvas();
+        const renderer = new Renderer(canvas);
+        const scene = sceneWith({
+            layers: [{ id: 'bg' }, { id: 'fg' }],
+            objects: [
+                { id: 'a', type: 'actor', x: 0, y: 0, width: 10, height: 10, color: '#111111', layerId: 'bg' },
+                { id: 'b', type: 'actor', x: 20, y: 20, width: 10, height: 10, color: '#222222', layerId: 'fg' }
+            ]
+        });
+
+        renderer.renderScene(scene, scene.camera, scene.camera, []);
+
+        // background fillRect + both entities
+        expect(ctx.fillRect).toHaveBeenCalledTimes(3);
+    });
 });
 
 describe('Renderer.drawEntity', () => {

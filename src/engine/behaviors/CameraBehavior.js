@@ -50,6 +50,15 @@ export class CameraBehavior extends Behavior {
         camera.y = nextY;
     }
 
+    /**
+     * @returns {string[]|null} layer ids this camera renders, or null for "all layers"
+     * (empty/unset `renderLayers`, same convention as Фаза A's `collidesWith: []`).
+     */
+    getRenderLayers() {
+        const layers = this.properties.renderLayers;
+        return Array.isArray(layers) && layers.length ? layers : null;
+    }
+
     /** @returns {import('../Entity.js').Entity|null} followTargetId entity, or scene.player. */
     _resolveTarget(scene) {
         const id = this.properties.followTargetId;

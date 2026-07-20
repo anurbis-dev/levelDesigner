@@ -174,7 +174,8 @@ const SCHEMAS = {
         { key: 'followTargetId', label: 'Follow Target Id (empty = player)', kind: 'text', default: '' },
         { key: 'deadzoneWidth', label: 'Deadzone Width', kind: 'number', default: 0 },
         { key: 'deadzoneHeight', label: 'Deadzone Height', kind: 'number', default: 0 },
-        { key: 'bounds', label: 'Bounds (JSON {x,y,width,height}; empty = unbounded)', kind: 'json', default: null }
+        { key: 'bounds', label: 'Bounds (JSON {x,y,width,height}; empty = unbounded)', kind: 'json', default: null },
+        { key: 'renderLayers', label: 'Render Layers (comma list of layer ids; empty = all)', kind: 'stringList', default: [] }
     ]
 };
 

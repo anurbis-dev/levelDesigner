@@ -1,4 +1,4 @@
-# Context Map - Level Designer v4.25.0 (Phase A done; Phase B dock B0–B5 done; §7 backlog 12/12 done: camera/pickup/damageHealth/movablePushable/mountableVehicleSeat/pathFollower/spawner/stateMachineBehavior/checkpointSavePoint/climbableLadder/conveyorZiplineJumpPadPortal/variableModifier/destructibleContainer)
+# Context Map - Level Designer v4.26.0 (Phase A done; Phase B dock B0–B5 done; §7 backlog 12/12 done: camera/pickup/damageHealth/movablePushable/mountableVehicleSeat/pathFollower/spawner/stateMachineBehavior/checkpointSavePoint/climbableLadder/conveyorZiplineJumpPadPortal/variableModifier/destructibleContainer; camera render layers extension, v4.26.0)
 
 ## ⚠️ КРИТИЧЕСКИ ВАЖНО - ЧИТАТЬ ПЕРВЫМ
 
@@ -282,9 +282,9 @@ level.settings.parallaxVertical // множитель вертикального
   - `src/engine/Scene.js` - уровень рантайма (entities, layers, settings, camera), методы `getLayersSorted/getLayerById/getVisibleLayerIds()`
   - `src/engine/ProjectLoader.js` - `load(manifest, opts)` → {levelsById, entryLevelId, assetsById: Map(), eventsById: Map()}; `loadLevel(levelId, registries)` → Scene
   - `src/engine/render/ParallaxController.js` - чистые функции `getCameraOffset/getParallaxOffset` (портированы 1:1 из ParallaxRenderer)
-  - `src/engine/render/Renderer.js` - Canvas 2D рендер (setCamera/restoreCamera/clear/drawBackground/drawEntity/renderScene), порт CanvasRenderer без editor-флагов
+  - `src/engine/render/Renderer.js` - Canvas 2D рендер (setCamera/restoreCamera/clear/drawBackground/drawEntity/renderScene), порт CanvasRenderer без editor-флагов; `renderScene(scene, camera, parallaxStartPosition, renderLayers = null)` 4-й параметр фильтрует сущности по `layerId` (пропускает те, чьи слои не в массиве; null = все слои), сущности без `layerId` рендерятся всегда
   - `src/engine/AssetLoader.js` - `LOADABLE_ASSET_TYPES/DATA_ONLY_ASSET_TYPES`, `collectImageSources(scene)`, `loadImages(sources)` с guard `typeof Image !== 'undefined'`
-  - `src/engine/GameEngine.js` - оркестратор (constructor, loadProject async, tick); `_updateCamera()` делегирует `camera`-маркеру уровня (`CameraBehavior.computeCamera`), без маркера — legacy hard-center на игроке; start/stop requestAnimationFrame-цикл; создаёт/уничтожает Input
+  - `src/engine/GameEngine.js` - оркестратор (constructor, loadProject async, tick); `_updateCamera()` делегирует `camera`-маркеру уровня (`CameraBehavior.computeCamera`), без маркера — legacy hard-center на игроке; новое поле `this.cameraRenderLayers` заполняется из `behavior.getRenderLayers()` и передаётся в `renderer.renderScene()` для фильтра слоёв (или null если маркер отсутствует); start/stop requestAnimationFrame-цикл; создаёт/уничтожает Input
   - `src/engine/Input.js` - клавиатурный стейт (arrows/WASD → нормализованная ось `{x,y}` в [-1,1]), методы `isDown()`/`getAxis()`/`destroy()`
   - **Фаза 2 MVP-поведения** (`src/engine/behaviors/` дочерние классы, `src/engine/BehaviorRegistry.js` реестр):
     - `src/engine/BehaviorRegistry.js` - `register(type, Class)`, `get(type)`, `has(type)`, явная регистрация (не import-side-effects)
@@ -295,7 +295,7 @@ level.settings.parallaxVertical // множитель вертикального
     - `src/engine/behaviors/InteractableBehavior.js` - `radius`/`hint` (properties), `isInRange(point)`
     - `src/engine/behaviors/PlayerStartBehavior.js` - `getSpawnPosition()`
     - `src/engine/behaviors/PlayerMovementBehavior.js` - runtime-поведение (не component-тип схемы) управляемого игрока; читает `scene.input.getAxis()`, движет entity, per-axis AABB-коллизия
-    - `src/engine/behaviors/CameraBehavior.js` - `computeCamera(scene, camera, canvas)` (не через generic `update(dt,scene)` — вызывается напрямую из `GameEngine._updateCamera()`); `followTargetId`/`deadzoneWidth`/`deadzoneHeight`/`bounds` properties (§7 backlog "Camera asset", закрыт 2026-07-17)
+    - `src/engine/behaviors/CameraBehavior.js` - `computeCamera(scene, camera, canvas)` (не через generic `update(dt,scene)` — вызывается напрямую из `GameEngine._updateCamera()`); `getRenderLayers()` возвращает массив layer id из `this.properties.renderLayers` или null (= все слои, конвенция Фазы A `collidesWith: []`); `followTargetId`/`deadzoneWidth`/`deadzoneHeight`/`bounds`/`renderLayers` properties (§7 backlog "Camera asset", закрыт 2026-07-17; renderLayers расширение v4.26.0)
     - `src/engine/behaviors/PickupBehavior.js` - AABB-проверка пересечения с `scene.player` каждый тик, `scene.inventory.add(itemId, count)` и опциональное удаление entity; properties: `itemId`/`count`/`destroyOnPickup` (§7 backlog "pickup", закрыт 2026-07-18)
     - `src/engine/behaviors/DamageHealthBehavior.js` - AABB-проверка пересечения с другими сущностями, имеющими damageHealth, каждый тик; при пересечении с `contactDamage>0` источником — урон один раз + `invulnerabilityDuration` i-frame; properties: `maxHealth`/`currentHealth`/`contactDamage`/`invulnerabilityDuration`/`destroyOnDeath`/`layer`/`collidesWith` (§7 backlog "damageHealth", закрыт 2026-07-19)
     - `src/engine/behaviors/MovablePushableBehavior.js` - duck-typed hook `tryPush(dx,dy,scene)` (как `TriggerBehavior.isOverlapping`); вызывается `PlayerMovementBehavior` при коллизии, сдвигает entity, проверяет свободу позиции (AABB, исключая triggers); properties: `layer`/`collidesWith` (§7 backlog "movablePushable" 3/12, закрыт 2026-07-19)

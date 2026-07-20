@@ -79,15 +79,21 @@ export class Renderer {
      * @param {import('../Scene.js').Scene} scene
      * @param {{x:number,y:number,zoom:number}} camera
      * @param {{x:number,y:number}} [parallaxStartPosition] - defaults to camera (no parallax shift)
+     * @param {string[]|null} [renderLayers] - layer ids to draw, or null/empty for all
+     *   (CameraBehavior.getRenderLayers()). Entities with no layerId always draw — layer
+     *   restriction only excludes entities explicitly assigned to a layer outside the list.
      */
-    renderScene(scene, camera, parallaxStartPosition = camera) {
+    renderScene(scene, camera, parallaxStartPosition = camera, renderLayers = null) {
         this.clear();
         this.drawBackground(scene.settings.backgroundColor);
 
         const cameraOffset = ParallaxController.getCameraOffset(camera, scene.settings, parallaxStartPosition);
+        const layerFilter = renderLayers && renderLayers.length ? new Set(renderLayers) : null;
         this.setCamera(camera);
 
         scene.entities.forEach(entity => {
+            if (layerFilter && entity.layerId && !layerFilter.has(entity.layerId)) return;
+
             const layer = scene.getLayerById(entity.layerId);
             const layerParallaxOffset = layer?.parallaxOffset || 0;
 

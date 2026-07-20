@@ -106,3 +106,20 @@ describe('CameraBehavior.computeCamera', () => {
         expect(camera).toEqual({ x: 5, y: 5, zoom: 1 });
     });
 });
+
+describe('CameraBehavior.getRenderLayers', () => {
+    it('returns null (all layers) when renderLayers is unset', () => {
+        const behavior = new CameraBehavior({}, { properties: {} });
+        expect(behavior.getRenderLayers()).toBeNull();
+    });
+
+    it('returns null (all layers) when renderLayers is an empty array', () => {
+        const behavior = new CameraBehavior({}, { properties: { renderLayers: [] } });
+        expect(behavior.getRenderLayers()).toBeNull();
+    });
+
+    it('returns the configured layer id list', () => {
+        const behavior = new CameraBehavior({}, { properties: { renderLayers: ['bg', 'gameplay'] } });
+        expect(behavior.getRenderLayers()).toEqual(['bg', 'gameplay']);
+    });
+});

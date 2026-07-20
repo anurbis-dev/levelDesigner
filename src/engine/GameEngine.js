@@ -17,6 +17,7 @@ export class GameEngine {
         this.scene = null;
         this.camera = null;
         this.parallaxStartPosition = null;
+        this.cameraRenderLayers = null;
         this._rafId = null;
         this._lastFrameTime = null;
         registerDefaultBehaviors();
@@ -49,7 +50,7 @@ export class GameEngine {
         if (!this.scene) return;
         this._update(dt);
         this._updateCamera();
-        this.renderer.renderScene(this.scene, this.camera, this.parallaxStartPosition);
+        this.renderer.renderScene(this.scene, this.camera, this.parallaxStartPosition, this.cameraRenderLayers);
     }
 
     _update(dt) {
@@ -74,9 +75,11 @@ export class GameEngine {
         const behavior = cameraEntity?.behaviors.find(b => typeof b.computeCamera === 'function');
         if (behavior?.enabled) {
             behavior.computeCamera(this.scene, this.camera, this.renderer.canvas);
+            this.cameraRenderLayers = behavior.getRenderLayers();
             return;
         }
 
+        this.cameraRenderLayers = null;
         const player = this.scene.player;
         if (!player) return;
         const zoom = this.camera.zoom || 1;

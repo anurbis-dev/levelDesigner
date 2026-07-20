@@ -416,8 +416,12 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
   на асset-тип `camera` (`DEFAULT_ASSET_COMPONENTS`). `GameEngine._updateCamera()` делегирует
   маркеру, если он есть на уровне; иначе legacy hard-center на игроке (v4.8.0 заглушка) остаётся
   как fallback для уровней без камеры. Без своего UI-виджета — generic Details JSON, как
-  `spriteUiAnimation`. render layers (часть исходного описания в каталоге) не реализованы —
-  все слои рендерятся одинаково для любой камеры, не было конкретной потребности.
+  `spriteUiAnimation`. **Render layers** ✅ ЗАВЕРШЕНА 2026-07-20: `camera.properties.renderLayers`
+  (список layer id; пусто = все слои, конвенция Фазы A `collidesWith: []`) —
+  `CameraBehavior.getRenderLayers()`, `GameEngine._updateCamera()` кэширует в
+  `this.cameraRenderLayers` (`null` для legacy hard-center fallback — без ограничения слоёв),
+  `Renderer.renderScene(scene, camera, parallaxStartPosition, renderLayers)` фильтрует
+  `scene.entities` по `entity.layerId` до отрисовки; сущности без `layerId` рендерятся всегда.
 - **Компоненты без отдельной фазы**: `damageHealth`, `movablePushable`,
   `mountableVehicleSeat`, `pathFollower`, `spawner`, `checkpointSavePoint`, `climbableLadder`,
   `conveyorZiplineJumpPadPortal`, `destructibleContainer`, `variableModifier` — реализуются по
