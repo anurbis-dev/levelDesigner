@@ -16,6 +16,8 @@ import { StateMachineBehavior } from './StateMachineBehavior.js';
 import { CheckpointSaveBehavior } from './CheckpointSaveBehavior.js';
 import { ClimbableLadderBehavior } from './ClimbableLadderBehavior.js';
 import { ConveyorZiplineJumpPadPortalBehavior } from './ConveyorZiplineJumpPadPortalBehavior.js';
+import { VariableModifierBehavior } from './VariableModifierBehavior.js';
+import { DestructibleContainerBehavior } from './DestructibleContainerBehavior.js';
 
 /**
  * Registers the Фаза 2 MVP component vertical slice (see docs/RUNTIME_SCHEMA.md).
@@ -40,4 +42,6 @@ export function registerDefaultBehaviors() {
     BehaviorRegistry.register('checkpointSavePoint', CheckpointSaveBehavior);
     BehaviorRegistry.register('climbableLadder', ClimbableLadderBehavior);
     BehaviorRegistry.register('conveyorZiplineJumpPadPortal', ConveyorZiplineJumpPadPortalBehavior);
+    BehaviorRegistry.register('variableModifier', VariableModifierBehavior);
+    BehaviorRegistry.register('destructibleContainer', DestructibleContainerBehavior);
 }

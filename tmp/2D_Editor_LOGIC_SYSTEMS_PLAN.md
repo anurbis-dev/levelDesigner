@@ -593,6 +593,25 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     `launchOffsetY`/`targetId`) в `src/constants/ComponentPropertySchema.js`; тесты
     `tests/engine/ConveyorZiplineJumpPadPortalBehavior.test.js` (9 тестов, включая
     zipline+`PlayerMovementBehavior` suspend/resume и double-zipline guard).
+  - `variableModifier` ✅ ЗАВЕРШЕНА 2026-07-20: `VariableModifierBehavior`
+    (`src/engine/behaviors/VariableModifierBehavior.js`) — never-solid Volume/Trigger зона
+    (`isOverlapping()` возвращает false, тот же duck-type, что `ClimbableLadderBehavior`/
+    `ConveyorZiplineJumpPadPortalBehavior`), реагирует только на `scene.player` (та же
+    дисциплина, что у остальных §7-зон). Пишет в переменную `EventGraphRuntime` при
+    контакте — обратная сторона механизма, которым Quest/Dialogue условия читают
+    переменные через `ConditionEvaluator`'s `{var,op,value}` против
+    `scene.eventGraphRuntime` (тот же `getVariable`/`setVariable` контракт, что уже
+    использует `PlayerMovementBehavior` для `speed` и `StateMachineBehavior`/
+    `spriteUiAnimation` для transition-условий). `op`: `set` пишет `value` напрямую;
+    `add`/`subtract` читают текущее значение (отсутствующее трактуется как 0) и
+    прибавляют/вычитают `value`; `toggle` инвертирует boolean, `value` игнорируется.
+    `mode: 'once'` — edge-detected, срабатывает один раз за вход в зону, повторно при
+    повторном входе (тот же "не спамит, но повторяем" приём, что `portal`/`jumpPad`, без
+    `destroyOnTrigger` — не запрошено); `mode: 'continuous'` — применяется каждый тик,
+    пока пересекается (drain/regen-зона). Схема `varName`/`op`/`value`/`mode`/shape-полей
+    в `src/constants/ComponentPropertySchema.js`; тесты
+    `tests/engine/VariableModifierBehavior.test.js` (9 тестов). Оставшийся §7-компонент:
+    `destructibleContainer` (12/12).
 - **Полный критерий Фазы 4 движка** (было решено сдать минимальным срезом, v4.6.x): eslint-
   plugin-boundaries для границы `engine/`↔остальной `src/`, asset-usage-граф для отсечения
   мёртвого контента в `build:game`, флаг "включено в билд" на уровне, `build:addon`/`build:event`

@@ -22,6 +22,18 @@ const CONVEYOR_ZIPLINE_JUMPPAD_PORTAL_KIND_OPTIONS = [
     { value: 'portal', label: 'Portal (teleport to target object)' }
 ];
 
+const VARIABLE_MODIFIER_OP_OPTIONS = [
+    { value: 'set', label: 'Set (write value directly)' },
+    { value: 'add', label: 'Add (value += amount)' },
+    { value: 'subtract', label: 'Subtract (value -= amount)' },
+    { value: 'toggle', label: 'Toggle (flip boolean, value ignored)' }
+];
+
+const VARIABLE_MODIFIER_MODE_OPTIONS = [
+    { value: 'once', label: 'Once (edge-detected on entry, repeatable on re-entry)' },
+    { value: 'continuous', label: 'Continuous (re-applies every tick while overlapping)' }
+];
+
 const COLLIDER_SHAPE_OPTIONS = [
     { value: 'box', label: 'Box (square / rect)' },
     { value: 'circle', label: 'Circle' },
@@ -120,6 +132,29 @@ const SCHEMAS = {
         { key: 'launchOffsetX', label: 'Jump Pad Launch Offset X', kind: 'number', default: 0 },
         { key: 'launchOffsetY', label: 'Jump Pad Launch Offset Y', kind: 'number', default: -96 },
         { key: 'targetId', label: 'Portal Target Object Id', kind: 'text', default: '' }
+    ],
+    variableModifier: [
+        { key: 'shape', label: 'Shape', kind: 'select', default: 'box', options: COLLIDER_SHAPE_OPTIONS },
+        { key: 'offsetX', label: 'Offset X (box TL / circle center)', kind: 'number', default: 0 },
+        { key: 'offsetY', label: 'Offset Y (box TL / circle center)', kind: 'number', default: 0 },
+        { key: 'width', label: 'Width (box; empty = entity)', kind: 'number', default: null },
+        { key: 'height', label: 'Height (box; empty = entity)', kind: 'number', default: null },
+        { key: 'radius', label: 'Radius (circle)', kind: 'number', default: null },
+        { key: 'points', label: 'Points (freeform JSON [{x,y}])', kind: 'json', default: [] },
+        { key: 'varName', label: 'Variable Name', kind: 'text', default: '' },
+        { key: 'op', label: 'Op', kind: 'select', default: 'set', options: VARIABLE_MODIFIER_OP_OPTIONS },
+        { key: 'value', label: 'Value (JSON; ignored for toggle)', kind: 'json', default: true },
+        { key: 'mode', label: 'Mode', kind: 'select', default: 'once', options: VARIABLE_MODIFIER_MODE_OPTIONS }
+    ],
+    destructibleContainer: [
+        { key: 'maxHealth', label: 'Max Health', kind: 'number', default: 20 },
+        { key: 'currentHealth', label: 'Current Health (empty = max)', kind: 'number', default: null },
+        { key: 'invulnerabilityDuration', label: 'Invulnerability After Hit (sec)', kind: 'number', default: 0 },
+        { key: 'destroyOnDeath', label: 'Destroy On Death', kind: 'bool', default: true },
+        { key: 'layer', label: 'Layer', kind: 'text', default: '' },
+        { key: 'collidesWith', label: 'Takes Damage From (comma list)', kind: 'stringList', default: [] },
+        { key: 'itemId', label: 'Item Id (level.items[].id) — dropped on destroy', kind: 'text', default: '' },
+        { key: 'count', label: 'Drop Count', kind: 'number', default: 1 }
     ],
     stateMachineBehavior: [
         { key: 'defaultState', label: 'Default State', kind: 'text', default: '' },
