@@ -610,8 +610,26 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     `destroyOnTrigger` — не запрошено); `mode: 'continuous'` — применяется каждый тик,
     пока пересекается (drain/regen-зона). Схема `varName`/`op`/`value`/`mode`/shape-полей
     в `src/constants/ComponentPropertySchema.js`; тесты
-    `tests/engine/VariableModifierBehavior.test.js` (9 тестов). Оставшийся §7-компонент:
-    `destructibleContainer` (12/12).
+    `tests/engine/VariableModifierBehavior.test.js` (9 тестов).
+  - `destructibleContainer` ✅ ЗАВЕРШЕНА 2026-07-20 (12/12, §7 backlog закрыт): `DestructibleContainerBehavior`
+    (`src/engine/behaviors/DestructibleContainerBehavior.js`) — подкласс `DamageHealthBehavior`,
+    не отдельная реализация health-pool: переиспользует его контактный урон/invulnerability/
+    solid-blocking-while-alive один в один (нет `isOverlapping()`, тот же duck-type, что
+    PlayerMovementBehavior уже проверяет для damageHealth-сущностей — контейнер блокирует
+    игрока, пока жив, "бесплатно"). `DamageHealthBehavior._applyDamage` разбит на явный хук
+    `_onDeath(scene)` (чистый рефакторинг, без изменения поведения) — `DestructibleContainerBehavior`
+    переопределяет его: перед вызовом `super._onDeath` (который делает `destroyEntity`, если
+    `destroyOnDeath`) спавнит loot-сущность через `EntityFactory.fromGameObjectData` (тот же
+    приём, что `SpawnerBehavior`) с `pickup`-компонентом (`itemId`/`count`) на своей позиции —
+    игрок подбирает loot как обычный Pickup (`PickupBehavior` уже существует), а не получает
+    предмет напрямую в инвентарь — тем самым сохраняется жанровая механика "разбил ящик →
+    подобрал предмет". Пустой `itemId` — loot не спавнится, `destroyOnDeath` всё равно
+    отрабатывает. `contactDamage` намеренно не выведен в editor-схему (контейнер не наносит
+    урон другим), но остаётся 0 по дефолту в рантайме (унаследованный конструктор, не требует
+    отдельного кода). Схема `maxHealth`/`currentHealth`/`invulnerabilityDuration`/
+    `destroyOnDeath`/`layer`/`collidesWith`/`itemId`/`count` в
+    `src/constants/ComponentPropertySchema.js`; тесты
+    `tests/engine/DestructibleContainerBehavior.test.js` (8 тестов).
 - **Полный критерий Фазы 4 движка** (было решено сдать минимальным срезом, v4.6.x): eslint-
   plugin-boundaries для границы `engine/`↔остальной `src/`, asset-usage-граф для отсечения
   мёртвого контента в `build:game`, флаг "включено в билд" на уровне, `build:addon`/`build:event`

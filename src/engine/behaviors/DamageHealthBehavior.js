@@ -9,6 +9,7 @@ import { getEntityBounds, rectsIntersect, matchesLayer } from './AABB.js';
  * of contact damage — a hazard/enemy sets contactDamage>0 (and typically no health pool use),
  * the player/enemy receiving hits sets maxHealth/currentHealth (and typically contactDamage=0)
  * — `layer`/`collidesWith` (Фаза A convention, AABB.js matchesLayer) decide who can hurt whom.
+ * DestructibleContainerBehavior subclasses this and overrides _onDeath to drop loot before destroying.
  */
 export class DamageHealthBehavior extends Behavior {
     constructor(entity, componentData) {
@@ -50,6 +51,11 @@ export class DamageHealthBehavior extends Behavior {
         if (this.currentHealth > 0) return;
 
         this._dead = true;
+        this._onDeath(scene);
+    }
+
+    /** Hook for subclasses (e.g. DestructibleContainerBehavior) to run extra logic before/around destroy. */
+    _onDeath(scene) {
         if (this.destroyOnDeath) {
             scene.destroyEntity(this.entity.id);
         }
