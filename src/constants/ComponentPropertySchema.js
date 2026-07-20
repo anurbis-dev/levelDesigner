@@ -164,7 +164,8 @@ const SCHEMAS = {
     ],
     stateMachineBehavior: [
         { key: 'defaultState', label: 'Default State', kind: 'text', default: '' },
-        { key: 'states', label: 'States (JSON: [{name,movement,speed,waypoints,transitions}]; distance condition: {type:"distance",op,value,fov?} — fov degrees, default 180, 360 = omnidirectional)', kind: 'json', default: [] },
+        { key: 'states', label: 'States (JSON: [{name,movement,speed,waypoints,transitions}]; distance condition: {type:"distance",op,value,fov?} — fov degrees, default 180, 360 = omnidirectional); overrides aiPreset when non-empty', kind: 'json', default: [] },
+        { key: 'aiPreset', label: 'AI Preset (JSON {aggroRadius?,leashRadius?,speed?,chaseSpeed?,waypoints?,fov?} — shorthand patrol/guard→chase→leash, ignored if States is set)', kind: 'json', default: null },
         { key: 'facingX', label: 'Initial Facing X', kind: 'number', default: 1 },
         { key: 'facingY', label: 'Initial Facing Y', kind: 'number', default: 0 }
     ],

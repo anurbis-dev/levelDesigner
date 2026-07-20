@@ -170,4 +170,67 @@ describe('StateMachineBehavior', () => {
         behavior.setState('nope');
         expect(behavior.currentStateName).toBe('idle');
     });
+
+    describe('aiPreset (§7 backlog aiBehaviorPreset Tier 1)', () => {
+        function makePresetFsm(aiPreset, x = 0, y = 0, player = null) {
+            const entity = new Entity({ id: 'npc1', type: 'object', x, y, width: 10, height: 10 });
+            const behavior = new StateMachineBehavior(entity, { properties: { aiPreset } });
+            entity.behaviors = [behavior];
+            const scene = { entities: [entity], player };
+            return { entity, behavior, scene };
+        }
+
+        it('starts in a guard-post patrol state when waypoints are omitted, and does not move until aggro\'d', () => {
+            const player = { x: 1000, y: 0 };
+            const { entity, behavior, scene } = makePresetFsm({ aggroRadius: 50 }, 0, 0, player);
+            behavior.update(1, scene);
+            expect(behavior.currentStateName).toBe('patrol');
+            expect(entity.x).toBe(0);
+            expect(entity.y).toBe(0);
+        });
+
+        it('transitions patrol -> chase once the player enters aggroRadius', () => {
+            const player = { x: 40, y: 0 };
+            const { behavior, scene } = makePresetFsm({ aggroRadius: 50, speed: 100, chaseSpeed: 30 }, 0, 0, player);
+            behavior.update(1, scene);
+            expect(behavior.currentStateName).toBe('chase');
+        });
+
+        it('transitions chase -> patrol once the player exits leashRadius', () => {
+            const player = { x: 500, y: 0 };
+            const { behavior, scene } = makePresetFsm({ aggroRadius: 50, leashRadius: 200 }, 0, 0, player);
+            behavior.setState('chase');
+            behavior.update(1, scene);
+            expect(behavior.currentStateName).toBe('patrol');
+        });
+
+        it('leashRadius defaults to 2x aggroRadius when unset', () => {
+            const player = { x: 250, y: 0 }; // beyond default leash (150*2=300)? no -> stays chasing
+            const { behavior, scene } = makePresetFsm({ aggroRadius: 150 }, 0, 0, player);
+            behavior.setState('chase');
+            behavior.update(0.001, scene);
+            expect(behavior.currentStateName).toBe('chase');
+        });
+
+        it('patrols between preset waypoints before aggro, same as a hand-written patrol state', () => {
+            const { entity, behavior, scene } = makePresetFsm({
+                aggroRadius: 5, speed: 10, waypoints: [{ x: 0, y: 0 }, { x: 10, y: 0 }]
+            });
+            behavior.update(1, scene);
+            expect(entity.x).toBeCloseTo(10);
+            expect(behavior.currentStateName).toBe('patrol');
+        });
+
+        it('explicit states takes precedence over aiPreset when both are provided', () => {
+            const entity = new Entity({ id: 'npc1', type: 'object', x: 0, y: 0, width: 10, height: 10 });
+            const behavior = new StateMachineBehavior(entity, {
+                properties: {
+                    states: [{ name: 'custom' }],
+                    defaultState: 'custom',
+                    aiPreset: { aggroRadius: 50 }
+                }
+            });
+            expect(behavior.currentStateName).toBe('custom');
+        });
+    });
 });

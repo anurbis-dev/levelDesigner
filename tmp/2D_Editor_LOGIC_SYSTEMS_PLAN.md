@@ -668,3 +668,13 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     Тесты: 3 новых в `tests/engine/PathFollowerBehavior.test.js` (точное попадание в waypoints,
     отклонение от прямой хорды mid-segment, дефолт `'linear'`). `aiBehaviorPreset`/
     `materialShaderPreset` — следующие Tier 1 пункты, не начаты.
+  - `aiBehaviorPreset` Tier 1 частично 🔨 2026-07-20: `stateMachineBehavior` получил `aiPreset`
+    (JSON `{aggroRadius?, leashRadius?, speed?, chaseSpeed?, waypoints?, fov?}`) — статический
+    `StateMachineBehavior._buildPresetStates` разворачивает его в стандартную двух-состоятельную
+    машину `patrol`(guard-пост при пустых waypoints)→`chase` по входу в `aggroRadius`→обратно
+    в `patrol` по выходу за `leashRadius` (дефолт `aggroRadius*2`). Явный `states`, если задан,
+    всегда приоритетнее `aiPreset` (это генератор-шорткат, не замена ручной машины). Без
+    отдельного каталожного ассета — конфиг инлайн на `stateMachineBehavior.properties`, тот же
+    приём, что `pathFollower.interpolation`/`PlaySound`. Schema-поле: `ComponentPropertySchema.js`
+    `aiPreset` (JSON). Тесты: 6 новых в `tests/engine/StateMachineBehavior.test.js`.
+    `materialShaderPreset` — следующий Tier 1 пункт, не начат.

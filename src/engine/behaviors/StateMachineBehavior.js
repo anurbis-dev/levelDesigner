@@ -30,19 +30,67 @@ import { compareOp, evalSpec } from '../eventgraph/ConditionEvaluator.js';
  * same one-tick-lag convention already used elsewhere in this engine (e.g. PlayerMovementBehavior
  * writing `speed` for Фаза F transitions). Initial facing defaults to (1,0) (right), overridable
  * via `properties.facingX`/`facingY` for a stationary guard's starting orientation.
+ *
+ * §7 backlog (aiBehaviorPreset, Tier 1): `properties.aiPreset` is a shorthand alternative to
+ * hand-writing `states` — `{aggroRadius?, leashRadius?, speed?, chaseSpeed?, waypoints?, fov?}`
+ * expands (`_buildPresetStates`) into the standard two-state patrol/guard→chase→leash loop:
+ * 'patrol' (or a stationary guard post when `waypoints` is empty/single-point, since
+ * `_resetPatrolProgress` already no-ops `_runPatrol` for <=1 waypoints) transitions to 'chase'
+ * within `aggroRadius`, 'chase' transitions back to 'patrol' beyond `leashRadius` (default
+ * `aggroRadius*2`). No separate reusable catalog asset/registry — `ProjectLoader.assetsById`
+ * is still an intentionally empty Map (Tier 2+), so the preset is inline component data, same
+ * convention as `PlaySound`/`pathFollower.interpolation`. Explicit `properties.states`, if
+ * present, always takes precedence over `aiPreset` (the preset is a convenience generator, not
+ * a replacement for hand-authored multi-state machines).
  */
 export class StateMachineBehavior extends Behavior {
     constructor(entity, componentData) {
         super(entity, componentData);
-        this.states = Array.isArray(this.properties.states) ? this.properties.states : [];
+        const preset = !Array.isArray(this.properties.states) && this.properties.aiPreset
+            ? StateMachineBehavior._buildPresetStates(this.properties.aiPreset)
+            : null;
+        this.states = preset ? preset.states : (Array.isArray(this.properties.states) ? this.properties.states : []);
         this._originX = entity.x;
         this._originY = entity.y;
-        this._currentStateName = this.properties.defaultState || this.states[0]?.name || null;
+        this._currentStateName = this.properties.defaultState || preset?.defaultState || this.states[0]?.name || null;
         this._patrolIndex = -1;
         this._patrolDirection = 1;
         this._facingX = this.properties.facingX ?? 1;
         this._facingY = this.properties.facingY ?? 0;
         this._resetPatrolProgress(this._stateByName(this._currentStateName));
+    }
+
+    /** Expands an `aiPreset` param bundle into a standard patrol/guard→chase→leash two-state machine. */
+    static _buildPresetStates(preset) {
+        const aggroRadius = preset.aggroRadius ?? 150;
+        const leashRadius = preset.leashRadius ?? aggroRadius * 2;
+        const speed = preset.speed ?? 100;
+        const chaseSpeed = preset.chaseSpeed ?? speed;
+        const waypoints = Array.isArray(preset.waypoints) ? preset.waypoints : [];
+        const distanceCondition = (op, value) => {
+            const condition = { type: 'distance', op, value };
+            if (preset.fov !== undefined) condition.fov = preset.fov;
+            return condition;
+        };
+
+        return {
+            defaultState: 'patrol',
+            states: [
+                {
+                    name: 'patrol',
+                    movement: 'patrol',
+                    speed,
+                    waypoints,
+                    transitions: [{ condition: distanceCondition('<', aggroRadius), target: 'chase' }]
+                },
+                {
+                    name: 'chase',
+                    movement: 'chase',
+                    speed: chaseSpeed,
+                    transitions: [{ condition: distanceCondition('>', leashRadius), target: 'patrol' }]
+                }
+            ]
+        };
     }
 
     update(dt, scene) {
