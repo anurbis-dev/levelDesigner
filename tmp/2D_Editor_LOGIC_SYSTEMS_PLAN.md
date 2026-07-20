@@ -688,5 +688,24 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     `pathFollower.interpolation`/`stateMachineBehavior.aiPreset`/`PlaySound`.
     Тесты: 3 новых в `tests/engine/Renderer.test.js`.
     **Весь Tier 1 §7 backlog (soundEffect/pathSpline/aiBehaviorPreset/materialShaderPreset)
-    закрыт.** Следующий приоритет — Tier 2 (`ProjectLoader.assetsById` реальный asset-реестр,
-    затем `prefab`).
+    закрыт.**
+  - **Tier 2 завершён ✅ 2026-07-20: реальный `ProjectLoader.assetsById` + `prefab`
+    (`SpawnObject`).** `ProjectExporter.export(..., {assetManager})` — опциональный
+    `assetManager`, встраивает `assetManager.getAllAssets().map(a => a.toJSON())` как новое
+    поле `assets` в манифест (пусто, если не передан — обратная совместимость).
+    `ProjectLoader.load()` строит настоящий `assetsById: Map` из `manifest.assets` (раньше —
+    захардкоженный пустой Map, см. старый шапка-комментарий); `ProjectLoader.loadLevel()`
+    прикрепляет его к `Scene.assetsById`. Новый `EntityFactory.fromAssetData(assetData,
+    {id?,x?,y?,layerId?}, assetsById?)` — engine-native порт `Asset.createInstance()`
+    (`src/models/Asset.js`), отдельная реализация (не переиспользует models/ui — `engine/`
+    остаётся без импортов оттуда); резолвит `sprite.properties.imageAssetId` композитного
+    ассета через `assetsById` в `imgSrc` другого каталожного ассета (аналог
+    `AssetVisualMigrate.resolveTextureSrc`, без deprecated `sprite.src` fallback).
+    Новый Event Graph action `SpawnObject` (`params: {assetId, x?, y?, layerId?}`,
+    `registerDefaultEventGraphNodes.js`) — первый action, которому реально нужен asset-реестр
+    (все предыдущие Tier 1 actions использовали inline params именно потому, что реестра не
+    было). Без editor UI для авторства `SpawnObject`-нод — не запрошено в этом срезе.
+    Тесты: 2 в `tests/ProjectExporter.test.js`, 2 в `tests/engine/ProjectLoader.test.js`,
+    7 в `tests/engine/EntityFactory.test.js`, 2 в `tests/engine/GameEngine.integration.test.js`.
+    Следующий приоритет — Tier 3 (`questObjective`/`saveSchema`/`inputMap`/`musicTrack`/
+    `audioZone`/`tileset`+`tilemap`).

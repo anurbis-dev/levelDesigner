@@ -9,19 +9,26 @@ import { Scene } from './Scene.js';
  *   3. register Special Events separately, never merged into the main registry — MVP:
  *      opts.events accepted, unused
  *   4. load one concrete level (default: entryLevelId) via EntityFactory
- * assetsById/eventsById stay empty Maps for now — ProjectExporter doesn't emit a
- * separate asset registry yet (placed objects already carry imgSrc inline); wiring
- * Addon asset-overrides needs that registry to exist first (Фаза 3/4).
+ * §7 backlog (prefab, Tier 2): assetsById is now built from `manifest.assets` (persisted
+ * catalog asset data, `Asset.toJSON()` shape — see ProjectExporter.js's opts.assetManager),
+ * keyed by asset id. Used by the `SpawnObject` Event Graph node
+ * (registerDefaultEventGraphNodes.js) via `EntityFactory.fromAssetData()`. eventsById stays
+ * an empty Map — Special Events registration (opts.events) still unused, MVP.
  */
 export class ProjectLoader {
     static load(manifest, opts = {}) {
         const levelsById = new Map();
         (manifest?.levels || []).forEach(({ id, data }) => levelsById.set(id, data));
 
+        const assetsById = new Map();
+        (manifest?.assets || []).forEach(asset => {
+            if (asset?.id) assetsById.set(asset.id, asset);
+        });
+
         return {
             levelsById,
             entryLevelId: manifest?.entryLevelId ?? null,
-            assetsById: new Map(),
+            assetsById,
             eventsById: new Map()
         };
     }
@@ -31,6 +38,8 @@ export class ProjectLoader {
         if (!levelData) {
             throw new Error(`ProjectLoader.loadLevel: unknown levelId "${levelId}"`);
         }
-        return new Scene(levelData);
+        const scene = new Scene(levelData);
+        scene.assetsById = registries.assetsById;
+        return scene;
     }
 }

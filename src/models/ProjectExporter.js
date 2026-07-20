@@ -17,8 +17,8 @@ export class ProjectExporter {
      * @param {Map<string, LevelSession>} levelSessions
      * @param {string[]} levelOrder
      * @param {Project|null} project
-     * @param {{includeLevelIds?: string[], entryLevelId?: string}} [opts]
-     * @returns {{formatVersion: number, name: string, entryLevelId: string|null, levels: Array<{id: string, data: object}>}}
+     * @param {{includeLevelIds?: string[], entryLevelId?: string, assetManager?: {getAllAssets(): Array<{toJSON(): object}>}}} [opts]
+     * @returns {{formatVersion: number, name: string, entryLevelId: string|null, levels: Array<{id: string, data: object}>, assets: object[]}}
      */
     static export(levelSessions, levelOrder, project, opts = {}) {
         const includeIds = opts.includeLevelIds ?? levelOrder;
@@ -29,11 +29,18 @@ export class ProjectExporter {
                 return { id: session.id, data: session.level.toJSON() };
             });
 
+        // §7 backlog (prefab, Tier 2): asset catalog was never part of the runtime manifest
+        // before — ProjectLoader.assetsById was a hardcoded empty Map (see its old header
+        // comment). opts.assetManager is optional so existing callers (and this file's own
+        // tests) that only care about levels keep working unchanged.
+        const assets = opts.assetManager?.getAllAssets?.().map(asset => asset.toJSON()) ?? [];
+
         return {
             formatVersion: 1,
             name: project?.name ?? 'Untitled Project',
             entryLevelId: opts.entryLevelId ?? levels[0]?.id ?? null,
-            levels
+            levels,
+            assets
         };
     }
 }

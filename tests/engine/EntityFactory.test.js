@@ -90,3 +90,86 @@ describe('EntityFactory.fromGameObjectData — component resolution', () => {
         warnSpy.mockRestore();
     });
 });
+
+describe('EntityFactory.fromAssetData (§7 backlog prefab, Tier 2)', () => {
+    it('spawns an entity from an image-type asset using its own imgSrc directly', () => {
+        const entity = EntityFactory.fromAssetData(
+            { name: 'Crate', type: 'image', width: 32, height: 32, color: '#fff', imgSrc: 'crate.png' },
+            { x: 10, y: 20 }
+        );
+
+        expect(entity.type).toBe('image');
+        expect(entity.x).toBe(10);
+        expect(entity.y).toBe(20);
+        expect(entity.imgSrc).toBe('crate.png');
+    });
+
+    it('resolves a composite asset\'s sprite.properties.imageAssetId against assetsById', () => {
+        const assetsById = new Map([['img_1', { type: 'image', imgSrc: 'hero.png' }]]);
+        const entity = EntityFactory.fromAssetData(
+            {
+                name: 'Hero', type: 'actor', width: 32, height: 32,
+                components: [{ type: 'sprite', enabled: true, properties: { imageAssetId: 'img_1' } }]
+            },
+            {},
+            assetsById
+        );
+
+        expect(entity.imgSrc).toBe('hero.png');
+    });
+
+    it('falls back to the asset\'s own imgSrc when the referenced image asset is missing', () => {
+        const entity = EntityFactory.fromAssetData({
+            name: 'Hero', type: 'actor', width: 32, height: 32, imgSrc: 'fallback.png',
+            components: [{ type: 'sprite', enabled: true, properties: { imageAssetId: 'missing' } }]
+        });
+
+        expect(entity.imgSrc).toBe('fallback.png');
+    });
+
+    it('ignores a disabled sprite component', () => {
+        const assetsById = new Map([['img_1', { type: 'image', imgSrc: 'hero.png' }]]);
+        const entity = EntityFactory.fromAssetData(
+            {
+                name: 'Hero', type: 'actor', width: 32, height: 32,
+                components: [{ type: 'sprite', enabled: false, properties: { imageAssetId: 'img_1' } }]
+            },
+            {},
+            assetsById
+        );
+
+        expect(entity.imgSrc).toBeNull();
+    });
+
+    it('defaults x/y to 0 and layerId to null, generates an id when placement omits them', () => {
+        const entity = EntityFactory.fromAssetData({ name: 'Crate', type: 'actor', width: 10, height: 10 });
+
+        expect(entity.x).toBe(0);
+        expect(entity.y).toBe(0);
+        expect(entity.layerId).toBeNull();
+        expect(entity.id).toMatch(/^spawn_/);
+    });
+
+    it('uses placement.id when provided', () => {
+        const entity = EntityFactory.fromAssetData(
+            { name: 'Crate', type: 'actor', width: 10, height: 10 },
+            { id: 'obj_fixed' }
+        );
+
+        expect(entity.id).toBe('obj_fixed');
+    });
+
+    it('copies properties/components so the source asset data is not mutated by later edits', () => {
+        const assetData = {
+            name: 'Crate', type: 'actor', width: 10, height: 10,
+            properties: { foo: 1 },
+            components: [{ id: 'c1', type: 'collider', enabled: true, properties: { bar: 2 } }]
+        };
+        const entity = EntityFactory.fromAssetData(assetData);
+        entity.properties.foo = 999;
+        entity.components[0].properties.bar = 999;
+
+        expect(assetData.properties.foo).toBe(1);
+        expect(assetData.components[0].properties.bar).toBe(2);
+    });
+});

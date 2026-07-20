@@ -83,4 +83,24 @@ describe('ProjectExporter.export', () => {
         const result = ProjectExporter.export(new Map(), [], null);
         expect(result.formatVersion).toBe(1);
     });
+
+    it('defaults assets to an empty array when opts.assetManager is omitted', () => {
+        const result = ProjectExporter.export(new Map(), [], null);
+        expect(result.assets).toEqual([]);
+    });
+
+    it('embeds opts.assetManager.getAllAssets() as toJSON()-serialized assets (§7 backlog prefab, Tier 2)', () => {
+        const assetManager = {
+            getAllAssets: () => [
+                { toJSON: () => ({ id: 'asset_1', type: 'image', imgSrc: 'crate.png' }) },
+                { toJSON: () => ({ id: 'asset_2', type: 'actor', components: [] }) }
+            ]
+        };
+        const result = ProjectExporter.export(new Map(), [], null, { assetManager });
+
+        expect(result.assets).toEqual([
+            { id: 'asset_1', type: 'image', imgSrc: 'crate.png' },
+            { id: 'asset_2', type: 'actor', components: [] }
+        ]);
+    });
 });

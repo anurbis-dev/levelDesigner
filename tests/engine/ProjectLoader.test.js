@@ -29,6 +29,14 @@ describe('ProjectLoader.load', () => {
         expect(registries.assetsById.size).toBe(0);
         expect(registries.eventsById.size).toBe(0);
     });
+
+    it('builds assetsById keyed by asset id from manifest.assets (§7 backlog prefab, Tier 2)', () => {
+        const manifest = { ...fixtureManifest(), assets: [{ id: 'asset_1', type: 'image', imgSrc: 'crate.png' }] };
+        const registries = ProjectLoader.load(manifest);
+
+        expect(registries.assetsById.size).toBe(1);
+        expect(registries.assetsById.get('asset_1')).toEqual({ id: 'asset_1', type: 'image', imgSrc: 'crate.png' });
+    });
 });
 
 describe('ProjectLoader.loadLevel', () => {
@@ -47,5 +55,14 @@ describe('ProjectLoader.loadLevel', () => {
     it('throws for an unknown levelId', () => {
         const registries = ProjectLoader.load(fixtureManifest());
         expect(() => ProjectLoader.loadLevel('missing', registries)).toThrow();
+    });
+
+    it('attaches registries.assetsById to the produced Scene (§7 backlog prefab, Tier 2)', () => {
+        const manifest = { ...fixtureManifest(), assets: [{ id: 'asset_1', type: 'image', imgSrc: 'crate.png' }] };
+        const registries = ProjectLoader.load(manifest);
+        const scene = ProjectLoader.loadLevel(registries.entryLevelId, registries);
+
+        expect(scene.assetsById).toBe(registries.assetsById);
+        expect(scene.assetsById.get('asset_1').imgSrc).toBe('crate.png');
     });
 });

@@ -2,6 +2,7 @@ import { EventGraphNodeRegistry } from './EventGraphNodeRegistry.js';
 import { evalSpec } from './ConditionEvaluator.js';
 import { DialogueRunner } from '../DialogueRunner.js';
 import { AudioPlayer } from '../AudioPlayer.js';
+import { EntityFactory } from '../EntityFactory.js';
 
 function findEntity(scene, id) {
     return scene.getAllEntities().find(e => e.id === id);
@@ -10,9 +11,9 @@ function findEntity(scene, id) {
 /**
  * Registers the Фаза D/E/F MVP node vocabulary (see docs/RUNTIME_SCHEMA.md discipline applied to
  * BehaviorRegistry — same idea here: only nodes with a real, working implementation get
- * registered; the rest of the plan's word list (SpawnObject, LoadLevel) stays
- * unregistered until a later phase actually needs them — EventGraphRuntime already
- * warns-and-skips unknown node types, so referencing one of those early is safe, just inert.
+ * registered; the rest of the plan's word list (LoadLevel) stays unregistered until a later
+ * phase actually needs it — EventGraphRuntime already warns-and-skips unknown node types, so
+ * referencing one of those early is safe, just inert.
  *
  * Boolean combinators (And/Or/Not) take `params.conditions: [{var,op,value}, ...]` — an
  * explicit list of Compare-shaped specs evaluated against current variables, not further graph
@@ -92,5 +93,20 @@ export function registerDefaultEventGraphNodes() {
     // still intentionally empty (see its header comment).
     EventGraphNodeRegistry.register('PlaySound', (node) => {
         AudioPlayer.play(node.params.src, { volume: node.params.volume, loop: node.params.loop });
+    });
+    // §7 backlog (prefab, Tier 2): resolves node.params.assetId against scene.assetsById
+    // (ProjectLoader.js, populated from the exported manifest's `assets` — see
+    // ProjectExporter.js's opts.assetManager), unlike every earlier Tier 1 action which used
+    // inline params — this is the first node that actually needs the asset registry to exist.
+    EventGraphNodeRegistry.register('SpawnObject', (node, ctx) => {
+        const assetData = ctx.scene.assetsById?.get(node.params.assetId);
+        if (!assetData) {
+            console.warn(`[engine] SpawnObject: unknown assetId '${node.params.assetId}'`);
+            return;
+        }
+        const entity = EntityFactory.fromAssetData(assetData, {
+            x: node.params.x, y: node.params.y, layerId: node.params.layerId
+        }, ctx.scene.assetsById);
+        ctx.scene.entities.push(entity);
     });
 }

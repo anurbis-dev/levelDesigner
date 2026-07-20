@@ -539,6 +539,68 @@ describe('GameEngine — §7 backlog PlaySound action', () => {
     });
 });
 
+// §7 backlog Tier 2 (prefab): SpawnObject resolves node.params.assetId against
+// scene.assetsById (ProjectLoader.js, built from the manifest's `assets` array — see
+// ProjectExporter.js's opts.assetManager) via EntityFactory.fromAssetData().
+describe('GameEngine — §7 backlog SpawnObject action (prefab, Tier 2)', () => {
+    function spawnManifest() {
+        return {
+            formatVersion: 1, name: 'Demo', entryLevelId: 'level_a',
+            assets: [{ id: 'asset_crate', name: 'Crate', type: 'actor', width: 16, height: 16, color: '#a52a2a' }],
+            levels: [{
+                id: 'level_a',
+                data: {
+                    meta: { name: 'Level A' },
+                    camera: { x: 0, y: 0, zoom: 1 },
+                    layers: [],
+                    eventGraph: {
+                        formatVersion: 1, scope: 'level',
+                        variables: [],
+                        nodes: [
+                            { id: 'n1', type: 'OnCustomEvent', params: { name: 'spawn' } },
+                            { id: 'n2', type: 'SpawnObject', params: { assetId: 'asset_crate', x: 40, y: 50 } }
+                        ],
+                        edges: [{ from: 'n1', to: 'n2' }]
+                    },
+                    objects: []
+                }
+            }]
+        };
+    }
+
+    it('spawns an entity from the resolved catalog asset at the event graph node\'s x/y', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(spawnManifest());
+
+        const before = engine.scene.entities.length;
+        engine.scene.eventGraphRuntime.emitCustomEvent('spawn');
+
+        expect(engine.scene.entities.length).toBe(before + 1);
+        const spawned = engine.scene.entities.at(-1);
+        expect(spawned.name).toBe('Crate');
+        expect(spawned.x).toBe(40);
+        expect(spawned.y).toBe(50);
+        expect(spawned.color).toBe('#a52a2a');
+    });
+
+    it('warns and no-ops for an unknown assetId', async () => {
+        const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        const manifest = spawnManifest();
+        manifest.levels[0].data.eventGraph.nodes[1].params.assetId = 'missing';
+        await engine.loadProject(manifest);
+
+        const before = engine.scene.entities.length;
+        engine.scene.eventGraphRuntime.emitCustomEvent('spawn');
+
+        expect(engine.scene.entities.length).toBe(before);
+        expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('missing'));
+        warnSpy.mockRestore();
+    });
+});
+
 describe('GameEngine — Фаза 2 vertical slice (BehaviorRegistry + collider/trigger/playerStart)', () => {
     it('resolves playerStart/collider/trigger to real behaviors and tracks trigger enter/exit across ticks', async () => {
         const { canvas } = mockCanvas();

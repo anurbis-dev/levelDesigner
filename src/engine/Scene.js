@@ -35,6 +35,13 @@ export class Scene {
         this.dialogues = new Map((levelData.dialogues || []).map(d => [d.id, d]));
         this.dialogueRunner = null;
         this.dialogueActive = false;
+        // HUD Canvases (Level.canvases), keyed by id — same "plain field" shortcut as
+        // dialogues/eventGraph above. CanvasHudRenderer reads scene.canvases + the active id
+        // list below to build the on-screen widget tree.
+        this.canvases = new Map((levelData.canvases || []).map(c => [c.id, c]));
+        // Canvas ids the active camera renders this tick (CameraBehavior.getCanvasIds(),
+        // written by GameEngine._updateCamera()); null/empty = no HUD canvas shown.
+        this.activeCanvasIds = null;
         // Item definitions (levelData.items) — display names for HUD / pickers.
         this.itemDefs = new Map(
             (levelData.items || [])
@@ -53,6 +60,11 @@ export class Scene {
                 this.npcInventories.set(objectId, new Inventory(seed));
             }
         }
+        // §7 backlog (prefab, Tier 2): catalog asset registry, keyed by asset id — populated
+        // by ProjectLoader.loadLevel() from registries.assetsById (empty Map by default here,
+        // e.g. for tests/callers constructing a Scene directly). Consumed by the `SpawnObject`
+        // Event Graph node via EntityFactory.fromAssetData().
+        this.assetsById = new Map();
         // Active camera marker entity (docs/RUNTIME_SCHEMA.md `camera`), set by
         // hideCameraMarker() at load time; null when the level has none (GameEngine falls
         // back to hardcoded player-centering, see GameEngine._updateCamera()).
