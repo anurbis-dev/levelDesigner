@@ -70,6 +70,58 @@ describe('StateMachineBehavior', () => {
         expect(behavior.currentStateName).toBe('chase');
     });
 
+    it('does not transition when the player is within range but behind the NPC\'s facing (default 180° cone)', () => {
+        // Default facing is (1,0) — player at x=-5 is directly behind, outside the 180° front cone.
+        const player = { x: -5, y: 0 };
+        const { behavior, scene } = makeFsm(
+            [
+                { name: 'idle', transitions: [{ condition: { type: 'distance', op: '<', value: 50 }, target: 'chase' }] },
+                { name: 'chase', movement: 'chase', speed: 10 }
+            ],
+            'idle',
+            0, 0, player
+        );
+        behavior.update(1, scene);
+        expect(behavior.currentStateName).toBe('idle');
+    });
+
+    it('transitions to a behind-facing player when the condition explicitly sets fov:360', () => {
+        const player = { x: -5, y: 0 };
+        const { behavior, scene } = makeFsm(
+            [
+                { name: 'idle', transitions: [{ condition: { type: 'distance', op: '<', value: 50, fov: 360 }, target: 'chase' }] },
+                { name: 'chase', movement: 'chase', speed: 10 }
+            ],
+            'idle',
+            0, 0, player
+        );
+        behavior.update(1, scene);
+        expect(behavior.currentStateName).toBe('chase');
+    });
+
+    it('facing follows patrol movement direction, gating a distance transition behind the new heading', () => {
+        // NPC starts facing (1,0) (default) at x=0; player sits at x=-15 — behind that initial
+        // facing, so tick 1 (patrol not yet moved) doesn't detect it. Patrol then walks the NPC
+        // left to x=-10 (facing becomes (-1,0)), putting the still-stationary player back in
+        // front of the NPC's new heading — tick 2 detects it.
+        const player = { x: -15, y: 0 };
+        const { entity, behavior, scene } = makeFsm(
+            [
+                { name: 'patrol', movement: 'patrol', speed: 10, waypoints: [{ x: 0, y: 0 }, { x: -10, y: 0 }],
+                    transitions: [{ condition: { type: 'distance', op: '<', value: 50 }, target: 'chase' }] },
+                { name: 'chase', movement: 'chase', speed: 10 }
+            ],
+            'patrol',
+            0, 0, player
+        );
+        behavior.update(1, scene);
+        expect(behavior.currentStateName).toBe('patrol');
+        expect(entity.x).toBeCloseTo(-10);
+
+        behavior.update(1, scene);
+        expect(behavior.currentStateName).toBe('chase');
+    });
+
     it('does not transition when the distance condition is not met', () => {
         const player = { x: 500, y: 0 };
         const { behavior, scene } = makeFsm(

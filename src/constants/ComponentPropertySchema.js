@@ -158,7 +158,9 @@ const SCHEMAS = {
     ],
     stateMachineBehavior: [
         { key: 'defaultState', label: 'Default State', kind: 'text', default: '' },
-        { key: 'states', label: 'States (JSON: [{name,movement,speed,waypoints,transitions}])', kind: 'json', default: [] }
+        { key: 'states', label: 'States (JSON: [{name,movement,speed,waypoints,transitions}]; distance condition: {type:"distance",op,value,fov?} — fov degrees, default 180, 360 = omnidirectional)', kind: 'json', default: [] },
+        { key: 'facingX', label: 'Initial Facing X', kind: 'number', default: 1 },
+        { key: 'facingY', label: 'Initial Facing Y', kind: 'number', default: 0 }
     ],
     spriteUiAnimation: [
         { key: 'frames', label: 'Frames (JSON array)', kind: 'json', default: [] },

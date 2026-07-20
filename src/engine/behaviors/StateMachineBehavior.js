@@ -22,6 +22,14 @@ import { compareOp, evalSpec } from '../eventgraph/ConditionEvaluator.js';
  *
  * `setState(name)` is a public duck-typed hook (mirrors MovablePushable's tryPush / Spawner's
  * spawnOne) for a future Event Graph "SetAIState" action — not wired to any node yet.
+ *
+ * `type:'distance'` is gated by a facing cone so the NPC doesn't "see" behind itself
+ * (`_isWithinSight`, default 180° — front half, override per-condition via `fov` degrees;
+ * `fov:360` restores the old fully-omnidirectional check). Facing (`_facingX`/`_facingY`) is
+ * the entity's last actual movement heading, updated by `_setFacing` in patrol/chase/flee —
+ * same one-tick-lag convention already used elsewhere in this engine (e.g. PlayerMovementBehavior
+ * writing `speed` for Фаза F transitions). Initial facing defaults to (1,0) (right), overridable
+ * via `properties.facingX`/`facingY` for a stationary guard's starting orientation.
  */
 export class StateMachineBehavior extends Behavior {
     constructor(entity, componentData) {
@@ -32,6 +40,8 @@ export class StateMachineBehavior extends Behavior {
         this._currentStateName = this.properties.defaultState || this.states[0]?.name || null;
         this._patrolIndex = -1;
         this._patrolDirection = 1;
+        this._facingX = this.properties.facingX ?? 1;
+        this._facingY = this.properties.facingY ?? 0;
         this._resetPatrolProgress(this._stateByName(this._currentStateName));
     }
 
@@ -74,11 +84,30 @@ export class StateMachineBehavior extends Behavior {
         if (!condition) return false;
         if (condition.type === 'distance') {
             if (!scene?.player) return false;
-            const dist = Math.hypot(scene.player.x - this.entity.x, scene.player.y - this.entity.y);
-            return compareOp(dist, condition.op, condition.value);
+            const dx = scene.player.x - this.entity.x;
+            const dy = scene.player.y - this.entity.y;
+            const dist = Math.hypot(dx, dy);
+            if (!compareOp(dist, condition.op, condition.value)) return false;
+            return this._isWithinSight(dx, dy, dist, condition.fov);
         }
         if (!scene?.eventGraphRuntime) return false;
         return evalSpec(condition, scene.eventGraphRuntime);
+    }
+
+    /** @returns {boolean} whether (dx,dy) at distance `dist` falls within a `fov`-degree cone centered on the current facing (default 180° — excludes the rear half). */
+    _isWithinSight(dx, dy, dist, fov = 180) {
+        if (dist === 0) return true;
+        const facingLen = Math.hypot(this._facingX, this._facingY) || 1;
+        const dot = (dx / dist) * (this._facingX / facingLen) + (dy / dist) * (this._facingY / facingLen);
+        const angleDeg = Math.acos(Math.min(1, Math.max(-1, dot))) * 180 / Math.PI;
+        return angleDeg <= fov / 2;
+    }
+
+    /** Updates the facing heading from a movement direction; no-op when not actually moving (dist 0). */
+    _setFacing(dx, dy, dist) {
+        if (dist <= 0) return;
+        this._facingX = dx / dist;
+        this._facingY = dy / dist;
     }
 
     _runMovement(state, dt, scene) {
@@ -100,6 +129,7 @@ export class StateMachineBehavior extends Behavior {
         const dx = targetX - this.entity.x;
         const dy = targetY - this.entity.y;
         const dist = Math.hypot(dx, dy);
+        this._setFacing(dx, dy, dist);
         const step = (state.speed ?? 100) * dt;
 
         if (dist <= step) {
@@ -128,6 +158,7 @@ export class StateMachineBehavior extends Behavior {
         const dy = target.y - this.entity.y;
         const dist = Math.hypot(dx, dy);
         if (dist === 0) return;
+        this._setFacing(dx, dy, dist);
         const step = Math.min(speed * dt, dist);
         this.entity.x += (dx / dist) * step;
         this.entity.y += (dy / dist) * step;
@@ -139,6 +170,7 @@ export class StateMachineBehavior extends Behavior {
         const dy = this.entity.y - target.y;
         const dist = Math.hypot(dx, dy);
         if (dist === 0) return;
+        this._setFacing(dx, dy, dist);
         const step = speed * dt;
         this.entity.x += (dx / dist) * step;
         this.entity.y += (dy / dist) * step;

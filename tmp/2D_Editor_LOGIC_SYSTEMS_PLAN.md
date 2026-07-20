@@ -535,6 +535,13 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     для будущего Event Graph action "SetAIState" (не подключён — вне рамок прохода). Схема
     `defaultState`/`states` в `src/constants/ComponentPropertySchema.js`; тесты
     `tests/engine/StateMachineBehavior.test.js` (9 тестов).
+    **Facing-cone fix (2026-07-20, v4.28.0):** `type:'distance'` был всенаправленным — NPC
+    "видел" игрока и у себя за спиной. Добавлен `_isWithinSight()` — конус обзора вокруг
+    `_facingX`/`_facingY` (направление последнего фактического движения, обновляется в
+    `patrol`/`chase`/`flee`), дефолт `fov: 180°` (не видит строго позади), override за счёт
+    `condition.fov` (`360` — старое поведение). `properties.facingX`/`facingY` — начальная
+    ориентация неподвижного NPC (дефолт `(1,0)`). Тесты +3 в
+    `tests/engine/StateMachineBehavior.test.js` (12 всего).
   - `checkpointSavePoint` ✅ ЗАВЕРШЕНА 2026-07-19: `CheckpointSaveBehavior`
     (`src/engine/behaviors/CheckpointSaveBehavior.js`) — самодостаточное поведение (как
     `pickup`), пустая схема свойств (как `playerStart` — триггер-зона = entity box, без
