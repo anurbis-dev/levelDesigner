@@ -657,3 +657,14 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     плейсхолдером без выделенной Asset Editor формы — не запрошено в этом срезе.
     Тесты: `tests/engine/AudioPlayer.test.js` (5), `GameEngine.integration.test.js` §7 PlaySound
     (1). `musicTrack`/`audioZone` (loop/crossfade/ambient-on-enter) — следующий Tier, не начат.
+  - `pathSpline` Tier 1 частично 🔨 2026-07-20: `pathFollower` получил `interpolation`
+    (`'linear'` дефолт \| `'smooth'`) — в `'smooth'` `PathFollowerBehavior._updateSmooth`/
+    `_catmullRom` (`src/engine/behaviors/PathFollowerBehavior.js`) двигает entity по кривой
+    Catmull-Rom через `waypoints` вместо прямых отрезков; control points — соседние waypoints
+    (клэмп на границах, без wrap даже в `mode:'loop'`), прогресс сегмента `_segT` — по длине
+    прямой хорды (приближение, не истинная длина дуги). Без отдельного каталожного ассета —
+    конфиг инлайн на `pathFollower.properties`, тот же приём, что `PlaySound`. Schema-форма:
+    `ComponentPropertySchema.js` `PATH_FOLLOWER_INTERPOLATION_OPTIONS`.
+    Тесты: 3 новых в `tests/engine/PathFollowerBehavior.test.js` (точное попадание в waypoints,
+    отклонение от прямой хорды mid-segment, дефолт `'linear'`). `aiBehaviorPreset`/
+    `materialShaderPreset` — следующие Tier 1 пункты, не начаты.

@@ -15,6 +15,11 @@ const PATH_FOLLOWER_MODE_OPTIONS = [
     { value: 'once', label: 'Once (stops at last waypoint)' }
 ];
 
+const PATH_FOLLOWER_INTERPOLATION_OPTIONS = [
+    { value: 'linear', label: 'Linear (straight segments)' },
+    { value: 'smooth', label: 'Smooth (Catmull-Rom curve)' }
+];
+
 const CONVEYOR_ZIPLINE_JUMPPAD_PORTAL_KIND_OPTIONS = [
     { value: 'conveyor', label: 'Conveyor (continuous push while overlapping)' },
     { value: 'zipline', label: 'Zipline (rides player to a target point)' },
@@ -94,7 +99,8 @@ const SCHEMAS = {
         { key: 'waypoints', label: 'Waypoints (JSON [{x,y}], offsets from spawn)', kind: 'json', default: [] },
         { key: 'speed', label: 'Speed (px/sec)', kind: 'number', default: 100 },
         { key: 'mode', label: 'Mode', kind: 'select', default: 'loop', options: PATH_FOLLOWER_MODE_OPTIONS },
-        { key: 'waitAtWaypoint', label: 'Wait At Waypoint (sec)', kind: 'number', default: 0 }
+        { key: 'waitAtWaypoint', label: 'Wait At Waypoint (sec)', kind: 'number', default: 0 },
+        { key: 'interpolation', label: 'Interpolation', kind: 'select', default: 'linear', options: PATH_FOLLOWER_INTERPOLATION_OPTIONS }
     ],
     spawner: [
         { key: 'template', label: 'Template (JSON GameObject data, id/x/y ignored)', kind: 'json', default: {} },

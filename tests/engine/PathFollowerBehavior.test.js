@@ -85,4 +85,41 @@ describe('PathFollowerBehavior', () => {
         expect(entity.x).toBe(60);
         expect(entity.y).toBe(50);
     });
+
+    describe('interpolation: smooth (Catmull-Rom)', () => {
+        it('reaches every waypoint exactly, same as linear mode', () => {
+            const entity = makeFollower(0, 0, {
+                waypoints: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }],
+                speed: 100,
+                interpolation: 'smooth'
+            });
+            const follower = entity.behaviors[0];
+            follower.update(1, {});
+            expect(entity.x).toBe(10);
+            expect(entity.y).toBe(0);
+            follower.update(1, {});
+            expect(entity.x).toBe(10);
+            expect(entity.y).toBe(10);
+        });
+
+        it('curves off the straight chord mid-segment, unlike linear mode', () => {
+            const entity = makeFollower(0, 0, {
+                waypoints: [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 20, y: 10 }, { x: 30, y: 0 }],
+                speed: 5,
+                interpolation: 'smooth'
+            });
+            const follower = entity.behaviors[0];
+            follower.update(1, {}); // t=0.5 along the (0,0)->(10,0) chord, curve pulled by control points
+            expect(entity.x).toBeCloseTo(4.375, 5);
+            expect(entity.y).toBeCloseTo(-0.625, 5);
+        });
+
+        it('defaults to linear when interpolation is unset', () => {
+            const entity = makeFollower(0, 0, { waypoints: [{ x: 0, y: 0 }, { x: 100, y: 0 }], speed: 50 });
+            expect(entity.behaviors[0].interpolation).toBe('linear');
+            entity.behaviors[0].update(1, {});
+            expect(entity.x).toBe(50);
+            expect(entity.y).toBe(0);
+        });
+    });
 });
