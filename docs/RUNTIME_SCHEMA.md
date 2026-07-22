@@ -55,7 +55,7 @@ Action (`action?`, only `button` type): `{type: 'customEvent', name: eventName}`
 
 Play HUD (`CanvasHudRenderer`): DOM-based overlay rendering active canvases (ids in `scene.activeCanvasIds`, written by active camera's `CameraBehavior.getCanvasIds()` each tick). Polling signature-diff (hash of canvas ids + widget values) drives re-render; pure helpers `resolveAnchorStyle()`, `resolveBindingValue()`, `resolveProgressFraction()`, `resolveDisplayText()` in `src/engine/CanvasHudBinding.js` are unit-testable without jsdom.
 
-**Editor authoring UI:** `src/ui/canvas-hud/CanvasHudPanel.js` (dock panel with 3-column list/list/form layout); `src/ui/canvas-hud/CanvasHudModel.js` (CRUD helpers + Event Graph scanning for autocomplete suggestions); `camera.canvasIds` rendered as `idMultiSelect` field kind in `AssetComponentDetailsPanel.js` (dynamic checkbox group populated from `level.canvases`).
+**Editor authoring UI:** `src/ui/canvas-hud/CanvasHudPanel.js` (dock panel: canvases | widgets | form | **layout Preview**); `CanvasHudPreview.js` (static 16:9 mock using play-mode anchor/CSS classes); `CanvasHudForm.js` (widget form + binding/action); `CanvasHudModel.js` (CRUD + Event Graph name suggestions); `camera.canvasIds` as `idMultiSelect` in `AssetComponentDetailsPanel.js`.
 
 ### Quests (level.quests[])
 

@@ -1,6 +1,6 @@
 /**
- * Level-scope HUD Canvases dock panel: canvases → widgets → widget form.
- * Mirrors DialoguesPanel/ItemsPanel layout + commit/undo pattern.
+ * Level-scope HUD Canvases dock panel: canvases → widgets → form → layout preview.
+ * Mirrors DialoguesPanel/ItemsPanel commit/undo pattern.
  */
 
 import {
@@ -11,19 +11,15 @@ import {
     upsertCanvas,
     removeCanvas,
     upsertWidget,
-    removeWidget,
-    normalizeCanvas,
-    WIDGET_TYPES,
-    ANCHOR_OPTIONS,
-    BINDING_SOURCE_OPTIONS,
-    listVariableNameOptions,
-    listCustomEventNameOptions
+    normalizeCanvas
 } from './CanvasHudModel.js';
-import { createIdSelect } from '../LevelObjectPicker.js';
-import { listItemOptions } from '../items/ItemModel.js';
-
-const INPUT_CSS = 'width:100%;box-sizing:border-box;background:#1f2937;color:#e5e7eb;border:1px solid #4b5563;border-radius:4px;padding:3px 6px;';
-const BTN_CSS = 'background:#374151;color:#e5e7eb;border:1px solid #4b5563;border-radius:4px;padding:2px 8px;cursor:pointer;font-size:12px;';
+import { renderCanvasHudPreview } from './CanvasHudPreview.js';
+import {
+    BTN_CSS,
+    mutedText,
+    renderCanvasMeta,
+    renderWidgetForm
+} from './CanvasHudForm.js';
 
 export class CanvasHudPanel {
     /**
@@ -42,6 +38,8 @@ export class CanvasHudPanel {
         this.selectedCanvasId = null;
         /** @type {string|null} */
         this.selectedWidgetId = null;
+        /** @type {Record<string, unknown>|null} live form values not yet committed (preview only) */
+        this._liveWidgetPatch = null;
         this._selfPatch = false;
         this._datalistSeq = 0;
 
@@ -112,18 +110,24 @@ export class CanvasHudPanel {
         body.appendChild(this.widgetsEl);
 
         this.formEl = document.createElement('div');
-        this.formEl.style.cssText = 'flex:1;min-width:0;overflow:auto;padding:8px;';
+        this.formEl.style.cssText = 'flex:0 0 300px;min-width:0;overflow:auto;padding:8px;border-right:1px solid #374151;';
         body.appendChild(this.formEl);
+
+        this.previewEl = document.createElement('div');
+        this.previewEl.style.cssText = 'flex:1;min-width:220px;overflow:auto;padding:8px;';
+        body.appendChild(this.previewEl);
 
         this.container.appendChild(body);
     }
 
     render() {
+        this._liveWidgetPatch = null;
         const level = this.levelEditor?.level;
         if (!level) {
             this.listEl.innerHTML = '<div style="color:#6b7280;">No level</div>';
             this.widgetsEl.innerHTML = '';
             this.formEl.innerHTML = '';
+            this._renderPreview(null);
             return;
         }
         const list = level.canvases || [];
@@ -144,6 +148,7 @@ export class CanvasHudPanel {
         }
         this._renderWidgets(canvas);
         this._renderForm(canvas);
+        this._renderPreview(canvas);
     }
 
     /** @private */
@@ -285,325 +290,58 @@ export class CanvasHudPanel {
     _renderForm(canvas) {
         this.formEl.innerHTML = '';
         if (!canvas) {
-            this.formEl.innerHTML = '<div style="color:#6b7280;">Select or create a canvas</div>';
+            this.formEl.appendChild(mutedText('Select or create a canvas'));
             return;
         }
 
-        this._renderCanvasMeta(canvas);
+        renderCanvasMeta(this.formEl, canvas, {
+            getList: () => this._getList(),
+            commitList: (list) => this._commitList(list),
+            commitCanvas: (c) => this._commitCanvas(c),
+            setSelectedCanvasId: (id) => { this.selectedCanvasId = id; }
+        });
 
         const widget = (canvas.widgets || []).find((w) => w.id === this.selectedWidgetId);
         if (!widget) {
-            this.formEl.appendChild(this._muted('Select or add a widget'));
+            this.formEl.appendChild(mutedText('Select or add a widget'));
             return;
         }
-        this._renderWidgetForm(canvas, widget);
-    }
-
-    /** @private */
-    _renderCanvasMeta(canvas) {
-        const meta = document.createElement('div');
-        meta.style.cssText = 'margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid #374151;';
-
-        meta.appendChild(this._fieldLabel('Canvas id'));
-        const idInput = document.createElement('input');
-        idInput.type = 'text';
-        idInput.value = canvas.id;
-        idInput.style.cssText = INPUT_CSS;
-        idInput.addEventListener('change', () => {
-            const newId = idInput.value.trim();
-            if (!newId || newId === canvas.id) return;
-            if (this._getList().some((c) => c.id === newId)) {
-                idInput.value = canvas.id;
-                return;
-            }
-            const next = cloneCanvases(this._getList());
-            const idx = next.findIndex((c) => c.id === canvas.id);
-            if (idx < 0) return;
-            next[idx] = { ...next[idx], id: newId };
-            this.selectedCanvasId = newId;
-            this._commitList(next);
+        renderWidgetForm(this.formEl, canvas, widget, {
+            level: this.levelEditor?.level,
+            nextListId: () => `canvas-hud-suggest-${++this._datalistSeq}`,
+            stageLive: (fields) => this._stageLivePreview(fields),
+            commitCanvas: (c) => this._commitCanvas(c),
+            clearSelectedWidget: () => { this.selectedWidgetId = null; }
         });
-        meta.appendChild(idInput);
-
-        meta.appendChild(this._fieldLabel('Display name'));
-        const nameInput = document.createElement('input');
-        nameInput.type = 'text';
-        nameInput.value = canvas.name || canvas.id;
-        nameInput.style.cssText = INPUT_CSS;
-        nameInput.addEventListener('change', () => {
-            this._commitCanvas({ ...canvas, name: nameInput.value });
-        });
-        meta.appendChild(nameInput);
-
-        this.formEl.appendChild(meta);
-    }
-
-    /** @private */
-    _renderWidgetForm(canvas, widget) {
-        const patch = (fields) => {
-            this._commitCanvas(upsertWidget(canvas, { ...widget, ...fields }));
-        };
-
-        const head = document.createElement('div');
-        head.style.cssText = 'display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;';
-        const t = document.createElement('span');
-        t.style.fontWeight = '600';
-        t.textContent = `Widget ${widget.id}`;
-        head.appendChild(t);
-        const del = document.createElement('button');
-        del.type = 'button';
-        del.textContent = 'Delete widget';
-        del.style.cssText = BTN_CSS;
-        del.addEventListener('click', () => {
-            this.selectedWidgetId = null;
-            this._commitCanvas(removeWidget(canvas, widget.id));
-        });
-        head.appendChild(del);
-        this.formEl.appendChild(head);
-
-        this.formEl.appendChild(this._fieldLabel('Type'));
-        this.formEl.appendChild(createIdSelect({
-            value: widget.type || 'text',
-            emptyLabel: '— type —',
-            options: WIDGET_TYPES,
-            onChange: (v) => patch({ type: v || 'text' })
-        }));
-
-        this.formEl.appendChild(this._fieldLabel('Anchor'));
-        this.formEl.appendChild(createIdSelect({
-            value: widget.anchor || 'topLeft',
-            emptyLabel: '— anchor —',
-            options: ANCHOR_OPTIONS,
-            onChange: (v) => patch({ anchor: v || 'topLeft' })
-        }));
-
-        this.formEl.appendChild(this._numberPairRow(
-            'Offset X', 'Offset Y',
-            widget.offsetX ?? 0, widget.offsetY ?? 0,
-            (x) => patch({ offsetX: x }),
-            (y) => patch({ offsetY: y })
-        ));
-
-        this.formEl.appendChild(this._numberPairRow(
-            'Width (empty = auto)', 'Height (empty = auto)',
-            widget.width, widget.height,
-            (v) => patch({ width: v }),
-            (v) => patch({ height: v }),
-            true
-        ));
-
-        if (widget.type === 'text' || widget.type === 'button') {
-            this.formEl.appendChild(this._fieldLabel('Text (fallback if unbound)'));
-            const textIn = document.createElement('input');
-            textIn.type = 'text';
-            textIn.value = widget.text || '';
-            textIn.style.cssText = INPUT_CSS;
-            textIn.addEventListener('change', () => patch({ text: textIn.value }));
-            this.formEl.appendChild(textIn);
-        }
-
-        if (widget.type === 'image') {
-            this.formEl.appendChild(this._fieldLabel('Image src (URL/path)'));
-            const src = document.createElement('input');
-            src.type = 'text';
-            src.value = widget.imgSrc || '';
-            src.style.cssText = INPUT_CSS;
-            src.addEventListener('change', () => patch({ imgSrc: src.value }));
-            this.formEl.appendChild(src);
-        }
-
-        this._renderBindingSection(canvas, widget, patch);
-
-        if (widget.type === 'button') {
-            this._renderActionSection(canvas, widget, patch);
-        }
     }
 
     /**
-     * Two number inputs side by side (offsets, or width/height).
+     * Apply in-progress form values to preview without history/commit (live layout feedback).
      * @private
+     * @param {Record<string, unknown>} fields
      */
-    _numberPairRow(labelA, labelB, valueA, valueB, onA, onB, optional = false) {
-        const wrap = document.createElement('div');
-        wrap.style.cssText = 'display:flex;gap:6px;margin-bottom:6px;';
-
-        const colA = document.createElement('div');
-        colA.style.flex = '1';
-        colA.appendChild(this._fieldLabel(labelA));
-        const inA = document.createElement('input');
-        inA.type = 'number';
-        inA.value = valueA == null ? '' : String(valueA);
-        inA.style.cssText = INPUT_CSS;
-        inA.addEventListener('change', () => {
-            const s = inA.value.trim();
-            onA(s === '' ? (optional ? undefined : 0) : Number(s));
-        });
-        colA.appendChild(inA);
-
-        const colB = document.createElement('div');
-        colB.style.flex = '1';
-        colB.appendChild(this._fieldLabel(labelB));
-        const inB = document.createElement('input');
-        inB.type = 'number';
-        inB.value = valueB == null ? '' : String(valueB);
-        inB.style.cssText = INPUT_CSS;
-        inB.addEventListener('change', () => {
-            const s = inB.value.trim();
-            onB(s === '' ? (optional ? undefined : 0) : Number(s));
-        });
-        colB.appendChild(inB);
-
-        wrap.appendChild(colA);
-        wrap.appendChild(colB);
-        return wrap;
-    }
-
-    /** @private */
-    _renderBindingSection(canvas, widget, patch) {
-        const box = document.createElement('div');
-        box.style.cssText = 'margin-top:8px;padding-top:8px;border-top:1px solid #374151;';
-        const h = document.createElement('div');
-        h.style.cssText = 'font-weight:600;margin-bottom:6px;';
-        h.textContent = 'Data binding';
-        box.appendChild(h);
-
-        const binding = widget.binding || null;
-        box.appendChild(this._fieldLabel('Bind to'));
-        box.appendChild(createIdSelect({
-            value: binding?.source || '',
-            emptyLabel: '— static (no binding) —',
-            options: BINDING_SOURCE_OPTIONS,
-            onChange: (v) => {
-                if (!v) {
-                    const next = { ...widget };
-                    delete next.binding;
-                    patch(next);
-                    return;
-                }
-                patch({ binding: v === 'variable' ? { source: 'variable', name: '' } : { source: 'inventoryCount', itemId: '', max: 100 } });
-            }
-        }));
-
-        if (binding?.source === 'variable') {
-            box.appendChild(this._fieldLabel('Variable name'));
-            box.appendChild(this._datalistInput({
-                value: binding.name || '',
-                placeholder: 'score',
-                options: listVariableNameOptions(this.levelEditor?.level),
-                onChange: (v) => patch({ binding: { ...binding, name: v } })
-            }));
-        }
-
-        if (binding?.source === 'inventoryCount') {
-            const items = this.levelEditor?.level?.items || [];
-            box.appendChild(this._fieldLabel('Item'));
-            box.appendChild(createIdSelect({
-                value: binding.itemId || '',
-                emptyLabel: '— item —',
-                options: listItemOptions(items, binding.itemId ? [binding.itemId] : []),
-                onChange: (v) => patch({ binding: { ...binding, itemId: v } })
-            }));
-        }
-
-        if (binding && widget.type === 'progressBar') {
-            box.appendChild(this._fieldLabel('Max (100% value)'));
-            const maxIn = document.createElement('input');
-            maxIn.type = 'number';
-            maxIn.value = String(binding.max ?? 100);
-            maxIn.style.cssText = INPUT_CSS;
-            maxIn.addEventListener('change', () => {
-                patch({ binding: { ...binding, max: Number(maxIn.value) || 1 } });
-            });
-            box.appendChild(maxIn);
-        }
-
-        this.formEl.appendChild(box);
-    }
-
-    /** @private */
-    _renderActionSection(canvas, widget, patch) {
-        const box = document.createElement('div');
-        box.style.cssText = 'margin-top:8px;padding-top:8px;border-top:1px solid #374151;';
-        const h = document.createElement('div');
-        h.style.cssText = 'font-weight:600;margin-bottom:6px;';
-        h.textContent = 'On click';
-        box.appendChild(h);
-
-        const action = widget.action || null;
-        box.appendChild(this._fieldLabel('Action'));
-        box.appendChild(createIdSelect({
-            value: action?.type || '',
-            emptyLabel: '— none —',
-            options: [{ id: 'customEvent', label: 'Emit custom event (Event Graph OnCustomEvent)' }],
-            onChange: (v) => {
-                if (!v) {
-                    const next = { ...widget };
-                    delete next.action;
-                    patch(next);
-                    return;
-                }
-                patch({ action: { type: 'customEvent', name: '' } });
-            }
-        }));
-
-        if (action?.type === 'customEvent') {
-            box.appendChild(this._fieldLabel('Event name'));
-            box.appendChild(this._datalistInput({
-                value: action.name || '',
-                placeholder: 'addScore',
-                options: listCustomEventNameOptions(this.levelEditor?.level),
-                onChange: (v) => patch({ action: { ...action, name: v } })
-            }));
-        }
-
-        this.formEl.appendChild(box);
+    _stageLivePreview(fields) {
+        this._liveWidgetPatch = { ...(this._liveWidgetPatch || {}), ...fields };
+        const list = this._getList();
+        let canvas = list.find((c) => c.id === this.selectedCanvasId) || null;
+        if (canvas) canvas = normalizeCanvas(canvas);
+        this._renderPreview(canvas);
     }
 
     /**
-     * Text input with a <datalist> of known-value suggestions — used for variable/event
-     * names that are authoring conventions, not an enumerable id domain like items/canvases
-     * (the name may not exist in the Event Graph yet), so a hard dropdown would block
-     * legitimate new-name entry.
+     * Static layout preview — see CanvasHudPreview.js.
      * @private
-     * @param {{ value: string, placeholder?: string, options: {id:string,label:string}[], onChange: (v:string) => void }} opts
      */
-    _datalistInput(opts) {
-        const wrap = document.createElement('div');
-        const listId = `canvas-hud-suggest-${++this._datalistSeq}`;
-
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = opts.value || '';
-        input.placeholder = opts.placeholder || '';
-        input.setAttribute('list', listId);
-        input.style.cssText = INPUT_CSS;
-        input.addEventListener('change', () => opts.onChange(input.value.trim()));
-        wrap.appendChild(input);
-
-        const datalist = document.createElement('datalist');
-        datalist.id = listId;
-        for (const o of opts.options || []) {
-            const opt = document.createElement('option');
-            opt.value = o.id;
-            datalist.appendChild(opt);
-        }
-        wrap.appendChild(datalist);
-        return wrap;
-    }
-
-    /** @private */
-    _fieldLabel(text) {
-        const el = document.createElement('div');
-        el.style.cssText = 'color:#9ca3af;margin:6px 0 2px;';
-        el.textContent = text;
-        return el;
-    }
-
-    /** @private */
-    _muted(text) {
-        const el = document.createElement('div');
-        el.style.color = '#6b7280';
-        el.textContent = text;
-        return el;
+    _renderPreview(canvas) {
+        renderCanvasHudPreview(this.previewEl, {
+            canvas,
+            selectedWidgetId: this.selectedWidgetId,
+            livePatch: this._liveWidgetPatch,
+            level: this.levelEditor?.level,
+            onSelectWidget: (id) => {
+                this.selectedWidgetId = id;
+                this.render();
+            }
+        });
     }
 }
