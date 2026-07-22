@@ -15,6 +15,7 @@ import { AssetPreviewPanel } from '../asset-editor/AssetPreviewPanel.js';
 import { EventGraphPanel } from '../event-graph/EventGraphPanel.js';
 import { DialoguesPanel } from '../dialogues/DialoguesPanel.js';
 import { ItemsPanel } from '../items/ItemsPanel.js';
+import { CanvasHudPanel } from '../canvas-hud/CanvasHudPanel.js';
 import { ASSET_EDITOR_TYPES, FACTORY_ONLY_LEVEL_TYPES } from './DockConstants.js';
 import { Logger } from '../../utils/Logger.js';
 
@@ -137,6 +138,14 @@ export function createPanelCopy(contentType, leafId, levelEditor) {
                 root.style.minHeight = '0';
                 root.style.height = '100%';
                 panel = new ItemsPanel(root, levelEditor.stateManager, levelEditor, opts);
+                break;
+            case 'canvases':
+                root.classList.add('tab-content-right');
+                root.style.display = 'flex';
+                root.style.flexDirection = 'column';
+                root.style.minHeight = '0';
+                root.style.height = '100%';
+                panel = new CanvasHudPanel(root, levelEditor.stateManager, levelEditor, opts);
                 break;
             default:
                 return null;

@@ -141,6 +141,20 @@ export class AssetComponentDetailsPanel {
     }
 
     /**
+     * Dynamic option source for 'idMultiSelect' fields — mirrors the assetRef pattern
+     * (live list from editor state) but for level-scope id catalogs instead of assets.
+     * @param {import('../../constants/ComponentPropertySchema.js').CompField} field
+     * @returns {{id:string,label:string}[]}
+     * @private
+     */
+    _dynamicIdOptions(field) {
+        if (field.source === 'canvases') {
+            return (this.levelEditor?.level?.canvases || []).map((c) => ({ id: c.id, label: c.name || c.id }));
+        }
+        return [];
+    }
+
+    /**
      * @param {import('../../constants/ComponentPropertySchema.js').CompField} field
      * @param {object} props
      * @private
@@ -179,6 +193,27 @@ export class AssetComponentDetailsPanel {
                     <input type="checkbox" data-field="${field.key}" class="ae-cf" id="${id}" ${val ? 'checked' : ''} />
                     <span>${this._esc(field.label)}</span>
                 </label>
+            `;
+        }
+        if (field.kind === 'idMultiSelect') {
+            const current = new Set(Array.isArray(val) ? val : (field.default || []));
+            const options = this._dynamicIdOptions(field);
+            const rows = options.length
+                ? options.map((o) => `
+                    <label style="display:flex;align-items:center;gap:6px;padding:2px 0;cursor:pointer;">
+                        <input type="checkbox" class="ae-cf-multi" data-multi-field="${field.key}" value="${this._esc(o.id)}" ${current.has(o.id) ? 'checked' : ''} />
+                        <span>${this._esc(o.label)}</span>
+                    </label>
+                `).join('')
+                : `<div style="color:var(--ui-text-color,#6b7280);font-size:11px;">None defined yet</div>`;
+            return `
+                <div data-multi-container="${field.key}">
+                    <label style="${labelStyle}">${this._esc(field.label)}</label>
+                    <div style="display:flex;flex-direction:column;border:1px solid var(--ui-border-color,#374151);border-radius:4px;padding:4px 6px;max-height:120px;overflow:auto;">
+                        ${rows}
+                    </div>
+                    ${err}
+                </div>
             `;
         }
         if (field.kind === 'select') {
@@ -389,6 +424,24 @@ export class AssetComponentDetailsPanel {
                 });
                 this.render();
             });
+        });
+
+        this.container.querySelectorAll('[data-multi-container]').forEach((box) => {
+            const key = box.dataset.multiContainer;
+            const field = schema.find((f) => f.key === key);
+            if (!field) return;
+            const checkboxes = box.querySelectorAll(`.ae-cf-multi[data-multi-field="${key}"]`);
+            const apply = () => {
+                const values = Array.from(checkboxes).filter((cb) => cb.checked).map((cb) => cb.value);
+                this._livePatch(assetId, componentId, (c) => {
+                    const next = { ...(c.properties || {}) };
+                    if (values.length) next[key] = values;
+                    else delete next[key];
+                    c.properties = next;
+                    return c;
+                }, { recordHistory: true });
+            };
+            checkboxes.forEach((cb) => cb.addEventListener('change', apply));
         });
     }
 

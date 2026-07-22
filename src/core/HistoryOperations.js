@@ -131,6 +131,7 @@ export class HistoryOperations extends BaseModule {
         this.restoreEventGraphFromHistory(state.eventGraph);
         this.restoreDialoguesFromHistory(state.dialogues);
         this.restoreInventoryDataFromHistory(state.inventoryData);
+        this.restoreCanvasesFromHistory(state.canvases);
         this.finalizeHistoryRestore();
     }
 
@@ -177,6 +178,19 @@ export class HistoryOperations extends BaseModule {
         this.editor.stateManager?.set?.(
             'inventoryRevision',
             (this.editor.stateManager.get('inventoryRevision') || 0) + 1
+        );
+    }
+
+    /**
+     * Restore level.canvases from history (undefined = legacy snapshot, leave as-is).
+     * @param {Array|undefined} canvases
+     */
+    restoreCanvasesFromHistory(canvases) {
+        if (canvases === undefined || !this.editor.level) return;
+        this.editor.level.canvases = JSON.parse(JSON.stringify(Array.isArray(canvases) ? canvases : []));
+        this.editor.stateManager?.set?.(
+            'canvasesRevision',
+            (this.editor.stateManager.get('canvasesRevision') || 0) + 1
         );
     }
 

@@ -5,8 +5,9 @@
 
 /**
  * @typedef {{ key: string, label: string,
- *   kind: 'number'|'text'|'bool'|'stringList'|'json'|'select'|'color'|'assetRef',
- *   default?: *, options?: { value: string, label: string }[], assetTypes?: string[] }} CompField
+ *   kind: 'number'|'text'|'bool'|'stringList'|'json'|'select'|'color'|'assetRef'|'idMultiSelect',
+ *   default?: *, options?: { value: string, label: string }[], assetTypes?: string[],
+ *   source?: 'canvases' }} CompField
  */
 
 const PATH_FOLLOWER_MODE_OPTIONS = [
@@ -185,7 +186,7 @@ const SCHEMAS = {
         { key: 'deadzoneHeight', label: 'Deadzone Height', kind: 'number', default: 0 },
         { key: 'bounds', label: 'Bounds (JSON {x,y,width,height}; empty = unbounded)', kind: 'json', default: null },
         { key: 'renderLayers', label: 'Render Layers (comma list of layer ids; empty = all)', kind: 'stringList', default: [] },
-        { key: 'canvasIds', label: 'HUD Canvas Ids (comma list; empty = none)', kind: 'stringList', default: [] }
+        { key: 'canvasIds', label: 'HUD Canvases (empty = none)', kind: 'idMultiSelect', source: 'canvases', default: [] }
     ]
 };
 

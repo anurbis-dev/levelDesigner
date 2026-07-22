@@ -32,6 +32,11 @@ export class HistoryManager extends BaseManager {
          * @type {null|(() => object|undefined)}
          */
         this._inventoryDataProvider = null;
+        /**
+         * Optional () => canvases[] for level.canvases snapshots (HUD Canvas UI).
+         * @type {null|(() => Array|undefined)}
+         */
+        this._canvasesProvider = null;
     }
 
     /**
@@ -53,6 +58,13 @@ export class HistoryManager extends BaseManager {
      */
     setInventoryDataProvider(provider) {
         this._inventoryDataProvider = typeof provider === 'function' ? provider : null;
+    }
+
+    /**
+     * @param {null|(() => Array|undefined)} provider
+     */
+    setCanvasesProvider(provider) {
+        this._canvasesProvider = typeof provider === 'function' ? provider : null;
     }
 
     /**
@@ -105,6 +117,21 @@ export class HistoryManager extends BaseManager {
     }
 
     /**
+     * @returns {Array|undefined}
+     * @private
+     */
+    _snapshotCanvases() {
+        if (!this._canvasesProvider) return undefined;
+        try {
+            const c = this._canvasesProvider();
+            if (c === undefined) return undefined;
+            return JSON.parse(JSON.stringify(Array.isArray(c) ? c : []));
+        } catch {
+            return [];
+        }
+    }
+
+    /**
      * Save current state to history
      * @param {Array} objects - Level objects array
      * @param {Set} selection - Selected objects set
@@ -137,6 +164,10 @@ export class HistoryManager extends BaseManager {
         const inventoryData = this._snapshotInventoryData();
         if (inventoryData !== undefined) {
             stateData.inventoryData = inventoryData;
+        }
+        const canvases = this._snapshotCanvases();
+        if (canvases !== undefined) {
+            stateData.canvases = canvases;
         }
 
         const stateSnapshot = JSON.stringify(stateData);
@@ -193,6 +224,9 @@ export class HistoryManager extends BaseManager {
                 : undefined,
             inventoryData: Object.prototype.hasOwnProperty.call(parsedState, 'inventoryData')
                 ? parsedState.inventoryData
+                : undefined,
+            canvases: Object.prototype.hasOwnProperty.call(parsedState, 'canvases')
+                ? parsedState.canvases
                 : undefined
         };
     }
