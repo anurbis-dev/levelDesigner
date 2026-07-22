@@ -725,4 +725,16 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     HUD виджета — не запрошено в этом срезе (тот же паттерн, что HUD Canvas/Event Graph MVP).
     Тесты: `tests/engine/QuestRunner.test.js` (11), 3 в `tests/engine/Scene.test.js`, 1 e2e в
     `tests/engine/GameEngine.integration.test.js`.
-    Следующий приоритет — `saveSchema`/`inputMap`/`musicTrack`/`audioZone`/`tileset`+`tilemap`.
+  - `saveSchema` завершён ✅ 2026-07-22: новый `src/engine/SaveGame.js` — browser-guarded
+    (`typeof localStorage === 'undefined'` no-op) persistence под одним глобальным ключом
+    (`SaveGame.KEY`). Новые Event Graph actions `SaveGame`/`LoadGame`
+    (`params: {variables?: string[], inventory?: boolean}`) — схема инлайн, без отдельного
+    каталожного ассета, тот же приём, что `PlaySound`/`pathFollower.interpolation`. `save()` —
+    снапшот перечисленных `scene.eventGraphRuntime` переменных и/или `scene.inventory.list()`;
+    `load()` — восстановление (инвентарь добавляется поверх текущего — без bulk-clear на
+    `Inventory`, вне рамок прохода). "across sessions" — буквально реализовано; "across levels"
+    поддержано тем же механизмом (один глобальный ключ), но не задействовано — переключение
+    уровней само по себе требует всё ещё не зарегистрированного `LoadLevel` action.
+    Тесты: `tests/engine/SaveGame.test.js` (11), 1 e2e в `tests/engine/GameEngine.integration.test.js`
+    (save на одном GameEngine, load на другом — подтверждает персист через общий localStorage).
+    Следующий приоритет — `inputMap`/`musicTrack`/`audioZone`/`tileset`+`tilemap`.

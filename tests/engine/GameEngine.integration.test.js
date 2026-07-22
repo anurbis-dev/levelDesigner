@@ -655,6 +655,68 @@ describe('GameEngine — §7 backlog StartQuest action (questObjective, Tier 3)'
     });
 });
 
+// §7 backlog Tier 3 (saveSchema): SaveGame/LoadGame actions persist to localStorage, browser-
+// guarded (no-op in Node, mocked here). Schema is inline node params, not a separate asset.
+describe('GameEngine — §7 backlog SaveGame/LoadGame actions (saveSchema, Tier 3)', () => {
+    function saveManifest() {
+        return {
+            formatVersion: 1, name: 'Demo', entryLevelId: 'level_a',
+            levels: [{
+                id: 'level_a',
+                data: {
+                    meta: { name: 'Level A' },
+                    camera: { x: 0, y: 0, zoom: 1 },
+                    layers: [],
+                    eventGraph: {
+                        formatVersion: 1, scope: 'level',
+                        variables: [{ name: 'score', default: 0 }],
+                        nodes: [
+                            { id: 'n1', type: 'OnCustomEvent', params: { name: 'save' } },
+                            { id: 'n2', type: 'SaveGame', params: { variables: ['score'], inventory: true } },
+                            { id: 'n3', type: 'OnCustomEvent', params: { name: 'load' } },
+                            { id: 'n4', type: 'LoadGame', params: { variables: ['score'], inventory: true } }
+                        ],
+                        edges: [{ from: 'n1', to: 'n2' }, { from: 'n3', to: 'n4' }]
+                    },
+                    objects: []
+                }
+            }]
+        };
+    }
+
+    function mockLocalStorage() {
+        const store = new Map();
+        return {
+            getItem: vi.fn((k) => (store.has(k) ? store.get(k) : null)),
+            setItem: vi.fn((k, v) => store.set(k, v)),
+            removeItem: vi.fn((k) => store.delete(k))
+        };
+    }
+
+    afterEach(() => {
+        delete global.localStorage;
+    });
+
+    it('SaveGame persists variables/inventory, LoadGame restores them onto a fresh scene', async () => {
+        global.localStorage = mockLocalStorage();
+
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(saveManifest());
+        engine.scene.eventGraphRuntime.setVariable('score', 99);
+        engine.scene.inventory.add('gold', 7);
+
+        engine.scene.eventGraphRuntime.emitCustomEvent('save');
+
+        const engine2 = new GameEngine(mockCanvas().canvas);
+        await engine2.loadProject(saveManifest());
+        engine2.scene.eventGraphRuntime.emitCustomEvent('load');
+
+        expect(engine2.scene.eventGraphRuntime.getVariable('score')).toBe(99);
+        expect(engine2.scene.inventory.count('gold')).toBe(7);
+    });
+});
+
 describe('GameEngine — Фаза 2 vertical slice (BehaviorRegistry + collider/trigger/playerStart)', () => {
     it('resolves playerStart/collider/trigger to real behaviors and tracks trigger enter/exit across ticks', async () => {
         const { canvas } = mockCanvas();

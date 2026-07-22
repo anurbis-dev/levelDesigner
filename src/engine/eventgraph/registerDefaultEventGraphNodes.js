@@ -3,6 +3,7 @@ import { evalSpec } from './ConditionEvaluator.js';
 import { DialogueRunner } from '../DialogueRunner.js';
 import { AudioPlayer } from '../AudioPlayer.js';
 import { EntityFactory } from '../EntityFactory.js';
+import { SaveGame } from '../SaveGame.js';
 
 function findEntity(scene, id) {
     return scene.getAllEntities().find(e => e.id === id);
@@ -114,5 +115,14 @@ export function registerDefaultEventGraphNodes() {
     // not a separate action; no CompleteQuest/GiveReward node needed.
     EventGraphNodeRegistry.register('StartQuest', (node, ctx) => {
         ctx.scene.questRunner?.startQuest(node.params.questId);
+    });
+    // §7 backlog (saveSchema, Tier 3): schema is inline params, not a separate catalog asset —
+    // {variables?: string[], inventory?: boolean}. No-op (SaveGame guards internally) when
+    // localStorage is unavailable, same convention as PlaySound's Audio guard.
+    EventGraphNodeRegistry.register('SaveGame', (node, ctx) => {
+        SaveGame.save(ctx.scene, node.params);
+    });
+    EventGraphNodeRegistry.register('LoadGame', (node, ctx) => {
+        SaveGame.load(ctx.scene, node.params);
     });
 }

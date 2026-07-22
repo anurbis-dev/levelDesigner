@@ -52,7 +52,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '4.34.0';
+    static VERSION = '4.35.0';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -73,6 +73,7 @@ export class LevelEditor {
             inventory: this.level?.inventory ?? [],
             npcInventories: this.level?.npcInventories ?? {}
         }));
+        this.historyManager.setCanvasesProvider(() => this.level?.canvases ?? []);
         this.assetManager = new AssetManager(this.stateManager);
         this.fileManager = new FileManager();
         this.resizerManager = new ResizerManager(this);
