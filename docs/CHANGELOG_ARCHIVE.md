@@ -1,3 +1,7 @@
+## Archived from CHANGELOG.md (Canvases global delete/dup shortcuts, v4.38.1)
+
+- **Fix: Canvases uses global editor commands (v4.38.1)**: Removed panel-local Delete/Duplicate buttons (form + widgets list + Delete canvas). Delete / X and Shift+D route to `CanvasHudPanel` when the Canvases dock is under the cursor (same registry `:hover` pattern as Outliner / Asset Preview). Widget delete preferred; else selected canvas. `deleteSelection()` / `duplicateSelection()` on the panel.
+
 ## Archived from CHANGELOG.md (Canvases editor UX, v4.38.0)
 
 - **Feat: Canvases editor UX (v4.38.0)**: Preview click-drag moves widgets (`offsetX`/`offsetY`, anchor-aware; commit on release). Duplicate widget (form + widgets list). Anchor is a 3×3 icon grid (not dropdown). Form fields are single-row (label|control); numeric fields use `NumericInput` scrub like Details. Split helpers to `CanvasHudFormFields.js`; `duplicateWidget` in model. CSS: `.canvas-hud-anchor-grid`, drag cursors.

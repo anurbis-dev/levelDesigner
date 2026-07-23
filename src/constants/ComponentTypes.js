@@ -15,7 +15,7 @@ export const COMPONENT_TYPES = [
     { id: 'collider', label: 'Collider', description: 'Collision frame: box / circle / freeform; optional color. Does not crop the sprite.', genres: 'all' },
     { id: 'trigger', label: 'Trigger', description: 'Zone (box / circle / freeform) reacting to enter/exit.', genres: 'all' },
     { id: 'transformAnimation', label: 'Transform Animation', description: 'Move/rotate/scale along a Path or curve.', genres: 'platformer, transport' },
-    { id: 'spriteUiAnimation', label: 'Sprite / UI Animation', description: 'Frame-by-frame animation playback (uses Sprite src as atlas).', genres: 'all' },
+    { id: 'spriteUiAnimation', label: 'Sprite / UI Animation', description: 'Frame-by-frame animation into entity texture (Image asset / resolved imgSrc atlas).', genres: 'all' },
     { id: 'interactable', label: 'Interactable', description: 'Makes Actor usable via interact button (radius + hint).', genres: 'adventure, RPG, puzzle' },
     { id: 'pickup', label: 'Pickup', description: 'References an Item Definition; removes from level, adds to inventory.', genres: 'most genres' },
     { id: 'dialogueTrigger', label: 'Dialogue Trigger', description: 'References a Dialogue Graph, fired via Interactable/Trigger.', genres: 'RPG, adventure, visual novel' },

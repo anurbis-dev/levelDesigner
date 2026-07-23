@@ -13,6 +13,7 @@ import {
 } from './CanvasHudModel.js';
 import { createIdSelect } from '../LevelObjectPicker.js';
 import { listItemOptions } from '../items/ItemModel.js';
+import { createAssetRefControl } from '../AssetRefControl.js';
 import {
     INPUT_CSS,
     mutedText,
@@ -72,6 +73,7 @@ export function renderCanvasMeta(formEl, canvas, api) {
  * @param {object} widget
  * @param {{
  *   level: object|null|undefined,
+ *   assetManager?: object|null,
  *   nextListId: () => string,
  *   stageLive: (fields: Record<string, unknown>) => void,
  *   commitCanvas: (c: object) => void
@@ -140,14 +142,20 @@ export function renderWidgetForm(formEl, canvas, widget, api) {
     }
 
     if (widget.type === 'image') {
-        const src = document.createElement('input');
-        src.type = 'text';
-        src.value = widget.imgSrc || '';
-        src.placeholder = 'URL / path';
-        src.style.cssText = INPUT_CSS;
-        src.addEventListener('input', () => api.stageLive({ imgSrc: src.value }));
-        src.addEventListener('change', () => patch({ imgSrc: src.value }));
-        formEl.appendChild(inlineRow('Image', src));
+        // Catalog Image asset id only — disk path lives on the Image asset, not here.
+        const control = createAssetRefControl({
+            value: widget.imageAssetId || '',
+            assetManager: api.assetManager,
+            assetTypes: ['image'],
+            emptyLabel: '— image asset —',
+            onChange: (id) => {
+                const next = { ...widget, imageAssetId: id || '' };
+                delete next.imgSrc;
+                api.stageLive({ imageAssetId: id || '', imgSrc: undefined });
+                api.commitCanvas(upsertWidget(canvas, next));
+            }
+        });
+        formEl.appendChild(inlineRow('Image', control, { wrap: true }));
     }
 
     renderBindingSection(formEl, widget, patch, api);

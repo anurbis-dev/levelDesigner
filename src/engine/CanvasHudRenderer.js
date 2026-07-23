@@ -1,4 +1,9 @@
-import { resolveAnchorStyle, resolveDisplayText, resolveProgressFraction } from './CanvasHudBinding.js';
+import {
+    resolveAnchorStyle,
+    resolveDisplayText,
+    resolveProgressFraction,
+    resolveWidgetImageSrc
+} from './CanvasHudBinding.js';
 
 /**
  * Play-mode HUD overlay: renders the level's `canvases` (Level.canvases / Scene.canvases)
@@ -81,6 +86,9 @@ export class CanvasHudRenderer {
     /** @private */
     _widgetSig(scene, widget) {
         if (widget.type === 'progressBar') return `${widget.id}=${resolveProgressFraction(scene, widget.binding)}`;
+        if (widget.type === 'image') {
+            return `${widget.id}=${resolveWidgetImageSrc(widget, scene?.assetsById) || ''}`;
+        }
         return `${widget.id}=${resolveDisplayText(scene, widget)}`;
     }
 
@@ -119,7 +127,8 @@ export class CanvasHudRenderer {
             }
             case 'image': {
                 el = document.createElement('img');
-                if (widget.imgSrc) el.src = widget.imgSrc;
+                const src = resolveWidgetImageSrc(widget, scene?.assetsById);
+                if (src) el.src = src;
                 break;
             }
             case 'progressBar': {

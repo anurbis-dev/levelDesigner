@@ -306,6 +306,7 @@ export class CanvasHudPanel {
         }
         renderWidgetForm(this.formEl, canvas, widget, {
             level: this.levelEditor?.level,
+            assetManager: this.levelEditor?.assetManager,
             nextListId: () => `canvas-hud-suggest-${++this._datalistSeq}`,
             stageLive: (fields) => this._stageLivePreview(fields),
             commitCanvas: (c) => this._commitCanvas(c)
@@ -393,6 +394,7 @@ export class CanvasHudPanel {
             selectedWidgetId: this.selectedWidgetId,
             livePatch: this._liveWidgetPatch,
             level: this.levelEditor?.level,
+            assetManager: this.levelEditor?.assetManager,
             onSelectWidget: (id) => this._selectWidgetFromPreview(id),
             onLiveOffset: (_id, fields) => this._stageLiveOffset(fields),
             onCommitOffset: (id, fields) => this._commitWidgetOffset(id, fields)

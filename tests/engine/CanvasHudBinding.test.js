@@ -3,7 +3,8 @@ import {
     resolveAnchorStyle,
     resolveBindingValue,
     resolveProgressFraction,
-    resolveDisplayText
+    resolveDisplayText,
+    resolveWidgetImageSrc
 } from '../../src/engine/CanvasHudBinding.js';
 
 describe('resolveAnchorStyle', () => {
@@ -93,5 +94,21 @@ describe('resolveDisplayText', () => {
         const scene = { eventGraphRuntime: { getVariable: () => null } };
         const widget = { text: 'fallback', binding: { source: 'variable', name: 'missing' } };
         expect(resolveDisplayText(scene, widget)).toBe('fallback');
+    });
+});
+
+describe('resolveWidgetImageSrc', () => {
+    it('resolves imageAssetId via assetsById Map', () => {
+        const assetsById = new Map([['img_1', { type: 'image', imgSrc: 'data:image/png;base64,xx' }]]);
+        expect(resolveWidgetImageSrc({ imageAssetId: 'img_1' }, assetsById)).toBe('data:image/png;base64,xx');
+    });
+
+    it('returns null when image asset missing', () => {
+        expect(resolveWidgetImageSrc({ imageAssetId: 'missing' }, new Map())).toBeNull();
+    });
+
+    it('uses legacy imgSrc only when imageAssetId is empty', () => {
+        expect(resolveWidgetImageSrc({ imgSrc: '/legacy.png' }, null)).toBe('/legacy.png');
+        expect(resolveWidgetImageSrc({ imageAssetId: 'img_1', imgSrc: '/legacy.png' }, new Map())).toBeNull();
     });
 });

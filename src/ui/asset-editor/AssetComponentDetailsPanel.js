@@ -19,6 +19,7 @@ import {
     subscribeAssetEditor,
     patchEditingComponent
 } from './AssetEditorContext.js';
+import { wireAssetDropTarget } from '../AssetRefControl.js';
 
 export class AssetComponentDetailsPanel {
     /**
@@ -176,13 +177,15 @@ export class AssetComponentDetailsPanel {
                     return `<option value="${this._esc(a.id)}"${sel}>${this._esc(a.name || a.id)}</option>`;
                 })
             ].join('');
+            const typeHint = types.join('/');
             return `
-                <div>
+                <div class="asset-ref-drop" data-asset-ref-field="${field.key}" title="Pick or drop an asset from Assets panel">
                     <label for="${id}" style="${labelStyle}">${this._esc(field.label)}</label>
                     <select data-field="${field.key}" class="ae-cf" id="${id}"
                         style="width:100%;box-sizing:border-box;background:var(--ui-input-background,#111827);color:var(--ui-text-color,#d1d5db);border:1px solid var(--ui-border-color,#374151);border-radius:4px;padding:4px 6px;">
                         ${opts}
                     </select>
+                    <div style="font-size:10px;color:#6b7280;margin-top:2px;">drop ${this._esc(typeHint)} asset here</div>
                     ${err}
                 </div>
             `;
@@ -406,6 +409,26 @@ export class AssetComponentDetailsPanel {
             } else {
                 el.addEventListener('input', () => apply(false));
                 el.addEventListener('change', () => apply(true));
+            }
+            // Assets panel drag-drop onto Sprite.imageAssetId (and any assetRef field)
+            if (field.kind === 'assetRef') {
+                const dropHost = el.closest('[data-asset-ref-field]') || el;
+                wireAssetDropTarget(dropHost, {
+                    assetManager: this.levelEditor?.assetManager,
+                    assetTypes: field.assetTypes || ['image'],
+                    onAssetId: (id) => {
+                        if (![...el.options].some((o) => o.value === id)) {
+                            const o = document.createElement('option');
+                            o.value = id;
+                            const asset = this.levelEditor?.assetManager?.getAsset?.(id)
+                                || this.levelEditor?.assetManager?.getAssetById?.(id);
+                            o.textContent = asset?.name || id;
+                            el.appendChild(o);
+                        }
+                        el.value = id;
+                        el.dispatchEvent(new Event('change', { bubbles: true }));
+                    }
+                });
             }
         });
 

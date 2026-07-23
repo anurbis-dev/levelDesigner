@@ -802,6 +802,14 @@ header .text-sm {
     color: #fbbf24;
 }
 
+/* Catalog asset ref drop target (Canvases image widget, Sprite.imageAssetId, …) */
+.asset-ref-drop.asset-ref-drop--active {
+    outline: 1px dashed #fbbf24;
+    outline-offset: 2px;
+    border-radius: 4px;
+    background: rgba(30, 58, 95, 0.35);
+}
+
 .canvas-hud__widget--text {
     font-size: 13px;
     line-height: 1.25;

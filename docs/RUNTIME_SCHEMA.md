@@ -43,9 +43,9 @@ Play HUD (`DialoguePlayHud`): choices buttons + item picker while `scene.dialogu
 |------|------------|
 | `id` | Unique canvas identifier (ref from `camera.canvasIds`) |
 | `name` | Display name (editor only, informational) |
-| `widgets[]` | Array of widget definitions `{id, type, anchor, offsetX?, offsetY?, width?, height?, text?, imgSrc?, style?, binding?, action?}` |
+| `widgets[]` | Array of widget definitions `{id, type, anchor, offsetX?, offsetY?, width?, height?, text?, imageAssetId?, style?, binding?, action?}` |
 
-Widget types (`type`): `'panel'` (container), `'text'` (static/bound text), `'button'` (clickable), `'image'` (sprite/icon), `'progressBar'` (fill fraction).
+Widget types (`type`): `'panel'` (container), `'text'` (static/bound text), `'button'` (clickable), `'image'` (catalog **Image** asset via `imageAssetId` — disk path lives only on that Image asset; legacy `imgSrc` read-only fallback), `'progressBar'` (fill fraction).
 
 Anchoring: `anchor` one of 9 positions: `'topLeft'`, `'topCenter'`, `'topRight'`, `'middleLeft'`, `'middleCenter'`, `'middleRight'`, `'bottomLeft'`, `'bottomCenter'`, `'bottomRight'` (CSS absolute position, inward offsets via `offsetX`/`offsetY` in px; center/middle positions apply transform translate).
 
@@ -55,7 +55,7 @@ Action (`action?`, only `button` type): `{type: 'customEvent', name: eventName}`
 
 Play HUD (`CanvasHudRenderer`): DOM-based overlay rendering active canvases (ids in `scene.activeCanvasIds`, written by active camera's `CameraBehavior.getCanvasIds()` each tick). Polling signature-diff (hash of canvas ids + widget values) drives re-render; pure helpers `resolveAnchorStyle()`, `resolveBindingValue()`, `resolveProgressFraction()`, `resolveDisplayText()` in `src/engine/CanvasHudBinding.js` are unit-testable without jsdom.
 
-**Editor authoring UI:** `src/ui/canvas-hud/CanvasHudPanel.js` (canvases | widgets | form | layout Preview with click-drag move); `CanvasHudPreview.js` (16:9 mock + drag offsets); `CanvasHudForm.js` + `CanvasHudFormFields.js` (inline rows, scrub numbers, 3×3 anchor icons, duplicate); `CanvasHudModel.js` (CRUD + `duplicateWidget` + Event Graph name suggestions); `camera.canvasIds` as `idMultiSelect` in `AssetComponentDetailsPanel.js`.
+**Editor authoring UI:** `src/ui/canvas-hud/CanvasHudPanel.js` (canvases | widgets | form | layout Preview with click-drag move); `CanvasHudPreview.js` (16:9 mock + drag offsets); `CanvasHudForm.js` + `CanvasHudFormFields.js` (inline rows, scrub numbers, 3×3 anchor icons); image widgets use `AssetRefControl` (`imageAssetId` select + drop from Assets); `CanvasHudModel.js` (CRUD + `duplicateWidget` + Event Graph name suggestions); Delete/Shift+D via global shortcuts when panel under cursor; `camera.canvasIds` as `idMultiSelect` in `AssetComponentDetailsPanel.js`.
 
 ### Quests (level.quests[])
 

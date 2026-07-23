@@ -1,7 +1,9 @@
 /**
  * Level-scope HUD Canvas definitions + widgets.
  * - level.canvases: [{ id, name, widgets: [{ id, type, anchor, offsetX, offsetY,
- *   width?, height?, text?, imgSrc?, style?, binding?, action? }] }]
+ *   width?, height?, text?, imageAssetId?, style?, binding?, action? }] }]
+ * Image widgets reference a catalog type=image asset (`imageAssetId`); disk path lives
+ * only on that Image asset. Legacy `imgSrc` is still resolved read-only if present.
  * Runtime consumer: src/engine/CanvasHudRenderer.js / CanvasHudBinding.js.
  * Camera assignment: component.properties.canvasIds (src/constants/ComponentPropertySchema.js).
  */

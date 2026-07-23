@@ -49,7 +49,13 @@ export class PlayOperations extends BaseModule {
             this.editor.levelSessions,
             this.editor.levelOrder,
             this.editor.project,
-            { includeLevelIds: [this.editor.currentLevelId], entryLevelId: this.editor.currentLevelId }
+            {
+                includeLevelIds: [this.editor.currentLevelId],
+                entryLevelId: this.editor.currentLevelId,
+                // Catalog assets (Image disk URLs, prefabs) must reach scene.assetsById
+                // so HUD image widgets / SpawnObject resolve imageAssetId.
+                assetManager: this.editor.assetManager
+            }
         );
 
         const canvas = this._createOverlay();

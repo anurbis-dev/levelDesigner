@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- **Fix: Canvases uses global editor commands (v4.38.1)**: Removed panel-local Delete/Duplicate buttons (form + widgets list + Delete canvas). Delete / X and Shift+D route to `CanvasHudPanel` when the Canvases dock is under the cursor (same registry `:hover` pattern as Outliner / Asset Preview F/A). Widget delete preferred; else selected canvas. `deleteSelection()` / `duplicateSelection()` on the panel.
+- **Feat: HUD image widgets use catalog Image assets (v4.39.0)**: Canvases image type stores `imageAssetId` (select + drop from Assets), not a disk path/URL. Resolve via `resolveWidgetImageSrc` + `scene.assetsById` (Play export now passes `assetManager`). Shared `AssetRefControl.js`; Asset Editor Sprite `imageAssetId` also accepts drop. Legacy widget `imgSrc` remains a read-only fallback when no asset id is set. Disk path remains only on type=image assets.

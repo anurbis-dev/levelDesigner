@@ -74,6 +74,28 @@ export function resolveProgressFraction(scene, binding) {
 }
 
 /**
+ * Image widget texture URL: catalog Image asset via `imageAssetId` (preferred).
+ * Legacy `imgSrc` path is only used when no asset id is set (old levels).
+ * Disk paths belong on type=image assets, not on widgets/components.
+ * @param {{imageAssetId?: string, imgSrc?: string}|null|undefined} widget
+ * @param {Map<string, {imgSrc?: string, type?: string}>|Record<string, {imgSrc?: string}>|null|undefined} assetsById
+ * @returns {string|null}
+ */
+export function resolveWidgetImageSrc(widget, assetsById) {
+    if (!widget) return null;
+    const id = widget.imageAssetId;
+    if (id && assetsById) {
+        const asset = typeof assetsById.get === 'function'
+            ? assetsById.get(id)
+            : assetsById[id];
+        const src = asset?.imgSrc;
+        if (typeof src === 'string' && src) return src;
+    }
+    if (!id && typeof widget.imgSrc === 'string' && widget.imgSrc) return widget.imgSrc;
+    return null;
+}
+
+/**
  * Widget display text: binding value (if bound and resolvable) else the static `text` field.
  * @param {import('./Scene.js').Scene} scene
  * @param {{text?: string, binding?: object}} widget

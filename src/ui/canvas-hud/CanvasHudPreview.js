@@ -5,7 +5,8 @@
  * Supports click-select and pointer-drag to move offsetX/offsetY.
  */
 
-import { resolveAnchorStyle } from '../../engine/CanvasHudBinding.js';
+import { resolveAnchorStyle, resolveWidgetImageSrc } from '../../engine/CanvasHudBinding.js';
+import { assetsByIdFromManager } from '../AssetRefControl.js';
 
 /** Anchor → screen delta invert for right/bottom (offset is measured inward). */
 const ANCHOR_AXIS = {
@@ -82,9 +83,10 @@ export function applyPreviewWidgetStyle(el, widget) {
 /**
  * @param {object} widget
  * @param {{items?: object[]}|null|undefined} level
+ * @param {Map<string, object>|null|undefined} [assetsById]
  * @returns {HTMLElement|null}
  */
-export function buildPreviewWidget(widget, level) {
+export function buildPreviewWidget(widget, level, assetsById = null) {
     let el;
     switch (widget.type) {
         case 'button':
@@ -92,16 +94,18 @@ export function buildPreviewWidget(widget, level) {
             el.type = 'button';
             el.textContent = previewDisplayText(widget, level) || 'Button';
             break;
-        case 'image':
-            if (widget.imgSrc) {
+        case 'image': {
+            const src = resolveWidgetImageSrc(widget, assetsById);
+            if (src) {
                 el = document.createElement('img');
-                el.src = widget.imgSrc;
+                el.src = src;
             } else {
                 el = document.createElement('div');
                 el.style.cssText = 'display:flex;align-items:center;justify-content:center;min-width:40px;min-height:24px;border:1px dashed #4b5563;color:#6b7280;font-size:10px;';
                 el.textContent = 'image';
             }
             break;
+        }
         case 'progressBar': {
             el = document.createElement('div');
             el.style.minWidth = '80px';
@@ -219,6 +223,7 @@ function bindWidgetDrag(el, widget, viewport, opts) {
  *   selectedWidgetId: string|null,
  *   livePatch?: Record<string, unknown>|null,
  *   level?: object|null,
+ *   assetManager?: object|null,
  *   onSelectWidget?: (widgetId: string) => void,
  *   onLiveOffset?: (widgetId: string, fields: {offsetX:number, offsetY:number}) => void,
  *   onCommitOffset?: (widgetId: string, fields: {offsetX:number, offsetY:number}) => void
@@ -227,6 +232,7 @@ function bindWidgetDrag(el, widget, viewport, opts) {
 export function renderCanvasHudPreview(host, opts) {
     host.innerHTML = '';
     const canvas = canvasWithLivePatch(opts.canvas, opts.selectedWidgetId, opts.livePatch || null);
+    const assetsById = assetsByIdFromManager(opts.assetManager);
 
     const head = document.createElement('div');
     head.style.cssText = 'color:#9ca3af;margin-bottom:6px;font-weight:600;';
@@ -251,7 +257,7 @@ export function renderCanvasHudPreview(host, opts) {
     host.appendChild(viewport);
 
     for (const widget of canvas.widgets || []) {
-        const el = buildPreviewWidget(widget, opts.level);
+        const el = buildPreviewWidget(widget, opts.level, assetsById);
         if (!el) continue;
         if (widget.id === opts.selectedWidgetId) {
             el.classList.add('canvas-hud__widget--selected');
