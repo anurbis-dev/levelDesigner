@@ -9,15 +9,12 @@ import {
     listVariableNameOptions,
     listCustomEventNameOptions,
     cloneCanvases,
-    upsertWidget,
-    removeWidget,
-    duplicateWidget
+    upsertWidget
 } from './CanvasHudModel.js';
 import { createIdSelect } from '../LevelObjectPicker.js';
 import { listItemOptions } from '../items/ItemModel.js';
 import {
     INPUT_CSS,
-    BTN_CSS,
     mutedText,
     inlineRow,
     datalistInput,
@@ -77,9 +74,7 @@ export function renderCanvasMeta(formEl, canvas, api) {
  *   level: object|null|undefined,
  *   nextListId: () => string,
  *   stageLive: (fields: Record<string, unknown>) => void,
- *   commitCanvas: (c: object) => void,
- *   clearSelectedWidget: () => void,
- *   setSelectedWidgetId: (id: string|null) => void
+ *   commitCanvas: (c: object) => void
  * }} api
  */
 export function renderWidgetForm(formEl, canvas, widget, api) {
@@ -87,39 +82,13 @@ export function renderWidgetForm(formEl, canvas, widget, api) {
         api.commitCanvas(upsertWidget(canvas, { ...widget, ...fields }));
     };
 
+    // Delete/Duplicate use global editor shortcuts (Delete / Shift+D) when panel is under cursor.
     const head = document.createElement('div');
-    head.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:6px;margin-bottom:8px;flex-wrap:wrap;';
+    head.style.cssText = 'margin-bottom:8px;';
     const t = document.createElement('span');
     t.style.fontWeight = '600';
     t.textContent = `Widget ${widget.id}`;
     head.appendChild(t);
-
-    const actions = document.createElement('div');
-    actions.style.cssText = 'display:flex;gap:4px;';
-
-    const dup = document.createElement('button');
-    dup.type = 'button';
-    dup.textContent = 'Duplicate';
-    dup.title = 'Duplicate widget';
-    dup.style.cssText = BTN_CSS;
-    dup.addEventListener('click', () => {
-        const { canvas: next, newWidgetId } = duplicateWidget(canvas, widget.id);
-        if (!newWidgetId) return;
-        api.setSelectedWidgetId(newWidgetId);
-        api.commitCanvas(next);
-    });
-    actions.appendChild(dup);
-
-    const del = document.createElement('button');
-    del.type = 'button';
-    del.textContent = 'Delete';
-    del.style.cssText = BTN_CSS;
-    del.addEventListener('click', () => {
-        api.clearSelectedWidget();
-        api.commitCanvas(removeWidget(canvas, widget.id));
-    });
-    actions.appendChild(del);
-    head.appendChild(actions);
     formEl.appendChild(head);
 
     const typeSel = createIdSelect({

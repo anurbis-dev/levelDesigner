@@ -346,9 +346,18 @@ export class EventHandlers extends BaseModule {
 
         if (this._matchesShortcut(e, 'editor', 'delete') || this._matchesShortcut(e, 'editor', 'deleteAlt')) {
             e.preventDefault();
+            // Canvases dock under cursor: Delete/X acts on selected widget (or canvas), not level objects.
+            const canvasHud = this._canvasHudPanelUnderCursor();
+            if (canvasHud && typeof canvasHud.deleteSelection === 'function' && canvasHud.deleteSelection()) {
+                return;
+            }
             this.editor.objectOperations?.deleteSelectedObjects();
         } else if (this._matchesShortcut(e, 'editor', 'duplicate')) {
             e.preventDefault();
+            const canvasHud = this._canvasHudPanelUnderCursor();
+            if (canvasHud && typeof canvasHud.duplicateSelection === 'function' && canvasHud.duplicateSelection()) {
+                return;
+            }
             this.editor.objectOperations?.duplicateSelectedObjects();
         } else if (this._matchesShortcut(e, 'editor', 'copy')) {
             e.preventDefault();
@@ -574,6 +583,23 @@ export class EventHandlers extends BaseModule {
         const primaryRoot = document.getElementById('outliner-content-panel');
         if (primaryRoot?.matches(':hover') && this.editor.outlinerPanel) {
             return this.editor.outlinerPanel;
+        }
+        return null;
+    }
+
+    /**
+     * CanvasHudPanel under cursor (contentType `canvases`) — Delete/Shift+D route here.
+     * Same dock-registry :hover pattern as Outliner / Asset Preview.
+     * @returns {import('../ui/canvas-hud/CanvasHudPanel.js').CanvasHudPanel|null}
+     */
+    _canvasHudPanelUnderCursor() {
+        const reg = this.editor.dockManager?.registry || this.editor.dockManager?.contentRegistry;
+        if (!reg?._byLeafId) return null;
+        for (const bind of reg._byLeafId.values()) {
+            if (bind.contentType !== 'canvases' || !bind.panel) continue;
+            if (bind.root?.matches?.(':hover') || bind.panel.container?.matches?.(':hover')) {
+                return bind.panel;
+            }
         }
         return null;
     }

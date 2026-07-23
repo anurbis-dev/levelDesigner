@@ -11,6 +11,7 @@ import {
     upsertCanvas,
     removeCanvas,
     upsertWidget,
+    removeWidget,
     duplicateWidget,
     normalizeCanvas
 } from './CanvasHudModel.js';
@@ -86,16 +87,9 @@ export class CanvasHudPanel {
         addCanvas.addEventListener('click', () => this._addCanvas());
         toolbar.appendChild(addCanvas);
 
-        const delCanvas = document.createElement('button');
-        delCanvas.type = 'button';
-        delCanvas.textContent = 'Delete canvas';
-        delCanvas.style.cssText = BTN_CSS;
-        delCanvas.addEventListener('click', () => this._deleteCanvas());
-        toolbar.appendChild(delCanvas);
-
         const hint = document.createElement('span');
         hint.style.cssText = 'color:#6b7280;font-size:11px;margin-left:auto;';
-        hint.textContent = 'assign to a camera via component "HUD Canvases"';
+        hint.textContent = 'Delete / Shift+D · HUD Canvases on camera';
         toolbar.appendChild(hint);
         this.container.appendChild(toolbar);
 
@@ -273,14 +267,6 @@ export class CanvasHudPanel {
             this._commitCanvas(upsertWidget(canvas, widget));
         });
         tools.appendChild(add);
-        const dup = document.createElement('button');
-        dup.type = 'button';
-        dup.textContent = '⧉';
-        dup.title = 'Duplicate selected widget';
-        dup.style.cssText = BTN_CSS + 'width:22px;height:22px;padding:0;';
-        dup.disabled = !this.selectedWidgetId;
-        dup.addEventListener('click', () => this._duplicateSelectedWidget(canvas));
-        tools.appendChild(dup);
         head.appendChild(tools);
         this.widgetsEl.appendChild(head);
 
@@ -322,9 +308,7 @@ export class CanvasHudPanel {
             level: this.levelEditor?.level,
             nextListId: () => `canvas-hud-suggest-${++this._datalistSeq}`,
             stageLive: (fields) => this._stageLivePreview(fields),
-            commitCanvas: (c) => this._commitCanvas(c),
-            clearSelectedWidget: () => { this.selectedWidgetId = null; },
-            setSelectedWidgetId: (id) => { this.selectedWidgetId = id; }
+            commitCanvas: (c) => this._commitCanvas(c)
         });
     }
 
@@ -339,13 +323,42 @@ export class CanvasHudPanel {
         this._renderForm(canvas);
     }
 
-    /** @private */
-    _duplicateSelectedWidget(canvas) {
-        if (!this.selectedWidgetId || !canvas) return;
+    /**
+     * Global editor Delete / X when this panel is under the cursor.
+     * Prefers selected widget; otherwise deletes the selected canvas.
+     * @returns {boolean} true if handled
+     */
+    deleteSelection() {
+        if (this.selectedWidgetId && this.selectedCanvasId) {
+            let canvas = this._getList().find((c) => c.id === this.selectedCanvasId) || null;
+            if (!canvas) return false;
+            canvas = normalizeCanvas(canvas);
+            const id = this.selectedWidgetId;
+            this.selectedWidgetId = null;
+            this._commitCanvas(removeWidget(canvas, id));
+            return true;
+        }
+        if (this.selectedCanvasId) {
+            this._deleteCanvas();
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * Global editor Shift+D when this panel is under the cursor.
+     * @returns {boolean} true if handled
+     */
+    duplicateSelection() {
+        if (!this.selectedWidgetId || !this.selectedCanvasId) return false;
+        let canvas = this._getList().find((c) => c.id === this.selectedCanvasId) || null;
+        if (!canvas) return false;
+        canvas = normalizeCanvas(canvas);
         const { canvas: next, newWidgetId } = duplicateWidget(canvas, this.selectedWidgetId);
-        if (!newWidgetId) return;
+        if (!newWidgetId) return false;
         this.selectedWidgetId = newWidgetId;
         this._commitCanvas(next);
+        return true;
     }
 
     /** Live form values → preview (no history). @private */
