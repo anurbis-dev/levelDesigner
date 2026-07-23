@@ -753,6 +753,55 @@ header .text-sm {
     outline-offset: 1px;
 }
 
+.canvas-hud__widget--editor-draggable {
+    pointer-events: auto;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+}
+
+.canvas-hud__widget--editor-dragging {
+    cursor: grabbing;
+    outline: 2px solid #fbbf24;
+    outline-offset: 1px;
+    z-index: 2;
+}
+
+/* Canvases form: 3×3 anchor picker */
+.canvas-hud-anchor-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 28px);
+    gap: 3px;
+    flex: 0 0 auto;
+}
+
+.canvas-hud-anchor-grid button {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1f2937;
+    color: #e5e7eb;
+    border: 1px solid #4b5563;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+}
+
+.canvas-hud-anchor-grid button:hover {
+    background: #374151;
+    border-color: #6b7280;
+}
+
+.canvas-hud-anchor-grid button.is-selected {
+    background: #1e3a5f;
+    border-color: #fbbf24;
+    color: #fbbf24;
+}
+
 .canvas-hud__widget--text {
     font-size: 13px;
     line-height: 1.25;

@@ -11,6 +11,7 @@ import {
     upsertCanvas,
     removeCanvas,
     upsertWidget,
+    duplicateWidget,
     normalizeCanvas
 } from './CanvasHudModel.js';
 import { renderCanvasHudPreview } from './CanvasHudPreview.js';
@@ -110,7 +111,7 @@ export class CanvasHudPanel {
         body.appendChild(this.widgetsEl);
 
         this.formEl = document.createElement('div');
-        this.formEl.style.cssText = 'flex:0 0 300px;min-width:0;overflow:auto;padding:8px;border-right:1px solid #374151;';
+        this.formEl.style.cssText = 'flex:0 0 320px;min-width:0;overflow:auto;padding:8px;border-right:1px solid #374151;';
         body.appendChild(this.formEl);
 
         this.previewEl = document.createElement('div');
@@ -258,6 +259,8 @@ export class CanvasHudPanel {
         h.style.cssText = 'color:#9ca3af;font-weight:600;';
         h.textContent = 'Widgets';
         head.appendChild(h);
+        const tools = document.createElement('div');
+        tools.style.cssText = 'display:flex;gap:3px;';
         const add = document.createElement('button');
         add.type = 'button';
         add.textContent = '+';
@@ -269,7 +272,16 @@ export class CanvasHudPanel {
             this.selectedWidgetId = id;
             this._commitCanvas(upsertWidget(canvas, widget));
         });
-        head.appendChild(add);
+        tools.appendChild(add);
+        const dup = document.createElement('button');
+        dup.type = 'button';
+        dup.textContent = '⧉';
+        dup.title = 'Duplicate selected widget';
+        dup.style.cssText = BTN_CSS + 'width:22px;height:22px;padding:0;';
+        dup.disabled = !this.selectedWidgetId;
+        dup.addEventListener('click', () => this._duplicateSelectedWidget(canvas));
+        tools.appendChild(dup);
+        head.appendChild(tools);
         this.widgetsEl.appendChild(head);
 
         for (const w of canvas.widgets || []) {
@@ -311,37 +323,66 @@ export class CanvasHudPanel {
             nextListId: () => `canvas-hud-suggest-${++this._datalistSeq}`,
             stageLive: (fields) => this._stageLivePreview(fields),
             commitCanvas: (c) => this._commitCanvas(c),
-            clearSelectedWidget: () => { this.selectedWidgetId = null; }
+            clearSelectedWidget: () => { this.selectedWidgetId = null; },
+            setSelectedWidgetId: (id) => { this.selectedWidgetId = id; }
         });
     }
 
-    /**
-     * Apply in-progress form values to preview without history/commit (live layout feedback).
-     * @private
-     * @param {Record<string, unknown>} fields
-     */
+    /** Preview select without DOM rebuild (keeps pointer capture for drag). @private */
+    _selectWidgetFromPreview(id) {
+        if (this.selectedWidgetId === id) return;
+        this.selectedWidgetId = id;
+        this._liveWidgetPatch = null;
+        let canvas = this._getList().find((c) => c.id === this.selectedCanvasId) || null;
+        if (canvas) canvas = normalizeCanvas(canvas);
+        this._renderWidgets(canvas);
+        this._renderForm(canvas);
+    }
+
+    /** @private */
+    _duplicateSelectedWidget(canvas) {
+        if (!this.selectedWidgetId || !canvas) return;
+        const { canvas: next, newWidgetId } = duplicateWidget(canvas, this.selectedWidgetId);
+        if (!newWidgetId) return;
+        this.selectedWidgetId = newWidgetId;
+        this._commitCanvas(next);
+    }
+
+    /** Live form values → preview (no history). @private */
     _stageLivePreview(fields) {
         this._liveWidgetPatch = { ...(this._liveWidgetPatch || {}), ...fields };
-        const list = this._getList();
-        let canvas = list.find((c) => c.id === this.selectedCanvasId) || null;
+        let canvas = this._getList().find((c) => c.id === this.selectedCanvasId) || null;
         if (canvas) canvas = normalizeCanvas(canvas);
         this._renderPreview(canvas);
     }
 
-    /**
-     * Static layout preview — see CanvasHudPreview.js.
-     * @private
-     */
+    /** Live offset during drag — patch only, no preview rebuild. @private */
+    _stageLiveOffset(fields) {
+        this._liveWidgetPatch = { ...(this._liveWidgetPatch || {}), ...fields };
+    }
+
+    /** Commit offset after preview drag. @private */
+    _commitWidgetOffset(widgetId, fields) {
+        let canvas = this._getList().find((c) => c.id === this.selectedCanvasId) || null;
+        if (!canvas) return;
+        canvas = normalizeCanvas(canvas);
+        const widget = canvas.widgets.find((w) => w.id === widgetId);
+        if (!widget) return;
+        this.selectedWidgetId = widgetId;
+        this._liveWidgetPatch = null;
+        this._commitCanvas(upsertWidget(canvas, { ...widget, ...fields }));
+    }
+
+    /** @private */
     _renderPreview(canvas) {
         renderCanvasHudPreview(this.previewEl, {
             canvas,
             selectedWidgetId: this.selectedWidgetId,
             livePatch: this._liveWidgetPatch,
             level: this.levelEditor?.level,
-            onSelectWidget: (id) => {
-                this.selectedWidgetId = id;
-                this.render();
-            }
+            onSelectWidget: (id) => this._selectWidgetFromPreview(id),
+            onLiveOffset: (_id, fields) => this._stageLiveOffset(fields),
+            onCommitOffset: (id, fields) => this._commitWidgetOffset(id, fields)
         });
     }
 }

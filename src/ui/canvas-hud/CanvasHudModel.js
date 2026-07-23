@@ -110,6 +110,24 @@ export function removeWidget(canvas, widgetId) {
 }
 
 /**
+ * Clone a widget with a new id, nudged +12/+12 so the copy is visible.
+ * @param {object} canvas
+ * @param {string} widgetId
+ * @returns {{ canvas: object, newWidgetId: string|null }}
+ */
+export function duplicateWidget(canvas, widgetId) {
+    const c = normalizeCanvas(canvas);
+    const src = c.widgets.find((w) => w.id === widgetId);
+    if (!src) return { canvas: c, newWidgetId: null };
+    const copy = cloneCanvas(src);
+    copy.id = nextWidgetId(c);
+    copy.offsetX = (Number(copy.offsetX) || 0) + 12;
+    copy.offsetY = (Number(copy.offsetY) || 0) + 12;
+    c.widgets.push(copy);
+    return { canvas: c, newWidgetId: copy.id };
+}
+
+/**
  * Suggests variable names already referenced by the level's Event Graph
  * (SetVariable/Compare/Not nodes), so binding.name can be picked instead of typed.
  * Not a canonical registry — Event Graph has no central variable list — just scan results.

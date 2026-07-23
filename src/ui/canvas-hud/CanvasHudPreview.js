@@ -2,9 +2,35 @@
  * Static layout preview for the Canvases dock panel.
  * Reuses play-mode anchor math (`resolveAnchorStyle`) and `.canvas-hud*` CSS so
  * editor placement matches CanvasHudRenderer; bindings render as `{name}` placeholders.
+ * Supports click-select and pointer-drag to move offsetX/offsetY.
  */
 
 import { resolveAnchorStyle } from '../../engine/CanvasHudBinding.js';
+
+/** Anchor → screen delta invert for right/bottom (offset is measured inward). */
+const ANCHOR_AXIS = {
+    topLeft: { h: 1, v: 1 },
+    topCenter: { h: 1, v: 1 },
+    topRight: { h: -1, v: 1 },
+    middleLeft: { h: 1, v: 1 },
+    middleCenter: { h: 1, v: 1 },
+    middleRight: { h: -1, v: 1 },
+    bottomLeft: { h: 1, v: -1 },
+    bottomCenter: { h: 1, v: -1 },
+    bottomRight: { h: -1, v: -1 }
+};
+
+/**
+ * Convert screen pointer delta into offsetX/offsetY delta for the widget's anchor.
+ * @param {string} anchor
+ * @param {number} dx
+ * @param {number} dy
+ * @returns {{ dX: number, dY: number }}
+ */
+export function screenDeltaToOffsetDelta(anchor, dx, dy) {
+    const axis = ANCHOR_AXIS[anchor] || ANCHOR_AXIS.topLeft;
+    return { dX: dx * axis.h, dY: dy * axis.v };
+}
 
 /**
  * Merge live (not-yet-committed) form fields onto the selected widget.
@@ -39,16 +65,26 @@ export function previewDisplayText(widget, level) {
 }
 
 /**
+ * Apply position (+ optional size) styles from widget fields onto an element.
+ * @param {HTMLElement} el
+ * @param {object} widget
+ */
+export function applyPreviewWidgetStyle(el, widget) {
+    const style = resolveAnchorStyle(widget.anchor || 'topLeft', widget.offsetX || 0, widget.offsetY || 0);
+    if (widget.width != null) style.width = `${widget.width}px`;
+    else style.width = '';
+    if (widget.height != null) style.height = `${widget.height}px`;
+    else style.height = '';
+    Object.assign(el.style, style);
+    if (widget.style) Object.assign(el.style, widget.style);
+}
+
+/**
  * @param {object} widget
  * @param {{items?: object[]}|null|undefined} level
  * @returns {HTMLElement|null}
  */
 export function buildPreviewWidget(widget, level) {
-    const style = resolveAnchorStyle(widget.anchor || 'topLeft', widget.offsetX || 0, widget.offsetY || 0);
-    if (widget.width != null) style.width = `${widget.width}px`;
-    if (widget.height != null) style.height = `${widget.height}px`;
-    Object.assign(style, widget.style || {});
-
     let el;
     switch (widget.type) {
         case 'button':
@@ -92,9 +128,87 @@ export function buildPreviewWidget(widget, level) {
             break;
     }
 
-    el.className = `${el.className ? el.className + ' ' : ''}canvas-hud__widget canvas-hud__widget--${widget.type || 'text'}`.trim();
-    Object.assign(el.style, style);
+    el.className = `${el.className ? el.className + ' ' : ''}canvas-hud__widget canvas-hud__widget--${widget.type || 'text'} canvas-hud__widget--editor-draggable`.trim();
+    el.dataset.widgetId = widget.id;
+    applyPreviewWidgetStyle(el, widget);
     return el;
+}
+
+/**
+ * Wire pointer drag on a preview widget (select + move offsets). Does not rebuild host DOM.
+ * @param {HTMLElement} el
+ * @param {object} widget - snapshot at bind time (ids/anchor/base offsets)
+ * @param {HTMLElement} viewport
+ * @param {{
+ *   onSelectWidget?: (widgetId: string) => void,
+ *   onLiveOffset?: (widgetId: string, fields: {offsetX:number, offsetY:number}) => void,
+ *   onCommitOffset?: (widgetId: string, fields: {offsetX:number, offsetY:number}) => void
+ * }} opts
+ */
+function bindWidgetDrag(el, widget, viewport, opts) {
+    let pointerId = null;
+    let startX = 0;
+    let startY = 0;
+    let startOffX = 0;
+    let startOffY = 0;
+    let moved = false;
+    let dragging = false;
+    let lastOx = 0;
+    let lastOy = 0;
+
+    const markSelected = () => {
+        viewport.querySelectorAll('.canvas-hud__widget--selected').forEach((n) => {
+            n.classList.remove('canvas-hud__widget--selected');
+        });
+        el.classList.add('canvas-hud__widget--selected');
+    };
+
+    el.addEventListener('pointerdown', (e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+        opts.onSelectWidget?.(widget.id);
+        markSelected();
+
+        pointerId = e.pointerId;
+        startX = e.clientX;
+        startY = e.clientY;
+        startOffX = Number(widget.offsetX) || 0;
+        startOffY = Number(widget.offsetY) || 0;
+        lastOx = startOffX;
+        lastOy = startOffY;
+        moved = false;
+        dragging = true;
+        el.classList.add('canvas-hud__widget--editor-dragging');
+        try { el.setPointerCapture(e.pointerId); } catch { /* ignore */ }
+    });
+
+    el.addEventListener('pointermove', (e) => {
+        if (!dragging || e.pointerId !== pointerId) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        if (!moved && Math.hypot(dx, dy) < 3) return;
+        moved = true;
+        const { dX, dY } = screenDeltaToOffsetDelta(widget.anchor || 'topLeft', dx, dy);
+        lastOx = Math.round(startOffX + dX);
+        lastOy = Math.round(startOffY + dY);
+        applyPreviewWidgetStyle(el, { ...widget, offsetX: lastOx, offsetY: lastOy });
+        opts.onLiveOffset?.(widget.id, { offsetX: lastOx, offsetY: lastOy });
+    });
+
+    const endDrag = (e) => {
+        if (!dragging || (e && e.pointerId !== pointerId)) return;
+        dragging = false;
+        el.classList.remove('canvas-hud__widget--editor-dragging');
+        try { el.releasePointerCapture(pointerId); } catch { /* ignore */ }
+        pointerId = null;
+        if (moved) {
+            opts.onCommitOffset?.(widget.id, { offsetX: lastOx, offsetY: lastOy });
+        }
+    };
+
+    el.addEventListener('pointerup', endDrag);
+    el.addEventListener('pointercancel', endDrag);
 }
 
 /**
@@ -105,7 +219,9 @@ export function buildPreviewWidget(widget, level) {
  *   selectedWidgetId: string|null,
  *   livePatch?: Record<string, unknown>|null,
  *   level?: object|null,
- *   onSelectWidget?: (widgetId: string) => void
+ *   onSelectWidget?: (widgetId: string) => void,
+ *   onLiveOffset?: (widgetId: string, fields: {offsetX:number, offsetY:number}) => void,
+ *   onCommitOffset?: (widgetId: string, fields: {offsetX:number, offsetY:number}) => void
  * }} opts
  */
 export function renderCanvasHudPreview(host, opts) {
@@ -127,7 +243,7 @@ export function renderCanvasHudPreview(host, opts) {
 
     const hint = document.createElement('div');
     hint.style.cssText = 'color:#6b7280;font-size:11px;margin-bottom:6px;';
-    hint.textContent = 'layout preview (16:9) — bindings as {placeholder}; click a widget to select';
+    hint.textContent = '16:9 — drag widgets to move; click to select';
     host.appendChild(hint);
 
     const viewport = document.createElement('div');
@@ -140,13 +256,7 @@ export function renderCanvasHudPreview(host, opts) {
         if (widget.id === opts.selectedWidgetId) {
             el.classList.add('canvas-hud__widget--selected');
         }
-        el.style.cursor = 'pointer';
-        el.style.pointerEvents = 'auto';
-        el.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            opts.onSelectWidget?.(widget.id);
-        });
+        bindWidgetDrag(el, widget, viewport, opts);
         viewport.appendChild(el);
     }
 }

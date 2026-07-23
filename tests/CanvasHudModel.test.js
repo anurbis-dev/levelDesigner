@@ -7,6 +7,7 @@ import {
     removeCanvas,
     upsertWidget,
     removeWidget,
+    duplicateWidget,
     normalizeCanvas,
     listVariableNameOptions,
     listCustomEventNameOptions
@@ -48,6 +49,20 @@ describe('CanvasHudModel', () => {
 
         canvas = removeWidget(canvas, 'widget_1');
         expect(canvas.widgets).toEqual([]);
+    });
+
+    it('duplicates a widget with new id and nudged offset', () => {
+        let canvas = createEmptyCanvas('hud1');
+        canvas = upsertWidget(canvas, {
+            id: 'widget_1', type: 'text', anchor: 'topLeft', offsetX: 10, offsetY: 20, text: 'Hi'
+        });
+        const { canvas: next, newWidgetId } = duplicateWidget(canvas, 'widget_1');
+        expect(newWidgetId).toBe('widget_2');
+        expect(next.widgets).toHaveLength(2);
+        expect(next.widgets[1]).toMatchObject({
+            id: 'widget_2', type: 'text', text: 'Hi', offsetX: 22, offsetY: 32
+        });
+        expect(duplicateWidget(canvas, 'missing').newWidgetId).toBeNull();
     });
 
     it('lists variable name suggestions scraped from SetVariable/Compare/Not nodes, deduped+sorted', () => {

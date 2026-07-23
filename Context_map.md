@@ -269,10 +269,11 @@ level.settings.parallaxVertical // множитель вертикального
 - `src/ui/dialogues/DialogueModel.js` - чистые helper-функции для операций с диалогами
 - `src/ui/items/ItemsPanel.js` - dock panel для уровня-широкого каталога предметов (3-column list/list/form layout); операции CRUD через HistoryManager `setInventoryProvider()`
 - `src/ui/items/ItemModel.js` - чистые helper-функции для операций с предметами
-- `src/ui/canvas-hud/CanvasHudPanel.js` - dock panel HUD Canvases (canvases | widgets | form | **Preview**); CRUD через HistoryManager `setCanvasesProvider()`; стейт-ключ `canvasesRevision`; live preview stage (`_liveWidgetPatch`) без history
-- `src/ui/canvas-hud/CanvasHudPreview.js` - 16:9 layout preview: `renderCanvasHudPreview` / `buildPreviewWidget` / `previewDisplayText`; те же anchor math + `.canvas-hud*` CSS, что play-mode
-- `src/ui/canvas-hud/CanvasHudForm.js` - form builders: canvas meta, widget fields, binding/action, number pairs + datalist
-- `src/ui/canvas-hud/CanvasHudModel.js` - чистые helper-функции для CRUD и Event Graph сканирования: `createEmptyCanvas()`, `upsertCanvas()`, `removeCanvas()`, `upsertWidget()`, `removeWidget()`, `nextCanvasId()`, `nextWidgetId()`, `normalizeCanvas()`, `listVariableNameOptions()` (сканирует eventGraph на SetVariable/Compare/Not nodes), `listCustomEventNameOptions()` (сканирует на OnCustomEvent/EmitCustomEvent nodes); константы `WIDGET_TYPES`, `ANCHOR_OPTIONS`, `BINDING_SOURCE_OPTIONS`
+- `src/ui/canvas-hud/CanvasHudPanel.js` - dock panel HUD Canvases (canvases | widgets | form | **Preview**); CRUD + duplicate; `canvasesRevision`; live preview stage; preview drag commit (`_commitWidgetOffset`)
+- `src/ui/canvas-hud/CanvasHudPreview.js` - 16:9 layout preview + click-select + pointer-drag move (`screenDeltaToOffsetDelta`, anchor-aware); те же anchor math + `.canvas-hud*` CSS, что play-mode
+- `src/ui/canvas-hud/CanvasHudForm.js` - canvas meta + widget form (inline rows, Duplicate/Delete, binding/action)
+- `src/ui/canvas-hud/CanvasHudFormFields.js` - `inlineRow`, `scrubNumberInput`/`numberPairRow` (NumericInput scrub), `anchorIconPicker` 3×3
+- `src/ui/canvas-hud/CanvasHudModel.js` - CRUD + `duplicateWidget()`; Event Graph name scan; `WIDGET_TYPES`/`ANCHOR_OPTIONS`/`BINDING_SOURCE_OPTIONS`
 
 ### Utils
 - `src/utils/Logger.js` - логирование (19 категорий)
