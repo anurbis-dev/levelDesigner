@@ -757,3 +757,11 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     `collectSolidBlockers` (PlayerMovement/movable/mount). `Renderer.drawTiles`;
     `AssetLoader.collectImageSources` harvest. Без autotiling / paint UI. Тесты:
     TilemapBehavior, Renderer, GameEngine.integration.
+  - **`particleEffect` завершён ✅ 2026-07-24 (v4.43.0)**: Component `particleEffect` +
+    `ParticleEffectBehavior` — continuous/burst VFX (`emitRate`/`burst`/`maxParticles`/
+    `lifetime`/`speed`/`spread`/`gravity*`/size·color·alpha over life). Optional
+    `imageAssetId`/`src`; `drawParticles` в Renderer; never solid; optional `seed` (LCG).
+    `DEFAULT_ASSET_COMPONENTS.particleEffect`. Без paint UI / catalog preset form. Тесты:
+    ParticleEffectBehavior, Renderer, GameEngine.integration. **Tier 3 asset-runtime
+    slice closed; Tier 4 started** (next: light / nineSliceSprite / fontTextStyle /
+    navMesh / sequenceCutscene / volume — no hard order).

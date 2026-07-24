@@ -993,3 +993,65 @@ describe('GameEngine — §7 backlog tileset + tilemap', () => {
         expect(solids.some(s => rectsIntersect(pBounds, s.getBounds()))).toBe(false);
     });
 });
+
+// §7 backlog Tier 4 (particleEffect): emitter + drawParticles path.
+describe('GameEngine — §7 backlog particleEffect', () => {
+    function particleManifest() {
+        return {
+            formatVersion: 1, name: 'Demo', entryLevelId: 'level_a',
+            assets: [{
+                id: 'spark_img', name: 'Spark', type: 'image', imgSrc: 'spark.png'
+            }],
+            levels: [{
+                id: 'level_a',
+                data: {
+                    meta: { name: 'Level A' },
+                    camera: { x: 0, y: 0, zoom: 1 },
+                    layers: [{ id: 'main', name: 'Main', visible: true, locked: false, parallaxX: 1, parallaxY: 1 }],
+                    objects: [
+                        {
+                            id: 'spawn', type: 'player_start', x: 0, y: 0, width: 16, height: 16,
+                            layerId: 'main',
+                            components: [{ type: 'playerStart', properties: {} }]
+                        },
+                        {
+                            id: 'fx', type: 'particleEffect', x: 40, y: 40, width: 16, height: 16,
+                            layerId: 'main',
+                            components: [{
+                                type: 'particleEffect',
+                                properties: {
+                                    imageAssetId: 'spark_img',
+                                    burst: 8,
+                                    emitting: false,
+                                    lifetime: 2,
+                                    seed: 11
+                                }
+                            }]
+                        }
+                    ]
+                }
+            }]
+        };
+    }
+
+    it('loads particleEffect, resolves image, bursts particles, never solid', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(particleManifest());
+
+        const fx = engine.scene.entities.find(e => e.id === 'fx');
+        expect(fx).toBeTruthy();
+        const pe = fx.behaviors.find(b => typeof b.drawParticles === 'function');
+        expect(pe).toBeTruthy();
+        expect(pe._resolvedSrc).toBe('spark.png');
+        expect(pe.isOverlapping()).toBe(false);
+
+        // behaviors update once per engine tick
+        pe.update(0.016, engine.scene);
+        expect(pe._particles.length).toBe(8);
+
+        const ctx = { globalAlpha: 1, fillRect: vi.fn(), drawImage: vi.fn() };
+        pe.drawParticles(ctx, new Map(), fx.x, fx.y);
+        expect(ctx.fillRect.mock.calls.length + ctx.drawImage.mock.calls.length).toBeGreaterThan(0);
+    });
+});

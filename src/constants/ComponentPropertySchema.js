@@ -196,6 +196,28 @@ const SCHEMAS = {
         { key: 'solidIndices', label: 'Solid Tile Indices (JSON null=all non-empty, []=none)', kind: 'json', default: null },
         { key: 'layer', label: 'Layer', kind: 'text', default: '' }
     ],
+    particleEffect: [
+        { key: 'imageAssetId', label: 'Particle Image Asset', kind: 'assetRef', assetTypes: ['image'], default: '' },
+        { key: 'src', label: 'Particle Src (URL fallback)', kind: 'text', default: '' },
+        { key: 'maxParticles', label: 'Max Particles', kind: 'number', default: 32 },
+        { key: 'emitRate', label: 'Emit Rate (per sec)', kind: 'number', default: 12 },
+        { key: 'lifetime', label: 'Lifetime (sec)', kind: 'number', default: 1 },
+        { key: 'speed', label: 'Speed (px/s)', kind: 'number', default: 50 },
+        { key: 'speedVariance', label: 'Speed Variance', kind: 'number', default: 20 },
+        { key: 'angle', label: 'Angle (deg, 0=+X, -90=up)', kind: 'number', default: -90 },
+        { key: 'spread', label: 'Spread (deg full cone)', kind: 'number', default: 360 },
+        { key: 'gravityX', label: 'Gravity X (px/s²)', kind: 'number', default: 0 },
+        { key: 'gravityY', label: 'Gravity Y (px/s²)', kind: 'number', default: 80 },
+        { key: 'startSize', label: 'Start Size (px)', kind: 'number', default: 6 },
+        { key: 'endSize', label: 'End Size (px)', kind: 'number', default: 0 },
+        { key: 'startColor', label: 'Start Color', kind: 'color', default: '#ffffff' },
+        { key: 'endColor', label: 'End Color', kind: 'color', default: '#ffffff' },
+        { key: 'startAlpha', label: 'Start Alpha (0–1)', kind: 'number', default: 1 },
+        { key: 'endAlpha', label: 'End Alpha (0–1)', kind: 'number', default: 0 },
+        { key: 'emitting', label: 'Emitting', kind: 'bool', default: true },
+        { key: 'burst', label: 'Burst On Start', kind: 'number', default: 0 },
+        { key: 'seed', label: 'RNG Seed (empty = random)', kind: 'number', default: null }
+    ],
     stateMachineBehavior: [
         { key: 'defaultState', label: 'Default State', kind: 'text', default: '' },
         { key: 'states', label: 'States (JSON: [{name,movement,speed,waypoints,transitions}]; distance condition: {type:"distance",op,value,fov?} — fov degrees, default 180, 360 = omnidirectional); overrides aiPreset when non-empty', kind: 'json', default: [] },

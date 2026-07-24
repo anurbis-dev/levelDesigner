@@ -76,7 +76,9 @@ export const DEFAULT_ASSET_COMPONENTS = {
     // §7 audioZone: placed zone already carries the ambient/music behavior.
     audioZone: ['audioZone'],
     // §7 tilemap: placed map entity already carries the grid/collision behavior.
-    tilemap: ['tilemap']
+    tilemap: ['tilemap'],
+    // §7 particleEffect: placed emitter already carries the VFX behavior.
+    particleEffect: ['particleEffect']
 };
 
 const ASSET_TYPE_MAP = new Map(ASSET_TYPES.map(t => [t.id, t]));

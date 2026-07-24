@@ -33,7 +33,8 @@ export const COMPONENT_TYPES = [
     { id: 'destructibleContainer', label: 'Destructible Container', description: 'Chest/vase/crate: yields a Pickup and changes sprite/disappears.', genres: 'adventure, action' },
     { id: 'variableModifier', label: 'Variable Modifier', description: 'Sets a global flag/variable on trigger (for Quest/Dialogue conditions).', genres: 'all with level logic' },
     { id: 'audioZone', label: 'Audio Zone', description: 'Ambient/music on player enter (volume specialization).', genres: 'all with audio' },
-    { id: 'tilemap', label: 'Tilemap', description: 'Grid layer from a tileset atlas; solid cells block movement.', genres: 'all with tile maps' }
+    { id: 'tilemap', label: 'Tilemap', description: 'Grid layer from a tileset atlas; solid cells block movement.', genres: 'all with tile maps' },
+    { id: 'particleEffect', label: 'Particle Effect', description: 'VFX emitter: continuous/burst particles with gravity and color over lifetime.', genres: 'all with VFX' }
 ];
 
 const COMPONENT_TYPE_MAP = new Map(COMPONENT_TYPES.map(c => [c.id, c]));

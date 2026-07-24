@@ -66,6 +66,14 @@ export class Renderer {
             return;
         }
 
+        // §7 particleEffect: VFX particles (emitter marker itself is not drawn)
+        const particles = entity.behaviors?.find(b => typeof b.drawParticles === 'function');
+        if (particles) {
+            particles.drawParticles(this.ctx, this.imageCache, x, y);
+            if (rotation) this.ctx.restore();
+            return;
+        }
+
         const img = entity.imgSrc && this.imageCache?.get(entity.imgSrc);
         if (img && img.complete && img.naturalHeight !== 0) {
             const spriteAnim = entity.behaviors?.find(b => typeof b.getSourceRect === 'function');

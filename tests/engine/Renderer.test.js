@@ -127,6 +127,20 @@ describe('Renderer.drawEntity', () => {
         expect(ctx.fillRect).not.toHaveBeenCalled();
     });
 
+    it('delegates to particleEffect.drawParticles when present', () => {
+        const { canvas, ctx } = mockCanvas();
+        const renderer = new Renderer(canvas);
+        const drawParticles = vi.fn().mockReturnValue(true);
+
+        renderer.drawEntity({
+            visible: true, type: 'particleEffect', x: 10, y: 20, width: 8, height: 8, color: '#0f0',
+            behaviors: [{ drawParticles }]
+        });
+
+        expect(drawParticles).toHaveBeenCalledWith(ctx, undefined, 10, 20);
+        expect(ctx.fillRect).not.toHaveBeenCalled();
+    });
+
     it('draws a colored rect when no image is cached', () => {
         const { canvas, ctx } = mockCanvas();
         const renderer = new Renderer(canvas);
