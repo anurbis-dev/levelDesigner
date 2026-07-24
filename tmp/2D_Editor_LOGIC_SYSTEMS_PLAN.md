@@ -790,4 +790,11 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     `StateMachineBehavior` chase follows path when mesh covers endpoints, else
     straight-line. `DEFAULT_ASSET_COMPONENTS.navMesh`. Тесты: NavMeshBehavior,
     StateMachineBehavior, GameEngine.integration.
-    Next Tier 4: sequenceCutscene.
+  - **`sequenceCutscene` завершён ✅ 2026-07-24 (v4.49.0)**: Component `sequenceCutscene` +
+    `SequenceCutsceneBehavior` — ordered `steps` timeline (wait/move/teleport/camera/
+    cameraRelease/dialogue/setVariable/playAnimation/playSound/emitEvent); `autoPlay`/
+    `playOnEnter`/`lockPlayer`/`loop`; `sequenceAssetId` catalog merge; Event Graph
+    `PlaySequence`/`StopSequence`; camera override via `applyCutsceneCamera`.
+    `DEFAULT_ASSET_COMPONENTS.sequenceCutscene`. Тесты: SequenceCutsceneBehavior,
+    GameEngine.integration.
+    Next: remaining §7 backlog / materialShaderPreset polish (Tier 4 asset list largely done).

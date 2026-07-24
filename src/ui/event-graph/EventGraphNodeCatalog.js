@@ -162,6 +162,20 @@ export const EVENT_GRAPH_NODE_DEFS = [
             { key: 'objectId', label: 'Object', type: 'objectId' },
             { key: 'clip', label: 'Clip name', type: 'string' }
         ]
+    },
+    {
+        type: 'PlaySequence',
+        label: 'Play Sequence',
+        category: 'action',
+        defaults: { objectId: '' },
+        fields: [{ key: 'objectId', label: 'Sequence object', type: 'objectId' }]
+    },
+    {
+        type: 'StopSequence',
+        label: 'Stop Sequence',
+        category: 'action',
+        defaults: { objectId: '' },
+        fields: [{ key: 'objectId', label: 'Sequence object', type: 'objectId' }]
     }
 ];
 

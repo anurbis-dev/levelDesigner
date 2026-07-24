@@ -994,6 +994,88 @@ describe('GameEngine — §7 backlog tileset + tilemap', () => {
     });
 });
 
+// §7 backlog Tier 4 (sequenceCutscene): ordered timeline + PlaySequence + camera lock.
+describe('GameEngine — §7 backlog sequenceCutscene', () => {
+    function sequenceManifest() {
+        return {
+            formatVersion: 1, name: 'Demo', entryLevelId: 'level_a',
+            assets: [{
+                id: 'intro_seq', name: 'Intro', type: 'sequenceCutscene',
+                properties: {
+                    steps: [
+                        { type: 'teleport', targetId: 'npc', x: 80, y: 20 },
+                        { type: 'setVariable', name: 'introDone', value: true },
+                        { type: 'wait', duration: 0.1 }
+                    ]
+                }
+            }],
+            levels: [{
+                id: 'level_a',
+                data: {
+                    meta: { name: 'Level A' },
+                    camera: { x: 0, y: 0, zoom: 1 },
+                    layers: [{ id: 'main', name: 'Main', visible: true, locked: false, parallaxX: 1, parallaxY: 1 }],
+                    eventGraph: {
+                        formatVersion: 1,
+                        variables: [{ name: 'introDone', default: false }],
+                        nodes: [
+                            { id: 'n_start', type: 'OnStart', params: {} },
+                            { id: 'n_play', type: 'PlaySequence', params: { objectId: 'cut' } }
+                        ],
+                        edges: [{ from: 'n_start', to: 'n_play' }]
+                    },
+                    objects: [
+                        {
+                            id: 'spawn', type: 'player_start', x: 0, y: 0, width: 16, height: 16,
+                            layerId: 'main',
+                            components: [{ type: 'playerStart', properties: {} }]
+                        },
+                        {
+                            id: 'npc', type: 'object', x: 10, y: 10, width: 10, height: 10,
+                            layerId: 'main',
+                            components: []
+                        },
+                        {
+                            id: 'cut', type: 'sequenceCutscene', x: 0, y: 0, width: 32, height: 32,
+                            layerId: 'main',
+                            components: [{
+                                type: 'sequenceCutscene',
+                                properties: {
+                                    sequenceAssetId: 'intro_seq',
+                                    lockPlayer: true
+                                }
+                            }]
+                        }
+                    ]
+                }
+            }]
+        };
+    }
+
+    it('loads sequence, PlaySequence on start, teleport + var + lock', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(sequenceManifest());
+
+        const cut = engine.scene.entities.find(e => e.id === 'cut');
+        const seq = cut.behaviors.find(b => typeof b.applyCutsceneCamera === 'function');
+        expect(seq).toBeTruthy();
+        expect(seq.isOverlapping()).toBe(false);
+
+        // OnStart fires during EventGraphRuntime construction inside loadProject
+        expect(seq.isPlaying() || engine.scene.eventGraphRuntime.getVariable('introDone') === true).toBe(true);
+
+        for (let i = 0; i < 5; i++) engine.tick(0.05);
+
+        const npc = engine.scene.entities.find(e => e.id === 'npc');
+        expect(npc.x).toBe(80);
+        expect(npc.y).toBe(20);
+        expect(engine.scene.eventGraphRuntime.getVariable('introDone')).toBe(true);
+        expect(seq.isPlaying()).toBe(false);
+        expect(engine.scene.cutsceneActive).toBe(false);
+    });
+});
+
 // §7 backlog Tier 4 (navMesh): walkable zone + chase pathfinding.
 describe('GameEngine — §7 backlog navMesh', () => {
     function navMeshManifest() {

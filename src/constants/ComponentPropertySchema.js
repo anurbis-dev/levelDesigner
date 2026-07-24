@@ -301,6 +301,27 @@ const SCHEMAS = {
         { key: 'navMeshAssetId', label: 'NavMesh Asset (shared cellSize/blocked)', kind: 'assetRef', assetTypes: ['navMesh'], default: '' },
         { key: 'enabled', label: 'Enabled', kind: 'bool', default: true }
     ],
+    sequenceCutscene: [
+        { key: 'shape', label: 'Shape (playOnEnter zone)', kind: 'select', default: 'box', options: COLLIDER_SHAPE_OPTIONS },
+        { key: 'offsetX', label: 'Offset X (box TL / circle center)', kind: 'number', default: 0 },
+        { key: 'offsetY', label: 'Offset Y (box TL / circle center)', kind: 'number', default: 0 },
+        { key: 'width', label: 'Width (box; empty = entity)', kind: 'number', default: null },
+        { key: 'height', label: 'Height (box; empty = entity)', kind: 'number', default: null },
+        { key: 'radius', label: 'Radius (circle)', kind: 'number', default: null },
+        { key: 'points', label: 'Points (freeform JSON [{x,y}])', kind: 'json', default: [] },
+        {
+            key: 'steps',
+            label: 'Steps (JSON [{type, …}] wait|move|teleport|camera|cameraRelease|dialogue|setVariable|playAnimation|playSound|emitEvent)',
+            kind: 'json',
+            default: []
+        },
+        { key: 'autoPlay', label: 'Auto Play', kind: 'bool', default: false },
+        { key: 'playOnEnter', label: 'Play On Player Enter', kind: 'bool', default: false },
+        { key: 'lockPlayer', label: 'Lock Player Movement', kind: 'bool', default: true },
+        { key: 'loop', label: 'Loop', kind: 'bool', default: false },
+        { key: 'sequenceAssetId', label: 'Sequence Asset (shared steps)', kind: 'assetRef', assetTypes: ['sequenceCutscene'], default: '' },
+        { key: 'enabled', label: 'Enabled', kind: 'bool', default: true }
+    ],
     stateMachineBehavior: [
         { key: 'defaultState', label: 'Default State', kind: 'text', default: '' },
         { key: 'states', label: 'States (JSON: [{name,movement,speed,waypoints,transitions}]; distance condition: {type:"distance",op,value,fov?} — fov degrees, default 180, 360 = omnidirectional); overrides aiPreset when non-empty', kind: 'json', default: [] },

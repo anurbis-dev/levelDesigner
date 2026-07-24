@@ -41,6 +41,8 @@ export class Scene {
         this.dialogues = new Map((levelData.dialogues || []).map(d => [d.id, d]));
         this.dialogueRunner = null;
         this.dialogueActive = false;
+        // §7 sequenceCutscene: true while a playing sequence has lockPlayer (PlayerMovement pauses).
+        this.cutsceneActive = false;
         // HUD Canvases (Level.canvases), keyed by id — same "plain field" shortcut as
         // dialogues/eventGraph above. CanvasHudRenderer reads scene.canvases + the active id
         // list below to build the on-screen widget tree.

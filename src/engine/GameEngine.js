@@ -72,6 +72,22 @@ export class GameEngine {
      * kept for levels authored before the camera asset/component existed.
      */
     _updateCamera() {
+        // §7 sequenceCutscene: active timeline camera override wins over the level camera marker.
+        for (const entity of this.scene.getAllEntities()) {
+            for (const b of entity.behaviors || []) {
+                if (!b.enabled) continue;
+                if (typeof b.applyCutsceneCamera === 'function'
+                    && b.applyCutsceneCamera(this.scene, this.camera, this.renderer.canvas)) {
+                    // Keep HUD/layers from the level camera if present; only position is overridden.
+                    const cameraEntity = this.scene.cameraEntity;
+                    const camB = cameraEntity?.behaviors.find(x => typeof x.getRenderLayers === 'function');
+                    this.cameraRenderLayers = camB?.enabled ? camB.getRenderLayers() : null;
+                    this.scene.activeCanvasIds = camB?.enabled ? camB.getCanvasIds() : null;
+                    return;
+                }
+            }
+        }
+
         const cameraEntity = this.scene.cameraEntity;
         const behavior = cameraEntity?.behaviors.find(b => typeof b.computeCamera === 'function');
         if (behavior?.enabled) {

@@ -19,6 +19,7 @@ export class PlayerMovementBehavior extends Behavior {
         const input = scene.input;
         if (!input || dt <= 0) return;
         if (scene.dialogueActive) return; // Фаза E: movement pauses while a dialogue is open
+        if (scene.cutsceneActive) return; // §7 sequenceCutscene: lockPlayer while timeline plays
         if (scene.mountedVehicle) return; // §7 mountableVehicleSeat: vehicle drives instead
         if (scene.zipliningEntity) return; // §7 conveyorZiplineJumpPadPortal: zipline drives instead
 

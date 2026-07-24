@@ -82,12 +82,41 @@ export function registerDefaultEventGraphNodes() {
     // machine's currentState — it resumes its own clip next time a transition fires.
     EventGraphNodeRegistry.register('PlayAnimation', (node, ctx) => {
         const target = findEntity(ctx.scene, node.params.objectId);
-        const anim = target?.behaviors?.find(b => typeof b.play === 'function');
+        // Exclude sequenceCutscene (also has play()) — animation only.
+        const anim = target?.behaviors?.find(
+            b => typeof b.play === 'function' && typeof b.applyCutsceneCamera !== 'function'
+        );
         if (!anim) {
             console.warn(`[engine] PlayAnimation: no animation behavior on '${node.params.objectId}'`);
             return;
         }
         anim.play(node.params.clip);
+    });
+    // §7 sequenceCutscene: start/stop ordered timeline on an entity with SequenceCutsceneBehavior.
+    // play(scene) requires the scene argument (unlike SpriteAnimationBehavior.play(clip)).
+    EventGraphNodeRegistry.register('PlaySequence', (node, ctx) => {
+        const target = findEntity(ctx.scene, node.params.objectId);
+        const seq = target?.behaviors?.find(
+            b => typeof b.play === 'function' && typeof b.isPlaying === 'function'
+                && typeof b.applyCutsceneCamera === 'function'
+        );
+        if (!seq) {
+            console.warn(`[engine] PlaySequence: no sequenceCutscene on '${node.params.objectId}'`);
+            return;
+        }
+        seq.play(ctx.scene);
+    });
+    EventGraphNodeRegistry.register('StopSequence', (node, ctx) => {
+        const target = findEntity(ctx.scene, node.params.objectId);
+        const seq = target?.behaviors?.find(
+            b => typeof b.stop === 'function' && typeof b.isPlaying === 'function'
+                && typeof b.applyCutsceneCamera === 'function'
+        );
+        if (!seq) {
+            console.warn(`[engine] StopSequence: no sequenceCutscene on '${node.params.objectId}'`);
+            return;
+        }
+        seq.stop(ctx.scene);
     });
     // §7 backlog (soundEffect, Tier 1): params carry {src, volume?, loop?} directly, same
     // inline-data convention as Teleport — no assetId lookup, ProjectLoader.assetsById is

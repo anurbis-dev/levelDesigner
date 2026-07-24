@@ -88,7 +88,9 @@ export const DEFAULT_ASSET_COMPONENTS = {
     // §7 volume: placed zone already carries the view-filter behavior.
     volume: ['volume'],
     // §7 navMesh: placed walkable zone already carries pathfinding behavior.
-    navMesh: ['navMesh']
+    navMesh: ['navMesh'],
+    // §7 sequenceCutscene: placed timeline already carries the cutscene behavior.
+    sequenceCutscene: ['sequenceCutscene']
 };
 
 const ASSET_TYPE_MAP = new Map(ASSET_TYPES.map(t => [t.id, t]));
