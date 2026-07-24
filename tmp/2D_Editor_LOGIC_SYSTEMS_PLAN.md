@@ -773,5 +773,10 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     `NineSliceSpriteBehavior` — 3×3 border stretch (`borderLeft/Right/Top/Bottom`,
     `fillCenter`, `imageAssetId`/`src`); `drawNineSlice` в Renderer; `collectImageSources`;
     never solid. `DEFAULT_ASSET_COMPONENTS.nineSliceSprite`. Без paint UI. Тесты:
-    NineSliceSpriteBehavior, Renderer, GameEngine.integration. Next Tier 4: fontTextStyle /
-    navMesh / sequenceCutscene / volume — no hard order.
+    NineSliceSpriteBehavior, Renderer, GameEngine.integration.
+  - **`fontTextStyle` завершён ✅ 2026-07-24 (v4.46.0)**: Component `fontTextStyle` +
+    `FontTextStyleBehavior` — canvas text (font/outline/shadow/align/wrap); optional
+    `styleAssetId` merges catalog fields when component empty; `drawText` в Renderer;
+    never solid. `DEFAULT_ASSET_COMPONENTS.fontTextStyle`. Без FontFace/.woff. Тесты:
+    FontTextStyleBehavior, Renderer, GameEngine.integration. Next Tier 4: navMesh /
+    sequenceCutscene / volume — no hard order.

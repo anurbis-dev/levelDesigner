@@ -36,7 +36,8 @@ export const COMPONENT_TYPES = [
     { id: 'tilemap', label: 'Tilemap', description: 'Grid layer from a tileset atlas; solid cells block movement.', genres: 'all with tile maps' },
     { id: 'particleEffect', label: 'Particle Effect', description: 'VFX emitter: continuous/burst particles with gravity and color over lifetime.', genres: 'all with VFX' },
     { id: 'light', label: 'Light', description: 'Point/directional/area light: ambient darkness + additive glow (no geometry soft shadows yet).', genres: 'all with lighting' },
-    { id: 'nineSliceSprite', label: 'Nine-Slice Sprite', description: 'Stretchable-edge image (3×3 borders) for UI frames / scalable decorations.', genres: 'all with UI frames' }
+    { id: 'nineSliceSprite', label: 'Nine-Slice Sprite', description: 'Stretchable-edge image (3×3 borders) for UI frames / scalable decorations.', genres: 'all with UI frames' },
+    { id: 'fontTextStyle', label: 'Font / Text Style', description: 'Canvas text: font family/size, outline, shadow; optional shared style asset.', genres: 'all with UI text' }
 ];
 
 const COMPONENT_TYPE_MAP = new Map(COMPONENT_TYPES.map(c => [c.id, c]));

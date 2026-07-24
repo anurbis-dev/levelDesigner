@@ -82,7 +82,9 @@ export const DEFAULT_ASSET_COMPONENTS = {
     // §7 light: placed light already carries the glow behavior.
     light: ['light'],
     // §7 nineSliceSprite: placed frame already carries the 9-slice behavior.
-    nineSliceSprite: ['nineSliceSprite']
+    nineSliceSprite: ['nineSliceSprite'],
+    // §7 fontTextStyle: placed text entity already carries the draw behavior.
+    fontTextStyle: ['fontTextStyle']
 };
 
 const ASSET_TYPE_MAP = new Map(ASSET_TYPES.map(t => [t.id, t]));

@@ -244,6 +244,33 @@ const SCHEMAS = {
         { key: 'borderBottom', label: 'Border Bottom (src px)', kind: 'number', default: 8 },
         { key: 'fillCenter', label: 'Fill Center', kind: 'bool', default: true }
     ],
+    fontTextStyle: [
+        { key: 'text', label: 'Text', kind: 'text', default: 'Text' },
+        { key: 'styleAssetId', label: 'Style Asset (fontTextStyle)', kind: 'assetRef', assetTypes: ['fontTextStyle'], default: '' },
+        { key: 'fontFamily', label: 'Font Family', kind: 'text', default: 'sans-serif' },
+        { key: 'fontSize', label: 'Font Size (px)', kind: 'number', default: 16 },
+        { key: 'fontWeight', label: 'Font Weight', kind: 'text', default: 'normal' },
+        { key: 'fontStyle', label: 'Font Style', kind: 'text', default: 'normal' },
+        { key: 'color', label: 'Fill Color', kind: 'color', default: '#ffffff' },
+        { key: 'align', label: 'Align', kind: 'select', default: 'left', options: [
+            { value: 'left', label: 'Left' },
+            { value: 'center', label: 'Center' },
+            { value: 'right', label: 'Right' }
+        ] },
+        { key: 'verticalAlign', label: 'Vertical Align', kind: 'select', default: 'top', options: [
+            { value: 'top', label: 'Top' },
+            { value: 'middle', label: 'Middle' },
+            { value: 'bottom', label: 'Bottom' }
+        ] },
+        { key: 'outlineColor', label: 'Outline Color', kind: 'color', default: '' },
+        { key: 'outlineWidth', label: 'Outline Width (px)', kind: 'number', default: 0 },
+        { key: 'shadowColor', label: 'Shadow Color', kind: 'color', default: '' },
+        { key: 'shadowBlur', label: 'Shadow Blur (px)', kind: 'number', default: 0 },
+        { key: 'shadowOffsetX', label: 'Shadow Offset X', kind: 'number', default: 0 },
+        { key: 'shadowOffsetY', label: 'Shadow Offset Y', kind: 'number', default: 0 },
+        { key: 'wrap', label: 'Word Wrap', kind: 'bool', default: true },
+        { key: 'lineHeight', label: 'Line Height (× fontSize)', kind: 'number', default: 1.2 }
+    ],
     stateMachineBehavior: [
         { key: 'defaultState', label: 'Default State', kind: 'text', default: '' },
         { key: 'states', label: 'States (JSON: [{name,movement,speed,waypoints,transitions}]; distance condition: {type:"distance",op,value,fov?} — fov degrees, default 180, 360 = omnidirectional); overrides aiPreset when non-empty', kind: 'json', default: [] },

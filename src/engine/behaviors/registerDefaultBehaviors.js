@@ -23,6 +23,7 @@ import { TilemapBehavior } from './TilemapBehavior.js';
 import { ParticleEffectBehavior } from './ParticleEffectBehavior.js';
 import { LightBehavior } from './LightBehavior.js';
 import { NineSliceSpriteBehavior } from './NineSliceSpriteBehavior.js';
+import { FontTextStyleBehavior } from './FontTextStyleBehavior.js';
 
 /**
  * Registers the Фаза 2 MVP component vertical slice (see docs/RUNTIME_SCHEMA.md).
@@ -54,4 +55,5 @@ export function registerDefaultBehaviors() {
     BehaviorRegistry.register('particleEffect', ParticleEffectBehavior);
     BehaviorRegistry.register('light', LightBehavior);
     BehaviorRegistry.register('nineSliceSprite', NineSliceSpriteBehavior);
+    BehaviorRegistry.register('fontTextStyle', FontTextStyleBehavior);
 }

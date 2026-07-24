@@ -1,3 +1,7 @@
+## Archived from CHANGELOG.md (nineSliceSprite, v4.45.0)
+
+- **Feat: nineSliceSprite (§7 Tier 4, v4.45.0)**: Component `nineSliceSprite` + `NineSliceSpriteBehavior` — 3×3 border-preserving stretch into entity box. Props: `imageAssetId`/`src`, `borderLeft`/`Right`/`Top`/`Bottom` (src px), `fillCenter`. Duck-type `drawNineSlice` in Renderer; `collectImageSources`; never solid. Fallback color rect if image missing. `DEFAULT_ASSET_COMPONENTS.nineSliceSprite`. No 9-slice paint UI. Tests: NineSliceSpriteBehavior, Renderer, GameEngine.integration.
+
 ## Archived from CHANGELOG.md (light, v4.44.0)
 
 - **Feat: light (§7 Tier 4, v4.44.0)**: Component `light` + `LightBehavior` — point / directional / area additive glow after entity draw. Props: `lightType`, `color`, `intensity`, `radius`, `angle`/`spread` (directional), `soft`, `ambient` (max of enabled lights → full-view darken), `enabled`. `Renderer.applyLights` (`lighter` composite); marker body suppressed; never solid. Soft geometry shadows deferred. `DEFAULT_ASSET_COMPONENTS.light`. Tests: LightBehavior, Renderer, GameEngine.integration.

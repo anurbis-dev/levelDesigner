@@ -82,6 +82,14 @@ export class Renderer {
             return;
         }
 
+        // §7 fontTextStyle: canvas text (font/outline/shadow); no solid body
+        const fontText = entity.behaviors?.find(b => typeof b.drawText === 'function');
+        if (fontText) {
+            fontText.drawText(this.ctx, x, y);
+            if (rotation) this.ctx.restore();
+            return;
+        }
+
         // §7 light: marker body suppressed; glow drawn in post-pass applyLights
         const light = entity.behaviors?.find(b => typeof b.drawLight === 'function');
         if (light) {

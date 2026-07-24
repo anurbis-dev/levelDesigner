@@ -994,6 +994,77 @@ describe('GameEngine — §7 backlog tileset + tilemap', () => {
     });
 });
 
+// §7 backlog Tier 4 (fontTextStyle): canvas text draw path.
+describe('GameEngine — §7 backlog fontTextStyle', () => {
+    function fontTextManifest() {
+        return {
+            formatVersion: 1, name: 'Demo', entryLevelId: 'level_a',
+            assets: [{
+                id: 'title_style', name: 'Title', type: 'fontTextStyle',
+                properties: { fontFamily: 'Georgia', fontSize: 22, color: '#ffcc00' }
+            }],
+            levels: [{
+                id: 'level_a',
+                data: {
+                    meta: { name: 'Level A' },
+                    camera: { x: 0, y: 0, zoom: 1 },
+                    layers: [{ id: 'main', name: 'Main', visible: true, locked: false, parallaxX: 1, parallaxY: 1 }],
+                    objects: [
+                        {
+                            id: 'spawn', type: 'player_start', x: 0, y: 0, width: 16, height: 16,
+                            layerId: 'main',
+                            components: [{ type: 'playerStart', properties: {} }]
+                        },
+                        {
+                            id: 'label', type: 'fontTextStyle', x: 40, y: 50, width: 200, height: 48,
+                            layerId: 'main',
+                            components: [{
+                                type: 'fontTextStyle',
+                                properties: {
+                                    text: 'Hello',
+                                    styleAssetId: 'title_style',
+                                    align: 'center',
+                                    wrap: false
+                                }
+                            }]
+                        }
+                    ]
+                }
+            }]
+        };
+    }
+
+    it('loads fontTextStyle, merges style asset, never solid, draws text', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(fontTextManifest());
+
+        const label = engine.scene.entities.find(e => e.id === 'label');
+        expect(label).toBeTruthy();
+        const ft = label.behaviors.find(b => typeof b.drawText === 'function');
+        expect(ft).toBeTruthy();
+        expect(ft.isOverlapping()).toBe(false);
+
+        ft.update(0, engine.scene);
+        expect(ft.fontFamily).toBe('Georgia');
+        expect(ft.fontSize).toBe(22);
+        expect(ft.color).toBe('#ffcc00');
+        expect(ft.text).toBe('Hello');
+
+        const ctx = {
+            save: vi.fn(), restore: vi.fn(),
+            fillText: vi.fn(), strokeText: vi.fn(),
+            measureText: vi.fn(() => ({ width: 40 })),
+            font: '', fillStyle: null, strokeStyle: null, lineWidth: 0, lineJoin: '',
+            textAlign: 'left', textBaseline: 'top',
+            shadowColor: '', shadowBlur: 0, shadowOffsetX: 0, shadowOffsetY: 0
+        };
+        ft.drawText(ctx, label.x, label.y);
+        expect(ctx.fillText).toHaveBeenCalledWith('Hello', 40 + 100, 50);
+        expect(ctx.textAlign).toBe('center');
+    });
+});
+
 // §7 backlog Tier 4 (nineSliceSprite): 3×3 stretch draw path.
 describe('GameEngine — §7 backlog nineSliceSprite', () => {
     function nineSliceManifest() {

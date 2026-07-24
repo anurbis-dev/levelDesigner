@@ -160,6 +160,20 @@ describe('Renderer.drawEntity', () => {
         expect(ctx.fillRect).not.toHaveBeenCalled();
     });
 
+    it('delegates to fontTextStyle.drawText when present', () => {
+        const { canvas, ctx } = mockCanvas();
+        const renderer = new Renderer(canvas);
+        const drawText = vi.fn().mockReturnValue(true);
+
+        renderer.drawEntity({
+            visible: true, type: 'fontTextStyle', x: 5, y: 6, width: 100, height: 20, color: '#fff',
+            behaviors: [{ drawText }]
+        });
+
+        expect(drawText).toHaveBeenCalledWith(ctx, 5, 6);
+        expect(ctx.fillRect).not.toHaveBeenCalled();
+    });
+
     it('suppresses entity fill when light.drawLight is present', () => {
         const { canvas, ctx } = mockCanvas();
         const renderer = new Renderer(canvas);
