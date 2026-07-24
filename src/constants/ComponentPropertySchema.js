@@ -40,6 +40,11 @@ const VARIABLE_MODIFIER_MODE_OPTIONS = [
     { value: 'continuous', label: 'Continuous (re-applies every tick while overlapping)' }
 ];
 
+const AUDIO_ZONE_CHANNEL_OPTIONS = [
+    { value: 'ambient', label: 'Ambient (zone channel, stops on exit)' },
+    { value: 'music', label: 'Music (global channel, optional crossfade)' }
+];
+
 const COLLIDER_SHAPE_OPTIONS = [
     { value: 'box', label: 'Box (square / rect)' },
     { value: 'circle', label: 'Circle' },
@@ -162,6 +167,21 @@ const SCHEMAS = {
         { key: 'collidesWith', label: 'Takes Damage From (comma list)', kind: 'stringList', default: [] },
         { key: 'itemId', label: 'Item Id (level.items[].id) — dropped on destroy', kind: 'text', default: '' },
         { key: 'count', label: 'Drop Count', kind: 'number', default: 1 }
+    ],
+    audioZone: [
+        { key: 'shape', label: 'Shape', kind: 'select', default: 'box', options: COLLIDER_SHAPE_OPTIONS },
+        { key: 'offsetX', label: 'Offset X (box TL / circle center)', kind: 'number', default: 0 },
+        { key: 'offsetY', label: 'Offset Y (box TL / circle center)', kind: 'number', default: 0 },
+        { key: 'width', label: 'Width (box; empty = entity)', kind: 'number', default: null },
+        { key: 'height', label: 'Height (box; empty = entity)', kind: 'number', default: null },
+        { key: 'radius', label: 'Radius (circle)', kind: 'number', default: null },
+        { key: 'points', label: 'Points (freeform JSON [{x,y}])', kind: 'json', default: [] },
+        { key: 'src', label: 'Audio Src (URL / path)', kind: 'text', default: '' },
+        { key: 'volume', label: 'Volume (0–1)', kind: 'number', default: 1 },
+        { key: 'loop', label: 'Loop', kind: 'bool', default: true },
+        { key: 'channel', label: 'Channel', kind: 'select', default: 'ambient', options: AUDIO_ZONE_CHANNEL_OPTIONS },
+        { key: 'stopOnExit', label: 'Stop On Exit', kind: 'bool', default: true },
+        { key: 'crossfade', label: 'Crossfade (sec, music channel)', kind: 'number', default: 0 }
     ],
     stateMachineBehavior: [
         { key: 'defaultState', label: 'Default State', kind: 'text', default: '' },

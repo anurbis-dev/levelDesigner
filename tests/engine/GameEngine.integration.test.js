@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { GameEngine } from '../../src/engine/GameEngine.js';
 import { Input } from '../../src/engine/Input.js';
+import { AudioPlayer } from '../../src/engine/AudioPlayer.js';
 
 /** Minimal fake EventTarget so tests don't need jsdom (see tests/engine/Input.test.js). */
 function fakeInputTarget() {
@@ -551,6 +552,103 @@ describe('GameEngine — §7 backlog PlaySound action', () => {
 
         expect(global.Audio).toHaveBeenCalledWith('hit.wav');
         expect(play).toHaveBeenCalled();
+    });
+});
+
+// §7 backlog Tier 3 (musicTrack): PlayMusic/StopMusic + audioZone enter/exit.
+describe('GameEngine — §7 backlog PlayMusic / audioZone', () => {
+    function musicManifest() {
+        return {
+            formatVersion: 1, name: 'Demo', entryLevelId: 'level_a',
+            levels: [{
+                id: 'level_a',
+                data: {
+                    meta: { name: 'Level A' },
+                    camera: { x: 0, y: 0, zoom: 1 },
+                    layers: [{ id: 'main', name: 'Main', visible: true, locked: false, parallaxX: 1, parallaxY: 1 }],
+                    eventGraph: {
+                        formatVersion: 1, scope: 'level',
+                        variables: [],
+                        nodes: [
+                            { id: 'n1', type: 'OnCustomEvent', params: { name: 'bgm' } },
+                            { id: 'n2', type: 'PlayMusic', params: { src: 'theme.ogg', volume: 0.6 } },
+                            { id: 'n3', type: 'OnCustomEvent', params: { name: 'silence' } },
+                            { id: 'n4', type: 'StopMusic', params: {} }
+                        ],
+                        edges: [
+                            { from: 'n1', to: 'n2' },
+                            { from: 'n3', to: 'n4' }
+                        ]
+                    },
+                    objects: [
+                        {
+                            id: 'spawn', type: 'player_start', x: 0, y: 0, width: 16, height: 16,
+                            layerId: 'main',
+                            components: [{ type: 'playerStart', properties: {} }]
+                        },
+                        {
+                            id: 'amb', type: 'audioZone', x: 100, y: 0, width: 40, height: 40,
+                            layerId: 'main',
+                            components: [{
+                                type: 'audioZone',
+                                properties: { src: 'cave.ogg', volume: 0.5, channel: 'ambient' }
+                            }]
+                        }
+                    ]
+                }
+            }]
+        };
+    }
+
+    afterEach(() => {
+        AudioPlayer._reset();
+        delete global.Audio;
+    });
+
+    it('PlayMusic starts the music channel; StopMusic clears it', async () => {
+        global.Audio = vi.fn(function (src) {
+            this.src = src;
+            this.volume = 1;
+            this.loop = false;
+            this.currentTime = 0;
+            this.pause = vi.fn();
+            this.play = vi.fn().mockResolvedValue(undefined);
+        });
+
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(musicManifest());
+
+        engine.scene.eventGraphRuntime.emitCustomEvent('bgm');
+        expect(global.Audio).toHaveBeenCalledWith('theme.ogg');
+        expect(AudioPlayer._music?.volume).toBe(0.6);
+        expect(AudioPlayer._music?.loop).toBe(true);
+
+        engine.scene.eventGraphRuntime.emitCustomEvent('silence');
+        expect(AudioPlayer._music).toBe(null);
+    });
+
+    it('audioZone plays ambient when the player enters the zone', async () => {
+        global.Audio = vi.fn(function (src) {
+            this.src = src;
+            this.volume = 1;
+            this.loop = false;
+            this.currentTime = 0;
+            this.pause = vi.fn();
+            this.play = vi.fn().mockResolvedValue(undefined);
+        });
+
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(musicManifest());
+
+        // player starts at (0,0); move into the zone at x=100
+        engine.scene.player.x = 110;
+        engine.scene.player.y = 10;
+        engine.tick(0.016);
+
+        expect(global.Audio).toHaveBeenCalledWith('cave.ogg');
+        expect(AudioPlayer._ambient?.volume).toBe(0.5);
     });
 });
 

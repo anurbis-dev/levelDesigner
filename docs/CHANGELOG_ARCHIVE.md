@@ -1,3 +1,7 @@
+## Archived from CHANGELOG.md (inputMap level keyboard remapping, v4.40.0)
+
+- **Feat: inputMap level keyboard remapping (§7 Tier 3, v4.40.0)**: `levelData.inputMap` `{actions: {name: string[]}}` on Scene/Level. `Input.setInputMap` / `isActionDown`; axes + interact honor remaps (`OnInteract`, mount/dismount). `GameEngine.loadProject` applies map; unmapped actions keep `DEFAULT_ACTIONS`. Tests for Input/Scene/GameEngine. No editor UI / gamepad this pass.
+
 ## Archived from CHANGELOG.md (HUD image catalog assets, v4.39.0)
 
 - **Feat: HUD image widgets use catalog Image assets (v4.39.0)**: Canvases image type stores `imageAssetId` (select + drop from Assets), not a disk path/URL. Resolve via `resolveWidgetImageSrc` + `scene.assetsById` (Play export now passes `assetManager`). Shared `AssetRefControl.js`; Asset Editor Sprite `imageAssetId` also accepts drop. Legacy widget `imgSrc` remains a read-only fallback when no asset id is set. Disk path remains only on type=image assets.

@@ -95,6 +95,18 @@ export function registerDefaultEventGraphNodes() {
     EventGraphNodeRegistry.register('PlaySound', (node) => {
         AudioPlayer.play(node.params.src, { volume: node.params.volume, loop: node.params.loop });
     });
+    // §7 backlog (musicTrack, Tier 3): single music channel with optional crossfade (seconds).
+    // Params {src, volume?, loop?, crossfade?} / StopMusic {crossfade?} — inline, not catalog.
+    EventGraphNodeRegistry.register('PlayMusic', (node) => {
+        AudioPlayer.playMusic(node.params.src, {
+            volume: node.params.volume,
+            loop: node.params.loop,
+            crossfade: node.params.crossfade
+        });
+    });
+    EventGraphNodeRegistry.register('StopMusic', (node) => {
+        AudioPlayer.stopMusic({ crossfade: node.params?.crossfade });
+    });
     // §7 backlog (prefab, Tier 2): resolves node.params.assetId against scene.assetsById
     // (ProjectLoader.js, populated from the exported manifest's `assets` — see
     // ProjectExporter.js's opts.assetManager), unlike every earlier Tier 1 action which used

@@ -18,6 +18,7 @@ import { ClimbableLadderBehavior } from './ClimbableLadderBehavior.js';
 import { ConveyorZiplineJumpPadPortalBehavior } from './ConveyorZiplineJumpPadPortalBehavior.js';
 import { VariableModifierBehavior } from './VariableModifierBehavior.js';
 import { DestructibleContainerBehavior } from './DestructibleContainerBehavior.js';
+import { AudioZoneBehavior } from './AudioZoneBehavior.js';
 
 /**
  * Registers the Фаза 2 MVP component vertical slice (see docs/RUNTIME_SCHEMA.md).
@@ -44,4 +45,5 @@ export function registerDefaultBehaviors() {
     BehaviorRegistry.register('conveyorZiplineJumpPadPortal', ConveyorZiplineJumpPadPortalBehavior);
     BehaviorRegistry.register('variableModifier', VariableModifierBehavior);
     BehaviorRegistry.register('destructibleContainer', DestructibleContainerBehavior);
+    BehaviorRegistry.register('audioZone', AudioZoneBehavior);
 }

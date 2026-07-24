@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- **Feat: inputMap level keyboard remapping (§7 Tier 3, v4.40.0)**: `levelData.inputMap` `{actions: {name: string[]}}` on Scene/Level. `Input.setInputMap` / `isActionDown`; axes + interact honor remaps (`OnInteract`, mount/dismount). `GameEngine.loadProject` applies map; unmapped actions keep `DEFAULT_ACTIONS`. Tests for Input/Scene/GameEngine. No editor UI / gamepad this pass.
+- **Feat: musicTrack + audioZone (§7 Tier 3, v4.41.0)**: `AudioPlayer` music/ambient channels — `playMusic`/`stopMusic` (optional linear crossfade), `playAmbient`/`stopAmbient`. Event Graph `PlayMusic`/`StopMusic` (`src`, `volume?`, `loop?`, `crossfade?`). Component `audioZone` + `AudioZoneBehavior` (AABB enter/exit, channel ambient|music, stopOnExit). `DEFAULT_ASSET_COMPONENTS.audioZone`. Catalog musicTrack/soundEffect forms still stubs. Tests: AudioPlayer, AudioZoneBehavior, GameEngine.integration.

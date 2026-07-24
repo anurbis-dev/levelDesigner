@@ -72,7 +72,9 @@ export const DEFAULT_ASSET_COMPONENTS = {
     // Image assets own the disk file (imgSrc) — no Sprite.
     // Composites get Sprite → imageAssetId pointing at an Image asset.
     actor: ['sprite'],
-    prefab: ['sprite']
+    prefab: ['sprite'],
+    // §7 audioZone: placed zone already carries the ambient/music behavior.
+    audioZone: ['audioZone']
 };
 
 const ASSET_TYPE_MAP = new Map(ASSET_TYPES.map(t => [t.id, t]));

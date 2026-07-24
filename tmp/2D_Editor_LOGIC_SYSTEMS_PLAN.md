@@ -655,8 +655,8 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     `AudioPlayer.play()` (`src/engine/AudioPlayer.js`), browser-guarded static-хелпер, только
     one-shot SFX (без instance-tracking/stop). Каталожный asset-тип `soundEffect` остаётся
     плейсхолдером без выделенной Asset Editor формы — не запрошено в этом срезе.
-    Тесты: `tests/engine/AudioPlayer.test.js` (5), `GameEngine.integration.test.js` §7 PlaySound
-    (1). `musicTrack`/`audioZone` (loop/crossfade/ambient-on-enter) — следующий Tier, не начат.
+    Тесты: `tests/engine/AudioPlayer.test.js`, `GameEngine.integration.test.js` §7 PlaySound.
+    `musicTrack`/`audioZone` — ✅ v4.41.0 (см. Tier 3 ниже).
   - `pathSpline` Tier 1 частично 🔨 2026-07-20: `pathFollower` получил `interpolation`
     (`'linear'` дефолт \| `'smooth'`) — в `'smooth'` `PathFollowerBehavior._updateSmooth`/
     `_catmullRom` (`src/engine/behaviors/PathFollowerBehavior.js`) двигает entity по кривой
@@ -743,4 +743,10 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     `MountableVehicleSeatBehavior`) читают actions. `GameEngine.loadProject` →
     `input.setInputMap(scene.inputMap)`. `Level.inputMap` round-trip в toJSON. Только
     keyboard; без editor UI / gamepad/touch. Тесты: Input/Scene/GameEngine.integration.
-    Следующий приоритет — `musicTrack`/`audioZone`/`tileset`+`tilemap`.
+  - **`musicTrack` + `audioZone` завершены ✅ 2026-07-24 (v4.41.0)**: `AudioPlayer`
+    music/ambient каналы (`playMusic`/`stopMusic` с optional linear crossfade sec,
+    `playAmbient`/`stopAmbient`). Event Graph `PlayMusic`/`StopMusic` (inline
+    `{src, volume?, loop?, crossfade?}`). Component `audioZone` + `AudioZoneBehavior`
+    (AABB enter/exit, channel ambient|music, stopOnExit). `DEFAULT_ASSET_COMPONENTS.audioZone`.
+    Каталожные формы musicTrack/soundEffect — stubs. Тесты: AudioPlayer, AudioZoneBehavior,
+    GameEngine.integration. Следующий приоритет — `tileset`+`tilemap`.
