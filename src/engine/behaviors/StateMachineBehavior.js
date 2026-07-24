@@ -1,5 +1,6 @@
 import { Behavior } from './Behavior.js';
 import { compareOp, evalSpec } from '../eventgraph/ConditionEvaluator.js';
+import { NavMeshBehavior } from './NavMeshBehavior.js';
 
 /**
  * AI finite-state machine for NPCs/mechanisms (patrol/chase) — §7 backlog `stateMachineBehavior`,
@@ -16,8 +17,9 @@ import { compareOp, evalSpec } from '../eventgraph/ConditionEvaluator.js';
  * "patrol NPC passes through geometry, not blocked by it" call as PathFollowerBehavior):
  * - 'patrol': ping-pongs between `waypoints` (asset-local offsets from spawn, same convention
  *   as PathFollowerBehavior/collider freeform points), waypoints[0] conventionally {x:0,y:0}.
- * - 'chase': moves straight toward scene.player at `speed`.
- * - 'flee': moves straight away from scene.player at `speed`.
+ * - 'chase': follows navMesh path toward scene.player when a covering mesh exists (§7 navMesh);
+ *   otherwise moves straight toward player at `speed`.
+ * - 'flee': moves straight away from scene.player at `speed` (navMesh not used for flee).
  * - unset/'idle': no movement — just evaluates transitions.
  *
  * `setState(name)` is a public duck-typed hook (mirrors MovablePushable's tryPush / Spawner's
@@ -57,6 +59,9 @@ export class StateMachineBehavior extends Behavior {
         this._patrolDirection = 1;
         this._facingX = this.properties.facingX ?? 1;
         this._facingY = this.properties.facingY ?? 0;
+        this._navPath = null;
+        this._navPathIndex = 0;
+        this._navGoalKey = null;
         this._resetPatrolProgress(this._stateByName(this._currentStateName));
     }
 
@@ -116,6 +121,9 @@ export class StateMachineBehavior extends Behavior {
             return;
         }
         this._currentStateName = name;
+        this._navPath = null;
+        this._navPathIndex = 0;
+        this._navGoalKey = null;
         this._resetPatrolProgress(next);
     }
 
@@ -162,10 +170,62 @@ export class StateMachineBehavior extends Behavior {
         if (!state || dt <= 0) return;
         switch (state.movement) {
             case 'patrol': this._runPatrol(state, dt); break;
-            case 'chase': this._moveToward(scene?.player, state.speed ?? 100, dt); break;
+            case 'chase': this._moveTowardNav(scene, scene?.player, state.speed ?? 100, dt); break;
             case 'flee': this._moveAway(scene?.player, state.speed ?? 100, dt); break;
             default: break;
         }
+    }
+
+    /**
+     * Chase via navMesh when both agent and target sit on a covering mesh;
+     * falls back to straight-line `_moveToward` if no mesh / no path.
+     * Replans when the goal cell changes (quantized by default cell size 16).
+     */
+    _moveTowardNav(scene, target, speed, dt) {
+        if (!target) return;
+        const meshes = NavMeshBehavior.collectFromScene(scene);
+        if (meshes.length === 0) {
+            this._moveToward(target, speed, dt);
+            return;
+        }
+        const quant = 16;
+        const goalKey = `${Math.round(target.x / quant)},${Math.round(target.y / quant)}`;
+        if (goalKey !== this._navGoalKey || !this._navPath) {
+            this._navPath = NavMeshBehavior.findPathInScene(
+                scene, this.entity.x, this.entity.y, target.x, target.y
+            );
+            this._navPathIndex = 0;
+            this._navGoalKey = goalKey;
+        }
+        if (!this._navPath || this._navPath.length === 0) {
+            this._moveToward(target, speed, dt);
+            return;
+        }
+        // Advance past reached waypoints
+        while (this._navPathIndex < this._navPath.length) {
+            const wp = this._navPath[this._navPathIndex];
+            const dx = wp.x - this.entity.x;
+            const dy = wp.y - this.entity.y;
+            const dist = Math.hypot(dx, dy);
+            const step = speed * dt;
+            if (dist <= step || dist < 0.5) {
+                this.entity.x = wp.x;
+                this.entity.y = wp.y;
+                this._navPathIndex += 1;
+                dt = Math.max(0, dt - (dist / (speed || 1)));
+                if (dt <= 0) {
+                    if (dist > 0) this._setFacing(dx, dy, dist);
+                    return;
+                }
+                continue;
+            }
+            this._setFacing(dx, dy, dist);
+            this.entity.x += (dx / dist) * step;
+            this.entity.y += (dy / dist) * step;
+            return;
+        }
+        // Path exhausted — finish straight to target
+        this._moveToward(target, speed, dt);
     }
 
     _runPatrol(state, dt) {

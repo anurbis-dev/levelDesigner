@@ -86,7 +86,9 @@ export const DEFAULT_ASSET_COMPONENTS = {
     // §7 fontTextStyle: placed text entity already carries the draw behavior.
     fontTextStyle: ['fontTextStyle'],
     // §7 volume: placed zone already carries the view-filter behavior.
-    volume: ['volume']
+    volume: ['volume'],
+    // §7 navMesh: placed walkable zone already carries pathfinding behavior.
+    navMesh: ['navMesh']
 };
 
 const ASSET_TYPE_MAP = new Map(ASSET_TYPES.map(t => [t.id, t]));

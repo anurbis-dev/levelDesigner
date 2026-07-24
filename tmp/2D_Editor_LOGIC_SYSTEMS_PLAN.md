@@ -784,4 +784,10 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     inside; optional `presetAssetId` merges catalog `materialShaderPreset`; `priority`
     on overlap; `getViewFilter` + `Renderer.applyVolumeFilter` screen post-pass.
     `DEFAULT_ASSET_COMPONENTS.volume`. Тесты: VolumeBehavior, Renderer, GameEngine.integration.
-    Next Tier 4: navMesh / sequenceCutscene — no hard order.
+  - **`navMesh` завершён ✅ 2026-07-24 (v4.48.0)**: Component `navMesh` + `NavMeshBehavior` —
+    walkable AABB (never solid), grid A* (`cellSize`, `blocked` holes), optional
+    `navMeshAssetId` catalog merge; `containsWorldPoint`/`findPath`/`findPathInScene`.
+    `StateMachineBehavior` chase follows path when mesh covers endpoints, else
+    straight-line. `DEFAULT_ASSET_COMPONENTS.navMesh`. Тесты: NavMeshBehavior,
+    StateMachineBehavior, GameEngine.integration.
+    Next Tier 4: sequenceCutscene.

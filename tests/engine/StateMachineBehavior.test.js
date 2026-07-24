@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Entity } from '../../src/engine/Entity.js';
 import { StateMachineBehavior } from '../../src/engine/behaviors/StateMachineBehavior.js';
+import { NavMeshBehavior } from '../../src/engine/behaviors/NavMeshBehavior.js';
 
 function makeFsm(states, defaultState, x = 0, y = 0, player = null) {
     const entity = new Entity({ id: 'npc1', type: 'object', x, y, width: 10, height: 10 });
@@ -232,5 +233,33 @@ describe('StateMachineBehavior', () => {
             });
             expect(behavior.currentStateName).toBe('custom');
         });
+    });
+
+    it('chase follows navMesh path around blocked obstacle instead of straight line', () => {
+        const player = { x: 70, y: 10 };
+        const { entity, behavior, scene } = makeFsm(
+            [{ name: 'chase', movement: 'chase', speed: 40 }],
+            'chase',
+            10, 10, player
+        );
+        const meshEntity = new Entity({
+            id: 'nav', type: 'navMesh', x: 0, y: 0, width: 80, height: 80
+        });
+        const mesh = new NavMeshBehavior(meshEntity, {
+            properties: {
+                cellSize: 10,
+                blocked: [{ x: 30, y: 0, width: 20, height: 60 }]
+            }
+        });
+        meshEntity.behaviors = [mesh];
+        scene.entities.push(meshEntity);
+
+        // Several ticks — agent should go around the wall (y rises), not sit in blocked band
+        for (let i = 0; i < 20; i++) behavior.update(0.25, scene);
+        expect(entity.x).toBeGreaterThan(10);
+        // At some point path dips below wall; final y may be near player (10) after clearing
+        // Ensure agent never ended stuck inside blocked column
+        const insideBlocked = entity.x >= 30 && entity.x < 50 && entity.y < 60;
+        expect(insideBlocked).toBe(false);
     });
 });

@@ -994,6 +994,82 @@ describe('GameEngine — §7 backlog tileset + tilemap', () => {
     });
 });
 
+// §7 backlog Tier 4 (navMesh): walkable zone + chase pathfinding.
+describe('GameEngine — §7 backlog navMesh', () => {
+    function navMeshManifest() {
+        return {
+            formatVersion: 1, name: 'Demo', entryLevelId: 'level_a',
+            assets: [{
+                id: 'mesh_shared', name: 'Floor', type: 'navMesh',
+                properties: {
+                    cellSize: 10,
+                    blocked: [{ x: 30, y: 0, width: 20, height: 50 }]
+                }
+            }],
+            levels: [{
+                id: 'level_a',
+                data: {
+                    meta: { name: 'Level A' },
+                    camera: { x: 0, y: 0, zoom: 1 },
+                    layers: [{ id: 'main', name: 'Main', visible: true, locked: false, parallaxX: 1, parallaxY: 1 }],
+                    objects: [
+                        {
+                            id: 'spawn', type: 'player_start', x: 70, y: 10, width: 16, height: 16,
+                            layerId: 'main',
+                            components: [{ type: 'playerStart', properties: {} }]
+                        },
+                        {
+                            id: 'floor', type: 'navMesh', x: 0, y: 0, width: 80, height: 80,
+                            layerId: 'main',
+                            components: [{
+                                type: 'navMesh',
+                                properties: { navMeshAssetId: 'mesh_shared' }
+                            }]
+                        },
+                        {
+                            id: 'npc', type: 'object', x: 10, y: 10, width: 10, height: 10,
+                            layerId: 'main',
+                            components: [{
+                                type: 'stateMachineBehavior',
+                                properties: {
+                                    defaultState: 'chase',
+                                    states: [{ name: 'chase', movement: 'chase', speed: 50 }]
+                                }
+                            }]
+                        }
+                    ]
+                }
+            }]
+        };
+    }
+
+    it('loads navMesh, merges asset, never solid, chase routes around blocked', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(navMeshManifest());
+
+        const floor = engine.scene.entities.find(e => e.id === 'floor');
+        expect(floor).toBeTruthy();
+        const nav = floor.behaviors.find(b => typeof b.findPath === 'function');
+        expect(nav).toBeTruthy();
+        expect(nav.isOverlapping()).toBe(false);
+        nav.update(0, engine.scene);
+        expect(nav.cellSize).toBe(10);
+        expect(nav.blocked.length).toBe(1);
+        expect(nav.containsWorldPoint(10, 10)).toBe(true);
+        expect(nav.containsWorldPoint(40, 10)).toBe(false);
+
+        const npc = engine.scene.entities.find(e => e.id === 'npc');
+        const sm = npc.behaviors.find(b => typeof b.setState === 'function');
+        expect(sm).toBeTruthy();
+        for (let i = 0; i < 30; i++) engine.tick(0.2);
+        // Should have moved toward player without ending inside blocked band
+        expect(npc.x).toBeGreaterThan(10);
+        const insideBlocked = npc.x >= 30 && npc.x < 50 && npc.y < 50;
+        expect(insideBlocked).toBe(false);
+    });
+});
+
 // §7 backlog Tier 4 (volume): view filter while player inside zone.
 describe('GameEngine — §7 backlog volume', () => {
     function volumeManifest() {

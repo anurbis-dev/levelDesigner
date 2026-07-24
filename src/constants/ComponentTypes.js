@@ -38,7 +38,8 @@ export const COMPONENT_TYPES = [
     { id: 'light', label: 'Light', description: 'Point/directional/area light: ambient darkness + additive glow (no geometry soft shadows yet).', genres: 'all with lighting' },
     { id: 'nineSliceSprite', label: 'Nine-Slice Sprite', description: 'Stretchable-edge image (3×3 borders) for UI frames / scalable decorations.', genres: 'all with UI frames' },
     { id: 'fontTextStyle', label: 'Font / Text Style', description: 'Canvas text: font family/size, outline, shadow; optional shared style asset.', genres: 'all with UI text' },
-    { id: 'volume', label: 'Volume', description: 'Arbitrary-shape zone: view filter (blur/color/shadow) while player is inside.', genres: 'all with visual zones' }
+    { id: 'volume', label: 'Volume', description: 'Arbitrary-shape zone: view filter (blur/color/shadow) while player is inside.', genres: 'all with visual zones' },
+    { id: 'navMesh', label: 'NavMesh', description: 'Walkable zone for AI pathfinding (grid A*); chase uses paths when present.', genres: 'all with AI navigation' }
 ];
 
 const COMPONENT_TYPE_MAP = new Map(COMPONENT_TYPES.map(c => [c.id, c]));

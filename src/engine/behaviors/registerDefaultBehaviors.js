@@ -25,6 +25,7 @@ import { LightBehavior } from './LightBehavior.js';
 import { NineSliceSpriteBehavior } from './NineSliceSpriteBehavior.js';
 import { FontTextStyleBehavior } from './FontTextStyleBehavior.js';
 import { VolumeBehavior } from './VolumeBehavior.js';
+import { NavMeshBehavior } from './NavMeshBehavior.js';
 
 /**
  * Registers the Фаза 2 MVP component vertical slice (see docs/RUNTIME_SCHEMA.md).
@@ -58,4 +59,5 @@ export function registerDefaultBehaviors() {
     BehaviorRegistry.register('nineSliceSprite', NineSliceSpriteBehavior);
     BehaviorRegistry.register('fontTextStyle', FontTextStyleBehavior);
     BehaviorRegistry.register('volume', VolumeBehavior);
+    BehaviorRegistry.register('navMesh', NavMeshBehavior);
 }
