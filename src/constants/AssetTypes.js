@@ -84,7 +84,9 @@ export const DEFAULT_ASSET_COMPONENTS = {
     // §7 nineSliceSprite: placed frame already carries the 9-slice behavior.
     nineSliceSprite: ['nineSliceSprite'],
     // §7 fontTextStyle: placed text entity already carries the draw behavior.
-    fontTextStyle: ['fontTextStyle']
+    fontTextStyle: ['fontTextStyle'],
+    // §7 volume: placed zone already carries the view-filter behavior.
+    volume: ['volume']
 };
 
 const ASSET_TYPE_MAP = new Map(ASSET_TYPES.map(t => [t.id, t]));

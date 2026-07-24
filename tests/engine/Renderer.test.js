@@ -299,4 +299,41 @@ describe('Renderer.drawEntity', () => {
         renderer.drawEntity({ visible: true, type: 'actor', x: 0, y: 0, width: 10, height: 10 });
         expect(ctx.filter).toBe('none');
     });
+
+    it('applyVolumeFilter records lastVolumeFilter from highest-priority getViewFilter', () => {
+        const { canvas } = mockCanvas();
+        const renderer = new Renderer(canvas);
+        const scene = sceneWith({
+            objects: [
+                { id: 'v1', type: 'volume', x: 0, y: 0, width: 10, height: 10 },
+                { id: 'v2', type: 'volume', x: 0, y: 0, width: 10, height: 10 }
+            ]
+        });
+        const e1 = scene.entities.find(e => e.id === 'v1') || scene.entities[0];
+        const e2 = scene.entities.find(e => e.id === 'v2') || scene.entities[1];
+        e1.behaviors = [{
+            priority: 1,
+            getViewFilter: () => ({ blur: 2 })
+        }];
+        e2.behaviors = [{
+            priority: 5,
+            getViewFilter: () => ({ blur: 8, brightness: 1.2 })
+        }];
+
+        renderer.applyVolumeFilter(scene);
+        expect(renderer.lastVolumeFilter).toBe('blur(8px) brightness(1.2)');
+    });
+
+    it('applyVolumeFilter leaves lastVolumeFilter null when no active volume', () => {
+        const { canvas } = mockCanvas();
+        const renderer = new Renderer(canvas);
+        const scene = sceneWith({
+            objects: [{ id: 'v1', type: 'volume', x: 0, y: 0, width: 10, height: 10 }]
+        });
+        const e1 = scene.entities[0];
+        e1.behaviors = [{ priority: 0, getViewFilter: () => null }];
+
+        renderer.applyVolumeFilter(scene);
+        expect(renderer.lastVolumeFilter).toBe(null);
+    });
 });

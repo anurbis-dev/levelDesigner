@@ -994,6 +994,66 @@ describe('GameEngine — §7 backlog tileset + tilemap', () => {
     });
 });
 
+// §7 backlog Tier 4 (volume): view filter while player inside zone.
+describe('GameEngine — §7 backlog volume', () => {
+    function volumeManifest() {
+        return {
+            formatVersion: 1, name: 'Demo', entryLevelId: 'level_a',
+            assets: [{
+                id: 'fx_fog', name: 'Fog', type: 'materialShaderPreset',
+                properties: { blur: 5, saturate: 0.6 }
+            }],
+            levels: [{
+                id: 'level_a',
+                data: {
+                    meta: { name: 'Level A' },
+                    camera: { x: 0, y: 0, zoom: 1 },
+                    layers: [{ id: 'main', name: 'Main', visible: true, locked: false, parallaxX: 1, parallaxY: 1 }],
+                    objects: [
+                        {
+                            id: 'spawn', type: 'player_start', x: 0, y: 0, width: 16, height: 16,
+                            layerId: 'main',
+                            components: [{ type: 'playerStart', properties: {} }]
+                        },
+                        {
+                            id: 'fog', type: 'volume', x: 0, y: 0, width: 64, height: 64,
+                            layerId: 'main',
+                            components: [{
+                                type: 'volume',
+                                properties: {
+                                    presetAssetId: 'fx_fog',
+                                    priority: 1
+                                }
+                            }]
+                        }
+                    ]
+                }
+            }]
+        };
+    }
+
+    it('loads volume, merges preset asset, never solid, activates filter on player enter', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(volumeManifest());
+
+        const fog = engine.scene.entities.find(e => e.id === 'fog');
+        expect(fog).toBeTruthy();
+        const vol = fog.behaviors.find(b => typeof b.getViewFilter === 'function');
+        expect(vol).toBeTruthy();
+        expect(vol.isOverlapping()).toBe(false);
+
+        // Player spawns at 0,0 — inside the 64×64 volume
+        vol.update(0, engine.scene);
+        expect(vol.blur).toBe(5);
+        expect(vol.saturate).toBe(0.6);
+        expect(vol.getViewFilter()).toEqual({ blur: 5, saturate: 0.6 });
+
+        engine.renderer.applyVolumeFilter(engine.scene);
+        expect(engine.renderer.lastVolumeFilter).toBe('blur(5px) saturate(0.6)');
+    });
+});
+
 // §7 backlog Tier 4 (fontTextStyle): canvas text draw path.
 describe('GameEngine — §7 backlog fontTextStyle', () => {
     function fontTextManifest() {

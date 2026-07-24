@@ -1,3 +1,7 @@
+## Archived from CHANGELOG.md (fontTextStyle, v4.46.0)
+
+- **Feat: fontTextStyle (§7 Tier 4, v4.46.0)**: Component `fontTextStyle` + `FontTextStyleBehavior` — canvas text in entity box (font family/size/weight/style, align, verticalAlign, outline, shadow, word-wrap). Optional `styleAssetId` merges catalog `fontTextStyle` asset fields when component fields empty. Duck-type `drawText` in Renderer (skips entity fill); never solid. No FontFace / custom .woff preload. `DEFAULT_ASSET_COMPONENTS.fontTextStyle`. Tests: FontTextStyleBehavior, Renderer, GameEngine.integration.
+
 ## Archived from CHANGELOG.md (nineSliceSprite, v4.45.0)
 
 - **Feat: nineSliceSprite (§7 Tier 4, v4.45.0)**: Component `nineSliceSprite` + `NineSliceSpriteBehavior` — 3×3 border-preserving stretch into entity box. Props: `imageAssetId`/`src`, `borderLeft`/`Right`/`Top`/`Bottom` (src px), `fillCenter`. Duck-type `drawNineSlice` in Renderer; `collectImageSources`; never solid. Fallback color rect if image missing. `DEFAULT_ASSET_COMPONENTS.nineSliceSprite`. No 9-slice paint UI. Tests: NineSliceSpriteBehavior, Renderer, GameEngine.integration.

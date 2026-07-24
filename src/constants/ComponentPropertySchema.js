@@ -271,6 +271,23 @@ const SCHEMAS = {
         { key: 'wrap', label: 'Word Wrap', kind: 'bool', default: true },
         { key: 'lineHeight', label: 'Line Height (× fontSize)', kind: 'number', default: 1.2 }
     ],
+    volume: [
+        { key: 'shape', label: 'Shape', kind: 'select', default: 'box', options: COLLIDER_SHAPE_OPTIONS },
+        { key: 'offsetX', label: 'Offset X (box TL / circle center)', kind: 'number', default: 0 },
+        { key: 'offsetY', label: 'Offset Y (box TL / circle center)', kind: 'number', default: 0 },
+        { key: 'width', label: 'Width (box; empty = entity)', kind: 'number', default: null },
+        { key: 'height', label: 'Height (box; empty = entity)', kind: 'number', default: null },
+        { key: 'radius', label: 'Radius (circle)', kind: 'number', default: null },
+        { key: 'points', label: 'Points (freeform JSON [{x,y}])', kind: 'json', default: [] },
+        { key: 'presetAssetId', label: 'Preset Asset (materialShaderPreset)', kind: 'assetRef', assetTypes: ['materialShaderPreset'], default: '' },
+        { key: 'blur', label: 'Blur (px)', kind: 'number', default: 0 },
+        { key: 'brightness', label: 'Brightness (1 = normal)', kind: 'number', default: null },
+        { key: 'saturate', label: 'Saturate (1 = normal)', kind: 'number', default: null },
+        { key: 'hueRotate', label: 'Hue Rotate (deg)', kind: 'number', default: 0 },
+        { key: 'dropShadow', label: 'Drop Shadow (JSON {x,y,blur,color})', kind: 'json', default: null },
+        { key: 'priority', label: 'Priority (higher wins on overlap)', kind: 'number', default: 0 },
+        { key: 'enabled', label: 'Enabled', kind: 'bool', default: true }
+    ],
     stateMachineBehavior: [
         { key: 'defaultState', label: 'Default State', kind: 'text', default: '' },
         { key: 'states', label: 'States (JSON: [{name,movement,speed,waypoints,transitions}]; distance condition: {type:"distance",op,value,fov?} — fov degrees, default 180, 360 = omnidirectional); overrides aiPreset when non-empty', kind: 'json', default: [] },

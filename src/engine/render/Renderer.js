@@ -117,14 +117,10 @@ export class Renderer {
     }
 
     /**
-     * §7 backlog (materialShaderPreset, Tier 1): `entity.materialPreset` is a direct GameObject
-     * field (same convention as `entity.color`/`imgSrc`, not a component under `properties`) —
-     * `{blur?, brightness?, saturate?, hueRotate?, dropShadow?:{x?,y?,blur?,color?}}` — turned
-     * into a canvas 2D CSS `filter` string. No separate reusable catalog asset/registry yet
-     * (`ProjectLoader.assetsById` still an intentionally empty Map, Tier 2+); the preset data is
-     * inline on the object, same "no assetId lookup" convention as `PlaySound`/`pathFollower
-     * .interpolation`/`stateMachineBehavior.aiPreset`. Applies to any entity (not gated behind
-     * a `volume` trigger zone — `volume` itself is a separate, still-unimplemented §7 item).
+     * §7 materialShaderPreset / volume: `materialPreset`-shaped object
+     * `{blur?, brightness?, saturate?, hueRotate?, dropShadow?:{x?,y?,blur?,color?}}`
+     * → canvas 2D CSS `filter` string. Used for per-entity `entity.materialPreset` and for
+     * screen-space `VolumeBehavior.getViewFilter()` post-pass.
      * @returns {string|null} CSS filter string, or null for an empty/absent preset.
      */
     static _buildFilterString(preset) {
@@ -182,6 +178,9 @@ export class Renderer {
         this.applyLights(scene, camera, layerFilter);
 
         this.restoreCamera();
+
+        // §7 volume: screen-space view filter while player is inside a volume zone
+        this.applyVolumeFilter(scene);
     }
 
     /**
@@ -248,5 +247,113 @@ export class Renderer {
             );
             if (behavior) out.push({ behavior, x: absX, y: absY });
         }
+    }
+
+    /**
+     * §7 volume: pick highest-priority active view filter (player inside zone)
+     * and re-composite the frame with a CSS filter in screen space.
+     * Sets `this.lastVolumeFilter` to the CSS string or null (test/observability).
+     * @param {import('../Scene.js').Scene} scene
+     */
+    applyVolumeFilter(scene) {
+        this.lastVolumeFilter = null;
+        const preset = this._resolveActiveVolumePreset(scene);
+        if (!preset) return;
+        const filterStr = Renderer._buildFilterString(preset);
+        if (!filterStr) return;
+        this.lastVolumeFilter = filterStr;
+
+        const w = this.canvas.width;
+        const h = this.canvas.height;
+        const tmp = this._getFilterScratch(w, h);
+        if (!tmp || typeof this.ctx.drawImage !== 'function') {
+            // Mock / headless without bitmap path — filter string still recorded.
+            return;
+        }
+        const tctx = tmp.getContext('2d');
+        if (!tctx || typeof tctx.drawImage !== 'function') return;
+        try {
+            tctx.setTransform?.(1, 0, 0, 1, 0, 0);
+            tctx.clearRect?.(0, 0, w, h);
+            tctx.drawImage(this.canvas, 0, 0);
+            this.ctx.save();
+            this.ctx.setTransform?.(1, 0, 0, 1, 0, 0);
+            this.ctx.filter = filterStr;
+            this.ctx.clearRect(0, 0, w, h);
+            this.ctx.drawImage(tmp, 0, 0);
+            this.ctx.restore();
+        } catch {
+            // Non-real canvas (unit mock) — lastVolumeFilter still set.
+        }
+    }
+
+    /**
+     * @param {import('../Scene.js').Scene} scene
+     * @returns {object|null}
+     */
+    _resolveActiveVolumePreset(scene) {
+        if (!scene?.entities) return null;
+        let best = null;
+        let bestPri = -Infinity;
+        this._walkVolumeFilters(scene.entities, (behavior) => {
+            const f = behavior.getViewFilter();
+            if (!f) return;
+            const pri = behavior.priority ?? 0;
+            if (pri >= bestPri) {
+                bestPri = pri;
+                best = f;
+            }
+        });
+        return best;
+    }
+
+    /**
+     * @param {Array} entities
+     * @param {(b: object) => void} visit
+     */
+    _walkVolumeFilters(entities, visit) {
+        if (!entities) return;
+        for (let i = 0; i < entities.length; i++) {
+            const entity = entities[i];
+            if (!entity || entity.visible === false) continue;
+            if (entity.type === 'group' && entity.children) {
+                this._walkVolumeFilters(entity.children, visit);
+                continue;
+            }
+            const behaviors = entity.behaviors;
+            if (!behaviors) continue;
+            for (let j = 0; j < behaviors.length; j++) {
+                const b = behaviors[j];
+                if (typeof b.getViewFilter === 'function') visit(b);
+            }
+        }
+    }
+
+    /**
+     * Reusable offscreen surface for volume post-pass.
+     * @param {number} w
+     * @param {number} h
+     * @returns {HTMLCanvasElement|OffscreenCanvas|null}
+     */
+    _getFilterScratch(w, h) {
+        if (this._filterScratch && this._filterScratch.width === w && this._filterScratch.height === h) {
+            return this._filterScratch;
+        }
+        try {
+            if (typeof OffscreenCanvas !== 'undefined') {
+                this._filterScratch = new OffscreenCanvas(w, h);
+                return this._filterScratch;
+            }
+            if (typeof document !== 'undefined' && document.createElement) {
+                const c = document.createElement('canvas');
+                c.width = w;
+                c.height = h;
+                this._filterScratch = c;
+                return c;
+            }
+        } catch {
+            /* ignore */
+        }
+        return null;
     }
 }

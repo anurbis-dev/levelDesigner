@@ -778,5 +778,10 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     `FontTextStyleBehavior` — canvas text (font/outline/shadow/align/wrap); optional
     `styleAssetId` merges catalog fields when component empty; `drawText` в Renderer;
     never solid. `DEFAULT_ASSET_COMPONENTS.fontTextStyle`. Без FontFace/.woff. Тесты:
-    FontTextStyleBehavior, Renderer, GameEngine.integration. Next Tier 4: navMesh /
-    sequenceCutscene / volume — no hard order.
+    FontTextStyleBehavior, Renderer, GameEngine.integration.
+  - **`volume` завершён ✅ 2026-07-24 (v4.47.0)**: Component `volume` + `VolumeBehavior` —
+    AABB zone (never solid) applies materialPreset-shaped view filter while player
+    inside; optional `presetAssetId` merges catalog `materialShaderPreset`; `priority`
+    on overlap; `getViewFilter` + `Renderer.applyVolumeFilter` screen post-pass.
+    `DEFAULT_ASSET_COMPONENTS.volume`. Тесты: VolumeBehavior, Renderer, GameEngine.integration.
+    Next Tier 4: navMesh / sequenceCutscene — no hard order.
