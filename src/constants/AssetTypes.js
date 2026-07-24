@@ -78,7 +78,9 @@ export const DEFAULT_ASSET_COMPONENTS = {
     // §7 tilemap: placed map entity already carries the grid/collision behavior.
     tilemap: ['tilemap'],
     // §7 particleEffect: placed emitter already carries the VFX behavior.
-    particleEffect: ['particleEffect']
+    particleEffect: ['particleEffect'],
+    // §7 light: placed light already carries the glow behavior.
+    light: ['light']
 };
 
 const ASSET_TYPE_MAP = new Map(ASSET_TYPES.map(t => [t.id, t]));

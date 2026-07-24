@@ -74,6 +74,13 @@ export class Renderer {
             return;
         }
 
+        // §7 light: marker body suppressed; glow drawn in post-pass applyLights
+        const light = entity.behaviors?.find(b => typeof b.drawLight === 'function');
+        if (light) {
+            if (rotation) this.ctx.restore();
+            return;
+        }
+
         const img = entity.imgSrc && this.imageCache?.get(entity.imgSrc);
         if (img && img.complete && img.naturalHeight !== 0) {
             const spriteAnim = entity.behaviors?.find(b => typeof b.getSourceRect === 'function');
@@ -155,6 +162,75 @@ export class Renderer {
             entity.y = originalY;
         });
 
+        // §7 light: ambient darkness + additive glows (world space, under camera transform)
+        this.applyLights(scene, camera, layerFilter);
+
         this.restoreCamera();
+    }
+
+    /**
+     * Collect enabled lights and apply ambient darken + lighter glows.
+     * @param {import('../Scene.js').Scene} scene
+     * @param {{x:number,y:number,zoom:number}} camera
+     * @param {Set<string>|null} layerFilter
+     */
+    applyLights(scene, camera, layerFilter = null) {
+        const lights = [];
+        this._collectLights(scene.entities, 0, 0, layerFilter, lights);
+        if (!lights.length) return;
+
+        let ambient = 0;
+        for (let i = 0; i < lights.length; i++) {
+            const a = lights[i].behavior.ambient ?? 0;
+            if (a > ambient) ambient = a;
+        }
+
+        const zoom = camera.zoom || 1;
+        const viewX = camera.x;
+        const viewY = camera.y;
+        const viewW = this.canvas.width / zoom;
+        const viewH = this.canvas.height / zoom;
+
+        if (ambient > 0) {
+            this.ctx.fillStyle = `rgba(0,0,0,${ambient})`;
+            this.ctx.fillRect(viewX, viewY, viewW, viewH);
+        }
+
+        const prevOp = this.ctx.globalCompositeOperation;
+        this.ctx.globalCompositeOperation = 'lighter';
+        for (let i = 0; i < lights.length; i++) {
+            const { behavior, x, y } = lights[i];
+            behavior.drawLight(this.ctx, x, y);
+        }
+        this.ctx.globalCompositeOperation = prevOp;
+    }
+
+    /**
+     * @param {Array} entities
+     * @param {number} parentX
+     * @param {number} parentY
+     * @param {Set<string>|null} layerFilter
+     * @param {Array<{behavior: object, x: number, y: number}>} out
+     */
+    _collectLights(entities, parentX, parentY, layerFilter, out) {
+        if (!entities) return;
+        for (let i = 0; i < entities.length; i++) {
+            const entity = entities[i];
+            if (!entity || entity.visible === false) continue;
+            if (layerFilter && entity.layerId && !layerFilter.has(entity.layerId)) continue;
+
+            const absX = (entity.x || 0) + parentX;
+            const absY = (entity.y || 0) + parentY;
+
+            if (entity.type === 'group' && entity.children) {
+                this._collectLights(entity.children, absX, absY, layerFilter, out);
+                continue;
+            }
+
+            const behavior = entity.behaviors?.find(
+                b => typeof b.drawLight === 'function' && b.enabled !== false
+            );
+            if (behavior) out.push({ behavior, x: absX, y: absY });
+        }
     }
 }

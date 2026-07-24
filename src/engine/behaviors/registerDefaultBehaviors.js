@@ -21,6 +21,7 @@ import { DestructibleContainerBehavior } from './DestructibleContainerBehavior.j
 import { AudioZoneBehavior } from './AudioZoneBehavior.js';
 import { TilemapBehavior } from './TilemapBehavior.js';
 import { ParticleEffectBehavior } from './ParticleEffectBehavior.js';
+import { LightBehavior } from './LightBehavior.js';
 
 /**
  * Registers the Фаза 2 MVP component vertical slice (see docs/RUNTIME_SCHEMA.md).
@@ -50,4 +51,5 @@ export function registerDefaultBehaviors() {
     BehaviorRegistry.register('audioZone', AudioZoneBehavior);
     BehaviorRegistry.register('tilemap', TilemapBehavior);
     BehaviorRegistry.register('particleEffect', ParticleEffectBehavior);
+    BehaviorRegistry.register('light', LightBehavior);
 }

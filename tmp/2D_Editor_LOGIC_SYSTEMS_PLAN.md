@@ -763,5 +763,10 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     `imageAssetId`/`src`; `drawParticles` в Renderer; never solid; optional `seed` (LCG).
     `DEFAULT_ASSET_COMPONENTS.particleEffect`. Без paint UI / catalog preset form. Тесты:
     ParticleEffectBehavior, Renderer, GameEngine.integration. **Tier 3 asset-runtime
-    slice closed; Tier 4 started** (next: light / nineSliceSprite / fontTextStyle /
-    navMesh / sequenceCutscene / volume — no hard order).
+    slice closed; Tier 4 started**.
+  - **`light` завершён ✅ 2026-07-24 (v4.44.0)**: Component `light` + `LightBehavior` —
+    point/directional/area additive glow; `ambient` (max of enabled) darkens camera view;
+    `Renderer.applyLights` post-pass (`lighter`); marker body suppressed; never solid.
+    Soft geometry shadows deferred. `DEFAULT_ASSET_COMPONENTS.light`. Тесты: LightBehavior,
+    Renderer, GameEngine.integration. Next Tier 4: nineSliceSprite / fontTextStyle /
+    navMesh / sequenceCutscene / volume — no hard order.

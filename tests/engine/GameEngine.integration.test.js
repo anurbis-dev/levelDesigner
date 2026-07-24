@@ -994,6 +994,68 @@ describe('GameEngine — §7 backlog tileset + tilemap', () => {
     });
 });
 
+// §7 backlog Tier 4 (light): ambient + additive glow pass.
+describe('GameEngine — §7 backlog light', () => {
+    function lightManifest() {
+        return {
+            formatVersion: 1, name: 'Demo', entryLevelId: 'level_a',
+            assets: [],
+            levels: [{
+                id: 'level_a',
+                data: {
+                    meta: { name: 'Level A' },
+                    camera: { x: 0, y: 0, zoom: 1 },
+                    layers: [{ id: 'main', name: 'Main', visible: true, locked: false, parallaxX: 1, parallaxY: 1 }],
+                    objects: [
+                        {
+                            id: 'spawn', type: 'player_start', x: 0, y: 0, width: 16, height: 16,
+                            layerId: 'main',
+                            components: [{ type: 'playerStart', properties: {} }]
+                        },
+                        {
+                            id: 'lamp', type: 'light', x: 80, y: 60, width: 16, height: 16,
+                            layerId: 'main',
+                            components: [{
+                                type: 'light',
+                                properties: {
+                                    lightType: 'point',
+                                    color: '#ffaa00',
+                                    intensity: 0.9,
+                                    radius: 100,
+                                    ambient: 0.4
+                                }
+                            }]
+                        }
+                    ]
+                }
+            }]
+        };
+    }
+
+    it('loads light, never solid, drawLight paints radial glow', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(lightManifest());
+
+        const lamp = engine.scene.entities.find(e => e.id === 'lamp');
+        expect(lamp).toBeTruthy();
+        const light = lamp.behaviors.find(b => typeof b.drawLight === 'function');
+        expect(light).toBeTruthy();
+        expect(light.lightType).toBe('point');
+        expect(light.isOverlapping()).toBe(false);
+
+        const grad = { addColorStop: vi.fn() };
+        const ctx = {
+            createRadialGradient: vi.fn(() => grad),
+            beginPath: vi.fn(), arc: vi.fn(), fill: vi.fn(),
+            fillStyle: null
+        };
+        light.drawLight(ctx, lamp.x, lamp.y);
+        expect(ctx.createRadialGradient).toHaveBeenCalled();
+        expect(ctx.fill).toHaveBeenCalled();
+    });
+});
+
 // §7 backlog Tier 4 (particleEffect): emitter + drawParticles path.
 describe('GameEngine — §7 backlog particleEffect', () => {
     function particleManifest() {

@@ -3,10 +3,15 @@ import { Renderer } from '../../src/engine/render/Renderer.js';
 import { Scene } from '../../src/engine/Scene.js';
 
 function mockCanvas() {
+    const grad = { addColorStop: vi.fn() };
     const ctx = {
         fillRect: vi.fn(), clearRect: vi.fn(), drawImage: vi.fn(),
         save: vi.fn(), restore: vi.fn(), translate: vi.fn(), scale: vi.fn(), rotate: vi.fn(),
-        fillStyle: null, filter: 'none'
+        fillStyle: null, filter: 'none',
+        globalCompositeOperation: 'source-over',
+        createRadialGradient: vi.fn(() => grad),
+        beginPath: vi.fn(), arc: vi.fn(), fill: vi.fn(),
+        moveTo: vi.fn(), closePath: vi.fn(), clip: vi.fn()
     };
     const canvas = { width: 800, height: 600, getContext: () => ctx };
     return { canvas, ctx };
@@ -139,6 +144,43 @@ describe('Renderer.drawEntity', () => {
 
         expect(drawParticles).toHaveBeenCalledWith(ctx, undefined, 10, 20);
         expect(ctx.fillRect).not.toHaveBeenCalled();
+    });
+
+    it('suppresses entity fill when light.drawLight is present', () => {
+        const { canvas, ctx } = mockCanvas();
+        const renderer = new Renderer(canvas);
+        const drawLight = vi.fn();
+
+        renderer.drawEntity({
+            visible: true, type: 'light', x: 10, y: 20, width: 8, height: 8, color: '#ff0',
+            behaviors: [{ drawLight, enabled: true, ambient: 0.3 }]
+        });
+
+        expect(drawLight).not.toHaveBeenCalled();
+        expect(ctx.fillRect).not.toHaveBeenCalled();
+    });
+
+    it('applyLights darkens ambient and calls drawLight with lighter composite', () => {
+        const { canvas, ctx } = mockCanvas();
+        const renderer = new Renderer(canvas);
+        const drawLight = vi.fn();
+        const scene = sceneWith({
+            objects: [{
+                id: 'lamp', type: 'light', x: 40, y: 40, width: 16, height: 16,
+                visible: true,
+                behaviors: [{ drawLight, enabled: true, ambient: 0.5 }]
+            }]
+        });
+        // Scene builds entities from objects — re-attach behavior duck-type
+        const ent = scene.entities.find(e => e.id === 'lamp') || scene.entities[0];
+        if (ent) ent.behaviors = [{ drawLight, enabled: true, ambient: 0.5 }];
+
+        renderer.applyLights(scene, { x: 0, y: 0, zoom: 1 }, null);
+
+        expect(ctx.fillStyle).toBe('rgba(0,0,0,0.5)');
+        expect(ctx.fillRect).toHaveBeenCalledWith(0, 0, 800, 600);
+        expect(drawLight).toHaveBeenCalled();
+        expect(ctx.globalCompositeOperation).toBe('source-over'); // restored
     });
 
     it('draws a colored rect when no image is cached', () => {

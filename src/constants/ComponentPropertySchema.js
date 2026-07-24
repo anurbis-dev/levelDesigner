@@ -45,6 +45,12 @@ const AUDIO_ZONE_CHANNEL_OPTIONS = [
     { value: 'music', label: 'Music (global channel, optional crossfade)' }
 ];
 
+const LIGHT_TYPE_OPTIONS = [
+    { value: 'point', label: 'Point (radial)' },
+    { value: 'directional', label: 'Directional (cone)' },
+    { value: 'area', label: 'Area (entity bounds + soft pad)' }
+];
+
 const COLLIDER_SHAPE_OPTIONS = [
     { value: 'box', label: 'Box (square / rect)' },
     { value: 'circle', label: 'Circle' },
@@ -217,6 +223,17 @@ const SCHEMAS = {
         { key: 'emitting', label: 'Emitting', kind: 'bool', default: true },
         { key: 'burst', label: 'Burst On Start', kind: 'number', default: 0 },
         { key: 'seed', label: 'RNG Seed (empty = random)', kind: 'number', default: null }
+    ],
+    light: [
+        { key: 'lightType', label: 'Light Type', kind: 'select', default: 'point', options: LIGHT_TYPE_OPTIONS },
+        { key: 'color', label: 'Color', kind: 'color', default: '#ffffff' },
+        { key: 'intensity', label: 'Intensity (0+)', kind: 'number', default: 1 },
+        { key: 'radius', label: 'Radius (px)', kind: 'number', default: 128 },
+        { key: 'angle', label: 'Angle (deg, directional; 0=+X, -90=up)', kind: 'number', default: -90 },
+        { key: 'spread', label: 'Spread (deg full cone, directional)', kind: 'number', default: 60 },
+        { key: 'soft', label: 'Soft Edge (0–1)', kind: 'number', default: 0.5 },
+        { key: 'ambient', label: 'Ambient Darkness (0–1, max of enabled lights)', kind: 'number', default: 0.45 },
+        { key: 'enabled', label: 'Enabled', kind: 'bool', default: true }
     ],
     stateMachineBehavior: [
         { key: 'defaultState', label: 'Default State', kind: 'text', default: '' },
