@@ -768,5 +768,10 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     point/directional/area additive glow; `ambient` (max of enabled) darkens camera view;
     `Renderer.applyLights` post-pass (`lighter`); marker body suppressed; never solid.
     Soft geometry shadows deferred. `DEFAULT_ASSET_COMPONENTS.light`. Тесты: LightBehavior,
-    Renderer, GameEngine.integration. Next Tier 4: nineSliceSprite / fontTextStyle /
+    Renderer, GameEngine.integration.
+  - **`nineSliceSprite` завершён ✅ 2026-07-24 (v4.45.0)**: Component `nineSliceSprite` +
+    `NineSliceSpriteBehavior` — 3×3 border stretch (`borderLeft/Right/Top/Bottom`,
+    `fillCenter`, `imageAssetId`/`src`); `drawNineSlice` в Renderer; `collectImageSources`;
+    never solid. `DEFAULT_ASSET_COMPONENTS.nineSliceSprite`. Без paint UI. Тесты:
+    NineSliceSpriteBehavior, Renderer, GameEngine.integration. Next Tier 4: fontTextStyle /
     navMesh / sequenceCutscene / volume — no hard order.

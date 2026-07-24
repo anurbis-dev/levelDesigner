@@ -74,6 +74,14 @@ export class Renderer {
             return;
         }
 
+        // §7 nineSliceSprite: 3×3 border-preserving stretch into entity box
+        const nineSlice = entity.behaviors?.find(b => typeof b.drawNineSlice === 'function');
+        if (nineSlice) {
+            nineSlice.drawNineSlice(this.ctx, this.imageCache, x, y);
+            if (rotation) this.ctx.restore();
+            return;
+        }
+
         // §7 light: marker body suppressed; glow drawn in post-pass applyLights
         const light = entity.behaviors?.find(b => typeof b.drawLight === 'function');
         if (light) {

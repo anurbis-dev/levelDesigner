@@ -1,3 +1,7 @@
+## Archived from CHANGELOG.md (light, v4.44.0)
+
+- **Feat: light (§7 Tier 4, v4.44.0)**: Component `light` + `LightBehavior` — point / directional / area additive glow after entity draw. Props: `lightType`, `color`, `intensity`, `radius`, `angle`/`spread` (directional), `soft`, `ambient` (max of enabled lights → full-view darken), `enabled`. `Renderer.applyLights` (`lighter` composite); marker body suppressed; never solid. Soft geometry shadows deferred. `DEFAULT_ASSET_COMPONENTS.light`. Tests: LightBehavior, Renderer, GameEngine.integration.
+
 ## Archived from CHANGELOG.md (particleEffect, v4.43.0)
 
 - **Feat: particleEffect (§7 Tier 4, v4.43.0)**: Component `particleEffect` + `ParticleEffectBehavior` — continuous/burst VFX (`emitRate`, `burst`, `maxParticles`, `lifetime`, `speed`/`speedVariance`, `angle`/`spread`, `gravityX`/`gravityY`, size/color/alpha over lifetime). Optional sprite via `imageAssetId`/`src`; fallback colored rects. `drawParticles` duck-type in Renderer (skips entity fill). `collectImageSources` preload. Never solid. Deterministic `seed` (LCG) for tests. `DEFAULT_ASSET_COMPONENTS.particleEffect`. No editor paint UI / catalog preset form this pass. Tests: ParticleEffectBehavior, Renderer, GameEngine.integration.

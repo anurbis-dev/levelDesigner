@@ -994,6 +994,69 @@ describe('GameEngine — §7 backlog tileset + tilemap', () => {
     });
 });
 
+// §7 backlog Tier 4 (nineSliceSprite): 3×3 stretch draw path.
+describe('GameEngine — §7 backlog nineSliceSprite', () => {
+    function nineSliceManifest() {
+        return {
+            formatVersion: 1, name: 'Demo', entryLevelId: 'level_a',
+            assets: [{
+                id: 'frame_img', name: 'Frame', type: 'image', imgSrc: 'frame.png'
+            }],
+            levels: [{
+                id: 'level_a',
+                data: {
+                    meta: { name: 'Level A' },
+                    camera: { x: 0, y: 0, zoom: 1 },
+                    layers: [{ id: 'main', name: 'Main', visible: true, locked: false, parallaxX: 1, parallaxY: 1 }],
+                    objects: [
+                        {
+                            id: 'spawn', type: 'player_start', x: 0, y: 0, width: 16, height: 16,
+                            layerId: 'main',
+                            components: [{ type: 'playerStart', properties: {} }]
+                        },
+                        {
+                            id: 'panel', type: 'nineSliceSprite', x: 20, y: 30, width: 120, height: 80,
+                            layerId: 'main',
+                            components: [{
+                                type: 'nineSliceSprite',
+                                properties: {
+                                    imageAssetId: 'frame_img',
+                                    borderLeft: 6,
+                                    borderRight: 6,
+                                    borderTop: 6,
+                                    borderBottom: 6,
+                                    fillCenter: true
+                                }
+                            }]
+                        }
+                    ]
+                }
+            }]
+        };
+    }
+
+    it('loads nineSliceSprite, resolves image, never solid, draws 9 patches', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(nineSliceManifest());
+
+        const panel = engine.scene.entities.find(e => e.id === 'panel');
+        expect(panel).toBeTruthy();
+        const ns = panel.behaviors.find(b => typeof b.drawNineSlice === 'function');
+        expect(ns).toBeTruthy();
+        expect(ns._resolvedSrc).toBe('frame.png');
+        expect(ns.isOverlapping()).toBe(false);
+        expect(ns.borderLeft).toBe(6);
+
+        const img = {
+            complete: true, naturalWidth: 32, naturalHeight: 32, width: 32, height: 32
+        };
+        const ctx = { drawImage: vi.fn(), fillRect: vi.fn(), fillStyle: null };
+        ns.drawNineSlice(ctx, new Map([['frame.png', img]]), panel.x, panel.y);
+        expect(ctx.drawImage).toHaveBeenCalledTimes(9);
+    });
+});
+
 // §7 backlog Tier 4 (light): ambient + additive glow pass.
 describe('GameEngine — §7 backlog light', () => {
     function lightManifest() {

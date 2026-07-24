@@ -80,7 +80,9 @@ export const DEFAULT_ASSET_COMPONENTS = {
     // §7 particleEffect: placed emitter already carries the VFX behavior.
     particleEffect: ['particleEffect'],
     // §7 light: placed light already carries the glow behavior.
-    light: ['light']
+    light: ['light'],
+    // §7 nineSliceSprite: placed frame already carries the 9-slice behavior.
+    nineSliceSprite: ['nineSliceSprite']
 };
 
 const ASSET_TYPE_MAP = new Map(ASSET_TYPES.map(t => [t.id, t]));

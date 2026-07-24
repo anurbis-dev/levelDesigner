@@ -146,6 +146,20 @@ describe('Renderer.drawEntity', () => {
         expect(ctx.fillRect).not.toHaveBeenCalled();
     });
 
+    it('delegates to nineSliceSprite.drawNineSlice when present', () => {
+        const { canvas, ctx } = mockCanvas();
+        const renderer = new Renderer(canvas);
+        const drawNineSlice = vi.fn().mockReturnValue(true);
+
+        renderer.drawEntity({
+            visible: true, type: 'nineSliceSprite', x: 2, y: 4, width: 80, height: 40, color: '#00f',
+            behaviors: [{ drawNineSlice }]
+        });
+
+        expect(drawNineSlice).toHaveBeenCalledWith(ctx, undefined, 2, 4);
+        expect(ctx.fillRect).not.toHaveBeenCalled();
+    });
+
     it('suppresses entity fill when light.drawLight is present', () => {
         const { canvas, ctx } = mockCanvas();
         const renderer = new Renderer(canvas);

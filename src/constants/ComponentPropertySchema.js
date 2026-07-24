@@ -235,6 +235,15 @@ const SCHEMAS = {
         { key: 'ambient', label: 'Ambient Darkness (0–1, max of enabled lights)', kind: 'number', default: 0.45 },
         { key: 'enabled', label: 'Enabled', kind: 'bool', default: true }
     ],
+    nineSliceSprite: [
+        { key: 'imageAssetId', label: 'Image Asset', kind: 'assetRef', assetTypes: ['image'], default: '' },
+        { key: 'src', label: 'Src (URL fallback)', kind: 'text', default: '' },
+        { key: 'borderLeft', label: 'Border Left (src px)', kind: 'number', default: 8 },
+        { key: 'borderRight', label: 'Border Right (src px)', kind: 'number', default: 8 },
+        { key: 'borderTop', label: 'Border Top (src px)', kind: 'number', default: 8 },
+        { key: 'borderBottom', label: 'Border Bottom (src px)', kind: 'number', default: 8 },
+        { key: 'fillCenter', label: 'Fill Center', kind: 'bool', default: true }
+    ],
     stateMachineBehavior: [
         { key: 'defaultState', label: 'Default State', kind: 'text', default: '' },
         { key: 'states', label: 'States (JSON: [{name,movement,speed,waypoints,transitions}]; distance condition: {type:"distance",op,value,fov?} — fov degrees, default 180, 360 = omnidirectional); overrides aiPreset when non-empty', kind: 'json', default: [] },
