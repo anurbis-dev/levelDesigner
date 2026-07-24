@@ -4,14 +4,15 @@ import { getEntityBounds, rectsIntersect, matchesLayer } from './AABB.js';
 /**
  * Player mount point — hands movement control to this entity (the "vehicle") while mounted.
  * Self-contained like PlayerMovementBehavior itself: polls scene.input directly (own
- * edge-detected 'e' press, independent of EventGraphRuntime's own interact tracking) rather
- * than requiring an authored OnInteract Event Graph node, same discipline as pickup/damageHealth
- * not requiring an Event Graph wire-up. getBounds() makes the parked vehicle solid (players must
- * mount to pass "through" it, same as ColliderBehavior) until mounted, at which point
- * scene.player is hidden and kept snapped to the vehicle's position (camera, which follows
- * scene.player by default, keeps tracking correctly with zero changes to CameraBehavior).
- * PlayerMovementBehavior early-returns while scene.mountedVehicle is set (same pattern as its
- * existing scene.dialogueActive pause).
+ * edge-detected interact action, independent of EventGraphRuntime's own interact tracking)
+ * rather than requiring an authored OnInteract Event Graph node, same discipline as
+ * pickup/damageHealth not requiring an Event Graph wire-up. Uses isActionDown('interact')
+ * so level.inputMap remaps apply (fallback isDown('e') for legacy mocks). getBounds() makes
+ * the parked vehicle solid (players must mount to pass "through" it, same as ColliderBehavior)
+ * until mounted, at which point scene.player is hidden and kept snapped to the vehicle's
+ * position (camera, which follows scene.player by default, keeps tracking correctly with zero
+ * changes to CameraBehavior). PlayerMovementBehavior early-returns while scene.mountedVehicle
+ * is set (same pattern as its existing scene.dialogueActive pause).
  */
 export class MountableVehicleSeatBehavior extends Behavior {
     constructor(entity, componentData) {
@@ -35,7 +36,9 @@ export class MountableVehicleSeatBehavior extends Behavior {
         // test 'ignores a second vehicle...').
         if (scene.mountedVehicle && scene.mountedVehicle !== this.entity) return;
 
-        const pressedNow = input.isDown('e');
+        const pressedNow = typeof input.isActionDown === 'function'
+            ? input.isActionDown('interact')
+            : input.isDown('e');
         const justPressed = pressedNow && !this._interactWasDown;
         this._interactWasDown = pressedNow;
 

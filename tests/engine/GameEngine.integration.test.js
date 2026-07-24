@@ -1,5 +1,20 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { GameEngine } from '../../src/engine/GameEngine.js';
+import { Input } from '../../src/engine/Input.js';
+
+/** Minimal fake EventTarget so tests don't need jsdom (see tests/engine/Input.test.js). */
+function fakeInputTarget() {
+    const listeners = {};
+    return {
+        addEventListener(type, fn) { (listeners[type] ||= []).push(fn); },
+        removeEventListener(type, fn) {
+            listeners[type] = (listeners[type] || []).filter(l => l !== fn);
+        },
+        dispatch(type, event) {
+            (listeners[type] || []).forEach(fn => fn(event));
+        }
+    };
+}
 
 function mockCanvas() {
     const ctx = {
@@ -714,6 +729,70 @@ describe('GameEngine — §7 backlog SaveGame/LoadGame actions (saveSchema, Tier
 
         expect(engine2.scene.eventGraphRuntime.getVariable('score')).toBe(99);
         expect(engine2.scene.inventory.count('gold')).toBe(7);
+    });
+});
+
+// §7 backlog Tier 3 (inputMap): remapped keyboard actions, wired via GameEngine.loadProject()
+// calling engine.input.setInputMap(scene.inputMap) — see src/engine/Input.js.
+describe('GameEngine — §7 backlog inputMap wiring (Tier 3)', () => {
+    function inputMapManifest() {
+        return {
+            formatVersion: 1, name: 'Demo', entryLevelId: 'level_a',
+            levels: [{
+                id: 'level_a',
+                data: {
+                    meta: { name: 'Level A' },
+                    camera: { x: 0, y: 0, zoom: 1 },
+                    layers: [],
+                    inputMap: { actions: { interact: ['f'] } },
+                    eventGraph: {
+                        formatVersion: 1, scope: 'level',
+                        variables: [{ name: 'talked', default: false }],
+                        nodes: [
+                            { id: 'n1', type: 'OnInteract', params: { objectId: 'npc' } },
+                            { id: 'n2', type: 'SetVariable', params: { name: 'talked', value: true } }
+                        ],
+                        edges: [{ from: 'n1', to: 'n2' }]
+                    },
+                    objects: [
+                        { id: 'spawn', type: 'player_start', x: 0, y: 0, width: 32, height: 32,
+                            components: [{ id: 'c1', type: 'playerStart', enabled: true, properties: {} }] },
+                        { id: 'npc', type: 'actor', x: 0, y: 0, width: 32, height: 32,
+                            components: [{ id: 'c2', type: 'interactable', enabled: true, properties: { radius: 32 } }] }
+                    ]
+                }
+            }]
+        };
+    }
+
+    it("applies the level's inputMap onto engine.input via setInputMap", async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        const spy = vi.spyOn(engine.input, 'setInputMap');
+
+        await engine.loadProject(inputMapManifest());
+
+        expect(spy).toHaveBeenCalledWith({ actions: { interact: ['f'] } });
+    });
+
+    it('OnInteract fires on the remapped key, not the default "e", once the level customizes it', async () => {
+        const target = fakeInputTarget();
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        engine.input.destroy();
+        engine.input = new Input(target);
+
+        await engine.loadProject(inputMapManifest());
+        engine.scene.input = engine.input;
+
+        target.dispatch('keydown', { key: 'e' }); // old default key — should NOT trigger interact
+        engine.tick(0.016);
+        expect(engine.scene.eventGraphRuntime.getVariable('talked')).toBe(false);
+
+        target.dispatch('keyup', { key: 'e' });
+        target.dispatch('keydown', { key: 'f' }); // remapped key
+        engine.tick(0.016);
+        expect(engine.scene.eventGraphRuntime.getVariable('talked')).toBe(true);
     });
 });
 

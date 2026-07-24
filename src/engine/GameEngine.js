@@ -33,6 +33,7 @@ export class GameEngine {
         const levelId = opts.levelId ?? registries.entryLevelId;
         this.scene = ProjectLoader.loadLevel(levelId, registries);
         this.scene.input = this.input;
+        this.input.setInputMap(this.scene.inputMap);
         this.scene.spawnPlayer();
         this.scene.hideCameraMarker();
         this.scene.eventGraphRuntime = this.scene.eventGraph

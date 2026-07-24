@@ -30,6 +30,11 @@ export class Scene {
         // constructor-built) so ProjectLoader.loadLevel() doesn't need to know about it.
         this.eventGraph = levelData.eventGraph || null;
         this.eventGraphRuntime = null;
+        // §7 backlog (inputMap, Tier 3): keyboard action→key bindings, null when the level has
+        // none authored (GameEngine.loadProject() calls `this.input.setInputMap(scene.inputMap)`,
+        // which itself treats null as "use Input.DEFAULT_ACTIONS only" — same plain-field
+        // convention as eventGraph above, not a separate catalog asset).
+        this.inputMap = levelData.inputMap || null;
         // Level-scope Dialogue Graphs (Фаза E), keyed by id — a plain field/level-scope map,
         // not the catalog `assetsById` registry (see below, §7 backlog prefab Tier 2) — dialogues
         // aren't catalog assets. StartDialogue resolves node.params.dialogueId against this map.

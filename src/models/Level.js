@@ -46,6 +46,9 @@ export class Level {
         // HUD Canvases (camera-assignable via component.properties.canvasIds):
         // [{ id, name, widgets: [{ id, type, anchor, offsetX, offsetY, ... }] }].
         this.canvases = data.canvases || [];
+        // §7 inputMap: keyboard action→keys (`{actions:{name:string[]}}`); null = engine defaults.
+        // Not a catalog asset — plain level field like eventGraph (no editor UI this pass).
+        this.inputMap = data.inputMap || null;
         // Optional seed for Scene.inventory at Play ([{itemId,count}] or map).
         this.inventory = data.inventory || null;
         // Per-object NPC bag seeds: { [objectId]: [{itemId,count}] }.
@@ -820,6 +823,7 @@ export class Level {
             dialogues: this.dialogues,
             items: this.items,
             canvases: this.canvases,
+            inputMap: this.inputMap,
             inventory: this.inventory,
             npcInventories: this.npcInventories,
             objects: this.objects.map(obj => {

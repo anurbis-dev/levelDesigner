@@ -737,4 +737,10 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     уровней само по себе требует всё ещё не зарегистрированного `LoadLevel` action.
     Тесты: `tests/engine/SaveGame.test.js` (11), 1 e2e в `tests/engine/GameEngine.integration.test.js`
     (save на одном GameEngine, load на другом — подтверждает персист через общий localStorage).
-    Следующий приоритет — `inputMap`/`musicTrack`/`audioZone`/`tileset`+`tilemap`.
+  - **`inputMap` завершён ✅ 2026-07-23 (v4.40.0)**: level-scope `levelData.inputMap`
+    `{actions: {name: string[]}}` (не catalog asset). `Input.DEFAULT_ACTIONS` +
+    `setInputMap`/`isActionDown`; `getAxis` и interact (`EventGraphRuntime.OnInteract`,
+    `MountableVehicleSeatBehavior`) читают actions. `GameEngine.loadProject` →
+    `input.setInputMap(scene.inputMap)`. `Level.inputMap` round-trip в toJSON. Только
+    keyboard; без editor UI / gamepad/touch. Тесты: Input/Scene/GameEngine.integration.
+    Следующий приоритет — `musicTrack`/`audioZone`/`tileset`+`tilemap`.

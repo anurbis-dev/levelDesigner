@@ -107,7 +107,12 @@ export class EventGraphRuntime {
     _checkInteractNodes() {
         const input = this.scene.input;
         const player = this.scene.player;
-        const pressedNow = typeof input?.isDown === 'function' && input.isDown('e');
+        // §7 backlog (inputMap, Tier 3): isActionDown('interact') respects a level's remapped
+        // key (falls back to Input.DEFAULT_ACTIONS.interact = ['e']) — isDown('e') stays as a
+        // fallback for any test/mock scene.input that only implements the older isDown() shape.
+        const pressedNow = typeof input?.isActionDown === 'function'
+            ? input.isActionDown('interact')
+            : (typeof input?.isDown === 'function' && input.isDown('e'));
         const justPressed = pressedNow && !this._interactWasDown;
         this._interactWasDown = pressedNow;
         if (!justPressed || !player) return;

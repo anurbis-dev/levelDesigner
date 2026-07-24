@@ -183,3 +183,15 @@ describe('Scene quests (§7 backlog questObjective, Tier 3)', () => {
         expect(scene.quests.size).toBe(0);
     });
 });
+
+describe('Scene.inputMap (§7 backlog inputMap, Tier 3)', () => {
+    it('reads levelData.inputMap onto scene.inputMap', () => {
+        const scene = new Scene({ inputMap: { actions: { interact: ['f'] } } });
+        expect(scene.inputMap).toEqual({ actions: { interact: ['f'] } });
+    });
+
+    it('defaults to null when levelData.inputMap is absent', () => {
+        const scene = new Scene({});
+        expect(scene.inputMap).toBeNull();
+    });
+});
