@@ -183,6 +183,19 @@ const SCHEMAS = {
         { key: 'stopOnExit', label: 'Stop On Exit', kind: 'bool', default: true },
         { key: 'crossfade', label: 'Crossfade (sec, music channel)', kind: 'number', default: 0 }
     ],
+    tilemap: [
+        { key: 'tilesetAssetId', label: 'Tileset Asset Id', kind: 'assetRef', assetTypes: ['tileset'], default: '' },
+        { key: 'imageAssetId', label: 'Atlas Image Asset', kind: 'assetRef', assetTypes: ['image'], default: '' },
+        { key: 'src', label: 'Atlas Src (URL fallback)', kind: 'text', default: '' },
+        { key: 'tileWidth', label: 'Tile Width (px)', kind: 'number', default: 16 },
+        { key: 'tileHeight', label: 'Tile Height (px)', kind: 'number', default: 16 },
+        { key: 'columns', label: 'Atlas Columns', kind: 'number', default: 1 },
+        { key: 'mapWidth', label: 'Map Width (tiles)', kind: 'number', default: 1 },
+        { key: 'mapHeight', label: 'Map Height (tiles)', kind: 'number', default: 1 },
+        { key: 'tiles', label: 'Tiles (JSON row-major indices; -1 empty)', kind: 'json', default: [] },
+        { key: 'solidIndices', label: 'Solid Tile Indices (JSON null=all non-empty, []=none)', kind: 'json', default: null },
+        { key: 'layer', label: 'Layer', kind: 'text', default: '' }
+    ],
     stateMachineBehavior: [
         { key: 'defaultState', label: 'Default State', kind: 'text', default: '' },
         { key: 'states', label: 'States (JSON: [{name,movement,speed,waypoints,transitions}]; distance condition: {type:"distance",op,value,fov?} — fov degrees, default 180, 360 = omnidirectional); overrides aiPreset when non-empty', kind: 'json', default: [] },

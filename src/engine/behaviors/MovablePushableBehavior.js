@@ -1,5 +1,5 @@
 import { Behavior } from './Behavior.js';
-import { getEntityBounds, rectsIntersect, matchesLayer } from './AABB.js';
+import { getEntityBounds, rectsIntersect, collectSolidBlockers } from './AABB.js';
 
 /**
  * Sokoban-style box: solid like ColliderBehavior (getBounds() blocks movers by default), but
@@ -17,13 +17,7 @@ export class MovablePushableBehavior extends Behavior {
         this.entity.x += dx;
         this.entity.y += dy;
         const bounds = this.getBounds();
-        const solids = scene.getAllEntities()
-            .filter(candidate => candidate !== this.entity)
-            .map(candidate => candidate.behaviors?.find(b => typeof b.getBounds === 'function'))
-            .filter(Boolean)
-            .filter(solid => solid.enabled)
-            .filter(solid => typeof solid.isOverlapping !== 'function')
-            .filter(solid => matchesLayer(this.properties.collidesWith, solid.properties?.layer));
+        const solids = collectSolidBlockers(scene, this.entity, this.properties.collidesWith);
 
         const blocked = solids.some(solid => rectsIntersect(bounds, solid.getBounds()));
         if (blocked) {

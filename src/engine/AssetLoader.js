@@ -29,10 +29,26 @@ export class AssetLoader {
         const visit = (entities) => {
             entities.forEach(entity => {
                 if (entity.imgSrc) sources.add(entity.imgSrc);
+                // §7 tilemap (and future multi-src behaviors): duck-typed collectImageSources
+                for (const b of entity.behaviors || []) {
+                    if (typeof b.collectImageSources === 'function') {
+                        b.collectImageSources(sources, scene);
+                    }
+                }
                 if (entity.children) visit(entity.children);
             });
         };
         visit(scene.entities);
+        // Catalog tileset/image assets may only be referenced by tilesetAssetId —
+        // also harvest imgSrc from scene.assetsById for loadable visual types.
+        if (scene.assetsById) {
+            const assets = typeof scene.assetsById.values === 'function'
+                ? scene.assetsById.values()
+                : Object.values(scene.assetsById);
+            for (const asset of assets) {
+                if (asset?.imgSrc) sources.add(asset.imgSrc);
+            }
+        }
         return sources;
     }
 

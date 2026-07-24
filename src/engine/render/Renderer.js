@@ -58,6 +58,14 @@ export class Renderer {
 
         this.ctx.filter = Renderer._buildFilterString(entity.materialPreset) || 'none';
 
+        // §7 tilemap: multi-cell atlas draw (empty cells stay transparent / not filled)
+        const tilemap = entity.behaviors?.find(b => typeof b.drawTiles === 'function');
+        if (tilemap) {
+            tilemap.drawTiles(this.ctx, this.imageCache, x, y);
+            if (rotation) this.ctx.restore();
+            return;
+        }
+
         const img = entity.imgSrc && this.imageCache?.get(entity.imgSrc);
         if (img && img.complete && img.naturalHeight !== 0) {
             const spriteAnim = entity.behaviors?.find(b => typeof b.getSourceRect === 'function');

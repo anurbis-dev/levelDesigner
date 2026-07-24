@@ -749,4 +749,11 @@ Dock contentType `eventGraph` (View menu / type picker), factory-only leaf (не
     `{src, volume?, loop?, crossfade?}`). Component `audioZone` + `AudioZoneBehavior`
     (AABB enter/exit, channel ambient|music, stopOnExit). `DEFAULT_ASSET_COMPONENTS.audioZone`.
     Каталожные формы musicTrack/soundEffect — stubs. Тесты: AudioPlayer, AudioZoneBehavior,
-    GameEngine.integration. Следующий приоритет — `tileset`+`tilemap`.
+    GameEngine.integration.
+  - **`tileset` + `tilemap` завершены ✅ 2026-07-24 (v4.42.0)**: Component `tilemap` +
+    `TilemapBehavior` — grid (`tiles` row-major, `-1` empty), atlas via inline `src`/
+    `imageAssetId` или `tilesetAssetId` → `scene.assetsById` (catalog `tileset`:
+    imgSrc/`imageAssetId`, tileWidth/Height, columns, solidIndices). `getSolidRects` +
+    `collectSolidBlockers` (PlayerMovement/movable/mount). `Renderer.drawTiles`;
+    `AssetLoader.collectImageSources` harvest. Без autotiling / paint UI. Тесты:
+    TilemapBehavior, Renderer, GameEngine.integration.

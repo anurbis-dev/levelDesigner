@@ -98,3 +98,44 @@ export function matchesLayer(collidesWith, otherLayer) {
     if (!collidesWith || collidesWith.length === 0) return true;
     return collidesWith.includes(otherLayer);
 }
+
+/**
+ * Collect solid blockers for movement resolution.
+ * - Behaviors with `getSolidRects(scene)` (§7 tilemap) expand to one proxy solid per cell.
+ * - Otherwise first `getBounds()` behavior that is not a sensor (`isOverlapping` present).
+ *
+ * @param {import('../Scene.js').Scene} scene
+ * @param {import('../Entity.js').Entity} selfEntity - excluded from results
+ * @param {string[]|undefined} collidesWith - filter against solid.properties.layer
+ * @returns {Array<{getBounds: Function, properties?: object, enabled?: boolean, tryPush?: Function}>}
+ */
+export function collectSolidBlockers(scene, selfEntity, collidesWith) {
+    const solids = [];
+    for (const candidate of scene.getAllEntities()) {
+        if (candidate === selfEntity) continue;
+        const behaviors = candidate.behaviors || [];
+        let usedSolidRects = false;
+        for (const b of behaviors) {
+            if (!b?.enabled) continue;
+            if (typeof b.getSolidRects !== 'function') continue;
+            usedSolidRects = true;
+            if (!matchesLayer(collidesWith, b.properties?.layer)) continue;
+            for (const r of b.getSolidRects(scene)) {
+                solids.push({
+                    getBounds: () => r,
+                    properties: b.properties || {},
+                    enabled: true,
+                    tryPush: typeof b.tryPush === 'function' ? b.tryPush.bind(b) : undefined
+                });
+            }
+        }
+        if (usedSolidRects) continue;
+
+        const solid = behaviors.find(b => typeof b.getBounds === 'function');
+        if (!solid || !solid.enabled) continue;
+        if (typeof solid.isOverlapping === 'function') continue;
+        if (!matchesLayer(collidesWith, solid.properties?.layer)) continue;
+        solids.push(solid);
+    }
+    return solids;
+}

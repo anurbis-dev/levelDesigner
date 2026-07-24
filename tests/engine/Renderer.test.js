@@ -112,6 +112,21 @@ describe('Renderer.renderScene', () => {
 });
 
 describe('Renderer.drawEntity', () => {
+    it('delegates to tilemap.drawTiles when a drawTiles behavior is present', () => {
+        const { canvas, ctx } = mockCanvas();
+        const renderer = new Renderer(canvas);
+        const drawTiles = vi.fn().mockReturnValue(true);
+
+        renderer.drawEntity({
+            visible: true, type: 'tilemap', x: 5, y: 5, width: 64, height: 32, color: '#ff0000',
+            behaviors: [{ drawTiles }]
+        });
+
+        expect(drawTiles).toHaveBeenCalledWith(ctx, undefined, 5, 5);
+        // no full-entity fillRect fallback
+        expect(ctx.fillRect).not.toHaveBeenCalled();
+    });
+
     it('draws a colored rect when no image is cached', () => {
         const { canvas, ctx } = mockCanvas();
         const renderer = new Renderer(canvas);

@@ -32,7 +32,8 @@ export const COMPONENT_TYPES = [
     { id: 'conveyorZiplineJumpPadPortal', label: 'Conveyor / Zipline / Jump Pad / Portal', description: 'Specialized movement-on-contact Volume/Trigger + impulse or teleport.', genres: 'platformer, puzzle' },
     { id: 'destructibleContainer', label: 'Destructible Container', description: 'Chest/vase/crate: yields a Pickup and changes sprite/disappears.', genres: 'adventure, action' },
     { id: 'variableModifier', label: 'Variable Modifier', description: 'Sets a global flag/variable on trigger (for Quest/Dialogue conditions).', genres: 'all with level logic' },
-    { id: 'audioZone', label: 'Audio Zone', description: 'Ambient/music on player enter (volume specialization).', genres: 'all with audio' }
+    { id: 'audioZone', label: 'Audio Zone', description: 'Ambient/music on player enter (volume specialization).', genres: 'all with audio' },
+    { id: 'tilemap', label: 'Tilemap', description: 'Grid layer from a tileset atlas; solid cells block movement.', genres: 'all with tile maps' }
 ];
 
 const COMPONENT_TYPE_MAP = new Map(COMPONENT_TYPES.map(c => [c.id, c]));

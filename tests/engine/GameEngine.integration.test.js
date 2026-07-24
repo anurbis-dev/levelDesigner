@@ -920,3 +920,76 @@ describe('GameEngine — Фаза 2 vertical slice (BehaviorRegistry + collider/
         expect(trigger.isOverlapping('candidate')).toBe(false);
     });
 });
+
+// §7 backlog Tier 3 (tileset + tilemap): grid collision + tileset asset resolve.
+describe('GameEngine — §7 backlog tileset + tilemap', () => {
+    function tilemapManifest() {
+        return {
+            formatVersion: 1, name: 'Demo', entryLevelId: 'level_a',
+            assets: [{
+                id: 'ts_ground', name: 'Ground', type: 'tileset', imgSrc: 'ground.png',
+                properties: { tileWidth: 16, tileHeight: 16, columns: 2 }
+            }],
+            levels: [{
+                id: 'level_a',
+                data: {
+                    meta: { name: 'Level A' },
+                    camera: { x: 0, y: 0, zoom: 1 },
+                    layers: [{ id: 'main', name: 'Main', visible: true, locked: false, parallaxX: 1, parallaxY: 1 }],
+                    objects: [
+                        {
+                            id: 'spawn', type: 'player_start', x: 0, y: 0, width: 16, height: 16,
+                            layerId: 'main',
+                            components: [{ type: 'playerStart', properties: {} }]
+                        },
+                        {
+                            // wall of solid tiles at x=32..64, empty gap at left so spawn is free
+                            id: 'ground', type: 'tilemap', x: 32, y: 0, width: 32, height: 16,
+                            layerId: 'main',
+                            components: [{
+                                type: 'tilemap',
+                                properties: {
+                                    tilesetAssetId: 'ts_ground',
+                                    mapWidth: 2, mapHeight: 1,
+                                    tiles: [0, 1]
+                                }
+                            }]
+                        }
+                    ]
+                }
+            }]
+        };
+    }
+
+    it('loads tilemap behavior, resolves tileset atlas, blocks player on solid cells', async () => {
+        const { canvas } = mockCanvas();
+        const engine = new GameEngine(canvas);
+        await engine.loadProject(tilemapManifest());
+
+        const ground = engine.scene.entities.find(e => e.id === 'ground');
+        const tilemap = ground.behaviors.find(b => typeof b.getSolidRects === 'function');
+        expect(tilemap).toBeTruthy();
+        // AssetLoader.collectImageSources resolves tileset during loadProject
+        expect(tilemap._resolvedSrc).toBe('ground.png');
+        const rects = tilemap.getSolidRects(engine.scene);
+        expect(rects).toHaveLength(2);
+        expect(rects.every(r => r.x >= 32)).toBe(true);
+
+        const player = engine.scene.player;
+        expect(player).toBeTruthy();
+
+        const { rectsIntersect, getEntityBounds, collectSolidBlockers } =
+            await import('../../src/engine/behaviors/AABB.js');
+        const solids = collectSolidBlockers(engine.scene, player, undefined);
+        expect(solids.length).toBeGreaterThanOrEqual(2);
+
+        const pBounds = getEntityBounds(player, {});
+        pBounds.x = 32;
+        pBounds.y = 0;
+        expect(solids.some(s => rectsIntersect(pBounds, s.getBounds()))).toBe(true);
+
+        // left of the map stays free
+        pBounds.x = 0;
+        expect(solids.some(s => rectsIntersect(pBounds, s.getBounds()))).toBe(false);
+    });
+});

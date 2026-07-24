@@ -1,5 +1,5 @@
 import { Behavior } from './Behavior.js';
-import { getEntityBounds, rectsIntersect, matchesLayer } from './AABB.js';
+import { getEntityBounds, rectsIntersect, collectSolidBlockers } from './AABB.js';
 
 /**
  * Player mount point — hands movement control to this entity (the "vehicle") while mounted.
@@ -86,13 +86,7 @@ export class MountableVehicleSeatBehavior extends Behavior {
         const dx = (axis.x / length) * this.speed * dt;
         const dy = (axis.y / length) * this.speed * dt;
 
-        const solids = scene.getAllEntities()
-            .filter(candidate => candidate !== this.entity)
-            .map(candidate => candidate.behaviors?.find(b => typeof b.getBounds === 'function'))
-            .filter(Boolean)
-            .filter(solid => solid.enabled)
-            .filter(solid => typeof solid.isOverlapping !== 'function')
-            .filter(solid => matchesLayer(this.properties.collidesWith, solid.properties?.layer));
+        const solids = collectSolidBlockers(scene, this.entity, this.properties.collidesWith);
 
         this._moveAxis(dx, 0, solids);
         this._moveAxis(0, dy, solids);

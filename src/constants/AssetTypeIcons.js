@@ -67,8 +67,8 @@ export const TYPE_ICON_PATHS = {
     conveyorZiplineJumpPadPortal: '<path d="M3 12h14"/><path d="M13 8l4 4-4 4"/><path d="M3 8h4M3 16h4" stroke-dasharray="1.5 1.5"/>',
     destructibleContainer: '<path d="M4 8h16v12H4z"/><path d="M4 8l2-5h12l2 5"/><path d="M10 8l1.5 5-2 4M14 8l-1.5 5 2 4"/>',
     variableModifier: '<rect x="3" y="8" width="18" height="8" rx="4"/><circle cx="16" cy="12" r="2.6"/>',
-    // component id matches asset-type id for audioZone
-    // (asset icon already under musicTrack/audioZone keys above)
+    // component id matches asset-type id for audioZone / tilemap
+    // (asset icons already under musicTrack/audioZone/tilemap keys above)
 };
 
 const DEFAULT_ICON = '<circle cx="12" cy="12" r="8.5"/><path d="M12 7v6M12 16.5v.01"/>';

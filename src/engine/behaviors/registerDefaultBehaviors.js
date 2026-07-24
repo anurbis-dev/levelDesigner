@@ -19,6 +19,7 @@ import { ConveyorZiplineJumpPadPortalBehavior } from './ConveyorZiplineJumpPadPo
 import { VariableModifierBehavior } from './VariableModifierBehavior.js';
 import { DestructibleContainerBehavior } from './DestructibleContainerBehavior.js';
 import { AudioZoneBehavior } from './AudioZoneBehavior.js';
+import { TilemapBehavior } from './TilemapBehavior.js';
 
 /**
  * Registers the Фаза 2 MVP component vertical slice (see docs/RUNTIME_SCHEMA.md).
@@ -46,4 +47,5 @@ export function registerDefaultBehaviors() {
     BehaviorRegistry.register('variableModifier', VariableModifierBehavior);
     BehaviorRegistry.register('destructibleContainer', DestructibleContainerBehavior);
     BehaviorRegistry.register('audioZone', AudioZoneBehavior);
+    BehaviorRegistry.register('tilemap', TilemapBehavior);
 }
