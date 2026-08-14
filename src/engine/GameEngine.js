@@ -52,9 +52,11 @@ export class GameEngine {
         this._update(dt);
         this._updateCamera();
         this.renderer.renderScene(this.scene, this.camera, this.parallaxStartPosition, this.cameraRenderLayers);
+        this.renderer.drawFade?.(this.scene.fade || 0);
     }
 
     _update(dt) {
+        this.input.beginFrame?.();
         for (const entity of this.scene.getAllEntities()) {
             for (const behavior of entity.behaviors) {
                 if (!behavior.enabled) continue;
@@ -63,6 +65,7 @@ export class GameEngine {
         }
         this.scene.eventGraphRuntime?.tick(dt);
         if (!this.scene.player) this.scene.respawnPlayer();
+        this.input.endFrame?.();
     }
 
     /**

@@ -1,0 +1,11 @@
+{
+  "name": "ledge_tileset",
+  "type": "image",
+  "category": "ledge",
+  "imgSrc": "tileset.png",
+  "color": "#635c8c",
+  "width": 144,
+  "height": 16,
+  "properties": { "isTemporary": false },
+  "components": []
+}

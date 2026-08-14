@@ -20,19 +20,52 @@ export class Input {
         moveRight: ['arrowright', 'd'],
         moveUp: ['arrowup', 'w'],
         moveDown: ['arrowdown', 's'],
-        interact: ['e']
+        jump: [' ', 'z', 'x'],
+        interact: ['e', 'f', 'c']
     };
 
     constructor(target = (typeof window !== 'undefined' ? window : null)) {
         this._keys = new Set();
+        this._keysPrev = new Set();
+        this._consumed = new Set();
         this._target = target;
         this._actions = null;
-        this._onKeyDown = (e) => this._keys.add(e.key.toLowerCase());
+        this._onKeyDown = (e) => {
+            this._keys.add(e.key.toLowerCase());
+            const k = e.key.toLowerCase();
+            if (k === ' ' || k.startsWith('arrow')) e.preventDefault?.();
+        };
         this._onKeyUp = (e) => this._keys.delete(e.key.toLowerCase());
         if (this._target) {
             this._target.addEventListener('keydown', this._onKeyDown);
             this._target.addEventListener('keyup', this._onKeyUp);
         }
+    }
+
+    /** Call at the start of a simulation tick (clears consume flags). */
+    beginFrame() {
+        this._consumed.clear();
+    }
+
+    /** Call at the end of a simulation tick (latches held keys as previous). */
+    endFrame() {
+        this._keysPrev = new Set(this._keys);
+    }
+
+    _keysFor(actionName) {
+        return this._actions?.get(actionName) || Input.DEFAULT_ACTIONS[actionName];
+    }
+
+    /** True on the first tick a bound key went down. Honors consumeAction(). */
+    wasActionPressed(actionName) {
+        if (this._consumed.has(actionName)) return false;
+        const keys = this._keysFor(actionName);
+        if (!keys) return this._keys.has(actionName) && !this._keysPrev.has(actionName);
+        return keys.some((k) => this._keys.has(k) && !this._keysPrev.has(k));
+    }
+
+    consumeAction(actionName) {
+        this._consumed.add(actionName);
     }
 
     isDown(key) {

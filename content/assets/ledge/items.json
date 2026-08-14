@@ -1,0 +1,11 @@
+{
+  "name": "ledge_items",
+  "type": "image",
+  "category": "ledge",
+  "imgSrc": "items.png",
+  "color": "#ffd75e",
+  "width": 96,
+  "height": 16,
+  "properties": { "isTemporary": false },
+  "components": []
+}

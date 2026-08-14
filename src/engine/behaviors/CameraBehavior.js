@@ -18,6 +18,9 @@ export class CameraBehavior extends Behavior {
         const target = this._resolveTarget(scene);
         if (!target) return;
 
+        if (this.properties.viewHeight > 0 && canvas?.height) {
+            camera.zoom = canvas.height / this.properties.viewHeight;
+        }
         const zoom = camera.zoom || 1;
         const viewW = canvas.width / zoom;
         const viewH = canvas.height / zoom;

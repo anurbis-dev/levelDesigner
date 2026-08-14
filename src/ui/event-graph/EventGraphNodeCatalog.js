@@ -176,6 +176,26 @@ export const EVENT_GRAPH_NODE_DEFS = [
         category: 'action',
         defaults: { objectId: '' },
         fields: [{ key: 'objectId', label: 'Sequence object', type: 'objectId' }]
+    },
+    {
+        type: 'HasItem',
+        label: 'Has Item',
+        category: 'condition',
+        defaults: { itemId: '', count: 1 },
+        fields: [
+            { key: 'itemId', label: 'Item Id', type: 'string' },
+            { key: 'count', label: 'Count', type: 'number' }
+        ]
+    },
+    {
+        type: 'ConsumeItem',
+        label: 'Consume Item',
+        category: 'action',
+        defaults: { itemId: '', count: 1 },
+        fields: [
+            { key: 'itemId', label: 'Item Id', type: 'string' },
+            { key: 'count', label: 'Count', type: 'number' }
+        ]
     }
 ];
 

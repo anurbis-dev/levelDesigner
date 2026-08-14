@@ -35,9 +35,43 @@ export class PathFollowerBehavior extends Behavior {
         this._direction = 1;
         this._waitRemaining = 0;
         this._segT = 0;
+        this.dx = 0;
+        this.dy = 0;
+        this.mode = this.properties.mode ?? this.mode;
+        this.gravity = this.properties.gravity ?? 0;
+        this.turnAtLedge = this.properties.turnAtLedge ?? false;
+        this._vy = 0;
+        this._elevIdx = 0;
+        this._elevSt = 'dwell';
+        this._elevT = this.waitAtWaypoint || 1.6;
+        this._elevWant = 0;
     }
 
     update(dt, scene) {
+        const prevX = this.entity.x;
+        const prevY = this.entity.y;
+        if (this.gravity) {
+            this._updateGravity(dt, scene);
+        } else if (this.mode === 'elevator' || this.properties.elevator) {
+            this._updateElevator(dt, scene);
+        } else {
+            this._updatePath(dt, scene);
+        }
+        this.dx = this.entity.x - prevX;
+        this.dy = this.entity.y - prevY;
+        this.entity.dx = this.dx;
+        this.entity.dy = this.dy;
+    }
+
+    _updatePath(dt, scene) {
+        if (this.turnAtLedge && scene) {
+            const footX = this.entity.x + (this.entity.width || 0) / 2 + (this._direction || 1) * 4;
+            const footY = this.entity.y + (this.entity.height || 0) + 3;
+            const tm = scene.getAllEntities()
+                .map((e) => e.behaviors?.find((b) => typeof b.isSolidWorld === 'function'))
+                .find(Boolean);
+            if (tm && !tm.isSolidWorld(footX, footY)) this._direction *= -1;
+        }
         if (this._targetIndex < 0) return;
         if (this._waitRemaining > 0) {
             this._waitRemaining -= dt;
@@ -128,5 +162,91 @@ export class PathFollowerBehavior extends Behavior {
             return;
         }
         this._targetIndex = this._targetIndex >= last ? 0 : this._targetIndex + 1;
+    }
+
+    _updateGravity(dt, scene) {
+        this._vy += this.gravity * dt;
+        if (this._vy > 300) this._vy = 300;
+        this.entity.y += this._vy * dt;
+        const tm = scene?.getAllEntities()
+            .map((e) => e.behaviors?.find((b) => typeof b.rectBlocked === 'function'))
+            .find(Boolean);
+        const w = this.entity.width || 4;
+        const h = this.entity.height || 4;
+        if (tm?.rectBlocked(this.entity.x, this.entity.y, w, h) || this.entity.y > 2000) {
+            scene?.destroyEntity(this.entity.id);
+        }
+    }
+
+    _inCabin(player) {
+        if (!player) return false;
+        return player.x + player.width > this.entity.x + 2
+            && player.x < this.entity.x + this.entity.width - 2
+            && Math.abs((player.y + player.height) - this.entity.y) < 4;
+    }
+
+    _updateElevator(dt, scene) {
+        const player = scene?.player;
+        const ride = this._inCabin(player);
+        const floors = this.waypoints.length
+            ? this.waypoints.map((w) => this._originY + (w.y ?? 0))
+            : [this._originY];
+        const inp = scene?.input;
+        const up = typeof inp?.wasActionPressed === 'function' && inp.wasActionPressed('moveUp');
+        const down = typeof inp?.wasActionPressed === 'function' && inp.wasActionPressed('moveDown');
+        if (this._elevSt === 'dwell') {
+            if (this._elevT > 0) this._elevT -= dt;
+            if (ride && up) this._elevWant = 1;
+            if (ride && down) this._elevWant = -1;
+            if (!ride && player && (up || down)) {
+                for (let i = 0; i < floors.length; i++) {
+                    if (Math.abs((player.y + player.height) - floors[i]) < 6 && this._elevIdx !== i) {
+                        this._elevIdx = i;
+                        this._elevSt = 'move';
+                        this._elevWant = 0;
+                        break;
+                    }
+                }
+            }
+            if (this._elevT <= 0 && ride && this._elevWant !== 0) {
+                const ni = this._elevIdx + this._elevWant;
+                if (ni >= 0 && ni < floors.length) {
+                    this._elevIdx = ni;
+                    this._elevSt = 'move';
+                }
+                this._elevWant = 0;
+            }
+            if (!ride) this._elevWant = 0;
+            return;
+        }
+        const tgt = floors[this._elevIdx];
+        const d = tgt - this.entity.y;
+        const stp = this.speed * dt;
+        if (Math.abs(d) <= stp) {
+            this.entity.y = tgt;
+            this._elevSt = 'dwell';
+            this._elevT = this.waitAtWaypoint || 1.6;
+        } else {
+            this.entity.y += d > 0 ? stp : -stp;
+        }
+    }
+
+    getGateRects() {
+        if (this.mode !== 'elevator' && !this.properties.elevator) return [];
+        const floors = this.waypoints.length
+            ? this.waypoints.map((w) => this._originY + (w.y ?? 0))
+            : [];
+        const T = 16;
+        const rects = [];
+        const c0 = Math.floor(this.entity.x / T);
+        const c1 = Math.floor((this.entity.x + this.entity.width - 1) / T);
+        for (const fy of floors) {
+            if (Math.abs(this.entity.y - fy) <= 3) continue;
+            const R = Math.floor(fy / T);
+            for (const c of [c0 - 1, c1 + 1]) {
+                rects.push({ x: c * T, y: (R - 2) * T, width: T, height: T * 2 });
+            }
+        }
+        return rects;
     }
 }

@@ -1,3 +1,7 @@
+## Archived from CHANGELOG.md (LEDGE art extract, afa4bfa1)
+
+- **Content: LEDGE prototype art**: `scripts/extract-ledge-art.mjs` пишет `content/assets/ledge/` PNG (tileset 144×16 / 9 тайлов, player 128×112 / 8×4 кадра 16×28, items 96×16, torch, enemy, flier, door, lift, platform, bomb) по палитре `tmp/ledge-v5.html`. Движок `src/` не менялся.
+
 ## Archived from CHANGELOG.md (sequenceCutscene, v4.49.0)
 
 - **Feat: sequenceCutscene (§7 Tier 4, v4.49.0)**: Component `sequenceCutscene` + `SequenceCutsceneBehavior` — ordered timeline driving actors/camera/dialogue/vars/SFX. Props: `steps` JSON (`wait|move|teleport|camera|cameraRelease|dialogue|setVariable|playAnimation|playSound|emitEvent`), `autoPlay`, `playOnEnter` (AABB zone), `lockPlayer` (`scene.cutsceneActive`), `loop`, optional `sequenceAssetId` catalog merge, `enabled`. Duck-types `play`/`stop`/`isPlaying`/`applyCutsceneCamera`; never solid. Event Graph `PlaySequence`/`StopSequence`. `DEFAULT_ASSET_COMPONENTS.sequenceCutscene`. Tests: SequenceCutsceneBehavior, GameEngine.integration.

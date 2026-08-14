@@ -1,4 +1,5 @@
 import { Behavior } from './Behavior.js';
+import { TILE_KIND, isSolidKind } from './platformer/platformerConstants.js';
 
 /**
  * §7 tileset + tilemap: grid of atlas tiles with per-cell collision.
@@ -40,10 +41,91 @@ export class TilemapBehavior extends Behavior {
         this.solidIndices = this.properties.solidIndices === undefined
             ? null
             : this.properties.solidIndices;
+        this.tileKinds = this.properties.tileKinds || null;
+        this.crumbTime = this.properties.crumbTime ?? 1.05;
+        this.crumbBack = this.properties.crumbBack ?? 3.4;
+        this._crumbT = {};
+        this._gone = {};
         this._resolvedSrc = null;
         this._resolved = false;
         this._solidCache = null;
         this._syncEntitySize();
+    }
+
+    kindOf(tileIndex) {
+        if (tileIndex == null || tileIndex < 0) return TILE_KIND.empty;
+        if (this.tileKinds) {
+            return this.tileKinds[tileIndex] ?? this.tileKinds[String(tileIndex)] ?? TILE_KIND.empty;
+        }
+        return this._isSolidIndexLegacy(tileIndex) ? TILE_KIND.solid : TILE_KIND.empty;
+    }
+
+    tileKindAt(tx, ty) {
+        return this.kindOf(this.tileAt(tx, ty));
+    }
+
+    tileKindAtWorld(px, py) {
+        const tw = Math.max(1, this.tileWidth);
+        const th = Math.max(1, this.tileHeight);
+        const tx = Math.floor((px - this.entity.x) / tw);
+        const ty = Math.floor((py - this.entity.y) / th);
+        return this.tileKindAt(tx, ty);
+    }
+
+    _cellKey(tx, ty) {
+        return `${tx},${ty}`;
+    }
+
+    isSolidWorld(px, py) {
+        const tw = Math.max(1, this.tileWidth);
+        const th = Math.max(1, this.tileHeight);
+        const tx = Math.floor((px - this.entity.x) / tw);
+        const ty = Math.floor((py - this.entity.y) / th);
+        const idx = this.tileAt(tx, ty);
+        if (idx < 0) return false;
+        const kind = this.kindOf(idx);
+        if (kind === TILE_KIND.crumb && this._gone[this._cellKey(tx, ty)] > 0) return false;
+        if (kind === TILE_KIND.halfTop) return (py - this.entity.y) < ty * th + th / 2;
+        if (this.tileKinds) return isSolidKind(kind);
+        return this._isSolidIndexLegacy(idx);
+    }
+
+    rectBlocked(x, y, w, h) {
+        const tw = Math.max(1, this.tileWidth);
+        const th = Math.max(1, this.tileHeight);
+        const c0 = Math.floor((x - this.entity.x) / tw);
+        const c1 = Math.floor((x + w - 1 - this.entity.x) / tw);
+        const r0 = Math.floor((y - this.entity.y) / th);
+        const r1 = Math.floor((y + h - 1 - this.entity.y) / th);
+        for (let r = r0; r <= r1; r++) {
+            for (let c = c0; c <= c1; c++) {
+                const idx = this.tileAt(c, r);
+                if (idx < 0) continue;
+                const kind = this.kindOf(idx);
+                if (kind === TILE_KIND.crumb && this._gone[this._cellKey(c, r)] > 0) continue;
+                if (kind === TILE_KIND.halfTop) {
+                    const top = this.entity.y + r * th;
+                    if (y < top + th / 2) return true;
+                    continue;
+                }
+                if (this.tileKinds ? isSolidKind(kind) : this._isSolidIndexLegacy(idx)) return true;
+            }
+        }
+        return false;
+    }
+
+    touchCrumbUnder(p) {
+        const tw = Math.max(1, this.tileWidth);
+        const th = Math.max(1, this.tileHeight);
+        const r = Math.floor((p.y + p.h + 2 - this.entity.y) / th);
+        const c0 = Math.floor((p.x - this.entity.x) / tw);
+        const c1 = Math.floor((p.x + p.w - 1 - this.entity.x) / tw);
+        for (let c = c0; c <= c1; c++) {
+            if (this.kindOf(this.tileAt(c, r)) !== TILE_KIND.crumb) continue;
+            const k = this._cellKey(c, r);
+            if (this._gone[k] > 0 || this._crumbT[k] !== undefined) continue;
+            this._crumbT[k] = this.crumbTime;
+        }
     }
 
     /** Pixel size of the full map — keeps entity box aligned for editor/gizmos. */
@@ -113,11 +195,20 @@ export class TilemapBehavior extends Behavior {
         return v;
     }
 
-    _isSolidIndex(tileIndex) {
+    _isSolidIndexLegacy(tileIndex) {
         if (tileIndex < 0) return false;
         if (this.solidIndices == null) return true;
         if (!Array.isArray(this.solidIndices)) return true;
         return this.solidIndices.includes(tileIndex);
+    }
+
+    _isSolidIndex(tileIndex) {
+        if (tileIndex < 0) return false;
+        if (this.tileKinds) {
+            const kind = this.kindOf(tileIndex);
+            return kind === TILE_KIND.solid || kind === TILE_KIND.crumb || kind === TILE_KIND.halfTop;
+        }
+        return this._isSolidIndexLegacy(tileIndex);
     }
 
     /**
@@ -145,11 +236,13 @@ export class TilemapBehavior extends Behavior {
             for (let tx = 0; tx < this.mapWidth; tx++) {
                 const idx = this.tileAt(tx, ty);
                 if (!this._isSolidIndex(idx)) continue;
+                if (this.kindOf(idx) === TILE_KIND.crumb && this._gone[this._cellKey(tx, ty)] > 0) continue;
+                const half = this.kindOf(idx) === TILE_KIND.halfTop;
                 rects.push({
                     x: ox + tx * tw,
                     y: oy + ty * th,
                     width: tw,
-                    height: th
+                    height: half ? th / 2 : th
                 });
             }
         }
@@ -159,8 +252,26 @@ export class TilemapBehavior extends Behavior {
         return rects;
     }
 
-    update(_dt, scene) {
+    update(dt, scene) {
         this._ensureResolved(scene);
+        if (dt <= 0) return;
+        let dirty = false;
+        for (const k of Object.keys(this._crumbT)) {
+            this._crumbT[k] -= dt;
+            if (this._crumbT[k] <= 0) {
+                this._gone[k] = this.crumbBack;
+                delete this._crumbT[k];
+                dirty = true;
+            }
+        }
+        for (const k of Object.keys(this._gone)) {
+            this._gone[k] -= dt;
+            if (this._gone[k] <= 0) {
+                delete this._gone[k];
+                dirty = true;
+            }
+        }
+        if (dirty) this._solidCache = null;
     }
 
     /**
@@ -183,6 +294,7 @@ export class TilemapBehavior extends Behavior {
                 for (let tx = 0; tx < this.mapWidth; tx++) {
                     const idx = this.tileAt(tx, ty);
                     if (idx < 0) continue;
+                    if (this.kindOf(idx) === TILE_KIND.crumb && this._gone[this._cellKey(tx, ty)] > 0) continue;
                     const sx = (idx % cols) * tw;
                     const sy = Math.floor(idx / cols) * th;
                     ctx.drawImage(img, sx, sy, tw, th, absX + tx * tw, absY + ty * th, tw, th);
@@ -196,6 +308,7 @@ export class TilemapBehavior extends Behavior {
             for (let tx = 0; tx < this.mapWidth; tx++) {
                 const idx = this.tileAt(tx, ty);
                 if (idx < 0) continue;
+                if (this.kindOf(idx) === TILE_KIND.crumb && this._gone[this._cellKey(tx, ty)] > 0) continue;
                 ctx.fillStyle = this.entity.color || '#6b7280';
                 ctx.fillRect(absX + tx * tw, absY + ty * th, tw, th);
             }

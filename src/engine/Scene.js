@@ -2,6 +2,7 @@ import { EntityFactory } from './EntityFactory.js';
 import { Entity } from './Entity.js';
 import { ColliderBehavior } from './behaviors/ColliderBehavior.js';
 import { PlayerMovementBehavior } from './behaviors/PlayerMovementBehavior.js';
+import { BehaviorRegistry } from './BehaviorRegistry.js';
 import { Inventory } from './Inventory.js';
 import { QuestRunner } from './QuestRunner.js';
 
@@ -88,6 +89,8 @@ export class Scene {
         // crosses a checkpoint, at which point respawnPlayer() prefers it over playerStart.
         this.checkpointPosition = null;
         this.activeCheckpoint = null;
+        this.fade = 0;
+        this.heldEntity = null;
     }
 
     /**
@@ -176,14 +179,42 @@ export class Scene {
     }
 
     _createPlayer(spawn, marker, speed) {
+        const startBh = marker.behaviors?.find((b) => typeof b.getSpawnPosition === 'function');
+        const props = { ...(startBh?.properties || {}), ...(marker.properties || {}) };
+        const mode = props.movementMode || props.mode || 'topdown';
+        const w = props.bodyWidth ?? (mode === 'platformer' ? 10 : marker.width);
+        const h = props.bodyHeight ?? (mode === 'platformer' ? 22 : marker.height);
         const player = new Entity({
-            id: '__player', type: 'player', x: spawn.x, y: spawn.y,
-            width: marker.width, height: marker.height, color: '#22c55e'
+            id: '__player',
+            type: 'player',
+            x: spawn.x,
+            y: spawn.y,
+            width: w,
+            height: h,
+            color: '#22c55e',
+            imgSrc: marker.imgSrc || props.imgSrc || null
         });
+        const moveProps = {
+            speed: props.speed ?? speed,
+            mode,
+            movementMode: mode,
+            platformer: props.platformer || {},
+            ...props
+        };
         player.behaviors = [
             new ColliderBehavior(player, {}),
-            new PlayerMovementBehavior(player, { properties: { speed } })
+            new PlayerMovementBehavior(player, { type: 'playerMovement', properties: moveProps })
         ];
+        for (const b of marker.behaviors || []) {
+            if (b.type !== 'damageHealth' && b.type !== 'spriteUiAnimation') continue;
+            const Ctor = BehaviorRegistry.get(b.type);
+            if (!Ctor) continue;
+            player.behaviors.push(new Ctor(player, {
+                type: b.type,
+                properties: { ...b.properties },
+                enabled: b.enabled
+            }));
+        }
 
         this.player = player;
         this.entities.push(player);

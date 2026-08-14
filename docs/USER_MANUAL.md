@@ -260,6 +260,7 @@
 ## 💾 Работа с файлами
 - **Новый уровень**: Level → New Level
 - **Открыть**: Level → Open Level (.json)
+- **Пример платформера LEDGE**: Level → Open Level → `content/maps/ledge.json`, затем Game → Play
 - **Сохранить**: Level → Save Level / Save As
 
 ## ⚙️ Настройки

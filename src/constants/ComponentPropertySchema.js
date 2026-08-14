@@ -13,7 +13,8 @@
 const PATH_FOLLOWER_MODE_OPTIONS = [
     { value: 'loop', label: 'Loop (wraps to first waypoint)' },
     { value: 'pingpong', label: 'Ping-pong (reverses at ends)' },
-    { value: 'once', label: 'Once (stops at last waypoint)' }
+    { value: 'once', label: 'Once (stops at last waypoint)' },
+    { value: 'elevator', label: 'Elevator (floors = waypoints y, up/down call)' }
 ];
 
 const PATH_FOLLOWER_INTERPOLATION_OPTIONS = [
@@ -68,7 +69,8 @@ const COLLIDER_SHAPE_FIELDS = [
     { key: 'radius', label: 'Radius (circle)', kind: 'number', default: null },
     { key: 'points', label: 'Points (freeform JSON [{x,y}])', kind: 'json', default: [] },
     { key: 'layer', label: 'Layer', kind: 'text', default: '' },
-    { key: 'collidesWith', label: 'Collides With (comma list)', kind: 'stringList', default: [] }
+    { key: 'collidesWith', label: 'Collides With (comma list)', kind: 'stringList', default: [] },
+    { key: 'oneWay', label: 'One-way (empty|up)', kind: 'text', default: '' }
 ];
 
 /** @type {Record<string, CompField[]>} */
@@ -86,7 +88,13 @@ const SCHEMAS = {
     pickup: [
         { key: 'itemId', label: 'Item Id (level.items[].id)', kind: 'text', default: '' },
         { key: 'count', label: 'Count', kind: 'number', default: 1 },
-        { key: 'destroyOnPickup', label: 'Destroy On Pickup', kind: 'bool', default: true }
+        { key: 'destroyOnPickup', label: 'Destroy On Pickup', kind: 'bool', default: true },
+        { key: 'mode', label: 'Mode (collect|hold)', kind: 'text', default: 'collect' },
+        { key: 'healAmount', label: 'Heal Amount', kind: 'number', default: 0 },
+        { key: 'requireInteract', label: 'Require Interact', kind: 'bool', default: false },
+        { key: 'throwSpeedX', label: 'Throw Speed X', kind: 'number', default: 155 },
+        { key: 'throwSpeedY', label: 'Throw Speed Y', kind: 'number', default: -135 },
+        { key: 'onPickupEvent', label: 'On Pickup Custom Event', kind: 'text', default: '' }
     ],
     damageHealth: [
         { key: 'maxHealth', label: 'Max Health', kind: 'number', default: 100 },
@@ -112,7 +120,11 @@ const SCHEMAS = {
         { key: 'speed', label: 'Speed (px/sec)', kind: 'number', default: 100 },
         { key: 'mode', label: 'Mode', kind: 'select', default: 'loop', options: PATH_FOLLOWER_MODE_OPTIONS },
         { key: 'waitAtWaypoint', label: 'Wait At Waypoint (sec)', kind: 'number', default: 0 },
-        { key: 'interpolation', label: 'Interpolation', kind: 'select', default: 'linear', options: PATH_FOLLOWER_INTERPOLATION_OPTIONS }
+        { key: 'interpolation', label: 'Interpolation', kind: 'select', default: 'linear', options: PATH_FOLLOWER_INTERPOLATION_OPTIONS },
+        { key: 'oneWayTop', label: 'One-way Top (platform)', kind: 'bool', default: false },
+        { key: 'turnAtLedge', label: 'Turn At Ledge', kind: 'bool', default: false },
+        { key: 'gravity', label: 'Gravity (px/s²; >0 = fall, ignore path)', kind: 'number', default: 0 },
+        { key: 'elevator', label: 'Elevator (alt to mode)', kind: 'bool', default: false }
     ],
     spawner: [
         { key: 'template', label: 'Template (JSON GameObject data, id/x/y ignored)', kind: 'json', default: {} },
@@ -120,10 +132,13 @@ const SCHEMAS = {
         { key: 'maxAlive', label: 'Max Alive (0 = unlimited)', kind: 'number', default: 0 },
         { key: 'maxSpawns', label: 'Max Total Spawns (0 = unlimited)', kind: 'number', default: 0 },
         { key: 'spawnOffsetX', label: 'Spawn Offset X', kind: 'number', default: 0 },
-        { key: 'spawnOffsetY', label: 'Spawn Offset Y', kind: 'number', default: 0 }
+        { key: 'spawnOffsetY', label: 'Spawn Offset Y', kind: 'number', default: 0 },
+        { key: 'spawnWhen', label: 'Spawn When (empty|playerBelow)', kind: 'text', default: '' },
+        { key: 'playerBelowX', label: 'Player-Below X Slack', kind: 'number', default: 26 }
     ],
     checkpointSavePoint: [],
     climbableLadder: [
+        { key: 'kind', label: 'Kind (vertical|diagonalR|diagonalL|bar)', kind: 'text', default: 'vertical' },
         { key: 'climbSpeed', label: 'Climb Speed (px/sec)', kind: 'number', default: 100 },
         { key: 'shape', label: 'Shape', kind: 'select', default: 'box', options: COLLIDER_SHAPE_OPTIONS },
         { key: 'offsetX', label: 'Offset X (box TL / circle center)', kind: 'number', default: 0 },
@@ -149,7 +164,11 @@ const SCHEMAS = {
         { key: 'targetOffsetY', label: 'Zipline Target Offset Y (from spawn)', kind: 'number', default: -200 },
         { key: 'launchOffsetX', label: 'Jump Pad Launch Offset X', kind: 'number', default: 0 },
         { key: 'launchOffsetY', label: 'Jump Pad Launch Offset Y', kind: 'number', default: -96 },
-        { key: 'targetId', label: 'Portal Target Object Id', kind: 'text', default: '' }
+        { key: 'targetId', label: 'Portal Target Object Id', kind: 'text', default: '' },
+        { key: 'requireInteract', label: 'Require Interact', kind: 'bool', default: false },
+        { key: 'requireItem', label: 'Require Item Id', kind: 'text', default: '' },
+        { key: 'consumeItem', label: 'Consume Item', kind: 'bool', default: false },
+        { key: 'fadeSeconds', label: 'Warp Fade (sec)', kind: 'number', default: 0.62 }
     ],
     variableModifier: [
         { key: 'shape', label: 'Shape', kind: 'select', default: 'box', options: COLLIDER_SHAPE_OPTIONS },
@@ -200,6 +219,9 @@ const SCHEMAS = {
         { key: 'mapHeight', label: 'Map Height (tiles)', kind: 'number', default: 1 },
         { key: 'tiles', label: 'Tiles (JSON row-major indices; -1 empty)', kind: 'json', default: [] },
         { key: 'solidIndices', label: 'Solid Tile Indices (JSON null=all non-empty, []=none)', kind: 'json', default: null },
+        { key: 'tileKinds', label: 'Tile Kinds (JSON {index: solid|crumb|ladderWall|...})', kind: 'json', default: null },
+        { key: 'crumbTime', label: 'Crumb Crack Time (sec)', kind: 'number', default: 1.05 },
+        { key: 'crumbBack', label: 'Crumb Respawn (sec)', kind: 'number', default: 3.4 },
         { key: 'layer', label: 'Layer', kind: 'text', default: '' }
     ],
     particleEffect: [
@@ -338,11 +360,21 @@ const SCHEMAS = {
         { key: 'defaultState', label: 'Default State', kind: 'text', default: '' },
         { key: 'states', label: 'States (JSON: [{name,clip,transitions}])', kind: 'json', default: [] }
     ],
-    playerStart: [],
+    playerStart: [
+        { key: 'movementMode', label: 'Movement Mode', kind: 'select', default: 'topdown', options: [
+            { value: 'topdown', label: 'Top-down (8-dir)' },
+            { value: 'platformer', label: 'Platformer (gravity / jump / ledge)' }
+        ] },
+        { key: 'bodyWidth', label: 'Body Width (platformer)', kind: 'number', default: 10 },
+        { key: 'bodyHeight', label: 'Body Height (platformer)', kind: 'number', default: 22 },
+        { key: 'speed', label: 'Speed (top-down)', kind: 'number', default: 200 },
+        { key: 'platformer', label: 'Platformer tunables JSON', kind: 'json', default: {} }
+    ],
     camera: [
         { key: 'followTargetId', label: 'Follow Target Id (empty = player)', kind: 'text', default: '' },
         { key: 'deadzoneWidth', label: 'Deadzone Width', kind: 'number', default: 0 },
         { key: 'deadzoneHeight', label: 'Deadzone Height', kind: 'number', default: 0 },
+        { key: 'viewHeight', label: 'View Height (px; sets zoom = canvasH / viewH)', kind: 'number', default: 0 },
         { key: 'bounds', label: 'Bounds (JSON {x,y,width,height}; empty = unbounded)', kind: 'json', default: null },
         { key: 'renderLayers', label: 'Render Layers (comma list of layer ids; empty = all)', kind: 'stringList', default: [] },
         { key: 'canvasIds', label: 'HUD Canvases (empty = none)', kind: 'idMultiSelect', source: 'canvases', default: [] }

@@ -48,6 +48,9 @@ export class DamageHealthBehavior extends Behavior {
     _applyDamage(amount, scene) {
         this.currentHealth -= amount;
         this._invulnTimer = this.invulnerabilityDuration;
+        if (this.entity === scene?.player || this.entity?.id === '__player') {
+            scene.eventGraphRuntime?.setVariable('hp', this.currentHealth);
+        }
         if (this.currentHealth > 0) return;
 
         this._dead = true;

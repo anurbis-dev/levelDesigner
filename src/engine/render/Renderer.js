@@ -11,6 +11,16 @@ export class Renderer {
     constructor(canvas) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d');
+        if (this.ctx) this.ctx.imageSmoothingEnabled = false;
+    }
+
+    drawFade(amount) {
+        if (!amount || !this.ctx) return;
+        this.ctx.save();
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0);
+        this.ctx.fillStyle = `rgba(7,6,15,${Math.min(1, amount)})`;
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        this.ctx.restore();
     }
 
     clear() {
@@ -99,13 +109,23 @@ export class Renderer {
 
         const img = entity.imgSrc && this.imageCache?.get(entity.imgSrc);
         if (img && img.complete && img.naturalHeight !== 0) {
+            this.ctx.imageSmoothingEnabled = false;
             const spriteAnim = entity.behaviors?.find(b => typeof b.getSourceRect === 'function');
             const sourceRect = spriteAnim?.getSourceRect();
+            const flip = entity.scaleX < 0;
+            if (flip) {
+                this.ctx.save();
+                this.ctx.translate(x + entity.width, y);
+                this.ctx.scale(-1, 1);
+                x = 0;
+                y = 0;
+            }
             if (sourceRect) {
                 this.ctx.drawImage(img, sourceRect.x, sourceRect.y, sourceRect.w, sourceRect.h, x, y, entity.width, entity.height);
             } else {
                 this.ctx.drawImage(img, x, y, entity.width, entity.height);
             }
+            if (flip) this.ctx.restore();
         } else {
             this.ctx.fillStyle = entity.color || '#cccccc';
             this.ctx.fillRect(x, y, entity.width, entity.height);

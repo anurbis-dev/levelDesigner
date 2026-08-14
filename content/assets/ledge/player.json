@@ -1,0 +1,11 @@
+{
+  "name": "ledge_player",
+  "type": "image",
+  "category": "ledge",
+  "imgSrc": "player.png",
+  "color": "#2fb6ab",
+  "width": 128,
+  "height": 112,
+  "properties": { "isTemporary": false },
+  "components": []
+}

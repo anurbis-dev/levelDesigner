@@ -166,4 +166,8 @@ export function registerDefaultEventGraphNodes() {
     EventGraphNodeRegistry.register('LoadGame', (node, ctx) => {
         SaveGame.load(ctx.scene, node.params);
     });
+    EventGraphNodeRegistry.register('HasItem', (node, ctx) =>
+        !!ctx.scene.inventory?.has(node.params.itemId, node.params.count ?? 1));
+    EventGraphNodeRegistry.register('ConsumeItem', (node, ctx) =>
+        !!ctx.scene.inventory?.remove(node.params.itemId, node.params.count ?? 1));
 }

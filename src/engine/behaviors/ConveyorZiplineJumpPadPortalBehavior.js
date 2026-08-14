@@ -35,10 +35,17 @@ export class ConveyorZiplineJumpPadPortalBehavior extends Behavior {
         this.launchOffsetX = this.properties.launchOffsetX ?? 0;
         this.launchOffsetY = this.properties.launchOffsetY ?? -96;
         this.targetId = this.properties.targetId ?? '';
+        this.requireInteract = this.properties.requireInteract ?? false;
+        this.requireItem = this.properties.requireItem ?? '';
+        this.consumeItem = this.properties.consumeItem ?? false;
+        this.fadeSeconds = this.properties.fadeSeconds ?? 0;
         this._originX = entity.x;
         this._originY = entity.y;
         this._wasOverlapping = false;
         this._riding = false;
+        this._warping = false;
+        this._warpT = 0;
+        this._warpMoved = false;
     }
 
     getBounds() {
@@ -79,11 +86,51 @@ export class ConveyorZiplineJumpPadPortalBehavior extends Behavior {
         }
 
         if (this.kind === 'portal') {
-            if (!entering) return;
-            const target = scene.getAllEntities().find(e => e.id === this.targetId);
-            if (!target) return;
-            player.x = target.x;
-            player.y = target.y;
+            if (this._warping) {
+                this._stepWarp(dt, scene, player);
+                return;
+            }
+            const interact = this.requireInteract
+                ? (overlapping && scene.input?.wasActionPressed?.('interact'))
+                : entering;
+            if (!interact) return;
+            if (this.requireItem && !scene.inventory?.has(this.requireItem)) {
+                scene.eventGraphRuntime?.emitCustomEvent('locked');
+                return;
+            }
+            if (this.consumeItem && this.requireItem) scene.inventory.remove(this.requireItem, 1);
+            scene.input?.consumeAction?.('interact');
+            const fade = this.fadeSeconds || 0;
+            if (fade <= 0) {
+                const target = scene.getAllEntities().find((e) => e.id === this.targetId);
+                if (target) {
+                    player.x = target.x;
+                    player.y = target.y;
+                }
+                return;
+            }
+            this._warping = true;
+            this._warpT = 0;
+            this._warpMoved = false;
+        }
+    }
+
+    _stepWarp(dt, scene, player) {
+        this._warpT += dt;
+        const fade = this.fadeSeconds || 0.62;
+        const half = fade * 0.5;
+        scene.fade = this._warpT < half ? this._warpT / half : Math.max(0, 1 - (this._warpT - half) / half);
+        if (!this._warpMoved && this._warpT >= half) {
+            const target = scene.getAllEntities().find((e) => e.id === this.targetId);
+            if (target) {
+                player.x = target.x + 8 - (player.width || 10) / 2;
+                player.y = target.y - (player.height || 22);
+            }
+            this._warpMoved = true;
+        }
+        if (this._warpT >= fade) {
+            scene.fade = 0;
+            this._warping = false;
         }
     }
 

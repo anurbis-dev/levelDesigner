@@ -1,5 +1,6 @@
 import { Behavior } from './Behavior.js';
 import { getEntityBounds, rectsIntersect, collectSolidBlockers } from './AABB.js';
+import { PlatformerController } from './platformer/PlatformerController.js';
 
 /**
  * Drives the runtime player entity from scene.input (see Scene.spawnPlayer()). Not a
@@ -13,6 +14,8 @@ export class PlayerMovementBehavior extends Behavior {
     constructor(entity, componentData) {
         super(entity, componentData);
         this.speed = this.properties.speed ?? 200; // px/sec
+        this.mode = this.properties.mode || this.properties.movementMode || 'topdown';
+        this._platformer = null;
     }
 
     update(dt, scene) {
@@ -22,6 +25,12 @@ export class PlayerMovementBehavior extends Behavior {
         if (scene.cutsceneActive) return; // §7 sequenceCutscene: lockPlayer while timeline plays
         if (scene.mountedVehicle) return; // §7 mountableVehicleSeat: vehicle drives instead
         if (scene.zipliningEntity) return; // §7 conveyorZiplineJumpPadPortal: zipline drives instead
+
+        if ((this.properties.mode || this.properties.movementMode || this.mode) === 'platformer') {
+            if (!this._platformer) this._platformer = new PlatformerController(this);
+            this._platformer.update(dt, scene);
+            return;
+        }
 
         const axis = input.getAxis();
         // §7 climbableLadder: while overlapping a ladder zone, horizontal input is ignored

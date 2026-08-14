@@ -37,6 +37,14 @@ export class SpawnerBehavior extends Behavior {
         this._alive = this._alive.filter(e => scene.entities.includes(e));
         if (this.maxAlive > 0 && this._alive.length >= this.maxAlive) return;
 
+        if (this.properties.spawnWhen === 'playerBelow') {
+            const p = scene.player;
+            if (!p) return;
+            const slack = this.properties.playerBelowX ?? 26;
+            const over = Math.abs((p.x + p.width / 2) - (this.entity.x + this.entity.width / 2)) < slack
+                && p.y > this.entity.y;
+            if (!over) return;
+        }
         this._timer += dt;
         if (this._timer < this.interval) return;
         this._timer -= this.interval;

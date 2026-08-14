@@ -31,7 +31,7 @@
 | `image` | Image | сырой растровый ресурс |
 | `imageAtlas` | Image Atlas | авто-упаковка картинок / источник sprite sheet |
 | `volume` | Volume | зона-триггер произвольной формы + визуальные эффекты |
-| `player_start` | Player Start | маркер спавна игрока (auto-managed: ровно один на уровень, auto-create при отсутствии, создаётся через Assets → Add → Core → Player Start) |
+| `player_start` | Player Start | маркер спавна игрока (auto-managed: ровно один на уровень). Компонент `playerStart`: `movementMode` `topdown`\|`platformer`, `bodyWidth`/`bodyHeight`, `speed`, `platformer` JSON. Runtime — `docs/RUNTIME_SCHEMA.md`. |
 
 ## 2. Visual / Render (8)
 
@@ -55,15 +55,15 @@
 
 **Итого: 29 asset-типов** в 6 категориях (`ASSET_CATEGORIES`: core, visual, audio, data, navigation, other).
 
-## 7. Component-типы (19)
+## 7. Component-типы (30)
 
-Навешиваются на Actor вместо создания отдельного asset-типа: `collider`, `trigger`, `transformAnimation`, `spriteUiAnimation`, `interactable`, `pickup`, `dialogueTrigger`, `damageHealth`, `movablePushable`, `mountableVehicleSeat`, `pathFollower`, `spawner`, `stateMachineBehavior`, `playerStart`, `checkpointSavePoint`, `climbableLadder`, `conveyorZiplineJumpPadPortal`, `destructibleContainer`, `variableModifier`. Полные описания и жанровая привязка — в `ComponentTypes.js`.
+Навешиваются на Actor: исходные 19 (`collider` … `variableModifier`) плюс `sprite`, `camera`, `audioZone`, `tilemap`, `particleEffect`, `light`, `nineSliceSprite`, `fontTextStyle`, `volume`, `navMesh`, `sequenceCutscene`. Полные описания — `ComponentTypes.js`. Runtime-поля (в т.ч. LEDGE: `playerStart.movementMode`, `tilemap.tileKinds`, `pickup.mode`, portal fade/item, `pathFollower` elevator) — `docs/RUNTIME_SCHEMA.md`. Пример уровня: `content/maps/ledge.json`.
 
 ## Отличия итоговой реализации от исходного плана (tmp/game-editor-asset-types.md)
 
 - План описывал 29 потенциальных asset-типов (Уровень 1-3 + уже определённые); в `ASSET_TYPES` попали 28 — структура категорий и состав типов перенесены практически 1:1.
 - Приоритетные "уровни внедрения" (1/2/3) из плана в код не перенесены как отдельные метаданные — каталог не различает приоритет типа программно, все типы равноправны и доступны для создания сразу.
-- Все типы обеих таблиц (asset и component) реализованы только как каталог + placeholder/stub — ни один не имеет специфичного редакторского UI сверх общего (кроме `asset.components[]` в asset-editor float).
+- Asset Editor рисует поля из `ComponentPropertySchema.js`. Runtime-поведение — `src/engine/` / `docs/RUNTIME_SCHEMA.md`, не редактор.
 
 ## Связанные файлы
 
@@ -73,3 +73,5 @@
 - `src/managers/AssetManager.js` — `createPlaceholderAsset()`.
 - `src/ui/asset-editor/AssetComponentsPanel.js` — список Components; `AssetComponentDetailsPanel.js` — stub details.
 - `src/ui/AssetPanelContextMenu.js`, `config/menu.js` (`buildAssetsMenu()`) — точки создания ассета по типу.
+- `docs/RUNTIME_SCHEMA.md` — runtime-контракт properties.
+- `docs/LEDGE_PORT_PLAN.md` — порт платформера LEDGE.
