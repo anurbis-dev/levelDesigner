@@ -169,6 +169,9 @@ export class ProjectFileOperations extends BaseModule {
         });
 
         this.editor.project = project;
+        if (this.editor.restoreProjectFolder) {
+            await this.editor.restoreProjectFolder(project.fileName);
+        }
 
         const currentIndex = Number.isInteger(json.currentLevelIndex) ? json.currentLevelIndex : 0;
         const orderedIds = this.editor.levelOrder;
@@ -256,6 +259,9 @@ export class ProjectFileOperations extends BaseModule {
         this.editor.project.fileName = fileName;
         this.editor.project.fileNameIsAuto = isAuto;
         this.editor.project.isDirty = false;
+
+        const folder = await FsaStore.getWorkingDirectoryHandle();
+        if (folder) await FsaStore.bindProjectDirectory(fileName, folder);
 
         this.editor.recentFilesManager?.remember('project', fileName, data);
 

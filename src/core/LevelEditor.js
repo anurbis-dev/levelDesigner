@@ -55,7 +55,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '4.54.1';
+    static VERSION = '4.55.0';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -943,8 +943,27 @@ export class LevelEditor {
     async setProjectFolder() {
         const handle = await FsaStore.pickWorkingDirectory();
         if (!handle) return null;
+        if (this.project?.fileName) {
+            await FsaStore.bindProjectDirectory(this.project.fileName, handle);
+        }
         await this.reloadProjectContent();
         return handle;
+    }
+
+    /**
+     * Rebind the folder last used with this project file (Open / Recent).
+     * No stored handle → default served ./content/.
+     */
+    async restoreProjectFolder(fileName) {
+        const handle = await FsaStore.restoreProjectDirectory(fileName);
+        if (handle) {
+            await this.reloadProjectContent();
+            return true;
+        }
+        if (FsaStore.getWorkingDirectoryName()) await FsaStore.clearWorkingDirectory();
+        await this.assetManager.scanContentFolder();
+        this._refreshAssetFoldersUi();
+        return false;
     }
 
     /**
@@ -979,7 +998,9 @@ export class LevelEditor {
     }
 
     async clearProjectFolder() {
+        const name = this.project?.fileName;
         await FsaStore.clearWorkingDirectory();
+        if (name) await FsaStore.unbindProjectDirectory(name);
         await this.assetManager.scanContentFolder();
         this._refreshAssetFoldersUi();
     }

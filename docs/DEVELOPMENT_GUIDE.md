@@ -100,7 +100,7 @@ eventManager.registerElement(button, 'button', {
 
 ```javascript
 export class LevelEditor {
-    static VERSION = '4.54.1'; // ← ЕДИНСТВЕННЫЙ ИСТОЧНИК ИСТИНЫ
+    static VERSION = '4.55.0'; // ← ЕДИНСТВЕННЫЙ ИСТОЧНИК ИСТИНЫ
 }
 ```
 
@@ -209,18 +209,22 @@ static currentLevel = Logger.LEVELS.INFO;
 
 ## Работа с File System Access API
 
-### Project folder (persist handle, v4.51.0)
+### Project folder (persist handle, v4.51.0–v4.55.0)
 
-Рабочая папка проекта — один grant на write; handle в IndexedDB, не в Project JSON. Не дублировать `showDirectoryPicker` для content/project/level/build writes — использовать `FsaStore` / `FsaContentWriter`.
+Рабочая папка проекта — grant на write; active handle в IndexedDB `workingDir`, per-project bind в `project:<basename>`; имя папки в localStorage, не в Project JSON. Не дублировать `showDirectoryPicker` для content/project/level/build writes — использовать `FsaStore` / `FsaContentWriter`. UI-вход: `LevelEditor.setProjectFolder` / `restoreProjectFolder` / `clearProjectFolder`.
 
 ```javascript
 import { FsaStore } from '../utils/FsaStore.js';
 import { FsaContentWriter } from '../utils/FsaContentWriter.js';
 
 // Grant once (File → Set Project Folder / Project Settings)
-await FsaStore.pickWorkingDirectory(); // showDirectoryPicker({ mode: 'readwrite' })
-// File → Clear Project Folder / Project Settings → Clear / New Project (v4.54.1)
-// → FsaStore.clearWorkingDirectory() + AssetManager.scanContentFolder()
+const handle = await FsaStore.pickWorkingDirectory(); // showDirectoryPicker({ mode: 'readwrite' })
+if (handle && editor.project?.fileName) {
+    await FsaStore.bindProjectDirectory(editor.project.fileName, handle);
+}
+// Open / Recent → FsaStore.restoreProjectDirectory(fileName) + reloadProjectContent()
+// Clear / New Project: clearWorkingDirectory(); Clear также unbindProjectDirectory(текущий fileName)
+// New Project вызывает clear после new Project() — предыдущий project:<file> остаётся
 
 // Content-relative write (maps/, assets/, …)
 await FsaStore.writeContentFile('maps/level.json', levelData);

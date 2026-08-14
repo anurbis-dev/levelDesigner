@@ -25,6 +25,13 @@ describe('FsaStore path helpers', () => {
     it('is unsupported in Node test env', () => {
         expect(FsaStore.isSupported()).toBe(false);
     });
+
+    it('keys a project folder bind by basename', () => {
+        expect(FsaStore.projectDirKey('My Game.json')).toBe('project:My Game.json');
+        expect(FsaStore.projectDirKey('root/foo/bar.json')).toBe('project:bar.json');
+        expect(FsaStore.projectDirKey('')).toBe(null);
+        expect(FsaStore.projectDirKey(null)).toBe(null);
+    });
 });
 
 describe('FsaContentWriter.assetToDiskJson', () => {

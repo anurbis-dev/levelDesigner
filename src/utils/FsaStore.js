@@ -13,6 +13,7 @@ export class FsaStore {
     static DB_VER = 1;
     static STORE = 'handles';
     static WORKING_DIR_KEY = 'workingDir';
+    static PROJECT_DIR_PREFIX = 'project:';
     static DIR_NAME_LS_KEY = 'levelDesignerFsaWorkingDirName';
 
     static isSupported() {
@@ -76,17 +77,57 @@ export class FsaStore {
     }
 
     static async getWorkingDirectoryHandle() {
-        if (!FsaStore.isSupported()) return null;
+        return FsaStore._getHandle(FsaStore.WORKING_DIR_KEY);
+    }
+
+    /** IDB key for a project's bound folder (`My Game.json` → `project:My Game.json`). */
+    static projectDirKey(fileName) {
+        const name = String(fileName || '').replace(/\\/g, '/').split('/').pop();
+        return name ? `${FsaStore.PROJECT_DIR_PREFIX}${name}` : null;
+    }
+
+    static async bindProjectDirectory(fileName, handle) {
+        const key = FsaStore.projectDirKey(fileName);
+        if (!key || !handle || !FsaStore.isSupported()) return false;
         try {
-            const db = await FsaStore._openDb();
-            const tx = db.transaction(FsaStore.STORE, 'readonly');
-            const handle = await FsaStore._idbReq(tx.objectStore(FsaStore.STORE).get(FsaStore.WORKING_DIR_KEY));
-            db.close();
-            return handle || null;
-        } catch (error) {
-            Logger.file.warn('FsaStore: failed to read working directory handle', error);
-            return null;
+            await FsaStore._putHandle(key, handle);
+            return true;
+        } catch {
+            return false;
         }
+    }
+
+    static async unbindProjectDirectory(fileName) {
+        const key = FsaStore.projectDirKey(fileName);
+        if (!key) return;
+        await FsaStore._deleteHandle(key);
+    }
+
+    static async getProjectDirectoryHandle(fileName) {
+        const key = FsaStore.projectDirKey(fileName);
+        return key ? FsaStore._getHandle(key) : null;
+    }
+
+    /**
+     * Make `handle` the active working directory (name + workingDir key).
+     * @returns {Promise<boolean>}
+     */
+    static async activateDirectoryHandle(handle) {
+        if (!handle || !(await FsaStore.verifyPermission(handle, 'readwrite'))) return false;
+        await FsaStore._putHandle(FsaStore.WORKING_DIR_KEY, handle);
+        FsaStore._setWorkingDirectoryName(handle.name || null);
+        return true;
+    }
+
+    /**
+     * Restore the folder last bound to this project file. Null if none / no permission.
+     */
+    static async restoreProjectDirectory(fileName) {
+        const handle = await FsaStore.getProjectDirectoryHandle(fileName);
+        if (!handle) return null;
+        if (!(await FsaStore.activateDirectoryHandle(handle))) return null;
+        Logger.file.info(`FsaStore: restored project folder (${handle.name}) for ${fileName}`);
+        return handle;
     }
 
     /**
@@ -98,7 +139,7 @@ export class FsaStore {
         try {
             const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
             if (!(await FsaStore.verifyPermission(handle, 'readwrite'))) return null;
-            await FsaStore._persistWorkingDirectoryHandle(handle);
+            await FsaStore._putHandle(FsaStore.WORKING_DIR_KEY, handle);
             FsaStore._setWorkingDirectoryName(handle.name || null);
             Logger.file.info(`FsaStore: project folder set (${handle.name})`);
             Logger.status.success(`Project folder set: ${handle.name}`);
@@ -111,18 +152,7 @@ export class FsaStore {
     }
 
     static async clearWorkingDirectory() {
-        try {
-            const db = await FsaStore._openDb();
-            const tx = db.transaction(FsaStore.STORE, 'readwrite');
-            tx.objectStore(FsaStore.STORE).delete(FsaStore.WORKING_DIR_KEY);
-            await new Promise((resolve, reject) => {
-                tx.oncomplete = () => resolve();
-                tx.onerror = () => reject(tx.error);
-            });
-            db.close();
-        } catch {
-            /* ignore */
-        }
+        await FsaStore._deleteHandle(FsaStore.WORKING_DIR_KEY);
         FsaStore._setWorkingDirectoryName(null);
         Logger.file.info('FsaStore: project folder cleared');
         Logger.status.info('Project folder cleared');
@@ -270,14 +300,44 @@ export class FsaStore {
         });
     }
 
-    static async _persistWorkingDirectoryHandle(handle) {
+    static async _getHandle(key) {
+        if (!key || !FsaStore.isSupported()) return null;
+        try {
+            const db = await FsaStore._openDb();
+            const tx = db.transaction(FsaStore.STORE, 'readonly');
+            const handle = await FsaStore._idbReq(tx.objectStore(FsaStore.STORE).get(key));
+            db.close();
+            return handle || null;
+        } catch (error) {
+            Logger.file.warn(`FsaStore: failed to read handle (${key})`, error);
+            return null;
+        }
+    }
+
+    static async _putHandle(key, handle) {
         const db = await FsaStore._openDb();
         const tx = db.transaction(FsaStore.STORE, 'readwrite');
-        tx.objectStore(FsaStore.STORE).put(handle, FsaStore.WORKING_DIR_KEY);
+        tx.objectStore(FsaStore.STORE).put(handle, key);
         await new Promise((resolve, reject) => {
             tx.oncomplete = () => resolve();
             tx.onerror = () => reject(tx.error);
         });
         db.close();
+    }
+
+    static async _deleteHandle(key) {
+        if (!key) return;
+        try {
+            const db = await FsaStore._openDb();
+            const tx = db.transaction(FsaStore.STORE, 'readwrite');
+            tx.objectStore(FsaStore.STORE).delete(key);
+            await new Promise((resolve, reject) => {
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+            db.close();
+        } catch {
+            /* ignore */
+        }
     }
 }
