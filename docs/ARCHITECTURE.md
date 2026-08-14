@@ -14,15 +14,16 @@
 
 1. **Скрытие интерфейса** - Body скрыт через CSS (`visibility: hidden`) до полной инициализации
 2. **Инициализация конфигурации** - `initializeConfiguration()` загружает настройки
-3. **Сканирование ассетов** - `assetManager.scanContentFolder()` и `preloadImages()`
+3. **Сканирование ассетов** - `assetManager.scanContentFolder()` и `preloadImages()` (fetch `./content/`)
 4. **Инициализация рендерера** - `initializeRenderer()` создает CanvasRenderer
 5. **Синхронизация изображений** - предзагруженные изображения синхронизируются с CanvasRenderer
 6. **Инициализация UI компонентов** - создание панелей, toolbar, диалогов (primary roots в `#dock-content-pool`)
-7. **`dockManager.init()`** - restore `panels.dock.*`, mount leaves в `#split-root` / `#floating-layer`
-8. **Инициализация обработчиков событий** - `initializeEventHandlerManager()`
-9. **Инициализация меню** - `initializeMenuAndEvents()`
-10. **Инициализация уровня** - `initializeLevelAndData()` создает новый уровень
-11. **Финализация** - `finalizeInitialization()`:
+7. **Project folder re-scan (v4.52.0)** - после UI: `reloadProjectContent({ onlyIfGranted: true, skipFetchFallback: true })` — если FSA handle уже granted, Content tree переключается на disk scan (`scanFromFsa`) вместо served `./content/`
+8. **`dockManager.init()`** - restore `panels.dock.*`, mount leaves в `#split-root` / `#floating-layer`
+9. **Инициализация обработчиков событий** - `initializeEventHandlerManager()`
+10. **Инициализация меню** - `initializeMenuAndEvents()`
+11. **Инициализация уровня** - `initializeLevelAndData()` создает новый уровень
+12. **Финализация** - `finalizeInitialization()`:
     - Первый рендер
     - Обновление версии (`updateVersionInfo()`, `updatePageTitle()`)
     - Обновление всех панелей
@@ -186,11 +187,11 @@
 **Файлы**: `src/managers/RecentFilesManager.js`, `config/menu.js` (`open-recent` dynamic submenu), `MenuManager.rebuildRecentFilesSubmenu`, prefs `editor.recentFiles` / `userPrefs.recentFiles`
 - Браузер не даёт стабильный path — в localStorage кладётся snapshot JSON (cap 10, skip >~1.5MB).
 - Запись: успешные open/save level и project.
-- Меню: File → Open Recent (rebuild on hover) + Clear Recent; после Open Recent, перед Save Project — **Set Project Folder...** (`set-project-folder` → `LevelEditor.setProjectFolder()` → `FsaStore.pickWorkingDirectory()`).
+- Меню: File → Open Recent (rebuild on hover) + Clear Recent; после Open Recent, перед Save Project — **Set Project Folder...** (`set-project-folder` → `LevelEditor.setProjectFolder()` → pick + `reloadProjectContent()`).
 
 **ProjectSettingsDialog** (extends BaseDialog):
 - Диалог редактирования параметров проекта (Phase 7).
-- **Текущие поля**: `project.name` (`<input type="text">`); **Project Folder** row — имя / Choose… / Clear (`FsaStore.pickWorkingDirectory` / `clearWorkingDirectory`), re-render on show. Hint: pick Level Designer folder or its `content/` folder. Folder handle — machine-local IndexedDB, **не** project JSON.
+- **Текущие поля**: `project.name` (`<input type="text">`); **Project Folder** row — имя / Choose… (`levelEditor.setProjectFolder`) / Clear (`levelEditor.clearProjectFolder`), re-render on show. Hint: pick Level Designer folder or its `content/` folder. Folder handle — machine-local IndexedDB, **не** project JSON.
 - **Отложенные поля** (Open Questions #9): default asset import path, default grid/snap для новых уровней проекта, naming convention — явно задокументированы в UI, но реализация отложена.
 
 ### AssetPanel System (v3.60.2 Фаза 4 завершена: декомпозиция на 7 компонентов)
@@ -204,8 +205,8 @@
 - **AssetFilterController** (Фаза 4.3) — поиск и фильтрация по типу ассета, скрытие строк фильтра, управление focus
 - **AssetSelectionController** (Фаза 4.4) — выделение ассетов (multi-select через Shift+Ctrl), select-all/deselect-all, обновление визуалов
 - **AssetDragDropController** (Фаза 4.5) — drag-out ассетов на канвас, external PNG file drop overlay, создание ассетов из файлов
-- **AssetItemActionsController** (Фаза 4.6) — контекстные меню (AssetContextMenu, AssetPanelContextMenu), клики по ассетам, open/show-in-explorer
-- **AssetToolbarController** (Фаза 4.7) — тулбар (размер превью, режимы просмотра), персистентность, refresh; Panel Settings → `LevelEditor.openSettings('assets')`
+- **AssetItemActionsController** (Фаза 4.6) — контекстные меню (AssetContextMenu, AssetPanelContextMenu), `folderOps` (`AssetFolderOps`), delete-with-disk, клики по ассетам, open/show-in-explorer
+- **AssetToolbarController** (Фаза 4.7) — тулбар (размер превью, режимы просмотра), персистентность; **Refresh** → `LevelEditor.reloadProjectContent()`; Panel Settings → `LevelEditor.openSettings('assets')`
 
 **Декомпозиция завершена** (Фаза 4): AssetPanel.js остаётся orchestration-слоем (constructor, init, destroy, setupEventListeners, setupAssetPanelHandlers, setupAssetEvents, updateContentVisibility, handleAssetWheel, handleDrop/createTemporaryAssetFromFile, handleAssetSave/handleAssetSaveChanges/handleAssetShowInExplorer, autoResizePanelHeight, showSaveSuccessMessage/showSaveErrorMessage/showErrorMessage, shouldShowUnsavedIndicator, плюс delegate-методы для контроллеров). Архитектура: 3099→1154 строк (62% сокращение).
 
@@ -215,6 +216,9 @@
 - **Горизонтальный скролл**: навигация по табам колесом мыши и средней кнопкой
 - **Drag-and-drop**: перетаскивание ассетов на канвас (AssetDragDropController), импорт PNG из системы
 - **Контекстные меню**: правый клик для дополнительных действий (AssetItemActionsController)
+- **Content tree RMB (v4.52.0)**: `FoldersContextMenu` — **New Folder** / **Delete Folder** (Delete скрыт на root); empty-area RMB в превью — **New Folder** (active folder); asset RMB — **Move to Folder** submenu из `contentStructure`
+- **Folder / asset disk CRUD (v4.52.0)**: `AssetFolderOps` — create/delete folders, move/delete assets (+ sibling PNG + manifest) when project folder granted; Del over folders tree (or over assets panel with non-root folder selected and no assets selected) → delete selected folder(s); cannot delete Content root
+- **Project folder as library (v4.52.0)**: after **Set Project Folder**, Content tree shows FSA scan of that folder (replaces served `./content/` library); Clear reverts to fetch `./content/`
 - **Фильтрация**: поиск и фильтр по типу ассета (AssetFilterController)
 - **Оптимизация производительности**: `FoldersPanel.updateLayout()` обновляет только обрезку имен при ресайзе без пересоздания DOM
 - **Type-specific иконки**: когда asset.type соответствует ID из AssetTypes каталога, grid-превью и list-row fallback рендерят minimalist SVG-иконку (через `AssetTypeIcons.buildTypeIconSvg()`) вместо color-swatch + первой буквы имени; ассеты без каталога-типа (регулярный импортированный контент) сохраняют старое поведение (color + буква)
@@ -338,7 +342,7 @@
 
 ### AssetManager & FileManager (v4.0.0 Phase A: новый null-safe метод)
 **Файл**: `src/managers/AssetManager.js`, `src/core/LevelFileOperations.js`
-- **AssetManager**: управление библиотекой ассетов, сканирование папки `content/`, кэширование изображений
+- **AssetManager**: управление библиотекой ассетов; `scanContentFolder()` (fetch `./content/`) или `scanFromFsa()` (v4.52.0 FSA tree → `ingestAssetJson`); кэширование изображений
   - **v4.0.0 Phase A**: добавлен метод `getAssetById(id)` (null-safe алиас к существующему `getAsset(assetId)`, устраняет краш в AssetItemActionsController.handleAssetClick при доступе к несуществующему методу)
   - **AssetTypes каталог** (`src/constants/AssetTypes.js`): 29 предопределённых типов ассетов в 6 категориях (Core: Camera, Actor, Image, ImageAtlas, Volume, Player Start; Visual/Render: SpriteAnimationClip, Tileset, Tilemap, NineSliceSprite, FontTextStyle, ParticleEffect, MaterialShaderPreset, Light; Audio: SoundEffect, MusicTrack, AudioZone; Data/System: DialogueGraph, QuestObjective, ItemDefinition, InventorySchema, LocalizationTable, SaveSchema, InputMap; Navigation/AI: PathSpline, NavMesh, AIBehaviorPreset; Other: Prefab, SequenceCutscene). `Player Start` — это не только тип ассета, но и auto-managed GameObject marker (ровно один на уровень, auto-создание при отсутствии, валидация в DetailsPanel/LevelFileOperations статистике) — через меню Assets → Add → Core → Player Start теперь можно вручную создать placeholder-ассет, который при размещении на уровне создаёт GameObject с `type='player_start'`, распознаваемый существующей системой. Вспомогательные функции `getAssetTypeById(id)`, `getAssetTypesByCategory(categoryId)`, `getAssetCategoriesWithTypes()`
   - **ComponentTypes каталог** (`src/constants/ComponentTypes.js`): 30 типов компонентов (включая `playerStart` с `movementMode` topdown|platformer, `camera` с `viewHeight`, `tilemap` с `tileKinds`, плюс sprite/audioZone/particleEffect/light/nineSliceSprite/fontTextStyle/volume/navMesh/sequenceCutscene) — editor-side metadata-стабы ({id, type, enabled, properties}), которые прикрепляются к Asset/GameObject; runtime-поведение в `src/engine/` (`docs/RUNTIME_SCHEMA.md`); вспомогательные функции `getComponentTypeById(id)`, `createComponentStub(typeId)`
@@ -421,10 +425,14 @@
 **Файл**: `src/core/GameBuildOperations.js`
 - У браузерного редактора нет shell/fs-доступа для запуска esbuild напрямую. `buildGame()` вызывает `saveProject()` и пишет `build-game.bat` (`npm run build:game`): `FsaStore.writeWorkingDirFile` если project folder granted, иначе download / native picker. Файлы должны лежать рядом с `package.json`. Триггер — **Game > Build...**.
 
-### FsaStore / FsaContentWriter (v4.51.0)
-**Файлы**: `src/utils/FsaStore.js`, `src/utils/FsaContentWriter.js`
+### FsaStore / FsaContentWriter / FsaContentFs (v4.51.0–v4.52.0)
+**Файлы**: `src/utils/FsaStore.js`, `src/utils/FsaContentWriter.js`, `src/utils/FsaContentFs.js`, `src/ui/AssetFolderOps.js`, `src/ui/FoldersContextMenu.js`
 - **FsaStore** (static): feature-detect `showOpenFilePicker`+`showSaveFilePicker`+`showDirectoryPicker`. Persist `FileSystemDirectoryHandle` в IndexedDB `levelDesignerFsaHandles` / store `handles` / key `workingDir`; имя папки — localStorage `levelDesignerFsaWorkingDirName` (machine-local, **не** Project.toJSON). API: `isSupported()`, `getWorkingDirectoryName()`, `pickWorkingDirectory()` (`showDirectoryPicker({ mode: 'readwrite' })`), `clearWorkingDirectory()`, `getWorkingDirectoryHandle()`, `verifyPermission(handle, mode)`, `getContentDirectoryHandle()` (subdir `content/` если есть, иначе сам folder), `writeWorkingDirFile(rel, data)`, `writeContentFile(rel, data)`, `ensureManifestEntry(rel, assetManager?)` (обновляет `content/manifest.json` `files[]` + `structure`), `toContentRelativePath(path)` (strips `root/`/`./content/`/`content/`), `toLevelRelativePath(fileName)` (bare name → `maps/<name>`).
 - **FsaContentWriter** (static): `assetToDiskJson(asset)` (persistable JSON, `imgSrc` = sibling basename, drop `path`/data-URL imgSrc); `saveAsset(asset, {updateManifest, assetManager})` / `saveNewAsset(asset, assetManager)` — write JSON + PNG sibling when imgSrc is data URL. `AssetPanel.handleAssetSave` / `handleAssetSaveChanges` пробуют FSA first; picker/`saveDataDirectly` только если null.
+- **FsaContentFs** (static, v4.52.0): directory/file ops on content root. `ensureDefaultContentLayout()` — if pick is not already a content root (`manifest.json` or `assets`/`maps`/`graphs`), creates nested `content/`; ensures default dirs + manifest. `scanContentTree()` → `{ structure, files }`. CRUD: `createDirectory`/`deletePath`/`moveFile`/`readText`/`readBlob`/`resolveImageSrc` (blob URL from FSA, else `./content/` fallback)/`updateManifest(mutator)`. Path helpers: `uiFolderToContentRel`/`contentRelToUiFolder`/`sanitizeFolderName`/`addStructureFolder`/`removeStructureNode`/`flattenFolderRels`.
+- **LevelEditor project-folder bind (v4.52.0)**: `setProjectFolder()` = pick + `reloadProjectContent()`; `reloadProjectContent({onlyIfGranted, skipFetchFallback})` ensure layout → `assetManager.scanFromFsa()` → refresh FoldersPanel; `clearProjectFolder()` clears handle and rescans served `./content/`.
+- **AssetFolderOps** (v4.52.0): create/delete folders, move/delete assets with disk+manifest when folder granted; `buildMoveMenuItems` for asset RMB **Move to Folder**.
+- **FoldersContextMenu** (v4.52.0): RMB on Content tree — **New Folder**, **Delete Folder** (hidden on root).
 
 ### Engine release build (v4.4.1 Фаза 4, minimal cut)
 **Файлы**: `src/engine/index.js` (bundle entry — `GameEngine`/`EntityFactory`/`BehaviorRegistry`/`ProjectLoader`), `scripts/build-game.mjs`, `scripts/build-addon.mjs`/`build-event.mjs` (stubs)
@@ -815,12 +823,13 @@ stateManager.subscribe('levelStructureChanged', () => {
 - **ResizeObserver**: динамическое обновление при изменении размера панели
 
 ### Asset Loading Pipeline
-1. **AssetManager.scanContentFolder()** - загрузка манифеста и сканирование файлов
-2. **buildCategoriesFromManifest()** - построение категорий из структуры манифеста
-3. **FoldersPanel.buildFolderStructure()** - создание структуры фолдеров
-4. **buildFromManifestStructure()** - создание папок из манифеста (включая пустые)
-5. **addAssetsToStructure()** - добавление ассетов и создание недостающих папок
-6. **StateManager.notify('assetsChanged')** - уведомление об изменениях
+1. **Fetch path**: `AssetManager.scanContentFolder()` — манифест + JSON через `./content/` (init default; after Clear Project Folder)
+2. **FSA path (v4.52.0)**: `LevelEditor.reloadProjectContent()` → `FsaContentFs.ensureDefaultContentLayout()` → `AssetManager.scanFromFsa()` (`FsaContentFs.scanContentTree` + `resolveImageSrc` + `ingestAssetJson`)
+3. **buildCategoriesFromManifest()** - построение категорий из структуры (manifest или FSA scan)
+4. **FoldersPanel.buildFolderStructure()** - создание структуры фолдеров
+5. **buildFromManifestStructure()** - создание папок из структуры (включая пустые)
+6. **addAssetsToStructure()** - добавление ассетов и создание недостающих папок
+7. **StateManager.notify('assetsChanged')** - уведомление об изменениях
 
 ### AssetImporter
 **Файл**: `src/utils/AssetImporter.js`

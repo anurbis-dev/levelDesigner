@@ -351,6 +351,7 @@ export class EventHandlers extends BaseModule {
             if (canvasHud && typeof canvasHud.deleteSelection === 'function' && canvasHud.deleteSelection()) {
                 return;
             }
+            if (this._deleteUnderAssetsPanel()) return;
             this.editor.objectOperations?.deleteSelectedObjects();
         } else if (this._matchesShortcut(e, 'editor', 'duplicate')) {
             e.preventDefault();
@@ -552,6 +553,44 @@ export class EventHandlers extends BaseModule {
      * Uses CSS :hover so we do not need last-known client coords for F2.
      * @returns {import('../ui/AssetPanel.js').AssetPanel|null}
      */
+    /**
+     * Del over Assets: folder tree → delete selected folder; previews → delete selected assets.
+     * @returns {boolean} true if handled
+     */
+    _deleteUnderAssetsPanel() {
+        const assetsPanel = this._assetsPanelUnderCursor();
+        if (!assetsPanel) return false;
+        const ops = assetsPanel.folderOps || assetsPanel.itemActionsController?.folderOps;
+        const foldersHover = assetsPanel.foldersContainer?.matches?.(':hover')
+            || assetsPanel.foldersPanel?.container?.matches?.(':hover');
+        if (foldersHover && ops) {
+            ops.deleteSelectedFolders();
+            return true;
+        }
+        const key = typeof assetsPanel.uiStateKey === 'function'
+            ? assetsPanel.uiStateKey('selectedAssets')
+            : 'selectedAssets';
+        const raw = this.editor.stateManager.get(key);
+        const selected = raw instanceof Set ? raw : new Set(Array.isArray(raw) ? raw : []);
+        if (selected.size && assetsPanel.itemActionsController) {
+            const firstId = Array.from(selected)[0];
+            const asset = this.editor.assetManager?.getAsset?.(firstId)
+                || this.editor.assetManager?.assets?.get?.(firstId);
+            if (asset) {
+                assetsPanel.itemActionsController.handleAssetDelete(asset);
+                return true;
+            }
+        }
+        if (ops && foldersHover === false) {
+            const folders = assetsPanel.foldersPanel?.selectedFolders;
+            if (folders instanceof Set && folders.size && !folders.has('root')) {
+                ops.deleteSelectedFolders();
+                return true;
+            }
+        }
+        return false;
+    }
+
     _assetsPanelUnderCursor() {
         const reg = this.editor.dockManager?.registry || this.editor.dockManager?.contentRegistry;
         if (reg?._byLeafId) {

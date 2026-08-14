@@ -184,6 +184,13 @@ export class AssetPanelContextMenu extends BaseContextMenu {
         // Asset creation
         this.addSubmenuItem('Add', '➕', this.buildAddMenuItems(), { id: 'asset-panel-add' });
 
+        this.addMenuItem('New Folder', '📁', () => {
+            const parent = this.assetPanel?.getActiveTabPath?.() || 'root';
+            const ops = this.assetPanel?.folderOps;
+            if (ops) ops.createFolder(parent);
+            else this.callbacks.onNewFolder?.(parent);
+        });
+
         this.addSeparator();
 
         // View options

@@ -14,19 +14,21 @@
 - `async saveLevelAs()` - prompt имени; обновляет per-session `session.fileName`; тот же FSA/download; Open Recent
 - `async closeLevel(levelId)` (новый, v3.57.0) - закрытие вкладки уровня; нельзя закрыть последний открытый уровень; спрашивает подтверждение если уровень содержит несохранённые изменения
 
-#### Файловые операции — проект (v3.57.0 Phase 7: Project; FSA v4.51.0):
+#### Файловые операции — проект (v3.57.0 Phase 7: Project; FSA v4.51.0–v4.52.0):
 - `async newProject()` - создание нового проекта: очищает все открытые уровни, создаёт один пустой уровень с baseline history. Единый confirm-диалог при несохранённых правках вместо N диалогов. **Replace-not-merge**: заменяет весь набор открытых вкладок.
 - `async openProject()` - открытие проекта из файла: парсит все уровни из project-JSON, восстанавливает видимость/порядок/currentLevelIndex. **Replace-not-merge**: новые уровни заменяют весь набор открытых табов. Единый confirm при dirty (Edge Case 11). Пишет Open Recent.
 - `async saveProject()` - async; без pinned `project.fileName` — имя из `project.name` (`fileNameIsAuto`); `FsaStore.writeWorkingDirFile` или download; Open Recent
 - `async saveProjectAs()` - async; prompt имени; FSA folder или download; Open Recent
-- `async setProjectFolder()` - v4.51.0: File → Set Project Folder... → `FsaStore.pickWorkingDirectory()`; handle в IndexedDB, name в localStorage (не Project JSON)
+- `async setProjectFolder()` - v4.52.0: File → Set Project Folder... → `FsaStore.pickWorkingDirectory()` + `reloadProjectContent()`; handle IndexedDB, name localStorage (не Project JSON); returns handle or null
+- `async reloadProjectContent({onlyIfGranted?, skipFetchFallback?}?)` - v4.52.0: `FsaContentFs.ensureDefaultContentLayout` → `assetManager.scanFromFsa` → refresh FoldersPanel; no folder / no content → optional `scanContentFolder`; returns boolean
+- `async clearProjectFolder()` - v4.52.0: `FsaStore.clearWorkingDirectory` + rescan served `./content/` + refresh FoldersPanel
 - `async openRecentFile(id)` - U3: открыть level/project из MRU-кэша (`editor.recentFiles`)
 - `clearRecentFiles()` - U3: очистить список Open Recent
-- `async openProjectSettings()` - ProjectSettingsDialog: `project.name` + Project Folder (Choose…/Clear)
+- `async openProjectSettings()` - ProjectSettingsDialog: `project.name` + Project Folder (Choose…→`setProjectFolder` / Clear→`clearProjectFolder`)
 - `async createAssetOfType(typeId)` - placeholder в активной папке Asset panel; `FsaContentWriter.saveNewAsset` + manifest; status `Created "name" → rel` если записано
 
 #### Версия:
-- `static VERSION` - текущая версия редактора (строка, например '3.54.6')
+- `static VERSION` - текущая версия редактора (строка, например `'4.52.0'`)
 - `updateVersionInfo()` - обновление отображения версии в UI
 
 #### Copy/Paste/Duplicate (Ctrl+C/X/V, Shift+D):
@@ -146,10 +148,12 @@
 
 #### Основные методы:
 - `loadDefaultAssets()` - загрузка стандартных ассетов
-- `scanContentFolder()` - сканирование папки контента и загрузка манифеста
+- `scanContentFolder()` - сканирование served `./content/` (fetch манифеста + JSON)
+- `async scanFromFsa()` - v4.52.0: replace in-memory library from granted project folder (`FsaContentFs.scanContentTree` + `resolveImageSrc` + `ingestAssetJson`); revokes prior blob URLs
+- `ingestAssetJson(filePath, assetData, result, imgSrcOverride)` - v4.52.0: register one asset JSON (shared by fetch and FSA paths); `imgSrcOverride` skips `./content/` path build
 - `buildCategoriesFromManifest(structure, parentPath, result)` - построение категорий из манифеста
 - `buildCategoriesFromStructure(result)` - построение категорий из известной структуры
-- `loadAssetFromFile(filePath, result)` - загрузка ассета из файла
+- `loadAssetFromFile(filePath, result)` - загрузка ассета из файла (fetch → `ingestAssetJson`)
 - `addAsset(assetData)` - добавление ассета
 - `removeAsset(assetId)` - удаление ассета
 - `getAsset(assetId)` - получение ассета по ID
@@ -160,9 +164,9 @@
 - `createPlaceholderAsset(typeId, customName?, folderPath?)` - создание placeholder-ассета по типу из каталога (Assets → Add → Category → Type); использует `typeDef.width`/`height`/`color` если заданы, иначе дефолты (48×48 + цвет категории); автоматически прикрепляет default-компоненты из `DEFAULT_ASSET_COMPONENTS[typeId]`
 
 #### Особенности:
-- **Манифест-система**: автоматическая загрузка структуры из `content/manifest.json`
-- **Динамическое сканирование**: обновление ассетов при изменении файлов
-- **Кеширование изображений**: оптимизация загрузки превью
+- **Манифест-система**: структура из `content/manifest.json` (fetch) или FSA scan (v4.52.0)
+- **Динамическое сканирование**: Refresh / Set Project Folder → `reloadProjectContent`
+- **Кеширование изображений**: оптимизация загрузки превью; FSA images as blob URLs
 - **Структурированная организация**: поддержка иерархии папок
 - **Обработка ошибок**: graceful handling ошибок загрузки файлов
 - **Catalog-driven placeholder creation**: 29 встроенных типов ассетов (категория Core, Visual/Render, Audio, Data/System, Navigation/AI, Other); каждый тип может быть создан как placeholder с опциональными custom размерами/цветом и auto-attached компонентами
@@ -224,6 +228,7 @@
 - **Умная обрезка имен**: динамическая обрезка длинных имен папок с учетом доступного места
 - **Drag-and-drop**: перетаскивание папок на контейнер табов для создания табов
 - **Синхронизация с табами**: автоматическая синхронизация выбора с AssetTabsManager
+- **FoldersContextMenu (v4.52.0)**: RMB — **New Folder** / **Delete Folder** (Delete hidden on root) → `AssetFolderOps`
 - **ResizeObserver**: автоматическое обновление при изменении размера панели
 - **Оптимизация ресайза**: при изменении размеров окна обновляется только текст обрезки без пересоздания элементов DOM (метод `updateLayout()`)
 
@@ -372,7 +377,7 @@
 
 #### Текущие поля:
 - `project.name` - `<input type="text">`
-- **Project Folder** - label + Choose… / Clear (`FsaStore`); hint: Level Designer folder or its `content/` folder; machine-local
+- **Project Folder** - label + Choose… (`levelEditor.setProjectFolder`) / Clear (`levelEditor.clearProjectFolder`); hint: Level Designer folder or its `content/` folder; machine-local; after Choose, Assets Content tree shows that folder
 
 #### Отложенные поля (Open Questions #9):
 - Default asset import path
@@ -406,6 +411,45 @@ Write content assets into the granted project folder (v4.51.0).
 - `assetToDiskJson(asset)` - persistable JSON; `imgSrc` = sibling basename; drop `path` and data-URL imgSrc
 - `async saveAsset(asset, {updateManifest?, assetManager?})` - `Promise<string|null>` content-relative path; PNG sibling when data-URL imgSrc
 - `async saveNewAsset(asset, assetManager)` - `saveAsset` with `updateManifest: true`
+
+### FsaContentFs (src/utils/FsaContentFs.js)
+Content-root layout, scan, and CRUD over the granted project folder (v4.52.0). Complements `FsaStore` writes.
+
+#### Константы:
+- `DEFAULT_DIRS` - `['assets', 'maps', 'graphs']`
+
+#### Path helpers:
+- `uiFolderToContentRel(folderPath)` - UI path (`root/...`) → content-relative
+- `contentRelToUiFolder(rel)` - content-relative → `root/...`
+- `sanitizeFolderName(name)` - strip illegal path chars
+- `addStructureFolder(structure, folderRel)` / `removeStructureNode(structure, folderRel)` / `flattenFolderRels(structure)`
+
+#### Основные методы:
+- `async looksLikeContentRoot(handle)` - has `manifest.json` or `assets`/`maps`/`graphs` dir
+- `async ensureDefaultContentLayout()` - create nested `content/` if pick is not already a content root; ensure default dirs + manifest; returns content dir handle or null
+- `async scanContentTree()` - `{ structure, files: [{relPath, json}] }` or null
+- `async createDirectory(folderRel)` / `async deletePath(relPath)` / `async moveFile(fromRel, toRel)`
+- `async readText(relPath)` / `async readBlob(relPath)`
+- `async resolveImageSrc(jsonRel, assetData)` - FSA blob URL, else `./content/` fallback
+- `async updateManifest(mutator)` - read-mutate-write `manifest.json`; returns manifest or false
+
+### AssetFolderOps (src/ui/AssetFolderOps.js)
+Create / move / delete asset folders and disk-backed assets (v4.52.0). Owned by `AssetItemActionsController` as `assetPanel.folderOps`.
+
+#### Основные методы:
+- `async createFolder(parentUiPath?)` - prompt name; disk mkdir + structure when folder granted
+- `async deleteFolder(uiPath)` - confirm; recursive assets + disk; cannot delete `root`
+- `async deleteSelectedFolders()` - delete all selected non-root folders
+- `async moveAsset(asset, targetUiPath)` - move JSON + sibling PNG + manifest entry when folder granted
+- `async deleteAssetWithDisk(asset)` - delete JSON + sibling PNG + manifest + memory
+- `static buildMoveMenuItems(assetPanel, asset)` - submenu items for asset RMB **Move to Folder**
+
+### FoldersContextMenu (src/ui/FoldersContextMenu.js)
+RMB on the Assets Content tree (v4.52.0). Extends `BaseContextMenu`.
+
+#### Menu items:
+- **New Folder** - `onNewFolder(folderPath)`
+- **Delete Folder** - `onDeleteFolder(folderPath)`; hidden when `folderPath === 'root'`
 
 ---
 

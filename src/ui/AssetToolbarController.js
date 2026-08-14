@@ -163,8 +163,13 @@ export class AssetToolbarController {
     /**
      * Handle refresh assets
      */
-    handleRefresh() {
+    async handleRefresh() {
         Logger.ui.debug('Refreshing assets');
+        const editor = this.assetPanel?.levelEditor;
+        if (editor && typeof editor.reloadProjectContent === 'function') {
+            await editor.reloadProjectContent();
+            return;
+        }
         this.assetPanel.render();
     }
 

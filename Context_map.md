@@ -1,4 +1,4 @@
-# Context Map - Level Designer v4.51.0 (FSA project folder: `FsaStore`/`FsaContentWriter`, File → Set Project Folder, in-place content/project/level/build writes; LEDGE platformer port remains; Phase A done; Phase B dock B0–B5 done; §7 backlog 12/12 + Tiers 1–4 done)
+# Context Map - Level Designer v4.52.0 (project-folder content sync + folder CRUD: `FsaContentFs`/`AssetFolderOps`/`FoldersContextMenu`; Set Project Folder binds+scans Content tree; v4.51.0 FSA writes remain; LEDGE platformer port; Phase A done; Phase B dock B0–B5 done; §7 backlog 12/12 + Tiers 1–4 done)
 
 ## ⚠️ КРИТИЧЕСКИ ВАЖНО - ЧИТАТЬ ПЕРВЫМ
 
@@ -50,13 +50,15 @@ levelEditor.newProject() // создание нового проекта: очи
 levelEditor.openProject() // открытие проекта из файла: парсит все уровни из project-JSON, заменяет весь набор открытых вкладок (Edge Case 11); unit confirm при dirty
 levelEditor.saveProject() // async; без pinned fileName — имя из project.name через _deriveFileNameFromProjectName(); writeWorkingDirFile в granted folder, иначе download; требует newProject()/openProject()
 levelEditor.saveProjectAs() // async; prompt имени; FSA folder или download
-levelEditor.setProjectFolder() // async v4.51.0: File → Set Project Folder... → FsaStore.pickWorkingDirectory(); handle в IndexedDB, name в localStorage (machine-local, не Project.toJSON)
+levelEditor.setProjectFolder() // async v4.52.0: File → Set Project Folder... → FsaStore.pickWorkingDirectory() + reloadProjectContent(); handle IndexedDB, name localStorage (machine-local, не Project.toJSON)
+levelEditor.reloadProjectContent({onlyIfGranted?, skipFetchFallback?}?) // async v4.52.0: ensureDefaultContentLayout → AssetManager.scanFromFsa → refresh FoldersPanel; no folder → scanContentFolder (unless skipFetchFallback)
+levelEditor.clearProjectFolder() // async v4.52.0: FsaStore.clearWorkingDirectory + rescan served ./content/
 levelEditor.openRecentFile(id) // U3: открыть level/project из MRU-кэша (editor.recentFiles)
 levelEditor.clearRecentFiles() // U3: очистить Open Recent
 levelEditor.recentFilesManager // RecentFilesManager: list/remember/open/clear; snapshot JSON в userPrefs
 levelEditor.moveSelectedObjectsToLayerId(layerId) // U4: перенос selection на слой (context menu)
 levelEditor.buildMoveToLayerMenuItems() // U4: пункты flyout Move to Layer
-levelEditor.openProjectSettings() // ProjectSettingsDialog: project.name + Project Folder (Choose…/Clear, FsaStore)
+levelEditor.openProjectSettings() // ProjectSettingsDialog: project.name + Project Folder (Choose…→setProjectFolder / Clear→clearProjectFolder)
 levelEditor.project // текущий Project экземпляр (инициализируется при New/Open/Save Project); null до первого вызова
 levelEditor.projectFileOperations // BaseModule: newProject/openProject/openProjectFromData/saveProject/saveProjectAs
 
@@ -74,7 +76,7 @@ levelEditor.createAssetOfType(typeId) // async: placeholder в текущей п
 // setupDropdownCursorMarginWatcher() — новый persistent mousemove-листенер для top-level dropdown (раньше mouseleave без margin), закрывает dropdown при выходе курсора за пределы margin (ui.cursorMenuMargin), включая открытые flyout-submenu
 
 // BaseContextMenu (v3.55.0+): единая разметка пунктов, disabled-схема, flyout-submenu
-// Все 6 наследников (AssetContextMenu, AssetPanelContextMenu, CanvasContextMenu, ConsoleContextMenu, LayersContextMenu, OutlinerContextMenu) получили единый визуальный шаблон:
+// Все 7 наследников (AssetContextMenu, AssetPanelContextMenu, CanvasContextMenu, ConsoleContextMenu, LayersContextMenu, OutlinerContextMenu, FoldersContextMenu) получили единый визуальный шаблон:
 // - createMenuItem()/createSubmenuItem() используют MenuItemTemplateUtils (три экспорта: renderMenuItemLeadingHtml, renderMenuItemBodyHtml, renderMenuItemTrailingHtml) для одиночного источника правды разметки пункта [leading | body | trailing]
 // - item rows: 'base-context-menu-item px-4 py-2 text-sm hover:bg-gray-700' (идентично MenuManager); separators: 'border-t border-gray-600 my-1'; submenu-триггеры с явным ▸-гліфом
 // - применяют полный disabled-scheme (opacity-50/pointer-events-none/cursor-not-allowed, как MenuManager)
@@ -107,6 +109,8 @@ levelEditor.dockManager.enterImmersiveLayout() / exitImmersiveLayout() // Game M
 import { getAssetTypeById, getAssetTypesByCategory, ASSET_CATEGORIES, DEFAULT_ASSET_COMPONENTS } from 'src/constants/AssetTypes.js' // 29 типов ассетов: Camera (follow-target/deadzone/bounds, реализован), Actor, Image, Player Start (auto-managed spawn marker, со своим компонентом), Tilemap, Sound, Dialogue, Quest, Prefab и т.д.; DEFAULT_ASSET_COMPONENTS = {player_start: ['playerStart'], camera: ['camera']} автоматически прикрепляет компонент при создании placeholder
 import { getComponentTypeById, createComponentStub } from 'src/constants/ComponentTypes.js' // 30 типов компонентов: Collider, Trigger, Interactable, PathFollower, Spawner, Camera (follow-target/deadzone/bounds/viewHeight), playerStart (movementMode topdown|platformer) и т.д.
 import { buildTypeIconSvg } from 'src/constants/AssetTypeIcons.js' // type-specific SVG icons (24×24 stroke glyphs, inline, растеризуются как data-URI Image в CanvasRenderer для canvas-рендера и AssetPanel для preview)
+assetManager.scanContentFolder() // fetch `./content/` (default / after clearProjectFolder)
+assetManager.scanFromFsa() // v4.52.0: FSA tree → ingestAssetJson; used by reloadProjectContent
 assetManager.createPlaceholderAsset(typeId, customName?, folderPath?) // создать заполнитель ассета (без imgSrc, используются опциональные typeDef.width/height/color если заданы, иначе 48×48 + цвет категории, отображается с type-иконкой в AssetPanel и на canvas); автоматически создаёт и прикрепляет компоненты из DEFAULT_ASSET_COMPONENTS[typeId] (сейчас только player_start → playerStart)
 asset.components // массив component stubs [{id, type, enabled, properties}], наследуется при размещении GameObject
 gameObject.components // component stubs in toJSON(); asset-side edit in asset editor float (assetComponents panel), not modal
@@ -216,6 +220,9 @@ level.settings.parallaxVertical // множитель вертикального
 - `src/core/ProjectFileOperations.js` - файловые операции проекта (Phase 7, BaseModule): `newProject()`/`openProject()`/`openProjectFromData()`/`saveProject()`/`saveProjectAs()` (async; FsaStore.writeWorkingDirFile или download), replace-not-merge; MRU remember
 - `src/utils/FsaStore.js` - v4.51.0 File System Access: persist `FileSystemDirectoryHandle` (IndexedDB `levelDesignerFsaHandles`/`handles`/`workingDir`), folder name localStorage `levelDesignerFsaWorkingDirName`; `isSupported`/`pickWorkingDirectory`/`clearWorkingDirectory`/`writeWorkingDirFile`/`writeContentFile`/`ensureManifestEntry`/`getContentDirectoryHandle`/`toContentRelativePath`/`toLevelRelativePath`
 - `src/utils/FsaContentWriter.js` - v4.51.0: `assetToDiskJson`/`saveAsset`/`saveNewAsset` — JSON+PNG sibling в content root без save dialog
+- `src/utils/FsaContentFs.js` - v4.52.0: content-root layout/scan/CRUD — `ensureDefaultContentLayout`/`scanContentTree`/`createDirectory`/`deletePath`/`moveFile`/`readText`/`readBlob`/`resolveImageSrc`/`updateManifest`; path helpers `uiFolderToContentRel`/`contentRelToUiFolder`/`sanitizeFolderName`/`addStructureFolder`/`removeStructureNode`/`flattenFolderRels`
+- `src/ui/AssetFolderOps.js` - v4.52.0: `createFolder`/`deleteFolder`/`deleteSelectedFolders`/`moveAsset`/`deleteAssetWithDisk` + `buildMoveMenuItems` (disk when folder granted)
+- `src/ui/FoldersContextMenu.js` - v4.52.0: RMB on Assets Content tree — New Folder / Delete Folder (hidden on root)
 - `src/managers/RecentFilesManager.js` - U3 Open Recent: MRU level/project snapshots в `editor.recentFiles`
 - `src/core/ObjectOperations.js` - операции с объектами
 - `src/core/LayerOperations.js` - операции со слоями
@@ -262,7 +269,7 @@ level.settings.parallaxVertical // множитель вертикального
 - `src/ui/AssetFilterController.js` - фильтрация и поиск (Фаза 4.3); поиск ассетов по имени, фильтр по типу, управление видимостью строк фильтра
 - `src/ui/AssetSelectionController.js` - выделение ассетов (Фаза 4.4); multi-select через Shift+Ctrl+клик, select-all/deselect-all, обновление визуалов выделения
 - `src/ui/AssetDragDropController.js` - перетаскивание и импорт (Фаза 4.5); drag-out ассетов на canvas, external PNG file drop overlay, создание ассетов из файлов
-- `src/ui/AssetItemActionsController.js` - действия с ассетами (Фаза 4.6); контекстные меню (AssetContextMenu, AssetPanelContextMenu), клики по ассетам, open/show-in-explorer, rename
+- `src/ui/AssetItemActionsController.js` - действия с ассетами (Фаза 4.6); контекстные меню (AssetContextMenu, AssetPanelContextMenu), `folderOps` (AssetFolderOps), delete-with-disk, open/show-in-explorer, rename
 - `src/ui/AssetToolbarController.js` - управление тулбаром (Фаза 4.7); размер превью (zoom), режимы просмотра (grid/list/details), персистентность; `handleSettings()` → `openSettings('assets')`
 - `src/ui/LayersPanel.js` - панель слоев, включая Layer Solo (`toggleLayerSolo`), paint drag на eye/lock-иконках (v3.58.0: mousedown + drag по иконкам того же типа применяет взятое значение, батчевый tail в `_endIconPaintDrag()` инвалидирует кэши и ре-рендерит)
 - `src/ui/OutlinerPanel.js` - иерархия объектов, включая eye-icon видимости (`createVisibilityButton`), Object Solo (Ctrl+click на глаз), paint drag на eye-icon (v3.58.0: mousedown + drag по глазам других объектов применяет взятое значение, per-node listeners без EventHandlerManager-делегирования), Ctrl+click мульти-select в фильтре типов (`showFilterMenu` → `MenuPositioningUtils.repositionMenu()` после добавления пунктов для совпадения с кнопкой), и F2 inline-rename (`startInlineRename`)
@@ -418,7 +425,7 @@ eventHandlerManager.registerElement(button, { click: onClick }, 'button-id');
 
 ## 🔧 Версионирование
 
-Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '4.51.0'` (FSA project folder + LEDGE platformer port + Phase A/B + §7 Tiers 1–4; layout = `editor.dockManager`)
+Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '4.52.0'` (project-folder content sync + folder CRUD + FSA writes + LEDGE platformer port + Phase A/B + §7 Tiers 1–4; layout = `editor.dockManager`)
 
 Версия отображается динамически после полной инициализации через `updateVersionInfo()` и `updatePageTitle()`. Интерфейс скрыт до завершения загрузки, чтобы избежать отображения устаревшей версии. Pre-push hook блокирует коммит без бампа версии (`.claude/settings.json`).
 

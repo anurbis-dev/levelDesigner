@@ -1,5 +1,6 @@
 import { BasePanel } from './BasePanel.js';
 import { Logger } from '../utils/Logger.js';
+import { FoldersContextMenu } from './FoldersContextMenu.js';
 
 /**
  * Folders panel UI component
@@ -19,6 +20,7 @@ export class FoldersPanel extends BasePanel {
 
         this.init();
         this.setupEventListeners();
+        this._setupContextMenu();
     }
 
     init() {
@@ -678,6 +680,21 @@ export class FoldersPanel extends BasePanel {
     /**
      * Setup event listeners
      */
+    _setupContextMenu() {
+        if (!this.folderTree || this.folderContextMenu) return;
+        this.folderContextMenu = new FoldersContextMenu(this.folderTree, this, {
+            stateManager: this.stateManager,
+            onNewFolder: (parentPath) => {
+                const ops = this.assetPanel?.folderOps;
+                if (ops) ops.createFolder(parentPath || 'root');
+            },
+            onDeleteFolder: (folderPath) => {
+                const ops = this.assetPanel?.folderOps;
+                if (ops) ops.deleteFolder(folderPath);
+            }
+        });
+    }
+
     setupEventListeners() {
         if (!this.subscriptions) this.subscriptions = [];
 
@@ -708,6 +725,8 @@ export class FoldersPanel extends BasePanel {
             this.subscriptions.forEach(unsub => unsub());
             this.subscriptions = [];
         }
+        if (this.folderContextMenu?.destroy) this.folderContextMenu.destroy();
+        this.folderContextMenu = null;
     }
 
     syncTabsToFolders(activeTabs) {

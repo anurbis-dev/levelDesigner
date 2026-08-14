@@ -9,6 +9,7 @@ import {
 } from '../ui/asset-editor/AssetVisualMigrate.js';
 import { createComponentStub } from '../constants/ComponentTypes.js';
 import { BaseManager } from './BaseManager.js';
+import { resolveCatalogAssetType, isLevelDocument } from '../utils/LevelAssetUtils.js';
 
 /**
  * Asset library management
@@ -176,62 +177,109 @@ export class AssetManager extends BaseManager {
         const assetData = await response.json();
         result.totalFiles++;
         Logger.asset.info(`AssetManager: Loading asset file: ${filePath}`);
+        this.ingestAssetJson(filePath, assetData, result, null);
+    }
 
-        // Parse file path
-        const pathParts = filePath.split('/');
-        const filename = pathParts[pathParts.length - 1].replace('.json', '');
-        
-        // Determine category from parent folder (can be any folder in path)
-        // For "assets/TEST/file.json" -> category is "TEST"
-        // For "graphs/file.json" -> category is "graphs"
-        // For "maps/subfolder/file.json" -> category is "subfolder"
-        const category = pathParts[pathParts.length - 2] || pathParts[0] || 'Uncategorized';
-
-        // Disk texture: only meaningful for type=image (also accept legacy image field)
-        let imgSrc = null;
-        if (assetData.imgSrc) {
-            imgSrc = Array.isArray(assetData.imgSrc) ? assetData.imgSrc[0] : assetData.imgSrc;
-        } else if (assetData.image) {
-            imgSrc = assetData.image;
+    /**
+     * Replace the in-memory library from the granted project folder (FSA).
+     * @returns {Promise<Object>}
+     */
+    async scanFromFsa() {
+        const { FsaContentFs } = await import('../utils/FsaContentFs.js');
+        const result = {
+            totalFiles: 0,
+            loadedAssets: 0,
+            categories: new Set(),
+            errors: []
+        };
+        const scan = await FsaContentFs.scanContentTree();
+        if (!scan) {
+            result.errors.push('No project folder (or write permission denied)');
+            return result;
         }
 
-        const assetType = assetData.type || 'image';
-        // Build full path to image relative to content folder (Image assets only)
-        if (imgSrc && assetType === 'image' && !imgSrc.startsWith('http') && !imgSrc.startsWith('data:')) {
+        for (const asset of this.assets.values()) {
+            if (asset.imgSrc && String(asset.imgSrc).startsWith('blob:')) {
+                try { URL.revokeObjectURL(asset.imgSrc); } catch { /* ignore */ }
+            }
+        }
+        this.assets.clear();
+        this.categories.clear();
+        this.contentStructure = scan.structure;
+        if (scan.structure) {
+            this.buildCategoriesFromManifest(scan.structure, '', result);
+        }
+
+        for (const entry of scan.files) {
+            try {
+                result.totalFiles++;
+                const imgSrc = await FsaContentFs.resolveImageSrc(entry.relPath, entry.json);
+                this.ingestAssetJson(entry.relPath, entry.json, result, imgSrc);
+            } catch (error) {
+                Logger.asset.error(`AssetManager: FSA load failed ${entry.relPath}:`, error);
+                result.errors.push(`Failed to load ${entry.relPath}: ${error.message}`);
+            }
+        }
+
+        this.relinkAllVisualModels();
+        if (this.stateManager) this.stateManager.notify('assetsChanged');
+        Logger.asset.info(`AssetManager: FSA scan loaded ${result.loadedAssets} assets from ${result.totalFiles} files`);
+        return result;
+    }
+
+    /**
+     * Register one asset JSON (from fetch or FSA). `imgSrcOverride` skips ./content/ path build.
+     */
+    ingestAssetJson(filePath, assetData, result, imgSrcOverride) {
+        const pathParts = filePath.split('/');
+        const filename = pathParts[pathParts.length - 1].replace('.json', '');
+        const category = pathParts[pathParts.length - 2] || pathParts[0] || 'Uncategorized';
+
+        let imgSrc = imgSrcOverride;
+        if (imgSrc === undefined || imgSrc === null) {
+            if (assetData.imgSrc) {
+                imgSrc = Array.isArray(assetData.imgSrc) ? assetData.imgSrc[0] : assetData.imgSrc;
+            } else if (assetData.image) {
+                imgSrc = assetData.image;
+            }
+        }
+
+        const assetType = resolveCatalogAssetType(assetData, filePath);
+        if (imgSrcOverride == null && imgSrc && assetType === 'image'
+            && !imgSrc.startsWith('http') && !imgSrc.startsWith('data:') && !imgSrc.startsWith('blob:')) {
             const assetDir = pathParts.slice(0, -1).join('/');
             imgSrc = `./content/${assetDir}/${imgSrc}`;
-            Logger.asset.info(`AssetManager: Built image path: ${imgSrc}`);
         } else if (assetType === 'image' && !imgSrc) {
             Logger.asset.warn(`AssetManager: No image source found for ${assetData.name} in ${filePath}`);
         }
-        if (assetType !== 'image') {
-            imgSrc = null;
+        if (assetType !== 'image') imgSrc = null;
+
+        const levelProps = { ...(assetData.properties || {}) };
+        if (assetType === 'level' && !levelProps.levelSrc && isLevelDocument(assetData)) {
+            levelProps.levelSrc = filePath;
         }
 
-        // Generate UNIQUE ID from full path if not provided
         let assetId = assetData.id;
         if (!assetId) {
             const pathForId = pathParts.slice(0, -1).join('_') + '_' + filename;
             assetId = `asset_${pathForId}`.replace(/[^a-zA-Z0-9_]/g, '_');
-            Logger.asset.info(`AssetManager: Generated unique ID from path: ${assetId}`);
         }
 
         const asset = this.addAsset({
             id: assetId,
-            name: assetData.name,
+            name: assetData.name || assetData.meta?.name || filename,
             type: assetType,
             category: category,
             path: filePath,
-            width: assetData.width || 32,
-            height: assetData.height || 32,
-            color: assetData.color || '#cccccc',
+            width: assetData.width || (assetType === 'level' ? 48 : 32),
+            height: assetData.height || (assetType === 'level' ? 48 : 32),
+            color: assetData.color || (assetType === 'level' ? '#38bdf8' : '#cccccc'),
             imgSrc: imgSrc,
-            properties: assetData.properties || {},
+            properties: assetType === 'level' ? levelProps : (assetData.properties || {}),
             tags: assetData.tags || [],
             components: Array.isArray(assetData.components) ? assetData.components : []
         });
 
-        // Image: disk only; composites: Sprite.imageAssetId (second pass links after all load)
         ensureAssetVisualModel(asset, this);
         asset.saveOriginalState?.();
 

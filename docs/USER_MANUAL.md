@@ -7,7 +7,7 @@
 3. **Создание**: Перетащите ассеты из нижней панели на canvas
 4. **Группировка**: Выделите объекты → `Ctrl+G`
 5. **Слои**: Организуйте объекты по слоям с полной изоляцией видимости
-6. **Project Folder** (v4.51.0, Chromium): File → **Set Project Folder...** или Project Settings → **Project Folder** → Choose… — один раз выдать write access к папке Level Designer (или её `content/`). Дальше Save Project / Save Level / Create Asset / Build пишут in-place без save dialog. Clear снимает grant. Без folder — прежний download / native picker.
+6. **Project Folder** (v4.51.0–v4.52.0, Chromium): File → **Set Project Folder...** или Project Settings → **Project Folder** → Choose… — один раз выдать write access к папке Level Designer (или её `content/`). Редактор создаёт default `content/` layout если его нет (или использует pick as-is, если это уже content root). **Content tree** в Assets показывает эту папку (FSA scan, не served `./content/`). Save Project / Save Level / Create Asset / Build / New Folder / Move / Delete пишут in-place. Clear снимает grant и возвращает served `./content/`. Без folder — download / native picker.
 7. **Сохранение**: `Ctrl+S` (уровень); File → Save Project — project JSON
 
 ## 🆕 Новые возможности v3.51.0
@@ -238,6 +238,11 @@
 
 ### Assets (Content)
 - Просмотр и импорт ассетов
+- **Project Folder as library** (v4.52.0): после **Set Project Folder** дерево Content = выбранная папка (FSA); **Refresh** перечитывает её; Clear → снова served `./content/`
+- **New Folder**: RMB on Content tree or empty asset area → **New Folder** (prompt); writes to disk when folder granted
+- **Delete Folder**: RMB on folder → **Delete Folder** (hidden on Content root); or Del over folders tree / over assets panel with non-root folder selected and no assets selected
+- **Move to Folder**: RMB on asset thumbnail → **Move to Folder** submenu (from content structure); moves JSON + sibling PNG + manifest when folder granted
+- **Delete asset**: RMB Delete or Del over previews — also removes JSON + sibling PNG + manifest entry when folder granted
 - **Переключение позиции папок**: Кнопка ⇄ в заголовке Content для изменения расположения папок
 - Поддержка Grid/List/Details режимов отображения
 - Drag & Drop для создания объектов на canvas

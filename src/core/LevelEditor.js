@@ -39,6 +39,7 @@ import { DockManager } from '../ui/dock/DockManager.js';
 import { ensureAssetVisualModel } from '../ui/asset-editor/AssetVisualMigrate.js';
 import { FsaStore } from '../utils/FsaStore.js';
 import { FsaContentWriter } from '../utils/FsaContentWriter.js';
+import { FsaContentFs } from '../utils/FsaContentFs.js';
 
 // Import new utilities
 import { ErrorHandler } from '../utils/ErrorHandler.js';
@@ -54,7 +55,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '4.51.0';
+    static VERSION = '4.52.0';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -426,6 +427,11 @@ export class LevelEditor {
                 this.log('warn', 'Failed to sync preloaded images to CanvasRenderer:', error.message);
             }
             this.lifecycleController.initializeUIComponents(domElements);
+            try {
+                await this.reloadProjectContent({ skipFetchFallback: true, onlyIfGranted: true });
+            } catch (error) {
+                this.log('warn', 'Project folder scan skipped:', error.message);
+            }
             // B2: dock shell + restore; viewport (toolbar+canvas) mounts into leaf
             if (this.dockManager) {
                 this.dockManager.init();
@@ -935,7 +941,52 @@ export class LevelEditor {
 
     /** Grant write access to a project folder once (File System Access API). */
     async setProjectFolder() {
-        return FsaStore.pickWorkingDirectory();
+        const handle = await FsaStore.pickWorkingDirectory();
+        if (!handle) return null;
+        await this.reloadProjectContent();
+        return handle;
+    }
+
+    /**
+     * Ensure default content/ layout, then show that folder in the Assets panel.
+     * @param {{onlyIfGranted?: boolean, skipFetchFallback?: boolean}} [opts]
+     */
+    async reloadProjectContent(opts = {}) {
+        const named = FsaStore.getWorkingDirectoryName();
+        if (!named) {
+            if (!opts.skipFetchFallback) {
+                await this.assetManager.scanContentFolder();
+                this._refreshAssetFoldersUi();
+            }
+            return false;
+        }
+        const handle = await FsaStore.getWorkingDirectoryHandle();
+        if (!handle) return false;
+        if (opts.onlyIfGranted) {
+            const state = await handle.queryPermission({ mode: 'readwrite' });
+            if (state !== 'granted') return false;
+        }
+        const content = await FsaContentFs.ensureDefaultContentLayout();
+        if (!content) {
+            if (!opts.skipFetchFallback) await this.assetManager.scanContentFolder();
+            this._refreshAssetFoldersUi();
+            return false;
+        }
+        await this.assetManager.scanFromFsa();
+        this._refreshAssetFoldersUi();
+        Logger.status.success(`Project folder: ${named}`);
+        return true;
+    }
+
+    async clearProjectFolder() {
+        await FsaStore.clearWorkingDirectory();
+        await this.assetManager.scanContentFolder();
+        this._refreshAssetFoldersUi();
+    }
+
+    _refreshAssetFoldersUi() {
+        this.assetPanel?.foldersPanel?.buildFolderStructure();
+        this.assetPanel?.render?.();
     }
 
     /** U3 — File → Open Recent entry */
@@ -975,6 +1026,7 @@ export class LevelEditor {
         } else {
             Logger.status.success(`Created "${asset.name}"`);
         }
+        this.assetPanel?.stateManager?.notify('assetsChanged');
         this.assetPanel?.render?.();
         return asset;
     }

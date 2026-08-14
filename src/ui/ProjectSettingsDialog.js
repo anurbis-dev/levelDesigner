@@ -99,7 +99,7 @@ export class ProjectSettingsDialog extends BaseDialog {
                 click: async (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    const handle = await FsaStore.pickWorkingDirectory();
+                    const handle = await this.levelEditor.setProjectFolder();
                     if (handle) this._refreshFolderUi();
                 }
             }, 'project-folder-choose');
@@ -109,7 +109,11 @@ export class ProjectSettingsDialog extends BaseDialog {
                 click: async (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    await FsaStore.clearWorkingDirectory();
+                    if (this.levelEditor.clearProjectFolder) {
+                        await this.levelEditor.clearProjectFolder();
+                    } else {
+                        await FsaStore.clearWorkingDirectory();
+                    }
                     this._refreshFolderUi();
                 }
             }, 'project-folder-clear');

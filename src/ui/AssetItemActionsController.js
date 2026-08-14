@@ -1,20 +1,18 @@
 import { Logger } from '../utils/Logger.js';
 import { AssetContextMenu } from './AssetContextMenu.js';
 import { AssetPanelContextMenu } from './AssetPanelContextMenu.js';
+import { AssetFolderOps } from './AssetFolderOps.js';
+import { FsaContentWriter } from '../utils/FsaContentWriter.js';
+import { FsaStore } from '../utils/FsaStore.js';
 
-/**
- * Context-menu/click actions for AssetPanel — context menu wiring, item click/double-click,
- * asset open / rename / duplicate / delete.
- * Extracted from AssetPanel.js — context menus / open / explorer.
- * Note: onSaveAsset/onSaveAssetChanges/onShowInExplorer and the panel-context-menu callbacks
- * (reset size, toggle view, refresh, settings, select/deselect all) call back into AssetPanel
- * directly — that logic isn't part of this phase's method list and stays where it is.
- */
+/** Context-menu/click actions for AssetPanel (open / rename / duplicate / delete). */
 export class AssetItemActionsController {
     constructor(assetPanel) {
         this.assetPanel = assetPanel;
         /** @type {string|null} asset id while inline rename input is open */
         this._renamingAssetId = null;
+        this.folderOps = new AssetFolderOps(assetPanel);
+        assetPanel.folderOps = this.folderOps;
     }
 
     _assetManager() {
@@ -62,6 +60,7 @@ export class AssetItemActionsController {
             onSaveAssetChanges: (asset) => assetPanel.handleAssetSaveChanges(asset),
             onShowInExplorer: (asset) => assetPanel.handleAssetShowInExplorer(asset),
             onDelete: (asset) => this.handleAssetDelete(asset),
+            onMoveAsset: (asset, folderPath) => this.folderOps.moveAsset(asset, folderPath),
             disableGlobalHandlers: true // Disable global handlers since we use delegated events
         });
 
@@ -76,6 +75,7 @@ export class AssetItemActionsController {
             onSettings: () => assetPanel.handleSettings(),
             onSelectAll: () => assetPanel.selectionController.handleSelectAll(),
             onDeselectAll: () => assetPanel.selectionController.handleDeselectAll(),
+            onNewFolder: (parentPath) => this.folderOps.createFolder(parentPath),
             disableGlobalHandlers: true // Disable global handlers since we use delegated events
         });
 
@@ -315,7 +315,10 @@ export class AssetItemActionsController {
         const clone = am.addExternalAsset(data);
         const selKey = this.assetPanel.uiStateKey('selectedAssets');
         this.assetPanel.stateManager.set(selKey, new Set([clone.id]));
-        this._notifyAssetsChanged();
+        FsaContentWriter.saveNewAsset(clone, am).then((wrote) => {
+            if (wrote) Logger.status.success(`Duplicated "${clone.name}" → ${wrote}`);
+            this._notifyAssetsChanged();
+        });
         Logger.ui.info(`Duplicated asset: ${asset.name} → ${clone.name}`);
     }
 
@@ -336,16 +339,19 @@ export class AssetItemActionsController {
             ? Array.from(selected)
             : [asset.id];
 
+        const onDisk = !!FsaStore.getWorkingDirectoryName();
         const message = ids.length > 1
-            ? `Delete ${ids.length} assets from the library? This cannot be undone (in-memory; files on disk are not removed).`
-            : `Delete asset "${asset.name}" from the library? This cannot be undone (in-memory; files on disk are not removed).`;
+            ? `Delete ${ids.length} assets${onDisk ? ' from the project folder' : ' from the library'}? This cannot be undone.`
+            : `Delete asset "${asset.name}"${onDisk ? ' from the project folder' : ' from the library'}? This cannot be undone.`;
 
         const confirmed = await confirm(message);
         if (!confirmed) return;
 
         let removed = 0;
         for (const id of ids) {
-            if (am.removeAsset(id)) removed += 1;
+            const target = am.getAsset?.(id) || am.assets?.get?.(id);
+            if (target && await this.folderOps.deleteAssetWithDisk(target)) removed += 1;
+            else if (am.removeAsset(id)) removed += 1;
         }
 
         const nextSel = new Set([...selected].filter((id) => !ids.includes(id)));
@@ -389,7 +395,4 @@ export class AssetItemActionsController {
             Logger.ui.warn('LevelEditor or showActorPropertiesPanel method not available');
         }
     }
-
-    // Selection / dblclick live on AssetViewRenderer (mousedown + dblclick).
-    // Dead panel-click detail===2 path removed after dock multi-instance.
 }

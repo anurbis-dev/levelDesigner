@@ -23,6 +23,7 @@
 
 import { BaseContextMenu } from './BaseContextMenu.js';
 import { Logger } from '../utils/Logger.js';
+import { AssetFolderOps } from './AssetFolderOps.js';
 
 export class AssetContextMenu extends BaseContextMenu {
     constructor(assetPanel, callbacks = {}) {
@@ -145,7 +146,10 @@ export class AssetContextMenu extends BaseContextMenu {
         if (!contextData.isAsset) {
             return;
         }
-        
+        const move = this.menuItems.find((item) => item.id === 'move-to-folder');
+        if (move) {
+            move.items = AssetFolderOps.buildMoveMenuItems(this.assetPanel, contextData.asset);
+        }
         super.showContextMenu(event, contextData);
     }
 
@@ -214,6 +218,10 @@ export class AssetContextMenu extends BaseContextMenu {
             // Show for all assets (both with file paths and temporary)
             return contextData.asset;
         });
+
+        this.addSeparator();
+
+        this.addSubmenuItem('Move to Folder', '📁', [], { id: 'move-to-folder' });
 
         this.addSeparator();
 
