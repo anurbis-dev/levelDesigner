@@ -1,0 +1,53 @@
+{
+  "name": "ledge_relic",
+  "type": "prefab",
+  "category": "ledge",
+  "width": 8,
+  "height": 8,
+  "color": "#ffd75e",
+  "properties": {
+    "isTemporary": false
+  },
+  "components": [
+    {
+      "id": "comp_ledge_19",
+      "type": "sprite",
+      "enabled": true,
+      "properties": {
+        "imageAssetId": "asset_assets_ledge_items"
+      }
+    },
+    {
+      "id": "comp_ledge_20",
+      "type": "spriteUiAnimation",
+      "enabled": true,
+      "properties": {
+        "frames": [
+          {
+            "x": 48,
+            "y": 0,
+            "w": 16,
+            "h": 16,
+            "duration": 1000
+          }
+        ],
+        "loop": false
+      }
+    },
+    {
+      "id": "comp_ledge_21",
+      "type": "pickup",
+      "enabled": true,
+      "properties": {
+        "itemId": "relic",
+        "count": 1,
+        "destroyOnPickup": true,
+        "healAmount": 0,
+        "onPickupEvent": "win"
+      }
+    }
+  ],
+  "tags": [
+    "ledge"
+  ]
+}

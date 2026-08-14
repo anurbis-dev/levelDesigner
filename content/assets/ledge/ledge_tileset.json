@@ -1,0 +1,44 @@
+{
+  "name": "ledge_tileset_def",
+  "type": "tileset",
+  "category": "ledge",
+  "width": 144,
+  "height": 16,
+  "color": "#635c8c",
+  "properties": {
+    "tileWidth": 16,
+    "tileHeight": 16,
+    "columns": 9,
+    "tileKinds": {
+      "1": "solid",
+      "2": "crumb",
+      "3": "ladderWall",
+      "4": "ladderFront",
+      "5": "ladderDiagR",
+      "6": "ladderDiagL",
+      "7": "halfTop",
+      "8": "bar"
+    },
+    "solidIndices": [
+      1,
+      2,
+      7
+    ],
+    "crumbTime": 1.05,
+    "crumbBack": 3.4
+  },
+  "components": [
+    {
+      "id": "comp_ledge_1",
+      "type": "sprite",
+      "enabled": true,
+      "properties": {
+        "imageAssetId": "asset_assets_ledge_tileset"
+      }
+    }
+  ],
+  "tags": [
+    "ledge",
+    "tileset"
+  ]
+}

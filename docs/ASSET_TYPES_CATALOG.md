@@ -22,16 +22,17 @@
 - `createComponentStub(typeId)` создаёт стаб компонента (`{id, type, enabled, properties:{}}`), добавляется в `asset.components[]` через `AssetComponentsPanel` и сохраняется в `toJSON()`.
 - **Важно**: и asset-типы, и component-типы на данном этапе — только каталог метаданных + UI создания/иконка. Реальная логика (автотайлинг Tileset, воспроизведение Dialogue Graph, физика Collider и т.п.) не реализована — это зона ответственности игрового рантайма, потребляющего экспортированный уровень.
 
-## 1. Core (6)
+## 1. Core (7)
 
 | ID | Label | Комментарий |
 |---|---|---|
-| `camera` | Camera | параметры без визуала (FOV/zoom, follow-target, границы, слои рендера) |
-| `actor` | Actor Placeholder | универсальный контейнер: визуал + коллизии + триггеры + анимация |
-| `image` | Image | сырой растровый ресурс |
+| `camera` | Camera | follow-target, deadzone, `followLerp` (0=snap, 0.0015=smooth), `lookAhead`, `viewHeight`, bounds, слои рендера |
+| `actor` | Actor Placeholder | универсальный контейнер: визуал + коллизии + триггеры + анимация; `sprite.imageAssetId` → Image |
+| `image` | Image | сырой растровый ресурс (`imgSrc` на диске); sidecar PNG рядом с JSON |
+| `level` | Level | документ уровня. Drop на viewport → `LevelFileOperations.openLevelFromAsset` (`properties.levelSrc` / `path`); dblclick — Asset Editor. `AssetManager` классифицирует map JSON (`objects`+`layers`+`settings`, напр. `maps/ledge.json`) как `type=level` (`LevelAssetUtils`). |
 | `imageAtlas` | Image Atlas | авто-упаковка картинок / источник sprite sheet |
 | `volume` | Volume | зона-триггер произвольной формы + визуальные эффекты |
-| `player_start` | Player Start | маркер спавна игрока (auto-managed: ровно один на уровень). Компонент `playerStart`: `movementMode` `topdown`\|`platformer`, `bodyWidth`/`bodyHeight`, `speed`, `platformer` JSON. Runtime — `docs/RUNTIME_SCHEMA.md`. |
+| `player_start` | Player Start | маркер спавна (auto-managed: ровно один на уровень). Компонент `playerStart`: `movementMode` `topdown`\|`platformer`, `bodyWidth`/`bodyHeight` (stand capsule), `crouchHeight` (дефолт 14), `proneHeight` (дефолт 7), опц. `crouchWidth`/`proneWidth`, `speed`, `platformer` JSON. Runtime — `docs/RUNTIME_SCHEMA.md`. |
 
 ## 2. Visual / Render (8)
 
@@ -41,9 +42,9 @@
 
 `soundEffect`, `musicTrack`, `audioZone` (специализация `Volume`).
 
-## 4. Data / System (7)
+## 4. Data / System (8)
 
-`dialogueGraph`, `questObjective`, `itemDefinition`, `inventorySchema`, `localizationTable`, `saveSchema`, `inputMap`.
+`eventGraph` (reusable graph: drop на viewport применяет `properties.graph` к текущему уровню и пишет `Level.eventGraphAssetId`; dblclick — Asset Editor; не путать с dock contentType `eventGraph` — это редактор графа уровня), `dialogueGraph`, `questObjective`, `itemDefinition`, `inventorySchema`, `localizationTable`, `saveSchema`, `inputMap`.
 
 ## 5. Navigation / AI (3)
 
@@ -53,15 +54,15 @@
 
 `prefab` (Actor Template), `sequenceCutscene` (Cutscene Timeline).
 
-**Итого: 29 asset-типов** в 6 категориях (`ASSET_CATEGORIES`: core, visual, audio, data, navigation, other).
+**Итого: 31 asset-тип** в 6 категориях (`ASSET_CATEGORIES`: core, visual, audio, data, navigation, other).
 
 ## 7. Component-типы (30)
 
-Навешиваются на Actor: исходные 19 (`collider` … `variableModifier`) плюс `sprite`, `camera`, `audioZone`, `tilemap`, `particleEffect`, `light`, `nineSliceSprite`, `fontTextStyle`, `volume`, `navMesh`, `sequenceCutscene`. Полные описания — `ComponentTypes.js`. Runtime-поля (в т.ч. LEDGE: `playerStart.movementMode`, `tilemap.tileKinds`, `pickup.mode`, portal fade/item, `pathFollower` elevator) — `docs/RUNTIME_SCHEMA.md`. Пример уровня: `content/maps/ledge.json`.
+Навешиваются на Actor: исходные 19 (`collider` … `variableModifier`) плюс `sprite`, `camera`, `audioZone`, `tilemap`, `particleEffect`, `light`, `nineSliceSprite`, `fontTextStyle`, `volume`, `navMesh`, `sequenceCutscene`. `sprite` в Play — no-op `Behavior` (`registerDefaultBehaviors`), чтобы не варнить. Полные описания — `ComponentTypes.js`. Runtime-поля (в т.ч. LEDGE: `playerStart` stance heights, `tilemap.tileKinds`/`tilesetAssetId`+`imageAssetId`, `pickup.mode`, portal fade/item, `pathFollower` elevator, `camera.followLerp`/`lookAhead`) — `docs/RUNTIME_SCHEMA.md`. Каталог LEDGE: `content/assets/ledge/` + уровень `content/maps/ledge.json`.
 
 ## Отличия итоговой реализации от исходного плана (tmp/game-editor-asset-types.md)
 
-- План описывал 29 потенциальных asset-типов (Уровень 1-3 + уже определённые); в `ASSET_TYPES` попали 28 — структура категорий и состав типов перенесены практически 1:1.
+- План описывал 29 потенциальных asset-типов и исключал Level из creatable catalog; v4.53.0 добавил `level` (core) и `eventGraph` (data) — сейчас 31 id в `ASSET_TYPES`.
 - Приоритетные "уровни внедрения" (1/2/3) из плана в код не перенесены как отдельные метаданные — каталог не различает приоритет типа программно, все типы равноправны и доступны для создания сразу.
 - Asset Editor рисует поля из `ComponentPropertySchema.js`. Runtime-поведение — `src/engine/` / `docs/RUNTIME_SCHEMA.md`, не редактор.
 
@@ -70,7 +71,9 @@
 - `src/constants/AssetTypes.js` — каталог asset-типов и категорий.
 - `src/constants/ComponentTypes.js` — каталог component-типов.
 - `src/constants/AssetTypeIcons.js` — SVG-иконки по типу.
-- `src/managers/AssetManager.js` — `createPlaceholderAsset()`.
+- `src/managers/AssetManager.js` — `createPlaceholderAsset()`; `ingestAssetJson` → `resolveCatalogAssetType`.
+- `src/utils/LevelAssetUtils.js` — `isLevelDocument` / `resolveCatalogAssetType` / `resolveLevelSrc` / `contentUrl`.
+- `src/core/LevelFileOperations.js` — `openLevelFromAsset`.
 - `src/ui/asset-editor/AssetComponentsPanel.js` — список Components; `AssetComponentDetailsPanel.js` — stub details.
 - `src/ui/AssetPanelContextMenu.js`, `config/menu.js` (`buildAssetsMenu()`) — точки создания ассета по типу.
 - `docs/RUNTIME_SCHEMA.md` — runtime-контракт properties.

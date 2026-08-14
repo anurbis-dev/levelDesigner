@@ -1,0 +1,53 @@
+{
+  "name": "ledge_gem",
+  "type": "prefab",
+  "category": "ledge",
+  "width": 8,
+  "height": 8,
+  "color": "#ffd75e",
+  "properties": {
+    "isTemporary": false
+  },
+  "components": [
+    {
+      "id": "comp_ledge_13",
+      "type": "sprite",
+      "enabled": true,
+      "properties": {
+        "imageAssetId": "asset_assets_ledge_items"
+      }
+    },
+    {
+      "id": "comp_ledge_14",
+      "type": "spriteUiAnimation",
+      "enabled": true,
+      "properties": {
+        "frames": [
+          {
+            "x": 16,
+            "y": 0,
+            "w": 16,
+            "h": 16,
+            "duration": 1000
+          }
+        ],
+        "loop": false
+      }
+    },
+    {
+      "id": "comp_ledge_15",
+      "type": "pickup",
+      "enabled": true,
+      "properties": {
+        "itemId": "gem",
+        "count": 1,
+        "destroyOnPickup": true,
+        "healAmount": 0,
+        "onPickupEvent": ""
+      }
+    }
+  ],
+  "tags": [
+    "ledge"
+  ]
+}

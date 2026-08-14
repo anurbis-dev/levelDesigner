@@ -130,6 +130,35 @@ export class LevelFileOperations extends BaseModule {
     }
 
     /**
+     * Open a catalog type=level asset (drop onto viewport). Dblclick still opens Asset Editor.
+     * @param {object} asset
+     */
+    async openLevelFromAsset(asset) {
+        const { resolveLevelSrc, contentUrl, isLevelDocument } = await import('../utils/LevelAssetUtils.js');
+        const src = resolveLevelSrc(asset);
+        if (!src) {
+            Logger.file.warn('openLevelFromAsset: asset has no levelSrc/path');
+            Logger.status.warn('Level asset has no source file');
+            return;
+        }
+        try {
+            const url = contentUrl(src);
+            const response = await fetch(`${url}?v=${Date.now()}`);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const json = await response.json();
+            if (!isLevelDocument(json)) {
+                Logger.status.warn('Dropped asset is not a level document');
+                return;
+            }
+            const fileName = String(src).split('/').pop() || 'level.json';
+            await this.openLevelFromData(json, fileName);
+        } catch (error) {
+            Logger.file.error(`openLevelFromAsset failed: ${error.message}`);
+            Logger.status.error(`Failed to open level: ${error.message}`);
+        }
+    }
+
+    /**
      * Save the current level
      * @returns {Promise<void>}
      */

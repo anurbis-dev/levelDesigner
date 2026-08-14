@@ -9,6 +9,8 @@ export const TYPE_ICON_PATHS = {
     camera: '<path d="M4 8h3l2-2h6l2 2h3v11H4z"/><circle cx="12" cy="13" r="3.2"/>',
     actor: '<circle cx="12" cy="7" r="3"/><path d="M6 20c0-4 3-6 6-6s6 2 6 6"/>',
     image: '<rect x="3" y="4" width="18" height="16" rx="1"/><circle cx="8.5" cy="9.5" r="1.4"/><path d="M21 16l-5-5-4 4-2-2-6 6"/>',
+    level: '<rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 10h18"/><path d="M8 14h8"/>',
+    eventGraph: '<circle cx="6" cy="8" r="2"/><circle cx="18" cy="8" r="2"/><circle cx="12" cy="17" r="2"/><path d="M8 8h8M7.2 10l3.6 5.4M16.8 10l-3.6 5.4"/>',
     imageAtlas: '<rect x="3" y="3" width="8" height="8"/><rect x="13" y="3" width="8" height="8"/><rect x="3" y="13" width="8" height="8"/><rect x="13" y="13" width="8" height="8"/>',
     volume: '<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/>',
     player_start: '<path d="M6 3v18"/><path d="M6 4h12l-3 3.5L18 11H6z"/>',

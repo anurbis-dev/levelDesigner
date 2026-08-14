@@ -1,0 +1,57 @@
+{
+  "name": "ledge_terrain",
+  "type": "tilemap",
+  "category": "ledge",
+  "width": 2976,
+  "height": 768,
+  "color": "#635c8c",
+  "properties": {
+    "isTemporary": false
+  },
+  "components": [
+    {
+      "id": "comp_ledge_8",
+      "type": "sprite",
+      "enabled": true,
+      "properties": {
+        "imageAssetId": "asset_assets_ledge_tileset"
+      }
+    },
+    {
+      "id": "comp_ledge_9",
+      "type": "tilemap",
+      "enabled": true,
+      "properties": {
+        "tilesetAssetId": "asset_assets_ledge_ledge_tileset",
+        "imageAssetId": "asset_assets_ledge_tileset",
+        "src": "./content/assets/ledge/tileset.png",
+        "tileWidth": 16,
+        "tileHeight": 16,
+        "columns": 9,
+        "mapWidth": 186,
+        "mapHeight": 48,
+        "tiles": [],
+        "tileKinds": {
+          "1": "solid",
+          "2": "crumb",
+          "3": "ladderWall",
+          "4": "ladderFront",
+          "5": "ladderDiagR",
+          "6": "ladderDiagL",
+          "7": "halfTop",
+          "8": "bar"
+        },
+        "solidIndices": [
+          1,
+          2,
+          7
+        ],
+        "crumbTime": 1.05,
+        "crumbBack": 3.4
+      }
+    }
+  ],
+  "tags": [
+    "ledge"
+  ]
+}

@@ -21,6 +21,8 @@ export const ASSET_TYPES = [
     { id: 'camera', label: 'Camera', category: 'core', description: 'Scene camera: follow target, deadzone, bounds clamp.', width: 32, height: 32, color: '#38bdf8' },
     { id: 'actor', label: 'Actor Placeholder', category: 'core', description: 'Generic Actor container asset (visual + collisions + triggers + animation).' },
     { id: 'image', label: 'Image', category: 'core', description: 'Raw bitmap resource.' },
+    { id: 'level', label: 'Level', category: 'core', description: 'Playable level document. Drop onto the viewport to open as the current level.' },
+    { id: 'eventGraph', label: 'Event Graph', category: 'data', description: 'Reusable Event Graph (nodes/edges/variables) referenced by a level.' },
     { id: 'imageAtlas', label: 'Image Atlas', category: 'core', description: 'Auto-packed image atlas / sprite sheet source.' },
     { id: 'volume', label: 'Volume', category: 'core', description: 'Arbitrary-shape trigger zone with visual effects (blur/color/shadow).' },
     // id must stay 'player_start' (not camelCase) — matches the GameObject.type string that

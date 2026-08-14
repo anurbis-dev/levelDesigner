@@ -70,6 +70,37 @@ describe('PlatformerController', () => {
         expect(player.y).toBeLessThan(y0);
         expect(move._platformer.onGround).toBe(false);
     });
+
+    it('uses crouchHeight/proneHeight for collision, not sprite size', () => {
+        const { player, move, scene, input, target } = makeFloorScene();
+        move.properties.crouchHeight = 12;
+        move.properties.proneHeight = 6;
+        move.properties.bodyHeight = 22;
+        for (let i = 0; i < 40; i++) {
+            input.beginFrame();
+            move.update(1 / 60, scene);
+            input.endFrame();
+        }
+        const floorY = player.y + player.height;
+        target.dispatch('keydown', { key: 's' });
+        input.beginFrame();
+        move.update(1 / 60, scene);
+        input.endFrame();
+        expect(move._platformer.stance).toBe(1);
+        expect(player.height).toBe(12);
+        expect(player.y + player.height).toBeCloseTo(floorY, 0);
+        target.dispatch('keyup', { key: 's' });
+        input.beginFrame();
+        move.update(1 / 60, scene);
+        input.endFrame();
+        target.dispatch('keydown', { key: 's' });
+        input.beginFrame();
+        move.update(1 / 60, scene);
+        input.endFrame();
+        expect(move._platformer.stance).toBe(2);
+        expect(player.height).toBe(6);
+        expect(player.y + player.height).toBeCloseTo(floorY, 0);
+    });
 });
 
 describe('Input jump edge', () => {

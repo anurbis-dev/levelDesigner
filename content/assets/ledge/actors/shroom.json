@@ -1,0 +1,53 @@
+{
+  "name": "ledge_shroom",
+  "type": "prefab",
+  "category": "ledge",
+  "width": 8,
+  "height": 8,
+  "color": "#ffd75e",
+  "properties": {
+    "isTemporary": false
+  },
+  "components": [
+    {
+      "id": "comp_ledge_16",
+      "type": "sprite",
+      "enabled": true,
+      "properties": {
+        "imageAssetId": "asset_assets_ledge_items"
+      }
+    },
+    {
+      "id": "comp_ledge_17",
+      "type": "spriteUiAnimation",
+      "enabled": true,
+      "properties": {
+        "frames": [
+          {
+            "x": 32,
+            "y": 0,
+            "w": 16,
+            "h": 16,
+            "duration": 1000
+          }
+        ],
+        "loop": false
+      }
+    },
+    {
+      "id": "comp_ledge_18",
+      "type": "pickup",
+      "enabled": true,
+      "properties": {
+        "itemId": "shroom",
+        "count": 1,
+        "destroyOnPickup": true,
+        "healAmount": 1,
+        "onPickupEvent": ""
+      }
+    }
+  ],
+  "tags": [
+    "ledge"
+  ]
+}

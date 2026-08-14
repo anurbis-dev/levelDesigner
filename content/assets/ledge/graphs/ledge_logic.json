@@ -1,0 +1,111 @@
+{
+  "name": "ledge_logic",
+  "type": "eventGraph",
+  "category": "ledge",
+  "width": 48,
+  "height": 48,
+  "color": "#a78bfa",
+  "properties": {
+    "graph": {
+      "formatVersion": 1,
+      "scope": "level",
+      "variables": [
+        {
+          "name": "hp",
+          "default": 3
+        },
+        {
+          "name": "done",
+          "default": false
+        },
+        {
+          "name": "speed",
+          "default": 0
+        },
+        {
+          "name": "moveState",
+          "default": "normal"
+        },
+        {
+          "name": "stance",
+          "default": 0
+        },
+        {
+          "name": "facing",
+          "default": 1
+        },
+        {
+          "name": "onGround",
+          "default": true
+        },
+        {
+          "name": "vy",
+          "default": 0
+        },
+        {
+          "name": "rolling",
+          "default": false
+        },
+        {
+          "name": "sliding",
+          "default": false
+        }
+      ],
+      "nodes": [
+        {
+          "id": "n_start",
+          "type": "OnStart",
+          "x": 40,
+          "y": 40,
+          "params": {}
+        },
+        {
+          "id": "n_hp",
+          "type": "SetVariable",
+          "x": 240,
+          "y": 40,
+          "params": {
+            "name": "hp",
+            "value": 3
+          }
+        },
+        {
+          "id": "n_win_ev",
+          "type": "OnCustomEvent",
+          "x": 40,
+          "y": 160,
+          "params": {
+            "name": "win"
+          }
+        },
+        {
+          "id": "n_win_set",
+          "type": "SetVariable",
+          "x": 240,
+          "y": 160,
+          "params": {
+            "name": "done",
+            "value": true
+          }
+        }
+      ],
+      "edges": [
+        {
+          "id": "e1",
+          "from": "n_start",
+          "to": "n_hp"
+        },
+        {
+          "id": "e2",
+          "from": "n_win_ev",
+          "to": "n_win_set"
+        }
+      ]
+    }
+  },
+  "components": [],
+  "tags": [
+    "ledge",
+    "graph"
+  ]
+}

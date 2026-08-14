@@ -14,6 +14,9 @@
 - ❌ **НЕ вешайте непассивные wheel-листенеры без необходимости** → ✅ **По умолчанию passive, только там где нужен preventDefault — non-passive**
 - ❌ **НЕ работайте с DOM напрямую** → ✅ **Используйте UIFactory**
 - ❌ **НЕ используйте `<input type="number">`** (белые стрелки-спиннеры) → ✅ **`type: 'number'` только в `createSettingsInput` / `UIFactory` (коэрцится в scrub) или `NumericInput.htmlAttrs` / `NumericInput.wireAll(root)`**
+- ❌ **НЕ сжимайте спрайт под crouch/prone** → ✅ **кадр рисуется в native size (feet-aligned); коллизия — `playerStart.crouchHeight`/`proneHeight`**
+- ❌ **НЕ ждите placed object от drop `type=level`/`eventGraph`** → ✅ **level открывает карту; eventGraph применяет graph. Dblclick — Asset Editor**
+- ❌ **НЕ оставляйте `sprite` без Behavior** → ✅ **`registerDefaultBehaviors` регистрирует no-op `Behavior` (иначе Play варнит)**
 
 **📖 Подробные примеры:** См. разделы ниже
 

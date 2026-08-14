@@ -58,6 +58,7 @@ export class EditorLifecycleController extends BaseModule {
         // Initialize renderer
         editor.canvasRenderer = new CanvasRenderer(canvas);
         editor.canvasRenderer.stateManager = editor.stateManager; // Store reference for state updates
+        editor.canvasRenderer.assetManager = editor.assetManager;
         editor.canvasRenderer.resizeCanvas();
         editor.lifecycle.register('canvasRenderer', editor.canvasRenderer, { priority: 1 });
 

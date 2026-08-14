@@ -1,0 +1,44 @@
+{
+  "name": "ledge_bomb",
+  "type": "prefab",
+  "category": "ledge",
+  "width": 6,
+  "height": 6,
+  "color": "#2e2949",
+  "properties": {
+    "isTemporary": false
+  },
+  "components": [
+    {
+      "id": "comp_ledge_50",
+      "type": "sprite",
+      "enabled": true,
+      "properties": {
+        "imageAssetId": "asset_assets_ledge_bomb"
+      }
+    },
+    {
+      "id": "comp_ledge_51",
+      "type": "damageHealth",
+      "enabled": true,
+      "properties": {
+        "maxHealth": 1,
+        "contactDamage": 1,
+        "layer": "hazard",
+        "destroyOnDeath": true
+      }
+    },
+    {
+      "id": "comp_ledge_52",
+      "type": "pathFollower",
+      "enabled": true,
+      "properties": {
+        "gravity": 520,
+        "waypoints": []
+      }
+    }
+  ],
+  "tags": [
+    "ledge"
+  ]
+}

@@ -113,19 +113,25 @@ export class Renderer {
             const spriteAnim = entity.behaviors?.find(b => typeof b.getSourceRect === 'function');
             const sourceRect = spriteAnim?.getSourceRect();
             const flip = entity.scaleX < 0;
+            const dw = sourceRect ? sourceRect.w : entity.width;
+            const dh = sourceRect ? sourceRect.h : entity.height;
+            const dx = x + (entity.width - dw) / 2;
+            const dy = y + entity.height - dh;
             if (flip) {
                 this.ctx.save();
-                this.ctx.translate(x + entity.width, y);
+                this.ctx.translate(dx + dw, dy);
                 this.ctx.scale(-1, 1);
-                x = 0;
-                y = 0;
-            }
-            if (sourceRect) {
-                this.ctx.drawImage(img, sourceRect.x, sourceRect.y, sourceRect.w, sourceRect.h, x, y, entity.width, entity.height);
+                if (sourceRect) {
+                    this.ctx.drawImage(img, sourceRect.x, sourceRect.y, sourceRect.w, sourceRect.h, 0, 0, dw, dh);
+                } else {
+                    this.ctx.drawImage(img, 0, 0, dw, dh);
+                }
+                this.ctx.restore();
+            } else if (sourceRect) {
+                this.ctx.drawImage(img, sourceRect.x, sourceRect.y, sourceRect.w, sourceRect.h, dx, dy, dw, dh);
             } else {
                 this.ctx.drawImage(img, x, y, entity.width, entity.height);
             }
-            if (flip) this.ctx.restore();
         } else {
             this.ctx.fillStyle = entity.color || '#cccccc';
             this.ctx.fillRect(x, y, entity.width, entity.height);

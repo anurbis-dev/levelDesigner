@@ -1,0 +1,53 @@
+{
+  "name": "ledge_stick",
+  "type": "prefab",
+  "category": "ledge",
+  "width": 8,
+  "height": 12,
+  "color": "#ffd75e",
+  "properties": {
+    "isTemporary": false
+  },
+  "components": [
+    {
+      "id": "comp_ledge_25",
+      "type": "sprite",
+      "enabled": true,
+      "properties": {
+        "imageAssetId": "asset_assets_ledge_items"
+      }
+    },
+    {
+      "id": "comp_ledge_26",
+      "type": "spriteUiAnimation",
+      "enabled": true,
+      "properties": {
+        "frames": [
+          {
+            "x": 80,
+            "y": 0,
+            "w": 16,
+            "h": 16,
+            "duration": 1000
+          }
+        ],
+        "loop": false
+      }
+    },
+    {
+      "id": "comp_ledge_27",
+      "type": "pickup",
+      "enabled": true,
+      "properties": {
+        "itemId": "stick",
+        "count": 1,
+        "destroyOnPickup": true,
+        "healAmount": 0,
+        "onPickupEvent": ""
+      }
+    }
+  ],
+  "tags": [
+    "ledge"
+  ]
+}

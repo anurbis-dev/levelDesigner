@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- **Feat: Project-folder content sync + folder CRUD (v4.52.0)**: `FsaContentFs` + `AssetFolderOps` + `FoldersContextMenu` — Set Project Folder creates default `content/` layout (or uses existing content root), scans via FSA into Assets Content tree (`AssetManager.scanFromFsa`); New Folder / Delete Folder (tree RMB + Del), Move to Folder (asset RMB), delete/duplicate assets write through to disk + manifest when folder granted; Assets Refresh → `reloadProjectContent()`; init re-scans if permission already granted.
+- **Feat: LEDGE catalog + stance collision tunables (v4.53.0)**: Level asset (drop on canvas opens map; dblclick still settings); prefabs/actors with `sprite.imageAssetId`; tileset + terrain + event graph as assets; player/enemy clips; camera `followLerp`/`lookAhead`; sprite draws at frame size (collider still shrinks). `playerStart.crouchHeight`/`proneHeight`/`crouchWidth`/`proneWidth` tune capsule per stance.

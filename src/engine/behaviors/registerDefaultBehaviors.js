@@ -1,4 +1,5 @@
 import { BehaviorRegistry } from '../BehaviorRegistry.js';
+import { Behavior } from './Behavior.js';
 import { ColliderBehavior } from './ColliderBehavior.js';
 import { TriggerBehavior } from './TriggerBehavior.js';
 import { InteractableBehavior } from './InteractableBehavior.js';
@@ -34,6 +35,7 @@ import { SequenceCutsceneBehavior } from './SequenceCutsceneBehavior.js';
  * overwrites), not relied upon via import side-effects.
  */
 export function registerDefaultBehaviors() {
+    BehaviorRegistry.register('sprite', Behavior);
     BehaviorRegistry.register('collider', ColliderBehavior);
     BehaviorRegistry.register('trigger', TriggerBehavior);
     BehaviorRegistry.register('interactable', InteractableBehavior);

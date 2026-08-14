@@ -10,6 +10,7 @@
 #### Файловые операции — уровни (v3.57.0 Phase 5-6: multi-level tabs):
 - `async newLevel()` - создание нового уровня ДОБАВЛЯЕТ вкладку (LevelSession), а не заменяет текущий открытый уровень; переключает на новый уровень через `levelsManager.addLevel()`
 - `async openLevel()` - открытие уровня из файла ДОБАВЛЯЕТ вкладку; делает best-effort деdup по fileName — если файл уже открыт, переключается на существующую вкладку вместо дубликата; пишет Open Recent
+- `async openLevelFromAsset(asset)` - v4.53.0: catalog `type=level` (viewport drop). `LevelAssetUtils.resolveLevelSrc`/`contentUrl`/`isLevelDocument` → `openLevelFromData`. Dblclick ассета открывает Asset Editor, не уровень.
 - `async saveLevel()` - сохранение текущего уровня; per-session fileName; без имени — prompt "Enter file name:" (default `level.json`); FSA: `content/maps/<file>` + manifest, иначе download; Open Recent
 - `async saveLevelAs()` - prompt имени; обновляет per-session `session.fileName`; тот же FSA/download; Open Recent
 - `async closeLevel(levelId)` (новый, v3.57.0) - закрытие вкладки уровня; нельзя закрыть последний открытый уровень; спрашивает подтверждение если уровень содержит несохранённые изменения
@@ -28,7 +29,7 @@
 - `async createAssetOfType(typeId)` - placeholder в активной папке Asset panel; `FsaContentWriter.saveNewAsset` + manifest; status `Created "name" → rel` если записано
 
 #### Версия:
-- `static VERSION` - текущая версия редактора (строка, например `'4.52.0'`)
+- `static VERSION` - текущая версия редактора (строка, например `'4.53.0'`)
 - `updateVersionInfo()` - обновление отображения версии в UI
 
 #### Copy/Paste/Duplicate (Ctrl+C/X/V, Shift+D):
@@ -150,7 +151,7 @@
 - `loadDefaultAssets()` - загрузка стандартных ассетов
 - `scanContentFolder()` - сканирование served `./content/` (fetch манифеста + JSON)
 - `async scanFromFsa()` - v4.52.0: replace in-memory library from granted project folder (`FsaContentFs.scanContentTree` + `resolveImageSrc` + `ingestAssetJson`); revokes prior blob URLs
-- `ingestAssetJson(filePath, assetData, result, imgSrcOverride)` - v4.52.0: register one asset JSON (shared by fetch and FSA paths); `imgSrcOverride` skips `./content/` path build
+- `ingestAssetJson(filePath, assetData, result, imgSrcOverride)` - v4.52.0: register one asset JSON (shared by fetch and FSA paths); `imgSrcOverride` skips `./content/` path build; type via `LevelAssetUtils.resolveCatalogAssetType` (map JSON → `level`; non-image `imgSrc` cleared)
 - `buildCategoriesFromManifest(structure, parentPath, result)` - построение категорий из манифеста
 - `buildCategoriesFromStructure(result)` - построение категорий из известной структуры
 - `loadAssetFromFile(filePath, result)` - загрузка ассета из файла (fetch → `ingestAssetJson`)
@@ -169,7 +170,15 @@
 - **Кеширование изображений**: оптимизация загрузки превью; FSA images as blob URLs
 - **Структурированная организация**: поддержка иерархии папок
 - **Обработка ошибок**: graceful handling ошибок загрузки файлов
-- **Catalog-driven placeholder creation**: 29 встроенных типов ассетов (категория Core, Visual/Render, Audio, Data/System, Navigation/AI, Other); каждый тип может быть создан как placeholder с опциональными custom размерами/цветом и auto-attached компонентами
+- **Catalog-driven placeholder creation**: 31 встроенный тип ассетов (Core + `level`, Data + `eventGraph`, Visual/Render, Audio, Navigation/AI, Other); каждый тип может быть создан как placeholder с опциональными custom размерами/цветом и auto-attached компонентами. Drop `level` открывает карту; drop `eventGraph` применяет graph к текущему уровню.
+
+### LevelAssetUtils (src/utils/LevelAssetUtils.js)
+Хелперы каталога type=`level` и полных map JSON (v4.53.0).
+
+- `isLevelDocument(data)` - `objects[]` + `layers[]` + `settings`
+- `resolveLevelSrc(asset)` - `asset.properties.levelSrc` || `asset.path`
+- `contentUrl(rel)` - `./content/<stripped rel>`
+- `resolveCatalogAssetType(assetData, filePath)` - явный `type` (кроме `image`) → as-is; иначе level-document → `level`; иначе `assetData.type` || `image`
 
 ### AssetTabsManager (src/ui/AssetTabsManager.js)
 Управление табами панели ассетов с поддержкой горизонтального скролла и drag-and-drop.
@@ -510,6 +519,7 @@ RMB on the Assets Content tree (v4.52.0). Extends `BaseContextMenu`.
 - `handleGlobalMouseMove(e)` - глобальное движение мыши
 - `handleGlobalMouseUp(e)` - глобальное отпускание мыши
 - `handleWheel(e)` - обработка колесика мыши
+- viewport drop: `type=level` → `levelFileOperations.openLevelFromAsset`; `type=eventGraph` → копирует `properties.graph` на `level.eventGraph` + `eventGraphAssetId`
 
 #### Rotate/Scale жесты (Ctrl+drag / Ctrl+Alt+drag):
 - `startObjectTransform(mode, clickInfo, startWorldPos)` - старт жеста, снапшот геометрии выделения

@@ -232,12 +232,25 @@ export class CanvasRenderer {
 
         // Draw image if available, fallback to colored rectangle
         let imageDrawn = false;
-        if (obj.imgSrc) {
-            const img = this.imageCache.get(obj.imgSrc);
-            if (img && img.complete && img.naturalHeight !== 0) {
+        const tilemap = (obj.components || []).find((c) => c.type === 'tilemap' && c.enabled !== false);
+        if (tilemap) {
+            imageDrawn = this.drawTilemapPreview(obj, tilemap, x, y);
+        }
+        const src = this.resolveObjectImgSrc(obj);
+        const img = src ? this.getCachedImage(src) : null;
+        if (!imageDrawn && img && img.complete && img.naturalHeight !== 0) {
+            const frame = this.getObjectSourceRect(obj);
+            if (frame) {
+                const dw = frame.w;
+                const dh = frame.h;
+                const dx = x + (obj.width - dw) / 2;
+                const dy = y + obj.height - dh;
+                this.ctx.imageSmoothingEnabled = false;
+                this.ctx.drawImage(img, frame.x, frame.y, frame.w, frame.h, dx, dy, dw, dh);
+            } else {
                 this.ctx.drawImage(img, x, y, obj.width, obj.height);
-                imageDrawn = true;
             }
+            imageDrawn = true;
         }
 
         if (!imageDrawn) {
@@ -423,6 +436,51 @@ export class CanvasRenderer {
         return bounds;
     }
 
+    resolveObjectImgSrc(obj) {
+        if (obj?.imgSrc) return obj.imgSrc;
+        const spr = (obj?.components || []).find((c) => c.type === 'sprite' && c.enabled !== false);
+        const id = spr?.properties?.imageAssetId;
+        if (!id || !this.assetManager) return null;
+        return this.assetManager.getAsset(id)?.imgSrc || null;
+    }
+
+    getObjectSourceRect(obj) {
+        const anim = (obj?.components || []).find((c) => c.type === 'spriteUiAnimation' && c.enabled !== false);
+        const frames = anim?.properties?.frames;
+        if (Array.isArray(frames) && frames[0]?.w) return frames[0];
+        const clips = anim?.properties?.clips;
+        const states = anim?.properties?.states;
+        const clipName = states?.[0]?.clip || anim?.properties?.defaultState
+            || (clips && Object.keys(clips)[0]);
+        const clip = clipName && clips?.[clipName];
+        if (Array.isArray(clip) && clip[0]?.w) return clip[0];
+        return null;
+    }
+
+    drawTilemapPreview(obj, tilemap, x, y) {
+        const p = tilemap.properties || {};
+        const src = p.src || this.resolveObjectImgSrc(obj);
+        const img = src ? this.getCachedImage(src) : null;
+        if (!img || !img.complete || !img.naturalHeight) return false;
+        const tw = p.tileWidth || 16;
+        const th = p.tileHeight || 16;
+        const cols = p.columns || 1;
+        const mw = p.mapWidth || 1;
+        const mh = p.mapHeight || 1;
+        const tiles = p.tiles || [];
+        this.ctx.imageSmoothingEnabled = false;
+        for (let ty = 0; ty < mh; ty++) {
+            for (let tx = 0; tx < mw; tx++) {
+                const idx = tiles[ty * mw + tx];
+                if (idx == null || idx < 0) continue;
+                const sx = (idx % cols) * tw;
+                const sy = Math.floor(idx / cols) * th;
+                this.ctx.drawImage(img, sx, sy, tw, th, x + tx * tw, y + ty * th, tw, th);
+            }
+        }
+        return true;
+    }
+
     /**
      * Cache image
      */
@@ -434,7 +492,15 @@ export class CanvasRenderer {
      * Get cached image
      */
     getCachedImage(src) {
-        return this.imageCache.get(src);
+        if (!src) return null;
+        if (this.imageCache.has(src)) return this.imageCache.get(src);
+        if (!String(src).startsWith('./') && this.imageCache.has(`./${src}`)) {
+            return this.imageCache.get(`./${src}`);
+        }
+        if (String(src).startsWith('./') && this.imageCache.has(src.slice(2))) {
+            return this.imageCache.get(src.slice(2));
+        }
+        return null;
     }
 
     /**

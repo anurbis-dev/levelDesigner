@@ -4,6 +4,11 @@
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+    IMG, SRC, TILE_KINDS, TILESET_ID, GRAPH_ID,
+    playerAnim, walkAnim, itemAnim, spriteComp,
+    catalogComp, resetCompSeq, writeLedgeCatalog
+} from './ledge-catalog.mjs';
 
 const T = 16;
 const MAP_W = 186;
@@ -106,33 +111,32 @@ fillR(120, 37, 3, 1, CRUMB);
 
 const tiles = Array.from(base, (v) => (v === 0 ? -1 : v));
 
-const LEDGE = 'content/assets/ledge';
-let seq = 1;
 function comp(type, properties = {}) {
-    return {
-        id: `comp_ledge_${seq++}`,
-        type,
-        enabled: true,
-        properties
-    };
+    return catalogComp(type, properties);
 }
 function obj(partial) {
+    const imageAssetId = partial.imageAssetId || null;
+    const imgSrc = partial.imgSrc || (partial.imageKey ? SRC[partial.imageKey] : null);
+    const components = [...(partial.components || [])];
+    if (imageAssetId && !components.some((c) => c.type === 'sprite')) {
+        components.unshift(spriteComp(imageAssetId));
+    }
     return {
         id: partial.id,
         name: partial.name || partial.id,
-        type: partial.type || 'object',
+        type: partial.type || 'actor',
         x: partial.x,
         y: partial.y,
         width: partial.width ?? 16,
         height: partial.height ?? 16,
         color: partial.color || '#cccccc',
         rotation: 0,
-        imgSrc: partial.imgSrc || null,
+        imgSrc,
         visible: true,
         locked: false,
         layerId: partial.layerId,
         properties: partial.properties || {},
-        components: partial.components || []
+        components
     };
 }
 
@@ -140,6 +144,7 @@ const L_TERRAIN = 'layer_ledge_terrain';
 const L_ACTORS = 'layer_ledge_actors';
 const L_ITEMS = 'layer_ledge_items';
 
+resetCompSeq();
 const objects = [];
 
 objects.push(obj({
@@ -149,16 +154,16 @@ objects.push(obj({
     x: 0, y: 0, width: MAP_W * T, height: MAP_H * T,
     color: '#635c8c',
     layerId: L_TERRAIN,
-    imgSrc: `${LEDGE}/tileset.png`,
+    imageAssetId: IMG.tileset,
+    imgSrc: SRC.tileset,
     components: [comp('tilemap', {
-        src: `${LEDGE}/tileset.png`,
+        tilesetAssetId: TILESET_ID,
+        imageAssetId: IMG.tileset,
+        src: SRC.tileset,
         tileWidth: 16, tileHeight: 16, columns: 9,
         mapWidth: MAP_W, mapHeight: MAP_H,
         tiles,
-        tileKinds: {
-            1: 'solid', 2: 'crumb', 3: 'ladderWall', 4: 'ladderFront',
-            5: 'ladderDiagR', 6: 'ladderDiagL', 7: 'halfTop', 8: 'bar'
-        },
+        tileKinds: TILE_KINDS,
         solidIndices: [1, 2, 7],
         crumbTime: 1.05, crumbBack: 3.4
     })]
@@ -171,15 +176,26 @@ objects.push(obj({
     x: 60, y: 22 * T - 22, width: 10, height: 22,
     color: 'lightblue',
     layerId: L_ACTORS,
-    imgSrc: `${LEDGE}/player.png`,
-    properties: { movementMode: 'platformer', bodyWidth: 10, bodyHeight: 22 },
+    imageAssetId: IMG.player,
+    imgSrc: SRC.player,
+    properties: {
+        movementMode: 'platformer',
+        bodyWidth: 10,
+        bodyHeight: 22,
+        crouchHeight: 14,
+        proneHeight: 7
+    },
     components: [
-        comp('playerStart', { movementMode: 'platformer', bodyWidth: 10, bodyHeight: 22 }),
+        comp('playerStart', {
+            movementMode: 'platformer',
+            bodyWidth: 10,
+            bodyHeight: 22,
+            crouchHeight: 14,
+            proneHeight: 7
+        }),
+        comp('collider', { shape: 'box', width: 10, height: 22 }),
         comp('damageHealth', { maxHealth: 3, currentHealth: 3, contactDamage: 0, invulnerabilityDuration: 1, destroyOnDeath: true }),
-        comp('spriteUiAnimation', {
-            frames: [{ x: 0, y: 0, w: 16, h: 28, duration: 200 }],
-            loop: true
-        })
+        comp('spriteUiAnimation', playerAnim())
     ]
 }));
 
@@ -192,8 +208,10 @@ objects.push(obj({
     layerId: L_ACTORS,
     components: [comp('camera', {
         viewHeight: 180,
-        deadzoneWidth: 40,
-        deadzoneHeight: 20,
+        followLerp: 0.0015,
+        lookAhead: 20,
+        deadzoneWidth: 0,
+        deadzoneHeight: 0,
         bounds: { x: 0, y: 0, width: MAP_W * T, height: MAP_H * T },
         canvasIds: ['hud_ledge']
     })]
@@ -216,17 +234,18 @@ const ITEMS = [
     [106, 39, 'coin'], [110, 34, 'gem'], [117, 32, 'gem'], [122, 39, 'coin'],
     [172, 21, 'gem'], [178, 21, 'relic']
 ];
-const ITEM_FRAME = { coin: 0, gem: 1, shroom: 2, relic: 3, key: 4, stick: 5 };
 for (let i = 0; i < ITEMS.length; i++) {
     const [c, r, kind] = ITEMS[i];
     objects.push(obj({
         id: `item_${kind}_${i}`,
         name: kind,
+        type: 'prefab',
         x: c * T + 4, y: r * T + 4, width: 8, height: 8,
         layerId: L_ITEMS,
-        imgSrc: `${LEDGE}/items.png`,
+        imageAssetId: IMG.items,
+        imgSrc: SRC.items,
         components: [
-            comp('spriteUiAnimation', { frames: [{ x: ITEM_FRAME[kind] * 16, y: 0, w: 16, h: 16, duration: 1000 }], loop: false }),
+            comp('spriteUiAnimation', itemAnim(kind)),
             comp('pickup', {
                 itemId: kind, count: 1, destroyOnPickup: true,
                 healAmount: kind === 'shroom' ? 1 : 0,
@@ -239,22 +258,26 @@ for (let i = 0; i < ITEMS.length; i++) {
 objects.push(obj({
     id: 'item_key',
     name: 'key',
+    type: 'prefab',
     x: 69 * T + 4, y: 15 * T - 10, width: 8, height: 8,
     layerId: L_ITEMS,
-    imgSrc: `${LEDGE}/items.png`,
+    imageAssetId: IMG.items,
+    imgSrc: SRC.items,
     components: [
-        comp('spriteUiAnimation', { frames: [{ x: 64, y: 0, w: 16, h: 16, duration: 1000 }], loop: false }),
+        comp('spriteUiAnimation', itemAnim('key')),
         comp('pickup', { itemId: 'key', count: 1, destroyOnPickup: true })
     ]
 }));
 objects.push(obj({
     id: 'item_stick',
     name: 'stick',
+    type: 'prefab',
     x: 117 * T, y: 40 * T - 12, width: 8, height: 12,
     layerId: L_ITEMS,
-    imgSrc: `${LEDGE}/items.png`,
+    imageAssetId: IMG.items,
+    imgSrc: SRC.items,
     components: [
-        comp('spriteUiAnimation', { frames: [{ x: 80, y: 0, w: 16, h: 16, duration: 1000 }], loop: false }),
+        comp('spriteUiAnimation', itemAnim('stick')),
         comp('pickup', { itemId: 'stick', count: 1, destroyOnPickup: true })
     ]
 }));
@@ -271,9 +294,11 @@ for (const d of DOORS) {
     objects.push(obj({
         id: d.id,
         name: d.id,
+        type: 'prefab',
         x: d.x, y: d.y - 24, width: 16, height: 24,
         layerId: L_ACTORS,
-        imgSrc: `${LEDGE}/door.png`,
+        imageAssetId: IMG.door,
+        imgSrc: SRC.door,
         components: [
             comp('interactable', { radius: 26, hint: d.locked ? 'Locked' : 'Enter' }),
             comp('conveyorZiplineJumpPadPortal', {
@@ -304,10 +329,14 @@ for (let i = 0; i < ENEMIES.length; i++) {
     objects.push(obj({
         id: `enemy_${i}`,
         name: `enemy_${i}`,
+        type: 'prefab',
         x, y: y - 14, width: 11, height: 14,
         layerId: L_ACTORS,
-        imgSrc: `${LEDGE}/enemy.png`,
+        imageAssetId: IMG.enemy,
+        imgSrc: SRC.enemy,
         components: [
+            comp('spriteUiAnimation', walkAnim(16, 16)),
+            comp('collider', { shape: 'box', width: 11, height: 14 }),
             comp('damageHealth', { maxHealth: 1, contactDamage: 1, invulnerabilityDuration: 0, layer: 'hazard', destroyOnDeath: true }),
             comp('pathFollower', {
                 waypoints: [{ x: 0, y: 0 }, { x: x1 - x, y: 0 }, { x: x0 - x, y: 0 }],
@@ -331,10 +360,14 @@ for (let i = 0; i < FLIERS.length; i++) {
     objects.push(obj({
         id: `flier_${i}`,
         name: `flier_${i}`,
+        type: 'prefab',
         x, y, width: 13, height: 9,
         layerId: L_ACTORS,
-        imgSrc: `${LEDGE}/flier.png`,
+        imageAssetId: IMG.flier,
+        imgSrc: SRC.flier,
         components: [
+            comp('spriteUiAnimation', walkAnim(16, 12)),
+            comp('collider', { shape: 'box', width: 13, height: 9 }),
             comp('damageHealth', { maxHealth: 1, contactDamage: 1, layer: 'hazard', destroyOnDeath: true }),
             comp('pathFollower', {
                 waypoints: [{ x: 0, y: 0 }, { x: x1 - x, y: 0 }, { x: x0 - x, y: 0 }],
@@ -344,8 +377,9 @@ for (let i = 0; i < FLIERS.length; i++) {
                 interval: 1.8, maxAlive: 1, spawnOffsetX: 4, spawnOffsetY: 8,
                 spawnWhen: 'playerBelow', playerBelowX: 26,
                 template: {
-                    type: 'object', width: 6, height: 6, imgSrc: `${LEDGE}/bomb.png`,
+                    type: 'actor', width: 6, height: 6, imgSrc: SRC.bomb,
                     components: [
+                        { type: 'sprite', enabled: true, properties: { imageAssetId: IMG.bomb } },
                         { type: 'damageHealth', enabled: true, properties: { maxHealth: 1, contactDamage: 1, layer: 'hazard', destroyOnDeath: true } },
                         { type: 'pathFollower', enabled: true, properties: { gravity: 520, waypoints: [] } }
                     ]
@@ -363,9 +397,11 @@ const PLATS = [
 for (const q of PLATS) {
     objects.push(obj({
         id: q.id, name: q.id,
+        type: 'prefab',
         x: q.x, y: q.y, width: 38, height: 8,
         layerId: L_ACTORS,
-        imgSrc: `${LEDGE}/platform.png`,
+        imageAssetId: IMG.platform,
+        imgSrc: SRC.platform,
         components: [
             comp('collider', { oneWay: 'up', width: 38, height: 8 }),
             comp('pathFollower', {
@@ -378,8 +414,9 @@ for (const q of PLATS) {
 
 objects.push(obj({
     id: 'lift_0', name: 'lift_0',
+    type: 'prefab',
     x: 73 * T, y: 22 * T, width: 48, height: 8,
-    layerId: L_ACTORS, imgSrc: `${LEDGE}/lift.png`,
+    layerId: L_ACTORS, imageAssetId: IMG.lift, imgSrc: SRC.lift,
     components: [
         comp('collider', { oneWay: 'up', width: 48, height: 8 }),
         comp('pathFollower', {
@@ -390,8 +427,9 @@ objects.push(obj({
 }));
 objects.push(obj({
     id: 'lift_1', name: 'lift_1',
+    type: 'prefab',
     x: 139 * T, y: 22 * T, width: 48, height: 8,
-    layerId: L_ACTORS, imgSrc: `${LEDGE}/lift.png`,
+    layerId: L_ACTORS, imageAssetId: IMG.lift, imgSrc: SRC.lift,
     components: [
         comp('collider', { oneWay: 'up', width: 48, height: 8 }),
         comp('pathFollower', {
@@ -409,34 +447,18 @@ for (let i = 0; i < TORCHES.length; i++) {
     const [c, r] = TORCHES[i];
     objects.push(obj({
         id: `torch_${i}`, name: `torch_${i}`,
+        type: 'prefab',
         x: c * T + 4, y: (r + 1) * T - 16, width: 8, height: 16,
-        layerId: L_ITEMS, imgSrc: `${LEDGE}/torch.png`,
+        layerId: L_ITEMS, imageAssetId: IMG.torch, imgSrc: SRC.torch,
         components: [comp('pickup', { itemId: 'torch', mode: 'hold', requireInteract: true, destroyOnPickup: false })]
     }));
 }
 
-const graph = {
-    formatVersion: 1,
-    scope: 'level',
-    variables: [
-        { name: 'hp', default: 3 },
-        { name: 'done', default: false },
-        { name: 'speed', default: 0 },
-        { name: 'moveState', default: 'normal' }
-    ],
-    nodes: [
-        { id: 'n_start', type: 'OnStart', x: 40, y: 40, params: {} },
-        { id: 'n_hp', type: 'SetVariable', x: 240, y: 40, params: { name: 'hp', value: 3 } },
-        { id: 'n_win_ev', type: 'OnCustomEvent', x: 40, y: 160, params: { name: 'win' } },
-        { id: 'n_win_set', type: 'SetVariable', x: 240, y: 160, params: { name: 'done', value: true } }
-    ],
-    edges: [
-        { id: 'e1', from: 'n_start', to: 'n_hp' },
-        { id: 'e2', from: 'n_win_ev', to: 'n_win_set' }
-    ]
-};
+const { graph } = writeLedgeCatalog();
 
 const level = {
+    name: 'LEDGE',
+    type: 'level',
     meta: {
         name: 'LEDGE',
         version: '1.0.0',
@@ -455,6 +477,7 @@ const level = {
     },
     camera: { x: 0, y: 200, zoom: 3 },
     eventGraph: graph,
+    eventGraphAssetId: GRAPH_ID,
     dialogues: [],
     items: [
         { id: 'coin', displayName: 'Coin' },
@@ -502,4 +525,4 @@ const outDir = join(dirname(fileURLToPath(import.meta.url)), '..', 'content', 'm
 mkdirSync(outDir, { recursive: true });
 const out = join(outDir, 'ledge.json');
 writeFileSync(out, JSON.stringify(level));
-console.log(`wrote ${out} objects=${objects.length} tiles=${tiles.filter((t) => t > 0).length}`);
+console.log(`wrote ${out} objects=${objects.length} tiles=${tiles.filter((t) => t > 0).length} catalog+graph`);

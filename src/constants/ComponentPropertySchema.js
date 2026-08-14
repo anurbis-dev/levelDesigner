@@ -366,7 +366,11 @@ const SCHEMAS = {
             { value: 'platformer', label: 'Platformer (gravity / jump / ledge)' }
         ] },
         { key: 'bodyWidth', label: 'Body Width (platformer)', kind: 'number', default: 10 },
-        { key: 'bodyHeight', label: 'Body Height (platformer)', kind: 'number', default: 22 },
+        { key: 'bodyHeight', label: 'Stand Collision Height', kind: 'number', default: 22 },
+        { key: 'crouchHeight', label: 'Crouch Collision Height', kind: 'number', default: 14 },
+        { key: 'proneHeight', label: 'Prone Collision Height', kind: 'number', default: 7 },
+        { key: 'crouchWidth', label: 'Crouch Collision Width (empty = body)', kind: 'number', default: null },
+        { key: 'proneWidth', label: 'Prone Collision Width (empty = body)', kind: 'number', default: null },
         { key: 'speed', label: 'Speed (top-down)', kind: 'number', default: 200 },
         { key: 'platformer', label: 'Platformer tunables JSON', kind: 'json', default: {} }
     ],
@@ -374,6 +378,8 @@ const SCHEMAS = {
         { key: 'followTargetId', label: 'Follow Target Id (empty = player)', kind: 'text', default: '' },
         { key: 'deadzoneWidth', label: 'Deadzone Width', kind: 'number', default: 0 },
         { key: 'deadzoneHeight', label: 'Deadzone Height', kind: 'number', default: 0 },
+        { key: 'followLerp', label: 'Follow Lerp (0=snap; 0.0015=smooth)', kind: 'number', default: 0 },
+        { key: 'lookAhead', label: 'Look-ahead (px along facing)', kind: 'number', default: 0 },
         { key: 'viewHeight', label: 'View Height (px; sets zoom = canvasH / viewH)', kind: 'number', default: 0 },
         { key: 'bounds', label: 'Bounds (JSON {x,y,width,height}; empty = unbounded)', kind: 'json', default: null },
         { key: 'renderLayers', label: 'Render Layers (comma list of layer ids; empty = all)', kind: 'stringList', default: [] },

@@ -1,10 +1,10 @@
-# Руководство пользователя - 2D Level Editor v3.52.5
+# Руководство пользователя - 2D Level Editor v4.53.0
 
 ## 🎯 Быстрый старт
 
 1. **Запуск**: Дважды кликните `start_Editor.vbs` (рекомендуется, полностью бесфликерный) или `start_Editor.bat`
 2. **Интерфейс**: Canvas (центр), панели (ассеты, детали, слои, структура)
-3. **Создание**: Перетащите ассеты из нижней панели на canvas
+3. **Создание**: Перетащите ассеты из нижней панели на canvas (`type=level` открывает карту, не ставит объект)
 4. **Группировка**: Выделите объекты → `Ctrl+G`
 5. **Слои**: Организуйте объекты по слоям с полной изоляцией видимости
 6. **Project Folder** (v4.51.0–v4.52.0, Chromium): File → **Set Project Folder...** или Project Settings → **Project Folder** → Choose… — один раз выдать write access к папке Level Designer (или её `content/`). Редактор создаёт default `content/` layout если его нет (или использует pick as-is, если это уже content root). **Content tree** в Assets показывает эту папку (FSA scan, не served `./content/`). Save Project / Save Level / Create Asset / Build / New Folder / Move / Delete пишут in-place. Clear снимает grant и возвращает served `./content/`. Без folder — download / native picker.
@@ -245,7 +245,7 @@
 - **Delete asset**: RMB Delete or Del over previews — also removes JSON + sibling PNG + manifest entry when folder granted
 - **Переключение позиции папок**: Кнопка ⇄ в заголовке Content для изменения расположения папок
 - Поддержка Grid/List/Details режимов отображения
-- Drag & Drop для создания объектов на canvas
+- Drag & Drop: обычные ассеты ставят объекты; `type=level` открывает карту (`openLevelFromAsset`); `type=eventGraph` применяет reusable graph к текущему уровню. Dblclick — Asset Editor.
 
 ### Layers
 - Управление слоями и их видимостью
@@ -266,7 +266,7 @@
 ## 💾 Работа с файлами
 - **Новый уровень**: Level → New Level
 - **Открыть**: Level → Open Level (.json)
-- **Пример платформера LEDGE**: Level → Open Level → `content/maps/ledge.json`, затем Game → Play
+- **Пример платформера LEDGE**: drop `LEDGE` из `content/assets/ledge/` на viewport (или Level → Open Level → `content/maps/ledge.json`), затем Game → Play. Каталог: Image sidecars, `ledge_tileset.json`, `actors/*.json` (player/camera/terrain/items/enemies/doors/platforms/lifts), `graphs/ledge_logic.json`.
 - **Сохранить**: Level → Save Level / Save As
 
 ## ⚙️ Настройки

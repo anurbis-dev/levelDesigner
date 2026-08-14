@@ -40,6 +40,14 @@ export class ProjectLoader {
         }
         const scene = new Scene(levelData);
         scene.assetsById = registries.assetsById;
+        const graphId = levelData.eventGraphAssetId;
+        if (graphId && registries.assetsById) {
+            const graphAsset = registries.assetsById.get(graphId);
+            const graph = graphAsset?.properties?.graph || graphAsset?.properties;
+            if (graph && (graph.nodes || graph.edges)) {
+                scene.eventGraph = graph;
+            }
+        }
         return scene;
     }
 }

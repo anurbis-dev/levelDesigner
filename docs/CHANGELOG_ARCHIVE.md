@@ -1,3 +1,7 @@
+## Archived from CHANGELOG.md (Project-folder content sync, v4.52.0, 77fcfce7)
+
+- **Feat: Project-folder content sync + folder CRUD (v4.52.0)**: `FsaContentFs` + `AssetFolderOps` + `FoldersContextMenu` — Set Project Folder creates default `content/` layout (or uses existing content root), scans via FSA into Assets Content tree (`AssetManager.scanFromFsa`); New Folder / Delete Folder (tree RMB + Del), Move to Folder (asset RMB), delete/duplicate assets write through to disk + manifest when folder granted; Assets Refresh → `reloadProjectContent()`; init re-scans if permission already granted.
+
 ## Archived from CHANGELOG.md (Project Folder FSA writes, v4.51.0, 75d98322)
 
 - **Feat: Project Folder / FSA in-place writes (v4.51.0)**: `FsaStore` + `FsaContentWriter` — persist directory handle (IndexedDB) + folder name (localStorage); File → **Set Project Folder...** / Project Settings **Project Folder**; async save level/project/asset/build writes to granted folder (`content/` root when present), else download/picker. `createAssetOfType` writes new assets + manifest when folder set.

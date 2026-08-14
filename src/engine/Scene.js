@@ -192,7 +192,7 @@ export class Scene {
             width: w,
             height: h,
             color: '#22c55e',
-            imgSrc: marker.imgSrc || props.imgSrc || null
+            imgSrc: this._resolveMarkerImgSrc(marker, props)
         });
         const moveProps = {
             speed: props.speed ?? speed,
@@ -219,6 +219,17 @@ export class Scene {
         this.player = player;
         this.entities.push(player);
         return player;
+    }
+
+    _resolveMarkerImgSrc(marker, props) {
+        if (marker.imgSrc || props.imgSrc) return marker.imgSrc || props.imgSrc;
+        const spr = (marker.components || []).find((c) => c.type === 'sprite' && c.enabled !== false);
+        const refId = spr?.properties?.imageAssetId;
+        if (!refId || !this.assetsById) return null;
+        const img = typeof this.assetsById.get === 'function'
+            ? this.assetsById.get(refId)
+            : this.assetsById[refId];
+        return img?.imgSrc || null;
     }
 
     /**

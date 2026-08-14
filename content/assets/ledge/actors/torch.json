@@ -1,0 +1,35 @@
+{
+  "name": "ledge_torch",
+  "type": "prefab",
+  "category": "ledge",
+  "width": 8,
+  "height": 16,
+  "color": "#ffb060",
+  "properties": {
+    "isTemporary": false
+  },
+  "components": [
+    {
+      "id": "comp_ledge_28",
+      "type": "sprite",
+      "enabled": true,
+      "properties": {
+        "imageAssetId": "asset_assets_ledge_torch"
+      }
+    },
+    {
+      "id": "comp_ledge_29",
+      "type": "pickup",
+      "enabled": true,
+      "properties": {
+        "itemId": "torch",
+        "mode": "hold",
+        "requireInteract": true,
+        "destroyOnPickup": false
+      }
+    }
+  ],
+  "tags": [
+    "ledge"
+  ]
+}

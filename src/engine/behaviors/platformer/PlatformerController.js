@@ -326,11 +326,21 @@ export class PlatformerController {
         p.y = b - h;
     }
 
+    _stanceBox(st, p) {
+        const h = st === 2 ? this.C.PRH : (st === 1 ? this.C.CRH : this.C.H);
+        const wRaw = st === 2 ? this.C.PRW : (st === 1 ? this.C.CRW : this.C.W);
+        const w = wRaw == null ? p.w : wRaw;
+        return { w, h };
+    }
+
     _setStance(world, p, st) {
         if (this.stance === st) return true;
-        const h = st === 2 ? this.C.PRH : (st === 1 ? this.C.CRH : this.C.H);
+        const { w, h } = this._stanceBox(st, p);
         const b = p.y + p.h;
-        if (!world.rectFree(p.x, b - h, p.w, h)) return false;
+        const x = p.x + (p.w - w) / 2;
+        if (!world.rectFree(x, b - h, w, h)) return false;
+        p.x = x;
+        p.w = w;
         this._setH(p, h);
         this.stance = st;
         this.emit(st === 0 ? 'stand' : (st === 1 ? 'crouch' : 'prone'));
@@ -357,6 +367,9 @@ export class PlatformerController {
         scene.eventGraphRuntime?.setVariable('stance', this.stance);
         scene.eventGraphRuntime?.setVariable('facing', this.facing);
         scene.eventGraphRuntime?.setVariable('onGround', this.onGround);
+        scene.eventGraphRuntime?.setVariable('vy', this.vy);
+        scene.eventGraphRuntime?.setVariable('rolling', this.rollT > 0);
+        scene.eventGraphRuntime?.setVariable('sliding', this.sliding > 0);
         this.entity.scaleX = this.facing < 0 ? -1 : 1;
     }
 }

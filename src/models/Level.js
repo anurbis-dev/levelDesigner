@@ -40,6 +40,7 @@ export class Level {
         // editor's own object/layer model; Play/build via Scene.js. Authoring: Event Graph /
         // Dialogues dock panels (src/ui/event-graph, src/ui/dialogues).
         this.eventGraph = data.eventGraph || null;
+        this.eventGraphAssetId = data.eventGraphAssetId || '';
         this.dialogues = data.dialogues || [];
         // Item definitions catalog (Items dock): [{ id, displayName, description? }].
         this.items = data.items || [];
@@ -820,6 +821,7 @@ export class Level {
             settings: this.settings,
             camera: this.camera,
             eventGraph: this.eventGraph,
+            eventGraphAssetId: this.eventGraphAssetId || undefined,
             dialogues: this.dialogues,
             items: this.items,
             canvases: this.canvases,

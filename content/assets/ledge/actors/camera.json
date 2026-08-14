@@ -1,0 +1,37 @@
+{
+  "name": "ledge_camera",
+  "type": "camera",
+  "category": "ledge",
+  "width": 32,
+  "height": 32,
+  "color": "#38bdf8",
+  "properties": {
+    "isTemporary": false
+  },
+  "components": [
+    {
+      "id": "comp_ledge_7",
+      "type": "camera",
+      "enabled": true,
+      "properties": {
+        "viewHeight": 180,
+        "followLerp": 0.0015,
+        "lookAhead": 20,
+        "deadzoneWidth": 0,
+        "deadzoneHeight": 0,
+        "bounds": {
+          "x": 0,
+          "y": 0,
+          "width": 2976,
+          "height": 768
+        },
+        "canvasIds": [
+          "hud_ledge"
+        ]
+      }
+    }
+  ],
+  "tags": [
+    "ledge"
+  ]
+}

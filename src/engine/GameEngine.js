@@ -20,6 +20,7 @@ export class GameEngine {
         this.cameraRenderLayers = null;
         this._rafId = null;
         this._lastFrameTime = null;
+        this._dt = 0;
         registerDefaultBehaviors();
         registerDefaultEventGraphNodes();
     }
@@ -49,6 +50,7 @@ export class GameEngine {
     /** Runs one update+render frame. */
     tick(dt = 0) {
         if (!this.scene) return;
+        this._dt = dt;
         this._update(dt);
         this._updateCamera();
         this.renderer.renderScene(this.scene, this.camera, this.parallaxStartPosition, this.cameraRenderLayers);
@@ -94,7 +96,7 @@ export class GameEngine {
         const cameraEntity = this.scene.cameraEntity;
         const behavior = cameraEntity?.behaviors.find(b => typeof b.computeCamera === 'function');
         if (behavior?.enabled) {
-            behavior.computeCamera(this.scene, this.camera, this.renderer.canvas);
+            behavior.computeCamera(this.scene, this.camera, this.renderer.canvas, this._dt || 0);
             this.cameraRenderLayers = behavior.getRenderLayers();
             this.scene.activeCanvasIds = behavior.getCanvasIds();
             return;

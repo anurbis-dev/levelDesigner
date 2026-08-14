@@ -144,16 +144,26 @@
     },
     "enemy": {
       "file": "enemy.png",
-      "size": [
+      "frame": [
         16,
         16
+      ],
+      "columns": 2,
+      "frames": [
+        "walk0",
+        "walk1"
       ]
     },
     "flier": {
       "file": "flier.png",
-      "size": [
+      "frame": [
         16,
         12
+      ],
+      "columns": 2,
+      "frames": [
+        "flap0",
+        "flap1"
       ]
     },
     "door": {

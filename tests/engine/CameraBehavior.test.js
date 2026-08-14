@@ -95,6 +95,23 @@ describe('CameraBehavior.computeCamera', () => {
         expect(camera.y).toBe(700 - 600);
     });
 
+    it('lerps toward the target when followLerp and dt are set', () => {
+        const player = { id: '__player', x: 800, y: 400, width: 32, height: 32 };
+        const scene = makeScene(player);
+        const camera = { x: 0, y: 0, zoom: 1 };
+        const canvas = { width: 800, height: 600 };
+        const behavior = new CameraBehavior({}, { properties: { followLerp: 0.0015 } });
+
+        behavior.computeCamera(scene, camera, canvas, 1 / 60);
+
+        const wantX = 800 + 16 - 400;
+        const wantY = 400 + 16 - 300;
+        expect(camera.x).toBeGreaterThan(0);
+        expect(camera.x).toBeLessThan(wantX);
+        expect(camera.y).toBeGreaterThan(0);
+        expect(camera.y).toBeLessThan(wantY);
+    });
+
     it('is a no-op when neither followTargetId nor scene.player resolves', () => {
         const scene = makeScene(null);
         const camera = { x: 5, y: 5, zoom: 1 };

@@ -1,4 +1,4 @@
-# 2D Level Editor v4.51.0
+# 2D Level Editor v4.53.0
 
 Редактор уровней для 2D игр с модульной архитектурой.
 
@@ -42,7 +42,7 @@
 - **[DIALOG_SYSTEM.md](./DIALOG_SYSTEM.md)** - система диалогов
 - **[ASSET_TYPES_CATALOG.md](./ASSET_TYPES_CATALOG.md)** - каталог типов ассетов и компонентов
 - **[RUNTIME_SCHEMA.md](./RUNTIME_SCHEMA.md)** - runtime-контракт properties / Event Graph
-- **[LEDGE_PORT_PLAN.md](./LEDGE_PORT_PLAN.md)** - порт прототипа LEDGE (уровень `content/maps/ledge.json`)
+- **[LEDGE_PORT_PLAN.md](./LEDGE_PORT_PLAN.md)** - порт прототипа LEDGE (`content/maps/ledge.json` + каталог `content/assets/ledge/`)
 
 ### Для пользователей
 - **[USER_MANUAL.md](./USER_MANUAL.md)** - руководство пользователя
@@ -114,4 +114,4 @@ docs/              # Документация
 - Тач-поддержка, мобильная адаптация
 - Контекстные меню, горячие клавиши
 
-**Статус**: Production Ready v4.51.0
+**Статус**: Production Ready v4.53.0

@@ -1,0 +1,16 @@
+{
+  "name": "LEDGE",
+  "type": "level",
+  "category": "ledge",
+  "width": 48,
+  "height": 48,
+  "color": "#38bdf8",
+  "properties": {
+    "levelSrc": "maps/ledge.json"
+  },
+  "components": [],
+  "tags": [
+    "ledge",
+    "level"
+  ]
+}

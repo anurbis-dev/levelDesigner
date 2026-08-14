@@ -6,6 +6,8 @@
   "color": "#ffd75e",
   "width": 96,
   "height": 16,
-  "properties": { "isTemporary": false },
+  "properties": {
+    "isTemporary": false
+  },
   "components": []
 }

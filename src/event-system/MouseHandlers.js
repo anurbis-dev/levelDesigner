@@ -1065,6 +1065,23 @@ export class MouseHandlers extends BaseModule {
         droppedAssetIds.forEach((assetId, index) => {
             const asset = this.editor.assetManager.getAsset(assetId);
             if (asset) {
+                if (asset.type === 'level') {
+                    this.editor.levelFileOperations?.openLevelFromAsset?.(asset);
+                    return;
+                }
+                if (asset.type === 'eventGraph' && this.editor.level) {
+                    const graph = asset.properties?.graph || asset.properties;
+                    if (graph && (graph.nodes || graph.edges)) {
+                        this.editor.level.eventGraph = JSON.parse(JSON.stringify(graph));
+                        this.editor.level.eventGraphAssetId = asset.id;
+                        this.editor.stateManager?.set(
+                            'eventGraphRevision',
+                            (this.editor.stateManager.get('eventGraphRevision') || 0) + 1
+                        );
+                        Logger.status?.success?.(`Event Graph "${asset.name}" applied to level`);
+                    }
+                    return;
+                }
                 let x = worldPos.x + index * 10;
                 let y = worldPos.y + index * 10;
 

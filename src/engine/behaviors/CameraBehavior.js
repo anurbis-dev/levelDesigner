@@ -14,7 +14,7 @@ export class CameraBehavior extends Behavior {
      * @param {{x:number,y:number,zoom:number}} camera
      * @param {{width:number,height:number}} canvas
      */
-    computeCamera(scene, camera, canvas) {
+    computeCamera(scene, camera, canvas, dt = 0) {
         const target = this._resolveTarget(scene);
         if (!target) return;
 
@@ -24,21 +24,35 @@ export class CameraBehavior extends Behavior {
         const zoom = camera.zoom || 1;
         const viewW = canvas.width / zoom;
         const viewH = canvas.height / zoom;
-        const targetCenterX = target.x + (target.width || 0) / 2;
-        const targetCenterY = target.y + (target.height || 0) / 2;
+        let targetCenterX = target.x + (target.width || 0) / 2;
+        let targetCenterY = target.y + (target.height || 0) / 2;
+        const lookAhead = this.properties.lookAhead || 0;
+        if (lookAhead) {
+            const facing = target.scaleX < 0 ? -1 : 1;
+            targetCenterX += facing * lookAhead;
+        }
         const curCenterX = camera.x + viewW / 2;
         const curCenterY = camera.y + viewH / 2;
 
         const deadW = this.properties.deadzoneWidth || 0;
         const deadH = this.properties.deadzoneHeight || 0;
+        const followLerp = this.properties.followLerp || 0;
 
         let nextX = camera.x;
         let nextY = camera.y;
-        if (Math.abs(targetCenterX - curCenterX) > deadW / 2) {
-            nextX = targetCenterX - viewW / 2;
-        }
-        if (Math.abs(targetCenterY - curCenterY) > deadH / 2) {
-            nextY = targetCenterY - viewH / 2;
+        if (followLerp > 0 && dt > 0) {
+            const wantX = targetCenterX - viewW / 2;
+            const wantY = targetCenterY - viewH / 2;
+            const k = 1 - Math.pow(followLerp, dt);
+            nextX = camera.x + (wantX - camera.x) * k;
+            nextY = camera.y + (wantY - camera.y) * k;
+        } else {
+            if (Math.abs(targetCenterX - curCenterX) > deadW / 2) {
+                nextX = targetCenterX - viewW / 2;
+            }
+            if (Math.abs(targetCenterY - curCenterY) > deadH / 2) {
+                nextY = targetCenterY - viewH / 2;
+            }
         }
 
         const bounds = this.properties.bounds;

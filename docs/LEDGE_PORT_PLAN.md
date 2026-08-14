@@ -1,6 +1,15 @@
 # LEDGE → Level Designer: план переноса
 
-**Статус:** реализовано в v4.50.0. Уровень `content/maps/ledge.json`, арт `content/assets/ledge/`, сборка `node scripts/build-ledge-level.mjs`. Ниже — исходный план (не переписывать как текущий статус движка).
+**Статус:** геймплей — v4.50.0; каталог ассетов — v4.53.0.
+
+- Уровень: `content/maps/ledge.json`
+- Каталог: `content/assets/ledge/` — Image sidecars (`player.png`, `tileset.png`, …); `ledge_tileset.json` (`type=tileset`, `tileKinds`/`solidIndices` + `sprite.imageAssetId`); `actors/*.json` (player, camera, terrain, items, enemies, doors, platforms, lifts); `graphs/ledge_logic.json` (`type=eventGraph`); `LEDGE.json` (`type=level`, `properties.levelSrc=maps/ledge.json`)
+- Drop `LEDGE` на viewport открывает карту; dblclick — Asset Editor. Drop `ledge_logic` применяет graph.
+- Объекты уровня — actors/prefabs со `sprite.imageAssetId`. Tilemap: `tilesetAssetId` + `imageAssetId`. `Level.eventGraphAssetId`.
+- Камера: `followLerp=0.0015`, `lookAhead=20`. Спрайт рисуется в native frame size (feet-aligned), collider crouch/prone сжимается (`crouchHeight` 14 / `proneHeight` 7).
+- Сборка: `node scripts/build-ledge-level.mjs`
+
+Ниже — исходный план (не переписывать как текущий статус движка).
 
 Источник: `tmp/ledge-v5.html`. Цель: тот же геймплей в Play редактора через компоненты, tilemap, Event Graph. Не хардкод уровня в JS.
 

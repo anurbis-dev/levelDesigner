@@ -1,0 +1,1382 @@
+{
+  "name": "ledge_player",
+  "type": "player_start",
+  "category": "ledge",
+  "width": 10,
+  "height": 22,
+  "color": "lightblue",
+  "properties": {
+    "isTemporary": false,
+    "movementMode": "platformer",
+    "bodyWidth": 10,
+    "bodyHeight": 22,
+    "crouchHeight": 14,
+    "proneHeight": 7
+  },
+  "components": [
+    {
+      "id": "comp_ledge_2",
+      "type": "sprite",
+      "enabled": true,
+      "properties": {
+        "imageAssetId": "asset_assets_ledge_player"
+      }
+    },
+    {
+      "id": "comp_ledge_3",
+      "type": "playerStart",
+      "enabled": true,
+      "properties": {
+        "movementMode": "platformer",
+        "bodyWidth": 10,
+        "bodyHeight": 22,
+        "crouchHeight": 14,
+        "proneHeight": 7
+      }
+    },
+    {
+      "id": "comp_ledge_4",
+      "type": "collider",
+      "enabled": true,
+      "properties": {
+        "shape": "box",
+        "width": 10,
+        "height": 22
+      }
+    },
+    {
+      "id": "comp_ledge_5",
+      "type": "damageHealth",
+      "enabled": true,
+      "properties": {
+        "maxHealth": 3,
+        "currentHealth": 3,
+        "contactDamage": 0,
+        "invulnerabilityDuration": 1,
+        "destroyOnDeath": true
+      }
+    },
+    {
+      "id": "comp_ledge_6",
+      "type": "spriteUiAnimation",
+      "enabled": true,
+      "properties": {
+        "clips": {
+          "idle": [
+            {
+              "x": 0,
+              "y": 0,
+              "w": 16,
+              "h": 28,
+              "duration": 280
+            },
+            {
+              "x": 16,
+              "y": 0,
+              "w": 16,
+              "h": 28,
+              "duration": 280
+            }
+          ],
+          "run": [
+            {
+              "x": 32,
+              "y": 0,
+              "w": 16,
+              "h": 28,
+              "duration": 90
+            },
+            {
+              "x": 48,
+              "y": 0,
+              "w": 16,
+              "h": 28,
+              "duration": 90
+            },
+            {
+              "x": 64,
+              "y": 0,
+              "w": 16,
+              "h": 28,
+              "duration": 90
+            },
+            {
+              "x": 80,
+              "y": 0,
+              "w": 16,
+              "h": 28,
+              "duration": 90
+            }
+          ],
+          "jump": [
+            {
+              "x": 96,
+              "y": 0,
+              "w": 16,
+              "h": 28,
+              "duration": 1000
+            }
+          ],
+          "fall": [
+            {
+              "x": 112,
+              "y": 0,
+              "w": 16,
+              "h": 28,
+              "duration": 1000
+            }
+          ],
+          "crouch": [
+            {
+              "x": 64,
+              "y": 28,
+              "w": 16,
+              "h": 28,
+              "duration": 160
+            },
+            {
+              "x": 80,
+              "y": 28,
+              "w": 16,
+              "h": 28,
+              "duration": 160
+            }
+          ],
+          "prone": [
+            {
+              "x": 96,
+              "y": 28,
+              "w": 16,
+              "h": 28,
+              "duration": 180
+            },
+            {
+              "x": 112,
+              "y": 28,
+              "w": 16,
+              "h": 28,
+              "duration": 180
+            }
+          ],
+          "hang": [
+            {
+              "x": 0,
+              "y": 56,
+              "w": 16,
+              "h": 28,
+              "duration": 1000
+            }
+          ],
+          "climb": [
+            {
+              "x": 16,
+              "y": 56,
+              "w": 16,
+              "h": 28,
+              "duration": 140
+            },
+            {
+              "x": 32,
+              "y": 56,
+              "w": 16,
+              "h": 28,
+              "duration": 140
+            },
+            {
+              "x": 48,
+              "y": 56,
+              "w": 16,
+              "h": 28,
+              "duration": 140
+            }
+          ],
+          "ladder": [
+            {
+              "x": 64,
+              "y": 56,
+              "w": 16,
+              "h": 28,
+              "duration": 140
+            },
+            {
+              "x": 80,
+              "y": 56,
+              "w": 16,
+              "h": 28,
+              "duration": 140
+            }
+          ],
+          "bars": [
+            {
+              "x": 0,
+              "y": 84,
+              "w": 16,
+              "h": 28,
+              "duration": 140
+            },
+            {
+              "x": 16,
+              "y": 84,
+              "w": 16,
+              "h": 28,
+              "duration": 140
+            }
+          ],
+          "stun": [
+            {
+              "x": 32,
+              "y": 28,
+              "w": 16,
+              "h": 28,
+              "duration": 1000
+            }
+          ],
+          "roll": [
+            {
+              "x": 48,
+              "y": 28,
+              "w": 16,
+              "h": 28,
+              "duration": 1000
+            }
+          ]
+        },
+        "defaultState": "idle",
+        "states": [
+          {
+            "name": "idle",
+            "clip": "idle",
+            "transitions": [
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "hang"
+                },
+                "target": "hang"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "climb"
+                },
+                "target": "climb"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "ladder"
+                },
+                "target": "ladder"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "bars"
+                },
+                "target": "bars"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "stun"
+                },
+                "target": "stun"
+              },
+              {
+                "condition": {
+                  "var": "rolling",
+                  "op": "==",
+                  "value": true
+                },
+                "target": "roll"
+              },
+              {
+                "condition": {
+                  "var": "stance",
+                  "op": "==",
+                  "value": 2
+                },
+                "target": "prone"
+              },
+              {
+                "condition": {
+                  "var": "stance",
+                  "op": "==",
+                  "value": 1
+                },
+                "target": "crouch"
+              },
+              {
+                "condition": {
+                  "var": "vy",
+                  "op": ">",
+                  "value": 20
+                },
+                "target": "fall"
+              },
+              {
+                "condition": {
+                  "var": "onGround",
+                  "op": "==",
+                  "value": false
+                },
+                "target": "jump"
+              },
+              {
+                "condition": {
+                  "var": "speed",
+                  "op": ">",
+                  "value": 8
+                },
+                "target": "run"
+              }
+            ]
+          },
+          {
+            "name": "run",
+            "clip": "run",
+            "transitions": [
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "hang"
+                },
+                "target": "hang"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "climb"
+                },
+                "target": "climb"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "ladder"
+                },
+                "target": "ladder"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "bars"
+                },
+                "target": "bars"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "stun"
+                },
+                "target": "stun"
+              },
+              {
+                "condition": {
+                  "var": "rolling",
+                  "op": "==",
+                  "value": true
+                },
+                "target": "roll"
+              },
+              {
+                "condition": {
+                  "var": "stance",
+                  "op": "==",
+                  "value": 2
+                },
+                "target": "prone"
+              },
+              {
+                "condition": {
+                  "var": "stance",
+                  "op": "==",
+                  "value": 1
+                },
+                "target": "crouch"
+              },
+              {
+                "condition": {
+                  "var": "vy",
+                  "op": ">",
+                  "value": 20
+                },
+                "target": "fall"
+              },
+              {
+                "condition": {
+                  "var": "onGround",
+                  "op": "==",
+                  "value": false
+                },
+                "target": "jump"
+              },
+              {
+                "condition": {
+                  "var": "onGround",
+                  "op": "==",
+                  "value": true
+                },
+                "target": "idle"
+              }
+            ]
+          },
+          {
+            "name": "jump",
+            "clip": "jump",
+            "transitions": [
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "hang"
+                },
+                "target": "hang"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "climb"
+                },
+                "target": "climb"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "ladder"
+                },
+                "target": "ladder"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "bars"
+                },
+                "target": "bars"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "stun"
+                },
+                "target": "stun"
+              },
+              {
+                "condition": {
+                  "var": "rolling",
+                  "op": "==",
+                  "value": true
+                },
+                "target": "roll"
+              },
+              {
+                "condition": {
+                  "var": "stance",
+                  "op": "==",
+                  "value": 2
+                },
+                "target": "prone"
+              },
+              {
+                "condition": {
+                  "var": "stance",
+                  "op": "==",
+                  "value": 1
+                },
+                "target": "crouch"
+              },
+              {
+                "condition": {
+                  "var": "vy",
+                  "op": ">",
+                  "value": 20
+                },
+                "target": "fall"
+              },
+              {
+                "condition": {
+                  "var": "speed",
+                  "op": ">",
+                  "value": 8
+                },
+                "target": "run"
+              },
+              {
+                "condition": {
+                  "var": "onGround",
+                  "op": "==",
+                  "value": true
+                },
+                "target": "idle"
+              }
+            ]
+          },
+          {
+            "name": "fall",
+            "clip": "fall",
+            "transitions": [
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "hang"
+                },
+                "target": "hang"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "climb"
+                },
+                "target": "climb"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "ladder"
+                },
+                "target": "ladder"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "bars"
+                },
+                "target": "bars"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "stun"
+                },
+                "target": "stun"
+              },
+              {
+                "condition": {
+                  "var": "rolling",
+                  "op": "==",
+                  "value": true
+                },
+                "target": "roll"
+              },
+              {
+                "condition": {
+                  "var": "stance",
+                  "op": "==",
+                  "value": 2
+                },
+                "target": "prone"
+              },
+              {
+                "condition": {
+                  "var": "stance",
+                  "op": "==",
+                  "value": 1
+                },
+                "target": "crouch"
+              },
+              {
+                "condition": {
+                  "var": "onGround",
+                  "op": "==",
+                  "value": false
+                },
+                "target": "jump"
+              },
+              {
+                "condition": {
+                  "var": "speed",
+                  "op": ">",
+                  "value": 8
+                },
+                "target": "run"
+              },
+              {
+                "condition": {
+                  "var": "onGround",
+                  "op": "==",
+                  "value": true
+                },
+                "target": "idle"
+              }
+            ]
+          },
+          {
+            "name": "crouch",
+            "clip": "crouch",
+            "transitions": [
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "hang"
+                },
+                "target": "hang"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "climb"
+                },
+                "target": "climb"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "ladder"
+                },
+                "target": "ladder"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "bars"
+                },
+                "target": "bars"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "stun"
+                },
+                "target": "stun"
+              },
+              {
+                "condition": {
+                  "var": "rolling",
+                  "op": "==",
+                  "value": true
+                },
+                "target": "roll"
+              },
+              {
+                "condition": {
+                  "var": "stance",
+                  "op": "==",
+                  "value": 2
+                },
+                "target": "prone"
+              },
+              {
+                "condition": {
+                  "var": "vy",
+                  "op": ">",
+                  "value": 20
+                },
+                "target": "fall"
+              },
+              {
+                "condition": {
+                  "var": "onGround",
+                  "op": "==",
+                  "value": false
+                },
+                "target": "jump"
+              },
+              {
+                "condition": {
+                  "var": "speed",
+                  "op": ">",
+                  "value": 8
+                },
+                "target": "run"
+              },
+              {
+                "condition": {
+                  "var": "onGround",
+                  "op": "==",
+                  "value": true
+                },
+                "target": "idle"
+              }
+            ]
+          },
+          {
+            "name": "prone",
+            "clip": "prone",
+            "transitions": [
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "hang"
+                },
+                "target": "hang"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "climb"
+                },
+                "target": "climb"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "ladder"
+                },
+                "target": "ladder"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "bars"
+                },
+                "target": "bars"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "stun"
+                },
+                "target": "stun"
+              },
+              {
+                "condition": {
+                  "var": "rolling",
+                  "op": "==",
+                  "value": true
+                },
+                "target": "roll"
+              },
+              {
+                "condition": {
+                  "var": "stance",
+                  "op": "==",
+                  "value": 1
+                },
+                "target": "crouch"
+              },
+              {
+                "condition": {
+                  "var": "vy",
+                  "op": ">",
+                  "value": 20
+                },
+                "target": "fall"
+              },
+              {
+                "condition": {
+                  "var": "onGround",
+                  "op": "==",
+                  "value": false
+                },
+                "target": "jump"
+              },
+              {
+                "condition": {
+                  "var": "speed",
+                  "op": ">",
+                  "value": 8
+                },
+                "target": "run"
+              },
+              {
+                "condition": {
+                  "var": "onGround",
+                  "op": "==",
+                  "value": true
+                },
+                "target": "idle"
+              }
+            ]
+          },
+          {
+            "name": "hang",
+            "clip": "hang",
+            "transitions": [
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "climb"
+                },
+                "target": "climb"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "ladder"
+                },
+                "target": "ladder"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "bars"
+                },
+                "target": "bars"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "stun"
+                },
+                "target": "stun"
+              },
+              {
+                "condition": {
+                  "var": "rolling",
+                  "op": "==",
+                  "value": true
+                },
+                "target": "roll"
+              },
+              {
+                "condition": {
+                  "var": "stance",
+                  "op": "==",
+                  "value": 2
+                },
+                "target": "prone"
+              },
+              {
+                "condition": {
+                  "var": "stance",
+                  "op": "==",
+                  "value": 1
+                },
+                "target": "crouch"
+              },
+              {
+                "condition": {
+                  "var": "vy",
+                  "op": ">",
+                  "value": 20
+                },
+                "target": "fall"
+              },
+              {
+                "condition": {
+                  "var": "onGround",
+                  "op": "==",
+                  "value": false
+                },
+                "target": "jump"
+              },
+              {
+                "condition": {
+                  "var": "speed",
+                  "op": ">",
+                  "value": 8
+                },
+                "target": "run"
+              },
+              {
+                "condition": {
+                  "var": "onGround",
+                  "op": "==",
+                  "value": true
+                },
+                "target": "idle"
+              }
+            ]
+          },
+          {
+            "name": "climb",
+            "clip": "climb",
+            "transitions": [
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "hang"
+                },
+                "target": "hang"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "ladder"
+                },
+                "target": "ladder"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "bars"
+                },
+                "target": "bars"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "stun"
+                },
+                "target": "stun"
+              },
+              {
+                "condition": {
+                  "var": "rolling",
+                  "op": "==",
+                  "value": true
+                },
+                "target": "roll"
+              },
+              {
+                "condition": {
+                  "var": "stance",
+                  "op": "==",
+                  "value": 2
+                },
+                "target": "prone"
+              },
+              {
+                "condition": {
+                  "var": "stance",
+                  "op": "==",
+                  "value": 1
+                },
+                "target": "crouch"
+              },
+              {
+                "condition": {
+                  "var": "vy",
+                  "op": ">",
+                  "value": 20
+                },
+                "target": "fall"
+              },
+              {
+                "condition": {
+                  "var": "onGround",
+                  "op": "==",
+                  "value": false
+                },
+                "target": "jump"
+              },
+              {
+                "condition": {
+                  "var": "speed",
+                  "op": ">",
+                  "value": 8
+                },
+                "target": "run"
+              },
+              {
+                "condition": {
+                  "var": "onGround",
+                  "op": "==",
+                  "value": true
+                },
+                "target": "idle"
+              }
+            ]
+          },
+          {
+            "name": "ladder",
+            "clip": "ladder",
+            "transitions": [
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "hang"
+                },
+                "target": "hang"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "climb"
+                },
+                "target": "climb"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "bars"
+                },
+                "target": "bars"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "stun"
+                },
+                "target": "stun"
+              },
+              {
+                "condition": {
+                  "var": "rolling",
+                  "op": "==",
+                  "value": true
+                },
+                "target": "roll"
+              },
+              {
+                "condition": {
+                  "var": "stance",
+                  "op": "==",
+                  "value": 2
+                },
+                "target": "prone"
+              },
+              {
+                "condition": {
+                  "var": "stance",
+                  "op": "==",
+                  "value": 1
+                },
+                "target": "crouch"
+              },
+              {
+                "condition": {
+                  "var": "vy",
+                  "op": ">",
+                  "value": 20
+                },
+                "target": "fall"
+              },
+              {
+                "condition": {
+                  "var": "onGround",
+                  "op": "==",
+                  "value": false
+                },
+                "target": "jump"
+              },
+              {
+                "condition": {
+                  "var": "speed",
+                  "op": ">",
+                  "value": 8
+                },
+                "target": "run"
+              },
+              {
+                "condition": {
+                  "var": "onGround",
+                  "op": "==",
+                  "value": true
+                },
+                "target": "idle"
+              }
+            ]
+          },
+          {
+            "name": "bars",
+            "clip": "bars",
+            "transitions": [
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "hang"
+                },
+                "target": "hang"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "climb"
+                },
+                "target": "climb"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "ladder"
+                },
+                "target": "ladder"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "stun"
+                },
+                "target": "stun"
+              },
+              {
+                "condition": {
+                  "var": "rolling",
+                  "op": "==",
+                  "value": true
+                },
+                "target": "roll"
+              },
+              {
+                "condition": {
+                  "var": "stance",
+                  "op": "==",
+                  "value": 2
+                },
+                "target": "prone"
+              },
+              {
+                "condition": {
+                  "var": "stance",
+                  "op": "==",
+                  "value": 1
+                },
+                "target": "crouch"
+              },
+              {
+                "condition": {
+                  "var": "vy",
+                  "op": ">",
+                  "value": 20
+                },
+                "target": "fall"
+              },
+              {
+                "condition": {
+                  "var": "onGround",
+                  "op": "==",
+                  "value": false
+                },
+                "target": "jump"
+              },
+              {
+                "condition": {
+                  "var": "speed",
+                  "op": ">",
+                  "value": 8
+                },
+                "target": "run"
+              },
+              {
+                "condition": {
+                  "var": "onGround",
+                  "op": "==",
+                  "value": true
+                },
+                "target": "idle"
+              }
+            ]
+          },
+          {
+            "name": "stun",
+            "clip": "stun",
+            "transitions": [
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "hang"
+                },
+                "target": "hang"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "climb"
+                },
+                "target": "climb"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "ladder"
+                },
+                "target": "ladder"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "bars"
+                },
+                "target": "bars"
+              },
+              {
+                "condition": {
+                  "var": "rolling",
+                  "op": "==",
+                  "value": true
+                },
+                "target": "roll"
+              },
+              {
+                "condition": {
+                  "var": "stance",
+                  "op": "==",
+                  "value": 2
+                },
+                "target": "prone"
+              },
+              {
+                "condition": {
+                  "var": "stance",
+                  "op": "==",
+                  "value": 1
+                },
+                "target": "crouch"
+              },
+              {
+                "condition": {
+                  "var": "vy",
+                  "op": ">",
+                  "value": 20
+                },
+                "target": "fall"
+              },
+              {
+                "condition": {
+                  "var": "onGround",
+                  "op": "==",
+                  "value": false
+                },
+                "target": "jump"
+              },
+              {
+                "condition": {
+                  "var": "speed",
+                  "op": ">",
+                  "value": 8
+                },
+                "target": "run"
+              },
+              {
+                "condition": {
+                  "var": "onGround",
+                  "op": "==",
+                  "value": true
+                },
+                "target": "idle"
+              }
+            ]
+          },
+          {
+            "name": "roll",
+            "clip": "roll",
+            "transitions": [
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "hang"
+                },
+                "target": "hang"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "climb"
+                },
+                "target": "climb"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "ladder"
+                },
+                "target": "ladder"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "bars"
+                },
+                "target": "bars"
+              },
+              {
+                "condition": {
+                  "var": "moveState",
+                  "op": "==",
+                  "value": "stun"
+                },
+                "target": "stun"
+              },
+              {
+                "condition": {
+                  "var": "stance",
+                  "op": "==",
+                  "value": 2
+                },
+                "target": "prone"
+              },
+              {
+                "condition": {
+                  "var": "stance",
+                  "op": "==",
+                  "value": 1
+                },
+                "target": "crouch"
+              },
+              {
+                "condition": {
+                  "var": "vy",
+                  "op": ">",
+                  "value": 20
+                },
+                "target": "fall"
+              },
+              {
+                "condition": {
+                  "var": "onGround",
+                  "op": "==",
+                  "value": false
+                },
+                "target": "jump"
+              },
+              {
+                "condition": {
+                  "var": "speed",
+                  "op": ">",
+                  "value": 8
+                },
+                "target": "run"
+              },
+              {
+                "condition": {
+                  "var": "onGround",
+                  "op": "==",
+                  "value": true
+                },
+                "target": "idle"
+              }
+            ]
+          }
+        ],
+        "loop": true
+      }
+    }
+  ],
+  "tags": [
+    "ledge"
+  ]
+}

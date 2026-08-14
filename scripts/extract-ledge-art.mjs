@@ -590,34 +590,46 @@ function makeTorch() {
   return img;
 }
 
-function makeEnemy() {
-  const img = createImage(16, 16);
-  const x = 2;
-  const y = 2;
+function drawEnemyBody(img, x, y, walk) {
   const w = 11;
   const h = 14;
   rc(img, x, y, w, h, P.foeB);
   rc(img, x + 1, y + 1, w - 2, h - 3, P.foeA);
   rc(img, x + 1, y + 1, w - 2, 1, '#b98ad0');
   rc(img, x + w - 4, y + 4, 2, 2, P.foeEye);
-  rc(img, x + 1, y + h - 2, 3, 2, P.foeB);
-  rc(img, x + w - 4, y + h - 2, 3, 2, P.foeB);
+  if (walk) {
+    rc(img, x + 0, y + h - 2, 4, 2, P.foeB);
+    rc(img, x + w - 3, y + h - 1, 3, 1, P.foeB);
+  } else {
+    rc(img, x + 1, y + h - 2, 3, 2, P.foeB);
+    rc(img, x + w - 4, y + h - 2, 3, 2, P.foeB);
+  }
   for (let t = 0; t < 3; t++) rc(img, x + 2 + t * 3, y - 1, 1, 3, P.foeA);
+}
+
+function makeEnemy() {
+  const img = createImage(32, 16);
+  drawEnemyBody(img, 2, 2, false);
+  drawEnemyBody(img, 18, 2, true);
   return img;
 }
 
-function makeFlier() {
-  const img = createImage(16, 12);
-  const x = 1;
-  const y = 1;
+function drawFlierBody(img, x, y, flap) {
   const w = 13;
   const h = 9;
   rc(img, x + 2, y + 2, w - 4, h - 3, '#6d5a8f');
   rc(img, x + 3, y + 3, w - 6, 2, '#9b83c4');
   rc(img, x + w - 4, y + 3, 2, 2, P.foeEye);
   rc(img, x + w - 2, y + 5, 2, 2, '#ffb060');
-  lb(img, [x + 3, y + 3], [x - 1, y + 1], 2, '#7e6aa6');
-  lb(img, [x + w - 3, y + 3], [x + w + 1, y + 1], 2, '#7e6aa6');
+  const wy = flap ? y : y + 2;
+  lb(img, [x + 3, y + 3], [x - 1, wy], 2, '#7e6aa6');
+  lb(img, [x + w - 3, y + 3], [x + w + 1, wy], 2, '#7e6aa6');
+}
+
+function makeFlier() {
+  const img = createImage(32, 12);
+  drawFlierBody(img, 1, 1, false);
+  drawFlierBody(img, 17, 1, true);
   return img;
 }
 
@@ -706,8 +718,8 @@ function main() {
       player: { file: 'player.png', frame: [16, 28], columns: 8, rows: 4, frames: PLAYER_FRAMES },
       items: { file: 'items.png', frame: 16, frames: ITEM_FRAMES },
       torch: { file: 'torch.png', size: [8, 16] },
-      enemy: { file: 'enemy.png', size: [16, 16] },
-      flier: { file: 'flier.png', size: [16, 12] },
+      enemy: { file: 'enemy.png', frame: [16, 16], columns: 2, frames: ['walk0', 'walk1'] },
+      flier: { file: 'flier.png', frame: [16, 12], columns: 2, frames: ['flap0', 'flap1'] },
       door: { file: 'door.png', size: [16, 24] },
       lift: { file: 'lift.png', size: [48, 8] },
       platform: { file: 'platform.png', size: [38, 8] },

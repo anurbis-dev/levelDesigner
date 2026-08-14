@@ -1,0 +1,54 @@
+{
+  "name": "ledge_platform",
+  "type": "prefab",
+  "category": "ledge",
+  "width": 38,
+  "height": 8,
+  "color": "#bd8347",
+  "properties": {
+    "isTemporary": false
+  },
+  "components": [
+    {
+      "id": "comp_ledge_44",
+      "type": "sprite",
+      "enabled": true,
+      "properties": {
+        "imageAssetId": "asset_assets_ledge_platform"
+      }
+    },
+    {
+      "id": "comp_ledge_45",
+      "type": "collider",
+      "enabled": true,
+      "properties": {
+        "oneWay": "up",
+        "width": 38,
+        "height": 8
+      }
+    },
+    {
+      "id": "comp_ledge_46",
+      "type": "pathFollower",
+      "enabled": true,
+      "properties": {
+        "waypoints": [
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 48,
+            "y": 0
+          }
+        ],
+        "speed": 30,
+        "mode": "pingpong",
+        "oneWayTop": true
+      }
+    }
+  ],
+  "tags": [
+    "ledge"
+  ]
+}

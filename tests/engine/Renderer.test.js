@@ -268,6 +268,21 @@ describe('Renderer.drawEntity', () => {
         expect(ctx.drawImage).toHaveBeenCalledWith(img, 32, 0, 16, 16, 5, 5, 16, 16);
     });
 
+    it('draws animation frames at source size, feet-aligned, when the collider is shorter', () => {
+        const { canvas, ctx } = mockCanvas();
+        const renderer = new Renderer(canvas);
+        const img = { complete: true, naturalHeight: 32 };
+        renderer.imageCache = new Map([['hero.png', img]]);
+        const spriteAnim = { getSourceRect: () => ({ x: 0, y: 28, w: 16, h: 28 }) };
+
+        renderer.drawEntity({
+            visible: true, type: 'player', x: 10, y: 40, width: 10, height: 7, imgSrc: 'hero.png',
+            behaviors: [spriteAnim]
+        });
+
+        expect(ctx.drawImage).toHaveBeenCalledWith(img, 0, 28, 16, 28, 7, 19, 16, 28);
+    });
+
     it('sets ctx.filter to "none" for an entity with no materialPreset', () => {
         const { canvas, ctx } = mockCanvas();
         const renderer = new Renderer(canvas);

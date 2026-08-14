@@ -1,0 +1,48 @@
+{
+  "name": "ledge_door",
+  "type": "prefab",
+  "category": "ledge",
+  "width": 16,
+  "height": 24,
+  "color": "#bd8347",
+  "properties": {
+    "isTemporary": false
+  },
+  "components": [
+    {
+      "id": "comp_ledge_41",
+      "type": "sprite",
+      "enabled": true,
+      "properties": {
+        "imageAssetId": "asset_assets_ledge_door"
+      }
+    },
+    {
+      "id": "comp_ledge_42",
+      "type": "interactable",
+      "enabled": true,
+      "properties": {
+        "radius": 26,
+        "hint": "Enter"
+      }
+    },
+    {
+      "id": "comp_ledge_43",
+      "type": "conveyorZiplineJumpPadPortal",
+      "enabled": true,
+      "properties": {
+        "kind": "portal",
+        "targetId": "",
+        "requireInteract": true,
+        "requireItem": "",
+        "consumeItem": false,
+        "fadeSeconds": 0.62,
+        "width": 16,
+        "height": 24
+      }
+    }
+  ],
+  "tags": [
+    "ledge"
+  ]
+}

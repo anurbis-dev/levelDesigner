@@ -24,7 +24,10 @@
         "ui-effects": {}
       },
       "flora": {},
-      "ledge": {},
+      "ledge": {
+        "actors": {},
+        "graphs": {}
+      },
       "platforms": {
         "blocks": {},
         "ground": {},
@@ -55,6 +58,25 @@
     "assets/ledge/door.json",
     "assets/ledge/lift.json",
     "assets/ledge/platform.json",
-    "assets/ledge/bomb.json"
+    "assets/ledge/bomb.json",
+    "assets/ledge/LEDGE.json",
+    "assets/ledge/ledge_tileset.json",
+    "assets/ledge/graphs/ledge_logic.json",
+    "assets/ledge/actors/player.json",
+    "assets/ledge/actors/camera.json",
+    "assets/ledge/actors/terrain.json",
+    "assets/ledge/actors/coin.json",
+    "assets/ledge/actors/gem.json",
+    "assets/ledge/actors/shroom.json",
+    "assets/ledge/actors/relic.json",
+    "assets/ledge/actors/key.json",
+    "assets/ledge/actors/stick.json",
+    "assets/ledge/actors/torch.json",
+    "assets/ledge/actors/enemy.json",
+    "assets/ledge/actors/flier.json",
+    "assets/ledge/actors/door.json",
+    "assets/ledge/actors/platform.json",
+    "assets/ledge/actors/lift.json",
+    "assets/ledge/actors/bomb.json"
   ]
 }

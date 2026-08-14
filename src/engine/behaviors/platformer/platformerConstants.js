@@ -36,6 +36,8 @@ export const PLATFORMER_DEFAULTS = {
     RH: 12,
     CRH: 14,
     PRH: 7,
+    CRW: null,
+    PRW: null,
     GRAV: 700,
     MAXFALL: 340,
     RUN: 105,
@@ -95,7 +97,14 @@ export function mergePlatformerProps(properties = {}) {
     const bag = properties.platformer && typeof properties.platformer === 'object'
         ? properties.platformer
         : {};
-    return { ...PLATFORMER_DEFAULTS, ...bag, ...properties };
+    const merged = { ...PLATFORMER_DEFAULTS, ...bag, ...properties };
+    if (properties.bodyHeight != null) merged.H = Number(properties.bodyHeight);
+    if (properties.bodyWidth != null) merged.W = Number(properties.bodyWidth);
+    if (properties.crouchHeight != null) merged.CRH = Number(properties.crouchHeight);
+    if (properties.proneHeight != null) merged.PRH = Number(properties.proneHeight);
+    if (properties.crouchWidth != null) merged.CRW = Number(properties.crouchWidth);
+    if (properties.proneWidth != null) merged.PRW = Number(properties.proneWidth);
+    return merged;
 }
 
 export function readPlatformerInput(input) {

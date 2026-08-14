@@ -1,0 +1,55 @@
+{
+  "name": "ledge_lift",
+  "type": "prefab",
+  "category": "ledge",
+  "width": 48,
+  "height": 8,
+  "color": "#bd8347",
+  "properties": {
+    "isTemporary": false
+  },
+  "components": [
+    {
+      "id": "comp_ledge_47",
+      "type": "sprite",
+      "enabled": true,
+      "properties": {
+        "imageAssetId": "asset_assets_ledge_lift"
+      }
+    },
+    {
+      "id": "comp_ledge_48",
+      "type": "collider",
+      "enabled": true,
+      "properties": {
+        "oneWay": "up",
+        "width": 48,
+        "height": 8
+      }
+    },
+    {
+      "id": "comp_ledge_49",
+      "type": "pathFollower",
+      "enabled": true,
+      "properties": {
+        "mode": "elevator",
+        "elevator": true,
+        "speed": 42,
+        "waitAtWaypoint": 1.6,
+        "waypoints": [
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 0,
+            "y": -96
+          }
+        ]
+      }
+    }
+  ],
+  "tags": [
+    "ledge"
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "name": "ledge_enemy",
+  "type": "prefab",
+  "category": "ledge",
+  "width": 11,
+  "height": 14,
+  "color": "#6d5a8f",
+  "properties": {
+    "isTemporary": false
+  },
+  "components": [
+    {
+      "id": "comp_ledge_30",
+      "type": "sprite",
+      "enabled": true,
+      "properties": {
+        "imageAssetId": "asset_assets_ledge_enemy"
+      }
+    },
+    {
+      "id": "comp_ledge_31",
+      "type": "spriteUiAnimation",
+      "enabled": true,
+      "properties": {
+        "frames": [
+          {
+            "x": 0,
+            "y": 0,
+            "w": 16,
+            "h": 16,
+            "duration": 180
+          },
+          {
+            "x": 16,
+            "y": 0,
+            "w": 16,
+            "h": 16,
+            "duration": 180
+          }
+        ],
+        "loop": true
+      }
+    },
+    {
+      "id": "comp_ledge_32",
+      "type": "collider",
+      "enabled": true,
+      "properties": {
+        "shape": "box",
+        "width": 11,
+        "height": 14
+      }
+    },
+    {
+      "id": "comp_ledge_33",
+      "type": "damageHealth",
+      "enabled": true,
+      "properties": {
+        "maxHealth": 1,
+        "contactDamage": 1,
+        "invulnerabilityDuration": 0,
+        "layer": "hazard",
+        "destroyOnDeath": true
+      }
+    },
+    {
+      "id": "comp_ledge_34",
+      "type": "pathFollower",
+      "enabled": true,
+      "properties": {
+        "waypoints": [
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 48,
+            "y": 0
+          }
+        ],
+        "speed": 26,
+        "mode": "pingpong",
+        "turnAtLedge": true
+      }
+    }
+  ],
+  "tags": [
+    "ledge"
+  ]
+}

@@ -9,7 +9,7 @@ export const LOADABLE_ASSET_TYPES = [
 ];
 
 export const DATA_ONLY_ASSET_TYPES = [
-    'camera', 'actor', 'volume', 'player_start',
+    'camera', 'actor', 'volume', 'player_start', 'level', 'eventGraph',
     'tilemap', 'nineSliceSprite', 'particleEffect', 'materialShaderPreset', 'light',
     'audioZone',
     'dialogueGraph', 'questObjective', 'itemDefinition', 'inventorySchema',

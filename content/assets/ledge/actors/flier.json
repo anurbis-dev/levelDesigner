@@ -1,0 +1,134 @@
+{
+  "name": "ledge_flier",
+  "type": "prefab",
+  "category": "ledge",
+  "width": 13,
+  "height": 9,
+  "color": "#6d5a8f",
+  "properties": {
+    "isTemporary": false
+  },
+  "components": [
+    {
+      "id": "comp_ledge_35",
+      "type": "sprite",
+      "enabled": true,
+      "properties": {
+        "imageAssetId": "asset_assets_ledge_flier"
+      }
+    },
+    {
+      "id": "comp_ledge_36",
+      "type": "spriteUiAnimation",
+      "enabled": true,
+      "properties": {
+        "frames": [
+          {
+            "x": 0,
+            "y": 0,
+            "w": 16,
+            "h": 12,
+            "duration": 180
+          },
+          {
+            "x": 16,
+            "y": 0,
+            "w": 16,
+            "h": 12,
+            "duration": 180
+          }
+        ],
+        "loop": true
+      }
+    },
+    {
+      "id": "comp_ledge_37",
+      "type": "collider",
+      "enabled": true,
+      "properties": {
+        "shape": "box",
+        "width": 13,
+        "height": 9
+      }
+    },
+    {
+      "id": "comp_ledge_38",
+      "type": "damageHealth",
+      "enabled": true,
+      "properties": {
+        "maxHealth": 1,
+        "contactDamage": 1,
+        "layer": "hazard",
+        "destroyOnDeath": true
+      }
+    },
+    {
+      "id": "comp_ledge_39",
+      "type": "pathFollower",
+      "enabled": true,
+      "properties": {
+        "waypoints": [
+          {
+            "x": 0,
+            "y": 0
+          },
+          {
+            "x": 48,
+            "y": 0
+          }
+        ],
+        "speed": 26,
+        "mode": "pingpong"
+      }
+    },
+    {
+      "id": "comp_ledge_40",
+      "type": "spawner",
+      "enabled": true,
+      "properties": {
+        "interval": 1.8,
+        "maxAlive": 1,
+        "spawnOffsetX": 4,
+        "spawnOffsetY": 8,
+        "spawnWhen": "playerBelow",
+        "playerBelowX": 26,
+        "template": {
+          "type": "actor",
+          "width": 6,
+          "height": 6,
+          "imgSrc": "./content/assets/ledge/bomb.png",
+          "components": [
+            {
+              "type": "sprite",
+              "enabled": true,
+              "properties": {
+                "imageAssetId": "asset_assets_ledge_bomb"
+              }
+            },
+            {
+              "type": "damageHealth",
+              "enabled": true,
+              "properties": {
+                "maxHealth": 1,
+                "contactDamage": 1,
+                "layer": "hazard",
+                "destroyOnDeath": true
+              }
+            },
+            {
+              "type": "pathFollower",
+              "enabled": true,
+              "properties": {
+                "gravity": 520,
+                "waypoints": []
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "tags": [
+    "ledge"
+  ]
+}
