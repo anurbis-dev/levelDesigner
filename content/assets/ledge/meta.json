@@ -1,0 +1,188 @@
+{
+  "source": "tmp/ledge-v5.html",
+  "palette": {
+    "out": "#100c1c",
+    "skin": "#f6cda2",
+    "skinS": "#c98f66",
+    "skinL": "#ffe7c9",
+    "hair": "#e0563c",
+    "hairS": "#a13425",
+    "hairL": "#ff8a63",
+    "shirt": "#2fb6ab",
+    "shirtS": "#1b7a76",
+    "shirtL": "#69e6d8",
+    "skirt": "#26618a",
+    "skirtS": "#17415e",
+    "pants": "#443c73",
+    "pantsS": "#2b2550",
+    "boot": "#8a5228",
+    "bootS": "#57301a",
+    "rock": "#635c8c",
+    "rockD": "#464069",
+    "rockL": "#8f86b8",
+    "rockX": "#2e2949",
+    "moss": "#6aa86f",
+    "mossD": "#437a51",
+    "crum": "#96705a",
+    "crumD": "#5d4437",
+    "crumL": "#bb8f70",
+    "wood": "#bd8347",
+    "woodD": "#7d5029",
+    "woodL": "#e0ac68",
+    "gem": "#6de8ff",
+    "gemD": "#2189ad",
+    "shroom": "#ff8f5e",
+    "shroomD": "#a8482c",
+    "stem": "#ffe9c9",
+    "coin": "#ffd75e",
+    "coinD": "#b98420",
+    "relic": "#e2c6ff",
+    "relicD": "#8a63c4",
+    "torch": "#ffb060",
+    "stickC": "#bd8347",
+    "stickD": "#7d5029",
+    "key": "#ffd75e",
+    "keyD": "#b98420",
+    "door": "#bd8347",
+    "doorD": "#7d5029",
+    "doorL": "#e0ac68",
+    "lockC": "#ffd75e",
+    "lockD": "#b98420",
+    "foeA": "#6d5a8f",
+    "foeB": "#443c73",
+    "foeEye": "#ffe7c9",
+    "liftA": "#bd8347",
+    "liftB": "#7d5029",
+    "liftC": "#e0ac68"
+  },
+  "files": {
+    "tileset": {
+      "file": "tileset.png",
+      "tile": 16,
+      "columns": 9,
+      "tiles": [
+        "empty",
+        "rock",
+        "crumb",
+        "ladderWall",
+        "ladderFront",
+        "ladderDiagR",
+        "ladderDiagL",
+        "halfTop",
+        "bar"
+      ]
+    },
+    "player": {
+      "file": "player.png",
+      "frame": [
+        16,
+        28
+      ],
+      "columns": 8,
+      "rows": 4,
+      "frames": [
+        [
+          "idle_a",
+          "idle_b",
+          "run0",
+          "run1",
+          "run2",
+          "run3",
+          "jump",
+          "fall"
+        ],
+        [
+          "land",
+          "slide",
+          "stun",
+          "roll",
+          "crouch",
+          "crouch_w",
+          "prone0",
+          "prone1"
+        ],
+        [
+          "hang",
+          "climb0",
+          "climb1",
+          "climb2",
+          "lad0",
+          "lad1",
+          "ladf0",
+          "ladf1"
+        ],
+        [
+          "bars0",
+          "bars1",
+          "atk0",
+          "atk1",
+          "atk2",
+          "empty",
+          "empty",
+          "empty"
+        ]
+      ]
+    },
+    "items": {
+      "file": "items.png",
+      "frame": 16,
+      "frames": [
+        "coin",
+        "gem",
+        "shroom",
+        "relic",
+        "key",
+        "stick"
+      ]
+    },
+    "torch": {
+      "file": "torch.png",
+      "size": [
+        8,
+        16
+      ]
+    },
+    "enemy": {
+      "file": "enemy.png",
+      "size": [
+        16,
+        16
+      ]
+    },
+    "flier": {
+      "file": "flier.png",
+      "size": [
+        16,
+        12
+      ]
+    },
+    "door": {
+      "file": "door.png",
+      "size": [
+        16,
+        24
+      ]
+    },
+    "lift": {
+      "file": "lift.png",
+      "size": [
+        48,
+        8
+      ]
+    },
+    "platform": {
+      "file": "platform.png",
+      "size": [
+        38,
+        8
+      ]
+    },
+    "bomb": {
+      "file": "bomb.png",
+      "size": [
+        6,
+        6
+      ]
+    }
+  }
+}
