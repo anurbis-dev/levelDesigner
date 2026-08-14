@@ -1,0 +1,11 @@
+{
+  "name": "ledge_door",
+  "type": "image",
+  "category": "ledge",
+  "imgSrc": "door.png",
+  "color": "#bd8347",
+  "width": 16,
+  "height": 24,
+  "properties": { "isTemporary": false },
+  "components": []
+}

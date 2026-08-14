@@ -8,7 +8,7 @@ Write-Host "Scanning content folder for JSON files..." -ForegroundColor Cyan
 
 # Find all JSON files except manifest.json
 $jsonFiles = Get-ChildItem -Path $contentPath -Filter "*.json" -Recurse -File | 
-    Where-Object { $_.Name -ne "manifest.json" } |
+    Where-Object { $_.Name -ne "manifest.json" -and $_.Name -ne "meta.json" } |
     ForEach-Object {
         # Get relative path from content folder
         $relativePath = $_.FullName.Substring($contentPath.Length + 1).Replace('\', '/')

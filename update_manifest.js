@@ -29,7 +29,7 @@ function findJsonFiles(dir, baseDir = dir) {
             if (entry.isDirectory()) {
                 // Recursively search subdirectories
                 files.push(...findJsonFiles(fullPath, baseDir));
-            } else if (entry.isFile() && entry.name.endsWith('.json') && entry.name !== 'manifest.json') {
+            } else if (entry.isFile() && entry.name.endsWith('.json') && entry.name !== 'manifest.json' && entry.name !== 'meta.json') {
                 // Add JSON file (except manifest.json itself)
                 const relativePath = path.relative(baseDir, fullPath).replace(/\\/g, '/');
                 files.push(relativePath);

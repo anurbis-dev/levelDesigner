@@ -18,7 +18,7 @@ def find_json_files(directory):
     
     for root, dirs, files in os.walk(directory):
         for file in files:
-            if file.endswith('.json') and file != 'manifest.json':
+            if file.endswith('.json') and file != 'manifest.json' and file != 'meta.json':
                 full_path = Path(root) / file
                 # Get relative path from content directory
                 rel_path = full_path.relative_to(directory)

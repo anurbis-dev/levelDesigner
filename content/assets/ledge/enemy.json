@@ -1,0 +1,11 @@
+{
+  "name": "ledge_enemy",
+  "type": "image",
+  "category": "ledge",
+  "imgSrc": "enemy.png",
+  "color": "#6d5a8f",
+  "width": 16,
+  "height": 16,
+  "properties": { "isTemporary": false },
+  "components": []
+}

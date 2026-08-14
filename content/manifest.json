@@ -24,6 +24,7 @@
         "ui-effects": {}
       },
       "flora": {},
+      "ledge": {},
       "platforms": {
         "blocks": {},
         "ground": {},
@@ -34,8 +35,7 @@
       "misc": {}
     },
     "graphs": {},
-    "maps": {},
-    "ledge": {}
+    "maps": {}
   },
   "files": [
     "assets/TEST/FG_flora_02.json",
@@ -48,6 +48,13 @@
     "maps/ledge.json",
     "assets/ledge/tileset.json",
     "assets/ledge/player.json",
-    "assets/ledge/items.json"
+    "assets/ledge/items.json",
+    "assets/ledge/torch.json",
+    "assets/ledge/enemy.json",
+    "assets/ledge/flier.json",
+    "assets/ledge/door.json",
+    "assets/ledge/lift.json",
+    "assets/ledge/platform.json",
+    "assets/ledge/bomb.json"
   ]
 }

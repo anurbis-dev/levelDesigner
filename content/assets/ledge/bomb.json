@@ -1,0 +1,11 @@
+{
+  "name": "ledge_bomb",
+  "type": "image",
+  "category": "ledge",
+  "imgSrc": "bomb.png",
+  "color": "#2e2949",
+  "width": 6,
+  "height": 6,
+  "properties": { "isTemporary": false },
+  "components": []
+}

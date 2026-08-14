@@ -716,6 +716,28 @@ function main() {
   };
   writeFileSync(join(OUT, 'meta.json'), JSON.stringify(meta, null, 2) + '\n');
   listing.push({ name: 'meta.json', bytes: statSync(join(OUT, 'meta.json')).size });
+  const colors = {
+    tileset: '#635c8c', player: '#2fb6ab', items: '#ffd75e', torch: '#ffb060',
+    enemy: '#6d5a8f', flier: '#6d5a8f', door: '#bd8347', lift: '#bd8347',
+    platform: '#bd8347', bomb: '#2e2949'
+  };
+  for (const [name, img] of files) {
+    const stem = name.replace(/\.png$/, '');
+    const jsonName = `${stem}.json`;
+    const data = {
+      name: `ledge_${stem}`,
+      type: 'image',
+      category: 'ledge',
+      imgSrc: name,
+      color: colors[stem] || '#cccccc',
+      width: img.w,
+      height: img.h,
+      properties: { isTemporary: false },
+      components: []
+    };
+    writeFileSync(join(OUT, jsonName), JSON.stringify(data, null, 2) + '\n');
+    listing.push({ name: jsonName, bytes: statSync(join(OUT, jsonName)).size });
+  }
   for (const f of listing) {
     const dim = f.w ? ` ${f.w}×${f.h}` : '';
     console.log(`${f.name}${dim}  ${f.bytes} bytes`);

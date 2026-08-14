@@ -1,0 +1,11 @@
+{
+  "name": "ledge_flier",
+  "type": "image",
+  "category": "ledge",
+  "imgSrc": "flier.png",
+  "color": "#6d5a8f",
+  "width": 16,
+  "height": 12,
+  "properties": { "isTemporary": false },
+  "components": []
+}

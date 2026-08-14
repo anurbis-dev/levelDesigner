@@ -1,0 +1,11 @@
+{
+  "name": "ledge_torch",
+  "type": "image",
+  "category": "ledge",
+  "imgSrc": "torch.png",
+  "color": "#ffb060",
+  "width": 8,
+  "height": 16,
+  "properties": { "isTemporary": false },
+  "components": []
+}
