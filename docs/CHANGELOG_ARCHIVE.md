@@ -1,3 +1,7 @@
+## Archived from CHANGELOG.md (Restore per-project Assets folder, v4.55.0, 744651a9)
+
+- **Feat: Restore project Assets folder on Open / Recent (v4.55.0)**: FSA handle is stored per project file name (`project:<file>` in IndexedDB). Save / Set Project Folder binds the current folder; Open Project and Open Recent call `restoreProjectFolder`. New Project still unbinds the active folder (default `./content/`) but keeps other projects' handles. Clear Project Folder forgets only the open project's bind.
+
 ## Archived from CHANGELOG.md (New Project resets Assets, v4.54.1, 71805576)
 
 - **Fix: New Project resets default Assets folder (v4.54.1)**: `newProject()` calls `clearProjectFolder()` — drops the FSA grant and rescans served `./content/`. Confirm mentions this when a folder is bound. File → **Clear Project Folder** does the same without creating a new project.

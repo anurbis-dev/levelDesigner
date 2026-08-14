@@ -10,7 +10,7 @@
 #### Файловые операции — уровни (v3.57.0 Phase 5-6: multi-level tabs):
 - `async newLevel()` - создание нового уровня ДОБАВЛЯЕТ вкладку (LevelSession), а не заменяет текущий открытый уровень; переключает на новый уровень через `levelsManager.addLevel()`
 - `async openLevel()` - открытие уровня из файла ДОБАВЛЯЕТ вкладку; делает best-effort деdup по fileName — если файл уже открыт, переключается на существующую вкладку вместо дубликата; пишет Open Recent
-- `async openLevelFromAsset(asset)` - v4.53.0: catalog `type=level` (viewport drop). `LevelAssetUtils.resolveLevelSrc`/`contentUrl`/`isLevelDocument` → `openLevelFromData`. Dblclick ассета открывает Asset Editor, не уровень.
+- `async openLevelFromAsset(asset)` - v4.53.0: catalog `type=level` (viewport drop). `resolveMapSrc` = только `properties.levelSrc` (catalog `path` — не URL карты). Если src есть: FSA `readText`, затем HTTP `contentUrl`; missing file → null (не 404). `pickLevelOpenPayload`: map document → `openLevelFromData`; иначе `type=level` → empty `fileManager.createNewLevel()` + `meta.name = asset.name`, `fileName` из `resolveLevelFileName`. `skipMouseGuard`. Dblclick — Asset Editor.
 - `async saveLevel()` - сохранение текущего уровня; per-session fileName; без имени — prompt "Enter file name:" (default `level.json`); FSA: `content/maps/<file>` + manifest, иначе download; Open Recent
 - `async saveLevelAs()` - prompt имени; обновляет per-session `session.fileName`; тот же FSA/download; Open Recent
 - `async closeLevel(levelId)` (новый, v3.57.0) - закрытие вкладки уровня; нельзя закрыть последний открытый уровень; спрашивает подтверждение если уровень содержит несохранённые изменения
@@ -177,7 +177,10 @@
 Хелперы каталога type=`level` и полных map JSON (v4.53.0).
 
 - `isLevelDocument(data)` - `objects[]` + `layers[]` + `settings`
-- `resolveLevelSrc(asset)` - `asset.properties.levelSrc` || `asset.path`
+- `resolveLevelSrc(asset)` - `asset.properties.levelSrc` || `asset.path` (другие callers, не drop)
+- `resolveMapSrc(asset)` - только `properties.levelSrc`; catalog `path` не карта
+- `pickLevelOpenPayload(asset, loadedJson)` - map document → `{kind:'document'}`; `type=level` без карты → `{kind:'empty'}`; иначе `{kind:'invalid'}`
+- `resolveLevelFileName(asset, src)` - basename `src` или `${asset.name}.json`
 - `contentUrl(rel)` - `./content/<stripped rel>`
 - `resolveCatalogAssetType(assetData, filePath)` - явный `type` (кроме `image`) → as-is; иначе level-document → `level`; иначе `assetData.type` || `image`
 

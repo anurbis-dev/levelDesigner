@@ -15,6 +15,36 @@ export function resolveLevelSrc(asset) {
     return src ? String(src) : null;
 }
 
+/**
+ * Map file to load for a catalog type=level asset.
+ * Only `properties.levelSrc` points at a real map. `path` is the catalog JSON
+ * (placeholder stubs, Asset Editor file) — fetching it as a map 404s.
+ */
+export function resolveMapSrc(asset) {
+    if (!asset?.properties?.levelSrc) return null;
+    return String(asset.properties.levelSrc);
+}
+
+/**
+ * @param {object|null} asset
+ * @param {object|null} loadedJson
+ * @returns {{ kind: 'document', json: object } | { kind: 'empty' } | { kind: 'invalid' }}
+ */
+export function pickLevelOpenPayload(asset, loadedJson) {
+    if (isLevelDocument(loadedJson)) return { kind: 'document', json: loadedJson };
+    if (asset?.type === 'level') return { kind: 'empty' };
+    return { kind: 'invalid' };
+}
+
+export function resolveLevelFileName(asset, src) {
+    if (src) {
+        const base = String(src).replace(/\\/g, '/').split('/').pop();
+        if (base) return base;
+    }
+    const name = String(asset?.name || 'level').trim() || 'level';
+    return name.toLowerCase().endsWith('.json') ? name : `${name}.json`;
+}
+
 export function contentUrl(rel) {
     const p = String(rel || '').replace(/^\.\//, '').replace(/^content\//, '');
     return p ? `./content/${p}` : null;

@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- **Feat: Restore project Assets folder on Open / Recent (v4.55.0)**: FSA handle is stored per project file name (`project:<file>` in IndexedDB). Save / Set Project Folder binds the current folder; Open Project and Open Recent call `restoreProjectFolder`. New Project still unbinds the active folder (default `./content/`) but keeps other projects' handles. Clear Project Folder forgets only the open project's bind.
+- **Fix: drop new empty Level asset 404** — `openLevelFromAsset` fetched `./content/${asset.path}`. Placeholder has no map file / no `levelSrc` (only catalog `path`), so HTTP 404 and no tab. Now loads only `properties.levelSrc` (FSA then `./content/`); otherwise opens an empty level named after the asset.

@@ -2,6 +2,7 @@ import { BaseModule } from './BaseModule.js';
 import { Logger } from '../utils/Logger.js';
 import { Level } from '../models/Level.js';
 import { FsaStore } from '../utils/FsaStore.js';
+import { FsaContentFs } from '../utils/FsaContentFs.js';
 
 /**
  * Level File Operations module for LevelEditor
@@ -134,27 +135,60 @@ export class LevelFileOperations extends BaseModule {
      * @param {object} asset
      */
     async openLevelFromAsset(asset) {
-        const { resolveLevelSrc, contentUrl, isLevelDocument } = await import('../utils/LevelAssetUtils.js');
-        const src = resolveLevelSrc(asset);
-        if (!src) {
-            Logger.file.warn('openLevelFromAsset: asset has no levelSrc/path');
-            Logger.status.warn('Level asset has no source file');
-            return;
+        const {
+            resolveMapSrc,
+            contentUrl,
+            pickLevelOpenPayload,
+            resolveLevelFileName
+        } = await import('../utils/LevelAssetUtils.js');
+        const src = resolveMapSrc(asset);
+        let loadedJson = null;
+        if (src) {
+            loadedJson = await this._readLevelJson(src, contentUrl);
         }
+        const payload = pickLevelOpenPayload(asset, loadedJson);
+        const fileName = resolveLevelFileName(asset, src);
         try {
-            const url = contentUrl(src);
-            const response = await fetch(`${url}?v=${Date.now()}`);
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const json = await response.json();
-            if (!isLevelDocument(json)) {
-                Logger.status.warn('Dropped asset is not a level document');
+            if (payload.kind === 'document') {
+                await this.openLevelFromData(payload.json, fileName, { skipMouseGuard: true });
                 return;
             }
-            const fileName = String(src).split('/').pop() || 'level.json';
-            await this.openLevelFromData(json, fileName);
+            if (payload.kind === 'empty') {
+                const empty = this.editor.fileManager.createNewLevel();
+                if (asset?.name) empty.meta.name = asset.name;
+                await this.openLevelFromData(empty.toJSON(), fileName, { skipMouseGuard: true });
+                return;
+            }
+            Logger.status.warn('Dropped asset is not a level document');
         } catch (error) {
             Logger.file.error(`openLevelFromAsset failed: ${error.message}`);
             Logger.status.error(`Failed to open level: ${error.message}`);
+        }
+    }
+
+    /**
+     * Read map JSON: granted project folder first, then served ./content/.
+     * Missing file returns null (placeholder drop must not 404 the console).
+     * @param {string} src
+     * @param {(rel: string) => string|null} contentUrl
+     * @returns {Promise<object|null>}
+     */
+    async _readLevelJson(src, contentUrl) {
+        try {
+            const text = await FsaContentFs.readText(src);
+            if (text) return JSON.parse(text);
+        } catch (error) {
+            Logger.file.warn(`openLevelFromAsset: FSA read failed: ${error.message}`);
+        }
+        try {
+            const url = contentUrl(src);
+            if (!url) return null;
+            const response = await fetch(`${url}?v=${Date.now()}`);
+            if (!response.ok) return null;
+            return await response.json();
+        } catch (error) {
+            Logger.file.warn(`openLevelFromAsset: fetch failed: ${error.message}`);
+            return null;
         }
     }
 

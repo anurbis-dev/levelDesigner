@@ -33,7 +33,7 @@
 // Несколько уровней открыты одновременно, переключаются через LevelsPanel или меню
 levelEditor.newLevel() // добавляет вкладку, переключает на новую (не заменяет текущую)
 levelEditor.openLevel() // добавляет вкладку из файла, dedup по fileName (не дублирует уже открытые)
-levelEditor.levelFileOperations.openLevelFromAsset(asset) // v4.53.0: type=level drop → fetch `properties.levelSrc`/`path` via LevelAssetUtils.contentUrl + openLevelFromData; dblclick ассета всё ещё Asset Editor
+levelEditor.levelFileOperations.openLevelFromAsset(asset) // type=level drop → resolveMapSrc (levelSrc only, не catalog path) FSA then ./content/; missing → empty createNewLevel(); map JSON → openLevelFromData; dblclick — Asset Editor
 levelEditor.saveLevel() // async; per-session fileName; без имени — prompt "Enter file name:"; при granted folder пишет `content/maps/<file>` через FsaStore, иначе download
 levelEditor.saveLevelAs() // async; prompt имени, обновляет per-session fileName; тот же FSA/download fallback
 levelEditor.closeLevel(levelId) // закрывает вкладку (нельзя закрыть последний открытый уровень, спрашивает подтверждение при dirty); доступен через крестик на вкладке и контекстное меню уровня (не в меню File)
@@ -217,7 +217,7 @@ level.settings.parallaxVertical // множитель вертикального
   - `DockFloatWorkspace.js` / `ViewportLeafChrome.js` / `DockTypeMenu.js` / `DockConstants.js`
 - `src/models/LevelSession.js` - editor-only обёртка над Level (visible, fileName, isDirty, viewState, history per-session) — Phase 1
 - `src/core/LevelFileOperations.js` - файловые операции уровня (Phase 5: newLevel/openLevel добавляют вкладки, saveLevel/saveLevelAs работают per-session, closeLevel закрывает вкладку; v4.53.0 `openLevelFromAsset`)
-- `src/utils/LevelAssetUtils.js` - v4.53.0: `isLevelDocument` / `resolveCatalogAssetType` / `resolveLevelSrc` / `contentUrl` — type=level vs map JSON
+- `src/utils/LevelAssetUtils.js` - `isLevelDocument` / `resolveCatalogAssetType` / `resolveLevelSrc` (levelSrc || path) / `resolveMapSrc` (levelSrc only) / `pickLevelOpenPayload` / `resolveLevelFileName` / `contentUrl`
 - `src/models/Project.js` - модель проекта (Phase 7): `toJSON(levelSessions, levelOrder, currentLevelId)` эмбеддит Level.toJSON() каждого уровня + видимость/порядок/currentLevelIndex; статический `fromJSON(json)` парсит проект-файл
 - `src/models/ProjectExporter.js` - трансформер editor-Project в runtime-Project манифест (engine plan Фаза 0); статический `export(levelSessions, levelOrder, project, opts)` возвращает `{formatVersion, name, entryLevelId, levels: [{id, data}], assets: [...]}` — если `opts.assetManager` передан, embedдит `assetManager.getAllAssets().map(asset => asset.toJSON())` как `assets[]`, иначе `assets: []` (полностью обратно совместимо)
 - `src/core/ProjectFileOperations.js` - файловые операции проекта (Phase 7, BaseModule): `newProject()` (после пустого проекта вызывает `clearProjectFolder()` — active bind only)/`openProject()`/`openProjectFromData()` (v4.55.0 `restoreProjectFolder`)/`saveProject()`/`saveProjectAs()` (`_doSaveProject` bind workingDir → `project:<fileName>`; FsaStore.writeWorkingDirFile или download), replace-not-merge; MRU remember

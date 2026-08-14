@@ -29,7 +29,7 @@
 | `camera` | Camera | follow-target, deadzone, `followLerp` (0=snap, 0.0015=smooth), `lookAhead`, `viewHeight`, bounds, слои рендера |
 | `actor` | Actor Placeholder | универсальный контейнер: визуал + коллизии + триггеры + анимация; `sprite.imageAssetId` → Image |
 | `image` | Image | сырой растровый ресурс (`imgSrc` на диске); sidecar PNG рядом с JSON |
-| `level` | Level | документ уровня. Drop на viewport → `LevelFileOperations.openLevelFromAsset` (`properties.levelSrc` / `path`); dblclick — Asset Editor. `AssetManager` классифицирует map JSON (`objects`+`layers`+`settings`, напр. `maps/ledge.json`) как `type=level` (`LevelAssetUtils`). |
+| `level` | Level | документ уровня. Drop → `openLevelFromAsset`: карта только из `properties.levelSrc` (FSA затем `./content/`); placeholder без levelSrc → пустой уровень (`createNewLevel`). Catalog `path` — не URL карты. Dblclick — Asset Editor. Scan: map JSON (`objects`+`layers`+`settings`) → `type=level`. |
 | `imageAtlas` | Image Atlas | авто-упаковка картинок / источник sprite sheet |
 | `volume` | Volume | зона-триггер произвольной формы + визуальные эффекты |
 | `player_start` | Player Start | маркер спавна (auto-managed: ровно один на уровень). Компонент `playerStart`: `movementMode` `topdown`\|`platformer`, `bodyWidth`/`bodyHeight` (stand capsule), `crouchHeight` (дефолт 14), `proneHeight` (дефолт 7), опц. `crouchWidth`/`proneWidth`, `speed`, `platformer` JSON. Runtime — `docs/RUNTIME_SCHEMA.md`. |
@@ -72,7 +72,7 @@
 - `src/constants/ComponentTypes.js` — каталог component-типов.
 - `src/constants/AssetTypeIcons.js` — SVG-иконки по типу.
 - `src/managers/AssetManager.js` — `createPlaceholderAsset()`; `ingestAssetJson` → `resolveCatalogAssetType`.
-- `src/utils/LevelAssetUtils.js` — `isLevelDocument` / `resolveCatalogAssetType` / `resolveLevelSrc` / `contentUrl`.
+- `src/utils/LevelAssetUtils.js` — `isLevelDocument` / `resolveCatalogAssetType` / `resolveLevelSrc` / `resolveMapSrc` / `pickLevelOpenPayload` / `resolveLevelFileName` / `contentUrl`.
 - `src/core/LevelFileOperations.js` — `openLevelFromAsset`.
 - `src/ui/asset-editor/AssetComponentsPanel.js` — список Components; `AssetComponentDetailsPanel.js` — stub details.
 - `src/ui/AssetPanelContextMenu.js`, `config/menu.js` (`buildAssetsMenu()`) — точки создания ассета по типу.
