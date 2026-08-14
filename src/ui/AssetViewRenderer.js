@@ -201,9 +201,7 @@ export class AssetViewRenderer {
             img.src = thumbSrc;
             img.alt = asset.name;
             img.draggable = false;
-            img.style.width = '100%';
-            img.style.height = '100%';
-            img.style.objectFit = 'cover';
+            this._applyThumbImageStyle(img);
             img.onload = () => {
                 Logger.ui.debug(`✅ Image loaded successfully for ${asset.name}`);
             };
@@ -350,9 +348,7 @@ export class AssetViewRenderer {
             img.src = listSrc;
             img.alt = asset.name;
             img.draggable = false;
-            img.style.width = '100%';
-            img.style.height = '100%';
-            img.style.objectFit = 'cover';
+            this._applyThumbImageStyle(img);
             img.onerror = () => {
                 img.style.display = 'none';
                 previewDiv.style.backgroundColor = asset.color;
@@ -419,8 +415,9 @@ export class AssetViewRenderer {
             const img = document.createElement('img');
             img.src = rowSrc;
             img.alt = asset.name;
-            img.className = 'w-full h-full object-cover rounded';
+            img.className = 'asset-thumb-img w-full h-full rounded';
             img.draggable = false;
+            this._applyThumbImageStyle(img);
             img.onerror = () => {
                 img.style.display = 'none';
                 const colorDiv = this.createColorFallback(asset, {
@@ -500,6 +497,17 @@ export class AssetViewRenderer {
         row.addEventListener('dragend', (e) => this.assetPanel.handleThumbnailDragEnd(e, asset));
 
         return row;
+    }
+
+    /**
+     * Fill the cell without bilinear blur (matches canvas imageSmoothingEnabled=false).
+     * @param {HTMLImageElement} img
+     */
+    _applyThumbImageStyle(img) {
+        img.style.width = '100%';
+        img.style.height = '100%';
+        img.style.objectFit = 'contain';
+        img.style.imageRendering = 'pixelated';
     }
 
     /**

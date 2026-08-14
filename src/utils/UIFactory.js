@@ -330,6 +330,11 @@ export class UIFactory {
             img.src = asset.imgSrc;
             img.alt = asset.name;
             img.draggable = false;
+            img.className = 'asset-thumb-img';
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'contain';
+            img.style.imageRendering = 'pixelated';
             img.onerror = () => { img.style.display = 'none'; };
             thumb.appendChild(img);
         } else {

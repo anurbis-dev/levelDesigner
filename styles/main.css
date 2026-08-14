@@ -443,6 +443,16 @@ header .text-sm {
     position: relative;
 }
 
+/* Nearest-neighbor upscale: tiny pixel sprites stay crisp in 64–128px cells */
+.asset-thumbnail img,
+.asset-list-item img,
+.asset-details-row img,
+.asset-thumb-img {
+    object-fit: contain;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: pixelated;
+}
+
 .asset-thumbnail.selected {
     border-color: var(--ui-active-color, #3B82F6); /* blue-500 */
     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
