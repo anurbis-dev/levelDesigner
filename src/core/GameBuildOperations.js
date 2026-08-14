@@ -1,6 +1,7 @@
 import { BaseModule } from './BaseModule.js';
 import { Logger } from '../utils/Logger.js';
 import { FileUtils } from '../utils/FileUtils.js';
+import { FsaStore } from '../utils/FsaStore.js';
 
 /**
  * Game menu "Build..." entry (engine plan §4, tmp/2D_Editor_ENGINE_PLAN.md). The
@@ -25,10 +26,16 @@ export class GameBuildOperations extends BaseModule {
         // underlying showSaveFilePicker() promise on timeout, so a slow pick would
         // fire BOTH the download fallback and (if the user then completes the still-
         // open dialog) the picker's own write, saving the .bat twice.
-        FileUtils.downloadData(this._buildBatScript(fileName), batName, FileUtils.TYPES.TEXT, false);
+        const batText = this._buildBatScript(fileName);
+        const wroteBat = await FsaStore.writeWorkingDirFile(batName, batText);
+        if (!wroteBat) {
+            FileUtils.downloadData(batText, batName, FileUtils.TYPES.TEXT, false);
+        }
 
         Logger.status.success(
-            `Build: saved "${fileName}" and "${batName}" — put both next to package.json (project root), then run the .bat`
+            wroteBat
+                ? `Build: wrote "${fileName}" and "${batName}" to the project folder`
+                : `Build: saved "${fileName}" and "${batName}" — put both next to package.json (project root), then run the .bat`
         );
     }
 

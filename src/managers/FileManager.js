@@ -1,5 +1,6 @@
 import { Level } from '../models/Level.js';
 import { FileUtils } from '../utils/FileUtils.js';
+import { FsaStore } from '../utils/FsaStore.js';
 import { ErrorHandler } from '../utils/ErrorHandler.js';
 import { BaseManager } from './BaseManager.js';
 import { createComponentStub } from '../constants/ComponentTypes.js';
@@ -45,14 +46,21 @@ export class FileManager extends BaseManager {
     }
 
     /**
-     * Save level to file
+     * Save level to file. Writes into the granted project folder when set;
+     * otherwise falls back to a browser download.
      */
-    saveLevel(level, fileName = null) {
+    async saveLevel(level, fileName = null) {
         const filename = fileName || this.currentFileName || 'level.json';
         const data = level.toJSON();
-        
-        FileUtils.downloadData(data, filename, FileUtils.TYPES.JSON);
-        
+        const rel = FsaStore.toLevelRelativePath(filename);
+        const wrote = rel ? await FsaStore.writeContentFile(rel, data) : false;
+        if (!wrote) {
+            FileUtils.downloadData(data, filename, FileUtils.TYPES.JSON);
+        }
+        if (wrote) {
+            await FsaStore.ensureManifestEntry(rel);
+        }
+
         this.currentFileName = filename;
         return filename;
     }

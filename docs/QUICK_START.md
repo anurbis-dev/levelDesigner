@@ -30,7 +30,8 @@
 - **Масштабирование**: `Ctrl+Alt+`перетаскивание объекта — равномерное масштабирование выделения относительно центра общего bounding box (`Shift` — снап фактора к шагу 10%)
 - **Группировка**: Выделите объекты → `Ctrl+G`
 - **Дублирование**: `Ctrl+D` с последующим размещением, либо `Alt+`перетаскивание объекта
-- **Сохранение**: `Ctrl+S`
+- **Project Folder** (v4.51.0): File → **Set Project Folder...** (или Project Settings → Project Folder) — grant write access once; levels/assets/project/build then save in-place. Without grant — download dialog
+- **Сохранение**: `Ctrl+S` (level); File → Save Project
 - **Сброс к дефолту (наведением)**: Наведите курсор на поле в панели Details/Settings и нажмите `Backspace` — поле сбрасывается к дефолту; наведите на заголовок секции — сбрасываются все поля внутри неё (без клика/выделения, только наведение мышью)
 
 ## ⌨️ Горячие клавиши

@@ -1,4 +1,4 @@
-# Context Map - Level Designer v4.50.0 (LEDGE platformer port: `PlayerMovementBehavior.mode` topdown|platformer, helpers `src/engine/behaviors/platformer/`, level `content/maps/ledge.json`, plan `docs/LEDGE_PORT_PLAN.md`; Phase A done; Phase B dock B0–B5 done; §7 backlog 12/12 + Tiers 1–4 done)
+# Context Map - Level Designer v4.51.0 (FSA project folder: `FsaStore`/`FsaContentWriter`, File → Set Project Folder, in-place content/project/level/build writes; LEDGE platformer port remains; Phase A done; Phase B dock B0–B5 done; §7 backlog 12/12 + Tiers 1–4 done)
 
 ## ⚠️ КРИТИЧЕСКИ ВАЖНО - ЧИТАТЬ ПЕРВЫМ
 
@@ -33,8 +33,8 @@
 // Несколько уровней открыты одновременно, переключаются через LevelsPanel или меню
 levelEditor.newLevel() // добавляет вкладку, переключает на новую (не заменяет текущую)
 levelEditor.openLevel() // добавляет вкладку из файла, dedup по fileName (не дублирует уже открытые)
-levelEditor.saveLevel() // сохраняет текущий уровень, использует per-session fileName; при отсутствии имени показывает prompt "Enter file name:" (не сохраняет под дефолтом без спроса)
-levelEditor.saveLevelAs() // сохраняет с выбором имени (показывает prompt), обновляет per-session fileName для текущей сессии
+levelEditor.saveLevel() // async; per-session fileName; без имени — prompt "Enter file name:"; при granted folder пишет `content/maps/<file>` через FsaStore, иначе download
+levelEditor.saveLevelAs() // async; prompt имени, обновляет per-session fileName; тот же FSA/download fallback
 levelEditor.closeLevel(levelId) // закрывает вкладку (нельзя закрыть последний открытый уровень, спрашивает подтверждение при dirty); доступен через крестик на вкладке и контекстное меню уровня (не в меню File)
 levelEditor.levelsManager.setCurrentLevel(levelId) // переключение между открытыми уровнями (вкладками), сохраняет/восстанавливает view state, history; отслеживает levelMRU для fallback
 levelEditor.nextLevel() / levelEditor.previousLevel() // новые хоткеи (Ctrl+PageDown/PageUp Phase 6) для циклического переключения между открытыми уровнями через levelsManager.cycleLevel(±1)
@@ -48,14 +48,15 @@ levelEditor.levelsManager.reorderLevels(newOrder) // переупорядочи�
 // Проект = контейнер набора открытых уровней (LevelSession), самодостаточный JSON с embedded Level.toJSON() каждого уровня + видимость/порядок/currentLevelIndex
 levelEditor.newProject() // создание нового проекта: очищает все открытые уровни, создаёт один пустой с seeded history baseline; единый confirm при несохранённых правках вместо N диалогов
 levelEditor.openProject() // открытие проекта из файла: парсит все уровни из project-JSON, заменяет весь набор открытых вкладок (Edge Case 11); unit confirm при dirty
-levelEditor.saveProject() // сохранение текущего проекта; при отсутствии project.fileName берёт имя из project.name через _deriveFileNameFromProjectName() (заменяет /, \ на -), не спрашивает имя файла; требует предварительного newProject()/openProject()
-levelEditor.saveProjectAs() // сохранение проекта с выбором имени файла (показывает prompt)
+levelEditor.saveProject() // async; без pinned fileName — имя из project.name через _deriveFileNameFromProjectName(); writeWorkingDirFile в granted folder, иначе download; требует newProject()/openProject()
+levelEditor.saveProjectAs() // async; prompt имени; FSA folder или download
+levelEditor.setProjectFolder() // async v4.51.0: File → Set Project Folder... → FsaStore.pickWorkingDirectory(); handle в IndexedDB, name в localStorage (machine-local, не Project.toJSON)
 levelEditor.openRecentFile(id) // U3: открыть level/project из MRU-кэша (editor.recentFiles)
 levelEditor.clearRecentFiles() // U3: очистить Open Recent
 levelEditor.recentFilesManager // RecentFilesManager: list/remember/open/clear; snapshot JSON в userPrefs
 levelEditor.moveSelectedObjectsToLayerId(layerId) // U4: перенос selection на слой (context menu)
 levelEditor.buildMoveToLayerMenuItems() // U4: пункты flyout Move to Layer
-levelEditor.openProjectSettings() // открытие ProjectSettingsDialog; пока стаб (редактируется только project.name)
+levelEditor.openProjectSettings() // ProjectSettingsDialog: project.name + Project Folder (Choose…/Clear, FsaStore)
 levelEditor.project // текущий Project экземпляр (инициализируется при New/Open/Save Project); null до первого вызова
 levelEditor.projectFileOperations // BaseModule: newProject/openProject/openProjectFromData/saveProject/saveProjectAs
 
@@ -64,7 +65,7 @@ levelEditor.createObject(type, x, y, properties)
 levelEditor.selectObject(id)
 levelEditor.getCachedObject(id)
 levelEditor.showSplashScreen() // v3.54.1
-levelEditor.createAssetOfType(typeId) // создание placeholder-ассета по типу в текущей выбранной папке (Add меню → category → Type)
+levelEditor.createAssetOfType(typeId) // async: placeholder в текущей папке; FsaContentWriter.saveNewAsset + manifest; status `Created "name" → rel` если записано
 
 // MenuManager disabled states и margin-aware dropdown (v3.55.0+)
 // Любой пункт меню (itemConfig в config/menu.js) может иметь `disabled: boolean | (editor) => boolean`
@@ -212,7 +213,9 @@ level.settings.parallaxVertical // множитель вертикального
 - `src/core/LevelFileOperations.js` - файловые операции уровня (Phase 5: newLevel/openLevel добавляют вкладки, saveLevel/saveLevelAs работают per-session, closeLevel закрывает вкладку)
 - `src/models/Project.js` - модель проекта (Phase 7): `toJSON(levelSessions, levelOrder, currentLevelId)` эмбеддит Level.toJSON() каждого уровня + видимость/порядок/currentLevelIndex; статический `fromJSON(json)` парсит проект-файл
 - `src/models/ProjectExporter.js` - трансформер editor-Project в runtime-Project манифест (engine plan Фаза 0); статический `export(levelSessions, levelOrder, project, opts)` возвращает `{formatVersion, name, entryLevelId, levels: [{id, data}], assets: [...]}` — если `opts.assetManager` передан, embedдит `assetManager.getAllAssets().map(asset => asset.toJSON())` как `assets[]`, иначе `assets: []` (полностью обратно совместимо)
-- `src/core/ProjectFileOperations.js` - файловые операции проекта (Phase 7, BaseModule): `newProject()`/`openProject()`/`openProjectFromData()`/`saveProject()`/`saveProjectAs()`, replace-not-merge; MRU remember
+- `src/core/ProjectFileOperations.js` - файловые операции проекта (Phase 7, BaseModule): `newProject()`/`openProject()`/`openProjectFromData()`/`saveProject()`/`saveProjectAs()` (async; FsaStore.writeWorkingDirFile или download), replace-not-merge; MRU remember
+- `src/utils/FsaStore.js` - v4.51.0 File System Access: persist `FileSystemDirectoryHandle` (IndexedDB `levelDesignerFsaHandles`/`handles`/`workingDir`), folder name localStorage `levelDesignerFsaWorkingDirName`; `isSupported`/`pickWorkingDirectory`/`clearWorkingDirectory`/`writeWorkingDirFile`/`writeContentFile`/`ensureManifestEntry`/`getContentDirectoryHandle`/`toContentRelativePath`/`toLevelRelativePath`
+- `src/utils/FsaContentWriter.js` - v4.51.0: `assetToDiskJson`/`saveAsset`/`saveNewAsset` — JSON+PNG sibling в content root без save dialog
 - `src/managers/RecentFilesManager.js` - U3 Open Recent: MRU level/project snapshots в `editor.recentFiles`
 - `src/core/ObjectOperations.js` - операции с объектами
 - `src/core/LayerOperations.js` - операции со слоями
@@ -415,7 +418,7 @@ eventHandlerManager.registerElement(button, { click: onClick }, 'button-id');
 
 ## 🔧 Версионирование
 
-Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '4.50.0'` (LEDGE platformer port + Phase A/B + §7 Tiers 1–4; layout = `editor.dockManager`)
+Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '4.51.0'` (FSA project folder + LEDGE platformer port + Phase A/B + §7 Tiers 1–4; layout = `editor.dockManager`)
 
 Версия отображается динамически после полной инициализации через `updateVersionInfo()` и `updatePageTitle()`. Интерфейс скрыт до завершения загрузки, чтобы избежать отображения устаревшей версии. Pre-push hook блокирует коммит без бампа версии (`.claude/settings.json`).
 

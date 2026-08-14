@@ -10,18 +10,20 @@
 #### Файловые операции — уровни (v3.57.0 Phase 5-6: multi-level tabs):
 - `async newLevel()` - создание нового уровня ДОБАВЛЯЕТ вкладку (LevelSession), а не заменяет текущий открытый уровень; переключает на новый уровень через `levelsManager.addLevel()`
 - `async openLevel()` - открытие уровня из файла ДОБАВЛЯЕТ вкладку; делает best-effort деdup по fileName — если файл уже открыт, переключается на существующую вкладку вместо дубликата; пишет Open Recent
-- `saveLevel()` - сохранение текущего уровня; использует per-session fileName из текущей LevelSession; при отсутствии имени файла показывает prompt "Enter file name:" с дефолтом "level.json" (не сохраняет под дефолтным без подтверждения); пишет Open Recent
-- `async saveLevelAs()` - сохранение текущего уровня с выбором файла (показывает prompt); обновляет per-session `session.fileName` для текущей сессии; пишет Open Recent
+- `async saveLevel()` - сохранение текущего уровня; per-session fileName; без имени — prompt "Enter file name:" (default `level.json`); FSA: `content/maps/<file>` + manifest, иначе download; Open Recent
+- `async saveLevelAs()` - prompt имени; обновляет per-session `session.fileName`; тот же FSA/download; Open Recent
 - `async closeLevel(levelId)` (новый, v3.57.0) - закрытие вкладки уровня; нельзя закрыть последний открытый уровень; спрашивает подтверждение если уровень содержит несохранённые изменения
 
-#### Файловые операции — проект (v3.57.0 Phase 7: Project):
+#### Файловые операции — проект (v3.57.0 Phase 7: Project; FSA v4.51.0):
 - `async newProject()` - создание нового проекта: очищает все открытые уровни, создаёт один пустой уровень с baseline history. Единый confirm-диалог при несохранённых правках вместо N диалогов. **Replace-not-merge**: заменяет весь набор открытых вкладок.
 - `async openProject()` - открытие проекта из файла: парсит все уровни из project-JSON, восстанавливает видимость/порядок/currentLevelIndex. **Replace-not-merge**: новые уровни заменяют весь набор открытых табов. Единый confirm при dirty (Edge Case 11). Пишет Open Recent.
-- `async saveProject()` - сохранение текущего проекта; при отсутствии pinned `project.fileName` имя берётся из `project.name` (auto пересчитывается пока `fileNameIsAuto`); пишет Open Recent
-- `async saveProjectAs()` - сохранение проекта с выбором имени файла (показывает prompt); пишет Open Recent
+- `async saveProject()` - async; без pinned `project.fileName` — имя из `project.name` (`fileNameIsAuto`); `FsaStore.writeWorkingDirFile` или download; Open Recent
+- `async saveProjectAs()` - async; prompt имени; FSA folder или download; Open Recent
+- `async setProjectFolder()` - v4.51.0: File → Set Project Folder... → `FsaStore.pickWorkingDirectory()`; handle в IndexedDB, name в localStorage (не Project JSON)
 - `async openRecentFile(id)` - U3: открыть level/project из MRU-кэша (`editor.recentFiles`)
 - `clearRecentFiles()` - U3: очистить список Open Recent
-- `async openProjectSettings()` - открытие диалога ProjectSettingsDialog (пока стаб: редактируется только `project.name`)
+- `async openProjectSettings()` - ProjectSettingsDialog: `project.name` + Project Folder (Choose…/Clear)
+- `async createAssetOfType(typeId)` - placeholder в активной папке Asset panel; `FsaContentWriter.saveNewAsset` + manifest; status `Created "name" → rel` если записано
 
 #### Версия:
 - `static VERSION` - текущая версия редактора (строка, например '3.54.6')
@@ -253,7 +255,7 @@
 
 #### Основные методы:
 - `createNewLevel()` - создание нового уровня
-- `saveLevel(level, fileName)` - сохранение уровня
+- `async saveLevel(level, fileName)` - JSON уровня; FSA `writeContentFile` (`toLevelRelativePath` → обычно `maps/<name>`) + `ensureManifestEntry`; иначе `FileUtils.downloadData`
 - `async loadLevel(file)` - загрузка уровня
 - `async loadLevelFromFileInput()` - загрузка уровня из файла
 - `isValidFile(file)` - проверка валидности файла
@@ -339,7 +341,7 @@
 
 #### Назначение:
 - Полная сохранённость multi-level сессии в одном файле (в отличие от single-level `Level.toJSON()`)
-- Браузер не имеет persistent file handle, поэтому project-файл — полная копия данных
+- Уровни **embedded** в project JSON (не path-ссылки). Disk writes — через FsaStore directory handle (IndexedDB, machine-local); handle **не** входит в Project.toJSON()
 
 ### ProjectFileOperations (src/core/ProjectFileOperations.js)
 Файловые операции проекта (BaseModule).
@@ -347,8 +349,9 @@
 #### Основные методы:
 - `async newProject()` - создание нового проекта: очищает все открытые уровни, создаёт один пустой с baseline history. Единый confirm-диалог при несохранённых правках вместо N диалогов.
 - `async openProject()` - открытие проекта из файла: парсит все уровни ДО очистки текущих (невалидная запись не оставит редактор без открытого уровня). Replace-not-merge: новые уровни заменяют весь набор табов. Единый confirm при dirty.
-- `async saveProject()` - сохранение текущего проекта; при отсутствии `project.fileName` имя берётся из `project.name` через `_deriveFileNameFromProjectName()` (заменяет `/` и `\` на `-`, добавляет `.json`); не спрашивает имя файла
-- `async saveProjectAs()` - сохранение проекта с выбором имени файла (показывает prompt)
+- `async saveProject()` - async; без `project.fileName` — `_deriveFileNameFromProjectName()`; `writeWorkingDirFile` или download
+- `async saveProjectAs()` - async; prompt имени; FSA или download
+- `async _doSaveProject(fileName, isAuto)` - private write path
 - `_activateBootstrappedSession(level)` - приватный helper: переключение на новую сессию с перезагруженным history
 - `_cleanupAllOpenSessions()` - приватный helper: очистка orphaned entries в per-levelId кешах (renderOperations.spatialIndex, visibleLayersCache и т.д.)
 - `_deriveFileNameFromProjectName()` - приватный helper: преобразует `project.name` в имя файла (заменяет `/` и `\` на `-`, добавляет `.json`)
@@ -356,25 +359,53 @@
 #### Семантика:
 - **Replace-not-merge**: `newProject()` и `openProject()` заменяют весь набор открытых уровней (не добавляют к существующим)
 - **Per-session history**: каждая фоновая сессия при загрузке получает seeded history (иначе `addLevel({makeCurrent:false})` не пропускает живой HistoryManager)
-- **saveProject() без диалога**: в отличие от `saveLevelAs()` и `saveProjectAs()`, `saveProject()` не спрашивает имя файла — берёт из `project.name` или переиспользует `project.fileName` if already saved
+- **saveProject() без диалога имени**: в отличие от `saveLevelAs()` / `saveProjectAs()`, имя из `project.name` или pinned `project.fileName`; при granted folder — in-place write без browser save dialog
 
 ### ProjectSettingsDialog (src/ui/ProjectSettingsDialog.js)
 Диалог редактирования параметров проекта (extends BaseDialog, Phase 7).
 
 #### Основные методы:
-- `show()` - отображение диалога с текущими значениями проекта
+- `show()` - отображение диалога с текущими значениями проекта (re-render Project Folder row)
 - `hide()` - скрытие диалога без применения изменений
 - `commitChanges()` - применение изменений проекта
 - `destroy()` - очистка ресурсов
 
 #### Текущие поля:
-- `project.name` - редактируется через `<input type="text">`
+- `project.name` - `<input type="text">`
+- **Project Folder** - label + Choose… / Clear (`FsaStore`); hint: Level Designer folder or its `content/` folder; machine-local
 
 #### Отложенные поля (Open Questions #9):
 - Default asset import path
 - Default grid/snap для новых уровней проекта
 - Naming convention
 - (явно задокументированы в UI, реализация отложена)
+
+### FsaStore (src/utils/FsaStore.js)
+Static File System Access helpers (v4.51.0). PixisEditor-style working directory.
+
+#### Константы:
+- IndexedDB: `levelDesignerFsaHandles` / store `handles` / key `workingDir`
+- localStorage name: `levelDesignerFsaWorkingDirName`
+
+#### Основные методы:
+- `isSupported()` - `showOpenFilePicker` + `showSaveFilePicker` + `showDirectoryPicker`
+- `getWorkingDirectoryName()` - folder name or null
+- `async pickWorkingDirectory()` - `showDirectoryPicker({ mode: 'readwrite' })`, persist handle
+- `async clearWorkingDirectory()` - drop handle + name
+- `async getWorkingDirectoryHandle()` / `async verifyPermission(handle, mode)`
+- `async getContentDirectoryHandle()` - `content/` subdir if present, else picked folder
+- `async writeWorkingDirFile(rel, data)` / `async writeContentFile(rel, data)` - `Promise<boolean>`
+- `async ensureManifestEntry(rel, assetManager?)` - update `content/manifest.json` files[] + structure
+- `toContentRelativePath(path)` - strip `root/` / `./content/` / `content/`
+- `toLevelRelativePath(fileName)` - bare name → `maps/<name>`
+
+### FsaContentWriter (src/utils/FsaContentWriter.js)
+Write content assets into the granted project folder (v4.51.0).
+
+#### Основные методы:
+- `assetToDiskJson(asset)` - persistable JSON; `imgSrc` = sibling basename; drop `path` and data-URL imgSrc
+- `async saveAsset(asset, {updateManifest?, assetManager?})` - `Promise<string|null>` content-relative path; PNG sibling when data-URL imgSrc
+- `async saveNewAsset(asset, assetManager)` - `saveAsset` with `updateManifest: true`
 
 ---
 

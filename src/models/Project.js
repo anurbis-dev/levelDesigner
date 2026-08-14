@@ -4,8 +4,8 @@
  * on LevelEditor.levelSessions/levelOrder (single source of truth, mirrors how
  * LevelSession wraps a Level without owning the editor-wide session map). A project
  * file is fully self-contained: it embeds every open level's own Level.toJSON()
- * output rather than referencing files by path, since the browser editor has no
- * persistent file-handle API to re-resolve paths across sessions.
+ * output rather than referencing files by path. Disk writes go through FsaStore
+ * (IndexedDB directory handle, machine-local — not stored on Project).
  */
 export class Project {
     constructor(opts = {}) {

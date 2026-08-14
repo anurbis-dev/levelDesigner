@@ -1,6 +1,7 @@
 import { BaseModule } from './BaseModule.js';
 import { Logger } from '../utils/Logger.js';
 import { Level } from '../models/Level.js';
+import { FsaStore } from '../utils/FsaStore.js';
 
 /**
  * Level File Operations module for LevelEditor
@@ -148,12 +149,12 @@ export class LevelFileOperations extends BaseModule {
             fileName = await prompt('Enter file name:', 'level.json');
             if (!fileName) return;
         }
-        session.fileName = this.editor.fileManager.saveLevel(this.editor.level, fileName);
+        session.fileName = await this.editor.fileManager.saveLevel(this.editor.level, fileName);
         session.isDirty = false;
         this.editor.stateManager.markClean();
         this.editor.recentFilesManager?.remember('level', session.fileName, this.editor.level.toJSON());
         Logger.file.info('💾 Level saved successfully');
-        Logger.status.success('Level saved');
+        Logger.status.success(FsaStore.getWorkingDirectoryName() ? `Level saved to project folder` : 'Level saved');
     }
 
     /**
@@ -174,7 +175,7 @@ export class LevelFileOperations extends BaseModule {
             return;
         }
 
-        session.fileName = this.editor.fileManager.saveLevel(this.editor.level, fileName);
+        session.fileName = await this.editor.fileManager.saveLevel(this.editor.level, fileName);
         session.isDirty = false;
         this.editor.stateManager.markClean();
         this.editor.recentFilesManager?.remember('level', session.fileName, this.editor.level.toJSON());

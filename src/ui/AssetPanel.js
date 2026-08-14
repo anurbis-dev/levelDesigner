@@ -13,6 +13,7 @@ import { globalEventRegistry } from '../event-system/GlobalEventRegistry.js';
 import { EventHandlerUtils } from '../event-system/EventHandlerUtils.js';
 import { searchManager } from '../utils/SearchManager.js';
 import { PanelSizeCalculator } from '../utils/PanelSizeCalculator.js';
+import { FsaContentWriter } from '../utils/FsaContentWriter.js';
 
 /**
  * Asset panel UI component
@@ -589,14 +590,14 @@ export class AssetPanel extends BasePanel {
                 }
             };
 
-            // Create filename based on asset name
             const filename = `${asset.name}.json`;
-            
-            // Use FileUtils to save the JSON file directly to the same location
-            const { FileUtils } = await import('../utils/FileUtils.js');
-            await FileUtils.saveDataDirectly(jsonData, filename, 'application/json');
-            
-            Logger.ui.info(`✅ Asset changes saved: ${filename}`);
+            const wrote = await FsaContentWriter.saveAsset(asset);
+            if (!wrote) {
+                const { FileUtils } = await import('../utils/FileUtils.js');
+                await FileUtils.saveDataDirectly(jsonData, filename, 'application/json');
+            }
+
+            Logger.ui.info(`✅ Asset changes saved: ${wrote || filename}`);
             
             // Update asset properties to mark as saved
             if (asset.properties) {
@@ -703,75 +704,36 @@ export class AssetPanel extends BasePanel {
         Logger.ui.info(`💾 Saving asset: ${asset.name}`);
         
         try {
-            // Check if File System Access API is supported
-            if (!('showDirectoryPicker' in window)) {
-                Logger.ui.warn('File System Access API not supported, falling back to download');
-                this.showErrorMessage('File System Access API not supported in this browser');
-                return;
-            }
-
-            // Create JSON data for the asset
-            const jsonData = {
-                name: asset.name,
-                type: asset.type,
-                category: asset.category,
-                // Support multiple image sources
-                imgSrc: asset.properties.sourceFile ? [asset.properties.sourceFile] : [],
-                // Legacy single image support
-                image: asset.properties.sourceFile,
-                color: asset.color,
-                width: asset.width,
-                height: asset.height,
-                properties: {
-                    created: new Date().toISOString(),
-                    isTemporary: false,
-                    wasDragDropped: asset.properties.isDragDropped || false
-                }
-            };
-
-            // Create filename based on asset name
             const jsonFilename = `${asset.name}.json`;
-            const pngFilename = `${asset.name}.png`;
-            
-            // Get current tab folder for starting directory
-            const currentTabFolder = this.foldersController.getCurrentTabFolder();
-            
-            // Open directory picker for saving both files with timeout protection
-            const directoryHandle = await ExtensionErrorUtils.withTimeout(
-                window.showDirectoryPicker({
-                    mode: 'readwrite',
-                    startIn: currentTabFolder || 'documents'
-                }),
-                10000,
-                'Directory picker'
-            );
-
-            // Save JSON file
-            const jsonFileHandle = await directoryHandle.getFileHandle(jsonFilename, { create: true });
-            const jsonWritable = await jsonFileHandle.createWritable();
-            await jsonWritable.write(JSON.stringify(jsonData, null, 2));
-            await jsonWritable.close();
-
-            // Save PNG file if asset has image data
-            if (asset.imgSrc && asset.imgSrc.startsWith('data:')) {
-                try {
-                    // Convert data URL to blob
-                    const response = await fetch(asset.imgSrc);
-                    const blob = await response.blob();
-                    
-                    // Save PNG file
-                    const pngFileHandle = await directoryHandle.getFileHandle(pngFilename, { create: true });
-                    const pngWritable = await pngFileHandle.createWritable();
-                    await pngWritable.write(blob);
-                    await pngWritable.close();
-                    
-                    Logger.ui.info(`✅ PNG file saved: ${pngFilename}`);
-                } catch (pngError) {
-                    Logger.ui.warn('Failed to save PNG file:', pngError);
+            const wrote = await FsaContentWriter.saveAsset(asset, {
+                updateManifest: true,
+                assetManager: this.assetManager
+            });
+            if (!wrote) {
+                if (!('showDirectoryPicker' in window)) {
+                    Logger.ui.warn('File System Access API not supported, falling back to download');
+                    this.showErrorMessage('File System Access API not supported in this browser');
+                    return;
                 }
+                const jsonData = {
+                    name: asset.name,
+                    type: asset.type,
+                    category: asset.category,
+                    imgSrc: asset.properties.sourceFile ? [asset.properties.sourceFile] : [],
+                    image: asset.properties.sourceFile,
+                    color: asset.color,
+                    width: asset.width,
+                    height: asset.height,
+                    properties: {
+                        created: new Date().toISOString(),
+                        isTemporary: false,
+                        wasDragDropped: asset.properties.isDragDropped || false
+                    }
+                };
+                await this._saveAssetViaDirectoryPicker(asset, jsonData, jsonFilename);
             }
-            
-            Logger.ui.info(`✅ Asset saved as: ${jsonFilename}`);
+
+            Logger.ui.info(`✅ Asset saved as: ${wrote || jsonFilename}`);
             
             // Update asset properties to mark as saved
             if (asset.properties) {
@@ -784,7 +746,7 @@ export class AssetPanel extends BasePanel {
             this.render();
             
             // Show success message
-            this.showSaveSuccessMessage(asset.name, jsonFilename);
+            this.showSaveSuccessMessage(asset.name, wrote || jsonFilename);
             
         } catch (error) {
             await ExtensionErrorUtils.handleFileSystemError(
@@ -800,6 +762,42 @@ export class AssetPanel extends BasePanel {
             if (!ExtensionErrorUtils.isExtensionError(error)) {
                 Logger.ui.error('Failed to save asset:', error);
                 this.showSaveErrorMessage(asset.name, error);
+            }
+        }
+    }
+
+    /**
+     * Fallback when no project folder is granted: native directory picker (old path).
+     * @private
+     */
+    async _saveAssetViaDirectoryPicker(asset, jsonData, jsonFilename) {
+        const pngFilename = `${asset.name}.png`;
+        const currentTabFolder = this.foldersController.getCurrentTabFolder();
+        const directoryHandle = await ExtensionErrorUtils.withTimeout(
+            window.showDirectoryPicker({
+                mode: 'readwrite',
+                startIn: currentTabFolder || 'documents'
+            }),
+            10000,
+            'Directory picker'
+        );
+
+        const jsonFileHandle = await directoryHandle.getFileHandle(jsonFilename, { create: true });
+        const jsonWritable = await jsonFileHandle.createWritable();
+        await jsonWritable.write(JSON.stringify(jsonData, null, 2));
+        await jsonWritable.close();
+
+        if (asset.imgSrc && asset.imgSrc.startsWith('data:')) {
+            try {
+                const response = await fetch(asset.imgSrc);
+                const blob = await response.blob();
+                const pngFileHandle = await directoryHandle.getFileHandle(pngFilename, { create: true });
+                const pngWritable = await pngFileHandle.createWritable();
+                await pngWritable.write(blob);
+                await pngWritable.close();
+                Logger.ui.info(`✅ PNG file saved: ${pngFilename}`);
+            } catch (pngError) {
+                Logger.ui.warn('Failed to save PNG file:', pngError);
             }
         }
     }

@@ -7,7 +7,8 @@
 3. **Создание**: Перетащите ассеты из нижней панели на canvas
 4. **Группировка**: Выделите объекты → `Ctrl+G`
 5. **Слои**: Организуйте объекты по слоям с полной изоляцией видимости
-6. **Сохранение**: `Ctrl+S`
+6. **Project Folder** (v4.51.0, Chromium): File → **Set Project Folder...** или Project Settings → **Project Folder** → Choose… — один раз выдать write access к папке Level Designer (или её `content/`). Дальше Save Project / Save Level / Create Asset / Build пишут in-place без save dialog. Clear снимает grant. Без folder — прежний download / native picker.
+7. **Сохранение**: `Ctrl+S` (уровень); File → Save Project — project JSON
 
 ## 🆕 Новые возможности v3.51.0
 

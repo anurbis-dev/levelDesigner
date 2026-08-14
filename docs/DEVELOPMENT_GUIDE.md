@@ -209,28 +209,53 @@ static currentLevel = Logger.LEVELS.INFO;
 
 ## Работа с File System Access API
 
-### Обработка ошибок расширений
+### Project folder (persist handle, v4.51.0)
 
-**ВАЖНО**: File System Access API может конфликтовать с браузерными расширениями (блокировщики рекламы, средства безопасности). Всегда используйте `ExtensionErrorUtils` для работы с этими API.
+Рабочая папка проекта — один grant на write; handle в IndexedDB, не в Project JSON. Не дублировать `showDirectoryPicker` для content/project/level/build writes — использовать `FsaStore` / `FsaContentWriter`.
+
+```javascript
+import { FsaStore } from '../utils/FsaStore.js';
+import { FsaContentWriter } from '../utils/FsaContentWriter.js';
+
+// Grant once (File → Set Project Folder / Project Settings)
+await FsaStore.pickWorkingDirectory(); // showDirectoryPicker({ mode: 'readwrite' })
+
+// Content-relative write (maps/, assets/, …)
+await FsaStore.writeContentFile('maps/level.json', levelData);
+await FsaStore.ensureManifestEntry('maps/level.json', assetManager);
+
+// Project root write (project JSON, build-game.bat)
+await FsaStore.writeWorkingDirFile('my-project.json', projectData);
+
+// Asset JSON + optional PNG sibling
+await FsaContentWriter.saveAsset(asset, { updateManifest: true, assetManager });
+
+// Fallback when no folder / permission denied: FileUtils.downloadData / saveDataDirectly
+```
+
+`getContentDirectoryHandle()`: если в выбранной папке есть `content/` — пишет туда; иначе в сам folder. Name: localStorage `levelDesignerFsaWorkingDirName`.
+
+### Read-only picker + ExtensionErrorUtils
+
+Одноразовые read-import (FolderPickerDialog, legacy AssetPanel picker) — `showDirectoryPicker({ mode: 'read' })` с `ExtensionErrorUtils`. FSA может конфликтовать с расширениями.
 
 ```javascript
 import { ExtensionErrorUtils } from '../utils/ExtensionErrorUtils.js';
 
-// ✅ ПРАВИЛЬНО - с таймаутом и fallback
+// ✅ read-only pick with timeout + fallback
 const directoryHandle = await ExtensionErrorUtils.withTimeout(
     window.showDirectoryPicker({ mode: 'read' }),
     10000,
     'Directory picker'
 );
 
-// ✅ ПРАВИЛЬНО - автоматическая обработка ошибок
 await ExtensionErrorUtils.handleFileSystemError(
     error,
     () => this.showInputDialog(), // fallback
     { logger: Logger.ui, operation: 'Directory picker' }
 );
 
-// ❌ НЕПРАВИЛЬНО - без защиты от расширений
+// ❌ bare picker without extension protection
 const directoryHandle = await window.showDirectoryPicker({ mode: 'read' });
 ```
 
@@ -254,10 +279,10 @@ ExtensionErrorUtils автоматически определяет следую
 
 ### Fallback стратегии
 
-При конфликтах с расширениями используйте fallback методы:
+- **FsaStore / FsaContentWriter**: no granted folder → download / native picker
 - **FolderPickerDialog**: fallback на input dialog
 - **FileUtils**: fallback на download метод
-- **AssetPanel**: пользовательские сообщения об ошибках
+- **AssetPanel**: FSA save first; `_saveAssetViaDirectoryPicker` / `saveDataDirectly` if null
 
 ### Запуск локального сервера
 

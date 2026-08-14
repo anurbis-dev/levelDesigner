@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- **Fix: LEDGE assets in editor library**: JSON-сайдкары для всех PNG в `content/assets/ledge/` (torch/enemy/flier/door/lift/platform/bomb); папка `ledge` в `manifest.structure.assets`; `extract-ledge-art.mjs` пишет сайдкары; `update_manifest.*` пропускает `meta.json`.
+- **Feat: Project Folder / FSA in-place writes (v4.51.0)**: `FsaStore` + `FsaContentWriter` — persist directory handle (IndexedDB) + folder name (localStorage); File → **Set Project Folder...** / Project Settings **Project Folder**; async save level/project/asset/build writes to granted folder (`content/` root when present), else download/picker. `createAssetOfType` writes new assets + manifest when folder set.

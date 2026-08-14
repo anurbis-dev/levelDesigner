@@ -13,7 +13,7 @@ Level Editor использует **централизованную систе�
 ```javascript
 // src/core/LevelEditor.js
 export class LevelEditor {
-    static VERSION = '4.50.0'; // ← ЕДИНСТВЕННЫЙ ИСТОЧНИК
+    static VERSION = '4.51.0'; // ← ЕДИНСТВЕННЫЙ ИСТОЧНИК
 }
 ```
 
@@ -23,7 +23,7 @@ export class LevelEditor {
 
 #### ✅ Места отображения версии:
 1. **Консоль при старте редактора**
-   - `🚀 Level Editor v4.50.0 - Utility Architecture`
+   - `🚀 Level Editor v4.51.0 - Utility Architecture`
    - Информирует разработчика о запущенной версии
 
 2. **Header главного окна**
@@ -32,11 +32,11 @@ export class LevelEditor {
 
 3. **Page title**
    - Динамически обновляется через `updatePageTitle()`
-   - `2D Level Editor v4.50.0`
+   - `2D Level Editor v4.51.0`
 
 4. **Console команда `version`**
    - По запросу: `> version`
-   - Выводит: `2D Level Editor v4.50.0`
+   - Выводит: `2D Level Editor v4.51.0`
 
 #### ❌ Места, где версия была убрана:
 - ~~Footer панели ассетов~~ - избыточно

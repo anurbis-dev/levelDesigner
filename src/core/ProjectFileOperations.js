@@ -3,6 +3,7 @@ import { Logger } from '../utils/Logger.js';
 import { Project } from '../models/Project.js';
 import { Level } from '../models/Level.js';
 import { FileUtils } from '../utils/FileUtils.js';
+import { FsaStore } from '../utils/FsaStore.js';
 
 /**
  * Project File Operations module for LevelEditor (Phase 7 of multi-level support).
@@ -200,7 +201,7 @@ export class ProjectFileOperations extends BaseModule {
         const project = this.editor.project;
         const pinned = !!(project?.fileName && !project.fileNameIsAuto);
         const fileName = pinned ? project.fileName : this._deriveFileNameFromProjectName();
-        this._doSaveProject(fileName, !pinned);
+        await this._doSaveProject(fileName, !pinned);
     }
 
     /**
@@ -210,7 +211,7 @@ export class ProjectFileOperations extends BaseModule {
         const currentFileName = this.editor.project?.fileName || 'project.json';
         const fileName = await prompt('Enter project file name:', currentFileName);
         if (!fileName) return;
-        this._doSaveProject(fileName, false);
+        await this._doSaveProject(fileName, false);
     }
 
     /**
@@ -232,13 +233,16 @@ export class ProjectFileOperations extends BaseModule {
      * @param {string} fileName
      * @param {boolean} isAuto - see Project.fileNameIsAuto
      */
-    _doSaveProject(fileName, isAuto) {
+    async _doSaveProject(fileName, isAuto) {
         if (!this.editor.project) {
             this.editor.project = new Project();
         }
 
         const data = this.editor.project.toJSON(this.editor.levelSessions, this.editor.levelOrder, this.editor.currentLevelId);
-        FileUtils.downloadData(data, fileName, FileUtils.TYPES.JSON);
+        const wrote = await FsaStore.writeWorkingDirFile(fileName, data);
+        if (!wrote) {
+            FileUtils.downloadData(data, fileName, FileUtils.TYPES.JSON);
+        }
 
         this.editor.project.fileName = fileName;
         this.editor.project.fileNameIsAuto = isAuto;
@@ -247,7 +251,7 @@ export class ProjectFileOperations extends BaseModule {
         this.editor.recentFilesManager?.remember('project', fileName, data);
 
         Logger.file.info(`💾 Project saved: ${fileName}`);
-        Logger.status.success(`Project saved: ${fileName}`);
+        Logger.status.success(wrote ? `Project saved to folder: ${fileName}` : `Project saved: ${fileName}`);
     }
 
     /**

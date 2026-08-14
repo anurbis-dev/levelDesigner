@@ -169,7 +169,7 @@
 **Файлы**: `src/models/Project.js`, `src/core/ProjectFileOperations.js`, `src/ui/ProjectSettingsDialog.js`
 
 **Project** — контейнер набора открытых уровней (LevelSession):
-- `toJSON(levelSessions, levelOrder, currentLevelId)` — экспортирует self-contained JSON: эмбеддит `Level.toJSON()` каждого открытого уровня + метаданные (per-level `visible` и `fileName`), порядок табов (`levelOrder`), и `currentLevelIndex` (позиция в массиве уровней, т.к. `Level.toJSON()` не сериализует `id`). Браузер не имеет persistent file handle, поэтому project-файл — полная копия, не ссылки.
+- `toJSON(levelSessions, levelOrder, currentLevelId)` — экспортирует self-contained JSON: эмбеддит `Level.toJSON()` каждого открытого уровня + метаданные (per-level `visible` и `fileName`), порядок табов (`levelOrder`), и `currentLevelIndex` (позиция в массиве уровней, т.к. `Level.toJSON()` не сериализует `id`). Project JSON **не** хранит path-ссылки на уровни (уровни embedded); отдельный FSA directory handle (IndexedDB, machine-local) используется только для disk writes, не сериализуется в Project.
 - `fromJSON(json)` (static) — парсит project-JSON обратно в LevelSession набор (per-level history восстанавливается из exported state в JSON).
 - **Назначение**: полная сохранённость multi-level сессии в одном файле (в отличие от single-level `Level.toJSON()`)
 
@@ -177,8 +177,8 @@
 - `newProject()` — создание нового проекта: очищает все открытые уровни, создаёт один пустой с `seeded history baseline` (один undo-шаг для начального состояния). Единый confirm-диалог при несохранённых правках, вместо N диалогов по одному на каждый уровень (Edge Case 10/11).
 - `openProject()` — picker + read, затем `openProjectFromData(json, fileName)`.
 - `openProjectFromData(json, fileName)` — открытие из JSON (диск или Open Recent): парсит all уровни ДО очистки текущих (Edge Case 3); replace-not-merge; пишет MRU.
-- `saveProject()` — сохранение текущего проекта (скачивание в браузер). При отсутствии pinned `project.fileName` имя берётся из `project.name` через `_deriveFileNameFromProjectName()`; auto-имя пересчитывается пока `fileNameIsAuto`. После save — MRU.
-- `saveProjectAs()` — сохранение проекта с выбором имени файла (показывает prompt).
+- `saveProject()` / `_doSaveProject()` — async. При отсутствии pinned `project.fileName` имя из `project.name` через `_deriveFileNameFromProjectName()`; auto-имя пока `fileNameIsAuto`. Пишет через `FsaStore.writeWorkingDirFile(fileName)` в granted folder; иначе `FileUtils.downloadData`. После save — MRU.
+- `saveProjectAs()` — async; prompt имени файла; тот же FSA/download путь.
 - **Per-session history bootstrap**: каждой фоновой (non-current) сессии при загрузке вручную seeded `.history` через `HistoryManager.saveState()` (т.к. `addLevel({makeCurrent:false})` не пропускает живой HistoryManager).
 - **Cache cleanup**: `newProject()`/`openProject()` вызывают приватный `_cleanupAllOpenSessions()` для очистки orphaned entries в `renderOperations.spatialIndex`, `visibleLayersCache`, и прочих per-levelId кешах (иначе повторные New/Open Project копили zombie-данные по старым levelId).
 
@@ -186,11 +186,11 @@
 **Файлы**: `src/managers/RecentFilesManager.js`, `config/menu.js` (`open-recent` dynamic submenu), `MenuManager.rebuildRecentFilesSubmenu`, prefs `editor.recentFiles` / `userPrefs.recentFiles`
 - Браузер не даёт стабильный path — в localStorage кладётся snapshot JSON (cap 10, skip >~1.5MB).
 - Запись: успешные open/save level и project.
-- Меню: File → Open Recent (rebuild on hover) + Clear Recent.
+- Меню: File → Open Recent (rebuild on hover) + Clear Recent; после Open Recent, перед Save Project — **Set Project Folder...** (`set-project-folder` → `LevelEditor.setProjectFolder()` → `FsaStore.pickWorkingDirectory()`).
 
 **ProjectSettingsDialog** (extends BaseDialog):
-- Диалог редактирования параметров проекта (Phase 7, пока стаб).
-- **Текущие поля**: только `project.name` (редактируется через `<input type="text">`).
+- Диалог редактирования параметров проекта (Phase 7).
+- **Текущие поля**: `project.name` (`<input type="text">`); **Project Folder** row — имя / Choose… / Clear (`FsaStore.pickWorkingDirectory` / `clearWorkingDirectory`), re-render on show. Hint: pick Level Designer folder or its `content/` folder. Folder handle — machine-local IndexedDB, **не** project JSON.
 - **Отложенные поля** (Open Questions #9): default asset import path, default grid/snap для новых уровней проекта, naming convention — явно задокументированы в UI, но реализация отложена.
 
 ### AssetPanel System (v3.60.2 Фаза 4 завершена: декомпозиция на 7 компонентов)
@@ -345,8 +345,8 @@
   - **AssetTypeIcons** (`src/constants/AssetTypeIcons.js`): минималистичная гліфическая библиотека (stroke SVG, 24×24px) для каждого типа ассета/компонента; функция `buildTypeIconSvg(typeId, color, size)` возвращает inline `<svg>` строку
   - **createPlaceholderAsset(typeId, customName?, folderPath = 'root')**: создание заполнителя-ассета без реального контента (цвет и размеры используют опциональные `typeDef.color`/`width`/`height` если заданы, иначе дефолты категории/48×48, type-иконка в превью вместо color-swatch+букв, поле `properties.placeholder = true`); `path` строится от `folderPath` (текущая выбранная папка в Asset panel), а не от категории — иначе ассет попадал бы в отдельную category-папку вместо текущей. Если в `DEFAULT_ASSET_COMPONENTS[typeId]` определены default-компоненты, они автоматически создаются через `createComponentStub()` и прикрепляются к `components[]` ассета
   - **Asset.components** и **GameObject.components**: новые поля (массив component stubs, дефолт `[]`), сохраняются в `toJSON()`, копируются в экземпляры при размещении GameObjects через `createInstance()`; `components` также участвует в `Asset.hasChangesFromOriginal()`/`saveOriginalState()` (dirty-check)
-- **FileManager**: сохранение/загрузка уровней
-- **Menu Integration** (`config/menu.js`): новое меню "Add" (id остаётся `assets`, вставлено между View и Settings) — иерархия категория→тип→действие (label = имя типа, без префикса "New"); `buildAssetsMenu()` динамически генерирует меню из каталога; каждый пункт вызывает `LevelEditor.createAssetOfType(typeId)`, который берёт текущую папку через `assetPanel.getActiveTabPath()`, передаёт её в `createPlaceholderAsset()` и шлёт `Logger.status.success/error` в строку состояния; `MenuManager.createSubmenuItem()` — поддержка вложенных submenu-ов (flyout dropdown); каждый пункт типа получает иконку из `buildTypeIconSvg()` и `disabled: isRootFolderSelected` (дизейбл при выборе корневой папки); `getAssetCategoriesWithTypes()` gruppирует типы по категориям для обоих меню (nav "Add" и AssetPanelContextMenu "Add")
+- **FileManager** (`src/managers/FileManager.js`): `async saveLevel(level, fileName)` — `FsaStore.toLevelRelativePath` → `writeContentFile` + `ensureManifestEntry` при granted folder; иначе `FileUtils.downloadData`. Load — picker/file input.
+- **Menu Integration** (`config/menu.js`): меню "Add" (id `assets`, между View и Settings) — иерархия категория→тип; `buildAssetsMenu()` из каталога; пункты вызывают async `LevelEditor.createAssetOfType(typeId)` (placeholder + `FsaContentWriter.saveNewAsset`); File menu: **Set Project Folder...** после Open Recent; `MenuManager.createSubmenuItem()` — nested flyout; type items: `buildTypeIconSvg()` + `disabled: isRootFolderSelected`; `getAssetCategoriesWithTypes()` для nav "Add" и AssetPanelContextMenu
 - **Asset Editor float** (`src/ui/asset-editor/*` + dock contentTypes `assetPreview`/`assetIdentity`/`assetComponents`/`assetComponentDetails`): float dock (`fw.role = 'assetEditor'`); `showActorPropertiesPanel` → `editingAssetId` + `openAssetEditorWorkspace`; live `updateAsset` / `patchEditingComponent`. **Identity** — name/size/color/category/tags; **Image** type edits disk `imgSrc`; composites show Sprite→Image link only. **Components** — unique-by-id; **Sprite** = `imageAssetId` (not path); Image assets have no Sprite. **Details** — live input → Preview/HUD. **Preview** — mini-viewport; sprite body independent of colliders; **all** colliders/triggers as stroke frames (`box`/`circle`/`freeform` + per-instance color); freeform vertex edit (Add/Move/Delete); F/A frame. **Undo/redo (Phase C)**: project-global asset stack in `HistoryManager` (`saveAssetState`/`undoAsset`/`redoAsset`); not mixed into per-level object history (multi-level safe). Ctrl+Z while Asset Editor open prefers asset undo; `AssetManager.snapshotForHistory`/`restoreFromHistory`.
 
 ---
@@ -407,7 +407,7 @@
 - **Файловые операции уровней с поддержкой multi-level сессий** (Фаза 5):
   - `newLevel()` — создание нового уровня ДОБАВЛЯЕТ его как новую вкладку/LevelSession через `levelsManager.addLevel()`, а не заменяет текущий открытый уровень. Больше НЕ вызывает `stateManager.reset()` — reset сбрасывал бы глобальное UI-состояние (view/panels/ui), что неверно для добавления вкладки.
   - `openLevel()` — открытие уровня из файла ДОБАВЛЯЕТ его как новую сессию; дополнительно проверяет "уже ли открыт" по `fileName` (best-effort dedup) — если файл уже открыт, переключается на существующую вкладку вместо дубликата. Аналогично `newLevel()`, НЕ вызывает `stateManager.reset()`.
-  - `saveLevel()` / `saveLevelAs()` — сохраняют per-session имя файла (`session.fileName`), а не глобальное `FileManager.currentFileName`. Гарантирует что сохранение уровня B никогда не перезапишет файл уровня A. После сохранения: `session.isDirty = false`.
+  - `async saveLevel()` / `async saveLevelAs()` — await `fileManager.saveLevel`; per-session `session.fileName` (не глобальное `FileManager.currentFileName`). FSA content write → `content/maps/<file>` (или relative path) + manifest; иначе download. После save: `session.isDirty = false`; status «Level saved to project folder» если folder granted.
   - `closeLevel(levelId)` (новый, Фаза 5) — закрытие вкладки уровня; на `LevelsManager`. Нельзя закрыть последний открытый уровень. Проверяет `session.isDirty` и спрашивает подтверждение при наличии несохранённых изменений. При закрытии текущего уровня переключается на первый из оставшихся уровней в `levelOrder`.
   - Per-level `isDirty` (Фаза 5) — каждая LevelSession трекит свой `isDirty` флаг независимо. `LevelsManager.setCurrentLevel()` снапшотит/восстанавливает глобальный `stateManager.isDirty` при переключении между вкладками, позволяя существующему коду работать без изменений (через единый глобальный флаг).
   - Per-level visible индикатор в LevelsPanel — точка в панели теперь точна для всех вкладок, не только текущей (может быть прочитана из `session.isDirty` каждой открытой сессии).
@@ -417,9 +417,14 @@
 - Запуск игрового режима в редакторе через fullscreen canvas overlay; валидирует PlayerStart, сериализует текущий уровень через ProjectExporter, создаёт GameEngine; методы `play()`/`stop()`/`toggle()`/`isPlaying()`
 - Триггер — пункт **Game > Play** в главном меню (`config/menu.js`, `LevelEditor.togglePlayMode()`); Toolbar больше не содержит кнопку Play (перенесена в меню).
 
-### GameBuildOperations (v4.5.0, Game menu "Build...")
+### GameBuildOperations (v4.5.0, Game menu "Build..."; FSA v4.51.0)
 **Файл**: `src/core/GameBuildOperations.js`
-- У браузерного редактора нет shell/fs-доступа для запуска esbuild напрямую. `buildGame()` сохраняет проект (как File > Save Project) и генерирует `build-game.bat`, запускающий `npm run build:game` (через `FileUtils.saveDataDirectly`, native save-picker). Оба файла нужно положить рядом с `package.json`. Триггер — **Game > Build...** в главном меню.
+- У браузерного редактора нет shell/fs-доступа для запуска esbuild напрямую. `buildGame()` вызывает `saveProject()` и пишет `build-game.bat` (`npm run build:game`): `FsaStore.writeWorkingDirFile` если project folder granted, иначе download / native picker. Файлы должны лежать рядом с `package.json`. Триггер — **Game > Build...**.
+
+### FsaStore / FsaContentWriter (v4.51.0)
+**Файлы**: `src/utils/FsaStore.js`, `src/utils/FsaContentWriter.js`
+- **FsaStore** (static): feature-detect `showOpenFilePicker`+`showSaveFilePicker`+`showDirectoryPicker`. Persist `FileSystemDirectoryHandle` в IndexedDB `levelDesignerFsaHandles` / store `handles` / key `workingDir`; имя папки — localStorage `levelDesignerFsaWorkingDirName` (machine-local, **не** Project.toJSON). API: `isSupported()`, `getWorkingDirectoryName()`, `pickWorkingDirectory()` (`showDirectoryPicker({ mode: 'readwrite' })`), `clearWorkingDirectory()`, `getWorkingDirectoryHandle()`, `verifyPermission(handle, mode)`, `getContentDirectoryHandle()` (subdir `content/` если есть, иначе сам folder), `writeWorkingDirFile(rel, data)`, `writeContentFile(rel, data)`, `ensureManifestEntry(rel, assetManager?)` (обновляет `content/manifest.json` `files[]` + `structure`), `toContentRelativePath(path)` (strips `root/`/`./content/`/`content/`), `toLevelRelativePath(fileName)` (bare name → `maps/<name>`).
+- **FsaContentWriter** (static): `assetToDiskJson(asset)` (persistable JSON, `imgSrc` = sibling basename, drop `path`/data-URL imgSrc); `saveAsset(asset, {updateManifest, assetManager})` / `saveNewAsset(asset, assetManager)` — write JSON + PNG sibling when imgSrc is data URL. `AssetPanel.handleAssetSave` / `handleAssetSaveChanges` пробуют FSA first; picker/`saveDataDirectly` только если null.
 
 ### Engine release build (v4.4.1 Фаза 4, minimal cut)
 **Файлы**: `src/engine/index.js` (bundle entry — `GameEngine`/`EntityFactory`/`BehaviorRegistry`/`ProjectLoader`), `scripts/build-game.mjs`, `scripts/build-addon.mjs`/`build-event.mjs` (stubs)

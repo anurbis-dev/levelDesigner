@@ -37,6 +37,8 @@ import { Logger } from '../utils/Logger.js';
 import { dialogReplacer } from '../utils/DialogReplacer.js';
 import { DockManager } from '../ui/dock/DockManager.js';
 import { ensureAssetVisualModel } from '../ui/asset-editor/AssetVisualMigrate.js';
+import { FsaStore } from '../utils/FsaStore.js';
+import { FsaContentWriter } from '../utils/FsaContentWriter.js';
 
 // Import new utilities
 import { ErrorHandler } from '../utils/ErrorHandler.js';
@@ -52,7 +54,7 @@ export class LevelEditor {
      * @static
      * @type {string}
      */
-    static VERSION = '4.50.0';
+    static VERSION = '4.51.0';
 
     constructor(userPreferencesManager = null) {
                 // Initialize ErrorHandler first
@@ -931,6 +933,11 @@ export class LevelEditor {
         return this.projectFileOperations.saveProjectAs();
     }
 
+    /** Grant write access to a project folder once (File System Access API). */
+    async setProjectFolder() {
+        return FsaStore.pickWorkingDirectory();
+    }
+
     /** U3 — File → Open Recent entry */
     async openRecentFile(id) {
         return this.recentFilesManager.open(id);
@@ -954,15 +961,21 @@ export class LevelEditor {
      * Places it into the currently selected Asset panel folder, so it shows up where the user is looking.
      * @param {string} typeId - id from src/constants/AssetTypes.js
      */
-    createAssetOfType(typeId) {
+    async createAssetOfType(typeId) {
         const folderPath = this.assetPanel?.getActiveTabPath?.() || 'root';
         const asset = this.assetManager?.createPlaceholderAsset(typeId, null, folderPath);
         if (!asset) {
             Logger.ui.warn(`LevelEditor: createAssetOfType() failed for type "${typeId}"`);
             Logger.status.error(`Failed to create asset of type "${typeId}"`);
+            return asset;
+        }
+        const wrote = await FsaContentWriter.saveNewAsset(asset, this.assetManager);
+        if (wrote) {
+            Logger.status.success(`Created "${asset.name}" → ${wrote}`);
         } else {
             Logger.status.success(`Created "${asset.name}"`);
         }
+        this.assetPanel?.render?.();
         return asset;
     }
 

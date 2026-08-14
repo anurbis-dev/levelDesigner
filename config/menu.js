@@ -72,6 +72,13 @@ export const MENU_CONFIG = {
                 },
                 { type: 'separator' },
                 {
+                    id: 'set-project-folder',
+                    label: 'Set Project Folder...',
+                    type: 'action',
+                    action: 'setProjectFolder'
+                },
+                { type: 'separator' },
+                {
                     id: 'save-project',
                     label: 'Save Project',
                     type: 'action',
