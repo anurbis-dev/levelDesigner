@@ -32,7 +32,7 @@
 - **Дублирование**: `Ctrl+D` с последующим размещением, либо `Alt+`перетаскивание объекта
 - **Project Folder** (v4.51.0–v4.55.0): File → **Set Project Folder...** (или Project Settings → Project Folder) — grant write access; Content tree shows that folder (creates default `content/` layout if needed); levels/assets/project/build + folder/asset CRUD save in-place. Save / Set Project Folder bind the folder to the project file name. **Open Project** / **Open Recent** restore that folder. File → **Clear Project Folder** (next to Set Project Folder...) or Project Settings → Clear → drop the open project's bind + served `./content/`. File → **New Project** drops the active bind and reloads default Assets, but keeps other projects' stored folders. First time after upgrade: Set Project Folder + Save once per project. Without grant — download dialog
 - **Assets folders** (v4.52.0–v4.54.0): Content tree RMB → **New Folder** / **Delete Folder**; click-drag assets onto a Content-tree folder (or a folder tab) and folders onto another folder to move them (no RMB **Move to Folder**); Del over tree or selected folder deletes folder(s) (not Content root); asset Del removes disk files when folder granted
-- **Сохранение**: `Ctrl+S` (level); File → Save Project
+- **Сохранение**: `Ctrl+S` (level; над Assets с выделением — выбранные ассеты); File → Save Project
 - **Сброс к дефолту (наведением)**: Наведите курсор на поле в панели Details/Settings и нажмите `Backspace` — поле сбрасывается к дефолту; наведите на заголовок секции — сбрасываются все поля внутри неё (без клика/выделения, только наведение мышью)
 
 ## ⌨️ Горячие клавиши

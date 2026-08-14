@@ -14,6 +14,10 @@ export class AssetViewRenderer {
         this._lastRenderKey = null;
     }
 
+    invalidatePreviewCache() {
+        this._lastRenderKey = null;
+    }
+
     render() {
         Logger.ui.debug('AssetPanel: render called');
         this.renderTabs();
@@ -55,14 +59,14 @@ export class AssetViewRenderer {
         // Apply search and type filters
         assetsToShow = this.assetPanel.filterAssets(assetsToShow);
 
-        // Skip the full DOM teardown/rebuild if nothing that affects the rendered
-        // output actually changed since the last call (renderPreviews() is invoked
-        // on every keystroke in search, tab switch, filter toggle, etc.). Safe as
-        // long as asset identity/order, selection, and view settings are the only
-        // inputs to rendering - true today since in-place asset edits (rename, etc.)
-        // aren't implemented yet and always go through an ID/list change when they land.
+        // Skip full DOM teardown when the painted grid would not change.
+        // Must include dirty/name/tmp — save/rename flip those without changing ids.
         const renderKey = `${this.assetPanel.viewMode}|${this.assetPanel.assetSize}|${this.assetPanel.gapSize}|` +
-            assetsToShow.map(a => a.id).join(',') + '|' +
+            assetsToShow.map((a) => {
+                const dirty = this.assetPanel.shouldShowUnsavedIndicator(a) ? '1' : '0';
+                const tmp = a.properties?.isTemporary ? '1' : '0';
+                return `${a.id}:${dirty}:${tmp}:${a.name}:${a.properties?.lastSaved || 0}`;
+            }).join(',') + '|' +
             Array.from(selectedAssets || []).sort().join(',');
         if (this._lastRenderKey === renderKey) {
             return;

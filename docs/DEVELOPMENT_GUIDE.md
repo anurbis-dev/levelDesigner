@@ -288,7 +288,7 @@ ExtensionErrorUtils автоматически определяет следую
 - **FsaStore / FsaContentWriter**: no granted folder → download / native picker
 - **FolderPickerDialog**: fallback на input dialog
 - **FileUtils**: fallback на download метод
-- **AssetPanel**: FSA save first; `_saveAssetViaDirectoryPicker` / `saveDataDirectly` if null
+- **AssetPanel**: FSA save first; `_saveAssetViaDirectoryPicker` / `saveDataDirectly` if null. `saveSelectedAssets` (Ctrl+S над Assets / RMB Save) — temp → `handleAssetSave`, existing → `handleAssetSaveChanges`; затем `_markAssetPersisted` + `invalidatePreviewCache` / `assetsChanged`
 
 ### Запуск локального сервера
 

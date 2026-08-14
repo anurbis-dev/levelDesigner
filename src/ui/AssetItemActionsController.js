@@ -56,8 +56,26 @@ export class AssetItemActionsController {
             onOpenEditor: (asset) => this.handleAssetOpenEditor(asset),
             onRename: (asset) => this.handleAssetRename(asset),
             onDuplicate: (asset) => this.handleAssetDuplicate(asset),
-            onSaveAsset: (asset) => assetPanel.handleAssetSave(asset),
-            onSaveAssetChanges: (asset) => assetPanel.handleAssetSaveChanges(asset),
+            onSaveAsset: (asset) => {
+                const selected = assetPanel._getSelectedAssetObjects?.() || [];
+                const list = selected.some((a) => a.id === asset?.id) && selected.length
+                    ? selected
+                    : (asset ? [asset] : []);
+                if (list.length && typeof assetPanel.saveSelectedAssets === 'function') {
+                    return assetPanel.saveSelectedAssets(list);
+                }
+                return assetPanel.handleAssetSave(asset);
+            },
+            onSaveAssetChanges: (asset) => {
+                const selected = assetPanel._getSelectedAssetObjects?.() || [];
+                const list = selected.some((a) => a.id === asset?.id) && selected.length
+                    ? selected
+                    : (asset ? [asset] : []);
+                if (list.length && typeof assetPanel.saveSelectedAssets === 'function') {
+                    return assetPanel.saveSelectedAssets(list);
+                }
+                return assetPanel.handleAssetSaveChanges(asset);
+            },
             onShowInExplorer: (asset) => assetPanel.handleAssetShowInExplorer(asset),
             onDelete: (asset) => this.handleAssetDelete(asset),
             disableGlobalHandlers: true // Disable global handlers since we use delegated events

@@ -8,7 +8,7 @@
 4. **Группировка**: Выделите объекты → `Ctrl+G`
 5. **Слои**: Организуйте объекты по слоям с полной изоляцией видимости
 6. **Project Folder** (v4.51.0–v4.55.0, Chromium): File → **Set Project Folder...** или Project Settings → **Project Folder** → Choose… — выдать write access к папке Level Designer (или её `content/`). Редактор создаёт default `content/` layout если его нет (или использует pick as-is, если это уже content root). **Content tree** в Assets показывает эту папку (FSA scan, не served `./content/`). Save Project / Save Level / Create Asset / Build / New Folder / Move / Delete пишут in-place. **Save** и **Set Project Folder** привязывают папку к имени файла проекта (`project:<file>` в IndexedDB; имя папки — localStorage, не в Project JSON). **Open Project** / **Open Recent** восстанавливают папку этого файла. File → **Clear Project Folder** или Project Settings → Clear снимает active bind и забывает только **открытый** проект, затем served `./content/`. File → **New Project** сбрасывает active bind и default Assets, но **не** стирает папки других проектов (confirm если есть несохранённые уровни или bound folder). После обновления до v4.55.0 один раз **Set Project Folder** + **Save** на каждый проект, чтобы bind появился. Без folder — download / native picker.
-7. **Сохранение**: `Ctrl+S` (уровень); File → Save Project — project JSON
+7. **Сохранение**: `Ctrl+S` (уровень; над Assets/Asset Editor — выделенные/редактируемый ассеты); File → Save Project — project JSON
 
 ## 🆕 Новые возможности v3.51.0
 
@@ -243,6 +243,7 @@
 - **Delete Folder**: RMB on folder → **Delete Folder** (hidden on Content root); or Del over folders tree / over assets panel with non-root folder selected and no assets selected
 - **Move assets / folders** (v4.54.0): click-drag asset thumbnail(s) onto a Content-tree folder or an existing folder tab — moves JSON + sibling PNG + manifest when project folder granted. Drag a folder onto another folder in the Content tree — moves the folder + all contents. Cannot move Content root; cannot drop a folder into itself or a descendant. Dropping a folder onto the tabs strip still pins a tab (does not move). After move, path-like cross-references (`path`, `imgSrc`, `properties.sourceFile`, `properties.levelSrc`, and any string that equals or is prefixed by the old content-relative path, including `./content/`, `content/`, `root/` forms) are remapped so links do not break. Component `*AssetId` fields stay. Open level objects/properties are rewritten the same way. Moved asset JSON is saved with stable `id`. No RMB **Move to Folder**.
 - **Delete asset**: RMB Delete or Del over previews — also removes JSON + sibling PNG + manifest entry when folder granted
+- **Save asset(s)**: `Ctrl+S` над Assets (есть выделение) или Asset Editor — persist library assets (temp → first save, existing → changes); RMB **Save Asset(s)** / **Save Asset(s) To...** сохраняет всё выделение, если кликнутый ассет в нём. File → Save всегда уровень
 - **Переключение позиции папок**: Кнопка ⇄ в заголовке Content для изменения расположения папок
 - Поддержка Grid/List/Details режимов отображения
 - Drag & Drop: обычные ассеты ставят объекты; `type=level` открывает карту (`openLevelFromAsset`); `type=eventGraph` применяет reusable graph к текущему уровню. Dblclick — Asset Editor.
@@ -353,7 +354,7 @@
 #### **Файловые операции**
 - `Ctrl+N` - Создать новый уровень
 - `Ctrl+O` - Открыть уровень
-- `Ctrl+S` - Сохранить уровень
+- `Ctrl+S` - Сохранить уровень; над панелью Assets (есть выделение) или Asset Editor — сохранить выделенные/редактируемый ассеты
 - `Ctrl+Shift+S` - Сохранить уровень как
 
 #### **Дополнительные функции**

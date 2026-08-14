@@ -100,7 +100,7 @@
     "saveLevel": {
       "key": "S",
       "ctrlKey": true,
-      "description": "Save level"
+      "description": "Save level (or selected assets when the Assets panel is hovered)"
     },
     "saveLevelAs": {
       "key": "S",

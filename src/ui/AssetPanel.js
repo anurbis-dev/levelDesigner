@@ -535,38 +535,88 @@ export class AssetPanel extends BasePanel {
      */
     shouldShowUnsavedIndicator(asset) {
         if (!asset) return false;
-        
-        // Show for temporary assets
-        if (asset.properties && asset.properties.isTemporary) {
-            return true;
+        if (asset.properties?.isTemporary) return true;
+        if (asset.properties?.hasUnsavedChanges === true) return true;
+        return !!(asset.hasChangesFromOriginal && asset.hasChangesFromOriginal());
+    }
+
+    /**
+     * Persist selected (or given) library assets. Used by Ctrl+S over Assets.
+     * @param {object[]|null} [assets]
+     * @returns {false|Promise<boolean>}
+     */
+    saveSelectedAssets(assets = null) {
+        const list = Array.isArray(assets) && assets.length
+            ? assets
+            : this._getSelectedAssetObjects();
+        if (!list.length) return false;
+        return this._saveAssetsList(list);
+    }
+
+    _getSelectedAssetObjects() {
+        const raw = this.stateManager?.get(this.uiStateKey('selectedAssets'));
+        const ids = raw instanceof Set ? raw : new Set(Array.isArray(raw) ? raw : []);
+        const out = [];
+        for (const id of ids) {
+            const asset = this.assetManager?.getAsset?.(id) || this.assetManager?.assets?.get?.(id);
+            if (asset) out.push(asset);
         }
-        
-        // Show for assets with unsaved changes
-        if (asset.properties && asset.properties.hasUnsavedChanges === true) {
-            return true;
+        return out;
+    }
+
+    async _saveAssetsList(list) {
+        let saved = 0;
+        let lastName = '';
+        let lastFile = '';
+        for (const asset of list) {
+            const isTemp = !asset.path || asset.properties?.isTemporary;
+            const wrote = isTemp
+                ? await this.handleAssetSave(asset, { silent: true })
+                : await this.handleAssetSaveChanges(asset, { silent: true });
+            if (wrote) {
+                saved += 1;
+                lastName = asset.name;
+                lastFile = typeof wrote === 'string' ? wrote : `${asset.name}.json`;
+            }
         }
-        
-        // Show for assets that were modified but not saved
-        if (asset.properties && asset.properties.lastModified && asset.properties.lastSaved) {
-            return asset.properties.lastModified > asset.properties.lastSaved;
+        this._refreshAfterAssetSave();
+        if (saved === 1) this.showSaveSuccessMessage(lastName, lastFile);
+        else if (saved > 1) this.showSaveSuccessMessage(`${saved} assets`, lastFile || 'content');
+        return saved > 0;
+    }
+
+    _markAssetPersisted(asset) {
+        if (!asset) return;
+        if (!asset.properties) asset.properties = {};
+        asset.properties.isTemporary = false;
+        asset.properties.hasUnsavedChanges = false;
+        asset.properties.lastSaved = Date.now();
+        if (asset.properties.lastModified && asset.properties.lastModified > asset.properties.lastSaved) {
+            asset.properties.lastModified = asset.properties.lastSaved;
         }
-        
-        return false;
+        if (typeof asset.saveOriginalState === 'function') {
+            asset.saveOriginalState();
+        }
+    }
+
+    _refreshAfterAssetSave() {
+        this.viewRenderer?.invalidatePreviewCache?.();
+        this.stateManager?.set('assetsChanged', Date.now());
     }
 
     /**
      * Handle save asset changes (without dialog)
      * @param {Object} asset - The asset to save changes for
      */
-    async handleAssetSaveChanges(asset) {
+    async handleAssetSaveChanges(asset, opts = {}) {
         Logger.ui.info(`💾 Saving changes for asset: ${asset.name}`);
         
         try {
             // Check if asset has a file path (not temporary)
             if (!asset.path || asset.properties.isTemporary) {
                 Logger.ui.warn('Cannot save changes for temporary asset without file path');
-                this.showErrorMessage('Cannot save changes for temporary asset');
-                return;
+                if (!opts.silent) this.showErrorMessage('Cannot save changes for temporary asset');
+                return false;
             }
 
             // Create JSON data for the asset
@@ -598,29 +648,16 @@ export class AssetPanel extends BasePanel {
             }
 
             Logger.ui.info(`✅ Asset changes saved: ${wrote || filename}`);
-            
-            // Update asset properties to mark as saved
-            if (asset.properties) {
-                asset.properties.lastSaved = Date.now();
-                asset.properties.hasUnsavedChanges = false;
+            this._markAssetPersisted(asset);
+            if (!opts.silent) {
+                this._refreshAfterAssetSave();
+                this.showSaveSuccessMessage(asset.name, wrote || filename);
             }
-            
-            // Update original state after successful save
-            // This makes the current state the new "original" state (state 1)
-            if (asset.saveOriginalState) {
-                asset.saveOriginalState();
-                Logger.ui.debug(`Updated original state for asset: ${asset.name}`);
-            }
-            
-            // Refresh the display to update indicators
-            this.render();
-            
-            // Show success message
-            this.showSaveSuccessMessage(asset.name, filename);
-            
+            return wrote || filename;
         } catch (error) {
             Logger.ui.error('Failed to save asset changes:', error);
-            this.showSaveErrorMessage(asset.name, error);
+            if (!opts.silent) this.showSaveErrorMessage(asset.name, error);
+            return false;
         }
     }
 
@@ -700,7 +737,7 @@ export class AssetPanel extends BasePanel {
      * Handle asset save
      * @param {Object} asset - The asset to save
      */
-    async handleAssetSave(asset) {
+    async handleAssetSave(asset, opts = {}) {
         Logger.ui.info(`💾 Saving asset: ${asset.name}`);
         
         try {
@@ -712,8 +749,8 @@ export class AssetPanel extends BasePanel {
             if (!wrote) {
                 if (!('showDirectoryPicker' in window)) {
                     Logger.ui.warn('File System Access API not supported, falling back to download');
-                    this.showErrorMessage('File System Access API not supported in this browser');
-                    return;
+                    if (!opts.silent) this.showErrorMessage('File System Access API not supported in this browser');
+                    return false;
                 }
                 const jsonData = {
                     name: asset.name,
@@ -734,25 +771,19 @@ export class AssetPanel extends BasePanel {
             }
 
             Logger.ui.info(`✅ Asset saved as: ${wrote || jsonFilename}`);
-            
-            // Update asset properties to mark as saved
-            if (asset.properties) {
-                asset.properties.isTemporary = false;
-                asset.properties.lastSaved = Date.now();
-                asset.properties.hasUnsavedChanges = false;
+            this._markAssetPersisted(asset);
+            if (!opts.silent) {
+                this._refreshAfterAssetSave();
+                this.showSaveSuccessMessage(asset.name, wrote || jsonFilename);
             }
-            
-            // Refresh the display to update indicators
-            this.render();
-            
-            // Show success message
-            this.showSaveSuccessMessage(asset.name, wrote || jsonFilename);
-            
+            return wrote || jsonFilename;
         } catch (error) {
             await ExtensionErrorUtils.handleFileSystemError(
                 error,
                 () => {
-                    this.showSaveErrorMessage(asset.name, new Error(ExtensionErrorUtils.getExtensionConflictMessage('Asset save')));
+                    if (!opts.silent) {
+                        this.showSaveErrorMessage(asset.name, new Error(ExtensionErrorUtils.getExtensionConflictMessage('Asset save')));
+                    }
                     return null;
                 },
                 { logger: Logger.ui, operation: 'Asset save' }
@@ -761,8 +792,9 @@ export class AssetPanel extends BasePanel {
             // If not an extension error, show the original error
             if (!ExtensionErrorUtils.isExtensionError(error)) {
                 Logger.ui.error('Failed to save asset:', error);
-                this.showSaveErrorMessage(asset.name, error);
+                if (!opts.silent) this.showSaveErrorMessage(asset.name, error);
             }
+            return false;
         }
     }
 

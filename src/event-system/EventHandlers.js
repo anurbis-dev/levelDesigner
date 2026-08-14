@@ -439,6 +439,7 @@ export class EventHandlers extends BaseModule {
             if (typeof this.editor.saveLevelAs === 'function') (async () => { await this.editor.saveLevelAs(); })();
         } else if (this._matchesShortcut(e, 'editor', 'saveLevel')) {
             e.preventDefault();
+            if (this._saveAssetsOnCtrlS()) return;
             if (typeof this.editor.saveLevel === 'function') (async () => { await this.editor.saveLevel(); })();
         } else if (this._matchesShortcut(e, 'editor', 'nextLevel')) {
             e.preventDefault();
@@ -586,6 +587,40 @@ export class EventHandlers extends BaseModule {
             if (folders instanceof Set && folders.size && !folders.has('root')) {
                 ops.deleteSelectedFolders();
                 return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Ctrl+S over Assets (or Asset Editor): persist library assets instead of the level.
+     * @returns {boolean} true if handled
+     */
+    _saveAssetsOnCtrlS() {
+        const assetsPanel = this._assetsPanelUnderCursor();
+        if (assetsPanel && typeof assetsPanel.saveSelectedAssets === 'function') {
+            const result = assetsPanel.saveSelectedAssets();
+            if (result) {
+                Promise.resolve(result).catch((err) => {
+                    Logger.event.warn('Ctrl+S asset save failed:', err?.message || err);
+                });
+                return true;
+            }
+        }
+
+        const editingId = this.editor.stateManager?.get('editingAssetId');
+        if (editingId && this._assetPreviewForHotkey()) {
+            const panel = assetsPanel || this.editor.assetPanel;
+            const asset = this.editor.assetManager?.getAsset?.(editingId)
+                || this.editor.assetManager?.assets?.get?.(editingId);
+            if (panel && asset && typeof panel.saveSelectedAssets === 'function') {
+                const result = panel.saveSelectedAssets([asset]);
+                if (result) {
+                    Promise.resolve(result).catch((err) => {
+                        Logger.event.warn('Ctrl+S editing-asset save failed:', err?.message || err);
+                    });
+                    return true;
+                }
             }
         }
         return false;

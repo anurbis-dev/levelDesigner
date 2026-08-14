@@ -4,4 +4,5 @@
 
 ## [Unreleased]
 
-- **Fix: tiny asset thumbnails were blurry** — grid/list/details (and UIFactory) thumbs now `image-rendering: pixelated` + `object-fit: contain`, same nearest-neighbor as the canvas.
+- **Feat: Ctrl+S saves selected assets** — over Assets panel (or Asset Editor) `Ctrl+S` persists selected/editing library assets instead of the level.
+- **Fix: unsaved-dot stayed after asset save** — `renderPreviews` skipped rebuild when only dirty flags changed; cache now includes dirty/name/tmp/`lastSaved`, and save calls `invalidatePreviewCache` + `assetsChanged`.

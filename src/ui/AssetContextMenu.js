@@ -187,13 +187,9 @@ export class AssetContextMenu extends BaseContextMenu {
         }, '💾', (contextData) => {
             this.callbacks.onSaveAssetChanges(contextData.asset);
         }, (contextData) => {
-            // Only show for assets with unsaved changes and not temporary
-            return contextData.asset && 
-                   contextData.asset.properties && 
-                   !contextData.asset.properties.isTemporary &&
-                   (contextData.asset.properties.hasUnsavedChanges || 
-                    (contextData.asset.properties.lastModified && contextData.asset.properties.lastSaved && 
-                     contextData.asset.properties.lastModified > contextData.asset.properties.lastSaved));
+            const asset = contextData.asset;
+            if (!asset || asset.properties?.isTemporary) return false;
+            return !!this.assetPanel?.shouldShowUnsavedIndicator?.(asset);
         });
 
         // Save Asset(s) To... (for temporary assets)

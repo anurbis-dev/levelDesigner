@@ -11,7 +11,7 @@
 - `async newLevel()` - создание нового уровня ДОБАВЛЯЕТ вкладку (LevelSession), а не заменяет текущий открытый уровень; переключает на новый уровень через `levelsManager.addLevel()`
 - `async openLevel()` - открытие уровня из файла ДОБАВЛЯЕТ вкладку; делает best-effort деdup по fileName — если файл уже открыт, переключается на существующую вкладку вместо дубликата; пишет Open Recent
 - `async openLevelFromAsset(asset)` - v4.53.0: catalog `type=level` (viewport drop). `resolveMapSrc` = только `properties.levelSrc` (catalog `path` — не URL карты). Если src есть: FSA `readText`, затем HTTP `contentUrl`; missing file → null (не 404). `pickLevelOpenPayload`: map document → `openLevelFromData`; иначе `type=level` → empty `fileManager.createNewLevel()` + `meta.name = asset.name`, `fileName` из `resolveLevelFileName`. `skipMouseGuard`. Dblclick — Asset Editor.
-- `async saveLevel()` - сохранение текущего уровня; per-session fileName; без имени — prompt "Enter file name:" (default `level.json`); FSA: `content/maps/<file>` + manifest, иначе download; Open Recent
+- `async saveLevel()` - сохранение текущего уровня; per-session fileName; без имени — prompt "Enter file name:" (default `level.json`); FSA: `content/maps/<file>` + manifest, иначе download; Open Recent. Сам метод всегда пишет уровень; клавиатурный `editor.saveLevel` (`Ctrl+S`) сначала идёт в `EventHandlers._saveAssetsOnCtrlS` (см. AssetPanel)
 - `async saveLevelAs()` - prompt имени; обновляет per-session `session.fileName`; тот же FSA/download; Open Recent
 - `async closeLevel(levelId)` (новый, v3.57.0) - закрытие вкладки уровня; нельзя закрыть последний открытый уровень; спрашивает подтверждение если уровень содержит несохранённые изменения
 
@@ -132,7 +132,11 @@
 - `selectAsset(assetId)` - выбор ассета
 - `handleAssetWheel()` - mouse wheel навигация по табам
 - `handleDrop()` - создание ассетов из dropped файлов
-- `handleAssetSave()` - сохранение ассета после редакции
+- `saveSelectedAssets(assets?)` - persist выбранных (или переданных) library assets; нет path / `isTemporary` → `handleAssetSave({silent})`, иначе `handleAssetSaveChanges({silent})`; затем `_refreshAfterAssetSave()`. `false` если список пуст
+- `handleAssetSave(asset, opts?)` - первое сохранение / temp; FSA `FsaContentWriter.saveAsset(..., {updateManifest, assetManager})`, иначе directory picker; затем `_markAssetPersisted`
+- `handleAssetSaveChanges(asset, opts?)` - in-place save существующего ассета; FSA first, иначе `FileUtils.saveDataDirectly`; затем `_markAssetPersisted`
+- `_markAssetPersisted(asset)` - `isTemporary=false`, `hasUnsavedChanges=false`, `lastSaved=now`, clamp `lastModified`, `saveOriginalState()`
+- `shouldShowUnsavedIndicator(asset)` - dirty-dot: `isTemporary || hasUnsavedChanges || hasChangesFromOriginal()` (без `lastModified>lastSaved`)
 - `autoResizePanelHeight()` - автоподгонка высоты панели
 - `destroy()` - очистка ресурсов
 
@@ -143,7 +147,8 @@
 - **Гибкие размеры**: настраиваемый размер превью ассетов (AssetToolbarController)
 - **Поиск и фильтрация**: поиск и фильтры по типам (AssetFilterController)
 - **Drag-and-drop**: перетаскивание ассетов на canvas (copy) или на Content-tree folder / folder tab (move); импорт PNG (AssetDragDropController)
-- **Контекстные меню**: правый клик для дополнительных действий (AssetItemActionsController)
+- **Контекстные меню**: правый клик (AssetItemActionsController); RMB **Save Asset(s)** / **Save Asset(s) To...** вызывает `saveSelectedAssets` на всём выделении, если кликнутый ассет в нём
+- **Ctrl+S**: `EventHandlers._saveAssetsOnCtrlS` — hover Assets + `selectedAssets` → `saveSelectedAssets()`; hover Asset Editor (`_assetPreviewForHotkey`) + `editingAssetId` → save этого ассета; иначе `saveLevel`. File → Save всегда уровень
 
 ### AssetManager (src/managers/AssetManager.js)
 Управление ассетами с поддержкой динамической загрузки из манифеста и placeholder-созданием по каталогу типов.
@@ -428,7 +433,7 @@ Write content assets into the granted project folder (v4.51.0).
 
 #### Основные методы:
 - `assetToDiskJson(asset)` - persistable JSON; `imgSrc` = sibling basename; drop `path` and data-URL imgSrc
-- `async saveAsset(asset, {updateManifest?, assetManager?})` - `Promise<string|null>` content-relative path; PNG sibling when data-URL imgSrc
+- `async saveAsset(asset, {updateManifest?, assetManager?})` - `Promise<string|null>` content-relative path; PNG sibling when data-URL imgSrc. Callers: `AssetPanel.handleAssetSave` (`updateManifest: true`) / `handleAssetSaveChanges`; `saveSelectedAssets` выбирает между ними
 - `async saveNewAsset(asset, assetManager)` - `saveAsset` with `updateManifest: true`
 
 ### FsaContentFs (src/utils/FsaContentFs.js)
