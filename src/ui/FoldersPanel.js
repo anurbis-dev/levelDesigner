@@ -425,23 +425,80 @@ export class FoldersPanel extends BasePanel {
             }
             });
             
-            // Setup drag and drop for folder items
-            item.addEventListener('dragstart', (e) => {
-                const path = item.dataset.path;
-                if (path) {
-                    e.dataTransfer.setData('application/x-folder-path', path);
-                    e.dataTransfer.effectAllowed = 'copy';
-                    item.classList.add('dragging');
-                }
-            });
-            
-            item.addEventListener('dragend', (e) => {
-                item.classList.remove('dragging');
-            });
+            this._bindFolderItemDrag(item);
         });
 
     }
 
+
+    _clearFolderDropHover() {
+        this.folderTree?.querySelectorAll('.folder-item.drop-hover').forEach((el) => {
+            el.classList.remove('drop-hover');
+        });
+    }
+
+    _dragHasAssets(e) {
+        const types = e.dataTransfer?.types;
+        return !!types && (types.includes('application/x-asset-ids') || types.includes('application/json'));
+    }
+
+    _dragHasFolders(e) {
+        return !!e.dataTransfer?.types?.includes('application/x-folder-path');
+    }
+
+    _bindFolderItemDrag(item) {
+        item.addEventListener('dragstart', (e) => {
+            const path = item.dataset.path;
+            if (!path) return;
+            const selected = this.selectedFolders instanceof Set ? Array.from(this.selectedFolders) : [];
+            const paths = selected.includes(path) && selected.length ? selected : [path];
+            e.dataTransfer.setData('application/x-folder-path', path);
+            e.dataTransfer.setData('application/x-folder-paths', JSON.stringify(paths));
+            e.dataTransfer.effectAllowed = 'copyMove';
+            item.classList.add('dragging');
+        });
+        item.addEventListener('dragend', () => {
+            item.classList.remove('dragging');
+            this._clearFolderDropHover();
+        });
+        item.addEventListener('dragover', (e) => {
+            if (!this._dragHasAssets(e) && !this._dragHasFolders(e)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            e.dataTransfer.dropEffect = 'move';
+            this._clearFolderDropHover();
+            item.classList.add('drop-hover');
+        });
+        item.addEventListener('dragleave', (e) => {
+            if (!item.contains(e.relatedTarget)) item.classList.remove('drop-hover');
+        });
+        item.addEventListener('drop', (e) => {
+            if (!this._dragHasAssets(e) && !this._dragHasFolders(e)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            item.classList.remove('drop-hover');
+            const dest = item.dataset.path;
+            const ops = this.assetPanel?.folderOps;
+            if (!dest || !ops) return;
+            if (this._dragHasFolders(e)) {
+                let paths = [];
+                try { paths = JSON.parse(e.dataTransfer.getData('application/x-folder-paths') || '[]'); } catch { /* ignore */ }
+                const primary = e.dataTransfer.getData('application/x-folder-path');
+                if (!paths.length && primary) paths = [primary];
+                ops.moveFolders(paths, dest);
+                return;
+            }
+            let ids = [];
+            try {
+                ids = JSON.parse(
+                    e.dataTransfer.getData('application/x-asset-ids')
+                    || e.dataTransfer.getData('application/json')
+                    || '[]'
+                );
+            } catch { /* ignore */ }
+            if (Array.isArray(ids) && ids.length) ops.moveAssetsByIds(ids, dest);
+        });
+    }
 
     /**
      * Select a folder

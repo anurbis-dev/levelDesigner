@@ -28,4 +28,21 @@ describe('FsaContentFs path helpers', () => {
         expect(structure.assets.enemies).toBeUndefined();
         expect(FsaContentFs.removeStructureNode(structure, 'missing/x')).toBe(false);
     });
+
+    it('isUnderPath treats empty parent as root', () => {
+        expect(FsaContentFs.isUnderPath('', 'assets/a')).toBe(true);
+        expect(FsaContentFs.isUnderPath('assets', 'assets/a')).toBe(true);
+        expect(FsaContentFs.isUnderPath('assets/a', 'assets')).toBe(false);
+        expect(FsaContentFs.isUnderPath('assets/a', 'assets/a')).toBe(true);
+    });
+
+    it('moves a structure subtree with children', () => {
+        const structure = {};
+        FsaContentFs.addStructureFolder(structure, 'assets/old/enemies');
+        expect(FsaContentFs.moveStructureNode(structure, 'assets/old', 'maps/old')).toBe(true);
+        expect(structure.assets.old).toBeUndefined();
+        expect(structure.maps.old.enemies).toEqual({});
+        expect(FsaContentFs.folderExists(structure, 'maps/old/enemies')).toBe(true);
+    });
 });
+

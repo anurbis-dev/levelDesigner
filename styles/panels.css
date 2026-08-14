@@ -202,6 +202,12 @@ body.tab-dragging .tab {
     cursor: grabbing;
 }
 
+.folder-item.drop-hover,
+.tab.drop-hover {
+    background-color: rgba(59, 130, 246, 0.28) !important;
+    outline: 1px dashed #3b82f6;
+}
+
 /* Unsaved changes indicator */
 .asset-unsaved-indicator {
     position: absolute;

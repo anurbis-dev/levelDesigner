@@ -786,26 +786,53 @@ export class AssetTabsManager {
         }
 
         this._folderDragOver = (e) => {
-            e.preventDefault();
-            if (e.dataTransfer.types.includes('application/x-folder-path')) {
+            const types = e.dataTransfer.types;
+            const isFolder = types.includes('application/x-folder-path');
+            const isAsset = types.includes('application/x-asset-ids') || types.includes('application/json');
+            const tab = e.target.closest?.('.tab');
+            if (isFolder) {
+                e.preventDefault();
                 this.tabsContainer.classList.add('drop-target');
+                return;
+            }
+            if (isAsset && tab) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                this.tabsContainer.querySelectorAll('.tab.drop-hover').forEach((el) => el.classList.remove('drop-hover'));
+                tab.classList.add('drop-hover');
             }
         };
         this._folderDragLeave = (e) => {
             if (!this.tabsContainer.contains(e.relatedTarget)) {
                 this.tabsContainer.classList.remove('drop-target');
+                this.tabsContainer.querySelectorAll('.tab.drop-hover').forEach((el) => el.classList.remove('drop-hover'));
             }
         };
         this._folderDrop = (e) => {
             e.preventDefault();
             this.tabsContainer.classList.remove('drop-target');
+            this.tabsContainer.querySelectorAll('.tab.drop-hover').forEach((el) => el.classList.remove('drop-hover'));
             const folderPath = e.dataTransfer.getData('application/x-folder-path');
             if (folderPath) {
                 this.addFolderTab(folderPath);
                 if (this.foldersPanel) {
                     this.foldersPanel.selectFolder(folderPath, null);
                 }
+                return;
             }
+            const tab = e.target.closest?.('.tab');
+            const dest = tab?.dataset?.folderPath;
+            const ops = this.assetPanel?.folderOps;
+            if (!dest || !ops) return;
+            let ids = [];
+            try {
+                ids = JSON.parse(
+                    e.dataTransfer.getData('application/x-asset-ids')
+                    || e.dataTransfer.getData('application/json')
+                    || '[]'
+                );
+            } catch { /* ignore */ }
+            if (Array.isArray(ids) && ids.length) ops.moveAssetsByIds(ids, dest);
         };
 
         this.tabsContainer.addEventListener('dragover', this._folderDragOver);

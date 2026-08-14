@@ -1,4 +1,4 @@
-# Руководство пользователя - 2D Level Editor v4.53.0
+# Руководство пользователя - 2D Level Editor v4.54.0
 
 ## 🎯 Быстрый старт
 
@@ -241,7 +241,7 @@
 - **Project Folder as library** (v4.52.0): после **Set Project Folder** дерево Content = выбранная папка (FSA); **Refresh** перечитывает её; Clear → снова served `./content/`
 - **New Folder**: RMB on Content tree or empty asset area → **New Folder** (prompt); writes to disk when folder granted
 - **Delete Folder**: RMB on folder → **Delete Folder** (hidden on Content root); or Del over folders tree / over assets panel with non-root folder selected and no assets selected
-- **Move to Folder**: RMB on asset thumbnail → **Move to Folder** submenu (from content structure); moves JSON + sibling PNG + manifest when folder granted
+- **Move assets / folders** (v4.54.0): click-drag asset thumbnail(s) onto a Content-tree folder or an existing folder tab — moves JSON + sibling PNG + manifest when project folder granted. Drag a folder onto another folder in the Content tree — moves the folder + all contents. Cannot move Content root; cannot drop a folder into itself or a descendant. Dropping a folder onto the tabs strip still pins a tab (does not move). After move, path-like cross-references (`path`, `imgSrc`, `properties.sourceFile`, `properties.levelSrc`, and any string that equals or is prefixed by the old content-relative path, including `./content/`, `content/`, `root/` forms) are remapped so links do not break. Component `*AssetId` fields stay. Open level objects/properties are rewritten the same way. Moved asset JSON is saved with stable `id`. No RMB **Move to Folder**.
 - **Delete asset**: RMB Delete or Del over previews — also removes JSON + sibling PNG + manifest entry when folder granted
 - **Переключение позиции папок**: Кнопка ⇄ в заголовке Content для изменения расположения папок
 - Поддержка Grid/List/Details режимов отображения

@@ -60,7 +60,6 @@ export class AssetItemActionsController {
             onSaveAssetChanges: (asset) => assetPanel.handleAssetSaveChanges(asset),
             onShowInExplorer: (asset) => assetPanel.handleAssetShowInExplorer(asset),
             onDelete: (asset) => this.handleAssetDelete(asset),
-            onMoveAsset: (asset, folderPath) => this.folderOps.moveAsset(asset, folderPath),
             disableGlobalHandlers: true // Disable global handlers since we use delegated events
         });
 

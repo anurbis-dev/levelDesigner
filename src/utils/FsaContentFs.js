@@ -56,6 +56,48 @@ export class FsaContentFs {
         return out;
     }
 
+    /** True if `childRel` is `parentRel` or lives under it. Empty parent = content root. */
+    static isUnderPath(parentRel, childRel) {
+        const parent = String(parentRel || '').replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+        const child = String(childRel || '').replace(/\\/g, '/').replace(/^\/+|\/+$/g, '');
+        if (!parent) return true;
+        return child === parent || child.startsWith(`${parent}/`);
+    }
+
+    static folderExists(structure, folderRel) {
+        const parts = String(folderRel || '').split('/').filter(Boolean);
+        if (!parts.length) return true;
+        let node = structure;
+        for (const part of parts) {
+            if (!node || typeof node !== 'object' || !(part in node)) return false;
+            node = node[part];
+        }
+        return true;
+    }
+
+    /** Relocate a structure subtree (keeps children). */
+    static moveStructureNode(structure, fromRel, toRel) {
+        const fromParts = String(fromRel || '').split('/').filter(Boolean);
+        const toParts = String(toRel || '').split('/').filter(Boolean);
+        if (!fromParts.length || !toParts.length) return false;
+        let srcParent = structure;
+        for (let i = 0; i < fromParts.length - 1; i++) {
+            if (!srcParent?.[fromParts[i]] || typeof srcParent[fromParts[i]] !== 'object') return false;
+            srcParent = srcParent[fromParts[i]];
+        }
+        const name = fromParts[fromParts.length - 1];
+        if (!(name in srcParent)) return false;
+        const subtree = srcParent[name];
+        delete srcParent[name];
+        FsaContentFs.addStructureFolder(structure, toParts.slice(0, -1).join('/'));
+        let destParent = structure;
+        for (let i = 0; i < toParts.length - 1; i++) {
+            destParent = destParent[toParts[i]];
+        }
+        destParent[toParts[toParts.length - 1]] = subtree && typeof subtree === 'object' ? subtree : {};
+        return true;
+    }
+
     static async looksLikeContentRoot(handle) {
         if (!handle) return false;
         try {
@@ -159,12 +201,51 @@ export class FsaContentFs {
         const from = FsaStore.toContentRelativePath(fromRel);
         const to = FsaStore.toContentRelativePath(toRel);
         if (!from || !to || from === to) return false;
-        const text = await FsaContentFs.readText(from);
-        if (text == null) return false;
-        const wrote = await FsaStore.writeContentFile(to, text);
+        const blob = await FsaContentFs.readBlob(from);
+        if (!blob) return false;
+        const wrote = await FsaStore.writeContentFile(to, blob);
         if (!wrote) return false;
         await FsaContentFs.deletePath(from);
         return true;
+    }
+
+    /**
+     * Move a directory tree. Native handle.move when available, else copy+delete.
+     */
+    static async moveDirectory(fromRel, toRel) {
+        const from = FsaStore.toContentRelativePath(fromRel) || String(fromRel || '').replace(/\\/g, '/');
+        const to = FsaStore.toContentRelativePath(toRel) || String(toRel || '').replace(/\\/g, '/');
+        if (!from || !to || from === to) return false;
+        if (FsaContentFs.isUnderPath(from, to) && to !== from) return false;
+        const content = await FsaStore.getContentDirectoryHandle();
+        if (!content) return false;
+        try {
+            const { handle, parent } = await FsaContentFs._getChildHandle(content, from);
+            const destParts = to.split('/').filter(Boolean);
+            const destName = destParts.pop();
+            let destParent = content;
+            for (const part of destParts) {
+                destParent = await destParent.getDirectoryHandle(part, { create: true });
+            }
+            if (handle && typeof handle.move === 'function') {
+                await handle.move(destParent, destName);
+                return true;
+            }
+            if (handle?.kind === 'directory' && destParent !== parent) {
+                /* fall through to copy */
+            }
+        } catch (error) {
+            Logger.file.debug?.(`FsaContentFs: native move unavailable (${from})`, error);
+        }
+        try {
+            await FsaContentFs.createDirectory(to);
+            await FsaContentFs._copyTree(content, from, to);
+            await FsaContentFs.deletePath(from);
+            return true;
+        } catch (error) {
+            Logger.file.warn(`FsaContentFs: moveDirectory failed (${from} → ${to})`, error);
+            return false;
+        }
     }
 
     static async readText(relPath) {
@@ -244,6 +325,41 @@ export class FsaContentFs {
             dir = await dir.getDirectoryHandle(part, { create });
         }
         return dir.getFileHandle(fileName, { create });
+    }
+
+    static async _getChildHandle(root, rel) {
+        const parts = String(rel || '').split('/').filter(Boolean);
+        const name = parts.pop();
+        let parent = root;
+        for (const part of parts) {
+            parent = await parent.getDirectoryHandle(part, { create: false });
+        }
+        try {
+            return { parent, handle: await parent.getDirectoryHandle(name, { create: false }) };
+        } catch {
+            return { parent, handle: await parent.getFileHandle(name, { create: false }) };
+        }
+    }
+
+    static async _copyTree(root, fromRel, toRel) {
+        const { handle } = await FsaContentFs._getChildHandle(root, fromRel);
+        if (!handle || handle.kind !== 'directory') {
+            const blob = await FsaContentFs.readBlob(fromRel);
+            if (blob) await FsaStore.writeContentFile(toRel, blob);
+            return;
+        }
+        for await (const [name, child] of handle.entries()) {
+            if (!name || name.startsWith('.')) continue;
+            const src = `${fromRel}/${name}`;
+            const dest = `${toRel}/${name}`;
+            if (child.kind === 'directory') {
+                await FsaContentFs.createDirectory(dest);
+                await FsaContentFs._copyTree(root, src, dest);
+            } else {
+                const file = await child.getFile();
+                await FsaStore.writeContentFile(dest, file);
+            }
+        }
     }
 
     static async _readOrCreateManifest(contentDir) {

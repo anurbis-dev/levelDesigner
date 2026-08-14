@@ -39,8 +39,9 @@ export class AssetDragDropController {
             'selectedAssets:', Array.from(selectedAssets)
         );
 
+        e.dataTransfer.setData('application/x-asset-ids', JSON.stringify(draggedAssetIds));
         e.dataTransfer.setData('application/json', JSON.stringify(draggedAssetIds));
-        e.dataTransfer.effectAllowed = 'copy';
+        e.dataTransfer.effectAllowed = 'copyMove';
 
         assetPanel.stateManager.update({
             'mouse.isDraggingAsset': true

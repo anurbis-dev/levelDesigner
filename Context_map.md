@@ -1,4 +1,4 @@
-# Context Map - Level Designer v4.53.0 (LEDGE catalog assets: type=`level`/`eventGraph`; prefabs + tileset + stance collision; v4.52.0 project-folder content sync + folder CRUD remain; LEDGE platformer port; Phase A done; Phase B dock B0–B5 done; §7 backlog 12/12 + Tiers 1–4 done)
+# Context Map - Level Designer v4.54.0 (drag-move assets/folders + path rewrite; LEDGE catalog assets: type=`level`/`eventGraph`; prefabs + tileset + stance collision; v4.52.0 project-folder content sync + folder CRUD remain; LEDGE platformer port; Phase A done; Phase B dock B0–B5 done; §7 backlog 12/12 + Tiers 1–4 done)
 
 ## ⚠️ КРИТИЧЕСКИ ВАЖНО - ЧИТАТЬ ПЕРВЫМ
 
@@ -222,9 +222,15 @@ level.settings.parallaxVertical // множитель вертикального
 - `src/core/ProjectFileOperations.js` - файловые операции проекта (Phase 7, BaseModule): `newProject()`/`openProject()`/`openProjectFromData()`/`saveProject()`/`saveProjectAs()` (async; FsaStore.writeWorkingDirFile или download), replace-not-merge; MRU remember
 - `src/utils/FsaStore.js` - v4.51.0 File System Access: persist `FileSystemDirectoryHandle` (IndexedDB `levelDesignerFsaHandles`/`handles`/`workingDir`), folder name localStorage `levelDesignerFsaWorkingDirName`; `isSupported`/`pickWorkingDirectory`/`clearWorkingDirectory`/`writeWorkingDirFile`/`writeContentFile`/`ensureManifestEntry`/`getContentDirectoryHandle`/`toContentRelativePath`/`toLevelRelativePath`
 - `src/utils/FsaContentWriter.js` - v4.51.0: `assetToDiskJson`/`saveAsset`/`saveNewAsset` — JSON+PNG sibling в content root без save dialog
-- `src/utils/FsaContentFs.js` - v4.52.0: content-root layout/scan/CRUD — `ensureDefaultContentLayout`/`scanContentTree`/`createDirectory`/`deletePath`/`moveFile`/`readText`/`readBlob`/`resolveImageSrc`/`updateManifest`; path helpers `uiFolderToContentRel`/`contentRelToUiFolder`/`sanitizeFolderName`/`addStructureFolder`/`removeStructureNode`/`flattenFolderRels`
-- `src/ui/AssetFolderOps.js` - v4.52.0: `createFolder`/`deleteFolder`/`deleteSelectedFolders`/`moveAsset`/`deleteAssetWithDisk` + `buildMoveMenuItems` (disk when folder granted)
+- `src/utils/FsaContentFs.js` - v4.52.0–v4.54.0: content-root layout/scan/CRUD — `ensureDefaultContentLayout`/`scanContentTree`/`createDirectory`/`deletePath`/`moveFile` (Blob/PNG-safe)/`moveDirectory`/`readText`/`readBlob`/`resolveImageSrc`/`updateManifest`; path helpers `uiFolderToContentRel`/`contentRelToUiFolder`/`sanitizeFolderName`/`addStructureFolder`/`removeStructureNode`/`flattenFolderRels`/`isUnderPath`/`folderExists`/`moveStructureNode`; internals `_getChildHandle`/`_copyTree`
+- `src/utils/AssetPathRewriter.js` - v4.54.0: `rewriteString` / `rewriteInPlace` / `rewriteAll(editor, remaps)` — remap path-like strings after asset/folder move (`path`/`imgSrc`/`sourceFile`/`levelSrc` + `./content/`/`content/`/`root/` forms); `*AssetId` stays
+- `src/ui/AssetFolderOps.js` - v4.52.0–v4.54.0: `createFolder`/`deleteFolder`/`deleteSelectedFolders`/`moveAsset`/`moveAssets`/`moveAssetsByIds`/`moveFolder`/`moveFolders`/`deleteAssetWithDisk` (disk+manifest when folder granted; no `buildMoveMenuItems`)
+- `src/ui/FoldersPanel.js` - Content-tree folder items are drop targets; dragstart sends `application/x-folder-path` + `application/x-folder-paths`
+- `src/ui/AssetTabsManager.js` - drop assets onto a `.tab` moves them into that folder; folder→tabs strip still pins a tab
+- `src/ui/AssetContextMenu.js` - asset thumbnail RMB; no **Move to Folder**
 - `src/ui/FoldersContextMenu.js` - v4.52.0: RMB on Assets Content tree — New Folder / Delete Folder (hidden on root)
+- `tests/AssetPathRewriter.test.js` - rewrite prefixes / skip ids / rewriteAll
+- `tests/FsaContentFs.test.js` - extra cases for `isUnderPath` / `folderExists` / `moveStructureNode`
 - `src/managers/RecentFilesManager.js` - U3 Open Recent: MRU level/project snapshots в `editor.recentFiles`
 - `src/core/ObjectOperations.js` - операции с объектами
 - `src/core/LayerOperations.js` - операции со слоями
@@ -270,7 +276,7 @@ level.settings.parallaxVertical // множитель вертикального
 - `src/ui/AssetFoldersController.js` - навигация по папкам (Фаза 4.1); управление табами папок, переключение активной папки, синхронизация с FoldersPanel
 - `src/ui/AssetFilterController.js` - фильтрация и поиск (Фаза 4.3); поиск ассетов по имени, фильтр по типу, управление видимостью строк фильтра
 - `src/ui/AssetSelectionController.js` - выделение ассетов (Фаза 4.4); multi-select через Shift+Ctrl+клик, select-all/deselect-all, обновление визуалов выделения
-- `src/ui/AssetDragDropController.js` - перетаскивание и импорт (Фаза 4.5); drag-out ассетов на canvas, external PNG file drop overlay, создание ассетов из файлов
+- `src/ui/AssetDragDropController.js` - перетаскивание и импорт (Фаза 4.5); drag-out ассетов на canvas, sets `application/x-asset-ids`, effectAllowed `copyMove` (canvas drop still copies); external PNG file drop overlay
 - `src/ui/AssetItemActionsController.js` - действия с ассетами (Фаза 4.6); контекстные меню (AssetContextMenu, AssetPanelContextMenu), `folderOps` (AssetFolderOps), delete-with-disk, open/show-in-explorer, rename
 - `src/ui/AssetToolbarController.js` - управление тулбаром (Фаза 4.7); размер превью (zoom), режимы просмотра (grid/list/details), персистентность; `handleSettings()` → `openSettings('assets')`
 - `src/ui/LayersPanel.js` - панель слоев, включая Layer Solo (`toggleLayerSolo`), paint drag на eye/lock-иконках (v3.58.0: mousedown + drag по иконкам того же типа применяет взятое значение, батчевый tail в `_endIconPaintDrag()` инвалидирует кэши и ре-рендерит)
@@ -427,7 +433,7 @@ eventHandlerManager.registerElement(button, { click: onClick }, 'button-id');
 
 ## 🔧 Версионирование
 
-Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '4.53.0'` (LEDGE catalog type=level/eventGraph + stance collision + v4.52.0 project-folder sync + FSA writes + LEDGE platformer port + Phase A/B + §7 Tiers 1–4; layout = `editor.dockManager`)
+Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '4.54.0'` (drag-move assets/folders + AssetPathRewriter + LEDGE catalog type=level/eventGraph + stance collision + v4.52.0 project-folder sync + FSA writes + LEDGE platformer port + Phase A/B + §7 Tiers 1–4; layout = `editor.dockManager`)
 
 Версия отображается динамически после полной инициализации через `updateVersionInfo()` и `updatePageTitle()`. Интерфейс скрыт до завершения загрузки, чтобы избежать отображения устаревшей версии. Pre-push hook блокирует коммит без бампа версии (`.claude/settings.json`).
 

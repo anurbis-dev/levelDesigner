@@ -2,6 +2,7 @@ import { Logger } from '../utils/Logger.js';
 import { FsaStore } from '../utils/FsaStore.js';
 import { FsaContentFs } from '../utils/FsaContentFs.js';
 import { FsaContentWriter } from '../utils/FsaContentWriter.js';
+import { AssetPathRewriter } from '../utils/AssetPathRewriter.js';
 
 /**
  * Create / move / delete asset folders and disk-backed assets.
@@ -120,43 +121,137 @@ export class AssetFolderOps {
     }
 
     async moveAsset(asset, targetUiPath) {
-        if (!asset) return false;
+        return this.moveAssets(asset ? [asset] : [], targetUiPath);
+    }
+
+    async moveAssetsByIds(ids, targetUiPath) {
         const am = this._am();
+        const assets = (ids || []).map((id) => am?.getAsset?.(id)).filter(Boolean);
+        return this.moveAssets(assets, targetUiPath);
+    }
+
+    async moveAssets(assets, targetUiPath) {
+        const list = (assets || []).filter(Boolean);
+        if (!list.length) return false;
         const destRel = FsaContentFs.uiFolderToContentRel(targetUiPath);
-        const oldRel = FsaStore.toContentRelativePath(asset.path);
-        if (!oldRel) {
-            Logger.status.warn('Asset has no file path');
+        const plans = [];
+        const remaps = [];
+        for (const asset of list) {
+            const oldRel = FsaStore.toContentRelativePath(asset.path);
+            if (!oldRel) {
+                Logger.status.warn(`Asset "${asset.name}" has no file path`);
+                continue;
+            }
+            const fileName = oldRel.split('/').pop();
+            const newRel = destRel ? `${destRel}/${fileName}` : fileName;
+            if (newRel === oldRel) continue;
+            const pngName = this._siblingPngName(asset, oldRel);
+            const png = pngName ? {
+                from: oldRel.split('/').slice(0, -1).concat(pngName).join('/'),
+                to: newRel.split('/').slice(0, -1).concat(pngName).join('/')
+            } : null;
+            plans.push({ asset, oldRel, newRel, png });
+            remaps.push({ from: oldRel, to: newRel });
+            if (png) remaps.push(png);
+        }
+        if (!plans.length) return false;
+        if (new Set(plans.map((p) => p.newRel)).size !== plans.length) {
+            Logger.status.error('Cannot move: duplicate destination names');
             return false;
         }
-        const fileName = oldRel.split('/').pop();
-        const newRel = destRel ? `${destRel}/${fileName}` : fileName;
-        if (newRel === oldRel) return false;
 
-        if (FsaStore.getWorkingDirectoryName()) {
-            const pngName = this._siblingPngName(asset, oldRel);
-            const moved = await FsaContentFs.moveFile(oldRel, newRel);
-            if (!moved) {
-                Logger.status.error('Could not move file on disk');
-                return false;
+        const granted = !!FsaStore.getWorkingDirectoryName();
+        if (granted) {
+            for (const plan of plans) {
+                const moved = await FsaContentFs.moveFile(plan.oldRel, plan.newRel);
+                if (!moved) {
+                    Logger.status.error(`Could not move "${plan.oldRel}"`);
+                    return false;
+                }
+                if (plan.png) await FsaContentFs.moveFile(plan.png.from, plan.png.to);
             }
-            if (pngName) {
-                const oldPngRel = oldRel.split('/').slice(0, -1).concat(pngName).join('/');
-                const newPngRel = newRel.split('/').slice(0, -1).concat(pngName).join('/');
-                await FsaContentFs.moveFile(oldPngRel, newPngRel);
-            }
-            const manifest = await FsaContentFs.updateManifest((m) => {
-                m.files = (m.files || []).filter((f) => f !== oldRel);
-                if (!m.files.includes(newRel)) m.files.push(newRel);
-                FsaContentFs.addStructureFolder(m.structure, destRel);
-            });
-            if (manifest && am) am.contentStructure = manifest.structure;
         }
 
-        asset.path = newRel;
-        const parts = newRel.split('/');
-        asset.category = parts[parts.length - 2] || parts[0] || asset.category;
+        for (const { asset, newRel } of plans) {
+            asset.path = newRel;
+            const parts = newRel.split('/');
+            asset.category = parts[parts.length - 2] || parts[0] || asset.category;
+        }
+        await this._commitRemaps(remaps, (m) => {
+            for (const { oldRel, newRel } of plans) {
+                m.files = (m.files || []).filter((f) => f !== oldRel);
+                if (!m.files.includes(newRel)) m.files.push(newRel);
+            }
+            FsaContentFs.addStructureFolder(m.structure, destRel);
+        }, plans.map((p) => p.asset));
         this.refreshUi();
-        Logger.status.success(`Moved "${asset.name}" → ${destRel || 'Content'}`);
+        Logger.status.success(`Moved ${plans.length} asset(s) → ${destRel || 'Content'}`);
+        return true;
+    }
+
+    async moveFolder(sourceUiPath, targetUiPath) {
+        return this.moveFolders(sourceUiPath ? [sourceUiPath] : [], targetUiPath);
+    }
+
+    async moveFolders(sourceUiPaths, targetUiPath) {
+        const destRel = FsaContentFs.uiFolderToContentRel(targetUiPath);
+        const am = this._am();
+        const sources = this._uniqueFolderRels(sourceUiPaths);
+        const plans = [];
+        for (const fromRel of sources) {
+            if (!fromRel) {
+                Logger.status.warn('Cannot move the Content root');
+                continue;
+            }
+            const name = fromRel.split('/').pop();
+            const toRel = destRel ? `${destRel}/${name}` : name;
+            if (toRel === fromRel || fromRel === destRel) continue;
+            if (FsaContentFs.isUnderPath(fromRel, destRel) && destRel !== fromRel) {
+                Logger.status.error('Cannot move a folder into itself');
+                return false;
+            }
+            if (FsaContentFs.folderExists(am?.contentStructure || {}, toRel)) {
+                Logger.status.error(`Folder already exists: ${toRel}`);
+                return false;
+            }
+            plans.push({ fromRel, toRel });
+        }
+        if (!plans.length) return false;
+
+        const granted = !!FsaStore.getWorkingDirectoryName();
+        if (granted) {
+            for (const { fromRel, toRel } of plans) {
+                const ok = await FsaContentFs.moveDirectory(fromRel, toRel);
+                if (!ok) {
+                    Logger.status.error(`Could not move folder "${fromRel}"`);
+                    return false;
+                }
+            }
+        }
+
+        const remaps = plans.map((p) => ({ from: p.fromRel, to: p.toRel }));
+        await this._commitRemaps(remaps, (m) => {
+            for (const { fromRel, toRel } of plans) {
+                if (!FsaContentFs.moveStructureNode(m.structure, fromRel, toRel)) {
+                    FsaContentFs.addStructureFolder(m.structure, toRel);
+                }
+                m.files = (m.files || []).map((f) => {
+                    if (f === fromRel) return toRel;
+                    if (String(f).startsWith(`${fromRel}/`)) return toRel + String(f).slice(fromRel.length);
+                    return f;
+                });
+            }
+        });
+        if (!granted && am?.contentStructure) {
+            for (const { fromRel, toRel } of plans) {
+                if (!FsaContentFs.moveStructureNode(am.contentStructure, fromRel, toRel)) {
+                    FsaContentFs.addStructureFolder(am.contentStructure, toRel);
+                }
+            }
+        }
+        this._remapUiFolders(remaps);
+        this.refreshUi();
+        Logger.status.success(`Moved ${plans.length} folder(s) → ${destRel || 'Content'}`);
         return true;
     }
 
@@ -197,26 +292,59 @@ export class AssetFolderOps {
         return stem ? `${stem}.png` : null;
     }
 
-    static buildMoveMenuItems(assetPanel, asset) {
-        const am = assetPanel.assetManager || assetPanel.levelEditor?.assetManager;
-        const ops = assetPanel.folderOps || new AssetFolderOps(assetPanel);
-        const currentRel = FsaStore.toContentRelativePath(asset?.path || '');
-        const currentDir = currentRel ? currentRel.split('/').slice(0, -1).join('/') : '';
-        const rels = FsaContentFs.flattenFolderRels(am?.contentStructure || {});
-        const items = [{
-            id: 'move-to-root',
-            text: 'Content',
-            disabled: () => currentDir === '',
-            action: () => ops.moveAsset(asset, 'root')
-        }];
-        for (const rel of rels) {
-            items.push({
-                id: `move-to-${rel.replace(/[^\w-]+/g, '-')}`,
-                text: rel,
-                disabled: () => rel === currentDir,
-                action: () => ops.moveAsset(asset, FsaContentFs.contentRelToUiFolder(rel))
-            });
+    _uniqueFolderRels(uiPaths) {
+        const rels = [...new Set((uiPaths || []).map((p) => FsaContentFs.uiFolderToContentRel(p)))];
+        return rels.filter((rel) => !rels.some((other) => other && other !== rel && FsaContentFs.isUnderPath(other, rel)));
+    }
+
+    async _commitRemaps(remaps, mutateManifest, extraPersist = []) {
+        const editor = this._editor();
+        const dirty = AssetPathRewriter.rewriteAll(editor, remaps);
+        const granted = !!FsaStore.getWorkingDirectoryName();
+        if (granted) {
+            const seen = new Set();
+            for (const asset of [...dirty, ...extraPersist]) {
+                if (!asset || seen.has(asset)) continue;
+                seen.add(asset);
+                await FsaContentWriter.saveAsset(asset);
+                if (asset.type === 'image') {
+                    const rel = FsaStore.toContentRelativePath(asset.path);
+                    const src = rel ? await FsaContentFs.resolveImageSrc(rel, asset) : null;
+                    if (src) asset.imgSrc = src;
+                }
+            }
+            const am = this._am();
+            const manifest = await FsaContentFs.updateManifest(mutateManifest);
+            if (manifest && am) am.contentStructure = manifest.structure;
         }
-        return items;
+    }
+
+    _remapUiFolders(remaps) {
+        const panel = this.assetPanel;
+        const sm = panel?.stateManager;
+        if (!sm) return;
+        const rewrite = (path) => AssetPathRewriter.rewriteString(path, remaps);
+        const mapSet = (key) => {
+            const raw = sm.get(key);
+            if (raw instanceof Set) {
+                sm.set(key, new Set(Array.from(raw).map(rewrite)));
+                return;
+            }
+            if (Array.isArray(raw)) sm.set(key, raw.map(rewrite));
+        };
+        const k = (base) => panel.uiStateKey?.(base) || base;
+        mapSet(k('selectedFolders'));
+        mapSet(k('activeAssetTabs'));
+        const order = sm.get(k('assetTabOrder'));
+        if (Array.isArray(order)) sm.set(k('assetTabOrder'), order.map(rewrite));
+        const active = sm.get(k('activeAssetTab'));
+        if (typeof active === 'string') sm.set(k('activeAssetTab'), rewrite(active));
+        const folders = panel.foldersPanel;
+        if (folders?.selectedFolders instanceof Set) {
+            folders.selectedFolders = new Set(Array.from(folders.selectedFolders).map(rewrite));
+        }
+        if (folders?.expandedFolders instanceof Set) {
+            folders.expandedFolders = new Set(Array.from(folders.expandedFolders).map(rewrite));
+        }
     }
 }

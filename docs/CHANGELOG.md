@@ -4,4 +4,4 @@
 
 ## [Unreleased]
 
-- **Feat: LEDGE catalog + stance collision tunables (v4.53.0)**: Level asset (drop on canvas opens map; dblclick still settings); prefabs/actors with `sprite.imageAssetId`; tileset + terrain + event graph as assets; player/enemy clips; camera `followLerp`/`lookAhead`; sprite draws at frame size (collider still shrinks). `playerStart.crouchHeight`/`proneHeight`/`crouchWidth`/`proneWidth` tune capsule per stance.
+- **Feat: Drag-move assets/folders + path rewrite (v4.54.0)**: click-drag assets onto Content tree (or a folder tab) and folders onto another folder to move them with contents; no RMB **Move to Folder**. `AssetPathRewriter` remaps `path`/`imgSrc`/`sourceFile`/`levelSrc` and any path-like strings in components, other assets, and the open level; `*AssetId` refs stay. `FsaContentFs.moveFile` is binary-safe; `moveDirectory` + `moveStructureNode` keep folder trees. IDs written back to moved JSON.

@@ -29,7 +29,7 @@
 - `async createAssetOfType(typeId)` - placeholder в активной папке Asset panel; `FsaContentWriter.saveNewAsset` + manifest; status `Created "name" → rel` если записано
 
 #### Версия:
-- `static VERSION` - текущая версия редактора (строка, например `'4.53.0'`)
+- `static VERSION` - текущая версия редактора (строка, например `'4.54.0'`)
 - `updateVersionInfo()` - обновление отображения версии в UI
 
 #### Copy/Paste/Duplicate (Ctrl+C/X/V, Shift+D):
@@ -121,7 +121,7 @@
 - **AssetViewRenderer** — рендеринг превью (grid/list/details)
 - **AssetFilterController** — поиск и фильтр по типу ассета
 - **AssetSelectionController** — выделение ассетов (multi-select, select-all)
-- **AssetDragDropController** — drag-out ассетов на canvas, import PNG files
+- **AssetDragDropController** — drag-out ассетов на canvas (`application/x-asset-ids`, effectAllowed `copyMove`; canvas drop still copies), import PNG files
 - **AssetItemActionsController** — контекстные меню, действия на ассеты
 - **AssetToolbarController** — тулбар (zoom size, view mode), персистентность
 
@@ -141,7 +141,7 @@
 - **Multi-select**: поддержка множественного выбора ассетов (AssetSelectionController)
 - **Гибкие размеры**: настраиваемый размер превью ассетов (AssetToolbarController)
 - **Поиск и фильтрация**: поиск и фильтры по типам (AssetFilterController)
-- **Drag-and-drop**: перетаскивание ассетов на canvas, импорт PNG (AssetDragDropController)
+- **Drag-and-drop**: перетаскивание ассетов на canvas (copy) или на Content-tree folder / folder tab (move); импорт PNG (AssetDragDropController)
 - **Контекстные меню**: правый клик для дополнительных действий (AssetItemActionsController)
 
 ### AssetManager (src/managers/AssetManager.js)
@@ -192,7 +192,7 @@
 - `getFolderName(folderPath)` - получение имени папки для отображения в табе
 - `setupContextMenu()` - настройка контекстного меню для табов
 - `setupTabDragging()` - настройка drag-and-drop для табов с правильными курсорами
-- `setupFolderDragToTabs()` - настройка дропа папок на контейнер табов
+- `setupFolderDragToTabs()` - folder drop on the tabs strip pins a tab; asset drop on a `.tab` calls `folderOps.moveAssetsByIds`
 - `setupHorizontalScrolling()` - настройка горизонтального скролла колесом мыши и средней кнопкой
 - `loadScrollPosition()` - загрузка сохраненной позиции скролла из пользовательских настроек
 - `saveTabOrder()` - сохранение порядка табов
@@ -201,7 +201,7 @@
 #### Особенности:
 - **Multi-select**: поддержка множественного выбора табов через Shift+клик
 - **Горизонтальный скролл**: навигация по табам колесом мыши и средней кнопкой
-- **Drag-and-drop**: перетаскивание табов с правильными курсорами (палец → схватывание)
+- **Drag-and-drop**: перетаскивание табов с правильными курсорами (палец → схватывание); drop assets onto a `.tab` moves them; folder→tabs still adds a tab
 - **Сохранение состояния**: позиция скролла сохраняется в пользовательских настройках
 - **Контекстное меню**: правый клик на табах для дополнительных действий
 - Табы создаются **только** при перетаскивании папок на контейнер табов
@@ -235,7 +235,7 @@
 - **Multi-select**: поддержка множественного выбора папок через Shift+клик и Ctrl+клик
 - **Рекурсивное раскрытие**: Shift+клик на иконке раскрытия для раскрытия всех вложенных папок
 - **Умная обрезка имен**: динамическая обрезка длинных имен папок с учетом доступного места
-- **Drag-and-drop**: перетаскивание папок на контейнер табов для создания табов
+- **Drag-and-drop**: перетаскивание папок на контейнер табов для создания табов (`application/x-folder-path` + `application/x-folder-paths`); folder items are drop targets — assets → `folderOps.moveAssetsByIds`, folders → `folderOps.moveFolders`
 - **Синхронизация с табами**: автоматическая синхронизация выбора с AssetTabsManager
 - **FoldersContextMenu (v4.52.0)**: RMB — **New Folder** / **Delete Folder** (Delete hidden on root) → `AssetFolderOps`
 - **ResizeObserver**: автоматическое обновление при изменении размера панели
@@ -422,7 +422,7 @@ Write content assets into the granted project folder (v4.51.0).
 - `async saveNewAsset(asset, assetManager)` - `saveAsset` with `updateManifest: true`
 
 ### FsaContentFs (src/utils/FsaContentFs.js)
-Content-root layout, scan, and CRUD over the granted project folder (v4.52.0). Complements `FsaStore` writes.
+Content-root layout, scan, and CRUD over the granted project folder (v4.52.0–v4.54.0). Complements `FsaStore` writes.
 
 #### Константы:
 - `DEFAULT_DIRS` - `['assets', 'maps', 'graphs']`
@@ -432,26 +432,41 @@ Content-root layout, scan, and CRUD over the granted project folder (v4.52.0). C
 - `contentRelToUiFolder(rel)` - content-relative → `root/...`
 - `sanitizeFolderName(name)` - strip illegal path chars
 - `addStructureFolder(structure, folderRel)` / `removeStructureNode(structure, folderRel)` / `flattenFolderRels(structure)`
+- `isUnderPath(parentRel, childRel)` - true if `childRel` is `parentRel` or lives under it
+- `folderExists(structure, folderRel)` / `moveStructureNode(structure, fromRel, toRel)`
 
 #### Основные методы:
 - `async looksLikeContentRoot(handle)` - has `manifest.json` or `assets`/`maps`/`graphs` dir
 - `async ensureDefaultContentLayout()` - create nested `content/` if pick is not already a content root; ensure default dirs + manifest; returns content dir handle or null
 - `async scanContentTree()` - `{ structure, files: [{relPath, json}] }` or null
-- `async createDirectory(folderRel)` / `async deletePath(relPath)` / `async moveFile(fromRel, toRel)`
+- `async createDirectory(folderRel)` / `async deletePath(relPath)` / `async moveFile(fromRel, toRel)` - `moveFile` copies Blob (PNG-safe) then deletes source
+- `async moveDirectory(fromRel, toRel)` - native `handle.move` when available, else `_copyTree` + delete; refuses self/descendant
 - `async readText(relPath)` / `async readBlob(relPath)`
 - `async resolveImageSrc(jsonRel, assetData)` - FSA blob URL, else `./content/` fallback
 - `async updateManifest(mutator)` - read-mutate-write `manifest.json`; returns manifest or false
 
+### AssetPathRewriter (src/utils/AssetPathRewriter.js)
+Remap content-relative paths after an asset/folder move (v4.54.0). Component `*AssetId` refs stay.
+
+#### Основные методы:
+- `static sortRemaps(remaps)` - drop no-ops; longest `from` first
+- `static rewriteString(value, remaps)` - rewrite one string if it equals or is prefixed by old path (`''`, `./content/`, `content/`, `root/` forms)
+- `static rewriteInPlace(obj, remaps)` - mutate path-like strings in an object graph; returns whether anything changed
+- `static rewriteAll(editor, remaps)` - rewrite every catalog asset + the open level (+ other `levelsManager` sessions); returns dirty assets
+
 ### AssetFolderOps (src/ui/AssetFolderOps.js)
-Create / move / delete asset folders and disk-backed assets (v4.52.0). Owned by `AssetItemActionsController` as `assetPanel.folderOps`.
+Create / move / delete asset folders and disk-backed assets (v4.52.0–v4.54.0). Owned by `AssetItemActionsController` as `assetPanel.folderOps`. No RMB **Move to Folder** (`buildMoveMenuItems` removed).
 
 #### Основные методы:
 - `async createFolder(parentUiPath?)` - prompt name; disk mkdir + structure when folder granted
 - `async deleteFolder(uiPath)` - confirm; recursive assets + disk; cannot delete `root`
 - `async deleteSelectedFolders()` - delete all selected non-root folders
-- `async moveAsset(asset, targetUiPath)` - move JSON + sibling PNG + manifest entry when folder granted
+- `async moveAsset(asset, targetUiPath)` - delegates to `moveAssets`
+- `async moveAssets(assets, targetUiPath)` - move JSON + sibling PNG + manifest when folder granted; then `AssetPathRewriter.rewriteAll`; persist dirty assets with stable `id`
+- `async moveAssetsByIds(ids, targetUiPath)` - resolve ids via AssetManager, then `moveAssets`
+- `async moveFolder(sourceUiPath, targetUiPath)` - delegates to `moveFolders`
+- `async moveFolders(sourceUiPaths, targetUiPath)` - move folder + contents; cannot move Content root; cannot drop into self/descendant
 - `async deleteAssetWithDisk(asset)` - delete JSON + sibling PNG + manifest + memory
-- `static buildMoveMenuItems(assetPanel, asset)` - submenu items for asset RMB **Move to Folder**
 
 ### FoldersContextMenu (src/ui/FoldersContextMenu.js)
 RMB on the Assets Content tree (v4.52.0). Extends `BaseContextMenu`.
