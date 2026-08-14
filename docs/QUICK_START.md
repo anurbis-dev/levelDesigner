@@ -1,4 +1,4 @@
-# Быстрый запуск Level Editor v4.54.0
+# Быстрый запуск Level Editor v4.54.1
 
 ## 🚀 Запуск за 3 шага
 
@@ -30,7 +30,7 @@
 - **Масштабирование**: `Ctrl+Alt+`перетаскивание объекта — равномерное масштабирование выделения относительно центра общего bounding box (`Shift` — снап фактора к шагу 10%)
 - **Группировка**: Выделите объекты → `Ctrl+G`
 - **Дублирование**: `Ctrl+D` с последующим размещением, либо `Alt+`перетаскивание объекта
-- **Project Folder** (v4.51.0–v4.52.0): File → **Set Project Folder...** (или Project Settings → Project Folder) — grant write access once; Content tree shows that folder (creates default `content/` layout if needed); levels/assets/project/build + folder/asset CRUD save in-place. Clear → served `./content/`. Without grant — download dialog
+- **Project Folder** (v4.51.0–v4.54.1): File → **Set Project Folder...** (или Project Settings → Project Folder) — grant write access once; Content tree shows that folder (creates default `content/` layout if needed); levels/assets/project/build + folder/asset CRUD save in-place. File → **Clear Project Folder** (next to Set Project Folder...) or Project Settings → Clear → served `./content/`. File → **New Project** also drops the folder grant and reloads default Assets. Without grant — download dialog
 - **Assets folders** (v4.52.0–v4.54.0): Content tree RMB → **New Folder** / **Delete Folder**; click-drag assets onto a Content-tree folder (or a folder tab) and folders onto another folder to move them (no RMB **Move to Folder**); Del over tree or selected folder deletes folder(s) (not Content root); asset Del removes disk files when folder granted
 - **Сохранение**: `Ctrl+S` (level); File → Save Project
 - **Сброс к дефолту (наведением)**: Наведите курсор на поле в панели Details/Settings и нажмите `Backspace` — поле сбрасывается к дефолту; наведите на заголовок секции — сбрасываются все поля внутри неё (без клика/выделения, только наведение мышью)

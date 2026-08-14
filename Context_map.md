@@ -1,4 +1,4 @@
-# Context Map - Level Designer v4.54.0 (drag-move assets/folders + path rewrite; LEDGE catalog assets: type=`level`/`eventGraph`; prefabs + tileset + stance collision; v4.52.0 project-folder content sync + folder CRUD remain; LEDGE platformer port; Phase A done; Phase B dock B0–B5 done; §7 backlog 12/12 + Tiers 1–4 done)
+# Context Map - Level Designer v4.54.1 (New Project / File → Clear Project Folder reset Assets to served `./content/`; drag-move assets/folders + path rewrite; LEDGE catalog assets: type=`level`/`eventGraph`; prefabs + tileset + stance collision; v4.52.0 project-folder content sync + folder CRUD remain; LEDGE platformer port; Phase A done; Phase B dock B0–B5 done; §7 backlog 12/12 + Tiers 1–4 done)
 
 ## ⚠️ КРИТИЧЕСКИ ВАЖНО - ЧИТАТЬ ПЕРВЫМ
 
@@ -47,13 +47,13 @@ levelEditor.levelsManager.reorderLevels(newOrder) // переупорядочи�
 
 // LevelEditor Project-операции (v3.57.0 Phase 7)
 // Проект = контейнер набора открытых уровней (LevelSession), самодостаточный JSON с embedded Level.toJSON() каждого уровня + видимость/порядок/currentLevelIndex
-levelEditor.newProject() // создание нового проекта: очищает все открытые уровни, создаёт один пустой с seeded history baseline; единый confirm при несохранённых правках вместо N диалогов
+levelEditor.newProject() // v4.54.1: replace-not-merge + seeded history baseline, затем clearProjectFolder() (drop FSA grant + rescan served ./content/). Confirm если unsaved ИЛИ bound folder: "Starting a new project will close all currently open levels." + optional "Unsaved changes will be lost." + optional "The project folder will be cleared and Assets will reload from the default content folder." + "Continue?"
 levelEditor.openProject() // открытие проекта из файла: парсит все уровни из project-JSON, заменяет весь набор открытых вкладок (Edge Case 11); unit confirm при dirty
 levelEditor.saveProject() // async; без pinned fileName — имя из project.name через _deriveFileNameFromProjectName(); writeWorkingDirFile в granted folder, иначе download; требует newProject()/openProject()
 levelEditor.saveProjectAs() // async; prompt имени; FSA folder или download
 levelEditor.setProjectFolder() // async v4.52.0: File → Set Project Folder... → FsaStore.pickWorkingDirectory() + reloadProjectContent(); handle IndexedDB, name localStorage (machine-local, не Project.toJSON)
 levelEditor.reloadProjectContent({onlyIfGranted?, skipFetchFallback?}?) // async v4.52.0: ensureDefaultContentLayout → AssetManager.scanFromFsa → refresh FoldersPanel; no folder → scanContentFolder (unless skipFetchFallback)
-levelEditor.clearProjectFolder() // async v4.52.0: FsaStore.clearWorkingDirectory + rescan served ./content/
+levelEditor.clearProjectFolder() // async: FsaStore.clearWorkingDirectory + scanContentFolder + refresh FoldersPanel. File → Clear Project Folder (рядом с Set Project Folder...) и Project Settings → Clear; newProject() тоже вызывает
 levelEditor.openRecentFile(id) // U3: открыть level/project из MRU-кэша (editor.recentFiles)
 levelEditor.clearRecentFiles() // U3: очистить Open Recent
 levelEditor.recentFilesManager // RecentFilesManager: list/remember/open/clear; snapshot JSON в userPrefs
@@ -219,7 +219,7 @@ level.settings.parallaxVertical // множитель вертикального
 - `src/utils/LevelAssetUtils.js` - v4.53.0: `isLevelDocument` / `resolveCatalogAssetType` / `resolveLevelSrc` / `contentUrl` — type=level vs map JSON
 - `src/models/Project.js` - модель проекта (Phase 7): `toJSON(levelSessions, levelOrder, currentLevelId)` эмбеддит Level.toJSON() каждого уровня + видимость/порядок/currentLevelIndex; статический `fromJSON(json)` парсит проект-файл
 - `src/models/ProjectExporter.js` - трансформер editor-Project в runtime-Project манифест (engine plan Фаза 0); статический `export(levelSessions, levelOrder, project, opts)` возвращает `{formatVersion, name, entryLevelId, levels: [{id, data}], assets: [...]}` — если `opts.assetManager` передан, embedдит `assetManager.getAllAssets().map(asset => asset.toJSON())` как `assets[]`, иначе `assets: []` (полностью обратно совместимо)
-- `src/core/ProjectFileOperations.js` - файловые операции проекта (Phase 7, BaseModule): `newProject()`/`openProject()`/`openProjectFromData()`/`saveProject()`/`saveProjectAs()` (async; FsaStore.writeWorkingDirFile или download), replace-not-merge; MRU remember
+- `src/core/ProjectFileOperations.js` - файловые операции проекта (Phase 7, BaseModule): `newProject()` (v4.54.1 после пустого проекта вызывает `clearProjectFolder()`)/`openProject()`/`openProjectFromData()`/`saveProject()`/`saveProjectAs()` (async; FsaStore.writeWorkingDirFile или download), replace-not-merge; MRU remember
 - `src/utils/FsaStore.js` - v4.51.0 File System Access: persist `FileSystemDirectoryHandle` (IndexedDB `levelDesignerFsaHandles`/`handles`/`workingDir`), folder name localStorage `levelDesignerFsaWorkingDirName`; `isSupported`/`pickWorkingDirectory`/`clearWorkingDirectory`/`writeWorkingDirFile`/`writeContentFile`/`ensureManifestEntry`/`getContentDirectoryHandle`/`toContentRelativePath`/`toLevelRelativePath`
 - `src/utils/FsaContentWriter.js` - v4.51.0: `assetToDiskJson`/`saveAsset`/`saveNewAsset` — JSON+PNG sibling в content root без save dialog
 - `src/utils/FsaContentFs.js` - v4.52.0–v4.54.0: content-root layout/scan/CRUD — `ensureDefaultContentLayout`/`scanContentTree`/`createDirectory`/`deletePath`/`moveFile` (Blob/PNG-safe)/`moveDirectory`/`readText`/`readBlob`/`resolveImageSrc`/`updateManifest`; path helpers `uiFolderToContentRel`/`contentRelToUiFolder`/`sanitizeFolderName`/`addStructureFolder`/`removeStructureNode`/`flattenFolderRels`/`isUnderPath`/`folderExists`/`moveStructureNode`; internals `_getChildHandle`/`_copyTree`
@@ -433,7 +433,7 @@ eventHandlerManager.registerElement(button, { click: onClick }, 'button-id');
 
 ## 🔧 Версионирование
 
-Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '4.54.0'` (drag-move assets/folders + AssetPathRewriter + LEDGE catalog type=level/eventGraph + stance collision + v4.52.0 project-folder sync + FSA writes + LEDGE platformer port + Phase A/B + §7 Tiers 1–4; layout = `editor.dockManager`)
+Версия в одном месте: `src/core/LevelEditor.js` → `static VERSION = '4.54.1'` (New Project resets Assets via `clearProjectFolder`; drag-move assets/folders + AssetPathRewriter + LEDGE catalog type=level/eventGraph + stance collision + v4.52.0 project-folder sync + FSA writes + LEDGE platformer port + Phase A/B + §7 Tiers 1–4; layout = `editor.dockManager`)
 
 Версия отображается динамически после полной инициализации через `updateVersionInfo()` и `updatePageTitle()`. Интерфейс скрыт до завершения загрузки, чтобы избежать отображения устаревшей версии. Pre-push hook блокирует коммит без бампа версии (`.claude/settings.json`).
 

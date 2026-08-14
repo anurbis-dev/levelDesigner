@@ -16,20 +16,20 @@
 - `async closeLevel(levelId)` (новый, v3.57.0) - закрытие вкладки уровня; нельзя закрыть последний открытый уровень; спрашивает подтверждение если уровень содержит несохранённые изменения
 
 #### Файловые операции — проект (v3.57.0 Phase 7: Project; FSA v4.51.0–v4.52.0):
-- `async newProject()` - создание нового проекта: очищает все открытые уровни, создаёт один пустой уровень с baseline history. Единый confirm-диалог при несохранённых правках вместо N диалогов. **Replace-not-merge**: заменяет весь набор открытых вкладок.
+- `async newProject()` - создание нового проекта: очищает все открытые уровни, создаёт один пустой уровень с baseline history. Confirm если unsaved ИЛИ bound folder: "Starting a new project will close all currently open levels." + optional "Unsaved changes will be lost." + optional "The project folder will be cleared and Assets will reload from the default content folder." + "Continue?". **Replace-not-merge**. v4.54.1: после bootstrap вызывает `clearProjectFolder()`.
 - `async openProject()` - открытие проекта из файла: парсит все уровни из project-JSON, восстанавливает видимость/порядок/currentLevelIndex. **Replace-not-merge**: новые уровни заменяют весь набор открытых табов. Единый confirm при dirty (Edge Case 11). Пишет Open Recent.
 - `async saveProject()` - async; без pinned `project.fileName` — имя из `project.name` (`fileNameIsAuto`); `FsaStore.writeWorkingDirFile` или download; Open Recent
 - `async saveProjectAs()` - async; prompt имени; FSA folder или download; Open Recent
 - `async setProjectFolder()` - v4.52.0: File → Set Project Folder... → `FsaStore.pickWorkingDirectory()` + `reloadProjectContent()`; handle IndexedDB, name localStorage (не Project JSON); returns handle or null
 - `async reloadProjectContent({onlyIfGranted?, skipFetchFallback?}?)` - v4.52.0: `FsaContentFs.ensureDefaultContentLayout` → `assetManager.scanFromFsa` → refresh FoldersPanel; no folder / no content → optional `scanContentFolder`; returns boolean
-- `async clearProjectFolder()` - v4.52.0: `FsaStore.clearWorkingDirectory` + rescan served `./content/` + refresh FoldersPanel
+- `async clearProjectFolder()` - `FsaStore.clearWorkingDirectory` + rescan served `./content/` + refresh FoldersPanel. File → **Clear Project Folder** (рядом с Set Project Folder...) и Project Settings → Clear; `newProject()` тоже вызывает.
 - `async openRecentFile(id)` - U3: открыть level/project из MRU-кэша (`editor.recentFiles`)
 - `clearRecentFiles()` - U3: очистить список Open Recent
 - `async openProjectSettings()` - ProjectSettingsDialog: `project.name` + Project Folder (Choose…→`setProjectFolder` / Clear→`clearProjectFolder`)
 - `async createAssetOfType(typeId)` - placeholder в активной папке Asset panel; `FsaContentWriter.saveNewAsset` + manifest; status `Created "name" → rel` если записано
 
 #### Версия:
-- `static VERSION` - текущая версия редактора (строка, например `'4.54.0'`)
+- `static VERSION` - текущая версия редактора (строка, например `'4.54.1'`)
 - `updateVersionInfo()` - обновление отображения версии в UI
 
 #### Copy/Paste/Duplicate (Ctrl+C/X/V, Shift+D):
@@ -166,7 +166,7 @@
 
 #### Особенности:
 - **Манифест-система**: структура из `content/manifest.json` (fetch) или FSA scan (v4.52.0)
-- **Динамическое сканирование**: Refresh / Set Project Folder → `reloadProjectContent`
+- **Динамическое сканирование**: Refresh / Set Project Folder → `reloadProjectContent`; File → **Clear Project Folder** / **New Project** → `clearProjectFolder()` + `scanContentFolder()`
 - **Кеширование изображений**: оптимизация загрузки превью; FSA images as blob URLs
 - **Структурированная организация**: поддержка иерархии папок
 - **Обработка ошибок**: graceful handling ошибок загрузки файлов
@@ -361,7 +361,7 @@
 Файловые операции проекта (BaseModule).
 
 #### Основные методы:
-- `async newProject()` - создание нового проекта: очищает все открытые уровни, создаёт один пустой с baseline history. Единый confirm-диалог при несохранённых правках вместо N диалогов.
+- `async newProject()` - создание нового проекта: очищает все открытые уровни, создаёт один пустой с baseline history. Confirm если unsaved ИЛИ bound folder (close all levels / optional unsaved lost / optional folder cleared + Assets reload from default content / Continue?). v4.54.1: после bootstrap вызывает `editor.clearProjectFolder()`.
 - `async openProject()` - открытие проекта из файла: парсит все уровни ДО очистки текущих (невалидная запись не оставит редактор без открытого уровня). Replace-not-merge: новые уровни заменяют весь набор табов. Единый confirm при dirty.
 - `async saveProject()` - async; без `project.fileName` — `_deriveFileNameFromProjectName()`; `writeWorkingDirFile` или download
 - `async saveProjectAs()` - async; prompt имени; FSA или download
@@ -386,7 +386,7 @@
 
 #### Текущие поля:
 - `project.name` - `<input type="text">`
-- **Project Folder** - label + Choose… (`levelEditor.setProjectFolder`) / Clear (`levelEditor.clearProjectFolder`); hint: Level Designer folder or its `content/` folder; machine-local; after Choose, Assets Content tree shows that folder
+- **Project Folder** - label + Choose… (`levelEditor.setProjectFolder`) / Clear (`levelEditor.clearProjectFolder`); hint: Level Designer folder or its `content/` folder; machine-local; after Choose, Assets Content tree shows that folder. Clear здесь тот же `clearProjectFolder()`, что File → **Clear Project Folder**; **New Project** тоже сбрасывает folder.
 
 #### Отложенные поля (Open Questions #9):
 - Default asset import path

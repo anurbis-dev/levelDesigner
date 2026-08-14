@@ -77,6 +77,12 @@ export const MENU_CONFIG = {
                     type: 'action',
                     action: 'setProjectFolder'
                 },
+                {
+                    id: 'clear-project-folder',
+                    label: 'Clear Project Folder',
+                    type: 'action',
+                    action: 'clearProjectFolder'
+                },
                 { type: 'separator' },
                 {
                     id: 'save-project',

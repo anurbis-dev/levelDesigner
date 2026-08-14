@@ -100,7 +100,7 @@ eventManager.registerElement(button, 'button', {
 
 ```javascript
 export class LevelEditor {
-    static VERSION = '4.54.0'; // ← ЕДИНСТВЕННЫЙ ИСТОЧНИК ИСТИНЫ
+    static VERSION = '4.54.1'; // ← ЕДИНСТВЕННЫЙ ИСТОЧНИК ИСТИНЫ
 }
 ```
 
@@ -219,6 +219,8 @@ import { FsaContentWriter } from '../utils/FsaContentWriter.js';
 
 // Grant once (File → Set Project Folder / Project Settings)
 await FsaStore.pickWorkingDirectory(); // showDirectoryPicker({ mode: 'readwrite' })
+// File → Clear Project Folder / Project Settings → Clear / New Project (v4.54.1)
+// → FsaStore.clearWorkingDirectory() + AssetManager.scanContentFolder()
 
 // Content-relative write (maps/, assets/, …)
 await FsaStore.writeContentFile('maps/level.json', levelData);

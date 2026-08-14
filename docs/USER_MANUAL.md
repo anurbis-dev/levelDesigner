@@ -1,4 +1,4 @@
-# Руководство пользователя - 2D Level Editor v4.54.0
+# Руководство пользователя - 2D Level Editor v4.54.1
 
 ## 🎯 Быстрый старт
 
@@ -7,7 +7,7 @@
 3. **Создание**: Перетащите ассеты из нижней панели на canvas (`type=level` открывает карту, не ставит объект)
 4. **Группировка**: Выделите объекты → `Ctrl+G`
 5. **Слои**: Организуйте объекты по слоям с полной изоляцией видимости
-6. **Project Folder** (v4.51.0–v4.52.0, Chromium): File → **Set Project Folder...** или Project Settings → **Project Folder** → Choose… — один раз выдать write access к папке Level Designer (или её `content/`). Редактор создаёт default `content/` layout если его нет (или использует pick as-is, если это уже content root). **Content tree** в Assets показывает эту папку (FSA scan, не served `./content/`). Save Project / Save Level / Create Asset / Build / New Folder / Move / Delete пишут in-place. Clear снимает grant и возвращает served `./content/`. Без folder — download / native picker.
+6. **Project Folder** (v4.51.0–v4.54.1, Chromium): File → **Set Project Folder...** или Project Settings → **Project Folder** → Choose… — один раз выдать write access к папке Level Designer (или её `content/`). Редактор создаёт default `content/` layout если его нет (или использует pick as-is, если это уже content root). **Content tree** в Assets показывает эту папку (FSA scan, не served `./content/`). Save Project / Save Level / Create Asset / Build / New Folder / Move / Delete пишут in-place. File → **Clear Project Folder** (рядом с Set Project Folder...) или Project Settings → Clear снимает grant и возвращает served `./content/`. File → **New Project** тоже сбрасывает folder и перечитывает default Assets (confirm если есть несохранённые уровни или bound folder: закроет все открытые уровни; unsaved будут потеряны; Assets reload from the default content folder). Без folder — download / native picker.
 7. **Сохранение**: `Ctrl+S` (уровень); File → Save Project — project JSON
 
 ## 🆕 Новые возможности v3.51.0
@@ -238,7 +238,7 @@
 
 ### Assets (Content)
 - Просмотр и импорт ассетов
-- **Project Folder as library** (v4.52.0): после **Set Project Folder** дерево Content = выбранная папка (FSA); **Refresh** перечитывает её; Clear → снова served `./content/`
+- **Project Folder as library** (v4.52.0 / v4.54.1): после **Set Project Folder** дерево Content = выбранная папка (FSA); **Refresh** перечитывает её; File → **Clear Project Folder**, Project Settings → Clear, или **New Project** → снова served `./content/`
 - **New Folder**: RMB on Content tree or empty asset area → **New Folder** (prompt); writes to disk when folder granted
 - **Delete Folder**: RMB on folder → **Delete Folder** (hidden on Content root); or Del over folders tree / over assets panel with non-root folder selected and no assets selected
 - **Move assets / folders** (v4.54.0): click-drag asset thumbnail(s) onto a Content-tree folder or an existing folder tab — moves JSON + sibling PNG + manifest when project folder granted. Drag a folder onto another folder in the Content tree — moves the folder + all contents. Cannot move Content root; cannot drop a folder into itself or a descendant. Dropping a folder onto the tabs strip still pins a tab (does not move). After move, path-like cross-references (`path`, `imgSrc`, `properties.sourceFile`, `properties.levelSrc`, and any string that equals or is prefixed by the old content-relative path, including `./content/`, `content/`, `root/` forms) are remapped so links do not break. Component `*AssetId` fields stay. Open level objects/properties are rewritten the same way. Moved asset JSON is saved with stable `id`. No RMB **Move to Folder**.

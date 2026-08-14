@@ -30,9 +30,14 @@ export class ProjectFileOperations extends BaseModule {
             return;
         }
 
-        if (this.editor.levelsManager.hasAnyUnsavedChanges()) {
-            const ok = await confirm('Starting a new project will close all currently open levels. Unsaved changes will be lost. Continue?');
-            if (!ok) return;
+        const unsaved = this.editor.levelsManager.hasAnyUnsavedChanges();
+        const hasFolder = !!FsaStore.getWorkingDirectoryName();
+        if (unsaved || hasFolder) {
+            const parts = ['Starting a new project will close all currently open levels.'];
+            if (unsaved) parts.push('Unsaved changes will be lost.');
+            if (hasFolder) parts.push('The project folder will be cleared and Assets will reload from the default content folder.');
+            parts.push('Continue?');
+            if (!(await confirm(parts.join(' ')))) return;
         }
 
         this._cleanupAllOpenSessions();
@@ -49,6 +54,10 @@ export class ProjectFileOperations extends BaseModule {
         this._updateParallaxStartPosition();
 
         this.editor.project = new Project();
+
+        if (this.editor.clearProjectFolder) {
+            await this.editor.clearProjectFolder();
+        }
 
         Logger.file.info('✅ New project created');
         Logger.status.success('New project created');
