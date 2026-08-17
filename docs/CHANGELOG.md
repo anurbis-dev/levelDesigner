@@ -4,5 +4,4 @@
 
 ## [Unreleased]
 
-- **Feat: Ctrl+S saves selected assets** — over Assets panel (or Asset Editor) `Ctrl+S` persists selected/editing library assets instead of the level.
-- **Fix: unsaved-dot stayed after asset save** — `renderPreviews` skipped rebuild when only dirty flags changed; cache now includes dirty/name/tmp/`lastSaved`, and save calls `invalidatePreviewCache` + `assetsChanged`.
+- **Chore: drop LEDGE_PORT_PLAN.md** — план порта в редактор выполнен (v4.50.0 / v4.53.0); файл и ссылки из `docs/README.md`, `docs/ASSET_TYPES_CATALOG.md`, `Context_map.md` убраны. Демо остаётся в `content/maps/ledge.json` + `content/assets/ledge/`.

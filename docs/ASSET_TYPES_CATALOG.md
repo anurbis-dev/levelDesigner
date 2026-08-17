@@ -77,4 +77,3 @@
 - `src/ui/asset-editor/AssetComponentsPanel.js` — список Components; `AssetComponentDetailsPanel.js` — stub details.
 - `src/ui/AssetPanelContextMenu.js`, `config/menu.js` (`buildAssetsMenu()`) — точки создания ассета по типу.
 - `docs/RUNTIME_SCHEMA.md` — runtime-контракт properties.
-- `docs/LEDGE_PORT_PLAN.md` — порт платформера LEDGE.

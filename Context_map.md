@@ -304,7 +304,7 @@ level.settings.parallaxVertical // множитель вертикального
 
 ### Docs — Engine Runtime (engine plan Фаза 0–1)
 - `docs/RUNTIME_SCHEMA.md` - контракт runtime-схемы: per-type `schemaVersion`/`properties` для 31 asset-типа и 30 component-типов, плюс раздел `## Versioning` про `Level.meta.version` (semver уровня, отдельная ось от `LevelEditor.VERSION`)
-- `docs/LEDGE_PORT_PLAN.md` - план переноса прототипа LEDGE; уровень `content/maps/ledge.json`, каталог `content/assets/ledge/` (Image sidecars, `ledge_tileset.json`, `actors/*.json`, `graphs/ledge_logic.json`, `LEDGE.json` type=level), сборка `node scripts/build-ledge-level.mjs`
+- LEDGE demo (порт v4.50.0 / каталог v4.53.0): `content/maps/ledge.json`, `content/assets/ledge/` (Image sidecars, `ledge_tileset.json`, `actors/*.json`, `graphs/ledge_logic.json`, `LEDGE.json` type=level); сборка `node scripts/build-ledge-level.mjs`
 - `docs/CONTENT_MODEL.md` - три типа контент-паков движка: Project (база+патчи), Addon (overrides/additions), Special Event (без overrides); различие editor-Project (табы редактора) от runtime-Project (релиз), роль `ProjectExporter`
 - **Фаза 1 MVP-ядро** (`src/engine/` самодостаточен, ноль импортов из `src/constants|core|managers|models|ui|utils|widgets`):
   - `src/engine/Entity.js` - тонкий runtime-класс (id/name/type/x/y/width/height/color/rotation/imgSrc/materialPreset/visible/layerId/properties/components/children)
